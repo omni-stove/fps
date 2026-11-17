@@ -33,7 +33,22 @@ namespace Shooter.Core
             }
 
             var gain = (long)Spec.KillXp + (headshot ? Spec.HeadshotXp : 0);
-            return Award(profile, gain, Saturated(profile.Kills, 1), profile.Deaths, profile.Matches, profile.Wins);
+            return Award(profile, gain, Saturated(profile.Kills, 1), profile.Assists, profile.Deaths, profile.Matches, profile.Wins);
+        }
+
+        /// <summary>
+        /// 1 人倒すのを手伝った (止めは刺さなかった) ことを記録する。アシストの数を 1 増やし、<see cref="ProgressionSpec.AssistXp"/> を足す。
+        /// 倒した数は増やさない。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">profile が null。</exception>
+        public ProgressionAward RecordAssist(PlayerProfile profile)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            return Award(profile, Spec.AssistXp, profile.Kills, Saturated(profile.Assists, 1), profile.Deaths, profile.Matches, profile.Wins);
         }
 
         /// <summary>
@@ -53,7 +68,7 @@ namespace Shooter.Core
             var gain = (long)Spec.MatchXp + (won ? Spec.WinXp : 0);
             var matches = Saturated(profile.Matches, 1);
             var wins = won ? Saturated(profile.Wins, 1) : profile.Wins;
-            return Award(profile, gain, profile.Kills, Saturated(profile.Deaths, result.Deaths), matches, wins);
+            return Award(profile, gain, profile.Kills, profile.Assists, Saturated(profile.Deaths, result.Deaths), matches, wins);
         }
 
         /// <summary>累計の XP が xp のときのレベル。1 から <see cref="ProgressionSpec.MaxLevel"/> まで。</summary>
@@ -118,10 +133,10 @@ namespace Shooter.Core
             return IsUnlocked(id, LevelOf(profile));
         }
 
-        private ProgressionAward Award(PlayerProfile profile, long gain, int kills, int deaths, int matches, int wins)
+        private ProgressionAward Award(PlayerProfile profile, long gain, int kills, int assists, int deaths, int matches, int wins)
         {
             var xp = (int)Math.Min(int.MaxValue, profile.Xp + gain);
-            var next = new PlayerProfile(xp, kills, deaths, matches, wins);
+            var next = new PlayerProfile(xp, kills, deaths, matches, wins, assists);
             return new ProgressionAward(next, xp - profile.Xp, LevelOf(profile.Xp), LevelOf(xp));
         }
 

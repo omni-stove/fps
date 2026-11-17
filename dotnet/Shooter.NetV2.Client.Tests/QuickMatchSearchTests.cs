@@ -72,6 +72,49 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void APartyOnlyPicksAServerWithRoomForEveryone()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 3, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 2),
+                Server("roomy", "203.0.113.2:7777", NetMatchSettings.DefaultMaxPlayers - 3),
+                Server("quiet", "203.0.113.3:7777", 1),
+            });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"), "the busiest server has room for only 2 of the 3");
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0 for a party of 3"));
+            Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=roomy server=203.0.113.2:7777 players=5/8"));
+        }
+
+        [Test]
+        public void APartySearchesAgainWhenNoServerHasRoomForEveryone()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 3, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 2),
+                Server("full", "203.0.113.2:7777", NetMatchSettings.DefaultMaxPlayers),
+            });
+
+            Assert.That(_ready, Is.Null);
+            Assert.That(_log, Has.Some.EqualTo(
+                "[Lobby] no server to join among 2 found (room for 2 (party of 3) x1, full x1); searching again in 5s"));
+
+            search.Tick(5f);
+            Assert.That(_backend.Searches, Is.EqualTo(2));
+            _backend.CompleteSearch(new List<LobbyInfo> { Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 3) });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.1"));
+        }
+
+        [Test]
         public void SearchesEveryFiveSecondsUntilAServerAppears()
         {
             var search = Begin();
@@ -187,6 +230,8 @@ namespace Shooter.NetV2.Tests
             var search = Begin();
 
             Assert.Throws<InvalidOperationException>(() => search.Begin(0f, _ => { }, _ => { }));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new QuickMatchSearch(new FakeLobbyBackend(), _version, _log.Add).Begin(0f, 0, _ => { }, _ => { }));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(null, _version, _log.Add));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(_backend, _version, null));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(_backend, _version, null, _log.Add));

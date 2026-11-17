@@ -76,15 +76,43 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (!_participants.TryGet(entry.KillerId, out var killer) || !killer.IsLocal)
+            if (IsLocal(entry.KillerId))
+            {
+                var kill = Ledger.RecordKill(Profile, entry.Headshot);
+                Profile = kill.Profile;
+                Debug.Log(ProgressionLog.Killed(entry.Headshot, kill));
+                LogLevelUp(kill);
+                return;
+            }
+
+            if (!AssistedLocally(entry))
             {
                 return;
             }
 
-            var award = Ledger.RecordKill(Profile, entry.Headshot);
-            Profile = award.Profile;
-            Debug.Log(ProgressionLog.Killed(entry.Headshot, award));
-            LogLevelUp(award);
+            var assist = Ledger.RecordAssist(Profile);
+            Profile = assist.Profile;
+            Debug.Log(ProgressionLog.Assisted(assist));
+            LogLevelUp(assist);
+        }
+
+        // 自分の Id が並びに 2 度あってもアシストの XP を 2 度与えないよう、数えずに有無だけを見る。
+        private bool AssistedLocally(KillFeedEntry entry)
+        {
+            foreach (var id in entry.AssisterIds)
+            {
+                if (IsLocal(id))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsLocal(int id)
+        {
+            return _participants.TryGet(id, out var participant) && participant.IsLocal;
         }
 
         private void OnMatchFinished(MatchResult result)

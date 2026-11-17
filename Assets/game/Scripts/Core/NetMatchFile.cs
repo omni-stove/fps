@@ -630,7 +630,9 @@ namespace Shooter.Core
                 return new SwimTuning(
                     fields.ReadFloat(SwimSpeedItem, fallback.Speed),
                     fields.ReadFloat(SwimBuoyancyItem, fallback.Buoyancy),
-                    fields.ReadFloat(SwimBreathSecondsItem, fallback.BreathSeconds));
+                    fields.ReadFloat(SwimBreathSecondsItem, fallback.BreathSeconds),
+                    fallback.DrownDamage,
+                    fallback.DrownIntervalSeconds);
             }
             catch (ArgumentException e)
             {

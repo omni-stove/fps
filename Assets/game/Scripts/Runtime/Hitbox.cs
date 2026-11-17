@@ -17,7 +17,25 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ダメージを受ける持ち主。空なら親階層から探す")]
         private Damageable _owner;
 
+        [SerializeField, Min(0f), Tooltip("部位の倍率の後に掛ける倍率 (乗り物のエンジンや燃料など)。1 なら変えない")]
+        private float _damageMultiplier = 1f;
+
         public HitZone Zone => _zone;
+
+        // 部位 (HitZone) の倍率は持ち主ごとに決まるので、同じ持ち主の中で当たり判定ごとに変える倍率 (乗り物の部位) は別に持つ。
+        public float DamageMultiplier
+        {
+            get => _damageMultiplier;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "DamageMultiplier must not be negative and must be finite");
+                }
+
+                _damageMultiplier = value;
+            }
+        }
 
         /// <summary>持ち主。未設定なら親階層 (自分を含む) から探して覚える。見つからなければ null。</summary>
         public Damageable Owner
@@ -67,7 +85,9 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"Hitbox '{name}' has no Damageable owner in itself or its parents");
             }
 
-            return owner.ApplyHit(baseDamage, _zone, distance, falloff, sourcePosition, direction, DamageKind.Bullet);
+            var damage = DamageCalculator.Scale(
+                DamageCalculator.Calculate(baseDamage, _zone, distance, falloff, owner.ZoneMultipliers), _damageMultiplier);
+            return owner.ApplyResolvedHit(damage, _zone, sourcePosition, direction, DamageKind.Bullet);
         }
 
         /// <summary>コライダーの GameObject か、その親階層にある Hitbox を返す。無ければ null。</summary>

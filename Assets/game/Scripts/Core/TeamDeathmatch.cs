@@ -31,6 +31,8 @@ namespace Fps.Core
         /// <summary>試合が終わった瞬間に 1 度だけ呼ばれる。引数は勝ったチームで、同点なら null。</summary>
         public event Action<Team?> Ended;
 
+        private const int TwoTeamSideCount = 2;
+
         private readonly ModeSession _session;
 
         public TeamDeathmatchSpec Spec { get; }
@@ -49,6 +51,14 @@ namespace Fps.Core
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
 
+            // Team (Alpha・Bravo) で受け答えする API なので、3 つ以上の陣営は黙って 2 つにせず断る。
+            if (spec.SideCount != TwoTeamSideCount)
+            {
+                throw new ArgumentException(
+                    $"team deathmatch supports exactly {TwoTeamSideCount} sides, but the spec has {spec.SideCount}; use TeamDeathmatchRunner for more sides",
+                    nameof(spec));
+            }
+
             var scoreLimit = new ScoreLimitWin(spec.ScoreLimit);
             var timeLimit = new TimeLimitWin();
             var winConditions = spec.Rules.RespawnMode == RespawnMode.None
@@ -58,7 +68,7 @@ namespace Fps.Core
             _session = new ModeSession(
                 new TwoTeams(),
                 spec.TimeLimitSeconds,
-                new IScoreRule[] { new KillScore() },
+                new IScoreRule[] { new KillScore(spec.PointsPerKill) },
                 RespawnPolicy.FromRules(spec.Rules, spec.RespawnSeconds),
                 winConditions);
             _session.StateChanged += state => StateChanged?.Invoke(state);
@@ -121,11 +131,11 @@ namespace Fps.Core
         /// <summary>Wave で次の波が来るまでの秒数。Wave 以外のときと、Playing 以外のときは null。</summary>
         public float? SecondsUntilNextWave => _session.SecondsUntilNextWave;
 
-        // 点はキル 1 回につき 1 点しか入らないので、double で持っていても整数のまま。
+        // 点はキル 1 回につき整数の PointsPerKill しか入らないので、double で持っていても整数のまま。
         public int GetScore(Team team) => (int)_session.GetScore(Side.FromTeam(team));
 
         /// <summary>
-        /// killerId が victimId を倒したことを報告する。別チームを倒したら倒した側のチームに 1 点入り、
+        /// killerId が victimId を倒したことを報告する。別チームを倒したら倒した側のチームに <see cref="TeamDeathmatchSpec.PointsPerKill"/> 点入り、
         /// 倒した人の Kills が増える。同じチームや自滅では加点せず、倒された人の Deaths だけ増える。
         /// Waiting・Ended の間と、倒された人がすでに倒れているとき (二重の報告) は何もしない。
         /// </summary>

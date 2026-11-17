@@ -140,6 +140,23 @@ namespace Shooter.Core
             return Tag + " restart";
         }
 
+        /// <summary>次の試合のマップを fromMap から toMap に替えたこと。値はマップの Id (シーン名)。</summary>
+        /// <example><c>[Match] map changed from=NetArena01 to=NetArena02</c></example>
+        public static string MapChanged(string fromMap, string toMap)
+        {
+            if (string.IsNullOrEmpty(fromMap))
+            {
+                throw new ArgumentException("fromMap must not be empty", nameof(fromMap));
+            }
+
+            if (string.IsNullOrEmpty(toMap))
+            {
+                throw new ArgumentException("toMap must not be empty", nameof(toMap));
+            }
+
+            return Tag + " map changed from=" + fromMap + " to=" + toMap;
+        }
+
         /// <summary>試合が終わった後、次の試合が始まるまでの秒数 (小数 1 桁)。</summary>
         /// <example><c>[Match] next match in=10.0s</c></example>
         public static string NextMatch(float delaySeconds)

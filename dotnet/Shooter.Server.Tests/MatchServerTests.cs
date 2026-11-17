@@ -63,7 +63,7 @@ namespace Shooter.Server.Tests
             Assert.That(client.Accepted.PlayerId, Is.EqualTo(1));
             Assert.That(client.Accepted.ServerVersion, Is.EqualTo("0.2.0"));
             Assert.That(client.Accepted.TickRate, Is.EqualTo(TickClock.DefaultTickRate));
-            Assert.That(client.Accepted.Map, Is.EqualTo(ServerLaunch.DefaultMap));
+            Assert.That(client.Accepted.Map, Is.EqualTo(TestMaps.Data().Name), "the map the server loaded, not the -map argument");
             Assert.That(client.Accepted.MaxHealth, Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
             Assert.That(_server.Match.PlayerCount, Is.EqualTo(1));
             Assert.That(_calls, Does.Contain("a.Connected#1"));

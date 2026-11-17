@@ -16,7 +16,7 @@ namespace Shooter.Server
     /// </summary>
     /// <remarks>
     /// 部品の並び (<see cref="ServerMapData.Structures"/>) を書き出していないマップや、.fpsmap と数が合わないマップでは、部品は壊れない壁として残る。
-    /// 建物は試合をまたいで壊れたまま (Unity のシーンと同じ)。
+    /// 建物は同じマップで続ける試合をまたいで壊れたまま (Unity のシーンと同じ)。マップを替えると作り直し、どの建物も壊れていない状態に戻る。
     /// </remarks>
     internal sealed class ServerStructures
     {
@@ -42,6 +42,8 @@ namespace Shooter.Server
                     continue;
                 }
 
+                // マップの当たりは読んだマップごとに 1 つで、前にこのマップで遊んだ試合で外した部品が残っているので、壊れていない建物から始める
+                _collision.SetGroupEnabled(collider.Group, true);
                 pieceCounts[structure] = Math.Max(pieceCounts.TryGetValue(structure, out var count) ? count : 0, piece + 1);
                 var shape = new PieceShape(collider, structure, piece);
                 _shapes.Add(shape);

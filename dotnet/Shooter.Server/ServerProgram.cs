@@ -67,14 +67,7 @@ namespace Shooter.Server
             output.WriteLine(launch.AntiCheat.Describe());
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
-            if (!ServerMapData.TryLoad(launch.Map, runtime.MapSearchRoots, out var map, out problem))
-            {
-                error.WriteLine(LogTag + " " + problem);
-                return ExitMisconfigured;
-            }
-
-            output.WriteLine(map.LogLine);
-
+            // 最初のマップとほかに読むマップはルールの候補で決まるので、ルールを先に読む
             if (!ServerRulesData.TryLoad(launch.Rules, runtime.MapSearchRoots, out var rules, out problem))
             {
                 error.WriteLine(LogTag + " " + problem);
@@ -82,6 +75,30 @@ namespace Shooter.Server
             }
 
             output.WriteLine(rules.LogLine);
+
+            var mapPool = rules.Settings.MapPool;
+            if (!ServerMapData.TryLoad(launch.StartMap(mapPool), runtime.MapSearchRoots, out var map, out problem))
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            output.WriteLine(map.LogLine);
+            if (!ServerMapData.TryLoadPool(map, mapPool, runtime.MapSearchRoots, out var maps, out problem))
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            for (var i = 1; i < maps.Count; i++)
+            {
+                output.WriteLine(maps[i].LogLine);
+            }
+
+            if (mapPool.Count > 0)
+            {
+                output.WriteLine(ServerMapData.PoolLogLine(maps));
+            }
 
             var modules = new List<IServerModule>();
             if (!createModules(launch, runtime, rules, modules, out problem))
@@ -119,7 +136,8 @@ namespace Shooter.Server
                     new ServerEventWriter(json, output, output),
                     () => DateTime.UtcNow,
                     rules.Settings.RestartDelaySeconds,
-                    rules);
+                    rules,
+                    maps);
                 var code = Start(server, error);
                 if (code != ExitOk)
                 {

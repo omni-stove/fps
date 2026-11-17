@@ -42,6 +42,16 @@ namespace Shooter.Server
 
         public string Map => Options.Map ?? DefaultMap;
 
+        /// <summary>
+        /// 最初の試合のマップ。<c>-map</c> が無ければ、候補 (ルールの <c>mapPool</c>) の先頭、候補も無ければ <see cref="DefaultMap"/>。
+        /// 候補の先頭を選ぶのは、候補に無い既定のシーンで始めると、次のマップを替えた後に二度と戻れないマップで 1 試合だけ遊ぶことになるため。
+        /// </summary>
+        public string StartMap(IReadOnlyList<string> mapPool)
+        {
+            ArgumentNullException.ThrowIfNull(mapPool);
+            return Options.Map ?? (mapPool.Count > 0 ? mapPool[0] : DefaultMap);
+        }
+
         public string Rules { get; }
 
         public AntiCheatSettings AntiCheat { get; }

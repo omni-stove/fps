@@ -113,13 +113,11 @@ namespace Shooter.Server
             _match = context.Match;
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
-            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles);
-            _shotTrace = new ServerShotTrace(_hitboxes);
-            _structures = new ServerStructures(context.Map, _log);
+            UseMap(context.Map);
             var rules = _data.Rules;
-            _structures.Enabled = rules.Destruction == Destruction.On;
 
             _match.PlayerJoined += HandlePlayerJoined;
+            _match.MapChanged += HandleMapChanged;
             _match.PlayerLeft += HandlePlayerLeft;
             _bodies.Teleported += HandleTeleported;
             _rules.PlayerSpawned += HandlePlayerSpawned;
@@ -217,6 +215,7 @@ namespace Shooter.Server
             }
 
             _match.PlayerJoined -= HandlePlayerJoined;
+            _match.MapChanged -= HandleMapChanged;
             _match.PlayerLeft -= HandlePlayerLeft;
             _bodies.Teleported -= HandleTeleported;
             _rules.PlayerSpawned -= HandlePlayerSpawned;
@@ -286,6 +285,28 @@ namespace Shooter.Server
             var fighter = GetOrAdd(playerId);
             fighter.Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
             RefillGrenades(fighter);
+        }
+
+        // 当たり判定は作るときに世界の当たりを受け取るので、作り直す。巻き戻しの記録は前のマップの位置なので一緒に捨てる
+        private void UseMap(ServerMapData map)
+        {
+            _hitboxes = new ServerHitboxes(_bodies, map.World, null, _vehicles);
+            _shotTrace = new ServerShotTrace(_hitboxes);
+            _structures = new ServerStructures(map, _log);
+            _structures.Enabled = _data.Rules.Destruction == Destruction.On;
+            _changedStructures.Clear();
+        }
+
+        // 飛んでいる物と燃えている範囲は前のマップの当たりで動いているので、新しいマップへ持ち込まない。座席の武器も乗り物ごと替わる
+        private void HandleMapChanged(ServerMapData map)
+        {
+            UseMap(map);
+            _mounts.Clear();
+            _mountBudgets.Clear();
+            ClearGrenades();
+            _projectiles.Clear();
+            _areaEffects.Clear();
+            _log.WriteLine(LogTag + " map=" + map.Name + " destructibleStructures=" + Text(_structures.Count));
         }
 
         private void HandleMatchStarted()

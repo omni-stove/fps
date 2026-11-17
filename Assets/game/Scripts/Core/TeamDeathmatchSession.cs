@@ -95,7 +95,7 @@ namespace Shooter.Core
 
         private readonly TeamDeathmatch _match;
         private readonly SpawnSelector _selector;
-        private readonly SpawnPoint[] _spawnPoints;
+        private SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
 
         // playerId の昇順に回して、同じ入力なら同じ結果になるようにする。
@@ -197,20 +197,7 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(maxHealth), maxHealth, "maxHealth must be positive");
             }
 
-            if (spawnPoints == null)
-            {
-                throw new ArgumentNullException(nameof(spawnPoints));
-            }
-
-            _spawnPoints = new SpawnPoint[spawnPoints.Count];
-            for (var i = 0; i < spawnPoints.Count; i++)
-            {
-                _spawnPoints[i] = spawnPoints[i] ?? throw new ArgumentException("spawnPoints must not contain null", nameof(spawnPoints));
-            }
-
-            RequireSpawnPointFor(_spawnPoints, Team.Alpha, nameof(spawnPoints));
-            RequireSpawnPointFor(_spawnPoints, Team.Bravo, nameof(spawnPoints));
-
+            _spawnPoints = CopySpawnPoints(spawnPoints, nameof(spawnPoints));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
@@ -851,6 +838,16 @@ namespace Shooter.Core
         }
 
         /// <summary>
+        /// 出現地点を spawnPoints に替える。次の出現 (リスポーン・<see cref="Restart"/>) から使い、今いる人は動かさない。
+        /// 条件はコンストラクタと同じで、満たさなければ今の地点のまま例外を投げる。
+        /// </summary>
+        /// <exception cref="ArgumentException">null を含む、またはどちらかのチームが使える地点が無い。</exception>
+        public void ReplaceSpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints)
+        {
+            _spawnPoints = CopySpawnPoints(spawnPoints, nameof(spawnPoints));
+        }
+
+        /// <summary>
         /// playerId が出現する地点を選ぶ。動ける (倒れていなくてダウンもしていない) 他のプレイヤーを敵・味方に分けて
         /// <see cref="SpawnSelector"/> に渡す。
         /// </summary>
@@ -1184,6 +1181,24 @@ namespace Shooter.Core
             {
                 _deferred.Dequeue()();
             }
+        }
+
+        private static SpawnPoint[] CopySpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints, string paramName)
+        {
+            if (spawnPoints == null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+
+            var copy = new SpawnPoint[spawnPoints.Count];
+            for (var i = 0; i < spawnPoints.Count; i++)
+            {
+                copy[i] = spawnPoints[i] ?? throw new ArgumentException("spawnPoints must not contain null", paramName);
+            }
+
+            RequireSpawnPointFor(copy, Team.Alpha, paramName);
+            RequireSpawnPointFor(copy, Team.Bravo, paramName);
+            return copy;
         }
 
         private static void RequireSpawnPointFor(SpawnPoint[] spawnPoints, Team team, string paramName)

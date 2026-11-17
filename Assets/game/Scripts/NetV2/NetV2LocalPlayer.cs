@@ -96,6 +96,8 @@ namespace Shooter.NetV2
 
         public Camera Camera => _camera;
 
+        public FirstPersonLook Look => _look;
+
         /// <summary>目の位置 (射撃・投げ・印の出どころ)。</summary>
         public Vector3 EyePosition => _eye.position;
 

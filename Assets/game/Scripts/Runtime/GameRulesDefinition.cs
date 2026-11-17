@@ -175,6 +175,10 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
         private ViewMode _viewMode = ViewMode.FirstPerson;
 
+        [Header("ストリーク")]
+        [SerializeField, Tooltip("倒れずに倒した数で UAV・空爆を得るストリークをプレイヤーに付けるか")]
+        private Streaks _streaks = Streaks.On;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -475,6 +479,12 @@ namespace Shooter.Runtime
             set => _viewMode = value;
         }
 
+        public Streaks Streaks
+        {
+            get => _streaks;
+            set => _streaks = value;
+        }
+
         /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
@@ -534,7 +544,8 @@ namespace Shooter.Runtime
                         _headDamageMultiplier,
                         _bodyDamageMultiplier,
                         _limbDamageMultiplier,
-                        ZoneDamageMultipliers.Default.WeakPoint));
+                        ZoneDamageMultipliers.Default.WeakPoint),
+                    _streaks);
             }
             catch (ArgumentException e)
             {
@@ -593,6 +604,7 @@ namespace Shooter.Runtime
             _headDamageMultiplier = rules.ZoneDamage.Head;
             _bodyDamageMultiplier = rules.ZoneDamage.Body;
             _limbDamageMultiplier = rules.ZoneDamage.Limb;
+            _streaks = rules.Streaks;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

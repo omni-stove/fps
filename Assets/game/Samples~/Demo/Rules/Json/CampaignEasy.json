@@ -28,5 +28,6 @@
   "objective": "None",
   "minPlayers": 0,
   "idleKickSeconds": 0,
-  "maxWeapons": 2
+  "maxWeapons": 2,
+  "streaks": "Off"
 }

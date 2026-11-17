@@ -9,7 +9,7 @@ namespace Shooter.Editor
 {
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/>。<see cref="BuildAt"/> の 7 つと、
-    /// 対戦・PvE モードの <see cref="ModeNames"/> の 9 つ) を作るか上書きする。
+    /// 対戦・PvE モードの <see cref="ModeNames"/> の 10 個) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
@@ -19,6 +19,7 @@ namespace Shooter.Editor
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネード・制圧射撃を足し、ジャンプを切ったもの。視点は TPS 射撃場だけが三人称で、他のモードは一人称。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
+    /// ストリークはキャンペーンの 3 つだけ付けず (<see cref="Streaks.Off"/>)、他のモードは <see cref="GameRules.Default"/> のまま付ける。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
     /// Editor を閉じた状態で次のように呼べる:
@@ -48,6 +49,7 @@ namespace Shooter.Editor
         public const string GuardianName = "Guardian";
         public const string ExecutionName = "Execution";
         public const string SearchAndDestroyName = "SearchAndDestroy";
+        public const string CaptureTheFlagName = "CaptureTheFlag";
         public const string HordeName = "Horde";
         public const string BattleRoyaleName = "BattleRoyale";
 
@@ -58,6 +60,7 @@ namespace Shooter.Editor
         public static string GuardianPath => Folder + "/" + GuardianName + ".asset";
         public static string ExecutionPath => Folder + "/" + ExecutionName + ".asset";
         public static string SearchAndDestroyPath => Folder + "/" + SearchAndDestroyName + ".asset";
+        public static string CaptureTheFlagPath => Folder + "/" + CaptureTheFlagName + ".asset";
         public static string HordePath => Folder + "/" + HordeName + ".asset";
         public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
 
@@ -83,6 +86,7 @@ namespace Shooter.Editor
             GuardianName,
             ExecutionName,
             SearchAndDestroyName,
+            CaptureTheFlagName,
             HordeName,
             BattleRoyaleName,
         };
@@ -135,7 +139,7 @@ namespace Shooter.Editor
 
         /// <summary>
         /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1.5 倍、
-        /// 建造物は壊れない。アクションは <see cref="CampaignActions"/>。
+        /// 建造物は壊れない。ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignEasyRules()
         {
@@ -151,29 +155,32 @@ namespace Shooter.Editor
                 1.5f,
                 Destruction.Off,
                 CampaignActions())
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>
         /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
-        /// アクションは <see cref="CampaignActions"/>。
+        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignNormalRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions())
                 .WithDeathCamera(DeathCamera.Fallen)
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>
         /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
-        /// アクションは <see cref="CampaignActions"/>。
+        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignHardRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions())
                 .WithDeathCamera(DeathCamera.Fallen)
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>
@@ -326,6 +333,15 @@ namespace Shooter.Editor
         }
 
         /// <summary>
+        /// 旗取り。<see cref="TeamDeathmatchRules"/> (個別リスポーン・出現直後の無敵あり) のうち、旗を運ぶ人が撃たれたらその場で旗を落とすよう
+        /// ダウンを切ったもの (<see cref="CaptureTheFlagActions"/>)。
+        /// </summary>
+        public static GameRules CaptureTheFlagRules()
+        {
+            return TeamDeathmatchRules().WithActions(CaptureTheFlagActions());
+        }
+
+        /// <summary>
         /// ホード (PvE)。<see cref="TeamDeathmatchRules"/> のうち、倒れた人は <see cref="HordeWaveIntervalSeconds"/> 秒ごとの波でまとめて戻り
         /// (<see cref="RespawnMode.Wave"/>、戻るので出現直後の無敵も残す)、予備弾を <see cref="HordeReserveAmmoMultiplier"/> 倍にしたもの。
         /// ダウンは <see cref="Downed.Revive"/> で、味方が起こせる。
@@ -371,6 +387,8 @@ namespace Shooter.Editor
                     return ExecutionRules();
                 case SearchAndDestroyName:
                     return SearchAndDestroyRules();
+                case CaptureTheFlagName:
+                    return CaptureTheFlagRules();
                 case HordeName:
                     return HordeRules();
                 case BattleRoyaleName:
@@ -394,6 +412,15 @@ namespace Shooter.Editor
 
         /// <summary>爆破のアクション。<see cref="TeamDeathmatchActions"/> のうち、倒れたらその場でラウンドから外れるようダウンしないようにしたもの。</summary>
         public static ActionRules SearchAndDestroyActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        /// <summary>
+        /// 旗取りのアクション。<see cref="TeamDeathmatchActions"/> のうち、ダウンしないようにしたもの。
+        /// ダウンさせると、倒れるまで旗を持ったまま残り、運ぶ人を撃っても旗が落ちない。
+        /// </summary>
+        public static ActionRules CaptureTheFlagActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }

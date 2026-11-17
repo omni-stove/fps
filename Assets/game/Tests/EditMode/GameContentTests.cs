@@ -221,6 +221,7 @@ namespace Shooter.Tests.EditMode
             var freeForAll = Track(ScriptableObject.CreateInstance<FreeForAllDefinition>());
             var guardian = Track(ScriptableObject.CreateInstance<GuardianDefinition>());
             var execution = Track(ScriptableObject.CreateInstance<ExecutionDefinition>());
+            var captureTheFlag = Track(ScriptableObject.CreateInstance<CaptureTheFlagDefinition>());
             var royaleA = Track(ScriptableObject.CreateInstance<BattleRoyaleDefinition>());
             var royaleB = Track(ScriptableObject.CreateInstance<BattleRoyaleDefinition>());
             var candidates = new Dictionary<System.Type, Object[]>
@@ -228,6 +229,7 @@ namespace Shooter.Tests.EditMode
                 { typeof(FreeForAllDefinition), new Object[] { freeForAll } },
                 { typeof(GuardianDefinition), new Object[] { guardian } },
                 { typeof(ExecutionDefinition), new Object[] { execution } },
+                { typeof(CaptureTheFlagDefinition), new Object[] { captureTheFlag } },
                 { typeof(BattleRoyaleDefinition), new Object[] { royaleA, royaleB } },
             };
 
@@ -236,9 +238,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(content.FreeForAll, Is.SameAs(freeForAll));
             Assert.That(content.Guardian, Is.SameAs(guardian));
             Assert.That(content.Execution, Is.SameAs(execution));
+            Assert.That(content.CaptureTheFlag, Is.SameAs(captureTheFlag));
             Assert.That(content.BattleRoyale, Is.Null);
             Assert.That(left, Does.Contain("BattleRoyale"));
-            Assert.That(left, Does.Not.Contain("FreeForAll").And.Not.Contain("Guardian").And.Not.Contain("Execution"));
+            Assert.That(left, Does.Not.Contain("FreeForAll").And.Not.Contain("Guardian").And.Not.Contain("Execution").And.Not.Contain("CaptureTheFlag"));
         }
 
         [Test]

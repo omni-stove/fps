@@ -668,6 +668,61 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void PlayerHasTheAimAssistWiredToTheLookAndTheAds()
+        {
+            var assist = _world.Player.GetComponent<AimAssist>();
+
+            Assert.That(assist, Is.Not.Null);
+            Assert.That(assist.Look, Is.SameAs(_world.Look));
+            Assert.That(assist.Targets, Is.Not.Null);
+            Assert.That(assist.AimSource, Is.Not.Null);
+            Assert.That(assist.AimingSource, Is.Not.Null);
+            Assert.That(assist.AimingSource(), Is.False, "not aiming down the sights yet");
+            Assert.That(_world.Player.GetComponent<LockOnAim>(), Is.Not.Null, "the aim assist sits beside the lock-on");
+        }
+
+        [Test]
+        public void PlayerHasTheStreaksWhenTheRulesTurnThemOn()
+        {
+            Assert.That(_world.Rules.Streaks, Is.EqualTo(Streaks.On), "the kit default");
+
+            var streaks = _world.Player.GetComponent<StreakController>();
+
+            Assert.That(streaks, Is.Not.Null);
+            Assert.That(streaks.enabled, Is.True);
+            Assert.That(streaks.gameObject, Is.SameAs(_world.PlayerDamageable.gameObject), "counted against the player's own deaths");
+        }
+
+        [Test]
+        public void CampaignRulesLeaveTheStreaksOffButKeepTheAimAssist()
+        {
+            _world.Player.SetActive(false);
+            var host = new GameObject("BootstrapCampaign");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                _rules.Streaks = Streaks.Off;
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules.Streaks, Is.EqualTo(Streaks.Off));
+                Assert.That(world.Player.GetComponent<StreakController>(), Is.Null);
+                Assert.That(world.Player.GetComponent<AimAssist>(), Is.Not.Null, "only the streaks follow the rule");
+                Assert.That(GameSignals.Streak.Value, Is.Null, "nothing publishes a streak");
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void ThePlayerTuningStartsAtTheComponentDefaults()
         {
             var bootstrap = _host.GetComponent<GameBootstrap>();

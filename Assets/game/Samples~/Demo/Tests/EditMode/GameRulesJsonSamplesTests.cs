@@ -98,6 +98,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers), name + " minPlayers");
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), name + " idleKickSeconds");
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), name + " maxWeapons");
+            Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), name + " streaks");
 
             var a = actual.Actions;
             var b = expected.Actions;

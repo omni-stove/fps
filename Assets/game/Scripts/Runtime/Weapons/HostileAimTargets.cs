@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Shooter.Core;
 using UnityEngine;
 using NVector3 = System.Numerics.Vector3;
 
@@ -7,7 +8,7 @@ namespace Shooter.Runtime
 {
     // エイムアシストは弾と違い撃った後に相手を追わないので、HitboxLockOnTargets の Id と Follow は持たず、狙う点だけを集める。
     // 見えるかは弾の通り道 (ShotCast) に加えて煙 (EnemySenses.IsVisionBlocked) でも確かめる。煙の向こうへ吸い付くと、見えない相手の位置が分かってしまうため。
-    public sealed class HostileAimTargets
+    public sealed class HostileAimTargets : IAimAssistTargets
     {
         public const int MaxColliders = HitboxLockOnTargets.MaxColliders;
 
@@ -62,6 +63,11 @@ namespace Shooter.Runtime
             }
 
             _seen.Clear();
+        }
+
+        void IAimAssistTargets.Collect(NVector3 eye, float range, List<NVector3> into)
+        {
+            Collect(eye.ToUnity(), range, into);
         }
 
         private static Damageable OwnerOf(Collider collider)

@@ -87,6 +87,7 @@ namespace Shooter.Core.Tests
                 (nameof(GameRules.ViewMode), r => r.WithViewMode(ViewMode.FirstPerson), ViewMode.FirstPerson),
                 (nameof(GameRules.PlayerMaxHealth), r => r.WithPlayerMaxHealth(150), 150),
                 (nameof(GameRules.ZoneDamage), r => r.WithZoneDamage(otherZoneDamage), otherZoneDamage),
+                (nameof(GameRules.Streaks), r => r.WithStreaks(Streaks.Off), Streaks.Off),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);

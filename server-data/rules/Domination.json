@@ -54,7 +54,8 @@
       "head": 2,
       "body": 1,
       "limb": 0.75
-    }
+    },
+    "streaks": "On"
   },
   "match": {
     "scoreLimit": 10,

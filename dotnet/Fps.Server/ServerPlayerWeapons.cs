@@ -69,6 +69,12 @@ namespace Fps.Server
                 throw new ArgumentException("specs must hold 1-" + OwnerSnapshot.MaxWeapons + " weapons", nameof(specs));
             }
 
+            // 前の並びの武器は受け皿 (持ち物) の Changed に購読が残るので、捨てる前に外す
+            foreach (var old in Items)
+            {
+                old.UseAmmoPool(null);
+            }
+
             var weapons = new ServerWeapon[specs.Count];
             for (var i = 0; i < specs.Count; i++)
             {

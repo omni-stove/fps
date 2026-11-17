@@ -335,6 +335,7 @@ namespace Shooter.Server
                     : VaultSync.None;
                 row.Prone = state.Prone;
                 row.Ladder = state.Ladder;
+                row.AirJumpsUsed = (byte)state.AirJumpsUsed;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))

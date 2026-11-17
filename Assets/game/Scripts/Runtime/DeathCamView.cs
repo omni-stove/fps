@@ -196,7 +196,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Begin(Vector3, float)"/> の、keepFirstPerson が true なら ViewRig を一人称のままにするもの。
-        /// 倒れた主観 (<see cref="FrameFallen"/>) で、床の近くに下ろしたカメラに自分の体を映さない (一人称と同じく影だけにする) ために使う。
+        /// 倒れた主観 (<see cref="FrameFallen"/>) で、床の近くに下ろしたカメラを三人称の位置へ動かさず、自分の目のまま倒すために使う。
         /// </summary>
         public void Begin(Vector3 deathEye, float fallbackYaw, bool keepFirstPerson)
         {

@@ -220,6 +220,14 @@ namespace Fps.Tests.EditMode
             public void Drop(int handle, int count)
             {
             }
+
+            public void Attach(int handle)
+            {
+            }
+
+            public void Detach(int weaponHandle, string itemId)
+            {
+            }
         }
     }
 }

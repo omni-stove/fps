@@ -21,8 +21,8 @@ namespace Fps.Runtime
     /// 目と向きを相手ごとの <see cref="KillCamBuffer"/> にためておき、倒れたら倒した相手の分を切り出す。記録が無い相手ならすぐ Killer にする。</item>
     /// <item><see cref="DeathCamera.Fallen"/>: 自分の目のまま、倒れた目の真下の床 (<see cref="FallenGroundY"/>) の近くへ崩れ落ち、横に傾いて止まる
     /// (<see cref="FallenView"/>。落ち方は <see cref="FallSeconds"/>・<see cref="FallenEyeHeight"/>・<see cref="FallenRollDegrees"/>・<see cref="FallenPitchDegrees"/>)。
-    /// 視点は一人称のままにして自分の体を影だけにし、倒れた抜け殻 (<see cref="DeathBodyPresenter.Shell"/>) も影だけにし、武器はしまわせる
-    /// (<see cref="WeaponController.Holster"/>)。床の近くのカメラに自分の脚や銃が映らないように。</item>
+    /// 視点は一人称のままにして、自分の体も倒れた抜け殻 (<see cref="DeathBodyPresenter.Shell"/>) も描かず影も落とさず、武器はしまわせる
+    /// (<see cref="WeaponController.Holster"/>)。床の近くのカメラに自分の脚や銃が映らないように。体は戻るときに描き直す。</item>
     /// </list>
     /// カメラの置き方と入力はネット対戦の NetDeathCamera と同じ <see cref="DeathCamView"/> に任せる。
     /// モードの試合が終わったら (<see cref="ModeRunnerBase.IsMatchOver"/>、<see cref="MatchRunner"/> の試合の終わり) 試合の終わりの見せ方に譲ってすぐ戻す。
@@ -86,6 +86,7 @@ namespace Fps.Runtime
         private float _fallenGroundY;
         private bool _fallenSettled;
         private WeaponController _holsteredWeapon;
+        private readonly List<Renderer> _hiddenOwnRenderers = new List<Renderer>();
 
         private Damageable _damageable;
         private DeathCamView _view;
@@ -583,6 +584,16 @@ namespace Fps.Runtime
                 _holsteredWeapon = weapon;
             }
 
+            // 一人称の体は影だけ描かれていて、カメラが床へ倒れても立ったままの影が残るので、影ごと描かない
+            foreach (var ownRenderer in GetComponentsInChildren<Renderer>(false))
+            {
+                if (ownRenderer.enabled)
+                {
+                    ownRenderer.enabled = false;
+                    _hiddenOwnRenderers.Add(ownRenderer);
+                }
+            }
+
             // 抜け殻は倒れたとき (Died) に作られ、リスポーンで消えるので、戻さなくてよい
             var body = GetComponent<DeathBodyPresenter>();
             var shell = body != null ? body.Shell : null;
@@ -590,9 +601,22 @@ namespace Fps.Runtime
             {
                 foreach (var shellRenderer in shell.GetComponentsInChildren<Renderer>(true))
                 {
-                    shellRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                    shellRenderer.enabled = false;
                 }
             }
+        }
+
+        private void ShowOwnBody()
+        {
+            foreach (var ownRenderer in _hiddenOwnRenderers)
+            {
+                if (ownRenderer != null)
+                {
+                    ownRenderer.enabled = true;
+                }
+            }
+
+            _hiddenOwnRenderers.Clear();
         }
 
         private void ReleaseHolster()
@@ -753,6 +777,7 @@ namespace Fps.Runtime
             _replay.Stop(reason);
             _killCamClip = KillCamClip.Empty;
             ReleaseHolster();
+            ShowOwnBody();
             _view.Restore(true);
             ClearAlly();
             _killer = null;

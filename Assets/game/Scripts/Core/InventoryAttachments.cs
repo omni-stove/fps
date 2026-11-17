@@ -12,7 +12,8 @@ namespace Shooter.Core
             IReadOnlyList<string> current,
             Func<IReadOnlyList<string>, bool> setAttachments,
             out string itemId,
-            out string replaced)
+            out string replaced,
+            Func<string, bool> isAvailable = null)
         {
             if (inventory == null)
             {
@@ -38,6 +39,11 @@ namespace Shooter.Core
             }
 
             itemId = item.Id;
+            if (isAvailable != null && !isAvailable(item.Id))
+            {
+                return AttachmentRejection.Locked;
+            }
+
             if (string.IsNullOrEmpty(weaponId))
             {
                 return AttachmentRejection.NoWeapon;

@@ -281,6 +281,123 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ObjectDisposedException>(() => search.Begin(0f, _code, _ => { }));
         }
 
+        private JoinCodeSearch BeginJoiningTheMatchLobby()
+        {
+            var search = new JoinCodeSearch(_backend, _version, 10f, _log.Add) { JoinsMatchLobby = true };
+            search.Begin(0f, _code, _results.Add);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo> { Server("mine", "203.0.113.3:7777", 0, _code) });
+            return search;
+        }
+
+        [Test]
+        public void JoinsTheFoundServersMatchLobbyAndHandsItOverWithTheResult()
+        {
+            var search = BeginJoiningTheMatchLobby();
+            Assert.That(_backend.MatchLobbyJoins, Is.EqualTo(new List<string> { "mine" }));
+            Assert.That(_results, Is.Empty, "the result waits for the match lobby");
+
+            _backend.CompleteMatchLobbyJoin(Server("mine", "203.0.113.3:7777", 0, _code));
+
+            var result = Result();
+            Assert.That(result.Outcome, Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(result.Options.Address, Is.EqualTo("203.0.113.3"));
+            Assert.That(result.MatchLobby, Is.Not.Null);
+            Assert.That(result.MatchLobby.LobbyId, Is.EqualTo("mine"));
+            Assert.That(_log, Has.Member(MatchLobbyLog.Joined("mine")));
+
+            search.Tick(1f);
+            search.Dispose();
+            Assert.That(_backend.Ticks, Is.Zero, "the owner of the match lobby ticks the service");
+            Assert.That(_backend.Disposed, Is.Zero, "the search no longer owns the service");
+
+            result.MatchLobby.Tick();
+            result.MatchLobby.Dispose();
+            result.MatchLobby.Dispose();
+            Assert.That(_backend.Ticks, Is.EqualTo(1));
+            Assert.That(_backend.Disposed, Is.EqualTo(1));
+            Assert.That(_log, Has.Member(MatchLobbyLog.Left("mine")));
+        }
+
+        [Test]
+        public void AMatchLobbyThatCannotBeJoinedStillConnectsWithoutVoice()
+        {
+            var search = BeginJoiningTheMatchLobby();
+
+            _backend.CompleteMatchLobbyJoin(null, "LobbyIsFull");
+
+            var result = Result();
+            Assert.That(result.Outcome, Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(result.MatchLobby, Is.Null);
+            Assert.That(_log, Has.Member(MatchLobbyLog.NotJoined("mine", "LobbyIsFull")));
+
+            search.Dispose();
+            Assert.That(_backend.Disposed, Is.EqualTo(1), "without a match lobby the search still closes the service");
+        }
+
+        [Test]
+        public void NoAnswerFromTheMatchLobbyConnectsWithoutVoiceAtTheDeadline()
+        {
+            var search = BeginJoiningTheMatchLobby();
+
+            search.Tick(9.9f);
+            Assert.That(_results, Is.Empty);
+            search.Tick(10f);
+
+            var result = Result();
+            Assert.That(result.Outcome, Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(result.MatchLobby, Is.Null);
+            Assert.That(_log, Has.Member(MatchLobbyLog.NotJoined("mine", MatchLobbyLog.TimedOut(10f))));
+
+            _backend.CompleteMatchLobbyJoin(Server("mine", "203.0.113.3:7777", 0, _code));
+            Assert.That(_results, Has.Count.EqualTo(1), "a late answer does not finish the search twice");
+        }
+
+        [Test]
+        public void ALogOutWhileJoiningTheMatchLobbyConnectsWithoutVoice()
+        {
+            BeginJoiningTheMatchLobby();
+
+            _backend.LogOut("expired");
+
+            var result = Result();
+            Assert.That(result.Outcome, Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(result.MatchLobby, Is.Null);
+        }
+
+        [Test]
+        public void AServerLobbyWithoutVoiceIsNotJoined()
+        {
+            var search = new JoinCodeSearch(_backend, _version, 10f, _log.Add) { JoinsMatchLobby = true };
+            search.Begin(0f, _code, _results.Add);
+            _backend.CompleteLogin(_self);
+            var attributes = new List<LobbyAttribute>();
+            foreach (var attribute in ServerLobby.Attributes("203.0.113.3:7777", _version, 0, new NetMatchSettings(privateMatch: true, joinCode: _code)))
+            {
+                if (attribute.Key != ServerLobby.VoiceEnabledKey)
+                {
+                    attributes.Add(attribute);
+                }
+            }
+
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                new LobbyInfo("quiet", _owner, NetMatchSettings.DefaultMaxPlayers, new[] { _owner }, attributes),
+            });
+
+            Assert.That(_backend.MatchLobbyJoins, Is.Empty);
+            Assert.That(Result().MatchLobby, Is.Null);
+            Assert.That(_log, Has.Member(MatchLobbyLog.NoVoiceRoom("quiet")));
+        }
+
+        [Test]
+        public void JoinsMatchLobbyCannotChangeAfterBeginning()
+        {
+            var search = Begin(_code);
+
+            Assert.Throws<InvalidOperationException>(() => search.JoinsMatchLobby = true);
+        }
+
         [Test]
         public void ALogOutBeforeBeginningIsIgnored()
         {
@@ -326,6 +443,7 @@ namespace Shooter.NetV2.Tests
         {
             private Action<string, string> _login;
             private Action<IReadOnlyList<LobbyInfo>, string> _search;
+            private Action<LobbyInfo, string> _joinMatch;
 
             public event Action<string> LoggedOut;
 
@@ -397,9 +515,17 @@ namespace Shooter.NetV2.Tests
                 done(null, LobbyBackendErrors.NotSupported);
             }
 
+            public List<string> MatchLobbyJoins { get; } = new List<string>();
+
             public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
             {
-                done(null, LobbyBackendErrors.NotSupported);
+                MatchLobbyJoins.Add(lobbyId);
+                _joinMatch = done;
+            }
+
+            public void CompleteMatchLobbyJoin(LobbyInfo lobby, string error = null)
+            {
+                _joinMatch(lobby, error);
             }
 
             public void LeaveMatchLobby(string lobbyId, Action<string> done)

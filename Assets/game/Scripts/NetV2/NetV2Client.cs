@@ -60,6 +60,7 @@ namespace Shooter.NetV2
         private ClientAntiCheat _antiCheat;
         private ClientMatch _match;
         private QuickMatchSearch _search;
+        private MatchLobby _matchLobby;
         private ClientWorld _world;
         private NetV2LocalPlayer _local;
         private WeaponPresentation _presentation;
@@ -156,6 +157,7 @@ namespace Shooter.NetV2
             ReleaseFinished();
             var client = Create(true);
             client._joinCode = result.JoinCode;
+            client._matchLobby = result.MatchLobby;
             client.Connect(result.Options);
             return null;
         }
@@ -223,7 +225,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this));
+            _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this)) { JoinsMatchLobby = true };
             var party = NetV2PartyControl.Current;
             _search.Begin(
                 Time.unscaledTime,
@@ -254,6 +256,7 @@ namespace Shooter.NetV2
                 return;
             }
 
+            _matchLobby = _search.TakeMatchLobby();
             Connect(options);
         }
 
@@ -335,7 +338,8 @@ namespace Shooter.NetV2
                 ControlPointPosition = ControlPointPosition,
                 MapDecided = _mapChange.Decide,
                 LocalPlayer = () => _local,
-                Voice = NetV2Eos.CreateVoiceSession(_options.Transport, log),
+                Voice = NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),
+                VoiceLobbyId = _matchLobby?.LobbyId,
             }));
             if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
             {
@@ -396,6 +400,7 @@ namespace Shooter.NetV2
             }
 
             _search?.Tick(Time.unscaledTime);
+            _matchLobby?.Tick();
             if (_client == null || _finished)
             {
                 return;
@@ -459,16 +464,24 @@ namespace Shooter.NetV2
                 _menu = null;
             }
 
+            ReleasePartsAndLobby();
+            _match?.Detach();
+            _antiCheat?.End();
+            _client?.Dispose();
+            DestroyViews();
+        }
+
+        // ボイスの部品が RTC 部屋を出てからロビーを出るよう、部品を先に閉じる
+        private void ReleasePartsAndLobby()
+        {
             foreach (var part in _parts)
             {
                 part.Dispose();
             }
 
             _parts.Clear();
-            _match?.Detach();
-            _antiCheat?.End();
-            _client?.Dispose();
-            DestroyViews();
+            _matchLobby?.Dispose();
+            _matchLobby = null;
         }
 
         private void HandleAccepted()
@@ -1465,6 +1478,9 @@ namespace Shooter.NetV2
             }
 
             _finished = true;
+
+            // 起動引数で始めたクライアントは失敗しても消えずに残るので、ロビーの席を空けておく
+            ReleasePartsAndLobby();
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
             {
                 Application.Quit(exitCode);

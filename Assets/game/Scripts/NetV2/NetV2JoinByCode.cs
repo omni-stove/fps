@@ -68,7 +68,7 @@ namespace Shooter.NetV2
             }
 
             Retire();
-            var search = new JoinCodeSearch(backend, _version, _log);
+            var search = new JoinCodeSearch(backend, _version, _log) { JoinsMatchLobby = true };
             _search = search;
             search.Begin(_now, code, Math.Max(1, _partySize()), result => Finish(search, result, done));
         }
@@ -131,8 +131,10 @@ namespace Shooter.NetV2
 
         private void Finish(JoinCodeSearch search, JoinCodeResult result, Action<JoinCodeOutcome> done)
         {
+            // 試合ロビーは結果と一緒にこちらへ渡っているので、つながないときはここで閉じてロビーから出る
             if (_disposed || search != _search)
             {
+                result.MatchLobby?.Dispose();
                 return;
             }
 
@@ -146,6 +148,7 @@ namespace Shooter.NetV2
             var refusal = _connect(result);
             if (refusal != null)
             {
+                result.MatchLobby?.Dispose();
                 _log(JoinCodeLog.Finished(JoinCodeOutcome.Failed, JoinCodeLog.NotConnected(refusal)));
                 done(JoinCodeOutcome.Failed);
                 return;

@@ -77,9 +77,20 @@ namespace Shooter.Net.Tests
             done(null, LobbyBackendErrors.NotSupported);
         }
 
+        public bool AcceptsMatchLobbies { get; set; }
+
+        public List<string> MatchLobbyJoins { get; } = new List<string>();
+
         public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
         {
-            done(null, LobbyBackendErrors.NotSupported);
+            MatchLobbyJoins.Add(lobbyId);
+            if (!AcceptsMatchLobbies)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+                return;
+            }
+
+            done(new LobbyInfo(lobbyId, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 2, Array.Empty<string>()), null);
         }
 
         public void LeaveMatchLobby(string lobbyId, Action<string> done)

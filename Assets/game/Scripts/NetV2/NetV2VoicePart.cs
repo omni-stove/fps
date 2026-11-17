@@ -10,6 +10,7 @@ namespace Shooter.NetV2
     {
         private readonly MatchClient _client;
         private readonly string _lobbyId;
+        private readonly VoiceRoster _roster;
         private readonly ClientVoice _voice;
         private readonly VoiceSettingsStore _store;
         private readonly Func<bool> _pushToTalkHeld;
@@ -32,7 +33,8 @@ namespace Shooter.NetV2
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _log = log ?? throw new ArgumentNullException(nameof(log));
-            _voice = new ClientVoice(session ?? throw new ArgumentNullException(nameof(session)), roster ?? throw new ArgumentNullException(nameof(roster)));
+            _roster = roster ?? throw new ArgumentNullException(nameof(roster));
+            _voice = new ClientVoice(session ?? throw new ArgumentNullException(nameof(session)), _roster);
             _lobbyId = string.IsNullOrEmpty(lobbyId) ? null : lobbyId;
             _pushToTalkHeld = pushToTalkHeld ?? ReadPushToTalk;
             _voice.StatusChanged += Show;
@@ -48,7 +50,17 @@ namespace Shooter.NetV2
 
         public bool Handle(IMessage message)
         {
-            return false;
+            if (!(message is VoiceRosterMessage roster))
+            {
+                return false;
+            }
+
+            if (!_disposed)
+            {
+                _roster.Apply(roster);
+            }
+
+            return true;
         }
 
         public void Apply(SnapshotMessage snapshot)

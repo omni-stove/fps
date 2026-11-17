@@ -149,6 +149,20 @@ namespace Fps.Tests.EditMode
             Assert.That(context.Selector.Find(ContextMeleeMove.FinisherId).StandDistance, Is.EqualTo(1.5f));
         }
 
+        [Test]
+        public void ReinstallingKeepsTheBehindArcTheGameSetInCode()
+        {
+            new MeleeActionInstaller().Install(_body, Rules());
+            new ContextMeleeActionInstaller().Install(_body, Rules());
+            var context = _body.GetComponent<ContextMeleeAction>();
+            Assert.That(context.BehindArcDegrees, Is.EqualTo(MeleeSpec.DefaultBehindArcDegrees));
+
+            context.BehindArcDegrees = 60f;
+            new ContextMeleeActionInstaller().Install(_body, Rules());
+
+            Assert.That(context.BehindArcDegrees, Is.EqualTo(60f));
+        }
+
         private InputAction Action(string name, InputActionType type = InputActionType.Button, string controlType = null)
         {
             var action = new InputAction(name, type, expectedControlType: controlType);

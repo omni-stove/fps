@@ -14,6 +14,18 @@ namespace Fps.Protocol.Tests
 
         private static readonly int[] _onlySecond = { 2 };
 
+        private const string _rifleItemId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+        private const string _rifleId = "5e6f7a8b-9c0d-4e1f-8a3b-4c5d6e7f8a9b";
+        private const string _scopeId = "0d1e2f3a-4b5c-4d6e-9f8a-9b0c1d2e3f4a";
+        private const string _gripId = "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b";
+
+        private static readonly string[] _opticAndUnder = { "optic", "underbarrel" };
+        private static readonly string[] _onlyScope = { _scopeId };
+        private static readonly ItemSpec _rifleItem = new ItemSpec(_rifleItemId, "weapon.rifle", width: 2, weaponId: _rifleId, attachmentSlots: _opticAndUnder);
+        private static readonly ItemSpec _scope = new ItemSpec(_scopeId, "item.scope", weight: 0.75f, attachment: new AttachmentSpec("optic", adsSpreadMultiplier: 0.5f));
+        private static readonly ItemSpec _grip = new ItemSpec(_gripId, "item.grip", weight: 0.25f, attachment: new AttachmentSpec("underbarrel"));
+        private static readonly WeaponSpec _rifle = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, weight: 3f);
+
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
@@ -38,7 +50,7 @@ namespace Fps.Protocol.Tests
         public void AnUnknownActionIsUnreadable()
         {
             var writer = new MessageWriter();
-            writer.WriteMessage(new InventoryRequestMessage { Action = (InventoryAction)3 });
+            writer.WriteMessage(new InventoryRequestMessage { Action = (InventoryAction)5 });
 
             Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
@@ -92,8 +104,23 @@ namespace Fps.Protocol.Tests
             sent.AddEntry(new InventoryStateMessage.Entry(1, 0, 2, 0, 0, false));
             writer.WriteMessage(sent);
             var bytes = writer.ToArray();
-            // 最後の山のアイテムの番号 (後ろから 6 バイト目) を、無い番号に書き換える
-            bytes[bytes.Length - 6] = 1;
+            // 最後の山のアイテムの番号 (後ろから 7 バイト目。後ろに付けた物の数が 1 バイト続く) を、無い番号に書き換える
+            bytes[bytes.Length - 7] = 1;
+
+            Assert.Throws<MessageReadException>(() => _client.Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void AnAttachedItemPointingPastTheItemsIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            var sent = new InventoryStateMessage();
+            sent.AddItem(new InventoryStateMessage.Item(_rifleItemId, 1, 3f, 2, 1));
+            sent.AddEntry(new InventoryStateMessage.Entry(1, 0, 1, 0, 0, false), new byte[] { 0 });
+            writer.WriteMessage(sent);
+            var bytes = writer.ToArray();
+            // 最後の付けた物の番号 (最後のバイト) を、無い番号に書き換える
+            bytes[bytes.Length - 1] = 1;
 
             Assert.Throws<MessageReadException>(() => _client.Read(new System.ArraySegment<byte>(bytes)));
         }
@@ -135,6 +162,80 @@ namespace Fps.Protocol.Tests
             Assert.That(got.AmmoItemId, Is.Null);
             Assert.That(got.IconId, Is.EqualTo("rifle"));
             Assert.That(new Inventory(catalog).WeightOf(got), Is.EqualTo(3.5f));
+        }
+
+        [Test]
+        public void AttachAndDetachRequestsCarryTheItemToTakeOff()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new InventoryRequestMessage { Action = InventoryAction.Detach, Handle = 4, ItemId = _scopeId });
+
+            var detach = (InventoryRequestMessage)_server.Read(writer.AsSegment());
+
+            Assert.That(detach.Action, Is.EqualTo(InventoryAction.Detach));
+            Assert.That(detach.Handle, Is.EqualTo(4));
+            Assert.That(detach.ItemId, Is.EqualTo(_scopeId));
+
+            var attachWriter = new MessageWriter();
+            attachWriter.WriteMessage(new InventoryRequestMessage { Action = InventoryAction.Attach, Handle = 7 });
+            var attach = (InventoryRequestMessage)_server.Read(attachWriter.AsSegment());
+            Assert.That(attach.Action, Is.EqualTo(InventoryAction.Attach));
+            Assert.That(attach.Handle, Is.EqualTo(7));
+            Assert.That(attach.ItemId, Is.Empty);
+        }
+
+        [Test]
+        public void TheStateCarriesWhatEachWeaponHasAttached()
+        {
+            var catalog = new ItemCatalog(new[] { _rifleItem, _scope, _grip }, new InventoryRule(gridWidth: 4, gridHeight: 2));
+            var inventory = new Inventory(catalog);
+            var attached = new[] { _scopeId, _gripId };
+            inventory.HoldWeapons(new[] { WeaponAttachments.Apply(_rifle, attached, catalog) }, _ => attached);
+            var sent = new InventoryStateMessage();
+            InventorySync.Write(inventory, sent);
+            var writer = new MessageWriter();
+            writer.WriteMessage(sent);
+
+            var got = (InventoryStateMessage)_client.Read(writer.AsSegment());
+
+            // 武器の山 1 つに、付けた物 2 つ。付けた物は山に無くても表に載る
+            Assert.That(got.EntryCount, Is.EqualTo(1));
+            Assert.That(got.ItemCount, Is.EqualTo(3));
+            Assert.That(got.EntryAt(0).AttachedCount, Is.EqualTo(2));
+            Assert.That(got.ItemAt(got.AttachedItemAt(0, 0)).ItemId, Is.EqualTo(_scopeId));
+            Assert.That(got.ItemAt(got.AttachedItemAt(0, 1)).ItemId, Is.EqualTo(_gripId));
+            Assert.That(got.ItemAt(got.EntryAt(0).ItemIndex).Weight, Is.EqualTo(4f).Within(1e-4f));
+
+            var received = InventorySync.ToCatalog(got, catalog);
+            var copy = new Inventory(received);
+            copy.Replace(InventorySync.ToEntries(got, received));
+            copy.ReplaceAttachments(InventorySync.ToAttachments(got, received));
+
+            Assert.That(copy.AttachmentsOf(_rifleId), Is.EqualTo(attached));
+            Assert.That(received.TryFindAttachment(_scopeId, out var scope), Is.True);
+            Assert.That(scope.Attachment.AdsSpreadMultiplier, Is.EqualTo(0.5f));
+            Assert.That(received.SlotsOf(_rifleId), Is.EqualTo(_opticAndUnder));
+        }
+
+        [Test]
+        public void AttachmentsTheClientDoesNotKnowAreLeftOut()
+        {
+            var catalog = new ItemCatalog(new[] { _rifleItem, _scope, _grip }, new InventoryRule(gridWidth: 4, gridHeight: 2));
+            var inventory = new Inventory(catalog);
+            var attached = new[] { _scopeId, _gripId };
+            inventory.HoldWeapons(new[] { _rifle }, _ => attached);
+            var sent = new InventoryStateMessage();
+            InventorySync.Write(inventory, sent);
+            var writer = new MessageWriter();
+            writer.WriteMessage(sent);
+            var got = (InventoryStateMessage)_client.Read(writer.AsSegment());
+
+            // クライアントの表には握りが無い
+            var received = InventorySync.ToCatalog(got, new ItemCatalog(new[] { _rifleItem, _scope }, InventoryRule.Default));
+            var attachments = InventorySync.ToAttachments(got, received);
+
+            Assert.That(attachments.Single().Key, Is.EqualTo(_rifleId));
+            Assert.That(attachments.Single().Value, Is.EqualTo(_onlyScope));
         }
     }
 }

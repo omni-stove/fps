@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// <see cref="DefaultMuzzleOffset"/> と <see cref="DefaultShellEjectOffset"/> だけずらした既定の位置を返す。
     /// </summary>
     /// <remarks>
-    /// 探すのは作ったときの 1 回だけ。武器のモデルを差し替えたら作り直す。
+    /// 探すのは作ったときの 1 回だけ。武器のモデルを差し替えたり、付けた物 (<see cref="WeaponAttachmentModels"/>) を付け直したりしたら作り直す。
     /// </remarks>
     public sealed class WeaponSockets
     {
@@ -41,9 +41,9 @@ namespace Fps.Runtime
         public WeaponSockets(Transform modelRoot)
         {
             ModelRoot = modelRoot;
-            Muzzle = FindSocket(modelRoot, MuzzleName);
-            ShellEject = FindSocket(modelRoot, ShellEjectName);
-            Sight = FindSocket(modelRoot, SightName);
+            Muzzle = FindPreferringAttachments(modelRoot, MuzzleName);
+            ShellEject = FindPreferringAttachments(modelRoot, ShellEjectName);
+            Sight = FindPreferringAttachments(modelRoot, SightName);
         }
 
         /// <summary>探した武器のモデルの根。無ければ null。</summary>
@@ -121,6 +121,27 @@ namespace Fps.Runtime
             }
 
             return null;
+        }
+
+        // 消音器の先の銃口や照準器の照準の点のように、付けた物 (WeaponAttachmentModel) の中のソケットが武器のモデルのものより優先する。後に付けた物ほど優先する
+        private static Transform FindPreferringAttachments(Transform root, string name)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            var attached = root.GetComponentsInChildren<WeaponAttachmentModel>(true);
+            for (var i = attached.Length - 1; i >= 0; i--)
+            {
+                var found = FindSocket(attached[i].transform, name);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return FindSocket(root, name);
         }
 
         private static Pose SocketPose(Transform socket, Vector3 origin, Vector3 direction, Vector3 offset, bool faceRight)

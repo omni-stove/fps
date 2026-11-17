@@ -2,10 +2,10 @@ namespace Fps.Protocol
 {
     public sealed class InventoryRequestMessage : IMessage
     {
-        public const byte CurrentVersion = 1;
+        public const byte CurrentVersion = 2;
 
         // InventoryAction の値の数。読むときにこれ未満かを確かめる
-        private const int _actionCount = 3;
+        private const int _actionCount = 5;
 
         public ushort Id => MessageIds.InventoryRequest;
 
@@ -23,6 +23,8 @@ namespace Fps.Protocol
 
         public ushort Count { get; set; }
 
+        public string ItemId { get; set; } = "";
+
         public void Write(MessageWriter writer)
         {
             writer.WriteByte((byte)Action);
@@ -31,6 +33,7 @@ namespace Fps.Protocol
             writer.WriteByte(Y);
             writer.WriteBool(Rotated);
             writer.WriteUInt16(Count);
+            writer.WriteString(ItemId ?? "", MatchProtocol.MaxContentIdBytes);
         }
 
         public void Read(MessageReader reader)
@@ -41,6 +44,7 @@ namespace Fps.Protocol
             Y = reader.ReadByte();
             Rotated = reader.ReadBool();
             Count = reader.ReadUInt16();
+            ItemId = reader.ReadString(MatchProtocol.MaxContentIdBytes, ItemId);
         }
     }
 }

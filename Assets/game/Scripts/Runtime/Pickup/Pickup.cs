@@ -817,7 +817,7 @@ namespace Fps.Runtime
                     {
                         if (outcome.DroppedWeaponId != null)
                         {
-                            if (!weapons.SwapWeapon(outcome.DroppedWeaponId, definition, _contents.CarriedAmmo, out var dropped))
+                            if (!weapons.SwapWeapon(outcome.DroppedWeaponId, definition, _contents.CarriedAmmo, _contents.Attachments, out var dropped))
                             {
                                 failure = $"could not swap weapon '{outcome.DroppedWeaponId}' for '{definition.Id}'";
                                 return false;
@@ -825,7 +825,7 @@ namespace Fps.Runtime
 
                             DropWeapon(dropped, collector);
                         }
-                        else if (!weapons.AddWeapon(definition, _contents.CarriedAmmo))
+                        else if (!weapons.AddWeapon(definition, _contents.CarriedAmmo, _contents.Attachments))
                         {
                             failure = $"already holds weapon '{definition.Id}'";
                             return false;
@@ -882,7 +882,7 @@ namespace Fps.Runtime
                 position += toward.normalized * Mathf.Min(DroppedWeaponOffset, toward.magnitude);
             }
 
-            var contents = PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, _contents.Eligibility);
+            var contents = PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, _contents.Eligibility, dropped.Attachments);
             var pickup = Create(contents, position, PickupCollectMode.Look, radius: _radius, lookAngleDegrees: _lookAngleDegrees);
             Debug.Log(PickupLog.Dropped(collector.Id, pickup.name, pickup.Spec, position.ToNumerics()), pickup);
             return pickup;
@@ -1116,17 +1116,28 @@ namespace Fps.Runtime
                 // 拾う範囲はトリガーの球で決めるので、見た目の当たり判定は外す (残すと固い物として移動と弾を遮る)。
                 var instance = Fps.Runtime.VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
                 instance.transform.localPosition = new Vector3(0f, VisualHeight, 0f);
+                AttachVisuals(instance.transform);
                 return instance.transform;
             }
 
             if (kind == PickupKind.Weapon)
             {
-                return CreateGunShape();
+                var gun = CreateGunShape();
+                AttachVisuals(gun);
+                return gun;
             }
 
             var visual = CreatePart(PrimitiveType.Cube, VisualName, transform, Vector3.one * VisualSize, ColorOf(kind));
             visual.localPosition = new Vector3(0f, VisualHeight, 0f);
             return visual;
+        }
+
+        private void AttachVisuals(Transform visual)
+        {
+            if (_contents != null && _contents.Attachments.Count > 0)
+            {
+                WeaponAttachmentModels.Apply(visual, _contents.Attachments, KitTuning.Items, AttachmentModelCatalog.Load());
+            }
         }
 
         /// <summary>contents の武器の、地面に置いたときの見た目 (<see cref="WeaponExtrasAssets.PickupModel"/>)。武器でないか、カタログに無ければ null。</summary>

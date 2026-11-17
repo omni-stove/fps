@@ -92,6 +92,9 @@ namespace Fps.Runtime
         private WeaponExtrasCatalog _weaponExtras;
 
         [SerializeField]
+        private AttachmentModelCatalog _attachmentModels;
+
+        [SerializeField]
         private HitFeedbackCatalog _hitFeedback;
 
         [SerializeField]
@@ -257,6 +260,12 @@ namespace Fps.Runtime
         {
             get => _weaponExtras;
             set => _weaponExtras = value;
+        }
+
+        public AttachmentModelCatalog AttachmentModels
+        {
+            get => _attachmentModels;
+            set => _attachmentModels = value;
         }
 
         public HitFeedbackCatalog HitFeedback

@@ -670,6 +670,7 @@ namespace Fps.Runtime
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _definitions = loaded;
             _unarmed = false;
+            _attachments.Clear();
             SetLoadout(loadout, specs, loaded, rules, resetAmmo: true);
 
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
@@ -742,9 +743,10 @@ namespace Fps.Runtime
         /// 同じ Id の武器を既に持っていれば何もせず false。定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
         /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、definition の武器 1 本だけを持った状態にする。
         /// 持てる数の上限 (<see cref="MaxWeapons"/>) はここでは見ない。上限で持ち替えるのは拾う側 (<see cref="Pickup"/>) が <see cref="SwapWeapon"/> で行う。
+        /// attachments はその武器に付いていた物 (持ち物のアイテムの Id) で、<see cref="AttachmentCatalog"/> でその武器に付かない物は捨てる。
         /// </summary>
         /// <exception cref="ArgumentException">ammo の武器の Id が definition の Id と違う。</exception>
-        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null)
+        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null)
         {
             if (definition == null)
             {
@@ -754,11 +756,15 @@ namespace Fps.Runtime
             EnsureInitialized();
             var spec = definition.ToSpec();
             RequireAmmoFor(spec, ammo);
+            var kept = WeaponAttachments.Keep(AttachmentCatalog, spec.Id, attachments);
+            spec = WeaponAttachments.Apply(spec, kept, AttachmentCatalog);
             if (_unarmed)
             {
                 var only = new[] { spec };
                 var armed = WeaponLoadout.Restore(only, AmmoList(ammo), spec.Id, _loadedRules, out _);
                 _unarmed = false;
+                _attachments.Clear();
+                RememberAttachments(spec.Id, kept);
                 SetLoadout(armed, only, new[] { definition }, _loadedRules);
                 Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.LogName}", this);
                 WeaponChanged?.Invoke(Weapon);
@@ -785,20 +791,23 @@ namespace Fps.Runtime
 
             var loadout = WeaponLoadout.Restore(specs, carried, Weapon.Spec.Id, _loadedRules, out _);
             KeepAmmoTypes(loadout, -1);
+            RememberAttachments(spec.Id, kept);
             SetLoadout(loadout, specs, definitions, _loadedRules);
-            Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName}", this);
+            Debug.Log($"[Combat] weapon added index={specs.Length - 1} id={spec.Id} name={spec.LogName} attachments={WeaponAttachments.Describe(kept)}", this);
             WeaponChanged?.Invoke(Weapon);
             return true;
         }
 
         /// <summary>
         /// Id が droppedWeaponId の持ち武器を手放し、同じ番号に definition の武器を入れて構える。弾数は ammo があればその数、null なら満タン。
-        /// 手放した武器の定義と残弾を dropped に入れて true。他の武器の弾数はそのまま。リロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ。
+        /// 付いていた物 attachments は <see cref="AddWeapon"/> と同じく付かない物を捨てる。
+        /// 手放した武器の定義と残弾と付けていた物を dropped に入れて true。他の武器の弾数はそのまま。リロード中なら取り消し、<see cref="WeaponChanged"/> を呼ぶ。
         /// 武器を持っていない・droppedWeaponId を持っていない・definition と同じ Id の武器を既に持っているなら何もせず false。
         /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、状態は変えない。
         /// </summary>
         /// <exception cref="ArgumentException">ammo の武器の Id が definition の Id と違う。</exception>
-        public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+        public bool SwapWeapon(
+            string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, IReadOnlyList<string> attachments, out HeldWeapon dropped)
         {
             if (definition == null)
             {
@@ -809,6 +818,8 @@ namespace Fps.Runtime
             EnsureInitialized();
             var spec = definition.ToSpec();
             RequireAmmoFor(spec, ammo);
+            var kept = WeaponAttachments.Keep(AttachmentCatalog, spec.Id, attachments);
+            spec = WeaponAttachments.Apply(spec, kept, AttachmentCatalog);
             if (_unarmed || _loadout.IndexOf(spec.Id) >= 0)
             {
                 return false;
@@ -824,6 +835,7 @@ namespace Fps.Runtime
             leaving.CancelReload();
             var leavingAmmo = WeaponAmmo.Leaving(leaving);
             var leavingDefinition = _loadedDefinitions[index];
+            var leavingAttachments = AttachmentsOf(leavingAmmo.WeaponId);
 
             var specs = (WeaponSpec[])_specs.Clone();
             specs[index] = spec;
@@ -846,18 +858,20 @@ namespace Fps.Runtime
 
             var loadout = WeaponLoadout.Restore(specs, carried, spec.Id, _loadedRules, out _);
             KeepAmmoTypes(loadout, index);
+            _attachments.Remove(leavingAmmo.WeaponId);
+            RememberAttachments(spec.Id, kept);
             SetLoadout(loadout, specs, definitions, _loadedRules);
-            dropped = new HeldWeapon(leavingDefinition, leavingAmmo);
+            dropped = new HeldWeapon(leavingDefinition, leavingAmmo, leavingAttachments);
             Debug.Log(
                 $"[Combat] weapon swapped index={index} id={spec.Id} name={spec.LogName} dropped={leavingAmmo.WeaponId} "
-                + $"dropped-ammo={leavingAmmo.AmmoInMagazine}/{leavingAmmo.ReserveAmmo}",
+                + $"dropped-ammo={leavingAmmo.AmmoInMagazine}/{leavingAmmo.ReserveAmmo} dropped-attachments={WeaponAttachments.Describe(leavingAttachments)}",
                 this);
             WeaponChanged?.Invoke(Weapon);
             return true;
         }
 
         /// <summary>
-        /// Id が weaponId の持ち武器を手放し、その定義と残弾 (予備弾を持ち物から出し入れする武器は弾倉の分だけ) を dropped に入れて true。
+        /// Id が weaponId の持ち武器を手放し、その定義と残弾 (予備弾を持ち物から出し入れする武器は弾倉の分だけ) と付けていた物を dropped に入れて true。
         /// 今の武器を手放したら残りの 0 番を構え、最後の 1 本なら武器を持っていない状態 (<see cref="Disarm"/>) にする。
         /// 武器を持っていないか weaponId を持っていなければ何もせず false。<see cref="WeaponChanged"/> を呼ぶ。
         /// </summary>
@@ -873,7 +887,8 @@ namespace Fps.Runtime
 
             var leaving = _loadout.Items[index];
             leaving.CancelReload();
-            dropped = new HeldWeapon(_loadedDefinitions[index], WeaponAmmo.Leaving(leaving));
+            dropped = new HeldWeapon(_loadedDefinitions[index], WeaponAmmo.Leaving(leaving), AttachmentsOf(leaving.Spec.Id));
+            _attachments.Remove(leaving.Spec.Id);
             if (_loadout.Count == 1)
             {
                 // 持ち物の山は持ち武器から作るので、武器を持っていない状態でも並びを残したまま Disarm で手放したことにする

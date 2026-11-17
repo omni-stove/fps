@@ -48,6 +48,7 @@ namespace Fps.Runtime
         private Transform _bodyGunDefault;
         private Transform _bodyGunModel;
         private string _bodyGunWeaponId;
+        private IReadOnlyList<string> _bodyGunAttachments = WeaponAttachments.None;
         private WeaponExtrasCatalog _weaponModels;
         private bool _weaponModelsResolved;
         private Transform _viewModelRoot;
@@ -557,19 +558,52 @@ namespace Fps.Runtime
             _bodyGunDefault.gameObject.SetActive(_bodyGunModel == null);
         }
 
-        // 持ち替えたときだけ置き直す。毎フレーム作り直すと、プレハブの複製が積もる。
+        // 持ち替えたときと付けた物が変わったときだけ置き直す。毎フレーム作り直すと、プレハブの複製が積もる。
         private void SyncBodyGunModel()
         {
-            var weapon = _reader.Weapon != null ? _reader.Weapon.Weapon : null;
+            var controller = _reader.Weapon;
+            var weapon = controller != null ? controller.Weapon : null;
             var weaponId = weapon != null ? weapon.Spec.Id : null;
+            var attachments = weaponId != null ? controller.AttachmentsOf(weaponId) : WeaponAttachments.None;
             if (string.Equals(weaponId, _bodyGunWeaponId, StringComparison.Ordinal))
             {
+                if (!WeaponAttachments.SameAs(attachments, _bodyGunAttachments))
+                {
+                    _bodyGunAttachments = attachments;
+                    WeaponAttachmentModels.Apply(_bodyGunModel, attachments, controller.AttachmentCatalog, AttachmentModelCatalog.Load());
+                    AddBodyRenderers(_bodyGunModel);
+                }
+
                 return;
             }
 
             _bodyGunWeaponId = weaponId;
+            _bodyGunAttachments = attachments;
             var catalog = weaponId != null ? WeaponModels : null;
             SetBodyGunModel(catalog != null && catalog.TryGetWeapon(weaponId, out var assets) ? assets.PickupModel : null);
+            if (attachments.Count > 0)
+            {
+                WeaponAttachmentModels.Apply(_bodyGunModel, attachments, controller.AttachmentCatalog, AttachmentModelCatalog.Load());
+                AddBodyRenderers(_bodyGunModel);
+            }
+        }
+
+        // 付けた物の描画物も体の描画物として数え、一人称で体を隠すときに一緒に隠す
+        private void AddBodyRenderers(Transform model)
+        {
+            if (model == null)
+            {
+                return;
+            }
+
+            _bodyRenderers.RemoveAll(r => r == null);
+            foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!_bodyRenderers.Contains(renderer))
+                {
+                    _bodyRenderers.Add(renderer);
+                }
+            }
         }
 
         // プレハブは名前の付いた空の根の子に置く。根の位置と大きさは姿勢 (Apply) が毎フレーム上書きするが、プレハブ自身の置き方は残すため。

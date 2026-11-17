@@ -16,6 +16,15 @@ namespace Fps.NetV2.Tests
         private static readonly InventoryAction[] _useThenDrop = { InventoryAction.Use, InventoryAction.Drop };
         private static readonly InventoryRule _grid = new InventoryRule(gridWidth: 4, gridHeight: 2);
 
+        private const string _rifleItemId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+        private const string _rifleId = "5e6f7a8b-9c0d-4e1f-8a3b-4c5d6e7f8a9b";
+        private const string _scopeId = "0d1e2f3a-4b5c-4d6e-9f8a-9b0c1d2e3f4a";
+        private static readonly string[] _opticSlot = { "optic" };
+        private static readonly string[] _scopeOnly = { _scopeId };
+        private static readonly InventoryAction[] _attachThenDetach = { InventoryAction.Attach, InventoryAction.Detach };
+        private static readonly ItemSpec _rifleItem = new ItemSpec(_rifleItemId, "weapon.rifle", width: 2, weaponId: _rifleId, attachmentSlots: _opticSlot);
+        private static readonly ItemSpec _scope = new ItemSpec(_scopeId, "item.scope", weight: 0.5f, attachment: new AttachmentSpec("optic"));
+
         private readonly List<InventoryRequestMessage> _sent = new List<InventoryRequestMessage>();
         private bool _connected = true;
 
@@ -135,6 +144,59 @@ namespace Fps.NetV2.Tests
             Assert.That(lines, Has.Some.Contains("[Inventory] could not send Use handle=1"));
         }
 
+        [Test]
+        public void AStateWithoutTheAttachmentTakesItOff()
+        {
+            var catalog = new ItemCatalog(new[] { _rifleItem, _scope }, _grid);
+            var client = new ClientInventory(Send, catalog);
+            var server = new Inventory(catalog);
+            server.HoldWeapons(new[] { new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, weight: 3f) }, _ => _scopeOnly);
+            var message = new InventoryStateMessage();
+            InventorySync.Write(server, message);
+            var changes = 0;
+
+            client.Receive(message);
+            client.Changed += () => changes++;
+            server.HoldWeapons(new[] { new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, weight: 3f) }, null);
+            InventorySync.Write(server, message);
+            client.Receive(message);
+
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(client.Inventory.AttachmentsOf(_rifleId), Is.Empty);
+        }
+
+        [Test]
+        public void TheFirstStateFillsTheAttachments()
+        {
+            var catalog = new ItemCatalog(new[] { _rifleItem, _scope }, _grid);
+            var client = new ClientInventory(Send, catalog);
+            var server = new Inventory(catalog);
+            server.HoldWeapons(new[] { new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, weight: 3f) }, _ => _scopeOnly);
+            var message = new InventoryStateMessage();
+            InventorySync.Write(server, message);
+
+            client.Receive(message);
+
+            Assert.That(client.Inventory.AttachmentsOf(_rifleId), Is.EqualTo(_scopeOnly));
+        }
+
+        [Test]
+        public void AttachAndDetachAreSentWithoutChangingTheCopy()
+        {
+            var client = Create();
+            client.Receive(State(Server(), herbs: 1, cases: 0));
+
+            client.Attach(3);
+            client.Detach(5, _scopeId);
+            client.Detach(5, "");
+
+            Assert.That(_sent.Select(m => m.Action), Is.EqualTo(_attachThenDetach));
+            Assert.That(_sent[0].Handle, Is.EqualTo(3));
+            Assert.That(_sent[0].ItemId, Is.Empty);
+            Assert.That(_sent[1].Handle, Is.EqualTo(5));
+            Assert.That(_sent[1].ItemId, Is.EqualTo(_scopeId));
+        }
+
         private ClientInventory Create()
         {
             return new ClientInventory(Send, new ItemCatalog(new[] { _herb }, InventoryRule.Default));
@@ -156,6 +218,7 @@ namespace Fps.NetV2.Tests
                 Y = request.Y,
                 Rotated = request.Rotated,
                 Count = request.Count,
+                ItemId = request.ItemId,
             });
             return true;
         }

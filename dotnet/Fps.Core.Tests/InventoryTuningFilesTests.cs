@@ -11,6 +11,7 @@ namespace Fps.Core.Tests
         {
             "item.bandage", "item.medkit", "item.armorPlate", "item.keycard", "item.toolbox", "item.ammo9mm", "item.ammo556", "item.ammo12ga",
             "weapon.rifle", "weapon.burstRifle", "weapon.handgun", "weapon.ricochetPistol", "weapon.shotgun",
+            "item.redDot", "item.scope4x", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
         };
         private static readonly string[] _usableNameKeys = { "item.bandage", "item.medkit", "item.armorPlate" };
 
@@ -24,7 +25,7 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheShippedItemsAreReadableAndStartWithTwoBandages()
+        public void TheShippedItemsAreReadableAndStartWithTwoBandagesAndThreeAttachments()
         {
             var catalog = InventoryJson.Parse(File.ReadAllText(UnityPath(RepositoryRoot())), "inventory.json");
 
@@ -32,8 +33,9 @@ namespace Fps.Core.Tests
             Assert.That(catalog.Rule.GridWidth, Is.EqualTo(8));
             Assert.That(catalog.Rule.GridHeight, Is.EqualTo(4));
             Assert.That(catalog.Rule.MaxWeight, Is.EqualTo(30f));
-            Assert.That(catalog.Starting.Single().ItemId, Is.EqualTo(catalog.Items[0].Id));
-            Assert.That(catalog.Starting.Single().Count, Is.EqualTo(2));
+            Assert.That(
+                catalog.Starting.Select(s => (catalog.Items.Single(i => i.Id == s.ItemId).NameKey, s.Count)),
+                Is.EqualTo(new[] { ("item.bandage", 2), ("item.redDot", 1), ("item.suppressor", 1), ("item.foregrip", 1) }));
             Assert.That(catalog.Items.Where(i => i.IsUsable).Select(i => i.NameKey), Is.EqualTo(_usableNameKeys));
         }
 
@@ -61,6 +63,29 @@ namespace Fps.Core.Tests
                 Assert.That(samples.ContainsKey(weapon.WeaponId), weapon.NameKey + " points at a sample weapon");
                 Assert.That(samples[weapon.WeaponId].NameKey, Is.EqualTo(weapon.NameKey));
                 Assert.That(samples[weapon.WeaponId].Ammo.Kind, Is.EqualTo(AmmoKind.Magazine), weapon.NameKey + " fires from a magazine");
+            }
+        }
+
+        [Test]
+        public void EveryAttachmentFitsAShippedWeaponAndEveryWeaponHasSlots()
+        {
+            var catalog = InventoryJson.Parse(File.ReadAllText(UnityPath(RepositoryRoot())), "inventory.json");
+            var expected = new (string NameKey, string[] Slots)[]
+            {
+                ("weapon.rifle", new[] { "optic", "muzzle", "underbarrel", "magazine" }),
+                ("weapon.burstRifle", new[] { "optic", "muzzle", "underbarrel", "magazine" }),
+                ("weapon.handgun", new[] { "optic", "muzzle" }),
+                ("weapon.ricochetPistol", new[] { "optic", "muzzle" }),
+                ("weapon.shotgun", new[] { "optic", "underbarrel" }),
+            };
+
+            Assert.That(catalog.Items.Where(i => i.IsWeapon).Select(w => (w.NameKey, w.AttachmentSlots.ToArray())), Is.EqualTo(expected));
+            foreach (var attachment in catalog.Items.Where(i => i.IsAttachment))
+            {
+                Assert.That(
+                    catalog.Items.Any(w => w.IsWeapon && catalog.CanAttach(w.WeaponId, attachment.Id)),
+                    Is.True,
+                    attachment.NameKey + " fits a shipped weapon");
             }
         }
 

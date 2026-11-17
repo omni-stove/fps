@@ -14,6 +14,7 @@ namespace Fps.Runtime
         public const string SpawnedLogPrefix = LogTag + " spawned";
         public const string SwappedLogPrefix = LogTag + " swapped";
         public const string RemovedLogPrefix = LogTag + " removed";
+        public const string AttachedLogPrefix = LogTag + " attachments";
 
         public const string ReasonThirdPerson = "third-person";
         public const string ReasonNotLocalView = "not-local-view";
@@ -40,6 +41,10 @@ namespace Fps.Runtime
         private Vector3 _adsPosition;
         private string _weaponId;
         private WeaponSockets _sockets = WeaponSockets.None;
+        private ViewmodelEntry _entry;
+        private IReadOnlyList<string> _attachments = WeaponAttachments.None;
+        private AttachmentModelCatalog _attachmentModels;
+        private bool _attachmentModelsResolved;
 
         public ViewmodelCatalog Catalog
         {
@@ -62,6 +67,29 @@ namespace Fps.Runtime
 
         // ネット対戦の NetPlayer のように WeaponController を持たない本体が、持っている武器の Id を渡すための差し込み口。
         public Func<string> WeaponIdSource { get; set; }
+
+        public Func<string, IReadOnlyList<string>> AttachmentsSource { get; set; }
+
+        public AttachmentModelCatalog AttachmentModels
+        {
+            get
+            {
+                if (!_attachmentModelsResolved)
+                {
+                    _attachmentModels = AttachmentModelCatalog.Load();
+                    _attachmentModelsResolved = true;
+                }
+
+                return _attachmentModels;
+            }
+            set
+            {
+                _attachmentModels = value;
+                _attachmentModelsResolved = true;
+            }
+        }
+
+        public IReadOnlyList<string> CurrentAttachments => _instance != null ? _attachments : WeaponAttachments.None;
 
         public GameObject Instance => _instance;
 
@@ -116,6 +144,13 @@ namespace Fps.Runtime
 
             if (_instance != null && string.Equals(wanted, _weaponId, StringComparison.Ordinal))
             {
+                var attachments = WantedAttachments(wanted);
+                if (!WeaponAttachments.SameAs(attachments, _attachments))
+                {
+                    Attach(attachments);
+                    Debug.Log($"{AttachedLogPrefix} weapon={wanted} attached={WeaponAttachments.Describe(attachments)} sight={_sockets.Sight != null}", this);
+                }
+
                 PlaceForAim();
                 return;
             }
@@ -201,6 +236,31 @@ namespace Fps.Runtime
             return weapon != null ? weapon.Spec.Id : null;
         }
 
+        private IReadOnlyList<string> WantedAttachments(string weaponId)
+        {
+            if (AttachmentsSource != null)
+            {
+                return AttachmentsSource(weaponId) ?? WeaponAttachments.None;
+            }
+
+            return _weapon != null && _weapon.IsInitialized ? _weapon.AttachmentsOf(weaponId) : WeaponAttachments.None;
+        }
+
+        private void Attach(IReadOnlyList<string> attachments)
+        {
+            var catalog = _weapon != null ? _weapon.AttachmentCatalog : KitTuning.Items;
+            WeaponAttachmentModels.Apply(_instance.transform, attachments, catalog, AttachmentModels);
+            _attachments = attachments;
+            _sockets = new WeaponSockets(_instance.transform);
+            var pivot = _instance.transform.parent;
+            var sight = _sockets.Sight != null && pivot != null ? pivot.InverseTransformPoint(_sockets.Sight.position) - _instance.transform.localPosition : Vector3.zero;
+            _adsPosition = AimedRootPosition(_entry.AdsOffset, sight);
+            if (_presentation != null)
+            {
+                _presentation.WeaponModel = _instance.transform;
+            }
+        }
+
         private ViewmodelEntry FindEntry(string weaponId)
         {
             var catalog = Catalog;
@@ -243,6 +303,13 @@ namespace Fps.Runtime
 
             _instance = instance;
             _weaponId = weaponId;
+            _entry = entry;
+            _attachments = WantedAttachments(weaponId);
+            if (_attachments.Count > 0)
+            {
+                WeaponAttachmentModels.Apply(instance.transform, _attachments, _weapon != null ? _weapon.AttachmentCatalog : KitTuning.Items, AttachmentModels);
+            }
+
             _sockets = new WeaponSockets(instance.transform);
             var sight = _sockets.Sight != null ? pivot.InverseTransformPoint(_sockets.Sight.position) - entry.Offset : Vector3.zero;
             _adsPosition = AimedRootPosition(entry.AdsOffset, sight);

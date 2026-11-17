@@ -59,6 +59,7 @@ namespace Fps.Runtime
 
             _weapons.WeaponChanged += OnWeaponChanged;
             _weapons.LoadoutReplaced += HoldWeapons;
+            _weapons.AttachmentCatalog = Inventory.Catalog;
             ConnectWeapons();
         }
 
@@ -79,6 +80,7 @@ namespace Fps.Runtime
             _inventory.Fill();
             if (_weapons != null)
             {
+                _weapons.AttachmentCatalog = catalog;
                 ConnectWeapons();
             }
 
@@ -160,6 +162,39 @@ namespace Fps.Runtime
             Debug.Log($"{LogTag} drop owner={name} item={dropped.ItemId} count={dropped.Count} pickup={pickup.name}", this);
         }
 
+        public void Attach(int handle)
+        {
+            var weaponId = CanChangeWeapons ? _weapons.Weapon?.Spec.Id : null;
+            var result = InventoryAttachments.Attach(
+                Inventory,
+                handle,
+                weaponId,
+                _weapons != null && weaponId != null ? _weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                next => _weapons.SetAttachments(weaponId, next),
+                out var itemId,
+                out var replaced);
+            Debug.Log(
+                $"{LogTag} attach owner={name} handle={handle} item={itemId ?? "-"} weapon={weaponId ?? "-"} replaced={replaced ?? "-"}"
+                + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),
+                this);
+        }
+
+        public void Detach(int weaponHandle, string itemId)
+        {
+            var weaponId = CanChangeWeapons ? Inventory.WeaponIdOf(weaponHandle) : null;
+            var result = InventoryAttachments.Detach(
+                Inventory,
+                weaponId,
+                weaponId != null ? _weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                itemId,
+                next => _weapons.SetAttachments(weaponId, next));
+            Debug.Log(
+                $"{LogTag} detach owner={name} weapon={weaponId ?? "-"} item={itemId ?? "-"}" + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),
+                this);
+        }
+
+        private bool CanChangeWeapons => _weapons != null && _weapons.IsInitialized && !_weapons.IsUnarmed && Damageable != null && !Damageable.IsDowned;
+
         private void DropWeapon(string weaponId)
         {
             if (_weapons == null || !_weapons.IsInitialized || !_weapons.DropWeapon(weaponId, out var dropped))
@@ -168,8 +203,11 @@ namespace Fps.Runtime
                 return;
             }
 
-            var pickup = Pickup.Create(PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo), DropPosition(), PickupCollectMode.Look);
-            Debug.Log($"{LogTag} drop owner={name} weapon={weaponId} ammo={dropped.Ammo.AmmoInMagazine} pickup={pickup.name}", this);
+            var pickup = Pickup.Create(
+                PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, attachments: dropped.Attachments), DropPosition(), PickupCollectMode.Look);
+            Debug.Log(
+                $"{LogTag} drop owner={name} weapon={weaponId} ammo={dropped.Ammo.AmmoInMagazine} attachments={WeaponAttachments.Describe(dropped.Attachments)} pickup={pickup.name}",
+                this);
         }
 
         private Vector3 DropPosition()
@@ -204,7 +242,7 @@ namespace Fps.Runtime
                 }
             }
 
-            foreach (var weaponId in _inventory.HoldWeapons(held))
+            foreach (var weaponId in _inventory.HoldWeapons(held, _weapons.AttachmentsOf))
             {
                 Debug.LogWarning($"{LogTag} weapon owner={name} weapon={weaponId} does not fit; held outside the inventory", this);
             }

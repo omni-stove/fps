@@ -14,6 +14,11 @@ namespace Fps.Core.Tests
             "'weapons':[{'id':'r','ammoInMagazine':12,'reserveAmmo':60},{'id':'h','ammoInMagazine':5,'reserveAmmo':24}]," +
             "'objectives':[{'id':'kills','state':'active','count':2},{'id':'exit','state':'locked','count':0}]}";
 
+        private const string _validCurrent =
+            "{'version':3,'missionId':'m01','checkpointId':'cp2','health':75,'equippedWeaponId':'h'," +
+            "'weapons':[{'id':'r','ammoInMagazine':12,'reserveAmmo':60,'attachments':['scope','grip']},{'id':'h','ammoInMagazine':5,'reserveAmmo':24,'attachments':[]}]," +
+            "'objectives':[{'id':'kills','state':'active','count':2}]}";
+
         private const string _validLegacy =
             "{'version':1,'missionId':'m01','checkpointId':'cp2','health':75,'ammoInMagazine':12,'reserveAmmo':60," +
             "'objectives':[{'id':'kills','state':'active','count':2},{'id':'exit','state':'locked','count':0}]}";
@@ -21,6 +26,8 @@ namespace Fps.Core.Tests
         private static readonly string[] _killsAndExit = { "kills", "exit" };
         private static readonly string[] _killsOnly = { "kills" };
         private static readonly string[] _sampleWeapons = { _rifleId + ":12/60", _handgunId + ":5/24" };
+        private static readonly string[] _scopeAndGrip = { "scope", "grip" };
+        private static readonly string[] _emptyId = { "" };
 
         [Test]
         public void ConstructorKeepsValues()
@@ -42,7 +49,7 @@ namespace Fps.Core.Tests
         [Test]
         public void WritesVersionFirst()
         {
-            Assert.That(Sample().ToJson(), Does.StartWith("{\"version\":2,"));
+            Assert.That(Sample().ToJson(), Does.StartWith("{\"version\":3,"));
         }
 
         [Test]
@@ -145,8 +152,8 @@ namespace Fps.Core.Tests
         {
             var json = CampaignSave.FromJson(Json(_validLegacy)).ToJson();
 
-            Assert.That(json, Does.StartWith("{\"version\":2,"));
-            Assert.That(json, Does.Contain("\"weapons\":[{\"id\":\"" + CampaignSave.LegacyWeaponId + "\",\"ammoInMagazine\":12,\"reserveAmmo\":60}]"));
+            Assert.That(json, Does.StartWith("{\"version\":3,"));
+            Assert.That(json, Does.Contain("\"weapons\":[{\"id\":\"" + CampaignSave.LegacyWeaponId + "\",\"ammoInMagazine\":12,\"reserveAmmo\":60,\"attachments\":[]}]"));
             Assert.That(CampaignSave.FromJson(json).FindWeapon(CampaignSave.LegacyWeaponId).ReserveAmmo, Is.EqualTo(60));
         }
 
@@ -164,7 +171,7 @@ namespace Fps.Core.Tests
         }
 
         [TestCase(0)]
-        [TestCase(3)]
+        [TestCase(4)]
         [TestCase(-1)]
         public void RejectsOtherVersions(int version)
         {
@@ -187,6 +194,67 @@ namespace Fps.Core.Tests
             var json = Json(_valid.Replace("'health':75,", "'health':75,'ammoInMagazine':1,", StringComparison.Ordinal));
 
             Assert.Throws<FormatException>(() => CampaignSave.FromJson(json));
+        }
+
+        [Test]
+        public void AttachmentsRoundTripThroughJson()
+        {
+            var save = Sample(new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<string>> { [_rifleId] = _scopeAndGrip });
+
+            var json = save.ToJson();
+            var loaded = CampaignSave.FromJson(json);
+
+            Assert.That(json, Does.Contain("\"reserveAmmo\":60,\"attachments\":[\"scope\",\"grip\"]}"));
+            Assert.That(json, Does.Contain("\"reserveAmmo\":24,\"attachments\":[]}"));
+            Assert.That(loaded.Attachments[_rifleId], Is.EqualTo(_scopeAndGrip));
+            Assert.That(loaded.Attachments.ContainsKey(_handgunId), Is.False);
+        }
+
+        [Test]
+        public void ReadsTheCurrentFormatsAttachments()
+        {
+            var save = CampaignSave.FromJson(Json(_validCurrent));
+
+            Assert.That(save.Attachments["r"], Is.EqualTo(_scopeAndGrip));
+            Assert.That(save.Attachments.ContainsKey("h"), Is.False);
+            Assert.That(save.Weapons, Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void ASaveWithoutAttachmentsIsReadWithNothingAttached()
+        {
+            var save = CampaignSave.FromJson(Json(_valid));
+
+            Assert.That(save.Version, Is.EqualTo(CampaignSave.CurrentVersion));
+            Assert.That(save.Attachments, Is.Empty);
+        }
+
+        [TestCase("'reserveAmmo':60,'attachments':['scope','grip']", "'reserveAmmo':60")]
+        [TestCase("['scope','grip']", "['scope',2]")]
+        [TestCase("['scope','grip']", "'scope'")]
+        public void RejectsInvalidAttachments(string from, string to)
+        {
+            Assert.That(_validCurrent.Contains(from, StringComparison.Ordinal), Is.True);
+            var json = Json(_validCurrent.Replace(from, to, StringComparison.Ordinal));
+
+            Assert.Throws<FormatException>(() => CampaignSave.FromJson(json));
+        }
+
+        [Test]
+        public void TheFormatWithoutAttachmentsDoesNotAcceptThem()
+        {
+            var json = Json(_valid.Replace("'reserveAmmo':60}", "'reserveAmmo':60,'attachments':[]}", StringComparison.Ordinal));
+
+            Assert.Throws<FormatException>(() => CampaignSave.FromJson(json));
+        }
+
+        [Test]
+        public void ConstructorRejectsAttachmentsForWeaponsNotSaved()
+        {
+            Assert.Throws<ArgumentException>(() => Sample(
+                new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<string>> { ["other"] = _scopeAndGrip }));
+            Assert.Throws<ArgumentException>(() => Sample(
+                new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IReadOnlyList<string>> { [_rifleId] = _emptyId }));
         }
 
         [Test]
@@ -326,7 +394,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentNullException>(() => WeaponAmmo.Of(null));
         }
 
-        private static CampaignSave Sample()
+        private static CampaignSave Sample(System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IReadOnlyList<string>> attachments = null)
         {
             return new CampaignSave(
                 "m01",
@@ -338,7 +406,8 @@ namespace Fps.Core.Tests
                 {
                     new ObjectiveProgress("kills", ObjectiveState.Active, 2),
                     new ObjectiveProgress("exit", ObjectiveState.Locked, 0),
-                });
+                },
+                attachments);
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

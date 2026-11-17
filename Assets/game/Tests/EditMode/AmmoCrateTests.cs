@@ -73,9 +73,10 @@ namespace Fps.Tests.EditMode
 
             public int MaxWeapons => 0;
 
-            public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null) => false;
+            public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null) => false;
 
-            public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+            public bool SwapWeapon(
+                string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, IReadOnlyList<string> attachments, out HeldWeapon dropped)
             {
                 dropped = default;
                 return false;

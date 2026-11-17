@@ -84,6 +84,25 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ABotKeepsThePickedUpWeaponsAttachmentsAndDropsThemWithIt()
+        {
+            // 持ち物の表 (Tuning/inventory.json) のレッドドットサイトは、照準器の取り付け口を持つどの武器にも付く
+            const string redDot = "2451a5a1-24e5-45ed-bbc1-8b23276152f8";
+            var pickup = Pickup.Create(
+                PickupContents.ForDroppedWeapon(_handgun, new WeaponAmmo(_handgun.Id, 3, 0), attachments: new[] { redDot, "not-an-item" }),
+                _host.transform.position);
+            _agent.Disarm();
+
+            Assert.That(pickup.TryCollect(_host.GetComponent<Damageable>(), out var outcome), Is.True, outcome.Rejection.ToString());
+
+            Assert.That(_agent.HeldAttachments, Is.EqualTo(new[] { redDot }));
+            Assert.That(_agent.Weapon.Spec.AdsSpreadDegrees, Is.EqualTo(TestWeapons.HandgunSpec().AdsSpreadDegrees * 0.8f).Within(1e-4f));
+            Assert.That(_agent.SwapWeapon(_handgun.Id, _rifle, null, null, out var dropped), Is.True);
+            Assert.That(dropped.Attachments, Is.EqualTo(new[] { redDot }));
+            Assert.That(_agent.HeldAttachments, Is.Empty);
+        }
+
+        [Test]
         public void AnErrandIsKeptUntilCleared()
         {
             Assert.That(_agent.Errand, Is.Null);

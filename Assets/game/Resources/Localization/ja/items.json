@@ -37,5 +37,11 @@
   "item.toolbox": "工具箱",
   "item.ammo9mm": "9mm 弾",
   "item.ammo556": "5.56mm 弾",
-  "item.ammo12ga": "12 ゲージ弾"
+  "item.ammo12ga": "12 ゲージ弾",
+  "item.redDot": "レッドドットサイト",
+  "item.scope4x": "4 倍スコープ",
+  "item.suppressor": "サプレッサー",
+  "item.compensator": "コンペンセイター",
+  "item.foregrip": "フォアグリップ",
+  "item.extendedMagazine": "拡張マガジン"
 }

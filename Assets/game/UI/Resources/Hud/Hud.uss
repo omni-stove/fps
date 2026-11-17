@@ -569,10 +569,24 @@
 
 .inventory__details {
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     align-self: stretch;
     min-height: 44px;
     margin-top: 12px;
+}
+
+.inventory__attached {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.inventory__attached > .inventory__item-name {
+    flex-grow: 1;
+    font-size: 16px;
+    -unity-text-align: middle-left;
 }
 
 .inventory__details > .inventory__item-name {

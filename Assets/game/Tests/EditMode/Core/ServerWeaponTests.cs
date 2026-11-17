@@ -638,5 +638,79 @@ namespace Fps.Core.Tests
             Assert.That(weapon.ReserveAmmo, Is.EqualTo(3));
             Assert.That(changes, Is.EqualTo(3));
         }
+
+        [Test]
+        public void ChangeSpecKeepsTheRoundsAndUsesTheNewValues()
+        {
+            var weapon = new ServerWeapon(Spec());
+            weapon.TryFire();
+
+            weapon.ChangeSpec(Spec(magazine: 5, reloadSeconds: 1f));
+
+            Assert.That(weapon.Spec.MagazineSize, Is.EqualTo(5));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(2));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(5));
+            Assert.That(weapon.TryStartReload(), Is.True);
+            Assert.That(weapon.ReloadDurationSeconds, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ChangeSpecMovesRoundsThatNoLongerFitIntoTheReserve()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+
+            weapon.ChangeSpec(Spec(magazine: 1, reserve: 5));
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void ChangeSpecPutsRoundsThatNoLongerFitBackIntoTheAmmoPool()
+        {
+            const string ammoId = "00000000-0000-4000-8000-000000000002";
+            const string rifleItemId = "00000000-0000-4000-8000-000000000003";
+            var catalog = new ItemCatalog(
+                new[] { new ItemSpec(ammoId, maxStack: 100), new ItemSpec(rifleItemId, weaponId: _rifleId, ammoItemId: ammoId) },
+                InventoryRule.Default);
+            var inventory = new Inventory(catalog);
+            inventory.Add(ammoId, 5);
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+            weapon.UseAmmoPool(InventoryWeapons.PoolFor(inventory, weapon.Spec));
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            weapon.ChangeSpec(Spec(magazine: 1, reserve: 5));
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(inventory.CountOf(ammoId), Is.EqualTo(7));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(7));
+            Assert.That(weapon.HasAmmoPool, Is.True);
+            Assert.That(changes, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public void ChangeSpecStopsAReloadAndRefillUsesTheNewMagazine()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+            weapon.TryFire();
+            weapon.TryStartReload();
+
+            weapon.ChangeSpec(Spec(magazine: 6, reserve: 5));
+            Assert.That(weapon.IsReloading, Is.False);
+
+            weapon.Refill();
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void ChangeSpecRefusesAnotherWeapon()
+        {
+            var weapon = new ServerWeapon(Spec());
+            var other = new WeaponSpec("00000000-0000-4000-8000-000000000009", null, WeaponCategory.AssaultRifle);
+
+            Assert.Throws<ArgumentException>(() => weapon.ChangeSpec(other));
+            Assert.Throws<ArgumentNullException>(() => weapon.ChangeSpec(null));
+        }
     }
 }

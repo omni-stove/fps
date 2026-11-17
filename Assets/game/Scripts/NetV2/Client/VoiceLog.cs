@@ -62,6 +62,20 @@ namespace Shooter.NetV2
             return Tag + " leave failed lobby=" + Token(lobbyId) + " reason=" + reason;
         }
 
+        /// <summary>この試合ではボイスを使わない (試合のロビーが分からない・ボイスの部屋が作れない)。</summary>
+        /// <example><c>[Voice] off reason=the match has no lobby</c></example>
+        public static string Off(string reason)
+        {
+            return Tag + " off reason=" + reason;
+        }
+
+        /// <summary>押して話すアクションが入力の資産に無いので、押して話せない。</summary>
+        /// <example><c>[Voice] input action Player/PushToTalk is missing; push to talk does nothing</c></example>
+        public static string PushToTalkMissing(string actionPath)
+        {
+            return Tag + " input action " + actionPath + " is missing; push to talk does nothing";
+        }
+
         private static string Flag(bool value) => value ? "true" : "false";
 
         private static string Token(string text) => string.IsNullOrEmpty(text) ? "none" : text;

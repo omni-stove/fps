@@ -30,6 +30,7 @@ namespace Shooter.Server
         private NetBotSpec _spec;
         private ServerBotNavigation _navigation;
         private bool _hasNavMesh;
+        private bool _laddersOn;
         private int _launchBots;
         private int _target;
         private int _nextBotId = BotRoster.FirstBotPlayerId;
@@ -69,29 +70,35 @@ namespace Shooter.Server
             _launchBots = context.Options.Bots;
             _target = BotRoster.TargetPlayers(_launchBots, data.Rules.MinPlayers);
             _log.WriteLine(LogTag + " fill target=" + Text(_target) + " bots=" + Text(_launchBots) + " minPlayers=" + Text(data.Rules.MinPlayers));
+            _laddersOn = data.Rules.Actions.Ladder == Ladder.On;
+            UseMap(context.Map);
 
+            _match.PlayerJoined += HandlePlayerJoined;
+            _match.PlayerLeft += HandlePlayerLeft;
+            _match.MapChanged += HandleMapChanged;
+        }
+
+        private void UseMap(ServerMapData map)
+        {
             _patrolPoints.Clear();
-            if (context.Map.Points != null)
+            if (map.Points != null)
             {
-                foreach (var point in context.Map.Points.SpawnPoints)
+                foreach (var point in map.Points.SpawnPoints)
                 {
                     _patrolPoints.Add(point.Position);
                 }
             }
 
-            var structures = _combat.Structures;
+            // 戦闘のモジュールはマップを替えると建物を作り直すので、その時の建物に問い合わせる
             _navigation = new ServerBotNavigation(
-                context.Navigation,
-                context.Map.NavMesh.Links,
-                context.Map.Ladders.Ladders,
-                context.World,
-                colliderId => structures != null && structures.IsPiece(colliderId),
+                map.Navigation,
+                map.NavMesh.Links,
+                map.Ladders.Ladders,
+                map.World,
+                colliderId => _combat.Structures != null && _combat.Structures.IsPiece(colliderId),
                 _spec.NavSampleRadius,
                 _bodies.Geometry.Standing.Height * 0.5f,
-                data.Rules.Actions.Ladder == Ladder.On);
-
-            _match.PlayerJoined += HandlePlayerJoined;
-            _match.PlayerLeft += HandlePlayerLeft;
+                _laddersOn);
             if (_target == 0)
             {
                 return;
@@ -100,16 +107,31 @@ namespace Shooter.Server
             _hasNavMesh = HasNavMeshNearPatrolPoints();
             if (!_hasNavMesh)
             {
-                _log.WriteLine(LogTag + " no NavMesh near the spawn points of " + context.Map.Name
-                    + "; bots walk straight to their goals. Export " + context.Map.Name + Shooter.Core.Navigation.NavMeshFile.Extension
+                _log.WriteLine(LogTag + " no NavMesh near the spawn points of " + map.Name
+                    + "; bots walk straight to their goals. Export " + map.Name + Shooter.Core.Navigation.NavMeshFile.Extension
                     + " with make export-server-data");
             }
 
             if (_navigation.UnmatchedLadderLinks > 0)
             {
-                _log.WriteLine(LogTag + " " + Text(_navigation.UnmatchedLadderLinks) + " ladder link(s) of " + context.Map.Name
-                    + " have no ladder in " + context.Map.Name + NetMapLadders.Extension + "; bots try to walk across them");
+                _log.WriteLine(LogTag + " " + Text(_navigation.UnmatchedLadderLinks) + " ladder link(s) of " + map.Name
+                    + " have no ladder in " + map.Name + NetMapLadders.Extension + "; bots try to walk across them");
             }
+        }
+
+        // 判断と経路は前のマップの NavMesh と巡回地点を持っているので、同じ Id のまま作り直す (試合からは抜かない)
+        private void HandleMapChanged(ServerMapData map)
+        {
+            UseMap(map);
+            _ids.Clear();
+            _ids.AddRange(_agents.Keys);
+            foreach (var playerId in _ids)
+            {
+                _agents[playerId] = NewAgent(playerId);
+            }
+
+            _log.WriteLine(LogTag + " map=" + map.Name + " bots=" + Text(_agents.Count) + " patrolPoints=" + Text(_patrolPoints.Count)
+                + " navMesh=" + (_hasNavMesh ? "yes" : "no"));
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -174,6 +196,7 @@ namespace Shooter.Server
 
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
+            _match.MapChanged -= HandleMapChanged;
             _trimRequests.Clear();
         }
 
@@ -285,12 +308,16 @@ namespace Shooter.Server
             }
 
             var playerId = _nextBotId++;
-            var agent = new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId), _combat.SightBlockers);
-            _agents.Add(playerId, agent);
+            _agents.Add(playerId, NewAgent(playerId));
 
             var player = _match.JoinBot(playerId);
             _movement.AddBot(player);
             _log.WriteLine(LogTag + " added player=" + Text(playerId) + " name=" + BotRoster.KillFeedName(playerId) + " team=" + player.Team);
+        }
+
+        private ServerBotAgent NewAgent(int playerId)
+        {
+            return new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId), _combat.SightBlockers);
         }
 
         private void Remove(int playerId, string reason)

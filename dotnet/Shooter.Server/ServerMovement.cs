@@ -55,6 +55,7 @@ namespace Shooter.Server
             _knockback = context.Rules?.Knockback ?? KnockbackSpec.Default;
             _context.Bodies.Teleported += HandleTeleported;
             _context.Bodies.DownedChanged += HandleDownedChanged;
+            _context.Match.MapChanged += HandleMapChanged;
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -121,17 +122,7 @@ namespace Shooter.Server
             // ルールのモジュールは参加の知らせ (この呼び出しより前) のうちに出現させるので、置き直しはもう体に書いてある
             var spawned = _context.Bodies.TryGet(player.PlayerId, out var shared) && shared.HasSpawned;
             var spawn = spawned ? shared.Position : _settings.SpawnPosition;
-            var body = new CharacterBody(_context.World, _settings.Mover, _settings.Stance);
-            var simulation = new CharacterMotorSimulation(
-                body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY, _settings.Prone)
-            {
-                SpawnPosition = spawn,
-                Ladders = _context.Map.Ladders.Ladders,
-                Knockback = _knockback,
-                Swim = _settings.Swim,
-                WallRun = _settings.WallRun,
-            };
-            var mover = new Mover(player, simulation)
+            var mover = new Mover(player, CreateSimulation(spawn))
             {
                 State = new CharacterMotorState(spawn, Vector3.Zero, false, false),
                 InputBudget = MaxInputBudget,
@@ -139,10 +130,37 @@ namespace Shooter.Server
                 Yaw = spawned ? shared.Yaw : 0f,
                 Downed = shared != null && shared.IsDowned,
             };
-            simulation.Place(mover.State);
+            mover.Simulation.Place(mover.State);
             _byPlayer[player.PlayerId] = mover;
             Publish(mover);
             return mover;
+        }
+
+        private CharacterMotorSimulation CreateSimulation(Vector3 spawn)
+        {
+            var body = new CharacterBody(_context.World, _settings.Mover, _settings.Stance);
+            return new CharacterMotorSimulation(body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY, _settings.Prone)
+            {
+                SpawnPosition = spawn,
+                Ladders = _context.Map.Ladders.Ladders,
+                Knockback = _knockback,
+                Swim = _settings.Swim,
+                WallRun = _settings.WallRun,
+            };
+        }
+
+        // 体は作るときに世界の当たりとはしごを受け取るので、作り直す。乗り物も替わるので座席から外し、置き直しは続くルールの出現に任せる
+        private void HandleMapChanged(ServerMapData map)
+        {
+            foreach (var mover in _byPlayer.Values)
+            {
+                var position = mover.State.Position;
+                mover.Simulation = CreateSimulation(position);
+                mover.Riding = false;
+                mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
+                mover.Simulation.Place(mover.State);
+                Publish(mover);
+            }
         }
 
         public void OnDisconnected(ConnectionId connection)
@@ -167,6 +185,7 @@ namespace Shooter.Server
             {
                 _context.Bodies.Teleported -= HandleTeleported;
                 _context.Bodies.DownedChanged -= HandleDownedChanged;
+                _context.Match.MapChanged -= HandleMapChanged;
             }
 
             _byConnection.Clear();
@@ -516,7 +535,7 @@ namespace Shooter.Server
 
             public ServerPlayer Player { get; }
 
-            public CharacterMotorSimulation Simulation { get; }
+            public CharacterMotorSimulation Simulation { get; set; }
 
             public CharacterMotorState State { get; set; }
 

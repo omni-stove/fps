@@ -49,7 +49,8 @@ namespace Shooter.Server
             ServerEventWriter events,
             Func<DateTime> utcNow,
             float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds,
-            ServerRulesData rules = null)
+            ServerRulesData rules = null,
+            IReadOnlyList<ServerMapData> maps = null)
         {
             _rules = rules;
             Bodies = new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
@@ -66,6 +67,7 @@ namespace Shooter.Server
             {
                 MaxPlayers = MaxPlayers,
             };
+            Match.UseMaps(map, maps);
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }
@@ -401,7 +403,7 @@ namespace Shooter.Server
             _accepted.ServerVersion = _launch.ServerVersion;
             _accepted.TickRate = TickClock.DefaultTickRate;
             _accepted.ServerTick = (int)Math.Min(_host.TickCount, int.MaxValue);
-            _accepted.Map = _launch.Map;
+            _accepted.Map = Match.Map.Name;
             _accepted.MaxHealth = _rules?.Settings.MaxHealth ?? NetMatchSettings.DefaultMaxHealth;
 
             // 移動のモジュールは同じルールのファイルの値 (ServerModules.MotorSettingsFrom) で動くので、クライアントの予測にも同じ値を渡す

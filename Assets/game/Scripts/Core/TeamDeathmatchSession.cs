@@ -40,7 +40,7 @@ namespace Shooter.Core
         // DamageLedger に渡す時刻。Tick で進めた秒数を試合の状態によらず足す。
         private double _clock;
         private readonly SpawnSelector _selector;
-        private readonly SpawnPoint[] _spawnPoints;
+        private SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
 
         // playerId の昇順に回して、同じ入力なら同じ結果になるようにする。
@@ -122,20 +122,7 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(maxHealth), maxHealth, "maxHealth must be positive");
             }
 
-            if (spawnPoints == null)
-            {
-                throw new ArgumentNullException(nameof(spawnPoints));
-            }
-
-            _spawnPoints = new SpawnPoint[spawnPoints.Count];
-            for (var i = 0; i < spawnPoints.Count; i++)
-            {
-                _spawnPoints[i] = spawnPoints[i] ?? throw new ArgumentException("spawnPoints must not contain null", nameof(spawnPoints));
-            }
-
-            RequireSpawnPointFor(_spawnPoints, Team.Alpha, nameof(spawnPoints));
-            RequireSpawnPointFor(_spawnPoints, Team.Bravo, nameof(spawnPoints));
-
+            _spawnPoints = CopySpawnPoints(spawnPoints, nameof(spawnPoints));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
@@ -743,6 +730,12 @@ namespace Shooter.Core
             TryStart();
         }
 
+        // Session を作り直さないのは、成績・切断した人の保持・チーム分けを捨てずに出現地点だけを替えるため。
+        public void ReplaceSpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints)
+        {
+            _spawnPoints = CopySpawnPoints(spawnPoints, nameof(spawnPoints));
+        }
+
         public SpawnPoint SelectSpawn(int playerId)
         {
             var team = GetTeam(playerId);
@@ -1068,6 +1061,24 @@ namespace Shooter.Core
             {
                 _deferred.Dequeue()();
             }
+        }
+
+        private static SpawnPoint[] CopySpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints, string paramName)
+        {
+            if (spawnPoints == null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+
+            var copy = new SpawnPoint[spawnPoints.Count];
+            for (var i = 0; i < spawnPoints.Count; i++)
+            {
+                copy[i] = spawnPoints[i] ?? throw new ArgumentException("spawnPoints must not contain null", paramName);
+            }
+
+            RequireSpawnPointFor(copy, Team.Alpha, paramName);
+            RequireSpawnPointFor(copy, Team.Bravo, paramName);
+            return copy;
         }
 
         private static void RequireSpawnPointFor(SpawnPoint[] spawnPoints, Team team, string paramName)

@@ -104,6 +104,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void FormatsMapChanged()
+        {
+            Assert.That(MatchLog.MapChanged("NetArena01", "NetArena02"), Is.EqualTo("[Match] map changed from=NetArena01 to=NetArena02"));
+            Assert.Throws<ArgumentException>(() => MatchLog.MapChanged("", "NetArena02"));
+            Assert.Throws<ArgumentException>(() => MatchLog.MapChanged("NetArena01", null));
+        }
+
+        [Test]
         public void FormatsNextMatch()
         {
             Assert.That(MatchLog.NextMatch(10f), Is.EqualTo("[Match] next match in=10.0s"));

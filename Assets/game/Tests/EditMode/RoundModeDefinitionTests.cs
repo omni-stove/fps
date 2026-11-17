@@ -50,12 +50,14 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.WinsToWin, Is.EqualTo(defaults.WinsToWin));
             Assert.That(spec.PreparationSeconds, Is.EqualTo(defaults.PreparationSeconds));
             Assert.That(spec.SwapEveryRounds, Is.EqualTo(defaults.SwapEveryRounds));
+            Assert.That(spec.BombPickupRadius, Is.EqualTo(defaults.BombPickupRadius));
+            Assert.That(spec.DefuseRadius, Is.EqualTo(defaults.DefuseRadius));
         }
 
         [Test]
         public void SearchAndDestroyDefinitionCopiesASpecAndGivesItBack()
         {
-            var source = new SearchAndDestroySpec(3, 80f, 2f, 6f, 25f, 5, 1f, 3);
+            var source = new SearchAndDestroySpec(3, 80f, 2f, 6f, 25f, 5, 1f, 3, 0.8f, 4f);
             var definition = Create<SearchAndDestroyDefinition>("Snd");
 
             definition.CopyFrom(source);
@@ -68,6 +70,8 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.WinsToWin, Is.EqualTo(5));
             Assert.That(spec.PreparationSeconds, Is.EqualTo(1f));
             Assert.That(spec.SwapEveryRounds, Is.EqualTo(3));
+            Assert.That(spec.BombPickupRadius, Is.EqualTo(0.8f));
+            Assert.That(spec.DefuseRadius, Is.EqualTo(4f));
             Assert.Throws<ArgumentNullException>(() => definition.CopyFrom(null));
         }
 
@@ -82,6 +86,12 @@ namespace Fps.Tests.EditMode
             Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
 
             definition.PlantSeconds = SearchAndDestroySpec.DefaultPlantSeconds;
+            definition.DefuseRadius = 0f;
+            error = Assert.Throws<InvalidOperationException>(() => definition.ToSpec(2));
+            StringAssert.Contains("BrokenSnd", error.Message);
+            StringAssert.Contains("defuseRadius", error.Message);
+
+            definition.DefuseRadius = SearchAndDestroySpec.DefaultDefuseRadius;
             Assert.Throws<InvalidOperationException>(() => definition.ToSpec(0), "a scene without sites is still refused");
         }
 
@@ -94,19 +104,30 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(KillConfirmedRunner.DefaultTimeLimitSeconds));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(KillConfirmedRunner.DefaultRespawnSeconds));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(KillConfirmedRunner.DefaultTagLifetimeSeconds));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(KillConfirmedRunner.DefaultPointsPerConfirm));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(KillConfirmedRunner.DefaultTagRadius));
         }
 
         [Test]
         public void KillConfirmedDefinitionCopiesASpecAndRejectsInvalidValues()
         {
             var definition = Create<KillConfirmedDefinition>("BrokenKc");
-            definition.CopyFrom(new KillConfirmedSpec(7, 45f, 0f, 9f));
+            definition.CopyFrom(new KillConfirmedSpec(7, 45f, 0f, 9f, 3, 4f));
 
             var spec = definition.ToSpec();
             Assert.That(spec.ScoreLimit, Is.EqualTo(7));
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(45f));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(0f));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(9f));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(3));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(4f));
+
+            definition.PointsPerConfirm = 0;
+            Assert.Throws<InvalidOperationException>(() => definition.ToSpec());
+            definition.PointsPerConfirm = 3;
+            definition.TagPickupRadius = 0f;
+            Assert.Throws<InvalidOperationException>(() => definition.ToSpec());
+            definition.TagPickupRadius = 4f;
 
             definition.ScoreLimit = 0;
             var error = Assert.Throws<InvalidOperationException>(() => definition.ToSpec());

@@ -8,6 +8,7 @@ namespace Fps.Core.Tests
     public sealed class SquadOrderFollowTests
     {
         private static readonly SquadOrderSpec _spec = new SquadOrderSpec(followDistance: 3f, leashDistance: 10f);
+        private static readonly BotInputSpec _input = BotInputSpec.Default;
         private static readonly Vector3 _self = Vector3.Zero;
         private static readonly Vector3 _enemy = new Vector3(0f, 1f, 8f);
 
@@ -23,14 +24,14 @@ namespace Fps.Core.Tests
         [Test]
         public void WithoutAnOrderTheDecisionIsKept()
         {
-            var decision = BotDriver.FollowOrder(_chasing, EnemyState.Chase, BotErrand.None, _self, _spec, out var steered);
+            var decision = BotDriver.FollowOrder(_chasing, EnemyState.Chase, BotErrand.None, _self, _spec, _input, out var steered);
 
             Assert.That(steered, Is.False);
             Assert.That(decision.MoveTo, Is.EqualTo(_chasing.MoveTo));
             Assert.That(decision.Fire, Is.EqualTo(_chasing.Fire));
 
             var errand = new BotErrand(BotErrandKind.EnterZone, new Vector3(9f, 0f, 9f), -1, true);
-            BotDriver.FollowOrder(_chasing, EnemyState.Chase, errand, _self, _spec, out steered);
+            BotDriver.FollowOrder(_chasing, EnemyState.Chase, errand, _self, _spec, _input, out steered);
             Assert.That(steered, Is.False, "a mode's errand is not a squad order");
         }
 
@@ -39,13 +40,13 @@ namespace Fps.Core.Tests
         {
             var place = new Vector3(6f, 0f, 0f);
 
-            var decision = BotDriver.FollowOrder(_chasing, EnemyState.Chase, BotErrand.Hold(place), _self, _spec, out var steered);
+            var decision = BotDriver.FollowOrder(_chasing, EnemyState.Chase, BotErrand.Hold(place), _self, _spec, _input, out var steered);
 
             Assert.That(steered, Is.True);
             Assert.That(decision.MoveTo, Is.EqualTo(place), "the bot does not chase away from the order");
             Assert.That(decision.LookAt, Is.EqualTo(_enemy));
 
-            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Hold(place), _self, _spec, out _);
+            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Hold(place), _self, _spec, _input, out _);
             Assert.That(decision.MoveTo, Is.EqualTo(place));
             Assert.That(decision.Fire, Is.True, "it shoots back on the way");
             Assert.That(decision.Crouch, Is.False, "it does not crouch while walking");
@@ -56,14 +57,14 @@ namespace Fps.Core.Tests
         {
             var place = new Vector3(0.3f, 0f, 0f);
 
-            var decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Hold(place), _self, _spec, out var steered);
+            var decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Hold(place), _self, _spec, _input, out var steered);
 
             Assert.That(steered, Is.True);
             Assert.That(decision.MoveTo, Is.Null, "arrived, so it stays");
             Assert.That(decision.Fire, Is.True);
             Assert.That(decision.Crouch, Is.True);
 
-            decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Hold(place), _self, _spec, out _);
+            decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Hold(place), _self, _spec, _input, out _);
             Assert.That(decision.MoveTo, Is.Null, "it does not wander off on its patrol");
         }
 
@@ -72,14 +73,14 @@ namespace Fps.Core.Tests
         {
             var target = new Vector3(20f, 0f, 0f);
 
-            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Attack(target), _self, _spec, out var steered);
+            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Attack(target), _self, _spec, _input, out var steered);
 
             Assert.That(steered, Is.True);
             Assert.That(decision.MoveTo, Is.EqualTo(target));
             Assert.That(decision.LookAt, Is.EqualTo(target));
             Assert.That(decision.Fire, Is.False);
 
-            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Attack(target), _self, _spec, out steered);
+            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Attack(target), _self, _spec, _input, out steered);
             Assert.That(steered, Is.False, "once it sees the target its own judgement fights it");
             Assert.That(decision.Fire, Is.True);
         }
@@ -88,20 +89,20 @@ namespace Fps.Core.Tests
         public void FollowStaysCloseAndComesBackFromAFightOnlyPastTheLeash()
         {
             var near = new Vector3(2f, 0f, 0f);
-            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Follow(near), _self, _spec, out var steered);
+            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Follow(near), _self, _spec, _input, out var steered);
             Assert.That(steered, Is.True);
             Assert.That(decision.MoveTo, Is.Null, "within the follow distance it waits");
 
             var apart = new Vector3(5f, 0f, 0f);
-            decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Follow(apart), _self, _spec, out _);
+            decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Follow(apart), _self, _spec, _input, out _);
             Assert.That(decision.MoveTo, Is.EqualTo(apart));
 
-            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Follow(apart), _self, _spec, out steered);
+            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Follow(apart), _self, _spec, _input, out steered);
             Assert.That(steered, Is.False, "inside the leash it keeps fighting");
             Assert.That(decision.Fire, Is.True);
 
             var far = new Vector3(0f, 0f, -12f);
-            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Follow(far), _self, _spec, out steered);
+            decision = BotDriver.FollowOrder(_fighting, EnemyState.Attack, BotErrand.Follow(far), _self, _spec, _input, out steered);
             Assert.That(steered, Is.True);
             Assert.That(decision.MoveTo, Is.EqualTo(far), "past the leash it comes back");
             Assert.That(decision.Fire, Is.True, "and still shoots on the way");
@@ -112,7 +113,7 @@ namespace Fps.Core.Tests
         {
             var above = new Vector3(0.2f, 5f, 0f);
 
-            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Hold(above), _self, _spec, out _);
+            var decision = BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.Hold(above), _self, _spec, _input, out _);
 
             Assert.That(decision.MoveTo, Is.Null);
         }
@@ -120,12 +121,13 @@ namespace Fps.Core.Tests
         [Test]
         public void ADeadBotOrABadOrderIsHandled()
         {
-            BotDriver.FollowOrder(EnemyDecision.None, EnemyState.Dead, BotErrand.Hold(new Vector3(9f, 0f, 0f)), _self, _spec, out var steered);
+            BotDriver.FollowOrder(EnemyDecision.None, EnemyState.Dead, BotErrand.Hold(new Vector3(9f, 0f, 0f)), _self, _spec, _input, out var steered);
             Assert.That(steered, Is.False);
 
             var nan = BotErrand.Hold(new Vector3(float.NaN, 0f, 0f));
-            Assert.Throws<ArgumentException>(() => BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, nan, _self, _spec, out _));
-            Assert.Throws<ArgumentNullException>(() => BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.None, _self, null, out _));
+            Assert.Throws<ArgumentException>(() => BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, nan, _self, _spec, _input, out _));
+            Assert.Throws<ArgumentNullException>(() => BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.None, _self, null, _input, out _));
+            Assert.Throws<ArgumentNullException>(() => BotDriver.FollowOrder(_patrolling, EnemyState.Patrol, BotErrand.None, _self, _spec, null, out _));
         }
 
         [Test]

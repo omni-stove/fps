@@ -8,6 +8,8 @@ namespace Fps.Runtime
     /// 拾える物 1 種類の調整値 (中身・拾い方・再出現の秒数・拾える範囲・照準の角度) をアセットとして持つ。<see cref="PickupSpawnPoint.Definition"/> に
     /// 入れると、出現点は自分の値の代わりにこれを読む。同じアセットを入れた出現点は、アセットを変えればまとめて変わる。
     /// 新しく作ったときの値は <see cref="PickupSpawnPoint"/> の既定値と同じ。
+    /// <see cref="AmmoCrate.Definition"/> に入れると、弾薬箱は範囲と補給の間隔 (<see cref="AmmoCrateRadius"/>・<see cref="AmmoCrateCooldownSeconds"/>、既定は
+    /// <see cref="AmmoCrate"/> の既定値) を自分の値の代わりに読む。
     /// </summary>
     [CreateAssetMenu(fileName = "Pickup", menuName = "Fps/Pickup")]
     public sealed class PickupDefinition : ScriptableObject
@@ -26,6 +28,13 @@ namespace Fps.Runtime
 
         [SerializeField, Range(0f, Pickup.MaxLookAngleDegrees), Tooltip("Look で、照準の向きからこの角度 (度) 以内に見た目が見えていれば照準が合っているとする。0 なら見た目に照準の線が当たったときだけ")]
         private float _lookAngleDegrees = Pickup.DefaultLookAngleDegrees;
+
+        // 拾う物の範囲 (_radius) とは既定も使われ方も違うので、弾薬箱には別の欄を持つ。
+        [SerializeField, Min(AmmoCrate.MinRadius), Tooltip("弾薬箱 (AmmoCrate) に入れたとき、使える範囲の半径 (m)。足元から球が立つ")]
+        private float _ammoCrateRadius = AmmoCrate.DefaultRadius;
+
+        [SerializeField, Min(0f), Tooltip("弾薬箱 (AmmoCrate) に入れたとき、補給してから次に補給できるまでの秒数")]
+        private float _ammoCrateCooldownSeconds = AmmoCrate.DefaultCooldownSeconds;
 
         /// <summary>中身。null は <see cref="ArgumentNullException"/>、値が不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
@@ -66,6 +75,53 @@ namespace Fps.Runtime
         {
             get => _lookAngleDegrees;
             set => _lookAngleDegrees = value;
+        }
+
+        /// <summary>弾薬箱の <see cref="AmmoCrate.EffectiveRadius"/>。<see cref="AmmoCrate.MinRadius"/> 未満か有限でなければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        public float AmmoCrateRadius
+        {
+            get => _ammoCrateRadius;
+            set
+            {
+                if (!AmmoCrate.IsValidRadius(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, $"ammo crate radius must be at least {AmmoCrate.MinRadius} and finite");
+                }
+
+                _ammoCrateRadius = value;
+            }
+        }
+
+        /// <summary>弾薬箱の <see cref="AmmoCrate.EffectiveCooldownSeconds"/>。負か有限でなければ <see cref="ArgumentOutOfRangeException"/>。</summary>
+        public float AmmoCrateCooldownSeconds
+        {
+            get => _ammoCrateCooldownSeconds;
+            set
+            {
+                if (!AmmoCrate.IsValidCooldown(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "ammo crate cooldown must be non-negative and finite");
+                }
+
+                _ammoCrateCooldownSeconds = value;
+            }
+        }
+
+        /// <summary>弾薬箱の範囲と補給の間隔が使えることを確かめる。中身は弾薬箱では使わないので見ない。</summary>
+        /// <exception cref="ArgumentException">どれかが不正。メッセージにアセット名を含む。</exception>
+        public void ValidateAmmoCrate()
+        {
+            if (!AmmoCrate.IsValidRadius(_ammoCrateRadius))
+            {
+                throw new ArgumentException(
+                    $"pickup definition '{SourceName}' ammo crate radius {_ammoCrateRadius} must be a finite number of at least {AmmoCrate.MinRadius}");
+            }
+
+            if (!AmmoCrate.IsValidCooldown(_ammoCrateCooldownSeconds))
+            {
+                throw new ArgumentException(
+                    $"pickup definition '{SourceName}' ammo crate cooldown {_ammoCrateCooldownSeconds} must be a non-negative finite number");
+            }
         }
 
         /// <summary>中身の Core の表し。呼ぶたびに作る。</summary>

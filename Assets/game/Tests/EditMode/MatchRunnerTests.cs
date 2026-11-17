@@ -63,11 +63,11 @@ namespace Fps.Tests.EditMode
         public void BeginShowsTheRemainingTimeOnTheHud()
         {
             var model = DefaultHud.Model;
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(HudFormat.DisplayedSeconds(TimeLimit)));
 
             _runner.Tick(11f);
 
-            Assert.That(model.TimeText, Is.EqualTo("00:19"));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(19));
         }
 
         [Test]

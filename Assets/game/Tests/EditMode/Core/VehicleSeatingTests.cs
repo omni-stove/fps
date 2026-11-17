@@ -139,6 +139,12 @@ namespace Fps.Core.Tests
                 Is.EqualTo("[Vehicle] 'Jeep' leave refused rider=Player reason=exit_blocked"));
             Assert.That(VehicleLog.Wrecked("Jeep", 2), Is.EqualTo("[Vehicle] 'Jeep' wrecked riders=2"));
             Assert.Throws<ArgumentOutOfRangeException>(() => VehicleLog.Wrecked("Jeep", -1));
+            Assert.That(
+                VehicleLog.Ram("Car", "Dummy", 40, 8.04f, "Player", 60),
+                Is.EqualTo("[Vehicle] 'Car' ram target=Dummy dmg=40 speed=8.0 by=Player hp=60"));
+            Assert.That(VehicleLog.Ram("Car", "Dummy", 40, 8f, null, 60), Is.EqualTo("[Vehicle] 'Car' ram target=Dummy dmg=40 speed=8.0 by=- hp=60"));
+            Assert.That(VehicleLog.Righted("Car", 171.6f), Is.EqualTo("[Vehicle] 'Car' righted tilt=172"));
+            Assert.That(VehicleLog.MissingMotor("Car"), Does.StartWith("[Vehicle] 'Car' "));
         }
     }
 }

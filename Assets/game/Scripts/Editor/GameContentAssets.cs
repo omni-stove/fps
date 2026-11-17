@@ -266,6 +266,12 @@ namespace Shooter.Editor
                 return false;
             }
 
+            // The Demo sample ships text tables with the same file names (minimap.json etc.) under Resources/Localization.
+            if (normalized.Contains("/Resources/Localization/", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(bundledTuningFolder))
             {
                 return true;

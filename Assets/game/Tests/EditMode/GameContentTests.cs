@@ -329,8 +329,10 @@ namespace Shooter.Tests.EditMode
         [TestCase("Assets/game/Resources/Tuning/minimap.json", "minimap", "Assets/game/Resources/Tuning/", false)]
         [TestCase("Assets/game/Resources/TuningExtra/minimap.json", "minimap", "Assets/game/Resources/Tuning", true)]
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", null, true)]
+        [TestCase("Assets/Samples/Shooter Kit/1.0.0/Demo/Resources/Localization/en/minimap.json", "minimap", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/Samples/Shooter Kit/1.0.0/Demo/Resources/Localization/ja/squad.json", "squad", null, false)]
         [TestCase("", "minimap", "Assets/game/Resources/Tuning", false)]
-        [TestCase("Assets/MyGame/Tuning/minimap.json", "", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/MyGame/Tuning/minimap.json", "","Assets/game/Resources/Tuning", false)]
         public void ATuningCandidateHasTheFileNameAndIsNotTheBundledCopy(string assetPath, string fileName, string bundled, bool expected)
         {
             Assert.That(GameContentAssets.IsTuningCandidate(assetPath, fileName, bundled), Is.EqualTo(expected));

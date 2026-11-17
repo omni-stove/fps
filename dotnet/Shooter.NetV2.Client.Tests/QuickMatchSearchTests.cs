@@ -229,6 +229,42 @@ namespace Shooter.NetV2.Tests
                 _search = done;
             }
 
+            public void CreateMemberLobby(
+                string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void LeaveMemberLobby(string lobbyId, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
+            }
+
+            public void SetMemberAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
+            }
+
+            public void ReadMemberAttributes(string lobbyId, string userId, Action<IReadOnlyList<LobbyAttribute>, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void LeaveMatchLobby(string lobbyId, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
+            }
+
             public void Dispose()
             {
                 Disposed++;

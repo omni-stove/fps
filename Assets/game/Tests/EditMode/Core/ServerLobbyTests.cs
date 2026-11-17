@@ -74,6 +74,72 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void LobbyInfoReadsThePrivateJoinCodeSkillAndVoiceAttributes()
+        {
+            var lobby = new LobbyInfo(
+                "lobby-1",
+                _ownerId,
+                NetMatchSettings.DefaultMaxPlayers,
+                new[] { _ownerId },
+                new[]
+                {
+                    LobbyAttribute.OfNumber(ServerLobby.PrivateKey, 1),
+                    LobbyAttribute.OfText(ServerLobby.JoinCodeKey, "AB12cd"),
+                    LobbyAttribute.OfNumber(ServerLobby.SkillAverageKey, 1450),
+                    LobbyAttribute.OfNumber(ServerLobby.VoiceEnabledKey, 1),
+                });
+
+            Assert.That(lobby.IsPrivate, Is.True);
+            Assert.That(lobby.JoinCode, Is.EqualTo("AB12cd"));
+            Assert.That(lobby.SkillAverage, Is.EqualTo(1450));
+            Assert.That(lobby.VoiceEnabled, Is.True);
+        }
+
+        [Test]
+        public void LobbyInfoTreatsMissingAttributesAsPublicWithoutCodeSkillOrVoice()
+        {
+            var lobby = Lobby("203.0.113.10:7777");
+
+            Assert.That(lobby.IsPrivate, Is.False);
+            Assert.That(lobby.JoinCode, Is.Null);
+            Assert.That(lobby.SkillAverage, Is.Null);
+            Assert.That(lobby.VoiceEnabled, Is.False);
+        }
+
+        [Test]
+        public void LobbyInfoIgnoresAttributesOfTheWrongKindOrRange()
+        {
+            var lobby = new LobbyInfo(
+                "lobby-1",
+                _ownerId,
+                NetMatchSettings.DefaultMaxPlayers,
+                new[] { _ownerId },
+                new[]
+                {
+                    LobbyAttribute.OfText(ServerLobby.PrivateKey, "1"),
+                    LobbyAttribute.OfNumber(ServerLobby.JoinCodeKey, 1234),
+                    LobbyAttribute.OfNumber(ServerLobby.SkillAverageKey, (long)int.MaxValue + 1),
+                    LobbyAttribute.OfNumber(ServerLobby.VoiceEnabledKey, 0),
+                });
+
+            Assert.That(lobby.IsPrivate, Is.False);
+            Assert.That(lobby.JoinCode, Is.Null);
+            Assert.That(lobby.SkillAverage, Is.Null);
+            Assert.That(lobby.VoiceEnabled, Is.False);
+        }
+
+        [Test]
+        public void TheServerLobbyDoesNotPublishTheNewAttributesYet()
+        {
+            var attributes = ByKey(ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2));
+
+            Assert.That(attributes.ContainsKey(ServerLobby.PrivateKey), Is.False);
+            Assert.That(attributes.ContainsKey(ServerLobby.JoinCodeKey), Is.False);
+            Assert.That(attributes.ContainsKey(ServerLobby.SkillAverageKey), Is.False);
+            Assert.That(attributes.ContainsKey(ServerLobby.VoiceEnabledKey), Is.False);
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentException>(() => ServerLobby.Attributes(" ", "0.3.0", 0));

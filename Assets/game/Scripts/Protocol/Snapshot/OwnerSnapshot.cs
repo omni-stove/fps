@@ -28,6 +28,12 @@ namespace Fps.Protocol
         /// </summary>
         public float CarrySpeedMultiplier { get; set; } = 1f;
 
+        /// <summary>
+        /// サーバーが <see cref="LastProcessedInputTick"/> の入力の後にこのプレイヤーを吹き飛ばしている状態。
+        /// 他の人には位置の補間で足りるが、持ち主の予測はこれが無いと飛んでいる間ずっと地上を歩いたつもりで巻き戻されるため、持ち主にだけ送る。
+        /// </summary>
+        public Fps.Core.CharacterKnockbackState Knockback { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         /// <summary>サーバーが今持たせている武器の Id (スロット順)。</summary>
@@ -45,6 +51,7 @@ namespace Fps.Protocol
             LastProcessedInputTick = other.LastProcessedInputTick;
             Weapon = other.Weapon;
             CarrySpeedMultiplier = other.CarrySpeedMultiplier;
+            Knockback = other.Knockback;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -73,6 +80,11 @@ namespace Fps.Protocol
                 fields |= OwnerFields.CarrySpeed;
             }
 
+            if (!Knockback.Equals(baseline.Knockback))
+            {
+                fields |= OwnerFields.Knockback;
+            }
+
             return fields;
         }
 
@@ -97,6 +109,17 @@ namespace Fps.Protocol
             if ((fields & OwnerFields.CarrySpeed) != 0)
             {
                 writer.WriteSingle(CarrySpeedMultiplier);
+            }
+
+            if ((fields & OwnerFields.Knockback) != 0)
+            {
+                var knockback = Knockback;
+                writer.WriteBool(knockback.IsFlying);
+                if (knockback.IsFlying)
+                {
+                    writer.WriteVector3(knockback.Velocity);
+                    writer.WriteSingle(knockback.ElapsedSeconds);
+                }
             }
         }
 
@@ -123,6 +146,15 @@ namespace Fps.Protocol
             {
                 CarrySpeedMultiplier = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "carry speed multiplier");
             }
+
+            if ((fields & OwnerFields.Knockback) != 0)
+            {
+                Knockback = reader.ReadBool()
+                    ? Fps.Core.CharacterKnockbackState.Flying(
+                        reader.ReadFiniteVector3("knockback velocity"),
+                        reader.ReadFiniteSingleBetween(0f, float.MaxValue, "knockback seconds"))
+                    : Fps.Core.CharacterKnockbackState.None;
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -146,6 +178,11 @@ namespace Fps.Protocol
             if ((missing & OwnerFields.CarrySpeed) != 0)
             {
                 CarrySpeedMultiplier = baseline.CarrySpeedMultiplier;
+            }
+
+            if ((missing & OwnerFields.Knockback) != 0)
+            {
+                Knockback = baseline.Knockback;
             }
 
             Present = OwnerFields.All;

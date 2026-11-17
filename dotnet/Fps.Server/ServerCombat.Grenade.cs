@@ -304,6 +304,11 @@ namespace Fps.Server
                 hurtFighter.LastHitDirection = hurtBody.Position - center;
             }
 
+            if (hurt == victimId && outcome != DamageOutcome.Killed)
+            {
+                PushAway(victimId, center, bodyCenter, explosion.StrengthAt(distance));
+            }
+
             SendExplosionHit(thrower, victimId, outcome, damage, center);
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
@@ -315,6 +320,19 @@ namespace Fps.Server
                 distance,
                 outcome));
             return outcome;
+        }
+
+        // オフラインの Explosion と同じく体の中ほどへ向けた向きと中心からの強さで、Core の KnockbackSpec に速さを決めさせる。
+        // 倒した相手はサーバーでは動かさない (抜け殻を押すのはクライアントの見た目のため)。
+        // Bot はオフラインの敵の代わりなので、重さは敵の重さにする。
+        private void PushAway(int victimId, Vector3 center, Vector3 bodyCenter, float strength)
+        {
+            var spec = _movement.Knockback;
+            var weight = BotRoster.IsBotId(victimId) ? spec.EnemyWeight : spec.PlayerWeight;
+            if (spec.TryGetVelocity(DamageKind.Explosion, bodyCenter - center, strength, weight, out var velocity))
+            {
+                _movement.Launch(victimId, velocity);
+            }
         }
 
         /// <summary>

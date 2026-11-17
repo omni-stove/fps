@@ -230,7 +230,7 @@ namespace Fps.Net.Tests
         [Test]
         public void TheDefaultHudShowsTheNetModelAndTheControlPointRings()
         {
-            var view = Hud.Create("NetV2HudTests.Hud", null, null, null);
+            var view = Hud.Create("NetV2HudTests.Hud");
             _created.Add(view.gameObject);
             _created.Add(view.OwnedPanelSettings);
             var snapshot = Snapshot(MatchObjective.Domination);

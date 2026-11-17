@@ -8,6 +8,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) をシーンで進める。分隊 (<see cref="Squads"/>) で戦い、倒れた人は戻らず、最後に残った分隊が勝つ。
+    /// 分隊の数と人数・制限時間・bot の用事を決め直す間隔と探す半径・パラシュートで降ろす高さは、
+    /// <see cref="Definition"/>、入口 (<see cref="GameContent.BattleRoyale"/>)、Inspector の値の順で読む。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -19,7 +21,7 @@ namespace Fps.Runtime
     /// bot は範囲にダウンした分隊の味方がいれば起こす。</item>
     /// <item>倒れて戻らなくなった人 (分隊が全滅した・出血した) は、持っていた武器と <see cref="DropOnDeath.Drops"/> を <see cref="DropOnDeath"/> で足元に落とす。
     /// ダウンしただけでは落とさない (起こされたら持ったまま戦うので)。DropOnDeath が無い参加者には始めたときに付ける。</item>
-    /// <item>bot には <see cref="BotPlanIntervalSeconds"/> ごとに <see cref="BattleRoyaleBotPlanner"/> で用事 (エリアの中へ移る・味方を起こす・拾える物を取る) を決めて渡す
+    /// <item>bot には <see cref="EffectiveBotPlanIntervalSeconds"/> ごとに <see cref="BattleRoyaleBotPlanner"/> で用事 (エリアの中へ移る・味方を起こす・拾える物を取る) を決めて渡す
     /// (<see cref="EnemyAgent.SetErrand"/>)。用事が変わるたびに <c>[Mode] errand</c> のログを出す。</item>
     /// <item>HUD に出す分隊ごとの残り人数と順位・エリアの様子・自分が起こしている相手・武器を持っているかは <see cref="BattleRoyaleStatus"/> にして渡す。</item>
     /// <item>分隊が脱落するたびに <c>[Mode] eliminated</c>、終わったら <c>[Mode] ended</c> と全分隊の順位 <c>[Mode] placements</c> のログ (<see cref="BattleRoyaleLog"/>) を出す。</item>
@@ -43,6 +45,9 @@ namespace Fps.Runtime
 
         /// <summary><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> のとき、出現点からどれだけ上に出すか (m) の既定値。</summary>
         public const float DefaultDropHeight = 60f;
+
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の分隊の数と人数・制限時間・bot の間隔と半径・降ろす高さの代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
+        private BattleRoyaleDefinition _definition;
 
         [SerializeField, Min(2), Tooltip("分隊の数。参加者の陣営の ID はこれより小さいこと")]
         private int _squadCount = DefaultSquadCount;
@@ -96,6 +101,46 @@ namespace Fps.Runtime
         /// <summary>この画面で操作しているプレイヤーがいま起こしている相手。起こしていなければ null。</summary>
         public SideMember LocalReviveTarget => _localReviveTarget.HasValue ? MemberOf(_localReviveTarget.Value) : null;
 
+        /// <summary>調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値で始める。</summary>
+        public BattleRoyaleDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public BattleRoyaleDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.BattleRoyale);
+
+        /// <summary>いま bot の用事を決め直す間隔 (秒)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotPlanIntervalSeconds"/>。</summary>
+        public float EffectiveBotPlanIntervalSeconds
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.BotPlanIntervalSeconds : _botPlanIntervalSeconds;
+            }
+        }
+
+        /// <summary>いま bot がダウンした味方と拾える物を探す半径 (m)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotSearchRadius"/>。</summary>
+        public float EffectiveBotSearchRadius
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.BotSearchRadius : _botSearchRadius;
+            }
+        }
+
+        /// <summary>いまパラシュートで降ろす高さ (m)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="DropHeight"/>。</summary>
+        public float EffectiveDropHeight
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.DropHeight : _dropHeight;
+            }
+        }
+
         public int SquadCount
         {
             get => _squadCount;
@@ -128,6 +173,7 @@ namespace Fps.Runtime
             set => _zone = value;
         }
 
+        /// <summary>Inspector の間隔。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotPlanIntervalSeconds
         {
             get => _botPlanIntervalSeconds;
@@ -143,7 +189,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 始めたときにプレイヤーをどこから始めさせるか。既定は <see cref="BattleRoyaleStart.Ground"/> (出現点の地面)。
         /// <see cref="BattleRoyaleStart.Parachute"/> なら、<see cref="ParachuteMovement"/> を持つ参加者 (bot は持たない) を
-        /// 出現点の <see cref="DropHeight"/> 上に出してパラシュートを開かせる。ルールでパラシュートを開けなければその参加者は地面から始める。
+        /// 出現点の <see cref="EffectiveDropHeight"/> 上に出してパラシュートを開かせる。ルールでパラシュートを開けなければその参加者は地面から始める。
         /// </summary>
         public BattleRoyaleStart StartFrom
         {
@@ -193,6 +239,18 @@ namespace Fps.Runtime
             var withDowned = actions.Downed == Downed.Revive ? actions : actions.WithDowned(Downed.Revive);
             var limit = timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
             return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned);
+        }
+
+        /// <summary>
+        /// <see cref="EffectiveDefinition"/> があればその値で、無ければ Inspector の値で、actions を使うバトルロイヤルを組む。
+        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
+        public BattleRoyaleSession CreateConfiguredBattleRoyale(ActionRules actions)
+        {
+            var definition = EffectiveDefinition;
+            return definition != null
+                ? definition.CreateBattleRoyale(actions)
+                : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions);
         }
 
         /// <summary>
@@ -261,7 +319,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// bot の用事を今すぐ決め直して渡す。Play 中は <see cref="BotPlanIntervalSeconds"/> ごとに呼ばれる。
+        /// bot の用事を今すぐ決め直して渡す。Play 中は <see cref="EffectiveBotPlanIntervalSeconds"/> ごとに呼ばれる。
         /// NavMesh の無い Edit Mode のテストでも、渡した用事 (<see cref="EnemyAgent.Errand"/>) は確かめられる。
         /// </summary>
         public void PlanBots()
@@ -273,6 +331,7 @@ namespace Fps.Runtime
 
             var zone = _runningZone != null && _runningZone.IsRunning ? _runningZone.State : (ZoneState?)null;
             var pickups = Pickup.FindActive();
+            var searchRadius = EffectiveBotSearchRadius;
             foreach (var member in Members)
             {
                 var agent = member != null ? member.GetComponent<EnemyAgent>() : null;
@@ -292,7 +351,7 @@ namespace Fps.Runtime
                 CollectOptions(member, agent, pickups);
                 CollectDownedSquadmates(member);
                 var errand = BattleRoyaleBotPlanner.Plan(
-                    member.GroundPosition.ToNumerics(), zone, !agent.IsUnarmed, _pickupOptions, _downedSquadmates, _botSearchRadius);
+                    member.GroundPosition.ToNumerics(), zone, !agent.IsUnarmed, _pickupOptions, _downedSquadmates, searchRadius);
 
                 if (errand.HasErrand)
                 {
@@ -313,7 +372,7 @@ namespace Fps.Runtime
 
         protected override ModeSession CreateSession()
         {
-            _battleRoyale = CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, ResolveActions());
+            _battleRoyale = CreateConfiguredBattleRoyale(ResolveActions());
             return _battleRoyale.Mode;
         }
 
@@ -398,7 +457,7 @@ namespace Fps.Runtime
             _untilBotPlan -= deltaSeconds;
             if (_untilBotPlan <= 0f)
             {
-                _untilBotPlan = Mathf.Max(0.05f, _botPlanIntervalSeconds);
+                _untilBotPlan = Mathf.Max(0.05f, EffectiveBotPlanIntervalSeconds);
                 PlanBots();
             }
         }
@@ -537,8 +596,9 @@ namespace Fps.Runtime
                 return;
             }
 
-            var verdict = parachute.TryOpenAt(member.transform.position + (Vector3.up * _dropHeight));
-            var line = BattleRoyaleLog.Drop(IdOf(member), _dropHeight, verdict);
+            var height = EffectiveDropHeight;
+            var verdict = parachute.TryOpenAt(member.transform.position + (Vector3.up * height));
+            var line = BattleRoyaleLog.Drop(IdOf(member), height, verdict);
             if (verdict == ParachuteOpenVerdict.Open)
             {
                 Debug.Log(line, member);

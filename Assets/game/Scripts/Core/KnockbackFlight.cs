@@ -91,6 +91,24 @@ namespace Fps.Core
             return seconds;
         }
 
+        // 予測の巻き戻しは状態の途中から進め直すので、Launch で 0 秒から始めるのではなく、その時点の秒数ごと戻す。
+        public void Restore(CharacterKnockbackState state)
+        {
+            if (!state.IsValid)
+            {
+                throw new ArgumentException("knockback state must be valid", nameof(state));
+            }
+
+            IsFlying = state.IsFlying;
+            Velocity = state.Velocity;
+            ElapsedSeconds = state.ElapsedSeconds;
+        }
+
+        public CharacterKnockbackState Capture()
+        {
+            return IsFlying ? CharacterKnockbackState.Flying(Velocity, ElapsedSeconds) : CharacterKnockbackState.None;
+        }
+
         public void Clear()
         {
             IsFlying = false;

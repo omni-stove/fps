@@ -57,7 +57,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudAddViewsAttachesTheSubtitles()
         {
-            var hud = Hud.Create("SubtitleViewTests.Hud", null, null, null);
+            var hud = Hud.Create("SubtitleViewTests.Hud");
             _created.Add(hud.gameObject);
             _created.Add(hud.OwnedPanelSettings);
 

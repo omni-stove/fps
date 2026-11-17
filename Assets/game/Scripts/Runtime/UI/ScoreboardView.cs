@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
     /// </remarks>
     [DisallowMultipleComponent]
-    public sealed class ScoreboardView : HudElementView, IScoreboard
+    public sealed class ScoreboardView : HudElementView
     {
         /// <summary>Hud.uxml のスコアボードの要素。</summary>
         public const string UxmlName = "scoreboard";

@@ -200,8 +200,8 @@ namespace Fps.Editor
             }
 
             var weapon = bootstrap.World.Weapon;
-            // 武器名は既定の HUD の表示から読むので、具体クラスで受ける (別の HUD なら「HUD が無い」として扱う)
-            var hud = bootstrap.World.Hud as Hud;
+            // 武器名は既定の HUD の表示から読む (既定の HUD を止めたゲームなら「HUD が無い」として扱う)
+            var hud = DefaultHudFactory.Current;
             if (weapon == null || !weapon.IsInitialized)
             {
                 problems.Add("the player's WeaponController is not initialized");
@@ -315,7 +315,7 @@ namespace Fps.Editor
             }
 
             var expected = weapon.Weapon.Spec;
-            Expect(problems, ReferenceEquals(hud.Model.WeaponSpec, expected), $"the HUD shows '{expected.Id}' (got '{hud.Model.WeaponSpec?.Id}')");
+            Expect(problems, ReferenceEquals(hud.ShownModel.WeaponSpec, expected), $"the HUD shows '{expected.Id}' (got '{hud.ShownModel.WeaponSpec?.Id}')");
         }
 
         private static void Expect(List<string> problems, bool condition, string what)

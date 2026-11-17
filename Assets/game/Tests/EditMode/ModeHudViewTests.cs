@@ -197,7 +197,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudAddsTheView()
         {
-            var hud = Hud.Create("ModeHudViewTests.Hud", null, null, null);
+            var hud = Hud.Create("ModeHudViewTests.Hud");
             try
             {
                 Assert.That(hud.ModeHud, Is.Not.Null, "Hud.AddViews attaches the mode view");
@@ -305,13 +305,13 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheViewIsTheHudsModeHud()
+        public void TheHudCarriesOneModeHudView()
         {
-            var hud = Hud.Create("ModeHudViewTests.Hud", null, null, null);
+            var hud = Hud.Create("ModeHudViewTests.Hud");
             try
             {
-                IHud asInterface = hud;
-                Assert.That(asInterface.ModeHud, Is.SameAs(hud.ModeHud));
+                Assert.That(hud.ModeHud, Is.Not.Null);
+                Assert.That(hud.GetComponents<ModeHudView>(), Has.Length.EqualTo(1));
             }
             finally
             {

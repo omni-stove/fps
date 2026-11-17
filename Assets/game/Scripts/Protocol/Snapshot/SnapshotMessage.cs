@@ -19,7 +19,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 8;
+        public const byte CurrentVersion = 9;
 
         /// <summary>基準が無い (全部が載っている) ことを表す <see cref="BaselineTick"/>。</summary>
         public const int NoBaseline = -1;
@@ -84,6 +84,7 @@ namespace Fps.Protocol
             HasOwner = false;
             _owner.LastProcessedInputTick = -1;
             _owner.Weapon = default;
+            _owner.Knockback = default;
             _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;

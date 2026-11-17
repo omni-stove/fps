@@ -47,7 +47,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheHudFactoryAttachesTheVignette()
         {
-            var hud = Hud.Create("TestVignetteHud", null, null, null);
+            var hud = Hud.Create("TestVignetteHud");
             _created.Add(hud.gameObject);
             _created.Add(hud.OwnedPanelSettings);
 

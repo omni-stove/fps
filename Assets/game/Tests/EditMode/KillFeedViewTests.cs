@@ -22,7 +22,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             CombatEvents.ClearSubscribers();
-            _hud = Hud.Create("KillFeedTestHud", null, null, null);
+            _hud = Hud.Create("KillFeedTestHud");
             _created.Add(_hud.gameObject);
             _created.Add(_hud.OwnedPanelSettings);
             _view = _hud.KillFeed;

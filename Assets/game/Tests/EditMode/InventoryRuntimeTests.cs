@@ -184,7 +184,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudAddViewsAttachesTheInventoryScreen()
         {
-            var hud = Hud.Create("InventoryRuntimeTests.Hud", null, null, null);
+            var hud = Hud.Create("InventoryRuntimeTests.Hud");
             _created.Add(hud.gameObject);
             _created.Add(hud.OwnedPanelSettings);
 

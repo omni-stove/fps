@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -24,6 +25,22 @@ namespace Fps.Tests.EditMode
             Assert.That(GameUi.Menu, Is.Not.Null);
             Assert.That(GameUi.IsPauseOpen, Is.EqualTo(PauseMenu.IsAnyOpen));
             Assert.That(GameUi.IsLoadoutSelectOpen, Is.EqualTo(LoadoutSelectView.IsAnyOpen));
+        }
+
+        [Test]
+        public void GameUi_OnlyCarriesTheWaysFromTheUiIntoTheGame()
+        {
+            var names = new List<string>();
+            foreach (var member in typeof(GameUi).GetMembers(BindingFlags.Public | BindingFlags.Static))
+            {
+                names.Add(member.Name);
+            }
+
+            Assert.That(names, Has.None.Contains("Hud"), "the game no longer builds or finds the HUD through GameUi");
+            Assert.That(names, Has.None.EqualTo("AttachActionDebug"));
+            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IHud"), Is.Null);
+            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IHudFactory"), Is.Null);
+            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IModeHud"), Is.Null);
         }
 
         [Test]

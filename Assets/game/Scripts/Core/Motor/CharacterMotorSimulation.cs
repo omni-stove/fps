@@ -15,6 +15,9 @@ namespace Fps.Core
 
         public const float PeekSlideSeconds = 0.15f;
 
+        // KnockbackMovement の着地と同じ。着地した tick に動かさないと床に触れず、次の tick で接地が外れて落ち始める。
+        private static readonly Vector3 _knockbackSettle = new Vector3(0f, -0.05f, 0f);
+
         private readonly PlayerMotor _motor;
         private readonly CharacterCoverSensor _coverSensor;
         private readonly CharacterVaultSensor _vaultSensor;
@@ -25,6 +28,8 @@ namespace Fps.Core
 
         private readonly ProneInput _proneInput = new ProneInput();
         private readonly ProneDive _dive;
+        private readonly KnockbackFlight _knockback = new KnockbackFlight();
+        private KnockbackSpec _knockbackSpec = KnockbackSpec.Default;
 
         // 状態の頂点から作った軌跡の使い回し。同じ頂点の間は毎 tick 作り直さない
         private VaultPath _vaultPath;
@@ -89,6 +94,13 @@ namespace Fps.Core
             }
         }
 
+        /// <summary>吹き飛ばされている間の重力・空中の効き・着地と打ち切りの秒数。予測とサーバーで同じ値を渡す。</summary>
+        public KnockbackSpec Knockback
+        {
+            get => _knockbackSpec;
+            set => _knockbackSpec = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
         public float TickSeconds { get; }
 
         public float KillPlaneY { get; }
@@ -106,6 +118,15 @@ namespace Fps.Core
             return new Vector3(MathF.Sin(yaw), 0f, MathF.Cos(yaw));
         }
 
+        /// <summary>
+        /// state を velocity で吹き飛ばした状態。動かすのは次の <see cref="Step"/> から。
+        /// 速さは <see cref="KnockbackSpec.TryGetVelocity"/> で決める (オフラインの吹き飛ばしと同じ計算にするため)。
+        /// </summary>
+        public static CharacterMotorState Launch(CharacterMotorState state, Vector3 velocity)
+        {
+            return state.WithKnockback(state.Knockback.Launch(velocity));
+        }
+
         public CharacterMotorState Step(CharacterMotorState state, CharacterMotorInput input)
         {
             input = input.Restrained();
@@ -116,6 +137,11 @@ namespace Fps.Core
             var vault = state.Vault;
             var startVelocity = state.Velocity;
             var ladder = AdvanceRegrab(state.Ladder);
+            if (state.IsKnockedBack)
+            {
+                return StepKnockback(state, input, ladder);
+            }
+
             if (input.Downed)
             {
                 _dodge.Cancel();
@@ -253,10 +279,66 @@ namespace Fps.Core
             return Finish(velocity, stance, cover, vault, input, ladder);
         }
 
+        // オフラインの KnockbackMovement は、はしごより優先の移動の横取り (PlayerController.BeginMovementOverride) なので、
+        // 同じく回避・乗り越え・伏せ・はしご・カバーをやめさせてから飛ばす。
+        private CharacterMotorState StepKnockback(CharacterMotorState state, CharacterMotorInput input, CharacterLadderState ladder)
+        {
+            _dodge.Cancel();
+            ReleaseProne();
+            if (ladder.IsClimbing)
+            {
+                ladder = Leave(ladder);
+            }
+
+            _dodge.Step(TickSeconds);
+            var stance = ResolveStance(state.Stance, input.Crouch, false);
+            var spec = _knockbackSpec;
+            _knockback.Restore(state.Knockback);
+            Vector3 velocity;
+            if (state.IsGrounded && _knockback.CanLand(spec.MinAirSeconds))
+            {
+                _knockback.Land();
+                Body.Move(_knockbackSettle);
+                velocity = Vector3.Zero;
+            }
+            else if (_knockback.HasTimedOut(spec.MaxAirSeconds))
+            {
+                // 落ちている速さは PlayerMotor に引き継ぎ、そのまま落ち続けさせる (落下のダメージもそちらで決まる)
+                velocity = _knockback.Velocity;
+                _knockback.Land();
+                Body.Move(Vector3.Zero);
+            }
+            else
+            {
+                var steer = Vector2.Zero;
+                var airControl = 0f;
+
+                // 入力が無いときまで寄せると、手を離しているだけで空中で止まってしまう
+                if (input.Move.LengthSquared() > 1e-4f)
+                {
+                    var forward = YawForward(input.Yaw);
+                    var right = new Vector3(forward.Z, 0f, -forward.X);
+                    var wish = ((right * input.Move.X) + (forward * input.Move.Y)) * _motor.Spec.WalkSpeed;
+                    steer = new Vector2(wish.X, wish.Z);
+                    airControl = spec.AirControl;
+                }
+
+                var contacts = Body.Move(_knockback.Step(TickSeconds, spec.Gravity, steer, airControl));
+                if ((contacts & CapsuleContacts.Above) != 0)
+                {
+                    _knockback.StopRising();
+                }
+
+                velocity = _knockback.Velocity;
+            }
+
+            return Finish(velocity, stance, CharacterCoverState.Out, CharacterVaultState.None, input, ladder, _knockback.Capture());
+        }
+
         // 落下の下限を確かめ、作業用に戻した回避・伏せの中身を状態へ写す
         private CharacterMotorState Finish(
             Vector3 velocity, PlayerStance stance, CharacterCoverState cover, CharacterVaultState vault, CharacterMotorInput input,
-            CharacterLadderState ladder)
+            CharacterLadderState ladder, CharacterKnockbackState knockback = default)
         {
             var position = Body.Position;
             var grounded = Body.IsGrounded;
@@ -271,12 +353,13 @@ namespace Fps.Core
                 vault = CharacterVaultState.None;
                 ReleaseProne();
                 ladder = CharacterLadderState.None;
+                knockback = CharacterKnockbackState.None;
                 Place(new CharacterMotorState(position, velocity, grounded, false));
             }
 
             var prone = new CharacterProneState(
                 _proneInput.IsActive, _proneInput.WasSprinting, input.Crouch, _dive.IsDiving, _dive.Direction, _dive.Elapsed);
-            return new CharacterMotorState(position, velocity, grounded, stance, cover, _dodge.Capture(), vault, prone, ladder);
+            return new CharacterMotorState(position, velocity, grounded, stance, cover, _dodge.Capture(), vault, prone, ladder, knockback);
         }
 
         public void Place(CharacterMotorState state)

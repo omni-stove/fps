@@ -7,23 +7,21 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
-    /// 値の源 (プレイヤーの <see cref="Damageable"/>・<see cref="WeaponController"/>・<see cref="Fps.Core.Match"/>) は
-    /// <see cref="Initialize"/> でコードから渡す。値はそれぞれのイベントで <see cref="HudModel"/> が更新し、
-    /// <see cref="HudView"/> が Label に写す。毎フレーム読みに行くのは、時間で進みイベントの無いリロードの進み
-    /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と
-    /// 照準の広がり・表示・目からの射線の遮り (<see cref="RefreshCrosshair"/>) だけ。
-    /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
-    /// 自分の <see cref="Model"/> と違う <see cref="HudModel"/> が <see cref="GameSignals.HudModel"/> に出ていれば、そちらを出す (<see cref="ShownModel"/>)。
-    /// ネット対戦 (Fps.NetV2 の NetV2Hud) は源を渡さずに作らせ、自分の <see cref="HudModel"/> を出してその Set 系で値を書く。チームの点数 (左上) と
-    /// 試合結果 (中央上) はそのときだけ出る。HUD の量・ポーズ中の時間の扱い・色の組の視点も、<see cref="GameSignals"/> に出ていればそれに合わせる。
+    /// 出す値は <see cref="GameSignals.HudModel"/> に出ている <see cref="HudModel"/> (オフラインは GameBootstrap、ネット対戦は Fps.NetV2 の NetV2Hud が出す) で、
+    /// 出ていない間は自分の <see cref="Model"/> (仮の表示) を出す (<see cref="ShownModel"/>)。<see cref="HudView"/> が Label に写す。
+    /// 照準を読むプレイヤーの部品 (<see cref="WeaponController"/>・<see cref="AimDownSights"/>・<see cref="PlayerController"/>) は <see cref="GameSignals.LocalPlayer"/> から受け、
+    /// 受けている間だけ、時間で進みイベントの無いリロードの進み (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類
+    /// (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と照準の広がり・表示・目からの射線の遮り
+    /// (<see cref="RefreshCrosshair"/>) を毎フレーム読んで出している値に書く。チームの点数 (左上) と試合結果 (中央上) は値があるときだけ出る。
+    /// HUD の量・ポーズ中の時間の扱い・色の組の視点・キャンペーンの案内も、<see cref="GameSignals"/> に出ていればそれに合わせる。
     /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
     /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
     /// Hud.uxml にキーで書いた文字 (見出し・ポーズのボタン) は <see cref="LocalizedTexts"/> で今の言語にし、言語が変わったら書き直す。
-    /// ゲーム進行からは <see cref="IHud"/> として使われ、オフラインでは既定の生成役 (<see cref="DefaultHudFactory"/>) が作る。
+    /// ゲーム進行はこの HUD を知らず、既定の作り役 (<see cref="DefaultHudFactory"/>) が <see cref="GameSignals"/> を見て作り、片付ける。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
-    public sealed class Hud : MonoBehaviour, IHud
+    public sealed class Hud : MonoBehaviour
     {
         public const string LogTag = "[HUD]";
 
@@ -42,7 +40,7 @@ namespace Fps.Runtime
         private readonly HudModel _model = new HudModel();
         private HudModel _shownModel;
         private HudView _view;
-        private Damageable _player;
+        private HudModel _noticeModel;
         private WeaponController _weapon;
         private AimDownSights _ads;
         private PlayerController _mover;
@@ -59,7 +57,7 @@ namespace Fps.Runtime
         private bool _aimBlockCatalogResolved;
         private AimBlockSettings _aimBlockSettings;
 
-        /// <summary>この HUD が値の源から書く値。</summary>
+        /// <summary><see cref="GameSignals.HudModel"/> に何も出ていない間に出す、この HUD の仮の値。</summary>
         public HudModel Model => _model;
 
         /// <summary>出している値。<see cref="GameSignals.HudModel"/> に別の HudModel が出ていればそれ、無ければ <see cref="Model"/>。</summary>
@@ -107,12 +105,12 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD 用の PanelSettings と UIDocument を持つ GameObject を objectName で作り、Resources の Hud.uxml とテーマを読み込んで
-        /// <see cref="Initialize"/> で源を渡す。源はどれも null 可 (Set 系で <see cref="Model"/> に直接書く場合)。
+        /// <see cref="GameSignals"/> の購読を始める。
         /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
         /// 失敗したら作りかけのものは消して例外を投げる。
         /// </summary>
         /// <exception cref="InvalidOperationException">Resources にレイアウトかテーマが無い。</exception>
-        public static Hud Create(string objectName, Damageable player, WeaponController weapon, Match match)
+        public static Hud Create(string objectName)
         {
             var layout = Resources.Load<VisualTreeAsset>(LayoutResourcePath);
             if (layout == null)
@@ -148,7 +146,7 @@ namespace Fps.Runtime
 
                 var hud = hudObject.AddComponent<Hud>();
                 AddViews(hudObject);
-                hud.Initialize(player, weapon, match, panelSettings);
+                hud.Initialize(panelSettings);
 
                 // 有効にすると UIDocument が木を作り、Play 中は Hud の OnEnable が Label を探す。
                 // Edit Mode では Hud の OnEnable が走らないので、木ができていればここで探す。
@@ -173,7 +171,7 @@ namespace Fps.Runtime
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
         /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
-        /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
+        /// オフラインとネット対戦で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
         public static void AddViews(GameObject hudObject)
@@ -268,16 +266,6 @@ namespace Fps.Runtime
 
         public PhotoModeView PhotoMode => GetComponent<PhotoModeView>();
 
-        IScoreboard IHud.Scoreboard => AsInterface<IScoreboard>(Scoreboard);
-
-        IHitMarker IHud.HitMarker => AsInterface<IHitMarker>(HitMarker);
-
-        IModeHud IHud.ModeHud => AsInterface<IModeHud>(ModeHud);
-
-        ITutorialPrompt IHud.TutorialPrompt => AsInterface<ITutorialPrompt>(TutorialPrompt);
-
-        IInteractPrompt IHud.InteractPrompt => AsInterface<IInteractPrompt>(InteractPrompt);
-
         /// <summary>ポーズを開いている間の時間の扱い (<see cref="Fps.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
         public void SetPauseTimeMode(PauseTimeMode mode)
         {
@@ -286,24 +274,6 @@ namespace Fps.Runtime
             {
                 pause.TimeMode = mode;
             }
-        }
-
-        // AddViews で付いているものを返す。AddViews を通さずに組んだ HUD だけ、ここで付ける (AttachTo は付いていればそれを返す)。
-        IGrenadeCount IHud.AttachGrenadeCount()
-        {
-            return GrenadeCountView.AttachTo(this);
-        }
-
-        IAbilitySlots IHud.AttachAbilitySlots()
-        {
-            return AbilitySlotsView.AttachTo(this);
-        }
-
-        // エディターの GetComponent は見つからなくても「null と等しい」オブジェクトを返すので、インターフェースに変える前に本当の null にする
-        private static T AsInterface<T>(Component component)
-            where T : class
-        {
-            return component != null ? component as T : null;
         }
 
         /// <summary>
@@ -406,7 +376,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD の量 (<see cref="GameRules.HudDensity"/>) に合わせて出す項目を切り替える (<see cref="HudVisibility.For"/>)。
-        /// オフラインは GameBootstrap とキャンペーンがルールを決めたときに、オンラインは NetHud がサーバーのルールが届いたときに呼ぶ。
+        /// <see cref="GameSignals.HudDensity"/> に値が出たときに呼ぶ。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
         public void ApplyDensity(HudDensity density)
@@ -438,22 +408,24 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>
-        /// 値の源を渡して購読する。どれも null 可 (その項目は仮の表示になる)。前に渡した源の購読は外す。
-        /// UIDocument の木が既にあればすぐ Label に反映する。
-        /// </summary>
-        /// <param name="player">プレイヤーの体力。</param>
-        /// <param name="weapon">プレイヤーの武器。未初期化 (Edit Mode など) なら初期化されたときに購読する。</param>
-        /// <param name="match">残り時間を出す試合。null なら後で <see cref="BindMatch"/> で渡す。</param>
-        /// <param name="ownedPanelSettings">この HUD 用に作った PanelSettings。渡すと破棄時に一緒に消す。null 可。</param>
-        public void Initialize(Damageable player, WeaponController weapon, Match match, PanelSettings ownedPanelSettings = null)
+        private void Initialize(PanelSettings ownedPanelSettings)
         {
             UnsubscribeSources();
+            _ownedPanelSettings = ownedPanelSettings;
+            SubscribeSignals();
+            RebuildView();
+        }
 
-            _player = player;
+        /// <summary>
+        /// 照準を読む部品を player から受ける。null なら受けていた部品を手放し、照準を仮の表示に戻す。
+        /// 覗き込み・移動・視点は player に無ければ武器の親の階層から探す (武器だけを渡すプレイヤーもあるため)。
+        /// </summary>
+        private void BindLocalPlayer(LocalPlayerSignal player)
+        {
+            var weapon = player != null ? player.Weapon : null;
             _weapon = weapon;
-            _ads = weapon != null ? weapon.GetComponentInParent<AimDownSights>(true) : null;
-            _mover = weapon != null ? weapon.GetComponentInParent<PlayerController>(true) : null;
+            _ads = player != null && player.Ads != null ? player.Ads : weapon != null ? weapon.GetComponentInParent<AimDownSights>(true) : null;
+            _mover = player != null && player.Mover != null ? player.Mover : weapon != null ? weapon.GetComponentInParent<PlayerController>(true) : null;
             _rig = weapon != null ? weapon.GetComponentInParent<ViewRig>(true) : null;
             var damageNumbers = GetComponent<DamageNumberView>();
             if (damageNumbers != null)
@@ -461,41 +433,60 @@ namespace Fps.Runtime
                 damageNumbers.Viewer = _ads != null ? _ads.Camera : null;
             }
 
-            _ownedPanelSettings = ownedPanelSettings;
-
-            if (_player != null)
-            {
-                _player.HealthReset += _model.BindHealth;
-            }
-
-            if (_weapon != null)
-            {
-                _weapon.WeaponChanged += _model.BindWeapon;
-            }
-
-            _model.BindHealth(_player != null ? _player.Health : null);
-            _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
-            GameSignals.CampaignNotice.Changed += _model.BindNotice;
-            _model.BindNotice(GameSignals.CampaignNotice.Value);
-            SubscribeSignals();
-
             // オフラインのプレイヤーは持ち物を自分で持つ。ネット対戦は持ち主の HUD が届いた持ち物を後から渡す
             var inventoryView = InventoryScreen;
-            var ownInventory = _player != null ? _player.GetComponent<PlayerInventory>() : null;
+            var damageable = player != null ? player.Damageable : null;
+            var ownInventory = damageable != null ? damageable.GetComponent<PlayerInventory>() : null;
             if (inventoryView != null && ownInventory != null)
             {
                 inventoryView.Source = ownInventory;
             }
-            _model.BindMatch(match);
-            RefreshCrosshair();
 
-            RebuildView();
+            if (_weapon == null)
+            {
+                _model.ResetCrosshair();
+                ApplyAimBlock(_model, false, null);
+            }
+            else
+            {
+                RefreshCrosshair();
+            }
         }
 
-        /// <summary>残り時間を出す試合を差し替える。null なら仮の表示に戻す。<see cref="MatchRunner"/> が試合を始めたときに呼ぶ。</summary>
-        public void BindMatch(Match match)
+        private void HandleLocalPlayerChanged(LocalPlayerSignal player)
         {
-            _model.BindMatch(match);
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                UnsubscribeSignals();
+                return;
+            }
+
+            BindLocalPlayer(player);
+        }
+
+        // 案内は出している値に書く。出す値が替わったら、前の値からは案内を外す
+        private void BindNoticeTo(HudModel model)
+        {
+            if (_noticeModel == model)
+            {
+                return;
+            }
+
+            _noticeModel?.BindNotice(null);
+            _noticeModel = model;
+            _noticeModel?.BindNotice(GameSignals.CampaignNotice.Value);
+        }
+
+        private void HandleNoticeChanged(CampaignNotice notice)
+        {
+            if (this == null)
+            {
+                UnsubscribeSignals();
+                return;
+            }
+
+            _noticeModel?.BindNotice(notice);
         }
 
         /// <summary>
@@ -537,10 +528,14 @@ namespace Fps.Runtime
         private void SubscribeSignals()
         {
             GameSignals.HudModel.Changed += HandleHudModelChanged;
+            GameSignals.LocalPlayer.Changed += HandleLocalPlayerChanged;
+            GameSignals.CampaignNotice.Changed += HandleNoticeChanged;
             GameSignals.HudDensity.Changed += HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed += HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed += HandlePaletteViewerChanged;
             HandleHudModelChanged(GameSignals.HudModel.Value);
+            BindNoticeTo(ShownModel);
+            BindLocalPlayer(GameSignals.LocalPlayer.Value);
             HandleDensityChanged(GameSignals.HudDensity.Value);
             HandlePauseTimeModeChanged(GameSignals.PauseTimeMode.Value);
             HandlePaletteViewerChanged(GameSignals.PaletteViewer.Value);
@@ -549,6 +544,8 @@ namespace Fps.Runtime
         private void UnsubscribeSignals()
         {
             GameSignals.HudModel.Changed -= HandleHudModelChanged;
+            GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+            GameSignals.CampaignNotice.Changed -= HandleNoticeChanged;
             GameSignals.HudDensity.Changed -= HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed -= HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed -= HandlePaletteViewerChanged;
@@ -571,6 +568,7 @@ namespace Fps.Runtime
 
             _shownModel = shown;
             ShownModel.SetReserveAmmoShown(_visibility.ReserveAmmo);
+            BindNoticeTo(ShownModel);
             if (_view != null)
             {
                 var document = GetComponent<UIDocument>();
@@ -628,11 +626,11 @@ namespace Fps.Runtime
 
         private void LateUpdate()
         {
-            // WeaponController を渡さない HUD (NetHud) は Set 系で進みや照準を書くので、ここで読み直して消さない。
+            // 自分のプレイヤーがいない HUD (ネット対戦) は出す側が Set 系で進みや照準を書くので、ここで読み直して消さない。
             if (_weapon != null)
             {
-                _model.RefreshReloadProgress();
-                _model.RefreshWeaponGauges();
+                ShownModel.RefreshReloadProgress();
+                ShownModel.RefreshWeaponGauges();
                 RefreshMagnification();
                 RefreshCrosshair();
             }
@@ -644,11 +642,11 @@ namespace Fps.Runtime
             var magnification = _ads != null ? _ads.Magnification : null;
             if (magnification.HasValue)
             {
-                _model.SetMagnification(magnification.Value);
+                ShownModel.SetMagnification(magnification.Value);
             }
             else
             {
-                _model.ClearMagnification();
+                ShownModel.ClearMagnification();
             }
         }
 
@@ -656,14 +654,13 @@ namespace Fps.Runtime
         /// 照準の線を、武器の今の散らばり (<see cref="WeaponController.CrosshairConeDegrees"/>) の縁をカメラ (<see cref="AimDownSights.Camera"/>) の
         /// 視野角で画面に写した位置 (<see cref="SpreadPattern.ScreenRadius"/>) に置き、撃った後の開き (<see cref="WeaponController.CrosshairSpreadFraction"/>) を足す。
         /// 照準を出すかは <see cref="ShowsCrosshair"/> で決める (一人称の ADS 中とダッシュ中は隠す)。
-        /// カメラが無ければ縁は 0 で出し、武器を渡していなければ広がり 0 で出す。値の源は <see cref="Initialize"/> の weapon と、その親の階層の ADS・プレイヤー・<see cref="ViewRig"/>。
+        /// カメラが無ければ縁は 0 で出す。値の源は <see cref="GameSignals.LocalPlayer"/> の武器・ADS・プレイヤーと、武器の親の階層の <see cref="ViewRig"/>。
+        /// 自分のプレイヤーがいなければ何もしない (出す側が照準を書く)。
         /// </summary>
         public void RefreshCrosshair()
         {
             if (_weapon == null)
             {
-                _model.ResetCrosshair();
-                ApplyAimBlock(false, null);
                 return;
             }
 
@@ -671,7 +668,7 @@ namespace Fps.Runtime
             var sprinting = _mover != null && _mover.IsSprinting;
             var view = _rig != null ? _rig.Mode : ViewMode.FirstPerson;
             var shown = ShowsCrosshair(view, aiming, sprinting);
-            _model.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), shown);
+            ShownModel.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), shown);
             RefreshAimBlock(shown);
         }
 
@@ -690,18 +687,18 @@ namespace Fps.Runtime
             if (!crosshairShown || !settings.Enabled || aim == null || eye == null || aim.parent != eye
                 || !(range > 0f) || float.IsInfinity(range))
             {
-                ApplyAimBlock(false, null);
+                ApplyAimBlock(ShownModel, false, null);
                 return;
             }
 
             if (!ViewRig.TryFindAimBlock(aim, eye, range, aim.root, _weapon.HitMask, settings.Margin, out var point))
             {
-                ApplyAimBlock(false, null);
+                ApplyAimBlock(ShownModel, false, null);
                 return;
             }
 
             var camera = _ads != null && _ads.Camera != null ? _ads.Camera : aim.GetComponent<Camera>();
-            ApplyAimBlock(true, AimBlockViewport(camera, point));
+            ApplyAimBlock(ShownModel, true, AimBlockViewport(camera, point));
         }
 
         /// <summary>world の点をカメラのビューポート座標にする。カメラが無いか点がカメラの後ろなら null。</summary>
@@ -723,16 +720,16 @@ namespace Fps.Runtime
             return new System.Numerics.Vector2(viewport.x, viewport.y);
         }
 
-        private void ApplyAimBlock(bool blocked, System.Numerics.Vector2? viewport)
+        private void ApplyAimBlock(HudModel model, bool blocked, System.Numerics.Vector2? viewport)
         {
-            var changed = blocked != _model.IsAimBlocked;
+            var changed = blocked != model.IsAimBlocked;
             if (blocked)
             {
-                _model.SetAimBlock(viewport);
+                model.SetAimBlock(viewport);
             }
             else
             {
-                _model.ClearAimBlock();
+                model.ClearAimBlock();
             }
 
             if (changed)
@@ -830,6 +827,7 @@ namespace Fps.Runtime
             StopFollowingPalette();
             DisposeView();
             UnsubscribeSources();
+            BindNoticeTo(null);
             _model.UnbindAll();
 
             if (_ownedPanelSettings != null)
@@ -951,22 +949,11 @@ namespace Fps.Runtime
 
         private void UnsubscribeSources()
         {
-            if (_player != null)
-            {
-                _player.HealthReset -= _model.BindHealth;
-            }
-
-            if (_weapon != null)
-            {
-                _weapon.WeaponChanged -= _model.BindWeapon;
-            }
-
-            GameSignals.CampaignNotice.Changed -= _model.BindNotice;
             UnsubscribeSignals();
-            _player = null;
             _weapon = null;
             _ads = null;
             _mover = null;
+            _rig = null;
         }
     }
 }

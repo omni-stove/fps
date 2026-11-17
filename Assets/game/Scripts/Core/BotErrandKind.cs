@@ -23,5 +23,17 @@ namespace Shooter.Core
 
         /// <summary>分隊の指示: 指示した人に付いていく。</summary>
         Follow,
+
+        /// <summary>旗取り: 運んでいる敵の旗を自陣の台へ運ぶ。</summary>
+        CarryFlag,
+
+        /// <summary>旗取り: 落ちた自陣の旗に触れて台へ戻しに行く。</summary>
+        RecoverFlag,
+
+        /// <summary>旗取り: 攻めの役として敵の旗のある所へ行く。</summary>
+        TakeFlag,
+
+        /// <summary>旗取り: 守りの役として自陣の台を守る。</summary>
+        DefendFlag,
     }
 }

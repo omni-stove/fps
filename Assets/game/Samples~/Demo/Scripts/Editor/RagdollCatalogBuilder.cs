@@ -8,11 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// <see cref="CharacterRigBuilder"/> の仮リグに合わせた <see cref="RagdollCatalog"/> を作るか上書きする。
-    /// コライダーの大きさはリグの見た目の部品 (<see cref="CharacterRigBuilder.BoneVolumes"/>) から取るので、部品を変えれば次の実行で追いつく。
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.RagdollCatalogBuilder.Build</code>
-    /// </summary>
+    // コライダーの大きさを CharacterRigBuilder.BoneVolumes から取るのは、リグの部品を変えれば次の実行で追いつくようにするため。
     public static class RagdollCatalogBuilder
     {
         public const string MenuPath = "Shooter/Build Ragdoll Catalog";
@@ -43,7 +39,6 @@ namespace Shooter.Editor
             BuildAt(CatalogPath);
         }
 
-        /// <summary>仮リグのボーンの並び (根に近い順) で対応表の中身を返す。仮リグと表の関節がずれていれば例外を投げる。</summary>
         public static IReadOnlyList<RagdollBone> Entries()
         {
             var volumes = new Dictionary<string, Bounds>(StringComparer.Ordinal);

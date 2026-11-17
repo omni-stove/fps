@@ -22,6 +22,21 @@ namespace Shooter.Server
         /// </summary>
         public event Action<ServerMapData> MapChanged;
 
+        /// <summary>
+        /// 次の試合を始めるとき、マップを替えるより前に呼ぶ。ここで <see cref="RequestNextMap"/> を呼べば、始める試合からそのマップになる。
+        /// </summary>
+        /// <remarks>
+        /// 試合の枠はモジュールより先に Tick するので、投票の締め切りと次の試合の始まりが同じ Tick に重なると、
+        /// モジュールの Tick で締め切っていては決まったマップが間に合わない。
+        /// </remarks>
+        public event Action NextMapChoosing;
+
+        /// <summary>試合の合間にマップの投票をする秒。0 なら投票しない。</summary>
+        public float MapVoteSeconds { get; }
+
+        /// <summary>試合の合間にマップの投票をするか。今のマップのほかに替えられるマップがあり、投票の秒が 0 より長いとき。</summary>
+        public bool HoldsMapVote => MapVoteSeconds > 0f && _maps.Count > 1;
+
         /// <summary>今の試合のマップ。<see cref="UseMaps"/> の前は null。</summary>
         public ServerMapData Map { get; private set; }
 
@@ -97,8 +112,17 @@ namespace Shooter.Server
             return true;
         }
 
+        public void WriteMapVote(int playerId, string mapId)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.MapVote(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), mapId));
+            }
+        }
+
         partial void ChangeMapForNextMatch()
         {
+            NextMapChoosing?.Invoke();
             var next = NextMap;
             NextMap = null;
             if (next == null || Map == null || string.Equals(next, Map.Name, StringComparison.Ordinal))

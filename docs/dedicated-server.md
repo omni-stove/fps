@@ -319,6 +319,32 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 次の試合のマップを選ぶ仕組み (投票) が選ばなければ、同じマップのまま続ける。
 途中から入る人には承認のメッセージで今のマップを知らせる。
 
+### 試合の合間のマップの投票
+
+ルールのファイルの `match.mapVoteSeconds` を 0 より長くし、読んだマップが 2 つ以上あると、試合が終わるたびに投票をする。
+読んだマップが 1 つだけか `mapVoteSeconds` が 0 (既定) なら投票はせず、投票のメッセージも送らない。
+
+```json
+"mapPool": ["NetTest", "NetArena01", "NetArena02"],
+"mapVoteSeconds": 15,
+```
+
+- 今のマップを除いた候補から最大 3 つを出す。候補が並ぶ順は `mapPool` の順。
+- 試合が終わると投票を始めて全員に `MapVoteStateMessage` を送り、票が変わったときと 1 秒ごと、途中から入った人にも送る。
+- 締め切ると一番票の多いマップに決め、並んだときと誰も入れなかったときは、並んだ候補から試合の Id で決まる乱数で選ぶ。
+  決まったマップを載せた `MapVoteStateMessage` を送り、次の試合をそのマップで始める。
+- 次の試合を始めるまでの秒 (`restartDelaySeconds`) が `mapVoteSeconds` より短いときは、`mapVoteSeconds` まで待つ。
+- 抜けた人の票は締め切る前なら消す。締め切った後の票と、候補に無い番号の票は受け付けない。
+
+ログには次の行が出る (`-log-format json` なら票ごとに `map_vote`、替えたときに `map_changed` の JSON も出る)。
+
+```
+[MapVote] opened current=NetTest candidates=[NetArena01, NetArena02] seconds=15.0
+[MapVote] cast player=1 map=NetArena02 result=Cast
+[MapVote] decided map=NetArena02 reason=Majority votes=1
+[Match] map changed from=NetTest to=NetArena02
+```
+
 ## サーバーがすること
 
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む。作業ディレクトリの `server-data/`、

@@ -226,29 +226,65 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudShowsSquadsPlacementAndTheZone()
+        public void TheStatusCarriesTheSquadsAndTheZone()
         {
             var zone = Zone(30f, new ShrinkingZone.PhaseSettings(12f, 10f, 10f, 1f));
             _runner.Zone = zone;
             var player = Member("Player", 0, ZeroSpawn);
             var enemy = Member("Bot-1-1", 1, OneSpawn);
-            var hud = BoundHudView();
-            Begin(new[] { player, enemy }, player, hud);
+            Begin(new[] { player, enemy }, player);
 
-            Assert.That(hud.TimeText, Is.EqualTo("00:00"), "without a time limit the HUD counts up");
-            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 残り 1"));
-            Assert.That(hud.Scores[0].IsOwn, Is.True);
-            Assert.That(hud.Lines, Does.Contain("残り分隊 2/2"));
-            Assert.That(hud.Lines, Does.Contain("順位 2 位以内"));
-            Assert.That(hud.Lines, Does.Contain("エリア縮小まで 00:12"));
-            Assert.That(hud.Lines, Does.Contain("分隊 生存 1"));
-            Assert.That(hud.ResultText, Is.EqualTo(HudFormat.NoResult));
+            var detail = Detail();
+            Assert.That(detail.Session, Is.SameAs(_runner.BattleRoyale));
+            Assert.That(detail.LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
+            Assert.That(detail.ReviveTargetId, Is.Null);
+            Assert.That(detail.IsLocalPlayerUnarmed, Is.False, "a player without a WeaponController is not told to pick one up");
+            Assert.That(detail.Zone.HasValue, Is.True, "the running zone hands its state to the runner");
+            Assert.That(detail.Zone.Value.Stage, Is.EqualTo(ZoneStage.Waiting));
+            Assert.That(detail.Zone.Value.SecondsUntilShrink, Is.EqualTo(12f).Within(1e-4f));
+            Assert.That(_runner.Status.RemainingSeconds, Is.Null, "the battle royale has no time limit");
+            Assert.That(_runner.Status.IsEnded, Is.False);
 
             KillBy(player, enemy);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Does.Contain("順位 1 位"));
-            Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)new Side(0)));
+            Assert.That(Detail().Session.GetPlacement(new Side(0)), Is.EqualTo((int?)1));
+        }
+
+        [Test]
+        public void TheHudShowsSquadsPlacementAndTheZone()
+        {
+            ModeHudFormatters.Register<BattleRoyaleStatus>(new BattleRoyaleHudFormatter());
+            try
+            {
+                var zone = Zone(30f, new ShrinkingZone.PhaseSettings(12f, 10f, 10f, 1f));
+                _runner.Zone = zone;
+                var player = Member("Player", 0, ZeroSpawn);
+                var enemy = Member("Bot-1-1", 1, OneSpawn);
+                var hud = BoundHudView();
+                Begin(new[] { player, enemy }, player);
+
+                Assert.That(hud.TimeText, Is.EqualTo("00:00"), "without a time limit the HUD counts up");
+                Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 残り 1"));
+                Assert.That(hud.Scores[0].IsOwn, Is.True);
+                Assert.That(hud.Lines, Does.Contain("残り分隊 2/2"));
+                Assert.That(hud.Lines, Does.Contain("順位 2 位以内"));
+                Assert.That(hud.Lines, Does.Contain("エリア縮小まで 00:12"));
+                Assert.That(hud.Lines, Does.Contain("分隊 生存 1"));
+                Assert.That(hud.ResultText, Is.EqualTo(HudFormat.NoResult));
+
+                KillBy(player, enemy);
+                _runner.Tick(0f);
+
+                Assert.That(hud.Lines, Does.Contain("順位 1 位"));
+                Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            }
+            finally
+            {
+                ModeHudFormatters.Unregister(typeof(BattleRoyaleStatus));
+            }
         }
 
         [Test]
@@ -328,7 +364,7 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.DropHeight = float.NaN);
         }
 
-        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
+        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer)
         {
             var br = BattleRoyaleRunner.CreateBattleRoyale(4, 2, 0f, ActionRules.Default);
             _runner.Begin(br, members, _spawns, localPlayer);
@@ -418,6 +454,13 @@ namespace Fps.Tests.EditMode
             point.transform.position = position;
             point.Side = new Side(side);
             return point;
+        }
+
+        private BattleRoyaleStatus Detail()
+        {
+            Assert.That(_runner.Status, Is.Not.Null);
+            Assert.That(_runner.Status.Detail, Is.InstanceOf<BattleRoyaleStatus>());
+            return (BattleRoyaleStatus)_runner.Status.Detail;
         }
 
         private ModeHudView BoundHudView()

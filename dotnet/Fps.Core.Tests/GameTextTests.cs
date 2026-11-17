@@ -125,7 +125,7 @@ namespace Fps.Core.Tests
             Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA wins"));
             Assert.That(GameText.Resolve(ScoreboardRows.LocalPlayerName), Is.EqualTo("You"));
             Assert.That(SubtitleText.Format(new SoundCue(SoundCueKind.Gunshot, SoundCueDirection.BackLeft, SoundCue.FarDistance)), Is.EqualTo("[Gunshot back left far]"));
-            Assert.That(GameText.Resolve(ZoneHudText.Closed), Is.EqualTo("Final zone"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.zone.closed")), Is.EqualTo("Final zone"));
         }
 
         private static StringTable Table(string reloading)

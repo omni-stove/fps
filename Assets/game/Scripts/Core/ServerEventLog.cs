@@ -98,8 +98,11 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>killer が victim を倒した。teamKill は味方に倒された (点数の入らない) キルか。自滅では killer と victim が同じ。</summary>
-        /// <example><c>{"type":"kill","time":"...","matchId":"6c1f...","killerId":"0","victimId":"1","teamKill":"false"}</c></example>
+        /// <summary>
+        /// killer が victim を倒した。teamKill は味方に倒された (点数の入らない) キルか。自滅では killer と victim が同じ。
+        /// assisterIds はアシストした人の Id で、いれば <c>assisterIds</c> にカンマ区切りで出す (いなければ項目ごと出さない)。
+        /// </summary>
+        /// <example><c>{"type":"kill","time":"...","matchId":"6c1f...","killerId":"0","victimId":"1","teamKill":"false","assisterIds":"2,3"}</c></example>
         public static string Kill(
             DateTime utcNow,
             string matchId,
@@ -107,12 +110,30 @@ namespace Shooter.Core
             string killerProductUserId,
             int victimId,
             string victimProductUserId,
-            bool teamKill)
+            bool teamKill,
+            IReadOnlyList<int> assisterIds = null)
         {
             var values = BeginMatch(KillType, utcNow, matchId);
             AddPlayer(values, "killerId", "killerProductUserId", killerId, killerProductUserId);
             AddPlayer(values, "victimId", "victimProductUserId", victimId, victimProductUserId);
             values.Add(Pair("teamKill", Bool(teamKill)));
+            if (assisterIds != null && assisterIds.Count > 0)
+            {
+                // 値はすべて文字列という決まりを守るため、配列にせずカンマ区切りの 1 つの文字列にする
+                var ids = new string[assisterIds.Count];
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    if (assisterIds[i] < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(assisterIds), assisterIds[i], "assister ids must not be negative");
+                    }
+
+                    ids[i] = Number(assisterIds[i]);
+                }
+
+                values.Add(Pair("assisterIds", string.Join(",", ids)));
+            }
+
             return FlatJsonObject.Format(values);
         }
 

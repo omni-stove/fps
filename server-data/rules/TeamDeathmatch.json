@@ -70,7 +70,14 @@
     "captureSeconds": 8,
     "pointsPerSecond": 1,
     "maxCapturers": 3,
-    "maxPlayers": 8
+    "maxPlayers": 8,
+    "mapPool": [],
+    "mapVoteSeconds": 0,
+    "maxTeamSizeDifference": 0,
+    "privateMatch": false,
+    "joinCode": "",
+    "chatIntervalSeconds": 1,
+    "maxChatLength": 120
   },
   "motor": {
     "walkSpeed": 5,

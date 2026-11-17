@@ -396,6 +396,10 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
 | `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
 | `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
+| `chat` | プレイヤーがチャットを送った。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (本文の文字数) |
+| `map_vote` | プレイヤーが次のマップに投票した (選び直しも 1 行) | `matchId`、`playerId`、`productUserId`、`mapId` |
+| `map_changed` | 次の試合のマップを替えた | `matchId` (終わった試合)、`fromMapId`、`toMapId` |
+| `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。

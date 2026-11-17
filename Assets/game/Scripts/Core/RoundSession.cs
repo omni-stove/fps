@@ -216,7 +216,7 @@ namespace Shooter.Core
             FinishRoundIfEnded();
         }
 
-        /// <summary><see cref="ModeSession.ReportKill"/> を呼び、それでラウンドが終わればその場で扱う。</summary>
+        /// <summary><see cref="ModeSession.ReportKill(int, int)"/> を呼び、それでラウンドが終わればその場で扱う。</summary>
         public void ReportKill(int killerId, int victimId)
         {
             _mode.ReportKill(killerId, victimId);

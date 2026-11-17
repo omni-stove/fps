@@ -301,7 +301,7 @@ namespace Shooter.Tests.EditMode
         {
             var other = new[]
             {
-                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true),
             };
             GameSignals.Scoreboard.Publish(other);
 

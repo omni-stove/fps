@@ -13,6 +13,13 @@ namespace Shooter.Core
         double PointsForKill(ModeSession session, int killerId, int victimId);
 
         /// <summary>
+        /// assisterId が、別の陣営の victimId を倒すのを手伝った (アシストした) ときに、assisterId の陣営へ足す点。0 以上の有限値。
+        /// 別の陣営を倒したキルについて、<see cref="ModeSession.ReportKill(int, int, System.Collections.Generic.IReadOnlyList{int})"/> が
+        /// アシストに数えた人ごとに呼ぶ。
+        /// </summary>
+        double PointsForAssist(ModeSession session, int assisterId, int victimId);
+
+        /// <summary>
         /// side に 1 秒あたり入る点。0 以上の有限値。<see cref="ModeSession.Tick"/> の頭で陣営ごとに 1 度ずつ呼び、
         /// その Tick の間は変わらないものとして足す (Tick の途中で目標を取っても、点はその次の Tick から入る)。
         /// </summary>

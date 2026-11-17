@@ -62,6 +62,8 @@ namespace Shooter.Runtime
         private ControlPointZone[] _zones = Array.Empty<ControlPointZone>();
         private ControlPointMap _map;
         private Domination _domination;
+        private OfflineAssists _assists;
+        private AssistSpec _assistSpec;
         private BootstrapWorld _world;
         private DominationStatus _publishedStatus;
         private ScoreboardEntry[] _publishedScoreboard;
@@ -72,6 +74,16 @@ namespace Shooter.Runtime
         private bool _enabledRestartAction;
 
         public Domination Domination => _domination;
+
+        // 入っていなければ KitTuning.Assist を読む。試すときに Resources を通さず値を渡せるよう、上書きできるようにしておく。
+        public AssistSpec AssistSpec
+        {
+            get => _assistSpec ?? KitTuning.Assist;
+            set => _assistSpec = value;
+        }
+
+        /// <summary>参加者が受けたダメージの記録。始める前と止めた後は null。</summary>
+        public OfflineAssists Assists => _assists;
 
         public bool IsStarted => _domination != null;
 
@@ -346,11 +358,13 @@ namespace Shooter.Runtime
             _zones = sortedZones;
             _domination = domination;
             _participants.AddRange(participants);
+            _assists = new OfflineAssists(AssistSpec, (attackerId, victimId) => AreAllies(domination, attackerId, victimId));
             foreach (var participant in participants)
             {
                 _byDamageable.Add(participant.Damageable, participant);
                 _candidates.Add(participant.Damageable);
                 participant.Damageable.Died += OnParticipantDied;
+                _assists.Watch(participant.Damageable, participant.Id);
                 Debug.Log(DominationLog.Joined(participant.Id, participant.Team, participant.Name), this);
             }
 
@@ -397,6 +411,7 @@ namespace Shooter.Runtime
                 return;
             }
 
+            _assists.Advance(deltaSeconds);
             foreach (var participant in _participants)
             {
                 if (participant.Countdown.Tick(deltaSeconds))
@@ -464,6 +479,8 @@ namespace Shooter.Runtime
             _participants.Clear();
             _byDamageable.Clear();
             _candidates.Clear();
+            _assists?.Stop();
+            _assists = null;
 
             if (_domination != null)
             {
@@ -578,7 +595,7 @@ namespace Shooter.Runtime
             var killer = FindKiller();
             if (killer != null && killer != victim)
             {
-                _domination.ReportKill(killer.Id, victim.Id);
+                _domination.ReportKill(killer.Id, victim.Id, _assists.TakeAssisters(victim.Id, killer.Id));
                 Debug.Log(DominationLog.Kill(killer.Id, victim.Id), this);
             }
             else
@@ -633,7 +650,13 @@ namespace Shooter.Runtime
                 RespawnPlayer(ground);
             }
 
+            _assists?.Clear(participant.Id);
             Debug.Log(DominationLog.Respawn(participant.Id, participant.Team, ground.ToNumerics()), this);
+        }
+
+        private static bool AreAllies(Domination domination, int attackerId, int victimId)
+        {
+            return !domination.HasPlayer(attackerId) || !domination.HasPlayer(victimId) || domination.GetTeam(attackerId) == domination.GetTeam(victimId);
         }
 
         private void RespawnPlayer(Vector3 ground)
@@ -796,6 +819,7 @@ namespace Shooter.Runtime
                     participant.Team,
                     _domination.GetKills(participant.Id),
                     _domination.GetDeaths(participant.Id),
+                    _domination.GetAssists(participant.Id),
                     ScoreboardConnection.None,
                     isLocal);
             }

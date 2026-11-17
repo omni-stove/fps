@@ -14,6 +14,10 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedEliminated1 = { "Eliminated 1" };
         private static readonly string[] _expectedEliminatedThenEnded = { "Eliminated 1", "Eliminated 2", "Ended 0" };
         private static readonly int[] _tenAndTwelve = { 10, 12 };
+        private static readonly int[] _assistersWithNoise = { 12, 12, 10, 11, 99 };
+        private static readonly int[] _assisters12And13 = { 12, 13 };
+        private static readonly int[] _assister11 = { 11 };
+        private static readonly int[] _assister12 = { 12 };
 
         [Test]
         public void JoinAssignsSidesInJoinOrder()
@@ -95,6 +99,114 @@ namespace Shooter.Core.Tests
             Assert.That(session.GetKills(10), Is.Zero);
             Assert.That(session.GetDeaths(10), Is.EqualTo(1));
             Assert.That(session.GetDeaths(11), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AssistersOfAKillCountOnceAndScoreForTheirOwnSide()
+        {
+            var session = Create(new FreeForAll(), scoreRules: new IScoreRule[] { new KillScore(1d, 0.5d) });
+            session.Join(10);
+            session.Join(11);
+            session.Join(12);
+            session.Start();
+
+            session.ReportKill(10, 11, _assistersWithNoise);
+
+            Assert.That(session.GetKills(10), Is.EqualTo(1));
+            Assert.That(session.GetAssists(12), Is.EqualTo(1));
+            Assert.That(session.GetAssists(10), Is.Zero);
+            Assert.That(session.GetAssists(11), Is.Zero);
+            Assert.That(session.GetScore(new Side(0)), Is.EqualTo(1d));
+            Assert.That(session.GetScore(new Side(1)), Is.Zero);
+            Assert.That(session.GetScore(new Side(2)), Is.EqualTo(0.5d));
+        }
+
+        [Test]
+        public void TheVictimsTeammatesAndTeamKillsGetNoAssist()
+        {
+            var session = Create(new TwoTeams(), scoreRules: new IScoreRule[] { new KillScore(1d, 1d) });
+            session.Join(10);
+            session.Join(11);
+            session.Join(12);
+            session.Join(13);
+            session.Start();
+
+            session.ReportKill(10, 11, _assisters12And13);
+            session.ReportKill(10, 12, _assister11);
+            session.ReportKill(13, 13, _assister12);
+
+            Assert.That(session.GetAssists(12), Is.EqualTo(1));
+            Assert.That(session.GetAssists(13), Is.Zero);
+            Assert.That(session.GetAssists(11), Is.Zero);
+            Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(2d));
+            Assert.That(session.GetScore(Side.Bravo), Is.Zero);
+        }
+
+        [Test]
+        public void AssistPointsCanReachTheScoreLimit()
+        {
+            var session = Create(
+                new TwoTeams(),
+                scoreRules: new IScoreRule[] { new KillScore(1d, 1d) },
+                winConditions: new IWinCondition[] { new ScoreLimitWin(2d) });
+            session.Join(10);
+            session.Join(11);
+            session.Join(12);
+            session.Start();
+
+            session.ReportKill(10, 11, _assister12);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(session.Winner, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(session.GetAssists(12), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void KillScoreGivesNoAssistPointsByDefault()
+        {
+            var session = Create(new TwoTeams(), scoreRules: new IScoreRule[] { new KillScore() });
+            session.Join(10);
+            session.Join(11);
+            session.Join(12);
+            session.Start();
+
+            session.ReportKill(10, 11, _assister12);
+
+            Assert.That(session.GetAssists(12), Is.EqualTo(1));
+            Assert.That(session.GetScore(Side.Alpha), Is.EqualTo(1d));
+            Assert.That(new KillScore().PointsPerAssist, Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillScore(1d, -1d));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new KillScore(1d, double.PositiveInfinity));
+        }
+
+        [Test]
+        public void AssistsAreCarriedInByAddPlayerAndClearedByReset()
+        {
+            var session = Create(new TwoTeams());
+            session.AddPlayer(10, Side.Alpha, 2, 1, 3);
+            session.AddPlayer(11, Side.Bravo, 1, 2);
+
+            Assert.That(session.GetAssists(10), Is.EqualTo(3));
+            Assert.That(session.GetAssists(11), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.AddPlayer(12, Side.Alpha, 0, 0, -1));
+            Assert.That(session.HasPlayer(12), Is.False);
+
+            session.Reset();
+
+            Assert.That(session.GetAssists(10), Is.Zero);
+        }
+
+        [Test]
+        public void AssistsAreNotCountedOutsidePlaying()
+        {
+            var session = Create(new TwoTeams());
+            session.Join(10);
+            session.Join(11);
+            session.Join(12);
+
+            session.ReportKill(10, 11, _assister12);
+
+            Assert.That(session.GetAssists(12), Is.Zero);
         }
 
         [Test]
@@ -470,6 +582,8 @@ namespace Shooter.Core.Tests
             public Action OnAdvance { get; set; }
 
             public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
+
+            public double PointsForAssist(ModeSession session, int assisterId, int victimId) => 0d;
 
             public double PointsPerSecond(ModeSession session, Side side) => Rates.TryGetValue(side, out var rate) ? rate : 0d;
 

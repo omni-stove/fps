@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using NUnit.Framework;
 
 namespace Shooter.Core.Tests
@@ -13,6 +14,9 @@ namespace Shooter.Core.Tests
         private const int _bravo2 = 4;
         private const float _returnSeconds = 10f;
         private const float _respawnSeconds = 5f;
+        private static readonly string[] _expectedByItself = { "1:-" };
+        private static readonly string[] _expectedCaptured = { "1:1 score=1" };
+        private static readonly string[] _expectedOrder = { "captured 1", "ended 0", "captured 2" };
 
         [Test]
         public void TheModeRejectsANullSpec()
@@ -171,7 +175,7 @@ namespace Shooter.Core.Tests
         {
             var game = Start();
             var returned = new List<string>();
-            game.FlagReturned += (flag, player) => returned.Add(flag.Id + ":" + (player.HasValue ? player.Value.ToString() : "-"));
+            game.FlagReturned += (flag, player) => returned.Add(flag.Id + ":" + (player.HasValue ? player.Value.ToString(CultureInfo.InvariantCulture) : "-"));
             game.Touch(Side.Bravo, _alpha1);
             game.ReportKill(_bravo1, _alpha1);
 
@@ -201,7 +205,7 @@ namespace Shooter.Core.Tests
         {
             var game = Start();
             var returned = new List<string>();
-            game.FlagReturned += (flag, player) => returned.Add(flag.Id + ":" + (player.HasValue ? player.Value.ToString() : "-"));
+            game.FlagReturned += (flag, player) => returned.Add(flag.Id + ":" + (player.HasValue ? player.Value.ToString(CultureInfo.InvariantCulture) : "-"));
             game.Touch(Side.Bravo, _alpha1);
             game.ReportKill(_bravo1, _alpha1);
 
@@ -214,7 +218,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.AtBase));
             Assert.That(game.GetReturnRemaining(Side.Bravo), Is.Null);
-            Assert.That(returned, Is.EqualTo(new[] { "1:-" }));
+            Assert.That(returned, Is.EqualTo(_expectedByItself));
         }
 
         [Test]
@@ -248,7 +252,7 @@ namespace Shooter.Core.Tests
             Assert.That(game.GetCaptures(Side.Bravo), Is.Zero);
             Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.AtBase), "the captured flag goes back to the enemy base");
             Assert.That(game.IsCarrying(_alpha1), Is.False);
-            Assert.That(captured, Is.EqualTo(new[] { "1:1 score=1" }), "the point is already added when the capture is announced");
+            Assert.That(captured, Is.EqualTo(_expectedCaptured), "the point is already added when the capture is announced");
         }
 
         [Test]
@@ -314,7 +318,7 @@ namespace Shooter.Core.Tests
         {
             var game = Start(new CaptureTheFlagSpec(scoreLimit: 2, respawnSeconds: _respawnSeconds, returnSeconds: _returnSeconds));
             var order = new List<string>();
-            game.Session.Ended += winner => order.Add("ended " + (winner.HasValue ? winner.Value.Id.ToString() : "draw"));
+            game.Session.Ended += winner => order.Add("ended " + (winner.HasValue ? winner.Value.Id.ToString(CultureInfo.InvariantCulture) : "draw"));
             game.FlagCaptured += (flag, player) => order.Add("captured " + player);
 
             game.Touch(Side.Bravo, _alpha1);
@@ -327,7 +331,7 @@ namespace Shooter.Core.Tests
             Assert.That(game.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(game.Session.Winner, Is.EqualTo(Side.Alpha));
             Assert.That(game.Session.GetScore(Side.Alpha), Is.EqualTo(2d));
-            Assert.That(order, Is.EqualTo(new[] { "captured 1", "ended 0", "captured 2" }));
+            Assert.That(order, Is.EqualTo(_expectedOrder));
         }
 
         [Test]

@@ -9,7 +9,7 @@ namespace Shooter.Protocol
     /// </remarks>
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 8;
+        public const byte CurrentVersion = 9;
 
         /// <summary><see cref="KillPlaneY"/> の既定。.NET のサーバーと Netcode のプレイヤーの既定と同じ。</summary>
         public const float DefaultKillPlaneY = -50f;
@@ -186,6 +186,24 @@ namespace Shooter.Protocol
             writer.WriteSingle(prone.SpreadScale);
             writer.WriteSingle(prone.DiveDistance);
             writer.WriteSingle(prone.DiveSeconds);
+
+            writer.WriteSingle(motor.LeanSideOffset);
+            writer.WriteSingle(motor.LeanAngleDegrees);
+            writer.WriteSingle(motor.LeanSpeed);
+            writer.WriteInt32(motor.AirJumps);
+            writer.WriteSingle(motor.AirJumpSpeed);
+
+            var swim = settings.Swim;
+            writer.WriteSingle(swim.Speed);
+            writer.WriteSingle(swim.Buoyancy);
+            writer.WriteSingle(swim.BreathSeconds);
+
+            var wallRun = settings.WallRun;
+            writer.WriteBool(wallRun.Enabled);
+            writer.WriteSingle(wallRun.MaxSeconds);
+            writer.WriteSingle(wallRun.MinSpeed);
+            writer.WriteSingle(wallRun.GravityScale);
+            writer.WriteSingle(wallRun.JumpOffSpeed);
         }
 
         private static void WriteDirection(MessageWriter writer, Shooter.Core.MoveDirectionScale direction)
@@ -233,6 +251,24 @@ namespace Shooter.Protocol
                 prone[i] = reader.ReadFiniteSingle("prone value");
             }
 
+            var leanSideOffset = reader.ReadFiniteSingle("lean side offset");
+            var leanAngleDegrees = reader.ReadFiniteSingle("lean angle");
+            var leanSpeed = reader.ReadFiniteSingle("lean speed");
+            var airJumps = reader.ReadInt32AtLeast(0, "air jumps");
+            var airJumpSpeed = reader.ReadFiniteSingle("air jump speed");
+            var swim = new float[3];
+            for (var i = 0; i < swim.Length; i++)
+            {
+                swim[i] = reader.ReadFiniteSingle("swim value");
+            }
+
+            var wallRunEnabled = reader.ReadBool();
+            var wallRun = new float[4];
+            for (var i = 0; i < wallRun.Length; i++)
+            {
+                wallRun[i] = reader.ReadFiniteSingle("wall run value");
+            }
+
             try
             {
                 return new Shooter.Core.NetMotorSettings(
@@ -242,10 +278,13 @@ namespace Shooter.Protocol
                         new Shooter.Core.MoveDirectionScale(direction[3], direction[4], direction[5]),
                         new Shooter.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
                         motor[13], motor[14], motor[15], motor[16], motor[17], motor[18],
-                        motor[19], motor[20], motor[21], motor[22], motor[23], motor[24], motor[25], motor[26], motor[27], motor[28]),
+                        motor[19], motor[20], motor[21], motor[22], motor[23], motor[24], motor[25], motor[26], motor[27], motor[28],
+                        leanSideOffset, leanAngleDegrees, leanSpeed, airJumps, airJumpSpeed),
                     new Shooter.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Shooter.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
-                    new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));
+                    new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]),
+                    new Shooter.Core.SwimTuning(swim[0], swim[1], swim[2]),
+                    new Shooter.Core.WallRunTuning(wallRunEnabled, wallRun[0], wallRun[1], wallRun[2], wallRun[3]));
             }
             catch (System.ArgumentException e)
             {

@@ -58,6 +58,39 @@ namespace Shooter.Core
             CharacterProneState prone,
             CharacterLadderState ladder,
             CharacterKnockbackState knockback)
+            : this(
+                position,
+                velocity,
+                isGrounded,
+                stance,
+                cover,
+                dodge,
+                vault,
+                prone,
+                ladder,
+                knockback,
+                CharacterLeanState.None,
+                CharacterSwimState.None,
+                CharacterWallRunState.None,
+                0)
+        {
+        }
+
+        public CharacterMotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            PlayerStance stance,
+            CharacterCoverState cover,
+            DodgeSnapshot dodge,
+            CharacterVaultState vault,
+            CharacterProneState prone,
+            CharacterLadderState ladder,
+            CharacterKnockbackState knockback,
+            CharacterLeanState lean,
+            CharacterSwimState swim,
+            CharacterWallRunState wallRun,
+            int airJumpsUsed)
         {
             Position = position;
             Velocity = velocity;
@@ -69,6 +102,10 @@ namespace Shooter.Core
             Prone = prone;
             Ladder = ladder;
             Knockback = knockback;
+            Lean = lean;
+            Swim = swim;
+            WallRun = wallRun;
+            AirJumpsUsed = airJumpsUsed;
         }
 
         public Vector3 Position { get; }
@@ -95,6 +132,18 @@ namespace Shooter.Core
 
         public CharacterKnockbackState Knockback { get; }
 
+        public CharacterLeanState Lean { get; }
+
+        public CharacterSwimState Swim { get; }
+
+        public CharacterWallRunState WallRun { get; }
+
+        public int AirJumpsUsed { get; }
+
+        public bool IsSwimming => Swim.IsSwimming;
+
+        public bool IsWallRunning => WallRun.IsRunning;
+
         public bool IsKnockedBack => Knockback.IsFlying;
 
         public bool IsDiving => Prone.IsDiving;
@@ -106,7 +155,8 @@ namespace Shooter.Core
         public bool IsVaulting => Vault.IsVaulting;
 
         public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
-            && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone;
+            && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone
+            && Lean.IsValid && Swim.IsValid && WallRun.IsValid && AirJumpsUsed >= 0;
 
         /// <summary>
         /// 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
@@ -135,12 +185,22 @@ namespace Shooter.Core
                 return StanceMismatchError;
             }
 
+            // 傾きの量の差は同じ入力が続けば揃うので、向きが食い違うときだけ巻き戻す (量の差まで見ると傾けている途中で毎回巻き戻す)。
+            if (predicted.Swim.IsSwimming != authoritative.Swim.IsSwimming
+                || predicted.WallRun.Side != authoritative.WallRun.Side
+                || predicted.AirJumpsUsed != authoritative.AirJumpsUsed
+                || LeanSide(predicted.Lean.Amount) != LeanSide(authoritative.Lean.Amount))
+            {
+                return StanceMismatchError;
+            }
+
             return Vector3.Distance(predicted.Position, authoritative.Position);
         }
 
         public CharacterMotorState WithKnockback(CharacterKnockbackState knockback)
         {
-            return new CharacterMotorState(Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback);
+            return new CharacterMotorState(
+                Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback, Lean, Swim, WallRun, AirJumpsUsed);
         }
 
         public bool Equals(CharacterMotorState other)
@@ -154,7 +214,11 @@ namespace Shooter.Core
                 && Vault.Equals(other.Vault)
                 && Prone.Equals(other.Prone)
                 && Ladder.Equals(other.Ladder)
-                && Knockback.Equals(other.Knockback);
+                && Knockback.Equals(other.Knockback)
+                && Lean.Equals(other.Lean)
+                && Swim.Equals(other.Swim)
+                && WallRun.Equals(other.WallRun)
+                && AirJumpsUsed == other.AirJumpsUsed;
         }
 
         public override bool Equals(object obj)
@@ -178,8 +242,14 @@ namespace Shooter.Core
             {
                 return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ ((int)Stance << 1)
                     ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode()
-                    ^ Knockback.GetHashCode();
+                    ^ Knockback.GetHashCode() ^ Lean.GetHashCode() ^ Swim.GetHashCode() ^ WallRun.GetHashCode() ^ (AirJumpsUsed << 4);
             }
+        }
+
+        // Math.Sign は NaN で投げるので、壊れた状態を受けても比べられるよう比較で決める。
+        private static int LeanSide(float amount)
+        {
+            return amount > 0f ? 1 : (amount < 0f ? -1 : 0);
         }
 
         private static bool IsFiniteVector(Vector3 v)

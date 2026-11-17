@@ -4,14 +4,6 @@ using Shooter.Core;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// <see cref="IMemberLobbyApi"/> の上で、<see cref="ILobbyBackend"/> のメンバー用ロビー (パーティ) の口を動かす。
-    /// 作る・コードで入る・出る・メンバーの属性の読み書きと、入っているロビーのメンバーの属性が変わった知らせを受け持つ。
-    /// </summary>
-    /// <remarks>
-    /// 作った・入ったロビーを使える形 (属性を付けて中身を読む) にできなければ、出てから失敗を返す。
-    /// 入っているロビーは覚えておき、<see cref="Dispose"/> で出る。ログは <c>[Lobby]</c> 付きで出す。
-    /// </remarks>
     public sealed class MemberLobbies : IDisposable
     {
         private const string _interrupted = "the lobby was left or the login ended before the request finished";
@@ -22,8 +14,6 @@ namespace Shooter.NetV2
         private int _epoch;
         private bool _disposed;
 
-        /// <param name="api">ロビーを呼ぶ側。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public MemberLobbies(IMemberLobbyApi api, Action<string> log)
         {
             _api = api ?? throw new ArgumentNullException(nameof(api));
@@ -31,13 +21,10 @@ namespace Shooter.NetV2
             _api.MemberUpdateReceived += HandleMemberUpdate;
         }
 
-        /// <summary><see cref="ILobbyBackend.MemberAttributesChanged"/>。</summary>
         public event Action<string, string> MemberAttributesChanged;
 
-        /// <summary>入っているメンバー用ロビーの ID (順不同)。</summary>
         public IReadOnlyCollection<string> Joined => _joined;
 
-        /// <summary><see cref="ILobbyBackend.CreateMemberLobby"/>。</summary>
         public void Create(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             if (string.IsNullOrEmpty(bucketId))
@@ -117,7 +104,6 @@ namespace Shooter.NetV2
             });
         }
 
-        /// <summary><see cref="ILobbyBackend.JoinMemberLobby"/>。</summary>
         public void Join(string code, Action<LobbyInfo, string> done)
         {
             var lobbyId = code?.Trim();
@@ -179,7 +165,6 @@ namespace Shooter.NetV2
             });
         }
 
-        /// <summary><see cref="ILobbyBackend.LeaveMemberLobby"/>。</summary>
         public void Leave(string lobbyId, Action<string> done)
         {
             if (string.IsNullOrEmpty(lobbyId))
@@ -214,7 +199,6 @@ namespace Shooter.NetV2
             });
         }
 
-        /// <summary><see cref="ILobbyBackend.SetMemberAttributes"/>。</summary>
         public void SetMemberAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
         {
             if (string.IsNullOrEmpty(lobbyId))
@@ -244,7 +228,6 @@ namespace Shooter.NetV2
             });
         }
 
-        /// <summary><see cref="ILobbyBackend.ReadMemberAttributes"/>。</summary>
         public void ReadMemberAttributes(string lobbyId, string userId, Action<IReadOnlyList<LobbyAttribute>, string> done)
         {
             if (string.IsNullOrEmpty(lobbyId))
@@ -273,7 +256,6 @@ namespace Shooter.NetV2
             done(attributes ?? Array.Empty<LobbyAttribute>(), null);
         }
 
-        /// <summary><see cref="ILobbyBackend.ReadMemberLobby"/>。</summary>
         public void Read(string lobbyId, Action<LobbyInfo, string> done)
         {
             if (string.IsNullOrEmpty(lobbyId))
@@ -290,7 +272,7 @@ namespace Shooter.NetV2
             var lobby = _api.CopyLobby(lobbyId, out var reason);
             if (lobby == null && (reason == null || LobbyBackendErrors.IsNotFound(reason)))
             {
-                // もう入っていない・ロビーが無いは、ILobbyBackend.ReadMemberLobby の約束どおり (null, null) で返す
+                // 入っていない・無いロビーは読めないのではなく「無い」なので、理由を付けずに (null, null) で返す
                 _joined.Remove(lobbyId);
                 done(null, null);
                 return;
@@ -305,16 +287,13 @@ namespace Shooter.NetV2
             done(lobby, null);
         }
 
-        /// <summary>
-        /// ログインが切れて、サービスの側でもうどのロビーにも入っていない。覚えているロビーを出ずに忘れ、返事待ちの要求は失敗にする。
-        /// </summary>
+        // ログインが切れるとサービスの側でもうどのロビーにも入っていないので、出る要求を送らずに忘れる。
         public void Forget()
         {
             _epoch++;
             _joined.Clear();
         }
 
-        /// <summary>入っているロビーから出て、知らせを止める。出る結果はログにだけ出す。</summary>
         public void Dispose()
         {
             if (_disposed)
@@ -346,7 +325,7 @@ namespace Shooter.NetV2
             done(lobby, null);
         }
 
-        /// <summary>入ったロビーの中身を読む。読めなければ、ID を返せないまま残らないよう出ておく。</summary>
+        // 読めなければ、呼び出し側に ID を返せないまま入ったロビーが残らないよう出ておく。
         private LobbyInfo Read(string lobbyId, out string error)
         {
             var lobby = _api.CopyLobby(lobbyId, out error);
@@ -361,7 +340,6 @@ namespace Shooter.NetV2
             return null;
         }
 
-        /// <summary>返事を待つ間に捨てられた・ログインが切れた・ロビーから出たなら、結果を渡すかを決めて false を返す。</summary>
         private bool Current(int epoch, string lobbyId, Action<LobbyInfo, string> done)
         {
             if (_disposed)
@@ -406,7 +384,7 @@ namespace Shooter.NetV2
             MemberAttributesChanged?.Invoke(lobbyId, userId);
         }
 
-        /// <summary>呼び出し側が後から一覧を変えても、送る属性が変わらないよう写す。</summary>
+        // 呼び出し側が後から一覧を変えても、送る属性が変わらないよう写す。
         private static LobbyAttribute[] CopyAttributes(IReadOnlyList<LobbyAttribute> attributes, string name)
         {
             if (attributes == null)

@@ -580,10 +580,7 @@ namespace Shooter.NetEos
             }, lobbyId);
         }
 
-        /// <summary>
-        /// メンバー <paramref name="member"/> の公開の属性のうち、文字列と整数のものを読む。読めない・形の合わない属性は
-        /// ロビーの属性と同じく飛ばす (パーティは欠けた属性を「まだ書いていない」として扱う)。
-        /// </summary>
+        // 読めない・形の合わない属性はロビーの属性と同じく飛ばす。パーティは欠けた属性を「まだ書いていない」として扱うため。
         private static List<Shooter.Core.LobbyAttribute> ReadMemberAttributes(LobbyDetails details, ProductUserId member, string lobbyId)
         {
             var countOptions = new LobbyDetailsGetMemberAttributeCountOptions { TargetUserId = member };
@@ -705,10 +702,6 @@ namespace Shooter.NetEos
 
         private delegate Result CopyAttributeAt(uint index, out Epic.OnlineServices.Lobby.Attribute? attribute);
 
-        /// <summary>
-        /// <see cref="MemberLobbies"/> から呼ばれ、ログイン済みの EOS の Lobby インターフェースを 1 つずつ呼ぶ。
-        /// ログインとプラットフォームは外側の <see cref="EosLobbyBackend"/> のものを使う。
-        /// </summary>
         private sealed class MemberLobbyApi : IMemberLobbyApi
         {
             private readonly EosLobbyBackend _owner;
@@ -909,10 +902,7 @@ namespace Shooter.NetEos
                 }
             }
 
-            /// <summary>
-            /// 外側が捨てられた後も、入ったままのロビーから出る要求は送れるよう、捨てられたかは見ない
-            /// (返事を捨てるかは <see cref="MemberLobbies"/> が決める)。
-            /// </summary>
+            // 外側が捨てられた後も入ったままのロビーから出る要求を送れるよう、捨てられたかは見ない。返事を捨てるかは MemberLobbies が決める。
             private bool Ready(out string error)
             {
                 if (_owner._localUserId == null)
@@ -931,7 +921,7 @@ namespace Shooter.NetEos
                 return true;
             }
 
-            /// <summary>EOS の失敗の結果を理由にする。ロビーが無い・入っていないときは決まった符号にする。</summary>
+            // ロビーが無い・入っていないときは決まった符号にする。MemberLobbies がそれを「もう出ている」として見分けるため。
             private static string Failure(string action, string lobbyId, Result result)
             {
                 return result == Result.NotFound

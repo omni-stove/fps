@@ -12,7 +12,8 @@ namespace Fps.Runtime
     /// 同じ種類の合図は 1 行にまとめる。設定 (<see cref="ControlSettings.ShowSubtitles"/>) が Off の間は何も出さず、
     /// Off にしたら出している行を消す。向きは合図を受けたときに決め、後から振り向いても書き換えない。
     /// 字幕は聞こえない人の代わりの情報なので、HUD の量 (<see cref="HudVisibility"/>) では隠さない。
-    /// <see cref="SubtitleFeed.Spoken"/> (分隊の bot の応答など) は話した人ごとに 1 行で出す (<see cref="Show(SubtitleSpeech)"/>)。
+    /// <see cref="SubtitleFeed.Spoken"/> と、分隊の bot の応答 (<see cref="SubtitleFeed.SquadReplied"/>、<see cref="SquadOrderText.Reply(SquadOrderReply)"/> で文にする) は
+    /// 話した人ごとに 1 行で出す (<see cref="Show(SubtitleSpeech)"/>)。
     /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付く。専用サーバーでは購読しない。
     /// </summary>
     [DisallowMultipleComponent]
@@ -51,6 +52,7 @@ namespace Fps.Runtime
 
             SubtitleFeed.CuePlayed += Show;
             SubtitleFeed.Spoken += Show;
+            SubtitleFeed.SquadReplied += Show;
             AppliedControlSettings.Changed += HandleSettingsChanged;
             _subscribed = true;
         }
@@ -61,6 +63,7 @@ namespace Fps.Runtime
             {
                 SubtitleFeed.CuePlayed -= Show;
                 SubtitleFeed.Spoken -= Show;
+                SubtitleFeed.SquadReplied -= Show;
                 AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _subscribed = false;
             }
@@ -106,6 +109,17 @@ namespace Fps.Runtime
             {
                 Refresh();
             }
+        }
+
+        /// <summary>分隊の bot の応答 reply を、今の言語の文にして <see cref="Show(SubtitleSpeech)"/> で出す。</summary>
+        public void Show(SquadOrderReply reply)
+        {
+            if (reply.Speaker == null)
+            {
+                return;
+            }
+
+            Show(new SubtitleSpeech(reply.Speaker, SquadOrderText.Reply(reply)));
         }
 
         /// <summary>deltaSeconds 秒進め、出し終えた行を消す。負か有限でない値では進めない。</summary>

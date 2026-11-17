@@ -7,7 +7,6 @@ namespace Fps.Core
     /// 射撃場のチュートリアルの進み。手順 (<see cref="Order"/>: 移動・照準・射撃・リロード・しゃがみ・カバー) を順に 1 つずつ進め、
     /// 今の手順を終えたかを毎フレームの観測 (<see cref="Observe"/>) から決める。
     /// 手順ごとの数え (歩いた距離・覗き込んだ時間・当てた回数) はその手順に入ってから数え始め、前の手順でしたことは持ち越さない。
-    /// 画面に出す文 (<see cref="Prompt"/>) も決める。使うキーの表記は呼ぶ側が今の入力機器と割り当てから渡す。
     /// </summary>
     public sealed class TutorialSteps
     {
@@ -25,9 +24,6 @@ namespace Fps.Core
         /// ダッシュ (8m/s) で 10fps まで落ちても 0.8m なので、歩きを捨てることはない。
         /// </summary>
         public const float DefaultTeleportMeters = 2f;
-
-        /// <summary>すべて終えたときに出す文。</summary>
-        public static LocalizedText CompletedText => new LocalizedText("tutorial.completed");
 
         /// <summary>手順の並び。この順に進む。</summary>
         public static IReadOnlyList<TutorialStep> Order { get; } = new[]
@@ -178,58 +174,6 @@ namespace Fps.Core
         {
             _index = 0;
             ResetCounts();
-        }
-
-        /// <summary>
-        /// 画面に出す文。今の手順を keyLabel のキーで案内し、頭に「[今の番号/手順の数]」を付ける (日本語の表で <c>[1/6] WASD で移動</c>)。
-        /// 射撃の手順では当てた回数も付ける。すべて終えたら <see cref="CompletedText"/>。
-        /// </summary>
-        /// <param name="keyLabel">今の手順で使うキー (またはボタン) の表記。空にはできない。すべて終えていれば使わない。</param>
-        public LocalizedText Prompt(string keyLabel)
-        {
-            if (IsComplete)
-            {
-                return CompletedText;
-            }
-
-            var body = Instruction(Current, keyLabel, _hitsRequired);
-            if (Current == TutorialStep.Shoot)
-            {
-                body = new LocalizedText("tutorial.shootProgress", body, _hits, _hitsRequired);
-            }
-
-            return new LocalizedText("tutorial.prompt", _index + 1, Order.Count, body);
-        }
-
-        /// <summary>step を keyLabel のキーで行うよう案内する文 (番号や進みは付けない)。</summary>
-        /// <param name="step">案内する手順。</param>
-        /// <param name="keyLabel">操作に使うキーの表記。空にはできない。</param>
-        /// <param name="hitsRequired">射撃の手順で当てる回数。1 以上。</param>
-        public static LocalizedText Instruction(TutorialStep step, string keyLabel, int hitsRequired = DefaultHitsRequired)
-        {
-            if (string.IsNullOrWhiteSpace(keyLabel))
-            {
-                throw new ArgumentException("keyLabel must not be empty", nameof(keyLabel));
-            }
-
-            if (hitsRequired < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(hitsRequired), hitsRequired, "hitsRequired must be at least 1");
-            }
-
-            var key = keyLabel.Trim();
-            switch (step)
-            {
-                case TutorialStep.Move:
-                case TutorialStep.Aim:
-                case TutorialStep.Shoot:
-                case TutorialStep.Reload:
-                case TutorialStep.Crouch:
-                case TutorialStep.Cover:
-                    return new LocalizedText("tutorial.step." + step, key, hitsRequired);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(step), step, "unknown tutorial step");
-            }
         }
 
         /// <summary>

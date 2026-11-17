@@ -12,8 +12,8 @@ using Object = UnityEngine.Object;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// 既定の印の表示 (PingMarkersView) が、画面の中の印をその位置に、外の印を端に寄せて向きを出すこと、
-    /// 既定の生成役 (DefaultPingViewFactory) と差し替え口 (PingUi) を確かめる。
+    /// 既定の印の表示 (PingMarkersView) が、画面の中の印をその位置に、外の印を端に寄せて向きを出すことと、
+    /// 要素を持っている間は GameSignals.Pings を購読して出された印を出すことを確かめる。
     /// </summary>
     public sealed class PingMarkersViewTests
     {
@@ -54,7 +54,6 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            PingUi.ViewFactory = null;
             foreach (var go in _objects)
             {
                 if (go != null)
@@ -64,6 +63,7 @@ namespace Fps.Tests.EditMode
             }
 
             _objects.Clear();
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -72,9 +72,9 @@ namespace Fps.Tests.EditMode
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
 
             LogAssert.Expect(LogType.Log, new Regex($@"^\[Ping\] screen id={marker.Id} onScreen=true edge=None "));
-            _view.Show(_pinger);
+            _view.Show(_pinger.Markers);
 
-            Assert.That(_view.Source, Is.SameAs(_pinger));
+            Assert.That(_view.Markers, Is.SameAs(_pinger.Markers));
             Assert.That(_view.TryGetPlacement(marker.Id, out var placement), Is.True);
             Assert.That(placement.IsOnScreen, Is.True);
             Assert.That(placement.X, Is.EqualTo(0.5f).Within(1e-3f));
@@ -86,7 +86,7 @@ namespace Fps.Tests.EditMode
         public void AMarkOutOfViewMovesToTheEdgeOnItsSide()
         {
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
-            _view.Show(_pinger);
+            _view.Show(_pinger.Markers);
 
             // 右を向くと、正面にあった印は左に外れる。真横 (90 度) はカメラの面の上で投影が決まらないので、少し手前にする。
             _camera.transform.rotation = Quaternion.Euler(0f, 80f, 0f);
@@ -103,15 +103,17 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheLayoutGetsAnElementPerMarkAndDropsItWhenTheMarkExpires()
+        public void TheBoundViewDrawsThePublishedMarksAndDropsThemWhenTheyExpire()
         {
             var root = CloneLayout();
+            LogAssert.Expect(LogType.Log, PingLog.View(nameof(PingMarkersView)));
             _view.Bind(root);
             Assert.That(_view.Element, Is.Not.Null, "Hud.uxml has the ping-markers element");
+            Assert.That(_view.Markers, Is.SameAs(_pinger.Markers), "binding picks up the marks already published");
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown without marks");
 
+            // 付けると GameSignals.Pings に出し直され、表示はそれを受けて要素を足す。
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
-            _view.Show(_pinger);
 
             var marks = _view.Element.Query<VisualElement>(className: PingMarkersView.MarkerClass).ToList();
             Assert.That(marks.Count(), Is.EqualTo(1));
@@ -132,40 +134,70 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ShowingNothingReleasesTheSource()
+        public void ClearingTheSignalRemovesTheMarksAndUnbindingStopsListening()
         {
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
-            _view.Show(_pinger);
+            _view.Bind(CloneLayout());
+            Assert.That(_view.TryGetPlacement(marker.Id, out _), Is.True);
+
+            _pinger.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Fps.Core.Ping.Off)));
+            Assert.That(_view.Markers, Is.Null, "turning Ping off clears the signal and the view");
+            Assert.That(_view.ShownCount, Is.Zero);
+
+            _view.Unbind();
+            GameSignals.Pings.Publish(new[] { marker });
+            Assert.That(_view.Markers, Is.Null, "an unbound view does not follow the signal");
+
+            _view.Bind(CloneLayout());
+            Assert.That(_view.TryGetPlacement(marker.Id, out _), Is.True, "binding again catches up with the signal");
+        }
+
+        [Test]
+        public void ShowingNothingReleasesTheMarks()
+        {
+            _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
+            _view.Show(_pinger.Markers);
 
             _view.Show(null);
 
-            Assert.That(_view.Source, Is.Null);
+            Assert.That(_view.Markers, Is.Null);
             Assert.That(_view.TryGetPlacement(marker.Id, out _), Is.False);
             Assert.That(_view.ShownCount, Is.Zero);
         }
 
         [Test]
-        public void TheDefaultFactoryPutsTheViewOnTheDefaultHudOnly()
+        public void HudAddViewsAttachesTheMarks()
         {
-            var factory = new DefaultPingViewFactory();
-            var hud = _view.GetComponent<Hud>();
-
-            Assert.That(factory.Create(hud), Is.SameAs(_view), "a HUD that already has the view keeps it");
-            Assert.That(factory.Create(null), Is.Null, "only the default Hud gets the default view");
-            Assert.That(PingUi.ViewFactory, Is.InstanceOf<DefaultPingViewFactory>(), "the UI assembly registers the default");
-            Assert.That(PingUi.CreateView(null), Is.Null);
+            var hud = Hud.Create("PingMarkersViewTests.Hud", null, null, null);
+            try
+            {
+                Assert.That(hud.PingMarkers, Is.Not.Null);
+                Assert.That(hud.SquadOrder, Is.Not.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(hud.OwnedPanelSettings);
+                Object.DestroyImmediate(hud.gameObject);
+            }
         }
 
         [Test]
-        public void TheFactoryCanBeReplaced()
+        public void WithoutAViewerTheLocalPlayersCameraIsUsed()
         {
-            var replacement = new FixedFactory();
-            PingUi.ViewFactory = replacement;
+            Assert.That(PingMarkersView.LocalPlayerCamera(), Is.SameAs(Camera.main), "without a local player it falls back to the main camera");
 
-            Assert.That(PingUi.CreateView(_view.GetComponent<Hud>()), Is.SameAs(replacement.View));
+            var player = Track(new GameObject("LocalPlayer"));
+            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(player, null, null, null, null, null, null, null));
+            Assert.That(PingMarkersView.LocalPlayerCamera(), Is.SameAs(Camera.main), "a player without a view rig falls back too");
 
-            PingUi.ViewFactory = null;
-            Assert.That(PingUi.ViewFactory, Is.InstanceOf<DefaultPingViewFactory>(), "null goes back to the default");
+            var eye = new GameObject("Eye").transform;
+            eye.SetParent(player.transform, false);
+            var cameraObject = new GameObject("PlayerCamera");
+            cameraObject.transform.SetParent(eye, false);
+            var camera = cameraObject.AddComponent<Camera>();
+            player.AddComponent<ViewRig>().Initialize(eye, camera);
+
+            Assert.That(PingMarkersView.LocalPlayerCamera(), Is.SameAs(camera));
         }
 
         private static VisualElement CloneLayout()
@@ -179,20 +211,6 @@ namespace Fps.Tests.EditMode
         {
             _objects.Add(go);
             return go;
-        }
-
-        private sealed class FixedFactory : IPingViewFactory
-        {
-            public IPingView View { get; } = new NullView();
-
-            public IPingView Create(IHud hud) => View;
-        }
-
-        private sealed class NullView : IPingView
-        {
-            public void Show(PingController source)
-            {
-            }
         }
     }
 }

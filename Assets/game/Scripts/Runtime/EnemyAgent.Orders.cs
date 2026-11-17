@@ -9,7 +9,7 @@ namespace Fps.Runtime
     /// 人が出す分隊の指示 (<see cref="SquadCommandController"/>) を受ける部分。指示は自分の判断や <see cref="SetErrand"/> の用事より優先し、
     /// 判断との合わせ方は <see cref="BotDriver.FollowOrder"/> が決める。
     /// <list type="bullet">
-    /// <item>受けたら <c>[Squad] accepted</c> をログに出し、応答を字幕 (<see cref="SubtitleFeed.Say"/>) に出す。</item>
+    /// <item>受けたら <c>[Squad] accepted</c> をログに出し、応答を字幕に知らせる (<see cref="SubtitleFeed.Reply"/>、何と言うかは UI が決める)。</item>
     /// <item>守る指示 (<see cref="OrderHold"/>) の間は遮蔽点へ移らない (守る場所を離れないため)。着いたら <c>[Squad] arrived</c>。</item>
     /// <item>狙う指示 (<see cref="OrderAttack"/>) の間は陣営で目標を選び直さず、指示の敵を目標にする (<c>[Squad] engage</c>)。
     /// 敵が倒れたら指示した人に付いていく指示に移る (<c>[Squad] done ... reason=TargetGone</c>)。</item>
@@ -120,7 +120,7 @@ namespace Fps.Runtime
             _orderLeader = leader;
             _orderSpec = spec;
             Debug.Log(SquadOrderLog.Accepted(Id, order.Kind, target != null ? target.Id : null, order.Destination), this);
-            SubtitleFeed.Say(Id, SquadOrderText.Reply(Id, order.Kind));
+            SubtitleFeed.Reply(SquadOrderReply.Accepted(Id, order.Kind));
         }
 
         private void ResetOrder()
@@ -187,7 +187,7 @@ namespace Fps.Runtime
 
             _order = BotErrand.Follow(leader.GroundPosition.ToNumerics());
             Debug.Log(SquadOrderLog.Done(Id, BotErrandKind.Attack, "TargetGone", BotErrandKind.Follow), this);
-            SubtitleFeed.Say(Id, SquadOrderText.Line(Id, SquadOrderText.TargetDownKey));
+            SubtitleFeed.Reply(SquadOrderReply.TargetDown(Id));
         }
 
         private void NoteOrderArrival()

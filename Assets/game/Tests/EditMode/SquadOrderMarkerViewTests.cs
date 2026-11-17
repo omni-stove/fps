@@ -12,8 +12,8 @@ using Object = UnityEngine.Object;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// 既定の分隊への指示の印 (SquadOrderMarkerView) が、守る場所・狙う敵の上に札付きの印を出し、画面の外なら端に寄せ、
-    /// 指示を取り消すと消すことと、既定の生成役 (DefaultSquadOrderViewFactory) と差し替え口 (SquadOrderUi) を確かめる。
+    /// 既定の分隊への指示の印 (SquadOrderMarkerView) が、GameSignals.SquadOrder に出された守る場所・狙う敵の上に札付きの印を出し、
+    /// 画面の外なら端に寄せ、指示を取り消すと消すことを確かめる。
     /// </summary>
     public sealed class SquadOrderMarkerViewTests
     {
@@ -69,7 +69,6 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            SquadOrderUi.ViewFactory = null;
             foreach (var go in _objects)
             {
                 if (go != null)
@@ -80,23 +79,26 @@ namespace Fps.Tests.EditMode
 
             _objects.Clear();
             Object.DestroyImmediate(_rifle);
+            GameSignals.ResetAll();
         }
 
         [Test]
         public void AHoldOrderIsDrawnWhereItIsWithItsLabel()
         {
             var root = CloneLayout();
+            LogAssert.Expect(LogType.Log, SquadOrderLog.View(nameof(SquadOrderMarkerView)));
             _view.Bind(root);
-            _view.Show(_commander);
             Assert.That(_view.Element, Is.Not.Null, "Hud.uxml has the squad-order element");
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown without an order");
 
-            // 指示を出すと持ち主の Changed で表示が置き直す。
+            // 指示を出すと GameSignals.SquadOrder に出され、表示はそれを受けて置き直す。
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Squad\] screen kind=Hold onScreen=true edge=None "));
             _commander.TryOrderAlong(_eye, Vector3.forward, out _);
 
+            Assert.That(_view.Order.HasValue, Is.True);
+            Assert.That(_view.Order.Value.Order, Is.EqualTo(BotErrandKind.Hold));
             Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.Hold));
-            Assert.That(_view.ShownLabel, Is.EqualTo(SquadOrderText.Marker(BotErrandKind.Hold)));
+            Assert.That(_view.ShownLabel, Is.EqualTo("守れ"));
             Assert.That(_view.TryGetPlacement(out var placement), Is.True);
             Assert.That(placement.X, Is.EqualTo(0.5f).Within(1e-3f));
             Assert.That(placement.Y, Is.EqualTo(0.5f).Within(1e-3f));
@@ -111,7 +113,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnOrderBehindGoesToTheEdgeAndARecallClearsIt()
         {
-            _view.Show(_commander);
+            _view.Bind(CloneLayout());
             _commander.TryOrderAlong(_eye, Vector3.forward, out _);
             _view.Refresh();
 
@@ -122,39 +124,55 @@ namespace Fps.Tests.EditMode
             Assert.That(behind.Edge, Is.EqualTo(PingScreenEdge.Bottom));
 
             _commander.Recall(out _);
-            Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.None), "the commander's change event redraws the view");
+            Assert.That(GameSignals.SquadOrder.Value, Is.Null, "a recall clears the order");
+            Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.None), "the cleared signal redraws the view");
             Assert.That(_view.TryGetPlacement(out _), Is.False);
         }
 
         [Test]
-        public void TheDefaultFactoryAttachesToTheDefaultHud()
+        public void AnAttackMarkerFollowsTheTarget()
         {
-            var factory = new DefaultSquadOrderViewFactory();
-            var hud = _view.GetComponent<Hud>();
+            var target = Track(GameObject.CreatePrimitive(PrimitiveType.Capsule));
+            target.name = "Foe";
+            target.transform.position = new Vector3(0f, 1f, 5f);
+            var foe = target.AddComponent<Damageable>();
+            foe.Initialize("Foe", Damageable.DefaultMaxHealth);
+            target.AddComponent<SideMember>().Side = new Side(1);
+            Physics.SyncTransforms();
 
-            Assert.That(factory.Create(hud), Is.SameAs(_view), "a HUD that already has the view keeps it");
-            Assert.That(factory.Create(null), Is.Null, "only the default Hud gets the default view");
-            Assert.That(SquadOrderUi.ViewFactory, Is.InstanceOf<DefaultSquadOrderViewFactory>(), "the UI assembly registers the default");
-            Assert.That(SquadOrderUi.CreateView(null), Is.Null);
+            _view.Show(new SquadOrderStatus(BotErrandKind.Attack, foe.AimPoint, foe));
+            Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.Attack));
+            Assert.That(_view.TryGetPlacement(out var ahead), Is.True);
+            Assert.That(ahead.X, Is.EqualTo(0.5f).Within(1e-3f));
+
+            // 敵が右へ動くと、出し直さなくても次の置き直しで印が付いていく。
+            target.transform.position = new Vector3(2f, 1f, 5f);
+            Physics.SyncTransforms();
+            _view.Refresh();
+            Assert.That(_view.TryGetPlacement(out var moved), Is.True);
+            Assert.That(moved.X, Is.GreaterThan(0.5f));
+
+            _view.Show(null);
+            Assert.That(_view.Order, Is.Null);
+            Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.None));
         }
 
         [Test]
-        public void TheFactoryCanBeReplacedAndTheControllerBindsTheView()
+        public void BindingCatchesUpWithTheOrderAlreadyPublished()
         {
-            var replacement = new FixedFactory();
-            SquadOrderUi.ViewFactory = replacement;
-            Assert.That(SquadOrderUi.CreateView(_view.GetComponent<Hud>()), Is.SameAs(replacement.View));
+            _commander.TryOrderAlong(_eye, Vector3.forward, out _);
+            Assert.That(_view.Order, Is.Null, "an unbound view does not follow the signal");
 
-            LogAssert.Expect(LogType.Log, "[Squad] view=FakeView");
-            _commander.BindView(replacement.View);
-            Assert.That(replacement.View.Source, Is.SameAs(_commander));
-            Assert.That(_commander.View, Is.SameAs(replacement.View));
+            _view.Bind(CloneLayout());
+            Assert.That(_view.Order, Is.EqualTo(GameSignals.SquadOrder.Value));
+            Assert.That(_view.ShownKind, Is.EqualTo(BotErrandKind.Hold));
 
-            _commander.BindView(null);
-            Assert.That(replacement.View.Source, Is.Null, "the old view lets go");
+            _view.Unbind();
+            _commander.Recall(out _);
+            Assert.That(_view.Order.HasValue, Is.True, "after unbinding the view keeps what it had");
 
-            SquadOrderUi.ViewFactory = null;
-            Assert.That(SquadOrderUi.ViewFactory, Is.InstanceOf<DefaultSquadOrderViewFactory>(), "null goes back to the default");
+            _view.Bind(CloneLayout());
+            Assert.That(_view.Order, Is.Null, "binding again clears what the signal cleared");
         }
 
         private static VisualElement CloneLayout()
@@ -168,23 +186,6 @@ namespace Fps.Tests.EditMode
         {
             _objects.Add(go);
             return go;
-        }
-
-        private sealed class FakeView : ISquadOrderView
-        {
-            public SquadCommandController Source { get; private set; }
-
-            public void Show(SquadCommandController source)
-            {
-                Source = source;
-            }
-        }
-
-        private sealed class FixedFactory : ISquadOrderViewFactory
-        {
-            public FakeView View { get; } = new FakeView();
-
-            public ISquadOrderView Create(IHud hud) => View;
         }
     }
 }

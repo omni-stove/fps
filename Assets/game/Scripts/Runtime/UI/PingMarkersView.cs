@@ -7,14 +7,14 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 印 (<see cref="PingController.Markers"/>) を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 印 (<see cref="GameSignals.Pings"/>) を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 要素を持っている間は <see cref="GameSignals.Pings"/> を購読し、出された印を出す。要素を受けたときは今の印に合わせる。
     /// 毎フレーム今のカメラから見直し、画面の中の印はその位置に、外 (後ろも含む) の印は <see cref="PingScreen.Place"/> で端に寄せて向きの矢印を出す。
-    /// 印が画面の中に入ったか端に寄ったときに <c>[Ping] screen</c> をログに出す。
-    /// <see cref="Hud.AddViews"/> では付けず、オフラインのプレイヤーの <see cref="PingController"/> が <see cref="PingUi"/> の既定の生成役
-    /// (<see cref="DefaultPingViewFactory"/>) で付ける。
+    /// 印が画面の中に入ったか端に寄ったときに <c>[Ping] screen</c>、印を受け始めたときに <c>[Ping] view</c> をログに出す。
+    /// <see cref="Hud.AddViews"/> が付ける。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class PingMarkersView : HudElementView, IPingView
+    public sealed class PingMarkersView : HudElementView
     {
         /// <summary>Hud.uxml の印を入れる要素。</summary>
         public const string UxmlName = "ping-markers";
@@ -51,14 +51,20 @@ namespace Fps.Runtime
 
         private readonly Dictionary<int, Entry> _entries = new Dictionary<int, Entry>();
         private readonly List<int> _stale = new List<int>();
-        private PingController _source;
+        private IReadOnlyList<PingMarker> _markers;
+        private bool _subscribed;
+
+        // 出している印が GameSignals から来たか。来ていれば、要素を持っていない間に印が消されたことを、受けたときに消して合わせる
+        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している印の持ち主。出していなければ null。</summary>
-        public PingController Source => _source;
+        /// <summary>出している印の並び。出していなければ null。</summary>
+        public IReadOnlyList<PingMarker> Markers => _markers;
 
-        /// <summary>向きの基準にするカメラ。null なら持ち主のカメラ (<see cref="PingController.ViewCamera"/>)、それも無ければ <see cref="Camera.main"/>。</summary>
+        /// <summary>
+        /// 向きの基準にするカメラ。null なら自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の視点のカメラ、それも無ければ <see cref="Camera.main"/>。
+        /// </summary>
         public Camera Viewer { get; set; }
 
         /// <summary>今画面に出している (位置が決まった) 印の数。</summary>
@@ -77,50 +83,13 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// hud に (無ければ) このビューを付けて返す。付けたばかりなら Hud に木から要素を渡し直させる。
-        /// UXML に要素が無ければエラーをログに出し、要素を持たないまま返す (位置は <see cref="TryGetPlacement"/> で読める)。
+        /// markers の印を出す。null なら出すのをやめる。前と同じ並び (中身は変わっていてよい) なら置き直すだけにする。
+        /// 要素を持っている間は <see cref="GameSignals.Pings"/> が出されるたびに呼ばれる。
         /// </summary>
-        public static PingMarkersView AttachTo(Hud hud)
+        public void Show(IReadOnlyList<PingMarker> markers)
         {
-            if (hud == null)
-            {
-                throw new ArgumentNullException(nameof(hud));
-            }
-
-            var view = hud.GetComponent<PingMarkersView>();
-            if (view != null)
-            {
-                return view;
-            }
-
-            view = hud.gameObject.AddComponent<PingMarkersView>();
-            try
-            {
-                hud.RebuildView();
-            }
-            catch (InvalidOperationException e)
-            {
-                Debug.LogError($"{Hud.LogTag} could not show ping markers on the HUD: {e.Message}", hud);
-            }
-
-            return view;
-        }
-
-        public void Show(PingController source)
-        {
-            if (_source != null)
-            {
-                _source.Changed -= OnChanged;
-            }
-
-            _source = source;
-            if (_source != null)
-            {
-                _source.Changed += OnChanged;
-            }
-
-            RemoveAll();
-            Refresh();
+            _showsSignal = false;
+            Write(markers);
         }
 
         /// <summary>印 id を今出している位置と向き。出していなければ false。</summary>
@@ -136,10 +105,10 @@ namespace Fps.Runtime
             return false;
         }
 
-        /// <summary>持ち主の今の印を、今のカメラから見て置き直す。</summary>
+        /// <summary>出している印を、今のカメラから見て置き直す。</summary>
         public void Refresh()
         {
-            var markers = _source != null ? _source.Markers : (IReadOnlyList<PingMarker>)Array.Empty<PingMarker>();
+            var markers = _markers ?? (IReadOnlyList<PingMarker>)Array.Empty<PingMarker>();
             DropStale(markers);
 
             var camera = ResolveViewer();
@@ -185,11 +154,20 @@ namespace Fps.Runtime
                 entry.Arrow = null;
             }
 
+            Subscribe();
+            var markers = GameSignals.Pings.Value;
+            if (markers != null || _showsSignal)
+            {
+                ShowSignal(markers);
+                return;
+            }
+
             Refresh();
         }
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             foreach (var entry in _entries.Values)
             {
                 RemoveElements(entry);
@@ -200,33 +178,77 @@ namespace Fps.Runtime
 
         private void LateUpdate()
         {
-            // 持ち主 (DefaultExecutionOrder 110) が印を動かし、カメラが動いた後に置き直す。
+            // PingController (DefaultExecutionOrder 110) が印を動かし、カメラが動いた後に置き直す。
             Refresh();
         }
 
         private void OnDestroy()
         {
-            if (_source != null)
+            Unsubscribe();
+        }
+
+        private void Write(IReadOnlyList<PingMarker> markers)
+        {
+            if (!ReferenceEquals(markers, _markers))
             {
-                _source.Changed -= OnChanged;
-                _source = null;
+                RemoveAll();
+                _markers = markers;
+            }
+
+            Refresh();
+        }
+
+        private void ShowSignal(IReadOnlyList<PingMarker> markers)
+        {
+            Write(markers);
+            _showsSignal = true;
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Pings.Changed += HandlePingsChanged;
+                _subscribed = true;
+                Debug.Log(PingLog.View(GetType().Name), this);
             }
         }
 
-        private void OnChanged(PingController source)
+        private void Unsubscribe()
         {
-            Refresh();
+            if (_subscribed)
+            {
+                GameSignals.Pings.Changed -= HandlePingsChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandlePingsChanged(IReadOnlyList<PingMarker> markers)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Pings.Changed -= HandlePingsChanged;
+                return;
+            }
+
+            ShowSignal(markers);
         }
 
         private Camera ResolveViewer()
         {
-            if (Viewer != null)
-            {
-                return Viewer;
-            }
+            return Viewer != null ? Viewer : LocalPlayerCamera();
+        }
 
-            var own = _source != null ? _source.ViewCamera : null;
-            return own != null ? own : Camera.main;
+        /// <summary>
+        /// 自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の視点 (<see cref="ViewRig"/>) のカメラ。無ければ <see cref="Camera.main"/>、それも無ければ null。
+        /// </summary>
+        public static Camera LocalPlayerCamera()
+        {
+            var player = GameSignals.LocalPlayer.Value?.Player;
+            var rig = player != null ? player.GetComponent<ViewRig>() : null;
+            var camera = rig != null ? rig.Camera : null;
+            return camera != null ? camera : Camera.main;
         }
 
         private static bool TryPlace(Camera camera, PingMarker marker, float aspect, float margin, out PingScreenPlacement placement)

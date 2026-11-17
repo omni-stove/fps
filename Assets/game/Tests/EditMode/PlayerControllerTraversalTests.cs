@@ -326,8 +326,8 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheSwimmingLogHasTheTag()
         {
-            Assert.That(PlayerController.FormatSwimmingLog(true, 2.5f), Is.EqualTo("[Player] swimming=true surface=2.50"));
-            Assert.That(PlayerController.FormatSwimmingLog(false, 2.5f), Is.EqualTo("[Player] swimming=false"));
+            Assert.That(PlayerTraversalLog.Swimming(true, 2.5f), Is.EqualTo("[Player] swimming=true surface=2.50"));
+            Assert.That(PlayerTraversalLog.Swimming(false, 2.5f), Is.EqualTo("[Player] swimming=false"));
         }
 
         private static MotorSpec Spec(int airJumps = MotorSpec.DefaultAirJumps)

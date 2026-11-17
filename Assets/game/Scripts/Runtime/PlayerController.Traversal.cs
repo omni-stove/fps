@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using Shooter.Core;
 using UnityEngine;
 using NVector2 = System.Numerics.Vector2;
@@ -56,13 +55,6 @@ namespace Shooter.Runtime
         // 足音と着地の音は接地で決まるので、水底に触れながら泳いでいる間を歩いていると数えさせない。
         bool ICharacterMotionSource.IsGrounded => IsGrounded && !IsSwimming;
 
-        public static string FormatSwimmingLog(bool swimming, float surfaceY)
-        {
-            return swimming
-                ? $"{LogTag} swimming=true surface={surfaceY.ToString("F2", CultureInfo.InvariantCulture)}"
-                : $"{LogTag} swimming=false";
-        }
-
         public bool TryGetMotorState(out CharacterMotorState state)
         {
             if (!IsInitialized)
@@ -116,7 +108,7 @@ namespace Shooter.Runtime
                 _airJumpsUsed = 0;
             }
 
-            Debug.Log(FormatSwimmingLog(next.IsSwimming, next.SurfaceY), this);
+            Debug.Log(PlayerTraversalLog.Swimming(next.IsSwimming, next.SurfaceY), this);
             SwimmingChanged?.Invoke(next.IsSwimming);
         }
 

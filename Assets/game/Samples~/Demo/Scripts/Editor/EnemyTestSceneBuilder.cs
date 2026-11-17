@@ -58,7 +58,7 @@ namespace Fps.Editor
         public const string LowCoverName = "LowCover";
 
         /// <summary>
-        /// 右手前の低い壁。上端 (1.05m) は <see cref="Fps.Core.CoverProbe.LowWallHeight"/> 未満で、しゃがんだ敵 (<see cref="EnemyAgent.DefaultCrouchHeight"/>) が隠れる。
+        /// 右手前の低い壁。上端 (1.05m) は <see cref="Fps.Core.MotorSpec.DefaultCoverLowWallHeight"/> 未満で、しゃがんだ敵 (<see cref="EnemyAgent.DefaultCrouchHeight"/>) が隠れる。
         /// プレイヤーの目 (1.6m) から巡回路の最後の地点は、この壁の上を越えて見える。
         /// </summary>
         public static readonly Vector3 LowCoverCenter = new Vector3(10f, 0.525f, 2f);

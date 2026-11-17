@@ -6,7 +6,7 @@ namespace Fps.Core
         /// <summary>カバーの外。</summary>
         Out,
 
-        /// <summary>壁へ寄せている途中 (<see cref="CoverState.EnterSeconds"/> の間)。</summary>
+        /// <summary>壁へ寄せている途中 (<see cref="MotorSpec.CoverEnterSeconds"/> の間)。</summary>
         Entering,
 
         /// <summary>壁に張り付いて隠れている。</summary>

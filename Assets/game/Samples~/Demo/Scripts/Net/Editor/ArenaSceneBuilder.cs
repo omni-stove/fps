@@ -59,7 +59,7 @@ namespace Fps.Editor
         public const float HighWallThickness = 0.5f;
 
         /// <summary>
-        /// 低い壁の高さ (m)。<see cref="CoverProbe.LowWallHeight"/> 未満なのでしゃがんで隠れる低いカバーになり、
+        /// 低い壁の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なのでしゃがんで隠れる低いカバーになり、
         /// <see cref="MotorSpec.DefaultVaultMaxHeight"/> 以下なので乗り越えられる。
         /// </summary>
         public const float LowWallHeight = 0.8f;

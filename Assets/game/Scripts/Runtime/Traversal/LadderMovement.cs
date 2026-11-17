@@ -157,7 +157,7 @@ namespace Fps.Runtime.Traversal
             }
 
             _ladder = ladder;
-            _climb = new LadderClimb(span, spec, _pendingEntry, span.HeightOf(FeetOf(mover).ToNumerics()));
+            _climb = new LadderClimb(span, spec, _pendingEntry, span.HeightOf(FeetOf(mover).ToNumerics()), mover.Motor.Spec);
             _placed = false;
             if (_weapon != null)
             {
@@ -281,7 +281,7 @@ namespace Fps.Runtime.Traversal
                     continue;
                 }
 
-                entry = span.Probe(feet, velocity, radius, spec.GrabDistance);
+                entry = span.Probe(feet, velocity, radius, spec.GrabDistance, _mover.Motor.Spec);
                 if (entry != LadderEntry.None)
                 {
                     found = ladder;

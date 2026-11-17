@@ -16,7 +16,7 @@ namespace Fps.Core.Tests
     public sealed class JapaneseGameTextSetUp
     {
         /// <summary>リポジトリの根からの、言語ごとの文字列表のフォルダー。</summary>
-        public const string StringsFolder = "Assets/game/Localization/Resources/Strings";
+        public const string StringsFolder = "Assets/game/Samples~/Demo/Localization/Resources/Strings";
 
         private Func<StringTable> _previous;
         private Func<GameLanguageList> _previousLanguages;
@@ -40,7 +40,7 @@ namespace Fps.Core.Tests
         }
 
         /// <summary>リポジトリの根からの、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
-        public const string LayerFolder = "Assets/game/Resources/Localization";
+        public const string LayerFolder = "Assets/game/Samples~/Demo/Resources/Localization";
 
         /// <summary>リポジトリの根からの、言語の一覧 (<see cref="GameLanguageList"/>) を置くフォルダー。</summary>
         public const string LanguageListFolder = LayerFolder + "/Languages";

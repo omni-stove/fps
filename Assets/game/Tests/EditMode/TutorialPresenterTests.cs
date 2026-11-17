@@ -108,7 +108,6 @@ namespace Fps.Tests.EditMode
             Assert.That(status.Device, Is.EqualTo(_presenter.Device));
             Assert.That(status.IsComplete, Is.False);
             Assert.That(_presenter.Status, Is.EqualTo(status));
-            Assert.That(Localizer.Resolve(TutorialText.For(status)), Does.StartWith("[1/6] ").And.EndWith(" で移動"));
         }
 
         [Test]
@@ -141,7 +140,6 @@ namespace Fps.Tests.EditMode
 
             Assert.That(Published.Hits, Is.EqualTo(1));
             Assert.That(Published.HitsRequired, Is.EqualTo(TutorialSteps.DefaultHitsRequired));
-            Assert.That(Localizer.Resolve(TutorialText.For(Published)), Does.StartWith("[3/6] ").And.EndWith("(1/3)"));
         }
 
         [Test]
@@ -201,7 +199,6 @@ namespace Fps.Tests.EditMode
             Assert.That(_store.IsCompleted, Is.True);
             Assert.That(Published.IsComplete, Is.True);
             Assert.That(Published.ActionPath, Is.Null);
-            Assert.That(TutorialText.For(Published), Is.EqualTo(TutorialText.CompletedText));
 
             _presenter.Tick(TutorialPresenter.CompletedDisplaySeconds, State(PlayerActionConditions.None), Vector3.zero, InputDeviceKind.KeyboardMouse);
 

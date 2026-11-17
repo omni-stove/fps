@@ -12,6 +12,11 @@ namespace Fps.Core
         public const int DefaultDominationScoreLimit = 100;
         public const float DefaultCaptureSeconds = 8f;
         public const float DefaultPointsPerSecond = 1f;
+        public const int DefaultMaxPlayers = 8;
+        public const int MinMaxPlayers = 1;
+
+        // Core からは Protocol を参照できないので、Fps.Protocol.SnapshotMessage.MaxPlayers の値を写す
+        public const int MaxMaxPlayers = 64;
 
         public NetMatchSettings(
             int scoreLimit = DefaultScoreLimit,
@@ -25,7 +30,8 @@ namespace Fps.Core
             int dominationScoreLimit = DefaultDominationScoreLimit,
             float captureSeconds = DefaultCaptureSeconds,
             float pointsPerSecond = DefaultPointsPerSecond,
-            int maxCapturers = DominationSpec.DefaultMaxCapturers)
+            int maxCapturers = DominationSpec.DefaultMaxCapturers,
+            int maxPlayers = DefaultMaxPlayers)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -39,6 +45,11 @@ namespace Fps.Core
             RequirePositive(captureSeconds, nameof(captureSeconds));
             RequirePositive(pointsPerSecond, nameof(pointsPerSecond));
             RequirePositive(maxCapturers, nameof(maxCapturers));
+            if (maxPlayers < MinMaxPlayers || maxPlayers > MaxMaxPlayers)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxPlayers), maxPlayers, nameof(maxPlayers) + " must be between " + MinMaxPlayers + " and " + MaxMaxPlayers);
+            }
 
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
@@ -52,6 +63,7 @@ namespace Fps.Core
             CaptureSeconds = captureSeconds;
             PointsPerSecond = pointsPerSecond;
             MaxCapturers = maxCapturers;
+            MaxPlayers = maxPlayers;
         }
 
         public static NetMatchSettings Default { get; } = new NetMatchSettings();
@@ -79,6 +91,8 @@ namespace Fps.Core
         public float PointsPerSecond { get; }
 
         public int MaxCapturers { get; }
+
+        public int MaxPlayers { get; }
 
         private static void RequirePositive(int value, string name)
         {

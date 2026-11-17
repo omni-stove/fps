@@ -28,6 +28,12 @@ namespace Fps.Core
         public const string GrenadeImpactItem = "impact";
         public const string StickinessItem = "stickiness";
         public const string RollDampingItem = "rollDamping";
+        public const string BodyRadiusItem = "bodyRadius";
+        public const string MassItem = "mass";
+        public const string BouncinessItem = "bounciness";
+        public const string FrictionItem = "friction";
+        public const string AngularDampingItem = "angularDamping";
+        public const string ReleaseDistanceItem = "releaseDistance";
         public const string GrenadeTypesItem = "types";
         public const string CarriedItem = "carried";
 
@@ -110,6 +116,12 @@ namespace Fps.Core
             GrenadeImpactItem,
             StickinessItem,
             RollDampingItem,
+            BodyRadiusItem,
+            MassItem,
+            BouncinessItem,
+            FrictionItem,
+            AngularDampingItem,
+            ReleaseDistanceItem,
         };
 
         public static IReadOnlyList<string> GrenadeCatalogItemNames { get; } = new[] { GrenadeTypesItem, CarriedItem };
@@ -396,6 +408,12 @@ namespace Fps.Core
             var throwLiftSpeed = fields.ReadFloat(ThrowLiftSpeedItem, defaults.ThrowLiftSpeed);
             var stickiness = fields.ReadEnum(StickinessItem, defaults.Stickiness);
             var rollDamping = fields.ReadFloat(RollDampingItem, defaults.RollDamping);
+            var bodyRadius = fields.ReadFloat(BodyRadiusItem, defaults.BodyRadius);
+            var mass = fields.ReadFloat(MassItem, defaults.Mass);
+            var bounciness = fields.ReadFloat(BouncinessItem, defaults.Bounciness);
+            var friction = fields.ReadFloat(FrictionItem, defaults.Friction);
+            var angularDamping = fields.ReadFloat(AngularDampingItem, defaults.AngularDamping);
+            var releaseDistance = fields.ReadFloat(ReleaseDistanceItem, defaults.ReleaseDistance);
             var impactFields = fields.Object(GrenadeImpactItem, WeaponSpecJson.GrenadeImpactItemNames);
             try
             {
@@ -413,7 +431,13 @@ namespace Fps.Core
                         id,
                         nameKey,
                         stickiness,
-                        rollDamping);
+                        rollDamping,
+                        bodyRadius,
+                        mass,
+                        bounciness,
+                        friction,
+                        angularDamping,
+                        releaseDistance);
                 }
 
                 foreach (var flat in _flatExplosionItems)
@@ -426,7 +450,21 @@ namespace Fps.Core
                 }
 
                 return new GrenadeSpec(
-                    id, nameKey, WeaponSpecJson.ReadImpact(impactFields), fuseSeconds, throwSeconds, throwSpeed, throwLiftSpeed, stickiness, rollDamping);
+                    id,
+                    nameKey,
+                    WeaponSpecJson.ReadImpact(impactFields),
+                    fuseSeconds,
+                    throwSeconds,
+                    throwSpeed,
+                    throwLiftSpeed,
+                    stickiness,
+                    rollDamping,
+                    bodyRadius,
+                    mass,
+                    bounciness,
+                    friction,
+                    angularDamping,
+                    releaseDistance);
             }
             catch (ArgumentException e)
             {

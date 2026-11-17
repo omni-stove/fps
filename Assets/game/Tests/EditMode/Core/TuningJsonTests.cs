@@ -14,6 +14,7 @@ namespace Fps.Core.Tests
         {
             "id", "nameKey", "fuseSeconds", "throwSeconds", "throwSpeed", "throwLiftSpeed",
             "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter", "impact", "stickiness", "rollDamping",
+            "bodyRadius", "mass", "bounciness", "friction", "angularDamping", "releaseDistance",
         };
 
         private static readonly string[] _expectedPingItemNames =

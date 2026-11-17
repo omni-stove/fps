@@ -12,11 +12,12 @@ namespace Fps.Core
     {
         public const string LobbyFlag = "-lobby";
 
-        /// <summary>ロビーの既定の最大人数。</summary>
-        public const int DefaultMaxPlayers = 8;
+        public const int DefaultMaxPlayers = NetMatchSettings.DefaultMaxPlayers;
 
-        /// <summary>ロビーの最大人数の下限。1 人ではロビーにする意味が無い。</summary>
-        public const int MinMaxPlayers = 2;
+        /// <summary>
+        /// ロビーの最大人数の下限。ロビーに入るのはサーバーだけで、人数は属性で載せるので、試合が 1 人までのサーバーも載せられるようにする。
+        /// </summary>
+        public const int MinMaxPlayers = NetMatchSettings.MinMaxPlayers;
 
         /// <summary>ロビーの最大人数の上限 (EOS_LOBBY_MAX_LOBBY_MEMBERS)。</summary>
         public const int MaxMaxPlayers = 64;

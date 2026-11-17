@@ -29,6 +29,7 @@ namespace Fps.Server.Eos
         /// <param name="backend">ロビーのサービスを呼ぶ側。これが Dispose する。</param>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス。</param>
         /// <param name="version">サーバーの版。</param>
+        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
         /// <param name="log">ログの出力先。</param>
         /// <param name="clock">今の時刻 (秒)。</param>
         /// <param name="sleep">閉じ終えるのを待つ間に眠るミリ秒を受け取る。</param>
@@ -38,6 +39,7 @@ namespace Fps.Server.Eos
             IServerLobbyBackend backend,
             string endpoint,
             string version,
+            int maxPlayers,
             TextWriter log,
             Func<float> clock,
             Action<int> sleep,
@@ -54,6 +56,7 @@ namespace Fps.Server.Eos
                 _service,
                 endpoint,
                 version,
+                maxPlayers,
                 schedule ?? new RetrySchedule(ServerLobby.RetryIntervalSeconds, ServerLobby.TimeoutSeconds),
                 log);
         }

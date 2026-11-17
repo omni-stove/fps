@@ -5,7 +5,6 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -13,7 +12,6 @@ namespace Fps.Tests.EditMode
     /// <summary>
     /// グレネードを投げる (<see cref="GrenadeThrower"/>) ことと、爆発 (<see cref="ThrownGrenade.Explode"/>) が半径内の
     /// <see cref="Damageable"/> と建造物に当たり、壁の向こうには当たらないことを確かめる。
-    /// HUD (<see cref="GrenadeCountView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の残りを出すことも確かめる。
     /// Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
     /// </summary>
     public sealed class GrenadeTests
@@ -43,7 +41,6 @@ namespace Fps.Tests.EditMode
             new GrenadeCatalog(new[] { GrenadeSpec.Default, _smoke }, new[] { GrenadeSpec.DefaultId, _smoke.Id });
 
         private readonly List<GameObject> _created = new List<GameObject>();
-        private PanelSettings _hudSettings;
 
         [TearDown]
         public void TearDown()
@@ -57,11 +54,6 @@ namespace Fps.Tests.EditMode
             }
 
             _created.Clear();
-            if (_hudSettings != null)
-            {
-                Object.DestroyImmediate(_hudSettings);
-                _hudSettings = null;
-            }
 
             GameSignals.ResetAll();
         }
@@ -390,85 +382,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheGrenadeCountNamesTheTypeOnlyWhenThereIsAChoice()
-        {
-            var thrower = CreateThrower(_twoGrenades);
-            var hud = new GameObject("HUD");
-            _created.Add(hud);
-            var view = hud.AddComponent<GrenadeCountView>();
-
-            view.Show(thrower);
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(2))));
-
-            thrower.ApplyCatalog(_fragAndSmoke);
-            thrower.SelectNext();
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(_smoke.Name, 2))));
-        }
-
-        [Test]
-        public void TheGrenadeCountShowsTheLocalPlayersThrowerFromTheSignal()
-        {
-            var view = CreateHud().GrenadeCount;
-            var thrower = CreateThrower(_twoGrenades);
-            Assert.That(view.Source, Is.Null, "nothing to show before a local player is published");
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
-
-            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(thrower.gameObject, null, null, null, null, thrower, null, null));
-            Assert.That(view.Source, Is.SameAs(thrower));
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(2))));
-            Assert.That(((Label)view.Element).text, Is.EqualTo(view.Text));
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-
-            thrower.Configure(GameRules.Default);
-            Assert.That(view.Text, Is.Empty, "the view rereads the thrower when its rule turns grenades off");
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
-
-            GameSignals.LocalPlayer.Clear();
-            Assert.That(view.Source, Is.Null);
-        }
-
-        [Test]
-        public void ThePublishedCountShowsWithoutALocalPlayerAndWinsOverIt()
-        {
-            var hud = CreateHud();
-            var view = hud.GrenadeCount;
-
-            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 3, null));
-            Assert.That(view.Source, Is.Null);
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(3))));
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-
-            hud.RebuildView();
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(3))), "rebinding catches up with the published count");
-
-            var thrower = CreateThrower(_twoGrenades);
-            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(thrower.gameObject, null, null, null, null, thrower, null, null));
-            Assert.That(view.Source, Is.Null, "the published count wins while it is out");
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(3))));
-
-            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(false, 3, null));
-            Assert.That(view.Text, Is.Empty, "grenades off by the rule");
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
-
-            GameSignals.GrenadeCount.Clear();
-            Assert.That(view.Source, Is.SameAs(thrower), "clearing the count goes back to the local player");
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(2))));
-        }
-
-        [Test]
-        public void ThePublishedCountNamesTheTypeById()
-        {
-            var view = CreateHud().GrenadeCount;
-            Assume.That(KitTuning.Grenades.TryFind(GrenadeSpec.DefaultId, out var frag), Is.True);
-
-            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 2, GrenadeSpec.DefaultId));
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(frag.Name, 2))));
-
-            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, -1, "not-in-the-json"));
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(LocalizedText.Literal("not-in-the-json"), 0))), "an unknown Id is shown as it is");
-        }
-
-        [Test]
         public void GrenadeCountStatusComparesByValue()
         {
             Assert.That(new GrenadeCountStatus(true, 2, "a"), Is.EqualTo(new GrenadeCountStatus(true, 2, "a")));
@@ -490,7 +403,7 @@ namespace Fps.Tests.EditMode
             Assert.That(grenade.IsStuck, Is.True);
             Assert.That(grenade.StuckTo, Is.SameAs(wall.transform));
             Assert.That(grenade.GetComponent<Rigidbody>().isKinematic, Is.True, "it does not bounce or fall");
-            Assert.That(grenade.transform.position, Is.EqualTo(new Vector3(0f, 1f, 2.9f - ThrownGrenade.BodyRadius)).Using(Vector3EqualityComparer.Instance));
+            Assert.That(grenade.transform.position, Is.EqualTo(new Vector3(0f, 1f, 2.9f - _sticky.BodyRadius)).Using(Vector3EqualityComparer.Instance));
             Assert.That(grenade.StickTo(wall, Vector3.zero, Vector3.up), Is.False, "it sticks only to the first thing");
         }
 
@@ -551,14 +464,6 @@ namespace Fps.Tests.EditMode
             _created.Add(grenade.gameObject);
             Physics.SyncTransforms();
             return grenade;
-        }
-
-        private Hud CreateHud()
-        {
-            var hud = Hud.Create("GrenadeTests.Hud");
-            _created.Add(hud.gameObject);
-            _hudSettings = hud.OwnedPanelSettings;
-            return hud;
         }
 
         private GrenadeThrower CreateThrower(GameRules rules)

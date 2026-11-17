@@ -161,12 +161,12 @@ namespace Fps.Net.Tests
             foreach (var (name, _, size) in ArenaSceneBuilder.HighWalls)
             {
                 Assert.That(size.y, Is.GreaterThan(MotorSpec.DefaultVaultMaxHeight), name + " cannot be vaulted");
-                Assert.That(size.y, Is.GreaterThanOrEqualTo(CoverProbe.LowWallHeight), name + " is high cover");
+                Assert.That(size.y, Is.GreaterThanOrEqualTo(MotorSpec.DefaultCoverLowWallHeight), name + " is high cover");
             }
 
             foreach (var (name, _, size) in ArenaSceneBuilder.LowWalls)
             {
-                Assert.That(size.y, Is.LessThan(CoverProbe.LowWallHeight), name + " is low cover");
+                Assert.That(size.y, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight), name + " is low cover");
                 AssertVaultable(name, size);
             }
 

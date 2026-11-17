@@ -3,6 +3,7 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -19,7 +20,6 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             GameSignals.ResetAll();
-            DefaultHudFactory.Unregister();
             GameUi.Pause = null;
             GameUi.LoadoutSelect = null;
             GameUi.Menu = null;
@@ -67,14 +67,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BootstrapBuildsTheWorldWithoutAHud()
         {
-            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Is.Empty);
-            Assert.That(GameObject.Find(DefaultHudFactory.HudObjectName), Is.Null);
-            Assert.That(DefaultHudFactory.Current, Is.Null);
+            Assert.That(Object.FindObjectsByType<UIDocument>(FindObjectsInactive.Include), Is.Empty, "the kit builds no screen of its own");
 
             Assert.That(_world.Player, Is.Not.Null);
             Assert.That(_world.Weapon, Is.Not.Null);
             Assert.That(_world.ActionReader, Is.Not.Null);
-            Assert.That(_world.Player.GetComponent<ActionDebugOverlay>(), Is.Null, "no UI attaches the debug overlay");
         }
 
         [Test]

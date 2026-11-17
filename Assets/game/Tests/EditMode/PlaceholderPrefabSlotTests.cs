@@ -101,7 +101,7 @@ namespace Fps.Tests.EditMode
             Assert.That(grenade.transform.localScale, Is.EqualTo(Vector3.one));
             var sphere = grenade.GetComponent<SphereCollider>();
             Assert.That(sphere, Is.Not.Null);
-            Assert.That(sphere.radius * grenade.transform.lossyScale.x, Is.EqualTo(ThrownGrenade.BodyRadius).Within(Tolerance));
+            Assert.That(sphere.radius * grenade.transform.lossyScale.x, Is.EqualTo(ThrownGrenade.UntypedSpec.BodyRadius).Within(Tolerance));
             Assert.That(sphere.sharedMaterial, Is.SameAs(ThrownGrenade.SharedPhysicsMaterial()));
             Assert.That(grenade.GetComponent<MeshRenderer>(), Is.Null);
         }
@@ -114,7 +114,7 @@ namespace Fps.Tests.EditMode
             Assert.That(grenade.transform.Find(ThrownGrenade.VisualName), Is.Null);
             Assert.That(grenade.GetComponent<MeshRenderer>(), Is.Not.Null);
             var sphere = grenade.GetComponent<SphereCollider>();
-            Assert.That(sphere.radius * grenade.transform.lossyScale.x, Is.EqualTo(ThrownGrenade.BodyRadius).Within(Tolerance));
+            Assert.That(sphere.radius * grenade.transform.lossyScale.x, Is.EqualTo(ThrownGrenade.UntypedSpec.BodyRadius).Within(Tolerance));
         }
 
         [Test]

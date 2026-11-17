@@ -96,7 +96,7 @@ namespace Fps.Core.Tests
             var catalog = InventoryJson.Parse(File.ReadAllText(UnityPath(root)), "inventory.json");
             foreach (var language in _languages)
             {
-                var table = File.ReadAllText(Path.Combine(root, "Assets", "game", "Resources", "Localization", language, "items.json"));
+                var table = File.ReadAllText(Path.Combine(root, JapaneseGameTextSetUp.LayerFolder, language, "items.json"));
                 foreach (var item in catalog.Items)
                 {
                     Assert.That(table, Does.Contain("\"" + item.NameKey + "\":"), language + " names " + item.NameKey);

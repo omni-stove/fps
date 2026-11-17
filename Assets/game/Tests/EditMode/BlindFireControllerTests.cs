@@ -399,7 +399,7 @@ namespace Fps.Tests.EditMode
         {
             Frame(true, false);
             Assert.That(_cover.IsInCover, Is.True, "a wall in front should be enterable");
-            for (var elapsed = 0f; elapsed < CoverState.EnterSeconds + _frame; elapsed += _frame)
+            for (var elapsed = 0f; elapsed < MotorSpec.DefaultCoverEnterSeconds + _frame; elapsed += _frame)
             {
                 Frame(false, false);
             }

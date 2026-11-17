@@ -56,6 +56,36 @@ namespace Fps.Core
         /// </summary>
         public const float DefaultMantleSpeed = 3f;
 
+        /// <summary>生成時に指定しなかったときの <see cref="CoverMaxEnterDistance"/>。</summary>
+        public const float DefaultCoverMaxEnterDistance = 1.0f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverMaxEnterAngleDegrees"/>。</summary>
+        public const float DefaultCoverMaxEnterAngleDegrees = 45f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverLowWallHeight"/>。</summary>
+        public const float DefaultCoverLowWallHeight = 1.1f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverPeekSideDistance"/>。</summary>
+        public const float DefaultCoverPeekSideDistance = 0.6f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverEnterSeconds"/>。</summary>
+        public const float DefaultCoverEnterSeconds = 0.15f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverBackHoldSeconds"/>。</summary>
+        public const float DefaultCoverBackHoldSeconds = 0.2f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="CoverPeekSlideSeconds"/>。</summary>
+        public const float DefaultCoverPeekSlideSeconds = 0.15f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="LadderTopEntryDepth"/>。</summary>
+        public const float DefaultLadderTopEntryDepth = 0.3f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="LadderMinApproachDot"/>。</summary>
+        public const float DefaultLadderMinApproachDot = 0.5f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="LadderMinApproachSpeed"/>。</summary>
+        public const float DefaultLadderMinApproachSpeed = 0.5f;
+
         public const float DefaultWalkSpeed = 5f;
         public const float DefaultSprintSpeed = 8f;
         public const float DefaultCrouchSpeed = 2.5f;
@@ -123,6 +153,39 @@ namespace Fps.Core
         /// <summary>乗り越えられる奥行きの上限 (m)。これより厚い物は台で、向こう側へ降りられないとみなす。</summary>
         public float VaultMaxDepth { get; }
 
+        /// <summary>カバーに入れる、体の中心から壁までの水平距離の上限 (m)。</summary>
+        public float CoverMaxEnterDistance { get; }
+
+        /// <summary>カバーに入るときの、向いている方向と壁へ向かう方向 (法線の逆) のなす角の上限 (度)。</summary>
+        public float CoverMaxEnterAngleDegrees { get; }
+
+        /// <summary>上端がこの高さ (足元から、m) 未満の壁を低い壁とし、しゃがんで隠れ立って覗く。以上なら高い壁で、端から横に出て覗く。</summary>
+        public float CoverLowWallHeight { get; }
+
+        /// <summary>高い壁の端から覗くときに横へ出る距離 (m)。</summary>
+        public float CoverPeekSideDistance { get; }
+
+        /// <summary>カバーに入るとき、壁へ寄せるのにかける秒数。</summary>
+        public float CoverEnterSeconds { get; }
+
+        /// <summary>カバー中に後ろの入力をこれだけ続けると出る (秒)。</summary>
+        public float CoverBackHoldSeconds { get; }
+
+        /// <summary>覗くときに <see cref="CoverPeekSideDistance"/> を横へ出るのにかける秒数。戻るときも同じ速さ。</summary>
+        public float CoverPeekSlideSeconds { get; }
+
+        /// <summary>
+        /// はしごの上の端からつかまったときの足元の、上の足場からの深さ (m)。つかまった瞬間に上の端を越えて降り直さないよう、少し下から始める。
+        /// 前からつかまれるのもこの深さより下の高さまで。
+        /// </summary>
+        public float LadderTopEntryDepth { get; }
+
+        /// <summary>動いている向きとはしごへ向かう向きのなす角の余弦がこれ以上なら、はしごへ進んでいるとみなしてつかまる。</summary>
+        public float LadderMinApproachDot { get; }
+
+        /// <summary>水平の速さがこれ未満なら、はしごへ進んでいるとみなさない (m/s)。</summary>
+        public float LadderMinApproachSpeed { get; }
+
         /// <summary>ダッシュしていないとき (歩き・しゃがみ・伏せ) に、移動の向きごとに速さへ掛ける倍率。</summary>
         public MoveDirectionScale WalkDirection { get; }
 
@@ -154,6 +217,16 @@ namespace Fps.Core
         /// <param name="vaultMaxAngleDegrees">乗り越え・よじ登りで障害物へ向く角度の上限。0〜180 度。</param>
         /// <param name="vaultMinHeight">乗り越える最低の高さ。0 以上の有限値。</param>
         /// <param name="vaultMaxDepth">乗り越えられる奥行きの上限。0 以上の有限値。</param>
+        /// <param name="coverMaxEnterDistance">カバーに入れる壁までの距離の上限。0 以上の有限値。</param>
+        /// <param name="coverMaxEnterAngleDegrees">カバーに入るときに壁へ向く角度の上限。0〜180 度。</param>
+        /// <param name="coverLowWallHeight">低い壁とする上端の高さ。0 以上の有限値。</param>
+        /// <param name="coverPeekSideDistance">高い壁の端から覗くときに横へ出る距離。0 以上の有限値。</param>
+        /// <param name="coverEnterSeconds">カバーに入るときに壁へ寄せる秒数。0 より大きい有限値。</param>
+        /// <param name="coverBackHoldSeconds">カバーから出る後ろの入力を続ける秒数。0 以上の有限値。</param>
+        /// <param name="coverPeekSlideSeconds">覗くときに横へ出る秒数。0 より大きい有限値。</param>
+        /// <param name="ladderTopEntryDepth">はしごの上の端からつかまったときの深さ。0 以上の有限値。</param>
+        /// <param name="ladderMinApproachDot">はしごへ進んでいるとみなす向きの余弦の下限。-1〜1。</param>
+        /// <param name="ladderMinApproachSpeed">はしごへ進んでいるとみなす水平の速さの下限。0 以上の有限値。</param>
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -176,7 +249,17 @@ namespace Fps.Core
             float vaultReach = DefaultVaultReach,
             float vaultMaxAngleDegrees = DefaultVaultMaxAngleDegrees,
             float vaultMinHeight = DefaultVaultMinHeight,
-            float vaultMaxDepth = DefaultVaultMaxDepth)
+            float vaultMaxDepth = DefaultVaultMaxDepth,
+            float coverMaxEnterDistance = DefaultCoverMaxEnterDistance,
+            float coverMaxEnterAngleDegrees = DefaultCoverMaxEnterAngleDegrees,
+            float coverLowWallHeight = DefaultCoverLowWallHeight,
+            float coverPeekSideDistance = DefaultCoverPeekSideDistance,
+            float coverEnterSeconds = DefaultCoverEnterSeconds,
+            float coverBackHoldSeconds = DefaultCoverBackHoldSeconds,
+            float coverPeekSlideSeconds = DefaultCoverPeekSlideSeconds,
+            float ladderTopEntryDepth = DefaultLadderTopEntryDepth,
+            float ladderMinApproachDot = DefaultLadderMinApproachDot,
+            float ladderMinApproachSpeed = DefaultLadderMinApproachSpeed)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -274,6 +357,27 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(vaultMaxDepth), vaultMaxDepth, "vaultMaxDepth must be finite and not negative");
             }
 
+            RequireNotNegative(coverMaxEnterDistance, nameof(coverMaxEnterDistance));
+            if (!(coverMaxEnterAngleDegrees >= 0f && coverMaxEnterAngleDegrees <= 180f))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(coverMaxEnterAngleDegrees), coverMaxEnterAngleDegrees, "coverMaxEnterAngleDegrees must be between 0 and 180");
+            }
+
+            RequireNotNegative(coverLowWallHeight, nameof(coverLowWallHeight));
+            RequireNotNegative(coverPeekSideDistance, nameof(coverPeekSideDistance));
+            RequirePositive(coverEnterSeconds, nameof(coverEnterSeconds));
+            RequireNotNegative(coverBackHoldSeconds, nameof(coverBackHoldSeconds));
+            RequirePositive(coverPeekSlideSeconds, nameof(coverPeekSlideSeconds));
+            RequireNotNegative(ladderTopEntryDepth, nameof(ladderTopEntryDepth));
+            if (!(ladderMinApproachDot >= -1f && ladderMinApproachDot <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ladderMinApproachDot), ladderMinApproachDot, "ladderMinApproachDot must be between -1 and 1");
+            }
+
+            RequireNotNegative(ladderMinApproachSpeed, nameof(ladderMinApproachSpeed));
+
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
             JumpHeight = jumpHeight;
@@ -296,6 +400,32 @@ namespace Fps.Core
             VaultMaxAngleDegrees = vaultMaxAngleDegrees;
             VaultMinHeight = vaultMinHeight;
             VaultMaxDepth = vaultMaxDepth;
+            CoverMaxEnterDistance = coverMaxEnterDistance;
+            CoverMaxEnterAngleDegrees = coverMaxEnterAngleDegrees;
+            CoverLowWallHeight = coverLowWallHeight;
+            CoverPeekSideDistance = coverPeekSideDistance;
+            CoverEnterSeconds = coverEnterSeconds;
+            CoverBackHoldSeconds = coverBackHoldSeconds;
+            CoverPeekSlideSeconds = coverPeekSlideSeconds;
+            LadderTopEntryDepth = ladderTopEntryDepth;
+            LadderMinApproachDot = ladderMinApproachDot;
+            LadderMinApproachSpeed = ladderMinApproachSpeed;
+        }
+
+        private static void RequireNotNegative(float value, string name)
+        {
+            if (!(value >= 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, name + " must be finite and not negative");
+            }
+        }
+
+        private static void RequirePositive(float value, string name)
+        {
+            if (!(value > 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, name + " must be finite and positive");
+            }
         }
     }
 }

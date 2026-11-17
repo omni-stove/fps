@@ -21,15 +21,6 @@ namespace Fps.Runtime
         /// <summary>差し替えた見た目のプレハブを置く子の名前。</summary>
         public const string VisualName = "Visual";
 
-        /// <summary>グレネードの球の半径 (m)。</summary>
-        public const float BodyRadius = 0.08f;
-
-        /// <summary>グレネードの重さ (kg)。</summary>
-        public const float Mass = 0.4f;
-
-        /// <summary>跳ね返りの強さ。</summary>
-        public const float Bounciness = 0.35f;
-
         /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
         public const float EffectLifetimeSeconds = Fps.Runtime.Explosion.EffectLifetimeSeconds;
 
@@ -42,7 +33,9 @@ namespace Fps.Runtime
         // 上を向いた面とみなす接触の法線の y。これより急な壁に触れても転がりは減らさない。
         private const float GroundNormalMinY = 0.5f;
 
-        private static PhysicsMaterial _material;
+        // 投げるたびに作ると増え続けるので、跳ね返りと摩擦の組ごとに 1 つを使い回す。
+        private static readonly Dictionary<(float Bounciness, float Friction), PhysicsMaterial> _materials =
+            new Dictionary<(float Bounciness, float Friction), PhysicsMaterial>();
         private static readonly List<ThrownGrenade> _live = new List<ThrownGrenade>();
 
         private readonly List<Collider> _ownColliders = new List<Collider>();
@@ -52,6 +45,7 @@ namespace Fps.Runtime
         private string _typeId = string.Empty;
         private float _remaining;
         private float _rollDamping;
+        private float _bodyRadius;
         private bool _grounded;
         private Rigidbody _body;
         private bool _armed;
@@ -79,6 +73,15 @@ namespace Fps.Runtime
 
         /// <summary>地面に触れている間の転がりの減り方 (1/s、<see cref="GrenadeSpec.RollDamping"/>)。</summary>
         public float RollDamping => _rollDamping;
+
+        /// <summary>当たり判定の球の半径 (m、<see cref="GrenadeSpec.BodyRadius"/>)。</summary>
+        public float BodyRadius => _bodyRadius;
+
+        /// <summary>
+        /// 種類を渡さずに投げるグレネード (<see cref="Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int)"/>) が球・跳ね方・転がりの値を借りる種類。
+        /// 調整値の JSON (<see cref="KitTuning.Grenades"/>) の最初の種類。
+        /// </summary>
+        public static GrenadeSpec UntypedSpec => KitTuning.Grenades.Types[0];
 
         /// <summary>今シーンにある、まだ爆発していないグレネード。警告や範囲の表示が毎フレーム読む。</summary>
         public static IReadOnlyList<ThrownGrenade> Live => _live;
@@ -108,7 +111,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int)"/> と同じく投げ、見た目を visualPrefab にする。
-        /// 跳ね方と当たり判定は仮の球と同じ半径 <see cref="BodyRadius"/> の球のままにし、プレハブは当たり判定を外して子に置く。
+        /// 跳ね方と当たり判定は仮の球と同じ半径 (<see cref="UntypedSpec"/> の <see cref="GrenadeSpec.BodyRadius"/>) の球のままにし、プレハブは当たり判定を外して子に置く。
         /// </summary>
         /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
         public static ThrownGrenade Spawn(
@@ -120,10 +123,10 @@ namespace Fps.Runtime
             int structureDamage,
             GameObject visualPrefab)
         {
-            return Create(thrower, position, velocity, visualPrefab, grenade => grenade.Arm(thrower, fuseSeconds, explosion, structureDamage));
+            return Create(thrower, position, velocity, UntypedSpec, visualPrefab, grenade => grenade.Arm(thrower, fuseSeconds, explosion, structureDamage));
         }
 
-        /// <summary>spec の種類のグレネードを投げる。信管・効果・くっつき方は spec に従う。</summary>
+        /// <summary>spec の種類のグレネードを投げる。信管・効果・くっつき方・球の大きさと跳ね方は spec に従う。</summary>
         /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
         public static ThrownGrenade Spawn(GameObject thrower, Vector3 position, Vector3 velocity, GrenadeSpec spec, GameObject visualPrefab)
         {
@@ -132,10 +135,11 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            return Create(thrower, position, velocity, visualPrefab, grenade => grenade.Arm(thrower, spec));
+            return Create(thrower, position, velocity, spec, visualPrefab, grenade => grenade.Arm(thrower, spec));
         }
 
-        private static ThrownGrenade Create(GameObject thrower, Vector3 position, Vector3 velocity, GameObject visualPrefab, Action<ThrownGrenade> arm)
+        private static ThrownGrenade Create(
+            GameObject thrower, Vector3 position, Vector3 velocity, GrenadeSpec body, GameObject visualPrefab, Action<ThrownGrenade> arm)
         {
             var go = visualPrefab != null ? new GameObject(ObjectName) : GameObject.CreatePrimitive(PrimitiveType.Sphere);
             try
@@ -147,16 +151,16 @@ namespace Fps.Runtime
                 {
                     // 根を拡大するとプレハブの大きさまで変わるので、根は等倍のまま球の半径で合わせる。
                     collider = go.AddComponent<SphereCollider>();
-                    collider.radius = BodyRadius;
+                    collider.radius = body.BodyRadius;
                     VisualPrefab.Instantiate(visualPrefab, go.transform, VisualName, stripColliders: true);
                 }
                 else
                 {
-                    go.transform.localScale = Vector3.one * (BodyRadius * 2f);
+                    go.transform.localScale = Vector3.one * (body.BodyRadius * 2f);
                     collider = go.GetComponent<SphereCollider>();
                 }
 
-                collider.sharedMaterial = SharedPhysicsMaterial();
+                collider.sharedMaterial = PhysicsMaterialFor(body);
                 if (thrower != null)
                 {
                     foreach (var other in thrower.GetComponentsInChildren<Collider>())
@@ -165,14 +169,16 @@ namespace Fps.Runtime
                     }
                 }
 
-                var body = go.AddComponent<Rigidbody>();
-                body.mass = Mass;
-                body.interpolation = RigidbodyInterpolation.Interpolate;
+                var physicsBody = go.AddComponent<Rigidbody>();
+                physicsBody.mass = body.Mass;
+                physicsBody.angularDamping = body.AngularDamping;
+                physicsBody.interpolation = RigidbodyInterpolation.Interpolate;
                 // 投げた直後は速く小さいので、薄い壁をすり抜けないよう連続判定にする。
-                body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-                body.linearVelocity = velocity;
+                physicsBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                physicsBody.linearVelocity = velocity;
 
                 var grenade = go.AddComponent<ThrownGrenade>();
+                grenade._bodyRadius = body.BodyRadius;
                 arm(grenade);
                 return grenade;
             }
@@ -197,7 +203,7 @@ namespace Fps.Runtime
             }
 
             var impact = new ImpactSpec(damage: 0, explosion: new ExplosionSpec(explosion, structureDamage, DetonationTrigger.OnLifetimeEnd));
-            Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty, GrenadeSpec.DefaultRollDamping);
+            Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty, UntypedSpec.RollDamping);
         }
 
         /// <summary>spec の信管・効果・くっつき方にする。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
@@ -408,22 +414,35 @@ namespace Fps.Runtime
             Fps.Runtime.Explosion.PlayEffects(center);
         }
 
-        /// <summary>グレネードの球の跳ね方 (<see cref="Bounciness"/>)。ネット対戦のグレネード (<c>Fps.Net.NetGrenade</c>) も同じものを使う。</summary>
+        /// <summary>種類を渡さずに投げる物の跳ね方 (<see cref="UntypedSpec"/> の跳ね返りと摩擦)。注意をそらす物 (<see cref="ThrownDistraction"/>) も使う。</summary>
         public static PhysicsMaterial SharedPhysicsMaterial()
         {
-            if (_material == null)
+            return PhysicsMaterialFor(UntypedSpec);
+        }
+
+        /// <summary>spec の跳ね返り (<see cref="GrenadeSpec.Bounciness"/>) と摩擦 (<see cref="GrenadeSpec.Friction"/>) の物理マテリアル。同じ組には同じものを返す。</summary>
+        public static PhysicsMaterial PhysicsMaterialFor(GrenadeSpec spec)
+        {
+            if (spec == null)
             {
-                _material = new PhysicsMaterial(ObjectName)
-                {
-                    bounciness = Bounciness,
-                    bounceCombine = PhysicsMaterialCombine.Maximum,
-                    dynamicFriction = 0.6f,
-                    staticFriction = 0.6f,
-                    hideFlags = HideFlags.HideAndDontSave,
-                };
+                throw new ArgumentNullException(nameof(spec));
             }
 
-            return _material;
+            var key = (spec.Bounciness, spec.Friction);
+            if (!_materials.TryGetValue(key, out var material) || material == null)
+            {
+                material = new PhysicsMaterial(ObjectName)
+                {
+                    bounciness = spec.Bounciness,
+                    bounceCombine = PhysicsMaterialCombine.Maximum,
+                    dynamicFriction = spec.Friction,
+                    staticFriction = spec.Friction,
+                    hideFlags = HideFlags.HideAndDontSave,
+                };
+                _materials[key] = material;
+            }
+
+            return material;
         }
 
         private static void DestroySafely(UnityEngine.Object target)

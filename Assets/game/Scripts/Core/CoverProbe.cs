@@ -9,20 +9,8 @@ namespace Fps.Core
     /// </summary>
     public static class CoverProbe
     {
-        /// <summary>カバーに入れる、体の中心から壁までの水平距離の上限 (m)。</summary>
-        public const float MaxEnterDistance = 1.0f;
-
-        /// <summary>向いている方向と壁へ向かう方向 (法線の逆) のなす角の上限 (度)。</summary>
-        public const float MaxEnterAngleDegrees = 45f;
-
-        /// <summary>上端がこの高さ (足元から、m) 未満の壁を低い壁とする。</summary>
-        public const float LowWallHeight = 1.1f;
-
         /// <summary>端の検査で、壁沿いに左右へずらす距離 (m)。</summary>
         public const float EdgeProbeDistance = 0.3f;
-
-        /// <summary>高い壁の端から覗くときに横へ出る距離 (m)。</summary>
-        public const float PeekSideDistance = 0.6f;
 
         /// <summary>張り付いたときの、体の表面と壁の隙間 (m)。</summary>
         public const float WallGap = 0.05f;
@@ -39,12 +27,18 @@ namespace Fps.Core
         private const float _minLength = 1e-6f;
 
         /// <summary>
-        /// sample を判定する。facing は向いている方向 (上下の成分は無視する)。
+        /// sample を判定する。facing は向いている方向 (上下の成分は無視する)、spec は入れる距離・角度と低い壁の高さを読む移動の設定。
         /// カバー中は壁へ向かう方向 (法線の逆) を渡せば、角度の条件に関わらず <see cref="CoverProbeResult.IsWall"/> で壁が残っているかが分かる。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">sample の値が有限でないとき。</exception>
-        public static CoverProbeResult Evaluate(CoverWallSample sample, Vector3 facing)
+        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
+        public static CoverProbeResult Evaluate(CoverWallSample sample, Vector3 facing, MotorSpec spec)
         {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             if (!sample.HasHit)
             {
                 return CoverProbeResult.None;
@@ -55,7 +49,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(sample), "sample must be finite");
             }
 
-            if (sample.Distance < 0f || sample.Distance > MaxEnterDistance + _boundaryEpsilon)
+            if (sample.Distance < 0f || sample.Distance > spec.CoverMaxEnterDistance + _boundaryEpsilon)
             {
                 return CoverProbeResult.None;
             }
@@ -67,7 +61,7 @@ namespace Fps.Core
             }
 
             var normal = Horizontal(sample.Normal);
-            var height = sample.TopHeight < LowWallHeight ? CoverHeight.Low : CoverHeight.High;
+            var height = sample.TopHeight < spec.CoverLowWallHeight ? CoverHeight.Low : CoverHeight.High;
             var edges = CoverEdge.None;
             if (!sample.WallOnLeft)
             {
@@ -79,15 +73,22 @@ namespace Fps.Core
                 edges |= CoverEdge.Right;
             }
 
-            return new CoverProbeResult(true, FacesWall(facing, normal), height, edges, normal, sample.Distance);
+            return new CoverProbeResult(true, FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees), height, edges, normal, sample.Distance);
         }
 
         /// <summary>
         /// 覗くときに壁沿いに横へ出る量 (m、右が正)。低い壁は立つだけなので 0、高い壁で端にいなければ 0。
-        /// 両端とも開いている (狭い柱) なら preferredSide (負なら左、それ以外は右) へ出る。
+        /// 両端とも開いている (狭い柱) なら preferredSide (負なら左、それ以外は右) へ出る。出る距離は spec の <see cref="MotorSpec.CoverPeekSideDistance"/>。
         /// </summary>
-        public static float PeekOffset(CoverProbeResult result, float preferredSide)
+        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
+        public static float PeekOffset(CoverProbeResult result, float preferredSide, MotorSpec spec)
         {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var peekSideDistance = spec.CoverPeekSideDistance;
             if (!result.IsWall || result.Height == CoverHeight.Low)
             {
                 return 0f;
@@ -95,15 +96,15 @@ namespace Fps.Core
 
             if (result.IsAtLeftEdge && result.IsAtRightEdge)
             {
-                return preferredSide < 0f ? -PeekSideDistance : PeekSideDistance;
+                return preferredSide < 0f ? -peekSideDistance : peekSideDistance;
             }
 
             if (result.IsAtLeftEdge)
             {
-                return -PeekSideDistance;
+                return -peekSideDistance;
             }
 
-            return result.IsAtRightEdge ? PeekSideDistance : 0f;
+            return result.IsAtRightEdge ? peekSideDistance : 0f;
         }
 
         /// <summary>壁に張り付いたときの、体の中心から壁までの水平距離 (体の半径 + <see cref="WallGap"/>)。</summary>
@@ -140,7 +141,7 @@ namespace Fps.Core
             return length < _minLength ? Vector3.Zero : flat / length;
         }
 
-        private static bool FacesWall(Vector3 facing, Vector3 normal)
+        private static bool FacesWall(Vector3 facing, Vector3 normal, float maxAngleDegrees)
         {
             var forward = Horizontal(facing);
             if (forward == Vector3.Zero)
@@ -149,7 +150,7 @@ namespace Fps.Core
             }
 
             var cos = Vector3.Dot(forward, -normal);
-            var limit = (float)Math.Cos(MaxEnterAngleDegrees * Math.PI / 180.0);
+            var limit = (float)Math.Cos(maxAngleDegrees * Math.PI / 180.0);
             return cos >= limit - _boundaryEpsilon;
         }
 

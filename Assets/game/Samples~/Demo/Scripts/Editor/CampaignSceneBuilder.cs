@@ -210,7 +210,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// しゃがんで隠れる低い遮蔽物 (<see cref="CoverProbe.LowWallHeight"/> 未満の直方体) の横に置く遮蔽点。
+        /// しゃがんで隠れる低い遮蔽物 (<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満の直方体) の横に置く遮蔽点。
         /// 南北の両面の左右の端に 1 つずつ置き、覗くときはその場で立ち上がる。高すぎる遮蔽物があれば <see cref="ArgumentException"/> を投げる。
         /// </summary>
         public static IReadOnlyList<CoverPointPlacement> LowCoverPoints(IEnumerable<LevelBox> covers)
@@ -224,10 +224,10 @@ namespace Fps.Editor
             foreach (var cover in covers)
             {
                 // 立ち上がっても頭が出ない高さだと、覗いても撃てない。
-                if (!(cover.Size.y < CoverProbe.LowWallHeight))
+                if (!(cover.Size.y < MotorSpec.DefaultCoverLowWallHeight))
                 {
                     throw new ArgumentException(
-                        $"cover '{cover.Name}' is {cover.Size.y}m tall; a low cover must be lower than {CoverProbe.LowWallHeight}m",
+                        $"cover '{cover.Name}' is {cover.Size.y}m tall; a low cover must be lower than {MotorSpec.DefaultCoverLowWallHeight}m",
                         nameof(covers));
                 }
 

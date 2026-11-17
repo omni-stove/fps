@@ -97,8 +97,8 @@ fix_metas() {
 	done < <(git -c core.quotepath=off ls-files --others --exclude-standard -- 'Assets/*.meta')
 }
 
-# 画面の文字は文字列表 (Assets/game/Localization/Resources/Strings と Assets/game/Resources/Localization/<言語>/) のキーで引く決まりなので、UI のコード
-# (Runtime/UI と Net/UI) の C# の文字列リテラルと UXML の text・label・tooltip に残った日本語を 1 行ずつ出す。
+# 画面の文字は文字列表 (Demo サンプルの Localization/Resources/Strings と Resources/Localization/<言語>/) のキーで引く決まりなので、UI のコード
+# (サンプルの Scripts/UI と Net/UI) の C# の文字列リテラルと UXML の text・label・tooltip に残った日本語を 1 行ずつ出す。
 # コメントの日本語は見ない。新しく足して未追跡のファイルも見る。
 # 日本語は UTF-8 の先頭バイトが E3〜E9 (U+3000〜U+9FFF: 和文の句読点・かな・漢字) の文字で見分ける。
 # awk は実装によって UTF-8 を文字で数えたりバイトで数えたりするので、バイトで読む perl を使う。
@@ -111,9 +111,9 @@ ui_text_problems() {
 		*) cs+=("$path") ;;
 		esac
 	done < <(git -c core.quotepath=off ls-files -z --cached --others --exclude-standard -- \
-		':(glob)Assets/game/Scripts/Runtime/UI/**/*.cs' \
+		':(glob)Assets/game/Samples~/Demo/Scripts/UI/**/*.cs' \
 		':(glob)Assets/game/Scripts/Net/UI/**/*.cs' \
-		':(glob)Assets/game/UI/**/*.uxml')
+		':(glob)Assets/game/Samples~/Demo/UI/**/*.uxml')
 
 	if [ "${#cs[@]}" -gt 0 ]; then
 		# 1 行ずつ、ブロックコメント・逐語的文字列 (@"..." は行をまたぐ) の中かを持ち越しながら読み、閉じた文字列リテラルを調べる。

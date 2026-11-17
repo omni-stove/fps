@@ -14,7 +14,7 @@ namespace Fps.Core.Tests
             var attributes = endpoint == null
                 ? Array.Empty<LobbyAttribute>()
                 : new[] { LobbyAttribute.OfText(ServerLobby.ServerKey, endpoint) };
-            return new LobbyInfo("lobby-1", _ownerId, ServerLobby.MaxPlayers, new[] { _ownerId }, attributes);
+            return new LobbyInfo("lobby-1", _ownerId, NetMatchSettings.DefaultMaxPlayers, new[] { _ownerId }, attributes);
         }
 
         private static Dictionary<string, LobbyAttribute> ByKey(IReadOnlyList<LobbyAttribute> attributes)
@@ -79,12 +79,6 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => ServerLobby.Attributes(" ", "0.3.0", 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", -1));
             Assert.Throws<ArgumentOutOfRangeException>(() => ServerLobby.PlayersAttribute(-1));
-        }
-
-        [Test]
-        public void MaxPlayersFitsALobby()
-        {
-            Assert.That(ServerLobby.MaxPlayers, Is.InRange(LobbyLaunchOptions.MinMaxPlayers, LobbyLaunchOptions.MaxMaxPlayers));
         }
     }
 }

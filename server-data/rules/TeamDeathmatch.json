@@ -68,7 +68,8 @@
     "dominationScoreLimit": 100,
     "captureSeconds": 8,
     "pointsPerSecond": 1,
-    "maxCapturers": 3
+    "maxCapturers": 3,
+    "maxPlayers": 8
   },
   "motor": {
     "walkSpeed": 5,
@@ -90,6 +91,16 @@
     "vaultMaxAngleDegrees": 45,
     "vaultMinHeight": 0.3,
     "vaultMaxDepth": 1,
+    "coverMaxEnterDistance": 1,
+    "coverMaxEnterAngleDegrees": 45,
+    "coverLowWallHeight": 1.1,
+    "coverPeekSideDistance": 0.6,
+    "coverEnterSeconds": 0.15,
+    "coverBackHoldSeconds": 0.2,
+    "coverPeekSlideSeconds": 0.15,
+    "ladderTopEntryDepth": 0.3,
+    "ladderMinApproachDot": 0.5,
+    "ladderMinApproachSpeed": 0.5,
     "walkForwardScale": 1,
     "walkBackwardScale": 1,
     "walkSideScale": 1,

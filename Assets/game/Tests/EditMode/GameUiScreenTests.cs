@@ -18,16 +18,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void Defaults_AreRegisteredByTheUi()
-        {
-            Assert.That(GameUi.Pause, Is.Not.Null);
-            Assert.That(GameUi.LoadoutSelect, Is.Not.Null);
-            Assert.That(GameUi.Menu, Is.Not.Null);
-            Assert.That(GameUi.IsPauseOpen, Is.EqualTo(PauseMenu.IsAnyOpen));
-            Assert.That(GameUi.IsLoadoutSelectOpen, Is.EqualTo(LoadoutSelectView.IsAnyOpen));
-        }
-
-        [Test]
         public void GameUi_OnlyCarriesTheWaysFromTheUiIntoTheGame()
         {
             var names = new List<string>();
@@ -88,17 +78,12 @@ namespace Fps.Tests.EditMode
             }
             finally
             {
-                GameUi.UseDefaultMenu(defaultMenu);
+                // 既定の UI が無ければ戻す既定も無く、null は UseDefaultMenu が断る
+                if (defaultMenu != null)
+                {
+                    GameUi.UseDefaultMenu(defaultMenu);
+                }
             }
-        }
-
-        [Test]
-        public void DefaultMenu_TakesTheMenuNavigatorRequests()
-        {
-            var pendingTutorial = MenuNavigator.PendingTutorial;
-
-            Assert.That(GameUi.Menu.TakeTutorialRequest(), Is.EqualTo(pendingTutorial));
-            Assert.That(MenuNavigator.PendingTutorial, Is.False);
         }
 
         [Test]

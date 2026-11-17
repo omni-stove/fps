@@ -294,7 +294,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_cover.IsPeeking, Is.True);
             Assert.That(_cover.IsInCover, Is.True, "the wall is checked from where the peek started");
-            Assert.That(_body.transform.position.x - startX, Is.EqualTo(CoverProbe.PeekSideDistance).Within(0.02f));
+            Assert.That(_body.transform.position.x - startX, Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance).Within(0.02f));
 
             for (var i = 0; i < 15; i++)
             {
@@ -420,7 +420,7 @@ namespace Fps.Tests.EditMode
         {
             Frame(true, false, Vector2.zero);
             Assert.That(_cover.IsInCover, Is.True, "a wall in front should be enterable");
-            for (var elapsed = 0f; elapsed < CoverState.EnterSeconds + _frame; elapsed += _frame)
+            for (var elapsed = 0f; elapsed < MotorSpec.DefaultCoverEnterSeconds + _frame; elapsed += _frame)
             {
                 Frame(false, false, Vector2.zero);
             }

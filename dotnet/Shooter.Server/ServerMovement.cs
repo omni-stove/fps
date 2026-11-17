@@ -133,6 +133,8 @@ namespace Shooter.Server
                 SpawnPosition = spawn,
                 Ladders = _context.Map.Ladders.Ladders,
                 Knockback = _knockback,
+                Swim = _settings.Swim,
+                WallRun = _settings.WallRun,
             };
             var mover = new Mover(player, simulation)
             {

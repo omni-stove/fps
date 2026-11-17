@@ -88,6 +88,14 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Zipline.HangOffset, Is.EqualTo(ZiplineMovement.DefaultHangOffset));
             Assert.That(spec.Zipline.RegrabSeconds, Is.EqualTo(ZiplineMovement.DefaultRegrabSeconds));
             Assert.That(spec.Zipline.SpreadMoveFraction, Is.EqualTo(ZiplineMovement.DefaultSpreadMoveFraction));
+            Assert.That(spec.Swim.Speed, Is.EqualTo(SwimTuning.DefaultSpeed));
+            Assert.That(spec.Swim.Buoyancy, Is.EqualTo(SwimTuning.DefaultBuoyancy));
+            Assert.That(spec.Swim.BreathSeconds, Is.EqualTo(SwimTuning.DefaultBreathSeconds));
+            Assert.That(spec.WallRun.Enabled, Is.EqualTo(WallRunTuning.DefaultEnabled));
+            Assert.That(spec.WallRun.MaxSeconds, Is.EqualTo(WallRunTuning.DefaultMaxSeconds));
+            Assert.That(spec.WallRun.MinSpeed, Is.EqualTo(WallRunTuning.DefaultMinSpeed));
+            Assert.That(spec.WallRun.GravityScale, Is.EqualTo(WallRunTuning.DefaultGravityScale));
+            Assert.That(spec.WallRun.JumpOffSpeed, Is.EqualTo(WallRunTuning.DefaultJumpOffSpeed));
         }
 
         [Test]

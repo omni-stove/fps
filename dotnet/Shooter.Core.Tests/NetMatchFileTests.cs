@@ -121,6 +121,69 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void LeanAirJumpSwimAndWallRunReadBack()
+        {
+            var motor = new NetMotorSettings(
+                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, leanSideOffset: 0.5f, leanAngleDegrees: 22f, leanSpeed: 5f, airJumps: 1, airJumpSpeed: 6f),
+                new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f),
+                CapsuleMoverSpec.Default,
+                ProneSpec.Default,
+                new SwimTuning(2.5f, 10f, 25f),
+                new WallRunTuning(true, 1.8f, 4.5f, 0.3f, 7.5f));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+
+            var text = NetMatchFile.Write(original);
+            var read = NetMatchFile.Parse(text, "traversal.json").Motor;
+
+            Assert.That(read.Motor.LeanSideOffset, Is.EqualTo(0.5f));
+            Assert.That(read.Motor.LeanAngleDegrees, Is.EqualTo(22f));
+            Assert.That(read.Motor.LeanSpeed, Is.EqualTo(5f));
+            Assert.That(read.Motor.AirJumps, Is.EqualTo(1));
+            Assert.That(read.Motor.AirJumpSpeed, Is.EqualTo(6f));
+            Assert.That(read.Swim.Speed, Is.EqualTo(2.5f));
+            Assert.That(read.Swim.Buoyancy, Is.EqualTo(10f));
+            Assert.That(read.Swim.BreathSeconds, Is.EqualTo(25f));
+            Assert.That(read.WallRun.Enabled, Is.True);
+            Assert.That(read.WallRun.MaxSeconds, Is.EqualTo(1.8f));
+            Assert.That(read.WallRun.MinSpeed, Is.EqualTo(4.5f));
+            Assert.That(read.WallRun.GravityScale, Is.EqualTo(0.3f));
+            Assert.That(read.WallRun.JumpOffSpeed, Is.EqualTo(7.5f));
+            Assert.That(text, Does.Contain("\"airJumps\": 1,"), "the jump count is written as a whole number");
+            Assert.That(text, Does.Contain("\"wallRunEnabled\": true,"));
+        }
+
+        [Test]
+        public void LeanAirJumpSwimAndWallRunDefaultWhenLeftOut()
+        {
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var read = NetMatchFile.Parse(bareText + ", \"motor\": {\"airJumps\": 2, \"swimSpeed\": 4, \"wallRunEnabled\": true}}", "partial.json").Motor;
+
+            Assert.That(read.Motor.AirJumps, Is.EqualTo(2));
+            Assert.That(read.Motor.AirJumpSpeed, Is.EqualTo(MotorSpec.DefaultAirJumpSpeed));
+            Assert.That(read.Motor.LeanSideOffset, Is.EqualTo(MotorSpec.DefaultLeanSideOffset));
+            Assert.That(read.Motor.LeanAngleDegrees, Is.EqualTo(MotorSpec.DefaultLeanAngleDegrees));
+            Assert.That(read.Motor.LeanSpeed, Is.EqualTo(MotorSpec.DefaultLeanSpeed));
+            Assert.That(read.Swim.Speed, Is.EqualTo(4f));
+            Assert.That(read.Swim.Buoyancy, Is.EqualTo(SwimTuning.DefaultBuoyancy));
+            Assert.That(read.Swim.BreathSeconds, Is.EqualTo(SwimTuning.DefaultBreathSeconds));
+            Assert.That(read.WallRun.Enabled, Is.True);
+            Assert.That(read.WallRun.MaxSeconds, Is.EqualTo(WallRunTuning.DefaultMaxSeconds));
+            Assert.That(read.WallRun.MinSpeed, Is.EqualTo(WallRunTuning.DefaultMinSpeed));
+            Assert.That(read.WallRun.GravityScale, Is.EqualTo(WallRunTuning.DefaultGravityScale));
+            Assert.That(read.WallRun.JumpOffSpeed, Is.EqualTo(WallRunTuning.DefaultJumpOffSpeed));
+
+            var defaults = NetMatchFile.Parse(bareText + ", \"motor\": {\"walkSpeed\": 5}}", "defaults.json").Motor;
+            Assert.That(defaults.Motor.AirJumps, Is.EqualTo(MotorSpec.DefaultAirJumps));
+            Assert.That(defaults.Swim.Speed, Is.EqualTo(SwimTuning.DefaultSpeed));
+            Assert.That(defaults.WallRun.Enabled, Is.EqualTo(WallRunTuning.DefaultEnabled));
+            Assert.That(NetMotorSettings.Default.Swim, Is.SameAs(SwimTuning.Default));
+            Assert.That(NetMotorSettings.Default.WallRun, Is.SameAs(WallRunTuning.Default));
+        }
+
+        [Test]
         public void CarryLoadReadsBackAndDefaultsWhenLeftOut()
         {
             var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 5f, 0.04f, 0.6f, CarryGaits.Walk | CarryGaits.Sprint);
@@ -181,6 +244,20 @@ namespace Shooter.Core.Tests
         [TestCase("{\"motor\": {\"walkSpeed\": -1}}", "motor.walkSpeed")]
         [TestCase("{\"motor\": {\"crouchHeight\": 9}}", "motor.crouchHeight")]
         [TestCase("{\"motor\": {\"slopeLimitDegrees\": 120}}", "motor.slopeLimitDegrees")]
+        [TestCase("{\"motor\": {\"leanSideOffset\": -1}}", "motor.leanSideOffset")]
+        [TestCase("{\"motor\": {\"leanAngleDegrees\": 100}}", "motor.leanAngleDegrees")]
+        [TestCase("{\"motor\": {\"leanSpeed\": 0}}", "motor.leanSpeed")]
+        [TestCase("{\"motor\": {\"airJumps\": -1}}", "motor.airJumps")]
+        [TestCase("{\"motor\": {\"airJumps\": 1.5}}", "motor.airJumps")]
+        [TestCase("{\"motor\": {\"airJumpSpeed\": -2}}", "motor.airJumpSpeed")]
+        [TestCase("{\"motor\": {\"swimSpeed\": -1}}", "motor.swimSpeed")]
+        [TestCase("{\"motor\": {\"swimBuoyancy\": -1}}", "motor.swimBuoyancy")]
+        [TestCase("{\"motor\": {\"swimBreathSeconds\": 0}}", "motor.swimBreathSeconds")]
+        [TestCase("{\"motor\": {\"wallRunEnabled\": \"yes\"}}", "motor.wallRunEnabled")]
+        [TestCase("{\"motor\": {\"wallRunMaxSeconds\": 0}}", "motor.wallRunMaxSeconds")]
+        [TestCase("{\"motor\": {\"wallRunMinSpeed\": -1}}", "motor.wallRunMinSpeed")]
+        [TestCase("{\"motor\": {\"wallRunGravityScale\": -1}}", "motor.wallRunGravityScale")]
+        [TestCase("{\"motor\": {\"wallRunJumpOffSpeed\": -1}}", "motor.wallRunJumpOffSpeed")]
         public void BadMotorValuesNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));

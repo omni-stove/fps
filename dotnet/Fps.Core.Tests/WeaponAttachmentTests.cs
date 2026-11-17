@@ -511,6 +511,35 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AnAttachThatTheWeaponRefusesPutsBothItemsBack()
+        {
+            var holder = new Holder(new Inventory(Catalog()), _suppressorId);
+            holder.Inventory.Add(_compensatorId, 1);
+            holder.Accepts = false;
+
+            var result = InventoryAttachments.Attach(
+                holder.Inventory, holder.Handle(_compensatorId), _rifleId, holder.Attached, holder.Set, out _, out _);
+
+            Assert.That(result, Is.EqualTo(AttachmentRejection.NoRoom));
+            Assert.That(holder.Attached, Is.EqualTo(Strings(_suppressorId)));
+            Assert.That(holder.Inventory.CountOf(_compensatorId), Is.EqualTo(1));
+            Assert.That(holder.Inventory.CountOf(_suppressorId), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ADetachThatTheWeaponRefusesTakesTheItemBackOut()
+        {
+            var holder = new Holder(new Inventory(Catalog()), _scopeId);
+            holder.Accepts = false;
+
+            var result = InventoryAttachments.Detach(holder.Inventory, _rifleId, holder.Attached, _scopeId, holder.Set);
+
+            Assert.That(result, Is.EqualTo(AttachmentRejection.NoRoom));
+            Assert.That(holder.Attached, Is.EqualTo(Strings(_scopeId)));
+            Assert.That(holder.Inventory.CountOf(_scopeId), Is.EqualTo(0));
+        }
+
+        [Test]
         public void DetachingWhatIsNotAttachedIsRefused()
         {
             var holder = new Holder(new Inventory(Catalog()), _scopeId);
@@ -539,12 +568,20 @@ namespace Fps.Core.Tests
 
             public int Handle(string itemId) => Inventory.Stacks.First(s => s.ItemId == itemId).Handle;
 
-            public void Set(System.Collections.Generic.IReadOnlyList<string> next)
+            public bool Accepts { get; set; } = true;
+
+            public bool Set(System.Collections.Generic.IReadOnlyList<string> next)
             {
                 Sets++;
                 CountWhenSet = Inventory.CountOf(_scopeId);
+                if (!Accepts)
+                {
+                    return false;
+                }
+
                 Attached = next;
                 Inventory.HoldWeapons(new[] { WeaponAttachments.Apply(_rifle, next, Inventory.Catalog) }, _ => Attached);
+                return true;
             }
         }
     }

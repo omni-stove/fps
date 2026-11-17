@@ -216,7 +216,8 @@ namespace Fps.Core
             Changed?.Invoke();
         }
 
-        public void ChangeSpec(WeaponSpec spec)
+        /// <summary>弾数と弾薬の種類を残して武器の値を替える。弾倉が減って溢れる弾が予備弾の受け皿に入りきらなければ、弾を失わないよう何も変えずに false を返す。</summary>
+        public bool ChangeSpec(WeaponSpec spec)
         {
             if (spec == null)
             {
@@ -228,9 +229,14 @@ namespace Fps.Core
                 throw new ArgumentException("spec is for weapon '" + spec.Id + "', not '" + Spec.Id + "'", nameof(spec));
             }
 
-            _weapon.CancelReload();
             var magazine = _weapon.AmmoInMagazine;
             var excess = magazine - spec.MagazineSize;
+            if (excess > 0 && _weapon.AmmoPool != null && _weapon.AmmoPool.Room < excess)
+            {
+                return false;
+            }
+
+            _weapon.CancelReload();
             if (excess > 0)
             {
                 magazine = spec.MagazineSize;
@@ -255,6 +261,7 @@ namespace Fps.Core
 
             _weapon.AmmoTypes.TrySelect(ammoType);
             Changed?.Invoke();
+            return true;
         }
 
         // 予備弾を pool から出し入れするようにする。満タン戻し (Refill) で武器を作り直しても同じ pool を使い続ける

@@ -93,9 +93,15 @@ namespace Fps.Runtime
         }
 
         // 最初の持ち物に戻し、持っている武器を置き直して、その最初の予備弾まで弾薬を足す (出直したとき)
+        // 付けた物は最初の持ち物にまた入るので、武器からは戻さずに外す。出直しの経路ごとに外すと漏れる経路で付けた物が増えるため、ここでまとめて外す
         public void Refill()
         {
             Inventory.Fill();
+            if (_weapons != null)
+            {
+                _weapons.ClearAttachments();
+            }
+
             HoldWeapons();
             Restock();
         }

@@ -225,10 +225,15 @@ namespace Fps.Server
         }
 
         // 持ち物の武器の重さは武器の値から取るので、武器の値を替えてから揃える
-        private static void SetAttachments(ServerPlayerWeapons weapons, Inventory inventory, string weaponId, IReadOnlyList<string> next)
+        private static bool SetAttachments(ServerPlayerWeapons weapons, Inventory inventory, string weaponId, IReadOnlyList<string> next)
         {
-            weapons.SetAttachments(weaponId, next, inventory.Catalog);
+            if (!weapons.SetAttachments(weaponId, next, inventory.Catalog))
+            {
+                return false;
+            }
+
             inventory.HoldWeapons(weapons.Specs, weapons.AttachmentsOf);
+            return true;
         }
 
         private Inventory GetOrAdd(int playerId)

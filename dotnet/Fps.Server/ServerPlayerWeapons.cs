@@ -113,6 +113,13 @@ namespace Fps.Server
                 }
 
                 var kept = WeaponAttachments.Keep(catalog, weaponId, attachments);
+                if (!items[i].ChangeSpec(WeaponAttachments.Apply(_baseSpecs[i], kept, catalog)))
+                {
+                    _log.WriteLine("[Net] attachments player=" + Text(_playerId) + " weapon=" + weaponId + " attached=" + WeaponAttachments.Describe(kept)
+                        + " rejected=NoRoomForAmmo");
+                    return false;
+                }
+
                 if (kept.Count == 0)
                 {
                     _attachments.Remove(weaponId);
@@ -122,7 +129,6 @@ namespace Fps.Server
                     _attachments[weaponId] = kept;
                 }
 
-                items[i].ChangeSpec(WeaponAttachments.Apply(_baseSpecs[i], kept, catalog));
                 var specs = new WeaponSpec[items.Count];
                 for (var s = 0; s < specs.Length; s++)
                 {

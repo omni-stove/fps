@@ -200,6 +200,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void RefillingTakesTheAttachmentsOffWithoutDuplicatingThem()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            inventory.Attach(Handle(inventory, _magazineId));
+            Assert.That(weapons.Weapon.Spec.MagazineSize, Is.EqualTo(40));
+
+            inventory.Refill();
+
+            Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+            Assert.That(weapons.Weapon.Spec.MagazineSize, Is.EqualTo(30));
+            Assert.That(weapons.Weapon.AmmoInMagazine, Is.EqualTo(30));
+            Assert.That(inventory.Inventory.CountOf(_magazineId), Is.EqualTo(1), "only the starting magazine; the attached one is not handed back on top");
+            Assert.That(inventory.Inventory.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+            Assert.That(inventory.Inventory.WeaponWeight, Is.Zero.Within(1e-4f));
+        }
+
+        [Test]
         public void ADroppedWeaponPickupWeighsItsAttachments()
         {
             var rifle = Definition("Rifle", TestWeapons.RifleSpec());

@@ -38,17 +38,27 @@ namespace Fps.Runtime
             _attachments.Clear();
         }
 
-        /// <summary>付けた物を持ち物へ戻さずに外し、武器を付ける前の値にする。持ち物を最初の状態に戻した後 (出直し) に呼び、付けた物が持ち物と武器の両方に残って増えるのを防ぐ。</summary>
+        /// <summary>付けた物を持ち物へ戻さずに外し、持っている武器も弾数を残したまま付ける前の値にする。持ち物を最初の状態に戻した後 (出直し) に呼び、付けた物が持ち物と武器の両方に残って増えるのを防ぐ。</summary>
         public void ClearAttachments()
         {
-            EnsureInitialized();
             if (_attachments.Count == 0)
             {
                 return;
             }
 
+            EnsureInitialized();
             _attachments.Clear();
             _specs = ToSpecs(_loadedDefinitions);
+            if (_unarmed)
+            {
+                return;
+            }
+
+            var loadout = WeaponLoadout.Restore(_specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            KeepAmmoTypes(loadout, -1);
+            SetLoadout(loadout, _specs, _loadedDefinitions, _loadedRules);
+            Debug.Log($"{AttachmentsLogPrefix} cleared weapon={Weapon.Spec.Id}", this);
+            WeaponChanged?.Invoke(Weapon);
         }
 
         public IReadOnlyList<string> AttachmentsOf(string weaponId)
@@ -74,9 +84,16 @@ namespace Fps.Runtime
 
             var spec = WeaponAttachments.Apply(_loadedDefinitions[index].ToSpec(), kept, catalog);
             var weapon = _loadout.Items[index];
-            weapon.CancelReload();
             var magazine = weapon.AmmoInMagazine;
             var excess = magazine - spec.MagazineSize;
+            // 弾倉が減って溢れる弾が持ち物に入らなければ、弾を失わないよう付け外しを断る
+            if (excess > 0 && weapon.AmmoPool != null && weapon.AmmoPool.Room < excess)
+            {
+                Debug.Log($"{AttachmentsLogPrefix} weapon={weaponId} attached={WeaponAttachments.Describe(kept)} rejected=NoRoomForAmmo excess={excess}", this);
+                return false;
+            }
+
+            weapon.CancelReload();
             var reserve = weapon.ReserveAmmo;
             if (excess > 0)
             {

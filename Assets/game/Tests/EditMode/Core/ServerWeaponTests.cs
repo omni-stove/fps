@@ -690,6 +690,27 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ChangeSpecIsRefusedWhenTheRoundsThatNoLongerFitHaveNoRoomInTheAmmoPool()
+        {
+            const string ammoId = "00000000-0000-4000-8000-000000000002";
+            const string rifleItemId = "00000000-0000-4000-8000-000000000003";
+            var catalog = new ItemCatalog(
+                new[] { new ItemSpec(ammoId, maxStack: 6), new ItemSpec(rifleItemId, weaponId: _rifleId, ammoItemId: ammoId) },
+                new InventoryRule(gridWidth: 1, gridHeight: 1));
+            var inventory = new Inventory(catalog);
+            inventory.Add(ammoId, 5);
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+            weapon.UseAmmoPool(InventoryWeapons.PoolFor(inventory, weapon.Spec));
+
+            var changed = weapon.ChangeSpec(Spec(magazine: 1, reserve: 5));
+
+            Assert.That(changed, Is.False, "two rounds would spill but the only cell holds one more");
+            Assert.That(weapon.Spec.MagazineSize, Is.EqualTo(3));
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3));
+            Assert.That(inventory.CountOf(ammoId), Is.EqualTo(5));
+        }
+
+        [Test]
         public void ChangeSpecStopsAReloadAndRefillUsesTheNewMagazine()
         {
             var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));

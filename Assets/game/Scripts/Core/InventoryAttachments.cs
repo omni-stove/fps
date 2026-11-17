@@ -5,13 +5,12 @@ namespace Fps.Core
 {
     public static class InventoryAttachments
     {
-        // setAttachments (武器と持ち物の武器の重さを揃える) を外した物を戻す前に呼ぶのは、武器の重さが古いままだと重さの上限で戻せないことがあるため
         public static AttachmentRejection Attach(
             Inventory inventory,
             int handle,
             string weaponId,
             IReadOnlyList<string> current,
-            Action<IReadOnlyList<string>> setAttachments,
+            Func<IReadOnlyList<string>, bool> setAttachments,
             out string itemId,
             out string replaced)
         {
@@ -66,17 +65,27 @@ namespace Fps.Core
                 return AttachmentRejection.NoRoom;
             }
 
-            setAttachments(next);
+            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。付ける前の持ち物に戻す
+            if (!setAttachments(next))
+            {
+                if (replaced != null)
+                {
+                    inventory.Remove(replaced, 1);
+                }
+
+                inventory.Add(item.Id, 1, 0f);
+                return AttachmentRejection.NoRoom;
+            }
+
             return AttachmentRejection.None;
         }
 
-        // Attach と同じ理由で、持ち物に戻す前に setAttachments を呼ぶ
         public static AttachmentRejection Detach(
             Inventory inventory,
             string weaponId,
             IReadOnlyList<string> current,
             string itemId,
-            Action<IReadOnlyList<string>> setAttachments)
+            Func<IReadOnlyList<string>, bool> setAttachments)
         {
             if (inventory == null)
             {
@@ -105,7 +114,12 @@ namespace Fps.Core
                 return AttachmentRejection.NoRoom;
             }
 
-            setAttachments(next);
+            if (!setAttachments(next))
+            {
+                inventory.Remove(item.Id, 1);
+                return AttachmentRejection.NoRoom;
+            }
+
             return AttachmentRejection.None;
         }
     }

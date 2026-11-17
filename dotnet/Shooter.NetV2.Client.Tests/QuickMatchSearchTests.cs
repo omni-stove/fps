@@ -246,6 +246,11 @@ namespace Shooter.NetV2.Tests
                 done(LobbyBackendErrors.NotSupported);
             }
 
+            public void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
             public void SetMemberAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
             {
                 done(LobbyBackendErrors.NotSupported);

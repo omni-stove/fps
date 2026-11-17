@@ -1141,6 +1141,26 @@ namespace Shooter.Core.Tests
             Assert.That(inverted.WithInvertLookY(true), Is.SameAs(inverted));
         }
 
+        [TestCase(2.5f)]
+        [TestCase(-0.75f)]
+        [TestCase(0f)]
+        public void ApplyInvertLookYKeepsTheVerticalLookWhenOff(float lookUp)
+        {
+            Assert.That(ControlSettings.Default.ApplyInvertLookY(lookUp), Is.EqualTo(lookUp));
+            Assert.That(ControlSettings.Default.WithInvertLookY(true).WithInvertLookY(false).ApplyInvertLookY(lookUp), Is.EqualTo(lookUp));
+        }
+
+        [TestCase(2.5f, -2.5f)]
+        [TestCase(-0.75f, 0.75f)]
+        [TestCase(0f, 0f)]
+        public void ApplyInvertLookYFlipsTheVerticalLookWhenOn(float lookUp, float expected)
+        {
+            var inverted = ControlSettings.Default.WithInvertLookY(true);
+
+            Assert.That(inverted.ApplyInvertLookY(lookUp), Is.EqualTo(expected));
+            Assert.That(inverted.ApplyInvertLookY(inverted.ApplyInvertLookY(lookUp)), Is.EqualTo(lookUp), "flipping twice gives the input back");
+        }
+
         [Test]
         public void WithRumbleEnabledChangesOnlyThatFlag()
         {

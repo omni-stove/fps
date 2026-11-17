@@ -37,9 +37,6 @@ namespace Fps.Runtime
         /// <summary>壁の上端を探すときに、上から下ろす Ray の始点の足元からの高さ (m)。これより高い壁は上端をこの高さとして扱う。</summary>
         public const float DefaultTopProbeHeight = 3f;
 
-        /// <summary>高い壁の端から横に出る・戻るのにかける時間 (秒)。</summary>
-        public const float PeekSlideSeconds = 0.15f;
-
         private const string LogTag = CoverState.LogTag;
 
         // 壁の上端を下ろす Ray で探すとき、当たった面から壁の内側へ入れる距離 (m)。面ちょうどだと上端の角を外すことがある。
@@ -62,7 +59,8 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("壁の上端を探す Ray の始点の、足元からの高さ (m)")]
         private float _topProbeHeight = DefaultTopProbeHeight;
 
-        private readonly CoverState _state = new CoverState();
+        // 初期化前にも IsInCover などを読まれるので空の状態を先に作る。値は Tick ごとに PlayerController の移動の設定に差し替える。
+        private readonly CoverState _state = new CoverState(MotorSpec.Default);
         private PlayerController _player;
         private ViewRig _rig;
         private AimDownSights _ads;
@@ -303,6 +301,7 @@ namespace Fps.Runtime
                 return;
             }
 
+            _state.Spec = _player.Motor.Spec;
             var wasInCover = _state.IsInCover;
             if (!wasInCover && (!coverPressed || _player.IsDodging || _player.IsVaulting || _player.IsMantling))
             {
@@ -427,7 +426,8 @@ namespace Fps.Runtime
                 return;
             }
 
-            var speed = CoverProbe.PeekSideDistance / PeekSlideSeconds;
+            var spec = _player.Motor.Spec;
+            var speed = spec.CoverPeekSideDistance / spec.CoverPeekSlideSeconds;
             var step = Mathf.MoveTowards(_appliedPeek, target, speed * deltaSeconds) - _appliedPeek;
             var right = CoverProbe.RightAlong(_state.Normal).ToUnity();
             var before = transform.position;
@@ -525,7 +525,7 @@ namespace Fps.Runtime
         {
             var feetY = FeetY();
             var origin = new Vector3(bodyPosition.x, feetY + _probeHeight, bodyPosition.z);
-            if (!TryCast(origin, direction, CoverProbe.MaxEnterDistance, out var hit))
+            if (!TryCast(origin, direction, _state.Spec.CoverMaxEnterDistance, out var hit))
             {
                 return CoverProbeResult.None;
             }
@@ -545,7 +545,7 @@ namespace Fps.Runtime
             }
 
             var sample = new CoverWallSample(hit.distance, normal.ToNumerics(), topHeight, wallOnLeft, wallOnRight);
-            var result = CoverProbe.Evaluate(sample, facing.ToNumerics());
+            var result = CoverProbe.Evaluate(sample, facing.ToNumerics(), _state.Spec);
             if (result.IsWall)
             {
                 _coverTopY = feetY + topHeight;

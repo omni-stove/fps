@@ -21,7 +21,7 @@ namespace Fps.Core
         /// <summary>カバーにできる壁が届く距離にある (向きは問わない)。カバー中に壁が残っているかはこれで見る。</summary>
         public bool IsWall { get; }
 
-        /// <summary><see cref="IsWall"/> で、しかも向いている方向から <see cref="CoverProbe.MaxEnterAngleDegrees"/> 以内。</summary>
+        /// <summary><see cref="IsWall"/> で、しかも向いている方向から <see cref="MotorSpec.CoverMaxEnterAngleDegrees"/> 以内。</summary>
         public bool CanEnter { get; }
 
         /// <summary>低い壁か高い壁か。<see cref="IsWall"/> が false なら意味を持たない。</summary>

@@ -53,6 +53,16 @@ namespace Fps.Core
         public const string VaultMaxAngleDegreesItem = "vaultMaxAngleDegrees";
         public const string VaultMinHeightItem = "vaultMinHeight";
         public const string VaultMaxDepthItem = "vaultMaxDepth";
+        public const string CoverMaxEnterDistanceItem = "coverMaxEnterDistance";
+        public const string CoverMaxEnterAngleDegreesItem = "coverMaxEnterAngleDegrees";
+        public const string CoverLowWallHeightItem = "coverLowWallHeight";
+        public const string CoverPeekSideDistanceItem = "coverPeekSideDistance";
+        public const string CoverEnterSecondsItem = "coverEnterSeconds";
+        public const string CoverBackHoldSecondsItem = "coverBackHoldSeconds";
+        public const string CoverPeekSlideSecondsItem = "coverPeekSlideSeconds";
+        public const string LadderTopEntryDepthItem = "ladderTopEntryDepth";
+        public const string LadderMinApproachDotItem = "ladderMinApproachDot";
+        public const string LadderMinApproachSpeedItem = "ladderMinApproachSpeed";
         public const string WalkForwardScaleItem = "walkForwardScale";
         public const string WalkBackwardScaleItem = "walkBackwardScale";
         public const string WalkSideScaleItem = "walkSideScale";
@@ -90,6 +100,9 @@ namespace Fps.Core
             WalkSpeedItem, SprintSpeedItem, JumpHeightItem, GravityItem, AirControlItem, CrouchSpeedItem, SafeFallSpeedItem, LethalFallSpeedItem,
             DodgeDistanceItem, DodgeSecondsItem, VaultMaxHeightItem, MantleMaxHeightItem, MantleSpeedItem,
             DodgeCooldownSecondsItem, VaultSpeedItem, VaultReachItem, VaultMaxAngleDegreesItem, VaultMinHeightItem, VaultMaxDepthItem,
+            CoverMaxEnterDistanceItem, CoverMaxEnterAngleDegreesItem, CoverLowWallHeightItem, CoverPeekSideDistanceItem,
+            CoverEnterSecondsItem, CoverBackHoldSecondsItem, CoverPeekSlideSecondsItem,
+            LadderTopEntryDepthItem, LadderMinApproachDotItem, LadderMinApproachSpeedItem,
             WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem,
             CarryWeightSourceItem, CarryMultiplierSourceItem, CarryFreeWeightItem, CarrySpeedLossPerKgItem, CarryMinWeightMultiplierItem,
             CarryWalkItem, CarrySprintItem, CarryCrouchItem, CarryProneItem,
@@ -262,6 +275,16 @@ namespace Fps.Core
             writer.Float(VaultMaxAngleDegreesItem, motor.VaultMaxAngleDegrees);
             writer.Float(VaultMinHeightItem, motor.VaultMinHeight);
             writer.Float(VaultMaxDepthItem, motor.VaultMaxDepth);
+            writer.Float(CoverMaxEnterDistanceItem, motor.CoverMaxEnterDistance);
+            writer.Float(CoverMaxEnterAngleDegreesItem, motor.CoverMaxEnterAngleDegrees);
+            writer.Float(CoverLowWallHeightItem, motor.CoverLowWallHeight);
+            writer.Float(CoverPeekSideDistanceItem, motor.CoverPeekSideDistance);
+            writer.Float(CoverEnterSecondsItem, motor.CoverEnterSeconds);
+            writer.Float(CoverBackHoldSecondsItem, motor.CoverBackHoldSeconds);
+            writer.Float(CoverPeekSlideSecondsItem, motor.CoverPeekSlideSeconds);
+            writer.Float(LadderTopEntryDepthItem, motor.LadderTopEntryDepth);
+            writer.Float(LadderMinApproachDotItem, motor.LadderMinApproachDot);
+            writer.Float(LadderMinApproachSpeedItem, motor.LadderMinApproachSpeed);
             writer.Float(WalkForwardScaleItem, motor.WalkDirection.Forward);
             writer.Float(WalkBackwardScaleItem, motor.WalkDirection.Backward);
             writer.Float(WalkSideScaleItem, motor.WalkDirection.Side);
@@ -414,7 +437,17 @@ namespace Fps.Core
                         fields.ReadFloat(VaultReachItem, dm.VaultReach),
                         fields.ReadFloat(VaultMaxAngleDegreesItem, dm.VaultMaxAngleDegrees),
                         fields.ReadFloat(VaultMinHeightItem, dm.VaultMinHeight),
-                        fields.ReadFloat(VaultMaxDepthItem, dm.VaultMaxDepth)),
+                        fields.ReadFloat(VaultMaxDepthItem, dm.VaultMaxDepth),
+                        fields.ReadFloat(CoverMaxEnterDistanceItem, dm.CoverMaxEnterDistance),
+                        fields.ReadFloat(CoverMaxEnterAngleDegreesItem, dm.CoverMaxEnterAngleDegrees),
+                        fields.ReadFloat(CoverLowWallHeightItem, dm.CoverLowWallHeight),
+                        fields.ReadFloat(CoverPeekSideDistanceItem, dm.CoverPeekSideDistance),
+                        fields.ReadFloat(CoverEnterSecondsItem, dm.CoverEnterSeconds),
+                        fields.ReadFloat(CoverBackHoldSecondsItem, dm.CoverBackHoldSeconds),
+                        fields.ReadFloat(CoverPeekSlideSecondsItem, dm.CoverPeekSlideSeconds),
+                        fields.ReadFloat(LadderTopEntryDepthItem, dm.LadderTopEntryDepth),
+                        fields.ReadFloat(LadderMinApproachDotItem, dm.LadderMinApproachDot),
+                        fields.ReadFloat(LadderMinApproachSpeedItem, dm.LadderMinApproachSpeed)),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),

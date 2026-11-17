@@ -13,8 +13,6 @@ namespace Fps.Core
     {
         public const string ReasonDowned = "downed";
 
-        public const float PeekSlideSeconds = 0.15f;
-
         // KnockbackMovement の着地と同じ。着地した tick に動かさないと床に触れず、次の tick で接地が外れて落ち始める。
         private static readonly Vector3 _knockbackSettle = new Vector3(0f, -0.05f, 0f);
 
@@ -23,7 +21,7 @@ namespace Fps.Core
         private readonly CharacterVaultSensor _vaultSensor;
 
         // 状態から毎 tick 戻して使う作業用。tick をまたいで中身を持ち越さない
-        private readonly CoverState _cover = new CoverState();
+        private readonly CoverState _cover;
         private readonly DodgeMotion _dodge;
 
         private readonly ProneInput _proneInput = new ProneInput();
@@ -61,6 +59,7 @@ namespace Fps.Core
             _coverSensor = new CharacterCoverSensor(body);
             _vaultSensor = new CharacterVaultSensor(body);
             _dodge = new DodgeMotion(motor.Spec);
+            _cover = new CoverState(motor.Spec);
             ProneSpec = prone ?? throw new ArgumentNullException(nameof(prone));
             _dive = new ProneDive(prone);
         }
@@ -446,12 +445,12 @@ namespace Fps.Core
                 // 端から横に出ている間は、出る前の位置で壁を調べる (出た先にはもう壁が無い)
                 var into = -previous.Normal;
                 var right = CoverProbe.RightAlong(previous.Normal);
-                probe = _coverSensor.Probe(position - (right * appliedPeek), into, into, out topY);
+                probe = _coverSensor.Probe(position - (right * appliedPeek), into, into, _motor.Spec, out topY);
             }
             else
             {
                 var forward = YawForward(input.Yaw);
-                probe = _coverSensor.Probe(position, forward, forward, out topY);
+                probe = _coverSensor.Probe(position, forward, forward, _motor.Spec, out topY);
             }
 
             var progressBefore = _cover.EnterProgress;
@@ -502,7 +501,7 @@ namespace Fps.Core
                 return applied;
             }
 
-            var speed = CoverProbe.PeekSideDistance / PeekSlideSeconds;
+            var speed = _motor.Spec.CoverPeekSideDistance / _motor.Spec.CoverPeekSlideSeconds;
             var step = MoveTowards(applied, target, speed * TickSeconds) - applied;
             var right = CoverProbe.RightAlong(normal);
             var before = Body.Position;
@@ -644,13 +643,13 @@ namespace Fps.Core
             for (var i = 0; i < _ladders.Count; i++)
             {
                 var ladder = _ladders[i];
-                var entry = ladder.Span.Probe(feet, velocity, Body.Radius, ladder.Spec.GrabDistance);
+                var entry = ladder.Span.Probe(feet, velocity, Body.Radius, ladder.Spec.GrabDistance, _motor.Spec);
                 if (entry == LadderEntry.None)
                 {
                     continue;
                 }
 
-                var climb = new LadderClimb(ladder.Span, ladder.Spec, entry, ladder.Span.HeightOf(feet));
+                var climb = new LadderClimb(ladder.Span, ladder.Spec, entry, ladder.Span.HeightOf(feet), _motor.Spec);
                 return CharacterLadderState.Climbing(i, climb.Entry, climb.Height, climb.IsInputLatched, climb.LatchedDownSign);
             }
 
@@ -665,7 +664,7 @@ namespace Fps.Core
             var ladder = _ladders[state.Index];
             var span = ladder.Span;
             var radius = Body.Radius;
-            var climb = LadderClimb.Resume(span, ladder.Spec, state.Entry, state.Height, state.IsInputLatched, state.LatchedDownSign);
+            var climb = LadderClimb.Resume(span, ladder.Spec, state.Entry, state.Height, state.IsInputLatched, state.LatchedDownSign, _motor.Spec);
             // 置く前の接地は、つかまる前に立っていた床 (上の足場など) のものなので読まない
             var outcome = climb.Step(forward, jump, placed && grounded, TickSeconds);
             ResolveStance(stance, false, false);

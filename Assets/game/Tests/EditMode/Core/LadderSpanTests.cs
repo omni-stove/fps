@@ -75,8 +75,8 @@ namespace Fps.Core.Tests
         {
             var feet = new Vector3(0.2f, 0f, -0.7f);
 
-            Assert.That(_span.Probe(feet, _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.Front));
-            Assert.That(_span.Probe(feet + new Vector3(0f, 1.5f, 0f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.Front), "in the air halfway up");
+            Assert.That(_span.Probe(feet, _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.Front));
+            Assert.That(_span.Probe(feet + new Vector3(0f, 1.5f, 0f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.Front), "in the air halfway up");
         }
 
         [Test]
@@ -84,19 +84,19 @@ namespace Fps.Core.Tests
         {
             var feet = new Vector3(0f, 0f, -0.7f);
 
-            Assert.That(_span.Probe(feet, Vector3.Zero, _radius, _grab), Is.EqualTo(LadderEntry.None), "not moving");
-            Assert.That(_span.Probe(feet, _awayFromLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "walking away");
-            Assert.That(_span.Probe(feet, new Vector3(3f, 0f, 0f), _radius, _grab), Is.EqualTo(LadderEntry.None), "walking along the wall");
-            Assert.That(_span.Probe(feet, new Vector3(0f, 0f, 0.2f), _radius, _grab), Is.EqualTo(LadderEntry.None), "too slow");
+            Assert.That(_span.Probe(feet, Vector3.Zero, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "not moving");
+            Assert.That(_span.Probe(feet, _awayFromLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "walking away");
+            Assert.That(_span.Probe(feet, new Vector3(3f, 0f, 0f), _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "walking along the wall");
+            Assert.That(_span.Probe(feet, new Vector3(0f, 0f, 0.2f), _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "too slow");
         }
 
         [Test]
         public void TooFarAwayToTheSideOrAboveDoesNotGrab()
         {
-            Assert.That(_span.Probe(new Vector3(0f, 0f, -1f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "out of reach");
-            Assert.That(_span.Probe(new Vector3(0.5f, 0f, -0.7f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "beside the ladder");
-            Assert.That(_span.Probe(new Vector3(0f, -0.5f, -0.7f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "below the bottom");
-            Assert.That(_span.Probe(new Vector3(0f, 2.9f, -0.7f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "next to the top");
+            Assert.That(_span.Probe(new Vector3(0f, 0f, -1f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "out of reach");
+            Assert.That(_span.Probe(new Vector3(0.5f, 0f, -0.7f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "beside the ladder");
+            Assert.That(_span.Probe(new Vector3(0f, -0.5f, -0.7f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "below the bottom");
+            Assert.That(_span.Probe(new Vector3(0f, 2.9f, -0.7f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "next to the top");
         }
 
         [Test]
@@ -104,10 +104,10 @@ namespace Fps.Core.Tests
         {
             var feet = new Vector3(0f, 3f, 0.6f);
 
-            Assert.That(_span.Probe(feet, _awayFromLadder, _radius, _grab), Is.EqualTo(LadderEntry.Top));
-            Assert.That(_span.Probe(feet, _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "walking deeper into the platform");
-            Assert.That(_span.Probe(new Vector3(0f, 3f, 1.5f), _awayFromLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "too far from the edge");
-            Assert.That(_span.Probe(new Vector3(0f, 2f, 0.6f), _awayFromLadder, _radius, _grab), Is.EqualTo(LadderEntry.None), "not on the platform");
+            Assert.That(_span.Probe(feet, _awayFromLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.Top));
+            Assert.That(_span.Probe(feet, _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "walking deeper into the platform");
+            Assert.That(_span.Probe(new Vector3(0f, 3f, 1.5f), _awayFromLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "too far from the edge");
+            Assert.That(_span.Probe(new Vector3(0f, 2f, 0.6f), _awayFromLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None), "not on the platform");
         }
 
         [Test]
@@ -115,10 +115,10 @@ namespace Fps.Core.Tests
         {
             var feet = new Vector3(0f, 0f, -0.7f);
 
-            Assert.That(_span.Probe(new Vector3(float.NaN, 0f, -0.7f), _towardLadder, _radius, _grab), Is.EqualTo(LadderEntry.None));
-            Assert.That(_span.Probe(feet, new Vector3(0f, 0f, float.PositiveInfinity), _radius, _grab), Is.EqualTo(LadderEntry.None));
-            Assert.That(_span.Probe(feet, _towardLadder, float.NaN, _grab), Is.EqualTo(LadderEntry.None));
-            Assert.That(_span.Probe(feet, _towardLadder, _radius, -1f), Is.EqualTo(LadderEntry.None));
+            Assert.That(_span.Probe(new Vector3(float.NaN, 0f, -0.7f), _towardLadder, _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None));
+            Assert.That(_span.Probe(feet, new Vector3(0f, 0f, float.PositiveInfinity), _radius, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None));
+            Assert.That(_span.Probe(feet, _towardLadder, float.NaN, _grab, MotorSpec.Default), Is.EqualTo(LadderEntry.None));
+            Assert.That(_span.Probe(feet, _towardLadder, _radius, -1f, MotorSpec.Default), Is.EqualTo(LadderEntry.None));
         }
 
         [Test]

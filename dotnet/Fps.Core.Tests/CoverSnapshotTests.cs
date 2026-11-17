@@ -22,7 +22,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RestoringACaptureReplaysTheSameTransitions()
         {
-            var original = new CoverState();
+            var original = new CoverState(MotorSpec.Default);
             var pillar = Wall(CoverHeight.High, CoverEdge.Left | CoverEdge.Right);
             original.Step(true, false, Vector2.Zero, pillar, _frame);
             original.Step(false, false, new Vector2(-1f, 0f), pillar, _frame);
@@ -33,7 +33,7 @@ namespace Fps.Core.Tests
             Assert.That(snapshot.EnterElapsed, Is.GreaterThan(0f));
             Assert.That(snapshot.PreferredSide, Is.EqualTo(-1f));
 
-            var replay = new CoverState();
+            var replay = new CoverState(MotorSpec.Default);
             replay.Restore(snapshot);
             Assert.That(replay.Capture(), Is.EqualTo(snapshot));
 
@@ -48,28 +48,28 @@ namespace Fps.Core.Tests
 
             // 両側とも端の柱では、写したときの好み (左) へ覗く
             Assert.That(replay.Phase, Is.EqualTo(CoverPhase.Peeking));
-            Assert.That(replay.PeekOffset, Is.EqualTo(-CoverProbe.PeekSideDistance));
+            Assert.That(replay.PeekOffset, Is.EqualTo(-MotorSpec.DefaultCoverPeekSideDistance));
         }
 
         [Test]
         public void BackTimerSurvivesARestore()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             state.Step(true, false, Vector2.Zero, Wall(), 0f);
-            state.Step(false, false, Vector2.Zero, Wall(), CoverState.EnterSeconds);
-            state.Step(false, false, new Vector2(0f, -1f), Wall(), CoverState.BackHoldSeconds * 0.75f);
+            state.Step(false, false, Vector2.Zero, Wall(), MotorSpec.DefaultCoverEnterSeconds);
+            state.Step(false, false, new Vector2(0f, -1f), Wall(), MotorSpec.DefaultCoverBackHoldSeconds * 0.75f);
 
-            var restored = new CoverState();
+            var restored = new CoverState(MotorSpec.Default);
             restored.Restore(state.Capture());
 
-            Assert.That(restored.Step(false, false, new Vector2(0f, -1f), Wall(), CoverState.BackHoldSeconds * 0.5f), Is.EqualTo(CoverTransition.Exit));
+            Assert.That(restored.Step(false, false, new Vector2(0f, -1f), Wall(), MotorSpec.DefaultCoverBackHoldSeconds * 0.5f), Is.EqualTo(CoverTransition.Exit));
             Assert.That(restored.LastExitReason, Is.EqualTo(CoverState.ReasonBack));
         }
 
         [Test]
         public void DefaultSnapshotIsOutsideAndPrefersTheRight()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             state.Restore(CoverSnapshot.Out);
 
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Out));
@@ -80,7 +80,7 @@ namespace Fps.Core.Tests
         [Test]
         public void RestoreRejectsBrokenSnapshots()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => state.Restore(
                 new CoverSnapshot(CoverPhase.In, CoverHeight.Low, Vector3.Zero, 0f, 0f, 0f, 1f)));

@@ -115,6 +115,28 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void OmittedStreaksAreOnAndWrittenStreaksAreRead()
+        {
+            Assert.That(GameRulesJson.Parse("{}", _source).Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(GameRulesJson.Parse("{\"streaks\": \"Off\"}", _source).Streaks, Is.EqualTo(Streaks.Off));
+            Assert.That(GameRulesJson.Parse("{}", _source, GameRules.Default.WithStreaks(Streaks.Off)).Streaks, Is.EqualTo(Streaks.Off), "omitted keeps the base");
+
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"streaks\": \"Sometimes\"}", _source));
+            AssertNames(e, "streaks");
+        }
+
+        [Test]
+        public void WriteThenParseKeepsStreaksOff()
+        {
+            var rules = GameRules.Default.WithStreaks(Streaks.Off);
+
+            var json = GameRulesJson.Write(rules);
+
+            Assert.That(json, Does.Contain("\"streaks\": \"Off\""));
+            Assert.That(GameRulesJson.Parse(json, _source).Streaks, Is.EqualTo(Streaks.Off));
+        }
+
+        [Test]
         public void ParseOverBaseRulesChangesOnlyTheWrittenItems()
         {
             var baseRules = GameRules.Default
@@ -150,7 +172,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(22));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(23));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(27));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -469,6 +491,7 @@ namespace Shooter.Core.Tests
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), "viewMode");
+            Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), "streaks");
 
             var a = actual.Actions;
             var b = expected.Actions;

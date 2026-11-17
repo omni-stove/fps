@@ -555,6 +555,38 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TryBeginWithRulesWithoutStreaksStopsThePlayersStreaks()
+        {
+            var scene = BuildScene();
+            var existing = scene.Player.gameObject.AddComponent<StreakController>();
+            var rules = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            rules.Streaks = Streaks.Off;
+            scene.Campaign.RulesDefinition = rules;
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            BeginWithWorldQuietly(scene);
+
+            Assert.That(scene.Player.GetComponents<StreakController>(), Has.Length.EqualTo(1));
+            Assert.That(existing.enabled, Is.False, "the campaign's rules leave out the streaks the bootstrap attached");
+        }
+
+        [Test]
+        public void TryBeginWithRulesWithStreaksAttachesThemToThePlayer()
+        {
+            var scene = BuildScene();
+            var rules = NewRules("CampaignNormal", 0f, 0f, false, 1f);
+            Assert.That(rules.Streaks, Is.EqualTo(Streaks.On), "a new definition keeps the kit default");
+            scene.Campaign.RulesDefinition = rules;
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+
+            BeginWithWorldQuietly(scene);
+
+            var streaks = scene.Player.GetComponent<StreakController>();
+            Assert.That(streaks, Is.Not.Null);
+            Assert.That(streaks.enabled, Is.True);
+        }
+
+        [Test]
         public void TryBeginWithAppliesTheDeathBodyToTargetsInTheScene()
         {
             var scene = BuildScene();

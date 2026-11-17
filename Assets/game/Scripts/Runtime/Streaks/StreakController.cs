@@ -51,6 +51,61 @@ namespace Shooter.Runtime
         public System.Random Random { get; set; }
 
         /// <summary>
+        /// rules の <see cref="GameRules.Streaks"/> に合わせて player のストリークを付け外しする。
+        /// On なら付けて (無効にしてあれば有効に戻して) 返し、Off なら付いているものを無効にして null を返す。
+        /// 無効にしても倒した数と得た報酬は捨てないので、On に戻せば続きから数える。
+        /// Play 中に付けると Awake で数え始めて自分の <see cref="Damageable"/> を探すので、Damageable を付けた後に呼ぶ。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">player か rules が null。</exception>
+        public static StreakController Apply(GameObject player, GameRules rules)
+        {
+            if (player == null)
+            {
+                throw new ArgumentNullException(nameof(player));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            var streaks = player.GetComponent<StreakController>();
+            if (rules.Streaks != Streaks.On)
+            {
+                if (streaks != null)
+                {
+                    streaks.enabled = false;
+
+                    // Edit Mode では OnDisable が呼ばれないので、受けるのと出すのをここで止める。
+                    if (!Application.isPlaying)
+                    {
+                        streaks.Unsubscribe();
+                        streaks.Unpublish();
+                    }
+                }
+
+                return null;
+            }
+
+            if (streaks == null)
+            {
+                return player.AddComponent<StreakController>();
+            }
+
+            var wasEnabled = streaks.enabled;
+            streaks.enabled = true;
+
+            // Edit Mode では OnEnable が呼ばれないので、数え始めていればここで受け直す。
+            if (!wasEnabled && !Application.isPlaying && streaks._tracker != null)
+            {
+                streaks.Subscribe();
+                streaks.Publish();
+            }
+
+            return streaks;
+        }
+
+        /// <summary>
         /// spec で数え直す。倒した数も得た報酬もすべて捨て、<c>[Streak] id=... rewards=...</c> をログに出して <see cref="GameSignals.Streak"/> に出す。
         /// 有効な間 (Edit Mode では呼んだとき) から <see cref="CombatEvents.Killed"/> と自分の <see cref="Damageable.Died"/> を受ける。
         /// </summary>

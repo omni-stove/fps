@@ -9,7 +9,8 @@ namespace Shooter.Runtime
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
     /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
     /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
-    /// <see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/>)
+    /// <see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/> + ゲームパッドのエイムアシスト <see cref="AimAssist"/>
+    /// + ルールの <see cref="GameRules.Streaks"/> が On ならストリーク <see cref="StreakController"/>)
     /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
     /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する) と、プレイヤーの体力と弾を写す <see cref="HudModel"/> を
     /// コードで生成する。HUD は作らない (UI が <see cref="GameSignals"/> を見て作る)。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
@@ -626,6 +627,9 @@ namespace Shooter.Runtime
 
                 actionReader = AttachActionReader(player, mover, weapon, ads, damageable, rig);
 
+                // LockOnAim・AimAssist と並べて ConfigurePlayer で付けないのは、Play 中は付けた Awake で自分の Damageable を探すため。
+                StreakController.Apply(player, rules);
+
                 // ルールが None でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため (HealthRegen と同じ)。
                 deathCamera = player.AddComponent<PlayerDeathCamera>();
                 deathCamera.ApplyRules(rules);
@@ -749,6 +753,7 @@ namespace Shooter.Runtime
             WireDodgeAndVault(mover, weapon, ads);
             WireAimToFire(weapon, ads, mover);
             LockOnAim.Attach(player, weapon, ads);
+            AimAssist.Attach(player, look, ads, weapon);
             WindUpSound.Attach(player, weapon);
 
             // 乗り物の座席などが操作を引き取ったら、移動と一緒に撃つ・持ち替える入力も止まるよう、同じ口を見させる。

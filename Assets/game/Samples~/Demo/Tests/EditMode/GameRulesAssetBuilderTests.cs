@@ -113,6 +113,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void OnlyTheCampaignLeavesOutStreaks()
+        {
+            Assert.That(GameRulesAssetBuilder.CampaignEasyRules().Streaks, Is.EqualTo(Streaks.Off));
+            Assert.That(GameRulesAssetBuilder.CampaignNormalRules().Streaks, Is.EqualTo(Streaks.Off));
+            Assert.That(GameRulesAssetBuilder.CampaignHardRules().Streaks, Is.EqualTo(Streaks.Off));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(GameRulesAssetBuilder.RangeRules().Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(GameRulesAssetBuilder.TpsRangeRules().Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(GameRulesAssetBuilder.DominationRules().Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(GameRulesAssetBuilder.FeatureBaseRules().Streaks, Is.EqualTo(Streaks.On));
+            foreach (var mode in GameRulesAssetBuilder.ModeNames)
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(mode).Streaks, Is.EqualTo(Streaks.On), mode);
+            }
+        }
+
+        [Test]
         public void BuildsDominationWithTheTeamDeathmatchValues()
         {
             var rules = BuildAndLoad(_dominationPath);

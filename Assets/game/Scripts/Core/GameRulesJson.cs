@@ -40,6 +40,7 @@ namespace Shooter.Core
         public const string ViewModeItem = "viewMode";
         public const string PlayerMaxHealthItem = "playerMaxHealth";
         public const string ZoneDamageItem = "zoneDamage";
+        public const string StreaksItem = "streaks";
 
         public const string HeadItem = "head";
         public const string BodyItem = "body";
@@ -103,6 +104,7 @@ namespace Shooter.Core
             ViewModeItem,
             PlayerMaxHealthItem,
             ZoneDamageItem,
+            StreaksItem,
         };
 
         /// <summary><see cref="ActionsItem"/> の中に書ける項目の名前 (<see cref="ActionRules"/> のコンストラクターの並び)。</summary>
@@ -231,7 +233,8 @@ namespace Shooter.Core
                     top.ReadEnum(ReloadModeItem, defaults.ReloadMode),
                     top.ReadEnum(ViewModeItem, defaults.ViewMode),
                     top.ReadInt(PlayerMaxHealthItem, defaults.PlayerMaxHealth),
-                    zoneDamage);
+                    zoneDamage,
+                    top.ReadEnum(StreaksItem, defaults.Streaks));
             }
             catch (ArgumentException e)
             {
@@ -308,6 +311,7 @@ namespace Shooter.Core
             writer.Double(BodyItem, rules.ZoneDamage.Body);
             writer.Double(LimbItem, rules.ZoneDamage.Limb);
             writer.EndObject();
+            writer.Enum(StreaksItem, rules.Streaks);
             return writer.Finish();
         }
 

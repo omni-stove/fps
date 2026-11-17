@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 突進兵を試す仮の敵と、低い壁で囲った囲い。避けた突進が壁にぶつかって止まるのを見られるよう、四方を乗り越えられる高さの壁で囲う。
+    // 避けた突進が壁にぶつかって止まるのを見られるよう、四方を乗り越えられる高さの壁で囲う。
     // 壁は足場と一緒に焼き (NavMeshBakeActivator)、歩くときは壁を避け、突進のときだけ壁にぶつかるようにする。
     // 手前の真ん中の下 (出現位置の右下) に置き、視界を出現位置・開けた場所・殴る的に届かない長さにする。
     public sealed class ChargerRangeFixture : ITpsRangeFixture

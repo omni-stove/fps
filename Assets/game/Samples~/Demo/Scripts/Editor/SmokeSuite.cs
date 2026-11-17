@@ -7,17 +7,8 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 今ある SmokeRun (<see cref="Runs"/>) を 1 つの Editor で順に走らせ、1 つでも失敗したら終了コード 1、
-    /// すべて通れば 0 で Editor を終える (nightly の workflow と <c>make nightly-local</c> から呼ぶ)。
-    /// 各 SmokeRun は Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.SmokeSuite.RunAll -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// 各 SmokeRun は終わるときに <see cref="TakeOver"/> を呼び、スイートが走っている間は Editor を閉じずに結果をここへ渡す。
-    /// スイートは Play Mode を抜けて Edit Mode に戻ってから次の SmokeRun を呼ぶ。
-    /// スクリプトが読み直されても続きを走らせられるよう、進み具合と結果は SessionState に置く。
-    /// </remarks>
+    // 1 つの Editor で順に走らせるため、各 SmokeRun は終わるときに TakeOver を呼び、スイートが走っている間は Editor を閉じずに結果をここへ渡す。
+    // スクリプトが読み直されても続きを走らせられるよう、進み具合と結果は SessionState に置く。
     [InitializeOnLoad]
     public static class SmokeSuite
     {
@@ -26,10 +17,7 @@ namespace Shooter.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        /// <summary>
-        /// 1 つの SmokeRun がこれだけ経っても終わらなければスイートごと失敗にする (秒)。
-        /// 各 SmokeRun の Play Mode に入れないときの待ち (120 秒) と走らせる秒数を足しても収まる長さにしてある。
-        /// </summary>
+        // 各 SmokeRun の Play Mode に入れないときの待ち (120 秒) と走らせる秒数を足しても収まる長さにしてある。
         public const float RunTimeoutSeconds = 600f;
 
         private const string ActiveKey = "Shooter.SmokeSuite.Active";
@@ -42,7 +30,6 @@ namespace Shooter.Editor
         private const char ResultSeparator = ';';
         private const char CodeSeparator = '=';
 
-        /// <summary>走らせる SmokeRun。この順に 1 つずつ呼ぶ。</summary>
         public static IReadOnlyList<SmokeRunEntry> Runs { get; } = new[]
         {
             new SmokeRunEntry(nameof(CampaignSmokeRun), CampaignSmokeRun.LogTag, CampaignSmokeRun.Run),
@@ -54,7 +41,6 @@ namespace Shooter.Editor
             new SmokeRunEntry(nameof(VehicleSmokeRun), VehicleSmokeRun.LogTag, VehicleSmokeRun.Run),
         };
 
-        /// <summary>スイートが走っている (SmokeRun の結果を <see cref="TakeOver"/> で受け取る) 間は true。</summary>
         public static bool IsActive => SessionState.GetBool(ActiveKey, false);
 
         static SmokeSuite()
@@ -65,7 +51,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。すべて終わると Editor を終了コード付きで閉じる。</summary>
         public static void RunAll()
         {
             // -quit を付けると、このメソッドから戻った時点で Editor が終了コード 0 で閉じ、SmokeRun が 1 つも走らないまま緑になる。
@@ -86,10 +71,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} running {Runs.Count} smoke run(s): {string.Join(", ", NamesOf(Runs))}");
         }
 
-        /// <summary>
-        /// SmokeRun が終わるときに呼ぶ。スイートが走っていれば結果を受け取って Play Mode を抜け、true を返す
-        /// (呼んだ側は Editor を閉じない)。走っていなければ何もせず false を返す。
-        /// </summary>
         public static bool TakeOver(string logTag, int exitCode)
         {
             if (!IsActive)
@@ -118,7 +99,7 @@ namespace Shooter.Editor
             return true;
         }
 
-        /// <summary>args に Unity の <c>-quit</c> があれば true。大文字小文字は区別しない (Unity と同じ)。</summary>
+        // Unity と同じく、大文字小文字は区別しない。
         public static bool HasQuitArgument(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -137,10 +118,7 @@ namespace Shooter.Editor
             return false;
         }
 
-        /// <summary>
-        /// <see cref="FormatResults"/> で書いた結果を、走らせた順の (名前, 終了コード) に戻す。
-        /// 形の崩れた項目は終了コード <see cref="FailureExitCode"/> として扱う (成功と取り違えないため)。
-        /// </summary>
+        // 形の崩れた項目は、成功と取り違えないよう終了コード FailureExitCode として扱う。
         public static IReadOnlyList<KeyValuePair<string, int>> ParseResults(string text)
         {
             var results = new List<KeyValuePair<string, int>>();
@@ -170,7 +148,6 @@ namespace Shooter.Editor
             return results;
         }
 
-        /// <summary>結果を SessionState に置ける 1 本の文字列にする (<see cref="ParseResults"/> で戻せる)。</summary>
         public static string FormatResults(IEnumerable<KeyValuePair<string, int>> results)
         {
             if (results == null)
@@ -199,10 +176,6 @@ namespace Shooter.Editor
             return text.ToString();
         }
 
-        /// <summary>
-        /// 走らせた結果と走らせるはずだった一覧から、スイートの終了コードを決める。
-        /// 1 つでも 0 以外があるか、一覧のうち結果の無いものがあれば <see cref="FailureExitCode"/>。
-        /// </summary>
         public static int ExitCodeFor(IReadOnlyList<KeyValuePair<string, int>> results, IReadOnlyList<SmokeRunEntry> expected)
         {
             if (results == null)
@@ -379,7 +352,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary><see cref="SmokeSuite"/> が走らせる SmokeRun の 1 つ。</summary>
     public sealed class SmokeRunEntry
     {
         public SmokeRunEntry(string name, string logTag, Action run)

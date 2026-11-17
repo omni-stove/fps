@@ -86,6 +86,18 @@ namespace Shooter.NetV2
             return Tag + " " + what + " failed id=" + partyId + ": " + error + "; retrying";
         }
 
+        public static string MemberSkill(string partyId, string userId, int? skillRating)
+        {
+            return Tag + " skill id=" + partyId + " member=" + userId + " rating="
+                + (skillRating.HasValue ? skillRating.Value.ToString(CultureInfo.InvariantCulture) : "-");
+        }
+
+        public static string SkillsUnavailable(string partyId, string what)
+        {
+            return Tag + " " + what + " is not supported by the lobby service id=" + partyId
+                + "; skill ratings are no longer shared in this session";
+        }
+
         public static string Failed(PartyError error, string reason)
         {
             return Tag + " " + error + ": " + reason;

@@ -25,6 +25,9 @@ namespace Shooter.Core
         /// attackerId が victimId に amount を与えたことを記録する。
         /// 自分へのダメージ・味方からのダメージ・0 以下の量は、アシストにならないので記録しない。
         /// </summary>
+        /// <param name="victimId">ダメージを受けた Id。</param>
+        /// <param name="attackerId">ダメージを与えた Id。</param>
+        /// <param name="amount">与えた量。</param>
         /// <param name="friendly">与えた側と受けた側が味方どうしか。</param>
         /// <param name="time">与えた時刻 (秒)。</param>
         /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
@@ -52,7 +55,9 @@ namespace Shooter.Core
         /// 合わせて <see cref="AssistSpec.MinDamage"/> 以上を与えた Id を返し、victimId の記録を消す。
         /// 並びは与えた量の多い順で、同じ量なら先に与えた順。いなければ空。
         /// </summary>
+        /// <param name="victimId">倒された Id。</param>
         /// <param name="killerId">倒した Id。自滅や武器によらない死なら victimId と同じでよい。</param>
+        /// <param name="time">倒れた時刻 (秒)。</param>
         /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
         public IReadOnlyList<int> TakeAssisters(int victimId, int killerId, double time)
         {

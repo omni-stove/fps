@@ -141,7 +141,7 @@ namespace Shooter.Runtime
         public Func<SightView> SightSource { get; set; }
 
         /// <summary>照準器で目へ寄せたために、三人称でも自分の体を影だけにしているか。</summary>
-        public bool IsBodyHiddenBySight => _bodyHiddenBySight;
+        public bool IsBodyHiddenBySight => _bodyHiddenBySight && isActiveAndEnabled;
 
         /// <summary>今 <see cref="ThirdPersonOffset"/> の x に掛けている符号。右肩で +1、左肩で -1、入れ替えの途中はその間。</summary>
         public float ShoulderOffsetSign => _shoulder.OffsetSign;
@@ -268,6 +268,8 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             _isLive = false;
+            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定を外す。
+            _bodyHiddenBySight = false;
             ApplyBodyVisibility(false);
         }
 

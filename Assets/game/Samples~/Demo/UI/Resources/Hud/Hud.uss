@@ -643,6 +643,18 @@
     font-size: 16px;
 }
 
+/* レベルが足りず付けられないアタッチメントの理由。details は横に並べるので、幅いっぱいにしてボタンの下の行に出す。 */
+.inventory__locked {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 16px;
+    color: rgb(255, 196, 64);
+}
+
+.inventory__button:disabled {
+    opacity: 0.4;
+}
+
 .inventory__empty {
     margin-top: 8px;
     font-size: 16px;

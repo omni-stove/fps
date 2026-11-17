@@ -56,6 +56,7 @@ namespace Shooter.Runtime
         public const string ButtonClass = "inventory__button";
         public const string HintClass = "inventory__hint";
         public const string EmptyClass = "inventory__empty";
+        public const string LockedClass = "inventory__locked";
 
         private const string _pauseActionPath = "Player/Pause";
 
@@ -64,6 +65,8 @@ namespace Shooter.Runtime
 
         private readonly List<InputAction> _suspended = new List<InputAction>();
         private IInventoryControl _source;
+        private ProgressionLedger _ledger;
+        private PlayerProfile _profile;
         private ItemIconCatalog _icons;
         private bool _iconsLoaded;
         private bool _open;
@@ -125,6 +128,19 @@ namespace Shooter.Runtime
         }
 
         public int SelectedHandle => _selectedHandle;
+
+        // IInventoryControl.Attach は断った理由を返さないので、Locked になるかは押す前にここで同じ表から求めて文を出す。null を渡すと全部使える
+        public void ShowUnlocks(ProgressionLedger ledger, PlayerProfile profile)
+        {
+            if (ledger != null && profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            _ledger = ledger;
+            _profile = ledger != null ? profile : null;
+            MarkDirty();
+        }
 
         public void SetOpen(bool open)
         {
@@ -464,7 +480,13 @@ namespace Shooter.Runtime
 
             if (item != null && item.IsAttachment)
             {
-                details.Add(MakeButton(AttachKey, () => _source?.Attach(handle)));
+                var attach = MakeButton(AttachKey, () => _source?.Attach(handle));
+                details.Add(attach);
+                if (_ledger != null && !_ledger.IsUnlocked(item.Id, _profile))
+                {
+                    attach.SetEnabled(false);
+                    details.Add(MakeLabel(ProgressionFormat.AttachmentLocked(_ledger.UnlockLevelOf(item.Id)), LockedClass));
+                }
             }
 
             details.Add(MakeButton(DropOneKey, () => _source?.Drop(handle, 1)));

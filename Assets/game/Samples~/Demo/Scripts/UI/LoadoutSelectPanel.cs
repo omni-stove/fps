@@ -28,6 +28,12 @@ namespace Shooter.Runtime
         public const string SelectedOptionClass = "loadout-select__option--selected";
         public const string OptionNameClass = "loadout-select__option-name";
         public const string OptionCategoryClass = "loadout-select__option-category";
+        public const string LockedOptionClass = "loadout-select__option--locked";
+        public const string OptionLockClass = "loadout-select__option-lock";
+        public const string LockIconClass = "loadout-select__lock-icon";
+        public const string LockShackleClass = "loadout-select__lock-shackle";
+        public const string LockBodyClass = "loadout-select__lock-body";
+        public const string LockLevelClass = "loadout-select__lock-level";
         public const string NoOptionClass = "loadout-select__no-option";
         public const string ConfirmClass = "loadout-select__confirm";
         public const string FocusedConfirmClass = "loadout-select__confirm--focused";
@@ -45,6 +51,7 @@ namespace Shooter.Runtime
 
         private readonly VisualElement _container;
         private readonly LoadoutSelection _selection;
+        private readonly ProgressionLedger _ledger;
         private readonly List<VisualElement> _rows = new List<VisualElement>();
         private readonly List<List<Button>> _options = new List<List<Button>>();
         private readonly Button _confirm;
@@ -56,10 +63,13 @@ namespace Shooter.Runtime
 
         /// <summary>container を空にして selection の行を作り、最初の行を選んだ状態にする。</summary>
         /// <exception cref="ArgumentNullException">container か selection が null。</exception>
-        public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection)
+        public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection, ProgressionLedger ledger = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
+
+            // 使えるかは selection の述語が決める。ledger から使えるかを引き直すと述語と食い違いうるので、鍵に添えるレベルを引くのにだけ使う
+            _ledger = ledger;
 
             container.Clear();
             container.AddToClassList(PanelClass);
@@ -216,11 +226,12 @@ namespace Shooter.Runtime
         public void SetBusy(bool busy)
         {
             _busy = busy;
-            foreach (var row in _options)
+            for (var slot = 0; slot < _options.Count; slot++)
             {
-                foreach (var button in row)
+                var row = _options[slot];
+                for (var option = 0; option < row.Count; option++)
                 {
-                    button.SetEnabled(!busy);
+                    row[option].SetEnabled(!busy && _selection.IsAvailableAt(slot, option));
                 }
             }
 
@@ -306,6 +317,13 @@ namespace Shooter.Runtime
                 category.AddToClassList(OptionCategoryClass);
                 button.Add(category);
 
+                if (!_selection.IsAvailableAt(slot, i))
+                {
+                    button.AddToClassList(LockedOptionClass);
+                    button.Add(BuildLock(options[i].Id));
+                    button.SetEnabled(false);
+                }
+
                 list.Add(button);
                 buttons.Add(button);
             }
@@ -313,6 +331,34 @@ namespace Shooter.Runtime
             _rows.Add(row);
             _options.Add(buttons);
             return row;
+        }
+
+        private VisualElement BuildLock(string weaponId)
+        {
+            var lockRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            lockRow.AddToClassList(OptionLockClass);
+
+            var icon = new VisualElement { pickingMode = PickingMode.Ignore };
+            icon.AddToClassList(LockIconClass);
+            var shackle = new VisualElement { pickingMode = PickingMode.Ignore };
+            shackle.AddToClassList(LockShackleClass);
+            icon.Add(shackle);
+            var body = new VisualElement { pickingMode = PickingMode.Ignore };
+            body.AddToClassList(LockBodyClass);
+            icon.Add(body);
+            lockRow.Add(icon);
+
+            var level = new Label(LockText(weaponId)) { pickingMode = PickingMode.Ignore };
+            level.AddToClassList(LockLevelClass);
+            lockRow.Add(level);
+            return lockRow;
+        }
+
+        // 述語がアンロックの表とは別の理由で断った武器は表に無くレベル 1 が返るので、その武器には誤ったレベルを出さない
+        private string LockText(string weaponId)
+        {
+            var level = _ledger?.UnlockLevelOf(weaponId) ?? 1;
+            return level > 1 ? ProgressionFormat.LockedUntil(level) : ProgressionFormat.Locked;
         }
 
         // 新しい種別がまだ表示名を持たなくても画面ごと出せなくならないよう、列挙の名前を出す

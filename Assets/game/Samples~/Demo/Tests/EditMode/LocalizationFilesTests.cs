@@ -130,6 +130,26 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheProgressionTextsAreReadFromTheProgressionTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var progression = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("progression.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(progression.Keys.All(key => key.StartsWith("progression.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(progression.Contains("progression.lockedUntil"), Is.True, code);
+                Assert.That(progression.Contains("progression.attachmentLocked"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Format("progression.xpToNext", 800, 3), Is.EqualTo("レベル 3 まで あと 800 XP"));
+            Assert.That(japanese.Format("progression.lockedUntil", 4), Is.EqualTo("レベル 4 で解放"));
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

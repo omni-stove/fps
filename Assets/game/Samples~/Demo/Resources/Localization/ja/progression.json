@@ -1,0 +1,20 @@
+{
+  "progression.title": "プロフィール",
+  "progression.back": "戻る",
+  "progression.level": "レベル {0}",
+  "progression.totalXp": "累計 {0} XP",
+  "progression.xpToNext": "レベル {1} まで あと {0} XP",
+  "progression.maxLevel": "最大レベル",
+  "progression.statsTitle": "戦績",
+  "progression.kills": "倒した数 {0}",
+  "progression.deaths": "倒れた数 {0}",
+  "progression.killDeathRatio": "K/D {0}",
+  "progression.matches": "試合数 {0}",
+  "progression.wins": "勝った数 {0}",
+  "progression.nextUnlocksTitle": "次に使えるようになる物",
+  "progression.unlock": "レベル {0}: {1}",
+  "progression.allUnlocked": "すべて使えます",
+  "progression.locked": "ロック中",
+  "progression.lockedUntil": "レベル {0} で解放",
+  "progression.attachmentLocked": "レベル {0} になると付けられます"
+}

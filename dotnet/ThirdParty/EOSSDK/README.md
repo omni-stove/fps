@@ -16,10 +16,13 @@ dotnet/ThirdParty/EOSSDK/
     linux-arm64/     libEOSSDK-LinuxArm64-Shipping.so
     osx-arm64/       libEOSSDK-Mac-Shipping.dylib
     osx-x64/         libEOSSDK-Mac-Shipping.dylib
-    win-x64/         EOSSDK-Win64-Shipping.dll
+    win-x64/         EOSSDK-Win64-Shipping.dll、xaudio2_9redist.dll (RTC が使う)
     win-arm64/       EOSSDK-Win64-Shippingarm64.dll
   license.txt        (任意) SDK に付いてくる配布の条件
 ```
+
+RTC (ボイス) は別のライブラリにならず、`Source/` の `RTC*` と各 OS のライブラリに入っている。
+Windows の RTC はそれに加えて XAudio 2.9 の `xaudio2_9redist.dll` を読む。`Bin/<RID>/` に置いたファイルはすべて出力先に写る。
 
 使う RID の分だけ置けばよい。ビルドは `-r <RID>` を付ければその RID の、付けなければビルドするマシンの RID のライブラリを出力先に写す。
 ファイル名は SDK に入っているままでよい (Linux の arm64 版は、SDK が読みに行く `libEOSSDK-Linux-Shipping.so` の名前で写される)。

@@ -5,13 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 建造物が壊れたときに出す破片 (Rigidbody 付きの小さな Cube。<see cref="DebrisPrefab"/> があればその形) をまとめて持つ。破片は見た目だけで、
-    /// 出すときにダメージの出し方を渡したものだけがキャラクターに当たるとダメージを与える (<see cref="DebrisCrusher"/>)。
-    /// 破片は <see cref="Lifetime"/> 秒で消え、<see cref="Capacity"/> 個を超えたら古い物から消す。
-    /// シーンに 1 つあればよく、<see cref="GetOrCreate"/> で探すか作る。
-    /// 時間は自分で数える (<see cref="Tick"/>) ので、Update が走らない Edit Mode のテストでも直接進められる。
-    /// </summary>
+    // 時間を Tick で自分で数えるのは、Update が走らない Edit Mode のテストでも直接進められるようにするため。
     [DisallowMultipleComponent]
     public sealed class DebrisPool : MonoBehaviour
     {
@@ -20,11 +14,8 @@ namespace Shooter.Runtime
         public const int DefaultCapacity = 200;
         public const float DefaultLifetime = 4f;
 
-        /// <summary>
-        /// 破片を置くレイヤー。<see cref="Physics.DefaultRaycastLayers"/> に含まれないので、
-        /// 射撃 (<see cref="Hitscan"/>) や爆発の範囲 (<see cref="StructureDamage"/>) に拾われない。
-        /// </summary>
-        public const int DebrisLayer = 2; // Ignore Raycast
+        // Ignore Raycast は Physics.DefaultRaycastLayers に含まれないので、破片が射撃 (Hitscan) や爆発の範囲 (StructureDamage) に拾われない。
+        public const int DebrisLayer = 2;
 
         private static DebrisPool _instance;
 
@@ -40,14 +31,12 @@ namespace Shooter.Runtime
         private readonly List<Entry> _entries = new List<Entry>();
         private double _clock;
 
-        /// <summary>破片の見た目。null なら仮の箱 (Cube) を作る。これから出す破片から使う。</summary>
         public GameObject DebrisPrefab
         {
             get => _debrisPrefab;
             set => _debrisPrefab = value;
         }
 
-        /// <summary>同時に存在できる破片の数。0 なら破片を出さない。下げたときは超えた分をすぐ古い物から消す。</summary>
         public int Capacity
         {
             get => _capacity;
@@ -64,7 +53,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>これから出す破片が消えるまでの秒数。0 より大きい有限値。出し済みの破片には反映しない。</summary>
         public float Lifetime
         {
             get => _lifetime;
@@ -79,7 +67,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今ある破片の数 (外から消された物は数えない)。</summary>
         public int Count
         {
             get
@@ -89,9 +76,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// シーンにある DebrisPool を返す。無ければ <see cref="DefaultObjectName"/> の GameObject を作って付ける。
-        /// </summary>
         public static DebrisPool GetOrCreate()
         {
             if (_instance != null)
@@ -129,27 +113,11 @@ namespace Shooter.Runtime
             Tick(Time.deltaTime);
         }
 
-        /// <summary>
-        /// 破片を 1 つ出す。<see cref="Capacity"/> に達していれば先に一番古い破片を消す。
-        /// Capacity が 0 なら何も出さずに null を返す。
-        /// </summary>
-        /// <param name="position">中心の位置。</param>
-        /// <param name="rotation">向き。</param>
-        /// <param name="size">大きさ (m)。各軸 0 より大きい。</param>
-        /// <param name="material">仮の箱の材質。null なら Cube の既定のまま。<see cref="DebrisPrefab"/> から出すときはプレハブの材質のまま使う。</param>
-        /// <param name="velocity">出したときの速度。</param>
         public GameObject Spawn(Vector3 position, Quaternion rotation, Vector3 size, Material material, Vector3 velocity)
         {
             return Spawn(position, rotation, size, material, velocity, null, null, null);
         }
 
-        /// <summary>
-        /// <see cref="Spawn(Vector3, Quaternion, Vector3, Material, Vector3)"/> と同じく破片を 1 つ出し、crushDamage があれば
-        /// キャラクターに当たるとダメージを与える <see cref="DebrisCrusher"/> を付ける。crushDamage が null なら見た目だけの破片になる。
-        /// </summary>
-        /// <param name="crushDamage">当たったときのダメージの出し方。null なら当たってもダメージを与えない。</param>
-        /// <param name="attribution">破片で倒したときに倒した者とする帰属 (建物を壊した者と武器)。分からなければ null。</param>
-        /// <param name="source">ログに出す、破片を出した建物の名前。</param>
         public GameObject Spawn(
             Vector3 position,
             Quaternion rotation,
@@ -220,8 +188,6 @@ namespace Shooter.Runtime
             return debris;
         }
 
-        /// <summary>時間を deltaSeconds 進め、寿命の過ぎた破片を消す。消した数を返す。</summary>
-        /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
         public int Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -251,7 +217,6 @@ namespace Shooter.Runtime
             return removed;
         }
 
-        /// <summary>今ある破片をすべて消す。</summary>
         public void Clear()
         {
             TrimTo(0);

@@ -6,20 +6,12 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 1 回の爆発。<see cref="Detonate"/> は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点・頭の高さ・足元までのどれかの線が
-    /// 人や標的でない物に遮られていなければ。置いた物 (<see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
-    /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
-    /// </summary>
     public static class Explosion
     {
-        /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
+        // プレハブが自分で消えなかったときの後始末として、この秒数で消す。
         public const float EffectLifetimeSeconds = 4f;
 
-        /// <summary>
-        /// 爆発の音が聞こえなくなる距離 (m)。<see cref="AudioSource.PlayClipAtPoint(AudioClip, Vector3)"/> が作る音源の既定の maxDistance に合わせ、
-        /// 字幕 (<see cref="SubtitleFeed"/>) をこれより遠い人には出さない。
-        /// </summary>
+        // AudioSource.PlayClipAtPoint が作る音源の既定の maxDistance に合わせ、字幕をこれより遠い人には出さない。
         public const float AudibleDistance = 500f;
 
         // 身をかがめて頭だけ出している相手にも当たるよう、体の上端の少し下へも線を引く。
@@ -28,10 +20,6 @@ namespace Shooter.Runtime
         // 下の空いた物の隙間から見える足にも当たるよう、足元へも線を引く。床に沿って床のコライダーに当たらないよう少し上げる。
         private const float BottomProbeLift = 0.1f;
 
-        /// <summary>
-        /// center で爆発させる。半径内の生きている <see cref="Damageable"/> に遮られていなければダメージを与え
-        /// (shooter の帰属で、撃った本人も巻き込む)、建造物に範囲で被害を与え、演出を出して <see cref="CombatEvents.RaiseExploded"/> で知らせる。
-        /// </summary>
         public static GrenadeExplosion Detonate(Vector3 center, ExplosionSpec explosion, GameObject shooter, string weaponId)
         {
             if (explosion == null)
@@ -69,7 +57,6 @@ namespace Shooter.Runtime
             return result;
         }
 
-        /// <summary>爆発のログ。例: <c>[Grenade] exploded at=(1.0, 0.1, 9.5) damaged=2 killed=1 structures=0</c>。</summary>
         public static string FormatLog(GrenadeExplosion explosion)
         {
             var c = explosion.Center;
@@ -85,11 +72,6 @@ namespace Shooter.Runtime
                 explosion.StructureHits);
         }
 
-        /// <summary>
-        /// center から target までの線が遮られているか。target 自身と、<see cref="Damageable"/> を持つ物 (人や標的) とトリガーは遮らない。
-        /// 置いた物 (盾など <see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る。
-        /// target の狙う点と、体の上端の少し下と、足元の少し上の 3 本を引き、すべて遮られていれば true。
-        /// </summary>
         public static bool IsObstructed(Vector3 center, Damageable target)
         {
             if (target == null)
@@ -117,7 +99,6 @@ namespace Shooter.Runtime
             return IsLineObstructed(center, feet, target.transform);
         }
 
-        /// <summary>center から target の体 (コライダーを合わせた範囲) のいちばん近い点までの距離。コライダーが無ければ Transform の位置まで。</summary>
         public static float DistanceTo(Vector3 center, Damageable target)
         {
             if (target == null)
@@ -129,11 +110,6 @@ namespace Shooter.Runtime
             return Vector3.Distance(center, closest);
         }
 
-        /// <summary>
-        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
-        /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
-        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Shooter.Net.NetCombatFeed</c>) も呼ぶ。
-        /// </summary>
         public static void PlayEffects(Vector3 center)
         {
             // Edit Mode では時間差で消せず、専用サーバーには見る人がいない。
@@ -226,7 +202,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>燃える範囲 (AreaEffectZone) も爆発と同じ相手を範囲の中とみなすよう、ここで探す。</summary>
+        // 燃える範囲 (AreaEffectZone) も爆発と同じ相手を範囲の中とみなすよう、ここで探す。
         internal static List<Damageable> FindTargets(Vector3 center, float radius)
         {
             var targets = new List<Damageable>();

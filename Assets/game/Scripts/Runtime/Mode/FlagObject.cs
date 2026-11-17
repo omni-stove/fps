@@ -4,28 +4,18 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 旗取り (<see cref="CaptureTheFlagRunner"/>) の陣営の旗の見た目。台にあるときは台の足元に立ち (<see cref="ShowAtBase"/>)、
-    /// 運ばれている間は運ぶ人の背中に付いて動き (<see cref="ShowCarried"/>)、落ちたときはその場の地面に立つ (<see cref="ShowDropped"/>)。
-    /// 旗の状態は Runner が <see cref="CaptureTheFlag"/> から読んで渡し、このコンポーネントは最後に見せた形だけを覚える。
-    /// 形は <see cref="ModelPrefab"/> (足元を原点にした旗) を子に置き、空ならコードで竿と布を作る。どちらも当たり判定は外し (弾と移動を遮らないように)、
-    /// 陣営 (<see cref="Side"/>) の色で塗る。落ちている間は少し暗く塗る。
-    /// </summary>
+    // 形はプレハブでもコードで作ったものでも、弾と移動を遮らないよう当たり判定を外す。
     [DisallowMultipleComponent]
     public sealed class FlagObject : MonoBehaviour
     {
-        /// <summary>見た目を置く子の名前。</summary>
         public const string ModelName = "FlagModel";
 
-        /// <summary>コードで作る竿の高さ (m)。</summary>
         public const float PoleHeight = 2f;
 
-        /// <summary>運ぶ人の Transform から見た、背中の位置 (上へ、後ろへ)。</summary>
         public const float CarryHeight = 0.2f;
 
         public const float CarryBack = 0.35f;
 
-        /// <summary>落ちている旗を塗るときの明るさの倍率。</summary>
         public const float DroppedBrightness = 0.6f;
 
         private const float PoleThickness = 0.06f;
@@ -46,7 +36,6 @@ namespace Shooter.Runtime
         private bool _followsSettings;
         private Team? _viewerTeam = TeamColors.OfflineViewer;
 
-        /// <summary>この旗の陣営。</summary>
         public Side Side
         {
             get => new Side(Mathf.Max(0, _sideId));
@@ -57,7 +46,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>画面のプレイヤーの陣営。この陣営の旗なら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーの陣営。null なら Alpha を味方の色にする。</summary>
         public Team? ViewerTeam
         {
             get => _viewerTeam;
@@ -68,38 +56,30 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>旗の見た目。null なら仮の竿と布。形を作る (最初に見せる) 前に設定したものを使う。</summary>
         public GameObject ModelPrefab
         {
             get => _modelPrefab;
             set => _modelPrefab = value;
         }
 
-        /// <summary>作った形 (<see cref="ModelName"/>)。まだ見せていなければ null。</summary>
         public GameObject Model => _model;
 
-        /// <summary>今付いている運ぶ人。運ばれていなければ null。</summary>
         public Transform Carrier => _carrier;
 
-        /// <summary>最後に見せた旗の状態。まだ見せていないか隠したなら null。</summary>
         public FlagState? ShownState => _shown;
 
-        /// <summary>見えているか。</summary>
         public bool IsVisible => _visible;
 
-        /// <summary>台の足元 ground に立てて見せる。</summary>
         public void ShowAtBase(Vector3 ground)
         {
             PlaceOnGround(ground, FlagState.AtBase);
         }
 
-        /// <summary>落ちた所の足元 ground に立てて見せる。</summary>
         public void ShowDropped(Vector3 ground)
         {
             PlaceOnGround(ground, FlagState.Dropped);
         }
 
-        /// <summary>carrier の背中に付けて見せる。carrier が null なら隠す。</summary>
         public void ShowCarried(Transform carrier)
         {
             if (carrier == null)
@@ -116,7 +96,6 @@ namespace Shooter.Runtime
             Paint();
         }
 
-        /// <summary>隠す。</summary>
         public void Hide()
         {
             _carrier = null;

@@ -6,12 +6,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オフラインで、この体にかかっている状態異常 (Core の <see cref="StatusEffects"/>) を毎フレーム進め、ダメージを <see cref="Damageable"/> に入れる。
-    /// ダメージはかけた者と武器に帰属させるので、燃えて倒れてもキルフィードには撃った者が出る。
-    /// かかっている間は種類ごとの見た目 (<see cref="StatusEffectVisuals"/>) を出す。倒れた・体力を戻したらすべて消す。
-    /// 種類ごとの振る舞い (目くらましなど) は、この partial の別のファイルで <see cref="OnKindStarted"/>・<see cref="OnKindEnded"/> を埋めて足す。
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Damageable))]
     public sealed partial class StatusEffectReceiver : MonoBehaviour
@@ -25,23 +19,18 @@ namespace Shooter.Runtime
         private Damageable _damageable;
         private bool _subscribed;
 
-        /// <summary>種類 (Id) の状態異常が付いた。延びただけのときは呼ばない。</summary>
         public event Action<string> Started;
 
-        /// <summary>種類 (Id) の状態異常が切れた。</summary>
         public event Action<string> Ended;
 
         public Damageable Damageable => _damageable != null ? _damageable : (_damageable = GetComponent<Damageable>());
 
-        /// <summary>今かかっている状態異常。</summary>
         public IReadOnlyList<ActiveStatusEffect> Active => _effects.Active;
 
         public bool Has(string kindId) => _effects.Has(kindId);
 
         public float RemainingSeconds(string kindId) => _effects.RemainingSeconds(kindId);
 
-        /// <summary>source が weaponId で spec をかけた。倒れていれば何もしない。同じ種類がかかっていれば延ばす。</summary>
-        /// <param name="source">かけた者 (撃った者の本体)。分からなければ null で、倒れたら自滅として出す。</param>
         public void Afflict(StatusEffectSpec spec, GameObject source, string weaponId)
         {
             if (spec == null)
@@ -65,7 +54,6 @@ namespace Shooter.Runtime
             BeginKind(effect.KindId);
         }
 
-        /// <summary>deltaSeconds 進め、その間のダメージを入れる。毎フレーム <see cref="Update"/> が呼ぶ。</summary>
         public void Advance(float deltaSeconds)
         {
             if (_effects.Count == 0)
@@ -107,7 +95,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>すべての状態異常を消す。</summary>
         public void ClearAll()
         {
             _effects.Clear();

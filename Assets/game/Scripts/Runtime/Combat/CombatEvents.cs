@@ -5,27 +5,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 戦闘で起きたことを演出と UI (<see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・HUD のヒットマーカーなど) に知らせる、
-    /// 静的なイベントの集まり。撃つ側・撃たれる側は購読者を知らずに Raise 系を呼ぶだけにし、演出の有無で戦闘の結果が変わらないようにする。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item><see cref="ShotFired"/>: 1 発撃つたび。オフラインでは <see cref="WeaponController.Fire"/> (プレイヤー) と <see cref="Hitscan.Fire"/> (敵など)。</item>
-    /// <item><see cref="Impact"/>: 撃った弾が何か (壁・人) に当たるたび。呼ぶ所は <see cref="ShotFired"/> と同じ。</item>
-    /// <item><see cref="HitConfirmed"/>: 撃った本人のクライアントでだけ、生きている相手に当てたとき。オフラインでは <see cref="WeaponController.Fire"/>。</item>
-    /// <item><see cref="DamageTaken"/>: 撃たれた本人のクライアントでだけ。オフラインでは <see cref="Damageable.IsLocalPlayer"/> の <see cref="Damageable"/>。</item>
-    /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
-    /// <item><see cref="Exploded"/>: 爆発するたび。オフラインでは <see cref="ThrownGrenade.Explode"/>、ネット対戦では <c>Shooter.Net.NetCombatFeed</c> が全員に。</item>
-    /// <item><see cref="Landed"/>: この画面で操作しているキャラが着地するたび。オフラインでは <see cref="PlayerController"/>、ネット対戦では持ち主の <c>Shooter.Net.NetworkPlayerMotor</c>。</item>
-    /// <item><see cref="MatchFinished"/>: 試合が終わったとき、1 試合に 1 回。オフラインでは <see cref="ModeRunnerBase"/>・<see cref="MatchRunner"/>・<see cref="DominationRunner"/>。</item>
-    /// </list>
-    /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Shooter.Net.NetPlayer</c>) が出し、それ以外はサーバーから
-    /// <c>Shooter.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
-    /// 材質・キャラかどうか・部位はサーバーが判定したものを載せる)。
-    /// 購読者が例外を投げても戦闘の処理は止めず、例外をログに出して残りの購読者を呼ぶ。
-    /// 静的なので、ドメインの再読み込みを切った Play でも前回の購読が残らないよう、Play の開始時に購読をすべて外す。
-    /// </remarks>
+    // 撃つ側・撃たれる側は購読者を知らずに Raise 系を呼ぶだけにし、演出の有無で戦闘の結果が変わらないようにする。
+    // 購読者が例外を投げても戦闘の処理を止めないよう、例外はログに出して残りの購読者を呼ぶ。
+    // 静的なので、ドメインの再読み込みを切った Play でも前回の購読が残らないよう、Play の開始時に購読をすべて外す。
     public static class CombatEvents
     {
         // 入れ子の Attribute を戻せるよう、今の帰属を 1 つだけ持ち、スコープが前の値を覚える。
@@ -35,22 +17,17 @@ namespace Shooter.Runtime
         private static readonly Dictionary<EntityId, int> _offlineIds = new Dictionary<EntityId, int>();
         private static readonly Dictionary<int, GameObject> _offlineObjects = new Dictionary<int, GameObject>();
 
-        /// <summary>1 発撃ったとき。</summary>
         public static event Action<ShotFiredInfo> ShotFired;
 
         // 跳ねた弾の続きを ShotFired で出すと、銃声・マズルフラッシュ・薬莢・反動まで跳ねた所でもう一度出てしまうので分ける。
         public static event Action<ShotFiredInfo> ShotContinued;
 
-        /// <summary>撃った弾が何かに当たったとき。</summary>
         public static event Action<ImpactInfo> Impact;
 
-        /// <summary>撃った本人のクライアントで、生きている相手に当てたとき。</summary>
         public static event Action<HitConfirm> HitConfirmed;
 
-        /// <summary>撃たれた本人のクライアントで、生きている間にダメージを受けたとき。</summary>
         public static event Action<DamageTakenInfo> DamageTaken;
 
-        /// <summary>誰かが倒れたとき。キルフィードの 1 行を渡す。</summary>
         public static event Action<KillFeedEntry> Killed;
 
         public static event Action<ExplosionInfo> Exploded;
@@ -60,21 +37,11 @@ namespace Shooter.Runtime
         // 戦闘の結果 (体力・判断) は BossController が先に変え終えてから流す。演出の有無で戦いが変わらないように。
         public static event Action<BossPhaseChangedInfo> BossPhaseChanged;
 
-        /// <summary>試合が終わったとき。この画面のプレイヤーの勝敗・倒した数・倒れた数・自陣の得点を渡す。</summary>
         public static event Action<MatchResult> MatchFinished;
 
-        /// <summary>
-        /// 今の帰属 (<see cref="Attribute"/> の中なら倒した者と武器)。外なら null。
-        /// </summary>
         public static ShotAttribution? CurrentAttribution => _attribution;
 
-        /// <summary>
-        /// オフラインでキルフィードに使う Id。キャラの本体 (撃つ側は撃った者、倒れる側は <see cref="Damageable"/> の GameObject) ごとに振る 1 以上の連番。
-        /// null なら 0。ネット対戦の Id とは別物で、同じ Play の間だけ一意。
-        /// </summary>
-        /// <remarks>
-        /// ルートを辿らないのは、敵や標的が 1 つの親の下にまとめて置かれ、ルートでは全員が同じ Id になるため。
-        /// </remarks>
+        // ルートを辿らないのは、敵や標的が 1 つの親の下にまとめて置かれ、ルートでは全員が同じ Id になるため。
         public static int OfflineId(GameObject gameObject)
         {
             if (gameObject == null)
@@ -93,21 +60,11 @@ namespace Shooter.Runtime
             return id;
         }
 
-        /// <summary>
-        /// <see cref="OfflineId"/> で id を振った GameObject。振っていないか、もう破棄されていれば null。
-        /// キルフィードがオフラインの Id から名前を引くのに使う。
-        /// </summary>
         public static GameObject OfflineObject(int id)
         {
             return _offlineObjects.TryGetValue(id, out var gameObject) && gameObject != null ? gameObject : null;
         }
 
-        /// <summary>
-        /// 戻り値を Dispose するまでの間に倒れた <see cref="Damageable"/> を、killer が weaponId で倒したことにする。
-        /// 撃つ側が命中の処理の前後をこれで囲む。入れ子にでき、Dispose で前の帰属に戻る。
-        /// </summary>
-        /// <param name="killer">倒した者。null なら帰属を外す (倒れた本人の自滅として出す)。</param>
-        /// <param name="weaponId">武器の Id。null は空文字として扱う。</param>
         public static AttributionScope Attribute(GameObject killer, string weaponId)
         {
             var previous = _attribution;
@@ -115,10 +72,7 @@ namespace Shooter.Runtime
             return new AttributionScope(previous);
         }
 
-        /// <summary>
-        /// <see cref="CurrentAttribution"/> で前に読んだ帰属を、戻り値を Dispose するまでの間の帰属にする。
-        /// 倒れるのが命中より後になるもの (崩れ落ちる破片など) が、壊した時の帰属を持ち越すのに使う。null なら帰属を外す。
-        /// </summary>
+        // 倒れるのが命中より後になるもの (崩れ落ちる破片など) が、壊した時の帰属を持ち越せるよう、前に読んだ帰属を受け取る形も用意する。
         public static AttributionScope Attribute(ShotAttribution? attribution)
         {
             var previous = _attribution;
@@ -136,13 +90,11 @@ namespace Shooter.Runtime
             Invoke(ShotContinued, new ShotFiredInfo(shooter, origin, direction, weaponId));
         }
 
-        /// <summary>collider から材質・キャラかどうか・部位を引いて (<see cref="ImpactInfo"/> のコライダーを渡すコンストラクタ) 着弾を知らせる。</summary>
         public static void RaiseImpact(Vector3 point, Vector3 normal, Collider collider)
         {
             Invoke(Impact, new ImpactInfo(point, normal, collider));
         }
 
-        /// <summary>組み立て済みの着弾を知らせる。コライダーから引けない情報 (ネット対戦でサーバーが決めた材質と部位) を載せるときに使う。</summary>
         public static void RaiseImpact(ImpactInfo impact)
         {
             Invoke(Impact, impact);
@@ -183,7 +135,6 @@ namespace Shooter.Runtime
             Invoke(MatchFinished, result);
         }
 
-        /// <summary>購読をすべて外し、帰属も消す。Play の開始時と、テストの後片付けで呼ぶ。</summary>
         public static void ClearSubscribers()
         {
             ShotFired = null;
@@ -227,7 +178,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="Attribute"/> の戻り値。Dispose で前の帰属に戻す。</summary>
         public readonly struct AttributionScope : IDisposable
         {
             private readonly ShotAttribution? _previous;
@@ -244,16 +194,13 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>倒れたときに、誰がどの武器で倒したことにするか (<see cref="CombatEvents.Attribute"/>)。</summary>
     public readonly struct ShotAttribution
     {
         // default では null になるので、読むときに空文字へ寄せる。
         private readonly string _weaponId;
 
-        /// <summary>倒した者の Id (<see cref="CombatEvents.OfflineId"/>)。</summary>
         public int KillerId { get; }
 
-        /// <summary>武器の Id。null にならない。</summary>
         public string WeaponId => _weaponId ?? string.Empty;
 
         public ShotAttribution(int killerId, string weaponId)
@@ -263,21 +210,16 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="CombatEvents.ShotFired"/> で渡す、1 発の情報。</summary>
     public readonly struct ShotFiredInfo
     {
         private readonly string _weaponId;
 
-        /// <summary>撃った者の本体 (プレイヤーは照準のルート、敵は <see cref="EnemyAgent"/> の GameObject)。分からなければ null。</summary>
         public GameObject Shooter { get; }
 
-        /// <summary>Raycast の始点。</summary>
         public Vector3 Origin { get; }
 
-        /// <summary>撃った向き (単位ベクトル)。</summary>
         public Vector3 Direction { get; }
 
-        /// <summary>武器の <see cref="WeaponSpec.Id"/>。分からなければ空文字。null にならない。</summary>
         public string WeaponId => _weaponId ?? string.Empty;
 
         // 飛ぶ弾は弾そのものが見えるので、まっすぐな曳光弾を重ねて出さないよう撃つ側が外せるようにする。
@@ -293,7 +235,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="CombatEvents.Impact"/> で渡す、弾が当たった所。</summary>
     public readonly struct ImpactInfo
     {
         // default では null になるので、読むときに既定の材質へ寄せる。
@@ -301,36 +242,23 @@ namespace Shooter.Runtime
         private readonly HitZone _zone;
         private readonly bool _hasZone;
 
-        /// <summary>当たった点。</summary>
         public Vector3 Point { get; }
 
-        /// <summary>当たった面の法線。</summary>
         public Vector3 Normal { get; }
 
-        /// <summary>当たったコライダー。ネット対戦でサーバーから届いた着弾では、このクライアントで見つからなければ null。</summary>
         public Collider Collider { get; }
 
-        /// <summary>当たった面の材質の Id (<see cref="SurfaceMaterial.IdOf"/>)。分からなければ <see cref="SurfaceMaterial.DefaultId"/>。null にならない。</summary>
         public string MaterialId => _materialId ?? SurfaceMaterial.DefaultId;
 
-        /// <summary>キャラ (<see cref="Hitbox"/> か <see cref="Damageable"/> を持つもの) に当たったか。</summary>
         public bool IsCharacter { get; }
 
-        /// <summary>キャラの当たった部位。キャラ以外か、キャラでも部位が分からない (Hitbox の無いところに当たった) ときは null。</summary>
         public HitZone? Zone => _hasZone ? _zone : (HitZone?)null;
 
-        /// <summary>collider から材質・キャラかどうか・部位を引いて作る (<see cref="SurfaceMaterial.IdOf"/>、親階層の <see cref="Hitbox"/> と <see cref="Damageable"/>)。</summary>
         public ImpactInfo(Vector3 point, Vector3 normal, Collider collider)
             : this(point, normal, collider, SurfaceMaterial.IdOf(collider), IsCharacterCollider(collider, out var zone), zone)
         {
         }
 
-        /// <summary>材質・キャラかどうか・部位を直接渡して作る。コライダーが手元で見つからない着弾 (ネット対戦のサーバーから届いたもの) に使う。</summary>
-        /// <param name="materialId">材質の Id。<see cref="SurfaceMaterial.Normalize"/> で揃える (null・空白なら既定の材質)。</param>
-        /// <param name="isCharacter">キャラに当たったか。</param>
-        /// <param name="zone">当たった部位。isCharacter が false なら null であること。</param>
-        /// <exception cref="ArgumentException">キャラ以外に部位を渡した。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">zone が <see cref="HitZone"/> に無い値。</exception>
         public ImpactInfo(Vector3 point, Vector3 normal, Collider collider, string materialId, bool isCharacter, HitZone? zone)
         {
             if (zone.HasValue)
@@ -355,7 +283,6 @@ namespace Shooter.Runtime
             _hasZone = zone.HasValue;
         }
 
-        /// <example><c>material=default character=True zone=Head</c>。部位が無ければ <c>zone=none</c>。</example>
         public override string ToString()
         {
             return "material=" + MaterialId + " character=" + IsCharacter + " zone=" + (Zone.HasValue ? Zone.Value.ToString() : "none");
@@ -415,13 +342,10 @@ namespace Shooter.Runtime
         public bool IsReset => Index < PreviousIndex;
     }
 
-    /// <summary><see cref="CombatEvents.DamageTaken"/> で渡す、撃たれた本人への被弾の情報。</summary>
     public readonly struct DamageTakenInfo
     {
-        /// <summary>攻撃した者の位置。分からなければ null (方向は出せない)。</summary>
         public Vector3? SourcePosition { get; }
 
-        /// <summary>受けたダメージ量。</summary>
         public int Amount { get; }
 
         public DamageTakenInfo(Vector3? sourcePosition, int amount)

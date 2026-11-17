@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 協力して開ける物 1 種類の値をアセットとして持つ。要る人数・押し続ける秒数・欠けたときに戻すか (<see cref="ToSpec"/> で
-    /// <see cref="CoopHoldSpec"/> にする) と、済んだときに扉 (<see cref="CoopDoor"/>) の板を動かす量と秒数。
-    /// 新しく作ったときの値は <see cref="CoopHoldSpec"/> と <see cref="CoopDoor"/> の既定値と同じ。
-    /// <see cref="CoopInteractable"/> に配線すると、それと、それに開く合図をもらう扉は Inspector の値の代わりにこれを読む。
-    /// </summary>
     [CreateAssetMenu(fileName = "CoopInteractable", menuName = "Shooter/Coop Interactable")]
     public sealed class CoopInteractableDefinition : ScriptableObject
     {
@@ -46,22 +40,18 @@ namespace Shooter.Runtime
             set => _resetOnInterrupt = value;
         }
 
-        /// <summary>扉の板を動かす量 (板の親の座標)。</summary>
         public Vector3 OpenOffset
         {
             get => _openOffset;
             set => _openOffset = value;
         }
 
-        /// <summary>扉が開き切るまでの秒数。0 ならすぐ開く。</summary>
         public float OpenSeconds
         {
             get => _openSeconds;
             set => _openSeconds = value;
         }
 
-        /// <summary>人数と秒数を <see cref="CoopHoldSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public CoopHoldSpec ToSpec()
         {
             try
@@ -74,8 +64,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>扉の値 (<see cref="OpenOffset"/>・<see cref="OpenSeconds"/>) が使えることを確かめる。</summary>
-        /// <exception cref="InvalidOperationException">どれかが負か有限でない。メッセージにアセット名を含む。</exception>
         public void ValidateDoor()
         {
             if (!(_openSeconds >= 0f) || float.IsInfinity(_openSeconds))
@@ -90,7 +78,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の人数と秒数を写す。扉の値は変えない。spec は検査済みなので、写した後は必ず <see cref="ToSpec"/> に通る。</summary>
         public void CopyFrom(CoopHoldSpec spec)
         {
             if (spec == null)

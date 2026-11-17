@@ -4,6 +4,9 @@ using Epic.OnlineServices.Logging;
 using Epic.OnlineServices.Platform;
 using Shooter.Core;
 using UnityEngine;
+// Platform と RTC・RTC Audio の名前空間を両方開くと型名がぶつかりうるので、RTC と RTC Audio は別名で参照する
+using EosRtc = Epic.OnlineServices.RTC;
+using EosRtcAudio = Epic.OnlineServices.RTCAudio;
 
 namespace Shooter.NetEos
 {
@@ -22,6 +25,12 @@ namespace Shooter.NetEos
 
         /// <summary>作成済みのプラットフォーム。無ければ null。</summary>
         public static PlatformInterface Current => _platform;
+
+        /// <summary>RTC インターフェース。プラットフォームが無いか、RTC を使えない (オプションを受け付けなかった) なら null。</summary>
+        public static EosRtc.RTCInterface Rtc => _platform?.GetRTCInterface();
+
+        /// <summary>RTC Audio インターフェース。<see cref="Rtc"/> が無ければ null。</summary>
+        public static EosRtcAudio.RTCAudioInterface RtcAudio => Rtc?.GetAudioInterface();
 
         /// <summary>
         /// このプロセスで Device ID のログインに成功したユーザー。まだなら null。
@@ -102,6 +111,8 @@ namespace Shooter.NetEos
                     IsServer = false,
                     Flags = flags,
                     CacheDirectory = Application.temporaryCachePath,
+                    // RTCOptions を渡さないと GetRTCInterface が null を返し、ロビーの RTC 部屋 (ボイス) に入れない
+                    RTCOptions = new RTCOptions { BackgroundMode = RTCBackgroundMode.LeaveRooms },
                 };
                 _platform = PlatformInterface.Create(ref options);
             }

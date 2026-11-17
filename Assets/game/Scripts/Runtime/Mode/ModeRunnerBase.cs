@@ -7,39 +7,15 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オフラインのモードをシーンで進める Runner の土台。派生クラスは <see cref="CreateSession"/> で <see cref="ModeSession"/> を組み立てるだけでよい。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>Start でシーンの <see cref="SideMember"/> を参加者にする。<see cref="GameBootstrap"/> があれば、そのプレイヤーに
-    /// SideMember が無いときは <see cref="PlayerSide"/> で付ける。プレイヤーの ID は 0、残りは陣営の ID・名前の順に 1 から振る。</item>
-    /// <item>参加者の <see cref="Damageable.Died"/> を、倒した者 (<see cref="CombatEvents.CurrentAttribution"/>) が参加者なら
-    /// <see cref="ModeSession.ReportKill"/>、分からないか自分なら <see cref="ModeSession.ReportDeath"/> に渡し、倒れている間は操作と行動を止める。</item>
-    /// <item><see cref="ModeSession.RespawnReady"/> を受けたら、次の <see cref="Tick"/> の終わりに自陣営の <see cref="SideSpawnPoint"/> のうち
-    /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
-    /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
-    /// 同じ時に、残り時間・得点・自分のリスポーンまでの秒数・勝敗・派生モードの状態 (<see cref="HudDetail"/>) を <see cref="ModeStatus"/> にして
-    /// <see cref="GameSignals.ModeStatus"/> に出す。止めたら消す。</item>
-    /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
-    /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
-    /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
-    /// 倒れ方 (<see cref="InterceptDeath"/>)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
-    /// <item>試合の終わりを自分で決める派生は <see cref="EndsMatchWithSession"/> を false にし、終わったときに <see cref="EndMatch"/> を呼ぶ。</item>
-    /// </list>
-    /// </remarks>
+    // RespawnReady を受けてもすぐには戻さず、次の Tick の終わりに戻すのは、ダメージの処理の途中で生き返らせないため。
     [DisallowMultipleComponent]
     public abstract class ModeRunnerBase : MonoBehaviour
     {
         public const string LogTag = ModeLog.Tag;
 
-        /// <summary><see cref="GameBootstrap"/> のプレイヤーの、このモードでの ID。</summary>
         public const int LocalPlayerId = 0;
 
-        /// <summary>
-        /// 再開に使うアクション。<see cref="MatchRunner.RestartActionPath"/> と同じ Reload。
-        /// 終了後は全員の <see cref="WeaponController"/> を止めるので、リロードと取り合うことはない。
-        /// </summary>
+        // 終了後は全員の WeaponController を止めるので、再開の入力をリロードと同じにしても取り合わない。
         public const string RestartActionPath = InputActionPaths.Reload;
 
         [SerializeField, Min(0), Tooltip("GameBootstrap が作るプレイヤーに SideMember が無いとき、付ける陣営の ID")]
@@ -63,158 +39,101 @@ namespace Shooter.Runtime
         private bool _matchOver;
         private Side? _matchWinner;
 
-        /// <summary>進めているモード。開始前や開始に失敗したときは null。</summary>
         public ModeSession Session => _session;
 
         public bool IsStarted => _session != null;
 
-        /// <summary>試合が終わったか (<see cref="EndMatch"/> の後)。終わった後は全員の操作と行動を止め、再開の入力を受け付ける。</summary>
         public bool IsMatchOver => _matchOver;
 
-        /// <summary>
-        /// <see cref="Session"/> が終わったら試合も終わりとして扱うなら true (既定)。ラウンド制のモードは false にし、
-        /// 試合が終わったときに自分で <see cref="EndMatch"/> を呼ぶ。
-        /// </summary>
         protected virtual bool EndsMatchWithSession => true;
 
-        /// <summary>
-        /// 陣営がそのまま分隊 (少人数の組) なら true。分隊への指示 (<see cref="SquadCommandController"/>) は、true なら離れていても分隊の全員に、
-        /// false (既定。陣営が大人数のチームか、陣営が無い) なら近くの同じ陣営の bot にだけ出す。
-        /// </summary>
         public virtual bool HasSquads => false;
 
-        /// <summary>出現点。null は除いてある。</summary>
         protected IReadOnlyList<SideSpawnPoint> SpawnPoints => _spawnPoints;
 
-        /// <summary>参加者。添字がモードでの ID。</summary>
         public IReadOnlyList<SideMember> Members => _members;
 
-        /// <summary>この画面で操作しているプレイヤー。いなければ null。</summary>
         public SideMember LocalPlayer => _localPlayer;
 
-        /// <summary>最後に <see cref="GameSignals.ModeStatus"/> に出した状態。出す前と止めた後は null。</summary>
         public ModeStatus Status => _publishedStatus;
 
-        /// <summary>終了後に押すと再開するアクション。解決できなければ null (モードは進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
 
-        /// <summary><see cref="GameBootstrap"/> のプレイヤーに SideMember が無いとき、付ける陣営。</summary>
         public Side PlayerSide
         {
             get => new Side(Math.Max(0, _playerSideId));
             set => _playerSideId = value.Id;
         }
 
-        /// <summary><see cref="TryBegin"/> で始めたとき、<see cref="GameBootstrap"/> が並べる標的ダミーを隠すか。既定は true。</summary>
         public bool HidesTargetDummies
         {
             get => _hideTargetDummies;
             set => _hideTargetDummies = value;
         }
 
-        /// <summary>
-        /// このモードの <see cref="ModeSession"/> を組み立てる。参加者は入れずに Waiting のまま返す (<see cref="Begin"/> が入れて始める)。
-        /// 設定が不正なら <see cref="ArgumentException"/> か <see cref="InvalidOperationException"/> を投げる (理由をログに出して止まる)。
-        /// </summary>
         protected abstract ModeSession CreateSession();
 
-        /// <summary>
-        /// <see cref="Begin"/> で参加者を入れてモードを始め、状態 (<see cref="ModeStatus"/>) を出した直後に 1 度だけ呼ばれる。<see cref="Members"/> と <see cref="Session"/> は揃っている。
-        /// 参加者に持たせる物 (武器など) をモードに合わせるならここで行う。
-        /// </summary>
         protected virtual void OnBegan()
         {
         }
 
-        /// <summary>
-        /// 参加者が倒れ、モードに報告した直後に呼ばれる。killer は倒した参加者で、分からないときと自滅では null。
-        /// 倒した武器は <see cref="CombatEvents.CurrentAttribution"/> でまだ読める。
-        /// リスポーンの部品を持たないモードは、ここで <see cref="Respawn"/> を呼ぶなどして戻し方を決める。
-        /// </summary>
         protected virtual void OnKill(SideMember killer, SideMember victim)
         {
         }
 
-        /// <summary>参加者を出現点に戻した直後に呼ばれる。</summary>
         protected virtual void OnSpawned(SideMember member)
         {
         }
 
-        /// <summary>モードが終わった直後に 1 度だけ呼ばれる。winner は勝った陣営で、引き分けなら null。</summary>
         protected virtual void OnEnded(Side? winner)
         {
         }
 
-        /// <summary><see cref="ModeSession.Tick"/> の直前に呼ばれる。拠点の出入りなど、時間を進める前にモードへ伝えることがあればここで伝える。</summary>
         protected virtual void OnBeforeTick(float deltaSeconds)
         {
         }
 
-        /// <summary>
-        /// <see cref="ModeStatus.Detail"/> に入れる、このモード固有の状態 (そのモードの Core の状態)。既定は null。
-        /// UI はこの型の書式役があればそれで文にし、無ければ既定の書式役 (残り時間・得点・結果) で出す。
-        /// </summary>
         protected virtual object HudDetail => null;
 
-        /// <summary>
-        /// <see cref="Begin"/> が参加者を入れる前に、session をこの Runner で進められるか確かめる。進められなければ <see cref="ArgumentException"/> を投げる。
-        /// 既定では何もしない。ModeSession を包む別の進め方 (ラウンド制など) を使う派生は、包んだものと session が合うかをここで確かめる。
-        /// </summary>
         protected virtual void ValidateSession(ModeSession session)
         {
         }
 
-        /// <summary><see cref="Begin"/> の最後に session を始める。既定は <see cref="ModeSession.Start"/>。ラウンド制のように外から始める派生が置き換える。</summary>
         protected virtual void StartSession(ModeSession session)
         {
             session.Start();
         }
 
-        /// <summary><see cref="Tick"/> で時間を進める。既定は <see cref="TickSession"/>。ラウンド制のように外から進める派生が置き換える。</summary>
         protected virtual void AdvanceSession(float deltaSeconds)
         {
             TickSession(_session, deltaSeconds);
         }
 
-        /// <summary><see cref="AdvanceSession"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。既定は <see cref="ModeSession.Tick"/>。</summary>
         protected virtual void TickSession(ModeSession session, float deltaSeconds)
         {
             session.Tick(deltaSeconds);
         }
 
-        /// <summary>
-        /// 参加者が倒れ、操作を止めた直後、モードに報告する前に呼ばれる。killer は倒した参加者で、分からないときと自滅では null。
-        /// true を返すと既定の報告 (<see cref="ModeSession.ReportKill"/> などとログと <see cref="OnKill"/>) をしない。ダウンを扱うモードが使う。
-        /// </summary>
         protected virtual bool InterceptDeath(SideMember killer, SideMember victim)
         {
             return false;
         }
 
-        /// <summary>
-        /// ModeSession が終わったときに出すログ。null なら出さない。既定は <see cref="ModeLog.Ended"/>。
-        /// ModeSession の終わりが試合の終わりでない (ラウンドの終わり) 派生は、自分で区切りのログを出して null を返す。
-        /// </summary>
         protected virtual string SessionEndedLog(Side? winner)
         {
             return ModeLog.Ended(winner);
         }
 
-        /// <summary><see cref="Stop"/> の頭、購読を外す前に呼ばれる。派生が自分で購読したものはここで外す。</summary>
         protected virtual void OnStopping()
         {
             OnStop();
         }
 
-        /// <summary>
-        /// <see cref="OnStopping"/> の既定が呼ぶ。何度呼ばれてもよいように書く。
-        /// Unity のメッセージ (OnDisable など) を派生クラスで定義すると土台のものが呼ばれなくなるので、購読の解除はこちらか <see cref="OnStopping"/> で行う。
-        /// </summary>
+        // Unity のメッセージ (OnDisable など) を派生クラスで定義すると土台のものが呼ばれなくなるので、派生の購読の解除はこちらか OnStopping で行う。
         protected virtual void OnStop()
         {
         }
 
-        /// <summary>参加者の ID。参加していなければ -1。</summary>
         public int IdOf(SideMember member)
         {
             if (member == null || member.Damageable == null)
@@ -225,7 +144,6 @@ namespace Shooter.Runtime
             return _ids.TryGetValue(member.Damageable, out var id) ? id : -1;
         }
 
-        /// <summary>ID の参加者。いなければ null。</summary>
         public SideMember MemberOf(int playerId)
         {
             return playerId >= 0 && playerId < _members.Count ? _members[playerId] : null;
@@ -273,10 +191,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// シーンの参加者・出現点を拾い、<see cref="CreateSession"/> のモードを始める。
-        /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBegin()
         {
             if (IsStarted)
@@ -342,15 +256,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// members をモードの参加者にし、死亡と出現を繋いで session を始める。session は Waiting で参加者がいないこと。
-        /// localPlayer は ID 0 にし、<see cref="ModeStatus"/> で自分の陣営として扱う (members に無ければ加える)。
-        /// 引数が不正か、陣営がモードのチーム分けに入らなければ <see cref="ArgumentException"/> を投げ、何も購読しない (session は使えなくなる)。
-        /// </summary>
-        /// <param name="session">始めるモード。</param>
-        /// <param name="members">参加者。null の要素と重複は飛ばす。<see cref="Damageable"/> を持つこと。</param>
-        /// <param name="spawnPoints">出現点。null の要素は飛ばす。</param>
-        /// <param name="localPlayer">この画面で操作しているプレイヤー。null 可。</param>
         public void Begin(
             ModeSession session,
             IReadOnlyList<SideMember> members,
@@ -436,9 +341,6 @@ namespace Shooter.Runtime
             OnBegan();
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進め、待っていたリスポーンを行い、HUD を書き直す。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!IsStarted)
@@ -452,10 +354,6 @@ namespace Shooter.Runtime
             RefreshHud();
         }
 
-        /// <summary>
-        /// member を自陣営の出現点のうち、生きている敵からいちばん離れた点に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
-        /// 自陣営の出現点が無ければ倒れた場所で戻し、陣営ごとに 1 度だけ警告を出す。
-        /// </summary>
         public void Respawn(SideMember member)
         {
             RequireMember(member);
@@ -502,10 +400,6 @@ namespace Shooter.Runtime
             RespawnAt(member, position, rotation);
         }
 
-        /// <summary>
-        /// member を point に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
-        /// ラウンドの頭で、参加者を 1 人ずつ別の出現点に並べるときに使う。
-        /// </summary>
         public void RespawnAt(SideMember member, SideSpawnPoint point)
         {
             if (point == null)
@@ -516,10 +410,6 @@ namespace Shooter.Runtime
             RespawnAt(member, point.Position, point.Rotation);
         }
 
-        /// <summary>
-        /// member を position (足元) に戻し、体力を満たして操作と行動を戻す (終了後は止めたまま)。
-        /// 出現点を自分で選ぶ派生 (ラウンドの始めに全員を並べ直すなど) が使う。
-        /// </summary>
         public void RespawnAt(SideMember member, Vector3 position, Quaternion rotation)
         {
             var id = RequireMember(member);
@@ -529,7 +419,6 @@ namespace Shooter.Runtime
             OnSpawned(member);
         }
 
-        /// <summary>今のシーンを読み込み直して最初からやり直す。Play 中にのみ呼べる。</summary>
         [ContextMenu("Restart")]
         public void Restart()
         {
@@ -549,7 +438,6 @@ namespace Shooter.Runtime
             SceneManager.LoadScene(scene.buildIndex);
         }
 
-        /// <summary>購読を解除してモードから離れる。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
             OnStopping();
@@ -588,11 +476,6 @@ namespace Shooter.Runtime
             _matchWinner = null;
         }
 
-        /// <summary>
-        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して状態を出し直してから <see cref="OnEnded"/> を呼び、
-        /// 操作しているプレイヤーがいれば、その勝敗・倒した数・倒れた数・自陣の得点を <see cref="CombatEvents.MatchFinished"/> で知らせる。
-        /// <see cref="EndsMatchWithSession"/> が true なら <see cref="Session"/> が終わったときに呼ばれる。2 度目からは何もしない。
-        /// </summary>
         protected void EndMatch(Side? winner)
         {
             if (_session == null || _matchOver)
@@ -641,7 +524,6 @@ namespace Shooter.Runtime
             return score > 0d ? (int)Math.Min(int.MaxValue, Math.Floor(score)) : 0;
         }
 
-        /// <summary>今の得点を <c>[Mode] score</c> でログに出す。キルのたびに呼ぶ。時間で点が入るモードは派生クラスが区切りで呼ぶ。</summary>
         protected void LogScore()
         {
             if (_session != null)
@@ -650,7 +532,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今の値で <see cref="ModeStatus"/> を作り、<see cref="GameSignals.ModeStatus"/> に出す。<see cref="Tick"/> のたびに呼ばれる。</summary>
         protected void RefreshHud()
         {
             if (_session == null)
@@ -788,7 +669,6 @@ namespace Shooter.Runtime
                 return;
             }
 
-            // 倒れている間は動けず撃てない。操作を止めても体はその場に残る。
             victim.SetActing(false);
 
             var killer = ResolveKiller();
@@ -895,7 +775,7 @@ namespace Shooter.Runtime
             return action;
         }
 
-        /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。
         private void AcquireRestartAction()
         {
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。

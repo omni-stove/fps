@@ -105,6 +105,7 @@ if [ -d "$from/Runtime/EOS_SDK" ]; then
 		"osx-arm64:$from/Runtime/macOS/libEOSSDK-Mac-Shipping.dylib"
 		"osx-x64:$from/Runtime/macOS/libEOSSDK-Mac-Shipping.dylib"
 		"win-x64:$from/Runtime/Windows/x64/EOSSDK-Win64-Shipping.dll"
+		"win-x64:$from/Runtime/Windows/x64/xaudio2_9redist.dll"
 		"win-arm64:$from/Runtime/Windows/ARM64/EOSSDK-Win64-Shippingarm64.dll"
 	)
 else
@@ -119,6 +120,7 @@ else
 		"osx-arm64:$sdk/Bin/libEOSSDK-Mac-Shipping.dylib"
 		"osx-x64:$sdk/Bin/libEOSSDK-Mac-Shipping.dylib"
 		"win-x64:$sdk/Bin/EOSSDK-Win64-Shipping.dll"
+		"win-x64:$sdk/Bin/x64/xaudio2_9redist.dll"
 		"win-arm64:$sdk/Bin/EOSSDK-Win64-Shippingarm64.dll"
 	)
 fi

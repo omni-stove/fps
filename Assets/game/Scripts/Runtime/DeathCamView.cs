@@ -14,7 +14,7 @@ namespace Shooter.Runtime
     /// <item><see cref="Begin(Vector3, float)"/> で <see cref="ViewRig"/> を三人称 (倒れた主観では一人称のまま) にして止め (カメラはこちらが置く)、視点操作 (<see cref="FirstPersonLook.InputSuspended"/>) と
     /// 覗き込み (<see cref="AimDownSights"/>) を止め、Move・Next・Previous の入力を使えるようにする。</item>
     /// <item><see cref="Restore"/> でカメラの位置・ViewRig の視点・入力を元に戻す。</item>
-    /// <item>倒した相手の方を向く (<see cref="Frame"/>)、味方の肩越し (<see cref="FrameAlly"/>)、自由カメラ (<see cref="MoveFree"/>)、
+    /// <item>倒した相手の方を向く (<see cref="Frame"/>)、味方の肩越し (<see cref="FrameAlly"/>)、味方の目 (<see cref="FrameEye"/>)、自由カメラ (<see cref="MoveFree"/>)、
     /// 倒れた主観 (<see cref="FrameFallen"/>) のどれかでカメラを置く。</item>
     /// </list>
     /// 壁にめり込まないよう縮めるのは <see cref="ViewRig.ResolveBoomPosition(Vector3, Vector3, Transform)"/>、自由カメラが壁を抜けないのは
@@ -371,6 +371,20 @@ namespace Shooter.Runtime
             var desired = DeathCamFraming.ShoulderPosition(allyEye.ToNumerics(), allyYaw, shoulderOffset.ToNumerics()).ToUnity();
             var position = _rig != null ? _rig.ResolveBoomPosition(allyEye, desired - allyEye, allyRoot) : desired;
             _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, allyYaw, 0f));
+        }
+
+        /// <summary>
+        /// カメラを相手の目 (eye) にそのまま置き、相手の体の向き (yaw、度) を水平に向ける一人称の観戦。借りていなければ何もしない。
+        /// </summary>
+        public void FrameEye(Vector3 eye, float yaw)
+        {
+            if (!_engaged || _camera == null)
+            {
+                return;
+            }
+
+            _freeActive = false;
+            _camera.transform.SetPositionAndRotation(eye, Quaternion.Euler(0f, yaw, 0f));
         }
 
         /// <summary>

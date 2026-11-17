@@ -9,7 +9,8 @@ namespace Shooter.Core
 
         public const int DefaultMaxPlayers = NetMatchSettings.DefaultMaxPlayers;
 
-        // ロビーに入るのはサーバーだけで、人数は属性で載せるので、試合が 1 人までのサーバーも載せられるようにする。
+        // 人数は属性で載せ、メンバーの上限はサーバー自身の分を足して決める (ServerLobby.MaxMembers) ので、
+        // 試合が 1 人までのサーバーも載せられるようにする。
         public const int MinMaxPlayers = NetMatchSettings.MinMaxPlayers;
 
         // EOS_LOBBY_MAX_LOBBY_MEMBERS に合わせてある。

@@ -85,7 +85,7 @@ namespace Shooter.Runtime
             return $"{LogTag} id={id} resisted kind={kind} reason=recovering";
         }
 
-        // shots は怯んでいる間に撃った数。撃たないことを確かめる相手 (敵) のときだけ出す。
+        // shots を省けるのは、怯み中に撃たないことを確かめる相手 (敵) のときだけ出すため。
         public static string FormatRecoverLog(string id, StaggerKind kind, int? shots = null)
         {
             var line = $"{LogTag} id={id} recovered kind={kind}";

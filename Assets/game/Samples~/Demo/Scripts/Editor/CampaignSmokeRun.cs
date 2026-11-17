@@ -9,51 +9,31 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットとキャンペーンのミッション (<see cref="CampaignSceneBuilder.Missions"/>) を生成し直し、セーブを消してから、
-    /// ミッションごとにそのシーンを Play Mode で数秒走らせ、ログで次を確かめる。全部終えたら Editor を終える。
-    /// <list type="bullet">
-    /// <item>ミッションが始まる (<c>[Mission] objective=... state=Active</c> が出る)。</item>
-    /// <item>キャンペーンがセーブ無しの状態から始まる (<c>[Campaign] no save; starting ...</c> が出る)。</item>
-    /// <item>Play に入って <see cref="KillDummyAfterSeconds"/> 秒後に標的ダミーを 1 体倒すと、キャンペーンのルール (体は倒れる) で
-    /// 抜け殻ができる (<c>[DeathBody] collapse ...</c> が出る)。</item>
-    /// <item>そのあと目標を定義順に、シーンに置かれた部品を通して進め (範囲はプレイヤーが入ったことにし、端末は Interact し、
-    /// 撃破の目標は標的が現れてから倒す)、最後まで進めるとミッションが完了する (<c>[Campaign] mission=... completed</c> が出る)。</item>
-    /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
-    /// </list>
-    /// すべてのミッションで満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
-    /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.CampaignSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// セーブ無しから始めるため、この Editor の <c>Application.persistentDataPath</c> にある各ミッションのスロット
-    /// (<see cref="CampaignSaveSlots.For"/> と、Campaign01 は古いスロット <see cref="CampaignSaveSlots.Legacy"/>) のセーブを走らせる前に消す。
-    /// 走っている間に開始地点のチェックポイントでセーブされるので、終えるときにもう一度消す。
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態 (何本目のミッションか・見つけた問題) は SessionState に置く。
-    /// </remarks>
+    // セーブ無しから始めるため、この Editor の Application.persistentDataPath にある各ミッションのスロット
+    // (CampaignSaveSlots.For と、Campaign01 は古いスロット CampaignSaveSlots.Legacy) のセーブを走らせる前に消す。
+    // 走っている間に開始地点のチェックポイントでセーブされるので、終えるときにもう一度消す。
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態 (何本目のミッションか・見つけた問題) は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class CampaignSmokeRun
     {
         public const string LogTag = "[CampaignSmokeRun]";
 
-        /// <summary>Play Mode で走らせる秒数 (ミッションごと) を渡す引数。例: <c>-campaignSmokeSeconds 8</c>。</summary>
         public const string SecondsArgument = "-campaignSmokeSeconds";
 
         public const float DefaultSeconds = 5f;
 
-        /// <summary>Play に入ってから標的ダミーを倒すまでの秒数。ダミーの復活 (3 秒) で抜け殻が消えるところまで既定の秒数に収まる。</summary>
+        // ダミーの復活 (3 秒) で抜け殻が消えるところまで既定の秒数に収まるよう、早めに倒す。
         public const float KillDummyAfterSeconds = 0.5f;
 
-        /// <summary>Play に入ってから目標を進め始めるまでの秒数。ダミーの抜け殻を確かめてから、敵の抜け殻と混ざらないように始める。</summary>
+        // ダミーの抜け殻を確かめてから、敵の抜け殻と混ざらないように目標を進め始める。
         public const float WalkthroughAfterSeconds = 1f;
 
-        /// <summary>1 つの目標が進められる状態 (Active で、部品が結び付き、標的が現れている) になるのを待つ秒数。</summary>
         public const float WalkthroughStepTimeoutSeconds = 2f;
 
-        /// <summary>倒すダミーを撃ったことにする位置の、ダミーの正面への距離 (m)。抜け殻はダミーの後ろへ倒れる。</summary>
+        // 抜け殻がダミーの後ろへ倒れるよう、正面から撃ったことにする。
         private const float KillSourceDistance = 5f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
@@ -66,7 +46,7 @@ namespace Shooter.Editor
         private const string PhaseKey = "Shooter.CampaignSmokeRun.Phase";
         private const string ProblemsKey = "Shooter.CampaignSmokeRun.Problems";
 
-        /// <summary>SessionState の問題の区切り。問題の文に改行は入れない。</summary>
+        // 問題の文に改行は入れないので、SessionState では改行で区切る。
         private const char ProblemSeparator = '\n';
 
         private const int PhaseEntering = 0;
@@ -103,7 +83,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -130,10 +109,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="SecondsArgument"/> の値を読む。無ければ <see cref="DefaultSeconds"/>。
-        /// 値が無い・正の有限な数でなければ <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static float ParseSeconds(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -176,7 +151,7 @@ namespace Shooter.Editor
             EditorApplication.update -= OnUpdate;
         }
 
-        /// <summary>SessionState の何本目かが指すミッション。ログのたびに配置を組み立て直さないよう、何本目かが変わるまで持っておく。</summary>
+        // ログのたびに配置を組み立て直さないよう、何本目かが変わるまで持っておく。
         private static CampaignMissionSpec CurrentMission()
         {
             var index = SessionState.GetInt(MissionIndexKey, 0);
@@ -196,7 +171,6 @@ namespace Shooter.Editor
             return _currentMission;
         }
 
-        /// <summary>index 本目のミッションのシーンを開いて Play Mode に入る。</summary>
         private static void StartMission(int index)
         {
             SessionState.SetInt(MissionIndexKey, index);
@@ -294,7 +268,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>シーンの標的ダミーを 1 体、正面から撃ったことにして倒す。見つからなければ問題として返す。</summary>
         private static string KillOneDummy()
         {
             var dummies = UnityEngine.Object.FindObjectsByType<TargetDummy>(FindObjectsInactive.Exclude);
@@ -397,10 +370,6 @@ namespace Shooter.Editor
             EndMission();
         }
 
-        /// <summary>
-        /// 今の目標 (<see cref="_walkStep"/> 番目) が進められる状態になっていれば、シーンの部品を通して 1 度だけ進める。
-        /// 完了していれば次の目標へ移る。進められる状態にならないまま <see cref="WalkthroughStepTimeoutSeconds"/> 秒経てば、問題を残して止める。
-        /// </summary>
         private static void WalkThrough(CampaignMissionSpec mission, double now)
         {
             if (_walkStep >= mission.Objectives.Count)
@@ -429,10 +398,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// objectiveId の目標を進めようとする。完了していれば progressed を true にする。
-        /// まだ進められなければ、待っている理由を返す (進めたか完了していれば null)。
-        /// </summary>
         private static string TryProgress(string objectiveId, out bool progressed)
         {
             progressed = false;

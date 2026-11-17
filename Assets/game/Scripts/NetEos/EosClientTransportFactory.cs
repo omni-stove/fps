@@ -10,7 +10,7 @@ namespace Shooter.NetEos
 {
     /// <summary>
     /// クライアントの EOS の通信路を PlayEveryWare のプラグインの P2P (<see cref="EosClientP2P"/>) で、クイックマッチのロビーの検索を
-    /// <see cref="EosLobbyBackend"/> で作る。認証情報は環境変数と、作業ディレクトリか実行ファイルの隣の
+    /// <see cref="EosLobbyBackend"/> で、試合のボイスチャットを <see cref="EosVoiceSession"/> で作る。認証情報は環境変数と、作業ディレクトリか実行ファイルの隣の
     /// <see cref="EosCredentials.LocalFileName"/> から読む (<see cref="EosCredentialSource"/>)。
     /// </summary>
     internal sealed class EosClientTransportFactory : IEosClientTransportFactory
@@ -29,6 +29,11 @@ namespace Shooter.NetEos
         public ILobbyBackend CreateLobbyBackend(EosCredentials credentials)
         {
             return new EosLobbyBackend(credentials, EosTransportInstaller.LobbyDisplayName);
+        }
+
+        public IVoiceSession CreateVoiceSession(Action<string> log)
+        {
+            return new EosVoiceSession(log);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.EosSdk;
@@ -119,6 +120,26 @@ namespace Shooter.Server.Tests
             Assert.That(settings.Mover, Is.SameAs(motor.Mover));
             Assert.That(settings.Rules, Is.SameAs(rules));
             Assert.That(settings.KillPlaneY, Is.EqualTo(ServerMotorSettings.Default.KillPlaneY));
+        }
+
+        [Test]
+        public void MovementUsesTheSwimAndWallRunValuesOfTheRulesFile()
+        {
+            var swim = new SwimTuning(2f, 8f, 30f);
+            var wallRun = new WallRunTuning(true, 2.5f, 4f, 0.5f, 9f);
+            var motor = new NetMotorSettings(
+                MotorSpec.Default, NetMotorSettings.Default.Stance, CapsuleMoverSpec.Default, ProneSpec.Default, swim, wallRun);
+            var data = new ServerRulesData("TeamDeathmatch", new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { TestRules.Rifle(), TestRules.Handgun() }, 0.4f, null, null, motor), PingSpec.Default, "memory", null);
+
+            var settings = ServerModules.MotorSettingsFrom(data);
+
+            Assert.That(settings.Swim, Is.SameAs(swim));
+            Assert.That(settings.WallRun, Is.SameAs(wallRun));
+            Assert.That(settings.WithRules(GameRules.Default).Swim, Is.SameAs(swim), "changing the rules keeps the swim values");
+            Assert.That(settings.WithSpawnPosition(Vector3.One).WallRun, Is.SameAs(wallRun), "moving the spawn keeps the wall run values");
         }
 
         private void WriteLocalFile()

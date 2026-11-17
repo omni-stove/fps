@@ -145,6 +145,7 @@ namespace Shooter.Runtime
             WriteLines(_stats, StatClass, new[]
             {
                 ProgressionFormat.Kills(_profile.Kills),
+                ProgressionFormat.Assists(_profile.Assists),
                 ProgressionFormat.Deaths(_profile.Deaths),
                 ProgressionFormat.KillDeathRatio(_profile.Kills, _profile.Deaths),
                 ProgressionFormat.Matches(_profile.Matches),

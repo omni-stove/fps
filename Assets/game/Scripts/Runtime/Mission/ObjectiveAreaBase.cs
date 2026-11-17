@@ -4,14 +4,8 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// トリガーの Collider に結び付いた目標の共通部分。プレイヤー (<see cref="PlayerTag"/> の付いた Collider) の出入りを
-    /// <see cref="ObjectiveZone"/> に伝えるだけで、進めるかどうかの判断はそちらに任せる。
-    /// MissionRunner は Inspector で指定しなければシーンから探す。
-    /// </summary>
     public abstract class ObjectiveAreaBase : MonoBehaviour
     {
-        /// <summary>GameBootstrap がプレイヤーに付ける Unity 組み込みのタグ。</summary>
         public const string DefaultPlayerTag = "Player";
 
         [SerializeField, Tooltip("進める MissionRunner。空ならシーンから探す")]
@@ -44,12 +38,10 @@ namespace Shooter.Runtime
             set => _playerTag = value;
         }
 
-        /// <summary>判断を任せている zone。Bind 前や失敗時は null。</summary>
         public ObjectiveZone Zone => _zone;
 
         public bool IsBound => _zone != null;
 
-        /// <summary>この範囲が目標をどう進めるか。</summary>
         protected abstract ObjectiveZoneMode Mode { get; }
 
         protected virtual void Start()
@@ -75,10 +67,6 @@ namespace Shooter.Runtime
             HandleExit(other);
         }
 
-        /// <summary>
-        /// runner (null ならシーンから探す) の目標に結び付ける。トリガーの Collider が無い・解決できないときは
-        /// 理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool Bind(MissionRunner runner)
         {
             Unbind();
@@ -100,7 +88,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>Collider が範囲に入った。プレイヤーの Collider なら zone に伝える。</summary>
         public void HandleEnter(Collider other)
         {
             if (_zone == null || !IsPlayer(other) || !_inside.Add(other))
@@ -111,7 +98,6 @@ namespace Shooter.Runtime
             _zone.Enter();
         }
 
-        /// <summary>Collider が範囲から出た。入っていたプレイヤーの Collider なら zone に伝える。</summary>
         public void HandleExit(Collider other)
         {
             if (_zone == null || other == null || !_inside.Remove(other))

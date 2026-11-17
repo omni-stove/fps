@@ -102,6 +102,17 @@ namespace Shooter.Core
             return found;
         }
 
+        public bool IsPrivate => TryGetNumber(ServerLobby.PrivateKey, out var value) && value != 0;
+
+        public string JoinCode => TryGetText(ServerLobby.JoinCodeKey, out var value) ? value : null;
+
+        public int? SkillAverage =>
+            TryGetNumber(ServerLobby.SkillAverageKey, out var value) && value >= int.MinValue && value <= int.MaxValue
+                ? (int)value
+                : (int?)null;
+
+        public bool VoiceEnabled => TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
+
         public bool IsOwnedBy(string userId)
         {
             return userId != null && string.Equals(OwnerUserId, userId, StringComparison.OrdinalIgnoreCase);

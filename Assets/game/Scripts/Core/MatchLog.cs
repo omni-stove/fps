@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace Shooter.Core
 {
@@ -38,6 +40,11 @@ namespace Shooter.Core
             return Tag + " left player=" + playerId.ToString(CultureInfo.InvariantCulture);
         }
 
+        public static string TeamBalanced(int playerId, Team from, Team to)
+        {
+            return Tag + " balanced player=" + playerId.ToString(CultureInfo.InvariantCulture) + " from=" + TeamName(from) + " to=" + TeamName(to);
+        }
+
         public static string Held(int playerId, float seconds)
         {
             return Tag + " holding player=" + playerId.ToString(CultureInfo.InvariantCulture)
@@ -70,6 +77,28 @@ namespace Shooter.Core
         {
             return Tag + " kill killer=" + killerId.ToString(CultureInfo.InvariantCulture)
                 + " victim=" + victimId.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string Kill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
+            var text = Kill(killerId, victimId);
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text).Append(" assists=");
+            for (var i = 0; i < assisterIds.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(assisterIds[i].ToString(CultureInfo.InvariantCulture));
+            }
+
+            return builder.ToString();
         }
 
         // 点数の入る Kill と区別できるよう、味方に倒されたことは別の語で書く。

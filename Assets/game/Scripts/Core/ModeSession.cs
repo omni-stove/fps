@@ -143,6 +143,7 @@ namespace Shooter.Core
             {
                 record.Kills = 0;
                 record.Deaths = 0;
+                record.Assists = 0;
                 record.IsDown = false;
             }
 
@@ -171,11 +172,23 @@ namespace Shooter.Core
 
         public void AddPlayer(int playerId, Side side)
         {
-            AddPlayer(playerId, side, 0, 0);
+            AddPlayer(playerId, side, 0, 0, 0);
         }
 
         // 戻ってきた人の kills を引き継いでも陣営の得点を動かさないのは、そのキルの点は抜ける前にもう入っているため。
         public void AddPlayer(int playerId, Side side, int kills, int deaths)
+        {
+            AddPlayer(playerId, side, kills, deaths, 0);
+        }
+
+        /// <summary>
+        /// プレイヤーを side に加え、キル数・デス数・アシスト数を kills・deaths・assists から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// 陣営の得点は動かさない (そのキルとアシストは抜ける前にもう入っている)。参加順の番号は進めない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">kills・deaths・assists が負、または side がチーム分けにない。</exception>
+        /// <exception cref="ArgumentException">すでに参加している。</exception>
+        /// <exception cref="InvalidOperationException">side が満員。</exception>
+        public void AddPlayer(int playerId, Side side, int kills, int deaths, int assists)
         {
             if (kills < 0)
             {
@@ -185,6 +198,11 @@ namespace Shooter.Core
             if (deaths < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(deaths), deaths, "deaths must not be negative");
+            }
+
+            if (assists < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(assists), assists, "assists must not be negative");
             }
 
             if (!_layout.Contains(side))
@@ -207,6 +225,7 @@ namespace Shooter.Core
             var record = _players[playerId];
             record.Kills = kills;
             record.Deaths = deaths;
+            record.Assists = assists;
         }
 
         public void RemovePlayer(int playerId)
@@ -226,6 +245,8 @@ namespace Shooter.Core
         public int GetKills(int playerId) => Find(playerId).Kills;
 
         public int GetDeaths(int playerId) => Find(playerId).Deaths;
+
+        public int GetAssists(int playerId) => Find(playerId).Assists;
 
         public IReadOnlyList<int> GetPlayerIds()
         {
@@ -334,6 +355,11 @@ namespace Shooter.Core
 
         public void ReportKill(int killerId, int victimId)
         {
+            ReportKill(killerId, victimId, null);
+        }
+
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
             var killer = Find(killerId, nameof(killerId));
             var victim = Find(victimId, nameof(victimId));
 
@@ -346,19 +372,63 @@ namespace Shooter.Core
             if (killerId != victimId && killer.Side != victim.Side)
             {
                 killer.Kills++;
-                var points = 0d;
+                var killPoints = 0d;
                 foreach (var rule in _scoreRules)
                 {
-                    points += CheckPoints(rule.PointsForKill(this, killerId, victimId));
+                    killPoints += CheckPoints(rule.PointsForKill(this, killerId, victimId));
                 }
 
-                if (points > 0d && AddScoreAndCheckLimit(killer.Side, points))
+                // 点を足す前にアシストの数と点をすべて決めておき、途中で得点上限に届いて終わっても数え漏れが出ないようにする。
+                var gains = new List<SidePoints> { new SidePoints(killer.Side, killPoints) };
+                CountAssists(killerId, victimId, victim.Side, assisterIds, gains);
+                foreach (var gain in gains)
                 {
-                    return;
+                    if (gain.Points > 0d && AddScoreAndCheckLimit(gain.Side, gain.Points))
+                    {
+                        return;
+                    }
                 }
             }
 
             BeginDown(victimId, victim);
+        }
+
+        private void CountAssists(int killerId, int victimId, Side victimSide, IReadOnlyList<int> assisterIds, List<SidePoints> gains)
+        {
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return;
+            }
+
+            var counted = new HashSet<int>();
+            foreach (var assisterId in assisterIds)
+            {
+                if (assisterId == killerId
+                    || assisterId == victimId
+                    || !_players.TryGetValue(assisterId, out var assister)
+                    || assister.Side == victimSide
+                    || !counted.Add(assisterId))
+                {
+                    continue;
+                }
+
+                assister.Assists++;
+                var points = 0d;
+                foreach (var rule in _scoreRules)
+                {
+                    points += CheckPoints(rule.PointsForAssist(this, assisterId, victimId));
+                }
+
+                var index = gains.FindIndex(g => g.Side == assister.Side);
+                if (index < 0)
+                {
+                    gains.Add(new SidePoints(assister.Side, points));
+                }
+                else
+                {
+                    gains[index] = new SidePoints(assister.Side, gains[index].Points + points);
+                }
+            }
         }
 
         public void ReportDeath(int playerId)
@@ -663,6 +733,7 @@ namespace Shooter.Core
             public Side Side { get; }
             public int Kills { get; set; }
             public int Deaths { get; set; }
+            public int Assists { get; set; }
 
             public bool IsDown { get; set; }
 
@@ -670,6 +741,18 @@ namespace Shooter.Core
             {
                 Side = side;
             }
+        }
+
+        private readonly struct SidePoints
+        {
+            public SidePoints(Side side, double points)
+            {
+                Side = side;
+                Points = points;
+            }
+
+            public Side Side { get; }
+            public double Points { get; }
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Shooter.Core
     {
         public const string KillXpItem = "killXp";
         public const string HeadshotXpItem = "headshotXp";
+        public const string AssistXpItem = "assistXp";
         public const string MatchXpItem = "matchXp";
         public const string WinXpItem = "winXp";
         public const string LevelsItem = "levels";
@@ -23,6 +24,7 @@ namespace Shooter.Core
         {
             KillXpItem,
             HeadshotXpItem,
+            AssistXpItem,
             MatchXpItem,
             WinXpItem,
             LevelsItem,
@@ -39,6 +41,7 @@ namespace Shooter.Core
                 var fields = new ServerDataJson.Fields(source, _kind, ServerDataJson.ParseDocument(text, source, _kind), string.Empty, ItemNames);
                 var killXp = fields.ReadInt(KillXpItem, ProgressionSpec.DefaultKillXp);
                 var headshotXp = fields.ReadInt(HeadshotXpItem, ProgressionSpec.DefaultHeadshotXp);
+                var assistXp = fields.ReadInt(AssistXpItem, ProgressionSpec.DefaultAssistXp);
                 var matchXp = fields.ReadInt(MatchXpItem, ProgressionSpec.DefaultMatchXp);
                 var winXp = fields.ReadInt(WinXpItem, ProgressionSpec.DefaultWinXp);
                 var levels = ReadLevels(fields);
@@ -51,7 +54,7 @@ namespace Shooter.Core
 
                 try
                 {
-                    return new ProgressionSpec(killXp, headshotXp, matchXp, winXp, levels, unlocks);
+                    return new ProgressionSpec(killXp, headshotXp, assistXp, matchXp, winXp, levels, unlocks);
                 }
                 catch (ArgumentException e)
                 {

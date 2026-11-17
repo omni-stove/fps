@@ -24,7 +24,7 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
   入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
   `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
-- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`・`assist.json`) は、オフラインと同じく入口の欄の JSON、
   無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
@@ -186,8 +186,9 @@ EOS の SDK か認証情報が無いと、理由を出して終了コード 3 �
 docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -register-lobby 203.0.113.10:7777
 ```
 
-ロビーは `shooter-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
-Device ID でログインしたユーザー。
+ロビーは `shooter-server:<版>` のバケツに作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
+Device ID でログインしたユーザー。ロビーでは RTC 部屋を開くので、ID で入ったクライアントのメンバーはそこでボイスを使える。
+メンバーの上限は、試合の人数 (既定は 8 人) にサーバー自身の 1 人を足した数 (EOS の上限の 64 人まで)。
 
 | 属性 | 値 |
 | --- | --- |
@@ -195,11 +196,12 @@ Device ID でログインしたユーザー。
 | `mode` | `tdm` |
 | `version` | ビルドの版 |
 | `players` | 接続しているプレイヤーの人数 (整数。Bot は数えない) |
+| `voice_enabled` | `1` (RTC 部屋を開いている) |
 
 ログには次のように出る。
 
 ```
-[Lobby] created id=<ロビー Id> max=8 owner=<サーバーの ID> server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0
+[Lobby] created id=<ロビー Id> max=9 owner=<サーバーの ID> rtc=on server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0 voice_enabled=1
 [Lobby] registered id=<ロビー Id> server=203.0.113.10:7777 players=0
 [Lobby] players 0 -> 1
 [Lobby] updated id=<ロビー Id> players=1
@@ -296,6 +298,9 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 - はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む。サーバーとクライアントの予測はどちらもこの並びの番号で
   はしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。起動時の `[Server] map ...` の `ladders=` が読んだ本数。
   伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
+  リーン (`leanSideOffset`・`leanAngleDegrees`・`leanSpeed`)・空中のジャンプ (`airJumps`・`airJumpSpeed`)・水泳 (`swimSpeed`・`swimBuoyancy`・`swimBreathSeconds`)・
+  壁走り (`wallRunEnabled`・`wallRunMaxSeconds`・`wallRunMinSpeed`・`wallRunGravityScale`・`wallRunJumpOffSpeed`) も同じ `motor` から読み、
+  承認のメッセージでクライアントの予測に渡す。水泳と壁走りの値は `make export-server-rules` が `Resources/Tuning/traversal.json` (入口の欄が先) から書き出す。
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - 乗り物は `server-data/maps/<マップ名>.vehicles.json` (`make export-server-data` がシーンの有効な `Vehicle` から書き出す) から読む。
   サーバーとクライアントはどちらもこの並びの番号で乗り物を指す。ファイルが無いマップは乗り物が無いものとして動く (`[Server] map ...` の `vehicles=`)。
@@ -306,6 +311,7 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  巻き戻すのは位置・しゃがみ・リーンの傾きで、傾けた人の体は足元を軸に、目がリーンのずれ (`MotorSpec.LeanSideOffset`) の所へ来るまで回す。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
 - 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・
@@ -391,8 +397,16 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
 | `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
 | `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
+| `chat` | プレイヤーのチャットを配った。`All` は全員に、`Team` は送った人と同じチームの人にだけ配る。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (前後の空白と改行を落とした本文の文字数) |
+| `chat_refused` | チャットを断った。断った文は送った人にも返さない。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`Empty` / `TooLong` / `TooSoon`) |
+| `map_vote` | プレイヤーが次のマップに投票した (選び直しも 1 行) | `matchId`、`playerId`、`productUserId`、`mapId` |
+| `map_changed` | 次の試合のマップを替えた | `matchId` (終わった試合)、`fromMapId`、`toMapId` |
+| `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
+ルールのファイルの `match.maxTeamSizeDifference` が 1 以上で、次の試合を始めるときに 2 チームの人数の差がそれを超えていれば、
+多いチームの最近入った人 (Bot も含む) から少ないチームへ移し、移した人ごとに `team_balanced` と `[Match] balanced player=3 from=Alpha to=Bravo` を出す。
+接続のときに同じパーティの Id を名乗った人はまとめて移すか、移さない。移すと差が縮まらない組は移さない。`0` (既定) なら移さない。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
 ## CI のテンプレート

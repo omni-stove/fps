@@ -34,19 +34,33 @@ namespace Shooter.Core
 
         public void Record(int tick, int entityId, Vector3 position)
         {
+            Record(tick, entityId, position, Vector3.Zero);
+        }
+
+        private void Record(int tick, int entityId, Vector3 position, Vector3 lean)
+        {
             if (!_histories.TryGetValue(entityId, out var history))
             {
                 history = new HitboxHistory(HistoryCapacity);
                 _histories.Add(entityId, history);
             }
 
-            history.Record(tick, position);
+            history.Record(tick, position, lean);
         }
 
         public void Record(int tick, int entityId, Vector3 position, bool crouched)
         {
+            Record(tick, entityId, position, crouched, Vector3.Zero);
+        }
+
+        /// <summary>
+        /// entityId の tick 時点の位置・しゃがみ・リーンの傾き (<see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/> の目の横のずれ) を記録する。
+        /// 初めての ID なら履歴を作る。
+        /// </summary>
+        public void Record(int tick, int entityId, Vector3 position, bool crouched, Vector3 lean)
+        {
             // 位置の履歴が古い tick を拒んだときに姿勢だけ記録されないよう、位置を先に記録する
-            Record(tick, entityId, position);
+            Record(tick, entityId, position, lean);
 
             if (!_stances.TryGetValue(entityId, out var stance))
             {
@@ -91,6 +105,20 @@ namespace Shooter.Core
                 if (pair.Value.TrySample(tick, out var crouched))
                 {
                     result.Add(pair.Key, crouched);
+                }
+            }
+
+            return result;
+        }
+
+        public IReadOnlyDictionary<int, Vector3> RewindLean(float tick)
+        {
+            var result = new Dictionary<int, Vector3>();
+            foreach (var pair in _histories)
+            {
+                if (pair.Value.TrySample(tick, out _, out var lean))
+                {
+                    result.Add(pair.Key, lean);
                 }
             }
 

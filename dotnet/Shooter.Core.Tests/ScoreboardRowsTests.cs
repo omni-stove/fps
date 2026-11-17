@@ -11,9 +11,9 @@ namespace Shooter.Core.Tests
 
         private static ScoreboardEntry Entry(
             int id, Team team, int kills, int deaths,
-            ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false)
+            ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false, int assists = 0)
         {
-            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, connection, isLocal);
+            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, assists, connection, isLocal);
         }
 
         [Test]
@@ -48,6 +48,24 @@ namespace Shooter.Core.Tests
             var rows = ScoreboardRows.Build(entries, Team.Alpha)[0].Rows;
 
             Assert.That(rows.Select(r => r.PlayerId), Is.EqualTo(Ids(1, 2, 3, 5, 4)));
+        }
+
+        [Test]
+        public void TiedKillsAreOrderedByMoreAssistsBeforeFewerDeaths()
+        {
+            var entries = new[]
+            {
+                Entry(1, Team.Alpha, 2, 0, assists: 1),
+                Entry(2, Team.Alpha, 2, 3, assists: 4),
+                Entry(3, Team.Alpha, 3, 5, assists: 0),
+                Entry(4, Team.Alpha, 2, 1, assists: 4),
+                Entry(5, Team.Alpha, 2, 0),
+            };
+
+            var rows = ScoreboardRows.Build(entries, Team.Alpha)[0].Rows;
+
+            Assert.That(rows.Select(r => r.PlayerId), Is.EqualTo(Ids(3, 4, 2, 1, 5)));
+            Assert.That(rows.Select(r => r.Assists), Is.EqualTo(Ids(0, 4, 4, 1, 0)));
         }
 
         [Test]
@@ -169,12 +187,13 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentException>(() => ScoreboardRows.Build(entries, Team.Alpha));
         }
 
-        [TestCase(-1, 0)]
-        [TestCase(0, -1)]
-        public void EntriesRejectNegativeCounts(int kills, int deaths)
+        [TestCase(-1, 0, 0)]
+        [TestCase(0, -1, 0)]
+        [TestCase(0, 0, -1)]
+        public void EntriesRejectNegativeCounts(int kills, int deaths, int assists)
         {
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ScoreboardEntry(0, ScoreboardName.Literal("x"), Team.Alpha, kills, deaths, ScoreboardConnection.None, false));
+                () => new ScoreboardEntry(0, ScoreboardName.Literal("x"), Team.Alpha, kills, deaths, assists, ScoreboardConnection.None, false));
         }
 
         [Test]
@@ -187,11 +206,21 @@ namespace Shooter.Core.Tests
         [Test]
         public void EntriesWithDifferentNamesAreNotEqual()
         {
-            var you = new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true);
+            var you = new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true);
 
-            Assert.That(you, Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
-            Assert.That(you.GetHashCode(), Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true).GetHashCode()));
-            Assert.That(you, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardName.Player(0), Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
+            Assert.That(you, Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true)));
+            Assert.That(you.GetHashCode(), Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true).GetHashCode()));
+            Assert.That(you, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardName.Player(0), Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true)));
+        }
+
+        [Test]
+        public void EntriesWithDifferentAssistsAreNotEqual()
+        {
+            var two = new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 1, 1, 2, ScoreboardConnection.None, true);
+
+            Assert.That(two.Assists, Is.EqualTo(2));
+            Assert.That(two, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 1, 1, 3, ScoreboardConnection.None, true)));
+            Assert.That(two.ToString(), Does.Contain(" A=2 "));
         }
     }
 }

@@ -8,24 +8,12 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// クライアント (プレイヤー) をビルドして <c>Builds/client-&lt;platform&gt;/</c> に出力する。
-    /// 入れるシーンは <see cref="BuildSceneList.Scenes"/> のうちプロジェクトにあるもので、先頭の <see cref="BuildSceneList.MainMenuScene"/> が起動時のシーンになる。
-    /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
-    /// Editor を閉じた状態で次のように呼ぶ (<c>make build</c> / <c>make build windows</c>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform windows|macos [-buildVersion v0.2.0]</code>
-    /// 失敗したら例外を投げるので、batchmode の Unity は終了コード 1 で終わる。
-    /// </summary>
     public static class ClientBuilder
     {
         public const string LogTag = "[Build]";
         public const string MenuPathWindows = "Shooter/Build Client (Windows)";
         public const string MenuPathMacOS = "Shooter/Build Client (macOS)";
 
-        /// <summary>
-        /// コマンドライン引数 <c>-clientPlatform</c> (既定は macos) で決まる OS 向けに、
-        /// <c>-buildVersion</c> (無ければ git describe) の版でビルドする。
-        /// </summary>
         public static void Build()
         {
             if (!ClientBuildOptions.TryParse(
@@ -49,10 +37,7 @@ namespace Shooter.Editor
             BuildVersionStamper.BuildWithResolvedVersion(() => BuildFor(new ClientBuildOptions(ClientPlatform.MacOS)));
         }
 
-        /// <summary>
-        /// listed のうち exists が true のものを、この順に返す。無かったものは skipped に足す (null なら足さない)。
-        /// Build Settings にはテンプレートの残りのシーンも入っているので、そちらではなく一覧から決める。
-        /// </summary>
+        // Build Settings にはテンプレートの残りのシーンも入っているので、そちらではなく一覧から決める。
         public static string[] ClientScenePaths(IReadOnlyList<string> listed, Func<string, bool> exists, ICollection<string> skipped)
         {
             if (listed == null)
@@ -86,7 +71,6 @@ namespace Shooter.Editor
             return paths.ToArray();
         }
 
-        /// <summary>BuildPlayerOptions に渡すターゲット。</summary>
         public static BuildTarget ToBuildTarget(ClientPlatform platform)
         {
             switch (platform)
@@ -100,10 +84,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// options の OS 向けにクライアントをビルドする。出力先のディレクトリは前のビルドの残り (消えたプラグインなど) を
-        /// 配る zip に混ぜないよう、空にしてから書き出す。
-        /// </summary>
+        // 前のビルドの残り (消えたプラグインなど) を配る zip に混ぜないよう、出力先のディレクトリを空にしてから書き出す。
         public static BuildReport BuildFor(ClientBuildOptions options)
         {
             if (options == null)
@@ -161,10 +142,7 @@ namespace Shooter.Editor
             return report;
         }
 
-        /// <summary>
-        /// ビルドに入れるシーン。起動時のシーンが無ければ、起動しても何も出ないビルドになるので例外を投げる。
-        /// 他に無いシーンは警告を出して飛ばす (<see cref="BuildSceneList.RegisterAll"/> と同じ扱い)。
-        /// </summary>
+        // 起動時のシーンが無いと起動しても何も出ないビルドになるので例外を投げるが、他に無いシーンは BuildSceneList.RegisterAll と同じく警告を出して飛ばす。
         private static string[] RequireScenes()
         {
             var skipped = new List<string>();

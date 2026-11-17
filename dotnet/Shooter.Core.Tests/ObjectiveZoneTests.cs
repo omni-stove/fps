@@ -126,6 +126,28 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void IsActiveOnlyWhileTheObjectiveCanProgress()
+        {
+            var mission = TwoStep();
+            var first = new ObjectiveZone(mission, "a", ObjectiveZoneMode.Interact);
+            using var second = new ObjectiveZone(mission, "b", ObjectiveZoneMode.Interact);
+
+            Assert.That(first.IsActive, Is.True);
+            Assert.That(second.IsActive, Is.False, "b is locked until a completes");
+
+            mission.Progress("a");
+            Assert.That(first.IsActive, Is.False, "a is completed");
+            Assert.That(second.IsActive, Is.True);
+
+            first.Dispose();
+            Assert.That(first.IsActive, Is.False);
+
+            mission.Progress("b");
+            Assert.That(mission.IsFinished, Is.True);
+            Assert.That(second.IsActive, Is.False);
+        }
+
+        [Test]
         public void HasObjective()
         {
             var mission = TwoStep();

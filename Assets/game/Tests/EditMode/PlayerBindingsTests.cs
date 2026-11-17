@@ -80,10 +80,28 @@ namespace Shooter.Tests.EditMode
         [TestCase("SwitchGrenade")]
         [TestCase("Inventory")]
         [TestCase("Previous")]
+        [TestCase("LeanLeft")]
+        [TestCase("LeanRight")]
+        [TestCase("Chat")]
+        [TestCase("TeamChat")]
+        [TestCase("PushToTalk")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
             Assert.That(PlayerBindings.Slots, Has.No.Member(new RebindSlot(actionName, InputDeviceKind.Gamepad)));
+        }
+
+        [TestCase("LeanLeft", "<Mouse>/backButton")]
+        [TestCase("LeanRight", "<Mouse>/forwardButton")]
+        [TestCase("Chat", "<Keyboard>/enter")]
+        [TestCase("TeamChat", "<Keyboard>/u")]
+        [TestCase("PushToTalk", "<Keyboard>/capsLock")]
+        public void LeanChatAndVoiceStartOnTheirKeys(string actionName, string path)
+        {
+            var slot = new RebindSlot(actionName, InputDeviceKind.KeyboardMouse);
+
+            Assert.That(_bindings.PathOf(slot), Is.EqualTo(path));
+            Assert.That(_bindings.FindConflicts(slot), Is.Empty);
         }
 
         [Test]

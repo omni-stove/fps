@@ -5,12 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場に、崩せる柱 (<see cref="PillarName"/>) と、その梁の下に立つ敵 (<see cref="EnemyName"/>) を置く。
-    /// 柱は地面に接する根元の部品 1 つで立ち、根元を壊すと上の部品と梁がすべて崩れ落ちて、梁の破片が敵に当たる。
-    /// 柱は破片の当たり判定 (<see cref="DestructibleStructure.DebrisCrushEnabled"/>) を入れ、壊れるかはルールの <see cref="GameRules.Destruction"/> で決める。
-    /// 射撃場は NavMesh を焼かないので、敵は <see cref="EnemyAgent"/> を付けず、体 (<see cref="Damageable"/>) と胴の <see cref="Hitbox"/> だけのカプセルにする。
-    /// </summary>
+    // 射撃場は NavMesh を焼かないので、敵は EnemyAgent を付けず、体 (Damageable) と胴の Hitbox だけのカプセルにする。
     public sealed class DebrisCrushRangeFixture : ITpsRangeFixture
     {
         public const string RootName = "DebrisCrush";
@@ -18,28 +13,22 @@ namespace Shooter.Editor
         public const string EnemyName = "CrushEnemy";
         public const string EnemyId = "CrushEnemy";
 
-        /// <summary>柱の根元の部品の添字。これを壊すと柱全体が崩れる。</summary>
         public const int BaseIndex = 0;
 
-        /// <summary>柱の高さ (部品の数)。</summary>
         public const int PillarHeight = 6;
 
-        /// <summary>柱の上端から +X へ伸ばす梁の長さ (部品の数)。</summary>
         public const int BeamLength = 3;
 
         public const float PieceSize = 1f;
 
-        /// <summary>梁の何番目 (柱から数えて 1 から) の下に敵を立たせるか。</summary>
         public const int EnemyUnderBeam = 2;
 
         public const float EnemyHeight = 2f;
         public const float EnemyRadius = 0.5f;
         public const int EnemyMaxHealth = 100;
 
-        /// <summary>柱の根元の床面の中心。開けた場所・小屋・遮蔽物・出現位置・標的の列と重ならない左奥。</summary>
         public static readonly Vector3 PillarBase = new Vector3(-14f, 0f, 14f);
 
-        /// <summary>敵の足元。</summary>
         public static Vector3 EnemyFeet => PillarBase + new Vector3(EnemyUnderBeam * PieceSize, 0f, 0f);
 
         public int Order => 100;
@@ -78,10 +67,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// parent の子に、<see cref="PillarBase"/> から立つ柱と、その上端から伸びる梁を作る。添字は根元から上へ 0..<see cref="PillarHeight"/>-1、
-        /// 続けて梁を柱に近い方から振る。根元だけが地面に接する。
-        /// </summary>
         public static DestructibleStructure CreatePillar(Transform parent, bool destructionEnabled)
         {
             var pillarObject = new GameObject(PillarName);

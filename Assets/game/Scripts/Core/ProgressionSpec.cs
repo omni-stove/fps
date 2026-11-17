@@ -9,18 +9,21 @@ namespace Shooter.Core
     {
         public const int DefaultKillXp = 100;
         public const int DefaultHeadshotXp = 50;
+        public const int DefaultAssistXp = 50;
         public const int DefaultMatchXp = 250;
         public const int DefaultWinXp = 500;
 
         private static readonly int[] _defaultLevels = { 0, 500, 1500, 3000, 5000, 7500, 10500, 14000, 18000, 22500 };
 
         public static readonly ProgressionSpec Default = new ProgressionSpec(
-            DefaultKillXp, DefaultHeadshotXp, DefaultMatchXp, DefaultWinXp, _defaultLevels, Array.Empty<ProgressionUnlock>());
+            DefaultKillXp, DefaultHeadshotXp, DefaultAssistXp, DefaultMatchXp, DefaultWinXp, _defaultLevels, Array.Empty<ProgressionUnlock>());
 
-        public ProgressionSpec(int killXp, int headshotXp, int matchXp, int winXp, IEnumerable<int> levels, IEnumerable<ProgressionUnlock> unlocks)
+        public ProgressionSpec(
+            int killXp, int headshotXp, int assistXp, int matchXp, int winXp, IEnumerable<int> levels, IEnumerable<ProgressionUnlock> unlocks)
         {
             RequireNonNegative(killXp, nameof(killXp));
             RequireNonNegative(headshotXp, nameof(headshotXp));
+            RequireNonNegative(assistXp, nameof(assistXp));
             RequireNonNegative(matchXp, nameof(matchXp));
             RequireNonNegative(winXp, nameof(winXp));
             if (levels == null)
@@ -83,6 +86,7 @@ namespace Shooter.Core
 
             KillXp = killXp;
             HeadshotXp = headshotXp;
+            AssistXp = assistXp;
             MatchXp = matchXp;
             WinXp = winXp;
             Levels = new ReadOnlyCollection<int>(levelList);
@@ -92,6 +96,8 @@ namespace Shooter.Core
         public int KillXp { get; }
 
         public int HeadshotXp { get; }
+
+        public int AssistXp { get; }
 
         public int MatchXp { get; }
 
@@ -107,8 +113,8 @@ namespace Shooter.Core
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "kill={0} headshot={1} match={2} win={3} levels={4} maxXp={5} unlocks={6}",
-                KillXp, HeadshotXp, MatchXp, WinXp, Levels.Count, Levels[Levels.Count - 1], Unlocks.Count);
+                "kill={0} headshot={1} assist={2} match={3} win={4} levels={5} maxXp={6} unlocks={7}",
+                KillXp, HeadshotXp, AssistXp, MatchXp, WinXp, Levels.Count, Levels[Levels.Count - 1], Unlocks.Count);
         }
 
         private static void RequireNonNegative(int value, string name)

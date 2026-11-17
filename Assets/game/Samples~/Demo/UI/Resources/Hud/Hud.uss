@@ -170,6 +170,23 @@
     -unity-font-style: bold;
 }
 
+/* この画面のプレイヤーがアシストした行。倒した・倒された行 (--local) より控えめに縁だけを付ける。 */
+.kill-feed__row--assist {
+    border-width: 1px;
+    border-color: rgba(255, 210, 80, 0.6);
+}
+
+.kill-feed__assist {
+    margin: 0 0 0 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 16px;
+    color: rgb(30, 30, 30);
+    background-color: rgb(255, 210, 80);
+    -unity-font-style: bold;
+    white-space: nowrap;
+}
+
 /* 画面下中央の音の合図の字幕。下端のチュートリアルの案内と重ならない高さに、行を最初に出た順で上から積む。 */
 .subtitles {
     position: absolute;
@@ -987,6 +1004,60 @@
     bottom: 0;
     width: 0;
     background-color: rgb(220, 40, 40);
+}
+
+/* 観戦の欄。下中央に、見ている味方の行を先頭にして積む。SpectateView が行を入れる。 */
+.spectate {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 160px;
+    flex-direction: column;
+    align-items: center;
+}
+
+.spectate__row {
+    margin: 4px 0 0 0;
+    padding: 4px 16px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.spectate__row--target {
+    font-size: 30px;
+    -unity-font-style: bold;
+}
+
+/* ボイスチャットの欄。左の中ほどに、自分の印を先頭にして話している人を積む。VoiceIndicatorView が行を入れる。 */
+.voice {
+    position: absolute;
+    left: 24px;
+    top: 40%;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.voice__row {
+    margin: 4px 0 0 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border-left-width: 4px;
+    border-left-color: rgb(120, 220, 120);
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 18px;
+    color: rgb(255, 255, 255);
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.voice__row--local {
+    border-left-color: rgb(240, 200, 60);
+    -unity-font-style: bold;
 }
 
 /* フラッシュの目くらまし。FlashOverlay が色 (画像があれば画像) と不透明度を入れる。 */

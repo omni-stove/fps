@@ -22,6 +22,8 @@ namespace Shooter.Core
 
         public bool IsOccupied => Occupants > 0;
 
+        public bool IsActive => !_disposed && !_mission.IsFinished && _mission.GetState(ObjectiveId) == ObjectiveState.Active;
+
         public ObjectiveZone(Mission mission, string objectiveId, ObjectiveZoneMode mode)
         {
             _mission = mission ?? throw new ArgumentNullException(nameof(mission));

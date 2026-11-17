@@ -5,29 +5,16 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> して、
-    /// 種類の <see cref="ImpactSpec"/> の爆発と範囲効果 (<see cref="AreaEffectZone"/>)、目くらまし (<see cref="Flash"/>) を起こす。くっつき方は <c>ThrownGrenade.Sticky.cs</c> が受け持つ。
-    /// 爆発は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点・頭の高さ・足元までのどれかの線が
-    /// <see cref="Damageable"/> を持たない物に遮られていなければ)、<see cref="StructureDamage.ApplyAround"/> で建造物にも範囲で当てる。
-    /// 演出は <see cref="PresentationCatalog"/> の爆発 (エフェクトと音) を出し、カタログか素材が無ければ出さない。
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
     public sealed partial class ThrownGrenade : MonoBehaviour
     {
         public const string ObjectName = "Grenade";
 
-        /// <summary>差し替えた見た目のプレハブを置く子の名前。</summary>
         public const string VisualName = "Visual";
 
-        /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
         public const float EffectLifetimeSeconds = Shooter.Runtime.Explosion.EffectLifetimeSeconds;
 
-        /// <summary>
-        /// 爆発の音が聞こえなくなる距離 (m)。<see cref="AudioSource.PlayClipAtPoint(AudioClip, Vector3)"/> が作る音源の既定の maxDistance に合わせ、
-        /// 字幕 (<see cref="SubtitleFeed"/>) をこれより遠い人には出さない。
-        /// </summary>
         public const float ExplosionAudibleDistance = Shooter.Runtime.Explosion.AudibleDistance;
 
         // 上を向いた面とみなす接触の法線の y。これより急な壁に触れても転がりは減らさない。
@@ -51,53 +38,30 @@ namespace Shooter.Runtime
         private bool _armed;
         private bool _exploded;
 
-        /// <summary>投げた者の本体。倒した記録 (キルログ) とヒットの確認に使う。投げた者が消えていれば null。</summary>
         public GameObject Thrower => _thrower;
 
-        /// <summary>爆発までの残り秒数。爆発した後は 0。</summary>
         public float RemainingSeconds => _exploded ? 0f : Mathf.Max(0f, _remaining);
 
-        /// <summary>爆発したか。</summary>
         public bool HasExploded => _exploded;
 
-        /// <summary>この爆発が与えるダメージ。<see cref="Arm"/> の前と、爆発しない種類では null。</summary>
         public ExplosionDamage Explosion => _impact?.Explosion?.Damage;
 
-        /// <summary>信管が切れたときの効果。<see cref="Arm"/> の前は null。</summary>
         public ImpactSpec Impact => _impact;
 
         public GrenadeStickiness Stickiness => _stickiness;
 
-        /// <summary>投げた種類の Id (<see cref="GrenadeSpec.Id"/>)。種類を渡さずに作ったときは空文字。</summary>
         public string TypeId => _typeId;
 
-        /// <summary>地面に触れている間の転がりの減り方 (1/s、<see cref="GrenadeSpec.RollDamping"/>)。</summary>
         public float RollDamping => _rollDamping;
 
-        /// <summary>当たり判定の球の半径 (m、<see cref="GrenadeSpec.BodyRadius"/>)。</summary>
         public float BodyRadius => _bodyRadius;
 
-        /// <summary>
-        /// 種類を渡さずに投げるグレネード (<see cref="Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int)"/>) が球・跳ね方・転がりの値を借りる種類。
-        /// 調整値の JSON (<see cref="KitTuning.Grenades"/>) の最初の種類。
-        /// </summary>
         public static GrenadeSpec UntypedSpec => KitTuning.Grenades.Types[0];
 
-        /// <summary>今シーンにある、まだ爆発していないグレネード。警告や範囲の表示が毎フレーム読む。</summary>
         public static IReadOnlyList<ThrownGrenade> Live => _live;
 
-        /// <summary>爆発したときに、このグレネードと結果を渡して 1 度だけ呼ばれる。</summary>
         public event Action<ThrownGrenade, GrenadeExplosion> Exploded;
 
-        /// <summary>
-        /// position に球のグレネードを作り、velocity で飛ばして <see cref="Arm"/> する。thrower の体のコライダーとはぶつからない。
-        /// </summary>
-        /// <param name="thrower">投げた者の本体。null 可 (帰属の無い爆発になる)。</param>
-        /// <param name="position">出す位置。</param>
-        /// <param name="velocity">初速 (m/s)。</param>
-        /// <param name="fuseSeconds">爆発までの秒数。0 以上の有限値。</param>
-        /// <param name="explosion">爆発のダメージ。</param>
-        /// <param name="structureDamage">中心で建造物に与える被害。0 以上。</param>
         public static ThrownGrenade Spawn(
             GameObject thrower,
             Vector3 position,
@@ -109,11 +73,6 @@ namespace Shooter.Runtime
             return Spawn(thrower, position, velocity, fuseSeconds, explosion, structureDamage, null);
         }
 
-        /// <summary>
-        /// <see cref="Spawn(GameObject, Vector3, Vector3, float, ExplosionDamage, int)"/> と同じく投げ、見た目を visualPrefab にする。
-        /// 跳ね方と当たり判定は仮の球と同じ半径 (<see cref="UntypedSpec"/> の <see cref="GrenadeSpec.BodyRadius"/>) の球のままにし、プレハブは当たり判定を外して子に置く。
-        /// </summary>
-        /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
         public static ThrownGrenade Spawn(
             GameObject thrower,
             Vector3 position,
@@ -126,8 +85,6 @@ namespace Shooter.Runtime
             return Create(thrower, position, velocity, UntypedSpec, visualPrefab, grenade => grenade.Arm(thrower, fuseSeconds, explosion, structureDamage));
         }
 
-        /// <summary>spec の種類のグレネードを投げる。信管・効果・くっつき方・球の大きさと跳ね方は spec に従う。</summary>
-        /// <param name="visualPrefab">グレネードの見た目。中心が原点。null なら仮の球を作る。</param>
         public static ThrownGrenade Spawn(GameObject thrower, Vector3 position, Vector3 velocity, GrenadeSpec spec, GameObject visualPrefab)
         {
             if (spec == null)
@@ -189,7 +146,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>信管と爆発の値を決める。<see cref="Spawn"/> が呼ぶ。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
         public void Arm(GameObject thrower, float fuseSeconds, ExplosionDamage explosion, int structureDamage)
         {
             if (explosion == null)
@@ -206,7 +162,6 @@ namespace Shooter.Runtime
             Arm(thrower, fuseSeconds, impact, GrenadeStickiness.None, string.Empty, UntypedSpec.RollDamping);
         }
 
-        /// <summary>spec の信管・効果・くっつき方にする。2 回目以降は値を差し替える (爆発した後は何もしない)。</summary>
         public void Arm(GameObject thrower, GrenadeSpec spec)
         {
             if (spec == null)
@@ -293,7 +248,6 @@ namespace Shooter.Runtime
             DampRoll(_body, _rollDamping, Time.fixedDeltaTime);
         }
 
-        /// <summary>body の水平の速さと回転を e^(-rollDamping * deltaSeconds) 倍にする。縦の速さ (跳ねと落下) は変えない。</summary>
         public static void DampRoll(Rigidbody body, float rollDamping, float deltaSeconds)
         {
             if (body == null)
@@ -312,7 +266,6 @@ namespace Shooter.Runtime
             Tick(Time.deltaTime);
         }
 
-        /// <summary>信管を deltaSeconds 進め、残りが 0 になったら <see cref="Explode"/> する。爆発したら true。</summary>
         public bool Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -335,11 +288,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 今の位置で効果を起こし、グレネードを消す。爆発する種類なら半径内の生きている <see cref="Damageable"/> に遮られていなければダメージを与え
-        /// (投げた者の帰属で、投げた本人も巻き込む)、建造物に範囲で被害を与え、演出を出す。範囲効果を持つ種類なら <see cref="AreaEffectZone"/> を置く。
-        /// 2 回目以降と <see cref="Arm"/> の前は何もせず default を返す。
-        /// </summary>
         public GrenadeExplosion Explode()
         {
             if (!_armed || _exploded)
@@ -382,45 +330,31 @@ namespace Shooter.Runtime
             return result;
         }
 
-        /// <summary>爆発のログ。例: <c>[Grenade] exploded at=(1.0, 0.1, 9.5) damaged=2 killed=1 structures=0</c>。</summary>
         public static string FormatLog(GrenadeExplosion explosion)
         {
             return Shooter.Runtime.Explosion.FormatLog(explosion);
         }
 
-        /// <summary>
-        /// center から target までの線が遮られているか。target 自身と、<see cref="Damageable"/> を持つ物 (人や標的) とトリガーは遮らない。
-        /// 置いた物 (盾など <see cref="Deployable"/>) は <see cref="Damageable"/> を持っていても遮る。
-        /// target の狙う点と、体の上端の少し下と、足元の少し上の 3 本を引き、すべて遮られていれば true。
-        /// </summary>
         public static bool IsObstructed(Vector3 center, Damageable target)
         {
             return Shooter.Runtime.Explosion.IsObstructed(center, target);
         }
 
-        /// <summary>center から target の体 (コライダーを合わせた範囲) のいちばん近い点までの距離。コライダーが無ければ Transform の位置まで。</summary>
         public static float DistanceTo(Vector3 center, Damageable target)
         {
             return Shooter.Runtime.Explosion.DistanceTo(center, target);
         }
 
-        /// <summary>
-        /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
-        /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
-        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Shooter.Net.NetCombatFeed</c>) も呼ぶ。
-        /// </summary>
         public static void PlayExplosionEffects(Vector3 center)
         {
             Shooter.Runtime.Explosion.PlayEffects(center);
         }
 
-        /// <summary>種類を渡さずに投げる物の跳ね方 (<see cref="UntypedSpec"/> の跳ね返りと摩擦)。注意をそらす物 (<see cref="ThrownDistraction"/>) も使う。</summary>
         public static PhysicsMaterial SharedPhysicsMaterial()
         {
             return PhysicsMaterialFor(UntypedSpec);
         }
 
-        /// <summary>spec の跳ね返り (<see cref="GrenadeSpec.Bounciness"/>) と摩擦 (<see cref="GrenadeSpec.Friction"/>) の物理マテリアル。同じ組には同じものを返す。</summary>
         public static PhysicsMaterial PhysicsMaterialFor(GrenadeSpec spec)
         {
             if (spec == null)
@@ -463,19 +397,14 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="ThrownGrenade.Explode"/> の結果。</summary>
     public readonly struct GrenadeExplosion
     {
-        /// <summary>爆発の中心。</summary>
         public Vector3 Center { get; }
 
-        /// <summary>ダメージを与えた <see cref="Damageable"/> の数。</summary>
         public int Damaged { get; }
 
-        /// <summary>この爆発で倒した <see cref="Damageable"/> の数。</summary>
         public int Killed { get; }
 
-        /// <summary>被害を与えた建造物の部品の数 (<see cref="StructureDamage.ApplyAround"/> の戻り値)。</summary>
         public int StructureHits { get; }
 
         public GrenadeExplosion(Vector3 center, int damaged, int killed, int structureHits)

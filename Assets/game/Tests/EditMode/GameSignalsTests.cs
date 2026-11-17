@@ -47,6 +47,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);
             Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
             Assert.That(GameSignals.Streak.Value, Is.Null);
+            Assert.That(GameSignals.Minimap.Value, Is.Null);
+            Assert.That(GameSignals.Chat.Value, Is.Null);
+            Assert.That(GameSignals.Voice.Value, Is.Null);
+            Assert.That(GameSignals.MapVote.Value, Is.Null);
+            Assert.That(GameSignals.Spectate.Value, Is.Null);
         }
 
         [Test]
@@ -151,6 +156,11 @@ namespace Shooter.Tests.EditMode
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.Freeze);
             GameSignals.PaletteViewer.Publish(Team.Bravo);
             GameSignals.Streak.Publish(new StreakStatus(3, new[] { new StreakSlot("uav", "streak.uav", 3, true) }));
+            GameSignals.Minimap.Publish(new MinimapStatus(System.Numerics.Vector3.Zero, 0f, null));
+            GameSignals.Chat.Publish(new[] { new ChatLine(1, ChatChannel.All, "gg", 1d) });
+            GameSignals.Voice.Publish(new VoiceStatus(false, null, true));
+            GameSignals.MapVote.Publish(new MapVoteStatus(new[] { new MapVoteCandidate("dust", 0) }, null, 10f, null));
+            GameSignals.Spectate.Publish(new SpectateStatus(2, 1, SpectateReason.Dead));
             heard = 0;
 
             GameSignals.ResetAll();
@@ -158,6 +168,27 @@ namespace Shooter.Tests.EditMode
             EverySignalStartsEmpty();
             GameSignals.ModeStatus.Publish(Status());
             Assert.That(heard, Is.Zero, "subscribers from before the reset are gone");
+        }
+
+        [Test]
+        public void TheMinimapChatVoiceVoteAndSpectateSignalsHoldWhatWasPublished()
+        {
+            var minimap = new MinimapStatus(new System.Numerics.Vector3(1f, 0f, 2f), 90f, null);
+            var chat = new[] { new ChatLine(4, ChatChannel.Team, "push B", 12.5d) };
+            var heardSpectate = new List<SpectateStatus?>();
+            GameSignals.Spectate.Changed += heardSpectate.Add;
+
+            GameSignals.Minimap.Publish(minimap);
+            GameSignals.Chat.Publish(chat);
+            GameSignals.Voice.Publish(new VoiceStatus(false, Array.Empty<int>(), false));
+            GameSignals.MapVote.Publish(new MapVoteStatus(Array.Empty<MapVoteCandidate>(), null, 0f, null));
+            GameSignals.Spectate.Publish(new SpectateStatus(null, 0, SpectateReason.BetweenRounds));
+
+            Assert.That(GameSignals.Minimap.Value, Is.EqualTo((MinimapStatus?)minimap));
+            Assert.That(GameSignals.Chat.Value, Is.SameAs(chat));
+            Assert.That(GameSignals.Voice.HasValue, Is.True, "no microphone and nobody speaking is still something to show");
+            Assert.That(GameSignals.MapVote.HasValue, Is.True, "an empty vote is still a vote in progress");
+            Assert.That(heardSpectate, Is.EqualTo(new SpectateStatus?[] { new SpectateStatus(null, 0, SpectateReason.BetweenRounds) }));
         }
 
         [Test]

@@ -133,6 +133,8 @@ namespace Shooter.Server
                 SpawnPosition = spawn,
                 Ladders = _context.Map.Ladders.Ladders,
                 Knockback = _knockback,
+                Swim = _settings.Swim,
+                WallRun = _settings.WallRun,
             };
             var mover = new Mover(player, simulation)
             {
@@ -333,6 +335,7 @@ namespace Shooter.Server
                     : VaultSync.None;
                 row.Prone = state.Prone;
                 row.Ladder = state.Ladder;
+                row.AirJumpsUsed = (byte)state.AirJumpsUsed;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
@@ -425,7 +428,8 @@ namespace Shooter.Server
             if (_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
             {
                 var state = mover.State;
-                body.SetPose(state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder);
+                body.SetPose(
+                    state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder, state.Lean.Amount);
             }
         }
 

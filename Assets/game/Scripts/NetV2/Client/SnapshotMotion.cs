@@ -33,7 +33,11 @@ namespace Shooter.NetV2
                     : CharacterVaultState.None,
                 row.Prone,
                 row.Ladder,
-                knockback);
+                knockback,
+                CharacterLeanState.None,
+                CharacterSwimState.None,
+                CharacterWallRunState.None,
+                row.AirJumpsUsed);
         }
 
         /// <summary>

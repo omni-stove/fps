@@ -56,6 +56,15 @@ namespace Shooter.Core
 
         public const float DefaultLadderMinApproachSpeed = 0.5f;
 
+        public const float DefaultLeanSideOffset = 0.4f;
+        public const float DefaultLeanAngleDegrees = 15f;
+        public const float DefaultLeanSpeed = 6f;
+
+        /// <summary>0 なのは、空中でもう一度跳べるかはゲームが決めることで、キットの既定では跳べないままにするため。</summary>
+        public const int DefaultAirJumps = 0;
+
+        public const float DefaultAirJumpSpeed = 6.5f;
+
         public const float DefaultWalkSpeed = 5f;
         public const float DefaultSprintSpeed = 8f;
         public const float DefaultCrouchSpeed = 2.5f;
@@ -131,6 +140,16 @@ namespace Shooter.Core
 
         public CarryLoadSpec CarryLoad { get; }
 
+        public float LeanSideOffset { get; }
+
+        public float LeanAngleDegrees { get; }
+
+        public float LeanSpeed { get; }
+
+        public int AirJumps { get; }
+
+        public float AirJumpSpeed { get; }
+
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -163,7 +182,12 @@ namespace Shooter.Core
             float coverPeekSlideSeconds = DefaultCoverPeekSlideSeconds,
             float ladderTopEntryDepth = DefaultLadderTopEntryDepth,
             float ladderMinApproachDot = DefaultLadderMinApproachDot,
-            float ladderMinApproachSpeed = DefaultLadderMinApproachSpeed)
+            float ladderMinApproachSpeed = DefaultLadderMinApproachSpeed,
+            float leanSideOffset = DefaultLeanSideOffset,
+            float leanAngleDegrees = DefaultLeanAngleDegrees,
+            float leanSpeed = DefaultLeanSpeed,
+            int airJumps = DefaultAirJumps,
+            float airJumpSpeed = DefaultAirJumpSpeed)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -281,6 +305,19 @@ namespace Shooter.Core
             }
 
             RequireNotNegative(ladderMinApproachSpeed, nameof(ladderMinApproachSpeed));
+            RequireNotNegative(leanSideOffset, nameof(leanSideOffset));
+            if (!(leanAngleDegrees >= 0f && leanAngleDegrees <= 90f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(leanAngleDegrees), leanAngleDegrees, "leanAngleDegrees must be between 0 and 90");
+            }
+
+            RequirePositive(leanSpeed, nameof(leanSpeed));
+            if (airJumps < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(airJumps), airJumps, "airJumps must not be negative");
+            }
+
+            RequireNotNegative(airJumpSpeed, nameof(airJumpSpeed));
 
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
@@ -314,6 +351,11 @@ namespace Shooter.Core
             LadderTopEntryDepth = ladderTopEntryDepth;
             LadderMinApproachDot = ladderMinApproachDot;
             LadderMinApproachSpeed = ladderMinApproachSpeed;
+            LeanSideOffset = leanSideOffset;
+            LeanAngleDegrees = leanAngleDegrees;
+            LeanSpeed = leanSpeed;
+            AirJumps = airJumps;
+            AirJumpSpeed = airJumpSpeed;
         }
 
         private static void RequireNotNegative(float value, string name)

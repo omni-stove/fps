@@ -6,11 +6,14 @@ namespace Shooter.Core
     {
         public static readonly TraversalSpec Default = new TraversalSpec();
 
-        public TraversalSpec(SlideTuning slide = null, ParachuteTuning parachute = null, ZiplineTuning zipline = null)
+        public TraversalSpec(
+            SlideTuning slide = null, ParachuteTuning parachute = null, ZiplineTuning zipline = null, SwimTuning swim = null, WallRunTuning wallRun = null)
         {
             Slide = slide ?? SlideTuning.Default;
             Parachute = parachute ?? ParachuteTuning.Default;
             Zipline = zipline ?? ZiplineTuning.Default;
+            Swim = swim ?? SwimTuning.Default;
+            WallRun = wallRun ?? WallRunTuning.Default;
         }
 
         public SlideTuning Slide { get; }
@@ -18,6 +21,114 @@ namespace Shooter.Core
         public ParachuteTuning Parachute { get; }
 
         public ZiplineTuning Zipline { get; }
+
+        public SwimTuning Swim { get; }
+
+        public WallRunTuning WallRun { get; }
+    }
+
+    public sealed class SwimTuning
+    {
+        public const float DefaultSpeed = 3f;
+        public const float DefaultBuoyancy = 12f;
+        public const float DefaultBreathSeconds = 15f;
+        public const int DefaultDrownDamage = 10;
+        public const float DefaultDrownIntervalSeconds = 1f;
+
+        public static readonly SwimTuning Default = new SwimTuning();
+
+        public SwimTuning(
+            float speed = DefaultSpeed,
+            float buoyancy = DefaultBuoyancy,
+            float breathSeconds = DefaultBreathSeconds,
+            int drownDamage = DefaultDrownDamage,
+            float drownIntervalSeconds = DefaultDrownIntervalSeconds)
+        {
+            TuningChecks.RequireNonNegativeFinite(speed, nameof(speed));
+            TuningChecks.RequireNonNegativeFinite(buoyancy, nameof(buoyancy));
+            TuningChecks.RequirePositiveFinite(breathSeconds, nameof(breathSeconds));
+            if (drownDamage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(drownDamage), drownDamage, "drownDamage must not be negative");
+            }
+
+            TuningChecks.RequirePositiveFinite(drownIntervalSeconds, nameof(drownIntervalSeconds));
+            Speed = speed;
+            Buoyancy = buoyancy;
+            BreathSeconds = breathSeconds;
+            DrownDamage = drownDamage;
+            DrownIntervalSeconds = drownIntervalSeconds;
+        }
+
+        public float Speed { get; }
+
+        public float Buoyancy { get; }
+
+        public float BreathSeconds { get; }
+
+        public int DrownDamage { get; }
+
+        public float DrownIntervalSeconds { get; }
+    }
+
+    public sealed class WallRunTuning
+    {
+        /// <summary>切なのは、壁走りが合わないゲームでも壁際で跳んだだけで走り出さないよう、使うゲームが入れるものにするため。</summary>
+        public const bool DefaultEnabled = false;
+
+        public const float DefaultMaxSeconds = 1.5f;
+        public const float DefaultMinSpeed = 5f;
+        public const float DefaultGravityScale = 0.25f;
+        public const float DefaultJumpOffSpeed = 7f;
+
+        public static readonly WallRunTuning Default = new WallRunTuning();
+
+        public WallRunTuning(
+            bool enabled = DefaultEnabled,
+            float maxSeconds = DefaultMaxSeconds,
+            float minSpeed = DefaultMinSpeed,
+            float gravityScale = DefaultGravityScale,
+            float jumpOffSpeed = DefaultJumpOffSpeed)
+        {
+            TuningChecks.RequirePositiveFinite(maxSeconds, nameof(maxSeconds));
+            TuningChecks.RequireNonNegativeFinite(minSpeed, nameof(minSpeed));
+            TuningChecks.RequireNonNegativeFinite(gravityScale, nameof(gravityScale));
+            TuningChecks.RequireNonNegativeFinite(jumpOffSpeed, nameof(jumpOffSpeed));
+            Enabled = enabled;
+            MaxSeconds = maxSeconds;
+            MinSpeed = minSpeed;
+            GravityScale = gravityScale;
+            JumpOffSpeed = jumpOffSpeed;
+        }
+
+        public bool Enabled { get; }
+
+        public float MaxSeconds { get; }
+
+        public float MinSpeed { get; }
+
+        public float GravityScale { get; }
+
+        public float JumpOffSpeed { get; }
+    }
+
+    internal static class TuningChecks
+    {
+        public static void RequireNonNegativeFinite(float value, string name)
+        {
+            if (!(value >= 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, $"{name} must be finite and not negative");
+            }
+        }
+
+        public static void RequirePositiveFinite(float value, string name)
+        {
+            if (!(value > 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, $"{name} must be finite and positive");
+            }
+        }
     }
 
     public sealed class SlideTuning

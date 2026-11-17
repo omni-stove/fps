@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
@@ -51,6 +52,41 @@ namespace Shooter.Core
         public static string Kill(int killerId, int victimId)
         {
             return Tag + " kill killer=" + Number(killerId) + " victim=" + Number(victimId);
+        }
+
+        public static string Kill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
+            var text = Kill(killerId, victimId);
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text).Append(" assists=");
+            for (var i = 0; i < assisterIds.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(Number(assisterIds[i]));
+            }
+
+            return builder.ToString();
+        }
+
+        public static string Stats(ModeSession session, int playerId)
+        {
+            if (session == null)
+            {
+                throw new ArgumentNullException(nameof(session));
+            }
+
+            return Tag + " stats player=" + Number(playerId)
+                + " kills=" + Number(session.GetKills(playerId))
+                + " deaths=" + Number(session.GetDeaths(playerId))
+                + " assists=" + Number(session.GetAssists(playerId));
         }
 
         // 点の入る Kill と区別できるよう、同じ陣営に倒されたことは別の語で書く。

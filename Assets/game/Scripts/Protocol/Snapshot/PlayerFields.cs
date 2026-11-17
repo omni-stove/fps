@@ -27,6 +27,11 @@ namespace Shooter.Protocol
         /// <summary>はしごの上り下りと、次につかまれるまでの待ち。</summary>
         Ladder = 1 << 11,
         Vehicle = 1 << 12,
-        All = (1 << 13) - 1,
+        /// <summary>体を傾ける量・泳ぎ・壁走り・空中ジャンプ。</summary>
+        Traversal = 1 << 13,
+        Assists = 1 << 14,
+        All = (1 << 15) - 1,
+        /// <summary>全部を送るときも既定の値なら載せない部分 (<see cref="ISnapshotEntity{T}.OptionalBits"/>)。</summary>
+        Optional = Traversal | Assists,
     }
 }

@@ -11,6 +11,8 @@ namespace Shooter.Core
         // 許すかを持つと、default のままの入力と古い呼び出しが跳べなくなるため、禁じるかで持つ。
         private readonly bool _jumpForbidden;
 
+        private readonly sbyte _lean;
+
         public CharacterMotorInput(
             Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed, bool cover, bool aim, bool dodge, bool vaultAllowed)
             : this(move, yaw, sprint, jump, crouch, downed, cover, aim, dodge, vaultAllowed, false, false, false)
@@ -38,12 +40,18 @@ namespace Shooter.Core
             bool proneAllowed,
             bool ladderAllowed,
             float carrySpeedMultiplier = 1f,
-            bool jumpAllowed = true)
+            bool jumpAllowed = true,
+            int lean = 0)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(carrySpeedMultiplier), carrySpeedMultiplier, "carrySpeedMultiplier must be finite and not negative");
+            }
+
+            if (lean < -1 || lean > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be -1, 0 or 1");
             }
 
             Move = ClampLength(move);
@@ -61,6 +69,7 @@ namespace Shooter.Core
             LadderAllowed = ladderAllowed;
             _carrySpeedOffset = carrySpeedMultiplier - 1f;
             _jumpForbidden = !jumpAllowed;
+            _lean = (sbyte)lean;
         }
 
         public Vector2 Move { get; }
@@ -93,11 +102,18 @@ namespace Shooter.Core
 
         public bool JumpAllowed => !_jumpForbidden;
 
+        public int Lean => _lean;
+
         public CharacterMotorInput Restrained()
         {
             return Downed
                 ? new CharacterMotorInput(Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier, JumpAllowed)
                 : this;
+        }
+
+        public CharacterMotorInput WithLean(int lean)
+        {
+            return Lean == lean ? this : With(lean: lean);
         }
 
         public CharacterMotorInput WithoutCover()
@@ -138,7 +154,7 @@ namespace Shooter.Core
 
         public CharacterMotorInput With(
             bool? cover = null, bool? dodge = null, bool? vaultAllowed = null, bool? prone = null, bool? proneAllowed = null, bool? ladderAllowed = null,
-            float? carrySpeedMultiplier = null, bool? jumpAllowed = null)
+            float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null)
         {
             return new CharacterMotorInput(
                 Move,
@@ -155,7 +171,8 @@ namespace Shooter.Core
                 proneAllowed ?? ProneAllowed,
                 ladderAllowed ?? LadderAllowed,
                 carrySpeedMultiplier ?? CarrySpeedMultiplier,
-                jumpAllowed ?? JumpAllowed);
+                jumpAllowed ?? JumpAllowed,
+                lean ?? Lean);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

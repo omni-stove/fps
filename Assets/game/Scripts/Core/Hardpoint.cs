@@ -152,6 +152,8 @@ namespace Shooter.Core
 
             public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
 
+            public double PointsForAssist(ModeSession session, int assisterId, int victimId) => 0d;
+
             public double PointsPerSecond(ModeSession session, Side side)
             {
                 return _owner.Holder == side ? _owner.Spec.PointsPerSecond : 0d;

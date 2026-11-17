@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// エクスキューション (<see cref="ExecutionSession"/>) の勝つラウンド数・準備の秒数・ラウンドの時間・とどめの秒数と距離をアセットとして持つ。
-    /// 新しく作ったときの値は <see cref="ExecutionRunner"/> の既定値と同じ。味方を起こせる距離と秒数はルール (<see cref="ActionRules"/>) にあるので持たない。
-    /// <see cref="ExecutionRunner.Definition"/> に配線するか入口 (<see cref="GameContent.Execution"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
+    // 味方を起こせる距離と秒数はルール (ActionRules) にあるので持たない。
     [CreateAssetMenu(fileName = "Execution", menuName = "Shooter/Modes/Execution")]
     public sealed class ExecutionDefinition : ScriptableObject
     {
@@ -57,9 +53,6 @@ namespace Shooter.Runtime
             set => _executeRange = value;
         }
 
-        /// <summary>この定義の値と actions でエクスキューション (<see cref="ExecutionRunner.CreateExecution"/>) を組む。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="ArgumentNullException">actions が null。</exception>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public ExecutionSession CreateExecution(ActionRules actions)
         {
             if (actions == null)

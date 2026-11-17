@@ -10,13 +10,15 @@ namespace Shooter.Core
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、
     /// 感度・視野角・音量 (<see cref="ControlValue"/>) を整数で持ち、オンラインの回線の表示を出すか (<see cref="ShowNetStats"/>) と
     /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) と
-    /// 血を出すか (<see cref="ShowBlood"/>) とエイムアシストを効かせるか (<see cref="AimAssist"/>) を持つ。不変。画面の言語は持たない (何をどの言語で出すかは game 側の UI が決め、自分で保存する)。
+    /// 血を出すか (<see cref="ShowBlood"/>) とエイムアシストを効かせるか (<see cref="AimAssist"/>) と
+    /// 視点の上下を反転するか (<see cref="InvertLookY"/>) とゲームパッドを振動させるか (<see cref="RumbleEnabled"/>) を持つ。
+    /// 不変。画面の言語は持たない (何をどの言語で出すかは game 側の UI が決め、自分で保存する)。
     /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして保存する。
     /// </summary>
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
         /// <summary>このコードが書き出す形式のバージョン。</summary>
-        public const int CurrentVersion = 9;
+        public const int CurrentVersion = 10;
 
         /// <summary>
         /// 読める最も古い形式のバージョン。1 は Hold/Toggle だけを持ち、数値の設定は初期値で補う。
@@ -27,6 +29,8 @@ namespace Shooter.Core
         /// 血の表示 (<see cref="ShowBlood"/>) を持たず、初期値 (揺れは 100%・血は出す) で補う。
         /// 6・7 は画面の言語 (<c>language</c>) も持つが、言語は game 側が自分で保存するので読み飛ばす。
         /// 8 はエイムアシスト (<see cref="AimAssist"/>) を持たず、初期値 (効かせる) で補う。
+        /// 9 は視点の上下反転 (<see cref="InvertLookY"/>)・スティックのデッドゾーン (<see cref="ControlValue.StickDeadzone"/>)・
+        /// 振動 (<see cref="RumbleEnabled"/>)・振動の強さ (<see cref="ControlValue.RumbleStrength"/>) を持たず、初期値で補う。
         /// </summary>
         public const int OldestReadableVersion = 1;
 
@@ -50,6 +54,10 @@ namespace Shooter.Core
         private const string _viewmodelMotionKey = "viewmodelMotion";
         private const string _showBloodKey = "showBlood";
         private const string _aimAssistKey = "aimAssist";
+        private const string _invertLookYKey = "invertLookY";
+        private const string _stickDeadzoneKey = "stickDeadzone";
+        private const string _rumbleKey = "rumble";
+        private const string _rumbleStrengthKey = "rumbleStrength";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -69,6 +77,8 @@ namespace Shooter.Core
             ControlValue.EffectsVolume,
             ControlValue.CameraShakeIntensity,
             ControlValue.ViewmodelMotionIntensity,
+            ControlValue.StickDeadzone,
+            ControlValue.RumbleStrength,
         };
 
         // 添字は ValueIndex(value)。
@@ -83,10 +93,13 @@ namespace Shooter.Core
             new ControlValueRange(0, 100, 100),
             new ControlValueRange(0, 100, 100),
             new ControlValueRange(0, 100, 100),
+            // 0.125 を整数で持てるよう ‰ にする。0.125 は Input System のスティックの既定のデッドゾーンで、今までの効き方を初期値にする。
+            new ControlValueRange(0, 500, 125),
+            new ControlValueRange(0, 100, 100),
         };
 
         // 添字は ValueIndex(value)。その値を書き始めた形式のバージョン。古い形式に無い値を、欠けた値として警告しないために使う。
-        private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7 };
+        private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7, 10, 10 };
 
         private static readonly string[] _versionOneRootKeys = { _versionKey, _keyboardMouseKey, _gamepadKey };
 
@@ -147,12 +160,22 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey,
         };
 
+        private static readonly string[] _versionNineRootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+        };
+
         private static readonly string[] _rootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
             _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
             _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
             _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
         };
 
@@ -162,6 +185,7 @@ namespace Shooter.Core
         /// 初期値。キーボード／マウスはすべて Hold。
         /// ゲームパッドはスティックを押し込み続けにくいのでダッシュとしゃがみを Toggle にし、ADS はトリガーなので Hold。
         /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。血は出す。エイムアシストは効かせる。
+        /// 視点の上下は反転しない。振動はさせる。
         /// </summary>
         public static ControlSettings Default { get; } = new ControlSettings(
             new[]
@@ -174,6 +198,8 @@ namespace Shooter.Core
             ColorPalette.Standard,
             false,
             true,
+            true,
+            false,
             true);
 
         // 添字は Index(device, action)。
@@ -192,6 +218,10 @@ namespace Shooter.Core
 
         private readonly bool _aimAssist;
 
+        private readonly bool _invertLookY;
+
+        private readonly bool _rumbleEnabled;
+
         private ControlSettings(
             HoldMode[] modes,
             int[] amounts,
@@ -199,7 +229,9 @@ namespace Shooter.Core
             ColorPalette palette,
             bool showSubtitles,
             bool showBlood,
-            bool aimAssist)
+            bool aimAssist,
+            bool invertLookY,
+            bool rumbleEnabled)
         {
             _modes = modes;
             _amounts = amounts;
@@ -208,6 +240,8 @@ namespace Shooter.Core
             _showSubtitles = showSubtitles;
             _showBlood = showBlood;
             _aimAssist = aimAssist;
+            _invertLookY = invertLookY;
+            _rumbleEnabled = rumbleEnabled;
         }
 
         /// <summary>数値の設定をすべて、並べる順に返す。</summary>
@@ -278,6 +312,27 @@ namespace Shooter.Core
         /// <summary>ゲームパッドで狙うときに、敵の近くで視点の回りを遅くし、覗き込みを始めたときに敵の方へ寄せるか。</summary>
         public bool AimAssist => _aimAssist;
 
+        /// <summary>視点の上下 (縦の視点操作) を反転するか。マウスとゲームパッドの両方に効く。</summary>
+        public bool InvertLookY => _invertLookY;
+
+        /// <summary>
+        /// 縦の視点操作の量 lookUp (正で上を向く) に <see cref="InvertLookY"/> を効かせた量。反転するなら符号を変え、しないならそのまま返す。
+        /// 視点を回す所はすべて、Look 入力の縦をこれに通してから使う。
+        /// </summary>
+        public float ApplyInvertLookY(float lookUp)
+        {
+            return _invertLookY ? -lookUp : lookUp;
+        }
+
+        /// <summary>ゲームパッドのスティックのデッドゾーン (0〜0.5)。倒した量がこれより小さい間は入力を 0 とみなす。</summary>
+        public float StickDeadzone => Get(ControlValue.StickDeadzone) / 1000f;
+
+        /// <summary>ゲームパッドを振動させるか。</summary>
+        public bool RumbleEnabled => _rumbleEnabled;
+
+        /// <summary>ゲームパッドの振動に掛ける倍率 (0〜1)。<see cref="RumbleEnabled"/> が false なら振動させない。</summary>
+        public float RumbleStrength => Percent(ControlValue.RumbleStrength);
+
         /// <summary>device の action だけを mode に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
@@ -294,7 +349,8 @@ namespace Shooter.Core
 
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
-            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist);
+            return new ControlSettings(
+                modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>数値の設定 value だけを amount に変えた設定を返す。この設定は変わらない。</summary>
@@ -318,13 +374,16 @@ namespace Shooter.Core
 
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
-            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist);
+            return new ControlSettings(
+                _modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>回線の表示 (<see cref="ShowNetStats"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowNetStats(bool show)
         {
-            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist);
+            return show == _showNetStats
+                ? this
+                : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>色の組 (<see cref="Palette"/>) だけを palette に変えた設定を返す。この設定は変わらない。</summary>
@@ -332,19 +391,25 @@ namespace Shooter.Core
         public ControlSettings WithPalette(ColorPalette palette)
         {
             PaletteName(palette);
-            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist);
+            return palette == _palette
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>字幕 (<see cref="ShowSubtitles"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowSubtitles(bool show)
         {
-            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist);
+            return show == _showSubtitles
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>血の表示 (<see cref="ShowBlood"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowBlood(bool show)
         {
-            return show == _showBlood ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist);
+            return show == _showBlood
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist, _invertLookY, _rumbleEnabled);
         }
 
         /// <summary>エイムアシスト (<see cref="AimAssist"/>) だけを enabled に変えた設定を返す。この設定は変わらない。</summary>
@@ -352,7 +417,43 @@ namespace Shooter.Core
         {
             return enabled == _aimAssist
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled);
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled, _invertLookY, _rumbleEnabled);
+        }
+
+        /// <summary>視点の上下反転 (<see cref="InvertLookY"/>) だけを invert に変えた設定を返す。この設定は変わらない。</summary>
+        public ControlSettings WithInvertLookY(bool invert)
+        {
+            return invert == _invertLookY
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, invert, _rumbleEnabled);
+        }
+
+        /// <summary>
+        /// スティックのデッドゾーン (<see cref="StickDeadzone"/>) だけを permille (‰、<see cref="ControlValue.StickDeadzone"/> の範囲) に変えた設定を返す。
+        /// この設定は変わらない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">permille が範囲の外。</exception>
+        public ControlSettings WithStickDeadzone(int permille)
+        {
+            return With(ControlValue.StickDeadzone, permille);
+        }
+
+        /// <summary>振動 (<see cref="RumbleEnabled"/>) だけを enabled に変えた設定を返す。この設定は変わらない。</summary>
+        public ControlSettings WithRumbleEnabled(bool enabled)
+        {
+            return enabled == _rumbleEnabled
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, enabled);
+        }
+
+        /// <summary>
+        /// 振動の強さ (<see cref="RumbleStrength"/>) だけを percent (%、<see cref="ControlValue.RumbleStrength"/> の範囲) に変えた設定を返す。
+        /// この設定は変わらない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">percent が範囲の外。</exception>
+        public ControlSettings WithRumbleStrength(int percent)
+        {
+            return With(ControlValue.RumbleStrength, percent);
         }
 
         /// <summary>JSON の文字列に書き出す。<see cref="FromJson(string, out IReadOnlyList{string})"/> で同じ内容に戻る。</summary>
@@ -381,12 +482,26 @@ namespace Shooter.Core
 
             foreach (var value in _values)
             {
+                // 版 10 で足した数値は、版 9 までの並びを崩さないよう、同じ版で足した真偽値と並べて後で書く。
+                if (value == ControlValue.StickDeadzone || value == ControlValue.RumbleStrength)
+                {
+                    continue;
+                }
+
                 builder.Append(',');
                 AppendKey(builder, KeyOf(value)).Append(Format(Get(value)));
             }
 
             builder.Append(',');
             AppendKey(builder, _showBloodKey).Append(_showBlood ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _invertLookYKey).Append(_invertLookY ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _stickDeadzoneKey).Append(Format(Get(ControlValue.StickDeadzone)));
+            builder.Append(',');
+            AppendKey(builder, _rumbleKey).Append(_rumbleEnabled ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _rumbleStrengthKey).Append(Format(Get(ControlValue.RumbleStrength)));
             builder.Append(',');
             AppendKey(builder, _showNetStatsKey).Append(_showNetStats ? "true" : "false");
             builder.Append(',');
@@ -413,6 +528,8 @@ namespace Shooter.Core
         /// 血の表示とエイムアシストは、無い・真偽値でなければ初期値にする。
         /// バージョン 6・7 (言語を持つ形式) の言語 (<c>language</c>) は、何も言わずに読み飛ばす。
         /// バージョン 1〜8 (エイムアシストが無い形式) は、エイムアシストを何も言わずに初期値で補う。
+        /// バージョン 1〜9 (視点の上下反転・デッドゾーン・振動・振動の強さが無い形式) は、それらを何も言わずに初期値で補う。
+        /// 視点の上下反転と振動は、無い・真偽値でなければ初期値にする。
         /// </summary>
         /// <param name="json">読む文字列。</param>
         /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
@@ -464,7 +581,9 @@ namespace Shooter.Core
             var hasShowSubtitles = version >= 5;
             var hasPresentation = version >= 7;
             var hasAimAssist = version >= 9;
-            var knownKeys = hasAimAssist ? _rootKeys
+            var hasGamepadFeel = version >= 10;
+            var knownKeys = hasGamepadFeel ? _rootKeys
+                : hasAimAssist ? _versionNineRootKeys
                 : version >= 8 ? _versionEightRootKeys
                 : hasPresentation ? _versionSevenRootKeys
                 : version >= 6 ? _versionSixRootKeys
@@ -489,7 +608,10 @@ namespace Shooter.Core
                 : Default._showSubtitles;
             var showBlood = hasPresentation ? ReadFlag(root, _showBloodKey, Default._showBlood, found) : Default._showBlood;
             var aimAssist = hasAimAssist ? ReadFlag(root, _aimAssistKey, Default._aimAssist, found) : Default._aimAssist;
-            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist);
+            var invertLookY = hasGamepadFeel ? ReadFlag(root, _invertLookYKey, Default._invertLookY, found) : Default._invertLookY;
+            var rumbleEnabled = hasGamepadFeel ? ReadFlag(root, _rumbleKey, Default._rumbleEnabled, found) : Default._rumbleEnabled;
+            return new ControlSettings(
+                modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist, invertLookY, rumbleEnabled);
         }
 
         public bool Equals(ControlSettings other)
@@ -519,7 +641,9 @@ namespace Shooter.Core
                 && _palette == other._palette
                 && _showSubtitles == other._showSubtitles
                 && _showBlood == other._showBlood
-                && _aimAssist == other._aimAssist;
+                && _aimAssist == other._aimAssist
+                && _invertLookY == other._invertLookY
+                && _rumbleEnabled == other._rumbleEnabled;
         }
 
         public override bool Equals(object obj)
@@ -544,7 +668,9 @@ namespace Shooter.Core
             hash = unchecked((hash * 31) + (int)_palette);
             hash = unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
             hash = unchecked((hash * 31) + (_showBlood ? 1 : 0));
-            return unchecked((hash * 31) + (_aimAssist ? 1 : 0));
+            hash = unchecked((hash * 31) + (_aimAssist ? 1 : 0));
+            hash = unchecked((hash * 31) + (_invertLookY ? 1 : 0));
+            return unchecked((hash * 31) + (_rumbleEnabled ? 1 : 0));
         }
 
         public override string ToString()
@@ -759,6 +885,10 @@ namespace Shooter.Core
                     return _cameraShakeKey;
                 case ControlValue.ViewmodelMotionIntensity:
                     return _viewmodelMotionKey;
+                case ControlValue.StickDeadzone:
+                    return _stickDeadzoneKey;
+                case ControlValue.RumbleStrength:
+                    return _rumbleStrengthKey;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

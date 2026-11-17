@@ -102,6 +102,8 @@ namespace Shooter.Server
 
         public PlayerStance Stance { get; private set; }
 
+        public float Lean { get; private set; }
+
         /// <summary>つかまっているはしごの、マップのはしごの並びでの番号。つかまっていなければ <see cref="CharacterLadderState.NoLadder"/>。</summary>
         public int Ladder { get; private set; } = CharacterLadderState.NoLadder;
 
@@ -147,15 +149,26 @@ namespace Shooter.Server
 
         public void SetPose(Vector3 position, float yaw, PlayerStance stance, int ladder)
         {
+            SetPose(position, yaw, stance, ladder, 0f);
+        }
+
+        public void SetPose(Vector3 position, float yaw, PlayerStance stance, int ladder, float lean)
+        {
             if (!IsFinite(position) || float.IsNaN(yaw) || float.IsInfinity(yaw))
             {
                 throw new ArgumentOutOfRangeException(nameof(position), position, "position and yaw must be finite");
+            }
+
+            if (!new CharacterLeanState(lean).IsValid)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be between -1 and 1");
             }
 
             Position = position;
             Yaw = yaw;
             Stance = stance;
             Ladder = ladder < 0 ? CharacterLadderState.NoLadder : ladder;
+            Lean = lean;
         }
 
         internal void Teleport(Vector3 position, float yaw, long tick)

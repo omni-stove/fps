@@ -91,6 +91,8 @@ namespace Shooter.Core
 
         public int GetDeaths(int playerId) => _session.GetDeaths(playerId);
 
+        public int GetAssists(int playerId) => _session.GetAssists(playerId);
+
         public int? GetPlayerPoint(int playerId) => FindPoint(playerId);
 
         public void SetPlayerPoint(int playerId, int? pointIndex)
@@ -129,8 +131,13 @@ namespace Shooter.Core
 
         public void ReportKill(int killerId, int victimId)
         {
+            ReportKill(killerId, victimId, null);
+        }
+
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
             var playing = State == GameModeState.Playing;
-            _session.ReportKill(killerId, victimId);
+            _session.ReportKill(killerId, victimId, assisterIds);
             if (playing)
             {
                 LeavePoint(victimId);
@@ -214,6 +221,8 @@ namespace Shooter.Core
             }
 
             public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
+
+            public double PointsForAssist(ModeSession session, int assisterId, int victimId) => 0d;
 
             public double PointsPerSecond(ModeSession session, Side side)
             {

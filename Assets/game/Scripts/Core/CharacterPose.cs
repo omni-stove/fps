@@ -12,6 +12,15 @@ namespace Shooter.Core
         public const string DeadParameter = "Dead";
         public const string WeaponCategoryParameter = "WeaponCategory";
         public const string SlideParameter = "Slide";
+        public const string LeanParameter = "Lean";
+        public const string SwimmingParameter = "Swimming";
+        public const string WallRunParameter = "WallRun";
+
+        public const int WallRunNone = (int)WallRunSide.None;
+
+        public const int WallRunLeft = (int)WallRunSide.Left;
+
+        public const int WallRunRight = (int)WallRunSide.Right;
 
         public const int CoverNone = 0;
 
@@ -73,6 +82,7 @@ namespace Shooter.Core
 
         // 死亡・ダウンのときは他のパラメーターを寝かせ、Animator が死亡・ダウンを他の姿勢と取り違えないようにする。
         // カバー中は姿勢が壁の高さで決まるので Crouch は立てない。スライディング中に Crouch も立てるのは、滑る姿勢の無いリグをしゃがみで見せるため。
+        // 壁走り・水泳の間はしゃがみ・スライディング・リーンを寝かせるのは、体の向きがそれぞれの姿勢で決まるため。カバー中にリーンを 0 にするのは、覗き込みをカバーの姿勢で見せるため。
         public CharacterPoseParameters Evaluate(CharacterPoseInput input)
         {
             var weapon = input.WeaponCategory.HasValue ? (int)input.WeaponCategory.Value : NoWeapon;
@@ -88,10 +98,43 @@ namespace Shooter.Core
             }
 
             var cover = CoverValue(input.CoverHeight);
-            var slide = input.IsSliding && cover == CoverNone;
-            var crouch = (input.IsCrouching || slide) && cover == CoverNone;
-            var speed = input.IsGrounded ? SpeedValue(input.HorizontalSpeed, crouch, input.IsSprinting) : IdleSpeedValue;
-            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide);
+            var wallRun = cover == CoverNone ? WallRunValue(input.WallRun) : WallRunNone;
+            var swimming = input.IsSwimming && cover == CoverNone && wallRun == WallRunNone;
+            var free = cover == CoverNone && wallRun == WallRunNone && !swimming;
+            var slide = input.IsSliding && free;
+            var crouch = (input.IsCrouching || slide) && free;
+            var lean = free ? input.Lean : 0f;
+
+            float speed;
+            if (wallRun != WallRunNone)
+            {
+                speed = SpeedValue(input.HorizontalSpeed, false, true);
+            }
+            else if (swimming)
+            {
+                speed = SpeedValue(input.HorizontalSpeed, false, false);
+            }
+            else
+            {
+                speed = input.IsGrounded ? SpeedValue(input.HorizontalSpeed, crouch, input.IsSprinting) : IdleSpeedValue;
+            }
+
+            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide, lean, swimming, wallRun);
+        }
+
+        public static int WallRunValue(WallRunSide side)
+        {
+            switch (side)
+            {
+                case WallRunSide.None:
+                    return WallRunNone;
+                case WallRunSide.Left:
+                    return WallRunLeft;
+                case WallRunSide.Right:
+                    return WallRunRight;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(side), side, "side is not a defined WallRunSide");
+            }
         }
 
         // ダッシュしていなければ 1 で止めるのは、回避などで速く動いても走る姿勢にしないため。

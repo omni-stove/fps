@@ -10,7 +10,7 @@ namespace Shooter.Server
     /// 試合の枠だけを持つ。点数・勝ち負け・時間はルールのモジュールが決めて <see cref="SetScores"/> と <see cref="End"/> で知らせる。
     /// 枠と決め方を分けるのは、ルールのモジュールを差し替えても出入り・チーム分け・JSON のイベントが変わらないようにするため。
     /// </summary>
-    internal sealed class ServerMatch
+    internal sealed partial class ServerMatch
     {
         public const float DefaultRestartDelaySeconds = 10f;
 
@@ -22,8 +22,14 @@ namespace Shooter.Server
         private readonly Func<DateTime> _utcNow;
         private float _restartRemaining;
         private int _botCount;
+        private long _joinCount;
 
-        public ServerMatch(float restartDelaySeconds, TextWriter log, ServerEventWriter events, Func<DateTime> utcNow)
+        public ServerMatch(
+            float restartDelaySeconds,
+            TextWriter log,
+            ServerEventWriter events,
+            Func<DateTime> utcNow,
+            int maxTeamSizeDifference = NetMatchSettings.DefaultMaxTeamSizeDifference)
         {
             if (!(restartDelaySeconds >= 0f) || float.IsInfinity(restartDelaySeconds))
             {
@@ -31,7 +37,14 @@ namespace Shooter.Server
                     nameof(restartDelaySeconds), restartDelaySeconds, "restartDelaySeconds must not be negative and must be finite");
             }
 
+            if (maxTeamSizeDifference < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxTeamSizeDifference), maxTeamSizeDifference, "maxTeamSizeDifference must not be negative");
+            }
+
             RestartDelaySeconds = restartDelaySeconds;
+            MaxTeamSizeDifference = maxTeamSizeDifference;
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
@@ -51,6 +64,9 @@ namespace Shooter.Server
         public event Action Restarted;
 
         public float RestartDelaySeconds { get; }
+
+        /// <summary>次の試合の前にそろえる、チームの人数の差の上限。0 ならそろえない。</summary>
+        public int MaxTeamSizeDifference { get; }
 
         public string MatchId { get; private set; }
 
@@ -116,8 +132,14 @@ namespace Shooter.Server
             return count;
         }
 
-        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null)
+        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null)
         {
+            if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            {
+                throw new ArgumentException(
+                    nameof(partyId) + " must be 1-" + ConnectionExtras.MaxPartyIdLength + " characters of [0-9A-Za-z_-]", nameof(partyId));
+            }
+
             if (productUserId != null && !NetLaunchOptions.IsProductUserId(productUserId))
             {
                 throw new ArgumentException("'" + productUserId + "' is not an EOS product user id", nameof(productUserId));
@@ -133,7 +155,7 @@ namespace Shooter.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            return Add(connection, playerId, rejoinKey, productUserId);
+            return Add(connection, playerId, rejoinKey, productUserId, partyId);
         }
 
         /// <summary>Bot は接続を持たないので <see cref="ConnectionId.None"/> で加え、送る側はそれを読み飛ばす。</summary>
@@ -150,7 +172,7 @@ namespace Shooter.Server
             }
 
             _botCount++;
-            return Add(ConnectionId.None, playerId, null, null);
+            return Add(ConnectionId.None, playerId, null, null, null);
         }
 
         public bool LeaveBot(int playerId)
@@ -164,13 +186,13 @@ namespace Shooter.Server
             return true;
         }
 
-        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId)
+        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId, string partyId)
         {
             var rejoined = false;
             var team = ChooseTeam != null
                 ? ChooseTeam(rejoinKey, out rejoined)
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId);
+            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {
@@ -290,6 +312,22 @@ namespace Shooter.Server
             }
         }
 
+        public void WriteChat(ChatLine line)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.Chat(_utcNow(), MatchId, line.SenderId, ProductUserIdOf(line.SenderId), line.Channel, line.Text.Length));
+            }
+        }
+
+        public void WriteChatRefused(int playerId, ChatRefusal reason)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.ChatRefused(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), reason));
+            }
+        }
+
         public void WriteVehicleEntered(int playerId, int vehicle, string vehicleId, int seat, VehicleSeatRole role)
         {
             if (_events.Enabled)
@@ -343,6 +381,9 @@ namespace Shooter.Server
 
         private void Restart()
         {
+            // 終わった試合の Id で記録できるよう、Id を作り直す前に替える
+            ChangeMapForNextMatch();
+            BalanceTeamsForNextMatch();
             State = GameModeState.Waiting;
             _restartRemaining = 0f;
             AlphaScore = 0;
@@ -352,6 +393,11 @@ namespace Shooter.Server
             Restarted?.Invoke();
             TryStart();
         }
+
+        // 中身を ServerMatch.Maps.cs・ServerMatch.Balance.cs に分けて書けるよう partial method にする (書かれていなければ何もしない)
+        partial void ChangeMapForNextMatch();
+
+        partial void BalanceTeamsForNextMatch();
 
         private void TryStart()
         {

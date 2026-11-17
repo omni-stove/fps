@@ -78,6 +78,30 @@ namespace Shooter.EosSdk.Tests
         }
 
         [Test]
+        public void TheRtcSourcesAreCompiledWithTheRest()
+        {
+            Place("Source/Generated/Platform/PlatformInterface.cs");
+            Place("Source/Generated/RTC/RTCInterface.cs");
+            Place("Source/Generated/RTCAudio/RTCAudioInterface.cs");
+
+            var sources = SourceFiles(Evaluate("linux-x64"));
+
+            Assert.That(sources, Has.Some.EndsWith("RTCInterface.cs").And.Some.EndsWith("RTCAudioInterface.cs"));
+        }
+
+        [Test]
+        public void TheXAudioLibraryWindowsRtcLoadsIsCopiedWithTheSdkLibrary()
+        {
+            Place("Source/Common.cs");
+            Place("Bin/win-x64/EOSSDK-Win64-Shipping.dll");
+            Place("Bin/win-x64/xaudio2_9redist.dll");
+
+            Assert.That(
+                NativeLinks(Evaluate("win-x64")),
+                Is.EquivalentTo(Names("EOSSDK-Win64-Shipping.dll", "xaudio2_9redist.dll")));
+        }
+
+        [Test]
         public void TheProjectBuildsWithoutTheSdk()
         {
             var artifacts = Path.Combine(_sdkDir, "artifacts");
@@ -103,7 +127,7 @@ namespace Shooter.EosSdk.Tests
         {
             var (code, output, error) = Dotnet(
                 "msbuild", ProjectPath(), "--nologo",
-                "-getProperty:EosSdkAvailable", "-getProperty:DefineConstants", "-getItem:EosSdkNative",
+                "-getProperty:EosSdkAvailable", "-getProperty:DefineConstants", "-getItem:EosSdkNative", "-getItem:EosSdkSource",
                 "-p:EosSdkDir=" + _sdkDir, "-p:EosSdkRid=" + rid);
             Assert.That(code, Is.Zero, output + error);
 
@@ -124,6 +148,16 @@ namespace Shooter.EosSdk.Tests
             }
 
             return items.EnumerateArray().Select(item => item.GetProperty("Link").GetString()).ToArray();
+        }
+
+        private static string[] SourceFiles(JsonElement result)
+        {
+            if (!result.GetProperty("Items").TryGetProperty("EosSdkSource", out var items))
+            {
+                return Array.Empty<string>();
+            }
+
+            return items.EnumerateArray().Select(item => item.GetProperty("Identity").GetString()).ToArray();
         }
 
         private static string ProjectPath()

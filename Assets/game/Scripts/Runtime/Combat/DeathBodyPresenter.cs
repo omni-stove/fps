@@ -8,54 +8,26 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// やられ演出 (<see cref="DeathBody"/>)。<see cref="Mode"/> が <see cref="DeathBody.Collapse"/> のとき、倒れた瞬間 (<see cref="Present"/>) に
-    /// 体の見た目 (子孫の MeshRenderer / SkinnedMeshRenderer) を複製した「抜け殻」を作り、Rigidbody とコライダーを付けて
-    /// 最後に受けた弾の向きへ倒す。抜け殻は <see cref="Clear"/> (リスポーン) か <see cref="Lifetime"/> 秒の経過で消える。
-    /// <see cref="DeathBody.Vanish"/> では何もしない (体を消すのは今どおり持ち主の側)。
-    /// <para>
-    /// 抜け殻は各クライアントのローカルな見た目だけで、<see cref="Hitbox"/> も NetworkObject も持たず、
-    /// 射撃 (<see cref="Physics.DefaultRaycastLayers"/>) に拾われない <see cref="ShellLayer"/> に置く。
-    /// 体の側は Collapse のとき見た目と当たり (CharacterController 以外のコライダー) を隠す。戻すのは持ち主のリスポーン処理。
-    /// 専用サーバー (<see cref="NetStartup.ShouldDisablePresentation"/>) では抜け殻を作らない。
-    /// </para>
-    /// <para>
-    /// オフラインでは <see cref="Bind"/> で <see cref="Damageable"/> に繋ぐ (倒れたら作り、体力を作り直したら消す)。
-    /// 時間は自分で数える (<see cref="Tick"/>) ので、Update が走らない Edit Mode のテストでも直接進められる。
-    /// </para>
-    /// <para>
-    /// <see cref="RagdollCatalog"/> があり、その全ボーンが体のリグに見つかれば、1 つの塊ではなくボーンごとに Rigidbody と関節を持つ
-    /// ラグドールの抜け殻にし、最後の被弾の向きとダメージに応じた速さで倒す。固めるのは抜け殻の <see cref="DeathRagdoll"/>。
-    /// 対応表が無い・中身が不正・ボーンが足りないときは 1 つの塊の抜け殻に戻す。
-    /// </para>
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class DeathBodyPresenter : MonoBehaviour
     {
         public const string LogTag = "[DeathBody]";
 
-        /// <summary>抜け殻が消えるまでの秒数の既定値。</summary>
         public const float DefaultLifetime = 5f;
 
-        /// <summary>倒すときに抜け殻に与える水平の速さ (m/s)。小さく押して倒すだけにする。</summary>
+        // 吹き飛ばさず、小さく押して倒すだけにする。
         public const float PushSpeed = 1.5f;
 
-        /// <summary>倒すときに抜け殻に与える回転の速さ (rad/s)。頭が押された向きへ傾く。</summary>
         public const float ToppleSpeed = 2.5f;
 
-        /// <summary>抜け殻の質量 (kg)。</summary>
         public const float ShellMass = 70f;
 
-        /// <summary>抜け殻の名前に付ける接尾辞。</summary>
         public const string ShellSuffix = " (DeathBody)";
 
-        /// <summary>
-        /// 抜け殻を置くレイヤー。<see cref="Physics.DefaultRaycastLayers"/> に含まれないので、
-        /// 射撃 (<see cref="Hitscan"/>・ネットの巻き戻し) や視線の判定に拾われない。<see cref="DebrisPool.DebrisLayer"/> と同じ。
-        /// </summary>
+        // 抜け殻は各クライアントの見た目だけなので、Physics.DefaultRaycastLayers に含まれないレイヤーに置き、射撃 (Hitscan・ネットの巻き戻し) や視線の判定に拾わせない。
         public const int ShellLayer = DebrisPool.DebrisLayer;
 
-        /// <summary>薄いメッシュ (Plane など) でも床をすり抜けないよう、コライダーの各辺をこれより小さくしない (m)。</summary>
+        // 薄いメッシュ (Plane など) でも床をすり抜けないよう、コライダーの各辺をこれより小さくしない。
         private const float MinColliderSize = 0.05f;
 
         public const string ReasonRespawn = "respawn";
@@ -90,7 +62,6 @@ namespace Shooter.Runtime
         private Damageable _target;
         private bool _awaitingHitDirection;
 
-        /// <summary>倒れた体の見せ方。定義済みの値だけ。今ある抜け殻には効かない。</summary>
         public DeathBody Mode
         {
             get => _mode;
@@ -105,7 +76,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>これから作る抜け殻が消えるまでの秒数。0 より大きい有限値。</summary>
         public float Lifetime
         {
             get => _lifetime;
@@ -120,7 +90,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>ログに出す識別子。未設定なら GameObject の名前。</summary>
         public string Id
         {
             get => string.IsNullOrEmpty(_id) ? name : _id;
@@ -143,22 +112,16 @@ namespace Shooter.Runtime
 
         public bool IsRagdoll => Ragdoll != null;
 
-        /// <summary>今ある抜け殻。無ければ (外から消されたときも) null。</summary>
         public GameObject Shell => _shell != null ? _shell : null;
 
-        /// <summary>抜け殻があれば true。</summary>
         public bool HasShell => _shell != null;
 
-        /// <summary>抜け殻が消えるまでの残り秒数。無ければ 0。</summary>
         public float RemainingSeconds => HasShell ? Mathf.Max(0f, _remaining) : 0f;
 
-        /// <summary><see cref="Bind"/> で繋いだ相手。無ければ null。</summary>
         public Damageable Target => _target;
 
-        /// <summary>このプロセスで抜け殻を作るか。専用サーバーでは描かないので作らない。</summary>
         public static bool IsPresentationAvailable => !NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild);
 
-        /// <summary>body に付いている DeathBodyPresenter を返す。無ければ付ける。</summary>
         public static DeathBodyPresenter Attach(GameObject body)
         {
             if (body == null)
@@ -170,10 +133,6 @@ namespace Shooter.Runtime
             return presenter != null ? presenter : body.AddComponent<DeathBodyPresenter>();
         }
 
-        /// <summary>
-        /// targets のそれぞれに DeathBodyPresenter を付け (<see cref="Attach"/>)、mode で <see cref="Bind"/> する。null は飛ばす。
-        /// 繋いだ数を返す。
-        /// </summary>
         public static int BindAll(IEnumerable<Damageable> targets, DeathBody mode)
         {
             if (targets == null)
@@ -201,11 +160,6 @@ namespace Shooter.Runtime
             return bound;
         }
 
-        /// <summary>
-        /// target が倒れたら mode で見せ、体力を作り直したら (リスポーン) 抜け殻を消すように繋ぐ。前に繋いでいた相手からは外す。
-        /// とどめの 1 発に撃った者の位置があれば (<see cref="Damageable.Damaged"/>)、その向きに倒す。無ければ体の後ろへ倒す。
-        /// 識別子が未設定なら target の <see cref="Damageable.Id"/> にする。
-        /// </summary>
         public void Bind(Damageable target, DeathBody mode)
         {
             if (target == null)
@@ -226,7 +180,6 @@ namespace Shooter.Runtime
             _target.HealthReset += OnHealthReset;
         }
 
-        /// <summary>繋いだ相手の購読を外す。今ある抜け殻はそのまま残る。</summary>
         public void Unbind()
         {
             if (_target != null)
@@ -240,18 +193,11 @@ namespace Shooter.Runtime
             _awaitingHitDirection = false;
         }
 
-        /// <summary>
-        /// 倒れた瞬間に呼ぶ。<see cref="Mode"/> が Collapse なら体の見た目と当たりを隠し、抜け殻を作って hitDirection の向きへ倒し、
-        /// <c>[DeathBody] collapse ...</c> を出して抜け殻を返す。前の抜け殻が残っていれば先に消す。
-        /// Vanish のとき・専用サーバー・複製できる見た目が無いときは null (最後のときは警告を出す)。
-        /// </summary>
-        /// <param name="hitDirection">最後に受けた弾の進む向き。null か水平成分が無ければ体の後ろへ倒す。</param>
         public GameObject Present(Vector3? hitDirection)
         {
             return Present(hitDirection, 0);
         }
 
-        /// <param name="damage">最後の被弾のダメージ。ラグドールのときだけ倒す速さに効く。</param>
         public GameObject Present(Vector3? hitDirection, int damage)
         {
             _awaitingHitDirection = false;
@@ -306,7 +252,6 @@ namespace Shooter.Runtime
             return shell;
         }
 
-        /// <summary>今ある抜け殻を direction の向きへ倒し直す。抜け殻が無ければ何もせず false。</summary>
         public bool Push(Vector3 direction)
         {
             return Push(direction, 0);
@@ -367,8 +312,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>今ある抜け殻を消して <c>[DeathBody] removed ...</c> を出す。無ければ何もせず false。</summary>
-        /// <param name="reason">ログに出す理由 (<see cref="ReasonRespawn"/> など)。</param>
         public bool Clear(string reason)
         {
             _awaitingHitDirection = false;
@@ -393,8 +336,7 @@ namespace Shooter.Runtime
             return existed;
         }
 
-        /// <summary>時間を deltaSeconds 進め、寿命が過ぎたら抜け殻を消す。消したら true。</summary>
-        /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
+        // 時間を自分で数えるのは、Update が走らない Edit Mode のテストでも直接進められるようにするため。
         public bool Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -851,7 +793,6 @@ namespace Shooter.Runtime
             return speed.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>見た目を消し、CharacterController 以外のコライダー (当たり判定) を止める。</summary>
         private void HideBody(Renderer[] renderers)
         {
             foreach (var bodyRenderer in renderers)
@@ -921,10 +862,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 体が表示されていれば見える部品か。体そのもののアクティブは見ない: 倒れた体を非アクティブにする購読者
-        /// (KillTargetObjective) が先に走っても、抜け殻は倒れる前の見た目で作る。
-        /// </summary>
+        // 体そのもののアクティブを見ないのは、倒れた体を非アクティブにする購読者 (KillTargetObjective) が先に走っても、
+        // 抜け殻を倒れる前の見た目で作るため。
         private bool IsShownWithBody(Transform part)
         {
             for (var current = part; current != null && current != transform; current = current.parent)
@@ -1034,10 +973,8 @@ namespace Shooter.Runtime
                 MinColliderSize / Mathf.Max(Mathf.Abs(scale.z), 1e-4f));
         }
 
-        /// <summary>
-        /// 体に残っている有効なコライダー (CharacterController) と抜け殻がぶつからないようにする。
-        /// 同じ場所に重ねて作るので、ぶつかると抜け殻が弾き飛ばされる。止めたコライダーとは組めない (Unity がエラーを出す) ので外す。
-        /// </summary>
+        // 抜け殻は体と同じ場所に重ねて作るので、体に残っている有効なコライダー (CharacterController) とぶつかると弾き飛ばされる。
+        // 止めたコライダーとは組めない (Unity がエラーを出す) ので外す。
         private void IgnoreBodyColliders(List<Collider> shellColliders)
         {
             foreach (var bodyCollider in GetComponentsInChildren<Collider>(false))
@@ -1066,9 +1003,6 @@ namespace Shooter.Runtime
             return direction;
         }
 
-        /// <summary>
-        /// 倒す向き。hitDirection を水平面に落とした単位ベクトルで、null か真上・真下なら body の後ろ (正面から撃たれた向き)。
-        /// </summary>
         public static Vector3 HorizontalDirection(Vector3? hitDirection, Transform body)
         {
             if (hitDirection.HasValue)

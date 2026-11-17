@@ -12,7 +12,7 @@ namespace Shooter.Editor
     {
         public const string TargetName = "SuppressionTarget";
 
-        // 乗り越えの壁 (x = -10) の奥、標的ダミーの列より左奥。撃つ線がほかの置き物を横切らない場所。
+        // 撃つ線がほかの置き物を横切らないよう、乗り越えの壁 (x = -10) の奥・標的ダミーの列より左奥に置く。
         public static readonly Vector3 TargetGround = new Vector3(-14f, 0f, 16f);
 
         public const float TargetHeight = GameBootstrap.PlayerHeight;

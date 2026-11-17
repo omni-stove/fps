@@ -4,24 +4,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 弾が建造物 (<see cref="IStructureHittable"/>) に当たったときの被害の配り方。
-    /// 半径 0 なら当たった物だけに、半径があれば着弾点を中心とした球の中の部品すべてに、距離で減らして渡す。
-    /// </summary>
     public static class StructureDamage
     {
-        /// <summary>
-        /// hitCollider への命中を建造物に渡し、<see cref="IStructureHittable.ApplyStructureHit"/> を呼んだ回数を返す。
-        /// radius が 0 なら hitCollider の親をたどって見つけた <see cref="IStructureHittable"/> に damage をそのまま 1 回渡す
-        /// (見つからなければ 0 回)。
-        /// radius が 0 より大きければ、point を中心に radius の球に触れるコライダー (トリガーを除く) を集め、
-        /// それぞれの親の <see cref="IStructureHittable"/> に、コライダーの point に最も近い点までの距離に比例して減らした被害
-        /// (中心で damage、縁で 0、整数に丸める) を渡す。1 つの建造物でも部品 (コライダー) ごとに呼ぶ。
-        /// </summary>
-        /// <param name="hitCollider">弾が当たったコライダー。null 不可。</param>
-        /// <param name="point">着弾点。</param>
-        /// <param name="damage">中心での被害。0 以上。</param>
-        /// <param name="radius">被害を広げる半径 (m)。0 以上の有限値。</param>
         public static int Apply(Collider hitCollider, Vector3 point, int damage, float radius)
         {
             if (hitCollider == null)
@@ -54,13 +38,6 @@ namespace Shooter.Runtime
             return SpreadAround(point, damage, radius);
         }
 
-        /// <summary>
-        /// 当たったコライダーの無い被害 (グレネードの爆発など) を、point を中心に radius の球の中の建造物の部品へ配り、
-        /// <see cref="IStructureHittable.ApplyStructureHit"/> を呼んだ回数を返す。配り方は <see cref="Apply"/> の radius が 0 より大きいときと同じ。
-        /// </summary>
-        /// <param name="point">爆発の中心。</param>
-        /// <param name="damage">中心での被害。0 以上。</param>
-        /// <param name="radius">被害を広げる半径 (m)。0 より大きい有限値。</param>
         public static int ApplyAround(Vector3 point, int damage, float radius)
         {
             if (damage < 0)
@@ -129,7 +106,6 @@ namespace Shooter.Runtime
             return count;
         }
 
-        /// <summary>中心からの距離 distance での被害。中心で damage、radius 以上で 0。</summary>
         public static int Scale(int damage, float distance, float radius)
         {
             if (damage < 0)

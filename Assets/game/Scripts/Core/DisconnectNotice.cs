@@ -18,6 +18,8 @@ namespace Shooter.Core
 
         public const string ServerFullDetail = "server-full";
 
+        public const string JoinCodeMismatchDetail = "join-code-mismatch";
+
         // 切断理由はサーバー (または途中の誰か) が自由に送れるので、文に混ぜる符号は長さと文字を絞ってから使う。
         public const int MaxDetailLength = 32;
 

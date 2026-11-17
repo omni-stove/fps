@@ -15,12 +15,15 @@ namespace Shooter.Server
         public const string BotsTuningFileName = "bots.json";
         public const string InventoryTuningFileName = "inventory.json";
         public const string KnockbackTuningFileName = "knockback.json";
+        public const string AssistTuningFileName = "assist.json";
 
         public ServerRulesData(
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
-            KnockbackSpec knockback = null, string knockbackPath = null)
+            KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null)
         {
+            Assist = assist ?? AssistSpec.Default;
+            AssistPath = assistPath;
             Knockback = knockback ?? KnockbackSpec.Default;
             KnockbackPath = knockbackPath;
             Items = items ?? ItemCatalog.Empty;
@@ -71,6 +74,11 @@ namespace Shooter.Server
 
         public string KnockbackPath { get; }
 
+        /// <summary>倒された人へのダメージのうち、どれをアシストに数えるか。</summary>
+        public AssistSpec Assist { get; }
+
+        public string AssistPath { get; }
+
         public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
@@ -80,6 +88,7 @@ namespace Shooter.Server
             + " bots=" + (BotsPath ?? "default")
             + " inventory=" + (ItemsPath ?? "default")
             + " knockback=" + (KnockbackPath ?? "default")
+            + " assist=" + (AssistPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -234,8 +243,29 @@ namespace Shooter.Server
                 knockbackPath = null;
             }
 
+            // アシストも Unity では Resources の JSON (KitTuning.Assist) から読むので、無ければ同じく既定値で動かす
+            var assistPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, AssistTuningFileName));
+            var assist = AssistSpec.Default;
+            if (System.IO.File.Exists(assistPath))
+            {
+                try
+                {
+                    assist = AssistJson.Parse(System.IO.File.ReadAllText(assistPath), assistPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read assist tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                assistPath = null;
+            }
+
             data = new ServerRulesData(
-                name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath);
+                name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath);
             error = null;
             return true;
         }

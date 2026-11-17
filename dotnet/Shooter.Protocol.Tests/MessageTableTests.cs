@@ -153,11 +153,40 @@ namespace Shooter.Protocol.Tests
         public void UnknownInputButtonIsRejected()
         {
             var input = new InputMessage();
-            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)128));
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)512));
             var writer = new MessageWriter();
             writer.WriteMessage(input);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void InputButtonsAreWrittenInTwoBytes()
+        {
+            var one = new InputMessage();
+            one.Add(new InputFrame(1, Vector2.Zero, 0f, InputButtons.LeanRight));
+            var writer = new MessageWriter();
+            writer.WriteMessage(one);
+
+            // Id・版 (2 + 1)、受け取ったスナップショットの tick・数・最初の tick (4 + 1 + 4)、移動・向き (8 + 4)、ボタン (2)
+            Assert.That(writer.Length, Is.EqualTo(3 + 9 + 12 + 2));
+        }
+
+        [TestCase(MessageIds.ChatRequest)]
+        [TestCase(MessageIds.MapVoteRequest)]
+        [TestCase(MessageIds.SpectateRequest)]
+        public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
+        {
+            Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);
+            Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.False);
+        }
+
+        [TestCase(MessageIds.Chat)]
+        [TestCase(MessageIds.MapVoteState)]
+        public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
+        {
+            Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);
+            Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.False);
         }
 
         [Test]

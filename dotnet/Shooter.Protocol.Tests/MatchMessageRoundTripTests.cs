@@ -13,6 +13,9 @@ namespace Shooter.Protocol.Tests
         // 承認の末尾に並ぶ吹き飛ばしの値 (力 3 種類 × 3 個と、そのほか 9 個)
         private const int _knockbackBytes = 18 * 4;
 
+        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・水泳 3 個・壁走りの入切 (1 バイト)・壁走り 4 個
+        private const int _traversalBytes = (3 * 4) + 4 + 4 + (3 * 4) + 1 + (4 * 4);
+
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
@@ -27,6 +30,95 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.ClientVersion, Is.EqualTo("1.2.3"));
             Assert.That(got.RejoinKey, Is.EqualTo("0123abcd"));
             Assert.That(got.DisplayName, Is.EqualTo("ぷれいやー"));
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.SkillRating, Is.Null);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestWithoutExtrasKeepsTheOldLayout()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "0123abcd", DisplayName = "ぷれいやー" });
+
+            Assert.That(writer.Length, Is.EqualTo(2 + 1 + 2 + 7 + 10 + 17));
+            Assert.That(ConnectRequestMessage.CurrentVersion, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ConnectRequestWithExtras()
+        {
+            var sent = new ConnectRequestMessage
+            {
+                ClientVersion = "1.2.3",
+                RejoinKey = "0123abcd",
+                DisplayName = "p",
+                PartyId = "party-1",
+                JoinCode = "AB12",
+                SkillRating = -25,
+                ProductUserId = "0123456789abcdef0123456789abcdef",
+            };
+
+            var got = ToServer<ConnectRequestMessage>(sent);
+
+            Assert.That(got.HasExtras, Is.True);
+            Assert.That(got.DisplayName, Is.EqualTo("p"));
+            Assert.That(got.PartyId, Is.EqualTo("party-1"));
+            Assert.That(got.JoinCode, Is.EqualTo("AB12"));
+            Assert.That(got.SkillRating, Is.EqualTo(-25));
+            Assert.That(got.ProductUserId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
+        }
+
+        [Test]
+        public void AConnectRequestWithOnlyASkillRatingCarriesIt()
+        {
+            var got = ToServer<ConnectRequestMessage>(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", SkillRating = 0 });
+
+            Assert.That(got.SkillRating, Is.EqualTo(0));
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestWithoutExtrasClearsTheExtrasReadBefore()
+        {
+            ToServer<ConnectRequestMessage>(
+                new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", PartyId = "party", JoinCode = "CODE", SkillRating = 9, ProductUserId = "u" });
+
+            var got = ToServer<ConnectRequestMessage>(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k" });
+
+            Assert.That(got.HasExtras, Is.False);
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.SkillRating, Is.Null);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestRefusesToWriteAnOverlongExtra()
+        {
+            var writer = new MessageWriter();
+            var request = new ConnectRequestMessage
+            {
+                ClientVersion = "1.2.3",
+                RejoinKey = "k",
+                JoinCode = new string('c', ConnectionExtras.MaxJoinCodeLength + 1),
+            };
+
+            Assert.Throws<System.ArgumentException>(() => writer.WriteMessage(request));
+            Assert.That(writer.Length, Is.Zero);
+        }
+
+        [Test]
+        public void AConnectRequestWithCutOffExtrasIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", PartyId = "party" });
+            var whole = writer.ToArray();
+
+            Assert.Throws<MessageReadException>(() => _server.Read(new System.ArraySegment<byte>(whole, 0, whole.Length - 1)));
         }
 
         [Test]
@@ -92,6 +184,53 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void ConnectAcceptedCarriesTheLeanAirJumpSwimAndWallRunValues()
+        {
+            var motor = new NetMotorSettings(
+                new MotorSpec(
+                    5f, 8f, 1.2f, 20f, 0.1f, 2.5f,
+                    leanSideOffset: 0.55f, leanAngleDegrees: 20f, leanSpeed: 4f, airJumps: 2, airJumpSpeed: 5.5f),
+                NetMotorSettings.Default.Stance,
+                CapsuleMoverSpec.Default,
+                ProneSpec.Default,
+                new SwimTuning(2.5f, 9f, 20f),
+                new WallRunTuning(true, 2f, 6f, 0.3f, 8f));
+
+            var got = ToClient<ConnectAcceptedMessage>(
+                new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100, Motor = motor, KillPlaneY = -30f });
+
+            Assert.That(got.Motor.Motor.LeanSideOffset, Is.EqualTo(0.55f));
+            Assert.That(got.Motor.Motor.LeanAngleDegrees, Is.EqualTo(20f));
+            Assert.That(got.Motor.Motor.LeanSpeed, Is.EqualTo(4f));
+            Assert.That(got.Motor.Motor.AirJumps, Is.EqualTo(2));
+            Assert.That(got.Motor.Motor.AirJumpSpeed, Is.EqualTo(5.5f));
+            Assert.That(got.Motor.Swim.Speed, Is.EqualTo(2.5f));
+            Assert.That(got.Motor.Swim.Buoyancy, Is.EqualTo(9f));
+            Assert.That(got.Motor.Swim.BreathSeconds, Is.EqualTo(20f));
+            Assert.That(got.Motor.WallRun.Enabled, Is.True);
+            Assert.That(got.Motor.WallRun.MaxSeconds, Is.EqualTo(2f));
+            Assert.That(got.Motor.WallRun.MinSpeed, Is.EqualTo(6f));
+            Assert.That(got.Motor.WallRun.GravityScale, Is.EqualTo(0.3f));
+            Assert.That(got.Motor.WallRun.JumpOffSpeed, Is.EqualTo(8f));
+            Assert.That(got.KillPlaneY, Is.EqualTo(-30f), "the values after the new ones still line up");
+        }
+
+        [Test]
+        public void ConnectAcceptedWithANonPositiveBreathIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
+            var bytes = writer.AsSegment().ToArray();
+
+            // 息の秒数は水泳の 3 番目で、後ろに壁走りの入切 (1 バイト) と 4 個、落ちる高さ、吹き飛ばしの値が続く
+            var breathSeconds = bytes.Length - _knockbackBytes - 4 - (4 * 4) - 1 - 4;
+            Assert.That(System.BitConverter.ToSingle(bytes, breathSeconds), Is.EqualTo(SwimTuning.DefaultBreathSeconds), "the offset points at the breath");
+            System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, breathSeconds, 4), 0f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
         public void ConnectAcceptedWithMotorSettingsOutOfRangeIsUnreadable()
         {
             var writer = new MessageWriter();
@@ -99,7 +238,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (19 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - _knockbackBytes - 4 - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var walkSpeed = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -113,7 +252,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 重さの倍率の下限は持ち物の値の 4 番目 (重さと倍率の数え方 2 バイト、遅くならない重さ、1 kg ごとの減り) で、後ろに動きの 1 バイトが続く
-            var minWeightMultiplier = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
+            var minWeightMultiplier = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, minWeightMultiplier, 4), 1.5f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -126,7 +265,7 @@ namespace Shooter.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            var weightSource = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var weightSource = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             bytes[weightSource] = 9;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -140,7 +279,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と持ち物の値、体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
-            var walkForward = bytes.Length - _knockbackBytes - 4 - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var walkForward = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkForward, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -226,6 +365,165 @@ namespace Shooter.Protocol.Tests
             Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Sprint | InputButtons.Jump));
             Assert.That(got[1].Tick, Is.EqualTo(51));
             Assert.That(got[1].Has(InputButtons.Dodge), Is.True);
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.All));
+        }
+
+        [Test]
+        public void InputCarriesTheLeanButtons()
+        {
+            var sent = new InputMessage();
+            sent.Add(new InputFrame(7, Vector2.Zero, 0f, InputButtons.LeanLeft | InputButtons.Aim));
+            sent.Add(new InputFrame(8, Vector2.Zero, 0f, InputButtons.LeanRight));
+
+            var got = ToServer<InputMessage>(sent);
+
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.LeanLeft | InputButtons.Aim));
+            Assert.That(got[0].Has(InputButtons.LeanRight), Is.False);
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.LeanRight));
+        }
+
+        [Test]
+        public void ChatRequestAndChat()
+        {
+            var request = ToServer<ChatRequestMessage>(new ChatRequestMessage { Channel = ChatChannel.Team, Text = "右から来る" });
+            Assert.That(request.Channel, Is.EqualTo(ChatChannel.Team));
+            Assert.That(request.Text, Is.EqualTo("右から来る"));
+
+            var chat = ToClient<ChatMessage>(new ChatMessage { SenderId = 3, Channel = ChatChannel.All, Text = "gg" });
+            Assert.That(chat.SenderId, Is.EqualTo(3));
+            Assert.That(chat.Channel, Is.EqualTo(ChatChannel.All));
+            Assert.That(chat.Text, Is.EqualTo("gg"));
+        }
+
+        [Test]
+        public void EmptyOrTooLongChatIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(new ChatRequestMessage { Text = "" }));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new ChatMessage { SenderId = 1, Text = null }));
+            Assert.Throws<System.ArgumentException>(
+                () => new MessageWriter().WriteMessage(new ChatRequestMessage { Text = new string('a', MatchProtocol.MaxChatBytes + 1) }));
+        }
+
+        [Test]
+        public void ChatWithoutTextOrWithAnUnknownChannelIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.ChatRequest);
+            writer.WriteByte(ChatRequestMessage.CurrentVersion);
+            writer.WriteByte((byte)ChatChannel.All);
+            writer.WriteString("");
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+
+            writer.Reset();
+            writer.WriteUInt16(MessageIds.Chat);
+            writer.WriteByte(ChatMessage.CurrentVersion);
+            writer.WriteInt32(1);
+            writer.WriteByte(2);
+            writer.WriteString("hi");
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void MapVoteRequestAndState()
+        {
+            Assert.That(ToServer<MapVoteRequestMessage>(new MapVoteRequestMessage { MapIndex = 2 }).MapIndex, Is.EqualTo(2));
+
+            var sent = new MapVoteStateMessage { RemainingSeconds = 12.5f };
+            sent.AddCandidate("NetArena01", 3);
+            sent.AddCandidate("NetHarbor", 0);
+            sent.AddCandidate("NetDesert", 1);
+            var got = ToClient<MapVoteStateMessage>(sent);
+
+            Assert.That(got.CandidateCount, Is.EqualTo(3));
+            Assert.That(got.MapId(0), Is.EqualTo("NetArena01"));
+            Assert.That(got.Votes(0), Is.EqualTo(3));
+            Assert.That(got.MapId(1), Is.EqualTo("NetHarbor"));
+            Assert.That(got.Votes(1), Is.Zero);
+            Assert.That(got.MapId(2), Is.EqualTo("NetDesert"));
+            Assert.That(got.Votes(2), Is.EqualTo(1));
+            Assert.That(got.RemainingSeconds, Is.EqualTo(12.5f));
+            Assert.That(got.ChosenIndex, Is.EqualTo(MapVoteStateMessage.NotChosen));
+
+            sent.RemainingSeconds = 0f;
+            sent.ChosenIndex = 0;
+            got = ToClient<MapVoteStateMessage>(sent);
+            Assert.That(got.ChosenIndex, Is.Zero);
+        }
+
+        [Test]
+        public void AFewerCandidateMapVoteStateDropsTheOldOnes()
+        {
+            var many = new MapVoteStateMessage();
+            many.AddCandidate("a", 1);
+            many.AddCandidate("b", 2);
+            ToClient<MapVoteStateMessage>(many);
+            var one = new MapVoteStateMessage();
+            one.AddCandidate("c", 0);
+
+            var got = ToClient<MapVoteStateMessage>(one);
+
+            Assert.That(got.CandidateCount, Is.EqualTo(1));
+            Assert.That(got.MapId(0), Is.EqualTo("c"));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => got.MapId(1));
+        }
+
+        [Test]
+        public void MapVoteStateRefusesAChoiceOutsideTheCandidates()
+        {
+            var state = new MapVoteStateMessage { ChosenIndex = 1 };
+            state.AddCandidate("a", 0);
+
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(state));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => state.AddCandidate("b", -1));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new MapVoteRequestMessage { MapIndex = -1 }));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new MapVoteRequestMessage { MapIndex = MapVoteStateMessage.MaxCandidates }));
+        }
+
+        [Test]
+        public void MapVoteStateWithAChoiceOutsideTheCandidatesIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.MapVoteState);
+            writer.WriteByte(MapVoteStateMessage.CurrentVersion);
+            writer.WriteByte(1);
+            writer.WriteString("a");
+            writer.WriteInt32(0);
+            writer.WriteSingle(1f);
+            writer.WriteByte(2);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void MapVoteRequestOutsideTheCandidateLimitIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.MapVoteRequest);
+            writer.WriteByte(MapVoteRequestMessage.CurrentVersion);
+            writer.WriteByte(MapVoteStateMessage.MaxCandidates);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [TestCase(SpectateStep.Next)]
+        [TestCase(SpectateStep.Previous)]
+        public void SpectateRequest(SpectateStep step)
+        {
+            Assert.That(ToServer<SpectateRequestMessage>(new SpectateRequestMessage { Step = step }).Step, Is.EqualTo(step));
+        }
+
+        [Test]
+        public void SpectateRequestWithAnUnknownStepIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.SpectateRequest);
+            writer.WriteByte(SpectateRequestMessage.CurrentVersion);
+            writer.WriteByte(2);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -512,6 +810,7 @@ namespace Shooter.Protocol.Tests
             Assert.That(killed.WeaponId, Is.EqualTo("rifle"));
             Assert.That(killed.Headshot, Is.True);
             Assert.That(killed.Friendly, Is.True);
+            Assert.That(killed.AssisterCount, Is.Zero);
 
             var explosion = ToClient<ExplosionMessage>(
                 new ExplosionMessage { Center = new Vector3(1f, 0f, 2f), HasThrower = true, ThrowerId = 4, WeaponId = "frag" });
@@ -519,6 +818,58 @@ namespace Shooter.Protocol.Tests
             Assert.That(explosion.HasThrower, Is.True);
             Assert.That(explosion.ThrowerId, Is.EqualTo(4));
             Assert.That(explosion.WeaponId, Is.EqualTo("frag"));
+        }
+
+        [Test]
+        public void KilledCarriesTheAssisters()
+        {
+            var sent = new KilledMessage { KillerId = 1, VictimId = 2, WeaponId = "rifle" };
+            sent.AddAssister(3);
+            sent.AddAssister(5);
+
+            var got = ToClient<KilledMessage>(sent);
+
+            Assert.That(got.AssisterCount, Is.EqualTo(2));
+            Assert.That(got.AssisterId(0), Is.EqualTo(3));
+            Assert.That(got.AssisterId(1), Is.EqualTo(5));
+
+            sent.ClearAssisters();
+            got = ToClient<KilledMessage>(sent);
+            Assert.That(got.AssisterCount, Is.Zero);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => got.AssisterId(0));
+        }
+
+        [Test]
+        public void KilledHoldsAtMostMaxAssisters()
+        {
+            var killed = new KilledMessage();
+            for (var i = 0; i < KilledMessage.MaxAssisters; i++)
+            {
+                killed.AddAssister(i);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => killed.AddAssister(99));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new KilledMessage().AddAssister(-1));
+        }
+
+        [Test]
+        public void KilledWithTooManyOrNegativeAssistersIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            WriteKilledHead(writer);
+            writer.WriteByte(KilledMessage.MaxAssisters + 1);
+            for (var i = 0; i <= KilledMessage.MaxAssisters; i++)
+            {
+                writer.WriteInt32(i);
+            }
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+
+            writer.Reset();
+            WriteKilledHead(writer);
+            writer.WriteByte(1);
+            writer.WriteInt32(-1);
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -688,6 +1039,17 @@ namespace Shooter.Protocol.Tests
                 Assert.That(_client.TryGet(id, out _), Is.True, "client reads " + id);
                 Assert.That(_server.TryGet(id, out _), Is.False, "server refuses " + id);
             }
+        }
+
+        private static void WriteKilledHead(MessageWriter writer)
+        {
+            writer.WriteUInt16(MessageIds.Killed);
+            writer.WriteByte(KilledMessage.CurrentVersion);
+            writer.WriteInt32(1);
+            writer.WriteInt32(2);
+            writer.WriteString("rifle");
+            writer.WriteBool(false);
+            writer.WriteBool(false);
         }
 
         private T ToServer<T>(IMessage message)

@@ -23,28 +23,10 @@ namespace Shooter.Server
 
             var unit = Vector3.Normalize(direction);
             var clamped = _lag.ClampTick(tick, LastRecordedTick);
-            var rewound = _lag.Rewind(clamped);
-            var crouched = _lag.RewindCrouched(clamped);
-            _ids.Clear();
-            foreach (var body in _bodies.All)
-            {
-                _ids.Add(body.PlayerId);
-            }
-
             var start = hits.Count;
-            var geometry = _bodies.Geometry;
-            foreach (var id in _ids)
+            foreach (var (id, body) in RewindBodies(clamped, shooterId, hittable))
             {
-                if (id == shooterId || !rewound.TryGetValue(id, out var position) || !hittable(id))
-                {
-                    continue;
-                }
-
-                var isCrouched = crouched.TryGetValue(id, out var c) && c;
-                var shape = geometry.Shape(isCrouched);
-                geometry.SphereCenters(shape, out var bottomY, out var topY);
-                var point = SprayCone.NearestPoint(
-                    range, origin, unit, position + new Vector3(0f, bottomY, 0f), position + new Vector3(0f, topY, 0f), geometry.Radius);
+                var point = SprayCone.NearestPoint(range, origin, unit, body.Bottom, body.Top, body.Radius);
                 if (!SprayCone.Contains(spray, range, origin, unit, point))
                 {
                     continue;
@@ -60,8 +42,7 @@ namespace Shooter.Server
                     continue;
                 }
 
-                var bottom = position.Y + shape.CenterY - (shape.Height / 2f);
-                var hit = ShotHit.Target(point, -toward, distance, id, position, isCrouched, Zone(point.Y, bottom, shape.Height));
+                var hit = ShotHit.Target(point, -toward, distance, id, body.Position, body.Crouched, body.Zone(point));
                 hits.Add(hit.WithRewind(LastRecordedTick - clamped));
             }
 

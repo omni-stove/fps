@@ -65,7 +65,6 @@ namespace Shooter.Runtime
 
                 _rule = value;
 
-                // 怯んでいる最中に切ったら、その場で解いて操作を返す。
                 if (value == Stagger.Off && _judge != null && _judge.IsStaggered)
                 {
                     var kind = _judge.Current;

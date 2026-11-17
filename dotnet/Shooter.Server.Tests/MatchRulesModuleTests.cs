@@ -6,6 +6,7 @@ using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Protocol;
+using ChatChannel = Shooter.Protocol.ChatChannel;
 
 namespace Shooter.Server.Tests
 {
@@ -248,6 +249,114 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TeamChatReachesOnlyTheSendersTeam()
+        {
+            Start(Plain());
+            Join(1);
+            Join(2);
+            Join(3);
+            Assert.That(TeamOf(1), Is.EqualTo(Team.Alpha));
+            Assert.That(TeamOf(2), Is.EqualTo(Team.Bravo));
+            Assert.That(TeamOf(3), Is.EqualTo(Team.Alpha));
+
+            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = ChatChannel.Team, Text = "  push B\n" });
+
+            foreach (var ally in new[] { 1, 3 })
+            {
+                var received = _transport.Read<ChatMessage>(ally, Copy);
+                Assert.That(received, Has.Count.EqualTo(1), "player " + ally);
+                Assert.That(received[0].SenderId, Is.EqualTo(1));
+                Assert.That(received[0].Channel, Is.EqualTo(ChatChannel.Team));
+                Assert.That(received[0].Text, Is.EqualTo("push B"));
+            }
+
+            Assert.That(_transport.Read<ChatMessage>(2, Copy), Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain("[Chat] gate interval=1.00 maxLength=120"));
+            Assert.That(_log.ToString(), Does.Contain("[Chat] accepted sender=1 channel=Team length=6 at="));
+            Assert.That(JsonOf("chat").Single(),
+                Does.Contain("\"playerId\":\"1\"").And.Contain("\"channel\":\"Team\"").And.Contain("\"length\":\"6\"").And.Not.Contain("push"));
+        }
+
+        [Test]
+        public void AllChatReachesEveryone()
+        {
+            Start(Plain());
+            Join(1);
+            Join(2);
+            Join(3);
+
+            Assert.That(_module.ServerChat(2, ChatChannel.All, "gg"), Is.EqualTo(ChatRefusal.None));
+
+            foreach (var id in new[] { 1, 2, 3 })
+            {
+                var received = _transport.Read<ChatMessage>(id, Copy);
+                Assert.That(received, Has.Count.EqualTo(1), "player " + id);
+                Assert.That(received[0].SenderId, Is.EqualTo(2));
+                Assert.That(received[0].Channel, Is.EqualTo(ChatChannel.All));
+                Assert.That(received[0].Text, Is.EqualTo("gg"));
+            }
+
+            Assert.That(JsonOf("chat").Single(), Does.Contain("\"playerId\":\"2\"").And.Contain("\"channel\":\"All\"").And.Contain("\"length\":\"2\""));
+        }
+
+        private static readonly int[] _chatPlayers = { 1, 2 };
+        private static readonly string[] _textA = { "a" };
+        private static readonly string[] _textAC = { "a", "c" };
+        private static readonly string[] _textShort = { "short" };
+
+        [Test]
+        public void ChatSentTooSoonIsNotSentEvenToTheSender()
+        {
+            Start(Plain(), new NetMatchSettings(chatIntervalSeconds: 1f));
+            Join(1);
+            Join(2);
+
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "a"), Is.EqualTo(ChatRefusal.None));
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "b"), Is.EqualTo(ChatRefusal.TooSoon));
+
+            foreach (var id in _chatPlayers)
+            {
+                var received = _transport.Read<ChatMessage>(id, Copy);
+                Assert.That(received.Select(m => m.Text), Is.EqualTo(_textA), "player " + id);
+            }
+
+            Assert.That(_log.ToString(), Does.Contain("[Chat] refused sender=1 reason=TooSoon"));
+            Assert.That(JsonOf("chat"), Has.Count.EqualTo(1));
+            Assert.That(JsonOf("chat_refused").Single(), Does.Contain("\"playerId\":\"1\"").And.Contain("\"reason\":\"TooSoon\""));
+
+            Advance(1.1f);
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "c"), Is.EqualTo(ChatRefusal.None));
+            Assert.That(_transport.Read<ChatMessage>(2, Copy).Select(m => m.Text), Is.EqualTo(_textAC));
+        }
+
+        [Test]
+        public void ChatLongerThanTheSettingIsRefused()
+        {
+            Start(Plain(), new NetMatchSettings(maxChatLength: 5));
+            Join(1);
+            Join(2);
+
+            Assert.That(_module.ServerChat(1, ChatChannel.Team, "toolong"), Is.EqualTo(ChatRefusal.TooLong));
+            Assert.That(_module.ServerChat(1, ChatChannel.Team, "short"), Is.EqualTo(ChatRefusal.None));
+
+            Assert.That(_transport.Read<ChatMessage>(1, Copy).Select(m => m.Text), Is.EqualTo(_textShort));
+            Assert.That(_transport.Read<ChatMessage>(2, Copy), Is.Empty);
+            Assert.That(JsonOf("chat_refused").Single(), Does.Contain("\"reason\":\"TooLong\""));
+        }
+
+        [Test]
+        public void ChatFromSomeoneOutsideTheMatchIsDropped()
+        {
+            Start(Plain());
+            Join(1);
+
+            Assert.That(_module.ServerChat(9, ChatChannel.All, "hi"), Is.Null);
+            Assert.That(_transport.Read<ChatMessage>(1, Copy), Is.Empty);
+            Assert.That(JsonOf("chat"), Is.Empty);
+            Assert.That(JsonOf("chat_refused"), Is.Empty);
+        }
+
+        [Test]
         public void JoiningSpawnsOnTheTeamsPointWithProtectionUntilFiring()
         {
             Start(Plain().WithSpawnProtectionSeconds(2f));
@@ -342,6 +451,11 @@ namespace Shooter.Server.Tests
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.6f, InputButtons.Crouch)), Is.True);
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.Crouch | InputButtons.Jump)), Is.True);
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.None)), Is.True);
+            Assert.That(
+                MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.Crouch | InputButtons.LeanLeft)),
+                Is.True);
+            var leaning = new InputFrame(1, Vector2.Zero, 0.5f, InputButtons.LeanRight);
+            Assert.That(MatchRulesModule.IsActivity(leaning, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.LeanRight)), Is.False);
         }
 
         [Test]

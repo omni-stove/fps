@@ -5,22 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ガンゲーム (<see cref="GunGame"/>) を進める <see cref="ModeRunnerBase"/>。全員が別の陣営 (<see cref="FreeForAll"/>) で、
-    /// <see cref="Ladder"/> の武器の並びを 0 段目から順に持ち、最後の段の武器で倒した人が勝つ。倒れた人は Ladder の <see cref="GunGameLadderDefinition.RespawnSeconds"/> 後に戻る。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>始めたとき、全員の持ち武器を今の段の武器 1 本だけにする。プレイヤーは <see cref="WeaponController"/> を作り直し (持ち替えの入力は外す)、
-    /// bot は <see cref="EnemyAgent.EquipWeapon"/> で替える。予備弾はプレイヤーの WeaponController のルール (GameBootstrap が配線したモードのルール) に従う。</item>
-    /// <item>倒した武器 (<see cref="CombatEvents.CurrentAttribution"/>) を <see cref="GunGame.ReportKill"/> に渡して段を動かし、
-    /// 段が変わった人の武器は次の <see cref="ModeRunnerBase.Tick"/> の頭で替える。撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。</item>
-    /// <item>プレイヤーの近接 (<see cref="MeleeController.MeleeWeapon"/>) は並びの最初の近接の武器にし、近接で倒したら相手を 1 段戻せるようにする。</item>
-    /// <item>最後の段の武器で倒した人が出たら、次の Tick でその人の陣営の勝ちで終わる (<see cref="GunGame.CheckStanding"/>)。時間切れは段のいちばん進んだ人の勝ち。</item>
-    /// <item>陣営の得点は 1 キル 1 点 (<see cref="KillScore"/>) で、勝敗には使わない。HUD に出す自分の段と今の武器、次の武器は <see cref="GunGameStatus"/> にして渡す。</item>
-    /// <item>段が動くたびに <c>[Mode] gungame promote|demote|finish</c>、武器を替えるたびに <c>[Mode] gungame equip</c> のログ (<see cref="GunGameText"/>) を出す。</item>
-    /// </list>
-    /// </remarks>
+    // 段が変わった人の武器を次の Tick の頭で替えるのは、撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。
     public sealed class GunGameRunner : ModeRunnerBase
     {
         public const float DefaultTimeLimitSeconds = 600f;
@@ -37,23 +22,16 @@ namespace Shooter.Runtime
         private ModeSession _gunGameSession;
         private GameRules _weaponRules = GameRules.Default;
 
-        /// <summary>武器の並び。<see cref="CreateGunGameSession"/> (開始時) に読む。</summary>
         public GunGameLadderDefinition Ladder
         {
             get => _ladder;
             set => _ladder = value;
         }
 
-        /// <summary>配線した <see cref="Ladder"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public GunGameLadderDefinition EffectiveLadder => GameContent.Pick(_ladder, c => c.GunGameLadder);
 
-        /// <summary>進めているガンゲーム。<see cref="CreateGunGameSession"/> で作ったモードを始めていなければ null。</summary>
         public GunGame GunGame => _gunGame != null && Session != null && Session == _gunGameSession ? _gunGame : null;
 
-        /// <summary>
-        /// 全員が別の陣営・1 キル 1 点・倒れてから respawnSeconds 後に戻る・gunGame の段で勝敗を決めるモードを作る。
-        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public static ModeSession CreateSession(GunGame gunGame, float timeLimitSeconds, float respawnSeconds)
         {
             if (gunGame == null)
@@ -69,10 +47,6 @@ namespace Shooter.Runtime
                 new IWinCondition[] { gunGame });
         }
 
-        /// <summary>
-        /// <see cref="Ladder"/> からガンゲームとモードを作り、この Runner が進めるものとして覚えて返す。<see cref="ModeRunnerBase.Begin"/> に渡す
-        /// (Play 中は Start が呼ぶ)。制限時間とリスポーンの秒数も Ladder から読む。Ladder が無いか、武器の並びか時間の値が不正なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public ModeSession CreateGunGameSession()
         {
             var definition = EffectiveLadder;
@@ -213,7 +187,6 @@ namespace Shooter.Runtime
             return controller != null ? controller.Rules : GameRules.Default;
         }
 
-        /// <summary>member に今の段の武器を持たせる。もう持っていれば何もしない。</summary>
         private void Equip(GunGame gunGame, SideMember member)
         {
             var id = IdOf(member);
@@ -242,10 +215,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// member の近接 (<see cref="MeleeController"/>) で倒したら、並びの最初の近接の武器で倒したことにする。
-        /// 持っている段の武器の Id のままだと、近接で倒しても段の武器で倒したことになり、相手を戻せないため。
-        /// </summary>
+        // 近接に並びの最初の近接の武器を持たせるのは、持っている段の武器の Id のままだと、近接で倒しても段の武器で倒したことになり、相手を戻せないため。
         private void EquipMelee(SideMember member)
         {
             if (_meleeWeapon == null)
@@ -260,7 +230,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>プレイヤーの武器を替える。WeaponController が無ければ null、替えたら true、もう持っていれば false。</summary>
         private static bool? EquipController(SideMember member, WeaponDefinition definition)
         {
             var controller = member.GetComponentInChildren<WeaponController>(true);
@@ -290,7 +259,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>bot の武器を替える。EnemyAgent が無ければ null、替えたら true、もう持っていれば false。</summary>
         private bool? EquipAgent(SideMember member, WeaponDefinition definition)
         {
             var agent = member.GetComponent<EnemyAgent>();

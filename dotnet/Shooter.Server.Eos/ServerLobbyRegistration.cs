@@ -29,7 +29,7 @@ namespace Shooter.Server.Eos
         /// <param name="backend">ロビーのサービスを呼ぶ側。これが Dispose する。</param>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス。</param>
         /// <param name="version">サーバーの版。</param>
-        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
+        /// <param name="maxPlayers">試合に入れる人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。ロビーのメンバーの上限は <see cref="ServerLobby.MaxMembers"/> で決める。</param>
         /// <param name="log">ログの出力先。</param>
         /// <param name="clock">今の時刻 (秒)。</param>
         /// <param name="sleep">閉じ終えるのを待つ間に眠るミリ秒を受け取る。</param>

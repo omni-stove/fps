@@ -4,13 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ホードの調整値 (通貨の入り方・防衛物を買える時期・補強の費用と届く距離・倒したときの点・波の敵の陣営と動かし方・波の式) をアセットとして持つ。
-    /// <see cref="HordeRunner"/> が読み、<see cref="ToSpec"/> で <see cref="HordeSpec"/>、<see cref="CreateSchedule"/> で波の予定を作る。
-    /// これがあれば、補強の費用と届く距離はシーンの <see cref="HordeFortification"/>、敵の値は <see cref="WaveSpawner"/> の Inspector の値に代わる。
-    /// 新しく作ったときの値は <see cref="HordeSpec"/> と <see cref="WaveSpawner"/> の既定値と同じ。
-    /// 中身は Shooter.Editor.HordeSceneBuilder が無いときだけ作る。
-    /// </summary>
     [CreateAssetMenu(fileName = "Horde", menuName = "Shooter/Horde")]
     public sealed class HordeDefinition : ScriptableObject
     {
@@ -126,7 +119,6 @@ namespace Shooter.Runtime
             set => _interactRadius = value;
         }
 
-        /// <summary>波の敵の陣営。<see cref="HordeRunner"/> はこれを敵の陣営として WaveSpawner にも渡す。</summary>
         public Side EnemySide
         {
             get => new Side(Math.Max(0, _enemySideId));
@@ -199,8 +191,6 @@ namespace Shooter.Runtime
             set => _maxAlive = value;
         }
 
-        /// <summary>defenders が守り attackers が攻めるときの <see cref="HordeSpec"/> を作る。</summary>
-        /// <exception cref="ArgumentException">値が不正か、defenders と attackers が同じ。メッセージにアセット名を含む。</exception>
         public HordeSpec ToSpec(Side defenders, Side attackers)
         {
             try
@@ -226,8 +216,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>波の式から、まだ始まっていない波の予定を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="ArgumentException">波の値が不正。メッセージにアセット名を含む。</exception>
         public WaveSchedule CreateSchedule()
         {
             try
@@ -242,8 +230,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>defenders と attackers で <see cref="ToSpec"/> と <see cref="CreateSchedule"/> が通ることを確かめる。</summary>
-        /// <exception cref="ArgumentException">どちらかが通らない。</exception>
         public void Validate(Side defenders, Side attackers)
         {
             ToSpec(defenders, attackers);

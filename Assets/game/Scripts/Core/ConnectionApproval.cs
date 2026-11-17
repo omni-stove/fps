@@ -14,6 +14,16 @@ namespace Shooter.Core
 
         public static ConnectionVerdict Judge(string serverVersion, byte[] payload, bool draining)
         {
+            return Judge(serverVersion, payload, draining, NetMatchSettings.Default);
+        }
+
+        public static ConnectionVerdict Judge(string serverVersion, byte[] payload, bool draining, NetMatchSettings match)
+        {
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
             if (!ConnectionPayload.IsNormalizedVersion(serverVersion))
             {
                 throw new ArgumentException("server version '" + serverVersion + "' is not a normalized build version", nameof(serverVersion));
@@ -28,7 +38,7 @@ namespace Shooter.Core
                     "the server is draining before it stops");
             }
 
-            if (!ConnectionPayload.TryDecode(payload, out var clientVersion, out var key))
+            if (!ConnectionPayload.TryDecode(payload, out var clientVersion, out var key, out var extras))
             {
                 var length = payload == null ? 0 : payload.Length;
                 return new ConnectionVerdict(
@@ -41,6 +51,16 @@ namespace Shooter.Core
                 return new ConnectionVerdict(
                     false, clientVersion, null, DisconnectNotice.VersionMismatchReason(serverVersion),
                     "version mismatch (client " + clientVersion + ", server " + serverVersion + ")");
+            }
+
+            // 版の違う相手はコードが合っても入れないので、コードは版を比べた後に見る。ログにはコードそのものを残さない
+            if (match.PrivateMatch && !JoinCode.Matches(match.JoinCode, extras.JoinCode))
+            {
+                return new ConnectionVerdict(
+                    false, clientVersion, null, DisconnectNotice.RejectedReason(DisconnectNotice.JoinCodeMismatchDetail),
+                    match.JoinCode == null
+                        ? "the private match has no join code to let anyone in"
+                        : extras.JoinCode == null ? "no join code for the private match" : "wrong join code for the private match");
             }
 
             return new ConnectionVerdict(true, clientVersion, key, null, null);

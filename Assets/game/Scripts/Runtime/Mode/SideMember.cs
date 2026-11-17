@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// GameObject に陣営 (<see cref="Shooter.Core.Side"/>) を持たせる。プレイヤーと <see cref="EnemyAgent"/> に付ける。
-    /// <see cref="ModeRunnerBase"/> はこれの付いたものをモードの参加者にし、<see cref="EnemyAgent"/> はこれがあれば
-    /// 自分と違う陣営のいちばん近い相手を狙う。体力は同じ GameObject の <see cref="Damageable"/> を使う。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class SideMember : MonoBehaviour
     {
@@ -20,14 +15,12 @@ namespace Shooter.Runtime
 
         private Damageable _damageable;
 
-        /// <summary>陣営。</summary>
         public Side Side
         {
             get => new Side(Math.Max(0, _sideId));
             set => _sideId = value.Id;
         }
 
-        /// <summary>同じ GameObject の体力。無ければ null。</summary>
         public Damageable Damageable
         {
             get
@@ -41,15 +34,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>倒れていなければ true。体力が無ければ (撃たれないので) 生きているとみなす。</summary>
+        // 体力が無ければ撃たれないので、生きているとみなす。
         public bool IsAlive => Damageable == null || !Damageable.IsDead;
 
-        /// <summary>同じ陣営なら true。other が null なら false。</summary>
         public bool IsAllyOf(SideMember other) => other != null && other.Side == Side;
 
-        /// <summary>
-        /// 位置の比較に使う足元の点。<see cref="EnemyAgent"/> なら NavMesh 上の足元、体力があればそのコライダーの底、無ければ Transform の位置。
-        /// </summary>
         public Vector3 GroundPosition
         {
             get
@@ -64,22 +53,16 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>go かその親に付いた陣営。無ければ null。</summary>
         public static SideMember Of(GameObject go)
         {
             return go != null ? go.GetComponentInParent<SideMember>() : null;
         }
 
-        /// <summary>シーンにある有効な陣営をすべて返す (順番は決まっていない)。</summary>
         public static SideMember[] FindAll()
         {
             return FindObjectsByType<SideMember>(FindObjectsInactive.Exclude);
         }
 
-        /// <summary>
-        /// members のうち、self と違う陣営で生きている、from にいちばん近いものを返す。いなければ null。
-        /// 判定は <see cref="HostileSelector.Nearest"/> に任せる。
-        /// </summary>
         public static SideMember NearestHostile(Side self, Vector3 from, IReadOnlyList<SideMember> members)
         {
             if (members == null)
@@ -104,12 +87,8 @@ namespace Shooter.Runtime
             return index >= 0 ? present[index] : null;
         }
 
-        /// <summary>
-        /// 体力を満たして groundPosition (足元) に戻す。生きていても戻す (ラウンドの始めに全員を並べ直すため)。
-        /// 初期化済みの <see cref="EnemyAgent"/> なら <see cref="EnemyAgent.ResetTo"/> に任せる。
-        /// それ以外 (プレイヤー) は乗り物に乗っていれば降ろし、CharacterController を切って足元が groundPosition に来るように移し、体力を作り直す。
-        /// プレイヤーの向きは視点の部品 (<see cref="FirstPersonLook"/>) が持っているので変えない。
-        /// </summary>
+        // 生きていても戻すのは、ラウンドの始めに全員を並べ直すため。
+        // プレイヤーの向きは視点の部品 (FirstPersonLook) が持っているので変えない。
         public void Respawn(Vector3 groundPosition, Quaternion rotation)
         {
             // 初期化に失敗した敵は判断を持たず自分で止まっているので、プレイヤーと同じく位置と体力だけ戻す。
@@ -158,12 +137,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// ダウンから起き上がらせる。その場に留まり、体力を health にする。プレイヤーは位置も弾も変えない。
-        /// 初期化済みの <see cref="EnemyAgent"/> は判断と NavMeshAgent が倒れたままなので、<see cref="EnemyAgent.ResetTo"/> でその場に戻してから体力を合わせる。
-        /// 操作と行動は戻さないので、呼んだ側が <see cref="SetActing"/> する。
-        /// </summary>
-        /// <param name="health">起き上がった後の体力。1 以上 (最大体力を超える値は最大体力にする)。</param>
+        // 初期化済みの EnemyAgent は判断と NavMeshAgent が倒れたままなので、ResetTo でその場に戻してから体力を合わせる。
         public void Revive(int health)
         {
             if (health <= 0)
@@ -183,10 +157,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 操作と行動を止める・戻す。プレイヤーなら移動 (<see cref="PlayerController"/>) と射撃 (<see cref="WeaponController"/>)、
-        /// bot なら <see cref="EnemyAgent"/> を切り替える。倒れている間と試合が終わった後に止める。
-        /// </summary>
         public void SetActing(bool acting)
         {
             // 武器を先に止める。止めると Reload アクションが無効に戻ることがあるので、再開の入力はその後で有効にする (MatchRunner と同じ順)。

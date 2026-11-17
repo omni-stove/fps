@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke に足す手順。<see cref="DebrisCrushRangeFixture"/> の柱の根元を、プレイヤーとその武器の帰属で
-    /// (<see cref="CombatEvents.Attribute(GameObject, string)"/>) 壊し、崩れた梁の破片が下の敵に当たったログ
-    /// (<c>[Destruction] debris hit ... id=CrushEnemy</c>) と、壊したプレイヤーを倒した者とするキルフィードの行
-    /// (<c>[KillFeed] ... killer=&lt;プレイヤー&gt; victim=&lt;敵&gt;</c>) が出て、敵が倒れるまで待つ。
-    /// </summary>
     public sealed class DebrisCrushSmokeStep : ITpsActionSmokeStep
     {
         public const string LogTag = "[DebrisCrushSmoke]";

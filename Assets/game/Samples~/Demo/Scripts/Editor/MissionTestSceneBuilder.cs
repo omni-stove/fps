@@ -10,18 +10,10 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// テスト用ミッション (エリアに到達 → 標的を 3 体倒す → 脱出地点に到達) の定義アセットとシーンを生成する。
-    /// プレイヤー・床・ライトは実行時に <see cref="GameBootstrap"/> が作るので、シーンにはミッション用の物だけを置き、
-    /// 参照 (MissionRunner の定義、トリガーの目標 Id) はここでコードから設定する。
-    /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -executeMethod Shooter.Editor.MissionTestSceneBuilder.Build</code>
-    /// </summary>
+    // プレイヤー・床・ライトは実行時に GameBootstrap が作るので、シーンにはミッション用の物だけを置く。
     public static class MissionTestSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MissionTestScene;
-        /// <summary>ミッション Id (<see cref="MissionDefinition.Id"/>) と定義のアセット名。表のキー (<see cref="MissionDefinition.NameKeyOf"/>) にも使う。</summary>
         public const string MissionId = "TestMission";
 
         public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
@@ -42,23 +34,18 @@ namespace Shooter.Editor
         public const string TargetObjectNamePrefix = "Target_";
         public const string ExtractionObjectName = "ExtractionPoint";
 
-        /// <summary>プレイヤー (原点で +Z を向く) から見て正面 10m。</summary>
         public static readonly Vector3 ReachAreaPosition = new Vector3(0f, 0f, 10f);
 
-        /// <summary>到達エリアのさらに 10m 先に横一列。</summary>
         public static readonly Vector3 TargetsPosition = new Vector3(0f, 0f, 20f);
 
         public const float TargetSpacing = 4f;
 
-        /// <summary>標的の奥の右手。</summary>
         public static readonly Vector3 ExtractionPosition = new Vector3(12f, 0f, 20f);
 
-        /// <summary>床に置く目印の大きさ。トリガーの高さは <see cref="AreaTriggerHeight"/>。</summary>
         public static readonly Vector3 AreaPadScale = new Vector3(4f, 0.1f, 4f);
 
         public const float AreaTriggerHeight = 2.5f;
 
-        /// <summary>テスト用ミッションの目標。</summary>
         public static IReadOnlyList<ObjectiveDefinition> TestObjectives()
         {
             return new[]
@@ -69,10 +56,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// 定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加える。
-        /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -86,7 +69,6 @@ namespace Shooter.Editor
             BuildAt(ScenePath, DefinitionPath);
         }
 
-        /// <summary>definitionPath に定義を、scenePath にシーンを生成・保存する。</summary>
         public static void BuildAt(string scenePath, string definitionPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -113,16 +95,12 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{definitionPath}' and '{scenePath}' and registered the scene in Build Settings");
         }
 
-        /// <summary>
-        /// path の MissionDefinition をテスト用の目標で上書きする。無ければ作る。既存のアセットは GUID を保つので、
-        /// それを参照しているシーンは壊れない。保存前に <see cref="Shooter.Core.Mission"/> に変換できることを確かめる。
-        /// </summary>
+        // 既存のアセットは GUID を保って上書きするので、それを参照しているシーンは壊れない。
         public static MissionDefinition CreateOrUpdateDefinition(string path)
         {
             return SceneBuildHelpers.CreateOrUpdateMissionDefinition(path, Configure);
         }
 
-        /// <summary>definition の Id と中身をテスト用ミッションにし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition)
         {
             if (definition == null)
@@ -138,10 +116,6 @@ namespace Shooter.Editor
             definition.CreateMission();
         }
 
-        /// <summary>
-        /// 空のシーンにテスト用ミッションの物を置き、参照をすべて設定する。Edit Mode では Awake/Start が走らないので、
-        /// ミッションは Play したときに始まる。プレイヤーは weapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) を持つ。
-        /// </summary>
         public static MissionTestLayout PopulateScene(Scene scene, MissionDefinition definition, IReadOnlyList<WeaponDefinition> weapons)
         {
             if (!scene.IsValid() || !scene.isLoaded)
@@ -214,22 +188,16 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// Build Settings のシーン一覧に path を有効な状態で加える。既にあれば位置を変えずに有効にし、
-        /// 他のシーンは順番と有効/無効をそのまま残す。
-        /// </summary>
         public static EditorBuildSettingsScene[] WithSceneAppended(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
             return BuildSceneList.WithScene(current, path);
         }
 
-        /// <summary>Assets/ 以下の .asset であることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateAssetPath(string path)
         {
             return SceneBuildHelpers.ValidateAssetPath(path);
         }
 
-        /// <summary>床に置く <see cref="AreaPadScale"/> の板の目印。トリガーは <see cref="AreaTriggerHeight"/> の高さまで伸ばす。</summary>
         private static GameObject CreateAreaPad(string name, Vector3 position)
         {
             return SceneBuildHelpers.CreateAreaPad(name, position, AreaPadScale, AreaTriggerHeight);
@@ -253,7 +221,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary><see cref="MissionTestSceneBuilder.PopulateScene"/> が置いたもの。</summary>
     public sealed class MissionTestLayout
     {
         public GameObject Bootstrap { get; }

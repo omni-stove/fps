@@ -82,7 +82,8 @@ namespace Shooter.Server
                     new SpawnSelector(settings.MinEnemySpawnDistance),
                     PositionOf,
                     null,
-                    settings.ReconnectGraceSeconds);
+                    settings.ReconnectGraceSeconds,
+                    _data.Assist);
             }
             catch (ArgumentException e)
             {
@@ -106,6 +107,7 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.Restarted += HandleMatchRestarted;
+            _match.TeamChanged += HandleTeamChanged;
 
             _log.WriteLine(MatchLog.Tag + " waiting for players scoreLimit=" + Text(_session.Spec.ScoreLimit)
                 + " timeLimit=" + Text(_session.Spec.TimeLimitSeconds) + "s respawn=" + Text(_session.Spec.RespawnSeconds)
@@ -130,6 +132,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
+            PrepareChat(settings);
             StartObjective();
         }
 
@@ -179,8 +182,32 @@ namespace Shooter.Server
                 case LoadoutRequestMessage loadout:
                     ServerChooseLoadout(player, loadout.WeaponIds);
                     break;
+                case ChatRequestMessage chat:
+                    OnChatRequest(player, chat);
+                    break;
+                case MapVoteRequestMessage vote:
+                    OnMapVoteRequest(player, vote);
+                    break;
+                case SpectateRequestMessage spectate:
+                    OnSpectateRequest(player, spectate);
+                    break;
             }
         }
+
+        // 機能ごとの中身を MatchRulesModule.<機能>.cs に分けて書けるよう、イベントにせず partial method にする (書かれていなければ呼び出しごと消える)
+        partial void OnChatRequest(ServerPlayer player, ChatRequestMessage request);
+
+        partial void OnMapVoteRequest(ServerPlayer player, MapVoteRequestMessage request);
+
+        partial void OnSpectateRequest(ServerPlayer player, SpectateRequestMessage request);
+
+        partial void OnPlayerJoined(ServerPlayer player);
+
+        partial void OnPlayerLeft(ServerPlayer player);
+
+        partial void OnMatchEnded(Team? winner);
+
+        partial void OnNextMatchStarting();
 
         public void Stop()
         {
@@ -192,6 +219,7 @@ namespace Shooter.Server
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.Restarted -= HandleMatchRestarted;
+            _match.TeamChanged -= HandleTeamChanged;
             if (_match.ChooseTeam == ChooseTeam)
             {
                 _match.ChooseTeam = null;
@@ -339,6 +367,7 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
+            OnPlayerJoined(player);
         }
 
         private void HandlePlayerLeft(ServerPlayer player)
@@ -350,6 +379,9 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            ChatPlayerLeft(playerId);
+            SpectatePlayerLeft(playerId);
+            OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {
                 _log.WriteLine(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
@@ -358,8 +390,30 @@ namespace Shooter.Server
             _bodies.Remove(playerId);
         }
 
+        // 続く HandleMatchRestarted の Session.Restart が、移った先のチームの地点に出現させてスナップショットに載せる
+        private void HandleTeamChanged(ServerPlayer player, Team from)
+        {
+            var playerId = player.PlayerId;
+            if (!_session.HasPlayer(playerId))
+            {
+                return;
+            }
+
+            if (_session.State != GameModeState.Ended)
+            {
+                _log.WriteLine(MatchLog.Tag + " player " + Text(playerId) + " moved to " + player.Team + " in the match but the rules are " + _session.State);
+                return;
+            }
+
+            // マーカーは送り先をチームで選ぶので、次の試合で消えるものも移す前に消して、前のチームのマーカーを残さない
+            PingMatchRestarted();
+            _session.ChangeTeam(playerId, player.Team);
+            ObjectivePlayerJoined(playerId);
+        }
+
         private void HandleMatchRestarted()
         {
+            OnNextMatchStarting();
             if (_session.State == GameModeState.Ended)
             {
                 _session.Restart();
@@ -379,6 +433,7 @@ namespace Shooter.Server
             ClearDowned();
             PingMatchRestarted();
             ObjectiveMatchRestarted();
+            SpectateMatchRestarted();
         }
 
         private void HandleScoreChanged(int alpha, int bravo)
@@ -388,14 +443,15 @@ namespace Shooter.Server
         }
 
         // Session は Killed の直後に倒された人の PlayerChanged と DownedChanged を出すので、ここで記録すればそこで引ける
-        private void HandleKilled(int killerId, int victimId)
+        private void HandleKilled(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             _lastKillers[victimId] = killerId;
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
-            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
+            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
             _match.WriteKill(killerId, victimId, byAlly);
-            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot));
+            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
             ObjectivePlayerKilled(victimId);
+            SpectatePlayerKilled(victimId);
         }
 
         private void HandleEnded(Team? winner)
@@ -404,6 +460,7 @@ namespace Shooter.Server
             ObjectiveMatchEnded();
             _match.End(winner);
             _reviveHolds.Clear();
+            OnMatchEnded(winner);
         }
 
         private void HandleHeldExpired(HeldPlayer held)
@@ -413,6 +470,7 @@ namespace Shooter.Server
 
         private void HandleSpawned(int playerId, SpawnPoint point)
         {
+            SpectatePlayerSpawned(playerId);
             if (!_bodies.TryGet(playerId, out var body))
             {
                 return;
@@ -448,23 +506,25 @@ namespace Shooter.Server
         }
 
         /// <summary>
-        /// Session の Killed (killerId, victimId) をキルフィードの 1 行にする。shot を撃った人が倒した者で、倒れたのが当たった人か
+        /// Session の Killed (killerId, victimId, アシストした Id) をキルフィードの 1 行にする。shot を撃った人が倒した者で、倒れたのが当たった人か
         /// 撃った本人 (跳ね返し) なら、その武器を載せる。頭への止めは当たった人をその弾で倒したときだけ。
         /// </summary>
-        internal static KillFeedEntry KillFeedEntryFor(int killerId, int victimId, bool friendly, KillShot? shot)
+        internal static KillFeedEntry KillFeedEntryFor(
+            int killerId, int victimId, bool friendly, KillShot? shot, IReadOnlyList<int> assisterIds = null)
         {
             if (!shot.HasValue || shot.Value.ShooterId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
             var byShot = victimId == shot.Value.TargetId;
             if (!byShot && victimId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
-            return new KillFeedEntry(killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly);
+            return new KillFeedEntry(
+                killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly, assisterIds);
         }
 
         private void SendToAll(TransportChannel channel, IMessage message)

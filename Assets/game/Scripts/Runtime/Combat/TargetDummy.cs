@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 撃って倒せる標的ダミー。<see cref="Create"/> で、本体の <see cref="Damageable"/> と、
-    /// Capsule の胴 (<see cref="BodyName"/>) と上の Sphere の頭 (<see cref="HeadName"/>) の <see cref="Hitbox"/> をコードで組み立てる。
-    /// 死ぬと (死亡ログは <see cref="Damageable"/> が出す) 体を隠し、<see cref="RespawnDelay"/> 秒後に元の位置で
-    /// Health を作り直して復活する。待ち時間の判断は <see cref="RespawnCountdown"/> に任せる。
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Damageable))]
     public sealed class TargetDummy : MonoBehaviour
@@ -20,14 +14,13 @@ namespace Shooter.Runtime
         public const string BodyName = "Body";
         public const string HeadName = "Head";
 
-        /// <summary>差し替えた見た目のプレハブを置く子の名前。</summary>
         public const string VisualName = "Visual";
 
-        /// <summary>胴体のカプセル。高さ 1.7m (Capsule は高さ 2m なので y を 0.85 倍) で足元から立つ。</summary>
+        // Capsule は高さ 2m なので、y を 0.85 倍して高さ 1.7m の胴を足元から立たせる。
         public static readonly Vector3 BodyLocalPosition = new Vector3(0f, 0.85f, 0f);
         public static readonly Vector3 BodyScale = new Vector3(1f, 0.85f, 1f);
 
-        /// <summary>頭の球。直径 0.5m で胴体のすぐ上 (1.7m〜2.2m)。正面を水平に撃つと胴体、少し上を向くと頭に当たる。</summary>
+        // 正面を水平に撃つと胴体、少し上を向くと頭に当たるよう、頭は胴体のすぐ上 (1.7m〜2.2m) に置く。
         public static readonly Vector3 HeadLocalPosition = new Vector3(0f, 1.95f, 0f);
         public static readonly Vector3 HeadScale = new Vector3(0.5f, 0.5f, 0.5f);
 
@@ -42,40 +35,20 @@ namespace Shooter.Runtime
         private Quaternion _homeRotation = Quaternion.identity;
         private bool _subscribed;
 
-        /// <summary>体力を持つ本体。</summary>
         public Damageable Damageable => _damageable;
 
-        /// <summary>死んでから復活するまでの秒数。</summary>
         public float RespawnDelay => _respawnDelay;
 
-        /// <summary>復活する位置 (<see cref="Initialize"/> したときの位置)。</summary>
         public Vector3 HomePosition => _homePosition;
 
-        /// <summary>復活する向き (<see cref="Initialize"/> したときの向き)。</summary>
         public Quaternion HomeRotation => _homeRotation;
 
-        /// <summary>死んで復活を待っている間は true。</summary>
         public bool IsWaitingToRespawn => _countdown != null && _countdown.IsRunning;
 
-        /// <summary>復活までの残り秒数。待っていなければ 0。</summary>
         public float RemainingRespawnSeconds => _countdown != null ? _countdown.RemainingSeconds : 0f;
 
-        /// <summary><see cref="Initialize"/> が済んでいれば true。</summary>
         public bool IsInitialized => _countdown != null;
 
-        /// <summary>
-        /// 標的ダミーを 1 体組み立てる。足元が position に来る。途中で失敗したら作りかけを片付けて例外を投げ直す。
-        /// </summary>
-        /// <param name="id">GameObject の名前とログの識別子。空にはできない。</param>
-        /// <param name="position">足元の位置 (復活する位置)。</param>
-        /// <param name="rotation">向き (復活する向き)。</param>
-        /// <param name="parent">親。null ならシーンの直下。</param>
-        /// <param name="maxHealth">最大体力。1 以上。</param>
-        /// <param name="respawnDelay">復活までの秒数。0 以上の有限値。</param>
-        /// <param name="visualPrefab">
-        /// 見た目。足元が原点、前が +Z。当たり判定を外して <see cref="VisualName"/> の子に置き、胴と頭の当たり判定は仮の形と同じ大きさの
-        /// 見えないコライダーにする。null なら仮の形 (Capsule と Sphere) を作り、その形をそのまま当たり判定に使う。
-        /// </param>
         public static TargetDummy Create(
             string id,
             Vector3 position,
@@ -119,10 +92,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 本体と復活までの秒数を設定し、今の位置と向きを復活する場所として覚える。
-        /// 何度呼んでもよく、<see cref="Damageable.Died"/> の購読は 1 本だけになる。
-        /// </summary>
         public void Initialize(Damageable damageable, float respawnDelay)
         {
             if (damageable == null)
@@ -178,11 +147,6 @@ namespace Shooter.Runtime
             Unsubscribe();
         }
 
-        /// <summary>
-        /// 復活待ちの時間を deltaSeconds 進め、待ち時間を過ぎたら復活する。復活したら true。
-        /// Play 中は Update から毎フレーム呼ぶ。Edit Mode のテストでは直接呼ぶ。
-        /// </summary>
-        /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
         public bool Tick(float deltaSeconds)
         {
             if (_countdown == null || !_countdown.Tick(deltaSeconds))
@@ -194,10 +158,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 待ち時間を待たずに、元の位置と向きで満タンの Health を作り直して復活する。
-        /// Play 中に Inspector の右クリックメニューからも呼べる。
-        /// </summary>
         [ContextMenu("Respawn")]
         public void Respawn()
         {
@@ -213,7 +173,6 @@ namespace Shooter.Runtime
             Debug.Log(FormatRespawnedLog(_damageable.Id), this);
         }
 
-        /// <summary>復活したときのログ。</summary>
         public static string FormatRespawnedLog(string id)
         {
             return $"{Damageable.LogTag} target respawned id={id}";

@@ -20,10 +20,8 @@ namespace Shooter.Editor
         // 掴める壁で狙う、縁から下がった高さ (m)。GrappleSpec.DefaultEdgeSnapDistance より浅いので縁へ寄る。
         public const float AimBelowEdge = 0.6f;
 
-        // 照準が当たったと見なす、狙った高さからのずれ (m)。
         public const float AimTolerance = 0.4f;
 
-        // 掴めない壁で狙う高さ (m)。
         public const float NotGrabbableAimHeight = 2.5f;
 
         // 上がった後の足元の高さの、壁の上端からの許容のずれ (m)。CharacterController の skinWidth を見込む。
@@ -32,7 +30,6 @@ namespace Shooter.Editor
         // ジャンプで離すまでに引き寄せられる距離 (m)。速さに乗った所で離す。
         public const float JumpAfterDistance = 3f;
 
-        // 離れた後に勢いが残っていると見なす水平の速さ (m/s)。
         public const float MinMomentumSpeed = 2f;
 
         private static readonly string _outOfRangeLog = $"{GrappleLog.MissPrefix}reason={GrappleMiss.OutOfRange} ";
@@ -490,8 +487,6 @@ namespace Shooter.Editor
             return true;
         }
 
-        // 照準の Ray (目から画面中央が指す点へ、ViewRig.ResolveAim) が target の高さに当たるまで向きを直す。
-        // 当たったら true。合わない間は false で、MaxAimUpdates を超えたら problem に理由を入れる。
         private bool AimAt(BootstrapWorld world, Vector3 target, string surfaceName, out string problem)
         {
             problem = null;

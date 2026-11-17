@@ -17,5 +17,9 @@ namespace Shooter.Core
         CameraShakeIntensity,
 
         ViewmodelMotionIntensity,
+
+        StickDeadzone,
+
+        RumbleStrength,
     }
 }

@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // タレットを試す場所。プレイヤーは手前 (PlayerGround) に立って +Z へタレットを置き、奥の足場に置いた敵を撃たせる。
     // 敵は無効のまま置き、smoke の手順 (TurretSmokeStep) が自分の番に有効にする。ほかの手順の間に撃ち合いを始めないように。
     // 足場の NavMesh は Play の頭に焼くが、焼いた後に有効にする物は渡さない (NavMeshBakeActivator は渡した物しか有効にしない)。
     // 置いたタレットの視界 (TurretSpec.DefaultSightRange) がほかの敵 (突進の囲いなど) に届かない所に置く。

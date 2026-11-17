@@ -6,18 +6,9 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場に、分隊への指示 (<see cref="SquadCommandController"/>) を試す場所を置く。右の中ほど (開けた場所と小屋の間) に足場を敷き、
-    /// その上に味方の bot (<see cref="BotName"/>、陣営 <see cref="BotSide"/>) を 1 人立たせる。
-    /// 射撃場の床は GameBootstrap が実行時に作り NavMesh が無いので、殴ってくる敵 (<see cref="MeleeEnemyRangeFixture"/>) と同じく足場を Play 中に焼いてから bot を有効にする。
-    /// smoke (<see cref="SquadCommandSmokeStep"/>) は <see cref="StandPoint"/> から <see cref="HoldPoint"/> を指して守らせ、
-    /// <see cref="TargetPoint"/> に置いた標的ダミーを指して狙わせ、最後に付いてこさせる。
-    /// 位置はどれも床の高さで、子の空の GameObject (<see cref="StandName"/> など) にも置くので、シーンを開いて場所を確かめられる。
-    /// </summary>
-    /// <remarks>
-    /// 立つ位置は狙撃手の足場 (<see cref="SniperRangeFixture.Perches"/>) のどれからも <see cref="SniperRangeFixture.SightRange"/> より離し、手順の間に撃たれないようにする。
-    /// bot は陣営を持つので、陣営の無い射撃場の敵や標的は自分からは狙わない (指示した敵だけを撃つ)。
-    /// </remarks>
+    // 射撃場の床は GameBootstrap が実行時に作り NavMesh が無いので、殴ってくる敵 (MeleeEnemyRangeFixture) と同じく足場を Play 中に焼いてから bot を有効にする。
+    // 立つ位置は狙撃手の足場 (SniperRangeFixture.Perches) のどれからも SniperRangeFixture.SightRange より離し、手順の間に撃たれないようにする。
+    // bot は陣営を持つので、陣営の無い射撃場の敵や標的は自分からは狙わず、指示した敵だけを撃つ。
     public sealed class SquadCommandRangeFixture : ITpsRangeFixture
     {
         public const string RootName = "SquadCommandYard";
@@ -29,10 +20,8 @@ namespace Shooter.Editor
         public const string TargetName = "Target";
         public const int FixtureOrder = 540;
 
-        /// <summary>足場の x 方向の広さ (m)。</summary>
         public const float NavFloorWidth = 8f;
 
-        /// <summary>足場の z 方向の広さ (m)。</summary>
         public const float NavFloorDepth = 5f;
 
         public const float NavFloorThickness = 0.1f;
@@ -40,22 +29,18 @@ namespace Shooter.Editor
         // 床の Plane (y=0) と面を重ねると、bot の足がどちらの面に乗るかが定まらないので、わずかに上げる。
         public const float NavFloorTop = 0.02f;
 
-        /// <summary>bot の陣営。smoke はプレイヤーにも同じ陣営を持たせて味方にする。</summary>
         public static readonly Side BotSide = Side.Alpha;
 
-        /// <summary>足場の中心 (床の高さ)。</summary>
         public static readonly Vector3 Center = new Vector3(13f, 0f, 5.5f);
 
-        /// <summary>プレイヤーが立つ位置 (床の高さ)。足場の左手前の端。</summary>
         public static readonly Vector3 StandPoint = new Vector3(9.5f, 0f, 3.8f);
 
-        /// <summary>bot が初めに立つ位置 (床の高さ)。</summary>
         public static readonly Vector3 BotPoint = new Vector3(12f, 0f, 6.5f);
 
-        /// <summary>守らせる場所 (床の高さ)。立つ位置から右前へ 5.5m ほどで、bot の初めの位置と照準の線が重ならない。</summary>
+        // 立つ位置から見て、bot の初めの位置と照準の線が重ならない所にする。
         public static readonly Vector3 HoldPoint = new Vector3(15.5f, 0f, 5f);
 
-        /// <summary>狙わせる標的ダミーを置く位置 (床の高さ)。守らせる場所から bot の攻撃の距離 (<see cref="EnemySpec.DefaultAttackRange"/>) の内。</summary>
+        // 守らせる場所から bot の攻撃の距離 (EnemySpec.DefaultAttackRange) の内に置く。
         public static readonly Vector3 TargetPoint = new Vector3(16f, 0f, 7.5f);
 
         public static readonly EnemyBody BotBody = new EnemyBody(2f, 0.5f, 3.5f, Damageable.DefaultMaxHealth);

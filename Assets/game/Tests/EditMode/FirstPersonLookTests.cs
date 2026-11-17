@@ -78,6 +78,72 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => _look.ControlSettings = null);
         }
 
+        [Test]
+        public void TheMouseLooksUpWhenMovedUpWithoutInvert()
+        {
+            var degrees = _look.ToLookDegrees(new Vector2(10f, 20f), true, 1f);
+
+            Assert.That(degrees.x, Is.EqualTo(10f * FirstPersonLook.DefaultMouseSensitivity).Within(1e-5f));
+            Assert.That(degrees.y, Is.EqualTo(20f * FirstPersonLook.DefaultMouseSensitivity).Within(1e-5f));
+        }
+
+        [Test]
+        public void InvertLookYFlipsOnlyTheVerticalMouseLook()
+        {
+            _look.ControlSettings = ControlSettings.Default.WithInvertLookY(true);
+
+            var degrees = _look.ToLookDegrees(new Vector2(10f, 20f), true, 1f);
+
+            Assert.That(degrees.x, Is.EqualTo(10f * FirstPersonLook.DefaultMouseSensitivity).Within(1e-5f), "left and right stay as they are");
+            Assert.That(degrees.y, Is.EqualTo(-20f * FirstPersonLook.DefaultMouseSensitivity).Within(1e-5f));
+        }
+
+        [Test]
+        public void TheStickLooksUpWhenPushedUpWithoutInvert()
+        {
+            var degrees = _look.ToLookDegrees(new Vector2(0.5f, 1f), false, 0.5f);
+
+            Assert.That(degrees.x, Is.EqualTo(0.5f * FirstPersonLook.DefaultStickSensitivity * 0.5f).Within(1e-4f));
+            Assert.That(degrees.y, Is.EqualTo(FirstPersonLook.DefaultStickSensitivity * 0.5f).Within(1e-4f));
+        }
+
+        [Test]
+        public void InvertLookYFlipsOnlyTheVerticalStickLook()
+        {
+            _look.ControlSettings = ControlSettings.Default.WithInvertLookY(true);
+
+            var degrees = _look.ToLookDegrees(new Vector2(0.5f, 1f), false, 0.5f);
+
+            Assert.That(degrees.x, Is.EqualTo(0.5f * FirstPersonLook.DefaultStickSensitivity * 0.5f).Within(1e-4f), "left and right stay as they are");
+            Assert.That(degrees.y, Is.EqualTo(-FirstPersonLook.DefaultStickSensitivity * 0.5f).Within(1e-4f));
+        }
+
+        [Test]
+        public void TurningOffInvertLookYTakesEffectOnTheNextReading()
+        {
+            _look.Initialize(_pivot, _action);
+            _look.ControlSettings = ControlSettings.Default.WithInvertLookY(true);
+
+            _look.Turn(_look.ToLookDegrees(new Vector2(0f, 100f), true, 1f), true);
+            Assert.That(_look.Pitch, Is.EqualTo(100f * FirstPersonLook.DefaultMouseSensitivity).Within(1e-3f), "moving the mouse up looks down");
+
+            _look.ControlSettings = ControlSettings.Default;
+            _look.Turn(_look.ToLookDegrees(new Vector2(0f, 100f), true, 1f), true);
+            Assert.That(_look.Pitch, Is.EqualTo(0f).Within(1e-3f), "moving the mouse up looks up again");
+        }
+
+        [Test]
+        public void InvertLookYLeavesTheAssistAngleAlone()
+        {
+            _look.Initialize(_pivot, _action);
+            _look.ControlSettings = ControlSettings.Default.WithInvertLookY(true);
+            _look.AddAssistDegrees(new Vector2(0f, 2f));
+
+            _look.Turn(Vector2.zero, false);
+
+            Assert.That(_look.Pitch, Is.EqualTo(-2f).Within(1e-3f), "the assist pulls toward the target, not along the player's input");
+        }
+
         [TestCase(-0.1f)]
         [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)]

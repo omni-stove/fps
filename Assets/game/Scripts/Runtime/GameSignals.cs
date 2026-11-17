@@ -78,6 +78,21 @@ namespace Shooter.Runtime
         /// <summary>この画面のプレイヤーのストリーク (倒れずに倒した数と報酬の枠)。ストリークを使っていなければ null。</summary>
         public static GameSignal<StreakStatus?> Streak { get; } = new GameSignal<StreakStatus?>(nameof(Streak));
 
+        /// <summary>ミニマップとコンパスに出すもの。出していなければ null。</summary>
+        public static GameSignal<MinimapStatus?> Minimap { get; } = new GameSignal<MinimapStatus?>(nameof(Minimap));
+
+        /// <summary>この画面で見せるチャットの行。チャットを使っていなければ null。</summary>
+        public static GameSignal<IReadOnlyList<ChatLine>> Chat { get; } = new GameSignal<IReadOnlyList<ChatLine>>(nameof(Chat));
+
+        /// <summary>ボイスチャットの状態。ボイスを使っていなければ null。</summary>
+        public static GameSignal<VoiceStatus?> Voice { get; } = new GameSignal<VoiceStatus?>(nameof(Voice));
+
+        /// <summary>次のマップの投票。投票していなければ null。</summary>
+        public static GameSignal<MapVoteStatus?> MapVote { get; } = new GameSignal<MapVoteStatus?>(nameof(MapVote));
+
+        /// <summary>ネット対戦で味方を見ている状態。見ていなければ null。</summary>
+        public static GameSignal<SpectateStatus?> Spectate { get; } = new GameSignal<SpectateStatus?>(nameof(Spectate));
+
         /// <summary>すべての項目の値と購読者を空に戻す。</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -102,6 +117,11 @@ namespace Shooter.Runtime
             PauseTimeMode.Reset();
             PaletteViewer.Reset();
             Streak.Reset();
+            Minimap.Reset();
+            Chat.Reset();
+            Voice.Reset();
+            MapVote.Reset();
+            Spectate.Reset();
         }
     }
 }

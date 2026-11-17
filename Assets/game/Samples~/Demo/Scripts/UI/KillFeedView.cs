@@ -11,7 +11,8 @@ namespace Shooter.Runtime
     /// </summary>
     /// <remarks>
     /// 名前の色はチーム (<see cref="Hud.TeamColor"/>) で、チームの無い名前は USS の既定の色のまま。この画面のプレイヤーが倒したか
-    /// 倒された行 (<see cref="KillFeedLine.Highlighted"/>) は <see cref="LocalRowClass"/> で強調する。
+    /// 倒された行 (<see cref="KillFeedLine.Highlighted"/>) は <see cref="LocalRowClass"/> で強調し、アシストした行 (<see cref="KillFeedLine.LocalAssisted"/>) は
+    /// <see cref="AssistRowClass"/> を付けて後ろに小さなアシストの知らせ (<see cref="AssistClass"/>) を出す。
     /// 印と武器の欄は描くときに今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら描き直す。
     /// 足した行は <see cref="LogTag"/> でログにも出し、画面を見ずにネット対戦の両クライアントのフィードを突き合わせられるようにする。
     /// </remarks>
@@ -41,6 +42,12 @@ namespace Shooter.Runtime
 
         /// <summary>味方撃ちの印の Label の USS クラス。</summary>
         public const string FriendlyClass = "kill-feed__friendly";
+
+        /// <summary>この画面のプレイヤーがアシストした行に足す USS クラス。</summary>
+        public const string AssistRowClass = "kill-feed__row--assist";
+
+        /// <summary>アシストの知らせ (<see cref="KillFeedText.AssistMark"/>) の Label の USS クラス。</summary>
+        public const string AssistClass = "kill-feed__assist";
 
         private readonly KillFeed _feed = new KillFeed();
         private IKillFeedNames _names;
@@ -200,6 +207,13 @@ namespace Shooter.Runtime
 
             row.Add(weapon);
             row.Add(CreateName(line.Victim, hud));
+
+            if (line.LocalAssisted)
+            {
+                row.AddToClassList(AssistRowClass);
+                row.Add(CreateLabel(Localizer.Resolve(KillFeedText.AssistMark), AssistClass));
+            }
+
             return row;
         }
 

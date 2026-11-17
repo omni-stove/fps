@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// 参加者のキル・デス・接続状態をチームごとに一覧にするビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 参加者のキル・アシスト・デス・接続状態をチームごとに一覧にするビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
     /// <see cref="ToggleActionPath"/> (Tab / ゲームパッドの View) を押している間だけ出す。
     /// </summary>
     /// <remarks>
@@ -53,7 +53,7 @@ namespace Shooter.Runtime
         /// <summary>名前の列。</summary>
         public const string NameCellClass = "scoreboard__name";
 
-        /// <summary>キル数・デス数の列。</summary>
+        /// <summary>キル数・アシスト数・デス数の列。</summary>
         public const string CountCellClass = "scoreboard__count";
 
         /// <summary>接続状態の列。</summary>
@@ -63,6 +63,8 @@ namespace Shooter.Runtime
         public const string KillsCaption = "K";
 
         public const string DeathsCaption = "D";
+
+        public static string AssistsCaption => Localizer.Resolve(ScoreboardText.AssistsCaption);
 
         public static string ConnectionCaption => Localizer.Resolve(ScoreboardText.ConnectionCaption);
 
@@ -282,6 +284,7 @@ namespace Shooter.Runtime
             var caption = Row(CaptionRowClass);
             caption.Add(Cell(string.Empty, NameCellClass));
             caption.Add(Cell(KillsCaption, CountCellClass));
+            caption.Add(Cell(AssistsCaption, CountCellClass));
             caption.Add(Cell(DeathsCaption, CountCellClass));
             caption.Add(Cell(ConnectionCaption, ConnectionCellClass));
             element.Add(caption);
@@ -301,6 +304,7 @@ namespace Shooter.Runtime
 
                 header.Add(teamName);
                 header.Add(Cell(ScoreboardText.Count(section.Kills), CountCellClass));
+                header.Add(Cell(ScoreboardText.Count(section.Assists), CountCellClass));
                 header.Add(Cell(ScoreboardText.Count(section.Deaths), CountCellClass));
                 header.Add(Cell(string.Empty, ConnectionCellClass));
                 box.Add(header);
@@ -320,6 +324,7 @@ namespace Shooter.Runtime
 
                     row.Add(Cell(NameOrEmpty(entry.Name), NameCellClass));
                     row.Add(Cell(ScoreboardText.Count(entry.Kills), CountCellClass));
+                    row.Add(Cell(ScoreboardText.Count(entry.Assists), CountCellClass));
                     row.Add(Cell(ScoreboardText.Count(entry.Deaths), CountCellClass));
                     row.Add(Cell(ConnectionTextOrEmpty(entry.Connection), ConnectionCellClass));
                     box.Add(row);

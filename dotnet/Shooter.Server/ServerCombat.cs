@@ -19,7 +19,7 @@ namespace Shooter.Server
     /// 射撃・ヒット・被弾・爆発をクライアントへ送る。
     /// </para>
     /// <para>
-    /// 位置は移動のモジュールが写した <see cref="ServerBodies"/> を読み、tick ごとに <see cref="ServerHitboxes"/> に残して巻き戻す。
+    /// 位置とリーンの傾きは移動のモジュールが写した <see cref="ServerBodies"/> を読み、tick ごとに <see cref="ServerHitboxes"/> に残して巻き戻す。
     /// 回避・乗り越え・カバー・覗き込みと移動の速さは移動のモジュールの確定状態を読む。
     /// </para>
     /// </remarks>
@@ -113,7 +113,7 @@ namespace Shooter.Server
             _match = context.Match;
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
-            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles);
+            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles, _movement.Settings.Motor);
             _shotTrace = new ServerShotTrace(_hitboxes);
             _structures = new ServerStructures(context.Map, _log);
             var rules = _data.Rules;

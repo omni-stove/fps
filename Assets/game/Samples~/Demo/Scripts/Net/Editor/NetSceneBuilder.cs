@@ -102,7 +102,7 @@ namespace Fps.Editor
         /// <summary>
         /// 試合の設定 (<see cref="MatchDefinitionPath"/>) を読む。無ければ既定の値に、デフォルトロードアウト
         /// (<see cref="WeaponAssetBuilder.LoadoutPath"/>) と武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を配線して作る。
-        /// 書き出すルールの並びが空なら、チームデスマッチとドミネーション (<see cref="SampleRulesPaths"/>) を並べる。
+        /// 新しく作るときだけ、ルールの並びにチームデスマッチとドミネーション (<see cref="SampleRulesPaths"/>) を入れる。
         /// ほかの中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
         /// </summary>
         public static NetMatchDefinition LoadOrBuildMatch()
@@ -119,18 +119,11 @@ namespace Fps.Editor
                 match = ScriptableObject.CreateInstance<NetMatchDefinition>();
                 match.Loadout = WeaponAssetBuilder.LoadDefaultLoadout();
                 match.Catalog = WeaponAssetBuilder.LoadCatalog();
+                match.SetRules(LoadSampleRules());
                 SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(MatchDefinitionPath));
                 AssetDatabase.CreateAsset(match, MatchDefinitionPath);
                 AssetDatabase.SaveAssets();
-                Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath);
-            }
-
-            if (match.Rules.Count == 0)
-            {
-                match.SetRules(LoadSampleRules());
-                EditorUtility.SetDirty(match);
-                AssetDatabase.SaveAssets();
-                Debug.Log("[Net] NetSceneBuilder: listed " + string.Join(", ", SampleRulesPaths) + " as the rules of " + MatchDefinitionPath);
+                Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath + " with the rules " + string.Join(", ", SampleRulesPaths));
             }
 
             if (!match.TryCreateLoadout(out _, out var error))

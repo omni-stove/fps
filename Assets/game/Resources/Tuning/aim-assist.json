@@ -1,0 +1,8 @@
+{
+  "slowdownDegrees": 5,
+  "slowdownScale": 0.5,
+  "magnetismDegrees": 3,
+  "magnetismDegreesPerSecond": 30,
+  "magnetismSeconds": 0.3,
+  "maxDistance": 50
+}

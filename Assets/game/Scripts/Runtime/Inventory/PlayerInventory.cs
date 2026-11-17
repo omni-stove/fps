@@ -289,10 +289,11 @@ namespace Fps.Runtime
                 return;
             }
 
+            var freed = 0f;
             foreach (var itemId in released)
             {
-                // 付けた物の重さはまだ武器の重さに数えられているので、その分を空きに足して判定する
-                var freed = _inventory.Catalog.TryFind(itemId, out var item) ? item.Weight : 0f;
+                // 付けた物の重さはまだ武器の重さに数えられているので、戻した分も含めた累積を空きに足して判定する
+                freed += _inventory.Catalog.TryFind(itemId, out var item) ? item.Weight : 0f;
                 if (_inventory.Add(itemId, 1, freed) < 1)
                 {
                     Debug.LogWarning($"{LogTag} attachment owner={name} item={itemId} does not fit; lost", this);

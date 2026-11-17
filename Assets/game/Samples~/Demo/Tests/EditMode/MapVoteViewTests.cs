@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -83,29 +85,72 @@ namespace Shooter.Tests.EditMode
         public void ChoosingACandidateCallsTheSenderWithItsIndex()
         {
             var view = CreateView();
-            var sent = new List<int>();
-            view.Voted += sent.Add;
+            var sender = PublishSender();
+            var voted = new List<int>();
+            view.Voted += voted.Add;
             GameSignals.MapVote.Publish(Vote(20f, myVote: null, decided: null, 0, 0, 0));
 
             Assert.That(view.Choose(2), Is.True);
             Assert.That(view.Choose(0), Is.True, "the vote can be changed before it closes");
 
-            Assert.That(sent, Is.EqualTo(new[] { 2, 0 }));
+            Assert.That(sender.Votes, Is.EqualTo(new[] { 2, 0 }));
+            Assert.That(voted, Is.EqualTo(new[] { 2, 0 }), "Voted tells what was sent");
+        }
+
+        [Test]
+        public void TheSenderPublishedLatestIsCalled()
+        {
+            var view = CreateView();
+            var first = PublishSender();
+            var second = PublishSender();
+            GameSignals.MapVote.Publish(Vote(20f, myVote: null, decided: null, 0, 0, 0));
+
+            Assert.That(view.Choose(1), Is.True);
+
+            Assert.That(first.Votes, Is.Empty);
+            Assert.That(second.Votes, Is.EqualTo(new[] { 1 }));
+        }
+
+        [Test]
+        public void WithoutASenderNothingIsChosen()
+        {
+            var view = CreateView();
+            var voted = new List<int>();
+            view.Voted += voted.Add;
+            GameSignals.MapVote.Publish(Vote(20f, myVote: null, decided: null, 0, 0, 0));
+
+            LogAssert.Expect(LogType.Warning, new Regex("no vote sender is published"));
+            Assert.That(view.Choose(1), Is.False);
+
+            Assert.That(voted, Is.Empty);
+        }
+
+        [Test]
+        public void AWithdrawnSenderIsNotCalled()
+        {
+            var view = CreateView();
+            var sender = PublishSender();
+            GameSignals.MapVote.Publish(Vote(20f, myVote: null, decided: null, 0, 0, 0));
+
+            GameSignals.MapVoteSender.ClearIfCurrent(sender);
+
+            LogAssert.Expect(LogType.Warning, new Regex("no vote sender is published"));
+            Assert.That(view.Choose(0), Is.False);
+            Assert.That(sender.Votes, Is.Empty);
         }
 
         [Test]
         public void TheCandidateAlreadyVotedForIsMarkedAndNotSentAgain()
         {
             var view = CreateView();
-            var sent = new List<int>();
-            view.Voted += sent.Add;
+            var sender = PublishSender();
 
             GameSignals.MapVote.Publish(Vote(20f, myVote: "NetArena01", decided: null, 0, 1, 0));
 
             Assert.That(view.CandidateButtons[1].ClassListContains(MapVoteView.MineClass), Is.True);
             Assert.That(view.CandidateButtons[0].ClassListContains(MapVoteView.MineClass), Is.False);
             Assert.That(view.Choose(1), Is.False);
-            Assert.That(sent, Is.Empty);
+            Assert.That(sender.Votes, Is.Empty);
         }
 
         [Test]
@@ -139,8 +184,7 @@ namespace Shooter.Tests.EditMode
         public void ADecidedVoteNamesTheNextMapAndTakesNoMoreVotes()
         {
             var view = CreateView();
-            var sent = new List<int>();
-            view.Voted += sent.Add;
+            var sender = PublishSender();
 
             GameSignals.MapVote.Publish(Vote(0f, myVote: "NetTest", decided: "NetArena01", 1, 2, 0));
 
@@ -149,13 +193,14 @@ namespace Shooter.Tests.EditMode
             Assert.That(view.CandidateButtons.All(button => !button.enabledSelf), Is.True);
             Assert.That(view.CandidateButtons[1].ClassListContains(MapVoteView.DecidedCandidateClass), Is.True);
             Assert.That(view.Choose(2), Is.False);
-            Assert.That(sent, Is.Empty);
+            Assert.That(sender.Votes, Is.Empty);
         }
 
         [Test]
         public void ClearingTheVoteHidesThePanel()
         {
             var view = CreateView();
+            var sender = PublishSender();
             GameSignals.MapVote.Publish(Vote(20f, myVote: null, decided: null, 0, 0, 0));
 
             GameSignals.MapVote.Clear();
@@ -164,6 +209,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(view.Panel.style.display.value, Is.EqualTo(DisplayStyle.None));
             Assert.That(view.CandidateButtons, Is.Empty);
             Assert.That(view.Choose(0), Is.False);
+            Assert.That(sender.Votes, Is.Empty);
         }
 
         [Test]
@@ -252,6 +298,13 @@ namespace Shooter.Tests.EditMode
             return view;
         }
 
+        private static FakeMapVoteSender PublishSender()
+        {
+            var sender = new FakeMapVoteSender();
+            GameSignals.MapVoteSender.Publish(sender);
+            return sender;
+        }
+
         private static MapVoteStatus Vote(float remainingSeconds, string myVote, string decided, int testVotes, int arenaVotes, int yardVotes)
         {
             var candidates = new[]
@@ -266,6 +319,16 @@ namespace Shooter.Tests.EditMode
         private static string[] Texts(MapVoteView view, string className)
         {
             return view.CandidateButtons.Select(button => button.Q<Label>(className: className).text).ToArray();
+        }
+
+        private sealed class FakeMapVoteSender : IMapVoteSender
+        {
+            public List<int> Votes { get; } = new List<int>();
+
+            public void Vote(int candidateIndex)
+            {
+                Votes.Add(candidateIndex);
+            }
         }
     }
 }

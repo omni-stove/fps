@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Protocol;
 using Shooter.Runtime;
+using Object = UnityEngine.Object;
 
 namespace Shooter.Net.Tests
 {
@@ -69,6 +71,36 @@ namespace Shooter.Net.Tests
             Assert.That(_sent, Is.EqualTo(new[] { 1 }));
             Assert.That(GameSignals.MapVote.Value.Value.MyVote, Is.EqualTo("NetArena03"));
             Assert.That(_logs, Has.Member(MapVoteLog.ClientRequested(1, "NetArena03", MapVoteCast.Cast, true)));
+        }
+
+        [Test]
+        public void ChoosingOnTheHudSendsTheIndexAndMarksItAsMine()
+        {
+            var hud = Hud.Create("NetV2MapVotePartTests.Hud");
+            try
+            {
+                _part.Handle(State(10f, MapVoteStateMessage.NotChosen, ("NetArena02", 0), ("NetArena03", 0)));
+                var view = hud.MapVote;
+                var buttonsBefore = view.CandidateButtons.ToArray();
+
+                Assert.That(view.Choose(1), Is.True);
+
+                Assert.That(_sent, Is.EqualTo(new[] { 1 }));
+                Assert.That(view.Status.Value.MyVote, Is.EqualTo("NetArena03"));
+                Assert.That(view.CandidateButtons, Is.EqualTo(buttonsBefore), "showing my vote keeps the buttons");
+                Assert.That(view.CandidateButtons[1].ClassListContains(MapVoteView.MineClass), Is.True);
+                Assert.That(view.Choose(1), Is.False, "the same vote is not sent again");
+                Assert.That(_sent, Is.EqualTo(new[] { 1 }));
+            }
+            finally
+            {
+                var settings = hud.OwnedPanelSettings;
+                Object.DestroyImmediate(hud.gameObject);
+                if (settings != null)
+                {
+                    Object.DestroyImmediate(settings);
+                }
+            }
         }
 
         [Test]

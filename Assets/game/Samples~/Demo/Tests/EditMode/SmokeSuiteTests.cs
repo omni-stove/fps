@@ -31,6 +31,7 @@ namespace Fps.Tests.EditMode
                     nameof(EnemyStuckSmokeRun),
                     nameof(WeaponSwitchSmokeRun),
                     nameof(LauncherSmokeRun),
+                    nameof(VehicleSmokeRun),
                 }));
             Assert.That(SmokeSuite.Runs.Select(run => run.LogTag), Is.Unique);
         }

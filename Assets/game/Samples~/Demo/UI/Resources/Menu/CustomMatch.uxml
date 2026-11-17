@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- 参加コードでカスタムマッチに入る画面。Shooter.Runtime.CustomMatchPanel が差し込み口へ読み込み、name で要素を探して GameSignals.JoinByCode で探して入る。 -->
+    <!-- text の "#キー" は文字列表 (Demo サンプルの Resources/Localization/ja/match-flow.json など) のキーで、CustomMatchPanel が Shooter.Runtime.LocalizedTexts で今の言語の文字にする。 -->
+    <Style src="CustomMatch.uss" />
+    <ui:VisualElement name="custom-match" class="custom-match">
+        <ui:Label text="#customMatch.title" class="custom-match__title" />
+        <ui:Label text="#customMatch.description" class="custom-match__description" />
+        <!-- 並び順がゲームパッドで上下に動かすフォーカスの順番。 -->
+        <ui:VisualElement class="custom-match__join-row">
+            <ui:TextField name="custom-match-code-field" class="custom-match__code-field" />
+            <ui:Button name="custom-match-join" text="#customMatch.join" class="custom-match__button custom-match__join" />
+        </ui:VisualElement>
+        <!-- 案内 (探している・見つからない理由など)。空のときは CustomMatchPanel が隠す。 -->
+        <ui:Label name="custom-match-notice" text="" class="custom-match__notice" style="display: none;" />
+        <ui:Button name="custom-match-back" text="#customMatch.back" class="custom-match__button custom-match__back" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -23,5 +23,19 @@
   "party.unavailable": "ここではパーティを使えない",
   "party.codeRequired": "招待のコードを入れる",
   "party.invalidCode": "招待のコードは 1〜{0} 文字の英数字・「-」・「_」",
-  "party.failed": "うまくいかなかった。もう一度試す"
+  "party.failed": "うまくいかなかった。もう一度試す",
+  "customMatch.title": "カスタムマッチ",
+  "customMatch.description": "試合を立てた人から聞いた参加コードを入れる",
+  "customMatch.codePlaceholder": "参加コード",
+  "customMatch.join": "入る",
+  "customMatch.back": "戻る",
+  "customMatch.unavailable": "ここでは参加コードで入れない",
+  "customMatch.codeRequired": "参加コードを入れる",
+  "customMatch.invalidCode": "参加コードは 1〜{0} 文字の英数字・「-」・「_」",
+  "customMatch.searching": "試合を探している…",
+  "customMatch.joined": "試合に入っている…",
+  "customMatch.notFound": "このコードの試合は見つからなかった。コードを確かめる",
+  "customMatch.full": "この試合は満員で入れない",
+  "customMatch.versionMismatch": "この試合とゲームのバージョンが違うので入れない",
+  "customMatch.failed": "うまくいかなかった。もう一度試す"
 }

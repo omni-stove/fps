@@ -23,5 +23,19 @@
   "party.unavailable": "Parties are not available here.",
   "party.codeRequired": "Enter an invite code.",
   "party.invalidCode": "An invite code is 1-{0} letters, digits, '-' or '_'.",
-  "party.failed": "That did not work. Try again."
+  "party.failed": "That did not work. Try again.",
+  "customMatch.title": "CUSTOM MATCH",
+  "customMatch.description": "Enter the join code from the player who set up the match.",
+  "customMatch.codePlaceholder": "Join code",
+  "customMatch.join": "JOIN",
+  "customMatch.back": "BACK",
+  "customMatch.unavailable": "Join codes are not available here.",
+  "customMatch.codeRequired": "Enter a join code.",
+  "customMatch.invalidCode": "A join code is 1-{0} letters, digits, '-' or '_'.",
+  "customMatch.searching": "Looking for the match…",
+  "customMatch.joined": "Joining the match…",
+  "customMatch.notFound": "No match has that code. Check the code.",
+  "customMatch.full": "That match is full.",
+  "customMatch.versionMismatch": "That match runs a different version of the game.",
+  "customMatch.failed": "That did not work. Try again."
 }

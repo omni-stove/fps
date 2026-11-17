@@ -22,7 +22,6 @@ namespace Shooter.Editor
         public const string GunName = "Gun";
         public const string HandsName = "Hands";
 
-        /// <summary>照門と照星の、機関部の上面からの高さ (m)。</summary>
         public const float SightPostHeight = 0.014f;
 
         public static readonly Color SkinColor = new Color(0.82f, 0.64f, 0.52f);
@@ -102,7 +101,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>構えきったときの照準の点の位置 (カメラから見て)。片手の銃は腕を伸ばすので遠い。</summary>
+        // 片手の銃は腕を伸ばして構えるので、照準の点を遠くする。
         public static Vector3 AdsOffsetFor(WeaponCategory category)
         {
             switch (category)

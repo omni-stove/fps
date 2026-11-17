@@ -343,8 +343,10 @@ namespace Shooter.Server.Tests
         {
             // FNV-1a (32 ビット) の "a" の値
             Assert.That(MatchRulesModule.SeedOf("a"), Is.EqualTo(unchecked((int)0xE40C292Cu)));
-            Assert.That(MatchRulesModule.SeedOf("match-1"), Is.EqualTo(MatchRulesModule.SeedOf("match-1")));
-            Assert.That(MatchRulesModule.SeedOf("match-1"), Is.Not.EqualTo(MatchRulesModule.SeedOf("match-2")));
+            var first = MatchRulesModule.SeedOf("match-1");
+            var again = MatchRulesModule.SeedOf("match-1");
+            Assert.That(again, Is.EqualTo(first));
+            Assert.That(MatchRulesModule.SeedOf("match-2"), Is.Not.EqualTo(first));
         }
 
         private void Start(float restartDelaySeconds, float mapVoteSeconds, params string[] maps)

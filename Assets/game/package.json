@@ -1,10 +1,10 @@
 {
-  "name": "com.omnistove.fps",
+  "name": "com.omnistove.shooter-kit",
   "version": "0.1.0",
-  "displayName": "FPS Kit",
-  "description": "First-person shooter gameplay, modes, campaign and the JSON importers. The gameplay publishes its state through GameSignals and shows no screen of its own. The demo game (weapons, rules, missions, scenes, the editor scripts that build them, and smoke runs) and the default UI (HUD, menus, pause and settings, Fps.Runtime.UI) with its language tables are the Demo Game sample; without it the game runs with no HUD. The online client (Fps.Protocol, Fps.NetV2) connects to the Unity-independent .NET dedicated server; Fps.NetEos compiles only when com.playeveryware.eos is installed.",
+  "displayName": "Shooter Kit",
+  "description": "First- and third-person shooter gameplay, modes, campaign and the JSON importers. The gameplay publishes its state through GameSignals and shows no screen of its own. The demo game (weapons, rules, missions, scenes, the editor scripts that build them, and smoke runs) and the default UI (HUD, menus, pause and settings, Fps.Runtime.UI) with its language tables are the Demo Game sample; without it the game runs with no HUD. The online client (Fps.Protocol, Fps.NetV2) connects to the Unity-independent .NET dedicated server; Fps.NetEos compiles only when com.playeveryware.eos is installed.",
   "unity": "6000.6",
-  "documentationUrl": "https://github.com/omni-stove/fps/blob/main/Assets/game/README.md",
+  "documentationUrl": "https://github.com/omni-stove/shooter-kit/blob/main/Assets/game/README.md",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.14",
     "com.unity.inputsystem": "1.20.0",

@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// 既定の <see cref="DefaultOutput"/> の順に決める。パッケージの中は読み取り専用なので、書き込み先は Assets/ の下に限る。
     /// </para>
     /// <para>
-    /// 読み取り元は、このアセンブリを含むパッケージのルート (<c>Packages/com.omnistove.fps</c> など)。
+    /// 読み取り元は、このアセンブリを含むパッケージのルート (<c>Packages/com.omnistove.shooter-kit</c> など)。
     /// パッケージでなく Assets/ の下に置かれている (このリポジトリ自身) なら <see cref="KitPaths.DefaultRoot"/>。
     /// </para>
     /// </summary>

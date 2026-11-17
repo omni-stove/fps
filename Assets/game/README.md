@@ -1,4 +1,4 @@
-# FPS Kit (`com.omnistove.fps`)
+# Shooter Kit (`com.omnistove.shooter-kit`)
 
 一人称・三人称のシューターのゲームプレイと、シーンやアセットを作る Editor のスクリプトをまとめた UPM パッケージ。
 ゲームごとの中身 (武器・ルール・ミッション・シーン・プレハブ) と、既定の UI・言語の表は、サンプル **Demo Game** (`Samples~/Demo`) にある。
@@ -20,17 +20,17 @@
 1. `Packages/manifest.json` の `dependencies` に足す。`#` の後ろはタグか SHA にし、`Packages/packages-lock.json` もコミットする。
 
    ```json
-   "com.omnistove.fps": "https://github.com/omni-stove/fps.git?path=/Assets/game#v0.1.0"
+   "com.omnistove.shooter-kit": "https://github.com/omni-stove/shooter-kit.git?path=/Assets/game#v0.1.0"
    ```
 
 2. **Edit > Project Settings > Player > Active Input Handling** を `Input System Package (New)` か `Both` にする。
-3. テストも回すなら、manifest に `"testables": ["com.omnistove.fps"]` を足す。
+3. テストも回すなら、manifest に `"testables": ["com.omnistove.shooter-kit"]` を足す。
 
 EOS (`Fps.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパイルされる。
 
 ## サンプル
 
-1. **Window > Package Manager** で FPS Kit の **Samples** から **Demo Game** を **Import** する。
+1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。
 2. **Fps > Build Main Menu Scene** を一度実行する。
 
 このリポジトリでは `Assets/Samples/FpsKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクなので、サンプルは `Samples~/Demo` の下を直す。

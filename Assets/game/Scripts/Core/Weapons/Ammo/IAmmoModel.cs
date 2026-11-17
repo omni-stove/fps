@@ -14,6 +14,8 @@ namespace Fps.Core
 
         int ReserveAmmoRoom { get; }
 
+        int StartingReserveAmmo { get; }
+
         bool HasInfiniteReserve { get; }
 
         bool HasActiveReload { get; }
@@ -32,6 +34,8 @@ namespace Fps.Core
         void Consume();
 
         int AddReserveAmmo(int amount);
+
+        bool UsePool(IAmmoPool pool);
 
         bool TryStartReload();
 

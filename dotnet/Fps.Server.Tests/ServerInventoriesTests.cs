@@ -15,6 +15,10 @@ namespace Fps.Server.Tests
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
         private const string _herbId = "0d3c6f1a-5b2e-4c7d-8a9f-1e2b3c4d5e6f";
         private const string _caseId = "2f4e6d8c-0b1a-4c3e-8d5f-7a9b1c3d5e7f";
+        private const string _rifleAmmoId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+        private const string _pistolAmmoId = "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f";
+        private const string _rifleItemId = "4d5e6f7a-8b9c-4d0e-9f2a-3b4c5d6e7f8a";
+        private const string _handgunItemId = "5e6f7a8b-9c0d-4e1f-8a3b-4c5d6e7f8a9b";
         private static readonly DateTime _time = new DateTime(2026, 11, 16, 9, 0, 0, DateTimeKind.Utc);
         private static readonly Vector3 _alphaSpawn = new Vector3(-5f, 1.6f, 0f);
         private static readonly Vector3 _bravoSpawn = new Vector3(5f, 1.6f, 0f);
@@ -29,6 +33,7 @@ namespace Fps.Server.Tests
         private ServerContext _context;
         private ServerHost _host;
         private MatchRulesModule _rules;
+        private ServerCombat _combat;
         private ServerInventories _inventories;
 
         [SetUp]
@@ -183,6 +188,129 @@ namespace Fps.Server.Tests
             Assert.That(inventory.CountOf(_herbId), Is.EqualTo(4));
         }
 
+        [Test]
+        public void SpawningPutsTheLoadoutIntoTheInventoryWithItsReserveAsAmmo()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            var inventory = _inventories.InventoryOf(1);
+            Assert.That(inventory.HoldsWeapon(TestRules.RifleId), Is.True, _log.ToString());
+            Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.True);
+            Assert.That(inventory.CountOf(_rifleAmmoId), Is.EqualTo(90));
+            Assert.That(inventory.CountOf(_pistolAmmoId), Is.EqualTo(48));
+            Assert.That(_combat.WeaponsOf(1).Items[0].ReserveAmmo, Is.EqualTo(90));
+            Assert.That(_combat.WeaponsOf(1).Items[1].ReserveAmmo, Is.EqualTo(48));
+        }
+
+        [Test]
+        public void TheWeaponsWeightIsSentButLeftOutOfTheCarriedItemWeight()
+        {
+            Start(WeaponCatalog(), new WeaponSpec(
+                TestRules.RifleId, "weapon.rifle", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None, weight: 3.5f));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            // 弾 90 + 48 発 × 0.01 kg。小銃の 3.5 kg は移動のルールが武器として数える
+            Assert.That(Body(1).CarriedItemWeight, Is.EqualTo(1.38f).Within(1e-4f));
+            Assert.That(_inventories.InventoryOf(1).TotalWeight, Is.EqualTo(4.88f).Within(1e-4f));
+            var last = _transport.Read<InventoryStateMessage>(1, Copy).Last();
+            var rifle = Enumerable.Range(0, last.ItemCount).Select(last.ItemAt).Single(i => i.ItemId == _rifleItemId);
+            Assert.That(rifle.Weight, Is.EqualTo(3.5f));
+        }
+
+        [Test]
+        public void UsingAWeaponItemSwitchesToThatWeapon()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            var handgun = inventory.Stacks.Single(s => s.ItemId == _handgunItemId).Handle;
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)handgun });
+            Tick();
+
+            Assert.That(_combat.WeaponsOf(1).CurrentSpec.Id, Is.EqualTo(TestRules.HandgunId));
+            Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] equip owner=1 weapon=" + TestRules.HandgunId + Environment.NewLine));
+        }
+
+        [Test]
+        public void DroppingAWeaponItemIsRefused()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            var rifle = inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle;
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Drop, Handle = (ushort)rifle, Count = 1 });
+            Tick();
+
+            Assert.That(inventory.HoldsWeapon(TestRules.RifleId), Is.True);
+            Assert.That(_combat.WeaponsOf(1).Items, Has.Count.EqualTo(2));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] drop owner=1 weapon=" + TestRules.RifleId + " rejected=weapon"));
+        }
+
+        [Test]
+        public void ReloadingTakesRoundsFromTheInventory()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var weapon = _combat.WeaponsOf(1).Items[0];
+            for (var i = 0; i < 5; i++)
+            {
+                weapon.TryFire();
+            }
+
+            Assert.That(weapon.TryStartReload(), Is.True);
+            weapon.Tick(2f);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(30));
+            Assert.That(_inventories.InventoryOf(1).CountOf(_rifleAmmoId), Is.EqualTo(85));
+        }
+
+        [Test]
+        public void RespawningRestocksTheAmmoWithoutGoingOverTheStartingReserve()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            inventory.Remove(_rifleAmmoId, 70);
+
+            _rules.ApplyDamage(2, 1, 1000);
+            Step(NetMatchSettings.DefaultRespawnSeconds + 0.5f);
+
+            Assert.That(_rules.Session.IsAlive(1), Is.True, _log.ToString());
+            Assert.That(inventory.CountOf(_rifleAmmoId), Is.EqualTo(90));
+            Assert.That(inventory.CountOf(_pistolAmmoId), Is.EqualTo(48));
+            Assert.That(inventory.HoldsWeapon(TestRules.RifleId), Is.True);
+        }
+
+        // 8x4 の持ち物に、小銃 (4x2・5.56) と拳銃 (2x1・9mm) と、1 発 0.01 kg・60 発で 1 山の弾薬
+        private static ItemCatalog WeaponCatalog()
+        {
+            return new ItemCatalog(
+                new[]
+                {
+                    new ItemSpec(_rifleAmmoId, "item.ammo556", maxStack: 60, weight: 0.01f),
+                    new ItemSpec(_pistolAmmoId, "item.ammo9mm", maxStack: 60, weight: 0.01f),
+                    new ItemSpec(_rifleItemId, "weapon.rifle", width: 4, height: 2, weaponId: TestRules.RifleId, ammoItemId: _rifleAmmoId),
+                    new ItemSpec(_handgunItemId, "weapon.handgun", width: 2, height: 1, weaponId: TestRules.HandgunId, ammoItemId: _pistolAmmoId),
+                },
+                new InventoryRule(gridWidth: 8, gridHeight: 4, countWeightInCarryLoad: true));
+        }
+
         private static ItemCatalog Catalog()
         {
             return new ItemCatalog(
@@ -197,7 +325,7 @@ namespace Fps.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(ItemCatalog items)
+        private void Start(ItemCatalog items, WeaponSpec rifle = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -205,7 +333,7 @@ namespace Fps.Server.Tests
             };
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, null);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules()), PingSpec.Default, "memory", null, items: items);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(), rifle: rifle), PingSpec.Default, "memory", null, items: items);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
@@ -218,11 +346,12 @@ namespace Fps.Server.Tests
                 data);
             var movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
             _rules = new MatchRulesModule();
-            _inventories = new ServerInventories(_rules);
+            _combat = new ServerCombat(_rules, movement);
+            _inventories = new ServerInventories(_rules, _combat);
             _host = new ServerHost();
             _host.Register(movement);
             _host.Register(_rules);
-            _host.Register(new ServerCombat(_rules, movement));
+            _host.Register(_combat);
             _host.Register(_inventories);
             _host.Start(_context);
         }

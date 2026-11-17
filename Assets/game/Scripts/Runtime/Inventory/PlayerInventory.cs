@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace Fps.Runtime
 
         private Inventory _inventory;
         private Damageable _damageable;
+        private WeaponController _weapons;
 
         public event Action Changed;
 
@@ -29,7 +31,36 @@ namespace Fps.Runtime
             }
         }
 
-        public float CarriedWeight => Inventory.Rule.CountWeightInCarryLoad ? Inventory.TotalWeight : 0f;
+        // 武器の重さは移動のルール (CarryLoadSpec) が武器として数えるので、持ち物の重さからは除く
+        public float CarriedWeight => Inventory.Rule.CountWeightInCarryLoad ? Inventory.TotalWeight - Inventory.WeaponWeight : 0f;
+
+        public WeaponController Weapons => _weapons;
+
+        // 持ち武器を持ち物の山として置き、弾薬アイテムを決めた武器の予備弾を持ち物の弾薬から出し入れさせる
+        public void Bind(WeaponController weapons)
+        {
+            if (_weapons == weapons)
+            {
+                return;
+            }
+
+            if (_weapons != null)
+            {
+                _weapons.WeaponChanged -= OnWeaponChanged;
+                _weapons.LoadoutReplaced -= HoldWeapons;
+                _weapons.UseAmmoPools(null);
+            }
+
+            _weapons = weapons;
+            if (_weapons == null)
+            {
+                return;
+            }
+
+            _weapons.WeaponChanged += OnWeaponChanged;
+            _weapons.LoadoutReplaced += HoldWeapons;
+            ConnectWeapons();
+        }
 
         public void Initialize(ItemCatalog catalog)
         {
@@ -46,8 +77,21 @@ namespace Fps.Runtime
             _inventory = new Inventory(catalog);
             _inventory.Changed += OnInventoryChanged;
             _inventory.Fill();
+            if (_weapons != null)
+            {
+                ConnectWeapons();
+            }
+
             Debug.Log($"{LogTag} ready owner={name} items={catalog.Items.Count} stacks={_inventory.Stacks.Count} grid={catalog.Rule.GridWidth}x{catalog.Rule.GridHeight}", this);
             Changed?.Invoke();
+        }
+
+        // 最初の持ち物に戻し、持っている武器を置き直して、その最初の予備弾まで弾薬を足す (出直したとき)
+        public void Refill()
+        {
+            Inventory.Fill();
+            HoldWeapons();
+            Restock();
         }
 
         public void Move(int handle, int x, int y, bool rotated)
@@ -63,6 +107,13 @@ namespace Fps.Runtime
             if (inventory.TryGetStack(handle, out var stack))
             {
                 inventory.Catalog.TryFind(stack.ItemId, out item);
+            }
+
+            if (item != null && item.IsWeapon)
+            {
+                var equipped = _weapons != null && _weapons.IsInitialized && Damageable != null && !Damageable.IsDowned && _weapons.Select(item.WeaponId);
+                Debug.Log($"{LogTag} equip owner={name} weapon={item.WeaponId}{(equipped ? string.Empty : " rejected")}", this);
+                return;
             }
 
             var damageable = Damageable;
@@ -92,17 +143,100 @@ namespace Fps.Runtime
 
         public void Drop(int handle, int count)
         {
+            var weaponId = Inventory.WeaponIdOf(handle);
+            if (weaponId != null)
+            {
+                DropWeapon(weaponId);
+                return;
+            }
+
             if (count <= 0 || !Inventory.TryTake(handle, count, out var dropped))
             {
                 Debug.Log($"{LogTag} drop owner={name} handle={handle} count={count} rejected", this);
                 return;
             }
 
+            var pickup = Pickup.Create(PickupContents.ForItem(dropped.ItemId, dropped.Count), DropPosition(), PickupCollectMode.Look);
+            Debug.Log($"{LogTag} drop owner={name} item={dropped.ItemId} count={dropped.Count} pickup={pickup.name}", this);
+        }
+
+        private void DropWeapon(string weaponId)
+        {
+            if (_weapons == null || !_weapons.IsInitialized || !_weapons.DropWeapon(weaponId, out var dropped))
+            {
+                Debug.Log($"{LogTag} drop owner={name} weapon={weaponId} rejected", this);
+                return;
+            }
+
+            var pickup = Pickup.Create(PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo), DropPosition(), PickupCollectMode.Look);
+            Debug.Log($"{LogTag} drop owner={name} weapon={weaponId} ammo={dropped.Ammo.AmmoInMagazine} pickup={pickup.name}", this);
+        }
+
+        private Vector3 DropPosition()
+        {
             var forward = transform.forward;
             forward.y = 0f;
-            var position = transform.position + (forward.sqrMagnitude > 1e-6f ? forward.normalized * DropDistance : Vector3.zero);
-            var pickup = Pickup.Create(PickupContents.ForItem(dropped.ItemId, dropped.Count), position, PickupCollectMode.Look);
-            Debug.Log($"{LogTag} drop owner={name} item={dropped.ItemId} count={dropped.Count} pickup={pickup.name}", this);
+            return transform.position + (forward.sqrMagnitude > 1e-6f ? forward.normalized * DropDistance : Vector3.zero);
+        }
+
+        private void ConnectWeapons()
+        {
+            var inventory = Inventory;
+            HoldWeapons();
+            _weapons.UseAmmoPools(spec => InventoryWeapons.PoolFor(inventory, spec));
+            Restock();
+        }
+
+        private void HoldWeapons()
+        {
+            if (_weapons == null || _inventory == null)
+            {
+                return;
+            }
+
+            var loadout = _weapons.Loadout;
+            var held = new List<WeaponSpec>();
+            if (loadout != null)
+            {
+                foreach (var weapon in loadout.Items)
+                {
+                    held.Add(weapon.Spec);
+                }
+            }
+
+            foreach (var weaponId in _inventory.HoldWeapons(held))
+            {
+                Debug.LogWarning($"{LogTag} weapon owner={name} weapon={weaponId} does not fit; held outside the inventory", this);
+            }
+        }
+
+        private void Restock()
+        {
+            var loadout = _weapons != null ? _weapons.Loadout : null;
+            if (loadout == null || _inventory == null)
+            {
+                return;
+            }
+
+            var pooled = new List<(string WeaponId, int StartingReserveAmmo)>();
+            foreach (var weapon in loadout.Items)
+            {
+                if (weapon.AmmoPool != null)
+                {
+                    pooled.Add((weapon.Spec.Id, weapon.StartingReserveAmmo));
+                }
+            }
+
+            var added = InventoryWeapons.Restock(_inventory, pooled);
+            if (added > 0)
+            {
+                Debug.Log($"{LogTag} restock owner={name} ammo={added}", this);
+            }
+        }
+
+        private void OnWeaponChanged(Weapon weapon)
+        {
+            HoldWeapons();
         }
 
         private Damageable Damageable => _damageable != null ? _damageable : (_damageable = GetComponent<Damageable>());
@@ -116,12 +250,30 @@ namespace Fps.Runtime
             return armor != null && armor.MaxArmor > 0 ? collector.WithArmor(Mathf.Clamp(armor.Armor, 0, armor.MaxArmor), armor.MaxArmor) : collector;
         }
 
+        // シーンに置いたプレイヤーでも、組み立てから Bind されなかったときは子の武器を使う
+        private void Start()
+        {
+            if (_weapons == null)
+            {
+                var weapons = GetComponentInChildren<WeaponController>(true);
+                if (weapons != null)
+                {
+                    Bind(weapons);
+                }
+            }
+        }
+
         private void OnEnable()
         {
             if (Damageable != null)
             {
                 Damageable.HealthReset += OnHealthReset;
             }
+        }
+
+        private void OnDestroy()
+        {
+            Bind(null);
         }
 
         private void OnDisable()
@@ -136,7 +288,7 @@ namespace Fps.Runtime
         {
             if (_inventory != null)
             {
-                _inventory.Fill();
+                Refill();
             }
         }
 

@@ -7,12 +7,14 @@ using Fps.Protocol;
 
 namespace Fps.Server
 {
-    // このサーバーには地面の拾い物が無いので、捨てたアイテムは消える
+    // このサーバーには地面の拾い物が無いので、捨てたアイテムは消える。
+    // 武器はルールが選んだ並びを出現のたびに持たせ直すので、持ち物からは捨てられない (使うとその武器に持ち替える)
     internal sealed class ServerInventories : IServerModule
     {
         public const string LogTag = "[Inventory]";
 
         private readonly MatchRulesModule _rules;
+        private readonly ServerCombat _combat;
         private readonly Dictionary<int, Inventory> _inventories = new Dictionary<int, Inventory>();
         private readonly HashSet<int> _dirty = new HashSet<int>();
         private readonly InventoryStateMessage _state = new InventoryStateMessage();
@@ -21,9 +23,10 @@ namespace Fps.Server
         private ServerMatch _match;
         private ItemCatalog _catalog;
 
-        public ServerInventories(MatchRulesModule rules)
+        public ServerInventories(MatchRulesModule rules, ServerCombat combat = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
+            _combat = combat;
         }
 
         public string Name => "inventory";
@@ -60,7 +63,8 @@ namespace Fps.Server
 
                 if (_context.Bodies.TryGet(playerId, out var body))
                 {
-                    body.CarriedItemWeight = _catalog.Rule.CountWeightInCarryLoad ? inventory.TotalWeight : 0f;
+                    // 武器の重さは移動のルール (CarryLoadSpec) が武器として数えるので、持ち物の重さからは除く
+                    body.CarriedItemWeight = _catalog.Rule.CountWeightInCarryLoad ? inventory.TotalWeight - inventory.WeaponWeight : 0f;
                 }
 
                 if (_match.TryGetPlayer(playerId, out var player))
@@ -138,6 +142,13 @@ namespace Fps.Server
                 inventory.Catalog.TryFind(stack.ItemId, out item);
             }
 
+            if (item != null && item.IsWeapon)
+            {
+                var switched = _combat != null && _rules.CanFire(playerId) && _combat.WeaponsOf(playerId).TrySwitch(item.WeaponId);
+                _log.WriteLine(LogTag + " equip owner=" + Text(playerId) + " weapon=" + item.WeaponId + (switched ? string.Empty : " rejected"));
+                return;
+            }
+
             ItemUseOutcome outcome;
             if (!_rules.CanFire(playerId) || session == null)
             {
@@ -161,6 +172,13 @@ namespace Fps.Server
 
         private void Drop(int playerId, Inventory inventory, int handle, int count)
         {
+            var weaponId = inventory.WeaponIdOf(handle);
+            if (weaponId != null)
+            {
+                _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " weapon=" + weaponId + " rejected=weapon");
+                return;
+            }
+
             if (!_rules.CanFire(playerId) || count <= 0 || !inventory.TryTake(handle, count, out var dropped))
             {
                 _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " handle=" + Text(handle) + " count=" + Text(count) + " rejected");
@@ -185,7 +203,8 @@ namespace Fps.Server
         // 入り直した人にも今の中身を送る
         private void HandlePlayerJoined(ServerPlayer player)
         {
-            GetOrAdd(player.PlayerId);
+            var inventory = GetOrAdd(player.PlayerId);
+            _combat?.WeaponsOf(player.PlayerId).UseAmmoPools(spec => InventoryWeapons.PoolFor(inventory, spec));
             _dirty.Add(player.PlayerId);
         }
 
@@ -195,9 +214,26 @@ namespace Fps.Server
             _dirty.Remove(player.PlayerId);
         }
 
+        // 戦闘が先に武器を持たせ直している (モジュールの順) ので、その武器を持ち物に置き、最初の予備弾を弾薬で持たせる
         private void HandlePlayerSpawned(int playerId)
         {
-            GetOrAdd(playerId).Fill();
+            var inventory = GetOrAdd(playerId);
+            inventory.Fill();
+            if (_combat != null)
+            {
+                var weapons = _combat.WeaponsOf(playerId);
+                foreach (var weaponId in inventory.HoldWeapons(weapons.Specs))
+                {
+                    _log.WriteLine(LogTag + " weapon owner=" + Text(playerId) + " weapon=" + weaponId + " does not fit; held outside the inventory");
+                }
+
+                var restocked = InventoryWeapons.Restock(inventory, weapons.PooledAmmo());
+                if (restocked > 0)
+                {
+                    _log.WriteLine(LogTag + " restock owner=" + Text(playerId) + " ammo=" + Text(restocked));
+                }
+            }
+
             _dirty.Add(playerId);
         }
 

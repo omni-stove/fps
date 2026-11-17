@@ -7,6 +7,9 @@ namespace Fps.Core.Tests
         private const string _herbId = "0d3c6f1a-5b2e-4c7d-8a9f-1e2b3c4d5e6f";
         private const string _plateId = "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f";
         private const string _keyId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+        private const string _rifleItemId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+        private const string _rifleId = "5e6f7a8b-9c0d-4e1f-8a3b-4c5d6e7f8a9b";
+        private const string _pistolId = "6f7a8b9c-0d1e-4f2a-9b4c-5d6e7f8a9b0c";
 
         private static readonly ItemSpec _herb = new ItemSpec(_herbId, "item.herb", maxStack: 3, maxCarried: 4, weight: 0.5f, useHealth: 40);
         private static readonly ItemSpec _plate = new ItemSpec(_plateId, "item.plate", useArmor: 50);
@@ -120,6 +123,68 @@ namespace Fps.Core.Tests
             // 下限で止まる
             Assert.That(carry.SpeedMultiplier(null, null, 20f), Is.EqualTo(0.5f).Within(1e-5f));
             Assert.That(carry.SpeedMultiplier(null, null, float.NaN), Is.EqualTo(1f).Within(1e-5f));
+        }
+
+        private static Inventory WeaponGrid(int width, int height, float maxWeight = 0f)
+        {
+            var rifle = new ItemSpec(_rifleItemId, "weapon.rifle", width: 4, height: 2, weaponId: _rifleId);
+            var pistol = new ItemSpec(_plateId, "weapon.handgun", width: 2, height: 1, weaponId: _pistolId);
+            return new Inventory(new ItemCatalog(new[] { rifle, pistol }, new InventoryRule(maxWeight: maxWeight, gridWidth: width, gridHeight: height)));
+        }
+
+        private static PickupCollector Armed(Inventory inventory, int maxWeapons, params string[] weaponIds)
+        {
+            var weapons = new PickupWeaponState[weaponIds.Length];
+            for (var i = 0; i < weaponIds.Length; i++)
+            {
+                weapons[i] = new PickupWeaponState(weaponIds[i], 0, 0, false);
+            }
+
+            return new PickupCollector(null, 100, 100).WithWeapons(weapons, weaponIds.Length > 0 ? weaponIds[0] : null, maxWeapons).WithInventory(inventory);
+        }
+
+        [Test]
+        public void AWeaponThatDoesNotFitInTheInventoryIsLeftOnTheGround()
+        {
+            var inventory = WeaponGrid(4, 2);
+            inventory.HoldWeapons(new[] { new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, weight: 3f) });
+
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_pistolId, 0, default, 1f), Armed(inventory, 0, _rifleId));
+
+            Assert.That(outcome.Rejection, Is.EqualTo(PickupRejection.InventoryFull));
+        }
+
+        [Test]
+        public void AWeaponTooHeavyForTheInventoryIsLeftOnTheGround()
+        {
+            var inventory = WeaponGrid(8, 4, maxWeight: 2f);
+
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifleId, 0, default, 3f), Armed(inventory, 0));
+
+            Assert.That(outcome.Rejection, Is.EqualTo(PickupRejection.InventoryFull));
+        }
+
+        [Test]
+        public void SwappingCountsTheRoomOfTheWeaponLeft()
+        {
+            var inventory = WeaponGrid(4, 2);
+            inventory.HoldWeapons(new[] { new WeaponSpec(_rifleId, null, WeaponCategory.AssaultRifle, weight: 3f) });
+
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_pistolId, 0, default, 1f), Armed(inventory, 1, _rifleId));
+
+            Assert.That(outcome.IsCollected, Is.True);
+            Assert.That(outcome.DroppedWeaponId, Is.EqualTo(_rifleId));
+        }
+
+        [Test]
+        public void AWeaponThatFitsIsAdded()
+        {
+            var inventory = WeaponGrid(8, 4);
+
+            var outcome = PickupJudge.Judge(PickupSpec.Weapon(_rifleId, 0, default, 3f), Armed(inventory, 0));
+
+            Assert.That(outcome.IsCollected, Is.True);
+            Assert.That(outcome.AddsWeapon, Is.True);
         }
     }
 }

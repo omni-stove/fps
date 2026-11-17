@@ -11,9 +11,11 @@ namespace Fps.Core
         /// <summary><see cref="TagOwnerId"/> の、持ち主のいないときの値。</summary>
         public const int NoOwner = -1;
 
-        private PickupSpec(PickupKind kind, int amount, string weaponId, int tagOwnerId, Side? tagOwnerSide, PickupEligibility eligibility, string itemId = null)
+        private PickupSpec(
+            PickupKind kind, int amount, string weaponId, int tagOwnerId, Side? tagOwnerSide, PickupEligibility eligibility, string itemId = null, float weaponWeight = 0f)
         {
             ItemId = itemId;
+            WeaponWeight = weaponWeight;
             Kind = kind;
             Amount = amount;
             WeaponId = weaponId;
@@ -39,6 +41,9 @@ namespace Fps.Core
 
         public string ItemId { get; }
 
+        // 持ち物に入れる武器の重さ。持ち物に入るかを、まだ持っていない武器の重さで決めるのに使う
+        public float WeaponWeight { get; }
+
         /// <summary><see cref="PickupKind.Tag"/> の持ち主 (倒れた人) のモードでの ID。分からないか他の種類なら <see cref="NoOwner"/>。</summary>
         public int TagOwnerId { get; }
 
@@ -52,7 +57,8 @@ namespace Fps.Core
         /// <param name="weaponId">渡す武器の Id。空でないこと。</param>
         /// <param name="ammoIfOwned">既に持っていたときに足す予備弾。0 以上。</param>
         /// <param name="eligibility">拾える陣営の条件。</param>
-        public static PickupSpec Weapon(string weaponId, int ammoIfOwned, PickupEligibility eligibility = default)
+        /// <param name="weaponWeight">武器の重さ。持ち物に入るかを決めるのに使う。0 以上の有限値。</param>
+        public static PickupSpec Weapon(string weaponId, int ammoIfOwned, PickupEligibility eligibility = default, float weaponWeight = 0f)
         {
             if (string.IsNullOrEmpty(weaponId))
             {
@@ -64,7 +70,8 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(ammoIfOwned), ammoIfOwned, "ammoIfOwned must not be negative");
             }
 
-            return new PickupSpec(PickupKind.Weapon, ammoIfOwned, weaponId, NoOwner, null, eligibility);
+            SpecGuard.NonNegativeFinite(weaponWeight, nameof(weaponWeight));
+            return new PickupSpec(PickupKind.Weapon, ammoIfOwned, weaponId, NoOwner, null, eligibility, null, weaponWeight);
         }
 
         /// <summary>予備弾を amount 足す。</summary>

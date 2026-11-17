@@ -28,6 +28,8 @@ namespace Fps.Runtime
         public const string EmptyKey = "hud.inventory.empty";
         public const string CountKey = "hud.inventory.count";
         public const string UseKey = "hud.inventory.use";
+        public const string EquipKey = "hud.inventory.equip";
+        public const string DropKey = "hud.inventory.drop";
         public const string DropOneKey = "hud.inventory.dropOne";
         public const string DropAllKey = "hud.inventory.dropAll";
         public const string HintKey = "hud.inventory.hint";
@@ -384,10 +386,17 @@ namespace Fps.Runtime
             }
 
             inventory.Catalog.TryFind(stack.ItemId, out var item);
-            var weight = item != null ? item.Weight * stack.Count : 0f;
+            var weight = item != null ? inventory.WeightOf(item) * stack.Count : 0f;
             details.Add(MakeLabel(NameOf(item, stack.ItemId) + "  " + Localizer.Resolve(new LocalizedText(CountKey, stack.Count.ToString(CultureInfo.InvariantCulture)))
                 + "  " + Localizer.Resolve(new LocalizedText(WeightNoLimitKey, Number(weight))), ItemNameClass));
             var handle = stack.Handle;
+            if (item != null && item.IsWeapon)
+            {
+                details.Add(MakeButton(EquipKey, () => _source?.Use(handle)));
+                details.Add(MakeButton(DropKey, () => _source?.Drop(handle, 1)));
+                return details;
+            }
+
             if (item != null && item.IsUsable)
             {
                 details.Add(MakeButton(UseKey, () => _source?.Use(handle)));

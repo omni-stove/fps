@@ -112,5 +112,29 @@ namespace Fps.Protocol.Tests
 
             Assert.That(entries.Select(e => e.Handle), Is.EqualTo(_onlySecond));
         }
+
+        [Test]
+        public void AWeaponItemIsSentWithTheWeaponsWeightAndReadBackAsThatWeaponWithoutItsAmmo()
+        {
+            const string ammoId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+            const string rifleItemId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+            const string rifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
+            var ammo = new ItemSpec(ammoId, "item.ammo556", maxStack: 60, weight: 0.01f);
+            var rifleItem = new ItemSpec(rifleItemId, "weapon.rifle", "rifle", width: 4, height: 2, weaponId: rifleId, ammoItemId: ammoId);
+            var local = new ItemCatalog(new[] { ammo, rifleItem }, new InventoryRule(gridWidth: 8, gridHeight: 4));
+            var inventory = new Inventory(local);
+            inventory.HoldWeapons(new[] { new WeaponSpec(rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, weight: 3.5f) });
+            var sent = new InventoryStateMessage();
+
+            InventorySync.Write(inventory, sent);
+            var catalog = InventorySync.ToCatalog(sent, local);
+
+            Assert.That(sent.ItemAt(0).Weight, Is.EqualTo(3.5f));
+            var got = catalog.Items.Single();
+            Assert.That(got.WeaponId, Is.EqualTo(rifleId));
+            Assert.That(got.AmmoItemId, Is.Null);
+            Assert.That(got.IconId, Is.EqualTo("rifle"));
+            Assert.That(new Inventory(catalog).WeightOf(got), Is.EqualTo(3.5f));
+        }
     }
 }

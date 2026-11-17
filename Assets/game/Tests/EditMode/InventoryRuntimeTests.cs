@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fps.Core;
+using Fps.Editor;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -20,7 +22,21 @@ namespace Fps.Tests.EditMode
         private static readonly ItemSpec _case = new ItemSpec(_caseId, "item.toolbox", weight: 6f, width: 3, height: 2);
         private static readonly ItemSpec _key = new ItemSpec(_keyId, "item.keycard", maxCarried: 1);
 
+        private const string _rifleAmmoId = "212170da-0998-4fa9-9457-761c75a2a797";
+        private const string _pistolAmmoId = "02e07a84-f063-4b41-8f63-17a410a3d069";
+        private const string _rifleItemId = "39cb64db-b31c-478c-9784-9ecf8006a0f1";
+        private const string _handgunItemId = "b5b5df13-2868-4b0a-b2c0-fbe6a055a4fa";
+
+        // 小銃 (4x2・5.56) と拳銃 (2x1・9mm)。弾は 60 発で 1 山・1 発 0.01 kg
+        private static readonly ItemSpec _rifleAmmo = new ItemSpec(_rifleAmmoId, "item.ammo556", maxStack: 60, weight: 0.01f);
+        private static readonly ItemSpec _pistolAmmo = new ItemSpec(_pistolAmmoId, "item.ammo9mm", maxStack: 60, weight: 0.01f);
+        private static readonly ItemSpec _rifleItem = new ItemSpec(
+            _rifleItemId, TestWeapons.RifleNameKey, width: 4, height: 2, weaponId: TestWeapons.RifleId, ammoItemId: _rifleAmmoId);
+        private static readonly ItemSpec _handgunItem = new ItemSpec(
+            _handgunItemId, TestWeapons.HandgunNameKey, width: 2, height: 1, weaponId: TestWeapons.HandgunId, ammoItemId: _pistolAmmoId);
+
         private readonly List<Object> _created = new List<Object>();
+        private readonly List<InputAction> _actions = new List<InputAction>();
 
         [TearDown]
         public void TearDown()
@@ -34,6 +50,12 @@ namespace Fps.Tests.EditMode
             }
 
             _created.Clear();
+            foreach (var action in _actions)
+            {
+                action.Dispose();
+            }
+
+            _actions.Clear();
             foreach (var pickup in Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include))
             {
                 Object.DestroyImmediate(pickup.gameObject);
@@ -234,6 +256,208 @@ namespace Fps.Tests.EditMode
             source.Inventory.Add(_keyId, 1);
 
             Assert.That(view.Element.Query(className: InventoryView.ItemClass).ToList(), Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void HeldWeaponsSitInTheInventoryAndTheirReserveIsAmmo()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+
+            // 包帯 (0,0) の次に、武器を弾薬より先に置く
+            Assert.That(inventory.Inventory.Stacks.Select(s => (s.ItemId, s.X, s.Y)).Take(3), Is.EqualTo(new[]
+            {
+                (_bandageId, 0, 0), (_rifleItemId, 1, 0), (_handgunItemId, 5, 0),
+            }));
+
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.RifleId), Is.True);
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.HandgunId), Is.True);
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.EqualTo(90));
+            Assert.That(inventory.Inventory.CountOf(_pistolAmmoId), Is.EqualTo(48));
+            Assert.That(weapons.Weapon.ReserveAmmo, Is.EqualTo(90));
+            Assert.That(weapons.Weapon.AmmoPool, Is.Not.Null);
+        }
+
+        [Test]
+        public void PickingUpAmmoItemsRaisesTheWeaponsReserve()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            var changes = 0;
+            weapons.Weapon.ReserveAmmoChanged += () => changes++;
+
+            inventory.Inventory.Add(_rifleAmmoId, 10);
+
+            Assert.That(weapons.Weapon.ReserveAmmo, Is.EqualTo(100));
+            Assert.That(changes, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UsingAWeaponItemEquipsIt()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            var handgun = inventory.Inventory.Stacks.Single(s => s.ItemId == _handgunItemId).Handle;
+
+            inventory.Use(handgun);
+
+            Assert.That(weapons.Weapon.Spec.Id, Is.EqualTo(TestWeapons.HandgunId));
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.HandgunId), Is.True, "equipping does not take the weapon out");
+        }
+
+        [Test]
+        public void DroppingAWeaponItemPutsTheWeaponOnTheGroundWithOnlyItsMagazine()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            var rifle = inventory.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle;
+
+            inventory.Drop(rifle, 1);
+
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(1));
+            Assert.That(weapons.Weapon.Spec.Id, Is.EqualTo(TestWeapons.HandgunId));
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.RifleId), Is.False);
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.EqualTo(90), "the reserve stays in the inventory");
+            var pickup = Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include).Single();
+            Assert.That(pickup.Spec.Kind, Is.EqualTo(PickupKind.Weapon));
+            Assert.That(pickup.Spec.WeaponId, Is.EqualTo(TestWeapons.RifleId));
+            Assert.That(pickup.Contents.CarriedAmmo.AmmoInMagazine, Is.EqualTo(30));
+            Assert.That(pickup.Contents.CarriedAmmo.ReserveAmmo, Is.Zero);
+        }
+
+        [Test]
+        public void DroppingTheLastWeaponLeavesThePlayerUnarmed()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            inventory.Drop(inventory.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle, 1);
+
+            inventory.Drop(inventory.Inventory.Stacks.Single(s => s.ItemId == _handgunItemId).Handle, 1);
+
+            Assert.That(weapons.IsUnarmed, Is.True);
+            Assert.That(inventory.Inventory.Stacks.Any(s => s.ItemId == _handgunItemId), Is.False);
+            Assert.That(Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include), Has.Length.EqualTo(2));
+        }
+
+        [Test]
+        public void ADroppedWeaponPickedUpAgainBringsNoExtraAmmo()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            inventory.Drop(inventory.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle, 1);
+            inventory.Inventory.Remove(_rifleAmmoId, 90);
+            var pickup = Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include).Single();
+
+            Assert.That(pickup.TryCollect(inventory.GetComponent<Damageable>(), out var outcome), Is.True, outcome.Rejection.ToString());
+
+            Assert.That(weapons.Loadout.Count, Is.EqualTo(2));
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.RifleId), Is.True);
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.Zero);
+        }
+
+        [Test]
+        public void AWeaponThatDoesNotFitStaysOnTheGround()
+        {
+            var (inventory, _) = NewArmedPlayer();
+            inventory.Drop(inventory.Inventory.Stacks.Single(s => s.ItemId == _handgunItemId).Handle, 1);
+            var pickup = Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include).Single();
+
+            // 空いたマスを包帯で埋める
+            inventory.Inventory.Add(_bandageId, 1000);
+
+            Assert.That(pickup.TryCollect(inventory.GetComponent<Damageable>(), out var outcome), Is.False);
+            Assert.That(outcome.Rejection, Is.EqualTo(PickupRejection.InventoryFull));
+        }
+
+        [Test]
+        public void RespawningRestocksTheAmmoAndKeepsTheWeapons()
+        {
+            var (inventory, _) = NewArmedPlayer();
+            inventory.Inventory.Remove(_rifleAmmoId, 80);
+
+            inventory.Refill();
+
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.EqualTo(90));
+            Assert.That(inventory.Inventory.HoldsWeapon(TestWeapons.RifleId), Is.True);
+            Assert.That(inventory.Inventory.CountOf(_bandageId), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ApplyingRulesWithLessReserveLowersTheAmmo()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+
+            weapons.ApplyRules(GameRules.Default.WithReserveAmmoMultiplier(0.5f));
+
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.EqualTo(45));
+            Assert.That(inventory.Inventory.CountOf(_pistolAmmoId), Is.EqualTo(24));
+            Assert.That(weapons.Weapon.ReserveAmmo, Is.EqualTo(45));
+        }
+
+        [Test]
+        public void RestoringASaveSetsTheAmmoToTheSavedReserve()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+
+            weapons.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 10, 20) }, TestWeapons.RifleId);
+
+            Assert.That(inventory.Inventory.CountOf(_rifleAmmoId), Is.EqualTo(20));
+            Assert.That(inventory.Inventory.CountOf(_pistolAmmoId), Is.EqualTo(48), "a weapon missing from the save starts full");
+            Assert.That(weapons.SnapshotAmmo().First().ReserveAmmo, Is.EqualTo(20));
+        }
+
+        [Test]
+        public void TheCarriedWeightLeavesOutTheWeapons()
+        {
+            var (inventory, _) = NewArmedPlayer(new InventoryRule(gridWidth: 8, gridHeight: 4, countWeightInCarryLoad: true), rifleWeight: 3.5f);
+
+            // 包帯 2 個 (0.2 kg) と弾 138 発 (1.38 kg)。小銃の 3.5 kg は移動のルールが武器として数える
+            Assert.That(inventory.CarriedWeight, Is.EqualTo(1.58f).Within(1e-4f));
+            Assert.That(inventory.Inventory.TotalWeight, Is.EqualTo(5.08f).Within(1e-4f));
+        }
+
+        [Test]
+        public void SelectingAWeaponOffersEquipAndDrop()
+        {
+            var source = new FakeControl(WeaponCatalog(InventoryRule.Default));
+            source.Inventory.HoldWeapons(new[] { TestWeapons.RifleSpec() });
+            var view = CreateBoundView(source);
+            view.SetOpen(true);
+
+            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle);
+
+            Assert.That(Buttons(view), Is.EqualTo(new[] { "装備する", "捨てる" }));
+        }
+
+        private (PlayerInventory Inventory, WeaponController Weapons) NewArmedPlayer(InventoryRule rule = null, float rifleWeight = 0f)
+        {
+            var player = NewPlayer(WeaponCatalog(rule ?? new InventoryRule(gridWidth: 8, gridHeight: 4)));
+            var camera = new GameObject("Camera");
+            camera.transform.SetParent(player.transform, false);
+            var rifle = Definition("Rifle", TestWeapons.RifleSpec());
+            rifle.Weight = rifleWeight;
+            var handgun = Definition("Handgun", TestWeapons.HandgunSpec());
+            var weapons = camera.AddComponent<WeaponController>();
+            weapons.Initialize(camera.transform, NewAction("Attack"), NewAction("Reload"), null, null, new[] { rifle, handgun });
+            var inventory = player.GetComponent<PlayerInventory>();
+            inventory.Bind(weapons);
+            return (inventory, weapons);
+        }
+
+        private WeaponDefinition Definition(string name, WeaponSpec spec)
+        {
+            var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _created.Add(definition);
+            definition.name = name;
+            WeaponAssets.Configure(definition, spec);
+            return definition;
+        }
+
+        private InputAction NewAction(string name)
+        {
+            var action = new InputAction(name, InputActionType.Button);
+            _actions.Add(action);
+            return action;
+        }
+
+        private static ItemCatalog WeaponCatalog(InventoryRule rule)
+        {
+            return new ItemCatalog(
+                new[] { _bandage, _case, _key, _rifleAmmo, _pistolAmmo, _rifleItem, _handgunItem }, rule, new[] { new ItemCount(_bandageId, 2) });
         }
 
         private static ItemCatalog Catalog(InventoryRule rule)

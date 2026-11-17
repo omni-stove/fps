@@ -19,6 +19,9 @@ namespace Fps.Core
 
         public event Action AmmoTypeSwitched;
 
+        // 予備弾を持ち物から出し入れする武器で、持ち物が変わったとき (弾薬を拾った・捨てた・同じ弾薬の別の武器が使った) に呼ぶ
+        public event Action ReserveAmmoChanged;
+
         private float _cooldownRemaining;
 
         public WeaponSpec Spec { get; }
@@ -118,6 +121,27 @@ namespace Fps.Core
 
         /// <summary>予備弾をあと何発拾えるか。<see cref="HasInfiniteReserve"/> なら拾う意味が無いので 0。</summary>
         public int ReserveAmmoRoom => Ammo.ReserveAmmoRoom;
+
+        public int StartingReserveAmmo => Ammo.StartingReserveAmmo;
+
+        public IAmmoPool AmmoPool { get; private set; }
+
+        // 予備弾を pool から出し入れするようにする。null で外す。予備弾が無限か熱で撃つ武器は pool を使わず false
+        public bool UseAmmoPool(IAmmoPool pool)
+        {
+            if (AmmoPool != null)
+            {
+                AmmoPool.Changed -= OnAmmoPoolChanged;
+            }
+
+            AmmoPool = Ammo.UsePool(pool) ? pool : null;
+            if (AmmoPool != null)
+            {
+                AmmoPool.Changed += OnAmmoPoolChanged;
+            }
+
+            return AmmoPool != null;
+        }
 
         /// <summary>
         /// 予備弾を amount 足す。<see cref="MaxReserveAmmo"/> を超える分は捨て、実際に足した数を返す。
@@ -230,6 +254,11 @@ namespace Fps.Core
         public void CancelReload()
         {
             Ammo.CancelReload();
+        }
+
+        private void OnAmmoPoolChanged()
+        {
+            ReserveAmmoChanged?.Invoke();
         }
 
         /// <summary>連射のクールダウンとリロードを deltaSeconds 進める。</summary>

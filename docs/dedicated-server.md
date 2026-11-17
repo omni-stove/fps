@@ -304,6 +304,10 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
   (無ければアイテムなし) から読み、出現のたびに持たせ直す。持ち主の置き直す・使う・捨てるの頼みを確かめ、中身が変わった tick に
   持ち主にだけ送る。決め方の `countWeightInCarryLoad` が true なら、持ち物の重さを移動の遅さに数える。
   地面の拾い物はまだ無いので、捨てたアイテムは消える。ログは `[Inventory] items=..`・`[Inventory] move|use|drop owner=..`。
+  `weaponId` を持つアイテムは武器で、出現で持たせた武器が持ち物のマスを占め、重さは武器の `weight` を使う
+  (持ち物の重さを移動の遅さに数えるときは、武器の分は移動のルールが武器として数えるので除く)。使うとその武器に持ち替え、捨てられない。
+  武器のアイテムに `ammoItemId` があれば、その武器の予備弾は持ち物の弾薬アイテムの数になり、リロードで減る。出現のたびに、持たせた武器の
+  最初の予備弾の合計まで弾薬を足す。ログは `[Inventory] equip owner=..`・`[Inventory] restock owner=..`。
 - 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` から読む。
   無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
   破片が当たるダメージ (DebrisCrush) はまだ無い。

@@ -14,6 +14,10 @@ namespace Shooter.Core.Tests
             new[] { 0, 100, 300, 600 },
             new[] { new ProgressionUnlock("burst", 2), new ProgressionUnlock("scope", 4) });
 
+        private static readonly int[] _singleLevel = { 0 };
+
+        private static readonly int[] _twoLevels = { 0, 1 };
+
         private readonly ProgressionLedger _ledger = new ProgressionLedger(_spec);
 
         [TestCase(0, 1)]
@@ -92,7 +96,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ZeroXpSourcesGiveNothingButStillCount()
         {
-            var ledger = new ProgressionLedger(new ProgressionSpec(0, 0, 0, 0, new[] { 0, 1 }, Array.Empty<ProgressionUnlock>()));
+            var ledger = new ProgressionLedger(new ProgressionSpec(0, 0, 0, 0, _twoLevels, Array.Empty<ProgressionUnlock>()));
 
             var kill = ledger.RecordKill(PlayerProfile.Empty, true);
             var match = ledger.RecordMatch(kill.Profile, new MatchResult(MatchOutcome.Won, 1, 0, 1));
@@ -116,7 +120,7 @@ namespace Shooter.Core.Tests
             Assert.That(match.Xp, Is.EqualTo(0));
             Assert.That(match.Profile, Is.EqualTo(new PlayerProfile(max, 0, max, max, max)));
 
-            var huge = new ProgressionLedger(new ProgressionSpec(max, max, max, max, new[] { 0 }, Array.Empty<ProgressionUnlock>()));
+            var huge = new ProgressionLedger(new ProgressionSpec(max, max, max, max, _singleLevel, Array.Empty<ProgressionUnlock>()));
             Assert.That(huge.RecordKill(PlayerProfile.Empty, true).Profile.Xp, Is.EqualTo(max));
             Assert.That(huge.RecordMatch(PlayerProfile.Empty, new MatchResult(MatchOutcome.Won, 0, 0, 0)).Profile.Xp, Is.EqualTo(max));
         }

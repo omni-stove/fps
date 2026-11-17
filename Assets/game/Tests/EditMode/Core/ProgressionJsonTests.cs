@@ -10,6 +10,14 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedUnlockItemNames = { "id", "level" };
 
+        private static readonly int[] _threeLevels = { 0, 100, 250 };
+
+        private static readonly int[] _defaultLevels = { 0, 500, 1500, 3000, 5000, 7500, 10500, 14000, 18000, 22500 };
+
+        private static readonly int[] _singleLevel = { 0 };
+
+        private static readonly int[] _twoLevels = { 0, 100 };
+
         [Test]
         public void TheItemNamesFollowTheSpecArguments()
         {
@@ -29,7 +37,7 @@ namespace Shooter.Core.Tests
             Assert.That(spec.HeadshotXp, Is.EqualTo(5));
             Assert.That(spec.MatchXp, Is.EqualTo(30));
             Assert.That(spec.WinXp, Is.EqualTo(40));
-            Assert.That(spec.Levels, Is.EqualTo(new[] { 0, 100, 250 }));
+            Assert.That(spec.Levels, Is.EqualTo(_threeLevels));
             Assert.That(spec.MaxLevel, Is.EqualTo(3));
             Assert.That(spec.Unlocks.Count, Is.EqualTo(2));
             Assert.That(spec.Unlocks[0].Id, Is.EqualTo("burst"));
@@ -47,7 +55,7 @@ namespace Shooter.Core.Tests
             Assert.That(spec.HeadshotXp, Is.EqualTo(50));
             Assert.That(spec.MatchXp, Is.EqualTo(250));
             Assert.That(spec.WinXp, Is.EqualTo(500));
-            Assert.That(spec.Levels, Is.EqualTo(new[] { 0, 500, 1500, 3000, 5000, 7500, 10500, 14000, 18000, 22500 }));
+            Assert.That(spec.Levels, Is.EqualTo(_defaultLevels));
             Assert.That(spec.Unlocks, Is.Empty, "an omitted unlock table leaves everything usable from the start");
         }
 
@@ -132,7 +140,7 @@ namespace Shooter.Core.Tests
             Assert.That(Assert.Throws<ArgumentException>(() => new ProgressionUnlock(null, 1)).ParamName, Is.EqualTo("id"));
             Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionUnlock("a", 0)).ParamName, Is.EqualTo("level"));
 
-            var single = new ProgressionSpec(0, 0, 0, 0, new[] { 0 }, none);
+            var single = new ProgressionSpec(0, 0, 0, 0, _singleLevel, none);
             Assert.That(single.MaxLevel, Is.EqualTo(1), "a table with only level 1 is allowed");
             Assert.That(single.ToString(), Is.EqualTo("kill=0 headshot=0 match=0 win=0 levels=1 maxXp=0 unlocks=0"));
         }
@@ -147,7 +155,7 @@ namespace Shooter.Core.Tests
             levels[1] = 5;
             unlocks[0] = new ProgressionUnlock("b", 1);
 
-            Assert.That(spec.Levels, Is.EqualTo(new[] { 0, 100 }));
+            Assert.That(spec.Levels, Is.EqualTo(_twoLevels));
             Assert.That(spec.Unlocks[0].Id, Is.EqualTo("a"));
         }
     }

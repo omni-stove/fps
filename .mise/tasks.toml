@@ -109,3 +109,19 @@ run = "unity run . -- -quit -executeMethod Shooter.Editor.ReplacementAudit.Run"
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, the map-data template's check (re-export and compare with server-data/maps), and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/nightly-local.sh"
+
+[comments-extract]
+description = "Print each comment block of the tracked .cs files under the given paths with its id and the next lines, for judging keep / delete / rewrite (docs/comment-cleanup.md)"
+run = "bash scripts/comments.sh extract"
+
+[comments-apply]
+description = "Apply a decisions file of keep / delete / rewrite to the comment blocks extract printed (docs/comment-cleanup.md)"
+run = "bash scripts/comments.sh apply"
+
+[comments-verify]
+description = "Check that the .cs changes since the merge base with main (or the given ref) touch only comments and blank lines, apart from removed usings"
+run = "bash scripts/comments.sh verify"
+
+[comments-test]
+description = "Run the tests of scripts/comments.sh"
+run = "bash scripts/comments-test.sh"

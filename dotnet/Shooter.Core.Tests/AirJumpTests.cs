@@ -203,6 +203,7 @@ namespace Shooter.Core.Tests
         public void SwimmingInTheAirGivesTheAirJumpsBack()
         {
             var simulation = NewSimulation(Spec(airJumps: 1));
+            simulation.Water = new WaterEverywhere(12f);
             var state = Airborne(swim: new CharacterSwimState(true, 12f, true));
 
             var next = simulation.Step(state, Input());
@@ -314,6 +315,21 @@ namespace Shooter.Core.Tests
                 SpawnPosition = _start,
                 Ladders = new[] { new MapLadder(_span, LadderSpec.Default) },
             };
+        }
+
+        private sealed class WaterEverywhere : IWaterVolumes
+        {
+            private readonly float _surfaceY;
+
+            public WaterEverywhere(float surfaceY)
+            {
+                _surfaceY = surfaceY;
+            }
+
+            public float? SurfaceAt(Vector3 position)
+            {
+                return _surfaceY;
+            }
         }
     }
 }

@@ -540,6 +540,74 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ASwapIsWeighedAsItWillBeAndHoldsTheReplacedSpotBeforeTheWeaponIsRebuilt()
+        {
+            // 消音器 (0.5 kg) を付けた小銃 3.5 kg と補正器 0.25 kg で 3.75 kg。付け替えても合計は 3.75 kg のまま
+            var holder = new Holder(new Inventory(Catalog()), _suppressorId);
+            holder.Inventory.Add(_compensatorId, 1);
+            var before = holder.Inventory.TotalWeight;
+
+            var result = InventoryAttachments.Attach(
+                holder.Inventory, holder.Handle(_compensatorId), _rifleId, holder.Attached, holder.Set, out _, out _);
+
+            Assert.That(result, Is.EqualTo(AttachmentRejection.None));
+            Assert.That(before, Is.EqualTo(3.75f).Within(1e-4f));
+            Assert.That(holder.TotalWeightWhenSet, Is.EqualTo(3.75f).Within(1e-4f), "the overflowing rounds are judged against the weight after the swap");
+            Assert.That(holder.SuppressorsWhenSet, Is.EqualTo(1), "the suppressor takes its spot before the rounds can");
+            Assert.That(holder.Inventory.TotalWeight, Is.EqualTo(3.75f).Within(1e-4f));
+            Assert.That(holder.Inventory.WeaponWeight, Is.EqualTo(3.25f).Within(1e-4f));
+        }
+
+        [Test]
+        public void ADetachIsWeighedAsItWillBeAndHoldsTheItemsSpotBeforeTheWeaponIsRebuilt()
+        {
+            // スコープ (0.75 kg) を付けた小銃で 3.75 kg。外しても合計は 3.75 kg のまま
+            var holder = new Holder(new Inventory(Catalog()), _scopeId);
+
+            var result = InventoryAttachments.Detach(holder.Inventory, _rifleId, holder.Attached, _scopeId, holder.Set);
+
+            Assert.That(result, Is.EqualTo(AttachmentRejection.None));
+            Assert.That(holder.TotalWeightWhenSet, Is.EqualTo(3.75f).Within(1e-4f), "the scope is not counted on both the weapon and the inventory");
+            Assert.That(holder.CountWhenSet, Is.EqualTo(1), "the scope takes its spot before the rounds can");
+            Assert.That(holder.Inventory.TotalWeight, Is.EqualTo(3.75f).Within(1e-4f));
+            Assert.That(holder.Inventory.WeaponWeight, Is.EqualTo(3f).Within(1e-4f));
+        }
+
+        [Test]
+        public void RefusedSwapsAndDetachesPutTheWeaponWeightBack()
+        {
+            var swap = new Holder(new Inventory(Catalog()), _suppressorId);
+            swap.Inventory.Add(_compensatorId, 1);
+            swap.Accepts = false;
+            InventoryAttachments.Attach(swap.Inventory, swap.Handle(_compensatorId), _rifleId, swap.Attached, swap.Set, out _, out _);
+
+            Assert.That(swap.Inventory.WeaponWeight, Is.EqualTo(3.5f).Within(1e-4f));
+            Assert.That(swap.Inventory.TotalWeight, Is.EqualTo(3.75f).Within(1e-4f));
+
+            var detach = new Holder(new Inventory(Catalog()), _scopeId);
+            detach.Accepts = false;
+            InventoryAttachments.Detach(detach.Inventory, _rifleId, detach.Attached, _scopeId, detach.Set);
+
+            Assert.That(detach.Inventory.WeaponWeight, Is.EqualTo(3.75f).Within(1e-4f));
+            Assert.That(detach.Inventory.TotalWeight, Is.EqualTo(3.75f).Within(1e-4f));
+        }
+
+        [Test]
+        public void WeaponWeightsCanBeSetOnlyForHeldWeapons()
+        {
+            var inventory = new Inventory(Catalog());
+            inventory.HoldWeapons(new[] { _rifle });
+
+            inventory.SetWeaponWeight(_rifleId, 4f);
+            inventory.SetWeaponWeight(_pistolId, 1f);
+
+            Assert.That(inventory.TryGetWeaponWeight(_rifleId, out var rifle), Is.True);
+            Assert.That(rifle, Is.EqualTo(4f));
+            Assert.That(inventory.TryGetWeaponWeight(_pistolId, out _), Is.False);
+            Assert.That(inventory.WeaponWeight, Is.EqualTo(4f));
+        }
+
+        [Test]
         public void DetachingWhatIsNotAttachedIsRefused()
         {
             var holder = new Holder(new Inventory(Catalog()), _scopeId);
@@ -566,6 +634,10 @@ namespace Fps.Core.Tests
 
             public int CountWhenSet { get; private set; } = -1;
 
+            public int SuppressorsWhenSet { get; private set; } = -1;
+
+            public float TotalWeightWhenSet { get; private set; } = -1f;
+
             public int Handle(string itemId) => Inventory.Stacks.First(s => s.ItemId == itemId).Handle;
 
             public bool Accepts { get; set; } = true;
@@ -574,6 +646,8 @@ namespace Fps.Core.Tests
             {
                 Sets++;
                 CountWhenSet = Inventory.CountOf(_scopeId);
+                SuppressorsWhenSet = Inventory.CountOf(_suppressorId);
+                TotalWeightWhenSet = Inventory.TotalWeight;
                 if (!Accepts)
                 {
                     return false;

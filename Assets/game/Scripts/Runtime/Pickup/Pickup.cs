@@ -845,6 +845,11 @@ namespace Fps.Runtime
                         return false;
                     }
 
+                    if (outcome.Kind == PickupKind.Weapon)
+                    {
+                        HandOverAttachments(collector);
+                    }
+
                     return true;
                 case PickupKind.Health:
                     collector.Health.Heal(outcome.Health);
@@ -885,6 +890,23 @@ namespace Fps.Runtime
             var pickup = Create(contents, position, PickupCollectMode.Look, radius: _radius, lookAngleDegrees: _lookAngleDegrees);
             Debug.Log(PickupLog.Dropped(collector.Id, pickup.name, pickup.Spec, position.ToNumerics()), pickup);
             return pickup;
+        }
+
+        // 同じ武器を持つ人は弾だけ取り込むので、付けた物を持ち物へ入れる。入らない物 (持ち物の無い bot も) は足元に置き、消さない
+        private void HandOverAttachments(Damageable collector)
+        {
+            var inventory = collector.GetComponent<PlayerInventory>();
+            foreach (var itemId in _contents.Attachments)
+            {
+                if (inventory != null && inventory.Inventory.Add(itemId, 1) == 1)
+                {
+                    Debug.Log($"{LogTag} '{name}' attachment item={itemId} -> inventory of {collector.Id}", this);
+                    continue;
+                }
+
+                var pickup = Create(PickupContents.ForItem(itemId, 1, _contents.Eligibility), transform.position, PickupCollectMode.Look);
+                Debug.Log(PickupLog.Dropped(collector.Id, pickup.name, pickup.Spec, transform.position.ToNumerics()), pickup);
+            }
         }
 
         private void TryCollectInside()

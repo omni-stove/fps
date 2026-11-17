@@ -155,6 +155,25 @@ namespace Fps.Core
             return item.IsWeapon && _weaponWeights.TryGetValue(item.WeaponId, out var weight) ? weight : item.Weight;
         }
 
+        public bool TryGetWeaponWeight(string weaponId, out float weight)
+        {
+            weight = 0f;
+            return weaponId != null && _weaponWeights.TryGetValue(weaponId, out weight);
+        }
+
+        // 武器の値を作り直すと HoldWeapons で重さが揃うが、それは溢れる弾の空きを判定した後になる。付け外しの前に重さだけ先に替えられるようにする
+        public void SetWeaponWeight(string weaponId, float weight)
+        {
+            SpecGuard.NonNegativeFinite(weight, nameof(weight));
+            if (weaponId == null || !_weaponWeights.TryGetValue(weaponId, out var current) || current == weight)
+            {
+                return;
+            }
+
+            _weaponWeights[weaponId] = weight;
+            Changed?.Invoke();
+        }
+
         public string WeaponIdOf(int handle)
         {
             return TryGetStack(handle, out var stack) && Catalog.TryFind(stack.ItemId, out var item) ? item.WeaponId : null;

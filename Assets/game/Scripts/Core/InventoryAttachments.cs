@@ -50,25 +50,32 @@ namespace Fps.Core
             }
 
             // 付け替えでは持ち物と武器を合わせた重さは変わらない。外した物の方が重いときだけ、その差を持ち物が軽くなる分として見る
-            if (replaced != null && catalog.TryFind(replaced, out var off)
-                && !inventory.HasRoomAfterTaking(handle, replaced, Math.Max(0f, off.Weight - item.Weight)))
-            {
-                return AttachmentRejection.NoRoom;
-            }
-
-            // 付ける物を持ち物に残したまま setAttachments を呼ぶ。この時点の持ち物と武器の重さの合計が、付け替えたあとの合計と同じになり、溢れる弾の空きを正しく判定できるため
-            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。持ち物は何も変えていない
-            if (!setAttachments(next))
+            var replacedWeight = replaced != null && catalog.TryFind(replaced, out var off) ? off.Weight : 0f;
+            if (replaced != null && !inventory.HasRoomAfterTaking(handle, replaced, Math.Max(0f, replacedWeight - item.Weight)))
             {
                 return AttachmentRejection.NoRoom;
             }
 
             inventory.TryTake(handle, 1, out _);
-            if (replaced != null && catalog.TryFind(replaced, out var removed)
-                && inventory.Add(replaced, 1, removed.Weight) != 1)
+            var restoreWeight = Reweigh(inventory, weaponId, item.Weight - replacedWeight);
+            // 外した物は setAttachments の前に入れる。後だと、item を抜いて空いたマスを溢れた弾が使い、外した物が入らず item を戻せなくなるため
+            if (replaced != null && inventory.Add(replaced, 1) != 1)
             {
-                inventory.Add(item.Id, 1, 0f);
-                setAttachments(current);
+                restoreWeight();
+                inventory.Add(item.Id, 1);
+                return AttachmentRejection.NoRoom;
+            }
+
+            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき
+            if (!setAttachments(next))
+            {
+                if (replaced != null)
+                {
+                    inventory.Remove(replaced, 1);
+                }
+
+                restoreWeight();
+                inventory.Add(item.Id, 1);
                 return AttachmentRejection.NoRoom;
             }
 
@@ -108,19 +115,33 @@ namespace Fps.Core
                 return AttachmentRejection.NoRoom;
             }
 
-            // 外した物は setAttachments の後に入れる。先に入れると、武器の重さにも数えられた同じ物で空きが減り、溢れる弾の判定が厳しくなるため
-            if (!setAttachments(next))
+            var restoreWeight = Reweigh(inventory, weaponId, -item.Weight);
+            if (inventory.Add(item.Id, 1) != 1)
             {
+                restoreWeight();
                 return AttachmentRejection.NoRoom;
             }
 
-            if (inventory.Add(item.Id, 1, item.Weight) != 1)
+            if (!setAttachments(next))
             {
-                setAttachments(current);
+                inventory.Remove(item.Id, 1);
+                restoreWeight();
                 return AttachmentRejection.NoRoom;
             }
 
             return AttachmentRejection.None;
+        }
+
+        // 溢れる弾の空きは setAttachments の中で、武器の重さが揃う前に判定される。付け外した後の重さで判定させるため、武器の重さを先に替える
+        private static Action Reweigh(Inventory inventory, string weaponId, float delta)
+        {
+            if (!inventory.TryGetWeaponWeight(weaponId, out var before))
+            {
+                return () => { };
+            }
+
+            inventory.SetWeaponWeight(weaponId, Math.Max(0f, before + delta));
+            return () => inventory.SetWeaponWeight(weaponId, before);
         }
     }
 }

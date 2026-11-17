@@ -158,6 +158,23 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PickingUpTheSameWeaponAsAmmoPutsItsAttachmentsIntoTheInventory()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            var reserve = weapons.Loadout.Items.Single(w => w.Spec.Id == TestWeapons.RifleId).ReserveAmmo;
+            var pickup = Pickup.Create(
+                PickupContents.ForWeapon(Definition("Rifle", TestWeapons.RifleSpec()), 5).WithAttachments(new[] { _suppressorId }),
+                Vector3.zero,
+                PickupCollectMode.Look);
+
+            Assert.That(pickup.TryCollect(inventory.GetComponent<Damageable>(), out var outcome), Is.True, outcome.Rejection.ToString());
+
+            Assert.That(weapons.Loadout.Items.Single(w => w.Spec.Id == TestWeapons.RifleId).ReserveAmmo, Is.EqualTo(reserve + 5));
+            Assert.That(inventory.Inventory.CountOf(_suppressorId), Is.EqualTo(2), "the one it started with and the one off the picked-up rifle");
+            Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+        }
+
+        [Test]
         public void SwappingAtTheWeaponLimitDropsTheOldWeaponWithItsAttachments()
         {
             var (inventory, weapons) = NewArmedPlayer();

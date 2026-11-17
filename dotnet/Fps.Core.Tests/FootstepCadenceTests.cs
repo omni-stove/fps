@@ -50,7 +50,7 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => cadence.Advance(0f, 0f, -_frame, true, false, false));
             Assert.Throws<ArgumentOutOfRangeException>(() => cadence.Advance(0f, 0f, float.NaN, true, false, false));
             Assert.Throws<ArgumentOutOfRangeException>(() => cadence.IntervalFor(-1f, false, false));
-            Assert.Throws<ArgumentOutOfRangeException>(() => FootstepCadence.LandingVolume(float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FootstepCadence().LandingVolume(float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => FootstepCadence.IsSprintingBySpeed(1f, 0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => FootstepCadence.IsSprintingBySpeed(float.NaN, 5f));
         }
@@ -219,7 +219,7 @@ namespace Fps.Core.Tests
             var cue = cadence.Advance(0f, -0.01f, _frame, true, false, false);
 
             Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Landing));
-            Assert.That(cue.Volume, Is.EqualTo(FootstepCadence.LandingVolume(7f)).Within(_tolerance));
+            Assert.That(cue.Volume, Is.EqualTo(new FootstepCadence().LandingVolume(7f)).Within(_tolerance));
             Assert.That(cadence.Progress, Is.EqualTo(0f), "the next footstep waits a whole stride after landing");
         }
 
@@ -252,18 +252,18 @@ namespace Fps.Core.Tests
 
         [TestCase(0f, 0f)]
         [TestCase(2.4f, 0f)]
-        [TestCase(2.5f, FootstepCadence.MinLandingVolume)]
+        [TestCase(2.5f, FootstepCadence.DefaultMinLandingVolume)]
         [TestCase(12f, 1f)]
         [TestCase(40f, 1f)]
         public void LandingVolumeGrowsWithTheFallSpeed(float fallSpeed, float expected)
         {
-            Assert.That(FootstepCadence.LandingVolume(fallSpeed), Is.EqualTo(expected).Within(_tolerance));
+            Assert.That(new FootstepCadence().LandingVolume(fallSpeed), Is.EqualTo(expected).Within(_tolerance));
         }
 
         [Test]
         public void HarderLandingsAreLouder()
         {
-            Assert.That(FootstepCadence.LandingVolume(9f), Is.GreaterThan(FootstepCadence.LandingVolume(5f)));
+            Assert.That(new FootstepCadence().LandingVolume(9f), Is.GreaterThan(new FootstepCadence().LandingVolume(5f)));
         }
 
         [Test]
@@ -305,7 +305,7 @@ namespace Fps.Core.Tests
             var cue = cadence.Advance(0f, -0.001f, frame, true, false, false);
 
             Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Landing));
-            Assert.That(cue.Volume, Is.EqualTo(FootstepCadence.LandingVolume(7f * tick / frame)).Within(_tolerance));
+            Assert.That(cue.Volume, Is.EqualTo(new FootstepCadence().LandingVolume(7f * tick / frame)).Within(_tolerance));
         }
 
         [Test]
@@ -324,7 +324,7 @@ namespace Fps.Core.Tests
             var cue = cadence.Advance(0f, 0f, frame, true, false, false);
 
             Assert.That(cue.Kind, Is.EqualTo(FootstepCueKind.Landing));
-            Assert.That(cue.Volume, Is.EqualTo(FootstepCadence.LandingVolume(7f * tick / (3f * frame))).Within(_tolerance));
+            Assert.That(cue.Volume, Is.EqualTo(new FootstepCadence().LandingVolume(7f * tick / (3f * frame))).Within(_tolerance));
         }
 
         [Test]

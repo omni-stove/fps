@@ -14,6 +14,8 @@ namespace Shooter.Core.Tests
         private const int _bravo2 = 4;
         private const float _returnSeconds = 10f;
         private const float _respawnSeconds = 5f;
+        private static readonly string[] _expectedTaken = { "1:1" };
+        private static readonly string[] _expectedReturned = { "1:4" };
         private static readonly string[] _expectedByItself = { "1:-" };
         private static readonly string[] _expectedCaptured = { "1:1 score=1" };
         private static readonly string[] _expectedOrder = { "captured 1", "ended 0", "captured 2" };
@@ -63,7 +65,7 @@ namespace Shooter.Core.Tests
             Assert.That(game.GetCarriedFlag(_alpha1), Is.EqualTo(Side.Bravo));
             Assert.That(game.IsCarrying(_alpha2), Is.False);
             Assert.That(game.GetFlagState(Side.Alpha), Is.EqualTo(FlagState.AtBase));
-            Assert.That(taken, Is.EqualTo(new[] { "1:1" }));
+            Assert.That(taken, Is.EqualTo(_expectedTaken));
         }
 
         [Test]
@@ -104,7 +106,7 @@ namespace Shooter.Core.Tests
             Assert.That(game.GetReturnRemaining(Side.Bravo), Is.EqualTo(_returnSeconds));
             Assert.That(game.IsCarrying(_alpha1), Is.False);
             Assert.That(game.Session.GetKills(_bravo1), Is.EqualTo(1));
-            Assert.That(dropped, Is.EqualTo(new[] { "1:1" }));
+            Assert.That(dropped, Is.EqualTo(_expectedTaken));
         }
 
         [Test]
@@ -183,7 +185,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(game.GetFlagState(Side.Bravo), Is.EqualTo(FlagState.AtBase));
             Assert.That(game.GetReturnRemaining(Side.Bravo), Is.Null);
-            Assert.That(returned, Is.EqualTo(new[] { "1:4" }));
+            Assert.That(returned, Is.EqualTo(_expectedReturned));
         }
 
         [Test]

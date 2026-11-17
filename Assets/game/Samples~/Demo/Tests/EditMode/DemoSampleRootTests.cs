@@ -67,6 +67,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.TpsRangePath, Is.EqualTo(Root + "/Rules/TpsRange.asset"));
             Assert.That(GameRulesAssetBuilder.DominationPath, Is.EqualTo(Root + "/Rules/Domination.asset"));
             Assert.That(GameRulesAssetBuilder.FreeForAllPath, Is.EqualTo(Root + "/Rules/FreeForAll.asset"));
+            Assert.That(GameRulesAssetBuilder.CaptureTheFlagPath, Is.EqualTo(Root + "/Rules/CaptureTheFlag.asset"));
             Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo(Root + "/Rules/BattleRoyale.asset"));
 
             Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo(Root + "/Weapons/Rifle.asset"));
@@ -103,6 +104,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.GuardianScene, Is.EqualTo(Root + "/Scenes/Guardian.unity"));
             Assert.That(BuildSceneList.ExecutionScene, Is.EqualTo(Root + "/Scenes/Execution.unity"));
             Assert.That(BuildSceneList.SearchAndDestroyScene, Is.EqualTo(Root + "/Scenes/SearchAndDestroy.unity"));
+            Assert.That(BuildSceneList.CaptureTheFlagScene, Is.EqualTo(Root + "/Scenes/CaptureTheFlag.unity"));
             Assert.That(BuildSceneList.HordeScene, Is.EqualTo(Root + "/Scenes/Horde.unity"));
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo(Root + "/Scenes/BattleRoyale.unity"));
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo(Root + "/Scenes/ModeTest.unity"));

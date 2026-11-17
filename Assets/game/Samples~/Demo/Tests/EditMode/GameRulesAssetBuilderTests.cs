@@ -669,15 +669,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ModeNamesAreTheNineModesWithPathsUnderGameRules()
+        public void ModeNamesAreTheTenModesWithPathsUnderGameRules()
         {
             Assert.That(
                 GameRulesAssetBuilder.ModeNames,
                 Is.EqualTo(new[]
                 {
-                    "FreeForAll", "KillConfirmed", "GunGame", "Hardpoint", "Guardian", "Execution", "SearchAndDestroy", "Horde", "BattleRoyale",
+                    "FreeForAll", "KillConfirmed", "GunGame", "Hardpoint", "Guardian", "Execution", "SearchAndDestroy", "CaptureTheFlag", "Horde",
+                    "BattleRoyale",
                 }));
             Assert.That(GameRulesAssetBuilder.FreeForAllPath, Is.EqualTo(DemoSample.Root + "/Rules/FreeForAll.asset"));
+            Assert.That(GameRulesAssetBuilder.CaptureTheFlagPath, Is.EqualTo(DemoSample.Root + "/Rules/CaptureTheFlag.asset"));
             Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo(DemoSample.Root + "/Rules/BattleRoyale.asset"));
             foreach (var name in GameRulesAssetBuilder.ModeNames)
             {
@@ -734,7 +736,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.HordeRules().WaveIntervalSeconds, Is.EqualTo(GameRulesAssetBuilder.HordeWaveIntervalSeconds));
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.GunGameName,
-                         GameRulesAssetBuilder.HardpointName, GameRulesAssetBuilder.GuardianName })
+                         GameRulesAssetBuilder.HardpointName, GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.CaptureTheFlagName })
             {
                 var rules = GameRulesAssetBuilder.ModeRules(name);
                 Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Individual), name);
@@ -755,6 +757,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.FreeForAllRules().Actions.Downed, Is.EqualTo(Downed.Off), "nobody can revive in a free-for-all");
             Assert.That(GameRulesAssetBuilder.GunGameRules().Actions.Downed, Is.EqualTo(Downed.Off));
             Assert.That(GameRulesAssetBuilder.SearchAndDestroyRules().Actions.Downed, Is.EqualTo(Downed.Off));
+            Assert.That(GameRulesAssetBuilder.CaptureTheFlagRules().Actions.Downed, Is.EqualTo(Downed.Off), "a shot carrier drops the flag at once");
+            Assert.That(
+                GameRulesAssetBuilder.CaptureTheFlagRules().Actions.GrenadeCount,
+                Is.EqualTo(GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
+                "only downing differs from team deathmatch");
 
             foreach (var name in GameRulesAssetBuilder.ModeNames)
             {
@@ -775,7 +782,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.FreeForAllRules().DeathCamera, Is.EqualTo(DeathCamera.Killer), "there is no ally to watch");
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.HardpointName,
-                         GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.ExecutionName, GameRulesAssetBuilder.SearchAndDestroyName })
+                         GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.ExecutionName, GameRulesAssetBuilder.SearchAndDestroyName,
+                         GameRulesAssetBuilder.CaptureTheFlagName })
             {
                 var rules = GameRulesAssetBuilder.ModeRules(name);
                 Assert.That(rules.InfiniteReserve, Is.False, name);

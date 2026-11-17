@@ -9,7 +9,7 @@ namespace Shooter.Editor
 {
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/>。<see cref="BuildAt"/> の 7 つと、
-    /// 対戦・PvE モードの <see cref="ModeNames"/> の 9 つ) を作るか上書きする。
+    /// 対戦・PvE モードの <see cref="ModeNames"/> の 10 個) を作るか上書きする。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
     /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
@@ -49,6 +49,7 @@ namespace Shooter.Editor
         public const string GuardianName = "Guardian";
         public const string ExecutionName = "Execution";
         public const string SearchAndDestroyName = "SearchAndDestroy";
+        public const string CaptureTheFlagName = "CaptureTheFlag";
         public const string HordeName = "Horde";
         public const string BattleRoyaleName = "BattleRoyale";
 
@@ -59,6 +60,7 @@ namespace Shooter.Editor
         public static string GuardianPath => Folder + "/" + GuardianName + ".asset";
         public static string ExecutionPath => Folder + "/" + ExecutionName + ".asset";
         public static string SearchAndDestroyPath => Folder + "/" + SearchAndDestroyName + ".asset";
+        public static string CaptureTheFlagPath => Folder + "/" + CaptureTheFlagName + ".asset";
         public static string HordePath => Folder + "/" + HordeName + ".asset";
         public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
 
@@ -84,6 +86,7 @@ namespace Shooter.Editor
             GuardianName,
             ExecutionName,
             SearchAndDestroyName,
+            CaptureTheFlagName,
             HordeName,
             BattleRoyaleName,
         };
@@ -330,6 +333,15 @@ namespace Shooter.Editor
         }
 
         /// <summary>
+        /// 旗取り。<see cref="TeamDeathmatchRules"/> (個別リスポーン・出現直後の無敵あり) のうち、旗を運ぶ人が撃たれたらその場で旗を落とすよう
+        /// ダウンを切ったもの (<see cref="CaptureTheFlagActions"/>)。
+        /// </summary>
+        public static GameRules CaptureTheFlagRules()
+        {
+            return TeamDeathmatchRules().WithActions(CaptureTheFlagActions());
+        }
+
+        /// <summary>
         /// ホード (PvE)。<see cref="TeamDeathmatchRules"/> のうち、倒れた人は <see cref="HordeWaveIntervalSeconds"/> 秒ごとの波でまとめて戻り
         /// (<see cref="RespawnMode.Wave"/>、戻るので出現直後の無敵も残す)、予備弾を <see cref="HordeReserveAmmoMultiplier"/> 倍にしたもの。
         /// ダウンは <see cref="Downed.Revive"/> で、味方が起こせる。
@@ -375,6 +387,8 @@ namespace Shooter.Editor
                     return ExecutionRules();
                 case SearchAndDestroyName:
                     return SearchAndDestroyRules();
+                case CaptureTheFlagName:
+                    return CaptureTheFlagRules();
                 case HordeName:
                     return HordeRules();
                 case BattleRoyaleName:
@@ -398,6 +412,15 @@ namespace Shooter.Editor
 
         /// <summary>爆破のアクション。<see cref="TeamDeathmatchActions"/> のうち、倒れたらその場でラウンドから外れるようダウンしないようにしたもの。</summary>
         public static ActionRules SearchAndDestroyActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        /// <summary>
+        /// 旗取りのアクション。<see cref="TeamDeathmatchActions"/> のうち、ダウンしないようにしたもの。
+        /// ダウンさせると、倒れるまで旗を持ったまま残り、運ぶ人を撃っても旗が落ちない。
+        /// </summary>
+        public static ActionRules CaptureTheFlagActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }

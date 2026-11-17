@@ -138,6 +138,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 | Kill Confirmed | `KillConfirmed` |
 | Hardpoint | `Hardpoint` |
 | 爆破 | `SearchAndDestroyStatus` |
+| 旗取り | `CaptureTheFlagStatus` |
 | Execution | `ExecutionStatus` |
 | Guardian | `GuardianStatus` |
 | Gun Game | `GunGameStatus` |

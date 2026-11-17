@@ -34,6 +34,7 @@ namespace Shooter.Editor
             new Slot("Hardpoint", typeof(HardpointDefinition), c => c.Hardpoint, (c, v) => c.Hardpoint = (HardpointDefinition)v),
             new Slot("KillConfirmed", typeof(KillConfirmedDefinition), c => c.KillConfirmed, (c, v) => c.KillConfirmed = (KillConfirmedDefinition)v),
             new Slot("SearchAndDestroy", typeof(SearchAndDestroyDefinition), c => c.SearchAndDestroy, (c, v) => c.SearchAndDestroy = (SearchAndDestroyDefinition)v),
+            new Slot("CaptureTheFlag", typeof(CaptureTheFlagDefinition), c => c.CaptureTheFlag, (c, v) => c.CaptureTheFlag = (CaptureTheFlagDefinition)v),
             new Slot("Horde", typeof(HordeDefinition), c => c.Horde, (c, v) => c.Horde = (HordeDefinition)v),
             new Slot("GunGameLadder", typeof(GunGameLadderDefinition), c => c.GunGameLadder, (c, v) => c.GunGameLadder = (GunGameLadderDefinition)v),
             new Slot("FreeForAll", typeof(FreeForAllDefinition), c => c.FreeForAll, (c, v) => c.FreeForAll = (FreeForAllDefinition)v),

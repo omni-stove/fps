@@ -83,6 +83,10 @@ namespace Shooter.Editor
         public static string GuardianScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.GuardianName);
         public static string ExecutionScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.ExecutionName);
         public static string SearchAndDestroyScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.SearchAndDestroyName);
+
+        /// <summary>旗取り。生成は <see cref="CaptureTheFlagSceneBuilder"/>。</summary>
+        public static string CaptureTheFlagScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.CaptureTheFlagName);
+
         public static string HordeScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
         public static string BattleRoyaleScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
 
@@ -126,6 +130,7 @@ namespace Shooter.Editor
                     GuardianScene,
                     ExecutionScene,
                     SearchAndDestroyScene,
+                    CaptureTheFlagScene,
                     HordeScene,
                     BattleRoyaleScene,
                     ModeTestScene,
@@ -160,6 +165,8 @@ namespace Shooter.Editor
                     return ExecutionScene;
                 case GameRulesAssetBuilder.SearchAndDestroyName:
                     return SearchAndDestroyScene;
+                case GameRulesAssetBuilder.CaptureTheFlagName:
+                    return CaptureTheFlagScene;
                 case GameRulesAssetBuilder.HordeName:
                     return HordeScene;
                 case GameRulesAssetBuilder.BattleRoyaleName:

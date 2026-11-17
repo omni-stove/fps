@@ -8,7 +8,7 @@ namespace Shooter.Runtime
     /// <summary>
     /// 旗取り (<see cref="CaptureTheFlag"/>) をシーンで進める <see cref="ModeRunnerBase"/> の派生。陣営 0 が Alpha、陣営 1 が Bravo。
     /// 旗の台 (<see cref="FlagBase"/>、陣営ごとに 1 つ) と旗の見た目 (<see cref="FlagObject"/>、無くてもよい) は Inspector (シーンの生成スクリプト) で配線する。
-    /// 調整値は <see cref="Definition"/>、Inspector の値の順で読む。
+    /// 調整値は <see cref="Definition"/>、入口 (<see cref="GameContent"/>) の欄、Inspector の値の順で読む。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -35,7 +35,7 @@ namespace Shooter.Runtime
         private const float _minimumPlanInterval = 0.05f;
 
         [Header("Rules")]
-        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の Rules と Bots の値の代わりにこれを読む")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の Rules と Bots の値の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
         private CaptureTheFlagDefinition _definition;
 
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの得点に届いたら試合が終わる")]
@@ -84,12 +84,17 @@ namespace Shooter.Runtime
         /// <summary>進めている旗取り。開始前は null。</summary>
         public CaptureTheFlag Game => _game;
 
-        /// <summary>調整値のアセット。null なら Inspector の値 (既定は <see cref="CaptureTheFlagSpec"/> の既定値) で始める。</summary>
+        /// <summary>
+        /// 調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値 (既定は <see cref="CaptureTheFlagSpec"/> の既定値) で始める。
+        /// </summary>
         public CaptureTheFlagDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public CaptureTheFlagDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.CaptureTheFlag);
 
         public int ScoreLimit
         {
@@ -133,25 +138,39 @@ namespace Shooter.Runtime
             set => _pointsPerCapture = value;
         }
 
-        /// <summary>Inspector の間隔。<see cref="Definition"/> があるときは使わない。</summary>
+        /// <summary>Inspector の間隔。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotPlanIntervalSeconds
         {
             get => _botPlanIntervalSeconds;
             set => _botPlanIntervalSeconds = value;
         }
 
-        /// <summary>Inspector の攻めの役の割合。<see cref="Definition"/> があるときは使わない。</summary>
+        /// <summary>Inspector の攻めの役の割合。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotAttackShare
         {
             get => _botAttackShare;
             set => _botAttackShare = value;
         }
 
-        /// <summary>いま bot の用事を決め直す間隔 (秒)。<see cref="Definition"/> があればその値、無ければ Inspector の <see cref="BotPlanIntervalSeconds"/>。</summary>
-        public float EffectiveBotPlanIntervalSeconds => _definition != null ? _definition.BotPlanIntervalSeconds : _botPlanIntervalSeconds;
+        /// <summary>いま bot の用事を決め直す間隔 (秒)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotPlanIntervalSeconds"/>。</summary>
+        public float EffectiveBotPlanIntervalSeconds
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.BotPlanIntervalSeconds : _botPlanIntervalSeconds;
+            }
+        }
 
-        /// <summary>いま攻めの役にする割合。<see cref="Definition"/> があればその値、無ければ Inspector の <see cref="BotAttackShare"/>。</summary>
-        public float EffectiveBotAttackShare => _definition != null ? _definition.BotAttackShare : _botAttackShare;
+        /// <summary>いま攻めの役にする割合。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotAttackShare"/>。</summary>
+        public float EffectiveBotAttackShare
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.BotAttackShare : _botAttackShare;
+            }
+        }
 
         /// <summary>配線した旗の台 (配線した順)。</summary>
         public IReadOnlyList<FlagBase> Bases => _bases ?? Array.Empty<FlagBase>();
@@ -174,14 +193,15 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// <see cref="CaptureTheFlagSpec"/> を、<see cref="Definition"/> があればその値で、無ければ Inspector の値で作る。bot の間隔と割合もここで確かめる。
+        /// <see cref="CaptureTheFlagSpec"/> を、<see cref="EffectiveDefinition"/> があればその値で、無ければ Inspector の値で作る。bot の間隔と割合もここで確かめる。
         /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
         /// </summary>
         public CaptureTheFlagSpec CreateSpec()
         {
-            if (_definition != null)
+            var definition = EffectiveDefinition;
+            if (definition != null)
             {
-                return _definition.ToSpec();
+                return definition.ToSpec();
             }
 
             RequireBotTuning(_botPlanIntervalSeconds, _botAttackShare);

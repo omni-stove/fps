@@ -19,6 +19,7 @@ namespace Shooter.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            GameContent.Use(null);
             foreach (var target in _objects)
             {
                 if (target != null)
@@ -158,6 +159,74 @@ namespace Shooter.Tests.EditMode
             var definition = Create("Copied");
 
             Assert.Throws<ArgumentNullException>(() => definition.CopyFrom(null));
+        }
+
+        [Test]
+        public void TheRunnerReadsItsDefinitionBeforeGameContent()
+        {
+            var runner = Runner();
+            var content = Content(Create("ContentFlags"));
+            content.CaptureTheFlag.ScoreLimit = 7;
+            content.CaptureTheFlag.BotPlanIntervalSeconds = 2f;
+            GameContent.Use(content);
+            var wired = Create("WiredFlags");
+            wired.ScoreLimit = 4;
+            wired.BotAttackShare = 0.25f;
+            runner.Definition = wired;
+
+            Assert.That(runner.EffectiveDefinition, Is.SameAs(wired));
+            Assert.That(runner.CreateSpec().ScoreLimit, Is.EqualTo(4));
+            Assert.That(runner.EffectiveBotPlanIntervalSeconds, Is.EqualTo(0.5f));
+            Assert.That(runner.EffectiveBotAttackShare, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void TheRunnerReadsGameContentWhenNothingIsWired()
+        {
+            var runner = Runner();
+            runner.ScoreLimit = 9;
+            runner.BotPlanIntervalSeconds = 1f;
+            var content = Content(Create("ContentFlags"));
+            content.CaptureTheFlag.ScoreLimit = 7;
+            content.CaptureTheFlag.BotPlanIntervalSeconds = 2f;
+            content.CaptureTheFlag.BotAttackShare = 0.75f;
+            GameContent.Use(content);
+
+            Assert.That(runner.EffectiveDefinition, Is.SameAs(content.CaptureTheFlag));
+            Assert.That(runner.CreateSpec().ScoreLimit, Is.EqualTo(7));
+            Assert.That(runner.EffectiveBotPlanIntervalSeconds, Is.EqualTo(2f));
+            Assert.That(runner.EffectiveBotAttackShare, Is.EqualTo(0.75f));
+        }
+
+        [Test]
+        public void TheRunnerUsesTheInspectorWhenGameContentHasNoDefinition()
+        {
+            var runner = Runner();
+            runner.ScoreLimit = 9;
+            runner.BotPlanIntervalSeconds = 1f;
+            runner.BotAttackShare = 0.2f;
+            GameContent.Use(Content(null));
+
+            Assert.That(runner.EffectiveDefinition, Is.Null);
+            Assert.That(runner.CreateSpec().ScoreLimit, Is.EqualTo(9));
+            Assert.That(runner.EffectiveBotPlanIntervalSeconds, Is.EqualTo(1f));
+            Assert.That(runner.EffectiveBotAttackShare, Is.EqualTo(0.2f));
+        }
+
+        private CaptureTheFlagRunner Runner()
+        {
+            var go = new GameObject("Runner");
+            _objects.Add(go);
+            return go.AddComponent<CaptureTheFlagRunner>();
+        }
+
+        private GameContent Content(CaptureTheFlagDefinition captureTheFlag)
+        {
+            var content = ScriptableObject.CreateInstance<GameContent>();
+            content.name = "Content";
+            content.CaptureTheFlag = captureTheFlag;
+            _objects.Add(content);
+            return content;
         }
 
         private CaptureTheFlagDefinition Create(string name)

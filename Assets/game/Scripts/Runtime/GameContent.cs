@@ -96,6 +96,9 @@ namespace Shooter.Runtime
         private SearchAndDestroyDefinition _searchAndDestroy;
 
         [SerializeField]
+        private CaptureTheFlagDefinition _captureTheFlag;
+
+        [SerializeField]
         private HordeDefinition _horde;
 
         [SerializeField]
@@ -315,6 +318,12 @@ namespace Shooter.Runtime
         {
             get => _searchAndDestroy;
             set => _searchAndDestroy = value;
+        }
+
+        public CaptureTheFlagDefinition CaptureTheFlag
+        {
+            get => _captureTheFlag;
+            set => _captureTheFlag = value;
         }
 
         public HordeDefinition Horde

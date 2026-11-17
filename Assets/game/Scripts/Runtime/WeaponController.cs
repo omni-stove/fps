@@ -670,7 +670,7 @@ namespace Fps.Runtime
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _definitions = loaded;
             _unarmed = false;
-            SetLoadout(loadout, specs, loaded, rules);
+            SetLoadout(loadout, specs, loaded, rules, resetAmmo: true);
 
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
             if (Application.isPlaying && isActiveAndEnabled)
@@ -696,7 +696,7 @@ namespace Fps.Runtime
             EnsureInitialized();
             var loadout = WeaponLoadout.Create(_specs, rules);
             _rules = rules;
-            SetLoadout(loadout, _specs, _loadedDefinitions, rules);
+            SetLoadout(loadout, _specs, _loadedDefinitions, rules, resetAmmo: true);
             WeaponChanged?.Invoke(Weapon);
         }
 
@@ -728,7 +728,7 @@ namespace Fps.Runtime
                     this);
             }
 
-            SetLoadout(loadout, _specs, _loadedDefinitions, _loadedRules);
+            SetLoadout(loadout, _specs, _loadedDefinitions, _loadedRules, resetAmmo: true);
             WeaponChanged?.Invoke(Weapon);
         }
 
@@ -758,8 +758,8 @@ namespace Fps.Runtime
             {
                 var only = new[] { spec };
                 var armed = WeaponLoadout.Restore(only, AmmoList(ammo), spec.Id, _loadedRules, out _);
-                SetLoadout(armed, only, new[] { definition }, _loadedRules);
                 _unarmed = false;
+                SetLoadout(armed, only, new[] { definition }, _loadedRules);
                 Debug.Log($"[Combat] weapon added index=0 id={spec.Id} name={spec.LogName}", this);
                 WeaponChanged?.Invoke(Weapon);
                 return true;
@@ -822,7 +822,7 @@ namespace Fps.Runtime
 
             var leaving = _loadout.Items[index];
             leaving.CancelReload();
-            var leavingAmmo = WeaponAmmo.Of(leaving);
+            var leavingAmmo = WeaponAmmo.Leaving(leaving);
             var leavingDefinition = _loadedDefinitions[index];
 
             var specs = (WeaponSpec[])_specs.Clone();
@@ -854,6 +854,83 @@ namespace Fps.Runtime
                 this);
             WeaponChanged?.Invoke(Weapon);
             return true;
+        }
+
+        /// <summary>
+        /// Id が weaponId の持ち武器を手放し、その定義と残弾 (予備弾を持ち物から出し入れする武器は弾倉の分だけ) を dropped に入れて true。
+        /// 今の武器を手放したら残りの 0 番を構え、最後の 1 本なら武器を持っていない状態 (<see cref="Disarm"/>) にする。
+        /// 武器を持っていないか weaponId を持っていなければ何もせず false。<see cref="WeaponChanged"/> を呼ぶ。
+        /// </summary>
+        public bool DropWeapon(string weaponId, out HeldWeapon dropped)
+        {
+            dropped = default;
+            EnsureInitialized();
+            var index = _unarmed ? -1 : _loadout.IndexOf(weaponId);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var leaving = _loadout.Items[index];
+            leaving.CancelReload();
+            dropped = new HeldWeapon(_loadedDefinitions[index], WeaponAmmo.Leaving(leaving));
+            if (_loadout.Count == 1)
+            {
+                // 持ち物の山は持ち武器から作るので、武器を持っていない状態でも並びを残したまま Disarm で手放したことにする
+                leaving.UseAmmoPool(null);
+                Debug.Log($"[Combat] weapon dropped index=0 id={leaving.Spec.Id} name={leaving.Spec.LogName} ammo={dropped.Ammo.AmmoInMagazine}/{dropped.Ammo.ReserveAmmo}", this);
+                Disarm();
+                return true;
+            }
+
+            var specs = new WeaponSpec[_specs.Length - 1];
+            var definitions = new WeaponDefinition[_loadedDefinitions.Length - 1];
+            var carried = new List<WeaponAmmo>();
+            var ammo = _loadout.SnapshotAmmo();
+            for (int from = 0, to = 0; from < _specs.Length; from++)
+            {
+                if (from == index)
+                {
+                    continue;
+                }
+
+                specs[to] = _specs[from];
+                definitions[to] = _loadedDefinitions[from];
+                carried.Add(ammo[from]);
+                to++;
+            }
+
+            var equipped = index == _loadout.CurrentIndex ? null : Weapon.Spec.Id;
+            var loadout = WeaponLoadout.Restore(specs, carried, equipped, _loadedRules, out _);
+            for (var i = 0; i < loadout.Count; i++)
+            {
+                loadout.Items[i].AmmoTypes.TrySelect(_loadout.Items[i < index ? i : i + 1].AmmoTypes.Index);
+            }
+
+            SetLoadout(loadout, specs, definitions, _loadedRules);
+            Debug.Log($"[Combat] weapon dropped index={index} id={leaving.Spec.Id} name={leaving.Spec.LogName} ammo={dropped.Ammo.AmmoInMagazine}/{dropped.Ammo.ReserveAmmo}", this);
+            WeaponChanged?.Invoke(Weapon);
+            return true;
+        }
+
+        public Func<WeaponSpec, IAmmoPool> AmmoPools { get; private set; }
+
+        // 持ち武器の並びを作り直したときに、予備弾の受け皿をつなぐ前に呼ぶ。持ち物が武器の場所を、受け皿に入る弾薬より先に取れるようにするため
+        public event Action LoadoutReplaced;
+
+        // 武器ごとの予備弾の受け皿 (持ち物の弾薬) を決め、今の武器と、この後に作り直す武器に使う。null で外す
+        public void UseAmmoPools(Func<WeaponSpec, IAmmoPool> poolFor)
+        {
+            AmmoPools = poolFor;
+            if (_loadout == null || _unarmed)
+            {
+                return;
+            }
+
+            foreach (var weapon in _loadout.Items)
+            {
+                weapon.UseAmmoPool(poolFor?.Invoke(weapon.Spec));
+            }
         }
 
         // 残弾の数だけでは種類が戻るので、込めた弾が別の種類に変わらないよう作り直した武器へ選択を移す。replacedIndex の武器は入れ替えたので移さない。
@@ -1230,7 +1307,8 @@ namespace Fps.Runtime
             direction = _aim.forward;
         }
 
-        private void SetLoadout(Loadout<Weapon> loadout, WeaponSpec[] specs, WeaponDefinition[] definitions, GameRules rules)
+        // resetAmmo: 予備弾を作った値にする作り直し (初期化・ルールの満たし直し・セーブから戻す)。持ち物の弾薬もその値に揃える
+        private void SetLoadout(Loadout<Weapon> loadout, WeaponSpec[] specs, WeaponDefinition[] definitions, GameRules rules, bool resetAmmo = false)
         {
             if (_loadout != null)
             {
@@ -1238,6 +1316,7 @@ namespace Fps.Runtime
                 foreach (var weapon in _loadout.Items)
                 {
                     weapon.Reloaded -= OnReloaded;
+                    weapon.UseAmmoPool(null);
                 }
             }
 
@@ -1245,12 +1324,43 @@ namespace Fps.Runtime
             _specs = specs;
             _loadedDefinitions = definitions;
             _loadedRules = rules;
-            if (_loadout != null)
+            LoadoutReplaced?.Invoke();
+            if (_loadout == null)
             {
-                _loadout.Switched += OnSwitched;
-                foreach (var weapon in _loadout.Items)
+                return;
+            }
+
+            Dictionary<string, (IAmmoPool Pool, int Count)> reset = null;
+            _loadout.Switched += OnSwitched;
+            foreach (var weapon in _loadout.Items)
+            {
+                weapon.Reloaded += OnReloaded;
+
+                // 武器を持っていない間の並びは手放した武器なので、その予備弾を持ち物に足さない
+                if (AmmoPools == null || _unarmed)
                 {
-                    weapon.Reloaded += OnReloaded;
+                    continue;
+                }
+
+                var own = weapon.ReserveAmmo;
+                var pool = AmmoPools(weapon.Spec);
+                if (weapon.UseAmmoPool(pool) && resetAmmo)
+                {
+                    reset ??= new Dictionary<string, (IAmmoPool Pool, int Count)>(StringComparer.Ordinal);
+                    reset[pool.Id] = reset.TryGetValue(pool.Id, out var target) ? (pool, Math.Max(target.Count, own)) : (pool, own);
+                }
+            }
+
+            // 受け皿につなぐと足りない分を足すだけなので、作り直しで予備弾が減る (難易度で減らす・セーブの値に戻す) ときは多い分を減らす
+            if (reset != null)
+            {
+                foreach (var (pool, count) in reset.Values)
+                {
+                    var extra = pool.Count - count;
+                    if (extra > 0)
+                    {
+                        pool.Take(extra);
+                    }
                 }
             }
         }

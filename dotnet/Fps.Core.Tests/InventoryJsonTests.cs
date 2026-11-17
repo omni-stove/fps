@@ -5,6 +5,9 @@ namespace Fps.Core.Tests
     public sealed class InventoryJsonTests
     {
         private const string _herbId = "0d3c6f1a-5b2e-4c7d-8a9f-1e2b3c4d5e6f";
+        private const string _ammoId = "7a8b9c0d-1e2f-4a3b-9c4d-5e6f7a8b9c0d";
+        private const string _rifleItemId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
+        private const string _rifleId = "5e6f7a8b-9c0d-4e1f-8a3b-4c5d6e7f8a9b";
 
         [Test]
         public void ReadsTheRuleItemsAndStartingItems()
@@ -94,6 +97,41 @@ namespace Fps.Core.Tests
                 "{ \"starting\": [ { \"id\": \"" + _herbId + "\" } ] }", "inventory.json"));
 
             Assert.That(e.Item, Is.EqualTo("starting"));
+        }
+
+        [Test]
+        public void ReadsTheWeaponAndItsAmmoItem()
+        {
+            var catalog = InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _ammoId + "\", \"maxStack\": 30, \"weight\": 0.01 },"
+                + " { \"id\": \"" + _rifleItemId + "\", \"nameKey\": \"weapon.rifle\", \"weaponId\": \"" + _rifleId + "\", \"ammoItemId\": \"" + _ammoId + "\","
+                + " \"width\": 4, \"height\": 2 } ] }",
+                "inventory.json");
+
+            var rifle = catalog.Items[1];
+            Assert.That(rifle.WeaponId, Is.EqualTo(_rifleId));
+            Assert.That(rifle.AmmoItemId, Is.EqualTo(_ammoId));
+            Assert.That(rifle.Weight, Is.EqualTo(0f));
+            Assert.That(catalog.Items[0].WeaponId, Is.Null);
+        }
+
+        [Test]
+        public void AWeaponItemWithItsOwnWeightIsRefused()
+        {
+            var e = Assert.Throws<TuningJsonException>(() => InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _rifleItemId + "\", \"weaponId\": \"" + _rifleId + "\", \"weight\": 3 } ] }", "inventory.json"));
+
+            Assert.That(e.Item, Is.EqualTo("items[0].weight"));
+        }
+
+        [Test]
+        public void AnAmmoItemThatIsNotListedIsRefused()
+        {
+            var e = Assert.Throws<TuningJsonException>(() => InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _rifleItemId + "\", \"weaponId\": \"" + _rifleId + "\", \"ammoItemId\": \"" + _ammoId + "\" } ] }",
+                "inventory.json"));
+
+            Assert.That(e.Item, Is.EqualTo("items"));
         }
     }
 }

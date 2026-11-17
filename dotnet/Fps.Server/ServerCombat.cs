@@ -296,6 +296,11 @@ namespace Fps.Server
             }
         }
 
+        internal ServerPlayerWeapons WeaponsOf(int playerId)
+        {
+            return GetOrAdd(playerId).Weapons;
+        }
+
         private Fighter GetOrAdd(int playerId)
         {
             if (!_fighters.TryGetValue(playerId, out var fighter))

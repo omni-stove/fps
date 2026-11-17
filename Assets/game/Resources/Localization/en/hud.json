@@ -56,6 +56,8 @@
   "hud.inventory.empty": "Nothing carried",
   "hud.inventory.count": "×{0}",
   "hud.inventory.use": "Use",
+  "hud.inventory.equip": "Equip",
+  "hud.inventory.drop": "Drop",
   "hud.inventory.dropOne": "Drop one",
   "hud.inventory.dropAll": "Drop all",
   "hud.inventory.hint": "Drag to move · R while dragging to rotate · [{0}] to close",

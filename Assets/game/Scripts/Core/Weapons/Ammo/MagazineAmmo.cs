@@ -6,6 +6,9 @@ namespace Fps.Core
     {
         private float _reloadRemaining;
         private float _reloadElapsed;
+        private int _reserve;
+        private int _maxReserve;
+        private IAmmoPool _pool;
 
         public MagazineAmmo(AmmoSpec spec, GameRules rules)
         {
@@ -16,8 +19,9 @@ namespace Fps.Core
             }
 
             AmmoInMagazine = spec.MagazineSize;
-            ReserveAmmo = Weapon.ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
-            MaxReserveAmmo = ReserveAmmo;
+            StartingReserveAmmo = Weapon.ScaleReserveAmmo(spec.ReserveAmmo, rules.ReserveAmmoMultiplier);
+            _reserve = StartingReserveAmmo;
+            _maxReserve = _reserve;
             HasInfiniteReserve = rules.InfiniteReserve;
             HasActiveReload = rules.Actions.ActiveReload == ActiveReload.On;
         }
@@ -38,8 +42,8 @@ namespace Fps.Core
             }
 
             AmmoInMagazine = ammoInMagazine;
-            ReserveAmmo = reserveAmmo;
-            MaxReserveAmmo = Math.Max(MaxReserveAmmo, reserveAmmo);
+            _reserve = reserveAmmo;
+            _maxReserve = Math.Max(_maxReserve, reserveAmmo);
         }
 
         public event Action Reloaded;
@@ -48,11 +52,15 @@ namespace Fps.Core
 
         public int AmmoInMagazine { get; private set; }
 
-        public int ReserveAmmo { get; private set; }
+        public int ReserveAmmo => _pool != null ? _pool.Count : _reserve;
 
-        public int MaxReserveAmmo { get; }
+        public int MaxReserveAmmo => _pool != null ? (int)Math.Min((long)_pool.Count + _pool.Room, int.MaxValue) : _maxReserve;
 
-        public int ReserveAmmoRoom => HasInfiniteReserve ? 0 : Math.Max(0, MaxReserveAmmo - ReserveAmmo);
+        public int ReserveAmmoRoom => HasInfiniteReserve ? 0 : _pool != null ? _pool.Room : Math.Max(0, _maxReserve - _reserve);
+
+        public int StartingReserveAmmo { get; }
+
+        public bool HasPool => _pool != null;
 
         public bool HasInfiniteReserve { get; }
 
@@ -103,9 +111,42 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
             }
 
+            if (_pool != null)
+            {
+                return HasInfiniteReserve ? 0 : _pool.Put(amount);
+            }
+
             var added = Math.Min(amount, ReserveAmmoRoom);
-            ReserveAmmo += added;
+            _reserve += added;
             return added;
+        }
+
+        // 予備弾を pool から出し入れするようにし、持っていた予備弾を pool に移す。
+        // pool に既にある分は数えて足りない分だけ移すのは、作り直した武器 (持ち替えや拾い直しで同じ弾数のまま作る) が弾を増やさないようにするため。
+        // 予備弾が無限なら数えないので pool を使わず false。
+        public bool UsePool(IAmmoPool pool)
+        {
+            if (pool == null)
+            {
+                _pool = null;
+                return false;
+            }
+
+            if (HasInfiniteReserve)
+            {
+                return false;
+            }
+
+            var own = _reserve;
+            _pool = pool;
+            _reserve = 0;
+            var missing = own - pool.Count;
+            if (missing > 0)
+            {
+                pool.Put(missing);
+            }
+
+            return true;
         }
 
         public bool TryStartReload()
@@ -153,12 +194,17 @@ namespace Fps.Core
         }
 
         // 予備弾の上限 (MaxReserveAmmo) で切らないのは、込めてあった弾を戻すだけで、拾って増やしたのではないため。
+        // pool に入り切らない弾は戻せないので捨てる (持ち物の外に置く場所が無い)。
         public void Unload()
         {
             CancelReload();
-            if (!HasInfiniteReserve)
+            if (_pool != null)
             {
-                ReserveAmmo = (int)Math.Min((long)ReserveAmmo + AmmoInMagazine, int.MaxValue);
+                _pool.Put(AmmoInMagazine);
+            }
+            else if (!HasInfiniteReserve)
+            {
+                _reserve = (int)Math.Min((long)_reserve + AmmoInMagazine, int.MaxValue);
             }
 
             AmmoInMagazine = 0;
@@ -174,11 +220,19 @@ namespace Fps.Core
                 throw new InvalidOperationException("cannot load a round while reloading, with a full magazine or without reserve ammo");
             }
 
-            AmmoInMagazine++;
-            if (!HasInfiniteReserve)
+            if (_pool != null)
             {
-                ReserveAmmo--;
+                if (_pool.Take(1) == 0)
+                {
+                    return;
+                }
             }
+            else if (!HasInfiniteReserve)
+            {
+                _reserve--;
+            }
+
+            AmmoInMagazine++;
         }
 
         public void Tick(float deltaSeconds)
@@ -206,11 +260,15 @@ namespace Fps.Core
             {
                 AmmoInMagazine += missing;
             }
+            else if (_pool != null)
+            {
+                AmmoInMagazine += _pool.Take(Math.Min(missing, _pool.Count));
+            }
             else
             {
-                var amount = Math.Min(missing, ReserveAmmo);
+                var amount = Math.Min(missing, _reserve);
                 AmmoInMagazine += amount;
-                ReserveAmmo -= amount;
+                _reserve -= amount;
             }
 
             _reloadRemaining = 0f;

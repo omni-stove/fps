@@ -56,6 +56,8 @@
   "hud.inventory.empty": "何も持っていない",
   "hud.inventory.count": "×{0}",
   "hud.inventory.use": "使う",
+  "hud.inventory.equip": "装備する",
+  "hud.inventory.drop": "捨てる",
   "hud.inventory.dropOne": "1 個捨てる",
   "hud.inventory.dropAll": "全部捨てる",
   "hud.inventory.hint": "ドラッグで動かす ・ ドラッグ中に R で回す ・ [{0}] で閉じる",

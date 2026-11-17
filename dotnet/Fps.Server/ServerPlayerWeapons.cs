@@ -26,6 +26,7 @@ namespace Fps.Server
         private double _chargeFrom;
         private int _burstRoundsLeft;
         private double _burstUntil;
+        private Func<WeaponSpec, IAmmoPool> _poolFor;
 
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
@@ -68,16 +69,51 @@ namespace Fps.Server
                 throw new ArgumentException("specs must hold 1-" + OwnerSnapshot.MaxWeapons + " weapons", nameof(specs));
             }
 
+            // 前の並びの武器は受け皿 (持ち物) の Changed に購読が残るので、捨てる前に外す
+            foreach (var old in Items)
+            {
+                old.UseAmmoPool(null);
+            }
+
             var weapons = new ServerWeapon[specs.Count];
             for (var i = 0; i < specs.Count; i++)
             {
                 weapons[i] = new ServerWeapon(specs[i] ?? throw new ArgumentException("specs must not contain null", nameof(specs)), rules);
+                if (_poolFor != null)
+                {
+                    weapons[i].UseAmmoPool(_poolFor(specs[i]));
+                }
             }
 
             _chargeFraction = 0f;
             _chargeFrom = _now();
             _burstRoundsLeft = 0;
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
+        }
+
+        // 武器ごとの予備弾の受け皿 (持ち物の弾薬) を決める。今の武器と、この後に持たせる (Equip) 武器に使う。null で外す
+        public void UseAmmoPools(Func<WeaponSpec, IAmmoPool> poolFor)
+        {
+            _poolFor = poolFor;
+            foreach (var weapon in Items)
+            {
+                weapon.UseAmmoPool(poolFor?.Invoke(weapon.Spec));
+            }
+        }
+
+        // 予備弾を受け皿から出し入れしている武器と、その最初の予備弾
+        public IReadOnlyList<(string WeaponId, int StartingReserveAmmo)> PooledAmmo()
+        {
+            var list = new List<(string WeaponId, int StartingReserveAmmo)>();
+            foreach (var weapon in Items)
+            {
+                if (weapon.HasAmmoPool)
+                {
+                    list.Add((weapon.Spec.Id, weapon.StartingReserveAmmo));
+                }
+            }
+
+            return list;
         }
 
         /// <summary>全武器を満タンに戻してリロードをやめ、持ち替え中でも 0 番を構えた状態に戻す。試合の開始時に呼ぶ。</summary>

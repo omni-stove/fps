@@ -580,6 +580,7 @@ namespace Fps.Runtime
 
                 // 使ったときに足す体力と同じ GameObject に置き、持ち物の重さを武器の重さと一緒に移動の遅さに数える
                 var inventory = player.AddComponent<PlayerInventory>();
+                inventory.Bind(weapon);
                 mover.CarryLoad = new PlayerCarryLoad(weapon, inventory);
 
                 // 回復しないルール (RegenPerSecond = 0) でも付けておくのは、キャンペーンが難易度のルールに差し替えられるようにするため。

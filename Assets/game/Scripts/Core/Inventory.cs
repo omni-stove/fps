@@ -12,6 +12,7 @@ namespace Fps.Core
         private const float _weightTolerance = 1e-4f;
 
         private readonly List<InventoryEntry> _stacks = new List<InventoryEntry>();
+        private readonly Dictionary<string, float> _weaponWeights = new Dictionary<string, float>(StringComparer.Ordinal);
         private int _nextHandle = 1;
 
         public Inventory(ItemCatalog catalog)
@@ -29,6 +30,23 @@ namespace Fps.Core
         public IReadOnlyList<InventoryEntry> Stacks { get; }
 
         public float TotalWeight => WeightOf(_stacks);
+
+        public float WeaponWeight
+        {
+            get
+            {
+                var total = 0f;
+                foreach (var stack in _stacks)
+                {
+                    if (Catalog.TryFind(stack.ItemId, out var item) && item.IsWeapon)
+                    {
+                        total += WeightOf(item) * stack.Count;
+                    }
+                }
+
+                return total;
+            }
+        }
 
         public int GridRows => !Rule.HasGrid ? 0 : Rule.HasFixedGridHeight ? Rule.GridHeight : Bottom(_stacks);
 
@@ -57,16 +75,108 @@ namespace Fps.Core
             return at >= 0;
         }
 
+        // 武器の山は持ち武器から作る (HoldWeapons) ので、アイテムとしては入らない
         public int RoomFor(string itemId)
         {
-            if (!Catalog.TryFind(itemId, out var item))
+            if (!Catalog.TryFind(itemId, out var item) || item.IsWeapon)
             {
                 return 0;
             }
 
             var copy = new List<InventoryEntry>(_stacks);
             var next = _nextHandle;
-            return Place(copy, item, int.MaxValue, ref next);
+            return Place(copy, item, WeightOf(item), int.MaxValue, ref next);
+        }
+
+        public float WeightOf(ItemSpec item)
+        {
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item));
+            }
+
+            return item.IsWeapon && _weaponWeights.TryGetValue(item.WeaponId, out var weight) ? weight : item.Weight;
+        }
+
+        public string WeaponIdOf(int handle)
+        {
+            return TryGetStack(handle, out var stack) && Catalog.TryFind(stack.ItemId, out var item) ? item.WeaponId : null;
+        }
+
+        public bool HoldsWeapon(string weaponId)
+        {
+            return Catalog.TryFindWeapon(weaponId, out var item) && CountIn(_stacks, item.Id) > 0;
+        }
+
+        // 持ち物に入らない武器 (表に無い武器) は、持ち物の外で持つので入るものとして扱う
+        public bool CanHoldWeapon(string weaponId, float weight, string replacedWeaponId = null)
+        {
+            SpecGuard.NonNegativeFinite(weight, nameof(weight));
+            if (!Catalog.TryFindWeapon(weaponId, out var item) || CountIn(_stacks, item.Id) > 0)
+            {
+                return true;
+            }
+
+            var copy = new List<InventoryEntry>(_stacks);
+            if (Catalog.TryFindWeapon(replacedWeaponId, out var replaced))
+            {
+                copy.RemoveAll(stack => string.Equals(stack.ItemId, replaced.Id, StringComparison.Ordinal));
+            }
+
+            var next = _nextHandle;
+            return Place(copy, item, weight, 1, ref next) == 1;
+        }
+
+        // 持ち武器 held に合わせて武器の山を足し引きする。入り切らなかった武器の Id を返す (その武器は持ち物の外で持つ)
+        public IReadOnlyList<string> HoldWeapons(IReadOnlyList<WeaponSpec> held)
+        {
+            if (held == null)
+            {
+                throw new ArgumentNullException(nameof(held));
+            }
+
+            var changed = false;
+            foreach (var spec in held)
+            {
+                if (spec != null)
+                {
+                    _weaponWeights[spec.Id] = spec.Weight;
+                }
+            }
+
+            for (var i = _stacks.Count - 1; i >= 0; i--)
+            {
+                if (Catalog.TryFind(_stacks[i].ItemId, out var item) && item.IsWeapon && !Holds(held, item.WeaponId))
+                {
+                    _stacks.RemoveAt(i);
+                    changed = true;
+                }
+            }
+
+            var missing = new List<string>();
+            foreach (var spec in held)
+            {
+                if (spec == null || !Catalog.TryFindWeapon(spec.Id, out var item) || CountIn(_stacks, item.Id) > 0)
+                {
+                    continue;
+                }
+
+                if (Place(_stacks, item, WeightOf(item), 1, ref _nextHandle) == 1)
+                {
+                    changed = true;
+                }
+                else
+                {
+                    missing.Add(spec.Id);
+                }
+            }
+
+            if (changed)
+            {
+                Changed?.Invoke();
+            }
+
+            return missing;
         }
 
         public int Add(string itemId, int count)
@@ -76,12 +186,12 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
             }
 
-            if (count == 0 || !Catalog.TryFind(itemId, out var item))
+            if (count == 0 || !Catalog.TryFind(itemId, out var item) || item.IsWeapon)
             {
                 return 0;
             }
 
-            var added = Place(_stacks, item, count, ref _nextHandle);
+            var added = Place(_stacks, item, WeightOf(item), count, ref _nextHandle);
             if (added > 0)
             {
                 Changed?.Invoke();
@@ -189,15 +299,30 @@ namespace Fps.Core
             return IsFree(_stacks, x, y, width, height, handle) ? InventoryMoveResult.Moved : InventoryMoveResult.Blocked;
         }
 
+        // 持っている武器は残し、他を最初の持ち物に戻す。武器を先に置くのは、大きい武器の場所を小さいアイテムに取られないようにするため
         public void Fill()
         {
+            var weapons = new List<ItemSpec>();
+            foreach (var stack in _stacks)
+            {
+                if (Catalog.TryFind(stack.ItemId, out var item) && item.IsWeapon)
+                {
+                    weapons.Add(item);
+                }
+            }
+
             _stacks.Clear();
             _nextHandle = 1;
+            foreach (var weapon in weapons)
+            {
+                Place(_stacks, weapon, WeightOf(weapon), 1, ref _nextHandle);
+            }
+
             foreach (var entry in Catalog.Starting)
             {
                 if (Catalog.TryFind(entry.ItemId, out var item))
                 {
-                    Place(_stacks, item, entry.Count, ref _nextHandle);
+                    Place(_stacks, item, WeightOf(item), entry.Count, ref _nextHandle);
                 }
             }
 
@@ -277,9 +402,9 @@ namespace Fps.Core
 
         public int HeightOf(InventoryEntry stack) => HeightOf(stack.ItemId, stack.Rotated);
 
-        private int Place(List<InventoryEntry> stacks, ItemSpec item, int count, ref int nextHandle)
+        private int Place(List<InventoryEntry> stacks, ItemSpec item, float weight, int count, ref int nextHandle)
         {
-            var remaining = Math.Min(count, Allowed(stacks, item));
+            var remaining = Math.Min(count, Allowed(stacks, item, weight));
             var wanted = remaining;
             for (var i = 0; i < stacks.Count && remaining > 0; i++)
             {
@@ -315,7 +440,7 @@ namespace Fps.Core
             return wanted - remaining;
         }
 
-        private int Allowed(List<InventoryEntry> stacks, ItemSpec item)
+        private int Allowed(List<InventoryEntry> stacks, ItemSpec item, float weight)
         {
             var allowed = int.MaxValue;
             if (item.MaxCarried > 0)
@@ -323,10 +448,10 @@ namespace Fps.Core
                 allowed = Math.Max(0, item.MaxCarried - CountIn(stacks, item.Id));
             }
 
-            if (Rule.MaxWeight > 0f && item.Weight > 0f)
+            if (Rule.MaxWeight > 0f && weight > 0f)
             {
                 var spare = Rule.MaxWeight - WeightOf(stacks);
-                var byWeight = spare <= 0f ? 0 : (int)Math.Floor((spare + _weightTolerance) / item.Weight);
+                var byWeight = spare <= 0f ? 0 : (int)Math.Floor((spare + _weightTolerance) / weight);
                 allowed = Math.Min(allowed, Math.Max(0, byWeight));
             }
 
@@ -476,11 +601,24 @@ namespace Fps.Core
             {
                 if (Catalog.TryFind(stack.ItemId, out var item))
                 {
-                    total += item.Weight * stack.Count;
+                    total += WeightOf(item) * stack.Count;
                 }
             }
 
             return total;
+        }
+
+        private static bool Holds(IReadOnlyList<WeaponSpec> held, string weaponId)
+        {
+            foreach (var spec in held)
+            {
+                if (spec != null && string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int CountIn(List<InventoryEntry> stacks, string itemId)

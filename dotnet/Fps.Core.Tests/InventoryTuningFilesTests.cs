@@ -7,7 +7,11 @@ namespace Fps.Core.Tests
     public sealed class InventoryTuningFilesTests
     {
         private static readonly string[] _languages = { "ja", "en" };
-        private static readonly string[] _shippedNameKeys = { "item.bandage", "item.medkit", "item.armorPlate", "item.keycard", "item.toolbox" };
+        private static readonly string[] _shippedNameKeys =
+        {
+            "item.bandage", "item.medkit", "item.armorPlate", "item.keycard", "item.toolbox", "item.ammo9mm", "item.ammo556", "item.ammo12ga",
+            "weapon.rifle", "weapon.burstRifle", "weapon.handgun", "weapon.ricochetPistol", "weapon.shotgun",
+        };
         private static readonly string[] _usableNameKeys = { "item.bandage", "item.medkit", "item.armorPlate" };
 
         [Test]
@@ -31,6 +35,33 @@ namespace Fps.Core.Tests
             Assert.That(catalog.Starting.Single().ItemId, Is.EqualTo(catalog.Items[0].Id));
             Assert.That(catalog.Starting.Single().Count, Is.EqualTo(2));
             Assert.That(catalog.Items.Where(i => i.IsUsable).Select(i => i.NameKey), Is.EqualTo(_usableNameKeys));
+        }
+
+        [Test]
+        public void EveryWeaponItemIsASampleWeaponAndFiresItsAmmoItem()
+        {
+            var root = RepositoryRoot();
+            var catalog = InventoryJson.Parse(File.ReadAllText(UnityPath(root)), "inventory.json");
+            var samples = Directory.GetFiles(Path.Combine(root, "Assets", "game", "Samples~", "Demo", "Weapons", "Json"), "*.json")
+                .Select(path => WeaponSpecJson.Parse(File.ReadAllText(path), path))
+                .ToDictionary(spec => spec.Id);
+            var expected = new (string NameKey, string AmmoNameKey)[]
+            {
+                ("weapon.rifle", "item.ammo556"),
+                ("weapon.burstRifle", "item.ammo556"),
+                ("weapon.handgun", "item.ammo9mm"),
+                ("weapon.ricochetPistol", "item.ammo9mm"),
+                ("weapon.shotgun", "item.ammo12ga"),
+            };
+
+            var weapons = catalog.Items.Where(i => i.IsWeapon).ToList();
+            Assert.That(weapons.Select(w => (w.NameKey, catalog.Items.Single(i => i.Id == w.AmmoItemId).NameKey)), Is.EqualTo(expected));
+            foreach (var weapon in weapons)
+            {
+                Assert.That(samples.ContainsKey(weapon.WeaponId), weapon.NameKey + " points at a sample weapon");
+                Assert.That(samples[weapon.WeaponId].NameKey, Is.EqualTo(weapon.NameKey));
+                Assert.That(samples[weapon.WeaponId].Ammo.Kind, Is.EqualTo(AmmoKind.Magazine), weapon.NameKey + " fires from a magazine");
+            }
         }
 
         [Test]

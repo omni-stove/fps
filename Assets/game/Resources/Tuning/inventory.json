@@ -56,6 +56,78 @@
       "weight": 6,
       "width": 3,
       "height": 2
+    },
+    {
+      "id": "02e07a84-f063-4b41-8f63-17a410a3d069",
+      "nameKey": "item.ammo9mm",
+      "iconId": "ammo9mm",
+      "maxStack": 60,
+      "weight": 0.01,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "212170da-0998-4fa9-9457-761c75a2a797",
+      "nameKey": "item.ammo556",
+      "iconId": "ammo556",
+      "maxStack": 60,
+      "weight": 0.012,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "825cc0f1-5eb0-4aa8-bf91-31b7519c975e",
+      "nameKey": "item.ammo12ga",
+      "iconId": "ammo12ga",
+      "maxStack": 25,
+      "weight": 0.05,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "id": "39cb64db-b31c-478c-9784-9ecf8006a0f1",
+      "nameKey": "weapon.rifle",
+      "iconId": "rifle",
+      "weaponId": "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83",
+      "ammoItemId": "212170da-0998-4fa9-9457-761c75a2a797",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "id": "66a8780e-2a00-4108-b380-32401f64f38a",
+      "nameKey": "weapon.burstRifle",
+      "iconId": "burstRifle",
+      "weaponId": "9795f821-8fac-4c4f-90f8-c0a80841de96",
+      "ammoItemId": "212170da-0998-4fa9-9457-761c75a2a797",
+      "width": 4,
+      "height": 2
+    },
+    {
+      "id": "b5b5df13-2868-4b0a-b2c0-fbe6a055a4fa",
+      "nameKey": "weapon.handgun",
+      "iconId": "handgun",
+      "weaponId": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
+      "ammoItemId": "02e07a84-f063-4b41-8f63-17a410a3d069",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "a73b64ff-3d5e-4542-aa88-36e0f98d6b6e",
+      "nameKey": "weapon.ricochetPistol",
+      "iconId": "ricochetPistol",
+      "weaponId": "a9ae4aeb-607f-41a8-875f-2e8deed9bfa6",
+      "ammoItemId": "02e07a84-f063-4b41-8f63-17a410a3d069",
+      "width": 2,
+      "height": 1
+    },
+    {
+      "id": "a4c92712-8069-40bf-bdb9-933765b3fc5c",
+      "nameKey": "weapon.shotgun",
+      "iconId": "shotgun",
+      "weaponId": "07e1b9a8-f64c-4474-bc38-dbf14d66b135",
+      "ammoItemId": "825cc0f1-5eb0-4aa8-bf91-31b7519c975e",
+      "width": 4,
+      "height": 2
     }
   ],
   "starting": [

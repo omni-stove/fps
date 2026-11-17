@@ -129,7 +129,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded)・弾薬の種類の切り替え (AmmoTypeSwitched) で更新し、武器名は
+        /// 弾数と武器名の源を差し替える。弾数は射撃 (Fired)・リロード完了 (Reloaded)・予備弾の補充 (ReserveAmmoAdded)・持ち物の弾薬の増減 (ReserveAmmoChanged)・弾薬の種類の切り替え (AmmoTypeSwitched) で更新し、武器名は
         /// ここで <see cref="WeaponSpec"/> を差し替える。null なら両方とも仮の表示に戻す。
         /// </summary>
         public void BindWeapon(Weapon weapon)
@@ -139,6 +139,7 @@ namespace Fps.Core
                 _weapon.Fired -= OnWeaponChanged;
                 _weapon.Reloaded -= OnWeaponChanged;
                 _weapon.ReserveAmmoAdded -= OnWeaponChanged;
+                _weapon.ReserveAmmoChanged -= OnWeaponChanged;
                 _weapon.AmmoTypeSwitched -= OnWeaponChanged;
             }
 
@@ -148,6 +149,7 @@ namespace Fps.Core
                 _weapon.Fired += OnWeaponChanged;
                 _weapon.Reloaded += OnWeaponChanged;
                 _weapon.ReserveAmmoAdded += OnWeaponChanged;
+                _weapon.ReserveAmmoChanged += OnWeaponChanged;
                 _weapon.AmmoTypeSwitched += OnWeaponChanged;
             }
 
@@ -206,6 +208,7 @@ namespace Fps.Core
                 _weapon.Fired -= OnWeaponChanged;
                 _weapon.Reloaded -= OnWeaponChanged;
                 _weapon.ReserveAmmoAdded -= OnWeaponChanged;
+                _weapon.ReserveAmmoChanged -= OnWeaponChanged;
                 _weapon.AmmoTypeSwitched -= OnWeaponChanged;
                 _weapon = null;
             }

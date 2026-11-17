@@ -7,7 +7,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class DamageNumberFeedTests
     {
-        private static readonly DamageNumberSettings Settings = new DamageNumberSettings(1f, 40f, 0.5f, 3);
+        private static readonly DamageNumberSettings _settings = new DamageNumberSettings(1f, 40f, 0.5f, 3);
 
         private static HitConfirm Hit(int damage, HitZone zone = HitZone.Body, bool killed = false)
         {
@@ -17,7 +17,7 @@ namespace Fps.Core.Tests
         [Test]
         public void AddedNumbersCarryTheHitAndGetIncreasingIds()
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
 
             var first = feed.Add(Hit(25));
             var second = feed.Add(Hit(100, HitZone.Head, killed: true));
@@ -34,7 +34,7 @@ namespace Fps.Core.Tests
         [Test]
         public void AHitWithoutDamageShowsNothing()
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
 
             Assert.That(feed.Add(Hit(0)), Is.EqualTo(0));
             Assert.That(feed.Numbers.Count, Is.EqualTo(0));
@@ -43,7 +43,7 @@ namespace Fps.Core.Tests
         [Test]
         public void TheOldestNumberGoesWhenTheLimitIsPassed()
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
 
             feed.Add(Hit(1));
             feed.Add(Hit(2));
@@ -58,7 +58,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ANumberRisesFadesInItsLastHalfAndGoesAfterItsLifetime()
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
             feed.Add(Hit(10));
 
             Assert.That(feed.Rise(feed.Numbers[0]), Is.EqualTo(0f));
@@ -94,7 +94,7 @@ namespace Fps.Core.Tests
         [TestCase(float.PositiveInfinity)]
         public void TickIgnoresANonPositiveOrNonFiniteStep(float delta)
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
             feed.Add(Hit(10));
 
             feed.Tick(delta);
@@ -105,7 +105,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ClearRemovesEveryNumber()
         {
-            var feed = new DamageNumberFeed(Settings);
+            var feed = new DamageNumberFeed(_settings);
             feed.Add(Hit(10));
             feed.Add(Hit(20));
 

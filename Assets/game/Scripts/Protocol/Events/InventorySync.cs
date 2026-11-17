@@ -36,7 +36,7 @@ namespace Fps.Protocol
                 if (itemIndex < 0)
                 {
                     itemIndex = message.AddItem(new InventoryStateMessage.Item(
-                        item.Id, (ushort)item.MaxStack, item.Weight, (byte)item.Width, (byte)item.Height));
+                        item.Id, (ushort)item.MaxStack, inventory.WeightOf(item), (byte)item.Width, (byte)item.Height));
                 }
 
                 message.AddEntry(new InventoryStateMessage.Entry(
@@ -86,7 +86,9 @@ namespace Fps.Protocol
                         sent.Width,
                         sent.Height,
                         known?.UseHealth ?? 0,
-                        known?.UseArmor ?? 0));
+                        known?.UseArmor ?? 0,
+                        // 弾薬アイテムは送った中に無いことがあり、表に無い弾薬を指すと表を作れないので、弾薬は付けない (撃つのはサーバー)
+                        known?.WeaponId));
                 }
                 catch (ArgumentException)
                 {

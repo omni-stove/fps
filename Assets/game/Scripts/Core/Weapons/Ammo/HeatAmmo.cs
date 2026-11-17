@@ -39,6 +39,8 @@ namespace Fps.Core
         // 弾薬箱が熱の武器に弾を配っても撃てる量は変わらないので、拾える余地を 0 にして弾を取らせない。
         public int ReserveAmmoRoom => 0;
 
+        public int StartingReserveAmmo => 0;
+
         public bool HasInfiniteReserve => _magazine.HasInfiniteReserve;
 
         public bool HasActiveReload => false;
@@ -80,6 +82,12 @@ namespace Fps.Core
             }
 
             return 0;
+        }
+
+        // 熱で撃つ武器は弾を使わないので、持ち物の弾薬も減らさない
+        public bool UsePool(IAmmoPool pool)
+        {
+            return false;
         }
 
         public bool TryStartReload()

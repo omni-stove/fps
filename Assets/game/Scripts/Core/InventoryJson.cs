@@ -26,6 +26,8 @@ namespace Fps.Core
         public const string HeightItem = "height";
         public const string UseHealthItem = "useHealth";
         public const string UseArmorItem = "useArmor";
+        public const string WeaponIdItem = "weaponId";
+        public const string AmmoItemIdItem = "ammoItemId";
 
         public const string CountItem = "count";
 
@@ -55,6 +57,8 @@ namespace Fps.Core
             HeightItem,
             UseHealthItem,
             UseArmorItem,
+            WeaponIdItem,
+            AmmoItemIdItem,
         };
 
         public static IReadOnlyList<string> StartingItemNames { get; } = new[] { IdItem, CountItem };
@@ -125,6 +129,15 @@ namespace Fps.Core
 
         private static ItemSpec ReadItem(ServerDataJson.Fields fields)
         {
+            var weaponId = fields.ReadString(WeaponIdItem, null);
+            var weight = fields.ReadFloat(WeightItem, ItemSpec.DefaultWeight);
+
+            // 武器の重さは武器のデータ (WeaponSpec.Weight) から取るので、ここにも書くとどちらが効くか読み手が迷う
+            if (!string.IsNullOrWhiteSpace(weaponId) && weight != ItemSpec.DefaultWeight)
+            {
+                throw fields.Rejected(fields.ItemPath(WeightItem), "a weapon item takes its weight from the weapon; remove weight", null);
+            }
+
             try
             {
                 return new ItemSpec(
@@ -133,11 +146,13 @@ namespace Fps.Core
                     fields.ReadString(IconIdItem, null),
                     fields.ReadInt(MaxStackItem, ItemSpec.DefaultMaxStack),
                     fields.ReadInt(MaxCarriedItem, ItemSpec.DefaultMaxCarried),
-                    fields.ReadFloat(WeightItem, ItemSpec.DefaultWeight),
+                    weight,
                     fields.ReadInt(WidthItem, ItemSpec.DefaultWidth),
                     fields.ReadInt(HeightItem, ItemSpec.DefaultHeight),
                     fields.ReadInt(UseHealthItem, ItemSpec.DefaultUseHealth),
-                    fields.ReadInt(UseArmorItem, ItemSpec.DefaultUseArmor));
+                    fields.ReadInt(UseArmorItem, ItemSpec.DefaultUseArmor),
+                    weaponId,
+                    fields.ReadString(AmmoItemIdItem, null));
             }
             catch (ArgumentException e)
             {

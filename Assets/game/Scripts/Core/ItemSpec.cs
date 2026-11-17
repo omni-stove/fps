@@ -27,7 +27,9 @@ namespace Fps.Core
             int width = DefaultWidth,
             int height = DefaultHeight,
             int useHealth = DefaultUseHealth,
-            int useArmor = DefaultUseArmor)
+            int useArmor = DefaultUseArmor,
+            string weaponId = null,
+            string ammoItemId = null)
         {
             Id = SpecGuard.LowercaseUuid(id, nameof(id));
             NameKey = SpecGuard.NameKey(nameKey);
@@ -39,6 +41,30 @@ namespace Fps.Core
             Height = Between(height, 1, MaxSize, nameof(height));
             UseHealth = SpecGuard.NonNegative(useHealth, nameof(useHealth));
             UseArmor = SpecGuard.NonNegative(useArmor, nameof(useArmor));
+            WeaponId = string.IsNullOrWhiteSpace(weaponId) ? null : weaponId.Trim();
+            AmmoItemId = string.IsNullOrWhiteSpace(ammoItemId) ? null : SpecGuard.LowercaseUuid(ammoItemId, nameof(ammoItemId));
+            if (WeaponId != null)
+            {
+                // 武器の残弾と弾薬の種類は 1 本ごとに持つので、2 本を 1 つの山に重ねられない
+                if (MaxStack != 1)
+                {
+                    throw new ArgumentException("a weapon item must have maxStack 1", nameof(maxStack));
+                }
+
+                if (UseHealth > 0 || UseArmor > 0)
+                {
+                    throw new ArgumentException("a weapon item cannot heal or add armor when used (using it equips the weapon)", nameof(weaponId));
+                }
+            }
+            else if (AmmoItemId != null)
+            {
+                throw new ArgumentException("ammoItemId needs a weaponId", nameof(ammoItemId));
+            }
+
+            if (AmmoItemId != null && string.Equals(AmmoItemId, Id, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("a weapon item cannot be its own ammo", nameof(ammoItemId));
+            }
         }
 
         public string Id { get; }
@@ -60,6 +86,12 @@ namespace Fps.Core
         public int UseHealth { get; }
 
         public int UseArmor { get; }
+
+        public string WeaponId { get; }
+
+        public string AmmoItemId { get; }
+
+        public bool IsWeapon => WeaponId != null;
 
         public bool IsUsable => UseHealth > 0 || UseArmor > 0;
 

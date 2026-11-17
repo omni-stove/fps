@@ -164,7 +164,7 @@ namespace Fps.Runtime
                         throw new ArgumentException("a Weapon pickup needs a WeaponDefinition");
                     }
 
-                    return PickupSpec.Weapon(_weapon.Id, _amount, eligibility);
+                    return PickupSpec.Weapon(_weapon.Id, _amount, eligibility, _weapon.Weight);
                 case PickupKind.ReserveAmmo:
                     return PickupSpec.ReserveAmmo(_amount, _weapon != null ? _weapon.Id : null, eligibility);
                 case PickupKind.Health:

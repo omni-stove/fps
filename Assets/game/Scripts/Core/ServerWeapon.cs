@@ -30,6 +30,7 @@ namespace Fps.Core
         private readonly WeaponSpec _innerSpec;
         private readonly GameRules _rules;
         private Weapon _weapon;
+        private IAmmoPool _pool;
 
         /// <param name="spec">武器の設定。<see cref="WeaponSpec.FireInterval"/> は使わない (<see cref="ShotBudget"/> に渡す)。予備弾は有限で倍率 1。</param>
         public ServerWeapon(WeaponSpec spec)
@@ -57,6 +58,10 @@ namespace Fps.Core
 
         public int AmmoInMagazine => _weapon.AmmoInMagazine;
         public int ReserveAmmo => _weapon.ReserveAmmo;
+
+        public int StartingReserveAmmo => _weapon.StartingReserveAmmo;
+
+        public bool HasAmmoPool => _weapon.AmmoPool != null;
         public bool IsReloading => _weapon.IsReloading;
 
         public AmmoTypeSelector AmmoTypes => _weapon.AmmoTypes;
@@ -206,8 +211,18 @@ namespace Fps.Core
         public void Refill()
         {
             _weapon.Reloaded -= HandleReloaded;
+            _weapon.UseAmmoPool(null);
             _weapon = CreateWeapon();
             Changed?.Invoke();
+        }
+
+        // 予備弾を pool から出し入れするようにする。満タン戻し (Refill) で武器を作り直しても同じ pool を使い続ける
+        public bool UseAmmoPool(IAmmoPool pool)
+        {
+            _pool = pool;
+            var used = _weapon.UseAmmoPool(pool);
+            Changed?.Invoke();
+            return used;
         }
 
         private void ReloadIfAuto()
@@ -234,6 +249,11 @@ namespace Fps.Core
         {
             var weapon = new Weapon(_innerSpec, _rules);
             weapon.Reloaded += HandleReloaded;
+            if (_pool != null)
+            {
+                weapon.UseAmmoPool(_pool);
+            }
+
             return weapon;
         }
 

@@ -27,6 +27,8 @@ namespace Fps.Core
 
         public int ReserveAmmoRoom => _magazine.ReserveAmmoRoom;
 
+        public int StartingReserveAmmo => _magazine.StartingReserveAmmo;
+
         public bool HasInfiniteReserve => _magazine.HasInfiniteReserve;
 
         // 1 発ずつ込める間に押し直す時機を決められないので、アクティブリロードはルールに関わらず使わない。
@@ -76,6 +78,11 @@ namespace Fps.Core
         public int AddReserveAmmo(int amount)
         {
             return _magazine.AddReserveAmmo(amount);
+        }
+
+        public bool UsePool(IAmmoPool pool)
+        {
+            return _magazine.UsePool(pool);
         }
 
         public bool TryStartReload()

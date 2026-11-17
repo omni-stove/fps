@@ -11,15 +11,18 @@ namespace Shooter.NetV2
         private readonly ClientMapVote _vote;
         private readonly Sender _sender;
         private readonly Action<string> _log;
+        private readonly Action<string> _decided;
         private MapVoteStatus? _published;
         private bool _senderPublished;
         private bool _disposed;
 
-        public NetV2MapVotePart(Func<IMessage, bool> send, Action<string> log = null)
+        // 決まったときだけでなく届くたびに (決まっていなければ空で) 知らせるのは、新しい投票が始まったら前に決まったマップを受け手が捨てられるようにするため。
+        public NetV2MapVotePart(Func<IMessage, bool> send, Action<string> log = null, Action<string> decided = null)
         {
             _vote = new ClientMapVote(send ?? throw new ArgumentNullException(nameof(send)));
             _sender = new Sender(this);
             _log = log ?? (line => Debug.Log(line));
+            _decided = decided;
         }
 
         public ClientMapVote Vote => _vote;
@@ -44,6 +47,7 @@ namespace Shooter.NetV2
             }
 
             Show();
+            _decided?.Invoke(_vote.Status.HasValue ? _vote.Status.Value.DecidedMapId : string.Empty);
             return true;
         }
 

@@ -11,7 +11,7 @@ namespace Shooter.NetV2
     // サーバーは参加した直後に全部の建物の状態を送るので、マップのシーンを読み終える前に届く。届いた状態を建物ごとに残し、
     // シーンに入ったときに (Enter) まとめて写す。
     // 建物の番号は書き出し (MapCollisionExporter) と同じく、有効・無効を問わずシーンの並び順で数える。
-    internal sealed class NetV2Structures
+    public sealed class NetV2Structures
     {
         private readonly Dictionary<int, ulong[]> _states = new Dictionary<int, ulong[]>();
         private readonly List<DestructibleStructure> _scene = new List<DestructibleStructure>();
@@ -41,6 +41,14 @@ namespace Shooter.NetV2
                 message.SetWords(pair.Value);
                 Show(message);
             }
+        }
+
+        public int StateCount => _states.Count;
+
+        // 建物の番号はマップごとに 0 から振るので、前のマップの状態を残すと新しいマップの別の建物に当たってしまう。
+        public void ClearStates()
+        {
+            _states.Clear();
         }
 
         public void Leave()

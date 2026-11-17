@@ -42,7 +42,10 @@ namespace Shooter.NetV2
         private readonly Dictionary<int, GameObject> _grenadeViews = new Dictionary<int, GameObject>();
         private readonly List<int> _goneGrenades = new List<int>();
         private readonly List<INetV2ClientPart> _parts = new List<INetV2ClientPart>();
+        private readonly ClientMapChange _mapChange = new ClientMapChange();
         private GrenadeCarrier _grenadeCarrier;
+        private string _loadingMap;
+        private string _joinCode;
         private float _ownYaw;
         private NetV2Structures _structures;
         private NetV2Vehicles _vehicles;
@@ -99,6 +102,7 @@ namespace Shooter.NetV2
             }
 
             GameUi.OnlineStarter = new MenuStarter(server);
+            NetV2OnlineServices.Install();
             switch (start)
             {
                 case NetClientStart.Connect:
@@ -120,22 +124,62 @@ namespace Shooter.NetV2
                 throw new ArgumentNullException(nameof(options));
             }
 
-            var host = new GameObject(ObjectName);
-            DontDestroyOnLoad(host);
-            var client = host.AddComponent<NetV2Client>();
-            client._startedFromMenu = fromMenu;
+            var client = Create(fromMenu);
             client.Connect(options);
             return client;
         }
 
         public static NetV2Client BeginQuickMatch(bool fromMenu)
         {
+            var client = Create(fromMenu);
+            client.SearchServer();
+            return client;
+        }
+
+        public static string ConnectByJoinCode(JoinCodeResult result)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException(nameof(result));
+            }
+
+            if (result.Outcome != JoinCodeOutcome.Joined)
+            {
+                return "no server was found for the join code (" + result.Outcome + ")";
+            }
+
+            if (Current != null && !Current._finished)
+            {
+                return "already in an online match";
+            }
+
+            ReleaseFinished();
+            var client = Create(true);
+            client._joinCode = result.JoinCode;
+            client.Connect(result.Options);
+            return null;
+        }
+
+        private static NetV2Client Create(bool fromMenu)
+        {
             var host = new GameObject(ObjectName);
             DontDestroyOnLoad(host);
             var client = host.AddComponent<NetV2Client>();
             client._startedFromMenu = fromMenu;
-            client.SearchServer();
             return client;
+        }
+
+        // 起動引数で始めて失敗したクライアントは残っているので、消して始め直す (Destroy は遅れるので先に外す)
+        private static void ReleaseFinished()
+        {
+            if (Current == null || !Current._finished)
+            {
+                return;
+            }
+
+            var finished = Current;
+            Current = null;
+            Destroy(finished.gameObject);
         }
 
         // 読めない認証情報のファイルは誤りを出すため、探せない側ではなく探す側に回す。
@@ -180,7 +224,22 @@ namespace Shooter.NetV2
             }
 
             _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this));
-            _search.Begin(Time.unscaledTime, HandleServerFound, HandleSearchFailed);
+            var party = NetV2PartyControl.Current;
+            _search.Begin(Time.unscaledTime, party != null ? party.MatchPlayers : 1, OwnSkillRating(), HandleServerFound, HandleSearchFailed);
+        }
+
+        private static int? OwnSkillRating()
+        {
+            var recorder = ProgressionBootstrap.Recorder;
+            return recorder != null ? recorder.Profile.Rating : (int?)null;
+        }
+
+        // 通信路がつながった時に読むので、つなぐまでに入ったパーティやログインで決まった ProductUserId も載る。
+        private ConnectionExtras BuildExtras()
+        {
+            var party = NetV2PartyControl.Current;
+            return ClientConnectExtras.Compose(
+                party != null ? party.PartyId : null, _joinCode, OwnSkillRating(), NetV2Eos.LocalProductUserId(), line => Debug.LogWarning(line, this));
         }
 
         private void HandleServerFound(NetLaunchOptions options)
@@ -257,13 +316,22 @@ namespace Shooter.NetV2
 
             Debug.Log(antiCheat.Describe(), this);
             var eos = _options.Transport == NetTransportKind.Eos;
-            var transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, line => Debug.Log(line, this)) : new UdpMatchTransport();
-            _client = new MatchClient(transport, version, _deviceKey, "", line => Debug.Log(line, this));
+            Action<string> log = line => Debug.Log(line, this);
+            var transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, log) : new UdpMatchTransport();
+            _client = new MatchClient(transport, version, _deviceKey, "", BuildExtras, log);
             _client.Accepted += HandleAccepted;
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;
             _client.Disconnected += HandleDisconnected;
-            _parts.AddRange(NetV2ClientParts.Create(_client, SendReliable));
+            _parts.AddRange(NetV2ClientParts.Create(new NetV2ClientPartsContext(_client, SendReliable, log)
+            {
+                Pings = _pings.Markers,
+                Minimap = MinimapPublisher.Tuning,
+                ControlPointPosition = ControlPointPosition,
+                MapDecided = _mapChange.Decide,
+                LocalPlayer = () => _local,
+                Voice = NetV2Eos.CreateVoiceSession(_options.Transport, log),
+            }));
             if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
             {
                 Leave(ExitMisconfigured, AntiCheatSettings.LogTag + " " + antiCheatError);
@@ -343,7 +411,7 @@ namespace Shooter.NetV2
             if (_mapLoad != null && _mapLoad.isDone)
             {
                 _mapLoad = null;
-                EnterMap();
+                EnterMap(_loadingMap);
             }
 
             if (_match == null)
@@ -407,10 +475,16 @@ namespace Shooter.NetV2
             }
 
             _loadout.SendSaved();
-            var map = _client.Map;
+            LoadMap(_client.Map);
+        }
+
+        private void LoadMap(string map)
+        {
+            _mapChange.Enter(map);
+            _loadingMap = map;
             if (SceneManager.GetActiveScene().name == map)
             {
-                EnterMap();
+                EnterMap(map);
                 return;
             }
 
@@ -422,11 +496,64 @@ namespace Shooter.NetV2
 
             Debug.Log(LogTag + " loading the server's map " + map + " (" + path + ")", this);
             _mapLoad = SceneManager.LoadSceneAsync(path, LoadSceneMode.Single);
+            if (_mapLoad == null)
+            {
+                Leave(ExitMisconfigured, LogTag + " cannot load the server's map " + map + " (" + path + ")");
+            }
         }
 
-        private void EnterMap()
+        // サーバーは同じ接続のまま次の試合を新しいマップで始めるので、つなぎ直さずに、マップから作った物だけを捨てて新しいシーンで作り直す。
+        private void ChangeMap(string map)
         {
-            var map = _client.Map;
+            Debug.Log(MapVoteLog.ClientMapChanging(_mapChange.CurrentMap, map), this);
+            LeaveMap();
+            LoadMap(map);
+        }
+
+        // Destroy はフレームの終わりまで遅れ、その間も Unity の == null は偽のままなので、捨てた物を指す欄は自分で空にする。
+        private void LeaveMap()
+        {
+            if (_match != null)
+            {
+                _match.PlayerAdded -= AddRemote;
+                _match.PlayerRemoved -= RemoveRemote;
+                _match.Reconciled -= HandleReconciled;
+                _match.LadderGrabbed -= HandleLadderGrabbed;
+                _match.Detach();
+                _match = null;
+            }
+
+            _heldContinuous = null;
+            _heldContinuousWeaponId = null;
+            _wasReloading = false;
+            _loadout.Bind(null);
+            DestroyViews();
+            _local = null;
+            _presentation = null;
+            _dryFire = null;
+            _lockOn = null;
+            _pingDisplay = null;
+            _hud = null;
+            _remoteRoot = null;
+            _world = null;
+            _structures?.ClearStates();
+        }
+
+        private System.Numerics.Vector3? ControlPointPosition(int index)
+        {
+            foreach (var zone in _zones)
+            {
+                if (zone != null && zone.Index == index)
+                {
+                    return NetV2Math.ToNumerics(zone.transform.position);
+                }
+            }
+
+            return null;
+        }
+
+        private void EnterMap(string map)
+        {
             if (!ClientWorld.TryLoad(MapCollisionFiles.Directory, map, out _world, out var error))
             {
                 Leave(ExitMisconfigured, LogTag + " " + error);
@@ -919,6 +1046,12 @@ namespace Shooter.NetV2
         {
             if (_match == null)
             {
+                return;
+            }
+
+            if (_mapChange.TryTakeChange(snapshot.Match.State, out var nextMap))
+            {
+                ChangeMap(nextMap);
                 return;
             }
 
@@ -1428,19 +1561,12 @@ namespace Shooter.NetV2
             public bool Start(MenuDestination destination, out MenuReturnReason refusal)
             {
                 refusal = null;
-                if (Current != null)
+                if (Current != null && !Current._finished)
                 {
-                    if (!Current._finished)
-                    {
-                        return true;
-                    }
-
-                    // 起動引数で始めて失敗したクライアントは残っているので、消して始め直す (Destroy は遅れるので先に外す)
-                    var finished = Current;
-                    Current = null;
-                    Destroy(finished.gameObject);
+                    return true;
                 }
 
+                ReleaseFinished();
                 if (_server != null)
                 {
                     Begin(_server, true);

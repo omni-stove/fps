@@ -16,5 +16,7 @@ namespace Shooter.NetV2
 
         // EOS のプラットフォームとログインは、ロビーのサービスか通信路が済ませたものを使うので、どちらかがログインしてから IVoiceSession.Join する。
         IVoiceSession CreateVoiceSession(Action<string> log);
+
+        string LocalProductUserId { get; }
     }
 }

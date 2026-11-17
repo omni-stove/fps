@@ -160,7 +160,10 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheStateTextsRoundTrip()
         {
-            foreach (PartyState state in Enum.GetValues<PartyState>())
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            foreach (PartyState state in Enum.GetValues(typeof(PartyState)))
+#pragma warning restore CA2263
             {
                 Assert.That(PartyLobby.TryParseState(PartyLobby.StateText(state), out var parsed), Is.True);
                 Assert.That(parsed, Is.EqualTo(state));

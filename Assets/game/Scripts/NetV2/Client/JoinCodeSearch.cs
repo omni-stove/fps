@@ -17,6 +17,10 @@ namespace Shooter.NetV2
         private string _code;
         private int _partySize = 1;
         private float _deadline;
+        private bool _joinsMatchLobby;
+        private MatchLobbyJoin _lobbyJoin;
+        private NetLaunchOptions _picked;
+        private bool _handedOver;
         private bool _disposed;
 
         public JoinCodeSearch(ILobbyBackend backend, string version, Action<string> log)
@@ -43,12 +47,27 @@ namespace Shooter.NetV2
             Idle,
             LoggingIn,
             Searching,
+            JoiningLobby,
             Finished,
         }
 
         public string BucketId => ServerLobby.BucketId(_version);
 
         public bool IsFinished => _step == Step.Finished;
+
+        public bool JoinsMatchLobby
+        {
+            get => _joinsMatchLobby;
+            set
+            {
+                if (_step != Step.Idle)
+                {
+                    throw new InvalidOperationException("set JoinsMatchLobby before the join code search begins");
+                }
+
+                _joinsMatchLobby = value;
+            }
+        }
 
         public void Begin(float now, string code, Action<JoinCodeResult> done)
         {
@@ -95,9 +114,20 @@ namespace Shooter.NetV2
                 return;
             }
 
-            _backend.Tick();
+            if (!_handedOver)
+            {
+                _backend.Tick();
+            }
+
             if (_step == Step.Idle || IsFinished || now < _deadline)
             {
+                return;
+            }
+
+            // サーバーはもう決まっているので、ロビーに入れないだけで失敗にせず、ボイス無しでつなぐ
+            if (_step == Step.JoiningLobby)
+            {
+                _lobbyJoin.GiveUp(MatchLobbyLog.TimedOut(_timeoutSeconds));
                 return;
             }
 
@@ -112,6 +142,12 @@ namespace Shooter.NetV2
             }
 
             _disposed = true;
+            _lobbyJoin?.Cancel();
+            if (_handedOver)
+            {
+                return;
+            }
+
             _backend.LoggedOut -= HandleLoggedOut;
             _backend.Dispose();
         }
@@ -175,13 +211,45 @@ namespace Shooter.NetV2
             lobby.TryGetText(ServerLobby.ServerKey, out var endpoint);
             lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
             _log(JoinCodeLog.Picked(lobby.Id, endpoint, players, ServerLobby.PlayerSlots(lobby)));
-            Finish(JoinCodeResult.Joined(options, _code));
+            if (!_joinsMatchLobby)
+            {
+                Finish(JoinCodeResult.Joined(options, _code));
+                return;
+            }
+
+            _picked = options;
+            _step = Step.JoiningLobby;
+            _lobbyJoin = new MatchLobbyJoin(_backend, _log);
+            _lobbyJoin.Begin(lobby, HandleLobbyJoined);
+        }
+
+        // 入れたロビーは同じサービスを閉じるので、結果に載せないときは閉じずに捨て、この検索が閉じるときに出る
+        private void HandleLobbyJoined(MatchLobby lobby)
+        {
+            if (_disposed || _step != Step.JoiningLobby)
+            {
+                return;
+            }
+
+            if (lobby != null)
+            {
+                _handedOver = true;
+                _backend.LoggedOut -= HandleLoggedOut;
+            }
+
+            Finish(JoinCodeResult.Joined(_picked, _code, lobby));
         }
 
         private void HandleLoggedOut(string reason)
         {
             if (_disposed || IsFinished || _step == Step.Idle)
             {
+                return;
+            }
+
+            if (_step == Step.JoiningLobby)
+            {
+                _lobbyJoin.GiveUp("logged out: " + reason);
                 return;
             }
 

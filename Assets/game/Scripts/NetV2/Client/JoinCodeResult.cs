@@ -5,12 +5,13 @@ namespace Shooter.NetV2
 {
     public sealed class JoinCodeResult
     {
-        private JoinCodeResult(JoinCodeOutcome outcome, NetLaunchOptions options, string joinCode, string reason)
+        private JoinCodeResult(JoinCodeOutcome outcome, NetLaunchOptions options, string joinCode, string reason, MatchLobby matchLobby)
         {
             Outcome = outcome;
             Options = options;
             JoinCode = joinCode;
             Reason = reason;
+            MatchLobby = matchLobby;
         }
 
         public JoinCodeOutcome Outcome { get; }
@@ -22,7 +23,14 @@ namespace Shooter.NetV2
 
         public string Reason { get; }
 
+        public MatchLobby MatchLobby { get; }
+
         public static JoinCodeResult Joined(NetLaunchOptions options, string joinCode)
+        {
+            return Joined(options, joinCode, null);
+        }
+
+        public static JoinCodeResult Joined(NetLaunchOptions options, string joinCode, MatchLobby matchLobby)
         {
             if (options == null)
             {
@@ -34,7 +42,7 @@ namespace Shooter.NetV2
                 throw new ArgumentException("must be a normalized join code", nameof(joinCode));
             }
 
-            return new JoinCodeResult(JoinCodeOutcome.Joined, options, joinCode, null);
+            return new JoinCodeResult(JoinCodeOutcome.Joined, options, joinCode, null, matchLobby);
         }
 
         public static JoinCodeResult NotJoined(JoinCodeOutcome outcome, string reason)
@@ -44,7 +52,7 @@ namespace Shooter.NetV2
                 throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "must be a defined outcome other than Joined");
             }
 
-            return new JoinCodeResult(outcome, null, null, reason);
+            return new JoinCodeResult(outcome, null, null, reason, null);
         }
 
         public ConnectionExtras WithJoinCode(ConnectionExtras extras)

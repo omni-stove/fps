@@ -183,6 +183,7 @@ namespace Shooter.Protocol.Tests
 
         [TestCase(MessageIds.Chat)]
         [TestCase(MessageIds.MapVoteState)]
+        [TestCase(MessageIds.VoiceRoster)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);

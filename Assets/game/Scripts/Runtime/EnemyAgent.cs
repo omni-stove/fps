@@ -246,6 +246,12 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.SprintRatio"/> を掛けた、走るときの速さ。</summary>
+        public float SprintSpeed => WalkSpeed * _sprintRatio;
+
+        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.CrouchRatio"/> を掛けた、しゃがんで動くときの速さ。</summary>
+        public float CrouchSpeed => WalkSpeed * _crouchRatio;
+
         public bool IsSprinting => _sprinting;
         public bool IsAiming => _aiming;
 
@@ -824,9 +830,9 @@ namespace Fps.Runtime
             bool steered;
             if (_order.IsOrder)
             {
-                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ EnemyBrain.ArrivalDistance (Default の値) で決める。
+                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ敵の設定の到着距離で決める。
                 decision = BotDriver.FollowOrder(
-                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, BotInputSpec.Default, out steered);
+                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, OrderInput(), out steered);
                 moveTo = steered ? decision.MoveTo : CoverMoveTo(decision);
                 NoteOrderArrival();
             }
@@ -861,12 +867,12 @@ namespace Fps.Runtime
             _aiming = !_unarmed && _brain.IsAiming;
             // 構えている間はプレイヤーと同じくダッシュしない。撃つ前から歩いて狙ってくるのが見えるように。
             _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing || _aiming);
-            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching);
+            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching, _sprintRatio, _crouchRatio);
         }
 
         /// <summary>
         /// 今のフレームで判断の移動先の代わりに向かう <see cref="Errand"/>。巡回・待機・捜索の間か、戦いより優先する行き先か、武器を持っていなければ返す。
-        /// 着いていれば (<see cref="EnemyBrain.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
+        /// 着いていれば (<see cref="EnemySpec.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
         /// </summary>
         private System.Numerics.Vector3? ErrandMoveTo()
         {
@@ -883,7 +889,7 @@ namespace Fps.Runtime
             }
 
             var destination = _errand.Value;
-            return HorizontalDistance(GroundPosition, destination) > EnemyBrain.ArrivalDistance
+            return HorizontalDistance(GroundPosition, destination) > _arrivalDistance
                 ? destination.ToNumerics()
                 : GroundPosition.ToNumerics();
         }
@@ -915,7 +921,7 @@ namespace Fps.Runtime
                 }
             }
 
-            return HorizontalDistance(GroundPosition, stand) > EnemyBrain.ArrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
+            return HorizontalDistance(GroundPosition, stand) > _arrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
         }
 
         /// <summary>しゃがむ・立つ。Y 向きのカプセルの当たり判定があれば、足元の高さを変えずに縮める・戻す。</summary>

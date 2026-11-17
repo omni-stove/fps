@@ -106,9 +106,11 @@ namespace Fps.Core
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
         public const float DefaultStaggerResistance = 0f;
-        public const float DefaultArrivalDistance = EnemyBrain.ArrivalDistance;
-        public const float DefaultSprintRatio = EnemyGait.SprintRatio;
-        public const float DefaultCrouchRatio = EnemyGait.CrouchRatio;
+        public const float DefaultArrivalDistance = 0.5f;
+
+        // 敵ごとの歩きの速さはシーンが決めるので、プレイヤーの既定 (歩き 5・ダッシュ 8・しゃがみ 2.5 m/s) を比にして掛ける。
+        public const float DefaultSprintRatio = 1.6f;
+        public const float DefaultCrouchRatio = 0.5f;
 
         // プレイヤーは反動で上がる照準を手で引き戻すので、敵もたまった反動の大半を打ち消す。打ち消さないと連射の後半が頭上へ抜ける。
         public const float DefaultRecoilControl = 0.75f;

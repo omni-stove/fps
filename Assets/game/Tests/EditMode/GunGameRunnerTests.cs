@@ -6,13 +6,12 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// GunGameRunner が段に合わせて持ち武器を替え、HUD に段と次の武器を出し、最後の段の武器で倒した人の勝ちで終えることを確かめる。
+    /// GunGameRunner が段に合わせて持ち武器を替え、状態 (ModeStatus) に段を読めるガンゲームを載せ、最後の段の武器で倒した人の勝ちで終えることを確かめる。
     /// Edit Mode では WeaponController が初期化されない (Awake が走らない) ので、持たせる武器は <see cref="WeaponController.Definitions"/> で見る。
     /// bot (EnemyAgent) の持ち替えは EnemyAgentTests で確かめる。
     /// </summary>
@@ -84,9 +83,9 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", 0);
             var bot = Member("Bot-1", 1);
-            var hud = BoundHudView();
-            Begin(player, bot, hud);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 1/3 Rifle", "次: Launcher" }));
+            Begin(player, bot);
+            Assert.That(Detail().GunGame, Is.SameAs(_runner.GunGame));
+            Assert.That(Detail().LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
 
             LogAssert.Expect(LogType.Log, "[Mode] gungame promote player=0 tier=2/3 weapon=weapon.launcher");
             KillBy(player, bot, TestWeapons.RifleId);
@@ -99,7 +98,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _launcher }));
             Assert.That(Controller(bot).Definitions, Is.EqualTo(new[] { _rifle }));
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 2/3 Launcher", "次: Handgun" }));
+            Assert.That(Detail().GunGame.GetTier(Detail().LocalPlayerId.Value), Is.EqualTo(1), "the status reads the new tier");
             Assert.That(_runner.Session.GetScore(new Side(0)), Is.EqualTo(1d), "kills still score");
         }
 
@@ -159,14 +158,13 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0);
             var a = Member("Bot-1", 1);
             var b = Member("Bot-2", 2);
-            var hud = BoundHudView();
-            Begin(player, a, b, hud);
+            Begin(player, a, b);
 
             KillBy(player, a, TestWeapons.RifleId);
             _runner.Tick(0f);
             KillBy(player, b, TestWeapons.LauncherId);
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "段 3/3 Handgun", "次: なし (この武器で倒せば勝ち)" }));
+            Assert.That(Detail().GunGame.GetNextWeapon(ModeRunnerBase.LocalPlayerId), Is.Null, "the player is on the last tier");
 
             LogAssert.Expect(LogType.Log, "[Mode] gungame finish player=0 weapon=weapon.handgun");
             KillBy(player, a, TestWeapons.HandgunId);
@@ -177,7 +175,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)new Side(0)));
-            Assert.That(hud.ResultText, Is.EqualTo(Localizer.Resolve(ModeHudText.SideName(new Side(0))) + " の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)new Side(0)));
             Assert.That(Controller(player).Definitions, Is.EqualTo(new[] { _handgun }), "the winner keeps the last weapon");
         }
 
@@ -213,12 +212,12 @@ namespace Fps.Tests.EditMode
             Assert.Throws<WeaponDefinitionException>(() => broken.ToLadder());
         }
 
-        private void Begin(SideMember player, SideMember a, ModeHudView hud = null)
+        private void Begin(SideMember player, SideMember a)
         {
             _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a }, Array.Empty<SideSpawnPoint>(), player);
         }
 
-        private void Begin(SideMember player, SideMember a, SideMember b, ModeHudView hud = null)
+        private void Begin(SideMember player, SideMember a, SideMember b)
         {
             _runner.Begin(_runner.CreateGunGameSession(), new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
         }
@@ -258,11 +257,11 @@ namespace Fps.Tests.EditMode
             return definition;
         }
 
-        private ModeHudView BoundHudView()
+        private GunGameStatus Detail()
         {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
+            Assert.That(_runner.Status, Is.Not.Null);
+            Assert.That(_runner.Status.Detail, Is.InstanceOf<GunGameStatus>());
+            return (GunGameStatus)_runner.Status.Detail;
         }
 
         private T Track<T>(T obj)

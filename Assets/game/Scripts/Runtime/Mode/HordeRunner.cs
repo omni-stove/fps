@@ -18,7 +18,7 @@ namespace Fps.Runtime
     /// <item>最後の波を全滅させたら勝ち、全員が倒れたら負け。倒れた味方は波の間に戻る。終わったら Spawner を止め、残った敵の動きも止める。</item>
     /// <item>操作しているプレイヤーが防衛物 (<see cref="HordeFortification"/>) の近くで <see cref="TryInteract()"/> すると (入力は
     /// <see cref="HordeInteractInput"/>)、通貨を払って壊れた部品を直すか、まだ置かれていない防衛物を置く。</item>
-    /// <item>HUD には経過時間・倒した敵の数 (得点) の下に、波の番号・残りの敵か次の波までの秒数・通貨・近くの防衛物の案内を出す。</item>
+    /// <item>HUD に出す波・通貨と、近くの防衛物で直せる・置けるもの (<see cref="HordeFortificationOffer"/>) は <see cref="HordeStatus"/> にして渡す。</item>
     /// <item>波の始まりと全滅・通貨が入ったとき・直した・置いた・断られたとき・勝ち負けに <c>[Mode]</c> のログ (<see cref="HordeText"/>) を出す。</item>
     /// </list>
     /// </remarks>
@@ -72,7 +72,7 @@ namespace Fps.Runtime
         /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public HordeDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Horde);
 
-        /// <summary>HUD の案内に出す、直す・置く操作のキー。空なら出さない。<see cref="HordeInteractInput"/> が入れる。</summary>
+        /// <summary>HUD の案内に出す、直す・置く操作のキー (<see cref="HordeFortificationOffer.KeyLabel"/>)。空なら出さない。<see cref="HordeInteractInput"/> が入れる。</summary>
         public string InteractKeyLabel { get; set; }
 
         /// <summary>始めるときに使う防衛物。空なら始めるときにシーンの HordeFortification をすべて使う。</summary>
@@ -176,62 +176,44 @@ namespace Fps.Runtime
             StopWaves();
         }
 
-        protected override LocalizedText HudTime(ModeSession session)
+        protected override object HudDetail
         {
-            return LocalizedText.Literal(HudFormat.Time((float)session.ElapsedSeconds));
+            get
+            {
+                if (_horde == null)
+                {
+                    return null;
+                }
+
+                var local = LocalPlayer;
+                var session = _horde.Session;
+                if (local == null || !session.HasPlayer(LocalPlayerId))
+                {
+                    return new HordeStatus(_horde, null, null);
+                }
+
+                return new HordeStatus(_horde, LocalPlayerId, Offer(local));
+            }
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
+        private HordeFortificationOffer? Offer(SideMember local)
         {
-            if (_horde == null)
-            {
-                return;
-            }
-
-            var schedule = _horde.Schedule;
-            lines.Add(HordeText.Wave(schedule.WaveNumber, schedule.WaveCount));
-            if (schedule.Phase == WavePhase.Fighting)
-            {
-                lines.Add(HordeText.RemainingEnemies(schedule.RemainingEnemies));
-            }
-            else if (schedule.Phase == WavePhase.Resting)
-            {
-                lines.Add(HordeText.NextWave(schedule.RestRemaining));
-            }
-
-            lines.Add(HordeText.Currency(_horde.Currency));
-
             var session = _horde.Session;
-            if (session.State == GameModeState.Ended)
+            if (session.State != GameModeState.Playing || !local.IsAlive
+                || (session.IsAwaitingRespawn(LocalPlayerId) && !_horde.IsBetweenWaves))
             {
-                lines.Add(_horde.IsVictory ? HordeText.Victory : HordeText.Defeat);
-                return;
-            }
-
-            var local = LocalPlayer;
-            if (local == null || !session.HasPlayer(LocalPlayerId))
-            {
-                return;
-            }
-
-            if (session.IsAwaitingRespawn(LocalPlayerId) && !_horde.IsBetweenWaves)
-            {
-                lines.Add(HordeText.ReturnsAfterWave);
-                return;
-            }
-
-            if (session.State != GameModeState.Playing || !local.IsAlive)
-            {
-                return;
+                return null;
             }
 
             var target = NearestFortification(local.GroundPosition);
-            if (target != null)
+            if (target == null)
             {
-                var action = target.PendingAction;
-                var cost = target.CostOf(action, target.RestorablePieces().Count);
-                lines.Add(HordeText.Prompt(InteractKeyLabel, action, target.name, cost, _horde.CheckPurchase(cost)));
+                return null;
             }
+
+            var action = target.PendingAction;
+            var cost = target.CostOf(action, target.RestorablePieces().Count);
+            return new HordeFortificationOffer(action, target.name, cost, _horde.CheckPurchase(cost), InteractKeyLabel);
         }
 
         /// <summary>操作しているプレイヤーで <see cref="TryInteract(SideMember)"/> する。プレイヤーがいなければ NothingToDo。</summary>

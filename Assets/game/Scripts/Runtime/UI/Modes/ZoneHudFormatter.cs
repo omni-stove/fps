@@ -1,7 +1,9 @@
-namespace Fps.Core
+using Fps.Core;
+
+namespace Fps.Runtime
 {
     /// <summary>縮むエリアの HUD の 1 行。秒は <see cref="HudFormat.Time"/> と同じ書式で出す。</summary>
-    public static class ZoneHudText
+    public static class ZoneHudFormatter
     {
         public static LocalizedText Closed => new LocalizedText("hud.zone.closed");
 

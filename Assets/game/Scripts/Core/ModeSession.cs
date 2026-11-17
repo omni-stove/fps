@@ -7,12 +7,13 @@ namespace Shooter.Core
     /// <summary>
     /// 部品を組み合わせて作るゲームモードの本体。チーム分け (<see cref="ITeamLayout"/>)・得点 (<see cref="IScoreRule"/>)・
     /// リスポーン (<see cref="IRespawnPolicy"/>)・勝利条件 (<see cref="IWinCondition"/>) を受け取り、参加者と陣営ごとの得点、
-    /// キル数とデス数、残り時間を持つ。時間は <see cref="Tick"/> で外から進める。
+    /// キル数とデス数とアシスト数、残り時間を持つ。時間は <see cref="Tick"/> で外から進める。
     /// 終了後は何を報告しても状態が変わらない。次の試合は <see cref="Reset"/> で同じ顔ぶれのまま始め直す。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
-    /// <item>別の陣営を倒すと倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。味方や自分を倒したときは Deaths だけ増える。</item>
+    /// <item>別の陣営を倒すと倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。味方や自分を倒したときは Deaths だけ増える。
+    /// 別の陣営を倒したときに渡されたアシストの Id は、倒された人と別の陣営の人だけ Assists を増やし、得点の部品が返した点をその人の陣営に入れる。</item>
     /// <item>リスポーンの部品を渡したときは、倒された人をリスポーン待ちにし、戻るまでの重ねての報告を無視する。
     /// null のときは倒されたことを数えるだけで、待ちも脱落も扱わない (リスポーンを外で扱うモード向け)。</item>
     /// <item><see cref="Tick"/> は、陣営の脱落を知らせ (<see cref="Eliminated"/>)、勝利条件の <see cref="IWinCondition.CheckStanding"/> を調べ、
@@ -167,7 +168,7 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// 次の試合のために、陣営の得点・各プレイヤーのキル数とデス数・残り時間・経過時間・勝者・リスポーン待ち・脱落を初期値に戻し、
+        /// 次の試合のために、陣営の得点・各プレイヤーのキル数とデス数とアシスト数・残り時間・経過時間・勝者・リスポーン待ち・脱落を初期値に戻し、
         /// 全員を生き返らせて Waiting に戻す。参加者と陣営分け、参加順の番号はそのまま残す。
         /// どの状態からでも呼べる。状態が変わったときだけ <see cref="StateChanged"/> を出す。
         /// </summary>
@@ -187,6 +188,7 @@ namespace Shooter.Core
             {
                 record.Kills = 0;
                 record.Deaths = 0;
+                record.Assists = 0;
                 record.IsDown = false;
             }
 
@@ -217,23 +219,35 @@ namespace Shooter.Core
             return side;
         }
 
-        /// <summary>プレイヤーを side に加える。参加順の番号は進めない。キル数とデス数は 0 から数える。</summary>
+        /// <summary>プレイヤーを side に加える。参加順の番号は進めない。キル数とデス数とアシスト数は 0 から数える。</summary>
         /// <exception cref="ArgumentOutOfRangeException">side がチーム分けにない。</exception>
         /// <exception cref="ArgumentException">すでに参加している。</exception>
         /// <exception cref="InvalidOperationException">side が満員。</exception>
         public void AddPlayer(int playerId, Side side)
         {
-            AddPlayer(playerId, side, 0, 0);
+            AddPlayer(playerId, side, 0, 0, 0);
         }
 
         /// <summary>
-        /// プレイヤーを side に加え、キル数とデス数を kills と deaths から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
-        /// 陣営の得点は動かさない (そのキルは抜ける前にもう入っている)。参加順の番号は進めない。
+        /// プレイヤーを side に加え、キル数とデス数を kills と deaths から、アシスト数を 0 から数える。
+        /// 陣営の得点は動かさない。参加順の番号は進めない。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">kills か deaths が負、または side がチーム分けにない。</exception>
         /// <exception cref="ArgumentException">すでに参加している。</exception>
         /// <exception cref="InvalidOperationException">side が満員。</exception>
         public void AddPlayer(int playerId, Side side, int kills, int deaths)
+        {
+            AddPlayer(playerId, side, kills, deaths, 0);
+        }
+
+        /// <summary>
+        /// プレイヤーを side に加え、キル数・デス数・アシスト数を kills・deaths・assists から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// 陣営の得点は動かさない (そのキルとアシストは抜ける前にもう入っている)。参加順の番号は進めない。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">kills・deaths・assists が負、または side がチーム分けにない。</exception>
+        /// <exception cref="ArgumentException">すでに参加している。</exception>
+        /// <exception cref="InvalidOperationException">side が満員。</exception>
+        public void AddPlayer(int playerId, Side side, int kills, int deaths, int assists)
         {
             if (kills < 0)
             {
@@ -243,6 +257,11 @@ namespace Shooter.Core
             if (deaths < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(deaths), deaths, "deaths must not be negative");
+            }
+
+            if (assists < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(assists), assists, "assists must not be negative");
             }
 
             if (!_layout.Contains(side))
@@ -265,6 +284,7 @@ namespace Shooter.Core
             var record = _players[playerId];
             record.Kills = kills;
             record.Deaths = deaths;
+            record.Assists = assists;
         }
 
         /// <summary>
@@ -288,6 +308,9 @@ namespace Shooter.Core
         public int GetKills(int playerId) => Find(playerId).Kills;
 
         public int GetDeaths(int playerId) => Find(playerId).Deaths;
+
+        /// <summary>別の陣営の人を倒すのを手伝った (アシストした) 回数。</summary>
+        public int GetAssists(int playerId) => Find(playerId).Assists;
 
         /// <summary>参加中のプレイヤーの id を昇順で返す。</summary>
         public IReadOnlyList<int> GetPlayerIds()
@@ -415,11 +438,28 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// killerId が victimId を倒したことを報告する。別の陣営を倒したら倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。
-        /// 味方や自滅では倒された人の Deaths だけ増える。得点上限に届いたら倒した側の勝ちで終える。
-        /// Waiting・Ended の間と、リスポーンを扱うときに倒された人がすでに倒れているとき (二重の報告) は何もしない。
+        /// killerId が victimId を、アシストなしで倒したことを報告する。
+        /// <see cref="ReportKill(int, int, IReadOnlyList{int})"/> にアシストの Id を空で渡すのと同じ。
         /// </summary>
         public void ReportKill(int killerId, int victimId)
+        {
+            ReportKill(killerId, victimId, null);
+        }
+
+        /// <summary>
+        /// killerId が victimId を倒したことを報告する。別の陣営を倒したら倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。
+        /// あわせて assisterIds のうち、参加中で、倒した人でも倒された人でもなく、倒された人と別の陣営の人の Assists を 1 ずつ増やし
+        /// (同じ Id は 1 度だけ数える)、得点の部品が返したアシストの点をその人の陣営に入れる。
+        /// 味方や自滅では倒された人の Deaths だけ増え、アシストも数えない。
+        /// 点を足した陣営が得点上限に届いたら、その陣営の勝ちで終える (倒した側の陣営を先に足す)。
+        /// Waiting・Ended の間と、リスポーンを扱うときに倒された人がすでに倒れているとき (二重の報告) は何もしない。
+        /// </summary>
+        /// <param name="killerId">倒した人。</param>
+        /// <param name="victimId">倒された人。</param>
+        /// <param name="assisterIds">
+        /// アシストした Id (<see cref="DamageLedger.TakeAssisters"/> の返す値など)。null なら空。抜けた人の Id が混じっていてもよい (数えずに飛ばす)。
+        /// </param>
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             var killer = Find(killerId, nameof(killerId));
             var victim = Find(victimId, nameof(victimId));
@@ -433,19 +473,67 @@ namespace Shooter.Core
             if (killerId != victimId && killer.Side != victim.Side)
             {
                 killer.Kills++;
-                var points = 0d;
+                var killPoints = 0d;
                 foreach (var rule in _scoreRules)
                 {
-                    points += CheckPoints(rule.PointsForKill(this, killerId, victimId));
+                    killPoints += CheckPoints(rule.PointsForKill(this, killerId, victimId));
                 }
 
-                if (points > 0d && AddScoreAndCheckLimit(killer.Side, points))
+                // 点を足す前にアシストの数と点をすべて決めておき、途中で得点上限に届いて終わっても数え漏れが出ないようにする。
+                var gains = new List<SidePoints> { new SidePoints(killer.Side, killPoints) };
+                CountAssists(killerId, victimId, victim.Side, assisterIds, gains);
+                foreach (var gain in gains)
                 {
-                    return;
+                    if (gain.Points > 0d && AddScoreAndCheckLimit(gain.Side, gain.Points))
+                    {
+                        return;
+                    }
                 }
             }
 
             BeginDown(victimId, victim);
+        }
+
+        /// <summary>
+        /// assisterIds のうちアシストに数える人の Assists を増やし、得点の部品が返した点を gains の同じ陣営の行に足す
+        /// (無い陣営なら行を加える)。
+        /// </summary>
+        private void CountAssists(int killerId, int victimId, Side victimSide, IReadOnlyList<int> assisterIds, List<SidePoints> gains)
+        {
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return;
+            }
+
+            var counted = new HashSet<int>();
+            foreach (var assisterId in assisterIds)
+            {
+                if (assisterId == killerId
+                    || assisterId == victimId
+                    || !_players.TryGetValue(assisterId, out var assister)
+                    || assister.Side == victimSide
+                    || !counted.Add(assisterId))
+                {
+                    continue;
+                }
+
+                assister.Assists++;
+                var points = 0d;
+                foreach (var rule in _scoreRules)
+                {
+                    points += CheckPoints(rule.PointsForAssist(this, assisterId, victimId));
+                }
+
+                var index = gains.FindIndex(g => g.Side == assister.Side);
+                if (index < 0)
+                {
+                    gains.Add(new SidePoints(assister.Side, points));
+                }
+                else
+                {
+                    gains[index] = new SidePoints(assister.Side, gains[index].Points + points);
+                }
+            }
         }
 
         /// <summary>
@@ -762,6 +850,7 @@ namespace Shooter.Core
             public Side Side { get; }
             public int Kills { get; set; }
             public int Deaths { get; set; }
+            public int Assists { get; set; }
 
             /// <summary>倒されてから、まだ戻っていない間は true。リスポーンの部品がなければ立たない。</summary>
             public bool IsDown { get; set; }
@@ -770,6 +859,18 @@ namespace Shooter.Core
             {
                 Side = side;
             }
+        }
+
+        private readonly struct SidePoints
+        {
+            public SidePoints(Side side, double points)
+            {
+                Side = side;
+                Points = points;
+            }
+
+            public Side Side { get; }
+            public double Points { get; }
         }
     }
 }

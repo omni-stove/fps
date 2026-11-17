@@ -117,6 +117,8 @@ namespace Shooter.Core
 
         public int GetDeaths(int playerId) => _session.GetDeaths(playerId);
 
+        public int GetAssists(int playerId) => _session.GetAssists(playerId);
+
         /// <summary>プレイヤーがいる拠点の番号。どの拠点の半径にもいなければ null。</summary>
         public int? GetPlayerPoint(int playerId) => FindPoint(playerId);
 
@@ -169,8 +171,20 @@ namespace Shooter.Core
         /// </summary>
         public void ReportKill(int killerId, int victimId)
         {
+            ReportKill(killerId, victimId, null);
+        }
+
+        /// <summary>
+        /// <see cref="ReportKill(int, int)"/> に加えて、別チームを倒したなら assisterIds のうち倒した人と同じチームの人 (倒した人を除く) の
+        /// Assists を増やす。アシストでもポイントは動かさない。
+        /// </summary>
+        /// <param name="killerId">倒した人。</param>
+        /// <param name="victimId">倒された人。</param>
+        /// <param name="assisterIds">アシストした Id。null なら空。抜けた人の Id は数えずに飛ばす。</param>
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
             var playing = State == GameModeState.Playing;
-            _session.ReportKill(killerId, victimId);
+            _session.ReportKill(killerId, victimId, assisterIds);
             if (playing)
             {
                 LeavePoint(victimId);
@@ -265,6 +279,8 @@ namespace Shooter.Core
             }
 
             public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
+
+            public double PointsForAssist(ModeSession session, int assisterId, int victimId) => 0d;
 
             public double PointsPerSecond(ModeSession session, Side side)
             {

@@ -10,7 +10,8 @@ namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="TeamDeathmatchDefinition"/> の陣営の数・人数・キル 1 回の点が <see cref="TeamDeathmatchSpec"/> に渡り、
-    /// <see cref="TeamDeathmatchRunner"/> が Definition があればその値、無ければ Inspector の値で試合を作ることを確かめる。
+    /// <see cref="TeamDeathmatchRunner"/> が Definition があればその値、無ければ Inspector の値で試合を作ることと、
+    /// 試合の中で別の人が撃った敵を倒すとアシストが数えられることを確かめる。
     /// </summary>
     public sealed class TeamDeathmatchSidesAndPointsTests
     {
@@ -147,6 +148,100 @@ namespace Shooter.Tests.EditMode
             Assert.That(session.GetScore(new Side(1)), Is.EqualTo(0d));
         }
 
+        [Test]
+        public void TheDefinitionPassesPointsPerAssistToTheSpecAndCopiesItBack()
+        {
+            var definition = Create<TeamDeathmatchDefinition>("AssistTdm");
+            Assert.That(definition.PointsPerAssist, Is.Zero);
+            Assert.That(definition.ToSpec().PointsPerAssist, Is.Zero);
+
+            definition.CopyFrom(new TeamDeathmatchSpec(12, 200f, 1.5f, null, 2, 8, 1, 3));
+
+            Assert.That(definition.PointsPerAssist, Is.EqualTo(3));
+            Assert.That(definition.ToSpec().PointsPerAssist, Is.EqualTo(3));
+
+            definition.PointsPerAssist = -1;
+            var error = Assert.Throws<InvalidOperationException>(() => definition.ToSpec());
+            StringAssert.Contains("AssistTdm", error.Message);
+        }
+
+        [Test]
+        public void TheRunnerUsesTheInspectorPointsPerAssistWithoutADefinition()
+        {
+            var runner = Runner();
+            runner.PointsPerAssist = 2;
+
+            Assert.That(runner.CreateSpec().PointsPerAssist, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void AnAllyWhoHitTheVictimEarnsAnAssistAndItsPointsInTheRunnersMatch()
+        {
+            var runner = Runner();
+            runner.AssistSpec = new AssistSpec(windowSeconds: 10f, minDamage: 20);
+            var definition = Create<TeamDeathmatchDefinition>("AssistTdm");
+            definition.PointsPerAssist = 2;
+            runner.Definition = definition;
+            var killer = Member("Alpha-1", 0);
+            var helper = Member("Alpha-2", 0);
+            var victim = Member("Bravo-1", 1);
+
+            Assert.That(runner.TryBegin(), Is.True);
+            var session = runner.Session;
+            var helperId = runner.IdOf(helper.GetComponent<SideMember>());
+            var killerId = runner.IdOf(killer.GetComponent<SideMember>());
+            var victimDamageable = victim.GetComponent<Damageable>();
+
+            using (CombatEvents.Attribute(helper, "rifle"))
+            {
+                victimDamageable.TakeDamage(30);
+            }
+
+            runner.Tick(2f);
+            using (CombatEvents.Attribute(killer, "rifle"))
+            {
+                victimDamageable.TakeDamage(Damageable.DefaultMaxHealth);
+            }
+
+            Assert.That(session.GetKills(killerId), Is.EqualTo(1));
+            Assert.That(session.GetAssists(helperId), Is.EqualTo(1));
+            Assert.That(session.GetAssists(killerId), Is.Zero);
+            Assert.That(session.GetScore(new Side(0)), Is.EqualTo(3d));
+        }
+
+        [Test]
+        public void DamageFromAnAllyOrBelowTheMinimumIsNoAssistInTheRunnersMatch()
+        {
+            var runner = Runner();
+            runner.AssistSpec = new AssistSpec(windowSeconds: 10f, minDamage: 20);
+            var killer = Member("Alpha-1", 0);
+            var helper = Member("Alpha-2", 0);
+            var victim = Member("Bravo-1", 1);
+            var victimAlly = Member("Bravo-2", 1);
+
+            Assert.That(runner.TryBegin(), Is.True);
+            var session = runner.Session;
+            var victimDamageable = victim.GetComponent<Damageable>();
+
+            using (CombatEvents.Attribute(helper, "rifle"))
+            {
+                victimDamageable.TakeDamage(19);
+            }
+
+            using (CombatEvents.Attribute(victimAlly, "rifle"))
+            {
+                victimDamageable.TakeDamage(30);
+            }
+
+            using (CombatEvents.Attribute(killer, "rifle"))
+            {
+                victimDamageable.TakeDamage(Damageable.DefaultMaxHealth);
+            }
+
+            Assert.That(session.GetAssists(runner.IdOf(helper.GetComponent<SideMember>())), Is.Zero);
+            Assert.That(session.GetAssists(runner.IdOf(victimAlly.GetComponent<SideMember>())), Is.Zero);
+        }
+
         private TeamDeathmatchRunner Runner()
         {
             var go = new GameObject("Runner");
@@ -154,12 +249,13 @@ namespace Shooter.Tests.EditMode
             return go.AddComponent<TeamDeathmatchRunner>();
         }
 
-        private void Member(string name, int side)
+        private GameObject Member(string name, int side)
         {
             var go = new GameObject(name, typeof(CapsuleCollider));
             _objects.Add(go);
             go.AddComponent<Damageable>().Initialize(name, Damageable.DefaultMaxHealth);
             go.AddComponent<SideMember>().Side = new Side(side);
+            return go;
         }
 
         private T Create<T>(string name)

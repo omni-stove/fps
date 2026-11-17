@@ -58,8 +58,8 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// サーバーのロビーにつなげない理由。つなげるなら null。
-        /// 版 (<see cref="ServerLobby.VersionKey"/>) が自分と違う、人数 (<see cref="ServerLobby.PlayersKey"/>) が
+        /// Quick Match でサーバーのロビーにつなげない理由。つなげるなら null。
+        /// 参加コードで入る非公開の試合 (<see cref="LobbyInfo.IsPrivate"/>) である、版 (<see cref="ServerLobby.VersionKey"/>) が自分と違う、人数 (<see cref="ServerLobby.PlayersKey"/>) が
         /// 入れるプレイヤーの数 (<see cref="ServerLobby.PlayerSlots"/>) に達している、アドレス (<see cref="ServerLobby.ServerKey"/>) が無いか IPv4:port でない、のどれか。
         /// </summary>
         /// <param name="lobby">検索で見つかったロビー。</param>
@@ -85,6 +85,11 @@ namespace Shooter.Core
             }
 
             ThrowIfInvalidPartySize(partySize);
+
+            if (lobby.IsPrivate)
+            {
+                return "private";
+            }
 
             // バケットにも版は入っているが、切り詰めた版が衝突したときや古いサーバーの残りを、属性でも弾く
             var expected = LobbyLaunchOptions.BucketVersion(version);

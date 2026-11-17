@@ -82,7 +82,8 @@ namespace Shooter.Server
                     new SpawnSelector(settings.MinEnemySpawnDistance),
                     PositionOf,
                     null,
-                    settings.ReconnectGraceSeconds);
+                    settings.ReconnectGraceSeconds,
+                    _data.Assist);
             }
             catch (ArgumentException e)
             {
@@ -440,13 +441,13 @@ namespace Shooter.Server
         }
 
         // Session は Killed の直後に倒された人の PlayerChanged と DownedChanged を出すので、ここで記録すればそこで引ける
-        private void HandleKilled(int killerId, int victimId)
+        private void HandleKilled(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             _lastKillers[victimId] = killerId;
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
-            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
+            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
             _match.WriteKill(killerId, victimId, byAlly);
-            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot));
+            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
             ObjectivePlayerKilled(victimId);
             SpectatePlayerKilled(victimId);
         }
@@ -503,23 +504,25 @@ namespace Shooter.Server
         }
 
         /// <summary>
-        /// Session の Killed (killerId, victimId) をキルフィードの 1 行にする。shot を撃った人が倒した者で、倒れたのが当たった人か
+        /// Session の Killed (killerId, victimId, アシストした Id) をキルフィードの 1 行にする。shot を撃った人が倒した者で、倒れたのが当たった人か
         /// 撃った本人 (跳ね返し) なら、その武器を載せる。頭への止めは当たった人をその弾で倒したときだけ。
         /// </summary>
-        internal static KillFeedEntry KillFeedEntryFor(int killerId, int victimId, bool friendly, KillShot? shot)
+        internal static KillFeedEntry KillFeedEntryFor(
+            int killerId, int victimId, bool friendly, KillShot? shot, IReadOnlyList<int> assisterIds = null)
         {
             if (!shot.HasValue || shot.Value.ShooterId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
             var byShot = victimId == shot.Value.TargetId;
             if (!byShot && victimId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
-            return new KillFeedEntry(killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly);
+            return new KillFeedEntry(
+                killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly, assisterIds);
         }
 
         private void SendToAll(TransportChannel channel, IMessage message)

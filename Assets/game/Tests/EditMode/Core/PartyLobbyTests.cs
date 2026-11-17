@@ -190,7 +190,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void AnUnreadableSkillCountsAsNone()
         {
-            Assert.That(PartyLobby.ReadSkill(new LobbyAttribute[0]), Is.Null);
+            Assert.That(PartyLobby.ReadSkill(System.Array.Empty<LobbyAttribute>()), Is.Null);
             Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfText("party_skill", "1350") }), Is.Null);
             Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfNumber("party_skill", 3000000000L) }), Is.Null);
             Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfNumber("party_skill", -3000000000L) }), Is.Null);

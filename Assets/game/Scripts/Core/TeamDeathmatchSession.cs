@@ -459,6 +459,34 @@ namespace Shooter.Core
             return held;
         }
 
+        /// <summary>
+        /// 終わった試合と次の試合の間に、playerId を team へ移す。キル数とデス数はそのまま (次の <see cref="Restart"/> で 0 に戻る)。
+        /// </summary>
+        /// <returns>チームが変わったら true。もう team にいれば何もせず false。</returns>
+        /// <exception cref="InvalidOperationException">試合が終わっていない。</exception>
+        public bool ChangeTeam(int playerId, Team team)
+        {
+            FindHealth(playerId);
+            Side.FromTeam(team);
+
+            // 試合中に移すと、その人のキルが入った点数と移った先のチームが食い違うので、終わった後だけにする
+            if (State != GameModeState.Ended)
+            {
+                throw new InvalidOperationException("a player can only change teams after the match has ended, but it is " + State);
+            }
+
+            if (GetTeam(playerId) == team)
+            {
+                return false;
+            }
+
+            var kills = GetKills(playerId);
+            var deaths = GetDeaths(playerId);
+            _match.RemovePlayer(playerId);
+            _match.AddPlayer(playerId, team, kills, deaths);
+            return true;
+        }
+
         /// <summary>key で参加中の人がいれば true。前の接続が切れたと分かる前に同じ人がつなぎ直してきたときに立つ。</summary>
         public bool IsKeyInUse(string key) => key != null && _playerByKey.ContainsKey(key);
 

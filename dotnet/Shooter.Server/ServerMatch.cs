@@ -23,8 +23,14 @@ namespace Shooter.Server
         private float _restartRemaining;
         private int _botCount;
         private int _maxPlayers = NetMatchSettings.DefaultMaxPlayers;
+        private long _joinCount;
 
-        public ServerMatch(float restartDelaySeconds, TextWriter log, ServerEventWriter events, Func<DateTime> utcNow)
+        public ServerMatch(
+            float restartDelaySeconds,
+            TextWriter log,
+            ServerEventWriter events,
+            Func<DateTime> utcNow,
+            int maxTeamSizeDifference = NetMatchSettings.DefaultMaxTeamSizeDifference)
         {
             if (!(restartDelaySeconds >= 0f) || float.IsInfinity(restartDelaySeconds))
             {
@@ -32,7 +38,14 @@ namespace Shooter.Server
                     nameof(restartDelaySeconds), restartDelaySeconds, "restartDelaySeconds must not be negative and must be finite");
             }
 
+            if (maxTeamSizeDifference < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxTeamSizeDifference), maxTeamSizeDifference, "maxTeamSizeDifference must not be negative");
+            }
+
             RestartDelaySeconds = restartDelaySeconds;
+            MaxTeamSizeDifference = maxTeamSizeDifference;
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
@@ -52,6 +65,9 @@ namespace Shooter.Server
         public event Action Restarted;
 
         public float RestartDelaySeconds { get; }
+
+        /// <summary>次の試合の前にそろえる、チームの人数の差の上限。0 ならそろえない。</summary>
+        public int MaxTeamSizeDifference { get; }
 
         public string MatchId { get; private set; }
 
@@ -145,14 +161,15 @@ namespace Shooter.Server
         /// </param>
         public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null)
         {
+            if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            {
+                throw new ArgumentException(
+                    nameof(partyId) + " must be 1-" + ConnectionExtras.MaxPartyIdLength + " characters of [0-9A-Za-z_-]", nameof(partyId));
+            }
+
             if (productUserId != null && !NetLaunchOptions.IsProductUserId(productUserId))
             {
                 throw new ArgumentException("'" + productUserId + "' is not an EOS product user id", nameof(productUserId));
-            }
-
-            if (partyId != null && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
-            {
-                throw new ArgumentException("'" + partyId + "' is not a party id", nameof(partyId));
             }
 
             if (!TryGetPlayerId(connection, out var playerId))
@@ -204,12 +221,12 @@ namespace Shooter.Server
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
 
             // パーティより前のチームを先に見るのは、つなぎ直すたびに試合の途中でチームが変わらないようにするため
-            if (!rejoined && partyId != null)
+            if (!rejoined && !string.IsNullOrEmpty(partyId))
             {
                 team = ChooseWithParty(partyId);
             }
 
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId);
+            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {

@@ -49,6 +49,13 @@ namespace Shooter.Core
             return Tag + " left player=" + playerId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>人数をそろえるため、次の試合の前にプレイヤーのチームを移したこと。</summary>
+        /// <example><c>[Match] balanced player=3 from=Alpha to=Bravo</c></example>
+        public static string TeamBalanced(int playerId, Team from, Team to)
+        {
+            return Tag + " balanced player=" + playerId.ToString(CultureInfo.InvariantCulture) + " from=" + TeamName(from) + " to=" + TeamName(to);
+        }
+
         /// <summary>切断した人の成績を残し始めたこと。</summary>
         /// <example><c>[Match] holding player=1 for=60s</c></example>
         public static string Held(int playerId, float seconds)

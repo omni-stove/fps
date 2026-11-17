@@ -18,6 +18,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(spec.KillXp, Is.EqualTo(ProgressionSpec.DefaultKillXp));
             Assert.That(spec.HeadshotXp, Is.EqualTo(ProgressionSpec.DefaultHeadshotXp));
+            Assert.That(spec.AssistXp, Is.EqualTo(ProgressionSpec.DefaultAssistXp));
             Assert.That(spec.MatchXp, Is.EqualTo(ProgressionSpec.DefaultMatchXp));
             Assert.That(spec.WinXp, Is.EqualTo(ProgressionSpec.DefaultWinXp));
             Assert.That(spec.Levels, Is.EqualTo(ProgressionSpec.Default.Levels));

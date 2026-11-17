@@ -61,7 +61,11 @@ namespace Shooter.Server
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
-            Match = new ServerMatch(restartDelaySeconds, log, events, utcNow) { MaxPlayers = MaxPlayers };
+            Match = new ServerMatch(
+                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference)
+            {
+                MaxPlayers = MaxPlayers,
+            };
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }

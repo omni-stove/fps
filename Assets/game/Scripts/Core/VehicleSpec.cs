@@ -130,6 +130,17 @@ namespace Fps.Core
             return result;
         }
 
+        // 座席に乗り物の武器があればそちらを使い、自分の武器は出させない。両手で 2 つの武器を同時に撃たせないため。
+        public VehicleSeatFiring FiringOf(int seatIndex)
+        {
+            if (WeaponsOfSeat(seatIndex).Count > 0)
+            {
+                return VehicleSeatFiring.VehicleWeapon;
+            }
+
+            return _seats[seatIndex].CanFireOwnWeapon ? VehicleSeatFiring.OwnWeapon : VehicleSeatFiring.None;
+        }
+
         /// <summary>id の部位。無ければ null。</summary>
         public VehiclePartSpec FindPart(string id)
         {

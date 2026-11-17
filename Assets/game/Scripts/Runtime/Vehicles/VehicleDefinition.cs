@@ -62,6 +62,12 @@ namespace Fps.Runtime
         /// <summary>この値と座席の並び seats で <see cref="VehicleSpec"/> を作る。値が不正なら <see cref="VehicleDefinitionException"/>。</summary>
         public VehicleSpec ToSpec(IReadOnlyList<VehicleSeatSpec> seats)
         {
+            return ToSpec(seats, null);
+        }
+
+        // 武器も座席と同じく置き場所がシーンの側 (VehicleWeaponMount) にあるので、その並びを受け取って合わせる。
+        public VehicleSpec ToSpec(IReadOnlyList<VehicleSeatSpec> seats, IReadOnlyList<VehicleWeaponSpec> weapons)
+        {
             if (seats == null)
             {
                 throw new ArgumentNullException(nameof(seats));
@@ -70,7 +76,7 @@ namespace Fps.Runtime
             var source = string.IsNullOrEmpty(name) ? "(unnamed vehicle)" : name;
             try
             {
-                return new VehicleSpec(_id, _maxHealth, seats, null, null, _enterRange, _chaseDistance, _chaseHeight);
+                return new VehicleSpec(_id, _maxHealth, seats, weapons, null, _enterRange, _chaseDistance, _chaseHeight);
             }
             catch (ArgumentException e)
             {

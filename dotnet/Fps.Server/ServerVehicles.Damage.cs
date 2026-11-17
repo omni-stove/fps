@@ -10,14 +10,21 @@ namespace Fps.Server
     {
         private readonly List<int> _ejected = new List<int>();
 
-        public void Damage(int vehicle, int amount, int? attackerId)
+        public int Damage(int vehicle, int amount, int? attackerId)
         {
             if (amount < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
             }
 
-            Damage(_cars[vehicle], amount, attackerId, true);
+            var car = _cars[vehicle];
+            if (car.Exploded)
+            {
+                return 0;
+            }
+
+            Damage(car, amount, attackerId, true);
+            return amount;
         }
 
         public int ApplyExplosion(Vector3 center, ExplosionDamage explosion, int? attackerId)

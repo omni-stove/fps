@@ -347,11 +347,11 @@ namespace Fps.Server
         {
             var damage = DamageCalculator.Scale(amount, hit.DamageMultiplier);
             var attacker = _match.TryGetPlayer(shot.ShooterId, out _) ? shot.ShooterId : (int?)null;
-            _vehicles.Damage(hit.VehicleIndex, damage, attacker);
-            if (attacker.HasValue && damage > 0 && !_vehicleHitConfirmed)
+            var dealt = _vehicles.Damage(hit.VehicleIndex, damage, attacker);
+            if (attacker.HasValue && dealt > 0 && !_vehicleHitConfirmed)
             {
                 _vehicleHitConfirmed = _collectingPelletHits;
-                SendHitConfirm(shot.ShooterId, damage, HitZone.Body, DamageOutcome.Damaged);
+                SendHitConfirm(shot.ShooterId, dealt, HitZone.Body, DamageOutcome.Damaged);
             }
         }
 

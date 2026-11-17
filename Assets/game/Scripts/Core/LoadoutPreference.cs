@@ -4,20 +4,11 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 最後に選んだロードアウト (スロット順の武器の Id) を保存する文字列にする・戻す。
-    /// 形は <c>{"version":1,"weapons":["id", ...]}</c>。武器の値は持たず、Id だけを持つ (値は試合の一覧から引き直す)。
-    /// </summary>
+    // 武器の値を持たず Id だけを持つのは、値を試合の一覧から引き直すため。
     public static class LoadoutPreference
     {
-        /// <summary>今の形の版。</summary>
         public const int Version = 1;
 
-        /// <summary>
-        /// weaponIds を保存する文字列にする。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">weaponIds が null。</exception>
-        /// <exception cref="ArgumentException">空・空の Id がある。</exception>
         public static string ToJson(IReadOnlyList<string> weaponIds)
         {
             if (weaponIds == null)
@@ -51,10 +42,6 @@ namespace Shooter.Core
             return builder.ToString();
         }
 
-        /// <summary>
-        /// <see cref="ToJson"/> の文字列を戻す。読めたらスロット順の Id と null の problem、
-        /// 読めなければ null と理由を返す (壊れている・知らない版・Id の列が無いか空・文字列でない Id や空の Id がある)。
-        /// </summary>
         public static IReadOnlyList<string> FromJson(string text, out string problem)
         {
             if (string.IsNullOrWhiteSpace(text))

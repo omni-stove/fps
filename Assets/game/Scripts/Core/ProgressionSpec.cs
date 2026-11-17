@@ -5,10 +5,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 成長の調整値。XP の元 (倒した・頭への上乗せ・試合の終了・勝ち)、レベルの表、アンロックの表を持つ。不変。
-    /// JSON からは <see cref="ProgressionJson.Parse"/> で読む。
-    /// </summary>
     public sealed class ProgressionSpec
     {
         public const int DefaultKillXp = 100;
@@ -21,15 +17,6 @@ namespace Shooter.Core
         public static readonly ProgressionSpec Default = new ProgressionSpec(
             DefaultKillXp, DefaultHeadshotXp, DefaultMatchXp, DefaultWinXp, _defaultLevels, Array.Empty<ProgressionUnlock>());
 
-        /// <param name="killXp">1 人倒すごとの XP。0 以上。</param>
-        /// <param name="headshotXp">頭で倒したときに <paramref name="killXp"/> へ足す XP。0 以上。</param>
-        /// <param name="matchXp">試合を終えるごとの XP。勝敗に関わらず入る。0 以上。</param>
-        /// <param name="winXp">勝ったときに <paramref name="matchXp"/> へ足す XP。0 以上。</param>
-        /// <param name="levels">各レベルに要る累計の XP。先頭がレベル 1 で 0、後ろほど大きいこと。</param>
-        /// <param name="unlocks">Id ごとの使えるようになるレベル。null を含まず、Id が重複せず、レベルが表の最大以下であること。</param>
-        /// <exception cref="ArgumentNullException">levels か unlocks が null。</exception>
-        /// <exception cref="ArgumentException">levels・unlocks が上の条件に合わない。ParamName は引数名。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">XP のどれかが負。</exception>
         public ProgressionSpec(int killXp, int headshotXp, int matchXp, int winXp, IEnumerable<int> levels, IEnumerable<ProgressionUnlock> unlocks)
         {
             RequireNonNegative(killXp, nameof(killXp));
@@ -110,7 +97,6 @@ namespace Shooter.Core
 
         public int WinXp { get; }
 
-        /// <summary>各レベルに要る累計の XP。添字 0 がレベル 1。</summary>
         public IReadOnlyList<int> Levels { get; }
 
         public int MaxLevel => Levels.Count;

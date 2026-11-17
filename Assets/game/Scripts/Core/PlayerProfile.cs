@@ -5,13 +5,8 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// プレイヤーの成長と戦績。累計の XP・倒した数・倒れた数・試合数・勝った数を持つ。不変。
-    /// 値を変えるのは <see cref="ProgressionLedger"/> で、新しいプロフィールを返す。<see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして保存する。
-    /// </summary>
     public sealed class PlayerProfile : IEquatable<PlayerProfile>
     {
-        /// <summary>このコードが書き出すプロフィールの形式のバージョン。</summary>
         public const int CurrentVersion = 1;
 
         private const string _versionKey = "version";
@@ -23,15 +18,8 @@ namespace Shooter.Core
 
         private static readonly string[] _keys = { _versionKey, _xpKey, _killsKey, _deathsKey, _matchesKey, _winsKey };
 
-        /// <summary>まだ 1 試合も遊んでいないプロフィール。</summary>
         public static readonly PlayerProfile Empty = new PlayerProfile(0, 0, 0, 0, 0);
 
-        /// <param name="xp">累計の XP。0 以上。</param>
-        /// <param name="kills">倒した数。0 以上。</param>
-        /// <param name="deaths">倒れた数。0 以上。</param>
-        /// <param name="matches">終えた試合の数。0 以上。</param>
-        /// <param name="wins">勝った試合の数。0 以上で matches 以下。</param>
-        /// <exception cref="ArgumentOutOfRangeException">どれかが負か、wins が matches より多い。</exception>
         public PlayerProfile(int xp, int kills, int deaths, int matches, int wins)
         {
             RequireNonNegative(xp, nameof(xp));
@@ -53,7 +41,6 @@ namespace Shooter.Core
             Wins = wins;
         }
 
-        /// <summary>プロフィールの形式のバージョン。常に <see cref="CurrentVersion"/>。</summary>
         public int Version { get; }
 
         public int Xp { get; }
@@ -66,7 +53,6 @@ namespace Shooter.Core
 
         public int Wins { get; }
 
-        /// <summary>JSON の文字列に書き出す。<see cref="FromJson"/> で同じ内容に戻る。</summary>
         public string ToJson()
         {
             var builder = new StringBuilder();
@@ -81,12 +67,6 @@ namespace Shooter.Core
             return builder.ToString();
         }
 
-        /// <summary>
-        /// <see cref="ToJson"/> で書き出した文字列から読む。JSON として壊れている、項目が欠けている・余分・型違い・範囲外、
-        /// バージョンが <see cref="CurrentVersion"/> でないときは <see cref="FormatException"/> を投げる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">json が null。</exception>
-        /// <exception cref="FormatException">json がプロフィールとして読めない。</exception>
         public static PlayerProfile FromJson(string json)
         {
             if (json == null)

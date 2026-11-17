@@ -3,40 +3,29 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ロビーを使った起動の設定。コマンドライン引数 <c>-lobby quickmatch</c> から作る。つなぐサーバーはロビーで決まるので、
-    /// <c>-mode</c> / <c>-address</c> / <c>-port</c> / <c>-eos-server</c> / <c>-register-lobby</c> とは一緒に使えない。
-    /// 選んだサーバーのロビーの公開アドレスへ UDP でつなぐ (<see cref="ServerLobby.ConnectOptions"/>)。
-    /// </summary>
     public sealed class LobbyLaunchOptions
     {
         public const string LobbyFlag = "-lobby";
 
         public const int DefaultMaxPlayers = NetMatchSettings.DefaultMaxPlayers;
 
-        /// <summary>
-        /// ロビーの最大人数の下限。ロビーに入るのはサーバーだけで、人数は属性で載せるので、試合が 1 人までのサーバーも載せられるようにする。
-        /// </summary>
+        // ロビーに入るのはサーバーだけで、人数は属性で載せるので、試合が 1 人までのサーバーも載せられるようにする。
         public const int MinMaxPlayers = NetMatchSettings.MinMaxPlayers;
 
-        /// <summary>ロビーの最大人数の上限 (EOS_LOBBY_MAX_LOBBY_MEMBERS)。</summary>
+        // EOS_LOBBY_MAX_LOBBY_MEMBERS に合わせてある。
         public const int MaxMaxPlayers = 64;
 
-        /// <summary>クイックマッチでつなげるサーバーが見つからないとき、検索し直すまでの秒数。</summary>
         public const float QuickMatchIntervalSeconds = 5f;
 
-        /// <summary>クイックマッチでログインからサーバーが決まるまで待つ秒数。過ぎたら見つからなかったとして諦める。</summary>
         public const float QuickMatchTimeoutSeconds = 30f;
 
-        /// <summary>1 回の検索で受け取るロビーの最大数。</summary>
         public const int MaxSearchResults = 25;
 
-        /// <summary>バケット ID に入れるバージョンの最大の長さ。</summary>
         public const int MaxBucketVersionLength = 32;
 
         private static readonly LobbyCommand[] _commands = { LobbyCommand.QuickMatch };
 
-        /// <summary>ロビーが決めるので、<c>-lobby</c> と一緒には指定できない起動引数。</summary>
+        // つなぐサーバーはロビーで決まるので、-lobby とは一緒に指定させない。
         private static readonly string[] _conflictingFlags =
         {
             NetLaunchOptions.ModeFlag,
@@ -46,12 +35,10 @@ namespace Shooter.Core
             NetLaunchOptions.RegisterLobbyFlag,
         };
 
-        /// <summary>ロビーを使わない設定。</summary>
         public static LobbyLaunchOptions None { get; } = new LobbyLaunchOptions(LobbyCommand.None);
 
         public LobbyCommand Command { get; }
 
-        /// <summary>ロビーを使うか。</summary>
         public bool IsRequested => Command != LobbyCommand.None;
 
         private LobbyLaunchOptions(LobbyCommand command)
@@ -59,13 +46,11 @@ namespace Shooter.Core
             Command = command;
         }
 
-        /// <summary>専用サーバーのロビーを探してつなぐ設定。</summary>
         public static LobbyLaunchOptions QuickMatch()
         {
             return new LobbyLaunchOptions(LobbyCommand.QuickMatch);
         }
 
-        /// <summary>引数に <c>-lobby</c> が含まれるか。値の妥当性は見ない。</summary>
         public static bool HasLobbyFlag(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -84,14 +69,7 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>
-        /// コマンドライン引数を解析する。<c>-lobby</c> が無ければ <see cref="None"/> を返す。
-        /// 知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
-        /// <param name="options">成功したときの設定。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
-        /// <returns>引数が正しければ true。</returns>
+        // 知らない引数を断らないのは、Unity 自身の -batchmode などが混ざって渡るため。
         public static bool TryParse(IReadOnlyList<string> args, out LobbyLaunchOptions options, out string error)
         {
             if (args == null)
@@ -156,7 +134,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>バケット ID に入れる版。空なら "0"、長すぎれば <see cref="MaxBucketVersionLength"/> 文字で切る。</summary>
         internal static string BucketVersion(string version)
         {
             var trimmed = string.IsNullOrWhiteSpace(version) ? "0" : version.Trim();
@@ -168,7 +145,6 @@ namespace Shooter.Core
             return trimmed;
         }
 
-        /// <summary>ログ向けの小文字の操作名 (none / quickmatch)。<c>-lobby</c> の値と同じ。</summary>
         public static string CommandName(LobbyCommand command)
         {
             switch (command)
@@ -220,7 +196,7 @@ namespace Shooter.Core
             return string.Equals(arg, flag, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>次の引数が値ではなく別のフラグに見えるか (値の書き忘れを検出する)。</summary>
+        // 次の引数が別のフラグに見えたら値として読まないのは、値の書き忘れを見つけるため。
         private static bool IsFlagLike(string arg)
         {
             return string.IsNullOrEmpty(arg) || arg[0] == '-';

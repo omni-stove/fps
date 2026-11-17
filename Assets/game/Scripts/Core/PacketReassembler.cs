@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="PacketSplitter"/> が分けたパケットを、送り手 1 人分について元のメッセージに戻す。
-    /// 断片は順不同で届いてもよい。揃わないまま上限数を超えたメッセージは古いものから捨てる。
-    /// </summary>
     public sealed class PacketReassembler
     {
         private readonly int _maxMessageSize;
@@ -16,9 +12,6 @@ namespace Shooter.Core
         private readonly Dictionary<ushort, Pending> _pending = new Dictionary<ushort, Pending>();
         private readonly List<ushort> _arrivalOrder = new List<ushort>();
 
-        /// <param name="maxMessageSize">受け付けるメッセージの最大バイト数。超えるものは捨てる。</param>
-        /// <param name="maxPendingMessages">同時に組み立て途中にしておけるメッセージの数。</param>
-        /// <param name="maxPendingBytes">組み立て途中のメッセージが溜めてよい合計バイト数。0 以下なら <paramref name="maxMessageSize"/> × <paramref name="maxPendingMessages"/>。</param>
         public PacketReassembler(int maxMessageSize, int maxPendingMessages, int maxPendingBytes = 0)
         {
             if (maxMessageSize <= 0)
@@ -36,13 +29,9 @@ namespace Shooter.Core
             _maxPendingBytes = maxPendingBytes > 0 ? maxPendingBytes : (long)maxMessageSize * maxPendingMessages;
         }
 
-        /// <summary>組み立て途中のメッセージの数。</summary>
         public int PendingCount => _pending.Count;
 
-        /// <summary>
-        /// パケットを 1 つ受け取る。<see cref="PacketReadResult.Complete"/> のときだけ <paramref name="message"/> が有効。
-        /// 分けられていないメッセージは <paramref name="packet"/> の一部を指すので、次の受信の前にコピーすること。
-        /// </summary>
+        // 分けられていないメッセージはコピーせず packet の一部を指して返すので、呼ぶ側は次の受信の前にコピーする。
         public PacketReadResult Read(ArraySegment<byte> packet, out ArraySegment<byte> message)
         {
             if (packet.Array == null)
@@ -153,7 +142,6 @@ namespace Shooter.Core
             return PacketReadResult.Complete;
         }
 
-        /// <summary>組み立て途中のメッセージをすべて捨てる。</summary>
         public void Clear()
         {
             _pending.Clear();

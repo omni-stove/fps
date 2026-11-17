@@ -3,13 +3,8 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 成長の調整値 (<see cref="ProgressionSpec"/>) を JSON から読む。項目の名前は <see cref="ProgressionSpec"/> のコンストラクターの引数名。
-    /// 省略した XP は <see cref="ProgressionSpec"/> の Default* の値、省略した <see cref="LevelsItem"/> は <see cref="ProgressionSpec.Default"/> の表、
-    /// 省略した <see cref="UnlocksItem"/> は空 (どれも最初から使える) になる。
-    /// 値の検査は <see cref="ProgressionSpec"/> と <see cref="ProgressionUnlock"/> に任せ、引っかかればどの項目 (unlocks[2].level など) かを添えた
-    /// <see cref="TuningJsonException"/> を投げる。
-    /// </summary>
+    // 項目の名前を ProgressionSpec のコンストラクターの引数名にそろえるのは、値の検査を ProgressionSpec と ProgressionUnlock に任せたまま、
+    // 引っかかった項目 (unlocks[2].level など) を例外の引数名から示せるようにするため。
     public static class ProgressionJson
     {
         public const string KillXpItem = "killXp";
@@ -36,13 +31,6 @@ namespace Shooter.Core
 
         public static IReadOnlyList<string> UnlockItemNames { get; } = new[] { IdItem, LevelItem };
 
-        /// <summary>text を成長の調整値として読む。</summary>
-        /// <param name="text">JSON の文字列。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="ProgressionSpec"/>・<see cref="ProgressionUnlock"/> の検査に通らない。
-        /// </exception>
         public static ProgressionSpec Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, _kind);

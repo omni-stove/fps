@@ -20,6 +20,11 @@ namespace Shooter.NetV2
         private int? _skillRating;
         private float _now;
         private string _lastRetryReason;
+        private bool _joinsMatchLobby;
+        private MatchLobbyJoin _lobbyJoin;
+        private NetLaunchOptions _picked;
+        private MatchLobby _matchLobby;
+        private bool _handedOver;
         private bool _disposed;
 
         public QuickMatchSearch(ILobbyBackend backend, string version, Action<string> log)
@@ -43,6 +48,7 @@ namespace Shooter.NetV2
             LoggingIn,
             Searching,
             WaitingToSearch,
+            JoiningLobby,
             Ready,
             Failed,
         }
@@ -50,6 +56,34 @@ namespace Shooter.NetV2
         public string BucketId => ServerLobby.BucketId(_version);
 
         public bool IsFinished => _step == Step.Ready || _step == Step.Failed;
+
+        public bool JoinsMatchLobby
+        {
+            get => _joinsMatchLobby;
+            set
+            {
+                if (_step != Step.Idle)
+                {
+                    throw new InvalidOperationException("set JoinsMatchLobby before the quick match search begins");
+                }
+
+                _joinsMatchLobby = value;
+            }
+        }
+
+        // ready の引数で渡さないのは、ロビーに入らない呼び出し方 (JoinsMatchLobby が偽) の ready をそのまま使えるようにするため
+        public MatchLobby TakeMatchLobby()
+        {
+            var lobby = _matchLobby;
+            if (lobby != null)
+            {
+                _matchLobby = null;
+                _handedOver = true;
+                _backend.LoggedOut -= HandleLoggedOut;
+            }
+
+            return lobby;
+        }
 
         public void Begin(float now, Action<NetLaunchOptions> ready, Action<string> failed)
         {
@@ -99,9 +133,24 @@ namespace Shooter.NetV2
             }
 
             _now = now;
-            _backend.Tick();
+            if (!_handedOver)
+            {
+                _backend.Tick();
+            }
+
             if (IsFinished || _step == Step.Idle)
             {
+                return;
+            }
+
+            // サーバーはもう決まっているので、ロビーに入れないだけで探すのをやめず、ボイス無しでつなぐ
+            if (_step == Step.JoiningLobby)
+            {
+                if (_schedule.IsExpired(now))
+                {
+                    _lobbyJoin.GiveUp(MatchLobbyLog.TimedOut(_schedule.TimeoutSeconds));
+                }
+
                 return;
             }
 
@@ -126,7 +175,21 @@ namespace Shooter.NetV2
             }
 
             _disposed = true;
+            _lobbyJoin?.Cancel();
+            if (_handedOver)
+            {
+                return;
+            }
+
             _backend.LoggedOut -= HandleLoggedOut;
+            if (_matchLobby != null)
+            {
+                // ロビーはサービスと同じ物を閉じるので、サービスを 2 度閉じないようロビーの側から閉じる
+                _matchLobby.Dispose();
+                _matchLobby = null;
+                return;
+            }
+
             _backend.Dispose();
         }
 
@@ -193,11 +256,37 @@ namespace Shooter.NetV2
 
             lobby.TryGetText(ServerLobby.ServerKey, out var endpoint);
             lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
-            _step = Step.Ready;
             _log(LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
                 + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + ServerLobby.PlayerSlots(lobby).ToString(CultureInfo.InvariantCulture)
                 + SkillText(lobby)
                 + "; connecting " + options);
+            if (!_joinsMatchLobby)
+            {
+                Ready(options);
+                return;
+            }
+
+            _picked = options;
+            _step = Step.JoiningLobby;
+            _lobbyJoin = new MatchLobbyJoin(_backend, _log);
+            _lobbyJoin.Begin(lobby, HandleLobbyJoined);
+        }
+
+        private void HandleLobbyJoined(MatchLobby lobby)
+        {
+            // 入れたロビーは同じサービスを閉じるので、ここで閉じずに捨て、この検索が閉じるときに出る
+            if (_disposed || _step != Step.JoiningLobby)
+            {
+                return;
+            }
+
+            _matchLobby = lobby;
+            Ready(_picked);
+        }
+
+        private void Ready(NetLaunchOptions options)
+        {
+            _step = Step.Ready;
             _ready(options);
         }
 
@@ -217,6 +306,12 @@ namespace Shooter.NetV2
         {
             if (_disposed || IsFinished || _step == Step.Idle)
             {
+                return;
+            }
+
+            if (_step == Step.JoiningLobby)
+            {
+                _lobbyJoin.GiveUp("logged out: " + reason);
                 return;
             }
 

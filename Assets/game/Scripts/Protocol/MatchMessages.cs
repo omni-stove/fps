@@ -40,6 +40,7 @@ namespace Shooter.Protocol
                 new SnapshotMessage(),
                 new StructureStateMessage(),
                 new MapVoteStateMessage(),
+                new VoiceRosterMessage(),
                 new ShotMessage(),
                 new HitConfirmMessage(),
                 new DamageTakenMessage(),

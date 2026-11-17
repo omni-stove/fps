@@ -414,7 +414,8 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request), request.SkillRating);
+            Match.Join(
+                connection, rejoinKey, productUserId, PartyIdOf(connection, request), request.SkillRating, ClaimedProductUserId(connection, request));
             _host.OnConnected(connection);
         }
 
@@ -448,6 +449,24 @@ namespace Shooter.Server
             }
 
             return partyId;
+        }
+
+        // ボイスで声の主を見分けるのにしか使わないので、形が違っても断らずに無いものとして入れる
+        private string ClaimedProductUserId(ConnectionId connection, ConnectRequestMessage request)
+        {
+            var userId = request.ProductUserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return null;
+            }
+
+            if (!NetLaunchOptions.IsProductUserId(userId))
+            {
+                _log.WriteLine("[Net] client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " sent a malformed product user id; joining without voice");
+                return null;
+            }
+
+            return userId;
         }
 
         private string VerifiedProductUserId(ConnectionId connection)

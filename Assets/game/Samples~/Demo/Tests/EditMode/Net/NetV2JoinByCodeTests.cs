@@ -148,6 +148,55 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheFoundServersMatchLobbyIsHandedToTheConnectionAndKeptOpen()
+        {
+            _join.Join(_code, _outcomes.Add);
+            var backend = _backends[0];
+            backend.AcceptsMatchLobbies = true;
+            backend.CompleteLogin(_self);
+            backend.CompleteSearch(new[] { Server("mine", "203.0.113.3:7777", 0, _code) });
+
+            Assert.That(_outcomes, Is.EqualTo(new[] { JoinCodeOutcome.Joined }));
+            Assert.That(backend.MatchLobbyJoins, Is.EqualTo(new[] { "mine" }));
+            Assert.That(_connected[0].MatchLobby, Is.Not.Null);
+            Assert.That(_connected[0].MatchLobby.LobbyId, Is.EqualTo("mine"));
+
+            _join.Tick(1f);
+            _join.Tick(2f);
+
+            Assert.That(backend.Disposed, Is.False, "the connection owns the lobby service for the match");
+            _connected[0].MatchLobby.Dispose();
+            Assert.That(backend.Disposed, Is.True);
+        }
+
+        [Test]
+        public void AMatchLobbyThatIsNotConnectedIsLeft()
+        {
+            _refusal = "already in an online match";
+            _join.Join(_code, _outcomes.Add);
+            var backend = _backends[0];
+            backend.AcceptsMatchLobbies = true;
+            backend.CompleteLogin(_self);
+            backend.CompleteSearch(new[] { Server("mine", "203.0.113.3:7777", 0, _code) });
+
+            Assert.That(_outcomes, Is.EqualTo(new[] { JoinCodeOutcome.Failed }));
+            Assert.That(backend.Disposed, Is.True);
+            Assert.That(_logs, Has.Member(MatchLobbyLog.Left("mine")));
+        }
+
+        [Test]
+        public void AMatchLobbyThatCannotBeJoinedStillConnects()
+        {
+            _join.Join(_code, _outcomes.Add);
+            _backends[0].CompleteLogin(_self);
+            _backends[0].CompleteSearch(new[] { Server("mine", "203.0.113.3:7777", 0, _code) });
+
+            Assert.That(_outcomes, Is.EqualTo(new[] { JoinCodeOutcome.Joined }));
+            Assert.That(_connected[0].MatchLobby, Is.Null);
+            Assert.That(_logs, Has.Member(MatchLobbyLog.NotJoined("mine", LobbyBackendErrors.NotSupported)));
+        }
+
+        [Test]
         public void TheSearchLooksForRoomForTheWholeParty()
         {
             _partySize = 3;

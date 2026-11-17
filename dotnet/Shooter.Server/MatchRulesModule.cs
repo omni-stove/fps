@@ -351,6 +351,7 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
+            VoicePlayerJoined(player);
             OnPlayerJoined(player);
         }
 
@@ -365,6 +366,7 @@ namespace Shooter.Server
             ObjectivePlayerLeft(playerId);
             ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
+            VoicePlayerLeft(player);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {

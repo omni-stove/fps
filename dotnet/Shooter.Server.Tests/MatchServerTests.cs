@@ -80,6 +80,31 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void AClaimedProductUserIdIsKeptForVoiceOnly()
+        {
+            Start();
+            var client = RequestWithProductUserId("0123456789abcdef0123456789abcdef");
+
+            Assert.That(client.Accepted, Is.Not.Null, client.DisconnectReason);
+            Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
+            Assert.That(player.VoiceUserId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
+            Assert.That(player.ProductUserId, Is.Null, "UDP cannot verify the id, so the match record does not use it");
+            Assert.That(player.RejoinKey, Is.EqualTo("device1"));
+        }
+
+        [Test]
+        public void AMalformedProductUserIdJoinsWithoutVoice()
+        {
+            Start();
+            var client = RequestWithProductUserId("not-a-product-user-id");
+
+            Assert.That(client.Accepted, Is.Not.Null, client.DisconnectReason);
+            Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
+            Assert.That(player.VoiceUserId, Is.Null);
+            Assert.That(_log.ToString(), Does.Contain("[Net] client 1 sent a malformed product user id; joining without voice"));
+        }
+
+        [Test]
         public void VersionMismatchIsRejectedWithTheUnityServersLog()
         {
             Start();
@@ -365,6 +390,20 @@ namespace Shooter.Server.Tests
         {
             var client = ConnectClient();
             client.SendRequest(version, key, (ushort)protocol);
+            Pump(() => client.Disconnected || client.Accepted != null);
+            return client;
+        }
+
+        private TestClient RequestWithProductUserId(string productUserId)
+        {
+            var client = ConnectClient();
+            client.Send(new ConnectRequestMessage
+            {
+                ClientVersion = "0.2.0",
+                RejoinKey = "device1",
+                DisplayName = "tester",
+                ProductUserId = productUserId,
+            });
             Pump(() => client.Disconnected || client.Accepted != null);
             return client;
         }

@@ -31,6 +31,7 @@ namespace Shooter.Protocol
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;
         public const ushort MapVoteState = 50;
+        public const ushort VoiceRoster = 51;
 
         public const ushort Shot = 64;
         public const ushort HitConfirm = 65;

@@ -13,10 +13,12 @@ namespace Shooter.Server
             string productUserId = null,
             string partyId = null,
             long joinOrder = 0,
-            int? skillRating = null)
+            int? skillRating = null,
+            string voiceUserId = null)
         {
             SkillRating = skillRating;
             ProductUserId = productUserId;
+            VoiceUserId = productUserId ?? voiceUserId;
             Connection = connection;
             PlayerId = playerId;
             Team = team;
@@ -34,6 +36,10 @@ namespace Shooter.Server
         public string RejoinKey { get; }
 
         public string ProductUserId { get; }
+
+        // UDP では名乗った Id を確かめられないので、試合の記録や鍵に使う ProductUserId とは分け、声の主を見分けるのにだけ使う。
+        // 通信路が確かめた Id があればそちらを使う。
+        public string VoiceUserId { get; }
 
         public string PartyId { get; }
 

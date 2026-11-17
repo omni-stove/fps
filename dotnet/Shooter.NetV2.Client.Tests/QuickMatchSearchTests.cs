@@ -284,6 +284,100 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ObjectDisposedException>(() => search.Begin(0f, _ => { }, _ => { }));
         }
 
+        private QuickMatchSearch BeginJoiningTheMatchLobby()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add) { JoinsMatchLobby = true };
+            search.Begin(0f, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo> { Server("busy", "203.0.113.2:7790", 4) });
+            return search;
+        }
+
+        [Test]
+        public void JoinsThePickedServersMatchLobbyBeforeConnecting()
+        {
+            var search = BeginJoiningTheMatchLobby();
+            Assert.That(_backend.MatchLobbyJoins, Is.EqualTo(new List<string> { "busy" }));
+            Assert.That(_ready, Is.Null, "connecting waits for the match lobby");
+            Assert.That(search.IsFinished, Is.False);
+
+            _backend.CompleteMatchLobbyJoin(Server("busy", "203.0.113.2:7790", 4));
+
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(_ready.Port, Is.EqualTo(7790));
+            var lobby = search.TakeMatchLobby();
+            Assert.That(lobby.LobbyId, Is.EqualTo("busy"));
+            Assert.That(search.TakeMatchLobby(), Is.Null, "the lobby is handed over once");
+
+            search.Tick(1f);
+            search.Dispose();
+            Assert.That(_backend.Ticks, Is.Zero, "the owner of the match lobby ticks the service");
+            Assert.That(_backend.Disposed, Is.Zero, "the search no longer owns the service");
+
+            lobby.Dispose();
+            Assert.That(_backend.Disposed, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnUntakenMatchLobbyIsClosedWithTheSearch()
+        {
+            var search = BeginJoiningTheMatchLobby();
+            _backend.CompleteMatchLobbyJoin(Server("busy", "203.0.113.2:7790", 4));
+
+            search.Dispose();
+
+            Assert.That(_backend.Disposed, Is.EqualTo(1));
+            Assert.That(_log, Has.Member(MatchLobbyLog.Left("busy")));
+        }
+
+        [Test]
+        public void AMatchLobbyThatCannotBeJoinedStillConnectsWithoutVoice()
+        {
+            var search = BeginJoiningTheMatchLobby();
+
+            _backend.CompleteMatchLobbyJoin(null, "LobbyIsFull");
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(search.TakeMatchLobby(), Is.Null);
+            Assert.That(_log, Has.Member(MatchLobbyLog.NotJoined("busy", "LobbyIsFull")));
+        }
+
+        [Test]
+        public void NoAnswerFromTheMatchLobbyConnectsWithoutVoiceAtTheTimeout()
+        {
+            var search = BeginJoiningTheMatchLobby();
+
+            search.Tick(29.9f);
+            Assert.That(_ready, Is.Null);
+            search.Tick(30f);
+
+            Assert.That(_failure, Is.Null, "the server is already picked");
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(search.TakeMatchLobby(), Is.Null);
+            Assert.That(_backend.Searches, Is.EqualTo(1), "it does not search again");
+        }
+
+        [Test]
+        public void ALogOutWhileJoiningTheMatchLobbyConnectsWithoutVoice()
+        {
+            var search = BeginJoiningTheMatchLobby();
+
+            _backend.LogOut("expired");
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(search.TakeMatchLobby(), Is.Null);
+        }
+
+        [Test]
+        public void JoinsMatchLobbyCannotChangeAfterBeginning()
+        {
+            var search = Begin();
+
+            Assert.Throws<InvalidOperationException>(() => search.JoinsMatchLobby = true);
+        }
+
         [Test]
         public void BeginsOnlyOnceAndChecksItsArguments()
         {
@@ -301,6 +395,7 @@ namespace Shooter.NetV2.Tests
         {
             private Action<string, string> _login;
             private Action<IReadOnlyList<LobbyInfo>, string> _search;
+            private Action<LobbyInfo, string> _joinMatch;
 
             public event Action<string> LoggedOut;
 
@@ -372,9 +467,17 @@ namespace Shooter.NetV2.Tests
                 done(null, LobbyBackendErrors.NotSupported);
             }
 
+            public List<string> MatchLobbyJoins { get; } = new List<string>();
+
             public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
             {
-                done(null, LobbyBackendErrors.NotSupported);
+                MatchLobbyJoins.Add(lobbyId);
+                _joinMatch = done;
+            }
+
+            public void CompleteMatchLobbyJoin(LobbyInfo lobby, string error = null)
+            {
+                _joinMatch(lobby, error);
             }
 
             public void LeaveMatchLobby(string lobbyId, Action<string> done)

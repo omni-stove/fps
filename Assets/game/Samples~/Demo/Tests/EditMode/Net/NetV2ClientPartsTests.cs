@@ -89,6 +89,31 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheVoicePartFillsTheRosterFromTheServer()
+        {
+            var roster = new VoiceRoster();
+            var context = Context(new FakeVoiceSession());
+            context.VoiceRoster = roster;
+            _parts = NetV2ClientParts.Create(context);
+            var message = new VoiceRosterMessage();
+            message.Add(2, "0123456789abcdef0123456789abcdef");
+
+            var taker = _parts.FirstOrDefault(part => part.Handle(message));
+
+            Assert.That(taker, Is.InstanceOf<NetV2VoicePart>());
+            Assert.That(roster.TryGetPlayerId("0123456789abcdef0123456789abcdef", out var playerId), Is.True);
+            Assert.That(playerId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WithoutVoiceNoPartTakesTheRoster()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+
+            Assert.That(_parts.Any(part => part.Handle(new VoiceRosterMessage())), Is.False);
+        }
+
+        [Test]
         public void TheMapVoteInTheListTellsTheDecidedMap()
         {
             _parts = NetV2ClientParts.Create(Context(null));

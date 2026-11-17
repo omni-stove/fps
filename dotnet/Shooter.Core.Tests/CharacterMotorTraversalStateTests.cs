@@ -69,6 +69,13 @@ namespace Shooter.Core.Tests
             Assert.That(new CharacterSwimState(false, 3f, true), Is.EqualTo(CharacterSwimState.None), "the surface is only kept while swimming");
             Assert.That(
                 new CharacterWallRunState(WallRunSide.None, 0.4f, Vector3.UnitZ), Is.EqualTo(CharacterWallRunState.None), "the time and wall are only kept while running");
+            Assert.That(
+                new CharacterWallRunState(WallRunSide.Left, 0.4f, Vector3.UnitX, Vector3.UnitZ).LastWall,
+                Is.EqualTo(Vector3.Zero),
+                "the last wall is only kept while not running");
+            Assert.That(CharacterWallRunState.LeftWall(Vector3.UnitZ), Is.Not.EqualTo(CharacterWallRunState.None));
+            Assert.That(CharacterWallRunState.LeftWall(Vector3.UnitZ).LastWall, Is.EqualTo(Vector3.UnitZ));
+            Assert.That(CharacterWallRunState.LeftWall(new Vector3(float.NaN, 0f, 0f)).IsValid, Is.False);
         }
 
         [Test]
@@ -152,7 +159,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(next.Lean, Is.EqualTo(lean));
             Assert.That(next.Swim, Is.EqualTo(swim));
-            Assert.That(next.WallRun, Is.EqualTo(wallRun));
+            Assert.That(next.WallRun, Is.EqualTo(CharacterWallRunState.None), "a body standing on the floor does not run on a wall");
             Assert.That(next.AirJumpsUsed, Is.EqualTo(1));
         }
 

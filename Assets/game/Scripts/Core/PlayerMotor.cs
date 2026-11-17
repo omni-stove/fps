@@ -175,6 +175,17 @@ namespace Shooter.Core
             return used;
         }
 
+        /// <summary>
+        /// 速度を入れて <see cref="Jumped"/> を知らせる。壁から跳ぶ速さは <see cref="WallRunStep"/> が決めるが、
+        /// 跳んだ知らせは地上と空中のジャンプと同じくこのクラスの 1 か所から出すため。
+        /// </summary>
+        /// <param name="velocity">跳んだ速度 (m/s)。各成分が有限値。</param>
+        public void JumpWith(Vector3 velocity)
+        {
+            SetVelocity(velocity);
+            Jumped?.Invoke();
+        }
+
         private float CarryScale(CarryGaits gait, float carrySpeedMultiplier)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))

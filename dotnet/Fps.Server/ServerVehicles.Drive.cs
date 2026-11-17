@@ -76,8 +76,8 @@ namespace Fps.Server
 
         private void Correct(Car car, int driverId, VehicleMoveRejection reason)
         {
+            // 許容量を戻すと、外れた姿を送って直させるたびに満タンの距離を進められるので、時間で貯まる分だけにする
             car.Generation++;
-            car.Drive.Reset();
             car.Velocity = Vector3.Zero;
             _log.WriteLine(VehicleLog.Corrected(
                 car.Name, Text(driverId), reason, car.Generation, car.Position.X, car.Position.Y, car.Position.Z));
@@ -89,7 +89,6 @@ namespace Fps.Server
         {
             car.Generation++;
             car.LastSequence = -1;
-            car.Drive.Reset();
             SendCorrection(car, driverId);
         }
 

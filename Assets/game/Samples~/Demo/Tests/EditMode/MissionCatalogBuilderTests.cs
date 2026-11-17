@@ -136,15 +136,52 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnInvalidCatalogKeepsTheSavedOne()
         {
-            CreateDefinition();
+            var definition = CreateDefinition();
             var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, Missions(MissionCatalogBuilder.Campaign01Id));
 
-            // Id が定義のアセット名と違う。
+            // ミッション Id として使えない。
             Assert.That(
-                () => MissionCatalogBuilder.BuildAt(_catalogPath, Missions("Campaign02")),
+                () => MissionCatalogBuilder.BuildAt(_catalogPath, Missions("bad id")),
                 Throws.InstanceOf<MissionCatalogException>());
             Assert.That(catalog.Missions.Count(), Is.EqualTo(1));
             Assert.That(catalog.Missions[0].Id, Is.EqualTo("Campaign01"), "the in-memory catalog is not left with the rejected list");
+            Assert.That(definition.Id, Is.EqualTo("Campaign01"), "the rejected id is not left on the definition");
+        }
+
+        [Test]
+        public void GivesEachDefinitionItsMissionIdAndKeepsItsAssetName()
+        {
+            var renamedPath = _folder + "/RenamedCampaign01.asset";
+            var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(
+                renamedPath,
+                d => d.SetObjectives(new[] { new ObjectiveDefinition("reach", "") }));
+            Assert.That(definition.Id, Is.Empty, "a definition made before it had an id");
+            var missions = new[]
+            {
+                new MissionCatalogBuilder.MissionSource(
+                    MissionCatalogBuilder.Campaign01Id, CampaignSceneBuilder.MissionNameKey, BuildSceneList.CampaignScene, renamedPath),
+            };
+
+            var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, missions);
+
+            Assert.That(definition.Id, Is.EqualTo("Campaign01"));
+            Assert.That(definition.name, Is.EqualTo("RenamedCampaign01"), "the builder does not rename the asset");
+            Assert.That(EditorUtility.IsDirty(definition), Is.False, "the id is saved with the catalog");
+            Assert.That(catalog.TryFind("Campaign01", out var entry), Is.True);
+            Assert.That(entry.Definition, Is.SameAs(definition));
+        }
+
+        [Test]
+        public void ANewCatalogHasTheDefaultCampaignTimings()
+        {
+            CreateDefinition();
+
+            var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, Missions(MissionCatalogBuilder.Campaign01Id));
+
+            Assert.That(catalog.ReloadDelaySeconds, Is.EqualTo(MissionCatalog.DefaultReloadDelaySeconds));
+            Assert.That(catalog.ReloadDelaySeconds, Is.EqualTo(3f));
+            Assert.That(catalog.SavedNoticeSeconds, Is.EqualTo(MissionCatalog.DefaultSavedNoticeSeconds));
+            Assert.That(catalog.SavedNoticeSeconds, Is.EqualTo(2.5f));
         }
 
         [Test]

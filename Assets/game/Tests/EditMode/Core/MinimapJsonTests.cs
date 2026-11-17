@@ -12,6 +12,13 @@ namespace Shooter.Core.Tests
             "radius", "scale", "updateIntervalSeconds", "spottedSeconds", "rotateWithPlayer",
         };
 
+        private static readonly string[] _expectedReplacedLines =
+        {
+            "[Minimap] minimap.json item 'radius' is 0, which is not positive and finite; using the default 50 instead",
+            "[Minimap] minimap.json item 'scale' is -1, which is not positive and finite; using the default 2 instead",
+            "[Minimap] minimap.json item 'spottedSeconds' is 0, which is not positive and finite; using the default 3 instead",
+        };
+
         [Test]
         public void ReadsEveryItem()
         {
@@ -69,12 +76,7 @@ namespace Shooter.Core.Tests
             Assert.That(spec.UpdateIntervalSeconds, Is.EqualTo(0.5f), "an item in range is kept");
             Assert.That(spec.SpottedSeconds, Is.EqualTo(3f));
             Assert.That(spec.RotateWithPlayer, Is.False, "an item in range is kept");
-            Assert.That(lines, Is.EqualTo(new[]
-            {
-                "[Minimap] minimap.json item 'radius' is 0, which is not positive and finite; using the default 50 instead",
-                "[Minimap] minimap.json item 'scale' is -1, which is not positive and finite; using the default 2 instead",
-                "[Minimap] minimap.json item 'spottedSeconds' is 0, which is not positive and finite; using the default 3 instead",
-            }));
+            Assert.That(lines, Is.EqualTo(_expectedReplacedLines));
         }
 
         [Test]

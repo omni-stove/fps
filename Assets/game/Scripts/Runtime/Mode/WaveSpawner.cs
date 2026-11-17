@@ -30,7 +30,7 @@ namespace Fps.Runtime
     {
         public const string LogTag = WaveLog.Tag;
 
-        public const int DefaultEnemySideId = 1;
+        public const int DefaultEnemySideId = HordeSpec.DefaultEnemySideId;
         public const int DefaultFirstEnemyCount = 3;
         public const float DefaultEnemiesPerWave = 2f;
         public const float DefaultFirstStrength = 1f;
@@ -39,9 +39,9 @@ namespace Fps.Runtime
         public const int DefaultMaxAlive = 4;
         public const float DefaultRestSeconds = 5f;
         public const int DefaultWaveCount = 5;
-        public const float DefaultAlertInterval = 3f;
-        public const float DefaultMinSpawnDistance = 8f;
-        public const float DefaultCorpseSeconds = 5f;
+        public const float DefaultAlertInterval = HordeSpec.DefaultAlertInterval;
+        public const float DefaultMinSpawnDistance = HordeSpec.DefaultMinSpawnDistance;
+        public const float DefaultCorpseSeconds = HordeSpec.DefaultCorpseSeconds;
 
         /// <summary>出現点の近くの NavMesh を探す半径 (メートル)。<see cref="EnemyAgent.OffMeshSnapRadius"/> と同じ。</summary>
         public const float SpawnSnapRadius = EnemyAgent.OffMeshSnapRadius;
@@ -196,6 +196,28 @@ namespace Fps.Runtime
         public float AlertInterval => _alertInterval;
         public float MinSpawnDistance => _minSpawnDistance;
         public float CorpseSeconds => _corpseSeconds;
+
+        /// <summary>
+        /// 敵の陣営・知らせの間隔・出現の最小距離・死体を残す時間を spec の値にする (陣営は <see cref="HordeSpec.Attackers"/>)。
+        /// <see cref="HordeRunner"/> が HordeDefinition から始めるときに、波を始める前に呼ぶ。始めた後なら <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ApplySpec(HordeSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (IsStarted)
+            {
+                throw new InvalidOperationException($"WaveSpawner '{name}' has already started");
+            }
+
+            EnemySide = spec.Attackers;
+            _alertInterval = spec.AlertInterval;
+            _minSpawnDistance = spec.MinSpawnDistance;
+            _corpseSeconds = spec.CorpseSeconds;
+        }
 
         /// <summary>表で波を決めるようにする。始める前に呼ぶ。</summary>
         public void SetTable(IReadOnlyList<WaveEntry> table)

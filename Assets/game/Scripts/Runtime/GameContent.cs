@@ -39,6 +39,27 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("アイテムと持ち物の決め方の JSON (Tuning/inventory.json と同じ形)。空なら Resources/Tuning/inventory")]
         private TextAsset _inventoryTuning;
 
+        [SerializeField, Tooltip("制圧の調整値の JSON。空なら Resources/Tuning/suppression")]
+        private TextAsset _suppressionTuning;
+
+        [SerializeField, Tooltip("分隊の調整値の JSON。空なら Resources/Tuning/squad")]
+        private TextAsset _squadTuning;
+
+        [SerializeField, Tooltip("よろめきの調整値の JSON。空なら Resources/Tuning/stagger")]
+        private TextAsset _staggerTuning;
+
+        [SerializeField, Tooltip("近接攻撃の調整値の JSON。空なら Resources/Tuning/melee")]
+        private TextAsset _meleeTuning;
+
+        [SerializeField, Tooltip("乗り越え・崖のぼりなどの移動の調整値の JSON。空なら Resources/Tuning/traversal")]
+        private TextAsset _traversalTuning;
+
+        [SerializeField, Tooltip("隠密の調整値の JSON。空なら Resources/Tuning/stealth")]
+        private TextAsset _stealthTuning;
+
+        [SerializeField, Tooltip("ボットの調整値の JSON (サーバーの bots.json と同じ形)。空なら Resources/Tuning/bots")]
+        private TextAsset _botsTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -70,6 +91,18 @@ namespace Fps.Runtime
 
         [SerializeField]
         private GunGameLadderDefinition _gunGameLadder;
+
+        [SerializeField]
+        private FreeForAllDefinition _freeForAll;
+
+        [SerializeField]
+        private GuardianDefinition _guardian;
+
+        [SerializeField]
+        private ExecutionDefinition _execution;
+
+        [SerializeField]
+        private BattleRoyaleDefinition _battleRoyale;
 
         [Header("キャラクター・文言・メニュー")]
         [SerializeField, Tooltip("プレイヤー・敵に置く人型のリグ (根に Animator)。空なら Resources/Characters/CharacterRig")]
@@ -167,6 +200,48 @@ namespace Fps.Runtime
             set => _inventoryTuning = value;
         }
 
+        public TextAsset SuppressionTuning
+        {
+            get => _suppressionTuning;
+            set => _suppressionTuning = value;
+        }
+
+        public TextAsset SquadTuning
+        {
+            get => _squadTuning;
+            set => _squadTuning = value;
+        }
+
+        public TextAsset StaggerTuning
+        {
+            get => _staggerTuning;
+            set => _staggerTuning = value;
+        }
+
+        public TextAsset MeleeTuning
+        {
+            get => _meleeTuning;
+            set => _meleeTuning = value;
+        }
+
+        public TextAsset TraversalTuning
+        {
+            get => _traversalTuning;
+            set => _traversalTuning = value;
+        }
+
+        public TextAsset StealthTuning
+        {
+            get => _stealthTuning;
+            set => _stealthTuning = value;
+        }
+
+        public TextAsset BotsTuning
+        {
+            get => _botsTuning;
+            set => _botsTuning = value;
+        }
+
         public WeaponCatalogAsset WeaponCatalog
         {
             get => _weaponCatalog;
@@ -225,6 +300,30 @@ namespace Fps.Runtime
         {
             get => _gunGameLadder;
             set => _gunGameLadder = value;
+        }
+
+        public FreeForAllDefinition FreeForAll
+        {
+            get => _freeForAll;
+            set => _freeForAll = value;
+        }
+
+        public GuardianDefinition Guardian
+        {
+            get => _guardian;
+            set => _guardian = value;
+        }
+
+        public ExecutionDefinition Execution
+        {
+            get => _execution;
+            set => _execution = value;
+        }
+
+        public BattleRoyaleDefinition BattleRoyale
+        {
+            get => _battleRoyale;
+            set => _battleRoyale = value;
         }
 
         public GameObject CharacterRig

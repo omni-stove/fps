@@ -24,6 +24,12 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("落ちたタグが誰にも拾われずに消えるまでの秒数")]
         private float _tagLifetimeSeconds = KillConfirmedRunner.DefaultTagLifetimeSeconds;
 
+        [SerializeField, Min(1), Tooltip("敵のタグを 1 枚拾って確定させたときに入る点")]
+        private int _pointsPerConfirm = KillConfirmedRunner.DefaultPointsPerConfirm;
+
+        [SerializeField, Min(Pickup.MinRadius), Tooltip("落ちたタグを拾える範囲の半径 (m)")]
+        private float _tagPickupRadius = KillConfirmedRunner.DefaultTagRadius;
+
         public int ScoreLimit
         {
             get => _scoreLimit;
@@ -48,13 +54,27 @@ namespace Fps.Runtime
             set => _tagLifetimeSeconds = value;
         }
 
+        public int PointsPerConfirm
+        {
+            get => _pointsPerConfirm;
+            set => _pointsPerConfirm = value;
+        }
+
+        /// <summary>タグを拾える範囲の半径 (m)。<see cref="Pickup.MinRadius"/> 未満はタグを落とすときに切り上げる。</summary>
+        public float TagPickupRadius
+        {
+            get => _tagPickupRadius;
+            set => _tagPickupRadius = value;
+        }
+
         /// <summary>定義を <see cref="KillConfirmedSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public KillConfirmedSpec ToSpec()
         {
             try
             {
-                return new KillConfirmedSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds);
+                return new KillConfirmedSpec(
+                    _scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds, _pointsPerConfirm, _tagPickupRadius);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -74,6 +94,8 @@ namespace Fps.Runtime
             _timeLimitSeconds = spec.TimeLimitSeconds;
             _respawnSeconds = spec.RespawnSeconds;
             _tagLifetimeSeconds = spec.TagLifetimeSeconds;
+            _pointsPerConfirm = spec.PointsPerConfirm;
+            _tagPickupRadius = spec.TagPickupRadius;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed kill confirmed definition)" : name;

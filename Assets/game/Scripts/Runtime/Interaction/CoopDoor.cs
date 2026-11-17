@@ -7,6 +7,7 @@ namespace Fps.Runtime
     /// 二人で使う物 (<see cref="CoopInteractable"/>) の使い方の例。済んだら扉の板 (<see cref="Panel"/>) を
     /// <see cref="OpenOffset"/> だけ <see cref="OpenSeconds"/> かけて動かし、通れるようにする。
     /// 板は自分の Collider ごと動くので、通れるかどうかは板の位置だけで決まる。
+    /// 二人で使う物に値のアセット (<see cref="CoopInteractable.Definition"/>) があれば、動かす量と秒数は自分の値の代わりにそれを読む。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CoopDoor : MonoBehaviour
@@ -24,15 +25,18 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("動かす扉の板。開いたときに通れるよう、範囲のトリガーとは別の GameObject にする")]
         private Transform _panel;
 
-        [SerializeField, Tooltip("開いたときに板を動かす量 (板の親の座標)")]
+        [SerializeField, Tooltip("開いたときに板を動かす量 (板の親の座標)。二人で使う物に値のアセットがあればそちらを使う")]
         private Vector3 _openOffset = DefaultOpenOffset;
 
-        [SerializeField, Min(0f), Tooltip("開き切るまでの秒数。0 ならすぐ開く")]
+        [SerializeField, Min(0f), Tooltip("開き切るまでの秒数。0 ならすぐ開く。二人で使う物に値のアセットがあればそちらを使う")]
         private float _openSeconds = DefaultOpenSeconds;
 
         private CoopInteractable _bound;
         private Vector3 _closedPosition;
         private float _openElapsed;
+        // 開いている途中でアセットや Inspector の値が変わっても板が跳ばないよう、開き始めた時の値で動かし切る。
+        private Vector3 _activeOffset;
+        private float _activeSeconds;
 
         /// <summary>済んだら開く二人で使う物。差し替えたら <see cref="Bind"/> し直す。</summary>
         public CoopInteractable Interactable
@@ -47,12 +51,14 @@ namespace Fps.Runtime
             set => _panel = value;
         }
 
+        /// <summary>Inspector の動かす量。二人で使う物に値のアセットがあれば、開くときはそちらを使う。</summary>
         public Vector3 OpenOffset
         {
             get => _openOffset;
             set => _openOffset = value;
         }
 
+        /// <summary>Inspector の開き切るまでの秒数。二人で使う物に値のアセットがあれば、開くときはそちらを使う。</summary>
         public float OpenSeconds
         {
             get => _openSeconds;
@@ -93,7 +99,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Interactable"/> (空なら同じ GameObject のもの) の <see cref="CoopInteractable.Completed"/> を受けるようにする。
-        /// 二人で使う物か板が無ければ理由を Debug.LogError に出して false を返す。
+        /// 二人で使う物か板が無いか、二人で使う物の <see cref="CoopInteractable.Definition"/> の扉の値が不正なら理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool Bind()
         {
@@ -116,13 +122,20 @@ namespace Fps.Runtime
                 return false;
             }
 
+            if (!TryResolveOpening(_interactable, out _, out _))
+            {
+                return false;
+            }
+
             _bound = _interactable;
             _bound.Completed += OnCompleted;
             return true;
         }
 
         /// <summary>
-        /// 開き始める。既に開き始めていれば何もせず false を返す。<see cref="OpenSeconds"/> が 0 ならすぐ開き切る。
+        /// 開き始める。既に開き始めていれば何もせず false を返す。動かす量と秒数は二人で使う物の <see cref="CoopInteractable.Definition"/>、
+        /// 無ければ <see cref="OpenOffset"/>・<see cref="OpenSeconds"/> で、秒数が 0 ならすぐ開き切る。
+        /// アセットの扉の値が不正なら理由を Debug.LogError に出して開かずに false を返す。
         /// </summary>
         public bool Open()
         {
@@ -131,12 +144,19 @@ namespace Fps.Runtime
                 return false;
             }
 
+            if (!TryResolveOpening(_bound != null ? _bound : _interactable, out var offset, out var seconds))
+            {
+                return false;
+            }
+
             IsOpening = true;
             _closedPosition = _panel.localPosition;
             _openElapsed = 0f;
+            _activeOffset = offset;
+            _activeSeconds = seconds;
             Debug.Log($"{LogTag} door '{name}' opening", this);
 
-            if (_openSeconds <= 0f)
+            if (seconds <= 0f)
             {
                 Finish();
             }
@@ -153,20 +173,47 @@ namespace Fps.Runtime
             }
 
             _openElapsed += Mathf.Max(0f, deltaSeconds);
-            if (_openElapsed >= _openSeconds)
+            if (_openElapsed >= _activeSeconds)
             {
                 Finish();
                 return;
             }
 
-            _panel.localPosition = _closedPosition + _openOffset * (_openElapsed / _openSeconds);
+            _panel.localPosition = _closedPosition + _activeOffset * (_openElapsed / _activeSeconds);
         }
 
         private void Finish()
         {
-            _panel.localPosition = _closedPosition + _openOffset;
+            _panel.localPosition = _closedPosition + _activeOffset;
             IsOpen = true;
             Debug.Log($"{LogTag} door '{name}' opened", this);
+        }
+
+        private bool TryResolveOpening(CoopInteractable interactable, out Vector3 offset, out float seconds)
+        {
+            var definition = interactable != null ? interactable.Definition : null;
+            if (definition == null)
+            {
+                offset = _openOffset;
+                seconds = _openSeconds;
+                return true;
+            }
+
+            try
+            {
+                definition.ValidateDoor();
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError($"{LogTag} 扉 '{name}' の開き方が不正です: {e.Message}", this);
+                offset = default;
+                seconds = 0f;
+                return false;
+            }
+
+            offset = definition.OpenOffset;
+            seconds = definition.OpenSeconds;
+            return true;
         }
 
         private void Unbind()

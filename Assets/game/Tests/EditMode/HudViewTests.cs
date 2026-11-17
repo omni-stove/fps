@@ -454,7 +454,7 @@ namespace Fps.Tests.EditMode
 
             model.SetAmmo(0, 90, true);
             model.SetHealth(10, 100);
-            Assert.That(view.AmmoLabel.text, Is.EqualTo(HudFormat.Ammo(0, 90, true)));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo(Localizer.Resolve(HudNumberFormat.Reloading) + " / 90"));
             Assert.That(view.AmmoLabel.ClassListContains(HudView.ReloadingClass), Is.True);
             Assert.That(view.HealthLabel.ClassListContains(HudView.LowHealthClass), Is.True);
 
@@ -482,7 +482,7 @@ namespace Fps.Tests.EditMode
                 Destruction.Off);
 
             model.BindWeapon(new Weapon(NewSpec(), infinite));
-            Assert.That(view.AmmoLabel.text, Is.EqualTo("30 / " + HudFormat.InfiniteReserve));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("30 / ∞"));
 
             model.BindWeapon(new Weapon(NewSpec()));
             Assert.That(view.AmmoLabel.text, Is.EqualTo("30 / 90"), "a finite reserve shows the number");
@@ -569,6 +569,108 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ShowsThePlaceholdersWithoutValues()
+        {
+            var view = new HudView(CloneLayout(), new HudModel());
+
+            Assert.That(view.HealthLabel.text, Is.EqualTo("--"));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("-- / --"));
+            Assert.That(view.TimeLabel.text, Is.EqualTo("--:--"));
+        }
+
+        [Test]
+        public void ClearingTheValuesShowsThePlaceholdersAgain()
+        {
+            var model = new HudModel();
+            model.SetHealth(50, 100);
+            model.SetAmmo(12, 48, false);
+            model.SetTime(30f);
+            var view = new HudView(CloneLayout(), model);
+
+            model.ClearHealth();
+            model.ClearAmmo();
+            model.ClearTime();
+
+            Assert.That(view.HealthLabel.text, Is.EqualTo("--"));
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("-- / --"));
+            Assert.That(view.TimeLabel.text, Is.EqualTo("--:--"));
+        }
+
+        [Test]
+        public void HidingTheReserveShowsOnlyTheMagazineAndShowingItBringsTheReserveBack()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetReserveAmmoShown(false);
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("--"), "no weapon yet");
+
+            model.SetAmmo(12, 48, false);
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("12"));
+
+            model.SetAmmo(0, 48, true);
+            Assert.That(view.AmmoLabel.text, Is.EqualTo(Localizer.Resolve(HudNumberFormat.Reloading)));
+
+            model.SetAmmo(12, 36, false);
+            model.SetReserveAmmoShown(true);
+            Assert.That(view.AmmoLabel.text, Is.EqualTo("12 / 36"));
+        }
+
+        [Test]
+        public void ReloadingWithAnInfiniteReserveShowsTheReloadingTextAndInfinity()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetAmmo(0, 0, true, true);
+
+            Assert.That(view.AmmoLabel.text, Is.EqualTo(Localizer.Resolve(HudNumberFormat.Reloading) + " / ∞"));
+        }
+
+        [Test]
+        public void TheTimeRoundsUpAndStopsAtTheLongestShownTime()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+
+            model.SetTime(0.2f);
+            Assert.That(view.TimeLabel.text, Is.EqualTo("00:01"));
+
+            model.SetTime(0f);
+            Assert.That(view.TimeLabel.text, Is.EqualTo("00:00"));
+
+            model.SetTime(float.PositiveInfinity);
+            Assert.That(view.TimeLabel.text, Is.EqualTo("99:59"));
+        }
+
+        [Test]
+        public void TheNumberFormatMatchesTheHudFormat()
+        {
+            Assert.That(HudNumberFormat.Health(75), Is.EqualTo(HudFormat.Health(75)));
+            Assert.That(HudNumberFormat.Health(null), Is.EqualTo(HudFormat.NoHealth));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, false)));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, true), Is.EqualTo(HudFormat.Ammo(0, 90, true, false)));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, true, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, true)));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, true, true), Is.EqualTo(HudFormat.Ammo(0, 90, true, true)));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, false), Is.EqualTo(HudFormat.Magazine(30, false)));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, false), Is.EqualTo(HudFormat.Magazine(0, true)));
+            Assert.That(HudNumberFormat.Ammo(null, null, false, false, true), Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(HudNumberFormat.Ammo(null, null, false, false, false), Is.EqualTo(HudFormat.NoMagazine));
+            Assert.That(HudNumberFormat.Time(65), Is.EqualTo(HudFormat.Time(65f)));
+            Assert.That(HudNumberFormat.Time(HudFormat.MaxDisplayedSeconds), Is.EqualTo(HudFormat.Time(HudFormat.MaxDisplayedSeconds)));
+            Assert.That(HudNumberFormat.Time(null), Is.EqualTo(HudFormat.NoTime));
+        }
+
+        [Test]
+        public void TheNumberFormatRejectsNegativeNumbers()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudNumberFormat.Health(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudNumberFormat.Ammo(-1, 0, false, false, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudNumberFormat.Ammo(0, -1, false, false, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudNumberFormat.Time(-1));
+        }
+
+        [Test]
         public void StopsUpdatingAfterDispose()
         {
             var model = new HudModel();
@@ -579,7 +681,7 @@ namespace Fps.Tests.EditMode
             view.Dispose();
             health.TakeDamage(10);
 
-            Assert.That(model.HealthText, Is.EqualTo("90"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(90));
             Assert.That(view.HealthLabel.text, Is.EqualTo("100"));
         }
 

@@ -123,8 +123,7 @@ namespace Fps.Runtime
         /// <summary>NavMesh から外れたときに戻る先を探す半径 (メートル)。</summary>
         public const float OffMeshSnapRadius = 3f;
 
-        // プレイヤーは反動で上がる照準を手で引き戻すので、敵もたまった反動の大半を打ち消す。打ち消さないと連射の後半が頭上へ抜ける。
-        public const float RecoilControl = 0.75f;
+        public const float RecoilControl = EnemySpec.DefaultRecoilControl;
 
         /// <summary>NavMesh に戻れなかったときに試し直す間隔 (秒)。</summary>
         public const float OffMeshRetryInterval = 1f;
@@ -180,6 +179,12 @@ namespace Fps.Runtime
 
         // ApplySpec・ChangeSpec で渡された値は、波の強さやボスの段階のように敵のデータを元に作り直したものなので、データより優先する。
         private bool _specApplied;
+
+        // Inspector に並べず敵のデータ (EnemyDefinition) にだけ置く値。ApplySpec・ChangeSpec の後の CreateSpec で落とさないよう、渡された値を覚えておく。
+        private float _arrivalDistance = EnemySpec.DefaultArrivalDistance;
+        private float _sprintRatio = EnemySpec.DefaultSprintRatio;
+        private float _crouchRatio = EnemySpec.DefaultCrouchRatio;
+        private float _recoilControl = EnemySpec.DefaultRecoilControl;
 
         [Header("Body")]
         [SerializeField, Min(0f)]
@@ -514,7 +519,11 @@ namespace Fps.Runtime
                 EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance),
                 _fireRange,
                 _fireToleranceDegrees,
-                _rangeSpreadDegrees);
+                _rangeSpreadDegrees,
+                _arrivalDistance,
+                _sprintRatio,
+                _crouchRatio,
+                _recoilControl);
         }
 
         /// <summary>
@@ -604,6 +613,10 @@ namespace Fps.Runtime
             _archetype = spec.Archetype;
             CopyArchetypeSpecs(spec);
             _staggerResistance = spec.StaggerResistance;
+            _arrivalDistance = spec.ArrivalDistance;
+            _sprintRatio = spec.SprintRatio;
+            _crouchRatio = spec.CrouchRatio;
+            _recoilControl = spec.RecoilControl;
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>
@@ -772,7 +785,9 @@ namespace Fps.Runtime
             bool steered;
             if (_order.IsOrder)
             {
-                decision = BotDriver.FollowOrder(decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, out steered);
+                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ EnemyBrain.ArrivalDistance (Default の値) で決める。
+                decision = BotDriver.FollowOrder(
+                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, BotInputSpec.Default, out steered);
                 moveTo = steered ? decision.MoveTo : CoverMoveTo(decision);
                 NoteOrderArrival();
             }

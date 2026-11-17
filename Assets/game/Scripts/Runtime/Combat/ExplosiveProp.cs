@@ -37,6 +37,9 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ログの識別子。空なら GameObject の名前")]
         private string _id;
 
+        [SerializeField, Tooltip("この置き物の値のアセット。配線すると下の耐久・ダメージ・半径・連鎖・燃え方の代わりにこれを読む。空なら下の値を使う")]
+        private ExplosivePropDefinition _definition;
+
         [SerializeField, Min(1), Tooltip("耐久。被害でこれが 0 になると爆発する (燃えるなら燃え始める)")]
         private int _maxHealth = ExplosivePropSpec.DefaultMaxHealth;
 
@@ -80,7 +83,13 @@ namespace Fps.Runtime
             set => _id = value;
         }
 
-        /// <summary>今の値。Inspector の値が不正なら null。</summary>
+        /// <summary>
+        /// 値のアセット。null なら Inspector の値 (既定は <see cref="ExplosivePropSpec"/> の Default* の値) を使う。
+        /// 差し替えは <see cref="Configure(ExplosivePropDefinition)"/> で行う。
+        /// </summary>
+        public ExplosivePropDefinition Definition => _definition;
+
+        /// <summary>今の値。<see cref="Definition"/> か Inspector の値が不正なら null。</summary>
         public ExplosivePropSpec Spec => TryEnsureCharge() ? _charge.Spec : null;
 
         /// <summary>残りの耐久。Inspector の値が不正なら 0。</summary>
@@ -136,6 +145,28 @@ namespace Fps.Runtime
             _charge = new ExplosiveCharge(spec);
             _invalid = false;
             _instigator = null;
+        }
+
+        /// <summary>
+        /// definition を <see cref="Definition"/> に入れ、その値で <see cref="Configure(ExplosivePropSpec)"/> する。爆発した後は何もしない。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">definition が null。</exception>
+        /// <exception cref="InvalidOperationException">definition の値が不正。今の値はそのまま残る。</exception>
+        public void Configure(ExplosivePropDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (_exploded)
+            {
+                return;
+            }
+
+            var spec = definition.ToSpec();
+            _definition = definition;
+            Configure(spec);
         }
 
         /// <summary>
@@ -337,7 +368,8 @@ namespace Fps.Runtime
             return targets;
         }
 
-        // Inspector の値が不正なら、撃った側を止めないよう 1 度だけエラーを出して以後の被害を無視する。
+        // 定義か Inspector の値が不正なら、撃った側を止めないよう 1 度だけエラーを出して以後の被害を無視する。
+        // 不正な定義の代わりに Inspector の値で爆発させると、作った人が狙った威力と違うまま気づかれないので使わない。
         private bool TryEnsureCharge()
         {
             if (_charge != null)
@@ -352,22 +384,32 @@ namespace Fps.Runtime
 
             try
             {
-                _charge = new ExplosiveCharge(new ExplosivePropSpec(
-                    _maxHealth,
-                    _maxDamage,
-                    _damageRadius,
-                    _fullDamageRadius,
-                    _structureDamageAtCenter,
-                    _chainDelaySeconds,
-                    _burnSeconds));
+                _charge = new ExplosiveCharge(CreateSpec());
                 return true;
             }
-            catch (ArgumentException e)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
             {
                 _invalid = true;
                 Debug.LogError($"{LogTag} ExplosiveProp '{name}' の設定が不正です: {e.Message}", this);
                 return false;
             }
+        }
+
+        private ExplosivePropSpec CreateSpec()
+        {
+            if (_definition != null)
+            {
+                return _definition.ToSpec();
+            }
+
+            return new ExplosivePropSpec(
+                _maxHealth,
+                _maxDamage,
+                _damageRadius,
+                _fullDamageRadius,
+                _structureDamageAtCenter,
+                _chainDelaySeconds,
+                _burnSeconds);
         }
 
         private static void DestroySafely(UnityEngine.Object target)

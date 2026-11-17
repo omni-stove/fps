@@ -731,7 +731,7 @@ namespace Fps.Runtime
             {
                 if (RebuildView())
                 {
-                    Debug.Log($"{LogTag} ready hp={_model.HealthText} weapon={_model.WeaponSpec?.Id} ammo={_model.AmmoText} time={_model.TimeText}", this);
+                    Debug.Log($"{LogTag} ready hp={HudNumberFormat.Health(_model)} weapon={_model.WeaponSpec?.Id} ammo={HudNumberFormat.Ammo(_model)} time={HudNumberFormat.Time(_model)}", this);
                 }
             }
             catch (InvalidOperationException e)

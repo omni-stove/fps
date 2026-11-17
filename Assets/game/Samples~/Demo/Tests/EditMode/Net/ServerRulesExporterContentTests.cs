@@ -105,12 +105,22 @@ namespace Fps.Net.Tests
         }
 
         [Test]
+        public void WithoutGameContentTheBotsOfResourcesIsWritten()
+        {
+            ServerRulesExporter.ExportTuning(_directory);
+
+            var resources = Resources.Load<TextAsset>(KitTuning.BotsResourcePath);
+            Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(resources.text));
+        }
+
+        [Test]
         public void TuningInNeitherGameContentNorResourcesIsWrittenAsTheDefaults()
         {
-            Assert.That(Resources.Load<TextAsset>(KitTuning.BotsResourcePath), Is.Null, "the kit ships no bots tuning");
+            const string missingPath = "Tuning/ServerRulesExporterContentTests-missing";
+            Assert.That(Resources.Load<TextAsset>(missingPath), Is.Null);
 
             var output = ServerRulesExporter.ExportTuningFile(
-                _directory, ServerRulesExporter.BotsFileName, c => c.BotsTuning, KitTuning.BotsResourcePath, TuningJson.ParseBots);
+                _directory, ServerRulesExporter.BotsFileName, c => c.BotsTuning, missingPath, TuningJson.ParseBots);
 
             Assert.That(File.ReadAllText(output), Is.EqualTo("{}\n"));
             var spec = TuningJson.ParseBots(File.ReadAllText(output), output);

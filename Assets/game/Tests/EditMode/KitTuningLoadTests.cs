@@ -122,11 +122,18 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void BotsDefaultToTheNetBotSpecDefaults()
+        public void BotsAreReadFromTheKitDefaultsInResources()
         {
             Assert.That(KitTuning.BotsResourcePath, Is.EqualTo("Tuning/bots"));
-            Assert.That(Resources.Load<TextAsset>(KitTuning.BotsResourcePath), Is.Null, "the kit ships no bots tuning");
-            Assert.That(KitTuning.Bots, Is.SameAs(NetBotSpec.Default));
+            Assert.That(Resources.Load<TextAsset>(KitTuning.BotsResourcePath), Is.Not.Null, "the kit ships its bots tuning");
+
+            var bots = KitTuning.Bots;
+
+            Assert.That(bots.Brain.SightRange, Is.EqualTo(NetBotSpec.DefaultSightRange));
+            Assert.That(bots.Brain.FireRange, Is.EqualTo(NetBotSpec.DefaultFireRange));
+            Assert.That(bots.Brain.FireToleranceDegrees, Is.EqualTo(NetBotSpec.DefaultFacingToleranceDegrees));
+            Assert.That(bots.Input.FireToleranceDegrees, Is.EqualTo(BotInputSpec.DefaultFireToleranceDegrees));
+            Assert.That(bots.StuckProgress, Is.EqualTo(NetBotSpec.DefaultStuckProgress));
         }
 
         [Test]

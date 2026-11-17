@@ -14,11 +14,15 @@ namespace Fps.Server
         public const string GrenadeTuningFileName = "grenade.json";
         public const string BotsTuningFileName = "bots.json";
         public const string InventoryTuningFileName = "inventory.json";
+        public const string KnockbackTuningFileName = "knockback.json";
 
         public ServerRulesData(
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
-            NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null)
+            NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
+            KnockbackSpec knockback = null, string knockbackPath = null)
         {
+            Knockback = knockback ?? KnockbackSpec.Default;
+            KnockbackPath = knockbackPath;
             Items = items ?? ItemCatalog.Empty;
             ItemsPath = itemsPath;
             Bots = bots ?? NetBotSpec.Default;
@@ -62,6 +66,11 @@ namespace Fps.Server
 
         public string BotsPath { get; }
 
+        /// <summary>爆発で吹き飛ばす強さと、飛んでいる間の動き。</summary>
+        public KnockbackSpec Knockback { get; }
+
+        public string KnockbackPath { get; }
+
         public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
@@ -70,6 +79,7 @@ namespace Fps.Server
             + " grenade=" + (GrenadePath ?? "default")
             + " bots=" + (BotsPath ?? "default")
             + " inventory=" + (ItemsPath ?? "default")
+            + " knockback=" + (KnockbackPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -203,7 +213,29 @@ namespace Fps.Server
                 itemsPath = null;
             }
 
-            data = new ServerRulesData(name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath);
+            // 吹き飛ばしも Unity では Resources の JSON (KitTuning.Knockback) から読むので、無ければ同じく既定値で動かす
+            var knockbackPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, KnockbackTuningFileName));
+            var knockback = KnockbackSpec.Default;
+            if (System.IO.File.Exists(knockbackPath))
+            {
+                try
+                {
+                    knockback = TuningJson.ParseKnockback(System.IO.File.ReadAllText(knockbackPath), knockbackPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read knockback tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                knockbackPath = null;
+            }
+
+            data = new ServerRulesData(
+                name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath);
             error = null;
             return true;
         }

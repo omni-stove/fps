@@ -148,7 +148,7 @@ namespace Fps.NetV2
         /// <summary>
         /// サーバーの移動と同じ値 (<see cref="MatchClient.Motor"/>) で、この世界を動く自分の体を作る。
         /// </summary>
-        public CharacterMotorSimulation CreateSimulation(NetMotorSettings motor, int tickRate, float killPlaneY)
+        public CharacterMotorSimulation CreateSimulation(NetMotorSettings motor, int tickRate, float killPlaneY, KnockbackSpec knockback = null)
         {
             if (motor == null)
             {
@@ -164,6 +164,7 @@ namespace Fps.NetV2
             return new CharacterMotorSimulation(body, new PlayerMotor(motor.Motor), 1f / tickRate, killPlaneY, motor.Prone)
             {
                 Ladders = Ladders.Ladders,
+                Knockback = knockback ?? KnockbackSpec.Default,
             };
         }
 

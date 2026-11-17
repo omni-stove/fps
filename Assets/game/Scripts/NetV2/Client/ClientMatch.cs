@@ -225,7 +225,7 @@ namespace Fps.NetV2
         private void ReconcileOwn(SnapshotMessage snapshot, in PlayerSnapshot row)
         {
             var processed = snapshot.HasOwner ? snapshot.Owner.LastProcessedInputTick : -1;
-            var state = SnapshotMotion.ToState(row);
+            var state = SnapshotMotion.ToState(row, snapshot.HasOwner ? snapshot.Owner.Knockback : CharacterKnockbackState.None);
             if (!_prediction.IsStarted)
             {
                 _prediction.Start(processed, state);

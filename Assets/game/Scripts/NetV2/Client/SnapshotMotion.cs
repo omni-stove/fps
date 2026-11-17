@@ -13,6 +13,12 @@ namespace Fps.NetV2
         /// <summary>行の移動の状態。サーバーはこの値を、その人の最後に処理した入力の後の状態として送る。</summary>
         public static CharacterMotorState ToState(in PlayerSnapshot row)
         {
+            return ToState(row, CharacterKnockbackState.None);
+        }
+
+        /// <summary>自分の行の移動の状態。吹き飛ばしは持ち主にだけ送るので (<see cref="OwnerSnapshot.Knockback"/>)、行とは別に受け取る。</summary>
+        public static CharacterMotorState ToState(in PlayerSnapshot row, CharacterKnockbackState knockback)
+        {
             var cover = row.Cover;
             var vault = row.Vault;
             return new CharacterMotorState(
@@ -26,7 +32,8 @@ namespace Fps.NetV2
                     ? CharacterVaultState.FromPoints(vault.Rise, vault.Cross, vault.Land, vault.Elapsed)
                     : CharacterVaultState.None,
                 row.Prone,
-                row.Ladder);
+                row.Ladder,
+                knockback);
         }
 
         /// <summary>

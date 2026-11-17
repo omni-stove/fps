@@ -37,7 +37,7 @@ namespace Fps.Server.Tests
             Assert.That(data.Grenades, Is.SameAs(GrenadeCatalog.Default));
             Assert.That(data.Bots, Is.SameAs(NetBotSpec.Default));
             Assert.That(data.BotsPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
         }
 
         [Test]

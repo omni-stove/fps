@@ -7,11 +7,12 @@ namespace Fps.Core
 {
     /// <summary>
     /// <see cref="GameRules"/> を JSON から読む。項目は <see cref="GameRules"/> の構成と同じで、名前はコンストラクターの引数名
-    /// (<see cref="ItemNames"/>)。アクションは <see cref="ActionsItem"/> の入れ子のオブジェクト (<see cref="ActionItemNames"/>) に書く。
-    /// 省略した項目は <see cref="GameRules.Default"/> (アクションは <see cref="GameRules.Default"/> の <see cref="GameRules.Actions"/>) の値になる。
+    /// (<see cref="ItemNames"/>)。アクションは <see cref="ActionsItem"/> の入れ子のオブジェクト (<see cref="ActionItemNames"/>) に、
+    /// 部位のダメージ倍率は <see cref="ZoneDamageItem"/> の入れ子のオブジェクト (<see cref="ZoneDamageItemNames"/>) に書く。
+    /// 省略した項目は <see cref="GameRules.Default"/> (入れ子の中の項目は <see cref="GameRules.Default"/> の <see cref="GameRules.Actions"/>・<see cref="GameRules.ZoneDamage"/>) の値になる。
     /// 土台のルールを渡す <see cref="Parse(string, string, GameRules)"/> なら、省略した項目は土台の値になる (ミッションが難易度のルールの一部だけを変えるときに使う)。
     /// 列挙は名前の文字列 (例: <c>"Off"</c>)、小数は JSON の数、整数は小数点も指数も無い数、真偽は true / false で書く。
-    /// 値の範囲の検査は <see cref="GameRules"/> と <see cref="ActionRules"/> に任せ、どれかに引っかかれば
+    /// 値の範囲の検査は <see cref="GameRules"/> と <see cref="ActionRules"/> と <see cref="ZoneDamageMultipliers"/> に任せ、どれかに引っかかれば
     /// どのファイルのどの項目かを添えた <see cref="GameRulesJsonException"/> を投げる。
     /// </summary>
     public static class GameRulesJson
@@ -37,6 +38,12 @@ namespace Fps.Core
         public const string MaxWeaponsItem = "maxWeapons";
         public const string ReloadModeItem = "reloadMode";
         public const string ViewModeItem = "viewMode";
+        public const string PlayerMaxHealthItem = "playerMaxHealth";
+        public const string ZoneDamageItem = "zoneDamage";
+
+        public const string HeadItem = "head";
+        public const string BodyItem = "body";
+        public const string LimbItem = "limb";
 
         public const string DownedItem = "downed";
         public const string DownedBleedoutSecondsItem = "downedBleedoutSeconds";
@@ -64,6 +71,7 @@ namespace Fps.Core
         public const string SlowMotionItem = "slowMotion";
         public const string AimToFireItem = "aimToFire";
         public const string JumpItem = "jump";
+        public const string ReviveRangeItem = "reviveRange";
 
         /// <summary>入れ子の深さの上限。項目は 2 段までなので、それより深いものは読む前に断る。</summary>
         private const int _maxDepth = 8;
@@ -93,6 +101,8 @@ namespace Fps.Core
             MaxWeaponsItem,
             ReloadModeItem,
             ViewModeItem,
+            PlayerMaxHealthItem,
+            ZoneDamageItem,
         };
 
         /// <summary><see cref="ActionsItem"/> の中に書ける項目の名前 (<see cref="ActionRules"/> のコンストラクターの並び)。</summary>
@@ -124,6 +134,18 @@ namespace Fps.Core
             SlowMotionItem,
             AimToFireItem,
             JumpItem,
+            ReviveRangeItem,
+        };
+
+        /// <summary>
+        /// <see cref="ZoneDamageItem"/> の中に書ける項目の名前 (<see cref="ZoneDamageMultipliers"/> のコンストラクターの並び)。
+        /// 弱点の倍率はルールで変えるものではないので書けず、土台のルールの値のまま。
+        /// </summary>
+        public static IReadOnlyList<string> ZoneDamageItemNames { get; } = new[]
+        {
+            HeadItem,
+            BodyItem,
+            LimbItem,
         };
 
         /// <summary>text を 1 つのルールとして読む。</summary>
@@ -183,6 +205,7 @@ namespace Fps.Core
             var top = new Fields(source, root, prefix, ItemNames);
 
             var actions = ReadActions(source, top, prefix, defaults.Actions);
+            var zoneDamage = ReadZoneDamage(source, top, prefix, defaults.ZoneDamage);
 
             try
             {
@@ -206,7 +229,9 @@ namespace Fps.Core
                     top.ReadFloat(IdleKickSecondsItem, defaults.IdleKickSeconds),
                     top.ReadInt(MaxWeaponsItem, defaults.MaxWeapons),
                     top.ReadEnum(ReloadModeItem, defaults.ReloadMode),
-                    top.ReadEnum(ViewModeItem, defaults.ViewMode));
+                    top.ReadEnum(ViewModeItem, defaults.ViewMode),
+                    top.ReadInt(PlayerMaxHealthItem, defaults.PlayerMaxHealth),
+                    zoneDamage);
             }
             catch (ArgumentException e)
             {
@@ -215,8 +240,9 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// rules のすべての項目を <see cref="Parse(string, string)"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> の順で、
-        /// 省略はしない。小数は読み直すと同じ float になる最短の形で書くので、<see cref="Parse(string, string)"/> に通すと同じ値に戻る。
+        /// rules のすべての項目を <see cref="Parse(string, string)"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> と
+        /// <see cref="ZoneDamageItemNames"/> の順で、省略はしない。小数は読み直すと同じ float (部位の倍率は double) になる最短の形で書くので、
+        /// <see cref="Parse(string, string)"/> に通すと同じ値に戻る。
         /// </summary>
         /// <exception cref="ArgumentNullException">rules が null。</exception>
         public static string Write(GameRules rules)
@@ -265,6 +291,7 @@ namespace Fps.Core
             writer.Enum(SlowMotionItem, actions.SlowMotion);
             writer.Enum(AimToFireItem, actions.AimToFire);
             writer.Enum(JumpItem, actions.Jump);
+            writer.Float(ReviveRangeItem, actions.ReviveRange);
             writer.EndObject();
             writer.Float(SpawnProtectionSecondsItem, rules.SpawnProtectionSeconds);
             writer.Enum(FallDamageItem, rules.FallDamage);
@@ -275,6 +302,12 @@ namespace Fps.Core
             writer.Int(MaxWeaponsItem, rules.MaxWeapons);
             writer.Enum(ReloadModeItem, rules.ReloadMode);
             writer.Enum(ViewModeItem, rules.ViewMode);
+            writer.Int(PlayerMaxHealthItem, rules.PlayerMaxHealth);
+            writer.BeginObject(ZoneDamageItem);
+            writer.Double(HeadItem, rules.ZoneDamage.Head);
+            writer.Double(BodyItem, rules.ZoneDamage.Body);
+            writer.Double(LimbItem, rules.ZoneDamage.Limb);
+            writer.EndObject();
             return writer.Finish();
         }
 
@@ -316,7 +349,8 @@ namespace Fps.Core
                     fields.ReadEnum(AbilitiesItem, defaults.Abilities),
                     fields.ReadEnum(SlowMotionItem, defaults.SlowMotion),
                     fields.ReadEnum(AimToFireItem, defaults.AimToFire),
-                    fields.ReadEnum(JumpItem, defaults.Jump));
+                    fields.ReadEnum(JumpItem, defaults.Jump),
+                    fields.ReadFloat(ReviveRangeItem, defaults.ReviveRange));
             }
             catch (ArgumentException e)
             {
@@ -324,7 +358,31 @@ namespace Fps.Core
             }
         }
 
-        // GameRules と ActionRules は引数名を ParamName に入れて投げ、引数名は項目名と同じなので、そのまま項目名として返せる。
+        private static ZoneDamageMultipliers ReadZoneDamage(string source, Fields top, string topPrefix, ZoneDamageMultipliers defaults)
+        {
+            var node = top.ReadNested(ZoneDamageItem);
+            if (node == null)
+            {
+                return defaults;
+            }
+
+            var prefix = topPrefix + ZoneDamageItem + ".";
+            var fields = new Fields(source, node, prefix, ZoneDamageItemNames);
+            try
+            {
+                return new ZoneDamageMultipliers(
+                    fields.ReadDouble(HeadItem, defaults.Head),
+                    fields.ReadDouble(BodyItem, defaults.Body),
+                    fields.ReadDouble(LimbItem, defaults.Limb),
+                    defaults.WeakPoint);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(source, prefix, e);
+            }
+        }
+
+        // GameRules と ActionRules と ZoneDamageMultipliers は引数名を ParamName に入れて投げ、引数名は項目名と同じなので、そのまま項目名として返せる。
         private static GameRulesJsonException Rejected(string source, string prefix, ArgumentException e)
         {
             var item = string.IsNullOrEmpty(e.ParamName) ? null : prefix + e.ParamName;
@@ -458,6 +516,27 @@ namespace Fps.Core
                 }
             }
 
+            public double ReadDouble(string name, double fallback)
+            {
+                var node = Find(name);
+                if (node == null)
+                {
+                    return fallback;
+                }
+
+                Require(node, name, NodeKind.Number, "a number");
+
+                // 大きすぎる値は無限大になる環境と例外になる環境があり、無限大なら ZoneDamageMultipliers の検査が項目名付きで断る。
+                try
+                {
+                    return double.Parse(node.Text, NumberStyles.Float, CultureInfo.InvariantCulture);
+                }
+                catch (OverflowException e)
+                {
+                    throw Invalid(name, node, "is too large for a 64-bit float", e);
+                }
+            }
+
             public int ReadInt(string name, int fallback)
             {
                 var node = Find(name);
@@ -576,6 +655,18 @@ namespace Fps.Core
                 if (float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture) != value)
                 {
                     text = value.ToString("G9", CultureInfo.InvariantCulture);
+                }
+
+                Raw(name, text);
+            }
+
+            public void Double(string name, double value)
+            {
+                // Float と同じく、"R" が読み直して別の値になる字句を返したときは必ず戻る 17 桁で書く。
+                var text = value.ToString("R", CultureInfo.InvariantCulture);
+                if (double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture) != value)
+                {
+                    text = value.ToString("G17", CultureInfo.InvariantCulture);
                 }
 
                 Raw(name, text);

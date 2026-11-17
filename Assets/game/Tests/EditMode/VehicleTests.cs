@@ -102,7 +102,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ConfigureRejectsNullAndAMismatchedSeatCount()
         {
-            Assert.Throws<ArgumentNullException>(() => _vehicle.Configure(null));
+            Assert.Throws<ArgumentNullException>(() => _vehicle.Configure((VehicleSpec)null));
             Assert.Throws<ArgumentException>(
                 () => _vehicle.Configure(new VehicleSpec("car", 100, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) })));
         }

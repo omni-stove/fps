@@ -8,13 +8,14 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 置きっぱなしの弾薬箱。範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が Interact (キーボードは E の長押し) をすると、
-    /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="CooldownSeconds"/> 経てば何度でも使える。
+    /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="EffectiveCooldownSeconds"/> 経てば何度でも使える。
+    /// <see cref="Definition"/> があれば、範囲と補給の間隔は自分の値の代わりにそちらを読む。
     /// 足したかどうかと数は <c>[AmmoCrate]</c> のログに出す。
-    /// 範囲にプレイヤーがいる間は、HUD の <see cref="IInteractPrompt"/> に使い方 (<see cref="PromptKey"/>) か満タン (<see cref="FullKey"/>) を出す。
+    /// 範囲にプレイヤーがいる間は、<see cref="GameSignals.InteractHint"/> に使えるか満タンかの案内 (<see cref="AmmoCrateHint"/>) を出し、離れたら消す。
     /// </summary>
     /// <remarks>
     /// 見た目は <see cref="VisualPrefab"/>、空なら仮の箱を作る。どちらも固い物として当たり判定を残す (身を隠せる物として置くため)。
-    /// 使える範囲は見た目とは別のトリガーの球 (<see cref="Radius"/>) で決める。
+    /// 使える範囲は見た目とは別のトリガーの球 (<see cref="EffectiveRadius"/>) で決める。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class AmmoCrate : MonoBehaviour
@@ -25,14 +26,9 @@ namespace Fps.Runtime
         public const string InteractActionPath = InputActionPaths.Interact;
 
         public const float DefaultRadius = 1.6f;
+        public const float MinRadius = 0.1f;
         public const float DefaultCooldownSeconds = 1f;
         public const string VisualName = "Visual";
-
-        /// <summary>使える間の案内の文のキー。{0} は Interact のキー。</summary>
-        public const string PromptKey = "hud.ammoCrate.prompt";
-
-        /// <summary>どの武器も満タンの間の案内の文のキー。</summary>
-        public const string FullKey = "hud.ammoCrate.full";
 
         /// <summary>仮の箱の大きさ (m)。</summary>
         public static readonly Vector3 DefaultVisualSize = new Vector3(0.9f, 0.5f, 0.6f);
@@ -43,7 +39,10 @@ namespace Fps.Runtime
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        [SerializeField, Min(0.1f), Tooltip("使える範囲の半径 (m)。足元から球が立つ")]
+        [SerializeField, Tooltip("調整値。入れると下の範囲と使ってから次に使えるまでの秒数の代わりにこれの弾薬箱の欄を使う")]
+        private PickupDefinition _definition;
+
+        [SerializeField, Min(MinRadius), Tooltip("使える範囲の半径 (m)。足元から球が立つ")]
         private float _radius = DefaultRadius;
 
         [SerializeField, Min(0f), Tooltip("使ってから次に使えるまでの秒数")]
@@ -53,22 +52,41 @@ namespace Fps.Runtime
         private GameObject _visualPrefab;
 
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
-        private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private float _readyAt;
-        private IHud _hud;
+        private InteractHintSlot _hint;
 
+        /// <summary>
+        /// 調整値。null でなければ <see cref="Radius"/>・<see cref="CooldownSeconds"/> の代わりに <see cref="PickupDefinition.AmmoCrateRadius"/>・
+        /// <see cref="PickupDefinition.AmmoCrateCooldownSeconds"/> を使う。範囲はすぐトリガーの球に映す。値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public PickupDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                if (value != null)
+                {
+                    value.ValidateAmmoCrate();
+                }
+
+                _definition = value;
+                ApplyRadius();
+            }
+        }
+
+        /// <summary>使える範囲の半径 (m)。<see cref="Definition"/> が無いときに使う。</summary>
         public float Radius
         {
             get => _radius;
             set
             {
-                if (!(value >= 0.1f) || float.IsInfinity(value))
+                if (!IsValidRadius(value))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, "radius must be at least 0.1 and finite");
+                    throw new ArgumentOutOfRangeException(nameof(value), value, $"radius must be at least {MinRadius} and finite");
                 }
 
                 _radius = value;
@@ -76,12 +94,13 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>使ってから次に使えるまでの秒数。<see cref="Definition"/> が無いときに使う。</summary>
         public float CooldownSeconds
         {
             get => _cooldownSeconds;
             set
             {
-                if (!(value >= 0f) || float.IsInfinity(value))
+                if (!IsValidCooldown(value))
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), value, "cooldown must be non-negative and finite");
                 }
@@ -89,6 +108,22 @@ namespace Fps.Runtime
                 _cooldownSeconds = value;
             }
         }
+
+        /// <summary>
+        /// 使っている範囲の半径 (m)。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="Radius"/>。
+        /// </summary>
+        public float EffectiveRadius =>
+            _definition != null && IsValidRadius(_definition.AmmoCrateRadius) ? _definition.AmmoCrateRadius : _radius;
+
+        /// <summary>
+        /// 使っている、使ってから次に使えるまでの秒数。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="CooldownSeconds"/>。
+        /// </summary>
+        public float EffectiveCooldownSeconds =>
+            _definition != null && IsValidCooldown(_definition.AmmoCrateCooldownSeconds) ? _definition.AmmoCrateCooldownSeconds : _cooldownSeconds;
+
+        public static bool IsValidRadius(float radius) => radius >= MinRadius && !float.IsInfinity(radius);
+
+        public static bool IsValidCooldown(float seconds) => seconds >= 0f && !float.IsInfinity(seconds);
 
         /// <summary>見た目。次に組み立てるとき (Awake) から使う。</summary>
         public GameObject VisualPrefab
@@ -102,6 +137,20 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            if (_definition != null)
+            {
+                try
+                {
+                    _definition.ValidateAmmoCrate();
+                }
+                catch (ArgumentException e)
+                {
+                    // 置き場所の遮蔽物として残すため見た目と当たり判定は作り、使えないことだけを知らせる。
+                    Debug.LogError($"{LogTag} '{name}' の設定が不正です: {e.Message}", this);
+                    enabled = false;
+                }
+            }
+
             Build();
         }
 
@@ -127,13 +176,23 @@ namespace Fps.Runtime
 
         private void OnTriggerEnter(Collider other)
         {
+            HandleEnter(other);
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            HandleExit(other);
+        }
+
+        public void HandleEnter(Collider other)
+        {
             if (other != null && other.GetComponentInParent<Damageable>() != null)
             {
                 _inside.Add(other);
             }
         }
 
-        private void OnTriggerExit(Collider other)
+        public void HandleExit(Collider other)
         {
             if (other != null)
             {
@@ -175,12 +234,12 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// player に出す案内。使えれば Interact のキー (keyLabel) を入れた <see cref="PromptKey"/>、どの武器も満タンなら <see cref="FullKey"/>。
+        /// player に出す案内。予備弾を足せる武器があるかと <see cref="InteractActionPath"/> を入れる。
         /// 倒れている・武器を持たないなら案内は出さない (false)。
         /// </summary>
-        public static bool TryDescribe(Damageable player, string keyLabel, out LocalizedText text)
+        public static bool TryDescribe(Damageable player, out AmmoCrateHint hint)
         {
-            text = default;
+            hint = default;
             if (player == null || player.IsDead || player.IsDowned)
             {
                 return false;
@@ -198,7 +257,7 @@ namespace Fps.Runtime
                 room |= state.Room > 0;
             }
 
-            text = room ? new LocalizedText(PromptKey, keyLabel ?? string.Empty) : new LocalizedText(FullKey);
+            hint = new AmmoCrateHint(room, InteractActionPath);
             return true;
         }
 
@@ -229,7 +288,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _readyAt = now + _cooldownSeconds;
+            _readyAt = now + EffectiveCooldownSeconds;
             return true;
         }
 
@@ -299,8 +358,9 @@ namespace Fps.Runtime
                 return;
             }
 
-            trigger.radius = _radius;
-            trigger.center = new Vector3(0f, _radius, 0f);
+            var radius = EffectiveRadius;
+            trigger.radius = radius;
+            trigger.center = new Vector3(0f, radius, 0f);
         }
 
         private Transform CreateVisual()
@@ -381,42 +441,21 @@ namespace Fps.Runtime
             Interact();
         }
 
-        private void UpdatePrompt()
+        internal void UpdatePrompt()
         {
             var player = _inside.Count > 0 ? LocalPlayerInside() : null;
-            if (player == null)
+            if (player == null || !TryDescribe(player, out var hint))
             {
                 HidePrompt();
                 return;
             }
 
-            // HUD はプレイヤーが範囲に入ったときにだけ探す (シーン全体を見るので毎フレームは探さない)。
-            if (!GameUi.IsAlive(_hud))
-            {
-                _hud = GameUi.FindHud();
-            }
-
-            var prompt = GameUi.IsAlive(_hud) ? _hud.InteractPrompt : null;
-            if (prompt == null)
-            {
-                return;
-            }
-
-            if (!TryDescribe(player, _keyLabel.For(_interactAction), out var text))
-            {
-                prompt.Hide(this);
-                return;
-            }
-
-            prompt.Show(this, text);
+            (_hint ?? (_hint = new InteractHintSlot(this))).Show(hint);
         }
 
         private void HidePrompt()
         {
-            if (GameUi.IsAlive(_hud))
-            {
-                _hud.InteractPrompt?.Hide(this);
-            }
+            _hint?.Clear();
         }
     }
 }

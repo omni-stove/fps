@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -6,7 +5,8 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// フリーフォーオール (<see cref="FreeForAllMode"/>) をシーンで進める。参加者 (<see cref="SideMember"/>) は 1 人ずつ別の陣営にすること
-    /// (同じ陣営が 2 人いると始められない)。HUD の得点の下に、自分の順位と 1 位との差 (<see cref="FreeForAllMode.RankText(ModeSession, Side)"/>) を出す。
+    /// (同じ陣営が 2 人いると始められない)。モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、
+    /// この画面のプレイヤーの順位と 1 位との差 (<see cref="FreeForAllMode.Standing"/>) を入れる。プレイヤーがいなければ null。
     /// </summary>
     public sealed class FreeForAllRunner : ModeRunnerBase
     {
@@ -42,12 +42,12 @@ namespace Fps.Runtime
             return FreeForAllMode.Create(_timeLimitSeconds, _scoreLimit, _respawnSeconds);
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
+        protected override object HudDetail
         {
-            var player = LocalPlayer;
-            if (player != null && Session != null)
+            get
             {
-                lines.Add(FreeForAllMode.RankText(Session, player.Side));
+                var player = LocalPlayer;
+                return player != null && Session != null ? FreeForAllMode.Standing(Session, player.Side) : (object)null;
             }
         }
     }

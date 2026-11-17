@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// <item><see cref="CheckpointTrigger"/> から <see cref="SaveAt"/> を呼ばれたら、ミッションの進み具合・プレイヤーの体力・弾数・
     /// チェックポイントの Id から <see cref="CampaignSave"/> を作り、ミッションごとのスロット <see cref="SaveSlot"/>
     /// (<see cref="CampaignSaveSlots.For"/>) に書く。</item>
-    /// <item>プレイヤーが倒れたら武器・移動・グレネードを止め、<see cref="ReloadDelaySeconds"/> 秒後にシーンを読み直す。</item>
+    /// <item>プレイヤーが倒れたら武器・移動・グレネードを止め、<see cref="ReloadDelaySeconds"/> 秒 (ミッションの一覧 <see cref="MissionCatalog"/> から読む) 後にシーンを読み直す。</item>
     /// <item>始めるときにセーブがあれば、ミッションの進み具合・チェックポイントの位置・体力・弾数を戻す。
     /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。
     /// <see cref="CampaignLaunchSelection.IgnoresSaves"/> の間 (エディタでシーンを直接 Play し、まだセーブしていない) はセーブを読まずに最初から始める。
@@ -40,19 +40,17 @@ namespace Fps.Runtime
     {
         public const string LogTag = "[Campaign]";
 
-        public const float DefaultReloadDelaySeconds = 3f;
-
-        /// <summary>セーブしたときに HUD へ「セーブしました」を出しておく秒数。</summary>
-        public const float SavedNoticeSeconds = 2.5f;
-
         [SerializeField, Tooltip("セーブするミッション。空ならシーンから探す")]
         private MissionRunner _missionRunner;
 
         [SerializeField, Tooltip("プレイヤーと HUD を作る GameBootstrap。空ならシーンから探す")]
         private GameBootstrap _bootstrap;
 
-        [SerializeField, Min(0f), Tooltip("プレイヤーが倒れてからシーンを読み直すまでの秒数")]
-        private float _reloadDelaySeconds = DefaultReloadDelaySeconds;
+        [SerializeField, Tooltip("倒れてから読み直すまでとセーブの案内の秒数を読むミッションの一覧。空なら入口 (GameContent) の一覧、それも無ければ MissionCatalog の既定の秒数")]
+        private MissionCatalog _missions;
+
+        // 一覧 (共有アセット) の値を書き換えると他のミッションにも効くので、この CampaignRunner だけ変える値は別に持つ。
+        private float? _reloadDelayOverride;
 
         [Header("ルール")]
         [SerializeField, Tooltip("難易度を選ばずに始めたときのルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す。シーン生成スクリプトが CampaignNormal を配線する")]
@@ -183,24 +181,60 @@ namespace Fps.Runtime
         /// <summary>案内を出している HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
         public IHud BoundHud => _hud;
 
-        /// <summary>プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上。</summary>
+        /// <summary>秒数を読むミッションの一覧。null なら入口 (<see cref="GameContent"/>) の一覧を使う。</summary>
+        public MissionCatalog Missions
+        {
+            get => _missions;
+            set => _missions = value;
+        }
+
+        /// <summary>秒数を読むミッションの一覧 (<see cref="Missions"/>、無ければ入口の一覧)。どちらも無ければ null。</summary>
+        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
+
+        /// <summary>
+        /// プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上。設定していなければ <see cref="EffectiveMissions"/> の
+        /// <see cref="MissionCatalog.ReloadDelaySeconds"/>、一覧が無ければ <see cref="MissionCatalog.DefaultReloadDelaySeconds"/>。
+        /// 設定するとこの CampaignRunner だけ一覧の値より優先する。
+        /// </summary>
         public float ReloadDelaySeconds
         {
-            get => _reloadDelaySeconds;
+            get
+            {
+                if (_reloadDelayOverride.HasValue)
+                {
+                    return _reloadDelayOverride.Value;
+                }
+
+                var missions = EffectiveMissions;
+                return missions != null ? missions.ReloadDelaySeconds : MissionCatalog.DefaultReloadDelaySeconds;
+            }
             set
             {
-                if (!(value >= 0f) || float.IsInfinity(value))
+                if (!MissionCatalog.IsValidSeconds(value))
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), value, "ReloadDelaySeconds must be a non-negative finite number");
                 }
 
-                _reloadDelaySeconds = value;
+                _reloadDelayOverride = value;
+            }
+        }
+
+        /// <summary>
+        /// セーブしたときに HUD へ「セーブしました」を出しておく秒数。<see cref="EffectiveMissions"/> の
+        /// <see cref="MissionCatalog.SavedNoticeSeconds"/>、一覧が無ければ <see cref="MissionCatalog.DefaultSavedNoticeSeconds"/>。
+        /// </summary>
+        public float SavedNoticeSeconds
+        {
+            get
+            {
+                var missions = EffectiveMissions;
+                return missions != null ? missions.SavedNoticeSeconds : MissionCatalog.DefaultSavedNoticeSeconds;
             }
         }
 
         public bool IsStarted => _mission != null;
 
-        /// <summary>セーブとの照合に使うミッションの Id (MissionDefinition のアセット名)。開始前は null。</summary>
+        /// <summary>セーブとの照合に使うミッションの Id (<see cref="MissionDefinition.Id"/>)。開始前は null。</summary>
         public string MissionId => _missionId;
 
         /// <summary>このミッションのセーブを置くスロット (<see cref="CampaignSaveSlots.For"/>)。開始前は null。</summary>
@@ -322,7 +356,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            if (!TryResolveRules(runner.Definition != null ? runner.Definition.name : string.Empty, out var rules)
+            if (!TryResolveRules(runner.Definition != null ? runner.Definition.Id : string.Empty, out var rules)
                 || !TryApplyMissionRules(runner.Definition, ref rules))
             {
                 return false;
@@ -364,7 +398,7 @@ namespace Fps.Runtime
         /// 使うルールが無ければ警告を出して <see cref="GameRules.Default"/>。
         /// 使うルールの値が不正なら理由を Debug.LogError に出して false (rules は null)。
         /// </summary>
-        /// <param name="missionId">このシーンのミッションの Id (MissionDefinition のアセット名)。選択と照合する。</param>
+        /// <param name="missionId">このシーンのミッションの Id (<see cref="MissionDefinition.Id"/>)。選択と照合する。</param>
         public bool TryResolveRules(string missionId, out GameRules rules)
         {
             CampaignDifficulty? difficulty = null;
@@ -470,7 +504,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            Debug.Log($"{LogTag} mission={mission.name} rules override view={overridden.ViewMode}", this);
+            Debug.Log($"{LogTag} mission={mission.Id} rules override view={overridden.ViewMode}", this);
             rules = overridden;
             return true;
         }
@@ -575,12 +609,12 @@ namespace Fps.Runtime
                 throw new ArgumentException($"MissionRunner '{missionRunner.name}' cannot start its mission", nameof(missionRunner));
             }
 
-            var missionId = missionRunner.Definition != null ? missionRunner.Definition.name : string.Empty;
+            var missionId = missionRunner.Definition != null ? missionRunner.Definition.Id : string.Empty;
             if (!CampaignLaunch.IsValidMissionId(missionId))
             {
                 throw new ArgumentException(
                     $"MissionRunner '{missionRunner.name}' has mission id '{missionId}', which cannot name a save slot "
-                    + $"(use 1-{CampaignLaunch.MaxMissionIdLength} letters, digits, '_' or '-' in the MissionDefinition's asset name)",
+                    + $"(set the MissionDefinition's id to 1-{CampaignLaunch.MaxMissionIdLength} letters, digits, '_' or '-')",
                     nameof(missionRunner));
             }
 
@@ -973,12 +1007,13 @@ namespace Fps.Runtime
                 return;
             }
 
+            var delay = ReloadDelaySeconds;
             _reloadPending = true;
-            _reloadRemaining = _reloadDelaySeconds;
+            _reloadRemaining = delay;
             StopPlayerControl();
             _notice.ShowRestartCountdown(_reloadRemaining);
             Debug.Log(
-                $"{LogTag} player died; reloading in {_reloadDelaySeconds.ToString("0.##", CultureInfo.InvariantCulture)}s from checkpoint={(_lastCheckpointId.Length > 0 ? _lastCheckpointId : "(start)")}",
+                $"{LogTag} player died; reloading in {delay.ToString("0.##", CultureInfo.InvariantCulture)}s from checkpoint={(_lastCheckpointId.Length > 0 ? _lastCheckpointId : "(start)")}",
                 this);
         }
 

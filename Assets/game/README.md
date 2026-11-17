@@ -339,13 +339,14 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `DistractionThrowDefinition` (能力のアセット) | 物を投げる初速と上向きの速さ・落ちた音が敵に聞こえる距離・消すまでの秒数・投げる物の見た目と落ちた音 (空なら仮の球で、音は鳴らさない) |
 | `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度・続けて付ける間隔 |
 | `SquadCommandController` (プレイヤーのコンポーネント) | 長押しとみなす秒数・照準の先を探す距離・照準が外れていても敵を指したとみなす角度・分隊の無いモードで指示が届く距離・付いてくる bot が寄ってくる距離と撃ち合いをやめて戻る距離 |
-| `BossController` (ボスのコンポーネント) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点) |
+| `BossDefinition` (ボスのアセット、`BossController.Definition` に配線) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点)、`BossStrafeMotion` の往復の速さと幅。空なら `BossController`・`BossStrafeMotion` の Inspector の値を使う |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
 
 ### ボスの段階と弱点
 
 `BossController` は体力の割合で段階を進め、段階ごとに `EnemyAgent` の `EnemySpec`・`IEnemyBehavior`・動きの速さの倍率と、出す弱点 (`BossWeakPoint`、部位は `HitZone.WeakPoint`) を差し替える。
+体力で進む段階は `BossDefinition` に書く。射撃場のボスは `<root>/Bosses/RangeBoss.asset` を読み、射撃場を組み直してもこのアセットの値は変えない。
 振る舞いや、体力以外の条件 (経過時間・仕掛けが壊れたなど) で進む段階は Inspector に書けないので、コードで `Fps.Core.BossPhases` を組んで `BossController.UsePhases` に渡す。
 行動の合図で弱点を出し入れするときは `SetWeakPointExposed`、条件を待たずに次へ進めるときは `Advance` を呼ぶ。
 
@@ -365,6 +366,8 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | 移動 (歩き・ダッシュ・しゃがみの速さ、ジャンプ、重力、空中の操作) | `MotorSettings` (**Assets > Create > Fps > Motor Settings**) | `Motor` |
 | 敵 AI (視界・反応・散らばり・遮蔽・怯み・種類ごとの値) | `EnemyDefinition` (**Assets > Create > Fps > Enemy Definition**) | `Enemies` |
 | グレネード・印・吹き飛ばし | JSON ([グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値)) | `GrenadeTuning`・`PingTuning`・`KnockbackTuning` |
+| 爆発する置き物 (耐久・ダメージ・半径・連鎖の遅れ・燃え方) | `ExplosivePropDefinition` (**Assets > Create > Fps > Explosive Prop**) | 置き物の `ExplosiveProp` の Definition |
+| 協力して開ける物 (要る人数・押し続ける秒数) と扉の開く量・秒数 | `CoopInteractableDefinition` (**Assets > Create > Fps > Coop Interactable**) | `CoopInteractable` の Definition (それで開く `CoopDoor` も読む) |
 | メニューから移るシーン | `MenuSceneSettings` (**Assets > Create > Fps > Menu Scene Settings**) | `MenuScenes` |
 | そのほか (ステルス・印・分隊・ボスなど) | コンポーネントの Inspector ([Inspector から変えられる値](#inspector-から変えられる値)) | — |
 
@@ -411,7 +414,7 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
 - ネット対戦の HUD は `GameUi.HudFactory` を通らない (`NetV2Hud` が既定の `Hud` を作る)。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt`・`AttachDomination()` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず、`GameSignals.ModeStatus` に出す (自分の HUD で出すなら購読する)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
+- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず `GameSignals.ModeStatus` に、拠点制圧の状態 (両チームのポイント・残り時間・拠点ごとの `ControlPointStatus`・勝敗) は `GameSignals.Domination` に `DominationStatus` で出す (自分の HUD で出すなら購読する)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さない (プレイヤーがグレネードや能力の枠を持つと、返した値の `Show` をすぐ呼ぶ)。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
 - 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`、入口の `AwarenessIndicator` が先) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
@@ -454,7 +457,6 @@ public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
     public void SetPauseTimeMode(PauseTimeMode mode) { }
     public IGrenadeCount AttachGrenadeCount() => this;
     public IAbilitySlots AttachAbilitySlots() => this;
-    public IDominationHud AttachDomination() => null;
 
     public void Show(GrenadeThrower thrower) => _grenades = thrower;
     public void Show(AbilityHost host) { }

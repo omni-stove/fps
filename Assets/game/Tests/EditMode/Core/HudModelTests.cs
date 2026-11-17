@@ -33,10 +33,55 @@ namespace Fps.Core.Tests
         {
             var model = new HudModel();
 
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.CurrentHealth, Is.Null);
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
             Assert.That(model.WeaponSpec, Is.Null);
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(model.RemainingSeconds, Is.Null);
+            Assert.That(model.MaxHealth, Is.Null);
+            Assert.That(model.IsReloading, Is.False);
+            Assert.That(model.IsReserveInfinite, Is.False);
+            Assert.That(model.ShowsReserveAmmo, Is.True);
+        }
+
+        [Test]
+        public void SetHealthKeepsTheCurrentAndTheMaximum()
+        {
+            var model = new HudModel();
+
+            model.SetHealth(30, 120);
+            Assert.That(model.CurrentHealth, Is.EqualTo(30));
+            Assert.That(model.MaxHealth, Is.EqualTo(120));
+
+            model.ClearHealth();
+            Assert.That(model.CurrentHealth, Is.Null);
+            Assert.That(model.MaxHealth, Is.Null);
+        }
+
+        [Test]
+        public void TheReserveNotifiesWhileItIsHiddenSoTheHudCanShowItAgainAtOnce()
+        {
+            var model = new HudModel();
+            model.SetReserveAmmoShown(false);
+            model.SetAmmo(5, 90, false);
+            var changes = Record(model);
+
+            model.SetAmmo(5, 60, false);
+
+            Assert.That(model.ReserveAmmo, Is.EqualTo(60));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo }));
+        }
+
+        [Test]
+        public void SetAmmoDoesNotNotifyWhenNothingChanges()
+        {
+            var model = new HudModel();
+            model.SetAmmo(5, 90, true, true);
+            var changes = Record(model);
+
+            model.SetAmmo(5, 90, true, true);
+
+            Assert.That(changes, Is.Empty);
         }
 
         [Test]
@@ -49,10 +94,11 @@ namespace Fps.Core.Tests
             model.BindWeapon(NewWeapon());
             model.BindMatch(new Match(180f, 1, _playerId));
 
-            Assert.That(model.HealthText, Is.EqualTo("100"));
-            Assert.That(model.AmmoText, Is.EqualTo("30 / 90"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(100));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
             Assert.That(model.WeaponSpec.Id, Is.EqualTo(_rifleId));
-            Assert.That(model.TimeText, Is.EqualTo("03:00"));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(180));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Ammo, HudField.WeaponName, HudField.Time }));
         }
 
@@ -68,7 +114,8 @@ namespace Fps.Core.Tests
 
             model.BindWeapon(NewHandgun());
             Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgunId), "switching weapons rebinds and shows the new name");
-            Assert.That(model.AmmoText, Is.EqualTo("12 / 48"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(12));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(48));
 
             model.BindWeapon(null);
             Assert.That(model.WeaponSpec, Is.Null);
@@ -101,15 +148,19 @@ namespace Fps.Core.Tests
             var model = new HudModel();
 
             model.BindWeapon(weapon);
-            Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(2));
+            Assert.That(model.IsReserveInfinite, Is.True);
 
             weapon.TryFire();
             Assert.That(weapon.TryStartReload(), Is.True);
             model.SetAmmo(weapon.AmmoInMagazine, weapon.ReserveAmmo, weapon.IsReloading, weapon.HasInfiniteReserve);
-            Assert.That(model.AmmoText, Is.EqualTo(GameText.Resolve(HudFormat.Reloading) + " / " + HudFormat.InfiniteReserve));
+            Assert.That(model.IsReloading, Is.True);
+            Assert.That(model.IsReserveInfinite, Is.True);
 
             weapon.Tick(1f);
-            Assert.That(model.AmmoText, Is.EqualTo("2 / " + HudFormat.InfiniteReserve), "the reload refills from the infinite reserve");
+            Assert.That(model.MagazineAmmo, Is.EqualTo(2), "the reload refills from the infinite reserve");
+            Assert.That(model.IsReloading, Is.False);
+            Assert.That(model.IsReserveInfinite, Is.True);
         }
 
         [Test]
@@ -165,13 +216,13 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             health.TakeDamage(25);
-            Assert.That(model.HealthText, Is.EqualTo("75"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(75));
 
             health.Heal(10);
-            Assert.That(model.HealthText, Is.EqualTo("85"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(85));
 
             health.TakeDamage(500);
-            Assert.That(model.HealthText, Is.EqualTo("0"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(0));
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Health, HudField.Health }));
         }
@@ -200,14 +251,17 @@ namespace Fps.Core.Tests
 
             weapon.TryFire();
             weapon.TryFire();
-            Assert.That(model.AmmoText, Is.EqualTo("28 / 90"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(28));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
 
             weapon.TryStartReload();
             weapon.Tick(0.5f);
-            Assert.That(model.AmmoText, Is.EqualTo("28 / 90"), "the magazine is only refilled when the reload finishes");
+            Assert.That(model.MagazineAmmo, Is.EqualTo(28), "the magazine is only refilled when the reload finishes");
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
 
             weapon.Tick(0.5f);
-            Assert.That(model.AmmoText, Is.EqualTo("30 / 88"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(88));
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo }));
         }
@@ -223,12 +277,12 @@ namespace Fps.Core.Tests
 
             // 65.0 → 64.9: 表示は 01:05 のまま。
             match.Tick(0.1f);
-            Assert.That(model.TimeText, Is.EqualTo("01:05"));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(65));
             Assert.That(changes, Is.Empty);
 
             // 64.9 → 63.9: 01:04。
             match.Tick(1f);
-            Assert.That(model.TimeText, Is.EqualTo("01:04"));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(64));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Time }));
         }
 
@@ -243,7 +297,7 @@ namespace Fps.Core.Tests
             match.Tick(10f);
 
             Assert.That(match.IsOver, Is.True);
-            Assert.That(model.TimeText, Is.EqualTo("00:00"));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(0));
         }
 
         [Test]
@@ -258,7 +312,7 @@ namespace Fps.Core.Tests
             var changes = Record(model);
             oldHealth.TakeDamage(30);
 
-            Assert.That(model.HealthText, Is.EqualTo("50"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(50));
             Assert.That(changes, Is.Empty);
         }
 
@@ -274,14 +328,15 @@ namespace Fps.Core.Tests
             model.BindWeapon(null);
             model.BindMatch(null);
 
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.CurrentHealth, Is.Null);
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
             Assert.That(model.WeaponSpec, Is.Null);
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(model.RemainingSeconds, Is.Null);
         }
 
         [Test]
-        public void UnbindAllKeepsTheTextButStopsUpdates()
+        public void UnbindAllKeepsTheValuesButStopsUpdates()
         {
             var model = new HudModel();
             var health = new Health(100);
@@ -299,9 +354,10 @@ namespace Fps.Core.Tests
             match.Tick(5f);
 
             Assert.That(changes, Is.Empty);
-            Assert.That(model.HealthText, Is.EqualTo("100"));
-            Assert.That(model.AmmoText, Is.EqualTo("30 / 90"));
-            Assert.That(model.TimeText, Is.EqualTo("00:10"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(100));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
+            Assert.That(model.RemainingSeconds, Is.EqualTo(10));
         }
 
         [Test]
@@ -315,7 +371,7 @@ namespace Fps.Core.Tests
             model.BindMatch(new Match(float.PositiveInfinity, 1, _playerId));
 
             Assert.That(model.HasTime, Is.False);
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(model.RemainingSeconds, Is.Null);
             Assert.That(changes, Is.EqualTo(new[] { HudField.Time }));
         }
 
@@ -424,16 +480,16 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             model.SetHealth(100, 100);
-            Assert.That(model.HealthText, Is.EqualTo("100"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(100));
             Assert.That(model.IsHealthLow, Is.False);
 
             model.SetHealth(20, 100);
-            Assert.That(model.HealthText, Is.EqualTo("20"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(20));
             Assert.That(model.IsHealthLow, Is.True);
 
             model.SetHealth(20, 100);
             model.ClearHealth();
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
+            Assert.That(model.CurrentHealth, Is.Null);
             Assert.That(model.IsHealthLow, Is.False);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Health, HudField.Health, HudField.Health }));
@@ -464,7 +520,7 @@ namespace Fps.Core.Tests
 
             model.SetHealth(80, 200);
 
-            Assert.That(model.HealthText, Is.EqualTo("80"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(80));
             Assert.That(model.HealthFraction, Is.EqualTo(0.4f));
             Assert.That(changes, Is.EqualTo(new[] { HudField.Health }));
         }
@@ -501,25 +557,29 @@ namespace Fps.Core.Tests
             var changes = Record(model);
 
             model.SetAmmo(5, 90, false);
-            Assert.That(model.AmmoText, Is.EqualTo("5 / 90"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(5));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
             Assert.That(model.IsReloading, Is.False);
 
             model.SetAmmo(5, 90, true);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(5, 90, true)));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(5));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
             Assert.That(model.IsReloading, Is.True);
 
             model.SetAmmo(30, 65, false);
-            Assert.That(model.AmmoText, Is.EqualTo("30 / 65"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(65));
             Assert.That(model.IsReloading, Is.False);
 
             model.ClearAmmo();
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo, HudField.Ammo }));
         }
 
         [Test]
-        public void HidingTheReserveRewritesTheShownAmmoToTheMagazineOnly()
+        public void HidingTheReserveKeepsTheAmmoNumbersAndNotifies()
         {
             var model = new HudModel();
             model.SetAmmo(12, 48, false, true);
@@ -527,14 +587,18 @@ namespace Fps.Core.Tests
 
             model.SetReserveAmmoShown(false);
             Assert.That(model.ShowsReserveAmmo, Is.False);
-            Assert.That(model.AmmoText, Is.EqualTo("12"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(12), "the numbers stay so the HUD can show the reserve again at once");
+            Assert.That(model.ReserveAmmo, Is.EqualTo(48));
+            Assert.That(model.IsReserveInfinite, Is.True);
 
             model.SetAmmo(0, 48, true, false);
-            Assert.That(model.AmmoText, Is.EqualTo(GameText.Resolve(HudFormat.Reloading)));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(0));
             Assert.That(model.IsReloading, Is.True);
+            Assert.That(model.IsReserveInfinite, Is.False);
 
             model.SetReserveAmmoShown(true);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(0, 48, true)));
+            Assert.That(model.ShowsReserveAmmo, Is.True);
+            Assert.That(model.ReserveAmmo, Is.EqualTo(48));
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo, HudField.Ammo }));
         }
@@ -547,24 +611,28 @@ namespace Fps.Core.Tests
             var weapon = NewWeapon();
 
             model.BindWeapon(weapon);
-            Assert.That(model.AmmoText, Is.EqualTo("30"));
+            Assert.That(model.ShowsReserveAmmo, Is.False);
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
 
             weapon.TryFire();
-            Assert.That(model.AmmoText, Is.EqualTo("29"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(29));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(90));
         }
 
         [Test]
-        public void HidingTheReserveWithoutAWeaponShowsTheMagazinePlaceholder()
+        public void HidingTheReserveWithoutAWeaponNotifiesOnlyWhenItChanges()
         {
             var model = new HudModel();
             var changes = Record(model);
 
             model.SetReserveAmmoShown(false);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoMagazine));
+            Assert.That(model.ShowsReserveAmmo, Is.False);
+            Assert.That(model.MagazineAmmo, Is.Null);
 
             model.SetReserveAmmoShown(false);
             model.SetReserveAmmoShown(true);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
 
             Assert.That(changes, Is.EqualTo(new[] { HudField.Ammo, HudField.Ammo }));
         }
@@ -577,7 +645,8 @@ namespace Fps.Core.Tests
             model.SetAmmo(5, 10, false);
 
             Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetAmmo(5, -1, false));
-            Assert.That(model.AmmoText, Is.EqualTo("5"));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(5));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(10));
         }
 
         [Test]
@@ -591,7 +660,7 @@ namespace Fps.Core.Tests
             model.SetTime(64f);
             model.ClearTime();
 
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime));
+            Assert.That(model.RemainingSeconds, Is.Null);
             Assert.That(changes, Is.EqualTo(new[] { HudField.Time, HudField.Time, HudField.Time }));
         }
 
@@ -957,7 +1026,9 @@ namespace Fps.Core.Tests
 
             Assert.That(result, Is.EqualTo(ActiveReloadResult.Success));
             Assert.That(model.ReloadProgress, Is.Null);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(30, 89, false)));
+            Assert.That(model.MagazineAmmo, Is.EqualTo(30));
+            Assert.That(model.ReserveAmmo, Is.EqualTo(89));
+            Assert.That(model.IsReloading, Is.False);
         }
 
         [Test]
@@ -991,7 +1062,7 @@ namespace Fps.Core.Tests
             Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetHealth(10, 0));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetAmmo(-1, 0, false));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => model.SetScores(Team.Alpha, -1, 0));
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.NoHealth));
+            Assert.That(model.CurrentHealth, Is.Null);
         }
 
         [Test]

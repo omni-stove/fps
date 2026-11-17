@@ -70,6 +70,25 @@ namespace Fps.Editor
         public const int WallRepairCostPerPiece = HordeFortification.DefaultRepairCostPerPiece;
         public const int BarricadeBuildCost = 30;
 
+        /// <summary>Definition に入れる操作の届く距離 (m)。いちばん長い防衛物の端から <see cref="InteractReach"/> まで届く。</summary>
+        public static float DefinitionInteractRadius
+        {
+            get
+            {
+                var radius = 0f;
+                foreach (var placement in Fortifications)
+                {
+                    radius = Mathf.Max(radius, FortificationInteractRadius(placement));
+                }
+
+                return radius;
+            }
+        }
+
+        /// <summary>placement の防衛物の端から <see cref="InteractReach"/> まで届く、真ん中からの距離 (m)。</summary>
+        public static float FortificationInteractRadius(HordeFortificationPlacement placement) =>
+            (placement.Length * PieceSize.x / 2f) + InteractReach;
+
         /// <summary>出現点・拠点の中心から、防衛物の部品の箱までに空けておく距離 (m)。人が出た途端に壁に埋まらないように。</summary>
         public const float SpawnClearance = 1f;
 
@@ -255,6 +274,16 @@ namespace Fps.Editor
             definition.KillReward = HordeSpec.DefaultKillReward;
             definition.KillRewardPerWave = HordeSpec.DefaultKillRewardPerWave;
             definition.PurchasesOnlyBetweenWaves = true;
+            definition.KillScore = HordeSpec.DefaultKillScore;
+
+            // Definition の費用と距離はすべての防衛物に同じに効く。置くのは始めは無いバリケードだけなのでその値、距離はいちばん長い壁の端まで届く値にする。
+            definition.BuildCost = BarricadeBuildCost;
+            definition.RepairCostPerPiece = WallRepairCostPerPiece;
+            definition.InteractRadius = DefinitionInteractRadius;
+            definition.EnemySide = EnemySide;
+            definition.AlertInterval = HordeSpec.DefaultAlertInterval;
+            definition.MinSpawnDistance = HordeSpec.DefaultMinSpawnDistance;
+            definition.CorpseSeconds = HordeSpec.DefaultCorpseSeconds;
             definition.WaveCount = WaveCount;
             definition.RestSeconds = RestSeconds;
             definition.FirstEnemyCount = FirstEnemyCount;
@@ -379,7 +408,7 @@ namespace Fps.Editor
             fortification.StartsBuilt = placement.StartsBuilt;
             fortification.BuildCost = placement.StartsBuilt ? WallBuildCost : BarricadeBuildCost;
             fortification.RepairCostPerPiece = WallRepairCostPerPiece;
-            fortification.InteractRadius = (placement.Length * PieceSize.x / 2f) + InteractReach;
+            fortification.InteractRadius = FortificationInteractRadius(placement);
             return fortification;
         }
 

@@ -57,7 +57,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ConfigureRejectsNullAndUsesTheGivenSpec()
         {
-            Assert.Throws<ArgumentNullException>(() => _interactable.Configure(null));
+            Assert.Throws<ArgumentNullException>(() => _interactable.Configure((CoopHoldSpec)null));
             Assert.That(_interactable.RequiredCount, Is.EqualTo(2));
             Assert.That(_interactable.HoldSeconds, Is.EqualTo(HoldSeconds));
         }

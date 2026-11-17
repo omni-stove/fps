@@ -62,6 +62,7 @@ namespace Fps.Core.Tests
         public void EachGameRulesWithReplacesOnlyItsValue()
         {
             var otherActions = ActionRules.Default;
+            var otherZoneDamage = new ZoneDamageMultipliers(1.4, 1.1, 0.5, 3);
             var cases = new (string Property, Func<GameRules, GameRules> With, object Value)[]
             {
                 (nameof(GameRules.FriendlyFire), r => r.WithFriendlyFire(FriendlyFire.Off), FriendlyFire.Off),
@@ -84,6 +85,8 @@ namespace Fps.Core.Tests
                 (nameof(GameRules.MaxWeapons), r => r.WithMaxWeapons(0), 0),
                 (nameof(GameRules.ReloadMode), r => r.WithReloadMode(ReloadMode.Auto), ReloadMode.Auto),
                 (nameof(GameRules.ViewMode), r => r.WithViewMode(ViewMode.FirstPerson), ViewMode.FirstPerson),
+                (nameof(GameRules.PlayerMaxHealth), r => r.WithPlayerMaxHealth(150), 150),
+                (nameof(GameRules.ZoneDamage), r => r.WithZoneDamage(otherZoneDamage), otherZoneDamage),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);
@@ -126,6 +129,7 @@ namespace Fps.Core.Tests
                 (nameof(ActionRules.SlowMotion), a => a.WithSlowMotion(SlowMotion.Off), SlowMotion.Off),
                 (nameof(ActionRules.AimToFire), a => a.WithAimToFire(AimToFire.Off), AimToFire.Off),
                 (nameof(ActionRules.Jump), a => a.WithJump(Jump.On), Jump.On),
+                (nameof(ActionRules.ReviveRange), a => a.WithReviveRange(3.5f), 3.5f),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。

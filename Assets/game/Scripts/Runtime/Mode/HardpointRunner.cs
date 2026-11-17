@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// <item>有効な拠点の円盤だけを光らせて確保しているチームの色に塗り、他の拠点は暗くする (<see cref="ControlPointZone.SetHighlight"/>)。</item>
     /// <item>bot (<see cref="EnemyAgent"/>) には有効な拠点の中を往復する巡回路を渡し、拠点が移るたびに渡し直す。
     /// 敵を見つけたら EnemyAgent がいつもどおり追って撃ち、見失えば巡回路 (有効な拠点) に戻る。</item>
-    /// <item>HUD には得点の下に、有効な拠点と次へ移るまでの秒数・拠点の様子 (<see cref="HardpointText.HudLines"/>) を出す。
+    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Fps.Core.Hardpoint"/> を入れる。
     /// 拠点が移ったときと拠点の様子が変わったときに <c>[Mode] hardpoint</c> のログを出す。</item>
     /// </list>
     /// </remarks>
@@ -237,13 +237,7 @@ namespace Fps.Runtime
             ShowStatus();
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            if (_hardpoint != null)
-            {
-                lines.AddRange(HardpointText.HudLines(_hardpoint));
-            }
-        }
+        protected override object HudDetail => _hardpoint;
 
         private void Attach(Hardpoint hardpoint, ControlPointZone[] zones)
         {

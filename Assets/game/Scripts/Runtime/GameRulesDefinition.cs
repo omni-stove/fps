@@ -60,6 +60,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("味方を起こすのにかかる秒数")]
         private float _reviveSeconds = ActionRules.DefaultReviveSeconds;
 
+        [SerializeField, Min(0.01f), Tooltip("味方を起こせる距離 (m)。起こす人と起こされる人の本体の中心どうしで測る")]
+        private float _reviveRange = ReviveReach.DefaultRange;
+
         [SerializeField, Tooltip("遮蔽物に張り付いて身を隠せるか")]
         private Cover _cover = Cover.Off;
 
@@ -125,6 +128,20 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("ふつうのジャンプで跳べるか。Off でも Jump は乗り越え・崖のぼり・伏せから立つ・はしごやジップラインから離れる・パラシュートを開くに使う")]
         private Jump _jump = Jump.On;
+
+        [Header("体力とダメージ")]
+        [SerializeField, Min(1), Tooltip("プレイヤーの最大体力")]
+        private int _playerMaxHealth = GameRules.DefaultPlayerMaxHealth;
+
+        // ZoneDamageMultipliers が double で持つので、JSON から取り込んだ値を丸めずに持てるよう double にする。
+        [SerializeField, Tooltip("頭に当たったときのダメージ倍率。0 以上")]
+        private double _headDamageMultiplier = ZoneDamageMultipliers.Default.Head;
+
+        [SerializeField, Tooltip("胴に当たったときのダメージ倍率。0 以上")]
+        private double _bodyDamageMultiplier = ZoneDamageMultipliers.Default.Body;
+
+        [SerializeField, Tooltip("手足に当たったときのダメージ倍率。0 以上")]
+        private double _limbDamageMultiplier = ZoneDamageMultipliers.Default.Limb;
 
         [Header("リスポーン")]
         [SerializeField, Min(0f), Tooltip("リスポーンしてからダメージを受けなくなる秒数。0 なら守らない")]
@@ -240,6 +257,12 @@ namespace Fps.Runtime
         {
             get => _reviveSeconds;
             set => _reviveSeconds = value;
+        }
+
+        public float ReviveRange
+        {
+            get => _reviveRange;
+            set => _reviveRange = value;
         }
 
         public Cover Cover
@@ -374,6 +397,30 @@ namespace Fps.Runtime
             set => _jump = value;
         }
 
+        public int PlayerMaxHealth
+        {
+            get => _playerMaxHealth;
+            set => _playerMaxHealth = value;
+        }
+
+        public double HeadDamageMultiplier
+        {
+            get => _headDamageMultiplier;
+            set => _headDamageMultiplier = value;
+        }
+
+        public double BodyDamageMultiplier
+        {
+            get => _bodyDamageMultiplier;
+            set => _bodyDamageMultiplier = value;
+        }
+
+        public double LimbDamageMultiplier
+        {
+            get => _limbDamageMultiplier;
+            set => _limbDamageMultiplier = value;
+        }
+
         public float SpawnProtectionSeconds
         {
             get => _spawnProtectionSeconds;
@@ -471,7 +518,8 @@ namespace Fps.Runtime
                         _abilities,
                         _slowMotion,
                         _aimToFire,
-                        _jump),
+                        _jump,
+                        _reviveRange),
                     _spawnProtectionSeconds,
                     _fallDamage,
                     _hudDensity,
@@ -480,7 +528,13 @@ namespace Fps.Runtime
                     _idleKickSeconds,
                     _maxWeapons,
                     _reloadMode,
-                    _viewMode);
+                    _viewMode,
+                    _playerMaxHealth,
+                    new ZoneDamageMultipliers(
+                        _headDamageMultiplier,
+                        _bodyDamageMultiplier,
+                        _limbDamageMultiplier,
+                        ZoneDamageMultipliers.Default.WeakPoint));
             }
             catch (ArgumentException e)
             {
@@ -535,6 +589,10 @@ namespace Fps.Runtime
             _maxWeapons = rules.MaxWeapons;
             _reloadMode = rules.ReloadMode;
             _viewMode = rules.ViewMode;
+            _playerMaxHealth = rules.PlayerMaxHealth;
+            _headDamageMultiplier = rules.ZoneDamage.Head;
+            _bodyDamageMultiplier = rules.ZoneDamage.Body;
+            _limbDamageMultiplier = rules.ZoneDamage.Limb;
 
             var actions = rules.Actions;
             _downed = actions.Downed;
@@ -563,6 +621,7 @@ namespace Fps.Runtime
             _slowMotion = actions.SlowMotion;
             _aimToFire = actions.AimToFire;
             _jump = actions.Jump;
+            _reviveRange = actions.ReviveRange;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

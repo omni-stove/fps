@@ -112,6 +112,89 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RevealingUsesTheGivenLifetimeAndDoesNotCountTowardTheLimit()
+        {
+            var board = new PingBoard(new PingSpec(lifetimeSeconds: 5f, maxMarkers: 1));
+            var location = board.Place(PingHit.Location(_here), null, 0f);
+
+            var first = board.Reveal(42, _there, 1f, 30f);
+            var second = board.Reveal(43, _here, 1f, 30f);
+
+            Assert.That(first.Marker.Id, Is.EqualTo(2));
+            Assert.That(first.Marker.Kind, Is.EqualTo(PingKind.Enemy));
+            Assert.That(first.Marker.TargetKey, Is.EqualTo(42));
+            Assert.That(first.Marker.IsTracking, Is.True);
+            Assert.That(first.Marker.ExpiresAt, Is.EqualTo(31f));
+            Assert.That(first.Refreshed, Is.False);
+            Assert.That(first.Replaced, Is.Null);
+            Assert.That(second.Replaced, Is.Null);
+            Assert.That(board.Count, Is.EqualTo(3), "revealed marks do not push out the placed one");
+            Assert.That(board.IsRevealed(first.Marker.Id), Is.True);
+            Assert.That(board.IsRevealed(location.Marker.Id), Is.False);
+
+            var next = board.Place(PingHit.Location(_there), null, 2f);
+            Assert.That(next.Replaced.HasValue, Is.True);
+            Assert.That(next.Replaced.Value.Id, Is.EqualTo(location.Marker.Id), "only placed marks make room for placed marks");
+            Assert.That(board.Count, Is.EqualTo(3));
+            Assert.That(board.IsMarked(42), Is.True);
+            Assert.That(board.IsMarked(43), Is.True);
+        }
+
+        [Test]
+        public void RevealingAMarkedEnemyRefreshesItWithoutShorteningIt()
+        {
+            var board = new PingBoard(new PingSpec(lifetimeSeconds: 5f));
+            var placed = board.Place(PingHit.Enemy(0, _here), 42, 0f);
+            board.Track(placed.Marker.Id, true, false, Vector3.Zero, out _);
+
+            var revealed = board.Reveal(42, _there, 1f, 30f);
+
+            Assert.That(revealed.Refreshed, Is.True);
+            Assert.That(revealed.Marker.Id, Is.EqualTo(placed.Marker.Id));
+            Assert.That(revealed.Marker.IsTracking, Is.True, "revealing picks a lost enemy up again");
+            Assert.That(revealed.Marker.Position, Is.EqualTo(_there));
+            Assert.That(revealed.Marker.ExpiresAt, Is.EqualTo(31f));
+            Assert.That(board.IsRevealed(placed.Marker.Id), Is.True);
+
+            var pingedAgain = board.Place(PingHit.Enemy(0, _here), 42, 2f);
+            Assert.That(pingedAgain.Marker.ExpiresAt, Is.EqualTo(31f), "pinging a revealed enemy keeps the longer lifetime");
+            Assert.That(board.IsRevealed(placed.Marker.Id), Is.True);
+            Assert.That(board.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ARevealedMarkerIsForgottenWhenItGoes()
+        {
+            var board = new PingBoard(PingSpec.Default);
+            var expiring = board.Reveal(42, _here, 0f, 10f).Marker.Id;
+            var dying = board.Reveal(43, _there, 0f, 10f).Marker.Id;
+
+            Assert.That(board.Track(dying, false, false, Vector3.Zero, out _), Is.EqualTo(PingTrackResult.Gone));
+            Assert.That(board.IsRevealed(dying), Is.False);
+
+            Assert.That(board.Expire(9.99f, null), Is.Zero);
+            Assert.That(board.Expire(10f, null), Is.EqualTo(1));
+            Assert.That(board.IsRevealed(expiring), Is.False);
+
+            var cleared = board.Reveal(44, _here, 11f, 10f).Marker.Id;
+            board.Clear(null);
+            Assert.That(board.IsRevealed(cleared), Is.False);
+        }
+
+        [Test]
+        public void RevealingRejectsInvalidValues()
+        {
+            var board = new PingBoard(PingSpec.Default);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => board.Reveal(42, _here, 0f, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => board.Reveal(42, _here, 0f, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => board.Reveal(42, _here, 0f, float.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => board.Reveal(42, _here, float.NaN, 5f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => board.Reveal(42, new Vector3(float.NaN, 0f, 0f), 0f, 5f));
+            Assert.That(board.Count, Is.Zero);
+        }
+
+        [Test]
         public void AnEnemyMarkerFollowsWhileVisibleAndStaysWhereItWasLost()
         {
             var board = new PingBoard(PingSpec.Default);

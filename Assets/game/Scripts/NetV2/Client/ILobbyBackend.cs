@@ -58,6 +58,7 @@ namespace Shooter.NetV2
         /// <summary>
         /// 試合 (サーバー) のロビー <paramref name="lobbyId"/> にメンバーとして入る。成功したら入ったロビーを渡す。
         /// 試合にはこれとは別に <see cref="ServerLobby.ConnectOptions"/> でつなぐ。
+        /// ロビーのボイスの部屋には入らない。話すときは、入った後に <see cref="IVoiceSession.Join"/> で入る。
         /// </summary>
         void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done);
 

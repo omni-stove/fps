@@ -62,6 +62,24 @@ namespace Shooter.Core
                 LogTag, result.Outcome, result.Kills, result.Deaths, Gained(award));
         }
 
+        public static string SkillConfigured(SkillSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return LogTag + " skill " + spec;
+        }
+
+        public static string Rated(MatchOutcome outcome, int previous, int rating, int opponents)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} rating {1}->{2} outcome={3} opponents={4}",
+                LogTag, previous, rating, outcome, opponents);
+        }
+
         public static string ProfileRejected(string reason)
         {
             return LogTag + " profile rejected: " + reason;

@@ -1,0 +1,6 @@
+{
+  "initialRating": 1000,
+  "kFactor": 32,
+  "minRating": 0,
+  "maxRating": 3000
+}

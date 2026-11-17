@@ -9,7 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    // 期待値は ProgressionSpec.Default の調整値 (キル 100・頭 +50・アシスト 50・試合 250・勝ち +500、レベル 2 は 500 から) から出す。
+    // 期待値は ProgressionSpec.Default の調整値 (キル 100・頭 +50・アシスト 50・試合 250・勝ち +500、レベル 2 は 500 から) と、
+    // SkillSpec.Default (初め 1000・K 32) から出す。
     public sealed class ProgressionRecorderTests
     {
         private const string WeaponId = "rifle";
@@ -186,7 +187,98 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(
                 _storage.Text(ProfileStore.Slot),
-                Is.EqualTo("{\"version\":2,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0}"));
+                Is.EqualTo("{\"version\":3,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0,\"rating\":1000}"));
+        }
+
+        [Test]
+        public void AVersion2SaveKeepsItsRecordAndStartsAtTheConfiguredRating()
+        {
+            _storage.Write(ProfileStore.Slot, "{\"version\":2,\"xp\":480,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":1,\"wins\":0}");
+            var recorder = new ProgressionRecorder(_storage, ProgressionSpec.Default, new SkillSpec(1500, 32f, 0, 3000), new OfflineParticipants());
+            try
+            {
+                recorder.Install();
+
+                Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(480, 4, 1, 1, 0, 2, 1500)));
+                Assert.That(recorder.Level, Is.EqualTo(1));
+                Assert.That(_storage.Has(ProfileStore.RejectedSlot), Is.False);
+
+                CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 0, 0, 0, rated: true, opponentRating: 1500));
+
+                Assert.That(
+                    _storage.Text(ProfileStore.Slot),
+                    Is.EqualTo("{\"version\":3,\"xp\":1230,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":2,\"wins\":1,\"rating\":1516}"));
+            }
+            finally
+            {
+                recorder.Uninstall();
+            }
+        }
+
+        [Test]
+        public void ARatedWinMovesTheRatingByTheOpponentAverageAndIsSaved()
+        {
+            _recorder.Install();
+
+            LogAssert.Expect(LogType.Log, "[Progression] rating 1000->1024 outcome=Won opponents=1200");
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 0, 0, 0, rated: true, opponentRating: 1200));
+
+            var expected = new PlayerProfile(750, 0, 0, 1, 1, 0, 1024);
+            Assert.That(_recorder.Profile, Is.EqualTo(expected));
+            Assert.That(new ProfileStore(_storage).Load(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ARatedLossWithoutAnOpponentAverageUsesTheInitialRating()
+        {
+            new ProfileStore(_storage).Save(new PlayerProfile(0, 0, 0, 0, 0, 0, 1200));
+            _recorder.Install();
+
+            LogAssert.Expect(LogType.Log, "[Progression] rating 1200->1176 outcome=Lost opponents=1000");
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0, rated: true));
+
+            Assert.That(_recorder.Profile.Rating, Is.EqualTo(1176));
+        }
+
+        [Test]
+        public void ARatedDrawAgainstAnEqualSideKeepsTheRating()
+        {
+            _recorder.Install();
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Draw, 0, 0, 0, rated: true, opponentRating: 1000));
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(250, 0, 0, 1, 0, 0, 1000)));
+        }
+
+        [Test]
+        public void ARatedMatchUsesTheConfiguredKAndBounds()
+        {
+            var recorder = new ProgressionRecorder(_storage, ProgressionSpec.Default, new SkillSpec(1000, 64f, 0, 1020), new OfflineParticipants());
+            try
+            {
+                recorder.Install();
+
+                CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 0, 0, 0, rated: true, opponentRating: 1000));
+
+                Assert.That(recorder.Profile.Rating, Is.EqualTo(1020), "+32 is cut at the ceiling of 1020");
+            }
+            finally
+            {
+                recorder.Uninstall();
+            }
+        }
+
+        [Test]
+        public void AnOfflineMatchAgainstBotsLeavesTheRating()
+        {
+            new ProfileStore(_storage).Save(new PlayerProfile(0, 0, 0, 0, 0, 0, 1234));
+            _recorder.Install();
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 3, 0, 30));
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 3, 0));
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(1000, 0, 3, 2, 1, 0, 1234)));
+            Assert.That(new ProfileStore(_storage).Load().Rating, Is.EqualTo(1234));
         }
 
         [Test]
@@ -315,8 +407,52 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheSkillSpecIsReadFromTheEntryBeforeResources()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            content.name = "Game";
+            var tuning = Track(new TextAsset("{ \"initialRating\": 1500, \"kFactor\": 10 }"));
+            tuning.name = "GameSkill";
+            content.SkillTuning = tuning;
+            GameContent.Use(content);
+            KitTuning.Reload();
+
+            var recorder = new ProgressionRecorder(_storage);
+            try
+            {
+                recorder.Install();
+
+                Assert.That(recorder.Skill.Spec.InitialRating, Is.EqualTo(1500));
+                Assert.That(recorder.Profile.Rating, Is.EqualTo(1500), "a new profile starts at the configured rating");
+
+                CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 0, 0, 0, rated: true));
+
+                Assert.That(recorder.Profile.Rating, Is.EqualTo(1505), "K 10 against the configured initial rating gives +5");
+            }
+            finally
+            {
+                recorder.Uninstall();
+            }
+        }
+
+        [Test]
+        public void TheShippedSkillSpecIsReadFromResources()
+        {
+            GameContent.Use(Track(ScriptableObject.CreateInstance<GameContent>()));
+            KitTuning.Reload();
+
+            var spec = ProgressionRecorder.LoadSkillSpec();
+
+            Assert.That(ProgressionRecorder.SkillResourcePath, Is.EqualTo("Tuning/skill"));
+            Assert.That(spec, Is.Not.SameAs(SkillSpec.Default));
+            Assert.That(spec.InitialRating, Is.EqualTo(1000));
+            Assert.That(spec.KFactor, Is.EqualTo(32f));
+        }
+
+        [Test]
         public void RejectsMissingArguments()
         {
+            Assert.Throws<ArgumentNullException>(() => new ProgressionRecorder(_storage, ProgressionSpec.Default, null, new OfflineParticipants()));
             Assert.Throws<ArgumentNullException>(() => new ProgressionRecorder(null, ProgressionSpec.Default, new OfflineParticipants()));
             Assert.Throws<ArgumentNullException>(() => new ProgressionRecorder(_storage, null, new OfflineParticipants()));
             Assert.Throws<ArgumentNullException>(() => new ProgressionRecorder(_storage, ProgressionSpec.Default, null));

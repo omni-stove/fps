@@ -377,6 +377,7 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            SpectatePlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {
@@ -429,6 +430,7 @@ namespace Shooter.Server
             ClearDowned();
             PingMatchRestarted();
             ObjectiveMatchRestarted();
+            SpectateMatchRestarted();
         }
 
         private void HandleScoreChanged(int alpha, int bravo)
@@ -446,6 +448,7 @@ namespace Shooter.Server
             _match.WriteKill(killerId, victimId, byAlly);
             SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot));
             ObjectivePlayerKilled(victimId);
+            SpectatePlayerKilled(victimId);
         }
 
         private void HandleEnded(Team? winner)
@@ -464,6 +467,7 @@ namespace Shooter.Server
 
         private void HandleSpawned(int playerId, SpawnPoint point)
         {
+            SpectatePlayerSpawned(playerId);
             if (!_bodies.TryGet(playerId, out var body))
             {
                 return;

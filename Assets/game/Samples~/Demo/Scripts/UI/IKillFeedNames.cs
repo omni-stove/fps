@@ -8,7 +8,10 @@ namespace Shooter.Runtime
     /// </summary>
     public interface IKillFeedNames
     {
-        /// <summary>entry の倒した側・倒された側の名前と武器の表示名を引いて行にする。分からない名前でも例外にせず仮の名前にする。</summary>
+        /// <summary>
+        /// entry の倒した側・倒された側の名前と武器の表示名を引き、アシストした Id にこの画面のプレイヤーがいるか (<see cref="KillFeedLine.LocalAssisted"/>) を添えて行にする。
+        /// 分からない名前でも例外にせず仮の名前にする。
+        /// </summary>
         KillFeedLine Describe(KillFeedEntry entry);
     }
 }

@@ -170,6 +170,23 @@
     -unity-font-style: bold;
 }
 
+/* この画面のプレイヤーがアシストした行。倒した・倒された行 (--local) より控えめに縁だけを付ける。 */
+.kill-feed__row--assist {
+    border-width: 1px;
+    border-color: rgba(255, 210, 80, 0.6);
+}
+
+.kill-feed__assist {
+    margin: 0 0 0 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 16px;
+    color: rgb(30, 30, 30);
+    background-color: rgb(255, 210, 80);
+    -unity-font-style: bold;
+    white-space: nowrap;
+}
+
 /* 画面下中央の音の合図の字幕。下端のチュートリアルの案内と重ならない高さに、行を最初に出た順で上から積む。 */
 .subtitles {
     position: absolute;

@@ -292,6 +292,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheSeatInputFilterRewritesWhatTheSeatReceives()
+        {
+            var sink = new RecordingSink();
+            _vehicle.AddInputSink(sink);
+            var filter = new ForwardFireFilter();
+            _rider.SeatInputFilter = filter;
+
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.False, "nothing is sent before boarding");
+            Assert.That(sink.Inputs, Is.Empty);
+            Assert.That(filter.Seats, Is.Empty, "the filter is not asked while the rider is on foot");
+
+            _vehicle.TryEnter(_rider);
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.True);
+
+            Assert.That(filter.Seats, Is.EqualTo(new[] { _driver }));
+            Assert.That(sink.Seats, Is.EqualTo(new[] { _driver }));
+            Assert.That(sink.Inputs.Count, Is.EqualTo(1));
+            Assert.That(sink.Inputs[0].Move, Is.EqualTo(new Vector2(0f, 1f)));
+            Assert.That(sink.Inputs[0].Boost, Is.True);
+            Assert.That(sink.Inputs[0].FireHeld, Is.True);
+            Assert.That(sink.Inputs[0].AimDirection, Is.EqualTo(Vector3.right));
+            Assert.That(sink.DeltaSeconds, Is.EqualTo(new[] { StepSeconds }));
+
+            _rider.SeatInputFilter = null;
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.True);
+            Assert.That(sink.Inputs[1].Move, Is.EqualTo(Vector2.zero), "without the filter the idle buttons pass through");
+            Assert.That(sink.Inputs[1].FireHeld, Is.False);
+        }
+
+        [Test]
         public void TheRiderCannotBeReboundWhileRiding()
         {
             _vehicle.TryEnter(_rider);
@@ -325,6 +355,37 @@ namespace Fps.Tests.EditMode
         {
             _created.Add(gameObject);
             return gameObject;
+        }
+
+        private sealed class ForwardFireFilter : IVehicleSeatInputFilter
+        {
+            public List<VehicleSeat> Seats { get; } = new List<VehicleSeat>();
+
+            public void Filter(VehicleSeat seat, ref VehicleSeatInput input)
+            {
+                Seats.Add(seat);
+                input = new VehicleSeatInput(new Vector2(0f, 1f), 0f, true, true, false, false, input.AimOrigin, Vector3.right * 3f);
+            }
+        }
+
+        private sealed class RecordingSink : IVehicleInputSink
+        {
+            public List<VehicleSeat> Seats { get; } = new List<VehicleSeat>();
+
+            public List<VehicleSeatInput> Inputs { get; } = new List<VehicleSeatInput>();
+
+            public List<float> DeltaSeconds { get; } = new List<float>();
+
+            public void OnSeatInput(VehicleSeat seat, VehicleSeatInput input, float deltaSeconds)
+            {
+                Seats.Add(seat);
+                Inputs.Add(input);
+                DeltaSeconds.Add(deltaSeconds);
+            }
+
+            public void OnSeatVacated(VehicleSeat seat)
+            {
+            }
         }
     }
 }

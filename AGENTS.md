@@ -2,6 +2,8 @@ Work the game engine by `.agents/refs/scriptability-rules.md`.
 
 Leave existing `.meta` files untouched.
 
+Write scripts in sh (bash and awk), not Python; the machines and CI that run them have no Python.
+
 Write tests and their expected values with each change, but do not run the Unity tests.
 
 Write a code comment, `///` included, only to say why the code is not written another way. Keep existing comments unless you change the code they describe.

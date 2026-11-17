@@ -10,6 +10,9 @@ namespace Fps.Server
     {
         private readonly List<int> _ejected = new List<int>();
 
+        // Unity の Vehicle.Explode が自分のコライダーを外して爆発させるのと同じく、爆発している乗り物は自分の爆風を遮らない
+        private int _exploding = -1;
+
         public int Damage(int vehicle, int amount, int? attackerId)
         {
             if (amount < 0)
@@ -76,7 +79,7 @@ namespace Fps.Server
             var own = _riders.TryGetValue(shooterId, out var riding) ? riding.Car.Index : -1;
             foreach (var car in _cars)
             {
-                if (car.Index == own)
+                if (car.Index == own || car.Index == _exploding)
                 {
                     continue;
                 }
@@ -132,6 +135,21 @@ namespace Fps.Server
             return car.Map.Spec.Seats[seat].AllowsOwnWeaponAt(yaw - car.Map.Seats[seat].SitYawDegrees);
         }
 
+        // 車体は .fpsmap に入っていないので、爆風と火炎の遮りは世界の当たりとは別にここで見る (Unity では車体のコライダーが遮る)
+        public bool BlocksLine(Vector3 from, Vector3 to, float tick, int shooterId)
+        {
+            var offset = to - from;
+            var length = offset.Length();
+            return length >= 1e-4f && Raycast(from, offset / length, length, tick, shooterId, out _, out _, out _, out _);
+        }
+
+        public bool AllowsVehicleWeapon(int vehicle, int weapon, Vector3 direction)
+        {
+            var car = _cars[vehicle];
+            var local = Vector3.Transform(direction, Quaternion.Inverse(car.Rotation));
+            return new VehicleWeaponAim(car.Map.Spec.Weapons[weapon]).CanReach(local);
+        }
+
         private void Damage(Car car, int amount, int? attackerId, bool report)
         {
             if (car.Exploded || amount <= 0)
@@ -181,9 +199,20 @@ namespace Fps.Server
             var attacker = car.LastAttacker.HasValue && _match.TryGetPlayer(car.LastAttacker.Value, out _) ? car.LastAttacker : null;
             var center = car.Map.Center(car.Position, car.Rotation);
             var explosion = car.Map.Spec.Durability.Explosion;
-            var counts = Combat != null
-                ? Combat.Explode(center, explosion, attacker ?? PlayerIds.None, VehicleSpec.ExplosionWeaponId)
-                : (Damaged: 0, Killed: 0);
+            var exploding = _exploding;
+            _exploding = car.Index;
+            (int Damaged, int Killed) counts;
+            try
+            {
+                counts = Combat != null
+                    ? Combat.Explode(center, explosion, attacker ?? PlayerIds.None, VehicleSpec.ExplosionWeaponId)
+                    : (Damaged: 0, Killed: 0);
+            }
+            finally
+            {
+                _exploding = exploding;
+            }
+
             _log.WriteLine(VehicleLog.Exploded(car.Name, center.X, center.Y, center.Z, riders, counts.Damaged, counts.Killed));
             _match.WriteVehicleExploded(car.Index, car.Map.Spec.Id, attacker, riders, counts.Damaged, counts.Killed);
 

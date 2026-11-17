@@ -367,7 +367,9 @@ namespace Fps.Server
         {
             var offset = to - from;
             var length = offset.Length();
-            return length >= 1e-4f && _context.World.Raycast(from, offset / length, length, ServerHitboxes.RaycastLayers, out _);
+            return length >= 1e-4f
+                && (_context.World.Raycast(from, offset / length, length, ServerHitboxes.RaycastLayers, out _)
+                    || (_vehicles != null && _vehicles.BlocksLine(from, to, float.MaxValue, PlayerIds.None)));
         }
 
         private void ContributeGrenades(SnapshotList<GrenadeSnapshot> list)

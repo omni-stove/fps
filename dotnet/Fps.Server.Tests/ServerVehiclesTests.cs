@@ -388,6 +388,37 @@ namespace Fps.Server.Tests
         }
 
         [Test]
+        public void TheGunnerCannotFireTheMountedWeaponOutsideItsTraverse()
+        {
+            StartWithTwoPlayers();
+            StandAt(1, new Vector3(0f, 0f, -2.5f));
+            _vehicles.Handle(1, VehicleAction.Board, 0, 2);
+            Tick();
+
+            // 銃座の上下の範囲は -45〜30 度なので、真上へは向けられない
+            Fire(1, Body(1).EyePosition, Vector3.UnitY, Tick0(), _gunId);
+
+            Assert.That(_log.ToString(), Does.Contain("[Net] rejected shot attacker=1 reason=OutsideSeatArc"));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] shot attacker=1"));
+        }
+
+        [Test]
+        public void TheHullBlocksBlastsAndSprayButNotItsOwnRiders()
+        {
+            StartWithTwoPlayers();
+
+            Assert.That(_vehicles.BlocksLine(new Vector3(0f, 1f, 5f), new Vector3(0f, 1f, -5f), float.MaxValue, PlayerIds.None), Is.True);
+            Assert.That(_vehicles.BlocksLine(new Vector3(0f, 3f, 5f), new Vector3(0f, 3f, -5f), float.MaxValue, PlayerIds.None), Is.False);
+
+            StandAt(1, _driverEnter);
+            _vehicles.Handle(1, VehicleAction.Board, 0, 0);
+            Assert.That(
+                _vehicles.BlocksLine(new Vector3(0f, 1f, 5f), new Vector3(0f, 1f, -5f), float.MaxValue, 1),
+                Is.False,
+                "a rider's own vehicle does not block what the rider fires");
+        }
+
+        [Test]
         public void TheGunnerCannotFireTheirOwnWeapon()
         {
             StartWithTwoPlayers();
@@ -507,7 +538,7 @@ namespace Fps.Server.Tests
                     new VehicleSeatSpec(VehicleSeatRole.Passenger, ownWeaponArcDegrees: 180f),
                     new VehicleSeatSpec(VehicleSeatRole.Gunner, VehicleSeatPose.Standing),
                 },
-                new[] { new VehicleWeaponSpec(_gunId, 2) },
+                new[] { new VehicleWeaponSpec(_gunId, 2, pitchMinDegrees: -45f) },
                 new[] { new VehiclePartSpec("engine", 2f) });
             return new MapVehicle(
                 spec,

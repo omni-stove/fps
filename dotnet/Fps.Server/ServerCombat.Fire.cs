@@ -327,7 +327,7 @@ namespace Fps.Server
             {
                 case VehicleSeatFiring.VehicleWeapon:
                     weapons = MountWeapons(vehicle, weapon);
-                    return ShotRejection.None;
+                    return _vehicles.AllowsVehicleWeapon(vehicle, weapon, request.Direction) ? ShotRejection.None : ShotRejection.OutsideSeatArc;
                 case VehicleSeatFiring.OwnWeapon:
                     spreadMultiplier = _vehicles.MapOf(vehicle).Spec.Seats[seat].OwnWeaponSpreadMultiplier;
                     return _vehicles.AllowsOwnWeapon(vehicle, seat, request.Direction) ? ShotRejection.None : ShotRejection.OutsideSeatArc;

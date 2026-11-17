@@ -150,6 +150,37 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void MatchPlayersCountsThePartyTheLeaderLastRead()
+        {
+            var leader = Session(_a);
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "alone before making a party");
+
+            leader.Create();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "alone while the party is being made");
+            Settle();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1));
+
+            var second = JoinParty(_b, leader);
+            var third = JoinParty(_c, leader);
+            Assert.That(third.MatchPlayers, Is.EqualTo(3));
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "the leader sees the new members on its next read");
+
+            Advance();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(3));
+            Assert.That(second.MatchPlayers, Is.EqualTo(3));
+
+            third.Leave();
+            Settle();
+            Advance();
+            Assert.That(third.MatchPlayers, Is.EqualTo(1));
+            Assert.That(leader.MatchPlayers, Is.EqualTo(2));
+
+            leader.Leave();
+            Settle();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1));
+        }
+
+        [Test]
         public void JoinTrimsTheCodeAndRejectsAMalformedOne()
         {
             var leader = CreateParty(_a);

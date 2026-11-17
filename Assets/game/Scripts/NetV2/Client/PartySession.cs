@@ -113,6 +113,12 @@ namespace Shooter.NetV2
 
         public bool IsLeader => _phase == PartyPhase.InParty && IsSelf(_leader);
 
+        /// <summary>
+        /// 試合に入る人数。パーティに入っていれば最後に読んだメンバーの数、入っていなければ自分 1 人。
+        /// リーダーはこれを <see cref="QuickMatchSearch.Begin(float, int, Action{NetLaunchOptions}, Action{string})"/> に渡し、全員が入れるサーバーを探す。
+        /// </summary>
+        public int MatchPlayers => _phase == PartyPhase.InParty ? Math.Max(1, _lobby.MemberCount) : 1;
+
         /// <summary>パーティを作って入り、リーダーになる。結果は <see cref="Status"/> で知らせる。</summary>
         /// <exception cref="InvalidOperationException">もうパーティに入っている・入ろうとしている。</exception>
         public void Create()

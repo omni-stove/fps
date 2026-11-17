@@ -73,6 +73,7 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `HudDensity` | `HudDensity?` | HUD に出す量 |
 | `PauseTimeMode` | `PauseTimeMode?` | ポーズを開いている間の時間の扱い |
 | `PaletteViewer` | `Team?` | 敵味方の色の組をどのチームから見て塗るか |
+| `Streak` | `StreakStatus?` | この画面のプレイヤーのストリーク (倒れずに倒した数・報酬の枠・使える枠の数) |
 
 #### 購読のしかた
 

@@ -265,6 +265,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "UseStreak",
+                    "type": "Button",
+                    "id": "8d3f5a1c-2e74-4b96-a0c8-5f1e9b7d3a62",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -936,6 +945,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "SquadCommand",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b62e9d4f-07a3-4c58-9e1b-3d7f2a6c8e40",
+                    "path": "<Keyboard>/4",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "UseStreak",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

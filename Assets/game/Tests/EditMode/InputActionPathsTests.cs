@@ -42,6 +42,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.SwitchAmmoType)]
         [TestCase(InputActionPaths.CycleMagnification)]
         [TestCase(InputActionPaths.HoldBreath)]
+        [TestCase(InputActionPaths.UseStreak)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -97,6 +98,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.SwitchAmmoType, "<Keyboard>/n")]
         [TestCase(InputActionPaths.CycleMagnification, "<Keyboard>/h")]
         [TestCase(InputActionPaths.HoldBreath, "<Keyboard>/leftCtrl")]
+        [TestCase(InputActionPaths.UseStreak, "<Keyboard>/4")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);

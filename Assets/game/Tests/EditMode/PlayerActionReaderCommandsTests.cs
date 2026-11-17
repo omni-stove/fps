@@ -33,6 +33,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(PlayerCommands.Ability1, InputActionPaths.Ability1)]
         [TestCase(PlayerCommands.Ability2, InputActionPaths.Ability2)]
         [TestCase(PlayerCommands.SquadCommand, InputActionPaths.SquadCommand)]
+        [TestCase(PlayerCommands.UseStreak, InputActionPaths.UseStreak)]
         public void ResolvesEachCommandFromTheProjectWideActions(PlayerCommands command, string path)
         {
             Assert.That(PlayerActionReader.CommandActionPath(command), Is.EqualTo(path));

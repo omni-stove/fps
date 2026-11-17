@@ -34,5 +34,6 @@ namespace Shooter.Runtime
         public const string HoldBreath = "Player/HoldBreath";
         public const string SwitchGrenade = "Player/SwitchGrenade";
         public const string Inventory = "Player/Inventory";
+        public const string UseStreak = "Player/UseStreak";
     }
 }

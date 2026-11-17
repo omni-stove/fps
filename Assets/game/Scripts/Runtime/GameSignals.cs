@@ -75,6 +75,9 @@ namespace Shooter.Runtime
         /// <summary>敵味方の色の組をどのチームから見て塗るか。自分のチームがまだ無ければ null。</summary>
         public static GameSignal<Team?> PaletteViewer { get; } = new GameSignal<Team?>(nameof(PaletteViewer));
 
+        /// <summary>この画面のプレイヤーのストリーク (倒れずに倒した数と報酬の枠)。ストリークを使っていなければ null。</summary>
+        public static GameSignal<StreakStatus?> Streak { get; } = new GameSignal<StreakStatus?>(nameof(Streak));
+
         /// <summary>すべての項目の値と購読者を空に戻す。</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -98,6 +101,7 @@ namespace Shooter.Runtime
             HudDensity.Reset();
             PauseTimeMode.Reset();
             PaletteViewer.Reset();
+            Streak.Reset();
         }
     }
 }

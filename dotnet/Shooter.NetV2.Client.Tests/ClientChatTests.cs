@@ -12,9 +12,9 @@ namespace Shooter.NetV2.Tests
     {
         private readonly List<(WireChatChannel Channel, string Text)> _sent = new List<(WireChatChannel, string)>();
         private readonly List<string> _logs = new List<string>();
-        private static readonly string[] UnknownChannelLogs = { "[Chat] ignored a line with an unknown channel sender=3 channel=7" };
-        private static readonly string[] SentLogs = { "[Chat] sent channel=Team length=10", "[Chat] sent channel=All length=2" };
-        private static readonly string[] NotConnectedLogs = { "[Chat] could not send channel=All length=2 (not connected)" };
+        private static readonly string[] _unknownChannelLogs = { "[Chat] ignored a line with an unknown channel sender=3 channel=7" };
+        private static readonly string[] _sentLogs = { "[Chat] sent channel=Team length=10", "[Chat] sent channel=All length=2" };
+        private static readonly string[] _notConnectedLogs = { "[Chat] could not send channel=All length=2 (not connected)" };
         private bool _connected;
 
         [SetUp]
@@ -86,7 +86,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(chat.Handle(Message(3, (WireChatChannel)7, "a"), 0d), Is.True);
 
             Assert.That(chat.Lines, Is.Empty);
-            Assert.That(_logs, Is.EqualTo(UnknownChannelLogs));
+            Assert.That(_logs, Is.EqualTo(_unknownChannelLogs));
         }
 
         [Test]
@@ -99,7 +99,7 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(refusal, Is.EqualTo(ChatRefusal.None));
             Assert.That(_sent, Is.EqualTo(new[] { (WireChatChannel.Team, "hello team"), (WireChatChannel.All, "gg") }));
-            Assert.That(_logs, Is.EqualTo(SentLogs));
+            Assert.That(_logs, Is.EqualTo(_sentLogs));
             Assert.That(chat.Lines, Is.Empty, "the line is shown when the server sends it back");
         }
 
@@ -171,7 +171,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(chat.Send(CoreChatChannel.All, "hi", out var refusal), Is.False);
 
             Assert.That(refusal, Is.EqualTo(ChatRefusal.None));
-            Assert.That(_logs, Is.EqualTo(NotConnectedLogs));
+            Assert.That(_logs, Is.EqualTo(_notConnectedLogs));
         }
 
         [Test]

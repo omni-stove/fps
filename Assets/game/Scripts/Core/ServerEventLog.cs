@@ -4,7 +4,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    // 項目の一覧は docs/dedicated-server.md に書いてあり、運用がそれを前提に読むので、項目を変えたらそちらも直す。
     // 表示名などの人の名前は出さない。
     public static class ServerEventLog
     {

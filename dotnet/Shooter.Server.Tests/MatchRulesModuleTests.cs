@@ -342,6 +342,11 @@ namespace Shooter.Server.Tests
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.6f, InputButtons.Crouch)), Is.True);
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.Crouch | InputButtons.Jump)), Is.True);
             Assert.That(MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.None)), Is.True);
+            Assert.That(
+                MatchRulesModule.IsActivity(still, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.Crouch | InputButtons.LeanLeft)),
+                Is.True);
+            var leaning = new InputFrame(1, Vector2.Zero, 0.5f, InputButtons.LeanRight);
+            Assert.That(MatchRulesModule.IsActivity(leaning, new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.LeanRight)), Is.False);
         }
 
         [Test]

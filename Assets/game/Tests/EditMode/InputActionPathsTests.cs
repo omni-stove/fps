@@ -43,6 +43,11 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.CycleMagnification)]
         [TestCase(InputActionPaths.HoldBreath)]
         [TestCase(InputActionPaths.UseStreak)]
+        [TestCase(InputActionPaths.LeanLeft)]
+        [TestCase(InputActionPaths.LeanRight)]
+        [TestCase(InputActionPaths.Chat)]
+        [TestCase(InputActionPaths.TeamChat)]
+        [TestCase(InputActionPaths.PushToTalk)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -99,6 +104,11 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.SwitchAmmoType, "<Keyboard>/n")]
         [TestCase(InputActionPaths.CycleMagnification, "<Keyboard>/h")]
         [TestCase(InputActionPaths.HoldBreath, "<Keyboard>/leftCtrl")]
+        [TestCase(InputActionPaths.LeanLeft, "<Mouse>/backButton")]
+        [TestCase(InputActionPaths.LeanRight, "<Mouse>/forwardButton")]
+        [TestCase(InputActionPaths.Chat, "<Keyboard>/enter")]
+        [TestCase(InputActionPaths.TeamChat, "<Keyboard>/u")]
+        [TestCase(InputActionPaths.PushToTalk, "<Keyboard>/capsLock")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);

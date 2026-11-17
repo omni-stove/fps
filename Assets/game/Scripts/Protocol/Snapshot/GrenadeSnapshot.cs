@@ -38,6 +38,8 @@ namespace Shooter.Protocol
 
         public int AllBits => (int)GrenadeFields.All;
 
+        public int OptionalBits => 0;
+
         public int ChangedBits(in GrenadeSnapshot baseline)
         {
             var bits = GrenadeFields.None;

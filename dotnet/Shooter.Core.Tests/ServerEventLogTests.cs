@@ -10,7 +10,7 @@ namespace Shooter.Core.Tests
     public sealed class ServerEventLogTests
     {
         private const string _matchId = "0123456789abcdef0123456789abcdef";
-        private static readonly int[] TwoAssisters = { 4, 2 };
+        private static readonly int[] _twoAssisters ={ 4, 2 };
         private const string _killerPuid = "0002aaaabbbbccccddddeeeeffff0000";
         private const string _victimPuid = "0002111122223333444455556666aaaa";
 
@@ -77,7 +77,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void KillListsTheAssistersLast()
         {
-            var pairs = ReadLine(ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, TwoAssisters));
+            var pairs = ReadLine(ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, _twoAssisters));
 
             Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "killerId", "victimId", "teamKill", "assisterIds")));
             Assert.That(Value(pairs, "assisterIds"), Is.EqualTo("4,2"));

@@ -2,25 +2,13 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// クライアントが接続の承認データ (バイト列) に載せる、ビルドの版と切断して戻ってきた人を見分ける鍵 (<see cref="RejoinKey"/>)。
-    /// 形は ASCII の <c>&lt;版&gt;/&lt;鍵&gt;</c>。サーバーは版で承認を決め (<see cref="ConnectionApproval"/>)、鍵で成績を引き継ぐ。
-    /// </summary>
-    /// <remarks>
-    /// 版 (<see cref="BuildVersion"/>) と鍵のどちらにも使えない <c>/</c> で区切るので、区切りを数えるだけで読み分けられる。
-    /// 承認データは相手が自由に送れるので、読むときは長さと文字を絞る。
-    /// </remarks>
     public static class ConnectionPayload
     {
+        // 版と鍵のどちらにも使えない文字で区切るので、区切りを数えるだけで読み分けられる。
         public const char Separator = '/';
 
-        /// <summary>承認データの最長のバイト数。</summary>
         public const int MaxLength = BuildVersion.MaxLength + 1 + RejoinKey.MaxLength;
 
-        /// <summary>version と rejoinKey を承認データにする。鍵は小文字にそろえる。</summary>
-        /// <exception cref="ArgumentException">
-        /// version が <see cref="BuildVersion.TryNormalize"/> で正規化済みの版でない、または rejoinKey が <see cref="RejoinKey.IsValid"/> でない。
-        /// </exception>
         public static byte[] Encode(string version, string rejoinKey)
         {
             if (!IsNormalizedVersion(version))
@@ -42,10 +30,7 @@ namespace Shooter.Core
             return bytes;
         }
 
-        /// <summary>
-        /// 承認データから版と鍵を読む。区切りが 1 つでない・長すぎる・どちらかが使えない文字を含むときは両方 null にして false を返す。
-        /// 版を載せない古いビルドの承認データ (鍵だけ) も読めない側に入る。
-        /// </summary>
+        // 承認データは相手が自由に送れるので、読むときは長さと文字を絞る。
         public static bool TryDecode(byte[] payload, out string version, out string rejoinKey)
         {
             version = null;
@@ -100,11 +85,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// payload の版はそのままに、鍵を rejoinKey に差し替えた承認データを作る。
-        /// EOS の transport がログインした後に、端末の Id を ProductUserId に替えるのに使う。
-        /// </summary>
-        /// <returns>payload が読めない、または rejoinKey が使えない鍵なら false (replaced は null)。</returns>
         public static bool TryReplaceRejoinKey(byte[] payload, string rejoinKey, out byte[] replaced)
         {
             replaced = null;
@@ -117,9 +97,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// text が <see cref="BuildVersion.TryNormalize"/> を通し、正規化しても変わらない版なら true。
-        /// </summary>
         public static bool IsNormalizedVersion(string text)
         {
             return BuildVersion.TryNormalize(text, out var normalized, out _) && normalized == text;

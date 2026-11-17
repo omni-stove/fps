@@ -2,23 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// キャラクターの状態 (<see cref="CharacterPoseInput"/>) から、人型のリグの Animator に渡すパラメーター
-    /// (<see cref="CharacterPoseParameters"/>) を決める。生成時に速さを検査し、以後は変わらない。
-    /// <para>
-    /// 姿勢の優先順は 死亡 &gt; ダウン &gt; それ以外。上位の状態のときは下位のパラメーターを寝かせる (false・0) ので、
-    /// Animator は死亡・ダウンを他の姿勢と取り違えない。
-    /// <list type="bullet">
-    /// <item>死亡: Dead だけを立て、Speed は 0。</item>
-    /// <item>ダウン: Downed だけを立て、Speed は 0。</item>
-    /// <item>カバー: Cover に壁の高さを入れる。姿勢は壁の高さで決まるので Crouch は立てない。ADS なら覗いて構える (Aim も立てる)。</item>
-    /// <item>ADS としゃがみは両方立ちうる (しゃがんで構える)。</item>
-    /// <item>スライディング中は Slide と Crouch を立てる (滑る姿勢の無いリグはしゃがみで見せる)。カバー中は立てない。</item>
-    /// <item>宙にいる間は足を動かさない (Speed は 0)。</item>
-    /// </list>
-    /// 武器の種別はどの状態でもそのまま渡す。
-    /// </para>
-    /// </summary>
     public sealed class CharacterPose
     {
         public const string SpeedParameter = "Speed";
@@ -30,42 +13,30 @@ namespace Shooter.Core
         public const string WeaponCategoryParameter = "WeaponCategory";
         public const string SlideParameter = "Slide";
 
-        /// <summary><see cref="CharacterPoseParameters.Cover"/> の、カバーしていない値。</summary>
         public const int CoverNone = 0;
 
-        /// <summary><see cref="CharacterPoseParameters.Cover"/> の、低い壁 (<see cref="Core.CoverHeight.Low"/>) にカバーしている値。</summary>
         public const int CoverLow = 1;
 
-        /// <summary><see cref="CharacterPoseParameters.Cover"/> の、高い壁 (<see cref="Core.CoverHeight.High"/>) にカバーしている値。</summary>
         public const int CoverHigh = 2;
 
-        /// <summary><see cref="CharacterPoseParameters.WeaponCategory"/> の、武器を持っていない値。どの <see cref="Core.WeaponCategory"/> とも重ならない。</summary>
+        // どの WeaponCategory とも重ならないよう負の値にする。
         public const int NoWeapon = -1;
 
-        /// <summary><see cref="CharacterPoseParameters.Speed"/> の、止まっている値。</summary>
         public const float IdleSpeedValue = 0f;
 
-        /// <summary><see cref="CharacterPoseParameters.Speed"/> の、歩き (しゃがみ中はしゃがみ歩き) の値。</summary>
         public const float WalkSpeedValue = 1f;
 
-        /// <summary><see cref="CharacterPoseParameters.Speed"/> の、走りの値。</summary>
         public const float RunSpeedValue = 2f;
 
-        /// <summary>これ未満の速さ (m/s) は止まっていると見なす。押し戻しや坂の小さな揺れで足が動かないようにする。</summary>
+        // 押し戻しや坂の小さな揺れで足が動かないよう、これ未満の速さ (m/s) は止まっていると見なす。
         public const float StillSpeed = 0.1f;
 
-        /// <summary>立って歩くときの水平速度 (m/s)。</summary>
         public float WalkSpeed { get; }
 
-        /// <summary>ダッシュ中の水平速度 (m/s)。<see cref="WalkSpeed"/> より大きい。</summary>
         public float SprintSpeed { get; }
 
-        /// <summary>しゃがみ中の水平速度 (m/s)。</summary>
         public float CrouchSpeed { get; }
 
-        /// <param name="walkSpeed">歩きの水平速度。<see cref="StillSpeed"/> より大きい有限値。</param>
-        /// <param name="sprintSpeed">ダッシュ中の水平速度。walkSpeed より大きい有限値。</param>
-        /// <param name="crouchSpeed">しゃがみ中の水平速度。<see cref="StillSpeed"/> より大きい有限値。</param>
         public CharacterPose(float walkSpeed, float sprintSpeed, float crouchSpeed)
         {
             // 速さで割って 0〜1 にならすので、止まっていると見なす速さ以下だと歩いても 1 に届かない。
@@ -90,7 +61,6 @@ namespace Shooter.Core
             CrouchSpeed = crouchSpeed;
         }
 
-        /// <summary>motor の歩き・ダッシュ・しゃがみの速さを使う。速さが <see cref="CharacterPose(float, float, float)"/> の条件を満たさなければ例外を投げる。</summary>
         public static CharacterPose FromMotor(MotorSpec motor)
         {
             if (motor == null)
@@ -101,7 +71,8 @@ namespace Shooter.Core
             return new CharacterPose(motor.WalkSpeed, motor.SprintSpeed, motor.CrouchSpeed);
         }
 
-        /// <summary>input の状態に合う Animator のパラメーターを返す。</summary>
+        // 死亡・ダウンのときは他のパラメーターを寝かせ、Animator が死亡・ダウンを他の姿勢と取り違えないようにする。
+        // カバー中は姿勢が壁の高さで決まるので Crouch は立てない。スライディング中に Crouch も立てるのは、滑る姿勢の無いリグをしゃがみで見せるため。
         public CharacterPoseParameters Evaluate(CharacterPoseInput input)
         {
             var weapon = input.WeaponCategory.HasValue ? (int)input.WeaponCategory.Value : NoWeapon;
@@ -123,11 +94,7 @@ namespace Shooter.Core
             return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide);
         }
 
-        /// <summary>
-        /// 水平の速さ horizontalSpeed (m/s) を <see cref="CharacterPoseParameters.Speed"/> の値にならす。
-        /// しゃがみ中は <see cref="CrouchSpeed"/> で 1 (ダッシュしても走らない)。立っているときは <see cref="WalkSpeed"/> で 1、
-        /// ダッシュ中だけ <see cref="SprintSpeed"/> へ向けて 2 まで上げる。ダッシュしていなければ回避などで速くても 1 で止める。
-        /// </summary>
+        // ダッシュしていなければ 1 で止めるのは、回避などで速く動いても走る姿勢にしないため。
         public float SpeedValue(float horizontalSpeed, bool crouching, bool sprinting)
         {
             if (!(horizontalSpeed >= 0f) || float.IsInfinity(horizontalSpeed))
@@ -154,7 +121,6 @@ namespace Shooter.Core
             return WalkSpeedValue + Math.Min(toSprint, RunSpeedValue - WalkSpeedValue);
         }
 
-        /// <summary>壁の高さ height を <see cref="CharacterPoseParameters.Cover"/> の値にする。カバーしていなければ (null なら) <see cref="CoverNone"/>。</summary>
         public static int CoverValue(CoverHeight? height)
         {
             if (!height.HasValue)

@@ -2,28 +2,16 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 距離によるダメージ減衰の設定。不変。
-    /// <see cref="StartDistance"/> 以下は倍率 1.0、<see cref="EndDistance"/> 以上は <see cref="MinMultiplier"/>、
-    /// その間は線形補間する。
-    /// </summary>
     public sealed class DamageFalloff
     {
-        /// <summary>減衰しない設定（どの距離でも倍率 1.0）。</summary>
         public static DamageFalloff None { get; } = new DamageFalloff(float.MaxValue, float.MaxValue, 1f);
 
-        /// <summary>減衰が始まる距離。この距離以下は倍率 1.0。</summary>
         public float StartDistance { get; }
 
-        /// <summary>減衰が終わる距離。この距離以上は <see cref="MinMultiplier"/>。</summary>
         public float EndDistance { get; }
 
-        /// <summary>最大まで減衰したときの倍率。0 以上 1 以下。</summary>
         public float MinMultiplier { get; }
 
-        /// <param name="startDistance">減衰が始まる距離。0 以上の有限値。</param>
-        /// <param name="endDistance">減衰が終わる距離。startDistance 以上の有限値。</param>
-        /// <param name="minMultiplier">最大まで減衰したときの倍率。0 以上 1 以下。</param>
         public DamageFalloff(float startDistance, float endDistance, float minMultiplier)
         {
             if (!IsFinite(startDistance) || startDistance < 0f)
@@ -46,8 +34,6 @@ namespace Shooter.Core
             MinMultiplier = minMultiplier;
         }
 
-        /// <summary>distance での減衰倍率（MinMultiplier 以上 1.0 以下）を返す。</summary>
-        /// <param name="distance">射手から命中点までの距離。0 以上。正の無限大は EndDistance 以上として扱う。</param>
         public double MultiplierAt(float distance)
         {
             if (float.IsNaN(distance) || distance < 0f)

@@ -2,10 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 何人かで同時に押し続けると済む操作の進み。押している人数が <see cref="CoopHoldSpec.RequiredCount"/> 以上の間だけ
-    /// 経過が進み、<see cref="CoopHoldSpec.HoldSeconds"/> に届いたら済む。誰が押しているかは呼ぶ側が数える。
-    /// </summary>
     public sealed class CoopHold
     {
         public CoopHold(CoopHoldSpec spec)
@@ -15,19 +11,14 @@ namespace Shooter.Core
 
         public CoopHoldSpec Spec { get; }
 
-        /// <summary>直前の <see cref="Tick"/> で押していた人数。</summary>
         public int HoldingCount { get; private set; }
 
-        /// <summary>揃って押し続けた秒数。<see cref="CoopHoldSpec.HoldSeconds"/> を超えない。</summary>
         public float ElapsedSeconds { get; private set; }
 
-        /// <summary>人数が揃って進んでいる間は true。</summary>
         public bool IsRunning { get; private set; }
 
-        /// <summary>済んだら true。<see cref="Reset"/> まで変わらない。</summary>
         public bool IsCompleted { get; private set; }
 
-        /// <summary>進み具合 (0 から 1)。</summary>
         public float Progress
         {
             get
@@ -41,11 +32,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 今押している人数で deltaSeconds だけ進める。済んだあとは人数だけ覚えて何もしない。
-        /// </summary>
-        /// <param name="holdingCount">今押している人数。0 以上。</param>
-        /// <param name="deltaSeconds">前の呼び出しからの秒数。0 以上の有限値。</param>
         public CoopHoldStep Tick(int holdingCount, float deltaSeconds)
         {
             if (holdingCount < 0)
@@ -93,7 +79,6 @@ namespace Shooter.Core
             return step;
         }
 
-        /// <summary>経過と完了を消して、もう一度使えるようにする。</summary>
         public void Reset()
         {
             HoldingCount = 0;

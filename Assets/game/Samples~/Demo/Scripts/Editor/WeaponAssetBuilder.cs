@@ -11,7 +11,8 @@ namespace Fps.Editor
     /// <summary>
     /// 武器のアセットを作るか上書きする。<see cref="JsonFolder"/> に置いた武器の JSON をすべて同じ名前の <see cref="WeaponDefinition"/> にし
     /// (<see cref="WeaponJsonImporter"/>)、それをファイル名の順に並べた射撃場で拾える武器の一覧 (<see cref="RangeWeaponsPath"/> の
-    /// <see cref="WeaponCatalogAsset"/>) を作る。続けて <see cref="RiflePath"/>・<see cref="HandgunPath"/> の武器を rifle・handgun の順に
+    /// <see cref="WeaponCatalogAsset"/>) を作る。他のゲームを参考にしたサンプル (<see cref="ReferenceJsonFolder"/>・<see cref="RealisticJsonFolder"/>) も
+    /// 同じように、それぞれのフォルダのアセットと一覧 (<see cref="ReferenceWeaponsPath"/>・<see cref="RealisticWeaponsPath"/>) にする。続けて <see cref="RiflePath"/>・<see cref="HandgunPath"/> の武器を rifle・handgun の順に
     /// 並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/> と、それをスロットに入れた <see cref="LoadoutPath"/> の
     /// <see cref="LoadoutDefinition"/> を作り、近接で倒したときの武器のナイフ (<see cref="KnifePath"/>) を作る。サンプルの武器を足すときは、<see cref="JsonFolder"/> に JSON を 1 つ置いて走らせ直すだけでよい。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
@@ -36,6 +37,18 @@ namespace Fps.Editor
 
         /// <summary>射撃場で拾える武器の一覧。<see cref="JsonFolder"/> の武器をすべて、JSON のファイル名の順に並べる。</summary>
         public static string RangeWeaponsPath => Folder + "/RangeWeapons.asset";
+
+        public static string ReferenceJsonFolder => Folder + "/ReferenceJson";
+
+        public static string ReferenceFolder => Folder + "/Reference";
+
+        public static string ReferenceWeaponsPath => Folder + "/ReferenceWeapons.asset";
+
+        public static string RealisticJsonFolder => Folder + "/RealisticJson";
+
+        public static string RealisticFolder => Folder + "/Realistic";
+
+        public static string RealisticWeaponsPath => Folder + "/RealisticWeapons.asset";
 
         public const string MenuPath = "Fps/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
@@ -368,6 +381,10 @@ namespace Fps.Editor
         /// </summary>
         public static WeaponCatalogAsset LoadRangeWeapons() => WeaponAssets.LoadCatalog(RangeWeaponsPath);
 
+        public static WeaponCatalogAsset LoadReferenceWeapons() => WeaponAssets.LoadCatalog(ReferenceWeaponsPath);
+
+        public static WeaponCatalogAsset LoadRealisticWeapons() => WeaponAssets.LoadCatalog(RealisticWeaponsPath);
+
         // 演出の仮素材は武器のアセットより先に作られることがあるので、アセットでなく JSON から読む。
         public static IReadOnlyList<(string Name, WeaponSpec Spec)> RangeWeaponSources()
         {
@@ -385,6 +402,8 @@ namespace Fps.Editor
         public static void Build()
         {
             BuildFromJsonAt(JsonFolder, Folder, RangeWeaponsPath);
+            BuildFromJsonAt(ReferenceJsonFolder, ReferenceFolder, ReferenceWeaponsPath);
+            BuildFromJsonAt(RealisticJsonFolder, RealisticFolder, RealisticWeaponsPath);
             WindUpSoundAssetBuilder.Build();
 
             // rifle と handgun はコードの値でなく JSON から作ったアセットを並べ、JSON を直せば既定の武器も変わるようにする。

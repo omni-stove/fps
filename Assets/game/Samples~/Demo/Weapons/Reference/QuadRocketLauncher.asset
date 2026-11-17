@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: QuadRocketLauncher
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: a9ea0da7-d5a2-4754-8658-f172f0bb1ae5
+  _nameKey: weapon.ref.quadRocketLauncher
+  _description: "Team Fortress 2 \u306E\u30ED\u30B1\u30C3\u30C8\u30E9\u30F3\u30C1\u30E3\u30FC (\u5B9F\u9283\u306F SMAW \u306E\u3088\u3046\u306A\u7B52\u578B) \u3092\u53C2\u8003\u3002\u7206\u767A 90\u30FB\u534A\u5F84 2.8 m\u30FB\u5F3E\u901F 21 m/s\u30FB0.8 \u79D2\u306B 1 \u767A\u3067 4 \u767A\u8FBC\u3081\u30011 \u767A\u305A\u3064 0.8 \u79D2\u3067\u8FBC\u3081\u308B\u3002\u7206\u98A8\u3067\u8DF3\u3079\u308B\u6271\u3044\u3002"
+  _category: 7
+  _fireMode: 1
+  _magazineSize: 4
+  _reserveAmmo: 20
+  _fireInterval: 0.8
+  _reloadSeconds: 0.92
+  _damage: 0
+  _range: 150
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 50
+  _blindFireSpreadDegrees: 0
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 4
+  _recoilYawDegrees: 1
+  _recoilRecoveryPerSecond: 10
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 1
+  _adsSpreadDegrees: 0
+  _moveSpreadDegrees: 3
+  _shotNoiseRadius: 50
+  _weight: 7.5
+  _moveSpeedMultiplier: 1
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
+  _charge:
+    _enabled: 0
+    _chargeSeconds: 1
+    _minChargeFraction: 0.25
+    _fullChargeDamageMultiplier: 2
+    _firesWhenFull: 0
+    _firesBelowMin: 0
+    _fullChargeSpeedMultiplier: 1
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 1
+  _reloadSecondsPerRound: 0.8
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 1
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 21
+    _gravityMultiplier: 0
+    _lifetimeSeconds: 8
+    _onWorldHit: 0
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 1
+    _maxDamage: 90
+    _radius: 2.8
+    _fullDamageRadius: 0.5
+    _structureDamageAtCenter: 80
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _ammoTypes: []

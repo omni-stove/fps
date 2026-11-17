@@ -175,7 +175,7 @@ namespace Fps.Tests.EditMode
                     $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the tutorial");
                 Assert.That(
                     roots[0].GetComponent<GameBootstrap>().WeaponDefinitions,
-                    Is.EqualTo(TestScenes.ExpectedPlayerWeapons()),
+                    Is.EqualTo(BootstrapSceneBuilder.LoadPlayerWeapons(WeaponAssetBuilder.LoadReferenceWeapons())),
                     $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 var range = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.RangePath);
                 Assert.That(range, Is.Not.Null, $"run {nameof(GameRulesAssetBuilder)}.Build");
@@ -256,17 +256,69 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheFeaturedWeaponsAreRangeWeapons()
+        public void TheFeaturedWeaponsAreOneReferenceAndOneRealisticSamplePerCategory()
         {
-            var featured = BootstrapSceneBuilder.LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var featured = LoadFeatured();
 
             Assert.That(featured.Select(w => w.Id), Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds));
+            Assert.That(featured, Has.Length.EqualTo(16));
+            var reference = featured.Take(8).ToArray();
+            var realistic = featured.Skip(8).ToArray();
+            var categories = new[]
+            {
+                WeaponCategory.AssaultRifle, WeaponCategory.SubmachineGun, WeaponCategory.Shotgun, WeaponCategory.LightMachineGun,
+                WeaponCategory.MarksmanRifle, WeaponCategory.SniperRifle, WeaponCategory.Handgun, WeaponCategory.Launcher,
+            };
+            Assert.That(reference.Select(w => w.ToSpec().Category), Is.EqualTo(categories));
+            Assert.That(realistic.Select(w => w.ToSpec().Category), Is.EqualTo(categories));
+            Assert.That(reference.Select(w => w.ToSpec().NameKey), Has.All.StartWith("weapon.ref."));
+            Assert.That(realistic.Select(w => w.ToSpec().NameKey), Has.All.StartWith("weapon.real."));
+            Assert.That(
+                reference.Select(w => w.name),
+                Is.EqualTo(new[]
+                {
+                    "Carbine556", "Pdw", "PumpShotgun", "SquadAutomaticWeapon", "BattleRifle", "MagnumSniper", "CompactPistol", "RocketPropelledGrenade",
+                }));
+            Assert.That(
+                realistic.Select(w => w.name),
+                Is.EqualTo(new[]
+                {
+                    "ServiceRifle", "RollerDelayedSmg", "CombatPumpShotgun", "Gpmg762", "MarksmanRifle762x54", "LongRangeBoltRifle", "Pistol45", "ShoulderFiredRocket",
+                }));
+        }
+
+        [Test]
+        public void ThePlayerStartsWithTheReferenceCarbineAndCompactPistol()
+        {
+            var weapons = BootstrapSceneBuilder.LoadPlayerWeapons(WeaponAssetBuilder.LoadReferenceWeapons());
+
+            Assert.That(weapons.Select(w => w.Id), Is.EqualTo(BootstrapSceneBuilder.PlayerWeaponIds));
+            Assert.That(weapons.Select(w => w.name), Is.EqualTo(new[] { "Carbine556", "CompactPistol" }));
+            Assert.That(weapons[0].ToSpec().Category, Is.EqualTo(WeaponCategory.AssaultRifle));
+            Assert.That(weapons[1].ToSpec().Category, Is.EqualTo(WeaponCategory.Handgun));
+            Assert.That(weapons, Is.Not.EqualTo(TestScenes.ExpectedPlayerWeapons()), "the range no longer starts with the kit's rifle and handgun");
+        }
+
+        [Test]
+        public void TheWeaponTableHasAFrontRowOfReferenceAndABackRowOfRealistic()
+        {
+            var positions = BootstrapSceneBuilder.WeaponTablePositions(16);
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+
+            Assert.That(positions, Has.Length.EqualTo(16));
+            for (var i = 0; i < 8; i++)
+            {
+                Assert.That(positions[i].z, Is.EqualTo(feet.z + 2.5f).Within(1e-5f));
+                Assert.That(positions[i + 8].z, Is.EqualTo(feet.z + 4f).Within(1e-5f));
+                Assert.That(positions[i + 8].x, Is.EqualTo(positions[i].x).Within(1e-5f), "the same category lines up front to back");
+                Assert.That(positions[i].x, Is.EqualTo(-7f + (2f * i)).Within(1e-5f));
+            }
         }
 
         [Test]
         public void TheWeaponTableLinesUpLookPickupsJustAheadOfTheSpawn()
         {
-            var featured = BootstrapSceneBuilder.LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var featured = LoadFeatured();
             var scene = TestScenes.NewAdditive();
             try
             {
@@ -338,6 +390,11 @@ namespace Fps.Tests.EditMode
 
             Assert.That(SurfaceMaterial.IdOf(low.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.ConcreteId));
             Assert.That(SurfaceMaterial.IdOf(high.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.MetalId));
+        }
+
+        private static WeaponDefinition[] LoadFeatured()
+        {
+            return BootstrapSceneBuilder.LoadFeaturedWeapons(WeaponAssetBuilder.LoadReferenceWeapons(), WeaponAssetBuilder.LoadRealisticWeapons());
         }
     }
 }

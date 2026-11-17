@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: DrumGrenadeLauncher
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 6c95cc3b-c27d-468c-bb6c-e84188171f67
+  _nameKey: weapon.ref.drumGrenadeLauncher
+  _description: "Team Fortress 2 \u306E\u30B0\u30EC\u30CD\u30FC\u30C9\u30E9\u30F3\u30C1\u30E3\u30FC (\u5B9F\u9283\u306F Milkor MGL \u306E\u3088\u3046\u306A\u56DE\u8EE2\u5F3E\u5009\u5F0F) \u3092\u53C2\u8003\u3002\u7206\u767A 100\u30FB\u534A\u5F84 2.8 m\u30FB\u5F3E\u901F 23 m/s \u3067\u5F27\u3092\u63CF\u304D\u30012.3 \u79D2\u3067\u8D77\u7206\u3059\u308B\u30024 \u767A\u8FBC\u3081\u30011 \u767A\u305A\u3064 0.6 \u79D2\u3067\u8FBC\u3081\u308B\u3002"
+  _category: 7
+  _fireMode: 1
+  _magazineSize: 4
+  _reserveAmmo: 16
+  _fireInterval: 0.6
+  _reloadSeconds: 1.24
+  _damage: 0
+  _range: 60
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 50
+  _blindFireSpreadDegrees: 0
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 4
+  _recoilYawDegrees: 1
+  _recoilRecoveryPerSecond: 10
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 1
+  _adsSpreadDegrees: 0
+  _moveSpreadDegrees: 3
+  _shotNoiseRadius: 50
+  _weight: 5.3
+  _moveSpeedMultiplier: 1
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
+  _charge:
+    _enabled: 0
+    _chargeSeconds: 1
+    _minChargeFraction: 0.25
+    _fullChargeDamageMultiplier: 2
+    _firesWhenFull: 0
+    _firesBelowMin: 0
+    _fullChargeSpeedMultiplier: 1
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 1
+  _reloadSecondsPerRound: 0.6
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 1
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 23
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 2.3
+    _onWorldHit: 2
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 1
+    _maxDamage: 100
+    _radius: 2.8
+    _fullDamageRadius: 0.5
+    _structureDamageAtCenter: 80
+    _detonation: 2
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _ammoTypes: []

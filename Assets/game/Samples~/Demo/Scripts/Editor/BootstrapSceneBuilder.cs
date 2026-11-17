@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Fps.Core;
 using Fps.Runtime;
 using UnityEditor;
@@ -70,23 +71,48 @@ namespace Fps.Editor
 
         public const string WeaponTableName = "WeaponTable";
 
-        public const string ShotgunId = "07e1b9a8-f64c-4474-bc38-dbf14d66b135";
-        public const string MinigunId = "4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13";
-        public const string FlamethrowerId = "8c2b5eea-4ded-4956-af00-0bceb5d3af29";
-        public const string LaserId = "739a532a-1faa-498e-b9e1-20de68186e40";
-        public const string BoltSniperId = "5b2af293-a0d8-45cb-af68-8c63628c80d1";
-        public const string RocketLauncherId = "ffe5619d-2694-4ce3-a388-c0d2b026c2a4";
-
-        // 全部を並べると出現位置の前が埋まるので、撃ち味の違いが分かる物だけにする。全部は TpsRange の武器棚 (RangeWeaponRackFixture) で試す。
-        public static readonly IReadOnlyList<string> FeaturedWeaponIds = new[]
+        // サンプルを全部 (Reference と Realistic で 64) 並べると出現位置の前が埋まるので、それぞれ武器種ごとに 1 つだけにし、同じ武器種の順にして前後の列で撃ち比べられるようにする。
+        public static readonly IReadOnlyList<string> FeaturedReferenceWeaponIds = new[]
         {
-            ShotgunId, MinigunId, FlamethrowerId, LaserId, BoltSniperId, RocketLauncherId,
+            "25974cbc-c194-4f98-b22d-c9d34c3ba6e4",
+            "6b1ce288-952f-4ead-b23b-337df82d3a02",
+            "7f8258fd-a401-403b-93d2-60a22a69cb0b",
+            "e250274d-82be-401c-a098-2ee06295b582",
+            "07895118-2fb7-4b50-aa16-8f8afef0fc79",
+            "7875b62b-86b5-4af7-bc20-27f643d3c4fe",
+            "343b6024-75f2-4d68-8ac6-d31fad86aa47",
+            "b9daae5b-9015-46cf-b104-6f9a9ba9c623",
+        };
+
+        public static readonly IReadOnlyList<string> FeaturedRealisticWeaponIds = new[]
+        {
+            "43c9c224-dfea-463d-a411-fd0f6c37824d",
+            "2f3825b8-dac2-4744-8025-d2909cbb57d4",
+            "05e08bbf-1757-464a-a142-8dcdd0c86ba9",
+            "aa7e7cf5-6840-4b20-b0ec-ae5d1dfb9c5c",
+            "c1f6ce08-79a8-4d20-a16a-6eb6cee0256d",
+            "a21e791d-cf45-4f05-981d-17480c5a791b",
+            "c5171e80-7b9c-44f0-bdd5-3e4fdd67f585",
+            "148acbfc-9d35-4c65-96fc-36bea468eaa4",
+        };
+
+        public static IReadOnlyList<string> FeaturedWeaponIds => FeaturedReferenceWeaponIds.Concat(FeaturedRealisticWeaponIds).ToArray();
+
+        public static readonly IReadOnlyList<string> PlayerWeaponIds = new[]
+        {
+            "25974cbc-c194-4f98-b22d-c9d34c3ba6e4",
+            "343b6024-75f2-4d68-8ac6-d31fad86aa47",
         };
 
         // 出現位置で拾える範囲 (RangeWeaponRackFixture.PickupRadius) に入らず、遮蔽物より手前に置く。
         public const float WeaponTableDistance = 2.5f;
 
         public const float WeaponTableSpacing = 2f;
+
+        public const int WeaponTableRowLength = 8;
+
+        // 後ろの列も遮蔽物 (CoverDistance) より手前に収めるため、横の間隔より詰める。
+        public const float WeaponTableRowSpacing = 1.5f;
 
         /// <summary>
         /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings に登録する。
@@ -116,9 +142,11 @@ namespace Fps.Editor
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
             // 武器のアセットが無ければ何も保存せずに止める (先に WeaponAssetBuilder.Build を走らせる)。
             // 射撃場のルールのアセットも同じく、無ければ止める (先に GameRulesAssetBuilder.Build を走らせる)。
-            var weapons = WeaponAssetBuilder.LoadPlayerLoadout();
+            var reference = WeaponAssetBuilder.LoadReferenceWeapons();
+            var realistic = WeaponAssetBuilder.LoadRealisticWeapons();
+            var weapons = LoadPlayerWeapons(reference);
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.RangePath);
-            var featured = LoadFeaturedWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var featured = LoadFeaturedWeapons(reference, realistic);
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -142,7 +170,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// 空のシーンに GameBootstrap と MatchRunner と TutorialPresenter を置いた GameObject と、遮蔽物 (<see cref="Covers"/>) をまとめた <see cref="CoversName"/> を入れ、
-        /// プレイヤーの武器の定義の並び weapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) とルール rules
+        /// プレイヤーの武器の定義の並び weapons (通常は <see cref="LoadPlayerWeapons"/> の Reference の主武器・副武器) とルール rules
         /// (通常は射撃場の <see cref="GameRulesAssetBuilder.RangePath"/>) を GameBootstrap に配線して、GameBootstrap の GameObject を返す。
         /// 残りの参照は実行時にコードで解決する。
         /// </summary>
@@ -212,12 +240,22 @@ namespace Fps.Editor
             return root;
         }
 
-        public static WeaponDefinition[] LoadFeaturedWeapons(WeaponCatalogAsset catalog)
+        public static WeaponDefinition[] LoadPlayerWeapons(WeaponCatalogAsset reference)
         {
-            var weapons = new WeaponDefinition[FeaturedWeaponIds.Count];
+            return FindAll(reference, PlayerWeaponIds);
+        }
+
+        public static WeaponDefinition[] LoadFeaturedWeapons(WeaponCatalogAsset reference, WeaponCatalogAsset realistic)
+        {
+            return FindAll(reference, FeaturedReferenceWeaponIds).Concat(FindAll(realistic, FeaturedRealisticWeaponIds)).ToArray();
+        }
+
+        private static WeaponDefinition[] FindAll(WeaponCatalogAsset catalog, IReadOnlyList<string> ids)
+        {
+            var weapons = new WeaponDefinition[ids.Count];
             for (var i = 0; i < weapons.Length; i++)
             {
-                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, WeaponTableName, FeaturedWeaponIds[i]);
+                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, WeaponTableName, ids[i]);
             }
 
             return weapons;
@@ -226,11 +264,15 @@ namespace Fps.Editor
         public static Vector3[] WeaponTablePositions(int count)
         {
             var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
-            var offsets = LineLayout.CenteredOffsets(count, WeaponTableSpacing);
-            var positions = new Vector3[offsets.Length];
-            for (var i = 0; i < offsets.Length; i++)
+            var positions = new Vector3[count];
+            for (var start = 0; start < count; start += WeaponTableRowLength)
             {
-                positions[i] = feet + new Vector3(offsets[i], 0f, WeaponTableDistance);
+                var row = start / WeaponTableRowLength;
+                var offsets = LineLayout.CenteredOffsets(Math.Min(WeaponTableRowLength, count - start), WeaponTableSpacing);
+                for (var i = 0; i < offsets.Length; i++)
+                {
+                    positions[start + i] = feet + new Vector3(offsets[i], 0f, WeaponTableDistance + (row * WeaponTableRowSpacing));
+                }
             }
 
             return positions;

@@ -8,7 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="HitFeedbackCatalog"/> の置き場所・部位からの血しぶきの引き当て・検査を確かめる。</summary>
     public sealed class HitFeedbackCatalogTests
     {
         private readonly List<Object> _created = new List<Object>();

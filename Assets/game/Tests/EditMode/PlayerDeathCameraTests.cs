@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインの PlayerDeathCamera の切り替えと置き方。Edit Mode では LateUpdate が走らないので、LateUpdate が集める状態
-    /// (ルール・生死・試合の終わり) を Step へ、入力を Advance へ直接渡す。プレイヤーは Damageable・SideMember・目・カメラ・ViewRig だけで組む。
-    /// </summary>
+    // Edit Mode では LateUpdate が走らないので、LateUpdate が集める状態 (ルール・生死・試合の終わり) を Step へ、入力を Advance へ直接渡す。
     public sealed class PlayerDeathCameraTests
     {
         private static readonly Vector3 _playerPosition = new Vector3(0f, 1f, 0f);

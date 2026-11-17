@@ -10,11 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="DamageVignetteView"/> が、被弾で画面端の画像を出して時間で消し、低体力の始まりと終わりをログに出すことと、
-    /// <see cref="DamageFeedbackCatalog"/> の検査を確かめる。
-    /// Edit Mode では MonoBehaviour の OnEnable が走らずイベントを購読しないので、ShowHit・SetHealthFraction・Tick を直接呼ぶ。
-    /// </summary>
+    // Edit Mode では MonoBehaviour の OnEnable が走らずイベントを購読しないので、ShowHit・SetHealthFraction・Tick を直接呼ぶ。
     public sealed class DamageVignetteViewTests
     {
         private readonly List<Object> _created = new List<Object>();

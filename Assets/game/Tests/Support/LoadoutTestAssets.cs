@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ロードアウトの選択のテストに使う、ディスクに保存しないアセット。デフォルトロードアウト (rifle・handgun) と同じルールに、
-    /// メインのスロットに入る SMG を足した一覧 (rifle, smg, handgun の順) を作る。<see cref="IDisposable.Dispose"/> で全部消す。
-    /// </summary>
     public sealed class LoadoutTestAssets : IDisposable
     {
         public const string SmgId = "00000000-0000-4000-8000-0000000000c1";

@@ -198,7 +198,6 @@ namespace Shooter.Core.Tests
             execution.Tick(0.1f);
             execution.Tick(0.1f);
 
-            // 前の人が手を離したら、次の人は 0 から数える。
             Assert.That(execution.Interact(_bravoTwo, _alphaOne, 1f), Is.EqualTo(ExecutionStep.Executing));
             Assert.That(execution.GetExecuteProgress(_alphaOne), Is.EqualTo(1f / _executeSeconds).Within(1e-5f));
         }

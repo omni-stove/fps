@@ -7,7 +7,6 @@ using UnityEditor;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>実際のビルドは <c>make build windows|macos</c> と client-release ワークフローに任せ、入れるシーンとターゲットの決め方だけを見る。</summary>
     public sealed class ClientBuilderTests
     {
         [Test]

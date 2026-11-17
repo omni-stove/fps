@@ -9,10 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// CoverPointRegistry が印 (Shooter.Runtime.CoverPoint) から selector を作り、敵どうしで点を共有させることを確かめる。
-    /// 印は NavMesh の無い遠く (x = 500) に置くので、位置は寄せられずにそのまま使われる。
-    /// </summary>
+    // 印は NavMesh の無い遠く (x = 500) に置くので、位置は寄せられずにそのまま使われる。
     public sealed class CoverPointRegistryTests
     {
         private static readonly Vector3 Origin = new Vector3(500f, 0f, 500f);

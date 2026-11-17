@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="CaptureTheFlagDefinition"/> の既定値が Runner と Spec の既定値と揃い、<see cref="CaptureTheFlagDefinition.ToSpec"/> が値をそのまま渡して
-    /// 不正な値ではアセット名を添えて止まり、<see cref="CaptureTheFlagDefinition.CopyFrom"/> が Spec の値を写すことを確かめる。
-    /// </summary>
     public sealed class CaptureTheFlagDefinitionTests
     {
         private readonly List<Object> _objects = new List<Object>();

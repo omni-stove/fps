@@ -9,10 +9,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="HitFeedbackAssetStep"/> を一時フォルダに走らせて、生成物・作り直したときの同一性・一括実行での順番を確かめる。
-    /// リポジトリの Assets/game/Presentation は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Presentation を触らないよう、一時フォルダに走らせる。
     public sealed class HitFeedbackAssetStepTests
     {
         private string _folder;

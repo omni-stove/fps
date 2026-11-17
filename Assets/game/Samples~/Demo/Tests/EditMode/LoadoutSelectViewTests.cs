@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="LoadoutSelectView"/> が開いている間だけ Hud.uxml の枠に選択の画面を出し、決定・答え・取り消しを扱うこと。
-    /// Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製した木を直接 Bind する。
-    /// </summary>
+    // Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製した木を直接 Bind する。
     public sealed class LoadoutSelectViewTests
     {
         private GameObject _host;

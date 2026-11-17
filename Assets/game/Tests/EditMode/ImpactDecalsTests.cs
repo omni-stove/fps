@@ -10,9 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ImpactDecals"/> が銃痕を面に沿って浮かせて貼り、キャラには貼らず、上限を超えたら古いものから剥がしてログに出すことを確かめる。
-    /// </summary>
     public sealed class ImpactDecalsTests
     {
         private readonly List<Object> _created = new List<Object>();

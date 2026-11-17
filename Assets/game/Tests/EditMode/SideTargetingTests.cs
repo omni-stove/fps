@@ -8,7 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>SideMember と EnemySenses.SelectHostile が、自分と違う陣営で生きているいちばん近い相手を選ぶことを確かめる。</summary>
     public sealed class SideTargetingTests
     {
         private readonly List<GameObject> _objects = new List<GameObject>();

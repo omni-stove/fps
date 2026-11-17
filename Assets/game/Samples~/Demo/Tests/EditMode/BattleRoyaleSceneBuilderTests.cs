@@ -9,11 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="BattleRoyaleSceneBuilder"/> の広いマップの置き場所・ルール・分隊の配置・地形・拾える物・エリアの予定と、
-    /// <see cref="BattleRoyaleSmokeRun"/> の引数と予定の縮め方を確かめる。シーンを組んで NavMesh を焼く処理は、開いているシーンを置き換える
-    /// (NewScene Single) ので <c>-executeMethod Shooter.Editor.BattleRoyaleSceneBuilder.Build</c> と <see cref="BattleRoyaleSmokeRun"/> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.BattleRoyaleSceneBuilder.Build と BattleRoyaleSmokeRun で確かめる。
     public sealed class BattleRoyaleSceneBuilderTests
     {
         private const float Epsilon = 1e-3f;
@@ -209,7 +206,6 @@ namespace Shooter.Tests.EditMode
                 previousDamage = phase.DamagePerSecond;
             }
 
-            // 最初の待ちの間に、出現点の先の武器を拾ってから最初の円の中へ歩ける。
             var first = BattleRoyaleSceneBuilder.ZonePhases[0];
             var walk = (BattleRoyaleSceneBuilder.SquadSpawnRadius - first.Radius) / EnemyTestSceneBuilder.EnemySpeed;
             Assert.That(first.WaitSeconds + first.ShrinkSeconds, Is.GreaterThan(walk));
@@ -440,7 +436,6 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleSmokeRun.ScalePhases(phases, 0f));
             Assert.Throws<ArgumentNullException>(() => BattleRoyaleSmokeRun.ScalePhases(null, 1f));
 
-            // 既定の倍率でも、bot が出現点の先の武器へ歩き着くより最初の待ちが長い。
             var first = BattleRoyaleSmokeRun.ScalePhases(phases, BattleRoyaleSmokeRun.DefaultZoneScale)[0];
             var toLoot = (BattleRoyaleSceneBuilder.SquadSpawnRadius - BattleRoyaleSceneBuilder.SquadLootRadius) / EnemyTestSceneBuilder.EnemySpeed;
             Assert.That(first.WaitSeconds, Is.GreaterThan(toLoot));
@@ -482,13 +477,11 @@ namespace Shooter.Tests.EditMode
             return Mathf.Abs(point.x - center.x) <= halfX + Epsilon && Mathf.Abs(point.z - center.z) <= halfZ + Epsilon;
         }
 
-        /// <summary>bot の背より低い所に底がある (歩く人を遮る) か。屋根は遮らない。</summary>
         private static bool Blocks(ModeObstacle obstacle)
         {
             return obstacle.Center.y - (obstacle.Size.y / 2f) < EnemyTestSceneBuilder.EnemyHeight;
         }
 
-        /// <summary>水平の point から obstacle の上から見た四角までの距離。中なら 0。</summary>
         private static float FootprintDistance(Vector3 point, ModeObstacle obstacle, float margin)
         {
             var dx = Mathf.Max(0f, Mathf.Abs(point.x - obstacle.Center.x) - (obstacle.Size.x / 2f) - margin);

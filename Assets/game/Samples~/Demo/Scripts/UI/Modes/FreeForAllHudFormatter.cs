@@ -4,17 +4,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// フリーフォーオール (<see cref="FreeForAllRunner"/>) の HUD の書式役。<see cref="ModeStatus.Detail"/> の自分の順位 (<see cref="FreeForAllStanding"/>) を、
-    /// リスポーンの行の後に順位の行 (<see cref="Rank"/>) にして出す。
-    /// </summary>
     public sealed class FreeForAllHudFormatter : ModeHudFormatterBase
     {
-        /// <summary>順位の行。表のキー <c>mode.freeForAll.*</c> の文で、差は符号を除いた数を引数に入れる。</summary>
-        /// <example>
-        /// 6 人中 3 位で 1 位と 4 点差なら <c>順位 3/6  1位と -4</c>、単独 1 位で 2 位と 2 点差なら <c>順位 1/6  2位と +2</c>、
-        /// 1 位が並んでいれば <c>順位 1/6  1位と同点</c>、1 人だけなら <c>順位 1/1</c>
-        /// </example>
+        // 差の符号は表の文の側が持つので、差は符号を除いた数を引数に入れる。
         public static LocalizedText Rank(FreeForAllStanding standing)
         {
             var text = new LocalizedText("mode.freeForAll.rank", standing.Rank, standing.SideCount);

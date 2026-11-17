@@ -9,10 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="HitMarkerView"/> と <see cref="DamageDirectionView"/> が、Hud.uxml の要素に印と弧を出して時間で消すことを確かめる。
-    /// Edit Mode では MonoBehaviour の OnEnable が走らずイベントを購読しないので、Show と Tick を直接呼ぶ。
-    /// </summary>
+    // Edit Mode では MonoBehaviour の OnEnable が走らずイベントを購読しないので、Show と Tick を直接呼ぶ。
     public sealed class HitFeedbackViewTests
     {
         private readonly List<Object> _created = new List<Object>();
@@ -103,7 +100,6 @@ namespace Shooter.Tests.EditMode
                     Assert.That(line.style.backgroundColor.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.RedGreen.Highlight)));
                 }
 
-                // 頭でなければ Hud.uss の色に戻す
                 view.Show(new HitConfirm(25, HitZone.Body, killed: false, downed: false));
                 foreach (var line in lines)
                 {

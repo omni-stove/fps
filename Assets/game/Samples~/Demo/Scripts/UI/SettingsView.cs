@@ -8,41 +8,17 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ・スティックのデッドゾーン・振動の強さ (<see cref="ControlValue"/>) のスライダー、
-    /// エイムアシスト (<see cref="ControlSettings.AimAssist"/>)・視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>)・
-    /// 振動 (<see cref="ControlSettings.RumbleEnabled"/>) の On/Off、血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
-    /// 敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
-    /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
-    /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
-    /// 値を変えるとすぐ <see cref="ISettingsSink.Apply"/> (既定は <see cref="AppliedControlSettings.Sink"/>) で効かせ、<see cref="Close"/> (か <see cref="Save"/>) で
-    /// <see cref="ControlSettingsStore"/> に保存する。スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
-    /// ボイスチャットのマイクの On/Off と受ける声の音量 (<see cref="VoiceSettings"/>) は開くときに <see cref="VoiceSettingsStore"/> から読み、
-    /// 閉じるときに同じストアへ保存する。試合中のボイスはその保存の知らせ (<see cref="VoiceSettingsStore.Saved"/>) で効かせる。
-    /// 「戻る」とキャンセル (ゲームパッドの B など) では <see cref="BackRequested"/> を呼ぶだけで、閉じるのは開いた側が決める。
-    /// <para>
-    /// キーとボタンの割り当ては <see cref="PlayerBindings"/> で機器ごとに変え (<see cref="StartRebind"/>)、上書きはすぐ効く。
-    /// ほかの割り当てと重なったら知らせ、<see cref="UndoRebind"/> で前の割り当てに戻せる。閉じるときに <see cref="InputBindingOverridesStore"/> に保存する。
-    /// </para>
-    /// <para>
-    /// 画面の文字は <see cref="Localizer"/> から引く (キーは settings.*、表は Resources/Localization/&lt;言語コード&gt;/settings.json)。
-    /// 言語の項目は Resources/Localization に表のある言語 (<see cref="Languages"/>) を順に切り替え、
-    /// 言語 (<see cref="SetLanguage"/>) を変えると、開いたまま画面を今の言語で組み直す。
-    /// </para>
-    /// </summary>
+    // 値はすぐ効かせるが、スライダーを動かすたびにディスクへ書かないよう、保存は閉じるときにまとめる。
     public sealed class SettingsView
     {
         public const string LogTag = AppliedControlSettings.LogTag;
 
-        /// <summary>Resources からの見た目 (Demo サンプルの UI/Resources/Menu/Settings.uss)。</summary>
         public const string StyleResourcePath = "Menu/Settings";
 
         public const string RootName = "settings";
 
-        /// <summary>画面の見出しの Label の name。</summary>
         public const string TitleName = "settings-title";
 
-        /// <summary>画面の言語 (<see cref="Localizer.Language"/>) を順に切り替えるボタンの name。</summary>
         public const string LanguageButtonName = "settings-language";
 
         public const string BackButtonName = "settings-back";
@@ -53,61 +29,42 @@ namespace Shooter.Runtime
         public const string RebindUndoButtonName = "settings-rebind-undo";
         public const string RebindKeepButtonName = "settings-rebind-keep";
 
-        /// <summary>敵味方の色の組 (<see cref="ControlSettings.Palette"/>) を順に切り替えるボタンの name。</summary>
         public const string PaletteButtonName = "settings-palette";
 
-        /// <summary>今の色の組で味方の見え方を出す見本の Label の name。</summary>
         public const string PaletteFriendlySampleName = "settings-palette-friendly";
 
-        /// <summary>今の色の組で敵の見え方を出す見本の Label の name。</summary>
         public const string PaletteEnemySampleName = "settings-palette-enemy";
 
-        /// <summary>音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string SubtitlesButtonName = "settings-subtitles";
 
-        /// <summary>血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string BloodButtonName = "settings-blood";
 
-        /// <summary>エイムアシスト (<see cref="ControlSettings.AimAssist"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string AimAssistButtonName = "settings-aim-assist";
 
-        /// <summary>視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string InvertLookYButtonName = "settings-invert-look-y";
 
-        /// <summary>ゲームパッドの振動 (<see cref="ControlSettings.RumbleEnabled"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string RumbleButtonName = "settings-rumble";
 
-        /// <summary>ボイスチャットのマイク (<see cref="Shooter.Core.VoiceSettings.MicrophoneEnabled"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string VoiceMicrophoneButtonName = "settings-voice-microphone";
 
-        /// <summary>受ける声の音量 (<see cref="Shooter.Core.VoiceSettings.VolumePercent"/>) のスライダーの name。</summary>
         public const string VoiceVolumeSliderName = "settings-voice-volume";
 
-        /// <summary>受ける声の音量の今の値を出す Label の name。</summary>
         public const string VoiceVolumeValueName = VoiceVolumeSliderName + "-value";
 
-        /// <summary>今の言語の「オン」。</summary>
         public static string OnText => Localizer.Get("settings.on");
 
-        /// <summary>今の言語の「オフ」。</summary>
         public static string OffText => Localizer.Get("settings.off");
 
-        /// <summary>今の言語の、見本の味方の名前。</summary>
         public static string FriendlySampleText => Localizer.Get("settings.palette.friendlySample");
 
-        /// <summary>今の言語の、見本の敵の名前。</summary>
         public static string EnemySampleText => Localizer.Get("settings.palette.enemySample");
 
-        /// <summary>今の言語の「長押し」。</summary>
         public static string HoldText => Localizer.Get("settings.mode.hold");
 
-        /// <summary>今の言語の「切り替え」。</summary>
         public static string ToggleText => Localizer.Get("settings.mode.toggle");
 
-        /// <summary>今の言語で、入力を待っている割り当てのボタンに出す文字。</summary>
         public static string WaitingText => Localizer.Get("settings.rebind.waiting");
 
-        /// <summary>割り当てを変えられない所 (ゲームパッドの移動など) に出す文字。言語に依らない。</summary>
         public const string NotRebindableText = "—";
 
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
@@ -160,12 +117,6 @@ namespace Shooter.Runtime
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
 
-        /// <param name="store">保存先。null ならゲームの既定のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
-        /// <param name="bindingStore">割り当ての上書きの保存先。null ならゲームの既定のキー。</param>
-        /// <param name="actions">割り当てを変える Input Actions。null なら開くときのプロジェクト全体のもの (<see cref="InputSystem.actions"/>)。</param>
-        /// <param name="sink">今の設定を読み、変えた値を効かせる先。null ならゲーム全体の <see cref="AppliedControlSettings.Sink"/>。</param>
-        /// <param name="languageStore">選んだ言語の保存先。null ならゲームの既定のキー。</param>
-        /// <param name="voiceStore">ボイスチャットの設定の保存先。null ならゲームの既定のキー。</param>
         public SettingsView(
             ControlSettingsStore store = null,
             InputBindingOverridesStore bindingStore = null,
@@ -182,55 +133,39 @@ namespace Shooter.Runtime
             _voiceStore = voiceStore ?? new VoiceSettingsStore();
         }
 
-        /// <summary>「戻る」かキャンセルが押されたとき。開いた側が <see cref="Close"/> を呼んで閉じる。</summary>
         public event Action BackRequested;
 
-        /// <summary>保存先。</summary>
         public ControlSettingsStore Store => _store;
 
         public LanguagePreferenceStore LanguageStore => _languageStore;
 
-        /// <summary>ボイスチャットの設定の保存先。</summary>
         public VoiceSettingsStore VoiceStore => _voiceStore;
 
-        /// <summary>画面で編集しているボイスチャットの設定。閉じていれば null。</summary>
         public VoiceSettings Voice => _voiceEditing;
 
-        /// <summary>開いているか。</summary>
         public bool IsOpen => _root != null;
 
-        /// <summary>開いている画面の根の要素。閉じていれば null。</summary>
         public VisualElement Root => _root;
 
-        /// <summary>画面で編集している設定 (すでに効いている)。閉じていれば null。</summary>
         public ControlSettings Settings => _editing;
 
-        /// <summary>割り当ての上書きの保存先。</summary>
         public InputBindingOverridesStore BindingStore => _bindingStore;
 
-        /// <summary>開いている画面が割り当てを変える Player マップ。閉じているか、Input Actions が無ければ null。</summary>
         public PlayerBindings Bindings => _bindings;
 
-        /// <summary>
-        /// 言語の項目で選べる言語 (<see cref="Localizer.AvailableLanguages()"/>)。画面を組むときに Resources から読む。閉じていれば空。
-        /// </summary>
         public IReadOnlyList<GameLanguage> Languages => _languages;
 
-        /// <summary>直前に変えた割り当てがほかと重なっていて、まだ取り消すか決めていなければその結果。無ければ null。</summary>
         public RebindResult PendingConflict => _pendingConflict;
 
-        /// <summary>まだ保存していない変更 (値・モード・割り当て・ボイス) があるか。</summary>
         public bool HasUnsavedChanges =>
             _editing != null && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved));
 
-        /// <summary>slot の割り当てを変えるボタンの name。</summary>
         public static string RebindButtonName(RebindSlot slot)
         {
             var name = "settings-bind-" + Slug(slot.Device) + "-" + slot.ActionName.ToLowerInvariant();
             return slot.Part == null ? name : name + "-" + slot.Part.ToLowerInvariant();
         }
 
-        /// <summary>今の言語で、重なりを知らせる文。</summary>
         public static string FormatConflict(string display, IReadOnlyList<BindingConflict> conflicts)
         {
             if (conflicts == null || conflicts.Count == 0)
@@ -252,25 +187,21 @@ namespace Shooter.Runtime
             return Localizer.Format("settings.rebind.conflict", display, joined);
         }
 
-        /// <summary>value のスライダーの name。</summary>
         public static string SliderName(ControlValue value)
         {
             return "settings-" + Slug(value);
         }
 
-        /// <summary>value の今の値を出す Label の name。</summary>
         public static string ValueLabelName(ControlValue value)
         {
             return SliderName(value) + "-value";
         }
 
-        /// <summary>device の action の Hold/Toggle を切り替えるボタンの name。</summary>
         public static string ModeButtonName(InputDeviceKind device, HoldAction action)
         {
             return "settings-mode-" + Slug(device) + "-" + Slug(action);
         }
 
-        /// <summary>スライダーの横に出す値。視野角は度、それ以外は %。‰ で持つデッドゾーンは小数 1 桁までの % にする。</summary>
         public static string FormatValue(ControlValue value, int amount)
         {
             switch (value)
@@ -284,26 +215,21 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>受ける声の音量のスライダーの横に出す値 (%)。</summary>
         public static string FormatVoiceVolume(int percent)
         {
             return percent.ToString(CultureInfo.InvariantCulture) + "%";
         }
 
-        /// <summary>今の言語で、Hold/Toggle のボタンに出す文字。</summary>
         public static string FormatMode(HoldMode mode)
         {
             return mode == HoldMode.Toggle ? ToggleText : HoldText;
         }
 
-        /// <summary>今の言語で、On/Off のボタンに出す文字。</summary>
         public static string FormatOnOff(bool on)
         {
             return on ? OnText : OffText;
         }
 
-        /// <summary>今の言語で、色の組のボタンに出す文字。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
         public static string FormatPalette(ColorPalette palette)
         {
             switch (palette)
@@ -319,19 +245,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 言語のボタンに出す文字。今の言語が読めなくても選べるよう、その言語の表にある、その言語自身での名前 (<see cref="Localizer.NativeNameOf(GameLanguage)"/>)。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
+        // 今の言語が読めなくても選べるよう、その言語自身での名前を出す。
         public static string FormatLanguage(GameLanguage language)
         {
             return Localizer.NativeNameOf(language);
         }
 
-        /// <summary>
-        /// available の並びで language の次の言語。最後の次は最初に戻る。language が available に無ければ最初の言語、available が空なら language のまま。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">available が null。</exception>
         public static GameLanguage NextLanguage(GameLanguage language, IReadOnlyList<GameLanguage> available)
         {
             if (available == null)
@@ -355,7 +274,6 @@ namespace Shooter.Runtime
             return available[0];
         }
 
-        /// <summary><see cref="TeamPalette.All"/> の並びで palette の次の組。最後の次は最初に戻る。</summary>
         public static ColorPalette NextPalette(ColorPalette palette)
         {
             var all = TeamPalette.All;
@@ -370,10 +288,6 @@ namespace Shooter.Runtime
             return all[0].Kind;
         }
 
-        /// <summary>
-        /// 今効いている設定 (<see cref="ISettingsSink.Current"/>) で画面を組んで container に入れ、最初のスライダーにフォーカスを置く。
-        /// 既に開いていれば、前の画面を閉じて (保存して) から開き直す。
-        /// </summary>
         public void Open(VisualElement container)
         {
             if (container == null)
@@ -397,10 +311,6 @@ namespace Shooter.Runtime
             FocusFirst();
         }
 
-        /// <summary>
-        /// 割り当ての入力を待っていればやめ、変更があれば保存し、画面を入れ物から外す。保存したら true。開いていなければ何もせず false。
-        /// 重なりを知らせたまま閉じたときは、変えた割り当てをそのまま残す。
-        /// </summary>
         public bool Close()
         {
             if (_root == null)
@@ -423,7 +333,6 @@ namespace Shooter.Runtime
             return saved;
         }
 
-        // 画面の要素を外して参照を捨てる。編集中の値と割り当ては残す。
         private void DetachElements()
         {
             _root.UnregisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
@@ -481,10 +390,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// まだ保存していない変更があれば、値とモードは <see cref="ControlSettingsStore"/> に、割り当ての上書きは <see cref="InputBindingOverridesStore"/> に書き出す。
-        /// 書き出して失敗が無ければ true。失敗したらエラーを出して false (変更はこの起動の間は効いたままで、次に閉じるときにまた書き出す)。
-        /// </summary>
         public bool Save()
         {
             if (!HasUnsavedChanges)
@@ -547,118 +452,66 @@ namespace Shooter.Runtime
             return !failed;
         }
 
-        /// <summary>value を amount にしてすぐ効かせ、スライダーと表示を合わせる。</summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">amount が <see cref="ControlSettings.RangeOf"/> の範囲の外。</exception>
         public void SetValue(ControlValue value, int amount)
         {
             EnsureOpen();
             Edit(_editing.With(value, amount));
         }
 
-        /// <summary>device の action のモードを mode にしてすぐ効かせ、ボタンの表示を合わせる。</summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetMode(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
             EnsureOpen();
             Edit(_editing.With(device, action, mode));
         }
 
-        /// <summary>
-        /// 敵味方の色の組を palette にしてすぐ効かせ (キャラクター・HUD・拠点は <see cref="AppliedControlSettings.Changed"/> で塗り直す)、
-        /// ボタンと見本の表示を合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">palette が定義済みの値でない。</exception>
         public void SetPalette(ColorPalette palette)
         {
             EnsureOpen();
             Edit(_editing.WithPalette(palette));
         }
 
-        /// <summary>
-        /// 音の合図の字幕を出すか (<see cref="ControlSettings.ShowSubtitles"/>) を show にしてすぐ効かせ
-        /// (HUD の <see cref="SubtitleView"/> は <see cref="AppliedControlSettings.Changed"/> で切り替わる)、ボタンの表示を合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetShowSubtitles(bool show)
         {
             EnsureOpen();
             Edit(_editing.WithShowSubtitles(show));
         }
 
-        /// <summary>
-        /// 血の表示 (<see cref="ControlSettings.ShowBlood"/>) を show にしてすぐ効かせ
-        /// (<see cref="AppliedControlSettings"/> が <see cref="BloodPresenter.BloodEnabled"/> に入れる)、ボタンの表示を合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetShowBlood(bool show)
         {
             EnsureOpen();
             Edit(_editing.WithShowBlood(show));
         }
 
-        /// <summary>
-        /// エイムアシスト (<see cref="ControlSettings.AimAssist"/>) を enabled にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、ボタンの表示を合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetAimAssist(bool enabled)
         {
             EnsureOpen();
             Edit(_editing.WithAimAssist(enabled));
         }
 
-        /// <summary>
-        /// 視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>) を invert にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、ボタンの表示を合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetInvertLookY(bool invert)
         {
             EnsureOpen();
             Edit(_editing.WithInvertLookY(invert));
         }
 
-        /// <summary>
-        /// ゲームパッドの振動 (<see cref="ControlSettings.RumbleEnabled"/>) を enabled にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、
-        /// ボタンの表示と、振動の強さのスライダーを触れるかを合わせる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetRumbleEnabled(bool enabled)
         {
             EnsureOpen();
             Edit(_editing.WithRumbleEnabled(enabled));
         }
 
-        /// <summary>
-        /// ボイスチャットのマイク (<see cref="VoiceSettings.MicrophoneEnabled"/>) を enabled にし、ボタンの表示を合わせる。
-        /// 試合中のボイスには、閉じたときの保存 (<see cref="VoiceSettingsStore.Saved"/>) で効く。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
         public void SetMicrophoneEnabled(bool enabled)
         {
             EnsureOpen();
             EditVoice(_voiceEditing.WithMicrophoneEnabled(enabled));
         }
 
-        /// <summary>
-        /// 受ける声の音量 (<see cref="VoiceSettings.VolumePercent"/>) を percent にし、スライダーと表示を合わせる。
-        /// 試合中のボイスには、閉じたときの保存 (<see cref="VoiceSettingsStore.Saved"/>) で効く。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">percent が 0 から <see cref="VoiceSettings.MaxVolumePercent"/> の外。</exception>
         public void SetVoiceVolume(int percent)
         {
             EnsureOpen();
             EditVoice(new VoiceSettings(_voiceEditing.MicrophoneEnabled, percent));
         }
 
-        /// <summary>
-        /// 画面の言語 (<see cref="Localizer.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
-        /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語はすぐ <see cref="LanguageStore"/> に書き出す
-        /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">language が定義済みの値でない。</exception>
         public void SetLanguage(GameLanguage language)
         {
             EnsureOpen();
@@ -688,12 +541,7 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>
-        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に、血の表示も On に、
-        /// 視点の上下反転も Off に、振動も On に、ボイスチャットも初期値 (<see cref="VoiceSettings.Default"/>) に戻す。保存は閉じるとき。
-        /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) と、読めない言語に戻って押した人が戻せなくならないよう言語は、今のまま残す。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        // 回線の表示 (ControlSettings.ShowNetStats) はこの画面に無いので、言語は読めない言語に戻って押した人が戻せなくならないよう、今のまま残す。
         public void ResetToDefaults()
         {
             EnsureOpen();
@@ -701,12 +549,6 @@ namespace Shooter.Runtime
             Edit(ControlSettings.Default);
         }
 
-        /// <summary>
-        /// slot の新しい入力を待ち始め、ボタンと案内を「待っている」表示にする。入力が来たらすぐ効かせ、ほかと重なれば <see cref="PendingConflict"/> に置いて知らせる。
-        /// まだ決めていない重なりは、そのまま残すことにする。既に待っていれば何もせず false。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていないか、Input Actions が無い。</exception>
-        /// <exception cref="ArgumentException">slot がこの Input Actions に無い。</exception>
         public bool StartRebind(RebindSlot slot)
         {
             var bindings = EnsureBindings();
@@ -725,18 +567,11 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>入力を待っていればやめる (割り当ては変えない)。開いていなければ何もしない。</summary>
         public void CancelRebind()
         {
             _bindings?.CancelRebind();
         }
 
-        /// <summary>
-        /// slot を path (例: "&lt;Keyboard&gt;/f") にする。入力を受け取ったときと同じく、すぐ効かせて重なりを調べる。
-        /// 入力を待っていればやめてから変える。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いていないか、Input Actions が無い。</exception>
-        /// <exception cref="ArgumentException">path が空か、slot がこの Input Actions に無い。</exception>
         public RebindResult SetBinding(RebindSlot slot, string path)
         {
             var bindings = EnsureBindings();
@@ -751,9 +586,6 @@ namespace Shooter.Runtime
             return result;
         }
 
-        /// <summary>
-        /// 重なりを知らせている割り当てを、変える前に戻す。戻したら true。知らせていなければ何もせず false。
-        /// </summary>
         public bool UndoRebind()
         {
             if (_pendingConflict == null || _bindings == null)
@@ -771,7 +603,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>重なりを知らせている割り当てを、そのまま残す。知らせていなければ何もせず false。</summary>
         public bool KeepRebind()
         {
             if (_pendingConflict == null)
@@ -786,8 +617,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>入力を待っていればやめ、割り当てをすべて既定に戻してすぐ効かせる。保存は閉じるとき。</summary>
-        /// <exception cref="InvalidOperationException">開いていないか、Input Actions が無い。</exception>
         public void ResetBindingsToDefaults()
         {
             var bindings = EnsureBindings();
@@ -1415,7 +1244,6 @@ namespace Shooter.Runtime
             return null;
         }
 
-        // element にフォーカスを置く。置けない要素 (null や focusable でないもの) なら何もせず false。
         private bool FocusLater(VisualElement element)
         {
             if (element == null || !element.focusable)
@@ -1453,7 +1281,6 @@ namespace Shooter.Runtime
             RequestBack();
         }
 
-        /// <summary>「戻る」を押したのと同じく <see cref="BackRequested"/> を呼ぶ。開いていなければ何もしない。</summary>
         public void RequestBack()
         {
             if (_root != null)

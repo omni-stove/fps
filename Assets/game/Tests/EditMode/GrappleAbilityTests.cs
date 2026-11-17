@@ -145,7 +145,6 @@ namespace Shooter.Tests.EditMode
             var wall = PlaceWall(0);
             wall.layer = 1;
 
-            // 掴めない壁の奥に掴める壁があっても、縄は手前の壁で止まる。
             var behind = PlaceBox("Behind", new Vector3(0f, 2.5f, _wallFaceZ + _wallDepth + 1f), new Vector3(6f, 5f, 1f));
             behind.layer = 0;
             Face(new Vector3(0f, 0.2f, 1f));
@@ -389,7 +388,6 @@ namespace Shooter.Tests.EditMode
                 && movement.IsHanging;
         }
 
-        // 正面 (+Z) に、手前の面が _wallFaceZ に来る高い壁を置く。
         private GameObject PlaceWall(int layer)
         {
             var wall = PlaceBox("Wall", new Vector3(0f, _wallHeight / 2f, _wallFaceZ + (_wallDepth / 2f)), new Vector3(6f, _wallHeight, _wallDepth));

@@ -227,7 +227,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(Mathf.Abs(openArea.min.x) <= half && Mathf.Abs(openArea.max.x) <= half, Is.True, "the open area is on the floor");
             Assert.That(Mathf.Abs(openArea.min.z) <= half && Mathf.Abs(openArea.max.z) <= half, Is.True, "the open area is on the floor");
 
-            // 出現位置 (原点) に立ったプレイヤーと標的ダミーの列に重ならないことも確かめる。
             var player = new Bounds(
                 GameBootstrap.PlayerSpawn,
                 new Vector3(GameBootstrap.PlayerRadius * 2f, GameBootstrap.PlayerHeight, GameBootstrap.PlayerRadius * 2f));
@@ -430,7 +429,7 @@ namespace Shooter.Tests.EditMode
             return null;
         }
 
-        /// <summary>決まりどおりに置くか、名前・置き場所・戻り値のどれかを外す置く物。private なので射撃場の生成には拾われない。</summary>
+        // private にしておくのは、射撃場の生成に拾われないようにするため。
         private sealed class FakeFixture : ITpsRangeFixture
         {
             private readonly string _placedName;

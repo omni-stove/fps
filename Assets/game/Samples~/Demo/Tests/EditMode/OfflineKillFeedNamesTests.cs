@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインのキルフィード (<see cref="OfflineKillFeedNames"/>) が、置いた物 (地雷・C4) で倒した行の武器の名前を、
-    /// 倒した側が持つ能力の枠の定義から引くことを確かめる。
-    /// </summary>
     public sealed class OfflineKillFeedNamesTests
     {
         private readonly List<Object> _created = new List<Object>();

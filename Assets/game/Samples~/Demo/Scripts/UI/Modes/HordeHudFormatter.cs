@@ -6,19 +6,13 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ホード (<see cref="Horde"/>) の HUD の行 (表のキー <c>mode.horde.*</c> の <see cref="LocalizedText"/>)。
-    /// 時間は経過時間を出し、得点 (倒した敵の数) の下に波の番号・残りの敵か次の波までの秒数・通貨・近くの防衛物の案内を出す。
-    /// </summary>
     public sealed class HordeHudFormatter : IModeHudFormatter
     {
-        /// <summary>自分が倒れていて、戦っている波を味方が越えれば戻れるときに出す行。</summary>
         public static LocalizedText ReturnsAfterWave => new LocalizedText("mode.horde.returnsAfterWave");
 
         public static LocalizedText Victory => new LocalizedText("mode.horde.victory");
         public static LocalizedText Defeat => new LocalizedText("mode.horde.defeat");
 
-        /// <example><c>Wave(2, 5)</c> は <c>WAVE 2/5</c>、終わりが無ければ <c>WAVE 2</c>、始まる前は <c>WAVE -/5</c></example>
         public static LocalizedText Wave(int number, int? waveCount)
         {
             var current = number > 0 ? number.ToString(CultureInfo.InvariantCulture) : "-";
@@ -27,26 +21,21 @@ namespace Shooter.Runtime
                 : new LocalizedText("mode.horde.waveEndless", current);
         }
 
-        /// <example><c>RemainingEnemies(4)</c> は <c>残りの敵 4</c></example>
         public static LocalizedText RemainingEnemies(int remaining)
         {
             return new LocalizedText("mode.horde.remainingEnemies", Math.Max(0, remaining));
         }
 
-        /// <summary>秒は <see cref="HudFormat.DisplayedSeconds"/> と同じく切り上げる。</summary>
-        /// <example><c>NextWave(4.2f)</c> は <c>次の波まで 5 秒</c></example>
         public static LocalizedText NextWave(float restSeconds)
         {
             return new LocalizedText("mode.horde.nextWave", HudFormat.DisplayedSeconds(restSeconds));
         }
 
-        /// <example><c>Currency(120)</c> は <c>通貨 120</c></example>
         public static LocalizedText Currency(int currency)
         {
             return new LocalizedText("mode.horde.currency", currency);
         }
 
-        /// <summary>防衛物にできることの名前。</summary>
         public static LocalizedText ActionName(HordeFortificationAction action)
         {
             switch (action)
@@ -60,13 +49,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 近くの防衛物の案内。払えるときはキー (空なら省く) と値段を、払えないときは理由を添える。
-        /// </summary>
-        /// <example>
-        /// <c>Prompt(new HordeFortificationOffer(Repair, "Wall-North", 30, Ok, "E"))</c> は <c>[E] Wall-North を直す (30)</c>、
-        /// 波の途中なら <c>Wall-North を直す (30): 波の間だけ</c>
-        /// </example>
         public static LocalizedText Prompt(HordeFortificationOffer offer)
         {
             var body = new LocalizedText("mode.horde.prompt", Word(offer.StructureName), ActionName(offer.Action), offer.Cost);

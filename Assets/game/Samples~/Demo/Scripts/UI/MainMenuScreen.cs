@@ -7,31 +7,12 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// メインメニューの画面。MainMenu シーン (Shooter.Editor.MenuSceneBuilder が生成) に置き、Awake で子の GameObject に
-    /// PanelSettings と UIDocument を作って Resources の MainMenu.uxml を読み込む (<see cref="Show"/>)。
-    /// ボタンを押すと <see cref="MenuNavigator.Go"/> でその行き先へ進む。ゲームパッドの上下 (とキーボードの矢印・Tab) では
-    /// <see cref="ButtonNames"/> の順にフォーカスを動かし、端では反対側へ回り込む。マウスで指したボタンにもフォーカスを移すので、
-    /// どの入力でも選んでいるボタンは 1 つになる。
-    /// 起動引数で <c>-mode client</c> / <c>-lobby quickmatch</c> を渡したときも出し、つないだクライアントがサーバーのマップへ移るまで見せておく。
-    /// 設定ボタンは <see cref="SettingsRequested"/> に差し込み口の要素を渡すだけで、中身は設定画面の側が入れる。
-    /// ロードアウトのボタンは、オンラインと同じアセット (<see cref="Loadout"/>・<see cref="Catalog"/>、MenuSceneBuilder が配線) から
-    /// 選ぶ画面 (<see cref="LoadoutSelectPanel"/>) を差し込み口に出し、決めた並びを <see cref="LoadoutStore"/> に保存する。
-    /// 送るのはオンラインに入ってから (ネット対戦のクライアントが保存した並びを送る)。
-    /// プロフィールのボタンは、成長の記録 (<see cref="Progression"/>) のレベル・戦績を <see cref="ProfilePanel"/> で差し込み口に出す。
-    /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
-    /// キャンペーンのボタンは、ミッションの一覧 (<see cref="Missions"/>、MenuSceneBuilder が配線) とセーブ (<see cref="SaveStorage"/>) から
-    /// ミッションと難易度を選ぶ画面 (<see cref="CampaignPanel"/>) を差し込み口に出し、決めた始め方で <see cref="MenuNavigator.StartCampaign"/> を呼ぶ。
-    /// 「最初から」はシーンを読めると確かめてからセーブを消す。
-    /// ボタンの文字は MainMenu.uxml にキーで書き、<see cref="LocalizedTexts"/> で今の言語にして、言語が変わったら書き直す。
-    /// </summary>
+    // マウスで指したボタンにもフォーカスを移すのは、どの入力でも選んでいるボタンを 1 つにするため。
     [DisallowMultipleComponent]
     public sealed class MainMenuScreen : MonoBehaviour
     {
-        /// <summary>Resources からのレイアウト (Demo サンプルの UI/Resources/Menu/MainMenu.uxml)。</summary>
         public const string LayoutResourcePath = "Menu/MainMenu";
 
-        /// <summary>HUD と同じランタイムテーマを使う。</summary>
         public const string ThemeResourcePath = Hud.ThemeResourcePath;
 
         public const string PanelSettingsName = "MainMenuPanelSettings";
@@ -51,25 +32,20 @@ namespace Shooter.Runtime
         public const string CampaignSlotName = "menu-campaign-slot";
         public const string ProfileSlotName = "menu-profile-slot";
 
-        /// <summary>設定画面がまだ差し込まれていないときに出す案内。</summary>
         public static string SettingsUnavailableNotice => Localizer.Get("menu.settingsUnavailable");
 
-        /// <summary>成長を記録していない (<see cref="Progression"/> が無い) ときに出す案内。</summary>
         public static string ProfileUnavailableNotice => Localizer.Get("menu.profileUnavailable");
 
-        /// <summary>ロードアウトのアセットが使えないときに出す案内。reason に理由を入れる。</summary>
         public static string LoadoutUnavailableNotice(string reason)
         {
             return Localizer.Format("menu.loadoutUnavailable", reason);
         }
 
-        /// <summary>行き先のシーンがビルドに無いときに出す案内。</summary>
         public static string SceneMissingNotice(string scenePath)
         {
             return Localizer.Format("menu.sceneMissing", scenePath);
         }
 
-        /// <summary>ボタンの名前。この順に上から並べ、ゲームパッドのフォーカスもこの順に動かす。</summary>
         public static readonly IReadOnlyList<string> ButtonNames = new[]
         {
             CampaignButtonName,
@@ -114,54 +90,38 @@ namespace Shooter.Runtime
         private SettingsView _settingsView;
         private LocalizedTexts _texts;
 
-        /// <summary>
-        /// 設定ボタンを押したときに、差し込み口の要素 (空にして表示した状態) を渡す。設定画面はここに中身を入れ、
-        /// 閉じるときに <see cref="CloseSettings"/> を呼ぶ。購読が無ければ <see cref="SettingsUnavailableNotice"/> を出すだけ。
-        /// </summary>
         public event Action<VisualElement> SettingsRequested;
 
-        /// <summary><see cref="CloseSettings"/> で設定画面を閉じた直後 (差し込み口を空にする前)。設定画面はここで保存する。</summary>
         public event Action SettingsClosed;
 
-        /// <summary><see cref="InstallSettingsView"/> で取り付けた設定画面。無ければ null。</summary>
         public SettingsView SettingsView => _settingsView;
 
-        /// <summary><see cref="ButtonNames"/> の順に並んだボタン。<see cref="Bind"/> の前は空。</summary>
         public IReadOnlyList<Button> Buttons => _buttons;
 
-        /// <summary>選んでいるボタンの位置。まだどこも選んでいなければ -1。</summary>
         public int FocusIndex => _focusIndex;
 
-        /// <summary>設定画面の差し込み口。<see cref="Bind"/> の前は null。</summary>
         public VisualElement SettingsSlot => _settingsSlot;
 
-        /// <summary>設定画面を開いているか。</summary>
         public bool IsSettingsOpen => _settingsOpen;
 
-        /// <summary>ロードアウトの差し込み口。<see cref="Bind"/> の前は null。</summary>
         public VisualElement LoadoutSlot => _loadoutSlot;
 
-        /// <summary>出しているロードアウトの選択。閉じていれば null。</summary>
         public LoadoutSelectPanel LoadoutPanel => _loadoutPanel;
 
-        /// <summary>ロードアウトの選択を開いているか。</summary>
         public bool IsLoadoutOpen => _loadoutPanel != null;
 
-        /// <summary>スロットのルールと既定の武器を引くロードアウト。MenuSceneBuilder がシーンに配線する。</summary>
         public LoadoutDefinition Loadout
         {
             get => _loadout;
             set => _loadout = value;
         }
 
-        /// <summary>選べる武器の一覧。MenuSceneBuilder がシーンに配線する。</summary>
         public WeaponCatalogAsset Catalog
         {
             get => _catalog;
             set => _catalog = value;
         }
 
-        /// <summary>キャンペーンのミッションの一覧。MenuSceneBuilder がシーンに配線する。</summary>
         public MissionCatalog Missions
         {
             get => _missions;
@@ -174,58 +134,40 @@ namespace Shooter.Runtime
 
         public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
 
-        /// <summary>
-        /// キャンペーンのセーブの置き場所。CampaignRunner と同じ <see cref="FileSaveStorage.CreateDefault"/> を、初めて使うときに作る。
-        /// null を入れると既定に戻す (テストで差し替える)。
-        /// </summary>
         public ISaveStorage SaveStorage
         {
             get => _saveStorage ??= FileSaveStorage.CreateDefault();
             set => _saveStorage = value;
         }
 
-        /// <summary>キャンペーンの選択の差し込み口。<see cref="Bind"/> の前は null。</summary>
         public VisualElement CampaignSlot => _campaignSlot;
 
-        /// <summary>出しているキャンペーンの選択。閉じていれば null。</summary>
         public CampaignSelectPanel CampaignPanel => _campaignPanel;
 
-        /// <summary>キャンペーンの選択を開いているか。</summary>
         public bool IsCampaignOpen => _campaignPanel != null;
 
-        /// <summary>選んだロードアウトの保存先。null を入れると既定のキーに戻す (テストで差し替える)。</summary>
         public LoadoutPreferenceStore LoadoutStore
         {
             get => _loadoutStore;
             set => _loadoutStore = value ?? new LoadoutPreferenceStore();
         }
 
-        /// <summary>
-        /// プロフィールを出し、ロードアウトで使えない武器を決める成長の記録。null を入れると <see cref="ProgressionBootstrap.Recorder"/> に戻す (テストで差し替える)。
-        /// どちらも無ければプロフィールは開かず、武器は全部使える。
-        /// </summary>
         public ProgressionRecorder Progression
         {
             get => _progression ?? ProgressionBootstrap.Recorder;
             set => _progression = value;
         }
 
-        /// <summary>プロフィールの差し込み口。<see cref="Bind"/> の前は null。</summary>
         public VisualElement ProfileSlot => _profileSlot;
 
-        /// <summary>出しているプロフィール。閉じていれば null。</summary>
         public ProfilePanel ProfilePanel => _profilePanel;
 
-        /// <summary>プロフィールを開いているか。</summary>
         public bool IsProfileOpen => _profilePanel != null;
 
-        // 設定・ロードアウト・キャンペーン・プロフィールのどれかを開いている間は、メニューのボタンとその移動を止める
         private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null || _profilePanel != null;
 
-        /// <summary>出している案内。出していなければ null。</summary>
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
 
-        /// <summary>この画面のために作り、破棄時に一緒に消す PanelSettings。<see cref="Show"/> の前は null。</summary>
         public PanelSettings OwnedPanelSettings => _ownedPanelSettings;
 
         private void Awake()
@@ -252,11 +194,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// PanelSettings と UIDocument を持つ子の GameObject を作り、MainMenu.uxml を読み込んでボタンをつなぐ。
-        /// 戻ってきた理由 (<see cref="MenuNavigator.TakeReturnReason"/>) があれば <see cref="ShowReturnReason"/> で出す。既に出していれば何もしない。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Resources にレイアウトかテーマが無い。</exception>
         public void Show()
         {
             if (_document != null)
@@ -304,11 +241,6 @@ namespace Shooter.Runtime
             FocusAt(0);
         }
 
-        /// <summary>
-        /// 設定ボタンで view を差し込み口に開き、「戻る」・キャンセルで閉じるようにつなぐ。閉じると view が保存する。
-        /// <see cref="Show"/> が呼ぶ。既に取り付けていれば何もしない (1 つの画面に設定画面は 1 つ)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">別の設定画面を取り付け済み。</exception>
         public void InstallSettingsView(SettingsView view)
         {
             if (view == null)
@@ -332,10 +264,6 @@ namespace Shooter.Runtime
             view.BackRequested += CloseSettings;
         }
 
-        /// <summary>
-        /// MainMenu.uxml から作った木 root のボタン・案内・差し込み口を探してつなぐ。前につないだ木は外す。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">root に <see cref="ButtonNames"/> のボタンなどが無い。</exception>
         public void Bind(VisualElement root)
         {
             if (root == null)
@@ -415,9 +343,6 @@ namespace Shooter.Runtime
             ShowNotice(null);
         }
 
-        /// <summary>
-        /// 選んでいるボタンを step だけ動かす (<see cref="MenuRoute.MoveFocus"/>)。設定画面・ロードアウトの選択を開いている間は動かさない。
-        /// </summary>
         public void MoveFocus(int step)
         {
             if (IsOverlayOpen || _buttons.Count == 0)
@@ -428,10 +353,7 @@ namespace Shooter.Runtime
             FocusAt(MenuRoute.MoveFocus(_focusIndex, step, _buttons.Count));
         }
 
-        /// <summary>
-        /// destination へ進む。進めたらボタンを押せなくし (シーンを読み終えるまでの二度押しを防ぐ)、true を返す。
-        /// シーンがビルドに無いなど進めなければ、案内を出して false を返す。
-        /// </summary>
+        // 進めたらボタンを押せなくするのは、シーンを読み終えるまでの二度押しを防ぐため。
         public bool Choose(MenuDestination destination)
         {
             if (_leaving || IsOverlayOpen)
@@ -474,9 +396,6 @@ namespace Shooter.Runtime
             return went;
         }
 
-        /// <summary>
-        /// 設定画面の差し込み口を空にして出し、<see cref="SettingsRequested"/> に渡す。購読が無ければ案内を出すだけ。
-        /// </summary>
         public void OpenSettings()
         {
             if (_settingsSlot == null || IsOverlayOpen || _leaving)
@@ -500,7 +419,6 @@ namespace Shooter.Runtime
             handlers(_settingsSlot);
         }
 
-        /// <summary>設定画面を閉じて差し込み口を空にし、設定ボタンにフォーカスを戻す。</summary>
         public void CloseSettings()
         {
             if (!_settingsOpen)
@@ -521,12 +439,6 @@ namespace Shooter.Runtime
             FocusAt(IndexOf(SettingsButtonName));
         }
 
-        /// <summary>
-        /// ロードアウトの選択を差し込み口に出す。最初に選んでおく並びは保存した並び (<see cref="LoadoutStore"/>)、
-        /// なければ <see cref="Loadout"/> の既定の武器。アセットが未設定・不正なら理由を案内に出して開かない。
-        /// 決めた並びは保存して閉じ、Cancel では保存せずに閉じる。
-        /// 今のプロフィール (<see cref="Progression"/>) のレベルで使えない武器は鍵を付けて並べ、選べない。
-        /// </summary>
         public void OpenLoadout()
         {
             if (_loadoutSlot == null || IsOverlayOpen || _leaving)
@@ -552,7 +464,6 @@ namespace Shooter.Runtime
             _loadoutPanel.Cancelled += CloseLoadout;
         }
 
-        /// <summary>ロードアウトの選択を閉じて差し込み口を空にし、ロードアウトのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
         public void CloseLoadout()
         {
             if (_loadoutPanel == null)
@@ -567,11 +478,6 @@ namespace Shooter.Runtime
             FocusAt(IndexOf(LoadoutButtonName));
         }
 
-        /// <summary>
-        /// 今のプロフィール (<see cref="Progression"/>) のレベル・XP・戦績と次のアンロックを差し込み口に出す。
-        /// アンロックの名前は <see cref="Catalog"/> の武器と持ち物の表 (<see cref="KitTuning.Items"/>) から引く。
-        /// 成長を記録していなければ案内を出して開かない。「戻る」・キャンセルで閉じる。
-        /// </summary>
         public void OpenProfile()
         {
             if (_profileSlot == null || IsOverlayOpen || _leaving)
@@ -594,7 +500,6 @@ namespace Shooter.Runtime
             _profilePanel.Cancelled += CloseProfile;
         }
 
-        /// <summary>プロフィールを閉じて差し込み口を空にし、プロフィールのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
         public void CloseProfile()
         {
             if (_profilePanel == null)
@@ -648,11 +553,6 @@ namespace Shooter.Runtime
             ShowNotice(LoadoutFormat.Saved);
         }
 
-        /// <summary>
-        /// キャンペーンの選択を差し込み口に出す。ミッションは <see cref="Missions"/> の順に並べ、<see cref="SaveStorage"/> に再開できるセーブがあるものには
-        /// 「続きから」と「最初から」を出す。最初に選んでおくミッションと難易度は前に始めたもの (<see cref="CampaignLaunchSelection.Current"/>)、無ければ先頭と Normal。
-        /// カタログが未設定・不正なら理由を案内に出して開かない。
-        /// </summary>
         public void OpenCampaign()
         {
             if (_campaignSlot == null || IsOverlayOpen || _leaving)
@@ -675,7 +575,6 @@ namespace Shooter.Runtime
             _campaignPanel.Cancelled += CloseCampaign;
         }
 
-        /// <summary>キャンペーンの選択を閉じて差し込み口を空にし、キャンペーンのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
         public void CloseCampaign()
         {
             if (_campaignPanel == null)
@@ -820,24 +719,18 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>案内を出す。null か空なら隠す。</summary>
         public void ShowNotice(string text)
         {
             _noticeSource = default;
             ShowNoticeText(text);
         }
 
-        /// <summary>案内を今の言語 (<see cref="Localizer.Resolve"/>) の文にして出し、言語が変わったら文にし直す。文にして空なら隠す。</summary>
         public void ShowNotice(LocalizedText text)
         {
             _noticeSource = text;
             ShowNoticeText(Localizer.Resolve(text));
         }
 
-        /// <summary>
-        /// メニューに戻った理由を、今の言語の文 (<see cref="DisconnectNoticeText.For(MenuReturnReason)"/>) にして案内に出す。
-        /// 言語が変わったら文にし直す。null なら案内を隠す。
-        /// </summary>
         public void ShowReturnReason(MenuReturnReason reason)
         {
             ShowNotice(DisconnectNoticeText.For(reason));

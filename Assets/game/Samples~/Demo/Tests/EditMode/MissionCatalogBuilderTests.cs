@@ -9,10 +9,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="MissionCatalogBuilder"/> を一時フォルダに走らせて、出力と GUID の保持を確かめる。
-    /// リポジトリの Assets/game/Missions は触らない。シーンはリポジトリの Campaign01 を指すだけで開かない。
-    /// </summary>
+    // リポジトリの Assets/game/Missions を触らないよう、一時フォルダに走らせる。
     public sealed class MissionCatalogBuilderTests
     {
         private string _folder;
@@ -139,7 +136,6 @@ namespace Shooter.Tests.EditMode
             var definition = CreateDefinition();
             var catalog = MissionCatalogBuilder.BuildAt(_catalogPath, Missions(MissionCatalogBuilder.Campaign01Id));
 
-            // ミッション Id として使えない。
             Assert.That(
                 () => MissionCatalogBuilder.BuildAt(_catalogPath, Missions("bad id")),
                 Throws.InstanceOf<MissionCatalogException>());

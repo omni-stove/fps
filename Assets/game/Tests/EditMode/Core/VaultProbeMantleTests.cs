@@ -4,10 +4,7 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// <see cref="VaultProbe.EvaluateMantle"/> と <see cref="VaultProbe.PlanMantlePath"/>、崖のぼりの調整値 (<see cref="MotorSpec"/>)。
-    /// 段は +Z 側にあり、手前の面の法線は -Z。
-    /// </summary>
+    // 段は +Z 側にあり、手前の面の法線は -Z。
     public sealed class VaultProbeMantleTests
     {
         private const float _tolerance = 1e-4f;
@@ -128,11 +125,9 @@ namespace Shooter.Core.Tests
             Assert.That(points.Count, Is.EqualTo(4));
             Assert.That(points[0], Is.EqualTo(Vector3.Zero));
 
-            // 上がりきった所で体の表面は面の WallGap 手前、足元は上端の Clearance 上。
             Assert.That(points[1].Z + _radius, Is.EqualTo(_distance - VaultProbe.WallGap).Within(_tolerance));
             Assert.That(points[1].Y, Is.EqualTo(1.8f + VaultProbe.Clearance).Within(_tolerance));
 
-            // 縁の上では体の後ろの端が面の WallGap 奥にあり、足元は上端に下りている。
             Assert.That(points[2].Y, Is.EqualTo(points[1].Y).Within(_tolerance));
             Assert.That(path.End.Z - _radius, Is.EqualTo(_distance + VaultProbe.WallGap).Within(_tolerance));
             Assert.That(path.End.Y, Is.EqualTo(1.8f).Within(_tolerance));

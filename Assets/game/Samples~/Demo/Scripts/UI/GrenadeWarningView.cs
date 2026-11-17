@@ -5,34 +5,21 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆発に巻き込まれる距離にあるグレネードを知らせるビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// 毎フレーム <see cref="ThrownGrenade.Live"/> から、今のカメラ (<see cref="Viewer"/>) が爆発の届く半径の内側にいるものを拾い、
-    /// その方向を画面の中央を囲む円周上の印 (<see cref="MarkerClass"/>) と距離の文字で出す。減らさずに当たる半径の内側なら
-    /// <see cref="LethalClass"/> を足す。見た目 (色・大きさ・アイコン) は Hud.uss の各クラスで決める。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class GrenadeWarningView : HudElementView
     {
-        /// <summary>Hud.uxml のグレネード警告の要素。</summary>
         public const string UxmlName = "grenade-warning";
 
-        /// <summary>グレネード 1 個の印に付けるクラス。</summary>
         public const string MarkerClass = "grenade-warning__marker";
 
-        /// <summary>印の中の文字に付けるクラス。</summary>
         public const string LabelClass = "grenade-warning__label";
 
-        /// <summary>減らさずに当たる半径の内側にいるときに印へ足すクラス。</summary>
         public const string LethalClass = "grenade-warning__marker--lethal";
 
-        /// <summary>印の文字のキー。{0} は距離 (m、切り上げ)。</summary>
         public const string TextKey = "hud.grenadeWarning";
 
-        /// <summary>同時に出す印の数の上限。近い順に出す。</summary>
         public const int MaxMarkers = 8;
 
-        /// <summary>印を置く円の半径 (HUD の基準解像度での px)。</summary>
         public const float MarkerRadius = 160f;
 
         private readonly List<GrenadeThreat> _threats = new List<GrenadeThreat>();
@@ -40,15 +27,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 距離と向きの基準にするカメラ。null なら <see cref="Camera.main"/> を使う。
-        /// </summary>
         public Transform Viewer { get; set; }
 
-        /// <summary>今出している印の数。</summary>
         public int ShownCount => _threats.Count;
 
-        /// <summary>index 番目に出している (近い順) グレネードの警告。</summary>
         public GrenadeThreat ThreatAt(int index)
         {
             return _threats[index];
@@ -73,10 +55,6 @@ namespace Shooter.Runtime
             Show(viewer, ThrownGrenade.Live);
         }
 
-        /// <summary>
-        /// grenades のうち viewer が爆発の届く半径の内側にいるものを、近い順に <see cref="MaxMarkers"/> 個まで出す。
-        /// 爆発しない種類・爆発した後のもの・HUD の量で出さないとき (<see cref="HudElementView.IsAllowed"/> が false) は出さない。
-        /// </summary>
         public void Show(Transform viewer, IReadOnlyList<ThrownGrenade> grenades)
         {
             _threats.Clear();
@@ -227,7 +205,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="GrenadeWarningView"/> が出しているグレネード 1 個。</summary>
     public readonly struct GrenadeThreat
     {
         public GrenadeThreat(Vector3 position, float distance, bool isLethal)
@@ -239,10 +216,8 @@ namespace Shooter.Runtime
 
         public Vector3 Position { get; }
 
-        /// <summary>カメラからの距離 (m)。</summary>
         public float Distance { get; }
 
-        /// <summary>減らさずに当たる半径の内側にいるか。</summary>
         public bool IsLethal { get; }
     }
 }

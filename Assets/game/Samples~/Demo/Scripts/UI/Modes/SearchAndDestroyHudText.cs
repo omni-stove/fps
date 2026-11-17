@@ -4,20 +4,12 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroy"/>) の HUD に出す文。表のキー <c>mode.snd.*</c> と引数の <see cref="LocalizedText"/> で返し、受け取った側が今の言語で文にする。
-    /// 陣営名は <see cref="ModeHudText.SideName"/>、設置地点の名前は <see cref="SearchAndDestroyText.SiteName"/> と同じ。
-    /// <see cref="SearchAndDestroyHudFormatter"/> が <see cref="SearchAndDestroyStatus"/> を読んでこれを呼ぶ。
-    /// </summary>
     public static class SearchAndDestroyHudText
     {
         public static LocalizedText AttackRole => new LocalizedText("mode.snd.attackRole");
         public static LocalizedText DefendRole => new LocalizedText("mode.snd.defendRole");
 
-        /// <summary>
-        /// HUD の時計。待ちの間は開始までの秒数、設置前はラウンドの残り時間、設置後は起爆までの秒数 (<see cref="HudNumberFormat.RemainingTime"/> の書式)。
-        /// 言語に依らないので表を引かずにそのまま運ぶ。
-        /// </summary>
+        // 時計の書式は言語に依らないので、表を引かずにそのまま運ぶ。
         public static LocalizedText Clock(SearchAndDestroy game)
         {
             Require(game);
@@ -29,10 +21,6 @@ namespace Shooter.Runtime
             return LocalizedText.Literal(HudNumberFormat.RemainingTime(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining));
         }
 
-        /// <summary>
-        /// 陣営ごとのラウンドの勝ち数と今の役割の行。ownSide があればその行を先頭に置く。勝ち数が単独で多い陣営を首位にする。
-        /// </summary>
-        /// <example><c>ALPHA 2 (攻撃)</c></example>
         public static IReadOnlyList<ModeHudScoreLine> Scores(SearchAndDestroy game, Side? ownSide)
         {
             Require(game);
@@ -63,12 +51,6 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        /// <summary>
-        /// HUD の得点の下に足す行。ラウンドの番号と先取数、自分の役割、待ちの間は前のラウンドの結果、ラウンド中は爆弾の様子
-        /// (設置後は <c>起爆まで n 秒</c>)、設置と解除の進みを出す。
-        /// </summary>
-        /// <param name="game">表示する試合。</param>
-        /// <param name="localPlayerId">この画面で操作しているプレイヤー。参加していなければ null。</param>
         public static IReadOnlyList<LocalizedText> Lines(SearchAndDestroy game, int? localPlayerId)
         {
             Require(game);
@@ -141,15 +123,11 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        /// <summary>設置後の起爆までの秒数 (端数は切り上げ)。</summary>
-        /// <example><c>Fuse(0, 12.3f)</c> は <c>爆弾 A に設置: 起爆まで 13 秒</c></example>
         public static LocalizedText Fuse(int site, float fuseRemaining)
         {
             return new LocalizedText("mode.snd.fuse", SearchAndDestroyText.SiteName(site), HudFormat.DisplayedSeconds(fuseRemaining));
         }
 
-        /// <summary>ラウンドの結果。</summary>
-        /// <example><c>RoundResult(Side.Bravo, RoundEndReason.Detonated)</c> は <c>BRAVO の勝ち (起爆)</c>、引き分けなら <c>引き分け (同時に全滅)</c></example>
         public static LocalizedText RoundResult(Side? winner, RoundEndReason reason)
         {
             var head = winner.HasValue ? HudText.Wins(ModeHudText.SideName(winner.Value)) : HudText.Draw;
@@ -177,7 +155,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>試合が終わったときの結果。終わっていなければ <c>default</c> (空の文)。</summary>
         public static LocalizedText Result(SearchAndDestroy game)
         {
             Require(game);

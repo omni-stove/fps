@@ -12,10 +12,7 @@ using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// はしご (<see cref="LadderComponent"/>) が張る NavMesh のリンクで、敵と Bot が地面から台の上へ (と、その逆へ) 経路を引けること。
-    /// 台と床だけを焼いた NavMesh では、台の上は地面とつながっていない。
-    /// </summary>
+    // 台と床だけを焼いた NavMesh では、台の上は地面とつながっていない。
     public sealed class LadderNavMeshTests
     {
         private const float SampleRadius = 1f;

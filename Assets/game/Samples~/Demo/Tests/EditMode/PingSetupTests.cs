@@ -10,7 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>印の取り付け (PingActionInstaller)、射撃場に置く物 (PingRangeFixture)、smoke の手順 (PingSmokeStep) が差し込み口から見つかることを確かめる。</summary>
     public sealed class PingSetupTests
     {
         private GameObject _player;

@@ -9,10 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="KillFeedView"/> が、オフラインの Id から <see cref="Damageable"/> の名前を引いて行を足し、
-    /// 5 行・5 秒で消し、自分の関わる行を強調することを確かめる。
-    /// </summary>
     public sealed class KillFeedViewTests
     {
         private readonly List<Object> _created = new List<Object>();

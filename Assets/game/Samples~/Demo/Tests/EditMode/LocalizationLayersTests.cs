@@ -10,10 +10,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="Localizer"/> が言語ごとの表を重ねて読み、読めない言語は日本語に戻し、
-    /// <see cref="Localizer.SwitchTo"/> で読み直して保存し、<see cref="LanguagePreferenceStore"/> が前の形式の操作設定から言語を読み移すこと。
-    /// </summary>
     public sealed class LocalizationLayersTests
     {
         private const string VersionSevenSettings =
@@ -215,7 +211,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(store.Load(), Is.EqualTo(GameLanguage.Japanese));
             Assert.That(settings.Load(), Is.EqualTo(ControlSettings.Default.With(ControlValue.MasterVolume, 30)));
 
-            // 操作設定を今の形式で書き直して言語が落ちても、読み移した言語は残る
             settings.Save(settings.Load());
             Assert.That(PlayerPrefs.GetString(_legacyKey), Does.Not.Contain("language"));
             Assert.That(store.Load(), Is.EqualTo(GameLanguage.Japanese));
@@ -287,7 +282,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));
             Assert.That(Localizer.NativeNameOf(GameLanguage.English), Is.EqualTo("English"));
 
-            // 今の言語が英語でも、日本語の名前は日本語の表から引く
             LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
             Localizer.Apply(GameLanguage.English);
             Assert.That(Localizer.NativeNameOf(GameLanguage.Japanese), Is.EqualTo("日本語"));

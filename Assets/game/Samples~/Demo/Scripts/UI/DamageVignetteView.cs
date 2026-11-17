@@ -6,24 +6,12 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 被弾の画面効果と低体力の演出。Hud.uxml の <see cref="UxmlName"/> (画面全体を覆う要素) に
-    /// <see cref="DamageFeedbackCatalog.Vignette"/> を引き伸ばして重ね、不透明度で強さを出す。
-    /// <see cref="CombatEvents.DamageTaken"/> を受けると端を赤くして薄くし、同じ GameObject の <see cref="Hud"/> の体力
-    /// (<see cref="HudModel.HealthFraction"/>) がしきい値以下の間は端の赤と心音を続け、回復したら止めて息切れの音を鳴らす。
-    /// 強さと低体力の判定は <see cref="DamageFeedback"/> が決める。
-    /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付き、どちらも同じイベントと HudModel の体力を受ける。
-    /// カタログが無ければ警告を 1 度だけ出し、画像も音も出さずに判定とログだけ続ける。
-    /// </summary>
-    /// <remarks>
-    /// HUD の量 (<see cref="HudVisibility"/>) では隠さない。体力の表示を隠す量でも、これが体力の減りを知る手がかりになるため。
-    /// </remarks>
+    // HUD の量 (HudVisibility) では隠さない。体力の表示を隠す量でも、これが体力の減りを知る手がかりになるため。
     [DisallowMultipleComponent]
     public sealed class DamageVignetteView : HudElementView
     {
         public const string LogTag = "[DamageFeedback]";
 
-        /// <summary>Hud.uxml の画面端の効果の要素。</summary>
         public const string UxmlName = "damage-vignette";
 
         private static bool _warnedMissingCatalog;
@@ -38,10 +26,6 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 素材と値を引くカタログ。初めて読んだときに <see cref="DamageFeedbackCatalog.Load"/> で探し、無ければ null。
-        /// 代入すると探さずにそれを使い (null で素材なし)、強さと低体力の状態は最初からにする。
-        /// </summary>
         public DamageFeedbackCatalog Catalog
         {
             get
@@ -71,16 +55,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今の強さと低体力の状態。初めて読んだときに <see cref="Catalog"/> の値で作る。</summary>
         public DamageFeedback Feedback => _feedback ??= new DamageFeedback(ResolveSettings());
 
-        /// <summary>画面に出している強さ ([0, 1])。</summary>
         public float Intensity => Feedback.Intensity;
 
-        /// <summary>しきい値以下の体力でいるか。</summary>
         public bool IsLowHealth => Feedback.IsLowHealth;
 
-        /// <summary>心音を鳴らしているか。</summary>
         public bool IsHeartbeatPlaying => _heartbeatSource != null && _heartbeatSource.isPlaying;
 
         private void OnEnable()
@@ -116,7 +96,6 @@ namespace Shooter.Runtime
             Tick(Time.unscaledDeltaTime);
         }
 
-        /// <summary>amount のダメージを受けた効果を出す。0 以下のダメージでは何もしない。</summary>
         public void ShowHit(int amount)
         {
             var feedback = Feedback;
@@ -130,10 +109,6 @@ namespace Shooter.Runtime
             Apply();
         }
 
-        /// <summary>
-        /// 体力の割合 (null は体力が無い) を渡す。しきい値以下に下がったら心音を始め、回復したら止めて息切れの音を鳴らす。
-        /// 倒れた (0) ときと体力が無くなったときは心音を止めるだけ。
-        /// </summary>
         public void SetHealthFraction(float? fraction)
         {
             var feedback = Feedback;
@@ -160,7 +135,6 @@ namespace Shooter.Runtime
             Apply();
         }
 
-        /// <summary>deltaSeconds 秒進めて強さを直す。0 以下か有限でない値では進めない。</summary>
         public void Tick(float deltaSeconds)
         {
             if (_feedback == null)

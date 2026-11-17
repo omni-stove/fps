@@ -4,29 +4,16 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの今のアクション (<see cref="PlayerActionState"/>) を、デバッグ表示の行に組み立てる。
-    /// 並びはダッシュ・しゃがみ・回避・乗り越え・接地・カバー・ブラインドファイア・ADS・射撃・リロード・ダウン・乗り物・肩・視点・武器・ばらつき。
-    /// 状態の有無を表す行は <c>名前: ON</c> / <c>名前: OFF</c> で、ON のときだけ <see cref="ActionDebugLine.IsActive"/> が true。
-    /// 肩・視点・武器・ばらつきは値を出すだけで、有効にはならない。項目名と値の語は <see cref="GameText"/> から今の言語で引く。
-    /// </summary>
     public static class ActionDebugFormat
     {
-        /// <summary><see cref="Lines"/> が返す行の数。</summary>
         public const int LineCount = 16;
 
         public const string On = "ON";
 
         public const string Off = "OFF";
 
-        /// <summary>武器を持っていない・アクティブリロードを未判定のときの値。</summary>
         public const string None = "-";
 
-        /// <summary>state の各項目を 1 行ずつ、<see cref="LineCount"/> 行にして返す。</summary>
-        /// <example>
-        /// ADS 中にリロードを 45% 進めたなら、ADS の行は <c>ADS: ON</c> (有効)、
-        /// リロードの行は <c>リロード: ON 45% (アクティブ: -)</c> (有効)。
-        /// </example>
         public static ActionDebugLine[] Lines(PlayerActionState state)
         {
             return new[]
@@ -50,14 +37,7 @@ namespace Shooter.Runtime
             };
         }
 
-        /// <summary>
-        /// リロードの行の値。リロード中なら進みを切り捨てた百分率を付ける。直前のアクティブリロードの結果は、成功でリロードが
-        /// その場で終わった後も残るので、リロード中かどうかに関わらず括弧で出す。
-        /// </summary>
-        /// <example><c>Reload(true, 0.456f, null)</c> は <c>ON 45% (アクティブ: -)</c>、<c>Reload(false, 0f, Success)</c> は <c>OFF (アクティブ: 成功)</c></example>
-        /// <param name="reloading">リロード中か。</param>
-        /// <param name="progress">0 以上 1 以下。リロード中でなければ使わない。</param>
-        /// <param name="activeReload">直前のアクティブリロードの結果。まだ無ければ null。</param>
+        // 直前のアクティブリロードの結果は、成功でリロードがその場で終わった後も残るので、リロード中かどうかに関わらず括弧で出す。
         public static string Reload(bool reloading, float progress, ActiveReloadResult? activeReload)
         {
             if (!(progress >= 0f && progress <= 1f))
@@ -76,7 +56,6 @@ namespace Shooter.Runtime
             return On + " " + percent.ToString(CultureInfo.InvariantCulture) + "%" + active;
         }
 
-        /// <example><c>Spread(2.5f)</c> は <c>2.5°</c>、<c>Spread(0f)</c> は <c>0.0°</c> (小数 1 桁)</example>
         public static string Spread(float degrees)
         {
             if (!(degrees >= 0f) || float.IsInfinity(degrees))

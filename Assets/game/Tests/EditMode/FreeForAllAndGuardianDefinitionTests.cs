@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="FreeForAllDefinition"/> と <see cref="GuardianDefinition"/> の制限時間・点・リスポーンで試合が作られ、
-    /// <see cref="FreeForAllRunner"/>・<see cref="GuardianRunner"/>・<see cref="MatchRunner"/> が Definition → GameContent の欄 → Inspector の値 の順で読むことを確かめる。
-    /// </summary>
     public sealed class FreeForAllAndGuardianDefinitionTests
     {
         private readonly List<Object> _objects = new List<Object>();

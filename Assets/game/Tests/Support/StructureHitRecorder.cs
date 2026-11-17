@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>テスト用の <see cref="IStructureHittable"/>。渡された被害を順に記録するだけで、何も壊さない。</summary>
     public sealed class StructureHitRecorder : MonoBehaviour, IStructureHittable
     {
         public readonly struct Call

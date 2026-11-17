@@ -10,11 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 設定画面 (<see cref="SettingsView"/>) のボイスチャットの 2 つの行 (マイクの On/Off と声の音量) が <see cref="VoiceSettingsStore"/> の値で開き、
-    /// 変えた値を閉じるときにそのストアへ書くこと。メインメニューとポーズ画面のどちらからも出ること。
-    /// 本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
-    /// </summary>
+    // 本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
     public sealed class SettingsViewVoiceTests
     {
         private ControlSettings _appliedBefore;

@@ -12,10 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 設定画面のキーとボタンの割り当て: 変えるとすぐ効き、重なりを知らせて取り消せ、既定に戻せ、閉じると保存されて起動し直しても残ること。
-    /// 本物の設定とプロジェクト全体のアクションを壊さないよう、保存先はテストごとの別のキー、アクションは写しにする。
-    /// </summary>
+    // 本物の設定とプロジェクト全体のアクションを壊さないよう、保存先はテストごとの別のキー、アクションは写しにする。
     public sealed class SettingsViewBindingsTests
     {
         private static readonly RebindSlot ReloadKey = new RebindSlot("Reload", InputDeviceKind.KeyboardMouse);

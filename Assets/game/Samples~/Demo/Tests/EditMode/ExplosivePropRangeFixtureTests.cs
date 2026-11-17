@@ -9,10 +9,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 射撃場に樽を並べる <see cref="ExplosivePropRangeFixture"/> と、撃って連鎖を確かめる <see cref="ExplosivePropSmokeStep"/> が
-    /// 差し込み口から見つかり、並べた物が smoke の手順どおりに連鎖する間隔になっていることを確かめる。
-    /// </summary>
     public sealed class ExplosivePropRangeFixtureTests
     {
         private Scene _scene;

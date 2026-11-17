@@ -9,10 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ModeRunnerBase が陣営の参加者をモードに入れ、死亡を報告し、自陣営の出現点に戻し、状態を <see cref="GameSignals.ModeStatus"/> に出すことを確かめる。
-    /// bot (EnemyAgent) は NavMesh が要るので、ここでは Damageable と SideMember だけの参加者で確かめる。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者で確かめる。
     public sealed class ModeRunnerBaseTests
     {
         private const float RespawnSeconds = 1f;

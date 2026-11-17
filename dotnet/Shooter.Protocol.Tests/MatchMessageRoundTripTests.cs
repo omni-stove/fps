@@ -226,6 +226,165 @@ namespace Shooter.Protocol.Tests
             Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Sprint | InputButtons.Jump));
             Assert.That(got[1].Tick, Is.EqualTo(51));
             Assert.That(got[1].Has(InputButtons.Dodge), Is.True);
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.All));
+        }
+
+        [Test]
+        public void InputCarriesTheLeanButtons()
+        {
+            var sent = new InputMessage();
+            sent.Add(new InputFrame(7, Vector2.Zero, 0f, InputButtons.LeanLeft | InputButtons.Aim));
+            sent.Add(new InputFrame(8, Vector2.Zero, 0f, InputButtons.LeanRight));
+
+            var got = ToServer<InputMessage>(sent);
+
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.LeanLeft | InputButtons.Aim));
+            Assert.That(got[0].Has(InputButtons.LeanRight), Is.False);
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.LeanRight));
+        }
+
+        [Test]
+        public void ChatRequestAndChat()
+        {
+            var request = ToServer<ChatRequestMessage>(new ChatRequestMessage { Channel = ChatChannel.Team, Text = "右から来る" });
+            Assert.That(request.Channel, Is.EqualTo(ChatChannel.Team));
+            Assert.That(request.Text, Is.EqualTo("右から来る"));
+
+            var chat = ToClient<ChatMessage>(new ChatMessage { SenderId = 3, Channel = ChatChannel.All, Text = "gg" });
+            Assert.That(chat.SenderId, Is.EqualTo(3));
+            Assert.That(chat.Channel, Is.EqualTo(ChatChannel.All));
+            Assert.That(chat.Text, Is.EqualTo("gg"));
+        }
+
+        [Test]
+        public void EmptyOrTooLongChatIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(new ChatRequestMessage { Text = "" }));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new ChatMessage { SenderId = 1, Text = null }));
+            Assert.Throws<System.ArgumentException>(
+                () => new MessageWriter().WriteMessage(new ChatRequestMessage { Text = new string('a', MatchProtocol.MaxChatBytes + 1) }));
+        }
+
+        [Test]
+        public void ChatWithoutTextOrWithAnUnknownChannelIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.ChatRequest);
+            writer.WriteByte(ChatRequestMessage.CurrentVersion);
+            writer.WriteByte((byte)ChatChannel.All);
+            writer.WriteString("");
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+
+            writer.Reset();
+            writer.WriteUInt16(MessageIds.Chat);
+            writer.WriteByte(ChatMessage.CurrentVersion);
+            writer.WriteInt32(1);
+            writer.WriteByte(2);
+            writer.WriteString("hi");
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void MapVoteRequestAndState()
+        {
+            Assert.That(ToServer<MapVoteRequestMessage>(new MapVoteRequestMessage { MapIndex = 2 }).MapIndex, Is.EqualTo(2));
+
+            var sent = new MapVoteStateMessage { RemainingSeconds = 12.5f };
+            sent.AddCandidate("NetArena01", 3);
+            sent.AddCandidate("NetHarbor", 0);
+            sent.AddCandidate("NetDesert", 1);
+            var got = ToClient<MapVoteStateMessage>(sent);
+
+            Assert.That(got.CandidateCount, Is.EqualTo(3));
+            Assert.That(got.MapId(0), Is.EqualTo("NetArena01"));
+            Assert.That(got.Votes(0), Is.EqualTo(3));
+            Assert.That(got.MapId(1), Is.EqualTo("NetHarbor"));
+            Assert.That(got.Votes(1), Is.Zero);
+            Assert.That(got.MapId(2), Is.EqualTo("NetDesert"));
+            Assert.That(got.Votes(2), Is.EqualTo(1));
+            Assert.That(got.RemainingSeconds, Is.EqualTo(12.5f));
+            Assert.That(got.ChosenIndex, Is.EqualTo(MapVoteStateMessage.NotChosen));
+
+            sent.RemainingSeconds = 0f;
+            sent.ChosenIndex = 0;
+            got = ToClient<MapVoteStateMessage>(sent);
+            Assert.That(got.ChosenIndex, Is.Zero);
+        }
+
+        [Test]
+        public void AFewerCandidateMapVoteStateDropsTheOldOnes()
+        {
+            var many = new MapVoteStateMessage();
+            many.AddCandidate("a", 1);
+            many.AddCandidate("b", 2);
+            ToClient<MapVoteStateMessage>(many);
+            var one = new MapVoteStateMessage();
+            one.AddCandidate("c", 0);
+
+            var got = ToClient<MapVoteStateMessage>(one);
+
+            Assert.That(got.CandidateCount, Is.EqualTo(1));
+            Assert.That(got.MapId(0), Is.EqualTo("c"));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => got.MapId(1));
+        }
+
+        [Test]
+        public void MapVoteStateRefusesAChoiceOutsideTheCandidates()
+        {
+            var state = new MapVoteStateMessage { ChosenIndex = 1 };
+            state.AddCandidate("a", 0);
+
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(state));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => state.AddCandidate("b", -1));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new MapVoteRequestMessage { MapIndex = -1 }));
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new MapVoteRequestMessage { MapIndex = MapVoteStateMessage.MaxCandidates }));
+        }
+
+        [Test]
+        public void MapVoteStateWithAChoiceOutsideTheCandidatesIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.MapVoteState);
+            writer.WriteByte(MapVoteStateMessage.CurrentVersion);
+            writer.WriteByte(1);
+            writer.WriteString("a");
+            writer.WriteInt32(0);
+            writer.WriteSingle(1f);
+            writer.WriteByte(2);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void MapVoteRequestOutsideTheCandidateLimitIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.MapVoteRequest);
+            writer.WriteByte(MapVoteRequestMessage.CurrentVersion);
+            writer.WriteByte(MapVoteStateMessage.MaxCandidates);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [TestCase(SpectateStep.Next)]
+        [TestCase(SpectateStep.Previous)]
+        public void SpectateRequest(SpectateStep step)
+        {
+            Assert.That(ToServer<SpectateRequestMessage>(new SpectateRequestMessage { Step = step }).Step, Is.EqualTo(step));
+        }
+
+        [Test]
+        public void SpectateRequestWithAnUnknownStepIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.SpectateRequest);
+            writer.WriteByte(SpectateRequestMessage.CurrentVersion);
+            writer.WriteByte(2);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -512,6 +671,7 @@ namespace Shooter.Protocol.Tests
             Assert.That(killed.WeaponId, Is.EqualTo("rifle"));
             Assert.That(killed.Headshot, Is.True);
             Assert.That(killed.Friendly, Is.True);
+            Assert.That(killed.AssisterCount, Is.Zero);
 
             var explosion = ToClient<ExplosionMessage>(
                 new ExplosionMessage { Center = new Vector3(1f, 0f, 2f), HasThrower = true, ThrowerId = 4, WeaponId = "frag" });
@@ -519,6 +679,58 @@ namespace Shooter.Protocol.Tests
             Assert.That(explosion.HasThrower, Is.True);
             Assert.That(explosion.ThrowerId, Is.EqualTo(4));
             Assert.That(explosion.WeaponId, Is.EqualTo("frag"));
+        }
+
+        [Test]
+        public void KilledCarriesTheAssisters()
+        {
+            var sent = new KilledMessage { KillerId = 1, VictimId = 2, WeaponId = "rifle" };
+            sent.AddAssister(3);
+            sent.AddAssister(5);
+
+            var got = ToClient<KilledMessage>(sent);
+
+            Assert.That(got.AssisterCount, Is.EqualTo(2));
+            Assert.That(got.AssisterId(0), Is.EqualTo(3));
+            Assert.That(got.AssisterId(1), Is.EqualTo(5));
+
+            sent.ClearAssisters();
+            got = ToClient<KilledMessage>(sent);
+            Assert.That(got.AssisterCount, Is.Zero);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => got.AssisterId(0));
+        }
+
+        [Test]
+        public void KilledHoldsAtMostMaxAssisters()
+        {
+            var killed = new KilledMessage();
+            for (var i = 0; i < KilledMessage.MaxAssisters; i++)
+            {
+                killed.AddAssister(i);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => killed.AddAssister(99));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new KilledMessage().AddAssister(-1));
+        }
+
+        [Test]
+        public void KilledWithTooManyOrNegativeAssistersIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            WriteKilledHead(writer);
+            writer.WriteByte(KilledMessage.MaxAssisters + 1);
+            for (var i = 0; i <= KilledMessage.MaxAssisters; i++)
+            {
+                writer.WriteInt32(i);
+            }
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+
+            writer.Reset();
+            WriteKilledHead(writer);
+            writer.WriteByte(1);
+            writer.WriteInt32(-1);
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -688,6 +900,17 @@ namespace Shooter.Protocol.Tests
                 Assert.That(_client.TryGet(id, out _), Is.True, "client reads " + id);
                 Assert.That(_server.TryGet(id, out _), Is.False, "server refuses " + id);
             }
+        }
+
+        private static void WriteKilledHead(MessageWriter writer)
+        {
+            writer.WriteUInt16(MessageIds.Killed);
+            writer.WriteByte(KilledMessage.CurrentVersion);
+            writer.WriteInt32(1);
+            writer.WriteInt32(2);
+            writer.WriteString("rifle");
+            writer.WriteBool(false);
+            writer.WriteBool(false);
         }
 
         private T ToServer<T>(IMessage message)

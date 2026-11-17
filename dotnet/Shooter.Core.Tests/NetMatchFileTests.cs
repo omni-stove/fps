@@ -387,6 +387,65 @@ namespace Shooter.Core.Tests
                 Is.EqualTo(MatchObjective.Domination));
         }
 
+        [Test]
+        public void CommittedRulesListTheBetweenMatchesItemsAtTheirDefaults()
+        {
+            var items = new[]
+            {
+                NetMatchFile.MapPoolItem, NetMatchFile.MapVoteSecondsItem, NetMatchFile.MaxTeamSizeDifferenceItem, NetMatchFile.PrivateMatchItem,
+                NetMatchFile.JoinCodeItem, NetMatchFile.ChatIntervalSecondsItem, NetMatchFile.MaxChatLengthItem,
+            };
+
+            foreach (var path in Directory.GetFiles(Path.Combine(ServerDataRoot(), "rules"), "*" + NetMatchFile.Extension))
+            {
+                var text = System.IO.File.ReadAllText(path);
+                foreach (var item in items)
+                {
+                    Assert.That(text, Does.Contain("\"" + item + "\": "), path + " " + item);
+                }
+
+                var settings = NetMatchFile.Parse(text, path).Settings;
+                Assert.That(settings.MapPool, Is.Empty, path);
+                Assert.That(settings.MapVoteSeconds, Is.EqualTo(0f), path);
+                Assert.That(settings.MaxTeamSizeDifference, Is.EqualTo(0), path);
+                Assert.That(settings.PrivateMatch, Is.False, path);
+                Assert.That(settings.JoinCode, Is.Null, path);
+                Assert.That(settings.ChatIntervalSeconds, Is.EqualTo(1f), path);
+                Assert.That(settings.MaxChatLength, Is.EqualTo(120), path);
+            }
+        }
+
+        private static readonly string[] _expectedMapPool = { "NetTest", "NetArena01" };
+
+        [Test]
+        public void CommittedRulesEditedAsTheGuideSaysStillRead()
+        {
+            var text = System.IO.File.ReadAllText(Path.Combine(ServerDataRoot(), "rules", "TeamDeathmatch.json"));
+            var edits = new[]
+            {
+                ("\"mapPool\": [],", "\"mapPool\": [\"NetTest\", \"NetArena01\"],"),
+                ("\"mapVoteSeconds\": 0,", "\"mapVoteSeconds\": 15,"),
+                ("\"maxTeamSizeDifference\": 0,", "\"maxTeamSizeDifference\": 1,"),
+                ("\"privateMatch\": false,", "\"privateMatch\": true,"),
+                ("\"joinCode\": \"\",", "\"joinCode\": \"test-1\","),
+                ("\"maxChatLength\": 120", "\"maxChatLength\": 170"),
+            };
+            foreach (var (from, to) in edits)
+            {
+                Assert.That(text, Does.Contain(from));
+                text = text.Replace(from, to);
+            }
+
+            var settings = NetMatchFile.Parse(text, "TeamDeathmatch.json").Settings;
+
+            Assert.That(settings.MapPool, Is.EqualTo(_expectedMapPool));
+            Assert.That(settings.MapVoteSeconds, Is.EqualTo(15f));
+            Assert.That(settings.MaxTeamSizeDifference, Is.EqualTo(1));
+            Assert.That(settings.PrivateMatch, Is.True);
+            Assert.That(settings.JoinCode, Is.EqualTo("test-1"));
+            Assert.That(settings.MaxChatLength, Is.EqualTo(170));
+        }
+
         [TestCase("{\"spawnPoints\": [{\"position\": [0, 1]}]}", "spawnPoints[0].position")]
         [TestCase("{\"spawnPoints\": [{\"position\": [0, 1, 2], \"team\": \"Charlie\"}]}", "spawnPoints[0].team")]
         [TestCase("{\"controlPoints\": [{\"index\": 0, \"center\": [0, 0, 0], \"radius\": 0, \"height\": 3}]}", "controlPoints[0].radius")]

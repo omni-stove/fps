@@ -15,10 +15,7 @@ namespace Shooter.Server
 
         private readonly List<ShotHit> _many = new List<ShotHit>();
 
-        /// <summary>
-        /// hit の世界の形を point から direction へ抜けるまでの厚さ。maxThickness を超えるか測れなければ <see cref="float.PositiveInfinity"/>。
-        /// プレイヤーの厚さは 0 (Unity でも部位のコライダーの重なりで測れないので、人は素材と枚数だけで抜けるかを決める)。
-        /// </summary>
+        // Unity でも部位のコライダーの重なりで人の厚さを測れないので、プレイヤーの厚さは 0 とし、素材と枚数だけで抜けるかを決める。
         public float Thickness(in ShotHit hit, Vector3 direction, float maxThickness)
         {
             if (!(maxThickness >= 0f) || float.IsInfinity(maxThickness))
@@ -129,35 +126,15 @@ namespace Shooter.Server
                 _many.Add(vehicleHit);
             }
 
-            var rewound = _lag.Rewind(clamped);
-            var crouched = _lag.RewindCrouched(clamped);
-            _ids.Clear();
-            foreach (var body in _bodies.All)
+            foreach (var (id, body) in RewindBodies(clamped, shooterId, hittable))
             {
-                _ids.Add(body.PlayerId);
-            }
-
-            var geometry = _bodies.Geometry;
-            foreach (var id in _ids)
-            {
-                if (id == shooterId || !rewound.TryGetValue(id, out var position) || !hittable(id))
-                {
-                    continue;
-                }
-
-                var isCrouched = crouched.TryGetValue(id, out var c) && c;
-                var shape = geometry.Shape(isCrouched);
-                geometry.SphereCenters(shape, out var bottomY, out var topY);
-                var p = position + new Vector3(0f, bottomY, 0f);
-                var q = position + new Vector3(0f, topY, 0f);
-                if (!RayCapsule(origin, unit, p, q, geometry.Radius, range, out var distance, out var normal))
+                if (!RayCapsule(origin, unit, body.Bottom, body.Top, body.Radius, range, out var distance, out var normal))
                 {
                     continue;
                 }
 
                 var point = origin + (unit * distance);
-                var bottom = position.Y + shape.CenterY - (shape.Height / 2f);
-                _many.Add(ShotHit.Target(point, normal, distance, id, position, isCrouched, Zone(point.Y, bottom, shape.Height)));
+                _many.Add(ShotHit.Target(point, normal, distance, id, body.Position, body.Crouched, body.Zone(point)));
             }
 
             return LastRecordedTick - clamped;

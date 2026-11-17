@@ -6,7 +6,6 @@ namespace Shooter.Runtime
     // ここから EnemyAgent に知らせる。知らせないと、知覚は囮を見ているのに弾は元の目標へ飛ぶ。
     public interface IPerceivedTargetContributor : IPerceptionContributor
     {
-        // 直前の Contribute で Target を差し替えなかったなら null。
         Damageable PerceivedTarget { get; }
     }
 }

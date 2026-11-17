@@ -5,42 +5,25 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 分隊への指示 (<see cref="GameSignals.SquadOrder"/>) の印を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// 要素を持っている間は <see cref="GameSignals.SquadOrder"/> を購読し、出された指示を出す。要素を受けたときは今の指示に合わせる。
-    /// 守る場所か狙う敵の上に、印と札 (「守れ」「狙え」、<see cref="SquadOrderText.Marker"/>) を出す。
-    /// 画面の外なら印 (Ping) と同じく <see cref="PingScreen.Place"/> で端に寄せて向きの矢印を出す。
-    /// 印が出たか、画面の中と端を行き来したときに <c>[Squad] screen</c>、指示を受け始めたときに <c>[Squad] view</c> をログに出す。
-    /// <see cref="Hud.AddViews"/> が付ける。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class SquadOrderMarkerView : HudElementView
     {
-        /// <summary>Hud.uxml の指示の印を入れる要素。</summary>
         public const string UxmlName = "squad-order";
 
-        /// <summary>印の要素に付けるクラス。</summary>
         public const string MarkerClass = "squad-order__marker";
 
-        /// <summary>狙う指示の印に足すクラス。</summary>
         public const string AttackClass = "squad-order__marker--attack";
 
-        /// <summary>守る指示の印に足すクラス。</summary>
         public const string HoldClass = "squad-order__marker--hold";
 
-        /// <summary>画面の外の印に足すクラス。</summary>
         public const string OffScreenClass = "squad-order__marker--offscreen";
 
-        /// <summary>印の形の要素に付けるクラス。</summary>
         public const string IconClass = "squad-order__icon";
 
-        /// <summary>札の Label に付けるクラス。</summary>
         public const string LabelClass = "squad-order__label";
 
-        /// <summary>画面の外の印の向きの矢印に付けるクラス (色は color で決める)。</summary>
         public const string ArrowClass = "squad-order__arrow";
 
-        /// <summary>画面の外の印を寄せる端の余白。画面の高さを 1 とした量。</summary>
         public const float EdgeMargin = PingMarkersView.EdgeMargin;
 
         // カメラの縦横比が読めないときに使う。HUD の基準解像度 (1920x1080) の比。
@@ -60,38 +43,26 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している指示。出していなければ null。</summary>
         public SquadOrderStatus? Order => _order;
 
-        /// <summary>
-        /// 向きの基準にするカメラ。null なら自分のプレイヤーの視点のカメラ (<see cref="PingMarkersView.LocalPlayerCamera"/>)、それも無ければ <see cref="Camera.main"/>。
-        /// </summary>
         public Camera Viewer { get; set; }
 
-        /// <summary>今出している印の指示の種類。出していなければ None。</summary>
         public BotErrandKind ShownKind => _hasPlacement ? _shownKind : BotErrandKind.None;
 
-        /// <summary>今出している札の文字。出していなければ空。</summary>
         public string ShownLabel => _hasPlacement && _label != null ? _label.text : string.Empty;
 
-        /// <summary>
-        /// order の指示の印を出す。null なら出すのをやめる。
-        /// 要素を持っている間は <see cref="GameSignals.SquadOrder"/> が出されるたびに呼ばれる。
-        /// </summary>
         public void Show(SquadOrderStatus? order)
         {
             _showsSignal = false;
             Write(order);
         }
 
-        /// <summary>今出している印の位置と向き。出していなければ false。</summary>
         public bool TryGetPlacement(out PingScreenPlacement placement)
         {
             placement = _placement;
             return _hasPlacement;
         }
 
-        /// <summary>出している指示を、今のカメラから見て置き直す。</summary>
         public void Refresh()
         {
             var kind = _order.HasValue ? _order.Value.Order : BotErrandKind.None;

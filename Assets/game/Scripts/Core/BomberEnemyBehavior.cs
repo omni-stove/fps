@@ -3,8 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    // 走って近づき、近くで合図 (信管) を始め、燃え尽きたら爆発させる。爆発そのものは物理を持つ Runtime (EnemyBomber) が行い、Detonate で知らせる。
-    // 倒されたときに大小どちらの爆発にするかは、その時の Phase で決まる (Approaching なら小さく、Fusing なら本来の爆発)。
+    // 爆発そのものは物理を持つ Runtime (EnemyBomber) に任せ、ここは Detonate で知らせるだけにする。
     public sealed class BomberEnemyBehavior : IEnemyBehavior
     {
         private BomberSpec _spec = BomberSpec.Default;

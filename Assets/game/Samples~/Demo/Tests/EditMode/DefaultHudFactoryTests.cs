@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 既定の HUD の作り役 (<see cref="DefaultHudFactory"/>) が、Bootstrap の出した自分のプレイヤーと HUD の値に HUD を 1 つ作り、
-    /// ビューとデバッグ表示 (<see cref="ActionDebugOverlay"/>) をそのプレイヤーにつなぎ、外すか切ると片付けることを確かめる。
-    /// </summary>
     public sealed class DefaultHudFactoryTests
     {
         private GameObject _host;
@@ -22,7 +18,6 @@ namespace Shooter.Tests.EditMode
         private WeaponDefinition _handgun;
         private GameRulesDefinition _rules;
 
-        /// <summary>SetUp で配線するルール。2 秒後から毎秒 10 回復、予備弾は 2 倍で無限。</summary>
         private static readonly GameRules _testRules = new GameRules(
             FriendlyFire.Off,
             RespawnMode.Individual,

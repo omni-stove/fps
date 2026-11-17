@@ -16,7 +16,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="Campaign02Mission"/> の配置を <see cref="CampaignSceneBuilder"/> で置いて確かめる。</summary>
     public sealed class Campaign02SceneBuilderTests
     {
         private CampaignMissionSpec _spec;
@@ -191,7 +190,6 @@ namespace Shooter.Tests.EditMode
             var high = 0;
             foreach (var point in layout.CoverRegistry.Points)
             {
-                // 低い遮蔽物 (1m) はしゃがんだ高さで、高い遮蔽物 (2m) は立った高さで当たる。
                 var origin = point.Position + (Vector3.up * (point.Height == CoverHeight.Low ? 0.5f : 1f));
                 Assert.That(
                     Physics.Raycast(origin, point.Facing, out var hit, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
@@ -319,7 +317,6 @@ namespace Shooter.Tests.EditMode
                 var mission = layout.Runner.Mission;
                 var terminal = (InteractObjective)layout.Area(Campaign02Mission.UseTerminalId);
 
-                // 建物に入る前は、端末に入っても操作できない。
                 terminal.HandleEnter(collider);
                 Assert.That(terminal.Interact(), Is.False);
                 terminal.HandleExit(collider);
@@ -412,25 +409,20 @@ namespace Shooter.Tests.EditMode
             var enemy = EnemyPlacement.Ambush("Enemy", "enemy", WeaponAssetBuilder.RifleId, Vector3.zero, Vector3.forward);
             var reach = CampaignAreaElement.Reach("Reach", "reach", Vector3.zero, Vector3.one);
 
-            // 2 体倒す目標に 1 体しかいない。
             var e = Assert.Throws<ArgumentException>(() => Spec(objectives, reach, new CampaignEnemyGroupElement("Enemies", new[] { enemy }, "kill")));
             Assert.That(e.Message, Does.Contain("needs 2 kills"));
 
-            // 撃破の目標を進める物が無い。
             e = Assert.Throws<ArgumentException>(() => Spec(objectives, reach));
             Assert.That(e.Message, Does.Contain("progresses objective 'kill'"));
 
-            // 同じ目標を 2 つの範囲が進める。
             e = Assert.Throws<ArgumentException>(
                 () => Spec(new[] { new ObjectiveDefinition("reach", "") }, reach, CampaignAreaElement.Reach("Reach2", "reach", Vector3.zero, Vector3.one)));
             Assert.That(e.Message, Does.Contain("already progresses"));
 
-            // 知らない目標を指す。
             e = Assert.Throws<ArgumentException>(
                 () => Spec(new[] { new ObjectiveDefinition("reach", "") }, reach, CampaignAreaElement.Reach("Other", "missing", Vector3.zero, Vector3.one)));
             Assert.That(e.Message, Does.Contain("unknown objective 'missing'"));
 
-            // 名前の重なり。
             e = Assert.Throws<ArgumentException>(
                 () => Spec(new[] { new ObjectiveDefinition("reach", "") }, CampaignAreaElement.Reach(CampaignSceneBuilder.LevelObjectName, "reach", Vector3.zero, Vector3.one)));
             Assert.That(e.Message, Does.Contain("twice"));
@@ -513,7 +505,7 @@ namespace Shooter.Tests.EditMode
             return definition;
         }
 
-        /// <summary>Edit Mode では物理の同期を待たずに確かめたいので、Collider.bounds ではなく Transform から計算する。</summary>
+        // Edit Mode では物理の同期を待たずに確かめたいので、Collider.bounds ではなく Transform から計算する。
         private static bool IsInside(BoxCollider box, Vector3 worldPoint)
         {
             var local = box.transform.InverseTransformPoint(worldPoint) - box.center;

@@ -7,9 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="DryFireSound"/> が武器の空撃ちの音を鳴らしてタグ付きのログを出し、カタログや音が無くても止まらないことを確かめる。
-    /// </summary>
     public sealed class DryFireSoundTests
     {
         private const string RifleId = "rifle-id";

@@ -4,15 +4,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// グレネード (<see cref="GrenadeCatalog"/>)・印 (<see cref="PingSpec"/>)・吹き飛ばし (<see cref="KnockbackSpec"/>) の調整値を JSON から読む。
-    /// 印と吹き飛ばしは入れ子の無い 1 つのオブジェクトで、項目の名前はコンストラクターの引数名 (<see cref="PingItemNames"/>・<see cref="KnockbackItemNames"/>)。
-    /// グレネードは種類の並び (<see cref="GrenadeCatalogItemNames"/>) で、1 種類は <see cref="GrenadeItemNames"/> の項目を持つ。
-    /// 吹き飛ばしの力 (<see cref="KnockbackForce"/>) だけは入れ子にせず、種類の名前を頭に付けた項目 (explosionSpeed など) に開く。
-    /// 省略した項目は各 Spec の既定値になる。小数は JSON の数、整数は小数点も指数も無い数で書く。
-    /// 文法は <see cref="GameRulesJson"/> と同じで、値の範囲の検査は Spec に任せ、どれかに引っかかれば
-    /// どのファイルのどの項目かを添えた <see cref="TuningJsonException"/> を投げる。
-    /// </summary>
     public static class TuningJson
     {
         public const string FuseSecondsItem = "fuseSeconds";
@@ -100,7 +91,6 @@ namespace Shooter.Core
         private const string _knockbackKind = "knockback JSON";
         private const string _botsKind = "bots JSON";
 
-        /// <summary>グレネード 1 種類に書ける項目の名前 (<see cref="GrenadeSpec"/> のコンストラクターの引数名)。</summary>
         public static IReadOnlyList<string> GrenadeItemNames { get; } = new[]
         {
             GrenadeIdItem,
@@ -129,7 +119,6 @@ namespace Shooter.Core
         // 爆発を impact に書いた種類に平らな爆発の値も書くと、どちらを使うか読み手が迷う
         private static readonly string[] _flatExplosionItems = { MaxDamageItem, DamageRadiusItem, FullDamageRadiusItem, StructureDamageAtCenterItem };
 
-        /// <summary>印の JSON に書ける項目の名前 (<see cref="PingSpec"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> PingItemNames { get; } = new[]
         {
             LifetimeSecondsItem,
@@ -139,7 +128,6 @@ namespace Shooter.Core
             MinIntervalSecondsItem,
         };
 
-        /// <summary>吹き飛ばしの JSON に書ける項目の名前 (<see cref="KnockbackSpec"/> のコンストラクターの並びで、力は種類ごとに 3 つへ開く)。</summary>
         public static IReadOnlyList<string> KnockbackItemNames { get; } = new[]
         {
             ExplosionSpeedItem,
@@ -200,12 +188,7 @@ namespace Shooter.Core
             StuckProgressItem,
         };
 
-        /// <summary>
-        /// text をグレネードの種類の並びとして読む。<see cref="GrenadeTypesItem"/> も <see cref="CarriedItem"/> も無いオブジェクトは、
-        /// 種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">JSON の文法・項目・値が不正。</exception>
+        // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
         public static GrenadeCatalog ParseGrenades(string text, string sourceName)
         {
             var source = SourceOf(sourceName, _grenadeKind);
@@ -247,13 +230,6 @@ namespace Shooter.Core
             });
         }
 
-        /// <summary>text を 1 種類のグレネードの調整値として読む。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="GrenadeSpec"/> の検査に通らない。
-        /// </exception>
         public static GrenadeSpec ParseGrenade(string text, string sourceName)
         {
             var source = SourceOf(sourceName, _grenadeKind);
@@ -261,13 +237,6 @@ namespace Shooter.Core
                 new ServerDataJson.Fields(source, _grenadeKind, ServerDataJson.ParseDocument(text, source, _grenadeKind), string.Empty, GrenadeItemNames)));
         }
 
-        /// <summary>text を 1 つの印の調整値として読む。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="PingSpec"/> の検査に通らない。
-        /// </exception>
         public static PingSpec ParsePing(string text, string sourceName)
         {
             var source = SourceOf(sourceName, _pingKind);
@@ -288,13 +257,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>text を 1 つの吹き飛ばしの調整値として読む。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="KnockbackSpec"/>・<see cref="KnockbackForce"/> の検査に通らない。
-        /// </exception>
         public static KnockbackSpec ParseKnockback(string text, string sourceName)
         {
             var source = SourceOf(sourceName, _knockbackKind);
@@ -577,7 +539,6 @@ namespace Shooter.Core
             return new TuningJsonException(source, item, $"{kind} '{source}'{where} is invalid: {e.Message}", e);
         }
 
-        /// <summary>最上位のオブジェクトの項目を、型を確かめながら取り出す。作った時点で知らない項目が無いことを確かめる。</summary>
         internal sealed class Fields
         {
             private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
@@ -755,7 +716,6 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>グレネード・印・吹き飛ばしの調整値の JSON が読めない、または値が不正。<see cref="SourceName"/> と <see cref="Item"/> でどこが悪いかを示す。</summary>
     public sealed class TuningJsonException : Exception
     {
         public TuningJsonException()
@@ -779,10 +739,8 @@ namespace Shooter.Core
             Item = item;
         }
 
-        /// <summary>読み込み元の名前 (ファイルのパスなど)。</summary>
         public string SourceName { get; }
 
-        /// <summary>悪い項目の名前。JSON の文法の誤りなど、項目に結び付かないときは null。</summary>
         public string Item { get; }
     }
 }

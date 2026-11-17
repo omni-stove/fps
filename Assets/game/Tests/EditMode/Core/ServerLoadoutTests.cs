@@ -10,7 +10,6 @@ namespace Shooter.Core.Tests
         private const string _rifle = "00000000-0000-4000-8000-00000000000a";
         private const string _handgun = "00000000-0000-4000-8000-000000000002";
 
-        // ロードアウトに無い Id
         private const string _shotgun = "00000000-0000-4000-8000-000000000003";
 
         private static WeaponSpec Spec(string id, WeaponCategory category, float fireInterval, int damage)
@@ -68,7 +67,6 @@ namespace Shooter.Core.Tests
             var weapons = new[] { Rifle(), Handgun() };
             var loadout = new ServerLoadout(Rule(), weapons, 0.5f);
 
-            // 渡した配列を後から書き換えても変わらない
             weapons[0] = Handgun();
 
             Assert.That(loadout.Weapons.Count, Is.EqualTo(2));
@@ -213,7 +211,6 @@ namespace Shooter.Core.Tests
             Assert.That(budget, Is.Null);
         }
 
-        // 一覧にだけある 2 本目のメイン武器
         private const string _smg = "00000000-0000-4000-8000-000000000004";
 
         private static WeaponSpec Smg()
@@ -221,7 +218,6 @@ namespace Shooter.Core.Tests
             return Spec(_smg, WeaponCategory.SubmachineGun, 0.5f, 20);
         }
 
-        /// <summary>メインに AssaultRifle か SubmachineGun、サブに Handgun を入れるルール。</summary>
         private static LoadoutRule ChoiceRule()
         {
             return new LoadoutRule(new[]
@@ -231,7 +227,6 @@ namespace Shooter.Core.Tests
             });
         }
 
-        /// <summary>既定は rifle と handgun、一覧は rifle・handgun・smg から選べるロードアウト。</summary>
         private static ServerLoadout ChoiceLoadout()
         {
             var catalog = new WeaponCatalog(new[] { Rifle(), Handgun(), Smg() });
@@ -250,7 +245,6 @@ namespace Shooter.Core.Tests
             Assert.That(loadout.WeaponsFor(1)[0].Id, Is.EqualTo(_smg));
             Assert.That(loadout.WeaponsFor(1)[1].Id, Is.EqualTo(_handgun));
 
-            // 選んでいない人は既定の並びのまま
             Assert.That(loadout.HasChoice(2), Is.False);
             Assert.That(loadout.WeaponsFor(2), Is.SameAs(loadout.Weapons));
         }
@@ -301,7 +295,6 @@ namespace Shooter.Core.Tests
         {
             var loadout = ChoiceLoadout();
 
-            // 一覧に無い・大文字にした・空の Id
             Assert.That(loadout.TryChoose(1, new[] { _shotgun, _handgun }, out var unknown), Is.False);
             Assert.That(unknown, Does.Contain("slot 0").And.Contain("not in the catalog"));
             Assert.That(unknown, Does.Not.Contain(_shotgun));

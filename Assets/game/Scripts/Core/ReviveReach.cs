@@ -3,24 +3,11 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ネット対戦の蘇生の要求を、<see cref="TeamDeathmatchSession.TryRevive"/> に渡してよいか確かめる。
-    /// Session は距離を見ないので、サーバーはここで距離・チーム・状態をそろえて確かめてから渡す。
-    /// </summary>
+    // TeamDeathmatchSession は距離を見ないので、サーバーはここで距離・チーム・状態をそろえて確かめてから TryRevive に渡す。
     public static class ReviveReach
     {
-        /// <summary>起こせる距離 (m) の既定値。起こす人と起こされる人の本体の中心どうしで測る。</summary>
         public const float DefaultRange = 1.5f;
 
-        /// <summary>
-        /// reviverId が targetId を起こしてよいか。受け付けるなら <see cref="ReviveRejection.None"/>、だめなら最初に引っかかった理由を返す。
-        /// </summary>
-        /// <param name="session">試合。</param>
-        /// <param name="reviverId">起こす人。</param>
-        /// <param name="targetId">起こされる人。</param>
-        /// <param name="reviverPosition">起こす人の本体の中心。</param>
-        /// <param name="targetPosition">起こされる人の本体の中心。</param>
-        /// <param name="range">起こせる距離 (m)。0 以上の有限値。</param>
         public static ReviveRejection Check(
             TeamDeathmatchSession session, int reviverId, int targetId, Vector3 reviverPosition, Vector3 targetPosition, float range)
         {
@@ -77,7 +64,6 @@ namespace Shooter.Core
             return IsWithin(reviverPosition, targetPosition, range) ? ReviveRejection.None : ReviveRejection.TooFar;
         }
 
-        /// <summary>a と b の距離が range 以下なら true。どちらかが有限値でなければ false。</summary>
         public static bool IsWithin(Vector3 a, Vector3 b, float range)
         {
             if (!IsFinite(a) || !IsFinite(b) || !(range >= 0f))

@@ -3,14 +3,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ネット対戦のマップのシーンに置くリスポーン地点の目印。サーバーはシーンを読めないので、書き出し (Shooter.Editor.ServerRulesExporter) が
-    /// <see cref="SpawnPoint"/> にして <c>server-data/maps/&lt;マップ&gt;.points.json</c> に書く。判断は持たない。
-    /// </summary>
+    // サーバーはシーンを読めないので、判断は持たせず、書き出し (Shooter.Editor.ServerRulesExporter) が server-data/maps/<マップ>.points.json に書く目印にする。
     [DisallowMultipleComponent]
     public sealed class NetSpawnPoint : MonoBehaviour
     {
-        /// <summary>地点を使えるチーム。Team? は直列化できないので Any を足した別の列挙にする。</summary>
+        // Team? は直列化できないので Any を足した別の列挙にする。
         public enum SpawnTeam
         {
             Any,
@@ -28,7 +25,6 @@ namespace Shooter.Runtime
             set => _team = value;
         }
 
-        /// <summary>今の位置とチームから Core の <see cref="SpawnPoint"/> を作る。</summary>
         public SpawnPoint ToSpawnPoint()
         {
             var p = transform.position;

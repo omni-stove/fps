@@ -3,12 +3,7 @@ using System.Globalization;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// スナップショットの物の並び。読むたびに作り直さず、確保した配列を使い回す。要素は ref で直接書き換える。
-    /// </summary>
-    /// <remarks>
-    /// 並びに無い物は消えたものとして扱う。差分は物ごとに、基準の並びの同じ Id の物と取る。
-    /// </remarks>
+    // 読むたびに作り直すと GC を起こすので、確保した配列を使い回し、要素は ref で直接書き換える。
     public sealed class SnapshotList<T>
         where T : struct, ISnapshotEntity<T>
     {
@@ -32,7 +27,6 @@ namespace Shooter.Protocol
             _idName = _what + " id";
         }
 
-        /// <summary>1 つのスナップショットに載せられる最大数。</summary>
         public int MaxCount { get; }
 
         public int Count { get; private set; }
@@ -55,8 +49,6 @@ namespace Shooter.Protocol
             Count = 0;
         }
 
-        /// <summary>default の要素を末尾に足し、その要素を返す。</summary>
-        /// <exception cref="InvalidOperationException">もう <see cref="MaxCount"/> 個ある。</exception>
         public ref T Add()
         {
             if (Count == MaxCount)
@@ -70,7 +62,6 @@ namespace Shooter.Protocol
             return ref _items[Count - 1];
         }
 
-        /// <summary>id の要素の位置。無ければ -1。</summary>
         public int IndexOf(int id)
         {
             for (var i = 0; i < Count; i++)
@@ -112,7 +103,6 @@ namespace Shooter.Protocol
             }
         }
 
-        /// <summary>baseline (null なら無し) から変わった部分だけを書く。</summary>
         internal void Write(MessageWriter writer, SnapshotList<T> baseline)
         {
             writer.WriteByte((byte)Count);
@@ -148,10 +138,6 @@ namespace Shooter.Protocol
             }
         }
 
-        /// <summary>
-        /// 並びを読む。hasBaseline が false なら、どの物も <see cref="ISnapshotEntity{T}.OptionalBits"/> 以外の部分が全部載っていなければ
-        /// 壊れているとみなし、載っていない部分は default の値で埋める。
-        /// </summary>
         internal void Read(MessageReader reader, bool hasBaseline)
         {
             Count = 0;
@@ -191,7 +177,6 @@ namespace Shooter.Protocol
             }
         }
 
-        /// <summary>届かなかった部分を baseline の同じ Id の物から埋められるか。</summary>
         internal bool CanFillFrom(SnapshotList<T> baseline)
         {
             for (var i = 0; i < Count; i++)

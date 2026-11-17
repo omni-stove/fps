@@ -5,16 +5,8 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 試合中のボイスチャットを <see cref="IVoiceSession"/> で動かす。試合のロビーの RTC 部屋に入り、押している間だけ送り、
-    /// スナップショットのチームを見て味方の声だけを受け、今の状態を <see cref="VoiceStatus"/> にする。Unity に依存しない。
-    /// </summary>
-    /// <remarks>
-    /// 声を受けるのは、<see cref="VoiceRoster"/> で試合のプレイヤーと分かり、そのプレイヤーが自分と同じチームにいる人だけ。
-    /// 対応の分からない人・試合にいない人・自分のチームが分からない間は受けない。
-    /// 対応のある人は部屋に入る前から受けるかを決めておく。<see cref="IVoiceSession"/> は参加者の一覧を出さず、サービスは入ってきた人の声を
-    /// 受ける状態で始めるので、対応の無い人は話し始めて <see cref="IVoiceSession.Speakers"/> に出たときに切る。
-    /// </remarks>
+    // IVoiceSession は参加者の一覧を出さず、サービスは入ってきた人の声を受ける状態で始めるので、対応のある人は部屋に入る前から受けるかを決めておき、
+    // 対応の無い人は話し始めて IVoiceSession.Speakers に出たときに切る。
     public sealed class ClientVoice : IDisposable
     {
         private readonly IVoiceSession _session;
@@ -32,8 +24,6 @@ namespace Shooter.NetV2
         private VoiceStatus? _status;
         private bool _disposed;
 
-        /// <param name="session">部屋を呼ぶ側。このオブジェクトが Dispose する。</param>
-        /// <param name="roster">参加者とプレイヤーの対応。変わったら受けるかを決め直す。</param>
         public ClientVoice(IVoiceSession session, VoiceRoster roster)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -44,25 +34,16 @@ namespace Shooter.NetV2
             _session.SetVolume(_settings.Volume);
         }
 
-        /// <summary><see cref="Status"/> が変わった。</summary>
         public event Action<VoiceStatus?> StatusChanged;
 
-        /// <summary>今の状態。部屋に入っていなければ null。</summary>
         public VoiceStatus? Status => _status;
 
         public VoiceSettings Settings => _settings;
 
-        /// <summary>押して話そうとしているか (<see cref="SetTalking"/> で決めた値)。</summary>
         public bool IsTalking => _talking;
 
-        /// <summary>部屋に入っている (入ろうとしている) か。</summary>
         public bool IsEntered => _entered;
 
-        /// <summary>
-        /// 試合のロビー <paramref name="lobbyId"/> の RTC 部屋に入る。もう同じロビーに入っていれば何もしない。別のロビーに入っていれば出てから入る。
-        /// 入れなければ部屋の外に戻る (理由は <see cref="IVoiceSession"/> がログに出す)。
-        /// </summary>
-        /// <exception cref="ArgumentException">lobbyId が空。</exception>
         public void Enter(string lobbyId)
         {
             if (string.IsNullOrEmpty(lobbyId))
@@ -103,7 +84,6 @@ namespace Shooter.NetV2
             Publish();
         }
 
-        /// <summary>部屋から出る。入っていなければ何もしない。</summary>
         public void Leave()
         {
             if (_disposed || !_entered)
@@ -118,7 +98,6 @@ namespace Shooter.NetV2
             Publish();
         }
 
-        /// <summary>押して話すボタンを押しているか。押している間だけ (マイクが入っていれば) 送る。</summary>
         public void SetTalking(bool talking)
         {
             ThrowIfDisposed();
@@ -127,8 +106,6 @@ namespace Shooter.NetV2
             Publish();
         }
 
-        /// <summary>マイクの入り切りと受ける声の音量を変える。</summary>
-        /// <exception cref="ArgumentNullException">settings が null。</exception>
         public void ApplySettings(VoiceSettings settings)
         {
             if (settings == null)
@@ -143,11 +120,7 @@ namespace Shooter.NetV2
             Publish();
         }
 
-        /// <summary>
-        /// スナップショットのプレイヤーのチームを覚え、受けるかを決め直す。<paramref name="localPlayerId"/> は自分のプレイヤーの Id。
-        /// 差分を埋め終えていないスナップショットはチームが正しくないので読まない。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">snapshot が null。</exception>
+        // 差分を埋め終えていないスナップショットはチームが正しくないので読まない。
         public void Apply(SnapshotMessage snapshot, int localPlayerId)
         {
             if (snapshot == null)
@@ -174,7 +147,6 @@ namespace Shooter.NetV2
             Refresh();
         }
 
-        /// <summary>SDK の処理とコールバックを進め、状態を出し直す。毎フレーム呼ぶ。</summary>
         public void Tick()
         {
             if (_disposed)
@@ -189,7 +161,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>参加者 <paramref name="productUserId"/> の声を受けるべきか (自分と、自分と同じチームのプレイヤー)。</summary>
         public bool ShouldReceive(string productUserId)
         {
             if (!_roster.TryGetPlayerId(productUserId, out var playerId))
@@ -227,7 +198,6 @@ namespace Shooter.NetV2
             StatusChanged = null;
         }
 
-        /// <summary>知っている参加者 (対応のある人と、前に決めた人) の受けるかを決め直す。</summary>
         private void Refresh()
         {
             if (_disposed)

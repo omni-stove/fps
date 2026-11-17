@@ -2,21 +2,13 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 崩れ落ちる建物の破片がキャラクターに当たったときのダメージ。破片の速さから <see cref="MinSpeed"/> を引いた分に質量を掛けた運動量に
-    /// <see cref="DamagePerMomentum"/> を掛け、端数を切り捨てて <see cref="MaxDamage"/> に収める。
-    /// 速さが <see cref="MinSpeed"/> 以下なら 0 (床に転がっている破片や、飛び散る小さな破片が触れただけでは減らない)。
-    /// 生成時に値を検査し、以後は変わらない。
-    /// </summary>
+    // 速さから MinSpeed を引くのは、床に転がっている破片や飛び散る小さな破片が触れただけで体力を減らさないため。
     public sealed class DebrisCrushDamage
     {
         public const float DefaultMinSpeed = 2f;
         public const float DefaultDamagePerMomentum = 0.25f;
         public const int DefaultMaxDamage = 200;
 
-        /// <param name="minSpeed">これ以下の速さ (m/s) ではダメージを与えない。0 以上の有限値。</param>
-        /// <param name="damagePerMomentum">運動量 1 kg·m/s あたりのダメージ。0 以上の有限値。</param>
-        /// <param name="maxDamage">1 回に与えるダメージの上限。0 以上。</param>
         public DebrisCrushDamage(float minSpeed, float damagePerMomentum, int maxDamage)
         {
             if (!(minSpeed >= 0f) || float.IsInfinity(minSpeed))
@@ -40,21 +32,14 @@ namespace Shooter.Core
             MaxDamage = maxDamage;
         }
 
-        /// <summary>既定値 (<see cref="DefaultMinSpeed"/>・<see cref="DefaultDamagePerMomentum"/>・<see cref="DefaultMaxDamage"/>)。</summary>
         public static DebrisCrushDamage Default => new DebrisCrushDamage(DefaultMinSpeed, DefaultDamagePerMomentum, DefaultMaxDamage);
 
-        /// <summary>これ以下の速さ (m/s) ではダメージを与えない。</summary>
         public float MinSpeed { get; }
 
-        /// <summary>運動量 1 kg·m/s あたりのダメージ。</summary>
         public float DamagePerMomentum { get; }
 
-        /// <summary>1 回に与えるダメージの上限。</summary>
         public int MaxDamage { get; }
 
-        /// <summary>速さ speed・質量 mass の破片が当たったときのダメージ。0 以上 <see cref="MaxDamage"/> 以下。</summary>
-        /// <param name="speed">当たったときの相対的な速さ (m/s)。0 以上 (正の無限大は <see cref="MaxDamage"/>)。</param>
-        /// <param name="mass">破片の質量 (kg)。0 より大きい有限値。</param>
         public int At(float speed, float mass)
         {
             if (!(speed >= 0f))

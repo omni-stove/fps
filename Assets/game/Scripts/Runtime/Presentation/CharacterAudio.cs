@@ -6,53 +6,31 @@ using Random = UnityEngine.Random;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャラの足音・着地音・被弾の声を鳴らす。プレイヤー・NetPlayer・敵の本体に付ける (<see cref="CharacterComponents.Attach"/>)。
-    /// <list type="bullet">
-    /// <item>足音と着地音: 毎フレームの終わりに本体の位置の差を測り、同じ本体の <see cref="ICharacterMotionSource"/> の接地・しゃがみ・ダッシュと
-    /// 一緒に <see cref="FootstepCadence"/> へ渡す。位置の差で測るので、自分で動かすプレイヤー・NavMesh で動く敵・
-    /// サーバーから届いた位置を補間して表示するネット対戦の他人のどれも同じ規則で鳴る。
-    /// ダッシュ中かが同期されていない (他人の) キャラは、速さから推す (<see cref="FootstepCadence.IsSprintingBySpeed"/>)。</item>
-    /// <item>被弾の声: 本体に <see cref="Damageable"/> があればその <see cref="Damageable.Damaged"/> で、無ければ <see cref="ICharacterHurtSource"/> で、
-    /// この画面で操作しているキャラなら <see cref="CombatEvents.DamageTaken"/>、他人なら <see cref="ICharacterHurtSource.Hurt"/> で鳴らす。
-    /// 連射や散弾で続けて当たっても <see cref="HurtVoiceCooldownSeconds"/> の間は鳴らし直さない。</item>
-    /// </list>
-    /// 足音と着地音は、鳴らすときに足元へ短く Raycast して床の材質 (<see cref="SurfaceMaterial.IdOf"/>) を引き、
-    /// <see cref="SurfaceCatalog"/> の組からランダムに選ぶ (直前と同じ音は避ける)。組が無ければ <see cref="FootstepSurfaceCatalog.CollectClips"/> の順に
-    /// default の組、<see cref="Catalog"/> の <see cref="PresentationCatalog.Footstep"/> / <see cref="PresentationCatalog.Landing"/> を使う。
-    /// 足元の材質が変わったら <see cref="FootstepLogTag"/> 付きでログに出す。
-    /// 被弾の声は <see cref="Catalog"/> の <see cref="PresentationCatalog.HurtVoice"/>。
-    /// 無いものは鳴らさないだけで、動きや戦闘の処理は止めない。AudioSource は初めて鳴らすときに本体へ足す (足と声で 2 つ)。
-    /// 他人の足音と着地音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
-    /// 銃声・着弾・リロードの音は <see cref="WeaponPresentation"/> が鳴らす。
-    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止める。
-    /// </summary>
+    // 足音を本体の位置の差で測るのは、自分で動かすプレイヤー・NavMesh で動く敵・サーバーから届いた位置を補間して表示するネット対戦の他人のどれも同じ規則で鳴らすため。
     [DisallowMultipleComponent]
     public sealed class CharacterAudio : MonoBehaviour
     {
         public const string LogTag = "[Audio]";
 
-        /// <summary>足元の材質が変わったときのログの頭。</summary>
         public const string FootstepLogTag = "[Footstep]";
 
-        /// <summary>足元を調べる Raycast を、足の高さからこれだけ (m) 上から始める。坂や段差で足が床に少し埋まっていても床を拾える。</summary>
+        // 坂や段差で足が床に少し埋まっていても床を拾えるよう、足の高さより上から Raycast を始める。
         public const float SurfaceProbeLift = 0.3f;
 
-        /// <summary>足の高さからこれだけ (m) 下まで床を探す。接地の判定の誤差と、ネット対戦の補間で浮いた分を拾える長さ。</summary>
+        // 接地の判定の誤差と、ネット対戦の補間で浮いた分を拾える長さ。
         public const float SurfaceProbeDepth = 0.5f;
 
         private const int SurfaceProbeBufferSize = 8;
 
-        /// <summary>この距離 (m) までは音量を下げない。</summary>
         public const float DefaultMinDistance = 1.5f;
 
-        /// <summary>この距離 (m) で聞こえなくなる。遠くの敵の足音で近くの音を埋めないよう、直線で 0 まで下げる。</summary>
+        // 遠くの敵の足音で近くの音を埋めないよう、直線で 0 まで下げる。
         public const float DefaultMaxDistance = 30f;
 
-        /// <summary>被弾の声を鳴らしてから次を鳴らせるまでの秒数。</summary>
+        // 連射や散弾で続けて当たっても被弾の声を鳴らし直さないための間。
         public const float HurtVoiceCooldownSeconds = 0.4f;
 
-        /// <summary>足音の高さを毎回この幅 (±) で揺らす。同じ音の繰り返しに聞こえないようにする。</summary>
+        // 同じ音の繰り返しに聞こえないよう、足音の高さを毎回揺らす。
         public const float FootstepPitchJitter = 0.06f;
 
         [SerializeField, Tooltip("音を引く設定。空なら Resources の PresentationCatalog を探す")]
@@ -93,10 +71,6 @@ namespace Shooter.Runtime
         private bool _hasLastPosition;
         private float _hurtCooldown;
 
-        /// <summary>
-        /// 音を引く設定。Inspector で入れていなければ、初めて読んだときに <see cref="PresentationCatalog.Load"/> で探し、無ければ null (鳴らさない)。
-        /// 代入すると探さずにそれを使う (null で音を止める)。
-        /// </summary>
         public PresentationCatalog Catalog
         {
             get
@@ -116,10 +90,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 床の材質ごとの足音と着地音。Inspector で入れていなければ、初めて読んだときに <see cref="FootstepSurfaceCatalog.Load"/> で探す。
-        /// 無ければ (1 度だけ警告して) null で、<see cref="Catalog"/> の足音・着地音を鳴らす。代入すると探さずにそれを使う。
-        /// </summary>
         public FootstepSurfaceCatalog SurfaceCatalog
         {
             get
@@ -146,13 +116,10 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>最後に足音か着地音を鳴らしたときの足元の材質の Id。まだ鳴らしていなければ null。</summary>
         public string LastSurfaceId => _lastSurfaceId;
 
-        /// <summary>足音と着地音を決める規則。</summary>
         public FootstepCadence Cadence => _cadence;
 
-        /// <summary>接地・しゃがみ・ダッシュを読む相手。見つかっていなければ null (足音と着地音を鳴らさない)。</summary>
         public ICharacterMotionSource MotionSource => _motion;
 
         private void Start()
@@ -248,11 +215,6 @@ namespace Shooter.Runtime
             PlayFootstep(cue.Kind, cue.Volume, ProbeSurfaceId());
         }
 
-        /// <summary>
-        /// materialId の床で kind (足音か着地) の音を volume で鳴らす。候補は <see cref="FootstepSurfaceCatalog.CollectClips"/> で引き、
-        /// 直前に同じ種類で鳴らした音を避けて選ぶ。materialId が前回と違えば <see cref="FootstepLogTag"/> 付きでログに出す。
-        /// 音が無い・kind が足音でも着地でもなければ何もせず null。鳴らしたらそのクリップを返す。
-        /// </summary>
         internal AudioClip PlayFootstep(FootstepCueKind kind, float volume, string materialId)
         {
             if (kind != FootstepCueKind.Footstep && kind != FootstepCueKind.Landing)
@@ -300,10 +262,6 @@ namespace Shooter.Runtime
             return clip;
         }
 
-        /// <summary>
-        /// 足元の床の材質の Id。足の高さの <see cref="SurfaceProbeLift"/> 上から <see cref="SurfaceProbeDepth"/> 下まで Raycast し、
-        /// 自分の本体の (子を含む) コライダーとトリガーを除いた一番近い面の <see cref="SurfaceMaterial.IdOf"/>。何も無ければ <see cref="SurfaceMaterial.DefaultId"/>。
-        /// </summary>
         internal string ProbeSurfaceId()
         {
             var origin = FeetPosition() + (Vector3.up * SurfaceProbeLift);
@@ -377,14 +335,9 @@ namespace Shooter.Runtime
             return position;
         }
 
-        /// <summary>この画面で操作しているキャラか (<see cref="Damageable.IsLocalPlayer"/> / <see cref="ICharacterHurtSource.IsLocalPlayer"/>)。</summary>
         public bool IsLocalCharacter =>
             _damageable != null ? _damageable.IsLocalPlayer : _hurtSource != null && _hurtSource.IsLocalPlayer;
 
-        /// <summary>
-        /// 被弾の声を鳴らす。<see cref="HurtVoiceCooldownSeconds"/> の間に続けて呼んでも 1 回だけ鳴らす。
-        /// 音が無ければ何もしない。鳴らしたら true。
-        /// </summary>
         public bool PlayHurtVoice()
         {
             if (_hurtCooldown > 0f)

@@ -8,13 +8,7 @@ using UnityEngine;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// クライアントの <see cref="EosMatchTransport"/> のために、PlayEveryWare のプラグインの SDK で P2P を呼ぶ。
-    /// プラットフォームとログインは <see cref="EosPlatform"/> をロビーと共有する。
-    /// </summary>
-    /// <remarks>
-    /// プラットフォームはプロセスに 1 つで終了時に <see cref="EosPlatform"/> が手放すので、<see cref="CloseAll"/> では手放さない。
-    /// </remarks>
+    // プラットフォームはプロセスに 1 つで終了時に EosPlatform が手放すので、CloseAll では手放さない。
     internal sealed class EosClientP2P : IEosP2P
     {
         private const string _displayName = "shooter-client";

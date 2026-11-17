@@ -15,7 +15,7 @@ namespace Shooter.Server
             _log = log ?? throw new ArgumentNullException(nameof(log));
         }
 
-        /// <summary>false なら呼ぶ側は行を作らない。<c>-log-format text</c> で JSON を組み立てる手間をかけないため。</summary>
+        // -log-format text で JSON を組み立てる手間をかけないよう、false なら呼ぶ側は行を作らない。
         public bool Enabled { get; private set; }
 
         public void Write(string line)

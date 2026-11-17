@@ -10,9 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// エクスキューションの HUD の文 (<see cref="ExecutionHudText"/>) と、<see cref="ExecutionStatus"/> をそれで文にする書式役 (<see cref="ExecutionHudFormatter"/>) を確かめる。
-    /// </summary>
     public sealed class ExecutionHudTextTests
     {
         private const int _alphaOne = 0;
@@ -246,7 +243,6 @@ namespace Shooter.Tests.EditMode
                 null, null, ownSide, null, false, null, new ExecutionStatus(execution, localPlayerId, interactTargetId));
         }
 
-        /// <summary>ラウンド 1 の残り 50 秒で、ALPHA の 1 人がダウンした BRAVO の 1 人にとどめを 1 秒ぶん刺している。</summary>
         private static ExecutionSession ExecutingAtFiftySeconds()
         {
             var execution = Create();

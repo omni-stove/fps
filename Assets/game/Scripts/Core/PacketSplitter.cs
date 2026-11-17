@@ -3,15 +3,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 パケットの上限 (EOS P2P では 1170 バイト) を超えるメッセージを複数のパケットに分ける。
-    /// 受け手は <see cref="PacketReassembler"/> で元に戻す。
-    /// </summary>
-    /// <remarks>
-    /// パケットの形式 (数値はリトルエンディアン):
-    /// 分けないとき <c>[<see cref="WholeTag"/>][本文]</c>、
-    /// 分けるとき <c>[<see cref="FragmentTag"/>][メッセージ ID 2][番号 2][総数 2][本文の断片]</c>。
-    /// </remarks>
     public sealed class PacketSplitter
     {
         public const byte WholeTag = 1;
@@ -22,7 +13,6 @@ namespace Shooter.Core
         private readonly byte[] _buffer;
         private ushort _nextMessageId;
 
-        /// <param name="maxPacketSize">1 パケットの最大バイト数。ヘッダ込み。</param>
         public PacketSplitter(int maxPacketSize)
         {
             if (maxPacketSize <= FragmentHeaderSize)
@@ -36,14 +26,9 @@ namespace Shooter.Core
 
         public int MaxPacketSize => _buffer.Length;
 
-        /// <summary>分ければ送れるメッセージの最大バイト数。</summary>
         public int MaxMessageSize => ushort.MaxValue * (MaxPacketSize - FragmentHeaderSize);
 
-        /// <summary>
-        /// <paramref name="message"/> をパケットに分けて順に <paramref name="send"/> へ渡す。
-        /// 渡すパケットは内部のバッファを使い回すので、<paramref name="send"/> の中でコピーするか送り切ること。
-        /// </summary>
-        /// <returns>渡したパケットの数。</returns>
+        // 渡すパケットは内部のバッファを使い回すので、send の中でコピーするか送り切る。
         public int Split(ArraySegment<byte> message, Action<ArraySegment<byte>> send)
         {
             if (message.Array == null)

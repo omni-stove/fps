@@ -2,22 +2,19 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary><see cref="UdpMatchTransport"/> の接続の調整値。</summary>
     public sealed class UdpTransportOptions
     {
         public const string DefaultConnectionKey = "shooter-match";
         public const int DefaultDisconnectTimeoutMilliseconds = 5000;
         public const int DefaultPingIntervalMilliseconds = 1000;
 
-        /// <summary>今の Netcode のクライアント (1 秒ごとに 10 回) と同じく、約 10 秒で諦める。</summary>
+        // 今の Netcode のクライアント (1 秒ごとに 10 回) と同じく、約 10 秒で諦める。
         public const int DefaultConnectAttemptIntervalMilliseconds = 1000;
 
         public const int DefaultMaxConnectAttempts = 10;
 
-        /// <summary>
-        /// 切断の知らせは UDP 1 つなので落ちると相手にはタイムアウトに見える。止めるときに相手の受け取りをこの時間まで待ち、
-        /// 落ちた知らせを送り直させる。
-        /// </summary>
+        // 切断の知らせは UDP 1 つなので落ちると相手にはタイムアウトに見える。止めるときに相手の受け取りをこの時間まで待ち、
+        // 落ちた知らせを送り直させる。
         public const int DefaultShutdownLingerMilliseconds = 300;
 
         private string _connectionKey = DefaultConnectionKey;
@@ -27,9 +24,7 @@ namespace Shooter.Protocol
         private int _maxConnectAttempts = DefaultMaxConnectAttempts;
         private int _shutdownLingerMilliseconds = DefaultShutdownLingerMilliseconds;
 
-        /// <summary>
-        /// サーバーとクライアントで同じでなければならない合言葉。違う相手は <see cref="UdpMatchTransport.ProtocolMismatchReason"/> で断る。
-        /// </summary>
+        // サーバーとクライアントで同じでなければならない。違う相手は UdpMatchTransport.ProtocolMismatchReason で断る。
         public string ConnectionKey
         {
             get => _connectionKey;

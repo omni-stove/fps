@@ -2,23 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 拾える物を拾おうとしたときに何が起きるかを決める。状態は変えず、反映は呼ぶ側が <see cref="PickupOutcome"/> に従って行う。
-    /// </summary>
-    /// <remarks>
-    /// 判定の順: 倒れていれば <see cref="PickupRejection.CollectorDown"/>、陣営の条件に合わなければ <see cref="PickupRejection.SideNotAllowed"/>、
-    /// その後に種類ごとの判定をする。
-    /// <list type="bullet">
-    /// <item>武器: 持っていなければ持ち武器に加える。持てる数の上限 (<see cref="PickupCollector.MaxWeapons"/>) に届いていれば、今の武器を落として持ち替える
-    /// (<see cref="PickupOutcome.DroppedWeaponId"/>)。武器が持ち物に入る物で、持ち物に場所か重さの余りが無ければ <see cref="PickupRejection.InventoryFull"/>。
-    /// 持っていればその武器の予備弾を <see cref="PickupSpec.Amount"/> まで (上限で切り詰めて) 足し、
-    /// 足せなければ <see cref="PickupRejection.AmmoFull"/>。</item>
-    /// <item>予備弾: 武器の Id が決まっていればその武器、無ければ今の武器、今の武器が満タンなら持ち武器の並びの順に、足せる最初の武器に足す。</item>
-    /// <item>回復・防具: 上限までの足りない分だけ足し、満タンなら拾わない。</item>
-    /// <item>アイテム: 持ち物に入る数まで入れ、1 個も入らなければ <see cref="PickupRejection.InventoryFull"/>。</item>
-    /// <item>タグ: 生きていて陣営の条件に合えば必ず拾える。得点などはモードが <see cref="PickupOutcome.IsOwnSideTag"/> を見て決める。</item>
-    /// </list>
-    /// </remarks>
     public static class PickupJudge
     {
         public static PickupOutcome Judge(PickupSpec spec, PickupCollector collector)

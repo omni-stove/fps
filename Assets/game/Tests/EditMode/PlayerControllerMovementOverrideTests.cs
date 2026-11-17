@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 移動の横取り (<see cref="IMovementOverride"/>) の選び方と当て方、回避・乗り越えと同時に有効にならないこと、
-    /// 操作を手放している間 (<see cref="PlayerController.Handoff"/>) は入力が移動に効かないこと。
-    /// </summary>
     public sealed class PlayerControllerMovementOverrideTests
     {
         private const float StepSeconds = 0.02f;
@@ -311,7 +307,6 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        // 足元 (y = 0) の下に床を置き、接地するまで落とす。
         private void LandOnFloor()
         {
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -327,7 +322,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_player.IsGrounded, Is.True, "landed on the floor");
         }
 
-        // 正面 (+Z) の 0.8m 先に、厚さ 0.4m・高さ 1m の乗り越えられる壁を置く (PlayerControllerTests と同じ寸法)。
         private void PlaceLowWallInFront()
         {
             _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);

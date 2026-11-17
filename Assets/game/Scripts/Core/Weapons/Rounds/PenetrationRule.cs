@@ -15,7 +15,6 @@ namespace Shooter.Core
             return round.Radius > 0f ? null : round.Penetration;
         }
 
-        // 厚さを測る側が、これより厚ければ測り切らずに諦めてよい長さ。
         public static float MaxThicknessFor(PenetrationSpec penetration, string surfaceMaterialId)
         {
             if (penetration == null)
@@ -27,8 +26,6 @@ namespace Shooter.Core
             return float.IsInfinity(max) ? float.MaxValue : max;
         }
 
-        // damageMultiplier はこの 1 枚を抜けた分の倍率で、それまでに抜けた分は呼ぶ側が掛け合わせる。
-        // 測り切れなかった厚さは float.PositiveInfinity で渡す。
         public static bool TryPassThrough(
             PenetrationSpec penetration, int passedCount, string surfaceMaterialId, float thickness, out float damageMultiplier)
         {

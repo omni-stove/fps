@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ExecutionRunner が倒れた参加者をダウンさせ、とどめか出血で倒れるまでラウンドを続け、味方の蘇生でその場に立たせ、
-    /// ラウンドの始めに全員を出現点へ並べ直すことを確かめる。bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者で確かめる。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者で確かめる。
     public sealed class ExecutionRunnerTests
     {
         private const float PreparationSeconds = 1f;

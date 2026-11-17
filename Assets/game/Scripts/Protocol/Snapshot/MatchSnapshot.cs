@@ -2,28 +2,21 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 試合全体の状態。Netcode では NetTeamDeathmatch の同期値 (スコア・残り時間・試合の進み・ルール・目標) に分かれていたもの。
-    /// </summary>
     public struct MatchSnapshot
     {
         public GameModeState State { get; set; }
 
         public bool HasWinner { get; set; }
 
-        /// <summary>勝ったチーム。<see cref="HasWinner"/> が false (引き分け・まだ終わっていない) なら使わない。</summary>
         public Team Winner { get; set; }
 
         public int AlphaScore { get; set; }
         public int BravoScore { get; set; }
 
-        /// <summary>試合の残り秒 (表示用の整数)。</summary>
         public int RemainingSeconds { get; set; }
 
-        /// <summary>次の試合が始まるまでの秒。</summary>
         public int NextMatchSeconds { get; set; }
 
-        /// <summary>まとめて出現するルールで、次の出現までの秒。</summary>
         public int NextWaveSeconds { get; set; }
 
         public MatchRulesSync Rules { get; set; }

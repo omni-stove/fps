@@ -5,23 +5,10 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 移動入力を <see cref="PlayerMotor"/> に渡し、返ってきた変位を <see cref="CharacterController.Move"/> に適用する。
-    /// 移動量の計算はすべて <see cref="PlayerMotor"/> が、しゃがみの寸法は <see cref="StanceGeometry"/> が行い、
-    /// ここは入力の読み取りと結果の適用だけを受け持つ。
-    /// 参照はコードで解決するので Inspector の配線は要らない: CharacterController と <see cref="FirstPersonLook"/> は同じ
-    /// GameObject、目は <see cref="ViewRig.FindEye"/> (無ければ子のカメラ)、入力はプロジェクト全体のアクション
-    /// (<see cref="InputSystem.actions"/>) の Move / Sprint / Crouch / Jump。解決できなければエラーを出して自分を無効にする
-    /// (Dodge と Prone は無くても警告だけで、回避・伏せを入力からできなくなる)。
-    /// 乗り物の座席などが <see cref="Handoff"/> で操作を引き取っている間は、入力を読まず何も押していないものとして動く。
-    /// 姿勢 (.Stance.cs)・伏せ (.Prone.cs)・ダッシュ (.Sprint.cs)・着地と落下ダメージ (.Landing.cs)・回避 (.Dodge.cs)・乗り越え (.Vault.cs)・
-    /// 崖のぼり (.Mantle.cs)・移動の横取り (.MovementOverride.cs) は、<see cref="Tick"/> から呼ぶメソッドとして別のファイルに置く。
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
     public sealed partial class PlayerController : MonoBehaviour, ICharacterMotionSource
     {
-        /// <summary>Assets/InputSystem_Actions.inputactions のアクション。</summary>
         public const string MoveActionPath = InputActionPaths.Move;
         public const string SprintActionPath = InputActionPaths.Sprint;
         public const string CrouchActionPath = InputActionPaths.Crouch;
@@ -37,7 +24,7 @@ namespace Shooter.Runtime
         public const float DefaultGravity = MotorSpec.DefaultGravity;
         public const float DefaultAirControl = MotorSpec.DefaultAirControl;
 
-        /// <summary>しゃがみのカプセルの高さ (m)。立ち 2m・半径 0.5m のプレイヤーで、目は足元から 0.8m になる。</summary>
+        // 立ち 2m・半径 0.5m のプレイヤーで、目が足元から 0.8m になる高さにする。
         public const float DefaultCrouchHeight = 1.2f;
 
         [SerializeField, Tooltip("移動の調整値。空なら Resources の MotorSettings、それも無ければ既定の値。ネット対戦の NetworkPlayerMotor と同じものを使う")]
@@ -78,30 +65,19 @@ namespace Shooter.Runtime
         public InputAction CrouchAction => _crouchAction;
         public InputAction JumpAction => _jumpAction;
 
-        /// <summary>移動計算。未初期化なら null。</summary>
         public PlayerMotor Motor => _motor;
 
-        /// <summary>直前の <see cref="CharacterController.Move"/> で接地していたか。未初期化なら false。</summary>
         public bool IsGrounded => _controller != null && _controller.isGrounded;
 
-        /// <summary>
-        /// <see cref="Tick"/> が姿勢を決める前に、移動・ダッシュ・しゃがみ・ジャンプの入力を書き換える差し込み口 (カバーなど)。
-        /// null なら入力をそのまま使う。
-        /// </summary>
         public IPlayerMoveFilter MoveFilter { get; set; }
 
-        /// <summary>持っている物による速さの倍率の出どころ。null なら倍率 1 (何も持っていない速さ) で動く。</summary>
         public IPlayerCarryLoad CarryLoad { get; set; }
 
-        /// <summary>今の持ち物で <see cref="Tick"/> が速さに掛ける倍率。どの動きに掛けるかは <see cref="CarryLoadSpec.Gaits"/>。</summary>
         public float CarrySpeedMultiplier => CarryLoad != null ? CarryLoad.CarrySpeedMultiplier(Spec.CarryLoad) : 1f;
 
         private Jump _jumpRule = Jump.On;
 
-        /// <summary>
-        /// ふつうのジャンプで跳べるか。既定は <see cref="Jump.On"/>。<see cref="PlayerActions.Attach"/> がルールの <see cref="ActionRules.Jump"/> を入れる。
-        /// Off でも Jump は乗り越え・崖のぼり・伏せから立つ・移動の横取り (はしご・ジップラインなど) には渡す。
-        /// </summary>
+        // Off で止めるのはふつうのジャンプだけで、Jump は乗り越え・崖のぼり・伏せから立つ・移動の横取り (はしご・ジップラインなど) には渡す。
         public Jump JumpRule
         {
             get => _jumpRule;
@@ -116,13 +92,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 操作を手放す口。乗り物の座席などが <see cref="ControlHandoff.Claim"/> している間、<see cref="ApplyInput"/> は入力を何も押していないものとして扱う。
-        /// 同じプレイヤーの <see cref="WeaponController.Handoff"/> にも同じものを配線する (オフラインは <see cref="GameBootstrap"/>)。
-        /// </summary>
         public ControlHandoff Handoff => _handoff;
 
-        /// <summary>操作を手放しているか (<see cref="Handoff"/> を誰かが宣言しているか)。</summary>
         public bool IsControlHandedOff => _handoff.IsHandedOff;
 
         public bool IsInitialized =>
@@ -152,11 +123,6 @@ namespace Shooter.Runtime
         public float AirControl => Spec.AirControl;
         public float CrouchHeight => _crouchHeight;
 
-        /// <summary>
-        /// ダッシュとしゃがみのモードを決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、設定画面で変わるたびに入れ直す
-        /// (Edit Mode では Awake が走らないので初期値)。
-        /// 変えると次の <see cref="UpdateSprint"/> / <see cref="UpdateCrouch"/> から使う。
-        /// </summary>
         public ControlSettings ControlSettings
         {
             get => _controlSettings;
@@ -213,7 +179,7 @@ namespace Shooter.Runtime
             EndMovementOverride();
         }
 
-        /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。
         private void AcquireActions()
         {
             _enabledMove = EnableIfNeeded(_moveAction);
@@ -247,7 +213,6 @@ namespace Shooter.Runtime
                 return PlayerMoveInput.Idle(_device, _crouchDevice);
             }
 
-            // 押されたダッシュボタンの機器を優先し、どちらも動いていなければ直前の機器のまま。
             var device = InputDeviceKinds.Of(_sprintAction, InputDeviceKinds.Of(_moveAction, _device));
             var crouchDevice = InputDeviceKinds.Of(_crouchAction, InputDeviceKinds.Of(_moveAction, _crouchDevice));
             return new PlayerMoveInput(
@@ -263,12 +228,6 @@ namespace Shooter.Runtime
                 _proneAction != null && _proneAction.WasPressedThisFrame());
         }
 
-        /// <summary>
-        /// 1 フレーム分の入力で、回避の開始・ダッシュと伏せとしゃがみの解釈 (<see cref="UpdateSprint"/> / <see cref="UpdateProne"/> / <see cref="UpdateCrouch"/>) をしてから
-        /// <see cref="Tick"/> する。伏せから起き上がるのに押した Jump では跳ばない。
-        /// Play 中は Update が Input Actions から読んだ入力で毎フレーム呼ぶ。
-        /// <see cref="IsControlHandedOff"/> の間は input を捨て、何も押していない入力 (<see cref="PlayerMoveInput.Idle"/>) として扱う。
-        /// </summary>
         public void ApplyInput(PlayerMoveInput input, float deltaSeconds)
         {
             if (!IsInitialized)
@@ -301,18 +260,6 @@ namespace Shooter.Runtime
             Tick(input.Move, sprint, crouch, jumpPressed, deltaSeconds);
         }
 
-        /// <summary>
-        /// 1 フレーム分の入力で姿勢 (立ち・しゃがみ・伏せ) を決め、<see cref="PlayerMotor.Step"/> を呼び、変位を CharacterController に適用する。
-        /// 伏せたいか (<see cref="IsProneActive"/>) は <see cref="UpdateProne"/> が覚えたものを使い、しゃがみより優先する。
-        /// 伏せている間は <see cref="ProneSpec.Speed"/> で動き、ダッシュもジャンプもしない。
-        /// 向きは <see cref="FirstPersonLook"/> 本体 (この GameObject) の yaw を使う。
-        /// <see cref="MoveFilter"/> があれば、姿勢を決める前に入力を書き換えさせる。
-        /// <see cref="VaultRule"/> が On なら、Jump で前方の低い障害物を乗り越える (乗り越えられなければふつうにジャンプする)。
-        /// <see cref="MantleRule"/> が On なら、乗り越えなかった Jump で、それより高い段によじ登る (よじ登れなければふつうにジャンプする)。
-        /// <see cref="JumpRule"/> が Off なら、乗り越えもよじ登りもしなかった Jump では跳ばない。
-        /// 登録した <see cref="IMovementOverride"/> のどれかが有効なら、姿勢と移動はそれに任せる (<see cref="ActiveMovementOverride"/>)。
-        /// </summary>
-        /// <param name="crouch">しゃがみたいか (<see cref="UpdateCrouch"/> の結果)。false でも頭上が塞がっていればしゃがんだまま。</param>
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
         {
             if (!IsInitialized)
@@ -365,10 +312,6 @@ namespace Shooter.Runtime
             ReportGrounded(grounded);
         }
 
-        /// <summary>
-        /// 乗り越え・崖のぼり・回避・飛び込みの最中なら、<see cref="PlayerMotor.Step"/> の代わりに動かす変位を displacement に入れて true を返す。
-        /// どれも動いていなければ false (displacement は 0)。
-        /// </summary>
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
         {
             var overridden = false;
@@ -396,10 +339,6 @@ namespace Shooter.Runtime
             return overridden;
         }
 
-        /// <summary>
-        /// 同じ GameObject の CharacterController と FirstPersonLook、プロジェクト全体の Move / Sprint / Crouch / Jump を探して初期化する。
-        /// 見つからないか設定値が不正なら理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryInitializeFromHierarchy()
         {
             var controller = GetComponent<CharacterController>();
@@ -460,12 +399,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 参照を直接渡して初期化する。controller と look はこの GameObject のものであること。
-        /// 立ちの寸法は今の controller の height / center / radius と目の位置から取り、しゃがみの高さは <see cref="CrouchHeight"/>、
-        /// 伏せの高さは <see cref="ProneSpec"/> の <see cref="ProneSpec.Height"/> (合わなければ合う範囲に収める)。
-        /// しゃがみの高さが controller と合わなければ ArgumentOutOfRangeException。
-        /// </summary>
         public void Initialize(
             CharacterController controller,
             FirstPersonLook look,
@@ -537,7 +470,6 @@ namespace Shooter.Runtime
             var stance = new StanceGeometry(
                 controller.height, standingCenter.y, standingEyeLocal.y, _crouchHeight, proneHeight, controller.radius);
 
-            // OnEnable 済み (動作中) に差し替えるなら、自分が有効にした古いアクションを戻してから新しいものを有効にする。
             if (_isLive)
             {
                 ReleaseActions();
@@ -571,13 +503,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="MotorSettings"/> から <see cref="MotorSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public MotorSpec CreateSpec()
         {
             return MotorSettings.Resolve(_motorSettings);
         }
 
-        /// <summary>接地状態のログ。例: <c>[Player] grounded=true</c>。</summary>
         public static string FormatGroundedLog(bool grounded)
         {
             return $"{LogTag} grounded={(grounded ? "true" : "false")}";

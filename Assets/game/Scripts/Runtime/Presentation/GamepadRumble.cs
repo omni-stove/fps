@@ -5,13 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 自分が撃つ・撃たれる・近くで爆発が起きたときに、今のゲームパッド (<see cref="Gamepad.current"/>) を揺らす。
-    /// 強さと秒数は <see cref="Tuning"/> (入口の rumble の欄か Resources/Tuning/rumble) から読み、重なればモーターごとに強い方を取る (<see cref="RumbleModel"/>)。
-    /// 揺らすのは、この本体の視点が自分のもので (<see cref="ViewRig.IsLocalView"/>)、最後に操作した機器がゲームパッドで、
-    /// 操作設定 (<see cref="ControlSettings.RumbleEnabled"/>・<see cref="ControlSettings.RumbleStrength"/>) が許すときだけ。
-    /// ポーズ中・キーボード／マウスに持ち替えたとき・設定で切ったとき・無効にされたとき・破棄されたときはモーターを止める。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class GamepadRumble : MonoBehaviour
     {
@@ -36,7 +29,6 @@ namespace Shooter.Runtime
         private Gamepad _pad;
         private RumbleMotors _applied = RumbleMotors.Zero;
 
-        /// <summary>入口の rumble の欄か Resources/Tuning/rumble の調整値。どちらも無ければ <see cref="RumbleSpec.Default"/>。</summary>
         public static RumbleSpec Tuning =>
             KitTuning.Load(c => c.RumbleTuning, TuningResourcePath, RumbleJson.Parse, RumbleSpec.Default);
 
@@ -47,18 +39,14 @@ namespace Shooter.Runtime
             set => _spec = value;
         }
 
-        /// <summary>従う操作設定。null なら <see cref="AppliedControlSettings.Current"/>。</summary>
         public Func<ControlSettings> SettingsSource { get; set; }
 
         public ViewRig Rig => _rig;
 
-        /// <summary>最後に操作した機器の種類。どの操作 (<see cref="InputAction"/>) が動いても、その機器で書き換わる。</summary>
         public InputDeviceKind ActiveDevice { get; internal set; } = InputDeviceKind.KeyboardMouse;
 
-        /// <summary>最後にモーターへ入れた強さ (設定を掛けた後)。</summary>
         public RumbleMotors LastOutput => _applied;
 
-        /// <summary>まだ続いている振動の数。</summary>
         public int ActivePulses => _model.ActiveCount;
 
         public bool IsLocalView => _rig != null && _rig.enabled && _rig.gameObject.activeInHierarchy && _rig.IsLocalView;
@@ -119,8 +107,6 @@ namespace Shooter.Runtime
             Tick(Time.unscaledDeltaTime, GameUi.IsPauseOpen);
         }
 
-        /// <exception cref="ArgumentNullException">rig が null。</exception>
-        /// <exception cref="ArgumentException">rig がこの部品と違う GameObject にある。</exception>
         public void Bind(ViewRig rig)
         {
             if (rig == null)
@@ -136,11 +122,7 @@ namespace Shooter.Runtime
             _rig = rig;
         }
 
-        /// <summary>
-        /// 1 フレーム進める。今の強さをモーターに入れてから deltaSeconds だけ時間を進めるので、1 フレームより短い振動も 1 フレームは揺れる。
-        /// paused か、揺らしてはいけない状態 (キーボード／マウス・設定で切った) なら、続いている振動を捨ててモーターを止める。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
+        // 時間を進める前に今の強さをモーターに入れるのは、1 フレームより短い振動も 1 フレームは揺らすため。
         public void Tick(float deltaSeconds, bool paused)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -160,7 +142,6 @@ namespace Shooter.Runtime
             _model.Tick(deltaSeconds);
         }
 
-        /// <summary>続いている振動を捨て、動いていればモーターを止める。</summary>
         public void Stop(string reason)
         {
             _model.Reset();

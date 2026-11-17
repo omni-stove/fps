@@ -17,7 +17,6 @@ namespace Shooter.Core
 
         public string MaterialId { get; }
 
-        // 抜けられる最大の厚さに掛ける倍率。0 ならこの素材は抜けない。
         public float Penetrability { get; }
     }
 }

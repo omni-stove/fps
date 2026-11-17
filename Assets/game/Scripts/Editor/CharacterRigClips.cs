@@ -3,11 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// <see cref="CharacterRigBuilder"/> が作る AnimationClip の中身 (関節ごとの回転と腰の位置)。
-    /// 角度は度で、関節のローカルの Euler 角。手足は下に垂れた向きが 0 で、X を負にすると前へ、正にすると後ろへ振る。
-    /// 胴と頭は X を正にすると前へ傾く。左の手足は Z を負に、右は正にすると外へ開く。
-    /// </summary>
     public static class CharacterRigClips
     {
         public const string Idle = "Idle";
@@ -26,10 +21,9 @@ namespace Shooter.Editor
         public const string Stumble = "Stumble";
         public const string Blast = "Blast";
 
-        /// <summary>立っているときの腰の高さ (m)。足の裏が足元 (0) に付く。</summary>
+        // 足の裏が足元 (0) に付く高さ。
         public const float StandingHipsHeight = 0.95f;
 
-        /// <summary>すべてのクリップの中身。名前は互いに異なる。</summary>
         public static IReadOnlyList<CharacterRigClipSpec> All()
         {
             return new[]
@@ -266,19 +260,16 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>1 本のクリップの中身。指定しなかった関節は回転 0 (立って腕を垂らした向き) でキーにする。</summary>
     public sealed class CharacterRigClipSpec
     {
         private readonly Dictionary<string, RigWave3> _rotations = new Dictionary<string, RigWave3>(StringComparer.Ordinal);
 
         public string Name { get; }
 
-        /// <summary>クリップの長さ (秒)。揺れのあるクリップでは 1 周期。</summary>
         public float Length { get; }
 
         public bool Loop { get; }
 
-        /// <summary><see cref="CharacterRigBuilder.HipsBone"/> のローカル位置 (m)。</summary>
         public RigWave3 HipsPosition { get; }
 
         public CharacterRigClipSpec(string name, float length, bool loop, RigWave3 hipsPosition)
@@ -299,13 +290,11 @@ namespace Shooter.Editor
             HipsPosition = hipsPosition;
         }
 
-        /// <summary>bone の回転 (度)。指定していなければ 0。</summary>
         public RigWave3 Rotation(string bone)
         {
             return _rotations.TryGetValue(bone, out var rotation) ? rotation : RigWave3.Hold(0f, 0f, 0f);
         }
 
-        /// <summary>bone の回転 (度) を rotation にする。既に指定していれば上書きする。</summary>
         public void Rotate(string bone, RigWave3 rotation)
         {
             if (string.IsNullOrEmpty(bone))
@@ -316,14 +305,9 @@ namespace Shooter.Editor
             _rotations[bone] = rotation;
         }
 
-        /// <summary>回転を指定した関節の名前。</summary>
         public IEnumerable<string> RotatedBones => _rotations.Keys;
     }
 
-    /// <summary>
-    /// クリップの 1 つの値の動き。<c>Base + Amplitude * sin(2π (Frequency * t / 長さ + Phase))</c>。
-    /// Amplitude が 0 なら Base のまま動かない。
-    /// </summary>
     public readonly struct RigWave
     {
         public static readonly RigWave Zero = new RigWave(0f, 0f, 0f);
@@ -331,10 +315,8 @@ namespace Shooter.Editor
         public float Base { get; }
         public float Amplitude { get; }
 
-        /// <summary>周期に対するずれ。0〜1。</summary>
         public float Phase { get; }
 
-        /// <summary>クリップ 1 本の間に揺れる回数。1 以上。</summary>
         public int Frequency { get; }
 
         public bool IsConstant => Amplitude == 0f;
@@ -368,7 +350,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>x・y・z の 3 つの <see cref="RigWave"/>。</summary>
     public readonly struct RigWave3
     {
         public RigWave X { get; }

@@ -2,15 +2,11 @@ using System;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 他のプレイヤーを表示するサーバーの tick (小数)。届いた最新の tick から <see cref="DelayTicks"/> 遅らせた所を目指し、
-    /// フレームの時間で進めながら少しずつ寄せる。届き方の揺れで表示が止まったり跳んだりしないため。
-    /// 長い途切れの後などで目標から大きく離れたら、寄せずに目標へ飛ぶ。
-    /// </summary>
-    /// <remarks>寄せ方の値は Netcode のクライアント (<c>NetworkPlayerMotor</c> の補間) と同じにする。</remarks>
+    // 届いた tick へ飛ばずフレームの時間で少しずつ寄せるのは、届き方の揺れで表示が止まったり跳んだりしないため。
+    // 寄せ方の値は Netcode のクライアント (NetworkPlayerMotor の補間) と同じにする。
     public sealed class InterpolationClock
     {
-        /// <summary>Netcode のクライアント (<c>NetworkPlayerMotor.InterpolationDelayTicks</c>) と同じ遅れ。</summary>
+        // Netcode のクライアント (NetworkPlayerMotor.InterpolationDelayTicks) と同じ遅れ。
         public const float DefaultDelayTicks = 2f;
 
         private const float _catchUpGain = 0.1f;
@@ -39,13 +35,10 @@ namespace Shooter.NetV2
 
         public float DelayTicks { get; }
 
-        /// <summary>最初の tick が届いて進み始めたか。</summary>
         public bool HasStarted { get; private set; }
 
-        /// <summary>今表示するサーバーの tick。</summary>
         public float RenderTick { get; private set; }
 
-        /// <summary>newestTick (届いた最新の tick) を目指して deltaSeconds だけ進める。</summary>
         public void Advance(float deltaSeconds, int newestTick)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

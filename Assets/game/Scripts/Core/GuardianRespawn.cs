@@ -3,42 +3,25 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ガーディアン (VIP の護衛) のリスポーン。陣営ごとに 1 人のリーダーを持ち、リーダーが倒れていない陣営の人は
-    /// 内側の部品 (<see cref="Inner"/>) のとおりに戻る。リーダーが倒れた (か抜けた) 陣営は、リーダーを含めて誰も戻らなくなる。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>リーダーは <see cref="ChooseLeaders"/> (試合開始時) か <see cref="SetLeader"/> で決める。リーダーのいない陣営の人は内側の部品のとおりに戻る。</item>
-    /// <item>リーダーが倒れたら、同じ陣営で待っていた人の待ちも取り消す (その人たちはその場で <see cref="ModeSession.IsEliminated"/> になる)。</item>
-    /// <item>リーダーが倒れた陣営は試合の終わりまで戻れない。<see cref="Reset"/> でリーダーごと消し、次の試合で選び直す。</item>
-    /// <item><see cref="CancelAll"/> (試合の終わり) ではリーダーと倒れたかどうかを残し、結果の表示に使えるようにする。</item>
-    /// </list>
-    /// </remarks>
     public sealed class GuardianRespawn : IRespawnPolicy
     {
         private readonly IRespawnPolicy _inner;
         private readonly Dictionary<Side, int> _leaders = new Dictionary<Side, int>();
         private readonly HashSet<Side> _fallen = new HashSet<Side>();
 
-        /// <summary>陣営のリーダーが決まったときに呼ばれる。引数は陣営と playerId。</summary>
         public event Action<Side, int> LeaderChosen;
 
-        /// <summary>陣営のリーダーが倒れたか抜けたときに 1 度だけ呼ばれる。引数は陣営と playerId。この時点でその陣営は戻れない。</summary>
         public event Action<Side, int> LeaderFell;
 
-        /// <param name="inner">リーダーが倒れていない陣営の人の戻し方。</param>
         public GuardianRespawn(IRespawnPolicy inner)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         }
 
-        /// <summary>リーダーが倒れていない陣営の人の戻し方。</summary>
         public IRespawnPolicy Inner => _inner;
 
         public float? SecondsUntilNextWave => _inner.SecondsUntilNextWave;
 
-        /// <summary>リーダーのいる陣営 (ID の昇順)。</summary>
         public IReadOnlyList<Side> LeaderSides
         {
             get
@@ -49,13 +32,11 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>side のリーダーの playerId。リーダーがいなければ null。倒れた後と抜けた後も残る。</summary>
         public int? GetLeader(Side side)
         {
             return _leaders.TryGetValue(side, out var id) ? id : (int?)null;
         }
 
-        /// <summary>playerId がどれかの陣営のリーダーなら true。</summary>
         public bool IsLeader(int playerId)
         {
             foreach (var id in _leaders.Values)
@@ -69,17 +50,10 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>side のリーダーが倒れたか抜けたなら true。リーダーがいなければ false。</summary>
         public bool HasLeaderFallen(Side side) => _fallen.Contains(side);
 
-        /// <summary>side の人が倒れたら戻れるなら true (リーダーがいないか、リーダーが倒れていない)。</summary>
         public bool CanRespawn(Side side) => !_fallen.Contains(side);
 
-        /// <summary>
-        /// session の陣営のうち、人がいてリーダーがまだいない陣営ごとに、その陣営の人 (playerId の昇順) から pick の返す番号の人をリーダーにする。
-        /// pick には陣営の人数が渡り、0 以上その数未満を返すこと (外れたら <see cref="InvalidOperationException"/>)。
-        /// 決めた陣営ごとに <see cref="LeaderChosen"/> を出す。
-        /// </summary>
         public void ChooseLeaders(ModeSession session, Func<int, int> pick)
         {
             if (session == null)
@@ -124,10 +98,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// playerId をその陣営のリーダーにする。陣営にもうリーダーがいれば <see cref="InvalidOperationException"/>。
-        /// playerId がもう倒れていれば、その場でリーダーが倒れたものとして扱う。
-        /// </summary>
         public void SetLeader(ModeSession session, int playerId)
         {
             if (session == null)
@@ -175,7 +145,6 @@ namespace Shooter.Core
             return CanRespawn(side) && _inner.BeginWait(session, playerId);
         }
 
-        /// <summary>playerId の待ちを取り消す (抜けた)。抜けたのがリーダーなら、その陣営はリーダーが倒れたのと同じく戻れなくなる。</summary>
         public void Cancel(int playerId)
         {
             _inner.Cancel(playerId);
@@ -190,9 +159,9 @@ namespace Shooter.Core
             }
         }
 
+        // 試合の終わりに呼ばれるので、リーダーと倒れたかどうかは消さずに残し、結果の表示に使えるようにする。
         public void CancelAll() => _inner.CancelAll();
 
-        /// <summary>待ちと時刻に加え、リーダーとリーダーが倒れたことも消す。次の試合では <see cref="ChooseLeaders"/> で選び直す。</summary>
         public void Reset()
         {
             _inner.Reset();

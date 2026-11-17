@@ -7,10 +7,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="PresentationAssetSteps"/> が手順を集める規則・実行の順・失敗したときの止まり方と、既存の
-    /// <see cref="PresentationAssetBuilder"/> が手順として集まることを確かめる。素材を書き出す <see cref="PresentationAssetSteps.BuildAll"/> は呼ばない。
-    /// </summary>
     public sealed class PresentationAssetStepsTests
     {
         [Test]
@@ -131,7 +127,6 @@ namespace Shooter.Tests.EditMode
             public abstract void Build();
         }
 
-        // 公開されていない型は集めない。引数の無いコンストラクタがあっても一括実行には混ざらない。
         private sealed class HiddenStep : IPresentationAssetStep
         {
             public string Name => "hidden";

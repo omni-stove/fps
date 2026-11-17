@@ -7,7 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2.Tests
 {
-    /// <summary>伏せ・はしご・壊れる壁・印・射撃の判断を、サーバー無しでクライアントの中身だけで確かめる。</summary>
     public sealed class ClientFeaturesTests
     {
         private const int _playerId = 3;

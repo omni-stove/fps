@@ -2,41 +2,25 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// スナップショットを受け取るクライアントのプレイヤーにだけ送る状態。Netcode では読む権限を持ち主にしていた同期値
-    /// (弾数・持たせている武器・グレネードの残り) と、予測の照合に使う処理済みの入力の tick。
-    /// </summary>
     public sealed class OwnerSnapshot
     {
-        /// <summary>持たせられる武器の最大数。</summary>
         public const int MaxWeapons = byte.MaxValue;
 
         private readonly ContentIdList _equippedWeaponIds = new ContentIdList(MaxWeapons, "equipped weapon");
         private readonly GrenadePouchSync _grenades = new GrenadePouchSync();
 
-        /// <summary>
-        /// サーバーが処理したこのプレイヤーの最後の入力の tick。まだ無ければ <see cref="InputMessage.NoSnapshot"/> と同じ -1。
-        /// <see cref="PlayerSnapshot"/> の移動の状態はこの入力の後の値。
-        /// </summary>
         public int LastProcessedInputTick { get; set; } = -1;
 
         public WeaponSync Weapon { get; set; }
 
-        /// <summary>
-        /// サーバーが今このプレイヤーの移動に掛けている持ち物の倍率 (<c>Shooter.Core.CarryLoadSpec.SpeedMultiplier</c>)。
-        /// クライアントは武器の値を持たなくても、これで予測をサーバーと揃える。0 以上の有限値。
-        /// </summary>
+        // クライアントが武器の値を持たなくても予測をサーバーと揃えられるよう、倍率そのものを送る。
         public float CarrySpeedMultiplier { get; set; } = 1f;
 
-        /// <summary>
-        /// サーバーが <see cref="LastProcessedInputTick"/> の入力の後にこのプレイヤーを吹き飛ばしている状態。
-        /// 他の人には位置の補間で足りるが、持ち主の予測はこれが無いと飛んでいる間ずっと地上を歩いたつもりで巻き戻されるため、持ち主にだけ送る。
-        /// </summary>
+        // 他の人には位置の補間で足りるが、持ち主の予測はこれが無いと飛んでいる間ずっと地上を歩いたつもりで巻き戻されるため、持ち主にだけ送る。
         public Shooter.Core.CharacterKnockbackState Knockback { get; set; }
 
         public GrenadePouchSync Grenades => _grenades;
 
-        /// <summary>サーバーが今持たせている武器の Id (スロット順)。</summary>
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
 
         internal OwnerFields Present { get; set; }

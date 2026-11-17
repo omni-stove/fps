@@ -9,10 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインの PlayerDeathCamera のキルカム (<see cref="DeathCamera.KillCam"/>)。Edit Mode では LateUpdate が走らないので、
-    /// LateUpdate が毎フレームする記録を RecordKillCam へ時刻つきで、切り替えを Step へ、経過を Advance へ直接渡す。
-    /// </summary>
+    // Edit Mode では LateUpdate が走らないので、LateUpdate が毎フレームする記録を RecordKillCam へ時刻つきで、
+    // 切り替えを Step へ、経過を Advance へ直接渡す。
     public sealed class PlayerKillCamTests
     {
         private static readonly Vector3 _playerPosition = new Vector3(0f, 1f, 0f);

@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary><see cref="IEosP2P.TryTakeNotice"/> が返す、SDK の通知 1 つ。</summary>
     public readonly struct EosP2PNotice
     {
         private readonly string _remoteUserId;
@@ -22,10 +21,8 @@ namespace Shooter.Protocol
 
         public EosP2PNoticeKind Kind { get; }
 
-        /// <summary>接続の通知の相手の ProductUserId。ログインの通知では空文字。</summary>
         public string RemoteUserId => _remoteUserId ?? "";
 
-        /// <summary>種類ごとの値 (<see cref="EosP2PNoticeKind"/> を参照)。無ければ空文字。</summary>
         public string Text => _text ?? "";
 
         public static EosP2PNotice SignedIn(string localUserId)

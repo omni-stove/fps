@@ -6,30 +6,17 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 飛ぶ弾 (<see cref="RoundDelivery.Projectile"/>) の見た目。当たりはサーバーが決めるので、ここでは見せるだけ。
-    /// 発射の知らせ (<see cref="ProjectileSpawnedMessage"/>) か、それが落ちたときはスナップショットで弾を出し、
-    /// 知らせの間は <see cref="BallisticFlight"/> で世界の当たりまで進め、スナップショットとのずれは少しずつ寄せる。
-    /// 終わりの知らせ (<see cref="ProjectileEndedMessage"/>) で消すか刺さったままにする。
-    /// </summary>
-    /// <remarks>
-    /// 撃った本人は撃った瞬間に予測の弾を出し、同じ武器のサーバーの弾がスナップショットに載ったら古い順に位置と速さが最も近い予測の弾がその Id を引き継ぐ。
-    /// 撃った本人には発射の知らせが来ないので、一度も知らない Id の終わりの知らせは、まだ引き継いでいない自分の予測の弾の終わりとみなす。
-    /// 予測の弾は撃った時から進めているので、往復の分だけ遅れたスナップショットには寄せない (寄せると毎回引き戻される)。
-    /// 誘導する弾だけは手元で曲がり方が分からないので、引き継いだ後はスナップショットに寄せる。
-    /// </remarks>
+    // 撃った本人には発射の知らせが来ないので、一度も知らない Id の終わりの知らせは、まだ引き継いでいない自分の予測の弾の終わりとみなす。
+    // 予測の弾は撃った時から進めているので、往復の分だけ遅れたスナップショットには寄せない (寄せると毎回引き戻される)。
+    // 誘導する弾だけは手元で曲がり方が分からないので、引き継いだ後はスナップショットに寄せる。
     public sealed class ClientProjectiles
     {
-        /// <summary>予測の弾がサーバーの弾を待つ秒数と、手元で止まった弾が終わりの知らせを待つ秒数。</summary>
         public const float DefaultPendingSeconds = 1f;
 
-        /// <summary>スナップショットとのずれを寄せ切る目安の秒数。</summary>
         public const float DefaultCorrectionSeconds = 0.1f;
 
-        /// <summary>これより離れていたら寄せずに跳ぶ。</summary>
         public const float DefaultSnapDistance = 4f;
 
-        /// <summary>武器が分からない弾を、終わりの知らせもスナップショットも無いまま残しておく最長の秒数。</summary>
         public const float UnknownWeaponLifetimeSeconds = 10f;
 
         private const int _retiredCapacity = 256;

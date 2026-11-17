@@ -3,27 +3,15 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ピアの間で EAC のために送るパケットの形式。ゲームのデータとは別のチャネルで送る。
-    /// <list type="bullet">
-    /// <item><description>Hello: [1][版][有効なら 1、無効なら 0]</description></item>
-    /// <item><description>Message: [2][EAC の SDK が出したメッセージ (1〜<see cref="MaxPayloadSize"/> バイト)]</description></item>
-    /// </list>
-    /// </summary>
     public readonly struct AntiCheatPacket
     {
-        /// <summary>この形式の版。Hello に載せ、違えば相手と組まない。</summary>
         public const byte ProtocolVersion = 1;
 
-        /// <summary>
-        /// 1 つのメッセージの上限。EAC の SDK が出すメッセージ (P2P では 256 バイト以下) に余裕を持たせた値。
-        /// </summary>
+        // EAC の SDK が出すメッセージは P2P では 256 バイト以下なので、余裕を持たせて 512 にする。
         public const int MaxPayloadSize = 512;
 
-        /// <summary>Hello パケットの長さ。</summary>
         public const int HelloSize = 3;
 
-        /// <summary>どのパケットも書き込める大きさ。送信用のバッファをこれで作る。</summary>
         public const int MaxPacketSize = 1 + MaxPayloadSize;
 
         private AntiCheatPacket(AntiCheatPacketKind kind, bool peerEnabled, ArraySegment<byte> payload)
@@ -35,13 +23,10 @@ namespace Shooter.Core
 
         public AntiCheatPacketKind Kind { get; }
 
-        /// <summary>Hello のとき、送り手の EAC が有効か。</summary>
         public bool PeerEnabled { get; }
 
-        /// <summary>Message のとき、EAC の SDK へ渡すメッセージ。読んだパケットの配列を指す。</summary>
         public ArraySegment<byte> Payload { get; }
 
-        /// <summary>Hello を <paramref name="buffer"/> の先頭に書き、書いた長さを返す。</summary>
         public static int WriteHello(byte[] buffer, bool enabled)
         {
             if (buffer == null)
@@ -60,8 +45,6 @@ namespace Shooter.Core
             return HelloSize;
         }
 
-        /// <summary>Message を <paramref name="buffer"/> の先頭に書き、書いた長さを返す。</summary>
-        /// <exception cref="ArgumentException">メッセージが空か <see cref="MaxPayloadSize"/> を超える、またはバッファが足りない。</exception>
         public static int WriteMessage(byte[] buffer, ArraySegment<byte> payload)
         {
             if (buffer == null)
@@ -91,11 +74,6 @@ namespace Shooter.Core
             return 1 + payload.Count;
         }
 
-        /// <summary>
-        /// 受け取ったパケットを読む。壊れていれば <see cref="AntiCheatPacketKind.Invalid"/> の値と理由を返す。
-        /// </summary>
-        /// <param name="packet">受け取ったパケット。</param>
-        /// <param name="error">読めなかった理由。読めたときは null。</param>
         public static AntiCheatPacket Read(ArraySegment<byte> packet, out string error)
         {
             if (packet.Array == null || packet.Count == 0)

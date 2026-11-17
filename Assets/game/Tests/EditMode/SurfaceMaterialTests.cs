@@ -6,7 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="SurfaceMaterial.IdOf"/> がコライダーから材質の Id を引き、無ければ既定の材質を返すことを確かめる。</summary>
     public sealed class SurfaceMaterialTests
     {
         private readonly List<Object> _created = new List<Object>();

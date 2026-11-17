@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="Side.Alpha"/> と <see cref="Side.Bravo"/> の 2 陣営に参加順で交互に分ける (<see cref="TeamAssigner"/> と同じ順)。
-    /// 人数の上限はなく、抜けた人がいても順番は戻さない。
-    /// </summary>
     public sealed class TwoTeams : ITeamLayout
     {
         private static readonly Side[] _sides = { Side.Alpha, Side.Bravo };

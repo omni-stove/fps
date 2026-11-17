@@ -10,11 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 能力の枠 (<see cref="AbilityHost"/>): ルールの Off で使えないこと、入力で使って回数が減り待ち時間の間は断ること、
-    /// 効果が出るまでの秒数と呼ばれる順、止められたとき、移動の横取りで <see cref="PlayerActionConditions.AbilityMoving"/> が立つこと、
-    /// 回数・待ち時間・ルールが変わると <see cref="AbilityHost.Changed"/> を呼ぶこと。
-    /// </summary>
     public sealed class AbilityHostTests
     {
         private static readonly GameRules _on = GameRules.Default.WithActions(ActionRules.Default.WithAbilities(Abilities.On));

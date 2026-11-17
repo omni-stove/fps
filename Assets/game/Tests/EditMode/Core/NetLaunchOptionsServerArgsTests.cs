@@ -4,10 +4,6 @@ using NUnit.Framework;
 namespace Shooter.Core.Tests
 {
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
-    /// <summary>
-    /// <see cref="NetLaunchOptions"/> の <c>-map</c> / <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> /
-    /// <c>-drain-timeout</c> / <c>-log-format</c> の解析と検証。
-    /// </summary>
     public sealed class NetLaunchOptionsServerArgsTests
     {
         private static string[] Args(string commandLine)

@@ -6,7 +6,6 @@ using UnityEditor;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>実際のビルドは <c>make build</c> / <c>make build-server</c> に任せ、版の決め方と bundleVersion を戻すことだけを見る。</summary>
     public sealed class BuildVersionStamperTests
     {
         private string _original;

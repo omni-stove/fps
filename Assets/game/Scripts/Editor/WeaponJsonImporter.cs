@@ -10,25 +10,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// JSON に書いた武器の値から <see cref="WeaponDefinition"/> を作るか更新する。Editor を開かずに利用側へ武器を入れるためのもの。
-    /// <para>
-    /// JSON は 1 ファイルに武器 1 つのオブジェクトで、読み書きは <see cref="WeaponSpecJson"/> に任せる。<c>id</c>・<c>category</c> のほかは
-    /// 部品 (<c>trigger</c>・<c>ammo</c>・<c>round</c>・<c>impact</c>・<c>aim</c>・<c>ammoTypes</c>) ごとの入れ子のオブジェクトに書き、
-    /// 項目名は部品の Spec のコンストラクタ引数と同じで、書かない項目は部品の既定になる。部品に分ける前の平らな形
-    /// (<c>damage</c>・<c>range</c>・<c>explosionRadius</c>・<c>adsFieldOfView</c> など) もそのまま読める。
-    /// </para>
-    /// <para>
-    /// <c>nameKey</c> は画面に出す名前を引く表のキー (例: <c>weapon.rifle</c>) で、文そのものは Resources/Localization/&lt;言語&gt;/ の JSON に書く。
-    /// </para>
-    /// <para>
-    /// アセットは出力先のフォルダに JSON のファイル名 (拡張子を除く) で置き、既存のアセットは GUID を保って中身だけ更新する。
-    /// 不正な値・欠けた項目・知らない項目・重複した Id などは、ファイル名と項目名を添えた <see cref="WeaponJsonException"/> にし、
-    /// どのアセットも保存しない (batchmode では Unity が終了コード 1 で終わる)。
-    /// </para>
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WeaponJsonImporter.Import -weaponJson &lt;file|dir&gt; [-weaponOut &lt;dir&gt;] [-weaponCatalog &lt;asset&gt;]</code>
-    /// </summary>
     public static class WeaponJsonImporter
     {
         public const string MenuPath = "Shooter/Import Weapons From JSON";
@@ -40,25 +21,19 @@ namespace Shooter.Editor
 
         public const string JsonExtension = ".json";
 
-        /// <summary><c>falloff</c> にこの文字列を書くと <see cref="DamageFalloff.None"/> (減衰しない) になる。</summary>
         public const string NoFalloff = WeaponSpecJson.NoFalloff;
 
         public const string IdField = WeaponSpecJson.IdItem;
         public const string NameKeyField = WeaponSpecJson.NameKeyItem;
 
-        /// <summary><see cref="NameKeyField"/> の前の項目名。書かれていたら、知らない項目とは別の文で書き換えを促す。</summary>
+        // NameKeyField の前の項目名。書かれていたら、知らない項目とは別の文で書き換えを促すために持つ。
         public const string LegacyDisplayNameField = "displayName";
         public const string RecoilRecoveryDelaySecondsField = WeaponSpecJson.RecoilRecoveryDelaySecondsItem;
 
         private const string WritablePrefix = "Assets/";
 
-        /// <summary><c>-weaponOut</c> を省いたときの出力先。<see cref="WeaponAssets.Folder"/> (出力先ルートの <c>Weapons/</c>)。</summary>
         public static string DefaultOutputFolder => WeaponAssets.Folder;
 
-        /// <summary>
-        /// コマンドライン引数 (<see cref="ParseArguments"/>) の JSON を取り込む。失敗したら例外を投げる
-        /// (batchmode では Unity が終了コード 1 で終わる)。
-        /// </summary>
         public static void Import()
         {
             var options = ParseArguments(Environment.GetCommandLineArgs());
@@ -103,11 +78,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="JsonArgument"/> (必須)、<see cref="OutputArgument"/>・<see cref="CatalogArgument"/> (省略可) を読む。
-        /// 省いた項目は null。出力先とカタログのパスは Assets/ の下であることを確かめ、区切りを / に揃える。
-        /// </summary>
-        /// <exception cref="ArgumentException">必須の引数が無い、値が無い・重なっている、またはパスが不正。</exception>
         public static WeaponJsonImportOptions ParseArguments(IReadOnlyList<string> args)
         {
             var source = FindArgument(args, JsonArgument, "a JSON file or a folder of JSON files");
@@ -124,17 +94,7 @@ namespace Shooter.Editor
                 catalog == null ? null : SceneBuildHelpers.ValidateAssetPath(catalog));
         }
 
-        /// <summary>
-        /// source (JSON ファイル、またはその直下の *.json を読むフォルダ) の武器を outputFolder に <see cref="WeaponDefinition"/> として
-        /// 作るか更新し、ファイル名の順に返す。catalogPath が null でなければ、その <see cref="WeaponCatalogAsset"/> に Id で重複なく足す
-        /// (同じ Id の別アセットが既にあれば、その位置を取り込んだアセットに差し替える)。
-        /// すべての JSON とカタログを検査してから保存するので、どこかが不正なら何も保存しない。
-        /// </summary>
-        /// <exception cref="WeaponJsonException">JSON の文法・項目・値が不正、Id が重複している、または既存のアセットと食い違う。</exception>
-        /// <exception cref="FileNotFoundException">source が無い、またはフォルダに JSON が無い。</exception>
-        /// <exception cref="ArgumentException">outputFolder か catalogPath が Assets/ の下でない。</exception>
-        /// <exception cref="InvalidOperationException">catalogPath のカタログが無い。</exception>
-        /// <exception cref="WeaponDefinitionException">catalogPath のカタログの既存の武器が不正。</exception>
+        // すべての JSON とカタログを検査してから保存するのは、どこかが不正なときに何も保存しないため。
         public static IReadOnlyList<WeaponDefinition> ImportFrom(string source, string outputFolder, string catalogPath)
         {
             outputFolder = ValidateOutputFolder(outputFolder);
@@ -168,12 +128,6 @@ namespace Shooter.Editor
             return definitions;
         }
 
-        /// <summary>
-        /// source がファイルならそれだけを、フォルダならその直下の *.json を名前の順に返す。区切りは / に揃える。
-        /// <c>Packages/</c> で始まる source は <see cref="ShooterKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
-        /// </summary>
-        /// <exception cref="ArgumentException">source が空。</exception>
-        /// <exception cref="FileNotFoundException">source が無い、またはフォルダに JSON が無い。</exception>
         public static IReadOnlyList<string> FindJsonFiles(string source)
         {
             if (string.IsNullOrWhiteSpace(source))
@@ -211,10 +165,6 @@ namespace Shooter.Editor
             return files;
         }
 
-        /// <summary>
-        /// json を武器 1 つとして読み、<see cref="WeaponSpec"/> にして返す。file は例外の文に出す読み元の名前。
-        /// </summary>
-        /// <exception cref="WeaponJsonException">文法・項目・値が不正。<see cref="WeaponJsonException.Field"/> に項目名を持つ。</exception>
         public static WeaponSpec ParseSpec(string json, string file)
         {
             if (json == null)
@@ -241,10 +191,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// current の後ろに imported を Id で重複なく足した並びを返す。同じ Id の武器が既にあれば、同じアセットならそのまま、
-        /// 別のアセットならその位置を imported の側に差し替える。current も imported も null 要素を含まず、値が正しいこと。
-        /// </summary>
         public static List<WeaponDefinition> MergeById(IReadOnlyList<WeaponDefinition> current, IReadOnlyList<WeaponDefinition> imported)
         {
             if (current == null)
@@ -285,8 +231,6 @@ namespace Shooter.Editor
             return merged;
         }
 
-        /// <summary>folder を出力先として正規化して返す。Assets/ の下のフォルダであること。</summary>
-        /// <exception cref="ArgumentException">folder が空、Assets/ の下でない、または空・<c>.</c>・<c>..</c> の区切りを含む。</exception>
         public static string ValidateOutputFolder(string folder)
         {
             string normalized;
@@ -504,7 +448,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary><see cref="WeaponJsonImporter.ParseArguments"/> が読んだ引数。</summary>
     public sealed class WeaponJsonImportOptions
     {
         public WeaponJsonImportOptions(string source, string outputFolder, string catalogPath)
@@ -514,17 +457,13 @@ namespace Shooter.Editor
             CatalogPath = catalogPath;
         }
 
-        /// <summary><c>-weaponJson</c> の JSON ファイルかフォルダ。</summary>
         public string Source { get; }
 
-        /// <summary><c>-weaponOut</c> の出力先。省いたら null (<see cref="WeaponJsonImporter.DefaultOutputFolder"/> を使う)。</summary>
         public string OutputFolder { get; }
 
-        /// <summary><c>-weaponCatalog</c> のカタログ。省いたら null (カタログには足さない)。</summary>
         public string CatalogPath { get; }
     }
 
-    /// <summary>武器の JSON が読めない・不正。どのファイルのどの項目かを持つ。</summary>
     public sealed class WeaponJsonException : Exception
     {
         public WeaponJsonException(string file, string field, string detail)
@@ -539,10 +478,8 @@ namespace Shooter.Editor
             Field = field;
         }
 
-        /// <summary>読み元のファイル。</summary>
         public string File { get; }
 
-        /// <summary>問題の項目名 (入れ子は <c>falloff.startDistance</c> の形)。ファイル全体の問題なら null。</summary>
         public string Field { get; }
 
         private static string Format(string file, string field, string detail)

@@ -20,7 +20,6 @@ namespace Shooter.Core
 
         public DeployRemoval? Over => SecondsLeft <= 0f ? DeployRemoval.Expired : (DeployRemoval?)null;
 
-        // 1 回の Tick で間隔を何度もまたいだときも、呼んだ回数をまとめて返す。
         public int Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

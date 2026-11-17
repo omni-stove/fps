@@ -5,19 +5,6 @@ using UnityEngine.Serialization;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 武器 1 種類の値をアセットとして持つ。クライアントと専用サーバーは同じアセットを読み、<see cref="ToSpec"/> で
-    /// 不変の <see cref="WeaponSpec"/> に変換して使う。検証は <see cref="WeaponSpec"/> と <see cref="DamageFalloff"/> に任せ、
-    /// 失敗したらどのアセットの値かを添えて <see cref="WeaponDefinitionException"/> を投げる。
-    /// 新しく作ったときの値は rifle 相当 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、
-    /// 20〜60m で 0.5 倍まで減衰)。ただし ADS の視野角は未設定 (共通の初期値) で、ブラインドファイアの散らばりは 0°、
-    /// アクティブリロードの値と反動の戻り始めまでの秒数は <see cref="WeaponSpec"/> の既定で始まり、それ以外の反動と弾の散らばりはすべて 0 (反動なし・散らばらない)。Id はエディターで作ったとき (<see cref="Reset"/>) と値を検証するとき (<see cref="OnValidate"/>) に、
-    /// 空なら新しい UUID を入れる。
-    /// 撃ち方・弾薬・弾・着弾・照準の部品の省略できる入れ子 (バースト・熱・飛ぶ弾・爆発・息止めなど) と弾薬の種類は、新しく作ったときは
-    /// どれも使わず、ヒットスキャン 1 本を即着弾させる今までの撃ち方になる。飛ぶ弾・ビーム・火炎・爆発の見た目と音は、
-    /// それぞれの入れ子の差し替えられる参照に置く。
-    /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Shooter.Editor.WeaponAssetBuilder が作る) の側にある。
-    /// </summary>
     [CreateAssetMenu(fileName = "Weapon", menuName = "Shooter/Weapon Definition")]
     public sealed class WeaponDefinition : ScriptableObject
     {
@@ -205,9 +192,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("切り替えて撃てる弾薬の種類。空なら切り替えない")]
         private AmmoTypeSettings[] _ammoTypes = Array.Empty<AmmoTypeSettings>();
 
-        /// <summary>
-        /// <see cref="AdsFieldOfView"/> が未設定であることを表す値。この項目が無かった頃に保存したアセットも、読み込むとこの値になる。
-        /// </summary>
+        // この項目が無かった頃に保存したアセットも読み込むと 0 になるので、0 を未設定とする。
         public const float UnsetAdsFieldOfView = 0f;
 
         public string Id
@@ -216,14 +201,12 @@ namespace Shooter.Runtime
             set => _id = value ?? string.Empty;
         }
 
-        /// <summary>画面に出す名前を引く表のキー (<see cref="WeaponSpec.NameKey"/>)。null は空文字にする。</summary>
         public string NameKey
         {
             get => _nameKey ?? string.Empty;
             set => _nameKey = value ?? string.Empty;
         }
 
-        /// <summary>作る人向けのメモ (<see cref="WeaponSpec.Description"/>)。null は空文字にする。</summary>
         public string Description
         {
             get => _description ?? string.Empty;
@@ -302,7 +285,6 @@ namespace Shooter.Runtime
             set => _explosionRadius = value;
         }
 
-        /// <summary>覗き込み切ったときの視野角 (度)。<see cref="UnsetAdsFieldOfView"/> なら <see cref="ToSpec"/> は共通の初期値を使う。</summary>
         public float AdsFieldOfView
         {
             get => _adsFieldOfView;
@@ -439,7 +421,6 @@ namespace Shooter.Runtime
             set => _pelletSpreadDegrees = value;
         }
 
-        /// <summary>弾の当たり判定の半径 (<see cref="RoundSpec.Radius"/>)。</summary>
         public float RoundRadius
         {
             get => _roundRadius;
@@ -464,7 +445,6 @@ namespace Shooter.Runtime
 
         public AreaEffectSettings AreaEffect => _areaEffect ??= new AreaEffectSettings();
 
-        /// <summary>覗き込みの視野角 (<see cref="AdsFieldOfView"/>) の次に並ぶ、スコープの倍率ごとの視野角 (度)。null は空にする。</summary>
         public float[] ExtraZoomLevels
         {
             get => _extraZoomLevels ?? Array.Empty<float>();
@@ -481,14 +461,12 @@ namespace Shooter.Runtime
 
         public SightSettings Sight => _sight ??= new SightSettings();
 
-        /// <summary>切り替えて撃てる弾薬の種類。null は空にする。</summary>
         public AmmoTypeSettings[] AmmoTypes
         {
             get => _ammoTypes ?? Array.Empty<AmmoTypeSettings>();
             set => _ammoTypes = value ?? Array.Empty<AmmoTypeSettings>();
         }
 
-        /// <summary>Id が空 (空白のみを含む) なら新しい UUID を入れて true を返す。既に値があれば変えずに false。</summary>
         public bool AssignIdIfEmpty()
         {
             if (!string.IsNullOrWhiteSpace(_id))
@@ -517,11 +495,6 @@ namespace Shooter.Runtime
 #endif
         }
 
-        /// <summary>
-        /// 定義を不変の <see cref="WeaponSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。
-        /// Id の前後の空白は <see cref="WeaponSpec"/> が取り除く。
-        /// </summary>
-        /// <exception cref="WeaponDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public WeaponSpec ToSpec()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed weapon)" : name;
@@ -587,7 +560,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="WeaponDefinition"/>・<see cref="WeaponCatalogAsset"/>・<see cref="LoadoutDefinition"/> の内容が不正で変換できない。</summary>
     public sealed class WeaponDefinitionException : Exception
     {
         public WeaponDefinitionException(string message)

@@ -14,7 +14,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場に置く仮のボス (<see cref="Shooter.Editor.RangeBossFixture"/>) が、隠れた弱点を持つボスを置くことを確かめる。</summary>
     public sealed class RangeBossFixtureTests
     {
         private string _folder;

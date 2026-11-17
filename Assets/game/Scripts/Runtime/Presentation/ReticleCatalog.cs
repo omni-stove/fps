@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 照準器の照準とスコープの縁の見た目。照準は <see cref="Shooter.Core.SightSpec.ReticleId"/> で引き、画像が空なら形 (<see cref="ReticleShape"/>) をコードで描く。
-    /// Id が見つからない (かカタログが無い) ときは、スコープの縁を出すなら <see cref="DefaultScope"/>、出さないなら <see cref="DefaultDot"/> を使う。
-    /// </summary>
     [CreateAssetMenu(fileName = "ReticleCatalog", menuName = "Shooter/Reticle Catalog")]
     public sealed class ReticleCatalog : ScriptableObject
     {
@@ -51,7 +47,6 @@ namespace Shooter.Runtime
             return Resources.Load<ReticleCatalog>(ResourcePath);
         }
 
-        /// <summary>catalog (null 可) から reticleId の見た目を引く。無ければ scopeOverlay で既定の見た目を選ぶ。</summary>
         public static ReticleEntry Resolve(ReticleCatalog catalog, string reticleId, bool scopeOverlay)
         {
             if (catalog != null && catalog.TryGet(reticleId, out var entry))

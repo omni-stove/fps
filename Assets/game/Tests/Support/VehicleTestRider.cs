@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>破棄される乗り手を試すための、何もしない <see cref="IVehicleRider"/> の部品。</summary>
     public sealed class VehicleTestRider : MonoBehaviour, IVehicleRider
     {
         public string RiderName => name;

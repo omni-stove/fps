@@ -3,61 +3,36 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 人型のリグの姿勢を決めるための、キャラクターの今の状態。<see cref="CharacterPose.Evaluate"/> に渡す。
-    /// 生成時に値を検査する。<c>default</c> は「止まって宙にいる・何もしていない・カバーなし・武器なし」。
-    /// </summary>
     public readonly struct CharacterPoseInput : IEquatable<CharacterPoseInput>
     {
-        /// <summary>水平の移動の速さ (m/s)。0 以上の有限値。</summary>
         public float HorizontalSpeed { get; }
 
-        /// <summary>足が地面に付いているか。</summary>
         public bool IsGrounded { get; }
 
         public bool IsCrouching { get; }
 
         public bool IsSprinting { get; }
 
-        /// <summary>覗き込んで (ADS で) 構えているか。</summary>
         public bool IsAiming { get; }
 
-        /// <summary>カバーしている壁の高さ。カバーしていなければ null。</summary>
         public CoverHeight? CoverHeight { get; }
 
         public bool IsDowned { get; }
 
         public bool IsDead { get; }
 
-        /// <summary>今持っている武器の種別。持っていなければ null。</summary>
         public WeaponCategory? WeaponCategory { get; }
 
-        /// <summary>スライディングの最中か。</summary>
         public bool IsSliding { get; }
 
-        /// <summary>体を横へ傾けている量。-1 (左へ傾け切り)〜1 (右へ傾け切り)。0 は傾けていない。</summary>
         public float Lean { get; }
 
         public bool IsSwimming { get; }
 
-        /// <summary>壁走りしている壁がどちら側にあるか。走っていなければ <see cref="WallRunSide.None"/>。</summary>
         public WallRunSide WallRun { get; }
 
         public bool IsInCover => CoverHeight.HasValue;
 
-        /// <param name="horizontalSpeed">水平の移動の速さ (m/s)。0 以上の有限値。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        /// <param name="isCrouching">しゃがんでいるか。</param>
-        /// <param name="isSprinting">ダッシュしているか。</param>
-        /// <param name="isAiming">ADS で構えているか。</param>
-        /// <param name="coverHeight">カバーしている壁の高さ。カバーしていなければ null。定義済みの値。</param>
-        /// <param name="isDowned">ダウンしているか。</param>
-        /// <param name="isDead">死んでいるか。</param>
-        /// <param name="weaponCategory">持っている武器の種別。持っていなければ null。定義済みの値。</param>
-        /// <param name="isSliding">スライディングの最中か。</param>
-        /// <param name="lean">体を横へ傾けている量。-1 (左)〜1 (右)。</param>
-        /// <param name="isSwimming">泳いでいるか。</param>
-        /// <param name="wallRun">壁走りしている壁の側。定義済みの値。</param>
         public CharacterPoseInput(
             float horizontalSpeed,
             bool isGrounded,
@@ -113,7 +88,6 @@ namespace Shooter.Core
             WallRun = wallRun;
         }
 
-        /// <summary>リーン・水泳・壁走りを motor の値に替えた入力。motor の値が範囲の外なら例外を投げる。</summary>
         public CharacterPoseInput WithMotor(CharacterMotorState motor)
         {
             return new CharacterPoseInput(

@@ -2,23 +2,14 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 つの目標の状態と進み具合の写し。<see cref="Mission.Snapshot"/> で書き出し、<see cref="Mission.Restore"/> で戻す。不変。
-    /// </summary>
     public sealed class ObjectiveProgress
     {
-        /// <summary>目標の Id。</summary>
         public string Id { get; }
 
-        /// <summary>目標の状態。</summary>
         public ObjectiveState State { get; }
 
-        /// <summary>目標の進み具合。0 以上。</summary>
         public int Count { get; }
 
-        /// <param name="id">目標の Id。空にはできない。</param>
-        /// <param name="state">目標の状態。</param>
-        /// <param name="count">目標の進み具合。0 以上。</param>
         public ObjectiveProgress(string id, ObjectiveState state, int count)
         {
             if (id == null)

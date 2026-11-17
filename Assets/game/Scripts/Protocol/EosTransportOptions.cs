@@ -2,22 +2,18 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary><see cref="EosMatchTransport"/> の待ち時間の調整値。</summary>
     public sealed class EosTransportOptions
     {
-        /// <summary>Netcode の EOS の transport (<c>EosP2PTransport.ConnectTimeoutSeconds</c>) と同じく、ログインからつながるまで 20 秒待つ。</summary>
+        // Netcode の EOS の transport (EosP2PTransport.ConnectTimeoutSeconds) と同じく、ログインからつながるまで 20 秒待つ。
         public const int DefaultConnectTimeoutMilliseconds = 20000;
 
-        /// <summary>サーバーは待ち受けを始める前にログインを済ませるので、つなぐ側より長く待つ。</summary>
+        // サーバーは待ち受けを始める前にログインを済ませるので、つなぐ側より長く待つ。
         public const int DefaultSignInTimeoutMilliseconds = 30000;
 
-        /// <summary>
-        /// 切断の知らせを送ってから、相手が受け取って閉じるのを待つ最長。EOS は閉じると送りかけのパケットを捨てうるので、
-        /// こちらからはすぐに閉じない。
-        /// </summary>
+        // EOS は閉じると送りかけのパケットを捨てうるので、切断の知らせを送ってもこちらからはすぐに閉じない。
         public const int DefaultCloseLingerMilliseconds = 3000;
 
-        /// <summary>止めるときに、切断の知らせが相手に届いて相手が閉じるのを待つ最長。止めるのを長く引き延ばさない。</summary>
+        // 止めるのを長く引き延ばさないよう、止めるときは切るときより短く待つ。
         public const int DefaultShutdownLingerMilliseconds = 1000;
 
         public const int DefaultPingIntervalMilliseconds = 1000;

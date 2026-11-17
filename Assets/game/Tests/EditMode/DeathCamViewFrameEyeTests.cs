@@ -6,7 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>ネット対戦の観戦が使う、相手の目にカメラを置く DeathCamView.FrameEye。</summary>
     public sealed class DeathCamViewFrameEyeTests
     {
         private static readonly Vector3 _cameraLocalPosition = new Vector3(0f, 1.6f, 0f);

@@ -9,9 +9,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// サンプルのルールの JSON (<see cref="SamplesFolder"/>) を一時フォルダに取り込むと、<see cref="GameRulesAssetBuilder"/> のルールと同じ値になることを確かめる。
-    /// </summary>
     public sealed class GameRulesJsonSamplesTests
     {
         private static readonly Dictionary<string, Func<GameRules>> _samples = new Dictionary<string, Func<GameRules>>

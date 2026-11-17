@@ -5,23 +5,14 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// メニューで選んだ <see cref="CampaignLaunch"/> を、ミッションのシーンの <see cref="CampaignRunner"/> へ渡す置き場所。
-    /// シーンを読み直しても (プレイヤーが倒れたときの再開でも) 選び直すまで残る。
-    /// Play を始めるたびに空に戻すので、シーンを直接開いて Play したときは何も選ばれていない。
-    /// エディタでシーンを直接開いて Play したときは、メニューで選ぶかその Play 中にセーブするまで <see cref="IgnoresSaves"/> が true になり、
-    /// 前の Play のセーブから再開せずに最初から始める。
-    /// </summary>
     public static class CampaignLaunchSelection
     {
         public const string LogTag = CampaignRunner.LogTag;
 
-        /// <summary>今の選択。何も選ばれていなければ null。</summary>
         public static CampaignLaunch Current { get; private set; }
 
         public static bool IgnoresSaves { get; private set; }
 
-        /// <summary>launch を選ぶ。前の選択は置き換える。</summary>
         public static void Select(CampaignLaunch launch)
         {
             Current = launch ?? throw new ArgumentNullException(nameof(launch));
@@ -29,7 +20,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} selected launch mission={launch.MissionId} difficulty={CampaignLaunchOptions.DifficultyName(launch.Difficulty)}");
         }
 
-        /// <summary>選択を消す。</summary>
         public static void Clear()
         {
             Current = null;
@@ -46,13 +36,6 @@ namespace Shooter.Runtime
             IgnoresSaves = false;
         }
 
-        /// <summary>
-        /// catalog の missionId のミッションを difficulty で選び、そのシーンを sceneLoader (null なら SceneManager.LoadScene) で開く。
-        /// catalog が不正なら <see cref="MissionCatalogException"/>、missionId が無ければ <see cref="ArgumentException"/>。
-        /// sceneLoader が null のときはシーンが Build Settings に無いと <see cref="InvalidOperationException"/>。
-        /// どの例外でも前の選択は変えない。
-        /// </summary>
-        /// <returns>開いたミッション。</returns>
         public static MissionCatalogEntry Launch(
             MissionCatalog catalog,
             string missionId,

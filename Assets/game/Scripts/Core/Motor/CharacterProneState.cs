@@ -3,10 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 伏せの入力の解釈 (<see cref="ProneInput"/>) と飛び込み (<see cref="ProneDive"/>) の中身。実際の姿勢は <see cref="CharacterMotorState.Stance"/> が持つ。
-    /// 押した瞬間・ダッシュの始まり・しゃがみの押下で伏せを解くので、前の tick のダッシュとしゃがみの入力も持つ (巻き戻しても同じ答えにするため)。
-    /// </summary>
+    // 押した瞬間・ダッシュの始まり・しゃがみの押下で伏せを解くので、巻き戻しても同じ答えにするため前の tick のダッシュとしゃがみの入力も持つ。
     public readonly struct CharacterProneState : IEquatable<CharacterProneState>
     {
         public CharacterProneState(
@@ -22,7 +19,6 @@ namespace Shooter.Core
 
         public static CharacterProneState None => default;
 
-        /// <summary>伏せたいか (<see cref="ProneInput.IsActive"/>)。頭上が塞がっていると、false でも伏せたままのことがある。</summary>
         public bool IsActive { get; }
 
         public bool WasSprinting { get; }
@@ -31,7 +27,6 @@ namespace Shooter.Core
 
         public bool IsDiving { get; }
 
-        /// <summary>飛び込んでいる向き (ワールドの水平の単位ベクトル、X がワールドの X、Y がワールドの Z)。</summary>
         public Vector2 DiveDirection { get; }
 
         public float DiveElapsed { get; }

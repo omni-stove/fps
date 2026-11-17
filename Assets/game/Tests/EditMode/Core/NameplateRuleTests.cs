@@ -6,7 +6,6 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class NameplateRuleTests
     {
-        // 味方は壁越しでも出す
         [TestCase(0f, false, true)]
         [TestCase(NameplateRule.FriendlyRange, false, true)]
         [TestCase(NameplateRule.FriendlyRange + 0.1f, true, false)]

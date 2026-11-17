@@ -4,18 +4,11 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 自分のプレイヤーの予測。tick ごとの入力をサーバーと同じ Core の移動で先に動かし、送る入力を覚えておく。
-    /// スナップショットが届いたら、サーバーが処理した最後の入力の tick (<see cref="OwnerSnapshot.LastProcessedInputTick"/>) の予測と
-    /// その行の状態を比べ、ずれていればその状態から後の入力をやり直す (<see cref="PredictionBuffer{TInput, TState}"/>)。
-    /// </summary>
-    /// <remarks>
-    /// 入力は落ちてよい届け方で送るので、サーバーが処理したと分かるまでの入力を、送るたびに新しい方から
-    /// <see cref="InputMessage.MaxFrames"/> 個まで載せ直す。
-    /// </remarks>
+    // 入力は落ちてよい届け方で送るので、サーバーが処理したと分かるまでの入力を、送るたびに新しい方から
+    // InputMessage.MaxFrames 個まで載せ直す。
     public sealed class OwnerPrediction
     {
-        /// <summary>Netcode のクライアント (<c>NetworkPlayerMotor.ReconcileTolerance</c>) と同じ許容値 (m)。</summary>
+        // Netcode のクライアント (NetworkPlayerMotor.ReconcileTolerance) と同じ許容値。
         public const float DefaultTolerance = 0.05f;
 
         private readonly CharacterMotorSimulation _simulation;
@@ -35,26 +28,19 @@ namespace Shooter.NetV2
             _frames = new InputFrame[capacity];
         }
 
-        /// <summary><see cref="Start"/> されたか。最初の自分の行が届くまでは予測しない。</summary>
         public bool IsStarted { get; private set; }
 
-        /// <summary>最後に予測した tick。</summary>
         public int CurrentTick => _buffer.CurrentTick;
 
-        /// <summary>最後に予測した状態。</summary>
         public CharacterMotorState Current => _buffer.Current;
 
-        /// <summary>サーバーが処理したと分かっている最後の入力の tick。</summary>
         public int LastProcessedTick { get; private set; } = -1;
 
-        /// <summary>まだサーバーが処理したと分からない入力の数。</summary>
         public int PendingFrames => _frameCount;
 
         public CharacterMotorSimulation Simulation => _simulation;
 
-        /// <summary>
-        /// tick の状態を起点にする。次の予測は tick + 1 から。サーバーは入力の tick を -1 より後から受け付けるので、最初は -1 を渡す。
-        /// </summary>
+        // サーバーは入力の tick を -1 より後から受け付けるので、最初は -1 を渡す。
         public void Start(int tick, CharacterMotorState state)
         {
             if (tick < -1)
@@ -70,12 +56,6 @@ namespace Shooter.NetV2
             IsStarted = true;
         }
 
-        /// <summary>
-        /// frame を次の tick の入力として予測し、送るために覚える。input は frame をサーバーと同じに読み直したもの
-        /// (<see cref="SnapshotMotion.ToInput"/>)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">まだ <see cref="Start"/> していない。</exception>
-        /// <exception cref="ArgumentException">frame の tick が <see cref="CurrentTick"/> の次でない。</exception>
         public CharacterMotorState Predict(InputFrame frame, CharacterMotorInput input)
         {
             if (!IsStarted)
@@ -101,9 +81,6 @@ namespace Shooter.NetV2
             return state;
         }
 
-        /// <summary>
-        /// サーバーが lastProcessedInputTick までの入力を処理した後の状態が authoritative だった。予測と比べて、ずれていればやり直す。
-        /// </summary>
         public ReconcileResult Reconcile(int lastProcessedInputTick, CharacterMotorState authoritative)
         {
             if (!IsStarted)
@@ -132,10 +109,8 @@ namespace Shooter.NetV2
             return result;
         }
 
-        /// <summary>
-        /// 乗り物の座席にいる間の照合。座席の位置は乗り物の動きで決まり入力からやり直せないので、比べずにサーバーの状態を今の予測にする。
-        /// まだ処理されていない入力は送り直すために残す。
-        /// </summary>
+        // 座席の位置は乗り物の動きで決まり入力からやり直せないので、比べずにサーバーの状態を今の予測にする。
+        // まだ処理されていない入力は送り直すために残す。
         public void Rebase(int lastProcessedInputTick, CharacterMotorState authoritative)
         {
             if (!IsStarted)
@@ -157,9 +132,6 @@ namespace Shooter.NetV2
             _simulation.Place(authoritative);
         }
 
-        /// <summary>
-        /// サーバーがまだ処理していない入力を、新しい方から最大 <see cref="InputMessage.MaxFrames"/> 個、古い順に message へ入れ直す。
-        /// </summary>
         public void FillInput(InputMessage message)
         {
             if (message == null)

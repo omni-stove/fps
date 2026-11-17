@@ -3,10 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// スナップショットの差分を取るための、浮動小数をビット列で比べる等しさ。
-    /// <c>==</c> だと NaN が自分と等しくならず、毎回変わったとみなして送り続けてしまうため。
-    /// </summary>
+    // 浮動小数を == でなくビット列で比べるのは、== だと NaN が自分と等しくならず、差分で毎回変わったとみなして送り続けてしまうため。
     internal static class Same
     {
         public static bool Bits(float a, float b)

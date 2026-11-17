@@ -5,21 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Ping の入力 (<see cref="PlayerActionReader.PressedCommands"/> の <see cref="PlayerCommands.Ping"/>) で、照準の先の敵か場所に印を付ける。
-    /// 何に付けるか・寿命・数の上限は <see cref="PingAim"/> と <see cref="PingBoard"/> が決め、ここはシーンから照準の Ray・敵・見えているかを測る。
-    /// <list type="bullet">
-    /// <item>付けられるかはルール (<see cref="ActionRules.Ping"/>) で決まり、<see cref="Configure"/> (オフラインは <see cref="PlayerActions.Attach"/> が呼ぶ)
-    /// で On を受け取るまでは付けない。</item>
-    /// <item>敵の印は、カメラから敵が見えている間だけ敵を追い、見失うと最後の位置に残る。敵が倒れたら消す。</item>
-    /// <item>印は、付けられる間 <see cref="GameSignals.Pings"/> に出し、付いた・動いた・消えたたびに出し直す。どう出すかは UI が決める。</item>
-    /// <item>同じ陣営 (<see cref="SideMember"/>) のオフラインの bot は、印の付いた敵を優先して狙う (<see cref="IsMarkedFor"/>)。</item>
-    /// </list>
-    /// 寿命・数の上限・届く距離・敵に吸い付く角度・続けて付ける間隔は Inspector の値から作る <see cref="Spec"/> に従う。
-    /// Play 中に生まれたときは、先に <see cref="ApplySpec"/> で渡されていなければ、Inspector の値を調整値の JSON (<see cref="KitTuning.Ping"/>) で上書きする。
-    /// ネット対戦では付けず、
-    /// <see cref="ShowShared"/> で受け取ったサーバーの印を出すだけにする (付けるのも追うのもサーバーで、ここで付けると味方と食い違うため)。
-    /// </summary>
+    // ネット対戦では自分で付けず、ShowShared で受け取ったサーバーの印を出すだけにする。付けるのも追うのもサーバーで、ここで付けると味方と食い違うため。
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(110)]
@@ -63,20 +49,14 @@ namespace Shooter.Runtime
         private SharedPingMarkers _shared;
         private int _sharedVersion;
 
-        /// <summary>印が付いた・動いた・消えたときに呼ばれる。表示が読み直す。</summary>
         public event Action<PingController> Changed;
 
-        /// <summary>今のルールで付けられるか。<see cref="Configure"/> の前は Off。</summary>
         public Shooter.Core.Ping Rule => _rule;
 
         public bool UsesPing => _configured && _rule == Shooter.Core.Ping.On;
 
-        /// <summary>
-        /// 今の値の <see cref="PingSpec"/>。<see cref="Configure"/> の後はそのときの値で、前は Inspector の値から作る。値が不正なら ArgumentOutOfRangeException。
-        /// </summary>
         public PingSpec Spec => _spec ?? (_spec = CreateSpec());
 
-        /// <summary>今ある印。古い順。</summary>
         public IReadOnlyList<PingMarker> Markers =>
             _shared != null ? _shared.Markers
             : _board != null ? _board.Markers
@@ -84,10 +64,8 @@ namespace Shooter.Runtime
 
         public bool IsShared => _shared != null;
 
-        /// <summary>最後に付けようとしたときに付けなかった理由。付けたら <see cref="PingRefusal.None"/>。</summary>
         public PingRefusal LastRefusal => _lastRefusal;
 
-        /// <summary>印を見るカメラ。プレイヤーの視点 (<see cref="ViewRig"/>) のカメラで、無ければ null。</summary>
         public Camera ViewCamera
         {
             get
@@ -97,7 +75,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>時刻 (秒) を返すもの。null なら <see cref="Time.time"/> (ポーズで時間が止まると寿命も止まる)。テストが差し込む。</summary>
+        // 既定を Time.time にするのは、ポーズで時間が止まると寿命も止めるため。テストが時刻を差し込めるよう差し替えられるようにする。
         public Func<float> Clock { get; set; }
 
         private float Now => Clock != null ? Clock() : Time.time;
@@ -115,17 +93,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>シリアライズされた値から <see cref="PingSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public PingSpec CreateSpec()
         {
             return new PingSpec(_lifetimeSeconds, _maxMarkers, _maxDistance, _enemyAimToleranceDegrees, _minIntervalSeconds);
         }
 
-        /// <summary>
-        /// spec の値をシリアライズされる値に書き込む。Play 中のコードとテストが差し込むのに使う。
-        /// Play の外で書き込んだ値は、Play 中に生まれたときに調整値の JSON で上書きされる。
-        /// 付いている印には効かず、次の <see cref="Configure"/> から使う。
-        /// </summary>
         public void ApplySpec(PingSpec spec)
         {
             if (spec == null)
@@ -154,10 +126,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// rules の <see cref="ActionRules.Ping"/> で付けられるかを決め、Inspector の値で設定を作り直す。付いていた印はすべて消す。
-        /// 何度呼んでも、最後に渡した rules に従う。Inspector の値が不正 (<see cref="CreateSpec"/>) なら何も変えずに ArgumentOutOfRangeException。
-        /// </summary>
         public void Configure(GameRules rules)
         {
             if (rules == null)
@@ -215,10 +183,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>
-        /// 照準 (<see cref="ViewRig.ResolveAim"/>) の先に印を付ける。付けたら true と付けた印を返し、<c>[Ping] placed</c> をログに出す。
-        /// 付けなければ false を返し、理由 (<see cref="LastRefusal"/>) を <c>[Ping] refused</c> でログに出す。
-        /// </summary>
         public bool TryPing(out PingMarker marker)
         {
             marker = default;
@@ -237,11 +201,6 @@ namespace Shooter.Runtime
             return TryPingAlong(origin, direction, out marker);
         }
 
-        /// <summary>
-        /// origin から direction への照準の先に印を付ける。何に付けるかは <see cref="PingAim.Resolve"/> で決める。
-        /// 返り値とログは <see cref="TryPing"/> と同じ。
-        /// </summary>
-        /// <exception cref="ArgumentException">origin が有限でないか、direction が 0 か有限でない。</exception>
         public bool TryPingAlong(Vector3 origin, Vector3 direction, out PingMarker marker)
         {
             marker = default;
@@ -294,14 +253,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// target に、lifetimeSeconds 秒で消える敵の印を付ける (<see cref="PingBoard.Reveal"/>)。UAV などの報酬が使う。
-        /// この印は数の上限に数えず、消えるまで見えていなくても敵を追う。付けたら true と付けた印を返し、<c>[Ping] revealed</c> をログに出す。
-        /// 付けなければ false を返し、理由 (<see cref="LastRefusal"/>) を <c>[Ping] refused</c> でログに出す。target が倒れていれば <see cref="PingRefusal.NoTarget"/>。
-        /// 敵かどうかは呼び出し側が決める。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">target が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">lifetimeSeconds が 0 以下か有限でない。</exception>
         public bool TryMarkEnemy(Damageable target, float lifetimeSeconds, out PingMarker marker)
         {
             marker = default;
@@ -334,11 +285,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// now の時点で、敵の印を追い (見えている間は動かし、見えなくなったら <c>[Ping] lost</c>)、倒れた敵の印と寿命の尽きた印 (<c>[Ping] expired</c>) を消す。
-        /// <see cref="TryMarkEnemy"/> で付けた印は、見えていなくても追う。
-        /// Play 中は LateUpdate が <see cref="Time.time"/> (<see cref="Clock"/>) で呼ぶ。
-        /// </summary>
         public void Tick(float now)
         {
             if (_shared != null)
@@ -410,7 +356,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>印をすべて消す。消したら <c>[Ping] cleared</c> をログに出す。</summary>
         public void ClearMarkers()
         {
             if (_shared != null)
@@ -453,19 +398,16 @@ namespace Shooter.Runtime
             return _board.TryGet(id, out marker);
         }
 
-        /// <summary>敵の印 id が付いている敵。場所の印か、無ければ null。</summary>
         public Damageable TargetOf(int id)
         {
             return _targets.TryGetValue(id, out var target) && target != null ? target : null;
         }
 
-        /// <summary>target に印を付けているか (見失った後も、消えるまでは付いている)。</summary>
         public bool IsMarked(Damageable target)
         {
             return target != null && _board != null && _board.IsMarked(KeyOf(target));
         }
 
-        /// <summary>付ける人の陣営。<see cref="SideMember"/> が無ければ null (味方の bot はいない)。</summary>
         public Side? PingerSide
         {
             get
@@ -475,10 +417,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// side の陣営の誰かが、ルールで付けられる状態で target に印を付けているか。オフラインの bot が狙う敵を選ぶとき
-        /// (<see cref="EnemySenses.SelectHostile"/>) に見る。
-        /// </summary>
         public static bool IsMarkedFor(Side side, Damageable target)
         {
             if (target == null)

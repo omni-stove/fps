@@ -8,7 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    // オフラインのフラッシュが、見えている相手に向きと距離で長さを変えた目くらましをかけ、敵の知覚をその間止めることを確かめる
     public sealed class FlashTests
     {
         private const string _weaponId = GrenadeThrower.WeaponId;

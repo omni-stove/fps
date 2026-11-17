@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>テスト用の <see cref="ICharacterPoseSource"/>。決めた状態を返し、渡された速さを記録する。</summary>
     public sealed class FakeCharacterPoseSource : MonoBehaviour, ICharacterPoseSource
     {
         public float WalkSpeed { get; set; } = 5f;
@@ -23,7 +22,6 @@ namespace Shooter.Tests.EditMode
 
         public WeaponCategory? Weapon { get; set; }
 
-        /// <summary>最後の <see cref="ReadPose"/> に渡された速さ。</summary>
         public float LastSpeed { get; private set; } = -1f;
 
         public CharacterPoseInput ReadPose(float horizontalSpeed)

@@ -2,25 +2,17 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 近くで Interact したら何が起きるかの案内。どの物が出しているか (<see cref="Source"/>) と、何が起きるか (<see cref="Detail"/>) を持つ。
-    /// 文にするのは UI で、<see cref="Detail"/> の型 (例: 拾う物の <see cref="PickupOutcome"/>) ごとに決める。
-    /// </summary>
     public readonly struct InteractHint : IEquatable<InteractHint>
     {
-        /// <param name="source">案内を出している物。出した物だけが自分の案内を消せるよう、見分けに使う。</param>
-        /// <param name="detail">Interact したら何が起きるか。</param>
-        /// <exception cref="ArgumentNullException">source か detail が null。</exception>
         public InteractHint(object source, object detail)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
             Detail = detail ?? throw new ArgumentNullException(nameof(detail));
         }
 
-        /// <summary>案内を出している物。<c>default(InteractHint)</c> では null。</summary>
+        // 出した物を持つのは、出した物だけが自分の案内を消せるよう見分けるため。
         public object Source { get; }
 
-        /// <summary>Interact したら何が起きるか。<c>default(InteractHint)</c> では null。</summary>
         public object Detail { get; }
 
         public bool Equals(InteractHint other)

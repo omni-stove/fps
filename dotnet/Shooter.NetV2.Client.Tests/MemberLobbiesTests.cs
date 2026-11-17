@@ -66,6 +66,9 @@ namespace Shooter.NetV2.Tests
             return new[] { LobbyAttribute.OfText("mode", "duo") };
         }
 
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Strings(params string[] values) => values;
+
         /// <summary>メンバー用ロビー L1 を属性なしで作り終える。</summary>
         private void CreateL1()
         {
@@ -87,23 +90,21 @@ namespace Shooter.NetV2.Tests
                 failure = error;
             });
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=4" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("create bucket=shooter-party:0.3.0 max=4")));
             _api.AnswerCreate("L1");
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=4", "update-lobby id=L1 mode=duo" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("create bucket=shooter-party:0.3.0 max=4", "update-lobby id=L1 mode=duo")));
             Assert.That(failure, Is.EqualTo("not answered"), "the lobby is not ready until its attributes are set");
 
             _api.AnswerUpdate(null);
-            Assert.That(_api.Calls, Is.EqualTo(new[]
-            {
+            Assert.That(_api.Calls, Is.EqualTo(Strings(
                 "create bucket=shooter-party:0.3.0 max=4",
                 "update-lobby id=L1 mode=duo",
-                "copy id=L1",
-            }));
+                "copy id=L1")));
             Assert.That(failure, Is.Null);
             Assert.That(created.Id, Is.EqualTo("L1"));
             Assert.That(created.OwnerUserId, Is.EqualTo(_self));
-            Assert.That(_lobbies.Joined, Is.EquivalentTo(new[] { "L1" }));
-            Assert.That(_log, Is.EqualTo(new[] { "[Lobby] member lobby created id=L1 bucket=shooter-party:0.3.0 members=1/4" }));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(Strings("L1")));
+            Assert.That(_log, Is.EqualTo(Strings("[Lobby] member lobby created id=L1 bucket=shooter-party:0.3.0 members=1/4")));
         }
 
         [Test]
@@ -114,7 +115,7 @@ namespace Shooter.NetV2.Tests
             _lobbies.Create(_bucket, 2, Array.Empty<LobbyAttribute>(), (lobby, _) => created = lobby);
             _api.AnswerCreate("L1");
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=2", "copy id=L1" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("create bucket=shooter-party:0.3.0 max=2", "copy id=L1")));
             Assert.That(created.Id, Is.EqualTo("L1"));
         }
 
@@ -126,12 +127,10 @@ namespace Shooter.NetV2.Tests
             _api.AnswerCreate(null, "creating the EOS member lobby failed: TooManyRequests");
 
             Assert.That(failure, Is.EqualTo("creating the EOS member lobby failed: TooManyRequests"));
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=4" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("create bucket=shooter-party:0.3.0 max=4")));
             Assert.That(_lobbies.Joined, Is.Empty);
-            Assert.That(_log, Is.EqualTo(new[]
-            {
-                "[Lobby] member lobby create failed bucket=shooter-party:0.3.0 reason=creating the EOS member lobby failed: TooManyRequests",
-            }));
+            Assert.That(_log, Is.EqualTo(Strings(
+                "[Lobby] member lobby create failed bucket=shooter-party:0.3.0 reason=creating the EOS member lobby failed: TooManyRequests")));
         }
 
         [Test]
@@ -160,12 +159,10 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(created, Is.Null);
             Assert.That(failure, Is.EqualTo("updating the EOS member lobby id=L1 failed: InvalidParameters"));
-            Assert.That(_api.Calls, Is.EqualTo(new[]
-            {
+            Assert.That(_api.Calls, Is.EqualTo(Strings(
                 "create bucket=shooter-party:0.3.0 max=4",
                 "update-lobby id=L1 mode=duo",
-                "leave id=L1",
-            }));
+                "leave id=L1")));
             Assert.That(_lobbies.Joined, Is.Empty);
             Assert.That(_log, Has.Member("[Lobby] member lobby abandoned id=L1 reason=updating the EOS member lobby id=L1 failed: InvalidParameters"));
         }
@@ -179,7 +176,7 @@ namespace Shooter.NetV2.Tests
             _api.AnswerCreate("L1");
 
             Assert.That(failure, Is.EqualTo("reading the EOS lobby id=L1 failed: NotFound"));
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=4", "copy id=L1", "leave id=L1" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("create bucket=shooter-party:0.3.0 max=4", "copy id=L1", "leave id=L1")));
             Assert.That(_lobbies.Joined, Is.Empty);
         }
 
@@ -206,15 +203,15 @@ namespace Shooter.NetV2.Tests
                 failure = error;
             });
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=L2" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("join id=L2")));
             _api.AnswerJoin(null);
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=L2", "copy id=L2" }));
+            Assert.That(_api.Calls, Is.EqualTo(Strings("join id=L2", "copy id=L2")));
             Assert.That(failure, Is.Null);
             Assert.That(joined.OwnerUserId, Is.EqualTo(_friend));
             Assert.That(joined.Members, Is.EqualTo(new[] { _friend, _self }));
-            Assert.That(_lobbies.Joined, Is.EquivalentTo(new[] { "L2" }));
-            Assert.That(_log, Is.EqualTo(new[] { "[Lobby] member lobby joined id=L2 members=2/4" }));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(Strings("L2")));
+            Assert.That(_log, Is.EqualTo(Strings("[Lobby] member lobby joined id=L2 members=2/4")));
         }
 
         [Test]

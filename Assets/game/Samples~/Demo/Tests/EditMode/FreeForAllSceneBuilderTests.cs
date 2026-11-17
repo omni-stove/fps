@@ -8,10 +8,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="FreeForAllSceneBuilder"/> の配置を確かめる。シーンを組んで NavMesh を焼く処理は開いているシーンを置き換えるので、
-    /// <c>-executeMethod Shooter.Editor.FreeForAllSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換えるので、-executeMethod Shooter.Editor.FreeForAllSceneBuilder.Build で確かめる。
     public sealed class FreeForAllSceneBuilderTests
     {
         [Test]

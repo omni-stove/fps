@@ -3,14 +3,12 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>マップの投票の候補 1 つ。マップは Id で持ち、名前に引くのは UI。</summary>
+    // マップを名前でなく Id で持つのは、名前に引くのを UI に任せるため。
     public readonly struct MapVoteCandidate : IEquatable<MapVoteCandidate>
     {
         // default ではコンストラクタを通らず null になるので、読むときに空文字へ寄せる。
         private readonly string _mapId;
 
-        /// <exception cref="ArgumentException">mapId が null か空白だけ。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">votes が負。</exception>
         public MapVoteCandidate(string mapId, int votes)
         {
             if (string.IsNullOrWhiteSpace(mapId))

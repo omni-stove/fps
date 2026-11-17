@@ -5,23 +5,13 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ネット対戦で味方を見ている間、見ている味方の名前・前と次の味方へ替える操作・復活までの秒数を 1 行ずつ出す (<see cref="SpectateText.Lines"/>)。
-    /// Hud.uxml の <see cref="UxmlName"/> に行を入れ、見た目は Hud.uss の spectate のクラスで決める。
-    /// 要素を持っている間は <see cref="GameSignals.Spectate"/>・<see cref="GameSignals.Participants"/>・<see cref="GameSignals.HudModel"/> (その案内) を購読し、
-    /// <see cref="GameSignals.Spectate"/> に値が無い間は隠す。名前は参加者の表 (<see cref="IParticipants"/>) から、秒数は HUD のリスポーンの案内 (<see cref="HudNotice"/>) から引く。
-    /// <see cref="Hud.AddViews"/> は付けないので、使うときは HUD の GameObject に付ける。木を持つ HUD に後から付けたときは、Start でその木を受ける。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class SpectateView : HudElementView
     {
-        /// <summary>Hud.uxml の観戦の VisualElement。</summary>
         public const string UxmlName = "spectate";
 
-        /// <summary>1 行分の Label に付ける USS クラス。</summary>
         public const string RowClass = "spectate__row";
 
-        /// <summary>見ている味方の行に足す USS クラス。</summary>
         public const string TargetRowClass = "spectate__row--target";
 
         private readonly List<string> _lines = new List<string>();
@@ -33,22 +23,18 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している観戦の状態。出していなければ null。</summary>
         public SpectateStatus? Status => _status;
 
         public bool IsShown => _status.HasValue;
 
-        /// <summary>出している行の文。出していなければ空。</summary>
         public IReadOnlyList<string> Lines => _lines;
 
-        /// <summary>status を出す。null なら隠す。要素を持っている間は <see cref="GameSignals.Spectate"/> が出されるたびに呼ばれる。</summary>
         public void Show(SpectateStatus? status)
         {
             _status = status;
             Refresh();
         }
 
-        /// <summary>出している状態を、今の参加者の名前・案内・言語で文にし直して行に写す。</summary>
         public void Refresh()
         {
             _lines.Clear();

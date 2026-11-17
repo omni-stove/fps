@@ -2,9 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroy"/>) の設定。生成時に値を検査し、以後は変わらない。
-    /// </summary>
     public sealed class SearchAndDestroySpec
     {
         public const int DefaultSiteCount = 2;
@@ -18,37 +15,26 @@ namespace Shooter.Core
         public const float DefaultBombPickupRadius = 1.5f;
         public const float DefaultDefuseRadius = 2f;
 
-        /// <summary>設置地点の数。1 以上。HUD とログでは 0 = A, 1 = B, ...。</summary>
         public int SiteCount { get; }
 
-        /// <summary>1 ラウンドの制限時間 (秒)。設置するとそこで止まる。0 より大きい有限値。</summary>
         public float RoundSeconds { get; }
 
-        /// <summary>設置し終えるまで長押しを続ける秒数。0 より大きい有限値。</summary>
         public float PlantSeconds { get; }
 
-        /// <summary>解除し終えるまで長押しを続ける秒数。0 より大きい有限値。</summary>
         public float DefuseSeconds { get; }
 
-        /// <summary>設置してから起爆するまでの秒数。0 より大きい有限値。</summary>
         public float FuseSeconds { get; }
 
-        /// <summary>試合に勝つのに要るラウンドの勝ち数。1 以上。</summary>
         public int WinsToWin { get; }
 
-        /// <summary>各ラウンドの開始前の待ち (秒)。0 以上の有限値。</summary>
         public float PreparationSeconds { get; }
 
-        /// <summary>何ラウンドごとに攻守を入れ替えるか。0 なら入れ替えない。</summary>
         public int SwapEveryRounds { get; }
 
-        /// <summary>攻撃側が落ちた爆弾を拾う距離 (m、水平)。0 より大きい有限値。</summary>
         public float BombPickupRadius { get; }
 
-        /// <summary>防衛側が設置された爆弾を解除できる距離 (m、水平)。0 より大きい有限値。</summary>
         public float DefuseRadius { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">どれかの値が範囲の外。</exception>
         public SearchAndDestroySpec(
             int siteCount = DefaultSiteCount,
             float roundSeconds = DefaultRoundSeconds,

@@ -2,15 +2,12 @@ using System;
 
 namespace Shooter.Runtime
 {
-    /// <summary>アクションのデバッグ表示の 1 行。<see cref="ActionDebugFormat.Lines"/> が作る。</summary>
     public readonly struct ActionDebugLine : IEquatable<ActionDebugLine>
     {
         private readonly string _text;
 
-        /// <summary>画面に出す文字列。null なら空文字。</summary>
         public string Text => _text ?? string.Empty;
 
-        /// <summary>今その項目が有効か。有効な行は色を変えて目立たせる。</summary>
         public bool IsActive { get; }
 
         public ActionDebugLine(string text, bool isActive)
@@ -44,7 +41,6 @@ namespace Shooter.Runtime
             return HashCode.Combine(StringComparer.Ordinal.GetHashCode(Text), IsActive);
         }
 
-        /// <summary>例: <c>* ADS: ON</c> (有効)、<c>  ADS: OFF</c> (無効)。</summary>
         public override string ToString()
         {
             return (IsActive ? "* " : "  ") + Text;

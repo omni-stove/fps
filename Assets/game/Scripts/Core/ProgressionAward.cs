@@ -3,13 +3,8 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="ProgressionLedger"/> が 1 つの出来事 (倒した・アシストした・試合を終えた) を記録した結果。新しいプロフィールと、得た XP と、前後のレベルを持つ。
-    /// </summary>
     public sealed class ProgressionAward
     {
-        /// <exception cref="ArgumentNullException">profile が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">xp が負か、レベルが 1 未満か、level が previousLevel より低い。</exception>
         public ProgressionAward(PlayerProfile profile, int xp, int previousLevel, int level)
         {
             if (xp < 0)
@@ -35,7 +30,6 @@ namespace Shooter.Core
 
         public PlayerProfile Profile { get; }
 
-        /// <summary>この出来事で増えた XP。累計が int の上限で止まったときは、実際に増えた分。</summary>
         public int Xp { get; }
 
         public int PreviousLevel { get; }

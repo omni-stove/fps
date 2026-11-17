@@ -4,28 +4,18 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 実行中に <see cref="ToggleKey"/> で、この端末のプレイヤーの視点 (<see cref="ViewRig.Mode"/>) を一人称と三人称で入れ替える。
-    /// ルールは変えずシーンも読み直さないので、FPS の射撃場でも TPS の射撃場でも、その場で同じ状況を見比べられる。
-    /// Editor と Development Build だけで (<see cref="IsSupported"/>)、シーンをまたいで 1 つ常駐する。専用サーバーでは作らない。
-    /// 死亡カメラや乗り物のカメラが視点を借りている間 (ViewRig が無効) は入れ替えずに断る。借り手は返すときに借りる前の視点へ戻すため。
-    /// 次にシーンを読むとルールの <see cref="GameRules.ViewMode"/> に戻る。読み直しても残したいときはルールのデバッグパネル (F1) の視点で選ぶ。
-    /// </summary>
+    // ルールは変えずシーンも読み直さないのは、FPS の射撃場でも TPS の射撃場でも、その場で同じ状況を見比べられるようにするため。
+    // 死亡カメラや乗り物のカメラが視点を借りている間 (ViewRig が無効) は入れ替えずに断る。借り手は返すときに借りる前の視点へ戻すため。
     [DisallowMultipleComponent]
     public sealed class ViewModeDebugToggle : MonoBehaviour
     {
-        /// <summary>常駐させる GameObject の名前。</summary>
         public const string ObjectName = "ViewModeDebugToggle";
 
-        /// <summary>
-        /// 入れ替えるキー。入力アセットは変えず <see cref="Keyboard.current"/> を直接読む
-        /// (ルールのデバッグパネルの F1・行動のデバッグ表示の F3・爆発の範囲の F4 と同じく)。
-        /// </summary>
+        // ルールのデバッグパネルの F1・行動のデバッグ表示の F3・爆発の範囲の F4 と同じく、入力アセットは変えず Keyboard.current を直接読む。
         public const Key ToggleKey = Key.F2;
 
         private static ViewModeDebugToggle _instance;
 
-        /// <summary>この Build で使えるか。Editor と Development Build だけ true。</summary>
         public static bool IsSupported
         {
             get
@@ -38,14 +28,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>常駐しているもの。作っていなければ null。</summary>
         public static ViewModeDebugToggle Instance => _instance;
 
-        /// <summary>
-        /// rig の視点を入れ替え、<see cref="ViewModeSwitch.FormatSwitchLog"/> をログに出して <see cref="ViewModeSwitch.Refusal.None"/> を返す。
-        /// rig が無いかこの端末の視点でなければ <see cref="ViewModeSwitch.Refusal.NoLocalView"/>、
-        /// 無効 (死亡カメラや乗り物のカメラが借りている) なら <see cref="ViewModeSwitch.Refusal.ViewBorrowed"/> を返して視点は変えない。
-        /// </summary>
         public static ViewModeSwitch.Refusal Toggle(ViewRig rig)
         {
             var refusal = Check(rig);
@@ -62,7 +46,6 @@ namespace Shooter.Runtime
             return ViewModeSwitch.Refusal.None;
         }
 
-        /// <summary>シーンにあるこの端末のプレイヤーの視点 (<see cref="ViewRig.IsLocalView"/>)。無ければ null。</summary>
         public static ViewRig FindLocalRig()
         {
             foreach (var rig in FindObjectsByType<ViewRig>(FindObjectsInactive.Exclude))

@@ -231,7 +231,6 @@ namespace Shooter.Runtime
             return speed >= 0f && !float.IsInfinity(speed) ? speed : 0f;
         }
 
-        /// <summary>今の覗き込みの進み具合。0 (腰だめ) 〜 1 (構えきった)。</summary>
         public float AdsProgress()
         {
             Resolve();

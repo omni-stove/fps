@@ -2,10 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// はしごの上り下りの中身 (<see cref="LadderClimb"/>) と、離れてから次につかまれるまでの待ち。はしごはマップのはしごの並び
-    /// (<see cref="CharacterMotorSimulation.Ladders"/>) の番号で指す。
-    /// </summary>
     public readonly struct CharacterLadderState : IEquatable<CharacterLadderState>
     {
         public const int NoLadder = -1;
@@ -32,14 +28,12 @@ namespace Shooter.Core
 
         public LadderEntry Entry { get; }
 
-        /// <summary>足元の、はしごの下端からの高さ (m)。</summary>
         public float Height { get; }
 
         public bool IsInputLatched { get; }
 
         public int LatchedDownSign { get; }
 
-        /// <summary>次につかまれるまでの残りの秒数。</summary>
         public float RegrabRemaining { get; }
 
         public bool IsValid => IsFinite(Height) && IsFinite(RegrabRemaining) && RegrabRemaining >= 0f

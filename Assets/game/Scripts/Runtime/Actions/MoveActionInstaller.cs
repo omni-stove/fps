@@ -3,13 +3,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの <see cref="PlayerController"/> の回避 (<see cref="PlayerController.DodgeRule"/>)・乗り越え (<see cref="PlayerController.VaultRule"/>)・
-    /// 崖のぼり (<see cref="PlayerController.MantleRule"/>)・ジャンプ (<see cref="PlayerController.JumpRule"/>) をルールにし、カバー中は回避させない。
-    /// </summary>
     public sealed class MoveActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。<see cref="CoverActionInstaller"/> が付けたカバーを読むので、その後に呼ぶ。</summary>
+        // CoverActionInstaller が付けたカバーを読むので、その後に呼ぶ。
         public const int InstallOrder = 300;
 
         public int Order => InstallOrder;

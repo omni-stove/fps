@@ -6,10 +6,7 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// ゲームが読む文字列表 (Demo サンプルの Assets/game/Samples~/Demo/Localization/Resources/Strings/*.json と Assets/game/Samples~/Demo/Resources/Localization/&lt;言語&gt;/*.json を重ねたもの)
-    /// が読め、どの言語にも同じキーがあり、同じキーが同じ番号の値を差し込むこと。片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまう。
-    /// </summary>
+    // 片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまうので、どの言語にも同じキーがあることを確かめる。
     public sealed class LocalizationFilesTests
     {
         // 重ねる表は後のものが勝つので、同じ言語の 2 つのファイルに同じキーがあると、片方を書き換えても画面が変わらないことがある。
@@ -147,6 +144,26 @@ namespace Shooter.Core.Tests
             var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
             Assert.That(japanese.Format("progression.xpToNext", 800, 3), Is.EqualTo("レベル 3 まで あと 800 XP"));
             Assert.That(japanese.Format("progression.lockedUntil", 4), Is.EqualTo("レベル 4 で解放"));
+        }
+
+        [Test]
+        public void TheAssistTextsAreReadFromTheAssistTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var assist = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("assist.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(assist.Keys.All(key => key.StartsWith("assist.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(assist.Contains("assist.scoreboard.caption"), Is.True, code);
+                Assert.That(assist.Contains("assist.killFeed.mark"), Is.True, code);
+                Assert.That(assist.Contains("assist.profile.assists"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Format("assist.profile.assists", 4), Is.EqualTo("アシスト 4"));
         }
 
         [Test]

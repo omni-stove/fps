@@ -9,10 +9,6 @@ using Vector3 = System.Numerics.Vector3;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// コンパス (CompassView) が、自分の向きを帯の中央にして方位の文字とピン・目標の向きを置くことと、
-    /// 方位の文字を Localization の minimap.json から引き、HUD の量でミニマップと一緒に隠れることを確かめる。
-    /// </summary>
     public sealed class CompassViewTests
     {
         private const float Tolerance = 1e-4f;

@@ -61,7 +61,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(Localizer.Resolve(formatter.Time(ended)), Is.EqualTo("00:00"));
         }
 
-        /// <summary>Alpha に 0, 2, 4、Bravo に 1, 3, 5 を入れ、各チームの最小の ID (Alpha 0・Bravo 1) をリーダーにして始める。</summary>
         private static ModeSession Playing(out GuardianRespawn leaders)
         {
             var session = GuardianMode.CreateSession(60f, 3f, _ => 0, out leaders);

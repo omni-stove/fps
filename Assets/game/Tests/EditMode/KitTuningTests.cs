@@ -7,10 +7,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 調整値の JSON (<see cref="KitTuning"/>) を、ファイルが無いときは既定値、壊れているときはエラーを出して既定値で読むことと、
-    /// 同梱の Resources/Tuning の JSON がそのまま読めることを確かめる。
-    /// </summary>
     public sealed class KitTuningTests
     {
         [TearDown]

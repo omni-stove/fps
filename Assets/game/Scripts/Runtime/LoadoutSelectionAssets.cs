@@ -4,18 +4,9 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ロードアウトのアセット (スロットのルールと既定の武器) と武器の一覧のアセットから、選ぶ画面の中身 (<see cref="LoadoutSelection"/>) を作る。
-    /// メインメニューとオンラインの HUD が同じアセットから同じ並びを作るためのもの。
-    /// </summary>
+    // メインメニューとオンラインの HUD が同じアセットから同じ並びを作れるよう、作り方をここにまとめる。
     public static class LoadoutSelectionAssets
     {
-        /// <summary>
-        /// loadout のルール (<see cref="LoadoutDefinition.ToRule"/>) と catalog の武器 (<see cref="WeaponCatalogAsset.ToCatalog"/>) から
-        /// <see cref="LoadoutSelection"/> を作る。最初に選んでおく並びは preferred、次に fallback、どちらも合わなければ
-        /// loadout の既定の武器で決める。どちらかのアセットが未設定・不正なら false と理由を返す。
-        /// isAvailable (武器の Id を受け取り、もう使えるかを返す) は <see cref="LoadoutSelection"/> にそのまま渡す。null なら全部使える。
-        /// </summary>
         public static bool TryCreate(
             LoadoutDefinition loadout,
             WeaponCatalogAsset catalog,

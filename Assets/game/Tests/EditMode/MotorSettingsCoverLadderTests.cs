@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="MotorSettings"/> のカバーとはしごの入り方の値が、<see cref="MotorSpec"/>・<see cref="NetMotorSettings"/>・
-    /// オフラインのカバー (<see cref="CoverController"/>) まで届くこと。
-    /// </summary>
     public sealed class MotorSettingsCoverLadderTests
     {
         private const float _frame = 0.02f;

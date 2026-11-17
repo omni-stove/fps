@@ -9,11 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// プレイヤーが乗り物に乗っている間、操作を手放して体を座席に留め、降りたら戻ること (<see cref="PlayerVehicleRider"/>)。
-    /// Edit Mode では Update が走らず入力も読まないので、乗り降りは <see cref="PlayerVehicleRider.Interact"/> などを直接呼び、
-    /// 体の動きは <see cref="PlayerController.Tick"/> を呼んで確かめる。
-    /// </summary>
+    // Edit Mode では Update が走らず入力も読まないので、乗り降りは PlayerVehicleRider.Interact などを直接呼び、
+    // 体の動きは PlayerController.Tick を呼んで確かめる。
     public sealed class PlayerVehicleRiderTests
     {
         private const float StepSeconds = 0.02f;

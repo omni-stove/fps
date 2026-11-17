@@ -5,33 +5,19 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 撃たれた方向を画面に出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="CombatEvents.DamageTaken"/> を受けるたびに、攻撃元の方向を画面の中央を囲む円周上の弧で出し、
-    /// <see cref="DamageDirection.DefaultSeconds"/> 秒かけて薄くして消す。
-    /// 角度は <see cref="DamageDirection.TryScreenAngle"/> で、毎フレーム今のカメラ (<see cref="Viewer"/>) から見直すので、
-    /// 振り向くと弧も回る。攻撃元が分からない被弾 (位置が null) には何も出さない。
-    /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付き、どちらも同じイベントを受ける。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class DamageDirectionView : HudElementView
     {
-        /// <summary>Hud.uxml の被弾方向の要素。</summary>
         public const string UxmlName = "damage-direction";
 
-        /// <summary>弧 1 つの要素に付けるクラス (色は Hud.uss の color で決める)。</summary>
         public const string ArcClass = "damage-direction__arc";
 
-        /// <summary>同時に出す弧の数の上限。超えたら最も古い弧を使い回す。</summary>
         public const int MaxIndicators = 8;
 
-        /// <summary>弧の半径 (HUD の基準解像度での px)。</summary>
         public const float ArcRadius = 220f;
 
-        /// <summary>弧の開き (度)。</summary>
         public const float ArcSpanDegrees = 40f;
 
-        /// <summary>弧の線の太さ (HUD の基準解像度での px)。</summary>
         public const float ArcWidth = 12f;
 
         // 同じ攻撃元から続けて撃たれたときに弧を重ねず 1 本で出し直すための距離 (m)。動く相手の数発も 1 本にまとめる。
@@ -41,12 +27,9 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 向きの基準にするカメラ。null なら <see cref="Camera.main"/> を使う (オフラインの PlayerCamera とオンラインの ViewCamera は MainCamera)。
-        /// </summary>
+        // 未設定なら Camera.main を基準にするのは、オフラインの PlayerCamera もオンラインの ViewCamera も MainCamera だから。
         public Transform Viewer { get; set; }
 
-        /// <summary>今出している弧の数。</summary>
         public int ActiveCount => _indicators.Count;
 
         private void OnEnable()
@@ -66,10 +49,6 @@ namespace Shooter.Runtime
             Tick(Time.unscaledDeltaTime);
         }
 
-        /// <summary>
-        /// sourcePosition から撃たれた弧を出す。近い攻撃元の弧が既にあれば、それを出し直す。
-        /// HUD の量で出さない (<see cref="HudElementView.IsAllowed"/> が false) ときは何もしない。
-        /// </summary>
         public void Show(Vector3 sourcePosition)
         {
             if (!IsAllowed || !IsFinite(sourcePosition))
@@ -83,7 +62,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>deltaSeconds 秒進め、出し終えた弧を消して残りの角度と濃さを直す。負か有限でない値では進めずに直すだけ。</summary>
         public void Tick(float deltaSeconds)
         {
             if (_indicators.Count == 0)
@@ -106,7 +84,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>弧をすべて消す。</summary>
         public void Clear()
         {
             foreach (var indicator in _indicators)
@@ -118,9 +95,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>
-        /// index 番目の弧の、今のカメラから見た角度 (画面の上から時計回りの度)。カメラが無いか向きが決まらなければ false。
-        /// </summary>
         public bool TryGetAngle(int index, out float degrees)
         {
             degrees = 0f;
@@ -128,7 +102,6 @@ namespace Shooter.Runtime
             return viewer != null && TryAngle(viewer, _indicators[index].Source, out degrees);
         }
 
-        /// <summary>index 番目の弧の今の不透明度 ([0, 1])。</summary>
         public float OpacityAt(int index)
         {
             return DamageDirection.Opacity(_indicators[index].Elapsed, DamageDirection.DefaultSeconds);

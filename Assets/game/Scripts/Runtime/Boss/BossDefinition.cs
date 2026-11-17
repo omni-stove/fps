@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ボス 1 体分の調整値 (段階の閾値・動きの倍率・出す弱点、部位の倍率、左右の往復の速さと幅) をアセットとして持つ。
-    /// <see cref="BossController.Definition"/> に配線すると、BossController と同じ GameObject の <see cref="BossStrafeMotion"/> は
-    /// Inspector の値の代わりにこれを読む。新しく作ったときの値は BossController・BossStrafeMotion の既定値と同じ。
-    /// </summary>
     [CreateAssetMenu(fileName = "Boss", menuName = "Shooter/Boss")]
     public sealed class BossDefinition : ScriptableObject
     {
@@ -42,7 +37,6 @@ namespace Shooter.Runtime
 
         public float StrafeHalfWidth => _strafeHalfWidth;
 
-        /// <exception cref="InvalidOperationException">倍率が不正なとき。メッセージにアセット名を含む。</exception>
         public ZoneDamageMultipliers CreateZoneMultipliers()
         {
             try
@@ -55,7 +49,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="InvalidOperationException">段階が空か不正なとき。メッセージにアセット名を含む。</exception>
         public BossPhases CreatePhases()
         {
             try
@@ -68,7 +61,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>段階・部位の倍率・往復の速さと幅を検査してから入れる。不正なら何も変えずに例外を投げる。</summary>
         public void Configure(IReadOnlyList<BossPhaseEntry> phases, ZoneDamageMultipliers multipliers, float strafeSpeed, float strafeHalfWidth)
         {
             if (phases == null)
@@ -101,7 +93,6 @@ namespace Shooter.Runtime
             _strafeHalfWidth = strafeHalfWidth;
         }
 
-        /// <exception cref="InvalidOperationException">往復の速さか幅が不正なとき。メッセージにアセット名を含む。</exception>
         public void ValidateStrafe()
         {
             try

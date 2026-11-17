@@ -3,7 +3,6 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    // 撃ち方 (ITriggerModel) に押す・離す・時間を渡す順を、プレイヤー・敵・タレットで揃える。
     public sealed class TriggerDriver
     {
         private ITriggerModel _model;
@@ -85,7 +84,6 @@ namespace Shooter.Runtime
             return shots;
         }
 
-        // 人の手で引かない撃ち手 (敵・タレット) の引き方: 溜める撃ち方は溜め切ってから離し、Auto は撃つ間押し続け、ほかは毎回押し直す。
         public int PullAsBot(WeaponSpec spec)
         {
             if (spec == null)

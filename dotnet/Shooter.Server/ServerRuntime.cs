@@ -7,7 +7,7 @@ using Shooter.Server.Eos;
 
 namespace Shooter.Server
 {
-    /// <summary>プロセスの外とのつながり。テストで標準出力・環境変数・シグナル・マップの置き場所を差し替えるために 1 つにまとめる。</summary>
+    // テストで標準出力・環境変数・シグナル・マップの置き場所を差し替えるために、プロセスの外とのつながりを 1 つにまとめる。
     internal sealed class ServerRuntime
     {
         public ServerRuntime(
@@ -32,7 +32,6 @@ namespace Shooter.Server
             BuiltVersion = builtVersion;
         }
 
-        /// <summary><c>-transport eos</c> の通信路を作る。SDK が無いビルドなどで作れなければ false と理由を返す。</summary>
         public delegate bool EosTransportFactory(
             EosCredentials credentials, string version, TextWriter log, out IMatchTransport transport, out string error);
 
@@ -46,15 +45,12 @@ namespace Shooter.Server
 
         public IReadOnlyList<string> MapSearchRoots { get; }
 
-        /// <summary>EOS の認証情報のファイル (<c>eos.local.json</c>) を探すフォルダ。</summary>
         public IReadOnlyList<string> CredentialSearchRoots { get; }
 
-        /// <summary>UDP の通信路を作る。</summary>
         public Func<IMatchTransport> CreateTransport { get; }
 
         public EosTransportFactory CreateEosTransport { get; }
 
-        /// <summary>ビルドに焼き込んだ版。<c>-buildVersion</c> が無いときに使う。焼き込んでいなければ null。</summary>
         public string BuiltVersion { get; }
 
         public static ServerRuntime Process()

@@ -11,9 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// UavReward が使った者から見た生きている敵にだけ PingController の印を付け、印が見えない敵も追い、渡した秒数で消えることを確かめる。
-    /// </summary>
     public sealed class UavRewardTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);

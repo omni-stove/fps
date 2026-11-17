@@ -1,6 +1,5 @@
 namespace Shooter.Protocol
 {
-    /// <summary><see cref="NetStatsProbeMessage"/> への返事。受け取った番号と、返した時点のサーバーの tick。</summary>
     public sealed class NetStatsEchoMessage : IMessage
     {
         public const byte CurrentVersion = 1;

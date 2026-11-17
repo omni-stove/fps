@@ -69,6 +69,13 @@ namespace Shooter.Core.Tests
             Assert.That(new CharacterSwimState(false, 3f, true), Is.EqualTo(CharacterSwimState.None), "the surface is only kept while swimming");
             Assert.That(
                 new CharacterWallRunState(WallRunSide.None, 0.4f, Vector3.UnitZ), Is.EqualTo(CharacterWallRunState.None), "the time and wall are only kept while running");
+            Assert.That(
+                new CharacterWallRunState(WallRunSide.Left, 0.4f, Vector3.UnitX, Vector3.UnitZ).LastWall,
+                Is.EqualTo(Vector3.Zero),
+                "the last wall is only kept while not running");
+            Assert.That(CharacterWallRunState.LeftWall(Vector3.UnitZ), Is.Not.EqualTo(CharacterWallRunState.None));
+            Assert.That(CharacterWallRunState.LeftWall(Vector3.UnitZ).LastWall, Is.EqualTo(Vector3.UnitZ));
+            Assert.That(CharacterWallRunState.LeftWall(new Vector3(float.NaN, 0f, 0f)).IsValid, Is.False);
         }
 
         [Test]
@@ -152,20 +159,20 @@ namespace Shooter.Core.Tests
 
             Assert.That(
                 next.Lean.Amount,
-                Is.EqualTo(0.4f).Within(1e-5f),
-                "the stored swim state keeps the body from leaning, so it comes back by LeanSpeed (6/s) for one tick");
-            Assert.That(next.Swim, Is.EqualTo(swim));
-            Assert.That(next.WallRun, Is.EqualTo(wallRun));
-            Assert.That(next.AirJumpsUsed, Is.Zero, "swimming and wall running give the air jumps back");
+                Is.EqualTo(0.6f).Within(1e-5f),
+                "without water the swim ends in the same tick, so the lean is not held back and moves toward the input by LeanSpeed (6/s) for one tick");
+            Assert.That(next.Swim, Is.EqualTo(CharacterSwimState.None), "without water the swim ends");
+            Assert.That(next.WallRun, Is.EqualTo(CharacterWallRunState.None), "a body standing on the floor does not run on a wall");
+            Assert.That(next.AirJumpsUsed, Is.Zero, "standing gives the air jumps back");
         }
 
         [Test]
-        public void WaterAndTheNewTuningDoNotChangeTheMovementYet()
+        public void WaterBelowTheChestAndTheNewTuningDoNotChangeTheMovement()
         {
             AddFloor();
             var plain = NewSimulation();
             var tuned = NewSimulation();
-            tuned.Water = new WaterEverywhere(10f);
+            tuned.Water = new WaterEverywhere(0.5f);
             tuned.Swim = new SwimTuning(1f, 30f, 2f);
             tuned.WallRun = new WallRunTuning(true, 5f, 0f, 0f, 20f);
 

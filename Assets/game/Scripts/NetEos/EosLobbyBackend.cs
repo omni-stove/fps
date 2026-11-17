@@ -197,6 +197,11 @@ namespace Shooter.NetEos
             RejectUnsupported(done);
         }
 
+        public void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
         public void SetMemberAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
         {
             RejectUnsupported(done);

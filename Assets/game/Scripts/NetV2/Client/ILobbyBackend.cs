@@ -47,6 +47,12 @@ namespace Shooter.NetV2
         void LeaveMemberLobby(string lobbyId, Action<string> done);
 
         /// <summary>
+        /// 入っているメンバー用ロビー <paramref name="lobbyId"/> の今の状態 (オーナー・メンバー・属性) を読む。
+        /// 自分がもうメンバーでない・ロビーが無くなったときは (null, null) を渡す。
+        /// </summary>
+        void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done);
+
+        /// <summary>
         /// ロビー <paramref name="lobbyId"/> での自分のメンバーの属性を <paramref name="attributes"/> で上書きする
         /// (同じキーは置き換え、無いキーはそのまま残す)。
         /// </summary>

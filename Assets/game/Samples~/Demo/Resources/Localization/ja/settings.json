@@ -16,6 +16,7 @@
   "settings.value.effectsVolume": "効果音の音量",
   "settings.value.cameraShake": "画面の揺れの強さ",
   "settings.value.viewmodelMotion": "武器の揺れの強さ",
+  "settings.aimAssist": "エイムアシスト (ゲームパッド)",
   "settings.blood": "血の表示",
   "settings.palette": "敵味方の色",
   "settings.palette.standard": "標準",

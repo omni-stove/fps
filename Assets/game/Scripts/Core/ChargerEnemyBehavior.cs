@@ -3,8 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    // 構え → 突進 → (当たれば) 立て直し / (外れれば) よろめき、を回す。
-    // 体を動かすことと、相手や壁に当たったかは物理を持つ Runtime (EnemyCharger) が見て EndCharge で知らせる。
+    // 体を動かすことと、相手や壁に当たったかは物理を持つ Runtime (EnemyCharger) に任せ、EndCharge で知らせてもらう。
     // 突進の時間はここで進め、届く距離を走り切ったら当たらなかったことにする。Runtime が動かせない間も突進が終わらないままにならないように。
     public sealed class ChargerEnemyBehavior : IEnemyBehavior
     {
@@ -34,7 +33,6 @@ namespace Shooter.Core
 
         public bool IsCharging => Phase == ChargerPhase.Charging;
 
-        // Hit は立て直し、それ以外の終わり方 (外れ) はよろめきにする。Cancelled は Cancel を使う。
         public bool EndCharge(ChargeEnd end)
         {
             if (end == ChargeEnd.None || end == ChargeEnd.Cancelled || !Enum.IsDefined(typeof(ChargeEnd), end))
@@ -53,7 +51,6 @@ namespace Shooter.Core
             return true;
         }
 
-        // 怯みや吹き飛ばしで体を持っていかれたときに、構えや突進を初めからにする。
         public bool Cancel()
         {
             if (Phase != ChargerPhase.WindingUp && Phase != ChargerPhase.Charging)

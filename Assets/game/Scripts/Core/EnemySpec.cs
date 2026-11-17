@@ -2,57 +2,35 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 敵 AI の設定。距離はメートル、時間は秒。
-    /// </summary>
     public sealed class EnemySpec
     {
-        /// <summary>目標を視認できる距離。</summary>
         public float SightRange { get; }
 
-        /// <summary>この距離以内に目標が見えていれば Attack になる (足を止めて撃つ)。</summary>
         public float AttackRange { get; }
 
-        /// <summary>
-        /// この距離以内に目標が見えていれば、<see cref="AttackRange"/> の外でも近づきながら撃つ。<see cref="AttackRange"/> 以上 <see cref="SightRange"/> 以下に収めて持つ。
-        /// <see cref="AttackRange"/> と同じなら、Attack になるまで撃たない。
-        /// </summary>
         public float FireRange { get; }
 
-        /// <summary>体の向きと目標の向きの差 (水平の度) がこれ以下になるまで撃たない。180 なら向きを問わない。</summary>
         public float FireToleranceDegrees { get; }
 
-        /// <summary>
-        /// 目標が <see cref="FireRange"/> にいるときに散らばりへ足す半角 (度)。<see cref="AttackRange"/> では 0 で、その間は距離に比例する。
-        /// 遠くから撃ち始めても、近づくまではそうそう当たらない。
-        /// </summary>
+        // 遠くから撃ち始めても近づくまではそうそう当たらないよう、FireRange に近いほど散らばりを足す。
         public float RangeSpreadDegrees { get; }
 
-        /// <summary>見失ってから Search に移るまでの時間。</summary>
         public float LoseSightSeconds { get; }
 
-        /// <summary>Search を続けてから Patrol（ルートが無ければ Idle）に戻るまでの時間。</summary>
         public float SearchSeconds { get; }
 
-        /// <summary>目標を <see cref="FireRange"/> 以内に捉えて構え始めてから、最初に撃つまでの時間。</summary>
         public float ReactionSeconds { get; }
 
-        /// <summary>Attack に入って最初の 1 発の散らばりの半角 (度)。</summary>
         public float OpeningSpreadDegrees { get; }
 
-        /// <summary>撃ち始めの数発が過ぎた後の散らばりの半角 (度)。</summary>
         public float SettledSpreadDegrees { get; }
 
-        /// <summary>OpeningSpreadDegrees から SettledSpreadDegrees まで絞るのにかける発数。0 なら最初から SettledSpreadDegrees。</summary>
         public int OpeningShots { get; }
 
-        /// <summary>TakeCover で遮蔽点に着いてから、また隠れ直してから、覗くまでしゃがんでいる時間。</summary>
         public float CoverHideSeconds { get; }
 
-        /// <summary>TakeCover で 1 回覗いている時間。覗き始めてから ReactionSeconds 経つまでは撃たない。</summary>
         public float CoverPeekSeconds { get; }
 
-        /// <summary>体力の割合がこれを下回ったら、撃たれていなくても TakeCover に移る。0 なら体力では移らない。</summary>
         public float CoverHealthFraction { get; }
 
         public EnemyArchetype Archetype { get; }
@@ -68,26 +46,22 @@ namespace Shooter.Core
 
         public BomberSpec Bomber { get; }
 
-        /// <summary>行き先 (巡回地点・遮蔽点・物音の所) にこの水平距離 (m) まで近づいたら着いたとみなす。</summary>
         public float ArrivalDistance { get; }
 
-        /// <summary>走るときに歩きの速さへ掛ける倍率。</summary>
         public float SprintRatio { get; }
 
-        /// <summary>しゃがんで動くときに歩きの速さへ掛ける倍率。</summary>
         public float CrouchRatio { get; }
 
-        /// <summary>たまった反動のうち、撃つたびに打ち消す割合。0 なら打ち消さず、1 なら反動で照準が上がらない。</summary>
         public float RecoilControl { get; }
 
         // 屋内では壁が視線を切るので長くても困らず、開けた場所でも人が人に気づいて撃ち合い始める距離として不自然でない値にする。
         public const float DefaultSightRange = 40f;
         public const float DefaultAttackRange = 15f;
 
-        /// <summary>見つけてから少し詰めた距離で構えて撃ち始め、<see cref="DefaultAttackRange"/> まで撃ちながら近づく。</summary>
+        // 見つけてから少し詰めた距離で構えて撃ち始め、DefaultAttackRange まで撃ちながら近づかせる。
         public const float DefaultFireRange = 30f;
 
-        /// <summary>30m 先で半径 1m ほど散らばりが増え、人の幅には半分も当たらない。</summary>
+        // 30m 先で半径 1m ほど散らばりが増え、人の幅には半分も当たらない。
         public const float DefaultRangeSpreadDegrees = 2f;
 
         public const float DefaultFireToleranceDegrees = 15f;
@@ -97,7 +71,7 @@ namespace Shooter.Core
         public const float DefaultSearchSeconds = 6f;
         public const float DefaultReactionSeconds = 1.0f;
 
-        /// <summary>撃ち始めの 1 発の散らばりの半角 (度)。15m 先で半径 1.3m ほどに散り、外れやすい。</summary>
+        // 撃ち始めの 1 発を外れやすくするため、15m 先で半径 1.3m ほどに散らす。
         public const float DefaultOpeningSpreadDegrees = 5f;
 
         public const float DefaultSettledSpreadDegrees = 0f;
@@ -115,7 +89,6 @@ namespace Shooter.Core
         // プレイヤーは反動で上がる照準を手で引き戻すので、敵もたまった反動の大半を打ち消す。打ち消さないと連射の後半が頭上へ抜ける。
         public const float DefaultRecoilControl = 0.75f;
 
-        /// <summary>archetype の怯みにくさの既定値。Rifleman は <see cref="DefaultStaggerResistance"/>、ほかは種類ごとの Spec の値。</summary>
         public static float DefaultStaggerResistanceFor(EnemyArchetype archetype)
         {
             switch (archetype)
@@ -161,30 +134,6 @@ namespace Shooter.Core
             DefaultCrouchRatio,
             DefaultRecoilControl);
 
-        /// <param name="sightRange">視認距離。0 より大きい。</param>
-        /// <param name="attackRange">攻撃距離。0 より大きく sightRange 以下。</param>
-        /// <param name="loseSightSeconds">見失ってから Search までの時間。0 以上。</param>
-        /// <param name="searchSeconds">Search を続ける時間。0 以上。</param>
-        /// <param name="reactionSeconds">Attack に入ってから最初に撃つまでの時間。0 以上。</param>
-        /// <param name="openingSpreadDegrees">Attack に入って最初の 1 発の散らばりの半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
-        /// <param name="settledSpreadDegrees">撃ち始めの数発が過ぎた後の散らばりの半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
-        /// <param name="openingShots">散らばりを絞るのにかける発数。0 以上。</param>
-        /// <param name="coverHideSeconds">TakeCover でしゃがんで隠れている時間。0 以上。</param>
-        /// <param name="coverPeekSeconds">TakeCover で 1 回覗いている時間。0 以上。</param>
-        /// <param name="coverHealthFraction">体力の割合がこれを下回ったら TakeCover に移る。0 以上 1 以下。</param>
-        /// <param name="archetype">敵の種類。</param>
-        /// <param name="shield">盾持ちの値。null なら既定値。</param>
-        /// <param name="sniper">狙撃兵の値。null なら既定値。</param>
-        /// <param name="charger">突進兵の値。null なら既定値。</param>
-        /// <param name="bomber">自爆兵の値。null なら既定値。</param>
-        /// <param name="staggerResistance">怯みにくさ (<see cref="StaggerJudge.Threshold"/>・<see cref="StaggerJudge.Duration"/>)。0 以上の有限値。null なら <see cref="DefaultStaggerResistanceFor"/>。</param>
-        /// <param name="fireRange">近づきながら撃つ距離。0 以上の有限値。attackRange から sightRange の間に収める。</param>
-        /// <param name="fireToleranceDegrees">撃つのに要る向きの合い方 (度)。0 以上 <see cref="MaxFireToleranceDegrees"/> 以下。</param>
-        /// <param name="rangeSpreadDegrees">撃ち始める距離で散らばりに足す半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
-        /// <param name="arrivalDistance">着いたとみなす水平距離 (m)。0 より大きい有限値。</param>
-        /// <param name="sprintRatio">走るときの速さの倍率。0 より大きい有限値。</param>
-        /// <param name="crouchRatio">しゃがんで動くときの速さの倍率。0 より大きい有限値。</param>
-        /// <param name="recoilControl">反動を打ち消す割合。0 以上 1 以下。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -289,13 +238,9 @@ namespace Shooter.Core
             RecoilControl = recoilControl;
         }
 
-        /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>
+        // 散らす処理 (BlindFireShot.Spread) が受け付ける範囲に合わせる。
         public const float MaxSpreadDegrees = BlindFireShot.MaxSpreadDegrees;
 
-        /// <summary>
-        /// Attack に入ってから shotIndex 発目 (0 始まり) の散らばりの半角 (度)。
-        /// 0 発目は OpeningSpreadDegrees で、OpeningShots 発かけて SettledSpreadDegrees まで一定の幅で絞り、以後はそのまま。
-        /// </summary>
         public float SpreadDegreesForShot(int shotIndex)
         {
             if (shotIndex < 0)
@@ -312,9 +257,6 @@ namespace Shooter.Core
             return OpeningSpreadDegrees + ((SettledSpreadDegrees - OpeningSpreadDegrees) * t);
         }
 
-        /// <summary>
-        /// 目標まで distance (m) のときに散らばりへ足す半角 (度)。<see cref="AttackRange"/> 以内は 0、<see cref="FireRange"/> 以遠は <see cref="RangeSpreadDegrees"/>。
-        /// </summary>
         public float RangeSpreadDegreesAt(float distance)
         {
             if (!(distance > AttackRange) || FireRange <= AttackRange)

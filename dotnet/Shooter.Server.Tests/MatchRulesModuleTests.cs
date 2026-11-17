@@ -299,6 +299,11 @@ namespace Shooter.Server.Tests
             Assert.That(JsonOf("chat").Single(), Does.Contain("\"playerId\":\"2\"").And.Contain("\"channel\":\"All\"").And.Contain("\"length\":\"2\""));
         }
 
+        private static readonly int[] ChatPlayers = { 1, 2 };
+        private static readonly string[] TextA = { "a" };
+        private static readonly string[] TextAC = { "a", "c" };
+        private static readonly string[] TextShort = { "short" };
+
         [Test]
         public void ChatSentTooSoonIsNotSentEvenToTheSender()
         {
@@ -309,10 +314,10 @@ namespace Shooter.Server.Tests
             Assert.That(_module.ServerChat(1, ChatChannel.All, "a"), Is.EqualTo(ChatRefusal.None));
             Assert.That(_module.ServerChat(1, ChatChannel.All, "b"), Is.EqualTo(ChatRefusal.TooSoon));
 
-            foreach (var id in new[] { 1, 2 })
+            foreach (var id in ChatPlayers)
             {
                 var received = _transport.Read<ChatMessage>(id, Copy);
-                Assert.That(received.Select(m => m.Text), Is.EqualTo(new[] { "a" }), "player " + id);
+                Assert.That(received.Select(m => m.Text), Is.EqualTo(TextA), "player " + id);
             }
 
             Assert.That(_log.ToString(), Does.Contain("[Chat] refused sender=1 reason=TooSoon"));
@@ -321,7 +326,7 @@ namespace Shooter.Server.Tests
 
             Advance(1.1f);
             Assert.That(_module.ServerChat(1, ChatChannel.All, "c"), Is.EqualTo(ChatRefusal.None));
-            Assert.That(_transport.Read<ChatMessage>(2, Copy).Select(m => m.Text), Is.EqualTo(new[] { "a", "c" }));
+            Assert.That(_transport.Read<ChatMessage>(2, Copy).Select(m => m.Text), Is.EqualTo(TextAC));
         }
 
         [Test]
@@ -334,7 +339,7 @@ namespace Shooter.Server.Tests
             Assert.That(_module.ServerChat(1, ChatChannel.Team, "toolong"), Is.EqualTo(ChatRefusal.TooLong));
             Assert.That(_module.ServerChat(1, ChatChannel.Team, "short"), Is.EqualTo(ChatRefusal.None));
 
-            Assert.That(_transport.Read<ChatMessage>(1, Copy).Select(m => m.Text), Is.EqualTo(new[] { "short" }));
+            Assert.That(_transport.Read<ChatMessage>(1, Copy).Select(m => m.Text), Is.EqualTo(TextShort));
             Assert.That(_transport.Read<ChatMessage>(2, Copy), Is.Empty);
             Assert.That(JsonOf("chat_refused").Single(), Does.Contain("\"reason\":\"TooLong\""));
         }

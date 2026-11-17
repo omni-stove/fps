@@ -3,13 +3,19 @@
     "rootNamespace": "Fps.Tests.EditMode",
     "references": [
         "Fps.Core",
-        "Fps.Runtime"
+        "Fps.Runtime",
+        "Fps.Editor",
+        "Unity.InputSystem"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": false,
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"

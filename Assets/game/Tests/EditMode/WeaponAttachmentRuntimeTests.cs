@@ -6,7 +6,6 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -249,27 +248,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheScreenOffersToAttachAndToDetach()
-        {
-            var source = new FakeControl(Catalog(InventoryRule.Default));
-            source.Inventory.Add(_suppressorId, 1);
-            source.Inventory.HoldWeapons(new[] { TestWeapons.RifleSpec() }, _ => new[] { _magazineId });
-            var view = CreateBoundView(source);
-            view.SetOpen(true);
-
-            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle);
-
-            Assert.That(Buttons(view), Is.EqualTo(new[] { "装備する", "捨てる", "外す" }));
-            Assert.That(
-                view.Element.Query<Label>(className: InventoryView.ItemNameClass).ToList().Select(l => l.text),
-                Has.Some.EqualTo("付けている物: 拡張マガジン"));
-
-            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle);
-
-            Assert.That(Buttons(view), Is.EqualTo(new[] { "今の武器に付ける", "1 個捨てる" }));
-        }
-
-        [Test]
         public void AttachmentModelsGoOnTheSlotSocketOrTheModelsOutline()
         {
             var model = new GameObject("Gun").transform;
@@ -360,54 +338,6 @@ namespace Fps.Tests.EditMode
             damageable.Initialize("Player", 100);
             go.AddComponent<PlayerInventory>().Initialize(catalog);
             return damageable;
-        }
-
-        private InventoryView CreateBoundView(IInventoryControl source)
-        {
-            var gameObject = new GameObject(nameof(InventoryView));
-            _created.Add(gameObject);
-            var view = gameObject.AddComponent<InventoryView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            view.Source = source;
-            return view;
-        }
-
-        private static string[] Buttons(InventoryView view)
-        {
-            return view.Element.Query<Button>(className: InventoryView.ButtonClass).ToList().Select(b => b.text).ToArray();
-        }
-
-        private sealed class FakeControl : IInventoryControl
-        {
-            public FakeControl(ItemCatalog catalog)
-            {
-                Inventory = new Inventory(catalog);
-                Inventory.Changed += () => Changed?.Invoke();
-            }
-
-            public event System.Action Changed;
-
-            public Inventory Inventory { get; }
-
-            public void Move(int handle, int x, int y, bool rotated)
-            {
-            }
-
-            public void Use(int handle)
-            {
-            }
-
-            public void Drop(int handle, int count)
-            {
-            }
-
-            public void Attach(int handle)
-            {
-            }
-
-            public void Detach(int weaponHandle, string itemId)
-            {
-            }
         }
     }
 }

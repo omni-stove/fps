@@ -82,9 +82,9 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheBundledTablesCanBeReadFromDisk()
+        public void TheBundledTuningCanBeReadFromDisk()
         {
-            Assert.That(System.IO.Directory.Exists(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("Resources/Localization"))), Is.True);
+            Assert.That(System.IO.Directory.Exists(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("Resources/Tuning"))), Is.True);
         }
 
         [Test]

@@ -12,7 +12,7 @@ namespace Shooter.Core.Tests
         private const float _killPlaneY = -50f;
         private const int _settleTicks = 192;
 
-        private static readonly int[] _expectedDrownedTicks = { 5, 9, 13 };
+        private static readonly int[] _expectedDrownedTicks = { 4, 8, 12 };
 
         private static readonly StanceGeometry _stance = new StanceGeometry(2f, 0f, 0.6f, 1.2f, 0.5f);
 
@@ -85,9 +85,9 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(swim.IsUnderwater, Is.True);
-            Assert.That(drownedAt, Is.EqualTo(_expectedDrownedTicks), "1 s is held, so the first event comes when the time passes 1 s");
+            Assert.That(drownedAt, Is.EqualTo(_expectedDrownedTicks), "1 s is held, so the first event comes when the time reaches 1 s, then every drown interval");
             Assert.That(swim.Drownings, Is.EqualTo(3));
-            Assert.That(swim.BreathUsedSeconds, Is.EqualTo(0.25f));
+            Assert.That(swim.BreathUsedSeconds, Is.EqualTo(3.25f));
         }
 
         [Test]
@@ -112,7 +112,7 @@ namespace Shooter.Core.Tests
             var swim = SwimStep.Step(CharacterSwimState.None, Vector3.Zero, false, _stance, new Pool(1f), tuning, 2.5f);
 
             Assert.That(swim.Drownings, Is.EqualTo(2));
-            Assert.That(swim.BreathUsedSeconds, Is.EqualTo(0.5f));
+            Assert.That(swim.BreathUsedSeconds, Is.EqualTo(2.5f));
         }
 
         [Test]
@@ -320,7 +320,7 @@ namespace Shooter.Core.Tests
         {
             AddBox(new Vector3(0f, -4f, 0f), new Vector3(50f, 1f, 50f));
             var simulation = NewSimulation(new Pool(0f));
-            simulation.Swim = new SwimTuning(3f, 12f, 0.5f);
+            simulation.Swim = new SwimTuning(3f, 12f, 0.5f, 10, 0.5f);
             var state = Float(simulation, new Vector3(0f, -0.8f, 0f));
             var underwaterTicks = 0;
             var seen = 0;
@@ -337,12 +337,12 @@ namespace Shooter.Core.Tests
                 state = next;
             }
 
-            var expected = (underwaterTicks - 1) / 32;
+            // 息 0.5 s は 32 tick、以後 0.5 s (32 tick) ごとに 1 回
+            var expected = underwaterTicks / 32;
             Assert.That(state.IsSwimming, Is.True, "the floor under deep water keeps the swim");
             Assert.That(underwaterTicks, Is.GreaterThan(129));
             Assert.That(state.Swim.Drownings, Is.EqualTo(expected));
-            Assert.That(state.Swim.Drownings, Is.EqualTo(4));
-            Assert.That(seen, Is.EqualTo(4));
+            Assert.That(seen, Is.EqualTo(expected));
         }
 
         [Test]

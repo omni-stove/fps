@@ -59,13 +59,9 @@ namespace Shooter.Core
             {
                 var used = swim.BreathUsedSeconds >= 0f && !float.IsInfinity(swim.BreathUsedSeconds) ? swim.BreathUsedSeconds : 0f;
                 breath = used + tickSeconds;
-                if (breath > tuning.BreathSeconds)
-                {
-                    // 引き算を繰り返さないのは、tick が息の秒数よりずっと長い設定でも 1 回で数え終えるため
-                    var cycles = Math.Floor(breath / (double)tuning.BreathSeconds);
-                    breath = Math.Max(0f, (float)(breath - (cycles * tuning.BreathSeconds)));
-                    drownings = (int)Math.Min(int.MaxValue, drownings + cycles);
-                }
+                // 回数を潜った累計秒数から式で出すのは、tick が間隔よりずっと長い設定でも 1 回で数え終え、DrowningClock と同じ回数にするため
+                var hits = DueHits(breath, tuning) - DueHits(used, tuning);
+                drownings = (int)Math.Min(int.MaxValue, drownings + (double)Math.Max(0L, hits));
             }
 
             return new CharacterSwimState(true, surfaceY, underwater, breath, drownings);
@@ -84,6 +80,12 @@ namespace Shooter.Core
 
             var standing = geometry.Standing;
             return (standing.CenterY + standing.EyeY) * 0.5f;
+        }
+
+        private static long DueHits(float usedSeconds, SwimTuning tuning)
+        {
+            var over = usedSeconds - tuning.BreathSeconds;
+            return over < 0f ? 0L : (long)Math.Floor(over / (double)tuning.DrownIntervalSeconds) + 1;
         }
 
         public static float FloatY(float surfaceY, StanceGeometry geometry)

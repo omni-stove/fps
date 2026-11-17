@@ -27,7 +27,7 @@ namespace Fps.Server
                 return;
             }
 
-            var rejection = ReviveReach.Check(_session, reviverId, targetId, PositionOf(reviverId), PositionOf(targetId), ReviveReach.DefaultRange);
+            var rejection = ReviveReach.Check(_session, reviverId, targetId, PositionOf(reviverId), PositionOf(targetId), _session.Spec.Rules.Actions.ReviveRange);
             if (rejection != ReviveRejection.None)
             {
                 _reviveHolds.Release(reviverId);
@@ -56,7 +56,7 @@ namespace Fps.Server
             {
                 var rejection = _session.HasPlayer(hold.ReviverId) && _session.HasPlayer(hold.TargetId)
                     ? ReviveReach.Check(
-                        _session, hold.ReviverId, hold.TargetId, PositionOf(hold.ReviverId), PositionOf(hold.TargetId), ReviveReach.DefaultRange)
+                        _session, hold.ReviverId, hold.TargetId, PositionOf(hold.ReviverId), PositionOf(hold.TargetId), _session.Spec.Rules.Actions.ReviveRange)
                     : ReviveRejection.NotJoined;
                 if (rejection != ReviveRejection.None)
                 {

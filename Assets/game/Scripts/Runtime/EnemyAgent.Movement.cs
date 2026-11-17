@@ -316,7 +316,7 @@ namespace Fps.Runtime
             return delta.magnitude;
         }
 
-        private void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
+        internal void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
         {
             if (!lookAt.HasValue)
             {

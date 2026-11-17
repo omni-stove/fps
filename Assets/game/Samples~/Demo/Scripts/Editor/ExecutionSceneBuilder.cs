@@ -43,7 +43,7 @@ namespace Fps.Editor
             runner.PreparationSeconds = ExecutionRunner.DefaultPreparationSeconds;
             runner.RoundTimeLimitSeconds = ExecutionRunner.DefaultRoundTimeLimitSeconds;
             runner.ExecuteSeconds = ExecutionRunner.DefaultExecuteSeconds;
-            runner.InteractRange = ExecutionRunner.DefaultInteractRange;
+            runner.ExecuteRange = ExecutionRunner.DefaultExecuteRange;
             return runner;
         }
     }

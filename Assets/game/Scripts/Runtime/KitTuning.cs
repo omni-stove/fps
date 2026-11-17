@@ -13,10 +13,11 @@ namespace Fps.Runtime
     /// <item>吹き飛ばし: <see cref="KnockbackResourcePath"/> (<see cref="Knockback"/>)。プレイヤーの <see cref="KnockbackMovement"/> と <see cref="EnemyAgent"/> が使う。</item>
     /// <item>持ち物: <see cref="InventoryResourcePath"/> (<see cref="Items"/>、<see cref="InventoryJson"/> の形)。オフラインの <see cref="PlayerInventory"/> とネット対戦が使う。</item>
     /// <item>ボット: <see cref="BotsResourcePath"/> (<see cref="Bots"/>、サーバーの bots.json と同じ形)。</item>
+    /// <item>制圧: <see cref="SuppressionResourcePath"/> (<see cref="Suppression"/>、<see cref="SuppressionJson"/> の形)。<see cref="SuppressionActionInstaller"/> がプレイヤーと敵に使う。</item>
     /// </list>
     /// ほかの調整値も <see cref="Load{T}"/> に入口の欄と Resources のパスを渡せば同じ規則で読める。
     /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeCatalog.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>・
-    /// <see cref="ItemCatalog.Empty"/>・<see cref="NetBotSpec.Default"/>) で動く。
+    /// <see cref="ItemCatalog.Empty"/>・<see cref="NetBotSpec.Default"/>・<see cref="SuppressionSpec.Default"/>) で動く。
     /// 壊れている・値が不正なら、ファイル名と項目名を添えたエラーを出して既定値で続ける。
     /// 初めて使うときに読み、Play の間は持ち続ける (Play の開始時に読み直す)。
     /// </summary>
@@ -37,6 +38,8 @@ namespace Fps.Runtime
 
         public const string BotsResourcePath = "Tuning/bots";
 
+        public const string SuppressionResourcePath = "Tuning/suppression";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
@@ -52,6 +55,8 @@ namespace Fps.Runtime
         public static ItemCatalog Items => Load(c => c.InventoryTuning, InventoryResourcePath, InventoryJson.Parse, ItemCatalog.Empty);
 
         public static NetBotSpec Bots => Load(c => c.BotsTuning, BotsResourcePath, TuningJson.ParseBots, NetBotSpec.Default);
+
+        public static SuppressionSpec Suppression => Load(c => c.SuppressionTuning, SuppressionResourcePath, SuppressionJson.Parse, SuppressionSpec.Default);
 
         /// <summary>読んだ値を捨て、次に使うときに入口か Resources から読み直させる。</summary>
         public static void Reload()

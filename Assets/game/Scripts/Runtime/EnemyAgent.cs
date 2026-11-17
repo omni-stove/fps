@@ -135,7 +135,7 @@ namespace Fps.Runtime
         private Vector3[] _patrolRoute = Array.Empty<Vector3>();
 
         [Header("Brain")]
-        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain と Cover の値と種類ごとの値の代わりにこれを使う。空なら入口 (GameContent) の同じ種類のデータ、それも無ければこの下の値を使う")]
+        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain・Body・Cover の値と種類ごとの値の代わりにこれを使う。空なら入口 (GameContent) の同じ種類のデータ、それも無ければこの下の値を使う")]
         private EnemyDefinition _definition;
 
         [SerializeField, Tooltip("敵の種類")]
@@ -276,8 +276,28 @@ namespace Fps.Runtime
 
         public EnemyArchetype Archetype => _archetype;
 
-        public float StaggerResistance =>
-            EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance) ?? EnemySpec.DefaultStaggerResistanceFor(_archetype);
+        /// <summary>
+        /// 怯みにくさ。初期化後は判断の設定の値。初期化前は <see cref="CreateSpec"/> と同じく、敵のデータがあればその値、無ければ Inspector の値。
+        /// </summary>
+        public float StaggerResistance
+        {
+            get
+            {
+                if (_brain != null)
+                {
+                    return _brain.Spec.StaggerResistance;
+                }
+
+                var definition = EffectiveDefinition;
+                if (definition != null && !_specApplied)
+                {
+                    return EnemyDefinition.StaggerResistanceOrArchetype(definition.StaggerResistance)
+                        ?? EnemySpec.DefaultStaggerResistanceFor(definition.Archetype);
+                }
+
+                return EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance) ?? EnemySpec.DefaultStaggerResistanceFor(_archetype);
+            }
+        }
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -309,6 +329,9 @@ namespace Fps.Runtime
         public float AttackRange => _attackRange;
         public float FireRange => _fireRange;
         public float EyeHeight => _eyeHeight;
+
+        /// <summary>狙う向きへ向き直る速さ (度/秒)。</summary>
+        public float TurnSpeed => _turnSpeed;
         public float CrouchHeight => _crouchHeight;
         public float CrouchEyeHeight => _crouchEyeHeight;
 
@@ -414,6 +437,7 @@ namespace Fps.Runtime
 
             // 知覚 (視界の距離) や SightRange などはフィールドを読むので、敵のデータから作った値もフィールドに揃える。
             CopySpec(spec);
+            CopyBody(EffectiveDefinition);
 
             WeaponSpec weaponSpec;
             try
@@ -617,6 +641,20 @@ namespace Fps.Runtime
             _sprintRatio = spec.SprintRatio;
             _crouchRatio = spec.CrouchRatio;
             _recoilControl = spec.RecoilControl;
+        }
+
+        // 体の値は EnemySpec に無く ApplySpec・ChangeSpec でも変わらないので、波の強さやボスの段階を渡した後も敵のデータから読む。
+        private void CopyBody(EnemyDefinition definition)
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            _turnSpeed = definition.TurnSpeed;
+            _eyeHeight = definition.EyeHeight;
+            _crouchHeight = definition.CrouchHeight;
+            _crouchEyeHeight = definition.CrouchEyeHeight;
         }
 
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>

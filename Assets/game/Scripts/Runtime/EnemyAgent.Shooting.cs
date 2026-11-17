@@ -343,7 +343,7 @@ namespace Fps.Runtime
             var directions = new Vector3[plan.Rounds.Count];
             for (var i = 0; i < directions.Length; i++)
             {
-                directions[i] = WithRecoil(plan.Rounds[i].Direction.ToUnity(), _recoil, RecoilControl);
+                directions[i] = WithRecoil(plan.Rounds[i].Direction.ToUnity(), _recoil, _brain.Spec.RecoilControl);
             }
 
             _recoil.Kick(spec, _spreadSeed, shotIndex);

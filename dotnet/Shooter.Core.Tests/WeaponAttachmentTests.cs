@@ -484,6 +484,70 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AttachRefusesAnAttachmentThatIsNotAvailableYet()
+        {
+            var holder = new Holder(new Inventory(Catalog()), _suppressorId);
+            holder.Inventory.Add(_scopeId, 1);
+            holder.Inventory.Add(_compensatorId, 1);
+            var asked = new System.Collections.Generic.List<string>();
+            Func<string, bool> isAvailable = id =>
+            {
+                asked.Add(id);
+                return id != _scopeId && id != _compensatorId;
+            };
+            var before = holder.Inventory.TotalWeight;
+
+            var scope = InventoryAttachments.Attach(
+                holder.Inventory, holder.Handle(_scopeId), _rifleId, holder.Attached, holder.Set, out var itemId, out var replaced, isAvailable);
+            var swap = InventoryAttachments.Attach(
+                holder.Inventory, holder.Handle(_compensatorId), _rifleId, holder.Attached, holder.Set, out _, out var swapReplaced, isAvailable);
+
+            Assert.That(scope, Is.EqualTo(AttachmentRejection.Locked));
+            Assert.That(itemId, Is.EqualTo(_scopeId));
+            Assert.That(replaced, Is.Null);
+            Assert.That(swap, Is.EqualTo(AttachmentRejection.Locked));
+            Assert.That(swapReplaced, Is.Null, "a locked swap does not take off what is on the weapon");
+            Assert.That(asked, Is.EqualTo(Strings(_scopeId, _compensatorId)));
+            Assert.That(holder.Sets, Is.EqualTo(0));
+            Assert.That(holder.Attached, Is.EqualTo(Strings(_suppressorId)));
+            Assert.That(holder.Inventory.CountOf(_scopeId), Is.EqualTo(1));
+            Assert.That(holder.Inventory.CountOf(_compensatorId), Is.EqualTo(1));
+            Assert.That(holder.Inventory.CountOf(_suppressorId), Is.EqualTo(0));
+            Assert.That(holder.Inventory.TotalWeight, Is.EqualTo(before).Within(1e-4f));
+        }
+
+        [Test]
+        public void AttachTakesAnAttachmentTheAvailabilityCheckAllows()
+        {
+            var holder = new Holder(new Inventory(Catalog()));
+            holder.Inventory.Add(_scopeId, 1);
+
+            var result = InventoryAttachments.Attach(
+                holder.Inventory, holder.Handle(_scopeId), _rifleId, holder.Attached, holder.Set, out _, out _, id => id == _scopeId);
+
+            Assert.That(result, Is.EqualTo(AttachmentRejection.None));
+            Assert.That(holder.Attached, Is.EqualTo(Strings(_scopeId)));
+            Assert.That(holder.Inventory.CountOf(_scopeId), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AttachChecksAvailabilityOnlyForAttachments()
+        {
+            var holder = new Holder(new Inventory(Catalog()));
+            var asked = 0;
+
+            Assert.That(
+                InventoryAttachments.Attach(
+                    holder.Inventory, holder.Handle(_rifleItemId), _rifleId, holder.Attached, holder.Set, out _, out _, _ => { asked++; return false; }),
+                Is.EqualTo(AttachmentRejection.NotAnAttachment));
+            Assert.That(
+                InventoryAttachments.Attach(
+                    holder.Inventory, 999, _rifleId, holder.Attached, holder.Set, out _, out _, _ => { asked++; return false; }),
+                Is.EqualTo(AttachmentRejection.NoStack));
+            Assert.That(asked, Is.EqualTo(0));
+        }
+
+        [Test]
         public void DetachingPutsTheItemBackAndLightensTheWeapon()
         {
             var holder = new Holder(new Inventory(Catalog()), _scopeId, _suppressorId);

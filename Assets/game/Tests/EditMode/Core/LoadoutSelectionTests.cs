@@ -174,6 +174,153 @@ namespace Shooter.Core.Tests
             Assert.That(selection.Validate(), Does.Contain("already in slot 0"));
         }
 
+        private static Func<string, bool> AllBut(HashSet<string> locked)
+        {
+            return id => !locked.Contains(id);
+        }
+
+        [Test]
+        public void LockedWeaponsStayListedAndAreReportedAsLocked()
+        {
+            var selection = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, new[] { _smg, _handgun }, AllBut(new HashSet<string> { _rifle }));
+
+            Assert.That(Ids(selection.OptionsAt(0)), Is.EqualTo(new[] { _smg, _rifle, _shotgun }));
+            Assert.That(selection.IsAvailableAt(0, 0), Is.True);
+            Assert.That(selection.IsAvailableAt(0, 1), Is.False);
+            Assert.That(selection.IsAvailableAt(0, 2), Is.True);
+            Assert.That(selection.IsAvailableAt(1, 1), Is.True);
+            Assert.Throws<ArgumentOutOfRangeException>(() => selection.IsAvailableAt(0, 3));
+            Assert.Throws<ArgumentOutOfRangeException>(() => selection.IsAvailableAt(0, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => selection.IsAvailableAt(2, 0));
+        }
+
+        [Test]
+        public void WithoutAnAvailabilityCheckEveryWeaponIsAvailable()
+        {
+            var selection = new LoadoutSelection(PrimaryAndSecondary(), Catalog(), null, null);
+
+            for (var slot = 0; slot < selection.SlotCount; slot++)
+            {
+                for (var option = 0; option < selection.OptionsAt(slot).Count; option++)
+                {
+                    Assert.That(selection.IsAvailableAt(slot, option), Is.True, "slot " + slot + " option " + option);
+                }
+            }
+        }
+
+        [Test]
+        public void SelectRefusesALockedWeapon()
+        {
+            var selection = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, new[] { _smg, _handgun }, AllBut(new HashSet<string> { _rifle }));
+
+            Assert.That(selection.Select(0, 1), Is.False);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_smg));
+            Assert.That(selection.Select(0, 2), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun));
+        }
+
+        [Test]
+        public void CycleSkipsLockedWeapons()
+        {
+            var selection = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, new[] { _smg, _handgun }, AllBut(new HashSet<string> { _rifle }));
+
+            Assert.That(selection.Cycle(0, 1), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun), "the locked rifle between them is skipped");
+            Assert.That(selection.Cycle(0, 1), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_smg));
+            Assert.That(selection.Cycle(0, -1), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun));
+            Assert.That(selection.Cycle(0, 3), Is.True, "a step counts only the available weapons");
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_smg));
+            Assert.That(selection.Cycle(0, 2), Is.False, "two steps over two available weapons comes back to the same one");
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_smg));
+            Assert.That(selection.Cycle(0, int.MaxValue), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun));
+            Assert.That(selection.Cycle(0, int.MinValue), Is.False);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun));
+        }
+
+        [Test]
+        public void CycleDoesNothingWhenNoOtherWeaponIsAvailable()
+        {
+            var selection = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, null, AllBut(new HashSet<string> { _handgun }));
+
+            Assert.That(selection.SelectedAt(1).Id, Is.EqualTo(_pistol));
+            Assert.That(selection.Cycle(1, 1), Is.False);
+            Assert.That(selection.Cycle(1, -1), Is.False);
+            Assert.That(selection.SelectedAt(1).Id, Is.EqualTo(_pistol));
+            Assert.That(selection.Validate(), Is.Null);
+        }
+
+        [Test]
+        public void ALockedPreferenceOrFallbackIsNotSelected()
+        {
+            var lockedPreference = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), new[] { _rifle, _pistol }, new[] { _smg, _handgun }, AllBut(new HashSet<string> { _rifle }));
+
+            Assert.That(lockedPreference.RestoredPreference, Is.False);
+            Assert.That(lockedPreference.WeaponIds, Is.EqualTo(new[] { _smg, _pistol }));
+
+            var lockedFallback = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, new[] { _rifle, _handgun }, AllBut(new HashSet<string> { _smg, _rifle, _handgun }));
+
+            Assert.That(lockedFallback.WeaponIds, Is.EqualTo(new[] { _shotgun, _pistol }));
+            Assert.That(lockedFallback.Validate(), Is.Null);
+        }
+
+        [Test]
+        public void WithoutPreferenceTheFirstAvailableUnusedOptionIsPicked()
+        {
+            var rule = new LoadoutRule(new[]
+            {
+                new[] { WeaponCategory.Handgun },
+                new[] { WeaponCategory.Handgun },
+            });
+
+            var selection = new LoadoutSelection(rule, Catalog(), null, null, AllBut(new HashSet<string> { _handgun }));
+
+            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { _pistol, _pistol }));
+            Assert.That(selection.Validate(), Does.Contain("already in slot 0"));
+        }
+
+        [Test]
+        public void ValidateRejectsASlotWhoseWeaponsAreAllLocked()
+        {
+            var selection = new LoadoutSelection(
+                PrimaryAndSecondary(), Catalog(), null, new[] { _rifle, _handgun }, AllBut(new HashSet<string> { _handgun, _pistol }));
+
+            Assert.That(selection.SelectedIndexAt(1), Is.EqualTo(0), "the first option is shown even though it is locked");
+            Assert.That(selection.SelectedAt(1).Id, Is.EqualTo(_handgun));
+            Assert.That(selection.Validate(), Does.Contain("slot 1").And.Contain(_handgun).And.Contain("not available"));
+            Assert.That(selection.Select(1, 1), Is.False);
+            Assert.That(selection.Cycle(1, 1), Is.False);
+        }
+
+        [Test]
+        public void AvailabilityIsAskedEachTimeSoAnUnlockDuringTheScreenTakesEffect()
+        {
+            var locked = new HashSet<string> { _rifle };
+            var selection = new LoadoutSelection(PrimaryAndSecondary(), Catalog(), null, new[] { _smg, _handgun }, AllBut(locked));
+
+            Assert.That(selection.Select(0, 1), Is.False);
+
+            locked.Remove(_rifle);
+
+            Assert.That(selection.IsAvailableAt(0, 1), Is.True);
+            Assert.That(selection.Select(0, 1), Is.True);
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_rifle));
+
+            locked.Add(_rifle);
+
+            Assert.That(selection.Validate(), Does.Contain("not available"));
+            Assert.That(selection.Cycle(0, 1), Is.True, "cycling away from a weapon that became locked lands on the next available one");
+            Assert.That(selection.SelectedAt(0).Id, Is.EqualTo(_shotgun));
+        }
+
         [Test]
         public void TheChosenIdsAreWhatTheServerAccepts()
         {

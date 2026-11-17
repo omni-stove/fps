@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// Interact の案内 (<see cref="InteractPromptView"/>) に入れるキーの表記。最後に触った入力機器 (キーボードとマウスかゲームパッド) の割り当てを出す。
+    /// Interact の案内 (<see cref="InteractPromptView"/>) とストリークの欄 (<see cref="StreakView"/>) に入れるキーの表記。最後に触った入力機器 (キーボードとマウスかゲームパッド) の割り当てを出す。
     /// 機器の見分けに使うアクションは初めて表記を求めたときに探し、それからは持ち続ける。
     /// 表記か機器が変わったら、どの割り当てから決めたかを <see cref="LogTag"/> を付けて Debug.Log に出す。
     /// </summary>

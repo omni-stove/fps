@@ -9,7 +9,8 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ (<see cref="ControlValue"/>) のスライダー、血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
+    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ (<see cref="ControlValue"/>) のスライダー、エイムアシスト (<see cref="ControlSettings.AimAssist"/>) の On/Off、
+    /// 血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
     /// 敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
     /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
@@ -63,6 +64,9 @@ namespace Shooter.Runtime
 
         /// <summary>血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string BloodButtonName = "settings-blood";
+
+        /// <summary>エイムアシスト (<see cref="ControlSettings.AimAssist"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string AimAssistButtonName = "settings-aim-assist";
 
         /// <summary>今の言語の「オン」。</summary>
         public static string OnText => Localizer.Get("settings.on");
@@ -122,6 +126,7 @@ namespace Shooter.Runtime
         private Label _enemySample;
         private Button _subtitlesButton;
         private Button _bloodButton;
+        private Button _aimAssistButton;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -383,6 +388,7 @@ namespace Shooter.Runtime
             _enemySample = null;
             _subtitlesButton = null;
             _bloodButton = null;
+            _aimAssistButton = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -513,6 +519,16 @@ namespace Shooter.Runtime
         {
             EnsureOpen();
             Edit(_editing.WithShowBlood(show));
+        }
+
+        /// <summary>
+        /// エイムアシスト (<see cref="ControlSettings.AimAssist"/>) を enabled にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、ボタンの表示を合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetAimAssist(bool enabled)
+        {
+            EnsureOpen();
+            Edit(_editing.WithAimAssist(enabled));
         }
 
         /// <summary>
@@ -768,6 +784,12 @@ namespace Shooter.Runtime
                 {
                     content.Add(BuildSliderRow(value));
                 }
+
+                // 狙いに関わる設定なので、視野角や音量より前の、感度の並びのすぐ後に置く。
+                if (value == ControlValue.AdsSensitivity)
+                {
+                    content.Add(BuildAimAssistRow());
+                }
             }
 
             content.Add(NewLabel(Localizer.Get("settings.section.effects"), "settings__section"));
@@ -985,6 +1007,16 @@ namespace Shooter.Runtime
             return row;
         }
 
+        private VisualElement BuildAimAssistRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.aimAssist"), "settings__caption"));
+            _aimAssistButton = NewButton(AimAssistButtonName, string.Empty, () => SetAimAssist(!_editing.AimAssist));
+            _aimAssistButton.AddToClassList("settings__mode");
+            row.Add(_aimAssistButton);
+            return row;
+        }
+
         private VisualElement BuildLanguageRow()
         {
             var row = NewRow();
@@ -1053,6 +1085,11 @@ namespace Shooter.Runtime
             if (_bloodButton != null)
             {
                 _bloodButton.text = FormatOnOff(_editing.ShowBlood);
+            }
+
+            if (_aimAssistButton != null)
+            {
+                _aimAssistButton.text = FormatOnOff(_editing.AimAssist);
             }
 
             if (_languageButton != null)

@@ -1,0 +1,6 @@
+{
+  "streak.kills": "ストリーク {0}",
+  "streak.next": "{1} まで あと {0}",
+  "streak.ready": "[{0}] {1} を使う",
+  "streak.readyNoKey": "{0} を使える"
+}

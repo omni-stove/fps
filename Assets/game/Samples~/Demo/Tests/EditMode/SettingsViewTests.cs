@@ -370,6 +370,75 @@ namespace Shooter.Tests.EditMode
             Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.CameraShakeIntensity)).value, Is.EqualTo(100));
         }
 
+        [Test]
+        public void TheAimAssistSwitchStartsOnRightAfterTheAdsSensitivity()
+        {
+            _view.Open(_container);
+
+            var aimAssist = _container.Q<Button>(SettingsView.AimAssistButtonName);
+            var ads = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.AdsSensitivity));
+            Assert.That(CaptionOf(aimAssist), Is.EqualTo("エイムアシスト (ゲームパッド)"));
+            Assert.That(aimAssist.text, Is.EqualTo("オン"));
+            var rows = ads.parent.parent;
+            Assert.That(rows.IndexOf(aimAssist.parent), Is.EqualTo(rows.IndexOf(ads.parent) + 1));
+        }
+
+        // エイムアシストを切るとすぐ効き、閉じると保存され、起動し直しても切れたまま
+        [Test]
+        public void TurningAimAssistOffAppliesAtOnceAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetAimAssist(false);
+
+                Assert.That(AppliedControlSettings.Current.AimAssist, Is.False);
+                Assert.That(received.Count(), Is.EqualTo(1));
+                Assert.That(_container.Q<Button>(SettingsView.AimAssistButtonName).text, Is.EqualTo(SettingsView.OffText));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "not written until it closes");
+
+                _view.Close();
+
+                Assert.That(new ControlSettingsStore(_store.Key).Load().AimAssist, Is.False);
+
+                _view.Open(_container);
+                Assert.That(_container.Q<Button>(SettingsView.AimAssistButtonName).text, Is.EqualTo(SettingsView.OffText));
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
+        [Test]
+        public void ResetToDefaultsTurnsTheAimAssistBackOn()
+        {
+            _view.Open(_container);
+            _view.SetAimAssist(false);
+
+            _view.ResetToDefaults();
+
+            Assert.That(AppliedControlSettings.Current.AimAssist, Is.True);
+            Assert.That(_container.Q<Button>(SettingsView.AimAssistButtonName).text, Is.EqualTo(SettingsView.OnText));
+        }
+
+        [Test]
+        public void TheAimAssistSwitchIsInEnglishToo()
+        {
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
+            Localizer.Apply(GameLanguage.English);
+
+            _view.Open(_container);
+
+            var aimAssist = _container.Q<Button>(SettingsView.AimAssistButtonName);
+            Assert.That(CaptionOf(aimAssist), Is.EqualTo("Aim assist (gamepad)"));
+            Assert.That(aimAssist.text, Is.EqualTo("On"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
         // 行の先頭の見出しの Label。
         private static string CaptionOf(VisualElement control)
         {

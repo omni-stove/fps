@@ -1,0 +1,6 @@
+{
+  "streak.kills": "Streak {0}",
+  "streak.next": "{1} in {0}",
+  "streak.ready": "[{0}] Use {1}",
+  "streak.readyNoKey": "{0} ready"
+}

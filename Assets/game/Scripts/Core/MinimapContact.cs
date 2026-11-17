@@ -7,6 +7,9 @@ namespace Shooter.Core
     /// <summary>ミニマップに載せる 1 つ。位置はワールドの座標、向きは上から見た Y 軸まわりの角度 (度) で、北 (+Z) を 0 に時計回り。</summary>
     public readonly struct MinimapContact : IEquatable<MinimapContact>
     {
+        /// <param name="kind">載せるものの種類。</param>
+        /// <param name="position">ワールドの位置。</param>
+        /// <param name="headingDegrees">向き (度)。0 以上 360 未満に寄せて持つ。</param>
         /// <param name="team">誰の側のものか。どちらの側でもない目標や、チームの無いモードでは null。</param>
         /// <exception cref="ArgumentOutOfRangeException">kind か team が定義に無い値、position か headingDegrees が有限でない。</exception>
         public MinimapContact(MinimapContactKind kind, Vector3 position, float headingDegrees, Team? team)

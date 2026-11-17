@@ -8,6 +8,7 @@ namespace Shooter.Core
     {
         /// <param name="targetId">見ている参加者の Id。見られる味方がいなければ null。</param>
         /// <param name="candidateCount">切り替えて見られる人の数。</param>
+        /// <param name="reason">観戦になっている理由。</param>
         /// <exception cref="ArgumentOutOfRangeException">candidateCount が負か、targetId があるのに 0、reason が定義に無い値。</exception>
         public SpectateStatus(int? targetId, int candidateCount, SpectateReason reason)
         {

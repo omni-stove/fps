@@ -54,6 +54,40 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ClientChangedShowsTheStatusOrThatItEnded()
+        {
+            var status = new MapVoteStatus(new[] { new MapVoteCandidate("NetArena02", 1), new MapVoteCandidate("NetArena03", 0) }, "NetArena02", 4.5f, null);
+
+            Assert.That(
+                MapVoteLog.ClientChanged(status),
+                Is.EqualTo("[MapVote] net candidates=[NetArena02=1, NetArena03=0] mine=NetArena02 left=4.5 decided=none"));
+            Assert.That(MapVoteLog.ClientChanged(null), Is.EqualTo("[MapVote] net ended"));
+        }
+
+        [Test]
+        public void ClientMalformedShowsTheCandidateCount()
+        {
+            Assert.That(MapVoteLog.ClientMalformed(2), Is.EqualTo("[MapVote] net dropped a malformed vote candidates=2"));
+        }
+
+        [Test]
+        public void ClientRequestedShowsWhetherTheVoteWasSent()
+        {
+            Assert.That(
+                MapVoteLog.ClientRequested(1, "NetArena03", MapVoteCast.Cast, true),
+                Is.EqualTo("[MapVote] net request index=1 map=NetArena03 result=Cast"));
+            Assert.That(
+                MapVoteLog.ClientRequested(0, "NetArena02", MapVoteCast.Changed, false),
+                Is.EqualTo("[MapVote] net request index=0 map=NetArena02 result=Changed (not connected; not sent)"));
+            Assert.That(
+                MapVoteLog.ClientRequested(5, null, MapVoteCast.NotCandidate, false),
+                Is.EqualTo("[MapVote] net request index=5 map=none result=NotCandidate (not sent)"));
+            Assert.That(
+                MapVoteLog.ClientRequested(0, "NetArena02", MapVoteCast.Closed, false),
+                Is.EqualTo("[MapVote] net request index=0 map=NetArena02 result=Closed (not sent)"));
+        }
+
+        [Test]
         public void OpenedRefusesNull()
         {
             Assert.Throws<ArgumentNullException>(() => MapVoteLog.Opened(null));

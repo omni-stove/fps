@@ -67,16 +67,6 @@ namespace Shooter.Runtime
             }
         }
 
-        public static bool AllowedAt(HudDensity density)
-        {
-            if (!Enum.IsDefined(typeof(HudDensity), density))
-            {
-                throw new ArgumentOutOfRangeException(nameof(density), density, "unknown HUD density");
-            }
-
-            return density == HudDensity.Full;
-        }
-
         public static Mark Place(MinimapStatus status, MinimapContact contact, float rangeMeters, bool rotatesWithHeading)
         {
             RequireRange(rangeMeters, nameof(rangeMeters));
@@ -367,7 +357,7 @@ namespace Shooter.Runtime
             // 値が消されたときは今のままにする (Hud と同じく、戻す先が無いため)。
             if (density.HasValue)
             {
-                SetAllowed(AllowedAt(density.Value));
+                SetAllowed(HudVisibility.For(density.Value).Minimap);
             }
         }
 

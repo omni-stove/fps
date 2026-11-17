@@ -151,6 +151,66 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TwoCandidateMapsAreBothLoadedAtStart()
+        {
+            TestMaps.Write(_data.Path, "NetArena02");
+            WritePool("NetTest", "NetArena02");
+
+            var code = Run();
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            var log = _output.ToString();
+            Assert.That(log, Does.Contain("[Server] map NetTest colliders=1"));
+            Assert.That(log, Does.Contain("[Server] map NetArena02 colliders=1"));
+            Assert.That(log, Does.Contain("[Server] map pool loaded 2 maps: NetTest, NetArena02"));
+            Assert.That(log, Does.Contain("[Net] server listening on"));
+        }
+
+        [Test]
+        public void WithoutAMapArgumentTheFirstCandidateIsPlayed()
+        {
+            TestMaps.Write(_data.Path, "NetArena02");
+            WritePool("NetArena02", "NetTest");
+
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] map pool loaded 2 maps: NetArena02, NetTest"));
+        }
+
+        [Test]
+        public void AnEmptyPoolLoadsOnlyOneMap()
+        {
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Not.Contain("map pool"));
+        }
+
+        [Test]
+        public void ACandidateThatCannotBeReadStopsTheStart()
+        {
+            WritePool("NetTest", "NetArena09");
+
+            var code = Run();
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.StartWith("[Server] map pool: map NetArena09 has no collision: NetArena09.fpsmap"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
+        public void TheRulesModuleRefusesACandidateWithoutSpawnPoints()
+        {
+            TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
+            TestMaps.Write(_data.Path, "NetArena02");
+            WritePool("NetTest", "NetArena02");
+
+            var code = ServerProgram.Run(System.Array.Empty<string>(), new IServerModule[] { new MatchRulesModule() }, Runtime());
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitFailure));
+            Assert.That(_error.ToString(), Does.Contain("map NetArena02 has no spawn points: NetArena02.points.json"));
+        }
+
+        [Test]
         public void MissingRulesExitMisconfigured()
         {
             var code = Run("-rules", "Domination");
@@ -333,6 +393,57 @@ namespace Shooter.Server.Tests
             Assert.That(_error.ToString(), Does.Contain("[Net] cannot load EOS credentials: "));
         }
 
+        [Test]
+        public void WithoutPrivateTheServerSaysItIsPublic()
+        {
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] public match"));
+            Assert.That(_output.ToString(), Does.Not.Contain("join_code="));
+        }
+
+        [Test]
+        public void PrivateWithoutACodeLogsTheGeneratedCode()
+        {
+            Assert.That(Run("--private"), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(
+                _output.ToString(),
+                Does.Match(@"\[Server\] private match join_code=[" + JoinCode.Alphabet + "]{" + JoinCode.DefaultLength
+                    + @"} \(generated; pass --join-code to choose one\)"));
+        }
+
+        [Test]
+        public void TheJoinCodeArgumentWinsOverTheRulesFile()
+        {
+            TestRules.Write(
+                _data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(privateMatch: true, joinCode: "FROMRULES")));
+
+            Assert.That(Run("--join-code", "friends"), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] private match join_code=FRIENDS" + Environment.NewLine));
+            Assert.That(_output.ToString(), Does.Not.Contain("FROMRULES"));
+        }
+
+        [Test]
+        public void TheRulesFileAloneMakesThePrivateMatch()
+        {
+            TestRules.Write(
+                _data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(privateMatch: true, joinCode: "FROMRULES")));
+
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] private match join_code=FROMRULES" + Environment.NewLine));
+        }
+
+        [Test]
+        public void ABadJoinCodeIsAUsageError()
+        {
+            Assert.That(Run("--join-code", "no/slash"), Is.EqualTo(ServerProgram.ExitUsage));
+
+            Assert.That(_error.ToString(), Does.StartWith("[Net] invalid arguments: --join-code must be"));
+        }
+
         private void AddCredentials()
         {
             _environment[EosCredentials.ProductIdVariable] = "product";
@@ -340,6 +451,11 @@ namespace Shooter.Server.Tests
             _environment[EosCredentials.DeploymentIdVariable] = "deployment";
             _environment[EosCredentials.ClientIdVariable] = "client";
             _environment[EosCredentials.ClientSecretVariable] = "secret";
+        }
+
+        private void WritePool(params string[] mapPool)
+        {
+            TestRules.Write(_data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(mapPool: mapPool)));
         }
 
         private int Run(params string[] args)

@@ -881,6 +881,43 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RestartUsesTheReplacedSpawnPoints()
+        {
+            var session = Create(scoreLimit: 1, restartDelaySeconds: 1f);
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(2, 1, _maxHealth);
+            Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
+            var alpha = new Vector3(-5f, 10f, 7f);
+            var bravo = new Vector3(5f, 10f, -7f);
+
+            session.ReplaceSpawnPoints(new[] { new SpawnPoint(bravo, Team.Bravo), new SpawnPoint(alpha, Team.Alpha) });
+            Assert.That(_positions[2], Is.EqualTo(_bravoBase), "nobody moves until they spawn again");
+            session.Tick(1f);
+
+            Assert.That(session.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_positions[1], Is.EqualTo(alpha));
+            Assert.That(_positions[2], Is.EqualTo(bravo));
+        }
+
+        [Test]
+        public void ReplacingWithSpawnPointsOneTeamCannotUseKeepsTheOldOnes()
+        {
+            var session = Create(scoreLimit: 1, restartDelaySeconds: 1f);
+            session.Join(1);
+            session.Join(2);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.Throws<ArgumentException>(() => session.ReplaceSpawnPoints(new[] { new SpawnPoint(Vector3.Zero, Team.Alpha) }));
+            Assert.Throws<ArgumentException>(() => session.ReplaceSpawnPoints(new SpawnPoint[1]));
+            Assert.Throws<ArgumentNullException>(() => session.ReplaceSpawnPoints(null));
+            session.Tick(1f);
+
+            Assert.That(_positions[1], Is.EqualTo(_alphaBase));
+            Assert.That(_positions[2], Is.EqualTo(_bravoBase));
+        }
+
+        [Test]
         public void RestartKeepsTeams()
         {
             var session = Create(scoreLimit: 1, restartDelaySeconds: 0f);

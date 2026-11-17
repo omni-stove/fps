@@ -212,6 +212,49 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AServerLobbyWithASkillAveragePublishesItAsANumber()
+        {
+            var attributes = ByKey(ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2, NetMatchSettings.Default, -25));
+
+            Assert.That(attributes.Count, Is.EqualTo(6));
+            Assert.That(attributes[ServerLobby.SkillAverageKey].IsText, Is.False);
+            Assert.That(attributes[ServerLobby.SkillAverageKey].Number, Is.EqualTo(-25));
+            Assert.That(
+                ByKey(ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2, NetMatchSettings.Default, null)).ContainsKey(ServerLobby.SkillAverageKey),
+                Is.False);
+
+            var lobby = new LobbyInfo(
+                "lobby-1", _ownerId, ServerLobby.MaxMembers(8), new[] { _ownerId },
+                ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2, NetMatchSettings.Default, 1450));
+            Assert.That(lobby.SkillAverage, Is.EqualTo(1450));
+        }
+
+        [Test]
+        public void SkillAverageCountsOnlyThePlayersWhoSentAValue()
+        {
+            Assert.That(ServerLobby.SkillAverage(new int?[] { 1000, null, 1400 }), Is.EqualTo(1200));
+            Assert.That(ServerLobby.SkillAverage(new int?[] { 1500 }), Is.EqualTo(1500));
+            Assert.That(ServerLobby.SkillAverage(new int?[] { null, null }), Is.Null);
+            Assert.That(ServerLobby.SkillAverage(System.Array.Empty<int?>()), Is.Null);
+        }
+
+        [Test]
+        public void SkillAverageRoundsHalvesAwayFromZero()
+        {
+            Assert.That(ServerLobby.SkillAverage(new int?[] { 1000, 1001 }), Is.EqualTo(1001));
+            Assert.That(ServerLobby.SkillAverage(new int?[] { 1000, 1000, 1001 }), Is.EqualTo(1000));
+            Assert.That(ServerLobby.SkillAverage(new int?[] { -1, -2 }), Is.EqualTo(-2));
+        }
+
+        [Test]
+        public void SkillAverageDoesNotOverflowAtTheIntLimits()
+        {
+            Assert.That(ServerLobby.SkillAverage(new int?[] { int.MaxValue, int.MaxValue, int.MaxValue }), Is.EqualTo(int.MaxValue));
+            Assert.That(ServerLobby.SkillAverage(new int?[] { int.MinValue, int.MinValue }), Is.EqualTo(int.MinValue));
+            Assert.Throws<ArgumentNullException>(() => ServerLobby.SkillAverage(null));
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentException>(() => ServerLobby.Attributes(" ", "0.3.0", 0));

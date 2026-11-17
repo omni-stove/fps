@@ -17,7 +17,7 @@ namespace Shooter.NetV2
         private readonly Dictionary<int, GrenadeTrack> _grenades = new Dictionary<int, GrenadeTrack>();
         private readonly List<int> _goneGrenades = new List<int>();
 
-        public ClientWorld(string map, WorldMap world, NetMapLadders ladders)
+        public ClientWorld(string map, WorldMap world, NetMapLadders ladders, NetMapWater water = null)
         {
             Map = map ?? throw new ArgumentNullException(nameof(map));
             if (world == null)
@@ -26,6 +26,7 @@ namespace Shooter.NetV2
             }
 
             Ladders = ladders ?? throw new ArgumentNullException(nameof(ladders));
+            Water = water ?? NetMapWater.None;
             ColliderCount = world.Colliders.Count;
             Collision = new BvhWorldCollision(world);
             foreach (var collider in world.Colliders)
@@ -57,6 +58,9 @@ namespace Shooter.NetV2
         // スナップショットははしごをこの並びの番号で指すので、サーバーと同じファイルから読む。
         public NetMapLadders Ladders { get; }
 
+        // 泳ぐかは水面で毎 tick 決まるので、サーバーと同じファイルから読まないと予測が泳ぎの出入りで毎回巻き戻る。
+        public NetMapWater Water { get; }
+
         public int StructureCount => _pieces.Count;
 
         public int BrokenPieceCount => _broken.Count;
@@ -66,9 +70,10 @@ namespace Shooter.NetV2
         public string LogLine => "[Net] map collision " + Map
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " structures=" + StructureCount.ToString(CultureInfo.InvariantCulture)
-            + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture);
+            + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
+            + " water=" + Water.Water.Count.ToString(CultureInfo.InvariantCulture);
 
-        // サーバーと同じく、はしごのファイルが無いマップははしごが無いものとして動かす。
+        // サーバーと同じく、はしごと水のファイルが無いマップははしごと水が無いものとして動かす。
         public static bool TryLoad(string directory, string map, out ClientWorld world, out string error)
         {
             if (directory == null)
@@ -120,9 +125,24 @@ namespace Shooter.NetV2
                 }
             }
 
+            var water = NetMapWater.None;
+            var waterPath = Path.Combine(directory, map + NetMapWater.Extension);
+            if (File.Exists(waterPath))
+            {
+                try
+                {
+                    water = NetMapWater.Parse(File.ReadAllText(waterPath), waterPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + waterPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                world = new ClientWorld(map, geometry, ladders);
+                world = new ClientWorld(map, geometry, ladders, water);
             }
             catch (ArgumentException e)
             {
@@ -150,6 +170,7 @@ namespace Shooter.NetV2
             return new CharacterMotorSimulation(body, new PlayerMotor(motor.Motor), 1f / tickRate, killPlaneY, motor.Prone)
             {
                 Ladders = Ladders.Ladders,
+                Water = Water,
                 Knockback = knockback ?? KnockbackSpec.Default,
                 Swim = motor.Swim,
                 WallRun = motor.WallRun,

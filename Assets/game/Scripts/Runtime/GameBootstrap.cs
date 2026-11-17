@@ -514,6 +514,7 @@ namespace Shooter.Runtime
 
                 // CharacterComponents は敵とネットのプレハブにも付けるので、一人称で手元に出すビューモデルは手元のプレイヤーにだけここで付ける。
                 player.AddComponent<ViewmodelPresenter>();
+                AttachPlayerFeedback(player, rig, camera, damageable);
                 WireDeathAndRespawn(damageable, mover, ads);
                 KnockbackMovement.Attach(mover, damageable);
 
@@ -683,7 +684,7 @@ namespace Shooter.Runtime
 
             if (weapon != null)
             {
-                weapon.FireBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling);
+                weapon.FireBlocker = () => mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling || mover.IsSwimming);
             }
 
             if (ads == null)
@@ -694,9 +695,18 @@ namespace Shooter.Runtime
             mover.DodgeStarted += _ => ads.Release();
             mover.VaultStarted += _ => ads.Release();
             mover.MantleStarted += _ => ads.Release();
+            mover.SwimmingChanged += swimming =>
+            {
+                if (swimming)
+                {
+                    ads.Release();
+                }
+            };
             ads.AimingChanged += aiming =>
             {
-                if (aiming && ((mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling)) || (weapon != null && weapon.IsHolstered)))
+                if (aiming
+                    && ((mover != null && (mover.IsDodging || mover.IsVaulting || mover.IsMantling || mover.IsSwimming))
+                        || (weapon != null && weapon.IsHolstered)))
                 {
                     ads.Release();
                 }
@@ -792,7 +802,10 @@ namespace Shooter.Runtime
         private static void WireAds(AimDownSights ads, WeaponController weapon, PlayerController mover)
         {
             ads.WeaponSource = () => weapon != null && weapon.Weapon != null ? weapon.Weapon.Spec : null;
-            ads.AdsBlocker = () => weapon != null && weapon.Weapon != null && weapon.Weapon.Trigger.BlocksAds;
+            // 泳ぎの状態は CharacterMotorState.CanAimDownSights と同じ答えにする (ネット対戦の予測と同じく、水の中では構えない)。
+            ads.AdsBlocker = () =>
+                (weapon != null && weapon.Weapon != null && weapon.Weapon.Trigger.BlocksAds)
+                || (mover != null && mover.TryGetMotorState(out var motor) && !motor.CanAimDownSights);
             ads.AimingChanged += aiming =>
             {
                 if (aiming && mover != null)
@@ -833,6 +846,30 @@ namespace Shooter.Runtime
 
             player.AddComponent<PlayerMockBody>().Bind(reader);
             return reader;
+        }
+
+        // 手元のプレイヤーにだけ付ける。敵とネットのプレハブにも付く CharacterComponents に入れると、地図・振動・スティック・水中の画面が操作していない体の分まで動くため。
+        // Play 中は付けた Awake / OnEnable が自力で参照を解決するが、Edit Mode では走らないので、要る参照はここで渡す。
+        private static void AttachPlayerFeedback(GameObject player, ViewRig rig, Camera camera, Damageable damageable)
+        {
+            player.AddComponent<PlayerMotorStateSource>();
+            player.AddComponent<MinimapPublisher>();
+
+            var rumble = player.AddComponent<GamepadRumble>();
+            if (rumble.Rig == null && rig != null)
+            {
+                rumble.Bind(rig);
+            }
+
+            player.AddComponent<StickDeadzoneApplier>();
+
+            var underwater = player.AddComponent<Traversal.UnderwaterPresenter>();
+            if (camera != null)
+            {
+                underwater.Eye = camera.transform;
+            }
+
+            underwater.Damageable = damageable;
         }
 
         // 乗っている間に止める覗き込み・カバー・グレネードを拾うので、それらを付けた後 (PlayerActions.Attach の後) に呼ぶ。

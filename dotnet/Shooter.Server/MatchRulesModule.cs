@@ -50,12 +50,10 @@ namespace Shooter.Server
             _match = context.Match;
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
-            var points = context.Map.Points ?? throw new InvalidOperationException(
-                "map " + context.Map.Name + " has no spawn points: " + context.Map.Name + NetMapPoints.Extension
-                + " is not in " + context.Map.Directory + "; export it from Unity with make export-server-rules");
-
+            var points = PointsOf(context.Map);
             var rules = _data.Rules;
             var settings = _data.Settings;
+            CheckOtherMaps(rules);
             PrepareObjective(rules, settings, points, out var killScoreLimit);
             try
             {
@@ -91,6 +89,7 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.Restarted += HandleMatchRestarted;
+            _match.MapChanged += HandleMapChanged;
             _match.TeamChanged += HandleTeamChanged;
 
             _log.WriteLine(MatchLog.Tag + " waiting for players scoreLimit=" + Text(_session.Spec.ScoreLimit)
@@ -117,6 +116,7 @@ namespace Shooter.Server
             PreparePings(rules);
             PrepareIdle(rules);
             PrepareChat(settings);
+            PrepareMapVote();
             StartObjective();
         }
 
@@ -131,6 +131,7 @@ namespace Shooter.Server
             TickObjective(deltaSeconds);
             TickIdle(deltaSeconds);
             TickPings();
+            TickMapVote(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -203,6 +204,7 @@ namespace Shooter.Server
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.Restarted -= HandleMatchRestarted;
+            _match.MapChanged -= HandleMapChanged;
             _match.TeamChanged -= HandleTeamChanged;
             if (_match.ChooseTeam == ChooseTeam)
             {
@@ -210,6 +212,7 @@ namespace Shooter.Server
             }
 
             StopObjective();
+            StopMapVote();
             _session = null;
         }
 

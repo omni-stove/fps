@@ -17,6 +17,7 @@ namespace Shooter.NetV2
         private Action<string> _failed;
         private Step _step;
         private int _partySize = 1;
+        private int? _skillRating;
         private float _now;
         private string _lastRetryReason;
         private bool _disposed;
@@ -57,6 +58,11 @@ namespace Shooter.NetV2
 
         public void Begin(float now, int partySize, Action<NetLaunchOptions> ready, Action<string> failed)
         {
+            Begin(now, partySize, null, ready, failed);
+        }
+
+        public void Begin(float now, int partySize, int? skillRating, Action<NetLaunchOptions> ready, Action<string> failed)
+        {
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(QuickMatchSearch));
@@ -75,11 +81,13 @@ namespace Shooter.NetV2
             _ready = ready ?? throw new ArgumentNullException(nameof(ready));
             _failed = failed ?? throw new ArgumentNullException(nameof(failed));
             _partySize = partySize;
+            _skillRating = skillRating;
             _now = now;
             _schedule.Start(now);
             _step = Step.LoggingIn;
             _log(LogPrefix + "logging in to search " + BucketId
-                + (partySize == 1 ? "" : " for a party of " + partySize.ToString(CultureInfo.InvariantCulture)));
+                + (partySize == 1 ? "" : " for a party of " + partySize.ToString(CultureInfo.InvariantCulture))
+                + (skillRating.HasValue ? " near skill " + skillRating.Value.ToString(CultureInfo.InvariantCulture) : ""));
             _backend.Login(Once<string>(HandleLoggedIn));
         }
 
@@ -165,7 +173,7 @@ namespace Shooter.NetV2
 
             var found = lobbies ?? Array.Empty<LobbyInfo>();
             _log(LogPrefix + "found " + found.Count.ToString(CultureInfo.InvariantCulture) + " lobby(s) in " + BucketId);
-            var lobby = LobbySelector.PickServer(found, _version, _partySize);
+            var lobby = LobbySelector.PickServer(found, _version, _partySize, _skillRating);
             if (lobby == null)
             {
                 Retry(LobbySelector.DescribeNoServer(found, _version, _partySize));
@@ -188,8 +196,21 @@ namespace Shooter.NetV2
             _step = Step.Ready;
             _log(LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
                 + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + ServerLobby.PlayerSlots(lobby).ToString(CultureInfo.InvariantCulture)
+                + SkillText(lobby)
                 + "; connecting " + options);
             _ready(options);
+        }
+
+        private string SkillText(LobbyInfo lobby)
+        {
+            if (!_skillRating.HasValue)
+            {
+                return "";
+            }
+
+            var average = lobby.SkillAverage;
+            return " skill=" + (average.HasValue ? average.Value.ToString(CultureInfo.InvariantCulture) : "-")
+                + " (self " + _skillRating.Value.ToString(CultureInfo.InvariantCulture) + ")";
         }
 
         private void HandleLoggedOut(string reason)

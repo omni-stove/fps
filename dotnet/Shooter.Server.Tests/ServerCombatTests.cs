@@ -857,6 +857,52 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void StayingUnderwaterPastTheBreathHurtsByTheConfiguredDamage()
+        {
+            var defaults = NetMotorSettings.Default;
+            var swim = new SwimTuning(breathSeconds: 0.5f, drownDamage: 7, drownIntervalSeconds: 0.5f);
+            Start(
+                Rules(),
+                water: WaterAroundAlpha(),
+                motor: new NetMotorSettings(defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, swim, defaults.WallRun));
+            Join(1);
+            Join(2);
+
+            // しゃがみで底まで潜ったままにする
+            Walk(1, Vector2.Zero, 2 * TickClock.DefaultTickRate, InputButtons.Crouch);
+
+            var lost = NetMatchSettings.DefaultMaxHealth - _rules.Session.GetHealth(1);
+            Assert.That(lost, Is.GreaterThan(0), _log.ToString());
+            Assert.That(lost % 7, Is.Zero, "every hit deals the configured drown damage");
+            Assert.That(_log.ToString(), Does.Contain("[Net] swim owner=1 tick="));
+            Assert.That(_log.ToString(), Does.Contain(" underwater=true"));
+            Assert.That(_log.ToString(), Does.Contain("[Net] drown owner=1 tick="));
+            Assert.That(_log.ToString(), Does.Contain(" damage=7 outcome=Damaged"));
+        }
+
+        [Test]
+        public void FloatingAtTheSurfaceDoesNotHurt()
+        {
+            var defaults = NetMotorSettings.Default;
+            var swim = new SwimTuning(breathSeconds: 0.5f, drownDamage: 7, drownIntervalSeconds: 0.5f);
+            Start(
+                Rules(),
+                water: WaterAroundAlpha(surfaceY: 2f),
+                motor: new NetMotorSettings(defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, swim, defaults.WallRun));
+            Join(1);
+            Join(2);
+
+            // 胸 (立って 1.8) より高く目 (2.1) より低い水面なので、泳いでも顔は出たまま
+            Walk(1, Vector2.Zero, 2 * TickClock.DefaultTickRate);
+
+            Assert.That(_movement.TryGetState(1, out var state), Is.True);
+            Assert.That(state.IsSwimming, Is.True);
+            Assert.That(state.Swim.IsUnderwater, Is.False);
+            Assert.That(_rules.Session.GetHealth(1), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] drown owner="));
+        }
+
+        [Test]
         public void AHardLandingDoesNotHurtWhenTheRuleIsOff()
         {
             Start(Rules().WithFallDamage(FallDamage.Off));
@@ -898,6 +944,15 @@ namespace Shooter.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
+        // 床 (上面 0.5) に立つと目 (2.1) は既定の水面 (5) より下になる。Bravo の出現地点は外す
+        private static NetMapWater WaterAroundAlpha(float surfaceY = 5f)
+        {
+            return new NetMapWater(new[]
+            {
+                new MapWater(new WaterBox(new Vector3(-10f, 0.5f, -5f), new Vector3(0f, 6f, 5f), surfaceY)),
+            });
+        }
+
         private static readonly GrenadeSpec _smoke = new GrenadeSpec(
             "ecaf6e57-cb77-4707-9321-6ea5b659408f",
             "grenade.smoke",
@@ -916,7 +971,14 @@ namespace Shooter.Server.Tests
         }
 
         private void Start(
-            GameRules rules, bool wall = false, bool destructibleWall = false, int wallPieces = 1, WeaponSpec rifle = null, GrenadeCatalog grenades = null)
+            GameRules rules,
+            bool wall = false,
+            bool destructibleWall = false,
+            int wallPieces = 1,
+            WeaponSpec rifle = null,
+            GrenadeCatalog grenades = null,
+            NetMapWater water = null,
+            NetMotorSettings motor = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -945,8 +1007,8 @@ namespace Shooter.Server.Tests
             }
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
-            var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, structures);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules, rifle: rifle), PingSpec.Default, "memory", null, grenades);
+            var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, structures, water: water);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules, rifle: rifle, motor: motor), PingSpec.Default, "memory", null, grenades);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

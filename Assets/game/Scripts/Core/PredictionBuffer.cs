@@ -92,6 +92,22 @@ namespace Shooter.Core
             return state;
         }
 
+        public bool TryGet(int tick, out TInput input, out TState state)
+        {
+            var logical = FindLogical(tick);
+            if (logical < 0)
+            {
+                input = default;
+                state = default;
+                return false;
+            }
+
+            var index = IndexOf(logical);
+            input = _inputs[index];
+            state = _states[index];
+            return true;
+        }
+
         public ReconcileResult Reconcile(int tick, TState authoritative)
         {
             if (tick <= LastConfirmedTick)

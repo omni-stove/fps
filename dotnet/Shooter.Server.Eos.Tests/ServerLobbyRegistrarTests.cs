@@ -157,6 +157,71 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void ASkillAverageChangeDuringAnUpdateIsSentAfterIt()
+        {
+            Register();
+
+            _registrar.SetPlayers(1, 1000);
+            _registrar.SetPlayers(1, 1100);
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            Assert.That(ByKey(_backend.Updates[0])[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1000));
+            _backend.CompleteUpdate();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            var second = ByKey(_backend.Updates[1]);
+            Assert.That(second.ContainsKey(ServerLobby.PlayersKey), Is.False, "only the changed attribute is sent");
+            Assert.That(second[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1100));
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedSkillAverage, Is.EqualTo(1100));
+            Assert.That(_registrar.PublishedPlayers, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AFailedSkillAverageUpdateIsRetriedAfterTheInterval()
+        {
+            Register();
+            _registrar.SetPlayers(0, 1000);
+            _backend.CompleteUpdate("throttled");
+
+            Assert.That(_registrar.PublishedSkillAverage, Is.Null);
+            _registrar.Tick(_interval);
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1])[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1000));
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedSkillAverage, Is.EqualTo(1000));
+        }
+
+        [Test]
+        public void ARecreatedLobbyCarriesTheSkillAverage()
+        {
+            Register();
+            _registrar.SetPlayers(2, 1300);
+            _backend.CompleteUpdate();
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.SkillAverageKey].Number, Is.EqualTo(1300));
+        }
+
+        [Test]
+        public void ANullSkillAverageKeepsTheLastOne()
+        {
+            Register();
+            _registrar.SetPlayers(1, 1300);
+            _backend.CompleteUpdate();
+
+            _registrar.SetPlayers(0, null);
+
+            Assert.That(_registrar.SkillAverage, Is.EqualTo(1300));
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1]).ContainsKey(ServerLobby.SkillAverageKey), Is.False);
+        }
+
+        [Test]
         public void PlayersWhoJoinBeforeRegistrationAreInTheCreatedLobby()
         {
             Begin();
@@ -376,9 +441,69 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void APublicMatchHasNoPrivateOrJoinCodeAttributes()
+        {
+            Begin();
+            _backend.CompleteLogin(_server);
+
+            var attributes = ByKey(_backend.CreatedAttributes);
+            Assert.That(attributes.ContainsKey(ServerLobby.PrivateKey), Is.False);
+            Assert.That(attributes.ContainsKey(ServerLobby.JoinCodeKey), Is.False);
+        }
+
+        [Test]
+        public void APrivateMatchPublishesThePrivateMarkAndTheJoinCode()
+        {
+            using var service = new ServerLobbyService(_backend, ServerLobby.BucketId(_version), _log);
+            var registrar = new ServerLobbyRegistrar(
+                service,
+                _endpoint,
+                _version,
+                new NetMatchSettings(maxPlayers: 4, privateMatch: true, joinCode: "friends"),
+                new RetrySchedule(_interval, _timeout),
+                _log);
+
+            registrar.Begin(0f, reason => _failure = reason);
+            _backend.CompleteLogin(_server);
+
+            Assert.That(registrar.MaxPlayers, Is.EqualTo(4));
+            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(5));
+            var attributes = ByKey(_backend.CreatedAttributes);
+            Assert.That(attributes[ServerLobby.PrivateKey].IsText, Is.False);
+            Assert.That(attributes[ServerLobby.PrivateKey].Number, Is.EqualTo(1));
+            Assert.That(attributes[ServerLobby.JoinCodeKey].Text, Is.EqualTo("FRIENDS"));
+        }
+
+        [Test]
+        public void ARecreatedPrivateLobbyKeepsTheJoinCode()
+        {
+            using var service = new ServerLobbyService(_backend, ServerLobby.BucketId(_version), _log);
+            var registrar = new ServerLobbyRegistrar(
+                service,
+                _endpoint,
+                _version,
+                new NetMatchSettings(maxPlayers: _maxPlayers, privateMatch: true, joinCode: "ABC234"),
+                new RetrySchedule(_interval, _timeout),
+                _log);
+            registrar.Begin(0f, reason => _failure = reason);
+            _backend.CompleteLogin(_server);
+            _backend.CompleteCreate(Lobby("l1"));
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            var attributes = ByKey(_backend.CreatedAttributes);
+            Assert.That(attributes[ServerLobby.PrivateKey].Number, Is.EqualTo(1));
+            Assert.That(attributes[ServerLobby.JoinCodeKey].Text, Is.EqualTo("ABC234"));
+        }
+
+        [Test]
         public void RejectsInvalidArguments()
         {
             var schedule = new RetrySchedule(_interval, _timeout);
+            Assert.Throws<ArgumentNullException>(
+                () => _ = new ServerLobbyRegistrar(_service, _endpoint, _version, (NetMatchSettings)null, schedule, _log));
             Assert.Throws<ArgumentNullException>(() => _ = new ServerLobbyRegistrar(null, _endpoint, _version, _maxPlayers, schedule, _log));
             Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "0.0.0.0:7777", _version, _maxPlayers, schedule, _log));
             Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "example.com:7777", _version, _maxPlayers, schedule, _log));

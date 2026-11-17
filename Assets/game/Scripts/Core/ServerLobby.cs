@@ -46,6 +46,12 @@ namespace Shooter.Core
 
         public static IReadOnlyList<LobbyAttribute> Attributes(string endpoint, string version, int players, NetMatchSettings match)
         {
+            return Attributes(endpoint, version, players, match, null);
+        }
+
+        public static IReadOnlyList<LobbyAttribute> Attributes(
+            string endpoint, string version, int players, NetMatchSettings match, int? skillAverage)
+        {
             if (string.IsNullOrWhiteSpace(endpoint))
             {
                 throw new ArgumentException("must not be null or blank", nameof(endpoint));
@@ -76,7 +82,46 @@ namespace Shooter.Core
                 }
             }
 
+            if (skillAverage.HasValue)
+            {
+                attributes.Add(SkillAverageAttribute(skillAverage.Value));
+            }
+
             return attributes;
+        }
+
+        public static LobbyAttribute SkillAverageAttribute(int skillAverage)
+        {
+            return LobbyAttribute.OfNumber(SkillAverageKey, skillAverage);
+        }
+
+        // 値を送らなかった人は数えない。0 として数えると、値の無い人がいるだけで平均が下がるため。
+        public static int? SkillAverage(IEnumerable<int?> ratings)
+        {
+            if (ratings == null)
+            {
+                throw new ArgumentNullException(nameof(ratings));
+            }
+
+            long sum = 0;
+            var count = 0;
+            foreach (var rating in ratings)
+            {
+                if (!rating.HasValue)
+                {
+                    continue;
+                }
+
+                sum += rating.Value;
+                count++;
+            }
+
+            if (count == 0)
+            {
+                return null;
+            }
+
+            return (int)Math.Round((double)sum / count, MidpointRounding.AwayFromZero);
         }
 
         // ボイスのためにプレイヤーもメンバーとして入り、オーナーのサーバー自身も 1 人分を使うので 1 足す。

@@ -21,9 +21,11 @@ namespace Shooter.Server
             NetMapPoints points = null,
             NetMapStructures structures = null,
             NetMapLadders ladders = null,
-            NetMapVehicles vehicles = null)
+            NetMapVehicles vehicles = null,
+            NetMapWater water = null)
         {
             Vehicles = vehicles ?? NetMapVehicles.None;
+            Water = water ?? NetMapWater.None;
             Points = points;
             Structures = structures;
             Ladders = ladders ?? NetMapLadders.None;
@@ -64,6 +66,9 @@ namespace Shooter.Server
 
         public NetMapVehicles Vehicles { get; }
 
+        // はしごと同じく、書き出す前のマップでも泳げないだけで動けるよう、ファイルが無ければ空にする。
+        public NetMapWater Water { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
@@ -73,6 +78,7 @@ namespace Shooter.Server
             + " structures=" + (Structures == null ? "none" : Structures.Structures.Count.ToString(CultureInfo.InvariantCulture))
             + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
             + " vehicles=" + Vehicles.Vehicles.Count.ToString(CultureInfo.InvariantCulture)
+            + " water=" + Water.Water.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
         // 作業ディレクトリを先に見るのは、リポジトリのルートから dotnet run したときにコミットした server-data をそのまま使うため。
@@ -87,6 +93,55 @@ namespace Shooter.Server
             }
 
             return roots;
+        }
+
+        /// <summary>
+        /// 起動したマップ (current) のほかに、次の試合のマップの候補 (mapPool) をすべて読む。current と同じ名前の候補は読み直さない。
+        /// 試合の途中で読めないと分かっても止めるしかないので、1 つでも読めなければ何も返さない。
+        /// </summary>
+        /// <returns>current を先頭に、候補を並べた順に重ねずに並べたもの。</returns>
+        public static bool TryLoadPool(
+            ServerMapData current, IReadOnlyList<string> mapPool, IReadOnlyList<string> searchRoots, out IReadOnlyList<ServerMapData> maps, out string error)
+        {
+            ArgumentNullException.ThrowIfNull(current);
+            ArgumentNullException.ThrowIfNull(mapPool);
+            ArgumentNullException.ThrowIfNull(searchRoots);
+
+            maps = null;
+            var loaded = new List<ServerMapData> { current };
+            var names = new HashSet<string>(StringComparer.Ordinal) { current.Name };
+            foreach (var name in mapPool)
+            {
+                if (!names.Add(name))
+                {
+                    continue;
+                }
+
+                if (!TryLoad(name, searchRoots, out var data, out var problem))
+                {
+                    error = "map pool: " + problem;
+                    return false;
+                }
+
+                loaded.Add(data);
+            }
+
+            maps = loaded;
+            error = null;
+            return true;
+        }
+
+        /// <example><c>[Server] map pool loaded 2 maps: NetArena01, NetArena02</c></example>
+        public static string PoolLogLine(IReadOnlyList<ServerMapData> maps)
+        {
+            ArgumentNullException.ThrowIfNull(maps);
+            var names = new string[maps.Count];
+            for (var i = 0; i < maps.Count; i++)
+            {
+                names[i] = maps[i].Name;
+            }
+
+            return ServerProgram.LogTag + " map pool loaded " + maps.Count.ToString(CultureInfo.InvariantCulture) + " maps: " + string.Join(", ", names);
         }
 
         public static bool TryLoad(string map, IReadOnlyList<string> searchRoots, out ServerMapData data, out string error)
@@ -219,9 +274,24 @@ namespace Shooter.Server
                 }
             }
 
+            NetMapWater water = null;
+            var waterPath = Path.Combine(directory, map + NetMapWater.Extension);
+            if (File.Exists(waterPath))
+            {
+                try
+                {
+                    water = NetMapWater.Parse(File.ReadAllText(waterPath), waterPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + waterPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water);
             }
             catch (ArgumentException e)
             {

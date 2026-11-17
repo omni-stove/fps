@@ -17,11 +17,15 @@ namespace Shooter.Server
         public const string KnockbackTuningFileName = "knockback.json";
         public const string AssistTuningFileName = "assist.json";
 
+        private readonly NetMatchSettings _settings;
+
         public ServerRulesData(
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
-            KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null)
+            KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
+            NetMatchSettings settings = null)
         {
+            _settings = settings;
             Assist = assist ?? AssistSpec.Default;
             AssistPath = assistPath;
             Knockback = knockback ?? KnockbackSpec.Default;
@@ -45,7 +49,7 @@ namespace Shooter.Server
 
         public GameRules Rules => File.Rules;
 
-        public NetMatchSettings Settings => File.Settings;
+        public NetMatchSettings Settings => _settings ?? File.Settings;
 
         // 移動のモジュール (#586) がクライアントの予測と同じ値で動かすために持つ。
         public NetMotorSettings Motor => File.Motor;
@@ -75,6 +79,14 @@ namespace Shooter.Server
         public AssistSpec Assist { get; }
 
         public string AssistPath { get; }
+
+        public ServerRulesData WithSettings(NetMatchSettings settings)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+            return new ServerRulesData(
+                Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
+                settings);
+        }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective

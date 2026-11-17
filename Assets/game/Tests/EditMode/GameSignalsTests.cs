@@ -52,6 +52,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Voice.Value, Is.Null);
             Assert.That(GameSignals.MapVote.Value, Is.Null);
             Assert.That(GameSignals.Spectate.Value, Is.Null);
+            Assert.That(GameSignals.ChatSender.Value, Is.Null);
+            Assert.That(GameSignals.MapVoteSender.Value, Is.Null);
+            Assert.That(GameSignals.Party.Value, Is.Null);
+            Assert.That(GameSignals.PartyControl.Value, Is.Null);
+            Assert.That(GameSignals.JoinByCode.Value, Is.Null);
         }
 
         [Test]
@@ -161,6 +166,11 @@ namespace Shooter.Tests.EditMode
             GameSignals.Voice.Publish(new VoiceStatus(false, null, true));
             GameSignals.MapVote.Publish(new MapVoteStatus(new[] { new MapVoteCandidate("dust", 0) }, null, 10f, null));
             GameSignals.Spectate.Publish(new SpectateStatus(2, 1, SpectateReason.Dead));
+            GameSignals.ChatSender.Publish(new FakeChatSender());
+            GameSignals.MapVoteSender.Publish(new FakeMapVoteSender());
+            GameSignals.Party.Publish(new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Ann", true) }, "lobby-1", true));
+            GameSignals.PartyControl.Publish(new FakePartyControl());
+            GameSignals.JoinByCode.Publish(new FakeJoinByCode());
             heard = 0;
 
             GameSignals.ResetAll();
@@ -189,6 +199,35 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Voice.HasValue, Is.True, "no microphone and nobody speaking is still something to show");
             Assert.That(GameSignals.MapVote.HasValue, Is.True, "an empty vote is still a vote in progress");
             Assert.That(heardSpectate, Is.EqualTo(new SpectateStatus?[] { new SpectateStatus(null, 0, SpectateReason.BetweenRounds) }));
+        }
+
+        [Test]
+        public void TheSendAndPartySignalsHoldWhatWasPublished()
+        {
+            var chat = new FakeChatSender();
+            var vote = new FakeMapVoteSender();
+            var control = new FakePartyControl();
+            var join = new FakeJoinByCode();
+            var heardParty = new List<PartyStatus?>();
+            GameSignals.Party.Changed += heardParty.Add;
+
+            GameSignals.ChatSender.Publish(chat);
+            GameSignals.MapVoteSender.Publish(vote);
+            GameSignals.PartyControl.Publish(control);
+            GameSignals.JoinByCode.Publish(join);
+            GameSignals.Party.Publish(new PartyStatus(PartyStage.None, null, null, false));
+
+            GameSignals.ChatSender.Value.Send(ChatChannel.Team, "push B");
+            GameSignals.MapVoteSender.Value.Vote(2);
+
+            Assert.That(GameSignals.ChatSender.Value, Is.SameAs(chat));
+            Assert.That(chat.Sent, Is.EqualTo(new[] { (ChatChannel.Team, "push B") }));
+            Assert.That(GameSignals.MapVoteSender.Value, Is.SameAs(vote));
+            Assert.That(vote.Votes, Is.EqualTo(new[] { 2 }));
+            Assert.That(GameSignals.PartyControl.Value, Is.SameAs(control));
+            Assert.That(GameSignals.JoinByCode.Value, Is.SameAs(join));
+            Assert.That(GameSignals.Party.HasValue, Is.True, "being outside a party is still something to show");
+            Assert.That(heardParty, Is.EqualTo(new PartyStatus?[] { new PartyStatus(PartyStage.None, null, string.Empty, false) }));
         }
 
         [Test]
@@ -258,6 +297,57 @@ namespace Shooter.Tests.EditMode
 
             public void Detach(int weaponHandle, string itemId)
             {
+            }
+        }
+
+        private sealed class FakeChatSender : IChatSender
+        {
+            public List<(ChatChannel, string)> Sent { get; } = new List<(ChatChannel, string)>();
+
+            public void Send(ChatChannel channel, string text)
+            {
+                Sent.Add((channel, text));
+            }
+        }
+
+        private sealed class FakeMapVoteSender : IMapVoteSender
+        {
+            public List<int> Votes { get; } = new List<int>();
+
+            public void Vote(int candidateIndex)
+            {
+                Votes.Add(candidateIndex);
+            }
+        }
+
+        private sealed class FakePartyControl : IPartyControl
+        {
+            public event Action<PartyStatus> StatusChanged
+            {
+                add { }
+                remove { }
+            }
+
+            public PartyStatus Status => default;
+
+            public void Create()
+            {
+            }
+
+            public void Join(string inviteCode)
+            {
+            }
+
+            public void Leave()
+            {
+            }
+        }
+
+        private sealed class FakeJoinByCode : IJoinByCode
+        {
+            public void Join(string code, Action<JoinCodeOutcome> done)
+            {
+                done(JoinCodeOutcome.NotFound);
             }
         }
     }

@@ -55,16 +55,36 @@ namespace Shooter.Server
             _log = context.Log;
             _match = context.Match;
             _bodies = context.Bodies;
-            var vehicles = context.Map.Vehicles.Vehicles;
+            UseMap(context.Map);
+
+            _match.PlayerLeft += HandlePlayerLeft;
+            _match.MapChanged += HandleMapChanged;
+            _bodies.Teleported += HandleTeleported;
+            _rules.MatchStarted += HandleMatchStarted;
+            _log.WriteLine(LogTag + " net vehicles=" + Text(_cars.Count));
+        }
+
+        private void UseMap(ServerMapData map)
+        {
+            _cars.Clear();
+            var vehicles = map.Vehicles.Vehicles;
             for (var i = 0; i < vehicles.Count; i++)
             {
                 _cars.Add(new Car(i, vehicles[i]));
             }
+        }
 
-            _match.PlayerLeft += HandlePlayerLeft;
-            _bodies.Teleported += HandleTeleported;
-            _rules.MatchStarted += HandleMatchStarted;
-            _log.WriteLine(LogTag + " net vehicles=" + Text(_cars.Count));
+        // 乗り物の番号は新しいマップの並びを指すので、前のマップの乗り物から全員を降ろしてから替える。置き直しは続くルールの出現に任せる
+        private void HandleMapChanged(ServerMapData map)
+        {
+            CopyRiders();
+            foreach (var id in _riderIds)
+            {
+                Release(id, VehicleLeaveReason.Forced, false);
+            }
+
+            UseMap(map);
+            _log.WriteLine(LogTag + " net vehicles=" + Text(_cars.Count) + " map=" + map.Name);
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -139,6 +159,7 @@ namespace Shooter.Server
             }
 
             _match.PlayerLeft -= HandlePlayerLeft;
+            _match.MapChanged -= HandleMapChanged;
             _bodies.Teleported -= HandleTeleported;
             _rules.MatchStarted -= HandleMatchStarted;
             _riders.Clear();

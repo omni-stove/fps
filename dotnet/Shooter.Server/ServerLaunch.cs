@@ -21,8 +21,16 @@ namespace Shooter.Server
         // Unity の NetMatch.prefab がこのルールに配線されているため。
         public const string DefaultRules = "TeamDeathmatch";
 
-        private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat)
+        // 引数のほかのフラグは - が 1 つだが、Issue #1004 で決めた名前に合わせる。
+        public const string PrivateFlag = "--private";
+
+        public const string JoinCodeFlag = "--join-code";
+
+        private ServerLaunch(
+            NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat, bool privateMatch, string joinCode)
         {
+            PrivateMatch = privateMatch;
+            JoinCode = joinCode;
             AntiCheat = antiCheat;
             Options = options;
             Version = version;
@@ -40,14 +48,68 @@ namespace Shooter.Server
 
         public string Map => Options.Map ?? DefaultMap;
 
+        /// <summary>
+        /// 最初の試合のマップ。<c>-map</c> が無ければ、候補 (ルールの <c>mapPool</c>) の先頭、候補も無ければ <see cref="DefaultMap"/>。
+        /// 候補の先頭を選ぶのは、候補に無い既定のシーンで始めると、次のマップを替えた後に二度と戻れないマップで 1 試合だけ遊ぶことになるため。
+        /// </summary>
+        public string StartMap(IReadOnlyList<string> mapPool)
+        {
+            ArgumentNullException.ThrowIfNull(mapPool);
+            return Options.Map ?? (mapPool.Count > 0 ? mapPool[0] : DefaultMap);
+        }
+
         public string Rules { get; }
 
         public AntiCheatSettings AntiCheat { get; }
 
+        public bool PrivateMatch { get; }
+
+        public string JoinCode { get; }
+
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode);
+        }
+
+        // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
+        public NetMatchSettings ApplyPrivacy(NetMatchSettings rules, Func<int, int> nextIndex, out bool generated)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+            ArgumentNullException.ThrowIfNull(nextIndex);
+
+            generated = false;
+            if (!PrivateMatch && !rules.PrivateMatch)
+            {
+                return rules;
+            }
+
+            var code = JoinCode;
+            if (code == null && Shooter.Core.JoinCode.TryNormalize(rules.JoinCode, out var fromRules))
+            {
+                code = fromRules;
+            }
+
+            // コードの無い非公開のサーバーには誰も入れないので、決め忘れても作って入れるようにする
+            if (code == null)
+            {
+                code = Shooter.Core.JoinCode.Generate(Shooter.Core.JoinCode.DefaultLength, nextIndex);
+                generated = true;
+            }
+
+            return rules.WithPrivacy(true, code);
+        }
+
+        public static string PrivacyLogLine(NetMatchSettings settings, bool generated)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+            if (!settings.PrivateMatch)
+            {
+                return ServerProgram.LogTag + " public match";
+            }
+
+            return ServerProgram.LogTag + " private match join_code=" + settings.JoinCode
+                + (generated ? " (generated; pass " + JoinCodeFlag + " to choose one)" : "");
         }
 
         public static bool TryParse(
@@ -112,12 +174,69 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryParsePrivacy(args, out var privateMatch, out var joinCode, out error))
+            {
+                return false;
+            }
+
             if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
             {
                 return false;
             }
 
-            launch = new ServerLaunch(options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat);
+            launch = new ServerLaunch(
+                options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat, privateMatch, joinCode);
+            return true;
+        }
+
+        // コードだけ渡されたときも非公開にするのは、公開のサーバーはコードを確かめず、渡しても効かないため
+        private static bool TryParsePrivacy(IReadOnlyList<string> args, out bool privateMatch, out string joinCode, out string error)
+        {
+            privateMatch = false;
+            joinCode = null;
+            var privateGiven = false;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (string.Equals(args[i], PrivateFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (privateGiven)
+                    {
+                        error = PrivateFlag + " is given more than once";
+                        return false;
+                    }
+
+                    privateGiven = true;
+                    continue;
+                }
+
+                if (!string.Equals(args[i], JoinCodeFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = JoinCodeFlag + " requires a value";
+                    return false;
+                }
+
+                if (joinCode != null)
+                {
+                    error = JoinCodeFlag + " is given more than once";
+                    return false;
+                }
+
+                var text = args[++i];
+                if (!Shooter.Core.JoinCode.TryNormalize(text, out joinCode))
+                {
+                    error = JoinCodeFlag + " must be " + Shooter.Core.JoinCode.MinLength + "-" + Shooter.Core.JoinCode.MaxLength
+                        + " characters of letters, digits, '_' or '-' (got '" + text + "')";
+                    return false;
+                }
+            }
+
+            privateMatch = privateGiven || joinCode != null;
+            error = null;
             return true;
         }
 

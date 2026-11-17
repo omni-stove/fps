@@ -9,7 +9,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    // 建物は Unity のシーンと同じく試合をまたいで壊れたままにする。
+    // 建物は Unity のシーンと同じく同じマップで続ける試合をまたいで壊れたままにする。マップを替えると作り直し、どの建物も壊れていない状態に戻る。
     internal sealed class ServerStructures
     {
         public const string LogTag = "[Destruction]";
@@ -34,6 +34,8 @@ namespace Shooter.Server
                     continue;
                 }
 
+                // マップの当たりは読んだマップごとに 1 つで、前にこのマップで遊んだ試合で外した部品が残っているので、壊れていない建物から始める
+                _collision.SetGroupEnabled(collider.Group, true);
                 pieceCounts[structure] = Math.Max(pieceCounts.TryGetValue(structure, out var count) ? count : 0, piece + 1);
                 var shape = new PieceShape(collider, structure, piece);
                 _shapes.Add(shape);

@@ -149,6 +149,75 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void PaddleRisesTowardTheFloatHeightByTheBuoyancyAndStopsThere()
+        {
+            var tuning = new SwimTuning(3f, 12f, 15f);
+
+            var velocity = SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, 0f, 1f, 1f, tuning, 0.1f, out var displacement);
+            var last = SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, 1.2f, 0.05f, 1f, tuning, 0.1f, out var lastDisplacement);
+
+            Assert.That(velocity.Y, Is.EqualTo(1.2f).Within(1e-5f), "12 m/s² for 0.1 s");
+            Assert.That(displacement.Y, Is.EqualTo(0.12f).Within(1e-5f));
+            Assert.That(lastDisplacement.Y, Is.EqualTo(0.05f).Within(1e-6f), "the tick that would overshoot stops at the float height");
+            Assert.That(last.Y, Is.Zero);
+        }
+
+        [Test]
+        public void PaddleDivesAndAscendsAtTheSwimSpeed()
+        {
+            var tuning = new SwimTuning(3f, 12f, 15f);
+
+            var dive = SwimStep.Paddle(true, Vector2.Zero, 0f, true, false, 0f, 0f, 1f, tuning, 0.1f, out var down);
+            var ascend = SwimStep.Paddle(true, Vector2.Zero, 0f, false, true, 0f, 1f, 1f, tuning, 0.1f, out var up);
+            var atTheSurface = SwimStep.Paddle(true, Vector2.Zero, 0f, false, true, 0f, 0f, 1f, tuning, 0.1f, out _);
+
+            Assert.That(dive.Y, Is.EqualTo(-3f));
+            Assert.That(down.Y, Is.EqualTo(-0.3f).Within(1e-6f));
+            Assert.That(ascend.Y, Is.EqualTo(3f));
+            Assert.That(up.Y, Is.EqualTo(0.3f).Within(1e-6f));
+            Assert.That(atTheSurface.Y, Is.Zero, "jumping at the float height does not leave the water");
+        }
+
+        [Test]
+        public void PaddleMovesAlongTheYawAtTheSwimSpeedTimesTheCarryLoad()
+        {
+            var tuning = new SwimTuning(3f, 12f, 15f);
+
+            var forward = SwimStep.Paddle(true, new Vector2(0f, 1f), 0f, false, false, 0f, 0f, 1f, tuning, 0.5f, out var moved);
+            var right = SwimStep.Paddle(true, new Vector2(0f, 1f), MathF.PI / 2f, false, false, 0f, 0f, 0.5f, tuning, 0.5f, out _);
+            var diagonal = SwimStep.Paddle(true, new Vector2(1f, 1f), 0f, false, false, 0f, 0f, 1f, tuning, 0.5f, out _);
+
+            Assert.That(forward.Z, Is.EqualTo(3f).Within(1e-5f));
+            Assert.That(moved.Z, Is.EqualTo(1.5f).Within(1e-5f));
+            Assert.That(right.X, Is.EqualTo(1.5f).Within(1e-5f), "turned to +x and halved by the carry load");
+            Assert.That(new Vector2(diagonal.X, diagonal.Z).Length(), Is.EqualTo(3f).Within(1e-5f), "a diagonal is not faster");
+        }
+
+        [Test]
+        public void PaddleCapsTheFallSpeedOnlyOnTheTickItEntersTheWater()
+        {
+            var tuning = new SwimTuning(3f, 12f, 15f);
+
+            var entering = SwimStep.Paddle(false, Vector2.Zero, 0f, false, false, -20f, -5f, 1f, tuning, 0.01f, out _);
+            var swimming = SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, -20f, -5f, 1f, tuning, 0.01f, out _);
+
+            Assert.That(entering.Y, Is.EqualTo(-3f).Within(1e-5f), "-20 is cut to the swim speed, then held there");
+            Assert.That(swimming.Y, Is.EqualTo(-19.88f).Within(1e-4f), "already swimming: only the buoyancy slows it");
+        }
+
+        [Test]
+        public void PaddleRejectsBadArguments()
+        {
+            var tuning = SwimTuning.Default;
+
+            Assert.Throws<ArgumentNullException>(() => SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, 0f, 0f, 1f, null, 0.1f, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, 0f, 0f, 1f, tuning, 0f, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, 0f, 0f, -1f, tuning, 0.1f, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SwimStep.Paddle(true, new Vector2(float.NaN, 0f), 0f, false, false, 0f, 0f, 1f, tuning, 0.1f, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SwimStep.Paddle(true, Vector2.Zero, 0f, false, false, float.NaN, 0f, 1f, tuning, 0.1f, out _));
+        }
+
+        [Test]
         public void ALandingInWaterDealsNoFallDamage()
         {
             var spec = MotorSpec.Default;

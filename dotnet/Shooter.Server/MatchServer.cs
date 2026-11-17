@@ -49,7 +49,8 @@ namespace Shooter.Server
             ServerEventWriter events,
             Func<DateTime> utcNow,
             float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds,
-            ServerRulesData rules = null)
+            ServerRulesData rules = null,
+            IReadOnlyList<ServerMapData> maps = null)
         {
             _rules = rules;
             Bodies = new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
@@ -61,11 +62,13 @@ namespace Shooter.Server
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
+            var settings = rules?.Settings ?? NetMatchSettings.Default;
             Match = new ServerMatch(
-                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference)
+                restartDelaySeconds, log, events, utcNow, settings.MaxTeamSizeDifference, settings.MapVoteSeconds)
             {
                 MaxPlayers = MaxPlayers,
             };
+            Match.UseMaps(map, maps);
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }
@@ -345,8 +348,8 @@ namespace Shooter.Server
         private void Approve(ConnectionId connection, ConnectRequestMessage request)
         {
             // Netcode の承認データと同じ形にして Core の判定に渡し、版の違い・読めない・drain 中の断り方と文を今のサーバーとそろえる
-            var payload = Encoding.UTF8.GetBytes(request.ClientVersion + ConnectionPayload.Separator + request.RejoinKey);
-            var verdict = ConnectionApproval.Judge(_launch.ServerVersion, payload, _drain.IsDraining);
+            var payload = Encoding.UTF8.GetBytes(request.ClientVersion + ConnectionPayload.Separator + request.RejoinKey + JoinCodeField(request));
+            var verdict = ConnectionApproval.Judge(_launch.ServerVersion, payload, _drain.IsDraining, _rules?.Settings ?? NetMatchSettings.Default);
             if (!verdict.Approved)
             {
                 Reject(connection, verdict.RejectReason, verdict.LogText);
@@ -401,7 +404,7 @@ namespace Shooter.Server
             _accepted.ServerVersion = _launch.ServerVersion;
             _accepted.TickRate = TickClock.DefaultTickRate;
             _accepted.ServerTick = (int)Math.Min(_host.TickCount, int.MaxValue);
-            _accepted.Map = _launch.Map;
+            _accepted.Map = Match.Map.Name;
             _accepted.MaxHealth = _rules?.Settings.MaxHealth ?? NetMatchSettings.DefaultMaxHealth;
 
             // 移動のモジュールは同じルールのファイルの値 (ServerModules.MotorSettingsFrom) で動くので、クライアントの予測にも同じ値を渡す
@@ -411,8 +414,22 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request));
+            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request), request.SkillRating);
             _host.OnConnected(connection);
+        }
+
+        // 判定に要るのはコードだけなので、パーティなどほかの欄の形が違っても承認のデータ全体を読めなくしないよう、コードの欄だけを載せる。
+        // 形の違うコードは載せず、非公開の試合では「コードが無い」として断る
+        private static string JoinCodeField(ConnectRequestMessage request)
+        {
+            var joinCode = request.JoinCode;
+            if (!ConnectionExtras.IsValidField(joinCode, ConnectionExtras.MaxJoinCodeLength))
+            {
+                return "";
+            }
+
+            var emptyField = new string(ConnectionPayload.Separator, 2);
+            return emptyField + joinCode + emptyField;
         }
 
         // パーティの Id はチームを決めるのにしか使わないので、形が違っても断らずに無いものとして入れる

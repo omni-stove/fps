@@ -7,7 +7,7 @@ namespace Shooter.Core
 {
     public sealed class PlayerProfile : IEquatable<PlayerProfile>
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public const int OldestReadableVersion = 1;
 
@@ -18,10 +18,13 @@ namespace Shooter.Core
         private const string _deathsKey = "deaths";
         private const string _matchesKey = "matches";
         private const string _winsKey = "wins";
+        private const string _ratingKey = "rating";
 
         private static readonly string[] _version1Keys = { _versionKey, _xpKey, _killsKey, _deathsKey, _matchesKey, _winsKey };
 
-        private static readonly string[] _keys = { _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey };
+        private static readonly string[] _version2Keys = { _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey };
+
+        private static readonly string[] _keys = { _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey, _ratingKey };
 
         public static readonly PlayerProfile Empty = new PlayerProfile(0, 0, 0, 0, 0, 0);
 
@@ -31,6 +34,11 @@ namespace Shooter.Core
         }
 
         public PlayerProfile(int xp, int kills, int deaths, int matches, int wins, int assists)
+            : this(xp, kills, deaths, matches, wins, assists, SkillSpec.DefaultInitialRating)
+        {
+        }
+
+        public PlayerProfile(int xp, int kills, int deaths, int matches, int wins, int assists, int rating)
         {
             RequireNonNegative(xp, nameof(xp));
             RequireNonNegative(kills, nameof(kills));
@@ -38,6 +46,7 @@ namespace Shooter.Core
             RequireNonNegative(matches, nameof(matches));
             RequireNonNegative(wins, nameof(wins));
             RequireNonNegative(assists, nameof(assists));
+            RequireNonNegative(rating, nameof(rating));
             if (wins > matches)
             {
                 throw new ArgumentOutOfRangeException(
@@ -51,6 +60,7 @@ namespace Shooter.Core
             Matches = matches;
             Wins = wins;
             Assists = assists;
+            Rating = rating;
         }
 
         public int Version { get; }
@@ -67,6 +77,18 @@ namespace Shooter.Core
 
         public int Wins { get; }
 
+        public int Rating { get; }
+
+        public static PlayerProfile Started(int rating)
+        {
+            return new PlayerProfile(0, 0, 0, 0, 0, 0, rating);
+        }
+
+        public PlayerProfile WithRating(int rating)
+        {
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, rating);
+        }
+
         public string ToJson()
         {
             var builder = new StringBuilder();
@@ -77,18 +99,26 @@ namespace Shooter.Core
             AppendInt(builder, _assistsKey, Assists).Append(',');
             AppendInt(builder, _deathsKey, Deaths).Append(',');
             AppendInt(builder, _matchesKey, Matches).Append(',');
-            AppendInt(builder, _winsKey, Wins);
+            AppendInt(builder, _winsKey, Wins).Append(',');
+            AppendInt(builder, _ratingKey, Rating);
             builder.Append('}');
             return builder.ToString();
         }
 
         public static PlayerProfile FromJson(string json)
         {
+            return FromJson(json, SkillSpec.DefaultInitialRating);
+        }
+
+        // 初めの値を PlayerProfile の中で決めないのは、実力の値を持たない版 2 までの保存をゲームが調整した値から始めるため。
+        public static PlayerProfile FromJson(string json, int initialRating)
+        {
             if (json == null)
             {
                 throw new ArgumentNullException(nameof(json));
             }
 
+            RequireNonNegative(initialRating, nameof(initialRating));
             if (!(SaveJson.Parse(json) is Dictionary<string, object> root))
             {
                 throw new FormatException("invalid profile data: the root must be an object");
@@ -103,7 +133,7 @@ namespace Shooter.Core
                     + $"(expected {OldestReadableVersion.ToString(CultureInfo.InvariantCulture)} to {CurrentVersion.ToString(CultureInfo.InvariantCulture)})");
             }
 
-            var keys = version == OldestReadableVersion ? _version1Keys : _keys;
+            var keys = KeysOf(version);
             foreach (var key in root.Keys)
             {
                 if (Array.IndexOf(keys, key) < 0)
@@ -114,13 +144,14 @@ namespace Shooter.Core
 
             var xp = ReadInt(root, _xpKey);
             var kills = ReadInt(root, _killsKey);
-            var assists = version == OldestReadableVersion ? 0 : ReadInt(root, _assistsKey);
+            var assists = version < 2 ? 0 : ReadInt(root, _assistsKey);
             var deaths = ReadInt(root, _deathsKey);
             var matches = ReadInt(root, _matchesKey);
             var wins = ReadInt(root, _winsKey);
+            var rating = version < 3 ? initialRating : ReadInt(root, _ratingKey);
             try
             {
-                return new PlayerProfile(xp, kills, deaths, matches, wins, assists);
+                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, rating);
             }
             catch (ArgumentException e)
             {
@@ -137,7 +168,8 @@ namespace Shooter.Core
                 && Assists == other.Assists
                 && Deaths == other.Deaths
                 && Matches == other.Matches
-                && Wins == other.Wins;
+                && Wins == other.Wins
+                && Rating == other.Rating;
         }
 
         public override bool Equals(object obj)
@@ -147,15 +179,28 @@ namespace Shooter.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Xp, Kills, Assists, Deaths, Matches, Wins);
+            return HashCode.Combine(Xp, Kills, Assists, Deaths, Matches, Wins, Rating);
         }
 
         public override string ToString()
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "xp={0} kills={1} assists={2} deaths={3} matches={4} wins={5}",
-                Xp, Kills, Assists, Deaths, Matches, Wins);
+                "xp={0} kills={1} assists={2} deaths={3} matches={4} wins={5} rating={6}",
+                Xp, Kills, Assists, Deaths, Matches, Wins, Rating);
+        }
+
+        private static string[] KeysOf(int version)
+        {
+            switch (version)
+            {
+                case 1:
+                    return _version1Keys;
+                case 2:
+                    return _version2Keys;
+                default:
+                    return _keys;
+            }
         }
 
         private static StringBuilder AppendInt(StringBuilder builder, string key, int value)

@@ -65,6 +65,17 @@ namespace Shooter.Runtime
 
         public static GameSignal<SpectateStatus?> Spectate { get; } = new GameSignal<SpectateStatus?>(nameof(Spectate));
 
+        // 以下の送る・操る口は、UI (Shooter.Runtime.UI) が NetV2 を参照しないので NetV2 の部品がここに出す。
+        public static GameSignal<IChatSender> ChatSender { get; } = new GameSignal<IChatSender>(nameof(ChatSender));
+
+        public static GameSignal<IMapVoteSender> MapVoteSender { get; } = new GameSignal<IMapVoteSender>(nameof(MapVoteSender));
+
+        public static GameSignal<PartyStatus?> Party { get; } = new GameSignal<PartyStatus?>(nameof(Party));
+
+        public static GameSignal<IPartyControl> PartyControl { get; } = new GameSignal<IPartyControl>(nameof(PartyControl));
+
+        public static GameSignal<IJoinByCode> JoinByCode { get; } = new GameSignal<IJoinByCode>(nameof(JoinByCode));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -94,6 +105,11 @@ namespace Shooter.Runtime
             Voice.Reset();
             MapVote.Reset();
             Spectate.Reset();
+            ChatSender.Reset();
+            MapVoteSender.Reset();
+            Party.Reset();
+            PartyControl.Reset();
+            JoinByCode.Reset();
         }
     }
 }

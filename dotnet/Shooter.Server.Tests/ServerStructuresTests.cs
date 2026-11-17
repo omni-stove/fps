@@ -51,6 +51,23 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void BuildingTheStructuresAgainStartsFromIntactWalls()
+        {
+            var map = Map(withLayouts: true);
+            var first = new ServerStructures(map, _log) { Enabled = true };
+            first.ApplyHit(10, new Vector3(0f, 0.5f, 0f), 60, 0f, _changed, _log);
+            Assert.That(map.World.Raycast(new Vector3(-5f, 1.5f, 0f), Vector3.UnitX, 10f, ~0, out _), Is.False);
+
+            var again = new ServerStructures(map, _log) { Enabled = true };
+
+            Assert.That(again.IsDestroyed(0, 0), Is.False);
+            Assert.That(again.IsDestroyed(0, 1), Is.False);
+            Assert.That(map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 0)), Is.True);
+            Assert.That(map.Collision.IsGroupEnabled(MapColliderGroups.Piece(0, 1)), Is.True);
+            Assert.That(map.World.Raycast(new Vector3(-5f, 1.5f, 0f), Vector3.UnitX, 10f, ~0, out _), Is.True);
+        }
+
+        [Test]
         public void TheBlastIsScaledByTheDistanceToEachPiece()
         {
             var structures = new ServerStructures(Map(withLayouts: true), _log) { Enabled = true };

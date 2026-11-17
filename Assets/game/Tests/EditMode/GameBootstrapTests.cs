@@ -9,6 +9,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using UnderwaterPresenter = Shooter.Runtime.Traversal.UnderwaterPresenter;
+using WaterVolumes = Shooter.Runtime.Traversal.WaterVolumes;
 
 namespace Shooter.Tests.EditMode
 {
@@ -259,6 +261,104 @@ namespace Shooter.Tests.EditMode
             Assert.That(_world.Mover.VaultRule, Is.EqualTo(_world.Rules.Actions.Vault));
             Assert.That(_world.Mover.IsVaulting, Is.False);
             Assert.That(_world.Weapon.IsFireBlocked, Is.False, "not vaulting");
+        }
+
+        [Test]
+        public void ThePlayerGetsTheMinimapRumbleDeadzoneLeanAndUnderwaterParts()
+        {
+            var player = _world.Player;
+
+            Assert.That(player.GetComponent<MinimapPublisher>(), Is.Not.Null);
+            Assert.That(player.GetComponent<StickDeadzoneApplier>(), Is.Not.Null);
+
+            var rumble = player.GetComponent<GamepadRumble>();
+            Assert.That(rumble, Is.Not.Null);
+            Assert.That(rumble.Rig, Is.SameAs(_world.Rig), "the rumble listens for shots from the view it belongs to");
+
+            var underwater = player.GetComponent<UnderwaterPresenter>();
+            Assert.That(underwater, Is.Not.Null);
+            Assert.That(underwater.Eye, Is.SameAs(_world.Camera.transform), "under water is judged at the camera");
+            Assert.That(underwater.Damageable, Is.SameAs(_world.PlayerDamageable), "drowning hurts the player");
+
+            Assert.That(player.GetComponent<LeanController>(), Is.Not.Null, "the lean installer runs with the other actions");
+            Assert.That(PlayerActions.Installers.Any(i => i is LeanActionInstaller), Is.True);
+        }
+
+        [Test]
+        public void TheMinimapAndTheUnderwaterPartsAreOnlyOnThePlayer()
+        {
+            foreach (var dummy in _world.Targets)
+            {
+                Assert.That(dummy.GetComponent<MinimapPublisher>(), Is.Null, dummy.name);
+                Assert.That(dummy.GetComponent<GamepadRumble>(), Is.Null, dummy.name);
+                Assert.That(dummy.GetComponent<UnderwaterPresenter>(), Is.Null, dummy.name);
+            }
+        }
+
+        [Test]
+        public void ThePlayerHandsItsMotorStateToTheLeaningViewAndBody()
+        {
+            var source = _world.Player.GetComponent<ICharacterMotorStateSource>();
+
+            Assert.That(source, Is.InstanceOf<PlayerMotorStateSource>());
+            Assert.That(((PlayerMotorStateSource)source).Mover, Is.SameAs(_world.Mover));
+            Assert.That(source.Spec, Is.Not.Null);
+            Assert.That(source.TryGetMotorState(out _), Is.False, "Edit Mode leaves the mover uninitialized, so there is no state yet");
+        }
+
+        [Test]
+        public void TheDamageablesRecordAssistsWithTheAssistTuning()
+        {
+            var asset = Resources.Load<TextAsset>(KitTuning.AssistResourcePath);
+            Assert.That(asset, Is.Not.Null, "Resources/" + KitTuning.AssistResourcePath + ".json");
+            var expected = AssistJson.Parse(asset.text, KitTuning.AssistResourcePath);
+
+            var spec = KillFeedAssists.Ledger.Spec;
+
+            Assert.That(spec, Is.SameAs(KitTuning.Assist));
+            Assert.That(spec.WindowSeconds, Is.EqualTo(expected.WindowSeconds));
+            Assert.That(spec.MinDamage, Is.EqualTo(expected.MinDamage));
+        }
+
+        [Test]
+        public void SwimmingBlocksFiringAndAimingUntilThePlayerLeavesTheWater()
+        {
+            var move = new InputAction("Move", InputActionType.Value, expectedControlType: "Vector2");
+            var sprint = new InputAction("Sprint", InputActionType.Button);
+            var crouch = new InputAction("Crouch", InputActionType.Button);
+            var jump = new InputAction("Jump", InputActionType.Button);
+            try
+            {
+                var mover = _world.Mover;
+                mover.Initialize(_world.Controller, _world.Look, move, sprint, crouch, jump, MotorSpec.Default);
+                mover.SwimTuning = SwimTuning.Default;
+                mover.Water = new WaterVolumes(new[]
+                {
+                    new WaterBox(new System.Numerics.Vector3(-10f, -1f, -10f), new System.Numerics.Vector3(10f, 4f, 10f), 3f),
+                });
+                Assert.That(_world.Weapon.IsFireBlocked, Is.False, "dry before the tick");
+                Assert.That(_world.Ads.AdsBlocker(), Is.False);
+
+                mover.Tick(Vector2.zero, false, false, false, 0.02f);
+
+                Assert.That(mover.IsSwimming, Is.True);
+                Assert.That(_world.Weapon.IsFireBlocked, Is.True);
+                Assert.That(_world.Ads.AdsBlocker(), Is.True);
+
+                mover.Water = NoWaterVolumes.Instance;
+                mover.Tick(Vector2.zero, false, false, false, 0.02f);
+
+                Assert.That(mover.IsSwimming, Is.False);
+                Assert.That(_world.Weapon.IsFireBlocked, Is.False);
+                Assert.That(_world.Ads.AdsBlocker(), Is.False);
+            }
+            finally
+            {
+                move.Dispose();
+                sprint.Dispose();
+                crouch.Dispose();
+                jump.Dispose();
+            }
         }
 
         [Test]

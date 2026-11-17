@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -15,7 +16,9 @@ namespace Shooter.Server
         private readonly Func<float> _clock;
         private readonly Action<int> _sleep;
         private ServerContext _context;
+        private ServerMatch _match;
         private ServerLobbyRegistration _registration;
+        private int? _skillAverage;
 
         public ServerLobbyModule(Func<TextWriter, IServerLobbyBackend> createBackend, string endpoint)
             : this(createBackend, endpoint, StopwatchClock(), Thread.Sleep)
@@ -34,15 +37,21 @@ namespace Shooter.Server
 
         public ServerLobbyRegistration Registration => _registration;
 
+        public int? SkillAverage => _skillAverage;
+
         public void Start(ServerContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _match = context.Match;
+            _match.PlayerJoined += HandlePlayersChanged;
+            _match.PlayerLeft += HandlePlayersChanged;
+            UpdateSkillAverage();
             var backend = _createBackend(context.Log) ?? throw new InvalidOperationException("the EOS lobby factory returned no backend");
             _registration = new ServerLobbyRegistration(
                 backend,
                 _endpoint,
                 context.Version,
-                (context.Rules?.Settings ?? NetMatchSettings.Default).MaxPlayers,
+                context.Rules?.Settings ?? NetMatchSettings.Default,
                 context.Log,
                 _clock,
                 _sleep,
@@ -51,7 +60,7 @@ namespace Shooter.Server
 
         public void Tick(long tick, float deltaSeconds)
         {
-            _registration.Tick(_context.Match.HumanCount, _context.Control.IsDraining);
+            _registration.Tick(_context.Match.HumanCount, _skillAverage, _context.Control.IsDraining);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -68,6 +77,7 @@ namespace Shooter.Server
 
         public void Stop()
         {
+            Unsubscribe();
             if (_registration == null)
             {
                 return;
@@ -86,8 +96,37 @@ namespace Shooter.Server
 
         public void Dispose()
         {
+            Unsubscribe();
             _registration?.Dispose();
             _registration = null;
+        }
+
+        private void HandlePlayersChanged(ServerPlayer player)
+        {
+            UpdateSkillAverage();
+        }
+
+        private void UpdateSkillAverage()
+        {
+            var ratings = new List<int?>();
+            foreach (var player in _match.Players)
+            {
+                ratings.Add(player.SkillRating);
+            }
+
+            _skillAverage = ServerLobby.SkillAverage(ratings);
+        }
+
+        private void Unsubscribe()
+        {
+            if (_match == null)
+            {
+                return;
+            }
+
+            _match.PlayerJoined -= HandlePlayersChanged;
+            _match.PlayerLeft -= HandlePlayersChanged;
+            _match = null;
         }
 
         private static Func<float> StopwatchClock()

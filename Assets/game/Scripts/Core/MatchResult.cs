@@ -6,6 +6,11 @@ namespace Shooter.Core
     public readonly struct MatchResult : IEquatable<MatchResult>
     {
         public MatchResult(MatchOutcome outcome, int kills, int deaths, int ownScore)
+            : this(outcome, kills, deaths, ownScore, false, null)
+        {
+        }
+
+        public MatchResult(MatchOutcome outcome, int kills, int deaths, int ownScore, bool rated, int? opponentRating = null)
         {
             if (!Enum.IsDefined(typeof(MatchOutcome), outcome))
             {
@@ -27,10 +32,22 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(ownScore), ownScore, "ownScore must not be negative");
             }
 
+            if (opponentRating.HasValue && opponentRating.Value < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(opponentRating), opponentRating, "opponentRating must not be negative");
+            }
+
+            if (opponentRating.HasValue && !rated)
+            {
+                throw new ArgumentException("opponentRating is only for a rated match", nameof(opponentRating));
+            }
+
             Outcome = outcome;
             Kills = kills;
             Deaths = deaths;
             OwnScore = ownScore;
+            Rated = rated;
+            OpponentRating = opponentRating;
         }
 
         public MatchOutcome Outcome { get; }
@@ -41,9 +58,18 @@ namespace Shooter.Core
 
         public int OwnScore { get; }
 
+        public bool Rated { get; }
+
+        public int? OpponentRating { get; }
+
         public bool Equals(MatchResult other)
         {
-            return Outcome == other.Outcome && Kills == other.Kills && Deaths == other.Deaths && OwnScore == other.OwnScore;
+            return Outcome == other.Outcome
+                && Kills == other.Kills
+                && Deaths == other.Deaths
+                && OwnScore == other.OwnScore
+                && Rated == other.Rated
+                && OpponentRating == other.OpponentRating;
         }
 
         public override bool Equals(object obj)
@@ -63,13 +89,19 @@ namespace Shooter.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Outcome, Kills, Deaths, OwnScore);
+            return HashCode.Combine(Outcome, Kills, Deaths, OwnScore, Rated, OpponentRating);
         }
 
         public override string ToString()
         {
-            return Outcome + " " + Kills.ToString(CultureInfo.InvariantCulture) + "/" + Deaths.ToString(CultureInfo.InvariantCulture)
+            var text = Outcome + " " + Kills.ToString(CultureInfo.InvariantCulture) + "/" + Deaths.ToString(CultureInfo.InvariantCulture)
                 + " score " + OwnScore.ToString(CultureInfo.InvariantCulture);
+            if (!Rated)
+            {
+                return text;
+            }
+
+            return text + " rated vs " + (OpponentRating.HasValue ? OpponentRating.Value.ToString(CultureInfo.InvariantCulture) : "?");
         }
     }
 }

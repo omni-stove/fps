@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Shooter.Core;
 using Shooter.Protocol;
 
@@ -48,6 +49,7 @@ namespace Shooter.NetV2
                 throw new ArgumentOutOfRangeException(nameof(tick), tick, "tick must be -1 or later");
             }
 
+            state = SnapshotMotion.Complete(state, default, _simulation.Water, _simulation.Body.Geometry);
             _buffer.Reset(tick, state);
             _simulation.Place(state);
             _frameStart = 0;
@@ -98,15 +100,41 @@ namespace Shooter.NetV2
                 }
             }
 
+            var probed = false;
+            if (_buffer.TryGet(lastProcessedInputTick, out var input, out var predicted))
+            {
+                authoritative = Complete(authoritative, predicted, input.Yaw, out probed);
+            }
+
             var result = _buffer.Reconcile(lastProcessedInputTick, authoritative);
 
-            // やり直しは体を途中の状態に置いたまま終わるので、表示と次の予測のために最新の状態へ置き直す
-            if (result.Outcome == ReconcileOutcome.Corrected)
+            // やり直しと壁の調べは体を途中の状態に置いたまま終わるので、表示と次の予測のために最新の状態へ置き直す
+            if (result.Outcome == ReconcileOutcome.Corrected || probed)
             {
                 _simulation.Place(_buffer.Current);
             }
 
             return result;
+        }
+
+        // 走り始めを予測し損ねた壁走りは、スナップショットに壁の向きが無いので、サーバーの位置でその tick の向きから壁を調べ直す。
+        // 調べても同じ側に壁が無ければ法線を空のまま渡し、次の tick に壁を見失って走り終える。
+        private CharacterMotorState Complete(CharacterMotorState authoritative, CharacterMotorState predicted, float yaw, out bool probed)
+        {
+            probed = false;
+            var completed = SnapshotMotion.Complete(authoritative, predicted, _simulation.Water, _simulation.Body.Geometry);
+            var wallRun = completed.WallRun;
+            if (!wallRun.IsRunning || wallRun.Normal != Vector3.Zero)
+            {
+                return completed;
+            }
+
+            _simulation.Place(completed);
+            probed = true;
+            var wall = _simulation.WallSensor.Probe(completed.Position, yaw);
+            return wall.Side == wallRun.Side
+                ? SnapshotMotion.WithWallRun(completed, new CharacterWallRunState(wallRun.Side, _simulation.TickSeconds, wall.Normal))
+                : completed;
         }
 
         // 座席の位置は乗り物の動きで決まり入力からやり直せないので、比べずにサーバーの状態を今の予測にする。

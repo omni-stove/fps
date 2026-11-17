@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Shooter.Core;
 using Shooter.Protocol;
 
@@ -13,10 +14,12 @@ namespace Shooter.NetV2
         }
 
         // 吹き飛ばしは持ち主にだけ送るので (OwnerSnapshot.Knockback)、行とは別に受け取る。
+        // 泳ぎと壁走りは有無と向きしか届かないので、ここでは水面・息・壁の向き・走った秒数を推し量らず空にし、持ち主の予測だけが Complete で埋める。
         public static CharacterMotorState ToState(in PlayerSnapshot row, CharacterKnockbackState knockback)
         {
             var cover = row.Cover;
             var vault = row.Vault;
+            var wallRunSide = (Shooter.Core.WallRunSide)(byte)row.WallRunSide;
             return new CharacterMotorState(
                 row.Position,
                 row.Velocity,
@@ -30,10 +33,112 @@ namespace Shooter.NetV2
                 row.Prone,
                 row.Ladder,
                 knockback,
-                CharacterLeanState.None,
-                CharacterSwimState.None,
-                CharacterWallRunState.None,
+                new CharacterLeanState(row.Lean),
+                row.Swimming ? new CharacterSwimState(true, 0f, false) : CharacterSwimState.None,
+                wallRunSide == Shooter.Core.WallRunSide.None
+                    ? CharacterWallRunState.None
+                    : new CharacterWallRunState(wallRunSide, 0f, Vector3.Zero),
                 row.AirJumpsUsed);
+        }
+
+        /// <summary>
+        /// 巻き戻すかを決める値 (泳いでいるか・壁走りの向き・リーンの向き) は authoritative のまま変えない。変えると食い違いを見逃す。
+        /// 走り始めを予測し損ねた壁走りの法線を空のまま返すのは、壁を調べるのに体を世界に置く必要があり、それを持つのが呼び手のため。
+        /// </summary>
+        public static CharacterMotorState Complete(
+            CharacterMotorState authoritative, CharacterMotorState predicted, IWaterVolumes water, StanceGeometry geometry)
+        {
+            if (water == null)
+            {
+                throw new ArgumentNullException(nameof(water));
+            }
+
+            if (geometry == null)
+            {
+                throw new ArgumentNullException(nameof(geometry));
+            }
+
+            // 届く傾きは 1/127 刻みに丸めてあるので、向きが同じなら丸める前の予測の量を使い、やり直しで量が段になって動かないようにする
+            var lean = Side(authoritative.Lean.Amount) == Side(predicted.Lean.Amount) ? predicted.Lean : authoritative.Lean;
+            return new CharacterMotorState(
+                authoritative.Position,
+                authoritative.Velocity,
+                authoritative.IsGrounded,
+                authoritative.Stance,
+                authoritative.Cover,
+                authoritative.Dodge,
+                authoritative.Vault,
+                authoritative.Prone,
+                authoritative.Ladder,
+                authoritative.Knockback,
+                lean,
+                CompleteSwim(authoritative, predicted.Swim, water, geometry),
+                CompleteWallRun(authoritative, predicted.WallRun),
+                authoritative.AirJumpsUsed);
+        }
+
+        public static CharacterMotorState WithWallRun(CharacterMotorState state, CharacterWallRunState wallRun)
+        {
+            return new CharacterMotorState(
+                state.Position,
+                state.Velocity,
+                state.IsGrounded,
+                state.Stance,
+                state.Cover,
+                state.Dodge,
+                state.Vault,
+                state.Prone,
+                state.Ladder,
+                state.Knockback,
+                state.Lean,
+                state.Swim,
+                wallRun,
+                state.AirJumpsUsed);
+        }
+
+        private static CharacterSwimState CompleteSwim(
+            CharacterMotorState authoritative, CharacterSwimState predicted, IWaterVolumes water, StanceGeometry geometry)
+        {
+            if (!authoritative.Swim.IsSwimming)
+            {
+                return CharacterSwimState.None;
+            }
+
+            if (predicted.IsSwimming)
+            {
+                return predicted;
+            }
+
+            // SwimStep と同じく足元の水面で測る。予測が水に無かったので息はまだ使っていないものとする
+            var standing = geometry.Standing;
+            var position = authoritative.Position;
+            var surface = water.SurfaceAt(new Vector3(position.X, position.Y + standing.BottomY, position.Z));
+            var surfaceY = surface.HasValue && !float.IsNaN(surface.Value) && !float.IsInfinity(surface.Value)
+                ? surface.Value
+                : position.Y + SwimStep.ChestY(geometry);
+            return new CharacterSwimState(true, surfaceY, position.Y + standing.EyeY < surfaceY);
+        }
+
+        private static CharacterWallRunState CompleteWallRun(CharacterMotorState authoritative, CharacterWallRunState predicted)
+        {
+            var side = authoritative.WallRun.Side;
+            if (side != Shooter.Core.WallRunSide.None)
+            {
+                return predicted.Side == side ? predicted : new CharacterWallRunState(side, 0f, Vector3.Zero);
+            }
+
+            // 着地すれば前の壁を忘れる (WallRunStep.Stop) ので、空中のときだけ、同じ壁に付き直さないための前の壁を予測から引き継ぐ
+            if (authoritative.IsGrounded)
+            {
+                return CharacterWallRunState.None;
+            }
+
+            return predicted.IsRunning ? CharacterWallRunState.LeftWall(predicted.Normal) : predicted;
+        }
+
+        private static int Side(float amount)
+        {
+            return amount > 0f ? 1 : (amount < 0f ? -1 : 0);
         }
 
         // ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は入力で送らないので、
@@ -71,10 +176,12 @@ namespace Shooter.NetV2
                 proneAllowed: rules.Prone == Prone.On,
                 ladderAllowed: rules.Ladder == Ladder.On,
                 carrySpeedMultiplier: carrySpeedMultiplier,
-                jumpAllowed: rules.Jump == Jump.On);
+                jumpAllowed: rules.Jump == Jump.On,
+                lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)));
         }
 
-        public static InputButtons Buttons(bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge, bool prone = false)
+        public static InputButtons Buttons(
+            bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge, bool prone = false, bool leanLeft = false, bool leanRight = false)
         {
             var buttons = InputButtons.None;
             buttons |= sprint ? InputButtons.Sprint : InputButtons.None;
@@ -84,6 +191,8 @@ namespace Shooter.NetV2
             buttons |= aim ? InputButtons.Aim : InputButtons.None;
             buttons |= dodge ? InputButtons.Dodge : InputButtons.None;
             buttons |= prone ? InputButtons.Prone : InputButtons.None;
+            buttons |= leanLeft ? InputButtons.LeanLeft : InputButtons.None;
+            buttons |= leanRight ? InputButtons.LeanRight : InputButtons.None;
             return buttons;
         }
 

@@ -185,5 +185,68 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => new SpectateStatus(4, 0, SpectateReason.Dead));
             Assert.Throws<ArgumentOutOfRangeException>(() => new SpectateStatus(4, 1, (SpectateReason)9));
         }
+
+        [Test]
+        public void APartyStatusCopiesItsMembersAndKeepsTheCodeAndLeader()
+        {
+            var members = new List<PartyMember> { new PartyMember("Ann", true), new PartyMember("Bo", false) };
+            var status = new PartyStatus(PartyStage.Searching, members, "lobby_7-A", true);
+            members.Add(new PartyMember("Cy", false));
+
+            Assert.That(status.Stage, Is.EqualTo(PartyStage.Searching));
+            Assert.That(status.Members, Is.EqualTo(new[] { new PartyMember("Ann", true), new PartyMember("Bo", false) }));
+            Assert.That(status.Members[1].Name, Is.EqualTo("Bo"));
+            Assert.That(status.Members[1].IsLeader, Is.False);
+            Assert.That(status.InviteCode, Is.EqualTo("lobby_7-A"));
+            Assert.That(status.HasInviteCode, Is.True);
+            Assert.That(status.IsLocalLeader, Is.True);
+            Assert.That(status, Is.EqualTo(new PartyStatus(PartyStage.Searching, new[] { new PartyMember("Ann", true), new PartyMember("Bo", false) }, "lobby_7-A", true)));
+            Assert.That(status, Is.Not.EqualTo(new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Ann", true), new PartyMember("Bo", false) }, "lobby_7-A", true)));
+            Assert.That(status, Is.Not.EqualTo(new PartyStatus(PartyStage.Searching, new[] { new PartyMember("Bo", false), new PartyMember("Ann", true) }, "lobby_7-A", true)));
+        }
+
+        [Test]
+        public void APartyStatusOutsideAPartyReadsEmpty()
+        {
+            var status = new PartyStatus(PartyStage.None, null, null, false);
+
+            Assert.That(status.Members, Is.Empty);
+            Assert.That(status.InviteCode, Is.Empty);
+            Assert.That(status.HasInviteCode, Is.False);
+            Assert.That(status, Is.EqualTo(new PartyStatus(PartyStage.None, Array.Empty<PartyMember>(), string.Empty, false)));
+            Assert.That(status, Is.EqualTo(default(PartyStatus)));
+            Assert.That(default(PartyStatus).Members, Is.Empty);
+            Assert.That(default(PartyMember).Name, Is.Empty);
+            Assert.That(new PartyStatus(PartyStage.Joining, null, null, false).Members, Is.Empty, "the lobby is not read yet while joining");
+        }
+
+        [Test]
+        public void APartyStatusRejectsOutOfRangeValues()
+        {
+            var leader = new[] { new PartyMember("Ann", true) };
+
+            Assert.Throws<ArgumentNullException>(() => new PartyMember(null, false));
+            Assert.Throws<ArgumentException>(() => new PartyMember(" ", false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PartyStatus((PartyStage)9, null, null, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PartyStatus((PartyStage)(-1), leader, "lobby", false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.InParty, new[] { default(PartyMember) }, null, false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Ann", true), new PartyMember("Bo", true) }, null, false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.InParty, leader, "has space", false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.InParty, leader, new string('a', ConnectionExtras.MaxPartyIdLength + 1), false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Bo", false) }, null, true));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.None, leader, null, false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.None, null, "lobby", false));
+            Assert.Throws<ArgumentException>(() => new PartyStatus(PartyStage.None, null, null, true));
+            Assert.DoesNotThrow(() => new PartyStatus(PartyStage.InParty, leader, new string('a', ConnectionExtras.MaxPartyIdLength), false));
+        }
+
+        [Test]
+        public void TheJoinCodeOutcomesAreTheFiveTheUiShows()
+        {
+            Assert.That(
+                Enum.GetValues(typeof(JoinCodeOutcome)),
+                Is.EqualTo(new[] { JoinCodeOutcome.Joined, JoinCodeOutcome.NotFound, JoinCodeOutcome.Full, JoinCodeOutcome.VersionMismatch, JoinCodeOutcome.Failed }));
+            Assert.That(Enum.IsDefined(typeof(JoinCodeOutcome), (JoinCodeOutcome)5), Is.False);
+        }
     }
 }

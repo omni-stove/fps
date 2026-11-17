@@ -168,9 +168,23 @@ namespace Shooter.Tests.EditMode
             Assert.That(content.RumbleTuning, Is.SameAs(rumble));
         }
 
+        [Test]
+        public void TheSkillTuningIsKeptAndStartsEmpty()
+        {
+            var content = Content("A");
+
+            Assert.That(content.SkillTuning, Is.Null);
+
+            var skill = Track(new TextAsset("{}"));
+            content.SkillTuning = skill;
+
+            Assert.That(content.SkillTuning, Is.SameAs(skill));
+        }
+
         [TestCase("_streaksTuning", "Resources/Tuning/streaks")]
         [TestCase("_aimAssistTuning", "Resources/Tuning/aim-assist")]
         [TestCase("_progressionTuning", "Resources/Tuning/progression")]
+        [TestCase("_skillTuning", "Resources/Tuning/skill")]
         [TestCase("_minimapTuning", "Resources/Tuning/minimap")]
         [TestCase("_assistTuning", "Resources/Tuning/assist")]
         [TestCase("_rumbleTuning", "Resources/Tuning/rumble")]

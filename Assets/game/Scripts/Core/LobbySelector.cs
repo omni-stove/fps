@@ -13,6 +13,11 @@ namespace Shooter.Core
 
         public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize)
         {
+            return PickServer(lobbies, version, partySize, null);
+        }
+
+        public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize, int? skillRating)
+        {
             if (lobbies == null)
             {
                 throw new ArgumentNullException(nameof(lobbies));
@@ -20,6 +25,7 @@ namespace Shooter.Core
 
             ThrowIfInvalidPartySize(partySize);
             LobbyInfo best = null;
+            long bestGap = 0;
             long bestPlayers = 0;
             foreach (var lobby in lobbies)
             {
@@ -28,17 +34,42 @@ namespace Shooter.Core
                     continue;
                 }
 
+                var gap = SkillGap(lobby, skillRating);
                 lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
                 if (best == null
-                    || players > bestPlayers
-                    || (players == bestPlayers && string.CompareOrdinal(lobby.Id, best.Id) < 0))
+                    || gap < bestGap
+                    || (gap == bestGap && players > bestPlayers)
+                    || (gap == bestGap && players == bestPlayers && string.CompareOrdinal(lobby.Id, best.Id) < 0))
                 {
                     best = lobby;
+                    bestGap = gap;
                     bestPlayers = players;
                 }
             }
 
             return best;
+        }
+
+        // 自分の値が無いときに値の無いロビーを後ろへ回すと、値を送らない古いクライアントの選び方まで変わるので、どのロビーも差を 0 とする。
+        public static long SkillGap(LobbyInfo lobby, int? skillRating)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            if (!skillRating.HasValue)
+            {
+                return 0;
+            }
+
+            var average = lobby.SkillAverage;
+            if (!average.HasValue)
+            {
+                return long.MaxValue;
+            }
+
+            return Math.Abs((long)average.Value - skillRating.Value);
         }
 
         public static string ServerRejection(LobbyInfo lobby, string version)
@@ -60,41 +91,62 @@ namespace Shooter.Core
                 return "private";
             }
 
-            // バケットにも版は入っているが、切り詰めた版が衝突したときや古いサーバーの残りを、属性でも弾く
-            var expected = LobbyLaunchOptions.BucketVersion(version);
-            if (!lobby.TryGetText(ServerLobby.VersionKey, out var serverVersion))
+            return Rejection(lobby, version, partySize, out _);
+        }
+
+        // 非公開のサーバーはコードを知る人のためのものなので、Quick Match と違って private では弾かない。
+        public static JoinCodeOutcome PickByJoinCode(
+            IReadOnlyList<LobbyInfo> lobbies, string code, string version, int partySize, out LobbyInfo picked)
+        {
+            if (lobbies == null)
             {
-                return "no version";
+                throw new ArgumentNullException(nameof(lobbies));
             }
 
-            if (!string.Equals(serverVersion, expected, StringComparison.Ordinal))
+            ThrowIfInvalidPartySize(partySize);
+            picked = null;
+            var full = false;
+            var otherVersion = false;
+            var broken = false;
+            foreach (var lobby in lobbies)
             {
-                return "version " + serverVersion + " (this build is " + expected + ")";
+                if (lobby == null || !JoinCode.Matches(lobby.JoinCode, code))
+                {
+                    continue;
+                }
+
+                if (Rejection(lobby, version, partySize, out var kind) == null)
+                {
+                    // コードは試合ごとに作るので重なるのはまれだが、重なっても検索の返す順によらず同じサーバーを選ぶ
+                    if (picked == null || string.CompareOrdinal(lobby.Id, picked.Id) < 0)
+                    {
+                        picked = lobby;
+                    }
+
+                    continue;
+                }
+
+                full |= kind == RejectionKind.Full;
+                otherVersion |= kind == RejectionKind.Version;
+                broken |= kind == RejectionKind.Broken;
             }
 
-            if (!lobby.TryGetText(ServerLobby.ServerKey, out var endpoint) || !NetLaunchOptions.TryParseEndpoint(endpoint, out _, out _))
+            if (picked != null)
             {
-                return "no server address";
+                return JoinCodeOutcome.Joined;
             }
 
-            if (!lobby.TryGetNumber(ServerLobby.PlayersKey, out var players) || players < 0)
+            if (full)
             {
-                return "no player count";
+                return JoinCodeOutcome.Full;
             }
 
-            var free = ServerLobby.PlayerSlots(lobby) - players;
-            if (free <= 0)
+            if (otherVersion)
             {
-                return "full";
+                return JoinCodeOutcome.VersionMismatch;
             }
 
-            if (free < partySize)
-            {
-                return "room for " + free.ToString(CultureInfo.InvariantCulture)
-                    + " (party of " + partySize.ToString(CultureInfo.InvariantCulture) + ")";
-            }
-
-            return null;
+            return broken ? JoinCodeOutcome.Failed : JoinCodeOutcome.NotFound;
         }
 
         public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version)
@@ -154,12 +206,66 @@ namespace Shooter.Core
                 + " found (" + string.Join(", ", parts) + ")";
         }
 
+        private static string Rejection(LobbyInfo lobby, string version, int partySize, out RejectionKind kind)
+        {
+            // バケットにも版は入っているが、切り詰めた版が衝突したときや古いサーバーの残りを、属性でも弾く
+            var expected = LobbyLaunchOptions.BucketVersion(version);
+            if (!lobby.TryGetText(ServerLobby.VersionKey, out var serverVersion))
+            {
+                kind = RejectionKind.Broken;
+                return "no version";
+            }
+
+            if (!string.Equals(serverVersion, expected, StringComparison.Ordinal))
+            {
+                kind = RejectionKind.Version;
+                return "version " + serverVersion + " (this build is " + expected + ")";
+            }
+
+            if (!lobby.TryGetText(ServerLobby.ServerKey, out var endpoint) || !NetLaunchOptions.TryParseEndpoint(endpoint, out _, out _))
+            {
+                kind = RejectionKind.Broken;
+                return "no server address";
+            }
+
+            if (!lobby.TryGetNumber(ServerLobby.PlayersKey, out var players) || players < 0)
+            {
+                kind = RejectionKind.Broken;
+                return "no player count";
+            }
+
+            var free = ServerLobby.PlayerSlots(lobby) - players;
+            if (free <= 0)
+            {
+                kind = RejectionKind.Full;
+                return "full";
+            }
+
+            if (free < partySize)
+            {
+                kind = RejectionKind.Full;
+                return "room for " + free.ToString(CultureInfo.InvariantCulture)
+                    + " (party of " + partySize.ToString(CultureInfo.InvariantCulture) + ")";
+            }
+
+            kind = RejectionKind.None;
+            return null;
+        }
+
         private static void ThrowIfInvalidPartySize(int partySize)
         {
             if (partySize < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(partySize), partySize, "must be at least 1");
             }
+        }
+
+        private enum RejectionKind
+        {
+            None,
+            Version,
+            Broken,
+            Full,
         }
     }
 }

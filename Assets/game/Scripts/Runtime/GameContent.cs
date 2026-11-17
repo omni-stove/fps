@@ -69,6 +69,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("成長の調整値の JSON。空なら Resources/Tuning/progression")]
         private TextAsset _progressionTuning;
 
+        [SerializeField, Tooltip("実力の値の調整値の JSON。空なら Resources/Tuning/skill")]
+        private TextAsset _skillTuning;
+
         [SerializeField, Tooltip("ミニマップの調整値の JSON。空なら Resources/Tuning/minimap")]
         private TextAsset _minimapTuning;
 
@@ -282,6 +285,12 @@ namespace Shooter.Runtime
         {
             get => _progressionTuning;
             set => _progressionTuning = value;
+        }
+
+        public TextAsset SkillTuning
+        {
+            get => _skillTuning;
+            set => _skillTuning = value;
         }
 
         public TextAsset MinimapTuning

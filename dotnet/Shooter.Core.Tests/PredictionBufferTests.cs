@@ -56,6 +56,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TryGetReturnsTheInputAndStateOfAKeptTickOnly()
+        {
+            var buffer = Create();
+            buffer.Predict(1, 2f);
+            buffer.Predict(2, 3f);
+            buffer.Predict(3, 4f);
+
+            Assert.That(buffer.TryGet(2, out var input, out var state), Is.True);
+            Assert.That(input, Is.EqualTo(3f));
+            Assert.That(state, Is.EqualTo(5f));
+            Assert.That(buffer.TryGet(0, out _, out _), Is.False, "the start state is not a predicted tick");
+            Assert.That(buffer.TryGet(4, out _, out _), Is.False);
+
+            buffer.Reconcile(2, 5f);
+            Assert.That(buffer.TryGet(2, out _, out _), Is.False, "confirmed ticks are dropped");
+            Assert.That(buffer.TryGet(3, out var third, out var thirdState), Is.True);
+            Assert.That(third, Is.EqualTo(4f));
+            Assert.That(thirdState, Is.EqualTo(9f));
+        }
+
+        [Test]
         public void MatchingConfirmationDoesNothing()
         {
             var buffer = Create();

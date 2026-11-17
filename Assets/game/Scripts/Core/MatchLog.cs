@@ -139,6 +139,21 @@ namespace Shooter.Core
             return Tag + " restart";
         }
 
+        public static string MapChanged(string fromMap, string toMap)
+        {
+            if (string.IsNullOrEmpty(fromMap))
+            {
+                throw new ArgumentException("fromMap must not be empty", nameof(fromMap));
+            }
+
+            if (string.IsNullOrEmpty(toMap))
+            {
+                throw new ArgumentException("toMap must not be empty", nameof(toMap));
+            }
+
+            return Tag + " map changed from=" + fromMap + " to=" + toMap;
+        }
+
         public static string NextMatch(float delaySeconds)
         {
             if (!(delaySeconds >= 0f) || float.IsInfinity(delaySeconds))

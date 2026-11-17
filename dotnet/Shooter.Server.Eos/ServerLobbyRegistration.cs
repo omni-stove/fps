@@ -27,7 +27,7 @@ namespace Shooter.Server.Eos
             IServerLobbyBackend backend,
             string endpoint,
             string version,
-            int maxPlayers,
+            NetMatchSettings match,
             TextWriter log,
             Func<float> clock,
             Action<int> sleep,
@@ -35,6 +35,7 @@ namespace Shooter.Server.Eos
             RetrySchedule schedule = null)
         {
             ArgumentNullException.ThrowIfNull(backend);
+            ArgumentNullException.ThrowIfNull(match);
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _sleep = sleep ?? throw new ArgumentNullException(nameof(sleep));
@@ -44,7 +45,7 @@ namespace Shooter.Server.Eos
                 _service,
                 endpoint,
                 version,
-                maxPlayers,
+                match,
                 schedule ?? new RetrySchedule(ServerLobby.RetryIntervalSeconds, ServerLobby.TimeoutSeconds),
                 log);
         }
@@ -56,6 +57,11 @@ namespace Shooter.Server.Eos
         // 待ち受けていないサーバーを見つけさせないよう、待ち受けを始めた後の最初の呼び出しで登録を始める。
         // drain に入ったら、待っている間にクイックマッチで選ばれないようロビーを閉じ始める。
         public void Tick(int players, bool draining)
+        {
+            Tick(players, null, draining);
+        }
+
+        public void Tick(int players, int? skillAverage, bool draining)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (draining)
@@ -70,7 +76,7 @@ namespace Shooter.Server.Eos
 
             if (!_closing)
             {
-                _registrar.SetPlayers(players);
+                _registrar.SetPlayers(players, skillAverage);
             }
 
             _registrar.Tick(_clock());

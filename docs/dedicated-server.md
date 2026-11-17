@@ -129,11 +129,13 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
 | 引数 | 内容 |
 | --- | --- |
-| `-map <マップ名>` | 遊ぶマップ。`server-data/maps/<マップ名>.*` を読む。無ければ `NetTest` |
+| `-map <マップ名>` | 最初の試合のマップ。`server-data/maps/<マップ名>.*` を読む。無ければルールの `mapPool` の先頭、それも空なら `NetTest` |
 | `-rules <ルール名>` | 試合のルール。`server-data/rules/<ルール名>.json` を読む。無ければ `TeamDeathmatch` |
 | `-bots <人数>` | 人と Bot を合わせてこの人数になるまで Bot を足す |
 | `-transport udp\|eos` | 待ち受ける通信路。既定は `udp` |
 | `-register-lobby <公開アドレス:ポート>` | EOS のロビーに載せる (下の「EOS のロビーに登録する」) |
+| `--private` | 参加コードを知っている人だけが入れる非公開の試合にする (下の「非公開の試合」) |
+| `--join-code <コード>` | 非公開の試合の参加コード (英数字と `-` `_` で 16 文字まで。小文字は大文字にそろえる)。付けると `--private` も付けたことになる |
 | `-drain-timeout <秒>` | 止める前に試合の終わりを待つ秒数 |
 | `-log-format text\|json` | `json` なら試合のイベントを JSON で出す |
 | `-buildVersion <版>` | 版を焼き込んだものから変える |
@@ -155,6 +157,21 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 ```sh
 docker run --rm -e SHOOTER_SERVER_PORT=9000 -p 9000:9000/udp shooter-server:local
 ```
+
+### 非公開の試合
+
+`--private` を付けると、参加コードの合う人だけを入れる。コードを省くと 6 文字のコードを作り、起動のログに出す。
+
+```
+[Server] private match join_code=7KQ2MX (generated; pass --join-code to choose one)
+```
+
+ルールの JSON (`server-data/rules/<ルール名>.json`) の `match` の `privateMatch` と `joinCode` でも同じ設定ができる。
+起動の引数があればそちらを使う (`--join-code` は JSON の `joinCode` より優先し、`--private` だけなら JSON の `joinCode` を使う)。
+引数でも JSON でも非公開でなければ `[Server] public match` を出す。
+コードの合わない人・コードを送らなかった人は、版を比べた後に `[Net] rejected client <番号>: wrong join code for the private match`
+(送らなかったときは `no join code for the private match`) で断る。送られたコードはログに出さない。
+`-register-lobby` と一緒に使うと、ロビーに `private` と `join_code` の属性が付く。
 
 ### EOS で待ち受ける
 
@@ -197,14 +214,18 @@ Device ID でログインしたユーザー。ロビーでは RTC 部屋を開�
 | `version` | ビルドの版 |
 | `players` | 接続しているプレイヤーの人数 (整数。Bot は数えない) |
 | `voice_enabled` | `1` (RTC 部屋を開いている) |
+| `private` | 非公開の試合のときだけ `1`。クイックマッチはこのロビーを選ばない |
+| `join_code` | 非公開の試合のときだけ、その参加コード |
+| `skill_average` | 接続しているプレイヤーのうち、接続のときに実力の値 (`SkillRating`) を送った人の平均 (整数。端数は四捨五入)。値を送った人が一度も入っていなければ付けない。EOS の属性は消せないので、値を送った人が全員抜けても最後の平均を残す |
 
-ログには次のように出る。
+ログには次のように出る。人が入る・出るたびに、変わった属性だけを更新する。
 
 ```
 [Lobby] created id=<ロビー Id> max=9 owner=<サーバーの ID> rtc=on server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0 voice_enabled=1
 [Lobby] registered id=<ロビー Id> server=203.0.113.10:7777 players=0
 [Lobby] players 0 -> 1
-[Lobby] updated id=<ロビー Id> players=1
+[Lobby] skill average - -> 1200
+[Lobby] updated id=<ロビー Id> players=1 skill_average=1200
 ```
 
 ロビーやログインを失うと (`[Lobby] lost the server lobby ...`)、5 秒おきに作り直す。起動してから 60 秒たっても
@@ -240,6 +261,10 @@ Device ID でログインしたユーザー。ロビーでは RTC 部屋を開�
   を出して手元のサーバー (`make server-dotnet`) へつなぐ。`-lobby quickmatch` と EOS のクイックマッチは、探せなければ理由を出して止まる。
 - `shooter-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
   `server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
+  自分の実力の値 (パーティならメンバーの平均) を渡して探したときは、`skill_average` と自分の値の差が小さいものを先に選び、
+  差が同じものの中で今の順 (人数の多い順、次にロビー ID の順) にする。`skill_average` の無いロビーは差がいちばん大きいとみなす。
+  このときのログは `[Lobby] logging in to search shooter-server:0.2.0 near skill 1000`、
+  `[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8 skill=1050 (self 1000); connecting ...` になる。
   クライアントはロビーには入らず、`server` のアドレスへ UDP でつなぐ。クイックマッチは UDP だけで、`-lobby quickmatch -transport eos` は理由を出して終了コード 2 で断られる
   (EOS でつなぐなら `-mode client -transport eos -eos-server <サーバーの ID>`)。
 
@@ -291,6 +316,60 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
 3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。円の中に立つと占領が進み、両チームがいると止まる。
 
+## 次の試合のマップの候補を置く
+
+ルールのファイル (`server-data/rules/<ルール名>.json`) の `match.mapPool` に、次の試合で替えられるマップの Id (シーン名) を並べる。
+
+```json
+"mapPool": ["NetTest", "NetArena01"],
+```
+
+起動するとき、サーバーは最初のマップ (`-map`、無ければ候補の先頭) と候補のマップをすべて読み、マップごとの `[Server] map ...` の行に続けて次の行を出す。
+
+```
+[Server] map NetTest colliders=... from=...
+[Server] map NetArena01 colliders=... from=...
+[Server] map pool loaded 2 maps: NetTest, NetArena01
+```
+
+- 候補のマップが 1 つでも読めなければ `[Server] map pool: map <Id> has no collision: ...` のように理由を出し、終了コード 3 で終わる。
+- 候補のマップに出現地点 (`.points.json`) が無い・どちらかのチームの出現地点が無い・拠点制圧のルールで拠点が無いときも、
+  試合の合間に止まらないよう、起動のうちに `[Server] failed to start: map <Id> has no spawn points: ...` や
+  `[Server] failed to start: cannot change to map <Id> ...` を出して終了コード 1 で終わる。
+- 候補が空 (`[]`) なら今までどおり 1 つのマップだけを読み、`map pool` の行は出さない。
+
+マップを替えるのは、試合が終わって次の試合を始めるときだけ。替えると `[Match] map changed from=<前の Id> to=<次の Id>` を出し、
+(`-log-format json` なら JSON の `map_changed` も出す) 当たり判定・出現地点・拠点・はしご・壊せる建物・乗り物・Bot の NavMesh を
+新しいマップのものにしてから、全員を新しいマップの出現地点へ置き直す。壊れた建物は、マップを替えると壊れていない状態に戻る。
+次の試合のマップを選ぶ仕組み (投票) が選ばなければ、同じマップのまま続ける。
+途中から入る人には承認のメッセージで今のマップを知らせる。
+
+### 試合の合間のマップの投票
+
+ルールのファイルの `match.mapVoteSeconds` を 0 より長くし、読んだマップが 2 つ以上あると、試合が終わるたびに投票をする。
+読んだマップが 1 つだけか `mapVoteSeconds` が 0 (既定) なら投票はせず、投票のメッセージも送らない。
+
+```json
+"mapPool": ["NetTest", "NetArena01", "NetArena02"],
+"mapVoteSeconds": 15,
+```
+
+- 今のマップを除いた候補から最大 3 つを出す。候補が並ぶ順は `mapPool` の順。
+- 試合が終わると投票を始めて全員に `MapVoteStateMessage` を送り、票が変わったときと 1 秒ごと、途中から入った人にも送る。
+- 締め切ると一番票の多いマップに決め、並んだときと誰も入れなかったときは、並んだ候補から試合の Id で決まる乱数で選ぶ。
+  決まったマップを載せた `MapVoteStateMessage` を送り、次の試合をそのマップで始める。
+- 次の試合を始めるまでの秒 (`restartDelaySeconds`) が `mapVoteSeconds` より短いときは、`mapVoteSeconds` まで待つ。
+- 抜けた人の票は締め切る前なら消す。締め切った後の票と、候補に無い番号の票は受け付けない。
+
+ログには次の行が出る (`-log-format json` なら票ごとに `map_vote`、替えたときに `map_changed` の JSON も出る)。
+
+```
+[MapVote] opened current=NetTest candidates=[NetArena01, NetArena02] seconds=15.0
+[MapVote] cast player=1 map=NetArena02 result=Cast
+[MapVote] decided map=NetArena02 reason=Majority votes=1
+[Match] map changed from=NetTest to=NetArena02
+```
+
 ## サーバーがすること
 
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む。作業ディレクトリの `server-data/`、
@@ -302,6 +381,16 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   壁走り (`wallRunEnabled`・`wallRunMaxSeconds`・`wallRunMinSpeed`・`wallRunGravityScale`・`wallRunJumpOffSpeed`) も同じ `motor` から読み、
   承認のメッセージでクライアントの予測に渡す。水泳と壁走りの値は `make export-server-rules` が `Resources/Tuning/traversal.json` (入口の欄が先) から書き出す。
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
+- 水の場所は `server-data/maps/<マップ名>.water.json` (`make export-server-data` がシーンの有効な `Water` の軸にそろった箱と水面の高さを書き出す) から読む。
+  ファイルが無いマップは水が無いものとして動く。起動時の `[Server] map ...` の `water=` が読んだ数。次の試合でマップを替えると、新しいマップの水で泳ぐ。
+  クライアントの予測も同じファイルを読む (`[Net] map collision ...` の `water=`)。
+  入力の `LeanLeft`・`LeanRight` のビットで傾け (両方なら傾けない)、スナップショットの人の欄に傾き・泳いでいるか・壁走りの側・使った空中のジャンプの回数を載せる。
+  クライアントは自分の予測をこれらと照らし合わせ、水面・息・壁の向きなど欄に無いものは同じ tick の予測と水から埋める。
+  他の人の体は、オフラインと同じく傾き (`leanAngleDegrees`)・泳ぎ・壁走りの側で足元を軸に傾けて見せる。
+  傾く向きが替わる・泳ぎ始める/やめる・潜る/顔を出す・壁を走り始める/離れる・空中で跳ぶたびに
+  `[Net] lean owner=.. tick=.. side=left|right|none`・`[Net] swim ... swimming=..`・`[Net] swim ... underwater=..`・`[Net] wallrun ... running=.. side=..`・`[Net] airjump ... used=..` を出す。
+  潜ったまま息 (`swimBreathSeconds`) が切れると `[Net] swim ... outOfBreath=..` を出し、撃った人のいないダメージとしてルールに通して `[Net] drown owner=.. tick=.. damage=.. outcome=..` を出す。
+  ダメージの量と間隔はルールのファイルにまだ無いので、`SwimTuning` の既定値 (10 を 1 秒ごと) になる。
 - 乗り物は `server-data/maps/<マップ名>.vehicles.json` (`make export-server-data` がシーンの有効な `Vehicle` から書き出す) から読む。
   サーバーとクライアントはどちらもこの並びの番号で乗り物を指す。ファイルが無いマップは乗り物が無いものとして動く (`[Server] map ...` の `vehicles=`)。
   乗り物の当たり判定は `.fpsmap` に入れず、ファイルの車体の箱で、撃った人が見ていた tick まで巻き戻して当てる。

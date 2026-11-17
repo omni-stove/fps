@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Shooter.Core;
 
@@ -18,6 +20,7 @@ namespace Shooter.Server.Eos
         private readonly string _endpoint;
         private readonly string _version;
         private readonly int _maxPlayers;
+        private readonly NetMatchSettings _match;
         private readonly RetrySchedule _schedule;
         private readonly TextWriter _log;
         private Action<string> _failed;
@@ -25,6 +28,8 @@ namespace Shooter.Server.Eos
         private float _now;
         private int _players;
         private int _publishedPlayers;
+        private int? _skillAverage;
+        private int? _publishedSkillAverage;
         private int _updateFailures;
         private int _lobbyGeneration;
         private float _nextUpdateTime;
@@ -34,8 +39,21 @@ namespace Shooter.Server.Eos
 
         public ServerLobbyRegistrar(
             ServerLobbyService service, string endpoint, string version, int maxPlayers, RetrySchedule schedule, TextWriter log)
+            : this(service, endpoint, version, maxPlayers, NetMatchSettings.Default, schedule, log)
+        {
+        }
+
+        public ServerLobbyRegistrar(
+            ServerLobbyService service, string endpoint, string version, NetMatchSettings match, RetrySchedule schedule, TextWriter log)
+            : this(service, endpoint, version, (match ?? throw new ArgumentNullException(nameof(match))).MaxPlayers, match, schedule, log)
+        {
+        }
+
+        private ServerLobbyRegistrar(
+            ServerLobbyService service, string endpoint, string version, int maxPlayers, NetMatchSettings match, RetrySchedule schedule, TextWriter log)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _match = match;
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             if (!NetLaunchOptions.TryParseEndpoint(endpoint, out _, out _))
@@ -80,6 +98,10 @@ namespace Shooter.Server.Eos
 
         public int PublishedPlayers => IsRegistered ? _publishedPlayers : -1;
 
+        public int? SkillAverage => _skillAverage;
+
+        public int? PublishedSkillAverage => IsRegistered ? _publishedSkillAverage : null;
+
         public void Begin(float now, Action<string> failed)
         {
             if (_step != Step.Idle)
@@ -97,19 +119,37 @@ namespace Shooter.Server.Eos
 
         public void SetPlayers(int players)
         {
+            SetPlayers(players, null);
+        }
+
+        // 人数と平均を一度に受けるのは、人が入るたびに属性の更新を 2 回に分けて送らないようにするため。
+        // EOS の属性を消す口が無いので、値のある人が誰もいなくなった (null) ときは前の平均を載せたままにする。
+        public void SetPlayers(int players, int? skillAverage)
+        {
             if (players < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(players), players, "must not be negative");
             }
 
-            if (players == _players)
+            var changed = false;
+            if (players != _players)
             {
-                return;
+                _log.WriteLine(_logPrefix + "players " + _players + " -> " + players);
+                _players = players;
+                changed = true;
             }
 
-            _log.WriteLine(_logPrefix + "players " + _players + " -> " + players);
-            _players = players;
-            PublishPlayers();
+            if (skillAverage.HasValue && skillAverage != _skillAverage)
+            {
+                _log.WriteLine(_logPrefix + "skill average " + SkillText(_skillAverage) + " -> " + SkillText(skillAverage));
+                _skillAverage = skillAverage;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                PublishChanges();
+            }
         }
 
         public void Tick(float now)
@@ -139,7 +179,7 @@ namespace Shooter.Server.Eos
 
                     break;
                 case Step.Registered:
-                    PublishPlayers();
+                    PublishChanges();
                     break;
             }
         }
@@ -218,15 +258,16 @@ namespace Shooter.Server.Eos
 
             _step = Step.Creating;
             var players = _players;
+            var skillAverage = _skillAverage;
             // ServerLobby.Attributes が voice_enabled=1 を載せるので、RTC 部屋もいつも開く
             _service.CreateLobby(
                 ServerLobby.MaxMembers(_maxPlayers),
                 true,
-                ServerLobby.Attributes(_endpoint, _version, players),
-                (lobby, error) => HandleCreated(lobby, error, players));
+                ServerLobby.Attributes(_endpoint, _version, players, _match, skillAverage),
+                (lobby, error) => HandleCreated(lobby, error, players, skillAverage));
         }
 
-        private void HandleCreated(LobbyInfo lobby, string error, int players)
+        private void HandleCreated(LobbyInfo lobby, string error, int players, int? skillAverage)
         {
             if (_step != Step.Creating)
             {
@@ -242,41 +283,65 @@ namespace Shooter.Server.Eos
             _step = Step.Registered;
             _lobbyGeneration++;
             _publishedPlayers = players;
+            _publishedSkillAverage = skillAverage;
             _updateFailures = 0;
             _nextUpdateTime = _now;
             _lastError = null;
             HasRegistered = true;
-            _log.WriteLine(_logPrefix + "registered id=" + lobby.Id + " server=" + _endpoint + " players=" + players);
-            PublishPlayers();
+            _log.WriteLine(_logPrefix + "registered id=" + lobby.Id + " server=" + _endpoint + " players=" + players
+                + (skillAverage.HasValue ? " skill_average=" + SkillText(skillAverage) : ""));
+            PublishChanges();
         }
 
-        private void PublishPlayers()
+        // 変わった属性だけを送るのは、人数だけが変わるたびに同じ平均を書き直さないようにするため。
+        private void PublishChanges()
         {
-            if (_step != Step.Registered || _service.IsUpdating || _players == _publishedPlayers || _now < _nextUpdateTime)
+            if (_step != Step.Registered || _service.IsUpdating || _now < _nextUpdateTime)
             {
                 return;
             }
 
             var players = _players;
+            var skillAverage = _skillAverage;
+            var attributes = new List<LobbyAttribute>(2);
+            if (players != _publishedPlayers)
+            {
+                attributes.Add(ServerLobby.PlayersAttribute(players));
+            }
+
+            if (skillAverage.HasValue && skillAverage != _publishedSkillAverage)
+            {
+                attributes.Add(ServerLobby.SkillAverageAttribute(skillAverage.Value));
+            }
+
+            if (attributes.Count == 0)
+            {
+                return;
+            }
+
             var generation = _lobbyGeneration;
-            _service.UpdateAttributes(
-                new[] { ServerLobby.PlayersAttribute(players) }, error => HandleUpdated(error, players, generation));
+            _service.UpdateAttributes(attributes, error => HandleUpdated(error, players, skillAverage, generation));
         }
 
-        private void HandleUpdated(string error, int players, int generation)
+        private void HandleUpdated(string error, int players, int? skillAverage, int generation)
         {
-            // 失ったロビーへの更新の結果を、作り直したロビーの人数として数えない
+            // 失ったロビーへの更新の結果を、作り直したロビーの値として数えない
             if (_step != Step.Registered || generation != _lobbyGeneration)
             {
-                PublishPlayers();
+                PublishChanges();
                 return;
             }
 
             if (error == null)
             {
                 _publishedPlayers = players;
+                if (skillAverage.HasValue)
+                {
+                    _publishedSkillAverage = skillAverage;
+                }
+
                 _updateFailures = 0;
-                PublishPlayers();
+                PublishChanges();
                 return;
             }
 
@@ -288,7 +353,7 @@ namespace Shooter.Server.Eos
             }
 
             _service.LeaveLobby();
-            Lose("updating the players attribute failed " + _updateFailures + " times in a row: " + error);
+            Lose("updating the lobby attributes failed " + _updateFailures + " times in a row: " + error);
         }
 
         private void HandleRemoved(string reason)
@@ -349,6 +414,11 @@ namespace Shooter.Server.Eos
             {
                 Attempt();
             }
+        }
+
+        private static string SkillText(int? skillAverage)
+        {
+            return skillAverage.HasValue ? skillAverage.Value.ToString(CultureInfo.InvariantCulture) : "-";
         }
 
         private void Unsubscribe()

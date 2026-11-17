@@ -337,7 +337,6 @@ namespace Shooter.Core.Tests
                 state = next;
             }
 
-            // 息 0.5 s は 32 tick、以後 0.5 s (32 tick) ごとに 1 回
             var expected = underwaterTicks / 32;
             Assert.That(state.IsSwimming, Is.True, "the floor under deep water keeps the swim");
             Assert.That(underwaterTicks, Is.GreaterThan(129));

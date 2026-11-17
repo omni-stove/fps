@@ -21,6 +21,18 @@ namespace Shooter.Core
         /// <summary>サーバーに接続しているプレイヤーの人数。</summary>
         public const string PlayersKey = "players";
 
+        /// <summary>参加コードを知る人だけが入れる非公開の試合か (整数。0 以外なら非公開)。<see cref="LobbyInfo.IsPrivate"/> で読む。</summary>
+        public const string PrivateKey = "private";
+
+        /// <summary>非公開の試合に入る参加コード (文字列)。<see cref="LobbyInfo.JoinCode"/> で読む。</summary>
+        public const string JoinCodeKey = "join_code";
+
+        /// <summary>試合にいるプレイヤーの実力の平均 (整数)。<see cref="LobbyInfo.SkillAverage"/> で読む。</summary>
+        public const string SkillAverageKey = "skill_average";
+
+        /// <summary>試合のボイスチャットが使えるか (整数。0 以外なら使える)。<see cref="LobbyInfo.VoiceEnabled"/> で読む。</summary>
+        public const string VoiceEnabledKey = "voice_enabled";
+
         /// <summary>ネット対戦のモード (チームで戦う試合) を表す <see cref="ModeKey"/> の値。</summary>
         public const string TeamDeathmatchMode = "tdm";
 

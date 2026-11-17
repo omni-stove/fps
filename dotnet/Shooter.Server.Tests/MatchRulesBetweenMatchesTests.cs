@@ -40,7 +40,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void ChatMapVoteAndSpectateRequestsDoNothingYet()
+        public void MapVoteAndSpectateRequestsDoNothingYet()
         {
             Start(new NetMatchSettings(mapPool: _maps, mapVoteSeconds: 5f));
             Join(1);
@@ -49,8 +49,6 @@ namespace Shooter.Server.Tests
             var log = _log.ToString();
             var json = _json.ToString();
 
-            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = Protocol.ChatChannel.All, Text = "hello" });
-            _module.OnMessage(new ConnectionId(1), new ChatRequestMessage { Channel = Protocol.ChatChannel.Team, Text = "go" });
             _module.OnMessage(new ConnectionId(2), new MapVoteRequestMessage { MapIndex = 1 });
             _module.OnMessage(new ConnectionId(2), new SpectateRequestMessage { Step = SpectateStep.Next });
 

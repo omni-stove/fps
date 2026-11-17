@@ -20,7 +20,8 @@ namespace Shooter.Core
 
         /// <summary>
         /// 跳んだ瞬間に 1 度だけ呼ばれる。引数は何段目か。地上のジャンプ (<see cref="Step"/>) は <see cref="GroundJumpNumber"/>、
-        /// 着地してから n 回目の空中のジャンプ (<see cref="StepAirJump"/>) は n + 1。
+        /// 着地してから n 回目の空中のジャンプ (<see cref="StepAirJump"/>) は n + 1。壁からのジャンプ (<see cref="JumpWith"/>) は空中のジャンプの回数を 0 に戻すので
+        /// <see cref="GroundJumpNumber"/>。
         /// </summary>
         public event Action<int> Jumped;
 
@@ -200,6 +201,17 @@ namespace Shooter.Core
             }
 
             return used;
+        }
+
+        /// <summary>
+        /// 速度を入れて <see cref="Jumped"/> を知らせる。壁から跳ぶ速さは <see cref="WallRunStep"/> が決めるが、
+        /// 跳んだ知らせは地上と空中のジャンプと同じくこのクラスの 1 か所から出すため。
+        /// </summary>
+        /// <param name="velocity">跳んだ速度 (m/s)。各成分が有限値。</param>
+        public void JumpWith(Vector3 velocity)
+        {
+            SetVelocity(velocity);
+            Jumped?.Invoke(GroundJumpNumber);
         }
 
         private static Vector2 TurnToInput(Vector2 horizontal, Vector2 moveInput, float yawRadians)

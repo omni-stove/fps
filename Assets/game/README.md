@@ -79,6 +79,11 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `Voice` | `VoiceStatus?` | ボイスチャットの状態 (自分が話しているか・話している参加者 Id・マイクが使えるか) |
 | `MapVote` | `MapVoteStatus?` | 次のマップの投票 (候補のマップ Id と票数・自分の票・残り秒数・決まったマップ Id) |
 | `Spectate` | `SpectateStatus?` | ネット対戦で味方を見ている状態 (見ている参加者 Id・候補の数・理由) |
+| `ChatSender` | `IChatSender` | チャットを全体かチームへ送る口 (`Send`)。ネット対戦だけが出す |
+| `MapVoteSender` | `IMapVoteSender` | 次のマップに `MapVote` の候補を並びの番号で選ぶ口 (`Vote`)。ネット対戦だけが出す |
+| `Party` | `PartyStatus?` | パーティの状態 (`PartyStage`・メンバーの名前とリーダーか・招待のコード・自分がリーダーか) |
+| `PartyControl` | `IPartyControl` | パーティを作る・招待のコードで入る・出る口と、状態が変わった知らせ (`StatusChanged`) |
+| `JoinByCode` | `IJoinByCode` | 参加コードで非公開の試合に入る口。結果 (`JoinCodeOutcome`) を呼び戻しで返す |
 
 #### 購読のしかた
 

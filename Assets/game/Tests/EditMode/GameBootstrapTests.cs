@@ -396,6 +396,77 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutSceneTuningThePlayerReadsTheGameWideMovementValues()
+        {
+            Assert.That(_world.Mover.MotorSettings, Is.Null);
+            Assert.That(_world.Mover.WallRunTuning, Is.SameAs(TraversalTuning.Current.WallRun));
+            Assert.That(_world.Mover.SwimTuning, Is.SameAs(TraversalTuning.Current.Swim));
+        }
+
+        [Test]
+        public void TheSceneMotorSettingsAndTraversalReachThePlayer()
+        {
+            var host = new GameObject("Bootstrap-Tuning");
+            var settings = ScriptableObject.CreateInstance<MotorSettings>();
+            settings.AirJumps = 1;
+            var traversal = new TextAsset("{ \"swim\": { \"speed\": 4 }, \"wallRun\": { \"enabled\": true } }") { name = "SceneTraversal" };
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.MotorSettings = settings;
+                bootstrap.TraversalTuningJson = traversal;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Mover.MotorSettings, Is.SameAs(settings));
+                Assert.That(world.Mover.Spec.AirJumps, Is.EqualTo(1));
+                Assert.That(world.Mover.WallRunTuning.Enabled, Is.True);
+                Assert.That(world.Mover.SwimTuning.Speed, Is.EqualTo(4f));
+                Assert.That(world.Player.GetComponent<UnderwaterPresenter>().Swim, Is.SameAs(world.Mover.SwimTuning), "breath and drowning use the same swim values");
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(settings);
+                Object.DestroyImmediate(traversal);
+            }
+        }
+
+        [Test]
+        public void AnUnreadableSceneTraversalFallsBackToTheGameWideValuesWithAnError()
+        {
+            var host = new GameObject("Bootstrap-BadTraversal");
+            var traversal = new TextAsset("{ \"wallRun\": { \"maxSeconds\": -1 } }") { name = "BadTraversal" };
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.TraversalTuningJson = traversal;
+
+                LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(@"^\[Tuning\] .*BadTraversal"));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Mover.WallRunTuning, Is.SameAs(TraversalTuning.Current.WallRun));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(traversal);
+            }
+        }
+
+        [Test]
         public void TheWiredRulesAreUsedWhenNothingOverridesThem()
         {
             Assert.That(GameRulesOverride.Current, Is.Null);

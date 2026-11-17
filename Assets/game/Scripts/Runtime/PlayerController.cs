@@ -112,6 +112,24 @@ namespace Shooter.Runtime
             set => _motorSettings = value;
         }
 
+        // setter で作り直さないのは、初期化の前に値だけ置く使い方 (Inspector・テスト) で、置くたびに初期化が走らないようにするため。
+        // GameBootstrap のように付けた時点の Awake で既に初期化された後に設定を替えるときは、こちらで PlayerMotor から作り直す。
+        public void UseMotorSettings(MotorSettings settings)
+        {
+            if (!IsInitialized)
+            {
+                _motorSettings = settings;
+                return;
+            }
+
+            // 不正な値で投げたときに、設定だけ替わって動きは前の値のままという食い違いを残さないよう、作れることを確かめてから置く。
+            var spec = MotorSettings.Resolve(settings);
+            var prone = _proneSpecAssigned ? _proneSpec : MotorSettings.ResolveProne(settings);
+            _motorSettings = settings;
+            _proneSpec = prone;
+            Initialize(_controller, _look, _moveAction, _sprintAction, _crouchAction, _jumpAction, spec);
+        }
+
         // 初期化の前でも、初期化したときに使われる値を返すため設定から作る。
         public MotorSpec Spec => _motor != null ? _motor.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
 
@@ -314,12 +332,15 @@ namespace Shooter.Runtime
             Vector3 displacement;
             var paddled = false;
             var movementOverride = SelectMovementOverride();
+            var wallRun = WallRunMotion.None;
             if (movementOverride != null)
             {
+                StopWallRun();
                 displacement = StepMovementOverride(movementOverride, move, sprint, crouch, jumpPressed, deltaSeconds);
             }
             else if (_swim.IsSwimming && !IsVaulting && !IsMantling)
             {
+                StopWallRun();
                 UpdateStance(false, false);
                 if (!TryClimbOutOfWater(jumpPressed, deltaSeconds, out displacement))
                 {
@@ -330,32 +351,45 @@ namespace Shooter.Runtime
             else
             {
                 UpdateStance(crouch, IsProneActive);
-                if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
+                if (TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
+                {
+                    StopWallRun();
+                }
+                else
                 {
                     var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
-                    var carry = CarrySpeedMultiplier;
                     var jump = jumpPressed && _jumpRule == Jump.On;
-                    StepAirJump(move, jump, yawRadians);
-                    displacement = IsProne
-                        ? _motor.StepProne(
-                            move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
-                        : _motor.Step(
-                            move.ToNumerics(),
-                            yawRadians,
-                            sprint,
-                            IsCrouched,
-                            jump,
-                            _controller.isGrounded,
-                            deltaSeconds,
-                            carry).ToUnity();
+
+                    // CharacterMotorSimulation と同じく壁走りを先に試し、壁に付いていない tick だけ空中のジャンプとふつうの移動に回す。
+                    wallRun = TryRunOnWall(move, jump, yawRadians, deltaSeconds, out displacement);
+                    if (wallRun == WallRunMotion.None)
+                    {
+                        var carry = CarrySpeedMultiplier;
+                        StepAirJump(move, jump, yawRadians);
+                        displacement = IsProne
+                            ? _motor.StepProne(
+                                move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
+                            : _motor.Step(
+                                move.ToNumerics(),
+                                yawRadians,
+                                sprint,
+                                IsCrouched,
+                                jump,
+                                _controller.isGrounded,
+                                deltaSeconds,
+                                carry).ToUnity();
+                    }
                 }
             }
 
+            var before = transform.position;
             var collisions = _controller.Move(displacement);
             if (paddled)
             {
                 StopPaddlingAgainst(collisions);
             }
+
+            SettleWallRun(wallRun, transform.position - before, collisions, deltaSeconds);
 
             // 泳いでいる間は水底や天井に触れても立っていないので、着地・足音・落下のダメージに数えない。
             var footing = _controller.isGrounded && !_swim.IsSwimming;

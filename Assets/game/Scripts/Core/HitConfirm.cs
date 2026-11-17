@@ -3,31 +3,18 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 撃った本人に知らせる、弾が当たったことの確認。ヒットマーカーと命中音に使う。
-    /// 生成時に値を検査する。
-    /// </summary>
     public readonly struct HitConfirm : IEquatable<HitConfirm>
     {
-        /// <summary>与えたダメージ。0 以上。</summary>
         public int Damage { get; }
 
-        /// <summary>当たった部位。</summary>
         public HitZone Zone { get; }
 
-        /// <summary>この弾で倒したか。</summary>
         public bool Killed { get; }
 
-        /// <summary>この弾で倒さずにダウンさせたか。<see cref="Killed"/> と同時には true にならない。</summary>
         public bool Downed { get; }
 
         public Vector3? Point { get; }
 
-        /// <param name="damage">与えたダメージ。0 以上。</param>
-        /// <param name="zone">当たった部位。定義済みの値。</param>
-        /// <param name="killed">倒したか。</param>
-        /// <param name="downed">ダウンさせたか。killed と同時に true にはできない。</param>
-        /// <param name="point">当たった点 (ワールド座標)。分からなければ null。</param>
         public HitConfirm(int damage, HitZone zone, bool killed, bool downed, Vector3? point = null)
         {
             if (damage < 0)

@@ -7,8 +7,6 @@ namespace Shooter.Core
     {
         // 撃った者の背中側は数えない (撃ち始めた位置のすぐ後ろの味方まで制圧しないように)。
         // 弾が止まった先は止まった点からの距離にする。すぐ横の壁に弾が当たっても制圧に数えたいので。
-        /// <exception cref="ArgumentException">direction が 0。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">length が 0 以上の有限値でない。</exception>
         public static bool TryDistance(Vector3 origin, Vector3 direction, float length, Vector3 point, out float distance, out float along)
         {
             if (direction.LengthSquared() < 1e-12f)

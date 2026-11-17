@@ -24,16 +24,10 @@ namespace Shooter.Runtime
 
         public event Action<Weapon> Fired;
 
-        /// <summary>持っている武器。未初期化か武器を持っていなければ (<see cref="IsUnarmed"/>) null。</summary>
         public Weapon Weapon => _unarmed ? null : _weapon;
 
-        /// <summary><see cref="Disarm"/> してから、武器を拾うか <see cref="EquipWeapon"/> するまで true。この間は撃たない。</summary>
         public bool IsUnarmed => _unarmed;
 
-        /// <summary>
-        /// 武器を持っていない状態にする。リロード中なら取り消す。武器を拾う (<see cref="AddWeapon"/>) か <see cref="EquipWeapon"/> すると持った状態に戻る。
-        /// 未初期化でも呼べる (初期化しても持っていないまま)。もう持っていなければ何もせず false。
-        /// </summary>
         public bool Disarm()
         {
             if (_unarmed)
@@ -47,7 +41,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>持っている武器 (1 本) の今の予備弾。武器を持っていないか未初期化なら空。</summary>
         public IReadOnlyList<PickupWeaponState> DescribeWeapons(out string currentWeaponId)
         {
             var weapon = Weapon;
@@ -61,13 +54,9 @@ namespace Shooter.Runtime
             return new[] { PickupWeaponState.Of(weapon) };
         }
 
-        /// <summary>bot は 1 本しか持たず、拾えば持ち替える (<see cref="AddWeapon"/>) ので、拾う判定には上限なしとして見せる。</summary>
+        // bot は 1 本しか持たず、拾えば持ち替える (AddWeapon) ので、拾う判定には上限なしとして見せる。
         public int MaxWeapons => 0;
 
-        /// <summary>
-        /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/>)。
-        /// 弾数は ammo があればその数、null なら満タン。付いていた物 attachments は効かせ、手放すときにそのまま渡す。同じ Id の武器を持っていれば何もせず false。
-        /// </summary>
         public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null)
         {
             if (definition == null)
@@ -86,10 +75,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// Id が droppedWeaponId の今の武器を手放して definition の武器を持つ (<see cref="AddWeapon"/> と同じ弾数と付けた物)。
-        /// 手放した武器の定義と残弾と付けていた物を dropped に入れて true。今の武器の Id が droppedWeaponId でない・definition と同じなら何もせず false。
-        /// </summary>
         public bool SwapWeapon(
             string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, IReadOnlyList<string> attachments, out HeldWeapon dropped)
         {
@@ -115,7 +100,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>持っている武器の Id が weaponId なら予備弾を amount 足し、実際に足した数を返す。違う武器か武器を持っていなければ 0。</summary>
         public int AddReserveAmmo(string weaponId, int amount)
         {
             if (amount < 0)
@@ -127,10 +111,6 @@ namespace Shooter.Runtime
             return weapon != null && string.Equals(weapon.Spec.Id, weaponId, StringComparison.Ordinal) ? weapon.AddReserveAmmo(amount) : 0;
         }
 
-        /// <summary>
-        /// 撃つ武器の定義。<see cref="TryInitialize"/> がこれから <see cref="Weapon"/> を作るので、それより前に設定する
-        /// (初期化後に変えても今の武器は変わらない。初期化後に持ち替えるなら <see cref="EquipWeapon"/>)。
-        /// </summary>
         public WeaponDefinition WeaponDefinition
         {
             get => _weaponDefinition;
@@ -139,16 +119,8 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<string> HeldAttachments => _weaponAttachments;
 
-        /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
         public GameRules WeaponRules => _weaponRules;
 
-        /// <summary>
-        /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す (ammo があればその弾数にする)。リロード中なら取り消す。
-        /// attachments (持ち物のアイテムの Id) は、持ち物の表 (<see cref="KitTuning.Items"/>) でその武器に付く物だけを効かせる。
-        /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
-        /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、持った状態に戻す。
-        /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
-        /// </summary>
         public void EquipWeapon(WeaponDefinition definition, GameRules rules = null, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null)
         {
             if (definition == null)
@@ -251,9 +223,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 体の向き (水平) と lookAt への向きの差が <see cref="EnemySpec.FireToleranceDegrees"/> 以下か。lookAt が無いか真上・真下なら true。
-        /// </summary>
         public bool IsFacing(System.Numerics.Vector3? lookAt)
         {
             if (!lookAt.HasValue || _brain == null)

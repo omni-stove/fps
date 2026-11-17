@@ -5,24 +5,15 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面の下に出す字幕の行。誰かが話した行 (<see cref="Say"/>) は話した人ごとに 1 行にする。
-    /// 音の合図は種類 (<see cref="SoundCueKind"/>) ごとに 1 行にまとめ、
-    /// 同じ種類が続けて届いたら行を増やさずに向きと距離を新しい合図に書き換え、出しておく時間を延ばす。
-    /// 行は最初に出た順に並べ、書き換えても並びは変えない (連射のたびに行が動いて読みにくくならないよう)。
-    /// 時刻は呼ぶ側が決めた物差し (秒) で渡す。
-    /// </summary>
+    // 書き換えた行を末尾へ移さずその場で書き換えるのは、連射のたびに行が動いて読みにくくならないようにするため。
     public sealed class SubtitleLines
     {
-        /// <summary>最後の合図から行を出しておく秒数。</summary>
         public const float DefaultSeconds = 3f;
 
         private readonly List<SubtitleLine> _lines = new List<SubtitleLine>();
         private readonly ReadOnlyCollection<SubtitleLine> _readOnly;
         private readonly float _seconds;
 
-        /// <param name="seconds">最後の合図から行を出しておく秒数。</param>
-        /// <exception cref="ArgumentOutOfRangeException">seconds が 0 以下か有限でない。</exception>
         public SubtitleLines(float seconds = DefaultSeconds)
         {
             if (!(seconds > 0f) || float.IsInfinity(seconds))
@@ -34,13 +25,8 @@ namespace Shooter.Runtime
             _readOnly = _lines.AsReadOnly();
         }
 
-        /// <summary>出している行 (最初に出た順)。</summary>
         public IReadOnlyList<SubtitleLine> Lines => _readOnly;
 
-        /// <summary>
-        /// cue を時刻 now に出す。同じ種類の行があればそれを書き換え、無ければ末尾に足す。
-        /// 出す文字が変わったか、行を足したら true (時間を延ばしただけなら false)。
-        /// </summary>
         public bool Show(SoundCue cue, float now)
         {
             var text = SubtitleText.Format(cue);
@@ -61,11 +47,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// speaker が話した text を時刻 now に出す。同じ人の行があればそれを書き換え (1 人 1 行)、無ければ末尾に足す。
-        /// 出す文字が変わったか、行を足したら true。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">speaker か text が null。</exception>
         public bool Say(string speaker, string text, float now)
         {
             if (speaker == null)
@@ -95,13 +76,11 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>時刻 now までに出し終えた行を消す。消したら true。</summary>
         public bool Expire(float now)
         {
             return _lines.RemoveAll(line => line.ExpiresAt <= now) > 0;
         }
 
-        /// <summary>行をすべて消す。消したら true。</summary>
         public bool Clear()
         {
             if (_lines.Count == 0)

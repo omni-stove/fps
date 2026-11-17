@@ -10,9 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// StreakController が自分の倒した数だけを数え、倒れたら 0 に戻し、使うと報酬 (UAV・空爆) を呼んで GameSignals.Streak を出し直すことを確かめる。
-    /// </summary>
     public sealed class StreakControllerTests
     {
         private readonly List<GameObject> _objects = new List<GameObject>();

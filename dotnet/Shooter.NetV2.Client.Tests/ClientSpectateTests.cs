@@ -7,7 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2.Tests
 {
-    /// <summary>ネット対戦のクライアントの観戦 (ClientSpectate) の、相手の選び方・替え方・相手が倒れたとき・相手がいないときを確かめる。</summary>
     public sealed class ClientSpectateTests
     {
         private const int _self = 1;

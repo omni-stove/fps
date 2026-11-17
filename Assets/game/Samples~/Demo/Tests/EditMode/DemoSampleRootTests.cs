@@ -7,7 +7,6 @@ using UnityEditor;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>サンプルが自分のフォルダ (<see cref="DemoSample.Root"/>) を出力先ルートの既定にし、ビルダーがその下に書くことを確かめる。</summary>
     public sealed class DemoSampleRootTests
     {
         private bool _hadPreference;

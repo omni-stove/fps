@@ -101,8 +101,7 @@ namespace Shooter.Runtime
             return ImpactApplier.Apply(request, hit, direction);
         }
 
-        // 当たった物を近い順に抜けられるだけ抜ける。撃った本人に返すのは最初に当てた人の結果で、人に当たらなければ止まった所の結果。
-        // 当てた相手が倒れた知らせから次の弾が撃たれても並びを壊さないよう、並びは弾ごとに持つ。止まった面では跳ねない (サーバーと同じ)。
+        // 当てた相手が倒れた知らせから次の弾が撃たれても並びを壊さないよう、並びは弾ごとに持つ。止まった面で跳ねないのはサーバーと揃えるため。
         private static ShotOutcome DeliverPenetrating(
             ShotRequest request, PenetrationSpec penetration, int pelletIndex, Vector3 origin, Vector3 direction, float range)
         {
@@ -171,7 +170,6 @@ namespace Shooter.Runtime
             return personOutcome.Owner != null ? personOutcome : outcome;
         }
 
-        // 弾を受け止める物 (盾・置いた物) に止められたら false。
         private static bool Strike(ShotRequest request, RaycastHit hit, Vector3 direction, float multiplier, out ShotOutcome outcome)
         {
             var weakened = new ShotRequest(

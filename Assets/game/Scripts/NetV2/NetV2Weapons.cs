@@ -5,10 +5,7 @@ using Shooter.Runtime;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="ClientTrigger"/>)。
-    /// アセットは Netcode のクライアントと同じく入口 (<see cref="GameContent"/>) のものを使う (サーバーのルールのファイルも同じアセットから書き出す)。
-    /// </summary>
+    // サーバーのルールのファイルも同じアセットから書き出すので、アセットは Netcode のクライアントと同じく入口 (GameContent) のものを使う。
     internal sealed class NetV2Weapons
     {
         private string _triggerWeaponId;
@@ -29,13 +26,9 @@ namespace Shooter.NetV2
 
         public WeaponCatalogAsset Catalog => NetMatchDefinition.PickCatalog(null);
 
-        /// <summary>なぜ <see cref="TriggerFor"/> が null を返したか。</summary>
         public string TriggerError => _triggerError;
 
-        /// <summary>
-        /// weaponId の武器の撃ち方で判断する引き金。武器が変わったら作り直す (撃ち始めからの間隔も持ち越さない)。
-        /// 武器がどのアセットにも無いなら null (サーバーに弾かれない頻度が分からないので撃たない)。
-        /// </summary>
+        // 武器がどのアセットにも無いと、サーバーに弾かれない頻度が分からないので、引き金を作らず撃たない。
         public ClientTrigger TriggerFor(string weaponId)
         {
             if (string.Equals(weaponId, _triggerWeaponId, StringComparison.Ordinal))
@@ -129,7 +122,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>weaponId の武器の値を、ロードアウト・一覧の順に探す。</summary>
         public bool TryFind(string weaponId, out WeaponSpec spec, out string error)
         {
             spec = null;

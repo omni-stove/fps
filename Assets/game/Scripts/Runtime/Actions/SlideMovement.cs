@@ -4,36 +4,18 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ダッシュ中にしゃがむと滑り込むスライディングを受け持つ、プレイヤーのコンポーネント。<see cref="PlayerController"/> の移動を
-    /// <see cref="IMovementOverride"/> として横取りし、速さの移り変わりは <see cref="SlideMotion"/> に任せる。
-    /// <list type="bullet">
-    /// <item>始まり: <see cref="Rule"/> が <see cref="Slide.On"/> で、接地して歩きより速く動いているときに、ダッシュ中 (<see cref="PlayerController.IsSprinting"/>) に
-    /// 立った姿勢からしゃがむ (<see cref="PlayerController.IsCrouchActive"/>) か、<see cref="TryStart"/> を呼んだとき。
-    /// <see cref="Blocker"/> が true (カバー中) の間・乗り越えか回避の最中・ほかの横取りの最中・操作を手放している間は始まらない。
-    /// 滑る向きは始まったときの移動の向きで、視点を回しても変わらない。</item>
-    /// <item>最中: 低い姿勢 (しゃがみの当たり判定) のまま足場に沿って滑る。撃てるが、速く動いているので照準は広がる (<see cref="GameBootstrap"/> の配線)。
-    /// 壁に当たって進めなければ、その分だけ遅くなる。</item>
-    /// <item>終わり: 速さが落ちるか最長の秒数で (<see cref="SlideMotion"/>)、ジャンプで (勢いを持ったまま跳ぶ。<see cref="PlayerController.JumpRule"/> が Off なら跳ばずに滑り続ける)、宙に出て少し経つと
-    /// (<see cref="AirborneGraceSeconds"/>)、死亡・リスポーン・ルールを Off にしたときに終わる。
-    /// その後はしゃがみの入力どおりで、しゃがみを押したままならしゃがみ、離していれば (頭上が空いていれば) 立つ。</item>
-    /// </list>
-    /// 始まりと終わりは <c>[Slide] start ..</c> / <c>[Slide] end reason=..</c> でログに出す。滑っている間は <see cref="PlayerActionConditions.Sliding"/> を立てる。
-    /// 調整値は <see cref="SlideActionInstaller"/> が <see cref="ApplyTuning"/> で渡す traversal.json の値 (渡さなければ Inspector の値) で、<see cref="Configure"/> のたびに読み直す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class SlideMovement : MonoBehaviour, IMovementOverride
     {
-        /// <summary><see cref="Priority"/>。はしごや乗り物の座席など、掴まる・乗る動きより低くする。</summary>
+        // はしごや乗り物の座席など、掴まる・乗る動きより低くする。
         public const int DefaultPriority = 10;
 
-        /// <summary>接地が外れてから、宙に出たとして終えるまでの秒数。坂の継ぎ目で一瞬浮いただけでは終えない。</summary>
+        // 坂の継ぎ目で一瞬浮いただけでは終えないよう、接地が外れてから少し待つ。
         public const float AirborneGraceSeconds = 0.15f;
 
-        /// <summary>前の Tick で動かそうとした水平の距離のうち、実際に進めた割合がこれ未満なら壁に当たったとみなす。</summary>
         public const float BlockedRatio = 0.5f;
 
-        /// <summary>足場の傾きを測る Ray を、体の足元からさらに伸ばす長さ (m)。坂の上でカプセルの中心の真下が足より低くても届く長さ。</summary>
+        // 坂の上でカプセルの中心の真下が足より低くても届くよう、足元からさらに伸ばす。
         public const float GroundProbeMargin = 0.6f;
 
         private const int MaxGroundHits = 8;
@@ -74,10 +56,6 @@ namespace Shooter.Runtime
         private Vector3 _stepFrom;
         private float _expectedHorizontal;
 
-        /// <summary>
-        /// スライディングを使うか。既定は <see cref="Slide.Off"/>。<see cref="SlideActionInstaller"/> がルールの <see cref="ActionRules.Slide"/> を入れる。
-        /// Off にすると滑っている最中でもやめる。
-        /// </summary>
         public Slide Rule
         {
             get => _rule;
@@ -96,25 +74,18 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>true を返す間は始めない (カバー中など)。滑っている最中に true になればやめる。null なら止めない。</summary>
         public Func<bool> Blocker { get; set; }
 
-        /// <summary>横取りしている <see cref="PlayerController"/>。まだ無ければ null。</summary>
         public PlayerController Mover => _mover;
 
-        /// <summary>速さの移り変わり。<see cref="Configure"/> で調整値が変わっていれば作り直す (滑っている最中なら終えてから)。</summary>
         public SlideMotion Motion => _motion;
 
-        /// <summary>滑っている最中か。</summary>
         public bool IsSliding => _motion.IsSliding;
 
         public int Priority => DefaultPriority;
 
-        /// <summary>
-        /// 滑っている最中か、今の Tick で滑り始めるか。<see cref="PlayerController"/> が Tick のたびに 1 度読む。
-        /// ダッシュ中にしゃがんだかは、ダッシュとしゃがみを解釈し終えてから姿勢を当てるまでの間 (= ここ) にしか見分けられないので、
-        /// 読むたびに始められるかを調べ、始めるなら向きと速さを覚えて <see cref="Begin"/> で使う。
-        /// </summary>
+        // ダッシュ中にしゃがんだかは、ダッシュとしゃがみを解釈し終えてから姿勢を当てるまでの間 (= ここ) にしか見分けられないので、
+        // 読むたびに始められるかを調べ、始めるなら向きと速さを覚えて Begin で使う。
         public bool IsActive
         {
             get
@@ -173,11 +144,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// rules の <see cref="ActionRules.Slide"/> を <see cref="Rule"/> に入れ、On なら有効に、それ以外なら無効にする (滑っていればやめる)。
-        /// 同じ GameObject の <see cref="PlayerController"/> に横取りとして登録し (無効なら外し)、Inspector の調整値が変わっていれば <see cref="Motion"/> を作り直す。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">調整値が <see cref="SlideMotion"/> の条件を満たさない。</exception>
         public void Configure(GameRules rules)
         {
             if (rules == null)
@@ -194,9 +160,6 @@ namespace Shooter.Runtime
             SyncRegistration();
         }
 
-        /// <summary>
-        /// 調整値を変える。滑っている最中なら終えてから作り直す。値は <see cref="SlideMotion(float, float, float, float, float, float)"/> の条件を満たすこと。
-        /// </summary>
         public void SetTuning(float startSpeed, float deceleration, float endSpeed, float minSeconds, float maxSeconds, float slopeAcceleration)
         {
             // 先に作って検査し、不正なら今の値を残す。
@@ -227,9 +190,6 @@ namespace Shooter.Runtime
             RebuildMotion();
         }
 
-        /// <summary>
-        /// damageable が死んだとき・体力を作り直した (リスポーンした) ときに滑るのをやめるよう購読する。前に渡したものの購読は外す。null 可。
-        /// </summary>
         public void BindDamageable(Damageable damageable)
         {
             // 破棄済みでも C# のオブジェクトは残っているので、購読は外せる。
@@ -247,10 +207,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// ダッシュとしゃがみの入力によらず、次の Tick で今の移動の向きへ滑り始めるよう頼む (入力の無い smoke やほかの動きからのつなぎ)。
-        /// 始められない (ルールが Off・接地していない・歩きより遅い・カバーや乗り越えの最中など) なら頼まずに false。
-        /// </summary>
         public bool TryStart()
         {
             // Edit Mode では OnEnable が走らず isActiveAndEnabled が false のままなので、enabled と階層の有効を直接見る。
@@ -263,7 +219,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>滑っている最中ならやめる。<see cref="TryStart"/> で頼んだまま始まっていなければ取り消す。やめたら true。</summary>
         public bool Cancel()
         {
             _startRequested = false;
@@ -365,7 +320,6 @@ namespace Shooter.Runtime
                 && !_mover.IsCrouched;
         }
 
-        // 始められるなら、今の水平の速度から向きと速さを返す。
         private bool TryMeasureEntry(out System.Numerics.Vector2 direction, out float speed)
         {
             direction = System.Numerics.Vector2.Zero;

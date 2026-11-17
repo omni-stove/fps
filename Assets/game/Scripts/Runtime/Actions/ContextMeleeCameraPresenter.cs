@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 技の仮の演出。アニメや音は持たず、技の間だけ視野角を狭めてカメラを寄せる。ゲームは IContextMeleePresenter を実装したものに差し替える。
     // 覗き込み (AimDownSights) なども視野角を書くので、自分の後にほかが書いた値を新しい元の値として覚え、それに倍率を掛ける。
     // 元の値を始めた時点で固定すると、技の間に覗き込みが腰だめへ戻り終えた分を、終えたときに古い値で上書きしてしまう。
     [DisallowMultipleComponent]

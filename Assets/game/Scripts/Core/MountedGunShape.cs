@@ -5,7 +5,6 @@ namespace Shooter.Core
     // 固定銃座は乗り物の土台に乗せるので、別の設定を持たせずに乗り物の設定の形 (座席 1 つ・運転席なし・その座席の武器あり・動き方なし) で見分ける。
     public static class MountedGunShape
     {
-        // 形に合っていれば null、合っていなければ MountedGunLog の Reason* のどれか。
         public static string Problem(VehicleSpec spec, bool hasMotor)
         {
             if (spec == null)

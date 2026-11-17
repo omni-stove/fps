@@ -18,7 +18,6 @@ namespace Shooter.Runtime
             set => _attachmentCatalog = value;
         }
 
-        /// <summary>武器を作り直す前に、付けていた物 (アタッチメントのアイテム Id) を渡す。持ち物に戻すために使う。</summary>
         public event Action<IReadOnlyList<string>> AttachmentsReleased;
 
         // 作り直しで付けた物を黙って捨てると持ち物から物が消えるので、先に持ち主へ知らせる
@@ -38,7 +37,7 @@ namespace Shooter.Runtime
             _attachments.Clear();
         }
 
-        /// <summary>付けた物を持ち物へ戻さずに外し、持っている武器も弾数を残したまま付ける前の値にする。持ち物を最初の状態に戻した後 (出直し) に呼び、付けた物が持ち物と武器の両方に残って増えるのを防ぐ。</summary>
+        // 持ち物へ戻さずに外すのは、持ち物を最初の状態に戻した後 (出直し) に呼ばれ、付けた物が持ち物と武器の両方に残って増えるのを防ぐため。
         public void ClearAttachments()
         {
             if (_attachments.Count == 0)
@@ -158,7 +157,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>セーブから付けた物を戻したときに、その Id を渡す。最初の持ち物に戻った持ち物から同じ数を引くために使う。</summary>
         public event Action<IReadOnlyList<string>> AttachmentsRestored;
 
         public IReadOnlyDictionary<string, IReadOnlyList<string>> SnapshotAttachments()

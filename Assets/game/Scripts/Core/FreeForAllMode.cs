@@ -3,11 +3,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// フリーフォーオール (全員が敵の個人戦) のモード。1 人 1 陣営 (<see cref="FreeForAll"/>) で、別の人を倒すと pointsPerKill 点 (<see cref="KillScore"/>)、
-    /// 倒れたら RespawnSeconds 後に戻る (<see cref="IndividualRespawn"/>)。誰かが ScoreLimit に届くか (<see cref="ScoreLimitWin"/>)、
-    /// 時間切れで最多得点の 1 人 (<see cref="TimeLimitWin"/>) が勝つ。最多得点が複数なら引き分け。
-    /// </summary>
     public static class FreeForAllMode
     {
         public const float DefaultTimeLimitSeconds = 300f;
@@ -15,15 +10,6 @@ namespace Shooter.Core
         public const float DefaultRespawnSeconds = 3f;
         public const int DefaultPointsPerKill = 1;
 
-        /// <summary>
-        /// 部品を組んだ <see cref="ModeSession"/> を Waiting で返す。参加者は <see cref="ModeSession.Join"/> か、
-        /// 他の人と重ならない陣営を指定した <see cref="ModeSession.AddPlayer(int, Side)"/> で入れる。
-        /// </summary>
-        /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい値。</param>
-        /// <param name="scoreLimit">勝利に必要なキル数。1 以上。</param>
-        /// <param name="respawnSeconds">倒れてから戻るまでの秒数。0 以上の有限値。</param>
-        /// <param name="pointsPerKill">別の人を 1 回倒すごとに入る点。1 以上。</param>
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。</exception>
         public static ModeSession Create(float timeLimitSeconds, int scoreLimit, float respawnSeconds, int pointsPerKill = DefaultPointsPerKill)
         {
             if (scoreLimit < 1)
@@ -45,12 +31,7 @@ namespace Shooter.Core
                 new IWinCondition[] { new ScoreLimitWin(scoreLimit), new TimeLimitWin() });
         }
 
-        /// <summary>
-        /// side の順位と 1 位との差。得点は HUD と同じく <see cref="HudFormat.DisplayedScore"/> で数え、同点は同じ順位にする
-        /// (5, 3, 3, 1 なら 1 位, 2 位, 2 位, 4 位)。数えるのは得点を持つ陣営 (<see cref="ModeSession.Sides"/>) で、抜けた人の陣営も含む。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">session が null。</exception>
-        /// <exception cref="ArgumentException">side が session の陣営にない。</exception>
+        // HUD に出す得点と順位がずれないよう、得点は HUD と同じく HudFormat.DisplayedScore で数える。
         public static FreeForAllStanding Standing(ModeSession session, Side side)
         {
             if (session == null)
@@ -101,25 +82,16 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>フリーフォーオールでの 1 人 (1 陣営) の順位 (<see cref="FreeForAllMode.Standing"/>)。</summary>
     public readonly struct FreeForAllStanding : IEquatable<FreeForAllStanding>
     {
-        /// <summary>順位。1 から。自分より得点の多い陣営の数 + 1 なので、同点は同じ順位になる。</summary>
         public int Rank { get; }
 
-        /// <summary>順位を数えた陣営の数 (自分を含む)。</summary>
         public int SideCount { get; }
 
-        /// <summary>自分の得点 (HUD に出す整数)。</summary>
         public int Score { get; }
 
-        /// <summary>
-        /// 自分の得点から、自分以外でいちばん多い得点を引いた値。正なら単独 1 位で 2 位との差、0 なら 1 位に並んでいる、
-        /// 負なら 1 位との差。自分しかいなければ null。
-        /// </summary>
         public int? Margin { get; }
 
-        /// <summary>単独で 1 位なら true。</summary>
         public bool IsSoleLeader => Margin.HasValue ? Margin.Value > 0 : SideCount == 1;
 
         public FreeForAllStanding(int rank, int sideCount, int score, int? margin)

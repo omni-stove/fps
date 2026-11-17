@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>smoke の足された手順 (<see cref="TpsRangeSmokeRun.ExtraSteps"/>) が決まりを守っていることを確かめる。</summary>
     public sealed class TpsRangeSmokeStepsTests
     {
         [Test]

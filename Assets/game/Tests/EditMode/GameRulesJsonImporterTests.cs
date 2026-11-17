@@ -10,10 +10,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GameRulesJsonImporter"/> を一時フォルダに走らせて、書いた JSON がそのルールの値になることと、
-    /// 失敗したときに何も保存しないことを確かめる。
-    /// </summary>
     public sealed class GameRulesJsonImporterTests
     {
         private string _folder;

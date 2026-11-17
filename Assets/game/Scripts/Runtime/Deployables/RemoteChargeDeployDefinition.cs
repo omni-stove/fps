@@ -102,7 +102,6 @@ namespace Shooter.Runtime
 
         public override float DetonateTapSeconds => _detonateTapSeconds;
 
-        /// <summary>owner が持つ、種類の Id が kindId の定義。キルログの名前 (<see cref="DisplayNameKey"/>) を引くのに使う。</summary>
         public static bool TryFind(GameObject owner, string kindId, out RemoteChargeDeployDefinition charge)
         {
             return TryFindEquipped(owner, kindId, out charge);
@@ -174,7 +173,6 @@ namespace Shooter.Runtime
             return RemoteCharge.DetonateAll(placed);
         }
 
-        // 置く物の上 (+Y) を面の向きに合わせる。前 (+Z) は狙った向きを面に沿わせた向きにし、面を真正面から狙ったときは面の上側に向ける。
         public static Quaternion SurfaceRotation(Vector3 normal, Vector3 aimDirection)
         {
             var up = normal.sqrMagnitude > 1e-8f ? normal.normalized : Vector3.up;
@@ -192,7 +190,7 @@ namespace Shooter.Runtime
             return Quaternion.LookRotation(forward.normalized, up);
         }
 
-        // 足元が原点で spec の大きさに収まる平たい箱。当たり判定を持たせ、敵の弾で壊せるようにする。
+        // 当たり判定を持たせるのは、敵の弾で壊せるようにするため。
         protected override GameObject CreatePlaceholder(DeploySpec spec)
         {
             var root = new GameObject(Id);

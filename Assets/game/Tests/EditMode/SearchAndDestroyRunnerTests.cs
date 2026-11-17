@@ -10,11 +10,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// SearchAndDestroyRunner が、ラウンドの頭に参加者を出現点に並べ、設置地点での設置・落ちた爆弾の拾い・設置された爆弾の解除を
-    /// 位置から Core に伝え、ラウンドと試合の終わりを扱うことを確かめる。bot (EnemyAgent) は NavMesh が要るので、
-    /// ここでは Damageable と SideMember だけの参加者を使う (プレイヤーがいないので、全員がその場にいれば長押ししているとみなされる)。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者を使う
+    // (プレイヤーがいないので、全員がその場にいれば長押ししているとみなされる)。
     public sealed class SearchAndDestroyRunnerTests
     {
         private const float PlantSeconds = 1f;

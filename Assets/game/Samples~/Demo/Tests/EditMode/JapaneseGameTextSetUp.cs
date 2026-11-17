@@ -7,16 +7,11 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// この名前空間のテストの間、画面の文字 (<see cref="GameText"/>) をゲームと同じ日本語の文字列表
-    /// (<see cref="StringsFolder"/> の ja.json に <see cref="LayerFolder"/>/ja/ の表を重ねたもの) から引かせ、終わったら前の引き先に戻す。
-    /// 書式のテストは日本語の文を期待しているので、エディターや OS の言語で結果が変わらないようにする。
-    /// Unity のプロジェクトの根からリポジトリのファイルを読む。
-    /// </summary>
+    // 書式のテストは日本語の文を期待しているので、エディターや OS の言語で結果が変わらないよう、
+    // この名前空間のテストの間は画面の文字をゲームと同じ日本語の文字列表から引かせる。
     [SetUpFixture]
     public sealed class JapaneseGameTextSetUp
     {
-        /// <summary>リポジトリの根からの、言語ごとの文字列表のフォルダー。</summary>
         public const string StringsFolder = "Assets/game/Samples~/Demo/Localization/Resources/Strings";
 
         private Func<StringTable> _previous;
@@ -40,16 +35,11 @@ namespace Shooter.Core.Tests
             GameLanguages.Use(_previousLanguages);
         }
 
-        /// <summary>リポジトリの根からの、言語コードのフォルダーごとに重ねる表を置くフォルダー。</summary>
         public const string LayerFolder = "Assets/game/Samples~/Demo/Resources/Localization";
 
-        /// <summary>リポジトリの根からの、言語の一覧 (<see cref="GameLanguageList"/>) を置くフォルダー。</summary>
         public const string LanguageListFolder = LayerFolder + "/Languages";
 
-        /// <summary>
-        /// 言語の一覧をリポジトリから、ゲーム (Shooter.Runtime の Localizer) と同じくファイル名 (拡張子なし) の順に重ねて読む。
-        /// 読めない所が 1 つでもあればテストを失敗にする。
-        /// </summary>
+        // ゲーム (Shooter.Runtime の Localizer) と同じ結果になるよう、同じくファイル名 (拡張子なし) の順に重ねて読む。
         public static GameLanguageList LoadLanguageList()
         {
             var folder = Path.Combine(FindRepositoryRoot(), LanguageListFolder);
@@ -65,20 +55,12 @@ namespace Shooter.Core.Tests
             return list;
         }
 
-        /// <summary>
-        /// language の文字列表をリポジトリから、ゲーム (Shooter.Runtime の Localizer) と同じ順に重ねて読む。
-        /// 見つからない・読めなければテストを失敗にする。
-        /// </summary>
         public static StringTable LoadTable(GameLanguage language)
         {
             return StringTable.Merge(LoadLayers(language).Select(layer => layer.Value));
         }
 
-        /// <summary>
-        /// language の文字列表を、重ねる順にファイルのパスと組にして読む。先に <see cref="StringsFolder"/> の &lt;言語コード&gt;.json (あれば)、
-        /// 続けて <see cref="LayerFolder"/>/&lt;言語コード&gt;/ の *.json をファイル名 (拡張子なし) の順 (大文字小文字を区別する) に並べる。
-        /// 1 つも無い・読めなければテストを失敗にする。
-        /// </summary>
+        // ゲーム (Shooter.Runtime の Localizer) と同じ順に重ねる。
         public static IReadOnlyList<KeyValuePair<string, StringTable>> LoadLayers(GameLanguage language)
         {
             var root = FindRepositoryRoot();
@@ -109,9 +91,6 @@ namespace Shooter.Core.Tests
             return layers;
         }
 
-        /// <summary>
-        /// <see cref="StringsFolder"/> を含むリポジトリの根。テストの出力先とプロジェクトの根 (今のフォルダー) から上へ探す。
-        /// </summary>
         public static string FindRepositoryRoot()
         {
             foreach (var start in new[] { TestContext.CurrentContext.TestDirectory, Environment.CurrentDirectory })

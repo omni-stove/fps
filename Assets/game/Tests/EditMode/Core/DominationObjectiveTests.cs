@@ -94,7 +94,6 @@ namespace Shooter.Core.Tests
             Assert.That(objective.Locate(1, null), Is.Null);
             Assert.That(objective.Mode.GetPlayerPoint(1), Is.Null);
 
-            // 誰もいなければ中立へ戻る
             objective.Tick(true, 1f);
             Assert.That(objective.Mode.GetControl(0), Is.Zero);
         }

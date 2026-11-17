@@ -11,9 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 一人称と三人称で、カメラの置き場所・体の描き方・射撃の始点と向きがどう変わるか (変わらないか)。
-    /// </summary>
     public sealed class ViewRigTests
     {
         private static readonly Vector3 _eyeHeight = new Vector3(0f, 0.6f, 0f);

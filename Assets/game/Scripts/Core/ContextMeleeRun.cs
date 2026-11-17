@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    // 技 1 回の時間だけを進める。位置合わせの動き・操作の停止・結果の適用は呼ぶ側 (ContextMeleeAction) が行う。
     public sealed class ContextMeleeRun
     {
         private float _elapsed;
@@ -29,7 +28,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <exception cref="ArgumentNullException">move が null。</exception>
         public bool Begin(ContextMeleeMove move)
         {
             if (move == null)
@@ -48,8 +46,6 @@ namespace Shooter.Core
             return true;
         }
 
-        // 結果を出した Tick で技を終える。呼ぶ側は Tick の前に Move を覚えておき、Resolved を受けたらその技の結果を出す。
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public ContextMeleeEvents Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -79,7 +75,6 @@ namespace Shooter.Core
             return events;
         }
 
-        // 撃たれたなど、技の設定で止められる理由のとき。中断できない技なら止めずに false。
         public bool TryInterrupt()
         {
             if (Move == null || !Move.Interruptible)
@@ -91,7 +86,6 @@ namespace Shooter.Core
             return true;
         }
 
-        // 自分が倒れた・相手が消えたなど、技の設定に関わらず続けられないとき。
         public bool Cancel()
         {
             if (Move == null)

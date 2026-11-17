@@ -9,9 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// AirstrikeReward が渡した発数を間を置いて爆発させ、位置を渡した乱数で広がりの中に決め、倒した数を使った者に帰属させることを確かめる。
-    /// </summary>
     public sealed class AirstrikeRewardTests
     {
         private const string WeaponId = "airstrike";

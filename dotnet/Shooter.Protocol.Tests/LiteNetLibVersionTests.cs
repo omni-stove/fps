@@ -7,7 +7,7 @@ namespace Shooter.Protocol.Tests
 {
     public sealed class LiteNetLibVersionTests
     {
-        /// <summary>版がずれるとクライアント (Unity) とサーバー (.NET) で通信の手順が食い違うので、片方だけ上げたら落とす。</summary>
+        // 版がずれるとクライアント (Unity) とサーバー (.NET) で通信の手順が食い違うので、片方だけ上げたら落とす。
         [Test]
         public void UnityPluginMatchesTheNuGetPackage()
         {

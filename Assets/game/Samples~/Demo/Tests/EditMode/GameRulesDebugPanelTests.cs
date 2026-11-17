@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="GameRulesDebugPanel"/> の項目の見出しが、どの言語の表にもあることを確かめる。</summary>
     public sealed class GameRulesDebugPanelTests
     {
         [Test]

@@ -2,12 +2,8 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 拾える陣営の条件。既定値 (default) は <see cref="Anyone"/>。
-    /// </summary>
     public readonly struct PickupEligibility : IEquatable<PickupEligibility>
     {
-        /// <summary>誰でも拾える。</summary>
         public static readonly PickupEligibility Anyone = new PickupEligibility(PickupSideRule.Anyone, default(Side));
 
         private PickupEligibility(PickupSideRule rule, Side side)
@@ -16,19 +12,14 @@ namespace Shooter.Core
             Side = side;
         }
 
-        /// <summary>絞り方。</summary>
         public PickupSideRule Rule { get; }
 
-        /// <summary><see cref="Rule"/> が使う陣営。<see cref="PickupSideRule.Anyone"/> では意味を持たない。</summary>
         public Side Side { get; }
 
-        /// <summary>side の人だけが拾える。</summary>
         public static PickupEligibility Only(Side side) => new PickupEligibility(PickupSideRule.OnlySide, side);
 
-        /// <summary>side 以外の人が拾える。</summary>
         public static PickupEligibility Except(Side side) => new PickupEligibility(PickupSideRule.ExceptSide, side);
 
-        /// <summary>rule と side から作る。定義されていない rule は <see cref="ArgumentOutOfRangeException"/>。</summary>
         public static PickupEligibility Of(PickupSideRule rule, Side side)
         {
             switch (rule)
@@ -44,7 +35,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>陣営が collectorSide (陣営を持たなければ null) の人が拾えるなら true。</summary>
         public bool Allows(Side? collectorSide)
         {
             switch (Rule)
@@ -64,7 +54,6 @@ namespace Shooter.Core
 
         public override int GetHashCode() => Rule == PickupSideRule.Anyone ? 0 : ((int)Rule * 397) ^ Side.Id;
 
-        /// <example><c>anyone</c>・<c>only:1</c>・<c>except:0</c></example>
         public override string ToString()
         {
             switch (Rule)

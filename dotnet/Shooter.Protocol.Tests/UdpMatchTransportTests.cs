@@ -8,7 +8,6 @@ using Shooter.Core;
 
 namespace Shooter.Protocol.Tests
 {
-    /// <summary>同じプロセスの中で、ループバックの UDP でサーバーとクライアントをつなぐ。</summary>
     [NonParallelizable]
     public sealed class UdpMatchTransportTests
     {
@@ -403,10 +402,8 @@ namespace Shooter.Protocol.Tests
             return transport;
         }
 
-        /// <summary>
-        /// 他の出来事を読み捨てながら kind が出てくるまで待つ。サーバーは TryReceive の中で接続の申し込みを受けるので、others も読み続ける。
-        /// 読み続けた others の出来事は捨てるので、後で確かめたい出来事がある側は others に入れない。
-        /// </summary>
+        // サーバーは TryReceive の中で接続の申し込みを受けるので、others も読み続ける。
+        // 読み続けた others の出来事は捨てるので、後で確かめたい出来事がある側は others に入れない。
         private static TransportEvent WaitFor(UdpMatchTransport transport, TransportEventKind kind, params IMatchTransport[] others)
         {
             TransportEvent found = default;
@@ -461,7 +458,7 @@ namespace Shooter.Protocol.Tests
                 others);
         }
 
-        /// <summary>届いたデータは次の TryReceive までしか保証されないので、その場で写して溜める。</summary>
+        // 届いたデータは次の TryReceive までしか保証されないので、その場で写して溜める。
         private sealed class Collector
         {
             private readonly UdpMatchTransport _transport;

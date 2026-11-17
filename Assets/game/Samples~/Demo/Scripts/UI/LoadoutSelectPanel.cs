@@ -6,16 +6,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ロードアウトを選ぶ画面の要素を、渡された入れ物の中にコードで作って操作をつなぐ。HUD の <see cref="LoadoutSelectView"/> と
-    /// メインメニューの <see cref="MainMenuScreen"/> が同じものを使う。
-    /// </summary>
-    /// <remarks>
-    /// スロットごとに 1 行を作り、その行に選べる武器 (<see cref="LoadoutSelection.OptionsAt"/>) を武器名と種別のボタンで並べ、最後に決定のボタンを置く。
-    /// マウスではボタンを押して選ぶ。ゲームパッドとキーボードでは上下 (Tab) で行を動かし、左右でその行の武器を替え、
-    /// 決定の行で Submit を押すと決める。Cancel で <see cref="Cancelled"/> を呼ぶ。
-    /// 既定の移動は画面上の位置で次を選ぶので、パネルの根で移動・決定・取り消しを受けて止め、行の順で動かす。
-    /// </remarks>
+    // 既定の移動は画面上の位置で次を選ぶので、パネルの根で移動・決定・取り消しを受けて止め、行の順で動かす。
     public sealed class LoadoutSelectPanel : IDisposable
     {
         public const string PanelClass = "loadout-select";
@@ -43,7 +34,6 @@ namespace Shooter.Runtime
         public const string ConfirmButtonName = "loadout-confirm";
         public const string StatusName = "loadout-status";
 
-        /// <summary>Resources からの見た目 (Demo サンプルの UI/Resources/Loadout/LoadoutSelect.uss)。</summary>
         public const string StyleSheetResourcePath = "Loadout/LoadoutSelect";
 
         private static StyleSheet _styleSheet;
@@ -61,8 +51,6 @@ namespace Shooter.Runtime
         private bool _busy;
         private bool _disposed;
 
-        /// <summary>container を空にして selection の行を作り、最初の行を選んだ状態にする。</summary>
-        /// <exception cref="ArgumentNullException">container か selection が null。</exception>
         public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection, ProgressionLedger ledger = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
@@ -110,43 +98,31 @@ namespace Shooter.Runtime
             RefreshAll();
         }
 
-        /// <summary>決定でルールに合う並びを選んでいたときに、スロット順の武器の Id を渡す。</summary>
         public event Action<IReadOnlyList<string>> Confirmed;
 
-        /// <summary>Cancel を押したとき。閉じるかどうかは受けた側が決める。</summary>
         public event Action Cancelled;
 
-        /// <summary>選んでいる中身。</summary>
         public LoadoutSelection Selection => _selection;
 
-        /// <summary>行を作った入れ物。</summary>
         public VisualElement Container => _container;
 
-        /// <summary>選んでいる行。0 から <see cref="LoadoutSelection.SlotCount"/> - 1 はスロット、<see cref="ConfirmRow"/> は決定のボタン。</summary>
         public int FocusRow => _focusRow;
 
-        /// <summary>決定のボタンの行の番号。</summary>
         public int ConfirmRow => _selection.SlotCount;
 
-        /// <summary>決定のボタン。</summary>
         public Button ConfirmButton => _confirm;
 
-        /// <summary>出している案内。出していなければ null。</summary>
         public string Status => _status.style.display == DisplayStyle.None ? null : _status.text;
 
-        /// <summary>出している案内がエラーか。</summary>
         public bool IsStatusError => _status.ClassListContains(ErrorStatusClass);
 
-        /// <summary>答えを待っていて操作を受け付けていないか (<see cref="SetBusy"/>)。</summary>
         public bool IsBusy => _busy;
 
-        /// <summary>slot 番のスロットの option 番目の武器のボタン。</summary>
         public Button OptionButton(int slot, int option)
         {
             return _options[slot][option];
         }
 
-        /// <summary>選んでいる行を step だけ動かし、端では反対側へ回り込む。</summary>
         public void MoveFocus(int step)
         {
             if (_busy || step == 0)
@@ -158,7 +134,6 @@ namespace Shooter.Runtime
             SetFocusRow(((_focusRow + step) % count + count) % count, true);
         }
 
-        /// <summary>選んでいる行がスロットなら、その武器を step だけ替える (端では回り込む)。替わったら true。</summary>
         public bool Cycle(int step)
         {
             if (_busy || _focusRow >= ConfirmRow || !_selection.Cycle(_focusRow, step))
@@ -172,7 +147,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>slot 番のスロットで option 番目の武器を選び、その行を選んでいる行にする。選べたら true。</summary>
         public bool Select(int slot, int option)
         {
             if (_busy || slot < 0 || slot >= _selection.SlotCount || !_selection.Select(slot, option))
@@ -186,10 +160,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 選んでいる並びを確かめ (<see cref="LoadoutSelection.Validate"/>)、合えば <see cref="Confirmed"/> を呼んで true。
-        /// 合わなければ理由をエラーの案内に出して false。答えを待っている間は何もせず false。
-        /// </summary>
         public bool Confirm()
         {
             if (_busy)
@@ -208,7 +178,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>案内を出す。text が空なら消す。error なら赤くする。</summary>
         public void ShowStatus(string text, bool error)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -222,7 +191,7 @@ namespace Shooter.Runtime
             _status.style.display = DisplayStyle.Flex;
         }
 
-        /// <summary>busy の間はボタンを押せなくし、移動・選択・決定を受け付けない (送った答えを待つ間の二度押しを防ぐ)。</summary>
+        // 送った答えを待つ間の二度押しを防ぐため、busy の間はボタンも移動・選択・決定も止める。
         public void SetBusy(bool busy)
         {
             _busy = busy;
@@ -242,7 +211,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>根の入力の購読を外し、入れ物を空にする。2 度目からは何もしない。</summary>
         public void Dispose()
         {
             if (_disposed)

@@ -7,59 +7,35 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 参加者のキル・アシスト・デス・接続状態をチームごとに一覧にするビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="ToggleActionPath"/> (Tab / ゲームパッドの View) を押している間だけ出す。
-    /// </summary>
-    /// <remarks>
-    /// 一覧は、要素を持っている間 <see cref="GameSignals.Scoreboard"/> を購読して受ける (オフラインは <see cref="MatchRunner"/> と
-    /// <see cref="DominationRunner"/> がキル・デスのたびに、ネット対戦はスナップショットが届くたびに出す)。自分の行のチームの欄を先に出し、自分の行が無ければ Alpha を先にする。
-    /// 並べ方は Core の <see cref="ScoreboardRows"/> を使う。名前などの文は作り直すときに <see cref="ScoreboardText"/> と今の言語 (<see cref="Localizer.Resolve"/>) で文にし、
-    /// 言語が変わったら作り直す。閉じている間に届いた一覧は覚えておくだけにし、
-    /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class ScoreboardView : HudElementView
     {
-        /// <summary>Hud.uxml のスコアボードの要素。</summary>
         public const string UxmlName = "scoreboard";
 
-        /// <summary>押している間だけ一覧を出すアクション。</summary>
         public const string ToggleActionPath = InputActionPaths.Scoreboard;
 
         public const string LogTag = "[Scoreboard]";
 
-        /// <summary>一覧全体に付ける USS クラス。</summary>
         public const string BoardClass = "scoreboard";
 
-        /// <summary>列の見出しの行。</summary>
         public const string CaptionRowClass = "scoreboard__caption";
 
-        /// <summary>1 チーム分の欄。</summary>
         public const string SectionClass = "scoreboard__section";
 
-        /// <summary>チームの欄の見出しの行 (チーム名と合計)。</summary>
         public const string TeamRowClass = "scoreboard__team";
 
-        /// <summary>参加者 1 人分の行。</summary>
         public const string PlayerRowClass = "scoreboard__row";
 
-        /// <summary>自分の行に足す。</summary>
         public const string LocalRowClass = "scoreboard__row--local";
 
-        /// <summary>切断した人の行に足す。</summary>
         public const string DisconnectedRowClass = "scoreboard__row--disconnected";
 
-        /// <summary>名前の列。</summary>
         public const string NameCellClass = "scoreboard__name";
 
-        /// <summary>キル数・アシスト数・デス数の列。</summary>
         public const string CountCellClass = "scoreboard__count";
 
-        /// <summary>接続状態の列。</summary>
         public const string ConnectionCellClass = "scoreboard__connection";
 
-        /// <summary>列の見出しの文字列。</summary>
         public const string KillsCaption = "K";
 
         public const string DeathsCaption = "D";
@@ -83,16 +59,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>一覧を出しているか。</summary>
         public bool IsOpen => _open;
 
-        /// <summary>
-        /// 最後に <see cref="GameSignals.Scoreboard"/> から受けた一覧を並べたもの。先に出すチームの欄が先で、いつも 2 つ。
-        /// 何も受けていなければ両チームとも空。
-        /// </summary>
         public IReadOnlyList<ScoreboardSection> Sections => _sections;
 
-        /// <summary>押している間だけ一覧を出すアクション。解決できなければ null (一覧は開かない)。</summary>
         public InputAction ToggleAction => _toggleAction;
 
         // entries が並べられない (同じ Id が 2 つ・知らないチーム) ときは、エラーを出して前の一覧を残す。届いた値の誤りで HUD ごと止めないため。
@@ -119,7 +89,6 @@ namespace Shooter.Runtime
             MarkDirty();
         }
 
-        /// <summary>entries のうち自分の行 (<see cref="ScoreboardEntry.IsLocal"/>) のチーム。自分の行が無ければ Alpha。</summary>
         public static Team FirstTeamOf(IReadOnlyList<ScoreboardEntry> entries)
         {
             if (entries != null)
@@ -136,10 +105,6 @@ namespace Shooter.Runtime
             return Team.Alpha;
         }
 
-        /// <summary>
-        /// 一覧を出すか隠す。Play 中は <see cref="ToggleAction"/> を押しているかで毎フレーム呼ぶ。
-        /// 要素をまだ受けていなくても状態は覚え、受けたときに合わせる。
-        /// </summary>
         public void SetOpen(bool open)
         {
             if (_open == open)
@@ -151,7 +116,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>見出しの色 (<see cref="Hud.TeamColor"/>) が変わったときに呼ぶ。開いていればすぐ塗り直す。</summary>
         public void RefreshTeamColors()
         {
             MarkDirty();
@@ -260,6 +224,7 @@ namespace Shooter.Runtime
             Refresh();
         }
 
+        // 閉じている間に届いた一覧は覚えるだけにして開いたときに作り直すのは、キルのたびに見えない要素を作り直さないため。
         private void Refresh()
         {
             var element = Element;
@@ -376,7 +341,7 @@ namespace Shooter.Runtime
             return label;
         }
 
-        /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。
         private void AcquireToggleAction()
         {
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ解決して有効にする。

@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HUD のストリークの欄 (<see cref="StreakView"/>) が <see cref="GameSignals.Streak"/> の値の有無で出し隠しし、
-    /// 出す文 (<see cref="StreakText"/>) を日本語の表 (Resources/Localization/ja/streaks.json) から作ることを確かめる。
-    /// </summary>
     public sealed class StreakViewTests
     {
         // 名前のキーが空の枠は Id を、キーのある枠は表 (items.json の weapon.rifle は "Rifle") を名前にする

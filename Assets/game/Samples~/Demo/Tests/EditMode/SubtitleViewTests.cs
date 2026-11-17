@@ -12,11 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="SubtitleView"/> が、設定で字幕を On にしている間だけ音の合図を「[種類 向き]」の行にして画面の下に出し、
-    /// 同じ種類を 1 行にまとめて 3 秒で消すことを確かめる。
-    /// Edit Mode では MonoBehaviour の OnEnable が走らず <see cref="SubtitleFeed"/> を購読しないので、Show と Tick を直接呼ぶ。
-    /// </summary>
+    // Edit Mode では MonoBehaviour の OnEnable が走らず SubtitleFeed を購読しないので、Show と Tick を直接呼ぶ。
     public sealed class SubtitleViewTests
     {
         private readonly List<Object> _created = new List<Object>();
@@ -64,7 +60,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(hud.Subtitles, Is.Not.Null, "Hud.AddViews attaches the subtitles");
         }
 
-        // 射撃場で自分が撃つと正面、後ろから撃たれると後ろ
         [Test]
         public void GunshotsAreShownWithTheirDirection()
         {

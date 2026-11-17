@@ -4,28 +4,17 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ロビー 1 つの、ある時点の状態。ID はどれも EOS が返す文字列のまま持ち、SDK の型には依存しない。
-    /// </summary>
+    // ID を EOS が返す文字列のまま持つのは、Core を EOS SDK の型に依存させないため。
     public sealed class LobbyInfo
     {
         private readonly string[] _members;
         private readonly LobbyAttribute[] _attributes;
 
-        /// <param name="id">ロビーの ID。</param>
-        /// <param name="ownerUserId">オーナーの ProductUserId。</param>
-        /// <param name="maxMembers">参加できる最大人数 (1 以上)。</param>
-        /// <param name="members">参加中のメンバーの ProductUserId。空・重複は取り除く。</param>
         public LobbyInfo(string id, string ownerUserId, int maxMembers, IReadOnlyList<string> members)
             : this(id, ownerUserId, maxMembers, members, Array.Empty<LobbyAttribute>())
         {
         }
 
-        /// <param name="id">ロビーの ID。</param>
-        /// <param name="ownerUserId">オーナーの ProductUserId。</param>
-        /// <param name="maxMembers">参加できる最大人数 (1 以上)。</param>
-        /// <param name="members">参加中のメンバーの ProductUserId。空・重複は取り除く。</param>
-        /// <param name="attributes">公開の属性。null の要素は取り除き、同じキーは先のものを残す。</param>
         public LobbyInfo(
             string id, string ownerUserId, int maxMembers, IReadOnlyList<string> members, IReadOnlyList<LobbyAttribute> attributes)
         {
@@ -90,18 +79,14 @@ namespace Shooter.Core
 
         public int MaxMembers { get; }
 
-        /// <summary>参加中のメンバーの ProductUserId。</summary>
         public IReadOnlyList<string> Members => _members;
 
         public int MemberCount => _members.Length;
 
-        /// <summary>あと何人参加できるか。</summary>
         public int FreeSlots => Math.Max(0, MaxMembers - _members.Length);
 
-        /// <summary>公開の属性。検索で読んだときだけ入り、無ければ空。</summary>
         public IReadOnlyList<LobbyAttribute> Attributes => _attributes;
 
-        /// <summary>文字列の属性 <paramref name="key"/> を読む。無い・整数の属性なら false。</summary>
         public bool TryGetText(string key, out string value)
         {
             var attribute = Find(_attributes, key);
@@ -109,7 +94,6 @@ namespace Shooter.Core
             return value != null;
         }
 
-        /// <summary>整数の属性 <paramref name="key"/> を読む。無い・文字列の属性なら false。</summary>
         public bool TryGetNumber(string key, out long value)
         {
             var attribute = Find(_attributes, key);
@@ -118,36 +102,27 @@ namespace Shooter.Core
             return found;
         }
 
-        /// <summary>非公開の試合か (<see cref="ServerLobby.PrivateKey"/> が 0 以外の整数)。属性が無ければ公開とみなして false。</summary>
         public bool IsPrivate => TryGetNumber(ServerLobby.PrivateKey, out var value) && value != 0;
 
-        /// <summary>参加コード (<see cref="ServerLobby.JoinCodeKey"/>)。無ければ null。</summary>
         public string JoinCode => TryGetText(ServerLobby.JoinCodeKey, out var value) ? value : null;
 
-        /// <summary>
-        /// 試合にいるプレイヤーの実力の平均 (<see cref="ServerLobby.SkillAverageKey"/>)。無い、または int に収まらなければ null。
-        /// </summary>
         public int? SkillAverage =>
             TryGetNumber(ServerLobby.SkillAverageKey, out var value) && value >= int.MinValue && value <= int.MaxValue
                 ? (int)value
                 : (int?)null;
 
-        /// <summary>ボイスチャットが使えるか (<see cref="ServerLobby.VoiceEnabledKey"/> が 0 以外の整数)。属性が無ければ false。</summary>
         public bool VoiceEnabled => TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
 
-        /// <summary><paramref name="userId"/> がオーナーか。ID の大文字・小文字は区別しない。</summary>
         public bool IsOwnedBy(string userId)
         {
             return userId != null && string.Equals(OwnerUserId, userId, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary><paramref name="userId"/> がメンバーか。ID の大文字・小文字は区別しない。</summary>
         public bool HasMember(string userId)
         {
             return userId != null && Contains(_members, userId);
         }
 
-        /// <summary>ログ向けのメンバーの一覧。<c>2/8 [id1,id2]</c> の形。</summary>
         public string DescribeMembers()
         {
             return MemberCount.ToString(CultureInfo.InvariantCulture) + "/"

@@ -5,7 +5,6 @@ namespace Shooter.Core
 {
     public static class InventoryWeapons
     {
-        // 弾薬アイテムを決めていない武器は null (予備弾をこれまでどおり武器の中で数える)
         public static IAmmoPool PoolFor(Inventory inventory, WeaponSpec spec)
         {
             if (inventory == null)
@@ -21,7 +20,6 @@ namespace Shooter.Core
             return inventory.Catalog.TryFindAmmo(spec.Id, out var ammo) ? new InventoryAmmoPool(inventory, ammo.Id) : null;
         }
 
-        // 持ち物を最初に戻したときに、持ち物から撃つ武器の最初の予備弾を弾薬アイテムで持たせる。
         // 足りない分だけ足すのは、何度呼んでも (出現と試合の開始が重なっても) 増え続けないようにするため。
         // 同じ弾薬を使う武器が何本あっても一番多い武器の分までにするのは、弾薬は武器ではなく持ち物にあり、セーブから戻した武器の
         // 予備弾 (どれも同じ持ち物の数) を足し合わせて増やさないため

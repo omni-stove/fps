@@ -9,9 +9,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="Localizer"/> が Resources の ja.json / en.json を読み、今の言語で文字を引き、言語が変わったときだけ知らせること。
-    /// </summary>
     public sealed class LocalizerTests
     {
         private ControlSettings _appliedBefore;

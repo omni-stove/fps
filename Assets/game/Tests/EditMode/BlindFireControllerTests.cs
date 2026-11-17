@@ -11,11 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 床・壁・壁の向こうの標的を置き、<see cref="CoverController.Tick"/> と <see cref="PlayerController.Tick"/> でカバーに入ってから
-    /// <see cref="WeaponController.Fire"/> して、ブラインドファイアの始点・止め方・ルールでの切り替えを確かめる。
-    /// Edit Mode では Awake が走らないので参照は直接渡す。寸法は <see cref="CoverControllerTests"/> と同じ。
-    /// </summary>
+    // Edit Mode では Awake が走らないので参照は直接渡す。
     public sealed class BlindFireControllerTests
     {
         private const float _frame = 0.02f;

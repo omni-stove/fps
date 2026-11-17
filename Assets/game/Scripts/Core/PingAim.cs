@@ -4,26 +4,10 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 照準の先の何に印を付けるかを決める。照準の Ray が最初に当たったものと、印を付けられる敵の一覧から選ぶ。
-    /// <list type="number">
-    /// <item>Ray が生きている敵に当たっていれば、その敵。</item>
-    /// <item>そうでなければ、見えていて生きている敵のうち、照準との角度が <see cref="PingSpec.EnemyAimToleranceDegrees"/> 以内で最も小さい敵
-    /// (同じ角度なら近い方、それも同じなら一覧で先の方)。</item>
-    /// <item>敵が無ければ、Ray が当たった点 (場所)。</item>
-    /// <item>どれも <see cref="PingSpec.MaxDistance"/> より遠ければ何も無い。</item>
-    /// </list>
-    /// </summary>
     public static class PingAim
     {
         private const float _minDistance = 1e-4f;
 
-        /// <param name="spec">届く距離と敵に吸い付く角度。</param>
-        /// <param name="origin">照準の始点。各成分は有限の値。</param>
-        /// <param name="direction">照準の向き。長さは問わないが 0 ではない有限の値。</param>
-        /// <param name="surfacePoint">Ray が最初に当たった点。何にも当たらなければ null。</param>
-        /// <param name="surfaceCandidate">Ray が最初に当たったものが candidates の敵なら、その添字。敵でなければ -1。</param>
-        /// <param name="candidates">印を付けられる敵。</param>
         public static PingHit Resolve(
             PingSpec spec,
             Vector3 origin,

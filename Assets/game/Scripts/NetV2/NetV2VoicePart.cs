@@ -6,15 +6,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 試合中のボイスチャットを動かす <see cref="NetV2Client"/> の部品。マップに入ったら試合のロビーの RTC 部屋に入り、
-    /// クライアントが消えるときに出る。押して話すボタン (<see cref="InputActionPaths.PushToTalk"/>) を押している間だけ送り、
-    /// スナップショットのチームを見て敵の声は受けない (<see cref="ClientVoice"/>)。今の状態は <see cref="GameSignals.Voice"/> に出す。
-    /// </summary>
-    /// <remarks>
-    /// マイクの入り切りと声の音量は <see cref="VoiceSettingsStore"/> から読み、設定の画面が保存したらすぐ効かせる。
-    /// ポーズ画面を開いている間は押していないものとして扱う。
-    /// </remarks>
     public sealed class NetV2VoicePart : INetV2ClientPart
     {
         private readonly MatchClient _client;
@@ -29,16 +20,6 @@ namespace Shooter.NetV2
         private VoiceStatus? _published;
         private bool _disposed;
 
-        /// <param name="client">つないだクライアント。自分のプレイヤーの Id をここから読む。</param>
-        /// <param name="session">試合のボイスチャット。この部品が Dispose する。</param>
-        /// <param name="lobbyId">
-        /// 試合のロビーの Id。ロビーにはメンバーとして先に入っておく (<see cref="ILobbyBackend.JoinMatchLobby"/>)。
-        /// null か空ならボイスを使わない。
-        /// </param>
-        /// <param name="roster">参加者 (ProductUserId) と試合のプレイヤーの対応。</param>
-        /// <param name="store">マイクの入り切りと声の音量を読む設定。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
-        /// <param name="pushToTalkHeld">押して話すボタンを押しているか。null なら入力のアクションを読む。</param>
         public NetV2VoicePart(
             MatchClient client,
             IVoiceSession session,
@@ -63,7 +44,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>試合のボイスの判断。</summary>
         public ClientVoice Voice => _voice;
 
         public bool Handle(IMessage message)

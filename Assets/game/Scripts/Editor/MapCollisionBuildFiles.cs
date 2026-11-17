@@ -5,9 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// Assets に写しを置かず、ビルドの StreamingAssets にだけ server-data/maps を入れる (<see cref="MapCollisionFiles"/>)。
-    /// </summary>
     public sealed class MapCollisionBuildFiles : BuildPlayerProcessor
     {
         public override void PrepareForBuild(BuildPlayerContext buildPlayerContext)

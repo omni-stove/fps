@@ -4,44 +4,29 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 弾が当たった面の材質 (<see cref="SurfaceMaterial"/> の Id) ごとの銃痕・着弾エフェクト・着弾音。
-    /// Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読み、<see cref="WeaponPresentation"/> が着弾ごとに
-    /// <see cref="Resolve"/> で引く。置いていなければ <see cref="WeaponPresentation"/> は <see cref="PresentationCatalog"/> の火花と音を使う。
-    /// 中身は Shooter.Editor.SurfaceImpactAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
-    /// </summary>
     [CreateAssetMenu(fileName = "SurfaceImpactCatalog", menuName = "Shooter/Surface Impact Catalog")]
     public sealed class SurfaceImpactCatalog : ScriptableObject
     {
-        /// <summary>演出のカタログの名前 (<see cref="PresentationCatalog.CatalogResourcePath"/> に渡す)。</summary>
         public const string CatalogName = "SurfaceImpact";
 
         [SerializeField, Tooltip("材質ごとの銃痕・エフェクト・音。材質の Id は重複させず、default を入れておく")]
         private List<SurfaceImpactAssets> _surfaces = new List<SurfaceImpactAssets>();
 
-        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/SurfaceImpactCatalog.asset、拡張子なし)。</summary>
         public static string ResourcePath => PresentationCatalog.CatalogResourcePath(CatalogName);
 
-        /// <summary>定義順の材質ごとの素材。中身を書き換えるときは <see cref="SetSurfaces"/> を使う。</summary>
         public IReadOnlyList<SurfaceImpactAssets> Surfaces => _surfaces ??= new List<SurfaceImpactAssets>();
 
-        /// <summary>入口 (<see cref="GameContent"/>) のもの、無ければ Resources の <see cref="ResourcePath"/> から読む。どちらも無ければ null。</summary>
         public static SurfaceImpactCatalog Load()
         {
             var fromContent = GameContent.Pick(c => c.SurfaceImpacts);
             return fromContent != null ? fromContent : Resources.Load<SurfaceImpactCatalog>(ResourcePath);
         }
 
-        /// <summary>材質ごとの素材をまとめて差し替える。null は空にする。渡した列は複製して持つ。</summary>
         public void SetSurfaces(IEnumerable<SurfaceImpactAssets> surfaces)
         {
             _surfaces = surfaces == null ? new List<SurfaceImpactAssets>() : new List<SurfaceImpactAssets>(surfaces);
         }
 
-        /// <summary>
-        /// 材質の Id が materialId (<see cref="SurfaceMaterial.Normalize"/> で揃えたもの) の素材を探す。Id は大文字小文字を区別して比べる。
-        /// 無ければ false と null を返す。
-        /// </summary>
         public bool TryGetSurface(string materialId, out SurfaceImpactAssets assets)
         {
             var id = SurfaceMaterial.Normalize(materialId);
@@ -58,10 +43,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// materialId の着弾に使う素材。その材質の素材があればそれ、無ければ <see cref="SurfaceMaterial.DefaultId"/> の素材、
-        /// それも無ければ null (着弾の演出を出さない)。見つけた素材の空の枠は、その枠の演出だけを出さない (default の枠で埋めない)。
-        /// </summary>
         public SurfaceImpactAssets Resolve(string materialId)
         {
             if (TryGetSurface(materialId, out var assets))
@@ -72,11 +53,6 @@ namespace Shooter.Runtime
             return TryGetSurface(SurfaceMaterial.DefaultId, out var fallback) ? fallback : null;
         }
 
-        /// <summary>
-        /// 材質が 1 つ以上あり、<see cref="SurfaceMaterial.DefaultId"/> を含み、どの材質も Id が重複せず、銃痕・エフェクト・音と
-        /// 銃痕の大きさがすべて埋まっていることを確かめる。足りないものはすべて並べて 1 つの例外にする。
-        /// </summary>
-        /// <exception cref="PresentationCatalogException">どれかが欠けている・重複しているとき。</exception>
         public void Validate()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed surface impact catalog)" : name;
@@ -133,11 +109,9 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>材質 1 つの銃痕・着弾エフェクト・着弾音。<see cref="SurfaceImpactCatalog"/> の要素。</summary>
     [Serializable]
     public sealed class SurfaceImpactAssets
     {
-        /// <summary>銃痕の一辺の既定の長さ (m)。</summary>
         public const float DefaultDecalSize = 0.12f;
 
         [SerializeField, Tooltip("材質の Id (SurfaceMaterial の Id と同じ値)")]
@@ -159,7 +133,6 @@ namespace Shooter.Runtime
         {
         }
 
-        /// <summary>materialId は <see cref="SurfaceMaterial.Normalize"/> で揃えて持つ (null・空白なら default)。</summary>
         public SurfaceImpactAssets(string materialId, Material decal, float decalSize, GameObject effect, AudioClip sound)
         {
             _materialId = SurfaceMaterial.Normalize(materialId);
@@ -171,16 +144,12 @@ namespace Shooter.Runtime
 
         public string MaterialId => SurfaceMaterial.Normalize(_materialId);
 
-        /// <summary>銃痕の材質。無ければ銃痕を出さない。</summary>
         public Material Decal => _decal;
 
-        /// <summary>銃痕の一辺の長さ (m)。</summary>
         public float DecalSize => _decalSize;
 
-        /// <summary>着弾のエフェクト。無ければ出さない。</summary>
         public GameObject Effect => _effect;
 
-        /// <summary>着弾の音。無ければ鳴らさない。</summary>
         public AudioClip Sound => _sound;
     }
 }

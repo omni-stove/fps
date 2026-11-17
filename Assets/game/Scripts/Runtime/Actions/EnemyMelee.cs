@@ -132,7 +132,7 @@ namespace Shooter.Runtime
             Debug.Log($"{MeleeLog.LogTag} enemy id={AttackerId} rule={_rule}", this);
         }
 
-        // 振り始めたか当たりを判定したかを返す。EnemyAgent の判断 (MeleeEnemyBehavior) を読むので、その Update の後に呼ぶ。
+        // EnemyAgent の判断 (MeleeEnemyBehavior) を読むので、その Update の後に呼ぶ。
         public bool Tick(float deltaSeconds)
         {
             var swing = EnsureSwing();
@@ -296,10 +296,6 @@ namespace Shooter.Runtime
             return _swing;
         }
 
-        /// <summary>
-        /// 敵のデータ (<see cref="EnemyAgent.EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から近接の設定を作る。
-        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
-        /// </summary>
         public MeleeSpec CreateSpec()
         {
             var agent = _agent != null ? _agent : GetComponent<EnemyAgent>();

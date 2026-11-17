@@ -5,19 +5,6 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ゲームで選べる言語の一覧。設定画面に並べる順と、言語ごとの名前・初めて起動したときに選ぶ OS の言語を持つ。
-    /// データ (<see cref="TryRead"/>) から作り、<see cref="GameLanguages.Use"/> で使わせる。
-    /// <code>
-    /// {
-    ///   "otherSystemLanguages": "en",
-    ///   "languages": [
-    ///     { "code": "ja", "name": "日本語", "systemLanguages": ["Japanese"] },
-    ///     { "code": "en", "name": "English", "systemLanguages": ["English"] }
-    ///   ]
-    /// }
-    /// </code>
-    /// </summary>
     public sealed class GameLanguageList
     {
         public const string LanguagesKey = "languages";
@@ -31,7 +18,6 @@ namespace Shooter.Runtime
         private readonly GameLanguageEntry[] _entries;
         private readonly Dictionary<string, GameLanguageEntry> _byCode;
 
-        /// <summary>データが読めないときに使う一覧。キットが表を持つ日本語と英語で、OS が日本語なら日本語、それ以外は英語。</summary>
         public static GameLanguageList BuiltIn { get; } = new GameLanguageList(
             new[]
             {
@@ -41,10 +27,6 @@ namespace Shooter.Runtime
             },
             GameLanguage.English);
 
-        /// <param name="entries">並べる順の言語。</param>
-        /// <param name="otherSystemLanguages">OS の言語がどの言語の <see cref="GameLanguageEntry.SystemLanguages"/> にも無いときの言語。<c>default</c> なら最初の言語。</param>
-        /// <exception cref="ArgumentNullException">entries が null か、null を含む。</exception>
-        /// <exception cref="ArgumentException">entries が空か、同じ言語が 2 つある。または otherSystemLanguages が entries に無い。</exception>
         public GameLanguageList(IEnumerable<GameLanguageEntry> entries, GameLanguage otherSystemLanguages = default)
         {
             if (entries == null)
@@ -92,29 +74,23 @@ namespace Shooter.Runtime
             OtherSystemLanguages = otherSystemLanguages.IsDefined ? otherSystemLanguages : _entries[0].Language;
         }
 
-        /// <summary>並べる順の行。</summary>
         public IReadOnlyList<GameLanguageEntry> Entries { get; }
 
-        /// <summary>並べる順の言語。</summary>
         public IReadOnlyList<GameLanguage> Languages { get; }
 
-        /// <summary>OS の言語に合う言語が無いときの言語。</summary>
         public GameLanguage OtherSystemLanguages { get; }
 
-        /// <summary>language が一覧にあるか。</summary>
         public bool Contains(GameLanguage language)
         {
             return language.IsDefined && _byCode.ContainsKey(language.Code);
         }
 
-        /// <summary>language の行。一覧に無い (<c>default</c> を含む) なら false。</summary>
         public bool TryGet(GameLanguage language, out GameLanguageEntry entry)
         {
             entry = null;
             return language.IsDefined && _byCode.TryGetValue(language.Code, out entry);
         }
 
-        /// <summary>言語コード code の言語。大文字小文字は区別し、一覧に無ければ false。</summary>
         public bool TryFind(string code, out GameLanguage language)
         {
             if (code != null && _byCode.TryGetValue(code, out var entry))
@@ -127,10 +103,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// OS の言語の名前 systemLanguage (Unity の <c>SystemLanguage</c> の名前) を <see cref="GameLanguageEntry.SystemLanguages"/> に持つ最初の言語。
-        /// どれにも無い (null を含む) なら <see cref="OtherSystemLanguages"/>。
-        /// </summary>
         public GameLanguage ForSystemLanguage(string systemLanguage)
         {
             if (systemLanguage != null)
@@ -150,17 +122,6 @@ namespace Shooter.Runtime
             return OtherSystemLanguages;
         }
 
-        /// <summary>
-        /// files (一覧の名前と JSON の文字列) を前から順に重ねて一覧を作る。後のファイルにある言語は前の行を同じ位置のまま置き換え、
-        /// 新しい言語は後ろに足す。<see cref="OtherSystemLanguagesKey"/> は最後に書いたファイルのものを使う。
-        /// 読めないファイル・読めない行・一覧に無い <see cref="OtherSystemLanguagesKey"/> は、warn で知らせて飛ばす。
-        /// </summary>
-        /// <param name="files">重ねる順の、名前 (知らせに出す) と JSON の文字列。</param>
-        /// <param name="warn">飛ばしたものの知らせの受け取り先。null なら知らせない。</param>
-        /// <param name="list">作った一覧。作れなければ null。</param>
-        /// <param name="error">作れなかった理由。作れたら null。</param>
-        /// <returns>言語が 1 つでも読めたか。</returns>
-        /// <exception cref="ArgumentNullException">files が null。</exception>
         public static bool TryRead(
             IEnumerable<KeyValuePair<string, string>> files,
             Action<string> warn,

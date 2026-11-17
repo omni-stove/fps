@@ -21,8 +21,6 @@ namespace Shooter.Runtime
             return new KillFeedLine(entry, killer, victim, default, AnyLocal(Participants, entry.AssisterIds));
         }
 
-        /// <summary>ids のどれかが participants でこの画面のプレイヤー (<see cref="Participant.IsLocal"/>) か。表に無い Id は飛ばす。</summary>
-        /// <exception cref="ArgumentNullException">participants が null。</exception>
         public static bool AnyLocal(IParticipants participants, IReadOnlyList<int> ids)
         {
             if (participants == null)

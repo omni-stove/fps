@@ -3,29 +3,19 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// クライアント (プレイヤー) のビルド設定。コマンドライン引数 <c>-clientPlatform windows|macos|webgl</c> から作り、
-    /// 出力先 <c>Builds/client-&lt;platform&gt;/</c> と実行ファイル (macOS は .app バンドル、WebGL はページのディレクトリ) のパスを決める。
-    /// </summary>
     public sealed class ClientBuildOptions
     {
         public const string PlatformFlag = "-clientPlatform";
 
-        /// <summary>ビルドの出力をまとめるディレクトリ (プロジェクトのルートからの相対パス、gitignore 済み)。</summary>
         public const string OutputRoot = "Builds";
 
-        /// <summary>実行ファイルの名前。PlayerSettings.productName と同じにして、Windows の <c>shooter_Data</c> と名前をそろえる。</summary>
+        // PlayerSettings.productName と同じにして、Windows の shooter_Data と名前をそろえる。
         public const string ExecutableName = "shooter";
 
         public ClientPlatform Platform { get; }
 
-        /// <summary>出力先のディレクトリ。例: <c>Builds/client-windows</c>。</summary>
         public string OutputDirectory => OutputRoot + "/client-" + PlatformName(Platform);
 
-        /// <summary>
-        /// BuildPipeline に渡すパス。Windows は <c>shooter.exe</c>、macOS は <c>shooter.app</c> (バンドルのディレクトリ)、
-        /// WebGL は <c>shooter</c> (index.html を置くディレクトリ)。
-        /// </summary>
         public string ExecutablePath => OutputDirectory + "/" + ExecutableName + ExecutableExtension(Platform);
 
         public ClientBuildOptions(ClientPlatform platform)
@@ -38,14 +28,7 @@ namespace Shooter.Core
             Platform = platform;
         }
 
-        /// <summary>
-        /// コマンドライン引数を解析する。<c>-clientPlatform</c> が無ければ <paramref name="defaultPlatform"/> を使う。
-        /// 知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="defaultPlatform">-clientPlatform が無いときの OS。</param>
-        /// <param name="options">成功したときの設定。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
+        // 知らない引数を拒まないのは、Unity 自身の -batchmode なども同じ引数に並ぶため。
         public static bool TryParse(
             IReadOnlyList<string> args,
             ClientPlatform defaultPlatform,
@@ -98,7 +81,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>出力先やログ、配布する zip の名前に使う小文字の名前 (windows / macos / webgl)。</summary>
         public static string PlatformName(ClientPlatform platform)
         {
             switch (platform)

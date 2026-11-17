@@ -5,10 +5,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="SearchAndDestroySceneBuilder"/> のパスと設置地点の配置を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.SearchAndDestroySceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.SearchAndDestroySceneBuilder.Build で確かめる。
     public sealed class SearchAndDestroySceneBuilderTests
     {
         [Test]

@@ -3,13 +3,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンのチェックポイント。プレイヤー (<see cref="PlayerTag"/> の付いた Collider) がトリガーの Collider に入ったら、
-    /// <see cref="CampaignRunner.SaveAt"/> に <see cref="CheckpointId"/> を渡してセーブさせる。セーブできたら以後は何もしない
-    /// (失敗したときは、次に入ったときにもう一度試す)。
-    /// 倒れて再開するときは <see cref="CampaignRunner"/> が Id でこれを探し、<see cref="RespawnPosition"/> にプレイヤーを移す。
-    /// CampaignRunner は Inspector で指定しなければシーンから探す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class CheckpointTrigger : MonoBehaviour
     {
@@ -45,19 +38,14 @@ namespace Shooter.Runtime
             set => _playerTag = value;
         }
 
-        /// <summary>
-        /// 再開位置のずれ。既定ではこの GameObject を床に置いたとき、プレイヤー (原点がカプセルの中心) の足が床に着く高さ。
-        /// </summary>
         public Vector3 RespawnOffset
         {
             get => _respawnOffset;
             set => _respawnOffset = value;
         }
 
-        /// <summary>再開するときにプレイヤーの原点を置く位置。</summary>
         public Vector3 RespawnPosition => transform.position + _respawnOffset;
 
-        /// <summary>このチェックポイントでセーブ済み (または、ここから再開した) なら true。</summary>
         public bool IsReached => _reached;
 
         private void Start()
@@ -85,9 +73,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// Collider が範囲に入った。まだセーブしていないチェックポイントにプレイヤーが入ったならセーブさせ、セーブできたら true。
-        /// </summary>
         public bool HandleEnter(Collider other)
         {
             if (_reached || !IsPlayer(other))
@@ -117,16 +102,11 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>セーブ済みとして扱い、以後は入ってもセーブさせない。ここから再開したときに CampaignRunner が呼ぶ。</summary>
         public void MarkReached()
         {
             _reached = true;
         }
 
-        /// <summary>
-        /// シーンにある有効な CheckpointTrigger から Id が checkpointId のものを探す。無ければ null。
-        /// 同じ Id が複数あれば警告を出し、そのうち 1 つを返す。
-        /// </summary>
         public static CheckpointTrigger Find(string checkpointId)
         {
             if (string.IsNullOrEmpty(checkpointId))

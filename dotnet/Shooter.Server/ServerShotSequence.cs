@@ -1,10 +1,7 @@
 namespace Shooter.Server
 {
-    /// <summary>
-    /// サーバーが 1 人のプレイヤーについて数える発射番号 (Unity の <c>ServerShotSequence</c> と同じ数え方)。検査を通って弾を消費した射撃にだけ
-    /// <see cref="Assign"/> で番号を付け、ばらつきの種にはクライアントの番号ではなくこの番号を使う。
-    /// 訂正が届くまでに古い世代で届く弾は同じだけずれていて、持ち主は訂正でまとめて合わせるので、世代が今と違う弾では訂正を重ねない。
-    /// </summary>
+    // 数え方は Unity の ServerShotSequence と同じにする。
+    // 訂正が届くまでに古い世代で届く弾は同じだけずれていて、持ち主は訂正でまとめて合わせるので、世代が今と違う弾では訂正を重ねない。
     internal sealed class ServerShotSequence
     {
         public int NextIndex { get; private set; }

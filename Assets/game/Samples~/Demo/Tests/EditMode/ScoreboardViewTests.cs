@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ScoreboardView"/> が開いている間だけ一覧を出し、<see cref="GameSignals.Scoreboard"/> に出された一覧で行を作り直すこと。
-    /// Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製した木を直接 Bind する。
-    /// </summary>
+    // Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製した木を直接 Bind する。
     public sealed class ScoreboardViewTests
     {
         private GameObject _host;

@@ -5,11 +5,6 @@ using System.Text;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面に出す文を、言語の表 (<see cref="StringTable"/>) のキーと書式に埋める引数の並びで表す値。
-    /// 引数には int・float・string・別の <see cref="LocalizedText"/> を入れられ、入れ子の文は表を引くときに一緒に引く。
-    /// 表を通さず決まった文字列をそのまま運ぶときは <see cref="Literal"/> で作る。
-    /// </summary>
     public readonly struct LocalizedText : IEquatable<LocalizedText>
     {
         private static readonly object[] _noArgs = Array.Empty<object>();
@@ -17,20 +12,14 @@ namespace Shooter.Runtime
         private readonly string _key;
         private readonly object[] _args;
 
-        /// <summary>表を引くキー。<see cref="IsLiteral"/> なら運ぶ文字列そのもの。<c>default</c> なら空文字。</summary>
         public string Key => _key ?? string.Empty;
 
-        /// <summary>書式の <c>{0}</c>, <c>{1}</c>… に埋める引数。要素は int・float・string・<see cref="LocalizedText"/> のどれか。</summary>
         public IReadOnlyList<object> Args => _args ?? _noArgs;
 
-        /// <summary>表を引かずに <see cref="Key"/> をそのまま出すか。</summary>
         public bool IsLiteral { get; }
 
-        /// <summary><c>default</c> のときに真。表を引くと空文字になる。</summary>
         public bool IsEmpty => _key == null;
 
-        /// <exception cref="ArgumentNullException">key が null。</exception>
-        /// <exception cref="ArgumentException">key が空か、引数に int・float・string・<see cref="LocalizedText"/> 以外 (null を含む) がある。</exception>
         public LocalizedText(string key, params object[] args)
         {
             if (key == null)
@@ -55,8 +44,6 @@ namespace Shooter.Runtime
             IsLiteral = isLiteral;
         }
 
-        /// <summary>表を引かず、どの言語でも <paramref name="text"/> をそのまま出す文。</summary>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
         public static LocalizedText Literal(string text)
         {
             if (text == null)
@@ -121,7 +108,6 @@ namespace Shooter.Runtime
             return hash.ToHashCode();
         }
 
-        /// <summary>ログやデバッグ用の形。例: <c>match.win(Alpha, 3)</c>、Literal なら <c>"GG"</c>。表は引かない。</summary>
         public override string ToString()
         {
             if (IsLiteral)

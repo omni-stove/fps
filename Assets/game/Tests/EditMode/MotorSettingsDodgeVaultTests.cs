@@ -6,10 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="MotorSettings"/> の回避の待ち時間と乗り越えの速さ・届く距離・角度・最低の高さ・奥行きが、
-    /// <see cref="MotorSpec"/>・<see cref="NetMotorSettings"/>・プレイヤーの回避まで届くこと。
-    /// </summary>
     public sealed class MotorSettingsDodgeVaultTests
     {
         private MotorSettings _settings;

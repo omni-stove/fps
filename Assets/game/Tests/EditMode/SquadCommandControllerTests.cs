@@ -11,11 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// SquadCommandController が照準の先に応じて味方の bot (EnemyAgent) に守る・狙う指示を出し、長押しで付いてこさせ、
-    /// 分隊の無いときは近くの同じ陣営の bot にだけ出すことと、bot が指示を受けて応答の字幕を出し、狙う敵を目標にすることを Edit Mode の物理で確かめる。
-    /// bot が実際に歩く部分は NavMesh が要るので、射撃場の smoke (SquadCommandSmokeStep) で確かめる。
-    /// </summary>
+    // bot が実際に歩く部分は NavMesh が要るので、射撃場の smoke (SquadCommandSmokeStep) で確かめる。
     public sealed class SquadCommandControllerTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);

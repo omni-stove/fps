@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ゲームが差し替える入口のアセット (<see cref="GameContent"/>) を作り、空の欄をプロジェクトのアセットで埋める。
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameContentAssets.Create [-gameContent Assets/MyGame/Resources/ShooterKit/GameContent.asset]</code>
-    /// </summary>
     public static class GameContentAssets
     {
         public const string MenuPath = "Shooter/Create Game Content";
@@ -19,7 +15,7 @@ namespace Shooter.Editor
         public const string ArgumentName = "-gameContent";
         public const string FileName = "GameContent.asset";
 
-        /// <summary>Assets/ の下のアセットだけを候補にする。パッケージの同梱物はゲームが差し替える前の仮のもの。</summary>
+        // パッケージの同梱物はゲームが差し替える前の仮のものなので、Assets/ の下のアセットだけを候補にする。
         public const string SearchFolder = "Assets";
 
         private static readonly Slot[] _slots =
@@ -55,13 +51,8 @@ namespace Shooter.Editor
             new Slot("CameraShake", typeof(CameraShakeSettings), c => c.CameraShake, (c, v) => c.CameraShake = (CameraShakeSettings)v),
         };
 
-        /// <summary>出力先ルート (<see cref="ShooterKitRoot.Output"/>) の <c>Resources/ShooterKit/GameContent.asset</c>。</summary>
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);
 
-        /// <summary>
-        /// <see cref="ArgumentName"/> のパス (無ければ <see cref="DefaultPath"/>) に入口を作るか、既にあれば空の欄だけを埋める。
-        /// 値が不正なら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void Create()
         {
@@ -70,7 +61,6 @@ namespace Shooter.Editor
             Selection.activeObject = content;
         }
 
-        /// <summary>args の <see cref="ArgumentName"/> の値。無ければ fallback。値が無い・2 度あるなら例外。</summary>
         public static string ResolvePath(IReadOnlyList<string> args, string fallback)
         {
             string found = null;
@@ -98,7 +88,6 @@ namespace Shooter.Editor
             return SceneBuildHelpers.ValidateAssetPath(found ?? fallback);
         }
 
-        /// <summary>path に入口を作るか読み、空の欄を <see cref="FillEmpty"/> で埋めて保存する。</summary>
         public static GameContent CreateOrFill(string path, Func<Type, IReadOnlyList<Object>> find)
         {
             if (find == null)
@@ -118,11 +107,7 @@ namespace Shooter.Editor
             return content;
         }
 
-        /// <summary>
-        /// content の空の欄に、find が返すその型のアセットがちょうど 1 つならそれを入れる。0 か 2 つ以上なら空のまま残す。
-        /// 敵の欄が空なら、種類ごとに最初の <see cref="EnemyDefinition"/> を入れる。文言の表と調整値の JSON は埋めない (Resources のものが読まれる)。
-        /// 埋めた欄と残した欄をログに出し、空のまま残した欄の名前を返す。
-        /// </summary>
+        // 文言の表と調整値の JSON は空でも Resources のものが読まれるので埋めない。
         public static IReadOnlyList<string> FillEmpty(GameContent content, Func<Type, IReadOnlyList<Object>> find)
         {
             if (content == null)
@@ -176,7 +161,6 @@ namespace Shooter.Editor
             return left;
         }
 
-        /// <summary>Assets/ の下にある type のアセットを、パスの順に返す。</summary>
         public static IReadOnlyList<Object> FindInProject(Type type)
         {
             if (type == null)

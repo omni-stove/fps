@@ -5,22 +5,13 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ボイスチャットで、自分が声を送っている印と、話している人の名前を 1 行ずつ出す (<see cref="VoiceText.Lines"/>)。
-    /// Hud.uxml の <see cref="UxmlName"/> に行を入れ、見た目は Hud.uss の voice のクラスで決める。
-    /// 要素を持っている間は <see cref="GameSignals.Voice"/> と <see cref="GameSignals.Participants"/> を購読し、出す行が無い間は隠す。
-    /// <see cref="Hud.AddViews"/> は付けないので、使うときは HUD の GameObject に付ける。木を持つ HUD に後から付けたときは、Start でその木を受ける。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class VoiceIndicatorView : HudElementView
     {
-        /// <summary>Hud.uxml のボイスの VisualElement。</summary>
         public const string UxmlName = "voice";
 
-        /// <summary>1 行分の Label に付ける USS クラス。</summary>
         public const string RowClass = "voice__row";
 
-        /// <summary>自分が送っている印の行に足す USS クラス。</summary>
         public const string LocalRowClass = "voice__row--local";
 
         private readonly List<string> _lines = new List<string>();
@@ -31,26 +22,20 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているボイスの状態。ボイスを使っていなければ null。</summary>
         public VoiceStatus? Status => _status;
 
-        /// <summary>出す行があるか。</summary>
         public bool IsShown => _lines.Count > 0;
 
-        /// <summary>自分が送っている印を出しているか。</summary>
         public bool ShowsLocal => _status.HasValue && _status.Value.IsLocalSpeaking;
 
-        /// <summary>出している行の文。自分の印があれば先頭。出していなければ空。</summary>
         public IReadOnlyList<string> Lines => _lines;
 
-        /// <summary>status を出す。null なら隠す。要素を持っている間は <see cref="GameSignals.Voice"/> が出されるたびに呼ばれる。</summary>
         public void Show(VoiceStatus? status)
         {
             _status = status;
             Refresh();
         }
 
-        /// <summary>出している状態を、今の参加者の名前と言語で文にし直して行に写す。</summary>
         public void Refresh()
         {
             _lines.Clear();

@@ -7,10 +7,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 旗取りの書式役 (<see cref="CaptureTheFlagHudFormatter"/>) が、<see cref="ModeStatus.Detail"/> の <see cref="CaptureTheFlagStatus"/> から
-    /// 両陣営の旗の状態の行と、自分が運んでいるときの案内の行を作ることを確かめる。
-    /// </summary>
     public sealed class CaptureTheFlagHudFormatterTests
     {
         private const int Alpha1 = 1;
@@ -103,7 +99,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(lines.Select(Localizer.Resolve), Is.EqualTo(new[] { "リスポーンまで 1 秒" }.Concat(_playedFlagLines)));
         }
 
-        /// <summary>両陣営 2 人ずつで始めた旗取り (旗は 20 秒で戻る)。</summary>
         private static CaptureTheFlag Started()
         {
             var game = new CaptureTheFlag(new CaptureTheFlagSpec(3, 600f, 5f, 1.5f, 2f, 20f, 1));
@@ -115,10 +110,7 @@ namespace Shooter.Tests.EditMode
             return game;
         }
 
-        /// <summary>
-        /// Alpha1 が Bravo の旗を運び、Alpha の旗を運んでいた Bravo1 が Alpha1 に倒されて旗を落とし、それから 4.5 秒たった旗取り
-        /// (Alpha の旗は戻るまで 15.5 秒)。
-        /// </summary>
+        // 旗は 20 秒で戻るので、落ちてから 4.5 秒たった Alpha の旗は戻るまで 15.5 秒。
         private static CaptureTheFlag Played()
         {
             var game = Started();

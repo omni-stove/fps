@@ -229,38 +229,32 @@ namespace Shooter.Runtime
             set => _crouchRatio = value;
         }
 
-        /// <summary>狙う向きへ向き直る速さ (度/秒)。</summary>
         public float TurnSpeed
         {
             get => _turnSpeed;
             set => _turnSpeed = value;
         }
 
-        /// <summary>立っているときの足元からの目の高さ (m)。</summary>
         public float EyeHeight
         {
             get => _eyeHeight;
             set => _eyeHeight = value;
         }
 
-        /// <summary>しゃがんだときの当たり判定の高さ (m)。</summary>
         public float CrouchHeight
         {
             get => _crouchHeight;
             set => _crouchHeight = value;
         }
 
-        /// <summary>しゃがんだときの足元からの目の高さ (m)。</summary>
         public float CrouchEyeHeight
         {
             get => _crouchEyeHeight;
             set => _crouchEyeHeight = value;
         }
 
-        /// <summary>発見ゲージの値。<see cref="ToAwarenessSpec"/> がここから作る。</summary>
         public EnemyAwarenessSettings Awareness => _awareness;
 
-        /// <summary>近接の値。<see cref="ToMeleeSpec"/> がここから作る。</summary>
         public EnemyMeleeSettings Melee => _melee;
 
         public EnemySpec ToSpec()
@@ -300,7 +294,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>発見ゲージの設定。値が不正なら <see cref="EnemyDefinitionException"/>。</summary>
         public AwarenessSpec ToAwarenessSpec()
         {
             try
@@ -313,7 +306,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>近接の設定。値が不正なら <see cref="EnemyDefinitionException"/>。</summary>
         public MeleeSpec ToMeleeSpec()
         {
             try
@@ -328,7 +320,6 @@ namespace Shooter.Runtime
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed enemy)" : name;
 
-        /// <summary>Inspector の怯みにくさ value を <see cref="EnemySpec"/> に渡す値にする。負なら null (種類ごとの既定値)。</summary>
         public static float? StaggerResistanceOrArchetype(float value)
         {
             return value < 0f ? (float?)null : value;

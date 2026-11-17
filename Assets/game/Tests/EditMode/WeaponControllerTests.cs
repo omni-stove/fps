@@ -208,7 +208,6 @@ namespace Shooter.Tests.EditMode
                 _controller.SelectNext();
                 Assert.That(rifle.IsReloading, Is.False, "the holstered rifle stops reloading");
 
-                // 持ち替えた handgun は Semi: 押したときだけ撃ち、押し続けても 2 発目は出ない。
                 LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={handgun.MagazineSize - 1}");
                 Assert.That(_controller.PullTrigger(true, true), Is.True);
                 _controller.Tick(handgun.FireInterval);
@@ -217,7 +216,6 @@ namespace Shooter.Tests.EditMode
                 _controller.Tick(_rifle.ReloadSeconds);
                 Assert.That(rifle.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize - 1), "a cancelled reload does not refill");
 
-                // rifle に戻ると Auto: 押し続けている間撃つ。
                 // しまっている武器の時間は進まないので、rifle の連射間隔は戻ってから経たせる。
                 _controller.SelectPrevious();
                 _controller.Tick(_rifle.FireInterval);
@@ -328,7 +326,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(rifle.IsReloading, Is.False);
                 Assert.That(_controller.SnapshotAmmo().Count(), Is.EqualTo(2));
 
-                // 戻した後も持ち替えられ、WeaponChanged が来る。
                 Assert.That(_controller.SelectNext(), Is.True);
                 Assert.That(changed, Is.SameAs(rifle));
             }
@@ -536,7 +533,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_controller.Fire(), Is.True);
             Assert.That(_controller.SpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot));
 
-            // 戻り始めるまでの間は広がったまま。
             _controller.Tick(WeaponController.SpreadRecoveryDelaySeconds);
             Assert.That(_controller.SpreadFraction, Is.EqualTo(WeaponController.SpreadPerShot));
 
@@ -556,7 +552,6 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
             Assert.That(_controller.Fire(), Is.True);
 
-            // 連射間隔が経つまでは撃てず、ログも出ない。
             Assert.That(_controller.Fire(), Is.False);
 
             _controller.Tick(_rifle.FireInterval);
@@ -1106,7 +1101,6 @@ namespace Shooter.Tests.EditMode
                 LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={full - 1}");
                 Assert.That(_controller.PullTrigger(true, true), Is.True);
 
-                // 連射間隔を過ぎても押し続けている間は 2 発目が出ない。
                 for (var i = 0; i < 5; i++)
                 {
                     _controller.Tick(handgun.FireInterval);
@@ -1399,7 +1393,6 @@ namespace Shooter.Tests.EditMode
             _controller.Initialize(_camera.transform, _attack, _reload, null, null, new[] { _rifle, handgun });
         }
 
-        // Hitbox の無い 1m の立方体。撃たれると StructureDamage から被害を記録する。
         private StructureHitRecorder CreateStructure(string name, Vector3 position)
         {
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1410,7 +1403,6 @@ namespace Shooter.Tests.EditMode
             return cube.AddComponent<StructureHitRecorder>();
         }
 
-        // 受け取った始点と向きを覚え、値を決めた方だけ書き換える。
         private sealed class RewritingShotFilter : IShotFilter
         {
             public Vector3? Origin { get; set; }

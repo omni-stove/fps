@@ -290,7 +290,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(view.TimePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
             Assert.That(view.ScorePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
-            // 値が変わっても隠したまま
             model.SetHealth(50, 100);
             model.SetCrosshair(0.5f, true);
             Assert.That(view.HealthPanel.style.display.value, Is.EqualTo(DisplayStyle.None));

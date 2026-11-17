@@ -8,10 +8,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="KillConfirmedSceneBuilder"/> の置き場所・ルール・配置・bot の落とす物の設定を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.KillConfirmedSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.KillConfirmedSceneBuilder.Build で確かめる。
     public sealed class KillConfirmedSceneBuilderTests
     {
         [Test]

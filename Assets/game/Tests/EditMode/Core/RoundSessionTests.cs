@@ -100,7 +100,6 @@ namespace Shooter.Core.Tests
             Assert.That(rounds.GetRoundWins(Side.Bravo), Is.EqualTo(1));
             Assert.That(rounds.RoundNumber, Is.EqualTo(3));
 
-            // 試合が終わった後は ModeSession も最後のラウンドの結果のまま残り、報告も時間も効かない。
             Assert.That(rounds.Mode.State, Is.EqualTo(GameModeState.Ended));
             rounds.ReportKill(_bravoPlayer, _alphaPlayer);
             rounds.Tick(100f);

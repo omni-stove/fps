@@ -11,11 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// CaptureTheFlagRunner が参加者の足元から旗を拾う・運び込む・戻すことを Core に伝え、倒れた運ぶ人の旗をその場に落とし、
-    /// 旗の見た目と HUD の状態を合わせ、bot に用事を渡すことを確かめる。人の参加者は Damageable と SideMember だけで、
-    /// bot は NavMesh の無い Edit Mode で初期化した EnemyAgent (渡した用事は <see cref="EnemyAgent.Errand"/> で見る)。
-    /// </summary>
+    // bot は NavMesh の無い Edit Mode で初期化した EnemyAgent で歩かないので、渡した用事は EnemyAgent.Errand で見る。
     public sealed class CaptureTheFlagRunnerTests
     {
         private const float ReturnSeconds = 10f;

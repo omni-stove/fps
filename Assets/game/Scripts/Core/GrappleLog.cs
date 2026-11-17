@@ -13,7 +13,6 @@ namespace Shooter.Core
         public const string ReleasedPrefix = Tag + " released ";
         public const string ClimbPrefix = Tag + " climb ";
 
-        // 例: [Grapple] attached surface=GrappleWall distance=12.34 edge=true
         public static string Attached(string surface, float distance, bool snappedToEdge)
         {
             return string.Format(
@@ -25,7 +24,6 @@ namespace Shooter.Core
                 snappedToEdge ? "true" : "false");
         }
 
-        // 例: [Grapple] miss reason=OutOfRange surface=- distance=-。何にも当たらなければ surface と distance は "-"。
         public static string Miss(GrappleMiss reason, string surface, float? distance)
         {
             if (reason == GrappleMiss.None)
@@ -37,14 +35,12 @@ namespace Shooter.Core
             return $"{MissPrefix}reason={reason} surface={NameOrDash(surface)} distance={measured}";
         }
 
-        // 例: [Grapple] arrived seconds=0.82 wall=true
         public static string Arrived(float seconds, bool wall)
         {
             return string.Format(
                 CultureInfo.InvariantCulture, "{0}seconds={1:0.00} wall={2}", ArrivedPrefix, seconds, wall ? "true" : "false");
         }
 
-        // 例: [Grapple] released reason=Jumped speed=14.20
         public static string Released(GrappleEnd reason, float speed)
         {
             if (reason == GrappleEnd.None || reason == GrappleEnd.Arrived)
@@ -55,7 +51,6 @@ namespace Shooter.Core
             return string.Format(CultureInfo.InvariantCulture, "{0}reason={1} speed={2:0.00}", ReleasedPrefix, reason, speed);
         }
 
-        // 例: [Grapple] climb started=true。started=false は崖のぼりが Off か、縁の上に立てないとき。
         public static string Climb(bool started)
         {
             return $"{ClimbPrefix}started={(started ? "true" : "false")}";

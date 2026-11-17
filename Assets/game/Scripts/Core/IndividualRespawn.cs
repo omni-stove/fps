@@ -3,16 +3,13 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>倒された人ごとに、倒されてから <see cref="RespawnSeconds"/> 後に戻す。0 秒なら倒されたその場で戻す。</summary>
     public sealed class IndividualRespawn : IRespawnPolicy
     {
         // 抜けてすぐ入り直した人が前の待ちを引き継がないよう、待ちごとに別のオブジェクトにして同じものかを比べる。
         private readonly Dictionary<int, Waiter> _waiters = new Dictionary<int, Waiter>();
 
-        /// <summary>倒されてから戻るまでの秒数。0 以上の有限値。</summary>
         public float RespawnSeconds { get; }
 
-        /// <param name="respawnSeconds">倒されてから戻るまでの秒数。0 以上の有限値。</param>
         public IndividualRespawn(float respawnSeconds)
         {
             if (!(respawnSeconds >= 0f) || float.IsInfinity(respawnSeconds))
@@ -97,7 +94,6 @@ namespace Shooter.Core
 
         internal sealed class Waiter
         {
-            /// <summary>倒されてから RespawnSeconds たつまでの残り秒数。過ぎると負になる。</summary>
             public float Remaining { get; set; }
 
             public Waiter(float remaining)
@@ -105,7 +101,7 @@ namespace Shooter.Core
                 Remaining = remaining;
             }
 
-            /// <summary>早く待ち終わった順 (同時なら playerId 順) に並べ、呼び出し順を決まったものにする。</summary>
+            // 同時なら playerId 順にまで並べるのは、呼び出し順を決まったものにするため。
             public static void SortByWaitedLongest(List<KeyValuePair<int, Waiter>> ready)
             {
                 ready.Sort((a, b) =>

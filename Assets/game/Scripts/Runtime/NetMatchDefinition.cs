@@ -5,13 +5,8 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ネット対戦の試合の設定 (点数・時間・体力・拠点・ロードアウト) と、プレイヤーの移動と体の寸法。
-    /// .NET の専用サーバーはアセットを読めないので、書き出し (Shooter.Editor.ServerRulesExporter) がルールのアセットごとに
-    /// <c>server-data/rules/&lt;ルール名&gt;.json</c> (<see cref="NetMatchFile"/>) にし、クライアントは承認のときにサーバーからその値を受け取る。
-    /// 書き出すルールは入口 (<see cref="GameContent"/>) のルールと <see cref="Rules"/> の並び。
-    /// ロードアウトと武器の一覧は、クライアントと同じく入口のものを先に使う (<see cref="PickLoadout"/>・<see cref="PickCatalog"/>)。
-    /// </summary>
+    // .NET の専用サーバーはアセットを読めないので、書き出し (Shooter.Editor.ServerRulesExporter) がルールのアセットごとに
+    // server-data/rules/<ルール名>.json にし、クライアントは承認のときにサーバーからその値を受け取る。
     [CreateAssetMenu(fileName = "NetMatch", menuName = "Shooter/Net Match Definition")]
     public sealed class NetMatchDefinition : ScriptableObject
     {
@@ -196,8 +191,6 @@ namespace Shooter.Runtime
             return match != null && match._catalog != null ? match._catalog : null;
         }
 
-        /// <summary>試合の設定。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">値が <see cref="NetMatchSettings"/> の条件に合わない。</exception>
         public NetMatchSettings ToSettings()
         {
             return new NetMatchSettings(
@@ -223,12 +216,6 @@ namespace Shooter.Runtime
                 _maxChatLength);
         }
 
-        /// <summary>
-        /// プレイヤーの移動と体の寸法。移動は <see cref="MotorSettings.Resolve"/>、伏せは <see cref="MotorSettings.ResolveProne"/> で、
-        /// 伏せの高さはその高さをカプセルが取れる高さに収めたもの (<see cref="NetMotorSettings.FitProneHeight"/>)。
-        /// 水泳と壁走りはオフラインと同じ値で動かすため、<see cref="TraversalTuning.Current"/> から取る。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">寸法・移動・伏せの値が条件に合わない。</exception>
         public NetMotorSettings ToMotor()
         {
             var prone = MotorSettings.ResolveProne(_motorSettings);
@@ -249,10 +236,6 @@ namespace Shooter.Runtime
                 traversal.WallRun);
         }
 
-        /// <summary>
-        /// ロードアウトのルール・武器と、選べる武器の一覧 (<see cref="PickLoadout"/>・<see cref="PickCatalog"/>) を検査し、試合で使う <see cref="ServerLoadout"/> にする。
-        /// ロードアウトが未設定か、ルール・武器・一覧が不正なら false と理由を返す。
-        /// </summary>
         public bool TryCreateLoadout(out ServerLoadout loadout, out string error)
         {
             loadout = null;

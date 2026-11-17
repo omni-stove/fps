@@ -16,7 +16,6 @@ namespace Shooter.Runtime
 
         public const float DefaultIndicatorHeightAboveHead = 0.5f;
 
-        // 当たり判定が無いときに、足元から頭までとみなす高さ (m)。
         public const float FallbackHeadHeight = 1.8f;
 
         private static readonly List<EnemyStealth> _active = new List<EnemyStealth>();
@@ -118,11 +117,6 @@ namespace Shooter.Runtime
 
         public string Id => _agent != null ? _agent.Id : name;
 
-        /// <summary>
-        /// 敵のデータ (<see cref="EnemyAgent.EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から発見ゲージの設定を作る。
-        /// <see cref="ApplySpec"/> を呼んだ後は、データがあってもその値から作る。
-        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
-        /// </summary>
         public AwarenessSpec CreateSpec()
         {
             var agent = _agent != null ? _agent : GetComponent<EnemyAgent>();
@@ -153,7 +147,6 @@ namespace Shooter.Runtime
                 _investigateLevel);
         }
 
-        // 初期化前に呼ぶ。EnemyAgent.ApplySpec と同じく、作った後の StealthAwareness の設定は変えない。
         public void ApplySpec(AwarenessSpec spec)
         {
             if (spec == null)
@@ -302,7 +295,6 @@ namespace Shooter.Runtime
         }
 
         // ゲージは今の目標しか見ていないので、ほかの相手を見ているかは分からない。目標が attacker で、今見えているときだけ上げる。
-        /// <exception cref="ArgumentNullException">attacker が null。</exception>
         public bool Witness(Damageable attacker, float level)
         {
             if (attacker == null)

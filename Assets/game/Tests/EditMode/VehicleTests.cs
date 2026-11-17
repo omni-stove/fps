@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 乗り物の土台 (<see cref="Vehicle"/>・<see cref="VehicleSeat"/>) の乗る・移る・降りる・壊れる と、座席の入力の口。
-    /// 乗る側は入力を持たない仮のもの (<see cref="FakeRider"/>) で確かめる。降りる場所の塞がりは Collider に問い合わせるので、置いたあとに SyncTransforms する。
-    /// </summary>
+    // 降りる場所の塞がりは Collider に問い合わせるので、置いたあとに SyncTransforms する。
     public sealed class VehicleTests
     {
         private static readonly Vector3 _driverSeat = new Vector3(-0.5f, 0.4f, 0f);

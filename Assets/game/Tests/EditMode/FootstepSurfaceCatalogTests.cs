@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="FootstepSurfaceCatalog"/> の引き方 (材質 → default → PresentationCatalog)・同じ音を続けない選び方・検査と、
-    /// <see cref="CharacterAudio"/> が足元の材質で鳴らし分けることを確かめる。
-    /// </summary>
     public sealed class FootstepSurfaceCatalogTests
     {
         private readonly List<Object> _created = new List<Object>();
@@ -124,7 +120,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(Collect(catalog, null, "glass", FootstepCueKind.Footstep, out var unknown), Is.EqualTo(new[] { defaultStep }));
             Assert.That(unknown, Is.EqualTo(FootstepClipSource.Default));
 
-            // 材質の組はあっても着地音が空なら、着地だけ default を使う
             Assert.That(Collect(catalog, null, "wood", FootstepCueKind.Landing, out var empty), Is.EqualTo(new[] { defaultLanding }));
             Assert.That(empty, Is.EqualTo(FootstepClipSource.Default));
 
@@ -347,7 +342,6 @@ namespace Shooter.Tests.EditMode
             capsule.height = 2f;
             capsule.radius = 0.4f;
 
-            // 足元の自分の当たり判定は床として拾わない
             var foot = Create("Foot");
             foot.transform.SetParent(audio.transform, false);
             foot.transform.localPosition = new Vector3(0f, -0.9f, 0f);

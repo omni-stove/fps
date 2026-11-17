@@ -1,0 +1,93 @@
+/*
+ * マップの投票。Shooter.Runtime.MapVoteView が HUD の根に作る枠に読み込むので、Hud.uss には書かない。
+ * 試合の結果 (Hud.uss の .hud__result と .hud__result-restart、上から 30% の所) のすぐ下に、候補を横に並べる。
+ */
+
+.map-vote {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    translate: -50% 0;
+    margin: 140px 0 0 0;
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+    align-items: center;
+}
+
+.map-vote__title {
+    margin: 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.map-vote__timer {
+    margin: 4px 0 0 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.7);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.map-vote__candidates {
+    flex-direction: row;
+    margin: 16px 0 0 0;
+}
+
+.map-vote__candidate {
+    min-width: 220px;
+    margin: 0 8px;
+    padding: 12px 20px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.08);
+    align-items: center;
+}
+
+/* マウスで指している候補と、ゲームパッド・キーボードでフォーカスしている候補。 */
+.map-vote__candidate:hover,
+.map-vote__candidate:focus {
+    border-color: rgb(255, 255, 255);
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.map-vote__candidate--mine {
+    border-color: rgb(255, 196, 64);
+}
+
+.map-vote__candidate--decided {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.25);
+}
+
+/* 決まった後は押せないが、決まった候補は薄くしない。 */
+.map-vote__candidate:disabled {
+    opacity: 0.5;
+}
+
+.map-vote__candidate--decided:disabled {
+    opacity: 1;
+}
+
+.map-vote__name {
+    margin: 0;
+    padding: 0;
+    font-size: 26px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    white-space: nowrap;
+}
+
+.map-vote__votes {
+    margin: 4px 0 0 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+}

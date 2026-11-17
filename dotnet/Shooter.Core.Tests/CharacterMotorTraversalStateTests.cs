@@ -44,7 +44,9 @@ namespace Shooter.Core.Tests
             Assert.That(With(swim: new CharacterSwimState(true, 1f, false)), Is.Not.EqualTo(plain));
             Assert.That(With(wallRun: new CharacterWallRunState(WallRunSide.Left, 0.1f, Vector3.UnitX)), Is.Not.EqualTo(plain));
             Assert.That(With(airJumpsUsed: 1), Is.Not.EqualTo(plain));
-            Assert.That(With(airJumpsUsed: 1).GetHashCode(), Is.EqualTo(With(airJumpsUsed: 1).GetHashCode()));
+            var used = With(airJumpsUsed: 1);
+            var sameUsed = With(airJumpsUsed: 1);
+            Assert.That(used.GetHashCode(), Is.EqualTo(sameUsed.GetHashCode()));
         }
 
         [Test]

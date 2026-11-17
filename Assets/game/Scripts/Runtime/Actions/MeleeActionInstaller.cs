@@ -8,7 +8,11 @@ namespace Fps.Runtime
         // グレネード (400) の後。振れるかを決めるときに GrenadeThrower を読むが、付けるのは CharacterComponents なので順は問わない。
         public const int InstallOrder = 500;
 
+        public const string TuningResourcePath = "Tuning/melee";
+
         public int Order => InstallOrder;
+
+        public static MeleeSpec Tuning => KitTuning.Load(c => c.MeleeTuning, TuningResourcePath, MeleeJson.Parse, MeleeSpec.Default);
 
         // 移動と射撃が無い物 (標的など) には振る体が無いので付けない。
         public void Install(GameObject player, GameRules rules)
@@ -18,7 +22,10 @@ namespace Fps.Runtime
                 return;
             }
 
-            PlayerActions.GetOrAdd<MeleeController>(player).Configure(rules);
+            // 実行時に付けるので Inspector の値は既定のままになる。ゲームの値は調整値の JSON から渡す。
+            var melee = PlayerActions.GetOrAdd<MeleeController>(player);
+            melee.Spec = Tuning;
+            melee.Configure(rules);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

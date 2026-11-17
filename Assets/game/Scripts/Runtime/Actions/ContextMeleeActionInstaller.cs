@@ -19,6 +19,9 @@ namespace Fps.Runtime
             }
 
             var action = PlayerActions.GetOrAdd<ContextMeleeAction>(player);
+
+            // MeleeController.Spec から読むのは、MeleeActionInstaller が調整値の JSON から渡した値と、ゲームがコードで差し替えた値の両方に従うため。
+            action.BehindArcDegrees = melee.Spec.BehindArcDegrees;
             action.Configure(rules);
 
             // 演出の差し替えが無いときだけ仮の演出を付ける。ゲームが付けた IContextMeleePresenter を上書きしない。

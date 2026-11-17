@@ -12,11 +12,6 @@ namespace Fps.Core
         // 怯んだ相手は撃たれて気づいた後なので、背後からでも報酬のある処刑技を先にする。
         public const int TakedownPriority = 50;
 
-        public const float DefaultAlignSeconds = 0.15f;
-
-        // 体の中心どうしの距離。相手とプレイヤーの半径 (0.5m ずつ) より少し離し、位置合わせで体がめり込まないようにする。
-        public const float DefaultStandDistance = 1.2f;
-
         /// <exception cref="ArgumentException">id が空か空白を含む、または required と excluded が重なる。</exception>
         /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。outcome が Damage なら damage は 1 以上、witnessAwareness は 0 以上 1 以下。</exception>
         public ContextMeleeMove(
@@ -154,8 +149,8 @@ namespace Fps.Core
                 ContextMeleeConditions.TargetStaggered,
                 ContextMeleeConditions.None,
                 spec.Reach,
-                DefaultStandDistance,
-                DefaultAlignSeconds,
+                spec.StandDistance,
+                spec.AlignSeconds,
                 spec.FinisherSeconds,
                 ContextMeleeOutcome.Kill,
                 0,
@@ -179,8 +174,8 @@ namespace Fps.Core
                 ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware,
                 ContextMeleeConditions.None,
                 spec.Reach,
-                DefaultStandDistance,
-                DefaultAlignSeconds,
+                spec.StandDistance,
+                spec.AlignSeconds,
                 spec.TakedownSeconds,
                 ContextMeleeOutcome.Kill,
                 0,

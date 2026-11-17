@@ -18,6 +18,12 @@ namespace Fps.Core
         public const float DefaultTakedownSeconds = 1.5f;
         public const bool DefaultTakedownInterruptible = true;
         public const float DefaultTakedownWitnessAwareness = 1f;
+        public const float DefaultAlignSeconds = 0.15f;
+
+        // 体の中心どうしの距離。相手とプレイヤーの半径 (0.5m ずつ) より少し離し、位置合わせで体がめり込まないようにする。
+        public const float DefaultStandDistance = 1.2f;
+
+        public const float DefaultBehindArcDegrees = ContextMeleeSelector.DefaultBehindArcDegrees;
 
         public const float MaxArcDegrees = 360f;
 
@@ -64,8 +70,16 @@ namespace Fps.Core
 
         public float TakedownWitnessAwareness { get; }
 
+        // 処刑技と背後から倒す技で同じ値を使う。技ごとに分けると、どちらかを変え忘れたときに構えの見た目が技で揃わなくなる。
+        public float AlignSeconds { get; }
+
+        public float StandDistance { get; }
+
+        // 相手の真後ろを中心にした扇の全体の角度。ArcDegrees と同じく半角でなく全体で持つ。
+        public float BehindArcDegrees { get; }
+
         // 処刑技 (ContextMeleeMove.Finisher) と背後から倒す技 (ContextMeleeMove.Takedown) の値を省けるのは、敵の近接や盾の殴りなど技を出さない側が値を並べなくて済むようにするため。
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下、takedownWitnessAwareness は 0 以上 1 以下。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下、takedownWitnessAwareness は 0 以上 1 以下、behindArcDegrees は 0 より大きく 360 以下。</exception>
         public MeleeSpec(
             int damage,
             float reach,
@@ -80,7 +94,10 @@ namespace Fps.Core
             bool finisherInterruptible = DefaultFinisherInterruptible,
             float takedownSeconds = DefaultTakedownSeconds,
             bool takedownInterruptible = DefaultTakedownInterruptible,
-            float takedownWitnessAwareness = DefaultTakedownWitnessAwareness)
+            float takedownWitnessAwareness = DefaultTakedownWitnessAwareness,
+            float alignSeconds = DefaultAlignSeconds,
+            float standDistance = DefaultStandDistance,
+            float behindArcDegrees = DefaultBehindArcDegrees)
         {
             if (damage <= 0)
             {
@@ -142,6 +159,21 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(takedownWitnessAwareness), takedownWitnessAwareness, "takedownWitnessAwareness must be between 0 and 1");
             }
 
+            if (!(alignSeconds >= 0f) || float.IsInfinity(alignSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(alignSeconds), alignSeconds, "alignSeconds must be a non-negative finite number");
+            }
+
+            if (!(standDistance >= 0f) || float.IsInfinity(standDistance))
+            {
+                throw new ArgumentOutOfRangeException(nameof(standDistance), standDistance, "standDistance must be a non-negative finite number");
+            }
+
+            if (!(behindArcDegrees > 0f && behindArcDegrees <= MaxArcDegrees))
+            {
+                throw new ArgumentOutOfRangeException(nameof(behindArcDegrees), behindArcDegrees, "behindArcDegrees must be greater than 0 and at most 360");
+            }
+
             Damage = damage;
             Reach = reach;
             ArcDegrees = arcDegrees;
@@ -156,6 +188,9 @@ namespace Fps.Core
             TakedownSeconds = takedownSeconds;
             TakedownInterruptible = takedownInterruptible;
             TakedownWitnessAwareness = takedownWitnessAwareness;
+            AlignSeconds = alignSeconds;
+            StandDistance = standDistance;
+            BehindArcDegrees = behindArcDegrees;
         }
 
         // 踏み込みの間は一定の速さで進む。当たりの瞬間が 0 秒なら踏み込まない (0 で割らない)。

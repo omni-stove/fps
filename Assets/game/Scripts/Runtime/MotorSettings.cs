@@ -47,6 +47,47 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("ダッシュ中に左右へ動く速さの倍率")]
         private float _sprintSideScale = MoveDirectionScale.DefaultSide;
 
+        [Header("落下・回避・乗り越え・崖のぼり")]
+        [SerializeField, Min(0f), Tooltip("着地したときにこの落下速さ (m/s) 以下ならダメージを受けない。落下ダメージのルールが On のときだけ使う")]
+        private float _safeFallSpeed = MotorSpec.DefaultSafeFallSpeed;
+
+        [SerializeField, Min(0f), Tooltip("着地したときにこの落下速さ (m/s) 以上なら倒れる。ダメージを受けない落下速さより大きくする")]
+        private float _lethalFallSpeed = MotorSpec.DefaultLethalFallSpeed;
+
+        [SerializeField, Min(0f), Tooltip("回避 1 回で動く水平距離 (m)")]
+        private float _dodgeDistance = MotorSpec.DefaultDodgeDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("回避 1 回にかかる秒数")]
+        private float _dodgeSeconds = MotorSpec.DefaultDodgeSeconds;
+
+        [SerializeField, Min(0f), Tooltip("乗り越えられる障害物の、足元からの最大の高さ (m)")]
+        private float _vaultMaxHeight = MotorSpec.DefaultVaultMaxHeight;
+
+        [SerializeField, Min(0f), Tooltip("よじ登れる段の、足元からの最大の高さ (m)。乗り越えられる高さ以下の段は乗り越える")]
+        private float _mantleMaxHeight = MotorSpec.DefaultMantleMaxHeight;
+
+        [SerializeField, Min(0.01f), Tooltip("よじ登る速さ (m/s)")]
+        private float _mantleSpeed = MotorSpec.DefaultMantleSpeed;
+
+        [Header("伏せ")]
+        [SerializeField, Min(0.01f), Tooltip("伏せたときのカプセルの高さ (m)。半径の 2 倍未満やしゃがみより高いときは合う高さに収める")]
+        private float _proneHeight = ProneSpec.DefaultHeight;
+
+        [SerializeField, Min(0f), Tooltip("伏せている間の水平速度 (m/s)")]
+        private float _proneSpeed = ProneSpec.DefaultSpeed;
+
+        [SerializeField, Range(1f, 90f), Tooltip("伏せている間に上下を向ける角度の上限 (度、水平から上下それぞれ)")]
+        private float _proneMaxPitchDegrees = ProneSpec.DefaultMaxPitchDegrees;
+
+        [SerializeField, Range(0f, 1f), Tooltip("伏せている間に弾の散らばりと照準の広がりに掛ける倍率")]
+        private float _proneSpreadScale = ProneSpec.DefaultSpreadScale;
+
+        [SerializeField, Min(0f), Tooltip("ダッシュ中に伏せたとき、飛び込んで前へ滑る水平距離 (m)")]
+        private float _diveDistance = ProneSpec.DefaultDiveDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("飛び込みにかかる秒数")]
+        private float _diveSeconds = ProneSpec.DefaultDiveSeconds;
+
         [Header("持ち物")]
         [SerializeField, Tooltip("重さを数える武器。Held は構えている武器だけ、Carried は持っている全部の合計、None は数えない")]
         private CarrySource _carryWeightSource = CarryLoadSpec.DefaultWeightSource;
@@ -100,6 +141,68 @@ namespace Fps.Runtime
         {
             get => _airControl;
             set => _airControl = value;
+        }
+
+        public float SafeFallSpeed
+        {
+            get => _safeFallSpeed;
+            set => _safeFallSpeed = value;
+        }
+
+        public float LethalFallSpeed
+        {
+            get => _lethalFallSpeed;
+            set => _lethalFallSpeed = value;
+        }
+
+        public float DodgeDistance
+        {
+            get => _dodgeDistance;
+            set => _dodgeDistance = value;
+        }
+
+        public float DodgeSeconds
+        {
+            get => _dodgeSeconds;
+            set => _dodgeSeconds = value;
+        }
+
+        public float VaultMaxHeight
+        {
+            get => _vaultMaxHeight;
+            set => _vaultMaxHeight = value;
+        }
+
+        public float MantleMaxHeight
+        {
+            get => _mantleMaxHeight;
+            set => _mantleMaxHeight = value;
+        }
+
+        public float MantleSpeed
+        {
+            get => _mantleSpeed;
+            set => _mantleSpeed = value;
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
+        public ProneSpec Prone
+        {
+            get => CreateProneSpec();
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _proneHeight = value.Height;
+                _proneSpeed = value.Speed;
+                _proneMaxPitchDegrees = value.MaxPitchDegrees;
+                _proneSpreadScale = value.SpreadScale;
+                _diveDistance = value.DiveDistance;
+                _diveSeconds = value.DiveSeconds;
+            }
         }
 
         /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
@@ -182,6 +285,14 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary><see cref="Resolve"/> と同じ順で設定を探して伏せの調整値を作る。どれも無ければ <see cref="ProneSpec.Default"/>。</summary>
+        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
+        public static ProneSpec ResolveProne(MotorSettings assigned)
+        {
+            var settings = assigned != null ? assigned : Load();
+            return settings != null ? settings.CreateProneSpec() : ProneSpec.Default;
+        }
+
         public MotorSpec CreateSpec()
         {
             return new MotorSpec(
@@ -191,9 +302,23 @@ namespace Fps.Runtime
                 _gravity,
                 _airControl,
                 _crouchSpeed,
-                walkDirection: WalkDirection,
-                sprintDirection: SprintDirection,
-                carryLoad: CarryLoad);
+                _safeFallSpeed,
+                _lethalFallSpeed,
+                _dodgeDistance,
+                _dodgeSeconds,
+                _vaultMaxHeight,
+                _mantleMaxHeight,
+                _mantleSpeed,
+                WalkDirection,
+                SprintDirection,
+                CarryLoad);
+        }
+
+        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
+        public ProneSpec CreateProneSpec()
+        {
+            return new ProneSpec(
+                _proneHeight, _proneSpeed, _proneMaxPitchDegrees, _proneSpreadScale, _diveDistance, _diveSeconds);
         }
 
         public void ResetToDefaults()
@@ -204,6 +329,14 @@ namespace Fps.Runtime
             _jumpHeight = MotorSpec.DefaultJumpHeight;
             _gravity = MotorSpec.DefaultGravity;
             _airControl = MotorSpec.DefaultAirControl;
+            _safeFallSpeed = MotorSpec.DefaultSafeFallSpeed;
+            _lethalFallSpeed = MotorSpec.DefaultLethalFallSpeed;
+            _dodgeDistance = MotorSpec.DefaultDodgeDistance;
+            _dodgeSeconds = MotorSpec.DefaultDodgeSeconds;
+            _vaultMaxHeight = MotorSpec.DefaultVaultMaxHeight;
+            _mantleMaxHeight = MotorSpec.DefaultMantleMaxHeight;
+            _mantleSpeed = MotorSpec.DefaultMantleSpeed;
+            Prone = ProneSpec.Default;
             WalkDirection = MoveDirectionScale.Uniform;
             SprintDirection = MoveDirectionScale.Uniform;
             CarryLoad = CarryLoadSpec.Default;

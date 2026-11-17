@@ -116,12 +116,31 @@ namespace Fps.Runtime
         /// <summary>胴の高さに掛ける倍率。ダウン中は 1、伏せなら <see cref="ProneScale"/>、しゃがみなら <see cref="CrouchScale"/>、それ以外は 1。</summary>
         public static float StanceScale(PlayerActionState state)
         {
+            return StanceScale(state, null);
+        }
+
+        /// <summary>
+        /// 胴の高さに掛ける倍率。ダウン中は 1、伏せならそのプレイヤーの伏せの高さと立ちの高さの比、しゃがみならしゃがみの高さと立ちの高さの比、それ以外は 1。
+        /// stance が null (プレイヤーが未初期化) なら <see cref="ProneScale"/> と <see cref="CrouchScale"/> を使う。
+        /// </summary>
+        public static float StanceScale(PlayerActionState state, StanceGeometry stance)
+        {
             if (state.IsDowned)
             {
                 return 1f;
             }
 
-            return state.IsProne ? ProneScale : state.IsCrouching ? CrouchScale : 1f;
+            if (state.IsProne)
+            {
+                return stance != null ? stance.Prone.Height / stance.Standing.Height : ProneScale;
+            }
+
+            if (state.IsCrouching)
+            {
+                return stance != null ? stance.Crouched.Height / stance.Standing.Height : CrouchScale;
+            }
+
+            return 1f;
         }
 
         /// <summary>stanceScale の高さのときの胴の位置 (足元から) と拡縮 (Unity のカプセルは直径 1・高さ 2)。</summary>
@@ -188,7 +207,13 @@ namespace Fps.Runtime
         /// </summary>
         public static MockPartPose BodyGun(PlayerActionState state, Quaternion aimPitch)
         {
-            var scale = StanceScale(state);
+            return BodyGun(state, aimPitch, null);
+        }
+
+        /// <summary><see cref="BodyGun(PlayerActionState, Quaternion)"/> の高さを、そのプレイヤーの姿勢の寸法 (<see cref="StanceScale(PlayerActionState, StanceGeometry)"/>) で縮める。</summary>
+        public static MockPartPose BodyGun(PlayerActionState state, Quaternion aimPitch, StanceGeometry stance)
+        {
+            var scale = StanceScale(state, stance);
             if (state.IsReloading || state.IsDowned)
             {
                 return new MockPartPose(ScaleHeight(BodyReloadGunPosition, scale), Quaternion.Euler(BodyReloadGunEuler));

@@ -1,0 +1,15 @@
+{
+  "killXp": 100,
+  "headshotXp": 50,
+  "matchXp": 250,
+  "winXp": 500,
+  "levels": [0, 500, 1500, 3000, 5000, 7500, 10500, 14000, 18000, 22500],
+  "unlocks": [
+    { "id": "9795f821-8fac-4c4f-90f8-c0a80841de96", "level": 2 },
+    { "id": "a2c5e73b-69fa-4402-b0ef-3c4297973226", "level": 2 },
+    { "id": "07e1b9a8-f64c-4474-bc38-dbf14d66b135", "level": 3 },
+    { "id": "3fc98d19-5fb3-4680-bd5f-30d30d14f84e", "level": 3 },
+    { "id": "a9ae4aeb-607f-41a8-875f-2e8deed9bfa6", "level": 4 },
+    { "id": "eb45e06b-489d-410d-ae0d-f1095df96a0b", "level": 4 }
+  ]
+}

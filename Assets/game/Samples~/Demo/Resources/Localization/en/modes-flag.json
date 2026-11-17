@@ -1,0 +1,7 @@
+{
+  "mode.ctf.atBase": "{0} flag: at base",
+  "mode.ctf.carried": "{0} flag: taken",
+  "mode.ctf.dropped": "{0} flag: dropped (returns in {1} s)",
+  "mode.ctf.carrying": "Carrying the {0} flag: bring it to your base",
+  "mode.ctf.carryingWaitForFlag": "Carrying the {0} flag: you can score once your flag is back at base"
+}

@@ -1008,7 +1008,7 @@ namespace Shooter.NetV2
                     _antiCheat.HandleMessage(antiCheat, Time.realtimeSinceStartupAsDouble);
                     break;
                 case KilledMessage killed:
-                    var entry = new KillFeedEntry(killed.KillerId, killed.VictimId, killed.WeaponId, killed.Headshot, killed.Friendly);
+                    var entry = ClientKillFeed.FromMessage(killed);
                     Debug.Log(CombatLogTag + " Killed " + entry, this);
                     if (killed.VictimId == _client.PlayerId && _local != null)
                     {

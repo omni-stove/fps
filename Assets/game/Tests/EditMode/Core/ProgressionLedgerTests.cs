@@ -213,7 +213,17 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionAward(PlayerProfile.Empty, 0, 2, 1));
             Assert.That(
                 new ProgressionAward(new PlayerProfile(150, 1, 0, 0, 0), 150, 1, 2).ToString(),
-                Is.EqualTo("+150 xp level 1->2 (xp=150 kills=1 assists=0 deaths=0 matches=0 wins=0)"));
+                Is.EqualTo("+150 xp level 1->2 (xp=150 kills=1 assists=0 deaths=0 matches=0 wins=0 rating=1000)"));
+        }
+
+        [Test]
+        public void TheLedgerKeepsTheRating()
+        {
+            var profile = new PlayerProfile(0, 0, 0, 0, 0, 0, 1234);
+
+            Assert.That(_ledger.RecordKill(profile, true).Profile.Rating, Is.EqualTo(1234));
+            Assert.That(_ledger.RecordAssist(profile).Profile.Rating, Is.EqualTo(1234));
+            Assert.That(_ledger.RecordMatch(profile, new MatchResult(MatchOutcome.Won, 0, 0, 0, rated: true, opponentRating: 900)).Profile.Rating, Is.EqualTo(1234));
         }
     }
 }

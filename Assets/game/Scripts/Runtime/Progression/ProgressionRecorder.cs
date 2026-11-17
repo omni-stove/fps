@@ -9,24 +9,40 @@ namespace Shooter.Runtime
     {
         public const string ResourcePath = "Tuning/progression";
 
+        public const string SkillResourcePath = "Tuning/skill";
+
         private readonly ProfileStore _store;
         private readonly IParticipants _participants;
 
         public ProgressionRecorder(ISaveStorage storage)
-            : this(storage, LoadSpec(), new OfflineParticipants())
+            : this(storage, LoadSpec(), LoadSkillSpec(), new OfflineParticipants())
         {
         }
 
         public ProgressionRecorder(ISaveStorage storage, ProgressionSpec spec, IParticipants participants)
+            : this(storage, spec, SkillSpec.Default, participants)
         {
-            _store = new ProfileStore(storage);
+        }
+
+        public ProgressionRecorder(ISaveStorage storage, ProgressionSpec spec, SkillSpec skill, IParticipants participants)
+        {
+            if (skill == null)
+            {
+                throw new ArgumentNullException(nameof(skill));
+            }
+
+            _store = new ProfileStore(storage, skill.InitialRating);
             Ledger = new ProgressionLedger(spec);
+            Skill = new SkillRating(skill);
             _participants = participants ?? throw new ArgumentNullException(nameof(participants));
+            Profile = PlayerProfile.Started(skill.InitialRating);
         }
 
         public ProgressionLedger Ledger { get; }
 
-        public PlayerProfile Profile { get; private set; } = PlayerProfile.Empty;
+        public SkillRating Skill { get; }
+
+        public PlayerProfile Profile { get; private set; }
 
         public int Level => Ledger.LevelOf(Profile);
 
@@ -42,6 +58,11 @@ namespace Shooter.Runtime
             return KitTuning.Load(c => c.ProgressionTuning, ResourcePath, ProgressionJson.Parse, ProgressionSpec.Default);
         }
 
+        public static SkillSpec LoadSkillSpec()
+        {
+            return KitTuning.Load(c => c.SkillTuning, SkillResourcePath, SkillJson.Parse, SkillSpec.Default);
+        }
+
         public void Install()
         {
             if (IsInstalled)
@@ -51,6 +72,7 @@ namespace Shooter.Runtime
 
             Profile = _store.Load();
             Debug.Log(ProgressionLog.Configured(Ledger.Spec));
+            Debug.Log(ProgressionLog.SkillConfigured(Skill.Spec));
             Debug.Log(ProgressionLog.Loaded(Profile, Level));
             CombatEvents.Killed += OnKilled;
             CombatEvents.MatchFinished += OnMatchFinished;
@@ -121,7 +143,20 @@ namespace Shooter.Runtime
             Profile = award.Profile;
             Debug.Log(ProgressionLog.MatchRecorded(result, award));
             LogLevelUp(award);
+            if (result.Rated)
+            {
+                Rate(result);
+            }
+
             Save();
+        }
+
+        private void Rate(MatchResult result)
+        {
+            var previous = Profile.Rating;
+            var opponents = result.OpponentRating ?? Skill.Spec.InitialRating;
+            Profile = Profile.WithRating(Skill.Next(previous, opponents, result.Outcome));
+            Debug.Log(ProgressionLog.Rated(result.Outcome, previous, Profile.Rating, opponents));
         }
 
         private void Save()

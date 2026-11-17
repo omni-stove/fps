@@ -48,7 +48,7 @@ namespace Shooter.Core.Tests
         {
             Assert.That(
                 ProgressionLog.Loaded(new PlayerProfile(900, 1, 1, 1, 1, 2), 2),
-                Is.EqualTo("[Progression] profile xp=900 kills=1 assists=2 deaths=1 matches=1 wins=1 level=2"));
+                Is.EqualTo("[Progression] profile xp=900 kills=1 assists=2 deaths=1 matches=1 wins=1 rating=1000 level=2"));
             Assert.That(ProgressionLog.ProfileRejected("bad"), Is.EqualTo("[Progression] profile rejected: bad"));
             Assert.That(ProgressionLog.ProfileKept("profile-rejected"), Is.EqualTo("[Progression] kept the rejected profile in slot=profile-rejected"));
         }
@@ -65,15 +65,25 @@ namespace Shooter.Core.Tests
         public void TheSaveLinesShowTheProfileOrTheReason()
         {
             Assert.That(
-                ProgressionLog.Saved(new PlayerProfile(900, 1, 1, 1, 1)),
-                Is.EqualTo("[Progression] saved xp=900 kills=1 assists=0 deaths=1 matches=1 wins=1"));
+                ProgressionLog.Saved(new PlayerProfile(900, 1, 1, 1, 1, 0, 1234)),
+                Is.EqualTo("[Progression] saved xp=900 kills=1 assists=0 deaths=1 matches=1 wins=1 rating=1234"));
             Assert.That(ProgressionLog.SaveFailed("disk full"), Is.EqualTo("[Progression] could not save the profile: disk full"));
+        }
+
+        [Test]
+        public void TheSkillLinesShowTheSpecAndTheChange()
+        {
+            Assert.That(ProgressionLog.SkillConfigured(SkillSpec.Default), Is.EqualTo("[Progression] skill initial=1000 k=32 min=0 max=3000"));
+            Assert.That(
+                ProgressionLog.Rated(MatchOutcome.Won, 1000, 1016, 1000),
+                Is.EqualTo("[Progression] rating 1000->1016 outcome=Won opponents=1000"));
         }
 
         [Test]
         public void RejectsMissingValues()
         {
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Configured(null));
+            Assert.Throws<ArgumentNullException>(() => ProgressionLog.SkillConfigured(null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Loaded(null, 1));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Killed(false, null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Assisted(null));

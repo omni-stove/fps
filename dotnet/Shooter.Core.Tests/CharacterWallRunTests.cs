@@ -214,8 +214,8 @@ namespace Shooter.Core.Tests
         {
             AddWorld();
             var motor = new PlayerMotor(MotorSpec.Default);
-            var jumped = 0;
-            motor.Jumped += () => jumped++;
+            var jumps = new List<int>();
+            motor.Jumped += jumps.Add;
             var simulation = NewSimulation(_enabled, motor);
             var state = Airborne(new Vector3(0f, 3f, -8f), new Vector3(0f, 2f, 8f), airJumpsUsed: 1);
             for (var i = 0; i < 5; i++)
@@ -224,7 +224,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(state.IsWallRunning, Is.True);
-            Assert.That(state.AirJumpsUsed, Is.EqualTo(1), "running does not give back the air jumps");
+            Assert.That(state.AirJumpsUsed, Is.Zero, "running on a wall gives back the air jumps");
 
             state = simulation.Step(state, Input(new Vector2(0f, 1f), jump: true));
 
@@ -233,7 +233,7 @@ namespace Shooter.Core.Tests
             Assert.That(state.Velocity.Y, Is.EqualTo(MathF.Sqrt(48f) - (20f * _tick)).Within(1e-3f), "as high as a ground jump");
             Assert.That(state.Velocity.Z, Is.EqualTo(8f).Within(1e-2f));
             Assert.That(state.AirJumpsUsed, Is.Zero);
-            Assert.That(jumped, Is.EqualTo(1));
+            Assert.That(jumps, Is.EqualTo(new[] { PlayerMotor.GroundJumpNumber }), "a jump off the wall counts as the first jump");
             AssertNormal(state.WallRun.LastWall, _rightWallNormal);
         }
 

@@ -15,6 +15,10 @@ namespace Shooter.Core
     /// <item>ADS としゃがみは両方立ちうる (しゃがんで構える)。</item>
     /// <item>スライディング中は Slide と Crouch を立てる (滑る姿勢の無いリグはしゃがみで見せる)。カバー中は立てない。</item>
     /// <item>宙にいる間は足を動かさない (Speed は 0)。</item>
+    /// <item>壁走り: WallRun に壁のある側を入れ、宙にいても走る速さで足を動かす。カバー中は立てない。</item>
+    /// <item>水泳: Swimming を立て、宙にいても水をかく速さを歩きの速さでならす (0〜1)。壁走り・カバー中は立てない。</item>
+    /// <item>壁走りと水泳の間は、しゃがみ・スライディング・リーンを寝かせる (体の向きがそれぞれの姿勢で決まる)。</item>
+    /// <item>リーン: Lean に傾きの量 (-1 左〜1 右) を入れる。カバー中は 0 (覗き込みはカバーの姿勢で見せる)。</item>
     /// </list>
     /// 武器の種別はどの状態でもそのまま渡す。
     /// </para>
@@ -29,6 +33,18 @@ namespace Shooter.Core
         public const string DeadParameter = "Dead";
         public const string WeaponCategoryParameter = "WeaponCategory";
         public const string SlideParameter = "Slide";
+        public const string LeanParameter = "Lean";
+        public const string SwimmingParameter = "Swimming";
+        public const string WallRunParameter = "WallRun";
+
+        /// <summary><see cref="CharacterPoseParameters.WallRun"/> の、壁走りしていない値。</summary>
+        public const int WallRunNone = (int)WallRunSide.None;
+
+        /// <summary><see cref="CharacterPoseParameters.WallRun"/> の、左の壁を走っている値。</summary>
+        public const int WallRunLeft = (int)WallRunSide.Left;
+
+        /// <summary><see cref="CharacterPoseParameters.WallRun"/> の、右の壁を走っている値。</summary>
+        public const int WallRunRight = (int)WallRunSide.Right;
 
         /// <summary><see cref="CharacterPoseParameters.Cover"/> の、カバーしていない値。</summary>
         public const int CoverNone = 0;
@@ -117,10 +133,44 @@ namespace Shooter.Core
             }
 
             var cover = CoverValue(input.CoverHeight);
-            var slide = input.IsSliding && cover == CoverNone;
-            var crouch = (input.IsCrouching || slide) && cover == CoverNone;
-            var speed = input.IsGrounded ? SpeedValue(input.HorizontalSpeed, crouch, input.IsSprinting) : IdleSpeedValue;
-            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide);
+            var wallRun = cover == CoverNone ? WallRunValue(input.WallRun) : WallRunNone;
+            var swimming = input.IsSwimming && cover == CoverNone && wallRun == WallRunNone;
+            var free = cover == CoverNone && wallRun == WallRunNone && !swimming;
+            var slide = input.IsSliding && free;
+            var crouch = (input.IsCrouching || slide) && free;
+            var lean = free ? input.Lean : 0f;
+
+            float speed;
+            if (wallRun != WallRunNone)
+            {
+                speed = SpeedValue(input.HorizontalSpeed, false, true);
+            }
+            else if (swimming)
+            {
+                speed = SpeedValue(input.HorizontalSpeed, false, false);
+            }
+            else
+            {
+                speed = input.IsGrounded ? SpeedValue(input.HorizontalSpeed, crouch, input.IsSprinting) : IdleSpeedValue;
+            }
+
+            return new CharacterPoseParameters(speed, crouch, input.IsAiming, cover, false, false, weapon, slide, lean, swimming, wallRun);
+        }
+
+        /// <summary>壁のある側 side を <see cref="CharacterPoseParameters.WallRun"/> の値にする。</summary>
+        public static int WallRunValue(WallRunSide side)
+        {
+            switch (side)
+            {
+                case WallRunSide.None:
+                    return WallRunNone;
+                case WallRunSide.Left:
+                    return WallRunLeft;
+                case WallRunSide.Right:
+                    return WallRunRight;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(side), side, "side is not a defined WallRunSide");
+            }
         }
 
         /// <summary>

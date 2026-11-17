@@ -39,6 +39,16 @@ namespace Shooter.Core
                 CultureInfo.InvariantCulture, "{0} kill head={1} {2}", LogTag, headshot ? "true" : "false", Gained(award));
         }
 
+        public static string Assisted(ProgressionAward award)
+        {
+            if (award == null)
+            {
+                throw new ArgumentNullException(nameof(award));
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, "{0} assist {1}", LogTag, Gained(award));
+        }
+
         public static string MatchRecorded(MatchResult result, ProgressionAward award)
         {
             if (award == null)

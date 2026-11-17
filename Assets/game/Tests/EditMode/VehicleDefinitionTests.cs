@@ -97,6 +97,75 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ANewDefinitionHasNoPartsAndTheDefaultDurability()
+        {
+            var definition = NewDefinition("Fresh");
+
+            Assert.That(definition.Parts, Is.Empty);
+            Assert.That(definition.SmokeHealthFraction, Is.EqualTo(VehicleDurabilitySpec.DefaultSmokeHealthFraction));
+            Assert.That(definition.BurnHealthFraction, Is.EqualTo(VehicleDurabilitySpec.DefaultBurnHealthFraction));
+            Assert.That(definition.BurnDamagePerSecond, Is.EqualTo(VehicleDurabilitySpec.DefaultBurnDamagePerSecond));
+            Assert.That(definition.ExplosionMaxDamage, Is.EqualTo(VehicleDurabilitySpec.DefaultExplosionMaxDamage));
+            Assert.That(definition.ExplosionRadius, Is.EqualTo(VehicleDurabilitySpec.DefaultExplosionRadius));
+            Assert.That(definition.ExplosionFullDamageRadius, Is.EqualTo(VehicleDurabilitySpec.DefaultExplosionFullDamageRadius));
+            Assert.That(definition.ExplosionStructureDamage, Is.EqualTo(VehicleDurabilitySpec.DefaultExplosionStructureDamage));
+        }
+
+        [Test]
+        public void ToSpecCarriesThePartsAndTheDurability()
+        {
+            var definition = Armored();
+
+            var spec = definition.ToSpec(_twoSeats);
+
+            Assert.That(spec.Parts.Count, Is.EqualTo(2));
+            Assert.That(spec.FindPart("engine").DamageMultiplier, Is.EqualTo(1.5f));
+            Assert.That(spec.FindPart("fuel").DamageMultiplier, Is.EqualTo(2.5f));
+            Assert.That(spec.Durability.SmokeHealthFraction, Is.EqualTo(0.6f));
+            Assert.That(spec.Durability.BurnHealthFraction, Is.EqualTo(0.3f));
+            Assert.That(spec.Durability.BurnDamagePerSecond, Is.EqualTo(40f));
+            Assert.That(spec.Durability.Explosion.Damage.MaxDamage, Is.EqualTo(300));
+            Assert.That(spec.Durability.Explosion.Damage.Radius, Is.EqualTo(10f));
+            Assert.That(spec.Durability.Explosion.Damage.FullDamageRadius, Is.EqualTo(3f));
+            Assert.That(spec.Durability.Explosion.StructureDamageAtCenter, Is.EqualTo(80));
+        }
+
+        [Test]
+        public void InvalidPartsAndDurabilityNameTheAsset()
+        {
+            var burnsBeforeSmoking = Armored();
+            burnsBeforeSmoking.BurnHealthFraction = 0.9f;
+            var sameBlastRadii = Armored();
+            sameBlastRadii.ExplosionFullDamageRadius = 10f;
+            var twoEngines = Armored();
+            twoEngines.Parts = new[] { new VehicleDefinition.Part("engine", 1f), new VehicleDefinition.Part("engine", 2f) };
+            var emptyPart = Armored();
+            emptyPart.Parts = new VehicleDefinition.Part[] { null };
+
+            foreach (var definition in new[] { burnsBeforeSmoking, sameBlastRadii, twoEngines, emptyPart })
+            {
+                var error = Assert.Throws<VehicleDefinitionException>(() => definition.ToSpec(_twoSeats));
+                Assert.That(error.Message, Does.StartWith("vehicle 'Armored' is invalid: "));
+            }
+        }
+
+        [Test]
+        public void CopyFromTakesThePartsAndTheDurability()
+        {
+            var source = Armored().ToSpec(_twoSeats);
+            var definition = NewDefinition("Copy");
+
+            definition.CopyFrom(source);
+
+            Assert.That(definition.Parts.Length, Is.EqualTo(2));
+            Assert.That(definition.Parts[1].Id, Is.EqualTo("fuel"));
+            Assert.That(definition.Parts[1].DamageMultiplier, Is.EqualTo(2.5f));
+            Assert.That(definition.BurnDamagePerSecond, Is.EqualTo(40f));
+            Assert.That(definition.ExplosionRadius, Is.EqualTo(10f));
+            Assert.That(definition.ToSpec(_twoSeats).Durability.Explosion.StructureDamageAtCenter, Is.EqualTo(80));
+        }
+
+        [Test]
         public void AVehicleWithoutADefinitionUsesItsInspectorValues()
         {
             var vehicle = NewVehicle("Car", out _);
@@ -191,6 +260,21 @@ namespace Fps.Tests.EditMode
             definition.EnterRange = 3f;
             definition.ChaseDistance = 8f;
             definition.ChaseHeight = 1.5f;
+            return definition;
+        }
+
+        private VehicleDefinition Armored()
+        {
+            var definition = NewDefinition("Armored");
+            definition.Id = "armored";
+            definition.Parts = new[] { new VehicleDefinition.Part("engine", 1.5f), new VehicleDefinition.Part("fuel", 2.5f) };
+            definition.SmokeHealthFraction = 0.6f;
+            definition.BurnHealthFraction = 0.3f;
+            definition.BurnDamagePerSecond = 40f;
+            definition.ExplosionMaxDamage = 300;
+            definition.ExplosionRadius = 10f;
+            definition.ExplosionFullDamageRadius = 3f;
+            definition.ExplosionStructureDamage = 80;
             return definition;
         }
 

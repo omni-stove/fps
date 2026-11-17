@@ -18,7 +18,7 @@ namespace Fps.Runtime
                 // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
                 using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
                 {
-                    Execute(structureOrders, request, hit, direction, null, HitZone.Body);
+                    Execute(structureOrders, request, hit, direction, null, HitZone.Body, 1f);
                 }
 
                 return new ShotOutcome(true, hit, null, null, 0, false, false);
@@ -40,14 +40,20 @@ namespace Fps.Runtime
             int damage;
             using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
             {
-                damage = Execute(orders, request, hit, direction, owner, hitbox.Zone);
+                damage = Execute(orders, request, hit, direction, owner, hitbox.Zone, hitbox.DamageMultiplier);
             }
 
             return new ShotOutcome(true, hit, hitbox, owner, damage, wasAlive, wasAlive && owner.IsDead);
         }
 
         private static int Execute(
-            IReadOnlyList<ImpactOrder> orders, ShotRequest request, RaycastHit hit, Vector3 direction, Damageable owner, HitZone zone)
+            IReadOnlyList<ImpactOrder> orders,
+            ShotRequest request,
+            RaycastHit hit,
+            Vector3 direction,
+            Damageable owner,
+            HitZone zone,
+            float damageMultiplier)
         {
             var damage = 0;
             foreach (var order in orders)
@@ -55,7 +61,8 @@ namespace Fps.Runtime
                 switch (order.Kind)
                 {
                     case ImpactOrderKind.Damage:
-                        damage += owner.ApplyResolvedHit(order.Amount, zone, request.SourcePosition, direction, DamageKind.Bullet);
+                        damage += owner.ApplyResolvedHit(
+                            DamageCalculator.Scale(order.Amount, damageMultiplier), zone, request.SourcePosition, direction, DamageKind.Bullet);
                         break;
                     case ImpactOrderKind.StructureDamage:
                         StructureDamage.Apply(hit.collider, order.Point.ToUnity(), order.Amount, order.Radius);

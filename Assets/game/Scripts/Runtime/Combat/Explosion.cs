@@ -289,7 +289,8 @@ namespace Fps.Runtime
             }
 
             // 置いた盾などは耐久のために Damageable を持つが、壁として置かれる物なので人や標的と違って遮る。
-            return FindDamageable(collider) == null || Deployable.Of(collider) != null;
+            // 乗り物も耐久のために Damageable を持つが、車体は乗っている人を守る壁なので遮る (開いた所からは届く)。
+            return FindDamageable(collider) == null || Deployable.Of(collider) != null || collider.GetComponentInParent<Vehicle>() != null;
         }
     }
 }

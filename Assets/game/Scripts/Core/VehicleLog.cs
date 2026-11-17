@@ -70,6 +70,36 @@ namespace Fps.Core
             return $"{Tag} '{vehicle}' leave refused rider={rider} reason={reason}";
         }
 
+        public static string Damaged(string vehicle, int damage, int health, int maxHealth)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' damaged dmg={2} hp={3}/{4}", Tag, vehicle, damage, health, maxHealth);
+        }
+
+        public static string Stage(string vehicle, VehicleDamageStage stage, int health, int maxHealth)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' stage={2} hp={3}/{4}", Tag, vehicle, stage, health, maxHealth);
+        }
+
+        public static string Exploded(string vehicle, float x, float y, float z, int riders, int damaged, int killed)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' exploded at=({2:0.0}, {3:0.0}, {4:0.0}) riders={5} damaged={6} killed={7}",
+                Tag,
+                vehicle,
+                x,
+                y,
+                z,
+                riders,
+                damaged,
+                killed);
+        }
+
+        public static string UnknownPart(string vehicle, string part)
+        {
+            return $"{Tag} '{vehicle}' part '{part}' is not in the spec; it takes damage unscaled";
+        }
+
         /// <example><c>[Vehicle] 'Jeep' wrecked riders=2</c></example>
         public static string Wrecked(string vehicle, int riders)
         {

@@ -7,13 +7,13 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 乗り物の土台。子の <see cref="VehicleSeat"/> を並び順に座席の番号として集め、誰がどこに座っているか (<see cref="VehicleSeating"/>) を持ち、
-    /// 乗る・移る・降りるを決めて乗る側 (<see cref="IVehicleRider"/>) に知らせる。動き方・武器・耐久は持たず、
-    /// 座席の入力を <see cref="IVehicleInputSink"/> に流すだけにする。
+    /// 乗る・移る・降りるを決めて乗る側 (<see cref="IVehicleRider"/>) に知らせる。動き方・武器は持たず、
+    /// 座席の入力を <see cref="IVehicleInputSink"/> に流すだけにする。耐久と爆発は Vehicle.Durability.cs。
     /// <list type="bullet">
     /// <item>乗る: 空いている座席のうち、乗る位置が <see cref="VehicleSpec.EnterRange"/> 以内で一番近いもの (<see cref="TryEnter(IVehicleRider)"/>)。</item>
     /// <item>降りる: 座席の降りる位置、乗り物の降りる位置の順に試し、塞がっていれば次へ。どれも塞がっていれば降りない (<see cref="TryExit"/>)。
     /// 候補が 1 つも無ければ、座席の右・左・後ろに <see cref="FallbackExitDistance"/> 離した位置を試す。</item>
-    /// <item>壊れる: 同じ GameObject の <see cref="Damageable"/> が倒れたか <see cref="Wreck"/> で、全員を降ろす (降りる場所が塞がっていても降ろす)。</item>
+    /// <item>壊れる: 同じ GameObject の <see cref="Damageable"/> が倒れて爆発したか <see cref="Wreck"/> で、全員を降ろす (降りる場所が塞がっていても降ろす)。</item>
     /// </list>
     /// 乗っている間は、乗っている人と乗り物の Collider を互いにぶつからないようにする。
     /// 設定は <see cref="Spec"/> で、<see cref="Definition"/> があればその値、無ければシリアライズした値と座席の値から作る。
@@ -22,7 +22,7 @@ namespace Fps.Runtime
     /// 乗り降りと座席の移動は <see cref="VehicleLog.Tag"/> 付きでログに出す。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class Vehicle : MonoBehaviour
+    public sealed partial class Vehicle : MonoBehaviour
     {
         public const string LogTag = VehicleLog.Tag;
 
@@ -157,6 +157,10 @@ namespace Fps.Runtime
             {
                 Configure(Spec);
             }
+            else
+            {
+                ConfigureDurability(Spec);
+            }
         }
 
         private void OnEnable()
@@ -175,15 +179,13 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
-            if (_damageable != null)
-            {
-                _damageable.Died -= OnDied;
-            }
+            UnbindDamageable();
         }
 
         private void Update()
         {
             PruneRemovedRiders();
+            TickDurability(Time.deltaTime);
         }
 
         /// <summary>
@@ -217,6 +219,7 @@ namespace Fps.Runtime
             _chaseHeight = spec.ChaseHeight;
             _spec = spec;
 
+            ConfigureDurability(spec);
             if (_damageable != null)
             {
                 _damageable.MaxHealth = spec.MaxHealth;
@@ -1013,11 +1016,7 @@ namespace Fps.Runtime
                 CollectSeats();
             }
 
-            _damageable = GetComponent<Damageable>();
-            if (_damageable != null)
-            {
-                _damageable.Died += OnDied;
-            }
+            BindDamageable();
 
             // Edit Mode やテストでは OnEnable が走らないので、使われた時点で一覧に載せる。
             if (IsLive && !_active.Contains(this))
@@ -1093,11 +1092,6 @@ namespace Fps.Runtime
             }
 
             return seats;
-        }
-
-        private void OnDied(Damageable _)
-        {
-            Wreck();
         }
 
         private static bool IsRemoved(IVehicleRider rider)

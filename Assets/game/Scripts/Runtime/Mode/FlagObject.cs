@@ -44,6 +44,7 @@ namespace Shooter.Runtime
         private FlagState? _shown;
         private bool _visible;
         private bool _followsSettings;
+        private Team? _viewerTeam = TeamColors.OfflineViewer;
 
         /// <summary>この旗の陣営。</summary>
         public Side Side
@@ -52,6 +53,17 @@ namespace Shooter.Runtime
             set
             {
                 _sideId = value.Id;
+                Paint();
+            }
+        }
+
+        /// <summary>画面のプレイヤーの陣営。この陣営の旗なら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーの陣営。null なら Alpha を味方の色にする。</summary>
+        public Team? ViewerTeam
+        {
+            get => _viewerTeam;
+            set
+            {
+                _viewerTeam = value;
                 Paint();
             }
         }
@@ -238,7 +250,7 @@ namespace Shooter.Runtime
 
         private void Paint()
         {
-            var color = FlagBase.ColorOf(Side);
+            var color = FlagBase.ColorOf(Side, _viewerTeam);
             if (_shown == FlagState.Dropped)
             {
                 color = new Color(color.r * DroppedBrightness, color.g * DroppedBrightness, color.b * DroppedBrightness, color.a);

@@ -34,6 +34,7 @@ namespace Shooter.Runtime
         private GameObject _marker;
         private bool _markerFromPrefab;
         private bool _followsSettings;
+        private Team? _viewerTeam = TeamColors.OfflineViewer;
 
         /// <summary>この台の陣営。</summary>
         public Side Side
@@ -85,7 +86,18 @@ namespace Shooter.Runtime
         public GameObject Marker => _marker;
 
         /// <summary>陣営の色。Alpha と Bravo は今の色の組の陣営の色、それ以外は中立の色。</summary>
-        public Color Color => ColorOf(Side);
+        public Color Color => ColorOf(Side, _viewerTeam);
+
+        /// <summary>画面のプレイヤーの陣営。この陣営の台なら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーの陣営。null なら Alpha を味方の色にする。</summary>
+        public Team? ViewerTeam
+        {
+            get => _viewerTeam;
+            set
+            {
+                _viewerTeam = value;
+                ApplyMarkerColor();
+            }
+        }
 
         /// <summary>
         /// 足元 ground が範囲の中 (水平に <see cref="Radius"/> 以内、上下に <see cref="CaptureTheFlagRunner.ReachHeight"/> 以内) なら true。
@@ -96,9 +108,9 @@ namespace Shooter.Runtime
         }
 
         /// <summary>side の旗・台の色。Alpha と Bravo は今の色の組の、オフラインのプレイヤーから見た陣営の色、それ以外は中立の色。</summary>
-        public static Color ColorOf(Side side)
+        public static Color ColorOf(Side side, Team? viewer = TeamColors.OfflineViewer)
         {
-            return side.TryGetTeam(out var team) ? TeamColors.Of(team, TeamColors.OfflineViewer) : TeamColors.Neutral;
+            return side.TryGetTeam(out var team) ? TeamColors.Of(team, viewer) : TeamColors.Neutral;
         }
 
         /// <summary>範囲を示す円盤を作るか、作ってあれば今の半径に大きさを合わせる。当たり判定は持たせない。<see cref="ShowsMarker"/> が false なら何もしない。</summary>

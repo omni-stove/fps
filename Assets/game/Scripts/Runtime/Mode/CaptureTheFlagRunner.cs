@@ -426,15 +426,19 @@ namespace Shooter.Runtime
             var flags = ResolveFlagObjects(_flagObjects);
             var game = new CaptureTheFlag(CreateSpec());
 
+            // 色の既定はオフラインの Alpha から見た色なので、陣営を変えたプレイヤーには自分の陣営から見た色にする
+            var viewer = PlayerSide.TryGetTeam(out var playerTeam) ? playerTeam : (Team?)null;
             foreach (var pair in bases)
             {
                 _baseOf.Add(pair.Key, pair.Value);
                 pair.Value.Radius = game.Spec.CaptureRadius;
+                pair.Value.ViewerTeam = viewer;
             }
 
             foreach (var pair in flags)
             {
                 _flagObjectOf.Add(pair.Key, pair.Value);
+                pair.Value.ViewerTeam = viewer;
             }
 
             foreach (var side in CaptureTheFlag.FlagSides)

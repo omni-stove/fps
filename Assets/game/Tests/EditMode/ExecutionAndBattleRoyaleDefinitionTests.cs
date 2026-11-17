@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ExecutionDefinition"/> と <see cref="BattleRoyaleDefinition"/> の値でセッションが作られ、
-    /// <see cref="ExecutionRunner"/>・<see cref="BattleRoyaleRunner"/> が Definition → GameContent の欄 → Inspector の値 の順で読むことを確かめる。
-    /// </summary>
     public sealed class ExecutionAndBattleRoyaleDefinitionTests
     {
         private static readonly Vector3 AlphaSpawn = new Vector3(0f, 0f, 0f);

@@ -12,9 +12,7 @@ namespace Shooter.Editor
     {
         public const float MinHalfExtent = 0.01f;
 
-        /// <summary>
-        /// 有効な乗り物をシーンの並び順で集める。サーバーとクライアント (NetV2Vehicles) は同じ並びの番号で乗り物を指すので、数え方をそろえる。
-        /// </summary>
+        // サーバーとクライアント (NetV2Vehicles) は同じ並びの番号で乗り物を指すので、数え方をそろえる。
         public static NetMapVehicles Collect(IReadOnlyList<GameObject> roots)
         {
             if (roots == null)

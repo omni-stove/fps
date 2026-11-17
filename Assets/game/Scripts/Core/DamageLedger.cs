@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 誰が誰にいつどれだけ与えたかを、倒された側の Id ごとに持ち、倒されたときにアシストした Id を返す。
-    /// オフラインとサーバーの両方で使い、時刻は呼び出し側の時計 (秒) をそのまま受ける。
-    /// </summary>
+    // オフラインとサーバーの両方で使うので、自分では時計を持たず、呼び出し側の時刻 (秒) をそのまま受ける。
     public sealed class DamageLedger
     {
         private static readonly int[] _none = Array.Empty<int>();
@@ -15,22 +12,11 @@ namespace Shooter.Core
 
         public AssistSpec Spec { get; }
 
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public DamageLedger(AssistSpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
         }
 
-        /// <summary>
-        /// attackerId が victimId に amount を与えたことを記録する。
-        /// 自分へのダメージ・味方からのダメージ・0 以下の量は、アシストにならないので記録しない。
-        /// </summary>
-        /// <param name="victimId">ダメージを受けた Id。</param>
-        /// <param name="attackerId">ダメージを与えた Id。</param>
-        /// <param name="amount">与えた量。</param>
-        /// <param name="friendly">与えた側と受けた側が味方どうしか。</param>
-        /// <param name="time">与えた時刻 (秒)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
         public void Record(int victimId, int attackerId, int amount, bool friendly, double time)
         {
             RequireFinite(time);
@@ -50,15 +36,6 @@ namespace Shooter.Core
             hits.Add(new Hit(attackerId, amount, time));
         }
 
-        /// <summary>
-        /// victimId が time に killerId に倒されたとして、killerId を除き、<see cref="AssistSpec.WindowSeconds"/> 秒のうちに
-        /// 合わせて <see cref="AssistSpec.MinDamage"/> 以上を与えた Id を返し、victimId の記録を消す。
-        /// 並びは与えた量の多い順で、同じ量なら先に与えた順。いなければ空。
-        /// </summary>
-        /// <param name="victimId">倒された Id。</param>
-        /// <param name="killerId">倒した Id。自滅や武器によらない死なら victimId と同じでよい。</param>
-        /// <param name="time">倒れた時刻 (秒)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
         public IReadOnlyList<int> TakeAssisters(int victimId, int killerId, double time)
         {
             RequireFinite(time);
@@ -103,13 +80,11 @@ namespace Shooter.Core
             return ids;
         }
 
-        /// <summary>victimId が受けた記録を消す。復活したときに呼ぶ。</summary>
         public void Clear(int victimId)
         {
             _hitsByVictim.Remove(victimId);
         }
 
-        /// <summary>すべての記録を消す。試合やラウンドの始めに呼ぶ。</summary>
         public void Reset()
         {
             _hitsByVictim.Clear();

@@ -7,39 +7,7 @@ using UnityEngine.AI;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンの敵をシーン上で動かす。判断は <see cref="EnemyBrain"/> に任せ、ここでは
-    /// 毎フレーム知覚 (<see cref="EnemySenses"/>) を組み立てて渡し、返ってきた <see cref="EnemyDecision"/> を
-    /// <see cref="NavMeshAgent.SetDestination"/>・向きの変更・射撃 (<see cref="Hitscan.Fire"/>) に変換するだけをする。
-    /// 参照はコードで解決する: NavMeshAgent と自分の <see cref="Damageable"/> は同じ GameObject、
-    /// 目標は <see cref="TargetTag"/> のタグが付いた GameObject の Damageable。
-    /// 同じ GameObject に <see cref="SideMember"/> があれば、タグの代わりに自分と違う陣営で生きている、いちばん近い相手を
-    /// <see cref="TargetSearchInterval"/> ごとに (目標が倒れたらすぐに) 選び直す (<see cref="EnemySenses.SelectHostile"/>)。
-    /// モードが倒れた敵を戻すときは <see cref="Respawn"/> を呼ぶ。
-    /// 武器は 1 本だけ持ち、自分では持ち替えない (ガンゲームのようにモードが <see cref="EquipWeapon"/> で替えることはある)。その値は <see cref="WeaponDefinition"/> アセットから作り、このコンポーネントには持たない
-    /// (シーン生成スクリプトが、敵の配置ごとに指定した Id の武器を武器の一覧 <see cref="WeaponCatalogAsset"/> から引いて配線する)。
-    /// 状態が変わるたびに <c>[AI] id=.. state=..</c> をログに出す。
-    /// 撃たれたら (<see cref="Damageable.Damaged"/>) 撃った者の位置を次の知覚 1 回だけ物音として渡し、
-    /// 視界の外から撃たれても <see cref="EnemyBrain"/> がその位置を Search するようにする。
-    /// 動こうとしているのに進めなければ (<see cref="StuckMonitor"/>)、経路の引き直し → 寄り道 → 目的地をあきらめる →
-    /// 瞬間移動の順に立て直し、<c>[AI] id=.. stuck recovery=..</c> をログに出す。NavMesh から外れたら近くの NavMesh に戻し
-    /// (近くに無ければ瞬間移動の段階で出現地点へ戻し)、位置が NaN などになったら最後に正常だった位置に戻す。判断の良し悪しはここでは直さない (<see cref="EnemyBrain"/> 側で調整する)。
-    /// <para>
-    /// <see cref="CoverRegistry"/> を配線していれば、その selector を <see cref="EnemyBrain.UseCover"/> に渡し、撃たれたときや体力が減ったときに
-    /// 遮蔽点 (<see cref="CoverPoint"/>) へ NavMesh で移る (TakeCover)。低い壁 (<see cref="CoverHeight.Low"/>) の点で隠れている間は
-    /// しゃがみ、当たり判定のカプセルと目の高さを <see cref="CrouchHeight"/>・<see cref="CrouchEyeHeight"/> まで下げる。
-    /// 覗くときは立ち上がり、点に覗く位置 (<see cref="CoverPoint.PeekPosition"/>) があればそこへ出て撃ち、隠れ直すときに点へ戻る。
-    /// 使う点や段階が変わるたびに <c>[AI] id=.. cover phase=.. point=..</c> をログに出す。
-    /// </para>
-    /// <para>
-    /// モードは <see cref="Disarm"/> で武器を持たせずに始められる (撃たない)。拾える物 (<see cref="Pickup"/>) から武器を拾う (<see cref="AddWeapon"/>) と持つ。
-    /// モードは <see cref="SetErrand"/> で戦いのほかの行き先 (縮むエリアの中・拾える物など) を渡せる。巡回・待機・捜索の間はその行き先へ動き、
-    /// 戦いより優先する行き先 (overridesCombat が true) か武器を持っていない間は、追跡・攻撃・隠れる最中でもそこへ動く (向きと射撃は判断のまま)。
-    /// </para>
-    /// <para>
-    /// 人は分隊の指示 (<see cref="OrderHold"/>・<see cref="OrderAttack"/>・<see cref="OrderFollow"/>) を出せる。指示は判断と行き先 (<see cref="SetErrand"/>) より優先する。
-    /// </para>
-    /// </summary>
+    // 撃たれたら撃った者の位置を次の知覚 1 回だけ物音として渡すのは、視界の外から撃たれても EnemyBrain がその位置を Search するようにするため。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(Damageable))]
@@ -47,7 +15,6 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[AI]";
 
-        /// <summary>目標を探すタグ。<see cref="GameBootstrap"/> がプレイヤーに付ける。</summary>
         public const string TargetTag = "Player";
 
         // キットを使うゲームがこの名前で読んでいても壊れないよう、EnemySpec に移した後も別名として残す。
@@ -75,57 +42,42 @@ namespace Shooter.Runtime
         [Obsolete("Use EnemySpec.DefaultOpeningShots")]
         public const int DefaultOpeningShots = EnemySpec.DefaultOpeningShots;
 
-        /// <summary>足元からの目の高さ (メートル)。</summary>
         public const float DefaultEyeHeight = 1.6f;
 
-        /// <summary>LookAt に向き直る速さ (度/秒)。</summary>
         public const float DefaultTurnSpeed = 360f;
 
-        /// <summary>しゃがんだときの当たり判定の高さ (メートル)。低い壁 (<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満) に隠れる高さ。</summary>
+        // 低い壁 (MotorSpec.DefaultCoverLowWallHeight 未満) に隠れる高さにする。
         public const float DefaultCrouchHeight = 1f;
 
-        /// <summary>しゃがんだときの足元からの目の高さ (メートル)。</summary>
         public const float DefaultCrouchEyeHeight = 0.8f;
 
-        /// <summary>巡回地点を NavMesh 上に寄せるときに探す半径 (メートル)。</summary>
         public const float RouteSnapRadius = 2f;
 
-        /// <summary>目的地がこれ以上動いたら経路を引き直す (メートル)。毎フレームの再計算を避ける。</summary>
+        // 毎フレームの経路の再計算を避けるため、目的地がこれ以上動いたときだけ引き直す。
         public const float RepathDistance = 0.25f;
 
-        /// <summary>目標が見つからないときに探し直す間隔 (秒)。</summary>
         public const float TargetSearchInterval = 1f;
 
-        /// <summary>進めないまま次の立て直しへ移るまでの秒数。</summary>
         public const float StuckSeconds = 2f;
 
-        /// <summary>これだけ動けば (立て直し中は目的地へこれだけ近づけば) 進めたとみなす距離 (メートル)。</summary>
         public const float StuckProgressDistance = 0.5f;
 
-        /// <summary>立て直しの途中で目的地がこれ以上変わったら、新しい目的地までの距離から測り直す距離 (メートル)。</summary>
         public const float StuckGoalChangeDistance = 2f;
 
-        /// <summary>寄り道の行き先を探す半径 (メートル)。</summary>
         public const float SidestepRadius = 2f;
 
-        /// <summary>寄り道の行き先として、今の位置からこれ以上離れた地点を選ぶ (メートル)。</summary>
         public const float SidestepMinDistance = 0.75f;
 
-        /// <summary>寄り道の行き先を探し直す回数。</summary>
         public const int SidestepAttempts = 6;
 
-        /// <summary>寄り道を切り上げて元の目的地へ向かい直すまでの秒数。</summary>
         public const float SidestepSeconds = 1.5f;
 
-        /// <summary>瞬間移動の行き先にする経路の角は、今の位置からこれ以上先のもの (メートル)。</summary>
         public const float WarpLookAhead = 1.5f;
 
-        /// <summary>NavMesh から外れたときに戻る先を探す半径 (メートル)。</summary>
         public const float OffMeshSnapRadius = 3f;
 
         public const float RecoilControl = EnemySpec.DefaultRecoilControl;
 
-        /// <summary>NavMesh に戻れなかったときに試し直す間隔 (秒)。</summary>
         public const float OffMeshRetryInterval = 1f;
 
         [SerializeField, Tooltip("ログに出す識別子。空なら Damageable の Id")]
@@ -246,16 +198,13 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.SprintRatio"/> を掛けた、走るときの速さ。</summary>
         public float SprintSpeed => WalkSpeed * _sprintRatio;
 
-        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.CrouchRatio"/> を掛けた、しゃがんで動くときの速さ。</summary>
         public float CrouchSpeed => WalkSpeed * _crouchRatio;
 
         public bool IsSprinting => _sprinting;
         public bool IsAiming => _aiming;
 
-        /// <summary>ログに出す識別子。</summary>
         public string Id
         {
             get
@@ -272,19 +221,14 @@ namespace Shooter.Runtime
             set => _id = value ?? string.Empty;
         }
 
-        /// <summary>判断を行う状態機械。未初期化なら null。</summary>
         public EnemyBrain Brain => _brain;
 
         public bool IsInitialized => _brain != null;
 
-        /// <summary>今の状態。未初期化なら Idle。</summary>
         public EnemyState State => _brain?.State ?? EnemyState.Idle;
 
         public EnemyArchetype Archetype => _archetype;
 
-        /// <summary>
-        /// 怯みにくさ。初期化後は判断の設定の値。初期化前は <see cref="CreateSpec"/> と同じく、敵のデータがあればその値、無ければ Inspector の値。
-        /// </summary>
         public float StaggerResistance
         {
             get
@@ -305,30 +249,22 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
 
-        /// <summary><see cref="Errand"/> を戦いより優先するなら true。</summary>
         public bool ErrandOverridesCombat => _errandOverridesCombat;
 
-        /// <summary>
-        /// 戦いのほかの行き先を渡す。巡回・待機・捜索の間はそこへ動く。overridesCombat が true か武器を持っていなければ、追跡・攻撃・隠れる最中もそこへ動く。
-        /// 着いても消さないので、要らなくなったら <see cref="ClearErrand"/> を呼ぶ。
-        /// </summary>
         public void SetErrand(Vector3 destination, bool overridesCombat)
         {
             _errand = destination;
             _errandOverridesCombat = overridesCombat;
         }
 
-        /// <summary><see cref="SetErrand"/> の行き先を消し、いつもの判断に戻す。</summary>
         public void ClearErrand()
         {
             _errand = null;
             _errandOverridesCombat = false;
         }
 
-        /// <summary>巡回地点 (ワールド座標の足元)。</summary>
         public IReadOnlyList<Vector3> PatrolRoute => _patrolRoute;
 
         public float SightRange => _sightRange;
@@ -336,24 +272,18 @@ namespace Shooter.Runtime
         public float FireRange => _fireRange;
         public float EyeHeight => _eyeHeight;
 
-        /// <summary>狙う向きへ向き直る速さ (度/秒)。</summary>
         public float TurnSpeed => _turnSpeed;
         public float CrouchHeight => _crouchHeight;
         public float CrouchEyeHeight => _crouchEyeHeight;
 
-        /// <summary>
-        /// 隠れに行く遮蔽点をまとめたもの。null なら遮蔽点を使わない。変えたら次の Update から新しい点を使う (使っていた点は放す)。
-        /// </summary>
         public CoverPointRegistry CoverRegistry
         {
             get => _coverRegistry;
             set => _coverRegistry = value;
         }
 
-        /// <summary>低い壁の遮蔽点でしゃがんで隠れているか。</summary>
         public bool IsCrouching => _crouching;
 
-        /// <summary>足元の位置。NavMeshAgent の baseOffset を引いた位置。</summary>
         public Vector3 GroundPosition
         {
             get
@@ -365,10 +295,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>視線と射撃の始点。しゃがんでいれば <see cref="CrouchEyeHeight"/> の高さ。</summary>
         public Vector3 EyePosition => GroundPosition + (Vector3.up * (_crouching ? Mathf.Min(_crouchEyeHeight, _eyeHeight) : _eyeHeight));
 
-        /// <summary>NavMesh の上にいて、Off-Mesh Link (飛び降りなど) を渡っている最中でなければ接地している。未初期化なら false。</summary>
         bool ICharacterMotionSource.IsGrounded => _agent != null && _agent.enabled && _agent.isOnNavMesh && !_agent.isOnOffMeshLink;
 
         bool ICharacterMotionSource.IsCrouched => _crouching;
@@ -381,9 +309,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 巡回地点を設定する。初期化済みなら NavMesh 上に寄せてすぐ <see cref="EnemyBrain.SetPatrolRoute"/> に渡す。
-        /// </summary>
         public void SetPatrolRoute(IReadOnlyList<Vector3> route)
         {
             if (route == null)
@@ -404,10 +329,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 部品を解決し、<see cref="CreateSpec"/> の値から <see cref="EnemyBrain"/> を、<see cref="WeaponDefinition"/> から <see cref="Weapon"/> を作る。
-        /// 失敗したら (定義が未設定・不正なときも) 理由を Debug.LogError に出して false を返す。2 回目以降は何もしない。
-        /// </summary>
         public bool TryInitialize()
         {
             if (_brain != null)
@@ -516,11 +437,6 @@ namespace Shooter.Runtime
             Initialized = null;
         }
 
-        /// <summary>
-        /// 敵のデータ (<see cref="EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から判断の設定を作る。
-        /// <see cref="ApplySpec"/>・<see cref="ChangeSpec"/> を呼んだ後は、データがあってもその値から作る。
-        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
-        /// </summary>
         public EnemySpec CreateSpec()
         {
             var definition = EffectiveDefinition;
@@ -556,10 +472,6 @@ namespace Shooter.Runtime
                 _recoilControl);
         }
 
-        /// <summary>
-        /// 判断の設定を spec の値にする。<see cref="TryInitialize"/> がこの値から <see cref="EnemyBrain"/> を作るので、それより前
-        /// (GameObject を有効にする前) に呼ぶ。波で出す敵を強くするのに使う。初期化後なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public void ApplySpec(EnemySpec spec)
         {
             if (spec == null)
@@ -592,7 +504,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent.EnemyFor"/>) の、Inspector の種類と同じ敵のデータ。どちらも無ければ null。</summary>
         public EnemyDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.EnemyFor(_archetype));
 
         // ApplySpec は初期化後を拒むので、ボスの段階のように戦いの途中で変える口を別に設ける。
@@ -663,13 +574,11 @@ namespace Shooter.Runtime
             _crouchEyeHeight = definition.CrouchEyeHeight;
         }
 
-        /// <summary>遮蔽点の段階が変わったときのログ。</summary>
         public static string FormatCoverLog(string id, EnemyCoverPhase phase, string point)
         {
             return $"{LogTag} id={id} cover phase={phase} point={(string.IsNullOrEmpty(point) ? "none" : point)}";
         }
 
-        /// <summary>立て直しのログ。</summary>
         public static string FormatStuckLog(
             string id, StuckRecovery recovery, EnemyState state, float stalledSeconds, Vector3 position, Vector3? goal, string path)
         {
@@ -680,7 +589,6 @@ namespace Shooter.Runtime
                 LogTag, id, recovery, state, stalledSeconds, position.ToString("F1"), goalText, path);
         }
 
-        /// <summary>状態変化のログ。</summary>
         public static string FormatStateLog(string id, EnemyState previous, EnemyState next)
         {
             return $"{LogTag} id={id} state={next} prev={previous}";
@@ -873,10 +781,7 @@ namespace Shooter.Runtime
             _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching, _sprintRatio, _crouchRatio);
         }
 
-        /// <summary>
-        /// 今のフレームで判断の移動先の代わりに向かう <see cref="Errand"/>。巡回・待機・捜索の間か、戦いより優先する行き先か、武器を持っていなければ返す。
-        /// 着いていれば (<see cref="EnemySpec.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
-        /// </summary>
+        // 着いていれば null にせず今の足元を返すのは、判断の移動先へ戻らずその場に留まらせるため。
         private System.Numerics.Vector3? ErrandMoveTo()
         {
             if (!_errand.HasValue)
@@ -897,10 +802,8 @@ namespace Shooter.Runtime
                 : GroundPosition.ToNumerics();
         }
 
-        /// <summary>
-        /// 遮蔽点に着いた後の TakeCover では <see cref="EnemyBrain"/> は移動先を出さないので、覗くときは覗く位置へ、
-        /// 隠れるときは点へ戻る移動先をここで足す。立つ位置に着いていれば null (その場に留まる)。
-        /// </summary>
+        // 遮蔽点に着いた後の TakeCover では EnemyBrain は移動先を出さないので、覗くときは覗く位置へ、
+        // 隠れるときは点へ戻る移動先をここで足す。
         private System.Numerics.Vector3? CoverMoveTo(EnemyDecision decision)
         {
             if (decision.MoveTo.HasValue || _brain.State != EnemyState.TakeCover)
@@ -927,7 +830,6 @@ namespace Shooter.Runtime
             return HorizontalDistance(GroundPosition, stand) > _arrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
         }
 
-        /// <summary>しゃがむ・立つ。Y 向きのカプセルの当たり判定があれば、足元の高さを変えずに縮める・戻す。</summary>
         private void SetCrouching(bool crouching)
         {
             if (_crouching == crouching)
@@ -970,12 +872,6 @@ namespace Shooter.Runtime
             Debug.Log(FormatCoverLog(Id, phase, marker != null ? marker.name : null), this);
         }
 
-        /// <summary>
-        /// 倒れた敵を groundPosition (足元) に戻して生き返らせる。体力を満たし、武器を弾の満ちた状態で作り直し、NavMeshAgent を有効に戻して
-        /// 近くの NavMesh に置き、判断 (<see cref="EnemyBrain.Revive"/>)・経路・立て直し・撃たれた記録を初めからにして、目標を選び直す。
-        /// 出現地点 (NavMesh から外れたときの戻り先) も置いた位置にする。
-        /// まだ生きていれば何もせず false。未初期化なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public bool Respawn(Vector3 groundPosition, Quaternion rotation)
         {
             if (_brain == null)
@@ -992,10 +888,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 生死を問わず、<see cref="Respawn"/> と同じく groundPosition (足元) に置き直して体力・武器・判断・経路を初めからにする。
-        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を出現点に戻すときに使う。未初期化なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public void ResetTo(Vector3 groundPosition, Quaternion rotation)
         {
             if (_brain == null)

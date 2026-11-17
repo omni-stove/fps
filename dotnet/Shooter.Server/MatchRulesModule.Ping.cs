@@ -35,7 +35,7 @@ namespace Shooter.Server
         private float _nextPingTrackTime;
         private float _nextPingRefusalLogTime;
 
-        /// <summary>参加していない人と試合の無いときは、断る理由も出さずに捨てる (射撃と同じ)。そのときは null。</summary>
+        // 射撃と同じく、参加していない人と試合の無いときは断る理由も出さずに捨てる。
         internal PingRefusal? ServerPing(int playerId, Vector3 direction)
         {
             if (_session == null || !_session.HasPlayer(playerId) || !_bodies.TryGet(playerId, out var pinger))

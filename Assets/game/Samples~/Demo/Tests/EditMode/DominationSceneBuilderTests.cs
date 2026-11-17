@@ -12,11 +12,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="DominationSceneBuilder"/> の配置と、地形の後に置く物 (<see cref="DominationSceneBuilder.PopulateScene"/>) を確かめる。
-    /// NavMesh を焼いて保存する処理は、開いているシーンを置き換える (NewScene Single) ので
-    /// <c>-executeMethod Shooter.Editor.DominationSceneBuilder.Build</c> と <see cref="DominationSmokeRun"/> で確かめる。
-    /// </summary>
+    // NavMesh を焼いて保存する処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.DominationSceneBuilder.Build と DominationSmokeRun で確かめる。
     public sealed class DominationSceneBuilderTests
     {
         private const float Epsilon = 1e-4f;
@@ -143,7 +140,6 @@ namespace Shooter.Tests.EditMode
                 }
             }
 
-            // 拠点の中を歩き回る時間が、1 人で占領し終える時間を超えること。
             var lap = 0f;
             for (var k = 0; k < loiter.Count; k++)
             {

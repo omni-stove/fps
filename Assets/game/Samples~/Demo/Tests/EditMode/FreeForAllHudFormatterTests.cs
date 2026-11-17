@@ -6,10 +6,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// フリーフォーオールの書式役 (<see cref="FreeForAllHudFormatter"/>) が、<see cref="ModeStatus.Detail"/> の自分の順位
-    /// (<see cref="FreeForAllStanding"/>) から順位と 1 位との差の行を作ることを確かめる。
-    /// </summary>
     public sealed class FreeForAllHudFormatterTests
     {
         [Test]

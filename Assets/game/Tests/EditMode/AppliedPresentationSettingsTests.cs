@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="AppliedControlSettings.Apply"/> が、揺れの強さを <see cref="CameraShake"/>・<see cref="ViewmodelMotion"/> の倍率に、
-    /// 血の表示を <see cref="BloodPresenter.BloodEnabled"/> に入れ、画面の揺れ 0・血の表示オフでは揺れのトラウマと血のログが出ないことを確かめる。
-    /// </summary>
     public sealed class AppliedPresentationSettingsTests
     {
         private readonly List<Object> _created = new List<Object>();

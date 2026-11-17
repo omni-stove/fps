@@ -3,19 +3,13 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>ストリークの報酬 1 つ分の枠。名前は文ではなく言語の表のキー (<see cref="DisplayNameKey"/>) で持ち、文にするのは UI。</summary>
+    // Core に表示の文を持たせないよう、名前は言語の表のキーで持ち、文にするのは UI に任せる。
     public readonly struct StreakSlot : IEquatable<StreakSlot>
     {
         // default(StreakSlot) ではコンストラクタを通らず null になるので、読むときに空文字へ寄せる。
         private readonly string _rewardId;
         private readonly string _displayNameKey;
 
-        /// <param name="rewardId">報酬の Id。</param>
-        /// <param name="displayNameKey">報酬の名前の、言語の表のキー。無ければ null か空文字。</param>
-        /// <param name="killsRequired">倒れずに倒す数。この数に届くと使えるようになる。</param>
-        /// <param name="ready">今使えるか。</param>
-        /// <exception cref="ArgumentException">rewardId が空。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">killsRequired が 1 より小さい。</exception>
         public StreakSlot(string rewardId, string displayNameKey, int killsRequired, bool ready)
         {
             if (string.IsNullOrWhiteSpace(rewardId))

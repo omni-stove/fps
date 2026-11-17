@@ -7,10 +7,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// キルコンファームドの書式役 (<see cref="KillConfirmedHudFormatter"/>) が、<see cref="ModeStatus.Detail"/> の <see cref="KillConfirmed"/> から
-    /// 陣営ごとの確定数・阻止数と落ちているタグの数の行を作ることを確かめる。
-    /// </summary>
     public sealed class KillConfirmedHudFormatterTests
     {
         private const int Alpha1 = 1;
@@ -50,7 +46,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(lines.Select(Localizer.Resolve), Is.EqualTo(new[] { "リスポーンまで 1 秒" }.Concat(_expectedHudLines)));
         }
 
-        /// <summary>Alpha が 1 つ確定し、Bravo が 1 つ阻止し、Alpha のタグが 1 つ落ちているキルコンファームド。</summary>
         private static KillConfirmed Played()
         {
             var mode = new KillConfirmed(new KillConfirmedSpec(10, 300f, 3f, 10f));

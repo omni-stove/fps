@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GuardianRunner"/> がリーダーの頭上に目印を出し、リーダーが倒れたチームを戻さず、状態 (ModeStatus) に両リーダーの生死を載せることを確かめる。
-    /// リーダーは乱数で選ばれるので、誰がリーダーかは <see cref="GuardianRunner.Leaders"/> から引いて確かめる。
-    /// </summary>
+    // リーダーは乱数で選ばれるので、誰がリーダーかは GuardianRunner.Leaders から引いて確かめる。
     public sealed class GuardianRunnerTests
     {
         private const float RespawnSeconds = 1f;

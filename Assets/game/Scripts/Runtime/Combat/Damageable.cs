@@ -196,7 +196,7 @@ namespace Shooter.Runtime
             }
 
             // オフラインの Damageable は陣営を持たないので、味方撃ちは KillFeedEntry と同じく false として扱う。
-            OfflineAssists.Ledger.Record(CombatEvents.OfflineId(gameObject), attribution.Value.KillerId, dealt, friendly: false, OfflineAssists.Now);
+            KillFeedAssists.Ledger.Record(CombatEvents.OfflineId(gameObject), attribution.Value.KillerId, dealt, friendly: false, KillFeedAssists.Now);
         }
 
         // 帰属が無い死 (Inspector の Kill・落下など) は、KillFeedEntry の決まりに合わせて自滅として出す。
@@ -207,7 +207,7 @@ namespace Shooter.Runtime
             var attribution = CombatEvents.CurrentAttribution;
             var killerId = attribution.HasValue ? attribution.Value.KillerId : victimId;
             var weaponId = attribution.HasValue ? attribution.Value.WeaponId : string.Empty;
-            var assisterIds = OfflineAssists.Ledger.TakeAssisters(victimId, killerId, OfflineAssists.Now);
+            var assisterIds = KillFeedAssists.Ledger.TakeAssisters(victimId, killerId, KillFeedAssists.Now);
             return new KillFeedEntry(killerId, victimId, weaponId, zone == HitZone.Head, friendly: false, assisterIds);
         }
 
@@ -271,7 +271,7 @@ namespace Shooter.Runtime
                 _health.Died -= OnHealthDied;
 
                 // 倒れずに満たし直したとき (ラウンドの切り替えなど) に、前の撃ち合いの分を次の死のアシストへ持ち越さないため。
-                OfflineAssists.Forget(gameObject);
+                KillFeedAssists.Forget(gameObject);
             }
 
             // Inspector で 0 以下にされていても Health の例外で落ちないよう 1 に揃える。

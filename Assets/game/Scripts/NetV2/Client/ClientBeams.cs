@@ -6,14 +6,8 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ビーム (<see cref="RoundDelivery.Beam"/>) の線。当たりはサーバーが決めるので、ここでは見せるだけ。
-    /// 他の人の線は照射の知らせ (<see cref="BeamStateMessage"/>) の始点と終点で出し、見た目を出す側 (NetV2Client) に <see cref="Drawn"/> と <see cref="Hidden"/> で知らせる。
-    /// </summary>
-    /// <remarks>
-    /// 撃った本人は知らせを待たずに、押してから離すまで毎フレーム (<see cref="Update"/>) 今の視線で世界に当てて線を出す。
-    /// 本人宛ての照射中の知らせは往復ぶん遅れた視線なので使わず、止まった知らせ (熱・弾切れ・倒れた) だけで線を消し、次に押すまで出さない。
-    /// </remarks>
+    // 本人宛ての照射中の知らせは往復ぶん遅れた視線なので使わず、撃った本人は知らせを待たずに押してから離すまで毎フレーム (Update) 今の視線で世界に当てて線を出す。
+    // 止まった知らせ (熱・弾切れ・倒れた) だけは本人宛てでも使って線を消し、次に押すまで出さない。
     public sealed class ClientBeams
     {
         private readonly Func<string, WeaponSpec> _findWeapon;
@@ -45,7 +39,6 @@ namespace Shooter.NetV2
             _localPlayerId = localPlayerId;
         }
 
-        /// <summary>つなぎ直しや試合の切り替えで、出していた線をすべて消す。</summary>
         public void Detach()
         {
             StopLocal();
@@ -136,7 +129,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>撃った本人の照射の線を、今の目の位置 eye と視線 direction で出し直す。押していなければ何もしない。</summary>
         public void Update(Vector3 eye, Vector3 direction)
         {
             var round = _localRound;
@@ -189,7 +181,6 @@ namespace Shooter.NetV2
 
     public readonly struct BeamView
     {
-        /// <summary>武器が分からない照射の線を、次の知らせを待って残す秒数。</summary>
         public const float DefaultHoldSeconds = 0.1f;
 
         public BeamView(int shooterId, string weaponId, Vector3 start, Vector3 end, float tickSeconds)
@@ -205,12 +196,11 @@ namespace Shooter.NetV2
 
         public string WeaponId { get; }
 
-        /// <summary>撃った人の目の位置。銃口から出すかは見た目の側が決める。</summary>
+        // 銃口から出すかは見た目の側が決めるので、撃った人の目の位置のまま持つ。
         public Vector3 Start { get; }
 
         public Vector3 End { get; }
 
-        /// <summary>照射の間合い。次の照射が来なければ、見た目の側はこの間合いを基に線を消す。</summary>
         public float TickSeconds { get; }
     }
 }

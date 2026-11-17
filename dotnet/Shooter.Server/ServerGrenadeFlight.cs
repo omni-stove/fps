@@ -4,14 +4,8 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 投げたグレネードの球の飛び方 (Unity の NetGrenade の Rigidbody の代わり)。重力で落ち、<c>.fpsmap</c> の世界に当たると跳ね返り、
-    /// 摩擦で滑りが転がりに変わる。人とほかのグレネードには当たらない (Unity でも全員の CharacterController との衝突を切っていた)。
-    /// </summary>
-    /// <remarks>
-    /// 球の半径・跳ね返り・摩擦・回転の減りは、オフラインの ThrownGrenade と同じく投げた種類の <see cref="GrenadeSpec"/> から読む。
-    /// 重力と跳ね返りのしきい値は Unity のプロジェクトの物理の設定にそろえる。
-    /// </remarks>
+    // 人とほかのグレネードに当てないのは、Unity でも全員の CharacterController との衝突を切っていたため。
+    // 重力と跳ね返りのしきい値は Unity のプロジェクトの物理の設定にそろえる。
     internal sealed partial class ServerGrenadeFlight
     {
         public const float BounceThreshold = 2f;
@@ -63,7 +57,6 @@ namespace Shooter.Server
 
         public float AngularDamping { get; }
 
-        /// <summary>くっついて止まっているか。止まった後は <see cref="Step"/> で落ちず、くっついた相手に付いて動く。</summary>
         public bool IsStuck { get; private set; }
 
         public void Step(float deltaSeconds)

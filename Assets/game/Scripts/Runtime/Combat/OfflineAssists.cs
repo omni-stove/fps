@@ -1,76 +1,128 @@
+using System;
+using System.Collections.Generic;
 using Shooter.Core;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// オフラインの場面に 1 つだけ持つ <see cref="DamageLedger"/>。<see cref="Damageable"/> が受けたダメージを記録し、倒れたときにアシストを引く。
-    /// 調整値は <see cref="KitTuning.Assist"/>。Play の開始時とシーンを読み替えたときに空に戻す。
+    /// オフラインのモードで、見張っている <see cref="Damageable"/> が受けたダメージを、そのときの <see cref="CombatEvents.CurrentAttribution"/> の撃ち手と合わせて
+    /// <see cref="DamageLedger"/> に記録し、倒されたときにアシストした Id を返す。Id は見張るときに呼び出し側が振ったもの。
+    /// 撃ち手が見張っていない物 (帰属の無い落下や環境、モードの外の物) のダメージは記録しない。時刻は <see cref="Advance"/> で進めた秒数。
     /// </summary>
-    public static class OfflineAssists
+    public sealed class OfflineAssists
     {
-        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
-        private static DamageLedger _ledger;
+        private readonly DamageLedger _ledger;
+        private readonly Func<int, int, bool> _areAllies;
+        private readonly Dictionary<Damageable, int> _ids = new Dictionary<Damageable, int>();
+        private readonly Dictionary<int, int> _idsByOfflineId = new Dictionary<int, int>();
 
-        /// <summary>
-        /// 場面の台帳。調整値が読み直された (入口を替えた・Play を始め直した) ときは、新しい値で作り直す。
-        /// 作り直すと前の記録は消えるが、調整値を替えるのは試合の外なので、数え方の違う記録を持ち越さない方を取る。
-        /// </summary>
-        public static DamageLedger Ledger
+        /// <param name="spec">アシストの調整値。</param>
+        /// <param name="areAllies">(撃った Id, 受けた Id) が味方どうしなら true。味方からのダメージはアシストに数えない。</param>
+        /// <exception cref="ArgumentNullException">spec か areAllies が null。</exception>
+        public OfflineAssists(AssistSpec spec, Func<int, int, bool> areAllies)
         {
-            get
-            {
-                var spec = KitTuning.Assist;
-                if (_ledger == null || !ReferenceEquals(_ledger.Spec, spec))
-                {
-                    _ledger = new DamageLedger(spec);
-                }
+            _ledger = new DamageLedger(spec ?? throw new ArgumentNullException(nameof(spec)));
+            _areAllies = areAllies ?? throw new ArgumentNullException(nameof(areAllies));
+        }
 
-                return _ledger;
+        public AssistSpec Spec => _ledger.Spec;
+
+        /// <summary><see cref="Advance"/> で進めた秒数の合計。</summary>
+        public double Clock { get; private set; }
+
+        /// <summary>damageable が受けるダメージを id のものとして記録し始める。</summary>
+        /// <exception cref="ArgumentNullException">damageable が null。</exception>
+        /// <exception cref="ArgumentException">damageable か id をもう見張っている。</exception>
+        public void Watch(Damageable damageable, int id)
+        {
+            if (damageable == null)
+            {
+                throw new ArgumentNullException(nameof(damageable));
+            }
+
+            if (_ids.ContainsKey(damageable))
+            {
+                throw new ArgumentException($"'{damageable.name}' is already watched", nameof(damageable));
+            }
+
+            if (_ids.ContainsValue(id))
+            {
+                throw new ArgumentException($"id {id} is already watched", nameof(id));
+            }
+
+            _ids.Add(damageable, id);
+            _idsByOfflineId[CombatEvents.OfflineId(damageable.gameObject)] = id;
+            damageable.Damaged += OnDamaged;
+        }
+
+        /// <summary>時刻を deltaSeconds 進める。負・NaN・無限の秒数は進めない。</summary>
+        public void Advance(float deltaSeconds)
+        {
+            if (deltaSeconds > 0f && !float.IsInfinity(deltaSeconds))
+            {
+                Clock += deltaSeconds;
             }
         }
 
-        /// <summary>今の時計 (秒)。台帳の時刻はこれで揃える。</summary>
-        public static double Now => Time.timeAsDouble;
+        /// <summary>
+        /// victimId が killerId に今倒されたとして、アシストした Id を <see cref="DamageLedger.TakeAssisters"/> の並びで返し、victimId の記録を消す。
+        /// </summary>
+        public IReadOnlyList<int> TakeAssisters(int victimId, int killerId)
+        {
+            return _ledger.TakeAssisters(victimId, killerId, Clock);
+        }
+
+        /// <summary>id が受けた記録を消す。出現し直したときに呼ぶ。</summary>
+        public void Clear(int id)
+        {
+            _ledger.Clear(id);
+        }
+
+        /// <summary>すべての購読と記録をやめる。</summary>
+        public void Stop()
+        {
+            foreach (var damageable in _ids.Keys)
+            {
+                if (damageable != null)
+                {
+                    damageable.Damaged -= OnDamaged;
+                }
+            }
+
+            _ids.Clear();
+            _idsByOfflineId.Clear();
+            _ledger.Reset();
+        }
 
         /// <summary>
-        /// victim が受けた記録を消す。まだ台帳が無ければ何もしない。
-        /// 台帳が無いときに作らないのは、体力を満たすたび (Awake を含む) に調整値を読み、オフライン Id を振ってしまわないため。
+        /// attackerObjectId (<see cref="CombatEvents.OfflineId"/>) の撃ち手が victimId に amount を与えたとして記録する。
+        /// 撃ち手を見張っていなければ何もしない。<see cref="Damageable.Damaged"/> を通さずに試すときにも使う。
         /// </summary>
-        public static void Forget(GameObject victim)
+        public void Record(int victimId, int attackerObjectId, int amount)
         {
-            if (_ledger == null || victim == null)
+            if (!_idsByOfflineId.TryGetValue(attackerObjectId, out var attackerId))
             {
                 return;
             }
 
-            _ledger.Clear(CombatEvents.OfflineId(victim));
+            _ledger.Record(victimId, attackerId, amount, _areAllies(attackerId, victimId), Clock);
         }
 
-        /// <summary>すべての記録を消す。次に <see cref="Ledger"/> を読んだときに調整値から作り直す。</summary>
-        public static void Reset()
+        // とどめの一撃は Died の後に届くので、倒れた後のダメージを次の命の記録に残さないよう飛ばす。
+        private void OnDamaged(Damageable damageable, DamageReport report)
         {
-            _ledger = null;
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnPlay()
-        {
-            Reset();
-
-            // 静的なイベントは Play をまたいで残るので、二重に付かないよう外してから付ける。
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
-
-        // 足すだけの読み込み (Additive) は今の場面の続きなので、記録を残す。
-        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (mode == LoadSceneMode.Single)
+            if (damageable == null || damageable.IsDead || !_ids.TryGetValue(damageable, out var victimId))
             {
-                Reset();
+                return;
             }
+
+            var attribution = CombatEvents.CurrentAttribution;
+            if (!attribution.HasValue)
+            {
+                return;
+            }
+
+            Record(victimId, attribution.Value.KillerId, report.Amount);
         }
     }
 }

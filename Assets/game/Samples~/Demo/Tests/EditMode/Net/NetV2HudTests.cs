@@ -11,9 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>
-    /// <see cref="NetV2Hud"/> が届いたスナップショットを自分の HudModel と GameSignals に出し、既定の HUD がそれを前と同じに出すこと。
-    /// </summary>
     public sealed class NetV2HudTests
     {
         private const int _localId = 3;
@@ -115,8 +112,8 @@ namespace Shooter.Net.Tests
             Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(rows), "the same rows are not published again every tick");
             Assert.That(rows, Is.EqualTo(new[]
             {
-                new ScoreboardEntry(_localId, BotRoster.ScoreboardName(_localId), Team.Bravo, 2, 1, ScoreboardConnection.Connected, true),
-                new ScoreboardEntry(_otherId, BotRoster.ScoreboardName(_otherId), Team.Alpha, 0, 0, ScoreboardConnection.Connected, false),
+                new ScoreboardEntry(_localId, BotRoster.ScoreboardName(_localId), Team.Bravo, 2, 1, 0, ScoreboardConnection.Connected, true),
+                new ScoreboardEntry(_otherId, BotRoster.ScoreboardName(_otherId), Team.Alpha, 0, 0, 0, ScoreboardConnection.Connected, false),
             }));
 
             snapshot.Players[1].Kills = 1;

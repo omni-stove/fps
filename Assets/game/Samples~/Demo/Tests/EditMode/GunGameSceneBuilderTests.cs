@@ -9,10 +9,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GunGameSceneBuilder"/> の配置と配線先を確かめる。シーンを組んで NavMesh を焼く処理は、開いているシーンを置き換える
-    /// (NewScene Single) ので <c>-executeMethod Shooter.Editor.GunGameSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.GunGameSceneBuilder.Build で確かめる。
     public sealed class GunGameSceneBuilderTests
     {
         [Test]

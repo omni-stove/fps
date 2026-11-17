@@ -3,7 +3,6 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>全員に送る爆発。投げた人がもう抜けていても演出は出す (<see cref="HasThrower"/> が false)。</summary>
     public sealed class ExplosionMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -18,7 +17,6 @@ namespace Shooter.Protocol
 
         public int ThrowerId { get; set; }
 
-        /// <summary>爆発した物の Id (爆発の見た目と音を選ぶ)。</summary>
         public string WeaponId { get; set; } = "";
 
         public void Write(MessageWriter writer)

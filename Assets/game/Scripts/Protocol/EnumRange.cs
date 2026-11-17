@@ -2,14 +2,8 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 1 バイトで送る列挙の値の数。値が 0 から隙間なく並ぶ列挙だけを扱い、読むときは数より小さい値だけを受け取る
-    /// (<see cref="MessageReader.ReadByteBelow"/>)。
-    /// </summary>
-    /// <remarks>
-    /// 値を毎回 <see cref="Enum.IsDefined(Type, object)"/> で確かめると箱詰めで GC を起こすので、型ごとに一度だけ数える。
-    /// 列挙の値はゲームが足せるので、数は定数にせず型から数える。
-    /// </remarks>
+    // 値を毎回 Enum.IsDefined で確かめると箱詰めで GC を起こすので、型ごとに一度だけ数える。
+    // 列挙の値はゲームが足せるので、数は定数にせず型から数える。
     internal static class EnumRange<T>
         where T : struct, Enum
     {

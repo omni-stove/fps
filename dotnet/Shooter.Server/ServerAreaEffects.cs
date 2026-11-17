@@ -7,11 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 地面に残る範囲の効果 (スモーク・炎など)。中心・半径・寿命を持ち、寿命が来たら消す。
-    /// 出たときと消えたときに <see cref="AreaEffectMessage"/> を全員へ送り、途中から入った人には今ある範囲を送る。
-    /// 種類ごとの効き目は <c>ServerAreaEffects.Smoke.cs</c>・<c>ServerAreaEffects.Fire.cs</c> の partial が受け持つ。
-    /// </summary>
     internal sealed partial class ServerAreaEffects
     {
         public const string LogTag = "[AreaEffect]";
@@ -81,7 +76,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>試合の始まりに、残っている範囲をすべて消す。</summary>
         public void Clear()
         {
             while (_zones.Count > 0)

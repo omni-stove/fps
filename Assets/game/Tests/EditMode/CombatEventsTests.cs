@@ -12,10 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 撃つ・当てる・倒すで <see cref="CombatEvents"/> の各イベントが 1 回ずつ流れることを確かめる。
-    /// Edit Mode でも Physics.Raycast はコライダーに当たるので、生成後に SyncTransforms してから撃つ。
-    /// </summary>
+    // Edit Mode でも Physics.Raycast はコライダーに当たるので、生成後に SyncTransforms してから撃つ。
     public sealed class CombatEventsTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);
@@ -535,7 +532,6 @@ namespace Shooter.Tests.EditMode
             return damageable;
         }
 
-        // 6 つのイベントを購読して届いた値を並べる。Dispose で購読を外す。
         private sealed class Recorder : IDisposable
         {
             public readonly List<ShotFiredInfo> Shots = new List<ShotFiredInfo>();

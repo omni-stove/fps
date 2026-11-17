@@ -3,13 +3,10 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ルールの <see cref="SlowMotion"/> を <see cref="TimeScaleArbiter.ApplyRules"/> に入れる。持ち主はプレイヤーにするので、
-    /// プレイヤーが消える (シーンを離れる) とルールは Off に戻る。<see cref="PlayerActions.Attach"/> はオフラインでだけ呼ばれる。
-    /// </summary>
+    // 持ち主をプレイヤーにするのは、プレイヤーが消える (シーンを離れる) とルールを Off に戻すため。
     public sealed class SlowMotionActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まない。</summary>
+        // ほかのアクションのコンポーネントは読まないので、並びは問わない。
         public const int InstallOrder = 350;
 
         public int Order => InstallOrder;

@@ -7,11 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    /// <summary>
-    /// 回避の待ち時間と乗り越えの速さ・届く距離・角度・最低の高さ・奥行きが、<see cref="MotorSpec"/> から
-    /// ルールのファイル (<see cref="NetMatchFile"/>)・承認の電文 (<see cref="ConnectAcceptedMessage"/>)・サーバーとクライアントが共に使う
-    /// <see cref="CharacterMotorSimulation"/> まで届くこと。
-    /// </summary>
     public sealed class MotorDodgeVaultTuningTests
     {
         private const float _tick = 1f / 60f;

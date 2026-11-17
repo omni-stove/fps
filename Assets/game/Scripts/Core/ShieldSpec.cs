@@ -48,8 +48,6 @@ namespace Shooter.Core
         // プレイヤーの近接攻撃と同じ値の形にする。当たりの探し方 (MeleeStrike) を共有して、殴り合いの決まりを 1 つに保つため。
         public MeleeSpec Bash { get; }
 
-        /// <exception cref="ArgumentNullException">bash が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。holdDistance は bash の届く距離以下。</exception>
         public ShieldSpec(
             float approachSpeedMultiplier,
             float holdDistance,

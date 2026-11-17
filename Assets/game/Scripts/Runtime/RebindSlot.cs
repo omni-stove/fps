@@ -3,10 +3,6 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 設定画面で割り当てを変えられる 1 か所。Player マップの <see cref="ActionName"/> の、<see cref="Device"/> の入力グループの最初の割り当て
-    /// (<see cref="Part"/> があれば、その名前の合成の部品。例: Move の "up")。どの割り当てを指すかは <see cref="PlayerBindings.BindingIndexOf"/> が決める。
-    /// </summary>
     public readonly struct RebindSlot : IEquatable<RebindSlot>
     {
         public RebindSlot(string actionName, InputDeviceKind device, string part = null)
@@ -26,13 +22,10 @@ namespace Shooter.Runtime
             Part = string.IsNullOrEmpty(part) ? null : part;
         }
 
-        /// <summary>Player マップのアクションの名前 (例: "Reload")。</summary>
         public string ActionName { get; }
 
-        /// <summary>どの機器の割り当てか。</summary>
         public InputDeviceKind Device { get; }
 
-        /// <summary>合成の部品の名前 (例: "up")。合成でなければ null。</summary>
         public string Part { get; }
 
         public bool Equals(RebindSlot other)

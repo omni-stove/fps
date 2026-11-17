@@ -7,38 +7,19 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ソロの試合 (<see cref="Shooter.Core.Match"/>) をシーンで進める。Start で同じ GameObject (無ければシーン) の
-    /// <see cref="GameBootstrap"/> が作った <see cref="BootstrapWorld"/> を拾い、試合を始めて Update で時間を進める。
-    /// 標的ダミーの死亡はプレイヤーのキル、プレイヤーの死亡は敗北として Match に渡すだけで、勝敗の判断は Match が行う。
-    /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止め、
-    /// HUD に勝敗と、やり直すキーを出し、勝敗・キル数・デス数を <see cref="CombatEvents.MatchFinished"/> で 1 度だけ知らせる。
-    /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
-    /// 制限時間と勝利に必要なキル数は、<see cref="Definition"/>、入口 (<see cref="GameContent.FreeForAll"/>) のフリーフォーオールの定義
-    /// (<see cref="FreeForAllDefinition.TimeLimitSeconds"/>・<see cref="FreeForAllDefinition.ScoreLimit"/>)、Inspector の値の順で読む。
-    /// 標的ダミーは自分で復活し、Match はキルの数を数えるので、定義のリスポーンとキル 1 回の点は使わない。
-    /// Inspector の制限時間は既定では無く (<see cref="TimeLimitSeconds"/> が 0)、HUD に残り時間も出さない。
-    /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> を小さくする。
-    /// 開始時とキル・デスのたびに自分と標的のキル数・デス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。
-    /// </summary>
+    // 標的ダミーは自分で復活し、Match はキルの数を数えるので、定義のリスポーンとキル 1 回の点は使わない。
     [DisallowMultipleComponent]
     public sealed class MatchRunner : MonoBehaviour
     {
         public const string LogTag = MatchLog.Tag;
 
-        /// <summary><see cref="TimeLimitSeconds"/> の既定。0 は制限時間なし。</summary>
         public const float DefaultTimeLimitSeconds = 0f;
 
-        /// <summary><see cref="KillsToWin"/> の既定。</summary>
         public const int DefaultKillsToWin = 10;
 
-        /// <summary>Match の中でのプレイヤーの ID。標的ダミーには左から 1, 2, ... を振る。</summary>
         public const int PlayerId = 0;
 
-        /// <summary>
-        /// 再開に使うアクション。Assets/InputSystem_Actions.inputactions の Reload (キーボードの R、ゲームパッドの X)。
-        /// 終了後は <see cref="WeaponController"/> を止めるので、リロードと取り合うことはない。
-        /// </summary>
+        // 再開に Reload を使っても、終了後は WeaponController を止めるので、リロードと取り合うことはない。
         public const string RestartActionPath = InputActionPaths.Reload;
 
         [SerializeField]
@@ -69,17 +50,14 @@ namespace Shooter.Runtime
         private InputAction _restartAction;
         private bool _enabledRestartAction;
 
-        /// <summary>制限時間と勝利に必要なキル数を読む定義。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値を使う。</summary>
         public FreeForAllDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public FreeForAllDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.FreeForAll);
 
-        /// <summary>Inspector の制限時間 (秒)。0 なら制限時間なし。次に始める試合から使う。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
@@ -94,7 +72,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>Inspector の勝利に必要なキル数。1 以上。次に始める試合から使う。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public int KillsToWin
         {
             get => _killsToWin;
@@ -109,16 +86,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="TimeLimitSeconds"/> を <see cref="Shooter.Core.Match"/> に渡す値にする。0 以下は制限時間なし。</summary>
         public static float MatchTimeLimit(float timeLimitSeconds)
         {
             return timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
         }
 
-        /// <summary>
-        /// <see cref="EffectiveDefinition"/> があればその制限時間と点の上限で、無ければ Inspector の値で、まだ始めていない試合を作る。
-        /// 定義の値が不正ならアセット名を含む <see cref="ArgumentException"/>。
-        /// </summary>
         public Match CreateMatch()
         {
             var definition = EffectiveDefinition;
@@ -137,12 +109,10 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>進めている試合。開始前や開始に失敗したときは null。</summary>
         public Match Match => _match;
 
         public bool IsStarted => _match != null;
 
-        /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
 
         private void Start()
@@ -155,7 +125,6 @@ namespace Shooter.Runtime
 
         private void OnEnable()
         {
-            // 終了後に無効→有効にされたら、再開の入力をもう一度受け付ける。
             if (IsStarted && _match.IsOver)
             {
                 AcquireRestartAction();
@@ -187,10 +156,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="GameBootstrap"/> の生成物を拾い、<see cref="CreateMatch"/> の試合を始める。
-        /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBeginFromBootstrap()
         {
             if (IsStarted)
@@ -233,11 +198,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// world の標的ダミーとプレイヤーの死亡を match に繋ぎ、match を始める。
-        /// match は <see cref="GameModeState.Waiting"/> で、プレイヤーの ID が <see cref="PlayerId"/> であること。
-        /// 失敗したら例外を投げ、何も購読しない。
-        /// </summary>
         public void Begin(BootstrapWorld world, Match match)
         {
             if (world == null)
@@ -296,17 +256,14 @@ namespace Shooter.Runtime
             _player.Died += OnPlayerDied;
             _match.StateChanged += OnStateChanged;
 
-            // HUD の値に残り時間と勝敗を写す。
             world.HudModel.BindMatch(_match);
 
             _match.Start();
             ShowScoreboard();
         }
 
-        /// <summary>プレイヤーの、この試合で倒された回数。開始前は 0。</summary>
         public int PlayerDeaths => DeathsOf(PlayerId);
 
-        /// <summary>targetId の標的が、この試合で倒された回数。知らない Id は 0。</summary>
         public int TargetDeaths(int targetId) => DeathsOf(targetId);
 
         private int DeathsOf(int id)
@@ -319,12 +276,9 @@ namespace Shooter.Runtime
             _deaths[id] = DeathsOf(id) + 1;
         }
 
-        /// <summary>最後に <see cref="GameSignals.Scoreboard"/> に出した一覧。出す前と止めた後は null。</summary>
         public IReadOnlyList<ScoreboardEntry> PublishedScoreboard => _publishedScoreboard;
 
-        /// <summary>
-        /// 自分 (Alpha) と標的 (Bravo) のキル数・デス数を <see cref="GameSignals.Scoreboard"/> に出す。標的は撃ち返さないのでキル数はいつも 0。
-        /// </summary>
+        // 標的は撃ち返さないので、標的のキル数はいつも 0 にする。
         private void ShowScoreboard()
         {
             if (_match == null)
@@ -333,14 +287,15 @@ namespace Shooter.Runtime
             }
 
             // 止めるときに自分の出した一覧かを参照で見分けるので、出すたびに新しい配列にする
+            // ソロでは標的を撃つのがプレイヤーだけで、標的は撃ち返さないので、誰にもアシストは付かない
             var entries = new ScoreboardEntry[_targetIds.Count + 1];
             entries[0] = new ScoreboardEntry(
-                PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, _match.Kills, PlayerDeaths, ScoreboardConnection.None, true);
+                PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, _match.Kills, PlayerDeaths, 0, ScoreboardConnection.None, true);
             var i = 1;
             foreach (var targetId in _targetIds.Values)
             {
                 entries[i++] = new ScoreboardEntry(
-                    targetId, ScoreboardName.Target(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId),
+                    targetId, ScoreboardName.Target(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId), 0,
                     ScoreboardConnection.None, false);
             }
 
@@ -348,7 +303,6 @@ namespace Shooter.Runtime
             GameSignals.Scoreboard.Publish(entries);
         }
 
-        /// <summary>試合の時間を deltaSeconds 進める。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。</summary>
         public void Tick(float deltaSeconds)
         {
             if (!IsStarted)
@@ -359,7 +313,6 @@ namespace Shooter.Runtime
             _match.Tick(deltaSeconds);
         }
 
-        /// <summary>今のシーンを読み込み直して最初からやり直す。Play 中にのみ呼べる。</summary>
         [ContextMenu("Restart")]
         public void Restart()
         {
@@ -433,7 +386,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>HUD の値の結果の下に、やり直すキーを今の入力機器の表記で出す。再開のアクションが無ければ何もしない。</summary>
         private void ShowRestartKey()
         {
             var model = _world != null ? _world.HudModel : null;
@@ -488,7 +440,7 @@ namespace Shooter.Runtime
             return action;
         }
 
-        /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。
         private void AcquireRestartAction()
         {
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
@@ -511,7 +463,6 @@ namespace Shooter.Runtime
             _enabledRestartAction = false;
         }
 
-        /// <summary>購読を解除して試合から離れる。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
             ReleaseRestartAction();

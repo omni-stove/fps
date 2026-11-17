@@ -36,7 +36,6 @@ namespace Shooter.Core
 
         public float MaxVignetteAlpha { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲外のとき。</exception>
         public SuppressionSpec(
             float nearMissRadius = DefaultNearMissRadius,
             float buildPerNearMiss = DefaultBuildPerNearMiss,

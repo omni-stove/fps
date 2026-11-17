@@ -741,7 +741,6 @@ namespace Shooter.Core.Tests
             model.SetRespawnNotice(RespawnMode.None, 0);
             Assert.That(model.Notice, Is.EqualTo(HudNotice.NoRespawnUntilNextMatch));
 
-            // 表示が変わらなければ知らせない
             model.SetRespawnNotice(RespawnMode.None, 3);
             Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice }));
         }

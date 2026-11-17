@@ -16,7 +16,6 @@ namespace Shooter.Core.Tests
             _simulateCalls = 0;
         }
 
-        /// <summary>状態は 1 次元の位置、入力はその tick の移動量。</summary>
         private float Simulate(float state, float input)
         {
             _simulateCalls++;
@@ -35,7 +34,6 @@ namespace Shooter.Core.Tests
             return buffer;
         }
 
-        /// <summary>tick 1..ticks に毎 tick 1 ずつ進む入力で予測する。</summary>
         private static void PredictConstant(PredictionBuffer<float, float> buffer, int ticks)
         {
             for (var tick = 1; tick <= ticks; tick++)

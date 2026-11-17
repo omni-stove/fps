@@ -10,10 +10,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// Edit Mode では Start/Update/OnTrigger* が走らず入力も読まないので、Bot の口 (BeginHold/EndHold) と Tick を直接呼んで確かめる。
-    /// 範囲の判定は Collider に問い合わせるので、置いたり動かしたりしたあとに SyncTransforms する。
-    /// </summary>
+    // Edit Mode では Start/Update/OnTrigger* が走らず入力も読まないので、Bot の口 (BeginHold/EndHold) と Tick を直接呼んで確かめる。
+    // 範囲の判定は Collider に問い合わせるので、置いたり動かしたりしたあとに SyncTransforms する。
     public sealed class CoopInteractableTests
     {
         private const float HoldSeconds = 1f;

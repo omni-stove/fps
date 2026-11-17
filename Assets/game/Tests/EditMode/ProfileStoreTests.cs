@@ -8,10 +8,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ProfileStore が profile の枠にプロフィールを読み書きし、無ければ・読めなければ新しいプロフィールにし、
-    /// 読めなかった内容を profile-rejected の枠に残すことを確かめる。
-    /// </summary>
     public sealed class ProfileStoreTests
     {
         private const string Broken = "{\"version\":1,\"xp\":";
@@ -30,13 +26,31 @@ namespace Shooter.Tests.EditMode
         {
             var storage = new MemorySaveStorage();
             var store = new ProfileStore(storage);
-            var profile = new PlayerProfile(900, 3, 2, 2, 1);
+            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4);
 
             store.Save(profile);
 
             Assert.That(ProfileStore.Slot, Is.EqualTo("profile"));
-            Assert.That(storage.Text("profile"), Is.EqualTo("{\"version\":1,\"xp\":900,\"kills\":3,\"deaths\":2,\"matches\":2,\"wins\":1}"));
+            Assert.That(
+                storage.Text("profile"),
+                Is.EqualTo("{\"version\":2,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1}"));
             Assert.That(new ProfileStore(storage).Load(), Is.EqualTo(profile));
+        }
+
+        [Test]
+        public void AVersion1ProfileKeepsItsXpAndIsNotSetAside()
+        {
+            var storage = new MemorySaveStorage();
+            const string version1 = "{\"version\":1,\"xp\":1600,\"kills\":9,\"deaths\":2,\"matches\":3,\"wins\":1}";
+            storage.Write(ProfileStore.Slot, version1);
+            var writes = storage.WriteCount;
+
+            var profile = new ProfileStore(storage).Load();
+
+            Assert.That(profile, Is.EqualTo(new PlayerProfile(1600, 9, 2, 3, 1, 0)));
+            Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
+            Assert.That(storage.WriteCount, Is.EqualTo(writes), "the old save is rewritten by the next save, not by reading");
+            LogAssert.NoUnexpectedReceived();
         }
 
         [Test]
@@ -70,10 +84,10 @@ namespace Shooter.Tests.EditMode
         public void AProfileFromANewerVersionIsRejected()
         {
             var storage = new MemorySaveStorage();
-            const string newer = "{\"version\":2,\"xp\":900,\"kills\":3,\"deaths\":2,\"matches\":2,\"wins\":1,\"prestige\":1}";
+            const string newer = "{\"version\":3,\"xp\":900,\"kills\":3,\"assists\":0,\"deaths\":2,\"matches\":2,\"wins\":1,\"prestige\":1}";
             storage.Write(ProfileStore.Slot, newer);
 
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 2"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 3"));
             LogAssert.Expect(LogType.Warning, "[Progression] kept the rejected profile in slot=profile-rejected");
             var profile = new ProfileStore(storage).Load();
 

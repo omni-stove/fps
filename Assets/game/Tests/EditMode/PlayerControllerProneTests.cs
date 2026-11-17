@@ -11,10 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 伏せ (<see cref="PlayerController.ProneRule"/>): ルール・カプセルと当たり判定の高さ・頭上の検査・飛び込み・視点と射撃のばらつき。
-    /// Edit Mode でも Physics の重なり判定はコライダーに当たるので、障害物を置いたら SyncTransforms してから Tick する。
-    /// </summary>
+    // Edit Mode でも Physics の重なり判定はコライダーに当たるので、障害物を置いたら SyncTransforms してから Tick する。
     public sealed class PlayerControllerProneTests
     {
         private const float _tolerance = 1e-4f;
@@ -496,7 +493,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_player.IsProne, Is.True, "lay down");
         }
 
-        // 足元から bottom の高さに下面が来る、厚さ 0.4m の天井を体の真上に置く。
         private void PlaceCeiling(float bottom)
         {
             _ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -505,7 +501,6 @@ namespace Shooter.Tests.EditMode
             Physics.SyncTransforms();
         }
 
-        // 足元 (y = 0) の下に床を置き、接地するまで落とす。
         private void LandOnFloor()
         {
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);

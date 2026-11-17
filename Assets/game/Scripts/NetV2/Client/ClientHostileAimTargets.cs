@@ -17,13 +17,6 @@ namespace Shooter.NetV2
         private readonly StanceGeometry _geometry;
         private readonly Func<Vector3, Vector3, bool> _visionBlocked;
 
-        /// <param name="localPlayerId">自分のプレイヤー ID。</param>
-        /// <param name="latest">最新のスナップショット。</param>
-        /// <param name="sample">相手の画面上の姿勢を取る関数。</param>
-        /// <param name="world">壁の見通しを確かめる世界。</param>
-        /// <param name="geometry">姿勢ごとの体の寸法。</param>
-        /// <param name="visionBlocked">目から点までが煙などで見えないか。null なら見通しは壁だけで決める。</param>
-        /// <exception cref="ArgumentNullException">latest・sample・world・geometry のどれかが null。</exception>
         public ClientHostileAimTargets(
             int localPlayerId,
             Func<SnapshotMessage> latest,
@@ -40,8 +33,6 @@ namespace Shooter.NetV2
             _visionBlocked = visionBlocked;
         }
 
-        /// <exception cref="ArgumentNullException">into が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">range が 0 以下か有限でない。</exception>
         public void Collect(Vector3 eye, float range, List<Vector3> into)
         {
             if (into == null)

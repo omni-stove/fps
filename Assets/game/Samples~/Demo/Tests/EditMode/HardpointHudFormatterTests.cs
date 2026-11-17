@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ハードポイントの書式役 (<see cref="HardpointHudFormatter"/>) が、<see cref="ModeStatus.Detail"/> の <see cref="Hardpoint"/> から
-    /// 有効な拠点と移るまでの秒数・拠点の様子の行を作り、<see cref="ModeHudView"/> がそれを出すことを確かめる。
-    /// </summary>
     public sealed class HardpointHudFormatterTests
     {
         private const int AlphaId = 1;
@@ -76,7 +72,6 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        /// <summary>拠点 4 つ・10 秒で移るハードポイントを始め、Alpha が拠点 A に 1 秒いた後のもの。</summary>
         private static Hardpoint HeldByAlpha()
         {
             var hardpoint = new Hardpoint(new HardpointSpec(4, 10f, 1f, 1000, 300f, 1f));

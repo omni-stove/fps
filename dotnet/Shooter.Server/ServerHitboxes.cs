@@ -5,17 +5,10 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// ラグ補償の当たり判定 (Unity の <c>HitboxRewinder</c> と NetTeamDeathmatch.Fire の記録)。各プレイヤーの体の位置としゃがみを tick ごとに
-    /// <see cref="LagCompensator"/> に残し、撃った人が見ていた tick まで巻き戻したカプセルと、<c>.fpsmap</c> の世界への Raycast の近い方を当たりにする。
-    /// </summary>
-    /// <remarks>
-    /// 巻き戻した位置が無い対象 (その時点にまだいなかった・置き直した直後) と当てられない対象は素通りする。撃った本人にも当たらない。
-    /// 置き直すと前の位置との間を補間しないよう、その人の記録を捨てる。
-    /// </remarks>
+    // 置き直すと前の位置との間を補間しないよう、その人の記録を捨てる。
     internal sealed partial class ServerHitboxes
     {
-        /// <summary>Unity の Physics.DefaultRaycastLayers と同じく Ignore Raycast (2) だけを外す。</summary>
+        // Unity の Physics.DefaultRaycastLayers と同じく Ignore Raycast (2) だけを外す。
         public const int RaycastLayers = ~(1 << 2);
 
         private const int _noTick = int.MinValue;
@@ -24,24 +17,26 @@ namespace Shooter.Server
         private readonly IWorldCollision _world;
         private readonly LagCompensator _lag;
         private readonly List<int> _ids = new List<int>();
+        private readonly List<(int Id, RewoundBody Body)> _rewound = new List<(int Id, RewoundBody Body)>();
         private readonly ServerVehicles _vehicles;
+        private readonly MotorSpec _motor;
 
-        public ServerHitboxes(ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null)
+        public ServerHitboxes(
+            ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null, MotorSpec motor = null)
         {
             _vehicles = vehicles;
+            _motor = motor ?? MotorSpec.Default;
             _bodies = bodies ?? throw new ArgumentNullException(nameof(bodies));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _lag = lag ?? new LagCompensator();
         }
 
-        /// <summary>巻き戻せる最大の tick 数。Unity のサーバーと同じ <see cref="LagCompensator.DefaultMaxRewindTicks"/>。</summary>
         public int MaxRewindTicks => _lag.MaxRewindTicks;
 
         public bool HasHistory => LastRecordedTick != _noTick;
 
         public int LastRecordedTick { get; private set; } = _noTick;
 
-        /// <summary>出現した全員の今の位置と姿勢を tick として残す。tick は前回以上。</summary>
         public void Record(int tick)
         {
             if (HasHistory && tick < LastRecordedTick)
@@ -53,7 +48,8 @@ namespace Shooter.Server
             {
                 if (body.HasSpawned)
                 {
-                    _lag.Record(tick, body.PlayerId, body.Position, body.Stance != PlayerStance.Standing);
+                    _lag.Record(
+                        tick, body.PlayerId, body.Position, body.Stance != PlayerStance.Standing, LeanStep.EyeOffset(body.Lean, body.Yaw, _motor));
                 }
             }
 
@@ -75,7 +71,8 @@ namespace Shooter.Server
             }
 
             var crouched = _lag.RewindCrouched(clamped).TryGetValue(playerId, out var c) && c;
-            center = position + new Vector3(0f, _bodies.Geometry.Shape(crouched).CenterY, 0f);
+            var lean = _lag.RewindLean(clamped).TryGetValue(playerId, out var l) ? l : Vector3.Zero;
+            center = Rewound(position, crouched, lean).Center;
             return true;
         }
 
@@ -84,10 +81,6 @@ namespace Shooter.Server
             _lag.Remove(playerId);
         }
 
-        /// <summary>
-        /// 太さ radius の弾を <see cref="Raycast"/> と同じく巻き戻した対象と世界に通し、近い順に maxHits 件までを hits に足す。
-        /// 半径 0・1 件なら <see cref="Raycast"/> と同じ結果になる。何かに当たれば true。
-        /// </summary>
         public bool Cast(
             Vector3 origin, Vector3 direction, float radius, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
             List<ShotHit> hits)
@@ -132,10 +125,6 @@ namespace Shooter.Server
             Vector3 origin, Vector3 direction, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
             List<ShotHit> hits, ref bool handled);
 
-        /// <summary>
-        /// 撃った人が見ていた tick (補間の割合を含む。<see cref="MaxRewindTicks"/> より古ければそこまでに縮める) まで巻き戻した対象と世界に、
-        /// origin から direction へ range まで線を引き、いちばん近い当たりを返す。対象は hittable が true を返す人だけで、撃った本人は除く。
-        /// </summary>
         public bool Raycast(
             Vector3 origin, Vector3 direction, float range, float tick, int shooterId, Func<int, bool> hittable, out ShotHit hit)
         {
@@ -185,44 +174,74 @@ namespace Shooter.Server
 
             var clamped = _lag.ClampTick(tick, LastRecordedTick);
             found |= NearerVehicle(origin, unit, found ? hit.Distance : range, clamped, shooterId, ref hit);
-            var rewound = _lag.Rewind(clamped);
+            foreach (var (id, body) in RewindBodies(clamped, shooterId, hittable))
+            {
+                var limit = found ? hit.Distance : range;
+                var thickness = radius > 0f && StartsGrazing(origin, body.Bottom, body.Top, body.Radius, radius) ? 0f : radius;
+
+                // 球と体のカプセルが触れるのは、球の中心の線が体を弾の半径だけ太らせたカプセルに触れるとき
+                if (!RayCapsule(origin, unit, body.Bottom, body.Top, body.Radius + thickness, limit, out var distance, out var normal))
+                {
+                    continue;
+                }
+
+                var point = origin + (unit * distance) - (normal * thickness);
+                hit = ShotHit.Target(point, normal, distance, id, body.Position, body.Crouched, body.Zone(point));
+                found = true;
+            }
+
+            hit = hit.WithRewind(LastRecordedTick - clamped);
+            return found;
+        }
+
+        private List<(int Id, RewoundBody Body)> RewindBodies(float clamped, int shooterId, Func<int, bool> hittable)
+        {
+            var positions = _lag.Rewind(clamped);
             var crouched = _lag.RewindCrouched(clamped);
+            var leans = _lag.RewindLean(clamped);
             _ids.Clear();
             foreach (var body in _bodies.All)
             {
                 _ids.Add(body.PlayerId);
             }
 
-            var geometry = _bodies.Geometry;
+            _rewound.Clear();
             foreach (var id in _ids)
             {
-                if (id == shooterId || !rewound.TryGetValue(id, out var position) || !hittable(id))
+                if (id == shooterId || !positions.TryGetValue(id, out var position) || !hittable(id))
                 {
                     continue;
                 }
 
                 var isCrouched = crouched.TryGetValue(id, out var c) && c;
-                var shape = geometry.Shape(isCrouched);
-                geometry.SphereCenters(shape, out var bottomY, out var topY);
-                var p = position + new Vector3(0f, bottomY, 0f);
-                var q = position + new Vector3(0f, topY, 0f);
-                var limit = found ? hit.Distance : range;
-                var thickness = radius > 0f && StartsGrazing(origin, p, q, geometry.Radius, radius) ? 0f : radius;
-
-                // 球と体のカプセルが触れるのは、球の中心の線が体を弾の半径だけ太らせたカプセルに触れるとき
-                if (!RayCapsule(origin, unit, p, q, geometry.Radius + thickness, limit, out var distance, out var normal))
-                {
-                    continue;
-                }
-
-                var point = origin + (unit * distance) - (normal * thickness);
-                var bottom = position.Y + shape.CenterY - (shape.Height / 2f);
-                hit = ShotHit.Target(point, normal, distance, id, position, isCrouched, Zone(point.Y, bottom, shape.Height));
-                found = true;
+                var lean = leans.TryGetValue(id, out var l) ? l : Vector3.Zero;
+                _rewound.Add((id, Rewound(position, isCrouched, lean)));
             }
 
-            hit = hit.WithRewind(LastRecordedTick - clamped);
-            return found;
+            return _rewound;
+        }
+
+        // 回す角度を MotorSpec.LeanAngleDegrees (見た目の体の角度) にしないのは、傾けた人の目 (カメラと撃つ位置) は LeanStep.EyeOffset だけずれるので、
+        // 頭の当たりもその目の所へ合わせるため
+        private RewoundBody Rewound(Vector3 position, bool crouched, Vector3 lean)
+        {
+            var geometry = _bodies.Geometry;
+            var shape = geometry.Shape(crouched);
+            geometry.SphereCenters(shape, out var bottomY, out var topY);
+            var feetY = shape.CenterY - (shape.Height / 2f);
+            var feet = position + new Vector3(0f, feetY, 0f);
+            var up = Vector3.UnitY;
+            var side = new Vector3(lean.X, 0f, lean.Z);
+            var shift = side.Length();
+            var eye = shape.EyeY - feetY;
+            if (shift > 1e-6f && eye > 1e-4f)
+            {
+                var sin = Math.Min(shift / eye, 1f);
+                up = (side / shift * sin) + (Vector3.UnitY * MathF.Sqrt(1f - (sin * sin)));
+            }
+
+            return new RewoundBody(
+                position, crouched, shape, feet, up, feet + (up * (bottomY - feetY)), feet + (up * (topY - feetY)), geometry.Radius);
         }
 
         // 車体は人より手前で弾を止めるので、人の当たりより先に、世界の当たりと比べて近い方を残す。
@@ -243,10 +262,6 @@ namespace Shooter.Server
             return height > 0f && float.IsFinite(height) ? CapsuleHitZone.Classify(hitY, bottom, height) : HitZone.Body;
         }
 
-        /// <summary>
-        /// 単位ベクトル direction の線と、p・q を両端の球の中心とする半径 radius のカプセルが maxDistance までに交わるか。
-        /// 始点がカプセルの中なら距離 0 で当たる。
-        /// </summary>
         internal static bool RayCapsule(
             Vector3 origin, Vector3 direction, Vector3 p, Vector3 q, float radius, float maxDistance, out float distance, out Vector3 normal)
         {
@@ -344,9 +359,48 @@ namespace Shooter.Server
         {
             return float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
         }
+
+        private readonly struct RewoundBody
+        {
+            public RewoundBody(
+                Vector3 position, bool crouched, StanceShape shape, Vector3 feet, Vector3 up, Vector3 bottom, Vector3 top, float radius)
+            {
+                Position = position;
+                Crouched = crouched;
+                Shape = shape;
+                Feet = feet;
+                Up = up;
+                Bottom = bottom;
+                Top = top;
+                Radius = radius;
+            }
+
+            public Vector3 Position { get; }
+
+            public bool Crouched { get; }
+
+            public StanceShape Shape { get; }
+
+            public Vector3 Feet { get; }
+
+            public Vector3 Up { get; }
+
+            public Vector3 Bottom { get; }
+
+            public Vector3 Top { get; }
+
+            public float Radius { get; }
+
+            public Vector3 Center => Feet + (Up * (Shape.Height / 2f));
+
+            // 傾けた体でも頭と足を分けられるよう、高さではなく体の軸に沿った足元からの長さで分ける
+            public HitZone Zone(Vector3 point)
+            {
+                return ServerHitboxes.Zone(Vector3.Dot(point - Feet, Up), 0f, Shape.Height);
+            }
+        }
     }
 
-    /// <summary><see cref="ServerHitboxes.Raycast"/> が当たった 1 か所。</summary>
     internal readonly struct ShotHit
     {
         private ShotHit(
@@ -374,12 +428,10 @@ namespace Shooter.Server
 
         public float Distance { get; }
 
-        /// <summary>プレイヤーに当たったか。false なら世界 (<see cref="ColliderId"/>) に当たった。</summary>
         public bool HitTarget { get; }
 
         public int TargetId { get; }
 
-        /// <summary>判定に使った (巻き戻した) 当たった人の位置。</summary>
         public Vector3 TargetPosition { get; }
 
         public bool TargetCrouched { get; }
@@ -390,7 +442,6 @@ namespace Shooter.Server
 
         public int Layer { get; }
 
-        /// <summary>巻き戻した tick 数 (記録した最新の tick − 判定に使った tick)。</summary>
         public float RewindTicks { get; }
 
         public int VehicleIndex { get; }

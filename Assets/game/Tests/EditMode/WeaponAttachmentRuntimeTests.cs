@@ -152,7 +152,7 @@ namespace Shooter.Tests.EditMode
         public void WithoutAPredicateTheProfileLevelDecidesWhatCanBeAttached()
         {
             var storage = new MemorySaveStorage();
-            var spec = new ProgressionSpec(100, 0, 0, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(_magazineId, 2) });
+            var spec = new ProgressionSpec(100, 0, 0, 0, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(_magazineId, 2) });
             ProgressionBootstrap.Install(new ProgressionRecorder(storage, spec, new OfflineParticipants()));
             try
             {
@@ -371,7 +371,6 @@ namespace Shooter.Tests.EditMode
             return action;
         }
 
-        // 付ける物を 1 つずつ持って始める
         private static ItemCatalog Catalog(InventoryRule rule)
         {
             return new ItemCatalog(

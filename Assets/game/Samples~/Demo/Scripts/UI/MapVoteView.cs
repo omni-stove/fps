@@ -6,11 +6,6 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 試合と試合の間のマップの投票 (<see cref="GameSignals.MapVote"/>) を、試合の結果の上に出す。
-    /// 票を送る口は Shooter.NetV2 が UI のアセンブリを参照しないので持たず、選んだ候補の番号を <see cref="Voted"/> で渡して送るのは受けた側に任せる。
-    /// マップの名前はデータに名前の鍵が無いので、Id から鍵 (<see cref="MapNameKey"/>) を作って言語の表を引き、表に無い Id は Id のまま出す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class MapVoteView : HudElementView
     {
@@ -59,9 +54,7 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 選んだ候補の <see cref="MapVoteStatus.Candidates"/> での番号を渡す。マップ Id でなく番号にするのは、送る口 (IMapVoteSender.Vote(int)) が番号で受けるため。
-        /// </summary>
+        // 票を送る口を持たずに番号を渡すのは、Shooter.NetV2 が UI のアセンブリを参照しないため。マップ Id でなく番号にするのは、送る口 (IMapVoteSender.Vote(int)) が番号で受けるため。
         public event Action<int> Voted;
 
         public MapVoteStatus? Status => _status;
@@ -76,6 +69,7 @@ namespace Shooter.Runtime
 
         public string TimerText => _timer != null && _timer.style.display != DisplayStyle.None ? _timer.text : string.Empty;
 
+        // データにマップの名前の鍵が無いので、Id から鍵を作って言語の表を引く。
         public static string MapNameKey(string mapId)
         {
             return MapNameKeyPrefix + (mapId ?? string.Empty);
@@ -101,8 +95,7 @@ namespace Shooter.Runtime
             UpdateCursor();
         }
 
-        /// <summary>もう入れた候補を選び直しても渡さないのは、ボタンを押し続けたときに同じ票を何度も送らないため。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">出している間に index が候補の範囲に無い。</exception>
+        // もう入れた候補を選び直しても渡さないのは、ボタンを押し続けたときに同じ票を何度も送らないため。
         public bool Choose(int index)
         {
             if (!IsShown || _status.Value.IsDecided)

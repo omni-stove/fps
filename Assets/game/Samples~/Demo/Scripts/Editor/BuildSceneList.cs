@@ -111,6 +111,15 @@ namespace Shooter.Editor
             }
         }
 
+        // オンラインはブラウザで使えないので、メニューから行けるオフラインのシーンだけにして、たどり着けないシーンで重くしない。
+        public static IReadOnlyList<string> WebScenes => new[]
+        {
+            MainMenuScene,
+            BootstrapScene,
+            CampaignScene,
+            Campaign02Scene,
+        };
+
         public static string ModeScene(string name)
         {
             switch (name)

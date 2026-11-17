@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 既定の印の表示 (PingMarkersView) が、画面の中の印をその位置に、外の印を端に寄せて向きを出すことと、
-    /// 要素を持っている間は GameSignals.Pings を購読して出された印を出すことを確かめる。
-    /// </summary>
     public sealed class PingMarkersViewTests
     {
         private readonly List<GameObject> _objects = new List<GameObject>();
@@ -112,7 +108,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_view.Markers, Is.SameAs(_pinger.Markers), "binding picks up the marks already published");
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown without marks");
 
-            // 付けると GameSignals.Pings に出し直され、表示はそれを受けて要素を足す。
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);
 
             var marks = _view.Element.Query<VisualElement>(className: PingMarkersView.MarkerClass).ToList();

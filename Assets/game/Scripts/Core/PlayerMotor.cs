@@ -3,42 +3,27 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// プレイヤーの移動量を計算する (歩き・ダッシュ・しゃがみ・ジャンプ・重力)。衝突判定はせず、
-    /// <see cref="Step"/> の戻り値をそのまま CharacterController.Move に渡す想定。座標は Y が上。
-    /// </summary>
     public sealed class PlayerMotor
     {
-        /// <summary>接地中かつジャンプしないときの縦速度。地面に吸着させるための小さな負値。</summary>
+        // 接地中に 0 でなく小さな負値にするのは、地面に吸着させるため。
         public const float GroundedVerticalSpeed = -2f;
 
-        /// <summary>接地中にジャンプした瞬間に 1 度だけ呼ばれる。</summary>
-        public event Action Jumped;
+        // CharacterMotorSimulation が吹き飛ばし中に入力で寄せるかを決める閾値と同じ
+        private const float _minTurnInputSquared = 1e-4f;
+
+        public const int GroundJumpNumber = 1;
+
+        public event Action<int> Jumped;
 
         public MotorSpec Spec { get; }
 
-        /// <summary>直近の <see cref="Step"/> 終了時点の速度 (m/s)。</summary>
         public Vector3 Velocity { get; private set; }
 
-        /// <param name="spec">移動の設定。null 不可。</param>
         public PlayerMotor(MotorSpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
         }
 
-        /// <summary>
-        /// 1 フレーム進め、今フレームの変位 (m) を返す。
-        /// </summary>
-        /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
-        /// <param name="yawRadians">向き (Y 軸まわり、ラジアン)。0 で +Z が前、正で右回り (+X 側) へ向く。</param>
-        /// <param name="sprint">ダッシュ中か。crouched が true なら無視する。ダッシュ中は <see cref="MotorSpec.SprintDirection"/>、
-        /// それ以外は <see cref="MotorSpec.WalkDirection"/> を向きの倍率に使う。</param>
-        /// <param name="crouched">しゃがみ中か。<see cref="MotorSpec.CrouchSpeed"/> で動く。</param>
-        /// <param name="jumpPressed">今フレームにジャンプが押されたか。接地中でなければ無視する。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        /// <param name="deltaSeconds">経過秒数。0 以上。</param>
-        /// <param name="carrySpeedMultiplier">持ち物による速さの倍率 (<see cref="CarryLoadSpec.SpeedMultiplier"/>)。
-        /// 今の動きが <see cref="CarryLoadSpec.Gaits"/> にあるときだけ掛ける。0 以上の有限値。</param>
         public Vector3 Step(
             Vector2 moveInput,
             float yawRadians,
@@ -57,29 +42,12 @@ namespace Shooter.Core
                 moveInput, yawRadians, speed * CarryScale(gait, carrySpeedMultiplier), direction, jumpPressed, isGrounded, deltaSeconds);
         }
 
-        /// <summary>伏せの速さ prone で 1 フレーム進める。<see cref="CarryGaits.Prone"/> が <see cref="CarryLoadSpec.Gaits"/> にあれば持ち物の倍率を掛ける。</summary>
-        /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
-        /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
-        /// <param name="prone">伏せの水平速度 (m/s)。0 以上の有限値。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        /// <param name="deltaSeconds">経過秒数。0 以上。</param>
-        /// <param name="carrySpeedMultiplier">持ち物による速さの倍率。0 以上の有限値。</param>
         public Vector3 StepProne(
             Vector2 moveInput, float yawRadians, float prone, bool isGrounded, float deltaSeconds, float carrySpeedMultiplier = 1f)
         {
             return StepAtSpeed(moveInput, yawRadians, prone * CarryScale(CarryGaits.Prone, carrySpeedMultiplier), false, isGrounded, deltaSeconds);
         }
 
-        /// <summary>
-        /// <see cref="Step"/> と同じく 1 フレーム進めるが、入力を前へ倒し切ったときの水平速度を speed で渡す
-        /// (伏せのように <see cref="MotorSpec"/> に無い速さで動くとき)。向きの倍率は <see cref="MotorSpec.WalkDirection"/> を掛ける。
-        /// </summary>
-        /// <param name="moveInput">移動入力。X が右、Y が前。長さ 1 を超える分は切り詰める。</param>
-        /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
-        /// <param name="speed">水平速度 (m/s)。0 以上の有限値。</param>
-        /// <param name="jumpPressed">今フレームにジャンプが押されたか。接地中でなければ無視する。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        /// <param name="deltaSeconds">経過秒数。0 以上。</param>
         public Vector3 StepAtSpeed(
             Vector2 moveInput, float yawRadians, float speed, bool jumpPressed, bool isGrounded, float deltaSeconds)
         {
@@ -145,34 +113,58 @@ namespace Shooter.Core
             Velocity = new Vector3(horizontal.X, verticalEnd, horizontal.Y);
             if (jumped)
             {
-                Jumped?.Invoke();
+                Jumped?.Invoke(GroundJumpNumber);
             }
 
             return new Vector3(horizontal.X * deltaSeconds, verticalDisplacement, horizontal.Y * deltaSeconds);
         }
 
-        /// <summary>
-        /// <see cref="Step"/> の前に呼ぶ。地上のジャンプは <see cref="Step"/> の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、
-        /// 回数を受け取って返す別の口にする。
-        /// </summary>
-        /// <param name="airJumpsUsed">着地してから空中で跳んだ回数。0 以上。</param>
-        /// <param name="jumpPressed">今フレームにジャンプが押されたか。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded)
+        // 地上のジャンプは Step の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、回数を受け取って返す別の口にする。
+        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded, Vector2 moveInput, float yawRadians)
         {
             if (airJumpsUsed < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(airJumpsUsed), airJumpsUsed, "airJumpsUsed must not be negative");
             }
 
+            if (!IsFinite(moveInput.X) || !IsFinite(moveInput.Y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(moveInput), moveInput, "moveInput must be finite");
+            }
+
+            if (!IsFinite(yawRadians))
+            {
+                throw new ArgumentOutOfRangeException(nameof(yawRadians), yawRadians, "yawRadians must be finite");
+            }
+
             var used = AirJumpStep.Step(airJumpsUsed, isGrounded, jumpPressed, Spec, out var jumped);
             if (jumped)
             {
-                Velocity = new Vector3(Velocity.X, Spec.AirJumpSpeed, Velocity.Z);
-                Jumped?.Invoke();
+                var horizontal = TurnToInput(new Vector2(Velocity.X, Velocity.Z), moveInput, yawRadians);
+                Velocity = new Vector3(horizontal.X, Spec.AirJumpSpeed, horizontal.Y);
+                Jumped?.Invoke(GroundJumpNumber + used);
             }
 
             return used;
+        }
+
+        // 壁から跳ぶ速さは WallRunStep が決めるが、跳んだ知らせ Jumped は地上と空中のジャンプと同じくこのクラスの 1 か所から出すため、速度を受け取る口を置く。
+        public void JumpWith(Vector3 velocity)
+        {
+            SetVelocity(velocity);
+            Jumped?.Invoke(GroundJumpNumber);
+        }
+
+        private static Vector2 TurnToInput(Vector2 horizontal, Vector2 moveInput, float yawRadians)
+        {
+            // スティックの遊び程度の入力で向きを変えると、手を離しかけただけで横へ跳んでしまう
+            var input = ClampLength(moveInput);
+            if (input.LengthSquared() <= _minTurnInputSquared)
+            {
+                return horizontal;
+            }
+
+            return Vector2.Normalize(ToWorld(input, yawRadians)) * horizontal.Length();
         }
 
         private float CarryScale(CarryGaits gait, float carrySpeedMultiplier)
@@ -186,16 +178,12 @@ namespace Shooter.Core
             return Spec.CarryLoad.ForGait(gait, carrySpeedMultiplier);
         }
 
-        /// <summary>速度を 0 に戻す (リスポーンやテレポート時など)。</summary>
         public void ResetVelocity()
         {
             Velocity = Vector3.Zero;
         }
 
-        /// <summary>
-        /// 速度を直接設定する。クライアント予測で過去の状態に巻き戻して再シミュレーションするときに使う。
-        /// </summary>
-        /// <param name="velocity">速度 (m/s)。各成分が有限値。</param>
+        // クライアント予測で過去の状態に巻き戻して再シミュレーションするため、速度を直接設定できるようにする。
         public void SetVelocity(Vector3 velocity)
         {
             if (!IsFinite(velocity.X) || !IsFinite(velocity.Y) || !IsFinite(velocity.Z))
@@ -212,7 +200,6 @@ namespace Shooter.Core
             return lengthSquared > 1f ? input / (float)Math.Sqrt(lengthSquared) : input;
         }
 
-        /// <summary>入力 (X 右・Y 前) を yaw で回し、ワールドの水平ベクトル (X, Z) にする。</summary>
         internal static Vector2 ToWorld(Vector2 input, float yawRadians)
         {
             var sin = (float)Math.Sin(yawRadians);

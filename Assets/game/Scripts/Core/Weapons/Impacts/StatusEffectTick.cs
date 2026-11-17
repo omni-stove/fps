@@ -1,6 +1,5 @@
 namespace Shooter.Core
 {
-    /// <summary><see cref="StatusEffects.Tick"/> で状態異常が与えるダメージ 1 回。かけた人と武器に帰属させる。</summary>
     public readonly struct StatusEffectTick
     {
         public StatusEffectTick(string kindId, int damage, int? sourceId, string weaponId)

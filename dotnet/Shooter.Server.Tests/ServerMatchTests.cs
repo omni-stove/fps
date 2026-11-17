@@ -139,6 +139,65 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ATwoPlayerPartyJoinsTheSameTeam()
+        {
+            var first = _match.Join(new ConnectionId(1), "device1", null, "party-1");
+            var second = _match.Join(new ConnectionId(2), "device2", null, "party-1");
+
+            Assert.That(first.Team, Is.EqualTo(Team.Alpha));
+            Assert.That(second.Team, Is.EqualTo(Team.Alpha));
+            Assert.That(second.PartyId, Is.EqualTo("party-1"));
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Waiting));
+            Assert.That(_log.ToString(), Does.Contain("[Match] joined player=2 team=Alpha"));
+
+            // 別のパーティとパーティの無い人は、人数の少ない方へ入る
+            Assert.That(_match.Join(new ConnectionId(3), "device3", null, "party-2").Team, Is.EqualTo(Team.Bravo));
+            Assert.That(_match.Join(new ConnectionId(4), "device4").Team, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void APartyMemberGoesToTheOtherTeamWhenThePartyTeamIsFull()
+        {
+            _match.MaxPlayers = 4;
+            _match.Join(new ConnectionId(1), "device1", null, "party-1");
+            _match.Join(new ConnectionId(2), "device2", null, "party-1");
+
+            var third = _match.Join(new ConnectionId(3), "device3", null, "party-1");
+
+            Assert.That(third.Team, Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
+        public void BotsDoNotMakeThePartyTeamFull()
+        {
+            _match.MaxPlayers = 4;
+            _match.Join(new ConnectionId(1), "device1", null, "party-1");
+            _match.JoinBot(BotRoster.FirstBotPlayerId);
+            _match.JoinBot(BotRoster.FirstBotPlayerId + 1);
+            Assert.That(_match.CountPlayers(Team.Alpha), Is.EqualTo(2));
+            Assert.That(_match.CountPlayers(Team.Bravo), Is.EqualTo(1));
+
+            // Alpha は Bot を入れると定員 2 に届くが、人は 1 人なので満員ではない
+            Assert.That(_match.Join(new ConnectionId(2), "device2", null, "party-1").Team, Is.EqualTo(Team.Alpha));
+        }
+
+        [Test]
+        public void JoinRefusesAPartyIdOfTheWrongShape()
+        {
+            Assert.That(() => _match.Join(new ConnectionId(1), "key", null, "bad party"), Throws.ArgumentException);
+            Assert.That(() => _match.Join(new ConnectionId(1), "key", null, new string('p', ConnectionExtras.MaxPartyIdLength + 1)), Throws.ArgumentException);
+            Assert.That(_match.PlayerCount, Is.Zero);
+        }
+
+        [Test]
+        public void MaxPlayersMustFitTheMatchSettings()
+        {
+            Assert.That(_match.MaxPlayers, Is.EqualTo(NetMatchSettings.DefaultMaxPlayers));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _match.MaxPlayers = 0);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _match.MaxPlayers = NetMatchSettings.MaxMaxPlayers + 1);
+        }
+
+        [Test]
         public void LeavingWritesTheLeftEventOnce()
         {
             _match.Join(new ConnectionId(1), null);

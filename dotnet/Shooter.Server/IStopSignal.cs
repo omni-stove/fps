@@ -2,7 +2,7 @@ using System;
 
 namespace Shooter.Server
 {
-    /// <summary>終了の求め (SIGTERM など) を受け取る口。テストから求めを起こせるよう、OS のシグナルと分けておく。</summary>
+    // テストから終了の求めを起こせるよう、OS のシグナル (SIGTERM など) と分けておく。
     internal interface IStopSignal
     {
         IDisposable Subscribe(Action onStop);

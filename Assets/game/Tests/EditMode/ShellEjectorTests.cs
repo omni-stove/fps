@@ -7,10 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ShellEjector"/> が撃つたびに排莢口から薬莢を出し、最初の接地で落下音を 1 回だけ鳴らし、プールの上限と寿命を守ることを、
-    /// メモリ上のカタログで確かめる (Edit Mode では OnEnable も物理も走らないので、Eject と Land を直接呼ぶ)。
-    /// </summary>
+    // Edit Mode では OnEnable も物理も走らないので、Eject と Land を直接呼ぶ。
     public sealed class ShellEjectorTests
     {
         private const string RifleId = "rifle-id";

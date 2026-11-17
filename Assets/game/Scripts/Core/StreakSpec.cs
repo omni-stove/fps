@@ -174,7 +174,6 @@ namespace Shooter.Core
 
         public ExplosionSpec Explosion { get; }
 
-        /// <summary>照準の先を空爆の中心にするとき、照準が届く距離 (m)。</summary>
         public float Range { get; }
 
         public static ExplosionSpec DefaultExplosion()

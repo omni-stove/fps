@@ -4,16 +4,11 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦で見える他のプレイヤー 1 人。補間した姿 (<see cref="RemotePose"/>) を書き写すだけで、自分では動かさない。
-    /// 見た目は Resources の <see cref="BodyResourcePath"/> のプレハブを使い、無ければ体の寸法のカプセルを作る。
-    /// しゃがみと伏せは見た目を縦に縮めて下げて表す (プレハブの見た目は立ったときの高さで作ってある前提)。
-    /// 撃ったときの演出は自分のプレイヤーと同じ部品 (<see cref="NetV2LocalPlayer.AttachPresentation"/>) が出す。
-    /// </summary>
+    // プレハブの見た目は立ったときの高さで作ってある前提なので、しゃがみと伏せは見た目を縦に縮めて下げて表す。
     [DisallowMultipleComponent]
     public sealed class NetV2RemotePlayer : MonoBehaviour
     {
-        /// <summary>他のプレイヤーの見た目のプレハブ。ゲームごとに差し替える。ルートの原点が足元ではなく本体の位置 (移動の位置) に合うように置く。</summary>
+        // プレハブはルートの原点を足元ではなく本体の位置 (移動の位置) に合わせて作る前提で、そのまま本体に重ねる。
         public const string BodyResourcePath = "NetV2/RemotePlayerBody";
 
         private const string _bodyName = "Body";

@@ -7,69 +7,37 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 武器の演出 (銃声・マズルフラッシュ・曳光弾・着弾の火花と音と銃痕・リロード音) を受け持つ。撃つ人 (プレイヤー・NetPlayer・敵) の本体に付ける。
-    /// 音とエフェクトは <see cref="Catalog"/> (<see cref="PresentationCatalog"/>) から武器の Id で引く。着弾の演出は、<see cref="SurfaceImpacts"/>
-    /// (<see cref="SurfaceImpactCatalog"/>) があればそこから当たった面の材質の Id で引き、無ければ <see cref="Catalog"/> の火花と音を使う。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item><see cref="CombatEvents.ShotFired"/> と <see cref="CombatEvents.Impact"/> は、有効なインスタンス全体で 1 回だけ購読し、
-    /// 撃った者 (<see cref="ShotFiredInfo.Shooter"/>) の本体のインスタンスに渡す。撃った者が分からない・演出が無い弾は、有効なうちの 1 つが出す。
-    /// 着弾には撃った者が載らないので、直前の ShotFired を出したインスタンスが出す (どちらの発生元も、1 発ごとに射撃→着弾の順に続けて出す)。</item>
-    /// <item>自分 (<see cref="IsLocal"/>) の銃声とリロード音は 2D、他人の銃声は本体の 3D の音源、着弾と撃った者の分からない銃声は
-    /// その場所に置いた 3D の音源で鳴らし、距離で減衰させる。</item>
-    /// <item>マズルフラッシュ・着弾の火花・曳光弾 (短い <see cref="LineRenderer"/>)・3D の音源は <see cref="PresentationPool{T}"/> で使い回し、
-    /// 上限を超えたら古いものから取り上げる。部品はキャラの外の <see cref="PoolRoot"/> の下に置く (キャラが動いても着弾の跡は動かない)。
-    /// 銃痕だけは撃った者が消えても残るよう、シーンに 1 つの <see cref="ImpactDecals"/> に貼る。</item>
-    /// <item>リロード音は、同じ階層の <see cref="WeaponController.ReloadStarted"/> (オフラインのプレイヤー) と、
-    /// <see cref="PlayReload"/> を呼ぶ側 (ネット対戦では <c>Shooter.Net.NetPlayer</c>) から鳴らす。</item>
-    /// <item>銃声とリロード音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。自分のリロード音は位置を付けない。</item>
-    /// </list>
-    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
-    /// </remarks>
+    // 着弾には撃った者が載らないので、直前の ShotFired を出したインスタンスが出す (どちらの発生元も、1 発ごとに射撃→着弾の順に続けて出す)。
+    // 部品をキャラの外の PoolRoot の下に置くのは、キャラが動いても着弾の跡を動かさないため。
+    // 銃痕だけは撃った者が消えても残るよう、シーンに 1 つの ImpactDecals に貼る。
     [DisallowMultipleComponent]
     public sealed class WeaponPresentation : MonoBehaviour
     {
         public const string LogTag = "[Presentation]";
 
-        /// <summary>マズルフラッシュのプール (武器のエフェクトごと) の上限。</summary>
         public const int MuzzleFlashCapacity = 4;
 
-        /// <summary>着弾の火花のプールの上限。</summary>
         public const int ImpactSparkCapacity = 12;
 
-        /// <summary>曳光弾のプールの上限。</summary>
         public const int TracerCapacity = 12;
 
-        /// <summary>場所に置く 3D の音源のプールの上限。</summary>
         public const int SoundCapacity = 12;
 
-        /// <summary>曳光弾の速さ (m/s)。</summary>
         public const float TracerSpeed = 400f;
 
-        /// <summary>曳光弾の線の長さ (m)。</summary>
         public const float TracerLength = 3f;
 
-        /// <summary>曳光弾の線の太さ (m)。</summary>
         public const float TracerWidth = 0.03f;
 
-        /// <summary>何にも当たらなかった弾の曳光弾が飛ぶ距離 (m)。</summary>
         public const float MaxTracerDistance = 150f;
 
-        /// <summary>これより近くに当たった弾には曳光弾を出さない (m)。銃口の先の壁で線が逆向きに見えないよう。</summary>
+        // 銃口の先の壁で線が逆向きに見えないよう、これより近くに当たった弾には曳光弾を出さない。
         public const float MinTracerDistance = 1f;
 
-        /// <summary>3D の音が減衰し始める距離 (m)。</summary>
         public const float SoundMinDistance = 2f;
 
-        /// <summary>3D の音が聞こえなくなる距離 (m)。</summary>
         public const float SoundMaxDistance = 120f;
 
-        /// <summary>
-        /// 銃口のソケットが無いときの銃口の位置 (<see cref="WeaponSockets.DefaultMuzzleOffset"/>)。
-        /// <see cref="WeaponModel"/> に <see cref="WeaponSockets.MuzzleName"/> があればそちらを使う。
-        /// </summary>
         public static readonly Vector3 MuzzleOffset = WeaponSockets.DefaultMuzzleOffset;
 
         private static readonly Color DefaultTracerColor = new Color(1f, 0.85f, 0.5f);
@@ -111,10 +79,6 @@ namespace Shooter.Runtime
         private PooledTracer _pendingTracer;
         private int _pendingTracerFrame = -1;
 
-        /// <summary>
-        /// 音とエフェクトを引く設定。初めて読んだときに <see cref="PresentationCatalog.Load"/> で探し、無ければ null (何も出さない)。
-        /// 代入すると探さずにそれを使う。
-        /// </summary>
         public PresentationCatalog Catalog
         {
             get
@@ -135,10 +99,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 材質ごとの着弾の演出を引く設定。初めて読んだときに <see cref="SurfaceImpactCatalog.Load"/> で探し、無ければ null
-        /// (着弾には <see cref="Catalog"/> の火花と音を使い、銃痕は貼らない)。代入すると探さずにそれを使う。
-        /// </summary>
         public SurfaceImpactCatalog SurfaceImpacts
         {
             get
@@ -158,10 +118,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 銃痕を貼る先。読んだときに無い (破棄されたものを含む) と、この本体のシーンの <see cref="ImpactDecals.For"/> を使う。
-        /// 代入するとそれを使う。
-        /// </summary>
         public ImpactDecals Decals
         {
             get
@@ -176,10 +132,6 @@ namespace Shooter.Runtime
             set => _decals = value;
         }
 
-        /// <summary>
-        /// この本体が手元のプレイヤーか (銃声とリロード音を 2D で鳴らす)。代入しなければ、同じ階層に <see cref="WeaponController"/> があるか
-        /// <see cref="Damageable.IsLocalPlayer"/> なら true。ネット対戦では <c>Shooter.Net.NetPlayer</c> が持ち主かどうかを代入する。
-        /// </summary>
         public bool IsLocal
         {
             get
@@ -202,35 +154,22 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 自分の弾の武器のモデルの根。代入するとその配下からソケットを探し直す (<see cref="Sockets"/>)。null ならソケットを持たない。
-        /// 武器を持ち替えてモデルを差し替えたら、新しいモデルを代入し直す。
-        /// </summary>
         public Transform WeaponModel
         {
             get => _sockets.ModelRoot;
             set => _sockets = value != null ? new WeaponSockets(value) : WeaponSockets.None;
         }
 
-        /// <summary>
-        /// 自分の弾のマズルフラッシュと曳光弾を出す位置と向き (<see cref="WeaponSockets.MuzzlePose"/>)。
-        /// 銃口のソケットが無ければ弾の始点から <see cref="MuzzleOffset"/> の位置。
-        /// </summary>
         public WeaponSockets Sockets => _sockets;
 
-        /// <summary>プールの部品を置く親。初めて部品を作るまでは null。</summary>
         public Transform PoolRoot => _poolRoot;
 
-        /// <summary>曳光弾のプール。初めて曳光弾を出すまでは null。</summary>
         public PresentationPool<PooledTracer> Tracers => _tracers;
 
-        /// <summary>場所に置く 3D の音源のプール。初めて使うまでは null。</summary>
         public PresentationPool<AudioSource> Sounds => _sounds;
 
-        /// <summary>自分の銃声とリロード音を鳴らす本体の音源。初めて鳴らすまでは null。</summary>
         public AudioSource BodySource => _bodySource;
 
-        /// <summary>prefab のエフェクトのプール。まだ一度も出していなければ null。</summary>
         public PresentationPool<PooledEffect> EffectPoolFor(GameObject prefab)
         {
             return prefab != null && _effectPools.TryGetValue(prefab, out var pool) ? pool : null;
@@ -299,12 +238,6 @@ namespace Shooter.Runtime
             Tick(Time.time);
         }
 
-        /// <summary>
-        /// shot の 1 発の銃声・マズルフラッシュ・曳光弾を出す。shot の撃った者がこの本体なら本体の音源 (自分なら 2D) で、
-        /// そうでなければ弾の始点に置いた 3D の音源で鳴らす。マズルフラッシュは自分の弾なら <see cref="WeaponPresentationAssets.MuzzleFlash"/>、
-        /// 他人の弾なら <see cref="WeaponPresentationAssets.ThirdPersonMuzzleFlash"/> (無ければ MuzzleFlash) を出す。
-        /// 武器の Id がカタログに無ければ、銃声とマズルフラッシュは出さずに曳光弾だけ出す。
-        /// </summary>
         public void PlayShot(ShotFiredInfo shot)
         {
             var now = Time.time;
@@ -375,13 +308,6 @@ namespace Shooter.Runtime
             _pendingTracer = LaunchTracer(catalog, shot.Origin, shot.Origin + (direction * MaxTracerDistance), now);
         }
 
-        /// <summary>
-        /// impact の着弾のエフェクトと音を出し、キャラ以外の面なら銃痕を貼る (<see cref="Decals"/>)。同じフレームの直前の
-        /// <see cref="PlayShot"/> の曳光弾は、当たった点で止まるようにする。
-        /// <see cref="SurfaceImpacts"/> があれば材質の Id で引いた素材 (<see cref="SurfaceImpactCatalog.Resolve"/>) を使い、引けなければ何も出さない。
-        /// 無ければ <see cref="Catalog"/> の火花と音を使い、銃痕は貼らない。
-        /// 素材の有無にかかわらず、1 回ごとに材質・部位・使った素材を <see cref="FormatImpactLog"/> の形でログに出す。
-        /// </summary>
         public void PlayImpact(ImpactInfo impact)
         {
             var now = Time.time;
@@ -432,7 +358,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>weaponId の武器のリロード音を本体の音源 (自分なら 2D) で鳴らす。カタログに無い武器なら何もしない。</summary>
         public void PlayReload(string weaponId)
         {
             var catalog = Catalog;
@@ -455,7 +380,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>時刻 now (<see cref="Time.time"/> と同じ物差し) まで進め、曳光弾を動かし、出し終えた部品をプールに返す。</summary>
         public void Tick(float now)
         {
             foreach (var pool in _effectPools.Values)
@@ -487,28 +411,16 @@ namespace Shooter.Runtime
             _tracerScratch.Clear();
         }
 
-        /// <summary>
-        /// 弾の始点 origin から direction へ撃ったときの、銃口のソケットが無いときの銃口の位置
-        /// (<see cref="WeaponSockets.None"/> の <see cref="WeaponSockets.MuzzlePose"/>)。
-        /// </summary>
         public static Vector3 MuzzlePosition(Vector3 origin, Vector3 direction)
         {
             return WeaponSockets.None.MuzzlePose(origin, direction).position;
         }
 
-        /// <summary>
-        /// 着弾の演出を出すときのログ。source は使った素材 (<see cref="ImpactSourceLabel"/>)。
-        /// 例: <c>[Presentation] impact material=metal character=False zone=none source=surface:metal</c>。
-        /// </summary>
         public static string FormatImpactLog(ImpactInfo impact, string source)
         {
             return LogTag + " impact " + impact + " source=" + source;
         }
 
-        /// <summary>
-        /// 着弾に使った素材の名前。surfaces が無ければ <c>legacy</c> (<see cref="PresentationCatalog"/> の火花と音)、
-        /// surfaces はあるが引けなければ <c>none</c>、引けたら <c>surface:&lt;引けた材質の Id&gt;</c> (default に寄せたら default)。
-        /// </summary>
         public static string ImpactSourceLabel(SurfaceImpactCatalog surfaces, SurfaceImpactAssets surface)
         {
             if (surfaces == null)
@@ -519,10 +431,6 @@ namespace Shooter.Runtime
             return surface != null ? "surface:" + surface.MaterialId : "none";
         }
 
-        /// <summary>
-        /// from から to へ飛ぶ曳光弾の、撃ってから elapsed 秒後の線 (後ろの端 tail と先の端 head)。先は <see cref="TracerSpeed"/> で進み、
-        /// 線の長さは <see cref="TracerLength"/> で、どちらの端も to を越えない。後ろの端が to に着いた (飛び終えた) ら false。
-        /// </summary>
         public static bool TracerSegment(Vector3 from, Vector3 to, float elapsed, out Vector3 tail, out Vector3 head)
         {
             var path = to - from;
@@ -542,13 +450,11 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>from から to までの曳光弾が飛び終えるまでの秒数。</summary>
         public static float TracerSeconds(Vector3 from, Vector3 to)
         {
             return (Vector3.Distance(from, to) + TracerLength) / TracerSpeed;
         }
 
-        /// <summary>shooter の本体 (自分か親) の WeaponPresentation。無いか無効なら null。</summary>
         public static WeaponPresentation FindFor(GameObject shooter)
         {
             if (shooter == null)
@@ -914,10 +820,8 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="WeaponPresentation"/> と <see cref="BloodPresenter"/> がプールで使い回すエフェクト 1 つ。</summary>
     public sealed class PooledEffect
     {
-        /// <summary>粒の系が無いエフェクトを出しておく秒数。</summary>
         public const float DefaultSeconds = 1f;
 
         public PooledEffect(GameObject root, ParticleSystem[] systems, float seconds)
@@ -927,11 +831,6 @@ namespace Shooter.Runtime
             Seconds = seconds;
         }
 
-        /// <summary>
-        /// prefab を parent の下に隠した状態で 1 つ作る。<see cref="Seconds"/> はいちばん長く残る粒が消えるまでの秒数で、
-        /// 粒の系が無ければ <see cref="DefaultSeconds"/>。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">prefab が null。</exception>
         public static PooledEffect Instantiate(GameObject prefab, Transform parent)
         {
             if (prefab == null)
@@ -956,7 +855,6 @@ namespace Shooter.Runtime
             return new PooledEffect(instance, systems, systems.Length > 0 ? seconds : DefaultSeconds);
         }
 
-        /// <summary>position に rotation で置いて見せ、粒を最初から出し直す。</summary>
         public void PlayAt(Vector3 position, Quaternion rotation)
         {
             if (Root == null)
@@ -976,7 +874,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>粒を消して隠す。もう破棄されていれば何もしない。</summary>
         public void Hide()
         {
             if (Root == null)
@@ -995,17 +892,13 @@ namespace Shooter.Runtime
             Root.SetActive(false);
         }
 
-        /// <summary>プレハブから作ったインスタンス。</summary>
         public GameObject Root { get; }
 
-        /// <summary>インスタンスの中の粒の系 (子を含む)。</summary>
         public ParticleSystem[] Systems { get; }
 
-        /// <summary>1 回出してから消すまでの秒数 (いちばん長く残る粒が消えるまで)。</summary>
         public float Seconds { get; }
     }
 
-    /// <summary><see cref="WeaponPresentation"/> がプールで使い回す曳光弾 1 本。</summary>
     public sealed class PooledTracer
     {
         public PooledTracer(LineRenderer line)
@@ -1015,13 +908,10 @@ namespace Shooter.Runtime
 
         public LineRenderer Line { get; }
 
-        /// <summary>飛び始めの点 (銃口)。</summary>
         public Vector3 From { get; set; }
 
-        /// <summary>飛び終える点 (当たった点か、届く限り)。</summary>
         public Vector3 To { get; set; }
 
-        /// <summary>撃った時刻 (<see cref="Time.time"/>)。</summary>
         public float StartTime { get; set; }
     }
 }

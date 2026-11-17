@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="EnemyAgent"/> のうち、乗り物に乗る処理 (<see cref="IVehicleRider"/>)。敵とモードの Bot は入力を持たないので、
-    /// 乗り降りはコードから (<see cref="TryBoard(Vehicle)"/>・<see cref="TryLeaveVehicle"/>・<see cref="TrySwitchVehicleSeat"/>) 行う。
-    /// 乗っている間は NavMeshAgent を止めて体を座席に留め、判断と移動を進めない (座席から撃つ・動かすのは座席の入力の口を使う振る舞いが足す)。
-    /// 倒れたら降りる。
-    /// </summary>
+    // 敵とモードの Bot は入力を持たないので、乗り降りはコードから行う。
     public sealed partial class EnemyAgent : IVehicleRider
     {
         private readonly RiderVisibility _vehicleHidden = new RiderVisibility();
@@ -19,7 +14,6 @@ namespace Shooter.Runtime
 
         public bool IsRiding => _vehicleSeat != null;
 
-        /// <summary>乗っている乗り物。乗っていなければ null。</summary>
         public Vehicle Vehicle => _vehicleSeat != null ? _vehicleSeat.Vehicle : null;
 
         string IVehicleRider.RiderName => Id;
@@ -34,7 +28,6 @@ namespace Shooter.Runtime
 
         bool IVehicleRider.CanBoard => enabled && gameObject.activeInHierarchy && _brain != null && !_brain.IsDead;
 
-        /// <summary>vehicle の乗り込める座席 (一番近い空席) に乗る。乗れなければ false (理由は乗り物がログに出す)。</summary>
         public bool TryBoard(Vehicle vehicle)
         {
             if (vehicle == null)
@@ -45,10 +38,6 @@ namespace Shooter.Runtime
             return vehicle.TryEnter(this);
         }
 
-        /// <summary>
-        /// vehicle の seatIndex の座席に乗る。requireInRange が false なら離れていても乗る (モードが出現と同時に座らせるとき)。
-        /// 乗れなければ false。
-        /// </summary>
         public bool TryBoard(Vehicle vehicle, int seatIndex, bool requireInRange = true)
         {
             if (vehicle == null)
@@ -59,14 +48,12 @@ namespace Shooter.Runtime
             return vehicle.TryEnter(this, seatIndex, requireInRange);
         }
 
-        /// <summary>乗っていれば降りる (降りる場所がすべて塞がっていれば降りない)。降りたら true。</summary>
         public bool TryLeaveVehicle()
         {
             var vehicle = Vehicle;
             return vehicle != null && vehicle.TryExit(this);
         }
 
-        /// <summary>乗っていれば seatIndex の座席に移る。移ったら true。</summary>
         public bool TrySwitchVehicleSeat(int seatIndex)
         {
             var vehicle = Vehicle;
@@ -116,7 +103,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 乗っている間は判断も移動も進めず、体を座席に付いていかせる。
         private bool HoldWhileRiding()
         {
             if (ReferenceEquals(_vehicleSeat, null))

@@ -6,17 +6,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// セーブデータをスロットごとに 1 つの UTF-8 ファイル (<c>&lt;root&gt;/&lt;slot&gt;.json</c>) に置く <see cref="ISaveStorage"/>。
-    /// 既定の置き場所は <c>Application.persistentDataPath/saves</c>。テストでは一時ディレクトリを渡す。
-    /// 書き込みは <c>&lt;slot&gt;.json.tmp</c> に書き切ってから置き換えるので、途中で落ちても前の内容は残る。
-    /// 読み込みで I/O エラーや UTF-8 として壊れた内容に当たったら、エラーをログに出して「セーブ無し」として扱う。
-    /// </summary>
+    // 書き込みを <slot>.json.tmp に書き切ってから置き換えるのは、途中で落ちても前の内容を残すため。
     public sealed class FileSaveStorage : ISaveStorage
     {
         public const string LogTag = CampaignRunner.LogTag;
 
-        /// <summary><c>Application.persistentDataPath</c> の下に作るディレクトリの名前。</summary>
         public const string DefaultDirectoryName = "saves";
 
         public const string FileExtension = ".json";
@@ -25,10 +19,8 @@ namespace Shooter.Runtime
         // BOM を付けず、読み込みでは不正なバイト列を黙って置き換えずに例外にする。
         private static readonly Encoding _encoding = new UTF8Encoding(false, true);
 
-        /// <summary>セーブファイルを置くディレクトリの絶対パス。最初に書くときに作る。</summary>
         public string RootDirectory { get; }
 
-        /// <param name="rootDirectory">セーブファイルを置くディレクトリ。空にはできない。相対パスは今の作業ディレクトリから解決する。</param>
         public FileSaveStorage(string rootDirectory)
         {
             if (rootDirectory == null)
@@ -44,23 +36,17 @@ namespace Shooter.Runtime
             RootDirectory = Path.GetFullPath(rootDirectory);
         }
 
-        /// <summary><c>Application.persistentDataPath/saves</c> に置くストレージを作る。メインスレッドから呼ぶ。</summary>
         public static FileSaveStorage CreateDefault()
         {
             return new FileSaveStorage(Path.Combine(Application.persistentDataPath, DefaultDirectoryName));
         }
 
-        /// <summary>slot のファイルのパス。スロット名が不正なら <see cref="ArgumentException"/> を投げる。</summary>
         public string PathFor(string slot)
         {
             ValidateSlot(slot);
             return Path.Combine(RootDirectory, slot + FileExtension);
         }
 
-        /// <summary>
-        /// スロット名がファイル名として安全か確かめる。空、パスの区切り文字、<c>..</c>、<c>.</c> だけの名前、
-        /// ファイル名に使えない文字を含む名前は <see cref="ArgumentException"/> にする。
-        /// </summary>
         public static void ValidateSlot(string slot)
         {
             if (slot == null)
@@ -91,7 +77,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <inheritdoc />
         public bool TryRead(string slot, out string text)
         {
             var path = PathFor(slot);
@@ -115,9 +100,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <inheritdoc />
-        /// <exception cref="IOException">ディレクトリやファイルを書けないとき。前の内容はそのまま残る。</exception>
-        /// <exception cref="UnauthorizedAccessException">書き込みの権限が無いとき。前の内容はそのまま残る。</exception>
         public void Write(string slot, string text)
         {
             var path = PathFor(slot);
@@ -148,9 +130,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <inheritdoc />
-        /// <exception cref="IOException">ファイルを消せないとき。</exception>
-        /// <exception cref="UnauthorizedAccessException">消す権限が無いとき。</exception>
         public void Delete(string slot)
         {
             var path = PathFor(slot);

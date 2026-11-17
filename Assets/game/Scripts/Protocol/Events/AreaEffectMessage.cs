@@ -19,7 +19,7 @@ namespace Shooter.Protocol
 
         public float Radius { get; set; }
 
-        /// <summary>0 なら効果が消えた。消えた知らせを別のメッセージにしないため。</summary>
+        // 0 で効果が消えたことを表すのは、消えた知らせを別のメッセージにしないため。
         public float RemainingSeconds { get; set; }
 
         public void Write(MessageWriter writer)

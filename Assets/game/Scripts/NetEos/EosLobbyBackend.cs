@@ -13,20 +13,9 @@ using LobbyInfo = Shooter.Core.LobbyInfo;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// EOS の Connect (Device ID) と Lobby インターフェースで、クイックマッチがサーバーのロビーを探す <see cref="ILobbyBackend"/> を実装する。
-    /// SDK の型はここから外に出さず、ID は文字列、ロビーは <see cref="LobbyInfo"/> にして返す。
-    /// </summary>
-    /// <remarks>
-    /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
-    /// プラットフォームが解放された後 (終了時) は SDK を呼ばず、失敗として返す。
-    /// 試合のロビーには RTC 部屋に入らずにメンバーとして入り、部屋には <see cref="EosVoiceSession"/> が入る。
-    /// 入ったままの試合のロビーは Dispose で出る。
-    /// メンバー用ロビーの口はまだ無く、<see cref="LobbyBackendErrors.NotSupported"/> で失敗として返す。
-    /// </remarks>
     internal sealed class EosLobbyBackend : ILobbyBackend
     {
-        /// <summary>バケット ID で検索するときの属性名 (EOS_LOBBY_SEARCH_BUCKET_ID)。</summary>
+        // EOS がバケット ID の検索に決めている属性名 (EOS_LOBBY_SEARCH_BUCKET_ID) なので変えられない。
         private const string _searchBucketKey = "bucket";
 
         private readonly EosCredentials _credentials;
@@ -42,8 +31,6 @@ namespace Shooter.NetEos
         private ulong _loginStatusNotification;
         private bool _disposed;
 
-        /// <param name="credentials">プラットフォームを作るのに使う認証情報。</param>
-        /// <param name="displayName">初めてログインしたときに作るユーザーの表示名。</param>
         public EosLobbyBackend(EosCredentials credentials, string displayName)
         {
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
@@ -52,7 +39,6 @@ namespace Shooter.NetEos
 
         public event Action<string> LoggedOut;
 
-        /// <summary>このバックエンドが使っているプラットフォームが、まだ解放されていないか。</summary>
         private bool PlatformAlive => _platform != null && ReferenceEquals(EosPlatform.Current, _platform);
 
         public void Tick()
@@ -394,7 +380,6 @@ namespace Shooter.NetEos
             done(userId.ToString(), null);
         }
 
-        /// <summary>Connect の認証の期限が近い。期限が切れる前に Device ID でログインし直して更新する。</summary>
         private void HandleAuthExpiration(ref EosConnect.AuthExpirationCallbackInfo info)
         {
             if (_disposed || _refresh != null || _localUserId == null || !IsLocalUser(info.LocalUserId) || !PlatformAlive)
@@ -439,7 +424,6 @@ namespace Shooter.NetEos
                 && string.Equals(userId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>入っているロビー <paramref name="lobbyId"/> を <see cref="LobbyInfo"/> にする。</summary>
         private LobbyInfo CopyLobby(string lobbyId, out string error)
         {
             var options = new CopyLobbyDetailsHandleOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
@@ -460,7 +444,7 @@ namespace Shooter.NetEos
             }
         }
 
-        /// <summary>試合のロビーから出る。結果を待つ相手がいないので、失敗はログにだけ出す。</summary>
+        // 結果を待つ相手がいないので、失敗はログにだけ出す。
         private void LeaveQuietly(string lobbyId)
         {
             _matchLobbies.Remove(lobbyId);
@@ -509,7 +493,7 @@ namespace Shooter.NetEos
             return lobbies;
         }
 
-        /// <summary>LobbyDetails を <see cref="LobbyInfo"/> にする。ハンドルの解放は呼び出し側で行う。</summary>
+        // ハンドルは呼び出し側が解放するので、ここでは解放しない。
         private static LobbyInfo Describe(LobbyDetails details, out string error)
         {
             var infoOptions = new LobbyDetailsCopyInfoOptions();
@@ -547,10 +531,7 @@ namespace Shooter.NetEos
                 lobbyId, owner.ToString(), (int)Math.Min(info.MaxMembers, (uint)int.MaxValue), members, ReadAttributes(details, lobbyId));
         }
 
-        /// <summary>
-        /// ロビーの公開の属性のうち、文字列と整数のものを読む。読めない・形の合わない属性は飛ばす
-        /// (クイックマッチの選び方が、欠けた属性のロビーを選ばないので、ロビーごと捨てなくてよい)。
-        /// </summary>
+        // 読めない・形の合わない属性は飛ばすだけでロビーごと捨てないのは、クイックマッチの選び方が欠けた属性のロビーを選ばないため。
         private static List<Shooter.Core.LobbyAttribute> ReadAttributes(LobbyDetails details, string lobbyId)
         {
             var countOptions = new LobbyDetailsGetAttributeCountOptions();
@@ -656,7 +637,6 @@ namespace Shooter.NetEos
             }
         }
 
-        /// <summary>SDK の文字列を string にする。null や空なら null。</summary>
         private static string Text(Utf8String value)
         {
             // Utf8String の演算子を通さずに null を判定する

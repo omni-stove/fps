@@ -5,14 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーに TPS のアクションを付け、ルールでどれを有効にするかを決める。アクションごとの取り付けは <see cref="IPlayerActionInstaller"/> で、
-    /// 組み込みのカバー (<see cref="CoverActionInstaller"/>)・ブラインドファイア (<see cref="BlindFireActionInstaller"/>)・
-    /// 回避・乗り越え・崖のぼり (<see cref="MoveActionInstaller"/>)・制圧射撃 (<see cref="SuppressionActionInstaller"/>)・伏せ (<see cref="ProneActionInstaller"/>)・時間の速さ (<see cref="SlowMotionActionInstaller"/>)・能力の枠 (<see cref="AbilityActionInstaller"/>)・
-    /// グレネード (<see cref="GrenadeActionInstaller"/>) に、
-    /// <see cref="Register"/> で足したものを加えて <see cref="IPlayerActionInstaller.Order"/> の順に呼ぶ。
-    /// オフラインの <see cref="GameBootstrap"/> と <see cref="CampaignRunner"/> がルールを読んだ後に呼ぶ。
-    /// </summary>
     public static class PlayerActions
     {
         public const string LogTag = "[Actions]";
@@ -29,7 +21,6 @@ namespace Shooter.Runtime
             new GrenadeActionInstaller(),
         };
 
-        /// <summary>今登録されている取り付け。<see cref="Attach"/> が呼ぶ順。</summary>
         public static IReadOnlyList<IPlayerActionInstaller> Installers
         {
             get
@@ -41,11 +32,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// installer を <see cref="Attach"/> で呼ぶものに加える。同じ型のものが既にあれば置き換える
-        /// (ドメインの再読み込みを切った Play のたびに登録し直しても増えない)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">installer が null。</exception>
+        // 同じ型のものを置き換えるのは、ドメインの再読み込みを切った Play のたびに登録し直しても増えないようにするため。
         public static void Register(IPlayerActionInstaller installer)
         {
             if (installer == null)
@@ -61,8 +48,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>installer と同じ型の取り付けを外す。外したら true、無ければ false。</summary>
-        /// <exception cref="ArgumentNullException">installer が null。</exception>
         public static bool Unregister(IPlayerActionInstaller installer)
         {
             if (installer == null)
@@ -76,11 +61,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// player に登録された取り付け (<see cref="Installers"/>) を順に呼び、rules で各アクションの有効・無効を決める。
-        /// 何度呼んでもコンポーネントは増えず、最後に渡した rules に従う。1 つの取り付けが投げても、エラーに出してほかの取り付けは続ける。
-        /// 決めた内容を <see cref="FormatLog"/> の 1 行でログに出す。
-        /// </summary>
         public static void Attach(GameObject player, GameRules rules)
         {
             if (player == null)
@@ -109,10 +89,6 @@ namespace Shooter.Runtime
             Debug.Log(FormatLog(rules.Actions), player);
         }
 
-        /// <summary>
-        /// アクションのルールのログ。例: <c>[Actions] cover=On blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off melee=Off ...</c>。
-        /// 後ろに近接攻撃からジャンプまでを <see cref="ActionRules"/> の並びで続ける。
-        /// </summary>
         public static string FormatLog(ActionRules actions)
         {
             if (actions == null)
@@ -128,7 +104,6 @@ namespace Shooter.Runtime
                 + $" aimToFire={actions.AimToFire} jump={actions.Jump}";
         }
 
-        /// <summary>player の T を返す。無ければ付けて返す。取り付けが自分のコンポーネントを増やさないために使う。</summary>
         public static T GetOrAdd<T>(GameObject player)
             where T : Component
         {

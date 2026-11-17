@@ -8,9 +8,6 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="LoadoutSelectPanel"/> がスロットごとに選べる武器を武器名と種別で並べ、行の移動・武器の切り替え・決定を受けること。
-    /// </summary>
     public sealed class LoadoutSelectPanelTests
     {
         private const string _rifle = "00000000-0000-4000-8000-000000000001";
@@ -237,7 +234,7 @@ namespace Shooter.Tests.EditMode
                 new[] { WeaponCategory.Handgun },
             });
             var ledger = new ProgressionLedger(new ProgressionSpec(
-                100, 50, 250, 500, new[] { 0, 500, 1500, 3000 }, new[] { new ProgressionUnlock(_smg, 4) }));
+                100, 50, 50, 250, 500, new[] { 0, 500, 1500, 3000 }, new[] { new ProgressionUnlock(_smg, 4) }));
             var selection = new LoadoutSelection(rule, catalog, null, new[] { _rifle, _handgun }, id => id != _smg && id != _pistol);
             _panel.Dispose();
             _panel = new LoadoutSelectPanel(_container, selection, ledger);

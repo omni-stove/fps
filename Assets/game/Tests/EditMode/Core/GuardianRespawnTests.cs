@@ -261,7 +261,6 @@ namespace Shooter.Core.Tests
             Assert.That(chosen, Is.EqualTo(_chosenZeroAndOne));
         }
 
-        /// <summary>Alpha に 0, 2, 4...、Bravo に 1, 3, 5... を入れ、各チームの最小の ID (Alpha 0・Bravo 1) をリーダーにして始める。</summary>
         private static ModeSession Playing(out GuardianRespawn leaders, float timeLimitSeconds = 60f)
         {
             var session = GuardianMode.CreateSession(timeLimitSeconds, _respawnSeconds, _ => 0, out leaders);

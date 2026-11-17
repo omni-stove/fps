@@ -5,10 +5,8 @@ using Epic.OnlineServices.Connect;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Device ID でログインするのは、専用サーバーが Epic アカウントを持たないため。
-    /// 端末ごとに同じ ID になるので、同じ PC・同じ OS ユーザーで起動したサーバーとクライアントは互いにつながらない。
-    /// </summary>
+    // Device ID でログインするのは、専用サーバーが Epic アカウントを持たないため。
+    // 端末ごとに同じ ID になるので、同じ PC・同じ OS ユーザーで起動したサーバーとクライアントは互いにつながらない。
     internal sealed class EosDeviceLogin
     {
         private const int _maxDisplayNameLength = 32;
@@ -25,7 +23,6 @@ namespace Shooter.Server.Eos
             _deviceModel = string.IsNullOrEmpty(deviceModel) ? "unknown" : deviceModel;
         }
 
-        /// <summary>終わったら、成功なら (ID, null)、失敗なら (null, 理由) で 1 回呼ぶ。プラットフォームの Tick の中で呼ばれる。</summary>
         public void Begin(Action<ProductUserId, string> done)
         {
             if (_done != null)

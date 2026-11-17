@@ -3,15 +3,10 @@ using System.Collections.Generic;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// <see cref="IVoiceRtc"/> の上で <see cref="IVoiceSession"/> を動かす。送る・受ける・音量は望む値と、サービスが受け入れた値を
-    /// 別に持ち、部屋につながっている間に違っていれば 1 つずつ要求する (返事を待つ間に変わったら、返事の後にもう一度要求する)。
-    /// 受けるのを切った参加者は、話していても <see cref="Speakers"/> に出さない。ログは <c>[Voice]</c> 付きで出す。
-    /// </summary>
     public sealed class VoiceSession : IVoiceSession
     {
-        public const float DefaultVolume = 1f;
-        public const float MaxVolume = 2f;
+        public const float DefaultVolume = Shooter.Core.VoiceSettings.DefaultVolume;
+        public const float MaxVolume = Shooter.Core.VoiceSettings.MaxVolume;
 
         private readonly IVoiceRtc _rtc;
         private readonly Action<string> _log;
@@ -27,8 +22,6 @@ namespace Shooter.NetV2
         private int _connectionEpoch;
         private bool _disposed;
 
-        /// <param name="rtc">部屋を呼ぶ側。このセッションが Dispose する。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public VoiceSession(IVoiceRtc rtc, Action<string> log)
         {
             _rtc = rtc ?? throw new ArgumentNullException(nameof(rtc));
@@ -52,7 +45,6 @@ namespace Shooter.NetV2
 
         public bool IsSending => _state == VoiceSessionState.Connected && _sending.Applied == true;
 
-        /// <summary>受ける声の音量の望む値 (<see cref="SetVolume"/> で丸めた後の値)。</summary>
         public float Volume => _volume.Wanted;
 
         public void Tick()
@@ -173,7 +165,6 @@ namespace Shooter.NetV2
             PumpVolume();
         }
 
-        /// <summary>参加者 <paramref name="participantId"/> の声を受けることを望んでいるか。</summary>
         public bool WantsReceiving(string participantId)
         {
             return !string.IsNullOrEmpty(participantId) && !_muted.Contains(participantId);
@@ -282,7 +273,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>部屋とのつながりで決まっていた値を捨て、返事を待っている要求を無視する。望む値は残す。</summary>
         private void Disconnect()
         {
             _connectionEpoch++;
@@ -433,7 +423,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>サービスに反映したい値 1 つの、望む値・受け入れられた値・断られた値・返事待ち。</summary>
         private sealed class Setting<T>
             where T : struct, IEquatable<T>
         {
@@ -447,13 +436,9 @@ namespace Shooter.NetV2
 
             public T Wanted { get; private set; }
 
-            /// <summary>サービスが受け入れた値。分からなければ null。</summary>
             public T? Applied { get; private set; }
 
-            /// <summary>
-            /// 要求を出すべきか。断られた値は、望む値が変わるまで要求し直さない
-            /// (サービスが断り続ける値を、返事のたびに要求し直さないため)。
-            /// </summary>
+            // 断られた値を望む値が変わるまで要求し直さないのは、サービスが断り続ける値を返事のたびに要求し直さないため。
             public bool NeedsRequest => !_pending && !Matches(Applied) && !Matches(_failed);
 
             public void Want(T value)

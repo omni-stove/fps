@@ -3,13 +3,10 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>二人で使う物 (<see cref="CoopHold"/>) の <c>[Coop]</c> 付きログの文言。</summary>
     public static class CoopHoldLog
     {
         public const string Tag = "[Coop]";
 
-        /// <summary>人数と経過を並べた説明。</summary>
-        /// <example><c>holding=1/2 elapsed=0.50/3.00</c></example>
         public static string Describe(CoopHold hold)
         {
             if (hold == null)

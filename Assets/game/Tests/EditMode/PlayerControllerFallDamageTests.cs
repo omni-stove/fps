@@ -8,9 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインの落下ダメージ (<see cref="PlayerController.FallDamage"/>)。床の上の高さ drop から落として着地させる。
-    /// </summary>
     public sealed class PlayerControllerFallDamageTests
     {
         private const float _tickSeconds = 0.02f;
@@ -156,7 +153,6 @@ namespace Shooter.Tests.EditMode
                 fallDamage: fallDamage);
         }
 
-        // 足元が床から drop の高さに来るよう置き、接地するまで入力なしで Tick する
         private void DropFrom(float drop)
         {
             _body.transform.position = new Vector3(0f, 1f + drop, 0f);

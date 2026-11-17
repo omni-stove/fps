@@ -3,13 +3,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの <see cref="PlayerController"/> の伏せ (<see cref="PlayerController.ProneRule"/>) をルールの <see cref="ActionRules.Prone"/> にする。
-    /// Off にすると、伏せていても起き上がらせる (頭上が空いていれば次の Tick で)。
-    /// </summary>
     public sealed class ProneActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まないので、並びは問わない。</summary>
+        // ほかのアクションのコンポーネントは読まないので、並びは問わない。
         public const int InstallOrder = 350;
 
         public int Order => InstallOrder;

@@ -2,9 +2,7 @@ using System;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="TestWeapons"/> と同じ値の武器の JSON。ゲームの武器の JSON (サンプルの Weapons/Json) を変えても取り込みのテストが動かないよう、テストの側に持つ。
-    /// </summary>
+    // ゲームの武器の JSON (サンプルの Weapons/Json) を変えても取り込みのテストが動かないよう、TestWeapons と同じ値の JSON をテストの側に持つ。
     public static class TestWeaponJson
     {
         public static readonly string[] Names = { "Rifle", "Handgun", "Launcher" };
@@ -98,7 +96,6 @@ namespace Shooter.Tests.EditMode
 }
 ";
 
-        /// <summary>name (<see cref="Names"/> のどれか) の JSON。</summary>
         public static string Text(string name)
         {
             switch (name)

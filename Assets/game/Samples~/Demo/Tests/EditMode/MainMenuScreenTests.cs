@@ -15,7 +15,7 @@ namespace Shooter.Tests.EditMode
     {
         // 試合 1 回で 250 XP、レベル 2 は 500 XP から。SMG はレベル 2 で使えるようになる
         private static readonly ProgressionSpec _profileSpec = new ProgressionSpec(
-            100, 0, 250, 0, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(LoadoutTestAssets.SmgId, 2) });
+            100, 0, 0, 250, 0, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(LoadoutTestAssets.SmgId, 2) });
 
         private GameObject _owner;
         private MainMenuScreen _screen;
@@ -328,7 +328,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.LoadoutButtonName)));
                 Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
 
-                // 次に開いたとき (再起動後も同じ PlayerPrefs から) 前に選んだ並びが選ばれている
                 _screen.OpenLoadout();
                 Assert.That(_screen.LoadoutPanel.Selection.WeaponIds, Is.EqualTo(expected));
                 Assert.That(_screen.LoadoutPanel.Selection.RestoredPreference, Is.True);
@@ -558,7 +557,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(storage.Slots.Count(), Is.EqualTo(2), "nothing is deleted before the answer");
                 Assert.That(_host.Loaded, Is.Empty);
 
-                // 確認は取り消しで閉じられる
                 panel.Cancel();
                 Assert.That(panel.Question, Is.Null);
                 Assert.That(_screen.IsCampaignOpen, Is.True);

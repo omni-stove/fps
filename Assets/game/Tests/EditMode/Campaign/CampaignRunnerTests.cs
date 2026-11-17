@@ -12,11 +12,9 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// Edit Mode では Start/Update/OnTrigger* が走らず、シーンも読み直せない。
-    /// そこで 1 つのシーンにあたる物を <see cref="CampaignScene"/> にまとめて組み、読み直しは差し替えた処理で数え、
-    /// 読み直した後のシーンは新しい <see cref="CampaignScene"/> を組んで <see cref="CampaignRunner.Begin"/> を呼んで再現する。
-    /// </summary>
+    // Edit Mode では Start/Update/OnTrigger* が走らず、シーンも読み直せない。
+    // そこで 1 つのシーンにあたる物を CampaignScene にまとめて組み、読み直しは差し替えた処理で数え、
+    // 読み直した後のシーンは新しい CampaignScene を組んで CampaignRunner.Begin を呼んで再現する。
     public sealed class CampaignRunnerTests
     {
         private const string MissionName = "CampaignTestMission";
@@ -98,7 +96,6 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Combat] fire ammo=28");
             Assert.That(first.Weapon.Fire(), Is.True);
 
-            // 持ち替えた武器と、武器ごとの残弾がセーブされる。
             Assert.That(first.Weapon.SelectNext(), Is.True);
             LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
             Assert.That(first.Weapon.Fire(), Is.True);
@@ -109,7 +106,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(first.Campaign.LastCheckpointId, Is.EqualTo(CheckpointId));
             Assert.That(_storage.TryRead(Slot, out _), Is.True);
 
-            // 同じチェックポイントには 1 度しかセーブしない。後の進み具合はセーブに入らない。
             first.Missions.Progress("kill");
             Assert.That(first.Checkpoint.HandleEnter(first.PlayerCollider), Is.False);
 
@@ -129,7 +125,6 @@ namespace Shooter.Tests.EditMode
             first.Campaign.Tick(10f);
             Assert.That(_reloads, Is.EqualTo(1), "reloads only once per death");
 
-            // 読み直したシーン。
             first.Dispose();
             var second = BuildScene();
             ExpectCampaign($"started mission={MissionName}");
@@ -151,7 +146,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(second.Checkpoint.IsReached, Is.True, "the checkpoint we restarted from does not save again");
             Assert.That(second.Campaign.LastCheckpointId, Is.EqualTo(CheckpointId));
 
-            // 達成したらセーブを消す。
             second.Missions.Progress("kill", 2);
             ExpectCampaign($"mission={MissionName} completed");
             ExpectCampaign($"deleted save slot={Slot}");
@@ -399,7 +393,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(6));
             Assert.That(scene.Weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(scene.Handgun.MagazineSize), "the handgun was not in the old save");
 
-            // 次のセーブは新しい形式で書く。
             scene.Campaign.SaveAt("next");
             Assert.That(_storage.TryRead(Slot, out var text), Is.True);
             Assert.That(text, Does.StartWith("{\"version\":" + CampaignSave.CurrentVersion + ","));
@@ -809,12 +802,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(scene.Weapon.Loadout.Items[1].ReserveAmmo, Is.EqualTo(135), "a weapon missing from the save starts with the multiplier");
             Assert.That(scene.Player.Health.Current, Is.EqualTo(60));
 
-            // 戻した体力の Health にも回復が付いている。
             var regen = scene.Player.GetComponent<HealthRegen>();
             Assert.That(regen.Regenerator.Health, Is.SameAs(scene.Player.Health));
             Assert.That(regen.Tick(1f), Is.EqualTo(25));
 
-            // セーブし直しても倍率は重ならない。
             ExpectCampaign(new Regex($@"^\[Campaign\] saved mission={MissionName} checkpoint=next .* ammo={RifleId}:5/20,{HandgunId}:30/135$"));
             Assert.That(scene.Campaign.SaveAt("next"), Is.True);
         }
@@ -955,7 +946,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out var moved), Is.True);
             Assert.That(moved, Is.EqualTo(legacy));
 
-            // 読み直したシーンは移した先のスロットから戻す。
             scene.Dispose();
             var second = BuildScene();
             ExpectCampaign($"started mission={id}");
@@ -1164,7 +1154,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(scene.Campaign.LastCheckpointId, Is.Empty);
         }
 
-        /// <summary>missionId の、チェックポイント <see cref="CheckpointId"/> (区域に着いた後) で体力 health のセーブ。</summary>
         private static CampaignSave SaveAtCheckpoint(string missionId, int health)
         {
             return new CampaignSave(missionId, CheckpointId, health, RifleAmmo(10, 20), RifleId, new[]
@@ -1211,7 +1200,6 @@ namespace Shooter.Tests.EditMode
             return created;
         }
 
-        /// <summary>読み直し 1 回分のシーン。GameBootstrap の代わりにプレイヤーを最小の構成で組む。</summary>
         private sealed class CampaignScene : IDisposable
         {
             public List<Object> Created { get; } = new List<Object>();
@@ -1259,10 +1247,8 @@ namespace Shooter.Tests.EditMode
             public Collider PlayerCollider => Controller;
             public WeaponController Weapon { get; }
 
-            /// <summary>プレイヤーの 0 番の武器の定義 (既定値、Id は <see cref="RifleId"/>)。</summary>
             public WeaponDefinition Rifle { get; }
 
-            /// <summary>プレイヤーの 1 番の武器の定義 (既定値、Id は <see cref="HandgunId"/>)。</summary>
             public WeaponDefinition Handgun { get; }
 
             public CheckpointTrigger Checkpoint { get; }
@@ -1273,7 +1259,6 @@ namespace Shooter.Tests.EditMode
                 Campaign.Begin(Missions, Player, Weapon, storage, reload);
             }
 
-            /// <summary>GameBootstrap の生成物の代わりに、このシーンのプレイヤーを渡す。HUD は無い。</summary>
             public BootstrapWorld World()
             {
                 return new BootstrapWorld(
@@ -1315,7 +1300,6 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        /// <summary>スロットごとに置き、書き込みを失敗させられるメモリ上のストレージ。</summary>
         private sealed class MemoryStorage : ISaveStorage
         {
             private readonly Dictionary<string, string> _slots = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -1343,7 +1327,6 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        /// <summary>書き込みを失敗させられるメモリ上のストレージ。</summary>
         private sealed class FlakyStorage : ISaveStorage
         {
             public bool FailWrites { get; set; }

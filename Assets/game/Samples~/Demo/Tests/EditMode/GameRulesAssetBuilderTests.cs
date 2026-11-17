@@ -9,10 +9,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GameRulesAssetBuilder"/> を一時フォルダに走らせて、出力と GUID の保持を確かめる。
-    /// リポジトリの Assets/game/Rules は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Rules を触らないよう、一時フォルダに走らせる。
     public sealed class GameRulesAssetBuilderTests
     {
         private const int TpsRangeIndex = 5;
@@ -284,7 +281,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(guid, Is.Not.Empty);
             }
 
-            // 手で書き換えられたアセットも、2 回目で GUID を保ったまま既定の値に戻る。
             var teamDeathmatch = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(_teamDeathmatchPath);
             teamDeathmatch.FriendlyFire = FriendlyFire.On;
             teamDeathmatch.RegenPerSecond = 1f;

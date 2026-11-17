@@ -98,6 +98,96 @@ namespace Shooter.Tests.EditMode
             Assert.That(PlayerMockPose.BodyShift(State(PlayerActionConditions.Grounded), wallNormal), Is.EqualTo(Vector3.zero));
         }
 
+        [TestCase(1f, 15f, 15f)]
+        [TestCase(-1f, 15f, -15f)]
+        [TestCase(0.5f, 20f, 10f)]
+        [TestCase(-0.5f, 30f, -15f)]
+        public void LeanTiltsTheBodySidewaysByTheLeanAngle(float lean, float leanAngle, float expectedDegrees)
+        {
+            var up = PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: lean), leanAngle) * Vector3.up;
+
+            Assert.That(up.x, Is.EqualTo(Mathf.Sin(expectedDegrees * Mathf.Deg2Rad)).Within(Tolerance), "a positive lean tips the head to the right");
+            Assert.That(up.y, Is.EqualTo(Mathf.Cos(expectedDegrees * Mathf.Deg2Rad)).Within(Tolerance));
+            Assert.That(Mathf.Abs(up.z), Is.LessThan(Tolerance), "leaning does not pitch");
+        }
+
+        [Test]
+        public void NoLeanStandsUpright()
+        {
+            Assert.That(PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(), 15f), Is.EqualTo(Quaternion.identity));
+            Assert.That(PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: 1f), 0f), Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void SwimmingPitchesTheBodyForward()
+        {
+            var up = PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: 1f, swimming: true), 15f) * Vector3.up;
+
+            Assert.That(up.z, Is.EqualTo(Mathf.Sin(PlayerMockPose.SwimPitchDegrees * Mathf.Deg2Rad)).Within(Tolerance));
+            Assert.That(up.y, Is.EqualTo(Mathf.Cos(PlayerMockPose.SwimPitchDegrees * Mathf.Deg2Rad)).Within(Tolerance));
+            Assert.That(Mathf.Abs(up.x), Is.LessThan(Tolerance), "swimming wins over the lean");
+        }
+
+        [TestCase(WallRunSide.Left, 1f)]
+        [TestCase(WallRunSide.Right, -1f)]
+        public void WallRunTiltsAwayFromTheWall(WallRunSide side, float awaySign)
+        {
+            var up = PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: -awaySign, swimming: true, wallRun: side), 15f)
+                * Vector3.up;
+
+            Assert.That(up.x, Is.EqualTo(awaySign * Mathf.Sin(PlayerMockPose.WallRunTiltDegrees * Mathf.Deg2Rad)).Within(Tolerance));
+            Assert.That(Mathf.Abs(up.z), Is.LessThan(Tolerance), "the wall run wins over swimming and the lean");
+        }
+
+        [Test]
+        public void AnimatorParametersTiltLikeTheMotorState()
+        {
+            var leaning = new CharacterPoseParameters(0f, false, false, CharacterPose.CoverNone, false, false, CharacterPose.NoWeapon, lean: 0.5f);
+            var swimming = new CharacterPoseParameters(0f, false, false, CharacterPose.CoverNone, false, false, CharacterPose.NoWeapon, swimming: true);
+            var wallRunning = new CharacterPoseParameters(
+                0f, false, false, CharacterPose.CoverNone, false, false, CharacterPose.NoWeapon, wallRun: CharacterPose.WallRunRight);
+
+            Assert.That(PlayerMockPose.TraversalLean(leaning, 15f), Is.EqualTo(PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: 0.5f), 15f)));
+            Assert.That(PlayerMockPose.TraversalLean(swimming, 15f), Is.EqualTo(Quaternion.Euler(PlayerMockPose.SwimPitchDegrees, 0f, 0f)));
+            Assert.That(
+                PlayerMockPose.TraversalLean(wallRunning, 15f),
+                Is.EqualTo(PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Right), 15f)));
+        }
+
+        [Test]
+        public void DownedVaultDodgeAndCoverWinOverTheMotorPoses()
+        {
+            var motor = FakeCharacterMotorStateSource.Motor(lean: 1f, wallRun: WallRunSide.Left);
+            foreach (var flags in new[]
+                     {
+                         PlayerActionConditions.Downed, PlayerActionConditions.Vaulting, PlayerActionConditions.Dodging, PlayerActionConditions.InCover,
+                     })
+            {
+                var state = State(flags);
+
+                Assert.That(
+                    PlayerMockPose.BodyLean(state, Vector3.forward, Vector3.back, motor, 15f),
+                    Is.EqualTo(PlayerMockPose.BodyLean(state, Vector3.forward, Vector3.back)),
+                    flags.ToString());
+            }
+
+            Assert.That(
+                PlayerMockPose.BodyLean(State(PlayerActionConditions.Grounded), Vector3.forward, Vector3.zero, motor, 15f),
+                Is.EqualTo(PlayerMockPose.TraversalLean(motor, 15f)),
+                "otherwise the motor decides");
+        }
+
+        [Test]
+        public void TraversalLeanRejectsValuesOutOfRange()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(1.5f, false, WallRunSide.None, 15f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(float.NaN, false, WallRunSide.None, 15f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(0f, false, WallRunSide.None, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(0f, false, WallRunSide.None, 91f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(0f, false, WallRunSide.None, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => PlayerMockPose.TraversalLean(0f, false, (WallRunSide)7, 15f));
+        }
+
         [Test]
         public void AdsRaisesTheGunToTheEyesAndReloadLowersAndTiltsIt()
         {

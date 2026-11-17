@@ -37,7 +37,37 @@ namespace Shooter.Server.Tests
             Assert.That(data.Grenades, Is.SameAs(GrenadeCatalog.Default));
             Assert.That(data.Bots, Is.SameAs(NetBotSpec.Default));
             Assert.That(data.BotsPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.Assist, Is.SameAs(AssistSpec.Default));
+            Assert.That(data.AssistPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+        }
+
+        [Test]
+        public void ReadsTheAssistTuningBesideTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.AssistTuningFileName), "{\"windowSeconds\": 4, \"minDamage\": 35}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Assist.WindowSeconds, Is.EqualTo(4f));
+            Assert.That(data.Assist.MinDamage, Is.EqualTo(35));
+            Assert.That(data.AssistPath, Does.EndWith(ServerRulesData.AssistTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" assist=" + data.AssistPath + " "));
+        }
+
+        [Test]
+        public void BrokenAssistTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.AssistTuningFileName), "{\"minDamage\": 0}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read assist tuning: ").And.Contain("minDamage"));
         }
 
         [Test]

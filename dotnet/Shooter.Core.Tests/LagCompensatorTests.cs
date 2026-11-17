@@ -159,5 +159,31 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => compensator.Record(9, 1, Vector3.Zero, true));
             Assert.That(compensator.RewindCrouched(10f)[1], Is.False);
         }
+
+        [Test]
+        public void TheLeanIsRewoundWithThePositionAndInterpolated()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero, false, Vector3.Zero);
+            compensator.Record(11, 1, Vector3.Zero, false, new Vector3(0.4f, 0f, 0f));
+            compensator.Record(11, 2, Vector3.One, true);
+
+            var lean = compensator.RewindLean(10.5f);
+            Assert.That(lean, Has.Count.EqualTo(1));
+            Assert.That(lean[1], Is.EqualTo(new Vector3(0.2f, 0f, 0f)));
+            Assert.That(compensator.RewindLean(11f)[1], Is.EqualTo(new Vector3(0.4f, 0f, 0f)));
+            Assert.That(compensator.RewindLean(11f)[2], Is.EqualTo(Vector3.Zero), "a record without a lean is upright");
+            Assert.That(compensator.RewindCrouched(11f)[2], Is.True);
+        }
+
+        [Test]
+        public void RemoveDropsTheLeanToo()
+        {
+            var compensator = new LagCompensator();
+            compensator.Record(10, 1, Vector3.Zero, false, Vector3.UnitX);
+
+            Assert.That(compensator.Remove(1), Is.True);
+            Assert.That(compensator.RewindLean(10f), Is.Empty);
+        }
     }
 }

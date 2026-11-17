@@ -33,6 +33,8 @@ namespace Shooter.Core
         public const string SpeedItem = "speed";
         public const string BuoyancyItem = "buoyancy";
         public const string BreathSecondsItem = "breathSeconds";
+        public const string DrownDamageItem = "drownDamage";
+        public const string DrownIntervalSecondsItem = "drownIntervalSeconds";
 
         public const string EnabledItem = "enabled";
         public const string MinSpeedItem = "minSpeed";
@@ -75,6 +77,8 @@ namespace Shooter.Core
             SpeedItem,
             BuoyancyItem,
             BreathSecondsItem,
+            DrownDamageItem,
+            DrownIntervalSecondsItem,
         };
 
         public static IReadOnlyList<string> WallRunItemNames { get; } = new[]
@@ -170,9 +174,11 @@ namespace Shooter.Core
             var speed = fields.ReadFloat(SpeedItem, defaults.Speed);
             var buoyancy = fields.ReadFloat(BuoyancyItem, defaults.Buoyancy);
             var breathSeconds = fields.ReadFloat(BreathSecondsItem, defaults.BreathSeconds);
+            var drownDamage = fields.ReadInt(DrownDamageItem, defaults.DrownDamage);
+            var drownIntervalSeconds = fields.ReadFloat(DrownIntervalSecondsItem, defaults.DrownIntervalSeconds);
             try
             {
-                return new SwimTuning(speed, buoyancy, breathSeconds);
+                return new SwimTuning(speed, buoyancy, breathSeconds, drownDamage, drownIntervalSeconds);
             }
             catch (ArgumentException e)
             {

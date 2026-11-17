@@ -192,7 +192,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(Vector3.Distance(point.Position, placements[i].Position), Is.LessThan(1e-4f));
                 Assert.That(Vector3.Distance(point.PeekPosition, placements[i].PeekPosition), Is.LessThan(1e-4f));
 
-                // 点から向きの方へ進むと、その遮蔽物に当たる。
                 var origin = point.Position + Vector3.up;
                 Assert.That(
                     Physics.Raycast(origin, point.Facing, out var hit, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
@@ -200,7 +199,6 @@ namespace Shooter.Tests.EditMode
                     $"{point.name} faces a cover");
                 Assert.That(hit.collider.name, Does.StartWith("Cover_"), $"{point.name} faces a cover");
 
-                // 覗く位置からは、遮蔽物の端を越えて向きの方が見通せる。
                 var peekOrigin = point.PeekPosition + Vector3.up;
                 Assert.That(
                     Physics.Raycast(peekOrigin, point.Facing, 2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
@@ -232,7 +230,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(CampaignSceneBuilder.StartCheckpointId, Is.EqualTo("start"));
             Assert.That(CampaignSceneBuilder.AreaACheckpointId, Is.EqualTo("area_a"));
 
-            // 開始地点のチェックポイントからは、GameBootstrap がプレイヤーを出す位置そのままで再開する。
             Assert.That(
                 Vector3.Distance(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).RespawnPosition, GameBootstrap.PlayerSpawn),
                 Is.LessThan(1e-4f));
@@ -662,7 +659,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(runner, Is.Not.Null);
             Assert.That(runner.Definition, Is.SameAs(definition));
 
-            // 保存した参照が読み直しても切れていない。
             var campaigns = Components<CampaignRunner>();
             Assert.That(campaigns, Has.Length.EqualTo(1), $"run {nameof(CampaignSceneBuilder)}.Build again to add the CampaignRunner");
             Assert.That(campaigns[0].Runner, Is.SameAs(runner));
@@ -722,7 +718,6 @@ namespace Shooter.Tests.EditMode
             return layout;
         }
 
-        /// <summary>_scene に置かれた T をすべて (無効なものも) 集める。</summary>
         private T[] Components<T>()
             where T : Component
         {
@@ -773,7 +768,7 @@ namespace Shooter.Tests.EditMode
             Object.DestroyImmediate(world.TargetRoot);
         }
 
-        /// <summary>Edit Mode では物理の同期を待たずに確かめたいので、Collider.bounds ではなく Transform から計算する。</summary>
+        // Edit Mode では物理の同期を待たずに確かめたいので、Collider.bounds ではなく Transform から計算する。
         private static bool IsInside(BoxCollider box, Vector3 worldPoint)
         {
             var local = box.transform.InverseTransformPoint(worldPoint) - box.center;

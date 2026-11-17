@@ -2,83 +2,49 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// グレネード 1 種類のバランス値。<see cref="Id"/> で引き、信管・投げる間隔・初速と、信管が切れたときの効果 (<see cref="Impact"/>: 爆発・状態異常・範囲効果)、
-    /// 投げたときのくっつき方 (<see cref="Stickiness"/>)、球の大きさ・重さ・跳ね方 (<see cref="BodyRadius"/> など)、手放す距離 (<see cref="ReleaseDistance"/>) を持つ。
-    /// 時間は秒、速さは m/s、距離は m。生成時に値を検査し、以後は変わらない。
-    /// </summary>
     public sealed class GrenadeSpec
     {
         public const string DefaultId = "ff94f232-2647-4b77-a077-5693d8f954d1";
 
         public const string DefaultNameKey = "grenade.frag";
 
-        /// <summary>生成時に指定しなかったときの <see cref="FuseSeconds"/>。</summary>
         public const float DefaultFuseSeconds = 2.5f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="ThrowSeconds"/>。</summary>
         public const float DefaultThrowSeconds = 0.6f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="ThrowSpeed"/>。</summary>
         public const float DefaultThrowSpeed = 14f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="ThrowLiftSpeed"/>。水平に狙っても弧を描いて遠くへ届く。</summary>
+        // 0 にしないのは、水平に狙っても弧を描いて遠くへ届くようにするため。
         public const float DefaultThrowLiftSpeed = 3f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="RollDamping"/>。地面に落ちてから 1 m 前後で止まる。</summary>
+        // 地面に落ちてから 1 m 前後で止まる値にしてある。
         public const float DefaultRollDamping = 4f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="MaxDamage"/>。標的ダミーとプレイヤーの最大体力 (100) を超え、近くなら 1 個で倒せる。</summary>
+        // 標的ダミーとプレイヤーの最大体力 (100) を超え、近くなら 1 個で倒せるようにしてある。
         public const int DefaultMaxDamage = 150;
 
-        /// <summary>生成時に指定しなかったときの <see cref="DamageRadius"/>。</summary>
         public const float DefaultDamageRadius = 6f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="FullDamageRadius"/>。</summary>
         public const float DefaultFullDamageRadius = 1.5f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="StructureDamageAtCenter"/>。</summary>
         public const int DefaultStructureDamageAtCenter = 150;
 
-        /// <summary>生成時に指定しなかったときの <see cref="BodyRadius"/>。</summary>
         public const float DefaultBodyRadius = 0.08f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="Mass"/>。</summary>
         public const float DefaultMass = 0.4f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="Bounciness"/>。</summary>
         public const float DefaultBounciness = 0.35f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="Friction"/>。</summary>
         public const float DefaultFriction = 0.6f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="AngularDamping"/>。Unity の Rigidbody の既定と同じ。</summary>
+        // Unity の Rigidbody の既定と同じにしてある。
         public const float DefaultAngularDamping = 0.05f;
 
-        /// <summary>生成時に指定しなかったときの <see cref="ReleaseDistance"/>。体のカプセル (半径 0.5m) の外に出す。</summary>
+        // 体のカプセル (半径 0.5m) の外に出すため、0.5 より長くしてある。
         public const float DefaultReleaseDistance = 0.7f;
 
-        /// <summary>すべて既定値の Spec (破片手榴弾)。</summary>
         public static readonly GrenadeSpec Default = new GrenadeSpec();
 
-        /// <param name="fuseSeconds">投げてから爆発するまでの秒数。0 以上の有限値。</param>
-        /// <param name="throwSeconds">投げてから次を投げられ、武器を撃てるようになるまでの秒数。0 以上の有限値。</param>
-        /// <param name="throwSpeed">視線の向きへの初速 (m/s)。0 以上の有限値。</param>
-        /// <param name="throwLiftSpeed">初速に足す上向きの速さ (m/s)。0 以上の有限値。</param>
-        /// <param name="maxDamage">中心 (<paramref name="fullDamageRadius"/> の内側) でのダメージ。0 以上。</param>
-        /// <param name="damageRadius">爆発が届く半径 (m)。0 より大きい有限値。</param>
-        /// <param name="fullDamageRadius">減らさずに maxDamage を与える半径 (m)。0 以上で damageRadius 未満。</param>
-        /// <param name="structureDamageAtCenter">中心で建造物に与える被害。0 以上。半径は damageRadius。</param>
-        /// <param name="id">小文字・ハイフン区切りの UUID。</param>
-        /// <param name="nameKey">名前を引く表のキー。空なら名前は id。</param>
-        /// <param name="stickiness">定義済みの値。</param>
-        /// <param name="rollDamping">地面に触れている間の転がりの減り方 (1/s)。0 以上の有限値。</param>
-        /// <param name="bodyRadius">当たり判定の球の半径 (m)。0 より大きい有限値。</param>
-        /// <param name="mass">重さ (kg)。0 より大きい有限値。</param>
-        /// <param name="bounciness">跳ね返りの強さ。0 以上 1 以下。</param>
-        /// <param name="friction">当たった面との摩擦の係数。0 以上の有限値。</param>
-        /// <param name="angularDamping">回転の減り方 (1/s)。0 以上の有限値。</param>
-        /// <param name="releaseDistance">目からグレネードを出す位置までの距離 (m)。0 以上の有限値。</param>
         public GrenadeSpec(
             float fuseSeconds = DefaultFuseSeconds,
             float throwSeconds = DefaultThrowSeconds,
@@ -157,16 +123,12 @@ namespace Shooter.Core
 
         public string LogName => NameKey.Length > 0 ? NameKey : Id;
 
-        /// <summary>投げてから効果を起こすまでの秒数。</summary>
         public float FuseSeconds { get; }
 
-        /// <summary>投げてから次を投げられ、武器を撃てるようになるまでの秒数。</summary>
         public float ThrowSeconds { get; }
 
-        /// <summary>視線の向きへの初速 (m/s)。</summary>
         public float ThrowSpeed { get; }
 
-        /// <summary>初速に足す上向きの速さ (m/s)。</summary>
         public float ThrowLiftSpeed { get; }
 
         // 投げ物は当たって効くのではなく信管で効くので、直撃のダメージ (ImpactSpec.Damage) は読まない
@@ -174,42 +136,28 @@ namespace Shooter.Core
 
         public GrenadeStickiness Stickiness { get; }
 
-        /// <summary>
-        /// 地面 (上を向いた面) に触れている間、水平の速さと回転を毎秒 e^-RollDamping 倍に減らす割合 (1/s)。0 なら物理の摩擦だけで転がり続ける。
-        /// </summary>
         public float RollDamping { get; }
 
-        /// <summary>当たり判定の球の半径 (m)。オフラインの球とサーバーの飛び方が同じ値を使う。</summary>
         public float BodyRadius { get; }
 
-        /// <summary>重さ (kg)。オフラインの Rigidbody に使う (サーバーの飛び方は重さで変わらない)。</summary>
         public float Mass { get; }
 
-        /// <summary>面に当たったときに、面へ向かう速さのうち跳ね返す割合。</summary>
         public float Bounciness { get; }
 
-        /// <summary>当たった面との摩擦の係数。滑りを転がりに変える。</summary>
         public float Friction { get; }
 
-        /// <summary>回転を減らす割合 (1/s)。毎秒 1 / (1 + AngularDamping × 秒) 倍になる。</summary>
         public float AngularDamping { get; }
 
-        /// <summary>目から視線の向きへ、グレネードを出す位置までの距離 (m)。間に壁があれば球が埋まらない壁の手前に出す。</summary>
         public float ReleaseDistance { get; }
 
-        /// <summary>爆発が人に与えるダメージ。爆発しない種類なら null。</summary>
         public ExplosionDamage Explosion => Impact.Explosion?.Damage;
 
-        /// <summary>中心でのダメージ (<see cref="Explosion"/> の <see cref="ExplosionDamage.MaxDamage"/>)。爆発しない種類なら 0。</summary>
         public int MaxDamage => Explosion?.MaxDamage ?? 0;
 
-        /// <summary>爆発が届く半径 (m)。建造物への被害もこの半径。爆発しない種類なら 0。</summary>
         public float DamageRadius => Explosion?.Radius ?? 0f;
 
-        /// <summary>減らさずに <see cref="MaxDamage"/> を与える半径 (m)。爆発しない種類なら 0。</summary>
         public float FullDamageRadius => Explosion?.FullDamageRadius ?? 0f;
 
-        /// <summary>中心で建造物に与える被害。半径は <see cref="DamageRadius"/>。爆発しない種類なら 0。</summary>
         public int StructureDamageAtCenter => Impact.Explosion?.StructureDamageAtCenter ?? 0;
 
         // ExplosionDamage の引数名 (radius) ではなくこの Spec の引数名で断り、調整値の JSON が項目名で示せるようにする。

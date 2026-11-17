@@ -5,9 +5,7 @@ using Shooter.Runtime;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// テストで使う武器の値。ゲームの武器 (サンプルの Weapons) の値を変えてもテストの前提が動かないよう、テストの側に持つ。
-    /// </summary>
+    // ゲームの武器 (サンプルの Weapons) の値を変えてもテストの前提が動かないよう、テストで使う武器の値はテストの側に持つ。
     public static class TestWeapons
     {
         public const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
@@ -22,7 +20,6 @@ namespace Shooter.Tests.EditMode
         public const float HandgunAdsFieldOfView = 55f;
         public const float LauncherExplosionRadius = 4f;
 
-        /// <summary>全自動の小銃 (30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰)。</summary>
         public static WeaponSpec RifleSpec()
         {
             return new WeaponSpec(
@@ -50,7 +47,6 @@ namespace Shooter.Tests.EditMode
                 moveSpreadDegrees: 3f);
         }
 
-        /// <summary>単発の拳銃 (12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰)。</summary>
         public static WeaponSpec HandgunSpec()
         {
             return new WeaponSpec(
@@ -78,7 +74,6 @@ namespace Shooter.Tests.EditMode
                 moveSpreadDegrees: 1.5f);
         }
 
-        /// <summary>爆発する発射機 (1/4 発、0.5 秒、リロード 3 秒、120 ダメージ、射程 150m、減衰なし、半径 4m)。</summary>
         public static WeaponSpec LauncherSpec()
         {
             return new WeaponSpec(
@@ -100,7 +95,6 @@ namespace Shooter.Tests.EditMode
         public const string EveryPartStandardAmmoId = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
         public const string EveryPartPiercingAmmoId = "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e";
 
-        /// <summary>省略できる部品をすべて持つ武器。読み書きと、アセットへの写しで何も落ちないことを確かめるのに使う。</summary>
         public static WeaponSpec EveryPartSpec()
         {
             var burning = new StatusEffectSpec(3f, 0.5f, 4, "fx.burning");
@@ -152,7 +146,6 @@ namespace Shooter.Tests.EditMode
                 shotNoiseRadius: 12f);
         }
 
-        /// <summary>スロット 0 に Handgun 以外のすべての種別で rifle、スロット 1 に Handgun で handgun を入れたロードアウト。</summary>
         public static LoadoutSlotDefinition[] LoadoutSlots(WeaponDefinition rifle, WeaponDefinition handgun)
         {
             var primary = new List<WeaponCategory>();

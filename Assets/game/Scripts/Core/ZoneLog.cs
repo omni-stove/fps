@@ -4,16 +4,11 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 縮むエリア (<see cref="ZoneSchedule"/>) の <c>[Zone]</c> 付きログの文言。key=value を空白で区切り、値に空白を入れない。
-    /// 段階は 1 始まりで <c>phase=1/3</c> のように全体の数と並べて書く。位置は水平面 (x, z)、長さは小数 2 桁、秒とダメージは小数 1 桁。
-    /// </summary>
+    // key=value を空白で区切って読めるよう、値に空白を入れない。
     public static class ZoneLog
     {
         public const string Tag = "[Zone]";
 
-        /// <summary>エリアを動かし始めた。</summary>
-        /// <example><c>[Zone] start center=(0.00, 0.00) radius=60.00 phases=3 seed=7 total=150.0</c></example>
         public static string Started(ZoneSchedule schedule)
         {
             if (schedule == null)
@@ -28,11 +23,6 @@ namespace Shooter.Core
                 + " total=" + Tenths(schedule.TotalSeconds);
         }
 
-        /// <summary>段階か動き (待ち・縮み・最後) が変わった。</summary>
-        /// <example>
-        /// <c>[Zone] phase=1/3 stage=Waiting radius=60.00 center=(0.00, 0.00) next_radius=35.00 next_center=(4.12, -9.80) dps=1.0 in=30.0</c>。
-        /// <c>in</c> は今の動きが終わるまでの秒数。最後の円 (<c>stage=Closed</c>) では next_ と in を書かない。
-        /// </example>
         public static string Stage(ZoneState state, int phaseCount)
         {
             if (phaseCount <= 0)
@@ -65,21 +55,16 @@ namespace Shooter.Core
             return line;
         }
 
-        /// <summary>id の者がエリアの外に出た。</summary>
-        /// <example><c>[Zone] outside target=Player</c></example>
         public static string Outside(string id)
         {
             return Tag + " outside target=" + Token(id);
         }
 
-        /// <summary>id の者がエリアの中に戻った。</summary>
-        /// <example><c>[Zone] inside target=Player</c></example>
         public static string Inside(string id)
         {
             return Tag + " inside target=" + Token(id);
         }
 
-        /// <example><c>[Zone] stop</c></example>
         public static string Stopped()
         {
             return Tag + " stop";

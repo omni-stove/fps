@@ -50,7 +50,6 @@ namespace Shooter.Core.Tests
             Assert.That(lines.Lines, Is.Empty);
         }
 
-        // 連射しても 1 行のまま、最後の 1 発から 3 秒出す
         [Test]
         public void TheSameKindIsMergedIntoOneLineAndExtended()
         {
@@ -76,7 +75,6 @@ namespace Shooter.Core.Tests
             Assert.That(lines.Lines[0].Text, Is.EqualTo("[銃声 後ろ]"));
         }
 
-        // 種類ごとに 1 行で、最初に出た順に並ぶ。書き換えても並びは変わらない
         [Test]
         public void DifferentKindsKeepTheOrderTheyFirstAppeared()
         {

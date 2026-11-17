@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// PingController が照準の先の敵か場所に印を付け、敵を見えている間だけ追い、見失うと残し、寿命で消し、
-    /// 同じ陣営の bot (EnemySenses.SelectHostile) に印の付いた敵を優先させることを、Edit Mode の物理で確かめる。
-    /// </summary>
     public sealed class PingControllerTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);

@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ReplacementAudit"/> が武器の演出と名前のキー・必須の参照の漏れを一覧にし、漏れの有無で終了コードを分けること。
-    /// アセットはメモリ上のものを渡し、プロジェクトのものには頼らない。
-    /// </summary>
     public sealed class ReplacementAuditTests
     {
         private readonly List<Object> _created = new List<Object>();

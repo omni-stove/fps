@@ -5,12 +5,6 @@ using Shooter.Core;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// クイックマッチで、専用サーバーが <c>-register-lobby</c> で載せたロビーを探してつなぐサーバーを決める。
-    /// ログインし、自分の版のバケット (<see cref="ServerLobby.BucketId"/>) を探し、<see cref="LobbySelector.PickServer"/> で選んだサーバーの
-    /// 公開アドレスへ UDP でつなぐ起動設定 (<see cref="ServerLobby.ConnectOptions"/>) を返す。つなげるサーバーが無ければ間を置いて探し直し、期限で諦める。
-    /// ロビーには入らない。ログは <c>[Lobby]</c> 付きで出す。
-    /// </summary>
     public sealed class QuickMatchSearch : IDisposable
     {
         public const string LogPrefix = "[Lobby] ";
@@ -22,23 +16,17 @@ namespace Shooter.NetV2
         private Action<NetLaunchOptions> _ready;
         private Action<string> _failed;
         private Step _step;
+        private int _partySize = 1;
         private float _now;
         private string _lastRetryReason;
         private bool _disposed;
 
-        /// <param name="backend">ログイン前のロビーのサービス。この検索が Dispose する。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。探すバケットとサーバーの版に使う。空なら "0"。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public QuickMatchSearch(ILobbyBackend backend, string version, Action<string> log)
             : this(backend, version,
                 new RetrySchedule(LobbyLaunchOptions.QuickMatchIntervalSeconds, LobbyLaunchOptions.QuickMatchTimeoutSeconds), log)
         {
         }
 
-        /// <param name="backend">ログイン前のロビーのサービス。この検索が Dispose する。</param>
-        /// <param name="version">自分のビルドの版。空なら "0"。</param>
-        /// <param name="schedule">探し直す間隔と、全体を諦めるまでの期限。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public QuickMatchSearch(ILobbyBackend backend, string version, RetrySchedule schedule, Action<string> log)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
@@ -58,17 +46,16 @@ namespace Shooter.NetV2
             Failed,
         }
 
-        /// <summary>探すバケット。</summary>
         public string BucketId => ServerLobby.BucketId(_version);
 
-        /// <summary>起動設定を返したか、諦めたか。</summary>
         public bool IsFinished => _step == Step.Ready || _step == Step.Failed;
 
-        /// <summary>手順を始める。<paramref name="ready"/> か <paramref name="failed"/> のどちらかを 1 回だけ呼ぶ。</summary>
-        /// <param name="now">今の時刻 (秒)。<see cref="Tick"/> と同じ時計で渡す。</param>
-        /// <param name="ready">サーバーが決まったときに、つなぐ起動設定を受け取る。</param>
-        /// <param name="failed">諦めたときに理由を受け取る。</param>
         public void Begin(float now, Action<NetLaunchOptions> ready, Action<string> failed)
+        {
+            Begin(now, 1, ready, failed);
+        }
+
+        public void Begin(float now, int partySize, Action<NetLaunchOptions> ready, Action<string> failed)
         {
             if (_disposed)
             {
@@ -80,16 +67,22 @@ namespace Shooter.NetV2
                 throw new InvalidOperationException("the quick match search has already begun");
             }
 
+            if (partySize < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(partySize), partySize, "must be at least 1");
+            }
+
             _ready = ready ?? throw new ArgumentNullException(nameof(ready));
             _failed = failed ?? throw new ArgumentNullException(nameof(failed));
+            _partySize = partySize;
             _now = now;
             _schedule.Start(now);
             _step = Step.LoggingIn;
-            _log(LogPrefix + "logging in to search " + BucketId);
+            _log(LogPrefix + "logging in to search " + BucketId
+                + (partySize == 1 ? "" : " for a party of " + partySize.ToString(CultureInfo.InvariantCulture)));
             _backend.Login(Once<string>(HandleLoggedIn));
         }
 
-        /// <summary>サービスを進め、待っている検索をやり直し、期限を見る。毎フレーム呼ぶ。終わった後も呼んでよい。</summary>
         public void Tick(float now)
         {
             if (_disposed)
@@ -117,7 +110,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>バックエンドを閉じる。以後のコールバックは呼ばない。</summary>
         public void Dispose()
         {
             if (_disposed)
@@ -173,10 +165,10 @@ namespace Shooter.NetV2
 
             var found = lobbies ?? Array.Empty<LobbyInfo>();
             _log(LogPrefix + "found " + found.Count.ToString(CultureInfo.InvariantCulture) + " lobby(s) in " + BucketId);
-            var lobby = LobbySelector.PickServer(found, _version);
+            var lobby = LobbySelector.PickServer(found, _version, _partySize);
             if (lobby == null)
             {
-                Retry(LobbySelector.DescribeNoServer(found, _version));
+                Retry(LobbySelector.DescribeNoServer(found, _version, _partySize));
                 return;
             }
 
@@ -229,7 +221,6 @@ namespace Shooter.NetV2
             _failed(reason);
         }
 
-        /// <summary>Dispose 後と 2 回目以降の完了を捨てるコールバックにする。</summary>
         private Action<T, string> Once<T>(Action<T, string> handler)
         {
             var called = false;

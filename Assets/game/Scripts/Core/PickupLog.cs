@@ -5,13 +5,10 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>拾える物の <c>[Pickup]</c> 付きログの文言。名前が空なら <c>-</c> と書く。</summary>
     public static class PickupLog
     {
         public const string Tag = "[Pickup]";
 
-        /// <summary>中身を 1 語ずつ並べた説明。</summary>
-        /// <example><c>kind=Weapon weapon=rifle amount=30 who=anyone</c>、<c>kind=Tag owner=2 owner-side=1 who=anyone</c></example>
         public static string Describe(PickupSpec spec)
         {
             if (spec == null)
@@ -43,25 +40,16 @@ namespace Shooter.Core
             return text.Append(" who=").Append(spec.Eligibility).ToString();
         }
 
-        /// <example><c>[Pickup] spawned pickup=Pickup-Health kind=Health amount=25 who=anyone at=(1.00, 0.00, 2.00)</c></example>
         public static string Spawned(string pickupName, PickupSpec spec, Vector3 position)
         {
             return Tag + " spawned pickup=" + Name(pickupName) + " " + Describe(spec) + " at=" + Position(position);
         }
 
-        /// <example><c>[Pickup] dropped by=enemy-1 pickup=Pickup-ReserveAmmo kind=ReserveAmmo amount=30 who=anyone at=(1.00, 0.00, 2.00)</c></example>
         public static string Dropped(string ownerName, string pickupName, PickupSpec spec, Vector3 position)
         {
             return Tag + " dropped by=" + Name(ownerName) + " pickup=" + Name(pickupName) + " " + Describe(spec) + " at=" + Position(position);
         }
 
-        /// <summary>拾えたときのログ。反映した量だけを書く。</summary>
-        /// <example>
-        /// <c>[Pickup] collected pickup=Pickup-Health by=Player kind=Health health=+25</c>、
-        /// <c>[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=launcher added</c>、
-        /// <c>[Pickup] collected pickup=Pickup-Weapon by=Player kind=Weapon weapon=launcher added dropped=rifle</c>、
-        /// <c>[Pickup] collected pickup=Tag by=Player kind=Tag owner=2 owner-side=1 own-side=false</c>
-        /// </example>
         public static string Collected(string pickupName, string collectorName, PickupOutcome outcome)
         {
             if (!outcome.IsCollected)
@@ -107,7 +95,6 @@ namespace Shooter.Core
             return text.ToString();
         }
 
-        /// <example><c>[Pickup] rejected pickup=Pickup-Health by=Player kind=Health reason=HealthFull</c></example>
         public static string Rejected(string pickupName, string collectorName, PickupOutcome outcome)
         {
             if (outcome.IsCollected)
@@ -118,21 +105,16 @@ namespace Shooter.Core
             return Tag + " rejected pickup=" + Name(pickupName) + " by=" + Name(collectorName) + " kind=" + outcome.Kind + " reason=" + outcome.Rejection;
         }
 
-        /// <summary>拾えると判定したのに反映できなかった (武器の定義が無いなど) ときのログ。</summary>
-        /// <example><c>[Pickup] failed pickup=Pickup-Weapon by=Player kind=Weapon reason=no WeaponDefinition</c></example>
         public static string Failed(string pickupName, string collectorName, PickupKind kind, string reason)
         {
             return Tag + " failed pickup=" + Name(pickupName) + " by=" + Name(collectorName) + " kind=" + kind + " reason=" + Name(reason);
         }
 
-        /// <example><c>[Pickup] respawned pickup=Pickup-Health</c></example>
         public static string Respawned(string pickupName)
         {
             return Tag + " respawned pickup=" + Name(pickupName);
         }
 
-        /// <summary>置いてから決まった時間が経ち、拾われずに消えたときのログ。</summary>
-        /// <example><c>[Pickup] expired pickup=Pickup-ReserveAmmo</c></example>
         public static string Expired(string pickupName)
         {
             return Tag + " expired pickup=" + Name(pickupName);

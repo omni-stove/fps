@@ -146,7 +146,6 @@ namespace Shooter.Core
 
         // 仲間から伝わった交戦と違い自分で見たので、交戦に入ればさらに仲間へ伝える (RaisedByAlarm を下ろす)。
         // 今の量以下なら何もしない。毎フレーム呼ばれても、見た瞬間だけを数えられるように。
-        /// <exception cref="ArgumentOutOfRangeException">level が 0 以上 1 以下でない。</exception>
         public bool Witness(Vector3 position, float level)
         {
             if (!(level >= 0f) || level > AwarenessMeter.Full)

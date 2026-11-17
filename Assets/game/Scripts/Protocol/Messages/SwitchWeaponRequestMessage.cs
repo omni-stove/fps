@@ -1,6 +1,5 @@
 namespace Shooter.Protocol
 {
-    /// <summary>持ち主が持っている武器のうち <see cref="WeaponId"/> への持ち替えを頼む。</summary>
     public sealed class SwitchWeaponRequestMessage : IMessage
     {
         public const byte CurrentVersion = 1;

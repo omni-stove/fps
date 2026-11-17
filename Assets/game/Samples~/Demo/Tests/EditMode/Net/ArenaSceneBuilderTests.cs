@@ -12,9 +12,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>
-    /// <see cref="ArenaSceneBuilder"/> の配置の値と、空のシーンへの組み立て。保存も NavMesh の焼き込みもしない。
-    /// </summary>
     public sealed class ArenaSceneBuilderTests
     {
         private const float Epsilon = 1e-4f;
@@ -377,7 +374,7 @@ namespace Shooter.Net.Tests
             return go;
         }
 
-        /// <summary>Shooter.Tests.EditMode の TestScenes.NewAdditive と同じ。保存されていない Untitled があると Additive の NewScene は例外を投げる。</summary>
+        // 保存されていない Untitled があると Additive の NewScene は例外を投げるので、Shooter.Tests.EditMode の TestScenes.NewAdditive と同じく避ける。
         private static Scene NewAdditiveScene()
         {
             for (var i = 0; i < SceneManager.sceneCount; i++)

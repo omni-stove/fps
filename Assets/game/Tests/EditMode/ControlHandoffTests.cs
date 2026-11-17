@@ -6,7 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>操作を手放す口 (<see cref="ControlHandoff"/>) の宣言の数え方と、<see cref="WeaponController"/> がそれを見ること。</summary>
     public sealed class ControlHandoffTests
     {
         [Test]

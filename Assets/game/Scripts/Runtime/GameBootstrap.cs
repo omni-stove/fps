@@ -5,36 +5,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>
-    /// + <see cref="PlayerController"/> + カメラの <see cref="WeaponController"/> + 覗き込みの <see cref="AimDownSights"/> + 敵に撃たれる <see cref="Damageable"/> と胴の <see cref="Hitbox"/> + 自動回復の <see cref="HealthRegen"/>
-    /// + 演出と手榴弾 (<see cref="CharacterComponents.Attach"/>) + 今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む
-    /// <see cref="PlayerMockBody"/> + 倒れてから戻るまでのカメラ <see cref="PlayerDeathCamera"/> + ゲームパッドのエイムアシスト <see cref="AimAssist"/>
-    /// + ルールの <see cref="GameRules.Streaks"/> が On ならストリーク <see cref="StreakController"/>)
-    /// ・ライト・プレイヤーの前方に並べた <see cref="TargetDummyCount"/> 体の <see cref="TargetDummy"/>
-    /// (<see cref="Damageable"/> + 頭と胴の <see cref="Hitbox"/>。倒すと 3 秒後に復活する) と、プレイヤーの体力と弾を写す <see cref="HudModel"/> を
-    /// コードで生成する。HUD は作らない (UI が <see cref="GameSignals"/> を見て作る)。参照はすべてここで解決するので、シーンにはこのコンポーネントを置いた GameObject だけあればよい。
-    /// 一人称か三人称かはルールの <see cref="GameRules.ViewMode"/> で選ぶ (狙いと当たり判定はどちらも目から)。
-    /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
-    /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す量は
-    /// <see cref="GameRules.HudDensity"/> で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
-    /// プレイヤーの最大体力はルールの <see cref="GameRules.PlayerMaxHealth"/> で、ルールが無いときだけこのコンポーネントの <see cref="PlayerMaxHealth"/> で決める。
-    /// プレイヤーと標的ダミーの部位のダメージ倍率は同じルールの <see cref="GameRules.ZoneDamage"/> で決める。
-    /// 三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
-    /// (<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
-    /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
-    /// 生成し終えたら、<see cref="HudModel"/> を <see cref="GameSignals.HudModel"/> に、HUD の量を <see cref="GameSignals.HudDensity"/> に、
-    /// オフラインなのでポーズ中は時間を止める (<see cref="PauseTimeMode.Freeze"/>) ことを <see cref="GameSignals.PauseTimeMode"/> に、
-    /// プレイヤーの部品を <see cref="GameSignals.LocalPlayer"/> に出し、破棄するときに消す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour
     {
         public const string ReadyLog = "[Bootstrap] ready";
 
-        /// <summary>
-        /// <see cref="GameRulesOverride"/> のルールを使うときのログ。definitionName は上書きされたシーンのルールの名前で、未設定なら null。
-        /// </summary>
         public static string FormatOverrideLog(string definitionName)
         {
             var replaced = string.IsNullOrEmpty(definitionName) ? "(none)" : "'" + definitionName + "'";
@@ -44,41 +19,35 @@ namespace Shooter.Runtime
         public const string FloorName = "Floor";
         public const string PlayerName = "Player";
 
-        /// <summary>プレイヤーに付ける Unity 組み込みのタグ。ミッションの範囲トリガーはこれでプレイヤーを見分ける。</summary>
         public const string PlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
         public const string CameraName = "PlayerCamera";
 
-        /// <summary>pitch を回し射撃の始点になる、プレイヤーの目の子 GameObject の名前。カメラはこの子。</summary>
         public const string EyeName = "PlayerEye";
         public const string LightName = "Directional Light";
 
-        /// <summary>Plane は 10m 四方なので、5 倍で 50m 四方。</summary>
+        // Plane は 10m 四方なので、5 倍で 50m 四方にする。
         public static readonly Vector3 FloorScale = new Vector3(5f, 1f, 5f);
 
         public const float PlayerHeight = 2f;
         public const float PlayerRadius = 0.5f;
 
-        /// <summary>足元が床 (y = 0) に接する位置。CharacterController の中心はカプセルの中心。</summary>
+        // CharacterController の中心はカプセルの中心なので、足元が床 (y = 0) に接するよう高さの半分だけ上げる。
         public static readonly Vector3 PlayerSpawn = new Vector3(0f, PlayerHeight / 2f, 0f);
 
-        /// <summary>カプセル中心からの目の高さ。足元から 1.6m。</summary>
+        // カプセル中心から 0.6m 上で、足元から 1.6m の目の高さになる。
         public static readonly Vector3 EyeOffset = new Vector3(0f, 0.6f, 0f);
 
         public static readonly Vector3 LightEuler = new Vector3(50f, -30f, 0f);
 
-        /// <summary>標的ダミーをまとめる親の名前。</summary>
         public const string TargetsName = "TargetDummies";
 
-        /// <summary>標的ダミーの名前 (ログの識別子) の頭。左から 1, 2, ... を付ける。</summary>
         public const string TargetDummyNamePrefix = "TargetDummy";
 
-        /// <summary>プレイヤーの前方に並べる標的ダミーの数。</summary>
         public const int TargetDummyCount = 5;
 
-        /// <summary>プレイヤーの足元から標的ダミーの列までの前方の距離 (m)。</summary>
         public const float TargetDummyDistance = 10f;
 
-        /// <summary>隣り合う標的ダミーの間隔 (m)。胴の直径 1m に対して 1m の隙間を空ける。</summary>
+        // 胴の直径 1m に対して 1m の隙間を空ける。
         public const float TargetDummySpacing = 2f;
 
         public const int TargetDummyMaxHealth = TargetDummy.DefaultMaxHealth;
@@ -128,7 +97,6 @@ namespace Shooter.Runtime
         private HudDensity? _publishedDensity;
         private bool _publishedPauseTimeMode;
 
-        /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
 
         // シーンに置かれた敵や標的は GameBootstrap から組み立てられないので、自分で同じルールを探す。
@@ -138,26 +106,14 @@ namespace Shooter.Runtime
             return bootstrap != null && bootstrap.World != null ? bootstrap.World.Rules : null;
         }
 
-        /// <summary>
-        /// <see cref="Build"/> が生成し終えたときに、生成物を渡して 1 度だけ呼ばれる。生成に失敗したときは呼ばれない。
-        /// 生成は Awake で済むので、購読する側は先に <see cref="World"/> を見て、null のときだけ購読して待つ。
-        /// 購読者が例外を投げても生成は失敗にせず、例外をログに出して残りの購読者を呼ぶ。
-        /// </summary>
         public event Action<BootstrapWorld> Built;
 
-        /// <summary>
-        /// <see cref="Build"/> で床を生成するか。シーン側に床 (NavMeshSurface を焼いたもの) があるときは false にする。
-        /// </summary>
         public bool CreatesFloor
         {
             get => _createFloor;
             set => _createFloor = value;
         }
 
-        /// <summary>
-        /// <see cref="Build"/> で作るプレイヤーの <see cref="WeaponController.Definitions"/> (既定のロードアウト)。0 番を持って始める。
-        /// Play 中に空で入口のロードアウト (<see cref="EffectiveWeaponDefinitions"/>) も無ければ WeaponController が初期化できず、<see cref="Build"/> は失敗する。null を設定すると空になる。
-        /// </summary>
         public IReadOnlyList<WeaponDefinition> WeaponDefinitions
         {
             get => _weaponDefinitions ?? Array.Empty<WeaponDefinition>();
@@ -180,9 +136,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// プレイヤーに持たせる武器。<see cref="WeaponDefinitions"/> が空なら入口 (<see cref="GameContent.Loadout"/>) のスロットの武器を並べる。
-        /// </summary>
         public IReadOnlyList<WeaponDefinition> EffectiveWeaponDefinitions
         {
             get
@@ -212,10 +165,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="Build"/> で作るプレイヤーの能力の枠 (<see cref="AbilityHost"/>) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。
-        /// 枠より多い分は入れない。空の要素はその枠を空にする。null を設定すると空になる。
-        /// </summary>
         public IReadOnlyList<AbilityDefinition> AbilityDefinitions
         {
             get => _abilityDefinitions ?? Array.Empty<AbilityDefinition>();
@@ -238,73 +187,54 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="Build"/> でプレイヤーに効かせるルール (自動回復の <see cref="HealthRegen"/> と、武器の予備弾) と、標的ダミーのやられ演出。
-        /// null なら <see cref="GameRules.Default"/> を使い、Build 時に警告を出す。
-        /// </summary>
         public GameRulesDefinition RulesDefinition
         {
             get => _rules;
             set => _rules = value;
         }
 
-        /// <summary><see cref="Build"/> で生成する床。null なら仮の板 (Plane を <see cref="FloorScale"/> 倍) を作る。</summary>
         public GameObject FloorPrefab
         {
             get => _floorPrefab;
             set => _floorPrefab = value;
         }
 
-        /// <summary><see cref="Build"/> で並べる標的ダミーの見た目 (<see cref="TargetDummy.Create"/> の visualPrefab)。null なら仮の形。</summary>
         public GameObject TargetDummyPrefab
         {
             get => _targetDummyPrefab;
             set => _targetDummyPrefab = value;
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの自機モックの見た目 (<see cref="PlayerMockBody.Prefabs"/>)。null を設定するとすべて仮の形になる。</summary>
         public PlayerMockBodyPrefabs MockBodyPrefabs
         {
             get => _mockBodyPrefabs ?? (_mockBodyPrefabs = new PlayerMockBodyPrefabs());
             set => _mockBodyPrefabs = value ?? new PlayerMockBodyPrefabs();
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの投げるグレネードの見た目 (<see cref="GrenadeThrower.GrenadePrefab"/>)。null なら仮の球。</summary>
         public GameObject GrenadePrefab
         {
             get => _grenadePrefab;
             set => _grenadePrefab = value;
         }
 
-        /// <summary>
-        /// ルール (<see cref="GameRulesOverride"/>・<see cref="RulesDefinition"/>・入口のルール) が無いときに <see cref="Build"/> で作るプレイヤーの最大体力。1 以上。
-        /// ルールがあれば <see cref="GameRules.PlayerMaxHealth"/> を使う。生成後に変えるなら <see cref="BootstrapWorld.PlayerDamageable"/> を変える。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">1 未満のとき。</exception>
         public int PlayerMaxHealth
         {
             get => _playerMaxHealth;
             set => _playerMaxHealth = ValidatePlayerMaxHealth(value, nameof(value));
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの三人称のカメラの位置 (<see cref="ViewRig.ThirdPersonOffset"/>)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">どれかの成分が有限でないとき。</exception>
         public Vector3 ThirdPersonOffset
         {
             get => _thirdPersonOffset;
             set => _thirdPersonOffset = ValidateThirdPersonOffset(value, nameof(value));
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの <see cref="ViewRig.MinBoomLength"/>。0 以上の有限値。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
         public float MinBoomLength
         {
             get => _minBoomLength;
             set => _minBoomLength = ValidateNonNegativeFinite(value, nameof(value));
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの <see cref="AimDownSights.TransitionSeconds"/>。0 以上の有限値。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
         public float AdsTransitionSeconds
         {
             get => _adsTransitionSeconds;
@@ -325,13 +255,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 床・プレイヤー・ライト・標的ダミー・<see cref="HudModel"/> を生成する。2 回目以降は何もせず最初の結果を返す。
-        /// 途中で失敗したら作りかけのオブジェクトを片付けてから例外を投げ直す。
-        /// <see cref="RulesDefinition"/> の値が不正なら何も作らずに <see cref="GameRulesDefinitionException"/> を投げる
-        /// (<see cref="GameRulesOverride"/> で上書き中は <see cref="RulesDefinition"/> を読まない)。
-        /// プレイヤーの値 (<see cref="PlayerMaxHealth"/> など) が不正なときも、何も作らずに <see cref="ArgumentOutOfRangeException"/> を投げる。
-        /// </summary>
         public BootstrapWorld Build()
         {
             if (_world != null)
@@ -391,10 +314,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="Build"/> で出した自分のプレイヤー・<see cref="HudModel"/>・HUD の量・ポーズ中の時間の扱いを <see cref="GameSignals"/> から消す。
-        /// 破棄時に呼ばれる。後から別の側が出した値は消さない。何度呼んでもよい。
-        /// </summary>
         public void ClearSignals()
         {
             if (_publishedPlayer != null)
@@ -436,11 +355,6 @@ namespace Shooter.Runtime
             GameSignals.LocalPlayer.Publish(_publishedPlayer);
         }
 
-        /// <summary>
-        /// <see cref="GameRulesOverride.Current"/> があればそれを使い、上書き中とログに出す。
-        /// 無ければ <see cref="RulesDefinition"/> (空なら入口 <see cref="GameContent.Rules"/>) を変換する。どちらも未設定なら警告を出して <see cref="GameRules.Default"/>。
-        /// configured はルールが見つかったときに true、<see cref="GameRules.Default"/> に落ちたときに false。
-        /// </summary>
         private GameRules ResolveRules(out bool configured)
         {
             configured = true;
@@ -622,7 +536,6 @@ namespace Shooter.Runtime
                 AttachVehicleRider(player, mover, weapon);
                 mover.ApplyRules(rules);
 
-                // 撃った・倒れた・体力を戻した (キャンペーンの再開) ときにダッシュをやめる。
                 mover.BindSprintRelease(weapon, damageable);
 
                 actionReader = AttachActionReader(player, mover, weapon, ads, damageable, rig);
@@ -669,7 +582,6 @@ namespace Shooter.Runtime
             controller.radius = PlayerRadius;
             controller.center = Vector3.zero;
 
-            // 本体 (yaw) > 目 (pitch、射撃の始点) > カメラ (目からのオフセットは ViewRig が視点ごとに決める)
             var eye = new GameObject(EyeName).transform;
             eye.SetParent(player.transform, false);
             eye.localPosition = EyeOffset;
@@ -761,11 +673,7 @@ namespace Shooter.Runtime
             mover.CarryLoad = weapon;
         }
 
-        /// <summary>
-        /// 回避・乗り越え・崖のぼりの間は撃たせず、覗き込みを解かせる (始めたときと、その最中に覗き込もうとしたとき)。
-        /// 武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>、はしごなど) も覗き込ませない。
-        /// 使うかはルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら始まらないので、ここは常に配線しておく。
-        /// </summary>
+        // 使うかはルールで決まり、Off なら始まらないので、ここは常に配線しておく。
         private static void WireDodgeAndVault(PlayerController mover, WeaponController weapon, AimDownSights ads)
         {
             if (mover == null)
@@ -795,11 +703,8 @@ namespace Shooter.Runtime
             };
         }
 
-        /// <summary>
-        /// ルールの <see cref="ActionRules.AimToFire"/> が On なら、覗き込んでいない間は撃たせない (ブラインドファイアは除く)。
-        /// ルールは撃つときに <see cref="WeaponController.Rules"/> から読むので、キャンペーンが差し替えたルールにも従う。
-        /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
-        /// </summary>
+        // ルールを撃つときに WeaponController.Rules から読むのは、キャンペーンが差し替えたルールにも従うため。
+        // WireDodgeAndVault の射撃の止め方に足すので、その後に呼ぶ。
         private static void WireAimToFire(WeaponController weapon, AimDownSights ads, PlayerController mover)
         {
             if (weapon == null)
@@ -831,11 +736,8 @@ namespace Shooter.Runtime
             };
         }
 
-        /// <summary>
-        /// 回避・乗り越え・崖のぼりの間と武器をしまっている間はグレネードを投げさせず、投げている間 (<see cref="GrenadeThrower.IsThrowing"/>) は撃たせず、
-        /// 投げたら覗き込みを解かせる。投げられるかと数はルールで決める (<see cref="PlayerActions.Attach"/>)。Off なら投げないので、ここは常に配線しておく。
-        /// <see cref="WireDodgeAndVault"/> の後に呼ぶ (その射撃の止め方に足す)。
-        /// </summary>
+        // 投げられるかはルールで決まり、Off なら投げないので、ここは常に配線しておく。
+        // WireDodgeAndVault の射撃の止め方に足すので、その後に呼ぶ。
         private static void WireGrenades(GrenadeThrower grenades, PlayerController mover, WeaponController weapon, AimDownSights ads)
         {
             if (grenades == null)
@@ -858,11 +760,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 射撃のばらつきに覗き込みの進み具合と移動の速さ (歩きの速さで足し切る) と姿勢の倍率 (<see cref="PlayerController.SpreadScale"/>) を読ませ、
-        /// 射撃の反動を視点に足させる。
-        /// WireAds と同じく、読むのは実行時なので Edit Mode では配線だけしておく。
-        /// </summary>
+        // 読むのは実行時なので、未初期化のことがある Edit Mode でも配線だけしておく。
         private static void WireSpreadAndRecoil(WeaponController weapon, AimDownSights ads, PlayerController mover, FirstPersonLook look)
         {
             if (weapon == null)
@@ -890,10 +788,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// ADS に今持っている武器の視野角を読ませ、覗き込み始めたらダッシュを解除させ、リロードを始めたときと持ち替えたときに覗き込みをやめさせる。
-        /// Edit Mode ではどれも未初期化のままのことがあるが、読むのは実行時なので配線だけしておく。
-        /// </summary>
+        // Edit Mode ではどれも未初期化のままのことがあるが、読むのは実行時なので配線だけしておく。
         private static void WireAds(AimDownSights ads, WeaponController weapon, PlayerController mover)
         {
             ads.WeaponSource = () => weapon != null && weapon.Weapon != null ? weapon.Weapon.Spec : null;
@@ -913,10 +808,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// プレイヤーの今のアクションをまとめる <see cref="PlayerActionReader"/> と、それを読む自機モック (<see cref="PlayerMockBody"/>) を付けて配線する。カバーとブラインドファイア (<see cref="PlayerActions.Attach"/>) の後に呼ぶ。
-        /// Play 中は Reader の Awake が自力で読み元を解決するので、解決できなかったら失敗にする。Edit Mode では Awake が走らないのでここで渡す。
-        /// </summary>
+        // カバーとブラインドファイア (PlayerActions.Attach) を読み元にするので、その後に呼ぶ。
+        // Play 中は Reader の Awake が自力で読み元を解決するので、解決できなかったら失敗にする。Edit Mode では Awake が走らないのでここで渡す。
         private static PlayerActionReader AttachActionReader(
             GameObject player,
             PlayerController mover,
@@ -942,10 +835,8 @@ namespace Shooter.Runtime
             return reader;
         }
 
-        /// <summary>
-        /// 乗り物に乗る部品 (<see cref="PlayerVehicleRider"/>) を付ける。乗っている間に止める覗き込み・カバー・グレネードを拾うので、
-        /// それらを付けた後 (<see cref="PlayerActions.Attach"/> の後) に呼ぶ。Edit Mode では Awake が走らないのでここで渡す。
-        /// </summary>
+        // 乗っている間に止める覗き込み・カバー・グレネードを拾うので、それらを付けた後 (PlayerActions.Attach の後) に呼ぶ。
+        // Edit Mode では Awake が走らないのでここで渡す。
         private static void AttachVehicleRider(GameObject player, PlayerController mover, WeaponController weapon)
         {
             var rider = player.AddComponent<PlayerVehicleRider>();
@@ -962,10 +853,6 @@ namespace Shooter.Runtime
             rider.Bind(mover, weapon);
         }
 
-        /// <summary>
-        /// 倒れたときと体力を作り直したとき (キャンペーンの再開) に、しゃがみと伏せを解除し、覗き込みを即座に腰だめへ戻す。
-        /// 倒れている間は操作も手放させる (<see cref="HoldControlWhileDead"/>)。
-        /// </summary>
         private static void WireDeathAndRespawn(Damageable damageable, PlayerController mover, AimDownSights ads)
         {
             damageable.Died += _ => ResetStance(mover, ads, CrouchInput.ReasonDeath, ProneInput.ReasonDeath);
@@ -976,13 +863,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// damageable が倒れて (ダウンを含む) から体力を作り直す (リスポーン・起こされる) まで、mover の <see cref="PlayerController.Handoff"/> を引き取る。
-        /// 同じ口を見る武器 (<see cref="WeaponController.Handoff"/>) と能力も、その間は撃つ・リロード・持ち替え・移動の入力を読まない。
-        /// 部品を止めるモードやキャンペーンが無い場面 (射撃場・機能シーン) でも、倒れたまま撃てないようにするため。
-        /// 部品の有効・無効ではなく口で止めるのは、モードの <see cref="SideMember.SetActing"/> と取り合わないため。
-        /// 引き取りに使う holder を返す。
-        /// </summary>
+        // 部品を止めるモードやキャンペーンが無い場面 (射撃場・機能シーン) でも、倒れたまま撃てないよう操作の口を引き取る。
+        // 部品の有効・無効ではなく口で止めるのは、モードの SideMember.SetActing と取り合わないため。
         internal static object HoldControlWhileDead(Damageable damageable, PlayerController mover)
         {
             if (damageable == null)
@@ -1032,16 +914,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>index 番目 (0 始まり、左から) の標的ダミーの名前。</summary>
         public static string TargetDummyName(int index)
         {
             return TargetDummyNamePrefix + (index + 1);
         }
 
-        /// <summary>
-        /// 標的ダミーの足元の位置。プレイヤーの足元から前方へ <see cref="TargetDummyDistance"/> 進んだ所に、
-        /// 横方向へ <see cref="TargetDummySpacing"/> 間隔で、プレイヤーから見て左から順に <see cref="TargetDummyCount"/> 個並べる。
-        /// </summary>
         public static Vector3[] TargetDummyPositions(Vector3 playerFeet, Quaternion playerRotation)
         {
             var forward = HorizontalForward(playerRotation);
@@ -1057,7 +934,6 @@ namespace Shooter.Runtime
             return positions;
         }
 
-        /// <summary>向きの前方を水平面に落とした単位ベクトル。真上か真下を向いていれば +Z。</summary>
         private static Vector3 HorizontalForward(Quaternion rotation)
         {
             // 水平に取るのは、プレイヤーが傾いていても標的が宙に浮いたり埋まったりしないようにするため。
@@ -1092,7 +968,6 @@ namespace Shooter.Runtime
             return root;
         }
 
-        /// <summary>標的ダミーのやられ演出を rules の <see cref="GameRules.DeathBody"/> にする (プレイヤー自身には付けない)。</summary>
         private static void BindDeathBodies(IReadOnlyList<TargetDummy> dummies, GameRules rules)
         {
             var targets = new List<Damageable>(dummies.Count);
@@ -1118,11 +993,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// プレイヤーの体力と武器を写す <see cref="HudModel"/> を作る。体力や武器が作り直されたとき
-        /// (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は写し直す。
-        /// 乗り物の座席の武器に座っている間は、その武器を写す (<see cref="HudWeaponBinding"/>)。
-        /// </summary>
         private static HudModel CreateHudModel(Damageable player, WeaponController weapon, PlayerVehicleRider rider, out HudWeaponBinding weaponBinding)
         {
             var model = new HudModel();
@@ -1195,16 +1065,13 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="GameBootstrap.Build"/> が生成したオブジェクト。</summary>
     public sealed class BootstrapWorld
     {
-        /// <summary>生成した床。<see cref="GameBootstrap.CreatesFloor"/> が false なら null。</summary>
         public GameObject Floor { get; }
         public GameObject Player { get; }
         public CharacterController Controller { get; }
         public Camera Camera { get; }
 
-        /// <summary>プレイヤーの視点 (一人称・三人称) と目。</summary>
         public ViewRig Rig { get; }
 
         public FirstPersonLook Look { get; }
@@ -1212,37 +1079,26 @@ namespace Shooter.Runtime
         public Light Light { get; }
         public WeaponController Weapon { get; }
 
-        /// <summary>プレイヤーの覗き込み (ADS)。</summary>
         public AimDownSights Ads { get; }
 
-        /// <summary>標的ダミーをまとめた親。</summary>
         public GameObject TargetRoot { get; }
 
-        /// <summary>プレイヤーの前方に並べた標的ダミー。プレイヤーから見て左から順。</summary>
         public IReadOnlyList<TargetDummy> Targets { get; }
 
-        /// <summary>プレイヤーの体力。敵の射撃はここに届く。</summary>
         public Damageable PlayerDamageable { get; }
 
-        /// <summary>プレイヤーの体力・弾と、試合の残り時間などを HUD に出す値。<see cref="GameSignals.HudModel"/> に出す。</summary>
         public HudModel HudModel { get; }
 
-        /// <summary>生成時にプレイヤーへ効かせたルール。<see cref="GameBootstrap.RulesDefinition"/> が空なら <see cref="GameRules.Default"/>。</summary>
         public GameRules Rules { get; }
 
-        /// <summary>プレイヤーの自動回復。</summary>
         public HealthRegen Regen { get; }
 
-        /// <summary>プレイヤーの今のアクションをまとめたもの。デバッグ表示と自機モックはここから読む。</summary>
         public PlayerActionReader ActionReader { get; }
 
-        /// <summary>プレイヤーのグレネード。投げられるかと数はルールで決まる。</summary>
         public GrenadeThrower Grenades { get; }
 
-        /// <summary>プレイヤーが倒れてから戻るまでのカメラ。何を映すかはルールの <see cref="GameRules.DeathCamera"/> で決まる。</summary>
         public PlayerDeathCamera DeathCamera { get; }
 
-        /// <summary>プレイヤーの能力の枠。使えるかはルールの <see cref="ActionRules.Abilities"/> で決まる。</summary>
         public AbilityHost Abilities { get; }
 
         public BootstrapWorld(

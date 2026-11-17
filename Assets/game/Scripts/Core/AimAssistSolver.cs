@@ -9,15 +9,6 @@ namespace Shooter.Core
         private const float _minLength = 1e-6f;
         private const double _degreesPerRadian = 180.0 / Math.PI;
 
-        /// <param name="spec">調整値。</param>
-        /// <param name="deltaSeconds">この刻みの秒数。</param>
-        /// <param name="aiming">ADS 中か。</param>
-        /// <param name="aimingSeconds">ADS を始めてからの秒数。</param>
-        /// <param name="eye">視点の位置。</param>
-        /// <param name="forward">照準の向き。</param>
-        /// <param name="candidates">敵の候補の点。</param>
-        /// <exception cref="ArgumentNullException">spec か candidates が null のとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds か aimingSeconds が負か有限でないとき。</exception>
         public static AimAssistResult Solve(
             AimAssistSpec spec,
             float deltaSeconds,

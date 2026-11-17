@@ -8,16 +8,10 @@ namespace Shooter.Runtime
     {
         private ViewRig _viewRig;
 
-        /// <summary>今の視点。null なら同じ GameObject の <see cref="ViewRig"/> の視点 (無ければ一人称)。</summary>
         public Func<ViewMode> ViewModeSource { get; set; }
 
-        /// <summary>今の武器の照準器。武器が無ければ <see cref="SightSpec.Default"/>。</summary>
         public SightSpec Sight => WeaponSource?.Invoke()?.Aim.Sight ?? SightSpec.Default;
 
-        /// <summary>
-        /// 最後の <see cref="Tick(bool, bool, InputDeviceKind, float)"/> (か <see cref="ResetView"/>) での照準器の出し方。
-        /// HUD がスコープの縁と照準を、<see cref="ViewRig"/> が三人称のカメラを目へ寄せる割合を、ビューモデルが隠すかを読む。
-        /// </summary>
         public SightView SightView { get; private set; }
 
         private ViewMode CurrentViewMode()

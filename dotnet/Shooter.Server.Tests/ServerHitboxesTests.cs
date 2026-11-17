@@ -8,7 +8,16 @@ namespace Shooter.Server.Tests
 {
     public sealed class ServerHitboxesTests
     {
+        // -X (撃つ人の方) を向くと、右は +Z
+        private const float _facingTheShooter = -MathF.PI / 2f;
+
         private static readonly StanceGeometry _geometry = new StanceGeometry(2f, 0f, 0.6f, 1.2f, 0.5f);
+
+        // 原点 y=1 に置いた体 (足元 0・目 1.6・頭の球の中心 1.5・半径 0.5) の、立った頭の左の端
+        private static readonly Vector3 _uprightHeadEdge = new Vector3(0f, 1.85f, -0.3f);
+
+        // 右へ傾け切った (目が +Z へ 0.4 ずれた) 体の軸の、足元から 1.9 の点。sin = 0.4 / 1.6。頭の球の中心から軸に沿って 0.4 先
+        private static readonly Vector3 _leanedHead = new Vector3(0f, 1.9f * 0.968246f, 1.9f * 0.25f);
 
         private ServerBodies _bodies;
 
@@ -288,9 +297,113 @@ namespace Shooter.Server.Tests
                 Is.False);
         }
 
-        private ServerHitboxes Hitboxes()
+        [Test]
+        public void ALeanedHeadIsHitWhereItLeanedAndNotWhereItStood()
         {
-            return new ServerHitboxes(_bodies, new BvhWorldCollision(new WorldMap(Array.Empty<WorldCollider>())));
+            var hitboxes = Hitboxes(MotorSpec.Default);
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            hitboxes.Record(1);
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, 1f);
+            hitboxes.Record(2);
+
+            // 立っていた tick では頭の左の端 (右へ傾けると頭が離れる側) に当たる
+            Assert.That(hitboxes.Raycast(_uprightHeadEdge, Vector3.UnitX, 100f, 1f, 1, _ => true, out var upright), Is.True);
+            Assert.That(upright.Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(hitboxes.Raycast(_uprightHeadEdge, Vector3.UnitX, 100f, 2f, 1, _ => true, out _), Is.False);
+
+            Assert.That(hitboxes.Raycast(_leanedHead, Vector3.UnitX, 100f, 2f, 1, _ => true, out var leaned), Is.True);
+            Assert.That(leaned.TargetId, Is.EqualTo(2));
+            Assert.That(leaned.Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(leaned.Distance, Is.EqualTo(9.7f).Within(1e-3f));
+            Assert.That(leaned.TargetPosition, Is.EqualTo(new Vector3(10f, 1f, 0f)), "the reported position is the upright origin");
+        }
+
+        [Test]
+        public void ACastForManyHitsUsesTheLeanedBody()
+        {
+            var hitboxes = Hitboxes(MotorSpec.Default);
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, 1f);
+            hitboxes.Record(1);
+            var hits = new List<ShotHit>();
+
+            Assert.That(hitboxes.Cast(_uprightHeadEdge, Vector3.UnitX, 0f, 100f, 2, 1f, 1, _ => true, hits), Is.False);
+            Assert.That(hitboxes.Cast(_leanedHead, Vector3.UnitX, 0f, 100f, 2, 1f, 1, _ => true, hits), Is.True);
+            Assert.That(hits, Has.Count.EqualTo(1));
+            Assert.That(hits[0].Zone, Is.EqualTo(HitZone.Head));
+            Assert.That(hits[0].Distance, Is.EqualTo(9.7f).Within(1e-3f));
+        }
+
+        [Test]
+        public void HalfwayBetweenTicksTheLeanIsHalfway()
+        {
+            var hitboxes = Hitboxes(MotorSpec.Default);
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, 0f);
+            hitboxes.Record(1);
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, 1f);
+            hitboxes.Record(2);
+
+            // 半分なら目は 0.2 ずれ、体は sin = 0.2 / 1.6 だけ回る。中心 (足元から 1) は横に 0.125
+            Assert.That(hitboxes.TryRewindCenter(2, 1.5f, out var center), Is.True);
+            Assert.That(center.Z, Is.EqualTo(0.125f).Within(1e-4f));
+            Assert.That(center.Y, Is.EqualTo(MathF.Sqrt(1f - (0.125f * 0.125f))).Within(1e-4f));
+        }
+
+        [Test]
+        public void TheRewoundCenterFollowsTheLean()
+        {
+            var hitboxes = Hitboxes(MotorSpec.Default);
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, -1f);
+            hitboxes.Record(1);
+
+            // 足元 (y=0) を軸に sin = 0.4 / 1.6 だけ左 (-Z) へ回した、足元から 1 の点
+            Assert.That(hitboxes.TryRewindCenter(2, 1f, out var center), Is.True);
+            Assert.That(center.X, Is.EqualTo(10f).Within(1e-4f));
+            Assert.That(center.Y, Is.EqualTo(0.968246f).Within(1e-4f));
+            Assert.That(center.Z, Is.EqualTo(-0.25f).Within(1e-4f));
+        }
+
+        [Test]
+        public void WithoutASideOffsetTheLeanDoesNotMoveTheBody()
+        {
+            var hitboxes = Hitboxes(new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, leanSideOffset: 0f));
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            target.SetPose(new Vector3(10f, 1f, 0f), _facingTheShooter, PlayerStance.Standing, CharacterLadderState.NoLadder, 1f);
+            hitboxes.Record(1);
+
+            Assert.That(hitboxes.Raycast(_uprightHeadEdge, Vector3.UnitX, 100f, 1f, 1, _ => true, out _), Is.True);
+            Assert.That(hitboxes.Raycast(_leanedHead, Vector3.UnitX, 100f, 1f, 1, _ => true, out _), Is.False);
+        }
+
+        [Test]
+        public void ALeanOutOfRangeIsRejected()
+        {
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => target.SetPose(Vector3.Zero, 0f, PlayerStance.Standing, CharacterLadderState.NoLadder, 1.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => target.SetPose(Vector3.Zero, 0f, PlayerStance.Standing, CharacterLadderState.NoLadder, float.NaN));
+            Assert.That(target.Lean, Is.Zero);
+            Assert.That(target.Position, Is.EqualTo(new Vector3(10f, 1f, 0f)));
+        }
+
+        [Test]
+        public void TeleportingStandsTheBodyUp()
+        {
+            var target = Spawn(2, new Vector3(10f, 1f, 0f));
+            target.SetPose(new Vector3(10f, 1f, 0f), 0f, PlayerStance.Standing, CharacterLadderState.NoLadder, 1f);
+
+            _bodies.Teleport(2, new Vector3(0f, 1f, 0f), 0f, 5);
+
+            Assert.That(target.Lean, Is.Zero);
+        }
+
+        private ServerHitboxes Hitboxes(MotorSpec motor = null)
+        {
+            return new ServerHitboxes(_bodies, new BvhWorldCollision(new WorldMap(Array.Empty<WorldCollider>())), motor: motor);
         }
 
         private ServerBody Spawn(int id, Vector3 position)

@@ -2,20 +2,9 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 波の強さの倍率 (<see cref="Wave.StrengthMultiplier"/>) を敵に当てはめる。倍率が m のとき:
-    /// <list type="bullet">
-    /// <item>体力は m 倍 (四捨五入、1 以上)。</item>
-    /// <item>撃ち始めるまでの反応時間 (<see cref="EnemySpec.ReactionSeconds"/>) は 1/m 倍。</item>
-    /// <item>散らばり (<see cref="EnemySpec.OpeningSpreadDegrees"/>・<see cref="EnemySpec.SettledSpreadDegrees"/>・<see cref="EnemySpec.RangeSpreadDegrees"/>) は 1/m 倍
-    /// (<see cref="EnemySpec.MaxSpreadDegrees"/> で頭打ち)。</item>
-    /// </list>
-    /// 視認距離・攻撃距離・撃ち始める距離・遮蔽の動き方は倍率で変えない。距離を伸ばすとレベルの作り (遮蔽物の配置) と噛み合わなくなるため。
-    /// m が 1 なら元の値のまま、1 未満なら弱くなる。
-    /// </summary>
+    // 視認距離・攻撃距離・撃ち始める距離・遮蔽の動き方は倍率で変えない。距離を伸ばすとレベルの作り (遮蔽物の配置) と噛み合わなくなるため。
     public static class WaveStrength
     {
-        /// <summary>spec に倍率 multiplier を当てはめた設定。multiplier は 0 より大きい有限値。</summary>
         public static EnemySpec Apply(EnemySpec spec, float multiplier)
         {
             if (spec == null)
@@ -53,7 +42,6 @@ namespace Shooter.Core
                 spec.RecoilControl);
         }
 
-        /// <summary>最大体力 baseHealth に倍率 multiplier を掛けた値。四捨五入し、1 以上 int の最大値以下に収める。</summary>
         public static int Health(int baseHealth, float multiplier)
         {
             if (baseHealth < 1)

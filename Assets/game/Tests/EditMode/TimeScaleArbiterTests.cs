@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="TimeScaleArbiter"/> がルールとネット対戦で要求を断り、受けた要求を Unity の時間に書いて戻すこと。
-    /// Edit Mode では常駐の Update が走らないので、<see cref="TimeScaleArbiter.Tick"/> を直接呼ぶ。
-    /// </summary>
+    // Edit Mode では常駐の Update が走らないので、TimeScaleArbiter.Tick を直接呼ぶ。
     public sealed class TimeScaleArbiterTests
     {
         private const string Reason = "test";

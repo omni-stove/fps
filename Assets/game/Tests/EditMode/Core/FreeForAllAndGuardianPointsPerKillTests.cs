@@ -3,7 +3,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary><see cref="FreeForAllMode"/> と <see cref="GuardianMode"/> がキル 1 回の点を渡された値で数え、不正な点を断ることを確かめる。</summary>
     public sealed class FreeForAllAndGuardianPointsPerKillTests
     {
         [Test]

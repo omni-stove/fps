@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    public sealed class OfflineAssistsTests
+    public sealed class KillFeedAssistsTests
     {
         private readonly List<Object> _created = new List<Object>();
         private readonly List<KillFeedEntry> _kills = new List<KillFeedEntry>();
@@ -33,7 +33,7 @@ namespace Shooter.Tests.EditMode
         {
             CombatEvents.ClearSubscribers();
             GameContent.Use(null);
-            OfflineAssists.Reset();
+            KillFeedAssists.Reset();
             foreach (var created in _created)
             {
                 if (created != null)
@@ -99,7 +99,7 @@ namespace Shooter.Tests.EditMode
             Hit(_first, "rifle", 30);
             Hit(_second, "pistol", 70);
 
-            Assert.That(OfflineAssists.Ledger.Spec.MinDamage, Is.EqualTo(50));
+            Assert.That(KillFeedAssists.Ledger.Spec.MinDamage, Is.EqualTo(50));
             Assert.That(_kills[0].AssisterIds, Is.Empty);
         }
 
@@ -150,7 +150,7 @@ namespace Shooter.Tests.EditMode
         public void ResettingDropsEveryRecord()
         {
             Hit(_first, "rifle", 30);
-            OfflineAssists.Reset();
+            KillFeedAssists.Reset();
             Hit(_second, "pistol", 70);
 
             Assert.That(_kills[0].AssisterIds, Is.Empty);
@@ -184,14 +184,14 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheLedgerIsSharedUntilTheTuningIsReadAgain()
         {
-            var ledger = OfflineAssists.Ledger;
+            var ledger = KillFeedAssists.Ledger;
 
-            Assert.That(OfflineAssists.Ledger, Is.SameAs(ledger));
+            Assert.That(KillFeedAssists.Ledger, Is.SameAs(ledger));
 
             UseAssistTuning("{ \"minDamage\": 40 }");
 
-            Assert.That(OfflineAssists.Ledger, Is.Not.SameAs(ledger));
-            Assert.That(OfflineAssists.Ledger.Spec.MinDamage, Is.EqualTo(40));
+            Assert.That(KillFeedAssists.Ledger, Is.Not.SameAs(ledger));
+            Assert.That(KillFeedAssists.Ledger.Spec.MinDamage, Is.EqualTo(40));
         }
 
         [Test]

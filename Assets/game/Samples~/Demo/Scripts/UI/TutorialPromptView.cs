@@ -3,19 +3,10 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面下の中央に、チュートリアルの今の手順 (または完了) を 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
-    /// 要素を持っている間は <see cref="GameSignals.Tutorial"/> を購読し、出された段階を <see cref="TutorialText"/> で文にして出し、消されたら隠す。
-    /// 要素を受けたときは今の段階に合わせる。<see cref="Show(LocalizedText, bool)"/> / <see cref="Hide"/> で直に出すこともでき、
-    /// 要素をまだ受けていない間 (HUD の木を作り直している間) も出す文を覚えておき、受けたときに合わせる。
-    /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
-    /// </summary>
     public sealed class TutorialPromptView : HudElementView
     {
-        /// <summary>Hud.uxml のチュートリアルの Label。</summary>
         public const string UxmlName = "tutorial-prompt";
 
-        /// <summary>すべて終えたときに足す USS クラス。</summary>
         public const string CompletedClass = "tutorial-prompt--completed";
 
         private LocalizedText _source;
@@ -29,32 +20,23 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているか。</summary>
         public bool IsShown => _shown;
 
-        /// <summary>出している文。出していなければ空文字。</summary>
         public string Text => _shown ? _text : string.Empty;
 
-        /// <summary>完了の見た目で出しているか。</summary>
         public bool IsCompleted => _shown && _completed;
 
-        /// <summary>決まった文字列 text をそのまま出す。completed なら完了の見た目にする。text が null か空白だけなら隠す。</summary>
         public void Show(string text, bool completed)
         {
             Show(string.IsNullOrEmpty(text) ? default : LocalizedText.Literal(text), completed);
         }
 
-        /// <summary>text を今の言語の文にして出す。completed なら完了の見た目にする。文にして空白だけなら隠す。</summary>
         public void Show(LocalizedText text, bool completed)
         {
             _showsSignal = false;
             Write(text, completed);
         }
 
-        /// <summary>
-        /// status を <see cref="TutorialText.For"/> で文にして出す。すべて終えた段階なら完了の見た目にする。null なら隠す。
-        /// 要素を持っている間は <see cref="GameSignals.Tutorial"/> が出されるたびに呼ばれる。
-        /// </summary>
         public void Show(TutorialStatus? status)
         {
             if (!status.HasValue)
@@ -67,10 +49,6 @@ namespace Shooter.Runtime
             _showsSignal = true;
         }
 
-        /// <summary>
-        /// 出している段階の文を、今のキーの割り当てで作り直す。割り当てが変わって文が変わったときだけ書き直す。
-        /// Play 中は毎フレーム呼ぶ。
-        /// </summary>
         public void RefreshKeys()
         {
             var status = GameSignals.Tutorial.Value;
@@ -108,7 +86,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>隠す。</summary>
         public void Hide()
         {
             _showsSignal = false;

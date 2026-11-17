@@ -7,32 +7,13 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ポーズ画面 (再開・設定・メニューに戻る)。<see cref="Hud"/> と同じ GameObject に <see cref="Hud.Create"/> が付け、
-    /// Hud.uxml の <see cref="UxmlName"/> を使う。Play 中は <see cref="PauseActionPath"/> (Esc / ゲームパッドの Start) で開閉する。
-    /// <para>
-    /// 開いている間は、Pause と同じアクションマップ (Player) の有効なアクションを Pause 以外すべて無効にしてプレイヤーの入力を止め、
-    /// カーソルを出す。時間は <see cref="TimeMode"/> に従う: <see cref="PauseTimeMode.Freeze"/> (オフライン、GameBootstrap が設定する) は
-    /// Time.timeScale を 0 にして閉じたら戻し、<see cref="PauseTimeMode.KeepRunning"/> (オンライン、既定) は時間に触らず重ねるだけにする。
-    /// 何を止めて何を戻すかは Core の <see cref="PauseState"/> が決める。
-    /// </para>
-    /// <para>
-    /// アクションは他の部品と共有するプロジェクト全体のもの (<see cref="InputSystem.actions"/>) なので、部品ごとの有効化を待たず
-    /// アクション自体を無効にする。開いている間に有効にされたアクション (出現し直したプレイヤーなど) も毎フレーム止め直す。
-    /// 閉じたときは自分が止めたものだけを有効に戻す。
-    /// </para>
-    /// <para>
-    /// 「メニューに戻る」は <see cref="MenuNavigator.ReturnToMenu"/> でメインメニューへ戻る。オンラインの接続は NetBootstrap が
-    /// <see cref="MenuNavigator.ReturningToMenu"/> で切る。「設定」は <see cref="OpenSettings"/> を渡すまで押せない
-    /// (<see cref="Hud.AddViews"/> が付ける <see cref="PauseSettingsView"/> が渡す)。
-    /// </para>
-    /// </summary>
+    // アクションは他の部品と共有するプロジェクト全体のもの (InputSystem.actions) なので、部品ごとの有効化を待たずアクション自体を無効にし、
+    // 閉じたときは自分が止めたものだけを有効に戻す。開いている間に有効にされたアクション (出現し直したプレイヤーなど) も毎フレーム止め直す。
     [DisallowMultipleComponent]
     public sealed class PauseMenu : HudElementView
     {
         public const string LogTag = "[Pause]";
 
-        /// <summary>Hud.uxml のポーズ画面の要素。</summary>
         public const string UxmlName = "pause-menu";
 
         public const string ResumeButtonName = "pause-resume";
@@ -40,10 +21,8 @@ namespace Shooter.Runtime
         public const string ReturnToMenuButtonName = "pause-return-to-menu";
         public const string NoteLabelName = "pause-note";
 
-        /// <summary>開閉に使うアクション。開いている間もこれだけは止めない。</summary>
         public const string PauseActionPath = InputActionPaths.Pause;
 
-        /// <summary><see cref="PauseTimeMode.KeepRunning"/> のときに画面に出す案内。</summary>
         public static string KeepRunningNote => Localizer.Get("pause.keepRunningNote");
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で 0 に戻す。
@@ -64,21 +43,14 @@ namespace Shooter.Runtime
         private Button _returnToMenuButton;
         private Label _noteLabel;
 
-        /// <summary>どれかのポーズ画面が開いているか。<see cref="FirstPersonLook"/> がカーソルをロックし直さないために見る。</summary>
         public static bool IsAnyOpen => _openCount > 0;
 
         public override string ElementName => UxmlName;
 
-        /// <summary>開いているか。</summary>
         public bool IsOpen => _state.IsOpen;
 
-        /// <summary>今止めているアクション (例: "Player/Move")。閉じている間は空。</summary>
         public IReadOnlyList<string> SuspendedActions => _state.SuspendedActions;
 
-        /// <summary>
-        /// 開いている間に時間を止めるか。既定は <see cref="PauseTimeMode.KeepRunning"/>。閉じている間だけ変えられる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">開いている間に違う値を入れた。</exception>
         public PauseTimeMode TimeMode
         {
             get => _state.TimeMode;
@@ -89,10 +61,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 「設定」で呼ぶ処理。null の間は「設定」を押せない。<see cref="Hud.AddViews"/> で付く <see cref="PauseSettingsView"/> が、
-        /// <see cref="SettingsView"/> を開く処理を渡す。
-        /// </summary>
         public Action OpenSettings
         {
             get => _openSettings;
@@ -103,10 +71,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>開いたとき。</summary>
         public event Action Opened;
 
-        /// <summary>閉じたとき。</summary>
         public event Action Closed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -147,7 +113,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>開いていれば閉じ、閉じていれば開く。</summary>
         public void Toggle()
         {
             if (_state.IsOpen)
@@ -160,10 +125,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 開く。<see cref="TimeMode"/> が <see cref="PauseTimeMode.Freeze"/> なら時間を止める。プレイヤーの入力を止めてカーソルを出し、
-        /// 「再開」にフォーカスを置く (ゲームパッドでそのまま選べるように)。既に開いていれば何もしない。
-        /// </summary>
+        // 開いたら「再開」にフォーカスを置くのは、ゲームパッドでそのまま選べるようにするため。
         public void Open()
         {
             if (!_state.Open(Time.timeScale, out var timeScale))
@@ -187,7 +149,6 @@ namespace Shooter.Runtime
             Raise(Opened, nameof(Opened));
         }
 
-        /// <summary>閉じる。止めた時間と入力を戻し、視点操作が有効ならカーソルをロックし直す。開いていなければ何もしない。</summary>
         public void Close()
         {
             if (!_state.Close(out var timeScale, out var actionsToEnable))
@@ -209,11 +170,6 @@ namespace Shooter.Runtime
             Raise(Closed, nameof(Closed));
         }
 
-        /// <summary>
-        /// メインメニューへ戻る (<see cref="MenuNavigator.ReturnToMenu"/>)。閉じて時間と入力を戻してから遷移する。
-        /// メニューのシーンがビルドに無ければ false で、閉じたまま今のシーンに留まる。Play 中にのみ呼べる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Play 中でない。</exception>
         public bool ReturnToMenu()
         {
             if (!Application.isPlaying)

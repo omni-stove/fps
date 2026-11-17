@@ -3,27 +3,16 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// PvE の 1 つの波の値。何体出すか・敵をどれだけ強くするか・同時に何体まで出しておくか・全滅させた後に何秒休むか。
-    /// </summary>
     public readonly struct Wave : IEquatable<Wave>
     {
-        /// <summary>この波で出す敵の数。1 以上。</summary>
         public int EnemyCount { get; }
 
-        /// <summary>敵の強さの倍率 (<see cref="WaveStrength"/>)。0 より大きい有限値。1 なら元の強さのまま。</summary>
         public float StrengthMultiplier { get; }
 
-        /// <summary>同時に出しておく敵の上限。1 以上。倒されて減った分だけ残りを出す。</summary>
         public int MaxAlive { get; }
 
-        /// <summary>この波を全滅させてから次の波を出すまでの休憩 (秒)。0 以上の有限値。</summary>
         public float RestSeconds { get; }
 
-        /// <param name="enemyCount">この波で出す敵の数。1 以上。</param>
-        /// <param name="strengthMultiplier">敵の強さの倍率。0 より大きい有限値。</param>
-        /// <param name="maxAlive">同時に出しておく敵の上限。1 以上。</param>
-        /// <param name="restSeconds">全滅させてから次の波までの休憩 (秒)。0 以上の有限値。</param>
         public Wave(int enemyCount, float strengthMultiplier, int maxAlive, float restSeconds)
         {
             if (enemyCount < 1)

@@ -8,13 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 被弾の画面効果と低体力の演出の仮素材 (端が赤く中央が透明な画像・心音・息切れの音) と <see cref="DamageFeedbackCatalog"/> を作るか上書きする。
-    /// 音は <see cref="ProceduralAudio"/> で合成して <see cref="PresentationAssetBuilder.AudioFolder"/> に WAV で、画像は
-    /// <see cref="PresentationAssetBuilder.PresentationFolder"/> に Texture2D のアセットで置く。
-    /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる (2 回走らせても差分が出ない)。
-    /// 一括実行の入口 (<see cref="PresentationAssetSteps.BuildAll"/>) からは <see cref="DamageFeedbackAssetStep"/> として呼ばれる。
-    /// </summary>
     public static class DamageFeedbackAssetBuilder
     {
         public const string LogTag = "[DamageFeedbackAssetBuilder]";
@@ -23,25 +16,18 @@ namespace Shooter.Editor
         public const string BreathSound = "BreathRecovery";
         public const string VignetteTextureName = "DamageVignette";
 
-        /// <summary>画像の一辺 (px)。画面に引き伸ばすので、なめらかなグラデーションに足りる大きさにする。</summary>
+        // 画面に引き伸ばすので、なめらかなグラデーションに足りる大きさにする。
         public const int VignetteSize = 256;
 
-        /// <summary>この半径 (画像の中心から辺の中点までを 1 とする) より内側は透明。</summary>
         public const float VignetteInnerRadius = 0.55f;
 
-        /// <summary>この半径より外側は <see cref="VignetteColor"/> の不透明度 1。</summary>
         public const float VignetteOuterRadius = 1.15f;
 
-        /// <summary>画像の端の色 (不透明度は半径で決める)。</summary>
         public static readonly Color32 VignetteColor = new Color32(200, 16, 16, 255);
 
-        /// <summary>
-        /// カタログの置き場所。実行時に <see cref="DamageFeedbackCatalog.Load"/> で読めるよう、Resources の
-        /// <see cref="DamageFeedbackCatalog.ResourcePath"/> に置く。
-        /// </summary>
+        // 実行時に DamageFeedbackCatalog.Load で読めるよう、Resources の下に置く。
         public static string CatalogPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + DamageFeedbackCatalog.ResourcePath + ".asset";
 
-        /// <summary>書き出す音の設計図。名前がそのままファイル名 (.wav) になる。</summary>
         public static IReadOnlyList<SoundSpec> SoundSpecs()
         {
             return new[]
@@ -55,7 +41,6 @@ namespace Shooter.Editor
                     new SoundLayer(0.26f, 0.06f, 0.003f, 0.015f, 0.15f, 200f),
                 }),
 
-                // 吸って吐くを 2 回。吸う音は高め・弱め、吐く音は低め・強めのノイズで、2 回目は落ち着いて弱くする。
                 new SoundSpec(BreathSound, 3201u, 2.9f, 0.6f, new[]
                 {
                     new SoundLayer(0f, 0.5f, 0.22f, 0.3f, 0.55f, 2200f),
@@ -66,11 +51,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// size × size の画像の画素 (下の行から)。色は <see cref="VignetteColor"/> で、不透明度は中心からの距離で
-        /// <see cref="VignetteInnerRadius"/> の 0 から <see cref="VignetteOuterRadius"/> の 1 へなめらかに上げる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">size が 2 未満。</exception>
         public static Color32[] VignettePixels(int size)
         {
             if (size < 2)
@@ -95,10 +75,6 @@ namespace Shooter.Editor
             return pixels;
         }
 
-        /// <summary>
-        /// <see cref="CatalogPath"/> のカタログを読み、<see cref="DamageFeedbackCatalog.Validate"/> に通ることを確かめて返す。
-        /// 無ければ先に <see cref="PresentationAssetSteps.BuildAll"/> を走らせるよう例外を投げる。
-        /// </summary>
         public static DamageFeedbackCatalog LoadCatalog()
         {
             var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<DamageFeedbackCatalog>(CatalogPath);
@@ -112,16 +88,11 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>既定の場所 (<see cref="PresentationAssetBuilder.AudioFolder"/>・<see cref="PresentationAssetBuilder.PresentationFolder"/>・<see cref="CatalogPath"/>) に作る。</summary>
         public static DamageFeedbackCatalog Build()
         {
             return BuildAt(PresentationAssetBuilder.AudioFolder, PresentationAssetBuilder.PresentationFolder, CatalogPath);
         }
 
-        /// <summary>
-        /// audioFolder に心音と息切れの音を、presentationFolder に画像を、catalogPath にそれをまとめたカタログを
-        /// 作るか上書きして保存し、カタログを返す。フォルダは Assets/ 以下で、無ければ作る。
-        /// </summary>
         public static DamageFeedbackCatalog BuildAt(string audioFolder, string presentationFolder, string catalogPath)
         {
             audioFolder = PresentationAssetBuilder.ValidateFolderPath(audioFolder, nameof(audioFolder));

@@ -7,27 +7,10 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/>。<see cref="BuildAt"/> の 7 つと、
-    /// 対戦・PvE モードの <see cref="ModeNames"/> の 10 個) を作るか上書きする。
-    /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// リスポーン直後の無敵は、チームデスマッチ (と、その値を引き継ぐドミネーション) と、そこから作る個別リスポーンのモードだけ
-    /// <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒で、他のモードは無し。どのモードも落下ダメージなし・HUD はすべて出す・
-    /// Bot で埋めない (<see cref="GameRules"/> の既定)。どのモードも持てる武器は <see cref="DemoMaxWeapons"/> 本。放置で切るのは、オンラインの試合が使うチームデスマッチと、
-    /// その値から作るモード (ドミネーション・対戦・PvE のモード) だけで <see cref="OnlineIdleKickSeconds"/> 秒。キャンペーンと射撃場は切らない。
-    /// オンラインの試合の勝敗を拠点で決める (<see cref="MatchObjective.Domination"/>) のはドミネーションだけで、他のモードは拠点なし。
-    /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
-    /// TPS 射撃場がそれに回避・乗り越え・グレネード・制圧射撃を足し、ジャンプを切ったもの。視点は TPS 射撃場だけが三人称で、他のモードは一人称。
-    /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
-    /// ストリークはキャンペーンの 3 つだけ付けず (<see cref="Streaks.Off"/>)、他のモードは <see cref="GameRules.Default"/> のまま付ける。
-    /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-    /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameRulesAssetBuilder.Build</code>
-    /// </summary>
+    // 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
+    // BuildAt の 7 つの値を変えたら、同じ値のサンプル JSON (GameRulesJsonImporter.SamplesFolder) も直す。
     public static class GameRulesAssetBuilder
     {
-        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => GameRulesAssets.Folder;
 
         public static string TeamDeathmatchPath => Folder + "/TeamDeathmatch.asset";
@@ -37,7 +20,6 @@ namespace Shooter.Editor
         public static string RangePath => Folder + "/Range.asset";
         public static string TpsRangePath => Folder + "/TpsRange.asset";
 
-        /// <summary>機能ごとのシーン (<see cref="FeatureSceneBuilder"/>) のルールを置く、<see cref="Folder"/> の下のフォルダ。</summary>
         public static string FeatureFolder => Folder + "/Features";
         public static string DominationPath => Folder + "/Domination.asset";
 
@@ -64,19 +46,14 @@ namespace Shooter.Editor
         public static string HordePath => Folder + "/" + HordeName + ".asset";
         public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
 
-        /// <summary><see cref="HordeRules"/> で、倒れた人がまとめて戻る波の間隔 (秒)。</summary>
         public const float HordeWaveIntervalSeconds = 30f;
 
-        /// <summary><see cref="HordeRules"/> の予備弾の倍率。敵の数が多く、倒れても戻るまで補給できないので多めに持たせる。</summary>
+        // ホードは敵の数が多く、倒れても戻るまで補給できないので多めに持たせる。
         public const float HordeReserveAmmoMultiplier = 2f;
 
-        /// <summary><see cref="BattleRoyaleRules"/> の予備弾の倍率。長く生き残るほど撃つので多めに持たせる。</summary>
+        // バトルロイヤルは長く生き残るほど撃つので多めに持たせる。
         public const float BattleRoyaleReserveAmmoMultiplier = 2f;
 
-        /// <summary>
-        /// 対戦・PvE モードの名前。<see cref="BuildModesAt"/> はこの順に <c>&lt;フォルダ&gt;/&lt;名前&gt;.asset</c> を作って返す。
-        /// シーンは <see cref="BuildSceneList"/> の <c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>。
-        /// </summary>
         public static IReadOnlyList<string> ModeNames { get; } = new[]
         {
             FreeForAllName,
@@ -91,33 +68,20 @@ namespace Shooter.Editor
             BattleRoyaleName,
         };
 
-        /// <summary><see cref="TpsRangeActions"/> で出撃ごとに持つグレネードの数。</summary>
         public const int TpsRangeGrenadeCount = 3;
 
-        /// <summary>
-        /// デモのどのモードでも 1 人が持てる武器の数。既定のロードアウト (2 本) でもう届いているので、拾った武器は今の武器と持ち替える。
-        /// </summary>
+        // 既定のロードアウト (2 本) でもう届く数にして、拾った武器は今の武器と持ち替えさせる。
         public const int DemoMaxWeapons = 2;
 
-        /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
         public const int TeamDeathmatchGrenadeCount = 2;
 
         public const string MenuPath = "Shooter/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
-        /// <summary><see cref="TeamDeathmatchRules"/> の出現直後の無敵の秒数。</summary>
         public const float TeamDeathmatchSpawnProtectionSeconds = 2f;
 
-        /// <summary>
-        /// <see cref="TeamDeathmatchRules"/> (オンラインの試合が使うルール) で、入力が無いプレイヤーをサーバーから切るまでの秒数。
-        /// </summary>
         public const float OnlineIdleKickSeconds = 120f;
 
-        /// <summary>
-        /// チームデスマッチ。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は倒れる、リスポーンまで生きている味方の視点で観戦する、予備弾は有限で 1 倍、
-        /// 建造物は弾で壊れる、出現直後は <see cref="TeamDeathmatchSpawnProtectionSeconds"/> 秒無敵、
-        /// 入力が <see cref="OnlineIdleKickSeconds"/> 秒無ければサーバーから切る。アクションは <see cref="TeamDeathmatchActions"/>。
-        /// </summary>
         public static GameRules TeamDeathmatchRules()
         {
             return new GameRules(
@@ -137,10 +101,6 @@ namespace Shooter.Editor
                 .WithMaxWeapons(DemoMaxWeapons);
         }
 
-        /// <summary>
-        /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1.5 倍、
-        /// 建造物は壊れない。ストリークは付けない。アクションは <see cref="CampaignActions"/>。
-        /// </summary>
         public static GameRules CampaignEasyRules()
         {
             return new GameRules(
@@ -159,10 +119,6 @@ namespace Shooter.Editor
                 .WithStreaks(Streaks.Off);
         }
 
-        /// <summary>
-        /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
-        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
-        /// </summary>
         public static GameRules CampaignNormalRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions())
@@ -171,10 +127,6 @@ namespace Shooter.Editor
                 .WithStreaks(Streaks.Off);
         }
 
-        /// <summary>
-        /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
-        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
-        /// </summary>
         public static GameRules CampaignHardRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions())
@@ -183,10 +135,6 @@ namespace Shooter.Editor
                 .WithStreaks(Streaks.Off);
         }
 
-        /// <summary>
-        /// 射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、倒れた主観で崩れ落ちる、予備弾は無限、建造物は弾で壊れる。
-        /// アクションは <see cref="RangeActions"/>。
-        /// </summary>
         public static GameRules RangeRules()
         {
             return new GameRules(
@@ -204,18 +152,11 @@ namespace Shooter.Editor
                 .WithMaxWeapons(DemoMaxWeapons);
         }
 
-        /// <summary>
-        /// TPS 射撃場。<see cref="RangeRules"/> (予備弾は無限) のアクションを <see cref="TpsRangeActions"/> にし、視点を三人称にしたもの。
-        /// </summary>
         public static GameRules TpsRangeRules()
         {
             return RangeRules().WithActions(TpsRangeActions()).WithViewMode(ViewMode.ThirdPerson);
         }
 
-        /// <summary>
-        /// 機能ごとのシーンの土台のルール。射撃場と同じく味方撃ちなし・個別リスポーン・体は消える・倒れた主観で崩れ落ちるで、予備弾は有限、建造物は壊れず、
-        /// オンオフで切り替える項目はどれもキットの既定 (<see cref="ActionRules.Default"/>・<see cref="GameRules.Default"/>) のまま。視点は一人称。
-        /// </summary>
         public static GameRules FeatureBaseRules()
         {
             return new GameRules(
@@ -233,12 +174,8 @@ namespace Shooter.Editor
                 .WithMaxWeapons(DemoMaxWeapons);
         }
 
-        /// <summary>
-        /// field の機能を試すシーンのルール。<see cref="FeatureBaseRules"/> の field だけを On にする
-        /// (<see cref="GameRulesDebugDraft"/> と同じく、ブラインドファイアはカバーも、グレネードは数も一緒に入れる)。
-        /// ダウンは倒れる手段が要るので落下ダメージも入れる。
-        /// </summary>
-        /// <exception cref="ArgumentException">field がオンオフの項目 (<see cref="GameRulesDebugDraft.IsToggle"/>) でない。</exception>
+        // GameRulesDebugDraft と同じく、ブラインドファイアはカバーも、グレネードは数も一緒に入れる。
+        // ダウンは倒れる手段が要るので落下ダメージも入れる。
         public static GameRules FeatureRules(GameRulesDebugField field)
         {
             if (!GameRulesDebugDraft.IsToggle(field))
@@ -256,27 +193,19 @@ namespace Shooter.Editor
             return draft.Build();
         }
 
-        /// <summary>field の機能のシーンのルールのアセットのパス (<see cref="FeatureFolder"/>/&lt;field&gt;.asset)。</summary>
         public static string FeatureRulesPath(GameRulesDebugField field)
         {
             return FeatureFolder + "/" + field + ".asset";
         }
 
-        /// <summary>
-        /// ドミネーション。<see cref="TeamDeathmatchRules"/> (アクションも <see cref="TeamDeathmatchActions"/>) のうち、
-        /// オンラインの試合の勝敗を拠点のポイントで決める (<see cref="MatchObjective.Domination"/>) ようにしたもの。
-        /// チームデスマッチの値を後で変えてもドミネーションが付いて変わるよう、値を写さずに呼び出して作る。
-        /// オフラインの DominationRunner は Objective を読まず、いつも拠点で勝敗を決める。
-        /// </summary>
+        // チームデスマッチの値を後で変えてもドミネーションが付いて変わるよう、値を写さずに呼び出して作る。
+        // オフラインの DominationRunner は Objective を読まず、いつも拠点で勝敗を決める。
         public static GameRules DominationRules()
         {
             return TeamDeathmatchRules().WithObjective(MatchObjective.Domination);
         }
 
-        /// <summary>
-        /// フリーフォーオール。<see cref="TeamDeathmatchRules"/> のうち、味方がいないので死亡カメラを倒した相手 (<see cref="DeathCamera.Killer"/>) にし、
-        /// アクションを <see cref="FreeForAllActions"/> (起こす味方がいないのでダウンしない) にしたもの。
-        /// </summary>
+        // 味方がいないので、死亡カメラは倒した相手 (DeathCamera.Killer) を映す。
         public static GameRules FreeForAllRules()
         {
             return TeamDeathmatchRules()
@@ -284,38 +213,29 @@ namespace Shooter.Editor
                 .WithActions(FreeForAllActions());
         }
 
-        /// <summary>キルコンファームド。今は <see cref="TeamDeathmatchRules"/> と同じ値 (呼び出して作るので付いて変わる)。</summary>
         public static GameRules KillConfirmedRules()
         {
             return TeamDeathmatchRules();
         }
 
-        /// <summary>
-        /// ガンゲーム。<see cref="FreeForAllRules"/> のうち、キルのたびに武器が替わって補給の機会が無いので予備弾を無限にし、
-        /// 近接で倒した相手を 1 段戻せるよう近接攻撃を使えるようにしたもの。
-        /// </summary>
+        // キルのたびに武器が替わって補給の機会が無いので予備弾を無限にし、近接で倒した相手を 1 段戻せるよう近接攻撃を使えるようにする。
         public static GameRules GunGameRules()
         {
             var free = FreeForAllRules();
             return free.WithInfiniteReserve(true).WithActions(free.Actions.WithMelee(Melee.On));
         }
 
-        /// <summary>ハードポイント。今は <see cref="TeamDeathmatchRules"/> と同じ値 (ドミネーションと同じく拠点の取り合い)。</summary>
         public static GameRules HardpointRules()
         {
             return TeamDeathmatchRules();
         }
 
-        /// <summary>ガーディアン (VIP の護衛)。今は <see cref="TeamDeathmatchRules"/> と同じ値。</summary>
         public static GameRules GuardianRules()
         {
             return TeamDeathmatchRules();
         }
 
-        /// <summary>
-        /// エクスキューション。<see cref="TeamDeathmatchRules"/> のうち、ラウンド中は戻らない (<see cref="RespawnMode.None"/>) ので出現直後の無敵を無くしたもの。
-        /// ダウンは <see cref="TeamDeathmatchActions"/> のまま (<see cref="Downed.Revive"/>) で、味方が起こせる。
-        /// </summary>
+        // ラウンド中は戻らない (RespawnMode.None) ので、出現直後の無敵は無くす。
         public static GameRules ExecutionRules()
         {
             return TeamDeathmatchRules()
@@ -323,29 +243,17 @@ namespace Shooter.Editor
                 .WithSpawnProtectionSeconds(0f);
         }
 
-        /// <summary>
-        /// 爆破 (サーチアンドデストロイ)。<see cref="ExecutionRules"/> のうち、倒れたらその場で終わるようダウンを切ったもの
-        /// (<see cref="SearchAndDestroyActions"/>)。
-        /// </summary>
         public static GameRules SearchAndDestroyRules()
         {
             return ExecutionRules().WithActions(SearchAndDestroyActions());
         }
 
-        /// <summary>
-        /// 旗取り。<see cref="TeamDeathmatchRules"/> (個別リスポーン・出現直後の無敵あり) のうち、旗を運ぶ人が撃たれたらその場で旗を落とすよう
-        /// ダウンを切ったもの (<see cref="CaptureTheFlagActions"/>)。
-        /// </summary>
         public static GameRules CaptureTheFlagRules()
         {
             return TeamDeathmatchRules().WithActions(CaptureTheFlagActions());
         }
 
-        /// <summary>
-        /// ホード (PvE)。<see cref="TeamDeathmatchRules"/> のうち、倒れた人は <see cref="HordeWaveIntervalSeconds"/> 秒ごとの波でまとめて戻り
-        /// (<see cref="RespawnMode.Wave"/>、戻るので出現直後の無敵も残す)、予備弾を <see cref="HordeReserveAmmoMultiplier"/> 倍にしたもの。
-        /// ダウンは <see cref="Downed.Revive"/> で、味方が起こせる。
-        /// </summary>
+        // 倒れた人は波でまとめて戻る (RespawnMode.Wave) ので、出現直後の無敵も残す。
         public static GameRules HordeRules()
         {
             return TeamDeathmatchRules()
@@ -354,10 +262,7 @@ namespace Shooter.Editor
                 .WithReserveAmmoMultiplier(HordeReserveAmmoMultiplier);
         }
 
-        /// <summary>
-        /// バトルロイヤル。<see cref="TeamDeathmatchRules"/> のうち、倒れたら戻らず (<see cref="RespawnMode.None"/>、出現直後の無敵なし)、
-        /// 予備弾を <see cref="BattleRoyaleReserveAmmoMultiplier"/> 倍にしたもの。ダウンは <see cref="Downed.Revive"/> で、分隊の味方が起こせる。
-        /// </summary>
+        // 倒れたら戻らない (RespawnMode.None) ので、出現直後の無敵は無くす。
         public static GameRules BattleRoyaleRules()
         {
             return TeamDeathmatchRules()
@@ -366,9 +271,6 @@ namespace Shooter.Editor
                 .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier);
         }
 
-        /// <summary>
-        /// <see cref="ModeNames"/> の name のルールを作る。知らない名前なら <see cref="ArgumentException"/>。
-        /// </summary>
         public static GameRules ModeRules(string name)
         {
             switch (name)
@@ -398,37 +300,30 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary><see cref="ModeNames"/> の name のルールを置くパス (<see cref="Folder"/> の <c>&lt;名前&gt;.asset</c>)。知らない名前なら <see cref="ArgumentException"/>。</summary>
         public static string ModeRulesPath(string name)
         {
             return ModeRulesPath(Folder, name);
         }
 
-        /// <summary>フリーフォーオールのアクション。<see cref="TeamDeathmatchActions"/> のうち、起こす味方がいないのでダウンしないようにしたもの。</summary>
+        // 起こす味方がいないので、ダウンしないようにする。
         public static ActionRules FreeForAllActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }
 
-        /// <summary>爆破のアクション。<see cref="TeamDeathmatchActions"/> のうち、倒れたらその場でラウンドから外れるようダウンしないようにしたもの。</summary>
+        // 倒れたらその場でラウンドから外れるよう、ダウンしないようにする。
         public static ActionRules SearchAndDestroyActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }
 
-        /// <summary>
-        /// 旗取りのアクション。<see cref="TeamDeathmatchActions"/> のうち、ダウンしないようにしたもの。
-        /// ダウンさせると、倒れるまで旗を持ったまま残り、運ぶ人を撃っても旗が落ちない。
-        /// </summary>
+        // ダウンさせると、倒れるまで旗を持ったまま残り、運ぶ人を撃っても旗が落ちないので、ダウンしないようにする。
         public static ActionRules CaptureTheFlagActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }
 
-        /// <summary>
-        /// TPS 射撃場のアクション。<see cref="RangeActions"/> に回避・乗り越え・崖のぼり・グレネード (<see cref="TpsRangeGrenadeCount"/> 個)・スライディング・伏せ・怯み・発見ゲージ・制圧射撃を足し、
-        /// ジャンプを切ったもの (段差は乗り越えと崖のぼりで上がる)。
-        /// </summary>
+        // ジャンプを切っても、段差は乗り越えと崖のぼりで上がれる。
         public static ActionRules TpsRangeActions()
         {
             return RangeActions()
@@ -445,11 +340,7 @@ namespace Shooter.Editor
                 .WithJump(Jump.Off);
         }
 
-        /// <summary>
-        /// チームデスマッチのアクション。倒れたらダウンして味方が起こせ、アクティブリロードを使い、グレネードを
-        /// <see cref="TeamDeathmatchGrenadeCount"/> 個持つ (オンラインではサーバーが数えて投げる)。
-        /// カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
-        /// </summary>
+        // カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
         public static ActionRules TeamDeathmatchActions()
         {
             return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On)
@@ -457,19 +348,16 @@ namespace Shooter.Editor
                 .WithGrenadeCount(TeamDeathmatchGrenadeCount);
         }
 
-        /// <summary>キャンペーン (どの難易度も) のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>
         public static ActionRules CampaignActions()
         {
             return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
         }
 
-        /// <summary>射撃場のアクション。カバー・ブラインドファイア・アクティブリロードを使い、ダウンはしない。</summary>
         public static ActionRules RangeActions()
         {
             return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
         }
 
-        /// <summary>path の <see cref="GameRulesDefinition"/> を読み、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめて返す。</summary>
         public static GameRulesDefinition LoadRules(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -493,9 +381,7 @@ namespace Shooter.Editor
             BuildModesAt(Folder);
         }
 
-        /// <summary>
-        /// path のルールを読む。無ければ field の <see cref="FeatureRules"/> で作る。あれば値は変えない (ゲーム側で調整した値を残す)。
-        /// </summary>
+        // ゲーム側で調整した値を残すよう、既にあれば値は変えない。
         public static GameRulesDefinition LoadOrBuildFeatureRules(GameRulesDebugField field, string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -510,10 +396,6 @@ namespace Shooter.Editor
             return built;
         }
 
-        /// <summary>
-        /// folder に <see cref="ModeNames"/> の各モードのルール (<c>&lt;名前&gt;.asset</c>) を作るか上書きして保存し、<see cref="ModeNames"/> の順に返す。
-        /// folder は Assets/ 以下のフォルダ (無ければ作る)。ルールの検査に通らなければ、そのアセットから先は保存せずに例外を投げる。
-        /// </summary>
         public static GameRulesDefinition[] BuildModesAt(string folder)
         {
             var paths = ModeRulesPaths(folder);
@@ -536,7 +418,6 @@ namespace Shooter.Editor
             return built;
         }
 
-        /// <summary>folder の中の、name のルールを置くパス。folder か name が不正なら <see cref="ArgumentException"/>。</summary>
         public static string ModeRulesPath(string folder, string name)
         {
             var known = false;
@@ -569,11 +450,6 @@ namespace Shooter.Editor
             return paths;
         }
 
-        /// <summary>
-        /// 各パスにモード別のルールを作るか上書きして保存し、
-        /// teamDeathmatch・campaignEasy・campaignNormal・campaignHard・range・tpsRange・domination の順に返す。
-        /// 7 つのパスは互いに異なる Assets/ 以下の .asset であること。
-        /// </summary>
         public static GameRulesDefinition[] BuildAt(
             string teamDeathmatchPath,
             string campaignEasyPath,
@@ -614,7 +490,6 @@ namespace Shooter.Editor
             return built;
         }
 
-        /// <summary>definition の中身を rules の値にし、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめる。</summary>
         public static void Configure(GameRulesDefinition definition, GameRules rules) => GameRulesAssets.Configure(definition, rules);
 
         private static ActionRules WithDefaultDownedTimings(Downed downed, Cover cover, BlindFire blindFire, ActiveReload activeReload)

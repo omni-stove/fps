@@ -10,23 +10,11 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 仮の音とエフェクトを手続きで作り、それをまとめた <see cref="PresentationCatalog"/> を作るか上書きする。
-    /// 音は <see cref="ProceduralAudio"/> でノイズと減衰する包絡線から合成し、<see cref="AudioFolder"/> に WAV で書き出す。
-    /// エフェクトは ParticleSystem をコードで設定したプレハブにして、使う材質・テクスチャと一緒に <see cref="PresentationFolder"/> に置く。
-    /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる (2 回走らせても差分が出ない)。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.PresentationAssetBuilder.Build</code>
-    /// 演出の仮素材をまとめて作る入口 (<see cref="PresentationAssetSteps.BuildAll"/>) からは <see cref="PresentationCatalogAssetStep"/> として呼ばれる。
-    /// </summary>
     public static class PresentationAssetBuilder
     {
         public static string AudioFolder => ShooterKitRoot.OutputPath("Audio");
         public static string PresentationFolder => ShooterKitRoot.OutputPath("Presentation");
-        /// <summary>
-        /// カタログの置き場所。実行時に <see cref="PresentationCatalog.Load"/> で読めるよう、Resources の
-        /// <see cref="PresentationCatalog.ResourcePath"/> に置く。
-        /// </summary>
+        // 実行時に PresentationCatalog.Load で読めるよう、Resources の下に置く。
         public static string CatalogPath => PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
 
         public const string MenuPath = "Shooter/Build Presentation Assets";
@@ -59,13 +47,11 @@ namespace Shooter.Editor
         public const string AdditiveMaterialName = "ParticleAdditive";
         public const string AlphaMaterialName = "ParticleAlpha";
 
-        /// <summary>エフェクトの材質に使う URP のパーティクル用シェーダー。</summary>
         public const string ParticleShaderName = "Universal Render Pipeline/Particles/Unlit";
 
-        /// <summary>曳光弾の速さ (m/s)。寿命と掛けたものが届く距離になる。</summary>
         public const float TracerSpeed = 400f;
 
-        /// <summary>曳光弾の寿命 (秒)。rifle の射程 100m を飛び切る長さにしている。</summary>
+        // 速さと掛けて、rifle の射程 100m を飛び切る長さにしている。
         public const float TracerLifetime = 0.25f;
 
         private const int SoftDotSize = 64;
@@ -75,10 +61,7 @@ namespace Shooter.Editor
         internal const float BlendAlpha = 0f;
         internal const float BlendAdditive = 2f;
 
-        /// <summary>
-        /// 武器ごとの音とマズルフラッシュ (自分から見るものと、他人から見るもの) の組み合わせ。武器の Id は <see cref="WeaponAssetBuilder"/> の固定値で、
-        /// カタログには入らない launcher も含める (建造物の破壊の確認で撃つため)。
-        /// </summary>
+        // カタログには入らない launcher も、建造物の破壊の確認で撃つため含める。
         public static IReadOnlyList<(string WeaponId, string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)> WeaponEntries()
         {
             return new[]
@@ -89,7 +72,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>書き出すすべての音の設計図。名前がそのままファイル名 (.wav) になる。</summary>
         public static IReadOnlyList<SoundSpec> SoundSpecs()
         {
             return new[]
@@ -167,10 +149,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// <see cref="CatalogPath"/> のカタログを読み、<see cref="PresentationCatalog.Validate"/> に通ることを確かめて返す。
-        /// 無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
-        /// </summary>
         public static PresentationCatalog LoadCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<PresentationCatalog>(CatalogPath);
@@ -190,10 +168,6 @@ namespace Shooter.Editor
             BuildAt(AudioFolder, PresentationFolder, CatalogPath);
         }
 
-        /// <summary>
-        /// audioFolder に音を、presentationFolder にエフェクトのプレハブと材質を、catalogPath にそれをまとめたカタログを
-        /// 作るか上書きして保存し、カタログを返す。フォルダは Assets/ 以下で、無ければ作る。
-        /// </summary>
         public static PresentationCatalog BuildAt(string audioFolder, string presentationFolder, string catalogPath)
         {
             audioFolder = ValidateFolderPath(audioFolder, nameof(audioFolder));
@@ -395,10 +369,6 @@ namespace Shooter.Editor
             return WriteTexture(path, Path.GetFileNameWithoutExtension(path), SoftDotSize, pixels, true);
         }
 
-        /// <summary>
-        /// size × size の RGBA32 の pixels (下の行から) を path の Texture2D のアセットに書いて保存する。既存のアセットは GUID を保って中身だけ替える。
-        /// path に別の型のアセットがあれば例外を投げる。
-        /// </summary>
         internal static Texture2D WriteTexture(string path, string textureName, int size, Color32[] pixels, bool mipChain)
         {
             if (size < 1)
@@ -757,11 +727,8 @@ namespace Shooter.Editor
             renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
         }
 
-        /// <summary>
-        /// folder/name.prefab に build で組んだプレハブを保存して返す。既にあって組み方 (子の名前と並び・部品の型) が同じなら、
-        /// 読み込んだ中身に値だけを貼り付けて保存する。作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
-        /// 組み方が変わったときだけ丸ごと上書きする (アセットの GUID は保たれる)。
-        /// </summary>
+        // 既にあって組み方 (子の名前と並び・部品の型) が同じなら、読み込んだ中身に値だけを貼り付けて保存する。
+        // 作り直すとプレハブ内の fileID が毎回変わり、差分が出るため。
         internal static GameObject SavePrefab(string folder, string name, Action<GameObject> build)
         {
             var path = $"{folder}/{name}.prefab";

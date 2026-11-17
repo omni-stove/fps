@@ -9,12 +9,9 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    // 試走場 (VehicleRangeSceneBuilder) を作り直して Play Mode に入り、銃座付きの車に乗る → 走る → 銃座から的を撃つ → 降りる →
-    // 固定銃座で仮の車を壊す、を順に行い、[Vehicle] のログがその順に出て、Play 中にエラーが出なければ終了コード 0 で終わる。
     // batchmode には入力が無いので、Interact / Previous の代わりに PlayerVehicleRider.Interact / SwitchSeat を呼び、
     // 移動・ブレーキ・狙い・射撃は PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座までは歩かせずに移す。
-    // Play Mode に入るので -quit は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    // unity -batchmode -projectPath . -executeMethod Shooter.Editor.VehicleSmokeRun.Run -logFile -
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class VehicleSmokeRun
     {
@@ -142,7 +139,6 @@ namespace Shooter.Editor
             return DroveLogPrefix(vehicle) + "distance=" + distance.ToString("0.0", CultureInfo.InvariantCulture);
         }
 
-        // 1 つ目から順に、それより後の行で満たされた期待の数を返す。満たされなかった最初の期待の番号と同じ。
         public static int CountInOrder(IReadOnlyList<string> lines, IReadOnlyList<LogExpectation> expected)
         {
             if (lines == null)
@@ -295,7 +291,6 @@ namespace Shooter.Editor
             }
         }
 
-        // 手順を 1 フレーム分進める。失敗したら理由を返し、続けるか終えたら null。
         private static string Advance(double now)
         {
             if (_rider == null)
@@ -471,7 +466,6 @@ namespace Shooter.Editor
             _stepStartedAt = now;
         }
 
-        // 座っている座席の銃を point へ向けさせ、向き終えていれば true。
         private static bool Aim(Vehicle vehicle, Vector3 point)
         {
             var seat = _rider.Seat;

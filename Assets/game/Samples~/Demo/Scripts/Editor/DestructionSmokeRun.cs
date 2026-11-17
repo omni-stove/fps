@@ -9,36 +9,21 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットと DestructionTest シーンを生成し直して Play Mode に入り、小屋の壁の下段を
-    /// プレイヤーの launcher の値で <see cref="Hitscan.Fire"/> で撃って次を確かめ、Editor を終える。
-    /// <list type="bullet">
-    /// <item>プレイヤーが launcher を持って始まり、小屋は射撃場のルールどおり壊れる設定 (<see cref="DestructibleStructure.DestructionEnabled"/>) になっている。</item>
-    /// <item><see cref="DestructibleStructure.DestructionEnabled"/> を false にして撃っても、どの部品も壊れず <c>[Destruction]</c> のログも出ない。</item>
-    /// <item>true に戻して下段を撃っていくと、<c>[Destruction] ... collapsed=</c> に 1 つ以上の部品が出る。</item>
-    /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
-    /// </list>
-    /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。
-    /// 小屋は角と屋根でつながっているので、1 発で下段の一部を壊しても崩落はしない。そのため、まだ壊れていない下段の部品を
-    /// 添字の順に 1 つずつ外側から撃ち、崩落が出るまで続ける (上限 <see cref="MaxShots"/> 発)。
-    /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.DestructionSmokeRun.Run -logFile -</code>
-    /// </summary>
+    // 小屋は角と屋根でつながっているので、1 発で下段の一部を壊しても崩落はしない。そのため、まだ壊れていない下段の部品を
+    // 添字の順に 1 つずつ外側から撃ち、崩落が出るまで続ける。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class DestructionSmokeRun
     {
         public const string LogTag = "[DestructionSmokeRun]";
 
-        /// <summary>Play Mode に入ってから確かめ始めるまでに待つ秒数。GameBootstrap と建物の Awake を済ませるため。</summary>
+        // GameBootstrap と建物の Awake を済ませてから確かめ始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>撃つ位置を、狙う部品の外側の面からどれだけ離すか (m)。</summary>
         public const float ShotStandOff = 3f;
 
-        /// <summary>崩落が出るまでに撃つ上限。下段の部品を 1 発ずつ 2 巡撃てる数。</summary>
         public const int MaxShots = DestructionTestSceneBuilder.GroundedPieceCount * 2;
 
         public const int SuccessExitCode = 0;
@@ -63,7 +48,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -92,10 +76,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// <see cref="DestructibleStructure.FormatDestroyedLog"/> の行から、崩落した部品の数を返す。
-        /// 別のログか、崩落が無ければ (<c>collapsed=-</c>) 0。
-        /// </summary>
         public static int CountCollapsed(string logLine)
         {
             if (logLine == null || !logLine.StartsWith(DestructibleStructure.LogTag + " ", StringComparison.Ordinal))
@@ -212,7 +192,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>シーンの小屋を launcher の値で撃ち、期待と違うことを problems に足す。</summary>
         private static void Exercise(List<string> problems)
         {
             var bootstrap = UnityEngine.Object.FindAnyObjectByType<GameBootstrap>();
@@ -313,7 +292,6 @@ namespace Shooter.Editor
             Expect(problems, _collapsedPieces > 0, $"shooting the bottom row collapses at least one piece within {MaxShots} shots (fired {shots})");
         }
 
-        /// <summary>piece を小屋の外側から、その外側の面に垂直に撃つ。当たったのが piece でなければ problems に足す。</summary>
         private static void Shoot(List<string> problems, DestructiblePiece piece, DestructibleStructure structure, WeaponSpec spec)
         {
             var outward = OutwardNormal(piece, structure);
@@ -329,10 +307,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 壁の部品の外向きの法線 (水平)。小屋の中心から見て x と z の大きい方の軸を選ぶ。
-        /// 角の部品は差が無いので z を選び、正面・背面の壁として撃つ (<see cref="DestructionTestSceneBuilder"/> は角をそちらに含める)。
-        /// </summary>
+        // 角の部品は x と z の差が無いので z を選び、正面・背面の壁として撃つ (DestructionTestSceneBuilder は角をそちらに含める)。
         private static Vector3 OutwardNormal(DestructiblePiece piece, DestructibleStructure structure)
         {
             var offset = structure.transform.InverseTransformPoint(piece.Collider.bounds.center);

@@ -6,28 +6,15 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS 射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足すスライディングの手順。坂 (<see cref="SlideSlopeFixture"/>) の場所で次を確かめる。
-    /// <list type="number">
-    /// <item>ルールの <see cref="ActionRules.Slide"/> が On で、プレイヤーの <see cref="SlideMovement"/> が有効。</item>
-    /// <item>平らな走路 (<see cref="SlideSlopeFixture.FlatStart"/>) で -Z へダッシュしてから滑り (<c>[Slide] start</c>)、
-    /// 滑っている間はしゃがみの姿勢で、<see cref="PlayerActionConditions.Sliding"/> が立ち、撃てて照準が止まっているときより広がる。
-    /// 速さが落ちて止まり (<c>[Slide] end reason=Stopped</c>)、しゃがみを押していないので立つ。</item>
-    /// <item>坂の上 (<see cref="SlideSlopeFixture.SlopeStart"/>) から同じように滑ると、平らな床の <see cref="MinSlopeRatio"/> 倍より長く滑る。</item>
-    /// </list>
-    /// </summary>
-    /// <remarks>
-    /// batchmode には入力が無いので、ダッシュは <see cref="PlayerController.MoveFilter"/> への差し込みで、しゃがみの押下は <see cref="SlideMovement.TryStart"/> で代える
-    /// (ダッシュ中のしゃがみで始まることは EditMode のテストで確かめる)。
-    /// </remarks>
+    // batchmode には入力が無いので、ダッシュは PlayerController.MoveFilter への差し込みで、しゃがみの押下は SlideMovement.TryStart で代える
+    // (ダッシュ中のしゃがみで始まることは EditMode のテストで確かめる)。
     public sealed class SlideSmokeStep : ITpsActionSmokeStep
     {
         public const string LogTag = "[SlideSmoke]";
 
-        /// <summary>坂で滑った距離が、平らな床で滑った距離の何倍を超えるべきか。</summary>
         public const float MinSlopeRatio = 1.5f;
 
-        /// <summary>坂の面に置くとき、足元を面からこれだけ浮かせる (m)。置いた直後に面へめり込まないため。</summary>
+        // 置いた直後に坂の面へめり込まないよう、足元を少し浮かせる。
         public const float DropHeight = 0.1f;
 
         private static readonly string _startLog = SlideMotion.LogTag + " start ";
@@ -346,10 +333,7 @@ namespace Shooter.Editor
             return string.Join(", ", names);
         }
 
-        /// <summary>
-        /// 入力の代わりに、<see cref="Sprinting"/> の間は前へダッシュし続け、そうでなければ何も押さない差し込み。しゃがみとジャンプは押さない。
-        /// 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
-        /// </summary>
+        // 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
         private sealed class SprintFilter : IPlayerMoveFilter
         {
             public SprintFilter(IPlayerMoveFilter inner)

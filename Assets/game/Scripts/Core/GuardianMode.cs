@@ -16,22 +16,36 @@ namespace Fps.Core
     /// </remarks>
     public static class GuardianMode
     {
+        public const int DefaultPointsPerKill = 1;
+
         /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい値。</param>
         /// <param name="respawnSeconds">リーダーが生きている間、倒れてから戻るまでの秒数。0 以上の有限値。</param>
         /// <param name="pick">リーダーを選ぶ。チームの人数が渡り、0 以上その数未満の番号 (playerId の昇順での位置) を返す。</param>
         /// <param name="leaders">組んだリスポーンの部品。リーダーと、倒れたかどうかを引く。</param>
-        public static ModeSession CreateSession(float timeLimitSeconds, float respawnSeconds, Func<int, int> pick, out GuardianRespawn leaders)
+        /// <param name="pointsPerKill">別のチームを 1 回倒すごとに入る点 (時間切れの判定に使う)。1 以上。</param>
+        public static ModeSession CreateSession(
+            float timeLimitSeconds,
+            float respawnSeconds,
+            Func<int, int> pick,
+            out GuardianRespawn leaders,
+            int pointsPerKill = DefaultPointsPerKill)
         {
             if (pick == null)
             {
                 throw new ArgumentNullException(nameof(pick));
             }
 
+            // HUD はチームの点を整数で出すので、KillScore が取れる小数の点は断る。
+            if (pointsPerKill < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pointsPerKill), pointsPerKill, "pointsPerKill must be at least 1");
+            }
+
             var respawn = new GuardianRespawn(new IndividualRespawn(respawnSeconds));
             var session = new ModeSession(
                 new TwoTeams(),
                 timeLimitSeconds,
-                new IScoreRule[] { new KillScore() },
+                new IScoreRule[] { new KillScore(pointsPerKill) },
                 respawn,
                 new IWinCondition[] { new LastSideStandingWin(), new LeaderStandingWin(respawn), new TimeLimitWin() });
 
@@ -48,15 +62,20 @@ namespace Fps.Core
             return session;
         }
 
-        /// <summary>random でリーダーを選ぶ <see cref="CreateSession(float, float, Func{int, int}, out GuardianRespawn)"/>。</summary>
-        public static ModeSession CreateSession(float timeLimitSeconds, float respawnSeconds, Random random, out GuardianRespawn leaders)
+        /// <summary>random でリーダーを選ぶ <see cref="CreateSession(float, float, Func{int, int}, out GuardianRespawn, int)"/>。</summary>
+        public static ModeSession CreateSession(
+            float timeLimitSeconds,
+            float respawnSeconds,
+            Random random,
+            out GuardianRespawn leaders,
+            int pointsPerKill = DefaultPointsPerKill)
         {
             if (random == null)
             {
                 throw new ArgumentNullException(nameof(random));
             }
 
-            return CreateSession(timeLimitSeconds, respawnSeconds, count => random.Next(count), out leaders);
+            return CreateSession(timeLimitSeconds, respawnSeconds, count => random.Next(count), out leaders, pointsPerKill);
         }
     }
 }

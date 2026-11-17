@@ -40,6 +40,41 @@ namespace Shooter.Tests.EditMode
 
             _objects.Clear();
             GameSignals.ResetAll();
+            MinimapReveals.ResetAll();
+        }
+
+        [Test]
+        public void RevealsOnlyLivingEnemiesOnTheMinimapForTheUavSeconds()
+        {
+            MinimapReveals.Clock = () => _now;
+            var pings = User(side: 0);
+            var enemy = Body("Enemy", new Vector3(0f, 1f, 10f), side: 1);
+            var ally = Body("Ally", new Vector3(-5f, 1f, 10f), side: 0);
+            var dead = Body("Dead", new Vector3(10f, 1f, 10f), side: 1);
+            dead.Kill();
+
+            UavReward.Use(pings.gameObject, pings, 10f);
+
+            Assert.That(MinimapReveals.RemainingSeconds(enemy), Is.EqualTo(10f));
+            Assert.That(MinimapReveals.IsRevealed(ally), Is.False);
+            Assert.That(MinimapReveals.IsRevealed(dead), Is.False);
+            Assert.That(MinimapReveals.IsRevealed(pings.GetComponent<Damageable>()), Is.False, "the user is not revealed");
+            Assert.That(MinimapReveals.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RevealsEnemiesOnTheMinimapEvenWhenThePingRuleIsOff()
+        {
+            MinimapReveals.Clock = () => _now;
+            var pings = User(side: 0);
+            var first = Body("A", new Vector3(0f, 1f, 10f), side: 1);
+            var second = Body("B", new Vector3(5f, 1f, 10f), side: 1);
+            pings.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Shooter.Core.Ping.Off)));
+
+            Assert.That(UavReward.Use(pings.gameObject, pings, 10f), Is.Zero);
+            Assert.That(pings.Markers, Is.Empty);
+            Assert.That(MinimapReveals.IsRevealed(first), Is.True);
+            Assert.That(MinimapReveals.IsRevealed(second), Is.True);
         }
 
         [Test]

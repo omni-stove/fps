@@ -5,20 +5,14 @@ namespace Fps.Core
 {
     /// <summary>
     /// カバーの状態 (外 / 入りかけ / 中 / 覗き) の遷移。1 フレームごとに入力と <see cref="CoverProbe.Evaluate"/> の結果で <see cref="Step"/> を呼ぶ。
-    /// 外で Cover を押し、入れる壁 (<see cref="CoverProbeResult.CanEnter"/>) があれば入りかけになり、<see cref="EnterSeconds"/> 後に中になる。
+    /// 外で Cover を押し、入れる壁 (<see cref="CoverProbeResult.CanEnter"/>) があれば入りかけになり、<see cref="MotorSpec.CoverEnterSeconds"/> 後に中になる。
     /// 中で Aim を押している間、低い壁なら立って、高い壁なら端にいるときだけ横に出て覗く。
-    /// もう一度 Cover を押すか、後ろの入力を <see cref="BackHoldSeconds"/> 続けるか、壁が無くなると出る。
+    /// もう一度 Cover を押すか、後ろの入力を <see cref="MotorSpec.CoverBackHoldSeconds"/> 続けるか、壁が無くなると出る。
     /// 左右は壁に向いたときの左右 (移動入力の x の正が右)。
     /// </summary>
     public sealed class CoverState
     {
         public const string LogTag = "[Cover]";
-
-        /// <summary>壁へ寄せるのにかける時間 (秒)。</summary>
-        public const float EnterSeconds = 0.15f;
-
-        /// <summary>後ろの入力をこれだけ続けると出る (秒)。</summary>
-        public const float BackHoldSeconds = 0.2f;
 
         /// <summary>移動入力の y がこれ以下なら後ろの入力と見なす (スティックの遊びで出ないように)。</summary>
         public const float BackInputThreshold = -0.5f;
@@ -38,6 +32,22 @@ namespace Fps.Core
         private float _enterElapsed;
         private float _backElapsed;
         private float _preferredSide = 1f;
+        private MotorSpec _spec;
+
+        /// <param name="spec">入る秒数・出る後ろの入力の秒数・覗く横の距離を読む移動の設定。null 不可。</param>
+        public CoverState(MotorSpec spec)
+        {
+            _spec = spec ?? throw new ArgumentNullException(nameof(spec));
+        }
+
+        /// <summary>
+        /// 入る秒数・出る後ろの入力の秒数・覗く横の距離を読む移動の設定。張り付いている間に差し替えると、次の <see cref="Step"/> から新しい値を使う。
+        /// </summary>
+        public MotorSpec Spec
+        {
+            get => _spec;
+            set => _spec = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
         /// <summary>今の状態。最初は <see cref="CoverPhase.Out"/>。</summary>
         public CoverPhase Phase { get; private set; }
@@ -73,7 +83,7 @@ namespace Fps.Core
                     case CoverPhase.Out:
                         return 0f;
                     case CoverPhase.Entering:
-                        return Math.Min(1f, _enterElapsed / EnterSeconds);
+                        return Math.Min(1f, _enterElapsed / _spec.CoverEnterSeconds);
                     default:
                         return 1f;
                 }
@@ -120,7 +130,7 @@ namespace Fps.Core
             }
 
             _backElapsed = move.Y <= BackInputThreshold ? _backElapsed + deltaSeconds : 0f;
-            if (_backElapsed >= BackHoldSeconds)
+            if (_backElapsed >= _spec.CoverBackHoldSeconds)
             {
                 return Exit(ReasonBack);
             }
@@ -137,7 +147,7 @@ namespace Fps.Core
             {
                 case CoverPhase.Entering:
                     _enterElapsed += deltaSeconds;
-                    if (_enterElapsed >= EnterSeconds)
+                    if (_enterElapsed >= _spec.CoverEnterSeconds)
                     {
                         Phase = CoverPhase.In;
                     }
@@ -241,7 +251,7 @@ namespace Fps.Core
 
         private CoverTransition TryPeek(CoverProbeResult probe)
         {
-            var offset = CoverProbe.PeekOffset(probe, _preferredSide);
+            var offset = CoverProbe.PeekOffset(probe, _preferredSide, _spec);
             if (probe.Height == CoverHeight.High && offset == 0f)
             {
                 return CoverTransition.None;

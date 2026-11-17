@@ -14,7 +14,7 @@ namespace Fps.Server.Tests
         [Test]
         public void ItFallsUnderGravity()
         {
-            var flight = new ServerGrenadeFlight(Empty(), new Vector3(0f, 10f, 0f), Vector3.Zero);
+            var flight = new ServerGrenadeFlight(Empty(), new Vector3(0f, 10f, 0f), Vector3.Zero, GrenadeSpec.Default);
 
             for (var i = 0; i < 60; i++)
             {
@@ -28,7 +28,7 @@ namespace Fps.Server.Tests
         [Test]
         public void ItBouncesOffTheFloorAndComesToRestOnIt()
         {
-            var flight = new ServerGrenadeFlight(Floor(), new Vector3(0f, 3f, 0f), Vector3.Zero);
+            var flight = new ServerGrenadeFlight(Floor(), new Vector3(0f, 3f, 0f), Vector3.Zero, GrenadeSpec.Default);
             var lowest = float.PositiveInfinity;
 
             for (var i = 0; i < 300; i++)
@@ -38,15 +38,15 @@ namespace Fps.Server.Tests
             }
 
             Assert.That(flight.Bounces, Is.GreaterThanOrEqualTo(1));
-            Assert.That(lowest, Is.GreaterThan(ServerGrenadeFlight.BodyRadius - 0.01f));
-            Assert.That(flight.Position.Y, Is.EqualTo(ServerGrenadeFlight.BodyRadius).Within(0.01f));
+            Assert.That(lowest, Is.GreaterThan(GrenadeSpec.DefaultBodyRadius - 0.01f));
+            Assert.That(flight.Position.Y, Is.EqualTo(GrenadeSpec.DefaultBodyRadius).Within(0.01f));
             Assert.That(Math.Abs(flight.Velocity.Y), Is.LessThan(0.5f));
         }
 
         [Test]
         public void ARollingGrenadeSpinsAndKeepsMostOfItsSpeed()
         {
-            var flight = new ServerGrenadeFlight(Floor(), new Vector3(0f, ServerGrenadeFlight.BodyRadius + 0.001f, 0f), new Vector3(7f, 0f, 0f));
+            var flight = new ServerGrenadeFlight(Floor(), new Vector3(0f, GrenadeSpec.DefaultBodyRadius + 0.001f, 0f), new Vector3(7f, 0f, 0f), GrenadeSpec.Default);
 
             for (var i = 0; i < 60; i++)
             {
@@ -63,7 +63,7 @@ namespace Fps.Server.Tests
         public void ItDoesNotPassThroughAWall()
         {
             var wall = WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(3f, 0f, 0f), new Vector3(0.1f, 5f, 5f), Quaternion.Identity);
-            var flight = new ServerGrenadeFlight(new BvhWorldCollision(new WorldMap(new[] { wall })), new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f));
+            var flight = new ServerGrenadeFlight(new BvhWorldCollision(new WorldMap(new[] { wall })), new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f), GrenadeSpec.Default);
 
             for (var i = 0; i < 30; i++)
             {
@@ -77,7 +77,7 @@ namespace Fps.Server.Tests
         [Test]
         public void AStickyGrenadeStopsOnTheWallItHitsInsteadOfBouncing()
         {
-            var flight = new ServerGrenadeFlight(Wall(out _), new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f), GrenadeStickiness.Surfaces);
+            var flight = new ServerGrenadeFlight(Wall(out _), new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f), Sticky(GrenadeStickiness.Surfaces));
 
             for (var i = 0; i < 60; i++)
             {
@@ -87,7 +87,7 @@ namespace Fps.Server.Tests
             Assert.That(flight.IsStuck, Is.True);
             Assert.That(flight.Bounces, Is.Zero);
             Assert.That(flight.Velocity, Is.EqualTo(Vector3.Zero));
-            Assert.That(flight.Position.X, Is.EqualTo(2.9f - ServerGrenadeFlight.BodyRadius).Within(0.01f));
+            Assert.That(flight.Position.X, Is.EqualTo(2.9f - GrenadeSpec.DefaultBodyRadius).Within(0.01f));
             Assert.That(flight.StuckToPlayerId, Is.Null);
             var stuckAt = flight.Position;
             Run(flight, 60);
@@ -102,7 +102,7 @@ namespace Fps.Server.Tests
                 WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(0f, -0.5f, 0f), new Vector3(50f, 0.5f, 50f), Quaternion.Identity),
                 WorldCollider.Box(2, 0, _pieceGroup, new Vector3(3f, 2f, 0f), new Vector3(0.1f, 2f, 5f), Quaternion.Identity),
             }));
-            var flight = new ServerGrenadeFlight(world, new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f), GrenadeStickiness.Surfaces);
+            var flight = new ServerGrenadeFlight(world, new Vector3(0f, 1f, 0f), new Vector3(30f, 0f, 0f), Sticky(GrenadeStickiness.Surfaces));
             Run(flight, 30);
             Assert.That(flight.IsStuck, Is.True);
 
@@ -110,14 +110,14 @@ namespace Fps.Server.Tests
             Run(flight, 120);
 
             Assert.That(flight.IsStuck, Is.True);
-            Assert.That(flight.Position.Y, Is.EqualTo(ServerGrenadeFlight.BodyRadius).Within(0.01f));
+            Assert.That(flight.Position.Y, Is.EqualTo(GrenadeSpec.DefaultBodyRadius).Within(0.01f));
         }
 
         [Test]
         public void AGrenadeThatSticksOnlyToSurfacesPassesThroughPeople()
         {
             var bodies = Bodies(out _);
-            var flight = new ServerGrenadeFlight(Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), GrenadeStickiness.Surfaces);
+            var flight = new ServerGrenadeFlight(Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), Sticky(GrenadeStickiness.Surfaces));
             flight.CollideWithCharacters(bodies, ignoredPlayerId: 1, _ => true);
 
             Run(flight, 30);
@@ -131,7 +131,7 @@ namespace Fps.Server.Tests
         {
             var bodies = Bodies(out var target);
             var flight = new ServerGrenadeFlight(
-                Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), GrenadeStickiness.SurfacesAndCharacters);
+                Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), Sticky(GrenadeStickiness.SurfacesAndCharacters));
             flight.CollideWithCharacters(bodies, ignoredPlayerId: 1, _ => true);
 
             Run(flight, 30);
@@ -141,7 +141,7 @@ namespace Fps.Server.Tests
             target.Capsule(out var bottom, out var top);
             Assert.That(
                 ServerCombat.DistanceToCapsule(flight.Position, bottom - new Vector3(0f, target.Radius, 0f), top + new Vector3(0f, target.Radius, 0f), target.Radius),
-                Is.EqualTo(ServerGrenadeFlight.BodyRadius).Within(0.01f),
+                Is.EqualTo(GrenadeSpec.DefaultBodyRadius).Within(0.01f),
                 "it stops touching the body");
             var offset = flight.Position - target.Position;
 
@@ -161,7 +161,7 @@ namespace Fps.Server.Tests
         {
             var bodies = Bodies(out _);
             var flight = new ServerGrenadeFlight(
-                Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), GrenadeStickiness.SurfacesAndCharacters);
+                Empty(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), Sticky(GrenadeStickiness.SurfacesAndCharacters));
             flight.CollideWithCharacters(bodies, ignoredPlayerId: 1, id => id != 2);
 
             Run(flight, 30);
@@ -176,7 +176,7 @@ namespace Fps.Server.Tests
             var bodies = Bodies(out _);
             var alive = true;
             var flight = new ServerGrenadeFlight(
-                Floor(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), GrenadeStickiness.SurfacesAndCharacters);
+                Floor(), new Vector3(0f, 1f, 0f), new Vector3(20f, 0f, 0f), Sticky(GrenadeStickiness.SurfacesAndCharacters));
             flight.CollideWithCharacters(bodies, ignoredPlayerId: 1, _ => alive);
             Run(flight, 30);
             Assert.That(flight.StuckToPlayerId, Is.EqualTo(2));
@@ -186,7 +186,7 @@ namespace Fps.Server.Tests
 
             Assert.That(flight.StuckToPlayerId, Is.Null);
             Assert.That(flight.IsStuck, Is.True, "it sticks to the floor it lands on");
-            Assert.That(flight.Position.Y, Is.EqualTo(ServerGrenadeFlight.BodyRadius).Within(0.01f));
+            Assert.That(flight.Position.Y, Is.EqualTo(GrenadeSpec.DefaultBodyRadius).Within(0.01f));
         }
 
         [Test]
@@ -203,6 +203,11 @@ namespace Fps.Server.Tests
             Assert.That(ServerGrenadeFlight.SweepCapsule(new Vector3(-5f, 3f, 0f), Vector3.UnitX, 10f, bottom, top, 0.5f, out _), Is.False);
             Assert.That(ServerGrenadeFlight.SweepCapsule(new Vector3(0f, 1f, 0.1f), Vector3.UnitX, 10f, bottom, top, 0.5f, out var inside), Is.True);
             Assert.That(inside, Is.Zero);
+        }
+
+        private static GrenadeSpec Sticky(GrenadeStickiness stickiness)
+        {
+            return new GrenadeSpec(stickiness: stickiness);
         }
 
         private static void Run(ServerGrenadeFlight flight, int steps)

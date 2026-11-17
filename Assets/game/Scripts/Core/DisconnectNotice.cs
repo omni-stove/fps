@@ -32,6 +32,8 @@ namespace Fps.Core
         /// <summary>サーバーが止まる準備中 (<see cref="ServerDrain"/>) で新しい参加を断るときの、断った訳の符号。</summary>
         public const string ServerDrainingDetail = "server-draining";
 
+        public const string ServerFullDetail = "server-full";
+
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 

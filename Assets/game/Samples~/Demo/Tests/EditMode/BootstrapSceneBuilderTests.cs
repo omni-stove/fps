@@ -201,8 +201,8 @@ namespace Fps.Tests.EditMode
             Assert.That(BootstrapSceneBuilder.Covers.Count(), Is.EqualTo(2));
             Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.EqualTo(1f));
             Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.EqualTo(2f));
-            Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.LessThan(CoverProbe.LowWallHeight), "the player crouches behind the low cover");
-            Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.GreaterThanOrEqualTo(CoverProbe.LowWallHeight), "the player stands behind the high cover");
+            Assert.That(BootstrapSceneBuilder.LowCover.Size.y, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight), "the player crouches behind the low cover");
+            Assert.That(BootstrapSceneBuilder.HighCover.Size.y, Is.GreaterThanOrEqualTo(MotorSpec.DefaultCoverLowWallHeight), "the player stands behind the high cover");
 
             foreach (var cover in BootstrapSceneBuilder.Covers)
             {
@@ -244,7 +244,7 @@ namespace Fps.Tests.EditMode
 
             foreach (var cover in BootstrapSceneBuilder.Covers)
             {
-                Assert.That(cover.Center.z, Is.GreaterThan(feet.z + GameBootstrap.PlayerRadius + CoverProbe.MaxEnterDistance), $"{cover.Name} is ahead of the spawn");
+                Assert.That(cover.Center.z, Is.GreaterThan(feet.z + GameBootstrap.PlayerRadius + MotorSpec.DefaultCoverMaxEnterDistance), $"{cover.Name} is ahead of the spawn");
                 Assert.That(cover.Center.z, Is.LessThan(targets[0].z), $"{cover.Name} is in front of the targets");
             }
 

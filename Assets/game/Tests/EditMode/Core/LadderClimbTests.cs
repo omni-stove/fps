@@ -17,7 +17,7 @@ namespace Fps.Core.Tests
         [Test]
         public void HoldingForwardClimbsToTheTopAndStepsOff()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f, MotorSpec.Default);
 
             var outcome = climb.Step(1f, false, true, _stepSeconds);
             Assert.That(outcome, Is.EqualTo(LadderOutcome.Climbing), "standing on the ground does not end the climb up");
@@ -39,7 +39,7 @@ namespace Fps.Core.Tests
         [Test]
         public void HoldingBackClimbsDownAndStepsOffAtTheBottom()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f, MotorSpec.Default);
 
             var outcome = LadderOutcome.Climbing;
             var steps = 0;
@@ -57,7 +57,7 @@ namespace Fps.Core.Tests
         [Test]
         public void TouchingGroundOnTheWayDownStepsOff()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 2f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 2f, MotorSpec.Default);
 
             Assert.That(climb.Step(-1f, false, true, _stepSeconds), Is.EqualTo(LadderOutcome.ExitBottom));
             Assert.That(climb.Height, Is.EqualTo(1.75f));
@@ -66,7 +66,7 @@ namespace Fps.Core.Tests
         [Test]
         public void LettingGoOfTheStickHangsInPlace()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f, MotorSpec.Default);
 
             Assert.That(climb.Step(0.05f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
             Assert.That(climb.Height, Is.EqualTo(1f));
@@ -76,7 +76,7 @@ namespace Fps.Core.Tests
         [Test]
         public void JumpLetsGoWithoutMoving()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f, MotorSpec.Default);
 
             Assert.That(climb.Step(1f, true, false, _stepSeconds), Is.EqualTo(LadderOutcome.JumpOff));
             Assert.That(climb.Height, Is.EqualTo(1f));
@@ -89,8 +89,8 @@ namespace Fps.Core.Tests
         [Test]
         public void GrabbingFromTheTopStartsJustBelowItAndTheEntryInputClimbsDown()
         {
-            var forwardIn = new LadderClimb(_span, _spec, LadderEntry.Top, 3f);
-            Assert.That(forwardIn.Height, Is.EqualTo(3f - LadderSpan.TopEntryDepth).Within(1e-5f));
+            var forwardIn = new LadderClimb(_span, _spec, LadderEntry.Top, 3f, MotorSpec.Default);
+            Assert.That(forwardIn.Height, Is.EqualTo(3f - MotorSpec.DefaultLadderTopEntryDepth).Within(1e-5f));
             Assert.That(forwardIn.IsInputLatched, Is.True);
 
             Assert.That(forwardIn.Step(1f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
@@ -98,7 +98,7 @@ namespace Fps.Core.Tests
             Assert.That(forwardIn.Step(-1f, false, false, _stepSeconds), Is.EqualTo(LadderOutcome.Climbing));
             Assert.That(forwardIn.VerticalSpeed, Is.EqualTo(2f), "the other way climbs up");
 
-            var backIn = new LadderClimb(_span, _spec, LadderEntry.Top, 3f);
+            var backIn = new LadderClimb(_span, _spec, LadderEntry.Top, 3f, MotorSpec.Default);
             backIn.Step(-1f, false, false, _stepSeconds);
             Assert.That(backIn.VerticalSpeed, Is.EqualTo(-2f), "backed off the edge, so back climbs down");
         }
@@ -106,7 +106,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ReleasingTheStickAfterATopGrabRestoresForwardAsUp()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Top, 3f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Top, 3f, MotorSpec.Default);
             climb.Step(1f, false, false, _stepSeconds);
 
             climb.Step(0f, false, false, _stepSeconds);
@@ -119,16 +119,16 @@ namespace Fps.Core.Tests
         [Test]
         public void AFrontGrabStartsWhereTheFeetAreButBelowTheTopEntry()
         {
-            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, -0.2f).Height, Is.EqualTo(0f));
-            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 1.2f).Height, Is.EqualTo(1.2f));
-            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 3f).Height, Is.EqualTo(3f - LadderSpan.TopEntryDepth).Within(1e-5f));
-            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 0f).IsInputLatched, Is.False);
+            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, -0.2f, MotorSpec.Default).Height, Is.EqualTo(0f));
+            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 1.2f, MotorSpec.Default).Height, Is.EqualTo(1.2f));
+            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 3f, MotorSpec.Default).Height, Is.EqualTo(3f - MotorSpec.DefaultLadderTopEntryDepth).Within(1e-5f));
+            Assert.That(new LadderClimb(_span, _spec, LadderEntry.Front, 0f, MotorSpec.Default).IsInputLatched, Is.False);
         }
 
         [Test]
         public void TheFeetFollowTheHeight()
         {
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 1f, MotorSpec.Default);
 
             Assert.That(climb.Feet(0.5f), Is.EqualTo(_span.FeetAt(1f, 0.5f)));
         }
@@ -136,12 +136,12 @@ namespace Fps.Core.Tests
         [Test]
         public void ArgumentsAreChecked()
         {
-            Assert.Throws<ArgumentException>(() => new LadderClimb(default, _spec, LadderEntry.Front, 0f));
-            Assert.Throws<ArgumentNullException>(() => new LadderClimb(_span, null, LadderEntry.Front, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new LadderClimb(_span, _spec, LadderEntry.None, 0f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new LadderClimb(_span, _spec, LadderEntry.Front, float.NaN));
+            Assert.Throws<ArgumentException>(() => new LadderClimb(default, _spec, LadderEntry.Front, 0f, MotorSpec.Default));
+            Assert.Throws<ArgumentNullException>(() => new LadderClimb(_span, null, LadderEntry.Front, 0f, MotorSpec.Default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LadderClimb(_span, _spec, LadderEntry.None, 0f, MotorSpec.Default));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LadderClimb(_span, _spec, LadderEntry.Front, float.NaN, MotorSpec.Default));
 
-            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f);
+            var climb = new LadderClimb(_span, _spec, LadderEntry.Front, 0f, MotorSpec.Default);
             Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(float.NaN, false, false, _stepSeconds));
             Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(1f, false, false, -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => climb.Step(1f, false, false, float.PositiveInfinity));

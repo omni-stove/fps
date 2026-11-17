@@ -711,7 +711,7 @@ namespace Fps.Server.Tests
             Assert.That(_log.ToString(), Does.Contain("[Grenade] net exploded thrower=1"));
             Assert.That(
                 _transport.Read<ExplosionMessage>(2, m => new ExplosionMessage { Center = m.Center }).Single().Center.Y,
-                Is.EqualTo(0.5f + ServerGrenadeFlight.BodyRadius).Within(0.01f),
+                Is.EqualTo(0.5f + GrenadeSpec.DefaultBodyRadius).Within(0.01f),
                 "the grenade should roll on the floor");
         }
 

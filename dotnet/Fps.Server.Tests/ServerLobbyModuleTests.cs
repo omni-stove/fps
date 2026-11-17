@@ -174,7 +174,7 @@ namespace Fps.Server.Tests
             Start();
             Tick();
             _backend.CompleteLogin(_server);
-            _backend.CompleteCreate(new LobbyInfo("l1", _server, ServerLobby.MaxPlayers, new[] { _server }));
+            _backend.CompleteCreate(new LobbyInfo("l1", _server, NetMatchSettings.DefaultMaxPlayers, new[] { _server }));
         }
 
         private void Tick()

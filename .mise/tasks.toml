@@ -68,8 +68,42 @@ description = "Run the Unity EditMode tests headlessly in batch mode (close the 
 run = "unity test --mode EditMode"
 
 [smoke]
-description = "Run every SmokeRun in one batch-mode editor via Fps.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first)"
-run = "unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll -logFile -"
+description = "Run every SmokeRun in one batch-mode editor via Fps.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first). --root <dir> sets the output root (-fpsKitRoot)"
+usage = '''
+flag "--root <dir>" help="output root under Assets/ (default: the imported sample's folder)"
+'''
+run = 'unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll ${usage_root:+-fpsKitRoot "$usage_root"} -logFile -'
+
+[import-weapons]
+description = "Import weapon JSON (one file, or every *.json directly in a folder) into WeaponDefinition assets via Fps.Editor.WeaponJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
+usage = '''
+arg "<json>" help="a JSON file or a folder of them"
+flag "--out <dir>" help="asset folder under Assets/ (default: <output root>/Weapons)"
+flag "--catalog <asset>" help="existing WeaponCatalogAsset to add the weapons to by Id"
+flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+'''
+run = 'unity run . -- -quit -executeMethod Fps.Editor.WeaponJsonImporter.Import -weaponJson "$usage_json" ${usage_out:+-weaponOut "$usage_out"} ${usage_catalog:+-weaponCatalog "$usage_catalog"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+
+[import-rules]
+description = "Import game rules JSON (one file, or every *.json directly in a folder) into GameRulesDefinition assets via Fps.Editor.GameRulesJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
+usage = '''
+arg "<json>" help="a JSON file or a folder of them"
+flag "--out <dir>" help="asset folder under Assets/ (default: <output root>/Rules)"
+flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+'''
+run = 'unity run . -- -quit -executeMethod Fps.Editor.GameRulesJsonImporter.Import -rulesJson "$usage_json" ${usage_out:+-rulesOut "$usage_out"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+
+[game-content]
+description = "Create the GameContent entry asset (or fill its empty fields) via Fps.Editor.GameContentAssets.Create (close the Editor first)"
+usage = '''
+flag "--path <asset>" help="asset path such as Assets/MyGame/Resources/FpsKit/GameContent.asset (default: <output root>/Resources/FpsKit/GameContent.asset)"
+flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+'''
+run = 'unity run . -- -quit -executeMethod Fps.Editor.GameContentAssets.Create ${usage_path:+-gameContent "$usage_path"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+
+[audit-replacements]
+description = "List what a game left unreplaced (catalog entries per weapon Id, keys missing in a language, empty [RequiredReference] references) via Fps.Editor.ReplacementAudit.Run; exits 0 when none, 1 when some, 2 when the audit throws (close the Editor first)"
+run = "unity run . -- -quit -executeMethod Fps.Editor.ReplacementAudit.Run"
 
 [nightly-local]
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, the map-data template's check (re-export and compare with server-data/maps), and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"

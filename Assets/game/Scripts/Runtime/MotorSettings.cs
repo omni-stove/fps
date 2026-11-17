@@ -87,6 +87,37 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("よじ登る速さ (m/s)")]
         private float _mantleSpeed = MotorSpec.DefaultMantleSpeed;
 
+        [Header("カバー・はしご")]
+        [SerializeField, Min(0f), Tooltip("カバーに入れる、体の中心から壁までの水平距離の上限 (m)")]
+        private float _coverMaxEnterDistance = MotorSpec.DefaultCoverMaxEnterDistance;
+
+        [SerializeField, Range(0f, 180f), Tooltip("カバーに入るときの、向いている方向と壁へ向かう方向のなす角の上限 (度)")]
+        private float _coverMaxEnterAngleDegrees = MotorSpec.DefaultCoverMaxEnterAngleDegrees;
+
+        [SerializeField, Min(0f), Tooltip("上端がこの高さ (足元から、m) 未満の壁を低い壁としてしゃがんで隠れる。以上なら高い壁で、端から横に出て覗く")]
+        private float _coverLowWallHeight = MotorSpec.DefaultCoverLowWallHeight;
+
+        [SerializeField, Min(0f), Tooltip("高い壁の端から覗くときに横へ出る距離 (m)")]
+        private float _coverPeekSideDistance = MotorSpec.DefaultCoverPeekSideDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("カバーに入るとき、壁へ寄せるのにかける秒数")]
+        private float _coverEnterSeconds = MotorSpec.DefaultCoverEnterSeconds;
+
+        [SerializeField, Min(0f), Tooltip("カバー中に後ろの入力をこれだけ (秒) 続けると出る")]
+        private float _coverBackHoldSeconds = MotorSpec.DefaultCoverBackHoldSeconds;
+
+        [SerializeField, Min(0.01f), Tooltip("高い壁の端から横に出る・戻るのにかける秒数")]
+        private float _coverPeekSlideSeconds = MotorSpec.DefaultCoverPeekSlideSeconds;
+
+        [SerializeField, Min(0f), Tooltip("はしごの上の端からつかまったときの足元の、上の足場からの深さ (m)。前からつかまれるのもこの深さより下まで")]
+        private float _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;
+
+        [SerializeField, Range(-1f, 1f), Tooltip("動いている向きとはしごへ向かう向きのなす角の余弦がこれ以上なら、はしごへ進んでいるとみなしてつかまる")]
+        private float _ladderMinApproachDot = MotorSpec.DefaultLadderMinApproachDot;
+
+        [SerializeField, Min(0f), Tooltip("水平の速さ (m/s) がこれ未満なら、はしごへ進んでいるとみなさない")]
+        private float _ladderMinApproachSpeed = MotorSpec.DefaultLadderMinApproachSpeed;
+
         [Header("伏せ")]
         [SerializeField, Min(0.01f), Tooltip("伏せたときのカプセルの高さ (m)。半径の 2 倍未満やしゃがみより高いときは合う高さに収める")]
         private float _proneHeight = ProneSpec.DefaultHeight;
@@ -239,6 +270,66 @@ namespace Fps.Runtime
             set => _mantleSpeed = value;
         }
 
+        public float CoverMaxEnterDistance
+        {
+            get => _coverMaxEnterDistance;
+            set => _coverMaxEnterDistance = value;
+        }
+
+        public float CoverMaxEnterAngleDegrees
+        {
+            get => _coverMaxEnterAngleDegrees;
+            set => _coverMaxEnterAngleDegrees = value;
+        }
+
+        public float CoverLowWallHeight
+        {
+            get => _coverLowWallHeight;
+            set => _coverLowWallHeight = value;
+        }
+
+        public float CoverPeekSideDistance
+        {
+            get => _coverPeekSideDistance;
+            set => _coverPeekSideDistance = value;
+        }
+
+        public float CoverEnterSeconds
+        {
+            get => _coverEnterSeconds;
+            set => _coverEnterSeconds = value;
+        }
+
+        public float CoverBackHoldSeconds
+        {
+            get => _coverBackHoldSeconds;
+            set => _coverBackHoldSeconds = value;
+        }
+
+        public float CoverPeekSlideSeconds
+        {
+            get => _coverPeekSlideSeconds;
+            set => _coverPeekSlideSeconds = value;
+        }
+
+        public float LadderTopEntryDepth
+        {
+            get => _ladderTopEntryDepth;
+            set => _ladderTopEntryDepth = value;
+        }
+
+        public float LadderMinApproachDot
+        {
+            get => _ladderMinApproachDot;
+            set => _ladderMinApproachDot = value;
+        }
+
+        public float LadderMinApproachSpeed
+        {
+            get => _ladderMinApproachSpeed;
+            set => _ladderMinApproachSpeed = value;
+        }
+
         /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
         public ProneSpec Prone
         {
@@ -371,7 +462,17 @@ namespace Fps.Runtime
                 _vaultReach,
                 _vaultMaxAngleDegrees,
                 _vaultMinHeight,
-                _vaultMaxDepth);
+                _vaultMaxDepth,
+                _coverMaxEnterDistance,
+                _coverMaxEnterAngleDegrees,
+                _coverLowWallHeight,
+                _coverPeekSideDistance,
+                _coverEnterSeconds,
+                _coverBackHoldSeconds,
+                _coverPeekSlideSeconds,
+                _ladderTopEntryDepth,
+                _ladderMinApproachDot,
+                _ladderMinApproachSpeed);
         }
 
         /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
@@ -402,6 +503,16 @@ namespace Fps.Runtime
             _vaultMaxDepth = MotorSpec.DefaultVaultMaxDepth;
             _mantleMaxHeight = MotorSpec.DefaultMantleMaxHeight;
             _mantleSpeed = MotorSpec.DefaultMantleSpeed;
+            _coverMaxEnterDistance = MotorSpec.DefaultCoverMaxEnterDistance;
+            _coverMaxEnterAngleDegrees = MotorSpec.DefaultCoverMaxEnterAngleDegrees;
+            _coverLowWallHeight = MotorSpec.DefaultCoverLowWallHeight;
+            _coverPeekSideDistance = MotorSpec.DefaultCoverPeekSideDistance;
+            _coverEnterSeconds = MotorSpec.DefaultCoverEnterSeconds;
+            _coverBackHoldSeconds = MotorSpec.DefaultCoverBackHoldSeconds;
+            _coverPeekSlideSeconds = MotorSpec.DefaultCoverPeekSlideSeconds;
+            _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;
+            _ladderMinApproachDot = MotorSpec.DefaultLadderMinApproachDot;
+            _ladderMinApproachSpeed = MotorSpec.DefaultLadderMinApproachSpeed;
             Prone = ProneSpec.Default;
             WalkDirection = MoveDirectionScale.Uniform;
             SprintDirection = MoveDirectionScale.Uniform;

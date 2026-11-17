@@ -20,9 +20,9 @@ namespace Fps.Core.Tests
         // 入って寄せ終わった (中の) 状態にする。
         private static CoverState InCover(CoverProbeResult wall)
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             Assert.That(state.Step(true, false, _noMove, wall, 0f), Is.EqualTo(CoverTransition.Enter));
-            state.Step(false, false, _noMove, wall, CoverState.EnterSeconds);
+            state.Step(false, false, _noMove, wall, MotorSpec.DefaultCoverEnterSeconds);
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
             return state;
         }
@@ -30,7 +30,7 @@ namespace Fps.Core.Tests
         [Test]
         public void StartsOutOfCover()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Out));
             Assert.That(state.IsInCover, Is.False);
@@ -42,7 +42,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PressingCoverInFrontOfAWallEnters()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             var transition = state.Step(true, false, _noMove, Wall(CoverHeight.Low), _frame);
 
@@ -57,7 +57,7 @@ namespace Fps.Core.Tests
         [Test]
         public void EnterLogNamesHighWalls()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             var transition = state.Step(true, false, _noMove, Wall(CoverHeight.High), _frame);
 
@@ -67,7 +67,7 @@ namespace Fps.Core.Tests
         [Test]
         public void DoesNotEnterWithoutPressingCover()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             Assert.That(state.Step(false, true, _noMove, Wall(), _frame), Is.EqualTo(CoverTransition.None));
             Assert.That(state.IsInCover, Is.False);
@@ -76,7 +76,7 @@ namespace Fps.Core.Tests
         [Test]
         public void DoesNotEnterWhenTheWallIsOutOfReachOrAngle()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             Assert.That(state.Step(true, false, _noMove, CoverProbeResult.None, _frame), Is.EqualTo(CoverTransition.None));
             Assert.That(state.Step(true, false, _noMove, Wall(canEnter: false), _frame), Is.EqualTo(CoverTransition.None));
@@ -86,12 +86,12 @@ namespace Fps.Core.Tests
         [Test]
         public void EnteringTakesEnterSecondsBeforeBeingIn()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             state.Step(true, false, _noMove, Wall(), 0f);
 
             state.Step(false, false, _noMove, Wall(), 0.1f);
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Entering));
-            Assert.That(state.EnterProgress, Is.EqualTo(0.1f / CoverState.EnterSeconds).Within(1e-5f));
+            Assert.That(state.EnterProgress, Is.EqualTo(0.1f / MotorSpec.DefaultCoverEnterSeconds).Within(1e-5f));
 
             Assert.That(state.Step(false, false, _noMove, Wall(), 0.06f), Is.EqualTo(CoverTransition.None));
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
@@ -114,7 +114,7 @@ namespace Fps.Core.Tests
         [Test]
         public void PressingCoverWhileEnteringExits()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             state.Step(true, false, _noMove, Wall(), 0f);
 
             Assert.That(state.Step(true, false, _noMove, Wall(), _frame), Is.EqualTo(CoverTransition.Exit));
@@ -215,13 +215,13 @@ namespace Fps.Core.Tests
             var peekLeft = left.Step(false, true, _noMove, Wall(CoverHeight.High, CoverEdge.Left), _frame);
 
             Assert.That(peekLeft, Is.EqualTo(CoverTransition.Peek));
-            Assert.That(left.PeekOffset, Is.EqualTo(-CoverProbe.PeekSideDistance));
+            Assert.That(left.PeekOffset, Is.EqualTo(-MotorSpec.DefaultCoverPeekSideDistance));
             Assert.That(left.FormatLog(peekLeft), Is.EqualTo("[Cover] peek left"));
 
             var right = InCover(Wall(CoverHeight.High, CoverEdge.Right));
             var peekRight = right.Step(false, true, _noMove, Wall(CoverHeight.High, CoverEdge.Right), _frame);
 
-            Assert.That(right.PeekOffset, Is.EqualTo(CoverProbe.PeekSideDistance));
+            Assert.That(right.PeekOffset, Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance));
             Assert.That(right.FormatLog(peekRight), Is.EqualTo("[Cover] peek right"));
         }
 
@@ -245,13 +245,13 @@ namespace Fps.Core.Tests
             state.Step(false, false, new Vector2(-1f, 0f), pillar, _frame);
             state.Step(false, true, _noMove, pillar, _frame);
 
-            Assert.That(state.PeekOffset, Is.EqualTo(-CoverProbe.PeekSideDistance));
+            Assert.That(state.PeekOffset, Is.EqualTo(-MotorSpec.DefaultCoverPeekSideDistance));
         }
 
         [Test]
         public void DoesNotPeekWhileStillEntering()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             state.Step(true, true, _noMove, Wall(CoverHeight.Low), 0f);
 
             Assert.That(state.Step(false, true, _noMove, Wall(CoverHeight.Low), 0.01f), Is.EqualTo(CoverTransition.None));
@@ -292,7 +292,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ReleaseExitsOnlyWhenInCover()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
             Assert.That(state.Release("death"), Is.False);
 
             state.Step(true, false, _noMove, Wall(), 0f);
@@ -305,14 +305,14 @@ namespace Fps.Core.Tests
         [Test]
         public void NoneHasNoLog()
         {
-            Assert.That(new CoverState().FormatLog(CoverTransition.None), Is.Null);
-            Assert.Throws<ArgumentOutOfRangeException>(() => new CoverState().FormatLog((CoverTransition)99));
+            Assert.That(new CoverState(MotorSpec.Default).FormatLog(CoverTransition.None), Is.Null);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CoverState(MotorSpec.Default).FormatLog((CoverTransition)99));
         }
 
         [Test]
         public void RejectsInvalidTimeAndInput()
         {
-            var state = new CoverState();
+            var state = new CoverState(MotorSpec.Default);
 
             Assert.Throws<ArgumentOutOfRangeException>(() => state.Step(false, false, _noMove, Wall(), -0.01f));
             Assert.Throws<ArgumentOutOfRangeException>(() => state.Step(false, false, _noMove, Wall(), float.NaN));

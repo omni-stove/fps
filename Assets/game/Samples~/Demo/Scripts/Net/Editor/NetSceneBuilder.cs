@@ -61,7 +61,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// カバーの確かめ用の壁 (ルールで Cover を On にしたとき張り付ける)。両陣地の前に、低い壁 (上端が床から 0.8m、
-        /// <see cref="CoverProbe.LowWallHeight"/> 未満) と、端から覗ける高い壁 (2.5m) を 1 枚ずつ、相手の陣地に向けて置く。
+        /// <see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満) と、端から覗ける高い壁 (2.5m) を 1 枚ずつ、相手の陣地に向けて置く。
         /// 位置は床の上の中心、大きさは Cube の拡大率。出現地点と陣地の間の通り道は塞がない。
         /// </summary>
         public static readonly (string Name, Vector3 Center, Vector3 Size)[] CoverWalls =

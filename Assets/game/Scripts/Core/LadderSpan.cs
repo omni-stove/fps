@@ -16,18 +16,6 @@ namespace Fps.Core
         /// <summary>上の端からつかまるとき、足元が上の足場の高さからこれだけずれていても足場の上にいるとみなす (m)。下の端の下も同じだけ許す。</summary>
         public const float HeightTolerance = 0.3f;
 
-        /// <summary>
-        /// 上の端からつかまったときの足元の、上の足場からの深さ (m)。つかまった瞬間に上の端を越えて降り直さないよう、少し下から始める。
-        /// 前からつかまれるのもこの深さより下の高さまで。
-        /// </summary>
-        public const float TopEntryDepth = 0.3f;
-
-        /// <summary>動いている向きとはしごへ向かう向きのなす角の余弦がこれ以上なら、はしごへ進んでいるとみなす。</summary>
-        public const float MinApproachDot = 0.5f;
-
-        /// <summary>水平の速さがこれ未満なら、はしごへ進んでいるとみなさない (m/s)。</summary>
-        public const float MinApproachSpeed = 0.5f;
-
         /// <summary>上向きの単位ベクトル。</summary>
         public static readonly Vector3 Up = Vector3.UnitY;
 
@@ -131,18 +119,26 @@ namespace Fps.Core
         /// 足元 feet・水平の速度 velocity・半径 radius の人が、今つかまるか。どれかの値が有限でなければつかまらない。
         /// <list type="bullet">
         /// <item><see cref="LadderEntry.Front"/>: 面の手前で体の表面が面から grabDistance 以内、足元が下端の少し下から
-        /// 上の端の <see cref="TopEntryDepth"/> 手前までの高さにあり、<see cref="Facing"/> へ進んでいる。</item>
+        /// 上の端の <see cref="MotorSpec.LadderTopEntryDepth"/> 手前までの高さにあり、<see cref="Facing"/> へ進んでいる。</item>
         /// <item><see cref="LadderEntry.Top"/>: 上の足場の上で体の中心が縁から radius + grabDistance 以内、足元が上の足場の高さにあり、
         /// 縁 (<see cref="Facing"/> の逆) へ進んでいる。</item>
         /// </list>
-        /// どちらも横へは <see cref="Width"/> の半分まで。
+        /// どちらも横へは <see cref="Width"/> の半分まで。進んでいるとみなすのは、水平の速さが <see cref="MotorSpec.LadderMinApproachSpeed"/> 以上で、
+        /// 向きの余弦が <see cref="MotorSpec.LadderMinApproachDot"/> 以上のとき。
         /// </summary>
         /// <param name="feet">人の足元の位置。</param>
         /// <param name="velocity">人の水平の速度 (m/s)。</param>
         /// <param name="radius">人の体の半径 (m)。</param>
         /// <param name="grabDistance">体の表面からはしごの面までの、つかまれる距離 (m)。0 以上。</param>
-        public LadderEntry Probe(Vector3 feet, Vector3 velocity, float radius, float grabDistance)
+        /// <param name="motor">上から入る深さと近づく向き・速さを読む移動の設定。null 不可。</param>
+        /// <exception cref="ArgumentNullException">motor が null のとき。</exception>
+        public LadderEntry Probe(Vector3 feet, Vector3 velocity, float radius, float grabDistance, MotorSpec motor)
         {
+            if (motor == null)
+            {
+                throw new ArgumentNullException(nameof(motor));
+            }
+
             if (!IsFinite(feet) || !IsFinite(velocity) || !(radius >= 0f) || float.IsInfinity(radius)
                 || !(grabDistance >= 0f) || float.IsInfinity(grabDistance))
             {
@@ -159,7 +155,7 @@ namespace Fps.Core
 
             var horizontal = new Vector3(velocity.X, 0f, velocity.Z);
             var speed = horizontal.Length();
-            if (speed < MinApproachSpeed)
+            if (speed < motor.LadderMinApproachSpeed)
             {
                 return LadderEntry.None;
             }
@@ -168,15 +164,15 @@ namespace Fps.Core
             var reach = radius + grabDistance;
             var height = relative.Y;
             if (along <= 0f && along >= -reach
-                && height >= -HeightTolerance && height <= Height - TopEntryDepth
-                && approach >= MinApproachDot)
+                && height >= -HeightTolerance && height <= Height - motor.LadderTopEntryDepth
+                && approach >= motor.LadderMinApproachDot)
             {
                 return LadderEntry.Front;
             }
 
             if (along >= 0f && along <= reach
                 && Math.Abs(height - Height) <= HeightTolerance
-                && -approach >= MinApproachDot)
+                && -approach >= motor.LadderMinApproachDot)
             {
                 return LadderEntry.Top;
             }

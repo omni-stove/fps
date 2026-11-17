@@ -20,9 +20,6 @@ namespace Fps.Server
         /// <summary>要求の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より少し早く届いても断らない。</summary>
         public const float GrenadeThrowJitterSeconds = 0.15f;
 
-        /// <summary>目からグレネードを出す位置までの距離 (Unity の GrenadeThrower.ReleaseDistance)。</summary>
-        public const float ReleaseDistance = 0.7f;
-
         // 頭の高さへの線を、カプセルの頂からどれだけ下へ引くか (m)。身をかがめて頭だけ出した相手にも当てる
         private const float _explosionTopProbeInset = 0.1f;
 
@@ -116,9 +113,9 @@ namespace Fps.Server
 
             direction = Vector3.Normalize(direction);
             thrower.Grenades.Take(_now, typeId, out var spec);
-            var position = ReleasePoint(body.EyePosition, direction);
+            var position = ReleasePoint(body.EyePosition, direction, spec);
             var velocity = (direction * spec.ThrowSpeed) + new Vector3(0f, spec.ThrowLiftSpeed, 0f);
-            var flight = new ServerGrenadeFlight(_context.World, position, velocity, spec.Stickiness);
+            var flight = new ServerGrenadeFlight(_context.World, position, velocity, spec);
             flight.CollideWithCharacters(_bodies, playerId, IsHittable);
             _grenades.Add(new LiveGrenade(_nextGrenadeId++, playerId, spec, flight));
 
@@ -139,14 +136,14 @@ namespace Fps.Server
                 spec.LogName));
         }
 
-        // 目から ReleaseDistance 先。間に壁があれば球が埋まらない壁の手前
-        private Vector3 ReleasePoint(Vector3 eye, Vector3 direction)
+        // 目から spec の ReleaseDistance 先 (オフラインの GrenadeThrower と同じ)。間に壁があれば球が埋まらない壁の手前
+        private Vector3 ReleasePoint(Vector3 eye, Vector3 direction, GrenadeSpec spec)
         {
-            var distance = ReleaseDistance;
+            var distance = spec.ReleaseDistance;
             if (_context.World.Raycast(
-                    eye, direction, ReleaseDistance + ServerGrenadeFlight.BodyRadius, ServerHitboxes.RaycastLayers, out var hit))
+                    eye, direction, spec.ReleaseDistance + spec.BodyRadius, ServerHitboxes.RaycastLayers, out var hit))
             {
-                distance = Math.Min(distance, Math.Max(0f, hit.Distance - ServerGrenadeFlight.BodyRadius));
+                distance = Math.Min(distance, Math.Max(0f, hit.Distance - spec.BodyRadius));
             }
 
             return eye + (direction * distance);

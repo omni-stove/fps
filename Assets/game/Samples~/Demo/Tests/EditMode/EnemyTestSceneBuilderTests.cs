@@ -290,7 +290,7 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
 
             Assert.That(Find(EnemyTestSceneBuilder.LowCoverName).transform.localScale, Is.EqualTo(EnemyTestSceneBuilder.LowCoverSize));
-            Assert.That(EnemyTestSceneBuilder.LowCoverSize.y, Is.LessThan(CoverProbe.LowWallHeight), "it counts as a low wall");
+            Assert.That(EnemyTestSceneBuilder.LowCoverSize.y, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight), "it counts as a low wall");
 
             foreach (var placement in EnemyTestSceneBuilder.CoverPoints)
             {

@@ -13,6 +13,7 @@ namespace Fps.Server.Eos.Tests
         private const string _version = "0.3.0";
         private const float _interval = 5f;
         private const float _timeout = 60f;
+        private const int _maxPlayers = 6;
 
         private StringWriter _log;
         private FakeLobbyBackend _backend;
@@ -26,7 +27,7 @@ namespace Fps.Server.Eos.Tests
             _log = new StringWriter();
             _backend = new FakeLobbyBackend();
             _service = new ServerLobbyService(_backend, ServerLobby.BucketId(_version), _log);
-            _registrar = new ServerLobbyRegistrar(_service, _endpoint, _version, new RetrySchedule(_interval, _timeout), _log);
+            _registrar = new ServerLobbyRegistrar(_service, _endpoint, _version, _maxPlayers, new RetrySchedule(_interval, _timeout), _log);
             _failure = null;
         }
 
@@ -47,7 +48,7 @@ namespace Fps.Server.Eos.Tests
             _backend.CompleteLogin(_server);
 
             Assert.That(_backend.CreatedBucket, Is.EqualTo("fps-server:" + _version));
-            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(ServerLobby.MaxPlayers));
+            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(_maxPlayers));
             var attributes = ByKey(_backend.CreatedAttributes);
             Assert.That(attributes[ServerLobby.ServerKey].Text, Is.EqualTo(_endpoint));
             Assert.That(attributes[ServerLobby.ModeKey].Text, Is.EqualTo("tdm"));
@@ -76,9 +77,9 @@ namespace Fps.Server.Eos.Tests
             {
                 "[Lobby] registering server=" + _endpoint + " bucket=fps-server:" + _version,
                 "[Lobby] logged in with the device id user=" + _server,
-                "[Lobby] created id=l1 max=" + ServerLobby.MaxPlayers + " owner=" + _server
+                "[Lobby] created id=l1 max=" + _maxPlayers + " owner=" + _server
                     + " server=" + _endpoint + " mode=tdm version=" + _version + " players=0",
-                "[Lobby] members=1/" + ServerLobby.MaxPlayers + " [" + _server + "] id=l1",
+                "[Lobby] members=1/" + _maxPlayers + " [" + _server + "] id=l1",
                 "[Lobby] registered id=l1 server=" + _endpoint + " players=0",
                 "[Lobby] players 0 -> 1",
                 "[Lobby] updated id=l1 players=1",
@@ -347,9 +348,11 @@ namespace Fps.Server.Eos.Tests
         public void RejectsInvalidArguments()
         {
             var schedule = new RetrySchedule(_interval, _timeout);
-            Assert.Throws<ArgumentNullException>(() => _ = new ServerLobbyRegistrar(null, _endpoint, _version, schedule, _log));
-            Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "0.0.0.0:7777", _version, schedule, _log));
-            Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "example.com:7777", _version, schedule, _log));
+            Assert.Throws<ArgumentNullException>(() => _ = new ServerLobbyRegistrar(null, _endpoint, _version, _maxPlayers, schedule, _log));
+            Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "0.0.0.0:7777", _version, _maxPlayers, schedule, _log));
+            Assert.Throws<ArgumentException>(() => _ = new ServerLobbyRegistrar(_service, "example.com:7777", _version, _maxPlayers, schedule, _log));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ = new ServerLobbyRegistrar(_service, _endpoint, _version, 0, schedule, _log));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _ = new ServerLobbyRegistrar(_service, _endpoint, _version, 65, schedule, _log));
             Assert.Throws<ArgumentOutOfRangeException>(() => _registrar.SetPlayers(-1));
             Begin();
             Assert.Throws<InvalidOperationException>(Begin);
@@ -377,7 +380,7 @@ namespace Fps.Server.Eos.Tests
 
         private static LobbyInfo Lobby(string id)
         {
-            return new LobbyInfo(id, _server, ServerLobby.MaxPlayers, new[] { _server });
+            return new LobbyInfo(id, _server, _maxPlayers, new[] { _server });
         }
 
         private static Dictionary<string, LobbyAttribute> ByKey(IReadOnlyList<LobbyAttribute> attributes)

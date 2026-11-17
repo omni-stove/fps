@@ -81,7 +81,7 @@ namespace Fps.Runtime
         /// <summary>LookAt に向き直る速さ (度/秒)。</summary>
         public const float DefaultTurnSpeed = 360f;
 
-        /// <summary>しゃがんだときの当たり判定の高さ (メートル)。低い壁 (<see cref="CoverProbe.LowWallHeight"/> 未満) に隠れる高さ。</summary>
+        /// <summary>しゃがんだときの当たり判定の高さ (メートル)。低い壁 (<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満) に隠れる高さ。</summary>
         public const float DefaultCrouchHeight = 1f;
 
         /// <summary>しゃがんだときの足元からの目の高さ (メートル)。</summary>

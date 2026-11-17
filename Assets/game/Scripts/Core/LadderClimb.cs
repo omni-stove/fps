@@ -28,7 +28,8 @@ namespace Fps.Core
         /// <param name="spec">上り下りの調整値。null 不可。</param>
         /// <param name="entry">つかまった所。<see cref="LadderEntry.None"/> は不可。</param>
         /// <param name="feetHeight">つかまったときの足元の、下端からの高さ (m)。<see cref="LadderEntry.Front"/> のときだけ使う。有限値。</param>
-        public LadderClimb(LadderSpan span, LadderSpec spec, LadderEntry entry, float feetHeight)
+        /// <param name="motor">上の端から入る深さ (<see cref="MotorSpec.LadderTopEntryDepth"/>) を読む移動の設定。null 不可。</param>
+        public LadderClimb(LadderSpan span, LadderSpec spec, LadderEntry entry, float feetHeight, MotorSpec motor)
         {
             if (span.Height <= 0f)
             {
@@ -38,6 +39,11 @@ namespace Fps.Core
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (motor == null)
+            {
+                throw new ArgumentNullException(nameof(motor));
             }
 
             if (entry != LadderEntry.Front && entry != LadderEntry.Top)
@@ -53,7 +59,7 @@ namespace Fps.Core
             Span = span;
             Spec = spec;
             Entry = entry;
-            var highest = Math.Max(0f, span.Height - LadderSpan.TopEntryDepth);
+            var highest = Math.Max(0f, span.Height - motor.LadderTopEntryDepth);
             Height = entry == LadderEntry.Top ? highest : Clamp(feetHeight, 0f, highest);
             _latchUntilReleased = entry == LadderEntry.Top;
         }
@@ -84,14 +90,14 @@ namespace Fps.Core
         /// 同じ中身から同じ入力で <see cref="Step"/> すれば同じ結果になる。height は 0 以上 span の高さ以下に丸め、latchedDownSign は -1・0・1 のどれか。
         /// </summary>
         public static LadderClimb Resume(
-            LadderSpan span, LadderSpec spec, LadderEntry entry, float height, bool inputLatched, int latchedDownSign)
+            LadderSpan span, LadderSpec spec, LadderEntry entry, float height, bool inputLatched, int latchedDownSign, MotorSpec motor)
         {
             if (latchedDownSign < -1 || latchedDownSign > 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(latchedDownSign), latchedDownSign, "latchedDownSign must be -1, 0 or 1");
             }
 
-            var climb = new LadderClimb(span, spec, entry, height);
+            var climb = new LadderClimb(span, spec, entry, height, motor);
             climb.Height = Clamp(height, 0f, span.Height);
             climb._latchUntilReleased = inputLatched;
             climb._latchedDownSign = inputLatched ? latchedDownSign : 0;

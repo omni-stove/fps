@@ -188,6 +188,75 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WinningRaisesThePlayersResultOnce()
+        {
+            var results = RecordResults();
+            Begin();
+            _runner.Tick(CaptureSeconds);
+            Assert.That(results, Is.Empty, "nothing is raised before the end");
+
+            _runner.Tick(3f);
+
+            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 0, 0, ScoreLimit) }));
+        }
+
+        [Test]
+        public void LosingRaisesThePlayersDeathAndAlphasScore()
+        {
+            _zone.transform.position = EnemyStart;
+            var results = RecordResults();
+            Begin();
+
+            using (CombatEvents.Attribute(_enemy.gameObject, "rifle"))
+            {
+                _world.PlayerDamageable.Kill();
+            }
+
+            _runner.Tick(CaptureSeconds);
+            _runner.Tick(3f);
+
+            Assert.That(_runner.Domination.Winner, Is.EqualTo((Team?)Team.Bravo));
+            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 0, 1, 0) }));
+        }
+
+        [Test]
+        public void ATimeUpWithNoPointsRaisesADraw()
+        {
+            _zone.transform.position = new Vector3(-20f, 0f, -20f);
+            var results = RecordResults();
+            Begin();
+
+            using (CombatEvents.Attribute(_world.Player, "rifle"))
+            {
+                _enemyBody.Kill();
+            }
+
+            _runner.Tick(TimeLimit);
+
+            Assert.That(_runner.Domination.Winner, Is.Null);
+            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Draw, 1, 0, 0) }));
+        }
+
+        [Test]
+        public void NothingIsRaisedAgainAfterTheEnd()
+        {
+            var results = RecordResults();
+            Begin();
+            _runner.Tick(CaptureSeconds);
+            _runner.Tick(3f);
+
+            _runner.Tick(TimeLimit);
+            using (CombatEvents.Attribute(_world.Player, "rifle"))
+            {
+                _enemyBody.Kill();
+            }
+
+            _runner.Tick(1f);
+
+            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 0, 0, ScoreLimit) }));
+        }
+
+        [Test]
         public void EnemyShotByThePlayerCountsAsAKillAndRespawnsLater()
         {
             Begin();
@@ -546,6 +615,13 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Domination] joined player=1 team=Bravo name=enemy-1");
             LogAssert.Expect(LogType.Log, "[Domination] state=Playing A=0 B=0 remaining=60.0");
             _runner.Begin(_world, new[] { _zone }, new[] { _enemy }, _runner.CreateSpec(1));
+        }
+
+        private static List<MatchResult> RecordResults()
+        {
+            var results = new List<MatchResult>();
+            CombatEvents.MatchFinished += results.Add;
+            return results;
         }
 
         private DominationDefinition Tuning()

@@ -10,13 +10,13 @@ namespace Shooter.Core
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、
     /// 感度・視野角・音量 (<see cref="ControlValue"/>) を整数で持ち、オンラインの回線の表示を出すか (<see cref="ShowNetStats"/>) と
     /// 敵味方の色の組 (<see cref="Palette"/>) と音の合図の字幕を出すか (<see cref="ShowSubtitles"/>) と
-    /// 血を出すか (<see cref="ShowBlood"/>) を持つ。不変。画面の言語は持たない (何をどの言語で出すかは game 側の UI が決め、自分で保存する)。
+    /// 血を出すか (<see cref="ShowBlood"/>) とエイムアシストを効かせるか (<see cref="AimAssist"/>) を持つ。不変。画面の言語は持たない (何をどの言語で出すかは game 側の UI が決め、自分で保存する)。
     /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして保存する。
     /// </summary>
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
         /// <summary>このコードが書き出す形式のバージョン。</summary>
-        public const int CurrentVersion = 8;
+        public const int CurrentVersion = 9;
 
         /// <summary>
         /// 読める最も古い形式のバージョン。1 は Hold/Toggle だけを持ち、数値の設定は初期値で補う。
@@ -26,6 +26,7 @@ namespace Shooter.Core
         /// 6 は画面の揺れ・ビューモデルの揺れの強さ (<see cref="ControlValue.CameraShakeIntensity"/>・<see cref="ControlValue.ViewmodelMotionIntensity"/>) と
         /// 血の表示 (<see cref="ShowBlood"/>) を持たず、初期値 (揺れは 100%・血は出す) で補う。
         /// 6・7 は画面の言語 (<c>language</c>) も持つが、言語は game 側が自分で保存するので読み飛ばす。
+        /// 8 はエイムアシスト (<see cref="AimAssist"/>) を持たず、初期値 (効かせる) で補う。
         /// </summary>
         public const int OldestReadableVersion = 1;
 
@@ -48,6 +49,7 @@ namespace Shooter.Core
         private const string _cameraShakeKey = "cameraShake";
         private const string _viewmodelMotionKey = "viewmodelMotion";
         private const string _showBloodKey = "showBlood";
+        private const string _aimAssistKey = "aimAssist";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -136,7 +138,7 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _languageKey,
         };
 
-        private static readonly string[] _rootKeys =
+        private static readonly string[] _versionEightRootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
             _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
@@ -145,12 +147,21 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey,
         };
 
+        private static readonly string[] _rootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+        };
+
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
 
         /// <summary>
         /// 初期値。キーボード／マウスはすべて Hold。
         /// ゲームパッドはスティックを押し込み続けにくいのでダッシュとしゃがみを Toggle にし、ADS はトリガーなので Hold。
-        /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。血は出す。
+        /// 数値は <see cref="RangeOf"/> の初期値。回線の表示は出さない。色の組は <see cref="ColorPalette.Standard"/>。字幕は出さない。血は出す。エイムアシストは効かせる。
         /// </summary>
         public static ControlSettings Default { get; } = new ControlSettings(
             new[]
@@ -162,6 +173,7 @@ namespace Shooter.Core
             false,
             ColorPalette.Standard,
             false,
+            true,
             true);
 
         // 添字は Index(device, action)。
@@ -178,13 +190,16 @@ namespace Shooter.Core
 
         private readonly bool _showBlood;
 
+        private readonly bool _aimAssist;
+
         private ControlSettings(
             HoldMode[] modes,
             int[] amounts,
             bool showNetStats,
             ColorPalette palette,
             bool showSubtitles,
-            bool showBlood)
+            bool showBlood,
+            bool aimAssist)
         {
             _modes = modes;
             _amounts = amounts;
@@ -192,6 +207,7 @@ namespace Shooter.Core
             _palette = palette;
             _showSubtitles = showSubtitles;
             _showBlood = showBlood;
+            _aimAssist = aimAssist;
         }
 
         /// <summary>数値の設定をすべて、並べる順に返す。</summary>
@@ -259,6 +275,9 @@ namespace Shooter.Core
         /// <summary>キャラが撃たれたときの血しぶきと血痕を出すか。</summary>
         public bool ShowBlood => _showBlood;
 
+        /// <summary>ゲームパッドで狙うときに、敵の近くで視点の回りを遅くし、覗き込みを始めたときに敵の方へ寄せるか。</summary>
+        public bool AimAssist => _aimAssist;
+
         /// <summary>device の action だけを mode に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
@@ -275,7 +294,7 @@ namespace Shooter.Core
 
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
-            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood);
+            return new ControlSettings(modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist);
         }
 
         /// <summary>数値の設定 value だけを amount に変えた設定を返す。この設定は変わらない。</summary>
@@ -299,13 +318,13 @@ namespace Shooter.Core
 
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
-            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood);
+            return new ControlSettings(_modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist);
         }
 
         /// <summary>回線の表示 (<see cref="ShowNetStats"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowNetStats(bool show)
         {
-            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _showBlood);
+            return show == _showNetStats ? this : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist);
         }
 
         /// <summary>色の組 (<see cref="Palette"/>) だけを palette に変えた設定を返す。この設定は変わらない。</summary>
@@ -313,19 +332,27 @@ namespace Shooter.Core
         public ControlSettings WithPalette(ColorPalette palette)
         {
             PaletteName(palette);
-            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood);
+            return palette == _palette ? this : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist);
         }
 
         /// <summary>字幕 (<see cref="ShowSubtitles"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowSubtitles(bool show)
         {
-            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _showBlood);
+            return show == _showSubtitles ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist);
         }
 
         /// <summary>血の表示 (<see cref="ShowBlood"/>) だけを show に変えた設定を返す。この設定は変わらない。</summary>
         public ControlSettings WithShowBlood(bool show)
         {
-            return show == _showBlood ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, show);
+            return show == _showBlood ? this : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist);
+        }
+
+        /// <summary>エイムアシスト (<see cref="AimAssist"/>) だけを enabled に変えた設定を返す。この設定は変わらない。</summary>
+        public ControlSettings WithAimAssist(bool enabled)
+        {
+            return enabled == _aimAssist
+                ? this
+                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled);
         }
 
         /// <summary>JSON の文字列に書き出す。<see cref="FromJson(string, out IReadOnlyList{string})"/> で同じ内容に戻る。</summary>
@@ -367,6 +394,8 @@ namespace Shooter.Core
             SaveJson.AppendString(builder, PaletteName(_palette));
             builder.Append(',');
             AppendKey(builder, _showSubtitlesKey).Append(_showSubtitles ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _aimAssistKey).Append(_aimAssist ? "true" : "false");
             builder.Append('}');
             return builder.ToString();
         }
@@ -381,8 +410,9 @@ namespace Shooter.Core
         /// バージョン 1〜3 (色の組が無い形式) は、色の組を何も言わずに初期値で補う。
         /// バージョン 1〜4 (字幕が無い形式) は、字幕を何も言わずに初期値で補う。
         /// バージョン 1〜6 (揺れの強さと血の表示が無い形式) は、揺れの強さと血の表示を何も言わずに初期値で補う。知らない項目は読み飛ばす。
-        /// 血の表示は、無い・真偽値でなければ初期値にする。
+        /// 血の表示とエイムアシストは、無い・真偽値でなければ初期値にする。
         /// バージョン 6・7 (言語を持つ形式) の言語 (<c>language</c>) は、何も言わずに読み飛ばす。
+        /// バージョン 1〜8 (エイムアシストが無い形式) は、エイムアシストを何も言わずに初期値で補う。
         /// </summary>
         /// <param name="json">読む文字列。</param>
         /// <param name="problems">初期値に戻した所や読み飛ばした所の理由。問題が無ければ空。</param>
@@ -433,7 +463,9 @@ namespace Shooter.Core
             var hasPalette = version >= 4;
             var hasShowSubtitles = version >= 5;
             var hasPresentation = version >= 7;
-            var knownKeys = version >= 8 ? _rootKeys
+            var hasAimAssist = version >= 9;
+            var knownKeys = hasAimAssist ? _rootKeys
+                : version >= 8 ? _versionEightRootKeys
                 : hasPresentation ? _versionSevenRootKeys
                 : version >= 6 ? _versionSixRootKeys
                 : hasShowSubtitles ? _versionFiveRootKeys
@@ -456,7 +488,8 @@ namespace Shooter.Core
                 ? ReadFlag(root, _showSubtitlesKey, Default._showSubtitles, found)
                 : Default._showSubtitles;
             var showBlood = hasPresentation ? ReadFlag(root, _showBloodKey, Default._showBlood, found) : Default._showBlood;
-            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, showBlood);
+            var aimAssist = hasAimAssist ? ReadFlag(root, _aimAssistKey, Default._aimAssist, found) : Default._aimAssist;
+            return new ControlSettings(modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist);
         }
 
         public bool Equals(ControlSettings other)
@@ -485,7 +518,8 @@ namespace Shooter.Core
             return _showNetStats == other._showNetStats
                 && _palette == other._palette
                 && _showSubtitles == other._showSubtitles
-                && _showBlood == other._showBlood;
+                && _showBlood == other._showBlood
+                && _aimAssist == other._aimAssist;
         }
 
         public override bool Equals(object obj)
@@ -509,7 +543,8 @@ namespace Shooter.Core
             hash = unchecked((hash * 31) + (_showNetStats ? 1 : 0));
             hash = unchecked((hash * 31) + (int)_palette);
             hash = unchecked((hash * 31) + (_showSubtitles ? 1 : 0));
-            return unchecked((hash * 31) + (_showBlood ? 1 : 0));
+            hash = unchecked((hash * 31) + (_showBlood ? 1 : 0));
+            return unchecked((hash * 31) + (_aimAssist ? 1 : 0));
         }
 
         public override string ToString()

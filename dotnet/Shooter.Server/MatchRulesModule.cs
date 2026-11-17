@@ -132,6 +132,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
+            PrepareChat(settings);
             StartObjective();
         }
 
@@ -378,6 +379,7 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))

@@ -71,5 +71,32 @@ namespace Fps.Core
 
             return Math.Max(1, (int)rounded);
         }
+
+        public static int Scale(int damage, float multiplier)
+        {
+            if (damage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(damage), damage, "damage must not be negative");
+            }
+
+            if (!(multiplier >= 0f) || float.IsInfinity(multiplier))
+            {
+                throw new ArgumentOutOfRangeException(nameof(multiplier), multiplier, "multiplier must not be negative and must be finite");
+            }
+
+            // Calculate と同じく、倍率 0 を効かない部位として使えるよう最低 1 の決まりより先に 0 を返す。
+            if (damage == 0 || multiplier == 0f)
+            {
+                return 0;
+            }
+
+            var rounded = Math.Round(damage * (double)multiplier, MidpointRounding.AwayFromZero);
+            if (rounded >= int.MaxValue)
+            {
+                return int.MaxValue;
+            }
+
+            return Math.Max(1, (int)rounded);
+        }
     }
 }

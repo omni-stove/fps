@@ -245,6 +245,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AHitboxMultiplierScalesTheZoneDamage()
+        {
+            var head = AddPart("Head", HitZone.Head);
+            Assert.That(head.DamageMultiplier, Is.EqualTo(1f));
+            head.DamageMultiplier = 1.5f;
+
+            var damage = head.ApplyHit(25, 0f, DamageFalloff.None);
+
+            Assert.That(damage, Is.EqualTo(75), "25 * 2 (head) * 1.5");
+            Assert.That(_damageable.Health.Current, Is.EqualTo(25));
+        }
+
+        [Test]
+        public void AHitboxMultiplierRejectsNegativeAndNonFiniteValues()
+        {
+            var body = AddPart("Body", HitZone.Body);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => body.DamageMultiplier = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => body.DamageMultiplier = float.NaN);
+            Assert.Throws<ArgumentOutOfRangeException>(() => body.DamageMultiplier = float.PositiveInfinity);
+            body.DamageMultiplier = 0f;
+
+            Assert.That(body.ApplyHit(25, 0f, DamageFalloff.None), Is.Zero);
+            Assert.That(_damageable.Health.Current, Is.EqualTo(Damageable.DefaultMaxHealth));
+        }
+
+        [Test]
         public void TryApplyHitLogsAnErrorForHitboxWithoutOwner()
         {
             var orphan = new GameObject("Orphan", typeof(BoxCollider), typeof(Hitbox));

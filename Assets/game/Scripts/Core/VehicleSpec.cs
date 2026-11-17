@@ -34,6 +34,7 @@ namespace Fps.Core
         /// <param name="enterRange">乗り込める距離 (m)。0 より大きい有限値。</param>
         /// <param name="chaseDistance">追うカメラの注視点からの距離 (m)。0 以上の有限値。</param>
         /// <param name="chaseHeight">追うカメラの注視点の高さ (m)。有限値。</param>
+        /// <param name="durability">傷み方と爆発。null なら <see cref="VehicleDurabilitySpec.Default"/>。</param>
         public VehicleSpec(
             string id,
             int maxHealth,
@@ -42,7 +43,8 @@ namespace Fps.Core
             IReadOnlyList<VehiclePartSpec> parts = null,
             float enterRange = DefaultEnterRange,
             float chaseDistance = DefaultChaseDistance,
-            float chaseHeight = DefaultChaseHeight)
+            float chaseHeight = DefaultChaseHeight,
+            VehicleDurabilitySpec durability = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -89,6 +91,7 @@ namespace Fps.Core
             EnterRange = enterRange;
             ChaseDistance = chaseDistance;
             ChaseHeight = chaseHeight;
+            Durability = durability ?? VehicleDurabilitySpec.Default;
         }
 
         public string Id { get; }
@@ -109,6 +112,8 @@ namespace Fps.Core
         public float ChaseDistance { get; }
 
         public float ChaseHeight { get; }
+
+        public VehicleDurabilitySpec Durability { get; }
 
         /// <summary>seatIndex の座席が操作する武器の番号 (<see cref="Weapons"/> の添字) を並びの順に返す。</summary>
         public IReadOnlyList<int> WeaponsOfSeat(int seatIndex)

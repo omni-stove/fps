@@ -12,11 +12,19 @@ namespace Fps.Runtime
         /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。</summary>
         public const int InstallOrder = 510;
 
+        public const string TuningResourcePath = "Tuning/squad";
+
         public int Order => InstallOrder;
 
+        public static SquadOrderSpec Tuning =>
+            KitTuning.Load(c => c.SquadTuning, TuningResourcePath, SquadOrderJson.Parse, SquadOrderSpec.Default);
+
+        // 実行時に付けるコンポーネントは Inspector で値を変えられないので、データの値を書き込んでから設定する。
         public void Install(GameObject player, GameRules rules)
         {
-            PlayerActions.GetOrAdd<SquadCommandController>(player).Configure();
+            var controller = PlayerActions.GetOrAdd<SquadCommandController>(player);
+            controller.ApplySpec(Tuning);
+            controller.Configure();
         }
 
         // Edit Mode (テストやシーン生成) では Play の初期化が走らないので、エディターの読み込みでも登録する。

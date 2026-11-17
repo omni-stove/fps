@@ -8,6 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// ガーディアン (VIP の護衛) をシーンで進める。試合開始時に Alpha と Bravo から 1 人ずつリーダーを選び (<see cref="GuardianMode"/>)、
     /// リーダーが生きている間は倒れた味方が <see cref="RespawnSeconds"/> 後に戻る。リーダーが倒れたチームは戻れなくなり、全員倒れたら負け。
+    /// 制限時間・リスポーン・キル 1 回の点は、<see cref="Definition"/>、入口 (<see cref="GameContent.Guardian"/>)、Inspector の値の順で読む。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -20,13 +21,20 @@ namespace Fps.Runtime
     {
         public const float DefaultTimeLimitSeconds = 300f;
         public const float DefaultRespawnSeconds = 3f;
+        public const int DefaultPointsPerKill = GuardianMode.DefaultPointsPerKill;
         public const string MarkerRootName = "LeaderMarkers";
+
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の制限時間・リスポーン・キル 1 回の点の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
+        private GuardianDefinition _definition;
 
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)")]
         private float _timeLimitSeconds = DefaultTimeLimitSeconds;
 
         [SerializeField, Min(0f), Tooltip("リーダーが生きている間、倒れてから出現点に戻るまでの秒数")]
         private float _respawnSeconds = DefaultRespawnSeconds;
+
+        [SerializeField, Min(1), Tooltip("別のチームを 1 回倒すごとに入る点")]
+        private int _pointsPerKill = DefaultPointsPerKill;
 
         [SerializeField, Tooltip("リーダーを選ぶ乱数の種。負なら Play ごとに変わる")]
         private int _leaderSeed = -1;
@@ -41,6 +49,16 @@ namespace Fps.Runtime
         private GuardianRespawn _leaders;
         private Transform _markerRoot;
 
+        /// <summary>調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値で始める。</summary>
+        public GuardianDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public GuardianDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Guardian);
+
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
@@ -51,6 +69,13 @@ namespace Fps.Runtime
         {
             get => _respawnSeconds;
             set => _respawnSeconds = value;
+        }
+
+        /// <summary>Inspector のキル 1 回の点。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
+        public int PointsPerKill
+        {
+            get => _pointsPerKill;
+            set => _pointsPerKill = value;
         }
 
         /// <summary>リーダーを選ぶ乱数の種。負なら Play ごとに変わる。</summary>
@@ -117,7 +142,11 @@ namespace Fps.Runtime
             }
 
             var random = _leaderSeed >= 0 ? new System.Random(_leaderSeed) : new System.Random();
-            var session = GuardianMode.CreateSession(_timeLimitSeconds, _respawnSeconds, random, out var leaders);
+            var definition = EffectiveDefinition;
+            GuardianRespawn leaders;
+            var session = definition != null
+                ? definition.CreateSession(random, out leaders)
+                : GuardianMode.CreateSession(_timeLimitSeconds, _respawnSeconds, random, out leaders, _pointsPerKill);
             _leaders = leaders;
             _leaders.LeaderChosen += OnLeaderChosen;
             _leaders.LeaderFell += OnLeaderFell;

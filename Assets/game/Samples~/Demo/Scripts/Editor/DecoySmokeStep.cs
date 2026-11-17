@@ -18,8 +18,8 @@ namespace Fps.Editor
         public const int SlotIndex = 1;
         public const float EnduringSeconds = 120f;
 
-        // 調べに行った敵が囮のあった場所に着いたとみなす距離。NavMesh の上に寄せた行き先との差を見込む。
-        public const float SearchArrivalDistance = EnemyBrain.ArrivalDistance + 1f;
+        // 調べに行った敵が囮のあった場所に着いたとみなす距離に足す幅。NavMesh の上に寄せた行き先との差を見込む。
+        public const float SearchArrivalMargin = 1f;
 
         private enum Phase
         {
@@ -313,7 +313,7 @@ namespace Fps.Editor
 
             var ground = _enemy.GroundPosition;
             var flat = new Vector2(ground.x - _spot.x, ground.z - _spot.z);
-            if (flat.magnitude > SearchArrivalDistance)
+            if (flat.magnitude > _enemy.Brain.Spec.ArrivalDistance + SearchArrivalMargin)
             {
                 return null;
             }

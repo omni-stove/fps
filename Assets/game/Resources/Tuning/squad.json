@@ -1,0 +1,8 @@
+{
+  "holdSeconds": 0.5,
+  "maxDistance": 150,
+  "enemyAimToleranceDegrees": 3,
+  "nearbyRadius": 30,
+  "followDistance": 3,
+  "leashDistance": 15
+}

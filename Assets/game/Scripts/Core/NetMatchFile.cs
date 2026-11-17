@@ -32,6 +32,7 @@ namespace Fps.Core
         public const string CaptureSecondsItem = "captureSeconds";
         public const string PointsPerSecondItem = "pointsPerSecond";
         public const string MaxCapturersItem = "maxCapturers";
+        public const string MaxPlayersItem = "maxPlayers";
 
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
@@ -117,7 +118,7 @@ namespace Fps.Core
         {
             ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, RestartDelaySecondsItem, MaxHealthItem, MinEnemySpawnDistanceItem,
             ReconnectGraceSecondsItem, MaxShotOriginOffsetItem, DominationScoreLimitItem, CaptureSecondsItem, PointsPerSecondItem,
-            MaxCapturersItem,
+            MaxCapturersItem, MaxPlayersItem,
         };
 
         public NetMatchFile(
@@ -250,6 +251,7 @@ namespace Fps.Core
             writer.Float(CaptureSecondsItem, s.CaptureSeconds);
             writer.Float(PointsPerSecondItem, s.PointsPerSecond);
             writer.Int(MaxCapturersItem, s.MaxCapturers);
+            writer.Int(MaxPlayersItem, s.MaxPlayers);
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -384,7 +386,8 @@ namespace Fps.Core
                     match.ReadInt(DominationScoreLimitItem, d.DominationScoreLimit),
                     match.ReadFloat(CaptureSecondsItem, d.CaptureSeconds),
                     match.ReadFloat(PointsPerSecondItem, d.PointsPerSecond),
-                    match.ReadInt(MaxCapturersItem, d.MaxCapturers));
+                    match.ReadInt(MaxCapturersItem, d.MaxCapturers),
+                    match.ReadInt(MaxPlayersItem, d.MaxPlayers));
             }
             catch (ArgumentException e)
             {

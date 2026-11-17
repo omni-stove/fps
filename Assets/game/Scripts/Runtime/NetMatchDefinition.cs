@@ -49,6 +49,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0f), Tooltip("サーバーが認める、射撃の始点とサーバーの目の位置のずれ (m)")]
         private float _maxShotOriginOffset = ShotValidator.DefaultMaxOriginOffset;
 
+        [SerializeField, Range(NetMatchSettings.MinMaxPlayers, NetMatchSettings.MaxMaxPlayers), Tooltip("試合に入れる人の数。Bot は数えない。満員ならサーバーは参加を断り、ロビーにもこの人数で載せる")]
+        private int _maxPlayers = NetMatchSettings.DefaultMaxPlayers;
+
         [Header("拠点制圧")]
         [SerializeField, Min(1), Tooltip("拠点のポイントで先に取ったチームが勝つ点数")]
         private int _dominationScoreLimit = NetMatchSettings.DefaultDominationScoreLimit;
@@ -104,6 +107,12 @@ namespace Fps.Runtime
             set => _catalog = value;
         }
 
+        public int MaxPlayers
+        {
+            get => _maxPlayers;
+            set => _maxPlayers = value;
+        }
+
         public MotorSettings MotorSettings
         {
             get => _motorSettings;
@@ -154,7 +163,8 @@ namespace Fps.Runtime
                 _dominationScoreLimit,
                 _captureSeconds,
                 _pointsPerSecond,
-                _maxCapturers);
+                _maxCapturers,
+                _maxPlayers);
         }
 
         /// <summary>

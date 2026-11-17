@@ -22,7 +22,8 @@ namespace Fps.Runtime
     /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
-    /// <item>HUD があれば拠点制圧の表示 (<see cref="IHud.AttachDomination"/>) を付けて両チームのポイント・残り時間・拠点の持ち主を出し、スコアボードにキル数とデス数を渡す。</item>
+    /// <item>両チームのポイント・残り時間・拠点ごとの状態を <see cref="DominationStatus"/> にして <see cref="GameSignals.Domination"/> に出し、止めたら消す。
+    /// HUD があればスコアボードにキル数とデス数を渡す。</item>
     /// <item>終わったらプレイヤーの移動と射撃を止め、<see cref="MatchRunner"/> と同じく <see cref="RestartActionPath"/> (キーボードの R) で
     /// 今のシーンを読み込み直して最初からやり直す。</item>
     /// </list>
@@ -86,7 +87,7 @@ namespace Fps.Runtime
         private ControlPointMap _map;
         private Domination _domination;
         private BootstrapWorld _world;
-        private IDominationHud _view;
+        private DominationStatus _publishedStatus;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _restartAction;
@@ -100,8 +101,8 @@ namespace Fps.Runtime
         /// <summary>試合の拠点。番号の順。開始前は空。</summary>
         public IReadOnlyList<ControlPointZone> Zones => _zones;
 
-        /// <summary>HUD に出しているビュー。HUD が無い (専用サーバー) か開始前は null。</summary>
-        public IDominationHud View => _view;
+        /// <summary>最後に <see cref="GameSignals.Domination"/> に出した状態。出す前と止めた後は null。</summary>
+        public DominationStatus Status => _publishedStatus;
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
@@ -421,8 +422,9 @@ namespace Fps.Runtime
                 world.TargetRoot.SetActive(false);
             }
 
-            ShowOnHud();
+            UseOfflinePalette();
             _domination.Start();
+            PublishStatus();
             ShowScoreboard();
         }
 
@@ -457,6 +459,7 @@ namespace Fps.Runtime
 
             UpdatePresence();
             _domination.Tick(deltaSeconds);
+            PublishStatus();
         }
 
         /// <summary>
@@ -527,12 +530,13 @@ namespace Fps.Runtime
                 _domination.PointNeutralized -= OnPointNeutralized;
             }
 
-            if (GameUi.IsAlive(_view) && _view.Source == _domination)
+            // 別の Runner が後から出した状態は消さない。
+            if (_publishedStatus != null)
             {
-                _view.Clear();
+                GameSignals.Domination.ClearIfCurrent(_publishedStatus);
             }
 
-            _view = null;
+            _publishedStatus = null;
             _zones = Array.Empty<ControlPointZone>();
             _map = null;
             _world = null;
@@ -763,11 +767,6 @@ namespace Fps.Runtime
             }
 
             SetPlayerControl(false);
-            if (GameUi.IsAlive(_view))
-            {
-                _view.Refresh();
-            }
-
             AcquireRestartAction();
         }
 
@@ -802,21 +801,19 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>HUD (専用サーバーでは無い) に拠点制圧の表示 (<see cref="IHud.AttachDomination"/>) を付けて試合を出す。</summary>
-        private void ShowOnHud()
+        private void UseOfflinePalette()
         {
             var hud = _world.Hud;
-            if (!GameUi.IsAlive(hud))
+            if (GameUi.IsAlive(hud))
             {
-                return;
+                hud.UseTeamPalette(TeamColors.OfflineViewer);
             }
+        }
 
-            hud.UseTeamPalette(TeamColors.OfflineViewer);
-            _view = hud.AttachDomination();
-            if (_view != null)
-            {
-                _view.Show(_domination);
-            }
+        private void PublishStatus()
+        {
+            _publishedStatus = DominationStatus.Of(_domination);
+            GameSignals.Domination.Publish(_publishedStatus);
         }
 
         /// <summary>自分 (Alpha) と敵 (Bravo) のキル数・デス数を HUD のスコアボードに渡す。HUD が無ければ何もしない。</summary>

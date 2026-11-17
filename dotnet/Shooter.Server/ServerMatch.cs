@@ -18,6 +18,7 @@ namespace Shooter.Server
         private readonly TextWriter _log;
         private readonly ServerEventWriter _events;
         private readonly Func<DateTime> _utcNow;
+        private readonly float _restartDelaySeconds;
         private float _restartRemaining;
         private int _botCount;
         private int _maxPlayers = NetMatchSettings.DefaultMaxPlayers;
@@ -28,7 +29,8 @@ namespace Shooter.Server
             TextWriter log,
             ServerEventWriter events,
             Func<DateTime> utcNow,
-            int maxTeamSizeDifference = NetMatchSettings.DefaultMaxTeamSizeDifference)
+            int maxTeamSizeDifference = NetMatchSettings.DefaultMaxTeamSizeDifference,
+            float mapVoteSeconds = NetMatchSettings.DefaultMapVoteSeconds)
         {
             if (!(restartDelaySeconds >= 0f) || float.IsInfinity(restartDelaySeconds))
             {
@@ -42,7 +44,14 @@ namespace Shooter.Server
                     nameof(maxTeamSizeDifference), maxTeamSizeDifference, "maxTeamSizeDifference must not be negative");
             }
 
-            RestartDelaySeconds = restartDelaySeconds;
+            if (!(mapVoteSeconds >= 0f) || float.IsInfinity(mapVoteSeconds))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(mapVoteSeconds), mapVoteSeconds, "mapVoteSeconds must not be negative and must be finite");
+            }
+
+            _restartDelaySeconds = restartDelaySeconds;
+            MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _events = events ?? throw new ArgumentNullException(nameof(events));
@@ -62,7 +71,11 @@ namespace Shooter.Server
 
         public event Action Restarted;
 
-        public float RestartDelaySeconds { get; }
+        /// <summary>
+        /// 試合が終わってから次の試合を始めるまでの秒。マップの投票をする (<see cref="HoldsMapVote"/>) ときは、
+        /// 締め切る前に次の試合が始まらないよう <see cref="MapVoteSeconds"/> より短くしない。
+        /// </summary>
+        public float RestartDelaySeconds => HoldsMapVote ? Math.Max(_restartDelaySeconds, MapVoteSeconds) : _restartDelaySeconds;
 
         public int MaxTeamSizeDifference { get; }
 

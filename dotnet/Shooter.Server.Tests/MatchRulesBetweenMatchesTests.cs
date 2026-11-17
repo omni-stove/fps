@@ -40,7 +40,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void MapVoteAndSpectateRequestsDoNothingYet()
+        public void MapVoteAndSpectateRequestsDuringPlayDoNothing()
         {
             Start(new NetMatchSettings(mapPool: _maps, mapVoteSeconds: 5f));
             Join(1);

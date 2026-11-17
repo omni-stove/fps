@@ -116,6 +116,7 @@ namespace Shooter.Server
             PreparePings(rules);
             PrepareIdle(rules);
             PrepareChat(settings);
+            PrepareMapVote();
             StartObjective();
         }
 
@@ -130,6 +131,7 @@ namespace Shooter.Server
             TickObjective(deltaSeconds);
             TickIdle(deltaSeconds);
             TickPings();
+            TickMapVote(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -210,6 +212,7 @@ namespace Shooter.Server
             }
 
             StopObjective();
+            StopMapVote();
             _session = null;
         }
 

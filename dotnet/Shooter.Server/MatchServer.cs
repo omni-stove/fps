@@ -62,8 +62,9 @@ namespace Shooter.Server
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
+            var settings = rules?.Settings ?? NetMatchSettings.Default;
             Match = new ServerMatch(
-                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference)
+                restartDelaySeconds, log, events, utcNow, settings.MaxTeamSizeDifference, settings.MapVoteSeconds)
             {
                 MaxPlayers = MaxPlayers,
             };

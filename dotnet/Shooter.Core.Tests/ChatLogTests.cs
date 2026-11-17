@@ -30,5 +30,25 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, ChatRefusal.None));
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, (ChatRefusal)99));
         }
+
+        [Test]
+        public void FormatsAReceivedLineWithoutItsText()
+        {
+            var line = new ChatLine(4, ChatChannel.All, "secret", 3.25d);
+
+            Assert.That(ChatLog.Received(line), Is.EqualTo("[Chat] received sender=4 channel=All length=6 at=3.25"));
+            Assert.That(ChatLog.IgnoredChannel(4, 9), Is.EqualTo("[Chat] ignored a line with an unknown channel sender=4 channel=9"));
+        }
+
+        [Test]
+        public void FormatsWhatHappenedToALineThisClientSent()
+        {
+            Assert.That(ChatLog.Sent(ChatChannel.Team, 7, true), Is.EqualTo("[Chat] sent channel=Team length=7"));
+            Assert.That(ChatLog.Sent(ChatChannel.All, 2, false), Is.EqualTo("[Chat] could not send channel=All length=2 (not connected)"));
+            Assert.That(ChatLog.NotSent(ChatChannel.All, ChatRefusal.TooLong), Is.EqualTo("[Chat] not sent channel=All reason=TooLong"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Sent((ChatChannel)9, 1, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.NotSent(ChatChannel.All, ChatRefusal.None));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.NotSent((ChatChannel)9, ChatRefusal.Empty));
+        }
     }
 }

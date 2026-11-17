@@ -6,22 +6,19 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     /// <summary>
     /// KillConfirmedRunner が、倒れた参加者に DropOnDeath でタグを落とさせ、拾われたタグを確定・阻止としてモードに渡し、
-    /// 消えたタグと試合の終わりに残ったタグを片付け、HUD に確定数と阻止数を出すことを確かめる。
+    /// 消えたタグと試合の終わりに残ったタグを片付け、モードの状態 (ModeStatus) の Detail に進めているキルコンファームドを入れることを確かめる。
     /// Edit Mode では物理が進まないので、タグの範囲に入ったことは <see cref="Pickup.TryCollect"/> と <see cref="Pickup.HandleEnter"/> で起こす。
     /// </summary>
     public sealed class KillConfirmedRunnerTests
     {
         private const float TagLifetimeSeconds = 10f;
         private const float RespawnSeconds = 1f;
-
-        private static readonly string[] ConfirmedHudLines = { "確定 ALPHA 1 / BRAVO 0", "阻止 ALPHA 0 / BRAVO 0", "落ちているタグ 0" };
 
         private readonly List<Object> _objects = new List<Object>();
         private KillConfirmedRunner _runner;
@@ -96,8 +93,7 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", 0, Vector3.zero);
             var bot = Member("Bot-1-1", 1, new Vector3(0f, 0f, 10f));
-            var hud = BoundHudView();
-            Begin(player, bot, hud);
+            Begin(player, bot);
             var tag = KillAndFindTag(bot, player);
 
             Assert.That(tag.TryCollect(player.Damageable, out _), Is.True);
@@ -106,7 +102,8 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.KillConfirmed.GetConfirmed(Side.Alpha), Is.EqualTo(1));
             Assert.That(_runner.KillConfirmed.Tags, Is.Empty);
             Assert.That(_runner.TagPickupCount, Is.Zero);
-            Assert.That(hud.Lines, Is.EqualTo(ConfirmedHudLines));
+            Assert.That(_runner.Status.Detail, Is.SameAs(_runner.KillConfirmed));
+            Assert.That(_runner.Status.SideScores, Is.EqualTo(new[] { new SideScore(Side.Alpha, 1d), new SideScore(Side.Bravo, 0d) }));
         }
 
         [Test]
@@ -131,8 +128,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0, Vector3.zero);
             var ally = Member("Bot-0-1", 0, new Vector3(0f, 0f, 5f));
             var bot = Member("Bot-1-1", 1, new Vector3(0f, 0f, 10f));
-            var hud = BoundHudView();
-            Begin(player, ally, bot, hud);
+            Begin(player, ally, bot);
             var tag = KillAndFindTag(ally, bot);
 
             Assert.That(tag.TryCollect(player.Damageable, out _), Is.True);
@@ -140,7 +136,8 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.GetScore(Side.Alpha), Is.Zero);
             Assert.That(_runner.Session.GetScore(Side.Bravo), Is.Zero);
             Assert.That(_runner.KillConfirmed.GetDenied(Side.Alpha), Is.EqualTo(1));
-            Assert.That(hud.Lines[1], Is.EqualTo("阻止 ALPHA 1 / BRAVO 0"));
+            Assert.That(_runner.Status.Detail, Is.SameAs(_runner.KillConfirmed));
+            Assert.That(_runner.Status.SideScores, Is.EqualTo(new[] { new SideScore(Side.Alpha, 0d), new SideScore(Side.Bravo, 0d) }));
         }
 
         [Test]
@@ -313,22 +310,22 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.KillConfirmed, Is.Null);
         }
 
-        private void Begin(SideMember player, SideMember bot, ModeHudView hud = null)
+        private void Begin(SideMember player, SideMember bot)
         {
-            Begin(CreateMode(), new[] { player, bot }, player, hud);
+            Begin(CreateMode(), new[] { player, bot }, player);
         }
 
-        private void Begin(SideMember player, SideMember ally, SideMember bot, ModeHudView hud)
+        private void Begin(SideMember player, SideMember ally, SideMember bot)
         {
-            Begin(CreateMode(), new[] { player, ally, bot }, player, hud);
+            Begin(CreateMode(), new[] { player, ally, bot }, player);
         }
 
         private void Begin(KillConfirmed mode, SideMember player, SideMember ally, SideMember bot)
         {
-            Begin(mode, new[] { player, ally, bot }, player, null);
+            Begin(mode, new[] { player, ally, bot }, player);
         }
 
-        private void Begin(KillConfirmed mode, IReadOnlyList<SideMember> members, SideMember player, ModeHudView hud)
+        private void Begin(KillConfirmed mode, IReadOnlyList<SideMember> members, SideMember player)
         {
             _runner.Begin(mode, members, Array.Empty<SideSpawnPoint>(), player);
         }
@@ -377,13 +374,6 @@ namespace Fps.Tests.EditMode
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);
             return member;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private T Track<T>(T obj)

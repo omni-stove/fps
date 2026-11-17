@@ -91,33 +91,6 @@ namespace Fps.Core
 
             return new FreeForAllStanding(rank, sides.Count, own, bestOther.HasValue ? own - bestOther.Value : (int?)null);
         }
-
-        /// <summary>HUD に出す順位の行。表のキー <c>mode.freeForAll.*</c> の文で、差は符号を除いた数を引数に入れる。</summary>
-        /// <example>
-        /// 6 人中 3 位で 1 位と 4 点差なら <c>順位 3/6  1位と -4</c>、単独 1 位で 2 位と 2 点差なら <c>順位 1/6  2位と +2</c>、
-        /// 1 位が並んでいれば <c>順位 1/6  1位と同点</c>、1 人だけなら <c>順位 1/1</c>
-        /// </example>
-        public static LocalizedText RankText(FreeForAllStanding standing)
-        {
-            var text = new LocalizedText("mode.freeForAll.rank", standing.Rank, standing.SideCount);
-            if (!standing.Margin.HasValue)
-            {
-                return text;
-            }
-
-            var margin = standing.Margin.Value;
-            if (margin > 0)
-            {
-                return new LocalizedText("mode.freeForAll.aheadOfSecond", text, margin);
-            }
-
-            return margin == 0
-                ? new LocalizedText("mode.freeForAll.tiedForFirst", text)
-                : new LocalizedText("mode.freeForAll.behindFirst", text, -margin);
-        }
-
-        /// <summary>今の順位を <see cref="RankText(FreeForAllStanding)"/> で返す。</summary>
-        public static LocalizedText RankText(ModeSession session, Side side) => RankText(Standing(session, side));
     }
 
     /// <summary>フリーフォーオールでの 1 人 (1 陣営) の順位 (<see cref="FreeForAllMode.Standing"/>)。</summary>

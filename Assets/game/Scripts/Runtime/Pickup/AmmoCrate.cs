@@ -8,13 +8,14 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 置きっぱなしの弾薬箱。範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が Interact (キーボードは E の長押し) をすると、
-    /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="CooldownSeconds"/> 経てば何度でも使える。
+    /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="EffectiveCooldownSeconds"/> 経てば何度でも使える。
+    /// <see cref="Definition"/> があれば、範囲と補給の間隔は自分の値の代わりにそちらを読む。
     /// 足したかどうかと数は <c>[AmmoCrate]</c> のログに出す。
     /// 範囲にプレイヤーがいる間は、HUD の <see cref="IInteractPrompt"/> に使い方 (<see cref="PromptKey"/>) か満タン (<see cref="FullKey"/>) を出す。
     /// </summary>
     /// <remarks>
     /// 見た目は <see cref="VisualPrefab"/>、空なら仮の箱を作る。どちらも固い物として当たり判定を残す (身を隠せる物として置くため)。
-    /// 使える範囲は見た目とは別のトリガーの球 (<see cref="Radius"/>) で決める。
+    /// 使える範囲は見た目とは別のトリガーの球 (<see cref="EffectiveRadius"/>) で決める。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class AmmoCrate : MonoBehaviour
@@ -25,6 +26,7 @@ namespace Fps.Runtime
         public const string InteractActionPath = InputActionPaths.Interact;
 
         public const float DefaultRadius = 1.6f;
+        public const float MinRadius = 0.1f;
         public const float DefaultCooldownSeconds = 1f;
         public const string VisualName = "Visual";
 
@@ -43,7 +45,10 @@ namespace Fps.Runtime
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        [SerializeField, Min(0.1f), Tooltip("使える範囲の半径 (m)。足元から球が立つ")]
+        [SerializeField, Tooltip("調整値。入れると下の範囲と使ってから次に使えるまでの秒数の代わりにこれの弾薬箱の欄を使う")]
+        private PickupDefinition _definition;
+
+        [SerializeField, Min(MinRadius), Tooltip("使える範囲の半径 (m)。足元から球が立つ")]
         private float _radius = DefaultRadius;
 
         [SerializeField, Min(0f), Tooltip("使ってから次に使えるまでの秒数")]
@@ -61,14 +66,34 @@ namespace Fps.Runtime
         private float _readyAt;
         private IHud _hud;
 
+        /// <summary>
+        /// 調整値。null でなければ <see cref="Radius"/>・<see cref="CooldownSeconds"/> の代わりに <see cref="PickupDefinition.AmmoCrateRadius"/>・
+        /// <see cref="PickupDefinition.AmmoCrateCooldownSeconds"/> を使う。範囲はすぐトリガーの球に映す。値が不正なら <see cref="ArgumentException"/>。
+        /// </summary>
+        public PickupDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                if (value != null)
+                {
+                    value.ValidateAmmoCrate();
+                }
+
+                _definition = value;
+                ApplyRadius();
+            }
+        }
+
+        /// <summary>使える範囲の半径 (m)。<see cref="Definition"/> が無いときに使う。</summary>
         public float Radius
         {
             get => _radius;
             set
             {
-                if (!(value >= 0.1f) || float.IsInfinity(value))
+                if (!IsValidRadius(value))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value), value, "radius must be at least 0.1 and finite");
+                    throw new ArgumentOutOfRangeException(nameof(value), value, $"radius must be at least {MinRadius} and finite");
                 }
 
                 _radius = value;
@@ -76,12 +101,13 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary>使ってから次に使えるまでの秒数。<see cref="Definition"/> が無いときに使う。</summary>
         public float CooldownSeconds
         {
             get => _cooldownSeconds;
             set
             {
-                if (!(value >= 0f) || float.IsInfinity(value))
+                if (!IsValidCooldown(value))
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), value, "cooldown must be non-negative and finite");
                 }
@@ -89,6 +115,22 @@ namespace Fps.Runtime
                 _cooldownSeconds = value;
             }
         }
+
+        /// <summary>
+        /// 使っている範囲の半径 (m)。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="Radius"/>。
+        /// </summary>
+        public float EffectiveRadius =>
+            _definition != null && IsValidRadius(_definition.AmmoCrateRadius) ? _definition.AmmoCrateRadius : _radius;
+
+        /// <summary>
+        /// 使っている、使ってから次に使えるまでの秒数。<see cref="Definition"/> があればその値、無いか値が不正なら <see cref="CooldownSeconds"/>。
+        /// </summary>
+        public float EffectiveCooldownSeconds =>
+            _definition != null && IsValidCooldown(_definition.AmmoCrateCooldownSeconds) ? _definition.AmmoCrateCooldownSeconds : _cooldownSeconds;
+
+        public static bool IsValidRadius(float radius) => radius >= MinRadius && !float.IsInfinity(radius);
+
+        public static bool IsValidCooldown(float seconds) => seconds >= 0f && !float.IsInfinity(seconds);
 
         /// <summary>見た目。次に組み立てるとき (Awake) から使う。</summary>
         public GameObject VisualPrefab
@@ -102,6 +144,20 @@ namespace Fps.Runtime
 
         private void Awake()
         {
+            if (_definition != null)
+            {
+                try
+                {
+                    _definition.ValidateAmmoCrate();
+                }
+                catch (ArgumentException e)
+                {
+                    // 置き場所の遮蔽物として残すため見た目と当たり判定は作り、使えないことだけを知らせる。
+                    Debug.LogError($"{LogTag} '{name}' の設定が不正です: {e.Message}", this);
+                    enabled = false;
+                }
+            }
+
             Build();
         }
 
@@ -229,7 +285,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _readyAt = now + _cooldownSeconds;
+            _readyAt = now + EffectiveCooldownSeconds;
             return true;
         }
 
@@ -299,8 +355,9 @@ namespace Fps.Runtime
                 return;
             }
 
-            trigger.radius = _radius;
-            trigger.center = new Vector3(0f, _radius, 0f);
+            var radius = EffectiveRadius;
+            trigger.radius = radius;
+            trigger.center = new Vector3(0f, radius, 0f);
         }
 
         private Transform CreateVisual()

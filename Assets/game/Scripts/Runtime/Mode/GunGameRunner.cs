@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// ガンゲーム (<see cref="GunGame"/>) を進める <see cref="ModeRunnerBase"/>。全員が別の陣営 (<see cref="FreeForAll"/>) で、
-    /// <see cref="Ladder"/> の武器の並びを 0 段目から順に持ち、最後の段の武器で倒した人が勝つ。倒れた人は <see cref="RespawnSeconds"/> 後に戻る。
+    /// <see cref="Ladder"/> の武器の並びを 0 段目から順に持ち、最後の段の武器で倒した人が勝つ。倒れた人は Ladder の <see cref="GunGameLadderDefinition.RespawnSeconds"/> 後に戻る。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -26,14 +26,8 @@ namespace Fps.Runtime
         public const float DefaultTimeLimitSeconds = 600f;
         public const float DefaultRespawnSeconds = 2f;
 
-        [SerializeField, Tooltip("武器の並び。空なら入口 (GameContent) のものを使う")]
+        [SerializeField, Tooltip("武器の並びと制限時間・リスポーンの秒数。空なら入口 (GameContent) のものを使う")]
         private GunGameLadderDefinition _ladder;
-
-        [SerializeField, Min(1f), Tooltip("制限時間 (秒)。切れたら段のいちばん進んだ人の勝ち")]
-        private float _timeLimitSeconds = DefaultTimeLimitSeconds;
-
-        [SerializeField, Min(0f), Tooltip("倒れてから出現点に戻るまでの秒数")]
-        private float _respawnSeconds = DefaultRespawnSeconds;
 
         private readonly List<SideMember> _pendingEquips = new List<SideMember>();
         private readonly HashSet<SideMember> _warnedUnarmed = new HashSet<SideMember>();
@@ -52,18 +46,6 @@ namespace Fps.Runtime
 
         /// <summary>配線した <see cref="Ladder"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public GunGameLadderDefinition EffectiveLadder => GameContent.Pick(_ladder, c => c.GunGameLadder);
-
-        public float TimeLimitSeconds
-        {
-            get => _timeLimitSeconds;
-            set => _timeLimitSeconds = value;
-        }
-
-        public float RespawnSeconds
-        {
-            get => _respawnSeconds;
-            set => _respawnSeconds = value;
-        }
 
         /// <summary>進めているガンゲーム。<see cref="CreateGunGameSession"/> で作ったモードを始めていなければ null。</summary>
         public GunGame GunGame => _gunGame != null && Session != null && Session == _gunGameSession ? _gunGame : null;
@@ -89,7 +71,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// <see cref="Ladder"/> からガンゲームとモードを作り、この Runner が進めるものとして覚えて返す。<see cref="ModeRunnerBase.Begin"/> に渡す
-        /// (Play 中は Start が呼ぶ)。Ladder が無いか不正なら <see cref="InvalidOperationException"/>、時間の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// (Play 中は Start が呼ぶ)。制限時間とリスポーンの秒数も Ladder から読む。Ladder が無いか、武器の並びか時間の値が不正なら <see cref="InvalidOperationException"/>。
         /// </summary>
         public ModeSession CreateGunGameSession()
         {
@@ -111,7 +93,7 @@ namespace Fps.Runtime
             }
 
             var gunGame = new GunGame(ladder);
-            var session = CreateSession(gunGame, _timeLimitSeconds, _respawnSeconds);
+            var session = definition.CreateSession(gunGame);
 
             _gunGame = gunGame;
             _gunGameSession = session;

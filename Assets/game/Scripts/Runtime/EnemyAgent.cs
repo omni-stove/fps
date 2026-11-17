@@ -772,7 +772,9 @@ namespace Fps.Runtime
             bool steered;
             if (_order.IsOrder)
             {
-                decision = BotDriver.FollowOrder(decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, out steered);
+                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ EnemyBrain.ArrivalDistance (Default の値) で決める。
+                decision = BotDriver.FollowOrder(
+                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, BotInputSpec.Default, out steered);
                 moveTo = steered ? decision.MoveTo : CoverMoveTo(decision);
                 NoteOrderArrival();
             }

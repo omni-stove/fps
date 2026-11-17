@@ -333,6 +333,7 @@ namespace Shooter.Server
             snapshot.Downed = DownedOf(playerId);
             snapshot.Kills = _session.GetKills(playerId);
             snapshot.Deaths = _session.GetDeaths(playerId);
+            snapshot.Assists = _session.GetAssists(playerId);
             snapshot.HasKiller = _lastKillers.TryGetValue(playerId, out var killer);
             snapshot.KillerId = snapshot.HasKiller ? killer : 0;
             snapshot.SpawnProtectionSeconds = HudFormat.DisplayedSeconds(_session.GetSpawnProtectionRemaining(playerId));
@@ -446,7 +447,7 @@ namespace Shooter.Server
             _lastKillers[victimId] = killerId;
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
-            _match.WriteKill(killerId, victimId, byAlly);
+            _match.WriteKill(killerId, victimId, byAlly, assisterIds);
             SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
             ObjectivePlayerKilled(victimId);
             SpectatePlayerKilled(victimId);
@@ -500,6 +501,15 @@ namespace Shooter.Server
             _killed.WeaponId = entry.WeaponId;
             _killed.Headshot = entry.Headshot;
             _killed.Friendly = entry.Friendly;
+            _killed.ClearAssisters();
+            var assisters = entry.AssisterIds;
+            // 載せきれない分は例外にせず落とす。並びは与えた量の多い順なので落ちるのは寄与の小さい人で、点数とログには全員が残る
+            var count = Math.Min(assisters.Count, KilledMessage.MaxAssisters);
+            for (var i = 0; i < count; i++)
+            {
+                _killed.AddAssister(assisters[i]);
+            }
+
             SendToAll(TransportChannel.Reliable, _killed);
         }
 

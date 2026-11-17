@@ -74,6 +74,30 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void KillListsTheAssistersLast()
+        {
+            var pairs = ReadLine(ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, new[] { 4, 2 }));
+
+            Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "killerId", "victimId", "teamKill", "assisterIds")));
+            Assert.That(Value(pairs, "assisterIds"), Is.EqualTo("4,2"));
+        }
+
+        [Test]
+        public void KillWithoutAssistersLeavesTheKeyOut()
+        {
+            var line = ServerEventLog.Kill(_time, _matchId, 3, null, 1, null, false, Array.Empty<int>());
+
+            Assert.That(line, Is.EqualTo(ServerEventLog.Kill(_time, _matchId, 3, null, 1, null, false)));
+            Assert.That(line, Does.Not.Contain("assisterIds"));
+        }
+
+        [Test]
+        public void KillRejectsANegativeAssister()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, new[] { -1 }));
+        }
+
+        [Test]
         public void PlayerJoinedHasTeamAndRejoined()
         {
             var pairs = ReadLine(ServerEventLog.PlayerJoined(_time, _matchId, 2, _killerPuid, Team.Bravo, true));

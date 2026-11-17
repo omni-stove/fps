@@ -284,12 +284,12 @@ namespace Shooter.Server
         }
 
         // 試合の JSON のイベントを 1 か所で書き、どれも同じ試合の Id と時計を使うようにする
-        public void WriteKill(int killerId, int victimId, bool teamKill)
+        public void WriteKill(int killerId, int victimId, bool teamKill, IReadOnlyList<int> assisterIds = null)
         {
             if (_events.Enabled)
             {
                 _events.Write(ServerEventLog.Kill(
-                    _utcNow(), MatchId, killerId, ProductUserIdOf(killerId), victimId, ProductUserIdOf(victimId), teamKill));
+                    _utcNow(), MatchId, killerId, ProductUserIdOf(killerId), victimId, ProductUserIdOf(victimId), teamKill, assisterIds));
             }
         }
 

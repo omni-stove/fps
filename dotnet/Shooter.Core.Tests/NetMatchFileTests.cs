@@ -415,7 +415,7 @@ namespace Shooter.Core.Tests
             }
         }
 
-        private static readonly string[] ExpectedMapPool = { "NetTest", "NetArena01" };
+        private static readonly string[] _expectedMapPool = { "NetTest", "NetArena01" };
 
         [Test]
         public void CommittedRulesEditedAsTheGuideSaysStillRead()
@@ -438,7 +438,7 @@ namespace Shooter.Core.Tests
 
             var settings = NetMatchFile.Parse(text, "TeamDeathmatch.json").Settings;
 
-            Assert.That(settings.MapPool, Is.EqualTo(ExpectedMapPool));
+            Assert.That(settings.MapPool, Is.EqualTo(_expectedMapPool));
             Assert.That(settings.MapVoteSeconds, Is.EqualTo(15f));
             Assert.That(settings.MaxTeamSizeDifference, Is.EqualTo(1));
             Assert.That(settings.PrivateMatch, Is.True);

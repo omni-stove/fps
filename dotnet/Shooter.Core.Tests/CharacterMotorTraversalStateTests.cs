@@ -138,7 +138,7 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void ATickCarriesTheNewStatesThroughUnchanged()
+        public void ATickCarriesTheUnwrittenStatesThroughUnchanged()
         {
             AddFloor();
             var simulation = NewSimulation();
@@ -150,7 +150,10 @@ namespace Shooter.Core.Tests
 
             var next = simulation.Step(state, Input(new Vector2(0f, 1f), lean: 1, jump: true));
 
-            Assert.That(next.Lean, Is.EqualTo(lean));
+            Assert.That(
+                next.Lean.Amount,
+                Is.EqualTo(0.4f).Within(1e-5f),
+                "the stored swim state keeps the body from leaning, so it comes back by LeanSpeed (6/s) for one tick");
             Assert.That(next.Swim, Is.EqualTo(swim));
             Assert.That(next.WallRun, Is.EqualTo(wallRun));
             Assert.That(next.AirJumpsUsed, Is.Zero, "swimming and wall running give the air jumps back");

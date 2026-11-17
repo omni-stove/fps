@@ -24,7 +24,7 @@ namespace Fps.Runtime
 
             // 実行時に付けるので Inspector の値は既定のままになる。ゲームの値は調整値の JSON から渡す。
             var melee = PlayerActions.GetOrAdd<MeleeController>(player);
-            melee.Spec = Tuning;
+            melee.ApplyTuning(Tuning);
             melee.Configure(rules);
         }
 

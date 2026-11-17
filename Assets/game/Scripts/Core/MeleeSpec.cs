@@ -79,7 +79,7 @@ namespace Fps.Core
         public float BehindArcDegrees { get; }
 
         // 処刑技 (ContextMeleeMove.Finisher) と背後から倒す技 (ContextMeleeMove.Takedown) の値を省けるのは、敵の近接や盾の殴りなど技を出さない側が値を並べなくて済むようにするため。
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下、takedownWitnessAwareness は 0 以上 1 以下、behindArcDegrees は 0 より大きく 360 以下。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。impactSeconds は 0 以上 swingSeconds 以下、takedownWitnessAwareness は 0 以上 1 以下、behindArcDegrees は 1 以上 360 以下。</exception>
         public MeleeSpec(
             int damage,
             float reach,
@@ -169,9 +169,9 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(standDistance), standDistance, "standDistance must be a non-negative finite number");
             }
 
-            if (!(behindArcDegrees > 0f && behindArcDegrees <= MaxArcDegrees))
+            if (!(behindArcDegrees >= 1f && behindArcDegrees <= MaxArcDegrees))
             {
-                throw new ArgumentOutOfRangeException(nameof(behindArcDegrees), behindArcDegrees, "behindArcDegrees must be greater than 0 and at most 360");
+                throw new ArgumentOutOfRangeException(nameof(behindArcDegrees), behindArcDegrees, "behindArcDegrees must be at least 1 and at most 360");
             }
 
             Damage = damage;

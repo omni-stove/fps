@@ -109,7 +109,7 @@ namespace Shooter.Tests.EditMode
             _world.Targets[1].Damageable.Kill();
 
             Assert.That(match.Result, Is.EqualTo(MatchOutcome.Won));
-            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchOutcome.Won),"the result reaches the model even with no HUD");
+            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchOutcome.Won), "the result reaches the model even with no HUD");
             Assert.That(_world.Mover.enabled, Is.False);
             Assert.That(_world.Weapon.enabled, Is.False);
         }

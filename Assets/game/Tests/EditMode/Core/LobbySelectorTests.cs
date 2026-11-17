@@ -154,6 +154,69 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void APartyNeedsRoomForEveryMember()
+        {
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 1, max: 4), _version, 3), Is.Null);
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 2, max: 4), _version, 3), Is.EqualTo("room for 2 (party of 3)"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 3, max: 4), _version, 3), Is.EqualTo("room for 1 (party of 3)"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 4, max: 4), _version, 3), Is.EqualTo("full"));
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 3, max: 4), _version, 1), Is.Null);
+            Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0.2.0", 4), _version, 3), Does.Contain("0.2.0"), "the version is checked before the room");
+        }
+
+        [Test]
+        public void AVoiceServerLeavesTheServersSlotOutOfThePartysRoom()
+        {
+            var lobby = new LobbyInfo("s", "server-s", ServerLobby.MaxMembers(4), Ids("server-s"), ServerLobby.Attributes("203.0.113.1:7777", _version, 2));
+
+            Assert.That(LobbySelector.ServerRejection(lobby, _version, 2), Is.Null);
+            Assert.That(LobbySelector.ServerRejection(lobby, _version, 3), Is.EqualTo("room for 2 (party of 3)"));
+        }
+
+        [Test]
+        public void PicksTheBusiestServerWithRoomForTheParty()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("busiest", "203.0.113.1:7777", 6),
+                Server("busy", "203.0.113.2:7777", 5),
+                Server("empty", "203.0.113.3:7777", 0),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1).Id, Is.EqualTo("busiest"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 2).Id, Is.EqualTo("busiest"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 3).Id, Is.EqualTo("busy"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 4).Id, Is.EqualTo("empty"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 9), Is.Null);
+        }
+
+        [Test]
+        public void DescribesTheServersTooSmallForTheParty()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("a", "203.0.113.1:7777", 6),
+                Server("f", "203.0.113.2:7777", 8),
+                Server("b", "203.0.113.3:7777", 6),
+                Server("c", "203.0.113.4:7777", 7),
+            };
+
+            Assert.That(
+                LobbySelector.DescribeNoServer(lobbies, _version, 3),
+                Is.EqualTo("no server to join among 4 found (room for 2 (party of 3) x2, full x1, room for 1 (party of 3) x1)"));
+        }
+
+        [Test]
+        public void RejectsAPartySizeBelowOne()
+        {
+            var lobbies = new List<LobbyInfo> { Server("s", "203.0.113.1:7777", 0) };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => LobbySelector.PickServer(lobbies, _version, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => LobbySelector.ServerRejection(lobbies[0], _version, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => LobbySelector.DescribeNoServer(lobbies, _version, -1));
+        }
+
+        [Test]
         public void RejectsServersThatCannotBeJoined()
         {
             Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0.2.0"), _version), Does.Contain("0.2.0").And.Contain(_version));

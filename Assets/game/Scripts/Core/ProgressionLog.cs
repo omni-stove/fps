@@ -57,6 +57,37 @@ namespace Shooter.Core
             return LogTag + " profile rejected: " + reason;
         }
 
+        public static string ProfileKept(string slot)
+        {
+            return LogTag + " kept the rejected profile in slot=" + slot;
+        }
+
+        public static string LeveledUp(ProgressionAward award)
+        {
+            if (award == null)
+            {
+                throw new ArgumentNullException(nameof(award));
+            }
+
+            return string.Format(
+                CultureInfo.InvariantCulture, "{0} level up {1}->{2} total={3}", LogTag, award.PreviousLevel, award.Level, award.Profile.Xp);
+        }
+
+        public static string Saved(PlayerProfile profile)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            return LogTag + " saved " + profile;
+        }
+
+        public static string SaveFailed(string reason)
+        {
+            return LogTag + " could not save the profile: " + reason;
+        }
+
         private static string Gained(ProgressionAward award)
         {
             return string.Format(

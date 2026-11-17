@@ -10,7 +10,6 @@ namespace Shooter.Editor
     // 発見ゲージの囲い (StealthRangeFixture) の見張りを使う。囲いを別に置くと、射撃場の床に空きを探し直すことになるため。
     // 発見ゲージの手順 (StealthSmokeStep) の後に回すので、見張りとプレイヤーのルールを自分で戻してから始める。
     // 能力の枠は 2 つとも埋まっているので、この手順の間だけグラップルの枠を物を投げる能力に入れ替え、終えたら戻す。
-    // 確かめること: 背を向けた見張りの後ろで物を投げると調べに行く・交戦中の見張りは物音に反応しない。
     public sealed class DistractionSmokeStep : ITpsActionSmokeStep
     {
         public const int SlotIndex = 0;

@@ -7,13 +7,6 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆発の届く範囲を線で見せるデバッグ表示。まだ爆発していないグレネード (<see cref="ThrownGrenade.Live"/>) には今の位置に、
-    /// 起きた爆発 (<see cref="Report"/>) にはその中心に、届く半径 (赤) と減らさずに当たる半径 (橙) の球を、水平と縦 2 本の円で描く。
-    /// 爆発の円は <see cref="HoldSeconds"/> 秒かけて薄くして消す。
-    /// Editor と Development Build だけで動き、それ以外と専用サーバーでは作られず <see cref="Report"/> は何もしない。
-    /// シーンの読み込み後に自分で 1 つ作り、F4 で表示と非表示を切り替える (入力アセットは変えず <see cref="Keyboard.current"/> を直接読む)。既定は表示。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class ExplosionRangeDebug : MonoBehaviour
     {
@@ -21,7 +14,6 @@ namespace Shooter.Runtime
 
         public const string ObjectName = "ExplosionRangeDebug";
 
-        /// <summary>起きた爆発の円を出し続ける秒数。</summary>
         public const float HoldSeconds = 2.5f;
 
         private const int CircleSegments = 48;
@@ -38,22 +30,14 @@ namespace Shooter.Runtime
         private int _usedLines;
         private bool _visible = true;
 
-        /// <summary>この Build で出すか。Editor と Development Build だけ true。</summary>
         public static bool IsSupported => Debug.isDebugBuild;
 
-        /// <summary>今動いている表示。作られていなければ null。</summary>
         public static ExplosionRangeDebug Instance => _instance;
 
-        /// <summary>表示中か (F4 で切り替わる)。</summary>
         public bool IsVisible => _visible;
 
-        /// <summary>出している爆発の円の数 (グレネードの分は数えない)。</summary>
         public int BlastCount => _blasts.Count;
 
-        /// <summary>
-        /// center で radius (届く半径) と fullDamageRadius (減らさずに当たる半径) の爆発が起きたことを知らせ、その範囲を描く。
-        /// 表示が無いときは何もしない。半径が 0 以下か有限でなければ描かない。
-        /// </summary>
         public static void Report(Vector3 center, float radius, float fullDamageRadius)
         {
             if (_instance == null || !(radius > 0f) || float.IsInfinity(radius))
@@ -64,7 +48,6 @@ namespace Shooter.Runtime
             _instance.Add(center, radius, fullDamageRadius);
         }
 
-        /// <summary>表示と非表示を切り替える。F4 を押したときと同じ。</summary>
         public void SetVisible(bool visible)
         {
             _visible = visible;
@@ -114,6 +97,7 @@ namespace Shooter.Runtime
 
         private void Update()
         {
+            // デバッグ表示のためだけに入力アセットを変えないよう、キーボードを直接読む。
             var keyboard = Keyboard.current;
             if (keyboard != null && keyboard.f4Key.wasPressedThisFrame)
             {

@@ -10,23 +10,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには床 (<see cref="FloorName"/>)、
-    /// <see cref="GameBootstrap"/> と <see cref="MatchRunner"/> を置いた GameObject、高低の遮蔽物 (<see cref="Covers"/>)、
-    /// 乗り越え用の低い壁 (<see cref="VaultWall"/>)、回避と手榴弾を試す開けた場所の目印 (<see cref="OpenAreaName"/>)、
-    /// 壊せる小屋 (<see cref="HutName"/>) とその破片の置き場、乗り降りを試す動かない仮の乗り物 (<see cref="VehicleName"/>) と
-    /// その左の降りる位置を塞ぐ箱 (<see cref="VehicleExitBlockerName"/>) を入れ、壁や箱には <see cref="SurfaceIds"/> の材質を付け、
-    /// 最後に差し込まれた置く物 (<see cref="ITpsRangeFixture"/>、<see cref="Fixtures"/>) を置く。
-    /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
-    /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線し、肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) もそのルールで決める。保存したシーンは Build Settings に (並びを変えずに) 加える。
-    /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.TpsRangeSceneBuilder.Build</code>
-    /// </summary>
-    /// <remarks>
-    /// 配置 (上から見て、プレイヤーは原点で +Z を向き、GameBootstrap が z = 10 に標的ダミーを x = -4..4 で並べる):
-    /// 遮蔽物は出現位置と標的の間とその周り、乗り越えの壁は左 (x = -10)、開けた場所は右手前 (x = 8..20, z = -12..0)、
-    /// 小屋は右奥 (<see cref="HutCenter"/>)、乗り物は出現位置の左手前 (<see cref="VehicleOrigin"/>) に置き、どれも床 (x, z とも ±<see cref="FloorHalfExtent"/>) に収める。
-    /// </remarks>
     public static class TpsRangeSceneBuilder
     {
         public static string ScenePath => BuildSceneList.TpsRangeScene;
@@ -45,51 +28,36 @@ namespace Shooter.Editor
         public const string HutName = DestructionTestSceneBuilder.HutName;
         public const string DebrisPoolName = DestructionTestSceneBuilder.DebrisPoolName;
 
-        /// <summary>
-        /// 乗り越え用の壁の高さ (m)。<see cref="MotorSpec.DefaultVaultMaxHeight"/> より低く、プレイヤーのジャンプ
-        /// (<see cref="PlayerController.DefaultJumpHeight"/>) でも越えられる。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なので低い遮蔽物にもなる。
-        /// </summary>
+        // MotorSpec.DefaultVaultMaxHeight より低く、プレイヤーのジャンプ (PlayerController.DefaultJumpHeight) でも越えられる高さにする。
+        // MotorSpec.DefaultCoverLowWallHeight 未満なので低い遮蔽物にもなる。
         public const float VaultWallHeight = 0.8f;
 
-        /// <summary>乗り越え用の壁の厚さ (m)。乗り越えの軌道が短く済むよう遮蔽物より薄くする。</summary>
+        // 乗り越えの軌道が短く済むよう遮蔽物より薄くする。
         public const float VaultWallThickness = 0.3f;
 
-        /// <summary>開けた場所の中心 (床の高さ)。この周り <see cref="OpenAreaHalfExtent"/> には何も置かない。</summary>
         public static readonly Vector3 OpenAreaCenter = new Vector3(14f, 0f, -6f);
 
-        /// <summary>開けた場所の x, z 方向の半分の広さ (m)。回避 (<see cref="MotorSpec.DefaultDodgeDistance"/>) を何度か続けられる広さ。</summary>
+        // 回避 (MotorSpec.DefaultDodgeDistance) を何度か続けられる広さにする。
         public const float OpenAreaHalfExtent = 6f;
 
-        /// <summary>壊せる小屋の床面の中心 (地面の高さ)。大きさは <see cref="DestructionTestSceneBuilder"/> の小屋と同じ。</summary>
         public static readonly Vector3 HutCenter = new Vector3(14f, 0f, 14f);
 
         public const string VehicleName = VehicleFixtureBuilder.DefaultName;
         public const string VehicleExitBlockerName = "VehicleExitBlocker";
 
-        /// <summary>乗り降りを試す仮の乗り物の原点 (床の高さ)。+Z を向けて出現位置の左手前に置く。</summary>
         public static readonly Vector3 VehicleOrigin = new Vector3(-6f, 0f, -11f);
 
-        /// <summary>
-        /// 乗り物の左に降りる位置 (運転席の最初の候補) を塞ぐ箱。運転席から降りると反対側の候補に降りることを確かめるためのもの。
-        /// </summary>
+        // 運転席から降りると反対側の候補に降りることを確かめるため、乗り物の左に降りる位置 (運転席の最初の候補) を塞ぐ。
         public static readonly LevelBox VehicleExitBlocker = new LevelBox(
             VehicleExitBlockerName,
             VehicleOrigin + VehicleFixtureBuilder.LeftExitLocal + new Vector3(0f, 1f, 0f),
             new Vector3(1f, 2f, 1f));
 
-        /// <summary>
-        /// 床の Plane の倍率。Plane は 10m 四方なので、8 倍で 80m 四方 (x, z とも ±40m)。
-        /// GameBootstrap の床 (<see cref="GameBootstrap.FloorScale"/>) では置く物が収まらないので、シーンに自前の床を置く。
-        /// </summary>
+        // GameBootstrap の床 (GameBootstrap.FloorScale) では置く物が収まらないので、シーンに自前の床を置く。Plane は 10m 四方なので 8 倍で 80m 四方にする。
         public static readonly Vector3 FloorScale = new Vector3(8f, 1f, 8f);
 
-        /// <summary>床の x, z 方向の半分の広さ (m)。</summary>
         public static readonly float FloorHalfExtent = FloorScale.x * 10f / 2f;
 
-        /// <summary>
-        /// 遮蔽物。0, 1 番は Bootstrap の射撃場と同じ低い壁と高い壁 (<see cref="BootstrapSceneBuilder.Covers"/>) で、
-        /// 出現位置の後ろに低い壁、右前に高い柱を足す。どれも +Z (標的) 側へ撃てる向きに置く。
-        /// </summary>
         public static readonly IReadOnlyList<LevelBox> Covers = new[]
         {
             BootstrapSceneBuilder.LowCover,
@@ -104,18 +72,12 @@ namespace Shooter.Editor
                 new Vector3(1f, BootstrapSceneBuilder.HighCoverHeight, 1f)),
         };
 
-        /// <summary>乗り越え用の低い壁。+Z へ歩いて越える向きに置く。</summary>
         public static readonly LevelBox VaultWall = new LevelBox(
             VaultWallName, new Vector3(-10f, VaultWallHeight / 2f, 2f), new Vector3(4f, VaultWallHeight, VaultWallThickness));
 
-        /// <summary>低い遮蔽物 (<see cref="Covers"/> の 0 番)。</summary>
         public static LevelBox LowCover => Covers[0];
 
-        /// <summary>
-        /// 床に置くものの名前ごとの面の材質 (<see cref="SurfaceMaterial"/> の Id)。遮蔽物は Bootstrap の射撃場と同じ材質を使い
-        /// (<see cref="BootstrapSceneBuilder.CoverSurfaceIds"/>)、着弾の演出を見比べられるよう残りは材質を散らす。小屋は部品すべてに効くよう親に付ける。
-        /// 載っていないものは <see cref="SurfaceMaterial.DefaultId"/>。
-        /// </summary>
+        // 着弾の演出を見比べられるよう、遮蔽物のほかは材質を散らす。小屋は部品すべてに効くよう親に付ける。
         public static readonly IReadOnlyDictionary<string, string> SurfaceIds = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [LowCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.LowCoverName],
@@ -126,7 +88,6 @@ namespace Shooter.Editor
             [HutName] = SurfaceImpactAssetStep.WoodId,
         };
 
-        /// <summary>射撃場に組み込みで置く物の名前。<see cref="ITpsRangeFixture.Name"/> はこれらと重ねられない。</summary>
         public static readonly IReadOnlyList<string> BuiltInNames = new[]
         {
             BootstrapObjectName,
@@ -140,8 +101,6 @@ namespace Shooter.Editor
             VehicleExitBlockerName,
         };
 
-        /// <summary>読み込み済みのアセンブリから見つけた置く物 (<see cref="ITpsRangeFixture"/>)。<see cref="ITpsRangeFixture.Order"/> の順。</summary>
-        /// <exception cref="InvalidOperationException">置く物の型に public な引数なしのコンストラクターが無い。</exception>
         public static IReadOnlyList<ITpsRangeFixture> Fixtures()
         {
             return ExtensionPoints.CreateAll<ITpsRangeFixture>(f => f.Order);
@@ -160,10 +119,6 @@ namespace Shooter.Editor
             BuildAt(ScenePath);
         }
 
-        /// <summary>
-        /// path にシーンを生成・保存し、Build Settings に加える (既存の並びは変えない)。
-        /// 武器・ルールのアセットが無いか不正なら何も保存せずに例外を投げる (batchmode では終了コード 1 になる)。
-        /// </summary>
         public static void BuildAt(string path)
         {
             path = BootstrapSceneBuilder.ValidateScenePath(path);
@@ -215,11 +170,7 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{path}' and registered it in Build Settings");
         }
 
-        /// <summary>
-        /// プレイヤーに持たせる武器。既定のロードアウト (<see cref="WeaponAssetBuilder.LoadPlayerLoadout"/>) で始め、
-        /// 小屋を壊しやすいよう launcher (<see cref="WeaponAssetBuilder.LoadLauncher"/>) を最後に足す。
-        /// どれかのアセットが無いか不正なら例外を投げる。
-        /// </summary>
+        // 小屋を壊しやすいよう、既定のロードアウトの最後に launcher を足す。
         public static WeaponDefinition[] LoadPlayerWeapons()
         {
             var loadout = WeaponAssetBuilder.LoadPlayerLoadout();
@@ -230,23 +181,11 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>
-        /// 空のシーンに床、GameBootstrap (三人称、床は作らない、weapons と rules を配線) と MatchRunner を置いた GameObject、遮蔽物、乗り越えの壁、
-        /// 開けた場所の目印、壊せる小屋と破片の置き場、仮の乗り物とその降りる位置を塞ぐ箱を入れ、見つけた置く物 (<see cref="Fixtures"/>) を置いて
-        /// GameBootstrap を返す。小屋が壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。引数が不正なら何も置かずに例外を投げる。
-        /// </summary>
         public static GameBootstrap PopulateScene(Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules)
         {
             return PopulateScene(scene, weapons, rules, Fixtures());
         }
 
-        /// <summary>
-        /// <see cref="PopulateScene(Scene, IReadOnlyList{WeaponDefinition}, GameRulesDefinition)"/> の、置く物を fixtures で渡す形。
-        /// 置く物は組み込みの物の後に並びの順で置く。どれかが <see cref="ITpsRangeFixture"/> の決まり (名前・置き場所) を守らないか投げたら、
-        /// それまでに置いた物を消して例外を投げる。
-        /// </summary>
-        /// <exception cref="ArgumentException">fixtures に null がある、名前が空か組み込みの物やほかの置く物と重なる。</exception>
-        /// <exception cref="InvalidOperationException">置く物が null を返した、別のシーンや子に置いた、または <see cref="ITpsRangeFixture.Name"/> と違う名前で置いた。</exception>
         public static GameBootstrap PopulateScene(
             Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules, IReadOnlyList<ITpsRangeFixture> fixtures)
         {
@@ -326,17 +265,11 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 床に置くもの (遮蔽物・乗り越えの壁・小屋・乗り物とその降りる位置を塞ぐ箱) の x, z の範囲。開けた場所や床からはみ出していないかを確かめるのに使う。
-        /// 小屋は <see cref="DestructionTestSceneBuilder"/> の大きさから求める。
-        /// </summary>
         public static IReadOnlyList<(string Name, Bounds Bounds)> Footprints()
         {
             return Footprints(Fixtures());
         }
 
-        /// <summary><see cref="Footprints()"/> の、置く物を fixtures で渡す形。組み込みの物の後に置く物の <see cref="ITpsRangeFixture.Footprint"/> を並べる。</summary>
-        /// <exception cref="ArgumentNullException">fixtures が null。</exception>
         public static IReadOnlyList<(string Name, Bounds Bounds)> Footprints(IReadOnlyList<ITpsRangeFixture> fixtures)
         {
             if (fixtures == null)

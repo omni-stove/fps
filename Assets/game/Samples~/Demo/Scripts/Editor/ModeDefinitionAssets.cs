@@ -4,21 +4,13 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// モードの調整値のアセット (<see cref="Folder"/> の <c>&lt;モード名&gt;.asset</c>) を、シーンの生成スクリプトが Runner に配線するために用意する。
-    /// 既にあるアセットは中身を書き換えずにそのまま返す。
-    /// </summary>
-    /// <remarks>
-    /// ゲームがアセットで変えた値を、シーンを組み直すたびに既定値へ戻さないため、GameRulesAssetBuilder のように毎回上書きはしない。
-    /// </remarks>
+    // ゲームがアセットで変えた値を、シーンを組み直すたびに既定値へ戻さないため、GameRulesAssetBuilder のように毎回上書きはしない。
     public static class ModeDefinitionAssets
     {
         public const string LogTag = "[ModeDefinitionAssets]";
 
-        /// <summary>モードの調整値のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => ShooterKitRoot.OutputPath("Modes");
 
-        /// <summary><see cref="Folder"/> の下の <c>&lt;modeName&gt;.asset</c>。</summary>
         public static string PathOf(string modeName)
         {
             if (string.IsNullOrWhiteSpace(modeName))
@@ -29,10 +21,6 @@ namespace Shooter.Editor
             return Folder + "/" + modeName + ".asset";
         }
 
-        /// <summary>
-        /// path にある型 T のアセットを返す。無ければ configureNew で値を入れて作り、保存して返す。
-        /// path に別の型のアセットがあれば <see cref="InvalidOperationException"/>。
-        /// </summary>
         public static T LoadOrCreate<T>(string path, Action<T> configureNew)
             where T : ScriptableObject
         {

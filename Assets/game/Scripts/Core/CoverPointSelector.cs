@@ -4,20 +4,13 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 敵が隠れに行く遮蔽点を選び、どの敵がどの点を使っているかを持つ。同じ一覧を使う敵 (<see cref="EnemyBrain"/>) で 1 つを共有する。
-    /// 選ぶのは、脅威 (プレイヤー) の方向を遮っていて、ほかの敵が使っておらず、敵から <see cref="MaxDistance"/> 以内の点のうち最も近いもの。
-    /// 座標は Y が上で、遮っているかは水平面で判定する。
-    /// </summary>
     public sealed class CoverPointSelector
     {
-        /// <summary>敵からこの距離 (m) より遠い点は選ばない。</summary>
         public const float DefaultMaxDistance = 15f;
 
-        /// <summary>点の <see cref="CoverPoint.Facing"/> と点から脅威への方向のなす角がこの角度 (度) 以下なら遮っているとみなす。</summary>
         public const float DefaultMaxCoverAngleDegrees = 60f;
 
-        /// <summary>脅威が点からこの水平距離 (m) より近ければ、壁越しでも撃たれるので遮っているとみなさない。</summary>
+        // 脅威が点のすぐそばにいると壁越しでも撃たれるので、この水平距離 (m) より近ければ遮っているとみなさない。
         public const float DefaultMinThreatDistance = 2f;
 
         // 角度の境界ちょうどを float の丸めで落とさないための余裕。
@@ -27,10 +20,6 @@ namespace Shooter.Core
         private readonly object[] _occupants;
         private readonly float _minCoverCos;
 
-        /// <param name="points">遮蔽点の一覧。複製して持つ。</param>
-        /// <param name="maxDistance">敵から選べる点までの距離の上限 (m)。0 より大きい有限値。</param>
-        /// <param name="maxCoverAngleDegrees">遮っているとみなす角度の上限 (度)。0 以上 180 以下。</param>
-        /// <param name="minThreatDistance">遮っているとみなす、点から脅威までの水平距離の下限 (m)。0 以上の有限値。</param>
         public CoverPointSelector(
             IReadOnlyList<CoverPoint> points,
             float maxDistance = DefaultMaxDistance,
@@ -71,7 +60,6 @@ namespace Shooter.Core
             MinThreatDistance = minThreatDistance;
         }
 
-        /// <summary>遮蔽点の一覧。</summary>
         public IReadOnlyList<CoverPoint> Points { get; }
 
         public float MaxDistance { get; }
@@ -80,8 +68,6 @@ namespace Shooter.Core
 
         public float MinThreatDistance { get; }
 
-        /// <summary>index の点が threat の方向を遮っているか。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が範囲外のとき、threat が有限でないとき。</exception>
         public bool Protects(int index, Vector3 threat)
         {
             RequireIndex(index);
@@ -89,12 +75,6 @@ namespace Shooter.Core
             return ProtectsUnchecked(_points[index], threat);
         }
 
-        /// <summary>
-        /// self にいる敵が threat から隠れるのに使う点の添字を返す。選べる点が無ければ -1。
-        /// owner が使っている点は選べる (ほかの敵が使っている点だけを外す)。excluded に入っている添字は選ばない。
-        /// 距離が同じなら添字の小さい方を選ぶ。選ぶだけで、使っている印は付けない (<see cref="TryClaim"/>)。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">self・threat が有限でないとき。</exception>
         public int Select(Vector3 self, Vector3 threat, object owner = null, ICollection<int> excluded = null)
         {
             RequireFinite(self, nameof(self));
@@ -133,12 +113,6 @@ namespace Shooter.Core
             return best;
         }
 
-        /// <summary>
-        /// owner が index の点を使う印を付ける。owner が別の点を使っていたらそちらは放す。
-        /// ほかの敵が使っていれば何もせず false を返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">owner が null のとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">index が範囲外のとき。</exception>
         public bool TryClaim(int index, object owner)
         {
             if (owner == null)
@@ -158,7 +132,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>owner が使っている点を放す。放す点があれば true。</summary>
         public bool Release(object owner)
         {
             if (owner == null)
@@ -179,14 +152,12 @@ namespace Shooter.Core
             return released;
         }
 
-        /// <summary>index の点を誰かが使っているか。</summary>
         public bool IsOccupied(int index)
         {
             RequireIndex(index);
             return _occupants[index] != null;
         }
 
-        /// <summary>owner が使っている点の添字。使っていなければ -1。</summary>
         public int IndexClaimedBy(object owner)
         {
             if (owner == null)

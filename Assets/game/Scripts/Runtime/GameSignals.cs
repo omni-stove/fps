@@ -55,6 +55,16 @@ namespace Shooter.Runtime
 
         public static GameSignal<StreakStatus?> Streak { get; } = new GameSignal<StreakStatus?>(nameof(Streak));
 
+        public static GameSignal<MinimapStatus?> Minimap { get; } = new GameSignal<MinimapStatus?>(nameof(Minimap));
+
+        public static GameSignal<IReadOnlyList<ChatLine>> Chat { get; } = new GameSignal<IReadOnlyList<ChatLine>>(nameof(Chat));
+
+        public static GameSignal<VoiceStatus?> Voice { get; } = new GameSignal<VoiceStatus?>(nameof(Voice));
+
+        public static GameSignal<MapVoteStatus?> MapVote { get; } = new GameSignal<MapVoteStatus?>(nameof(MapVote));
+
+        public static GameSignal<SpectateStatus?> Spectate { get; } = new GameSignal<SpectateStatus?>(nameof(Spectate));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -79,6 +89,11 @@ namespace Shooter.Runtime
             PauseTimeMode.Reset();
             PaletteViewer.Reset();
             Streak.Reset();
+            Minimap.Reset();
+            Chat.Reset();
+            Voice.Reset();
+            MapVote.Reset();
+            Spectate.Reset();
         }
     }
 }

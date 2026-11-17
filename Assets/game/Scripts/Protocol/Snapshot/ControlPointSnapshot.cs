@@ -31,6 +31,8 @@ namespace Shooter.Protocol
 
         public int AllBits => (int)ControlPointFields.All;
 
+        public int OptionalBits => 0;
+
         public int ChangedBits(in ControlPointSnapshot baseline)
         {
             var same = HasOwner == baseline.HasOwner

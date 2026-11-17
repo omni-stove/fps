@@ -287,14 +287,15 @@ namespace Shooter.Runtime
             }
 
             // 止めるときに自分の出した一覧かを参照で見分けるので、出すたびに新しい配列にする
+            // ソロでは標的を撃つのがプレイヤーだけで、標的は撃ち返さないので、誰にもアシストは付かない
             var entries = new ScoreboardEntry[_targetIds.Count + 1];
             entries[0] = new ScoreboardEntry(
-                PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, _match.Kills, PlayerDeaths, ScoreboardConnection.None, true);
+                PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, _match.Kills, PlayerDeaths, 0, ScoreboardConnection.None, true);
             var i = 1;
             foreach (var targetId in _targetIds.Values)
             {
                 entries[i++] = new ScoreboardEntry(
-                    targetId, ScoreboardName.Target(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId),
+                    targetId, ScoreboardName.Target(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId), 0,
                     ScoreboardConnection.None, false);
             }
 

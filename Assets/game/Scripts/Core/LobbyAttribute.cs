@@ -3,17 +3,15 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ロビーに付ける公開の属性 1 つ。値は文字列か整数で、検索で比べられる。SDK の型には依存しない。
-    /// </summary>
+    // SDK の型を使わないのは、Core を EOS SDK に依存させないため。
 #pragma warning disable CA1711 // ロビーの「属性」を表す名前で、System.Attribute の派生ではない
     public sealed class LobbyAttribute
 #pragma warning restore CA1711
     {
-        /// <summary>キーの最大の長さ。EOS の属性キーの上限より十分短くしておく。</summary>
+        // EOS の属性キーの上限より十分短くしておく。
         public const int MaxKeyLength = 32;
 
-        /// <summary>文字列の値の最大の長さ (EOS_LOBBYMODIFICATION_MAX_ATTRIBUTE_LENGTH)。</summary>
+        // EOS_LOBBYMODIFICATION_MAX_ATTRIBUTE_LENGTH に合わせてある。
         public const int MaxTextLength = 1000;
 
         private LobbyAttribute(string key, string text, long number)
@@ -25,17 +23,12 @@ namespace Shooter.Core
 
         public string Key { get; }
 
-        /// <summary>文字列の値。整数の属性では null。</summary>
         public string Text { get; }
 
-        /// <summary>整数の値。文字列の属性では 0。</summary>
         public long Number { get; }
 
         public bool IsText => Text != null;
 
-        /// <summary>文字列の属性を作る。</summary>
-        /// <param name="key">英小文字・数字・<c>_</c> だけの <see cref="MaxKeyLength"/> 文字以内のキー。</param>
-        /// <param name="value">空でない <see cref="MaxTextLength"/> 文字以内の値。</param>
         public static LobbyAttribute OfText(string key, string value)
         {
             ValidateKey(key);
@@ -52,16 +45,12 @@ namespace Shooter.Core
             return new LobbyAttribute(key, value, 0);
         }
 
-        /// <summary>整数の属性を作る。</summary>
-        /// <param name="key">英小文字・数字・<c>_</c> だけの <see cref="MaxKeyLength"/> 文字以内のキー。</param>
-        /// <param name="value">値。</param>
         public static LobbyAttribute OfNumber(string key, long value)
         {
             ValidateKey(key);
             return new LobbyAttribute(key, null, value);
         }
 
-        /// <summary>ログ向けの <c>key=value</c>。</summary>
         public override string ToString()
         {
             return Key + "=" + (IsText ? Text : Number.ToString(CultureInfo.InvariantCulture));

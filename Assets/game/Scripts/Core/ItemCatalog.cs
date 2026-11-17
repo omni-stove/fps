@@ -143,7 +143,7 @@ namespace Shooter.Core
                 && attachment.Attachment.Fits(weaponId);
         }
 
-        // 付ける先の武器が表にあり、その取り付け口を持つかを確かめる。サーバーから届いた表は一部のアイテムしか持たないので、作るときではなく読むときに確かめる
+        // サーバーから届いた表は一部のアイテムしか持たないので、作るときではなく読むときに確かめる
         public void CheckAttachments()
         {
             foreach (var item in Items)

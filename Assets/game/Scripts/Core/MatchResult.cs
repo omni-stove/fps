@@ -3,14 +3,8 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>終わった試合の、この画面のプレイヤーの結果。</summary>
     public readonly struct MatchResult : IEquatable<MatchResult>
     {
-        /// <param name="outcome">勝敗。</param>
-        /// <param name="kills">倒した数。</param>
-        /// <param name="deaths">倒れた数。</param>
-        /// <param name="ownScore">自分の得点。</param>
-        /// <exception cref="ArgumentOutOfRangeException">outcome が <see cref="MatchOutcome"/> に無いか、kills・deaths・ownScore が負。</exception>
         public MatchResult(MatchOutcome outcome, int kills, int deaths, int ownScore)
         {
             if (!Enum.IsDefined(typeof(MatchOutcome), outcome))

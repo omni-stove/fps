@@ -7,15 +7,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// メインメニューのシーン MainMenu を生成し、起動時のシーンとして Build Settings の先頭に登録する。
-    /// シーンには背景を塗るカメラと <see cref="MainMenuScreen"/> を置いた GameObject だけを入れ、UI Toolkit の UIDocument と
-    /// PanelSettings は実行時に MainMenuScreen がコードで作る (Resources の MainMenu.uxml を読む)。
-    /// MainMenuScreen にはロードアウトの選択に使うデフォルトロードアウトと武器の一覧のアセット (<see cref="WeaponAssetBuilder"/>) と、
-    /// キャンペーンの選択に使うミッションの一覧 (<see cref="MissionCatalogBuilder"/>) を配線する。
-    /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.MenuSceneBuilder.Build</code>
-    /// </summary>
+    // UI Toolkit の UIDocument と PanelSettings は実行時に MainMenuScreen がコードで作る (Resources の MainMenu.uxml を読む) ので、
+    // シーンには背景を塗るカメラと MainMenuScreen を置いた GameObject だけを入れる。
     public static class MenuSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MainMenuScene;
@@ -25,7 +18,7 @@ namespace Shooter.Editor
         public const string CameraName = "MenuCamera";
         public const string MenuObjectName = "MainMenu";
 
-        /// <summary>メニューの後ろを塗る色。UI の背景は半透明なので、これが透けて見える。</summary>
+        // UI の背景は半透明なので、メニューの後ろはこの色が透けて見える。
         public static readonly Color BackgroundColor = new Color(0.04f, 0.05f, 0.07f, 1f);
 
         [MenuItem(MenuPath)]
@@ -42,7 +35,6 @@ namespace Shooter.Editor
             DemoSample.WriteMenuSceneSettings();
         }
 
-        /// <summary>path に MainMenu シーンを生成・保存し、Build Settings の先頭に登録する。失敗したら例外を投げる。</summary>
         public static void BuildAt(string path)
         {
             path = BootstrapSceneBuilder.ValidateScenePath(path);
@@ -62,10 +54,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{path}' and registered it first in Build Settings");
         }
 
-        /// <summary>
-        /// 空のシーンに背景を塗るカメラ (<see cref="CameraName"/>) と <see cref="MainMenuScreen"/> を置いた GameObject
-        /// (<see cref="MenuObjectName"/>) を入れ、後者を返す。
-        /// </summary>
         public static GameObject PopulateScene(Scene scene)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the main menu");
@@ -103,10 +91,7 @@ namespace Shooter.Editor
             return load();
         }
 
-        /// <summary>
-        /// キャンペーンの選択に使うミッションの一覧。無ければミッションの定義とシーンから作る (<see cref="MissionCatalogBuilder.Build"/>)。
-        /// 定義やシーンがまだ無くて作れないときは警告を出して null を返す (メニューは「キャンペーンを開けない」案内を出す)。
-        /// </summary>
+        // 定義やシーンがまだ無くて作れなくても例外にせず警告と null で返すのは、メニューが「キャンペーンを開けない」案内を出せるため。
         public static MissionCatalog LoadOrBuildMissionCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<MissionCatalog>(MissionCatalogBuilder.CatalogPath);

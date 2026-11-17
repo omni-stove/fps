@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 拾おうとしている人の、拾う判定 (<see cref="PickupJudge.Judge"/>) に要る今の状態。
-    /// 体力と陣営で作り、武器を持てる人は <see cref="WithWeapons"/>、防具を持てる人は <see cref="WithArmor"/>、アイテムを持てる人は <see cref="WithInventory"/> で足す。
-    /// </summary>
     public sealed class PickupCollector
     {
         private static readonly PickupWeaponState[] _noWeapons = Array.Empty<PickupWeaponState>();
@@ -33,9 +29,6 @@ namespace Shooter.Core
             MaxWeapons = maxWeapons;
         }
 
-        /// <param name="side">陣営。持たなければ null。</param>
-        /// <param name="health">今の体力。0 以上 maxHealth 以下。0 なら倒れている。</param>
-        /// <param name="maxHealth">最大体力。1 以上。</param>
         public PickupCollector(Side? side, int health, int maxHealth)
             : this(side, health, maxHealth, 0, 0, null, null, 0, null)
         {
@@ -56,30 +49,20 @@ namespace Shooter.Core
 
         public int MaxHealth { get; }
 
-        /// <summary>倒れていなければ true。</summary>
         public bool IsAlive => Health > 0;
 
-        /// <summary>今の防具。防具を持てなければ 0。</summary>
         public int Armor { get; }
 
-        /// <summary>防具の上限。0 なら防具を持てない。</summary>
         public int MaxArmor { get; }
 
-        /// <summary>持っている武器。武器を持てない人 (<see cref="WithWeapons"/> していない) は null。</summary>
         public IReadOnlyList<PickupWeaponState> Weapons { get; }
 
-        /// <summary>今持っている武器の Id。武器を持てなければ null。</summary>
         public string CurrentWeaponId { get; }
 
-        /// <summary>同時に持てる武器の数。0 なら上限なし (武器を持てない人も 0)。</summary>
         public int MaxWeapons { get; }
 
         public Inventory Inventory { get; }
 
-        /// <summary>武器を持てる人にする。</summary>
-        /// <param name="weapons">持っている武器。null を渡すと空として扱う。Id の重なりは前のものを使う。</param>
-        /// <param name="currentWeaponId">今持っている武器の Id。持っていなければ null。weapons に無い Id は <see cref="ArgumentException"/>。</param>
-        /// <param name="maxWeapons">同時に持てる武器の数。0 なら上限なし。負の値は <see cref="ArgumentOutOfRangeException"/>。</param>
         public PickupCollector WithWeapons(IReadOnlyList<PickupWeaponState> weapons, string currentWeaponId, int maxWeapons = 0)
         {
             if (maxWeapons < 0)
@@ -102,9 +85,6 @@ namespace Shooter.Core
             return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, copy.Count > 0 ? copy.AsReadOnly() : (IReadOnlyList<PickupWeaponState>)_noWeapons, current, maxWeapons, Inventory);
         }
 
-        /// <summary>防具を持てる人にする。</summary>
-        /// <param name="armor">今の防具。0 以上 maxArmor 以下。</param>
-        /// <param name="maxArmor">防具の上限。1 以上。</param>
         public PickupCollector WithArmor(int armor, int maxArmor)
         {
             if (maxArmor <= 0)
@@ -130,7 +110,6 @@ namespace Shooter.Core
             return new PickupCollector(Side, Health, MaxHealth, Armor, MaxArmor, Weapons, CurrentWeaponId, MaxWeapons, inventory);
         }
 
-        /// <summary>Id が weaponId の持ち武器の番号。無ければ (武器を持てない人も) -1。</summary>
         public int IndexOfWeapon(string weaponId)
         {
             return Weapons != null && !string.IsNullOrEmpty(weaponId) ? IndexIn(Weapons, weaponId) : -1;

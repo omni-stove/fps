@@ -3,21 +3,14 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ロードアウトのスロットの並びと、スロットごとに持てる <see cref="WeaponCategory"/> の集合。生成後は変わらない。
-    /// スロットがそれぞれ何の役目か (メイン・サブなど) は持たず、どう並べるかはデータの側で決める。
-    /// </summary>
     public sealed class LoadoutRule
     {
         private readonly HashSet<WeaponCategory>[] _accepted;
 
-        /// <summary>スロット順の、そのスロットが許す種別 (重複なし・列挙値の昇順)。どのスロットも 1 つ以上。</summary>
         public IReadOnlyList<IReadOnlyList<WeaponCategory>> Slots { get; }
 
-        /// <summary>スロットの数。1 以上。</summary>
         public int SlotCount => Slots.Count;
 
-        /// <param name="slots">スロット順の、各スロットが許す種別。空・null 要素・種別が空のスロット・未定義の種別は不可。同じ種別の重複は 1 つにまとめる。</param>
         public LoadoutRule(IEnumerable<IEnumerable<WeaponCategory>> slots)
         {
             if (slots == null)
@@ -67,8 +60,6 @@ namespace Shooter.Core
             Slots = ordered.AsReadOnly();
         }
 
-        /// <summary>slot 番のスロットが category を許すなら true。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が 0 以上 <see cref="SlotCount"/> 未満でない。</exception>
         public bool Accepts(int slot, WeaponCategory category)
         {
             if (slot < 0 || slot >= _accepted.Length)
@@ -79,11 +70,6 @@ namespace Shooter.Core
             return _accepted[slot].Contains(category);
         }
 
-        /// <summary>
-        /// weapons の i 本目を i 番スロットに入れるとして、このルールに合うか調べる。合えば null、合わなければ理由を返す。
-        /// 本数が <see cref="SlotCount"/> と違う・null 要素・スロットが許さない種別・同じ Id の武器を 2 回入れる、のどれも不可。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">weapons が null。</exception>
         public string Validate(IReadOnlyList<WeaponSpec> weapons)
         {
             if (weapons == null)

@@ -329,6 +329,17 @@ namespace Shooter.Runtime
             _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, allyYaw, 0f));
         }
 
+        public void FrameEye(Vector3 eye, float yaw)
+        {
+            if (!_engaged || _camera == null)
+            {
+                return;
+            }
+
+            _freeActive = false;
+            _camera.transform.SetPositionAndRotation(eye, Quaternion.Euler(0f, yaw, 0f));
+        }
+
         public void MoveFree(Vector2 move, Vector2 lookDegrees, float speed, float deltaSeconds)
         {
             if (!_engaged || _camera == null)

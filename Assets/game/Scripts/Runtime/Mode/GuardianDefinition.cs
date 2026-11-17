@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ガーディアン (<see cref="GuardianMode"/>) の制限時間・リスポーン・キル 1 回の点をアセットとして持つ。
-    /// 新しく作ったときの値は <see cref="GuardianRunner"/> の既定値と同じ。リーダーを選ぶ乱数の種と目印の見た目は Runner の側にあるので持たない。
-    /// <see cref="GuardianRunner.Definition"/> に配線するか入口 (<see cref="GameContent.Guardian"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
+    // リーダーを選ぶ乱数の種と目印の見た目は Runner の側にあるので持たない。
     [CreateAssetMenu(fileName = "Guardian", menuName = "Shooter/Modes/Guardian")]
     public sealed class GuardianDefinition : ScriptableObject
     {
@@ -39,9 +35,6 @@ namespace Shooter.Runtime
             set => _pointsPerKill = value;
         }
 
-        /// <summary>この定義の値で、random でリーダーを選ぶモード (<see cref="GuardianMode.CreateSession(float, float, System.Random, out GuardianRespawn, int)"/>) を組む。</summary>
-        /// <exception cref="ArgumentNullException">random が null。</exception>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public ModeSession CreateSession(System.Random random, out GuardianRespawn leaders)
         {
             try

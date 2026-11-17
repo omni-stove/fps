@@ -63,6 +63,13 @@ namespace Shooter.Runtime
         private bool _listeningToSettings;
         private AimDownSights _ads;
         private bool _bodyHiddenBySight;
+        private ShoulderSide _chosenShoulder = ShoulderSide.Right;
+        private ICharacterMotorStateSource _motorSource;
+        private float _leanAmount;
+        private float _leanRollDegrees;
+        private Quaternion _appliedLeanRoll = Quaternion.identity;
+        private Quaternion _rolledRotation = Quaternion.identity;
+        private bool _hasLeanRoll;
 
         public ViewMode Mode
         {
@@ -91,15 +98,36 @@ namespace Shooter.Runtime
 
         public ShoulderSide Shoulder
         {
-            get => _shoulder.Target;
+            get => _chosenShoulder;
             set
             {
-                if (_shoulder.SetTarget(value))
+                if (value != ShoulderSide.Right && value != ShoulderSide.Left)
                 {
-                    ReportShoulder();
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "unknown shoulder side");
                 }
+
+                if (value == _chosenShoulder)
+                {
+                    return;
+                }
+
+                _chosenShoulder = value;
+                ReportShoulder();
+                _shoulder.SetTarget(CameraShoulderFor(_leanAmount));
             }
         }
+
+        public ShoulderSide CameraShoulder => _shoulder.Target;
+
+        public ICharacterMotorStateSource MotorSource
+        {
+            get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
+            set => _motorSource = value;
+        }
+
+        public float LeanAmount => _leanAmount;
+
+        public float LeanRollDegrees => _leanRollDegrees;
 
         public Func<SightView> SightSource { get; set; }
 
@@ -213,9 +241,13 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             _isLive = false;
-            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定を外す。
+            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定とカメラの傾きを外す。
             _bodyHiddenBySight = false;
             ApplyBodyVisibility(false);
+            if (IsInitialized)
+            {
+                ApplyLeanRoll(0f);
+            }
         }
 
         private void LateUpdate()
@@ -233,12 +265,23 @@ namespace Shooter.Runtime
 
             if (swapPressedThisFrame && _isLocalView && _mode == ViewMode.ThirdPerson)
             {
-                _shoulder.Toggle();
+                _chosenShoulder = _chosenShoulder == ShoulderSide.Right ? ShoulderSide.Left : ShoulderSide.Right;
                 ReportShoulder();
             }
 
+            _shoulder.SetTarget(CameraShoulderFor(ReadLean(out _)));
             _shoulder.Tick(deltaSeconds);
             UpdateCameraPosition();
+        }
+
+        public ShoulderSide CameraShoulderFor(float lean)
+        {
+            if (lean > 0f)
+            {
+                return ShoulderSide.Right;
+            }
+
+            return lean < 0f ? ShoulderSide.Left : _chosenShoulder;
         }
 
         public void SetSwapShoulderAction(InputAction action)
@@ -371,9 +414,18 @@ namespace Shooter.Runtime
             var sight = _mode == ViewMode.ThirdPerson ? CurrentSightView() : SightView.None;
             HideBodyForSight(sight.HidesBody);
 
+            var lean = ReadLean(out var leanSpec);
+            var firstPersonLean = _mode == ViewMode.FirstPerson && lean != 0f;
+            ApplyLeanRoll(firstPersonLean ? -lean * leanSpec.LeanAngleDegrees : 0f);
+
             var shoulderOffset = _thirdPersonOffset;
             shoulderOffset.x *= _shoulder.OffsetSign;
             var offset = CameraBoom.TowardEye(CameraBoom.Offset(_mode, shoulderOffset.ToNumerics()), sight.EyeBlend).ToUnity();
+            if (firstPersonLean)
+            {
+                offset += LeanEyeOffset(lean, leanSpec);
+            }
+
             var cameraTransform = _camera.transform;
             var desired = offset.magnitude;
             if (desired < 1e-6f)
@@ -392,8 +444,74 @@ namespace Shooter.Runtime
                 blockedAt = hitDistance * (desired / worldLength);
             }
 
-            var length = CameraBoom.Length(desired, blockedAt, _minBoomLength);
+            // 下限を残すと、壁際のリーンでカメラが壁の中に止まる。
+            var minLength = _mode == ViewMode.FirstPerson ? 0f : _minBoomLength;
+            var length = CameraBoom.Length(desired, blockedAt, minLength);
             cameraTransform.localPosition = offset * (length / desired);
+        }
+
+        public Vector3 LeanEyeOffset(float lean, MotorSpec spec)
+        {
+            EnsureInitialized();
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var yaw = transform.eulerAngles.y * Mathf.Deg2Rad;
+            var world = LeanStep.EyeOffset(lean, yaw, spec).ToUnity();
+            return _eye.InverseTransformVector(world);
+        }
+
+        private float ReadLean(out MotorSpec spec)
+        {
+            spec = null;
+            _leanAmount = 0f;
+            if (CharacterMotorStateSources.IsMissing(_motorSource))
+            {
+                _motorSource = TryGetComponent<ICharacterMotorStateSource>(out var found) ? found : null;
+            }
+
+            if (_motorSource == null || !_motorSource.TryGetMotorState(out var state) || !state.Lean.IsValid)
+            {
+                return 0f;
+            }
+
+            spec = _motorSource.Spec;
+            if (spec == null)
+            {
+                return 0f;
+            }
+
+            _leanAmount = state.Lean.Amount;
+            return _leanAmount;
+        }
+
+        // カメラの向きは照準器の揺れ (AimDownSights) も書く。前のフレームに自分が書いた向きのままなら自分の傾きだけを外し、
+        // 書き直されていればそれを傾けていない向きとして、その上に傾きを掛ける。
+        private void ApplyLeanRoll(float degrees)
+        {
+            var cameraTransform = _camera.transform;
+            var current = cameraTransform.localRotation;
+            var unrolled = _hasLeanRoll && current == _rolledRotation ? current * Quaternion.Inverse(_appliedLeanRoll) : current;
+            _leanRollDegrees = degrees;
+            if (degrees == 0f)
+            {
+                if (_hasLeanRoll)
+                {
+                    cameraTransform.localRotation = unrolled;
+                    _hasLeanRoll = false;
+                    _appliedLeanRoll = Quaternion.identity;
+                }
+
+                return;
+            }
+
+            var roll = Quaternion.Euler(0f, 0f, degrees);
+            cameraTransform.localRotation = unrolled * roll;
+            _appliedLeanRoll = roll;
+            _rolledRotation = cameraTransform.localRotation;
+            _hasLeanRoll = true;
         }
 
         public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset)
@@ -695,7 +813,7 @@ namespace Shooter.Runtime
 
         private void ReportShoulder()
         {
-            Debug.Log(FormatShoulderLog(_shoulder.Target), this);
+            Debug.Log(FormatShoulderLog(_chosenShoulder), this);
         }
 
         private void RefreshSwapShoulderAction()

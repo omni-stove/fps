@@ -5,24 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ハードポイント (<see cref="Shooter.Core.Hardpoint"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
-    /// 拠点は <see cref="ControlPointZone"/> を使い、番号の順に有効になる。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>秒数や得点は調整値のアセット (<see cref="Definition"/>) から読む。設定していなければ Inspector の値 (既定は Default*) を使う。</item>
-    /// <item>拠点は <see cref="SetZones"/> で渡したもの。渡していなければ始めるときにシーンの ControlPointZone をすべて使う。
-    /// 番号は 0 から抜けも重なりもなく、2 つ以上あること (でなければ理由をログに出して止まる)。</item>
-    /// <item>毎 Tick の前に、有効な拠点の範囲にいる生きた参加者を調べ (<see cref="ControlPointZone.Scan"/>)、
-    /// <see cref="Shooter.Core.Hardpoint.SetPlayerPoint"/> に伝える。</item>
-    /// <item>有効な拠点の円盤だけを光らせて確保しているチームの色に塗り、他の拠点は暗くする (<see cref="ControlPointZone.SetHighlight"/>)。</item>
-    /// <item>bot (<see cref="EnemyAgent"/>) には有効な拠点の中を往復する巡回路を渡し、拠点が移るたびに渡し直す。
-    /// 敵を見つけたら EnemyAgent がいつもどおり追って撃ち、見失えば巡回路 (有効な拠点) に戻る。</item>
-    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Shooter.Core.Hardpoint"/> を入れる。
-    /// 拠点が移ったときと拠点の様子が変わったときに <c>[Mode] hardpoint</c> のログを出す。</item>
-    /// </list>
-    /// </remarks>
     public sealed class HardpointRunner : ModeRunnerBase
     {
         public const float DefaultRotateSeconds = 30f;
@@ -31,7 +13,7 @@ namespace Shooter.Runtime
         public const float DefaultTimeLimitSeconds = 300f;
         public const float DefaultRespawnSeconds = 3f;
 
-        /// <summary>bot の巡回路の端を、拠点の中心から半径のこの割合だけ離す (範囲の縁で出入りを繰り返さないように内側に置く)。</summary>
+        // bot が範囲の縁で出入りを繰り返さないよう、巡回路の端は半径より内側に置く。
         public const float RouteRadiusFraction = 0.5f;
 
         // bot ごとに巡回する向きを黄金角ずつ回し、同じ拠点に集まっても重ならないようにする。
@@ -65,23 +47,16 @@ namespace Shooter.Runtime
         private HardpointStatus? _loggedStatus;
         private Side? _loggedHolder;
 
-        /// <summary>進めているハードポイント。開始前は null。</summary>
         public Hardpoint Hardpoint => _hardpoint;
 
-        /// <summary>使っている拠点。番号の順。開始前は空。</summary>
         public IReadOnlyList<ControlPointZone> Zones => _activeZones;
 
-        /// <summary>
-        /// 調整値のアセット。設定されていれば <see cref="CreateSpec"/> はこれの値を使い、<see cref="RotateSeconds"/> などの Runner 自身の値は使わない。
-        /// null なら Runner 自身の値 (既定は Default*) を使う。始めた後に変えても効かない。
-        /// </summary>
         public HardpointDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public HardpointDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Hardpoint);
 
         public float RotateSeconds
@@ -114,10 +89,8 @@ namespace Shooter.Runtime
             set => _respawnSeconds = value;
         }
 
-        /// <summary>始めるときに使う拠点。空なら始めるときにシーンの ControlPointZone をすべて使う。</summary>
         public IReadOnlyList<ControlPointZone> ConfiguredZones => _zones ?? Array.Empty<ControlPointZone>();
 
-        /// <summary>始めるときに使う拠点を設定する。null か空なら、シーンの ControlPointZone をすべて使う。始めた後に変えても効かない。</summary>
         public void SetZones(IReadOnlyList<ControlPointZone> zones)
         {
             var copy = new ControlPointZone[zones != null ? zones.Count : 0];
@@ -129,10 +102,6 @@ namespace Shooter.Runtime
             _zones = copy;
         }
 
-        /// <summary>
-        /// 拠点が pointCount 個の <see cref="HardpointSpec"/> を、<see cref="Definition"/> があればその値から、無ければ Inspector の設定から作る。
-        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public HardpointSpec CreateSpec(int pointCount)
         {
             var definition = EffectiveDefinition;
@@ -144,11 +113,6 @@ namespace Shooter.Runtime
             return new HardpointSpec(pointCount, _rotateSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _respawnSeconds);
         }
 
-        /// <summary>
-        /// hardpoint の拠点を zones にして、members を参加者に hardpoint.Session を始める (<see cref="ModeRunnerBase.Begin"/>)。
-        /// zones は番号が 0 から抜けも重なりもなく、数が hardpoint.PointCount と同じであること。
-        /// 引数が不正なら <see cref="ArgumentException"/> を投げ、何も購読しない。
-        /// </summary>
         public void Begin(
             Hardpoint hardpoint,
             IReadOnlyList<ControlPointZone> zones,
@@ -185,10 +149,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// bot が有効な拠点の中を往復する巡回路 (2 点)。中心から半径の <see cref="RouteRadiusFraction"/> だけ離れた、向かい合う 2 点で、
-        /// 向きは slot ごとに回す。
-        /// </summary>
         public static Vector3[] RouteAround(Vector3 center, float radius, int slot)
         {
             if (!(radius > 0f) || float.IsInfinity(radius))
@@ -273,7 +233,7 @@ namespace Shooter.Runtime
             _loggedHolder = null;
         }
 
-        /// <summary>有効な拠点の範囲にいる生きた参加者を調べ、Hardpoint に伝える。他の拠点にいる人は数えないので、どこにもいないことにする。</summary>
+        // 有効でない拠点にいる人は数えないので、どこにもいないことにする。
         private void UpdatePresence()
         {
             var members = Members;
@@ -294,7 +254,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>拠点の様子が変わったらログに出し、有効な拠点の円盤を確保しているチームの色にする。</summary>
         private void ShowStatus()
         {
             var status = _hardpoint.Status;
@@ -366,7 +325,6 @@ namespace Shooter.Runtime
             _routedPoint = _hardpoint.ActivePoint;
         }
 
-        /// <summary>zones を番号の順に並べる。null・範囲の不正・番号の抜けや重なり・2 つ未満なら <see cref="ArgumentException"/>。</summary>
         private static ControlPointZone[] SortZones(IReadOnlyList<ControlPointZone> zones)
         {
             if (zones == null)

@@ -314,9 +314,15 @@ namespace Shooter.Runtime
                 return Vector2.zero;
             }
 
+            return ToLookDegrees(raw, action.activeControl?.device is Pointer, deltaSeconds);
+        }
+
+        public Vector2 ToLookDegrees(Vector2 raw, bool fromPointer, float deltaSeconds)
+        {
             // マウスやタッチの delta はフレームあたりの移動量なので deltaTime を掛けない。スティックは速度として扱う。
-            var isPointer = action.activeControl?.device is Pointer;
-            return isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
+            var degrees = fromPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
+            degrees.y = _controlSettings.ApplyInvertLookY(degrees.y);
+            return degrees;
         }
 
         // 射撃 (WeaponController.Update) が反動を足した後に向きへ反映する。

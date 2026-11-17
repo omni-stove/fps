@@ -5,27 +5,19 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ガーディアンのリーダーの頭上に浮かぶ目印。<see cref="Target"/> の当たり判定の上端から <see cref="HeightAboveHead"/> 上に、
-    /// チームの色の菱形 (<see cref="GuardianRunner.LeaderMarkerPrefab"/> があればその形をチームの色に塗ったもの) を回しながら出す。
-    /// <see cref="GuardianRunner"/> が作り、リーダーが倒れたら隠す。
-    /// </summary>
-    /// <remarks>
-    /// リーダーの子にしないのは、bot の拡縮や倒れたときの体の傾きを目印が受けないようにするため。毎フレーム位置だけを追う。
-    /// </remarks>
+    // リーダーの子にしないのは、bot の拡縮や倒れたときの体の傾きを目印が受けないようにするため。毎フレーム位置だけを追う。
     [DisallowMultipleComponent]
     public sealed class GuardianLeaderMarker : MonoBehaviour
     {
         public const string ObjectNamePrefix = "LeaderMarker-";
 
-        /// <summary>当たり判定が無いときに、足元から頭までとみなす高さ (m)。</summary>
         public const float FallbackHeadHeight = 1.8f;
 
         public const float DefaultHeightAboveHead = 0.6f;
         public const float DefaultSize = 0.35f;
         public const float SpinDegreesPerSecond = 90f;
 
-        /// <summary>仮の菱形の傾き。立方体を頂点が上下に来るように傾ける。</summary>
+        // 立方体を頂点が上下に来るように傾けて菱形に見せる。
         public static readonly Quaternion PlaceholderTilt = Quaternion.Euler(45f, 0f, 45f);
 
         private readonly List<Material> _materials = new List<Material>();
@@ -38,21 +30,16 @@ namespace Shooter.Runtime
         private Team? _viewerTeam = TeamColors.OfflineViewer;
         private bool _followsSettings;
 
-        /// <summary>目印を出すリーダー。</summary>
         public SideMember Target => _target;
 
-        /// <summary>目印の色を塗った Renderer (プレハブから作ったときは最初の 1 つ)。無ければ null。</summary>
         public Renderer Renderer => _renderers.Length > 0 ? _renderers[0] : null;
 
-        /// <summary>目印の色を塗った Renderer すべて。</summary>
         public IReadOnlyList<Renderer> Renderers => _renderers;
 
         public float HeightAboveHead => _heightAboveHead;
 
-        /// <summary>プレハブが無く仮の菱形で作ったなら true。</summary>
         public bool IsPlaceholder => _isPlaceholder;
 
-        /// <summary>目印が見えているなら true。</summary>
         public bool IsShown
         {
             get
@@ -69,19 +56,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// target の頭上に出す仮の菱形の目印を作る。シーンの直下に置き、当たり判定は持たせない (弾と移動を遮らないように)。
-        /// </summary>
+        // 弾と移動を遮らないよう、当たり判定は持たせない。
         public static GuardianLeaderMarker Create(SideMember target, float heightAboveHead = DefaultHeightAboveHead, float size = DefaultSize)
         {
             return Create(target, null, heightAboveHead, size);
         }
 
-        /// <summary>
-        /// target の頭上に出す目印を作る。prefab があれば当たり判定を外して置き (大きさと向きはプレハブのまま、原点を目印の下端として
-        /// 頭上 heightAboveHead に置き、縦の軸で回す)、size は使わない。null なら仮の菱形を作る。
-        /// どちらも Renderer の材質を複製してチームの色に塗る。
-        /// </summary>
         public static GuardianLeaderMarker Create(
             SideMember target,
             GameObject prefab,
@@ -138,10 +118,6 @@ namespace Shooter.Runtime
             return marker;
         }
 
-        /// <summary>
-        /// 画面のプレイヤーのチーム。リーダーがこのチームなら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーのチーム
-        /// (<see cref="TeamColors.OfflineViewer"/>)。
-        /// </summary>
         public Team? ViewerTeam
         {
             get => _viewerTeam;
@@ -152,9 +128,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// viewer から見た陣営の色 (今の色の組)。Alpha と Bravo は拠点と同じ色 (<see cref="ControlPointZone.ColorOf"/>)、それ以外は中立の色。
-        /// </summary>
         public static Color ColorOf(Side side, Team? viewer = TeamColors.OfflineViewer)
         {
             return ControlPointZone.ColorOf(side.TryGetTeam(out var team) ? team : (Team?)null, viewer);
@@ -223,7 +196,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>目印を見せるか隠す。</summary>
         public void SetShown(bool shown)
         {
             foreach (var markerRenderer in _renderers)
@@ -235,7 +207,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>リーダーの頭上へ動かす。Play 中は LateUpdate で毎フレーム呼ぶ。</summary>
         public void Follow()
         {
             if (_target == null)
@@ -264,7 +235,7 @@ namespace Shooter.Runtime
                 Quaternion.Euler(0f, _spin, 0f) * _tilt);
         }
 
-        /// <summary>目印と複製したマテリアルを消す。Edit Mode では OnDestroy が呼ばれないので、マテリアルもここで消す。</summary>
+        // Edit Mode では OnDestroy が呼ばれないので、複製したマテリアルもここで消す。
         public void Remove()
         {
             StopFollowingSettings();

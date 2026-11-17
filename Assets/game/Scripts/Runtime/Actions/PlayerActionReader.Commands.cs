@@ -16,6 +16,11 @@ namespace Shooter.Runtime
             PlayerCommands.Ability2,
             PlayerCommands.SquadCommand,
             PlayerCommands.UseStreak,
+            PlayerCommands.LeanLeft,
+            PlayerCommands.LeanRight,
+            PlayerCommands.Chat,
+            PlayerCommands.TeamChat,
+            PlayerCommands.PushToTalk,
         };
 
         private readonly InputAction[] _commandActions = new InputAction[_commands.Length];
@@ -46,6 +51,16 @@ namespace Shooter.Runtime
                     return InputActionPaths.SquadCommand;
                 case PlayerCommands.UseStreak:
                     return InputActionPaths.UseStreak;
+                case PlayerCommands.LeanLeft:
+                    return InputActionPaths.LeanLeft;
+                case PlayerCommands.LeanRight:
+                    return InputActionPaths.LeanRight;
+                case PlayerCommands.Chat:
+                    return InputActionPaths.Chat;
+                case PlayerCommands.TeamChat:
+                    return InputActionPaths.TeamChat;
+                case PlayerCommands.PushToTalk:
+                    return InputActionPaths.PushToTalk;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), command, "command must be a single PlayerCommands button");
             }

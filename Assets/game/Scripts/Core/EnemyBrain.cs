@@ -4,28 +4,8 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// キャンペーンの敵の判断。毎 tick 知覚を受け取り、どこへ動き・どこを向き・撃つかを決める。
-    /// 移動や視線判定（Raycast）は行わず、呼び出し側が決定を実行する。
-    /// </summary>
-    /// <remarks>
-    /// 目標が視線の通る SightRange 内にいれば Chase、AttackRange 内なら Attack (足を止めて撃つ)。
-    /// FireRange 内に捉えたら構え (<see cref="IsAiming"/>)、ReactionSeconds 後から撃つ。AttackRange の外で構えている間は足を止め、
-    /// 撃ち始めたら撃ちながら近づく。FireRange の外を追っていた時間は数えないので、射程に入った瞬間には撃たない。
-    /// 撃ち始めの数発は散らばりを大きくし、OpeningShots 発かけて絞る（<see cref="EnemySpec.SpreadDegreesForShot"/>）。
-    /// 見失ったら最後に見た位置へ向かい、LoseSightSeconds 後に Search、SearchSeconds 後に Patrol（ルートが無ければ Idle）に戻る。
-    /// Idle・Patrol・Search 中に音を聞いたら、その位置を Search する。
-    /// <para>
-    /// <see cref="UseCover"/> で遮蔽点を渡していれば、撃たれたとき (<see cref="EnemyPerception.WasHit"/>) や体力の割合が
-    /// <see cref="EnemySpec.CoverHealthFraction"/> を下回ったときに、脅威の方向を遮る点を選んで TakeCover に移る。
-    /// 脅威の位置は目標の位置 (視線が通らなくても渡されていれば使う) で、目標がいなければ撃たれた tick だけ撃った者の位置を使う。
-    /// 点に着いたら CoverHideSeconds しゃがみ、CoverPeekSeconds 立って覗き (見えていれば ReactionSeconds 後から撃つ)、を繰り返す。
-    /// 目標が点の遮る向きから外れたら (回り込まれたら) 別の点に移り、移れる点が無いか目標がいなくなったら TakeCover をやめて追う。
-    /// </para>
-    /// </remarks>
     public sealed class EnemyBrain
     {
-        /// <summary>状態が変わるたびに（変わる前, 変わった後）で呼ばれる。</summary>
         public event Action<EnemyState, EnemyState> StateChanged;
 
         private EnemySpec _spec;
@@ -53,27 +33,17 @@ namespace Shooter.Core
         public EnemyState State { get; private set; } = EnemyState.Idle;
         public bool IsDead => State == EnemyState.Dead;
 
-        /// <summary>TakeCover の中の段階。TakeCover でなければ None。</summary>
         public EnemyCoverPhase CoverPhase { get; private set; }
 
-        /// <summary>使っている遮蔽点の、<see cref="CoverPointSelector.Points"/> での添字。使っていなければ -1。</summary>
         public int CoverPointIndex => _coverIndex;
 
-        /// <summary>使っている遮蔽点。使っていなければ null。</summary>
         public CoverPoint? CurrentCoverPoint => _cover != null && _coverIndex >= 0 ? _cover.Points[_coverIndex] : (CoverPoint?)null;
 
-        /// <summary>
-        /// 今の Attack に入ってから <see cref="RecordShot"/> で記録した発数。Attack に入るたび、TakeCover で覗き始めるたびに 0 に戻る。
-        /// </summary>
         public int ShotsInAttack => _shotsInAttack;
 
-        /// <summary>次に撃つ弾の散らばりの半角 (度)。</summary>
         public float NextShotSpreadDegrees => _spec.SpreadDegreesForShot(_shotsInAttack);
 
-        /// <summary>
-        /// 実際に 1 発撃ったことを記録し、次の弾の散らばりを絞る。
-        /// Fire の決定でも弾切れや連射間隔で撃てないことがあるので、撃てたかどうかは呼び出し側が伝える。
-        /// </summary>
+        // Fire の決定でも弾切れや連射間隔で撃てないことがあるので、撃てたかどうかは呼び出し側が伝える。
         public void RecordShot()
         {
             if (_shotsInAttack < int.MaxValue)
@@ -82,18 +52,12 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 目標に銃を構えているか。Attack と、TakeCover で覗いている間と、FireRange 内の目標を Chase している間。
-        /// </summary>
         public bool IsAiming => EnemyGait.IsAiming(State, CoverPhase) || (State == EnemyState.Chase && _engaging);
 
-        /// <summary>構え始めてから撃てるようになるまでの残り秒数。構えていないか撃てるなら 0。</summary>
         public float AimRemainingSeconds => IsAiming ? Math.Max(0f, _spec.ReactionSeconds - _reactionElapsed) : 0f;
 
-        /// <summary>巡回で次に向かう地点の添字。ルートが無ければ 0。</summary>
         public int PatrolIndex => _routeIndex;
 
-        /// <param name="spec">敵の設定。</param>
         public EnemyBrain(EnemySpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
@@ -105,10 +69,6 @@ namespace Shooter.Core
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
         }
 
-        /// <summary>
-        /// 巡回ルートを設定する。到着すると次の地点へ進み、最後の地点の次は最初に戻る。
-        /// 空のルートを渡すと巡回をやめ、Patrol 中なら Idle になる。リストは複製して保持する。
-        /// </summary>
         public void SetPatrolRoute(IReadOnlyList<Vector3> route)
         {
             if (route == null)
@@ -135,10 +95,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 隠れに行く遮蔽点を設定する。同じ一覧を使う敵どうしで同じ selector を渡すと、ほかの敵が使っている点を選ばなくなる。
-        /// null を渡すと遮蔽点を使わなくなる。TakeCover 中に変えたら今の点を放し、次の tick に選び直す (選べなければ TakeCover をやめる)。
-        /// </summary>
         public void UseCover(CoverPointSelector selector)
         {
             if (ReferenceEquals(selector, _cover))
@@ -151,7 +107,6 @@ namespace Shooter.Core
             _cover = selector;
         }
 
-        /// <summary>死亡させる。<see cref="Revive"/> するまで Tick はすべて空の決定を返す。使っていた遮蔽点は放す。</summary>
         public void Kill()
         {
             if (IsDead)
@@ -164,10 +119,6 @@ namespace Shooter.Core
             SetState(EnemyState.Dead);
         }
 
-        /// <summary>
-        /// 死亡から生き返らせる。最後に見た位置・反応や見失いの経過・撃った発数・着けなかった遮蔽点を忘れ、
-        /// 巡回ルートの最初の地点から Patrol (ルートが無ければ Idle) で始め直す。生きていれば何もせず false。
-        /// </summary>
         public bool Revive()
         {
             if (!IsDead)
@@ -179,23 +130,12 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// 生死を問わず、<see cref="Revive"/> と同じく覚えていることを忘れて巡回ルートの最初の地点から始め直す。使っていた遮蔽点は放す。
-        /// ラウンド制のモードがラウンドの頭で、生き残っていた敵も含めて全員を戻すときに使う。
-        /// </summary>
         public void Restart()
         {
             ReleaseCoverPoint();
             StartOver();
         }
 
-        /// <summary>
-        /// 今向かっている先に届かないとき、その目的地をあきらめる。
-        /// Patrol なら次の巡回地点へ進め、Search なら打ち切って次の tick で Patrol (ルートが無ければ Idle) に戻す。
-        /// 見失った後の Chase なら Search を飛ばして同じく戻す。目標が見えていれば次の tick でまた追う。
-        /// TakeCover で遮蔽点へ向かっているなら、その点を放して以後選ばず、次の tick に別の点を選び直す (選べなければ TakeCover をやめる)。
-        /// 目的地を持たない状態 (Idle・Attack・Dead、遮蔽点に着いた後の TakeCover) では何もせず false を返す。
-        /// </summary>
         public bool AbandonGoal()
         {
             switch (State)
@@ -217,11 +157,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 目標を倒し終えたときに戦いをやめる。Chase・Attack・TakeCover・Search なら使っていた遮蔽点を放し、最後に見た位置と見失いや捜索の経過を忘れて、
-        /// 巡回ルートの今の地点から Patrol (ルートが無ければ Idle) に戻す。倒れた目標の最後に見た位置へ向かわないようにするため。
-        /// それ以外の状態では何もせず false を返す。
-        /// </summary>
+        // 最後に見た位置まで忘れるのは、倒れた目標の最後に見た位置へ向かわないようにするため。
         public bool StandDown()
         {
             switch (State)
@@ -248,9 +184,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>時間を deltaSeconds 進め、この tick の決定を返す。</summary>
-        /// <param name="deltaSeconds">前の tick からの経過秒。0 以上。</param>
-        /// <param name="perception">この tick の知覚。</param>
         public EnemyDecision Tick(float deltaSeconds, EnemyPerception perception)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -410,7 +343,6 @@ namespace Shooter.Core
             return Routine(p.Self);
         }
 
-        /// <summary>目標が見えているときの Chase / Attack。</summary>
         private EnemyDecision Engage(float deltaSeconds, Vector3 self, Vector3 target)
         {
             _lostElapsed = 0f;
@@ -462,10 +394,6 @@ namespace Shooter.Core
             return p.WasHit ? p.HitSource : null;
         }
 
-        /// <summary>
-        /// TakeCover に入るか続ける。使える遮蔽点が無いか脅威が分からなければ TakeCover をやめて false を返し、
-        /// 呼び出し側がふだんの Chase / Attack の判断を続ける。
-        /// </summary>
         private bool TryCover(float deltaSeconds, EnemyPerception p, bool seen, out EnemyDecision decision)
         {
             decision = EnemyDecision.None;
@@ -569,7 +497,6 @@ namespace Shooter.Core
             return new EnemyDecision(null, _coverThreat, seen && inRange && _reactionElapsed >= _spec.ReactionSeconds, false);
         }
 
-        /// <summary>TakeCover をやめる。状態は呼び出し側の判断 (Chase / Attack) で移る。</summary>
         private void LeaveCover()
         {
             if (State == EnemyState.TakeCover)
@@ -605,7 +532,6 @@ namespace Shooter.Core
             SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
         }
 
-        /// <summary>見失った直後。最後に見た位置へ向かい、LoseSightSeconds 経ったら Search に移る。</summary>
         private EnemyDecision Pursue(float deltaSeconds)
         {
             _engaging = false;
@@ -633,7 +559,6 @@ namespace Shooter.Core
             return new EnemyDecision(_searchPoint, _searchPoint, false);
         }
 
-        /// <summary>ルートがあれば Patrol、なければ Idle。</summary>
         private EnemyDecision Routine(Vector3 self)
         {
             _unreachableCover.Clear();

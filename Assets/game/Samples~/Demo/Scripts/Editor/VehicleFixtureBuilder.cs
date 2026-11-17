@@ -6,16 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 乗り降りを試す、動かない仮の乗り物 (<see cref="Vehicle"/>) をシーンに置く。見た目は箱 1 つで、座席は 3 つ:
-    /// 運転席 (左前・座る・追うカメラ)、助手席 (右前・座る・座席からの視点)、銃座 (後ろの屋根・立つ・追うカメラ)。
-    /// 運転席は左、助手席は右から乗り、降りるときはまず乗った側、塞がっていれば反対側に降りる。どの座席も最後に後ろへ降りられる。
-    /// 助手席は前の半分 (<see cref="PassengerArcDegrees"/>) へ自分の武器で撃て、銃座には gunnerWeapon を渡すと屋根の銃 (<see cref="GunName"/>) が付く。
-    /// 動き方はまだ持たない (後から差し込む)。耐久は <see cref="Vehicle"/> が自分で付ける <see cref="Damageable"/> の既定の値で、部位は持たない。
-    /// </summary>
-    /// <remarks>
-    /// 位置は乗り物の原点 (床の高さ・車体の中心の真下) から見たもの。車体は <see cref="BodySize"/> の箱で、+Z が前。
-    /// </remarks>
     public static class VehicleFixtureBuilder
     {
         public const string DefaultName = "ParkedVehicle";
@@ -43,25 +33,18 @@ namespace Shooter.Editor
         public static readonly Vector3 PassengerEnterLocal = new Vector3(1.3f, 0f, 0.4f);
         public static readonly Vector3 GunnerEnterLocal = new Vector3(0f, 0f, -2.3f);
 
-        /// <summary>左に降りる位置 (足元)。運転席の最初の候補。</summary>
         public static readonly Vector3 LeftExitLocal = new Vector3(-2f, 0f, 0.4f);
 
-        /// <summary>右に降りる位置 (足元)。助手席の最初の候補で、運転席の 2 番目の候補。</summary>
         public static readonly Vector3 RightExitLocal = new Vector3(2f, 0f, 0.4f);
 
-        /// <summary>後ろに降りる位置 (足元)。どの座席からでも使う乗り物の候補。</summary>
         public static readonly Vector3 RearExitLocal = new Vector3(0f, 0f, -3f);
 
-        /// <summary>助手席の視点 (座席から見た位置)。</summary>
         public static readonly Vector3 PassengerViewLocal = new Vector3(0f, 0.9f, 0f);
 
-        /// <summary>銃座の銃の回る点。銃座の前、立った腰の高さ。</summary>
         public static readonly Vector3 GunLocal = new Vector3(0f, 2.2f, -0.6f);
 
-        /// <summary>弾の出る点 (銃から見た位置)。</summary>
         public static readonly Vector3 MuzzleLocal = new Vector3(0f, 0f, 1f);
 
-        /// <summary>運転席・助手席・銃座の順の設定。乗り物の Id は <see cref="DefaultName"/>。gunnerWeaponId があれば銃座にその武器を付ける。</summary>
         public static VehicleSpec Spec(string gunnerWeaponId = null)
         {
             return new VehicleSpec(
@@ -88,10 +71,6 @@ namespace Shooter.Editor
                     : null);
         }
 
-        /// <summary>
-        /// 仮の乗り物を作って position・rotation に置き、返す。parent が null ならシーンの直下に置く。
-        /// gunnerWeapon があれば銃座に銃を付ける。
-        /// </summary>
         public static Vehicle Create(
             Scene scene, Transform parent, string name, Vector3 position, Quaternion rotation, WeaponDefinition gunnerWeapon = null)
         {
@@ -160,7 +139,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>origin・rotation に置いた仮の乗り物の車体の範囲 (床に置くものの重なりを確かめるのに使う)。</summary>
         public static Bounds BodyBounds(Vector3 origin, Quaternion rotation)
         {
             var center = origin + (rotation * new Vector3(0f, BodySize.y / 2f, 0f));

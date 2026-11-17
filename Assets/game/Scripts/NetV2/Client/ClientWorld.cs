@@ -165,6 +165,8 @@ namespace Shooter.NetV2
             {
                 Ladders = Ladders.Ladders,
                 Knockback = knockback ?? KnockbackSpec.Default,
+                Swim = motor.Swim,
+                WallRun = motor.WallRun,
             };
         }
 

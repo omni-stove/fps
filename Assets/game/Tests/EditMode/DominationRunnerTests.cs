@@ -399,8 +399,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(entries, Is.SameAs(_runner.PublishedScoreboard));
             Assert.That(entries, Is.EqualTo(new[]
             {
-                new ScoreboardEntry(DominationRunner.PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true),
-                new ScoreboardEntry(1, ScoreboardName.Literal("enemy-1"), Team.Bravo, 0, 0, ScoreboardConnection.None, false),
+                new ScoreboardEntry(DominationRunner.PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(1, ScoreboardName.Literal("enemy-1"), Team.Bravo, 0, 0, 0, ScoreboardConnection.None, false),
             }));
         }
 
@@ -441,7 +441,7 @@ namespace Shooter.Tests.EditMode
             Begin();
             var other = new[]
             {
-                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true),
             };
             GameSignals.Scoreboard.Publish(other);
 

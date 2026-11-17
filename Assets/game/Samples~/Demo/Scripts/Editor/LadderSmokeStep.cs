@@ -9,28 +9,16 @@ using LadderRule = Shooter.Core.Ladder;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、はしごの台 (<see cref="LadderRangeFixture"/>) を確かめる手順。
-    /// <list type="number">
-    /// <item>ルールの Ladder を Off にしてはしごの前で前へ進み続け、<see cref="LadderOffSeconds"/> 秒の間つかまらない (<c>[Ladder] grab</c> が出ない) ことを確かめる。</item>
-    /// <item>Ladder を On にして前へ進み、前からつかまり (<c>[Ladder] grab ... entry=Front</c>)、つかまっている間は武器をしまって撃てず
-    /// <see cref="PlayerActionConditions.OnLadder"/> が立つことを確かめ、上り切って上の足場に降りる (<c>[Ladder] leave ... reason=ExitTop</c>)。</item>
-    /// <item>上の足場で後ろへ下がって縁からつかまり (<c>entry=Top</c>)、そのまま下り切って地面に降りる (<c>reason=ExitBottom</c>)。</item>
-    /// </list>
-    /// 射撃場のルールは変えず、この手順の間だけ <see cref="LadderActionInstaller"/> でプレイヤーのはしごの設定を切り替え、終わったら戻す。
-    /// </summary>
+    // 射撃場のルールはほかの手順と共有しているので変えず、この手順の間だけ LadderActionInstaller でプレイヤーのはしごの設定を切り替え、終わったら戻す。
     public sealed class LadderSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary>Off のまま前へ進み続ける秒数。</summary>
         public const float LadderOffSeconds = 0.6f;
 
-        /// <summary>はしごの前に置くときの、上り下りする位置からさらに手前へ離す距離 (m)。つかまれる距離 (<see cref="LadderComponent.GrabDistance"/>) に収める。</summary>
+        // つかまれる距離 (LadderComponent.GrabDistance) に収まるよう、手前へ離す距離を抑える。
         public const float StandBack = 0.2f;
 
-        /// <summary>降りた足元の高さと、上の足場・地面の高さとの差の許容 (m)。</summary>
         public const float LandingTolerance = 0.25f;
 
-        /// <summary>Off のまま前へ進んで、これより高く上がったら失敗にする (m)。</summary>
         public const float OffRiseLimit = 0.3f;
 
         private int _frontGrabs;
@@ -315,7 +303,7 @@ namespace Shooter.Editor
             return problem == null ? ladder : null;
         }
 
-        // はしごの前の地面に、はしごを向いて立たせる。CharacterController は有効なままだと Transform の書き換えを次の移動で上書きするので、移す間だけ切る。
+        // CharacterController は有効なままだと Transform の書き換えを次の移動で上書きするので、移す間だけ切る。
         private static void PlaceInFront(BootstrapWorld world, LadderSpan span)
         {
             var mover = world.Mover;
@@ -350,7 +338,7 @@ namespace Shooter.Editor
             return string.Format(CultureInfo.InvariantCulture, "({0:0.##}, {1:0.##}, {2:0.##})", v.x, v.y, v.z);
         }
 
-        /// <summary>入力の代わりに <see cref="Move"/> を押し続け、ダッシュ・しゃがみ・ジャンプは押さない差し込み。先に差し込まれていたもの (カバー) は後から呼ぶ。</summary>
+        // 先に差し込まれていたもの (カバー) を外さないよう、後から呼ぶ。
         private sealed class LadderInputFilter : IPlayerMoveFilter
         {
             public LadderInputFilter(IPlayerMoveFilter inner)

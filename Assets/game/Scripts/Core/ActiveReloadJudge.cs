@@ -2,20 +2,9 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// アクティブリロードの判定。リロードの進み (経過時間 / リロード時間) が判定の幅に入っていれば成功にする。
-    /// オフライン (<see cref="Weapon.TryActiveReload"/>) とオンラインで同じ判定を使う。
-    /// </summary>
+    // オフラインの Weapon.TryActiveReload とオンラインで判定がずれないよう、どちらもここを通す。
     public static class ActiveReloadJudge
     {
-        /// <summary>
-        /// progress が windowStart 以上、windowStart + windowLength 以下なら <see cref="ActiveReloadResult.Success"/>、
-        /// それ以外は <see cref="ActiveReloadResult.Fail"/>。境界は両端とも成功に含む。
-        /// </summary>
-        /// <param name="progress">リロードの進み。NaN 以外。0〜1 の外なら失敗。</param>
-        /// <param name="windowStart">判定の幅の始まり。0 以上 1 未満 (<see cref="WeaponSpec.ActiveReloadWindowStart"/>)。</param>
-        /// <param name="windowLength">判定の幅の長さ。0 より大きく、windowStart との和が 1 以下 (<see cref="WeaponSpec.ActiveReloadWindowLength"/>)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">progress が NaN か、判定の幅が上の範囲の外。</exception>
         public static ActiveReloadResult Judge(float progress, float windowStart, float windowLength)
         {
             if (float.IsNaN(progress))

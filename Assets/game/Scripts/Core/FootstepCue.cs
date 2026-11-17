@@ -3,26 +3,16 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="FootstepCadence.Advance"/> の結果。鳴らす音の種類と音量。
-    /// <c>default</c> は <see cref="None"/> と同じ (何も鳴らさない)。
-    /// </summary>
     public readonly struct FootstepCue : IEquatable<FootstepCue>
     {
-        /// <summary>何も鳴らさない結果。</summary>
         public static readonly FootstepCue None;
 
-        /// <summary>鳴らす音の種類。</summary>
         public FootstepCueKind Kind { get; }
 
-        /// <summary>音量 ([0, 1])。<see cref="FootstepCueKind.None"/> では 0。</summary>
         public float Volume { get; }
 
-        /// <summary>何か鳴らすか。</summary>
         public bool HasSound => Kind != FootstepCueKind.None;
 
-        /// <param name="kind">定義済みの種類。</param>
-        /// <param name="volume">[0, 1] の音量。kind が <see cref="FootstepCueKind.None"/> なら 0。</param>
         public FootstepCue(FootstepCueKind kind, float volume)
         {
             if (!Enum.IsDefined(typeof(FootstepCueKind), kind))

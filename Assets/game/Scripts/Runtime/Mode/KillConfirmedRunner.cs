@@ -5,26 +5,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キルコンファームド (<see cref="Shooter.Core.KillConfirmed"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
-    /// 倒しただけでは点が入らず、倒れた人の落としたタグ (<see cref="Pickup"/>) を敵が拾えば確定 (<see cref="KillConfirmedSpec.PointsPerConfirm"/> 点)、味方が拾えば阻止 (0 点) になる。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>始めたときに全参加者の <see cref="DropOnDeath"/> の <see cref="DropOnDeath.DecideDrops"/> にタグを足すフックを掛ける。
-    /// DropOnDeath の無い参加者 (実行時に作られるプレイヤーなど) には、タグだけを落とす DropOnDeath を付ける。
-    /// 前から掛かっていたフックは先に呼び、止めるときに戻す。</item>
-    /// <item>落ちたタグは <see cref="Shooter.Core.KillConfirmed.DropTag"/> に登録し、<see cref="Pickup.Collected"/> を
-    /// <see cref="Shooter.Core.KillConfirmed.Collect"/> に渡す。消えるまでの秒数は Core が数え、消えたら Pickup を壊す
-    /// (Pickup 自身の <see cref="Pickup.LifetimeSeconds"/> は 0 にする)。</item>
-    /// <item>参加者でない者に拾われたタグは、点も阻止も数えずに無くす。</item>
-    /// <item>出現点に戻した参加者は、残っているタグの範囲から出たことにする (倒れた場所のタグの範囲に入ったまま数えられ、
-    /// 戻った瞬間に遠くから自分のタグを拾ってしまわないように)。</item>
-    /// <item>試合が終わったら残ったタグの Pickup を壊す。</item>
-    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Shooter.Core.KillConfirmed"/> を入れる
-    /// (得点は確定数)。タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
-    /// </list>
-    /// </remarks>
+    // タグが消えるまでの秒数は Core が数えるので、Pickup 自身の LifetimeSeconds は 0 にする。
+    // 出現点に戻した参加者を残っているタグの範囲から出たことにするのは、倒れた場所のタグの範囲に入ったまま数えられ、
+    // 戻った瞬間に遠くから自分のタグを拾ってしまわないようにするため。
     public sealed class KillConfirmedRunner : ModeRunnerBase
     {
         public const int DefaultScoreLimit = 20;
@@ -33,7 +16,6 @@ namespace Shooter.Runtime
         public const float DefaultTagLifetimeSeconds = 30f;
         public const int DefaultPointsPerConfirm = KillConfirmedSpec.DefaultPointsPerConfirm;
 
-        /// <summary>タグを拾える範囲の既定の半径 (m)。</summary>
         public const float DefaultTagRadius = KillConfirmedSpec.DefaultTagPickupRadius;
 
         [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の得点上限・制限時間・リスポーン・タグの秒数・確定の点・タグの半径の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
@@ -63,17 +45,14 @@ namespace Shooter.Runtime
         private readonly List<Collider> _colliders = new List<Collider>();
         private KillConfirmed _killConfirmed;
 
-        /// <summary>進めているキルコンファームド。開始前は null。</summary>
         public KillConfirmed KillConfirmed => _killConfirmed;
 
-        /// <summary>調整値のアセット。null なら Inspector の値 (既定は Default* の値) で始める。</summary>
         public KillConfirmedDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public KillConfirmedDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.KillConfirmed);
 
         public int ScoreLimit
@@ -106,29 +85,19 @@ namespace Shooter.Runtime
             set => _pointsPerConfirm = value;
         }
 
-        /// <summary>
-        /// <see cref="Definition"/> が無いときのタグを拾える範囲の半径 (m)。<see cref="Pickup.MinRadius"/> 未満は落とすときに切り上げる。
-        /// 落とすタグには、進めているモードの <see cref="KillConfirmedSpec.TagPickupRadius"/> を使う。
-        /// </summary>
         public float TagRadius
         {
             get => _tagRadius;
             set => _tagRadius = value;
         }
 
-        /// <summary>今落ちているタグの Pickup の数。</summary>
         public int TagPickupCount => _pickupOf.Count;
 
-        /// <summary>落ちている tagId のタグの Pickup。拾われたか消えたか、知らない番号なら null。</summary>
         public Pickup PickupOf(int tagId)
         {
             return _pickupOf.TryGetValue(tagId, out var pickup) ? pickup : null;
         }
 
-        /// <summary>
-        /// <see cref="KillConfirmedSpec"/> を、<see cref="Definition"/> があればその値で、無ければ Inspector の値で作る。
-        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public KillConfirmedSpec CreateSpec()
         {
             var definition = EffectiveDefinition;
@@ -141,10 +110,6 @@ namespace Shooter.Runtime
                 _scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds, _pointsPerConfirm, _tagRadius);
         }
 
-        /// <summary>
-        /// killConfirmed で、members を参加者に killConfirmed.Session を始める (<see cref="ModeRunnerBase.Begin"/>)。
-        /// 引数が不正なら <see cref="ArgumentException"/> を投げ、何も購読しない。
-        /// </summary>
         public void Begin(
             KillConfirmed killConfirmed,
             IReadOnlyList<SideMember> members,
@@ -295,10 +260,7 @@ namespace Shooter.Runtime
             _hooked.Add(new HookedDrop(drop, previous));
         }
 
-        /// <summary>
-        /// 設定やフックが足した持ち主の分からないタグを外し、倒れた参加者のタグを 1 枚足す。
-        /// DropOnDeath とこの Runner のどちらが先に倒れたことを受けても同じになるよう、ここではモードの状態を変えない (登録は <see cref="OnDropped"/>)。
-        /// </summary>
+        // DropOnDeath とこの Runner のどちらが先に倒れたことを受けても同じになるよう、ここではモードの状態を変えず、登録は OnDropped で行う。
         private void DecideTagDrop(DropContext context, List<PickupContents> drops)
         {
             drops.RemoveAll(item => item == null || item.Kind == PickupKind.Tag);

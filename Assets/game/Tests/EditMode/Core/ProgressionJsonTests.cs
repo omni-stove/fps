@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ProgressionJsonTests
     {
-        private static readonly string[] _expectedItemNames = { "killXp", "headshotXp", "matchXp", "winXp", "levels", "unlocks" };
+        private static readonly string[] _expectedItemNames = { "killXp", "headshotXp", "assistXp", "matchXp", "winXp", "levels", "unlocks" };
 
         private static readonly string[] _expectedUnlockItemNames = { "id", "level" };
 
@@ -29,12 +29,13 @@ namespace Shooter.Core.Tests
         public void ReadsEveryItem()
         {
             var spec = ProgressionJson.Parse(
-                "{\"killXp\": 10, \"headshotXp\": 5, \"matchXp\": 30, \"winXp\": 40, \"levels\": [0, 100, 250],"
+                "{\"killXp\": 10, \"headshotXp\": 5, \"assistXp\": 3, \"matchXp\": 30, \"winXp\": 40, \"levels\": [0, 100, 250],"
                 + " \"unlocks\": [{\"id\": \"burst\", \"level\": 2}, {\"id\": \"scope\", \"level\": 3}]}",
                 "progression.json");
 
             Assert.That(spec.KillXp, Is.EqualTo(10));
             Assert.That(spec.HeadshotXp, Is.EqualTo(5));
+            Assert.That(spec.AssistXp, Is.EqualTo(3));
             Assert.That(spec.MatchXp, Is.EqualTo(30));
             Assert.That(spec.WinXp, Is.EqualTo(40));
             Assert.That(spec.Levels, Is.EqualTo(_threeLevels));
@@ -53,6 +54,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(spec.KillXp, Is.EqualTo(100));
             Assert.That(spec.HeadshotXp, Is.EqualTo(50));
+            Assert.That(spec.AssistXp, Is.EqualTo(50));
             Assert.That(spec.MatchXp, Is.EqualTo(250));
             Assert.That(spec.WinXp, Is.EqualTo(500));
             Assert.That(spec.Levels, Is.EqualTo(_defaultLevels));
@@ -66,12 +68,15 @@ namespace Shooter.Core.Tests
 
             Assert.That(spec.KillXp, Is.EqualTo(7));
             Assert.That(spec.WinXp, Is.EqualTo(ProgressionSpec.DefaultWinXp));
+            Assert.That(spec.AssistXp, Is.EqualTo(ProgressionSpec.DefaultAssistXp));
             Assert.That(spec.Levels, Is.EqualTo(ProgressionSpec.Default.Levels));
             Assert.That(spec.Unlocks[0].Level, Is.EqualTo(10), "the default table has 10 levels");
         }
 
         [TestCase("{\"killXp\": -1}", "killXp")]
         [TestCase("{\"headshotXp\": -1}", "headshotXp")]
+        [TestCase("{\"assistXp\": -1}", "assistXp")]
+        [TestCase("{\"assistXp\": 2.5}", "assistXp")]
         [TestCase("{\"matchXp\": -1}", "matchXp")]
         [TestCase("{\"winXp\": -5}", "winXp")]
         [TestCase("{\"winXp\": 1.5}", "winXp")]
@@ -132,17 +137,20 @@ namespace Shooter.Core.Tests
             var levels = new[] { 0, 100 };
             var none = Array.Empty<ProgressionUnlock>();
 
-            Assert.Throws<ArgumentNullException>(() => new ProgressionSpec(1, 1, 1, 1, null, none));
-            Assert.Throws<ArgumentNullException>(() => new ProgressionSpec(1, 1, 1, 1, levels, null));
+            Assert.Throws<ArgumentNullException>(() => new ProgressionSpec(1, 1, 1, 1, 1, null, none));
+            Assert.Throws<ArgumentNullException>(() => new ProgressionSpec(1, 1, 1, 1, 1, levels, null));
             Assert.That(
-                Assert.Throws<ArgumentException>(() => new ProgressionSpec(1, 1, 1, 1, levels, new ProgressionUnlock[] { null })).ParamName,
+                Assert.Throws<ArgumentException>(() => new ProgressionSpec(1, 1, 1, 1, 1, levels, new ProgressionUnlock[] { null })).ParamName,
                 Is.EqualTo("unlocks"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionSpec(1, 1, -1, 1, 1, levels, none)).ParamName,
+                Is.EqualTo("assistXp"));
             Assert.That(Assert.Throws<ArgumentException>(() => new ProgressionUnlock(null, 1)).ParamName, Is.EqualTo("id"));
             Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionUnlock("a", 0)).ParamName, Is.EqualTo("level"));
 
-            var single = new ProgressionSpec(0, 0, 0, 0, _singleLevel, none);
+            var single = new ProgressionSpec(0, 0, 0, 0, 0, _singleLevel, none);
             Assert.That(single.MaxLevel, Is.EqualTo(1), "a table with only level 1 is allowed");
-            Assert.That(single.ToString(), Is.EqualTo("kill=0 headshot=0 match=0 win=0 levels=1 maxXp=0 unlocks=0"));
+            Assert.That(single.ToString(), Is.EqualTo("kill=0 headshot=0 assist=0 match=0 win=0 levels=1 maxXp=0 unlocks=0"));
         }
 
         [Test]
@@ -150,7 +158,7 @@ namespace Shooter.Core.Tests
         {
             var levels = new[] { 0, 100 };
             var unlocks = new[] { new ProgressionUnlock("a", 2) };
-            var spec = new ProgressionSpec(1, 1, 1, 1, levels, unlocks);
+            var spec = new ProgressionSpec(1, 1, 1, 1, 1, levels, unlocks);
 
             levels[1] = 5;
             unlocks[0] = new ProgressionUnlock("b", 1);

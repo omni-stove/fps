@@ -22,7 +22,7 @@ namespace Shooter.Server
             var motor = rules.Motor;
             var defaults = ServerMotorSettings.Default;
             return new ServerMotorSettings(
-                motor.Motor, motor.Stance, motor.Mover, motor.Prone, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
+                motor.Motor, motor.Stance, motor.Mover, motor.Prone, motor.Swim, motor.WallRun, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
         }
 
         /// <param name="launch">起動設定。</param>

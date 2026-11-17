@@ -5,16 +5,11 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ネット対戦でプレイヤーが自分のロードアウトを選んだときの <c>[Net] loadout</c> 付きログの文言。
-    /// 持ち主の送信・サーバーの判定・持ち主に届いた結果を同じ頭で出し、クライアントとサーバーのログを突き合わせられるようにする。
-    /// </summary>
+    // 持ち主の送信・サーバーの判定・持ち主に届いた結果を同じ頭で出し、クライアントとサーバーのログを突き合わせられるようにする。
     public static class LoadoutChoiceLog
     {
         public const string Prefix = "[Net] loadout";
 
-        /// <summary>持ち主が送った武器の Id の並び。</summary>
-        /// <example><c>[Net] loadout request weapons=6c1f...,b4e2...</c></example>
         public static string Requested(IReadOnlyList<string> weaponIds)
         {
             if (weaponIds == null)
@@ -25,8 +20,6 @@ namespace Shooter.Core
             return Prefix + " request weapons=" + Join(weaponIds);
         }
 
-        /// <summary>サーバーが受け入れ、clientId の次の出現から配る武器 (スロット順)。</summary>
-        /// <example><c>[Net] loadout accepted client=1 weapons=6c1f...,b4e2... applies=next-spawn</c></example>
         public static string Accepted(ulong clientId, IReadOnlyList<WeaponSpec> weapons)
         {
             if (weapons == null)
@@ -44,16 +37,12 @@ namespace Shooter.Core
                 + " weapons=" + Join(ids) + " applies=next-spawn";
         }
 
-        /// <summary>サーバーが断った理由。武器は前のまま変えない。</summary>
-        /// <example><c>[Net] loadout rejected client=1 reason=slot 0 does not accept Handgun (weapon 'Handgun')</c></example>
         public static string Rejected(ulong clientId, string reason)
         {
             return Prefix + " rejected client=" + clientId.ToString(CultureInfo.InvariantCulture)
                 + " reason=" + (string.IsNullOrEmpty(reason) ? "-" : reason);
         }
 
-        /// <summary>持ち主に届いた結果。受け入れなら <c>accepted</c>、断られたら <c>rejected reason=..</c>。</summary>
-        /// <example><c>[Net] loadout answer rejected reason=...</c></example>
         public static string Answer(bool accepted, string reason)
         {
             return accepted

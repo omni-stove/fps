@@ -6,25 +6,12 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 時間とともに縮むエリア。この GameObject の位置 (水平面) を最初の円の中心にし、<see cref="ZoneSchedule"/> の予定どおりに縮める。
-    /// <list type="bullet">
-    /// <item>Update で <see cref="Tick"/> を呼ぶ。Edit Mode のテストでは直接呼ぶ。<see cref="Begin()"/> するまでは何もしない
-    /// (<see cref="BeginsOnStart"/> なら Start で始める)。</item>
-    /// <item><see cref="DamageIntervalSeconds"/> ごとに、円の外にいる生きた <see cref="Damageable"/> へ、その間の
-    /// <see cref="ZoneState.DamagePerSecond"/> ぶんのダメージを与える。端数は相手ごとに持ち越す。高さは見ない。</item>
-    /// <item>段階か動き (待ち・縮み・最後) が変わるたびと、相手が外に出た・中に戻ったときに <c>[Zone]</c> ログを出す。</item>
-    /// <item>Play 中は境界を、上下が開いた半透明の筒で出す (中からも外からも見えるよう両面を描く)。<see cref="BoundaryPrefab"/> があればその形で出す。</item>
-    /// </list>
-    /// HUD は <see cref="SecondsUntilShrink"/> か <see cref="State"/> を読む (このコンポーネントは自分では HUD に書かず、文も作らない。
-    /// どの HUD にどう出すかはモードの Runner と UI が決めるので)。
-    /// </summary>
+    // 自分では HUD に書かず文も作らないのは、どの HUD にどう出すかをモードの Runner と UI が決めるため。
     [DisallowMultipleComponent]
     public sealed class ShrinkingZone : MonoBehaviour
     {
         public const string LogTag = ZoneLog.Tag;
 
-        /// <summary>Play 中に作る、境界を示す筒の名前。</summary>
         public const string BoundaryName = "ZoneBoundary";
 
         public const float DefaultInitialRadius = 60f;
@@ -34,7 +21,6 @@ namespace Shooter.Runtime
 
         public static readonly Color DefaultBoundaryColor = new Color(1f, 0.35f, 0.2f, 0.35f);
 
-        // URP の Lit (プリミティブの既定の材質) の、半透明と両面描画のプロパティ
         private static readonly int _surfaceId = Shader.PropertyToID("_Surface");
         private static readonly int _blendId = Shader.PropertyToID("_Blend");
         private static readonly int _srcBlendId = Shader.PropertyToID("_SrcBlend");
@@ -47,7 +33,6 @@ namespace Shooter.Runtime
 
         private const int GizmoSegments = 48;
 
-        /// <summary>Inspector で並べる段階 1 つ。<see cref="ZonePhase"/> と同じ意味。</summary>
         [Serializable]
         public struct PhaseSettings
         {
@@ -131,34 +116,24 @@ namespace Shooter.Runtime
         private Mesh _boundaryMesh;
         private Material _boundaryMaterialInstance;
 
-        /// <summary>段階が進んだか、動き (待ち・縮み・最後) が変わったときに、新しい様子を渡して呼ばれる。<see cref="Begin()"/> 直後にも呼ぶ。</summary>
         public event Action<ZoneState> StageChanged;
 
-        /// <summary>エリアのダメージを与えたときに、相手と量を渡して呼ばれる。</summary>
         public event Action<Damageable, int> DamageDealt;
 
-        /// <summary>動かしている予定。<see cref="Begin()"/> 前は null。</summary>
         public ZoneSchedule Schedule => _schedule;
 
-        /// <summary><see cref="Begin()"/> してから <see cref="Stop"/> するまで true。</summary>
         public bool IsRunning => _schedule != null;
 
-        /// <summary>始めてからの経過秒数。</summary>
         public float ElapsedSeconds => _elapsedSeconds;
 
-        /// <summary>今の様子。<see cref="Begin()"/> 前は既定値。</summary>
         public ZoneState State => _state;
 
-        /// <summary>次に縮み始めるまでの秒数。待っていなければ (縮んでいる途中・最後の円・始める前) 0。HUD 用。</summary>
         public float SecondsUntilShrink => IsRunning ? _state.SecondsUntilShrink : 0f;
 
-        /// <summary>最後にダメージを与える判定をしたとき、外にいた者。</summary>
         public IReadOnlyCollection<Damageable> Outside => _outside;
 
-        /// <summary>Play 中に作った境界の筒 (<see cref="BoundaryName"/>)。作っていなければ null。</summary>
         public GameObject Boundary => _boundary;
 
-        /// <summary>境界の見た目。null なら仮の半透明の筒。筒を作る (<see cref="RefreshBoundary"/>) 前に設定したものを使う。</summary>
         public GameObject BoundaryPrefab
         {
             get => _boundaryPrefab;
@@ -171,7 +146,6 @@ namespace Shooter.Runtime
             set => _beginOnStart = value;
         }
 
-        /// <summary>最初の円の半径 (m)。0 より大きい有限値。次の <see cref="Begin()"/> から使う。</summary>
         public float InitialRadius
         {
             get => _initialRadius;
@@ -186,7 +160,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>外にいる者にダメージを与える間隔 (秒)。0 より大きい有限値。</summary>
         public float DamageIntervalSeconds
         {
             get => _damageIntervalSeconds;
@@ -201,7 +174,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>境界の筒の高さ (m)。0 より大きい有限値。次に筒を合わせるとき (<see cref="RefreshBoundary"/>) から使う。</summary>
         public float BoundaryHeight
         {
             get => _boundaryHeight;
@@ -216,17 +188,14 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>Play 中に境界の筒を出すか。始めた後に変えても、作った筒はそのまま。</summary>
         public bool ShowsBoundary
         {
             get => _showBoundary;
             set => _showBoundary = value;
         }
 
-        /// <summary>段階の並び (Inspector の値の写し)。次の <see cref="Begin()"/> から使う。</summary>
         public IReadOnlyList<PhaseSettings> PhaseSettingsList => _phases ?? Array.Empty<PhaseSettings>();
 
-        /// <summary>段階の並びを差し替える。次の <see cref="Begin()"/> から使う。中身は <see cref="Begin()"/> で確かめる。</summary>
         public void SetPhases(IReadOnlyList<PhaseSettings> phases)
         {
             if (phases == null)
@@ -241,40 +210,29 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// ダメージを与える相手を targets に限る。null なら、判定のたびにシーンの <see cref="Damageable"/> をすべて探す。
-        /// 参加者を知っているモードの Runner が渡す (渡した一覧は持ち続けるので、Runner 側で入れ替えればそれに従う)。
-        /// </summary>
         public void SetTargets(IReadOnlyList<Damageable> targets)
         {
             _explicitTargets = targets;
         }
 
-        /// <summary><see cref="Seed"/> で始める (<see cref="UseRandomSeed"/> なら選び直す)。始められなければ false を返し、理由をエラーログに出す。</summary>
         public bool Begin()
         {
             var seed = _useRandomSeed ? Environment.TickCount : _seed;
             return Begin(seed);
         }
 
-        /// <summary><see cref="Begin()"/> で使うシード。<see cref="UseRandomSeed"/> なら使わない。</summary>
         public int Seed
         {
             get => _seed;
             set => _seed = value;
         }
 
-        /// <summary><see cref="Begin()"/> のたびにシードを選び直すか。</summary>
         public bool UseRandomSeed
         {
             get => _useRandomSeed;
             set => _useRandomSeed = value;
         }
 
-        /// <summary>
-        /// seed で円の列を決めて最初から始める。動いている途中でも最初からになる。
-        /// Inspector の値が不正 (段階が無い・半径が前より大きいなど) なら false を返し、理由をエラーログに出す。
-        /// </summary>
         public bool Begin(int seed)
         {
             ZoneSchedule schedule;
@@ -307,7 +265,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>止める。境界の筒は最後の形のまま残す。動いていなければ何もしない。</summary>
         public void Stop()
         {
             if (_schedule == null)
@@ -321,11 +278,6 @@ namespace Shooter.Runtime
             Debug.Log(ZoneLog.Stopped(), this);
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進め、段階の変化をログに出し、境界の筒を合わせ、ダメージの間隔に達するたびに外の者へダメージを与える。
-        /// 動いていなければ何もしない。
-        /// </summary>
-        /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -357,16 +309,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>position が今の円の中 (境界を含む) なら true。高さは見ない。始める前は常に true。</summary>
         public bool Contains(Vector3 position)
         {
             return !IsRunning || _state.Contains(new System.Numerics.Vector2(position.x, position.z));
         }
 
-        /// <summary>
-        /// 境界の筒を作るか、作ってあれば今の円に合わせる。<see cref="ShowsBoundary"/> が false か、始める前なら何もしない。
-        /// 当たり判定は持たせない (弾と移動を遮らないように)。
-        /// </summary>
         public void RefreshBoundary()
         {
             if (!_showBoundary || !IsRunning)
@@ -509,7 +456,6 @@ namespace Shooter.Runtime
             _targets.AddRange(FindObjectsByType<Damageable>(FindObjectsInactive.Exclude));
         }
 
-        // 破棄された・対象から外れた相手の持ち越しと「外にいる」を捨てる。外にいたまま外れた者は、戻ってきたら外に出たとして数え直す。
         private void ForgetMissingTargets()
         {
             _stale.Clear();
@@ -571,7 +517,7 @@ namespace Shooter.Runtime
             renderer.sharedMaterial = _boundaryMaterialInstance;
         }
 
-        /// <summary>半径 1・高さ 1 (y は -0.5 から 0.5)、上下の開いた筒。法線は外向き (両面描画で内側からも見せる)。</summary>
+        // 内側の面を足さず両面描画で内側からも見せるので、法線は外向きだけにする。
         public static Mesh BuildTubeMesh(int segments)
         {
             if (segments < 3)

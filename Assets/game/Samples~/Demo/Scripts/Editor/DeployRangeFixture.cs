@@ -5,7 +5,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 置ける物 (展開式の盾) を試す場所。プレイヤーは各レーンの手前 (PlayerZ) に立って +Z へ置く。
     // 左手前の隅 (x = -35..-22, z = -36..-25) の、自爆兵の囲いの視界の外に置く。
     // 急な坂のレーン 1 本と平らなレーンを並べ、上限を超えて置けるよう平らなレーンは盾の幅より離す。
     // 撃ち手の目印は当たり判定も陣営も持たない (陣営を持たせると、モードの参加者や敵の狙う相手になる)。
@@ -28,7 +27,6 @@ namespace Shooter.Editor
         public static readonly Vector3 RampCenter = new Vector3(RampLaneX, 1f, -30.5f);
         public static readonly Vector3 RampScale = new Vector3(2.5f, 0.3f, 5f);
 
-        // 0 番は撃ち手の正面に置く。
         public static readonly IReadOnlyList<float> FlatLaneXs = new[] { -29.5f, -26.5f, -23.5f };
 
         public int Order => FixtureOrder;

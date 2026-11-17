@@ -8,7 +8,6 @@ namespace Shooter.Core
     // モードの勝ち負けや選び直しの間隔に巻き込まれる。
     public static class DecoyLure
     {
-        // 見えている目標が囮より近い (同じ距離も) なら、目標を相手にし続けて -1 を返す。
         public static int SelectSeen(Vector3 self, Vector3? target, bool targetSeen, IReadOnlyList<DecoyOption> decoys)
         {
             var index = Nearest(self, decoys, true);

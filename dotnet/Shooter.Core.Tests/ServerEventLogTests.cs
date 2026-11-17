@@ -14,6 +14,7 @@ namespace Shooter.Core.Tests
         private const string _victimPuid = "0002111122223333444455556666aaaa";
 
         private static readonly DateTime _time = new DateTime(2026, 11, 13, 9, 30, 5, 123, DateTimeKind.Utc);
+        private static readonly int[] _twoAssisters = { 4, 2 };
 
         /// <summary>1 行の JSON オブジェクトとして読み、キーと値を出てきた順に返す。値はすべて文字列であること。</summary>
         private static List<KeyValuePair<string, string>> ReadLine(string line)
@@ -71,6 +72,30 @@ namespace Shooter.Core.Tests
             Assert.That(line, Is.EqualTo(
                 "{\"type\":\"kill\",\"time\":\"2026-11-13T09:30:05.123Z\",\"matchId\":\"" + _matchId
                 + "\",\"killerId\":\"3\",\"victimId\":\"3\",\"teamKill\":\"true\"}"));
+        }
+
+        [Test]
+        public void KillListsTheAssistersLast()
+        {
+            var pairs = ReadLine(ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, _twoAssisters));
+
+            Assert.That(Keys(pairs), Is.EqualTo(Names("type", "time", "matchId", "killerId", "victimId", "teamKill", "assisterIds")));
+            Assert.That(Value(pairs, "assisterIds"), Is.EqualTo("4,2"));
+        }
+
+        [Test]
+        public void KillWithoutAssistersLeavesTheKeyOut()
+        {
+            var line = ServerEventLog.Kill(_time, _matchId, 3, null, 1, null, false, Array.Empty<int>());
+
+            Assert.That(line, Is.EqualTo(ServerEventLog.Kill(_time, _matchId, 3, null, 1, null, false)));
+            Assert.That(line, Does.Not.Contain("assisterIds"));
+        }
+
+        [Test]
+        public void KillRejectsANegativeAssister()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerEventLog.Kill(_time, _matchId, 0, null, 1, null, false, new[] { -1 }));
         }
 
         [Test]

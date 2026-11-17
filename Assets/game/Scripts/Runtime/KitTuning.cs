@@ -21,6 +21,8 @@ namespace Shooter.Runtime
 
         public const string SuppressionResourcePath = "Tuning/suppression";
 
+        public const string AssistResourcePath = "Tuning/assist";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
@@ -35,6 +37,8 @@ namespace Shooter.Runtime
         public static NetBotSpec Bots => Load(c => c.BotsTuning, BotsResourcePath, TuningJson.ParseBots, NetBotSpec.Default);
 
         public static SuppressionSpec Suppression => Load(c => c.SuppressionTuning, SuppressionResourcePath, SuppressionJson.Parse, SuppressionSpec.Default);
+
+        public static AssistSpec Assist => Load(c => c.AssistTuning, AssistResourcePath, AssistJson.Parse, AssistSpec.Default);
 
         public static void Reload()
         {

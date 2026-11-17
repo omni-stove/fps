@@ -354,7 +354,6 @@ namespace Shooter.Tests.EditMode
             presenter.Step(1f);
             Assert.That(camera.fieldOfView, Is.EqualTo(30f).Within(1e-3f));
 
-            // 技の間にほかが視野角を書いたら、それを元の値として寄せ直し、終えたらそこへ戻す。
             camera.fieldOfView = 50f;
             presenter.Step(0f);
             Assert.That(camera.fieldOfView, Is.EqualTo(25f).Within(1e-3f));

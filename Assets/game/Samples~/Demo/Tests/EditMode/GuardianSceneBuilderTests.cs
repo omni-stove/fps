@@ -4,10 +4,7 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GuardianSceneBuilder"/> のパスと配置を確かめる。シーンを組む処理は開いているシーンを置き換えるので、
-    /// <c>-executeMethod Shooter.Editor.GuardianSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組む処理は開いているシーンを置き換えるので、-executeMethod Shooter.Editor.GuardianSceneBuilder.Build で確かめる。
     public sealed class GuardianSceneBuilderTests
     {
         [Test]

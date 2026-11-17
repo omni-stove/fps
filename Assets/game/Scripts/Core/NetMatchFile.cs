@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// Unity 抜きのサーバーが <c>-rules &lt;名前&gt;</c> で読む、1 つの試合のルールのファイル (<c>server-data/rules/&lt;名前&gt;.json</c>)。
-    /// Unity の Editor が NetMatch.prefab とルールのアセットから書き出す (<see cref="Write"/>) ので、サーバーの試合は Unity の専用サーバーと同じ値で動く。
-    /// </summary>
+    // Unity の Editor が NetMatch.prefab とルールのアセットから書き出したものを読むので、Unity 抜きのサーバーの試合も Unity の専用サーバーと同じ値で動く。
     public sealed class NetMatchFile
     {
         public const string Extension = ".json";
@@ -192,7 +189,7 @@ namespace Shooter.Core
 
         public WeaponCatalog Catalog { get; }
 
-        /// <summary>試合ごとに作り直すのは、<see cref="ServerLoadout"/> がプレイヤーごとの選んだ並びと連射の制限を持つため。</summary>
+        // 試合ごとに作り直すのは、ServerLoadout がプレイヤーごとの選んだ並びと連射の制限を持つため。
         public ServerLoadout CreateLoadout()
         {
             return new ServerLoadout(LoadoutRule, LoadoutWeapons, Catalog, SwitchSeconds);
@@ -630,7 +627,9 @@ namespace Shooter.Core
                 return new SwimTuning(
                     fields.ReadFloat(SwimSpeedItem, fallback.Speed),
                     fields.ReadFloat(SwimBuoyancyItem, fallback.Buoyancy),
-                    fields.ReadFloat(SwimBreathSecondsItem, fallback.BreathSeconds));
+                    fields.ReadFloat(SwimBreathSecondsItem, fallback.BreathSeconds),
+                    fallback.DrownDamage,
+                    fallback.DrownIntervalSeconds);
             }
             catch (ArgumentException e)
             {

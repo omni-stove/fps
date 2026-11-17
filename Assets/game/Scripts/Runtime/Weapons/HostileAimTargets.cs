@@ -23,8 +23,6 @@ namespace Shooter.Runtime
             _layerMask = layerMask;
         }
 
-        /// <exception cref="ArgumentNullException">into が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">range が 0 以下か有限でない。</exception>
         public void Collect(Vector3 eye, float range, List<NVector3> into)
         {
             if (into == null)

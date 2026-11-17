@@ -11,7 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="MissionCatalog"/> の検証と、<see cref="CampaignLaunchSelection"/> でメニューの選択をシーンへ渡すことを確かめる。</summary>
     public sealed class MissionCatalogTests
     {
         private const string ScenePath = "Assets/game/Scenes/Campaign01.unity";

@@ -5,25 +5,17 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生中に、画面の枠と見出し (<see cref="KillCamText.Caption(KillCamStatus)"/>) と再生の進みを出すビュー。
-    /// Hud.uxml の <see cref="UxmlName"/> を使い、見た目は Hud.uss の kill-cam のクラスで決める。
-    /// 要素を持っている間 <see cref="GameSignals.KillCam"/> を購読し、再生が出ている間は枠を出して進みを合わせ、消えたら閉じる。
-    /// 要素を受けたときは今の再生に合わせる (要素を持たない間は購読しないので、その間の変化を後から拾う)。言語が変わったら文にし直す。
-    /// 再生中であることを伝える表示なので、HUD の量 (<see cref="HudVisibility"/>) では隠さない。
-    /// </summary>
+    // 再生中であることを伝える表示なので、HUD の量 (HudVisibility) では隠さない。
+    // 要素を持たない間は購読しないので、要素を受けたときに今の再生に合わせてその間の変化を拾う。
     [DisallowMultipleComponent]
     public sealed class KillCamView : HudElementView
     {
         public const string LogTag = KillCamLog.Tag;
 
-        /// <summary>Hud.uxml のキルカムの枠。</summary>
         public const string UxmlName = "kill-cam";
 
-        /// <summary>枠の中の見出しの Label。</summary>
         public const string CaptionName = "kill-cam-caption";
 
-        /// <summary>枠の中の再生の進みの塗り。</summary>
         public const string ProgressName = "kill-cam-progress";
 
         private LocalizedText _caption;
@@ -35,16 +27,12 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているか。</summary>
         public bool IsShown { get; private set; }
 
-        /// <summary>出している見出し。出していなければ空文字。</summary>
         public string Caption => IsShown ? _text : string.Empty;
 
-        /// <summary>再生の進み (0 から 1)。出していなければ 0。</summary>
         public float Progress { get; private set; }
 
-        /// <summary>枠と caption の見出しを出し、進みを 0 にする。</summary>
         public void Show(LocalizedText caption)
         {
             _killerName = null;
@@ -56,7 +44,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>進みを progress (0 から 1 に丸める) にする。出していなければ何もしない。</summary>
         public void SetProgress(float progress)
         {
             if (!IsShown)
@@ -68,7 +55,6 @@ namespace Shooter.Runtime
             RefreshProgress();
         }
 
-        /// <summary>枠と見出しを消す。出していなければ何もしない。</summary>
         public void Hide()
         {
             if (!IsShown)

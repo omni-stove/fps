@@ -8,14 +8,8 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// クライアントが自分の移動を予測する世界。サーバー (<c>ServerMapData</c>) と同じ <c>.fpsmap</c> と <c>.ladders.json</c> を読み、
-    /// 壊れた建物の部品はサーバーの <see cref="StructureStateMessage"/> を受けて当たりから外す (<see cref="Apply"/>)。
-    /// </summary>
-    /// <remarks>
-    /// 部品を指す番号は書き出し (MapCollisionExporter) が付けた形の組 (<see cref="MapColliderGroups.Piece"/>) で、サーバーも同じ番号で送る。
-    /// 壊れていないと届いた部品は当たりに戻す (次の試合で建物が直るため)。
-    /// </remarks>
+    // 部品を指す番号は書き出し (MapCollisionExporter) が付けた形の組 (MapColliderGroups.Piece) で、サーバーも同じ番号で送る。
+    // 次の試合で建物が直るので、壊れていないと届いた部品は当たりに戻す。
     public sealed class ClientWorld
     {
         private readonly Dictionary<int, List<int>> _pieces = new Dictionary<int, List<int>>();
@@ -60,13 +54,11 @@ namespace Shooter.NetV2
 
         public BvhWorldCollision Collision { get; }
 
-        /// <summary>マップのはしご。スナップショットははしごをこの並びの番号で指すので、サーバーと同じファイルから読む。</summary>
+        // スナップショットははしごをこの並びの番号で指すので、サーバーと同じファイルから読む。
         public NetMapLadders Ladders { get; }
 
-        /// <summary>壊せる建物の数 (部品の当たりを持つもの)。</summary>
         public int StructureCount => _pieces.Count;
 
-        /// <summary>今当たりから外している部品の数。</summary>
         public int BrokenPieceCount => _broken.Count;
 
         public IEnumerable<int> GrenadeIds => _grenades.Keys;
@@ -76,10 +68,7 @@ namespace Shooter.NetV2
             + " structures=" + StructureCount.ToString(CultureInfo.InvariantCulture)
             + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture);
 
-        /// <summary>
-        /// directory の <c>&lt;map&gt;.fpsmap</c> と (あれば) <c>&lt;map&gt;.ladders.json</c> を読む。
-        /// はしごのファイルが無いマップは、サーバーと同じくはしごが無いものとして動かす。
-        /// </summary>
+        // サーバーと同じく、はしごのファイルが無いマップははしごが無いものとして動かす。
         public static bool TryLoad(string directory, string map, out ClientWorld world, out string error)
         {
             if (directory == null)
@@ -145,9 +134,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        /// <summary>
-        /// サーバーの移動と同じ値 (<see cref="MatchClient.Motor"/>) で、この世界を動く自分の体を作る。
-        /// </summary>
         public CharacterMotorSimulation CreateSimulation(NetMotorSettings motor, int tickRate, float killPlaneY, KnockbackSpec knockback = null)
         {
             if (motor == null)
@@ -170,11 +156,7 @@ namespace Shooter.NetV2
             };
         }
 
-        /// <summary>
-        /// 建物 1 つの壊れた部品をサーバーの知らせのとおりにする。知らない建物なら false (書き出しの古いマップでも動けるよう、何もしない)。
-        /// </summary>
-        /// <param name="message">建物の番号と壊れた部品の集合。</param>
-        /// <param name="changed">当たりを外した・戻した部品の数。</param>
+        // 書き出しの古いマップでも動けるよう、知らない建物の知らせは何もせず false を返す。
         public bool Apply(StructureStateMessage message, out int changed)
         {
             if (message == null)
@@ -279,7 +261,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        /// <summary>grenadeId のグレネードの種類の Id (<see cref="GrenadeSpec.Id"/>)。知らないグレネードなら空文字。</summary>
         public string GrenadeTypeId(int grenadeId)
         {
             return _grenades.TryGetValue(grenadeId, out var track) ? track.TypeId : string.Empty;

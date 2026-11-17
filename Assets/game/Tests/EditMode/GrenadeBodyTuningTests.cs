@@ -7,9 +7,6 @@ using UnityEngine.TestTools.Utils;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 投げたグレネードの球の大きさ・重さ・跳ね返り・摩擦・回転の減りと、手放す距離が <see cref="GrenadeSpec"/> (grenade.json) から来ることを確かめる。
-    /// </summary>
     public sealed class GrenadeBodyTuningTests
     {
         private const float Tolerance = 1e-5f;

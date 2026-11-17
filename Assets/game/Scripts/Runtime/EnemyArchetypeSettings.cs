@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // EnemyAgent と EnemyDefinition の Inspector に並べる値。ほかの判断の値と同じく、ここから EnemySpec を作り、ApplySpec (EnemyDefinition では CopyFrom) で書き戻す。
     [Serializable]
     public sealed class EnemyShieldSettings
     {
@@ -41,7 +40,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("殴るときに前へ踏み込む距離 (m)")]
         private float _bashLungeDistance = ShieldSpec.DefaultBashLungeDistance;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public ShieldSpec ToSpec()
         {
             var bash = new MeleeSpec(
@@ -85,7 +83,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.01f), Tooltip("次の位置へ向かってこれだけ経っても着かなければ、その場から狙い直す (秒)")]
         private float _relocateGiveUpSeconds = SniperSpec.DefaultRelocateGiveUpSeconds;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public SniperSpec ToSpec()
         {
             return new SniperSpec(_aimSeconds, _shotDamageMultiplier, _reaimDelaySeconds, _relocateGiveUpSeconds);
@@ -132,7 +129,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("当てたあと次に動き出すまでの秒数")]
         private float _recoverSeconds = ChargerSpec.DefaultRecoverSeconds;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public ChargerSpec ToSpec()
         {
             return new ChargerSpec(
@@ -187,7 +183,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("小さな爆発の、減らさずにダメージを与える半径 (m)")]
         private float _deathBlastFullDamageRadius = BomberSpec.DefaultDeathBlastFullDamageRadius;
 
-        /// <exception cref="ArgumentException">値が不正。</exception>
         public BomberSpec ToSpec()
         {
             return new BomberSpec(

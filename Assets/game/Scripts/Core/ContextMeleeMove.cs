@@ -12,8 +12,6 @@ namespace Shooter.Core
         // 怯んだ相手は撃たれて気づいた後なので、背後からでも報酬のある処刑技を先にする。
         public const int TakedownPriority = 50;
 
-        /// <exception cref="ArgumentException">id が空か空白を含む、または required と excluded が重なる。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。outcome が Damage なら damage は 1 以上、witnessAwareness は 0 以上 1 以下。</exception>
         public ContextMeleeMove(
             string id,
             int priority,
@@ -129,13 +127,11 @@ namespace Shooter.Core
 
         public bool Interruptible { get; }
 
-        // 技の最中に振る者を見た敵の発見ゲージを、この量まで上げる (AwarenessMeter.Full で交戦)。0 なら見られても上げない。
         public float WitnessAwareness { get; }
 
         public float TotalSeconds => AlignSeconds + PerformSeconds;
 
         // 届く距離はふつうの近接と揃え、怯んだ相手に近接を押したときに「届いたのにふつうの近接が出た」とならないようにする。
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public static ContextMeleeMove Finisher(MeleeSpec spec)
         {
             if (spec == null)
@@ -159,8 +155,7 @@ namespace Shooter.Core
                 spec.FinisherInterruptible);
         }
 
-        // 気づいていない相手を倒すので報酬は付けない。音の合図も出さず、見ていなかった敵の気づきも上げない (ContextMeleeAction はどの技でもそれらを出さない)。
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
+        // 気づいていない相手を倒すので報酬は付けない。
         public static ContextMeleeMove Takedown(MeleeSpec spec)
         {
             if (spec == null)

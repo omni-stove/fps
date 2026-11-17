@@ -5,10 +5,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 登録した <see cref="IServerModule"/> に、起動・tick・接続・切断・停止を配る。何をするかはモジュールが決め、
-    /// ここは順番と、失敗したときに起動済みのモジュールを止めることだけを受け持つ。
-    /// </summary>
     internal sealed class ServerHost
     {
         public const string LogTag = "[ServerHost]";
@@ -19,14 +15,10 @@ namespace Shooter.Server
 
         public ServerHostState State { get; private set; }
 
-        /// <summary>今までに進めた tick の数。</summary>
         public long TickCount { get; private set; }
 
-        /// <summary>登録した順のモジュール。</summary>
         public IReadOnlyList<IServerModule> Modules => _modules;
 
-        /// <summary>モジュールを末尾に足す。起動の前にだけ呼べる。</summary>
-        /// <exception cref="InvalidOperationException">起動した後か、同じモジュールを 2 度足した。</exception>
         public void Register(IServerModule module)
         {
             ArgumentNullException.ThrowIfNull(module);
@@ -44,10 +36,6 @@ namespace Shooter.Server
             _modules.Add(module);
         }
 
-        /// <summary>
-        /// 登録した順にモジュールを起動する。どれかが投げたら、起動済みのものを逆順に止めて
-        /// <see cref="ServerHostState.Stopped"/> になり、その例外を投げ直す。
-        /// </summary>
         public void Start(ServerContext context)
         {
             if (State != ServerHostState.NotStarted)
@@ -76,7 +64,6 @@ namespace Shooter.Server
             context.Log.WriteLine(LogTag + " started with " + _modules.Count.ToString(CultureInfo.InvariantCulture) + " module(s)");
         }
 
-        /// <summary>tick を 1 つ進め、登録した順にモジュールへ配る。</summary>
         public void Tick(float deltaSeconds)
         {
             ThrowIfNotRunning();
@@ -123,10 +110,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// 登録と逆の順にモジュールを止める。止まらなかったモジュールがあっても残りを止めてから
-        /// <see cref="AggregateException"/> で知らせる。起動前・停止後に呼んでも何もしない。
-        /// </summary>
         public void Stop()
         {
             if (State == ServerHostState.NotStarted)

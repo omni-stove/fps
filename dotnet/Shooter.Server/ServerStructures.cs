@@ -9,15 +9,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// マップの壊せる建物 (Unity の DestructibleStructure・StructureDamage・NetDestructibleStructure)。部品の耐久値と崩落は Core の
-    /// <see cref="StructureIntegrity"/> で決め、壊れた部品は <c>.fpsmap</c> の当たりから外して、弾と爆風を通す。
-    /// 壊れた部品の集合は変わったときと途中参加のときに <see cref="StructureStateMessage"/> で送る。
-    /// </summary>
-    /// <remarks>
-    /// 部品の並び (<see cref="ServerMapData.Structures"/>) を書き出していないマップや、.fpsmap と数が合わないマップでは、部品は壊れない壁として残る。
-    /// 建物は同じマップで続ける試合をまたいで壊れたまま (Unity のシーンと同じ)。マップを替えると作り直し、どの建物も壊れていない状態に戻る。
-    /// </remarks>
+    // 建物は Unity のシーンと同じく同じマップで続ける試合をまたいで壊れたままにする。マップを替えると作り直し、どの建物も壊れていない状態に戻る。
     internal sealed class ServerStructures
     {
         public const string LogTag = "[Destruction]";
@@ -83,7 +75,6 @@ namespace Shooter.Server
 
         public int Count => _integrity.Length;
 
-        /// <summary>破壊のルールが On のときだけ壊れる。</summary>
         public bool Enabled { get; set; }
 
         public bool IsPiece(int colliderId)
@@ -96,10 +87,7 @@ namespace Shooter.Server
             return structure < _integrity.Length && _integrity[structure].IsDestroyed(piece);
         }
 
-        /// <summary>
-        /// 弾が colliderId に当たった。半径 0 なら当たった部品だけに、半径があれば着弾点の周りの部品に距離で減らして渡す
-        /// (Unity の StructureDamage.Apply と同じ)。壊れた部品を変えたら、変わった建物の Id を changed に足す。
-        /// </summary>
+        // Unity の StructureDamage.Apply と同じ渡し方にする。
         public int ApplyHit(int colliderId, Vector3 point, int damage, float radius, ICollection<int> changed, TextWriter log)
         {
             if (radius > 0f)
@@ -116,10 +104,7 @@ namespace Shooter.Server
             return 1;
         }
 
-        /// <summary>
-        /// point を中心に半径 radius の球に触れる部品へ、部品の point に最も近い点までの距離で減らした被害 (中心で damage、縁で 0) を
-        /// 部品ごとに 1 回だけ渡す (Unity の StructureDamage.ApplyAround と同じ)。渡した部品の数を返す。
-        /// </summary>
+        // Unity の StructureDamage.ApplyAround と同じ渡し方にする。
         public int ApplyAround(Vector3 point, int damage, float radius, ICollection<int> changed, TextWriter log)
         {
             if (!Enabled || _integrity.Length == 0 || !(radius > 0f))
@@ -157,14 +142,14 @@ namespace Shooter.Server
             return best.Count;
         }
 
-        /// <summary>中心からの距離 distance での被害。中心で damage、radius 以上で 0 (Unity の StructureDamage.Scale と同じ丸め)。</summary>
+        // Unity の StructureDamage.Scale と同じ丸めにする。
         public static int Scale(int damage, float distance, float radius)
         {
             var ratio = 1f - Math.Clamp(distance / radius, 0f, 1f);
             return Math.Clamp((int)MathF.Round(damage * ratio, MidpointRounding.ToEven), 0, damage);
         }
 
-        /// <summary>今の壊れた部品の集合を送る。何も壊れていない建物は送らない (最初からそうなので)。</summary>
+        // 何も壊れていない建物は、クライアントが最初からそう見ているので送らない。
         public void SendState(ServerMessenger messenger, ConnectionId connection)
         {
             for (var i = 0; i < _integrity.Length; i++)

@@ -4,9 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// <see cref="DodgeMotion.Capture"/> と <see cref="DodgeMotion.Restore"/> (ネット対戦の予測の巻き戻し)。
-    /// </summary>
     public sealed class DodgeSnapshotTests
     {
         private const float _tick = 1f / 30f;

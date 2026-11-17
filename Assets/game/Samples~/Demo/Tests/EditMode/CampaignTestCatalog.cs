@@ -8,10 +8,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// メニューのテストに使うミッションの一覧。<see cref="Mission01"/> のシーンは <see cref="MenuRoute.CampaignScene"/>
-    /// (テストのホストが Build Settings にあることにするシーン)、<see cref="Mission02"/> のシーンはどのビルドにも無いパス。
-    /// </summary>
+    // Mission01 のシーンは MenuRoute.CampaignScene (テストのホストが Build Settings にあることにするシーン)、
+    // Mission02 のシーンはどのビルドにも無いパス。
     internal sealed class CampaignTestCatalog : IDisposable
     {
         public const string Mission01 = "Campaign01";
@@ -34,15 +32,12 @@ namespace Shooter.Tests.EditMode
             });
         }
 
-        /// <summary>メニューに出る <see cref="Mission01"/> の名前 (今の言語の表で <see cref="Mission01NameKey"/> を引いたもの)。</summary>
         public static string Mission01Name => Localizer.Get(Mission01NameKey);
 
-        /// <summary>メニューに出る <see cref="Mission02"/> の名前 (今の言語の表で <see cref="Mission02NameKey"/> を引いたもの)。</summary>
         public static string Mission02Name => Localizer.Get(Mission02NameKey);
 
         public MissionCatalog Catalog { get; }
 
-        /// <summary>missionId のミッションの、チェックポイント checkpointId で書いたセーブの文字列。</summary>
         public static string SaveJson(string missionId, string checkpointId)
         {
             return new CampaignSave(
@@ -75,7 +70,6 @@ namespace Shooter.Tests.EditMode
         }
     }
 
-    /// <summary>メモリに置く <see cref="ISaveStorage"/>。<see cref="FailDeletes"/> で消すときに失敗させられる。</summary>
     internal sealed class MemorySaveStorage : ISaveStorage
     {
         public readonly Dictionary<string, string> Slots = new Dictionary<string, string>(StringComparer.Ordinal);

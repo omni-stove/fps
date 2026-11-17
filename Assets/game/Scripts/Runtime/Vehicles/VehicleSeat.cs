@@ -5,14 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 乗り物の座席 1 つ。<see cref="Vehicle"/> の子に置き、この Transform の位置に乗っている人の足元を、向きに正面を合わせる。
-    /// 種類・姿勢・カメラは <see cref="Spec"/> (乗り物の <see cref="VehicleSpec.Seats"/> の同じ番号) が決める。
-    /// 乗る位置 (<see cref="EnterPoints"/>) は乗り込める距離を測る点で、無ければ座席そのものから測る。
-    /// 降りる位置 (<see cref="ExitPoints"/>) は並びの順に試し、塞がっていれば次へ進む。座席の候補の後には乗り物の候補を試す。
-    /// 座席からの視点 (<see cref="ViewPoint"/>) が無ければ、乗っている人の目から見る。
-    /// 座っている人の入力は <see cref="SubmitInput"/> で乗り物の <see cref="IVehicleInputSink"/> に流す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class VehicleSeat : MonoBehaviour
     {
@@ -42,13 +34,10 @@ namespace Shooter.Runtime
 
         private VehicleSeatSpec _spec;
 
-        /// <summary>この座席を持つ乗り物。<see cref="Vehicle"/> が座席を集めたときに決まる。</summary>
         public Vehicle Vehicle { get; private set; }
 
-        /// <summary>乗り物の中での番号 (<see cref="VehicleSpec.Seats"/> の添字)。乗り物に集められていなければ -1。</summary>
         public int Index { get; private set; } = -1;
 
-        /// <summary>この座席の設定。</summary>
         public VehicleSeatSpec Spec => _spec ??= new VehicleSeatSpec(_role, _pose, _cameraView, _ownWeaponArcDegrees, _ownWeaponSpreadMultiplier);
 
         public VehicleSeatRole Role => Spec.Role;
@@ -57,7 +46,6 @@ namespace Shooter.Runtime
 
         public VehicleCameraView CameraView => Spec.CameraView;
 
-        /// <summary>座っている人。空いていれば null。</summary>
         public IVehicleRider Occupant => Vehicle != null && Index >= 0 ? Vehicle.OccupantOf(Index) : null;
 
         public bool IsOccupied => Occupant != null;
@@ -68,10 +56,8 @@ namespace Shooter.Runtime
 
         public Transform ViewPoint => _viewPoint;
 
-        /// <summary>座っている人の足元を置く位置。</summary>
         public Vector3 SitPosition => transform.position;
 
-        /// <summary>座っている人の正面の向き (ワールドの yaw、度)。</summary>
         public float SitYawDegrees => Quaternion.LookRotation(Flatten(transform.forward), Vector3.up).eulerAngles.y;
 
         private void OnValidate()
@@ -79,7 +65,6 @@ namespace Shooter.Runtime
             _spec = null;
         }
 
-        /// <summary>設定を差し替える。乗り物の <see cref="Vehicle.Configure(VehicleSpec)"/> が座席の番号ごとに呼ぶ。</summary>
         public void ApplySpec(VehicleSeatSpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
@@ -90,25 +75,21 @@ namespace Shooter.Runtime
             _ownWeaponSpreadMultiplier = spec.OwnWeaponSpreadMultiplier;
         }
 
-        /// <summary>乗る位置を差し替える。null なら無し (座席から測る)。null の要素は飛ばす。</summary>
         public void SetEnterPoints(params Transform[] points)
         {
             _enterPoints = Compact(points);
         }
 
-        /// <summary>降りる位置の候補を差し替える。null なら無し。null の要素は飛ばす。</summary>
         public void SetExitPoints(params Transform[] points)
         {
             _exitPoints = Compact(points);
         }
 
-        /// <summary>座席からの視点を差し替える。null なら乗っている人の目から見る。</summary>
         public void SetViewPoint(Transform viewPoint)
         {
             _viewPoint = viewPoint;
         }
 
-        /// <summary>from から一番近い乗る位置までの距離 (m)。乗る位置が無ければ座席までの距離。</summary>
         public float DistanceToEnter(Vector3 from)
         {
             var best = float.PositiveInfinity;
@@ -127,10 +108,6 @@ namespace Shooter.Runtime
             return any ? best : Vector3.Distance(from, transform.position);
         }
 
-        /// <summary>
-        /// rider がこの座席に座っていれば、このフレームの入力を乗り物の <see cref="IVehicleInputSink"/> に流して true を返す。
-        /// 座っていなければ (他の人の座席・降りた後) 何もせず false。
-        /// </summary>
         public bool SubmitInput(IVehicleRider rider, VehicleSeatInput input, float deltaSeconds)
         {
             if (rider == null)

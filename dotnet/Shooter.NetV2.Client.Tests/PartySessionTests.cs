@@ -40,7 +40,6 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>1 秒ごとに読み直すセッション。サーバーが決まった知らせは <see cref="_chosen"/> に貯める。</summary>
         private PartySession Session(string userId, int maxMembers = PartyLobby.DefaultMaxMembers)
         {
             var backend = new FakePartyBackend(_service, userId);
@@ -53,7 +52,6 @@ namespace Shooter.NetV2.Tests
             return session;
         }
 
-        /// <summary>時刻を進めずに、どのセッションも要求と完了の連なりを終えるまで進める。</summary>
         private void Settle()
         {
             for (var round = 0; round < 4; round++)
@@ -65,7 +63,6 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>読み直す間隔ぶん時刻を進めて、どのセッションも読み直させる。</summary>
         private void Advance()
         {
             _now += 1f;
@@ -147,6 +144,37 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(leader.Status.Members, Is.EqualTo(new[] { _a, _b }));
             Assert.That(leader.Status.IsLeader, Is.True);
+        }
+
+        [Test]
+        public void MatchPlayersCountsThePartyTheLeaderLastRead()
+        {
+            var leader = Session(_a);
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "alone before making a party");
+
+            leader.Create();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "alone while the party is being made");
+            Settle();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1));
+
+            var second = JoinParty(_b, leader);
+            var third = JoinParty(_c, leader);
+            Assert.That(third.MatchPlayers, Is.EqualTo(3));
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1), "the leader sees the new members on its next read");
+
+            Advance();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(3));
+            Assert.That(second.MatchPlayers, Is.EqualTo(3));
+
+            third.Leave();
+            Settle();
+            Advance();
+            Assert.That(third.MatchPlayers, Is.EqualTo(1));
+            Assert.That(leader.MatchPlayers, Is.EqualTo(2));
+
+            leader.Leave();
+            Settle();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1));
         }
 
         [Test]
@@ -537,14 +565,13 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new PartySession(backend, _version, 4, float.NaN, _log.Add));
         }
 
-        /// <summary>メンバー用ロビーを覚えておく、偽のロビーのサービス。どのユーザーのバックエンドも同じものを見る。</summary>
         private sealed class FakeLobbyService
         {
             private int _created;
 
             public Dictionary<string, FakeLobby> Lobbies { get; } = new Dictionary<string, FakeLobby>();
 
-            /// <summary>オーナーが出たとき、残っている最初のメンバーをオーナーにするか (EOS と同じ)。</summary>
+            // オーナーが出たとき、残っている最初のメンバーをオーナーにするのを既定にするのは、EOS と同じにするため。
             public bool HandsOverOwnership { get; set; } = true;
 
             public FakeLobby Create(string bucket, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, string owner)
@@ -616,9 +643,6 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>
-        /// 1 人のユーザーのバックエンド。要求はすぐサービスに反映し、完了のコールバックは次の <see cref="Tick"/> で呼ぶ。
-        /// </summary>
         private sealed class FakePartyBackend : ILobbyBackend
         {
             private readonly FakeLobbyService _service;
@@ -642,10 +666,8 @@ namespace Shooter.NetV2.Tests
 
             public string LoginError { get; set; }
 
-            /// <summary>あと何回、属性の書き込みを失敗させるか。</summary>
             public int FailWrites { get; set; }
 
-            /// <summary>パーティの要求をどれも <see cref="LobbyBackendErrors.NotSupported"/> で返すか。</summary>
             public bool Unsupported { get; set; }
 
             public void Tick()

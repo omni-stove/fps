@@ -84,7 +84,6 @@ namespace Shooter.Core.Tests
         [Test]
         public void MagnetismPullsTowardTheCandidateNearestInAngle()
         {
-            // 距離で近い方ではなく、照準からの角度で近い方へ寄せる。
             var result = Solve(true, 0f, 1f, Point(-2.5f, 0f, 10f), Point(1f, 0f, 30f));
 
             Assert.That(result.LookScale, Is.EqualTo(0.4f));
@@ -215,7 +214,6 @@ namespace Shooter.Core.Tests
             return AimAssistSolver.Solve(_spec, deltaSeconds, aiming, aimingSeconds, Vector3.Zero, Vector3.UnitZ, candidates);
         }
 
-        // yaw は +Z から +X へ、pitchUp は上へ回した向きに distance 先の点。
         private static Vector3 Point(float yawDegrees, float pitchUpDegrees, float distance)
         {
             var yaw = yawDegrees * Math.PI / 180.0;

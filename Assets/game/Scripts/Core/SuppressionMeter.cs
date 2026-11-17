@@ -21,7 +21,6 @@ namespace Shooter.Core
         // 度合いが 0 に戻ったら数え直す。ログで「何発で制圧されたか」を読めるように。
         public int NearMisses { get; private set; }
 
-        /// <exception cref="ArgumentOutOfRangeException">distance が 0 以上の有限値でない。</exception>
         public float AmountFor(float distance)
         {
             if (!(distance >= 0f) || float.IsInfinity(distance))
@@ -37,7 +36,6 @@ namespace Shooter.Core
             return Spec.BuildPerNearMiss * (1f - (distance / Spec.NearMissRadius));
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">distance が 0 以上の有限値でない。</exception>
         public bool AddNearMiss(float distance)
         {
             var amount = AmountFor(distance);
@@ -57,7 +55,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が 0 以上の有限値でない。</exception>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

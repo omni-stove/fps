@@ -26,7 +26,6 @@ namespace Shooter.Core
 
         public const int DefaultMaxHealth = 30;
 
-        // 体から腕を伸ばして貼る距離。体の中心から測る。
         public const float DefaultMaxRange = 2.5f;
 
         public const float DefaultWidth = 0.25f;

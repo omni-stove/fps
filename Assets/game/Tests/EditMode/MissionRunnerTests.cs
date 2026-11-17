@@ -10,9 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// Edit Mode では Awake/Start/OnTrigger* が走らないので、それらが呼ぶ公開メソッドを直接呼んで確かめる。
-    /// </summary>
+    // Edit Mode では Awake/Start/OnTrigger* が走らないので、それらが呼ぶ公開メソッドを直接呼んで確かめる。
     public sealed class MissionRunnerTests
     {
         private readonly List<Object> _created = new List<Object>();

@@ -9,11 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="BloodPresenter"/> がキャラへの着弾にだけ部位の血しぶきを出し、背後の近い壁にだけ血痕を付け、
-    /// 止める口・カタログが無いとき・プールの上限で正しく振る舞うことを、メモリ上のカタログで確かめる
-    /// (Edit Mode では OnEnable が走らないので、PlayImpact と Tick を直接呼ぶ)。
-    /// </summary>
+    // Edit Mode では OnEnable が走らないので、PlayImpact と Tick を直接呼ぶ。
     public sealed class BloodPresenterTests
     {
         private readonly List<Object> _created = new List<Object>();

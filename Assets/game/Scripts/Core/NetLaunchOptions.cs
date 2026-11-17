@@ -4,11 +4,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /
-    /// <c>-transport</c> / <c>-eos-server</c> / <c>-register-lobby</c> / <c>-map</c> / <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> /
-    /// <c>-net-jitter</c> / <c>-drain-timeout</c> / <c>-log-format</c> から作る。知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
-    /// </summary>
     public sealed class NetLaunchOptions
     {
         public const string ModeFlag = "-mode";
@@ -25,33 +20,25 @@ namespace Shooter.Core
         public const string DrainTimeoutFlag = "-drain-timeout";
         public const string LogFormatFlag = "-log-format";
 
-        /// <summary><see cref="Map"/> の名前の最長の文字数。</summary>
         public const int MaxMapNameLength = 64;
 
-        /// <summary><see cref="Bots"/> の上限。サーバーが Bot を際限なく足さないようにする。</summary>
+        // サーバーが Bot を際限なく足さないよう上限を持つ。
         public const int MaxBots = 64;
 
-        /// <summary><see cref="NetLatencyMs"/> と <see cref="NetJitterMs"/> の上限 (ミリ秒)。</summary>
         public const int MaxNetDelayMs = 5000;
 
-        /// <summary><see cref="NetLossPercent"/> の上限 (%)。</summary>
         public const int MaxNetLossPercent = 100;
 
-        /// <summary><see cref="DrainTimeoutSeconds"/> の上限 (秒)。</summary>
         public const int MaxDrainTimeoutSeconds = 3600;
 
         public const string DefaultAddress = "127.0.0.1";
         public const ushort DefaultPort = 7777;
 
-        /// <summary>
-        /// <c>-transport</c> が無いときの transport。認証情報の有無で挙動が変わらないよう、EOS は明示したときだけ使う。
-        /// </summary>
+        // 認証情報の有無で挙動が変わらないよう、EOS は明示したときだけ使う。
         public const NetTransportKind DefaultTransport = NetTransportKind.Udp;
 
-        /// <summary>全インターフェースで待ち受けるアドレス。サーバー側でだけ使える。</summary>
         public const string AnyAddress = "0.0.0.0";
 
-        /// <summary>EOS の ProductUserId の文字列表現の長さ (16 進数の桁数)。</summary>
         public const int ProductUserIdLength = 32;
 
         private static readonly string[] _flags =
@@ -62,52 +49,35 @@ namespace Shooter.Core
 
         public NetLaunchMode Mode { get; }
 
-        /// <summary>UDP のとき、クライアントでは接続先、サーバーでは待ち受けるアドレス (IPv4)。</summary>
         public string Address { get; }
 
         public ushort Port { get; }
 
         public NetTransportKind Transport { get; }
 
-        /// <summary>EOS のクライアントが接続するサーバーの ProductUserId。それ以外では null。</summary>
         public string EosServerId { get; }
 
-        /// <summary>
-        /// サーバーが EOS のロビーに載せる、クライアントがつなぐ公開アドレス (<c>address:port</c>)。登録しないなら null。
-        /// </summary>
         public string RegisterLobbyEndpoint { get; }
 
-        /// <summary>サーバーが自分を EOS のロビーに登録するか。</summary>
         public bool RegistersLobby => RegisterLobbyEndpoint != null;
 
-        /// <summary>サーバーが試合に使うマップ (シーン名)。指定が無ければ null で、今のシーンのまま。</summary>
         public string Map { get; }
 
-        /// <summary>サーバーが試合に足す Bot の数。0 なら足さない。</summary>
         public int Bots { get; }
 
-        /// <summary>送受信に足す遅れ (ミリ秒)。0 なら足さない。</summary>
         public int NetLatencyMs { get; }
 
-        /// <summary>落とすパケットの割合 (%)。0 なら落とさない。</summary>
         public int NetLossPercent { get; }
 
-        /// <summary>遅れに足すゆらぎ (ミリ秒)。0 ならゆらがない。</summary>
         public int NetJitterMs { get; }
 
-        /// <summary>回線の劣化 (遅れ・ロス・ゆらぎ) をどれか 1 つでも求められているか。</summary>
         public bool SimulatesNetwork => NetLatencyMs > 0 || NetLossPercent > 0 || NetJitterMs > 0;
 
-        /// <summary>
-        /// サーバーが終了を求められてから、今の試合が終わるのを待つ最長の秒数。0 なら待たずに止まる。
-        /// <c>-drain-timeout</c> が無いときも 0 になるので、サーバーは <see cref="ServerDrain.ResolveTimeoutSeconds"/> で既定の秒数に読み替える。
-        /// </summary>
+        // -drain-timeout が無いときも 0 になるので、サーバーは ServerDrain.ResolveTimeoutSeconds で既定の秒数に読み替える。
         public int DrainTimeoutSeconds { get; }
 
-        /// <summary>サーバーのログの形式。<see cref="ServerLogFormat.Json"/> なら試合のイベントを 1 行の JSON でも出す。</summary>
         public ServerLogFormat LogFormat { get; }
 
-        /// <summary>ログ向けの接続先・待ち受け先。UDP は <c>address:port</c>、EOS は <c>eos</c> か <c>eos:&lt;サーバーの ID&gt;</c>。</summary>
         public string Endpoint
         {
             get
@@ -121,54 +91,22 @@ namespace Shooter.Core
             }
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。</param>
-        /// <param name="port">1 から 65535 のポート番号。</param>
         public NetLaunchOptions(NetLaunchMode mode, string address, ushort port)
             : this(mode, address, port, NetTransportKind.Udp, null)
         {
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
-        /// <param name="port">1 から 65535 のポート番号。</param>
-        /// <param name="transport">transport。</param>
-        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
         public NetLaunchOptions(NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId)
             : this(mode, address, port, transport, eosServerId, null)
         {
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
-        /// <param name="port">1 から 65535 のポート番号。</param>
-        /// <param name="transport">transport。</param>
-        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
-        /// <param name="registerLobbyEndpoint">
-        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
-        /// </param>
         public NetLaunchOptions(
             NetLaunchMode mode, string address, ushort port, NetTransportKind transport, string eosServerId, string registerLobbyEndpoint)
             : this(mode, address, port, transport, eosServerId, registerLobbyEndpoint, null, 0, 0, 0, 0, 0)
         {
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
-        /// <param name="port">1 から 65535 のポート番号。</param>
-        /// <param name="transport">transport。</param>
-        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
-        /// <param name="registerLobbyEndpoint">
-        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
-        /// </param>
-        /// <param name="map">サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
-        /// <param name="bots">サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
-        /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
-        /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
-        /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
-        /// <param name="drainTimeoutSeconds">
-        /// 終了を求められてから試合の終わりを待つ最長の秒数。0 以上 <see cref="MaxDrainTimeoutSeconds"/> 以下。サーバー以外では 0。
-        /// </param>
         public NetLaunchOptions(
             NetLaunchMode mode,
             string address,
@@ -188,23 +126,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="address">IPv4 アドレス。クライアントでは <see cref="AnyAddress"/> を使えない。EOS では使わないが検証はする。</param>
-        /// <param name="port">1 から 65535 のポート番号。</param>
-        /// <param name="transport">transport。</param>
-        /// <param name="eosServerId">EOS のクライアントでは必須の、サーバーの ProductUserId。EOS のクライアント以外では null。</param>
-        /// <param name="registerLobbyEndpoint">
-        /// UDP のサーバーが EOS のロビーに載せる公開アドレス (<c>address:port</c>)。登録しないなら null。
-        /// </param>
-        /// <param name="map">サーバーが使うマップ (<see cref="IsMapName"/> に通るシーン名)。今のシーンのままなら null。</param>
-        /// <param name="bots">サーバーが足す Bot の数。0 以上 <see cref="MaxBots"/> 以下。クライアントでは 0。</param>
-        /// <param name="netLatencyMs">足す遅れ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
-        /// <param name="netLossPercent">落とすパケットの割合 (%)。0 以上 <see cref="MaxNetLossPercent"/> 以下。</param>
-        /// <param name="netJitterMs">遅れのゆらぎ (ミリ秒)。0 以上 <see cref="MaxNetDelayMs"/> 以下。</param>
-        /// <param name="drainTimeoutSeconds">
-        /// 終了を求められてから試合の終わりを待つ最長の秒数。0 以上 <see cref="MaxDrainTimeoutSeconds"/> 以下。サーバー以外では 0。
-        /// </param>
-        /// <param name="logFormat">ログの形式。サーバー以外では <see cref="ServerLogFormat.Text"/>。</param>
         public NetLaunchOptions(
             NetLaunchMode mode,
             string address,
@@ -303,13 +224,11 @@ namespace Shooter.Core
             LogFormat = logFormat;
         }
 
-        /// <summary>引数に <c>-mode</c> が含まれるか。値の妥当性は見ない。</summary>
         public static bool HasModeFlag(IReadOnlyList<string> args)
         {
             return HasFlag(args, ModeFlag);
         }
 
-        /// <summary>引数に flag (大文字小文字を問わない) が含まれるか。値の妥当性は見ない。</summary>
         public static bool HasFlag(IReadOnlyList<string> args, string flag)
         {
             if (args == null)
@@ -328,21 +247,7 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>
-        /// コマンドライン引数を解析する。<c>-mode</c> が無ければ <paramref name="defaultMode"/>、
-        /// <c>-address</c> が無ければ <see cref="DefaultAddress"/>、<c>-port</c> が無ければ <see cref="DefaultPort"/>、
-        /// <c>-transport</c> が無ければ <see cref="DefaultTransport"/> を使う。
-        /// <c>-eos-server</c> は <c>-transport eos</c> のクライアントでだけ使い、そのときは必須。
-        /// <c>-register-lobby</c> は UDP のサーバーでだけ使える。
-        /// <c>-map</c> と <c>-bots</c> と <c>-drain-timeout</c> はサーバーでだけ使える。
-        /// <c>-bots</c> / <c>-net-latency</c> / <c>-net-loss</c> / <c>-net-jitter</c> / <c>-drain-timeout</c> は 0 以上の整数で、無ければ 0。
-        /// <c>-log-format</c> は <c>text</c> か <c>json</c> で、<c>json</c> はサーバーでだけ使える。無ければ <c>text</c>。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。先頭が実行ファイルのパスでもよい。</param>
-        /// <param name="defaultMode">-mode が無いときのモード。</param>
-        /// <param name="options">成功したときの設定。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
-        /// <returns>引数が正しければ true。</returns>
+        // 知らない引数を断らないのは、Unity 自身の -batchmode などが混ざって渡るため。
         public static bool TryParse(
             IReadOnlyList<string> args,
             NetLaunchMode defaultMode,
@@ -470,7 +375,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>ログ向けの小文字のモード名 (server / client)。</summary>
         public static string ModeName(NetLaunchMode mode)
         {
             switch (mode)
@@ -484,7 +388,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>ログ・引数向けの小文字の transport 名 (udp / eos)。</summary>
         public static string TransportName(NetTransportKind transport)
         {
             switch (transport)
@@ -498,7 +401,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>ログ・引数向けの小文字のログの形式の名前 (text / json)。</summary>
         public static string LogFormatName(ServerLogFormat format)
         {
             switch (format)
@@ -512,10 +414,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// EOS の ProductUserId の文字列表現 (<see cref="ProductUserIdLength"/> 桁の 16 進数) に見えるか。
-        /// 実在するかは EOS に問い合わせないと分からない。
-        /// </summary>
+        // 形だけを見るのは、実在するかは EOS に問い合わせないと分からないため。
         public static bool IsProductUserId(string text)
         {
             if (text == null || text.Length != ProductUserIdLength)
@@ -535,12 +434,7 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// <c>address:port</c> (IPv4 と 1〜65535 のポート) を分ける。<see cref="AnyAddress"/> はつなぐ先にならないので受け付けない。
-        /// </summary>
-        /// <param name="text">分ける文字列。</param>
-        /// <param name="address">成功したときのアドレス。失敗したときは null。</param>
-        /// <param name="port">成功したときのポート。失敗したときは 0。</param>
+        // AnyAddress を受け付けないのは、つなぐ先にならないため。
         public static bool TryParseEndpoint(string text, out string address, out ushort port)
         {
             address = null;
@@ -567,19 +461,11 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>ログ・ロビーの属性向けの <c>address:port</c>。</summary>
         public static string FormatEndpoint(string address, ushort port)
         {
             return address + ":" + port.ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// transport だけを差し替えた設定を返す。UDP にしたときは EOS のサーバー ID を捨てる。
-        /// ロビーへの登録・マップ・Bot・回線の劣化・終了の待ち時間・ログの形式はそのまま引き継ぐ。
-        /// </summary>
-        /// <exception cref="ArgumentException">
-        /// EOS のクライアントにするのにサーバー ID が無い、または EOS にするのにロビーへの登録が指定されている。
-        /// </exception>
         public NetLaunchOptions WithTransport(NetTransportKind transport)
         {
             if (transport == Transport)
@@ -593,10 +479,6 @@ namespace Shooter.Core
                 Map, Bots, NetLatencyMs, NetLossPercent, NetJitterMs, DrainTimeoutSeconds, LogFormat);
         }
 
-        /// <summary>
-        /// <c>&lt;モード&gt; &lt;接続先&gt;</c> に、指定されたものだけ <c>lobby=</c> / <c>map=</c> / <c>bots=</c> /
-        /// <c>latency=</c> <c>loss=</c> <c>jitter=</c> / <c>drain=</c> / <c>log=</c> を続けたログ向けの文字列。
-        /// </summary>
         public override string ToString()
         {
             var text = ModeName(Mode) + " " + Endpoint;
@@ -635,10 +517,7 @@ namespace Shooter.Core
             return text;
         }
 
-        /// <summary>
-        /// <c>-map</c> に使えるシーン名か。1 文字以上 <see cref="MaxMapNameLength"/> 文字以下の英数字・<c>_</c>・<c>-</c> だけを認める
-        /// (パスや拡張子を書いても、ビルドに入っているシーンは名前でしか引けないため)。シーンがビルドにあるかは見ない。
-        /// </summary>
+        // パスや拡張子を認めないのは、ビルドに入っているシーンは名前でしか引けないため。
         public static bool IsMapName(string text)
         {
             if (string.IsNullOrEmpty(text) || text.Length > MaxMapNameLength)
@@ -658,7 +537,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateMap(NetLaunchMode mode, string map)
         {
             if (map == null)
@@ -675,13 +553,11 @@ namespace Shooter.Core
             return mode == NetLaunchMode.Client ? ServerOnly(MapFlag, mode) : null;
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateBots(NetLaunchMode mode, int bots)
         {
             return bots > 0 && mode == NetLaunchMode.Client ? ServerOnly(BotsFlag, mode) : null;
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateDrainTimeout(NetLaunchMode mode, int seconds)
         {
             if (seconds == 0 || mode == NetLaunchMode.Server)
@@ -693,7 +569,6 @@ namespace Shooter.Core
                 + " (got " + ModeName(mode) + ")";
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateLogFormat(NetLaunchMode mode, ServerLogFormat format)
         {
             // JSON の行は専用サーバーの標準出力を集める運用のためのもので、クライアントには読む先が無い
@@ -711,9 +586,6 @@ namespace Shooter.Core
             return flag + " is only used by " + ModeFlag + " " + ModeName(NetLaunchMode.Server) + " (got " + ModeName(mode) + ")";
         }
 
-        /// <summary>
-        /// values の flag を 0 以上 max 以下の整数として読む。無ければ 0。整数でないか範囲外なら error に理由を入れて false。
-        /// </summary>
         private static bool TryReadCount(
             Dictionary<string, string> values, string flag, int max, out int value, out string error)
         {
@@ -790,7 +662,6 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary><c>-transport</c> の値 (udp / eos、大文字小文字を問わない) を読む。</summary>
         public static bool TryParseTransport(string text, out NetTransportKind transport)
         {
             foreach (NetTransportKind candidate in Enum.GetValues(typeof(NetTransportKind)))
@@ -811,7 +682,6 @@ namespace Shooter.Core
             return ushort.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out port) && port != 0;
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateAddress(NetLaunchMode mode, string address)
         {
             if (!IsIPv4(address))
@@ -827,7 +697,6 @@ namespace Shooter.Core
             return null;
         }
 
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateEosServer(NetLaunchMode mode, NetTransportKind transport, string eosServerId)
         {
             var needsServer = transport == NetTransportKind.Eos && mode == NetLaunchMode.Client;
@@ -852,11 +721,6 @@ namespace Shooter.Core
             return null;
         }
 
-        /// <param name="mode">起動モード。</param>
-        /// <param name="transport">transport。</param>
-        /// <param name="endpoint">登録しないなら null。</param>
-        /// <param name="normalized">正しいときの <c>address:port</c>。登録しないか誤りなら null。</param>
-        /// <returns>正しければ null、誤りならその理由。</returns>
         private static string ValidateRegisterLobby(
             NetLaunchMode mode, NetTransportKind transport, string endpoint, out string normalized)
         {
@@ -888,7 +752,6 @@ namespace Shooter.Core
             return null;
         }
 
-        /// <summary>ドット区切り 4 つの 0〜255 の 10 進数か。"1" や "01.2.3.4" のような省略・先頭 0 は認めない。</summary>
         private static bool IsIPv4(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -923,7 +786,7 @@ namespace Shooter.Core
             return string.Equals(arg, flag, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>次の引数が値ではなく別のフラグに見えるか (値の書き忘れを検出する)。</summary>
+        // 次の引数が別のフラグに見えたら値として読まないのは、値の書き忘れを見つけるため。
         private static bool IsFlagLike(string arg)
         {
             return string.IsNullOrEmpty(arg) || arg[0] == '-';

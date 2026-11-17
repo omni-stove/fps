@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 乗り物の値の定義 (<see cref="VehicleDefinition"/>) が <see cref="VehicleSpec"/> に入ることと、
-    /// <see cref="Vehicle"/> が定義を Inspector の値より先に使い、耐久を <see cref="Damageable"/> に入れること。
-    /// </summary>
     public sealed class VehicleDefinitionTests
     {
         private static readonly VehicleSeatSpec[] _twoSeats =

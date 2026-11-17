@@ -4,10 +4,7 @@ using System.Numerics;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 視線を遮る物の集まり。どれか 1 つでも遮れば遮る。何も足していなければ何も遮らない。
-    /// </summary>
-    /// <remarks>Bot の知覚はこれに問い合わせるので、遮る物を足す側は Bot を知らずに済む。</remarks>
+    // Bot の知覚はこれに問い合わせるので、遮る物を足す側は Bot を知らずに済む。
     internal sealed class ServerSightBlockers : ISightBlocker
     {
         private readonly List<ISightBlocker> _blockers = new List<ISightBlocker>();

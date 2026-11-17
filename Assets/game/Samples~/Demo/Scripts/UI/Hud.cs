@@ -5,36 +5,19 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
-    /// 出す値は <see cref="GameSignals.HudModel"/> に出ている <see cref="HudModel"/> (オフラインは GameBootstrap、ネット対戦は Shooter.NetV2 の NetV2Hud が出す) で、
-    /// 出ていない間は自分の <see cref="Model"/> (仮の表示) を出す (<see cref="ShownModel"/>)。<see cref="HudView"/> が Label に写す。
-    /// 照準を読むプレイヤーの部品 (<see cref="WeaponController"/>・<see cref="AimDownSights"/>・<see cref="PlayerController"/>) は <see cref="GameSignals.LocalPlayer"/> から受け、
-    /// 受けている間だけ、時間で進みイベントの無いリロードの進み (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類
-    /// (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と照準の広がり・表示・目からの射線の遮り
-    /// (<see cref="RefreshCrosshair"/>) を毎フレーム読んで出している値に書く。チームの点数 (左上) と試合結果 (中央上) は値があるときだけ出る。
-    /// HUD の量・ポーズ中の時間の扱い・色の組の視点・キャンペーンの案内も、<see cref="GameSignals"/> に出ていればそれに合わせる。
-    /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
-    /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
-    /// Hud.uxml にキーで書いた文字 (見出し・ポーズのボタン) は <see cref="LocalizedTexts"/> で今の言語にし、言語が変わったら書き直す。
-    /// ゲーム進行はこの HUD を知らず、既定の作り役 (<see cref="DefaultHudFactory"/>) が <see cref="GameSignals"/> を見て作り、片付ける。
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
     public sealed class Hud : MonoBehaviour
     {
         public const string LogTag = "[HUD]";
 
-        /// <summary>Resources からの HUD のレイアウト (Assets/game/Samples~/Demo/UI/Resources/Hud/Hud.uxml)。</summary>
         public const string LayoutResourcePath = "Hud/Hud";
 
-        /// <summary>Resources からのランタイムテーマ (Demo サンプルの UI/Resources/Hud/HudTheme.tss)。</summary>
         public const string ThemeResourcePath = "Hud/HudTheme";
 
-        /// <summary><see cref="Create"/> が作る PanelSettings の名前。</summary>
         public const string PanelSettingsName = "HudPanelSettings";
 
-        /// <summary>HUD の基準解像度。Hud.uss の寸法はこの解像度で決めてあり、画面の大きさに合わせて拡縮する。</summary>
+        // Hud.uss の寸法はこの解像度で決めてあり、画面の大きさに合わせて拡縮する。
         public static readonly Vector2Int ReferenceResolution = new Vector2Int(1920, 1080);
 
         private readonly HudModel _model = new HudModel();
@@ -57,25 +40,14 @@ namespace Shooter.Runtime
         private bool _aimBlockCatalogResolved;
         private AimBlockSettings _aimBlockSettings;
 
-        /// <summary><see cref="GameSignals.HudModel"/> に何も出ていない間に出す、この HUD の仮の値。</summary>
         public HudModel Model => _model;
 
-        /// <summary>出している値。<see cref="GameSignals.HudModel"/> に別の HudModel が出ていればそれ、無ければ <see cref="Model"/>。</summary>
         public HudModel ShownModel => _shownModel ?? _model;
 
-        /// <summary><see cref="ShownModel"/> が別の HudModel に替わったとき。</summary>
         public event Action ShownModelChanged;
 
-        /// <summary>
-        /// 上の欄にチームの点数を出しているか。出していれば、拠点制圧は点数と残り時間を重ねて出す <see cref="DominationView"/> でなく、
-        /// 拠点のリング (<see cref="ControlPointsView"/>) だけで出す。
-        /// </summary>
         public bool ShowsTeamScores => ShownModel.FirstScoreTeam.HasValue;
 
-        /// <summary>
-        /// 目からの射線が遮られているときの照準の知らせ方 (<see cref="RefreshAimBlock"/>)。初めて読むときに <see cref="AimBlockCatalog.Load"/> で探し、
-        /// 見つからなければ null (<see cref="AimBlockSettings.Default"/> と、コードで作る印で出す)。
-        /// </summary>
         public AimBlockCatalog AimBlockCatalog
         {
             get
@@ -97,19 +69,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>Label に写している View。UIDocument の木がまだ無ければ null。</summary>
         public HudView View => _view;
 
-        /// <summary>この HUD 用に作り、破棄時に一緒に消す PanelSettings。無ければ null。</summary>
         public PanelSettings OwnedPanelSettings => _ownedPanelSettings;
 
-        /// <summary>
-        /// HUD 用の PanelSettings と UIDocument を持つ GameObject を objectName で作り、Resources の Hud.uxml とテーマを読み込んで
-        /// <see cref="GameSignals"/> の購読を始める。
-        /// UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
-        /// 失敗したら作りかけのものは消して例外を投げる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">Resources にレイアウトかテーマが無い。</exception>
+        // UIDocument が有効になる前に参照をすべて設定するため、GameObject は無効で作ってから有効にする。
         public static Hud Create(string objectName)
         {
             var layout = Resources.Load<VisualTreeAsset>(LayoutResourcePath);
@@ -166,14 +130,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="ScopeOverlayView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
-        /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
-        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="StreakView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
-        /// hudObject に付ける。グレネード・能力の枠・ストリーク・拠点制圧は、出すものを渡されるまで隠れている。
-        /// オフラインとネット対戦で同じものを付ける。
-        /// 既に付いているものは付け直さない。
-        /// </summary>
         public static void AddViews(GameObject hudObject)
         {
             if (hudObject == null)
@@ -210,73 +166,54 @@ namespace Shooter.Runtime
             AddIfMissing<PhotoModeView>(hudObject);
         }
 
-        /// <summary>同じ GameObject のヒットマーカー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public HitMarkerView HitMarker => GetComponent<HitMarkerView>();
 
-        /// <summary>同じ GameObject の被弾方向。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DamageDirectionView DamageDirection => GetComponent<DamageDirectionView>();
 
-        /// <summary>同じ GameObject の被弾の画面効果と低体力の演出。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DamageVignetteView DamageVignette => GetComponent<DamageVignetteView>();
 
         public FlashOverlay FlashOverlay => GetComponent<FlashOverlay>();
 
         public ScopeOverlayView ScopeOverlay => GetComponent<ScopeOverlayView>();
 
-        /// <summary>照準を読むこの画面のプレイヤーの覗き込み。いなければ null。</summary>
         public AimDownSights Ads => _ads;
 
-        /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillFeedView KillFeed => GetComponent<KillFeedView>();
 
-        /// <summary>同じ GameObject の音の合図の字幕。<see cref="AddViews"/> で付けていなければ null。</summary>
         public SubtitleView Subtitles => GetComponent<SubtitleView>();
 
-        /// <summary>同じ GameObject のスコアボード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public ScoreboardView Scoreboard => GetComponent<ScoreboardView>();
 
-        /// <summary>同じ GameObject のロードアウト選択。<see cref="AddViews"/> で付けていなければ null。</summary>
         public LoadoutSelectView LoadoutSelect => GetComponent<LoadoutSelectView>();
 
         public InventoryView InventoryScreen => GetComponent<InventoryView>();
 
-        /// <summary>同じ GameObject のチュートリアルの案内。<see cref="AddViews"/> で付けていなければ null。</summary>
         public TutorialPromptView TutorialPrompt => GetComponent<TutorialPromptView>();
 
-        /// <summary>同じ GameObject の Interact の案内。<see cref="AddViews"/> で付けていなければ null。</summary>
         public InteractPromptView InteractPrompt => GetComponent<InteractPromptView>();
 
-        /// <summary>同じ GameObject のオフラインのモードの表示。<see cref="AddViews"/> で付けていなければ null。</summary>
         public ModeHudView ModeHud => GetComponent<ModeHudView>();
 
-        /// <summary>同じ GameObject のキルカムの枠と見出し。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillCamView KillCam => GetComponent<KillCamView>();
 
-        /// <summary>同じ GameObject の残りのグレネードの数。<see cref="AddViews"/> で付けていなければ null。</summary>
         public GrenadeCountView GrenadeCount => GetComponent<GrenadeCountView>();
 
-        /// <summary>同じ GameObject の能力の枠。<see cref="AddViews"/> で付けていなければ null。</summary>
         public AbilitySlotsView AbilitySlots => GetComponent<AbilitySlotsView>();
 
-        /// <summary>同じ GameObject のストリークの欄。<see cref="AddViews"/> で付けていなければ null。</summary>
         public StreakView Streak => GetComponent<StreakView>();
 
-        /// <summary>同じ GameObject の拠点制圧の表示。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DominationView Domination => GetComponent<DominationView>();
 
         public PingMarkersView PingMarkers => GetComponent<PingMarkersView>();
 
         public SquadOrderMarkerView SquadOrder => GetComponent<SquadOrderMarkerView>();
 
-        /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
-        /// <summary>同じ GameObject のポーズ画面の設定画面。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseSettingsView PauseSettings => GetComponent<PauseSettingsView>();
 
         public PhotoModeView PhotoMode => GetComponent<PhotoModeView>();
 
-        /// <summary>ポーズを開いている間の時間の扱い (<see cref="Shooter.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
         public void SetPauseTimeMode(PauseTimeMode mode)
         {
             var pause = PauseMenu;
@@ -286,20 +223,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// チームの点数・スコアボードの見出し・キルログの名前・拠点制圧の欄を塗る色を決める。View を作り直しても引き継ぐ。
-        /// 色の組に従わせていた (<see cref="UseTeamPalette"/>) ときはやめ、この色のままにする。
-        /// </summary>
         public void SetTeamColors(Color alpha, Color bravo)
         {
             StopFollowingPalette();
             ApplyTeamColors(alpha, bravo);
         }
 
-        /// <summary>
-        /// viewer のチームから見た敵味方の色 (<see cref="TeamColors"/>) で塗り、設定の色の組が変わったら塗り直す。
-        /// viewer が null (自分のチームがまだ無い) なら Alpha を味方の色にする。チームが変わったら呼び直す。
-        /// </summary>
         public void UseTeamPalette(Team? viewer)
         {
             _paletteViewer = viewer;
@@ -312,10 +241,8 @@ namespace Shooter.Runtime
             ApplyPaletteColors();
         }
 
-        /// <summary>色の組に従っている (<see cref="UseTeamPalette"/>) か。</summary>
         public bool FollowsTeamPalette => _followsPalette;
 
-        /// <summary>team の点数を塗る色。<see cref="SetTeamColors"/> の前は白。</summary>
         public Color TeamColor(Team team)
         {
             return team == Team.Bravo ? _bravoColor : _alphaColor;
@@ -381,24 +308,13 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今出している項目。<see cref="ApplyDensity"/> の前は <see cref="HudVisibility.Full"/>。</summary>
         public HudVisibility Visibility => _visibility;
 
-        /// <summary>
-        /// HUD の量 (<see cref="GameRules.HudDensity"/>) に合わせて出す項目を切り替える (<see cref="HudVisibility.For"/>)。
-        /// <see cref="GameSignals.HudDensity"/> に値が出たときに呼ぶ。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
         public void ApplyDensity(HudDensity density)
         {
             ApplyVisibility(HudVisibility.For(density));
         }
 
-        /// <summary>
-        /// 出す項目を visibility に替える。弾数の書式 (<see cref="HudModel.SetReserveAmmoShown"/>)、Label の欄 (<see cref="HudView"/>)、
-        /// 部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageDirectionView"/>・<see cref="KillFeedView"/>) に効かせる。
-        /// View を作り直しても引き継ぐ。
-        /// </summary>
         public void ApplyVisibility(HudVisibility visibility)
         {
             if (visibility == null)
@@ -426,10 +342,7 @@ namespace Shooter.Runtime
             RebuildView();
         }
 
-        /// <summary>
-        /// 照準を読む部品を player から受ける。null なら受けていた部品を手放し、照準を仮の表示に戻す。
-        /// 覗き込み・移動・視点は player に無ければ武器の親の階層から探す (武器だけを渡すプレイヤーもあるため)。
-        /// </summary>
+        // 覗き込み・移動・視点が player に無ければ武器の親の階層から探すのは、武器だけを渡すプレイヤーもあるため。
         private void BindLocalPlayer(LocalPlayerSignal player)
         {
             var weapon = player != null ? player.Weapon : null;
@@ -501,11 +414,7 @@ namespace Shooter.Runtime
             _noticeModel?.BindNotice(notice);
         }
 
-        /// <summary>
-        /// UIDocument の今の木から Label を探し直して View を作る。UIDocument は有効にし直すたびに木を作り直すので、
-        /// そのたびに呼ぶ (Play 中は OnEnable で呼ぶ)。木がまだ無ければ何もせず false。
-        /// UXML に必要な要素が無ければ <see cref="InvalidOperationException"/> を投げる。
-        /// </summary>
+        // UIDocument は有効にし直すたびに木を作り直すので、そのたびに Label を探し直す。
         public bool RebuildView()
         {
             DisposeView();
@@ -662,13 +571,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 照準の線を、武器の今の散らばり (<see cref="WeaponController.CrosshairConeDegrees"/>) の縁をカメラ (<see cref="AimDownSights.Camera"/>) の
-        /// 視野角で画面に写した位置 (<see cref="SpreadPattern.ScreenRadius"/>) に置き、撃った後の開き (<see cref="WeaponController.CrosshairSpreadFraction"/>) を足す。
-        /// 照準を出すかは <see cref="ShowsCrosshair"/> で決める (一人称か照準器越し (<see cref="SightView.ThroughSight"/>) の ADS 中とダッシュ中は隠す)。
-        /// カメラが無ければ縁は 0 で出す。値の源は <see cref="GameSignals.LocalPlayer"/> の武器・ADS・プレイヤーと、武器の親の階層の <see cref="ViewRig"/>。
-        /// 自分のプレイヤーがいなければ何もしない (出す側が照準を書く)。
-        /// </summary>
         public void RefreshCrosshair()
         {
             if (_weapon == null)
@@ -685,12 +587,6 @@ namespace Shooter.Runtime
             RefreshAimBlock(shown);
         }
 
-        /// <summary>
-        /// 照準を出している間、目から画面中央が指す点への線がその点より手前で遮られているかを武器の射撃と同じ条件
-        /// (<see cref="ViewRig.TryFindAimBlock(Transform, Transform, float, Transform, LayerMask, float, out Vector3)"/>・武器の射程と当たるレイヤー) で調べ、
-        /// 遮られていれば遮られた点の画面上の位置を <see cref="HudModel.SetAimBlock"/> で渡す。視点に関係なく同じ判定を使う。
-        /// 出すかと余裕は <see cref="AimBlockCatalog"/> から読み、変わったときに <c>[HUD] aim blocked=True</c> のようにログに出す。
-        /// </summary>
         private void RefreshAimBlock(bool crosshairShown)
         {
             var settings = AimBlockSettingsInUse();
@@ -714,7 +610,6 @@ namespace Shooter.Runtime
             ApplyAimBlock(ShownModel, true, AimBlockViewport(camera, point));
         }
 
-        /// <summary>world の点をカメラのビューポート座標にする。カメラが無いか点がカメラの後ろなら null。</summary>
         public static System.Numerics.Vector2? AimBlockViewport(Camera camera, Vector3 world)
         {
             if (camera == null)
@@ -784,10 +679,6 @@ namespace Shooter.Runtime
             return !sprinting && (!aiming || view == ViewMode.ThirdPerson);
         }
 
-        /// <summary>
-        /// 今の武器の散らばりの縁が画面の中央から離れる距離 (HUD の基準解像度の px)。カメラか武器が無ければ 0。
-        /// 画面の縦半分は UIDocument の木の高さ (パネルの拡縮後の px) から取り、まだ並べていなければ <see cref="ReferenceResolution"/> の縦半分を使う。
-        /// </summary>
         public float CrosshairConeGap()
         {
             var camera = _ads != null ? _ads.Camera : null;

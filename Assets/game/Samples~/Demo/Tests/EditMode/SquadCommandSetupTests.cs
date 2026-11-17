@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 分隊への指示の取り付け (SquadCommandActionInstaller)、射撃場に置く物 (SquadCommandRangeFixture)、smoke の手順 (SquadCommandSmokeStep) が
-    /// 差し込み口から見つかり、置く物が決まりどおりの場所に味方の bot を置くことを確かめる。
-    /// </summary>
     public sealed class SquadCommandSetupTests
     {
         private GameObject _player;

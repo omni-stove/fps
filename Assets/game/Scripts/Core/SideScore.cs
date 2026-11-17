@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>陣営 1 つの得点。<see cref="ModeStatus.SideScores"/> に陣営の数だけ並ぶ。</summary>
     public readonly struct SideScore : IEquatable<SideScore>
     {
         public SideScore(Side side, double score)
@@ -13,7 +12,7 @@ namespace Shooter.Core
 
         public Side Side { get; }
 
-        /// <summary>得点。拠点のように時間で入る点は小数を含む。</summary>
+        // 拠点のように時間で入る点があるので、小数で持つ。
         public double Score { get; }
 
         public bool Equals(SideScore other)

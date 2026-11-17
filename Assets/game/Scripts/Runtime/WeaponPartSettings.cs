@@ -5,11 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="WeaponDefinition"/> が Inspector に出す、武器の部品の省略できる入れ子 (<see cref="BurstSpec"/> など) の値。
-    /// <c>Enabled</c> を持つものは、切ってある間は値を残したまま部品に入れない。届け方 (<see cref="RoundDelivery"/>) や弾薬の種類
-    /// (<see cref="AmmoKind"/>) で使うかが決まるものは <c>Enabled</c> を持たず、その届け方・種類のときだけ部品に入れる。
-    /// </summary>
+    // 届け方 (RoundDelivery) や弾薬の種類 (AmmoKind) で使うかが決まる入れ子は、Enabled を持たせずその届け方・種類のときだけ部品に入れる。
     [Serializable]
     public sealed class BurstSettings
     {
@@ -237,7 +233,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>弾薬の種類が <see cref="AmmoKind.Heat"/> のときだけ使う。</summary>
     [Serializable]
     public sealed class HeatSettings
     {
@@ -402,7 +397,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>届け方が <see cref="RoundDelivery.Projectile"/> のときだけ使う。</summary>
     [Serializable]
     public sealed class ProjectileSettings
     {
@@ -509,7 +503,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>届け方が <see cref="RoundDelivery.Beam"/> のときだけ使う。</summary>
     [Serializable]
     public sealed class BeamSettings
     {
@@ -545,7 +538,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>届け方が <see cref="RoundDelivery.Spray"/> (火炎) のときだけ使う。</summary>
     [Serializable]
     public sealed class SpraySettings
     {
@@ -833,7 +825,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>弾の性質 (<see cref="RoundSpec"/>) 1 つ分。弾薬の種類 (<see cref="AmmoTypeSettings"/>) が武器の弾を上書きするのに使う。</summary>
     [Serializable]
     public sealed class RoundSettings
     {
@@ -917,7 +908,6 @@ namespace Shooter.Runtime
             Spray.Set(spec.Spray);
         }
 
-        /// <summary>届け方に合う入れ子 (飛ぶ弾・ビーム・火炎) だけを入れて <see cref="RoundSpec"/> を作る。</summary>
         public static RoundSpec Build(
             RoundDelivery delivery,
             float range,
@@ -946,7 +936,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>着弾時の効果 (<see cref="ImpactSpec"/>) 1 つ分。弾薬の種類 (<see cref="AmmoTypeSettings"/>) が武器の着弾を上書きするのに使う。</summary>
     [Serializable]
     public sealed class ImpactSettings
     {
@@ -1019,7 +1008,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>弾薬の種類 (<see cref="AmmoTypeSpec"/>) 1 つ分。上書きしない部品は武器のものを使う。</summary>
     [Serializable]
     public sealed class AmmoTypeSettings
     {

@@ -111,7 +111,6 @@ namespace Shooter.Core
             return direction * travel;
         }
 
-        // 離した Tick の速度を返す。Jump で離したときはこれを勢いとして渡す。
         public Vector3 Release(GrappleEnd reason)
         {
             if (reason == GrappleEnd.None || reason == GrappleEnd.Arrived)

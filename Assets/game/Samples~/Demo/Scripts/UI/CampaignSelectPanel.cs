@@ -5,17 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンのミッションと難易度を選び、続きから／最初から始める画面の要素を、渡された入れ物の中にコードで作って
-    /// <see cref="CampaignMenu"/> につなぐ。<see cref="MainMenuScreen"/> がメニューの差し込み口に出す。見た目は MainMenu.uss の campaign-select。
-    /// </summary>
-    /// <remarks>
-    /// ミッションを上から並べ、その下に難易度の行、選んだミッションの始め方 (セーブがあれば「続きから」「最初から」、無ければ「始める」) と「戻る」を置く。
-    /// 「最初から」は確認の 2 つのボタンに入れ替え、確認してから <see cref="StartRequested"/> を呼ぶ。
-    /// マウスではボタンを押して選ぶ。ゲームパッドとキーボードでは上下 (Tab) でフォーカスを動かし、難易度の行では左右で難易度を替え、
-    /// Submit で決定、Cancel で確認を閉じるかメニューへ戻る (<see cref="Cancelled"/>)。
-    /// 既定の移動は画面上の位置で次を選ぶので、パネルの根で移動・決定・取り消しを受けて止め、<see cref="CampaignMenu.Items"/> の順で動かす。
-    /// </remarks>
+    // 既定の移動は画面上の位置で次を選ぶので、パネルの根で移動・決定・取り消しを受けて止め、CampaignMenu.Items の順で動かす。
     public sealed class CampaignSelectPanel : IDisposable
     {
         public const string PanelClass = "campaign-select";
@@ -65,8 +55,6 @@ namespace Shooter.Runtime
         private bool _busy;
         private bool _disposed;
 
-        /// <summary>container を空にして menu の項目を作り、menu のフォーカスを選んだ状態にする。</summary>
-        /// <exception cref="ArgumentNullException">container か menu が null。</exception>
         public CampaignSelectPanel(VisualElement container, CampaignMenu menu)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
@@ -121,25 +109,20 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>始め方を決めたとき。セーブを消す・シーンを読むのは受けた側。</summary>
         public event Action<CampaignMenuStart> StartRequested;
 
-        /// <summary>「戻る」か、確認を出していないときの Cancel。閉じるかどうかは受けた側が決める。</summary>
         public event Action Cancelled;
 
         public CampaignMenu Menu => _menu;
 
         public VisualElement Container => _container;
 
-        /// <summary>出している案内。出していなければ null。</summary>
         public string Status => _status.style.display == DisplayStyle.None ? null : _status.text;
 
         public bool IsStatusError => _status.ClassListContains(ErrorStatusClass);
 
-        /// <summary>受けた側の処理 (シーンを読むなど) を待っていて、操作を受け付けていないか (<see cref="SetBusy"/>)。</summary>
         public bool IsBusy => _busy;
 
-        /// <summary>確認の問いの文言。確認を出していなければ null。</summary>
         public string Question => _menu.IsConfirmingRestart ? _question.text : null;
 
         public Button MissionButton(int index)
@@ -157,13 +140,11 @@ namespace Shooter.Runtime
             return _difficultyButtons[difficulty];
         }
 
-        /// <summary>kind のボタン (始め方・戻る・確認)。</summary>
         public Button ActionButton(CampaignMenuItemKind kind)
         {
             return _actionButtons[kind];
         }
 
-        /// <summary>kind のボタンを出しているか。</summary>
         public bool IsShown(CampaignMenuItemKind kind)
         {
             var button = _actionButtons[kind];
@@ -171,7 +152,6 @@ namespace Shooter.Runtime
             return section.style.display != DisplayStyle.None && button.style.display != DisplayStyle.None;
         }
 
-        /// <summary>フォーカスを step だけ動かす。</summary>
         public void MoveFocus(int step)
         {
             if (_busy)
@@ -184,7 +164,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>難易度の行を選んでいれば、難易度を step だけ替える。替わったら true。</summary>
         public bool CycleDifficulty(int step)
         {
             if (_busy || _menu.FocusedItem.Kind != CampaignMenuItemKind.Difficulty || !_menu.CycleDifficulty(step))
@@ -196,7 +175,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>フォーカスしている項目を決定する。</summary>
         public void Submit()
         {
             if (_busy)
@@ -207,7 +185,6 @@ namespace Shooter.Runtime
             Handle(_menu.Activate());
         }
 
-        /// <summary>取り消し。確認を出していれば閉じ、そうでなければ <see cref="Cancelled"/> を呼ぶ。</summary>
         public void Cancel()
         {
             if (_busy)
@@ -218,7 +195,6 @@ namespace Shooter.Runtime
             Handle(_menu.Cancel());
         }
 
-        /// <summary>kind のボタンを押す (マウス)。今出ていなければ何もしない。</summary>
         public void Press(CampaignMenuItemKind kind)
         {
             if (_busy)
@@ -229,7 +205,6 @@ namespace Shooter.Runtime
             Handle(_menu.Activate(kind));
         }
 
-        /// <summary>index 番目のミッションを選び、その行にフォーカスを移す (マウス)。</summary>
         public void ChooseMission(int index)
         {
             if (_busy || !_menu.FocusOn(_menu.IndexOf(CampaignMenuItemKind.Mission, index)))
@@ -241,7 +216,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>難易度を difficulty にし、難易度の行にフォーカスを移す (マウス)。</summary>
         public void ChooseDifficulty(CampaignDifficulty difficulty)
         {
             if (_busy || !_menu.SetDifficulty(difficulty))
@@ -253,7 +227,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>案内を出す。text が空なら消す。error なら赤くする。</summary>
         public void ShowStatus(string text, bool error)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -267,7 +240,7 @@ namespace Shooter.Runtime
             _status.style.display = DisplayStyle.Flex;
         }
 
-        /// <summary>busy の間はボタンを押せなくし、移動・決定・取り消しを受け付けない (シーンを読むまでの二度押しを防ぐ)。</summary>
+        // シーンを読むまでの二度押しを防ぐため、busy の間はボタンも移動・決定・取り消しも止める。
         public void SetBusy(bool busy)
         {
             _busy = busy;
@@ -282,7 +255,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>メニューの状態 (セーブの有無・確認・選択・フォーカス) を画面に映し直す。</summary>
         public void Refresh()
         {
             if (_disposed)
@@ -326,7 +298,6 @@ namespace Shooter.Runtime
             FocusCurrent();
         }
 
-        /// <summary>根の入力の購読を外し、入れ物を空にする。2 度目からは何もしない。</summary>
         public void Dispose()
         {
             if (_disposed)

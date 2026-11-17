@@ -87,7 +87,6 @@ namespace Shooter.Runtime
 
         float INearMissTarget.NearMissRadius => IsActive ? Spec.NearMissRadius : 0f;
 
-        /// <exception cref="ArgumentException">Inspector の調整値が不正。</exception>
         public SuppressionSpec CreateSpec()
         {
             return new SuppressionSpec(
@@ -108,8 +107,6 @@ namespace Shooter.Runtime
         }
 
         // 調整値が今と違えば度合いを 0 から数え直す (前の値でためた度合いを新しい閾値で読ませない)。
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">rule が <see cref="Suppression"/> の値でない。</exception>
         public void Configure(Suppression rule, SuppressionSpec spec)
         {
             if (spec == null)

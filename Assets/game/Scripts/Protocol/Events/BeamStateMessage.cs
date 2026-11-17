@@ -13,7 +13,7 @@ namespace Shooter.Protocol
 
         public int ShooterId { get; set; }
 
-        /// <summary>ビームの見た目と音を武器から選ぶため、撃った人の今の武器に頼らずに送る。</summary>
+        // ビームの見た目と音を武器から選ぶため、撃った人の今の武器に頼らずに送る。
         public string WeaponId { get; set; } = "";
 
         public Vector3 Start { get; set; }

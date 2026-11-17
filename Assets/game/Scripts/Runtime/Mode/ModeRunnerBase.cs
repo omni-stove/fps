@@ -30,6 +30,8 @@ namespace Shooter.Runtime
         private readonly Queue<int> _pendingRespawns = new Queue<int>();
         private readonly HashSet<Side> _warnedMissingSpawn = new HashSet<Side>();
         private ModeSession _session;
+        private OfflineAssists _assists;
+        private AssistSpec _assistSpec;
         private SideMember _localPlayer;
         private ModeStatus _publishedStatus;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -40,6 +42,16 @@ namespace Shooter.Runtime
         private Side? _matchWinner;
 
         public ModeSession Session => _session;
+
+        // 入っていなければ KitTuning.Assist を読む。試すときに Resources を通さず値を渡せるよう、上書きできるようにしておく。
+        public AssistSpec AssistSpec
+        {
+            get => _assistSpec ?? KitTuning.Assist;
+            set => _assistSpec = value;
+        }
+
+        /// <summary>参加者が受けたダメージの記録。始める前と止めた後は null。</summary>
+        public OfflineAssists Assists => _assists;
 
         public bool IsStarted => _session != null;
 
@@ -316,10 +328,12 @@ namespace Shooter.Runtime
             _session = session;
             _localPlayer = localPlayer != null && ordered.Contains(localPlayer) ? localPlayer : null;
             _members.AddRange(ordered);
+            _assists = new OfflineAssists(AssistSpec, (attackerId, victimId) => AreAllies(session, attackerId, victimId));
             for (var id = 0; id < _members.Count; id++)
             {
                 _ids.Add(_members[id].Damageable, id);
                 _members[id].Damageable.Died += OnMemberDied;
+                _assists.Watch(_members[id].Damageable, id);
                 Debug.Log(ModeLog.Joined(id, _members[id].name, _members[id].Side), _members[id]);
             }
 
@@ -349,6 +363,7 @@ namespace Shooter.Runtime
             }
 
             OnBeforeTick(deltaSeconds);
+            _assists.Advance(deltaSeconds);
             AdvanceSession(deltaSeconds);
             RespawnPending();
             RefreshHud();
@@ -413,6 +428,7 @@ namespace Shooter.Runtime
         public void RespawnAt(SideMember member, Vector3 position, Quaternion rotation)
         {
             var id = RequireMember(member);
+            _assists?.Clear(id);
             member.Respawn(position, rotation);
             member.SetActing(_session == null || (!_matchOver && _session.State != GameModeState.Ended));
             Debug.Log(ModeLog.Spawn(id, member.Side, position.ToNumerics()), member);
@@ -458,6 +474,9 @@ namespace Shooter.Runtime
                 _session.Ended -= OnSessionEnded;
             }
 
+            _assists?.Stop();
+            _assists = null;
+
             // 別の Runner が後から出した状態は消さない。
             if (_publishedStatus != null)
             {
@@ -496,6 +515,11 @@ namespace Shooter.Runtime
 
             AcquireRestartAction();
             Debug.Log(ModeLog.Ended(winner), this);
+            foreach (var playerId in _session.GetPlayerIds())
+            {
+                Debug.Log(ModeLog.Stats(_session, playerId), this);
+            }
+
             RefreshHud();
             OnEnded(winner);
             RaiseMatchFinished(winner);
@@ -680,10 +704,11 @@ namespace Shooter.Runtime
 
             if (killerId >= 0 && killerId != victimId)
             {
+                var assisters = _assists.TakeAssisters(victimId, killerId);
                 Debug.Log(
-                    killer.Side == victim.Side ? ModeLog.TeamKill(killerId, victimId) : ModeLog.Kill(killerId, victimId),
+                    killer.Side == victim.Side ? ModeLog.TeamKill(killerId, victimId) : ModeLog.Kill(killerId, victimId, assisters),
                     victim);
-                _session.ReportKill(killerId, victimId);
+                _session.ReportKill(killerId, victimId, assisters);
             }
             else
             {
@@ -699,6 +724,12 @@ namespace Shooter.Runtime
             }
 
             OnKill(killer, victim);
+        }
+
+        // 派生がモードから抜いた人のダメージは、アシストにならないよう味方どうしと同じに扱う。
+        private static bool AreAllies(ModeSession session, int attackerId, int victimId)
+        {
+            return !session.HasPlayer(attackerId) || !session.HasPlayer(victimId) || session.GetSide(attackerId) == session.GetSide(victimId);
         }
 
         private static SideMember ResolveKiller()

@@ -7,21 +7,14 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 1 つの言語の、キーから画面に出す文字列への表。JSON (<c>{"settings.title": "設定", ...}</c>) から <see cref="TryParse"/> で作る。
-    /// <see cref="Get"/> は無いキーならキーそのものを返し、<see cref="Format"/> は <c>{0}</c> などの所に値を差し込む。
-    /// 無いキーや差し込めない所は、キーごとに一度だけ警告の受け取り先に知らせる (毎フレーム引く所で同じ警告を出し続けないため)。
-    /// 表の中身は変わらない。
-    /// </summary>
     public sealed class StringTable
     {
         private readonly Dictionary<string, string> _entries;
         private readonly Action<string> _warn;
+        // 無いキーや差し込めない所の警告をキーごとに一度だけにするのは、毎フレーム引く所で同じ警告を出し続けないため。
         private readonly HashSet<string> _warned = new HashSet<string>(StringComparer.Ordinal);
 
-        /// <param name="entries">キーと文字列。写しを持つので、後で変えてもこの表は変わらない。</param>
-        /// <param name="warn">無いキーや差し込めない所の知らせの受け取り先。null なら知らせない。</param>
-        /// <exception cref="ArgumentNullException">entries が null か、キーか文字列に null がある。</exception>
+        // 呼び出し側が後から entries を変えても表が変わらないよう、写しを持つ。
         public StringTable(IEnumerable<KeyValuePair<string, string>> entries, Action<string> warn = null)
         {
             if (entries == null)
@@ -44,20 +37,10 @@ namespace Shooter.Runtime
             Keys = new ReadOnlyCollection<string>(new List<string>(_entries.Keys));
         }
 
-        /// <summary>表にあるキー。</summary>
         public IReadOnlyList<string> Keys { get; }
 
-        /// <summary>表にあるキーの数。</summary>
         public int Count => _entries.Count;
 
-        /// <summary>
-        /// JSON の文字列 (値がすべて文字列で入れ子の無いオブジェクト) から表を作る。
-        /// 空のキー・同じキーの重なり・文字列でない値があれば読まない。
-        /// </summary>
-        /// <param name="json">読む文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="warn">作った表の、無いキーや差し込めない所の知らせの受け取り先。null なら知らせない。</param>
-        /// <param name="table">読めたときの表。読めなければ null。</param>
-        /// <param name="error">読めなかったときの理由 (何文字目か付き)。読めたら null。</param>
         public static bool TryParse(string json, Action<string> warn, out StringTable table, out string error)
         {
             if (json == null)
@@ -84,12 +67,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// tables を前から順に重ねた表。同じキーは後の表の文字列になる。
-        /// </summary>
-        /// <param name="tables">重ねる表。重ねた後に元の表は変わらない。</param>
-        /// <param name="warn">重ねた表の、無いキーや差し込めない所の知らせの受け取り先。null なら知らせない。</param>
-        /// <exception cref="ArgumentNullException">tables が null か、null の表を含む。</exception>
         public static StringTable Merge(IEnumerable<StringTable> tables, Action<string> warn = null)
         {
             if (tables == null)
@@ -114,7 +91,6 @@ namespace Shooter.Runtime
             return new StringTable(entries, warn);
         }
 
-        /// <summary>key が表にあるか。</summary>
         public bool Contains(string key)
         {
             if (key == null)
@@ -125,8 +101,7 @@ namespace Shooter.Runtime
             return _entries.ContainsKey(key);
         }
 
-        /// <summary>key の文字列。無ければ、どのキーが足りないか画面で分かるようキーそのものを返し、警告する。</summary>
-        /// <exception cref="ArgumentNullException">key が null。</exception>
+        // 無いキーでキーそのものを返すのは、どのキーが足りないか画面で分かるようにするため。
         public string Get(string key)
         {
             if (key == null)
@@ -143,12 +118,7 @@ namespace Shooter.Runtime
             return key;
         }
 
-        /// <summary>
-        /// key の文字列の <c>{0}</c>・<c>{1}</c>… に args の値を差し込む。数は言語に依らない書き方 (InvariantCulture) にする。
-        /// <c>{{</c> と <c>}}</c> は <c>{</c> と <c>}</c> になる。訳の誤りで画面が止まらないよう、渡されていない番号の所はそのまま残して警告する。
-        /// 無いキーは <see cref="Get"/> と同じくキーそのものを返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">key か args が null。</exception>
+        // 訳の誤りで画面が止まらないよう、渡されていない番号の所は例外にせずそのまま残して警告する。
         public string Format(string key, params object[] args)
         {
             if (args == null)
@@ -168,10 +138,6 @@ namespace Shooter.Runtime
             return text;
         }
 
-        /// <summary>
-        /// <see cref="LocalizedText"/> を文にする。入れ子の文は先にこの表で文にして <see cref="Format"/> に渡す。
-        /// <see cref="LocalizedText.Literal"/> はその文字列、<c>default</c> は空文字、表に無いキーは引数を使わずキーそのものを返す。
-        /// </summary>
         public string Resolve(LocalizedText text)
         {
             if (text.IsEmpty)
@@ -194,9 +160,6 @@ namespace Shooter.Runtime
             return Format(text.Key, values);
         }
 
-        /// <summary>
-        /// template が差し込む番号を小さい順に重なり無く返す。言語ごとの表で同じキーが同じ値を使っているかを確かめるためのもの。
-        /// </summary>
         public static IReadOnlyList<int> PlaceholdersOf(string template)
         {
             if (template == null)
@@ -216,7 +179,6 @@ namespace Shooter.Runtime
             return builder.ToString();
         }
 
-        // builder が null なら番号を集めるだけ。unmatched は args に無い番号のうち最初のもの (無ければ -1)。
         private static void Scan(string template, object[] args, StringBuilder builder, SortedSet<int> indices, out int unmatched)
         {
             unmatched = -1;
@@ -259,7 +221,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // template[start] の '{' から '{数字}' を読む。end は '}' の次。数字が無い・桁が多すぎる・閉じていなければ false。
         private static bool TryReadPlaceholder(string template, int start, out int index, out int end)
         {
             index = 0;

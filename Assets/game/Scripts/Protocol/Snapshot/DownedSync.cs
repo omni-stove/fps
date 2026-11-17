@@ -1,17 +1,13 @@
 namespace Shooter.Protocol
 {
-    /// <summary>プレイヤーのダウンの状態 (Netcode の <c>NetDownedState</c> の中身)。HUD に出す丸めた値で送る。</summary>
     public struct DownedSync
     {
-        /// <summary><see cref="RevivePercent"/> の最大。</summary>
         public const int FullPercent = 100;
 
         public bool IsDowned { get; set; }
 
-        /// <summary>失血で倒れるまでの残り秒 (表示用に切り上げた整数)。</summary>
         public int BleedoutSeconds { get; set; }
 
-        /// <summary>蘇生の進み (0〜100)。</summary>
         public byte RevivePercent { get; set; }
 
         public static DownedSync None => default;

@@ -8,10 +8,8 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <remarks>
-    /// Bot を接続の無いプレイヤーとして <see cref="ServerMatch"/> に入れ、人と同じ入力 (<see cref="InputFrame"/>) を移動のモジュールに、
-    /// 射撃を戦闘のモジュールの人と同じ検査に渡すのは、ルール・戦闘・スナップショット・クライアントの予測が Bot を人と分けずに扱えるようにするため。
-    /// </remarks>
+    // Bot を接続の無いプレイヤーとして ServerMatch に入れ、人と同じ入力 (InputFrame) を移動のモジュールに、
+    // 射撃を戦闘のモジュールの人と同じ検査に渡すのは、ルール・戦闘・スナップショット・クライアントの予測が Bot を人と分けずに扱えるようにするため。
     internal sealed class ServerBots : IServerModule
     {
         public const string LogTag = "[Bot]";

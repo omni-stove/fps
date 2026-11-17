@@ -1,0 +1,107 @@
+name: Web demo
+
+# Demo の WebGL 版をビルドし、GitHub Pages に置く。v* のタグで client-release と一緒に走り、Actions の画面から手で走らせることもできる。
+# ブラウザからは UDP を使えないので、オンライン対戦を除いたものになる。出す手順は docs/client-release.md を参照
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Pages には最後に置いたものだけが残るので、古い方が後から上書きしないよう取り消さずに順に走らせる
+concurrency:
+  group: web-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      # タグから決める規則は client-release.yml の version ジョブと同じ。手で走らせたときはタグが無いので dev-<commit> にする
+      - id: version
+        name: Resolve the build version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then
+            version="$REF_NAME"
+            if [[ "$version" =~ ^[vV][0-9] ]]; then
+              version="${version:1}"
+            fi
+          else
+            version="dev-${SHA:0:7}"
+          fi
+          if [[ ! "$version" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]{0,31}$ ]]; then
+            echo "::error::'$version' is not a usable build version (letters, digits, . - _ only, not starting with . or -, at most 32 characters after the leading v)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # WebGL は IL2CPP と Emscripten の中間ファイルが大きく、ランナーの空きだけでは足りないことがあるので、使わないツールを消して空ける
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v6
+        with:
+          path: Library
+          key: unity-library-client-webgl-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: unity-library-client-webgl-
+
+      # ClientBuilder.Build は -clientPlatform webgl で Builds/client-webgl/shooter/ に出力し (make build webgl と同じ)、
+      # EOS を外して、Pages でも読める gzip と展開の設定でビルドする。versioning: Custom の理由は client-release.yml と同じ
+      - name: Build the WebGL client
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          buildMethod: Shooter.Editor.ClientBuilder.Build
+          customParameters: -clientPlatform webgl
+          versioning: Custom
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Check the build output
+        run: |
+          set -euo pipefail
+          # unity-builder のコンテナは root で書き出すので、ランナーのユーザーで読み書きできるようにする
+          sudo chown -R "$(id -u):$(id -g)" Builds
+          test -f Builds/client-webgl/shooter/index.html
+          test -d Builds/client-webgl/shooter/Build
+          {
+            echo "WebGL build \`${{ steps.version.outputs.version }}\`:"
+            echo
+            echo '```'
+            du -ah Builds/client-webgl/shooter/Build | sort -h
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: Builds/client-webgl/shooter
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

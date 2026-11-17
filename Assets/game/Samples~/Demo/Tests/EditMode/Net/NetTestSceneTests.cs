@@ -10,10 +10,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>
-    /// コミットされた NetTest シーンと試合の設定 (Shooter.Editor.NetSceneBuilder.Build の出力) が、.NET のサーバーへの書き出しとクライアントで使えるか。
-    /// 失敗したら Build をやり直してシーンとアセットをコミットする。
-    /// </summary>
     public sealed class NetTestSceneTests
     {
         private const string _rerun = "run Shooter.Editor.NetSceneBuilder.Build";

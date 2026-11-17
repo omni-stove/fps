@@ -45,7 +45,6 @@ namespace Shooter.Core
             return $"{EnemyPrefix(enemyId)} hears owner={Name(ownerId)} kind={Name(kindId)} serial={serial} at={Point(at)}";
         }
 
-        // gone は囮が消えたか。false なら囮は残っていて、見えなくなっただけ。
         public static string Lost(string enemyId, string ownerId, string kindId, int serial, Vector3 last, bool gone)
         {
             return $"{EnemyPrefix(enemyId)} lost owner={Name(ownerId)} kind={Name(kindId)} serial={serial} last={Point(last)} gone={gone}";

@@ -6,10 +6,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 燃焼などの状態異常。相手ごとに Core の <see cref="StatusEffects"/> を持ち、毎 tick 進めてダメージを出す。
-    /// かけた・延ばした・切れたときに <see cref="StatusEffectMessage"/> を全員に送り (切れたら残り 0)、クライアントは燃えている見た目を出す。
-    /// </summary>
     internal sealed class ServerStatusEffects
     {
         public const string LogTag = "[StatusEffect]";
@@ -28,15 +24,12 @@ namespace Shooter.Server
 
         public ServerCombat Combat { get; }
 
-        /// <summary>shot の弾で victimId に effect をかける。倒れている相手・かけてはいけない味方には何もしない。</summary>
         public void Afflict(in ServerShot shot, int victimId, StatusEffectSpec effect)
         {
             Afflict(shot.ShooterId, shot.Weapon.Id, victimId, effect);
         }
 
-        /// <summary>
-        /// 弾ではなく燃える範囲などがかけるときのため、かけた人を Id で受ける。かけた人が居なければ (sourceId が null) 味方の判定はせず、帰属の無い燃焼にする。
-        /// </summary>
+        // 弾ではなく燃える範囲などがかけるときのため、かけた人を Id で受ける。
         public void Afflict(int? sourceId, string weaponId, int victimId, StatusEffectSpec effect)
         {
             ArgumentNullException.ThrowIfNull(effect);
@@ -58,7 +51,6 @@ namespace Shooter.Server
             Send(victimId, active.KindId, active.RemainingSeconds);
         }
 
-        /// <summary>playerId にかかっている種類 kindId の残り秒数。かかっていなければ 0。</summary>
         public float RemainingSeconds(int playerId, string kindId)
         {
             return _byPlayer.TryGetValue(playerId, out var effects) ? effects.RemainingSeconds(kindId) : 0f;
@@ -123,7 +115,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>playerId にかかっている状態異常を消す (抜けた・倒れた)。</summary>
         public void Forget(int playerId)
         {
             if (!_byPlayer.TryGetValue(playerId, out var effects))
@@ -137,7 +128,6 @@ namespace Shooter.Server
             SendEnded(playerId);
         }
 
-        /// <summary>試合の始まりに、すべての状態異常を消す。</summary>
         public void Clear()
         {
             foreach (var pair in _byPlayer)

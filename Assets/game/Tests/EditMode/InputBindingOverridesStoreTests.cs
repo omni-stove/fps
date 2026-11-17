@@ -10,10 +10,7 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 割り当ての上書きを PlayerPrefs に保存し、起動し直したとき (新しいアセットの写し) に読み込めること。
-    /// 本物の設定とプロジェクト全体のアクションを壊さないよう、キーはテストごとに変え、アセットは写しを使う。
-    /// </summary>
+    // 本物の設定とプロジェクト全体のアクションを壊さないよう、キーはテストごとに変え、アセットは写しを使う。
     public sealed class InputBindingOverridesStoreTests
     {
         private static readonly RebindSlot ReloadKey = new RebindSlot("Reload", InputDeviceKind.KeyboardMouse);

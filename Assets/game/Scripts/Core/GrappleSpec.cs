@@ -89,7 +89,6 @@ namespace Shooter.Core
             return distance >= MinRange && distance <= MaxRange;
         }
 
-        // 床なら上に立ち、天井ならその下に頭を付け、壁なら面の手前で手 (中心から HangHeight 上) が anchor に来る所。
         public Vector3 HangPoint(Vector3 anchor, Vector3 normal, float bodyRadius, float bodyHalfHeight)
         {
             RequireFinite(anchor, nameof(anchor));

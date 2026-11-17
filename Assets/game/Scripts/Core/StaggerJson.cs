@@ -3,13 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// よろめきの調整値 (<see cref="StaggerTuning"/>) を JSON から読む。最上位は <see cref="PlayerItem"/> と <see cref="EnemyItem"/> のオブジェクトで、
-    /// 中の項目の名前は <see cref="StaggerSpec"/> のコンストラクターの引数名 (<see cref="PlayerItemNames"/>・<see cref="EnemyItemNames"/>)。
-    /// 省略した項目・オブジェクトは <see cref="StaggerSpec.PlayerDefault"/>・<see cref="StaggerSpec.EnemyDefault"/> の値になる。
-    /// 文法は <see cref="TuningJson"/> と同じで、値の範囲の検査は <see cref="StaggerSpec"/> に任せ、
-    /// どれかに引っかかればどのファイルのどの項目 (player.flinchSeconds など) かを添えた <see cref="TuningJsonException"/> を投げる。
-    /// </summary>
     public static class StaggerJson
     {
         public const string PlayerItem = "player";
@@ -63,13 +56,6 @@ namespace Shooter.Core
             TurnMultiplierItem,
         };
 
-        /// <summary>text をプレイヤーと敵のよろめきの調整値として読む。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="StaggerSpec"/> の検査に通らない。
-        /// </exception>
         public static StaggerTuning Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, _kind);

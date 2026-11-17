@@ -4,51 +4,29 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// クライアントが接続の承認データ (バイト列) に載せる、ビルドの版と切断して戻ってきた人を見分ける鍵 (<see cref="RejoinKey"/>)、
-    /// それにどれも無くてよい欄 (<see cref="ConnectionExtras"/>)。
-    /// 形は ASCII の <c>&lt;版&gt;/&lt;鍵&gt;</c>、欄があれば <c>&lt;版&gt;/&lt;鍵&gt;/&lt;パーティ&gt;/&lt;参加コード&gt;/&lt;実力&gt;/&lt;ProductUserId&gt;</c>
-    /// (無い欄は空)。サーバーは版で承認を決め (<see cref="ConnectionApproval"/>)、鍵で成績を引き継ぐ。
-    /// </summary>
-    /// <remarks>
-    /// 版 (<see cref="BuildVersion"/>)・鍵・欄のどれにも使えない <c>/</c> で区切るので、区切りを数えるだけで読み分けられる。
-    /// 欄がどれも無ければ欄を足す前と同じバイト列にするのは、足す前のビルドのサーバーとも版を比べて断り合えるようにするため。
-    /// 承認データは相手が自由に送れるので、読むときは長さと文字を絞る。
-    /// </remarks>
     public static class ConnectionPayload
     {
+        // 版・鍵・欄のどれにも使えない文字で区切るので、区切りを数えるだけで読み分けられる。
         public const char Separator = '/';
 
-        /// <summary>実力の値を 10 進で書いたときの最長の文字数 (<c>-2147483648</c>)。</summary>
         public const int MaxSkillRatingLength = 11;
 
-        /// <summary>承認データの最長のバイト数。</summary>
         public const int MaxLength = BuildVersion.MaxLength + 1 + RejoinKey.MaxLength
             + 1 + ConnectionExtras.MaxPartyIdLength
             + 1 + ConnectionExtras.MaxJoinCodeLength
             + 1 + MaxSkillRatingLength
             + 1 + ConnectionExtras.MaxProductUserIdLength;
 
-        /// <summary>版と鍵だけの承認データの区切りの数。</summary>
         private const int _basicSeparators = 1;
 
-        /// <summary>欄を載せた承認データの区切りの数。</summary>
         private const int _extendedSeparators = 5;
 
-        /// <summary>version と rejoinKey を承認データにする。鍵は小文字にそろえる。</summary>
-        /// <exception cref="ArgumentException">
-        /// version が <see cref="BuildVersion.TryNormalize"/> で正規化済みの版でない、または rejoinKey が <see cref="RejoinKey.IsValid"/> でない。
-        /// </exception>
         public static byte[] Encode(string version, string rejoinKey)
         {
             return Encode(version, rejoinKey, ConnectionExtras.None);
         }
 
-        /// <summary>version と rejoinKey と extras を承認データにする。鍵は小文字にそろえ、欄は大文字・小文字をそのまま載せる。</summary>
-        /// <exception cref="ArgumentNullException">extras が null。</exception>
-        /// <exception cref="ArgumentException">
-        /// version が <see cref="BuildVersion.TryNormalize"/> で正規化済みの版でない、または rejoinKey が <see cref="RejoinKey.IsValid"/> でない。
-        /// </exception>
+        // 欄がどれも無ければ欄を足す前と同じバイト列にするのは、足す前のビルドのサーバーとも版を比べて断り合えるようにするため。
         public static byte[] Encode(string version, string rejoinKey, ConnectionExtras extras)
         {
             if (extras == null)
@@ -88,19 +66,12 @@ namespace Shooter.Core
             return bytes;
         }
 
-        /// <summary>
-        /// 承認データから版と鍵を読む。欄は読み捨てる。読めないときの扱いは <see cref="TryDecode(byte[], out string, out string, out ConnectionExtras)"/> と同じ。
-        /// </summary>
         public static bool TryDecode(byte[] payload, out string version, out string rejoinKey)
         {
             return TryDecode(payload, out version, out rejoinKey, out _);
         }
 
-        /// <summary>
-        /// 承認データから版と鍵と欄を読む。区切りが 1 つでも 5 つでもない・長すぎる・どれかが使えない文字を含むときは
-        /// どれも null にして false を返す。欄の無い承認データは extras を <see cref="ConnectionExtras.None"/> にする。
-        /// 版を載せない古いビルドの承認データ (鍵だけ) も読めない側に入る。
-        /// </summary>
+        // 承認データは相手が自由に送れるので、読むときは長さと文字を絞る。
         public static bool TryDecode(byte[] payload, out string version, out string rejoinKey, out ConnectionExtras extras)
         {
             version = null;
@@ -167,11 +138,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// payload の版と欄はそのままに、鍵を rejoinKey に差し替えた承認データを作る。
-        /// EOS の transport がログインした後に、端末の Id を ProductUserId に替えるのに使う。
-        /// </summary>
-        /// <returns>payload が読めない、または rejoinKey が使えない鍵なら false (replaced は null)。</returns>
         public static bool TryReplaceRejoinKey(byte[] payload, string rejoinKey, out byte[] replaced)
         {
             replaced = null;
@@ -184,17 +150,11 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// text が <see cref="BuildVersion.TryNormalize"/> を通し、正規化しても変わらない版なら true。
-        /// </summary>
         public static bool IsNormalizedVersion(string text)
         {
             return BuildVersion.TryNormalize(text, out var normalized, out _) && normalized == text;
         }
 
-        /// <summary>
-        /// text が <see cref="ConnectionExtras.SkillRating"/> を invariant の 10 進で書いたもの (先頭の 0 と <c>-0</c> は無し) なら読む。
-        /// </summary>
         public static bool TryParseSkillRating(string text, out int value)
         {
             value = 0;
@@ -262,7 +222,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>区切り separatorAt の次から end の手前までを欄として読む。空なら null。</summary>
         private static bool TryField(byte[] payload, int separatorAt, int end, int maxLength, out string value)
         {
             value = Ascii(payload, separatorAt + 1, end - separatorAt - 1);
@@ -281,9 +240,7 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// バイトを 1 つずつ文字にする。0x80 以上のバイトは ASCII でない文字になり、後の文字の検査で落ちる。
-        /// </summary>
+        // 0x80 以上のバイトはここで弾かず、ASCII でない文字にして後の文字の検査で落とす。
         private static string Ascii(byte[] payload, int start, int length)
         {
             var chars = new char[length];

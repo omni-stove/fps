@@ -6,19 +6,7 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 自機の今のアクション (<see cref="PlayerActionReader.Current"/>) を、プリミティブで作った仮の体 (<see cref="Prefabs"/> があればその形) で見せる自機モック。
-    /// <list type="bullet">
-    /// <item>三人称: 胴 (カプセル)・頭 (球)・銃 (細長い箱) を本体の子に置き、<see cref="PlayerMockPose"/> の姿勢へ寄せる。
-    /// 銃は、今の武器に置いたときの見た目 (<see cref="WeaponExtrasAssets.PickupModel"/>) があればそれに替える。</item>
-    /// <item>一人称: 体は影だけにし、カメラの子に置いた銃 (ビューモデル) だけを右下に見せる。</item>
-    /// </list>
-    /// <see cref="CharacterAnimator"/> が人型のリグを置いたら体は出さず (<see cref="ShowsBody"/>)、一人称の銃だけを受け持つ。
-    /// 部品にはコライダーを付けない (当たり判定は CharacterController のまま)。部品と重ならないよう、本体自身のレンダラー
-    /// (プリミティブのカプセル) は組み立てている間だけ消し、外すときに元へ戻す。
-    /// 読み元は <see cref="GameBootstrap"/> が <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
-    /// 無ければエラーを出して自分を無効にする。部品は Play 中の最初の LateUpdate で組み立てる (<see cref="Build"/>)。
-    /// </summary>
+    // 部品と重ならないよう、本体自身のレンダラー (プリミティブのカプセル) は組み立てている間だけ消し、外すときに元へ戻す。
     [DisallowMultipleComponent]
     // PlayerActionReader (100) がそのフレームの状態を組み立て、ViewRig がカメラを置き終えてから姿勢を決める。
     [DefaultExecutionOrder(110)]
@@ -29,10 +17,10 @@ namespace Shooter.Runtime
         public const string BodyRootName = "MockBody";
         public const string ViewModelRootName = "MockViewModel";
 
-        /// <summary>体の色。敵 (既定の白いカプセル) ともネット対戦のチーム色 (青・赤) とも見分けが付く緑。</summary>
+        // 敵 (既定の白いカプセル) ともネット対戦のチーム色 (青・赤) とも見分けが付く緑にする。
         public static readonly Color BodyColor = new Color(0.2f, 0.75f, 0.45f);
 
-        /// <summary>銃の色。体と見分けが付くよう暗くする。</summary>
+        // 体と見分けが付くよう暗くする。
         public static readonly Color GunColor = new Color(0.15f, 0.15f, 0.17f);
 
         [SerializeField, Tooltip("見せるアクションの読み元。GameBootstrap が配線する")]
@@ -72,21 +60,25 @@ namespace Shooter.Runtime
         private MockPartPose _viewPose;
         private bool _showsBody = true;
         private ViewRig _viewRig;
+        private ICharacterMotorStateSource _motorSource;
+        private bool _warnedInvalidMotor;
 
-        /// <summary>見せるアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
 
-        /// <summary>胴・頭・銃の見た目。次に組み立てるとき (<see cref="Build"/>) から使う。null を設定するとすべて仮の形になる。</summary>
+        public ICharacterMotorStateSource MotorSource
+        {
+            get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
+            set => _motorSource = value;
+        }
+
         public PlayerMockBodyPrefabs Prefabs
         {
             get => _prefabs ?? (_prefabs = new PlayerMockBodyPrefabs());
             set => _prefabs = value ?? new PlayerMockBodyPrefabs();
         }
 
-        /// <summary>部品を組み立て済みか。</summary>
         public bool IsBuilt => _bodyRoot != null && _viewModelRoot != null;
 
-        /// <summary>三人称の体の根 (足元)。未組み立てなら null。</summary>
         public Transform BodyRoot => _bodyRoot;
 
         public Transform Torso => _torso;
@@ -115,18 +107,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>一人称の銃の根 (カメラの子)。未組み立てなら null。</summary>
         public Transform ViewModelRoot => _viewModelRoot;
 
         public Transform ViewModelGun => _viewModelGun;
 
-        /// <summary>今の反動の強さ。0 (なし) 〜 1 (撃った瞬間)。</summary>
         public float Kick => _kick;
 
-        /// <summary>
-        /// 三人称の体 (<see cref="BodyRoot"/>) を出すか。既定は true。<see cref="CharacterAnimator"/> が人型のリグを置いたら false にし、
-        /// 一人称の銃 (ビューモデル) だけを残す。変えるとすぐ反映する。
-        /// </summary>
         public bool ShowsBody
         {
             get => _showsBody;
@@ -218,15 +204,51 @@ namespace Shooter.Runtime
             var eye = _reader.Rig.Eye;
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
 
-            Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance);
+            if (TryReadMotor(out var motor, out var leanAngleDegrees))
+            {
+                Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance, motor, leanAngleDegrees);
+            }
+            else
+            {
+                Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance);
+            }
+
             var armed = _reader.Weapon == null || !_reader.Weapon.IsHolstered;
             ShowGuns(armed, armed && !HasViewmodel());
         }
 
-        /// <summary>
-        /// 武器のビューモデル (<see cref="ViewmodelPresenter.Instance"/>) が出ているか。出ている間は仮の一人称の銃を隠す
-        /// (仮の形は差し替えの見た目が無いときの代わりなので、両方を出すと銃が二重に見える)。
-        /// </summary>
+        // 読み元は PlayerController より後に付くことがあるので、見つかるまで探し直す。
+        private bool TryReadMotor(out CharacterMotorState motor, out float leanAngleDegrees)
+        {
+            motor = default;
+            leanAngleDegrees = 0f;
+            if (CharacterMotorStateSources.IsMissing(_motorSource))
+            {
+                _motorSource = TryGetComponent<ICharacterMotorStateSource>(out var found) ? found : null;
+            }
+
+            if (_motorSource == null || !_motorSource.TryGetMotorState(out motor))
+            {
+                return false;
+            }
+
+            var spec = _motorSource.Spec ?? _reader.Mover.Spec;
+            if (!motor.Lean.IsValid || !motor.WallRun.IsValid)
+            {
+                if (!_warnedInvalidMotor)
+                {
+                    Debug.LogWarning($"{LogTag} '{name}' の移動の状態のリーンか壁走りが範囲の外なので、傾けずに見せます。", this);
+                    _warnedInvalidMotor = true;
+                }
+
+                return false;
+            }
+
+            leanAngleDegrees = spec.LeanAngleDegrees;
+            return true;
+        }
+
+        // 仮の形は差し替えの見た目が無いときの代わりなので、武器のビューモデルが出ている間に両方を出すと銃が二重に見える。
         private bool HasViewmodel()
         {
             if (_viewmodel == null)
@@ -237,7 +259,6 @@ namespace Shooter.Runtime
             return _viewmodel != null && _viewmodel.Instance != null;
         }
 
-        /// <summary>三人称の体の銃と一人称の銃を見せるか隠す。武器をしまっている間 (<see cref="WeaponController.IsHolstered"/>) は隠す。組み立てていなければ何もしない。</summary>
         public void ShowGuns(bool shown)
         {
             ShowGuns(shown, shown);
@@ -261,7 +282,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>見せるアクションの読み元を渡す。</summary>
         public void Bind(PlayerActionReader reader)
         {
             if (reader == null)
@@ -273,10 +293,7 @@ namespace Shooter.Runtime
             _reader = reader;
         }
 
-        /// <summary>
-        /// 部品を組み立てる。三人称の体は本体の子、一人称の銃は camera の子に置き、本体自身のレンダラーを消す。
-        /// 組み立て済みなら何もしない。camera はこの本体の子孫であること (視点と一緒に動き、本体と一緒に消えるように)。
-        /// </summary>
+        // camera をこの本体の子孫に限るのは、一人称の銃を視点と一緒に動かし、本体と一緒に消すため。
         public void Build(Transform camera)
         {
             if (camera == null)
@@ -330,17 +347,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} built for '{name}' body={_bodyRenderers.Count} viewModel={_viewModelRenderers.Count}", this);
         }
 
-        /// <summary>
-        /// state の姿勢へ deltaSeconds 分だけ寄せる (組み立てた直後の 1 回目はそのまま置く)。一人称なら体を影だけにして
-        /// ビューモデルを出し、三人称なら体を描いてビューモデルを隠す。
-        /// </summary>
-        /// <param name="state">見せるアクション。</param>
-        /// <param name="worldVelocity">本体の速度 (ワールド)。回避で傾ける向きに使う。</param>
-        /// <param name="worldCoverNormal">カバーしている壁の面の向き (ワールド、壁から離れる向き)。</param>
-        /// <param name="aimPitch">目の上下の向き (目のローカルの回転)。三人称の銃口をこれに合わせる。</param>
-        /// <param name="feetLocalY">本体のローカルでの足元の高さ。</param>
-        /// <param name="deltaSeconds">前の Apply からの秒数。0 以上の有限値。</param>
-        /// <param name="stance">プレイヤーの立ち・しゃがみ・伏せの寸法 (<see cref="PlayerController.Stance"/>)。null なら既定の高さで縮める。</param>
         public void Apply(
             PlayerActionState state,
             Vector3 worldVelocity,
@@ -349,6 +355,34 @@ namespace Shooter.Runtime
             float feetLocalY,
             float deltaSeconds,
             StanceGeometry stance = null)
+        {
+            ApplyPose(state, worldVelocity, worldCoverNormal, aimPitch, feetLocalY, deltaSeconds, stance, null, 0f);
+        }
+
+        public void Apply(
+            PlayerActionState state,
+            Vector3 worldVelocity,
+            Vector3 worldCoverNormal,
+            Quaternion aimPitch,
+            float feetLocalY,
+            float deltaSeconds,
+            StanceGeometry stance,
+            CharacterMotorState motor,
+            float leanAngleDegrees)
+        {
+            ApplyPose(state, worldVelocity, worldCoverNormal, aimPitch, feetLocalY, deltaSeconds, stance, motor, leanAngleDegrees);
+        }
+
+        private void ApplyPose(
+            PlayerActionState state,
+            Vector3 worldVelocity,
+            Vector3 worldCoverNormal,
+            Quaternion aimPitch,
+            float feetLocalY,
+            float deltaSeconds,
+            StanceGeometry stance,
+            CharacterMotorState? motor,
+            float leanAngleDegrees)
         {
             if (!IsBuilt)
             {
@@ -367,7 +401,9 @@ namespace Shooter.Runtime
             var localNormal = transform.InverseTransformDirection(worldCoverNormal);
             var targetScale = PlayerMockPose.StanceScale(state, stance);
             var targetShift = PlayerMockPose.BodyShift(state, localNormal);
-            var targetLean = PlayerMockPose.BodyLean(state, localMove, localNormal);
+            var targetLean = motor.HasValue
+                ? PlayerMockPose.BodyLean(state, localMove, localNormal, motor.Value, leanAngleDegrees)
+                : PlayerMockPose.BodyLean(state, localMove, localNormal);
             var targetGun = PlayerMockPose.BodyGun(state, aimPitch, stance);
             var targetView = PlayerMockPose.ViewModel(state);
 
@@ -395,13 +431,11 @@ namespace Shooter.Runtime
             ApplyView(state.ViewMode);
         }
 
-        /// <summary>撃った反動を最大にする。武器の Fired から呼ばれる。</summary>
         public void AddKick()
         {
             _kick = 1f;
         }
 
-        /// <summary>部品と作った材質を壊し、本体自身のレンダラーを元に戻す。組み立てていなければ何もしない。</summary>
         public void Dismantle()
         {
             UnsubscribeWeapon();
@@ -721,9 +755,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>
-    /// <see cref="PlayerMockBody"/> の部品の見た目。どれも当たり判定を外して置く。空の部品は仮の形 (胴は Capsule、頭は Sphere、銃は箱) を作る。
-    /// </summary>
     [Serializable]
     public sealed class PlayerMockBodyPrefabs
     {

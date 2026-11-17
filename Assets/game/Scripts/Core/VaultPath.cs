@@ -4,10 +4,6 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 乗り越えの軌跡。始点からの変位 (m、Y が上) を結んだ折れ線を、一定の速さ <see cref="Speed"/> でたどる。
-    /// 衝突判定はせず、<see cref="Displacement"/> の戻り値を呼ぶ側が CharacterController.Move などに渡す。
-    /// </summary>
     public sealed class VaultPath
     {
         private readonly Vector3[] _points;
@@ -15,8 +11,6 @@ namespace Shooter.Core
         // _cumulative[i] は始点から _points[i] までの折れ線の長さ。
         private readonly float[] _cumulative;
 
-        /// <param name="points">折れ線の頂点 (始点からの変位)。2 つ以上で、各成分が有限値。</param>
-        /// <param name="speed">たどる速さ (m/s)。正の有限値。</param>
         public VaultPath(IReadOnlyList<Vector3> points, float speed)
         {
             if (points == null)
@@ -53,23 +47,16 @@ namespace Shooter.Core
             Duration = Length / speed;
         }
 
-        /// <summary>折れ線の頂点 (始点からの変位)。</summary>
         public IReadOnlyList<Vector3> Points => _points;
 
-        /// <summary>たどる速さ (m/s)。</summary>
         public float Speed { get; }
 
-        /// <summary>折れ線の長さ (m)。</summary>
         public float Length { get; }
 
-        /// <summary>たどり終えるまでの秒数。</summary>
         public float Duration { get; }
 
-        /// <summary>終点 (始点からの変位)。</summary>
         public Vector3 End => _points[_points.Length - 1];
 
-        /// <summary>始めてから seconds 秒の位置 (始点からの変位)。<see cref="Duration"/> を過ぎたら終点。</summary>
-        /// <param name="seconds">0 以上。無限大は終点として扱う。</param>
         public Vector3 PositionAt(float seconds)
         {
             if (!(seconds >= 0f))
@@ -98,9 +85,7 @@ namespace Shooter.Core
             return End;
         }
 
-        /// <summary>
-        /// fromSeconds から toSeconds までに動く変位。同じ時刻の差で出すので、フレームの刻みによらず合計は始点から終点までになる。
-        /// </summary>
+        // フレームの刻みによらず合計が始点から終点までになるよう、同じ時刻の差で出す。
         public Vector3 Displacement(float fromSeconds, float toSeconds)
         {
             if (toSeconds < fromSeconds)

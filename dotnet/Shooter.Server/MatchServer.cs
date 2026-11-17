@@ -8,7 +8,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。</summary>
+    // 時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。
     internal sealed class MatchServer : IServerControl
     {
         public const float DefaultApprovalTimeoutSeconds = 10f;
@@ -62,7 +62,11 @@ namespace Shooter.Server
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
-            Match = new ServerMatch(restartDelaySeconds, log, events, utcNow);
+            Match = new ServerMatch(
+                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference)
+            {
+                MaxPlayers = MaxPlayers,
+            };
             Match.UseMaps(map, maps);
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
@@ -80,7 +84,6 @@ namespace Shooter.Server
 
         public bool ExitRequested { get; private set; }
 
-        /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
         public int ExitCode { get; private set; } = ServerProgram.ExitOk;
 
         public int ConnectedPlayers => Match.HumanCount;
@@ -410,8 +413,26 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, rejoinKey, productUserId);
+            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request));
             _host.OnConnected(connection);
+        }
+
+        // パーティの Id はチームを決めるのにしか使わないので、形が違っても断らずに無いものとして入れる
+        private string PartyIdOf(ConnectionId connection, ConnectRequestMessage request)
+        {
+            var partyId = request.PartyId;
+            if (string.IsNullOrEmpty(partyId))
+            {
+                return null;
+            }
+
+            if (!ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            {
+                _log.WriteLine("[Net] client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " sent a malformed party id; joining without a party");
+                return null;
+            }
+
+            return partyId;
         }
 
         private string VerifiedProductUserId(ConnectionId connection)

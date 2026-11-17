@@ -3,29 +3,18 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 武器の弾のばらつき。散らばりの半角は腰撃ち／覗き込み (ADS) と移動の速さから <see cref="WeaponSpec"/> の値で決め、
-    /// 向きはその円錐の中から種 (プレイヤー Id・発射番号) だけで決める。同じ種なら必ず同じ向きを返す。
-    /// 座標は Y が上。
-    /// </summary>
     public static class SpreadPattern
     {
-        /// <summary>散らばりの半角の上限 (度)。<see cref="WeaponSpec.HipSpreadDegrees"/> などの上限と同じ。</summary>
         public const float MaxDegrees = 90f;
 
-        /// <summary>円錐の中の向きの極角 (中心からの角度) を選ぶ値の系列。</summary>
         public const uint PolarStream = 1u;
 
-        /// <summary>円錐の中の向きの方位角 (中心の周りの角度) を選ぶ値の系列。</summary>
         public const uint AzimuthStream = 2u;
 
-        /// <summary>反動の左右 (<see cref="RecoilState"/>) を選ぶ値の系列。</summary>
         public const uint RecoilYawStream = 3u;
 
-        /// <summary>ブラインドファイアの散らばり (<see cref="BlindFireShot.Spread(Vector3, float, int, int)"/>) の極角を選ぶ値の系列。</summary>
         public const uint BlindFirePolarStream = 4u;
 
-        /// <summary>ブラインドファイアの散らばりの方位角を選ぶ値の系列。</summary>
         public const uint BlindFireAzimuthStream = 5u;
 
         public const uint PelletPolarStream = 6u;
@@ -39,15 +28,6 @@ namespace Shooter.Core
         // 2^-53。64 ビットの上位 53 ビットを [0, 1) の double にする。
         private const double _unitScale = 1.0 / 9007199254740992.0;
 
-        /// <summary>
-        /// 今撃ったときの散らばりの半角 (度)。腰撃ちの <see cref="WeaponSpec.HipSpreadDegrees"/> と ADS の <see cref="WeaponSpec.AdsSpreadDegrees"/> を
-        /// adsProgress で補間し、<see cref="WeaponSpec.MoveSpreadDegrees"/> に moveFraction を掛けて足す。<see cref="MaxDegrees"/> を超えない。
-        /// </summary>
-        /// <param name="spec">撃つ武器。</param>
-        /// <param name="adsProgress">覗き込みの進み具合。0 で腰撃ち、1 で覗き込み切り。範囲外は 0〜1 に収める。</param>
-        /// <param name="moveFraction">移動の速さの割合 (<see cref="MoveFraction"/>)。0 で止まっている。範囲外は 0〜1 に収める。</param>
-        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">adsProgress か moveFraction が NaN のとき。</exception>
         public static float ConeDegrees(WeaponSpec spec, float adsProgress, float moveFraction)
         {
             if (spec == null)
@@ -71,12 +51,6 @@ namespace Shooter.Core
             return Math.Min(MaxDegrees, aim + (spec.MoveSpreadDegrees * move));
         }
 
-        /// <summary>
-        /// 移動で足された散らばりが、その覗き込み具合で動き切ったときの散らばり (<see cref="ConeDegrees"/> の moveFraction = 1) に占める割合 (0〜1)。
-        /// HUD の照準を移動で開くのに使う。<see cref="WeaponSpec.MoveSpreadDegrees"/> が 0 か、動き切っても散らばりが 0 なら 0。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">adsProgress か moveFraction が NaN のとき。</exception>
         public static float MoveShare(WeaponSpec spec, float adsProgress, float moveFraction)
         {
             var moving = ConeDegrees(spec, adsProgress, moveFraction);
@@ -85,14 +59,7 @@ namespace Shooter.Core
             return full <= 0f ? 0f : Clamp01((moving - still) / full);
         }
 
-        /// <summary>
-        /// 半角 coneDegrees の円錐の縁が、縦の視野角 verticalFieldOfViewDegrees の透視投影の画面で中央から離れる距離。
-        /// 画面の縦半分を halfHeight としたときの同じ単位で返す。円錐が 90° 以上は画面の外の無限遠になるので、<see cref="MaxDegrees"/> の手前で止める。
-        /// </summary>
-        /// <param name="coneDegrees">散らばりの半角 (度)。負は 0 として扱う。</param>
-        /// <param name="verticalFieldOfViewDegrees">カメラの縦の視野角 (度)。0 より大きく 180 未満。</param>
-        /// <param name="halfHeight">画面の縦半分の長さ (px など)。0 以上。</param>
-        /// <exception cref="ArgumentOutOfRangeException">値が有限でないか範囲外のとき。</exception>
+        // 円錐が 90° 以上は画面の外の無限遠になるので、MaxDegrees の手前で止める。
         public static float ScreenRadius(float coneDegrees, float verticalFieldOfViewDegrees, float halfHeight)
         {
             if (!IsFinite(coneDegrees))
@@ -116,12 +83,6 @@ namespace Shooter.Core
             return (float)(Math.Tan(cone) / Math.Tan(halfFov) * halfHeight);
         }
 
-        /// <summary>
-        /// 移動の速さの割合。speed が fullSpeed 以上なら 1、0 なら 0。fullSpeed が 0 以下なら、動いていれば 1。
-        /// </summary>
-        /// <param name="speed">今の水平の速さ (m/秒)。負は 0 として扱う。</param>
-        /// <param name="fullSpeed">散らばりを <see cref="WeaponSpec.MoveSpreadDegrees"/> まで足し切る速さ (m/秒)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">値が有限でないとき。</exception>
         public static float MoveFraction(float speed, float fullSpeed)
         {
             if (!IsFinite(speed))
@@ -142,25 +103,12 @@ namespace Shooter.Core
             return fullSpeed <= 0f ? 1f : Clamp01(speed / fullSpeed);
         }
 
-        /// <summary>
-        /// aim を中心とし、半角 halfAngleDegrees の円錐の中で、種 (playerId・shotIndex) から決めた向き (長さ 1)。
-        /// 種を一様な乱数と見なすと、円錐の上で一様 (立体角あたり同じ確からしさ) になる。0° なら aim を長さ 1 にしたものをそのまま返す。
-        /// </summary>
-        /// <param name="aim">狙った向き。長さは問わない。</param>
-        /// <param name="halfAngleDegrees">散らばりの半角 (度)。0 以上 <see cref="MaxDegrees"/> 以下。</param>
-        /// <param name="playerId">撃ったプレイヤーの Id。</param>
-        /// <param name="shotIndex">そのプレイヤーの発射番号。</param>
-        /// <exception cref="ArgumentOutOfRangeException">aim が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
         public static Vector3 Direction(Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex)
         {
             return Direction(aim, halfAngleDegrees, playerId, shotIndex, PolarStream, AzimuthStream);
         }
 
-        /// <summary>
-        /// <see cref="Direction(Vector3, float, int, int)"/> と同じく円錐の中の向きを決めるが、極角と方位角を選ぶ値の系列を指定する。
-        /// 同じ弾に 2 度目の散らばりを掛ける (ブラインドファイア) とき、1 度目と別の系列にして同じ向きへ重ならないようにする。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">aim が有限でないか長さ 0、halfAngleDegrees が範囲外のとき。</exception>
+        // 同じ弾に 2 度目の散らばりを掛ける (ブラインドファイア) とき、1 度目と別の系列にして同じ向きへ重ならないよう、系列を指定できるようにする。
         public static Vector3 Direction(Vector3 aim, float halfAngleDegrees, int playerId, int shotIndex, uint polarStream, uint azimuthStream)
         {
             return Cone(aim, halfAngleDegrees, playerId, shotIndex, null, polarStream, azimuthStream);
@@ -205,9 +153,6 @@ namespace Shooter.Core
             return Vector3.Normalize((forward * (float)cosTheta) + (sideways * (float)sinTheta));
         }
 
-        /// <summary>
-        /// 種 (playerId・shotIndex) と系列 (stream) だけで決まる [0, 1) の値。系列を変えると同じ種から別の値が出る。
-        /// </summary>
         public static double Sample(int playerId, int shotIndex, uint stream)
         {
             // System.Random は実装 (Mono と .NET) で列が変わりうるので使わず、整数の演算だけで決める (クライアントとサーバーで揃えるため)。

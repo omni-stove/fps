@@ -176,7 +176,6 @@ namespace Shooter.Tests.EditMode
         {
             var (inventory, weapons) = NewArmedPlayer();
 
-            // 包帯 (0,0) の次に、武器を弾薬より先に置く
             Assert.That(inventory.Inventory.Stacks.Select(s => (s.ItemId, s.X, s.Y)).Take(3), Is.EqualTo(new[]
             {
                 (_bandageId, 0, 0), (_rifleItemId, 1, 0), (_handgunItemId, 5, 0),
@@ -269,7 +268,6 @@ namespace Shooter.Tests.EditMode
             inventory.Drop(inventory.Inventory.Stacks.Single(s => s.ItemId == _handgunItemId).Handle, 1);
             var pickup = Object.FindObjectsByType<Pickup>(FindObjectsInactive.Include).Single();
 
-            // 空いたマスを包帯で埋める
             inventory.Inventory.Add(_bandageId, 1000);
 
             Assert.That(pickup.TryCollect(inventory.GetComponent<Damageable>(), out var outcome), Is.False);

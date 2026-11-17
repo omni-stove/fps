@@ -2,20 +2,13 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 切断した人が戻ってきたと見分けるための鍵 (EOS では ProductUserId、UDP では起動時に作る端末の Id) を、
-    /// 接続の承認データ (バイト列) との間で変換する。
-    /// </summary>
-    /// <remarks>
-    /// 承認データは相手が自由に送れるので、長さと文字を絞ってから文字列にする。大文字と小文字は区別しない
-    /// (EOS の Id は小文字で返るが、貼り付けなどで大文字になっても同じ人として扱う)。
-    /// </remarks>
+    // 承認データは相手が自由に送れるので、長さと文字を絞ってから文字列にする。大文字と小文字は区別しない
+    // (EOS の Id は小文字で返るが、貼り付けなどで大文字になっても同じ人として扱う)。
     public static class RejoinKey
     {
-        /// <summary>鍵の最長の文字数。ProductUserId (32 桁) と端末の Id (32 桁) が収まる。</summary>
+        // ProductUserId (32 桁) と端末の Id (32 桁) が収まる長さ。
         public const int MaxLength = 64;
 
-        /// <summary>英数字と <c>-</c> <c>_</c> だけからなる 1〜<see cref="MaxLength"/> 文字なら true。</summary>
         public static bool IsValid(string key)
         {
             if (string.IsNullOrEmpty(key) || key.Length > MaxLength)
@@ -34,8 +27,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>鍵を承認データにする。</summary>
-        /// <exception cref="ArgumentException">鍵が <see cref="IsValid"/> でない。</exception>
         public static byte[] Encode(string key)
         {
             if (!IsValid(key))
@@ -52,10 +43,6 @@ namespace Shooter.Core
             return bytes;
         }
 
-        /// <summary>
-        /// 承認データから鍵を読む。空・長すぎる・使えない文字を含むときは key を null にして false を返す。
-        /// 読めた鍵は小文字にそろえる。
-        /// </summary>
         public static bool TryDecode(byte[] payload, out string key)
         {
             key = null;
@@ -80,7 +67,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>端末の Id として使う新しい鍵 (32 桁の 16 進数)。</summary>
         public static string NewDeviceKey()
         {
             return Guid.NewGuid().ToString("N");

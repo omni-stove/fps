@@ -3,28 +3,16 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 目からカメラまでの腕 (ブーム) の計算。三人称では目から離した位置にカメラを置き、
-    /// 間に壁があれば壁の手前まで縮めてカメラが壁にめり込まないようにする。
-    /// </summary>
     public static class CameraBoom
     {
-        /// <summary>壁に寄ったときも目にこれ以上は近づけない距離 (m)。0 だと近すぎてカメラの near clip が体を切る。</summary>
+        // 0 にしないのは、近すぎるとカメラの near clip が体を切るため。
         public const float DefaultMinLength = 0.2f;
 
-        /// <summary>
-        /// 目から見たカメラの位置 (目のローカル座標)。一人称は目そのもの (0)、三人称は thirdPersonOffset。
-        /// <see cref="ShoulderSide.Right"/> を渡した <see cref="Offset(ViewMode, Vector3, ShoulderSide)"/> と同じ。
-        /// </summary>
         public static Vector3 Offset(ViewMode mode, Vector3 thirdPersonOffset)
         {
             return Offset(mode, thirdPersonOffset, ShoulderSide.Right);
         }
 
-        /// <summary>
-        /// 目から見たカメラの位置 (目のローカル座標)。一人称は目そのもの (0)、三人称は thirdPersonOffset で、
-        /// side が <see cref="ShoulderSide.Left"/> なら x (左右) の符号を反転する。
-        /// </summary>
         public static Vector3 Offset(ViewMode mode, Vector3 thirdPersonOffset, ShoulderSide side)
         {
             // 一人称でも side を検査するのは、不正な値が視点を切り替えた時点で初めて見つかるのを避けるため。
@@ -46,10 +34,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// offset (目から見たカメラの位置) を eyeBlend (0〜1 に丸める。NaN は 0) の割合だけ目へ寄せた位置。
-        /// 動き始めと止まり際が急にならないよう、割合を smoothstep で緩めてから寄せる。
-        /// </summary>
+        // 線形に寄せないのは、動き始めと止まり際が急にならないよう、割合を smoothstep で緩めるため。
         public static Vector3 TowardEye(Vector3 offset, float eyeBlend)
         {
             var t = float.IsNaN(eyeBlend) ? 0f : Math.Max(0f, Math.Min(1f, eyeBlend));
@@ -57,13 +42,6 @@ namespace Shooter.Core
             return offset * (1f - eased);
         }
 
-        /// <summary>
-        /// 腕の長さ。間を遮るものが無ければ desired のまま、あればその手前 (blockedAt) まで縮める。
-        /// ただし minLength より短くはしない (desired がそれより短ければ desired)。
-        /// </summary>
-        /// <param name="desired">遮るものが無いときの長さ (m)。0 以上の有限値。</param>
-        /// <param name="blockedAt">目からカメラへ球を飛ばして当たった距離 (m)。当たらなければ null。</param>
-        /// <param name="minLength">縮めるときの下限 (m)。0 以上の有限値。</param>
         public static float Length(float desired, float? blockedAt, float minLength = DefaultMinLength)
         {
             if (!IsFiniteNonNegative(desired))

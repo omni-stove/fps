@@ -11,11 +11,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 崩れた破片の当たり判定 (<see cref="DestructibleStructure.DebrisCrushEnabled"/>・<see cref="DebrisCrusher"/>) を確かめる。
-    /// 物理は進めないので、破片が当たったことは <see cref="DebrisCrusher.TryCrush"/> を直接呼んで表す。
-    /// 他のテストの物と重ならないよう、原点から離して置く。
-    /// </summary>
+    // 物理は進めないので、破片が当たったことは DebrisCrusher.TryCrush を直接呼んで表す。
+    // 他のテストの物と重ならないよう、原点から離して置く。
     public sealed class DebrisCrusherTests
     {
         private const string WeaponId = "rifle";
@@ -307,7 +304,6 @@ namespace Shooter.Tests.EditMode
             structure.ApplyStructureHit(target.Collider, target.transform.position, target.MaxHealth);
         }
 
-        // 1m の破片 (質量 100kg) を出す。
         private DebrisCrusher SpawnCrusher(DebrisCrushDamage damage, ShotAttribution? attribution)
         {
             var debris = _pool.Spawn(_origin + Vector3.up * 10f, Quaternion.identity, Vector3.one, null, Vector3.zero, damage, attribution, "Tower");

@@ -10,7 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    // 座席ごとの撃ち方: 運転席は撃てず、助手席は前の半分 (180 度) へ自分の銃を散らばり 2 倍で撃ち、銃座は乗り物の銃 (拳銃) を撃つ。
     // Edit Mode では Update が走らないので、撃てるかは WeaponController.IsFireBlocked と散らばりの値で確かめる。
     public sealed class PlayerVehicleRiderFiringTests
     {

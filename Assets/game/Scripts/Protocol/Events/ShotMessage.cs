@@ -5,15 +5,8 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// サーバーが確定した 1 発。撃った人の近くにいるクライアントへ送り、弾道・着弾の演出を出させる。
-    /// 撃った人がもう抜けていても演出は出す (<see cref="HasShooter"/> が false)。
-    /// </summary>
-    /// <remarks>
-    /// ペレット・貫通・跳弾で 1 回の射撃が何本にも分かれても 1 つで送るよう、弾の区間を並び (<see cref="Segment"/>) で持つ。
-    /// 区間は少なくとも 1 本あり、<see cref="Origin"/> から <see cref="ImpactZone"/> までは最初の区間を読み書きする。
-    /// 1 本だけを撃つ呼び出し側が区間の並びを知らずに済むようにするため。
-    /// </remarks>
+    // ペレット・貫通・跳弾で 1 回の射撃が何本にも分かれても 1 つで送るよう、弾の区間を並び (Segment) で持つ。
+    // Origin から ImpactZone までが最初の区間を読み書きするのは、1 本だけを撃つ呼び出し側が区間の並びを知らずに済むようにするため。
     public sealed class ShotMessage : IMessage
     {
         public const byte CurrentVersion = 2;
@@ -46,7 +39,6 @@ namespace Shooter.Protocol
             set => _segments[0].Direction = value;
         }
 
-        /// <summary>何かに当たったか。false なら着弾の値は使わない。</summary>
         public bool HasImpact
         {
             get => _segments[0].HasImpact;
@@ -65,7 +57,6 @@ namespace Shooter.Protocol
             set => _segments[0].ImpactNormal = value;
         }
 
-        /// <summary>当たった面の素材の Id (着弾の音と破片を選ぶ)。</summary>
         public string ImpactMaterialId
         {
             get => _segments[0].ImpactMaterialId ?? "";
@@ -78,7 +69,6 @@ namespace Shooter.Protocol
             set => _segments[0].ImpactIsCharacter = value;
         }
 
-        /// <summary>キャラに当たった部位が分かるか。キャラ以外なら false。</summary>
         public bool HasImpactZone
         {
             get => _segments[0].HasImpactZone;

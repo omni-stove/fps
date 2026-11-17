@@ -9,10 +9,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="FootstepSurfaceAssetStep"/> を一時フォルダに走らせて、材質ごとの音とカタログ・作り直したときの GUID・一括実行に入ることを確かめる。
-    /// リポジトリの Assets/game/Audio と Assets/game/Presentation は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Audio と Assets/game/Presentation を触らないよう、一時フォルダに走らせる。
     public sealed class FootstepSurfaceAssetStepTests
     {
         private string _folder;

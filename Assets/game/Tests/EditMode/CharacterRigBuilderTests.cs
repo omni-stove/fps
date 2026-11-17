@@ -12,10 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="CharacterRigBuilder"/> を一時フォルダに走らせて、プレハブ・コントローラー・クリップの中身と、
-    /// 2 回目の実行でファイルが変わらないことを確かめる。リポジトリの Assets/game/Characters は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Characters を触らないよう、一時フォルダに走らせる。
     public sealed class CharacterRigBuilderTests
     {
         private const float _footTolerance = 0.1f;
@@ -110,6 +107,9 @@ namespace Shooter.Tests.EditMode
                 { CharacterPose.DeadParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.WeaponCategoryParameter, AnimatorControllerParameterType.Int },
                 { CharacterPose.SlideParameter, AnimatorControllerParameterType.Bool },
+                { CharacterPose.LeanParameter, AnimatorControllerParameterType.Float },
+                { CharacterPose.SwimmingParameter, AnimatorControllerParameterType.Bool },
+                { CharacterPose.WallRunParameter, AnimatorControllerParameterType.Int },
                 { CharacterRigBuilder.StaggerParameter, AnimatorControllerParameterType.Int },
             }));
         }

@@ -48,12 +48,6 @@ namespace Shooter.Core
             BehindArcDegreesItem,
         };
 
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="MeleeSpec"/> の検査に通らない。
-        /// </exception>
         public static MeleeSpec Parse(string text, string sourceName)
         {
             var source = TuningJson.SourceOf(sourceName, _kind);

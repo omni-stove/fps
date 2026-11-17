@@ -19,7 +19,7 @@ namespace Shooter.NetV2
             _localPlayerId = localPlayerId;
         }
 
-        /// <summary>乗り物の壊れ方が変わった。初めて見た乗り物では、その時の段階で 1 度呼ぶ (途中から入った人に残骸を見せるため)。</summary>
+        // 途中から入った人に残骸を見せるため、初めて見た乗り物でもその時の段階で 1 度呼ぶ。
         public event Action<int, VehicleDamageStage> StageChanged;
 
         public event Action<VehicleSeatSync> LocalSeatChanged;

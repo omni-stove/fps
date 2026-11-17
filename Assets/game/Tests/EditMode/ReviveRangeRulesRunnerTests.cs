@@ -7,9 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインの BattleRoyaleRunner と ExecutionRunner が、ダウンした味方を起こせる距離をルールの reviveRange から読むことを確かめる。
-    /// </summary>
     public sealed class ReviveRangeRulesRunnerTests
     {
         private static readonly Vector3 AlphaSpawn = new Vector3(0f, 0f, 0f);

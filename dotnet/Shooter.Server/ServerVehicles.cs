@@ -13,7 +13,7 @@ namespace Shooter.Server
     {
         public const string LogTag = VehicleLog.Tag;
 
-        /// <summary>降りる位置を置いていない座席から降りるとき、座席の横へ離す距離 (m)。Unity の Vehicle.FallbackExitDistance と同じ。</summary>
+        // Unity の Vehicle.FallbackExitDistance と同じ。
         public const float FallbackExitDistance = 2f;
 
         // 降りる位置の当たりを確かめるとき、地面に触れただけで塞がっていることにしないよう体を浮かせる高さ。

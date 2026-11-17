@@ -3,11 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 燃える範囲 (焼夷グレネード) の決まり。中にいる相手に間隔ごとに状態異常をかけ直すだけにし、範囲が直接ダメージを与えないのは、
-    /// 外に出た相手を状態異常が切れるまで燃やし続け、中でも外でも同じ間隔・同じ帰属でダメージを数えるため。
-    /// オフライン (AreaEffectZone) とサーバー (ServerAreaEffects) で結果をそろえるため、ここに置く。
-    /// </summary>
+    // 中にいる相手に間隔ごとに状態異常をかけ直すだけにし、範囲が直接ダメージを与えないのは、
+    // 外に出た相手を状態異常が切れるまで燃やし続け、中でも外でも同じ間隔・同じ帰属でダメージを数えるため。
+    // オフライン (AreaEffectZone) とサーバー (ServerAreaEffects) で結果をそろえるため、ここに置く。
     public static class FireArea
     {
         public const float DefaultBurnSeconds = 3f;
@@ -19,10 +17,7 @@ namespace Shooter.Core
         private static readonly ConditionalWeakTable<AreaEffectSpec, StatusEffectSpec> _derived =
             new ConditionalWeakTable<AreaEffectSpec, StatusEffectSpec>();
 
-        /// <summary>
-        /// statusEffect を書いていない範囲でも damagePerTick だけで燃えるよう、範囲の間隔とダメージから燃焼を作る。
-        /// 出た後に燃える長さは書けば statusEffect.durationSeconds、書かなければ <see cref="DefaultBurnSeconds"/>。
-        /// </summary>
+        // statusEffect を書いていない範囲でも damagePerTick だけで燃えるよう、範囲の間隔とダメージから燃焼を作る。
         public static StatusEffectSpec Affliction(AreaEffectSpec spec)
         {
             if (spec == null)
@@ -44,10 +39,8 @@ namespace Shooter.Core
             return affliction != null && string.Equals(affliction.KindId, StatusEffectKinds.Burn, StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// 毎フレームかけ直すと、かけるたびの知らせ (ネット対戦では全員へのメッセージ) が増えすぎるので、出た直後と
-        /// <see cref="AreaEffectSpec.TickSeconds"/> ごとの回だけ true にする。経った時間から数え、範囲ごとに状態を持たずに済ませる。
-        /// </summary>
+        // 毎フレームかけ直すと、かけるたびの知らせ (ネット対戦では全員へのメッセージ) が増えすぎるので、出た直後と
+        // AreaEffectSpec.TickSeconds ごとの回だけ true にする。経った時間から数え、範囲ごとに状態を持たずに済ませる。
         public static bool Pulses(AreaEffectSpec spec, float elapsedSeconds, float deltaSeconds)
         {
             if (spec == null)

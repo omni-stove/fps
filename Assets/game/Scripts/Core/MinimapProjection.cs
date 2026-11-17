@@ -3,11 +3,6 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ワールドの位置と向きを、自分を中心にしたミニマップの位置とコンパスの方位へ直す。
-    /// 向きは <see cref="MinimapContact"/> と同じく、上から見て北 (+Z) を 0 度に時計回り (東 +X が 90 度)。
-    /// 地図の位置は中心が 0、+X が右、+Y が上で、単位は <see cref="MinimapSpec.Scale"/> を掛けたもの。高さ (Y) は見ない。
-    /// </summary>
     public static class MinimapProjection
     {
         // 真上や真下に近い向きは水平の成分がわずかな揺れで大きく回るので、方位を出さずに無いと返す。
@@ -15,12 +10,6 @@ namespace Shooter.Core
 
         private const float _degreesPerRadian = 180f / MathF.PI;
 
-        /// <summary>
-        /// worldPosition を地図の位置へ直す。spec が自分の向きを上にするなら selfHeadingDegrees の分だけ回す。
-        /// <see cref="MinimapSpec.Radius"/> より遠いものは、同じ向きのまま縁 (<see cref="MinimapSpec.MapRadius"/>) に寄せ、onEdge を true にする。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">位置か向きが有限でない。</exception>
         public static Vector2 ToMap(MinimapSpec spec, Vector3 selfPosition, float selfHeadingDegrees, Vector3 worldPosition, out bool onEdge)
         {
             if (spec == null)
@@ -48,16 +37,11 @@ namespace Shooter.Core
             return offset * spec.Scale;
         }
 
-        /// <summary>ToMap の status 版。自分の位置と向きは status から取る。</summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public static Vector2 ToMap(MinimapSpec spec, MinimapStatus status, MinimapContact contact, out bool onEdge)
         {
             return ToMap(spec, status.SelfPosition, status.SelfHeadingDegrees, contact.Position, out onEdge);
         }
 
-        /// <summary>地図の上で印を何度回して描くか (上が 0 で時計回り、0 以上 360 未満)。北が上なら headingDegrees のまま。</summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">向きが有限でない。</exception>
         public static float MapHeadingDegrees(MinimapSpec spec, float selfHeadingDegrees, float headingDegrees)
         {
             if (spec == null)
@@ -70,11 +54,6 @@ namespace Shooter.Core
             return spec.RotateWithPlayer ? MinimapContact.NormalizeHeading(heading - self, nameof(headingDegrees)) : heading;
         }
 
-        /// <summary>
-        /// 向き (前を指すベクトル) から方位の角度 (0 以上 360 未満) を出す。
-        /// 真上か真下を向いていて水平の向きが無いときは false を返し、degrees は 0。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">direction が有限でない。</exception>
         public static bool TryHeadingDegrees(Vector3 direction, out float degrees)
         {
             MinimapContact.RequireFinite(direction, nameof(direction));
@@ -88,8 +67,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>from から to への方位の角度。to が from の真上か真下なら false。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">位置が有限でない。</exception>
         public static bool TryBearingDegrees(Vector3 from, Vector3 to, out float degrees)
         {
             MinimapContact.RequireFinite(from, nameof(from));
@@ -97,11 +74,6 @@ namespace Shooter.Core
             return TryHeadingDegrees(to - from, out degrees);
         }
 
-        /// <summary>
-        /// 自分の向きから見て bearingDegrees が何度ずれているか。右が正で、-180 以上 180 未満。
-        /// コンパスの帯で、方位や印を中心からどれだけ横に置くかに使う。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">角度が有限でない。</exception>
         public static float RelativeDegrees(float selfHeadingDegrees, float bearingDegrees)
         {
             var self = MinimapContact.NormalizeHeading(selfHeadingDegrees, nameof(selfHeadingDegrees));

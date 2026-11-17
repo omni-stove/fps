@@ -126,7 +126,6 @@ namespace Shooter.Core.Tests
             drain.Request(10f, false, 1);
             drain.Tick(20f, true, 1);
 
-            // 待ち終えた後に自分で呼ぶ終了も、ここを通る
             Assert.That(drain.Request(21f, false, 1), Is.False);
             Assert.That(drain.Tick(22f, false, 0), Is.False);
             Assert.That(drain.Stop, Is.EqualTo(ServerDrainStop.MatchEnded));

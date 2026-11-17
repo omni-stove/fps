@@ -7,10 +7,8 @@ namespace Shooter.Runtime
     {
         Transform Root { get; }
 
-        // 0 以下を返せば調べない。
         float NearMissRadius { get; }
 
-        // 倒れているなど、今は数えないなら false。
         bool TryGetNearMissCenter(out Vector3 center);
 
         void OnNearMiss(HitscanNearMiss nearMiss);

@@ -7,11 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 1 人ぶんの持たせている武器の並び (Unity の NetPlayerWeapon のサーバー側)。弾倉・予備弾・リロード・アクティブリロード・持ち替えを
-    /// Core の <see cref="ServerWeapon"/> と <see cref="Loadout{T}"/> で進め、持ち主に送る <see cref="WeaponSync"/> を作る。
-    /// 弾薬の種類は武器ごとの <see cref="ServerWeapon.AmmoTypes"/> で選び、撃つ弾の値 (<see cref="CurrentRound"/>・<see cref="CurrentImpact"/>) はその種類で上書きする。
-    /// </summary>
     internal sealed class ServerPlayerWeapons
     {
         // 押していた時間は届いた時刻の差で測るので、前の射撃だけ遅れて届くと短く見える。その揺れで正しく溜めた弾を削らないよう、この秒数だけ長く見る。
@@ -40,29 +35,20 @@ namespace Shooter.Server
 
         public bool IsEquipped => _loadout != null;
 
-        /// <summary>今持っている武器 (持ち替え中は持ち替え先)。装備前は null。</summary>
         public WeaponSpec CurrentSpec => _loadout?.Current.Spec;
 
         public IReadOnlyList<ServerWeapon> Items => _loadout?.Items ?? Array.Empty<ServerWeapon>();
 
-        /// <summary>持っている武器の値 (スロット順)。装備前は空。</summary>
         public IReadOnlyList<WeaponSpec> Specs { get; private set; } = Array.Empty<WeaponSpec>();
 
-        /// <summary>今の武器で撃つ弾の値 (選んだ弾薬の種類で上書きした後)。装備前は null。</summary>
         public RoundSpec CurrentRound => _loadout == null ? null : CurrentAmmoType.Round;
 
-        /// <summary>今の武器の着弾の値 (選んだ弾薬の種類で上書きした後)。装備前は null。</summary>
         public ImpactSpec CurrentImpact => _loadout == null ? null : CurrentAmmoType.Impact;
 
-        /// <summary>
-        /// 今の武器の弾薬の種類を <see cref="WeaponSync.AmmoTypeIndex"/> の値にしたもの。0 は種類を選んでいない (武器そのものの弾)、
-        /// 1 からは <see cref="WeaponSpec.AmmoTypes"/> の番号 + 1。
-        /// </summary>
         public byte AmmoTypeIndex => _loadout == null ? (byte)0 : (byte)(CurrentAmmoType.Index + 1);
 
         private AmmoTypeSelector CurrentAmmoType => _loadout.Current.AmmoTypes;
 
-        /// <summary>specs をこの並びで満タンで持たせ、0 番を構えた状態にする。前の武器 (リロード中・持ち替え中を含む) は捨てる。</summary>
         public void Equip(IReadOnlyList<WeaponSpec> specs, float switchSeconds, GameRules rules)
         {
             ArgumentNullException.ThrowIfNull(specs);
@@ -169,7 +155,6 @@ namespace Shooter.Server
             return list;
         }
 
-        /// <summary>全武器を満タンに戻してリロードをやめ、持ち替え中でも 0 番を構えた状態に戻す。試合の開始時に呼ぶ。</summary>
         public void Refill()
         {
             if (_loadout == null)
@@ -200,7 +185,6 @@ namespace Shooter.Server
             _loadout.Current.Tick(deltaSeconds);
         }
 
-        /// <summary>今の武器で 1 発ぶん消費する。弾倉が空なら (予備弾があれば) リロードを始めて <see cref="ShotRejection.OutOfAmmo"/>。</summary>
         public ShotRejection TryFire()
         {
             if (_loadout == null)
@@ -227,11 +211,6 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>
-        /// 射撃の要求の溜め requested を今の武器に照らして受け入れ、着弾の倍率に使う値を fraction に返す。溜めの無い武器は 0。
-        /// 溜めは前に溜めを使い切った時 (前の射撃・持ち替え・装備) からの秒数で届く分までに下げ、下げた値が最小に届かず、
-        /// 届かない弾を撃たない武器なら <see cref="ShotRejection.Undercharged"/>。受け入れた値は持ち主に <see cref="WeaponSync.ChargeFraction"/> で返す。
-        /// </summary>
         public ShotRejection AcceptCharge(float requested, out float fraction)
         {
             var charge = CurrentSpec?.Trigger.Charge;
@@ -282,10 +261,6 @@ namespace Shooter.Server
             return charge == null || ChargeTrigger.Fraction(charge, _now() - _chargeFrom) >= 1f;
         }
 
-        /// <summary>
-        /// 今の武器の弾薬の種類を次へ切り替え、込めてあった弾を予備弾に戻す (次のリロードから新しい種類を込める)。
-        /// 持ち替え中・装備前・切り替えられない武器なら false。
-        /// </summary>
         public bool TrySwitchAmmoType()
         {
             if (_loadout == null || _loadout.IsSwitching || !_loadout.Current.TrySwitchAmmoType())
@@ -297,7 +272,6 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>持っている weaponId (大文字・小文字は区別する) へ持ち替える。並びに無ければ警告を出して false。</summary>
         public bool TrySwitch(string weaponId)
         {
             if (_loadout == null)
@@ -318,10 +292,7 @@ namespace Shooter.Server
             return false;
         }
 
-        /// <summary>
-        /// 持ち主に送る今の武器の状態。アクティブリロードのルールが On でリロード中なら、開始時刻と長さを、まだ判定していなければ成功の幅も載せる
-        /// (Unity の NetPlayerWeapon.BuildState と同じ)。
-        /// </summary>
+        // Unity の NetPlayerWeapon.BuildState と同じものを載せる。
         public WeaponSync Sync()
         {
             if (_loadout == null)

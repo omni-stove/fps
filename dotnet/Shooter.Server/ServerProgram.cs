@@ -8,7 +8,7 @@ using Shooter.Server.Eos;
 
 namespace Shooter.Server
 {
-    /// <summary>終了コードを Unity の専用サーバー (<c>NetBootstrap</c>) と同じ番号にするのは、運用の監視をそのまま使えるようにするため。</summary>
+    // 終了コードを Unity の専用サーバー (NetBootstrap) と同じ番号にするのは、運用の監視をそのまま使えるようにするため。
     internal static class ServerProgram
     {
         public const string LogTag = "[Server]";
@@ -155,10 +155,8 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// Unity のサーバー (<c>NetBootstrap</c>) と同じく、EOS を求められても認証情報が揃わなければ UDP で待ち受ける。
-        /// 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
-        /// </summary>
+        // Unity のサーバー (NetBootstrap) と同じく、EOS を求められても認証情報が揃わなければ UDP で待ち受ける。
+        // 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
         private static bool TryPlanTransport(ServerLaunch launch, ServerRuntime runtime, out NetTransportPlan plan, out string error)
         {
             plan = null;

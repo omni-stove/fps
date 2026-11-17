@@ -7,19 +7,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 倒されてからリスポーンまでの観戦で、自分のカメラを借りて動かす部分。いつ始めて止めるか・何を映すかは持ち主
-    /// (ネット対戦の NetDeathCamera、オフラインの <see cref="PlayerDeathCamera"/>) が決め、ここはカメラの置き方と入力だけを受け持つ。
-    /// <list type="bullet">
-    /// <item><see cref="Begin(Vector3, float)"/> で <see cref="ViewRig"/> を三人称 (倒れた主観では一人称のまま) にして止め (カメラはこちらが置く)、視点操作 (<see cref="FirstPersonLook.InputSuspended"/>) と
-    /// 覗き込み (<see cref="AimDownSights"/>) を止め、Move・Next・Previous の入力を使えるようにする。</item>
-    /// <item><see cref="Restore"/> でカメラの位置・ViewRig の視点・入力を元に戻す。</item>
-    /// <item>倒した相手の方を向く (<see cref="Frame"/>)、味方の肩越し (<see cref="FrameAlly"/>)、自由カメラ (<see cref="MoveFree"/>)、
-    /// 倒れた主観 (<see cref="FrameFallen"/>) のどれかでカメラを置く。</item>
-    /// </list>
-    /// 壁にめり込まないよう縮めるのは <see cref="ViewRig.ResolveBoomPosition(Vector3, Vector3, Transform)"/>、自由カメラが壁を抜けないのは
-    /// <see cref="ViewRig.ResolveFreeMove"/> で決める。
-    /// </summary>
     public sealed class DeathCamView
     {
         public const string LogTag = "[DeathCam]";
@@ -50,7 +37,6 @@ namespace Shooter.Runtime
         private bool _lookWasSuspended;
         private bool _engaged;
 
-        // 自由カメラ。切り替わった時点のカメラの位置と向きから始める
         private readonly LookAngles _freeAngles = new LookAngles();
         private Vector3 _freePosition;
         private bool _freeActive;
@@ -70,8 +56,6 @@ namespace Shooter.Runtime
         private bool _enabledNextAction;
         private bool _enabledPreviousAction;
 
-        /// <param name="owner">カメラを持つプレイヤー。ログの名前と、ViewRig・FirstPersonLook・AimDownSights・カメラを探す起点に使う。</param>
-        /// <param name="missingCameraHint">カメラが見つからないときの警告に添える、直し方の一言。</param>
         public DeathCamView(Component owner, string missingCameraHint)
             : this(owner, missingCameraHint, true)
         {
@@ -87,16 +71,12 @@ namespace Shooter.Runtime
             Resolve();
         }
 
-        /// <summary><see cref="Begin"/> してから <see cref="Restore"/> するまでの間か。</summary>
         public bool IsEngaged => _engaged;
 
-        /// <summary>借りているカメラ。借りていないか、カメラが見つからなければ null。</summary>
         public Camera Camera => _camera;
 
-        /// <summary>倒れた時点の目の位置。</summary>
         public Vector3 DeathEye => _deathEye;
 
-        /// <summary>いま自由カメラで動かしているか。</summary>
         public bool IsFreeCamera => _engaged && _freeActive;
 
         public float FreeRoll
@@ -185,19 +165,12 @@ namespace Shooter.Runtime
             Restore(true);
         }
 
-        /// <summary>
-        /// カメラを借りる。deathEye は倒れた目の位置、fallbackYaw は向ける相手がいないときに使う体の向き (度)。
-        /// 借りている間にもう一度呼んでも何もしない。
-        /// </summary>
         public void Begin(Vector3 deathEye, float fallbackYaw)
         {
             Begin(deathEye, fallbackYaw, false);
         }
 
-        /// <summary>
-        /// <see cref="Begin(Vector3, float)"/> の、keepFirstPerson が true なら ViewRig を一人称のままにするもの。
-        /// 倒れた主観 (<see cref="FrameFallen"/>) で、床の近くに下ろしたカメラを三人称の位置へ動かさず、自分の目のまま倒すために使う。
-        /// </summary>
+        // keepFirstPerson で ViewRig を一人称のままにできるのは、倒れた主観 (FrameFallen) で床の近くに下ろしたカメラを三人称の位置へ動かさず、自分の目のまま倒すため。
         public void Begin(Vector3 deathEye, float fallbackYaw, bool keepFirstPerson)
         {
             if (_engaged)
@@ -257,10 +230,6 @@ namespace Shooter.Runtime
             AcquireActions();
         }
 
-        /// <summary>
-        /// カメラと入力を戻す。reenableView が false なら (視点が無くなったときなど) ViewRig と覗き込みを有効に戻さない。
-        /// 借りていなければ何もしない。
-        /// </summary>
         public void Restore(bool reenableView)
         {
             if (!_engaged)
@@ -310,10 +279,6 @@ namespace Shooter.Runtime
             _freeLimitRadius = null;
         }
 
-        /// <summary>
-        /// カメラを倒れた目から <see cref="DeathCamFraming.BoomOffset"/> の先 (壁があれば手前) へ置き、target (null なら倒れた目) を向ける。
-        /// 借りていなければ何もしない。
-        /// </summary>
         public void Frame(Vector3? target, float height, float backDistance)
         {
             if (!_engaged || _camera == null)
@@ -331,11 +296,6 @@ namespace Shooter.Runtime
             _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(pitch, yaw, 0f));
         }
 
-        /// <summary>
-        /// 倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れ始めてから elapsed 秒のカメラを置く。倒れた目から真下の
-        /// <see cref="FallenView.Eye"/> (壁や床があれば手前) へ下ろし、倒れた時の体の向きのまま、上下の向きと横の傾きを fallen に従って変える。
-        /// groundY は倒れた足元の高さ。借りていなければ何もしない。
-        /// </summary>
         public void FrameFallen(FallenView fallen, float groundY, float elapsed)
         {
             if (fallen == null)
@@ -355,10 +315,6 @@ namespace Shooter.Runtime
             _camera.transform.SetPositionAndRotation(position, rotation);
         }
 
-        /// <summary>
-        /// カメラを味方の目から肩越し (<see cref="DeathCamFraming.ShoulderPosition"/>、壁があれば手前) へ置き、
-        /// 味方の体の向き (allyYaw、度) を水平に向ける。allyRoot は味方の本体で、カメラを縮める判定でその体を除く。借りていなければ何もしない。
-        /// </summary>
         public void FrameAlly(Vector3 allyEye, float allyYaw, Transform allyRoot)
         {
             if (!_engaged || _camera == null)
@@ -373,12 +329,17 @@ namespace Shooter.Runtime
             _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, allyYaw, 0f));
         }
 
-        /// <summary>
-        /// 自由カメラを 1 フレーム動かす。直前まで自由カメラでなければ、今のカメラの位置と向きから始める。
-        /// lookDegrees (x は正で右、y は正で上) だけ回してから、move (Move 入力) で向いている方へ speed (m/s) で進め、
-        /// 壁の手前で止める (<see cref="ViewRig.ResolveFreeMove"/>)。<see cref="LimitFree"/> していればその球の中に収め、
-        /// 向きには <see cref="FreeRoll"/> の傾きを付ける。借りていなければ何もしない。
-        /// </summary>
+        public void FrameEye(Vector3 eye, float yaw)
+        {
+            if (!_engaged || _camera == null)
+            {
+                return;
+            }
+
+            _freeActive = false;
+            _camera.transform.SetPositionAndRotation(eye, Quaternion.Euler(0f, yaw, 0f));
+        }
+
         public void MoveFree(Vector2 move, Vector2 lookDegrees, float speed, float deltaSeconds)
         {
             if (!_engaged || _camera == null)
@@ -420,7 +381,6 @@ namespace Shooter.Runtime
             return PhotoModeSpec.ClampWithin(position.ToNumerics(), _freeLimitCenter.ToNumerics(), _freeLimitRadius.Value).ToUnity();
         }
 
-        /// <summary>このフレームの Next と Previous の押下をまとめた数。Next で +1、Previous で -1。</summary>
         public int ReadSpectateStep()
         {
             var step = 0;
@@ -437,13 +397,11 @@ namespace Shooter.Runtime
             return step;
         }
 
-        /// <summary>このフレームの Move 入力。入力が無ければ zero。</summary>
         public Vector2 ReadMove()
         {
             return _moveAction != null ? _moveAction.ReadValue<Vector2>() : Vector2.zero;
         }
 
-        /// <summary>このフレームの Look 入力を、プレイヤーの感度で回転量 (度) にしたもの。</summary>
         public Vector2 ReadLookDegrees(float deltaSeconds)
         {
             return _look != null ? _look.ReadLookDegrees(deltaSeconds) : Vector2.zero;

@@ -6,14 +6,8 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 火炎 (<see cref="RoundDelivery.Spray"/>) の見た目。当たりと燃焼はサーバーが決めるので、ここでは見せるだけ。
-    /// 他の人の火炎は噴射の知らせ (<see cref="BeamStateMessage"/>) の始点と終点で出し、見た目を出す側 (NetV2Client) に <see cref="Drawn"/> と <see cref="Hidden"/> で知らせる。
-    /// </summary>
-    /// <remarks>
-    /// 撃った本人は知らせを待たずに、押してから離すまで毎フレーム (<see cref="Update"/>) 今の視線で世界に当てて火炎を出す。
-    /// 本人宛ての噴射中の知らせは往復ぶん遅れた視線なので使わず、止まった知らせ (熱・倒れた) だけで火炎を消し、次に押すまで出さない。
-    /// </remarks>
+    // 本人宛ての噴射中の知らせは往復ぶん遅れた視線なので使わず、撃った本人は知らせを待たずに押してから離すまで毎フレーム (Update) 今の視線で世界に当てて火炎を出す。
+    // 止まった知らせ (熱・倒れた) だけは本人宛てでも使って火炎を消し、次に押すまで出さない。
     public sealed class ClientSpray
     {
         private readonly Func<string, WeaponSpec> _findWeapon;
@@ -45,7 +39,6 @@ namespace Shooter.NetV2
             _localPlayerId = localPlayerId;
         }
 
-        /// <summary>つなぎ直しや試合の切り替えで、出していた火炎をすべて消す。</summary>
         public void Detach()
         {
             StopLocal();
@@ -142,7 +135,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>撃った本人の火炎を、今の目の位置 eye と視線 direction で出し直す。押していなければ何もしない。</summary>
         public void Update(Vector3 eye, Vector3 direction)
         {
             var round = _localRound;
@@ -187,10 +179,8 @@ namespace Shooter.NetV2
 
     public readonly struct SprayView
     {
-        /// <summary>武器が分からない火炎を、次の知らせを待って出し続ける秒数。</summary>
         public const float DefaultHoldSeconds = 0.1f;
 
-        /// <summary>武器が分からない火炎の広がり (半角の度)。</summary>
         public const float DefaultConeDegrees = 10f;
 
         public SprayView(int shooterId, string weaponId, Vector3 start, Vector3 end, SpraySpec spray)
@@ -209,10 +199,9 @@ namespace Shooter.NetV2
 
         public string WeaponId { get; }
 
-        /// <summary>撃った人の目の位置。銃口から出すかは見た目の側が決める。</summary>
+        // 銃口から出すかは見た目の側が決めるので、撃った人の目の位置のまま持つ。
         public Vector3 Start { get; }
 
-        /// <summary>火炎が世界で止まった所。人では止まらない。</summary>
         public Vector3 End { get; }
 
         public float TickSeconds { get; }

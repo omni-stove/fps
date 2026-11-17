@@ -11,10 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 参照の解決と、しゃがみ (カプセルと目の寸法・頭上の検査)。
-    /// Edit Mode でも Physics の重なり判定はコライダーに当たるので、障害物を置いたら SyncTransforms してから Tick する。
-    /// </summary>
+    // Edit Mode でも Physics の重なり判定はコライダーに当たるので、障害物を置いたら SyncTransforms してから Tick する。
     public sealed class PlayerControllerTests
     {
         private const float _tolerance = 1e-4f;
@@ -23,7 +20,6 @@ namespace Shooter.Tests.EditMode
         private const float _height = 2f;
         private const float _radius = 0.5f;
 
-        // 乗り越えの検査で正面に置く壁の、体の中心から手前の面までの距離と厚さ。
         private const float _wallNearZ = 0.8f;
         private const float _wallDepth = 0.4f;
         private static readonly Vector3 _bodyPosition = new Vector3(0f, 1f, 0f);
@@ -719,7 +715,6 @@ namespace Shooter.Tests.EditMode
                 Object.DestroyImmediate(ceiling);
             }
 
-            // 天井が無くなっても、切り替えたしゃがみは勝手には解けない。
             Physics.SyncTransforms();
             TickCrouch(false, false, false, false, InputDeviceKind.KeyboardMouse);
             Assert.That(_player.IsCrouched, Is.True);
@@ -860,7 +855,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_player.IsCrouchActive, Is.False);
             Assert.That(_player.IsSprinting, Is.False);
 
-            // しゃがみとジャンプを押し続けても、転がっている間は立ったまま跳ばない。
             Physics.SyncTransforms();
             _player.Tick(Vector2.zero, true, true, true, 0.02f);
 
@@ -1015,7 +1009,6 @@ namespace Shooter.Tests.EditMode
             LandOnFloor();
             _player.VaultRule = Vault.On;
             _player.JumpRule = Jump.Off;
-            // 前へ長く延びる厚さ 0.4 m の壁に、端から向かう。
             _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _wall.transform.position = new Vector3(0f, 0.5f, _wallNearZ + 2.5f);
             _wall.transform.localScale = new Vector3(_wallDepth, 1f, 5f);
@@ -1091,7 +1084,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(PlayerController.FormatVaultProbeLog(result), Is.EqualTo("[Player] vault=TooDeep height=1.00 depth=inf"));
         }
 
-        // 正面 (+Z) の、体の中心から _wallNearZ 先に、厚さ _wallDepth・高さ height の壁を床の上に置く。
         private void PlaceWallInFront(float height, float depth = _wallDepth)
         {
             _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1100,7 +1092,6 @@ namespace Shooter.Tests.EditMode
             Physics.SyncTransforms();
         }
 
-        // 足元 (y = 0) の下に床を置き、接地するまで落とす。
         private void LandOnFloor()
         {
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1144,7 +1135,6 @@ namespace Shooter.Tests.EditMode
             return _body.transform.position.y + _characterController.center.y - (_characterController.height * 0.5f);
         }
 
-        // 受け取った値を覚え、値を決めた項目だけ書き換える。
         private sealed class RewritingMoveFilter : IPlayerMoveFilter
         {
             public Vector2? Move { get; set; }

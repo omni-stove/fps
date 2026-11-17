@@ -11,7 +11,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Net.Tests
 {
-    // 失敗したら make export-server-data で書き出し直し、server-data/maps をコミットする
     public sealed class ServerDataMapsTests
     {
         private const int _probeCount = 4500;

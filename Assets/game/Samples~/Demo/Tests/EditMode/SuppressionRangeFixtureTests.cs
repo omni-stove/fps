@@ -12,7 +12,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場の制圧の的 (<see cref="Shooter.Editor.SuppressionRangeFixture"/>) と smoke の手順 (<see cref="Shooter.Editor.SuppressionSmokeStep"/>) を確かめる。</summary>
     public sealed class SuppressionRangeFixtureTests
     {
         [Test]

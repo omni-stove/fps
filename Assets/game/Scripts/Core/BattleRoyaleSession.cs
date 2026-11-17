@@ -3,68 +3,32 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// バトルロイヤル。<see cref="Squads"/> で分隊を組み、倒れた人は戻らない (<see cref="NoRespawn"/>)。
-    /// 体力が 0 になった人はダウンし、分隊の味方が起こすか出血で倒れるまでは試合から外れない。分隊の全員が倒れた分隊は脱落し、
-    /// 脱落した順に順位 (<see cref="GetPlacement"/>) が付く。最後に残った 1 分隊 (<see cref="LastSideStandingWin"/>) が 1 位で勝つ。
-    /// 時間は <see cref="Tick"/> で外から進める。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>体力が 0 になったことは <see cref="ReportLethal"/> で伝える。分隊にほかに立っている (倒れてもダウンしてもいない) 人がいればダウンさせ、
-    /// いなければその場で倒し、ダウン中の分隊の味方もいっしょに倒す (起こせる人がもういないので)。
-    /// <see cref="ActionRules.Downed"/> が Off のルールでは、ダウンさせずにその場で倒す。</item>
-    /// <item>ダウン中は撃たれても倒れない (体の体力はもう 0)。倒れるのは出血か分隊の全滅のとき。どちらも、ダウンさせた敵 (いなければダウン中に最後に当てた敵)
-    /// が倒したことにする (<see cref="DownedTracker.GetBleedoutCreditId"/>)。</item>
-    /// <item>蘇生の長押しは <see cref="Revive"/> で、押している間 Tick ごとに 1 度、その秒数で進める。決まりは <see cref="DownedTracker"/> の蘇生と同じ。</item>
-    /// <item>順位: 同じ Tick に脱落した分隊は同じ順位で、その Tick の頭で残っていた分隊の数から脱落した数を引いて 1 足した順位になる。
-    /// 開始時に誰もいなかった分隊は数えない。全員が抜けた分隊も脱落と同じに扱う。試合が終わったときに残っていた分隊は、
-    /// 立っている人・残っている人の多い順に 1 位から付ける (最後の 1 分隊なら 1 位、時間切れで同数なら同じ順位)。</item>
-    /// <item>制限時間を <see cref="float.PositiveInfinity"/> にすると時間切れにならない (縮むエリアで決着させる)。
-    /// 有限なら、時間切れで立っている人のいちばん多い分隊が勝ち、同じなら残っている人で比べ、それも同じなら引き分け。</item>
-    /// </list>
-    /// 参加と陣営分けは <see cref="Mode"/> に直接行う。ModeSession の Start・Reset・報告と抜けるのは、この型を通して呼ぶ。
-    /// </remarks>
     public sealed class BattleRoyaleSession
     {
         public const int DefaultSquadCount = 4;
         public const int DefaultSquadSize = 2;
 
-        /// <summary>ダウンさせたときに呼ばれる。引数はダウンした人と、ダウンさせた人 (分からないときと自滅では null)。</summary>
         public event Action<int, int?> PlayerDowned;
 
-        /// <summary>味方を起こし終えたときに呼ばれる。引数は起こした人と起き上がった人。</summary>
         public event Action<int, int> PlayerRevived;
 
-        /// <summary>出血で倒れたときに呼ばれる。引数は倒れた人と、倒したことにした敵 (いなければ null)。ModeSession に報告した後に呼ぶ。</summary>
         public event Action<int, int?> PlayerBledOut;
 
-        /// <summary>
-        /// 分隊の全滅で、ダウン中の人を倒したときに呼ばれる。引数は倒れた人と、倒したことにした敵 (いなければ null)。ModeSession に報告した後に呼ぶ。
-        /// </summary>
         public event Action<int, int?> PlayerFinished;
 
-        /// <summary>分隊が脱落して順位が決まったときに呼ばれる。引数は分隊と順位。勝敗を調べる前 (<see cref="Tick"/> の頭) に呼ぶ。</summary>
         public event Action<Side, int> SquadEliminated;
 
-        /// <summary>試合が終わり、残っていた分隊にも順位を付け終えたときに呼ばれる。引数は勝った分隊で、引き分けなら null。</summary>
         public event Action<Side?> Ended;
 
         private readonly ModeSession _mode;
 
-        // ダウンを使わないルールでは null。
         private readonly DownedTracker _downed;
 
         private readonly Dictionary<Side, int> _placements = new Dictionary<Side, int>();
         private readonly List<Side> _entrants = new List<Side>();
 
-        // 時間切れの判定で数えた、分隊ごとの (立っている人数 << 32 | 残っている人数)。
         private readonly Dictionary<Side, long> _finalCounts = new Dictionary<Side, long>();
 
-        /// <param name="squadCount">分隊の数。2 以上。</param>
-        /// <param name="squadSize">1 隊の人数の上限。1 以上。</param>
-        /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい値。<see cref="float.PositiveInfinity"/> なら時間切れにならない。</param>
-        /// <param name="actions">ダウン・出血・蘇生の決まり。</param>
         public BattleRoyaleSession(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions)
         {
             Actions = actions ?? throw new ArgumentNullException(nameof(actions));
@@ -83,24 +47,18 @@ namespace Shooter.Core
             _mode.Ended += OnModeEnded;
         }
 
-        /// <summary>試合を表す ModeSession。参加者の出入りと、倒れたか (<see cref="ModeSession.IsDown"/>) はここで見る。</summary>
         public ModeSession Mode => _mode;
 
         public ActionRules Actions { get; }
 
-        /// <summary>体力が 0 になった人をダウンさせるなら true (<see cref="ActionRules.Downed"/> が Revive)。</summary>
         public bool UsesDowned => _downed != null;
 
-        /// <summary>試合中 (始まっていて終わっていない) なら true。</summary>
         public bool IsLive => _mode.State == GameModeState.Playing;
 
-        /// <summary>開始時に 1 人以上いた分隊の数。始める前は 0。</summary>
         public int EntrantCount => _entrants.Count;
 
-        /// <summary>開始時に 1 人以上いて、まだ順位の付いていない分隊の数。</summary>
         public int SquadsRemaining => _entrants.Count - _placements.Count;
 
-        /// <summary>試合を始める。開始時に 1 人以上いる分隊を順位の対象にする。</summary>
         public void Start()
         {
             _entrants.Clear();
@@ -115,7 +73,6 @@ namespace Shooter.Core
             _mode.Start();
         }
 
-        /// <summary>ダウンと順位を消し、<see cref="ModeSession.Reset"/> で最初に戻す。参加者と陣営分けは残す。</summary>
         public void Reset()
         {
             _downed?.Clear();
@@ -125,27 +82,18 @@ namespace Shooter.Core
             _mode.Reset();
         }
 
-        /// <summary>ダウン中なら true。</summary>
         public bool IsDowned(int playerId) => _downed != null && _downed.IsDowned(playerId);
 
-        /// <summary>ダウン中の人の id を昇順で返す。</summary>
         public IReadOnlyList<int> GetDownedIds() => _downed != null ? _downed.GetDownedIds() : (IReadOnlyList<int>)Array.Empty<int>();
 
-        /// <summary>出血で倒れるまでの残り秒数。ダウンしていなければ null。</summary>
         public float? GetBleedoutRemaining(int playerId) => _downed?.GetBleedoutRemaining(playerId);
 
-        /// <summary>起こされている進み (0 以上 1 以下)。ダウンしていなければ 0。</summary>
         public float GetReviveProgress(int playerId) => _downed != null ? _downed.GetReviveProgress(playerId) : 0f;
 
-        /// <summary>
-        /// 最大体力が maxHealth の人が起こされた後の体力。最大体力に <see cref="ActionRules.DownedHealthFraction"/> を掛けて切り上げる。
-        /// </summary>
         public int RevivedHealth(int maxHealth) => DownedTracker.HealthFor(maxHealth, Actions.DownedHealthFraction);
 
-        /// <summary>playerId が倒れてもダウンしてもいなければ true。</summary>
         public bool IsStanding(int playerId) => !_mode.IsDown(playerId) && !IsDowned(playerId);
 
-        /// <summary>squad のうち、まだ倒れていない人数 (ダウン中を含む)。</summary>
         public int CountRemaining(Side squad)
         {
             var count = 0;
@@ -160,7 +108,6 @@ namespace Shooter.Core
             return count;
         }
 
-        /// <summary>squad のうち、ダウン中の人数。</summary>
         public int CountDowned(Side squad)
         {
             var count = 0;
@@ -175,13 +122,10 @@ namespace Shooter.Core
             return count;
         }
 
-        /// <summary>squad のうち、倒れてもダウンしてもいない人数。</summary>
         public int CountStanding(Side squad) => CountRemaining(squad) - CountDowned(squad);
 
-        /// <summary>squad の順位。まだ付いていなければ null。</summary>
         public int? GetPlacement(Side squad) => _placements.TryGetValue(squad, out var place) ? place : (int?)null;
 
-        /// <summary>付いた順位を、順位の昇順 (同じなら分隊の ID の昇順) で返す。</summary>
         public IReadOnlyList<SquadPlacement> GetPlacements()
         {
             var list = new List<SquadPlacement>(_placements.Count);
@@ -194,13 +138,7 @@ namespace Shooter.Core
             return list;
         }
 
-        /// <summary>
-        /// victimId の体力が 0 になったことを伝える。試合中で、倒れてもダウンしてもいなければ、分隊にほかに立っている人がいればダウンさせ、
-        /// いなければ倒して分隊のダウン中の人もいっしょに倒す。ダウンを使わないルールではその場で倒す。
-        /// </summary>
-        /// <param name="victimId">体力が 0 になった人。</param>
-        /// <param name="attackerId">当てた人。分からないときは null。</param>
-        /// <exception cref="ArgumentOutOfRangeException">victimId か attackerId が参加していない。</exception>
+        // 分隊にほかに立っている人がいなければ、起こせる人がもういないので、ダウン中の味方もいっしょに倒す。
         public BattleRoyaleHit ReportLethal(int victimId, int? attackerId)
         {
             RequirePlayer(victimId, nameof(victimId));
@@ -228,14 +166,6 @@ namespace Shooter.Core
             return BattleRoyaleHit.Downed;
         }
 
-        /// <summary>
-        /// actorId が、ダウンした分隊の味方 targetId を deltaSeconds だけ起こす。距離は呼ぶ側が確かめる。
-        /// 試合中でない・同じ分隊でない・actorId が立っていない・targetId がダウンしていないときは <see cref="ReviveStep.Rejected"/>。
-        /// </summary>
-        /// <param name="actorId">起こす人。</param>
-        /// <param name="targetId">ダウンした人。</param>
-        /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
-        /// <exception cref="ArgumentOutOfRangeException">actorId か targetId が参加していないか、deltaSeconds が不正。</exception>
         public ReviveStep Revive(int actorId, int targetId, float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -262,10 +192,6 @@ namespace Shooter.Core
             return step;
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進める。試合中なら、出血の残りを減らして 0 になった人を倒し、立っている人のいない分隊のダウン中の人を倒し、
-        /// 脱落した分隊に順位を付けてから、<see cref="ModeSession.Tick"/> で勝敗を調べて時間を進める。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsPositiveInfinity(deltaSeconds))
@@ -287,8 +213,6 @@ namespace Shooter.Core
             _mode.Tick(deltaSeconds);
         }
 
-        /// <summary>playerId を抜く。ダウンからも外し、抜けた人には出血のキルを付けない。分隊の最後の 1 人なら、次の Tick で脱落として扱う。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">参加していない。</exception>
         public void RemovePlayer(int playerId)
         {
             _mode.RemovePlayer(playerId);
@@ -308,7 +232,6 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>squad のダウン中の人をすべて倒す。倒したことにする敵がいなければ fallbackCreditId (敵なら) にする。</summary>
         private void FinishDowned(Side squad, int? fallbackCreditId)
         {
             if (_downed == null)
@@ -401,7 +324,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>まだ順位の無い分隊のうち、脱落したか全員抜けた分隊に、同じ Tick の脱落として同じ順位を付ける。</summary>
         private void PlaceEliminatedSquads()
         {
             List<Side> eliminated = null;
@@ -485,10 +407,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 試合に参加した分隊のうち脱落していないものが 1 つ以下になったら終える。1 つならその分隊の勝ち、なければ引き分け。
-        /// <see cref="LastSideStandingWin"/> は誰もいない分隊を勝ちにしうるので使わない。
-        /// </summary>
+        // LastSideStandingWin は誰もいない分隊を勝ちにしうるので使わない。
         private sealed class LastSquadStanding : IWinCondition
         {
             private readonly BattleRoyaleSession _owner;
@@ -524,7 +443,6 @@ namespace Shooter.Core
             public ModeOutcome CheckTimeUp(ModeSession session) => ModeOutcome.Undecided;
         }
 
-        /// <summary>時間切れのとき、立っている人のいちばん多い分隊の勝ち。同じなら残っている人で比べ、それも同じなら引き分け。</summary>
         private sealed class MostStandingAtTimeUp : IWinCondition
         {
             private readonly BattleRoyaleSession _owner;
@@ -544,10 +462,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// まだ順位の無い分隊ごとに、立っている人数を上の桁・残っている人数を下の桁にした値を覚え、
-        /// いちばん大きい分隊を返す。いちばん大きい分隊が複数あれば null (引き分け)。
-        /// </summary>
+        // 立っている人数を上の桁、残っている人数を下の桁にするのは、1 回の比較で立っている人数を先に、同じなら残っている人数で比べるため。
         private Side? CaptureStandingAndPickLeader()
         {
             _finalCounts.Clear();

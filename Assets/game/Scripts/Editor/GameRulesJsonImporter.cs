@@ -9,24 +9,14 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// JSON (<see cref="GameRulesJson"/> の形) からモードのルールのアセット (<see cref="GameRulesDefinition"/>) を作るか上書きする。
-    /// 1 ファイルが 1 アセットで、アセットの名前はファイル名から拡張子を除いたもの (<c>TeamDeathmatch.json</c> なら <c>TeamDeathmatch.asset</c>)。
-    /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// どれか 1 つでも読めない・値が不正・書けない場所なら、1 つも保存せずに、ファイル名と項目名を添えた例外を投げる
-    /// (batchmode では Unity が終了コード 1 で終わる)。
-    /// Editor を閉じた状態で次のように呼べる (<see cref="OutputArgument"/> を省くと <see cref="GameRulesAssets.Folder"/>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameRulesJsonImporter.Import -rulesJson Assets/MyGame/Rules/Json -rulesOut Assets/MyGame/Rules</code>
-    /// </summary>
+    // 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     public static class GameRulesJsonImporter
     {
         public const string MenuPath = "Shooter/Import Game Rules From JSON";
         public const string LogTag = "[GameRulesJsonImporter]";
 
-        /// <summary>読む JSON のファイルか、JSON を並べたフォルダ (直下の <c>*.json</c> だけを読む)。プロジェクトのフォルダからの相対か絶対パス。</summary>
         public const string SourceArgument = "-rulesJson";
 
-        /// <summary>アセットを書き出す Assets/ の下のフォルダ。無ければ作る。</summary>
         public const string OutputArgument = "-rulesOut";
 
         public const string JsonExtension = ".json";
@@ -34,7 +24,6 @@ namespace Shooter.Editor
         private const string _assetExtension = ".asset";
         private const string _writablePrefix = "Assets/";
 
-        /// <summary>batchmode の入口。引数は <see cref="ResolveArguments"/> のとおり。</summary>
         public static void Import()
         {
             var (source, output) = ResolveArguments(Environment.GetCommandLineArgs(), () => GameRulesAssets.Folder);
@@ -66,11 +55,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から読み込み元 (<see cref="SourceArgument"/>、必須) と出力先 (<see cref="OutputArgument"/>、無ければ defaultOutput の値) を取り出す。
-        /// defaultOutput は出力先が省かれたときだけ呼ぶ (出力先ルートの引数の検査を、使わないときに走らせないため)。
-        /// </summary>
-        /// <exception cref="ArgumentException">読み込み元が無い、どちらかの値が無い、または同じ引数が 2 度ある。</exception>
+        // 出力先ルートの引数の検査を使わないときに走らせないよう、defaultOutput は出力先が省かれたときだけ呼ぶ。
         public static (string Source, string Output) ResolveArguments(IReadOnlyList<string> args, Func<string> defaultOutput)
         {
             if (defaultOutput == null)
@@ -89,13 +74,7 @@ namespace Shooter.Editor
             return (source, output ?? defaultOutput());
         }
 
-        /// <summary>
-        /// source (JSON のファイルか、JSON を並べたフォルダ) のルールを outputFolder に <c>&lt;ファイル名&gt;.asset</c> として作るか上書きして保存し、
-        /// 読んだ順 (フォルダならファイル名の順) に返す。すべて読んで検査してから書くので、失敗したときは 1 つも保存しない。
-        /// </summary>
-        /// <exception cref="GameRulesJsonException">JSON が読めない、知らない項目がある、または値が不正。メッセージにファイル名と項目名を含む。</exception>
-        /// <exception cref="ArgumentException">source が無い・JSON が 1 つも無い、outputFolder が Assets/ の下でない、またはアセットの名前が重なる。</exception>
-        /// <exception cref="InvalidOperationException">出力先に <see cref="GameRulesDefinition"/> でないアセットがある。</exception>
+        // すべて読んで検査してから書くのは、どれか 1 つでも失敗したときに 1 つも保存しないため。
         public static GameRulesDefinition[] ImportFrom(string source, string outputFolder)
         {
             var files = FindJsonFiles(source);
@@ -147,11 +126,6 @@ namespace Shooter.Editor
             return built;
         }
 
-        /// <summary>
-        /// source がファイルならそれだけを、フォルダなら直下の <c>*.json</c> をファイル名の順 (序数比較) に返す。
-        /// 区切りは / に揃える。<c>Packages/</c> で始まる source は <see cref="ShooterKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
-        /// </summary>
-        /// <exception cref="ArgumentException">source が空・存在しない・.json でない、またはフォルダに .json が 1 つも無い。</exception>
         public static IReadOnlyList<string> FindJsonFiles(string source)
         {
             if (string.IsNullOrWhiteSpace(source))
@@ -193,8 +167,6 @@ namespace Shooter.Editor
             return files;
         }
 
-        /// <summary>folder を Assets/ の下のフォルダとして正規化して返す。</summary>
-        /// <exception cref="ArgumentException">folder が空、Assets/ の下でない、または空・<c>.</c>・<c>..</c> の区切りを含む。</exception>
         public static string ValidateOutputFolder(string folder)
         {
             var normalized = KitPaths.NormalizeRoot(folder);

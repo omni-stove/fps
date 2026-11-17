@@ -3,11 +3,8 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// Unity の CharacterController と同じ規則で、<see cref="IWorldCollision"/> の上の縦向きのカプセルを動かす。
-    /// 1 回の <see cref="Move"/> は、段を上がる持ち上げ・横の滑り・下ろしの 3 つに分けて掃引する。
-    /// 同じ状態・同じ変位・同じ世界からは同じ結果のビットになる (クライアントの予測とサーバーで同じ計算をするため)。
-    /// </summary>
+    // Unity の CharacterController と同じ規則で動かす。
+    // クライアントの予測とサーバーで同じ計算をするため、同じ状態・同じ変位・同じ世界からは同じ結果のビットになるようにする。
     public sealed class CapsuleMover
     {
         private const int _maxSlideIterations = 4;
@@ -23,11 +20,6 @@ namespace Shooter.Core
         private readonly CapsuleMoverSpec _spec;
         private readonly int[] _overlap = new int[1];
 
-        /// <param name="world">当たりを問い合わせる世界。</param>
-        /// <param name="spec">坂・段差・skin の設定。</param>
-        /// <param name="radius">カプセルの半径。正の有限値。</param>
-        /// <param name="height">カプセルの高さ。半径の 2 倍より低ければ球になる。</param>
-        /// <param name="center"><see cref="Position"/> からカプセルの中心へのずれ (ワールドの向き)。</param>
         public CapsuleMover(IWorldCollision world, CapsuleMoverSpec spec, float radius, float height, Vector3 center)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -49,14 +41,10 @@ namespace Shooter.Core
 
         public Vector3 Position { get; private set; }
 
-        /// <summary>最後の <see cref="Move"/> で歩ける面に立ったか (<see cref="CapsuleContacts.Below"/>)。</summary>
         public bool IsGrounded => (Contacts & CapsuleContacts.Below) != 0;
 
         public CapsuleContacts Contacts { get; private set; }
 
-        /// <summary>
-        /// 当たりを調べずに置く。再シミュレーションで前の tick の状態に戻すときにも使う。
-        /// </summary>
         public void Place(Vector3 position, CapsuleContacts contacts)
         {
             RequireFinite(position, nameof(position));
@@ -64,9 +52,6 @@ namespace Shooter.Core
             Contacts = contacts;
         }
 
-        /// <summary>
-        /// 当たりを調べずに高さと中心を変える。立ち上がるなど広がるときは、先に <see cref="HasHeadroom"/> で確かめる。
-        /// </summary>
         public void SetShape(float height, Vector3 center)
         {
             if (!(height >= 0f) || float.IsInfinity(height))
@@ -79,16 +64,12 @@ namespace Shooter.Core
             Center = center;
         }
 
-        /// <summary>今の位置で、この高さと中心のカプセルが何にも重ならないか。</summary>
         public bool HasHeadroom(float height, Vector3 center)
         {
             return IsClear(Position, height, center);
         }
 
-        /// <summary>
-        /// position に置いたこの高さと中心のカプセルが何にも重ならないか。
-        /// 床や壁に skin の隙間で触れているだけで塞がっていると見なさないよう、半径を skin (半径の半分まで) だけ細くして調べる。
-        /// </summary>
+        // 床や壁に skin の隙間で触れているだけで塞がっていると見なさないよう、半径を skin (半径の半分まで) だけ細くして調べる。
         public bool IsClear(Vector3 position, float height, Vector3 center)
         {
             if (!(height >= 0f) || float.IsInfinity(height))
@@ -103,10 +84,6 @@ namespace Shooter.Core
             return _world.OverlapCapsule(bottom, top, Radius - margin, _spec.LayerMask, _overlap) == 0;
         }
 
-        /// <summary>
-        /// displacement だけ動かす。壁や歩けない坂には沿って滑り、<see cref="CapsuleMoverSpec.StepOffset"/> までの段は上がる。
-        /// 動かす前から重なっているものは通り抜ける (<see cref="IWorldCollision.CapsuleCast"/> と同じ)。
-        /// </summary>
         public CapsuleContacts Move(Vector3 displacement)
         {
             RequireFinite(displacement, nameof(displacement));

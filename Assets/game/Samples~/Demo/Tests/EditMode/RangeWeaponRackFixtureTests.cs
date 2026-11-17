@@ -11,7 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場で拾える武器の棚 (<see cref="RangeWeaponRackFixture"/>) を確かめる。</summary>
     public sealed class RangeWeaponRackFixtureTests
     {
         private readonly List<Object> _created = new List<Object>();

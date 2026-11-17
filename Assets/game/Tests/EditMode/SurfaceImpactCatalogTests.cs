@@ -6,7 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="SurfaceImpactCatalog"/> の置き場所・材質の引き当てと default への寄せ方・検査を確かめる。</summary>
     public sealed class SurfaceImpactCatalogTests
     {
         private readonly List<Object> _created = new List<Object>();

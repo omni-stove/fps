@@ -12,11 +12,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 壊せる建物 (<see cref="DestructibleStructure"/>・<see cref="DestructiblePiece"/>) と破片 (<see cref="DebrisPool"/>) を確かめる。
-    /// 部品は 1m の Cube を 2x2 に並べる。添字は下段が 0 (左)・1 (右)、上段が 2 (左)・3 (右) で、下段だけ地面に接する。
-    /// 他のテストの物と重ならないよう、原点から離して置く。
-    /// </summary>
+    // 部品は 1m の Cube を 2x2 に並べる。添字は下段が 0 (左)・1 (右)、上段が 2 (左)・3 (右) で、下段だけ地面に接する。
+    // 他のテストの物と重ならないよう、原点から離して置く。
     public sealed class DestructibleStructureTests
     {
         private static readonly Vector3 _origin = new Vector3(200f, 0f, 200f);
@@ -175,7 +172,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(structure.Pieces[i].Collider.enabled, Is.False, $"piece {i}");
             }
 
-            // 直接壊れた 2 つは小さな破片を、崩落した 2 つは自分の大きさの破片を 1 つずつ出す。
             Assert.That(_pool.Count, Is.EqualTo(2 * DestructibleStructure.FragmentsPerDestroyedPiece + 2));
             var whole = 0;
             foreach (Transform debris in _pool.transform)

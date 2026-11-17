@@ -12,13 +12,10 @@ namespace Shooter.Core.Tests
         private static readonly Vector3 _self = Vector3.Zero;
         private static readonly Vector3 _enemy = new Vector3(0f, 1f, 8f);
 
-        // 撃ち合っている判断: 敵を見て撃ち、その場に留まる (Attack)。
         private static readonly EnemyDecision _fighting = new EnemyDecision(null, _enemy, true, true);
 
-        // 追っている判断: 敵の方へ動き、まだ撃たない (Chase)。
         private static readonly EnemyDecision _chasing = new EnemyDecision(_enemy, _enemy, false);
 
-        // 巡回の判断: 巡回地点へ動く (Patrol)。
         private static readonly EnemyDecision _patrolling = new EnemyDecision(new Vector3(-5f, 0f, 0f), null, false);
 
         [Test]

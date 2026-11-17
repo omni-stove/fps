@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="WeaponExtrasCatalog"/> の引き方と検査、仮素材を作る <see cref="WeaponExtrasAssetStep"/> の組み合わせを確かめる。
-    /// 素材を書き出す <see cref="WeaponExtrasAssetStep.Build"/> は呼ばない。
-    /// </summary>
     public sealed class WeaponExtrasCatalogTests
     {
         private WeaponExtrasCatalog _catalog;

@@ -3,17 +3,9 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="DodgeMotion"/> の中身 1 回分 (<see cref="DodgeMotion.Capture"/> で写し、<see cref="DodgeMotion.Restore"/> で戻す)。
-    /// ネット対戦の予測で過去の tick へ巻き戻して同じ入力を再シミュレーションするために、転がりの進みと待ち時間を含める。
-    /// <c>default</c> は転がっておらず、待ち時間も無い。
-    /// </summary>
+    // ネット対戦の予測で過去の tick へ巻き戻して同じ入力を再シミュレーションするために、転がりの進みと待ち時間を含める。
     public readonly struct DodgeSnapshot : IEquatable<DodgeSnapshot>
     {
-        /// <param name="isRolling">転がっている最中か。</param>
-        /// <param name="direction">転がっている向き (ワールドの水平の単位ベクトル)。転がっていなければ使わない。</param>
-        /// <param name="elapsed">今の転がりを始めてからの秒数。転がっていなければ使わない。</param>
-        /// <param name="cooldownRemaining">次を始められるまでの残りの秒数。</param>
         public DodgeSnapshot(bool isRolling, Vector2 direction, float elapsed, float cooldownRemaining)
         {
             IsRolling = isRolling;
@@ -22,24 +14,16 @@ namespace Shooter.Core
             CooldownRemaining = cooldownRemaining;
         }
 
-        /// <summary>転がっておらず、待ち時間も無い。</summary>
         public static DodgeSnapshot Ready => default;
 
         public bool IsRolling { get; }
 
-        /// <summary><see cref="DodgeMotion.Direction"/>。</summary>
         public Vector2 Direction { get; }
 
-        /// <summary><see cref="DodgeMotion.Elapsed"/>。</summary>
         public float Elapsed { get; }
 
-        /// <summary><see cref="DodgeMotion.CooldownRemaining"/>。</summary>
         public float CooldownRemaining { get; }
 
-        /// <summary>
-        /// <see cref="DodgeMotion.Restore"/> に渡せる値か。数値がすべて有限で、秒数が負でなく、転がっている最中なら向きが 0 でない。
-        /// ネットワークから受け取った値の検査に使う。
-        /// </summary>
         public bool IsValid
         {
             get

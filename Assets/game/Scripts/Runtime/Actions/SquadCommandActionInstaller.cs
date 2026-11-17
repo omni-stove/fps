@@ -3,13 +3,10 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーに <see cref="SquadCommandController"/> を (無ければ) 付けて設定する。
-    /// 指示を受ける味方の bot がいなければ何も起きない (<c>[Squad] refused reason=NoRecipients</c>) ので、ルールでは切り替えない。
-    /// </summary>
+    // 指示を受ける味方の bot がいなければ何も起きない ([Squad] refused reason=NoRecipients) ので、ルールでは切り替えない。
     public sealed class SquadCommandActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。</summary>
+        // ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。
         public const int InstallOrder = 510;
 
         public const string TuningResourcePath = "Tuning/squad";

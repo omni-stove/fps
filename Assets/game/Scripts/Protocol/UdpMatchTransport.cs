@@ -11,16 +11,12 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// LiteNetLib の UDP で <see cref="IMatchTransport"/> を実装する。送受信と再送・ping は LiteNetLib のスレッドが行い、
-    /// 出来事は <see cref="TryReceive"/> の中で溜めてから返すので、呼ぶ側のスレッドの外で呼び返さない。
-    /// </summary>
+    // 送受信と再送・ping は LiteNetLib のスレッドが行うので、出来事は TryReceive の中で溜めてから返し、呼ぶ側のスレッドの外で呼び返さない。
     public sealed class UdpMatchTransport : IMatchTransport
     {
-        /// <summary>合言葉 (<see cref="UdpTransportOptions.ConnectionKey"/>) が違う相手を断るときの理由。</summary>
         public const string ProtocolMismatchReason = DisconnectNotice.RejectedPrefix + "protocol-mismatch";
 
-        /// <summary>LiteNetLib が分けて送るので UDP 1 つに収まらなくてよい。1 つのメッセージの最長 (<see cref="MessageWriter"/>) に合わせる。</summary>
+        // LiteNetLib が分けて送るので UDP 1 つに収まらなくてよい。1 つのメッセージの最長 (MessageWriter) に合わせる。
         public const int MaxReliablePayloadSize = MessageWriter.DefaultMaxLength;
 
         private const int _lingerPollMilliseconds = 5;
@@ -55,14 +51,11 @@ namespace Shooter.Protocol
             Client,
         }
 
-        /// <summary>
-        /// MTU を探らずに LiteNetLib の初期値のまま使うので、どの経路でも分けずに送れるこの長さで固定できる。
-        /// </summary>
+        // MTU を探らずに LiteNetLib の初期値のまま使うので、どの経路でも分けずに送れるこの長さで固定できる。
         public static int MaxUnreliablePayloadSize => NetConstants.InitialMtu - NetConstants.HeaderSize;
 
         public bool IsActive => _manager != null;
 
-        /// <summary>待ち受けているかつないでいるローカルのポート。止まっていれば 0。ポート 0 で待ち受けたときに実際のポートを知るのに使う。</summary>
         public int LocalPort => _manager?.LocalPort ?? 0;
 
         public void Listen(string address, ushort port)
@@ -257,10 +250,7 @@ namespace Shooter.Protocol
             return ip;
         }
 
-        /// <summary>
-        /// LiteNetLib の名前解決は OS が IPv6 を使えると IPv6 を先に返すが、ここでは IPv4 だけで開くので IPv4 を選ぶ。
-        /// 解決できなければ null を返し、つながらなかった出来事として知らせる。
-        /// </summary>
+        // LiteNetLib の名前解決は OS が IPv6 を使えると IPv6 を先に返すが、ここでは IPv4 だけで開くので IPv4 を選ぶ。
         private static IPAddress ResolveIPv4(string address)
         {
             if (IPAddress.TryParse(address, out var parsed))
@@ -526,16 +516,15 @@ namespace Shooter.Protocol
 
             public bool Reported { get; set; }
 
-            /// <summary>こちらから切り始めたか。切り始めた後に届いたデータは出さない。</summary>
             public bool Closing { get; set; }
 
             public string LocalReason { get; set; } = "";
 
-            /// <summary>LiteNetLib の往復時間は最初の ping が返るまで 0 なので、測れたかを別に持つ。</summary>
+            // LiteNetLib の往復時間は最初の ping が返るまで 0 なので、測れたかを別に持つ。
             public bool Measured { get; set; }
         }
 
-        /// <summary>LiteNetLib の型を公開の API に出さないよう、受け口を中に閉じる。</summary>
+        // LiteNetLib の型を公開の API に出さないよう、受け口を中に閉じる。
         private sealed class Listener : ILiteNetEventListener
         {
             private readonly UdpMatchTransport _owner;

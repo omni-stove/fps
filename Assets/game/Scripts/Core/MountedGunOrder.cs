@@ -10,7 +10,6 @@ namespace Shooter.Core
 
         public bool Fire { get; }
 
-        // 降りるならその理由。乗ったままなら null。
         public MountedGunLeaveCause? Leave { get; }
     }
 }

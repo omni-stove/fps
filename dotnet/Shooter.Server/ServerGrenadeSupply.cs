@@ -15,11 +15,7 @@ namespace Shooter.Server
         UnknownType,
     }
 
-    /// <summary>
-    /// 1 人ぶんのグレネードの種類ごとの残りと、前に投げてからの間隔 (Unity の <c>ServerGrenadeSupply</c> と同じ)。
-    /// 次に投げられるまでの間隔は、前に投げた種類の <see cref="GrenadeSpec.ThrowSeconds"/>。
-    /// 要求の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より jitterSeconds まで早く届いても断らない。
-    /// </summary>
+    // 要求の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より jitterSeconds まで早く届いても断らない。
     internal sealed class ServerGrenadeSupply
     {
         private readonly GrenadeCatalog _catalog;
@@ -54,7 +50,6 @@ namespace Shooter.Server
             _nextThrowAt = double.NegativeInfinity;
         }
 
-        /// <summary>typeId の種類を今投げられるか。typeId が空なら持っている最初の種類を投げる。</summary>
         public GrenadeThrowRejection Check(double nowSeconds, string typeId, out GrenadeSpec spec)
         {
             if (!double.IsFinite(nowSeconds))

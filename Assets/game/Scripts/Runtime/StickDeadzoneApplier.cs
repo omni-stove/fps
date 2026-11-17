@@ -8,13 +8,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 設定のスティックのデッドゾーン (<see cref="ControlSettings.StickDeadzone"/>) を、Input Actions の
-    /// <see cref="LeftStickPath"/>・<see cref="RightStickPath"/> の割り当てに <c>stickDeadzone(min=…)</c> の processor の上書きとして付ける。
-    /// 割り当ての上書き (<see cref="PlayerBindings"/>・<see cref="InputBindingOverridesStore"/>) の入力のパスと interaction はそのまま残す。
-    /// 設定が変わったとき (<see cref="AppliedControlSettings.Changed"/>) と、上書きを読み直したり外したりして割り当てが解決し直されたときに付け直し、
-    /// 無効になったら外す。アセットは <see cref="Actions"/>、空ならプロジェクト全体のアクション (<see cref="InputSystem.actions"/>)。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class StickDeadzoneApplier : MonoBehaviour
     {
@@ -34,10 +27,6 @@ namespace Shooter.Runtime
         private bool _listening;
         private bool _needsRefresh;
 
-        /// <summary>
-        /// デッドゾーンを付けるアセット。null ならプロジェクト全体のアクション。
-        /// 有効な間に変えると、前のアセットから外して新しいアセットに付ける。
-        /// </summary>
         public InputActionAsset Actions
         {
             get => _actions;
@@ -57,15 +46,9 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今デッドゾーンを付けているアセット。付けていなければ null。</summary>
         public InputActionAsset AppliedActions => _applied;
 
-        /// <summary>
-        /// baseProcessors (アセットに書いた processor) の先頭に、deadzone の <c>stickDeadzone</c> を足した processor の文字列。
-        /// baseProcessors に <c>stickDeadzone</c> があれば外す (2 つ重ねると内側の範囲で 2 回伸ばしてしまう)。
-        /// 先頭に置くのは、スケールなどのあとに切ると、切る量が設定と変わるため。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">deadzone が 0 未満か 1 以上か、数でない。</exception>
+        // 先頭に置くのは、スケールなどのあとに切ると、切る量が設定と変わるため。既にある stickDeadzone を外すのは、2 つ重ねると内側の範囲で 2 回伸ばしてしまうため。
         public static string ProcessorsFor(string baseProcessors, float deadzone)
         {
             if (float.IsNaN(deadzone) || deadzone < 0f || deadzone >= 1f)
@@ -89,7 +72,6 @@ namespace Shooter.Runtime
             return builder.ToString();
         }
 
-        /// <summary>binding がデッドゾーンを付ける割り当て (効いている入力が左右のスティック) か。</summary>
         public static bool IsStickBinding(InputBinding binding)
         {
             if (binding.isComposite)
@@ -102,13 +84,6 @@ namespace Shooter.Runtime
                 || string.Equals(path, RightStickPath, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// actions のすべてのマップのスティックの割り当てに、deadzone の processor の上書きを付ける。
-        /// 入力のパスと interaction の上書きは残す。既に同じ processor が付いている割り当ては触らない (解決し直しを起こさない)。
-        /// 付け直した割り当ての数を返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">actions が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">deadzone が 0 未満か 1 以上か、数でない。</exception>
         public static int Apply(InputActionAsset actions, float deadzone)
         {
             if (actions == null)
@@ -148,10 +123,6 @@ namespace Shooter.Runtime
             return changed;
         }
 
-        /// <summary>
-        /// actions のスティックの割り当てから processor の上書きを外す。入力のパスと interaction の上書きは残す。外した割り当ての数を返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">actions が null。</exception>
         public static int Remove(InputActionAsset actions)
         {
             if (actions == null)
@@ -190,11 +161,6 @@ namespace Shooter.Runtime
             return removed;
         }
 
-        /// <summary>
-        /// settings のデッドゾーンを、<see cref="Actions"/> (空ならプロジェクト全体のアクション) に付け直す。
-        /// 付けるアセットが無ければ警告を出して何もしない。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">settings が null。</exception>
         public void Refresh(ControlSettings settings)
         {
             if (settings == null)

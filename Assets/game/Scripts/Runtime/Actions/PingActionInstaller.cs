@@ -3,10 +3,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>プレイヤーに <see cref="PingController"/> を (無ければ) 付け、<see cref="ActionRules.Ping"/> で付けられるかを決める。</summary>
     public sealed class PingActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。</summary>
+        // ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。
         public const int InstallOrder = 500;
 
         public int Order => InstallOrder;

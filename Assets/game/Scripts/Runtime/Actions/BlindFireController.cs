@@ -5,17 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 遮蔽物に隠れたまま狙わずに撃つブラインドファイアを受け持つ、プレイヤーのコンポーネント。
-    /// <see cref="Configure"/> でルールの <see cref="ActionRules.BlindFire"/> が <see cref="BlindFire.On"/> のときだけ有効にし、
-    /// 有効な間は <see cref="WeaponController.ShotFilter"/> に自分を差し込む。
-    /// カバー中 (<see cref="CoverController.IsInCover"/>) で覗いていない (<see cref="CoverController.IsPeeking"/> でない) ときの射撃を、
-    /// 低い壁では壁の上から、高い壁では端の横から、武器の <see cref="WeaponSpec.BlindFireSpreadDegrees"/> で散らして撃つ (<see cref="BlindFireShot"/>)。
-    /// 体は出さないので、しゃがみ・位置・撃たれる側の当たり判定は変えない。弾倉の消費と連射の間隔は通常の射撃と同じ。
-    /// 高い壁で端にいないときは撃てないので、その間は WeaponController の Attack を止める (弾を消費させない)。
-    /// 参照はコードで解決するので Inspector の配線は要らない: <see cref="CoverController"/> と <see cref="ViewRig"/> (無くてもよい) は同じ GameObject、
-    /// <see cref="WeaponController"/> は子 (プレイヤーのカメラ)。
-    /// </summary>
+    // 高い壁で端にいないときは撃てないので、その間は WeaponController の Attack を止めて弾を消費させない。
     [DisallowMultipleComponent]
     // Attack を止めるのは、WeaponController が同じフレームに Attack を読むより先でないと効かない。
     [DefaultExecutionOrder(-10)]
@@ -28,7 +18,6 @@ namespace Shooter.Runtime
         private ViewRig _rig;
         private System.Random _random = new System.Random();
 
-        // 端にいない高い壁で止めている Attack。止めていなければ null。
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _blockedAttack;
@@ -39,23 +28,17 @@ namespace Shooter.Runtime
 
         public bool IsInitialized => _cover != null && _weapon != null;
 
-        /// <summary>弾の向きを散らす乱数。テストで固定するために差し替える。null は渡せない。</summary>
+        // テストで乱数を固定できるよう差し替えられるようにする。
         public System.Random Random
         {
             get => _random;
             set => _random = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>今 Attack すればブラインドファイアになるか (有効・カバー中・覗いていない)。</summary>
         public bool IsBlindFiring => enabled && IsInitialized && _cover.IsInCover && !_cover.IsPeeking;
 
-        /// <summary>ブラインドファイアになるのに、高い壁で端にいないので撃てないか。この間は Attack を止める。</summary>
         public bool IsFireBlocked => IsBlindFiring && _cover.CoverHeight == CoverHeight.High && EdgeSide() == 0;
 
-        /// <summary>
-        /// 今撃ったときに弾が散らばる最大の角度 (度)。ブラインドファイアになるときは今の武器の <see cref="WeaponSpec.BlindFireSpreadDegrees"/>、
-        /// それ以外 (通常の射撃は散らさない) と武器が無いときは 0。
-        /// </summary>
         public float SpreadDegrees
         {
             get
@@ -65,7 +48,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>Attack を止めているか。</summary>
         public bool IsAttackBlocked => _blockedAttack != null;
 
         private void Awake()
@@ -101,10 +83,6 @@ namespace Shooter.Runtime
             RefreshAttackBlock();
         }
 
-        /// <summary>
-        /// rules の <see cref="ActionRules.BlindFire"/> が <see cref="BlindFire.On"/> なら有効に、それ以外なら無効にし、
-        /// <see cref="WeaponController.ShotFilter"/> への差し込みを揃える。
-        /// </summary>
         public void Configure(GameRules rules)
         {
             if (rules == null)
@@ -123,10 +101,6 @@ namespace Shooter.Runtime
             SyncShotFilter();
         }
 
-        /// <summary>
-        /// 同じ GameObject の <see cref="CoverController"/> と子の <see cref="WeaponController"/> を探して初期化する。
-        /// 見つからなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryInitializeFromHierarchy()
         {
             var cover = GetComponent<CoverController>();
@@ -147,10 +121,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 参照を直接渡して初期化する。cover はこの GameObject のもの、weapon はこの GameObject かその子のもの。
-        /// <see cref="ViewRig"/> は同じ GameObject にあれば、両側とも端の柱で出る側 (肩の側) を決めるのに使う。
-        /// </summary>
         public void Initialize(CoverController cover, WeaponController weapon)
         {
             if (cover == null)
@@ -185,10 +155,6 @@ namespace Shooter.Runtime
             SyncShotFilter();
         }
 
-        /// <summary>
-        /// 高い壁で端にいない (<see cref="IsFireBlocked"/>) 間は WeaponController の Attack を無効にし、そうでなくなったら有効に戻す。
-        /// 毎フレーム WeaponController より先に呼ぶ (<see cref="Update"/>)。止めている間に Attack を押し続けていたら、戻った後は押し直すまで撃たない。
-        /// </summary>
         public void RefreshAttackBlock()
         {
             if (IsFireBlocked)
@@ -201,10 +167,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// ブラインドファイアになるときだけ、origin を壁の上か端の横へ移し、direction を武器の半角で散らして
-        /// <c>[Combat] blind-fire spread=..</c> をログに出す。ならないとき (高い壁で端にいないときも) は何も変えない。
-        /// </summary>
         public void Filter(ref Vector3 origin, ref Vector3 direction)
         {
             if (!IsBlindFiring)

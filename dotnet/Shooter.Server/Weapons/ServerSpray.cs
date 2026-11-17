@@ -7,14 +7,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 火炎のような吹き付け (<see cref="RoundDelivery.Spray"/>)。押した・離したの要求で吹き付けを持ち、毎 tick 円錐の中の相手にダメージを出す。
-    /// </summary>
-    /// <remarks>
-    /// 噴射の間合いはビームと同じ数え方 (<see cref="TriggerModels"/> が火炎に使う <see cref="BeamState"/>) で数え、噴射のたびに弾 (熱) を 1 発使う。
-    /// 見た目はビームと同じ <see cref="BeamStateMessage"/> で送り、クライアントは武器の届け方で火炎として出す。
-    /// 始点と向きは押したときの要求にしか載らないので、その後の噴射は撃った人の体の今の位置と yaw に合わせて回す (上下の向きは押したときのまま)。
-    /// </remarks>
+    // 始点と向きは押したときの要求にしか載らないので、その後の噴射は撃った人の体の今の位置と yaw に合わせて回す (上下の向きは押したときのまま)。
     internal sealed class ServerSpray
     {
         private readonly Dictionary<int, Spray> _sprays = new Dictionary<int, Spray>();
@@ -46,10 +39,7 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// 受け入れた射撃 shot の弾 1 本。押した知らせ (<see cref="ServerShot.Trigger"/>) なら始める。
-        /// 押した・離したを送らない撃ち手 (Bot) の射撃は、噴射 1 回ぶんとして当てる。
-        /// </summary>
+        // 押した・離したを送らない撃ち手 (Bot) の射撃は、噴射 1 回ぶんとして当てる。
         public void Fire(in ServerShot shot, PlannedRound planned)
         {
             var spec = shot.Round.Spray ?? throw new ArgumentException("the round needs RoundSpec.Spray", nameof(shot));
@@ -95,7 +85,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>shooterId が引き金を離した。</summary>
         public void Release(int shooterId)
         {
             if (_sprays.TryGetValue(shooterId, out var spray) && spray.State.IsFiring)
@@ -141,7 +130,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>playerId が抜けた・倒れた・試合が始まった。</summary>
         public void Forget(int playerId)
         {
             if (!_sprays.TryGetValue(playerId, out var spray))

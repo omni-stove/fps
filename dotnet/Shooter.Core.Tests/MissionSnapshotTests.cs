@@ -242,7 +242,6 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ObjectiveProgress("a", (ObjectiveState)99, 0));
         }
 
-        /// <summary>kills (3 回) → exit の必須の流れと、任意の bonus。</summary>
         private static Mission Chain()
         {
             return new Mission(new[]
@@ -263,7 +262,6 @@ namespace Shooter.Core.Tests
             return entries.Select(e => new ObjectiveProgress(e.Id, e.State, e.Count)).ToArray();
         }
 
-        /// <summary>"id:状態:進み具合" の空白区切りを読む。</summary>
         private static ObjectiveProgress[] Parse(string text)
         {
             return text.Split(' ')

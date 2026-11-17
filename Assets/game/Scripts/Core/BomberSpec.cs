@@ -41,8 +41,6 @@ namespace Shooter.Core
 
         public ExplosionDamage DeathBlast { get; }
 
-        /// <exception cref="ArgumentNullException">blast か deathBlast が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。</exception>
         public BomberSpec(float triggerDistance, float fuseSeconds, float runSpeedMultiplier, ExplosionDamage blast, ExplosionDamage deathBlast)
         {
             if (blast == null)

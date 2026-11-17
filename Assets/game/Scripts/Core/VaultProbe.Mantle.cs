@@ -5,34 +5,12 @@ namespace Shooter.Core
 {
     public static partial class VaultProbe
     {
-        /// <summary>
-        /// よじ登った後に体が縁の上に立つのに要る、手前の面からの奥行き (m)。体の直径に <see cref="WallGap"/> を足したもの。
-        /// 縁の奥がこれより短い (薄い壁など) と、上に立てないのでよじ登らない (<see cref="VaultVerdict.TooNarrow"/>)。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">bodyRadius が負か有限でないとき。</exception>
         public static float MantleFootingDepth(float bodyRadius)
         {
             ValidateRadius(bodyRadius);
             return (bodyRadius * 2f) + WallGap;
         }
 
-        /// <summary>
-        /// 崖のぼり (<see cref="Mantle.On"/>) の判定。sample の上端が <see cref="MotorSpec.VaultMaxHeight"/> (これ以下は乗り越えの受け持ち) より高く
-        /// <see cref="MotorSpec.MantleMaxHeight"/> 以下で、縁の奥行きが <see cref="MantleFootingDepth"/> 以上なら <see cref="PlanMantlePath"/> で軌跡を作り、
-        /// isPathClear (物理で軌跡の上を体が通れるか) が false なら <see cref="VaultVerdict.Blocked"/> にする (上がる間の頭上か、縁の上が塞がっている)。
-        /// 理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・NarrowFace・TooNarrow・Blocked の順に調べ、最初に当たったものを返す。通れば <see cref="VaultVerdict.Mantle"/>。
-        /// sample の Depth は、手前の面から <see cref="MantleFootingDepth"/> より先まで測ったもの (それより厚ければ無限大でよい)。
-        /// </summary>
-        /// <param name="sample">前方への Ray で測った段の標本。</param>
-        /// <param name="facing">向いている向き。</param>
-        /// <param name="spec">
-        /// 高さの下限 (<see cref="MotorSpec.VaultMaxHeight"/>)・上限 (<see cref="MotorSpec.MantleMaxHeight"/>)・速さ (<see cref="MotorSpec.MantleSpeed"/>)・
-        /// 届く距離 (<see cref="MotorSpec.VaultReach"/>)・向きの角度 (<see cref="MotorSpec.VaultMaxAngleDegrees"/>) を読む移動の設定。
-        /// </param>
-        /// <param name="bodyRadius">体の半径。</param>
-        /// <param name="isPathClear">軌跡の上を体が通れるかを物理で調べる関数。</param>
-        /// <exception cref="ArgumentOutOfRangeException">sample・facing・bodyRadius の値が不正なとき。</exception>
-        /// <exception cref="ArgumentNullException">spec か isPathClear が null のとき。</exception>
         public static VaultProbeResult EvaluateMantle(
             VaultObstacleSample sample,
             Vector3 facing,
@@ -80,13 +58,6 @@ namespace Shooter.Core
             return new VaultProbeResult(verdict, height, depth, into, path);
         }
 
-        /// <summary>
-        /// direction (段へ向かう水平の向き) にある、手前の面まで distance・上端 topHeight の段に、半径 bodyRadius の体でよじ登る軌跡を作る。
-        /// 頂点は始点・面の手前で上端より <see cref="Clearance"/> 上まで上がりきった所・縁の上へ移りきった所・縁の上に下りた所の 4 つ。
-        /// 縁の上では体の後ろの端が手前の面から <see cref="WallGap"/> 奥に来る。
-        /// </summary>
-        /// <exception cref="ArgumentException">direction に水平の成分が無いとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">距離・高さ・半径が負か有限でない、または speed が正の有限値でないとき。</exception>
         public static VaultPath PlanMantlePath(Vector3 direction, float distance, float topHeight, float bodyRadius, float speed)
         {
             var into = CoverProbe.Horizontal(direction);

@@ -28,12 +28,10 @@ namespace Shooter.Server.Tests
 
         public string ServerDisconnectingReason { get; private set; }
 
-        /// <summary>最後に組み立てられた (差分なら基準で埋めた) スナップショット。</summary>
         public SnapshotMessage LatestSnapshot { get; private set; }
 
         public int UnresolvedSnapshots { get; private set; }
 
-        /// <summary>組み立てられたスナップショットのうち、差分で届いたものの数。</summary>
         public int DeltaSnapshots { get; private set; }
 
         public static ushort FreePort()
@@ -68,9 +66,16 @@ namespace Shooter.Server.Tests
             _transport.Send(_server, TransportChannel.Reliable, new ArraySegment<byte>(bytes));
         }
 
-        public void SendRequest(string version, string key = "device1", ushort protocol = MatchProtocol.Version)
+        public void SendRequest(string version, string key = "device1", ushort protocol = MatchProtocol.Version, string partyId = "")
         {
-            Send(new ConnectRequestMessage { ClientVersion = version, RejoinKey = key, DisplayName = "tester", ProtocolVersion = protocol });
+            Send(new ConnectRequestMessage
+            {
+                ClientVersion = version,
+                RejoinKey = key,
+                DisplayName = "tester",
+                ProtocolVersion = protocol,
+                PartyId = partyId,
+            });
         }
 
         public void Poll()

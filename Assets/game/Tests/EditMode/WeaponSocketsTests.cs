@@ -7,7 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="WeaponSockets"/> が武器のモデルの配下からソケットを名前で探し、無ければ既定の位置を返すことを確かめる。</summary>
     public sealed class WeaponSocketsTests
     {
         private readonly List<Object> _created = new List<Object>();

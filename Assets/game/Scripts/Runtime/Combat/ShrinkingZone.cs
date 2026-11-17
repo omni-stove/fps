@@ -16,8 +16,8 @@ namespace Fps.Runtime
     /// <item>段階か動き (待ち・縮み・最後) が変わるたびと、相手が外に出た・中に戻ったときに <c>[Zone]</c> ログを出す。</item>
     /// <item>Play 中は境界を、上下が開いた半透明の筒で出す (中からも外からも見えるよう両面を描く)。<see cref="BoundaryPrefab"/> があればその形で出す。</item>
     /// </list>
-    /// HUD は <see cref="SecondsUntilShrink"/> か <see cref="HudLine"/> を読む (このコンポーネントは自分では HUD に書かない。
-    /// どの HUD に出すかはモードの Runner が決めるので)。
+    /// HUD は <see cref="SecondsUntilShrink"/> か <see cref="State"/> を読む (このコンポーネントは自分では HUD に書かず、文も作らない。
+    /// どの HUD にどう出すかはモードの Runner と UI が決めるので)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ShrinkingZone : MonoBehaviour
@@ -151,9 +151,6 @@ namespace Fps.Runtime
 
         /// <summary>次に縮み始めるまでの秒数。待っていなければ (縮んでいる途中・最後の円・始める前) 0。HUD 用。</summary>
         public float SecondsUntilShrink => IsRunning ? _state.SecondsUntilShrink : 0f;
-
-        /// <summary>HUD に出す 1 行 (<see cref="ZoneHudText.Line"/>)。出す側が今の言語で文にする。始める前は空の文 (<c>default</c>)。</summary>
-        public LocalizedText HudLine => IsRunning ? ZoneHudText.Line(_state) : default;
 
         /// <summary>最後にダメージを与える判定をしたとき、外にいた者。</summary>
         public IReadOnlyCollection<Damageable> Outside => _outside;

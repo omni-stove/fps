@@ -17,7 +17,7 @@ namespace Fps.Runtime
     /// 段が変わった人の武器は次の <see cref="ModeRunnerBase.Tick"/> の頭で替える。撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。</item>
     /// <item>プレイヤーの近接 (<see cref="MeleeController.MeleeWeapon"/>) は並びの最初の近接の武器にし、近接で倒したら相手を 1 段戻せるようにする。</item>
     /// <item>最後の段の武器で倒した人が出たら、次の Tick でその人の陣営の勝ちで終わる (<see cref="GunGame.CheckStanding"/>)。時間切れは段のいちばん進んだ人の勝ち。</item>
-    /// <item>陣営の得点は 1 キル 1 点 (<see cref="KillScore"/>) で、勝敗には使わない。HUD には得点の下に自分の段と今の武器、次の武器を出す。</item>
+    /// <item>陣営の得点は 1 キル 1 点 (<see cref="KillScore"/>) で、勝敗には使わない。HUD に出す自分の段と今の武器、次の武器は <see cref="GunGameStatus"/> にして渡す。</item>
     /// <item>段が動くたびに <c>[Mode] gungame promote|demote|finish</c>、武器を替えるたびに <c>[Mode] gungame equip</c> のログ (<see cref="GunGameText"/>) を出す。</item>
     /// </list>
     /// </remarks>
@@ -183,24 +183,19 @@ namespace Fps.Runtime
             _pendingEquips.Clear();
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
+        protected override object HudDetail
         {
-            var gunGame = GunGame;
-            var player = LocalPlayer;
-            if (gunGame == null || player == null)
+            get
             {
-                return;
-            }
+                var gunGame = GunGame;
+                if (gunGame == null)
+                {
+                    return null;
+                }
 
-            var id = IdOf(player);
-            if (id < 0)
-            {
-                return;
+                var id = IdOf(LocalPlayer);
+                return new GunGameStatus(gunGame, id >= 0 ? id : (int?)null);
             }
-
-            var next = gunGame.GetNextWeapon(id);
-            lines.Add(GunGameText.Tier(gunGame.GetTier(id), gunGame.Ladder.TierCount, gunGame.GetWeapon(id).Name));
-            lines.Add(GunGameText.Next(next.HasValue ? next.Value.Name : default));
         }
 
         private void QueueEquip(SideMember member)

@@ -50,11 +50,13 @@ namespace Fps.Runtime
             set => _nameKey = value;
         }
 
+        public override string DisplayNameKey => _nameKey != null ? _nameKey.Trim() : string.Empty;
+
         public LocalizedText Name
         {
             get
             {
-                var key = _nameKey != null ? _nameKey.Trim() : string.Empty;
+                var key = DisplayNameKey;
                 return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(Id);
             }
         }

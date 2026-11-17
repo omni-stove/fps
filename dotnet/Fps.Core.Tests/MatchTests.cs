@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
         [TestCase(0f)]
         [TestCase(-1f)]
         [TestCase(float.NaN)]
-        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
         public void RejectsInvalidTimeLimit(float timeLimitSeconds)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new Match(timeLimitSeconds, 1, _player));
@@ -350,6 +350,59 @@ namespace Fps.Core.Tests
                 (GameModeState.Playing, null),
                 (GameModeState.Ended, MatchResult.Won),
             }));
+        }
+
+        [Test]
+        public void WithoutATimeLimitTheMatchNeverRunsOut()
+        {
+            var match = new Match(float.PositiveInfinity, 2, _player);
+            var ticks = 0;
+            match.RemainingSecondsChanged += _ => ticks++;
+            match.Start();
+
+            match.Tick(100000f);
+
+            Assert.That(match.HasTimeLimit, Is.False);
+            Assert.That(match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(float.IsPositiveInfinity(match.RemainingSeconds), Is.True);
+            Assert.That(ticks, Is.Zero, "no remaining time to report");
+        }
+
+        [Test]
+        public void WithoutATimeLimitKillsStillWinAndDeathStillLoses()
+        {
+            var won = new Match(float.PositiveInfinity, 2, _player);
+            won.Start();
+            won.ReportKill(_player, _target);
+            won.ReportKill(_player, _target);
+            Assert.That(won.Result, Is.EqualTo(MatchResult.Won));
+
+            var lost = new Match(float.PositiveInfinity, 2, _player);
+            lost.Start();
+            lost.ReportDeath(_player);
+            Assert.That(lost.Result, Is.EqualTo(MatchResult.Lost));
+        }
+
+        [Test]
+        public void WithATimeLimitRunningOutLoses()
+        {
+            var match = new Match(5f, 2, _player);
+            match.Start();
+
+            match.Tick(5f);
+
+            Assert.That(match.HasTimeLimit, Is.True);
+            Assert.That(match.RemainingSeconds, Is.EqualTo(0f));
+            Assert.That(match.Result, Is.EqualTo(MatchResult.Lost));
+        }
+
+        [Test]
+        public void SoloStateLogsNoneForTheRemainingTimeWithoutALimit()
+        {
+            var match = new Match(float.PositiveInfinity, 2, _player);
+            match.Start();
+
+            Assert.That(MatchLog.SoloState(match), Is.EqualTo("[Match] state=Playing kills=0 remaining=none"));
         }
     }
 }

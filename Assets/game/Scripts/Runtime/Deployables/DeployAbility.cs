@@ -132,11 +132,17 @@ namespace Fps.Runtime
             return true;
         }
 
-        public bool TryGetFollowUpHint(AbilityContext context, out LocalizedText hint)
+        public bool TryGetFollowUp(AbilityContext context, out AbilityFollowUp followUp)
         {
-            hint = default;
+            followUp = default;
             var owner = context.Owner.GetComponent<DeployOwner>();
-            return owner != null && CanDetonate(owner) && _definition.TryGetDetonateHint(owner.ActiveCount(_definition.Id), out hint);
+            if (owner == null || !CanDetonate(owner))
+            {
+                return false;
+            }
+
+            followUp = AbilityFollowUp.Detonate(_definition.Id, _definition.DisplayNameKey, owner.ActiveCount(_definition.Id));
+            return true;
         }
 
         public void End(AbilityContext context, bool interrupted)

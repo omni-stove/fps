@@ -272,16 +272,8 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheHudAndLogTextCountTiersFromOne()
+        public void TheLogTextCountsTiersFromOne()
         {
-            Assert.That(GameText.Resolve(GunGameText.Tier(1, 3, _tiers[1].Name)), Is.EqualTo("段 2/3 Launcher"));
-            Assert.That(GameText.Resolve(GunGameText.Tier(3, 3, _tiers[2].Name)), Is.EqualTo("段 3/3 Handgun"), "the finisher stays on the last tier");
-            Assert.That(GameText.Resolve(GunGameText.Next(_tiers[2].Name)), Is.EqualTo("次: Handgun"));
-            Assert.That(GameText.Resolve(GunGameText.Next(default)), Is.EqualTo("次: なし (この武器で倒せば勝ち)"));
-            Assert.That(GunGameText.Tier(1, 3, _tiers[1].Name), Is.EqualTo(new LocalizedText("mode.gungame.tier", 2, 3, new LocalizedText("weapon.launcher"))));
-            Assert.That(GunGameText.Tier(1, 3, default), Is.EqualTo(new LocalizedText("mode.gungame.tier", 2, 3, "-")));
-            Assert.That(GunGameText.Next(default), Is.EqualTo(GunGameText.LastTier));
-            Assert.That(GunGameText.LastTier.Key, Is.EqualTo("mode.gungame.lastTier"));
             Assert.That(GunGameText.Promote(0, 1, 3, "Launcher"), Is.EqualTo("[Mode] gungame promote player=0 tier=2/3 weapon=Launcher"));
             Assert.That(GunGameText.Demote(2, 0, 3, "Rifle"), Is.EqualTo("[Mode] gungame demote player=2 tier=1/3 weapon=Rifle"));
             Assert.That(GunGameText.Equip(1, 0, 3, string.Empty), Is.EqualTo("[Mode] gungame equip player=1 tier=1/3 weapon=-"));

@@ -12,6 +12,9 @@ namespace Fps.Core
     {
         public const string Tag = "[Match]";
 
+        /// <summary>制限時間の無いソロの試合で remaining= に書く値。</summary>
+        public const string NoTimeLimit = "none";
+
         /// <summary>引き分けで終わったときに winner= に書く値。</summary>
         public const string Draw = "draw";
 
@@ -118,7 +121,7 @@ namespace Fps.Core
         /// ソロの試合 (<see cref="Match"/>) の状態。終了後は state に勝敗 (Won / Lost) を、それまでは進行状態を書く。
         /// remaining は残り時間 (秒、小数 1 桁)。
         /// </summary>
-        /// <example><c>[Match] state=Won kills=10 remaining=12.3</c></example>
+        /// <example><c>[Match] state=Won kills=10 remaining=12.3</c>、制限時間が無ければ <c>remaining=none</c></example>
         public static string SoloState(Match match)
         {
             if (match == null)
@@ -128,7 +131,7 @@ namespace Fps.Core
 
             return Tag + " state=" + SoloStateName(match)
                 + " kills=" + match.Kills.ToString(CultureInfo.InvariantCulture)
-                + " remaining=" + match.RemainingSeconds.ToString("F1", CultureInfo.InvariantCulture);
+                + " remaining=" + (match.HasTimeLimit ? match.RemainingSeconds.ToString("F1", CultureInfo.InvariantCulture) : NoTimeLimit);
         }
 
         /// <example><c>[Match] restart</c></example>

@@ -3,7 +3,6 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -70,11 +69,13 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", Vector3.zero);
             var ally = Member("Bot-0-1", new Vector3(3f, 0f, 0f));
-            var hud = BoundHudView();
             _runner.BeginHorde(_schedule, new[] { player, ally }, new[] { SpawnPoint(new Vector3(0f, 0f, -2f)) }, player);
 
             Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Fighting), "the first wave starts with the match");
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 2))).And.Contain(Localizer.Resolve(HordeText.RemainingEnemies(2))));
+            Assert.That(Detail().Horde, Is.SameAs(_runner.Horde));
+            Assert.That(Detail().LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
+            Assert.That(Detail().Horde.Schedule.WaveNumber, Is.EqualTo(1));
+            Assert.That(Detail().Horde.Schedule.RemainingEnemies, Is.EqualTo(2));
 
             ally.Damageable.Kill();
             _runner.Tick(30f);
@@ -87,15 +88,14 @@ namespace Fps.Tests.EditMode
             Assert.That(ally.IsAlive, Is.True);
             Assert.That(_runner.Horde.Currency, Is.EqualTo(StartingCurrency + (KillReward * 2)));
             Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(2d), "the score counts the enemies killed");
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.NextWave(RestSeconds)))
-                .And.Contain(Localizer.Resolve(HordeText.Currency(StartingCurrency + (KillReward * 2)))));
+            Assert.That(Detail().Horde.Schedule.Phase, Is.EqualTo(WavePhase.Resting));
+            Assert.That(Detail().Horde.Schedule.RestRemaining, Is.EqualTo(RestSeconds));
         }
 
         [Test]
         public void ClearingEveryWaveWins()
         {
             var player = Member("Player", Vector3.zero);
-            var hud = BoundHudView();
             _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             ClearWave();
@@ -106,8 +106,9 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Alpha));
             Assert.That(_runner.Horde.IsVictory, Is.True);
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Victory)));
-            Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(Detail().Horde.IsVictory, Is.True);
         }
 
         [Test]
@@ -115,19 +116,21 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", Vector3.zero);
             var ally = Member("Bot-0-1", new Vector3(3f, 0f, 0f));
-            var hud = BoundHudView();
             _runner.BeginHorde(_schedule, new[] { player, ally }, new SideSpawnPoint[0], player);
 
             player.Damageable.Kill();
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.ReturnsAfterWave)));
+            Assert.That(Detail().Horde.Session.IsAwaitingRespawn(ModeRunnerBase.LocalPlayerId), Is.True);
+            Assert.That(Detail().Offer, Is.Null, "a downed player is offered nothing");
 
             ally.Damageable.Kill();
             _runner.Tick(0f);
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Bravo));
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Defeat)));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(Detail().Horde.IsVictory, Is.False);
         }
 
         [Test]
@@ -136,7 +139,6 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", Vector3.zero);
             var wall = Fortification("Wall", new Vector3(0f, 0f, 2f), true);
             _runner.SetFortifications(new[] { wall });
-            var hud = BoundHudView();
             _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             var structure = wall.Structure;
@@ -144,10 +146,13 @@ namespace Fps.Tests.EditMode
             Assert.That(wall.PendingAction, Is.EqualTo(HordeFortificationAction.Repair));
 
             _runner.Tick(0f);
-            Assert.That(
-                hud.Lines,
-                Does.Contain(Localizer.Resolve(
-                    HordeText.Prompt(null, HordeFortificationAction.Repair, "Wall", RepairCostPerPiece, HordePurchaseVerdict.WaveInProgress))));
+            var offer = Detail().Offer;
+            Assert.That(offer.HasValue, Is.True, "the wall in reach is offered");
+            Assert.That(offer.Value.Action, Is.EqualTo(HordeFortificationAction.Repair));
+            Assert.That(offer.Value.StructureName, Is.EqualTo("Wall"));
+            Assert.That(offer.Value.Cost, Is.EqualTo(RepairCostPerPiece));
+            Assert.That(offer.Value.Verdict, Is.EqualTo(HordePurchaseVerdict.WaveInProgress));
+            Assert.That(offer.Value.KeyLabel, Is.Empty);
             Assert.That(_runner.TryInteract(), Is.EqualTo(HordePurchaseVerdict.WaveInProgress));
             Assert.That(structure.Pieces[0].IsBroken, Is.True);
 
@@ -243,11 +248,10 @@ namespace Fps.Tests.EditMode
             _definition.EnemiesPerWave = 0f;
             _schedule = _runner.CreateSchedule();
             var player = Member("Player", Vector3.zero);
-            var hud = BoundHudView();
             _runner.BeginHorde(_schedule, new[] { player }, new SideSpawnPoint[0], player);
 
             Assert.That(_schedule.WaveCount, Is.EqualTo(3));
-            Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.Wave(1, 3))));
+            Assert.That(Detail().Horde.Schedule.WaveCount, Is.EqualTo(3));
 
             for (var wave = 1; wave < 3; wave++)
             {
@@ -255,7 +259,6 @@ namespace Fps.Tests.EditMode
                 _runner.Tick(0f);
                 Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Resting));
                 Assert.That(_schedule.RestRemaining, Is.EqualTo(7f));
-                Assert.That(hud.Lines, Does.Contain(Localizer.Resolve(HordeText.NextWave(7f))));
 
                 _schedule.Tick(6f);
                 Assert.That(_schedule.Phase, Is.EqualTo(WavePhase.Resting), "the rest lasts as long as the definition says");
@@ -482,11 +485,11 @@ namespace Fps.Tests.EditMode
             return point;
         }
 
-        private ModeHudView BoundHudView()
+        private HordeStatus Detail()
         {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
+            Assert.That(_runner.Status, Is.Not.Null);
+            Assert.That(_runner.Status.Detail, Is.InstanceOf<HordeStatus>());
+            return (HordeStatus)_runner.Status.Detail;
         }
 
         private GameObject Track(GameObject go)

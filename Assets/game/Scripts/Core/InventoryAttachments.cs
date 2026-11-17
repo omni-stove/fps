@@ -58,12 +58,15 @@ namespace Fps.Core
             }
 
             inventory.TryTake(handle, 1, out _);
-            setAttachments(next);
-            if (replaced != null)
+            // 外した物は setAttachments の前に入れる。後だと溢れた弾が空きを先に使い、外した物が消えるため
+            if (replaced != null && catalog.TryFind(replaced, out var removed)
+                && inventory.Add(replaced, 1, removed.Weight) != 1)
             {
-                inventory.Add(replaced, 1);
+                inventory.Add(item.Id, 1, 0f);
+                return AttachmentRejection.NoRoom;
             }
 
+            setAttachments(next);
             return AttachmentRejection.None;
         }
 

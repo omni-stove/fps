@@ -8,6 +8,9 @@ namespace Shooter.NetV2.Tests
 {
     public sealed class ClientMapVoteTests
     {
+        private static readonly int[] SentOne = { 1 };
+        private static readonly int[] SentOneThenZero = { 1, 0 };
+
         // 送る知らせは使い回しなので、送ったときの番号を写しておく
         private readonly List<int> _sent = new List<int>();
         private bool _connected;
@@ -75,7 +78,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_vote.Vote(1, out var sent), Is.EqualTo(MapVoteCast.Cast));
 
             Assert.That(sent, Is.True);
-            Assert.That(_sent, Is.EqualTo(new[] { 1 }));
+            Assert.That(_sent, Is.EqualTo(SentOne));
             Assert.That(_vote.Status.Value.MyVote, Is.EqualTo("NetArena03"));
         }
 
@@ -90,7 +93,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_vote.Vote(0, out var changed), Is.EqualTo(MapVoteCast.Changed));
             Assert.That(changed, Is.True);
 
-            Assert.That(_sent, Is.EqualTo(new[] { 1, 0 }));
+            Assert.That(_sent, Is.EqualTo(SentOneThenZero));
             Assert.That(_vote.Status.Value.MyVote, Is.EqualTo("NetArena02"));
         }
 

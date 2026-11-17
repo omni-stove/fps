@@ -25,7 +25,6 @@ namespace Shooter.NetV2
 
         public bool IsOpen => Status.HasValue && !Status.Value.IsDecided;
 
-        /// <returns>中身が壊れていて投票を閉じたときは false。</returns>
         public bool Apply(MapVoteStateMessage message)
         {
             if (message == null)
@@ -74,8 +73,6 @@ namespace Shooter.NetV2
             _remainingSeconds = Math.Max(0f, _remainingSeconds - deltaSeconds);
         }
 
-        /// <param name="candidateIndex"><see cref="MapVoteStatus.Candidates"/> の並びの番号。</param>
-        /// <param name="sent">サーバーへ送れたか。送らなかった結果では常に false。</param>
         public MapVoteCast Vote(int candidateIndex, out bool sent)
         {
             sent = false;

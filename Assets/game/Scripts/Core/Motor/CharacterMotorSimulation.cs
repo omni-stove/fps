@@ -159,9 +159,10 @@ namespace Shooter.Core
             var vault = state.Vault;
             var startVelocity = state.Velocity;
             var ladder = AdvanceRegrab(state.Ladder);
+            var swim = SwimStep.Step(state.Swim, state.Position, _water, _swim, TickSeconds);
             var traversal = new TraversalStates(
-                LeanStep.Step(state.Lean, input.Lean, _motor.Spec, TickSeconds),
-                SwimStep.Step(state.Swim, state.Position, _water, _swim, TickSeconds),
+                LeanStep.Step(state, input, swim, Body, _motor.Spec, TickSeconds),
+                swim,
                 WallRunStep.Step(state.WallRun, Body, startVelocity, state.IsGrounded, _wallRun, TickSeconds),
                 state.AirJumpsUsed);
             if (state.IsKnockedBack)

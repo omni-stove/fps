@@ -29,8 +29,8 @@ namespace Shooter.Tests.EditMode
                 new Participant(AliceId, "Alice", Team.Alpha, true),
                 new Participant(BobId, "Bob", Team.Bravo, false)));
             _hud = Hud.Create("ChatTests.Hud");
-            _view = _hud.gameObject.AddComponent<ChatView>();
-            _hud.RebuildView();
+            _view = _hud.Chat;
+            Assert.That(_view, Is.Not.Null, "Hud.AddViews attaches the chat");
         }
 
         [TearDown]

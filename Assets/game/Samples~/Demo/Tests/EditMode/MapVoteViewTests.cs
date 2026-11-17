@@ -38,7 +38,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheViewAddedByHandIsHiddenUntilAVoteIsPublished()
+        public void TheViewIsHiddenUntilAVoteIsPublished()
         {
             var view = CreateView();
 
@@ -246,8 +246,9 @@ namespace Shooter.Tests.EditMode
         private MapVoteView CreateView()
         {
             _hud = Hud.Create("MapVoteTests.Hud");
-            var view = _hud.gameObject.AddComponent<MapVoteView>();
-            _hud.RebuildView();
+            var view = _hud.MapVote;
+            Assert.That(view, Is.Not.Null, "Hud.AddViews attaches the map vote");
+            Assert.That(view.Element, Is.Not.Null);
             return view;
         }
 

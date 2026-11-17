@@ -160,6 +160,12 @@ namespace Shooter.Runtime
             AddIfMissing<ControlPointsView>(hudObject);
             AddIfMissing<PingMarkersView>(hudObject);
             AddIfMissing<SquadOrderMarkerView>(hudObject);
+            AddIfMissing<MinimapView>(hudObject);
+            AddIfMissing<CompassView>(hudObject);
+            AddIfMissing<ChatView>(hudObject);
+            AddIfMissing<VoiceIndicatorView>(hudObject);
+            AddIfMissing<SpectateView>(hudObject);
+            AddIfMissing<MapVoteView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -207,6 +213,18 @@ namespace Shooter.Runtime
         public PingMarkersView PingMarkers => GetComponent<PingMarkersView>();
 
         public SquadOrderMarkerView SquadOrder => GetComponent<SquadOrderMarkerView>();
+
+        public MinimapView Minimap => GetComponent<MinimapView>();
+
+        public CompassView Compass => GetComponent<CompassView>();
+
+        public ChatView Chat => GetComponent<ChatView>();
+
+        public VoiceIndicatorView VoiceIndicator => GetComponent<VoiceIndicatorView>();
+
+        public SpectateView Spectate => GetComponent<SpectateView>();
+
+        public MapVoteView MapVote => GetComponent<MapVoteView>();
 
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
@@ -839,6 +857,18 @@ namespace Shooter.Runtime
             if (abilities != null)
             {
                 abilities.SetAllowed(_visibility.Ammo);
+            }
+
+            var minimap = Minimap;
+            if (minimap != null)
+            {
+                minimap.SetAllowed(_visibility.Minimap);
+            }
+
+            var compass = Compass;
+            if (compass != null)
+            {
+                compass.SetAllowed(_visibility.Compass);
             }
         }
 

@@ -139,11 +139,7 @@ namespace Shooter.Runtime
             _markerElements.Clear();
             CreateBand(element);
             Subscribe();
-            var density = GameSignals.HudDensity.Value;
-            if (density.HasValue)
-            {
-                SetAllowed(MinimapView.AllowedAt(density.Value));
-            }
+            ApplyDensity(GameSignals.HudDensity.Value);
 
             var status = GameSignals.Minimap.Value;
             if (status.HasValue || _showsSignal)
@@ -376,10 +372,15 @@ namespace Shooter.Runtime
                 return;
             }
 
+            ApplyDensity(density);
+        }
+
+        private void ApplyDensity(HudDensity? density)
+        {
             // 値が消されたときは今のままにする (Hud と同じく、戻す先が無いため)。
             if (density.HasValue)
             {
-                SetAllowed(MinimapView.AllowedAt(density.Value));
+                SetAllowed(HudVisibility.For(density.Value).Compass);
             }
         }
 

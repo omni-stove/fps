@@ -39,12 +39,11 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheHudDoesNotCarryTheViewUntilItIsAddedAndThenHidesItWithoutAValue()
+        public void TheHudCarriesTheViewAndHidesItWithoutAValue()
         {
-            _hud = Hud.Create("VoiceIndicatorTests.Hud");
-            Assert.That(_hud.GetComponent<VoiceIndicatorView>(), Is.Null);
-
             var view = CreateView();
+
+            Assert.That(_hud.GetComponents<VoiceIndicatorView>(), Has.Length.EqualTo(1));
 
             Assert.That(view.Status, Is.Null);
             Assert.That(view.IsShown, Is.False);
@@ -176,13 +175,9 @@ namespace Shooter.Tests.EditMode
 
         private VoiceIndicatorView CreateView()
         {
-            if (_hud == null)
-            {
-                _hud = Hud.Create("VoiceIndicatorTests.Hud");
-            }
-
-            var view = _hud.gameObject.AddComponent<VoiceIndicatorView>();
-            Assert.That(_hud.RebuildView(), Is.True);
+            _hud = Hud.Create("VoiceIndicatorTests.Hud");
+            var view = _hud.VoiceIndicator;
+            Assert.That(view, Is.Not.Null, "Hud.AddViews attaches the voice indicator");
             Assert.That(view.Element, Is.Not.Null);
             return view;
         }

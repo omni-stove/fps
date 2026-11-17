@@ -21,7 +21,9 @@ namespace Shooter.Core
             crosshairScale: FullCrosshairScale,
             hitMarker: true,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: true,
+            compass: true);
 
         public static readonly HudVisibility Minimal = new HudVisibility(
             HudDensity.Minimal,
@@ -35,7 +37,9 @@ namespace Shooter.Core
             crosshairScale: SmallCrosshairScale,
             hitMarker: true,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: false,
+            compass: false);
 
         public static readonly HudVisibility Hardcore = new HudVisibility(
             HudDensity.Hardcore,
@@ -49,7 +53,9 @@ namespace Shooter.Core
             crosshairScale: FullCrosshairScale,
             hitMarker: false,
             damageDirection: true,
-            killFeed: true);
+            killFeed: true,
+            minimap: false,
+            compass: false);
 
         private HudVisibility(
             HudDensity density,
@@ -63,7 +69,9 @@ namespace Shooter.Core
             float crosshairScale,
             bool hitMarker,
             bool damageDirection,
-            bool killFeed)
+            bool killFeed,
+            bool minimap,
+            bool compass)
         {
             Density = density;
             Health = health;
@@ -77,6 +85,8 @@ namespace Shooter.Core
             HitMarker = hitMarker;
             DamageDirection = damageDirection;
             KillFeed = killFeed;
+            Minimap = minimap;
+            Compass = compass;
         }
 
         public HudDensity Density { get; }
@@ -102,6 +112,10 @@ namespace Shooter.Core
         public bool DamageDirection { get; }
 
         public bool KillFeed { get; }
+
+        public bool Minimap { get; }
+
+        public bool Compass { get; }
 
         public static HudVisibility For(HudDensity density)
         {

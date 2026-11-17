@@ -1,8 +1,11 @@
-/* 画面左下、体力の欄の上のテキストチャット。ChatView が読み込み、行を古い順に上から積む。 */
+/*
+ * 画面左下、体力の欄とその上の能力の枠 (Hud.uss の .ability-slots、bottom 104px から上へ積む) のさらに上のテキストチャット。
+ * Hud.uxml と ChatView が読み込み、行を古い順に上から積む。
+ */
 .chat {
     position: absolute;
     left: 32px;
-    bottom: 110px;
+    bottom: 230px;
     width: 560px;
     flex-direction: column;
     align-items: flex-start;

@@ -11,29 +11,14 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ネット対戦のマップ NetArena01 を生成する。.NET のサーバーは <c>-map NetArena01</c> でこのマップの書き出し (server-data/maps) を読み、
-    /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。
-    /// 60 m 四方の床と外周の壁に、高い壁・低い壁・乗り越えられる段差を置いて NavMesh を焼き、壊せる建物 2 棟
-    /// (<see cref="DestructibleStructure"/>)、チームごとの出現地点 <see cref="SpawnsPerTeam"/> か所、
-    /// 拠点制圧の拠点 A/B/C (<see cref="ControlPointZone"/> と旗)、NetTest と同じ観戦カメラとライトを置く。
-    /// 拠点はルールが <see cref="MatchObjective.Domination"/> の試合でだけ使われ、チームデスマッチでは置いてあるだけになる。
-    /// 何度実行しても同じ結果になる。batchmode では
-    /// <c>-batchmode -quit -projectPath . -executeMethod Shooter.Editor.ArenaSceneBuilder.Build</c> で呼ぶ。
-    /// </summary>
-    /// <remarks>
-    /// 配置は z = 0 の線で鏡写しにする。Alpha の陣地は -z 側、Bravo は +z 側で、どの壁・段差・出現地点にも反対側に同じものがある。
-    /// 建物と拠点 B は z = 0 の線の上に置き、それ自体が鏡写しになる形にする。
-    /// 床の高さは NetTest と同じ <see cref="NetSceneBuilder.GroundY"/> で、出現地点はカプセルの中心 (y = 0) に置く。
-    /// </remarks>
+    // ルールはサーバーが -rules で選ぶので、拠点は MatchObjective.Domination の試合でしか使われないがどのルールでも置いておく。
     public static class ArenaSceneBuilder
     {
-        /// <summary><c>-map</c> に渡す名前。シーンのファイル名と同じ。</summary>
         public const string MapName = "NetArena01";
 
         public static string ScenePath => BuildSceneList.NetArena01Scene;
 
-        /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
+        // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MapName + "/NavMesh-Arena.asset");
 
         public const string MenuPath = "Shooter/Net/Build NetArena01 Scene";
@@ -43,71 +28,60 @@ namespace Shooter.Editor
         public const string GroundName = "Ground";
         public const string SpawnPointsRootName = "SpawnPoints";
 
-        /// <summary>床の中心から外周までの距離 (m)。床は 60 m 四方。</summary>
         public const float HalfExtent = 30f;
 
         public const float GroundY = NetSceneBuilder.GroundY;
 
         public const int SpawnsPerTeam = 8;
 
-        /// <summary>外周の壁の高さと厚さ (m)。乗り越えられず、外へ出られない。</summary>
+        // 外周の壁は乗り越えられず外へ出られない高さにする。
         public const float BoundaryHeight = 4f;
         public const float BoundaryThickness = 1f;
 
-        /// <summary>高い壁の高さ (m)。乗り越えられる高さ (<see cref="MotorSpec.DefaultVaultMaxHeight"/>) より高く、端から覗くカバーになる。</summary>
+        // 乗り越えられる高さ (MotorSpec.DefaultVaultMaxHeight) より高くして、端から覗くカバーにする。
         public const float HighWallHeight = 3f;
         public const float HighWallThickness = 0.5f;
 
-        /// <summary>
-        /// 低い壁の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なのでしゃがんで隠れる低いカバーになり、
-        /// <see cref="MotorSpec.DefaultVaultMaxHeight"/> 以下なので乗り越えられる。
-        /// </summary>
+        // MotorSpec.DefaultCoverLowWallHeight 未満にしてしゃがんで隠れる低いカバーにし、MotorSpec.DefaultVaultMaxHeight 以下にして乗り越えられるようにする。
         public const float LowWallHeight = 0.8f;
         public const float LowWallThickness = 0.4f;
 
-        /// <summary>段差の高さと奥行き (m)。<see cref="MotorSpec.DefaultVaultMinHeight"/> 以上・<see cref="MotorSpec.DefaultVaultMaxDepth"/> 以下なので乗り越えられる。</summary>
+        // 段差は MotorSpec.DefaultVaultMinHeight 以上・MotorSpec.DefaultVaultMaxDepth 以下にして乗り越えられるようにする。
         public const float StepHeight = 0.5f;
         public const float StepDepth = 0.8f;
 
-        /// <summary>建物の x 方向の幅・z 方向の奥行き・壁の高さ (部品の数 = m)。</summary>
         public const int BuildingWidth = 6;
         public const int BuildingDepth = 6;
         public const int BuildingWallHeight = 4;
 
-        /// <summary>建物の南北の壁の中央に空ける出入口の幅と高さ (部品の数 = m)。プレイヤー (高さ 2 m) がくぐれる。</summary>
+        // 出入口はプレイヤー (高さ 2 m) がくぐれる大きさにする。
         public const int DoorWidth = 2;
         public const int DoorHeight = 3;
 
         public const float PieceSize = 1f;
         public const int PieceMaxHealth = DestructiblePiece.DefaultMaxHealth;
 
-        /// <summary>建物 1 棟の部品の数。南北の壁は出入口の分を除き、東西の壁は角を除く。</summary>
+        // 東西の壁は角を南北の壁と二重に数えないよう除く。
         public const int BuildingPieceCount =
             (2 * ((BuildingWidth * BuildingWallHeight) - (DoorWidth * DoorHeight)))
             + (2 * (BuildingDepth - 2) * BuildingWallHeight)
             + (BuildingWidth * BuildingDepth);
 
-        /// <summary>拠点の範囲の水平の半径と高さ (m)。高さは足元から上下に半分ずつなので、床に立つカプセルの中心 (y = 0) が入る。</summary>
         public const float ControlPointRadius = ControlPointZone.DefaultRadius;
         public const float ControlPointHeight = ControlPointZone.DefaultHeight;
 
-        /// <summary>
-        /// 拠点の範囲の円と、壁・段差・建物との間に空ける幅 (m)。円の縁に立ったプレイヤーのカプセルが遮蔽物にめり込まず、
-        /// 拠点の床で乗り越えや遮蔽の動きが起きないようにする。
-        /// </summary>
+        // 拠点の円の縁に立ったプレイヤーのカプセルが遮蔽物にめり込まず、拠点の床で乗り越えや遮蔽の動きが起きないよう、円と遮蔽物の間にプレイヤーの半径を空ける。
         public const float ControlPointClearance = NetSceneBuilder.PlayerRadius;
 
-        /// <summary>NavMesh に乗っていることを確かめる点を探す半径 (m)。</summary>
         public const float NavMeshCheckRadius = 1f;
 
-        /// <summary>床 (Plane は 10 m 四方) の拡大率。</summary>
+        // Plane は 10 m 四方なので、半分の幅を 5 で割ると拡大率になる。
         public static readonly Vector3 GroundScale = new Vector3(HalfExtent / 5f, 1f, HalfExtent / 5f);
 
-        /// <summary>自分のプレイヤーが居ない間の観戦カメラ。両陣地と外周まで見下ろす。</summary>
+        // 両陣地と外周まで見下ろせる位置にする。
         public static readonly Vector3 SpectatorPosition = new Vector3(0f, 50f, -42f);
         public static readonly Quaternion SpectatorRotation = Quaternion.Euler(50f, 0f, 0f);
 
-        /// <summary>外周の壁。中心と大きさ (Cube の拡大率)。床の縁のすぐ外に立てる。</summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Center, Vector3 Size)> BoundaryWalls = new[]
         {
             ("Boundary South", new Vector3(0f, GroundY + (BoundaryHeight / 2f), -HalfExtent - (BoundaryThickness / 2f)),
@@ -120,9 +94,6 @@ namespace Shooter.Editor
                 new Vector3(BoundaryThickness, BoundaryHeight, HalfExtent * 2f)),
         };
 
-        /// <summary>
-        /// 高い壁。両陣地の前の東西に 1 枚ずつと、中央の拠点 B を東西から挟む 2 枚 (z = 0 をまたぐ)。
-        /// </summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Center, Vector3 Size)> HighWalls = Concat(
             Mirrored("High Wall", "West", OnGround(new Vector3(-10f, 0f, -14f), HighWallHeight), new Vector3(6f, HighWallHeight, HighWallThickness)),
             Mirrored("High Wall", "East", OnGround(new Vector3(10f, 0f, -14f), HighWallHeight), new Vector3(6f, HighWallHeight, HighWallThickness)),
@@ -132,34 +103,24 @@ namespace Shooter.Editor
                 ("High Wall Center East", OnGround(new Vector3(6f, 0f, 0f), HighWallHeight), new Vector3(HighWallThickness, HighWallHeight, 6f)),
             });
 
-        /// <summary>低い壁。両陣地から中央へ出たところと、東西の通り道に置き、相手の陣地に向ける。</summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Center, Vector3 Size)> LowWalls = Concat(
             Mirrored("Low Wall", "Center", OnGround(new Vector3(0f, 0f, -9f), LowWallHeight), new Vector3(4f, LowWallHeight, LowWallThickness)),
             Mirrored("Low Wall", "West", OnGround(new Vector3(-24f, 0f, -8f), LowWallHeight), new Vector3(4f, LowWallHeight, LowWallThickness)),
             Mirrored("Low Wall", "East", OnGround(new Vector3(24f, 0f, -8f), LowWallHeight), new Vector3(4f, LowWallHeight, LowWallThickness)));
 
-        /// <summary>乗り越えられる段差。両陣地から東西の建物へ向かう通り道に置く。</summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Center, Vector3 Size)> Steps = Concat(
             Mirrored("Step", "West", OnGround(new Vector3(-17f, 0f, -19f), StepHeight), new Vector3(4f, StepHeight, StepDepth)),
             Mirrored("Step", "East", OnGround(new Vector3(17f, 0f, -19f), StepHeight), new Vector3(4f, StepHeight, StepDepth)));
 
-        /// <summary>壊せる建物。床面の中心。z = 0 の線の上に置き、出入口は南北 (両陣地の方) に向ける。</summary>
         public static readonly IReadOnlyList<(string Name, Vector3 GroundCenter)> Buildings = new[]
         {
             ("Building West", new Vector3(-18f, GroundY, 0f)),
             ("Building East", new Vector3(18f, GroundY, 0f)),
         };
 
-        /// <summary>
-        /// 出現地点。Alpha は -z の陣地に 2 列 × 4 か所、Bravo はその鏡写し。カプセルの中心が y = 0 に来るので床にちょうど立つ。
-        /// </summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Position, NetSpawnPoint.SpawnTeam Team)> SpawnPoints = CreateSpawnLayout();
 
-        /// <summary>
-        /// 拠点制圧の拠点 (足元、床の高さ) と番号 (HUD とログで 0 = A)。A は Alpha の陣地寄り、B は中央、C は Bravo の陣地寄り。
-        /// A は陣地の前の低い壁と高い壁の間、B は中央の高い壁 2 枚の間に、範囲の円が <see cref="ControlPointClearance"/> を空けて
-        /// どの壁・段差・建物にも掛からないように置く。
-        /// </summary>
+        // 範囲の円が ControlPointClearance を空けてどの壁・段差・建物にも掛からない位置にしか置けない (ControlPointOverlaps が確かめる)。
         public static readonly IReadOnlyList<(string Name, Vector3 Position, int Index)> ControlPoints = new[]
         {
             (ControlPointName(0), new Vector3(0f, GroundY, -15f), 0),
@@ -179,10 +140,6 @@ namespace Shooter.Editor
             BuildAt(ScenePath, NavMeshDataPath);
         }
 
-        /// <summary>
-        /// シーンを生成して NavMesh を焼き、両方を保存して Build Settings に加える (既存の並びは変えない)。
-        /// 拠点の範囲が壁・段差・建物・出現地点に掛かる、NavMesh が出現地点・拠点に届かなければ例外を投げる (batchmode では終了コード 1)。
-        /// </summary>
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -218,10 +175,6 @@ namespace Shooter.Editor
                 + NetLaunchOptions.MapFlag + " " + MapName);
         }
 
-        /// <summary>
-        /// 床・外周の壁・高い壁・低い壁・段差を <see cref="LevelName"/> の下にまとめて空のシーンに置き、NavMeshSurface を返す。
-        /// NavMesh は Level の子のコライダーだけから焼く (焼くのは呼び出し側)。
-        /// </summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the arena level");
@@ -247,9 +200,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 焼いた NavMesh に出現地点・拠点・建物の出入口の前が乗り、Alpha の最初の出現地点からどれへも歩いて行けることを確かめる。
-        /// </summary>
         public static void RequireNavigable()
         {
             var points = NavMeshCheckPoints();
@@ -257,7 +207,6 @@ namespace Shooter.Editor
             SceneBuildHelpers.RequireReachable(Feet(SpawnPoints[0].Position), points, NavMeshCheckRadius, "arena point");
         }
 
-        /// <summary>NavMesh に乗っているべき点 (足元)。出現地点・拠点・建物の南北の出入口の 1.5 m 外。</summary>
         public static List<Vector3> NavMeshCheckPoints()
         {
             var points = new List<Vector3>();
@@ -281,9 +230,6 @@ namespace Shooter.Editor
             return points;
         }
 
-        /// <summary>
-        /// 観戦カメラ・ライト・破片の置き場・建物・出現地点・拠点を置く。
-        /// </summary>
         public static void PopulateScene(Scene scene, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
@@ -315,10 +261,6 @@ namespace Shooter.Editor
             EditorSceneManager.MarkSceneDirty(scene);
         }
 
-        /// <summary>
-        /// position (足元) に拠点を置いて返す。<see cref="ControlPointZone"/> が範囲を持って Play 中に地面の円盤を出し、
-        /// クライアントはサーバーから届いた持ち主の色で塗る。中心には遠くから見える旗を立てる (<see cref="DominationSceneBuilder.AddFlag"/>、当たり判定なし)。
-        /// </summary>
         public static ControlPointZone CreateControlPoint(Scene scene, string pointName, Vector3 position, int index)
         {
             SceneBuildHelpers.RequireLoaded(scene);
@@ -343,16 +285,11 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>シーンと HUD で使う拠点の名前 (番号 0 = "Control Point A")。</summary>
         public static string ControlPointName(int index)
         {
             return "Control Point " + DominationHudFormat.PointName(index);
         }
 
-        /// <summary>
-        /// 拠点の範囲の円 (半径に <see cref="ControlPointClearance"/> を足したもの) が、壁 (外周を含む)・段差・建物の床面・
-        /// 出現地点・ほかの拠点の範囲に掛かっていれば、その組み合わせを返す。掛かっていなければ空。上から見た平面で調べる。
-        /// </summary>
         public static List<string> ControlPointOverlaps()
         {
             var problems = new List<string>();
@@ -399,11 +336,7 @@ namespace Shooter.Editor
             return problems;
         }
 
-        /// <summary>
-        /// groundCenter (床面の中心) に壊せる建物を置いて返す。シーンの直下に置き、壊れた部品はサーバーの知らせでクライアントが外す。
-        /// 壁 4 面 (下段は地面に接する) と屋根を 1 m の Cube の部品で組み、南北の壁の中央に出入口を空ける。部品の添字は作った順に 0 から振る。
-        /// 弾で壊れるかはサーバーが試合のルールで決めるので、ここでは壊れない状態にしておく。
-        /// </summary>
+        // 弾で壊れるかはサーバーが試合のルールで決め、壊れた部品はサーバーの知らせでクライアントが外すので、ここでは壊れない状態にしておく。
         public static DestructibleStructure CreateBuilding(
             Scene scene, string buildingName, Vector3 groundCenter, DebrisPool pool, GameObject pieceVisualPrefab = null)
         {
@@ -472,20 +405,17 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>南北の壁の column 列・row 段目が出入口の穴か。</summary>
         public static bool IsDoor(int column, int row)
         {
             var first = (BuildingWidth - DoorWidth) / 2;
             return row < DoorHeight && column >= first && column < first + DoorWidth;
         }
 
-        /// <summary>出現地点 (カプセルの中心) の足元。</summary>
         public static Vector3 Feet(Vector3 spawnPosition)
         {
             return spawnPosition + new Vector3(0f, GroundY, 0f);
         }
 
-        /// <summary>z を反転した点。Alpha の側の配置から Bravo の側を作る。</summary>
         public static Vector3 MirrorZ(Vector3 point)
         {
             return new Vector3(point.x, point.y, -point.z);
@@ -516,7 +446,6 @@ namespace Shooter.Editor
             return new Vector2(a.x - b.x, a.z - b.z).magnitude;
         }
 
-        /// <summary>point から、center・size の箱を上から見た長方形までの距離。中にあれば 0。</summary>
         private static float HorizontalDistanceToBox(Vector3 point, Vector3 center, Vector3 size)
         {
             var dx = Mathf.Max(0f, Mathf.Abs(point.x - center.x) - (size.x / 2f));

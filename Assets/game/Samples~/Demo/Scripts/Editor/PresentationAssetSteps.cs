@@ -7,38 +7,23 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 演出の仮素材を作る手順 (<see cref="IPresentationAssetStep"/>) をすべて集めて順に実行する入口。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.PresentationAssetSteps.BuildAll</code>
-    /// どれかの手順が例外を投げたら、どの手順かを付けた例外にして止める (batchmode では終了コードが 0 でなくなる)。
-    /// </summary>
     public static class PresentationAssetSteps
     {
         public const string MenuPath = "Shooter/Build All Presentation Assets";
         public const string LogTag = "[PresentationAssetSteps]";
 
-        /// <summary>読み込まれているアセンブリから手順を集め (<see cref="Discover"/>)、順に実行する (<see cref="Run"/>)。</summary>
         [MenuItem(MenuPath)]
         public static void BuildAll()
         {
             Run(Discover());
         }
 
-        /// <summary>読み込まれているアセンブリの <see cref="IPresentationAssetStep"/> の実装を <see cref="Collect"/> の規則で集め、実行の順に並べて返す。</summary>
         public static IReadOnlyList<IPresentationAssetStep> Discover()
         {
             return Sort(Collect(TypeCache.GetTypesDerivedFrom<IPresentationAssetStep>()));
         }
 
-        /// <summary>
-        /// types のうち、<see cref="IPresentationAssetStep"/> を実装した公開の具象クラスを作って返す。それ以外の型
-        /// (インターフェース・抽象クラス・ジェネリックの定義・公開されていない型・実装していない型) は飛ばす。
-        /// 公開されていない型を飛ばすのは、テストの中だけで使う手順が一括実行に混ざらないようにするため。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">types が null。</exception>
-        /// <exception cref="ArgumentException">types に null が入っている。</exception>
-        /// <exception cref="InvalidOperationException">手順にあたる型が引数の無い公開コンストラクタを持たない、またはコンストラクタが例外を投げた。</exception>
+        // 公開されていない型を飛ばすのは、テストの中だけで使う手順が一括実行に混ざらないようにするため。
         public static IReadOnlyList<IPresentationAssetStep> Collect(IEnumerable<Type> types)
         {
             if (types == null)
@@ -79,9 +64,6 @@ namespace Shooter.Editor
             return steps;
         }
 
-        /// <summary>steps を実行の順 (<see cref="IPresentationAssetStep.Order"/> の小さい順、同じなら型の完全名の順) に並べ替えた新しい列を返す。</summary>
-        /// <exception cref="ArgumentNullException">steps が null。</exception>
-        /// <exception cref="ArgumentException">steps に null が入っている。</exception>
         public static IReadOnlyList<IPresentationAssetStep> Sort(IEnumerable<IPresentationAssetStep> steps)
         {
             if (steps == null)
@@ -101,12 +83,6 @@ namespace Shooter.Editor
                 .ToList();
         }
 
-        /// <summary>
-        /// steps を実行の順 (<see cref="Sort"/>) に 1 つずつ実行し、実行した手順の名前を順に返す。
-        /// 手順が例外を投げたら残りは実行せず、手順の名前を付けた <see cref="InvalidOperationException"/> を投げる (元の例外は InnerException)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">steps が null。</exception>
-        /// <exception cref="ArgumentException">steps に null が入っている。</exception>
         public static IReadOnlyList<string> Run(IEnumerable<IPresentationAssetStep> steps)
         {
             var ordered = Sort(steps);

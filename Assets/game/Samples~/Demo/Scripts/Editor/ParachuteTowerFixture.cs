@@ -1,29 +1,21 @@
 using Shooter.Core;
-using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場に置く、パラシュートを試す高い台 (<see cref="TowerName"/>)。上から +Z へ歩いて飛び降りると、
-    /// 開ける高さ (<see cref="ParachuteMotion.DefaultMinOpenHeight"/>) を十分に超えたところで開け、開かずに落ちれば落下ダメージを受ける高さにする。
-    /// 左端の外寄り (x = -30..-26, z = -14..-10) に置き、降りる先の +Z 側 (開いて流される 20m ほど) は空けておく。
-    /// </summary>
+    // 降りる先の +Z 側 (開いて流される 20m ほど) は空けておく。
     public sealed class ParachuteTowerFixture : ITpsRangeFixture
     {
         public const string TowerName = "ParachuteTower";
 
-        /// <summary>
-        /// 台の高さ (m)。<see cref="ParachuteMotion.DefaultMinOpenHeight"/> の 2 倍で、端から落ちて少し下がってからでも開ける。
-        /// 既定の重力 (<see cref="PlayerController.DefaultGravity"/>) で開かずに落ちると約 22 m/s になり、<see cref="MotorSpec.DefaultSafeFallSpeed"/> を超える。
-        /// </summary>
+        // 開ける高さの 2 倍にして、端から落ちて少し下がってからでも開けるようにする。
+        // この高さなら既定の重力 (PlayerController.DefaultGravity) で開かずに落ちると約 22 m/s になり、MotorSpec.DefaultSafeFallSpeed を超えて落下ダメージを受ける。
         public const float TowerHeight = ParachuteMotion.DefaultMinOpenHeight * 2f;
 
-        /// <summary>台の上面の x, z の広さ (m)。プレイヤー (直径 1m) が立って歩き出せる広さ。</summary>
+        // プレイヤー (直径 1m) が立って歩き出せる広さにする。
         public const float TowerWidth = 4f;
 
-        /// <summary>台の床面の中心 (地面の高さ)。</summary>
         public static readonly Vector3 TowerBase = new Vector3(-28f, 0f, -12f);
 
         public int Order => 0;
@@ -32,10 +24,8 @@ namespace Shooter.Editor
 
         public Bounds Footprint => new Bounds(TowerCenter, TowerSize);
 
-        /// <summary>台の箱の中心 (ワールド)。</summary>
         public static Vector3 TowerCenter => TowerBase + (Vector3.up * (TowerHeight / 2f));
 
-        /// <summary>台の箱の大きさ。</summary>
         public static Vector3 TowerSize => new Vector3(TowerWidth, TowerHeight, TowerWidth);
 
         // ルールが Off でも置くのは、射撃場のデバッグパネルで On にして読み直したときにも試せるようにするため。

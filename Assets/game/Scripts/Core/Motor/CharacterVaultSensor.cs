@@ -27,11 +27,17 @@ namespace Fps.Core
             _faceRaycast = FaceRaycast;
         }
 
-        public VaultProbeResult Probe(Vector3 position, float yaw, float maxHeight)
+        public VaultProbeResult Probe(Vector3 position, float yaw, MotorSpec spec)
         {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var maxHeight = spec.VaultMaxHeight;
             var forward = CharacterMotorSimulation.YawForward(yaw);
             var feetY = _body.FeetY(position);
-            if (!TryFindFace(position, feetY, forward, maxHeight, out var hit))
+            if (!TryFindFace(position, feetY, forward, maxHeight, spec.VaultReach, out var hit))
             {
                 return VaultProbeResult.None;
             }
@@ -40,16 +46,16 @@ namespace Fps.Core
             var flatLength = MathF.Sqrt((flat.X * flat.X) + (flat.Z * flat.Z));
             var into = flatLength > 0f ? -flat / flatLength : Vector3.Zero;
             var topHeight = MeasureTop(hit, into, feetY, maxHeight);
-            var depth = into == Vector3.Zero ? float.PositiveInfinity : MeasureDepth(hit, into);
+            var depth = into == Vector3.Zero ? float.PositiveInfinity : MeasureDepth(hit, into, spec.VaultMaxDepth);
             var along = (forward.X * into.X) + (forward.Z * into.Z);
             var width = into == Vector3.Zero ? 0f : VaultProbe.MeasureFaceWidth(hit.Point, into, _body.Radius, _faceRaycast);
             var sample = new VaultObstacleSample(hit.Distance * along, hit.Normal, topHeight, depth, width);
             _pathOrigin = position;
-            return VaultProbe.Evaluate(sample, forward, maxHeight, _body.Radius, _isPathClear);
+            return VaultProbe.Evaluate(sample, forward, spec, _body.Radius, _isPathClear);
         }
 
         // 1 本では張り出した縁の下をくぐるので高さを並べる。並べ方と選び方は PlayerController.TryFindVaultFace と揃え、予測と答えを同じにする
-        private bool TryFindFace(Vector3 position, float feetY, Vector3 forward, float maxHeight, out WorldHit face)
+        private bool TryFindFace(Vector3 position, float feetY, Vector3 forward, float maxHeight, float reach, out WorldHit face)
         {
             var found = false;
             face = default;
@@ -57,7 +63,7 @@ namespace Fps.Core
             for (var i = 0; i < count; i++)
             {
                 var origin = new Vector3(position.X, feetY + VaultProbe.ProbeHeightAt(i), position.Z);
-                if (_body.World.Raycast(origin, forward, VaultProbe.MaxReach, _body.LayerMask, out var hit)
+                if (_body.World.Raycast(origin, forward, reach, _body.LayerMask, out var hit)
                     && VaultProbe.IsBetterFace(found, face.Normal, face.Distance, hit.Normal, hit.Distance))
                 {
                     face = hit;
@@ -93,10 +99,10 @@ namespace Fps.Core
                 : startHeight;
         }
 
-        // 手前の面から MaxDepth より先から当たった形へ戻る Ray で向こうの面を探す。始点が中 (もっと厚い) なら当たらないので無限大とする
-        private float MeasureDepth(WorldHit hit, Vector3 into)
+        // 手前の面から奥行きの上限より先から当たった形へ戻る Ray で向こうの面を探す。始点が中 (もっと厚い) なら当たらないので無限大とする
+        private float MeasureDepth(WorldHit hit, Vector3 into, float maxDepth)
         {
-            var reach = VaultProbe.MaxDepth + DepthSlack;
+            var reach = maxDepth + DepthSlack;
             return _body.World.RaycastCollider(hit.ColliderId, hit.Point + (into * reach), -into, reach, out var back)
                 ? Math.Max(0f, reach - back.Distance)
                 : float.PositiveInfinity;

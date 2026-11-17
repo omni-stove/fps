@@ -60,8 +60,26 @@ namespace Fps.Runtime
         [SerializeField, Min(0.01f), Tooltip("回避 1 回にかかる秒数")]
         private float _dodgeSeconds = MotorSpec.DefaultDodgeSeconds;
 
+        [SerializeField, Min(0f), Tooltip("回避が終わってから次の回避を始められるまでの秒数")]
+        private float _dodgeCooldownSeconds = MotorSpec.DefaultDodgeCooldownSeconds;
+
         [SerializeField, Min(0f), Tooltip("乗り越えられる障害物の、足元からの最大の高さ (m)")]
         private float _vaultMaxHeight = MotorSpec.DefaultVaultMaxHeight;
+
+        [SerializeField, Min(0.01f), Tooltip("乗り越える速さ (m/s)。厚い台の上に乗る乗り越えもこの速さ")]
+        private float _vaultSpeed = MotorSpec.DefaultVaultSpeed;
+
+        [SerializeField, Min(0f), Tooltip("乗り越え・よじ登りが届く、体の中心から障害物の手前の面までの水平距離 (m)")]
+        private float _vaultReach = MotorSpec.DefaultVaultReach;
+
+        [SerializeField, Range(0f, 180f), Tooltip("乗り越え・よじ登りで、向いている方向と障害物へ向かう方向のなす角の上限 (度)")]
+        private float _vaultMaxAngleDegrees = MotorSpec.DefaultVaultMaxAngleDegrees;
+
+        [SerializeField, Min(0f), Tooltip("上端がこの高さ (足元から、m) 未満の障害物は段差として歩いて上がり、乗り越えない")]
+        private float _vaultMinHeight = MotorSpec.DefaultVaultMinHeight;
+
+        [SerializeField, Min(0f), Tooltip("乗り越えられる障害物の奥行きの上限 (m)。これより厚い物は台で、向こう側へ降りない")]
+        private float _vaultMaxDepth = MotorSpec.DefaultVaultMaxDepth;
 
         [SerializeField, Min(0f), Tooltip("よじ登れる段の、足元からの最大の高さ (m)。乗り越えられる高さ以下の段は乗り越える")]
         private float _mantleMaxHeight = MotorSpec.DefaultMantleMaxHeight;
@@ -167,10 +185,46 @@ namespace Fps.Runtime
             set => _dodgeSeconds = value;
         }
 
+        public float DodgeCooldownSeconds
+        {
+            get => _dodgeCooldownSeconds;
+            set => _dodgeCooldownSeconds = value;
+        }
+
         public float VaultMaxHeight
         {
             get => _vaultMaxHeight;
             set => _vaultMaxHeight = value;
+        }
+
+        public float VaultSpeed
+        {
+            get => _vaultSpeed;
+            set => _vaultSpeed = value;
+        }
+
+        public float VaultReach
+        {
+            get => _vaultReach;
+            set => _vaultReach = value;
+        }
+
+        public float VaultMaxAngleDegrees
+        {
+            get => _vaultMaxAngleDegrees;
+            set => _vaultMaxAngleDegrees = value;
+        }
+
+        public float VaultMinHeight
+        {
+            get => _vaultMinHeight;
+            set => _vaultMinHeight = value;
+        }
+
+        public float VaultMaxDepth
+        {
+            get => _vaultMaxDepth;
+            set => _vaultMaxDepth = value;
         }
 
         public float MantleMaxHeight
@@ -311,7 +365,13 @@ namespace Fps.Runtime
                 _mantleSpeed,
                 WalkDirection,
                 SprintDirection,
-                CarryLoad);
+                CarryLoad,
+                _dodgeCooldownSeconds,
+                _vaultSpeed,
+                _vaultReach,
+                _vaultMaxAngleDegrees,
+                _vaultMinHeight,
+                _vaultMaxDepth);
         }
 
         /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
@@ -333,7 +393,13 @@ namespace Fps.Runtime
             _lethalFallSpeed = MotorSpec.DefaultLethalFallSpeed;
             _dodgeDistance = MotorSpec.DefaultDodgeDistance;
             _dodgeSeconds = MotorSpec.DefaultDodgeSeconds;
+            _dodgeCooldownSeconds = MotorSpec.DefaultDodgeCooldownSeconds;
             _vaultMaxHeight = MotorSpec.DefaultVaultMaxHeight;
+            _vaultSpeed = MotorSpec.DefaultVaultSpeed;
+            _vaultReach = MotorSpec.DefaultVaultReach;
+            _vaultMaxAngleDegrees = MotorSpec.DefaultVaultMaxAngleDegrees;
+            _vaultMinHeight = MotorSpec.DefaultVaultMinHeight;
+            _vaultMaxDepth = MotorSpec.DefaultVaultMaxDepth;
             _mantleMaxHeight = MotorSpec.DefaultMantleMaxHeight;
             _mantleSpeed = MotorSpec.DefaultMantleSpeed;
             Prone = ProneSpec.Default;

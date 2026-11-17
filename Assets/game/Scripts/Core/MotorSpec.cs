@@ -32,8 +32,26 @@ namespace Fps.Core
         /// </summary>
         public const float DefaultMantleMaxHeight = 2.2f;
 
+        /// <summary>生成時に指定しなかったときの <see cref="DodgeCooldownSeconds"/>。</summary>
+        public const float DefaultDodgeCooldownSeconds = 0.5f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="VaultSpeed"/>。体の半径 0.5 m で、0.8 m 先の高さ 1 m・厚さ 0.4 m の壁を越えるのに約 0.65 秒。</summary>
+        public const float DefaultVaultSpeed = 6f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="VaultReach"/>。</summary>
+        public const float DefaultVaultReach = 1.0f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="VaultMaxAngleDegrees"/>。</summary>
+        public const float DefaultVaultMaxAngleDegrees = 45f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="VaultMinHeight"/>。</summary>
+        public const float DefaultVaultMinHeight = 0.3f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="VaultMaxDepth"/>。</summary>
+        public const float DefaultVaultMaxDepth = 1.0f;
+
         /// <summary>
-        /// 生成時に指定しなかったときの <see cref="MantleSpeed"/>。乗り越え (<see cref="VaultProbe.Speed"/>) の半分で、
+        /// 生成時に指定しなかったときの <see cref="MantleSpeed"/>。乗り越え (<see cref="DefaultVaultSpeed"/>) の半分で、
         /// 0.8 m 先の高さ 1.8 m の段を約 1 秒で上がる。
         /// </summary>
         public const float DefaultMantleSpeed = 3f;
@@ -87,6 +105,24 @@ namespace Fps.Core
         /// <summary>よじ登る軌跡をたどる速さ (m/s)。</summary>
         public float MantleSpeed { get; }
 
+        /// <summary>回避が終わってから次の回避を始められるまでの秒数。</summary>
+        public float DodgeCooldownSeconds { get; }
+
+        /// <summary>乗り越えの軌跡をたどる速さ (m/s)。厚い台の上に乗る乗り越えもこの速さ。</summary>
+        public float VaultSpeed { get; }
+
+        /// <summary>乗り越え・よじ登りができる、体の中心から手前の面までの水平距離の上限 (m)。</summary>
+        public float VaultReach { get; }
+
+        /// <summary>乗り越え・よじ登りで、向いている方向と障害物へ向かう方向のなす角の上限 (度)。</summary>
+        public float VaultMaxAngleDegrees { get; }
+
+        /// <summary>上端がこの高さ (足元から、m) 未満の障害物は段差として扱い、乗り越えない。</summary>
+        public float VaultMinHeight { get; }
+
+        /// <summary>乗り越えられる奥行きの上限 (m)。これより厚い物は台で、向こう側へ降りられないとみなす。</summary>
+        public float VaultMaxDepth { get; }
+
         /// <summary>ダッシュしていないとき (歩き・しゃがみ・伏せ) に、移動の向きごとに速さへ掛ける倍率。</summary>
         public MoveDirectionScale WalkDirection { get; }
 
@@ -112,6 +148,12 @@ namespace Fps.Core
         /// <param name="walkDirection">ダッシュしていないときの向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
         /// <param name="sprintDirection">ダッシュ中の向きごとの倍率。null で <see cref="MoveDirectionScale.Uniform"/>。</param>
         /// <param name="carryLoad">持ち物による速さの倍率の決め方。null で <see cref="CarryLoadSpec.Default"/>。</param>
+        /// <param name="dodgeCooldownSeconds">回避が終わってから次を始められるまでの秒数。0 以上の有限値。</param>
+        /// <param name="vaultSpeed">乗り越えの速さ。0 より大きい有限値。</param>
+        /// <param name="vaultReach">乗り越え・よじ登りが届く水平距離。0 以上の有限値。</param>
+        /// <param name="vaultMaxAngleDegrees">乗り越え・よじ登りで障害物へ向く角度の上限。0〜180 度。</param>
+        /// <param name="vaultMinHeight">乗り越える最低の高さ。0 以上の有限値。</param>
+        /// <param name="vaultMaxDepth">乗り越えられる奥行きの上限。0 以上の有限値。</param>
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -128,7 +170,13 @@ namespace Fps.Core
             float mantleSpeed = DefaultMantleSpeed,
             MoveDirectionScale walkDirection = null,
             MoveDirectionScale sprintDirection = null,
-            CarryLoadSpec carryLoad = null)
+            CarryLoadSpec carryLoad = null,
+            float dodgeCooldownSeconds = DefaultDodgeCooldownSeconds,
+            float vaultSpeed = DefaultVaultSpeed,
+            float vaultReach = DefaultVaultReach,
+            float vaultMaxAngleDegrees = DefaultVaultMaxAngleDegrees,
+            float vaultMinHeight = DefaultVaultMinHeight,
+            float vaultMaxDepth = DefaultVaultMaxDepth)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -196,6 +244,36 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(mantleSpeed), mantleSpeed, "mantleSpeed must be finite and positive");
             }
 
+            if (!(dodgeCooldownSeconds >= 0f) || float.IsInfinity(dodgeCooldownSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(dodgeCooldownSeconds), dodgeCooldownSeconds, "dodgeCooldownSeconds must be finite and not negative");
+            }
+
+            if (!(vaultSpeed > 0f) || float.IsInfinity(vaultSpeed))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vaultSpeed), vaultSpeed, "vaultSpeed must be finite and positive");
+            }
+
+            if (!(vaultReach >= 0f) || float.IsInfinity(vaultReach))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vaultReach), vaultReach, "vaultReach must be finite and not negative");
+            }
+
+            if (!(vaultMaxAngleDegrees >= 0f && vaultMaxAngleDegrees <= 180f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vaultMaxAngleDegrees), vaultMaxAngleDegrees, "vaultMaxAngleDegrees must be between 0 and 180");
+            }
+
+            if (!(vaultMinHeight >= 0f) || float.IsInfinity(vaultMinHeight))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vaultMinHeight), vaultMinHeight, "vaultMinHeight must be finite and not negative");
+            }
+
+            if (!(vaultMaxDepth >= 0f) || float.IsInfinity(vaultMaxDepth))
+            {
+                throw new ArgumentOutOfRangeException(nameof(vaultMaxDepth), vaultMaxDepth, "vaultMaxDepth must be finite and not negative");
+            }
+
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
             JumpHeight = jumpHeight;
@@ -212,6 +290,12 @@ namespace Fps.Core
             WalkDirection = walkDirection ?? MoveDirectionScale.Uniform;
             SprintDirection = sprintDirection ?? MoveDirectionScale.Uniform;
             CarryLoad = carryLoad ?? CarryLoadSpec.Default;
+            DodgeCooldownSeconds = dodgeCooldownSeconds;
+            VaultSpeed = vaultSpeed;
+            VaultReach = vaultReach;
+            VaultMaxAngleDegrees = vaultMaxAngleDegrees;
+            VaultMinHeight = vaultMinHeight;
+            VaultMaxDepth = vaultMaxDepth;
         }
     }
 }

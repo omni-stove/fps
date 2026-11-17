@@ -292,7 +292,7 @@ namespace Fps.Core
         // 前方を調べ、乗り越えられれば進み 0 の状態を返す。乗り越えられなければ None (Jump はふつうのジャンプになる)
         private CharacterVaultState TryStartVault(float yaw)
         {
-            LastVaultProbe = _vaultSensor.Probe(Body.Position, yaw, _motor.Spec.VaultMaxHeight);
+            LastVaultProbe = _vaultSensor.Probe(Body.Position, yaw, _motor.Spec);
             if (!LastVaultProbe.CanVault)
             {
                 return CharacterVaultState.None;
@@ -307,7 +307,7 @@ namespace Fps.Core
         {
             if (_vaultPath == null || !vault.HasSamePath(_vaultPath))
             {
-                _vaultPath = vault.ToPath();
+                _vaultPath = vault.ToPath(_motor.Spec.VaultSpeed);
             }
 
             var before = vault.Elapsed;

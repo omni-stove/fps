@@ -8,9 +8,11 @@ namespace Fps.Core.Tests
     {
         private const float _tolerance = 1e-4f;
 
-        private static MotorSpec Spec(float dodgeDistance = 3f, float dodgeSeconds = 0.3f)
+        private static MotorSpec Spec(
+            float dodgeDistance = 3f, float dodgeSeconds = 0.3f, float dodgeCooldownSeconds = MotorSpec.DefaultDodgeCooldownSeconds)
         {
-            return new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, dodgeDistance: dodgeDistance, dodgeSeconds: dodgeSeconds);
+            return new MotorSpec(
+                5f, 8f, 1.2f, 20f, 0.1f, 2.5f, dodgeDistance: dodgeDistance, dodgeSeconds: dodgeSeconds, dodgeCooldownSeconds: dodgeCooldownSeconds);
         }
 
         [Test]
@@ -20,8 +22,8 @@ namespace Fps.Core.Tests
 
             Assert.That(motion.Distance, Is.EqualTo(4f));
             Assert.That(motion.Seconds, Is.EqualTo(0.5f));
-            Assert.That(motion.CooldownSeconds, Is.EqualTo(DodgeMotion.DefaultCooldownSeconds));
-            Assert.That(DodgeMotion.DefaultCooldownSeconds, Is.EqualTo(0.5f));
+            Assert.That(motion.CooldownSeconds, Is.EqualTo(MotorSpec.DefaultDodgeCooldownSeconds));
+            Assert.That(MotorSpec.DefaultDodgeCooldownSeconds, Is.EqualTo(0.5f));
         }
 
         [Test]
@@ -39,9 +41,6 @@ namespace Fps.Core.Tests
         public void RejectsInvalidArguments()
         {
             Assert.Throws<ArgumentNullException>(() => new DodgeMotion(null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new DodgeMotion(Spec(), -0.1f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new DodgeMotion(Spec(), float.PositiveInfinity));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new DodgeMotion(Spec(), float.NaN));
 
             var motion = new DodgeMotion(Spec());
             Assert.Throws<ArgumentOutOfRangeException>(() => motion.TryStart(Vector2.Zero));
@@ -94,7 +93,7 @@ namespace Fps.Core.Tests
         [Test]
         public void EndsAfterTheSecondsAndWaitsForTheCooldown()
         {
-            var motion = new DodgeMotion(Spec(3f, 0.3f), 0.5f);
+            var motion = new DodgeMotion(Spec(3f, 0.3f, 0.5f));
             motion.TryStart(new Vector2(1f, 0f));
 
             motion.Step(0.2f);
@@ -119,7 +118,7 @@ namespace Fps.Core.Tests
         [Test]
         public void TimeLeftOverFromTheLastStepCountsTowardsTheCooldown()
         {
-            var motion = new DodgeMotion(Spec(3f, 0.3f), 0.5f);
+            var motion = new DodgeMotion(Spec(3f, 0.3f, 0.5f));
             motion.TryStart(new Vector2(1f, 0f));
 
             var step = motion.Step(0.5f);
@@ -141,7 +140,7 @@ namespace Fps.Core.Tests
         [Test]
         public void MashingOnlyDodgesOncePerRollPlusCooldown()
         {
-            var motion = new DodgeMotion(Spec(3f, 0.3f), 0.5f);
+            var motion = new DodgeMotion(Spec(3f, 0.3f, 0.5f));
             const float frame = 0.01f;
             var starts = 0;
 
@@ -162,7 +161,7 @@ namespace Fps.Core.Tests
         [Test]
         public void CancelStopsTheRollAndStartsTheCooldown()
         {
-            var motion = new DodgeMotion(Spec(), 0.5f);
+            var motion = new DodgeMotion(Spec(dodgeCooldownSeconds: 0.5f));
             Assert.That(motion.Cancel(), Is.False);
 
             motion.TryStart(new Vector2(1f, 0f));
@@ -177,7 +176,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ResetClearsTheRollAndTheCooldown()
         {
-            var motion = new DodgeMotion(Spec(), 0.5f);
+            var motion = new DodgeMotion(Spec(dodgeCooldownSeconds: 0.5f));
             motion.TryStart(new Vector2(1f, 0f));
             motion.Cancel();
 

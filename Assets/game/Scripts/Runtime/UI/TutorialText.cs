@@ -16,7 +16,7 @@ namespace Fps.Runtime
         /// <summary>status を、今の割り当てのキーで案内する文にする。すべて終えていれば <see cref="CompletedText"/>。</summary>
         public static LocalizedText For(TutorialStatus status)
         {
-            return status.IsComplete ? CompletedText : Prompt(status, KeyLabelFor(status.ActionPath, status.Device));
+            return status.IsComplete ? CompletedText : Prompt(status, string.IsNullOrWhiteSpace(status.KeyLabel) ? KeyLabelFor(status.ActionPath, status.Device) : status.KeyLabel);
         }
 
         /// <summary>

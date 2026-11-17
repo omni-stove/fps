@@ -55,7 +55,7 @@ namespace Fps.Core.Tests
             // 倒した本人でなくても、敵のチームの誰が拾っても確定する。
             Assert.That(mode.Collect(tag.Id, _alpha2), Is.EqualTo(KillConfirmedResult.Confirmed));
 
-            Assert.That(mode.Session.GetScore(Side.Alpha), Is.EqualTo(KillConfirmed.PointsPerConfirm));
+            Assert.That(mode.Session.GetScore(Side.Alpha), Is.EqualTo((double)KillConfirmedSpec.DefaultPointsPerConfirm));
             Assert.That(mode.Session.GetScore(Side.Bravo), Is.Zero);
             Assert.That(mode.GetConfirmed(Side.Alpha), Is.EqualTo(1));
             Assert.That(mode.GetDenied(Side.Alpha), Is.Zero);

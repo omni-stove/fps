@@ -56,29 +56,19 @@ namespace Fps.Core
                 return AttachmentRejection.NoRoom;
             }
 
-            inventory.TryTake(handle, 1, out _);
-            // 外した物は setAttachments の前に入れる。後だと、item を抜いて空いたマスを溢れた弾が使い、外した物が入らず item を戻せなくなるため
-            var returned = false;
-            if (replaced != null && catalog.TryFind(replaced, out var removed))
-            {
-                if (inventory.Add(replaced, 1, removed.Weight) != 1)
-                {
-                    inventory.Add(item.Id, 1, 0f);
-                    return AttachmentRejection.NoRoom;
-                }
-
-                returned = true;
-            }
-
-            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。付ける前の持ち物に戻す
+            // 付ける物を持ち物に残したまま setAttachments を呼ぶ。この時点の持ち物と武器の重さの合計が、付け替えたあとの合計と同じになり、溢れる弾の空きを正しく判定できるため
+            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。持ち物は何も変えていない
             if (!setAttachments(next))
             {
-                if (returned)
-                {
-                    inventory.Remove(replaced, 1);
-                }
+                return AttachmentRejection.NoRoom;
+            }
 
+            inventory.TryTake(handle, 1, out _);
+            if (replaced != null && catalog.TryFind(replaced, out var removed)
+                && inventory.Add(replaced, 1, removed.Weight) != 1)
+            {
                 inventory.Add(item.Id, 1, 0f);
+                setAttachments(current);
                 return AttachmentRejection.NoRoom;
             }
 

@@ -7,8 +7,11 @@ namespace Fps.Server
 {
     internal sealed class ServerBotAgent
     {
+        private const float _minHorizontalLengthSquared = 1e-6f;
+
         private readonly NetBotSpec _spec;
         private readonly ISightBlocker _sightBlocker;
+        private readonly Random _random;
         private Vector3 _progressPosition;
         private float _progressTime;
         private bool _tracking;
@@ -22,6 +25,7 @@ namespace Fps.Server
             PlayerId = playerId;
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _sightBlocker = sightBlocker ?? throw new ArgumentNullException(nameof(sightBlocker));
+            _random = random ?? throw new ArgumentNullException(nameof(random));
             Brain = new EnemyBrain(spec.Brain);
             Brain.SetPatrolRoute(route);
             Driver = new BotDriver(spec.Input, random);
@@ -110,6 +114,41 @@ namespace Fps.Server
         public bool IsSightBlocked(Vector3 eye, Vector3 target)
         {
             return _sightBlocker.Blocks(eye, target);
+        }
+
+        /// <summary>
+        /// 撃つ向き direction と、目 eye から lookAt への向きの水平の差が <see cref="EnemySpec.FireToleranceDegrees"/> 以下なら true
+        /// (オフラインの EnemyAgent.IsFacing と同じ)。lookAt が無いか真上・真下なら true。
+        /// </summary>
+        public bool IsFacing(Vector3 eye, Vector3 direction, Vector3? lookAt)
+        {
+            var tolerance = Brain.Spec.FireToleranceDegrees;
+            if (!lookAt.HasValue || tolerance >= EnemySpec.MaxFireToleranceDegrees)
+            {
+                return true;
+            }
+
+            var toTarget = new Vector2(lookAt.Value.X - eye.X, lookAt.Value.Z - eye.Z);
+            var forward = new Vector2(direction.X, direction.Z);
+            if (toTarget.LengthSquared() < _minHorizontalLengthSquared || forward.LengthSquared() < _minHorizontalLengthSquared)
+            {
+                return true;
+            }
+
+            var cos = Vector2.Dot(Vector2.Normalize(toTarget), Vector2.Normalize(forward));
+            var degrees = Math.Acos(Math.Max(-1f, Math.Min(1f, cos))) * ServerBotMath.DegreesPerRadian;
+            return degrees <= tolerance;
+        }
+
+        /// <summary>
+        /// direction に、Attack に入ってからの発数の散らばり (<see cref="EnemyBrain.NextShotSpreadDegrees"/>) と
+        /// lookAt までの距離の散らばり (<see cref="EnemySpec.RangeSpreadDegreesAt"/>) を足した向き (長さ 1)。散らばりが 0 なら乱数を引かない。
+        /// </summary>
+        public Vector3 Scatter(Vector3 eye, Vector3 direction, Vector3? lookAt)
+        {
+            var range = lookAt.HasValue ? Brain.Spec.RangeSpreadDegreesAt(Vector3.Distance(eye, lookAt.Value)) : 0f;
+            var halfAngle = Math.Min(EnemySpec.MaxSpreadDegrees, Brain.NextShotSpreadDegrees + range);
+            return BlindFireShot.Spread(direction, halfAngle, _random);
         }
 
         public FireTrigger TriggerFor(WeaponSpec spec)

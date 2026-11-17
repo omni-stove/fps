@@ -61,6 +61,20 @@ namespace Fps.Core
         public const string LoseSightSecondsItem = "loseSightSeconds";
         public const string SearchSecondsItem = "searchSeconds";
         public const string ReactionSecondsItem = "reactionSeconds";
+        public const string FireRangeItem = "fireRange";
+        public const string FacingToleranceDegreesItem = "facingToleranceDegrees";
+        public const string RangeSpreadDegreesItem = "rangeSpreadDegrees";
+        public const string OpeningSpreadDegreesItem = "openingSpreadDegrees";
+        public const string SettledSpreadDegreesItem = "settledSpreadDegrees";
+        public const string OpeningShotsItem = "openingShots";
+        public const string CoverHideSecondsItem = "coverHideSeconds";
+        public const string CoverPeekSecondsItem = "coverPeekSeconds";
+        public const string CoverHealthFractionItem = "coverHealthFraction";
+        public const string ArchetypeItem = "archetype";
+        public const string StaggerResistanceItem = "staggerResistance";
+        public const string SprintRatioItem = "sprintRatio";
+        public const string CrouchRatioItem = "crouchRatio";
+        public const string RecoilControlItem = "recoilControl";
         public const string MaxTurnDegreesPerSecondItem = "maxTurnDegreesPerSecond";
         public const string AimErrorPerMeterItem = "aimErrorPerMeter";
         public const string AimErrorRefreshSecondsItem = "aimErrorRefreshSeconds";
@@ -136,7 +150,8 @@ namespace Fps.Core
             EnemyWeightItem,
         };
 
-        // 項目名は EnemySpec・BotInputSpec・NetBotSpec のコンストラクターの引数名にそろえ、値の検査で断られた項目を名前で示せるようにする
+        // 項目名は EnemySpec・BotInputSpec・NetBotSpec のコンストラクターの引数名にそろえ、値の検査で断られた項目を名前で示せるようにする。
+        // EnemySpec の fireToleranceDegrees だけは BotInputSpec の同じ名前と分けるため facingToleranceDegrees と呼ぶ
         public static IReadOnlyList<string> BotItemNames { get; } = new[]
         {
             SightRangeItem,
@@ -144,6 +159,20 @@ namespace Fps.Core
             LoseSightSecondsItem,
             SearchSecondsItem,
             ReactionSecondsItem,
+            OpeningSpreadDegreesItem,
+            SettledSpreadDegreesItem,
+            OpeningShotsItem,
+            CoverHideSecondsItem,
+            CoverPeekSecondsItem,
+            CoverHealthFractionItem,
+            ArchetypeItem,
+            StaggerResistanceItem,
+            FireRangeItem,
+            FacingToleranceDegreesItem,
+            RangeSpreadDegreesItem,
+            SprintRatioItem,
+            CrouchRatioItem,
+            RecoilControlItem,
             MaxTurnDegreesPerSecondItem,
             AimErrorPerMeterItem,
             AimErrorRefreshSecondsItem,
@@ -291,21 +320,55 @@ namespace Fps.Core
             var defaults = NetBotSpec.Default;
             var brain = defaults.Brain;
             var input = defaults.Input;
+
+            // 道の角で止まる距離と行き先に着いたとみなす距離が違うと、手前で止まった bot がいつまでも着かずに行き詰まるので、1 つの項目で両方を決める
+            var arrivalDistance = fields.ReadFloat(ArrivalDistanceItem, input.ArrivalDistance);
+            var archetype = fields.ReadEnum(ArchetypeItem, brain.Archetype);
+            float? staggerResistance = fields.Has(StaggerResistanceItem) ? fields.ReadFloat(StaggerResistanceItem, brain.StaggerResistance) : (float?)null;
+            EnemySpec readBrain;
+            try
+            {
+                readBrain = new EnemySpec(
+                    fields.ReadFloat(SightRangeItem, brain.SightRange),
+                    fields.ReadFloat(AttackRangeItem, brain.AttackRange),
+                    fields.ReadFloat(LoseSightSecondsItem, brain.LoseSightSeconds),
+                    fields.ReadFloat(SearchSecondsItem, brain.SearchSeconds),
+                    fields.ReadFloat(ReactionSecondsItem, brain.ReactionSeconds),
+                    fields.ReadFloat(OpeningSpreadDegreesItem, brain.OpeningSpreadDegrees),
+                    fields.ReadFloat(SettledSpreadDegreesItem, brain.SettledSpreadDegrees),
+                    fields.ReadInt(OpeningShotsItem, brain.OpeningShots),
+                    fields.ReadFloat(CoverHideSecondsItem, brain.CoverHideSeconds),
+                    fields.ReadFloat(CoverPeekSecondsItem, brain.CoverPeekSeconds),
+                    fields.ReadFloat(CoverHealthFractionItem, brain.CoverHealthFraction),
+                    archetype,
+                    staggerResistance: staggerResistance,
+                    fireRange: fields.ReadFloat(FireRangeItem, brain.FireRange),
+                    fireToleranceDegrees: fields.ReadFloat(FacingToleranceDegreesItem, brain.FireToleranceDegrees),
+                    rangeSpreadDegrees: fields.ReadFloat(RangeSpreadDegreesItem, brain.RangeSpreadDegrees),
+                    arrivalDistance: arrivalDistance,
+                    sprintRatio: fields.ReadFloat(SprintRatioItem, brain.SprintRatio),
+                    crouchRatio: fields.ReadFloat(CrouchRatioItem, brain.CrouchRatio),
+                    recoilControl: fields.ReadFloat(RecoilControlItem, brain.RecoilControl));
+            }
+            catch (ArgumentException e) when (e.ParamName == FireToleranceDegreesItem)
+            {
+                throw RejectedItem(source, _botsKind, FacingToleranceDegreesItem, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(source, _botsKind, BotItemNames, e);
+            }
+
             try
             {
                 return new NetBotSpec(
-                    new EnemySpec(
-                        fields.ReadFloat(SightRangeItem, brain.SightRange),
-                        fields.ReadFloat(AttackRangeItem, brain.AttackRange),
-                        fields.ReadFloat(LoseSightSecondsItem, brain.LoseSightSeconds),
-                        fields.ReadFloat(SearchSecondsItem, brain.SearchSeconds),
-                        fields.ReadFloat(ReactionSecondsItem, brain.ReactionSeconds)),
+                    readBrain,
                     new BotInputSpec(
                         fields.ReadFloat(MaxTurnDegreesPerSecondItem, input.MaxTurnDegreesPerSecond),
                         fields.ReadFloat(AimErrorPerMeterItem, input.AimErrorPerMeter),
                         fields.ReadFloat(AimErrorRefreshSecondsItem, input.AimErrorRefreshSeconds),
                         fields.ReadFloat(FireToleranceDegreesItem, input.FireToleranceDegrees),
-                        fields.ReadFloat(ArrivalDistanceItem, input.ArrivalDistance),
+                        arrivalDistance,
                         fields.ReadFloat(SprintDistanceItem, input.SprintDistance),
                         fields.ReadFloat(SprintMaxAngleDegreesItem, input.SprintMaxAngleDegrees),
                         fields.ReadBool(CrouchWhenHoldingItem, input.CrouchWhenHolding)),
@@ -466,6 +529,11 @@ namespace Fps.Core
                 }
             }
 
+            return RejectedItem(source, kind, item, e);
+        }
+
+        private static TuningJsonException RejectedItem(string source, string kind, string item, ArgumentException e)
+        {
             var where = item == null ? string.Empty : $" item '{item}'";
             return new TuningJsonException(source, item, $"{kind} '{source}'{where} is invalid: {e.Message}", e);
         }
@@ -569,6 +637,37 @@ namespace Fps.Core
                 }
 
                 return value;
+            }
+
+            public bool Has(string name)
+            {
+                return _values.ContainsKey(name);
+            }
+
+            public T ReadEnum<T>(string name, T fallback)
+                where T : struct, Enum
+            {
+                var node = Find(name);
+                if (node == null)
+                {
+                    return fallback;
+                }
+
+                if (node.Kind != GameRulesJson.NodeKind.String)
+                {
+                    throw Invalid(name, node, $"must be a string, but is {node.Describe()}");
+                }
+
+                // 数を名前として書いたもの ("1") を Enum.TryParse は通すので、名前だけを受け付ける。
+                foreach (var value in Enum.GetNames(typeof(T)))
+                {
+                    if (string.Equals(value, node.Text, StringComparison.Ordinal))
+                    {
+                        return Enum.Parse<T>(value);
+                    }
+                }
+
+                throw Invalid(name, node, $"must be one of {string.Join(", ", Enum.GetNames(typeof(T)))}, but is \"{node.Text}\"");
             }
 
             public bool ReadBool(string name, bool fallback)

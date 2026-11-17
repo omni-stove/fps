@@ -18,15 +18,16 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void WithoutBotsTuningInUnityTheServerUsesTheDefaults()
+        public void TheServerReadsTheSameBotsAsUnity()
         {
             var root = RepositoryRoot();
             var server = File.ReadAllText(Path.Combine(root, "server-data", "tuning", "bots.json"));
+            var unity = File.ReadAllText(Path.Combine(root, "Assets", "game", "Resources", "Tuning", "bots.json"));
 
-            Assert.That(File.Exists(Path.Combine(root, "Assets", "game", "Resources", "Tuning", "bots.json")), Is.False);
-            Assert.That(server, Is.EqualTo("{}\n"));
+            Assert.That(server, Is.EqualTo(unity));
             var spec = TuningJson.ParseBots(server, "bots.json");
             Assert.That(spec.Brain.SightRange, Is.EqualTo(40f));
+            Assert.That(spec.Brain.FireToleranceDegrees, Is.EqualTo(180f));
             Assert.That(spec.Input.MaxTurnDegreesPerSecond, Is.EqualTo(240f));
             Assert.That(spec.StuckProgress, Is.EqualTo(0.5f));
         }

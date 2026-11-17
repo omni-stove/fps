@@ -428,7 +428,7 @@ namespace Fps.Server
 
             if (!traversing && !after.Ladder.IsClimbing)
             {
-                Shoot(agent, plan, (int)Math.Min(tick, int.MaxValue), dt);
+                Shoot(agent, plan, decision.LookAt, (int)Math.Min(tick, int.MaxValue), dt);
             }
 
             if (agent.Clock >= agent.NextPositionLog)
@@ -453,7 +453,7 @@ namespace Fps.Server
             _log.WriteLine(LogTag + " ladder player=" + Text(agent.PlayerId) + " ladder=" + Text(index) + " climb=" + climb);
         }
 
-        private void Shoot(ServerBotAgent agent, BotInputPlan plan, int tick, float dt)
+        private void Shoot(ServerBotAgent agent, BotInputPlan plan, Vector3? lookAt, int tick, float dt)
         {
             var playerId = agent.PlayerId;
             if (!_combat.TryGetWeapon(playerId, out var spec, out var state))
@@ -475,12 +475,12 @@ namespace Fps.Server
             }
 
             // Semi も連射間隔ごとに引き直す (人が速く叩くのと同じ)。間隔より速くはサーバーの検査も通さない
-            if (!plan.Fire || !_rules.CanFire(playerId) || !trigger.Pull(true, true))
+            if (!plan.Fire || !agent.IsFacing(plan.FireOrigin, plan.FireDirection, lookAt) || !_rules.CanFire(playerId) || !trigger.Pull(true, true))
             {
                 return;
             }
 
-            if (_combat.BotFire(playerId, plan.FireOrigin, plan.FireDirection, tick))
+            if (_combat.BotFire(playerId, plan.FireOrigin, agent.Scatter(plan.FireOrigin, plan.FireDirection, lookAt), tick))
             {
                 agent.Brain.RecordShot();
             }

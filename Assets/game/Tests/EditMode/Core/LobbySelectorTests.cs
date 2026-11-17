@@ -190,6 +190,110 @@ namespace Shooter.Core.Tests
             Assert.That(LobbySelector.PickServer(lobbies, _version, 9), Is.Null);
         }
 
+        private static LobbyInfo RatedServer(string id, long players, int? skillAverage, int max = 8)
+        {
+            var server = Server(id, "203.0.113.1:7777", players, max: max);
+            if (!skillAverage.HasValue)
+            {
+                return server;
+            }
+
+            var attributes = new List<LobbyAttribute>(server.Attributes)
+            {
+                LobbyAttribute.OfNumber(ServerLobby.SkillAverageKey, skillAverage.Value),
+            };
+            return new LobbyInfo(id, server.OwnerUserId, max, server.Members, attributes);
+        }
+
+        [Test]
+        public void PicksTheServerWhoseSkillAverageIsClosest()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RatedServer("strong", 6, 1800),
+                RatedServer("near", 1, 1120),
+                RatedServer("weak", 5, 800),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000).Id, Is.EqualTo("near"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1700).Id, Is.EqualTo("strong"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 700).Id, Is.EqualTo("weak"));
+        }
+
+        [Test]
+        public void TakesAServerWithoutASkillAverageAsTheFarthest()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RatedServer("unrated", 7, null),
+                RatedServer("far", 1, 3000),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000).Id, Is.EqualTo("far"));
+            Assert.That(
+                LobbySelector.PickServer(new List<LobbyInfo> { lobbies[0] }, _version, 1, 1000).Id,
+                Is.EqualTo("unrated"),
+                "an unrated server is still picked when it is the only one with room");
+        }
+
+        [Test]
+        public void KeepsTheBusiestFirstOrderWhenTheSkillGapsAreEqual()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RatedServer("b-above", 2, 1100),
+                RatedServer("busy-below", 5, 900),
+                RatedServer("a-above", 2, 1100),
+                RatedServer("unrated-1", 7, null),
+                RatedServer("unrated-0", 7, null),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000).Id, Is.EqualTo("busy-below"));
+
+            lobbies.RemoveAt(1);
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000).Id, Is.EqualTo("a-above"), "equal gap and players fall back to the lobby id");
+
+            var unrated = new List<LobbyInfo> { RatedServer("u-quiet", 1, null), lobbies[2], lobbies[3] };
+            Assert.That(LobbySelector.PickServer(unrated, _version, 1, 1000).Id, Is.EqualTo("unrated-0"));
+        }
+
+        [Test]
+        public void IgnoresSkillWhenTheSearcherHasNoValue()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RatedServer("near", 1, 1000),
+                RatedServer("unrated-busy", 6, null),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null).Id, Is.EqualTo("unrated-busy"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version).Id, Is.EqualTo("unrated-busy"));
+        }
+
+        [Test]
+        public void SkillDoesNotOverrideRoomForTheParty()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RatedServer("near-but-crowded", 7, 1000),
+                RatedServer("far-with-room", 2, 2000),
+                null,
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 2, 1000).Id, Is.EqualTo("far-with-room"));
+        }
+
+        [Test]
+        public void SkillGapDoesNotOverflowAtTheIntLimits()
+        {
+            var high = RatedServer("high", 0, int.MaxValue);
+
+            Assert.That(LobbySelector.SkillGap(high, int.MinValue), Is.EqualTo((long)int.MaxValue - int.MinValue));
+            Assert.That(LobbySelector.SkillGap(RatedServer("u", 0, null), int.MinValue), Is.EqualTo(long.MaxValue));
+            Assert.That(LobbySelector.SkillGap(high, null), Is.Zero);
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.SkillGap(null, 1000));
+        }
+
         [Test]
         public void DescribesTheServersTooSmallForTheParty()
         {

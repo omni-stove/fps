@@ -154,7 +154,8 @@ namespace Shooter.Server
             return count;
         }
 
-        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null)
+        public ServerPlayer Join(
+            ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null, int? skillRating = null)
         {
             if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
             {
@@ -177,7 +178,7 @@ namespace Shooter.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            return Add(connection, playerId, rejoinKey, productUserId, partyId);
+            return Add(connection, playerId, rejoinKey, productUserId, partyId, skillRating);
         }
 
         // Bot は接続を持たないので ConnectionId.None で加え、送る側はそれを読み飛ばす。
@@ -194,7 +195,7 @@ namespace Shooter.Server
             }
 
             _botCount++;
-            return Add(ConnectionId.None, playerId, null, null, null);
+            return Add(ConnectionId.None, playerId, null, null, null, null);
         }
 
         public bool LeaveBot(int playerId)
@@ -208,7 +209,8 @@ namespace Shooter.Server
             return true;
         }
 
-        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId, string partyId)
+        private ServerPlayer Add(
+            ConnectionId connection, int playerId, string rejoinKey, string productUserId, string partyId, int? skillRating)
         {
             var rejoined = false;
             var team = ChooseTeam != null
@@ -221,7 +223,7 @@ namespace Shooter.Server
                 team = ChooseWithParty(partyId);
             }
 
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount);
+            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount, skillRating);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {

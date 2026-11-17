@@ -414,7 +414,7 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request));
+            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request), request.SkillRating);
             _host.OnConnected(connection);
         }
 

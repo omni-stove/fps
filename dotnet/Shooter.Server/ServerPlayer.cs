@@ -5,8 +5,17 @@ namespace Shooter.Server
 {
     internal sealed class ServerPlayer
     {
-        public ServerPlayer(ConnectionId connection, int playerId, Team team, string rejoinKey, string productUserId = null, string partyId = null, long joinOrder = 0)
+        public ServerPlayer(
+            ConnectionId connection,
+            int playerId,
+            Team team,
+            string rejoinKey,
+            string productUserId = null,
+            string partyId = null,
+            long joinOrder = 0,
+            int? skillRating = null)
         {
+            SkillRating = skillRating;
             ProductUserId = productUserId;
             Connection = connection;
             PlayerId = playerId;
@@ -29,6 +38,8 @@ namespace Shooter.Server
         public string PartyId { get; }
 
         public long JoinOrder { get; }
+
+        public int? SkillRating { get; }
 
         public bool IsBot => BotRoster.IsBotId(PlayerId);
 

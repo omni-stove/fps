@@ -70,6 +70,67 @@ namespace Shooter.NetV2.Tests
             Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=busy server=203.0.113.2:7790 players=4/8"));
         }
 
+        private static LobbyInfo RatedServer(string id, string endpoint, int players, int? skillAverage)
+        {
+            return new LobbyInfo(
+                id, _owner, ServerLobby.MaxMembers(NetMatchSettings.DefaultMaxPlayers), new[] { _owner },
+                ServerLobby.Attributes(endpoint, _version, players, NetMatchSettings.Default, skillAverage));
+        }
+
+        [Test]
+        public void ConnectsToTheServerNearestToTheSkillRating()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 1, 1000, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                RatedServer("strong", "203.0.113.1:7777", 6, 1800),
+                RatedServer("near", "203.0.113.2:7777", 1, 1050),
+                RatedServer("unrated", "203.0.113.3:7777", 7, null),
+            });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0 near skill 1000"));
+            Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=near server=203.0.113.2:7777 players=1/8 skill=1050 (self 1000)"));
+        }
+
+        [Test]
+        public void APartyPassesTheAverageOfItsMembers()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 2, ServerLobby.SkillAverage(new int?[] { 1600, 2000 }), options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                RatedServer("low", "203.0.113.1:7777", 1, 1500),
+                RatedServer("high", "203.0.113.2:7777", 1, 1850),
+                RatedServer("crowded", "203.0.113.3:7777", 7, 1800),
+            });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"), "1850 is nearest to the party's 1800 among the servers with room for 2");
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0 for a party of 2 near skill 1800"));
+        }
+
+        [Test]
+        public void WithoutASkillRatingTheBusiestServerIsStillPicked()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 1, null, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                RatedServer("near", "203.0.113.1:7777", 1, 1000),
+                RatedServer("busy", "203.0.113.2:7777", 5, null),
+            });
+
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"));
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0"));
+            Assert.That(_log, Has.None.Contains("skill"));
+        }
+
         [Test]
         public void APartyOnlyPicksAServerWithRoomForEveryone()
         {

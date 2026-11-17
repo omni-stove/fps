@@ -58,6 +58,11 @@ namespace Shooter.Server.Eos
         // drain に入ったら、待っている間にクイックマッチで選ばれないようロビーを閉じ始める。
         public void Tick(int players, bool draining)
         {
+            Tick(players, null, draining);
+        }
+
+        public void Tick(int players, int? skillAverage, bool draining)
+        {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (draining)
             {
@@ -71,7 +76,7 @@ namespace Shooter.Server.Eos
 
             if (!_closing)
             {
-                _registrar.SetPlayers(players);
+                _registrar.SetPlayers(players, skillAverage);
             }
 
             _registrar.Tick(_clock());

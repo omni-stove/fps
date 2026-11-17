@@ -216,14 +216,16 @@ Device ID でログインしたユーザー。ロビーでは RTC 部屋を開�
 | `voice_enabled` | `1` (RTC 部屋を開いている) |
 | `private` | 非公開の試合のときだけ `1`。クイックマッチはこのロビーを選ばない |
 | `join_code` | 非公開の試合のときだけ、その参加コード |
+| `skill_average` | 接続しているプレイヤーのうち、接続のときに実力の値 (`SkillRating`) を送った人の平均 (整数。端数は四捨五入)。値を送った人が一度も入っていなければ付けない。EOS の属性は消せないので、値を送った人が全員抜けても最後の平均を残す |
 
-ログには次のように出る。
+ログには次のように出る。人が入る・出るたびに、変わった属性だけを更新する。
 
 ```
 [Lobby] created id=<ロビー Id> max=9 owner=<サーバーの ID> rtc=on server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0 voice_enabled=1
 [Lobby] registered id=<ロビー Id> server=203.0.113.10:7777 players=0
 [Lobby] players 0 -> 1
-[Lobby] updated id=<ロビー Id> players=1
+[Lobby] skill average - -> 1200
+[Lobby] updated id=<ロビー Id> players=1 skill_average=1200
 ```
 
 ロビーやログインを失うと (`[Lobby] lost the server lobby ...`)、5 秒おきに作り直す。起動してから 60 秒たっても
@@ -259,6 +261,10 @@ Device ID でログインしたユーザー。ロビーでは RTC 部屋を開�
   を出して手元のサーバー (`make server-dotnet`) へつなぐ。`-lobby quickmatch` と EOS のクイックマッチは、探せなければ理由を出して止まる。
 - `shooter-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
   `server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
+  自分の実力の値 (パーティならメンバーの平均) を渡して探したときは、`skill_average` と自分の値の差が小さいものを先に選び、
+  差が同じものの中で今の順 (人数の多い順、次にロビー ID の順) にする。`skill_average` の無いロビーは差がいちばん大きいとみなす。
+  このときのログは `[Lobby] logging in to search shooter-server:0.2.0 near skill 1000`、
+  `[Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8 skill=1050 (self 1000); connecting ...` になる。
   クライアントはロビーには入らず、`server` のアドレスへ UDP でつなぐ。クイックマッチは UDP だけで、`-lobby quickmatch -transport eos` は理由を出して終了コード 2 で断られる
   (EOS でつなぐなら `-mode client -transport eos -eos-server <サーバーの ID>`)。
 

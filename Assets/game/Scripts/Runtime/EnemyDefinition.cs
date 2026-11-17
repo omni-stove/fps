@@ -48,6 +48,32 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("散らばりを絞り切るまでの発数")]
         private int _openingShots = EnemySpec.DefaultOpeningShots;
 
+        [SerializeField, Range(0f, 1f), Tooltip("たまった反動のうち、撃つたびに打ち消す割合。0 なら打ち消さず、1 なら反動で照準が上がらない")]
+        private float _recoilControl = EnemySpec.DefaultRecoilControl;
+
+        [Header("動き")]
+        [SerializeField, Min(0.01f), Tooltip("行き先にこの水平距離 (m) まで近づいたら着いたとみなす")]
+        private float _arrivalDistance = EnemySpec.DefaultArrivalDistance;
+
+        [SerializeField, Min(0.01f), Tooltip("走るときに歩きの速さへ掛ける倍率")]
+        private float _sprintRatio = EnemySpec.DefaultSprintRatio;
+
+        [SerializeField, Min(0.01f), Tooltip("しゃがんで動くときに歩きの速さへ掛ける倍率")]
+        private float _crouchRatio = EnemySpec.DefaultCrouchRatio;
+
+        [SerializeField, Min(0f), Tooltip("狙う向きへ向き直る速さ (度/秒)")]
+        private float _turnSpeed = EnemyAgent.DefaultTurnSpeed;
+
+        [Header("体")]
+        [SerializeField, Min(0f), Tooltip("立っているときの足元からの目の高さ (m)")]
+        private float _eyeHeight = EnemyAgent.DefaultEyeHeight;
+
+        [SerializeField, Min(0.01f), Tooltip("しゃがんだときの当たり判定の高さ (m)")]
+        private float _crouchHeight = EnemyAgent.DefaultCrouchHeight;
+
+        [SerializeField, Min(0f), Tooltip("しゃがんだときの足元からの目の高さ (m)")]
+        private float _crouchEyeHeight = EnemyAgent.DefaultCrouchEyeHeight;
+
         [Header("遮蔽")]
         [SerializeField, Min(0f), Tooltip("遮蔽点に着いてから、また隠れ直してから、覗くまで隠れている秒数")]
         private float _coverHideSeconds = EnemySpec.DefaultCoverHideSeconds;
@@ -74,6 +100,14 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("種類が Bomber のときに使う値")]
         private EnemyBomberSettings _bomber = new EnemyBomberSettings();
+
+        [Header("発見ゲージ")]
+        [SerializeField, Tooltip("見つかるまでのゲージのたまり方・減り方と、物音の聞こえ方")]
+        private EnemyAwarenessSettings _awareness = new EnemyAwarenessSettings();
+
+        [Header("近接")]
+        [SerializeField, Tooltip("近づいた目標を殴るときの値")]
+        private EnemyMeleeSettings _melee = new EnemyMeleeSettings();
 
         public EnemyArchetype Archetype
         {
@@ -171,9 +205,67 @@ namespace Fps.Runtime
             set => _staggerResistance = value;
         }
 
+        public float RecoilControl
+        {
+            get => _recoilControl;
+            set => _recoilControl = value;
+        }
+
+        public float ArrivalDistance
+        {
+            get => _arrivalDistance;
+            set => _arrivalDistance = value;
+        }
+
+        public float SprintRatio
+        {
+            get => _sprintRatio;
+            set => _sprintRatio = value;
+        }
+
+        public float CrouchRatio
+        {
+            get => _crouchRatio;
+            set => _crouchRatio = value;
+        }
+
+        /// <summary>狙う向きへ向き直る速さ (度/秒)。</summary>
+        public float TurnSpeed
+        {
+            get => _turnSpeed;
+            set => _turnSpeed = value;
+        }
+
+        /// <summary>立っているときの足元からの目の高さ (m)。</summary>
+        public float EyeHeight
+        {
+            get => _eyeHeight;
+            set => _eyeHeight = value;
+        }
+
+        /// <summary>しゃがんだときの当たり判定の高さ (m)。</summary>
+        public float CrouchHeight
+        {
+            get => _crouchHeight;
+            set => _crouchHeight = value;
+        }
+
+        /// <summary>しゃがんだときの足元からの目の高さ (m)。</summary>
+        public float CrouchEyeHeight
+        {
+            get => _crouchEyeHeight;
+            set => _crouchEyeHeight = value;
+        }
+
+        /// <summary>発見ゲージの値。<see cref="ToAwarenessSpec"/> がここから作る。</summary>
+        public EnemyAwarenessSettings Awareness => _awareness;
+
+        /// <summary>近接の値。<see cref="ToMeleeSpec"/> がここから作る。</summary>
+        public EnemyMeleeSettings Melee => _melee;
+
         public EnemySpec ToSpec()
         {
-            var source = string.IsNullOrEmpty(name) ? "(unnamed enemy)" : name;
+            var source = SourceName;
             try
             {
                 return new EnemySpec(
@@ -196,13 +288,45 @@ namespace Fps.Runtime
                     StaggerResistanceOrArchetype(_staggerResistance),
                     _fireRange,
                     _fireToleranceDegrees,
-                    _rangeSpreadDegrees);
+                    _rangeSpreadDegrees,
+                    _arrivalDistance,
+                    _sprintRatio,
+                    _crouchRatio,
+                    _recoilControl);
             }
             catch (ArgumentException e)
             {
                 throw new EnemyDefinitionException($"enemy '{source}' is invalid: {e.Message}", e);
             }
         }
+
+        /// <summary>発見ゲージの設定。値が不正なら <see cref="EnemyDefinitionException"/>。</summary>
+        public AwarenessSpec ToAwarenessSpec()
+        {
+            try
+            {
+                return _awareness.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw new EnemyDefinitionException($"enemy '{SourceName}' has invalid awareness: {e.Message}", e);
+            }
+        }
+
+        /// <summary>近接の設定。値が不正なら <see cref="EnemyDefinitionException"/>。</summary>
+        public MeleeSpec ToMeleeSpec()
+        {
+            try
+            {
+                return _melee.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw new EnemyDefinitionException($"enemy '{SourceName}' has invalid melee: {e.Message}", e);
+            }
+        }
+
+        private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed enemy)" : name;
 
         /// <summary>Inspector の怯みにくさ value を <see cref="EnemySpec"/> に渡す値にする。負なら null (種類ごとの既定値)。</summary>
         public static float? StaggerResistanceOrArchetype(float value)
@@ -233,6 +357,10 @@ namespace Fps.Runtime
             _coverPeekSeconds = spec.CoverPeekSeconds;
             _coverHealthFraction = spec.CoverHealthFraction;
             _staggerResistance = spec.StaggerResistance;
+            _arrivalDistance = spec.ArrivalDistance;
+            _sprintRatio = spec.SprintRatio;
+            _crouchRatio = spec.CrouchRatio;
+            _recoilControl = spec.RecoilControl;
             _shield.CopyFrom(spec.Shield);
             _sniper.CopyFrom(spec.Sniper);
             _charger.CopyFrom(spec.Charger);

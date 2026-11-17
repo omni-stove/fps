@@ -68,6 +68,18 @@ namespace Fps.Core
 
         public BomberSpec Bomber { get; }
 
+        /// <summary>行き先 (巡回地点・遮蔽点・物音の所) にこの水平距離 (m) まで近づいたら着いたとみなす。</summary>
+        public float ArrivalDistance { get; }
+
+        /// <summary>走るときに歩きの速さへ掛ける倍率。</summary>
+        public float SprintRatio { get; }
+
+        /// <summary>しゃがんで動くときに歩きの速さへ掛ける倍率。</summary>
+        public float CrouchRatio { get; }
+
+        /// <summary>たまった反動のうち、撃つたびに打ち消す割合。0 なら打ち消さず、1 なら反動で照準が上がらない。</summary>
+        public float RecoilControl { get; }
+
         // 屋内では壁が視線を切るので長くても困らず、開けた場所でも人が人に気づいて撃ち合い始める距離として不自然でない値にする。
         public const float DefaultSightRange = 40f;
         public const float DefaultAttackRange = 15f;
@@ -94,6 +106,12 @@ namespace Fps.Core
         public const float DefaultCoverPeekSeconds = 2f;
         public const float DefaultCoverHealthFraction = 0.5f;
         public const float DefaultStaggerResistance = 0f;
+        public const float DefaultArrivalDistance = EnemyBrain.ArrivalDistance;
+        public const float DefaultSprintRatio = EnemyGait.SprintRatio;
+        public const float DefaultCrouchRatio = EnemyGait.CrouchRatio;
+
+        // プレイヤーは反動で上がる照準を手で引き戻すので、敵もたまった反動の大半を打ち消す。打ち消さないと連射の後半が頭上へ抜ける。
+        public const float DefaultRecoilControl = 0.75f;
 
         /// <summary>archetype の怯みにくさの既定値。Rifleman は <see cref="DefaultStaggerResistance"/>、ほかは種類ごとの Spec の値。</summary>
         public static float DefaultStaggerResistanceFor(EnemyArchetype archetype)
@@ -135,7 +153,11 @@ namespace Fps.Core
             DefaultStaggerResistance,
             DefaultFireRange,
             DefaultFireToleranceDegrees,
-            DefaultRangeSpreadDegrees);
+            DefaultRangeSpreadDegrees,
+            DefaultArrivalDistance,
+            DefaultSprintRatio,
+            DefaultCrouchRatio,
+            DefaultRecoilControl);
 
         /// <param name="sightRange">視認距離。0 より大きい。</param>
         /// <param name="attackRange">攻撃距離。0 より大きく sightRange 以下。</param>
@@ -157,6 +179,10 @@ namespace Fps.Core
         /// <param name="fireRange">近づきながら撃つ距離。0 以上の有限値。attackRange から sightRange の間に収める。</param>
         /// <param name="fireToleranceDegrees">撃つのに要る向きの合い方 (度)。0 以上 <see cref="MaxFireToleranceDegrees"/> 以下。</param>
         /// <param name="rangeSpreadDegrees">撃ち始める距離で散らばりに足す半角 (度)。0 以上 <see cref="MaxSpreadDegrees"/> 以下。</param>
+        /// <param name="arrivalDistance">着いたとみなす水平距離 (m)。0 より大きい有限値。</param>
+        /// <param name="sprintRatio">走るときの速さの倍率。0 より大きい有限値。</param>
+        /// <param name="crouchRatio">しゃがんで動くときの速さの倍率。0 より大きい有限値。</param>
+        /// <param name="recoilControl">反動を打ち消す割合。0 以上 1 以下。</param>
         public EnemySpec(
             float sightRange,
             float attackRange,
@@ -177,7 +203,11 @@ namespace Fps.Core
             float? staggerResistance = null,
             float fireRange = 0f,
             float fireToleranceDegrees = MaxFireToleranceDegrees,
-            float rangeSpreadDegrees = 0f)
+            float rangeSpreadDegrees = 0f,
+            float arrivalDistance = DefaultArrivalDistance,
+            float sprintRatio = DefaultSprintRatio,
+            float crouchRatio = DefaultCrouchRatio,
+            float recoilControl = DefaultRecoilControl)
         {
             if (!(sightRange > 0f) || float.IsInfinity(sightRange))
             {
@@ -222,6 +252,14 @@ namespace Fps.Core
                     nameof(fireToleranceDegrees), fireToleranceDegrees, "fireToleranceDegrees must be between 0 and " + MaxFireToleranceDegrees);
             }
 
+            RequirePositive(arrivalDistance, nameof(arrivalDistance));
+            RequirePositive(sprintRatio, nameof(sprintRatio));
+            RequirePositive(crouchRatio, nameof(crouchRatio));
+            if (!(recoilControl >= 0f) || recoilControl > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(recoilControl), recoilControl, "recoilControl must be between 0 and 1");
+            }
+
             SightRange = sightRange;
             AttackRange = attackRange;
             // 視界を狭めた敵のデータに既定の撃ち始める距離が残っていても弾かず、視界の端から撃たせる。
@@ -243,6 +281,10 @@ namespace Fps.Core
             Charger = charger ?? ChargerSpec.Default;
             Bomber = bomber ?? BomberSpec.Default;
             StaggerResistance = resistance;
+            ArrivalDistance = arrivalDistance;
+            SprintRatio = sprintRatio;
+            CrouchRatio = crouchRatio;
+            RecoilControl = recoilControl;
         }
 
         /// <summary>散らばりの半角の上限 (度)。散らす処理 (<see cref="BlindFireShot.Spread(System.Numerics.Vector3, float, System.Random)"/>) が受け付ける範囲に合わせる。</summary>
@@ -287,6 +329,14 @@ namespace Fps.Core
             if (!(value >= 0f) || value > MaxSpreadDegrees)
             {
                 throw new ArgumentOutOfRangeException(name, value, name + " must be between 0 and " + MaxSpreadDegrees);
+            }
+        }
+
+        private static void RequirePositive(float value, string name)
+        {
+            if (!(value > 0f) || float.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(name, value, name + " must be positive and finite");
             }
         }
 

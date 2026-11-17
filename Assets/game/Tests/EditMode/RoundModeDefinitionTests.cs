@@ -104,19 +104,30 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(KillConfirmedRunner.DefaultTimeLimitSeconds));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(KillConfirmedRunner.DefaultRespawnSeconds));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(KillConfirmedRunner.DefaultTagLifetimeSeconds));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(KillConfirmedRunner.DefaultPointsPerConfirm));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(KillConfirmedRunner.DefaultTagRadius));
         }
 
         [Test]
         public void KillConfirmedDefinitionCopiesASpecAndRejectsInvalidValues()
         {
             var definition = Create<KillConfirmedDefinition>("BrokenKc");
-            definition.CopyFrom(new KillConfirmedSpec(7, 45f, 0f, 9f));
+            definition.CopyFrom(new KillConfirmedSpec(7, 45f, 0f, 9f, 3, 4f));
 
             var spec = definition.ToSpec();
             Assert.That(spec.ScoreLimit, Is.EqualTo(7));
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(45f));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(0f));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(9f));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(3));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(4f));
+
+            definition.PointsPerConfirm = 0;
+            Assert.Throws<InvalidOperationException>(() => definition.ToSpec());
+            definition.PointsPerConfirm = 3;
+            definition.TagPickupRadius = 0f;
+            Assert.Throws<InvalidOperationException>(() => definition.ToSpec());
+            definition.TagPickupRadius = 4f;
 
             definition.ScoreLimit = 0;
             var error = Assert.Throws<InvalidOperationException>(() => definition.ToSpec());

@@ -217,7 +217,7 @@ namespace Fps.Runtime
             var eye = _reader.Rig.Eye;
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
 
-            Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime);
+            Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance);
             var armed = _reader.Weapon == null || !_reader.Weapon.IsHolstered;
             ShowGuns(armed, armed && !HasViewmodel());
         }
@@ -339,13 +339,15 @@ namespace Fps.Runtime
         /// <param name="aimPitch">目の上下の向き (目のローカルの回転)。三人称の銃口をこれに合わせる。</param>
         /// <param name="feetLocalY">本体のローカルでの足元の高さ。</param>
         /// <param name="deltaSeconds">前の Apply からの秒数。0 以上の有限値。</param>
+        /// <param name="stance">プレイヤーの立ち・しゃがみ・伏せの寸法 (<see cref="PlayerController.Stance"/>)。null なら既定の高さで縮める。</param>
         public void Apply(
             PlayerActionState state,
             Vector3 worldVelocity,
             Vector3 worldCoverNormal,
             Quaternion aimPitch,
             float feetLocalY,
-            float deltaSeconds)
+            float deltaSeconds,
+            StanceGeometry stance = null)
         {
             if (!IsBuilt)
             {
@@ -362,10 +364,10 @@ namespace Fps.Runtime
 
             var localMove = transform.InverseTransformDirection(worldVelocity);
             var localNormal = transform.InverseTransformDirection(worldCoverNormal);
-            var targetScale = PlayerMockPose.StanceScale(state);
+            var targetScale = PlayerMockPose.StanceScale(state, stance);
             var targetShift = PlayerMockPose.BodyShift(state, localNormal);
             var targetLean = PlayerMockPose.BodyLean(state, localMove, localNormal);
-            var targetGun = PlayerMockPose.BodyGun(state, aimPitch);
+            var targetGun = PlayerMockPose.BodyGun(state, aimPitch, stance);
             var targetView = PlayerMockPose.ViewModel(state);
 
             if (!_hasPose)

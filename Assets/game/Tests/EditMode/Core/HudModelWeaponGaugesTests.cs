@@ -98,12 +98,14 @@ namespace Fps.Core.Tests
             model.BindWeapon(weapon);
             model.RefreshWeaponGauges();
             Assert.That(model.HeatFraction, Is.EqualTo(0f));
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
 
             weapon.TryFire();
             model.RefreshWeaponGauges();
             Assert.That(model.HeatFraction, Is.EqualTo(0.25f));
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.MagazineAmmo, Is.Null);
+            Assert.That(model.ReserveAmmo, Is.Null);
         }
 
         [Test]

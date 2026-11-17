@@ -63,10 +63,5 @@ namespace Fps.Runtime
         /// 能力の枠ごとの回数と待ち時間の表示を (無ければ) 付けて返す。画面に出す場所が見つからなければエラーをログに出し、出せないまま返す。
         /// </summary>
         IAbilitySlots AttachAbilitySlots();
-
-        /// <summary>
-        /// 拠点制圧 (<see cref="Domination"/>) の表示を (無ければ) 付けて返す。画面に出す場所が見つからなければエラーをログに出し、出せないまま返す。
-        /// </summary>
-        IDominationHud AttachDomination();
     }
 }

@@ -251,7 +251,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(barrel.Spec, Is.SameAs(spec));
             Assert.That(barrel.Health, Is.EqualTo(50));
-            Assert.Throws<System.ArgumentNullException>(() => barrel.Configure(null));
+            Assert.Throws<System.ArgumentNullException>(() => barrel.Configure((ExplosivePropSpec)null));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => barrel.ApplyDamage(-1, chained: false));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => barrel.Tick(-1f));
         }

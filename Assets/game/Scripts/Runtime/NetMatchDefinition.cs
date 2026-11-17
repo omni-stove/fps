@@ -123,23 +123,25 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// プレイヤーの移動と体の寸法。移動は <see cref="MotorSettings.Resolve"/>、伏せの高さは <see cref="ProneSpec.Default"/> の高さを
-        /// カプセルが取れる高さに収めたもの (<see cref="NetMotorSettings.FitProneHeight"/>)。
+        /// プレイヤーの移動と体の寸法。移動は <see cref="MotorSettings.Resolve"/>、伏せは <see cref="MotorSettings.ResolveProne"/> で、
+        /// 伏せの高さはその高さをカプセルが取れる高さに収めたもの (<see cref="NetMotorSettings.FitProneHeight"/>)。
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">寸法か移動の値が条件に合わない。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">寸法・移動・伏せの値が条件に合わない。</exception>
         public NetMotorSettings ToMotor()
         {
+            var prone = MotorSettings.ResolveProne(_motorSettings);
             var stance = new StanceGeometry(
                 _standingHeight,
                 _standingCenterY,
                 _eyeY,
                 _crouchHeight,
-                NetMotorSettings.FitProneHeight(ProneSpec.Default.Height, _crouchHeight, _radius),
+                NetMotorSettings.FitProneHeight(prone.Height, _crouchHeight, _radius),
                 _radius);
             return new NetMotorSettings(
                 MotorSettings.Resolve(_motorSettings),
                 stance,
-                new CapsuleMoverSpec(_slopeLimitDegrees, _stepOffset, _skinWidth, CapsuleMoverSpec.DefaultLayerMask));
+                new CapsuleMoverSpec(_slopeLimitDegrees, _stepOffset, _skinWidth, CapsuleMoverSpec.DefaultLayerMask),
+                prone);
         }
 
         /// <summary>

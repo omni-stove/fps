@@ -21,8 +21,8 @@ namespace Fps.Runtime
     /// <item>出現点に戻した参加者は、残っているタグの範囲から出たことにする (倒れた場所のタグの範囲に入ったまま数えられ、
     /// 戻った瞬間に遠くから自分のタグを拾ってしまわないように)。</item>
     /// <item>試合が終わったら残ったタグの Pickup を壊す。</item>
-    /// <item>HUD には得点 (= 確定数) の下に、陣営ごとの確定数・阻止数と落ちているタグの数 (<see cref="KillConfirmedText.HudLines"/>) を出す。
-    /// タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
+    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Fps.Core.KillConfirmed"/> を入れる
+    /// (得点は確定数)。タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
     /// </list>
     /// </remarks>
     public sealed class KillConfirmedRunner : ModeRunnerBase
@@ -222,13 +222,7 @@ namespace Fps.Runtime
             }
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            if (_killConfirmed != null)
-            {
-                lines.AddRange(KillConfirmedText.HudLines(_killConfirmed));
-            }
-        }
+        protected override object HudDetail => _killConfirmed;
 
         protected override void OnStopping()
         {

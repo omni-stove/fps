@@ -48,12 +48,15 @@ namespace Shooter.Server.Eos.Tests
             _backend.CompleteLogin(_server);
 
             Assert.That(_backend.CreatedBucket, Is.EqualTo("shooter-server:" + _version));
-            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(_maxPlayers));
+            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(_maxPlayers + 1), "the server takes a member slot besides the players");
+            Assert.That(_backend.CreatedVoiceRoom, Is.True);
             var attributes = ByKey(_backend.CreatedAttributes);
             Assert.That(attributes[ServerLobby.ServerKey].Text, Is.EqualTo(_endpoint));
             Assert.That(attributes[ServerLobby.ModeKey].Text, Is.EqualTo("tdm"));
             Assert.That(attributes[ServerLobby.VersionKey].Text, Is.EqualTo(_version));
             Assert.That(attributes[ServerLobby.PlayersKey].Number, Is.Zero);
+            Assert.That(attributes[ServerLobby.VoiceEnabledKey].IsText, Is.False);
+            Assert.That(attributes[ServerLobby.VoiceEnabledKey].Number, Is.EqualTo(1));
             Assert.That(_registrar.IsRegistered, Is.False);
 
             _backend.CompleteCreate(Lobby("l1"));
@@ -62,6 +65,34 @@ namespace Shooter.Server.Eos.Tests
             Assert.That(_registrar.HasRegistered, Is.True);
             Assert.That(_registrar.PublishedPlayers, Is.Zero);
             Assert.That(_service.Current.Id, Is.EqualTo("l1"));
+        }
+
+        [Test]
+        public void AFullSizedMatchKeepsTheLobbyWithinTheEosMemberLimit()
+        {
+            using var service = new ServerLobbyService(_backend, ServerLobby.BucketId(_version), _log);
+            var registrar = new ServerLobbyRegistrar(
+                service, _endpoint, _version, NetMatchSettings.MaxMaxPlayers, new RetrySchedule(_interval, _timeout), _log);
+
+            registrar.Begin(0f, reason => _failure = reason);
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(LobbyLaunchOptions.MaxMaxPlayers));
+            Assert.That(_backend.CreatedVoiceRoom, Is.True);
+        }
+
+        [Test]
+        public void ARecreatedLobbyAlsoOpensTheVoiceRoom()
+        {
+            Register();
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(_backend.CreatedVoiceRoom, Is.True);
+            Assert.That(_backend.CreatedMaxMembers, Is.EqualTo(_maxPlayers + 1));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.VoiceEnabledKey].Number, Is.EqualTo(1));
         }
 
         [Test]
@@ -77,9 +108,9 @@ namespace Shooter.Server.Eos.Tests
             {
                 "[Lobby] registering server=" + _endpoint + " bucket=shooter-server:" + _version,
                 "[Lobby] logged in with the device id user=" + _server,
-                "[Lobby] created id=l1 max=" + _maxPlayers + " owner=" + _server
-                    + " server=" + _endpoint + " mode=tdm version=" + _version + " players=0",
-                "[Lobby] members=1/" + _maxPlayers + " [" + _server + "] id=l1",
+                "[Lobby] created id=l1 max=" + (_maxPlayers + 1) + " owner=" + _server
+                    + " rtc=on server=" + _endpoint + " mode=tdm version=" + _version + " players=0 voice_enabled=1",
+                "[Lobby] members=1/" + (_maxPlayers + 1) + " [" + _server + "] id=l1",
                 "[Lobby] registered id=l1 server=" + _endpoint + " players=0",
                 "[Lobby] players 0 -> 1",
                 "[Lobby] updated id=l1 players=1",
@@ -380,7 +411,7 @@ namespace Shooter.Server.Eos.Tests
 
         private static LobbyInfo Lobby(string id)
         {
-            return new LobbyInfo(id, _server, _maxPlayers, new[] { _server });
+            return new LobbyInfo(id, _server, ServerLobby.MaxMembers(_maxPlayers), new[] { _server });
         }
 
         private static Dictionary<string, LobbyAttribute> ByKey(IReadOnlyList<LobbyAttribute> attributes)

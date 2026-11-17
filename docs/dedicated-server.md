@@ -186,8 +186,9 @@ EOS の SDK か認証情報が無いと、理由を出して終了コード 3 �
 docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -register-lobby 203.0.113.10:7777
 ```
 
-ロビーは `shooter-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
-Device ID でログインしたユーザー。
+ロビーは `shooter-server:<版>` のバケツに作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
+Device ID でログインしたユーザー。ロビーでは RTC 部屋を開くので、ID で入ったクライアントのメンバーはそこでボイスを使える。
+メンバーの上限は、試合の人数 (既定は 8 人) にサーバー自身の 1 人を足した数 (EOS の上限の 64 人まで)。
 
 | 属性 | 値 |
 | --- | --- |
@@ -195,11 +196,12 @@ Device ID でログインしたユーザー。
 | `mode` | `tdm` |
 | `version` | ビルドの版 |
 | `players` | 接続しているプレイヤーの人数 (整数。Bot は数えない) |
+| `voice_enabled` | `1` (RTC 部屋を開いている) |
 
 ログには次のように出る。
 
 ```
-[Lobby] created id=<ロビー Id> max=8 owner=<サーバーの ID> server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0
+[Lobby] created id=<ロビー Id> max=9 owner=<サーバーの ID> rtc=on server=203.0.113.10:7777 mode=tdm version=0.2.0 players=0 voice_enabled=1
 [Lobby] registered id=<ロビー Id> server=203.0.113.10:7777 players=0
 [Lobby] players 0 -> 1
 [Lobby] updated id=<ロビー Id> players=1

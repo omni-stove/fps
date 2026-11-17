@@ -144,6 +144,16 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AVoiceServerIsFullWhenThePlayersFillAllButTheServersSlot()
+        {
+            var open = new LobbyInfo("s", "server-s", ServerLobby.MaxMembers(4), Ids("server-s"), ServerLobby.Attributes("203.0.113.1:7777", _version, 3));
+            var full = new LobbyInfo("s", "server-s", ServerLobby.MaxMembers(4), Ids("server-s"), ServerLobby.Attributes("203.0.113.1:7777", _version, 4));
+
+            Assert.That(LobbySelector.ServerRejection(open, _version), Is.Null);
+            Assert.That(LobbySelector.ServerRejection(full, _version), Is.EqualTo("full"));
+        }
+
+        [Test]
         public void RejectsServersThatCannotBeJoined()
         {
             Assert.That(LobbySelector.ServerRejection(Server("s", "203.0.113.1:7777", 0, "0.2.0"), _version), Does.Contain("0.2.0").And.Contain(_version));

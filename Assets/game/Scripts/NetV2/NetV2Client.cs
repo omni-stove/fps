@@ -524,6 +524,7 @@ namespace Shooter.NetV2
                 _pingDisplay = _local.gameObject.AddComponent<PingController>();
                 _pingDisplay.ShowShared(_pings.Markers);
                 _lockOn = AttachLockOn(_local);
+                AttachAimAssist(_local);
             }
 
             for (var i = 0; i < ticks; i++)
@@ -566,6 +567,22 @@ namespace Shooter.NetV2
             lockOn.Targets = new ClientLockOnTargets(
                 _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance);
             return lockOn;
+        }
+
+        // 回した視点は FirstPersonLook の yaw としてそのまま入力で送られるので、サーバーに知らせることは無い。
+        private void AttachAimAssist(NetV2LocalPlayer local)
+        {
+            var assist = local.gameObject.AddComponent<AimAssist>();
+            assist.Look = local.Look;
+            assist.AimingSource = () => local != null && local.IsAiming;
+            assist.AimSource = () => local != null ? new Ray(local.EyePosition, local.AimDirection) : (Ray?)null;
+            assist.Targets = new ClientHostileAimTargets(
+                _client.PlayerId,
+                () => _client.LatestSnapshot,
+                _match.TrySampleRemote,
+                _world.Collision,
+                _client.Motor.Stance,
+                (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
         }
 
         private OwnerSnapshot CurrentOwner()

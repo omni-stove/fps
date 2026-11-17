@@ -93,6 +93,20 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void CollectingThroughTheSharedInterfaceGivesTheSamePoints()
+        {
+            var shooter = CreateBody("shooter", _eye, 0);
+            var seen = CreateBody("seen", new Vector3(0f, 1f, 10f), 1);
+            IAimAssistTargets targets = new HostileAimTargets(shooter.transform, Physics.DefaultRaycastLayers);
+
+            var found = new List<NVector3>();
+            targets.Collect(_eye.ToNumerics(), 50f, found);
+
+            Assert.That(found, Has.Count.EqualTo(1));
+            Assert.That(found[0].ToUnity(), Is.EqualTo(seen.AimPoint));
+        }
+
+        [Test]
         public void RejectsBadArguments()
         {
             var targets = new HostileAimTargets(null, Physics.DefaultRaycastLayers);

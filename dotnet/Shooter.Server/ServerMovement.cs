@@ -8,11 +8,9 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 入力は落ちてよい届け方で直近の tick をまとめて送ってくるので、処理済みの tick は捨てる。
-    /// 速く送り続けて先へ進むのを防ぐため、1 tick の入力を 1 つ使う予算を tick の速さで貯め、半秒分を超えて貯めない (Unity のサーバーと同じ)。
-    /// ダウン中か・乗り越えてよいか・ルールで使えない動きはクライアントの申告を信じず、サーバーの知る状態とルールで決める。
-    /// </summary>
+    // 入力は落ちてよい届け方で直近の tick をまとめて送ってくるので、処理済みの tick は捨てる。
+    // 速く送り続けて先へ進むのを防ぐため、1 tick の入力を 1 つ使う予算を tick の速さで貯め、半秒分を超えて貯めない (Unity のサーバーと同じ)。
+    // ダウン中か・乗り越えてよいか・ルールで使えない動きはクライアントの申告を信じず、サーバーの知る状態とルールで決める。
     internal sealed class ServerMovement : IServerModule, ISnapshotContributor
     {
         public const float MaxInputBudget = TickClock.DefaultTickRate * 0.5f;
@@ -79,7 +77,7 @@ namespace Shooter.Server
             _byConnection[connection] = Add(player);
         }
 
-        /// <summary>Bot は接続を持たないので、Bot のモジュールが試合に加えた直後にここで体を作る。</summary>
+        // Bot は接続を持たないので、Bot のモジュールが試合に加えた直後にここで体を作る。
         public void AddBot(ServerPlayer player)
         {
             ArgumentNullException.ThrowIfNull(player);
@@ -101,10 +99,7 @@ namespace Shooter.Server
             return BotRoster.IsBotId(playerId) && _byPlayer.Remove(playerId);
         }
 
-        /// <summary>
-        /// Bot の 1 tick の入力を、人の入力と同じ確定処理 (ルールで使えない動き・ダウン中の制限・ログ・着地) に通す。
-        /// 人の入力の予算で縛らないのは、Bot はサーバーの tick ごとに 1 つしか作らないため。
-        /// </summary>
+        // 人の入力の予算で縛らないのは、Bot はサーバーの tick ごとに 1 つしか作らないため。
         public bool ApplyBotInput(int playerId, InputFrame frame)
         {
             if (!BotRoster.IsBotId(playerId) || !_byPlayer.TryGetValue(playerId, out var mover))
@@ -188,7 +183,6 @@ namespace Shooter.Server
             return false;
         }
 
-        /// <summary>覗き込んでいるか (ルールで覗き込めないときは false)。戦闘のモジュールがばらつきに使う。</summary>
         public bool IsAiming(int playerId)
         {
             return _byPlayer.TryGetValue(playerId, out var mover) && mover.Aiming;
@@ -218,15 +212,9 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>
-        /// 吹き飛ばしの値 (<see cref="ServerRulesData.Knockback"/>)。飛んでいる間の動きはクライアントの予測にも同じ値を渡す
-        /// (<see cref="ConnectAcceptedMessage.Knockback"/>)。
-        /// </summary>
         public KnockbackSpec Knockback => _knockback;
 
-        /// <summary>
-        /// 最後に処理した入力の後の状態を velocity で吹き飛ばす。動くのは次の入力から (持ち主の予測がその状態から入力をやり直せるように)。
-        /// </summary>
+        // 持ち主の予測がその状態から入力をやり直せるよう、最後に処理した入力の後の状態を吹き飛ばし、動くのは次の入力からにする。
         public bool Launch(int playerId, Vector3 velocity)
         {
             if (!float.IsFinite(velocity.X) || !float.IsFinite(velocity.Y) || !float.IsFinite(velocity.Z))
@@ -244,10 +232,7 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>
-        /// 乗り物の座席に置く。座っている間は入力の tick と向きだけを受け取り、体は乗り物のモジュールが毎 tick ここで座席へ置き直す。
-        /// 置き直しを <see cref="Teleport"/> にしないのは、巻き戻しの記録を捨てずに、乗っている人にも遅れを補って当てるため。
-        /// </summary>
+        // 座席への置き直しを Teleport にしないのは、巻き戻しの記録を捨てずに、乗っている人にも遅れを補って当てるため。
         public bool Ride(int playerId, Vector3 position, Vector3 velocity, bool crouched)
         {
             if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
@@ -267,7 +252,6 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>座席から外す。体は座席に置いたままなので、降ろす側が続けて置き直す。</summary>
         public bool Dismount(int playerId)
         {
             if (!_byPlayer.TryGetValue(playerId, out var mover) || !mover.Riding)

@@ -4,10 +4,8 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 体の寸法の既定は Unity のネット対戦のプレイヤー (NetSceneBuilder の CharacterController と NetworkPlayerMotor の既定) と同じにする。
-    /// クライアントの予測と同じ寸法でないと、毎 tick 位置が食い違って巻き戻されるため。
-    /// </summary>
+    // 体の寸法の既定は Unity のネット対戦のプレイヤー (NetSceneBuilder の CharacterController と NetworkPlayerMotor の既定) と同じにする。
+    // クライアントの予測と同じ寸法でないと、毎 tick 位置が食い違って巻き戻されるため。
     internal sealed class ServerMotorSettings
     {
         public const float DefaultStandingHeight = 2f;

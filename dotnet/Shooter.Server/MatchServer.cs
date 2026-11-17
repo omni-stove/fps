@@ -8,7 +8,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。</summary>
+    // 時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。
     internal sealed class MatchServer : IServerControl
     {
         public const float DefaultApprovalTimeoutSeconds = 10f;
@@ -78,7 +78,6 @@ namespace Shooter.Server
 
         public bool ExitRequested { get; private set; }
 
-        /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
         public int ExitCode { get; private set; } = ServerProgram.ExitOk;
 
         public int ConnectedPlayers => Match.HumanCount;

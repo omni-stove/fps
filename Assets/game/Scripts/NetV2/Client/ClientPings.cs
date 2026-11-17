@@ -4,15 +4,11 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// サーバーから届いた印 (付けた人の味方にだけ届く) を、Netcode のクライアントと同じ <see cref="SharedPingMarkers"/> に写す。
-    /// 表示はオフラインと同じ <c>PingController.ShowShared</c> が <see cref="Markers"/> を読む。
-    /// </summary>
+    // 表示をオフラインと同じ PingController.ShowShared に任せるため、Netcode のクライアントと同じ SharedPingMarkers に写す。
     public sealed class ClientPings
     {
         private readonly Action<string> _log;
 
-        /// <param name="log"><c>[Ping]</c> 付きの 1 行を受け取る先。</param>
         public ClientPings(Action<string> log)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
@@ -20,7 +16,6 @@ namespace Shooter.NetV2
 
         public SharedPingMarkers Markers { get; } = new SharedPingMarkers();
 
-        /// <summary>印のメッセージなら写して true。now はこちらの時計 (秒) で、消える時刻はそこから数える。</summary>
         public bool Handle(IMessage message, float now)
         {
             switch (message)

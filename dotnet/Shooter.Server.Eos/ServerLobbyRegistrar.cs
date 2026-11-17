@@ -4,17 +4,12 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Unity の <c>Shooter.Net.ServerLobbyRegistrar</c> を移したもの。やり直しの間隔・諦める期限・ログの行を同じにし、
-    /// 運用の手順と監視をそのまま使えるようにする。
-    /// </summary>
-    /// <remarks>
-    /// 起動してから一度も登録できないまま期限を過ぎたら、認証情報や設定の誤りとみなして諦める。
-    /// 一度登録できた後は試合を止めないよう、期限を過ぎてもエラーを出しながら作り直しを続ける。
-    /// </remarks>
+    // やり直しの間隔・諦める期限・ログの行を Unity の Shooter.Net.ServerLobbyRegistrar と同じにし、運用の手順と監視をそのまま使えるようにする。
+    // 起動してから一度も登録できないまま期限を過ぎたら、認証情報や設定の誤りとみなして諦める。
+    // 一度登録できた後は試合を止めないよう、期限を過ぎてもエラーを出しながら作り直しを続ける。
     internal sealed class ServerLobbyRegistrar
     {
-        /// <summary>退出の通知が来ないままロビーが消えていることがあるので、更新がこの回数続けて失敗したら作り直す。</summary>
+        // 退出の通知が来ないままロビーが消えていることがあるので、更新がこの回数続けて失敗したら作り直す。
         public const int MaxUpdateFailures = 3;
 
         private const string _logPrefix = ServerLobbyService.LogPrefix;
@@ -37,12 +32,6 @@ namespace Shooter.Server.Eos
         private bool _failedLeaveDone;
         private Action _failedLeaveWaiters;
 
-        /// <param name="service">ログイン前のロビーのサービス。</param>
-        /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
-        /// <param name="version">サーバーの版。</param>
-        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
-        /// <param name="schedule">やり直す間隔と、登録できないまま待つ期限。</param>
-        /// <param name="log">ログの出力先。</param>
         public ServerLobbyRegistrar(
             ServerLobbyService service, string endpoint, string version, int maxPlayers, RetrySchedule schedule, TextWriter log)
         {
@@ -89,11 +78,8 @@ namespace Shooter.Server.Eos
 
         public int MaxPlayers => _maxPlayers;
 
-        /// <summary>ロビーの属性に載っている人数。まだ載っていなければ -1。</summary>
         public int PublishedPlayers => IsRegistered ? _publishedPlayers : -1;
 
-        /// <param name="now">今の時刻 (秒)。<see cref="Tick"/> と同じ時計で渡す。</param>
-        /// <param name="failed">一度も登録できないまま諦めたときに理由を受け取る。</param>
         public void Begin(float now, Action<string> failed)
         {
             if (_step != Step.Idle)
@@ -158,10 +144,6 @@ namespace Shooter.Server.Eos
             }
         }
 
-        /// <summary>
-        /// やり直しをやめ、作ったロビーを閉じる。閉じ終えたら (閉じるものが無ければすぐ) <paramref name="done"/> を呼ぶ。
-        /// 何度呼んでもよい。
-        /// </summary>
         public void Close(Action done = null)
         {
             if (_step == Step.Failed && !_failedLeaveDone)

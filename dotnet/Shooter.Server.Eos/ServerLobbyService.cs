@@ -5,10 +5,8 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Unity の <c>Shooter.Net.LobbyService</c> のうち、サーバーのロビーの登録に使う部分を移したもの。ログの行も同じにする。
-    /// 検索と参加を持たないのは、サーバーは自分のロビーを作るだけで、他のロビーに入らないため。
-    /// </summary>
+    // ログの行は Unity の Shooter.Net.LobbyService と同じにする。
+    // 検索と参加を持たないのは、サーバーは自分のロビーを作るだけで、他のロビーに入らないため。
     internal sealed class ServerLobbyService : IDisposable
     {
         public const string LogPrefix = "[Lobby] ";
@@ -36,10 +34,8 @@ namespace Shooter.Server.Eos
             _backend.LoggedOut += HandleLoggedOut;
         }
 
-        /// <summary>引数は理由。自分で出たときは呼ばない。</summary>
         public event Action<string> Removed;
 
-        /// <summary>ロビーに入っていれば先に <see cref="Removed"/> を呼ぶ。</summary>
         public event Action<string> LoggedOut;
 
         private enum Operation
@@ -56,7 +52,7 @@ namespace Shooter.Server.Eos
 
         public bool IsLoggedIn => LocalUserId != null;
 
-        /// <summary>属性の更新は含めない (<see cref="IsUpdating"/>)。</summary>
+        // 属性の更新はほかの操作と並べて進められるので含めない (IsUpdating)。
         public bool IsBusy => _operation != Operation.None;
 
         public bool IsUpdating => _updating;
@@ -154,7 +150,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>更新は 1 つずつ行い、ほかの操作とは並べて進められる。</summary>
         public void UpdateAttributes(IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
@@ -187,10 +182,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>
-        /// 作ったロビーを閉じる。作成の途中なら、作り終えたところで閉じる。入っていなければ何もせず成功にする。
-        /// いつ呼んでも例外にしない。
-        /// </summary>
         public void LeaveLobby(Action<string> done = null)
         {
             if (_disposed)
@@ -231,7 +222,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>ロビーに入っていれば閉じる要求を出し、バックエンドを閉じる。以後のコールバックは呼ばない。</summary>
         public void Dispose()
         {
             if (_disposed)

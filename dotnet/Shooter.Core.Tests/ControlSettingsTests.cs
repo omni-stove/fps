@@ -1076,20 +1076,18 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.ShowBlood, Is.False, "the saved value");
         }
 
-        /// <summary>今の形式から、バージョン 7 で足した揺れの強さと血の表示を除く (初期値のときだけ)。</summary>
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
         }
 
-        /// <summary>今の形式の json を version の形にする。9 より前は、バージョン 9 で足したエイムアシストを除く (初期値のときだけ)。</summary>
         private static string AsVersion(string json, int version)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
             return version >= 9 ? old : old.Replace(Json(",'aimAssist':true"), string.Empty, StringComparison.Ordinal);
         }
 
-        /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>
+        // 読みやすさのため ' で書いた JSON を " に直す。
         private static string Json(string text)
         {
             return text.Replace('\'', '"');

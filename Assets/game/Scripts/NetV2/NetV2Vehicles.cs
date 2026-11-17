@@ -9,11 +9,9 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.NetV2
 {
-    /// <remarks>
-    /// 乗り降り・耐久・爆発はサーバーが決めるので、シーンの乗り物の部品 (<see cref="Vehicle"/>・<see cref="VehicleImpactDamage"/>) は止め、
-    /// 煙・火・残骸の見た目 (<see cref="VehicleDamageEffects"/>) にだけサーバーの段階を渡す。
-    /// 乗り物の番号は書き出し (MapVehicleExporter) と同じく、有効な乗り物をシーンの並び順で数える。
-    /// </remarks>
+    // 乗り降り・耐久・爆発はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage) は止め、
+    // 煙・火・残骸の見た目 (VehicleDamageEffects) にだけサーバーの段階を渡す。
+    // 乗り物の番号は書き出し (MapVehicleExporter) と同じく、有効な乗り物をシーンの並び順で数える。
     internal sealed class NetV2Vehicles
     {
         private readonly List<SceneVehicle> _scene = new List<SceneVehicle>();

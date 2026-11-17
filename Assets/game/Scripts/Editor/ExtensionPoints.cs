@@ -4,17 +4,9 @@ using UnityEditor;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 差し込み口 (<c>ITpsRangeFixture</c>・<c>ITpsActionSmokeStep</c> など) を実装した型を読み込み済みのアセンブリから探して作る。
-    /// 拾うのは public な具象クラスだけで、テストの中に private で置いた偽物は拾わない。
-    /// </summary>
+    // 拾うのを public な具象クラスだけにするのは、テストの中に private で置いた偽物を拾わないため。
     public static class ExtensionPoints
     {
-        /// <summary>
-        /// T を実装した public な具象クラスを 1 つずつ引数なしのコンストラクターで作り、order の小さい順 (同じなら型の完全名の順) に返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">order が null。</exception>
-        /// <exception cref="InvalidOperationException">拾う型に public な引数なしのコンストラクターが無い。</exception>
         public static IReadOnlyList<T> CreateAll<T>(Func<T, int> order)
             where T : class
         {
@@ -49,7 +41,6 @@ namespace Shooter.Editor
             return created;
         }
 
-        /// <summary>type が <see cref="CreateAll{T}"/> で拾われる型か。public (入れ子なら外側も public) で、抽象でも開いたジェネリックでもない class。</summary>
         public static bool IsCandidate(Type type)
         {
             return type != null

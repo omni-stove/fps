@@ -15,7 +15,6 @@ namespace Shooter.Core.Tests
 
         private static readonly DateTime _time = new DateTime(2026, 11, 13, 9, 30, 5, 123, DateTimeKind.Utc);
 
-        /// <summary>1 行の JSON オブジェクトとして読み、キーと値を出てきた順に返す。値はすべて文字列であること。</summary>
         private static List<KeyValuePair<string, string>> ReadLine(string line)
         {
             Assert.That(line, Does.Not.Contain("\n").And.Not.Contain("\r"));

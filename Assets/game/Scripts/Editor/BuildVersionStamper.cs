@@ -8,12 +8,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ビルドの版を決めて PlayerSettings.bundleVersion に入れ、ビルドが終わったら (失敗しても) 元の値に戻す。
-    /// 版はコマンドライン引数 <c>-buildVersion &lt;版&gt;</c>、無ければ <c>git describe --tags --always --dirty</c> の出力を
-    /// <see cref="BuildVersion"/> で正規化したもの。実行時は Application.version として読め、起動時に <c>[Version]</c> の行で出る。
-    /// ProjectSettings を版ごとに書き換えてコミットの差分に残さないため、ビルドの間だけ入れる。
-    /// </summary>
+    // ProjectSettings を版ごとに書き換えてコミットの差分に残さないため、版はビルドの間だけ PlayerSettings.bundleVersion に入れ、終わったら (失敗しても) 戻す。
     public static class BuildVersionStamper
     {
         public const string LogTag = "[BuildVersion]";
@@ -23,10 +18,6 @@ namespace Shooter.Editor
         // 大きなリポジトリでも describe は一瞬で終わる。止まったら (認証の入力待ちなど) ビルドごと待たせないように打ち切る
         private const int GitTimeoutMilliseconds = 30000;
 
-        /// <summary>
-        /// コマンドライン引数の <c>-buildVersion</c>、無ければプロジェクトのルートでの git describe から版を決める。
-        /// どちらからも決められなければ例外を投げる (batchmode の Unity は終了コード 1 で終わる)。
-        /// </summary>
         public static string Resolve(string[] args)
         {
             if (args == null)
@@ -57,10 +48,6 @@ namespace Shooter.Editor
             return version;
         }
 
-        /// <summary>
-        /// PlayerSettings.bundleVersion を version にして build を呼び、終わったら元の値に戻す。
-        /// build が例外を投げても戻してから投げ直す。
-        /// </summary>
         public static T WithVersion<T>(string version, Func<T> build)
         {
             if (build == null)
@@ -88,16 +75,11 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>コマンドライン引数から版を決め (<see cref="Resolve"/>)、その版を入れて build を呼ぶ (<see cref="WithVersion{T}"/>)。</summary>
         public static T BuildWithResolvedVersion<T>(Func<T> build)
         {
             return WithVersion(Resolve(Environment.GetCommandLineArgs()), build);
         }
 
-        /// <summary>
-        /// projectRoot で <c>git describe --tags --always --dirty</c> を実行し、その出力 (前後の空白は落とさない) を返す。
-        /// git が無い、リポジトリでない、時間内に終わらないときは例外を投げる。
-        /// </summary>
         public static string DescribeWithGit(string projectRoot)
         {
             if (string.IsNullOrEmpty(projectRoot))
@@ -167,7 +149,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>Assets の 1 つ上 (ProjectSettings と同じ階層) のディレクトリ。</summary>
         private static string ProjectRoot()
         {
             return Directory.GetParent(UnityEngine.Application.dataPath).FullName;

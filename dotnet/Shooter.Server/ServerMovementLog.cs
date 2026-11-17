@@ -4,7 +4,7 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>Unity のサーバー (NetworkPlayerMotor) と同じ行にして、ログを見る手順と監視をそのまま使えるようにする。</summary>
+    // Unity のサーバー (NetworkPlayerMotor) と同じ行にして、ログを見る手順と監視をそのまま使えるようにする。
     internal static class ServerMovementLog
     {
         public static string Stance(int playerId, int tick, bool crouched)

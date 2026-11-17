@@ -3,13 +3,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerController"/> を持つプレイヤーに <see cref="ParachuteMovement"/> を付け、ルールの <see cref="ActionRules.Parachute"/> と、<see cref="KitTuning"/> から読む traversal.json の parachute の値を入れる。
-    /// 起動時に <see cref="PlayerActions.Register"/> で自分を登録する。
-    /// </summary>
     public sealed class ParachuteActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。回避と乗り越え (<see cref="MoveActionInstaller.InstallOrder"/>) を決めた後に呼ぶ。</summary>
+        // 回避と乗り越え (MoveActionInstaller.InstallOrder) を決めた後に呼ぶため、それより後に置く。
         public const int InstallOrder = 350;
 
         public int Order => InstallOrder;

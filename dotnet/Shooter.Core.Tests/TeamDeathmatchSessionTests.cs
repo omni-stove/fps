@@ -1024,7 +1024,6 @@ namespace Shooter.Core.Tests
                 actions);
         }
 
-        /// <summary>Alpha に 1 と 3、Bravo に 2 と 4 を入れて始め、ここまでのイベントを消す。</summary>
         private TeamDeathmatchSession CreateTwoOnTwo(
             GameRules rules,
             int scoreLimit = 10,

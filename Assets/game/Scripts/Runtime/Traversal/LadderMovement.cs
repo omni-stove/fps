@@ -5,28 +5,14 @@ using LadderRule = Shooter.Core.Ladder;
 
 namespace Shooter.Runtime.Traversal
 {
-    /// <summary>
-    /// プレイヤーをはしご (<see cref="Ladder"/>) で上り下りさせる移動の横取り。<see cref="Bind"/> で <see cref="PlayerController"/> に登録する
-    /// (オフラインのプレイヤーには <see cref="LadderActionInstaller"/> が付ける)。
-    /// <list type="bullet">
-    /// <item><see cref="Rule"/> が On で、有効なはしごの前で、はしごへ進んでいる (<see cref="PlayerMotor.Velocity"/> の水平成分がはしごへ向く) とつかまる
-    /// (<see cref="LadderSpan.Probe"/>)。上の足場から縁へ進んでもつかまる。</item>
-    /// <item>つかまっている間は前後の入力で上り下りし (<see cref="LadderClimb"/>)、Jump で離れる。上の端では上の足場に、下の端では地面に降りる。</item>
-    /// <item>つかまっている間は <see cref="PlayerActionConditions.OnLadder"/> を立て、武器をしまわせ (<see cref="WeaponController.Holster"/>) 撃たせない。</item>
-    /// <item>つかまったら <c>[Ladder] grab ...</c>、離れたら <c>[Ladder] leave ... reason=..</c> をログに出す (<see cref="LadderLog"/>)。</item>
-    /// </list>
-    /// つかまっている途中で Rule が Off になる・はしごが無効になる・このコンポーネントが無効になると、その場で離す (<see cref="LadderOutcome.Released"/>)。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class LadderMovement : MonoBehaviour, IMovementOverride
     {
-        /// <summary><see cref="Priority"/>。はしごにつかまっている間は、ほかの横取りより先に選ばれる。</summary>
+        // ほかの横取りより高くし、はしごにつかまっている間はこちらが先に選ばれるようにする。
         public const int MovementPriority = 200;
 
-        /// <summary>上の端・下の端で降りた足元を床から浮かせて置く高さ (m)。置いた Tick の <see cref="LandingDrop"/> で床に着く。</summary>
         public const float LandingLift = LadderClimb.LandingLift;
 
-        /// <summary>降りた Tick に下へ動かす量 (m)。床に触れさせて接地にする。</summary>
         public const float LandingDrop = LadderClimb.LandingDrop;
 
         private LadderRule _rule = LadderRule.Off;
@@ -40,45 +26,32 @@ namespace Shooter.Runtime.Traversal
         private bool _placed;
         private float _regrabRemaining;
 
-        /// <summary>はしごにつかまったとき、つかまったはしごと所を渡して呼ばれる。</summary>
         public event Action<Ladder, LadderEntry> Grabbed;
 
-        /// <summary>はしごを離れたとき、離れたはしごと理由を渡して呼ばれる。</summary>
         public event Action<Ladder, LadderOutcome> Left;
 
-        /// <summary>はしごにつかまれるか。Off にすると、つかまっていれば次の Tick で離す。</summary>
         public LadderRule Rule
         {
             get => _rule;
             set => _rule = value;
         }
 
-        /// <summary><see cref="Bind"/> で渡したプレイヤー。未設定なら null。</summary>
         public PlayerController Mover => _mover;
 
-        /// <summary>つかまっている間にしまわせる武器。無ければ null。</summary>
         public WeaponController Weapon => _weapon;
 
-        /// <summary>はしごにつかまっているか。</summary>
         public bool IsClimbing => _climb != null;
 
-        /// <summary>つかまっているはしご。つかまっていなければ null。</summary>
         public Ladder CurrentLadder => _climb != null ? _ladder : null;
 
-        /// <summary>今の上り下り。つかまっていなければ null。</summary>
         public LadderClimb Climb => _climb;
 
-        /// <summary>次につかまれるまでの残りの秒数。</summary>
         public float RegrabRemaining => _regrabRemaining;
 
         public int Priority => MovementPriority;
 
         public PlayerActionConditions Conditions => PlayerActionConditions.OnLadder;
 
-        /// <summary>
-        /// 今つかまっている (または、この Tick でつかまる) か。つかまっていなければ、有効なはしごのうちつかまれるものを探して覚え、
-        /// <see cref="Begin"/> でそれにつかまる。つかまっている途中で続けられなくなっていたら、ここで離して false を返す。
-        /// </summary>
         public bool IsActive
         {
             get
@@ -104,13 +77,6 @@ namespace Shooter.Runtime.Traversal
             }
         }
 
-        /// <summary>
-        /// mover に横取りとして登録し、つかまっている間に weapon をしまわせ、ads の覗き込みを解く。何度呼んでも登録は 1 つ。
-        /// 別の mover に付け替えるなら、前の mover からは外す。
-        /// </summary>
-        /// <param name="mover">動かすプレイヤー。null 不可。</param>
-        /// <param name="weapon">しまわせる武器。無ければ null。</param>
-        /// <param name="ads">つかまったときに覗き込みを解く。無ければ null。</param>
         public void Bind(PlayerController mover, WeaponController weapon, AimDownSights ads)
         {
             if (mover == null)
@@ -138,7 +104,6 @@ namespace Shooter.Runtime.Traversal
             mover.RegisterMovementOverride(this);
         }
 
-        /// <summary>次につかまれるまでの待ちを deltaSeconds 進める。Play 中は Update が呼ぶ。</summary>
         public void AdvanceCooldown(float deltaSeconds)
         {
             if (deltaSeconds > 0f && !float.IsInfinity(deltaSeconds))
@@ -235,7 +200,6 @@ namespace Shooter.Runtime.Traversal
             }
         }
 
-        /// <summary>mover の足元 (CharacterController のカプセルの底)。</summary>
         public static Vector3 FeetOf(PlayerController mover)
         {
             var controller = mover.Controller;
@@ -248,7 +212,7 @@ namespace Shooter.Runtime.Traversal
             return mover.Controller.radius;
         }
 
-        // 足元を feet に合わせたときの本体の位置。足元と本体の差は姿勢を変えても保たれる (しゃがみは足元を残して縮む)。
+        // 足元と本体の差は姿勢を変えても保たれる (しゃがみは足元を残して縮む) ので、今の差をそのまま足す。
         private static Vector3 RootFor(PlayerController mover, Vector3 feet)
         {
             return feet + (mover.transform.position - FeetOf(mover));

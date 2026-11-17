@@ -6,7 +6,7 @@ using NVector3 = System.Numerics.Vector3;
 
 namespace Shooter.Runtime
 {
-    // オフラインの相手は Hitbox を持つ生きた Damageable。撃った本人の体は ShotCast と同じく外す。
+    // 撃った本人の体を外すのは、ShotCast と同じ当たり方にするため。
     public sealed class HitboxLockOnTargets : ILockOnTargets
     {
         public const int MaxColliders = 256;

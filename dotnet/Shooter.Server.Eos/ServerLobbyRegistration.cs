@@ -5,13 +5,10 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// <c>-register-lobby</c> のサーバーの一生 (待ち受け後に登録・人数の更新・drain で閉じる・止まる前に閉じ終えるのを待つ) を、
-    /// Unity の <c>NetBootstrap</c> と同じ順にまとめる。サーバーのモジュールはこれに tick を渡すだけにする。
-    /// </summary>
+    // 登録・人数の更新・drain で閉じる・止まる前に閉じ終えるのを待つ順は、Unity の NetBootstrap と同じにする。
     internal sealed class ServerLobbyRegistration : IDisposable
     {
-        /// <summary>閉じる要求を出してすぐ SDK を解放すると要求が届かず、つながらないサーバーのロビーが検索に残るので、この秒数まで待つ。</summary>
+        // 閉じる要求を出してすぐ SDK を解放すると要求が届かず、つながらないサーバーのロビーが検索に残るので、この秒数まで待つ。
         public const float CloseWaitSeconds = 3f;
 
         public const int CloseWaitPollMilliseconds = 10;
@@ -26,15 +23,6 @@ namespace Shooter.Server.Eos
         private bool _closed;
         private bool _disposed;
 
-        /// <param name="backend">ロビーのサービスを呼ぶ側。これが Dispose する。</param>
-        /// <param name="endpoint">クライアントがつなぐ公開アドレス。</param>
-        /// <param name="version">サーバーの版。</param>
-        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
-        /// <param name="log">ログの出力先。</param>
-        /// <param name="clock">今の時刻 (秒)。</param>
-        /// <param name="sleep">閉じ終えるのを待つ間に眠るミリ秒を受け取る。</param>
-        /// <param name="failed">一度も登録できないまま諦めたときに理由を受け取る。</param>
-        /// <param name="schedule">やり直す間隔と期限。null なら <see cref="ServerLobby"/> の値。</param>
         public ServerLobbyRegistration(
             IServerLobbyBackend backend,
             string endpoint,
@@ -65,10 +53,8 @@ namespace Shooter.Server.Eos
 
         public ServerLobbyRegistrar Registrar => _registrar;
 
-        /// <summary>
-        /// 待ち受けを始めた後の tick ごとに呼ぶ。待ち受けていないサーバーを見つけさせないよう、最初の呼び出しで登録を始める。
-        /// drain に入ったら、待っている間にクイックマッチで選ばれないようロビーを閉じ始める。
-        /// </summary>
+        // 待ち受けていないサーバーを見つけさせないよう、待ち受けを始めた後の最初の呼び出しで登録を始める。
+        // drain に入ったら、待っている間にクイックマッチで選ばれないようロビーを閉じ始める。
         public void Tick(int players, bool draining)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -90,7 +76,6 @@ namespace Shooter.Server.Eos
             _registrar.Tick(_clock());
         }
 
-        /// <summary>ロビーを閉じ、閉じ終えるか <see cref="CloseWaitSeconds"/> が過ぎるまで SDK を進めて待つ。</summary>
         public void CloseAndWait()
         {
             ObjectDisposedException.ThrowIf(_disposed, this);

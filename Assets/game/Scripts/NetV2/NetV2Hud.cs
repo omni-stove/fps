@@ -7,17 +7,9 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦の HUD に出す値。届いたスナップショットの値を自分の <see cref="Model"/> に書き、それを <see cref="GameSignals.HudModel"/> に出す。
-    /// 拠点・スコアボード・グレネードの残り・持ち物・目くらまし・参加者・HUD の量・ポーズ中の時間の扱い・色の組の視点も <see cref="GameSignals"/> に出し、
-    /// 消すときに自分の出したものだけを消す。どう出すかは UI が決める (UI が無ければ HUD 無しで進む)。
-    /// </summary>
-    /// <remarks>
-    /// 値が変わったときだけ書き直す。毎 tick 届くスナップショットのたびに出し直さないため。
-    /// 案内の欄の優先は <c>NetHud</c> と同じ: 試合の終わり、放置の警告、ダウン中、倒れている間のリスポーンの案内、出現直後の無敵。
-    /// Individual のリスポーンまでの秒数はスナップショットに無いので、倒れている間は出さない。
-    /// 拠点制圧の試合では、拠点ごとの状態を <see cref="GameSignals.Domination"/> に出す。
-    /// </remarks>
+    // 毎 tick 届くスナップショットのたびに出し直さないよう、値が変わったときだけ書き直す。
+    // 案内の欄の優先は NetHud と揃える: 試合の終わり、放置の警告、ダウン中、倒れている間のリスポーンの案内、出現直後の無敵。
+    // Individual のリスポーンまでの秒数はスナップショットに無いので、倒れている間は出さない。
     [DisallowMultipleComponent]
     public sealed class NetV2Hud : MonoBehaviour
     {
@@ -62,10 +54,6 @@ namespace Shooter.NetV2
 
         public IParticipants Participants => _roster;
 
-        /// <summary>
-        /// 持ち主のグレネードの残りを <see cref="GameSignals.GrenadeCount"/> に出す。typeId はクライアントが選んだ投げる種類。
-        /// 種類を切り替えて持っているときだけ種類の Id を添える。pouch が null なら変えない。
-        /// </summary>
         public void ShowGrenades(GrenadePouchSync pouch, string typeId)
         {
             if (pouch == null)
@@ -98,7 +86,7 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>値を出し始める。ポーズを開いても対戦は止まらないので、<see cref="GameSignals.PauseTimeMode"/> は <see cref="PauseTimeMode.KeepRunning"/> にする。</summary>
+        // ポーズを開いても対戦は止まらないので、GameSignals.PauseTimeMode は PauseTimeMode.KeepRunning にする。
         // 武器の値を引く口を受け取るのは、溜め・熱・弾薬の種類を出すかを武器の値で決めるため (WeaponSync は無い項目にも 0 を運ぶ)。
         public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon)
         {
@@ -129,7 +117,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>届いた最新のスナップショットを出す。</summary>
         public void Apply(SnapshotMessage snapshot)
         {
             if (snapshot == null)
@@ -223,7 +210,6 @@ namespace Shooter.NetV2
             ShowScoreboard(snapshot);
         }
 
-        /// <summary>「あと remainingSeconds 秒で切断」の放置の警告を出し、ここから数える。</summary>
         public void ShowIdleWarning(float remainingSeconds)
         {
             _idleRemaining = float.IsNaN(remainingSeconds) ? 0f : Math.Max(0f, remainingSeconds);
@@ -231,9 +217,6 @@ namespace Shooter.NetV2
             Refresh();
         }
 
-        /// <summary>
-        /// 自分にかかっている状態異常の残りを、effects から読んで出す。目くらましの残りを読む関数は <see cref="GameSignals.LocalBlindSeconds"/> に出す。
-        /// </summary>
         public void BindStatusEffects(ClientStatusEffects effects)
         {
             _statusEffects = effects;
@@ -459,9 +442,6 @@ namespace Shooter.NetV2
             ClearSignals();
         }
 
-        /// <summary>
-        /// 出した値を <see cref="GameSignals"/> から消す。後から別の側が出した値は消さない。破棄時に呼ばれ、何度呼んでもよい。
-        /// </summary>
         public void ClearSignals()
         {
             GameSignals.HudModel.ClearIfCurrent(_model);

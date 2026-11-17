@@ -4,7 +4,6 @@ using Shooter.Core;
 
 namespace Shooter.Protocol.Tests
 {
-    /// <summary>対戦のメッセージを 1 つずつ書いて、受け取る側の表で読み戻すと同じ値になるか。</summary>
     public sealed class MatchMessageRoundTripTests
     {
         // 重さと倍率の数え方 (1 + 1 バイト)、遅くならない重さ・1 kg ごとの減り・重さの倍率の下限 (4 バイトずつ)、動き (1 バイト)

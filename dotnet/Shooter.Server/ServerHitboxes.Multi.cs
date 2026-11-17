@@ -15,10 +15,7 @@ namespace Shooter.Server
 
         private readonly List<ShotHit> _many = new List<ShotHit>();
 
-        /// <summary>
-        /// hit の世界の形を point から direction へ抜けるまでの厚さ。maxThickness を超えるか測れなければ <see cref="float.PositiveInfinity"/>。
-        /// プレイヤーの厚さは 0 (Unity でも部位のコライダーの重なりで測れないので、人は素材と枚数だけで抜けるかを決める)。
-        /// </summary>
+        // Unity でも部位のコライダーの重なりで人の厚さを測れないので、プレイヤーの厚さは 0 とし、素材と枚数だけで抜けるかを決める。
         public float Thickness(in ShotHit hit, Vector3 direction, float maxThickness)
         {
             if (!(maxThickness >= 0f) || float.IsInfinity(maxThickness))

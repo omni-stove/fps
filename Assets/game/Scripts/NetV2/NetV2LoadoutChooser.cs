@@ -7,20 +7,8 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦の、自分のロードアウトを選ぶ画面 (<see cref="GameUi.LoadoutSelect"/>) とサーバーへの送信をつなぐ。
-    /// 振る舞いは Netcode のクライアントの <c>NetLoadoutChooser</c> と同じ。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// 倒されてリスポーンを待っている間に画面を開き、出現したら閉じる。並べる武器は入口のロードアウトと一覧 (<see cref="NetV2Weapons"/>) から作り、
-    /// 最初に選んでおく並びは保存した並び、なければ今持たされている並び。受け入れられた並びだけを保存する (断られた並びを次に自動で送らないため)。
-    /// </para>
-    /// <para>
-    /// 承認されたら保存した並びを 1 度だけ送る。サーバーは選んだ並びを次の出現から配るので、最初の出現は既定の並びになる。
-    /// サーバーはどの要求にも送った順に答えるので、届いた答えは待っている先頭の並びへのもの。
-    /// </para>
-    /// </remarks>
+    // 断られた並びを次に自動で送らないよう、受け入れられた並びだけを保存する。
+    // サーバーはどの要求にも送った順に答えるので、届いた答えは待っている先頭の並びへのものとして突き合わせる。
     internal sealed class NetV2LoadoutChooser : IDisposable
     {
         private readonly NetV2Weapons _weapons;
@@ -36,7 +24,6 @@ namespace Shooter.NetV2
         // 画面を開いた回数。前に開いた画面から送った並びの答えを、開き直した画面に出さないために答えと突き合わせる
         private int _screenSession;
 
-        /// <param name="send">確実な届け方でサーバーへ送る。承認の前で送れなければ false。</param>
         public NetV2LoadoutChooser(NetV2Weapons weapons, Func<IMessage, bool> send, UnityEngine.Object context)
         {
             _weapons = weapons ?? throw new ArgumentNullException(nameof(weapons));
@@ -44,7 +31,6 @@ namespace Shooter.NetV2
             _context = context;
         }
 
-        /// <summary>画面を使い始める。画面が無い (UI が無い) ときは null を渡し、自動で送るだけにする。</summary>
         public void Bind(ILoadoutSelect view)
         {
             Unbind();
@@ -55,7 +41,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>保存した並びが今のアセットとルールで選べるなら送る。承認されたときに 1 度呼ぶ。</summary>
         public void SendSaved()
         {
             var saved = LoadSaved();
@@ -81,7 +66,6 @@ namespace Shooter.NetV2
             Send(selection.WeaponIds, 0);
         }
 
-        /// <summary>届いたスナップショットで、リスポーン待ちに入った・抜けたら画面を開く・閉じる。</summary>
         public void Apply(SnapshotMessage snapshot, int playerId)
         {
             if (snapshot.HasOwner)

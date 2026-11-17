@@ -14,10 +14,7 @@ using Shooter.Server.Eos;
 
 namespace Shooter.NetV2.Tests
 {
-    /// <summary>
-    /// .NET のサーバーと クライアントが、UDP の上で EAC の Hello とメッセージを送り合う。
-    /// EAC の SDK は両側とも差し替えるので、EOS の認証情報も SDK も無い手元で回せる。
-    /// </summary>
+    // EAC の SDK は両側とも差し替え、EOS の認証情報も SDK も無い手元で回せるようにする。
     [NonParallelizable]
     public sealed class AntiCheatConnectionTests
     {
@@ -353,7 +350,7 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>サーバーのスレッドで呼ばれ、テストのスレッドから読まれる。</summary>
+        // サーバーのスレッドで呼ばれ、テストのスレッドから読まれる。
         private sealed class FakeServerBackend : IAntiCheatServerBackend
         {
             public static readonly byte[] Greeting = { 1, 2, 3 };
@@ -430,7 +427,6 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>EOS の P2P の transport の代わりに、UDP の接続に決まった ProductUserId を持たせる。</summary>
         private sealed class UserIdTransport : IMatchTransport, IConnectionUserIds
         {
             private readonly UdpMatchTransport _inner = new UdpMatchTransport();

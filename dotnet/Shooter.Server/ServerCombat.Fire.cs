@@ -9,7 +9,7 @@ namespace Shooter.Server
     // サーバー権威のヒットスキャン (Unity の NetTeamDeathmatch.Fire と NetPlayer.Fire のサーバー側)
     internal sealed partial class ServerCombat
     {
-        /// <summary>着弾の音と破片の既定の材質 (Unity の SurfaceMaterial.DefaultId)。.fpsmap は材質を持たないので、どの面もこれで送る。</summary>
+        // .fpsmap は材質を持たないので、どの面も Unity の SurfaceMaterial.DefaultId と同じこの材質で送る。
         public const string DefaultSurfaceMaterialId = "default";
 
         private readonly ShotMessage _shot = new ShotMessage();
@@ -23,12 +23,6 @@ namespace Shooter.Server
         // ペレットごとに乗り物のヒットマーカーを出さないよう、1 回の射撃で 1 度だけ送る
         private bool _vehicleHitConfirmed;
 
-        /// <summary>
-        /// 射撃 1 発。撃てる状態・武器と連射の間隔・始点を確かめ、弾倉から 1 発消費してから、<see cref="ShotPlanner"/> で弾を並べ、
-        /// 弾ごとに届け方 (<see cref="RoundSpec.Delivery"/>) へ渡す。ヒットスキャンの弾は撃った人が見ていた時点まで他の人を巻き戻して当て、
-        /// 当たりを <see cref="ServerImpact"/> で処理する。判定の向きはサーバーが数えた発射番号でばらつきを掛けた向き。
-        /// 検査で捨てた射撃では弾も連射の枠も減らさない。引き金を離した知らせは検査せずに、押している間出続ける届け方へ渡す。
-        /// </summary>
         private bool Fire(Fighter shooter, FireRequestMessage request)
         {
             var shooterId = shooter.PlayerId;
@@ -126,10 +120,7 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <summary>
-        /// 弾を届け方ごとに振り分ける。ヒットスキャンの弾はすべて通してから 1 つの <see cref="ShotMessage"/> で送り、そのあと当たりを順に処理する。
-        /// 同じ射撃の弾が、先の弾のダメージで倒れた相手を素通りしないよう、判定はダメージより先にまとめて行う。
-        /// </summary>
+        // 同じ射撃の弾が、先の弾のダメージで倒れた相手を素通りしないよう、判定はダメージより先にまとめて行う。
         private void Deliver(in ServerShot shot, ShotPlan plan)
         {
             _segments.Clear();
@@ -189,10 +180,6 @@ namespace Shooter.Server
             _pelletHits.Clear();
         }
 
-        /// <summary>
-        /// shot の弾が direction へ進んで hit のプレイヤーに amount のダメージを与える。ルールに通し、受けた人の倒れる向きを残し、
-        /// 本人たちにヒット・被弾を送って NetHitLog に残す。
-        /// </summary>
         internal void DamagePlayer(in ServerShot shot, Vector3 direction, in ShotHit hit, int amount)
         {
             var shooterId = shot.ShooterId;
@@ -223,10 +210,6 @@ namespace Shooter.Server
             _log.WriteLine(NetHitLog.Hit(shooterId, victimId, hit.RewindTicks, hit.Zone, amount, health, outcome, hit.TargetCrouched));
         }
 
-        /// <summary>
-        /// 燃焼などの状態異常が victimId に amount を与える。かけた人 (attackerId) と武器に帰属させてルールに通し、被弾を本人に送る。
-        /// かけた人が抜けていれば、撃った人のいないダメージとして自滅に数える。
-        /// </summary>
         internal DamageOutcome DamageOverTime(int? attackerId, int victimId, int amount, string weaponId)
         {
             var session = _rules.Session;
@@ -242,9 +225,6 @@ namespace Shooter.Server
             return outcome;
         }
 
-        /// <summary>
-        /// attackerId が victimId に体力を減らす以外の効果 (燃焼など) を与えてよいか。味方撃ちが <see cref="FriendlyFire.On"/> でなければ味方には与えない。
-        /// </summary>
         internal bool CanAfflict(int attackerId, int victimId)
         {
             var session = _rules.Session;
@@ -259,17 +239,14 @@ namespace Shooter.Server
                 || session.GetTeam(attackerId) != session.GetTeam(victimId);
         }
 
-        /// <summary>世界の colliderId の point に amount の被害を与え、壊れた建物の状態を送る。</summary>
         internal void DamageStructure(int colliderId, Vector3 point, int amount, float radius)
         {
             _structures.ApplyHit(colliderId, point, amount, radius, _changedStructures, _log);
             SendStructureChanges();
         }
 
-        /// <summary>
-        /// Bot の射撃を人の射撃と同じ検査 (撃てる状態・武器・連射・始点・弾数) に通す。Bot はサーバーの上で今の位置を見て撃つので、
-        /// 見ていた tick はこの tick (巻き戻しは無い)。発射番号はサーバーが次に受け入れる番号を添え、訂正を起こさない。
-        /// </summary>
+        // Bot はサーバーの上で今の位置を見て撃つので、見ていた tick はこの tick にして巻き戻さない。
+        // 発射番号はサーバーが次に受け入れる番号を添え、訂正を起こさない。
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
             if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
@@ -336,11 +313,8 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// 押している間出続ける届け方の照射 1 回ぶん、shooterId が今も weaponId を構えて撃てるかを確かめ、consume なら弾 (熱) を 1 発使う。
-        /// <see cref="Fire"/> の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
-        /// 倒れた・試合が止まったなど撃てない状態は、警告にしないよう理由を <see cref="ShotRejection.None"/> にして false を返す。
-        /// </summary>
+        // Fire の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
+        // 倒れた・試合が止まったなど撃てない状態は、警告にしないよう理由を ShotRejection.None にして false を返す。
         internal bool TryContinueFire(int shooterId, string weaponId, bool consume, out ShotRejection rejection)
         {
             rejection = ShotRejection.None;
@@ -397,10 +371,7 @@ namespace Shooter.Server
             return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && fighter.Weapons.TryReload();
         }
 
-        /// <summary>
-        /// 受け入れた弾にサーバーの発射番号を付け、ずれていれば持ち主へ訂正を送り、ばらつきを掛けた弾の並びを返す。
-        /// 散らばりは武器の値と、サーバーの知る覗き込みと移動の速さで決める (持ち主の予測と同じ計算)。
-        /// </summary>
+        // 散らばりは持ち主の予測と同じ計算になるよう、武器の値と、サーバーの知る覗き込みと移動の速さで決める。
         private ShotPlan PlanShot(
             Fighter shooter,
             WeaponSpec spec,
@@ -454,7 +425,7 @@ namespace Shooter.Server
             return new ShotPlan(plan.Round, plan.ShotIndex, rounds);
         }
 
-        /// <summary>ルールの Cover と BlindFire がどちらも On で、カバー中で覗いていないならブラインドファイア (Unity の NetBlindFire.Resolve と同じ)。</summary>
+        // Unity の NetBlindFire.Resolve と同じ決め方にする。
         private BlindFireAim ResolveBlindFire(CharacterCoverState cover, ServerBody body, out Vector3 origin)
         {
             origin = body.EyePosition;
@@ -512,10 +483,6 @@ namespace Shooter.Server
             SendToAll(_shot, shooterId);
         }
 
-        /// <summary>
-        /// 1 発の結果を本人たちに知らせる。跳ね返した味方撃ちなら撃った本人に被弾 (位置なし) だけを、それ以外は撃った人にヒット、
-        /// 受けた人に被弾 (撃った人の位置から) を送る。
-        /// </summary>
         private void SendHitResult(int shooterId, int victimId, DamageOutcome outcome, int damage, HitZone zone, Vector3 shooterPosition)
         {
             if (IsReflected(shooterId, victimId))

@@ -5,17 +5,10 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// ラグ補償の当たり判定 (Unity の <c>HitboxRewinder</c> と NetTeamDeathmatch.Fire の記録)。各プレイヤーの体の位置としゃがみを tick ごとに
-    /// <see cref="LagCompensator"/> に残し、撃った人が見ていた tick まで巻き戻したカプセルと、<c>.fpsmap</c> の世界への Raycast の近い方を当たりにする。
-    /// </summary>
-    /// <remarks>
-    /// 巻き戻した位置が無い対象 (その時点にまだいなかった・置き直した直後) と当てられない対象は素通りする。撃った本人にも当たらない。
-    /// 置き直すと前の位置との間を補間しないよう、その人の記録を捨てる。
-    /// </remarks>
+    // 置き直すと前の位置との間を補間しないよう、その人の記録を捨てる。
     internal sealed partial class ServerHitboxes
     {
-        /// <summary>Unity の Physics.DefaultRaycastLayers と同じく Ignore Raycast (2) だけを外す。</summary>
+        // Unity の Physics.DefaultRaycastLayers と同じく Ignore Raycast (2) だけを外す。
         public const int RaycastLayers = ~(1 << 2);
 
         private const int _noTick = int.MinValue;
@@ -34,14 +27,12 @@ namespace Shooter.Server
             _lag = lag ?? new LagCompensator();
         }
 
-        /// <summary>巻き戻せる最大の tick 数。Unity のサーバーと同じ <see cref="LagCompensator.DefaultMaxRewindTicks"/>。</summary>
         public int MaxRewindTicks => _lag.MaxRewindTicks;
 
         public bool HasHistory => LastRecordedTick != _noTick;
 
         public int LastRecordedTick { get; private set; } = _noTick;
 
-        /// <summary>出現した全員の今の位置と姿勢を tick として残す。tick は前回以上。</summary>
         public void Record(int tick)
         {
             if (HasHistory && tick < LastRecordedTick)
@@ -84,10 +75,6 @@ namespace Shooter.Server
             _lag.Remove(playerId);
         }
 
-        /// <summary>
-        /// 太さ radius の弾を <see cref="Raycast"/> と同じく巻き戻した対象と世界に通し、近い順に maxHits 件までを hits に足す。
-        /// 半径 0・1 件なら <see cref="Raycast"/> と同じ結果になる。何かに当たれば true。
-        /// </summary>
         public bool Cast(
             Vector3 origin, Vector3 direction, float radius, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
             List<ShotHit> hits)
@@ -132,10 +119,6 @@ namespace Shooter.Server
             Vector3 origin, Vector3 direction, float range, int maxHits, float tick, int shooterId, Func<int, bool> hittable,
             List<ShotHit> hits, ref bool handled);
 
-        /// <summary>
-        /// 撃った人が見ていた tick (補間の割合を含む。<see cref="MaxRewindTicks"/> より古ければそこまでに縮める) まで巻き戻した対象と世界に、
-        /// origin から direction へ range まで線を引き、いちばん近い当たりを返す。対象は hittable が true を返す人だけで、撃った本人は除く。
-        /// </summary>
         public bool Raycast(
             Vector3 origin, Vector3 direction, float range, float tick, int shooterId, Func<int, bool> hittable, out ShotHit hit)
         {
@@ -243,10 +226,6 @@ namespace Shooter.Server
             return height > 0f && float.IsFinite(height) ? CapsuleHitZone.Classify(hitY, bottom, height) : HitZone.Body;
         }
 
-        /// <summary>
-        /// 単位ベクトル direction の線と、p・q を両端の球の中心とする半径 radius のカプセルが maxDistance までに交わるか。
-        /// 始点がカプセルの中なら距離 0 で当たる。
-        /// </summary>
         internal static bool RayCapsule(
             Vector3 origin, Vector3 direction, Vector3 p, Vector3 q, float radius, float maxDistance, out float distance, out Vector3 normal)
         {
@@ -346,7 +325,6 @@ namespace Shooter.Server
         }
     }
 
-    /// <summary><see cref="ServerHitboxes.Raycast"/> が当たった 1 か所。</summary>
     internal readonly struct ShotHit
     {
         private ShotHit(
@@ -374,12 +352,10 @@ namespace Shooter.Server
 
         public float Distance { get; }
 
-        /// <summary>プレイヤーに当たったか。false なら世界 (<see cref="ColliderId"/>) に当たった。</summary>
         public bool HitTarget { get; }
 
         public int TargetId { get; }
 
-        /// <summary>判定に使った (巻き戻した) 当たった人の位置。</summary>
         public Vector3 TargetPosition { get; }
 
         public bool TargetCrouched { get; }
@@ -390,7 +366,6 @@ namespace Shooter.Server
 
         public int Layer { get; }
 
-        /// <summary>巻き戻した tick 数 (記録した最新の tick − 判定に使った tick)。</summary>
         public float RewindTicks { get; }
 
         public int VehicleIndex { get; }

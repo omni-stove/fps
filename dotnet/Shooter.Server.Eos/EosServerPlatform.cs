@@ -8,10 +8,8 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// SDK の初期化と終了はプロセスに 1 回しかできないので、プラットフォームは 1 つを数えて共有し、
-    /// 最後の利用者が手放したところで解放して SDK を終える。ロビーと (後から足す) P2P の transport が同じ 1 つを使う。
-    /// </summary>
+    // SDK の初期化と終了はプロセスに 1 回しかできないので、プラットフォームは 1 つを数えて共有し、
+    // 最後の利用者が手放したところで解放して SDK を終える。
     internal sealed class EosServerPlatform
     {
         private const string _productName = "shooter-server";
@@ -31,13 +29,9 @@ namespace Shooter.Server.Eos
 
         public bool IsAlive => Interface != null;
 
-        /// <summary>このプロセスで Device ID のログインに成功したユーザー。ロビーと transport でログインを 1 回で済ませるために持つ。</summary>
+        // ロビーと transport でログインを 1 回で済ませるために持つ。
         public ProductUserId LocalUserId { get; set; }
 
-        /// <summary>
-        /// SDK の初期化・ネイティブライブラリの読み込みの失敗は例外にせず <paramref name="error"/> で返す。
-        /// 返したものは <see cref="Release"/> で手放す。
-        /// </summary>
         public static EosServerPlatform Acquire(EosCredentials credentials, string version, TextWriter log, out string error)
         {
             ArgumentNullException.ThrowIfNull(credentials);

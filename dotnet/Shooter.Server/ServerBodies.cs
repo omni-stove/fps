@@ -5,12 +5,8 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 試合に出ている各プレイヤーの体 (位置・向き・姿勢・ダウン)。位置の持ち主は移動のモジュールで、入力を処理するたびにここへ写す。
-    /// ルールのモジュールは出現 (<see cref="Teleport"/>) とダウン (<see cref="SetDowned"/>) をここに書き、移動のモジュールがそれを受ける。
-    /// 1 つにまとめるのは、どのモジュールも同じ tick の同じ位置で判定するため。
-    /// </summary>
-    /// <remarks>位置は Unity の NetPlayer の transform.position と同じ点 (カプセルの寸法の原点) で、スナップショットにもこの値を載せる。</remarks>
+    // 各プレイヤーの体を 1 つにまとめるのは、どのモジュールも同じ tick の同じ位置で判定するため。
+    // 位置は Unity の NetPlayer の transform.position と同じ点 (カプセルの寸法の原点) にそろえ、スナップショットにもこの値を載せる。
     internal sealed class ServerBodies
     {
         private readonly SortedDictionary<int, ServerBody> _bodies = new SortedDictionary<int, ServerBody>();
@@ -20,10 +16,8 @@ namespace Shooter.Server
             Geometry = geometry ?? throw new ArgumentNullException(nameof(geometry));
         }
 
-        /// <summary>置き直した直後に呼ばれる。移動のモジュールはこれで予測の照合や速度を捨てる。</summary>
         public event Action<ServerBody> Teleported;
 
-        /// <summary><see cref="ServerBody.IsDowned"/> が変わった直後に呼ばれる。移動のモジュールはこれでダウン中の動きを止める。</summary>
         public event Action<ServerBody> DownedChanged;
 
         public StanceGeometry Geometry { get; }
@@ -102,7 +96,6 @@ namespace Shooter.Server
 
         public PlayerStance Stance { get; private set; }
 
-        /// <summary>つかまっているはしごの、マップのはしごの並びでの番号。つかまっていなければ <see cref="CharacterLadderState.NoLadder"/>。</summary>
         public int Ladder { get; private set; } = CharacterLadderState.NoLadder;
 
         public bool IsClimbing => Ladder >= 0;
@@ -126,10 +119,8 @@ namespace Shooter.Server
             top = Position + new Vector3(0f, topY, 0f);
         }
 
-        /// <summary>構えている武器 (持ち替え中は持ち替え先)。装備前は null。戦闘のモジュールが写し、移動のモジュールが速さの倍率に使う。</summary>
         public WeaponSpec HeldWeapon { get; private set; }
 
-        /// <summary>持っている武器すべて。装備前は空。</summary>
         public IReadOnlyList<WeaponSpec> CarriedWeapons { get; private set; } = Array.Empty<WeaponSpec>();
 
         public void SetWeapons(WeaponSpec held, IReadOnlyList<WeaponSpec> carried)

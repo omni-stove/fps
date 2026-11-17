@@ -11,7 +11,6 @@ namespace Shooter.Runtime
 
         private static readonly Comparer<RaycastHit> _byDistance = Comparer<RaycastHit>.Create((a, b) => a.distance.CompareTo(b.distance));
 
-        // TryFirst と同じものを除いて、当たりを近い順に hits の後ろへ足し、足した数を返す。
         public static int CastAll(
             Vector3 origin, Vector3 direction, float maxDistance, int layerMask, Transform shooterRoot, List<RaycastHit> hits)
         {
@@ -61,7 +60,6 @@ namespace Shooter.Runtime
             return hits.Count - start;
         }
 
-        // collider を point から direction へ抜けるまでの厚さ。maxThickness を超えるか測れなければ float.PositiveInfinity。
         public static float Thickness(Collider collider, Vector3 point, Vector3 direction, float maxThickness)
         {
             if (collider == null)

@@ -6,7 +6,7 @@ namespace Shooter.NetV2
     /// <summary>
     /// 試合のボイスチャット。<see cref="ILobbyBackend.JoinMatchLobby"/> で入った試合のロビーの RTC 部屋で話す。
     /// Shooter.NetV2.Client は EOS の SDK を参照しないので、実装は <c>Shooter.NetEos.EosVoiceSession</c> にあり、
-    /// <see cref="IEosClientTransportFactory.CreateVoiceSession"/> で作る。
+    /// <c>IEosClientTransportFactory.CreateVoiceSession</c> で作る。
     /// </summary>
     /// <remarks>
     /// 送る・受ける・音量は、望む値を覚えておき、部屋につながっている間にサービスへ反映する。

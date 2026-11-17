@@ -33,6 +33,7 @@ namespace Shooter.NetV2.Tests
         public void TearDown()
         {
             _session.Dispose();
+            _rtc.Dispose();
         }
 
         /// <summary>部屋に入ってつなぎ、つないだときの送る (false) と音量 (1) の要求に応える。</summary>

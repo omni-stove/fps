@@ -239,6 +239,12 @@ namespace Shooter.NetEos
             {
                 if (_disposed)
                 {
+                    // 返事を待つ間に捨てられると Dispose の出る対象に入っていないので、入れた分はここで出る
+                    if (info.ResultCode == Result.Success && PlatformAlive && _localUserId != null)
+                    {
+                        LeaveQuietly(lobbyId);
+                    }
+
                     return;
                 }
 

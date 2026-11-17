@@ -5,8 +5,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class KillFeedEntryTests
     {
-        static readonly int[] Three4 = { 3, 4 };
-        static readonly int[] Four3 = { 4, 3 };
+        private static readonly int[] _threeFour = { 3, 4 };
+        private static readonly int[] _fourThree = { 4, 3 };
 
         [Test]
         public void AssistersDefaultToEmpty()
@@ -23,15 +23,15 @@ namespace Shooter.Core.Tests
             var entry = new KillFeedEntry(1, 2, "rifle", false, false, ids);
             ids[0] = 9;
 
-            Assert.That(entry.AssisterIds, Is.EqualTo(new[] { 3, 4 }));
+            Assert.That(entry.AssisterIds, Is.EqualTo(_threeFour));
         }
 
         [Test]
         public void AssistersTakePartInEquality()
         {
-            var a = new KillFeedEntry(1, 2, "rifle", true, false, Three4);
-            var same = new KillFeedEntry(1, 2, "rifle", true, false, Three4);
-            var reordered = new KillFeedEntry(1, 2, "rifle", true, false, Four3);
+            var a = new KillFeedEntry(1, 2, "rifle", true, false, _threeFour);
+            var same = new KillFeedEntry(1, 2, "rifle", true, false, _threeFour);
+            var reordered = new KillFeedEntry(1, 2, "rifle", true, false, _fourThree);
             var none = new KillFeedEntry(1, 2, "rifle", true, false);
 
             Assert.That(a == same, Is.True);
@@ -48,7 +48,7 @@ namespace Shooter.Core.Tests
                 new KillFeedEntry(1, 2, "rifle", true, false).ToString(),
                 Is.EqualTo("killer=1 victim=2 weapon=rifle headshot=True friendly=False"));
             Assert.That(
-                new KillFeedEntry(1, 2, "rifle", true, false, Three4).ToString(),
+                new KillFeedEntry(1, 2, "rifle", true, false, _threeFour).ToString(),
                 Is.EqualTo("killer=1 victim=2 weapon=rifle headshot=True friendly=False assisters=3,4"));
         }
     }

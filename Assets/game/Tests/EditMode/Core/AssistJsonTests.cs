@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class AssistJsonTests
     {
-        static readonly string[] ExpectedItemNames = { "windowSeconds", "minDamage" };
+        private static readonly string[] _expectedItemNames = { "windowSeconds", "minDamage" };
 
         [Test]
         public void ReadsEveryItem()
@@ -39,7 +39,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheItemNamesAreTheConstructorArguments()
         {
-            Assert.That(AssistJson.ItemNames, Is.EqualTo(ExpectedItemNames));
+            Assert.That(AssistJson.ItemNames, Is.EqualTo(_expectedItemNames));
         }
 
         [Test]

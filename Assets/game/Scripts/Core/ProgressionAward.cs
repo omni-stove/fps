@@ -3,7 +3,9 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary><see cref="ProgressionLedger"/> が 1 つの出来事を記録した結果。新しいプロフィールと、得た XP と、前後のレベルを持つ。</summary>
+    /// <summary>
+    /// <see cref="ProgressionLedger"/> が 1 つの出来事 (倒した・アシストした・試合を終えた) を記録した結果。新しいプロフィールと、得た XP と、前後のレベルを持つ。
+    /// </summary>
     public sealed class ProgressionAward
     {
         /// <exception cref="ArgumentNullException">profile が null。</exception>

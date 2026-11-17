@@ -1,0 +1,12 @@
+{
+  "fireLow": 0.15,
+  "fireHigh": 0.35,
+  "fireSeconds": 0.08,
+  "damageLow": 0.6,
+  "damageHigh": 0.3,
+  "damageSeconds": 0.25,
+  "explosionLow": 1,
+  "explosionHigh": 0.6,
+  "explosionSeconds": 0.45,
+  "explosionRadius": 25
+}

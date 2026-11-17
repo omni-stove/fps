@@ -5,18 +5,12 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Scene と Inspector に置ける拾える物の中身。<see cref="ToSpec"/> で Core の <see cref="PickupSpec"/> にする。
-    /// 武器の中身は Core では Id だけで足りるが、持ち武器に加えるには定義のアセットが要るので <see cref="Weapon"/> に持つ。
-    /// 作るときは種類ごとの作り方 (<see cref="ForWeapon"/> など) を使い、シーン生成スクリプトが <see cref="Pickup"/> や
-    /// <see cref="PickupSpawnPoint"/>・<see cref="DropOnDeath"/> に配線する。
-    /// </summary>
+    // 武器の中身は Core では Id だけで足りるが、持ち武器に加えるには定義のアセットが要るので Weapon に持つ。
     [Serializable]
     public sealed class PickupContents
     {
         public const int DefaultHealthAmount = 25;
 
-        /// <summary>武器を落とした人の残弾を持っていない (拾った人は満タンで持つ) ことを表す弾倉の弾数。</summary>
         public const int NoCarriedAmmo = -1;
 
         [SerializeField, Tooltip("種類")]
@@ -56,10 +50,8 @@ namespace Shooter.Runtime
 
         public int Amount => _amount;
 
-        /// <summary>渡す武器か、弾を足す武器の定義。無ければ null。</summary>
         public WeaponDefinition Weapon => _weapon;
 
-        /// <summary>落とされた武器の残弾。拾った人はこの弾数で持つ。武器でないか、落とされた物でなければ (満タンで持つ) null。</summary>
         public WeaponAmmo CarriedAmmo =>
             _kind == PickupKind.Weapon && _weapon != null && _carriedMagazine >= 0
                 ? new WeaponAmmo(_weapon.Id, _carriedMagazine, Math.Max(0, _carriedReserve))
@@ -72,7 +64,6 @@ namespace Shooter.Runtime
 
         public PickupEligibility Eligibility => PickupEligibility.Of(_sideRule, new Side(Math.Max(0, _sideId)));
 
-        /// <summary>武器。持っていなければ持ち武器に加え、持っていれば予備弾を ammoIfOwned 足す。</summary>
         public static PickupContents ForWeapon(WeaponDefinition weapon, int ammoIfOwned, PickupEligibility eligibility = default)
         {
             if (weapon == null)
@@ -83,11 +74,6 @@ namespace Shooter.Runtime
             return Create(PickupKind.Weapon, ammoIfOwned, weapon, eligibility, PickupSpec.NoOwner, null);
         }
 
-        /// <summary>
-        /// 誰かが手放した武器。持っていなければ ammo の弾数で持ち武器に加え、持っていれば ammo の弾倉と予備弾を合わせた数を予備弾に足す。
-        /// attachments はその武器に付いていた物で、拾った人の武器にそのまま付く。
-        /// ammo の武器の Id が weapon の Id と違えば <see cref="ArgumentException"/>。
-        /// </summary>
         public static PickupContents ForDroppedWeapon(
             WeaponDefinition weapon, WeaponAmmo ammo, PickupEligibility eligibility = default, IReadOnlyList<string> attachments = null)
         {
@@ -113,7 +99,6 @@ namespace Shooter.Runtime
             return contents;
         }
 
-        /// <summary>予備弾。weapon が null なら今持っている武器に足す。</summary>
         public static PickupContents ForReserveAmmo(int amount, WeaponDefinition weapon = null, PickupEligibility eligibility = default)
         {
             return Create(PickupKind.ReserveAmmo, amount, weapon, eligibility, PickupSpec.NoOwner, null);
@@ -163,18 +148,11 @@ namespace Shooter.Runtime
             return copy;
         }
 
-        /// <summary>倒れた人のタグ。</summary>
-        /// <param name="ownerId">持ち主のモードでの ID。分からなければ <see cref="PickupSpec.NoOwner"/>。</param>
-        /// <param name="ownerSide">持ち主の陣営。分からなければ null。</param>
         public static PickupContents ForTag(int ownerId, Side? ownerSide, PickupEligibility eligibility = default)
         {
             return Create(PickupKind.Tag, 1, null, eligibility, ownerId, ownerSide);
         }
 
-        /// <summary>
-        /// Core の中身にする。値が中身の種類に合わなければ (武器の定義が無い・量が 0 など) <see cref="ArgumentException"/>、
-        /// 武器の定義の Id が空なら <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public PickupSpec ToSpec()
         {
             var eligibility = Eligibility;
@@ -205,7 +183,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>同じ中身の写し。落とすたびに別の物として持たせるのに使う。</summary>
         public PickupContents Clone()
         {
             var copy = (PickupContents)MemberwiseClone();

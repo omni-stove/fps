@@ -5,19 +5,12 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroyRunner"/>) の設置地点 1 つ。地点の番号 (<see cref="Index"/>、0 始まりで HUD とログでは A, B, ...) と
-    /// 範囲の半径・高さを持ち、この GameObject の位置を中心とした円柱 (<see cref="ControlPointArea"/>) を範囲にする。
-    /// 誰が中にいるかは Runner が <see cref="Contains"/> で調べる。試合中に地点を動かすことは考えない。
-    /// Play 中は足元に範囲を示す薄い円盤 (<see cref="MarkerPrefab"/> があればその形) を作り、設置されたら <see cref="PlantedColor"/> で塗る (<see cref="ShowPlanted"/>)。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class BombSite : MonoBehaviour
     {
         public const float DefaultRadius = 3f;
         public const float DefaultHeight = 6f;
 
-        /// <summary>Play 中に作る、範囲を示す円盤の名前。</summary>
         public const string MarkerName = "BombSiteMarker";
 
         public static readonly Color IdleColor = new Color(1f, 0.65f, 0.1f);
@@ -45,7 +38,6 @@ namespace Shooter.Runtime
         private bool _markerFromPrefab;
         private bool _planted;
 
-        /// <summary>地点の番号。0 以上。</summary>
         public int Index
         {
             get => _index;
@@ -60,7 +52,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲の水平の半径 (m)。0 より大きい有限値。</summary>
         public float Radius
         {
             get => _radius;
@@ -75,7 +66,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲の高さ (m)。0 より大きい有限値。</summary>
         public float Height
         {
             get => _height;
@@ -90,7 +80,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲を示す印の見た目。null なら仮の薄い円盤。円盤を作る (<see cref="RefreshMarker"/>) 前に設定したものを使う。</summary>
         public GameObject MarkerPrefab
         {
             get => _markerPrefab;
@@ -103,29 +92,23 @@ namespace Shooter.Runtime
             set => _showMarker = value;
         }
 
-        /// <summary>今の位置での範囲。Inspector の値が不正 (半径・高さが 0 以下) なら <see cref="ArgumentOutOfRangeException"/>。</summary>
         public ControlPointArea Area => new ControlPointArea(_index, transform.position.ToNumerics(), _radius, _height);
 
-        /// <summary>この地点に設置されているか (<see cref="ShowPlanted"/> で最後に渡した値)。</summary>
         public bool IsPlanted => _planted;
 
-        /// <summary>Play 中に作った円盤 (<see cref="MarkerName"/>)。作っていなければ null。</summary>
         public GameObject Marker => _marker;
 
-        /// <summary>position が範囲の中 (境界を含む) なら true。</summary>
         public bool Contains(Vector3 position)
         {
             return Area.Contains(position.ToNumerics());
         }
 
-        /// <summary>設置されているかを覚え、円盤があればその色で塗る。</summary>
         public void ShowPlanted(bool planted)
         {
             _planted = planted;
             ApplyMarkerColor();
         }
 
-        /// <summary>範囲を示す円盤を作るか、作ってあれば今の半径に大きさを合わせる。当たり判定は持たせない。<see cref="ShowsMarker"/> が false なら何もしない。</summary>
         public void RefreshMarker()
         {
             if (!_showMarker)

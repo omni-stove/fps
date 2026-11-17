@@ -6,26 +6,14 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// トリガーの Collider の範囲の中で、決まった人数が同時に Interact を長押ししている間だけ進み、
-    /// 決まった秒数に届いたら <see cref="Completed"/> を出す。何が起きるか (扉が開くなど) は使う側がイベントで決める。
-    /// </summary>
-    /// <remarks>
-    /// 押している人は 2 通りで数える。
-    /// 範囲に入った <see cref="PlayerTag"/> の Collider は、この端末の Interact (<see cref="InputSystem.actions"/> の
-    /// <see cref="InteractActionPath"/>) が押されている間だけ押しているとみなす。
-    /// Bot など入力を経ない者は <see cref="BeginHold"/>・<see cref="EndHold"/> で押す・離すを伝え、範囲の外に出たら離したことにする。
-    /// 範囲はこの GameObject の isTrigger の Collider で、<see cref="Collider.ClosestPoint"/> が使える形 (箱・球・カプセル・凸のメッシュ) に限る。
-    /// </remarks>
+    // 範囲は Collider.ClosestPoint で測るので、それが使える形 (箱・球・カプセル・凸のメッシュ) の isTrigger の Collider に限る。
     [DisallowMultipleComponent]
     public sealed class CoopInteractable : MonoBehaviour
     {
         public const string LogTag = CoopHoldLog.Tag;
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
-        /// <summary>GameBootstrap がプレイヤーに付ける Unity 組み込みのタグ。</summary>
         public const string DefaultPlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
 
         // 足元の位置が床に置いたトリガーの下の面にちょうど乗っても、浮動小数の誤差で外と判定しない程度の幅。
@@ -61,29 +49,20 @@ namespace Shooter.Runtime
         private bool _enabledInteractAction;
         private int _loggedHoldingCount;
 
-        /// <summary>済んだとき (押し続ける秒数に届いたとき) に 1 度出す。<see cref="ResetHold"/> すればまた出る。</summary>
         public event Action<CoopInteractable> Completed;
 
-        /// <summary>
-        /// 値のアセット。null なら Inspector の値 (既定は <see cref="CoopHoldSpec"/> と <see cref="CoopDoor"/> の Default* の値) を使う。
-        /// 差し替えは <see cref="Configure(CoopInteractableDefinition)"/> で行う。
-        /// </summary>
         public CoopInteractableDefinition Definition => _definition;
 
-        /// <summary>今の設定。<see cref="Configure(CoopHoldSpec)"/> で差し替える。<see cref="Definition"/> か Inspector の値が不正なら例外を投げる。</summary>
         public CoopHoldSpec Spec => Hold.Spec;
 
         public int RequiredCount => Hold.Spec.RequiredCount;
 
         public float HoldSeconds => Hold.Spec.HoldSeconds;
 
-        /// <summary>直前の <see cref="Tick"/> で押していた人数。</summary>
         public int HoldingCount => Hold.HoldingCount;
 
-        /// <summary>進み具合 (0 から 1)。</summary>
         public float Progress => Hold.Progress;
 
-        /// <summary>人数が揃って進んでいる間は true。</summary>
         public bool IsRunning => Hold.IsRunning;
 
         public bool IsCompleted => Hold.IsCompleted;
@@ -94,7 +73,6 @@ namespace Shooter.Runtime
             set => _playerTag = value;
         }
 
-        /// <summary>読んでいる Interact アクション。未解決なら null。</summary>
         public InputAction InteractAction => _interactAction;
 
         private CoopHold Hold => _hold ??= new CoopHold(CreateSpec());
@@ -155,9 +133,6 @@ namespace Shooter.Runtime
             HandleExit(other);
         }
 
-        /// <summary>
-        /// 設定を差し替え、進みを最初からにする。ゲームのデータから人数や秒数を上書きするときに使う。
-        /// </summary>
         public void Configure(CoopHoldSpec spec)
         {
             if (spec == null)
@@ -172,12 +147,6 @@ namespace Shooter.Runtime
             _loggedHoldingCount = 0;
         }
 
-        /// <summary>
-        /// definition を <see cref="Definition"/> に入れ、その人数と秒数で <see cref="Configure(CoopHoldSpec)"/> する。
-        /// これで開く扉 (<see cref="CoopDoor"/>) は、次に開くときから definition の開き方を使う。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">definition が null。</exception>
-        /// <exception cref="InvalidOperationException">definition の値が不正。今の設定はそのまま残る。</exception>
         public void Configure(CoopInteractableDefinition definition)
         {
             if (definition == null)
@@ -191,7 +160,6 @@ namespace Shooter.Runtime
             Configure(spec);
         }
 
-        /// <summary>経過と完了を消して、もう一度使えるようにする。押している人はそのまま。</summary>
         public void ResetHold()
         {
             Hold.Reset();
@@ -199,7 +167,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} '{name}' reset", this);
         }
 
-        /// <summary>Collider が範囲に入った。<see cref="PlayerTag"/> の Collider なら覚える。</summary>
         public void HandleEnter(Collider other)
         {
             if (other != null && !string.IsNullOrEmpty(_playerTag) && other.CompareTag(_playerTag))
@@ -208,7 +175,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>Collider が範囲から出た。</summary>
         public void HandleExit(Collider other)
         {
             if (other != null)
@@ -217,10 +183,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 入力を経ずに holder が押し始めたことにする (Bot 用)。holder が範囲の中にいれば覚えて true を返し、
-        /// <see cref="EndHold"/> するか範囲から出るまで押しているとみなす。済んだあとや範囲の外なら false。
-        /// </summary>
         public bool BeginHold(GameObject holder)
         {
             if (holder == null)
@@ -247,7 +209,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>入力を経ずに holder が離したことにする (Bot 用)。押していたら true。</summary>
         public bool EndHold(GameObject holder)
         {
             if (holder == null || !_directHolders.Remove(holder))
@@ -259,13 +220,11 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary><see cref="BeginHold"/> で押していて、まだ離していなければ true。</summary>
         public bool IsHeldBy(GameObject holder)
         {
             return holder != null && _directHolders.Contains(holder);
         }
 
-        /// <summary>point が範囲 (この GameObject の有効な isTrigger の Collider のどれか) の中なら true。</summary>
         public bool IsInRange(Vector3 point)
         {
             GetComponents(_colliderBuffer);
@@ -289,10 +248,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 今押している人を数えて deltaSeconds だけ進める (Update から呼ぶ)。人数が変わったとき・進み始めたとき・
-        /// 止まったとき・済んだときに <see cref="LogTag"/> 付きのログを出し、済んだら <see cref="Completed"/> を出す。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             var hold = Hold;

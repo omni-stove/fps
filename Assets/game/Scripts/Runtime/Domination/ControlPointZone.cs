@@ -5,31 +5,20 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 拠点制圧の拠点 1 つ。拠点の番号 (<see cref="Index"/>、0 始まりで HUD とログでは A, B, ...) と範囲の半径・高さを持ち、
-    /// この GameObject の位置を中心とした円柱 (<see cref="ControlPointArea"/>) を範囲にする。
-    /// 範囲にいる生きた参加者は <see cref="DominationRunner"/> が毎フレーム <see cref="Scan"/> で調べ直す (このコンポーネントは自分では調べない。
-    /// 誰が参加者かを知っているのは Runner なので)。試合中に拠点を動かすことは考えない。
-    /// Play 中は足元に範囲を示す薄い円盤 (<see cref="MarkerPrefab"/> があればその形) を作り、持ち主のチームの色 (<see cref="ShowOwner"/>) で塗る。色は画面のプレイヤーのチーム
-    /// (<see cref="ViewerTeam"/>) から見た敵味方の色で、設定の色の組 (<see cref="TeamColors"/>) が変わったら塗り直す。Scene ビューには範囲を線で描く。
-    /// ハードポイントのように有効な拠点が 1 つだけのモードは、<see cref="SetHighlight"/> で有効な拠点の円盤を光らせ、他を暗くする。
-    /// </summary>
+    // 範囲にいる参加者を自分では調べず、DominationRunner に毎フレーム Scan させるのは、誰が参加者かを知っているのが Runner だから。
     [DisallowMultipleComponent]
     public sealed class ControlPointZone : MonoBehaviour
     {
         public const float DefaultRadius = 5f;
         public const float DefaultHeight = 6f;
 
-        /// <summary>Play 中に作る、範囲を示す円盤の名前。</summary>
         public const string MarkerName = "ControlPointMarker";
 
-        /// <summary>円盤の厚み (m)。床に埋もれず、上に立っても段差にならない薄さにする。</summary>
+        // 床に埋もれず、上に立っても段差にならない薄さにする。
         public const float MarkerThickness = 0.04f;
 
-        /// <summary>光らせていない (<see cref="SetHighlight"/> に false を渡した) 拠点の円盤の明るさ。</summary>
         public const float DimmedBrightness = 0.3f;
 
-        /// <summary>光らせた拠点の円盤の発光の強さ (チームの色に掛ける)。</summary>
         public const float HighlightEmission = 1.5f;
 
         private const int GizmoSegments = 32;
@@ -60,10 +49,6 @@ namespace Shooter.Runtime
         private Team? _viewerTeam = TeamColors.OfflineViewer;
         private bool _followsSettings;
 
-        /// <summary>
-        /// 画面のプレイヤーのチーム。持ち主がこのチームなら味方の色、違えば敵の色で塗る。既定はオフラインのプレイヤーのチーム
-        /// (<see cref="TeamColors.OfflineViewer"/>)。null なら Alpha を味方の色にする。
-        /// </summary>
         public Team? ViewerTeam
         {
             get => _viewerTeam;
@@ -74,7 +59,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>拠点の番号。0 以上。</summary>
         public int Index
         {
             get => _index;
@@ -89,7 +73,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲の水平の半径 (m)。0 より大きい有限値。円盤を出した後に変えたら <see cref="RefreshMarker"/> で大きさを合わせる。</summary>
         public float Radius
         {
             get => _radius;
@@ -104,7 +87,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲の高さ (m)。この GameObject の位置から上下に半分ずつ。0 より大きい有限値。</summary>
         public float Height
         {
             get => _height;
@@ -119,47 +101,33 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>範囲を示す印の見た目。null なら仮の薄い円盤。円盤を作る (<see cref="RefreshMarker"/>) 前に設定したものを使う。</summary>
         public GameObject MarkerPrefab
         {
             get => _markerPrefab;
             set => _markerPrefab = value;
         }
 
-        /// <summary>Play 中に範囲を示す円盤を出すか。開始後に変えても、作った円盤はそのまま。</summary>
         public bool ShowsMarker
         {
             get => _showMarker;
             set => _showMarker = value;
         }
 
-        /// <summary>今の位置での範囲。Inspector の値が不正 (半径・高さが 0 以下) なら <see cref="ArgumentOutOfRangeException"/>。</summary>
         public ControlPointArea Area => new ControlPointArea(_index, transform.position.ToNumerics(), _radius, _height);
 
-        /// <summary>最後の <see cref="Scan"/> で範囲にいた、生きている参加者。</summary>
         public IReadOnlyList<Damageable> Occupants => _occupants;
 
-        /// <summary><see cref="ShowOwner"/> で最後に渡された持ち主。中立なら null。</summary>
         public Team? Owner => _owner;
 
-        /// <summary>
-        /// <see cref="SetHighlight"/> で最後に渡された値。true は光らせている、false は暗くしている、null はどちらでもない (既定。拠点制圧の見た目)。
-        /// </summary>
         public bool? Highlight => _highlight;
 
-        /// <summary>Play 中に作った円盤 (<see cref="MarkerName"/>)。作っていなければ null。</summary>
         public GameObject Marker => _marker;
 
-        /// <summary>position が範囲の中 (境界を含む) なら true。</summary>
         public bool Contains(Vector3 position)
         {
             return Area.Contains(position.ToNumerics());
         }
 
-        /// <summary>
-        /// candidates のうち、生きていて位置 (Transform) が範囲の中にいるものを <see cref="Occupants"/> に入れ直す。
-        /// null と倒れているものは数えない。
-        /// </summary>
         public void Scan(IReadOnlyList<Damageable> candidates)
         {
             if (candidates == null)
@@ -178,25 +146,18 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>持ち主を覚え、円盤があればその色で塗る。中立なら null。</summary>
         public void ShowOwner(Team? owner)
         {
             _owner = owner;
             ApplyMarkerColor();
         }
 
-        /// <summary>
-        /// 円盤を光らせる (true)、暗くする (false)、どちらでもない元の色に戻す (null)。円盤がまだ無くても覚えておき、作ったときに合わせる。
-        /// </summary>
         public void SetHighlight(bool? highlighted)
         {
             _highlight = highlighted;
             ApplyMarkerColor();
         }
 
-        /// <summary>
-        /// 持ち主と光らせ方に応じた円盤の色 (今の色の組で、viewer から見た色)。暗くするときは <see cref="DimmedBrightness"/> を掛ける (不透明度はそのまま)。
-        /// </summary>
         public static Color MarkerColorOf(Team? owner, bool? highlight, Team? viewer = TeamColors.OfflineViewer)
         {
             var color = ColorOf(owner, viewer);
@@ -208,16 +169,11 @@ namespace Shooter.Runtime
             return color;
         }
 
-        /// <summary>今の色の組で、viewer のチームから見た持ち主の色。中立 (null) なら組の中立の色。</summary>
         public static Color ColorOf(Team? owner, Team? viewer = TeamColors.OfflineViewer)
         {
             return TeamColors.Of(owner, viewer);
         }
 
-        /// <summary>
-        /// 範囲を示す円盤を作るか、作ってあれば今の半径に大きさを合わせる。当たり判定は持たせない (弾と移動を遮らないように)。
-        /// <see cref="ShowsMarker"/> が false なら何もしない。Play 中は Start で呼ぶ。
-        /// </summary>
         public void RefreshMarker()
         {
             if (!_showMarker)
@@ -233,10 +189,7 @@ namespace Shooter.Runtime
             FitMarker(_marker.transform, transform.lossyScale, _radius, _markerFromPrefab);
         }
 
-        /// <summary>
-        /// 親の拡縮を打ち消し、印を世界で直径 2 × radius にする。仮の円盤 (Cylinder は高さ 2・直径 1) は厚みを <see cref="MarkerThickness"/> にし、
-        /// プレハブ (直径 1m) は高さをプレハブのままにする。
-        /// </summary>
+        // Cylinder は高さ 2・直径 1 なので、仮の円盤は厚みを MarkerThickness に合わせて縮め、直径 1m のプレハブは高さをそのままにする。
         internal static void FitMarker(Transform marker, Vector3 parentScale, float radius, bool fromPrefab)
         {
             var height = fromPrefab ? 1f : MarkerThickness * 0.5f;
@@ -248,10 +201,7 @@ namespace Shooter.Runtime
             marker.localRotation = Quaternion.identity;
         }
 
-        /// <summary>
-        /// 範囲を示す印を parent の子に作る。prefab があれば当たり判定を外して置き、無ければ当たり判定の無い Cylinder を作る。
-        /// 影は落とさない。塗るための材質は Renderer ごとに複製して materials に足す (印と一緒に消すこと)。
-        /// </summary>
+        // 塗るための材質は Renderer ごとに複製して materials に足すので、呼んだ側が印と一緒に消す。
         internal static GameObject CreateMarkerObject(GameObject prefab, Transform parent, string markerName, List<Material> materials)
         {
             GameObject marker;
@@ -292,7 +242,6 @@ namespace Shooter.Runtime
             return marker;
         }
 
-        /// <summary>materials をすべて消して空にする。</summary>
         internal static void DestroyMaterials(List<Material> materials)
         {
             foreach (var material in materials)

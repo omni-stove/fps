@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 旗取り (<see cref="CaptureTheFlag"/>) の調整値をアセットとして持つ。<see cref="ToSpec"/> で <see cref="CaptureTheFlagSpec"/> に変換する。
-    /// bot の用事を決め直す間隔と攻めの役の割合 (<see cref="CaptureTheFlagBotPlanner"/>) も持つ。新しく作ったときの値は <see cref="CaptureTheFlagRunner"/> の既定値と同じ。
-    /// <see cref="CaptureTheFlagRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
     [CreateAssetMenu(fileName = "CaptureTheFlag", menuName = "Shooter/Modes/Capture The Flag")]
     public sealed class CaptureTheFlagDefinition : ScriptableObject
     {
@@ -93,11 +88,7 @@ namespace Shooter.Runtime
             set => _botAttackShare = value;
         }
 
-        /// <summary>
-        /// 定義を <see cref="CaptureTheFlagSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。
-        /// Spec に入らない bot の間隔と割合も、ここで範囲を確かめる (不正なアセットで試合を始めないように)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
+        // Spec に入らない bot の間隔と割合もここで範囲を確かめるのは、不正なアセットで試合を始めないようにするため。
         public CaptureTheFlagSpec ToSpec()
         {
             try
@@ -112,8 +103,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の値をすべて写す。bot の間隔と割合は spec に無いので変えない。spec は検査済みなので、写した後も bot の値が正しければ <see cref="ToSpec"/> に通る。</summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public void CopyFrom(CaptureTheFlagSpec spec)
         {
             if (spec == null)

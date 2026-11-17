@@ -3,15 +3,10 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroyRunner"/>) の爆弾の見た目。持たれている間は持ち主の背中に付いて動き (<see cref="ShowCarried"/>)、
-    /// 落ちているときと設置されたときは地面に置かれる (<see cref="ShowOnGround"/>)。爆弾の状態は Runner が <see cref="SearchAndDestroy"/> から読んで渡し、
-    /// このコンポーネントは状態を持たない。当たり判定は持たせない (弾と移動を遮らないように)。色は同じ GameObject の Renderer を塗る。
-    /// </summary>
+    // 弾と移動を遮らないよう、当たり判定は持たせない。
     [DisallowMultipleComponent]
     public sealed class BombObject : MonoBehaviour
     {
-        /// <summary>持ち主の Transform から見た、背中の位置 (上へ、後ろへ)。</summary>
         public const float CarryHeight = 1.1f;
 
         public const float CarryBack = 0.35f;
@@ -25,10 +20,8 @@ namespace Shooter.Runtime
         private Renderer _renderer;
         private Material _material;
 
-        /// <summary>今付いている持ち主。持たれていなければ null。</summary>
         public Transform Carrier => _carrier;
 
-        /// <summary>見えているか。</summary>
         public bool IsVisible => Renderer != null && Renderer.enabled;
 
         private Renderer Renderer
@@ -44,7 +37,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>carrier の背中に付けて見せる。carrier が null なら隠す。</summary>
         public void ShowCarried(Transform carrier)
         {
             _carrier = carrier;
@@ -58,9 +50,6 @@ namespace Shooter.Runtime
             Paint(CarriedColor, true);
         }
 
-        /// <summary>
-        /// 足元 ground に置いて見せる。state で色を変え、<see cref="BombState.Detonated"/> なら隠す (起爆で無くなった)。
-        /// </summary>
         public void ShowOnGround(Vector3 ground, BombState state)
         {
             _carrier = null;
@@ -82,7 +71,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>隠す。</summary>
         public void Hide()
         {
             _carrier = null;
@@ -124,7 +112,7 @@ namespace Shooter.Runtime
                 Quaternion.LookRotation(back.sqrMagnitude > 0f ? -back : Vector3.forward, Vector3.up));
         }
 
-        /// <summary>見た目は 1m 四方の立方体を拡縮したものなので、高さの半分は拡縮の y の半分。</summary>
+        // 見た目は 1m 四方の立方体を拡縮したものなので、高さの半分は拡縮の y の半分。
         private float HalfHeight()
         {
             return transform.lossyScale.y * 0.5f;

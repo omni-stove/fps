@@ -6,25 +6,10 @@ using UnityEngine.AI;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// PvE の波で敵を出す。波の進め方は <see cref="WaveSchedule"/> に任せ、ここでは出してよい数 (<see cref="WaveSchedule.SpawnBudget"/>)
-    /// だけ敵の雛形 (<see cref="EnemyTemplate"/>) を複製して出現点に置き、倒されたら報告する。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>波の値は、<see cref="UsesTable"/> なら Inspector の表、そうでなければ式 (<see cref="WaveFormula"/>) から決める。</item>
-    /// <item>出す敵は雛形の複製で、<see cref="EnemySide"/> の <see cref="SideMember"/> を付け、体力と判断の設定を波の強さの倍率で強くする
-    /// (<see cref="WaveStrength"/>)。複製は有効にする前に設定するので、雛形は無効の GameObject (シーンに置いたもの) か Prefab にする。
-    /// シーンに有効なまま置かれていれば、始めるときに無効にする。</item>
-    /// <item>出現点は <see cref="SpawnPoints"/>。空ならシーンにある <see cref="EnemySide"/> の <see cref="SideSpawnPoint"/> を使う。
-    /// 順に回して使い、敵対する陣営の誰かから <see cref="MinSpawnDistance"/> 以内の点はほかに使える点があれば飛ばす。</item>
-    /// <item>出した敵は視界の外にいることが多いので、出した直後と <see cref="AlertInterval"/> ごとに、Idle か Patrol の敵へいちばん近い
-    /// 敵対者の位置を物音として渡し (<see cref="EnemyAgent.Alert"/>)、そこへ向かわせる。</item>
-    /// <item><see cref="GameBootstrap"/> のプレイヤーに SideMember が無ければ <see cref="PlayerSide"/> で付ける (無いと敵が狙えない)。</item>
-    /// <item>倒された敵は <see cref="CorpseSeconds"/> 後に消す。倒されずに消えた敵も倒されたとして数え、波が止まらないようにする。</item>
-    /// <item>波の始まり・敵を出したとき・倒されたとき・全滅・休憩の終わり・全波の終わりに <c>[Wave]</c> のログ (<see cref="WaveLog"/>) を出す。</item>
-    /// </list>
-    /// </remarks>
+    // 出した敵は視界の外にいることが多いので、出した直後と AlertInterval ごとに、Idle か Patrol の敵へいちばん近い
+    // 敵対者の位置を物音として渡して向かわせる。
+    // 倒されずに消えた敵も倒されたとして数えるのは、波が止まらないようにするため。
+    // GameBootstrap のプレイヤーに SideMember が無ければ付けるのは、無いと敵が狙えないため。
     [DisallowMultipleComponent]
     public sealed class WaveSpawner : MonoBehaviour
     {
@@ -43,10 +28,8 @@ namespace Shooter.Runtime
         public const float DefaultMinSpawnDistance = HordeSpec.DefaultMinSpawnDistance;
         public const float DefaultCorpseSeconds = HordeSpec.DefaultCorpseSeconds;
 
-        /// <summary>出現点の近くの NavMesh を探す半径 (メートル)。<see cref="EnemyAgent.OffMeshSnapRadius"/> と同じ。</summary>
         public const float SpawnSnapRadius = EnemyAgent.OffMeshSnapRadius;
 
-        /// <summary>表で決める 1 つの波。Inspector で並べる。</summary>
         [Serializable]
         public struct WaveEntry
         {
@@ -70,7 +53,6 @@ namespace Shooter.Runtime
                 RestSeconds = restSeconds;
             }
 
-            /// <summary>値が不正なら <see cref="ArgumentOutOfRangeException"/>。</summary>
             public Wave ToWave() => new Wave(EnemyCount, Strength, MaxAlive, RestSeconds);
         }
 
@@ -141,66 +123,52 @@ namespace Shooter.Runtime
         private float _untilAlert;
         private bool _warnedNoHostile;
 
-        /// <summary>敵を 1 体出して有効にした直後に呼ばれる。</summary>
         public event Action<EnemyAgent> EnemySpawned;
 
-        /// <summary>進めている波の予定。開始前や開始に失敗したときは null。波の始まりや全滅はこれのイベントで受ける。</summary>
         public WaveSchedule Schedule => _schedule;
 
         public bool IsStarted => _schedule != null;
 
-        /// <summary>出ていてまだ倒されていない敵。</summary>
         public IReadOnlyCollection<EnemyAgent> AliveEnemies => _alive.Values;
 
-        /// <summary>複製して出す敵。始める前に設定する。</summary>
         public EnemyAgent EnemyTemplate
         {
             get => _enemyTemplate;
             set => _enemyTemplate = value;
         }
 
-        /// <summary>出現点。空ならシーンにある <see cref="EnemySide"/> の <see cref="SideSpawnPoint"/> を使う。始める前に設定する。</summary>
         public IReadOnlyList<SideSpawnPoint> SpawnPoints
         {
             get => _spawnPoints;
             set => _spawnPoints = value != null ? CopyOf(value) : Array.Empty<SideSpawnPoint>();
         }
 
-        /// <summary>出す敵の陣営。</summary>
         public Side EnemySide
         {
             get => new Side(Math.Max(0, _enemySideId));
             set => _enemySideId = value.Id;
         }
 
-        /// <summary><see cref="GameBootstrap"/> のプレイヤーに SideMember が無いとき、付ける陣営。</summary>
         public Side PlayerSide
         {
             get => new Side(Math.Max(0, _playerSideId));
             set => _playerSideId = value.Id;
         }
 
-        /// <summary>Start で 1 波目を始めるか。</summary>
         public bool BeginOnStart
         {
             get => _beginOnStart;
             set => _beginOnStart = value;
         }
 
-        /// <summary>true なら <see cref="Table"/>、false なら式で波を決める。</summary>
         public bool UsesTable => _useTable;
 
-        /// <summary>表で決める波。</summary>
         public IReadOnlyList<WaveEntry> Table => _table;
 
         public float AlertInterval => _alertInterval;
         public float MinSpawnDistance => _minSpawnDistance;
         public float CorpseSeconds => _corpseSeconds;
 
-        /// <summary>
-        /// 敵の陣営・知らせの間隔・出現の最小距離・死体を残す時間を spec の値にする (陣営は <see cref="HordeSpec.Attackers"/>)。
-        /// <see cref="HordeRunner"/> が HordeDefinition から始めるときに、波を始める前に呼ぶ。始めた後なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public void ApplySpec(HordeSpec spec)
         {
             if (spec == null)
@@ -219,7 +187,6 @@ namespace Shooter.Runtime
             _corpseSeconds = spec.CorpseSeconds;
         }
 
-        /// <summary>表で波を決めるようにする。始める前に呼ぶ。</summary>
         public void SetTable(IReadOnlyList<WaveEntry> table)
         {
             if (table == null)
@@ -237,7 +204,6 @@ namespace Shooter.Runtime
             _useTable = true;
         }
 
-        /// <summary>式で波を決めるようにする。始める前に呼ぶ。値の検査は <see cref="WaveFormula"/> が始めるときに行う。</summary>
         public void SetFormula(
             int firstEnemyCount,
             float enemiesPerWave,
@@ -259,7 +225,6 @@ namespace Shooter.Runtime
             _useTable = false;
         }
 
-        /// <summary>Inspector の値から波の予定を作る。値が不正なら <see cref="ArgumentException"/>。</summary>
         public WaveSchedule CreateSchedule()
         {
             if (_useTable)
@@ -306,10 +271,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 雛形・出現点・波の予定を確かめて 1 波目を始める。既に始まっていれば何もせず true。
-        /// 始められなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBegin()
         {
             if (IsStarted)
@@ -345,10 +306,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// schedule を購読して始める。schedule は開始前 (Waiting) であること。雛形と出現点は <see cref="TryBegin"/> と同じく確かめる。
-        /// 既に始まっていれば <see cref="InvalidOperationException"/>、雛形か出現点が使えなければ <see cref="InvalidOperationException"/>。
-        /// </summary>
         public void Begin(WaveSchedule schedule)
         {
             if (schedule == null)
@@ -399,10 +356,6 @@ namespace Shooter.Runtime
             SpawnDue();
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進め、倒されずに消えた敵を倒されたとして数え、出してよい数だけ敵を出し、間隔ごとに敵を敵対者へ向かわせる。
-        /// Play 中は Update から呼ぶ。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!IsStarted)
@@ -422,7 +375,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>購読を解除して止める。出ている敵はそのまま残す。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
             foreach (var damageable in _alive.Keys)

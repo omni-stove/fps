@@ -5,30 +5,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 旗取り (<see cref="CaptureTheFlag"/>) をシーンで進める <see cref="ModeRunnerBase"/> の派生。陣営 0 が Alpha、陣営 1 が Bravo。
-    /// 旗の台 (<see cref="FlagBase"/>、陣営ごとに 1 つ) と旗の見た目 (<see cref="FlagObject"/>、無くてもよい) は Inspector (シーンの生成スクリプト) で配線する。
-    /// 調整値は <see cref="Definition"/>、入口 (<see cref="GameContent"/>) の欄、Inspector の値の順で読む。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>毎フレーム (<see cref="ModeRunnerBase.Tick"/> の頭)、生きている参加者の足元から、台にあるか落ちている旗の <see cref="CaptureTheFlagSpec.PickupRadius"/> の中にいれば
-    /// 触れたこと (<see cref="CaptureTheFlag.Touch"/>。敵の旗なら持ち、落ちた自陣の旗なら戻す) を、敵の旗を運んでいて自陣の台の
-    /// <see cref="CaptureTheFlagSpec.CaptureRadius"/> の中にいれば着いたこと (<see cref="CaptureTheFlag.ReachBase"/>) を伝える。上下は <see cref="ReachHeight"/> まで。</item>
-    /// <item>参加者が倒れたら (<see cref="ModeRunnerBase.OnKill"/>)、運んでいた旗をその場に落とす。落ちた所は倒れた人の足元。</item>
-    /// <item>bot には <see cref="EffectiveBotPlanIntervalSeconds"/> ごとと旗が動いたときに <see cref="CaptureTheFlagBotPlanner"/> で用事を決めて渡す
-    /// (<see cref="EnemyAgent.SetErrand"/>)。攻めと守りの役は、陣営の bot を ID の順に並べて <see cref="EffectiveBotAttackShare"/> で割り振る。
-    /// 倒れている bot と試合の外では用事を消す (<see cref="EnemyAgent.ClearErrand"/>)。</item>
-    /// <item>HUD には旗の様子と自分のプレイヤー (<see cref="CaptureTheFlagStatus"/>) を <see cref="ModeStatus.Detail"/> で渡し、何をどう出すかは UI が決める。</item>
-    /// <item>旗を持つ・落とす・戻す・運んで点を取るたびと bot の用事が変わるたびに <c>[Mode]</c> のログ (<see cref="CaptureTheFlagLog"/>) を出す。</item>
-    /// </list>
-    /// </remarks>
     public sealed class CaptureTheFlagRunner : ModeRunnerBase
     {
-        /// <summary>bot の用事を決め直す既定の間隔 (秒)。</summary>
         public const float DefaultBotPlanIntervalSeconds = 0.5f;
 
-        /// <summary>旗と台のそばにいるとみなす上下の差 (m)。段差の上下で旗を拾ったり運び込んだりしないように。</summary>
+        // 段差の上下で旗を拾ったり運び込んだりしないよう、上下の差も見る。
         public const float ReachHeight = 2f;
 
         // 間隔の設定が小さすぎても、毎フレームより細かくは決め直さないための下限。
@@ -81,19 +62,14 @@ namespace Shooter.Runtime
         private CaptureTheFlag _game;
         private float _untilBotPlan;
 
-        /// <summary>進めている旗取り。開始前は null。</summary>
         public CaptureTheFlag Game => _game;
 
-        /// <summary>
-        /// 調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値 (既定は <see cref="CaptureTheFlagSpec"/> の既定値) で始める。
-        /// </summary>
         public CaptureTheFlagDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public CaptureTheFlagDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.CaptureTheFlag);
 
         public int ScoreLimit
@@ -138,21 +114,18 @@ namespace Shooter.Runtime
             set => _pointsPerCapture = value;
         }
 
-        /// <summary>Inspector の間隔。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotPlanIntervalSeconds
         {
             get => _botPlanIntervalSeconds;
             set => _botPlanIntervalSeconds = value;
         }
 
-        /// <summary>Inspector の攻めの役の割合。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotAttackShare
         {
             get => _botAttackShare;
             set => _botAttackShare = value;
         }
 
-        /// <summary>いま bot の用事を決め直す間隔 (秒)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotPlanIntervalSeconds"/>。</summary>
         public float EffectiveBotPlanIntervalSeconds
         {
             get
@@ -162,7 +135,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>いま攻めの役にする割合。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotAttackShare"/>。</summary>
         public float EffectiveBotAttackShare
         {
             get
@@ -172,30 +144,22 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>配線した旗の台 (配線した順)。</summary>
         public IReadOnlyList<FlagBase> Bases => _bases ?? Array.Empty<FlagBase>();
 
-        /// <summary>配線した旗の見た目 (配線した順)。</summary>
         public IReadOnlyList<FlagObject> FlagObjects => _flagObjects ?? Array.Empty<FlagObject>();
 
         protected override object HudDetail => _game != null ? new CaptureTheFlagStatus(_game, LocalPlayer != null ? LocalPlayerId : (int?)null) : null;
 
-        /// <summary>旗の台を配線する。Alpha と Bravo に 1 つずつであること (始めるときに確かめる)。</summary>
         public void SetBases(IReadOnlyList<FlagBase> bases)
         {
             _bases = Copy(bases);
         }
 
-        /// <summary>旗の見た目を配線する。陣営ごとに 1 つまで (始めるときに確かめる)。</summary>
         public void SetFlagObjects(IReadOnlyList<FlagObject> flags)
         {
             _flagObjects = Copy(flags);
         }
 
-        /// <summary>
-        /// <see cref="CaptureTheFlagSpec"/> を、<see cref="EffectiveDefinition"/> があればその値で、無ければ Inspector の値で作る。bot の間隔と割合もここで確かめる。
-        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public CaptureTheFlagSpec CreateSpec()
         {
             var definition = EffectiveDefinition;
@@ -209,8 +173,6 @@ namespace Shooter.Runtime
                 _scoreLimit, _timeLimitSeconds, _respawnSeconds, _pickupRadius, _captureRadius, _returnSeconds, _pointsPerCapture);
         }
 
-        /// <summary>bot の用事を決め直す間隔と攻めの役の割合を確かめる。間隔は 0 より大きい有限値、割合は 0 以上 1 以下。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">どちらかが範囲の外。</exception>
         public static void RequireBotTuning(float planIntervalSeconds, float attackShare)
         {
             if (!(planIntervalSeconds > 0f) || float.IsInfinity(planIntervalSeconds))
@@ -225,9 +187,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// bases から Alpha と Bravo の台を引く。null の要素・重なる陣営・Alpha と Bravo 以外の陣営・足りない陣営があれば <see cref="InvalidOperationException"/>。
-        /// </summary>
         public static IReadOnlyDictionary<Side, FlagBase> ResolveBases(IReadOnlyList<FlagBase> bases)
         {
             var resolved = new Dictionary<Side, FlagBase>();
@@ -265,30 +224,22 @@ namespace Shooter.Runtime
             return resolved;
         }
 
-        /// <summary>
-        /// 足元 ground が point から水平に radius 以内、上下に <see cref="ReachHeight"/> 以内 (境界を含む) なら true。
-        /// </summary>
         public static bool IsWithin(Vector3 ground, Vector3 point, float radius)
         {
             var offset = ground - point;
             return Mathf.Abs(offset.y) <= ReachHeight && ((offset.x * offset.x) + (offset.z * offset.z)) <= radius * radius;
         }
 
-        /// <summary>side の台。始める前と配線されていない陣営は null。</summary>
         public FlagBase BaseOf(Side side)
         {
             return _baseOf.TryGetValue(side, out var flagBase) ? flagBase : null;
         }
 
-        /// <summary>side の旗の見た目。始める前と配線されていない陣営は null。</summary>
         public FlagObject FlagObjectOf(Side side)
         {
             return _flagObjectOf.TryGetValue(side, out var flag) ? flag : null;
         }
 
-        /// <summary>
-        /// side の旗の今の足元。台にあれば台の足元、落ちていれば落ちた所、運ばれていれば運ぶ人の足元。始める前は null。
-        /// </summary>
         public Vector3? FlagPosition(Side side)
         {
             if (_game == null || !_baseOf.TryGetValue(side, out var flagBase))
@@ -309,10 +260,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// シーンを探さずに、配線した台と旗で members・spawnPoints の試合を始める (<see cref="ModeRunnerBase.Begin"/>)。
-        /// 台や設定が不正なら <see cref="InvalidOperationException"/> か <see cref="ArgumentException"/> を投げ、何も購読しない。
-        /// </summary>
         public void Begin(
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
@@ -335,10 +282,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 生きている参加者の足元から、旗に触れたか・自陣の台に着いたかを <see cref="CaptureTheFlag"/> に伝える。試合中以外は何もしない。
-        /// Play 中は <see cref="ModeRunnerBase.Tick"/> の頭で呼ばれる。
-        /// </summary>
         public void UpdateFlagContacts()
         {
             if (_game == null || IsMatchOver)
@@ -384,10 +327,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// bot の用事を今すぐ決め直して渡す。Play 中は <see cref="EffectiveBotPlanIntervalSeconds"/> ごとと旗が動いたときに呼ばれる。
-        /// NavMesh の無い Edit Mode のテストでも、渡した用事 (<see cref="EnemyAgent.Errand"/>) は確かめられる。
-        /// </summary>
         public void PlanBots()
         {
             if (_game == null)

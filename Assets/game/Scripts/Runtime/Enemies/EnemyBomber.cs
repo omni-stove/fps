@@ -113,7 +113,6 @@ namespace Shooter.Runtime
             Tick(Time.deltaTime);
         }
 
-        // 信管で爆発したフレームに true を返す。
         public bool Tick(float deltaSeconds)
         {
             EnsureInitialized();

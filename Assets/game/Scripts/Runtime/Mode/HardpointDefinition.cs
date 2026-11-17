@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ハードポイント (<see cref="HardpointRunner"/>) の調整値をアセットとして持つ。拠点の数はシーンの <see cref="ControlPointZone"/> で決まるので持たず、
-    /// <see cref="ToSpec"/> に渡す。新しく作ったときの値は <see cref="HardpointRunner"/> の既定値と同じ。
-    /// 中身は Shooter.Editor.ModeTuningAssetBuilder が無ければ作る。
-    /// </summary>
+    // 拠点の数はシーンの ControlPointZone で決まるので持たず、ToSpec に渡す。
     [CreateAssetMenu(fileName = "Hardpoint", menuName = "Shooter/Modes/Hardpoint")]
     public sealed class HardpointDefinition : ScriptableObject
     {
@@ -60,8 +56,6 @@ namespace Shooter.Runtime
             set => _respawnSeconds = value;
         }
 
-        /// <summary>拠点が pointCount 個の <see cref="HardpointSpec"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">pointCount か、どれかの値が不正なとき。メッセージにアセット名を含む。</exception>
         public HardpointSpec ToSpec(int pointCount)
         {
             try
@@ -74,8 +68,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>拠点の数に依らない値がすべて <see cref="ToSpec"/> に通ることを確かめる。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">どれかの値が不正なとき。メッセージにアセット名を含む。</exception>
         public void Validate()
         {
             ToSpec(_minimumPointCount);

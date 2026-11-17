@@ -4,24 +4,14 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Play の開始時 (シーンを読む前) に <see cref="ProgressionRecorder"/> を <see cref="FileSaveStorage.CreateDefault"/> の置き場所で作って
-    /// <see cref="ProgressionRecorder.Install"/> し、<see cref="Recorder"/> に置く。Play を抜けるときに外す。メニュー・ロードアウト・持ち物は
-    /// <see cref="IsUnlocked"/> を「使えるか」の述語として受け取る。
-    /// </summary>
     public static class ProgressionBootstrap
     {
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static ProgressionRecorder _recorder;
 
-        /// <summary>記録している <see cref="ProgressionRecorder"/>。Play の外 (Edit Mode のテストなど) で <see cref="Install(ProgressionRecorder)"/> していなければ null。</summary>
         public static ProgressionRecorder Recorder => _recorder;
 
-        /// <summary>
-        /// 今のプロフィールのレベルで id が使えるか。<see cref="Recorder"/> が無ければ全部使える。
-        /// 述語として渡す先が呼ぶたびに今のプロフィールを引くので、試合中にレベルが上がればその場で使えるようになる。
-        /// </summary>
-        /// <exception cref="ArgumentException">id が null か空。</exception>
+        // 値を覚えずに呼ぶたびに今のプロフィールを引くのは、試合中にレベルが上がればその場で使えるようにするため。
         public static bool IsUnlocked(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -32,8 +22,6 @@ namespace Shooter.Runtime
             return _recorder == null || _recorder.IsUnlocked(id);
         }
 
-        /// <summary>storage に保存する記録係を作って <see cref="Install(ProgressionRecorder)"/> する。</summary>
-        /// <exception cref="ArgumentNullException">storage が null。</exception>
         public static ProgressionRecorder Install(ISaveStorage storage)
         {
             if (storage == null)
@@ -44,8 +32,6 @@ namespace Shooter.Runtime
             return Install(new ProgressionRecorder(storage));
         }
 
-        /// <summary>前の記録係を外し、recorder を始めて <see cref="Recorder"/> に置く。既に置いているものなら何もしない。</summary>
-        /// <exception cref="ArgumentNullException">recorder が null。</exception>
         public static ProgressionRecorder Install(ProgressionRecorder recorder)
         {
             if (recorder == null)
@@ -64,7 +50,6 @@ namespace Shooter.Runtime
             return recorder;
         }
 
-        /// <summary>記録を止めて <see cref="Recorder"/> を空にする。置いていなければ何もしない。</summary>
         public static void Uninstall()
         {
             var recorder = _recorder;

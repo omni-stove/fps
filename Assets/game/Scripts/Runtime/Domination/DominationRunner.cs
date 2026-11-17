@@ -7,35 +7,11 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 拠点制圧 (<see cref="Shooter.Core.Domination"/>) をシーンで進める。Start で <see cref="GameBootstrap"/> の生成物と、シーンの
-    /// <see cref="ControlPointZone"/>・<see cref="EnemyAgent"/> を拾い、調整値のアセット (<see cref="Definition"/>) か、それが無ければ Inspector の設定から
-    /// <see cref="DominationSpec"/> を作って試合を始める。
-    /// プレイヤーは Alpha (Id <see cref="PlayerId"/>)、敵は名前の順に Bravo (Id 1, 2, ...) として加える。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>Update で、各拠点に範囲の参加者を調べさせ (<see cref="ControlPointZone.Scan"/>)、生きている参加者がいる拠点を
-    /// <see cref="ControlPointMap.Locate"/> で決めて <see cref="Shooter.Core.Domination.SetPlayerPoint"/> に渡してから <see cref="Shooter.Core.Domination.Tick"/> する。</item>
-    /// <item>倒れたら、倒した者 (<see cref="CombatEvents.CurrentAttribution"/>) が参加者なら <see cref="Shooter.Core.Domination.ReportKill"/>、
-    /// そうでなければ <see cref="Shooter.Core.Domination.ReportDeath"/> に渡し、<see cref="EffectiveRespawnSeconds"/> 秒後に自チームの出現点へ戻す。
-    /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
-    /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
-    /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
-    /// <item>終わったら、プレイヤーの勝敗・キル数・デス数・Alpha のポイント (切り捨て) を <see cref="CombatEvents.MatchFinished"/> で 1 度だけ知らせる。</item>
-    /// <item>両チームのポイント・残り時間・拠点ごとの状態を <see cref="DominationStatus"/> にして <see cref="GameSignals.Domination"/> に出し、止めたら消す。
-    /// 参加者ごとのキル数とデス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。</item>
-    /// <item>終わったらプレイヤーの移動と射撃を止め、<see cref="MatchRunner"/> と同じく <see cref="RestartActionPath"/> (キーボードの R) で
-    /// 今のシーンを読み込み直して最初からやり直す。</item>
-    /// </list>
-    /// GameBootstrap が並べる標的ダミーは試合に数えないので、<see cref="HidesTargetDummies"/> が true (既定) なら隠す。
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class DominationRunner : MonoBehaviour
     {
         public const string LogTag = DominationLog.Tag;
 
-        /// <summary>Domination の中でのプレイヤーの Id。敵には名前の順に 1, 2, ... を振る。</summary>
         public const int PlayerId = 0;
 
         public const float DefaultCaptureSeconds = 8f;
@@ -44,7 +20,7 @@ namespace Shooter.Runtime
         public const float DefaultTimeLimitSeconds = 300f;
         public const float DefaultRespawnSeconds = 5f;
 
-        /// <summary>再開に使うアクション。<see cref="MatchRunner.RestartActionPath"/> と同じ (終了後は武器を止めるのでリロードと取り合わない)。</summary>
+        // 終了後は武器を止めるので、再開の入力をリロードと同じキーにしても取り合わない。
         public const string RestartActionPath = MatchRunner.RestartActionPath;
 
         [Header("Rules")]
@@ -95,38 +71,26 @@ namespace Shooter.Runtime
         private InputAction _restartAction;
         private bool _enabledRestartAction;
 
-        /// <summary>進めている試合。開始前や開始に失敗したときは null。</summary>
         public Domination Domination => _domination;
 
         public bool IsStarted => _domination != null;
 
-        /// <summary>試合の拠点。番号の順。開始前は空。</summary>
         public IReadOnlyList<ControlPointZone> Zones => _zones;
 
-        /// <summary>最後に <see cref="GameSignals.Domination"/> に出した状態。出す前と止めた後は null。</summary>
         public DominationStatus Status => _publishedStatus;
 
-        /// <summary>最後に <see cref="GameSignals.Scoreboard"/> に出した一覧。出す前と止めた後は null。</summary>
         public IReadOnlyList<ScoreboardEntry> PublishedScoreboard => _publishedScoreboard;
 
-        /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
 
-        /// <summary>
-        /// 調整値のアセット。設定されていれば <see cref="CreateSpec"/> とリスポーンの秒数はこれの値を使い、
-        /// <see cref="CaptureSeconds"/> などの Runner 自身の値は使わない。null なら Runner 自身の値 (既定は Default*) を使う。
-        /// 試合を始めた後に変えても、その試合には効かない。
-        /// </summary>
         public DominationDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public DominationDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Domination);
 
-        /// <summary>試合で使うリスポーンの秒数。<see cref="Definition"/> があればその値、無ければ <see cref="RespawnSeconds"/>。</summary>
         public float EffectiveRespawnSeconds => EffectiveDefinition is { } definition ? definition.RespawnSeconds : _respawnSeconds;
 
         public float CaptureSeconds
@@ -159,7 +123,6 @@ namespace Shooter.Runtime
             set => _maxCapturers = value;
         }
 
-        /// <summary>倒れてから自チームの出現点に戻るまでの秒数。試合を始めた後に変えても、その試合には効かない。</summary>
         public float RespawnSeconds
         {
             get => _respawnSeconds;
@@ -172,13 +135,11 @@ namespace Shooter.Runtime
             set => _hideTargetDummies = value;
         }
 
-        /// <summary>team の出現点 (足元の位置)。設定していなければ空。</summary>
         public IReadOnlyList<Transform> SpawnPoints(Team team)
         {
             return (team == Team.Alpha ? _alphaSpawns : _bravoSpawns) ?? Array.Empty<Transform>();
         }
 
-        /// <summary>team の出現点 (足元の位置) を設定する。null か空なら、試合開始時にそのチームの参加者が立っていた位置を使う。</summary>
         public void SetSpawnPoints(Team team, IReadOnlyList<Transform> points)
         {
             var copy = new Transform[points != null ? points.Count : 0];
@@ -200,10 +161,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 拠点が pointCount 個の <see cref="DominationSpec"/> を、<see cref="Definition"/> があればその値から、無ければ Inspector の設定から作る。
-        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public DominationSpec CreateSpec(int pointCount)
         {
             var definition = EffectiveDefinition;
@@ -215,7 +172,6 @@ namespace Shooter.Runtime
             return new DominationSpec(pointCount, _captureSeconds, _pointsPerSecond, _scoreLimit, _timeLimitSeconds, _maxCapturers);
         }
 
-        /// <summary>definition の値を Runner 自身の値 (<see cref="CaptureSeconds"/> など) に写す。<see cref="Definition"/> は変えない。</summary>
         public void CopyFrom(DominationDefinition definition)
         {
             if (definition == null)
@@ -273,10 +229,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="GameBootstrap"/> の生成物・シーンの <see cref="ControlPointZone"/> と <see cref="EnemyAgent"/> を拾い、
-        /// <see cref="CreateSpec"/> の値で試合を始める。既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBeginFromScene()
         {
             if (IsStarted)
@@ -331,11 +283,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// world のプレイヤーを Alpha、enemies を並びの順に Bravo として spec の試合に加え、zones を拠点にして試合を始める。
-        /// zones の番号は 0 から抜けも重なりもなく、数が spec.PointCount と同じであること。enemies は空でもよい (警告を出す)。
-        /// 失敗したら例外を投げ、何も購読しない。
-        /// </summary>
         public void Begin(BootstrapWorld world, IReadOnlyList<ControlPointZone> zones, IReadOnlyList<EnemyAgent> enemies, DominationSpec spec)
         {
             if (world == null)
@@ -433,10 +380,6 @@ namespace Shooter.Runtime
             ShowScoreboard();
         }
 
-        /// <summary>
-        /// 試合の時間を deltaSeconds 進める。倒れている参加者の待ち時間を進めて戻し、拠点にいる参加者を伝えてから
-        /// <see cref="Shooter.Core.Domination.Tick"/> する。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!IsStarted)
@@ -467,9 +410,6 @@ namespace Shooter.Runtime
             PublishStatus();
         }
 
-        /// <summary>
-        /// 各拠点に範囲にいる参加者を調べ直させ、生きている参加者がいる拠点を Domination に伝える。倒れている参加者はどこにもいないことにする。
-        /// </summary>
         private void UpdatePresence()
         {
             foreach (var zone in _zones)
@@ -490,7 +430,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今のシーンを読み込み直して最初からやり直す。Play 中にのみ呼べる。</summary>
         [ContextMenu("Restart")]
         public void Restart()
         {
@@ -510,7 +449,6 @@ namespace Shooter.Runtime
             SceneManager.LoadScene(scene.buildIndex);
         }
 
-        /// <summary>購読を解除して試合から離れる。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
             ReleaseRestartAction();
@@ -653,7 +591,6 @@ namespace Shooter.Runtime
             ShowScoreboard();
         }
 
-        /// <summary>今倒れた者を倒した参加者。帰属が無いか参加者でなければ null。</summary>
         private Participant FindKiller()
         {
             var attribution = CombatEvents.CurrentAttribution;
@@ -729,10 +666,6 @@ namespace Shooter.Runtime
             SetPlayerControl(_domination.State == GameModeState.Playing);
         }
 
-        /// <summary>
-        /// participant のチームの出現点から、生きている相手からいちばん遠い点を選ぶ (足元の位置)。
-        /// 出現点を設定していなければ、試合開始時にそのチームの参加者が立っていた位置から選ぶ。
-        /// </summary>
         private Vector3 SelectSpawn(Participant participant)
         {
             var points = new List<SpawnPoint>();
@@ -844,7 +777,6 @@ namespace Shooter.Runtime
             GameSignals.Domination.Publish(_publishedStatus);
         }
 
-        /// <summary>自分 (Alpha) と敵 (Bravo) のキル数・デス数を <see cref="GameSignals.Scoreboard"/> に出す。</summary>
         private void ShowScoreboard()
         {
             if (_domination == null)
@@ -892,7 +824,7 @@ namespace Shooter.Runtime
             return action;
         }
 
-        /// <summary>プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたときだけ後で無効に戻す。
         private void AcquireRestartAction()
         {
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。
@@ -915,7 +847,6 @@ namespace Shooter.Runtime
             _enabledRestartAction = false;
         }
 
-        /// <summary>CharacterController のカプセルの底 (足元) から Transform の位置までの高さ。</summary>
         private static float FeetToRoot(CharacterController controller)
         {
             return controller != null
@@ -934,13 +865,11 @@ namespace Shooter.Runtime
             public Team Team { get; }
             public Damageable Damageable { get; }
 
-            /// <summary>敵なら その EnemyAgent。プレイヤーなら null。</summary>
             public EnemyAgent Enemy { get; }
 
-            /// <summary>試合を始めたときに立っていた足元の位置。出現点を設定していないチームはここから戻る。</summary>
             public Vector3 HomeGround { get; }
 
-            /// <summary>試合を始めたときの向き。敵を戻すときに使う (プレイヤーの向きは FirstPersonLook が持つので変えない)。</summary>
+            // 敵を戻すときだけ使う。プレイヤーの向きは FirstPersonLook が持つので変えない。
             public Quaternion HomeRotation { get; }
 
             public string Name { get; }

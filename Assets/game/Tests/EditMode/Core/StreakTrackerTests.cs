@@ -7,6 +7,8 @@ namespace Shooter.Core.Tests
     public sealed class StreakTrackerTests
     {
         private static readonly string[] _uavOnly = { "uav" };
+        private static readonly string[] _airstrikeOnly = { "airstrike" };
+        private static readonly string[] _airstrikeThenUav = { "airstrike", "uav" };
 
         [Test]
         public void ANewTrackerHasNoKillsAndListsTheRewardsInOrder()
@@ -63,7 +65,7 @@ namespace Shooter.Core.Tests
             Assert.That(tracker.Kills, Is.EqualTo(0));
             Assert.That(status.ReadyCount, Is.EqualTo(1));
             Assert.That(status.Slots[0].Ready, Is.True);
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(new[] { "uav" }));
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_uavOnly));
 
             tracker.Killed();
             Assert.That(tracker.Kills, Is.EqualTo(1), "counts again from zero");
@@ -83,9 +85,9 @@ namespace Shooter.Core.Tests
             tracker.Killed(out var atSix);
 
             Assert.That(atFour, Is.Empty);
-            Assert.That(atFive, Is.EqualTo(new[] { "airstrike" }));
+            Assert.That(atFive, Is.EqualTo(_airstrikeOnly));
             Assert.That(atSix, Is.Empty);
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }), "the used UAV does not come back in the same life");
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_airstrikeOnly),"the used UAV does not come back in the same life");
         }
 
         [Test]
@@ -100,7 +102,7 @@ namespace Shooter.Core.Tests
             tracker.Killed();
             tracker.Killed(out var earned);
 
-            Assert.That(earned, Is.EqualTo(new[] { "uav" }));
+            Assert.That(earned, Is.EqualTo(_uavOnly));
             Assert.That(tracker.Status.ReadyCount, Is.EqualTo(1));
         }
 
@@ -159,8 +161,8 @@ namespace Shooter.Core.Tests
             tracker.Killed();
             tracker.Killed(out var earned);
 
-            Assert.That(earned, Is.EqualTo(new[] { "airstrike", "uav" }));
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(new[] { "airstrike", "uav" }));
+            Assert.That(earned, Is.EqualTo(_airstrikeThenUav));
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_airstrikeThenUav));
         }
 
         [Test]

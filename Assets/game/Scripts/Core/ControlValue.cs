@@ -1,7 +1,8 @@
 namespace Shooter.Core
 {
     /// <summary>
-    /// <see cref="ControlSettings"/> が持つ数値の設定。値はすべて整数で、範囲は <see cref="ControlSettings.RangeOf"/> が決める。    /// </summary>
+    /// <see cref="ControlSettings"/> が持つ数値の設定。値はすべて整数で、範囲は <see cref="ControlSettings.RangeOf"/> が決める。
+    /// </summary>
     public enum ControlValue
     {
         /// <summary>マウスの視点感度 (%)。100 で視点操作の基準の速さ。</summary>

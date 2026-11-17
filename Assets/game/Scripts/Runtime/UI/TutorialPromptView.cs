@@ -67,6 +67,31 @@ namespace Fps.Runtime
             _showsSignal = true;
         }
 
+        /// <summary>
+        /// 出している段階の文を、今のキーの割り当てで作り直す。割り当てが変わって文が変わったときだけ書き直す。
+        /// Play 中は毎フレーム呼ぶ。
+        /// </summary>
+        public void RefreshKeys()
+        {
+            var status = GameSignals.Tutorial.Value;
+            if (!_showsSignal || !_shown || !status.HasValue)
+            {
+                return;
+            }
+
+            var text = TutorialText.For(status.Value);
+            if (text != _source)
+            {
+                Write(text, status.Value.IsComplete);
+            }
+        }
+
+        // 割り当てを変えても段階は変わらず通知が来ないので、出している間は毎フレーム今の割り当てでキーの表記を引き直す
+        private void LateUpdate()
+        {
+            RefreshKeys();
+        }
+
         private void Write(LocalizedText text, bool completed)
         {
             var resolved = Localizer.Resolve(text);

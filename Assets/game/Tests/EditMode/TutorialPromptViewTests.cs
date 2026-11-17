@@ -2,6 +2,7 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -118,7 +119,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_view.IsShown, Is.False);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
-    
+
         [Test]
         public void APublishedStatusIsShownAsItsPrompt()
         {
@@ -193,6 +194,31 @@ namespace Fps.Tests.EditMode
             _view.Bind(_root);
 
             Assert.That(_view.IsShown, Is.False);
+        }
+
+        [Test]
+        public void ARebindDuringAStepIsShownWithoutANewStatus()
+        {
+            var reload = InputSystem.actions != null ? InputSystem.actions.FindAction(InputActionPaths.Reload) : null;
+            Assume.That(reload, Is.Not.Null, "the project-wide actions have Reload");
+            var steps = AtShoot();
+            steps.Observe(Frame(hits: TutorialSteps.DefaultHitsRequired));
+            Assume.That(steps.Current, Is.EqualTo(TutorialStep.Reload));
+            _view.Bind(_root);
+            GameSignals.Tutorial.Publish(new TutorialStatus(steps, InputActionPaths.Reload, InputDeviceKind.KeyboardMouse));
+            try
+            {
+                reload.ApplyBindingOverride(new InputBinding { groups = TutorialKeyLabels.KeyboardMouseGroup, overridePath = "<Keyboard>/f12" });
+
+                _view.RefreshKeys();
+
+                Assert.That(_view.Text, Is.EqualTo(Localizer.Resolve(TutorialText.For(GameSignals.Tutorial.Value.Value))));
+                Assert.That(_view.Text, Does.StartWith("[4/6] F12 "));
+            }
+            finally
+            {
+                reload.RemoveAllBindingOverrides();
+            }
         }
     }
 }

@@ -82,6 +82,14 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void WithoutAFireRangeItFollowsTheAttackRange()
+        {
+            var spec = TuningJson.ParseBots("{\"attackRange\": 10}", "bots.json");
+
+            Assert.That(spec.Brain.FireRange, Is.EqualTo(10f));
+        }
+
+        [Test]
         public void TheFireRangeIsKeptWithinTheSightRange()
         {
             var spec = TuningJson.ParseBots("{\"sightRange\": 30, \"fireRange\": 50}", "bots.json");

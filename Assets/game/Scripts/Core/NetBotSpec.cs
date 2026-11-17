@@ -45,7 +45,7 @@ namespace Fps.Core
                 EnemySpec.DefaultCoverPeekSeconds,
                 EnemySpec.DefaultCoverHealthFraction,
                 EnemyArchetype.Rifleman,
-                fireRange: DefaultFireRange,
+                fireRange: 0f,
                 fireToleranceDegrees: DefaultFacingToleranceDegrees,
                 rangeSpreadDegrees: DefaultRangeSpreadDegrees),
             BotInputSpec.Default,

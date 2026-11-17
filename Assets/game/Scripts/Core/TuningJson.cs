@@ -342,7 +342,8 @@ namespace Fps.Core
                     fields.ReadFloat(CoverHealthFractionItem, brain.CoverHealthFraction),
                     archetype,
                     staggerResistance: staggerResistance,
-                    fireRange: fields.ReadFloat(FireRangeItem, brain.FireRange),
+                    // 省いたときは 0 を渡し、EnemySpec に読んだ攻撃距離へそろえさせる (既定の FireRange を使うと攻撃距離だけ変えたデータで食い違う)
+                    fireRange: fields.ReadFloat(FireRangeItem, 0f),
                     fireToleranceDegrees: fields.ReadFloat(FacingToleranceDegreesItem, brain.FireToleranceDegrees),
                     rangeSpreadDegrees: fields.ReadFloat(RangeSpreadDegreesItem, brain.RangeSpreadDegrees),
                     arrivalDistance: arrivalDistance,

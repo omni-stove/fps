@@ -399,7 +399,7 @@ namespace Shooter.Core
         private Vector3 Paddle(bool wasSwimming, CharacterMotorInput input, Vector3 startVelocity, float surfaceY)
         {
             var tuning = _swim;
-            var horizontal = PlayerMotor.ToWorld(input.Move, input.Yaw) * tuning.Speed;
+            var horizontal = PlayerMotor.ToWorld(input.Move, input.Yaw) * (tuning.Speed * input.CarrySpeedMultiplier);
             var vertical = startVelocity.Y;
             if (!wasSwimming)
             {

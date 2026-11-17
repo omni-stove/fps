@@ -229,6 +229,19 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheCarryLoadSlowsTheSwimToo()
+        {
+            AddBox(new Vector3(0f, -4f, 0f), new Vector3(50f, 1f, 50f));
+            var simulation = NewSimulation(new Pool(0f));
+            var floated = Float(simulation, new Vector3(0f, -0.8f, 0f));
+
+            var next = simulation.Step(floated, Input(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.5f));
+
+            Assert.That(next.IsSwimming, Is.True);
+            Assert.That(next.Velocity.Z, Is.EqualTo(SwimTuning.DefaultSpeed * 0.5f).Within(1e-4f));
+        }
+
+        [Test]
         public void ADownedSwimmerFloatsInsteadOfDiving()
         {
             AddBox(new Vector3(0f, -4f, 0f), new Vector3(50f, 1f, 50f));
@@ -259,6 +272,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(state.IsSwimming, Is.False);
+            state = Run(simulation, state, Input(), _settleTicks);
             Assert.That(state.IsGrounded, Is.True);
             Assert.That(state.Position.Y, Is.EqualTo(-0.5f).Within(0.05f), "standing on the floor at -1.5");
 

@@ -9,8 +9,9 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ (<see cref="ControlValue"/>) のスライダー、エイムアシスト (<see cref="ControlSettings.AimAssist"/>) の On/Off、
-    /// 血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
+    /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ・スティックのデッドゾーン・振動の強さ (<see cref="ControlValue"/>) のスライダー、
+    /// エイムアシスト (<see cref="ControlSettings.AimAssist"/>)・視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>)・
+    /// 振動 (<see cref="ControlSettings.RumbleEnabled"/>) の On/Off、血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
     /// 敵味方の色の組 (<see cref="ColorPalette"/>) の切り替えと見本、
     /// 音の合図の字幕 (<see cref="ControlSettings.ShowSubtitles"/>) の On/Off、入力機器ごとの Hold/Toggle の切り替えを
     /// UI Toolkit の要素としてコードで組み、<see cref="Open"/> で渡された入れ物 (メインメニューの差し込み口やポーズ画面の枠) に入れる。
@@ -68,6 +69,12 @@ namespace Shooter.Runtime
         /// <summary>エイムアシスト (<see cref="ControlSettings.AimAssist"/>) の On/Off を切り替えるボタンの name。</summary>
         public const string AimAssistButtonName = "settings-aim-assist";
 
+        /// <summary>視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string InvertLookYButtonName = "settings-invert-look-y";
+
+        /// <summary>ゲームパッドの振動 (<see cref="ControlSettings.RumbleEnabled"/>) の On/Off を切り替えるボタンの name。</summary>
+        public const string RumbleButtonName = "settings-rumble";
+
         /// <summary>今の言語の「オン」。</summary>
         public static string OnText => Localizer.Get("settings.on");
 
@@ -98,6 +105,9 @@ namespace Shooter.Runtime
         // 視点と音の見出しではなく、血の表示と同じ演出の見出しに並べる数値。
         private static readonly ControlValue[] _effectValues = { ControlValue.CameraShakeIntensity, ControlValue.ViewmodelMotionIntensity };
 
+        // 視点と音の見出しではなく、振動の On/Off と同じゲームパッドの見出しに並べる数値。
+        private static readonly ControlValue[] _gamepadValues = { ControlValue.StickDeadzone, ControlValue.RumbleStrength };
+
         private static bool _warnedMissingStyle;
 
         private readonly ControlSettingsStore _store;
@@ -127,6 +137,8 @@ namespace Shooter.Runtime
         private Button _subtitlesButton;
         private Button _bloodButton;
         private Button _aimAssistButton;
+        private Button _invertLookYButton;
+        private Button _rumbleButton;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -231,11 +243,18 @@ namespace Shooter.Runtime
             return "settings-mode-" + Slug(device) + "-" + Slug(action);
         }
 
-        /// <summary>スライダーの横に出す値。視野角は度、それ以外は %。</summary>
+        /// <summary>スライダーの横に出す値。視野角は度、それ以外は %。‰ で持つデッドゾーンは小数 1 桁までの % にする。</summary>
         public static string FormatValue(ControlValue value, int amount)
         {
-            var number = amount.ToString(CultureInfo.InvariantCulture);
-            return value == ControlValue.FieldOfView ? number + "°" : number + "%";
+            switch (value)
+            {
+                case ControlValue.FieldOfView:
+                    return amount.ToString(CultureInfo.InvariantCulture) + "°";
+                case ControlValue.StickDeadzone:
+                    return (amount / 10m).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+                default:
+                    return amount.ToString(CultureInfo.InvariantCulture) + "%";
+            }
         }
 
         /// <summary>今の言語で、Hold/Toggle のボタンに出す文字。</summary>
@@ -389,6 +408,8 @@ namespace Shooter.Runtime
             _subtitlesButton = null;
             _bloodButton = null;
             _aimAssistButton = null;
+            _invertLookYButton = null;
+            _rumbleButton = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -532,6 +553,27 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
+        /// 視点の上下反転 (<see cref="ControlSettings.InvertLookY"/>) を invert にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、ボタンの表示を合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetInvertLookY(bool invert)
+        {
+            EnsureOpen();
+            Edit(_editing.WithInvertLookY(invert));
+        }
+
+        /// <summary>
+        /// ゲームパッドの振動 (<see cref="ControlSettings.RumbleEnabled"/>) を enabled にしてすぐ効かせ (<see cref="ISettingsSink.Apply"/>)、
+        /// ボタンの表示と、振動の強さのスライダーを触れるかを合わせる。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">開いていない。</exception>
+        public void SetRumbleEnabled(bool enabled)
+        {
+            EnsureOpen();
+            Edit(_editing.WithRumbleEnabled(enabled));
+        }
+
+        /// <summary>
         /// 画面の言語 (<see cref="Localizer.Language"/>) を <see cref="Localizer.SwitchTo"/> で language に切り替える。
         /// 表を読み直し、<see cref="Localizer.Changed"/> で開いている画面を今の言語で組み直し、言語はすぐ <see cref="LanguageStore"/> に書き出す
         /// (ほかの値の変更は閉じるときに保存する)。今と同じ言語なら何もしない。
@@ -568,7 +610,8 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に、血の表示も On に戻す。保存は閉じるとき。
+        /// すべて初期値 (<see cref="ControlSettings.Default"/>) に戻してすぐ効かせる。色の組も標準に、字幕も Off に、血の表示も On に、
+        /// 視点の上下反転も Off に、振動も On に戻す。保存は閉じるとき。
         /// この画面に無い回線の表示 (<see cref="ControlSettings.ShowNetStats"/>) と、読めない言語に戻って押した人が戻せなくならないよう言語は、今のまま残す。
         /// </summary>
         /// <exception cref="InvalidOperationException">開いていない。</exception>
@@ -780,7 +823,7 @@ namespace Shooter.Runtime
             content.Add(NewLabel(Localizer.Get("settings.section.viewAndSound"), "settings__section"));
             foreach (var value in ControlSettings.Values)
             {
-                if (Array.IndexOf(_effectValues, value) < 0)
+                if (Array.IndexOf(_effectValues, value) < 0 && Array.IndexOf(_gamepadValues, value) < 0)
                 {
                     content.Add(BuildSliderRow(value));
                 }
@@ -789,8 +832,14 @@ namespace Shooter.Runtime
                 if (value == ControlValue.AdsSensitivity)
                 {
                     content.Add(BuildAimAssistRow());
+                    content.Add(BuildInvertLookYRow());
                 }
             }
+
+            content.Add(NewLabel(Localizer.Get("settings.section.gamepad"), "settings__section"));
+            content.Add(BuildSliderRow(ControlValue.StickDeadzone));
+            content.Add(BuildRumbleRow());
+            content.Add(BuildSliderRow(ControlValue.RumbleStrength));
 
             content.Add(NewLabel(Localizer.Get("settings.section.effects"), "settings__section"));
             foreach (var value in _effectValues)
@@ -1017,6 +1066,26 @@ namespace Shooter.Runtime
             return row;
         }
 
+        private VisualElement BuildInvertLookYRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.invertLookY"), "settings__caption"));
+            _invertLookYButton = NewButton(InvertLookYButtonName, string.Empty, () => SetInvertLookY(!_editing.InvertLookY));
+            _invertLookYButton.AddToClassList("settings__mode");
+            row.Add(_invertLookYButton);
+            return row;
+        }
+
+        private VisualElement BuildRumbleRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.rumble"), "settings__caption"));
+            _rumbleButton = NewButton(RumbleButtonName, string.Empty, () => SetRumbleEnabled(!_editing.RumbleEnabled));
+            _rumbleButton.AddToClassList("settings__mode");
+            row.Add(_rumbleButton);
+            return row;
+        }
+
         private VisualElement BuildLanguageRow()
         {
             var row = NewRow();
@@ -1090,6 +1159,22 @@ namespace Shooter.Runtime
             if (_aimAssistButton != null)
             {
                 _aimAssistButton.text = FormatOnOff(_editing.AimAssist);
+            }
+
+            if (_invertLookYButton != null)
+            {
+                _invertLookYButton.text = FormatOnOff(_editing.InvertLookY);
+            }
+
+            if (_rumbleButton != null)
+            {
+                _rumbleButton.text = FormatOnOff(_editing.RumbleEnabled);
+            }
+
+            // 振動を切っている間は強さが効かないので、動かしても何も変わらないスライダーを触らせない。
+            if (_sliders.TryGetValue(ControlValue.RumbleStrength, out var rumbleStrength))
+            {
+                rumbleStrength.SetEnabled(_editing.RumbleEnabled);
             }
 
             if (_languageButton != null)
@@ -1296,6 +1381,10 @@ namespace Shooter.Runtime
                     return Localizer.Get("settings.value.cameraShake");
                 case ControlValue.ViewmodelMotionIntensity:
                     return Localizer.Get("settings.value.viewmodelMotion");
+                case ControlValue.StickDeadzone:
+                    return Localizer.Get("settings.value.stickDeadzone");
+                case ControlValue.RumbleStrength:
+                    return Localizer.Get("settings.value.rumbleStrength");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }
@@ -1339,6 +1428,10 @@ namespace Shooter.Runtime
                     return "camera-shake";
                 case ControlValue.ViewmodelMotionIntensity:
                     return "viewmodel-motion";
+                case ControlValue.StickDeadzone:
+                    return "stick-deadzone";
+                case ControlValue.RumbleStrength:
+                    return "rumble-strength";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

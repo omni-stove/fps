@@ -30,6 +30,51 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void LeanAndAirJumpUseTheDefaultsWhenOmitted()
+        {
+            var spec = new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f);
+
+            Assert.That(spec.LeanSideOffset, Is.EqualTo(MotorSpec.DefaultLeanSideOffset));
+            Assert.That(spec.LeanAngleDegrees, Is.EqualTo(MotorSpec.DefaultLeanAngleDegrees));
+            Assert.That(spec.LeanSpeed, Is.EqualTo(MotorSpec.DefaultLeanSpeed));
+            Assert.That(spec.AirJumps, Is.Zero, "the kit does not jump in the air unless a game turns it on");
+            Assert.That(spec.AirJumpSpeed, Is.EqualTo(MotorSpec.DefaultAirJumpSpeed));
+        }
+
+        [Test]
+        public void LeanAndAirJumpKeepTheGivenValues()
+        {
+            var spec = new MotorSpec(
+                4f, 8f, 1.5f, 9.81f, 0.5f, 2f, leanSideOffset: 0.6f, leanAngleDegrees: 25f, leanSpeed: 3f, airJumps: 2, airJumpSpeed: 5f);
+
+            Assert.That(spec.LeanSideOffset, Is.EqualTo(0.6f));
+            Assert.That(spec.LeanAngleDegrees, Is.EqualTo(25f));
+            Assert.That(spec.LeanSpeed, Is.EqualTo(3f));
+            Assert.That(spec.AirJumps, Is.EqualTo(2));
+            Assert.That(spec.AirJumpSpeed, Is.EqualTo(5f));
+        }
+
+        [Test]
+        public void LeanAndAirJumpRejectBadValuesByName()
+        {
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, leanSideOffset: -0.1f)).ParamName,
+                Is.EqualTo("leanSideOffset"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, leanAngleDegrees: 91f)).ParamName,
+                Is.EqualTo("leanAngleDegrees"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, leanSpeed: 0f)).ParamName,
+                Is.EqualTo("leanSpeed"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, airJumps: -1)).ParamName,
+                Is.EqualTo("airJumps"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, airJumpSpeed: float.NaN)).ParamName,
+                Is.EqualTo("airJumpSpeed"));
+        }
+
+        [Test]
         public void DefaultsAreValid()
         {
             Assert.That(MotorSpec.DefaultSafeFallSpeed, Is.GreaterThanOrEqualTo(0f));

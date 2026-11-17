@@ -7,7 +7,7 @@ namespace Shooter.Runtime
     /// <summary>
     /// <see cref="ControlSettings"/> を <see cref="PlayerPrefs"/> の 1 つのキーに JSON の文字列 (<see cref="ControlSettings.ToJson"/>) で読み書きする。
     /// 読めなかった所は初期値 (範囲の外の数値は範囲に収めた値) に戻し、理由を <c>[Input]</c> 付きの警告で出す。
-    /// 古い形式も警告なしに読み、次に保存したときに今の形式で書き直す。
+    /// 古い形式も警告なしに読み (無い欄は初期値で補い、ほかの欄は残す)、次に保存したときに今の形式で書き直す。
     /// </summary>
     public sealed class ControlSettingsStore
     {

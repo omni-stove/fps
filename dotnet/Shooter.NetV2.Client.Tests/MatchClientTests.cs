@@ -94,7 +94,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(request.ProductUserId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
             Assert.That(client.SentExtras.PartyId, Is.EqualTo("party-1"));
             Assert.That(log, Has.Some.EqualTo(
-                "[Net] connect request party=party-1 joinCode=ABC234 skill=1640 productUserId=0123456789abcdef0123456789abcdef"));
+                "[Net] connect request party=party-1 joinCode=set skill=1640 productUserId=0123456789abcdef0123456789abcdef"));
         }
 
         [Test]

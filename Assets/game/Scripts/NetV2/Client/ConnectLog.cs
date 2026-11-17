@@ -17,7 +17,7 @@ namespace Shooter.NetV2
         {
             var value = extras ?? ConnectionExtras.None;
             return Tag + " connect request party=" + Token(value.PartyId)
-                + " joinCode=" + Token(value.JoinCode)
+                + " joinCode=" + (string.IsNullOrEmpty(value.JoinCode) ? "none" : "set")
                 + " skill=" + (value.SkillRating.HasValue ? value.SkillRating.Value.ToString(CultureInfo.InvariantCulture) : "none")
                 + " productUserId=" + Token(value.ProductUserId);
         }

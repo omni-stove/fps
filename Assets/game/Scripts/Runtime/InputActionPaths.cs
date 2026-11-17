@@ -35,5 +35,10 @@ namespace Shooter.Runtime
         public const string SwitchGrenade = "Player/SwitchGrenade";
         public const string Inventory = "Player/Inventory";
         public const string UseStreak = "Player/UseStreak";
+        public const string LeanLeft = "Player/LeanLeft";
+        public const string LeanRight = "Player/LeanRight";
+        public const string Chat = "Player/Chat";
+        public const string TeamChat = "Player/TeamChat";
+        public const string PushToTalk = "Player/PushToTalk";
     }
 }

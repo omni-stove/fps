@@ -69,6 +69,15 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("成長の調整値の JSON。空なら Resources/Tuning/progression")]
         private TextAsset _progressionTuning;
 
+        [SerializeField, Tooltip("ミニマップの調整値の JSON。空なら Resources/Tuning/minimap")]
+        private TextAsset _minimapTuning;
+
+        [SerializeField, Tooltip("キルのアシストの調整値の JSON。空なら Resources/Tuning/assist")]
+        private TextAsset _assistTuning;
+
+        [SerializeField, Tooltip("コントローラーの振動の調整値の JSON。空なら Resources/Tuning/rumble")]
+        private TextAsset _rumbleTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -270,6 +279,24 @@ namespace Shooter.Runtime
         {
             get => _progressionTuning;
             set => _progressionTuning = value;
+        }
+
+        public TextAsset MinimapTuning
+        {
+            get => _minimapTuning;
+            set => _minimapTuning = value;
+        }
+
+        public TextAsset AssistTuning
+        {
+            get => _assistTuning;
+            set => _assistTuning = value;
+        }
+
+        public TextAsset RumbleTuning
+        {
+            get => _rumbleTuning;
+            set => _rumbleTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

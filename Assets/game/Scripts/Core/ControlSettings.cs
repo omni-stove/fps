@@ -315,6 +315,15 @@ namespace Shooter.Core
         /// <summary>視点の上下 (縦の視点操作) を反転するか。マウスとゲームパッドの両方に効く。</summary>
         public bool InvertLookY => _invertLookY;
 
+        /// <summary>
+        /// 縦の視点操作の量 lookUp (正で上を向く) に <see cref="InvertLookY"/> を効かせた量。反転するなら符号を変え、しないならそのまま返す。
+        /// 視点を回す所はすべて、Look 入力の縦をこれに通してから使う。
+        /// </summary>
+        public float ApplyInvertLookY(float lookUp)
+        {
+            return _invertLookY ? -lookUp : lookUp;
+        }
+
         /// <summary>ゲームパッドのスティックのデッドゾーン (0〜0.5)。倒した量がこれより小さい間は入力を 0 とみなす。</summary>
         public float StickDeadzone => Get(ControlValue.StickDeadzone) / 1000f;
 

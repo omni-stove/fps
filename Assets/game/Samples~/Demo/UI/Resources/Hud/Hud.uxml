@@ -29,6 +29,8 @@
         <ui:Label name="grenade-count" text="" class="grenade-count" picking-mode="Ignore" style="display: none;" />
         <!-- 能力の枠ごとの回数と待ち時間。GameBootstrap が AbilitySlotsView を付け、行 (ability-slots__row) を入れる。ルールで能力を使い、枠に能力があるときだけ出す。 -->
         <ui:VisualElement name="ability-slots" class="ability-slots" picking-mode="Ignore" style="display: none;" />
+        <!-- 自分のストリーク (今の数・次の報酬まで・使える報酬と使うキー)。StreakView が行 (streak__row) を入れ、GameSignals.Streak に値があるときだけ出す。 -->
+        <ui:VisualElement name="streak" class="streak" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />

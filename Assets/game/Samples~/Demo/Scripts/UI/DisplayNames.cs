@@ -68,6 +68,11 @@ namespace Shooter.Runtime
             return Of(deploy.DisplayNameKey, deploy.Id);
         }
 
+        public static LocalizedText Of(StreakSlot slot)
+        {
+            return Of(slot.DisplayNameKey, slot.RewardId);
+        }
+
         // ミッションは Id を人に見せる名前にしていないので、キーが空なら Id ではなく空の文にする。
         public static LocalizedText Mission(string displayNameKey)
         {

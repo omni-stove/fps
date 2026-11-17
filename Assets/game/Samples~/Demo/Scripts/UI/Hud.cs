@@ -169,8 +169,8 @@ namespace Shooter.Runtime
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
-        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
-        /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
+        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="StreakView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
+        /// hudObject に付ける。グレネード・能力の枠・ストリーク・拠点制圧は、出すものを渡されるまで隠れている。
         /// オフラインとネット対戦で同じものを付ける。
         /// 既に付いているものは付け直さない。
         /// </summary>
@@ -198,6 +198,7 @@ namespace Shooter.Runtime
             AddIfMissing<KillCamView>(hudObject);
             AddIfMissing<GrenadeCountView>(hudObject);
             AddIfMissing<AbilitySlotsView>(hudObject);
+            AddIfMissing<StreakView>(hudObject);
             AddIfMissing<DominationView>(hudObject);
             AddIfMissing<ControlPointsView>(hudObject);
             AddIfMissing<PingMarkersView>(hudObject);
@@ -250,6 +251,9 @@ namespace Shooter.Runtime
 
         /// <summary>同じ GameObject の能力の枠。<see cref="AddViews"/> で付けていなければ null。</summary>
         public AbilitySlotsView AbilitySlots => GetComponent<AbilitySlotsView>();
+
+        /// <summary>同じ GameObject のストリークの欄。<see cref="AddViews"/> で付けていなければ null。</summary>
+        public StreakView Streak => GetComponent<StreakView>();
 
         /// <summary>同じ GameObject の拠点制圧の表示。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DominationView Domination => GetComponent<DominationView>();

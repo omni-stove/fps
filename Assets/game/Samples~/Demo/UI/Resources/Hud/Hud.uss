@@ -288,6 +288,32 @@
     color: rgba(255, 255, 255, 0.55);
 }
 
+/* 右下の、武器の溜め・熱・弾薬の種類 (3 行) より上に右寄せで積む、自分のストリーク。行は StreakView が入れる。 */
+.streak {
+    position: absolute;
+    right: 32px;
+    bottom: 300px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.streak__row {
+    margin: 4px 0 0 0;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.streak__row--ready {
+    color: rgb(255, 214, 92);
+}
+
 /* 弾数の欄のすぐ下に右寄せで出す、アクティブリロードの細いバー。塗りと幅の left / width は HudView が % で入れる。 */
 /* グレネードの数の上に右寄せで積む、武器の溜め・熱・弾薬の種類。 */
 .hud__weapon-gauges {

@@ -36,11 +36,8 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>
-    /// 壁は呼び手が <see cref="CharacterWallSensor"/> で調べて渡す (走っていれば Follow、いなければ Probe)。
-    /// 世界を引かない計算にして、壁の有無ごとの決まりを世界を組まずに確かめるため。
-    /// 同じ壁に付き直さないのを秒数でなく着地までにしたのは、待ちの秒数を調整値に足すと、サーバーへ送る設定とその書き出しまで増えるため。
-    /// </summary>
+    // 壁を呼び手が CharacterWallSensor で調べて渡すのは、世界を引かない計算にして、壁の有無ごとの決まりを世界を組まずに確かめるため。
+    // 同じ壁に付き直さないのを秒数でなく着地までにしたのは、待ちの秒数を調整値に足すと、サーバーへ送る設定とその書き出しまで増えるため。
     public static class WallRunStep
     {
         public const float SameWallDot = 0.95f;

@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>サーバーが届け先に配るチャットの 1 行。</summary>
     public sealed class ChatMessage : IMessage
     {
         public const byte CurrentVersion = 1;

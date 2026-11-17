@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # C# の書式・スタイル・アナライザを検査する。Unity 非依存のコードは dotnet/Shooter.slnx で全規則を、
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
-# あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) を検査する。
+# あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) と、
+# .cs に /// のコメントが無いこと (comment_problems) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
 # (.meta の抜けは、.cs・.asmdef・.asmref・テキストアセットとフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # --fix-meta は .meta の抜けだけを直して終わる。CI の meta ジョブが dotnet 無しで作り直すため。
+# --comments は comment_problems だけを検査して終わる。scripts/lint-test.sh が dotnet 無しで確かめるため。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 
@@ -166,6 +168,27 @@ ui_text_problems() {
 	fi
 }
 
+# コメントは理由だけを // で書く決まりなので、/// で始まる行は説明を書いたコメントとして 1 行ずつ出す。
+# 行末の /// は文字列の中 ("a///b") と見分けられないので見ない。新しく足して未追跡のファイルも見る。
+comment_problems() {
+	local cs=() path
+	while IFS= read -r -d '' path; do
+		[ -f "$path" ] && cs+=("$path")
+	done < <(git -c core.quotepath=off ls-files -z --cached --others --exclude-standard -- \
+		':(glob)Assets/**/*.cs' ':(glob)dotnet/**/*.cs')
+	[ "${#cs[@]}" -gt 0 ] || return 0
+	perl -ne '
+		print "$ARGV:$.: error COMMENT: /// のコメントがある (理由だけを // で書き、/// と XML タグは使わない)\n" if m{^(?:\xEF\xBB\xBF)?\s*///};
+		close ARGV if eof;
+	' "${cs[@]}"
+}
+
+if [ "${1:-}" = "--comments" ]; then
+	out="$(comment_problems)"
+	[ -z "$out" ] || { printf '%s\n' "$out" | problems >&2; exit 1; }
+	exit 0
+fi
+
 if [ "${1:-}" = "--fix-meta" ]; then
 	fix_metas
 	exit 0
@@ -180,6 +203,8 @@ out="$( {
 	[ -z "$metas" ] || { printf '%s\n' "$metas"; status=1; }
 	texts="$(ui_text_problems)" || status=1
 	[ -z "$texts" ] || { printf '%s\n' "$texts"; status=1; }
+	comments="$(comment_problems)" || status=1
+	[ -z "$comments" ] || { printf '%s\n' "$comments"; status=1; }
 	echo "status=$status"
 } 2>&1)"
 status="${out##*status=}"

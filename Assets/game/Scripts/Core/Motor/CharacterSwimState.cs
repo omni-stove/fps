@@ -30,10 +30,7 @@ namespace Shooter.Core
 
         public float BreathUsedSeconds { get; }
 
-        /// <summary>
-        /// 水に入ってから積んだ、息が切れたダメージの出来事の数。ダメージは Runtime が <see cref="DrowningsSince"/> で差を取って与える。
-        /// 1 tick 分だけ持つ形にしないのは、読む側が tick を飛ばしても出来事を落とさないため。
-        /// </summary>
+        // 1 tick 分だけ持つ形にせず積むのは、差を取る側 (DrowningsSince) が tick を飛ばしても出来事を落とさないため。
         public int Drownings { get; }
 
         public bool IsValid => !float.IsNaN(SurfaceY) && !float.IsInfinity(SurfaceY)

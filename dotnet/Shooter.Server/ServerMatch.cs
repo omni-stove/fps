@@ -71,10 +71,7 @@ namespace Shooter.Server
 
         public event Action Restarted;
 
-        /// <summary>
-        /// 試合が終わってから次の試合を始めるまでの秒。マップの投票をする (<see cref="HoldsMapVote"/>) ときは、
-        /// 締め切る前に次の試合が始まらないよう <see cref="MapVoteSeconds"/> より短くしない。
-        /// </summary>
+        // マップの投票をするときに MapVoteSeconds より短くしないのは、締め切る前に次の試合が始まらないようにするため。
         public float RestartDelaySeconds => HoldsMapVote ? Math.Max(_restartDelaySeconds, MapVoteSeconds) : _restartDelaySeconds;
 
         public int MaxTeamSizeDifference { get; }

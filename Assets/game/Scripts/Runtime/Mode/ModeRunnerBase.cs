@@ -50,7 +50,6 @@ namespace Shooter.Runtime
             set => _assistSpec = value;
         }
 
-        /// <summary>参加者が受けたダメージの記録。始める前と止めた後は null。</summary>
         public OfflineAssists Assists => _assists;
 
         public bool IsStarted => _session != null;

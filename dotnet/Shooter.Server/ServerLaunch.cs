@@ -48,10 +48,7 @@ namespace Shooter.Server
 
         public string Map => Options.Map ?? DefaultMap;
 
-        /// <summary>
-        /// 最初の試合のマップ。<c>-map</c> が無ければ、候補 (ルールの <c>mapPool</c>) の先頭、候補も無ければ <see cref="DefaultMap"/>。
-        /// 候補の先頭を選ぶのは、候補に無い既定のシーンで始めると、次のマップを替えた後に二度と戻れないマップで 1 試合だけ遊ぶことになるため。
-        /// </summary>
+        // -map が無いとき候補 (ルールの mapPool) の先頭を選ぶのは、候補に無い既定のシーンで始めると、次のマップを替えた後に二度と戻れないマップで 1 試合だけ遊ぶことになるため。
         public string StartMap(IReadOnlyList<string> mapPool)
         {
             ArgumentNullException.ThrowIfNull(mapPool);

@@ -27,10 +27,10 @@ namespace Shooter.Core
     {
         public const float ReachBeyondRadius = 0.3f;
 
-        /// <summary>垂直に限らず少し傾いた面も壁とするのは、組んだ壁の誤差で走れなくならないため。これより寝た面は坂や天井として取らない。</summary>
+        // 垂直に限らず少し傾いた面も壁とするのは、組んだ壁の誤差で走れなくならないため。これより寝た面は坂や天井として取らない。
         public const float MaxNormalY = 0.1f;
 
-        /// <summary>法線の一致まで求めないのは、曲がった壁を少しずつ向きを変えて追うため。</summary>
+        // 法線の一致まで求めないのは、曲がった壁を少しずつ向きを変えて追うため。
         public const float FollowDot = 0.95f;
 
         private readonly CharacterBody _body;

@@ -4,51 +4,29 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 次の試合のマップ。起動時に読んだマップ (<see cref="Maps"/>) の中から <see cref="RequestNextMap"/> で選び、
-    /// 次の試合を始めるときに <see cref="Map"/> を替えて <see cref="MapChanged"/> で知らせる。
-    /// </summary>
-    /// <remarks>
-    /// 試合の途中で替えず次の試合の始めに替えるのは、当たり判定と出現地点が試合の途中で入れ替わると、
-    /// 今いる位置が新しいマップの壁の中や宙になるため。
-    /// </remarks>
+    // マップを試合の途中で替えず次の試合の始めに替えるのは、当たり判定と出現地点が試合の途中で入れ替わると、
+    // 今いる位置が新しいマップの壁の中や宙になるため。
     internal sealed partial class ServerMatch
     {
         private readonly List<ServerMapData> _maps = new List<ServerMapData>();
 
-        /// <summary>
-        /// 次の試合のマップを替えた直後、<see cref="Restarted"/> より前に呼ぶ。モジュールはここで当たり判定・出現地点・はしご・建物・乗り物を
-        /// 新しいマップのものに替える。続く <see cref="Restarted"/> でルールが全員を新しいマップの出現地点へ置き直す。
-        /// </summary>
+        // Restarted より前に呼ぶのは、モジュールが当たり判定・出現地点などを新しいマップのものに替えてから、ルールが全員を新しいマップの出現地点へ置き直すため。
         public event Action<ServerMapData> MapChanged;
 
-        /// <summary>
-        /// 次の試合を始めるとき、マップを替えるより前に呼ぶ。ここで <see cref="RequestNextMap"/> を呼べば、始める試合からそのマップになる。
-        /// </summary>
-        /// <remarks>
-        /// 試合の枠はモジュールより先に Tick するので、投票の締め切りと次の試合の始まりが同じ Tick に重なると、
-        /// モジュールの Tick で締め切っていては決まったマップが間に合わない。
-        /// </remarks>
+        // モジュールの Tick でなくマップを替える前のこのイベントで選ばせるのは、試合の枠はモジュールより先に Tick するので、投票の締め切りと
+        // 次の試合の始まりが同じ Tick に重なると、モジュールの Tick で締め切っていては決まったマップが間に合わないため。
         public event Action NextMapChoosing;
 
-        /// <summary>試合の合間にマップの投票をする秒。0 なら投票しない。</summary>
         public float MapVoteSeconds { get; }
 
-        /// <summary>試合の合間にマップの投票をするか。今のマップのほかに替えられるマップがあり、投票の秒が 0 より長いとき。</summary>
         public bool HoldsMapVote => MapVoteSeconds > 0f && _maps.Count > 1;
 
-        /// <summary>今の試合のマップ。<see cref="UseMaps"/> の前は null。</summary>
         public ServerMapData Map { get; private set; }
 
-        /// <summary>替えられるマップ。今のマップを先頭に、起動時に読んだ順。</summary>
         public IReadOnlyList<ServerMapData> Maps => _maps;
 
-        /// <summary><see cref="RequestNextMap"/> で選んだ次の試合のマップの Id。選んでいなければ null。</summary>
         public string NextMap { get; private set; }
 
-        /// <summary>今のマップを current にし、替えられるマップに maps を足す。current と同じものが maps にあってもよい。</summary>
-        /// <exception cref="InvalidOperationException">もう呼んだ。</exception>
-        /// <exception cref="ArgumentException">maps に null か、同じ Id の別のマップがある。</exception>
         public void UseMaps(ServerMapData current, IReadOnlyList<ServerMapData> maps = null)
         {
             ArgumentNullException.ThrowIfNull(current);
@@ -83,7 +61,6 @@ namespace Shooter.Server
             Map = current;
         }
 
-        /// <summary>読んであるマップから Id で引く。無ければ null。</summary>
         public ServerMapData FindMap(string mapId)
         {
             foreach (var map in _maps)
@@ -97,10 +74,6 @@ namespace Shooter.Server
             return null;
         }
 
-        /// <summary>
-        /// 次の試合を mapId のマップで始める。替えるのは次の試合を始めるときで、それまでは選び直せる。
-        /// 読んでいないマップなら何もせず false。
-        /// </summary>
         public bool RequestNextMap(string mapId)
         {
             if (FindMap(mapId) == null)

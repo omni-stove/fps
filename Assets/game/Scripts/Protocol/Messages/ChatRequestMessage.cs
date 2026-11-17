@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>持ち主がチャットを送りたい。届ける相手を絞るのと本文を確かめるのはサーバー。</summary>
     public sealed class ChatRequestMessage : IMessage
     {
         public const byte CurrentVersion = 1;

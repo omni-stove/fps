@@ -1,6 +1,5 @@
 namespace Shooter.Protocol
 {
-    /// <summary>倒れている持ち主が、観戦で映す相手を次か前へ替えたい。映せる相手はサーバーが決める。</summary>
     public sealed class SpectateRequestMessage : IMessage
     {
         public const byte CurrentVersion = 1;

@@ -3,9 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 効くかと壁は tick の始めの状態と体の位置だけから決める。予測・再シミュレーション・サーバーで、同じ状態と入力から同じ傾きにするため。
-    /// </summary>
+    // 効くかと壁は tick の始めの状態と体の位置だけから決める。予測・再シミュレーション・サーバーで、同じ状態と入力から同じ傾きにするため。
     public static class LeanStep
     {
         public static CharacterLeanState Step(

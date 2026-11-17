@@ -1,0 +1,6 @@
+{
+  "chat.line": "{0}: {1}",
+  "chat.teamLine": "[Team] {0}: {1}",
+  "chat.prompt.all": "All:",
+  "chat.prompt.team": "Team:"
+}

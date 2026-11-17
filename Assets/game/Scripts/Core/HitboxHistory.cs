@@ -36,9 +36,6 @@ namespace Shooter.Core
             Record(tick, position, Vector3.Zero);
         }
 
-        /// <summary>
-        /// tick の位置とリーンの傾き (目の横のずれ。傾けていなければ zero) を記録する。tick の決まりは <see cref="Record(int, Vector3)"/> と同じ。
-        /// </summary>
         public void Record(int tick, Vector3 position, Vector3 lean)
         {
             if (!IsFinite(lean))
@@ -84,7 +81,6 @@ namespace Shooter.Core
             return TrySample(tick, out position, out _);
         }
 
-        /// <summary>tick 時点の位置とリーンの傾き。補間のしかたと false を返すときは <see cref="TrySample(float, out Vector3)"/> と同じ。</summary>
         public bool TrySample(float tick, out Vector3 position, out Vector3 lean)
         {
             position = default;

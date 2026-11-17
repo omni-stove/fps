@@ -24,12 +24,6 @@ namespace Shooter.Core
             RotateWithPlayerItem,
         };
 
-        /// <summary>
-        /// text を読む。範囲外の数は項目ごとに既定値へ戻し、戻したことを <see cref="MinimapLog.ValueReplaced"/> の行で log に渡す。
-        /// <c>KitTuning.Load</c> には <c>(t, s) =&gt; MinimapJson.Parse(t, s, Debug.LogWarning)</c> の形で渡す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">text か log が null。</exception>
-        /// <exception cref="TuningJsonException">JSON の文法が壊れている・知らない項目がある・型が違う。</exception>
         public static MinimapSpec Parse(string text, string sourceName, Action<string> log)
         {
             if (log == null)

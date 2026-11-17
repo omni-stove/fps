@@ -181,13 +181,7 @@ namespace Shooter.Core
             AddPlayer(playerId, side, kills, deaths, 0);
         }
 
-        /// <summary>
-        /// プレイヤーを side に加え、キル数・デス数・アシスト数を kills・deaths・assists から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
-        /// 陣営の得点は動かさない (そのキルとアシストは抜ける前にもう入っている)。参加順の番号は進めない。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">kills・deaths・assists が負、または side がチーム分けにない。</exception>
-        /// <exception cref="ArgumentException">すでに参加している。</exception>
-        /// <exception cref="InvalidOperationException">side が満員。</exception>
+        // 戻ってきた人の kills と assists を引き継いでも陣営の得点を動かさないのは、そのキルとアシストの点は抜ける前にもう入っているため。
         public void AddPlayer(int playerId, Side side, int kills, int deaths, int assists)
         {
             if (kills < 0)

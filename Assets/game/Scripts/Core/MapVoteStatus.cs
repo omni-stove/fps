@@ -4,7 +4,6 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>試合と試合の間のマップの投票の今の状態。</summary>
     public readonly struct MapVoteStatus : IEquatable<MapVoteStatus>
     {
         // 渡された一覧を後から書き換えられても変わらないよう写しを持つ。default ではコンストラクタを通らず null になるので、読むときに空へ寄せる。
@@ -12,12 +11,6 @@ namespace Shooter.Core
         private readonly string _myVote;
         private readonly string _decidedMapId;
 
-        /// <param name="candidates">候補。並びはそのまま持つ。null なら空。</param>
-        /// <param name="myVote">自分が入れた候補のマップ Id。まだ入れていなければ null か空文字。</param>
-        /// <param name="remainingSeconds">投票の残り秒数。</param>
-        /// <param name="decidedMapId">決まったマップ Id。まだ決まっていなければ null か空文字。</param>
-        /// <exception cref="ArgumentException">candidates に default の候補か同じマップ Id が 2 度ある、myVote か decidedMapId が候補に無い。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">remainingSeconds が負か有限でない。</exception>
         public MapVoteStatus(IReadOnlyList<MapVoteCandidate> candidates, string myVote, float remainingSeconds, string decidedMapId)
         {
             if (!(remainingSeconds >= 0f) || float.IsInfinity(remainingSeconds))
@@ -61,14 +54,12 @@ namespace Shooter.Core
 
         public IReadOnlyList<MapVoteCandidate> Candidates => _candidates ?? Array.Empty<MapVoteCandidate>();
 
-        /// <summary>自分が入れた候補のマップ Id。まだ入れていなければ空文字。</summary>
         public string MyVote => _myVote ?? string.Empty;
 
         public bool HasVoted => MyVote.Length > 0;
 
         public float RemainingSeconds { get; }
 
-        /// <summary>決まったマップ Id。まだ決まっていなければ空文字。</summary>
         public string DecidedMapId => _decidedMapId ?? string.Empty;
 
         public bool IsDecided => DecidedMapId.Length > 0;

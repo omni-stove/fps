@@ -11,13 +11,6 @@ namespace Shooter.Core
             return PickServer(lobbies, version, 1);
         }
 
-        /// <summary>
-        /// <see cref="PickServer(IReadOnlyList{LobbyInfo}, string)"/> と同じ選び方で、<paramref name="partySize"/> 人がまとめて入れるサーバーのロビーを返す。
-        /// </summary>
-        /// <param name="lobbies">検索結果。null の要素は無視する。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。</param>
-        /// <param name="partySize">入る人数 (パーティならその人数。1 以上)。</param>
-        /// <returns>つなぐサーバーのロビー。無ければ null。</returns>
         public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize)
         {
             if (lobbies == null)
@@ -53,14 +46,6 @@ namespace Shooter.Core
             return ServerRejection(lobby, version, 1);
         }
 
-        /// <summary>
-        /// <paramref name="partySize"/> 人で入るときに、サーバーのロビーにつなげない理由。つなげるなら null。
-        /// <see cref="ServerRejection(LobbyInfo, string)"/> の理由に加え、空きがあっても人数に足りなければ
-        /// <c>room for 2 (party of 3)</c> の形の理由を返す。
-        /// </summary>
-        /// <param name="lobby">検索で見つかったロビー。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。空なら "0" として比べる。</param>
-        /// <param name="partySize">入る人数 (1 以上)。</param>
         public static string ServerRejection(LobbyInfo lobby, string version, int partySize)
         {
             if (lobby == null)
@@ -117,10 +102,6 @@ namespace Shooter.Core
             return DescribeNoServer(lobbies, version, 1);
         }
 
-        /// <summary><paramref name="partySize"/> 人で入れるサーバーが無かったときの理由。形は <see cref="DescribeNoServer(IReadOnlyList{LobbyInfo}, string)"/> と同じ。</summary>
-        /// <param name="lobbies">検索結果。null の要素は無視する。</param>
-        /// <param name="version">自分のビルドの版。</param>
-        /// <param name="partySize">入る人数 (1 以上)。</param>
         public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize)
         {
             if (lobbies == null)

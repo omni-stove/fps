@@ -29,11 +29,6 @@ namespace Shooter.Core
             return Award(profile, gain, Saturated(profile.Kills, 1), profile.Assists, profile.Deaths, profile.Matches, profile.Wins);
         }
 
-        /// <summary>
-        /// 1 人倒すのを手伝った (止めは刺さなかった) ことを記録する。アシストの数を 1 増やし、<see cref="ProgressionSpec.AssistXp"/> を足す。
-        /// 倒した数は増やさない。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">profile が null。</exception>
         public ProgressionAward RecordAssist(PlayerProfile profile)
         {
             if (profile == null)

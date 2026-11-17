@@ -60,7 +60,7 @@ namespace Shooter.Core
         public const float DefaultLeanAngleDegrees = 15f;
         public const float DefaultLeanSpeed = 6f;
 
-        /// <summary>0 なのは、空中でもう一度跳べるかはゲームが決めることで、キットの既定では跳べないままにするため。</summary>
+        // 0 なのは、空中でもう一度跳べるかはゲームが決めることで、キットの既定では跳べないままにするため。
         public const int DefaultAirJumps = 0;
 
         public const float DefaultAirJumpSpeed = 6.5f;

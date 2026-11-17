@@ -1,0 +1,63 @@
+{
+  "id": "f05e1048-c628-4e36-bbd3-5fea65e35595",
+  "nameKey": "weapon.ref.fiftyCalSniper",
+  "description": "Apex Legends の Kraber (実銃は Barrett M95 / M99 のような .50 口径ボルト式) を参考。体 150 (キットでは 75)・25 RPM・4 発。弾が飛んで落ちる (749 m/s)。6 倍と 10 倍のスコープ。Apex は体力とシールドで 200 なので、キットの体力 100 に合わせてダメージを半分にした。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 100,
+  "weight": 12,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 2.4,
+      "leavesAds": false
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 4,
+    "reserveAmmo": 8,
+    "reloadSeconds": 3.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 400,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 749,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 2,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 75,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 6,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [10.99, 6.61],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "4d125980-c0c4-4872-8ef0-a8e9198ab64b",
+  "nameKey": "weapon.ref.lightAssaultRifle",
+  "description": "Apex Legends の R-301 カービン (実銃は LR-300 / AR-15 系) を参考。体 15 (キットでは 8)・810 RPM・青の拡張マガジン相当の 28 発。反動が小さい。Apex は体力とシールドで 200 なので、キットの体力 100 に合わせてダメージを半分にした。",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "weight": 3.2,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0741
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 28,
+    "reserveAmmo": 112,
+    "reloadSeconds": 2.4,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 8,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3,
+    "adsSpreadDegrees": 0.4,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 0.3,
+    "recoilYawDegrees": 0.15,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [60],
+    "swayDegrees": 0
+  }
+}

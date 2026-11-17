@@ -61,6 +61,22 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void KeepsTheDescriptionThroughAFireIntervalChange()
+        {
+            var spec = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, description: "AK 系の小銃");
+
+            Assert.That(spec.Description, Is.EqualTo("AK 系の小銃"));
+            Assert.That(spec.WithFireInterval(0.2f).Description, Is.EqualTo("AK 系の小銃"));
+        }
+
+        [Test]
+        public void ANullDescriptionIsEmpty()
+        {
+            Assert.That(new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, description: null).Description, Is.Empty);
+            Assert.That(Create().Description, Is.Empty);
+        }
+
+        [Test]
         public void AdsFieldOfViewFallsBackToTheCommonDefault()
         {
             Assert.That(Create().AdsFieldOfView, Is.EqualTo(AdsZoom.DefaultFieldOfView));

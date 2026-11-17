@@ -1,0 +1,61 @@
+{
+  "id": "e4f9661c-dbad-429a-b7a6-ab9cafa47d6a",
+  "nameKey": "weapon.ref.lightSniper",
+  "description": "CS2 の SSG 08 (実銃は Steyr Scout) を参考。体 88 のボルト式で、頭なら一撃。軽く、移動の倍率は 230/250。ボルトの往復は 1.25 秒。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 80,
+  "weight": 3.3,
+  "moveSpeedMultiplier": 0.92,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.25,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 10,
+    "reserveAmmo": 20,
+    "reloadSeconds": 3.7,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 300,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 88,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.92
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 6,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [28.78, 10.99],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

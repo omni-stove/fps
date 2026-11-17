@@ -1,0 +1,52 @@
+{
+  "id": "bf8d80f4-5043-4ecf-8ecb-6ab2c7a1ab64",
+  "nameKey": "weapon.ref.beltFedLmg",
+  "description": "CS2 の Negev (実銃は IWI Negev) を参考。体 35・800 RPM・150 発。とても重く、移動の倍率は 150/250。RangeModifier 0.97 を 50 m で 0.89 倍に置き換えた。",
+  "category": "LightMachineGun",
+  "shotNoiseRadius": 60,
+  "weight": 7.6,
+  "moveSpeedMultiplier": 0.6,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.075
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 150,
+    "reserveAmmo": 300,
+    "reloadSeconds": 5.7,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 120,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 35,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.89
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 0.45,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

@@ -28,6 +28,9 @@ namespace Fps.Runtime
         [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("プレイヤーに見せる名前を引く表のキー (例: weapon.rifle)。文は Resources/Localization/<言語>/*.json に書く。空なら Id を出す")]
         private string _nameKey = string.Empty;
 
+        [SerializeField, TextArea, Tooltip("作る人向けのメモ (どの銃を模したか・どんな役回りか)。プレイヤーには見せない")]
+        private string _description = string.Empty;
+
         [SerializeField, Tooltip("武器の種別。ロードアウトの制約と表示にだけ使う")]
         private WeaponCategory _category = WeaponCategory.AssaultRifle;
 
@@ -215,6 +218,13 @@ namespace Fps.Runtime
         {
             get => _nameKey ?? string.Empty;
             set => _nameKey = value ?? string.Empty;
+        }
+
+        /// <summary>作る人向けのメモ (<see cref="WeaponSpec.Description"/>)。null は空文字にする。</summary>
+        public string Description
+        {
+            get => _description ?? string.Empty;
+            set => _description = value ?? string.Empty;
         }
 
         /// <summary>画面に出す名前 (<see cref="WeaponSpec.Name"/>)。</summary>
@@ -549,7 +559,7 @@ namespace Fps.Runtime
                     BreathHold.ToSpec(),
                     _swayDegrees);
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier);
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description);
             }
             catch (ArgumentException e)
             {

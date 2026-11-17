@@ -1,0 +1,48 @@
+{
+  "id": "59bee024-01d3-40b2-93a9-fe3dfb6b4f45",
+  "nameKey": "weapon.ref.assaultRifle762",
+  "description": "Valorant の Vandal (実銃は AK-47) を参考。体 40・毎秒 9.75 発・25 発で、距離で減らない。頭は Valorant の 4 倍ではなくキットの 2 倍。",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "weight": 3.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.1026
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 25,
+    "reserveAmmo": 75,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 40,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3,
+    "adsSpreadDegrees": 0.4,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 0.8,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [49.58],
+    "swayDegrees": 0
+  }
+}

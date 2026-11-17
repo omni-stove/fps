@@ -1,0 +1,67 @@
+{
+  "id": "9e587bf9-004e-4bde-9c83-0292614d6b83",
+  "nameKey": "weapon.real.boltRifle300",
+  "description": "Battlefield 6 の M2010 ESR (実銃は M2010 (.300 Win Mag)) を参考。80@0m→62.5@160m・44 RPM・6 発 (薬室の 1 発込み)・弾速 760 m/s。頭は BF の 1.34 倍ではなくキットの 2 倍。BF6 は 0 m で 80、一定の距離帯でだけ 100 になるが、キットでは距離で上がるダメージを表せないので 80 から始めた。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 90,
+  "weight": 5.4,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.36,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 6,
+    "reserveAmmo": 36,
+    "reloadSeconds": 3.23,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 1000,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 760,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 1.32,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 80,
+    "falloff": {
+      "startDistance": 160,
+      "endDistance": 161,
+      "minMultiplier": 0.78
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3.35,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0.84,
+    "recoilPitchDegrees": 1.49,
+    "recoilYawDegrees": 0.26,
+    "recoilRecoveryPerSecond": 17.5,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [21.79, 8.26],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

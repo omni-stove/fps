@@ -1,0 +1,52 @@
+{
+  "id": "25974cbc-c194-4f98-b22d-c9d34c3ba6e4",
+  "nameKey": "weapon.ref.carbine556",
+  "description": "CS2 の M4A4 (実銃は Colt M4A1) を参考。体 33・666 RPM・30 発。距離での減り (RangeModifier 0.97) を 50 m で 0.89 倍の直線に置き換えた。移動の倍率は 225/250。",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "weight": 3,
+  "moveSpeedMultiplier": 0.9,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0901
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 30,
+    "reserveAmmo": 120,
+    "reloadSeconds": 3.07,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 33,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.89
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3,
+    "adsSpreadDegrees": 0.4,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 0.55,
+    "recoilYawDegrees": 0.25,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [53.32],
+    "swayDegrees": 0
+  }
+}

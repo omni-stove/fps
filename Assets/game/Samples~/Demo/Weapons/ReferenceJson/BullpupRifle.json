@@ -1,0 +1,52 @@
+{
+  "id": "8ea177bd-a3ae-4984-ad92-f1f4a4dde742",
+  "nameKey": "weapon.ref.bullpupRifle",
+  "description": "CS2 の AUG (実銃は Steyr AUG) を参考。体 28・600 RPM・30 発で、2 倍スコープ付き。RangeModifier 0.98 を 50 m で 0.92 倍に置き換えた。移動の倍率は 220/250。",
+  "category": "AssaultRifle",
+  "shotNoiseRadius": 50,
+  "weight": 3.6,
+  "moveSpeedMultiplier": 0.88,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.1
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 30,
+    "reserveAmmo": 90,
+    "reloadSeconds": 3.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 120,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 28,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.92
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3,
+    "adsSpreadDegrees": 0.25,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 0.55,
+    "recoilYawDegrees": 0.25,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 8,
+    "zoomLevels": [32.2],
+    "swayDegrees": 0
+  }
+}

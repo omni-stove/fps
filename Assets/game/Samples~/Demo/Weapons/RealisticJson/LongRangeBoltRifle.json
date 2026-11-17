@@ -1,0 +1,67 @@
+{
+  "id": "a21e791d-cf45-4f05-981d-17480c5a791b",
+  "nameKey": "weapon.real.longRangeBoltRifle",
+  "description": "Battlefield 6 の L115 (実銃は Accuracy International L115A3) を参考。80@0m→62.5@200m・46.3 RPM・6 発 (薬室の 1 発込み)・弾速 742 m/s。頭は BF の 1.34 倍ではなくキットの 2 倍。BF6 は 0 m で 80、一定の距離帯でだけ 100 になるが、キットでは距離で上がるダメージを表せないので 80 から始めた。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 90,
+  "weight": 6.8,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.29,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 6,
+    "reserveAmmo": 36,
+    "reloadSeconds": 2.75,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 1000,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 742,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 1.35,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 80,
+    "falloff": {
+      "startDistance": 200,
+      "endDistance": 201,
+      "minMultiplier": 0.78
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3.35,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0.84,
+    "recoilPitchDegrees": 2,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 17.5,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [21.79, 8.26],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

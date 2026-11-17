@@ -1,0 +1,61 @@
+{
+  "id": "6c95cc3b-c27d-468c-bb6c-e84188171f67",
+  "nameKey": "weapon.ref.drumGrenadeLauncher",
+  "description": "Team Fortress 2 のグレネードランチャー (実銃は Milkor MGL のような回転弾倉式) を参考。爆発 100・半径 2.8 m・弾速 23 m/s で弧を描き、2.3 秒で起爆する。4 発込め、1 発ずつ 0.6 秒で込める。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 5.3,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.6
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 4,
+    "reserveAmmo": 16,
+    "reloadSeconds": 1.24,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.6
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 23,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 2.3,
+      "onWorldHit": "Bounce"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 100,
+      "radius": 2.8,
+      "fullDamageRadius": 0.5,
+      "structureDamageAtCenter": 80,
+      "detonation": "OnLifetimeEnd"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

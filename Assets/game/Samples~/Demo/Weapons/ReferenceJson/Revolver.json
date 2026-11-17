@@ -1,0 +1,52 @@
+{
+  "id": "9db67405-6954-4587-8f37-436b9ed68d53",
+  "nameKey": "weapon.ref.revolver",
+  "description": "Valorant の Sheriff (実銃は S&W Model 29 のような .44 マグナムのリボルバー) を参考。体 55・毎秒 4 発・6 発で、30 m から 50 に減る。",
+  "category": "Handgun",
+  "shotNoiseRadius": 50,
+  "weight": 1.4,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.25
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 6,
+    "reserveAmmo": 24,
+    "reloadSeconds": 2.25,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 55,
+    "falloff": {
+      "startDistance": 30,
+      "endDistance": 31,
+      "minMultiplier": 0.91
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.6,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 3,
+    "recoilYawDegrees": 0.5,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 5,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

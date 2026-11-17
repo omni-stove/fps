@@ -12,7 +12,7 @@ namespace Shooter.Protocol
     public sealed class SnapshotList<T>
         where T : struct, ISnapshotEntity<T>
     {
-        private static readonly T _empty = default;
+        private static readonly T _empty;
 
         private readonly string _what;
 

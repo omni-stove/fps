@@ -21,9 +21,10 @@ namespace Fps.NetV2
 
         public Func<string, IReadOnlyList<string>> OwnAttachments { get; set; }
 
-        public LoadoutDefinition Loadout => GameContent.Pick<LoadoutDefinition>(c => c.Loadout);
+        // クライアントは試合の設定のアセットを持たないので、サーバーへの書き出しと同じ選び方に入口だけを渡す
+        public LoadoutDefinition Loadout => NetMatchDefinition.PickLoadout(null);
 
-        public WeaponCatalogAsset Catalog => GameContent.Pick<WeaponCatalogAsset>(c => c.WeaponCatalog);
+        public WeaponCatalogAsset Catalog => NetMatchDefinition.PickCatalog(null);
 
         /// <summary>なぜ <see cref="TriggerFor"/> が null を返したか。</summary>
         public string TriggerError => _triggerError;

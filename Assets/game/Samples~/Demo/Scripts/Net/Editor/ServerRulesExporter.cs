@@ -13,7 +13,9 @@ namespace Fps.Editor
     /// Unity 抜きのサーバー (dotnet/Fps.Server) はアセットとシーンを読めないので、試合の設定 (<see cref="NetMatchDefinition"/>、
     /// <see cref="NetSceneBuilder.MatchDefinitionPath"/>) とルールのアセットを <c>server-data/rules/&lt;ルール名&gt;.json</c> に、
     /// 各マップの出現地点と拠点を <c>server-data/maps/&lt;マップ&gt;.points.json</c> に、
-    /// 印とグレネードの調整値と持ち物を <c>server-data/tuning/ping.json</c>・<c>grenade.json</c>・<c>inventory.json</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
+    /// 印・グレネード・持ち物・吹き飛ばし・ボットの調整値を <c>server-data/tuning/</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
+    /// ルールは入口 (<see cref="GameContent"/>) のルールと <see cref="NetMatchDefinition.Rules"/> の並び (<see cref="RulesToExport"/>)、
+    /// 調整値は <see cref="KitTuning"/> と同じ順 (入口の欄、無ければ Resources) で読む。
     /// サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
     /// </summary>
     /// <remarks>make export-server-rules: unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export</remarks>
@@ -28,10 +30,37 @@ namespace Fps.Editor
 
         public static string ProjectRoot => Path.GetDirectoryName(Application.dataPath) ?? ".";
 
-        /// <summary>ルールはチームデスマッチと、拠点で勝敗を決めるドミネーションのアセットから取る。</summary>
-        public static IReadOnlyList<string> RulesAssetPaths()
+        public const string PingFileName = "ping.json";
+        public const string GrenadeFileName = "grenade.json";
+        public const string InventoryFileName = "inventory.json";
+        public const string KnockbackFileName = "knockback.json";
+        public const string BotsFileName = "bots.json";
+
+        public const string AllDefaultsJson = "{}\n";
+
+        public static IReadOnlyList<GameRulesDefinition> RulesToExport(NetMatchDefinition match)
         {
-            return new[] { GameRulesAssetBuilder.TeamDeathmatchPath, GameRulesAssetBuilder.DominationPath };
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            var rules = new List<GameRulesDefinition>();
+            void Add(GameRulesDefinition candidate)
+            {
+                if (candidate != null && !rules.Contains(candidate))
+                {
+                    rules.Add(candidate);
+                }
+            }
+
+            Add(GameContent.Pick(c => c.Rules));
+            foreach (var candidate in match.Rules)
+            {
+                Add(candidate);
+            }
+
+            return rules;
         }
 
         public static void Export()
@@ -40,9 +69,7 @@ namespace Fps.Editor
             var written = new List<string>();
             written.AddRange(ExportRules(Path.Combine(root, RulesFolder)));
             written.AddRange(ExportPoints(Path.Combine(root, MapsFolder)));
-            written.Add(ExportPingTuning(Path.Combine(root, TuningFolder)));
-            written.Add(ExportGrenadeTuning(Path.Combine(root, TuningFolder)));
-            written.Add(ExportInventoryTuning(Path.Combine(root, TuningFolder)));
+            written.AddRange(ExportTuning(Path.Combine(root, TuningFolder)));
             Debug.Log(LogTag + " wrote " + written.Count + " file(s) under " + Path.Combine(root, DataFolder) + "; commit them");
         }
 
@@ -51,13 +78,21 @@ namespace Fps.Editor
             var match = NetSceneBuilder.LoadOrBuildMatch();
             var motor = match.ToMotor();
             Directory.CreateDirectory(directory);
-            var written = new List<string>();
-            foreach (var path in RulesAssetPaths())
+            var rules = RulesToExport(match);
+            if (rules.Count == 0)
             {
-                var asset = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path);
-                if (asset == null)
+                throw new InvalidOperationException(
+                    LogTag + " no rules to export; set Rules in GameContent or in " + AssetDatabase.GetAssetPath(match));
+            }
+
+            var written = new List<string>();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var asset in rules)
+            {
+                // ファイル名がルールの名前なので、同じ名前の 2 つ目は 1 つ目を上書きしてしまう
+                if (!names.Add(asset.name))
                 {
-                    throw new InvalidOperationException(LogTag + " " + path + " is missing; run Fps.Editor.GameRulesAssetBuilder.Build");
+                    throw new InvalidOperationException(LogTag + " two rules are named " + asset.name + "; rename one of " + AssetDatabase.GetAssetPath(asset));
                 }
 
                 var file = ToFile(match, asset, motor);
@@ -91,8 +126,8 @@ namespace Fps.Editor
                 throw new InvalidOperationException(LogTag + " " + AssetDatabase.GetAssetPath(match) + " cannot be used by the match: " + error);
             }
 
-            var loadout = match.Loadout;
-            var catalog = match.Catalog;
+            var loadout = NetMatchDefinition.PickLoadout(match);
+            var catalog = NetMatchDefinition.PickCatalog(match);
             return new NetMatchFile(
                 asset.name,
                 rules,
@@ -139,51 +174,44 @@ namespace Fps.Editor
             return written;
         }
 
-        // サーバーは Resources を読めないので、オフラインと同じ値で印を動かすよう同じ JSON を写す
-        public static string ExportPingTuning(string directory)
+        // サーバーは Resources も入口も読めないので、オフラインと同じ値で動くよう KitTuning が読むのと同じ JSON を写す
+        public static IReadOnlyList<string> ExportTuning(string directory)
         {
-            var text = Resources.Load<TextAsset>(KitTuning.PingResourcePath);
-            if (text == null)
+            return new[]
             {
-                throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.PingResourcePath + ".json is missing");
-            }
-
-            TuningJson.ParsePing(text.text, KitTuning.PingResourcePath);
-            Directory.CreateDirectory(directory);
-            var output = Path.Combine(directory, "ping.json");
-            File.WriteAllText(output, text.text);
-            return output;
+                ExportTuningFile(directory, PingFileName, c => c.PingTuning, KitTuning.PingResourcePath, TuningJson.ParsePing),
+                ExportTuningFile(directory, GrenadeFileName, c => c.GrenadeTuning, KitTuning.GrenadeResourcePath, TuningJson.ParseGrenades),
+                ExportTuningFile(directory, InventoryFileName, c => c.InventoryTuning, KitTuning.InventoryResourcePath, InventoryJson.Parse),
+                ExportTuningFile(directory, KnockbackFileName, c => c.KnockbackTuning, KitTuning.KnockbackResourcePath, TuningJson.ParseKnockback),
+                ExportTuningFile(directory, BotsFileName, c => c.BotsTuning, KitTuning.BotsResourcePath, TuningJson.ParseBots),
+            };
         }
 
-        // グレネードも同じく、オフラインと同じ値で投げて爆発させるよう同じ JSON を写す
-        public static string ExportGrenadeTuning(string directory)
+        public static string ExportTuningFile<T>(
+            string directory,
+            string fileName,
+            Func<GameContent, TextAsset> select,
+            string resourcePath,
+            Func<string, string, T> parse)
         {
-            var text = Resources.Load<TextAsset>(KitTuning.GrenadeResourcePath);
-            if (text == null)
+            if (parse == null)
             {
-                throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.GrenadeResourcePath + ".json is missing");
+                throw new ArgumentNullException(nameof(parse));
             }
 
-            TuningJson.ParseGrenades(text.text, KitTuning.GrenadeResourcePath);
-            Directory.CreateDirectory(directory);
-            var output = Path.Combine(directory, "grenade.json");
-            File.WriteAllText(output, text.text);
-            return output;
-        }
-
-        // 持ち物も同じく、オフラインと同じアイテムと決め方で持たせるよう同じ JSON を写す
-        public static string ExportInventoryTuning(string directory)
-        {
-            var text = Resources.Load<TextAsset>(KitTuning.InventoryResourcePath);
+            var text = KitTuning.FindText(select, resourcePath, out var source);
             if (text == null)
             {
-                throw new InvalidOperationException(LogTag + " Resources/" + KitTuning.InventoryResourcePath + ".json is missing");
+                // ファイルを消さずに項目を省いた JSON を置くのは、どの調整値もサーバーへ渡していることを server-data で見せるため (省いた項目は KitTuning が無いときに使うのと同じ既定値になる)
+                text = AllDefaultsJson;
+                source += " (missing; every item left out, so the defaults KitTuning uses)";
             }
 
-            InventoryJson.Parse(text.text, KitTuning.InventoryResourcePath);
+            parse(text, source);
+            var output = Path.Combine(directory, fileName);
             Directory.CreateDirectory(directory);
-            var output = Path.Combine(directory, "inventory.json");
-            File.WriteAllText(output, text.text);
+            File.WriteAllText(output, text);
+            Debug.Log(LogTag + " wrote " + output + " from " + source);
             return output;
         }
 

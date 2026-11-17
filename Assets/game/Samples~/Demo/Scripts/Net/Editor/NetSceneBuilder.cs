@@ -102,7 +102,8 @@ namespace Fps.Editor
         /// <summary>
         /// 試合の設定 (<see cref="MatchDefinitionPath"/>) を読む。無ければ既定の値に、デフォルトロードアウト
         /// (<see cref="WeaponAssetBuilder.LoadoutPath"/>) と武器の一覧 (<see cref="WeaponAssetBuilder.CatalogPath"/>) を配線して作る。
-        /// 既にあれば中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
+        /// 書き出すルールの並びが空なら、チームデスマッチとドミネーション (<see cref="SampleRulesPaths"/>) を並べる。
+        /// ほかの中身は上書きしない (ゲームが変えた値を残す)。ロードアウトが試合で使えなければ例外を投げる。
         /// </summary>
         public static NetMatchDefinition LoadOrBuildMatch()
         {
@@ -124,12 +125,33 @@ namespace Fps.Editor
                 Debug.Log("[Net] NetSceneBuilder: created " + MatchDefinitionPath);
             }
 
+            if (match.Rules.Count == 0)
+            {
+                match.SetRules(LoadSampleRules());
+                EditorUtility.SetDirty(match);
+                AssetDatabase.SaveAssets();
+                Debug.Log("[Net] NetSceneBuilder: listed " + string.Join(", ", SampleRulesPaths) + " as the rules of " + MatchDefinitionPath);
+            }
+
             if (!match.TryCreateLoadout(out _, out var error))
             {
                 throw new InvalidOperationException("[Net] NetSceneBuilder: " + MatchDefinitionPath + " cannot be used by the match: " + error);
             }
 
             return match;
+        }
+
+        public static string[] SampleRulesPaths => new[] { GameRulesAssetBuilder.TeamDeathmatchPath, GameRulesAssetBuilder.DominationPath };
+
+        private static GameRulesDefinition[] LoadSampleRules()
+        {
+            if (SampleRulesPaths.Any(p => AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(p) == null))
+            {
+                Debug.Log("[Net] NetSceneBuilder: the sample rules are missing; running GameRulesAssetBuilder.Build");
+                GameRulesAssetBuilder.Build();
+            }
+
+            return SampleRulesPaths.Select(GameRulesAssetBuilder.LoadRules).ToArray();
         }
 
         /// <summary>

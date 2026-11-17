@@ -155,5 +155,32 @@ namespace Fps.Core.Tests
             Assert.That(aim.YawDegrees, Is.Zero);
             Assert.That(aim.PitchDegrees, Is.Zero);
         }
+
+        [Test]
+        public void CanReachOnlyDirectionsInsideTheRange()
+        {
+            var aim = Limited();
+
+            Assert.That(aim.CanReach(Vector3.UnitZ), Is.True);
+            Assert.That(aim.CanReach(Vector3.UnitX), Is.True, "the right edge itself");
+            Assert.That(aim.CanReach(-Vector3.UnitZ + (Vector3.UnitX * 0.01f)), Is.False, "behind");
+            Assert.That(aim.CanReach(VehicleWeaponAim.ToDirection(0f, 30f)), Is.True);
+            Assert.That(aim.CanReach(VehicleWeaponAim.ToDirection(0f, 31f)), Is.False, "above the top");
+            Assert.That(aim.CanReach(Vector3.Zero), Is.False);
+            Assert.That(FullCircle().CanReach(-Vector3.UnitZ), Is.True);
+        }
+
+        [Test]
+        public void OffsetIsTheAngleFromWhereTheGunPoints()
+        {
+            var aim = Limited();
+
+            Assert.That(aim.OffsetDegrees(Vector3.UnitZ * 5f), Is.EqualTo(0f).Within(_epsilon));
+            Assert.That(aim.OffsetDegrees(Vector3.UnitX), Is.EqualTo(90f).Within(_epsilon));
+
+            aim.Step(Vector3.UnitX, 0.5f);
+            Assert.That(aim.OffsetDegrees(Vector3.UnitX), Is.EqualTo(45f).Within(_epsilon));
+            Assert.Throws<ArgumentException>(() => aim.OffsetDegrees(Vector3.Zero));
+        }
     }
 }

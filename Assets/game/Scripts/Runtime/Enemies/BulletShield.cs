@@ -115,6 +115,12 @@ namespace Fps.Runtime
 
         public static BulletShield CreatePlaceholder(Transform owner)
         {
+            return CreatePlaceholder(owner, PlaceholderLocalPosition, PlaceholderLocalScale);
+        }
+
+        // 固定銃座のように敵より大きな物の前にも立てるので、位置と大きさを持ち主が決められるようにする。
+        public static BulletShield CreatePlaceholder(Transform owner, Vector3 localPosition, Vector3 localScale)
+        {
             if (owner == null)
             {
                 throw new ArgumentNullException(nameof(owner));
@@ -123,9 +129,9 @@ namespace Fps.Runtime
             var plate = GameObject.CreatePrimitive(PrimitiveType.Cube);
             plate.name = PlaceholderName;
             plate.transform.SetParent(owner, false);
-            plate.transform.localPosition = PlaceholderLocalPosition;
+            plate.transform.localPosition = localPosition;
             plate.transform.localRotation = Quaternion.identity;
-            plate.transform.localScale = PlaceholderLocalScale;
+            plate.transform.localScale = localScale;
             return plate.AddComponent<BulletShield>();
         }
 
@@ -155,7 +161,9 @@ namespace Fps.Runtime
         private void OnBlocked(int damage, Vector3? sourcePosition, GameObject shooter)
         {
             var owner = Owner;
-            var id = owner != null ? owner.Id : name;
+            // 固定銃座の盾は敵に付かないので、盾の名前ではなく、どの銃座の盾が止めたかを出す。
+            var vehicle = owner == null ? GetComponentInParent<Vehicle>() : null;
+            var id = owner != null ? owner.Id : vehicle != null ? vehicle.name : name;
             Debug.Log(ShieldLog.Blocked(id, damage, DescribeShooter(shooter)), this);
             Blocked?.Invoke(this, damage);
 

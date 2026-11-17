@@ -34,6 +34,9 @@ namespace Shooter.Core
 
         public const string ServerFullDetail = "server-full";
 
+        /// <summary>非公開の試合 (<see cref="NetMatchSettings.PrivateMatch"/>) に、参加コードが無い・合わない接続を断るときの、断った訳の符号。</summary>
+        public const string JoinCodeMismatchDetail = "join-code-mismatch";
+
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 

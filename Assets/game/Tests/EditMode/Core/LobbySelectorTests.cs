@@ -228,6 +228,59 @@ namespace Shooter.Core.Tests
             Assert.That(LobbySelector.ServerRejection(Lobby("host", "o", 8, "o"), _version), Is.EqualTo("no version"), "a player-hosted lobby has no server attributes");
         }
 
+        private static LobbyInfo PrivateServer(string id, string endpoint, long players)
+        {
+            var match = new NetMatchSettings(privateMatch: true, joinCode: "ABC234");
+            return new LobbyInfo(id, "server-" + id, ServerLobby.MaxMembers(8), Ids("server-" + id), ServerLobby.Attributes(endpoint, _version, (int)players, match));
+        }
+
+        [Test]
+        public void QuickMatchRejectsAPrivateServer()
+        {
+            Assert.That(LobbySelector.ServerRejection(PrivateServer("p", "203.0.113.1:7777", 0), _version), Is.EqualTo("private"));
+            Assert.That(LobbySelector.ServerRejection(PrivateServer("p", "203.0.113.1:7777", 0), _version, 2), Is.EqualTo("private"));
+        }
+
+        [Test]
+        public void QuickMatchTakesAZeroPrivateFlagAsPublic()
+        {
+            var attributes = new List<LobbyAttribute>(ServerLobby.Attributes("203.0.113.1:7777", _version, 0))
+            {
+                LobbyAttribute.OfNumber(ServerLobby.PrivateKey, 0),
+            };
+            var lobby = new LobbyInfo("s", "server-s", ServerLobby.MaxMembers(8), Ids("server-s"), attributes);
+
+            Assert.That(LobbySelector.ServerRejection(lobby, _version), Is.Null);
+        }
+
+        [Test]
+        public void PickServerSkipsPrivateServersEvenWhenBusier()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                PrivateServer("a-private", "203.0.113.1:7777", 6),
+                Server("b-public", "203.0.113.2:7777", 2),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version).Id, Is.EqualTo("b-public"));
+            Assert.That(LobbySelector.PickServer(new List<LobbyInfo> { lobbies[0] }, _version), Is.Null);
+        }
+
+        [Test]
+        public void DescribesPrivateServers()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                PrivateServer("p1", "203.0.113.1:7777", 0),
+                Server("f", "203.0.113.2:7777", 8),
+                PrivateServer("p2", "203.0.113.3:7777", 1),
+            };
+
+            Assert.That(
+                LobbySelector.DescribeNoServer(lobbies, _version),
+                Is.EqualTo("no server to join among 3 found (private x2, full x1)"));
+        }
+
         [Test]
         public void ComparesVersionsTheWayTheServerWritesThem()
         {

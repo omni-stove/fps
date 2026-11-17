@@ -20,17 +20,14 @@ namespace Shooter.Server
 
         public int PlayerId { get; }
 
-        /// <summary>試合の間に <see cref="ServerMatch"/> が人数をそろえるときだけ変わる。</summary>
         public Team Team { get; private set; }
 
         public string RejoinKey { get; }
 
         public string ProductUserId { get; }
 
-        /// <summary>承認のデータで名乗ったパーティの Id。無ければ null。</summary>
         public string PartyId { get; }
 
-        /// <summary>試合に入った順の番号。後に入った人ほど大きい。</summary>
         public long JoinOrder { get; }
 
         public bool IsBot => BotRoster.IsBotId(PlayerId);

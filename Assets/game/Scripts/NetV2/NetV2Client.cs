@@ -77,7 +77,6 @@ namespace Shooter.NetV2
 
         public ClientMatch Match => _match;
 
-        /// <summary>自分のプレイヤーの視点と入力。自分の行が届いて予測を始めるまでと、マップを出た後は null。</summary>
         public NetV2LocalPlayer LocalPlayer => _local;
 
         public GameObject GrenadePrefab { get; set; }
@@ -1463,22 +1462,12 @@ namespace Shooter.NetV2
         }
     }
 
-    /// <summary>
-    /// <see cref="NetV2Client"/> に差し込む機能の部品 (チャット・投票・観戦など)。<see cref="NetV2ClientParts.Create"/> がつないだときに作り、
-    /// クライアントが消えるときに <see cref="IDisposable.Dispose"/> で後片付けする。
-    /// </summary>
     public interface INetV2ClientPart : IDisposable
     {
-        /// <summary>
-        /// サーバーから届いたメッセージのうち、<see cref="NetV2Client"/> と武器の受け口が受け持たなかったもの。
-        /// 受け持ったら true を返し、後の部品と印には渡さない。
-        /// </summary>
         bool Handle(IMessage message);
 
-        /// <summary>マップに入った後に届いたスナップショット。</summary>
         void Apply(SnapshotMessage snapshot);
 
-        /// <summary>マップに入った後の毎フレーム。</summary>
         void Tick(float deltaSeconds);
     }
 }

@@ -350,10 +350,7 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ObjectDisposedException>(() => _voice.Enter(_lobby));
         }
 
-        /// <summary>
-        /// 偽の <see cref="IVoiceSession"/>。送る・受ける・音量の望む値を覚え、つながっていれば送るものとする。
-        /// 話している人は、受けるのを切った人を除いて <see cref="Speakers"/> に出す (<see cref="VoiceSession"/> と同じ)。
-        /// </summary>
+        // 話している人から受けるのを切った人を除くのは、VoiceSession と同じにするため。
         private sealed class FakeVoiceSession : IVoiceSession
         {
             private readonly HashSet<string> _muted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

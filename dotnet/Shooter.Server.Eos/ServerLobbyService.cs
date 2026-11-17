@@ -95,10 +95,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <param name="maxMembers">オーナーのサーバーを含むメンバーの上限 (<see cref="ServerLobby.MaxMembers"/>)。</param>
-        /// <param name="voiceRoom">RTC 部屋を開き、入ったメンバーがボイスで話せるようにするか。</param>
-        /// <param name="attributes">作った直後に付ける公開の属性。</param>
-        /// <param name="done">作ったロビーか、失敗の理由を受け取る。</param>
         public void CreateLobby(int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             ArgumentNullException.ThrowIfNull(done);

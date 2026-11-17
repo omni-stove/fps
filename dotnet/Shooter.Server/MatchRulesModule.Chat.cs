@@ -12,10 +12,7 @@ namespace Shooter.Server
         private ChatGate _chatGate;
         private float _nextChatRefusalLogTime;
 
-        /// <summary>
-        /// playerId の文を <see cref="ChatGate"/> に通し、通れば全体なら全員に、チームなら同じチームの人にだけ配る。
-        /// 断った文は送った本人にも返さない。参加していない人と試合の無いときは理由も出さずに捨てる (印と同じ)。そのときは null。
-        /// </summary>
+        // 参加していない人と試合の無いときに理由も出さずに捨てるのは、印と同じにするため。
         internal ChatRefusal? ServerChat(int playerId, Shooter.Protocol.ChatChannel channel, string text)
         {
             if (_session == null || _chatGate == null || !_session.HasPlayer(playerId))

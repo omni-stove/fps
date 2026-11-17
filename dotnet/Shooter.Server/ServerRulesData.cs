@@ -72,7 +72,6 @@ namespace Shooter.Server
 
         public string KnockbackPath { get; }
 
-        /// <summary>倒された人へのダメージのうち、どれをアシストに数えるか。</summary>
         public AssistSpec Assist { get; }
 
         public string AssistPath { get; }

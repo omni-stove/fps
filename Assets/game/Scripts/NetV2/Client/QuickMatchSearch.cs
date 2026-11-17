@@ -55,14 +55,6 @@ namespace Shooter.NetV2
             Begin(now, 1, ready, failed);
         }
 
-        /// <summary>
-        /// <paramref name="partySize"/> 人がまとめて入れるサーバーを探す手順を始める。空きが人数に足りないサーバーは選ばない。
-        /// <paramref name="ready"/> か <paramref name="failed"/> のどちらかを 1 回だけ呼ぶ。
-        /// </summary>
-        /// <param name="now">今の時刻 (秒)。<see cref="Tick"/> と同じ時計で渡す。</param>
-        /// <param name="partySize">入る人数 (パーティなら <see cref="PartySession.MatchPlayers"/>。1 以上)。</param>
-        /// <param name="ready">サーバーが決まったときに、つなぐ起動設定を受け取る。</param>
-        /// <param name="failed">諦めたときに理由を受け取る。</param>
         public void Begin(float now, int partySize, Action<NetLaunchOptions> ready, Action<string> failed)
         {
             if (_disposed)

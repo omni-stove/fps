@@ -80,10 +80,10 @@ namespace Shooter.Runtime
         private static StyleSheet _styleSheet;
         private static bool _warnedMissingStyleSheet;
 
-        [SerializeField, Tooltip("左下に出す最近の行の数 (1 以上)")]
+        [SerializeField]
         private int _visibleLines = DefaultVisibleLines;
 
-        [SerializeField, Tooltip("行が届いてから薄くするまでの秒数 (0 以上)")]
+        [SerializeField]
         private float _fadeSeconds = DefaultFadeSeconds;
 
         // 入力の宛先を止めないアクションは無い。Pause も止め、入力中の Esc でポーズ画面を開かせない。
@@ -423,6 +423,7 @@ namespace Shooter.Runtime
             _field = new TextField { name = FieldName };
             _field.AddToClassList("chat__field");
             _field.RegisterCallback<KeyDownEvent>(HandleFieldKeyDown, TrickleDown.TrickleDown);
+            _field.RegisterCallback<FocusOutEvent>(HandleFieldFocusOut, TrickleDown.TrickleDown);
             _inputRow.Add(_prompt);
             _inputRow.Add(_field);
             element.Add(_inputRow);
@@ -436,6 +437,7 @@ namespace Shooter.Runtime
             Cancel();
             Unsubscribe();
             _field?.UnregisterCallback<KeyDownEvent>(HandleFieldKeyDown, TrickleDown.TrickleDown);
+            _field?.UnregisterCallback<FocusOutEvent>(HandleFieldFocusOut, TrickleDown.TrickleDown);
             element.Clear();
             _rows.Clear();
             _lines.Clear();
@@ -450,6 +452,17 @@ namespace Shooter.Runtime
         {
             RefreshPrompt();
             Render();
+        }
+
+        private void HandleFieldFocusOut(FocusOutEvent evt)
+        {
+            // フォーカスが外れると Enter / Esc が届かず、止めた入力も戻せなくなるので、入力欄の中へ移るとき以外は閉じる。
+            if (evt.relatedTarget is VisualElement next && _field != null && _field.Contains(next))
+            {
+                return;
+            }
+
+            Cancel();
         }
 
         private void HandleFieldKeyDown(KeyDownEvent evt)

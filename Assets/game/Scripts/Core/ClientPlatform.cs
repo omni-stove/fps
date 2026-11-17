@@ -5,5 +5,7 @@ namespace Shooter.Core
         Windows,
 
         MacOS,
+
+        WebGL,
     }
 }

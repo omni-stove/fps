@@ -6,25 +6,12 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke に足す、爆発する置き物 (<see cref="ExplosivePropRangeFixture"/>) の手順。
-    /// <list type="number">
-    /// <item>樽 A の正面から、プレイヤーの今の武器の値で弾を撃つ (<see cref="Hitscan.Fire"/>)。爆発するまで 1 フレームに 1 発ずつ撃つ。</item>
-    /// <item>樽 A が連鎖でなく爆発し (<c>[Explosive] exploded id=Barrel_A chained=false</c>)、隣の標的ダミーが倒れる (<c>[Combat] target died</c>)。</item>
-    /// <item>樽 B が連鎖として、樽 A から <see cref="ExplosivePropSpec.ChainDelaySeconds"/> 以上遅れて爆発する。</item>
-    /// <item>ガソリン缶が燃え始め (<c>[Explosive] ignited id=GasCan</c>)、<see cref="ExplosivePropSpec.BurnSeconds"/> 以上燃えてから爆発する。</item>
-    /// </list>
-    /// </summary>
-    /// <remarks>
-    /// batchmode では照準を樽へ向けられないので、プレイヤーの <see cref="WeaponController.Fire"/> ではなく、敵の弾と同じ
-    /// <see cref="Hitscan.Fire"/> で撃つ。弾が置き物に届くまでの道筋 (Raycast → <see cref="StructureDamage.Apply"/>) は同じ。
-    /// </remarks>
+    // batchmode では照準を樽へ向けられないので、プレイヤーの WeaponController.Fire ではなく、敵の弾と同じ
+    // Hitscan.Fire で撃つ。弾が置き物に届くまでの道筋 (Raycast → StructureDamage.Apply) は同じ。
     public sealed class ExplosivePropSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary>樽 A の正面のどれだけ手前から撃つか (m)。</summary>
         public const float ShotDistance = 4f;
 
-        /// <summary>樽 A が爆発するまでに撃つ弾の数の上限。</summary>
         public const int MaxShots = 10;
 
         // 爆発までの時間はフレームの deltaTime を足して数えるので、Time.time の差は浮動小数の誤差だけ短く見えることがある。
@@ -60,7 +47,7 @@ namespace Shooter.Editor
 
         public string Name => "explosive props";
 
-        /// <summary>撃ってからガソリン缶が燃え尽きるまでを見込む。</summary>
+        // 撃ってからガソリン缶が燃え尽きるまでを見込む。
         public float TimeoutSeconds => 10f;
 
         public void Reset()

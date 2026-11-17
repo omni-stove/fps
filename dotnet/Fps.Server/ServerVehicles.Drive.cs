@@ -40,6 +40,14 @@ namespace Fps.Server
             }
 
             car.LastSequence = move.Sequence;
+            // 成分が有限でも、長さ 0 や float を溢れる長さの回転は正規化で NaN になるので、姿に入れる前に直す
+            var rotationLength = move.Rotation.Length();
+            if (float.IsNaN(rotationLength) || float.IsInfinity(rotationLength) || rotationLength < 1e-6f)
+            {
+                Correct(car, playerId, VehicleMoveRejection.Blocked);
+                return;
+            }
+
             var rejection = CheckMove(car, move.Position);
             if (rejection != VehicleMoveRejection.None)
             {

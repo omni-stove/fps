@@ -63,7 +63,7 @@ namespace Fps.Server
             var spec = weapons.CurrentSpec;
             var weaponCheck = weapons == shooter.Weapons
                 ? _rules.Loadout.TryFire(shooterId, spec, request.WeaponId, _now)
-                : string.Equals(spec.Id, request.WeaponId, StringComparison.Ordinal) ? ShotRejection.None : ShotRejection.WeaponMismatch;
+                : CheckMountFire(weapons, spec, request.WeaponId);
             if (weaponCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, weaponCheck);
@@ -291,6 +291,26 @@ namespace Fps.Server
             _botFire.LockTargetId = 0;
             _botFire.Trigger = TriggerEdge.None;
             return Fire(fighter, _botFire);
+        }
+
+        private ShotRejection CheckMountFire(ServerPlayerWeapons mount, WeaponSpec spec, string weaponId)
+        {
+            if (!string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+            {
+                return ShotRejection.WeaponMismatch;
+            }
+
+            if (!_mountBudgets.TryGetValue(mount, out var budget))
+            {
+                // ビームと火炎の撃ち方は最短の間隔が 0 なので、ServerLoadout と同じく照射の間隔で制限する
+                var round = spec.Round;
+                budget = round.Delivery == RoundDelivery.Beam ? new ShotBudget(round.Beam.TickSeconds)
+                    : round.Delivery == RoundDelivery.Spray ? new ShotBudget(round.Spray.TickSeconds)
+                    : new ShotBudget(TriggerModels.For(spec));
+                _mountBudgets.Add(mount, budget);
+            }
+
+            return budget.TryConsume(_now) ? ShotRejection.None : ShotRejection.FireRateExceeded;
         }
 
         private ShotRejection CheckSeat(int shooterId, FireRequestMessage request, out ServerPlayerWeapons weapons, out float spreadMultiplier)

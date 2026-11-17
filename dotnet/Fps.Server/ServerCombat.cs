@@ -48,6 +48,8 @@ namespace Fps.Server
         // 座席の武器の弾と連射の間隔は、座る人が代わっても武器に残るので、人ではなく乗り物と武器の番号で持つ
         private readonly Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons> _mounts =
             new Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons>();
+        // 座席の武器は ServerLoadout の人ごとの制限を通らないので、連射の間隔は武器ごとにここで持つ
+        private readonly Dictionary<ServerPlayerWeapons, ShotBudget> _mountBudgets = new Dictionary<ServerPlayerWeapons, ShotBudget>();
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -289,6 +291,7 @@ namespace Fps.Server
         private void HandleMatchStarted()
         {
             _mounts.Clear();
+            _mountBudgets.Clear();
             ClearGrenades();
             _projectiles.Clear();
             _statusEffects.Clear();

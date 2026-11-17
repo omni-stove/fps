@@ -30,6 +30,16 @@ namespace Shooter.Core
             return obj is RumbleMotors other && Equals(other);
         }
 
+        public static bool operator ==(RumbleMotors left, RumbleMotors right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(RumbleMotors left, RumbleMotors right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             unchecked

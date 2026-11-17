@@ -36,6 +36,16 @@ namespace Shooter.Core
             return obj is RumblePulse other && Equals(other);
         }
 
+        public static bool operator ==(RumblePulse left, RumblePulse right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(RumblePulse left, RumblePulse right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             unchecked

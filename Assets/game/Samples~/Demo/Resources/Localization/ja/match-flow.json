@@ -37,5 +37,9 @@
   "customMatch.notFound": "このコードの試合は見つからなかった。コードを確かめる",
   "customMatch.full": "この試合は満員で入れない",
   "customMatch.versionMismatch": "この試合とゲームのバージョンが違うので入れない",
-  "customMatch.failed": "うまくいかなかった。もう一度試す"
+  "customMatch.failed": "うまくいかなかった。もう一度試す",
+  "menu.party": "オンライン - パーティ",
+  "menu.joinByCode": "オンライン - コードで入る",
+  "menu.partyUnavailable": "パーティを開けない: {0}",
+  "menu.customMatchUnavailable": "コードで入る画面を開けない: {0}"
 }

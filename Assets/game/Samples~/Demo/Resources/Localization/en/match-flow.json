@@ -37,5 +37,9 @@
   "customMatch.notFound": "No match has that code. Check the code.",
   "customMatch.full": "That match is full.",
   "customMatch.versionMismatch": "That match runs a different version of the game.",
-  "customMatch.failed": "That did not work. Try again."
+  "customMatch.failed": "That did not work. Try again.",
+  "menu.party": "ONLINE - PARTY",
+  "menu.joinByCode": "ONLINE - JOIN BY CODE",
+  "menu.partyUnavailable": "Cannot open the party: {0}",
+  "menu.customMatchUnavailable": "Cannot open join by code: {0}"
 }

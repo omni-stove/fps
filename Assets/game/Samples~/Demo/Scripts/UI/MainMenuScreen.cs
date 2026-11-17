@@ -20,6 +20,8 @@ namespace Shooter.Runtime
 
         public const string CampaignButtonName = "menu-campaign";
         public const string QuickMatchButtonName = "menu-quick-match";
+        public const string PartyButtonName = "menu-party";
+        public const string JoinByCodeButtonName = "menu-join-by-code";
         public const string LoadoutButtonName = "menu-loadout";
         public const string ProfileButtonName = "menu-profile";
         public const string RangeButtonName = "menu-range";
@@ -31,6 +33,11 @@ namespace Shooter.Runtime
         public const string LoadoutSlotName = "menu-loadout-slot";
         public const string CampaignSlotName = "menu-campaign-slot";
         public const string ProfileSlotName = "menu-profile-slot";
+        public const string PartySlotName = "menu-party-slot";
+        public const string CustomMatchSlotName = "menu-custom-match-slot";
+
+        public const string PartyUnavailableKey = "menu.partyUnavailable";
+        public const string CustomMatchUnavailableKey = "menu.customMatchUnavailable";
 
         public static string SettingsUnavailableNotice => Localizer.Get("menu.settingsUnavailable");
 
@@ -50,6 +57,8 @@ namespace Shooter.Runtime
         {
             CampaignButtonName,
             QuickMatchButtonName,
+            PartyButtonName,
+            JoinByCodeButtonName,
             LoadoutButtonName,
             ProfileButtonName,
             RangeButtonName,
@@ -80,6 +89,10 @@ namespace Shooter.Runtime
         private CampaignSelectPanel _campaignPanel;
         private VisualElement _profileSlot;
         private ProfilePanel _profilePanel;
+        private VisualElement _partySlot;
+        private PartyPanel _partyPanel;
+        private VisualElement _customMatchSlot;
+        private CustomMatchPanel _customMatchPanel;
         private ProgressionRecorder _progression;
         private ISaveStorage _saveStorage;
         private Label _notice;
@@ -164,7 +177,24 @@ namespace Shooter.Runtime
 
         public bool IsProfileOpen => _profilePanel != null;
 
-        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null || _profilePanel != null;
+        public VisualElement PartySlot => _partySlot;
+
+        public PartyPanel PartyPanel => _partyPanel;
+
+        public bool IsPartyOpen => _partyPanel != null;
+
+        public VisualElement CustomMatchSlot => _customMatchSlot;
+
+        public CustomMatchPanel CustomMatchPanel => _customMatchPanel;
+
+        public bool IsCustomMatchOpen => _customMatchPanel != null;
+
+        public static bool IsPartyAvailable => GameSignals.PartyControl.HasValue;
+
+        public static bool IsJoinByCodeAvailable => GameSignals.JoinByCode.HasValue;
+
+        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null || _profilePanel != null
+            || _partyPanel != null || _customMatchPanel != null;
 
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
 
@@ -296,6 +326,10 @@ namespace Shooter.Runtime
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{CampaignSlotName}'");
             _profileSlot = root.Q<VisualElement>(ProfileSlotName)
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{ProfileSlotName}'");
+            _partySlot = root.Q<VisualElement>(PartySlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{PartySlotName}'");
+            _customMatchSlot = root.Q<VisualElement>(CustomMatchSlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{CustomMatchSlotName}'");
 
             for (var i = 0; i < _buttons.Count; i++)
             {
@@ -333,6 +367,15 @@ namespace Shooter.Runtime
             Localizer.Changed += HandleLanguageChanged;
             _unbind.Add(() => Localizer.Changed -= HandleLanguageChanged);
 
+            // EOS のログインなどで口が後から出たり消えたりするので、開いている間も出し入れする。
+            GameSignals.PartyControl.Changed += HandlePartyControlChanged;
+            GameSignals.JoinByCode.Changed += HandleJoinByCodeChanged;
+            _unbind.Add(() =>
+            {
+                GameSignals.PartyControl.Changed -= HandlePartyControlChanged;
+                GameSignals.JoinByCode.Changed -= HandleJoinByCodeChanged;
+            });
+
             _focusIndex = -1;
             _settingsOpen = false;
             _leaving = false;
@@ -340,7 +383,16 @@ namespace Shooter.Runtime
             SetDisplayed(_loadoutSlot, false);
             SetDisplayed(_campaignSlot, false);
             SetDisplayed(_profileSlot, false);
+            SetDisplayed(_partySlot, false);
+            SetDisplayed(_customMatchSlot, false);
+            RefreshOnlineButtons();
             ShowNotice(null);
+        }
+
+        public bool IsButtonShown(string buttonName)
+        {
+            var index = IndexOf(buttonName);
+            return index >= 0 && index < _buttons.Count && IsShown(_buttons[index]);
         }
 
         public void MoveFocus(int step)
@@ -350,7 +402,38 @@ namespace Shooter.Runtime
                 return;
             }
 
-            FocusAt(MenuRoute.MoveFocus(_focusIndex, step, _buttons.Count));
+            var next = NextShown(_focusIndex, step);
+            if (next >= 0)
+            {
+                FocusAt(next);
+            }
+        }
+
+        // 出していないボタン (オフラインだけのビルドのパーティなど) は飛ばして、並び順で次に出ているボタンを返す。
+        private int NextShown(int from, int step)
+        {
+            var next = from;
+            for (var tried = 0; tried < _buttons.Count; tried++)
+            {
+                next = MenuRoute.MoveFocus(next, step, _buttons.Count);
+                if (next < 0)
+                {
+                    return -1;
+                }
+
+                if (IsShown(_buttons[next]))
+                {
+                    return next;
+                }
+
+                // 0 歩では同じボタンに留まり続けるので、出ていなければ下へ探す
+                if (step == 0)
+                {
+                    step = 1;
+                }
+            }
+
+            return -1;
         }
 
         // 進めたらボタンを押せなくするのは、シーンを読み終えるまでの二度押しを防ぐため。
@@ -512,6 +595,126 @@ namespace Shooter.Runtime
             SetDisplayed(_profileSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(ProfileButtonName));
+        }
+
+        // ボタンを出していないときは開かない。開いた後に口が消えたときは、パネルが「使えない」を出す。
+        public void OpenParty()
+        {
+            if (_partySlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            if (!IsPartyAvailable)
+            {
+                Debug.Log(PartyPanel.LogTag + " the party was requested but no party service is published (GameSignals.PartyControl)", this);
+                return;
+            }
+
+            ShowNotice(null);
+            SetDisplayed(_partySlot, true);
+            SetButtonsEnabled(false);
+            try
+            {
+                _partyPanel = new PartyPanel(_partySlot);
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError(PartyPanel.LogTag + " cannot open the party: " + e.Message, this);
+                _partySlot.Clear();
+                SetDisplayed(_partySlot, false);
+                SetButtonsEnabled(true);
+                ShowNotice(new LocalizedText(PartyUnavailableKey, e.Message));
+                FocusAt(IndexOf(PartyButtonName));
+                return;
+            }
+
+            _partyPanel.Cancelled += CloseParty;
+        }
+
+        public void CloseParty()
+        {
+            if (_partyPanel == null)
+            {
+                return;
+            }
+
+            _partyPanel.Dispose();
+            _partyPanel = null;
+            SetDisplayed(_partySlot, false);
+            SetButtonsEnabled(true);
+            FocusShownAt(IndexOf(PartyButtonName));
+        }
+
+        public void OpenCustomMatch()
+        {
+            if (_customMatchSlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            if (!IsJoinByCodeAvailable)
+            {
+                Debug.Log(CustomMatchPanel.LogTag + " join by code was requested but no join-by-code service is published (GameSignals.JoinByCode)", this);
+                return;
+            }
+
+            ShowNotice(null);
+            SetDisplayed(_customMatchSlot, true);
+            SetButtonsEnabled(false);
+            try
+            {
+                _customMatchPanel = new CustomMatchPanel(_customMatchSlot);
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError(CustomMatchPanel.LogTag + " cannot open join by code: " + e.Message, this);
+                _customMatchSlot.Clear();
+                SetDisplayed(_customMatchSlot, false);
+                SetButtonsEnabled(true);
+                ShowNotice(new LocalizedText(CustomMatchUnavailableKey, e.Message));
+                FocusAt(IndexOf(JoinByCodeButtonName));
+                return;
+            }
+
+            _customMatchPanel.Cancelled += HandleCustomMatchCancelled;
+            _customMatchPanel.Joined += HandleCustomMatchJoined;
+        }
+
+        public void CloseCustomMatch()
+        {
+            if (_customMatchPanel == null)
+            {
+                return;
+            }
+
+            _customMatchPanel.Dispose();
+            _customMatchPanel = null;
+            SetDisplayed(_customMatchSlot, false);
+
+            // 入った後はつないだ先へシーンが替わるので、クイックマッチと同じく二度押しさせない
+            SetButtonsEnabled(!_leaving);
+            if (!_leaving)
+            {
+                FocusShownAt(IndexOf(JoinByCodeButtonName));
+            }
+        }
+
+        // 入った後に戻ると、つないでいる最中のメニューで別の行き先を選べてしまうので、シーンが替わるまで画面を残す。
+        private void HandleCustomMatchCancelled()
+        {
+            if (_customMatchPanel != null && _customMatchPanel.HasJoined)
+            {
+                return;
+            }
+
+            CloseCustomMatch();
+        }
+
+        private void HandleCustomMatchJoined()
+        {
+            _leaving = true;
+            Debug.Log(MenuNavigator.LogTag + " joined a match by code; waiting for the connection to load the match", this);
         }
 
         // 武器の一覧が壊れていてもプロフィールは出せるので、名前の代わりに Id を出す (ProfilePanel は一覧が無ければ Id を出す)
@@ -774,6 +977,12 @@ namespace Shooter.Runtime
                 case QuickMatchButtonName:
                     Choose(MenuDestination.QuickMatch);
                     break;
+                case PartyButtonName:
+                    OpenParty();
+                    break;
+                case JoinByCodeButtonName:
+                    OpenCustomMatch();
+                    break;
                 case LoadoutButtonName:
                     OpenLoadout();
                     break;
@@ -852,6 +1061,49 @@ namespace Shooter.Runtime
             CloseSettings();
         }
 
+        private void HandlePartyControlChanged(IPartyControl control)
+        {
+            RefreshOnlineButtons();
+        }
+
+        private void HandleJoinByCodeChanged(IJoinByCode joinByCode)
+        {
+            RefreshOnlineButtons();
+        }
+
+        private void RefreshOnlineButtons()
+        {
+            if (this == null || _buttons.Count == 0)
+            {
+                return;
+            }
+
+            SetDisplayed(_buttons[IndexOf(PartyButtonName)], IsPartyAvailable);
+            SetDisplayed(_buttons[IndexOf(JoinByCodeButtonName)], IsJoinByCodeAvailable);
+
+            // 選んでいたボタンが消えると、ゲームパッドで動かす起点が無くなるので、次に出ているボタンへ移す
+            if (!IsOverlayOpen && _focusIndex >= 0 && !IsShown(_buttons[_focusIndex]))
+            {
+                FocusShownAt(_focusIndex);
+            }
+        }
+
+        private void FocusShownAt(int index)
+        {
+            if (index >= 0 && index < _buttons.Count && IsShown(_buttons[index]))
+            {
+                FocusAt(index);
+                return;
+            }
+
+            FocusAt(NextShown(index, 1));
+        }
+
+        private static bool IsShown(VisualElement element)
+        {
+            return element.style.display != DisplayStyle.None;
+        }
+
         private void FocusAt(int index)
         {
             if (index < 0 || index >= _buttons.Count)
@@ -917,6 +1169,18 @@ namespace Shooter.Runtime
                 _profilePanel = null;
             }
 
+            if (_partyPanel != null)
+            {
+                _partyPanel.Dispose();
+                _partyPanel = null;
+            }
+
+            if (_customMatchPanel != null)
+            {
+                _customMatchPanel.Dispose();
+                _customMatchPanel = null;
+            }
+
             foreach (var undo in _unbind)
             {
                 undo();
@@ -932,6 +1196,8 @@ namespace Shooter.Runtime
             _loadoutSlot = null;
             _campaignSlot = null;
             _profileSlot = null;
+            _partySlot = null;
+            _customMatchSlot = null;
         }
 
         private static void SetDisplayed(VisualElement element, bool displayed)

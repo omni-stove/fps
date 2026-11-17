@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 試走場 (VehicleRangeSceneBuilder) を作り直して Play Mode に入り、銃座付きの車に乗る → 走る → 銃座から的を撃つ → 降りる →
     // 固定銃座で仮の車を壊す、を順に行い、[Vehicle] のログがその順に出て、Play 中にエラーが出なければ終了コード 0 で終わる。
     // batchmode には入力が無いので、Interact / Previous の代わりに PlayerVehicleRider.Interact / SwitchSeat を呼び、
     // 移動・ブレーキ・狙い・射撃は PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座までは歩かせずに移す。
     // Play Mode に入るので -quit は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    // unity -batchmode -projectPath . -executeMethod Fps.Editor.VehicleSmokeRun.Run -logFile -
+    // unity -batchmode -projectPath . -executeMethod Shooter.Editor.VehicleSmokeRun.Run -logFile -
     [InitializeOnLoad]
     public static class VehicleSmokeRun
     {
@@ -37,8 +37,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.VehicleSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.VehicleSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.VehicleSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.VehicleSmokeRun.RequestedAt";
 
         private static readonly List<string> _errors = new List<string>();
         private static readonly List<string> _lines = new List<string>();

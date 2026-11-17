@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ゲーム進行がメニューへ戻した理由、またはオンラインを始めずにメニューに留めた理由。どう言うかはメニューの UI が決める。
@@ -47,7 +47,7 @@ namespace Fps.Core
             return new MenuReturnReason(MenuReturnKind.OnlineFailed, exitCode, null, detail ?? string.Empty);
         }
 
-        /// <summary>ログに出す 1 行の中身。例: <c>return=Disconnected exit=0 kind=ServerStopped connected=True reason="fps:server-stopped"</c>。</summary>
+        /// <summary>ログに出す 1 行の中身。例: <c>return=Disconnected exit=0 kind=ServerStopped connected=True reason="shooter:server-stopped"</c>。</summary>
         public string Describe()
         {
             var text = "return=" + Kind + " exit=" + ExitCode.ToString(CultureInfo.InvariantCulture);

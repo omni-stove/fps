@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="DownedTracker.AddReviveProgress"/> の結果。</summary>
     public enum ReviveStep

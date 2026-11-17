@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーが射撃を捨てる理由。<see cref="ShotValidator.Check"/> の結果に、連射の制限 (<see cref="ShotBudget"/>) と

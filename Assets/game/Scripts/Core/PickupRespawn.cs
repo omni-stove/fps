@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 出現点に置いた拾える物が、拾われてから再び出るまでの時間。時間は <see cref="Tick"/> で外から進める。

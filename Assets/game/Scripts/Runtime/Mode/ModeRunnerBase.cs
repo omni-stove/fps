@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインのモードをシーンで進める Runner の土台。派生クラスは <see cref="CreateSession"/> で <see cref="ModeSession"/> を組み立てるだけでよい。

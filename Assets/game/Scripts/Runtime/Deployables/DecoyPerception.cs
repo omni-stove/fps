@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 囮は SideMember を持たない (持たせるとモードの参加者になる) ので、敵の目標 (陣営やタグで選ぶ相手) には入れず、知覚の Target だけを差し替える。
     // 目標を替えないので、囮が消えると知覚は元の目標 (見えていない) に戻り、EnemyBrain は最後に見た囮の場所を調べに行く。

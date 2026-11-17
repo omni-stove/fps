@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class StatusEffectsTests
     {
         private const string _weaponId = "78afe32d-bf3f-459c-98b8-8c238290913f";

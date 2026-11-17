@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class UxmlWellFormedTests
     {

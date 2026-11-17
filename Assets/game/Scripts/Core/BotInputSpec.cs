@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// Bot の入力変換 (<see cref="BotDriver"/>) の設定。角度は度、距離はメートル、時間は秒。

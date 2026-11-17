@@ -1,12 +1,12 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 何もしない能力。効果が出たらその場で終わる。枠・回数・待ち時間・HUD・ログを確かめるためのもので、
-    /// 射撃場 (<c>Fps.Editor.TpsRangeSceneBuilder</c>) が Ability1 に入れる。
+    /// 射撃場 (<c>Shooter.Editor.TpsRangeSceneBuilder</c>) が Ability1 に入れる。
     /// </summary>
-    [CreateAssetMenu(fileName = "NullAbility", menuName = "Fps/Abilities/Null Ability")]
+    [CreateAssetMenu(fileName = "NullAbility", menuName = "Shooter/Abilities/Null Ability")]
     public sealed class NullAbilityDefinition : AbilityDefinition
     {
         public override IAbility CreateAbility()

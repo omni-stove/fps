@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>倒された人ごとに、倒されてから <see cref="RespawnSeconds"/> 後に戻す。0 秒なら倒されたその場で戻す。</summary>
     public sealed class IndividualRespawn : IRespawnPolicy

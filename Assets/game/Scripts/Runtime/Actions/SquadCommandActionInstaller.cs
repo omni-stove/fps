@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーに <see cref="SquadCommandController"/> を (無ければ) 付けて設定する。

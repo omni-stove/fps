@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拾ったときに何が起きるか (<see cref="PickupJudge.Judge"/> の結果)。拾えたときは、拾う人に反映する量だけを持つ

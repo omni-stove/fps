@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラの状態を人型のリグ (CharacterRigBuilder が作るプレハブ) の Animator に写す。プレイヤー・NetPlayer・敵の本体に付ける。
@@ -22,7 +22,7 @@ namespace Fps.Runtime
     /// <item>毎フレーム (<see cref="Refresh"/>): 状態を <see cref="CharacterPose"/> で Animator のパラメーターにして渡す。
     /// この端末のプレイヤーの一人称 (<see cref="ViewRig"/>) ではリグを影だけにし、自分の体が視界に入らないようにする。</item>
     /// </list>
-    /// 専用サーバーでは自分を止める (<c>Fps.Net.HeadlessPresentation</c> も止める)。
+    /// 専用サーバーでは自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
     /// </summary>
     [DisallowMultipleComponent]
     // 移動・射撃・カバー (Update) と PlayerActionReader (100)・PlayerMockBody (110) の後に、そのフレームの状態を読む。
@@ -252,7 +252,7 @@ namespace Fps.Runtime
             {
                 Debug.LogWarning(
                     $"{LogTag} '{name}': リグのプレハブ (Resources/{RigResourcePath}) がありません。カプセルの見た目のままにします。"
-                    + " unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CharacterRigBuilder.Build で作れます。",
+                    + " unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CharacterRigBuilder.Build で作れます。",
                     this);
                 return false;
             }

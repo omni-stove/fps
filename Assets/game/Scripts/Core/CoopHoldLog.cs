@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>二人で使う物 (<see cref="CoopHold"/>) の <c>[Coop]</c> 付きログの文言。</summary>
     public static class CoopHoldLog

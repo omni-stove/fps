@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// フリーフォーオールの書式役 (<see cref="FreeForAllHudFormatter"/>) が、<see cref="ModeStatus.Detail"/> の自分の順位

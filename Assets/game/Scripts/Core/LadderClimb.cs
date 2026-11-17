@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// はしご 1 本に 1 回つかまっている間の上り下り。足元の高さ (<see cref="Height"/>、下端から) だけを持ち、

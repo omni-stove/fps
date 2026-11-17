@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="HudModel"/> の値を文字列にして Hud.uxml の Label に写す。<see cref="HudModel.Changed"/> が来たときだけ書き換え、

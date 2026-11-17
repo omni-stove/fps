@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class TraversalTuningTests
     {
@@ -26,7 +26,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            // プロジェクトの Resources/FpsKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
+            // プロジェクトの Resources/ShooterKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
             GameContent.Use(Track(ScriptableObject.CreateInstance<GameContent>()));
 
             _body = Track(new GameObject("Body"));
@@ -95,7 +95,7 @@ namespace Fps.Tests.EditMode
         {
             UseTraversalJson("GameTraversal", GameJson);
             var rules = GameRules.Default.WithActions(
-                ActionRules.Default.WithSlide(Slide.On).WithParachute(Parachute.On).WithZipline(Fps.Core.Zipline.On));
+                ActionRules.Default.WithSlide(Slide.On).WithParachute(Parachute.On).WithZipline(Shooter.Core.Zipline.On));
 
             new SlideActionInstaller().Install(_body, rules);
             new ParachuteActionInstaller().Install(_body, rules);

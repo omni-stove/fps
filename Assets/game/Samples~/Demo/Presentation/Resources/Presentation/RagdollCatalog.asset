@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b0834412dad036513317fc41d2421b1, type: 3}
   m_Name: RagdollCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.RagdollCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.RagdollCatalog
   _bones:
   - _bone: Hips
     _shape: 0

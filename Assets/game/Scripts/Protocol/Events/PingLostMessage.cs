@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>敵に付いた印が敵を見失い、最後の位置 (<see cref="Position"/>) に止まった知らせ。</summary>
     public sealed class PingLostMessage : IMessage

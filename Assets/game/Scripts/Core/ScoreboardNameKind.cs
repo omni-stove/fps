@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>スコアボードの名前が誰を指すか。<see cref="ScoreboardName"/> が持ち、UI がこれで言い方を決める。</summary>
     public enum ScoreboardNameKind

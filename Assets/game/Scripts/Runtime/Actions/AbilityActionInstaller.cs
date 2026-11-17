@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーに <see cref="AbilityHost"/> を (無ければ) 付け、<see cref="ActionRules.Abilities"/> で使えるかを決める。

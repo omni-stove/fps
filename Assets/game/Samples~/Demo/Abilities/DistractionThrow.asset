@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 165a47a33aeb88449f6881c42bfeeaf7, type: 3}
   m_Name: DistractionThrow
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DistractionThrowDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DistractionThrowDefinition
   _id: distraction-throw
   _maxCharges: 3
   _rechargeSeconds: 10

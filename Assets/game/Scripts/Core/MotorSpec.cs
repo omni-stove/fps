@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="PlayerMotor"/> の設定。速度は m/s、高さは m、重力は m/s² (正の値で下向きに適用する)。

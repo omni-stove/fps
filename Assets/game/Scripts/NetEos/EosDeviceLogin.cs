@@ -2,7 +2,7 @@ using System;
 using Epic.OnlineServices;
 using Epic.OnlineServices.Connect;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// Connect インターフェースに Device ID でログインし、P2P に使う ProductUserId を得る。
@@ -139,7 +139,7 @@ namespace Fps.NetEos
         {
             if (string.IsNullOrEmpty(text))
             {
-                return "fps";
+                return "shooter";
             }
 
             return text.Length <= maxLength ? text : text.Substring(0, maxLength);

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// スライディング (<see cref="Slide.On"/>) 1 回の、足場に沿った速さの移り変わり。<see cref="TryStart"/> した向きへ

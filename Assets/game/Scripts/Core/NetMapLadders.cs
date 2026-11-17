@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの対戦マップのはしご (<c>server-data/maps/&lt;マップ&gt;.ladders.json</c>)。NavMesh のリンクの両端からは幅・向き・調整値を作れないので、

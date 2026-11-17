@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# C# の書式・スタイル・アナライザを検査する。Unity 非依存のコードは dotnet/Fps.slnx で全規則を、
+# C# の書式・スタイル・アナライザを検査する。Unity 非依存のコードは dotnet/Shooter.slnx で全規則を、
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
@@ -174,7 +174,7 @@ fi
 
 status=0
 out="$( {
-	dotnet format dotnet/Fps.slnx ${verify[@]+"${verify[@]}"} -v q || status=1
+	dotnet format dotnet/Shooter.slnx ${verify[@]+"${verify[@]}"} -v q || status=1
 	dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q || status=1
 	metas="$(meta_problems)"
 	[ -z "$metas" ] || { printf '%s\n' "$metas"; status=1; }

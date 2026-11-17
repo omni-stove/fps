@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 当たり判定 1 つ分の部位。同じ GameObject か親にあるコライダーへの命中を、持ち主の <see cref="Damageable"/> に

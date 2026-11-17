@@ -1,7 +1,7 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
-    /// サーバーが承認済みのクライアントを切る前に送る理由。止まるとき (<c>Fps.Core.DisconnectNotice.ServerStoppedReason</c>) と
+    /// サーバーが承認済みのクライアントを切る前に送る理由。止まるとき (<c>Shooter.Core.DisconnectNotice.ServerStoppedReason</c>) と
     /// 入力が無くて切るとき (<c>IdleKickedReason</c>) に使う。
     /// </summary>
     public sealed class ServerDisconnectingMessage : IMessage

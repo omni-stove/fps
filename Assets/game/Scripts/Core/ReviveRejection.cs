@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ReviveReach.Check"/> が蘇生の要求を受け付けなかった理由。</summary>
     public enum ReviveRejection

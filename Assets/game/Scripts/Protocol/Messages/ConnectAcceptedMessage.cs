@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>サーバーが承認したときに返す、クライアントのプレイヤーとサーバーの時計。</summary>
     /// <remarks>
@@ -29,14 +29,14 @@ namespace Fps.Protocol
         /// <summary>承認した時点のサーバーの tick。</summary>
         public int ServerTick { get; set; }
 
-        /// <summary>サーバーの試合のマップ (シーン名。<see cref="Fps.Core.NetLaunchOptions.IsMapName"/> に通る)。</summary>
+        /// <summary>サーバーの試合のマップ (シーン名。<see cref="Shooter.Core.NetLaunchOptions.IsMapName"/> に通る)。</summary>
         public string Map { get; set; } = "";
 
         /// <summary>試合の最大の体力。スナップショットは今の体力だけを運ぶので、HUD のゲージの満タンをここで知る。</summary>
         public int MaxHealth { get; set; } = 1;
 
         /// <summary>サーバーがプレイヤーを動かす値 (移動・体の寸法・カプセルの移動・伏せ)。</summary>
-        public Fps.Core.NetMotorSettings Motor { get; set; } = Fps.Core.NetMotorSettings.Default;
+        public Shooter.Core.NetMotorSettings Motor { get; set; } = Shooter.Core.NetMotorSettings.Default;
 
         /// <summary>この高さより下に落ちたら出現地点へ戻す (サーバーの移動と同じ値)。</summary>
         public float KillPlaneY { get; set; } = DefaultKillPlaneY;
@@ -45,15 +45,15 @@ namespace Fps.Protocol
         /// サーバーが爆発で吹き飛ばす値 (<c>knockback.json</c>)。移動の値と同じく、クライアントが自分の既定で予測すると
         /// サーバーだけ変えたときに飛んでいる間ずっとずれるので、ここで受け取る。
         /// </summary>
-        public Fps.Core.KnockbackSpec Knockback { get; set; } = Fps.Core.KnockbackSpec.Default;
+        public Shooter.Core.KnockbackSpec Knockback { get; set; } = Shooter.Core.KnockbackSpec.Default;
 
         public void Write(MessageWriter writer)
         {
             writer.WriteInt32(PlayerId);
-            writer.WriteString(ServerVersion, Fps.Core.BuildVersion.MaxLength);
+            writer.WriteString(ServerVersion, Shooter.Core.BuildVersion.MaxLength);
             writer.WriteInt32(TickRate);
             writer.WriteInt32(ServerTick);
-            writer.WriteString(Map, Fps.Core.NetLaunchOptions.MaxMapNameLength);
+            writer.WriteString(Map, Shooter.Core.NetLaunchOptions.MaxMapNameLength);
             writer.WriteInt32(MaxHealth);
             WriteMotor(writer, Motor ?? throw new System.InvalidOperationException("motor settings must be set"));
             writer.WriteSingle(KillPlaneY);
@@ -63,11 +63,11 @@ namespace Fps.Protocol
         public void Read(MessageReader reader)
         {
             PlayerId = reader.ReadInt32AtLeast(0, "player id");
-            ServerVersion = reader.ReadString(Fps.Core.BuildVersion.MaxLength, ServerVersion);
+            ServerVersion = reader.ReadString(Shooter.Core.BuildVersion.MaxLength, ServerVersion);
             TickRate = reader.ReadInt32AtLeast(1, "tick rate");
             ServerTick = reader.ReadInt32AtLeast(0, "server tick");
-            Map = reader.ReadString(Fps.Core.NetLaunchOptions.MaxMapNameLength, Map);
-            if (!Fps.Core.NetLaunchOptions.IsMapName(Map))
+            Map = reader.ReadString(Shooter.Core.NetLaunchOptions.MaxMapNameLength, Map);
+            if (!Shooter.Core.NetLaunchOptions.IsMapName(Map))
             {
                 throw new MessageReadException("map '" + Map + "' is not a scene name");
             }
@@ -78,7 +78,7 @@ namespace Fps.Protocol
             Knockback = ReadKnockback(reader);
         }
 
-        private static void WriteKnockback(MessageWriter writer, Fps.Core.KnockbackSpec spec)
+        private static void WriteKnockback(MessageWriter writer, Shooter.Core.KnockbackSpec spec)
         {
             WriteForce(writer, spec.Explosion);
             WriteForce(writer, spec.Melee);
@@ -94,14 +94,14 @@ namespace Fps.Protocol
             writer.WriteSingle(spec.EnemyWeight);
         }
 
-        private static void WriteForce(MessageWriter writer, Fps.Core.KnockbackForce force)
+        private static void WriteForce(MessageWriter writer, Shooter.Core.KnockbackForce force)
         {
             writer.WriteSingle(force.Speed);
             writer.WriteSingle(force.UpwardRatio);
             writer.WriteSingle(force.WeightFactor);
         }
 
-        private static Fps.Core.KnockbackSpec ReadKnockback(MessageReader reader)
+        private static Shooter.Core.KnockbackSpec ReadKnockback(MessageReader reader)
         {
             var values = new float[18];
             for (var i = 0; i < values.Length; i++)
@@ -111,10 +111,10 @@ namespace Fps.Protocol
 
             try
             {
-                return new Fps.Core.KnockbackSpec(
-                    new Fps.Core.KnockbackForce(values[0], values[1], values[2]),
-                    new Fps.Core.KnockbackForce(values[3], values[4], values[5]),
-                    new Fps.Core.KnockbackForce(values[6], values[7], values[8]),
+                return new Shooter.Core.KnockbackSpec(
+                    new Shooter.Core.KnockbackForce(values[0], values[1], values[2]),
+                    new Shooter.Core.KnockbackForce(values[3], values[4], values[5]),
+                    new Shooter.Core.KnockbackForce(values[6], values[7], values[8]),
                     values[9], values[10], values[11], values[12], values[13], values[14], values[15], values[16], values[17]);
             }
             catch (System.ArgumentException e)
@@ -123,7 +123,7 @@ namespace Fps.Protocol
             }
         }
 
-        private static void WriteMotor(MessageWriter writer, Fps.Core.NetMotorSettings settings)
+        private static void WriteMotor(MessageWriter writer, Shooter.Core.NetMotorSettings settings)
         {
             var motor = settings.Motor;
             writer.WriteSingle(motor.WalkSpeed);
@@ -188,7 +188,7 @@ namespace Fps.Protocol
             writer.WriteSingle(prone.DiveSeconds);
         }
 
-        private static void WriteDirection(MessageWriter writer, Fps.Core.MoveDirectionScale direction)
+        private static void WriteDirection(MessageWriter writer, Shooter.Core.MoveDirectionScale direction)
         {
             writer.WriteSingle(direction.Forward);
             writer.WriteSingle(direction.Backward);
@@ -196,7 +196,7 @@ namespace Fps.Protocol
         }
 
         // 範囲の検査は Core の型の作り方に任せ、通らない値は読めないメッセージとして断る
-        private static Fps.Core.NetMotorSettings ReadMotor(MessageReader reader)
+        private static Shooter.Core.NetMotorSettings ReadMotor(MessageReader reader)
         {
             var motor = new float[29];
             for (var i = 0; i < motor.Length; i++)
@@ -210,12 +210,12 @@ namespace Fps.Protocol
                 direction[i] = reader.ReadFiniteSingle("move direction scale");
             }
 
-            var weightSource = (Fps.Core.CarrySource)reader.ReadByte();
-            var multiplierSource = (Fps.Core.CarrySource)reader.ReadByte();
+            var weightSource = (Shooter.Core.CarrySource)reader.ReadByte();
+            var multiplierSource = (Shooter.Core.CarrySource)reader.ReadByte();
             var freeWeight = reader.ReadFiniteSingle("carry free weight");
             var speedLossPerKg = reader.ReadFiniteSingle("carry speed loss per kg");
             var minWeightMultiplier = reader.ReadFiniteSingle("carry min weight multiplier");
-            var gaits = (Fps.Core.CarryGaits)reader.ReadByte();
+            var gaits = (Shooter.Core.CarryGaits)reader.ReadByte();
 
             var stance = new float[6];
             for (var i = 0; i < stance.Length; i++)
@@ -235,17 +235,17 @@ namespace Fps.Protocol
 
             try
             {
-                return new Fps.Core.NetMotorSettings(
-                    new Fps.Core.MotorSpec(
+                return new Shooter.Core.NetMotorSettings(
+                    new Shooter.Core.MotorSpec(
                         motor[0], motor[1], motor[2], motor[3], motor[4], motor[5], motor[6], motor[7], motor[8], motor[9], motor[10], motor[11], motor[12],
-                        new Fps.Core.MoveDirectionScale(direction[0], direction[1], direction[2]),
-                        new Fps.Core.MoveDirectionScale(direction[3], direction[4], direction[5]),
-                        new Fps.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
+                        new Shooter.Core.MoveDirectionScale(direction[0], direction[1], direction[2]),
+                        new Shooter.Core.MoveDirectionScale(direction[3], direction[4], direction[5]),
+                        new Shooter.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
                         motor[13], motor[14], motor[15], motor[16], motor[17], motor[18],
                         motor[19], motor[20], motor[21], motor[22], motor[23], motor[24], motor[25], motor[26], motor[27], motor[28]),
-                    new Fps.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
-                    new Fps.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
-                    new Fps.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));
+                    new Shooter.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
+                    new Shooter.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
+                    new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));
             }
             catch (System.ArgumentException e)
             {

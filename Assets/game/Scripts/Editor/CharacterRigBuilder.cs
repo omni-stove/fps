@@ -1,36 +1,36 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// プリミティブで胴・頭・腕・脚を組んだ人型のリグを作るか上書きする。
     /// <list type="bullet">
     /// <item><see cref="PrefabPath"/>: 関節 (空の GameObject) とその子の見た目 (MeshFilter と MeshRenderer) を組み、根に Animator を付けたプレハブ。
-    /// <see cref="Fps.Runtime.CharacterAnimator"/> が Resources から読み、プレイヤーと敵の子に置く。
+    /// <see cref="Shooter.Runtime.CharacterAnimator"/> が Resources から読み、プレイヤーと敵の子に置く。
     /// 見た目だけのリグなので、コライダーは付けない (当たり判定は今までどおり Hitbox が持つ)。</item>
     /// <item><see cref="ClipFolder"/>: <see cref="CharacterRigClips"/> の姿勢ごとの AnimationClip。関節の回転と腰の位置をコードでキーにする。</item>
     /// <item><see cref="ControllerPath"/>: クリップを <see cref="CharacterPose"/> のパラメーターと怯みの <see cref="StaggerParameter"/> でつなぐ AnimatorController。</item>
     /// </list>
     /// 既存のアセットは GUID と中のオブジェクトを保って中身だけ書き換えるので、何度実行しても同じ結果になり、git diff が出ない。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CharacterRigBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CharacterRigBuilder.Build</code>
     /// </summary>
     public static class CharacterRigBuilder
     {
-        public static string Folder => FpsKitRoot.BundledPath("Characters");
+        public static string Folder => ShooterKitRoot.BundledPath("Characters");
         // CharacterAnimator が実行時に Resources.Load で読むので、プレハブだけ Resources の下に置く。
-        public static string PrefabPath => Folder + "/Resources/" + Fps.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
+        public static string PrefabPath => Folder + "/Resources/" + Shooter.Runtime.CharacterAnimator.RigResourcePath + ".prefab";
         public static string ControllerPath => Folder + "/CharacterRig.controller";
         public static string ClipFolder => Folder + "/Clips";
 
-        public const string MenuPath = "Fps/Build Character Rig";
+        public const string MenuPath = "Shooter/Build Character Rig";
         public const string LogTag = "[CharacterRigBuilder]";
 
         public const string BaseLayerName = "Base Layer";
@@ -60,8 +60,8 @@ namespace Fps.Editor
         public const string StumbleState = "Stumble";
         public const string BlastState = "Blast";
 
-        /// <summary>怯みの種類 (<see cref="StaggerKind"/> の int) を受け取る int のパラメーター。<see cref="Fps.Runtime.StaggerReaction"/> が書く。</summary>
-        public const string StaggerParameter = Fps.Runtime.StaggerReaction.AnimatorParameter;
+        /// <summary>怯みの種類 (<see cref="StaggerKind"/> の int) を受け取る int のパラメーター。<see cref="Shooter.Runtime.StaggerReaction"/> が書く。</summary>
+        public const string StaggerParameter = Shooter.Runtime.StaggerReaction.AnimatorParameter;
 
         /// <summary>ふつうの姿勢の間を移る秒数。</summary>
         public const float PoseTransitionSeconds = 0.15f;

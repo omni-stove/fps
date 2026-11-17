@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="CoverState"/> の中身 1 回分 (<see cref="CoverState.Capture"/> で写し、<see cref="CoverState.Restore"/> で戻す)。

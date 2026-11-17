@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroyRunner"/>) の爆弾の見た目。持たれている間は持ち主の背中に付いて動き (<see cref="ShowCarried"/>)、

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦の飛ぶ弾の見た目。オフラインと同じ <see cref="ProjectileBody"/> を見た目だけで出し、見た目と音は武器の定義

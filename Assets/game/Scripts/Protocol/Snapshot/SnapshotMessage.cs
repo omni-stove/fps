@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// サーバーが毎 tick クライアントごとに送る試合の状態。Netcode の NetworkVariable・NetworkList と、毎 tick の <c>StateRpc</c>、

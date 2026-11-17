@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 体力が 0 になったプレイヤーをすぐ倒すか、ダウンさせて蘇生を待つか。

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 座席の向きの範囲の外では撃たせない。照準の向きは入力ではなく武器の照準 (カメラ) から読む。撃つ弾はその向きへ飛ぶため。
     public sealed class OwnWeaponSeatModifier : IWeaponModifier

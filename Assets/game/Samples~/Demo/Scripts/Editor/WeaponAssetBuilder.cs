@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器のアセットを作るか上書きする。<see cref="JsonFolder"/> に置いた武器の JSON をすべて同じ名前の <see cref="WeaponDefinition"/> にし
@@ -18,11 +18,11 @@ namespace Fps.Editor
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.WeaponAssetBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WeaponAssetBuilder.Build</code>
     /// </summary>
     public static class WeaponAssetBuilder
     {
-        /// <summary>武器のアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
+        /// <summary>武器のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => WeaponAssets.Folder;
 
         public static string RiflePath => Folder + "/Rifle.asset";
@@ -50,7 +50,7 @@ namespace Fps.Editor
 
         public static string RealisticWeaponsPath => Folder + "/RealisticWeapons.asset";
 
-        public const string MenuPath = "Fps/Build Weapon Assets";
+        public const string MenuPath = "Shooter/Build Weapon Assets";
         public const string LogTag = "[WeaponAssetBuilder]";
 
         // 再ビルドしても Id が変わらないよう固定する。サーバーとクライアントはこの Id で武器を突き合わせる

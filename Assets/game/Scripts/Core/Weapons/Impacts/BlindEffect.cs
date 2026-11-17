@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 見通せるかは世界の当たりを持つ側 (Unity の Flash・サーバーの ServerFlash) が調べ、ここは見えている前提で長さだけを決める。
     public static class BlindEffect

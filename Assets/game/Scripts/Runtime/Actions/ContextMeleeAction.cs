@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 近接の入力 (MeleeController) で、相手と自分の状態に合う技 (ContextMeleeSelector) があればふつうの近接の代わりに出す。
     // 技は「位置を合わせる → 双方の操作を止めたまま演出の秒数を待つ → 結果を出す」の順に進め、演出は IContextMeleePresenter に任せる。

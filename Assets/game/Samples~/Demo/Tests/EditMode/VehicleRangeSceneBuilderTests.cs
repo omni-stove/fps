@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class VehicleRangeSceneBuilderTests
     {
@@ -69,7 +69,7 @@ namespace Fps.Tests.EditMode
             Assert.That(BuildSceneList.VehicleRangeScene, Is.EqualTo(DemoSample.Root + "/Scenes/VehicleRange.unity"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.VehicleRangeScene));
             Assert.That(VehicleRangeSceneBuilder.NavMeshDataPath, Is.EqualTo(ModeSceneBuilder.NavMeshDataPathFor(BuildSceneList.VehicleRangeScene)));
-            Assert.That(VehicleRangeSceneBuilder.MenuPath, Is.EqualTo("Fps/Build Vehicle Range Scene"));
+            Assert.That(VehicleRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Vehicle Range Scene"));
         }
 
         [Test]

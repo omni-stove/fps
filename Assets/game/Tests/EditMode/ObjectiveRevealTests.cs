@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>Edit Mode では Start/Update が走らないので、それらが呼ぶ Bind と Refresh を直接呼んで確かめる。</summary>
     public sealed class ObjectiveRevealTests

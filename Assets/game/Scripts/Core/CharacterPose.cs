@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャラクターの状態 (<see cref="CharacterPoseInput"/>) から、人型のリグの Animator に渡すパラメーター

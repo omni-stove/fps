@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// シーンの遮蔽点 (<see cref="CoverPoint"/>) をまとめ、敵 (<see cref="EnemyAgent"/>) が共有する <see cref="CoverPointSelector"/> を 1 つ持つ。
@@ -149,7 +149,7 @@ namespace Fps.Runtime
             _markers.Clear();
             _peekPositions.Clear();
 
-            var points = new List<Fps.Core.CoverPoint>(_points.Length);
+            var points = new List<Shooter.Core.CoverPoint>(_points.Length);
             foreach (var marker in _points)
             {
                 if (marker == null)

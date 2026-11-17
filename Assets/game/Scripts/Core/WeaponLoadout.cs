@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オフラインのプレイヤーが持つ <see cref="Weapon"/> の <see cref="Loadout{T}"/> を作り、武器の Id で引く。

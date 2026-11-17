@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーの能力の枠 (<see cref="SlotCount"/> 個。0 番を Ability1、1 番を Ability2 の入力で使う)。

@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // Vehicle に動き方を持たせず別の部品にするのは、固定銃座のように動き方の無い乗り物が、この部品を付けないだけで済むようにするため。
     [DisallowMultipleComponent]

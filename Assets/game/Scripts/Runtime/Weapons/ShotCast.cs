@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public static partial class ShotCast
     {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 専用サーバーのビルド設定。コマンドライン引数 <c>-serverPlatform macos|linux</c> から作り、
@@ -14,7 +14,7 @@ namespace Fps.Core
         /// <summary>ビルドの出力をまとめるディレクトリ (プロジェクトのルートからの相対パス、gitignore 済み)。</summary>
         public const string OutputRoot = "Builds";
 
-        public const string ExecutableName = "fps-server";
+        public const string ExecutableName = "shooter-server";
 
         public ServerPlatform Platform { get; }
 

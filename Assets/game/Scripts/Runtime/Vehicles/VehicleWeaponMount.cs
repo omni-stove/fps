@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃つのはプレイヤーと同じ撃ち方 (TriggerDriver・Weapon) と弾の届け方 (ShotDeliveries) で、撃った者は座っている人にする。
     // 減衰・部位・置いた物での止まり方・味方撃ち・倒したときの帰属がプレイヤーの射撃と同じ規則を通るように。

@@ -1,20 +1,20 @@
 using System;
 using System.IO;
 using System.Linq;
-using Fps.Core;
-using Fps.Core.Navigation;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Core.Navigation;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 using NumericsVector3 = System.Numerics.Vector3;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class NavMeshExporterTests
     {
@@ -59,7 +59,7 @@ namespace Fps.Tests.EditMode
             _walkLink.area = 2;
 
             SceneBuildHelpers.BakeNavMesh(surface);
-            _temp = Path.Combine(Path.GetTempPath(), "fps-navmesh-exporter-" + Guid.NewGuid().ToString("N"));
+            _temp = Path.Combine(Path.GetTempPath(), "shooter-navmesh-exporter-" + Guid.NewGuid().ToString("N"));
         }
 
         [TearDown]

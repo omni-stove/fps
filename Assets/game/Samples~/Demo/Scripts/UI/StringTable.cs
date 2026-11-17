@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 1 つの言語の、キーから画面に出す文字列への表。JSON (<c>{"settings.title": "設定", ...}</c>) から <see cref="TryParse"/> で作る。

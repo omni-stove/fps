@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "CameraShakeSettings", menuName = "Fps/Camera Shake Settings")]
+    [CreateAssetMenu(fileName = "CameraShakeSettings", menuName = "Shooter/Camera Shake Settings")]
     public sealed class CameraShakeSettings : ScriptableObject
     {
         public const string ResourcePath = PresentationCatalog.ResourceFolder + "/CameraShakeSettings";

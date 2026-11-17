@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// キャンペーンの 2 本目のミッション Campaign02 の配置。<see cref="CampaignSceneBuilder"/> が <see cref="Spec"/> からシーンと定義を作る。
@@ -30,10 +30,10 @@ namespace Fps.Editor
         public const string MissionId = "Campaign02";
         public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
         public static string ScenePath => BuildSceneList.Campaign02Scene;
-        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
+        public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MissionId + "/" + CampaignSceneBuilder.NavMeshDataFileName);
+        public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MissionId + "/" + CampaignSceneBuilder.NavMeshDataFileName);
 
         public const string EnterBuildingId = "enter_building";
         public const string UseTerminalId = "use_terminal";

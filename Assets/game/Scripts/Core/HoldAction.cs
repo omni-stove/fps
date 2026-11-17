@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="HoldMode"/> を選べる操作。<see cref="ControlSettings"/> が操作ごとにモードを持つ。

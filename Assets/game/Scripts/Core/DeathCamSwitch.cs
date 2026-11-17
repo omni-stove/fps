@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// デスカムを映すかの判断。毎フレーム <see cref="Update"/> に今の状態を渡す。

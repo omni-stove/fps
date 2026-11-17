@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>検索で見つかった専用サーバーのロビーから、つなぐものを選ぶ。</summary>
     public static class LobbySelector

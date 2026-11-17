@@ -1,12 +1,12 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class ControlSettingsStoreTests
     {
@@ -16,7 +16,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             // 本物の設定 (DefaultKey) を壊さないよう、テストごとに別のキーを使う。
-            _store = new ControlSettingsStore("Fps.Tests.ControlSettings." + Guid.NewGuid().ToString("N"));
+            _store = new ControlSettingsStore("Shooter.Tests.ControlSettings." + Guid.NewGuid().ToString("N"));
         }
 
         [TearDown]

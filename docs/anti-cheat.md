@@ -1,23 +1,23 @@
 # Easy Anti-Cheat (EAC)
 
-.NET の専用サーバー (`dotnet/Fps.Server`) が EOS の **Anti-Cheat Server インターフェース**、ゲームのクライアントが
+.NET の専用サーバー (`dotnet/Shooter.Server`) が EOS の **Anti-Cheat Server インターフェース**、ゲームのクライアントが
 Anti-Cheat Client の **ClientServer モード** を使う。ポータルでの設定と配布物の用意は人が行う。
 
 ## 仕組み
 
-- コード: サーバーは `dotnet/Fps.Server/ServerAntiCheat.cs` (Hello・登録・中継・切断) と
-  `dotnet/Fps.Server.Eos/EosAntiCheatServerBackend.cs` (SDK の呼び出し。EOS の C# SDK を置いたビルドだけに入る)。
+- コード: サーバーは `dotnet/Shooter.Server/ServerAntiCheat.cs` (Hello・登録・中継・切断) と
+  `dotnet/Shooter.Server.Eos/EosAntiCheatServerBackend.cs` (SDK の呼び出し。EOS の C# SDK を置いたビルドだけに入る)。
   クライアントは `Assets/game/Scripts/NetV2/Client/ClientAntiCheat.cs` (Hello と中継)、`Assets/game/Scripts/NetV2/NetV2AntiCheat.cs`
   (SDK の側を差し込む口)、`Assets/game/Scripts/NetEos/EosAntiCheatClientSession.cs` (PlayEveryWare のプラグインの SDK の呼び出し)。
   有効・無効の判定とパケットの形は `Assets/game/Scripts/Core/AntiCheat*.cs`。
-- EAC のパケットは `Fps.Protocol` の `AntiCheatToServerMessage` / `AntiCheatToClientMessage` に `AntiCheatPacket` をそのまま載せ、
+- EAC のパケットは `Shooter.Protocol` の `AntiCheatToServerMessage` / `AntiCheatToClientMessage` に `AntiCheatPacket` をそのまま載せ、
   試合のメッセージと同じ通信路の確実な届け方で送る。サーバーが承認した直後から送り合う。
 - 承認の直後に互いの EAC の有効・無効を Hello で伝える。片方だけ有効なら切断する (`-noeac` の相手と守られた相手を同じ試合に入れない)。
-  Hello が 15 秒来なければ切断する。サーバーが切るときはクライアントへ `fps:rejected:anti-cheat` を送り、クライアントは
+  Hello が 15 秒来なければ切断する。サーバーが切るときはクライアントへ `shooter:rejected:anti-cheat` を送り、クライアントは
   「サーバーに断られました」の文でメニューへ戻る。クライアントが先に食い違いに気付いたときも、自分の Hello がサーバーへ届くよう
   1 秒待ってから同じ文で抜ける。
 - サーバーはクライアントを ProductUserId で EAC に登録するので、相手の ID を確かめられる EOS の transport (`-transport eos`) が要る。
-  transport は `Fps.Protocol.IConnectionUserIds` を実装して ID を渡す。
+  transport は `Shooter.Protocol.IConnectionUserIds` を実装して ID を渡す。
 
 ## 有効・無効の決まり方
 
@@ -81,7 +81,7 @@ Anti-Cheat Client の **ClientServer モード** を使う。ポータルでの�
 サーバーとクライアントは別の PC か別の OS ユーザーで動かす (EOS の Device ID が端末・ユーザーごとに 1 つなので)。
 
 1. EOS の認証情報を `eos.local.json` か環境変数で渡し、`make eos-sdk` で SDK を置いてから `make server-dotnet ARGS="-transport eos -eac"`
-   (または `-transport eos -eac` を付けて `dotnet/Fps.Server` かサーバーのイメージを起動) する。ログに次が出る。
+   (または `-transport eos -eac` を付けて `dotnet/Shooter.Server` かサーバーのイメージを起動) する。ログに次が出る。
    - `[AntiCheat] enabled (client-server, dedicated server)`
    - `[AntiCheat] session started (client-server)`
    - `[Net] EOS server ready id=<サーバーの ID> ...`
@@ -102,5 +102,5 @@ Anti-Cheat Client の **ClientServer モード** を使う。ポータルでの�
    `[AntiCheat] anti-cheat BeginSession failed: ...; launch the game through the EAC bootstrapper ...` が出て終わる
    (batchmode では終了コード 6)。
 
-EOS の認証情報も SDK も無い手元では、両側の SDK を差し替えたテスト (`dotnet/Fps.NetV2.Client.Tests/AntiCheatConnectionTests.cs`) が
+EOS の認証情報も SDK も無い手元では、両側の SDK を差し替えたテスト (`dotnet/Shooter.NetV2.Client.Tests/AntiCheatConnectionTests.cs`) が
 UDP の上で同じ Hello・中継・切断を確かめる。

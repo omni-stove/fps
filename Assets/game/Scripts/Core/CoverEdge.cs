@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>壁沿いにあと <see cref="CoverProbe.EdgeProbeDistance"/> 動くと壁が途切れる側。左右は壁に向いたときの左右。</summary>
     [Flags]

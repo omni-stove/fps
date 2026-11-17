@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 弾が当たった部位。部位ごとのダメージ倍率は <see cref="DamageCalculator"/> が持つ。

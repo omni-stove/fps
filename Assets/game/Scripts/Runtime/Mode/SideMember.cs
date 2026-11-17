@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// GameObject に陣営 (<see cref="Fps.Core.Side"/>) を持たせる。プレイヤーと <see cref="EnemyAgent"/> に付ける。
+    /// GameObject に陣営 (<see cref="Shooter.Core.Side"/>) を持たせる。プレイヤーと <see cref="EnemyAgent"/> に付ける。
     /// <see cref="ModeRunnerBase"/> はこれの付いたものをモードの参加者にし、<see cref="EnemyAgent"/> はこれがあれば
     /// 自分と違う陣営のいちばん近い相手を狙う。体力は同じ GameObject の <see cref="Damageable"/> を使う。
     /// </summary>

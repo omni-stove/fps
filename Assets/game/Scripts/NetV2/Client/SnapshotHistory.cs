@@ -1,7 +1,7 @@
 using System;
-using Fps.Protocol;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 組み立て終えたスナップショットを tick ごとに取っておき、次に届く差分の基準にする。

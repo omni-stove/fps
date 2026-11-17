@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// HUD に出す数の判断 (表示する秒数・得点・蘇生の百分率、体力が少ないか、相手のチーム)。画面・ログ・通信で同じ数に揃えるため Core に置く。

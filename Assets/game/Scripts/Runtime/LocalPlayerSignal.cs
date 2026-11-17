@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// この画面で操作しているプレイヤーの部品。<see cref="GameSignals.LocalPlayer"/> で UI に渡し、UI は照準・ADS・体力などをここから読む。

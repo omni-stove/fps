@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Core.Navigation;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Core.Navigation;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 書き出した .fpsnav で Core が引く経路が、元のシーンで Unity が引く経路と食い違わないかを、ゲームごとのテストから確かめる。
     public static class NavMeshParity

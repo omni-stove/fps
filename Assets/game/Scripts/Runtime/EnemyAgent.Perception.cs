@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public sealed partial class EnemyAgent
     {

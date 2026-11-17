@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 乗り物の段階 (Vehicle.DamageStageChanged) を見るだけの部品に分けたのは、ゲームが演出を丸ごと別の部品に替えられるようにするため。
     [DisallowMultipleComponent]

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SquadOrderRecipients.Select"/> に渡す、指示を受けられるかもしれない bot 1 人。</summary>
     public readonly struct SquadOrderCandidate

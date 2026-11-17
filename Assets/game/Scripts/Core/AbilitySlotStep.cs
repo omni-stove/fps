@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="AbilitySlot.Tick"/> の 1 回で起きたこと。</summary>
     [Flags]

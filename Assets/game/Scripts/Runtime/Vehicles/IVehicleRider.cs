@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 乗り物に乗れる者 (プレイヤー・敵・Bot)。<see cref="Vehicle"/> が座席を決め、乗った・移った・降りたことをここへ知らせる。

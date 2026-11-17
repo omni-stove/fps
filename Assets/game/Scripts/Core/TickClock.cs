@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 固定 tick クロック。可変のフレーム時間を受け取り、固定間隔の tick に変換する。

@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class WaveStrengthTests
     {
         // 視認 20m、攻撃 12m、見失って 2 秒、Search 6 秒、反応 1 秒、散らばり 5 度から 3 発で 1 度へ。

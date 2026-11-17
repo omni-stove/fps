@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーが接続の承認データ (<see cref="ConnectionPayload"/>) を見て、クライアントを入れるか決める。

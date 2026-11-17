@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     public sealed class AreaEffectMessage : IMessage
     {

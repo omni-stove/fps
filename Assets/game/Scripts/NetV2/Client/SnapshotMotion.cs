@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 通信の形 (<see cref="PlayerSnapshot"/>・<see cref="InputFrame"/>) と Core の移動 (<see cref="CharacterMotorState"/>・

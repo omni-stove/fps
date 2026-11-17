@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
+using Shooter.Core;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="FreeForAllSceneBuilder"/> の配置を確かめる。シーンを組んで NavMesh を焼く処理は開いているシーンを置き換えるので、
-    /// <c>-executeMethod Fps.Editor.FreeForAllSceneBuilder.Build</c> で確かめる。
+    /// <c>-executeMethod Shooter.Editor.FreeForAllSceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class FreeForAllSceneBuilderTests
     {

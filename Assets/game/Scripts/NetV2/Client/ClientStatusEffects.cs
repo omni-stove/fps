@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Protocol;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// サーバーから届いた状態異常 (<see cref="StatusEffectMessage"/>) を相手と種類ごとに持ち、残りを数え下ろす。

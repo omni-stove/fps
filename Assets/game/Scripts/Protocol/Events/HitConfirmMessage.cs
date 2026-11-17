@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>撃った人にだけ送る、自分の弾が当たった知らせ (ヒットマーカー)。</summary>
     public sealed class HitConfirmMessage : IMessage

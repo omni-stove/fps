@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーで、誰が誰を起こそうと押し続けているかを持つ。クライアントは押している間 tick ごとに要求を送り、

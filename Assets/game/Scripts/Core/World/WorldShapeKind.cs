@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 値は .fpsmap にそのまま書くので、変えると読めなくなる
     public enum WorldShapeKind : byte

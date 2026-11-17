@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// ホード (<see cref="Fps.Core.Horde"/>) をシーンで進める <see cref="ModeRunnerBase"/>。プレイヤーと味方の bot (<see cref="PlayerSide"/>) が、
+    /// ホード (<see cref="Shooter.Core.Horde"/>) をシーンで進める <see cref="ModeRunnerBase"/>。プレイヤーと味方の bot (<see cref="PlayerSide"/>) が、
     /// <see cref="WaveSpawner"/> の出す波の敵 (<see cref="EnemySide"/>) を耐える。波の敵はモードの参加者にしない。
     /// </summary>
     /// <remarks>
@@ -300,7 +300,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 波の敵を 1 体倒したことをホードに伝え、入った通貨を返す (<see cref="Fps.Core.Horde.ReportEnemyKilled"/>)。
+        /// 波の敵を 1 体倒したことをホードに伝え、入った通貨を返す (<see cref="Shooter.Core.Horde.ReportEnemyKilled"/>)。
         /// Spawner の敵が倒されたときに呼ばれる。Spawner を使わないテストでは、予定に倒したことを伝えた後に呼ぶ。
         /// </summary>
         public int RewardEnemyKill()

@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime.Traversal
+namespace Shooter.Runtime.Traversal
 {
     public sealed class ZiplineActionInstaller : IPlayerActionInstaller
     {

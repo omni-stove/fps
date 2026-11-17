@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     // 出すかどうかを武器の値で決めるのは、溜めも熱も無い武器にも WeaponSync は 0 を運ぶので、値だけでは空のゲージが出てしまうため。
     public static class ClientWeaponGauges

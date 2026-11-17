@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 敵味方と注意を引く印に使う色の組 (<see cref="TeamPalette"/>) の種類。設定 (<see cref="ControlSettings.Palette"/>) で選ぶ。

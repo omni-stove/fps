@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     public static class AmmoModels
     {

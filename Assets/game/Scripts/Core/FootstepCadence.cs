@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャラ 1 体の足音と着地音をいつ・どの大きさで鳴らすかを決める。毎フレーム、そのフレームに動いた距離と接地・しゃがみ・ダッシュの

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 最後に選んだロードアウト (スロット順の武器の Id) を保存する文字列にする・戻す。

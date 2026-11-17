@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PingScreen.Place"/> の結果。印を画面のどこに、どの向きで出すか。</summary>
     public readonly struct PingScreenPlacement

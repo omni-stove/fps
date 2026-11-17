@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// HUD に出す値と照準の状態を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、

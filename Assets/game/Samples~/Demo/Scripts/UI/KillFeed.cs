@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルフィードに出している行の待ち行列。古い順に並び、<see cref="Capacity"/> 行を超えたら一番古い行から消え、

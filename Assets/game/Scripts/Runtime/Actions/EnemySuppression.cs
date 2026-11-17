@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // EnemyBrain の判断そのものは変えず、知覚 (IPerceptionContributor) と振る舞い (IEnemyBehavior) の差し込み口から効かせる。
     // ルールが Off の敵は判断を何も変えないことを、差し込まないことで保つ。

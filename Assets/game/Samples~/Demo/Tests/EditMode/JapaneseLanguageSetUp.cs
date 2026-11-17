@@ -1,7 +1,7 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// この名前空間のテストの間、今の言語 (<see cref="Localizer.Language"/>) を日本語にし、終わったら前の言語に戻す。

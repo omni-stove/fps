@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 分隊への指示 (SquadCommand) の調整値。長押しとみなす秒数、照準の先を探す距離と敵に吸い付く角度、

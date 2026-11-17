@@ -6,106 +6,106 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Bootstrap.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Bootstrap.unity
     guid: bf68c1de5df3446cfaa1313d0b731725
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/EnemyAiTest.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/EnemyAiTest.unity
     guid: 3de659f36b26e464eb457e4d427b3fb7
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/MissionTest.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/MissionTest.unity
     guid: 01a4e79d58ccc463baf8618da652431f
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Campaign01.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Campaign01.unity
     guid: 0332ae92e305548bebee37df147503f2
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/NetTest.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/NetTest.unity
     guid: 3438060f06ee74b0891303855b050a30
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Campaign02.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Campaign02.unity
     guid: b5af0ea1f365646af8cd060f964b6f95
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/TpsRange.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/TpsRange.unity
     guid: b63eb41af2da545d9816c91a161ab603
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/NetArena01.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/NetArena01.unity
     guid: d4f86b6dccbf84e3d8270388af445537
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_InfiniteReserve.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_InfiniteReserve.unity
     guid: 7879f0afe4b194869acca8953a956fe5
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Destruction.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Destruction.unity
     guid: 8da4549f2b32e41f1b8e546ac7e5af5a
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Downed.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Downed.unity
     guid: 8c37a1142cbd24c7cac3971ce98e82a4
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Cover.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Cover.unity
     guid: 345ced395425449209cf34e561a16342
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_BlindFire.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_BlindFire.unity
     guid: 0eb5e1d5a83a64f639dec5ac9fcb5fa7
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_ActiveReload.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_ActiveReload.unity
     guid: 5c1f25d8fc2984315ad0e34d3fd83d17
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Dodge.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Dodge.unity
     guid: 86fc69d2f75cd48fb9f1e2c86beb36b8
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Vault.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Vault.unity
     guid: e6f8d5c860d1c449394ddbc8d4377c4a
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Grenade.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Grenade.unity
     guid: 29576b34ed1a24c3f90a97b16f2c2846
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Melee.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Melee.unity
     guid: 337c73f8a035b4ca4804599e8168b836
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Stagger.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Stagger.unity
     guid: d7c56516c5df64b66851075d53b1c8bb
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Slide.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Slide.unity
     guid: c52d85adb9fab4601a66501db85c2d4e
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Mantle.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Mantle.unity
     guid: da438c695fd344562a00c1ec1c28cf3a
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Prone.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Prone.unity
     guid: 88f85651adeb4484babba66db27f6bce
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Ladder.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Ladder.unity
     guid: 98cc59cabf15a43aebc732ed492aa335
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Zipline.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Zipline.unity
     guid: 71d10640d2bd94d5ea58455a5add05c4
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Parachute.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Parachute.unity
     guid: 86df7fa8d7b9749c092bd27b2a5c9be9
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Stealth.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Stealth.unity
     guid: 73f0c9bbae4a94dc6b0b88033246d09b
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Suppression.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Suppression.unity
     guid: 016abe54ee3ff4db38648c1cfe040bed
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Ping.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Ping.unity
     guid: 71c5fb863d9484fe0bb0d8df7cc0a369
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Abilities.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Abilities.unity
     guid: b78bfd56d595a44be8ae5daa5607ad69
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_SlowMotion.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_SlowMotion.unity
     guid: 751b4ee107587433280179f2470b534f
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_AimToFire.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_AimToFire.unity
     guid: 77b4d0262811945a69c31cb87c6d641c
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_Jump.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_Jump.unity
     guid: c7550c65398534d6a96d0b1c1caa849a
   - enabled: 1
-    path: Assets/Samples/FpsKitDemo/Scenes/Feature_FallDamage.unity
+    path: Assets/Samples/ShooterKitDemo/Scenes/Feature_FallDamage.unity
     guid: 2aa148c55f4284653886ec9f97f3f83a
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

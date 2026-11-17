@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Awake が走らないので、MeleeController は Initialize で結んでから取り付けを呼ぶ。寸法は MeleeControllerTests と同じ。
     public sealed class MeleeTuningInstallTests
@@ -25,7 +25,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            // プロジェクトの Resources/FpsKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
+            // プロジェクトの Resources/ShooterKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
             GameContent.Use(Content("Empty"));
 
             _body = Track(new GameObject("Body"));

@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class CameraShakeSettingsAssetStepTests
     {

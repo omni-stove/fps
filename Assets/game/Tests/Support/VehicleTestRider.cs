@@ -1,8 +1,8 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>破棄される乗り手を試すための、何もしない <see cref="IVehicleRider"/> の部品。</summary>
     public sealed class VehicleTestRider : MonoBehaviour, IVehicleRider

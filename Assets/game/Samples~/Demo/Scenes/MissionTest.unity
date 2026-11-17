@@ -150,7 +150,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: 
   _maxHealth: 100
 --- !u!23 &13700159
@@ -279,7 +279,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: 
   _maxHealth: 100
 --- !u!23 &667245096
@@ -409,7 +409,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4875f8ff0b149421389f7a25c8731492, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ReachAreaTrigger
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ReachAreaTrigger
   _runner: {fileID: 876531640}
   _objectiveId: reach_area
   _playerTag: Player
@@ -561,7 +561,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dd48d129c1bf74e7c869a305d3db1e72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.KillTargetObjective
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.KillTargetObjective
   _runner: {fileID: 876531640}
   _objectiveId: kill_targets
   _targets:
@@ -615,7 +615,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 151140a00a8084c5d868e2f6b786c5df, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MissionRunner
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MissionRunner
   _definition: {fileID: 11400000, guid: 4b986ca2bbf0847a0a47974536d6be81, type: 2}
 --- !u!4 &876531641
 Transform:
@@ -660,7 +660,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4274ea70c4be6440bbfef1d376b2b5f0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameBootstrap
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameBootstrap
   _createFloor: 1
   _weaponDefinitions:
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
@@ -724,7 +724,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: 
   _maxHealth: 100
 --- !u!23 &1204487305
@@ -854,7 +854,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4875f8ff0b149421389f7a25c8731492, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ReachAreaTrigger
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ReachAreaTrigger
   _runner: {fileID: 876531640}
   _objectiveId: extract
   _playerTag: Player

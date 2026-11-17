@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オフラインのキルカム (<see cref="DeathCamera.KillCam"/>) のために、相手 1 人分の姿勢 (<see cref="KillCamPose"/>) を

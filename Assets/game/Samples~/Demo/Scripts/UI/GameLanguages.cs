@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ゲームで選べる言語の一覧 (<see cref="GameLanguageList"/>) を引く先。一覧を返す関数を <see cref="Use"/> で受け取り、引くたびに呼ぶ。
-    /// ゲームでは Fps.Runtime の Localizer が Resources の一覧から作って渡す。引き先が無い・null を返すときは <see cref="GameLanguageList.BuiltIn"/>。
+    /// ゲームでは Shooter.Runtime の Localizer が Resources の一覧から作って渡す。引き先が無い・null を返すときは <see cref="GameLanguageList.BuiltIn"/>。
     /// </summary>
     public static class GameLanguages
     {

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 押している間は見本を出して狙い、離したら置く。押した時点で置くと、置ける所かを見てから決められない。
     // 回数は押した時点で枠が減らすので、置かずに終えたとき (置けない所で離した・止められた・起爆した) は返す。

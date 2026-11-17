@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>アクティブリロードの判定の結果。</summary>
     public enum ActiveReloadResult

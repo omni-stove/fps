@@ -5,17 +5,17 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 演出の仮素材を作る手順 (<see cref="IPresentationAssetStep"/>) をすべて集めて順に実行する入口。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.PresentationAssetSteps.BuildAll</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.PresentationAssetSteps.BuildAll</code>
     /// どれかの手順が例外を投げたら、どの手順かを付けた例外にして止める (batchmode では終了コードが 0 でなくなる)。
     /// </summary>
     public static class PresentationAssetSteps
     {
-        public const string MenuPath = "Fps/Build All Presentation Assets";
+        public const string MenuPath = "Shooter/Build All Presentation Assets";
         public const string LogTag = "[PresentationAssetSteps]";
 
         /// <summary>読み込まれているアセンブリから手順を集め (<see cref="Discover"/>)、順に実行する (<see cref="Run"/>)。</summary>

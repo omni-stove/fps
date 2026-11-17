@@ -1,11 +1,11 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using ZiplineRule = Fps.Core.Zipline;
+using ZiplineRule = Shooter.Core.Zipline;
 
-namespace Fps.Runtime.Traversal
+namespace Shooter.Runtime.Traversal
 {
     // PlayerController (既定の実行順 0) より先に入力を読む。Jump で掴まったフレームの Tick で、その Jump が普通のジャンプにならないようにするため。
     [DisallowMultipleComponent]

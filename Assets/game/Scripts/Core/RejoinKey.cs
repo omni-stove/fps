@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 切断した人が戻ってきたと見分けるための鍵 (EOS では ProductUserId、UDP では起動時に作る端末の Id) を、

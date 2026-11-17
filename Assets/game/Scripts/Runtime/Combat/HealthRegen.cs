@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="Damageable"/> の体力を <see cref="GameRules"/> の自動回復 (<see cref="GameRules.RegenDelaySeconds"/> /

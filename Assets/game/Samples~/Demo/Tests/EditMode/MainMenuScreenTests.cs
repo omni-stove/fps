@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class MainMenuScreenTests
     {
@@ -33,7 +33,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
 
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
-            _store = new LoadoutPreferenceStore("Fps.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
+            _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
             _screen.LoadoutStore = _store;
 
             // 本物のセーブ (persistentDataPath) を読み書きしないよう、キャンペーンのテストはメモリの置き場所を使う

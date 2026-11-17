@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 座席に座っている間、プレイヤーのカメラを借りて置く部分。いつ借りて返すかは持ち主 (<see cref="PlayerVehicleRider"/>) が決める。

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: MagnumPistol
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 886fa55c-c980-4d7b-ad90-d16e5a872c7f
   _nameKey: weapon.ref.magnumPistol
   _description: "CS2 \u306E Desert Eagle (\u5B9F\u9283\u306F IMI Desert Eagle .50AE) \u3092\u53C2\u8003\u3002\u4F53 53\u30FB0.225 \u79D2\u306B 1 \u767A\u30FB7 \u767A\u3067\u3001\u53CD\u52D5\u304C\u5927\u304D\u3044\u3002RangeModifier 0.85 \u3092 50 m \u3067 0.53 \u500D\u306B\u7F6E\u304D\u63DB\u3048\u305F\u3002"

@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 乗り物を試す試走場 VehicleRange。プレイヤーは原点で +Z を向いて出て、GameBootstrap が z = 10 (x = -4..4) に標的ダミーを並べる。
     // 銃座付きの車は出現位置のすぐ右後ろで +X を向き、その先の平地の直線の奥に坂 (上り・平ら・下り) を置く。
@@ -22,7 +22,7 @@ namespace Fps.Editor
 
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Fps/Build Vehicle Range Scene";
+        public const string MenuPath = "Shooter/Build Vehicle Range Scene";
         public const string LogTag = "[VehicleRangeSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";

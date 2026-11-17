@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class AttachmentModelCatalogAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = PresentationCatalogAssetStep.StepOrder + 10;
 
-        public const string MenuPath = "Fps/Build Attachment Model Catalog";
+        public const string MenuPath = "Shooter/Build Attachment Model Catalog";
         public const string LogTag = "[AttachmentModelCatalogAssetStep]";
 
         // Tuning/inventory.json の items の id

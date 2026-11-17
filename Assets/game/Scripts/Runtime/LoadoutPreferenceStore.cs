@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 最後に選んだロードアウト (スロット順の武器の Id) を <see cref="PlayerPrefs"/> の 1 つのキーに
@@ -12,7 +12,7 @@ namespace Fps.Runtime
     public sealed class LoadoutPreferenceStore
     {
         /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
-        public const string DefaultKey = "Fps.LoadoutChoice";
+        public const string DefaultKey = "Shooter.LoadoutChoice";
 
         public const string LogTag = "[Loadout]";
 

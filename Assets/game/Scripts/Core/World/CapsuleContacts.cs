@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="CapsuleMover.Move"/> でカプセルが触れた向き。値は Unity の CollisionFlags と同じ。</summary>
     [Flags]

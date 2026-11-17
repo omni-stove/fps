@@ -4,7 +4,7 @@ using System.IO;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     public sealed class NavMeshFile
     {

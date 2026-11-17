@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerController"/> のうち、乗り越えの処理。

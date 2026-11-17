@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ミッションの目標の状態。</summary>
     public enum ObjectiveState

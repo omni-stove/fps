@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 持っている武器の並びと、今どれを持っているか・持ち替え中かどうか。時間は <see cref="Tick"/> で外から進める。

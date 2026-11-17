@@ -1,21 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// <see cref="CharacterRigBuilder"/> の仮リグに合わせた <see cref="RagdollCatalog"/> を作るか上書きする。
     /// コライダーの大きさはリグの見た目の部品 (<see cref="CharacterRigBuilder.BoneVolumes"/>) から取るので、部品を変えれば次の実行で追いつく。
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.RagdollCatalogBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.RagdollCatalogBuilder.Build</code>
     /// </summary>
     public static class RagdollCatalogBuilder
     {
-        public const string MenuPath = "Fps/Build Ragdoll Catalog";
+        public const string MenuPath = "Shooter/Build Ragdoll Catalog";
         public const string LogTag = "[RagdollCatalogBuilder]";
 
         public static string CatalogPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + RagdollCatalog.ResourcePath + ".asset";

@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     public sealed class SlideMotionTests
     {

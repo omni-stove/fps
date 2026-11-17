@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ネット対戦のマップ NetArena01 を生成する。.NET のサーバーは <c>-map NetArena01</c> でこのマップの書き出し (server-data/maps) を読み、
@@ -19,7 +19,7 @@ namespace Fps.Editor
     /// 拠点制圧の拠点 A/B/C (<see cref="ControlPointZone"/> と旗)、NetTest と同じ観戦カメラとライトを置く。
     /// 拠点はルールが <see cref="MatchObjective.Domination"/> の試合でだけ使われ、チームデスマッチでは置いてあるだけになる。
     /// 何度実行しても同じ結果になる。batchmode では
-    /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.ArenaSceneBuilder.Build</c> で呼ぶ。
+    /// <c>-batchmode -quit -projectPath . -executeMethod Shooter.Editor.ArenaSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
     /// <remarks>
     /// 配置は z = 0 の線で鏡写しにする。Alpha の陣地は -z 側、Bravo は +z 側で、どの壁・段差・出現地点にも反対側に同じものがある。
@@ -34,9 +34,9 @@ namespace Fps.Editor
         public static string ScenePath => BuildSceneList.NetArena01Scene;
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MapName + "/NavMesh-Arena.asset");
+        public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MapName + "/NavMesh-Arena.asset");
 
-        public const string MenuPath = "Fps/Net/Build NetArena01 Scene";
+        public const string MenuPath = "Shooter/Net/Build NetArena01 Scene";
         public const string LogTag = "[Net] ArenaSceneBuilder:";
 
         public const string LevelName = "Level";

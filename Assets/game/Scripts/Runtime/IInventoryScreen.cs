@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public interface IInventoryScreen
     {

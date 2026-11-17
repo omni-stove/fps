@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 盾を構えているか下ろしているかだけを持つ。何で下ろすか (近接・爆発・怯み) と何秒かは呼ぶ側が決める。
     public sealed class ShieldGuard

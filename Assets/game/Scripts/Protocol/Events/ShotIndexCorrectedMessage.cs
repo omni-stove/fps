@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 持ち主が数えた何発目かがサーバーとずれていたときに、サーバーの番号に合わせ直させる (ばらつきの乱数をそろえるため)。

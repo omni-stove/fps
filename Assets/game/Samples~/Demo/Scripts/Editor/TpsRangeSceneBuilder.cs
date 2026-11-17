@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 三人称で TPS のアクションを試す射撃場 TpsRange を生成する。シーンには床 (<see cref="FloorName"/>)、
@@ -20,7 +20,7 @@ namespace Fps.Editor
     /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。
     /// ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/> を配線し、肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) もそのルールで決める。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.TpsRangeSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.TpsRangeSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向き、GameBootstrap が z = 10 に標的ダミーを x = -4..4 で並べる):
@@ -30,7 +30,7 @@ namespace Fps.Editor
     public static class TpsRangeSceneBuilder
     {
         public static string ScenePath => BuildSceneList.TpsRangeScene;
-        public const string MenuPath = "Fps/Build TPS Range Scene";
+        public const string MenuPath = "Shooter/Build TPS Range Scene";
         public const string LogTag = "[TpsRangeSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";

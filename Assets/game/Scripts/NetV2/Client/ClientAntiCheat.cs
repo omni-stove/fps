@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クライアントで、.NET のサーバーと EAC のパケット (<see cref="AntiCheatPacket"/>) をやり取りする。
-    /// Unity の <c>Fps.NetEos.EosAntiCheat</c> と同じく EAC が無効でも Hello を送り、片方だけ有効なら同じ理由で抜ける。
+    /// Unity の <c>Shooter.NetEos.EosAntiCheat</c> と同じく EAC が無効でも Hello を送り、片方だけ有効なら同じ理由で抜ける。
     /// </summary>
     /// <remarks>
     /// サーバーをピアとして登録しないのは、ClientServer モードの EAC ではクライアントがサーバーを登録せず、

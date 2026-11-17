@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ヒットスキャン (Raycast) の共通処理。射撃と視線判定の両方で使い、プレイヤーの射撃と敵の射撃で

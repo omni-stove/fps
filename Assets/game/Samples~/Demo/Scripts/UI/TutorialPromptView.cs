@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面下の中央に、チュートリアルの今の手順 (または完了) を 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。

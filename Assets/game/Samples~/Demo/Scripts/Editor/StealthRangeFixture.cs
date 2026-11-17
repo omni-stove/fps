@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 組み込みの手順でプレイヤーが立つ所 (出現位置・乗り越えの壁・開けた場所) から敵の視認距離より離して置く。近いと、ほかの手順の途中で見つかって撃たれる。
     public sealed class StealthRangeFixture : ITpsRangeFixture

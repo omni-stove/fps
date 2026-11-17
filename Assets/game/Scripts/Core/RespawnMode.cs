@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 倒されたプレイヤーがいつ戻ってくるか。

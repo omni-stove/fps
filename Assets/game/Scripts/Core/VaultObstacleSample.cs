@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 物理で調べた、乗り越えるかもしれない前方の障害物の様子 1 回分 (<see cref="VaultProbe.Evaluate"/> に渡す)。

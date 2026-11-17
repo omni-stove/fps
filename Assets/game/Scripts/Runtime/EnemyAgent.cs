@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャンペーンの敵をシーン上で動かす。判断は <see cref="EnemyBrain"/> に任せ、ここでは

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     internal sealed class XzGrid
     {

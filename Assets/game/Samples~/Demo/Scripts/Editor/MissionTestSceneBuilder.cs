@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// テスト用ミッション (エリアに到達 → 標的を 3 体倒す → 脱出地点に到達) の定義アセットとシーンを生成する。
@@ -16,7 +16,7 @@ namespace Fps.Editor
     /// 参照 (MissionRunner の定義、トリガーの目標 Id) はここでコードから設定する。
     /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -executeMethod Fps.Editor.MissionTestSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -executeMethod Shooter.Editor.MissionTestSceneBuilder.Build</code>
     /// </summary>
     public static class MissionTestSceneBuilder
     {
@@ -24,10 +24,10 @@ namespace Fps.Editor
         /// <summary>ミッション Id (<see cref="MissionDefinition.Id"/>) と定義のアセット名。表のキー (<see cref="MissionDefinition.NameKeyOf"/>) にも使う。</summary>
         public const string MissionId = "TestMission";
 
-        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
+        public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
         public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
-        public const string MenuPath = "Fps/Build Mission Test Scene";
+        public const string MenuPath = "Shooter/Build Mission Test Scene";
         public const string LogTag = "[MissionTestSceneBuilder]";
 
         public const string ReachAreaId = "reach_area";
@@ -115,7 +115,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// path の MissionDefinition をテスト用の目標で上書きする。無ければ作る。既存のアセットは GUID を保つので、
-        /// それを参照しているシーンは壊れない。保存前に <see cref="Fps.Core.Mission"/> に変換できることを確かめる。
+        /// それを参照しているシーンは壊れない。保存前に <see cref="Shooter.Core.Mission"/> に変換できることを確かめる。
         /// </summary>
         public static MissionDefinition CreateOrUpdateDefinition(string path)
         {

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// スナップショットの差分を取るための、浮動小数をビット列で比べる等しさ。

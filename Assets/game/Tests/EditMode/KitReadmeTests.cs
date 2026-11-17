@@ -1,17 +1,17 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class KitReadmeTests
     {
         private static string ReadReadme()
         {
-            return File.ReadAllText(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("README.md")));
+            return File.ReadAllText(ShooterKitRoot.PhysicalPath(ShooterKitRoot.BundledPath("README.md")));
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace Fps.Tests.EditMode
             Assert.That(readme, Does.Contain("`" + nameof(GameSignal<object>.Value) + "`"));
             Assert.That(readme, Does.Contain("`" + nameof(GameSignal<object>.HasValue) + "`"));
             Assert.That(readme, Does.Contain("`" + nameof(GameSignal<object>.Changed) + "`"));
-            Assert.That(readme, Does.Contain("`ModeStatus." + nameof(Fps.Core.ModeStatus.Detail) + "`"));
+            Assert.That(readme, Does.Contain("`ModeStatus." + nameof(Shooter.Core.ModeStatus.Detail) + "`"));
             Assert.That(readme, Does.Contain("GameSignals.HudModel.Changed += Bind;"));
         }
     }

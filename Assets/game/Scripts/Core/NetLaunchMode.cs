@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ネットワークの起動モード。コマンドライン引数 <c>-mode server|client</c> に対応する。</summary>
     public enum NetLaunchMode

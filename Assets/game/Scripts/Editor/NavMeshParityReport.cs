@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class NavMeshParityReport
     {

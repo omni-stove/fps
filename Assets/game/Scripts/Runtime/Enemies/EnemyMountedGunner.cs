@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // EnemyAgent の Update が目標を選び直し、乗りに行く判断 (MountedGunEnemyBehavior) を済ませた後に、同じフレームで乗る・撃つ。
     // 乗っている間の EnemyAgent は判断を進めず座席に留まるだけなので、銃座の入力はここが出す。

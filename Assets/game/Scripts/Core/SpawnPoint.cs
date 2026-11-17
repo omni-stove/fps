@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// リスポーン地点。Team が null の地点はどちらのチームも使える。

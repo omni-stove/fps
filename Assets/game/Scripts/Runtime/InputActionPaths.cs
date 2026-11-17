@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Assets/InputSystem_Actions.inputactions の Player マップにあるアクションのパス。

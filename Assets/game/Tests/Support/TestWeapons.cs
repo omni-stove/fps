@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// テストで使う武器の値。ゲームの武器 (サンプルの Weapons) の値を変えてもテストの前提が動かないよう、テストの側に持つ。

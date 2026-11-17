@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class MenuNavigatorTests
     {

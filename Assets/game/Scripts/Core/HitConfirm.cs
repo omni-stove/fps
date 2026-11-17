@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 撃った本人に知らせる、弾が当たったことの確認。ヒットマーカーと命中音に使う。

@@ -1,4 +1,4 @@
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary><see cref="MatchClient"/> の接続の段階。</summary>
     public enum MatchClientState

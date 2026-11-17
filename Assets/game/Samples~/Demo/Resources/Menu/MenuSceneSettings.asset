@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 71b62bfa658cf4a5b216680f987ee095, type: 3}
   m_Name: MenuSceneSettings
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MenuSceneSettings
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MenuSceneSettings
   _mainMenu: MainMenu
   _range: Bootstrap
   _campaign: Campaign01
   _net: NetTest
-  _sceneRoot: Assets/Samples/FpsKitDemo
+  _sceneRoot: Assets/Samples/ShooterKitDemo

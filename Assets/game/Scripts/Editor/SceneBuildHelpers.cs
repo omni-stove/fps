@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// シーン生成スクリプト (<c>EnemyTestSceneBuilder</c>、<c>MissionTestSceneBuilder</c>、
@@ -461,7 +461,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// rootName の GameObject に <see cref="CoverPointRegistry"/> を付け、その子に placements の遮蔽点
-        /// (<see cref="Fps.Runtime.CoverPoint"/>) を並べて registry に配線する。parent が null ならシーンの直下に置く。
+        /// (<see cref="Shooter.Runtime.CoverPoint"/>) を並べて registry に配線する。parent が null ならシーンの直下に置く。
         /// 名前が重なっていれば何も置かずに例外を投げる。敵には <see cref="EnemyAgent.CoverRegistry"/> で渡す。
         /// </summary>
         public static CoverPointRegistry CreateCoverPoints(
@@ -485,7 +485,7 @@ namespace Fps.Editor
             Place(scene, parent, root);
             var registry = root.AddComponent<CoverPointRegistry>();
 
-            var points = new Fps.Runtime.CoverPoint[placements.Count];
+            var points = new Shooter.Runtime.CoverPoint[placements.Count];
             for (var i = 0; i < placements.Count; i++)
             {
                 var placement = placements[i];
@@ -493,7 +493,7 @@ namespace Fps.Editor
                 marker.transform.SetParent(root.transform, false);
                 marker.transform.SetPositionAndRotation(placement.Position, FacingTowards(Vector3.zero, placement.Facing));
 
-                points[i] = marker.AddComponent<Fps.Runtime.CoverPoint>();
+                points[i] = marker.AddComponent<Shooter.Runtime.CoverPoint>();
                 points[i].Height = placement.Height;
                 points[i].SetPeekOffsetWorld(placement.PeekOffset);
             }

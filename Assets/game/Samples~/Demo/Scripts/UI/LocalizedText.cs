@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面に出す文を、言語の表 (<see cref="StringTable"/>) のキーと書式に埋める引数の並びで表す値。

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 動き方 (IVehicleMotor) と分けるのは、ゲームが足す戦闘機やヘリも同じ部品で人や物にぶつかったダメージを与えられるようにするため。
     [DisallowMultipleComponent]

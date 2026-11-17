@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ホード (<see cref="Horde"/>) の <c>[Mode]</c> のログ。

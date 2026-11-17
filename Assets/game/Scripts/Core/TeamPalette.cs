@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 敵味方の色の組。<see cref="ColorPalette"/> ごとに味方・敵・中立・強調の色と、ネームプレートに付ける形の印を持つ。不変。

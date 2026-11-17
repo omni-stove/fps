@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroyRunner"/>) の設置地点 1 つ。地点の番号 (<see cref="Index"/>、0 始まりで HUD とログでは A, B, ...) と

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: Rifle
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
   _nameKey: weapon.rifle
   _category: 0

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>拾えなかった理由。拾えたときは <see cref="None"/>。</summary>
     public enum PickupRejection

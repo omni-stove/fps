@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// バトルロイヤル。<see cref="Squads"/> で分隊を組み、倒れた人は戻らない (<see cref="NoRespawn"/>)。

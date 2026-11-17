@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity の Shooter.NetV2.Client アセンブリ (Assets/game/Scripts/NetV2/Client) を Unity 抜きでビルドする。ソースは Assets 側が正 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shooter.Core/Shooter.Core.csproj" />
+    <ProjectReference Include="../Shooter.Protocol/Shooter.Protocol.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/game/Scripts/NetV2/Client/**/*.cs" />
+  </ItemGroup>
+</Project>

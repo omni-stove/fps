@@ -11,13 +11,13 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5417f81dafc83065a78f4e5d47fc75c3, type: 3}
   m_Name: MissionCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MissionCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MissionCatalog
   _missions:
   - _id: Campaign01
     _displayNameKey: campaign.mission.Campaign01.name
-    _scenePath: Assets/Samples/FpsKitDemo/Scenes/Campaign01.unity
+    _scenePath: Assets/Samples/ShooterKitDemo/Scenes/Campaign01.unity
     _definition: {fileID: 11400000, guid: e8233c733e7a0411e9b7d5281cb6d8df, type: 2}
   - _id: Campaign02
     _displayNameKey: campaign.mission.Campaign02.name
-    _scenePath: Assets/Samples/FpsKitDemo/Scenes/Campaign02.unity
+    _scenePath: Assets/Samples/ShooterKitDemo/Scenes/Campaign02.unity
     _definition: {fileID: 11400000, guid: 0537e70efe2a044de89b99ace201631b, type: 2}

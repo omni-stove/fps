@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、印 (<see cref="PingController"/>) を確かめる手順。
@@ -167,7 +167,7 @@ namespace Fps.Editor
             }
 
             var actions = world.Rules.Actions;
-            if (actions.Ping == Fps.Core.Ping.Off)
+            if (actions.Ping == Shooter.Core.Ping.Off)
             {
                 if (_controller.TryPing(out var unexpected))
                 {
@@ -179,7 +179,7 @@ namespace Fps.Editor
                     return $"a ping with the rule Off was refused for {_controller.LastRefusal} instead of {PingRefusal.RuleOff}";
                 }
 
-                _controller.Configure(world.Rules.WithActions(actions.WithPing(Fps.Core.Ping.On)));
+                _controller.Configure(world.Rules.WithActions(actions.WithPing(Shooter.Core.Ping.On)));
                 _reconfigured = true;
             }
 

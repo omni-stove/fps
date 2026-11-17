@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// JSON に書いた武器の値から <see cref="WeaponDefinition"/> を作るか更新する。Editor を開かずに利用側へ武器を入れるためのもの。
@@ -27,11 +27,11 @@ namespace Fps.Editor
     /// どのアセットも保存しない (batchmode では Unity が終了コード 1 で終わる)。
     /// </para>
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.WeaponJsonImporter.Import -weaponJson &lt;file|dir&gt; [-weaponOut &lt;dir&gt;] [-weaponCatalog &lt;asset&gt;]</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WeaponJsonImporter.Import -weaponJson &lt;file|dir&gt; [-weaponOut &lt;dir&gt;] [-weaponCatalog &lt;asset&gt;]</code>
     /// </summary>
     public static class WeaponJsonImporter
     {
-        public const string MenuPath = "Fps/Import Weapons From JSON";
+        public const string MenuPath = "Shooter/Import Weapons From JSON";
         public const string LogTag = "[WeaponJsonImporter]";
 
         public const string JsonArgument = "-weaponJson";
@@ -170,7 +170,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// source がファイルならそれだけを、フォルダならその直下の *.json を名前の順に返す。区切りは / に揃える。
-        /// <c>Packages/</c> で始まる source は <see cref="FpsKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
+        /// <c>Packages/</c> で始まる source は <see cref="ShooterKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
         /// </summary>
         /// <exception cref="ArgumentException">source が空。</exception>
         /// <exception cref="FileNotFoundException">source が無い、またはフォルダに JSON が無い。</exception>
@@ -181,7 +181,7 @@ namespace Fps.Editor
                 throw new ArgumentException($"{LogTag} the JSON source must not be empty", nameof(source));
             }
 
-            var trimmed = FpsKitRoot.PhysicalPath(source.Trim());
+            var trimmed = ShooterKitRoot.PhysicalPath(source.Trim());
             if (File.Exists(trimmed))
             {
                 return new[] { trimmed.Replace('\\', '/') };

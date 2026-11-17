@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 盾の上げ下げと振りの時間は読むだけで進めない。MeleeEnemyBehavior と同じく、当たりの瞬間や盾の切り替えを Runtime の 1 か所で扱うため。
     // 種類が Shield でない間は何も上書きしない。段階で種類を変えるボスにも付けたままにできるように。

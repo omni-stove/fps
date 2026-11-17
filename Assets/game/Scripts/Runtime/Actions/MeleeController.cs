@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     // 撃てない・リロードの取り消しは、WeaponController が同じフレームに Attack と Reload を読むより先に振り始めていないと効かない。

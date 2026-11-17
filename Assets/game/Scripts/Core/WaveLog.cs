@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// PvE の波 (<see cref="WaveSchedule"/>) の <c>[Wave]</c> 付きログの文言。倍率は小数第 2 位、秒は小数第 1 位まで書く。

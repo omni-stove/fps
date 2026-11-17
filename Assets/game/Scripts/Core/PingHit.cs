@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PingAim.Resolve"/> の結果。照準の先の何に印を付けるか。</summary>
     public readonly struct PingHit

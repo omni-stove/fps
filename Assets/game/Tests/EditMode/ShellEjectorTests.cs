@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="ShellEjector"/> が撃つたびに排莢口から薬莢を出し、最初の接地で落下音を 1 回だけ鳴らし、プールの上限と寿命を守ることを、

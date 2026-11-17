@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // EnemyAgent と EnemyDefinition の Inspector に並べる値。ほかの判断の値と同じく、ここから EnemySpec を作り、ApplySpec (EnemyDefinition では CopyFrom) で書き戻す。
     [Serializable]

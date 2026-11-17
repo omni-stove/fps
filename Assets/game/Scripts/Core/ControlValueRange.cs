@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ControlValue"/> が取れる値の範囲 (両端を含む) と初期値。</summary>
     public readonly struct ControlValueRange

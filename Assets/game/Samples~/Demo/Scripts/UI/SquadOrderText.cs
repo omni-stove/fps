@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 分隊への指示で画面に出す文字。bot の応答 (<see cref="SquadOrderReply"/>) の字幕 (「Bot_1: 了解、そこを守る」) と、HUD の指示の印の札。

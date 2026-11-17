@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足す、崖のぼりの手順。段は <see cref="MantleLedgesFixture"/>。

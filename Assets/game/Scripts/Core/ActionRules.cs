@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// TPS のアクション (ダウンと蘇生、カバー、ブラインドファイア、アクティブリロード、回避、乗り越え、グレネード、

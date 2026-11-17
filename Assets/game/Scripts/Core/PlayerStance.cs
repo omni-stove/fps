@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーの姿勢。後ろほど低い。寸法は <see cref="StanceGeometry.Shape(PlayerStance)"/> で引く。

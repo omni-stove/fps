@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerLobbyTests
     {
         private const string _ownerId = "0123456789abcdef0123456789abcdef";
@@ -47,8 +47,8 @@ namespace Fps.Core.Tests
             var attributes = ByKey(ServerLobby.Attributes("203.0.113.10:7777", " ", 0));
 
             Assert.That(attributes["version"].Text, Is.EqualTo("0"));
-            Assert.That(ServerLobby.BucketId(" "), Is.EqualTo("fps-server:0"));
-            Assert.That(ServerLobby.BucketId("0.3.0"), Is.EqualTo("fps-server:0.3.0"));
+            Assert.That(ServerLobby.BucketId(" "), Is.EqualTo("shooter-server:0"));
+            Assert.That(ServerLobby.BucketId("0.3.0"), Is.EqualTo("shooter-server:0.3.0"));
         }
 
         [Test]

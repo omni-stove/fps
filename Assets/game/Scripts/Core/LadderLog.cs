@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>はしごのログの文。どれも <see cref="LogTag"/> で始まる。</summary>
     public static class LadderLog

@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="SurfaceImpactAssetStep"/> を一時フォルダに走らせて、材質ごとの仮素材とカタログ・作り直したときの同一性・銃痕の画素を確かめる。

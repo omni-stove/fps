@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 状態異常にかかっている体に付ける見た目を、種類ごとに出し消しする。オフラインの <see cref="StatusEffectReceiver"/> と、
-    /// ネット対戦のクライアント (Fps.NetV2.NetV2Client) が相手の体に付ける。
+    /// ネット対戦のクライアント (Shooter.NetV2.NetV2Client) が相手の体に付ける。
     /// 見た目は <see cref="StatusEffectVisualCatalog"/> の参照から取り、無ければ燃焼 (<see cref="StatusEffectKinds.Burn"/>) だけコードで炎を作る。
     /// 専用サーバーでは何も出さない。
     /// </summary>

@@ -1,14 +1,14 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 能力の枠 (<see cref="AbilityHost"/>): ルールの Off で使えないこと、入力で使って回数が減り待ち時間の間は断ること、

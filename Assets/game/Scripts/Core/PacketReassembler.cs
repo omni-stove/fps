@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="PacketSplitter"/> が分けたパケットを、送り手 1 人分について元のメッセージに戻す。

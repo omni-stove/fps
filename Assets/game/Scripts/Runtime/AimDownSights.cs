@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 覗き込み (ADS)。<see cref="AimActionPath"/> で覗き込んでいる間、カメラの視野角を今の武器の

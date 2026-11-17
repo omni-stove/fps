@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class LoadoutDefinitionTests
     {

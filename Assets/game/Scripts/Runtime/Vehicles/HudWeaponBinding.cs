@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 座席の武器に座っている間は、持ち物の武器が持ち替わっても HUD を座席の武器のままにするため、両方の知らせをここでまとめる。
     public sealed class HudWeaponBinding : IDisposable

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     // 問い合わせのたびに作業用の配列を使い回すので、同時に複数のスレッドから呼ばない。
     public sealed class MeshNavigation : INavigation

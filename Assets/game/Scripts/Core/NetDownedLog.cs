@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ネット対戦のダウンと蘇生の <c>[Net]</c> 付きログの文言。<see cref="MatchLog"/> と同じく key=value を空白で区切り、

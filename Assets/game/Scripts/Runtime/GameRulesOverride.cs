@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// シーンに配線された <see cref="GameRulesDefinition"/> の代わりに使う <see cref="GameRules"/> の置き場所。

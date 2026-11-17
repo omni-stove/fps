@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 射撃場のチュートリアルの今の段階。今の手順と何番目か・射撃の手順で当てた回数・押すキーのアクション (<see cref="ActionPath"/>) と

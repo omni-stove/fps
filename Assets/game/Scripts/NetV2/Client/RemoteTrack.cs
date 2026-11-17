@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 他のプレイヤー 1 人の、tick ごとの位置・向き・しゃがみの記録。表示する tick (<see cref="InterpolationClock.RenderTick"/>) の前後から補間する。

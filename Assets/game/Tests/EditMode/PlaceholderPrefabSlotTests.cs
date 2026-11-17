@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 仮の形を作っていたコンポーネント (<see cref="DebrisPool"/>・<see cref="ThrownGrenade"/>・<see cref="GuardianLeaderMarker"/>・

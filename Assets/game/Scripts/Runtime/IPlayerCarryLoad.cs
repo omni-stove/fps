@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーが持っている物から、移動の速さに掛ける倍率を出す口。<see cref="PlayerController.CarryLoad"/> に渡す

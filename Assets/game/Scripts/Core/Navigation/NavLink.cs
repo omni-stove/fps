@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     public readonly struct NavLink : IEquatable<NavLink>
     {

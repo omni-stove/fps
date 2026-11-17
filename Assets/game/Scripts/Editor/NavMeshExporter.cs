@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core.Navigation;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core.Navigation;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using NumericsVector3 = System.Numerics.Vector3;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public static class NavMeshExporter
     {

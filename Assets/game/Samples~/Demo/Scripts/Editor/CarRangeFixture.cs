@@ -1,9 +1,9 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 車で走り、曲がり、止まり、的にぶつけるための直線。車は手前の左端で +X を向き、的は同じ線の右端で車の方を向く。
     // 走る場所を取るため、ほかの物の無い射撃場の一番手前 (z = -32 の帯) に置く。

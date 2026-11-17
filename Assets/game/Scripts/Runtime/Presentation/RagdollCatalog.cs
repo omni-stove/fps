@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 枠は任意 (PresentationCatalog の規約)。無いか中身が足りなければ DeathBodyPresenter は 1 つの塊の抜け殻で倒す。
-    [CreateAssetMenu(fileName = "RagdollCatalog", menuName = "Fps/Ragdoll Catalog")]
+    [CreateAssetMenu(fileName = "RagdollCatalog", menuName = "Shooter/Ragdoll Catalog")]
     public sealed class RagdollCatalog : ScriptableObject
     {
         public const string CatalogName = "Ragdoll";

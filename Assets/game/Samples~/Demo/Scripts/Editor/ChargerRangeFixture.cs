@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 突進兵を試す仮の敵と、低い壁で囲った囲い。避けた突進が壁にぶつかって止まるのを見られるよう、四方を乗り越えられる高さの壁で囲う。
     // 壁は足場と一緒に焼き (NavMeshBakeActivator)、歩くときは壁を避け、突進のときだけ壁にぶつかるようにする。

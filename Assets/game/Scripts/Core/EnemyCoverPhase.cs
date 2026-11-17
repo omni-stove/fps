@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="EnemyState.TakeCover"/> の中の段階 (<see cref="EnemyBrain.CoverPhase"/>)。</summary>
     public enum EnemyCoverPhase

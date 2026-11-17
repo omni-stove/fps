@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     public sealed class InventoryRequestMessage : IMessage
     {

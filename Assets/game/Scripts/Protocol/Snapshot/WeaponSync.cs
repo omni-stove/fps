@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 持ち主にだけ送る今の武器の状態 (Netcode の <c>NetWeaponState</c> の中身)。他の人の弾数を送ると、リロードや持ち替えの隙が分かってしまうため。

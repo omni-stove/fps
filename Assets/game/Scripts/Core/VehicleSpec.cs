@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り物 1 台の設定。耐久・部位・座席の並び・武器・乗り込める距離・追うカメラの置き方を持つ。生成時に値を検査し、以後は変わらない。

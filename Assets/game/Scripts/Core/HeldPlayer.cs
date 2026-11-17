@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 切断した人の、戻ってきたら引き継ぐ成績。<see cref="TeamDeathmatchSession.FindHeld"/> が返す。

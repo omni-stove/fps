@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 物理は進めず、ぶつかった Collider と速さと時刻を TryHit に直接渡す。
     public sealed class VehicleImpactDamageTests

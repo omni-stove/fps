@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 乗り物の座席 1 つ。<see cref="Vehicle"/> の子に置き、この Transform の位置に乗っている人の足元を、向きに正面を合わせる。

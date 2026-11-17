@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ロードアウトのスロットの並びと、スロットごとに持てる <see cref="WeaponCategory"/> の集合。生成後は変わらない。

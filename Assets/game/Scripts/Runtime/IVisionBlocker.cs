@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // コライダーで遮らないのは、煙のように弾は通すが視線だけ遮る物を置けるようにするため。
     public interface IVisionBlocker

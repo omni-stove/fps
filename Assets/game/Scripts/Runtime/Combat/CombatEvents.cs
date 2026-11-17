@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 戦闘で起きたことを演出と UI (<see cref="WeaponPresentation"/>・<see cref="CharacterAudio"/>・HUD のヒットマーカーなど) に知らせる、
@@ -16,11 +16,11 @@ namespace Fps.Runtime
     /// <item><see cref="HitConfirmed"/>: 撃った本人のクライアントでだけ、生きている相手に当てたとき。オフラインでは <see cref="WeaponController.Fire"/>。</item>
     /// <item><see cref="DamageTaken"/>: 撃たれた本人のクライアントでだけ。オフラインでは <see cref="Damageable.IsLocalPlayer"/> の <see cref="Damageable"/>。</item>
     /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
-    /// <item><see cref="Exploded"/>: 爆発するたび。オフラインでは <see cref="ThrownGrenade.Explode"/>、ネット対戦では <c>Fps.Net.NetCombatFeed</c> が全員に。</item>
-    /// <item><see cref="Landed"/>: この画面で操作しているキャラが着地するたび。オフラインでは <see cref="PlayerController"/>、ネット対戦では持ち主の <c>Fps.Net.NetworkPlayerMotor</c>。</item>
+    /// <item><see cref="Exploded"/>: 爆発するたび。オフラインでは <see cref="ThrownGrenade.Explode"/>、ネット対戦では <c>Shooter.Net.NetCombatFeed</c> が全員に。</item>
+    /// <item><see cref="Landed"/>: この画面で操作しているキャラが着地するたび。オフラインでは <see cref="PlayerController"/>、ネット対戦では持ち主の <c>Shooter.Net.NetworkPlayerMotor</c>。</item>
     /// </list>
-    /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Fps.Net.NetPlayer</c>) が出し、それ以外はサーバーから
-    /// <c>Fps.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
+    /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Shooter.Net.NetPlayer</c>) が出し、それ以外はサーバーから
+    /// <c>Shooter.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
     /// 材質・キャラかどうか・部位はサーバーが判定したものを載せる)。
     /// 購読者が例外を投げても戦闘の処理は止めず、例外をログに出して残りの購読者を呼ぶ。
     /// 静的なので、ドメインの再読み込みを切った Play でも前回の購読が残らないよう、Play の開始時に購読をすべて外す。

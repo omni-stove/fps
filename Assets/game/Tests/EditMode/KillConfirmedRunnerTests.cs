@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// KillConfirmedRunner が、倒れた参加者に DropOnDeath でタグを落とさせ、拾われたタグを確定・阻止としてモードに渡し、

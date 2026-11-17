@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 撃って倒せる標的ダミー。<see cref="Create"/> で、本体の <see cref="Damageable"/> と、

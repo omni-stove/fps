@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 設定画面が、今効いている操作設定を読んで、変えた値を効かせる先。ふだんは <see cref="AppliedControlSettings.Sink"/>。

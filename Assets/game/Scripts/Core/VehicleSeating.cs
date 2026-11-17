@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り物のどの座席に誰が座っているか。座る・降りる・移る と、空いている座席の選び方 (一番近い・次の) を受け持つ。

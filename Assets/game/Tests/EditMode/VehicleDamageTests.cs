@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 窓の開いた乗り物を、車体の下半分と屋根の 2 つの箱で作る。間 (高さ 0.8〜1.6 m) が窓で、乗っている人の体がそこから見える。
     public sealed class VehicleDamageTests

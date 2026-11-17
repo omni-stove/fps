@@ -1,14 +1,14 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class FirstPersonLookTests
     {
@@ -196,11 +196,11 @@ namespace Fps.Tests.EditMode
             Assert.That(_look.LookAction, Is.SameAs(InputSystem.actions.FindAction(FirstPersonLook.LookActionPath)));
         }
 
-        private static Fps.Core.WeaponSpec RecoilSpec(float pitch, float yaw, float recovery)
+        private static Shooter.Core.WeaponSpec RecoilSpec(float pitch, float yaw, float recovery)
         {
-            return new Fps.Core.WeaponSpec(
-                "3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13", "Test", Fps.Core.WeaponCategory.AssaultRifle, Fps.Core.FireMode.Auto,
-                30, 90, 0.1f, 2f, 10, 100f, Fps.Core.DamageFalloff.None,
+            return new Shooter.Core.WeaponSpec(
+                "3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13", "Test", Shooter.Core.WeaponCategory.AssaultRifle, Shooter.Core.FireMode.Auto,
+                30, 90, 0.1f, 2f, 10, 100f, Shooter.Core.DamageFalloff.None,
                 recoilPitchDegrees: pitch, recoilYawDegrees: yaw, recoilRecoveryPerSecond: recovery, recoilRecoveryDelaySeconds: 0f);
         }
 
@@ -209,7 +209,7 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(30f, -10f));
-            var recoil = new Fps.Core.RecoilState();
+            var recoil = new Shooter.Core.RecoilState();
             _look.Recoil = recoil;
 
             recoil.Kick(RecoilSpec(4f, 0f, 0f), 1, 0);
@@ -225,7 +225,7 @@ namespace Fps.Tests.EditMode
         public void RecoilYawTurnsOnlyThePitchPivot()
         {
             _look.Initialize(_pivot, _action);
-            var recoil = new Fps.Core.RecoilState();
+            var recoil = new Shooter.Core.RecoilState();
             _look.Recoil = recoil;
             var spec = RecoilSpec(0f, 3f, 0f);
 
@@ -242,7 +242,7 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(0f, 5f));
-            var recoil = new Fps.Core.RecoilState();
+            var recoil = new Shooter.Core.RecoilState();
             _look.Recoil = recoil;
             recoil.Kick(RecoilSpec(4f, 2f, 100f), 1, 0);
             _look.ApplyRecoil();
@@ -260,13 +260,13 @@ namespace Fps.Tests.EditMode
         {
             _look.Initialize(_pivot, _action);
             _look.ApplyLookDelta(new Vector2(0f, 80f));
-            var recoil = new Fps.Core.RecoilState();
+            var recoil = new Shooter.Core.RecoilState();
             _look.Recoil = recoil;
 
             recoil.Kick(RecoilSpec(20f, 0f, 0f), 1, 0);
             _look.ApplyRecoil();
 
-            Assert.That(Mathf.DeltaAngle(0f, _pivot.localEulerAngles.x), Is.EqualTo(-Fps.Core.LookAngles.DefaultMaxPitch).Within(1e-3f));
+            Assert.That(Mathf.DeltaAngle(0f, _pivot.localEulerAngles.x), Is.EqualTo(-Shooter.Core.LookAngles.DefaultMaxPitch).Within(1e-3f));
             Assert.That(_look.AppliedRecoilPitchUp, Is.EqualTo(5f).Within(1e-3f));
         }
 
@@ -285,7 +285,7 @@ namespace Fps.Tests.EditMode
         public void ResyncingKeepsTheAimUnderTheRecoil()
         {
             _look.Initialize(_pivot, _action);
-            var recoil = new Fps.Core.RecoilState();
+            var recoil = new Shooter.Core.RecoilState();
             _look.Recoil = recoil;
             recoil.Kick(RecoilSpec(4f, 0f, 0f), 1, 0);
             _look.ApplyRecoil();

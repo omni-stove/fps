@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 差し込み口 (<c>ITpsRangeFixture</c>・<c>ITpsActionSmokeStep</c> など) を実装した型を読み込み済みのアセンブリから探して作る。

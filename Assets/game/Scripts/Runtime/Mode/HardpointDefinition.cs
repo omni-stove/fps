@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ハードポイント (<see cref="HardpointRunner"/>) の調整値をアセットとして持つ。拠点の数はシーンの <see cref="ControlPointZone"/> で決まるので持たず、
     /// <see cref="ToSpec"/> に渡す。新しく作ったときの値は <see cref="HardpointRunner"/> の既定値と同じ。
-    /// 中身は Fps.Editor.ModeTuningAssetBuilder が無ければ作る。
+    /// 中身は Shooter.Editor.ModeTuningAssetBuilder が無ければ作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "Hardpoint", menuName = "Fps/Modes/Hardpoint")]
+    [CreateAssetMenu(fileName = "Hardpoint", menuName = "Shooter/Modes/Hardpoint")]
     public sealed class HardpointDefinition : ScriptableObject
     {
         // Validate は拠点の数を知らないので、HardpointSpec が受け付ける最小の数で確かめる。

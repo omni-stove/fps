@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// デスカム (<see cref="DeathCamera.Killer"/>) のカメラの置き場所と向きの計算。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// EAC の SDK (Anti-Cheat Client の ClientServer モード) の側。Unity にも EOS のプラグインにも依存しないアセンブリから

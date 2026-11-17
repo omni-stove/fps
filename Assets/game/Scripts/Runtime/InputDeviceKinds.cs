@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 入力機器を <see cref="InputDeviceKind"/> に分ける。どの <see cref="ControlSettings"/> の値を使うかを決めるのに使う。

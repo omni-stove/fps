@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 固めるまでの時間を DeathBodyPresenter ではなく抜け殻の側で数えるのは、倒れた体を非アクティブにする購読者
     // (KillTargetObjective) がいると体の Update が来なくなり、固めないまま寿命まで転がり続けるため。

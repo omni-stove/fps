@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃つのはプレイヤーや敵と同じ撃ち方 (TriggerDriver) と弾の届け方 (Hitscan.Fire → ShotDeliveries) なので、減衰・部位・置いた物での止まり方・建物への被害は同じ規則を通る。
     // 狙う相手は毎フレームではなく SearchIntervalSeconds ごとに選び直す。候補を集めるのにシーンの Damageable をすべて見るため。

@@ -2,7 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// プロジェクト全体の Input Actions の写し。割り当ての上書きはアセットに残り、ほかのテストやエディタの操作に効いてしまうので、

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// サーバーから届いた印 (付けた人の味方にだけ届く) を、Netcode のクライアントと同じ <see cref="SharedPingMarkers"/> に写す。

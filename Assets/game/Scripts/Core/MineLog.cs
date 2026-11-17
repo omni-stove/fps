@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた・消えた・撃たれて止めたは DeployLog に、爆発の当たりは Explosion のログに出す。ここは地雷が有効になったことと、誰が踏んだかだけ。
     public static class MineLog

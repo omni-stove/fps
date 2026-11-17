@@ -1,10 +1,10 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// ネット対戦のマップのシーンに置くリスポーン地点の目印。サーバーはシーンを読めないので、書き出し (Fps.Editor.ServerRulesExporter) が
+    /// ネット対戦のマップのシーンに置くリスポーン地点の目印。サーバーはシーンを読めないので、書き出し (Shooter.Editor.ServerRulesExporter) が
     /// <see cref="SpawnPoint"/> にして <c>server-data/maps/&lt;マップ&gt;.points.json</c> に書く。判断は持たない。
     /// </summary>
     [DisallowMultipleComponent]
@@ -35,14 +35,14 @@ namespace Fps.Runtime
             return new SpawnPoint(new System.Numerics.Vector3(p.x, p.y, p.z), ToCoreTeam(_team));
         }
 
-        public static Fps.Core.Team? ToCoreTeam(SpawnTeam team)
+        public static Shooter.Core.Team? ToCoreTeam(SpawnTeam team)
         {
             switch (team)
             {
                 case SpawnTeam.Alpha:
-                    return Fps.Core.Team.Alpha;
+                    return Shooter.Core.Team.Alpha;
                 case SpawnTeam.Bravo:
-                    return Fps.Core.Team.Bravo;
+                    return Shooter.Core.Team.Bravo;
                 default:
                     return null;
             }

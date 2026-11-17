@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // NavMesh の無い場所 (射撃場) でもボスの段階による速さの変化を見せられるよう、経路を引かずに左右へ往復するだけの動き。
     // 速さは同じ GameObject の BossController の段階の倍率を毎フレーム読み、段階の切り替えをこちらで覚えない。

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="IMovementOverride.Step"/> が返す、1 Tick 分の動き。<see cref="PlayerController"/> は次の順に当てる:

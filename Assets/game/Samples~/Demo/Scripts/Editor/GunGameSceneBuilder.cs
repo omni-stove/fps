@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ガンゲームのシーン GunGame を組む。全員が別の陣営 (プレイヤーが陣営 0、bot が 1 から <see cref="BotCount"/>) で撃ち合い、
@@ -15,14 +15,14 @@ namespace Fps.Editor
     /// 出現点は <see cref="SpawnPositions"/> の 8 か所を全陣営で共有し、陣営ごとに並びをずらして最初の点をばらけさせる
     /// (Runner は自陣営の点のうち敵からいちばん離れた点に戻すので、共有していれば生きている全員から離れた点に戻る)。
     /// Editor を閉じた状態で次のように呼べる (先に WeaponAssetBuilder.Build と GameRulesAssetBuilder.Build を走らせる):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GunGameSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GunGameSceneBuilder.Build</code>
     /// </summary>
     public sealed class GunGameSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.GunGameScene;
         public static string RulesPathValue => GameRulesAssetBuilder.GunGamePath;
-        public static string LadderPath => FpsKitRoot.OutputPath("Weapons/GunGameLadder.asset");
-        public const string MenuPath = "Fps/Build Gun Game Scene";
+        public static string LadderPath => ShooterKitRoot.OutputPath("Weapons/GunGameLadder.asset");
+        public const string MenuPath = "Shooter/Build Gun Game Scene";
 
         /// <summary>bot の数。1 体ずつ別の陣営に立てる。</summary>
         public const int BotCount = 5;

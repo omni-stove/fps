@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "Enemy", menuName = "Fps/Enemy Definition")]
+    [CreateAssetMenu(fileName = "Enemy", menuName = "Shooter/Enemy Definition")]
     public sealed class EnemyDefinition : ScriptableObject
     {
         // 種類を選んだだけのデータが種類ごとの怯みにくさを使えるよう、「決めていない」を Inspector の 1 つの欄で表せる負の値にする。

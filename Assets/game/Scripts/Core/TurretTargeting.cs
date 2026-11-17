@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public static class TurretTargeting
     {

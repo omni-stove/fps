@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public static partial class ImpactResolver
     {

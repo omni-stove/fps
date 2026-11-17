@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャンペーンの起動設定。コマンドライン引数 <c>-difficulty easy|normal|hard</c> から作る。

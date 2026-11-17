@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 投げられたグレネード 1 個。<see cref="Spawn"/> で Rigidbody の球として作られて跳ね、信管の秒数が経つと <see cref="Explode"/> して、
@@ -22,13 +22,13 @@ namespace Fps.Runtime
         public const string VisualName = "Visual";
 
         /// <summary>爆発のエフェクトを消すまでの秒数。プレハブが自分で消えなかったときの後始末。</summary>
-        public const float EffectLifetimeSeconds = Fps.Runtime.Explosion.EffectLifetimeSeconds;
+        public const float EffectLifetimeSeconds = Shooter.Runtime.Explosion.EffectLifetimeSeconds;
 
         /// <summary>
         /// 爆発の音が聞こえなくなる距離 (m)。<see cref="AudioSource.PlayClipAtPoint(AudioClip, Vector3)"/> が作る音源の既定の maxDistance に合わせ、
         /// 字幕 (<see cref="SubtitleFeed"/>) をこれより遠い人には出さない。
         /// </summary>
-        public const float ExplosionAudibleDistance = Fps.Runtime.Explosion.AudibleDistance;
+        public const float ExplosionAudibleDistance = Shooter.Runtime.Explosion.AudibleDistance;
 
         // 上を向いた面とみなす接触の法線の y。これより急な壁に触れても転がりは減らさない。
         private const float GroundNormalMinY = 0.5f;
@@ -358,7 +358,7 @@ namespace Fps.Runtime
             }
 
             var result = _impact.Explosion != null
-                ? Fps.Runtime.Explosion.Detonate(center, _impact.Explosion, _thrower, GrenadeThrower.WeaponId)
+                ? Shooter.Runtime.Explosion.Detonate(center, _impact.Explosion, _thrower, GrenadeThrower.WeaponId)
                 : new GrenadeExplosion(center, 0, 0, 0);
             if (_impact.AreaEffect != null)
             {
@@ -385,7 +385,7 @@ namespace Fps.Runtime
         /// <summary>爆発のログ。例: <c>[Grenade] exploded at=(1.0, 0.1, 9.5) damaged=2 killed=1 structures=0</c>。</summary>
         public static string FormatLog(GrenadeExplosion explosion)
         {
-            return Fps.Runtime.Explosion.FormatLog(explosion);
+            return Shooter.Runtime.Explosion.FormatLog(explosion);
         }
 
         /// <summary>
@@ -395,23 +395,23 @@ namespace Fps.Runtime
         /// </summary>
         public static bool IsObstructed(Vector3 center, Damageable target)
         {
-            return Fps.Runtime.Explosion.IsObstructed(center, target);
+            return Shooter.Runtime.Explosion.IsObstructed(center, target);
         }
 
         /// <summary>center から target の体 (コライダーを合わせた範囲) のいちばん近い点までの距離。コライダーが無ければ Transform の位置まで。</summary>
         public static float DistanceTo(Vector3 center, Damageable target)
         {
-            return Fps.Runtime.Explosion.DistanceTo(center, target);
+            return Shooter.Runtime.Explosion.DistanceTo(center, target);
         }
 
         /// <summary>
         /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
         /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
-        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Fps.Net.NetCombatFeed</c>) も呼ぶ。
+        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Shooter.Net.NetCombatFeed</c>) も呼ぶ。
         /// </summary>
         public static void PlayExplosionEffects(Vector3 center)
         {
-            Fps.Runtime.Explosion.PlayEffects(center);
+            Shooter.Runtime.Explosion.PlayEffects(center);
         }
 
         /// <summary>種類を渡さずに投げる物の跳ね方 (<see cref="UntypedSpec"/> の跳ね返りと摩擦)。注意をそらす物 (<see cref="ThrownDistraction"/>) も使う。</summary>

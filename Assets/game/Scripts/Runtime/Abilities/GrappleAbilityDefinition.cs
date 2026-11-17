@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 敵を引く・物と物をつなぐはキットでは作らない。ゲームが別の AbilityDefinition として足す。
-    [CreateAssetMenu(fileName = "GrappleAbility", menuName = "Fps/Abilities/Grapple Ability")]
+    [CreateAssetMenu(fileName = "GrappleAbility", menuName = "Shooter/Abilities/Grapple Ability")]
     public sealed class GrappleAbilityDefinition : AbilityDefinition
     {
         [SerializeField, Min(0f), Tooltip("撃てる最短の距離 (m)。目から刺さる点までがこれより近ければ刺さらない")]

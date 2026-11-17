@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 軌跡は <see cref="VaultProbe.PlanPath"/> が作る形 (始点が 0 の 4 頂点) に限り、始点以外の 3 頂点だけを持つ。

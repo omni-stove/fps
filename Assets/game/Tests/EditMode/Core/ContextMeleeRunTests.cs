@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     // 秒数は 2 進で割り切れる値にする。0.1 などを足し重ねると丸めで境目の手前に止まり、Tick の判定がずれる。
     public sealed class ContextMeleeRunTests
     {

@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆発の届く範囲を線で見せるデバッグ表示。まだ爆発していないグレネード (<see cref="ThrownGrenade.Live"/>) には今の位置に、

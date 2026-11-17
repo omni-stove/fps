@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// カバーの状態 (外 / 入りかけ / 中 / 覗き) の遷移。1 フレームごとに入力と <see cref="CoverProbe.Evaluate"/> の結果で <see cref="Step"/> を呼ぶ。

@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーの今のアクション (<see cref="PlayerActionState"/>) を、デバッグ表示の行に組み立てる。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// スコアボードの 1 チーム分。<see cref="ScoreboardRows.Build"/> が作る。

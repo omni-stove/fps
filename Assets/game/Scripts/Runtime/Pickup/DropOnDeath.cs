@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 同じ GameObject の <see cref="Damageable"/> が倒れたら、倒れた位置 (足元) に <see cref="Drops"/> の拾える物を落とす。

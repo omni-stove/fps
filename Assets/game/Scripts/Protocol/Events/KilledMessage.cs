@@ -1,6 +1,6 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
-    /// <summary>全員に送るキルログの 1 行 (<c>Fps.Core.KillFeedEntry</c> の中身)。自滅なら倒した人と倒された人が同じ。</summary>
+    /// <summary>全員に送るキルログの 1 行 (<c>Shooter.Core.KillFeedEntry</c> の中身)。自滅なら倒した人と倒された人が同じ。</summary>
     public sealed class KilledMessage : IMessage
     {
         public const byte CurrentVersion = 1;

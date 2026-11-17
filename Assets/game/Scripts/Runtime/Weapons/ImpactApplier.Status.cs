@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public static partial class ImpactApplier
     {

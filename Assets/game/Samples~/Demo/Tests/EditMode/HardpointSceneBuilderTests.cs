@@ -1,15 +1,15 @@
 using System.Linq;
 using System;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="HardpointSceneBuilder"/> の拠点の配置と、シーン・ルールのパスを確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Fps.Editor.HardpointSceneBuilder.Build</c> で確かめる。
+    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.HardpointSceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class HardpointSceneBuilderTests
     {

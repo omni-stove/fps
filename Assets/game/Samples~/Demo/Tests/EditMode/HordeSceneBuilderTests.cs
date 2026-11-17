@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="HordeSceneBuilder"/> の拠点・防衛物・出現点の配置と、シーン・ルールのパスを確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Fps.Editor.HordeSceneBuilder.Build</c> で確かめる。
+    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.HordeSceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class HordeSceneBuilderTests
     {

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>分隊への指示 (<see cref="BotErrand.IsOrder"/>) の <c>[Squad]</c> 付きログの文言。</summary>
     public static class SquadOrderLog

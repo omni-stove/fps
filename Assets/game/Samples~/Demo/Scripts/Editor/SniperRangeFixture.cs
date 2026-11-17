@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 狙撃兵を試す仮の敵と、その高台。高台の上面だけを Play 中に焼き (NavMeshBakeActivator)、狙撃兵は上面の足場の間だけを移る。
     // 右奥の隅に置き、視界を出現位置・開けた場所に届かない長さにして、ほかの smoke の手順の間に撃ってこないようにする。

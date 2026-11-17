@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 位置はどれも乗り物の原点から見た向きと距離 (乗り物の回転を掛ける前) で持つ。乗り物が動いても書き直さずに済むようにするため。
     public sealed class MapVehicleSeat

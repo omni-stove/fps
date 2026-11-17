@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// SquadCommand の入力 (<see cref="PlayerActionReader.HeldCommands"/> の <see cref="PlayerCommands.SquadCommand"/>) で、味方の bot (<see cref="EnemyAgent"/>) に指示を出す。

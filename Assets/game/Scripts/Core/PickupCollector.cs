@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拾おうとしている人の、拾う判定 (<see cref="PickupJudge.Judge"/>) に要る今の状態。

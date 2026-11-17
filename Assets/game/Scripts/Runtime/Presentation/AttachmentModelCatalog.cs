@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "AttachmentModelCatalog", menuName = "Fps/Attachment Model Catalog")]
+    [CreateAssetMenu(fileName = "AttachmentModelCatalog", menuName = "Shooter/Attachment Model Catalog")]
     public sealed class AttachmentModelCatalog : ScriptableObject
     {
         public const string CatalogName = "AttachmentModel";

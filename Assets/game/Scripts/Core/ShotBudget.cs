@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーでクライアント 1 人の連射を制限する。<see cref="MinShotSpacingSeconds"/> 秒ごとに 1 発ぶん回復し、

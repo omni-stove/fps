@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 射撃場のチュートリアルの段階 (<see cref="TutorialStatus"/>) を、画面に出す 1 行の文にする。

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SquadOrderButton.Tick"/> が返す、SquadCommand のボタンの押し方。</summary>
     public enum SquadOrderGesture

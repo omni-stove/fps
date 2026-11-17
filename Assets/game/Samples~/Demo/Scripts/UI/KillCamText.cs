@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>キルカム (<see cref="DeathCamera.KillCam"/>) の再生中に UI が出す文。</summary>
     public static class KillCamText

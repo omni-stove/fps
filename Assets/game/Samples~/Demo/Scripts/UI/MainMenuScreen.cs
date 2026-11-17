@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// メインメニューの画面。MainMenu シーン (Fps.Editor.MenuSceneBuilder が生成) に置き、Awake で子の GameObject に
+    /// メインメニューの画面。MainMenu シーン (Shooter.Editor.MenuSceneBuilder が生成) に置き、Awake で子の GameObject に
     /// PanelSettings と UIDocument を作って Resources の MainMenu.uxml を読み込む (<see cref="Show"/>)。
     /// ボタンを押すと <see cref="MenuNavigator.Go"/> でその行き先へ進む。ゲームパッドの上下 (とキーボードの矢印・Tab) では
     /// <see cref="ButtonNames"/> の順にフォーカスを動かし、端では反対側へ回り込む。マウスで指したボタンにもフォーカスを移すので、
@@ -598,7 +598,7 @@ namespace Fps.Runtime
             var catalog = EffectiveMissions;
             if (catalog == null)
             {
-                error = "no mission catalog is wired to the menu or set in the GameContent; rerun Fps/Build Mission Catalog and Fps/Build Main Menu Scene";
+                error = "no mission catalog is wired to the menu or set in the GameContent; rerun Shooter/Build Mission Catalog and Shooter/Build Main Menu Scene";
                 return false;
             }
 

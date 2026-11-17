@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // UI Toolkit の HUD に足さず OnGUI で描くのは、HUD を差し替えたゲームでも既定の演出が消えないようにするため。
     [DisallowMultipleComponent]

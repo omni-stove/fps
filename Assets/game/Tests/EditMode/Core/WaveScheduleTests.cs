@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class WaveScheduleTests
     {
         // 1 波目は 2 体を同時に 1 体ずつ、休憩 3 秒。2 波目は 3 体を同時に 2 体まで、強さ 1.5 倍。

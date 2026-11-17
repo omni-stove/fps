@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 他のプレイヤーは世界に入れない。予測するクライアントには他人の確定位置が無く、当てるとサーバーと毎回食い違うため。

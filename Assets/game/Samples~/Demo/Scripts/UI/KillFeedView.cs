@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 誰が誰をどの武器で倒したかを画面右上に並べるビュー。Hud.uxml の <see cref="UxmlName"/> を使う。

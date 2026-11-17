@@ -1,26 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Core.Navigation;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Core.Navigation;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using SceneLadder = Fps.Runtime.Traversal.Ladder;
+using SceneLadder = Shooter.Runtime.Traversal.Ladder;
 using NumericsQuaternion = System.Numerics.Quaternion;
 using NumericsVector3 = System.Numerics.Vector3;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public static class MapCollisionExporter
     {
-        public const string MenuPath = "Fps/Net/Export Server Data";
+        public const string MenuPath = "Shooter/Net/Export Server Data";
         public const string LogTag = "[MapCollision]";
         public const string ScenesArgument = "-mapScenes";
         public const string OutputFolder = MapCollisionFiles.ServerDataFolder;
-        public const string FileExtension = FpsMapFile.Extension;
+        public const string FileExtension = ShooterMapFile.Extension;
 
         private static Func<IReadOnlyList<string>> _mapScenes;
 
@@ -201,7 +201,7 @@ namespace Fps.Editor
             var temporary = path + ".tmp";
             using (var stream = File.Create(temporary))
             {
-                FpsMapFile.Write(stream, map);
+                ShooterMapFile.Write(stream, map);
             }
 
             if (File.Exists(path))
@@ -276,7 +276,7 @@ namespace Fps.Editor
         {
             using (var stream = File.OpenRead(path))
             {
-                return FpsMapFile.Read(stream);
+                return ShooterMapFile.Read(stream);
             }
         }
 

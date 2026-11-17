@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="IMatchTransport"/> で送るときの届け方。</summary>
     public enum TransportChannel

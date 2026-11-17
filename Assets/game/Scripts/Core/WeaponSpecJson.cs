@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 項目名はサンプルの武器の JSON (Samples~/Demo/Weapons/Json) と同じにし、手で書いた武器の JSON をそのまま貼れるようにする。
     // 部品の項目名は部品の Spec のコンストラクター引数と同じにし、Spec が ParamName に入れて投げた不正をそのまま項目に結び付ける。

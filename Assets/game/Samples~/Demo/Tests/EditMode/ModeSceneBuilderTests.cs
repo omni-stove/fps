@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
+using Shooter.Core;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="ModeSceneBuilder"/> の配置の検査と既定の配置を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Fps.Editor.ModeTestSceneBuilder.Build</c> で確かめる。
+    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.ModeTestSceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class ModeSceneBuilderTests
     {

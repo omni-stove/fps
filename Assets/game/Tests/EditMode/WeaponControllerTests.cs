@@ -1,16 +1,16 @@
 using System.Linq;
 using System;
 using System.Text.RegularExpressions;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
-using WeaponAmmo = Fps.Core.WeaponAmmo;
+using WeaponAmmo = Shooter.Core.WeaponAmmo;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class WeaponControllerTests
     {
@@ -110,7 +110,7 @@ namespace Fps.Tests.EditMode
             try
             {
                 InitializeWithRifleAndHandgun(handgun);
-                var changes = new System.Collections.Generic.List<Fps.Core.Weapon>();
+                var changes = new System.Collections.Generic.List<Shooter.Core.Weapon>();
                 _controller.WeaponChanged += changes.Add;
                 var rifle = _controller.Weapon;
 
@@ -151,10 +151,10 @@ namespace Fps.Tests.EditMode
                 handgun.Weight = 1f;
                 handgun.MoveSpeedMultiplier = 1.1f;
                 InitializeWithRifleAndHandgun(handgun);
-                var held = new Fps.Core.CarryLoadSpec(
-                    Fps.Core.CarrySource.Held, Fps.Core.CarrySource.Held, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
-                var carried = new Fps.Core.CarryLoadSpec(
-                    Fps.Core.CarrySource.Carried, Fps.Core.CarrySource.None, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
+                var held = new Shooter.Core.CarryLoadSpec(
+                    Shooter.Core.CarrySource.Held, Shooter.Core.CarrySource.Held, 0f, 0.1f, 0f, Shooter.Core.CarryGaits.All);
+                var carried = new Shooter.Core.CarryLoadSpec(
+                    Shooter.Core.CarrySource.Carried, Shooter.Core.CarrySource.None, 0f, 0.1f, 0f, Shooter.Core.CarryGaits.All);
 
                 // 4 kg → 0.6、それに 0.9
                 Assert.That(_controller.CarrySpeedMultiplier(held), Is.EqualTo(0.6f * 0.9f).Within(1e-5f));
@@ -176,8 +176,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeforeInitializingTheCarryMultiplierIsOne()
         {
-            var carry = new Fps.Core.CarryLoadSpec(
-                Fps.Core.CarrySource.Carried, Fps.Core.CarrySource.Carried, 0f, 0.1f, 0f, Fps.Core.CarryGaits.All);
+            var carry = new Shooter.Core.CarryLoadSpec(
+                Shooter.Core.CarrySource.Carried, Shooter.Core.CarrySource.Carried, 0f, 0.1f, 0f, Shooter.Core.CarryGaits.All);
 
             Assert.That(_controller.CarrySpeedMultiplier(carry), Is.EqualTo(1f));
             Assert.Throws<ArgumentNullException>(() => _controller.CarrySpeedMultiplier(null));
@@ -309,7 +309,7 @@ namespace Fps.Tests.EditMode
                 _controller.Fire();
                 Assert.That(_controller.StartReload(), Is.True);
                 var previous = _controller.Weapon;
-                Fps.Core.Weapon changed = null;
+                Shooter.Core.Weapon changed = null;
                 _controller.WeaponChanged += weapon => changed = weapon;
 
                 _controller.RestoreLoadout(
@@ -376,25 +376,25 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentException>(() => _controller.RestoreLoadout(new WeaponAmmo[] { null }, null));
         }
 
-        private static Fps.Core.GameRules ReserveRules(bool infinite, float multiplier)
+        private static Shooter.Core.GameRules ReserveRules(bool infinite, float multiplier)
         {
-            return new Fps.Core.GameRules(
-                Fps.Core.FriendlyFire.Off,
-                Fps.Core.RespawnMode.Individual,
-                Fps.Core.GameRules.DefaultWaveIntervalSeconds,
+            return new Shooter.Core.GameRules(
+                Shooter.Core.FriendlyFire.Off,
+                Shooter.Core.RespawnMode.Individual,
+                Shooter.Core.GameRules.DefaultWaveIntervalSeconds,
                 0f,
                 0f,
-                Fps.Core.DeathBody.Vanish,
-                Fps.Core.DeathCamera.None,
+                Shooter.Core.DeathBody.Vanish,
+                Shooter.Core.DeathCamera.None,
                 infinite,
                 multiplier,
-                Fps.Core.Destruction.Off);
+                Shooter.Core.Destruction.Off);
         }
 
         [Test]
         public void InitializeBuildsTheWeaponsWithTheConfiguredRules()
         {
-            Assert.That(_controller.Rules, Is.SameAs(Fps.Core.GameRules.Default), "the default before anything is set");
+            Assert.That(_controller.Rules, Is.SameAs(Shooter.Core.GameRules.Default), "the default before anything is set");
             var rules = ReserveRules(true, 2f);
             _controller.Rules = rules;
 
@@ -405,7 +405,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True);
 
             _controller.Rules = null;
-            Assert.That(_controller.Rules, Is.SameAs(Fps.Core.GameRules.Default), "null resets to the default");
+            Assert.That(_controller.Rules, Is.SameAs(Shooter.Core.GameRules.Default), "null resets to the default");
             Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True, "setting Rules does not rebuild the current weapons");
         }
 
@@ -419,7 +419,7 @@ namespace Fps.Tests.EditMode
                 LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
                 _controller.Fire();
                 _controller.SelectNext();
-                Fps.Core.Weapon changed = null;
+                Shooter.Core.Weapon changed = null;
                 _controller.WeaponChanged += weapon => changed = weapon;
                 var rules = ReserveRules(false, 0.6f);
 
@@ -431,10 +431,10 @@ namespace Fps.Tests.EditMode
                 Assert.That(changed, Is.SameAs(_controller.Weapon));
                 var rifle = _controller.Loadout.Items[0];
                 Assert.That(rifle.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize), "rebuilt full");
-                Assert.That(rifle.ReserveAmmo, Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(_rifle.ReserveAmmo, 0.6f)));
+                Assert.That(rifle.ReserveAmmo, Is.EqualTo(Shooter.Core.Weapon.ScaleReserveAmmo(_rifle.ReserveAmmo, 0.6f)));
                 Assert.That(
                     _controller.Loadout.Items[1].ReserveAmmo,
-                    Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 0.6f)));
+                    Is.EqualTo(Shooter.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 0.6f)));
             }
             finally
             {
@@ -457,7 +457,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(_controller.Weapon.HasInfiniteReserve, Is.True);
                 Assert.That(
                     _controller.Loadout.Items[1].ReserveAmmo,
-                    Is.EqualTo(Fps.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 1.5f)),
+                    Is.EqualTo(Shooter.Core.Weapon.ScaleReserveAmmo(handgun.ReserveAmmo, 1.5f)),
                     "a weapon missing from the save starts with the multiplier");
             }
             finally
@@ -469,7 +469,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ApplyRulesNeedsInitializeAndRules()
         {
-            Assert.Throws<InvalidOperationException>(() => _controller.ApplyRules(Fps.Core.GameRules.Default));
+            Assert.Throws<InvalidOperationException>(() => _controller.ApplyRules(Shooter.Core.GameRules.Default));
             Assert.That(_controller.LoadedRules, Is.Null);
 
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -479,7 +479,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void InitializeBuildsTheWeaponFromTheDefinition()
         {
-            Fps.Core.Weapon changed = null;
+            Shooter.Core.Weapon changed = null;
             _controller.WeaponChanged += weapon => changed = weapon;
 
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -686,7 +686,7 @@ namespace Fps.Tests.EditMode
             var filter = new RewritingShotFilter();
             _controller.ShotFilter = filter;
             var forward = _camera.transform.forward;
-            var expected = Fps.Core.SpreadPattern.Direction(forward.ToNumerics(), 10f, 3, 0).ToUnity();
+            var expected = Shooter.Core.SpreadPattern.Direction(forward.ToNumerics(), 10f, 3, 0).ToUnity();
 
             Assert.That(_controller.Fire(), Is.True);
 
@@ -793,7 +793,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_controller.SpreadFraction, Is.EqualTo(1f), "the crosshair never goes past 1");
 
             _controller.AddModifier(new AddingModifier(1000f, 0f));
-            Assert.That(_controller.CurrentConeDegrees(spec), Is.EqualTo(Fps.Core.SpreadPattern.MaxDegrees));
+            Assert.That(_controller.CurrentConeDegrees(spec), Is.EqualTo(Shooter.Core.SpreadPattern.MaxDegrees));
 
             Assert.That(_controller.RemoveModifier(widen), Is.True);
             Assert.That(_controller.RemoveModifier(widen), Is.False);
@@ -910,14 +910,14 @@ namespace Fps.Tests.EditMode
             laser.name = "Laser";
             WeaponAssets.Configure(
                 laser,
-                new Fps.Core.WeaponSpec(
+                new Shooter.Core.WeaponSpec(
                     _laserId,
                     null,
-                    Fps.Core.WeaponCategory.AssaultRifle,
-                    new Fps.Core.TriggerSpec(Fps.Core.FireMode.Auto, 1f),
-                    new Fps.Core.AmmoSpec(magazineSize: 100, reserveAmmo: 0),
-                    new Fps.Core.RoundSpec(Fps.Core.RoundDelivery.Beam, 50f, beam: new Fps.Core.BeamSpec(tickSeconds)),
-                    new Fps.Core.ImpactSpec(_laserDamage)));
+                    Shooter.Core.WeaponCategory.AssaultRifle,
+                    new Shooter.Core.TriggerSpec(Shooter.Core.FireMode.Auto, 1f),
+                    new Shooter.Core.AmmoSpec(magazineSize: 100, reserveAmmo: 0),
+                    new Shooter.Core.RoundSpec(Shooter.Core.RoundDelivery.Beam, 50f, beam: new Shooter.Core.BeamSpec(tickSeconds)),
+                    new Shooter.Core.ImpactSpec(_laserDamage)));
             return laser;
         }
 
@@ -928,7 +928,7 @@ namespace Fps.Tests.EditMode
             target.transform.position = _camera.transform.position + (_camera.transform.forward * 10f);
             var damageable = target.AddComponent<Damageable>();
             damageable.Initialize("beam-target", 1000);
-            target.AddComponent<Hitbox>().Initialize(Fps.Core.HitZone.Body, damageable);
+            target.AddComponent<Hitbox>().Initialize(Shooter.Core.HitZone.Body, damageable);
             Physics.SyncTransforms();
             return damageable;
         }
@@ -969,7 +969,7 @@ namespace Fps.Tests.EditMode
         {
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 0, 12) }, TestWeapons.RifleId);
-            var dry = new System.Collections.Generic.List<Fps.Core.Weapon>();
+            var dry = new System.Collections.Generic.List<Shooter.Core.Weapon>();
             var reloads = 0;
             _controller.DryFired += dry.Add;
             _controller.ReloadStarted += _ => reloads++;
@@ -1015,7 +1015,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void FiringTheLastRoundStartsTheReloadWhenReloadIsAuto()
         {
-            Assert.That(Fps.Core.GameRules.Default.ReloadMode, Is.EqualTo(Fps.Core.ReloadMode.Auto));
+            Assert.That(Shooter.Core.GameRules.Default.ReloadMode, Is.EqualTo(Shooter.Core.ReloadMode.Auto));
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 2, 4) }, TestWeapons.RifleId);
             var reloads = 0;
@@ -1037,7 +1037,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ManualReloadNeverStartsFromTheTrigger()
         {
-            _controller.Rules = Fps.Core.GameRules.Default.WithReloadMode(Fps.Core.ReloadMode.Manual);
+            _controller.Rules = Shooter.Core.GameRules.Default.WithReloadMode(Shooter.Core.ReloadMode.Manual);
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
             _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 1, 4) }, TestWeapons.RifleId);
 
@@ -1099,7 +1099,7 @@ namespace Fps.Tests.EditMode
             {
                 handgun.name = "Handgun";
                 WeaponAssets.Configure(handgun, TestWeapons.HandgunSpec());
-                Assert.That(handgun.FireMode, Is.EqualTo(Fps.Core.FireMode.Semi));
+                Assert.That(handgun.FireMode, Is.EqualTo(Shooter.Core.FireMode.Semi));
                 _controller.Initialize(_camera.transform, _attack, _reload, handgun);
                 var full = handgun.MagazineSize;
 
@@ -1152,16 +1152,16 @@ namespace Fps.Tests.EditMode
             try
             {
                 dmr.name = "Dmr";
-                var piercing = new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Fps.Core.ImpactSpec(36));
-                WeaponAssets.Configure(dmr, new Fps.Core.WeaponSpec(
+                var piercing = new Shooter.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Shooter.Core.ImpactSpec(36));
+                WeaponAssets.Configure(dmr, new Shooter.Core.WeaponSpec(
                     TestWeapons.RifleId,
                     "weapon.dmr",
-                    Fps.Core.WeaponCategory.MarksmanRifle,
-                    ammo: new Fps.Core.AmmoSpec(15, 60, 2f),
-                    impact: new Fps.Core.ImpactSpec(45),
-                    ammoTypes: new[] { new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"), piercing }));
+                    Shooter.Core.WeaponCategory.MarksmanRifle,
+                    ammo: new Shooter.Core.AmmoSpec(15, 60, 2f),
+                    impact: new Shooter.Core.ImpactSpec(45),
+                    ammoTypes: new[] { new Shooter.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"), piercing }));
                 _controller.Initialize(_camera.transform, _attack, _reload, dmr);
-                var switched = new System.Collections.Generic.List<Fps.Core.Weapon>();
+                var switched = new System.Collections.Generic.List<Shooter.Core.Weapon>();
                 _controller.AmmoTypeSwitched += switched.Add;
 
                 LogAssert.Expect(LogType.Log, $"{WeaponController.AmmoTypeSwitchedLogPrefix} weapon=weapon.dmr index=1 id={piercing.Id} damage=36");
@@ -1193,16 +1193,16 @@ namespace Fps.Tests.EditMode
             try
             {
                 dmr.name = "Dmr";
-                WeaponAssets.Configure(dmr, new Fps.Core.WeaponSpec(
+                WeaponAssets.Configure(dmr, new Shooter.Core.WeaponSpec(
                     TestWeapons.RifleId,
                     "weapon.dmr",
-                    Fps.Core.WeaponCategory.MarksmanRifle,
-                    ammo: new Fps.Core.AmmoSpec(15, 60, 2f),
-                    impact: new Fps.Core.ImpactSpec(45),
+                    Shooter.Core.WeaponCategory.MarksmanRifle,
+                    ammo: new Shooter.Core.AmmoSpec(15, 60, 2f),
+                    impact: new Shooter.Core.ImpactSpec(45),
                     ammoTypes: new[]
                     {
-                        new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"),
-                        new Fps.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Fps.Core.ImpactSpec(36)),
+                        new Shooter.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a2", "ammo.dmr.standard"),
+                        new Shooter.Core.AmmoTypeSpec("00000000-0000-4000-8000-0000000000a3", "ammo.dmr.armorPiercing", impact: new Shooter.Core.ImpactSpec(36)),
                     }));
                 _controller.Initialize(_camera.transform, _attack, _reload, dmr);
                 LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape(WeaponController.AmmoTypeSwitchedLogPrefix)));
@@ -1238,11 +1238,11 @@ namespace Fps.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
-        private static Fps.Core.GameRules ActiveReloadRules(Fps.Core.ActiveReload activeReload)
+        private static Shooter.Core.GameRules ActiveReloadRules(Shooter.Core.ActiveReload activeReload)
         {
-            var d = Fps.Core.GameRules.Default;
-            var a = Fps.Core.ActionRules.Default;
-            return new Fps.Core.GameRules(
+            var d = Shooter.Core.GameRules.Default;
+            var a = Shooter.Core.ActionRules.Default;
+            return new Shooter.Core.GameRules(
                 d.FriendlyFire,
                 d.RespawnMode,
                 d.WaveIntervalSeconds,
@@ -1253,10 +1253,10 @@ namespace Fps.Tests.EditMode
                 d.InfiniteReserve,
                 d.ReserveAmmoMultiplier,
                 d.Destruction,
-                new Fps.Core.ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
+                new Shooter.Core.ActionRules(a.Downed, a.DownedBleedoutSeconds, a.DownedHealthFraction, a.ReviveSeconds, a.Cover, a.BlindFire, activeReload));
         }
 
-        private void StartReloadWithRules(Fps.Core.ActiveReload activeReload)
+        private void StartReloadWithRules(Shooter.Core.ActiveReload activeReload)
         {
             _controller.Rules = ActiveReloadRules(activeReload);
             _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
@@ -1269,8 +1269,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PressingReloadInsideTheWindowJudgesASuccessAndRefillsAtOnce()
         {
-            StartReloadWithRules(Fps.Core.ActiveReload.On);
-            var judged = new System.Collections.Generic.List<Fps.Core.ActiveReloadResult>();
+            StartReloadWithRules(Shooter.Core.ActiveReload.On);
+            var judged = new System.Collections.Generic.List<Shooter.Core.ActiveReloadResult>();
             _controller.ActiveReloadJudged += (weapon, result) =>
             {
                 Assert.That(weapon, Is.SameAs(_controller.Weapon));
@@ -1282,7 +1282,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Combat] active-reload success");
             Assert.That(_controller.PressReload(), Is.True);
 
-            Assert.That(judged, Is.EqualTo(new[] { Fps.Core.ActiveReloadResult.Success }));
+            Assert.That(judged, Is.EqualTo(new[] { Shooter.Core.ActiveReloadResult.Success }));
             Assert.That(_controller.Weapon.IsReloading, Is.False);
             Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(_rifle.MagazineSize));
             LogAssert.NoUnexpectedReceived();
@@ -1291,7 +1291,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PressingReloadOutsideTheWindowJudgesAFailOnlyOnce()
         {
-            StartReloadWithRules(Fps.Core.ActiveReload.On);
+            StartReloadWithRules(Shooter.Core.ActiveReload.On);
             _controller.Tick(_rifle.ReloadSeconds * _rifle.ActiveReloadWindowStart / 2f);
 
             LogAssert.Expect(LogType.Log, "[Combat] active-reload fail");
@@ -1308,7 +1308,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PressingReloadWhileReloadingDoesNothingWhenTheRuleIsOff()
         {
-            StartReloadWithRules(Fps.Core.ActiveReload.Off);
+            StartReloadWithRules(Shooter.Core.ActiveReload.Off);
             var judged = 0;
             _controller.ActiveReloadJudged += (weapon, result) => judged++;
             _controller.Tick(_rifle.ReloadSeconds * (_rifle.ActiveReloadWindowStart + (_rifle.ActiveReloadWindowLength / 2f)));
@@ -1324,8 +1324,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ActiveReloadLogNamesTheResult()
         {
-            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Success), Is.EqualTo("[Combat] active-reload success"));
-            Assert.That(WeaponController.ActiveReloadLog(Fps.Core.ActiveReloadResult.Fail), Is.EqualTo("[Combat] active-reload fail"));
+            Assert.That(WeaponController.ActiveReloadLog(Shooter.Core.ActiveReloadResult.Success), Is.EqualTo("[Combat] active-reload success"));
+            Assert.That(WeaponController.ActiveReloadLog(Shooter.Core.ActiveReloadResult.Fail), Is.EqualTo("[Combat] active-reload fail"));
         }
 
         [Test]
@@ -1447,7 +1447,7 @@ namespace Fps.Tests.EditMode
                 _spread = spread;
             }
 
-            public float ModifyConeDegrees(Fps.Core.WeaponSpec spec, float coneDegrees) => coneDegrees + _degrees;
+            public float ModifyConeDegrees(Shooter.Core.WeaponSpec spec, float coneDegrees) => coneDegrees + _degrees;
 
             public float ModifySpreadFraction(float spreadFraction) => spreadFraction + _spread;
         }
@@ -1467,7 +1467,7 @@ namespace Fps.Tests.EditMode
                 _scale = scale;
             }
 
-            public float ModifyConeDegrees(Fps.Core.WeaponSpec spec, float coneDegrees) => coneDegrees * _scale;
+            public float ModifyConeDegrees(Shooter.Core.WeaponSpec spec, float coneDegrees) => coneDegrees * _scale;
 
             public float ModifySpreadFraction(float spreadFraction) => spreadFraction * _scale;
         }

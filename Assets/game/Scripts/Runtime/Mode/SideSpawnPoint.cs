@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 陣営ごとの出現点。<see cref="ModeRunnerBase"/> は倒れた人を、自分の陣営のこの点のうち敵からいちばん離れた所

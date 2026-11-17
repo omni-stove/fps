@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// メインメニューの遷移先の選び方。オフラインのボタンの行き先 (<see cref="MenuDestination"/>) から読むシーンを決め
     /// (<see cref="Plan(MenuDestination, string, MenuScenes)"/>。シーンのルートを省くと <see cref="KitPaths.DefaultRoot"/>、
     /// シーンの名前 (<see cref="MenuScenes"/>) を省くと下の const の既定の名前)、ゲームパッドで動かすフォーカスの
-    /// 次の位置 (<see cref="MoveFocus"/>) を決める。実際にシーンを読むのは Fps.Runtime の MenuNavigator。
+    /// 次の位置 (<see cref="MoveFocus"/>) を決める。実際にシーンを読むのは Shooter.Runtime の MenuNavigator。
     /// </summary>
     public static class MenuRoute
     {

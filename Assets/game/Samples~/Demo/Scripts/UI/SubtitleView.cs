@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 音の合図の字幕を画面の下に出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。

@@ -1,13 +1,13 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Update は Edit Mode では走らないので、Bind と Tick を直接呼んで進める。
     public sealed class StaggerReactionTests

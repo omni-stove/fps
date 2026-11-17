@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: HeavyMarksmanRifle
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 2f9fcfb4-cacb-4fe1-a325-327eaa1c4c8d
   _nameKey: weapon.ref.heavyMarksmanRifle
   _description: "CS2 \u306E G3SG1 (\u5B9F\u9283\u306F HK G3SG/1) \u3092\u53C2\u8003\u3002\u4F53 80\u30FB240 RPM\u30FB20 \u767A\u3067 SCAR-20 \u3068\u540C\u3058\u6483\u3061\u5408\u3044\u3060\u304C\u3001\u30EA\u30ED\u30FC\u30C9\u304C 4.67 \u79D2\u3068\u9045\u304F\u91CD\u3044\u3002"

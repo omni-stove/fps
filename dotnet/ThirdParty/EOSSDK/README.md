@@ -1,6 +1,6 @@
 # EOS の C# SDK
 
-.NET のサーバー (`dotnet/Fps.Server`) が EOS を直接呼ぶための SDK を置く場所。
+.NET のサーバー (`dotnet/Shooter.Server`) が EOS を直接呼ぶための SDK を置く場所。
 SDK は Epic Online Services Developer Agreement の下で配られるので、リポジトリにはコミットしない。
 このフォルダの中身は README.md を除いて `.gitignore` で除いてあり、各自が手元に置く。
 
@@ -55,4 +55,4 @@ make eos-sdk ARGS="--from ~/Downloads/EOS-SDK.zip"   # ポータルの zip (か�
 
 `dotnet/EosSdk.props` を読み込んだプロジェクトは、SDK があるときだけ `EosSdkAvailable` が `true` になり、`EOS_SDK` とその OS の `EOS_PLATFORM_*` が定義される。
 SDK の型を使うコードは `#if EOS_SDK` で囲むか、`Condition="'$(EosSdkAvailable)' == 'true'"` を付けた項目でだけコンパイルする。
-SDK そのものは `dotnet/Fps.EosSdk` に入る。参照すればネイティブのライブラリも出力先に写る。`Fps.EosSdk.EosSdkBuild.Included` でビルドに SDK が入っているかを確かめられる。
+SDK そのものは `dotnet/Shooter.EosSdk` に入る。参照すればネイティブのライブラリも出力先に写る。`Shooter.EosSdk.EosSdkBuild.Included` でビルドに SDK が入っているかを確かめられる。

@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>ロードアウトを選ぶ画面に出す文字列。<see cref="GameText"/> から今の言語で引く。</summary>
     public static class LoadoutFormat

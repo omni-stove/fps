@@ -1,7 +1,7 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>既定の UI が、ゲーム進行への口 (<see cref="GameUi"/>) にポーズ・ロードアウトの選択・メニューの既定を登録することを確かめる。</summary>
     public sealed class DefaultGameUiTests

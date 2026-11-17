@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面に出す文字の言語。言語コード (<see cref="Code"/>) で区別する。設定画面で選んで <see cref="LanguagePreferenceStore"/> に保存し、文字は言語ごとの <see cref="StringTable"/> から引く。

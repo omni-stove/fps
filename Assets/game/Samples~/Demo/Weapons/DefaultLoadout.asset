@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a7c2e90b85d4f31a6c3e8f12d09b7e4, type: 3}
   m_Name: DefaultLoadout
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.LoadoutDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.LoadoutDefinition
   _slots:
   - _allowedCategories: 00000000010000000200000003000000040000000500000007000000i
     _weapon: {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}

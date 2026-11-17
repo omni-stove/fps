@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD。画面の上中央に両チームのポイント・残り時間・各拠点の持ち主を出し、

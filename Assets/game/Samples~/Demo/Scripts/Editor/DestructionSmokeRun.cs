@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器とルールのアセットと DestructionTest シーンを生成し直して Play Mode に入り、小屋の壁の下段を
@@ -22,7 +22,7 @@ namespace Fps.Editor
     /// 小屋は角と屋根でつながっているので、1 発で下段の一部を壊しても崩落はしない。そのため、まだ壊れていない下段の部品を
     /// 添字の順に 1 つずつ外側から撃ち、崩落が出るまで続ける (上限 <see cref="MaxShots"/> 発)。
     /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.DestructionSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.DestructionSmokeRun.Run -logFile -</code>
     /// </summary>
     [InitializeOnLoad]
     public static class DestructionSmokeRun
@@ -44,8 +44,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.DestructionSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.DestructionSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.DestructionSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.DestructionSmokeRun.RequestedAt";
         private const string CollapsedKey = " collapsed=";
 
         private static readonly List<string> _errors = new List<string>();

@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerActions.Attach"/> が呼ぶ、アクション 1 つ分の取り付け。プレイヤーに自分のコンポーネントを付け、ルールで有効・無効を決める。

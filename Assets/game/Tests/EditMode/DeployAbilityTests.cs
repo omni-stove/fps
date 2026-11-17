@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 持ち主は視点も CharacterController も無い GameObject にして、狙いを持ち主の正面、足元を Transform の位置に固定する。
     public sealed class DeployAbilityTests

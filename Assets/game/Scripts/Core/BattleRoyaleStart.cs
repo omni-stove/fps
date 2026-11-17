@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>バトルロイヤルを始めたときに、プレイヤーをどこから始めさせるか。</summary>
     public enum BattleRoyaleStart

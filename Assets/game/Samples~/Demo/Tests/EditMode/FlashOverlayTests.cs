@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では OnEnable と LateUpdate が走らないので、Track と Refresh を直接呼ぶ
     public sealed class FlashOverlayTests

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 時間とともに縮むエリア。この GameObject の位置 (水平面) を最初の円の中心にし、<see cref="ZoneSchedule"/> の予定どおりに縮める。

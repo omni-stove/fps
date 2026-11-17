@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// グレネードの残り。プレイヤーの部品にグレネードを投げる役 (GrenadeThrower) が無い画面 (ネット対戦) が、届いた数をそのまま出す。

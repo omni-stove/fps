@@ -1,14 +1,14 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Update は Edit Mode では走らないので、乗っている間に判断を止めることは Play での確認に任せ、ここでは乗り降りの口だけを確かめる。
     public sealed class EnemyAgentVehicleTests

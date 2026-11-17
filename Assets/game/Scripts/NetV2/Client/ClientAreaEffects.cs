@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Protocol;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// サーバーが効かせている範囲の効果 (<see cref="AreaEffectMessage"/>)。出た・変わった・消えたを知らせ、見た目を出す側 (NetV2Client) がそれに合わせて出す。

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="Match"/> の勝敗。</summary>
     public enum MatchResult

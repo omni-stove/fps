@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 乗り物の土台。子の <see cref="VehicleSeat"/> を並び順に座席の番号として集め、誰がどこに座っているか (<see cref="VehicleSeating"/>) を持ち、

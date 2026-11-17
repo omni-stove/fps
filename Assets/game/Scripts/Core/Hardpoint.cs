@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ハードポイントのルール。Alpha と Bravo の 2 チームが <see cref="HardpointSpec.PointCount"/> 個の拠点のうち、

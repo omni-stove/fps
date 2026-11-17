@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     // 武器の機能ごとの受け口を 1 か所で振り分けるのは、機能の issue が NetV2Client を触らずに受け口だけを埋められるようにするため。
     public sealed class ClientWeaponHooks

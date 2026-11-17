@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインのモードの HUD (陣営ごとの得点・残り時間・結果) に出す文。表のキー <c>hud.*</c> と引数の <see cref="LocalizedText"/> で返す。

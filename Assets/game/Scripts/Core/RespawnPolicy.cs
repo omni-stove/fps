@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="IRespawnPolicy"/> を <see cref="GameRules"/> から作る。</summary>
     public static class RespawnPolicy

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ダッシュボタンと移動入力から、ダッシュ中かどうかを決める。中で <see cref="HoldToggleState"/> を持ち、

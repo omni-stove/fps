@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     // アニメの値にそのまま出すので、並びを変えると Animator の条件がずれる。足すときは末尾に足す。
     public enum StaggerKind

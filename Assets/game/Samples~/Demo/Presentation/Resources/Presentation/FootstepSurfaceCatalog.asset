@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f89a52549c971c62e1e5f5ea0033d551, type: 3}
   m_Name: FootstepSurfaceCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.FootstepSurfaceCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.FootstepSurfaceCatalog
   _surfaces:
   - _materialId: default
     _footsteps:

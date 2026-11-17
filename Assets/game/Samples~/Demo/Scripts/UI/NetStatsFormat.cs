@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オンラインの HUD の右上に出す回線の表示 (Ping・パケットロス・サーバーの tick) の文字列と色の段階。

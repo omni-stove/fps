@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// クライアント予測の履歴。tick ごとに入力とそれを適用した後の状態をリングバッファに持つ。

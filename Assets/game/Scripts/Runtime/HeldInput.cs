@@ -1,7 +1,7 @@
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public static class HeldInput
     {

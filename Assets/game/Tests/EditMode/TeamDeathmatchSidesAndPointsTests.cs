@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="TeamDeathmatchDefinition"/> の陣営の数・人数・キル 1 回の点が <see cref="TeamDeathmatchSpec"/> に渡り、

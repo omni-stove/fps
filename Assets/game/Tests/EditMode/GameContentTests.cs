@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class GameContentTests
     {
@@ -150,7 +150,7 @@ namespace Fps.Tests.EditMode
             var b = Content("B");
             var a = Content("A");
 
-            LogAssert.Expect(LogType.Error, new Regex(@"^\[GameContent\] 2 assets in Resources/FpsKit/ \(A, B\); using 'A'"));
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[GameContent\] 2 assets in Resources/ShooterKit/ \(A, B\); using 'A'"));
             Assert.That(GameContent.Find(new[] { b, a }), Is.SameAs(a));
             Assert.That(GameContent.Find(new GameContent[0]), Is.Null);
         }
@@ -210,10 +210,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ThePathArgumentIsReadOnce()
         {
-            Assert.That(GameContentAssets.ResolvePath(new[] { "Unity" }, "Assets/Game/Resources/FpsKit/GameContent.asset"),
-                Is.EqualTo("Assets/Game/Resources/FpsKit/GameContent.asset"));
-            Assert.That(GameContentAssets.ResolvePath(new[] { "-gameContent", "Assets/X/Resources/FpsKit/Mine.asset" }, "Assets/Y.asset"),
-                Is.EqualTo("Assets/X/Resources/FpsKit/Mine.asset"));
+            Assert.That(GameContentAssets.ResolvePath(new[] { "Unity" }, "Assets/Game/Resources/ShooterKit/GameContent.asset"),
+                Is.EqualTo("Assets/Game/Resources/ShooterKit/GameContent.asset"));
+            Assert.That(GameContentAssets.ResolvePath(new[] { "-gameContent", "Assets/X/Resources/ShooterKit/Mine.asset" }, "Assets/Y.asset"),
+                Is.EqualTo("Assets/X/Resources/ShooterKit/Mine.asset"));
             Assert.Throws<System.ArgumentException>(() => GameContentAssets.ResolvePath(new[] { "-gameContent" }, "Assets/Y.asset"));
             Assert.Throws<System.ArgumentException>(
                 () => GameContentAssets.ResolvePath(new[] { "-gameContent", "Assets/A.asset", "-gameContent", "Assets/B.asset" }, "Assets/Y.asset"));

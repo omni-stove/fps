@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// スコアボードの行に出す文。言葉の入る名前と接続状態は表のキー <c>hud.scoreboard.*</c> の <see cref="LocalizedText"/> で返し、

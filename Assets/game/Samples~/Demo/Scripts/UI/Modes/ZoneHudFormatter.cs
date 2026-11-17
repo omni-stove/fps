@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>縮むエリアの HUD の 1 行。秒は <see cref="HudNumberFormat.RemainingTime"/> と同じ書式で出す。</summary>
     public static class ZoneHudFormatter

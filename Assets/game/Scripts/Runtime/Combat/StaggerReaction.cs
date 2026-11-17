@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 怯みの解除を EnemyAgent.Update より先に数え、解けたフレームの発砲を怯み中の発砲に数えないようにする。
     [DefaultExecutionOrder(-10)]

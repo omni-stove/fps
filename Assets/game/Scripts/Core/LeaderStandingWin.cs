@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 時間切れで、リーダーが倒れていない陣営がちょうど 1 つならその陣営の勝ち (<see cref="GuardianRespawn"/>)。

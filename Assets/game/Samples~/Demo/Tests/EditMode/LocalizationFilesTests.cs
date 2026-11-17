@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary>
     /// ゲームが読む文字列表 (Demo サンプルの Assets/game/Samples~/Demo/Localization/Resources/Strings/*.json と Assets/game/Samples~/Demo/Resources/Localization/&lt;言語&gt;/*.json を重ねたもの)

@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// オフラインの PlayerDeathCamera の切り替えと置き方。Edit Mode では LateUpdate が走らないので、LateUpdate が集める状態

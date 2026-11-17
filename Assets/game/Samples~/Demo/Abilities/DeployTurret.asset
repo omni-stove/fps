@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c9764cf4dde69f264afa0a7d2f2c46f7, type: 3}
   m_Name: DeployTurret
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.TurretDeployDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.TurretDeployDefinition
   _id: deploy-turret
   _maxCharges: 1
   _rechargeSeconds: 30

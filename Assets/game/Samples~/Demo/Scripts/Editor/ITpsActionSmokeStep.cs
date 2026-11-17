@@ -1,6 +1,6 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足す手順 1 つ分。public な具象クラスで引数なしのコンストラクターを持てば、

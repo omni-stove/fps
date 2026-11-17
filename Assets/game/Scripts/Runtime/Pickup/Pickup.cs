@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拾える物。トリガーの球 (<see cref="Radius"/>) に <see cref="Damageable"/> を持つ人が入ったら (<see cref="PickupCollectMode.Touch"/>)、
@@ -1135,7 +1135,7 @@ namespace Fps.Runtime
             if (prefab != null)
             {
                 // 拾う範囲はトリガーの球で決めるので、見た目の当たり判定は外す (残すと固い物として移動と弾を遮る)。
-                var instance = Fps.Runtime.VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
+                var instance = Shooter.Runtime.VisualPrefab.Instantiate(prefab, transform, VisualName, stripColliders: true);
                 instance.transform.localPosition = new Vector3(0f, VisualHeight, 0f);
                 AttachVisuals(instance.transform);
                 return instance.transform;

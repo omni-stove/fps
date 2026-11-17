@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーに TPS のアクションを付け、ルールでどれを有効にするかを決める。アクションごとの取り付けは <see cref="IPlayerActionInstaller"/> で、

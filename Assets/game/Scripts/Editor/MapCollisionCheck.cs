@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using NumericsVector3 = System.Numerics.Vector3;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public static class MapCollisionCheck
     {

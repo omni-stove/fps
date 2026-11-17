@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラの足音・着地音・被弾の声を鳴らす。プレイヤー・NetPlayer・敵の本体に付ける (<see cref="CharacterComponents.Attach"/>)。
@@ -25,7 +25,7 @@ namespace Fps.Runtime
     /// 無いものは鳴らさないだけで、動きや戦闘の処理は止めない。AudioSource は初めて鳴らすときに本体へ足す (足と声で 2 つ)。
     /// 他人の足音と着地音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
     /// 銃声・着弾・リロードの音は <see cref="WeaponPresentation"/> が鳴らす。
-    /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止める。
+    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止める。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CharacterAudio : MonoBehaviour

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ExecutionSession.Interact"/> で、ダウンした人へのインタラクトの長押しを進めた結果。</summary>
     public enum ExecutionStep

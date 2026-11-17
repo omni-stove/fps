@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     public static class InventorySync
     {

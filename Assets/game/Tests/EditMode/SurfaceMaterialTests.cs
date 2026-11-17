@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="SurfaceMaterial.IdOf"/> がコライダーから材質の Id を引き、無ければ既定の材質を返すことを確かめる。</summary>
     public sealed class SurfaceMaterialTests

@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// EnemyAiTest で敵をわざと詰まらせ、<see cref="EnemyAgent"/> の立て直しをログで確かめて Editor を終える。
@@ -20,7 +20,7 @@ namespace Fps.Editor
     /// </list>
     /// 敵が目標に気を取られないよう、Play 直後にプレイヤーを無効にする。
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>Unity -batchmode -projectPath . -executeMethod Fps.Editor.EnemyStuckSmokeRun.Run -logFile -</code>
+    /// <code>Unity -batchmode -projectPath . -executeMethod Shooter.Editor.EnemyStuckSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
     /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
@@ -54,8 +54,8 @@ namespace Fps.Editor
         /// </summary>
         public const float OffMeshOffset = 10f;
 
-        private const string ActiveKey = "Fps.EnemyStuckSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.EnemyStuckSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.EnemyStuckSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.EnemyStuckSmokeRun.RequestedAt";
 
         private static readonly string StuckPrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} stuck recovery=";
         private static readonly string WarpedPrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} warped ";

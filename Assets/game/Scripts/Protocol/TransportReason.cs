@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 切断の理由 (<see cref="TransportEvent.Reason"/>) を通信路に載せるバイト列との間で変える。どの <see cref="IMatchTransport"/> の実装も

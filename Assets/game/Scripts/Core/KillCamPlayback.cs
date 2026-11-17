@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) の 1 回の再生の進み。<see cref="Advance"/> に経過時間と再生の速さを渡して進め、

@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class InteractKeyLabelTests
     {

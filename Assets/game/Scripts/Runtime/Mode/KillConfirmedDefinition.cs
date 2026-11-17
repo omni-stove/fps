@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルコンファームド (<see cref="KillConfirmed"/>) の調整値をアセットとして持つ。<see cref="ToSpec"/> で <see cref="KillConfirmedSpec"/> に変換する。
     /// 新しく作ったときの値は <see cref="KillConfirmedRunner"/> の既定値と同じ。
     /// <see cref="KillConfirmedRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "KillConfirmed", menuName = "Fps/Modes/Kill Confirmed")]
+    [CreateAssetMenu(fileName = "KillConfirmed", menuName = "Shooter/Modes/Kill Confirmed")]
     public sealed class KillConfirmedDefinition : ScriptableObject
     {
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの確定数に届いたら試合が終わる")]

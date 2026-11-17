@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-// Fps.Runtime に置くと、同じ名前のルールの列挙 (Fps.Core.Ladder) を Fps.Runtime の中から名前だけで指せなくなるので、名前空間を分ける。
-namespace Fps.Runtime.Traversal
+// Shooter.Runtime に置くと、同じ名前のルールの列挙 (Shooter.Core.Ladder) を Shooter.Runtime の中から名前だけで指せなくなるので、名前空間を分ける。
+namespace Shooter.Runtime.Traversal
 {
     /// <summary>
     /// はしご 1 本。この GameObject の位置を、はしごの面が地面と交わる線の真ん中 (<see cref="LadderSpan.Bottom"/>)、

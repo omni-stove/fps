@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>アクションのデバッグ表示の 1 行。<see cref="ActionDebugFormat.Lines"/> が作る。</summary>
     public readonly struct ActionDebugLine : IEquatable<ActionDebugLine>

@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ModeSessionTests
     {
         private static readonly string[] _expectedPlayingEndedEnded = { "Playing ", "Ended Side 0", "Ended Side 0" };

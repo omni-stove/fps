@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="CapsuleMover"/> の設定。Unity の CharacterController の slopeLimit・stepOffset・skinWidth に当たる。長さは m。

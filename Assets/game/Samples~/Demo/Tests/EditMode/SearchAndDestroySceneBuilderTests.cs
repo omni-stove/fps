@@ -1,13 +1,13 @@
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="SearchAndDestroySceneBuilder"/> のパスと設置地点の配置を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Fps.Editor.SearchAndDestroySceneBuilder.Build</c> で確かめる。
+    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.SearchAndDestroySceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class SearchAndDestroySceneBuilderTests
     {

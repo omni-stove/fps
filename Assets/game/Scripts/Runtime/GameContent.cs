@@ -1,21 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // シーンのコンポーネントに直接配線した参照は、シーンごとに変えたいときのために、入口より先に使う。
     // 入口は、配線が空のときにキットが引く「ゲーム全体の中身」で、入口の欄も空なら従来の Resources のパス、それも無ければ既定値で動く。
-    [CreateAssetMenu(fileName = "GameContent", menuName = "Fps/Game Content")]
+    [CreateAssetMenu(fileName = "GameContent", menuName = "Shooter/Game Content")]
     public sealed class GameContent : ScriptableObject
     {
         public const string LogTag = "[GameContent]";
 
-        // 名前ではなく型で探すので、ゲームは Resources/FpsKit/ に好きな名前で 1 つ置けばよい。
-        public const string ResourceFolder = "FpsKit";
+        // 名前ではなく型で探すので、ゲームは Resources/ShooterKit/ に好きな名前で 1 つ置けばよい。
+        public const string ResourceFolder = "ShooterKit";
 
         [Header("ルール・移動・敵")]
         [SerializeField, Tooltip("シーンにルールが配線されていないときに使うルール")]

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器のアセットと EnemyAiTest を生成し直し、Play Mode で走らせて、ログで次を確かめて Editor を終える。
@@ -21,7 +21,7 @@ namespace Fps.Editor
     /// </list>
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
     /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.EnemyFireSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.EnemyFireSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
     /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
@@ -46,18 +46,18 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.EnemyFireSmokeRun.Active";
-        private const string SecondsKey = "Fps.EnemyFireSmokeRun.Seconds";
-        private const string RequestedAtKey = "Fps.EnemyFireSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.EnemyFireSmokeRun.Active";
+        private const string SecondsKey = "Shooter.EnemyFireSmokeRun.Seconds";
+        private const string RequestedAtKey = "Shooter.EnemyFireSmokeRun.RequestedAt";
 
         private const string PlayerFirePrefix = "[Combat] fire ammo=";
 
         private static readonly string EnemyFirePrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} fire ammo=";
 
-        private static readonly string TakeCoverPrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} state={Fps.Core.EnemyState.TakeCover} ";
+        private static readonly string TakeCoverPrefix = $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} state={Shooter.Core.EnemyState.TakeCover} ";
 
         private static readonly string HidingPrefix =
-            $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} cover phase={Fps.Core.EnemyCoverPhase.Hiding} point=";
+            $"{EnemyAgent.LogTag} id={EnemyTestSceneBuilder.EnemyId} cover phase={Shooter.Core.EnemyCoverPhase.Hiding} point=";
 
         private static readonly List<string> _errors = new List<string>();
         private static bool _playerFired;

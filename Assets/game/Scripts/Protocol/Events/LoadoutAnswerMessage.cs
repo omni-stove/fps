@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="LoadoutRequestMessage"/> への返事。断ったなら訳 (ログに出す文) を付ける。</summary>
     public sealed class LoadoutAnswerMessage : IMessage

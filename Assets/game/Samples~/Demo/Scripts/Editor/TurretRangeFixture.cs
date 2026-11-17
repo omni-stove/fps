@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // タレットを試す場所。プレイヤーは手前 (PlayerGround) に立って +Z へタレットを置き、奥の足場に置いた敵を撃たせる。
     // 敵は無効のまま置き、smoke の手順 (TurretSmokeStep) が自分の番に有効にする。ほかの手順の間に撃ち合いを始めないように。

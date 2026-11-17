@@ -1,4 +1,4 @@
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>通信と Core が使う System.Numerics の値と、Unity の値の変換。</summary>
     internal static class NetV2Math

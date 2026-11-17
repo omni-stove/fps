@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では EnemyAgent の Update が走らないので、判断 (BomberEnemyBehavior) は知覚を作って直接進め、爆発させる EnemyBomber は Tick を呼ぶ。
     public sealed class EnemyBomberTests

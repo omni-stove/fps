@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class GameUiScreenTests
     {
@@ -28,9 +28,9 @@ namespace Fps.Tests.EditMode
 
             Assert.That(names, Has.None.Contains("Hud"), "the game no longer builds or finds the HUD through GameUi");
             Assert.That(names, Has.None.EqualTo("AttachActionDebug"));
-            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IHud"), Is.Null);
-            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IHudFactory"), Is.Null);
-            Assert.That(typeof(GameUi).Assembly.GetType("Fps.Runtime.IModeHud"), Is.Null);
+            Assert.That(typeof(GameUi).Assembly.GetType("Shooter.Runtime.IHud"), Is.Null);
+            Assert.That(typeof(GameUi).Assembly.GetType("Shooter.Runtime.IHudFactory"), Is.Null);
+            Assert.That(typeof(GameUi).Assembly.GetType("Shooter.Runtime.IModeHud"), Is.Null);
         }
 
         [Test]

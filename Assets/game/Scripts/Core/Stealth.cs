@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 敵がプレイヤーにすぐ気づかず、発見ゲージを溜めて気づき・警戒・交戦と段階を踏むか。

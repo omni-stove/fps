@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// SearchAndDestroyRunner が、ラウンドの頭に参加者を出現点に並べ、設置地点での設置・落ちた爆弾の拾い・設置された爆弾の解除を

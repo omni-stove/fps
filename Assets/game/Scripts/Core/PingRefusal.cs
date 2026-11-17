@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>印を付けようとして付けなかった理由。</summary>
     public enum PingRefusal

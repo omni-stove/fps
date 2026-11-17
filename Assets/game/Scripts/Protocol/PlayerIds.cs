@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>メッセージでプレイヤー (人と Bot) を指す、サーバーが振る Id の決まり。</summary>
     public static class PlayerIds

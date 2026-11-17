@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) のログの行。オフラインとネット対戦で同じ形にし、smoke とテストが同じ行を探せるようにする。

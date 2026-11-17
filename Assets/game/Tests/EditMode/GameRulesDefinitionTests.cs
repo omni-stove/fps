@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class GameRulesDefinitionTests
     {
@@ -70,7 +70,7 @@ namespace Fps.Tests.EditMode
             definition.Parachute = Parachute.On;
             definition.Stealth = Stealth.On;
             definition.Suppression = Suppression.On;
-            definition.Ping = Fps.Core.Ping.On;
+            definition.Ping = Shooter.Core.Ping.On;
             definition.Abilities = Abilities.On;
             definition.SlowMotion = SlowMotion.On;
             definition.AimToFire = AimToFire.On;
@@ -118,7 +118,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.Actions.Parachute, Is.EqualTo(Parachute.On));
             Assert.That(rules.Actions.Stealth, Is.EqualTo(Stealth.On));
             Assert.That(rules.Actions.Suppression, Is.EqualTo(Suppression.On));
-            Assert.That(rules.Actions.Ping, Is.EqualTo(Fps.Core.Ping.On));
+            Assert.That(rules.Actions.Ping, Is.EqualTo(Shooter.Core.Ping.On));
             Assert.That(rules.Actions.Abilities, Is.EqualTo(Abilities.On));
             Assert.That(rules.Actions.SlowMotion, Is.EqualTo(SlowMotion.On));
             Assert.That(rules.Actions.AimToFire, Is.EqualTo(AimToFire.On));
@@ -171,7 +171,7 @@ namespace Fps.Tests.EditMode
                     Parachute.On,
                     Stealth.On,
                     Suppression.On,
-                    Fps.Core.Ping.On,
+                    Shooter.Core.Ping.On,
                     Abilities.On,
                     SlowMotion.On,
                     AimToFire.On,
@@ -432,7 +432,7 @@ namespace Fps.Tests.EditMode
                     definition.Suppression = (Suppression)99;
                     break;
                 case "Ping":
-                    definition.Ping = (Fps.Core.Ping)99;
+                    definition.Ping = (Shooter.Core.Ping)99;
                     break;
                 case "Abilities":
                     definition.Abilities = (Abilities)99;

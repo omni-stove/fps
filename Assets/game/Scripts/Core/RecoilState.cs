@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 撃つたびに跳ねる視線のずれ (反動) と、その戻り。1 人の射手に 1 つ持つ。

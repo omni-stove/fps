@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルコンファームド (<see cref="KillConfirmed"/>) の <c>[Mode] killconfirmed</c> のログの文言。

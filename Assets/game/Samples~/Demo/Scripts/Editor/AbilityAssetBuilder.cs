@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 試し用の何もしない能力 (<see cref="NullAbilityDefinition"/>) のアセットを <see cref="NullAbilityPath"/> に、
@@ -18,11 +18,11 @@ namespace Fps.Editor
     /// 物を投げて敵の注意をそらす能力 (<see cref="DistractionThrowDefinition"/>) を <see cref="DistractionAbilityPath"/> に作る。
     /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.AbilityAssetBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.AbilityAssetBuilder.Build</code>
     /// </summary>
     public static class AbilityAssetBuilder
     {
-        public const string MenuPath = "Fps/Build Ability Assets";
+        public const string MenuPath = "Shooter/Build Ability Assets";
         public const string LogTag = "[AbilityAssetBuilder]";
 
         public const string NullAbilityId = "null-ability";
@@ -83,8 +83,8 @@ namespace Fps.Editor
         /// </summary>
         public const int GrappleGrabbableLayers = 1 << 0;
 
-        /// <summary>能力のアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
-        public static string Folder => FpsKitRoot.OutputPath("Abilities");
+        /// <summary>能力のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => ShooterKitRoot.OutputPath("Abilities");
 
         public static string NullAbilityPath => Folder + "/NullAbility.asset";
 
@@ -374,13 +374,13 @@ namespace Fps.Editor
             ability.RechargeSeconds = ShieldAbilityRechargeSeconds;
             ability.CooldownSeconds = ShieldAbilityCooldownSeconds;
             ability.WindupSeconds = ShieldAbilityWindupSeconds;
-            ability.MaxActive = Fps.Core.DeploySpec.DefaultMaxActive;
-            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
-            ability.MaxHealth = Fps.Core.DeploySpec.DefaultMaxHealth;
-            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
-            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
-            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
-            ability.Size = new Vector3(Fps.Core.DeploySpec.DefaultWidth, Fps.Core.DeploySpec.DefaultHeight, Fps.Core.DeploySpec.DefaultDepth);
+            ability.MaxActive = Shooter.Core.DeploySpec.DefaultMaxActive;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
+            ability.MaxHealth = Shooter.Core.DeploySpec.DefaultMaxHealth;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.Size = new Vector3(Shooter.Core.DeploySpec.DefaultWidth, Shooter.Core.DeploySpec.DefaultHeight, Shooter.Core.DeploySpec.DefaultDepth);
             ability.Prefab = null;
             ability.PreviewPrefab = null;
             ability.ToSpec();
@@ -395,11 +395,11 @@ namespace Fps.Editor
             ability.CooldownSeconds = TurretAbilityCooldownSeconds;
             ability.WindupSeconds = TurretAbilityWindupSeconds;
             ability.MaxActive = TurretSpec.DefaultMaxActive;
-            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
             ability.MaxHealth = TurretSpec.DefaultMaxHealth;
-            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
-            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
-            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
             ability.Size = new Vector3(TurretSpec.DefaultWidth, TurretSpec.DefaultHeight, TurretSpec.DefaultDepth);
             ability.Prefab = null;
             ability.PreviewPrefab = null;
@@ -424,11 +424,11 @@ namespace Fps.Editor
             ability.CooldownSeconds = DecoyAbilityCooldownSeconds;
             ability.WindupSeconds = DecoyAbilityWindupSeconds;
             ability.MaxActive = DecoySpec.DefaultMaxActive;
-            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
             ability.MaxHealth = DecoySpec.DefaultMaxHealth;
-            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
-            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
-            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
             ability.Size = new Vector3(DecoySpec.DefaultWidth, DecoySpec.DefaultHeight, DecoySpec.DefaultDepth);
             ability.Prefab = null;
             ability.PreviewPrefab = null;
@@ -451,11 +451,11 @@ namespace Fps.Editor
             ability.CooldownSeconds = MineAbilityCooldownSeconds;
             ability.WindupSeconds = MineAbilityWindupSeconds;
             ability.MaxActive = MineSpec.DefaultMaxActive;
-            ability.Overflow = Fps.Core.DeploySpec.DefaultOverflow;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
             ability.MaxHealth = MineSpec.DefaultMaxHealth;
-            ability.MaxRange = Fps.Core.DeploySpec.DefaultMaxRange;
-            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
-            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
             ability.Size = new Vector3(MineSpec.DefaultWidth, MineSpec.DefaultHeight, MineSpec.DefaultDepth);
             ability.Prefab = null;
             ability.PreviewPrefab = null;
@@ -485,8 +485,8 @@ namespace Fps.Editor
             ability.Overflow = RemoteChargeSpec.DefaultOverflow;
             ability.MaxHealth = RemoteChargeSpec.DefaultMaxHealth;
             ability.MaxRange = RemoteChargeSpec.DefaultMaxRange;
-            ability.MaxSlopeDegrees = Fps.Core.DeploySpec.DefaultMaxSlopeDegrees;
-            ability.MaxStepHeight = Fps.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
             ability.Size = new Vector3(RemoteChargeSpec.DefaultWidth, RemoteChargeSpec.DefaultHeight, RemoteChargeSpec.DefaultDepth);
             ability.Prefab = null;
             ability.PreviewPrefab = null;

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ハードポイント (<see cref="Hardpoint"/>) の有効な拠点の様子。</summary>
     public enum HardpointStatus

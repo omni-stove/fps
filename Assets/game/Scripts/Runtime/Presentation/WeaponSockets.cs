@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 武器のモデルの中の、演出を出す位置 (ソケット)。モデルの配下 (自分を含む) から <see cref="MuzzleName"/> と

@@ -1,9 +1,9 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 試し場所に置く、はしごの付いた台。動かない直方体の台 (<see cref="PlatformName"/>) の 1 つの側面にはしご (<see cref="LadderName"/>、

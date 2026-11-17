@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 1 tick の移動の入力 (Netcode の <c>SubmitInputRpc</c> の中身)。ダウン中か・乗り越えてよいかはクライアントの申告を信じないので送らない。

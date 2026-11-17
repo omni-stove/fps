@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>撃たれた人にだけ送る、受けたダメージと撃ってきた位置 (被弾の向きの表示)。</summary>
     public sealed class DamageTakenMessage : IMessage

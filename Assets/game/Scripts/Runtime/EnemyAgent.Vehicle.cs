@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="EnemyAgent"/> のうち、乗り物に乗る処理 (<see cref="IVehicleRider"/>)。敵とモードの Bot は入力を持たないので、

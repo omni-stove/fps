@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public static class MountedGunLog
     {

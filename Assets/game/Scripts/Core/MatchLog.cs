@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// チームデスマッチの <c>[Match]</c> 付きログの文言。サーバーとクライアントで同じ書式にし、

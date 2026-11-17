@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: Pdw
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 6b1ce288-952f-4ead-b23b-337df82d3a02
   _nameKey: weapon.ref.pdw
   _description: "CS2 \u306E P90 (\u5B9F\u9283\u306F FN P90) \u3092\u53C2\u8003\u3002\u4F53 26\u30FB857 RPM\u30FB50 \u767A\u306E\u5927\u5BB9\u91CF\u3002RangeModifier 0.86 \u3092 50 m \u3067 0.55 \u500D\u306B\u7F6E\u304D\u63DB\u3048\u305F\u3002\u79FB\u52D5\u306E\u500D\u7387\u306F 230/250\u3002"

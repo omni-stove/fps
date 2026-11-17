@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らないので、Mine.Tick を手で進める。
     // 地雷は原点に置き、持ち主は Alpha の陣営で、地雷から離れた所に立つ。

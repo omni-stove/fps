@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クイックマッチで、専用サーバーが <c>-register-lobby</c> で載せたロビーを探してつなぐサーバーを決める。

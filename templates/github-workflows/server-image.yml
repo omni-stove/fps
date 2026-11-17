@@ -1,7 +1,7 @@
 name: Server image
 
 # キットのテンプレート。ゲームのリポジトリの .github/workflows/ に写して使う (docs/dedicated-server.md の「CI のテンプレート」)。
-# v* のタグを push したら、Unity を使わない専用サーバー (dotnet/Fps.Server) を linux/amd64 と linux/arm64 のイメージにし、
+# v* のタグを push したら、Unity を使わない専用サーバー (dotnet/Shooter.Server) を linux/amd64 と linux/arm64 のイメージにし、
 # コンテナのレジストリに push する。Unity のライセンスもビルドも使わない。
 # PR では amd64 のイメージを作って起動を確かめるだけで push しない。要らなければ pull_request を消す。
 #
@@ -26,11 +26,11 @@ jobs:
       packages: write
     env:
       IMAGE: ${{ vars.SERVER_IMAGE || format('ghcr.io/{0}/server', github.repository) }}
-      SMOKE_IMAGE: fps-server:smoke
+      SMOKE_IMAGE: shooter-server:smoke
     steps:
       - uses: actions/checkout@v6
 
-      # Fps.Core.BuildVersion と同じ規則 (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめる。
+      # Shooter.Core.BuildVersion と同じ規則 (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめる。
       # PR ではタグが無いので、イメージの試しに使う版は PR の番号から作る
       - id: version
         name: Resolve the build version
@@ -71,7 +71,7 @@ jobs:
           context: .
           file: docker/server/Dockerfile
           platforms: linux/amd64
-          build-args: FPS_BUILD_VERSION=${{ steps.version.outputs.version }}
+          build-args: SHOOTER_BUILD_VERSION=${{ steps.version.outputs.version }}
           load: true
           tags: ${{ env.SMOKE_IMAGE }}
           cache-from: type=gha,scope=server-image
@@ -111,7 +111,7 @@ jobs:
           context: .
           file: docker/server/Dockerfile
           platforms: linux/amd64,linux/arm64
-          build-args: FPS_BUILD_VERSION=${{ steps.version.outputs.version }}
+          build-args: SHOOTER_BUILD_VERSION=${{ steps.version.outputs.version }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

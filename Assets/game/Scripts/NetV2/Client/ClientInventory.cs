@@ -1,9 +1,9 @@
 using System;
 using System.Text;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     public sealed class ClientInventory
     {

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>爆発する置き物 (<see cref="ExplosiveCharge"/>) の <c>[Explosive]</c> 付きログの文言。</summary>
     public static class ExplosivePropLog

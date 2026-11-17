@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 参加者をどの陣営 (<see cref="Side"/>) に分けるか。<see cref="ModeSession"/> が参加順の番号と今の各陣営の人数を渡して呼ぶ。

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using NumericsQuaternion = System.Numerics.Quaternion;
 using NumericsVector3 = System.Numerics.Vector3;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public static class MapVehicleExporter
     {

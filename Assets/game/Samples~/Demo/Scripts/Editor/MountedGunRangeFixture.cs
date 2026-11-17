@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 固定銃座を 2 つ置く。手前の銃座 (PlayerGunName) は床の西の端の的へ向け、乗って撃ち続けて熱を試す。
     // 奥の銃座 (EnemyGunName) は射撃場の真ん中へ向け、その後ろに銃座を使う敵を置く。敵の視界は手前の銃座に届かない広さにし、

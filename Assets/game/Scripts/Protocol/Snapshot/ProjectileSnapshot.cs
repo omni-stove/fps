@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <remarks>
     /// 発射の知らせ (<see cref="ProjectileSpawnedMessage"/>) が落ちても、後から見えるようになった人にも弾が見えるよう、スナップショットにも並べる。

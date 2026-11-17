@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の拠点 1 つの範囲。<see cref="Center"/> を中心に、水平は半径 <see cref="Radius"/>、

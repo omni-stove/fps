@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 武器の名前を出さないのは、Id の意味がオフラインと違う画面 (ネット対戦) では、倒した側の持っている武器を部品から引けないため。
     public sealed class ParticipantKillFeedNames : IKillFeedNames

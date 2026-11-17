@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DeployMine", menuName = "Fps/Abilities/Deploy Mine")]
+    [CreateAssetMenu(fileName = "DeployMine", menuName = "Shooter/Abilities/Deploy Mine")]
     public sealed class MineDeployDefinition : DeployAbilityDefinition
     {
         public const string BodyName = "Body";

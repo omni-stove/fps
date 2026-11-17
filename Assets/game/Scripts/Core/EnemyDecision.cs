@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 tick 分の敵の決定。移動・向き・射撃の実行は呼び出し側が行う。

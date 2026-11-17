@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="SurfaceImpactCatalog"/> の置き場所・材質の引き当てと default への寄せ方・検査を確かめる。</summary>
     public sealed class SurfaceImpactCatalogTests

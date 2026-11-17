@@ -1,10 +1,10 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 壊せる建物 1 つの、壊れている部品の集合 (Netcode の NetDestructibleStructure の NetworkList の中身)。
-    /// 部品 i が壊れていれば要素 i / 64 のビット i % 64 が立つ (<c>Fps.Core.StructureIntegrity.ToBitset</c> の形)。
+    /// 部品 i が壊れていれば要素 i / 64 のビット i % 64 が立つ (<c>Shooter.Core.StructureIntegrity.ToBitset</c> の形)。
     /// </summary>
     /// <remarks>
     /// 壊れるときにしか変わらず、部品が多いと大きいので、毎 tick のスナップショットに載せずに変わったときと途中参加のときに確実な届け方で送る。

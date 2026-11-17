@@ -1,8 +1,8 @@
 using System;
 using System.Numerics;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     // 誰が座っているかは乗り物ではなくプレイヤーの行 (PlayerSnapshot.Vehicle) に載せる。座席の数だけの並びを構造体に持たせると、差分の基準と中身を共有してしまうため。
     public struct VehicleSnapshot : ISnapshotEntity<VehicleSnapshot>

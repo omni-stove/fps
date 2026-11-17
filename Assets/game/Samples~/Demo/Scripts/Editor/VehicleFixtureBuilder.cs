@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 乗り降りを試す、動かない仮の乗り物 (<see cref="Vehicle"/>) をシーンに置く。見た目は箱 1 つで、座席は 3 つ:

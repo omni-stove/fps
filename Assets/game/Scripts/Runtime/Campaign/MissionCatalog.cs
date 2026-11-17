@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャンペーンのミッションの一覧。ミッションごとに Id・表示名・シーン・<see cref="MissionDefinition"/> を持つ。
@@ -13,7 +13,7 @@ namespace Fps.Runtime
     /// <see cref="CampaignRunner"/> が読む。
     /// Editor の MissionCatalogBuilder が生成するので、Inspector では書き換えない。
     /// </summary>
-    [CreateAssetMenu(fileName = "MissionCatalog", menuName = "Fps/Mission Catalog")]
+    [CreateAssetMenu(fileName = "MissionCatalog", menuName = "Shooter/Mission Catalog")]
     public sealed class MissionCatalog : ScriptableObject
     {
         public const float DefaultReloadDelaySeconds = 3f;

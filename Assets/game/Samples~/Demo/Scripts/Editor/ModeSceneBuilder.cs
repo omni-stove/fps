@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// オフラインのモード (<see cref="ModeRunnerBase"/>) のシーンを組む土台。派生クラスは Runner (<see cref="AddRunner"/>) と、

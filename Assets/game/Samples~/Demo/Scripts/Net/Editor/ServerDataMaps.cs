@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     [InitializeOnLoad]
     public static class ServerDataMaps

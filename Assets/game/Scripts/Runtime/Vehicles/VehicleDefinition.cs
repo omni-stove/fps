@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 乗り物 1 種類の値 (Id・耐久・部位の倍率・傷み方と爆発・乗り込める距離・追うカメラの置き方) をアセットとして持つ。
@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// 座席の並びはシーンの <see cref="VehicleSeat"/> の側にあるので、<see cref="ToSpec"/> で座席の設定と合わせて <see cref="VehicleSpec"/> にする。
     /// 検証は <see cref="VehicleSpec"/> に任せ、失敗したらどのアセットの値かを添えて <see cref="VehicleDefinitionException"/> を投げる。
     /// </summary>
-    [CreateAssetMenu(fileName = "Vehicle", menuName = "Fps/Vehicle Definition")]
+    [CreateAssetMenu(fileName = "Vehicle", menuName = "Shooter/Vehicle Definition")]
     public sealed class VehicleDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("乗り物の Id。ゲームのデータがこの乗り物を指すのに使う")]

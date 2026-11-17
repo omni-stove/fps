@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// HUD (<see cref="GrenadeCountView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) と <see cref="GameSignals.GrenadeCount"/> の残りを出すことを確かめる。

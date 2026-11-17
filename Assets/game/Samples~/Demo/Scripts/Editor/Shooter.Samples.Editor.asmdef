@@ -1,0 +1,31 @@
+{
+    "name": "Shooter.Samples.Editor",
+    "rootNamespace": "Shooter.Editor",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Editor",
+        "Shooter.NetV2.Client",
+        "Shooter.Protocol",
+        "Shooter.Runtime",
+        "Shooter.Runtime.UI",
+        "Unity.AI.Navigation",
+        "Unity.RenderPipelines.Universal.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "1.0.0",
+            "define": "SHOOTER_URP"
+        }
+    ],
+    "noEngineReferences": false
+}

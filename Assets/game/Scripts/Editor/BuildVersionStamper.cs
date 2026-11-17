@@ -2,11 +2,11 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEditor;
 using Debug = UnityEngine.Debug;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ビルドの版を決めて PlayerSettings.bundleVersion に入れ、ビルドが終わったら (失敗しても) 元の値に戻す。

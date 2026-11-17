@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーの起動・終了と試合のイベントを、運用のために機械で読める 1 行の JSON (<see cref="FlatJsonObject.Format"/>) にする。

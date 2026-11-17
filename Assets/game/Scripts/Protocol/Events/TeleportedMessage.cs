@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// サーバーがプレイヤーを置き直した (出現・リスポーン) 知らせ。全員に送り、他の人の補間の履歴を捨てさせ、持ち主には予測を置き直させる。

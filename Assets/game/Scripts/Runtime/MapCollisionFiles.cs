@@ -1,8 +1,8 @@
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// エディタではコミットした server-data/maps を直接読み、ビルドでは StreamingAssets に入れた写しを読む。
@@ -22,7 +22,7 @@ namespace Fps.Runtime
 
         public static string PathOf(string map)
         {
-            return Path.Combine(Directory, map + FpsMapFile.Extension);
+            return Path.Combine(Directory, map + ShooterMapFile.Extension);
         }
     }
 }

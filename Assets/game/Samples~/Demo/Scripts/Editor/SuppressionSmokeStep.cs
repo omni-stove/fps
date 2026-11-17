@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 狙いは入力で合わせられないので、弾の始点と向きを WeaponController.ShotFilter の差し込みで決める。
     // プレイヤーへの制圧は、Bot (EnemyAgent) と同じ Hitscan.Fire で撃って確かめる (射撃場に Bot を置けないため。SuppressionRangeFixture を参照)。

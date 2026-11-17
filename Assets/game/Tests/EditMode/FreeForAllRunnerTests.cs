@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// FreeForAllRunner が 1 人 1 陣営でキルを数え、モードの状態 (ModeStatus) の Detail に自分の順位を入れ、得点上限か時間切れで勝者を決めることを確かめる。

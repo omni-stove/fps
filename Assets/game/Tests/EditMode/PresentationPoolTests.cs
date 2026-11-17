@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="PresentationPool{T}"/> の上限・使い回し・返す時刻を、ただのオブジェクトで確かめる。</summary>
     public sealed class PresentationPoolTests

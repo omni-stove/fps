@@ -1,14 +1,14 @@
 using System.Linq;
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="WeaponAssetBuilder"/> を一時フォルダに走らせて、出力と GUID の保持を確かめる。
@@ -69,7 +69,7 @@ namespace Fps.Tests.EditMode
             foreach (var spec in expected)
             {
                 var name = System.IO.Path.GetFileNameWithoutExtension(AssetPathOf(spec.Id));
-                var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + name + ".json"));
+                var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + name + ".json"));
                 Assert.That(
                     WeaponSpecJson.Write(WeaponJsonImporter.ParseSpec(json, name + ".json")), Is.EqualTo(WeaponSpecJson.Write(spec)), name);
             }
@@ -97,7 +97,7 @@ namespace Fps.Tests.EditMode
                 foreach (var definition in catalog.Weapons)
                 {
                     Assert.That(AssetDatabase.GetAssetPath(definition), Is.EqualTo(folder + "/" + definition.name + ".asset"));
-                    var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(jsonFolder + "/" + definition.name + ".json"));
+                    var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(jsonFolder + "/" + definition.name + ".json"));
                     Assert.That(
                         WeaponSpecJson.Write(definition.ToSpec()),
                         Is.EqualTo(WeaponSpecJson.Write(WeaponJsonImporter.ParseSpec(json, definition.name + ".json"))),
@@ -138,7 +138,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheDmrSampleSwitchesFromStandardToArmorPiercingRounds()
         {
-            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/Dmr.json"));
+            var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/Dmr.json"));
             var spec = WeaponJsonImporter.ParseSpec(json, "Dmr.json");
             var asset = WeaponAssetBuilder.LoadRangeWeapons().Weapons.Single(d => d.ToSpec().Id == spec.Id);
 
@@ -168,7 +168,7 @@ namespace Fps.Tests.EditMode
         public void TheLauncherSamplesFireExplodingRoundsAndTheirCommittedAssetsAreTheJson(
             string file, bool falls, WorldHitResponse onWorldHit, DetonationTrigger detonation)
         {
-            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + file));
+            var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + file));
             var spec = WeaponJsonImporter.ParseSpec(json, file);
 
             Assert.That(spec.Round.Delivery, Is.EqualTo(RoundDelivery.Projectile));
@@ -189,7 +189,7 @@ namespace Fps.Tests.EditMode
         public void TheCommittedRangeListHoldsEverySampleWeapon()
         {
             var range = WeaponAssetBuilder.LoadRangeWeapons();
-            var names = System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder), "*.json")
+            var names = System.IO.Directory.GetFiles(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder), "*.json")
                 .Select(System.IO.Path.GetFileNameWithoutExtension)
                 .OrderBy(n => n, StringComparer.Ordinal);
 
@@ -200,7 +200,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheScopedRifleSampleHasSeveralZoomLevelsAndItsCommittedAssetMatchesTheJson()
         {
-            var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/ScopedRifle.json"));
+            var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/ScopedRifle.json"));
             var spec = WeaponJsonImporter.ParseSpec(json, "ScopedRifle.json");
 
             Assert.That(spec.Aim.ZoomLevels.Count, Is.GreaterThanOrEqualTo(2));

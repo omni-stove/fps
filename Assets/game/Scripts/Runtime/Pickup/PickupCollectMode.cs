@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="Pickup"/> をどう拾うか。</summary>
     public enum PickupCollectMode

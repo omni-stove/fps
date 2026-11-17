@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 見た目を差し替えるときは、これを実装したコンポーネントを根に持つプレハブを AwarenessIndicatorCatalog に入れる。
     public interface IAwarenessIndicator

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 伏せボタン (Prone) から「伏せたいか」を決める。押すたびに切り替え、ダッシュ中に押して伏せたら飛び込み (<see cref="ProneDive"/>) を始めさせる。

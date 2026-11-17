@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 設定画面。感度・ADS 感度・視野角・音量・揺れの強さ (<see cref="ControlValue"/>) のスライダー、血の表示 (<see cref="ControlSettings.ShowBlood"/>) の On/Off、
@@ -732,7 +732,7 @@ namespace Fps.Runtime
 
         private void Edit(ControlSettings settings)
         {
-            // 回線の表示はこの画面に無く、開いている間にも F3 (Fps.Net の NetHud) で切り替わるので、開いたときの値で戻さない
+            // 回線の表示はこの画面に無く、開いている間にも F3 (Shooter.Net の NetHud) で切り替わるので、開いたときの値で戻さない
             settings = settings.WithShowNetStats(_sink.Current.ShowNetStats);
             if (settings.Equals(_editing))
             {

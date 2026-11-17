@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="PresentationAssetBuilder"/> を一時フォルダに走らせて、生成物・作り直したときの同一性・カタログの引き当てを確かめる。
@@ -211,7 +211,7 @@ namespace Fps.Tests.EditMode
 
             var e = Assert.Throws<InvalidOperationException>(() => PresentationAssetBuilder.LoadCatalog());
 
-            Assert.That(e.Message, Does.Contain("Fps.Editor.PresentationAssetBuilder.Build"));
+            Assert.That(e.Message, Does.Contain("Shooter.Editor.PresentationAssetBuilder.Build"));
         }
 
         [Test]

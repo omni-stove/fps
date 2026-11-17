@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り越え (<see cref="Vault.On"/>) の判定。物理で調べた前方の障害物 (<see cref="VaultObstacleSample"/>) の高さと奥行きから、

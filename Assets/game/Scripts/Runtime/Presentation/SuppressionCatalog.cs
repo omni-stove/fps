@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 枠は任意 (PresentationCatalog の規約)。無いか空なら SuppressionVignette はコードで作る仮の模様で画面の端を暗くする。
-    [CreateAssetMenu(fileName = "SuppressionCatalog", menuName = "Fps/Suppression Catalog")]
+    [CreateAssetMenu(fileName = "SuppressionCatalog", menuName = "Shooter/Suppression Catalog")]
     public sealed class SuppressionCatalog : ScriptableObject
     {
         public const string CatalogName = "Suppression";

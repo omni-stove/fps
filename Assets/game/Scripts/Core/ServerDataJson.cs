@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     internal static class ServerDataJson
     {

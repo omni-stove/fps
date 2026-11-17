@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 弾は Hitscan と WeaponController が先にここで振り分ける (味方の弾は素通り、敵の弾は止めて耐久で受ける)。
     // 爆発と近接は Damageable へそのまま届くので、ここでは扱わない。

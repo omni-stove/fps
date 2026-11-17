@@ -1,10 +1,10 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="MotorSettings"/> の回避の待ち時間と乗り越えの速さ・届く距離・角度・最低の高さ・奥行きが、

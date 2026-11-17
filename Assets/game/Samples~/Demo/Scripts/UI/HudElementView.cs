@@ -2,13 +2,13 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// HUD の一部を受け持つビューの土台。<see cref="Hud"/> と同じ GameObject に付き、Hud が UIDocument の木を作り直すたびに
     /// <see cref="Bind"/> で Hud.uxml の自分の要素 (<see cref="ElementName"/>) を受け取る。
     /// 何を出すかは派生クラスが決める。持っている間に言語が変わると <see cref="OnLanguageChanged"/> で派生クラスに知らせる。
-    /// HUD の量 (<see cref="Fps.Core.HudVisibility"/>) で出さないとき (<see cref="IsAllowed"/> が false) は、要素の visibility を隠す。
+    /// HUD の量 (<see cref="Shooter.Core.HudVisibility"/>) で出さないとき (<see cref="IsAllowed"/> が false) は、要素の visibility を隠す。
     /// display は派生クラスが「今出すものがあるか」で切り替えるので、量による隠し方はそれと混ぜない。
     /// </summary>
     [RequireComponent(typeof(Hud))]

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 倒されてからリスポーンまでの観戦 (<see cref="DeathCamera.Ally"/>) で、どの味方を映すかの選び方。

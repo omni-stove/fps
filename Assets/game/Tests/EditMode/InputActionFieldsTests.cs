@@ -2,18 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine.InputSystem;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class InputActionFieldsTests
     {
         private static IEnumerable<FieldInfo> InputActionFieldsOfUnityObjects()
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => a.GetName().Name.StartsWith("Fps.", StringComparison.Ordinal) && !a.GetName().Name.StartsWith("Fps.Tests", StringComparison.Ordinal));
+                .Where(a => a.GetName().Name.StartsWith("Shooter.", StringComparison.Ordinal) && !a.GetName().Name.StartsWith("Shooter.Tests", StringComparison.Ordinal));
             foreach (var assembly in assemblies)
             {
                 Type[] types;

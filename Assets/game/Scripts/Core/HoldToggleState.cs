@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの操作 (ダッシュ・しゃがみ・ADS など) が有効かどうか。フレームごとに <see cref="Update"/> でボタンの状態を渡す。

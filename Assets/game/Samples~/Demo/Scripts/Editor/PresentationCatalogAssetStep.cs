@@ -1,7 +1,7 @@
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
-    /// 武器の音とエフェクトの仮素材と <see cref="Fps.Runtime.PresentationCatalog"/> を作る手順 (<see cref="PresentationAssetBuilder.Build"/>)。
+    /// 武器の音とエフェクトの仮素材と <see cref="Shooter.Runtime.PresentationCatalog"/> を作る手順 (<see cref="PresentationAssetBuilder.Build"/>)。
     /// 粒の材質とテクスチャ (<see cref="PresentationAssetBuilder.PresentationFolder"/>) もここで作るので、それを借りる手順より先に実行する。
     /// </summary>
     public sealed class PresentationCatalogAssetStep : IPresentationAssetStep

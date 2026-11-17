@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拠点制圧の、拠点ごとの状態を HUD に出す。拠点を番号の順に横へ並べ、それぞれを丸い枠で描く。

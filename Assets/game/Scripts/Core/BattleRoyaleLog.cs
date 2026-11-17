@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の <c>[Mode]</c> 付きログの文言。参加者の出入りや状態・キルは <see cref="ModeLog"/> のものを使い、

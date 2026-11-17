@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// メニューで選んだ <see cref="CampaignLaunch"/> を、ミッションのシーンの <see cref="CampaignRunner"/> へ渡す置き場所。

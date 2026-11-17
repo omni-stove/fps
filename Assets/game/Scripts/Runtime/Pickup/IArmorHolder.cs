@@ -1,8 +1,8 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 防具を持てるもの。<see cref="Damageable"/> と同じ GameObject に付いたコンポーネントがこれを実装していれば、
-    /// <see cref="Pickup"/> の防具を拾える。無ければ防具は拾えない (<see cref="Fps.Core.PickupRejection.NoArmor"/>)。
+    /// <see cref="Pickup"/> の防具を拾える。無ければ防具は拾えない (<see cref="Shooter.Core.PickupRejection.NoArmor"/>)。
     /// </summary>
     public interface IArmorHolder
     {

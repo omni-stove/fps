@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// <see cref="CharacterRigBuilder"/> が作る AnimationClip の中身 (関節ごとの回転と腰の位置)。

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 撃つたびに排莢口から薬莢を物理で右上へ飛ばし、最初に何かに当たったときに落下音を 1 回鳴らす。撃つ人の本体に付ける。
@@ -20,7 +20,7 @@ namespace Fps.Runtime
     /// <item>薬莢はプレハブごとの <see cref="PresentationPool{T}"/> で <see cref="ShellCapacity"/> 個まで使い回し、<see cref="ShellLifetimeSeconds"/> で隠す。
     /// 部品はキャラの外の <see cref="PoolRoot"/> の下に置き、撃った本人の体とは当たらないようにする。</item>
     /// </list>
-    /// 専用サーバーでは有効になったときに自分を止める (<c>Fps.Net.HeadlessPresentation</c> も止める)。
+    /// 専用サーバーでは有効になったときに自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class ShellEjector : MonoBehaviour

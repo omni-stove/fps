@@ -1,14 +1,14 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Awake・Update が走らないので、参照は Initialize で渡し、振りの時間は Tick で進める。寸法は BlindFireControllerTests と同じ。
     public sealed class MeleeControllerTests

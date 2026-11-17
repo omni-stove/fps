@@ -162,7 +162,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -223,7 +223,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -287,7 +287,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: concrete
 --- !u!23 &419821541
 MeshRenderer:
@@ -410,7 +410,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -471,7 +471,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -532,7 +532,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -593,7 +593,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -654,7 +654,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -715,7 +715,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -776,7 +776,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -837,7 +837,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -898,7 +898,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -959,7 +959,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -1087,7 +1087,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a80bbd0d5260c39cf3ba8b09831f648c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.TutorialPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.TutorialPresenter
 --- !u!114 &1532697011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1099,7 +1099,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e3b9a41c6d24f08b5a2d91f0c84e7a3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MatchRunner
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MatchRunner
 --- !u!114 &1532697012
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1111,7 +1111,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4274ea70c4be6440bbfef1d376b2b5f0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameBootstrap
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameBootstrap
   _createFloor: 1
   _weaponDefinitions:
   - {fileID: 11400000, guid: d994a3529cf8f4ca88ba801a74e77d37, type: 2}
@@ -1187,7 +1187,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -1251,7 +1251,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: metal
 --- !u!23 &1769377541
 MeshRenderer:
@@ -1374,7 +1374,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -1435,7 +1435,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -1496,7 +1496,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0

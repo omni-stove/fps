@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: BreakActionGrenadeLauncher
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: c60edf2f-2afc-422c-97f2-c0bed85d2039
   _nameKey: weapon.ref.breakActionGrenadeLauncher
   _description: "Quake III Arena \u306E\u30B0\u30EC\u30CD\u30FC\u30C9\u30E9\u30F3\u30C1\u30E3\u30FC\u306E\u5F3E (\u7206\u767A 100\u30FB\u534A\u5F84 3.8 m\u30FB\u5F3E\u901F 18 m/s \u3067\u8DF3\u306D\u30012.5 \u79D2\u3067\u8D77\u7206) \u3092\u3001M79 \u306E\u3088\u3046\u306A\u4E2D\u6298\u308C\u5F0F\u306E 1 \u767A\u8FBC\u3081\u306B\u8F09\u305B\u305F\u3002Quake III \u306B\u306F\u30EA\u30ED\u30FC\u30C9\u304C\u7121\u3044\u306E\u3067\u3001\u30EA\u30ED\u30FC\u30C9\u306F M79 \u306B\u5408\u308F\u305B\u305F\u3002"

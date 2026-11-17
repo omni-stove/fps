@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="AbilitySlot"/> の能力が今どこにいるか。</summary>
     public enum AbilityPhase

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 波の強さの倍率 (<see cref="Wave.StrengthMultiplier"/>) を敵に当てはめる。倍率が m のとき:

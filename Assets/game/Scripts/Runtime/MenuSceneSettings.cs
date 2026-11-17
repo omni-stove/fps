@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// メニューから移るシーンの名前を、ゲームが <see cref="MenuRoute"/> の既定から変えるためのデータ。
     /// 入口 (<see cref="GameContent.MenuScenes"/>) に割り当てるか Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) がこの名前を読む。
     /// 置かなければ、また空にした欄は既定の名前 (<see cref="MenuScenes.Default"/>) を使う。
     /// </summary>
-    [CreateAssetMenu(fileName = "MenuSceneSettings", menuName = "Fps/Menu Scene Settings")]
+    [CreateAssetMenu(fileName = "MenuSceneSettings", menuName = "Shooter/Menu Scene Settings")]
     public sealed class MenuSceneSettings : ScriptableObject
     {
         /// <summary>メインメニューのレイアウト (Resources の Menu/MainMenu) と同じフォルダ。</summary>

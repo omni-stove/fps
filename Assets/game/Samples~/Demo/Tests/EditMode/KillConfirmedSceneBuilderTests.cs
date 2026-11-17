@@ -1,16 +1,16 @@
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="KillConfirmedSceneBuilder"/> の置き場所・ルール・配置・bot の落とす物の設定を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Fps.Editor.KillConfirmedSceneBuilder.Build</c> で確かめる。
+    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.KillConfirmedSceneBuilder.Build</c> で確かめる。
     /// </summary>
     public sealed class KillConfirmedSceneBuilderTests
     {

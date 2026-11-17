@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 発見ゲージの囲い (StealthRangeFixture) の見張りを使う。囲いを別に置くと、射撃場の床に空きを探し直すことになるため。
     // 発見ゲージの手順 (StealthSmokeStep) の後に回すので、見張りとプレイヤーのルールを自分で戻してから始める。

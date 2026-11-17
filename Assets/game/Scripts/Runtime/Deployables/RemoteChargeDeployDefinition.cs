@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DeployRemoteCharge", menuName = "Fps/Abilities/Deploy Remote Charge")]
+    [CreateAssetMenu(fileName = "DeployRemoteCharge", menuName = "Shooter/Abilities/Deploy Remote Charge")]
     public sealed class RemoteChargeDeployDefinition : DeployAbilityDefinition
     {
         public const string BodyName = "Body";

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラが撃たれたときの血の演出を受け持つ。<see cref="CombatEvents.Impact"/> のうちキャラへの着弾
@@ -24,7 +24,7 @@ namespace Fps.Runtime
     /// 部品はキャラの外の <see cref="PoolRoot"/> の下に置く。血痕は付けた壁のコライダーが消えるか無効になったら外す。</item>
     /// <item><see cref="BloodEnabled"/> を false にすると、新しい血を出さず、出ている血も次の <see cref="Tick"/> で消す。</item>
     /// </list>
-    /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
+    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class BloodPresenter : MonoBehaviour
@@ -518,7 +518,7 @@ namespace Fps.Runtime
             _warnedMissingCatalog = true;
             Debug.LogWarning(
                 $"{LogTag} no HitFeedbackCatalog at Resources/{HitFeedbackCatalog.ResourcePath}; blood is off. "
-                + "Run Fps/Build All Presentation Assets (Fps.Editor.PresentationAssetSteps.BuildAll)",
+                + "Run Shooter/Build All Presentation Assets (Shooter.Editor.PresentationAssetSteps.BuildAll)",
                 this);
         }
     }

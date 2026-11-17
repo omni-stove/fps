@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// SquadCommand のボタンの押し方を、押されているかの並びから決める。時刻は呼ぶ側が決めた物差し (秒) で渡す。

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 座席に座っている間だけ描かないものを隠し、降りたら元に戻す。隠す前に描いていたものだけを戻すので、

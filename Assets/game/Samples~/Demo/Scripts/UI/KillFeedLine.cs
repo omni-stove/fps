@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルフィードに出す 1 行。<see cref="KillFeedEntry"/> に、受け取った時点で引いた名前と武器の名前を添える

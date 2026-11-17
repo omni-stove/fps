@@ -1,21 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="DominationSceneBuilder"/> の配置と、地形の後に置く物 (<see cref="DominationSceneBuilder.PopulateScene"/>) を確かめる。
     /// NavMesh を焼いて保存する処理は、開いているシーンを置き換える (NewScene Single) ので
-    /// <c>-executeMethod Fps.Editor.DominationSceneBuilder.Build</c> と <see cref="DominationSmokeRun"/> で確かめる。
+    /// <c>-executeMethod Shooter.Editor.DominationSceneBuilder.Build</c> と <see cref="DominationSmokeRun"/> で確かめる。
     /// </summary>
     public sealed class DominationSceneBuilderTests
     {
@@ -55,7 +55,7 @@ namespace Fps.Tests.EditMode
             Assert.That(DominationSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.DominationScene));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.DominationScene));
             Assert.That(DominationSceneBuilder.NavMeshDataPath, Is.EqualTo(DemoSample.Root + "/Scenes/Domination/NavMesh-Floor.asset"));
-            Assert.That(DominationSceneBuilder.MenuPath, Is.EqualTo("Fps/Build Domination Scene"));
+            Assert.That(DominationSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Domination Scene"));
         }
 
         [Test]

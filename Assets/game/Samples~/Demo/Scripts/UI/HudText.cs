@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public static class HudText
     {

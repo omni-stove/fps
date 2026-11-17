@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="HitFeedbackCatalog"/> の置き場所・部位からの血しぶきの引き当て・検査を確かめる。</summary>
     public sealed class HitFeedbackCatalogTests

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// <see cref="WeaponJsonImporter"/> が読む JSON の文法だけを扱う。

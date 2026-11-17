@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場に、爆発する置き物 (<see cref="ExplosiveProp"/>) を x 方向に並べる。左から標的ダミー、樽 2 つ、ガソリン缶の順で、

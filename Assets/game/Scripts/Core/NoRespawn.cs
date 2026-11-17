@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>倒された人は試合中は戻らない。倒された人はそのまま <see cref="ModeSession.IsEliminated"/> になる。</summary>
     public sealed class NoRespawn : IRespawnPolicy

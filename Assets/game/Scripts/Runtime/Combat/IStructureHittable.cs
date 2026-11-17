@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾で被害を受ける建造物。<see cref="StructureDamage.Apply"/> が、当たったコライダーの親をたどって見つけたものに渡す。

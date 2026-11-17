@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場に置く、はしごの付いた台 (<see cref="LadderTowerBuilder"/>)。左奥の空いた所に置き、はしごは台の +X 側 (出現位置の側) に立てる。

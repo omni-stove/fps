@@ -1,9 +1,9 @@
 using System.Text;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Interact の案内 (<see cref="InteractPromptView"/>) に入れるキーの表記。最後に触った入力機器 (キーボードとマウスかゲームパッド) の割り当てを出す。

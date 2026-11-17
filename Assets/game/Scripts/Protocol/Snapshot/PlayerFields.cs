@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="PlayerSnapshot"/> の部分。変わった部分だけを送る単位。</summary>
     [Flags]

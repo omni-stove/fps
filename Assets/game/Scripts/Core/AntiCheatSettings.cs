@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// Easy Anti-Cheat (EAC) を使うかどうかの決定。コマンドライン引数・エディタかどうか・ネットワークの起動設定から決める。

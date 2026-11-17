@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: MagnumSniper
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 7875b62b-86b5-4af7-bc20-27f643d3c4fe
   _nameKey: weapon.ref.magnumSniper
   _description: "CS2 \u306E AWP (\u5B9F\u9283\u306F Accuracy International AWM) \u3092\u53C2\u8003\u3002\u4F53 115 \u3067\u80F4\u306B\u5F53\u3066\u308C\u3070\u5012\u305B\u308B\u30DC\u30EB\u30C8\u5F0F\u3002\u30DC\u30EB\u30C8\u3092\u5F15\u304F 1.455 \u79D2\u306E\u9593\u306F\u30B9\u30B3\u30FC\u30D7\u304C\u5916\u308C\u308B\u3002\u8584\u3044\u58C1\u3092\u629C\u304F\u3002\u79FB\u52D5\u306E\u500D\u7387\u306F 200/250\u3002"

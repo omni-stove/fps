@@ -1,13 +1,13 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 床と壁 (BoxCollider) を置き、<see cref="CoverController.Tick"/> と <see cref="PlayerController.Tick"/> を交互に呼んで、

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 飛ぶ弾の見た目を作る口。見た目の参照は武器の定義 (Unity のアセット) にしか無いので、Unity 抜きでビルドする

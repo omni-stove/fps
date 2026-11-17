@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.NetV2;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.NetV2;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// サンプルの rocket launcher (<c>RocketLauncher.json</c>) と grenade launcher (<c>GrenadeLauncher.json</c>) を、射撃場と同じ届け方
@@ -20,9 +20,9 @@ namespace Fps.Editor
     /// <item>グレネードが山なりに上がり、床で跳ね、武器の寿命の秒数が過ぎた所で 1 回だけ爆発し、近くの標的に爆風が届く。</item>
     /// <item>ネット対戦のクライアントが同じ射撃を見せる弾 (<see cref="ClientProjectiles"/> の予測の弾) が、オフラインの弾と同じ所で止まる・消える。</item>
     /// </list>
-    /// サーバーの弾の起爆はサーバーのテスト (<c>dotnet/Fps.Server.Tests/ServerCombatTests.Projectiles.cs</c>) で確かめる。
+    /// サーバーの弾の起爆はサーバーのテスト (<c>dotnet/Shooter.Server.Tests/ServerCombatTests.Projectiles.cs</c>) で確かめる。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.LauncherSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.LauncherSmokeRun.Run -logFile -</code>
     /// </summary>
     [InitializeOnLoad]
     public static class LauncherSmokeRun
@@ -71,8 +71,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.LauncherSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.LauncherSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.LauncherSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.LauncherSmokeRun.RequestedAt";
         private const float LaneSpacing = 10f;
         private const float FloorSize = 300f;
         private const float StraightTolerance = 0.05f;
@@ -378,7 +378,7 @@ namespace Fps.Editor
 
         private static WeaponDefinition LoadSample(string jsonFile)
         {
-            var path = FpsKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + jsonFile);
+            var path = ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/" + jsonFile);
             var id = WeaponJsonImporter.ParseSpec(System.IO.File.ReadAllText(path), jsonFile).Id;
             if (!WeaponAssetBuilder.LoadRangeWeapons().TryFind(id, out var weapon))
             {

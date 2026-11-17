@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 乗りに行くまでは判断の上書き (TryOverride) で、乗った後は Man で決める。乗っている間の敵は判断を進めない (EnemyAgent が座席に留める) ため。
     // どの銃座が空いているかはシーンにしか無いので、近くの空いた銃座の乗る位置は Runtime が SetCandidate で毎フレーム渡す。

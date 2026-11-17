@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// しゃがみボタンから「しゃがみたいか」を決める。中で <see cref="HoldToggleState"/> を持ち、

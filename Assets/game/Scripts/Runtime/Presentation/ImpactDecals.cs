@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using Random = UnityEngine.Random;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾が当たった面に貼る銃痕 (四角い板) を <see cref="PresentationPool{T}"/> で使い回す。シーンに 1 つ置き (<see cref="For"/>)、

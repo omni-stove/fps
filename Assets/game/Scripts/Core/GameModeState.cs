@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ゲームモード (<see cref="IGameMode"/>) の進行状態。どのモードも Waiting → Playing → Ended の順に進む。</summary>
     public enum GameModeState

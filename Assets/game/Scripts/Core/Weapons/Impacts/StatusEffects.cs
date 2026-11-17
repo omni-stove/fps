@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 人にかかっている状態異常の並び。種類 (<see cref="StatusEffectSpec.KindId"/>) ごとに 1 つだけ持ち、同じ種類をかけ直すと残りを延ばす。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public sealed class PerRoundReload : IAmmoModel
     {

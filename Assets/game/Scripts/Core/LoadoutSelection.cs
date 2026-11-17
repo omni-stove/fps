@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ロードアウトを選ぶ画面の中身。<see cref="LoadoutRule"/> のスロットごとに、<see cref="WeaponCatalog"/> の武器のうち

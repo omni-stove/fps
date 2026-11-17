@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り越えられない高さの段や崖の縁に手を掛けてよじ登れるか。

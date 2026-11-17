@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="IdleTracker"/> の 1 回の操作で、そのプレイヤーの放置の状態がどう変わったか。</summary>
     public enum IdleChange

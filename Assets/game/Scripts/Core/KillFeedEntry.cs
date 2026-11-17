@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルフィードの 1 行。誰が誰をどの武器で倒したか。

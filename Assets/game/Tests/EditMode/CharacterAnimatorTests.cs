@@ -1,8 +1,8 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// CharacterAnimator が読み元 (プレイヤー・敵) の状態を変えるとパラメーターを変えること、リグを足元に置いてカプセルと

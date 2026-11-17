@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// メインメニューと他のシーンの行き来をまとめる。メニューのボタンは <see cref="Go"/>、ポーズや切断から戻る画面は
@@ -87,7 +87,7 @@ namespace Fps.Runtime
                 var starter = GameUi.OnlineStarter;
                 if (starter == null)
                 {
-                    Debug.LogError(LogTag + " " + destination + ": no online client is installed (is the Fps.NetV2 assembly in the build?)");
+                    Debug.LogError(LogTag + " " + destination + ": no online client is installed (is the Shooter.NetV2 assembly in the build?)");
                     return false;
                 }
 
@@ -139,7 +139,7 @@ namespace Fps.Runtime
             var buildIndex = _host.BuildIndexOf(entry.ScenePath);
             if (buildIndex < 0)
             {
-                LogMissingScene(entry.ScenePath, "Fps.Editor.CampaignSceneBuilder.Build");
+                LogMissingScene(entry.ScenePath, "Shooter.Editor.CampaignSceneBuilder.Build");
                 return false;
             }
 
@@ -166,7 +166,7 @@ namespace Fps.Runtime
             var buildIndex = _host.BuildIndexOf(transition.ScenePath);
             if (buildIndex < 0)
             {
-                LogMissingScene(transition.ScenePath, "Fps.Editor.MenuSceneBuilder.Build");
+                LogMissingScene(transition.ScenePath, "Shooter.Editor.MenuSceneBuilder.Build");
                 return false;
             }
 
@@ -239,7 +239,7 @@ namespace Fps.Runtime
         private static void LogMissingScene(string path, string builder)
         {
             Debug.LogError(LogTag + " " + path + " is not in the build settings; run " + builder
-                + " (or Fps/Register Build Scenes) and rebuild");
+                + " (or Shooter/Register Build Scenes) and rebuild");
         }
 
         /// <summary>Enter Play Mode でドメインを読み直さない設定でも、前の Play の要求や購読を持ち越さない。</summary>

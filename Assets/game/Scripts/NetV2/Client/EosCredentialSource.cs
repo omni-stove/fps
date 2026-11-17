@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// EOS の認証情報を環境変数と <see cref="EosCredentials.LocalFileName"/> から集める。

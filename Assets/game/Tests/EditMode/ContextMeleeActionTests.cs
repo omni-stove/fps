@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Awake・Update が走らないので、参照は Initialize / Configure で渡し、技の時間は Tick で進める。寸法は MeleeControllerTests と同じ。
     public sealed class ContextMeleeActionTests
@@ -53,7 +53,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             _savedRule = StaggerReaction.ActiveRule;
-            StaggerReaction.ActiveRule = Fps.Core.Stagger.On;
+            StaggerReaction.ActiveRule = Shooter.Core.Stagger.On;
 
             _floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             _floor.name = "Floor";

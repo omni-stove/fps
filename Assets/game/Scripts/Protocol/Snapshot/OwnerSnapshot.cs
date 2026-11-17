@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// スナップショットを受け取るクライアントのプレイヤーにだけ送る状態。Netcode では読む権限を持ち主にしていた同期値
@@ -23,7 +23,7 @@ namespace Fps.Protocol
         public WeaponSync Weapon { get; set; }
 
         /// <summary>
-        /// サーバーが今このプレイヤーの移動に掛けている持ち物の倍率 (<c>Fps.Core.CarryLoadSpec.SpeedMultiplier</c>)。
+        /// サーバーが今このプレイヤーの移動に掛けている持ち物の倍率 (<c>Shooter.Core.CarryLoadSpec.SpeedMultiplier</c>)。
         /// クライアントは武器の値を持たなくても、これで予測をサーバーと揃える。0 以上の有限値。
         /// </summary>
         public float CarrySpeedMultiplier { get; set; } = 1f;
@@ -32,7 +32,7 @@ namespace Fps.Protocol
         /// サーバーが <see cref="LastProcessedInputTick"/> の入力の後にこのプレイヤーを吹き飛ばしている状態。
         /// 他の人には位置の補間で足りるが、持ち主の予測はこれが無いと飛んでいる間ずっと地上を歩いたつもりで巻き戻されるため、持ち主にだけ送る。
         /// </summary>
-        public Fps.Core.CharacterKnockbackState Knockback { get; set; }
+        public Shooter.Core.CharacterKnockbackState Knockback { get; set; }
 
         public GrenadePouchSync Grenades => _grenades;
 
@@ -150,10 +150,10 @@ namespace Fps.Protocol
             if ((fields & OwnerFields.Knockback) != 0)
             {
                 Knockback = reader.ReadBool()
-                    ? Fps.Core.CharacterKnockbackState.Flying(
+                    ? Shooter.Core.CharacterKnockbackState.Flying(
                         reader.ReadFiniteVector3("knockback velocity"),
                         reader.ReadFiniteSingleBetween(0f, float.MaxValue, "knockback seconds"))
-                    : Fps.Core.CharacterKnockbackState.None;
+                    : Shooter.Core.CharacterKnockbackState.None;
             }
         }
 

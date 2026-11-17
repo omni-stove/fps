@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ゲームのアセットを置くルート (<see cref="DefaultRoot"/>) と、その下のパスの組み立て方。

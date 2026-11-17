@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// シーンを組み直すと前のシーンごと部品を捨てるので、壊れる物の見た目はシーンの外 (<see cref="PrefabPath"/> のプレハブ) から読む。
@@ -9,7 +9,7 @@ namespace Fps.Editor
     /// </summary>
     public static class DestructiblePieceVisual
     {
-        public static string PrefabPath => FpsKitRoot.OutputPath("Prefabs/DestructiblePiece.prefab");
+        public static string PrefabPath => ShooterKitRoot.OutputPath("Prefabs/DestructiblePiece.prefab");
 
         public static GameObject Load()
         {

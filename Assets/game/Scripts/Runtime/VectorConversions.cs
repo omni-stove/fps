@@ -1,7 +1,7 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// Fps.Core が使う <see cref="System.Numerics"/> のベクトルと UnityEngine のベクトルを相互に変換する。
+    /// Shooter.Core が使う <see cref="System.Numerics"/> のベクトルと UnityEngine のベクトルを相互に変換する。
     /// どちらも同じ成分 (Y が上、左手系の解釈は呼び出し側の約束) をそのまま写すだけで、座標系の変換はしない。
     /// </summary>
     public static class VectorConversions

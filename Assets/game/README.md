@@ -9,7 +9,7 @@
 | --- | --- |
 | Unity の版・依存パッケージ | `package.json` |
 | コマンド (テスト・取り込み・smoke・点検) と引数 | `mise tasks` (`.mise/tasks.toml`) |
-| 武器・ルールの JSON の項目 | サンプルの `Weapons/Json/`・`Rules/Json/` と、`Fps.Core` の Spec |
+| 武器・ルールの JSON の項目 | サンプルの `Weapons/Json/`・`Rules/Json/` と、`Shooter.Core` の Spec |
 | 調整値の JSON の項目と既定値 | `Resources/Tuning/*.json` |
 | 入口・アセット・コンポーネントの欄 | 各型の Inspector の Tooltip |
 | 文言のキー | サンプルの `Resources/Localization/ja/` |
@@ -26,29 +26,29 @@
 2. **Edit > Project Settings > Player > Active Input Handling** を `Input System Package (New)` か `Both` にする。
 3. テストも回すなら、manifest に `"testables": ["com.omnistove.shooter-kit"]` を足す。
 
-EOS (`Fps.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパイルされる。
+EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパイルされる。
 
 ## サンプル
 
 1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。
-2. **Fps > Build Main Menu Scene** を一度実行する。
+2. **Shooter > Build Main Menu Scene** を一度実行する。
 
-このリポジトリでは `Assets/Samples/FpsKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクなので、サンプルは `Samples~/Demo` の下を直す。
+このリポジトリでは `Assets/Samples/ShooterKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクなので、サンプルは `Samples~/Demo` の下を直す。
 
 ## ゲームの中身を差し替える
 
-1. 入口のアセット `GameContent` を作る (`make game-content` か **Fps > Create Game Content**)。
+1. 入口のアセット `GameContent` を作る (`make game-content` か **Shooter > Create Game Content**)。
 2. 入口の欄に自分のアセットを入れる。
 3. `make audit-replacements` で差し替え漏れを点検する。
 
-- 入口は `Resources/FpsKit/` に 1 つだけ置く。
+- 入口は `Resources/ShooterKit/` に 1 つだけ置く。
 - シーンのコンポーネントに配線した参照は入口より先に使われる。入口に頼るシーンではその参照を空にする。
 - 調整値の JSON は、パッケージの `Resources/Tuning/` と同じパスに置かず、入口の欄に入れる。同じパスだとどちらが読まれるか決まらない。
 
 ### UI
 
-キットのゲーム進行は画面も文も作らない。今の状態は型の付いた値で `GameSignals` (`Fps.Runtime`) に出し、1 回きりの出来事 (撃った・当たった・倒した) は `CombatEvents` のイベントで知らせる。何をどう出すか (言語を含む) は UI が決める。
-既定の UI (`Fps.Runtime.UI`) と言語の表は Demo サンプルにあり、サンプルを取り込まなければ HUD 無しで動く。
+キットのゲーム進行は画面も文も作らない。今の状態は型の付いた値で `GameSignals` (`Shooter.Runtime`) に出し、1 回きりの出来事 (撃った・当たった・倒した) は `CombatEvents` のイベントで知らせる。何をどう出すか (言語を含む) は UI が決める。
+既定の UI (`Shooter.Runtime.UI`) と言語の表は Demo サンプルにあり、サンプルを取り込まなければ HUD 無しで動く。
 
 #### `GameSignals` の項目
 
@@ -84,8 +84,8 @@ EOS (`Fps.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパ
 体力だけを出す最小の HUD。`Assets/` の下のスクリプトに置いて Play すると、プレイヤーが出たときに左上に体力が出る。
 
 ```csharp
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
 public sealed class HealthOnlyHud : MonoBehaviour
@@ -157,12 +157,12 @@ public sealed class HealthOnlyHud : MonoBehaviour
 ## 乗り物を足す
 
 キットは乗り降り・座席・耐久・座席の武器・固定銃座を持ち、動き方は `IVehicleMotor` で差し込む。同梱の動き方は車 (`SimpleCarMotor`) だけ。
-組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder` で、試走場は **Fps > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
+組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder` で、試走場は **Shooter > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
 
 ### 座席を並べる
 
 1. 乗り物の根元に `Vehicle` を付け、その子に座席ごとの `VehicleSeat` を置く。座席の番号は子の並び順 (0 から)。
-2. 座席の種類・姿勢・カメラは各 `VehicleSeat` の欄で決める。乗り物の値 (Id・耐久・部位・爆発・乗り込める距離・追うカメラ) は `VehicleDefinition` (Create > Fps > Vehicle Definition) に入れて `Vehicle` に配線する。コードで組むなら、座席と同じ番号の順に `VehicleSeatSpec` を並べた `VehicleSpec` を `Vehicle.Configure` に渡す。
+2. 座席の種類・姿勢・カメラは各 `VehicleSeat` の欄で決める。乗り物の値 (Id・耐久・部位・爆発・乗り込める距離・追うカメラ) は `VehicleDefinition` (Create > Shooter > Vehicle Definition) に入れて `Vehicle` に配線する。コードで組むなら、座席と同じ番号の順に `VehicleSeatSpec` を並べた `VehicleSpec` を `Vehicle.Configure` に渡す。
    - 運転席 (`Driver`) の入力だけが動き方に届く。運転席が無ければ動かない乗り物 (固定銃座など) になる。
    - 座席の武器は、乗り物の子に `VehicleWeaponMount` を置き、操作する座席の番号をその欄に入れる。
    - 助手席から自分の武器で撃たせるなら、その座席の撃てる向きの範囲 (`OwnWeaponArcDegrees`) を 0 より大きくする。
@@ -182,7 +182,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 キットは言語と文を扱わない。武器などの表示名はキー (ただの文字列) としてデータに持ち、それを文にするのは UI。ここからはサンプルの UI (`Localizer`・`GameText`・`LocalizedTexts`) の決まりで、自分の UI を作るなら従わなくてよい。
 
-文言は、サンプルの `Resources/Strings/<言語コード>.json` の後に `Resources/Localization/<言語コード>/*.json` をファイル名の順に重ね、同じキーは後のファイルが勝つ。`Resources/FpsKit/` の `LocalizationContent` (**Create > Fps > Localization Content**) に言語ごとの表を入れると、さらにその後に重なる。
+文言は、サンプルの `Resources/Strings/<言語コード>.json` の後に `Resources/Localization/<言語コード>/*.json` をファイル名の順に重ね、同じキーは後のファイルが勝つ。`Resources/ShooterKit/` の `LocalizationContent` (**Create > Shooter > Localization Content**) に言語ごとの表を入れると、さらにその後に重なる。
 利用側のファイルは、サンプルのどのファイルより後に並ぶ名前 (`zz-mygame.json` など) にする。同じ名前だとどちらが読まれるか決まらない。
 
 - 文を変える: `Assets/Resources/Localization/ja/zz-mygame.json` に、変えるキーだけを書く。
@@ -192,4 +192,4 @@ public sealed class HealthOnlyHud : MonoBehaviour
   { "languages": [ { "code": "fr", "name": "Français", "systemLanguages": ["French"] } ] }
   ```
 
-- 選んだ言語: 設定画面で選ぶと `LanguagePreferenceStore` が `PlayerPrefs` の `Fps.Language` に言語コードで保存する。キットの操作設定 (`ControlSettings`) には入れない。保存が無ければ OS の言語から決め (言語の一覧の `systemLanguages` に合う言語、どれにも合わなければ `otherSystemLanguages`)、前の形式 (操作設定の中の `language`) が残っていれば最初に読んだときに `Fps.Language` へ移す。
+- 選んだ言語: 設定画面で選ぶと `LanguagePreferenceStore` が `PlayerPrefs` の `Shooter.Language` に言語コードで保存する。キットの操作設定 (`ControlSettings`) には入れない。保存が無ければ OS の言語から決め (言語の一覧の `systemLanguages` に合う言語、どれにも合わなければ `otherSystemLanguages`)、前の形式 (操作設定の中の `language`) が残っていれば最初に読んだときに `Shooter.Language` へ移す。

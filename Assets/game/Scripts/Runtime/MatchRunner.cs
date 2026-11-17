@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// ソロの試合 (<see cref="Fps.Core.Match"/>) をシーンで進める。Start で同じ GameObject (無ければシーン) の
+    /// ソロの試合 (<see cref="Shooter.Core.Match"/>) をシーンで進める。Start で同じ GameObject (無ければシーン) の
     /// <see cref="GameBootstrap"/> が作った <see cref="BootstrapWorld"/> を拾い、試合を始めて Update で時間を進める。
     /// 標的ダミーの死亡はプレイヤーのキル、プレイヤーの死亡は敗北として Match に渡すだけで、勝敗の判断は Match が行う。
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止め、
@@ -109,7 +109,7 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary><see cref="TimeLimitSeconds"/> を <see cref="Fps.Core.Match"/> に渡す値にする。0 以下は制限時間なし。</summary>
+        /// <summary><see cref="TimeLimitSeconds"/> を <see cref="Shooter.Core.Match"/> に渡す値にする。0 以下は制限時間なし。</summary>
         public static float MatchTimeLimit(float timeLimitSeconds)
         {
             return timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
@@ -372,7 +372,7 @@ namespace Fps.Runtime
             if (scene.buildIndex < 0)
             {
                 Debug.LogError(
-                    $"{LogTag} シーン '{scene.path}' が Build Settings にないため再読み込みできません。Fps.Editor.BootstrapSceneBuilder.Build でシーンを生成してください。",
+                    $"{LogTag} シーン '{scene.path}' が Build Settings にないため再読み込みできません。Shooter.Editor.BootstrapSceneBuilder.Build でシーンを生成してください。",
                     this);
                 return;
             }

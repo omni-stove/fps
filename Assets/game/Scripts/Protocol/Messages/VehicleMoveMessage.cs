@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     // 運転席のクライアントは乗り物を自分の物理で動かすので、入力ではなく動かした後の姿を送り、サーバーは届く範囲かを確かめるだけにする。
     public sealed class VehicleMoveMessage : IMessage

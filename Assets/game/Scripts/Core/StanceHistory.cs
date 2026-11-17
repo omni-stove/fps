@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// エンティティ 1 体分のしゃがみの履歴。tick ごとのしゃがみを固定長のリングバッファに記録し、

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 人型のリグの姿勢を決めるための、キャラクターの今の状態。<see cref="CharacterPose.Evaluate"/> に渡す。

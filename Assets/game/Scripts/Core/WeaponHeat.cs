@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 弾薬 (HeatAmmo) から熱だけを切り出すのは、固定銃座のように熱が上がった・冷めたの切り替わりを知りたい側が、弾倉の扱いを経ずに読めるようにするため。
     public sealed class WeaponHeat

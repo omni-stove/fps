@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 割り当ての上書きを PlayerPrefs に保存し、起動し直したとき (新しいアセットの写し) に読み込めること。
@@ -26,7 +26,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            _store = new InputBindingOverridesStore("Fps.Tests.InputBindingOverrides." + Guid.NewGuid().ToString("N"));
+            _store = new InputBindingOverridesStore("Shooter.Tests.InputBindingOverrides." + Guid.NewGuid().ToString("N"));
         }
 
         [TearDown]

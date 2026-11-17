@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 通信路で送る 1 つのメッセージ。<see cref="MessageWriter.WriteMessage"/> が先頭に <see cref="Id"/> と <see cref="Version"/> を書き、

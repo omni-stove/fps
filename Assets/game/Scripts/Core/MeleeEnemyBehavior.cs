@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 振る・当てるは Runtime が行い、ここは「今振りたいか」と、その間の移動・向き・射撃を決めるだけにする。
     // 振りの時間 (MeleeSwing) は読むだけで進めない。Runtime がプレイヤーと同じ決まりで進め、当たりの瞬間を 1 か所で扱うため。

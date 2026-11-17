@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// ModeRunnerBase が <see cref="GameSignals.ModeStatus"/> に出した状態が、既定の HUD (<see cref="ModeHudView"/>) に届くことを確かめる。

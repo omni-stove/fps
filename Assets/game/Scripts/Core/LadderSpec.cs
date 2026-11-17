@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// はしご 1 本の上り下りの調整値。はしごのコンポーネントがシーンに持つ値から作り、生成時に値を検査する。

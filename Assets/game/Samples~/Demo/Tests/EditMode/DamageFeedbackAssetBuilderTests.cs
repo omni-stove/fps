@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="DamageFeedbackAssetBuilder"/> を一時フォルダに走らせて、生成物・作り直したときの同一性と、一括実行の手順として集まることを確かめる。
@@ -111,7 +111,7 @@ namespace Fps.Tests.EditMode
             Assert.That(catalog.Vignette.width, Is.EqualTo(DamageFeedbackAssetBuilder.VignetteSize));
             Assert.That(AssetDatabase.GetAssetPath(catalog.Heartbeat), Is.EqualTo(_audioFolder + "/" + DamageFeedbackAssetBuilder.HeartbeatSound + ".wav"));
             Assert.That(AssetDatabase.GetAssetPath(catalog.Breath), Is.EqualTo(_audioFolder + "/" + DamageFeedbackAssetBuilder.BreathSound + ".wav"));
-            Assert.That(catalog.ToSettings().LowHealthThreshold, Is.EqualTo(Fps.Core.DamageFeedbackSettings.Default.LowHealthThreshold));
+            Assert.That(catalog.ToSettings().LowHealthThreshold, Is.EqualTo(Shooter.Core.DamageFeedbackSettings.Default.LowHealthThreshold));
         }
 
         [Test]

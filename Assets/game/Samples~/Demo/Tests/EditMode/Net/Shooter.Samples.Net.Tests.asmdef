@@ -1,0 +1,34 @@
+{
+    "name": "Shooter.Samples.Net.Tests",
+    "rootNamespace": "Shooter.Net.Tests",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Editor",
+        "Shooter.Samples.Editor",
+        "Shooter.Samples.Net.Editor",
+        "Shooter.Runtime",
+        "Shooter.Runtime.UI",
+        "Shooter.Protocol",
+        "Shooter.NetV2",
+        "Shooter.NetV2.Client",
+        "Unity.AI.Navigation",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

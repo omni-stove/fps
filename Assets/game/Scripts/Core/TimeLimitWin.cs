@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>時間切れで、得点がいちばん多い陣営の勝ち。いちばん多い陣営が複数あれば引き分け (<see cref="ModeSession.LeadingSide"/>)。</summary>
     public sealed class TimeLimitWin : IWinCondition

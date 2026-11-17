@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 怯みを試す敵を TPS の射撃場に置く。射撃場の床は実行時に作られて NavMesh が無いので、敵の足元に台を置いて Play の頭に焼く (NavMeshBakeActivator)。
     // 射撃場の他の手順の邪魔をしないよう、敵は標的の列の奥に置き、視界を射撃場の他の場所に届かない広さに絞る。

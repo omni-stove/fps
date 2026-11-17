@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ボタンで有効・無効を切り替える操作 (<see cref="HoldAction"/>) の入力の仕方。

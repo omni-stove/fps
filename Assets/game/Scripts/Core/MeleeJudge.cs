@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 座標は Y が上。前方の扇は水平面で測り、届く距離は高さの差も含めて測る (段の上の相手に下から届かないように)。
     public static class MeleeJudge

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ゲームのクライアントの起動引数の読み方。クライアントは .NET の専用サーバーへつなぐだけなので、<c>-mode client</c> か

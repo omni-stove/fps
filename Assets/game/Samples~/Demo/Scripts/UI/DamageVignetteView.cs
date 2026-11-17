@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 被弾の画面効果と低体力の演出。Hud.uxml の <see cref="UxmlName"/> (画面全体を覆う要素) に
@@ -55,7 +55,7 @@ namespace Fps.Runtime
                         _warnedMissingCatalog = true;
                         Debug.LogWarning(
                             $"{LogTag} catalog 'Resources/{DamageFeedbackCatalog.ResourcePath}' was not found; damage vignette and heartbeat are off "
-                            + "(run Fps/Build All Presentation Assets)", this);
+                            + "(run Shooter/Build All Presentation Assets)", this);
                     }
                 }
 

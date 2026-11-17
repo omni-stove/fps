@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) の <c>[Mode]</c> 付きログの文言。参加者の出入りや状態は <see cref="ModeLog"/> のものを使い、

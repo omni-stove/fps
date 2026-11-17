@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 能力の枠ごとの回数と待ち時間 (<see cref="HudText.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何ができるか (<see cref="AbilityHost.TryGetFollowUp"/>、置いた C4 の起爆など) があれば、

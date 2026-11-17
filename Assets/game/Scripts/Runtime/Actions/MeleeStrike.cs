@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // プレイヤー (MeleeController) と敵 (EnemyMelee) が同じ決まりで当てるよう、相手の探し方とダメージの渡し方をここにまとめる。
     public static class MeleeStrike

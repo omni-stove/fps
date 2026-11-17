@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// メニューに戻った理由 (<see cref="MenuReturnReason"/>)・サーバーとの接続を失った理由 (<see cref="DisconnectNotice"/>) を、メニューに出す文にする

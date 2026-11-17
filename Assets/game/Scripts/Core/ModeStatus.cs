@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オフラインのモードの今の状態。モードの Runner が状態の変わるたびに作り直して UI に渡し、UI がこれを読んで何をどう出すかを決める。

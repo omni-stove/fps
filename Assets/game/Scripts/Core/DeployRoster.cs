@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 消すのは呼ぶ側 (Unity の物を壊す) なので、ここは消す物を選んで一覧から外し、返すだけにする。
     public sealed class DeployRoster<T>

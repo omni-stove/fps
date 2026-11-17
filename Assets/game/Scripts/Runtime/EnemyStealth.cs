@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // EnemyAgent が判断を進める前に見え方の材料を渡す必要があるので、EnemyAgent より先に Update させる。
     [DefaultExecutionOrder(-50)]

@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 実行中に <see cref="ToggleKey"/> で、この端末のプレイヤーの視点 (<see cref="ViewRig.Mode"/>) を一人称と三人称で入れ替える。

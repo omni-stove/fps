@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 拠点 1 つの占領の状態 (Netcode の <c>NetControlPointState</c> の中身)。拠点はマップの番号 (<see cref="Index"/>、HUD では 0 = A) で指す。

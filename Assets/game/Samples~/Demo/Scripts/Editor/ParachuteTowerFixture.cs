@@ -1,9 +1,9 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場に置く、パラシュートを試す高い台 (<see cref="TowerName"/>)。上から +Z へ歩いて飛び降りると、

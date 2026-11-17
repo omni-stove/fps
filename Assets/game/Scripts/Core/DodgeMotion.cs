@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 回避 (<see cref="Dodge.On"/>) 1 回の水平の動き。<see cref="TryStart"/> した向きへ <see cref="MotorSpec.DodgeDistance"/> を

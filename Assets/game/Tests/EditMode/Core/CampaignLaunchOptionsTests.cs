@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CampaignLaunchOptionsTests
     {
         private static string[] Args(string commandLine)
@@ -31,7 +31,7 @@ namespace Fps.Core.Tests
         [Test]
         public void NoDifficultyMeansNone()
         {
-            var options = ParseOrFail("/path/to/fps -batchmode -nographics -mode host");
+            var options = ParseOrFail("/path/to/shooter -batchmode -nographics -mode host");
 
             Assert.That(options, Is.SameAs(CampaignLaunchOptions.None));
             Assert.That(options.Difficulty, Is.Null);
@@ -51,7 +51,7 @@ namespace Fps.Core.Tests
         [TestCase("-difficulty normal", CampaignDifficulty.Normal)]
         [TestCase("-difficulty hard", CampaignDifficulty.Hard)]
         [TestCase("-DIFFICULTY Hard", CampaignDifficulty.Hard)]
-        [TestCase("/path/to/fps -batchmode -difficulty EASY -logFile -", CampaignDifficulty.Easy)]
+        [TestCase("/path/to/shooter -batchmode -difficulty EASY -logFile -", CampaignDifficulty.Easy)]
         public void ReadsTheDifficulty(string commandLine, CampaignDifficulty expected)
         {
             var options = ParseOrFail(commandLine);

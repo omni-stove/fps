@@ -12,7 +12,7 @@ fail() {
 [ $# -ge 1 ] && [ -n "$1" ] || fail "usage: $0 <image> [<version>]"
 image="$1"
 version="${2:-}"
-name="fps-server-smoke-$$"
+name="shooter-server-smoke-$$"
 
 trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 docker run --detach --name "$name" -p 7777:7777/udp "$image" >/dev/null
@@ -38,7 +38,7 @@ if [ -n "$version" ]; then
 fi
 
 user="$(docker exec "$name" id -u)"
-[ "$user" = 10001 ] || fail "the server runs as uid $user, not 10001 (fps)"
+[ "$user" = 10001 ] || fail "the server runs as uid $user, not 10001 (shooter)"
 
 # 誰もつないでいなければ、最初の SIGTERM ですぐに終了コード 0 で止まる
 docker stop --time 30 "$name" >/dev/null

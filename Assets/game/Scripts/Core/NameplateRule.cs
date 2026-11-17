@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 他のプレイヤーの頭の上にネームプレートを出すかの決まり。

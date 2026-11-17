@@ -1,11 +1,11 @@
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// メインメニューのシーン MainMenu を生成し、起動時のシーンとして Build Settings の先頭に登録する。
@@ -14,12 +14,12 @@ namespace Fps.Editor
     /// MainMenuScreen にはロードアウトの選択に使うデフォルトロードアウトと武器の一覧のアセット (<see cref="WeaponAssetBuilder"/>) と、
     /// キャンペーンの選択に使うミッションの一覧 (<see cref="MissionCatalogBuilder"/>) を配線する。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.MenuSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.MenuSceneBuilder.Build</code>
     /// </summary>
     public static class MenuSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MainMenuScene;
-        public const string MenuPath = "Fps/Build Main Menu Scene";
+        public const string MenuPath = "Shooter/Build Main Menu Scene";
         public const string LogTag = "[MenuSceneBuilder]";
 
         public const string CameraName = "MenuCamera";

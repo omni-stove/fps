@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 盾持ちと同じく、敵の状態のログと並べて読めるよう [AI] に出す。
     public static class SniperLog

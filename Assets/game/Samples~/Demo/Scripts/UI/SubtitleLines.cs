@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面の下に出す字幕の行。誰かが話した行 (<see cref="Say"/>) は話した人ごとに 1 行にする。

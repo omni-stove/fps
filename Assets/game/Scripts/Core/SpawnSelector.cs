@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// チームデスマッチでリスポーンする地点を選ぶ。乱数は使わず、同じ入力なら同じ地点を返す。

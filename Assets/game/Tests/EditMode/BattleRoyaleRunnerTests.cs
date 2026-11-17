@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// BattleRoyaleRunner が倒れた参加者をダウンさせて分隊の味方に起こさせ、全滅した分隊に持ち物を落とさせて順位を付け、

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyAgent))]

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の <c>[Domination]</c> 付きログの文言。key=value を空白で区切り、値に空白を入れない。

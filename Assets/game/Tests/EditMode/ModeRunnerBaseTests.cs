@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// ModeRunnerBase が陣営の参加者をモードに入れ、死亡を報告し、自陣営の出現点に戻し、状態を <see cref="GameSignals.ModeStatus"/> に出すことを確かめる。

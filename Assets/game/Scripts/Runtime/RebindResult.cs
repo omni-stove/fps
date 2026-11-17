@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="PlayerBindings.StartRebind"/> の終わり。取り消されたときは <see cref="Completed"/> が false で、割り当ては変わっていない。</summary>
     public sealed class RebindResult

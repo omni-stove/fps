@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class BattleRoyaleHudFormatterTests
     {

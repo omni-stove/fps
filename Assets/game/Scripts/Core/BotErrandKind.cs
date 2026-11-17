@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="BotErrand"/> の用事の種類。</summary>
     public enum BotErrandKind

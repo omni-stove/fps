@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="IWorldCollision"/> の Raycast・掃引が当たった 1 か所。</summary>
     public readonly struct WorldHit

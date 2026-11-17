@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 画面中央 (カメラの正面) で狙った点へ、キャラの目から撃つための計算。一人称と三人称で同じ手順を使う。

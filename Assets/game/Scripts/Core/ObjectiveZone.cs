@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ObjectiveZone"/> が目標を進める条件。</summary>
     public enum ObjectiveZoneMode

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>引き金を引いたときに、射撃を送るか・リロードを頼むか・何もしないか。</summary>
     public enum FireDecision

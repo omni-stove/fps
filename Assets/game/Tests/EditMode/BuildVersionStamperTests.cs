@@ -1,10 +1,10 @@
 using System;
 using System.IO;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>実際のビルドは <c>make build</c> / <c>make build-server</c> に任せ、版の決め方と bundleVersion を戻すことだけを見る。</summary>
     public sealed class BuildVersionStamperTests
@@ -71,7 +71,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void DescribeFailsOutsideARepository()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "fps-build-version-" + Guid.NewGuid().ToString("N"));
+            var directory = Path.Combine(Path.GetTempPath(), "shooter-build-version-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             try
             {

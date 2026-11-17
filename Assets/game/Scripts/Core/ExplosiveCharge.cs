@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆発する置き物 1 つの耐久と、爆発までの残り時間。被害 (<see cref="ApplyDamage"/>) で耐久が 0 になると爆発を待ち始め、

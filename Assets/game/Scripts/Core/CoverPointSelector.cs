@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 敵が隠れに行く遮蔽点を選び、どの敵がどの点を使っているかを持つ。同じ一覧を使う敵 (<see cref="EnemyBrain"/>) で 1 つを共有する。

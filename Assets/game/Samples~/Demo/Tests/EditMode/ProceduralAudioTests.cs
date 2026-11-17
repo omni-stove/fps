@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="ProceduralAudio"/> の合成と WAV の書き出し、<see cref="PresentationAssetBuilder.SoundSpecs"/> の音の性質を確かめる。</summary>
     public sealed class ProceduralAudioTests

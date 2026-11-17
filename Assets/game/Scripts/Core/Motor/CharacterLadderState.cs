@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// はしごの上り下りの中身 (<see cref="LadderClimb"/>) と、離れてから次につかまれるまでの待ち。はしごはマップのはしごの並び

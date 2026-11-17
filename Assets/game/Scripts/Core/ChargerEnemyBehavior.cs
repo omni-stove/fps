@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 構え → 突進 → (当たれば) 立て直し / (外れれば) よろめき、を回す。
     // 体を動かすことと、相手や壁に当たったかは物理を持つ Runtime (EnemyCharger) が見て EndCharge で知らせる。

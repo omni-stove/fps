@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーの今のアクションを 1 つにまとめた不変の値。デバッグ表示と自機モックが読む。

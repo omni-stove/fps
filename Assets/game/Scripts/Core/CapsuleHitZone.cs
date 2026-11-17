@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 縦長のカプセル 1 つで表したプレイヤーの、どの高さに当たったかで部位を決める。

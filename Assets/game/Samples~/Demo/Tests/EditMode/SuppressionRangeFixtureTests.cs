@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,9 +10,9 @@ using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場の制圧の的 (<see cref="Fps.Editor.SuppressionRangeFixture"/>) と smoke の手順 (<see cref="Fps.Editor.SuppressionSmokeStep"/>) を確かめる。</summary>
+    /// <summary>射撃場の制圧の的 (<see cref="Shooter.Editor.SuppressionRangeFixture"/>) と smoke の手順 (<see cref="Shooter.Editor.SuppressionSmokeStep"/>) を確かめる。</summary>
     public sealed class SuppressionRangeFixtureTests
     {
         [Test]

@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーの <see cref="PlayerController"/> の伏せ (<see cref="PlayerController.ProneRule"/>) をルールの <see cref="ActionRules.Prone"/> にする。

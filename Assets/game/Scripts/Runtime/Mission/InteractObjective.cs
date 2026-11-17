@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーがトリガーの Collider の中で Interact (キーボードは E の長押し) を行ったら目標を進める。

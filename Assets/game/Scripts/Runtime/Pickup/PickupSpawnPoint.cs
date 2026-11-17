@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Scene に置いた点に拾える物を出す。Start で自分の子に <see cref="Pickup"/> を作り (位置は Transform の位置が足元)、

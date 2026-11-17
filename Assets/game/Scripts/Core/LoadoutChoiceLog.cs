@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ネット対戦でプレイヤーが自分のロードアウトを選んだときの <c>[Net] loadout</c> 付きログの文言。

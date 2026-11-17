@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>手放した武器 1 本。その定義と、手放したときの残弾と付けていた物 (持ち物のアイテムの Id)。</summary>
     public readonly struct HeldWeapon

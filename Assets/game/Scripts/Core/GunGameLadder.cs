@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガンゲーム (<see cref="GunGame"/>) の武器の並び。全員が 0 段目の武器から始め、今の段の武器で倒すたびに次の段へ進み、

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 上がり方を音に持たせず聞いた側の AwarenessSpec で決めるのは、同じ銃声でも敵の種類ごとに耳の良さを変えられるようにするため。
     public readonly struct SoundStimulus

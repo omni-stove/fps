@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class LobbyLaunchOptionsTests
     {
         private const string _serverId = "0123456789abcdef0123456789abcdef";
@@ -33,16 +33,16 @@ namespace Fps.Core.Tests
         [Test]
         public void WithoutLobbyFlagIsNone()
         {
-            var options = Parse("fps -batchmode -mode client -address 10.0.0.2");
+            var options = Parse("shooter -batchmode -mode client -address 10.0.0.2");
 
             Assert.That(options, Is.SameAs(LobbyLaunchOptions.None));
             Assert.That(options.IsRequested, Is.False);
             Assert.That(options.Command, Is.EqualTo(LobbyCommand.None));
         }
 
-        [TestCase("fps -lobby quickmatch")]
-        [TestCase("fps -LOBBY QUICKMATCH")]
-        [TestCase("fps -lobby quickmatch -transport udp")]
+        [TestCase("shooter -lobby quickmatch")]
+        [TestCase("shooter -LOBBY QUICKMATCH")]
+        [TestCase("shooter -lobby quickmatch -transport udp")]
         public void ParsesQuickMatch(string commandLine)
         {
             var options = Parse(commandLine);
@@ -86,9 +86,9 @@ namespace Fps.Core.Tests
         [Test]
         public void HasLobbyFlagIgnoresSimilarFlags()
         {
-            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("fps -lobby quickmatch")), Is.True);
-            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("fps -lobby-id abc")), Is.False);
-            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("fps -mode client")), Is.False);
+            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("shooter -lobby quickmatch")), Is.True);
+            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("shooter -lobby-id abc")), Is.False);
+            Assert.That(LobbyLaunchOptions.HasLobbyFlag(Args("shooter -mode client")), Is.False);
         }
 
         [Test]

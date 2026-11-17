@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     internal static class NavFunnel
     {

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="StructureIntegrity.ApplyDamage"/> で壊れた部品。</summary>
     public sealed class StructureDamageResult

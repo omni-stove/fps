@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ゲーム進行が UI に渡すものの置き場。項目ごとに今の値とそれが変わったときのイベントを持つ (<see cref="GameSignal{T}"/>)。

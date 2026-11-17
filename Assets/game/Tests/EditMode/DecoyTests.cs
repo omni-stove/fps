@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らないので、Decoy.Tick と敵の知覚 (EnemyAgent.Perceive) を手で進める。
     // 囮は原点に +Z 向きで置き、持ち主は Alpha の陣営と発見ゲージ On のルールを持つ。敵は +Z の先から囮の方を向いて立つ。
@@ -72,7 +72,7 @@ namespace Fps.Tests.EditMode
             Assert.That(bounds.max.y, Is.EqualTo(spec.Height).Within(1e-3f));
             Assert.That(bounds.size.x, Is.LessThanOrEqualTo(spec.Width + 1e-3f));
             Assert.That(decoy.GetComponent<NavMeshObstacle>(), Is.Not.Null);
-            Assert.That(decoy.GetComponentInChildren<Fps.Runtime.CoverPoint>(), Is.Null);
+            Assert.That(decoy.GetComponentInChildren<Shooter.Runtime.CoverPoint>(), Is.Null);
             Assert.That(decoy.Damageable.Health.Current, Is.EqualTo(DecoySpec.DefaultMaxHealth));
             Assert.That(decoy.IsArmed, Is.True);
             Assert.That(Decoy.Armed, Has.Member(decoy));

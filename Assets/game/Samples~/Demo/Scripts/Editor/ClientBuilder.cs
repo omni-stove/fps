@@ -1,26 +1,26 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// クライアント (プレイヤー) をビルドして <c>Builds/client-&lt;platform&gt;/</c> に出力する。
     /// 入れるシーンは <see cref="BuildSceneList.Scenes"/> のうちプロジェクトにあるもので、先頭の <see cref="BuildSceneList.MainMenuScene"/> が起動時のシーンになる。
     /// 版は <see cref="BuildVersionStamper"/> が <c>-buildVersion</c> か git describe から決め、ビルドの間だけ bundleVersion に入れる。
     /// Editor を閉じた状態で次のように呼ぶ (<c>make build</c> / <c>make build windows</c>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build -clientPlatform windows|macos [-buildVersion v0.2.0]</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform windows|macos [-buildVersion v0.2.0]</code>
     /// 失敗したら例外を投げるので、batchmode の Unity は終了コード 1 で終わる。
     /// </summary>
     public static class ClientBuilder
     {
         public const string LogTag = "[Build]";
-        public const string MenuPathWindows = "Fps/Build Client (Windows)";
-        public const string MenuPathMacOS = "Fps/Build Client (macOS)";
+        public const string MenuPathWindows = "Shooter/Build Client (Windows)";
+        public const string MenuPathMacOS = "Shooter/Build Client (macOS)";
 
         /// <summary>
         /// コマンドライン引数 <c>-clientPlatform</c> (既定は macos) で決まる OS 向けに、

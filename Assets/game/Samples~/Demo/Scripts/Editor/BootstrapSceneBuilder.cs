@@ -2,28 +2,28 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// Bootstrap シーン (射撃場) を生成する。シーンには <see cref="GameBootstrap"/> と試合を進める <see cref="MatchRunner"/>、
     /// 初めて入ったとき (とメニューのチュートリアルから来たとき) に案内を出す <see cref="TutorialPresenter"/> を置いた GameObject と、カバーを試す遮蔽物 (<see cref="Covers"/>) を入れ、残りは実行時に GameBootstrap がコードで作る。
     /// 保存したシーンは Build Settings に登録する (先頭はメインメニューなので、既にあれば位置は変えない)。
     /// Editor を閉じた状態で次のように呼べる (保存先は -bootstrapScenePath で変えられる):
-    /// <code>unity -batchmode -quit -executeMethod Fps.Editor.BootstrapSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -executeMethod Shooter.Editor.BootstrapSceneBuilder.Build</code>
     /// </summary>
     public static class BootstrapSceneBuilder
     {
         public static string DefaultScenePath => BuildSceneList.BootstrapScene;
         public const string ScenePathArgument = "-bootstrapScenePath";
         public const string BootstrapObjectName = "GameBootstrap";
-        public const string MenuPath = "Fps/Build Bootstrap Scene";
+        public const string MenuPath = "Shooter/Build Bootstrap Scene";
 
         /// <summary>遮蔽物をまとめる親の名前。</summary>
         public const string CoversName = "Covers";

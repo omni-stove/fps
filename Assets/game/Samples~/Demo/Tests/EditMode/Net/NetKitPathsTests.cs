@@ -1,8 +1,8 @@
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     /// <summary>NetSceneBuilder が書く場所が、既定の出力先ルートで今と同じであること。</summary>
     public sealed class NetKitPathsTests
@@ -14,9 +14,9 @@ namespace Fps.Net.Tests
         [SetUp]
         public void SetUp()
         {
-            _hadPreference = EditorPrefs.HasKey(FpsKitRoot.PrefsKey);
-            _savedPreference = EditorPrefs.GetString(FpsKitRoot.PrefsKey, string.Empty);
-            EditorPrefs.DeleteKey(FpsKitRoot.PrefsKey);
+            _hadPreference = EditorPrefs.HasKey(ShooterKitRoot.PrefsKey);
+            _savedPreference = EditorPrefs.GetString(ShooterKitRoot.PrefsKey, string.Empty);
+            EditorPrefs.DeleteKey(ShooterKitRoot.PrefsKey);
         }
 
         [TearDown]
@@ -24,11 +24,11 @@ namespace Fps.Net.Tests
         {
             if (_hadPreference)
             {
-                EditorPrefs.SetString(FpsKitRoot.PrefsKey, _savedPreference);
+                EditorPrefs.SetString(ShooterKitRoot.PrefsKey, _savedPreference);
             }
             else
             {
-                EditorPrefs.DeleteKey(FpsKitRoot.PrefsKey);
+                EditorPrefs.DeleteKey(ShooterKitRoot.PrefsKey);
             }
         }
 
@@ -42,11 +42,11 @@ namespace Fps.Net.Tests
         [Test]
         public void BuilderPathsFollowTheOutputRoot()
         {
-            FpsKitRoot.SetPreferredOutput("Assets/FpsKit");
+            ShooterKitRoot.SetPreferredOutput("Assets/ShooterKit");
 
-            Assert.That(NetSceneBuilder.ScenePath, Is.EqualTo("Assets/FpsKit/Scenes/NetTest.unity"));
-            Assert.That(NetSceneBuilder.MatchDefinitionPath, Is.EqualTo("Assets/FpsKit/Rules/NetMatch.asset"));
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { "Assets/FpsKit/Scenes/NetTest.unity", "Assets/FpsKit/Scenes/NetArena01.unity" }));
+            Assert.That(NetSceneBuilder.ScenePath, Is.EqualTo("Assets/ShooterKit/Scenes/NetTest.unity"));
+            Assert.That(NetSceneBuilder.MatchDefinitionPath, Is.EqualTo("Assets/ShooterKit/Rules/NetMatch.asset"));
+            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { "Assets/ShooterKit/Scenes/NetTest.unity", "Assets/ShooterKit/Scenes/NetArena01.unity" }));
         }
     }
 }

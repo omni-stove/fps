@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃った者が持つ定義を先に見るのは、カタログに無い武器 (試験や差し替えた武器) の見た目も引けるようにするため。
     public static class ShooterWeapons

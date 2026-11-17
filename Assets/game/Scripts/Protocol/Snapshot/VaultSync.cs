@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// プレイヤーの乗り越えの状態 (Netcode の <c>NetVaultState</c> の中身)。経路は始めた位置からの相対の 3 点。

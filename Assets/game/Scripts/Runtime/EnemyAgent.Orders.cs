@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 人が出す分隊の指示 (<see cref="SquadCommandController"/>) を受ける部分。指示は自分の判断や <see cref="SetErrand"/> の用事より優先し、

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 脱落した陣営 (<see cref="ModeSession.IsSideEliminated"/>: 1 人以上いて全員が戻らない形で倒れている) があり、

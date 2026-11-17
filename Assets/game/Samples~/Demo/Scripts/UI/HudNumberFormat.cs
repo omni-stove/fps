@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 書式を言語や画面ごとに変えられるよう、<see cref="HudModel"/> は数で持ち、文字列にするのは UI のここで行う。

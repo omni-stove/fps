@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="IMatchTransport.TryReceive"/> が返す 1 つの出来事。</summary>
     public readonly struct TransportEvent
@@ -40,7 +40,7 @@ namespace Fps.Protocol
         /// <see cref="TransportEventKind.Disconnected"/> のとき、切った側が <see cref="IMatchTransport.Disconnect"/> か
         /// <see cref="IMatchTransport.Shutdown"/> に渡した理由。自分から切ったなら自分が渡した理由。
         /// 知らせが無い (相手が黙って消えた・つながらなかった) ときや、それ以外の出来事では空文字。
-        /// 相手が自由に送れる値なので、画面に出すなら <c>Fps.Core.DisconnectNotice.Classify</c> で分けてから使う。
+        /// 相手が自由に送れる値なので、画面に出すなら <c>Shooter.Core.DisconnectNotice.Classify</c> で分けてから使う。
         /// </summary>
         public string Reason => _reason ?? "";
 

@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="SettingsView"/> が値を変えた直後から <see cref="AppliedControlSettings"/> で効かせ、閉じたときに保存すること。
@@ -35,8 +35,8 @@ namespace Fps.Tests.EditMode
             AppliedControlSettings.Apply(ControlSettings.Default);
             Localizer.Apply(GameLanguage.Japanese);
             var suffix = Guid.NewGuid().ToString("N");
-            _store = new ControlSettingsStore("Fps.Tests.SettingsView." + suffix);
-            _languageStore = new LanguagePreferenceStore("Fps.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
+            _store = new ControlSettingsStore("Shooter.Tests.SettingsView." + suffix);
+            _languageStore = new LanguagePreferenceStore("Shooter.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
             _view = new SettingsView(_store, languageStore: _languageStore);
             _container = new VisualElement();
         }

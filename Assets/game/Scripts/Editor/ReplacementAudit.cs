@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ゲームが差し替えるもののうち、抜けていると動かない・出ないものをまとめて洗い出し、一覧をログに出す。見るのは次のもの:
@@ -23,12 +23,12 @@ namespace Fps.Editor
     /// </list>
     /// 漏れがあれば終了コード <see cref="FindingsExitCode"/>、点検そのものが失敗したら <see cref="ErrorExitCode"/>、無ければ
     /// <see cref="SuccessExitCode"/> で Editor を閉じる (batchmode のときだけ)。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ReplacementAudit.Run -logFile -</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ReplacementAudit.Run -logFile -</code>
     /// </summary>
     public static class ReplacementAudit
     {
         public const string LogTag = "[ReplacementAudit]";
-        public const string MenuPath = "Fps/Audit Replacements";
+        public const string MenuPath = "Shooter/Audit Replacements";
 
         public const int SuccessExitCode = 0;
         public const int FindingsExitCode = 1;

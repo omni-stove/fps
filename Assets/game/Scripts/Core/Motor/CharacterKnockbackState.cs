@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // KnockbackFlight を持ち主ごとに持たせず状態に載せるのは、予測の巻き戻しでもサーバーと同じ飛び方から進め直せるようにするため。
     public readonly struct CharacterKnockbackState : IEquatable<CharacterKnockbackState>

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 射撃場のルールは Melee を Off のまま配る (ほかの手順の前提を変えない) ので、Off で振れないことを確かめた後に、
     // この手順の間だけプレイヤーと敵を On にする。

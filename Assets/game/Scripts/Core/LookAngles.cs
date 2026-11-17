@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 一人称視点の向き。yaw (左右, 度) は [0, 360) に正規化し、pitch (上下, 度) は ±MaxPitch に収める。

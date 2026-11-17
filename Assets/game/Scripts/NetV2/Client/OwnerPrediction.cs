@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 自分のプレイヤーの予測。tick ごとの入力をサーバーと同じ Core の移動で先に動かし、送る入力を覚えておく。

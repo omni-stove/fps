@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// <see cref="IMatchTransport"/> の 1 つの接続を表す Id。実装が接続ごとに 1 以上の値を振り、切れるまで変えない。

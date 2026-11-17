@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// メッセージをバイト列に書く。数はリトルエンディアン、文字列は UTF-8 のバイト数 (ushort) を前に付けて書く。

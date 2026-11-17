@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ガンゲームの武器の並び (<see cref="GunGameLadder"/>) の 1 段。持たせる武器の Id と、HUD とログに出す名前のキー。</summary>
     public readonly struct GunGameTier

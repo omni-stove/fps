@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 爆発する置き物 (<see cref="ExplosiveProp"/>) が弾と爆発で耐久を減らし、0 で爆発して近くの人・建造物・ほかの置き物に被害を配り、

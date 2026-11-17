@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器とルールのアセットと Bootstrap シーン (射撃場) を生成し直して Play Mode に入り、プレイヤーの TPS アクションを
@@ -22,7 +22,7 @@ namespace Fps.Editor
     /// batchmode には入力が無いので、Cover / Attack / Reload / 肩の入れ替えの代わりに <see cref="CoverController.Tick"/>・
     /// <see cref="WeaponController.PullTrigger"/>・<see cref="WeaponController.TryActiveReload"/>・<see cref="ViewRig.Tick"/> を呼ぶ。
     /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.TpsActionSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.TpsActionSmokeRun.Run -logFile -</code>
     /// </summary>
     [InitializeOnLoad]
     public static class TpsActionSmokeRun
@@ -44,8 +44,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.TpsActionSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.TpsActionSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.TpsActionSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.TpsActionSmokeRun.RequestedAt";
 
         private static readonly string _coverEnterLog = CoverState.LogTag + " enter";
         private static readonly string _activeReloadSuccessLog = WeaponController.ActiveReloadLog(ActiveReloadResult.Success);

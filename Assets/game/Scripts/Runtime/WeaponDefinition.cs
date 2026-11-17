@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 武器 1 種類の値をアセットとして持つ。クライアントと専用サーバーは同じアセットを読み、<see cref="ToSpec"/> で
@@ -16,9 +16,9 @@ namespace Fps.Runtime
     /// 撃ち方・弾薬・弾・着弾・照準の部品の省略できる入れ子 (バースト・熱・飛ぶ弾・爆発・息止めなど) と弾薬の種類は、新しく作ったときは
     /// どれも使わず、ヒットスキャン 1 本を即着弾させる今までの撃ち方になる。飛ぶ弾・ビーム・火炎・爆発の見た目と音は、
     /// それぞれの入れ子の差し替えられる参照に置く。
-    /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Fps.Editor.WeaponAssetBuilder が作る) の側にある。
+    /// 実際に使う値はアセット (Assets/game/Weapons/*.asset、Shooter.Editor.WeaponAssetBuilder が作る) の側にある。
     /// </summary>
-    [CreateAssetMenu(fileName = "Weapon", menuName = "Fps/Weapon Definition")]
+    [CreateAssetMenu(fileName = "Weapon", menuName = "Shooter/Weapon Definition")]
     public sealed class WeaponDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("武器の識別子。小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。空なら自動で振る。作った後は変えない")]
@@ -70,7 +70,7 @@ namespace Fps.Runtime
         private float _explosionRadius;
 
         [Header("覗き込み (ADS)")]
-        [SerializeField, Min(0f), Tooltip("覗き込み切ったときのカメラの縦の視野角 (度)。0 なら共通の初期値 (Fps.Core.AdsZoom.DefaultFieldOfView)")]
+        [SerializeField, Min(0f), Tooltip("覗き込み切ったときのカメラの縦の視野角 (度)。0 なら共通の初期値 (Shooter.Core.AdsZoom.DefaultFieldOfView)")]
         private float _adsFieldOfView = UnsetAdsFieldOfView;
 
         [Header("ブラインドファイア")]

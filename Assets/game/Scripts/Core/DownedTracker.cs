@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ダウン中のプレイヤーごとに、ダウン中の体力・出血の残り秒数・蘇生の累計・誰に当てられたかを持つ。

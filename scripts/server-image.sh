@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Unity を使わない専用サーバー (dotnet/Fps.Server) を docker/server/Dockerfile でイメージにする。Unity も Editor を閉じることも要らない。
+# Unity を使わない専用サーバー (dotnet/Shooter.Server) を docker/server/Dockerfile でイメージにする。Unity も Editor を閉じることも要らない。
 # 使い方: scripts/server-image.sh [--tag <name:tag>] [--version <version>] [--platform <linux/amd64|linux/arm64>]
-#   --tag       作るイメージの名前とタグ (既定は fps-server:local)
+#   --tag       作るイメージの名前とタグ (既定は shooter-server:local)
 #   --version   サーバーに焼き込む版 (v0.2.0 など。既定は git describe --tags --always --dirty)
 #   --platform  作るイメージのアーキテクチャ (既定は Docker が動いているマシンのもの)
 set -euo pipefail
@@ -16,7 +16,7 @@ fail() {
 	exit 1
 }
 
-tag="fps-server:local"
+tag="shooter-server:local"
 version=""
 platform=""
 while [ $# -gt 0 ]; do
@@ -53,7 +53,7 @@ docker info >/dev/null 2>&1 || fail "cannot reach the Docker daemon (is Docker r
 if [ -z "$version" ]; then
 	version="$(git describe --tags --always --dirty)" || fail "git describe failed; pass --version <version>"
 fi
-# サーバーが起動時に断るのと同じ規則 (Fps.Core.BuildVersion) で、イメージを作る前に確かめる
+# サーバーが起動時に断るのと同じ規則 (Shooter.Core.BuildVersion) で、イメージを作る前に確かめる
 if [[ "$version" =~ ^[vV][0-9] ]]; then
 	version="${version:1}"
 fi
@@ -66,7 +66,7 @@ fi
 
 # Dockerfile.dockerignore は BuildKit でしか効かない
 DOCKER_BUILDKIT=1 docker build ${platform:+--platform "$platform"} \
-	--build-arg FPS_BUILD_VERSION="$version" \
+	--build-arg SHOOTER_BUILD_VERSION="$version" \
 	--file docker/server/Dockerfile --tag "$tag" .
 
 echo "server-image: built $tag (version $version); run it with: docker run --rm -p 7777:7777/udp $tag"

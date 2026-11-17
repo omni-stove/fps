@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ルールのオンオフの項目 (<see cref="GameRulesDebugDraft.IsToggle"/>) ごとに、その機能だけを試す小さなシーン
@@ -17,7 +17,7 @@ namespace Fps.Editor
     /// 実行中は F1 (ルールのデバッグパネル) で同じ項目を切って見比べ、F2 (<see cref="ViewModeDebugToggle"/>) で一人称と三人称を入れ替える。
     /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。保存したシーンは Build Settings に (並びを変えずに) 加える。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.FeatureSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.FeatureSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 試し場所は TPS の射撃場の置く物 (<see cref="ITpsRangeFixture"/>) をそのまま使い、射撃場の配置に意味があるもの
@@ -27,7 +27,7 @@ namespace Fps.Editor
     /// </remarks>
     public static class FeatureSceneBuilder
     {
-        public const string MenuPath = "Fps/Build Feature Scenes";
+        public const string MenuPath = "Shooter/Build Feature Scenes";
         public const string LogTag = "[FeatureSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";

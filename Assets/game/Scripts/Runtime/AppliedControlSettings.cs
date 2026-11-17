@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に、

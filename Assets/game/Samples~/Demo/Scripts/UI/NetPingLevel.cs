@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>Ping の良し悪し。HUD の回線の表示の色を決める (<see cref="NetStatsFormat.PingLevel"/>)。</summary>
     public enum NetPingLevel

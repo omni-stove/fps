@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾が建造物 (<see cref="IStructureHittable"/>) に当たったときの被害の配り方。

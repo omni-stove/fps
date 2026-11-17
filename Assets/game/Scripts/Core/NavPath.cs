@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="INavigation.CalculatePath"/> が埋める経路。毎回作らずに使い回せるよう、中身は <see cref="Clear"/> で捨てる。

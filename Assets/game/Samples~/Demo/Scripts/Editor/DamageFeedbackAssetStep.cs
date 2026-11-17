@@ -1,7 +1,7 @@
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
-    /// 被弾の画面効果と低体力の演出の仮素材と <see cref="Fps.Runtime.DamageFeedbackCatalog"/> を作る手順 (<see cref="DamageFeedbackAssetBuilder.Build"/>)。
+    /// 被弾の画面効果と低体力の演出の仮素材と <see cref="Shooter.Runtime.DamageFeedbackCatalog"/> を作る手順 (<see cref="DamageFeedbackAssetBuilder.Build"/>)。
     /// </summary>
     public sealed class DamageFeedbackAssetStep : IPresentationAssetStep
     {

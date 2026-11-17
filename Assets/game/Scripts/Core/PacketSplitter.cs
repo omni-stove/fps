@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 パケットの上限 (EOS P2P では 1170 バイト) を超えるメッセージを複数のパケットに分ける。

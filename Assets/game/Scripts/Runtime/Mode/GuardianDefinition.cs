@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガーディアン (<see cref="GuardianMode"/>) の制限時間・リスポーン・キル 1 回の点をアセットとして持つ。
     /// 新しく作ったときの値は <see cref="GuardianRunner"/> の既定値と同じ。リーダーを選ぶ乱数の種と目印の見た目は Runner の側にあるので持たない。
     /// <see cref="GuardianRunner.Definition"/> に配線するか入口 (<see cref="GameContent.Guardian"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "Guardian", menuName = "Fps/Modes/Guardian")]
+    [CreateAssetMenu(fileName = "Guardian", menuName = "Shooter/Modes/Guardian")]
     public sealed class GuardianDefinition : ScriptableObject
     {
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)")]

@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class MapCollisionExporterTests
     {
@@ -270,7 +270,7 @@ namespace Fps.Tests.EditMode
         {
             using (var stream = new MemoryStream(Bytes(map)))
             {
-                return FpsMapFile.Read(stream);
+                return ShooterMapFile.Read(stream);
             }
         }
 
@@ -278,7 +278,7 @@ namespace Fps.Tests.EditMode
         {
             using (var stream = new MemoryStream())
             {
-                FpsMapFile.Write(stream, map);
+                ShooterMapFile.Write(stream, map);
                 return stream.ToArray();
             }
         }

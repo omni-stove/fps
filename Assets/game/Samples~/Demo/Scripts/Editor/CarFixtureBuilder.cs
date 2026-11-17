@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 位置は車の原点 (床の高さ・車体の中心の真下) から見たもの。+Z が前。
     public static class CarFixtureBuilder

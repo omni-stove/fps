@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 文は JapaneseLanguageSetUp が効かせる日本語の表 (Resources/Localization/ja/squad.json) から引く。
     public sealed class SquadOrderTextTests

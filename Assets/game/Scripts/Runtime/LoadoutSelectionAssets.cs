@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ロードアウトのアセット (スロットのルールと既定の武器) と武器の一覧のアセットから、選ぶ画面の中身 (<see cref="LoadoutSelection"/>) を作る。

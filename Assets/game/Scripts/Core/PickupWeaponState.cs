@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PickupCollector"/> が持っている武器 1 本の、拾う判定に要る状態。</summary>
     public readonly struct PickupWeaponState

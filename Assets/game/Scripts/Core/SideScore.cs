@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>陣営 1 つの得点。<see cref="ModeStatus.SideScores"/> に陣営の数だけ並ぶ。</summary>
     public readonly struct SideScore : IEquatable<SideScore>

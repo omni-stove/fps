@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラが撃たれたときの血の演出 (<see cref="BloodPresenter"/>) の素材。部位 (<see cref="HitZone"/>) ごとの血しぶきと、
     /// 撃たれたキャラの背後の壁に付ける血痕を持つ。
     /// Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読む (<see cref="PresentationCatalog"/> の規約)。
-    /// 中身は Fps.Editor.HitFeedbackAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
+    /// 中身は Shooter.Editor.HitFeedbackAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
-    [CreateAssetMenu(fileName = "HitFeedbackCatalog", menuName = "Fps/Hit Feedback Catalog")]
+    [CreateAssetMenu(fileName = "HitFeedbackCatalog", menuName = "Shooter/Hit Feedback Catalog")]
     public sealed class HitFeedbackCatalog : ScriptableObject
     {
         /// <summary>カタログの名前 (<see cref="PresentationCatalog.CatalogResourcePath"/> に渡すもの)。</summary>

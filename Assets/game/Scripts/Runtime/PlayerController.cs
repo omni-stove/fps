@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 移動入力を <see cref="PlayerMotor"/> に渡し、返ってきた変位を <see cref="CharacterController.Move"/> に適用する。

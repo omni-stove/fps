@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オンラインの試合で、人の足りない分を埋める Bot の数・抜けさせるチーム・プレイヤー Id・名前の決まり。
@@ -119,12 +119,12 @@ namespace Fps.Core
             return playerId - FirstBotPlayerId + 1;
         }
 
-        /// <summary>スコアボードの名前。Bot なら通し番号の <see cref="Fps.Core.ScoreboardName.Bot"/>、人なら <see cref="Fps.Core.ScoreboardName.Player"/>。</summary>
-        public static Fps.Core.ScoreboardName ScoreboardName(int playerId)
+        /// <summary>スコアボードの名前。Bot なら通し番号の <see cref="Shooter.Core.ScoreboardName.Bot"/>、人なら <see cref="Shooter.Core.ScoreboardName.Player"/>。</summary>
+        public static Shooter.Core.ScoreboardName ScoreboardName(int playerId)
         {
             return IsBotId(playerId)
-                ? Fps.Core.ScoreboardName.Bot(BotNumber(playerId))
-                : Fps.Core.ScoreboardName.Player(playerId);
+                ? Shooter.Core.ScoreboardName.Bot(BotNumber(playerId))
+                : Shooter.Core.ScoreboardName.Player(playerId);
         }
 
         /// <summary>キルフィードの名前。Bot なら <c>[BOT] B1</c>、人なら <see cref="KillFeedFormat.Player"/>。</summary>

@@ -2,9 +2,9 @@ using System;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class DeployPlacementTests
     {
         private static readonly DeploySpec _spec = new DeploySpec(2, DeployOverflow.ReplaceOldest, 300, 4f, 30f, 0.25f, 2f, 1.4f, 0.2f);

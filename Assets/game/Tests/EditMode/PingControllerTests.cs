@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// PingController が照準の先の敵か場所に印を付け、敵を見えている間だけ追い、見失うと残し、寿命で消し、
@@ -21,7 +21,7 @@ namespace Fps.Tests.EditMode
         private readonly List<GameObject> _objects = new List<GameObject>();
         private float _now;
 
-        private static GameRules PingRules(Fps.Core.Ping ping)
+        private static GameRules PingRules(Shooter.Core.Ping ping)
         {
             return GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(ping));
         }
@@ -58,7 +58,7 @@ namespace Fps.Tests.EditMode
             Assert.That(unconfigured.TryPingAlong(_eye, Vector3.forward, out _), Is.False);
             Assert.That(unconfigured.LastRefusal, Is.EqualTo(PingRefusal.RuleOff));
 
-            unconfigured.Configure(PingRules(Fps.Core.Ping.Off));
+            unconfigured.Configure(PingRules(Shooter.Core.Ping.Off));
             LogAssert.Expect(LogType.Log, PingLog.Refused(PingRefusal.RuleOff));
             Assert.That(unconfigured.TryPingAlong(_eye, Vector3.forward, out _), Is.False);
             Assert.That(unconfigured.Markers, Is.Empty);
@@ -210,10 +210,10 @@ namespace Fps.Tests.EditMode
             pinger.TryPingAlong(_eye, Vector3.forward, out _);
 
             LogAssert.Expect(LogType.Log, PingLog.Cleared(1));
-            pinger.Configure(PingRules(Fps.Core.Ping.Off));
+            pinger.Configure(PingRules(Shooter.Core.Ping.Off));
 
             Assert.That(pinger.Markers, Is.Empty);
-            Assert.That(pinger.Rule, Is.EqualTo(Fps.Core.Ping.Off));
+            Assert.That(pinger.Rule, Is.EqualTo(Shooter.Core.Ping.Off));
         }
 
         [Test]
@@ -265,7 +265,7 @@ namespace Fps.Tests.EditMode
             Assert.That(heard.Count, Is.EqualTo(2), "an expired mark publishes again");
             Assert.That(GameSignals.Pings.Value, Is.Empty);
 
-            pinger.Configure(PingRules(Fps.Core.Ping.Off));
+            pinger.Configure(PingRules(Shooter.Core.Ping.Off));
             Assert.That(GameSignals.Pings.Value, Is.Null, "with Ping off nothing is published");
         }
 
@@ -276,10 +276,10 @@ namespace Fps.Tests.EditMode
             var second = Pinger();
             Assert.That(GameSignals.Pings.Value, Is.SameAs(second.Markers), "the last pinger to change wins");
 
-            first.Configure(PingRules(Fps.Core.Ping.Off));
+            first.Configure(PingRules(Shooter.Core.Ping.Off));
             Assert.That(GameSignals.Pings.Value, Is.SameAs(second.Markers), "another pinger's marks stay");
 
-            second.Configure(PingRules(Fps.Core.Ping.Off));
+            second.Configure(PingRules(Shooter.Core.Ping.Off));
             Assert.That(GameSignals.Pings.Value, Is.Null);
         }
 
@@ -291,7 +291,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(pinger.Spec.MaxMarkers, Is.EqualTo(PingSpec.DefaultMaxMarkers), "the running spec does not change mid-match");
 
-            pinger.Configure(PingRules(Fps.Core.Ping.On));
+            pinger.Configure(PingRules(Shooter.Core.Ping.On));
             Assert.That(pinger.Spec.LifetimeSeconds, Is.EqualTo(9f));
             Assert.That(pinger.Spec.MaxMarkers, Is.EqualTo(5));
             Assert.Throws<System.ArgumentNullException>(() => pinger.ApplySpec(null));
@@ -304,7 +304,7 @@ namespace Fps.Tests.EditMode
             var pinger = Pinger();
             pinger.ApplySpec(new PingSpec(minIntervalSeconds: 2f));
 
-            pinger.Configure(PingRules(Fps.Core.Ping.On));
+            pinger.Configure(PingRules(Shooter.Core.Ping.On));
 
             Assert.That(pinger.Spec.MinIntervalSeconds, Is.EqualTo(2f));
             Assert.That(pinger.CreateSpec().MinIntervalSeconds, Is.EqualTo(2f), "the applied values are the serialized ones");
@@ -322,7 +322,7 @@ namespace Fps.Tests.EditMode
             }
 
             pinger.Clock = () => _now;
-            pinger.Configure(PingRules(Fps.Core.Ping.On));
+            pinger.Configure(PingRules(Shooter.Core.Ping.On));
             return pinger;
         }
 

@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 爆破の HUD の文 (<see cref="SearchAndDestroyHudText"/>) と、<see cref="SearchAndDestroyStatus"/> をそれで文にする書式役 (<see cref="SearchAndDestroyHudFormatter"/>) を確かめる。

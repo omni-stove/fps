@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public sealed class NetMatchSettings
     {
@@ -15,7 +15,7 @@ namespace Fps.Core
         public const int DefaultMaxPlayers = 8;
         public const int MinMaxPlayers = 1;
 
-        // Core からは Protocol を参照できないので、Fps.Protocol.SnapshotMessage.MaxPlayers の値を写す
+        // Core からは Protocol を参照できないので、Shooter.Protocol.SnapshotMessage.MaxPlayers の値を写す
         public const int MaxMaxPlayers = 64;
 
         public NetMatchSettings(

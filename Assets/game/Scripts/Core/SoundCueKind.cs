@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>字幕にする音の合図の種類。</summary>
     public enum SoundCueKind

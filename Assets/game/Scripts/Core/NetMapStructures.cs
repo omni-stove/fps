@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの対戦マップの壊せる建物の部品の並び (<c>server-data/maps/&lt;マップ&gt;.structures.json</c>)。

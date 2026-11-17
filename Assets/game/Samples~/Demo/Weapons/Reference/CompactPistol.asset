@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: CompactPistol
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 343b6024-75f2-4d68-8ac6-d31fad86aa47
   _nameKey: weapon.ref.compactPistol
   _description: "CS2 \u306E Glock-18 (\u5B9F\u9283\u306F Glock 18) \u3092\u53C2\u8003\u3002\u4F53 30\u30FB0.15 \u79D2\u306B 1 \u767A\u30FB20 \u767A\u3002CS2 \u306E 3 \u70B9\u30D0\u30FC\u30B9\u30C8\u306F\u5165\u308C\u3066\u3044\u306A\u3044\u3002RangeModifier 0.85 \u3092 50 m \u3067 0.53 \u500D\u306B\u7F6E\u304D\u63DB\u3048\u305F\u3002\u79FB\u52D5\u306E\u500D\u7387\u306F 240/250\u3002"

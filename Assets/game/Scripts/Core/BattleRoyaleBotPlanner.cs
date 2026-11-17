@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// バトルロイヤルの bot が戦いのほかにする用事 (<see cref="BotErrand"/>) を決める。状態は持たず、同じ入力なら同じ用事を返す。

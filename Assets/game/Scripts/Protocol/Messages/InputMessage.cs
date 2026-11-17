@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// クライアントが毎 tick 送る移動の入力。落ちてもよい届け方で送れるよう、まだサーバーが処理したと分からない直近の tick を

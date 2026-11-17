@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 速度を求めるのを受け手でなく Knockback に任せるのは、倒れた後も同じ Spec と重さでラグドールへ同じ力を渡すため。
     public interface IKnockbackReceiver

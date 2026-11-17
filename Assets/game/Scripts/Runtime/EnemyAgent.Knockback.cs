@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 飛んでいる間は NavMeshAgent を切り、Rigidbody も付けずに自分で動かす。Agent を付けたままだと NavMesh の上に引き戻され、
     // Rigidbody を足すと NavMeshAgent と位置を奪い合う。

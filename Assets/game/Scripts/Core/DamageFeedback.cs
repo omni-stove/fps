@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 体力の変化で <see cref="DamageFeedback.SetHealth"/> が返す、低体力の状態の変わり方。

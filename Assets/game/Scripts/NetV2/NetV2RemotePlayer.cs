@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦で見える他のプレイヤー 1 人。補間した姿 (<see cref="RemotePose"/>) を書き写すだけで、自分では動かさない。

@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 目から狙う点までの線が手前の物に遮られているときの照準の知らせ方。出すか・遮りとみなす余裕 (<see cref="AimBlockSettings"/>) と、
     /// 遮られた点に出す印の画像を持つ。印の画像が空なら HUD がコードで × の形を作る。遮られている間の照準の色は Hud.uss の
     /// <c>hud__crosshair--blocked</c> で決める。
     /// </summary>
-    [CreateAssetMenu(fileName = "AimBlockCatalog", menuName = "Fps/Aim Block Catalog")]
+    [CreateAssetMenu(fileName = "AimBlockCatalog", menuName = "Shooter/Aim Block Catalog")]
     public sealed class AimBlockCatalog : ScriptableObject
     {
         public const string CatalogName = "AimBlock";

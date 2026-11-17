@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 高い所から落ちている間にパラシュートを開いて降りる、プレイヤーのコンポーネント。<see cref="PlayerController"/> の移動の横取り (<see cref="IMovementOverride"/>) として動く。

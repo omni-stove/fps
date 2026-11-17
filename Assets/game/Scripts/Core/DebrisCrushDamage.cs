@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 崩れ落ちる建物の破片がキャラクターに当たったときのダメージ。破片の速さから <see cref="MinSpeed"/> を引いた分に質量を掛けた運動量に

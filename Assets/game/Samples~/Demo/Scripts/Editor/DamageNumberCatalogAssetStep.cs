@@ -1,14 +1,14 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class DamageNumberCatalogAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = 100;
 
-        public const string MenuPath = "Fps/Build Damage Number Catalog";
+        public const string MenuPath = "Shooter/Build Damage Number Catalog";
         public const string LogTag = "[DamageNumberCatalogAssetStep]";
 
         public static string AssetPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + DamageNumberCatalog.ResourcePath + ".asset";

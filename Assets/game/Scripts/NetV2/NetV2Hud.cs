@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦の HUD に出す値。届いたスナップショットの値を自分の <see cref="Model"/> に書き、それを <see cref="GameSignals.HudModel"/> に出す。

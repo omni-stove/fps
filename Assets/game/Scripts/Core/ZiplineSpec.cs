@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 線ごとに変えられるよう、ルール (ActionRules) ではなく Zipline コンポーネントの Inspector の値から作る。
     public sealed class ZiplineSpec

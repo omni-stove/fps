@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 目からカメラまでの腕 (ブーム) の計算。三人称では目から離した位置にカメラを置き、

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>別の陣営を倒すたびに、倒した人の陣営へ決まった点を足す。時間では点を足さない。</summary>
     public sealed class KillScore : IScoreRule

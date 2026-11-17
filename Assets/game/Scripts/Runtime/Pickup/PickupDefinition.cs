@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拾える物 1 種類の調整値 (中身・拾い方・再出現の秒数・拾える範囲・照準の角度) をアセットとして持つ。<see cref="PickupSpawnPoint.Definition"/> に
@@ -11,7 +11,7 @@ namespace Fps.Runtime
     /// <see cref="AmmoCrate.Definition"/> に入れると、弾薬箱は範囲と補給の間隔 (<see cref="AmmoCrateRadius"/>・<see cref="AmmoCrateCooldownSeconds"/>、既定は
     /// <see cref="AmmoCrate"/> の既定値) を自分の値の代わりに読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "Pickup", menuName = "Fps/Pickup")]
+    [CreateAssetMenu(fileName = "Pickup", menuName = "Shooter/Pickup")]
     public sealed class PickupDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("中身")]

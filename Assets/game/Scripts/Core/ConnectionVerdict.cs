@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ConnectionApproval.Judge(string, byte[], bool)"/> の結果。</summary>
     public sealed class ConnectionVerdict

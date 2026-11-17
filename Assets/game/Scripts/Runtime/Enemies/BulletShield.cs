@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 盾は持ち主の子に置くので、Hitbox.FindFor は親の胴の Hitbox を返してしまう。弾の流れ (Hitscan・WeaponController) だけが先にここで止める。
     // 近接と爆発は Hitbox.FindFor を通って持ち主に届くので、盾ごと殴れて、盾越しの爆発も効く。

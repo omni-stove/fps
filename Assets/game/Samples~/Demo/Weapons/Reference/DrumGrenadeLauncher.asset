@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: DrumGrenadeLauncher
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 6c95cc3b-c27d-468c-bb6c-e84188171f67
   _nameKey: weapon.ref.drumGrenadeLauncher
   _description: "Team Fortress 2 \u306E\u30B0\u30EC\u30CD\u30FC\u30C9\u30E9\u30F3\u30C1\u30E3\u30FC (\u5B9F\u9283\u306F Milkor MGL \u306E\u3088\u3046\u306A\u56DE\u8EE2\u5F3E\u5009\u5F0F) \u3092\u53C2\u8003\u3002\u7206\u767A 100\u30FB\u534A\u5F84 2.8 m\u30FB\u5F3E\u901F 23 m/s \u3067\u5F27\u3092\u63CF\u304D\u30012.3 \u79D2\u3067\u8D77\u7206\u3059\u308B\u30024 \u767A\u8FBC\u3081\u30011 \u767A\u305A\u3064 0.6 \u79D2\u3067\u8FBC\u3081\u308B\u3002"

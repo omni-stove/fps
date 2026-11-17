@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 遮蔽物に隠れたまま、狙わずに撃てるか。

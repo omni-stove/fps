@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 武器などの Id の並び。読むたびに配列や同じ Id の文字列を作り直さず、前に読んだものを使い回す。

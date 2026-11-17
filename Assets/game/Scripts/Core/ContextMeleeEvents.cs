@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 大きな秒数の Tick では位置合わせの終わりと結果が同じ回に起きるので、どちらも落とさないよう flags で返す。
     [Flags]

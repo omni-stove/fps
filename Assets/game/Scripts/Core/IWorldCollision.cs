@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 世界の当たりへの問い合わせの差し込み口。Unity では Physics、Unity 抜きのサーバーでは自前の当たりが実装する。

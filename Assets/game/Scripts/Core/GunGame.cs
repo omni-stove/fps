@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガンゲームの段の進み方と勝ち方。<see cref="ModeSession"/> の勝利条件として渡し、キルは <see cref="ReportKill"/> で別に伝える

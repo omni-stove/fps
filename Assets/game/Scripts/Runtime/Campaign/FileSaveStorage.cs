@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Text;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// セーブデータをスロットごとに 1 つの UTF-8 ファイル (<c>&lt;root&gt;/&lt;slot&gt;.json</c>) に置く <see cref="ISaveStorage"/>。

@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ロードアウトをアセットとして持つ。スロットの並び (各スロットが許す種別と入れる武器) と持ち替え秒数、能力の枠に入れる能力 (<see cref="Abilities"/>)。
     /// <see cref="ToRule"/> で Core の <see cref="LoadoutRule"/> に、<see cref="ToSpecs"/> でスロット順の <see cref="WeaponSpec"/> に変換する。
     /// ルールに合わない・武器が空・値が不正なときは、どのアセットかを添えて <see cref="WeaponDefinitionException"/> にする。
     /// </summary>
-    [CreateAssetMenu(fileName = "Loadout", menuName = "Fps/Loadout Definition")]
+    [CreateAssetMenu(fileName = "Loadout", menuName = "Shooter/Loadout Definition")]
     public sealed class LoadoutDefinition : ScriptableObject
     {
         public const float DefaultSwitchSeconds = 0.4f;

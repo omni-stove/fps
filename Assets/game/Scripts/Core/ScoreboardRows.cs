@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// スコアボードの並べ方。参加者をチームごとに分け、キルの多い順に並べる。行に出す文はスコアボードの UI が作る。

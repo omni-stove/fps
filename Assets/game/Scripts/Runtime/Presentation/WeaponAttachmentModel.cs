@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     public sealed class WeaponAttachmentModel : MonoBehaviour

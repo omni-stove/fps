@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// モード別のルールのアセット (<see cref="Folder"/> の <see cref="GameRulesDefinition"/>。<see cref="BuildAt"/> の 7 つと、
@@ -22,11 +22,11 @@ namespace Fps.Editor
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesAssetBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameRulesAssetBuilder.Build</code>
     /// </summary>
     public static class GameRulesAssetBuilder
     {
-        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
+        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => GameRulesAssets.Folder;
 
         public static string TeamDeathmatchPath => Folder + "/TeamDeathmatch.asset";
@@ -98,7 +98,7 @@ namespace Fps.Editor
         /// <summary><see cref="TeamDeathmatchActions"/> (ドミネーションも同じ) で出撃ごとに持つグレネードの数。</summary>
         public const int TeamDeathmatchGrenadeCount = 2;
 
-        public const string MenuPath = "Fps/Build Game Rules Assets";
+        public const string MenuPath = "Shooter/Build Game Rules Assets";
         public const string LogTag = "[GameRulesAssetBuilder]";
 
         /// <summary><see cref="TeamDeathmatchRules"/> の出現直後の無敵の秒数。</summary>
@@ -451,7 +451,7 @@ namespace Fps.Editor
             if (definition == null)
             {
                 throw new InvalidOperationException(
-                    $"game rules '{path}' were not found; run {MenuPath} (Fps.Editor.GameRulesAssetBuilder.Build) first");
+                    $"game rules '{path}' were not found; run {MenuPath} (Shooter.Editor.GameRulesAssetBuilder.Build) first");
             }
 
             definition.ToRules();

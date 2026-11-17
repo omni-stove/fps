@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆破 (サーチアンドデストロイ) のルール。<see cref="RoundSession"/> で Alpha と Bravo がラウンドを取り合い、

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 囮を試す場所。プレイヤーは手前 (PlayerGround) に立って +Z へ囮を置き、奥で囮の方を向いて立つ敵に気づかせる。
     // 右手前の隅 (x = 28..36, z = -37..-26) の、ほかの敵の居場所から囮の呼び声 (DecoySpec.DefaultCallRadius) が届かない所に置く。

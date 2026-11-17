@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 建造物破壊の動作確認用シーン DestructionTest を生成する。床に <see cref="NavMeshSurface"/> を置いて NavMesh を焼き、
@@ -18,7 +18,7 @@ namespace Fps.Editor
     /// プレイヤーは launcher を持って始まり、小屋が壊れるかは射撃場のルール (<see cref="GameRulesAssetBuilder.RangePath"/>) の
     /// <see cref="Destruction"/> で決める。プレイヤーとライトは実行時に GameBootstrap が作る。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.DestructionTestSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.DestructionTestSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向く):
@@ -33,7 +33,7 @@ namespace Fps.Editor
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Fps/Build Destruction Test Scene";
+        public const string MenuPath = "Shooter/Build Destruction Test Scene";
         public const string LogTag = "[DestructionTestSceneBuilder]";
 
         public const string FloorName = "Floor";

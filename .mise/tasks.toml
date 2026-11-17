@@ -1,5 +1,5 @@
 [install]
-description = "Restore the NuGet packages of dotnet/Fps.slnx"
+description = "Restore the NuGet packages of dotnet/Shooter.slnx"
 run = "scripts/install.sh"
 quiet = true
 
@@ -16,7 +16,7 @@ description = "Pull skill-kit and re-sync this repo"
 run = "skill-kit game update"
 
 [lint]
-description = "Check C# formatting, style and analyzers (Unity-independent code via dotnet/Fps.slnx, all of Assets/game for whitespace) and that every tracked file/folder under Assets has a tracked .meta and vice versa"
+description = "Check C# formatting, style and analyzers (Unity-independent code via dotnet/Shooter.slnx, all of Assets/game for whitespace) and that every tracked file/folder under Assets has a tracked .meta and vice versa"
 run = "scripts/lint.sh"
 quiet = true
 
@@ -26,7 +26,7 @@ run = "scripts/lint.sh --fix"
 quiet = true
 
 [test]
-description = "Run the Unity-independent C# unit tests (every test project in dotnet/Fps.slnx) with dotnet test"
+description = "Run the Unity-independent C# unit tests (every test project in dotnet/Shooter.slnx) with dotnet test"
 run = "scripts/test.sh"
 quiet = true
 
@@ -36,22 +36,22 @@ usage = '''
 arg "[platform]" help="macos or windows" default="macos"
 flag "--version <version>" help="build version such as v0.2.0 (default: git describe --tags --always --dirty)"
 '''
-run = 'unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ClientBuilder.Build -clientPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
+run = 'unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-dotnet]
-description = "Build the Unity-independent .NET server (dotnet/Fps.Server) and run it with -mode server on 0.0.0.0:7777 (FPS_SERVER_ADDRESS / FPS_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
+description = "Build the Unity-independent .NET server (dotnet/Shooter.Server) and run it with -mode server on 0.0.0.0:7777 (SHOOTER_SERVER_ADDRESS / SHOOTER_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. The version is git describe --tags --always --dirty"
 run = [
-  "dotnet build dotnet/Fps.Server/Fps.Server.csproj -c Release -v q --nologo",
-  'dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',
+  "dotnet build dotnet/Shooter.Server/Shooter.Server.csproj -c Release -v q --nologo",
+  'dotnet run --project dotnet/Shooter.Server/Shooter.Server.csproj -c Release --no-build -- -mode server -buildVersion "$(git describe --tags --always --dirty)"',
 ]
 
 [export-server-data]
-description = "Write the collision, the NavMesh with its links, the destructible structures and the ladders of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav, <map>.structures.json and <map>.ladders.json with the Unity editor in batch mode via Fps.Editor.MapCollisionExporter.Export, removing those files of maps no longer listed (close the Editor first). Commit the result"
-run = "unity --non-interactive run . -- -executeMethod Fps.Editor.MapCollisionExporter.Export"
+description = "Write the collision, the NavMesh with its links, the destructible structures and the ladders of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav, <map>.structures.json and <map>.ladders.json with the Unity editor in batch mode via Shooter.Editor.MapCollisionExporter.Export, removing those files of maps no longer listed (close the Editor first). Commit the result"
+run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]
-description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Fps.Editor.ServerRulesExporter.Export (close the Editor first): the net match settings (Rules/NetMatch.asset, made by Fps.Editor.NetSceneBuilder when missing) with the GameContent rules and each rules asset listed in the net match to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping, grenade, inventory, knockback and bots tuning (the GameContent field first, then Resources/Tuning, as KitTuning reads them) to server-data/tuning/ping.json, grenade.json, inventory.json, knockback.json and bots.json. Commit the written files"
-run = "unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export"
+description = "Write what the .NET server cannot read from Unity with the editor in batch mode via Shooter.Editor.ServerRulesExporter.Export (close the Editor first): the net match settings (Rules/NetMatch.asset, made by Shooter.Editor.NetSceneBuilder when missing) with the GameContent rules and each rules asset listed in the net match to server-data/rules/<rules>.json (chosen with -rules), each server map's spawn and control points to server-data/maps/<map>.points.json, and the ping, grenade, inventory, knockback and bots tuning (the GameContent field first, then Resources/Tuning, as KitTuning reads them) to server-data/tuning/ping.json, grenade.json, inventory.json, knockback.json and bots.json. Commit the written files"
+run = "unity run . -- -executeMethod Shooter.Editor.ServerRulesExporter.Export"
 
 [eos-sdk]
 description = "Place the EOS C# SDK in dotnet/ThirdParty/EOSSDK (not committed) from the PlayEveryWare EOS package in Library/PackageCache, from an Epic Developer Portal SDK zip/folder with --from <path>, or with --fetch from git at the version locked in Packages/packages-lock.json (no Unity needed; Linux x64 library only)"
@@ -59,7 +59,7 @@ description = "Place the EOS C# SDK in dotnet/ThirdParty/EOSSDK (not committed) 
 run = "bash scripts/eos-sdk.sh"
 
 [server-image]
-description = "Package the Unity-independent .NET server (dotnet/Fps.Server) with server-data/ and the EOS SDK in dotnet/ThirdParty/EOSSDK (make eos-sdk; without it the image runs without EOS) as a Docker image with docker/server/Dockerfile. No Unity needed. Options: --tag <name:tag> (default fps-server:local), --version <v> (default git describe --tags --always --dirty), --platform linux/amd64|linux/arm64"
+description = "Package the Unity-independent .NET server (dotnet/Shooter.Server) with server-data/ and the EOS SDK in dotnet/ThirdParty/EOSSDK (make eos-sdk; without it the image runs without EOS) as a Docker image with docker/server/Dockerfile. No Unity needed. Options: --tag <name:tag> (default shooter-server:local), --version <v> (default git describe --tags --always --dirty), --platform linux/amd64|linux/arm64"
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/server-image.sh"
 
@@ -68,42 +68,42 @@ description = "Run the Unity EditMode tests headlessly in batch mode (close the 
 run = "unity test --mode EditMode"
 
 [smoke]
-description = "Run every SmokeRun in one batch-mode editor via Fps.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first). --root <dir> sets the output root (-fpsKitRoot)"
+description = "Run every SmokeRun in one batch-mode editor via Shooter.Editor.SmokeSuite.RunAll; exits 1 if any fails (close the Editor first). --root <dir> sets the output root (-shooterKitRoot)"
 usage = '''
 flag "--root <dir>" help="output root under Assets/ (default: the imported sample's folder)"
 '''
-run = 'unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll ${usage_root:+-fpsKitRoot "$usage_root"} -logFile -'
+run = 'unity -batchmode -projectPath . -executeMethod Shooter.Editor.SmokeSuite.RunAll ${usage_root:+-shooterKitRoot "$usage_root"} -logFile -'
 
 [import-weapons]
-description = "Import weapon JSON (one file, or every *.json directly in a folder) into WeaponDefinition assets via Fps.Editor.WeaponJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
+description = "Import weapon JSON (one file, or every *.json directly in a folder) into WeaponDefinition assets via Shooter.Editor.WeaponJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
 usage = '''
 arg "<json>" help="a JSON file or a folder of them"
 flag "--out <dir>" help="asset folder under Assets/ (default: <output root>/Weapons)"
 flag "--catalog <asset>" help="existing WeaponCatalogAsset to add the weapons to by Id"
-flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+flag "--root <dir>" help="output root under Assets/ (-shooterKitRoot)"
 '''
-run = 'unity run . -- -quit -executeMethod Fps.Editor.WeaponJsonImporter.Import -weaponJson "$usage_json" ${usage_out:+-weaponOut "$usage_out"} ${usage_catalog:+-weaponCatalog "$usage_catalog"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+run = 'unity run . -- -quit -executeMethod Shooter.Editor.WeaponJsonImporter.Import -weaponJson "$usage_json" ${usage_out:+-weaponOut "$usage_out"} ${usage_catalog:+-weaponCatalog "$usage_catalog"} ${usage_root:+-shooterKitRoot "$usage_root"}'
 
 [import-rules]
-description = "Import game rules JSON (one file, or every *.json directly in a folder) into GameRulesDefinition assets via Fps.Editor.GameRulesJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
+description = "Import game rules JSON (one file, or every *.json directly in a folder) into GameRulesDefinition assets via Shooter.Editor.GameRulesJsonImporter.Import; saves nothing and exits 1 if any file is invalid (close the Editor first)"
 usage = '''
 arg "<json>" help="a JSON file or a folder of them"
 flag "--out <dir>" help="asset folder under Assets/ (default: <output root>/Rules)"
-flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+flag "--root <dir>" help="output root under Assets/ (-shooterKitRoot)"
 '''
-run = 'unity run . -- -quit -executeMethod Fps.Editor.GameRulesJsonImporter.Import -rulesJson "$usage_json" ${usage_out:+-rulesOut "$usage_out"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+run = 'unity run . -- -quit -executeMethod Shooter.Editor.GameRulesJsonImporter.Import -rulesJson "$usage_json" ${usage_out:+-rulesOut "$usage_out"} ${usage_root:+-shooterKitRoot "$usage_root"}'
 
 [game-content]
-description = "Create the GameContent entry asset (or fill its empty fields) via Fps.Editor.GameContentAssets.Create (close the Editor first)"
+description = "Create the GameContent entry asset (or fill its empty fields) via Shooter.Editor.GameContentAssets.Create (close the Editor first)"
 usage = '''
-flag "--path <asset>" help="asset path such as Assets/MyGame/Resources/FpsKit/GameContent.asset (default: <output root>/Resources/FpsKit/GameContent.asset)"
-flag "--root <dir>" help="output root under Assets/ (-fpsKitRoot)"
+flag "--path <asset>" help="asset path such as Assets/MyGame/Resources/ShooterKit/GameContent.asset (default: <output root>/Resources/ShooterKit/GameContent.asset)"
+flag "--root <dir>" help="output root under Assets/ (-shooterKitRoot)"
 '''
-run = 'unity run . -- -quit -executeMethod Fps.Editor.GameContentAssets.Create ${usage_path:+-gameContent "$usage_path"} ${usage_root:+-fpsKitRoot "$usage_root"}'
+run = 'unity run . -- -quit -executeMethod Shooter.Editor.GameContentAssets.Create ${usage_path:+-gameContent "$usage_path"} ${usage_root:+-shooterKitRoot "$usage_root"}'
 
 [audit-replacements]
-description = "List what a game left unreplaced (catalog entries per weapon Id, keys missing in a language, empty [RequiredReference] references) via Fps.Editor.ReplacementAudit.Run; exits 0 when none, 1 when some, 2 when the audit throws (close the Editor first)"
-run = "unity run . -- -quit -executeMethod Fps.Editor.ReplacementAudit.Run"
+description = "List what a game left unreplaced (catalog entries per weapon Id, keys missing in a language, empty [RequiredReference] references) via Shooter.Editor.ReplacementAudit.Run; exits 0 when none, 1 when some, 2 when the audit throws (close the Editor first)"
+run = "unity run . -- -quit -executeMethod Shooter.Editor.ReplacementAudit.Run"
 
 [nightly-local]
 description = "Run the nightly workflow's steps locally: EditMode tests, the smoke suite, the map-data template's check (re-export and compare with server-data/maps), and on Sundays (JST) the macOS client build (close the Editor first). Options: --client to always build the client, --no-client to never"

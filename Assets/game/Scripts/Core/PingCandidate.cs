@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PingAim.Resolve"/> に渡す、印を付けられる敵 1 人分。</summary>
     public readonly struct PingCandidate

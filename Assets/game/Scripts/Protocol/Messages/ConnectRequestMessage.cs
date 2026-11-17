@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// クライアントがつないで最初に送る承認のデータ。中身は Netcode の承認データ (<see cref="ConnectionPayload"/>) と同じく、
@@ -26,7 +26,7 @@ namespace Fps.Protocol
         /// <summary>クライアントのビルドの版 (<see cref="BuildVersion"/> で正規化したもの)。</summary>
         public string ClientVersion { get; set; } = "";
 
-        /// <summary>切断して戻ってきた人を見分ける鍵 (<see cref="Fps.Core.RejoinKey"/>)。</summary>
+        /// <summary>切断して戻ってきた人を見分ける鍵 (<see cref="Shooter.Core.RejoinKey"/>)。</summary>
         public string RejoinKey { get; set; } = "";
 
         public string DisplayName { get; set; } = "";
@@ -35,7 +35,7 @@ namespace Fps.Protocol
         {
             writer.WriteUInt16(ProtocolVersion);
             writer.WriteString(ClientVersion, BuildVersion.MaxLength);
-            writer.WriteString(RejoinKey, Fps.Core.RejoinKey.MaxLength);
+            writer.WriteString(RejoinKey, Shooter.Core.RejoinKey.MaxLength);
             writer.WriteString(DisplayName, MaxDisplayNameBytes);
         }
 
@@ -43,7 +43,7 @@ namespace Fps.Protocol
         {
             ProtocolVersion = reader.ReadUInt16();
             ClientVersion = reader.ReadString(BuildVersion.MaxLength, ClientVersion);
-            RejoinKey = reader.ReadString(Fps.Core.RejoinKey.MaxLength, RejoinKey);
+            RejoinKey = reader.ReadString(Shooter.Core.RejoinKey.MaxLength, RejoinKey);
             DisplayName = reader.ReadString(MaxDisplayNameBytes, DisplayName);
         }
     }

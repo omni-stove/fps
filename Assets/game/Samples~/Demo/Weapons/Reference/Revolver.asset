@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: Revolver
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 9db67405-6954-4587-8f37-436b9ed68d53
   _nameKey: weapon.ref.revolver
   _description: "Valorant \u306E Sheriff (\u5B9F\u9283\u306F S&W Model 29 \u306E\u3088\u3046\u306A .44 \u30DE\u30B0\u30CA\u30E0\u306E\u30EA\u30DC\u30EB\u30D0\u30FC) \u3092\u53C2\u8003\u3002\u4F53 55\u30FB\u6BCE\u79D2 4 \u767A\u30FB6 \u767A\u3067\u300130 m \u304B\u3089 50 \u306B\u6E1B\u308B\u3002"

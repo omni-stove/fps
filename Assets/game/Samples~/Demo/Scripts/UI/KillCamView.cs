@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生中に、画面の枠と見出し (<see cref="KillCamText.Caption(KillCamStatus)"/>) と再生の進みを出すビュー。

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// シーンの起点。Awake で床・プレイヤー (CharacterController + 目 + その子のカメラ + <see cref="ViewRig"/> + <see cref="FirstPersonLook"/>

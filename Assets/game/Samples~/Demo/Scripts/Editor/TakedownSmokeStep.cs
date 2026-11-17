@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 発見ゲージの囲い (StealthRangeFixture) の敵で、気づいた敵には背後からでも技が出ず、気づいていない敵は背後から静かに倒せて、
     // 近くの見張りの段階が変わらないことを確かめる。batchmode には入力が無いので、近接の入力の代わりに MeleeController.TryMelee を使う。

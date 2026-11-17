@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="InputFrame"/> で押されているボタン。</summary>
     [Flags]

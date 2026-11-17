@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 1 つの物 (source) が <see cref="GameSignals.InteractHint"/> に出す案内。毎フレーム <see cref="Show"/> を呼んでよい。

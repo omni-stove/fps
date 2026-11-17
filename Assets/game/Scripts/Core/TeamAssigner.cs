@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 新しく入る人のチームを、今いる人数と点数から決める。人数の少ないチームに入れ、同じなら点の低いチーム、

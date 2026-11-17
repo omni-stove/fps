@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 出撃ごとに持つグレネードの数。<see cref="For"/> で <see cref="ActionRules"/> から作り、投げるたびに <see cref="TryTake"/> で 1 つ減らし、

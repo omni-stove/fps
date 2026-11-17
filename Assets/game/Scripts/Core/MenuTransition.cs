@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// メニューから (またはメニューへ) の 1 回の遷移。読むシーンと、射撃場でチュートリアルを出すよう求めるかを持つ。作るのは <see cref="MenuRoute"/>。

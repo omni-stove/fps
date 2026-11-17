@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガーディアン (VIP の護衛) をシーンで進める。試合開始時に Alpha と Bravo から 1 人ずつリーダーを選び (<see cref="GuardianMode"/>)、

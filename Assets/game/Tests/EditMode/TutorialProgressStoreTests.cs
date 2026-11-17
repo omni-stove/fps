@@ -1,9 +1,9 @@
 using System;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class TutorialProgressStoreTests
     {
@@ -13,7 +13,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             // 本物の記録 (DefaultKey) を壊さないよう、テストごとに別のキーを使う。
-            _store = new TutorialProgressStore("Fps.Tests.TutorialCompleted." + Guid.NewGuid().ToString("N"));
+            _store = new TutorialProgressStore("Shooter.Tests.TutorialCompleted." + Guid.NewGuid().ToString("N"));
         }
 
         [TearDown]

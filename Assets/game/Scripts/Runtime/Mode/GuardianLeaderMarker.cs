@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガーディアンのリーダーの頭上に浮かぶ目印。<see cref="Target"/> の当たり判定の上端から <see cref="HeightAboveHead"/> 上に、

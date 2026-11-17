@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 建造物への被害の配り方 (<see cref="StructureDamage"/>) と、<see cref="Hitscan.Fire"/> からの呼び出しを確かめる。

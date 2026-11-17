@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>はしごの 1 Tick の結果 (<see cref="LadderClimb.Step"/>) と、はしごを離れた理由。</summary>
     public enum LadderOutcome

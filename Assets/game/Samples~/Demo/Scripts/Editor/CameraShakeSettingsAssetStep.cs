@@ -1,14 +1,14 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class CameraShakeSettingsAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = 100;
 
-        public const string MenuPath = "Fps/Build Camera Shake Settings";
+        public const string MenuPath = "Shooter/Build Camera Shake Settings";
         public const string LogTag = "[CameraShakeSettingsAssetStep]";
 
         public static string AssetPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + CameraShakeSettings.ResourcePath + ".asset";

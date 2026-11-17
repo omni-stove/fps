@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class NetLaunchOptionsTests
     {
         private const string _serverId = "0123456789abcdef0123456789ABCDEF";
@@ -33,7 +33,7 @@ namespace Fps.Core.Tests
         [Test]
         public void NoArgumentsUseDefaults()
         {
-            var options = ParseOrFail("/path/to/fps -batchmode -nographics");
+            var options = ParseOrFail("/path/to/shooter -batchmode -nographics");
 
             Assert.That(options.Mode, Is.EqualTo(NetLaunchMode.Client));
             Assert.That(options.Address, Is.EqualTo(NetLaunchOptions.DefaultAddress));
@@ -67,7 +67,7 @@ namespace Fps.Core.Tests
         [Test]
         public void ParsesAllFlagsAmongUnityArguments()
         {
-            var options = ParseOrFail("fps -batchmode -logFile - -mode client -address 192.168.0.10 -nographics -port 8888");
+            var options = ParseOrFail("shooter -batchmode -logFile - -mode client -address 192.168.0.10 -nographics -port 8888");
 
             Assert.That(options.Mode, Is.EqualTo(NetLaunchMode.Client));
             Assert.That(options.Address, Is.EqualTo("192.168.0.10"));
@@ -164,8 +164,8 @@ namespace Fps.Core.Tests
         [Test]
         public void DetectsModeFlag()
         {
-            Assert.That(NetLaunchOptions.HasModeFlag(Args("fps -batchmode -mode server")), Is.True);
-            Assert.That(NetLaunchOptions.HasModeFlag(Args("fps -batchmode -port 7777")), Is.False);
+            Assert.That(NetLaunchOptions.HasModeFlag(Args("shooter -batchmode -mode server")), Is.True);
+            Assert.That(NetLaunchOptions.HasModeFlag(Args("shooter -batchmode -port 7777")), Is.False);
         }
 
         [Test]

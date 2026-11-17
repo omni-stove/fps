@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ビルドに入れるシーンの一覧と、Build Settings への登録の仕方を 1 か所にまとめる。
@@ -13,39 +13,39 @@ namespace Fps.Editor
     /// </summary>
     public static class BuildSceneList
     {
-        public const string MenuPath = "Fps/Register Build Scenes";
+        public const string MenuPath = "Shooter/Register Build Scenes";
         public const string LogTag = "[BuildSceneList]";
 
-        // シーンはどれも出力先ルート (FpsKitRoot.Output) の Scenes の下に置く。ルートは引数と EditorPrefs で変わるので、読むたびに組む。
+        // シーンはどれも出力先ルート (ShooterKitRoot.Output) の Scenes の下に置く。ルートは引数と EditorPrefs で変わるので、読むたびに組む。
 
         /// <summary>
-        /// メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Fps.Core.MenuRoute"/>) と同じ名前で、
+        /// メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Shooter.Core.MenuRoute"/>) と同じ名前で、
         /// 出力先ルートが既定なら同じパス。
         /// </summary>
-        public static string MainMenuScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.MainMenuSceneName);
+        public static string MainMenuScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.MainMenuSceneName);
 
         /// <summary>射撃場。メニューから読む。</summary>
-        public static string BootstrapScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.RangeSceneName);
+        public static string BootstrapScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.RangeSceneName);
 
-        public static string EnemyAiTestScene => FpsKitRoot.OutputScene("EnemyAiTest");
-        public static string MissionTestScene => FpsKitRoot.OutputScene("MissionTest");
-        public static string DestructionTestScene => FpsKitRoot.OutputScene("DestructionTest");
-        public static string VehicleRangeScene => FpsKitRoot.OutputScene("VehicleRange");
-        public static string CampaignScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.CampaignSceneName);
+        public static string EnemyAiTestScene => ShooterKitRoot.OutputScene("EnemyAiTest");
+        public static string MissionTestScene => ShooterKitRoot.OutputScene("MissionTest");
+        public static string DestructionTestScene => ShooterKitRoot.OutputScene("DestructionTest");
+        public static string VehicleRangeScene => ShooterKitRoot.OutputScene("VehicleRange");
+        public static string CampaignScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.CampaignSceneName);
 
         /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
-        public static string Campaign02Scene => FpsKitRoot.OutputScene("Campaign02");
+        public static string Campaign02Scene => ShooterKitRoot.OutputScene("Campaign02");
 
         /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
-        public static string TpsRangeScene => FpsKitRoot.OutputScene("TpsRange");
+        public static string TpsRangeScene => ShooterKitRoot.OutputScene("TpsRange");
 
-        /// <summary>機能ごとのシーンの名前の頭。後ろにルールの項目 (<see cref="Fps.Core.GameRulesDebugField"/>) の名前を付ける。</summary>
+        /// <summary>機能ごとのシーンの名前の頭。後ろにルールの項目 (<see cref="Shooter.Core.GameRulesDebugField"/>) の名前を付ける。</summary>
         public const string FeatureScenePrefix = "Feature_";
 
         /// <summary>
         /// field の機能だけを試すシーン。ルールは <see cref="GameRulesAssetBuilder.FeatureRulesPath"/>。生成は <see cref="FeatureSceneBuilder"/>。
         /// </summary>
-        public static string FeatureScene(Fps.Core.GameRulesDebugField field) => FpsKitRoot.OutputScene(FeatureScenePrefix + field);
+        public static string FeatureScene(Shooter.Core.GameRulesDebugField field) => ShooterKitRoot.OutputScene(FeatureScenePrefix + field);
 
         /// <summary>機能ごとのシーンすべて。<see cref="FeatureSceneBuilder.All"/> の順。</summary>
         public static IReadOnlyList<string> FeatureScenes
@@ -63,43 +63,43 @@ namespace Fps.Editor
         }
 
         /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
-        public static string DominationScene => FpsKitRoot.OutputScene("Domination");
+        public static string DominationScene => ShooterKitRoot.OutputScene("Domination");
 
         /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
-        public static string WaveTestScene => FpsKitRoot.OutputScene("WaveTest");
+        public static string WaveTestScene => ShooterKitRoot.OutputScene("WaveTest");
 
         // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
-        public static string FreeForAllScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.FreeForAllName);
+        public static string FreeForAllScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.FreeForAllName);
 
         /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
-        public static string KillConfirmedScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.KillConfirmedName);
+        public static string KillConfirmedScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.KillConfirmedName);
 
         /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
-        public static string GunGameScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.GunGameName);
+        public static string GunGameScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.GunGameName);
 
         /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
-        public static string HardpointScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.HardpointName);
+        public static string HardpointScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HardpointName);
 
-        public static string GuardianScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.GuardianName);
-        public static string ExecutionScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.ExecutionName);
-        public static string SearchAndDestroyScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.SearchAndDestroyName);
-        public static string HordeScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
-        public static string BattleRoyaleScene => FpsKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
+        public static string GuardianScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.GuardianName);
+        public static string ExecutionScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.ExecutionName);
+        public static string SearchAndDestroyScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.SearchAndDestroyName);
+        public static string HordeScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
+        public static string BattleRoyaleScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
 
         /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>
-        public static string ModeTestScene => FpsKitRoot.OutputScene("ModeTest");
+        public static string ModeTestScene => ShooterKitRoot.OutputScene("ModeTest");
 
         /// <summary>
-        /// ネット対戦の既定のマップ (<see cref="Fps.Core.MenuRoute.NetSceneName"/>)。.NET のサーバーが <c>-map</c> を省いたときに使い、
-        /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。生成は Fps.Samples.Net.Editor の NetSceneBuilder。
+        /// ネット対戦の既定のマップ (<see cref="Shooter.Core.MenuRoute.NetSceneName"/>)。.NET のサーバーが <c>-map</c> を省いたときに使い、
+        /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。生成は Shooter.Samples.Net.Editor の NetSceneBuilder。
         /// </summary>
-        public static string NetTestScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.NetSceneName);
+        public static string NetTestScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.NetSceneName);
 
         /// <summary>
-        /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Fps.Samples.Net.Editor の ArenaSceneBuilder
-        /// (この Editor のアセンブリは Fps.Samples.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
+        /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Shooter.Samples.Net.Editor の ArenaSceneBuilder
+        /// (この Editor のアセンブリは Shooter.Samples.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
         /// </summary>
-        public static string NetArena01Scene => FpsKitRoot.OutputScene("NetArena01");
+        public static string NetArena01Scene => ShooterKitRoot.OutputScene("NetArena01");
 
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
         public static IReadOnlyList<string> Scenes

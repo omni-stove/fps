@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り物の部位 (エンジン・燃料など) 1 つの設定 (<see cref="VehicleSpec.Parts"/> の 1 つ)。その部位に当たったダメージに掛ける倍率を持つ。

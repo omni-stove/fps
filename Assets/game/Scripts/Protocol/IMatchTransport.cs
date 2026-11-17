@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 試合の通信路の差し込み口。UDP・EOS の P2P・テスト用のメモリ上の通信路などが実装する。
@@ -28,7 +28,7 @@ namespace Fps.Protocol
         void Connect(string address, ushort port);
 
         /// <summary>
-        /// その接続を切り、reason (<c>Fps.Core.DisconnectNotice</c> の符号など。null か空なら知らせない) を相手に知らせる
+        /// その接続を切り、reason (<c>Shooter.Core.DisconnectNotice</c> の符号など。null か空なら知らせない) を相手に知らせる
         /// (相手の <see cref="TransportEvent.Reason"/> になる)。
         /// 切れたら <see cref="TransportEventKind.Disconnected"/> が出てくる。知らない Id か、もう切っている最中なら何もしない。
         /// </summary>
@@ -56,7 +56,7 @@ namespace Fps.Protocol
         /// <summary>
         /// すべての接続を切り、reason を相手に知らせて止める。溜まった出来事は捨て、以後は何も出てこない。2 度呼んでもよい。
         /// </summary>
-        /// <param name="reason">切る理由 (サーバーが止まるなら <c>Fps.Core.DisconnectNotice.ServerStoppedReason</c>)。null か空なら知らせない。</param>
+        /// <param name="reason">切る理由 (サーバーが止まるなら <c>Shooter.Core.DisconnectNotice.ServerStoppedReason</c>)。null か空なら知らせない。</param>
         /// <exception cref="ArgumentException">reason が UTF-8 で <see cref="TransportEvent.MaxReasonBytes"/> バイトを超える。</exception>
         void Shutdown(string reason);
     }

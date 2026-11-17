@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary>
     /// <see cref="VaultProbe.EvaluateMantle"/> と <see cref="VaultProbe.PlanMantlePath"/>、崖のぼりの調整値 (<see cref="MotorSpec"/>)。

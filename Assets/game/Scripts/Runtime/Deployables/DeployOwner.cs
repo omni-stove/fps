@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 能力の枠を入れ替えても置いた物を数え続けられるよう、能力 (DeployAbility) ではなく持ち主に持たせる。
     [DisallowMultipleComponent]

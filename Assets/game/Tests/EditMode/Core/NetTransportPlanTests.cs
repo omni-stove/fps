@@ -1,14 +1,14 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class NetTransportPlanTests
     {
         private const string _serverId = "0123456789abcdef0123456789abcdef";
 
-        private static readonly string[] _playerArgs = { "fps" };
+        private static readonly string[] _playerArgs = { "shooter" };
 
         private static EosCredentials Credentials()
         {

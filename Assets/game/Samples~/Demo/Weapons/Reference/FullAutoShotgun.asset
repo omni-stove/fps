@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: FullAutoShotgun
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 9b4f8184-b97e-4bbd-bd01-ea55ff3a229f
   _nameKey: weapon.ref.fullAutoShotgun
   _description: "Valorant \u306E Judge (\u5B9F\u9283\u306F AA-12) \u3092\u53C2\u8003\u300217 \xD7 12 \u7C92\u306E\u30D5\u30EB\u30AA\u30FC\u30C8\u3067\u6BCE\u79D2 3.5 \u767A\u30FB5 \u767A\u300210 m \u304B\u3089\u6E1B\u308A\u59CB\u3081\u300115 m \u3067 7 (0.41 \u500D)\u3002\u30DE\u30AC\u30B8\u30F3\u3054\u3068\u66FF\u3048\u308B\u3002"

@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 調整値の JSON (<see cref="KitTuning"/>) を、ファイルが無いときは既定値、壊れているときはエラーを出して既定値で読むことと、

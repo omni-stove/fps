@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
-using ZiplineComponent = Fps.Runtime.Traversal.Zipline;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
+using ZiplineComponent = Shooter.Runtime.Traversal.Zipline;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class FeatureSceneBuilderTests
     {
@@ -65,7 +65,7 @@ namespace Fps.Tests.EditMode
             var expected = GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).ToArray();
 
             Assert.That(FeatureSceneBuilder.All().Select(f => f.Field), Is.EqualTo(expected));
-            Assert.That(FeatureSceneBuilder.MenuPath, Is.EqualTo("Fps/Build Feature Scenes"));
+            Assert.That(FeatureSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Feature Scenes"));
         }
 
         [Test]

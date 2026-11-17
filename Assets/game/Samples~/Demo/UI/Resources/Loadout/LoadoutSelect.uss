@@ -1,5 +1,5 @@
 /*
- * ロードアウトを選ぶ画面の中身。Fps.Runtime.LoadoutSelectPanel が入れ物に読み込むので、HUD とメインメニューの両方で同じ見た目になる。
+ * ロードアウトを選ぶ画面の中身。Shooter.Runtime.LoadoutSelectPanel が入れ物に読み込むので、HUD とメインメニューの両方で同じ見た目になる。
  * 入れ物の位置と幅は置く側 (Hud.uss の .hud__loadout、MainMenu.uss の .menu__loadout-slot) が決める。
  */
 

@@ -1,15 +1,15 @@
 using System.IO;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class DemoReadmeTests
     {
         private static string ReadReadme()
         {
-            return File.ReadAllText(FpsKitRoot.PhysicalPath(FpsKitRoot.BundledPath("README.md")));
+            return File.ReadAllText(ShooterKitRoot.PhysicalPath(ShooterKitRoot.BundledPath("README.md")));
         }
 
         [Test]
@@ -28,7 +28,7 @@ namespace Fps.Tests.EditMode
         {
             var readme = ReadReadme();
 
-            Assert.That(LanguagePreferenceStore.DefaultKey, Is.EqualTo("Fps.Language"));
+            Assert.That(LanguagePreferenceStore.DefaultKey, Is.EqualTo("Shooter.Language"));
             Assert.That(readme, Does.Contain("`" + LanguagePreferenceStore.DefaultKey + "`"));
             Assert.That(readme, Does.Contain("Resources/" + Localizer.LanguageListFolder + "/zz-mygame.json"));
             Assert.That(readme, Does.Contain("Resources/" + Localizer.ResourceFolder + "/<言語コード>.json"));

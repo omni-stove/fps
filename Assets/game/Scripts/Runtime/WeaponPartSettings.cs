@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="WeaponDefinition"/> が Inspector に出す、武器の部品の省略できる入れ子 (<see cref="BurstSpec"/> など) の値。

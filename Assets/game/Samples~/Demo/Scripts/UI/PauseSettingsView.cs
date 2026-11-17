@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ポーズ画面の「設定」で <see cref="SettingsView"/> を開く。<see cref="Hud.AddViews"/> が <see cref="PauseMenu"/> と同じ GameObject に付け、

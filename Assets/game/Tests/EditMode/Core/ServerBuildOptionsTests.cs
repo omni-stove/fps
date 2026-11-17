@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerBuildOptionsTests
     {
         private static string[] Args(string commandLine)
@@ -40,7 +40,7 @@ namespace Fps.Core.Tests
         [TestCase("Linux", ServerPlatform.Linux)]
         public void ParsesPlatform(string value, ServerPlatform expected)
         {
-            var options = ParseOrFail("-batchmode -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform " + value);
+            var options = ParseOrFail("-batchmode -executeMethod Shooter.Editor.ServerBuilder.Build -serverPlatform " + value);
 
             Assert.That(options.Platform, Is.EqualTo(expected));
         }
@@ -78,9 +78,9 @@ namespace Fps.Core.Tests
             var linux = new ServerBuildOptions(ServerPlatform.Linux);
 
             Assert.That(mac.OutputDirectory, Is.EqualTo("Builds/server-macos"));
-            Assert.That(mac.ExecutablePath, Is.EqualTo("Builds/server-macos/fps-server"));
+            Assert.That(mac.ExecutablePath, Is.EqualTo("Builds/server-macos/shooter-server"));
             Assert.That(linux.OutputDirectory, Is.EqualTo("Builds/server-linux"));
-            Assert.That(linux.ExecutablePath, Is.EqualTo("Builds/server-linux/fps-server.x86_64"));
+            Assert.That(linux.ExecutablePath, Is.EqualTo("Builds/server-linux/shooter-server.x86_64"));
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FormatsForLogs()
         {
-            Assert.That(new ServerBuildOptions(ServerPlatform.Linux).ToString(), Is.EqualTo("linux -> Builds/server-linux/fps-server.x86_64"));
+            Assert.That(new ServerBuildOptions(ServerPlatform.Linux).ToString(), Is.EqualTo("linux -> Builds/server-linux/shooter-server.x86_64"));
         }
     }
 }

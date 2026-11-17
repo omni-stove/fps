@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ネットワークの起動設定。コマンドライン引数 <c>-mode</c> / <c>-address</c> / <c>-port</c> /

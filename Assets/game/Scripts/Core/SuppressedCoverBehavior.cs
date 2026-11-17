@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 遮蔽点に着いた後だけ効かせる。向かう途中 (Moving) で止めると、撃たれている開けた場所で立ち止まってしまう。
     public sealed class SuppressedCoverBehavior : IEnemyBehavior

@@ -1,17 +1,17 @@
 using System;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary><see cref="ReplacementAudit"/> が見つけた差し替え漏れの種類。</summary>
     public enum ReplacementAuditArea
     {
-        /// <summary>音とエフェクト (<see cref="Fps.Runtime.PresentationCatalog"/>) の漏れ。</summary>
+        /// <summary>音とエフェクト (<see cref="Shooter.Runtime.PresentationCatalog"/>) の漏れ。</summary>
         Presentation,
 
         /// <summary>文言のキーと、game 側の言語の表の漏れ。</summary>
         Strings,
 
-        /// <summary>シーン・プレハブ・アセットの必須の参照 (<see cref="Fps.Runtime.RequiredReferenceAttribute"/>) の漏れ。</summary>
+        /// <summary>シーン・プレハブ・アセットの必須の参照 (<see cref="Shooter.Runtime.RequiredReferenceAttribute"/>) の漏れ。</summary>
         Reference,
     }
 

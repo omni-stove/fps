@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="WaveSchedule"/> の段階。</summary>
     public enum WavePhase

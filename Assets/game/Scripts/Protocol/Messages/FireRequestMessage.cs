@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 持ち主が撃ったときの要求。当たり判定はサーバーが、撃った tick と補間の割合で他の人を巻き戻して行う。

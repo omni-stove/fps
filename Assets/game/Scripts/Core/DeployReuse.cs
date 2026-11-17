@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた物を起爆できる能力 (C4) は、置くのと起爆するのを同じボタンで受ける。置く操作は押している間に狙って離すので、狙う前に離した押し方を起爆にする。
     public static class DeployReuse

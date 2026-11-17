@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーごとに、入力が無いまま経った時間を数え、残り <see cref="WarningSeconds"/> 秒で警告、0 で追い出しを知らせる

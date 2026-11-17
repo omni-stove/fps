@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="IEosP2P.TryTakeNotice"/> が返す、SDK の通知 1 つ。</summary>
     public readonly struct EosP2PNotice

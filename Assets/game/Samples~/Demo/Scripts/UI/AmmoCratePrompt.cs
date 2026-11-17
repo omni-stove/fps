@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>弾薬箱の近くで出す案内 (<see cref="AmmoCrateHint"/>) の文。</summary>
     public static class AmmoCratePrompt

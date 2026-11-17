@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// UXML に文字列表のキーで書いた文字 (<c>text="#pause.title"</c> のように <see cref="KeyPrefix"/> を頭に付けた text) を、

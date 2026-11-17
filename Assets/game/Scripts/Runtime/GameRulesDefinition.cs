@@ -1,16 +1,16 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// モード 1 つ分のルールをアセットとして持つ。<see cref="ToRules"/> で不変の <see cref="GameRules"/> に変換して使う。
     /// 検証は <see cref="GameRules"/> に任せ、失敗したらどのアセットの値かを添えて <see cref="GameRulesDefinitionException"/> を投げる。
     /// 新しく作ったときの値は <see cref="GameRules.Default"/> と同じ。
-    /// 実際に使う値はアセット (Assets/game/Rules/*.asset、Fps.Editor.GameRulesAssetBuilder が作る) の側にある。
+    /// 実際に使う値はアセット (Assets/game/Rules/*.asset、Shooter.Editor.GameRulesAssetBuilder が作る) の側にある。
     /// </summary>
-    [CreateAssetMenu(fileName = "GameRules", menuName = "Fps/Game Rules")]
+    [CreateAssetMenu(fileName = "GameRules", menuName = "Shooter/Game Rules")]
     public sealed class GameRulesDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("味方に弾が当たったときの扱い")]
@@ -115,7 +115,7 @@ namespace Fps.Runtime
         private Suppression _suppression = Suppression.Off;
 
         [SerializeField, Tooltip("敵や場所に印を付けられるか")]
-        private Fps.Core.Ping _ping = Fps.Core.Ping.Off;
+        private Shooter.Core.Ping _ping = Shooter.Core.Ping.Off;
 
         [SerializeField, Tooltip("能力 (回数・待ち時間・入力の枠に乗るもの) を使えるか")]
         private Abilities _abilities = Abilities.Off;
@@ -367,7 +367,7 @@ namespace Fps.Runtime
             set => _suppression = value;
         }
 
-        public Fps.Core.Ping Ping
+        public Shooter.Core.Ping Ping
         {
             get => _ping;
             set => _ping = value;

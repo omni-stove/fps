@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 車の動き方・入力の受け渡し・ぶつかったダメージのテストで同じ車を組むためのもの。座席は運転席・助手席の順で、前輪で曲がり後輪で走る。
     internal static class TestCars

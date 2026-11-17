@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using NVector3 = System.Numerics.Vector3;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // オフラインの相手は Hitbox を持つ生きた Damageable。撃った本人の体は ShotCast と同じく外す。
     public sealed class HitboxLockOnTargets : ILockOnTargets

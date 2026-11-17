@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 技 1 回の時間だけを進める。位置合わせの動き・操作の停止・結果の適用は呼ぶ側 (ContextMeleeAction) が行う。
     public sealed class ContextMeleeRun

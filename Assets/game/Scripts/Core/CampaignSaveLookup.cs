@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// メニューから見たミッションのセーブ。再開できるセーブがあるか (<see cref="TryReadResumable"/>) と、「最初から」で消す

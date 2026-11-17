@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
-    /// ゲームのネット対戦のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
+    /// ゲームのネット対戦のクライアント。Shooter.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
     /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
     /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
     /// (<see cref="NetV2RemotePlayer"/>)・HUD に出す値 (<see cref="NetV2Hud"/>) を作る。HUD は UI がその値を見て作る。シーンをまたいで残る。
@@ -197,7 +197,7 @@ namespace Fps.NetV2
             if (factory == null)
             {
                 Leave(ExitMisconfigured, QuickMatchSearch.LogPrefix
-                    + "the EOS lobby is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)");
+                    + "the EOS lobby is not in this build (is com.playeveryware.eos installed and Shooter.NetEos compiled?)");
                 return;
             }
 
@@ -335,7 +335,7 @@ namespace Fps.NetV2
                 var factory = NetV2Eos.Factory;
                 if (factory == null)
                 {
-                    error = LogTag + " the EOS transport is not in this build (is com.playeveryware.eos installed and Fps.NetEos compiled?)";
+                    error = LogTag + " the EOS transport is not in this build (is com.playeveryware.eos installed and Shooter.NetEos compiled?)";
                     return false;
                 }
 
@@ -764,7 +764,7 @@ namespace Fps.NetV2
         private bool CanPing()
         {
             var latest = _client.LatestSnapshot;
-            if (latest == null || latest.Match.Rules.Ping != Fps.Core.Ping.On)
+            if (latest == null || latest.Match.Rules.Ping != Shooter.Core.Ping.On)
             {
                 return false;
             }

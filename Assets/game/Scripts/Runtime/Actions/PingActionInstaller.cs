@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>プレイヤーに <see cref="PingController"/> を (無ければ) 付け、<see cref="ActionRules.Ping"/> で付けられるかを決める。</summary>
     public sealed class PingActionInstaller : IPlayerActionInstaller

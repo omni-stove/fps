@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PingBoard.Place"/> の結果。</summary>
     public readonly struct PingPlacement

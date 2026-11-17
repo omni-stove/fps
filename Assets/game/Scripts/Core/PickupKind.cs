@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>拾える物の種類。拾ったときに何が起きるかは <see cref="PickupJudge"/> が決める。</summary>
     public enum PickupKind

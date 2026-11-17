@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 書式を 1 か所に置くのは、smoke とテストがログの行を同じ関数で作って突き合わせるため。
     public static class SuppressionLog

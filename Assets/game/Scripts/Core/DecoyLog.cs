@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた・消えた・撃たれて止めたは DeployLog に出す。ここは囮が呼んだことと、敵が囮に気を引かれた・見失ったことだけ。
     public static class DecoyLog

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// スコアボードの 1 行の名前。誰を指すか (<see cref="Kind"/>) と番号か、言葉の入らない名前だけを持ち、文にするのは UI。

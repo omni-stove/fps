@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -16,7 +16,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class CampaignSceneBuilderTests
     {
@@ -242,7 +242,7 @@ namespace Fps.Tests.EditMode
         public void CampaignSavesAtTheCheckpointsAndRestartsFromAreaA()
         {
             var layout = Populate();
-            var root = Path.Combine(Path.GetTempPath(), "fps-campaign-scene-tests-" + Guid.NewGuid().ToString("N"));
+            var root = Path.Combine(Path.GetTempPath(), "shooter-campaign-scene-tests-" + Guid.NewGuid().ToString("N"));
             var storage = new FileSaveStorage(root);
             var attack = new InputAction("Attack", InputActionType.Button);
             var reload = new InputAction("Reload", InputActionType.Button);

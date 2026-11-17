@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// モードが陣営の得点を足す口。キルで入る点・時間で入る点 (拠点を持っている間など) を <see cref="ModeSession"/> に返す。

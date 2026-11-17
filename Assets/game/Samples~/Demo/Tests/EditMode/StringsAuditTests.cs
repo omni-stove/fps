@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="StringsAudit"/> が言語の表のキーと武器の名前のキーの漏れを一覧にすること。

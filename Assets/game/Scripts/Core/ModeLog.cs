@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オフラインのモード (<see cref="ModeSession"/> をシーンで進めるもの) の <c>[Mode]</c> 付きログの文言。

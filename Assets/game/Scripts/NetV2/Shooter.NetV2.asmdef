@@ -1,0 +1,20 @@
+{
+    "name": "Shooter.NetV2",
+    "rootNamespace": "Shooter.NetV2",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Protocol",
+        "Shooter.NetV2.Client",
+        "Shooter.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

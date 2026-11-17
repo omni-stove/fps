@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャンペーンのセーブデータ。チェックポイントに着いた時点のミッションの進み具合とプレイヤーの状態 (体力・武器ごとの残弾と付けた物・持っていた武器) を持つ。不変。

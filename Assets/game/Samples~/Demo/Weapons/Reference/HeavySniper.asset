@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: HeavySniper
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 99dae863-8e9c-4cb7-9b8d-6dbfbf66beef
   _nameKey: weapon.ref.heavySniper
   _description: "Valorant \u306E Operator (\u5B9F\u9283\u306F L115A3 / M200 \u306E\u3088\u3046\u306A\u5927\u53E3\u5F84\u30DC\u30EB\u30C8\u5F0F) \u3092\u53C2\u8003\u3002\u4F53 150\u30FB\u6BCE\u79D2 0.6 \u767A\u30FB5 \u767A\u3067\u30012.5 \u500D\u3068 5 \u500D\u306E\u30B9\u30B3\u30FC\u30D7\u3002"

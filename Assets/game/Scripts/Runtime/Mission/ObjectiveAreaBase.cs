@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// トリガーの Collider に結び付いた目標の共通部分。プレイヤー (<see cref="PlayerTag"/> の付いた Collider) の出入りを

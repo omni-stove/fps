@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拾える陣営の条件。既定値 (default) は <see cref="Anyone"/>。

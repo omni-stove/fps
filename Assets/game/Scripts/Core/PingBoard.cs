@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 人が付けた印 (<see cref="PingMarker"/>) の一覧。付ける・敵を追う・寿命で消す・数の上限を受け持つ。時刻は呼び出し側が渡す。

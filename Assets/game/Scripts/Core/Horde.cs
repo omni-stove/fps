@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ホード (PvE の防衛)。守る側 1 チームが <see cref="WaveSchedule"/> の波を耐える。

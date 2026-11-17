@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PingBoard.Track"/> で印がどうなったか。</summary>
     public enum PingTrackResult

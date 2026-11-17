@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 近くを弾が飛ぶと制圧され、狙いや動きが鈍るか。

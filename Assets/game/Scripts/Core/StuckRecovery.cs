@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 動こうとしているのに進めないときに試す立て直し。<see cref="StuckMonitor"/> が軽いものから順に返す。

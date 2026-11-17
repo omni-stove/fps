@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガーディアン (VIP の護衛) の <see cref="ModeSession"/> を組む。Alpha と Bravo の 2 チーム (<see cref="TwoTeams"/>) で、

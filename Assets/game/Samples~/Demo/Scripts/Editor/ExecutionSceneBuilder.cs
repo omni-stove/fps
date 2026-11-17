@@ -1,22 +1,22 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// エクスキューションのシーン (<see cref="BuildSceneList.ExecutionScene"/>) を組む。Runner は <see cref="ExecutionRunner"/>、
     /// ルールは <see cref="GameRulesAssetBuilder.ExecutionPath"/> (ラウンド中は戻らない・ダウンして味方が起こせる)。
     /// 地形と遮蔽物は土台の既定のまま、2 チームが 3 人ずつ (プレイヤーの陣営 0 に bot 2 体、陣営 1 に bot 3 体) で向かい合う。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.ExecutionSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ExecutionSceneBuilder.Build</code>
     /// </summary>
     public sealed class ExecutionSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.ExecutionScene;
         public static string RulesPathValue => GameRulesAssetBuilder.ExecutionPath;
-        public const string MenuPath = "Fps/Build Execution Scene";
+        public const string MenuPath = "Shooter/Build Execution Scene";
 
         /// <summary>プレイヤーの陣営の bot の数。プレイヤーを合わせて <see cref="EnemySideBots"/> と同じ人数になる。</summary>
         public const int PlayerSideBots = 2;

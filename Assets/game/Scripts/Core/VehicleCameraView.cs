@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>座席に座っている間のカメラ。</summary>
     public enum VehicleCameraView

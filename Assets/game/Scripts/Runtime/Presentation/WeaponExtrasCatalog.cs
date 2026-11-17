@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// 武器ごとの薬莢と空撃ちの素材 (薬莢のプレハブ・薬莢の落下音・空撃ちの音) と、地面に置いたときの見た目を武器の Id (<see cref="Fps.Core.WeaponSpec.Id"/>) で引く。
+    /// 武器ごとの薬莢と空撃ちの素材 (薬莢のプレハブ・薬莢の落下音・空撃ちの音) と、地面に置いたときの見た目を武器の Id (<see cref="Shooter.Core.WeaponSpec.Id"/>) で引く。
     /// <see cref="ShellEjector"/>・<see cref="DryFireSound"/>・<see cref="Pickup"/> (武器の見た目) が <see cref="Load"/> で読む。
-    /// 中身は Fps.Editor.WeaponExtrasAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
+    /// 中身は Shooter.Editor.WeaponExtrasAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// 置き場所と枠の扱いは <see cref="PresentationCatalog"/> の規約に従う (どの枠も空でよく、空の枠の演出だけを出さない)。
     /// </summary>
-    [CreateAssetMenu(fileName = "WeaponExtrasCatalog", menuName = "Fps/Weapon Extras Catalog")]
+    [CreateAssetMenu(fileName = "WeaponExtrasCatalog", menuName = "Shooter/Weapon Extras Catalog")]
     public sealed class WeaponExtrasCatalog : ScriptableObject
     {
         /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す名前。</summary>
@@ -48,7 +48,7 @@ namespace Fps.Runtime
             _warnedMissing = true;
             Debug.LogWarning(
                 $"{WeaponPresentation.LogTag} no WeaponExtrasCatalog at Resources/{ResourcePath}; shell casings and dry-fire sounds are off. "
-                + "Run Fps/Build All Presentation Assets (Fps.Editor.PresentationAssetSteps.BuildAll)",
+                + "Run Shooter/Build All Presentation Assets (Shooter.Editor.PresentationAssetSteps.BuildAll)",
                 context);
         }
 
@@ -166,7 +166,7 @@ namespace Fps.Runtime
         {
         }
 
-        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Fps.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
+        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Shooter.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
         public WeaponExtrasAssets(string weaponId, GameObject shellPrefab, AudioClip shellLandSound, AudioClip dryFireSound)
         {
             _weaponId = weaponId?.Trim() ?? string.Empty;

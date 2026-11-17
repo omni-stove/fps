@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ルールのデバッグパネル (<see cref="GameRulesDebugDraft"/>) で切り替えられる項目。並びはパネルの並び順。

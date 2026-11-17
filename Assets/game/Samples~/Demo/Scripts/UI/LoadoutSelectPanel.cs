@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ロードアウトを選ぶ画面の要素を、渡された入れ物の中にコードで作って操作をつなぐ。HUD の <see cref="LoadoutSelectView"/> と

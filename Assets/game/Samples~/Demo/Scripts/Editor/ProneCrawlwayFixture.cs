@@ -1,9 +1,9 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場に置く、伏せを試す低い天井のくぐり道。左右の壁の上に天井の板を渡し、+Z へ伏せてくぐる向きに置く。

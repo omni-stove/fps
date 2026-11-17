@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ゲームごとに変える調整値のうち、JSON (<see cref="TuningJson"/> の形) から読むもの。入口 (<see cref="GameContent"/>) に JSON があればそれを、無ければ Resources の JSON を読む。

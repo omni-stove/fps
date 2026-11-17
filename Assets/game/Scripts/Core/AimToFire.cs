@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 覗き込んで構えている間しか撃てないか (腰撃ちを禁じるか)。

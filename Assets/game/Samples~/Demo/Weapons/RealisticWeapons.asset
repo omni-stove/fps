@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c84b2f1e6a7d4093b5e8d2a1f0c37e45, type: 3}
   m_Name: RealisticWeapons
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponCatalogAsset
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponCatalogAsset
   _weapons:
   - {fileID: 11400000, guid: 0145af547c5e84b7692994eb4427668f, type: 2}
   - {fileID: 11400000, guid: 6aca4b59b20584a4a9f7a9be0d5b8210, type: 2}

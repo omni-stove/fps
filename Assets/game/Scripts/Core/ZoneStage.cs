@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>縮むエリア (<see cref="ZoneSchedule"/>) の、ある時刻での動き。</summary>
     public enum ZoneStage

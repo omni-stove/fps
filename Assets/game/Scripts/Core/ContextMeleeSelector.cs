@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 近接の入力で出す技を、登録された中から選ぶ。どれも当てはまらなければ null を返し、呼ぶ側がふつうの近接を出す。
     // 座標は Y が上で、背後かどうかは水平面で測る (MeleeJudge と同じ)。

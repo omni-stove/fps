@@ -1,22 +1,22 @@
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     /// <summary>
-    /// コミットされた NetTest シーンと試合の設定 (Fps.Editor.NetSceneBuilder.Build の出力) が、.NET のサーバーへの書き出しとクライアントで使えるか。
+    /// コミットされた NetTest シーンと試合の設定 (Shooter.Editor.NetSceneBuilder.Build の出力) が、.NET のサーバーへの書き出しとクライアントで使えるか。
     /// 失敗したら Build をやり直してシーンとアセットをコミットする。
     /// </summary>
     public sealed class NetTestSceneTests
     {
-        private const string _rerun = "run Fps.Editor.NetSceneBuilder.Build";
+        private const string _rerun = "run Shooter.Editor.NetSceneBuilder.Build";
 
         private Scene _scene;
 
@@ -84,9 +84,9 @@ namespace Fps.Net.Tests
             Assert.That(zone.Contains(zone.transform.position + new Vector3(0f, -NetSceneBuilder.GroundY, 0f)), Is.True);
 
             var rules = AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(GameRulesAssetBuilder.DominationPath);
-            Assert.That(rules, Is.Not.Null, "run Fps.Editor.GameRulesAssetBuilder.Build");
+            Assert.That(rules, Is.Not.Null, "run Shooter.Editor.GameRulesAssetBuilder.Build");
             Assert.That(rules.TryToRules(out var loaded, out var error), Is.True, error);
-            Assert.That(loaded.Objective, Is.EqualTo(MatchObjective.Domination), "run Fps.Editor.GameRulesAssetBuilder.Build");
+            Assert.That(loaded.Objective, Is.EqualTo(MatchObjective.Domination), "run Shooter.Editor.GameRulesAssetBuilder.Build");
         }
 
         [Test]

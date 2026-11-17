@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの姿勢 (立ち・しゃがみ・伏せ) でのカプセルと目の寸法。Y はすべてプレイヤー本体のローカル座標 (m)。

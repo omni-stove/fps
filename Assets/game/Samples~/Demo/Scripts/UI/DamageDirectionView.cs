@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 撃たれた方向を画面に出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。

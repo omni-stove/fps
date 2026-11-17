@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// シーンにある拠点の範囲 (<see cref="ControlPointArea"/>) の一覧。番号が 0 から抜けも重なりもなく並んでいることを生成時に確かめ、

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 移動入力の向きごとに速さへ掛ける倍率 (前・後ろ・横)。入力の前後の成分に前か後ろの倍率、左右の成分に横の倍率を掛けるので、

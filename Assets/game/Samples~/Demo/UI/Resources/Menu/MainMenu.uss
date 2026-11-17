@@ -74,7 +74,7 @@
     right: 160px;
 }
 
-/* キャンペーンの選択の差し込み口と、Fps.Runtime.CampaignSelectPanel が作る中身。 */
+/* キャンペーンの選択の差し込み口と、Shooter.Runtime.CampaignSelectPanel が作る中身。 */
 .menu__campaign-slot {
     position: absolute;
     left: 760px;

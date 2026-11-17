@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 伏せの入力の解釈 (<see cref="ProneInput"/>) と飛び込み (<see cref="ProneDive"/>) の中身。実際の姿勢は <see cref="CharacterMotorState.Stance"/> が持つ。

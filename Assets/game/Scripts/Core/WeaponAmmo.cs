@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>武器 1 本ぶんの残弾。セーブデータで武器の Id ごとに持つ。不変。</summary>
     public sealed class WeaponAmmo

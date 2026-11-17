@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// PvE の波 (<see cref="WaveSpawner"/>) を試すシーン WaveTest を生成する。床・壁・低い壁は敵 AI のテストシーンと同じ
@@ -16,7 +16,7 @@ namespace Fps.Editor
     /// <see cref="GameBootstrap"/> (床は生成しない設定)、無効にした敵の雛形、敵陣営の出現点 (<see cref="SideSpawnPoint"/>)、
     /// <see cref="WaveSpawner"/> を置く。プレイヤーとライトは実行時に GameBootstrap が作る。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.WaveTestSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WaveTestSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// プレイヤーは原点で +Z を向き、z = 8 の壁の裏 (z = 16〜17) の 3 か所から敵が出て、プレイヤーへ向かってくる。
@@ -29,7 +29,7 @@ namespace Fps.Editor
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Fps/Build Wave Test Scene";
+        public const string MenuPath = "Shooter/Build Wave Test Scene";
         public const string LogTag = "[WaveTestSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";

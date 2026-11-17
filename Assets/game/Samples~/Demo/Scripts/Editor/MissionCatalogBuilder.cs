@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// キャンペーンのミッションの一覧 (<see cref="CatalogPath"/> の <see cref="MissionCatalog"/>) を作るか上書きする。
@@ -12,12 +12,12 @@ namespace Fps.Editor
     /// ミッションの定義とシーンは先に <see cref="CampaignSceneBuilder.Build"/> で作っておく (無ければ何も保存せずに止める)。
     /// 何度実行しても同じ結果になる。不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.MissionCatalogBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.MissionCatalogBuilder.Build</code>
     /// </summary>
     public static class MissionCatalogBuilder
     {
-        public static string CatalogPath => FpsKitRoot.OutputPath("Missions/MissionCatalog.asset");
-        public const string MenuPath = "Fps/Build Mission Catalog";
+        public static string CatalogPath => ShooterKitRoot.OutputPath("Missions/MissionCatalog.asset");
+        public const string MenuPath = "Shooter/Build Mission Catalog";
         public const string LogTag = "[MissionCatalogBuilder]";
 
         /// <summary>Campaign01 のミッション Id。定義 (<see cref="CampaignSceneBuilder.DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>

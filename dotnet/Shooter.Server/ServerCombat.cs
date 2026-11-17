@@ -1,0 +1,462 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Numerics;
+using Shooter.Core;
+using Shooter.Protocol;
+
+namespace Shooter.Server
+{
+    /// <summary>
+    /// 戦闘。Unity の NetPlayer.Fire・ServerShotSequence・HitboxRewinder・NetTeamDeathmatch.Fire / .Explosion・ServerGrenadeSupply・NetGrenade・
+    /// NetPlayerWeapon (サーバー側)・NetCombatFeed がしていたことを、Core の判定と <c>.fpsmap</c> の世界 (<see cref="IWorldCollision"/>) で行う。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ダメージはすべてルールのモジュールの <see cref="MatchRulesModule.ApplyDamage"/> を通すので、味方撃ち・出現直後の無敵・ダウン・キルの数え方と
+    /// キルフィード・JSON の <c>kill</c> の行はルールのモジュールが決めて出す。ここは撃ってよいか・何に当たったか・いくつ減らすかを決め、
+    /// 射撃・ヒット・被弾・爆発をクライアントへ送る。
+    /// </para>
+    /// <para>
+    /// 位置は移動のモジュールが写した <see cref="ServerBodies"/> を読み、tick ごとに <see cref="ServerHitboxes"/> に残して巻き戻す。
+    /// 回避・乗り越え・カバー・覗き込みと移動の速さは移動のモジュールの確定状態を読む。
+    /// </para>
+    /// </remarks>
+    internal sealed partial class ServerCombat : IServerModule, ISnapshotContributor
+    {
+        public const string LogTag = "[Combat]";
+
+        // 不正な要求の警告を出す最短の間隔 (秒)。連打でログを埋めないため
+        private const float _rejectWarningInterval = 1f;
+
+        private readonly MatchRulesModule _rules;
+        private readonly ServerMovement _movement;
+        private readonly Dictionary<int, Fighter> _fighters = new Dictionary<int, Fighter>();
+        // 1 回の着弾・爆発で同じ建物の部品がいくつ壊れても、その建物の状態を送るのは 1 度だけにする
+        private readonly SortedSet<int> _changedStructures = new SortedSet<int>();
+        private readonly ServerSightBlockers _sightBlockers = new ServerSightBlockers();
+        private readonly ServerImpact _impact;
+        private readonly ServerProjectiles _projectiles;
+        private readonly ServerBeams _beams;
+        private readonly ServerSpray _spray;
+        private readonly ServerStatusEffects _statusEffects;
+        private readonly ServerLockOn _lockOn;
+        private readonly ServerAreaEffects _areaEffects;
+        private readonly ServerFlash _flash;
+        private readonly ServerVehicles _vehicles;
+        // 座席の武器の弾と連射の間隔は、座る人が代わっても武器に残るので、人ではなく乗り物と武器の番号で持つ
+        private readonly Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons> _mounts =
+            new Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons>();
+        // 座席の武器は ServerLoadout の人ごとの制限を通らないので、連射の間隔は武器ごとにここで持つ
+        private readonly Dictionary<ServerPlayerWeapons, ShotBudget> _mountBudgets = new Dictionary<ServerPlayerWeapons, ShotBudget>();
+        private ServerContext _context;
+        private TextWriter _log;
+        private ServerMatch _match;
+        private ServerBodies _bodies;
+        private ServerRulesData _data;
+        private ServerHitboxes _hitboxes;
+        private ServerStructures _structures;
+        private ServerShotTrace _shotTrace;
+        private double _now;
+        private float _nextRejectWarningTime = float.NegativeInfinity;
+
+        public ServerCombat(MatchRulesModule rules, ServerMovement movement, ServerVehicles vehicles = null)
+        {
+            _vehicles = vehicles;
+            if (vehicles != null)
+            {
+                vehicles.Combat = this;
+            }
+
+            _rules = rules ?? throw new ArgumentNullException(nameof(rules));
+            _movement = movement ?? throw new ArgumentNullException(nameof(movement));
+            _impact = new ServerImpact(this);
+            _projectiles = new ServerProjectiles(this);
+            _beams = new ServerBeams(this);
+            _spray = new ServerSpray(this);
+            _statusEffects = new ServerStatusEffects(this);
+            _lockOn = new ServerLockOn(this);
+            _areaEffects = new ServerAreaEffects(this);
+            _flash = new ServerFlash(this);
+        }
+
+        public string Name => "combat";
+
+        internal ServerHitboxes Hitboxes => _hitboxes;
+
+        internal ServerStructures Structures => _structures;
+
+        /// <summary>世界の当たりのほかに視線を遮る物。Bot の知覚が問い合わせる。</summary>
+        internal ServerSightBlockers SightBlockers => _sightBlockers;
+
+        internal ServerContext Context => _context;
+
+        internal ServerImpact Impact => _impact;
+
+        internal ServerStatusEffects StatusEffects => _statusEffects;
+
+        internal MatchRulesModule Rules => _rules;
+
+        internal ZoneDamageMultipliers ZoneDamage => _data.Rules.ZoneDamage;
+
+        internal ServerAreaEffects AreaEffects => _areaEffects;
+
+        internal ServerFlash Flash => _flash;
+
+        internal TextWriter Log => _log;
+
+        public void Start(ServerContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _log = context.Log;
+            _match = context.Match;
+            _bodies = context.Bodies;
+            _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
+            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles);
+            _shotTrace = new ServerShotTrace(_hitboxes);
+            _structures = new ServerStructures(context.Map, _log);
+            var rules = _data.Rules;
+            _structures.Enabled = rules.Destruction == Destruction.On;
+
+            _match.PlayerJoined += HandlePlayerJoined;
+            _match.PlayerLeft += HandlePlayerLeft;
+            _bodies.Teleported += HandleTeleported;
+            _rules.PlayerSpawned += HandlePlayerSpawned;
+            _rules.MatchStarted += HandleMatchStarted;
+            _movement.Landed += HandleLanded;
+
+            _log.WriteLine(LogTag + " hitscan maxRewindTicks=" + Text(_hitboxes.MaxRewindTicks)
+                + " maxShotOriginOffset=" + Text(_data.Settings.MaxShotOriginOffset)
+                + " destructibleStructures=" + Text(_structures.Count) + " destruction=" + rules.Destruction);
+            PrepareGrenades(rules);
+        }
+
+        public void Tick(long tick, float deltaSeconds)
+        {
+            _now += deltaSeconds;
+            foreach (var fighter in _fighters.Values)
+            {
+                fighter.Weapons.Tick(deltaSeconds);
+                if (_bodies.TryGet(fighter.PlayerId, out var body))
+                {
+                    body.SetWeapons(fighter.Weapons.CurrentSpec, fighter.Weapons.Specs);
+                }
+            }
+
+            foreach (var mount in _mounts.Values)
+            {
+                mount.Tick(deltaSeconds);
+            }
+
+            TickGrenades(deltaSeconds);
+            _beams.Tick(deltaSeconds);
+            _spray.Tick(deltaSeconds);
+            _statusEffects.Tick(deltaSeconds);
+            _lockOn.Tick(deltaSeconds);
+            _areaEffects.Tick(deltaSeconds);
+            _hitboxes.Record((int)Math.Min(tick, int.MaxValue));
+
+            // 飛ぶ弾は巻き戻さずに今の位置へ当てるので、この tick の位置を残してから進める
+            _projectiles.Tick(deltaSeconds);
+        }
+
+        public void OnConnected(ConnectionId connection)
+        {
+            // 途中から入った人にも、それまでに壊れた建物を見せる
+            _structures.SendState(_context.Messenger, connection);
+            _areaEffects.SendState(_context.Messenger, connection);
+        }
+
+        public void OnDisconnected(ConnectionId connection)
+        {
+        }
+
+        public void OnMessage(ConnectionId connection, IMessage message)
+        {
+            if (!_match.TryGetPlayer(connection, out var player) || !_fighters.TryGetValue(player.PlayerId, out var fighter))
+            {
+                return;
+            }
+
+            switch (message)
+            {
+                case FireRequestMessage fire:
+                    Fire(fighter, fire);
+                    break;
+                case WeaponActionRequestMessage action:
+                    var weapons = ActiveWeapons(fighter);
+                    if (action.Action == WeaponAction.ActiveReload)
+                    {
+                        weapons.TryActiveReload();
+                    }
+                    else if (action.Action == WeaponAction.Reload)
+                    {
+                        weapons.TryReload();
+                    }
+                    else if (action.Action == WeaponAction.SwitchAmmoType)
+                    {
+                        weapons.TrySwitchAmmoType();
+                    }
+
+                    break;
+                case SwitchWeaponRequestMessage weaponSwitch:
+                    fighter.Weapons.TrySwitch(weaponSwitch.WeaponId);
+                    break;
+                case ThrowGrenadeRequestMessage grenade:
+                    ThrowGrenade(fighter, grenade.Direction, grenade.GrenadeTypeId);
+                    break;
+            }
+        }
+
+        public void Stop()
+        {
+            if (_match == null)
+            {
+                return;
+            }
+
+            _match.PlayerJoined -= HandlePlayerJoined;
+            _match.PlayerLeft -= HandlePlayerLeft;
+            _bodies.Teleported -= HandleTeleported;
+            _rules.PlayerSpawned -= HandlePlayerSpawned;
+            _rules.MatchStarted -= HandleMatchStarted;
+            _movement.Landed -= HandleLanded;
+            _fighters.Clear();
+            _grenades.Clear();
+            _projectiles.Clear();
+            _statusEffects.Clear();
+        }
+
+        /// <summary>
+        /// 各プレイヤーの持っている武器と最後に受けた弾の向き、受け取る人の弾数・持たせている武器・グレネードの残り、飛んでいるグレネードを載せる。
+        /// </summary>
+        public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            ArgumentNullException.ThrowIfNull(receiver);
+            var players = snapshot.Players;
+            for (var i = 0; i < players.Count; i++)
+            {
+                ref var row = ref players[i];
+                if (_fighters.TryGetValue(row.PlayerId, out var fighter))
+                {
+                    row.WeaponId = ActiveWeapons(fighter).CurrentSpec?.Id ?? "";
+                    row.LastHitDirection = fighter.LastHitDirection;
+                }
+            }
+
+            if (_fighters.TryGetValue(receiver.PlayerId, out var own))
+            {
+                // 座席の武器に座っている間は、持ち主の画面と射撃がその武器を今の武器として扱うよう、座席の武器を載せる
+                var owner = snapshot.Owner;
+                var active = ActiveWeapons(own);
+                owner.Weapon = active.Sync();
+                active.FillIds(owner.EquippedWeaponIds);
+                own.Grenades.Fill(owner.Grenades);
+            }
+
+            ContributeGrenades(snapshot.Grenades);
+            _projectiles.Contribute(snapshot.Projectiles);
+        }
+
+        private void HandlePlayerJoined(ServerPlayer player)
+        {
+            GetOrAdd(player.PlayerId);
+        }
+
+        private void HandlePlayerLeft(ServerPlayer player)
+        {
+            _fighters.Remove(player.PlayerId);
+            _hitboxes.Forget(player.PlayerId);
+            _beams.Forget(player.PlayerId);
+            _spray.Forget(player.PlayerId);
+            _statusEffects.Forget(player.PlayerId);
+        }
+
+        // 置き直した人の前の位置と新しい位置の間を補間して当てないよう、それまでの記録を捨てる
+        private void HandleTeleported(ServerBody body)
+        {
+            _hitboxes.Forget(body.PlayerId);
+        }
+
+        // 出現のたびに、選んだ並びの武器を満タンで持たせ直し、グレネードをルールの数に戻す
+        private void HandlePlayerSpawned(int playerId)
+        {
+            var fighter = GetOrAdd(playerId);
+            fighter.Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+            RefillGrenades(fighter);
+        }
+
+        private void HandleMatchStarted()
+        {
+            _mounts.Clear();
+            _mountBudgets.Clear();
+            ClearGrenades();
+            _projectiles.Clear();
+            _statusEffects.Clear();
+            _areaEffects.Clear();
+            foreach (var fighter in _fighters.Values)
+            {
+                fighter.Weapons.Refill();
+                RefillGrenades(fighter);
+            }
+        }
+
+        // 落下ダメージは撃った人のいないダメージとしてルールに通し、倒れたら自滅として数えさせる (Unity の NetworkPlayerMotor.Landing と同じ)
+        private void HandleLanded(ServerPlayer player, int tick, float fallSpeed)
+        {
+            var damage = _movement.FallDamage(fallSpeed, _data.Settings.MaxHealth);
+            if (damage <= 0)
+            {
+                return;
+            }
+
+            var outcome = _rules.ApplyDamage(null, player.PlayerId, damage);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                _log.WriteLine("[Net] fall owner=" + Text(player.PlayerId) + " tick=" + Text(tick)
+                    + " speed=" + fallSpeed.ToString("F2", CultureInfo.InvariantCulture) + " damage=" + Text(damage) + " outcome=" + outcome);
+            }
+        }
+
+        private ServerPlayerWeapons ActiveWeapons(Fighter fighter)
+        {
+            if (_vehicles == null
+                || _vehicles.FiringOf(fighter.PlayerId, out var vehicle, out _, out var weapon) != VehicleSeatFiring.VehicleWeapon)
+            {
+                return fighter.Weapons;
+            }
+
+            return MountWeapons(vehicle, weapon);
+        }
+
+        private ServerPlayerWeapons MountWeapons(int vehicle, int weapon)
+        {
+            if (!_mounts.TryGetValue((vehicle, weapon), out var mount))
+            {
+                mount = new ServerPlayerWeapons(PlayerIds.None, _log, () => _now);
+                mount.Equip(new[] { _vehicles.MapOf(vehicle).Weapons[weapon] }, _data.File.SwitchSeconds, _data.Rules);
+                _mounts.Add((vehicle, weapon), mount);
+            }
+
+            return mount;
+        }
+
+        internal void DamageVehicle(in ServerShot shot, in ShotHit hit, int amount)
+        {
+            var damage = DamageCalculator.Scale(amount, hit.DamageMultiplier);
+            var attacker = _match.TryGetPlayer(shot.ShooterId, out _) ? shot.ShooterId : (int?)null;
+            var dealt = _vehicles.Damage(hit.VehicleIndex, damage, attacker);
+            if (attacker.HasValue && dealt > 0 && !_vehicleHitConfirmed)
+            {
+                _vehicleHitConfirmed = _collectingPelletHits;
+                SendHitConfirm(shot.ShooterId, dealt, HitZone.Body, DamageOutcome.Damaged);
+            }
+        }
+
+        internal ServerPlayerWeapons WeaponsOf(int playerId)
+        {
+            return GetOrAdd(playerId).Weapons;
+        }
+
+        private Fighter GetOrAdd(int playerId)
+        {
+            if (!_fighters.TryGetValue(playerId, out var fighter))
+            {
+                fighter = new Fighter(
+                    new ServerPlayerWeapons(playerId, _log, () => _now),
+                    new ServerGrenadeSupply(_data.Grenades, GrenadeThrowJitterSeconds),
+                    playerId);
+                _fighters.Add(playerId, fighter);
+            }
+
+            return fighter;
+        }
+
+        internal void Send(int playerId, IMessage message)
+        {
+            if (_match.TryGetPlayer(playerId, out var player))
+            {
+                _context.Messenger.Send(player.Connection, TransportChannel.Reliable, message);
+            }
+        }
+
+        internal void SendToAll(IMessage message, int? except = null)
+        {
+            foreach (var player in _match.Players)
+            {
+                if (player.PlayerId != except)
+                {
+                    _context.Messenger.Send(player.Connection, TransportChannel.Reliable, message);
+                }
+            }
+        }
+
+        // 跳ね返した味方撃ちなら、体力が減るのは撃った本人
+        private bool IsReflected(int attackerId, int victimId)
+        {
+            var session = _rules.Session;
+            return attackerId != victimId
+                && _data.Rules.FriendlyFire == FriendlyFire.Reflect
+                && session.HasPlayer(attackerId) && session.HasPlayer(victimId)
+                && session.GetTeam(attackerId) == session.GetTeam(victimId);
+        }
+
+        internal bool IsHittable(int playerId)
+        {
+            var session = _rules.Session;
+            return session != null && session.HasPlayer(playerId) && session.IsAlive(playerId);
+        }
+
+        private void SendStructureChanges()
+        {
+            foreach (var structure in _changedStructures)
+            {
+                foreach (var player in _match.Players)
+                {
+                    _structures.Send(_context.Messenger, player.Connection, structure);
+                }
+            }
+
+            _changedStructures.Clear();
+        }
+
+        private bool CanWarn()
+        {
+            var now = (float)_now;
+            if (now < _nextRejectWarningTime)
+            {
+                return false;
+            }
+
+            _nextRejectWarningTime = now + _rejectWarningInterval;
+            return true;
+        }
+
+        private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+        private static string Text(float value) => value.ToString(CultureInfo.InvariantCulture);
+
+        private sealed class Fighter
+        {
+            public Fighter(ServerPlayerWeapons weapons, ServerGrenadeSupply grenades, int playerId)
+            {
+                Weapons = weapons;
+                Grenades = grenades;
+                PlayerId = playerId;
+            }
+
+            public int PlayerId { get; }
+
+            public ServerPlayerWeapons Weapons { get; }
+
+            public ServerGrenadeSupply Grenades { get; }
+
+            public ServerShotSequence Shots { get; } = new ServerShotSequence();
+
+            /// <summary>最後に受けた弾の進む向き。クライアントは倒れた体をこの向きへ倒す。</summary>
+            public Vector3 LastHitDirection { get; set; }
+        }
+    }
+}

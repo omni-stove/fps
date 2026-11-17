@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="VaultProbe.Evaluate"/> と <see cref="VaultProbe.EvaluateMantle"/> の結果。</summary>
     public readonly struct VaultProbeResult

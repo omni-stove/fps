@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>能力を今使えない理由。使えるなら <see cref="None"/>。</summary>
     public enum AbilityUseBlock

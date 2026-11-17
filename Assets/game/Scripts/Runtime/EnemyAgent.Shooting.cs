@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public sealed partial class EnemyAgent
     {
@@ -13,7 +13,7 @@ namespace Fps.Runtime
         private bool _unarmed;
         private readonly System.Random _random = new System.Random();
         private readonly RecoilState _recoil = new RecoilState();
-        private IReadOnlyList<string> _weaponAttachments = Fps.Core.WeaponAttachments.None;
+        private IReadOnlyList<string> _weaponAttachments = Shooter.Core.WeaponAttachments.None;
         private readonly TriggerDriver _trigger = new TriggerDriver();
         private int _spreadSeed;
         private int _shotCount;

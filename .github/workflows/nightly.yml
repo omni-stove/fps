@@ -158,12 +158,12 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: StandaloneOSX
-          buildName: fps
+          buildName: shooter
           versioning: None
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fps-macos-${{ github.sha }}
+          name: shooter-macos-${{ github.sha }}
           path: build/StandaloneOSX
           retention-days: 14
           if-no-files-found: error

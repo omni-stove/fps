@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆発に巻き込まれる距離にあるグレネードを知らせるビュー。Hud.uxml の <see cref="UxmlName"/> を使う。

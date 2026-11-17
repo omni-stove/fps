@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 倒れた主観 (<see cref="DeathCamera.Fallen"/>) の動き。倒れた目から床の近く (<see cref="EyeHeight"/>) まで <see cref="Seconds"/> 秒で落ち、

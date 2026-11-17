@@ -1,11 +1,11 @@
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// EnemyAgent の武器なしの状態 (<see cref="EnemyAgent.Disarm"/>)、拾える物からの武器と予備弾の受け取り、モードが渡す行き先 (<see cref="EnemyAgent.SetErrand"/>) を確かめる。

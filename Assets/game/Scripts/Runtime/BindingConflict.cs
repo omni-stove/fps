@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>新しい割り当てと同じ入力を使っている、Player マップのほかの割り当て。<see cref="PlayerBindings.FindConflicts"/> が返す。</summary>
     public readonly struct BindingConflict

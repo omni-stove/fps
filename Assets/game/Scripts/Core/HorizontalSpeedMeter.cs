@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 位置の変化から水平の移動の速さ (m/s) を求める。速度そのものが同期されないキャラ (ネット対戦の他人のプレイヤーなど) の

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 撃った側のクライアントが見ていた時点。サーバーの tick (<see cref="Tick"/>) と、次の tick までの割合 (<see cref="Alpha"/>) で表す。

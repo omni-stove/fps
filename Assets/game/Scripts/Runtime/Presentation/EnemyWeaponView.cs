@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 人型のリグには手に持つ銃が無いので、プレイヤーの三人称のモック (PlayerMockBody) と同じ寸法・構えの箱を本体の子に置く。
     [DisallowMultipleComponent]

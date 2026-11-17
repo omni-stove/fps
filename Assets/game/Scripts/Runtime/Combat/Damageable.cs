@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// ダメージを受けるもの。中で <see cref="Fps.Core.Health"/> を持ち、ダメージと死亡の判断はそちらに任せる。
+    /// ダメージを受けるもの。中で <see cref="Shooter.Core.Health"/> を持ち、ダメージと死亡の判断はそちらに任せる。
     /// <see cref="Hitbox"/> からの命中は <see cref="ApplyHit"/> で受け、ダメージ量の計算は <see cref="DamageCalculator"/> に任せる。
     /// Health は Awake か最初に触れたときに <see cref="MaxHealth"/> で作るので、Awake が走らない Edit Mode でも使える。
     /// <see cref="ResetHealth"/> で Health を作り直しても、<see cref="Died"/> の購読者はそのまま通知を受け取れる。

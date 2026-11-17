@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 目から狙う点までの線が手前の物に遮られているとき、照準で知らせるための値 (<see cref="AimSolver.IsBlocked"/>)。

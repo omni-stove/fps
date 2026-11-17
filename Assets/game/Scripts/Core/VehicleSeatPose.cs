@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>座席に座っている間のキャラクターの姿勢。</summary>
     public enum VehicleSeatPose

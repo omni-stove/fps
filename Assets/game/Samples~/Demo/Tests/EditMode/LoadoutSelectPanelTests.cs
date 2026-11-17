@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="LoadoutSelectPanel"/> がスロットごとに選べる武器を武器名と種別で並べ、行の移動・武器の切り替え・決定を受けること。

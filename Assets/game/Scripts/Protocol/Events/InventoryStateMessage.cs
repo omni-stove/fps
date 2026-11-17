@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     // 大きさと重さも送るのは、クライアントがサーバーと違うアイテムの表を持っていても並べて描けるようにするため
     public sealed class InventoryStateMessage : IMessage

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 武器。弾倉・予備弾・連射間隔・リロードを管理する。時間は <see cref="Tick"/> で外から進める。

@@ -1,12 +1,12 @@
 using System.Linq;
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class MissionDefinitionTests
     {
@@ -147,7 +147,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void RejectsInvalidMissionStructure()
         {
-            // 必須の目標が無い・Id の重複・未知の前提・循環は Fps.Core.Mission が見つける。
+            // 必須の目標が無い・Id の重複・未知の前提・循環は Shooter.Core.Mission が見つける。
             var cases = new[]
             {
                 new[] { new ObjectiveDefinition("a", "", 1, true) },

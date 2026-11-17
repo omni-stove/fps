@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 射撃場で拾える武器 (WeaponAssetBuilder.LoadRangeWeapons、サンプルの武器の JSON すべて) を、標的の奥 (x = -1.25..18.75, z = 28.5..37.5) に
     // 一覧の順で左から右・手前から奥へ並べる。サンプルの武器を足す issue は JSON を置くだけで、ここに拾える武器が 1 つ増える。

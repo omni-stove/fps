@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="MenuNavigator"/> がシーンを読み、アプリを終えるときの相手。ふだんは SceneManager と Application を使い、

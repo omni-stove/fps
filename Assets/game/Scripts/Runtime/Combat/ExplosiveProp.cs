@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 撃たれたり爆発に巻き込まれたりすると耐久が減り、0 で爆発する置き物 (樽・ガソリン缶など)。

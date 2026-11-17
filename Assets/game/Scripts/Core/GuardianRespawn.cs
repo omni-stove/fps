@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガーディアン (VIP の護衛) のリスポーン。陣営ごとに 1 人のリーダーを持ち、リーダーが倒れていない陣営の人は

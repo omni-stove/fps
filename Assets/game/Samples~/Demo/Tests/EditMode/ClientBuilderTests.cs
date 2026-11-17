@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
+using Shooter.Core;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>実際のビルドは <c>make build windows|macos</c> と client-release ワークフローに任せ、入れるシーンとターゲットの決め方だけを見る。</summary>
     public sealed class ClientBuilderTests

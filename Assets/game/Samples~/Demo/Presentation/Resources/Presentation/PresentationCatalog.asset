@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac8e36ff4a36ca2f3375f13fe8f30096, type: 3}
   m_Name: PresentationCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PresentationCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PresentationCatalog
   _weapons:
   - _weaponId: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
     _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}

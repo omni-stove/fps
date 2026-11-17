@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
-    /// クライアントが EOS の通信路とクイックマッチのロビーの検索を作る口。Fps.NetV2 が PlayEveryWare のプラグインに依存しないよう、
-    /// プラグインを使う Fps.NetEos が実装して <see cref="NetV2Eos.Factory"/> に入れる。
+    /// クライアントが EOS の通信路とクイックマッチのロビーの検索を作る口。Shooter.NetV2 が PlayEveryWare のプラグインに依存しないよう、
+    /// プラグインを使う Shooter.NetEos が実装して <see cref="NetV2Eos.Factory"/> に入れる。
     /// </summary>
     public interface IEosClientTransportFactory
     {

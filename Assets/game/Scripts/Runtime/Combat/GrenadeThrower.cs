@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Grenade の入力 (<see cref="InputActionPaths.Grenade"/>) で、視線の向きにグレネード (<see cref="ThrownGrenade"/>) を投げる。

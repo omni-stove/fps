@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破の HUD の書式役。<see cref="ModeStatus.Detail"/> の <see cref="SearchAndDestroyStatus"/> を <see cref="SearchAndDestroyHudText"/> で文にする。

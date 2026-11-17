@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public enum WeaponPaint
     {

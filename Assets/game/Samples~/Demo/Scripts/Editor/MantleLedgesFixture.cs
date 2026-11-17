@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場に置く、崖のぼりを試す段の組 (<see cref="RootName"/>)。左手前 (x = -22..-14, z = -10..-8) に、+Z へ登る向きで 3 つ並べる。

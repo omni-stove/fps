@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) の HUD に出す文。得点の欄には両チームが取ったラウンドの数を、

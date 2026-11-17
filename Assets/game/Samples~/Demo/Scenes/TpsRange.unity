@@ -160,7 +160,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &5234719
 MonoBehaviour:
@@ -173,7 +173,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -190,7 +190,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &5234721
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,7 +202,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &5234722
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -214,7 +214,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &5234723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,7 +226,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &5234724
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,7 +238,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -270,7 +270,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -344,7 +344,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 5234727}
 --- !u!114 &5234727
@@ -358,7 +358,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: stealth-enemy
   _maxHealth: 100
 --- !u!195 &5234728
@@ -552,7 +552,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -615,7 +615,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 16
   _maxHealth: 100
   _grounded: 0
@@ -906,7 +906,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 33
   _maxHealth: 100
   _grounded: 0
@@ -1057,7 +1057,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f0ecedbd6627623e4211ff240ff0258, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructibleStructure
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructibleStructure
   _destructionEnabled: 1
   _hasAuthority: 1
   _spawnDebris: 1
@@ -1347,7 +1347,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 50
   _maxHealth: 100
   _grounded: 0
@@ -1474,7 +1474,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 2006206367}
   _activateAfterBake:
   - {fileID: 243066287}
@@ -1527,7 +1527,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 240566452}
   _activateAfterBake:
   - {fileID: 723379918}
@@ -1596,7 +1596,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 27
   _maxHealth: 100
   _grounded: 0
@@ -1854,7 +1854,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 15
   _maxHealth: 100
   _grounded: 0
@@ -2000,7 +2000,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 0
   _maxHealth: 100
   _grounded: 1
@@ -2146,7 +2146,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 58
   _maxHealth: 100
   _grounded: 0
@@ -2444,7 +2444,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &176762868
 MonoBehaviour:
@@ -2457,7 +2457,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -2474,7 +2474,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &176762870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2486,7 +2486,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &176762871
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2498,7 +2498,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &176762872
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2510,7 +2510,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &176762873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2522,7 +2522,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -2554,7 +2554,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -2628,7 +2628,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 176762876}
 --- !u!114 &176762876
@@ -2642,7 +2642,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: stealth-sentry
   _maxHealth: 100
 --- !u!195 &176762877
@@ -2827,7 +2827,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 52
   _maxHealth: 100
   _grounded: 0
@@ -2973,7 +2973,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 44
   _maxHealth: 100
   _grounded: 0
@@ -3245,7 +3245,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 421fe5d9b44deb02ff38f9ac9d44946e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Traversal.Zipline
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Traversal.Zipline
   _start: {x: -20, y: 5.6, z: -5}
   _end: {x: -20, y: 2.6, z: 16}
   _minSpeed: 4
@@ -3426,7 +3426,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b9bb3c8ec93a578eafb7be0434a00cd7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SideMember
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SideMember
   _sideId: 0
 --- !u!114 &243066289
 MonoBehaviour:
@@ -3439,7 +3439,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &243066290
 MonoBehaviour:
@@ -3452,7 +3452,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -3469,7 +3469,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &243066292
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3481,7 +3481,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &243066293
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3493,7 +3493,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &243066294
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3505,7 +3505,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &243066295
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3517,7 +3517,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -3549,7 +3549,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -3623,7 +3623,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 243066298}
 --- !u!114 &243066298
@@ -3637,7 +3637,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: SquadBot
   _maxHealth: 100
 --- !u!195 &243066299
@@ -3800,7 +3800,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -4088,7 +4088,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 7
   _maxHealth: 100
   _grounded: 1
@@ -4682,7 +4682,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 40
   _maxHealth: 100
   _grounded: 0
@@ -4828,7 +4828,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 30
   _maxHealth: 100
   _grounded: 0
@@ -4973,7 +4973,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 0
   _maxHealth: 100
   _grounded: 1
@@ -5102,7 +5102,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cccc861aa622695a574ee90227c9f019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ExplosiveProp
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ExplosiveProp
   _id: Barrel_A
   _maxHealth: 20
   _maxDamage: 150
@@ -5234,7 +5234,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -5409,7 +5409,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 13
   _maxHealth: 100
   _grounded: 0
@@ -5701,7 +5701,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: metal
 --- !u!23 &391609292
 MeshRenderer:
@@ -5936,7 +5936,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -5981,7 +5981,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: wood
 --- !u!114 &411642138
 MonoBehaviour:
@@ -5994,7 +5994,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f0ecedbd6627623e4211ff240ff0258, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructibleStructure
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructibleStructure
   _destructionEnabled: 1
   _hasAuthority: 1
   _spawnDebris: 1
@@ -6088,7 +6088,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 1
   _owner: {fileID: 1888973590}
 --- !u!1 &430039624
@@ -6133,7 +6133,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4a57e8cc4c5fb5082bbd8714feebbcd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyShield
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyShield
   _plate: {fileID: 1565412389}
   _platePrefab: {fileID: 0}
   _hitMask:
@@ -6150,7 +6150,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &430039627
 MonoBehaviour:
@@ -6163,7 +6163,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -6180,7 +6180,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &430039629
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6192,7 +6192,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &430039630
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6204,7 +6204,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &430039631
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6216,7 +6216,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &430039632
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6228,7 +6228,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -6260,7 +6260,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -6334,7 +6334,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 430039635}
 --- !u!114 &430039635
@@ -6348,7 +6348,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: ShieldEnemy
   _maxHealth: 150
 --- !u!195 &430039636
@@ -6516,7 +6516,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 21
   _maxHealth: 100
   _grounded: 0
@@ -6657,7 +6657,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6da3e44e6894f824ac893777a9206fbf, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyMelee
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyMelee
   _damage: 50
   _reach: 2
   _arcDegrees: 90
@@ -6679,7 +6679,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &451950148
 MonoBehaviour:
@@ -6692,7 +6692,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -6709,7 +6709,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &451950150
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6721,7 +6721,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &451950151
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6733,7 +6733,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &451950152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6745,7 +6745,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &451950153
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6757,7 +6757,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -6789,7 +6789,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -6863,7 +6863,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 451950156}
 --- !u!114 &451950156
@@ -6877,7 +6877,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: MeleeEnemy
   _maxHealth: 100
 --- !u!195 &451950157
@@ -7043,7 +7043,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: ExplosiveDummy
   _maxHealth: 100
 --- !u!114 &452688594
@@ -7057,7 +7057,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e25b7c3d80a41f6b4c9a1e03d6f8b72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.TargetDummy
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.TargetDummy
   _respawnDelay: 3
   _damageable: {fileID: 452688593}
 --- !u!1 &457350016
@@ -7088,7 +7088,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 638500711}
   _activateAfterBake: []
   _agentTypeId: 0
@@ -7157,7 +7157,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 22
   _maxHealth: 100
   _grounded: 0
@@ -7303,7 +7303,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 462247397}
 --- !u!114 &462247397
@@ -7317,7 +7317,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: CrushEnemy
   _maxHealth: 100
 --- !u!23 &462247398
@@ -7447,7 +7447,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 43
   _maxHealth: 100
   _grounded: 0
@@ -7593,7 +7593,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 3
   _maxHealth: 100
   _grounded: 1
@@ -7739,7 +7739,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 51
   _maxHealth: 100
   _grounded: 0
@@ -7900,7 +7900,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 895387396}
   _activateAfterBake:
   - {fileID: 599639878}
@@ -8220,7 +8220,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d6eb10a420f5b411028465ee83ac13ff, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyCharger
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyCharger
   _tell: {fileID: 0}
   _tellPrefab: {fileID: 0}
   _obstacleMask:
@@ -8237,7 +8237,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &599639881
 MonoBehaviour:
@@ -8250,7 +8250,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -8267,7 +8267,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &599639883
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8279,7 +8279,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &599639884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8291,7 +8291,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &599639885
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8303,7 +8303,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &599639886
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8315,7 +8315,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -8347,7 +8347,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -8421,7 +8421,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 599639889}
 --- !u!114 &599639889
@@ -8435,7 +8435,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: Charger
   _maxHealth: 150
 --- !u!195 &599639890
@@ -8633,7 +8633,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 2
   _maxHealth: 100
   _grounded: 0
@@ -8874,7 +8874,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: metal
 --- !u!23 &617296617
 MeshRenderer:
@@ -9000,7 +9000,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 5
   _maxHealth: 100
   _grounded: 0
@@ -9309,7 +9309,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -9371,7 +9371,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 4
   _maxHealth: 100
   _grounded: 0
@@ -9501,7 +9501,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 19
   _maxHealth: 100
   _grounded: 0
@@ -9646,7 +9646,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 452688593}
 --- !u!23 &710012278
@@ -9776,7 +9776,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 60
   _maxHealth: 100
   _grounded: 0
@@ -9918,7 +9918,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -9976,7 +9976,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 36da3d2e0020f0c0e3671292b6e1539a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemySniper
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemySniper
   _perches:
   - {x: 22, y: 4, z: 18.5}
   - {x: 22, y: 4, z: 21}
@@ -9995,7 +9995,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &723379921
 MonoBehaviour:
@@ -10008,7 +10008,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -10025,7 +10025,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &723379923
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10037,7 +10037,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &723379924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10049,7 +10049,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &723379925
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10061,7 +10061,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &723379926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10073,7 +10073,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -10105,7 +10105,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -10179,7 +10179,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 723379929}
 --- !u!114 &723379929
@@ -10193,7 +10193,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: Sniper
   _maxHealth: 80
 --- !u!195 &723379930
@@ -10517,7 +10517,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 5
   _maxHealth: 100
   _grounded: 1
@@ -10663,7 +10663,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 23
   _maxHealth: 100
   _grounded: 0
@@ -10809,7 +10809,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 31
   _maxHealth: 100
   _grounded: 0
@@ -10951,7 +10951,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -11108,7 +11108,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e3b9a41c6d24f08b5a2d91f0c84e7a3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MatchRunner
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MatchRunner
 --- !u!114 &808258797
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11120,7 +11120,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4274ea70c4be6440bbfef1d376b2b5f0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameBootstrap
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameBootstrap
   _createFloor: 0
   _weaponDefinitions:
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
@@ -11203,7 +11203,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 54
   _maxHealth: 100
   _grounded: 0
@@ -11570,7 +11570,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fda287a2bb49431083bb40525f5e8661, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Traversal.Ladder
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Traversal.Ladder
   _height: 3
   _width: 0.8
   _climbSpeed: 2.5
@@ -11625,7 +11625,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 10
   _maxHealth: 100
   _grounded: 1
@@ -11928,7 +11928,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 32
   _maxHealth: 100
   _grounded: 0
@@ -12055,7 +12055,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 1570095060}
   _activateAfterBake:
   - {fileID: 451950145}
@@ -12326,7 +12326,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 35
   _maxHealth: 100
   _grounded: 0
@@ -12472,7 +12472,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 42
   _maxHealth: 100
   _grounded: 0
@@ -12618,7 +12618,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 28
   _maxHealth: 100
   _grounded: 0
@@ -12969,7 +12969,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 1859591878}
   _activateAfterBake:
   - {fileID: 1772904094}
@@ -13110,7 +13110,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 8
   _maxHealth: 100
   _grounded: 1
@@ -13255,7 +13255,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 3
   _maxHealth: 100
   _grounded: 0
@@ -13419,7 +13419,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: concrete
 --- !u!23 &1018062012
 MeshRenderer:
@@ -13636,7 +13636,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 38
   _maxHealth: 100
   _grounded: 0
@@ -13893,7 +13893,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 8
   _maxHealth: 100
   _grounded: 0
@@ -14050,7 +14050,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -14505,7 +14505,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 63
   _maxHealth: 100
   _grounded: 0
@@ -14650,7 +14650,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1446966574}
 --- !u!23 &1151727491
@@ -14776,7 +14776,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -14848,7 +14848,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &1165098201
 MonoBehaviour:
@@ -14861,7 +14861,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -14878,7 +14878,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &1165098203
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14890,7 +14890,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &1165098204
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14902,7 +14902,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &1165098205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14914,7 +14914,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &1165098206
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14926,7 +14926,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -14958,7 +14958,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -15032,7 +15032,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1165098209}
 --- !u!114 &1165098209
@@ -15046,7 +15046,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: turret-raider
   _maxHealth: 100000
 --- !u!195 &1165098210
@@ -15197,7 +15197,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 1
   _owner: {fileID: 1387540426}
 --- !u!23 &1168633956
@@ -15411,7 +15411,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -15490,7 +15490,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ae12e9dcc63cf1730799cf491789721, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DebrisPool
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DebrisPool
   _capacity: 200
   _lifetime: 4
   _debrisPrefab: {fileID: 0}
@@ -15553,7 +15553,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7687990767d458a4e306fc0059b2e019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.VehicleSeat
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.VehicleSeat
   _role: 1
   _pose: 0
   _cameraView: 1
@@ -15620,7 +15620,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &1256255846
 MonoBehaviour:
@@ -15633,7 +15633,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -15650,7 +15650,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &1256255848
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15662,7 +15662,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &1256255849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15674,7 +15674,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &1256255850
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15686,7 +15686,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &1256255851
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15698,7 +15698,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -15730,7 +15730,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -15804,7 +15804,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1256255854}
 --- !u!114 &1256255854
@@ -15818,7 +15818,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: turret-prey
   _maxHealth: 100
 --- !u!195 &1256255855
@@ -15970,7 +15970,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 4
   _maxHealth: 100
   _grounded: 1
@@ -16112,7 +16112,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -16249,7 +16249,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -16293,7 +16293,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 601191976}
   _activateAfterBake:
   - {fileID: 430039624}
@@ -16362,7 +16362,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 11
   _maxHealth: 100
   _grounded: 1
@@ -16628,7 +16628,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 1
   _maxHealth: 100
   _grounded: 0
@@ -16739,7 +16739,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bdbcc8c4f0ff0958697dcfb47c385e4f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.RuntimeNavMeshArea
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.RuntimeNavMeshArea
   _size: {x: 5, y: 8, z: 13.5}
   _agentTypeId: 0
   _activateAfterBuild:
@@ -16812,7 +16812,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 41
   _maxHealth: 100
   _grounded: 0
@@ -16957,7 +16957,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: MeleeDummy
   _maxHealth: 100
 --- !u!114 &1387540427
@@ -16971,7 +16971,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e25b7c3d80a41f6b4c9a1e03d6f8b72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.TargetDummy
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.TargetDummy
   _respawnDelay: 3
   _damageable: {fileID: 1387540426}
 --- !u!1 &1388266548
@@ -17017,7 +17017,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -17076,7 +17076,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -17138,7 +17138,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 6
   _maxHealth: 100
   _grounded: 0
@@ -17376,7 +17376,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -17550,7 +17550,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cccc861aa622695a574ee90227c9f019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ExplosiveProp
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ExplosiveProp
   _id: GasCan
   _maxHealth: 10
   _maxDamage: 120
@@ -17668,7 +17668,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e25b7c3d80a41f6b4c9a1e03d6f8b72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.TargetDummy
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.TargetDummy
   _respawnDelay: 5
   _damageable: {fileID: 1446966574}
 --- !u!114 &1446966572
@@ -17682,7 +17682,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7c5e5242908b96b72698f544e714c687, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BossStrafeMotion
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BossStrafeMotion
   _speed: 1.5
   _halfWidth: 3
 --- !u!114 &1446966573
@@ -17696,7 +17696,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f61db5cfb1dc3f1bb04d3ca8e54f7b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BossController
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BossController
   _phases:
   - _id: Guarded
     _healthFraction: 1
@@ -17722,7 +17722,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: RangeBoss
   _maxHealth: 300
 --- !u!4 &1446966575
@@ -17880,7 +17880,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 47ae30497776d4280d18fd484be962a5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BossWeakPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BossWeakPoint
   _id: Core
 --- !u!114 &1479694563
 MonoBehaviour:
@@ -17893,7 +17893,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 3
   _owner: {fileID: 1446966574}
 --- !u!23 &1479694564
@@ -18048,7 +18048,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -18110,7 +18110,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 7
   _maxHealth: 100
   _grounded: 0
@@ -18240,7 +18240,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 56
   _maxHealth: 100
   _grounded: 0
@@ -18416,7 +18416,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cccc861aa622695a574ee90227c9f019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ExplosiveProp
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ExplosiveProp
   _id: Barrel_B
   _maxHealth: 20
   _maxDamage: 150
@@ -18664,7 +18664,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 39
   _maxHealth: 100
   _grounded: 0
@@ -18794,7 +18794,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 12c39d73cc29babbfac082bb9432a73d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BulletShield
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BulletShield
   _loweredOffset: {x: 0, y: -0.6, z: -0.15}
   _loweredTiltDegrees: 70
 --- !u!23 &1565412390
@@ -19132,7 +19132,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1387540426}
 --- !u!23 &1619702332
@@ -19262,7 +19262,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 24
   _maxHealth: 100
   _grounded: 0
@@ -19407,7 +19407,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 1
   _owner: {fileID: 1446966574}
 --- !u!23 &1640300788
@@ -19690,7 +19690,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 57
   _maxHealth: 100
   _grounded: 0
@@ -19851,7 +19851,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 946eebf1d1e6555cfeeb6b3b910da0c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SuppressionReceiver
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SuppressionReceiver
   _rule: 1
   _id: SuppressionTarget
   _nearMissRadius: 1.5
@@ -20005,7 +20005,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 12
   _maxHealth: 100
   _grounded: 0
@@ -20182,7 +20182,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 48
   _maxHealth: 100
   _grounded: 0
@@ -20309,7 +20309,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 76171333}
   _activateAfterBake: []
   _agentTypeId: 0
@@ -20672,7 +20672,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 275a6865ce664da8f2250f6d9e011260, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Vehicle
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Vehicle
   _vehicleId: ParkedVehicle
   _maxHealth: 1000
   _enterRange: 2.5
@@ -21019,7 +21019,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -21194,7 +21194,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 26
   _maxHealth: 100
   _grounded: 0
@@ -21340,7 +21340,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 17
   _maxHealth: 100
   _grounded: 0
@@ -21482,7 +21482,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -21529,7 +21529,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: wood
 --- !u!23 &1751397873
 MeshRenderer:
@@ -21671,7 +21671,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 29
   _maxHealth: 100
   _grounded: 0
@@ -21835,7 +21835,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 2
   _owner: {fileID: 1888973590}
 --- !u!1 &1764650141
@@ -21992,7 +21992,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b08656254ee04697f23bad838c9ab7cd, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyBomber
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyBomber
   _signal: {fileID: 0}
   _signalPrefab: {fileID: 0}
   _blinkSeconds: 0.15
@@ -22007,7 +22007,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &1772904097
 MonoBehaviour:
@@ -22020,7 +22020,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -22037,7 +22037,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &1772904099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22049,7 +22049,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &1772904100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22061,7 +22061,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &1772904101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22073,7 +22073,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &1772904102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22085,7 +22085,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -22117,7 +22117,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -22191,7 +22191,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1772904105}
 --- !u!114 &1772904105
@@ -22205,7 +22205,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: Bomber
   _maxHealth: 60
 --- !u!195 &1772904106
@@ -22502,7 +22502,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &1799429053
 MonoBehaviour:
@@ -22515,7 +22515,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -22532,7 +22532,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &1799429055
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22544,7 +22544,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &1799429056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22556,7 +22556,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &1799429057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22568,7 +22568,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &1799429058
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22580,7 +22580,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -22612,7 +22612,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -22686,7 +22686,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1799429061}
 --- !u!114 &1799429061
@@ -22700,7 +22700,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: decoy-enemy
   _maxHealth: 100
 --- !u!195 &1799429062
@@ -22833,7 +22833,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 55328674c94e4e4f2438caf78c794d12, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.NavMeshBakeActivator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NavMeshBakeActivator
   _source: {fileID: 1800274463}
   _activateAfterBake:
   - {fileID: 1888973579}
@@ -22902,7 +22902,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 25
   _maxHealth: 100
   _grounded: 0
@@ -23044,7 +23044,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7687990767d458a4e306fc0059b2e019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.VehicleSeat
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.VehicleSeat
   _role: 2
   _pose: 1
   _cameraView: 0
@@ -23100,7 +23100,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 46
   _maxHealth: 100
   _grounded: 0
@@ -23246,7 +23246,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 34
   _maxHealth: 100
   _grounded: 0
@@ -23422,7 +23422,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44a5f2c1465d563575b91617195c7b80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceMaterial
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceMaterial
   _id: concrete
 --- !u!23 &1833544176
 MeshRenderer:
@@ -23545,7 +23545,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -23604,7 +23604,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7687990767d458a4e306fc0059b2e019, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.VehicleSeat
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.VehicleSeat
   _role: 0
   _pose: 0
   _cameraView: 0
@@ -23694,7 +23694,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 9
   _maxHealth: 100
   _grounded: 1
@@ -23948,7 +23948,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -24011,7 +24011,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 53
   _maxHealth: 100
   _grounded: 0
@@ -24152,7 +24152,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5a9695a591f29753a3881c9964a9dbe2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.StaggerReaction
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.StaggerReaction
   _flinchSeconds: 0.5
   _kneelSeconds: 1.5
   _stumbleSeconds: 1
@@ -24174,7 +24174,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7edba3fa95e850a87198123a4e54fa40, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAnimator
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAnimator
   _rigPrefab: {fileID: 0}
 --- !u!114 &1888973582
 MonoBehaviour:
@@ -24187,7 +24187,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53c19fbdc4d47ad87b267c34d9d6a5dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CharacterAudio
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CharacterAudio
   _catalog: {fileID: 0}
   _surfaceCatalog: {fileID: 0}
   _minDistance: 1.5
@@ -24204,7 +24204,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 295ea104cea990c06dee58cbe3c39a18, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.BloodPresenter
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BloodPresenter
 --- !u!114 &1888973584
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24216,7 +24216,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57c8215a5b0d1bbb3d3e6841885ea040, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DryFireSound
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DryFireSound
 --- !u!114 &1888973585
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24228,7 +24228,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ae7ea3693d244a7d147382480009f4d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ShellEjector
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ShellEjector
 --- !u!114 &1888973586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24240,7 +24240,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 678b4a51ae73fdcbd53a440d408b00d3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponPresentation
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponPresentation
 --- !u!114 &1888973587
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24252,7 +24252,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08a412316d1a3af83265ab00868fe10c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyStealth
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyStealth
   _fieldOfViewDegrees: 120
   _gainPerSecond: 1
   _fullGainDistance: 3
@@ -24284,7 +24284,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e91d4b07a6c3452f8d1b7e3c9a05f6b2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.EnemyAgent
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.EnemyAgent
   _shieldSettings:
     _approachSpeedMultiplier: 0.5
     _holdDistance: 1.2
@@ -24358,7 +24358,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 0
   _owner: {fileID: 1888973590}
 --- !u!114 &1888973590
@@ -24372,7 +24372,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e5a81f0c3b9d47a2865c0d4f19b7e2a8, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Damageable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Damageable
   _id: stagger-enemy
   _maxHealth: 1000
 --- !u!195 &1888973591
@@ -24573,7 +24573,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 14
   _maxHealth: 100
   _grounded: 0
@@ -24719,7 +24719,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 18
   _maxHealth: 100
   _grounded: 0
@@ -24865,7 +24865,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 45
   _maxHealth: 100
   _grounded: 0
@@ -25007,7 +25007,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e57de91493b4f6cee78b1bb755f880c6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.PickupSpawnPoint
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.PickupSpawnPoint
   _definition: {fileID: 0}
   _contents:
     _kind: 0
@@ -25070,7 +25070,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 6
   _maxHealth: 100
   _grounded: 1
@@ -25216,7 +25216,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 36
   _maxHealth: 100
   _grounded: 0
@@ -25361,7 +25361,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4d93c7f1b2e48e6905c3be8f7a1d264, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Hitbox
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Hitbox
   _zone: 1
   _owner: {fileID: 452688593}
 --- !u!23 &1937081741
@@ -25489,7 +25489,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 37
   _maxHealth: 100
   _grounded: 0
@@ -25949,7 +25949,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 47
   _maxHealth: 100
   _grounded: 0
@@ -26095,7 +26095,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 49
   _maxHealth: 100
   _grounded: 0
@@ -26273,7 +26273,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 59
   _maxHealth: 100
   _grounded: 0
@@ -26419,7 +26419,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 1
   _maxHealth: 100
   _grounded: 1
@@ -26612,7 +26612,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 61
   _maxHealth: 100
   _grounded: 0
@@ -26758,7 +26758,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 62
   _maxHealth: 100
   _grounded: 0
@@ -26905,7 +26905,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a4f73060dac5964427207212bac828ae, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CoopDoor
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CoopDoor
   _interactable: {fileID: 2111756824}
   _panel: {fileID: 1554273109}
   _openOffset: {x: 0, y: 3, z: 0}
@@ -26921,7 +26921,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 09ccf7710436b558a7ac5f1ca4ac46a5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CoopInteractable
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CoopInteractable
   _requiredCount: 2
   _holdSeconds: 3
   _resetOnInterrupt: 0
@@ -27168,7 +27168,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 2
   _maxHealth: 100
   _grounded: 1
@@ -27314,7 +27314,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 20
   _maxHealth: 100
   _grounded: 0
@@ -27460,7 +27460,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 55
   _maxHealth: 100
   _grounded: 0

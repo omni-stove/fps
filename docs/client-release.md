@@ -5,8 +5,8 @@
 Editor を閉じてから次を実行する。版は `--version` で渡すか、無ければ `git describe --tags --always --dirty` から決まる。
 
 ```sh
-make build                          # macOS → Builds/client-macos/fps.app
-make build windows                  # Windows → Builds/client-windows/fps.exe
+make build                          # macOS → Builds/client-macos/shooter.app
+make build windows                  # Windows → Builds/client-windows/shooter.exe
 make build windows ARGS="--version v0.2.0"
 ```
 
@@ -17,7 +17,7 @@ Windows 向けには Unity Hub で Windows Build Support (Mono) を、macOS 向�
 ## Release に添付する
 
 `v*` のタグを push すると `.github/workflows/client-release.yml` が Windows と macOS のクライアントをビルドし、
-`fps-<版>-windows.zip` と `fps-<版>-macos.zip` をそのタグの GitHub Release に添付する (版はタグから先頭の `v` を外したもの)。
+`shooter-<版>-windows.zip` と `shooter-<版>-macos.zip` をそのタグの GitHub Release に添付する (版はタグから先頭の `v` を外したもの)。
 専用サーバーのイメージ (`server-image.yml`) も同じタグで作られる。
 
 ```sh
@@ -45,4 +45,4 @@ git tag -d v0.0.0-test
 
 ## macOS の署名と公証
 
-macOS 版は署名も公証もしていない。遊ぶ人は `fps.app` を右クリックして「開く」で起動する (手順は `docs/client-readme.md`)。
+macOS 版は署名も公証もしていない。遊ぶ人は `shooter.app` を右クリックして「開く」で起動する (手順は `docs/client-readme.md`)。

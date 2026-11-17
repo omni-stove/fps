@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS 射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足すスライディングの手順。坂 (<see cref="SlideSlopeFixture"/>) の場所で次を確かめる。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// アクティブリロードの判定。リロードの進み (経過時間 / リロード時間) が判定の幅に入っていれば成功にする。

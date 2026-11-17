@@ -2,10 +2,10 @@ using System;
 using Epic.OnlineServices;
 using Epic.OnlineServices.Logging;
 using Epic.OnlineServices.Platform;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// プロセスに 1 つの EOS プラットフォームを作って持つ。認証情報はコミットせず、呼び出し側から受け取る。
@@ -13,7 +13,7 @@ namespace Fps.NetEos
     /// </summary>
     internal static class EosPlatform
     {
-        private const string _productName = "fps";
+        private const string _productName = "shooter";
 
         private static PlatformInterface _platform;
         private static ProductUserId _localUserId;

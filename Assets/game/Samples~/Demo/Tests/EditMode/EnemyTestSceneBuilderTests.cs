@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -12,7 +12,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class EnemyTestSceneBuilderTests
     {
@@ -70,7 +70,7 @@ namespace Fps.Tests.EditMode
             Physics.SyncTransforms();
 
             Assert.That(tower.name, Is.EqualTo(EnemyTestSceneBuilder.LadderTowerName));
-            Assert.That(tower.GetComponentInChildren<Fps.Runtime.Traversal.Ladder>(), Is.Not.Null);
+            Assert.That(tower.GetComponentInChildren<Shooter.Runtime.Traversal.Ladder>(), Is.Not.Null);
             Assert.DoesNotThrow(() => EnemyTestSceneBuilder.RequireLadderReachable(tower));
             Assert.Throws<InvalidOperationException>(
                 () => SceneBuildHelpers.RequireReachable(

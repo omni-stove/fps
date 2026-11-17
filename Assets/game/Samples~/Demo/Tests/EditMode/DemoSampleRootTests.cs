@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>サンプルが自分のフォルダ (<see cref="DemoSample.Root"/>) を出力先ルートの既定にし、ビルダーがその下に書くことを確かめる。</summary>
     public sealed class DemoSampleRootTests
@@ -19,9 +19,9 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            _hadPreference = EditorPrefs.HasKey(FpsKitRoot.PrefsKey);
-            _savedPreference = EditorPrefs.GetString(FpsKitRoot.PrefsKey, string.Empty);
-            EditorPrefs.DeleteKey(FpsKitRoot.PrefsKey);
+            _hadPreference = EditorPrefs.HasKey(ShooterKitRoot.PrefsKey);
+            _savedPreference = EditorPrefs.GetString(ShooterKitRoot.PrefsKey, string.Empty);
+            EditorPrefs.DeleteKey(ShooterKitRoot.PrefsKey);
         }
 
         [TearDown]
@@ -29,11 +29,11 @@ namespace Fps.Tests.EditMode
         {
             if (_hadPreference)
             {
-                EditorPrefs.SetString(FpsKitRoot.PrefsKey, _savedPreference);
+                EditorPrefs.SetString(ShooterKitRoot.PrefsKey, _savedPreference);
             }
             else
             {
-                EditorPrefs.DeleteKey(FpsKitRoot.PrefsKey);
+                EditorPrefs.DeleteKey(ShooterKitRoot.PrefsKey);
             }
         }
 
@@ -41,14 +41,14 @@ namespace Fps.Tests.EditMode
         public void TheSampleRootIsTheDefaultOutput()
         {
             Assert.That(Root, Is.Not.Null.And.StartsWith("Assets/"));
-            Assert.That(FpsKitRoot.DefaultOutput, Is.EqualTo(Root));
-            Assert.That(FpsKitRoot.Output, Is.EqualTo(Root));
+            Assert.That(ShooterKitRoot.DefaultOutput, Is.EqualTo(Root));
+            Assert.That(ShooterKitRoot.Output, Is.EqualTo(Root));
         }
 
-        [TestCase("Assets/Samples/FpsKitDemo/Scripts/Editor/Fps.Samples.Editor.asmdef", "Assets/Samples/FpsKitDemo")]
-        [TestCase("Assets/Samples/Shooter Kit/0.1.0/Demo Game/Scripts/Editor/Fps.Samples.Editor.asmdef", "Assets/Samples/Shooter Kit/0.1.0/Demo Game")]
-        [TestCase("Packages/com.omnistove.shooter-kit/Scripts/Editor/Fps.Samples.Editor.asmdef", null)]
-        [TestCase("Scripts/Editor/Fps.Samples.Editor.asmdef", null)]
+        [TestCase("Assets/Samples/ShooterKitDemo/Scripts/Editor/Shooter.Samples.Editor.asmdef", "Assets/Samples/ShooterKitDemo")]
+        [TestCase("Assets/Samples/Shooter Kit/0.1.0/Demo Game/Scripts/Editor/Shooter.Samples.Editor.asmdef", "Assets/Samples/Shooter Kit/0.1.0/Demo Game")]
+        [TestCase("Packages/com.omnistove.shooter-kit/Scripts/Editor/Shooter.Samples.Editor.asmdef", null)]
+        [TestCase("Scripts/Editor/Shooter.Samples.Editor.asmdef", null)]
         [TestCase(null, null)]
         public void RootOfIsTwoFoldersAboveTheAsmdef(string asmdefPath, string expected)
         {
@@ -123,18 +123,18 @@ namespace Fps.Tests.EditMode
         [Test]
         public void PreferenceMovesTheSamplePaths()
         {
-            FpsKitRoot.SetPreferredOutput("Assets/FpsKit/");
+            ShooterKitRoot.SetPreferredOutput("Assets/ShooterKit/");
 
-            Assert.That(FpsKitRoot.Output, Is.EqualTo("Assets/FpsKit"));
-            Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo("Assets/FpsKit/Weapons/Rifle.asset"));
-            Assert.That(GameRulesAssetBuilder.RangePath, Is.EqualTo("Assets/FpsKit/Rules/Range.asset"));
-            Assert.That(BuildSceneList.MainMenuScene, Is.EqualTo("Assets/FpsKit/Scenes/MainMenu.unity"));
-            Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo("Assets/FpsKit/Scenes/Campaign01/NavMesh-Level.asset"));
-            Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/FpsKit/Scenes/NetTest.unity"));
+            Assert.That(ShooterKitRoot.Output, Is.EqualTo("Assets/ShooterKit"));
+            Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo("Assets/ShooterKit/Weapons/Rifle.asset"));
+            Assert.That(GameRulesAssetBuilder.RangePath, Is.EqualTo("Assets/ShooterKit/Rules/Range.asset"));
+            Assert.That(BuildSceneList.MainMenuScene, Is.EqualTo("Assets/ShooterKit/Scenes/MainMenu.unity"));
+            Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo("Assets/ShooterKit/Scenes/Campaign01/NavMesh-Level.asset"));
+            Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/ShooterKit/Scenes/NetTest.unity"));
 
-            FpsKitRoot.ClearPreferredOutput();
+            ShooterKitRoot.ClearPreferredOutput();
 
-            Assert.That(FpsKitRoot.Output, Is.EqualTo(Root));
+            Assert.That(ShooterKitRoot.Output, Is.EqualTo(Root));
         }
     }
 }

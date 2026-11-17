@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 使った後にもう一度押すと出す効果 (例: 置いた C4 の起爆) を持つ能力。<see cref="IAbility"/> と一緒に実装する。

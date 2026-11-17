@@ -1,0 +1,29 @@
+{
+    "name": "Shooter.Tests.EditMode",
+    "rootNamespace": "Shooter.Tests.EditMode",
+    "references": [
+        "Shooter.Tests.Support",
+        "Shooter.Core",
+        "Shooter.Runtime",
+        "Shooter.Editor",
+        "Unity.InputSystem",
+        "Unity.AI.Navigation",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

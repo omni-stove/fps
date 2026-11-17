@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャンペーンのセーブと再開を受け持つ。

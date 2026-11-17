@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="SubtitleLines"/> の 1 行。音の合図の行か、誰かが話した行 (<see cref="IsSpeech"/>)。</summary>
     public readonly struct SubtitleLine

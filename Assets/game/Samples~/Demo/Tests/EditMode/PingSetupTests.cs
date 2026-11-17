@@ -1,14 +1,14 @@
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>印の取り付け (PingActionInstaller)、射撃場に置く物 (PingRangeFixture)、smoke の手順 (PingSmokeStep) が差し込み口から見つかることを確かめる。</summary>
     public sealed class PingSetupTests
@@ -37,14 +37,14 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(PlayerActions.Installers.OfType<PingActionInstaller>().Count(), Is.EqualTo(1));
 
-            PlayerActions.Attach(_player, GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Fps.Core.Ping.On)));
+            PlayerActions.Attach(_player, GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Shooter.Core.Ping.On)));
             var pinger = _player.GetComponent<PingController>();
             Assert.That(pinger, Is.Not.Null);
             Assert.That(pinger.UsesPing, Is.True);
 
             PlayerActions.Attach(_player, GameRules.Default);
             Assert.That(_player.GetComponents<PingController>(), Has.Length.EqualTo(1));
-            Assert.That(pinger.Rule, Is.EqualTo(Fps.Core.Ping.Off));
+            Assert.That(pinger.Rule, Is.EqualTo(Shooter.Core.Ping.Off));
             Assert.That(pinger.UsesPing, Is.False);
         }
 

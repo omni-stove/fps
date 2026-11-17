@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らないので、敵の判断は Brain.Tick に Perceive を渡して、銃手は Tick で手で進める。
     // 銃座は原点に +Z 向き (左右 -60〜60 度) で、座席は銃の 0.9m 後ろ。敵はその左に立ち、目標は銃の正面 15m に置く。

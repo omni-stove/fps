@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// Edit Mode では Start/Update/OnTrigger* が走らず、シーンも読み直せない。
@@ -50,7 +50,7 @@ namespace Fps.Tests.EditMode
                 new ObjectiveDefinition("extract", "", 1, false, "kill"),
             });
 
-            _root = Path.Combine(Path.GetTempPath(), "fps-campaign-tests-" + Guid.NewGuid().ToString("N"));
+            _root = Path.Combine(Path.GetTempPath(), "shooter-campaign-tests-" + Guid.NewGuid().ToString("N"));
             _storage = new FileSaveStorage(_root);
             _reloads = 0;
             CampaignLaunchSelection.Clear();

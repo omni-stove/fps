@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 弾倉やリロードは持たせない。タレットは置いた時点の弾の数を撃ち切るか、持続の秒数が過ぎたら消える。
     public sealed class TurretState

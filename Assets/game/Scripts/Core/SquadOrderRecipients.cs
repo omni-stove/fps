@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 分隊への指示を誰に出すかを決める。状態は持たず、同じ入力なら同じ相手を返す。

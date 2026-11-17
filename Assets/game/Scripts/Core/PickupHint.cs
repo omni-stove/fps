@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>Interact で拾うと何が起きるか (<see cref="PickupHint.Action"/>)。</summary>
     public enum PickupHintAction

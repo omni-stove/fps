@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// フリーフォーオールのシーン FreeForAll を組む。Runner は <see cref="FreeForAllRunner"/>、ルールは <see cref="GameRulesAssetBuilder.FreeForAllPath"/>。
     /// プレイヤー (陣営 0) と、それぞれ別の陣営 (1〜<see cref="BotCount"/>) の bot 1 体ずつが戦う。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.FreeForAllSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.FreeForAllSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 出現点は床の中央 (<see cref="ArenaCenter"/>) を囲む <see cref="SpawnPool"/> の 6 か所で、どれも中央を向く。全陣営がこの 6 か所を出現点に持ち、
@@ -21,7 +21,7 @@ namespace Fps.Editor
     {
         public static string ScenePathValue => BuildSceneList.FreeForAllScene;
         public static string RulesPathValue => GameRulesAssetBuilder.FreeForAllPath;
-        public const string MenuPath = "Fps/Build Free For All Scene";
+        public const string MenuPath = "Shooter/Build Free For All Scene";
 
         /// <summary>bot の数。それぞれが自分だけの陣営を持つ。</summary>
         public const int BotCount = 5;

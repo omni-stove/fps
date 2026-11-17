@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// <see cref="IMatchTransport"/> と分けるのは、相手の EOS の ProductUserId を確かめてつなぐ通信路 (EOS の P2P) だけが実装でき、

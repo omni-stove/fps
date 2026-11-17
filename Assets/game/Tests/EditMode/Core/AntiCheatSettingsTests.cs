@@ -1,18 +1,18 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class AntiCheatSettingsTests
     {
         private const string _serverId = "0123456789abcdef0123456789abcdef";
 
-        private static readonly string[] _noArgs = { "fps" };
-        private static readonly string[] _noEacArgs = { "fps", "-mode", "client", "-NoEac" };
-        private static readonly string[] _eacArgs = { "fps", "-eac" };
-        private static readonly string[] _bothArgs = { "fps", "-noeac", "-eac" };
-        private static readonly string[] _similarArgs = { "fps", "-noeacx", "--noeac", "noeac" };
+        private static readonly string[] _noArgs = { "shooter" };
+        private static readonly string[] _noEacArgs = { "shooter", "-mode", "client", "-NoEac" };
+        private static readonly string[] _eacArgs = { "shooter", "-eac" };
+        private static readonly string[] _bothArgs = { "shooter", "-noeac", "-eac" };
+        private static readonly string[] _similarArgs = { "shooter", "-noeacx", "--noeac", "noeac" };
 
         private static NetLaunchOptions Eos(NetLaunchMode mode)
         {

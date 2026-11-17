@@ -1,11 +1,11 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="UdpMatchTransport"/> の接続の調整値。</summary>
     public sealed class UdpTransportOptions
     {
-        public const string DefaultConnectionKey = "fps-match";
+        public const string DefaultConnectionKey = "shooter-match";
         public const int DefaultDisconnectTimeoutMilliseconds = 5000;
         public const int DefaultPingIntervalMilliseconds = 1000;
 

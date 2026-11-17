@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// モードの調整値のアセット (<see cref="Folder"/> の <c>&lt;モード名&gt;.asset</c>) を、シーンの生成スクリプトが Runner に配線するために用意する。
@@ -15,8 +15,8 @@ namespace Fps.Editor
     {
         public const string LogTag = "[ModeDefinitionAssets]";
 
-        /// <summary>モードの調整値のアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
-        public static string Folder => FpsKitRoot.OutputPath("Modes");
+        /// <summary>モードの調整値のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => ShooterKitRoot.OutputPath("Modes");
 
         /// <summary><see cref="Folder"/> の下の <c>&lt;modeName&gt;.asset</c>。</summary>
         public static string PathOf(string modeName)

@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>) を画面の左上に 1 項目 1 行で出すデバッグ表示。

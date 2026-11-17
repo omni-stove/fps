@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ExplosiveCharge.ApplyDamage"/> の 1 回で起きたこと。</summary>
     public enum ExplosiveChargeStep

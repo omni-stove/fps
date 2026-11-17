@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: cc5872734f7f86162dc40a4533ecfe10, type: 3}
   m_Name: HitFeedbackCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.HitFeedbackCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.HitFeedbackCatalog
   _sprays:
   - _zone: 1
     _effect: {fileID: 8143318550443136194, guid: 7655d931c49f94191bc51d2dbdf4cefa, type: 3}

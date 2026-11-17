@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ポーズ画面 (再開・設定・メニューに戻る)。<see cref="Hud"/> と同じ GameObject に <see cref="Hud.Create"/> が付け、

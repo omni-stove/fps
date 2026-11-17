@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="DropOnDeath.DecideDrops"/> に渡す、1 回倒れたときの情報。</summary>
     public readonly struct DropContext

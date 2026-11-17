@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足す伏せの手順。くぐり道 (<see cref="ProneCrawlwayFixture"/>) と組で使う。

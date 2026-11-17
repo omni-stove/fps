@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーが持つプレイヤー 1 人ぶんの武器。<see cref="Weapon"/> (弾倉・予備弾・リロード) に、撃てなかった理由

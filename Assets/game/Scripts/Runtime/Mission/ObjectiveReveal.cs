@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 目標が Active になったら、それまで非アクティブにしておいた <see cref="Targets"/> (増援の敵など) をアクティブにする。

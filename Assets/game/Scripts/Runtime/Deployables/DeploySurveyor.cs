@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 置けるかの決まりは Core (DeployPlacement) が持ち、ここは物理で調べた結果を渡すだけにする。決まりを Unity 抜きで確かめられるように。
     public static class DeploySurveyor

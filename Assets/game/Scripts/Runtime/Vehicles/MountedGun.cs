@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 乗り降り・撃ち方・耐久は乗り物の土台 (Vehicle・VehicleSeat・VehicleWeaponMount) をそのまま使い、ここは形の確かめ・前面の盾・敵が探す一覧だけを持つ。
     // 同じことを別に持つと、プレイヤーと敵とで乗り方や撃ち方の規則がずれるため。

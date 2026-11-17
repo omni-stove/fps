@@ -1,14 +1,14 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 using UnityEngine;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クライアントが EAC のパケットを .NET のサーバーと送受信する口。
     /// EAC の SDK の側 (<see cref="IAntiCheatClientSession"/>) は作り方 (<see cref="CreateSession"/>) を登録してもらう形にする。
-    /// EOS のプラグインに依存するアセンブリ (Fps.NetEos) を、このアセンブリが参照しないため。
+    /// EOS のプラグインに依存するアセンブリ (Shooter.NetEos) を、このアセンブリが参照しないため。
     /// </summary>
     public static class NetV2AntiCheat
     {

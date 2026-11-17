@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Scene と Inspector に置ける拾える物の中身。<see cref="ToSpec"/> で Core の <see cref="PickupSpec"/> にする。

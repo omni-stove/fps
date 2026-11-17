@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 建物1つ分の部品の並び。部品ごとの最大耐久値・地面に接しているか・隣接 (無向) を持つ。

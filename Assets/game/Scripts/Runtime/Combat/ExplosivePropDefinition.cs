@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆発する置き物 (<see cref="ExplosiveProp"/>) 1 種類の値 (耐久・ダメージ・半径・建造物への被害・連鎖の遅れ・燃え方) をアセットとして持つ。
     /// <see cref="ToSpec"/> で <see cref="ExplosivePropSpec"/> に変換する。新しく作ったときの値は <see cref="ExplosivePropSpec"/> の既定値と同じ。
     /// <see cref="ExplosiveProp"/> に配線すると、置き物は Inspector の値の代わりにこれを読む。同じアセットを入れた置き物は、アセットを変えればまとめて変わる。
     /// </summary>
-    [CreateAssetMenu(fileName = "ExplosiveProp", menuName = "Fps/Explosive Prop")]
+    [CreateAssetMenu(fileName = "ExplosiveProp", menuName = "Shooter/Explosive Prop")]
     public sealed class ExplosivePropDefinition : ScriptableObject
     {
         [SerializeField, Min(1), Tooltip("耐久。被害でこれが 0 になると爆発する (燃えるなら燃え始める)")]

@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 対戦のメッセージの <see cref="IMessage.Id"/>。送る向きと種類ごとに範囲を分け、後から足しても既存の Id を動かさない。

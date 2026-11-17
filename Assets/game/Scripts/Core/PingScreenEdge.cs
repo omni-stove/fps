@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>画面の外の印を、画面のどの端に寄せて出すか。</summary>
     public enum PingScreenEdge

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガーディアンの <c>[Mode]</c> のログ (<see cref="GuardianRespawn"/> のリーダーの生死)。

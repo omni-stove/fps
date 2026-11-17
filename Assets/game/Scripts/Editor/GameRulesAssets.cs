@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ルールのアセット (<see cref="GameRulesDefinition"/>) に値を入れ、読み直して確かめる。
@@ -11,8 +11,8 @@ namespace Fps.Editor
     /// </summary>
     public static class GameRulesAssets
     {
-        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
-        public static string Folder => FpsKitRoot.OutputPath("Rules");
+        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => ShooterKitRoot.OutputPath("Rules");
 
         /// <summary>path の <see cref="GameRulesDefinition"/> を読み、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめて返す。</summary>
         /// <exception cref="InvalidOperationException">path にルールが無い。</exception>

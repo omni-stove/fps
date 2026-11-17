@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="WeaponController"/> が決めた射撃の始点と向きを、Raycast の前に書き換える (<see cref="WeaponController.ShotFilter"/>)。

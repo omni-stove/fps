@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="MenuTransition"/> がすること。</summary>
     public enum MenuTransitionKind

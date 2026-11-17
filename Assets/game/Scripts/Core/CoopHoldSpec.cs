@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 何人で何秒押し続けると済むか (<see cref="CoopHold"/>) の設定。生成時に値を検査し、以後は変わらない。

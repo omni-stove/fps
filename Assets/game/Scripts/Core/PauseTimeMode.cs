@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ポーズ画面を開いている間に、ゲームの時間をどうするか。</summary>
     public enum PauseTimeMode

@@ -1,11 +1,11 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 最後に被弾してから <see cref="RegenDelaySeconds"/> たつと、<see cref="Health"/> を 1 秒あたり
     /// <see cref="RegenPerSecond"/> ずつ回復させる。<see cref="Health"/> は整数なので、1 未満の端数は内部にためて
-    /// 整数になった分だけ <see cref="Fps.Core.Health.Heal"/> する。
+    /// 整数になった分だけ <see cref="Shooter.Core.Health.Heal"/> する。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">

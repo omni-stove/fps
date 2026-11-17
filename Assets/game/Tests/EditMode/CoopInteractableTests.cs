@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// Edit Mode では Start/Update/OnTrigger* が走らず入力も読まないので、Bot の口 (BeginHold/EndHold) と Tick を直接呼んで確かめる。

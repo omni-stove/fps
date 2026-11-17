@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="TimeScaleArbitration"/> が受けている時間の速さの要求 1 つ。</summary>
     public readonly struct TimeScaleRequest

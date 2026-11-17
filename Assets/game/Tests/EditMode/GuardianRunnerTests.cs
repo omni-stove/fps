@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="GuardianRunner"/> がリーダーの頭上に目印を出し、リーダーが倒れたチームを戻さず、状態 (ModeStatus) に両リーダーの生死を載せることを確かめる。

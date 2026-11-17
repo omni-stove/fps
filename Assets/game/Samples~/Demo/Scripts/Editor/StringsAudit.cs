@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class StringsAudit : IReplacementAuditCheck
     {

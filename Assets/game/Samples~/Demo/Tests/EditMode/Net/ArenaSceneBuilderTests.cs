@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     /// <summary>
     /// <see cref="ArenaSceneBuilder"/> の配置の値と、空のシーンへの組み立て。保存も NavMesh の焼き込みもしない。
@@ -18,7 +18,7 @@ namespace Fps.Net.Tests
     public sealed class ArenaSceneBuilderTests
     {
         private const float Epsilon = 1e-4f;
-        private const string BaseScenePath = "Temp/FpsTestBase.unity";
+        private const string BaseScenePath = "Temp/ShooterTestBase.unity";
 
         private Scene _scene;
         private readonly List<GameObject> _created = new List<GameObject>();
@@ -377,7 +377,7 @@ namespace Fps.Net.Tests
             return go;
         }
 
-        /// <summary>Fps.Tests.EditMode の TestScenes.NewAdditive と同じ。保存されていない Untitled があると Additive の NewScene は例外を投げる。</summary>
+        /// <summary>Shooter.Tests.EditMode の TestScenes.NewAdditive と同じ。保存されていない Untitled があると Additive の NewScene は例外を投げる。</summary>
         private static Scene NewAdditiveScene()
         {
             for (var i = 0; i < SceneManager.sceneCount; i++)

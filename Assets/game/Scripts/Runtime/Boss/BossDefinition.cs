@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ボス 1 体分の調整値 (段階の閾値・動きの倍率・出す弱点、部位の倍率、左右の往復の速さと幅) をアセットとして持つ。
     /// <see cref="BossController.Definition"/> に配線すると、BossController と同じ GameObject の <see cref="BossStrafeMotion"/> は
     /// Inspector の値の代わりにこれを読む。新しく作ったときの値は BossController・BossStrafeMotion の既定値と同じ。
     /// </summary>
-    [CreateAssetMenu(fileName = "Boss", menuName = "Fps/Boss")]
+    [CreateAssetMenu(fileName = "Boss", menuName = "Shooter/Boss")]
     public sealed class BossDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("段階。上から順に進む。最初の段階は始めから入っている")]

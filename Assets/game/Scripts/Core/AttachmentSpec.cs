@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 重さは持ち物のマスに置いたときと武器に付けたときで同じにするため、ここには持たずアイテムの重さ (ItemSpec.Weight) を使う
     public sealed class AttachmentSpec

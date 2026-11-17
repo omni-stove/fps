@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// チームデスマッチの書式役 (<see cref="TeamDeathmatchHudFormatter"/>) と、その土台 (<see cref="ModeHudFormatterBase"/>) が

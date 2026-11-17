@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="TeamPalette"/> の 1 色。赤・緑・青を 0〜1 で持つ (不透明)。Core は UnityEngine を参照しないので、Unity の Color には使う側で直す。

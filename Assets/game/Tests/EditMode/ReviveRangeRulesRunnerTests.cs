@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// オフラインの BattleRoyaleRunner と ExecutionRunner が、ダウンした味方を起こせる距離をルールの reviveRange から読むことを確かめる。

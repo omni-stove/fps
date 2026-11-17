@@ -1,9 +1,9 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using ZiplineLine = Fps.Runtime.Traversal.Zipline;
+using ZiplineLine = Shooter.Runtime.Traversal.Zipline;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 射撃場の左寄り (x = -20) を手前から奥へ下る線。手前の足場に坂で上がり、足場に立ったまま掴まれる高さに始点を置く。
     // 乗り越えの壁 (x = -12..-8) と開けた場所 (右手前) には重ねない。崖のぼりの段 (x = -22..-14, z = -10..-8) より奥 (z > -8) に

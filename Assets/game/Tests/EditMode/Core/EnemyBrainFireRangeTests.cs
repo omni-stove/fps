@@ -2,9 +2,9 @@ using System;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class EnemyBrainFireRangeTests
     {
         // 視認 20m、攻撃 10m、撃ち始める距離 18m、反応 0.5 秒、向きの許容 15 度。

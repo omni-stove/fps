@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="HostileSelector"/> に渡す、狙う相手の候補 1 人分。</summary>
     public readonly struct HostileCandidate

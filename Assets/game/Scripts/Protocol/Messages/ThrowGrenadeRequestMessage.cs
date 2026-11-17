@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>持ち主がグレネードを投げる要求。投げてよいか (持っている数・間隔) はサーバーが決める。</summary>
     public sealed class ThrowGrenadeRequestMessage : IMessage

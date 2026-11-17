@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DeployTurret", menuName = "Fps/Abilities/Deploy Turret")]
+    [CreateAssetMenu(fileName = "DeployTurret", menuName = "Shooter/Abilities/Deploy Turret")]
     public sealed class TurretDeployDefinition : DeployAbilityDefinition
     {
         public const string BaseName = "Base";

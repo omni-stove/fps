@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>部品 1 つの親のローカル座標での位置と向き。</summary>
     public readonly struct MockPartPose : IEquatable<MockPartPose>

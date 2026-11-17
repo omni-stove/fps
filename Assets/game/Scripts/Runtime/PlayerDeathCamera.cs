@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインのプレイヤー (<see cref="GameBootstrap"/> が作る) が倒されてから戻るまで (モードのリスポーン・キャンペーンの読み直し) のカメラ。

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// フリーフォーオール (<see cref="FreeForAllMode"/>) をシーンで進める。参加者 (<see cref="SideMember"/>) は 1 人ずつ別の陣営にすること

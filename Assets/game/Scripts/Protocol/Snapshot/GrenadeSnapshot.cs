@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 投げられて飛んでいるグレネード 1 個。Netcode では NetGrenade の NetworkObject を Spawn し、NetworkTransform で位置と回転を配っていた。

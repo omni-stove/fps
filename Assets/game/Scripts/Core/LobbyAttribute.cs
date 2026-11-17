@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ロビーに付ける公開の属性 1 つ。値は文字列か整数で、検索で比べられる。SDK の型には依存しない。

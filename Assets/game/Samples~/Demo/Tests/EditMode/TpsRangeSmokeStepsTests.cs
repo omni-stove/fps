@@ -1,8 +1,8 @@
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>smoke の足された手順 (<see cref="TpsRangeSmokeRun.ExtraSteps"/>) が決まりを守っていることを確かめる。</summary>
     public sealed class TpsRangeSmokeStepsTests

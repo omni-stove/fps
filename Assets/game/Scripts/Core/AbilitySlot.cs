@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 能力 1 枠の回数と時間。使うと回数を 1 つ減らして待ち時間を始め、効果が出るまでの秒数 (<see cref="AbilitySpec.WindupSeconds"/>) の後に効果を出す。

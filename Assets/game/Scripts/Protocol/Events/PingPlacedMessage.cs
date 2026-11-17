@@ -1,7 +1,7 @@
 using System.Numerics;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>印を見せる相手 (付けた人の味方) に送る、新しい印。</summary>
     public sealed class PingPlacedMessage : IMessage

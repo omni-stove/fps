@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦の自分のプレイヤーの視点と入力。視点は <see cref="FirstPersonLook"/> が本体の yaw と目の pitch を回し、

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// PvE の波で敵を出す。波の進め方は <see cref="WaveSchedule"/> に任せ、ここでは出してよい数 (<see cref="WaveSchedule.SpawnBudget"/>)

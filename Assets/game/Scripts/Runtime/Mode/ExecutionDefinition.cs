@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) の勝つラウンド数・準備の秒数・ラウンドの時間・とどめの秒数と距離をアセットとして持つ。
     /// 新しく作ったときの値は <see cref="ExecutionRunner"/> の既定値と同じ。味方を起こせる距離と秒数はルール (<see cref="ActionRules"/>) にあるので持たない。
     /// <see cref="ExecutionRunner.Definition"/> に配線するか入口 (<see cref="GameContent.Execution"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "Execution", menuName = "Fps/Modes/Execution")]
+    [CreateAssetMenu(fileName = "Execution", menuName = "Shooter/Modes/Execution")]
     public sealed class ExecutionDefinition : ScriptableObject
     {
         [SerializeField, Min(1), Tooltip("試合に勝つのに要るラウンドの勝ち数")]

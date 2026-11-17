@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// よろめきの調整値 (<see cref="StaggerTuning"/>) を JSON から読む。最上位は <see cref="PlayerItem"/> と <see cref="EnemyItem"/> のオブジェクトで、

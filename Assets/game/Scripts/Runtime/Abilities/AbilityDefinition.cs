@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 能力 1 つの定義。回数と時間 (<see cref="ToSpec"/> で <see cref="AbilitySpec"/> に) と、振る舞い (<see cref="CreateAbility"/>) を持つ。

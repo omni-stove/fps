@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 武器が予備弾を自分では数えず、持ち物などの外から出し入れするときの受け皿
     public interface IAmmoPool

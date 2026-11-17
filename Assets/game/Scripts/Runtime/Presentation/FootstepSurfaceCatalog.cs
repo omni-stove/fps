@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 床の材質 (<see cref="SurfaceMaterial.Id"/>) ごとの足音と着地音のクリップの組。<see cref="CharacterAudio"/> が足元の材質で引く。
     /// Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読む (<see cref="PresentationCatalog"/> の規約)。
     /// 引き方は <see cref="CollectClips"/>: 材質の組 → <see cref="SurfaceMaterial.DefaultId"/> の組 → <see cref="PresentationCatalog"/> の
     /// 足音・着地音の順に、クリップが 1 つでもある最初のものを使う。カタログが無くても従来の足音で鳴る。
-    /// 中身は Fps.Editor.FootstepSurfaceAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
+    /// 中身は Shooter.Editor.FootstepSurfaceAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
-    [CreateAssetMenu(fileName = "FootstepSurfaceCatalog", menuName = "Fps/Footstep Surface Catalog")]
+    [CreateAssetMenu(fileName = "FootstepSurfaceCatalog", menuName = "Shooter/Footstep Surface Catalog")]
     public sealed class FootstepSurfaceCatalog : ScriptableObject
     {
         /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す名前。</summary>

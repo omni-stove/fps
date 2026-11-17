@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 文字の大きさと色は Hud.uss に任せ、ゲームが見た目を差し替えられるようにする。
     [DisallowMultipleComponent]

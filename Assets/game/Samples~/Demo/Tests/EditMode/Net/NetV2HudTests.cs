@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.NetV2;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.NetV2;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     /// <summary>
     /// <see cref="NetV2Hud"/> が届いたスナップショットを自分の HudModel と GameSignals に出し、既定の HUD がそれを前と同じに出すこと。

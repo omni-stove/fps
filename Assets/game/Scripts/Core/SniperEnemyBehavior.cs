@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 狙う → 撃つ → 位置を変える、を回す。撃てたかは武器の連射間隔や弾切れで決まるので、Firing のまま Runtime の ConfirmShot を待つ。
     // 追ったり捜したりして足場を降りないよう、種類が Sniper の間は移動を常に上書きする。

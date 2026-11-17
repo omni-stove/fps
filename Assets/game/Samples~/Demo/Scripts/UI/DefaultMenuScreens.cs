@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ポーズ (<see cref="PauseMenu"/>)・ロードアウトの選択 (<see cref="LoadoutSelectView"/>)・メニューとの行き来 (<see cref="MenuNavigator"/>) を、

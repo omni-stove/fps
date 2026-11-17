@@ -1,9 +1,9 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場にスライディング (<see cref="SlideMovement"/>) を試す場所を置く。左端の外寄り (x = -36..-32) に、+Z の端が高く -Z の端が床に着く坂 (<see cref="RampName"/>) と、

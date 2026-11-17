@@ -1,28 +1,28 @@
 using System;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ネット対戦の既定のマップ NetTest と、試合の設定 (<see cref="NetMatchDefinition"/>、<see cref="MatchDefinitionPath"/>) を生成し、
     /// シーンをビルド設定に加える。.NET のサーバーは書き出し (MapCollisionExporter・ServerRulesExporter) を読み、
     /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。何度実行しても同じ結果になる。batchmode では
-    /// <c>-batchmode -quit -projectPath . -executeMethod Fps.Editor.NetSceneBuilder.Build</c> で呼ぶ。
+    /// <c>-batchmode -quit -projectPath . -executeMethod Shooter.Editor.NetSceneBuilder.Build</c> で呼ぶ。
     /// </summary>
     public static class NetSceneBuilder
     {
         /// <summary>試合の設定。ServerRulesExporter がルールのアセットごとに server-data/rules に書き出す。</summary>
-        public static string MatchDefinitionPath => FpsKitRoot.OutputPath("Rules/NetMatch.asset");
+        public static string MatchDefinitionPath => ShooterKitRoot.OutputPath("Rules/NetMatch.asset");
 
         /// <summary>
-        /// 生成して保存するシーン。出力先ルート (<see cref="FpsKitRoot.Output"/>) の下の <see cref="BuildSceneList.NetTestScene"/>。
+        /// 生成して保存するシーン。出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下の <see cref="BuildSceneList.NetTestScene"/>。
         /// </summary>
         public static string ScenePath => BuildSceneList.NetTestScene;
 
@@ -82,7 +82,7 @@ namespace Fps.Editor
             ("Control Point A", new Vector3(0f, GroundY, 0f), 0),
         };
 
-        [MenuItem("Fps/Net/Build NetTest Scene")]
+        [MenuItem("Shooter/Net/Build NetTest Scene")]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

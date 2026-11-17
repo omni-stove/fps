@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器とルールのアセットとキャンペーンのミッション (<see cref="CampaignSceneBuilder.Missions"/>) を生成し直し、セーブを消してから、
@@ -23,7 +23,7 @@ namespace Fps.Editor
     /// </list>
     /// すべてのミッションで満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
     /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.CampaignSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.CampaignSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
     /// セーブ無しから始めるため、この Editor の <c>Application.persistentDataPath</c> にある各ミッションのスロット
@@ -59,12 +59,12 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.CampaignSmokeRun.Active";
-        private const string SecondsKey = "Fps.CampaignSmokeRun.Seconds";
-        private const string RequestedAtKey = "Fps.CampaignSmokeRun.RequestedAt";
-        private const string MissionIndexKey = "Fps.CampaignSmokeRun.MissionIndex";
-        private const string PhaseKey = "Fps.CampaignSmokeRun.Phase";
-        private const string ProblemsKey = "Fps.CampaignSmokeRun.Problems";
+        private const string ActiveKey = "Shooter.CampaignSmokeRun.Active";
+        private const string SecondsKey = "Shooter.CampaignSmokeRun.Seconds";
+        private const string RequestedAtKey = "Shooter.CampaignSmokeRun.RequestedAt";
+        private const string MissionIndexKey = "Shooter.CampaignSmokeRun.MissionIndex";
+        private const string PhaseKey = "Shooter.CampaignSmokeRun.Phase";
+        private const string ProblemsKey = "Shooter.CampaignSmokeRun.Problems";
 
         /// <summary>SessionState の問題の区切り。問題の文に改行は入れない。</summary>
         private const char ProblemSeparator = '\n';

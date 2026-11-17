@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     public sealed class SprayFlame : MonoBehaviour

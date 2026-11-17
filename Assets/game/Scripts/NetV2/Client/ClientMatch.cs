@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 承認された後の試合の見え方。自分は入力を Core の移動で予測し (<see cref="OwnerPrediction"/>)、届いたスナップショットの

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     public sealed class ClientVehicles
     {

@@ -1,12 +1,12 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class LoadoutPreferenceStoreTests
     {
@@ -19,7 +19,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             // 本物の選択 (DefaultKey) を壊さないよう、テストごとに別のキーを使う。
-            _store = new LoadoutPreferenceStore("Fps.Tests.LoadoutChoice." + Guid.NewGuid().ToString("N"));
+            _store = new LoadoutPreferenceStore("Shooter.Tests.LoadoutChoice." + Guid.NewGuid().ToString("N"));
         }
 
         [TearDown]
@@ -32,7 +32,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void UsesItsOwnKey()
         {
-            Assert.That(LoadoutPreferenceStore.DefaultKey, Is.EqualTo("Fps.LoadoutChoice"));
+            Assert.That(LoadoutPreferenceStore.DefaultKey, Is.EqualTo("Shooter.LoadoutChoice"));
             Assert.That(new LoadoutPreferenceStore().Key, Is.EqualTo(LoadoutPreferenceStore.DefaultKey));
             Assert.Throws<ArgumentNullException>(() => new LoadoutPreferenceStore(null));
             Assert.Throws<ArgumentException>(() => new LoadoutPreferenceStore(string.Empty));

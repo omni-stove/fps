@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PacketReassembler.Read"/> の結果。</summary>
     public enum PacketReadResult

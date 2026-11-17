@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 弾薬箱の近くで出す案内の中身 (<see cref="InteractHint.Detail"/>)。補給できる武器があるか (<see cref="HasRoom"/>) と、

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 怯みの手順 (StaggerSmokeStep) の敵を使い、怯んでいない敵にはふつうの近接、脚を撃って怯ませた敵には処刑技が出ることを確かめる。
     // batchmode には入力が無いので、近接の入力の代わりに MeleeController.TryMelee を、脚を撃つ代わりに脚の当たり判定への直接の当たりを使う。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 操作を手放す口。乗り物の座席などが「今はこの人が動かす」と <see cref="Claim"/> している間、これを見る部品

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// フリーフォーオール (<see cref="FreeForAllMode"/>) の制限時間・勝利に必要な点・リスポーン・キル 1 回の点をアセットとして持つ。
@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// <see cref="FreeForAllRunner.Definition"/> に配線するか入口 (<see cref="GameContent.FreeForAll"/>) に置くと、
     /// <see cref="FreeForAllRunner"/> と <see cref="MatchRunner"/> は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "FreeForAll", menuName = "Fps/Modes/Free For All")]
+    [CreateAssetMenu(fileName = "FreeForAll", menuName = "Shooter/Modes/Free For All")]
     public sealed class FreeForAllDefinition : ScriptableObject
     {
         [SerializeField, Min(1f), Tooltip("制限時間 (秒)")]

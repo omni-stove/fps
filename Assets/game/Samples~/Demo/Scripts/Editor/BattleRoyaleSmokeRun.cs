@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器とルールのアセットとバトルロイヤルのシーン (<see cref="BattleRoyaleSceneBuilder"/>) を生成し直して Play Mode に入り、
@@ -20,7 +20,7 @@ namespace Fps.Editor
     /// </list>
     /// Play 中にエラー・例外・Assert のログが出たら失敗にする。最後に勝った分隊を書いた行を出し、すべて成り立てば終了コード 0、そうでなければ 1 で終わる。
     /// <see cref="SmokeSuite"/> には入れていない (試合が数分かかるので)。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.BattleRoyaleSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.BattleRoyaleSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
     /// batchmode には入力が無いので、プレイヤーは出現点に立ったまま (エリアに追われて倒れる) で、戦うのは bot だけになる。
@@ -57,9 +57,9 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.BattleRoyaleSmokeRun.Active";
-        private const string ScheduleSecondsKey = "Fps.BattleRoyaleSmokeRun.ScheduleSeconds";
-        private const string RequestedAtKey = "Fps.BattleRoyaleSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.BattleRoyaleSmokeRun.Active";
+        private const string ScheduleSecondsKey = "Shooter.BattleRoyaleSmokeRun.ScheduleSeconds";
+        private const string RequestedAtKey = "Shooter.BattleRoyaleSmokeRun.RequestedAt";
 
         private static readonly string _collectSuffix = " kind=" + BotErrandKind.Collect + " ";
         private static readonly string _errandPrefix = BattleRoyaleLog.Tag + " errand ";

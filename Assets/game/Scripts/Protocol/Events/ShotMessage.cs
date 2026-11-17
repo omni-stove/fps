@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
 using System.Numerics;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// サーバーが確定した 1 発。撃った人の近くにいるクライアントへ送り、弾道・着弾の演出を出させる。

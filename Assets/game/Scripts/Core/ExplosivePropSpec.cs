@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆発する置き物 (樽・ガソリン缶など) 1 種類の値。耐久・爆発の威力と半径 (<see cref="Explosion"/>)・建造物への被害・

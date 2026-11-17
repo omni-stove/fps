@@ -1,12 +1,12 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="MotorSettings"/> の落下ダメージ・回避・乗り越え・崖のぼり・伏せの値が、<see cref="MotorSpec"/>・<see cref="ProneSpec"/>・

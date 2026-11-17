@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// チームデスマッチのルール。Alpha と Bravo の 2 チームでキル数を競い、どちらかが ScoreLimit に届くか

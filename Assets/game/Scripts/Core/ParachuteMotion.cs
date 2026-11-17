@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// パラシュート (<see cref="Parachute.On"/>) で降りる動き。開けるか (<see cref="Evaluate"/>) と、開いている間の速度 (<see cref="Step"/>) を決める。

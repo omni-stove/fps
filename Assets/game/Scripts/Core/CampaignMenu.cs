@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>キャンペーンのメニューに並べる 1 ミッション。</summary>
     public sealed class CampaignMenuMission
@@ -164,7 +164,7 @@ namespace Fps.Core
     /// 「最初から」は確認 (<see cref="IsConfirmingRestart"/>) を挟む。
     /// 選べる項目 (<see cref="Items"/>) を上から並べ、ゲームパッドの上下でフォーカス (<see cref="FocusIndex"/>) を動かす。
     /// ミッションの行にフォーカスを移すとそのミッションを選び、難易度の行では左右で難易度を替える。
-    /// 画面に出すのは Fps.Runtime の CampaignSelectPanel。
+    /// 画面に出すのは Shooter.Runtime の CampaignSelectPanel。
     /// </summary>
     public sealed class CampaignMenu
     {

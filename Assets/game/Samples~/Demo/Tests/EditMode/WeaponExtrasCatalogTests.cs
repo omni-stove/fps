@@ -1,11 +1,11 @@
 using System.Linq;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="WeaponExtrasCatalog"/> の引き方と検査、仮素材を作る <see cref="WeaponExtrasAssetStep"/> の組み合わせを確かめる。

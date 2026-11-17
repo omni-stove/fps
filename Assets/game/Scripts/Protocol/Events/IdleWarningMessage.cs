@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 入力が無い持ち主に、切られるまでの残りを知らせる。入力が戻れば <see cref="Active"/> を false にして警告を消させる。

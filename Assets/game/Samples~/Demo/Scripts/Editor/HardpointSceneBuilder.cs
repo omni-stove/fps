@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ハードポイントのシーン Hardpoint を組む。<see cref="ModeSceneBuilder"/> の既定の地形・出現点・bot (プレイヤーの陣営 0 に bot 2 体、陣営 1 に 3 体) に、
     /// 拠点 (<see cref="ControlPointZone"/>) を <see cref="Points"/> の 4 つ置き、<see cref="HardpointRunner"/> に配線する。
     /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>、秒数や得点は <see cref="DefinitionPath"/> (無ければ既定値で作る)。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
     /// 満たさなければシーンを保存せずに例外を投げる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HardpointSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.HardpointSceneBuilder.Build</code>
     /// </summary>
     public sealed class HardpointSceneBuilder : ModeSceneBuilder
     {
@@ -21,7 +21,7 @@ namespace Fps.Editor
 
         /// <summary>Runner に配線する調整値のアセット (<see cref="HardpointDefinition"/>)。</summary>
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.HardpointName);
-        public const string MenuPath = "Fps/Build Hardpoint Scene";
+        public const string MenuPath = "Shooter/Build Hardpoint Scene";
 
         public const string PointsRootName = "ControlPoints";
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // Unity 抜きのサーバーはシーンの乗り物を読めないので、設定 (VehicleSpec) に置き方・座席の位置・車体の形・座席の武器を添えて持つ。
     public sealed class MapVehicle

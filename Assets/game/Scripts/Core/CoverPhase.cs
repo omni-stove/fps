@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>カバーの状態 (<see cref="CoverState.Phase"/>)。</summary>
     public enum CoverPhase

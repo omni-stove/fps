@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 敵に見せるのは DecoyPerception (敵ごとの IPerceptionContributor) の役目で、ここは置いた物として呼び続けて時間で消えることだけを持つ。
     // 撃たれて壊れるのは置ける物の土台 (Deployable) が受け持つ。

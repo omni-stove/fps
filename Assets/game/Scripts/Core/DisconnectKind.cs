@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>クライアントがサーバーとの接続を失った理由の分け方。<see cref="DisconnectNotice.Classify"/> が決める。</summary>
     public enum DisconnectKind

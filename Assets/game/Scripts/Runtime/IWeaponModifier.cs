@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // FireBlocker (Func) と違い複数を並べて登録できるので、近接・伏せ・制圧などがそれぞれ 1 つずつ足しても互いに上書きしない。
     public interface IWeaponModifier

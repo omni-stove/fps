@@ -1,4 +1,4 @@
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     public enum NavLinkKind : byte
     {

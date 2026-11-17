@@ -1,12 +1,12 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class FileSaveStorageTests
     {
@@ -17,7 +17,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             // まだ無いディレクトリを渡し、最初の書き込みで作られることも確かめる。
-            _root = Path.Combine(Path.GetTempPath(), "fps-save-tests-" + Guid.NewGuid().ToString("N"), "saves");
+            _root = Path.Combine(Path.GetTempPath(), "shooter-save-tests-" + Guid.NewGuid().ToString("N"), "saves");
             _storage = new FileSaveStorage(_root);
         }
 

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -10,7 +10,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// キャンペーンのミッション (<see cref="Missions"/>: Campaign01 と <see cref="Campaign02Mission"/>) のシーンとミッション定義を生成する。
@@ -23,7 +23,7 @@ namespace Fps.Editor
     /// (先に <see cref="GameRulesAssetBuilder.Build"/> を走らせておく)。
     /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。何度実行しても同じ結果になる。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.CampaignSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CampaignSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// Campaign01 は 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、
@@ -45,15 +45,15 @@ namespace Fps.Editor
     public static class CampaignSceneBuilder
     {
         public static string ScenePath => BuildSceneList.CampaignScene;
-        public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
+        public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
         /// <summary>キャンペーンの焼いた NavMesh のファイル名。</summary>
         public const string NavMeshDataFileName = "NavMesh-Level.asset";
 
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
-        public static string NavMeshDataPath => FpsKitRoot.OutputPath("Scenes/" + MissionId + "/" + NavMeshDataFileName);
+        public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MissionId + "/" + NavMeshDataFileName);
 
-        public const string MenuPath = "Fps/Build Campaign Scenes";
+        public const string MenuPath = "Shooter/Build Campaign Scenes";
         public const string LogTag = "[CampaignSceneBuilder]";
 
         /// <summary>Campaign01 のミッション Id。定義 (<see cref="DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>

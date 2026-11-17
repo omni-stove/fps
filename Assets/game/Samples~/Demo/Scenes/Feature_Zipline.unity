@@ -147,7 +147,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 421fe5d9b44deb02ff38f9ac9d44946e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.Traversal.Zipline
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.Traversal.Zipline
   _start: {x: -20, y: 5.6, z: -5}
   _end: {x: -20, y: 2.6, z: 16}
   _minSpeed: 4
@@ -203,7 +203,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7e3b9a41c6d24f08b5a2d91f0c84e7a3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.MatchRunner
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MatchRunner
 --- !u!114 &506861731
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4274ea70c4be6440bbfef1d376b2b5f0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameBootstrap
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameBootstrap
   _createFloor: 0
   _weaponDefinitions:
   - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}

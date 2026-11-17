@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// GunGameLadderDefinition の制限時間・リスポーンの秒数の既定と、不正な値でモードを作れないことを確かめる。

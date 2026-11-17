@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ホードで通貨を払って防衛物を直す・置こうとした結果 (<see cref="Horde.CheckPurchase"/>)。</summary>
     public enum HordePurchaseVerdict

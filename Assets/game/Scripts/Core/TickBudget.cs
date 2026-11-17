@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーの 1 tick にかかった時間 (ミリ秒) を集め、平均・最大・p95 を出して予算 (<see cref="AverageBudgetMs"/>・<see cref="MaxBudgetMs"/>) と比べる。

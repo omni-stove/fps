@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>ロードアウトを選ぶ画面の開閉の様子。ゲーム進行は <see cref="GameUi.IsLoadoutSelectOpen"/> から読む。</summary>
     public interface ILoadoutSelect

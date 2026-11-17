@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ラグ補償用に、エンティティ ID ごとの位置としゃがみの履歴を持つ。

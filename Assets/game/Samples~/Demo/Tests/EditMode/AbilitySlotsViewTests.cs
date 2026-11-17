@@ -1,10 +1,10 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// HUD (<see cref="AbilitySlotsView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の能力の枠 (<see cref="AbilityHost"/>) の回数と待ち時間を出し、

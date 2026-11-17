@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 敵が隠れに行く遮蔽点の印。この GameObject の位置が隠れるときに立つ足元、前 (+Z) が壁へ向かう向き
@@ -52,11 +52,11 @@ namespace Fps.Runtime
         /// 判断に渡す遮蔽点を作る。position は足元 (NavMesh に寄せた位置などを渡せる)。
         /// 向きに水平の成分が無い (真上・真下を向いている) か座標が有限でなければ false を返し、error に理由を入れる。
         /// </summary>
-        public bool TryToCore(Vector3 position, out Fps.Core.CoverPoint point, out string error)
+        public bool TryToCore(Vector3 position, out Shooter.Core.CoverPoint point, out string error)
         {
             try
             {
-                point = new Fps.Core.CoverPoint(position.ToNumerics(), Facing.ToNumerics(), _height);
+                point = new Shooter.Core.CoverPoint(position.ToNumerics(), Facing.ToNumerics(), _height);
                 error = null;
                 return true;
             }

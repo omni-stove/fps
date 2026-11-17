@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>開いていたパラシュートを閉じた理由。</summary>
     public enum ParachuteCloseReason

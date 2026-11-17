@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 試合の進行は文を作らず、何をどう出すかは UI が決めるので、再生の値だけを持つ。
     public readonly struct KillCamStatus : IEquatable<KillCamStatus>

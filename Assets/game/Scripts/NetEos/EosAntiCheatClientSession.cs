@@ -1,10 +1,10 @@
 using System;
 using Epic.OnlineServices;
 using Epic.OnlineServices.AntiCheatClient;
-using Fps.NetV2;
+using Shooter.NetV2;
 using UnityEngine;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// クライアントの EAC を、Anti-Cheat Client の ClientServer モードで動かす。
@@ -109,7 +109,7 @@ namespace Fps.NetEos
                 var result = _client.EndSession(ref options);
                 if (result != Result.Success)
                 {
-                    Debug.LogWarning(Fps.Core.AntiCheatSettings.LogTag + " EndSession failed: " + result);
+                    Debug.LogWarning(Shooter.Core.AntiCheatSettings.LogTag + " EndSession failed: " + result);
                 }
             }
 

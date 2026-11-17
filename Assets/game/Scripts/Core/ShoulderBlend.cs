@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 三人称のカメラを右肩と左肩の間で入れ替えるときの補間。目標の肩 (<see cref="Target"/>) と、そこへの進み具合

@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ViewmodelMotion))]
@@ -439,7 +439,7 @@ namespace Fps.Runtime
             _warnedMissingCatalog = true;
             Debug.LogWarning(
                 $"{LogTag} no ViewmodelCatalog at Resources/{ViewmodelCatalog.ResourcePath}; first-person viewmodels are off. "
-                + "Run Fps/Build All Presentation Assets (Fps.Editor.PresentationAssetSteps.BuildAll)",
+                + "Run Shooter/Build All Presentation Assets (Shooter.Editor.PresentationAssetSteps.BuildAll)",
                 this);
         }
 

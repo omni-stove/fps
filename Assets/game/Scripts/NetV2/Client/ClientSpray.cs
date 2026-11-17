@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 火炎 (<see cref="RoundDelivery.Spray"/>) の見た目。当たりと燃焼はサーバーが決めるので、ここでは見せるだけ。

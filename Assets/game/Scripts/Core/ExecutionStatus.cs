@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// エクスキューションの Runner が <see cref="ModeStatus.Detail"/> に入れる、エクスキューション固有の状態。

@@ -6,10 +6,10 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using Fps.Core;
 using LiteNetLib;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// LiteNetLib の UDP で <see cref="IMatchTransport"/> を実装する。送受信と再送・ping は LiteNetLib のスレッドが行い、

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 敵の知覚 (<see cref="EnemyPerception"/>) をシーンから組み立てる。判断は <see cref="EnemyBrain"/> が行い、

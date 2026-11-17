@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ロビー 1 つの、ある時点の状態。ID はどれも EOS が返す文字列のまま持ち、SDK の型には依存しない。

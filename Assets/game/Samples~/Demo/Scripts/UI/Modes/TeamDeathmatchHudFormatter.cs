@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// チームデスマッチ (<see cref="TeamDeathmatchRunner"/>) の HUD の書式役。<see cref="ModeStatus.Detail"/> がそのまま <see cref="ModeSession"/> のモードに使い、

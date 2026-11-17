@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ゲームが差し替える入口のアセット (<see cref="GameContent"/>) を作り、空の欄をプロジェクトのアセットで埋める。
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameContentAssets.Create [-gameContent Assets/MyGame/Resources/FpsKit/GameContent.asset]</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameContentAssets.Create [-gameContent Assets/MyGame/Resources/ShooterKit/GameContent.asset]</code>
     /// </summary>
     public static class GameContentAssets
     {
-        public const string MenuPath = "Fps/Create Game Content";
+        public const string MenuPath = "Shooter/Create Game Content";
         public const string LogTag = "[GameContentAssets]";
         public const string ArgumentName = "-gameContent";
         public const string FileName = "GameContent.asset";
@@ -54,8 +54,8 @@ namespace Fps.Editor
             new Slot("CameraShake", typeof(CameraShakeSettings), c => c.CameraShake, (c, v) => c.CameraShake = (CameraShakeSettings)v),
         };
 
-        /// <summary>出力先ルート (<see cref="FpsKitRoot.Output"/>) の <c>Resources/FpsKit/GameContent.asset</c>。</summary>
-        public static string DefaultPath => FpsKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);
+        /// <summary>出力先ルート (<see cref="ShooterKitRoot.Output"/>) の <c>Resources/ShooterKit/GameContent.asset</c>。</summary>
+        public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);
 
         /// <summary>
         /// <see cref="ArgumentName"/> のパス (無ければ <see cref="DefaultPath"/>) に入口を作るか、既にあれば空の欄だけを埋める。
@@ -87,7 +87,7 @@ namespace Fps.Editor
 
                 if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1].StartsWith("-", StringComparison.Ordinal))
                 {
-                    throw new ArgumentException($"{ArgumentName} needs an asset path such as Assets/MyGame/Resources/FpsKit/{FileName}");
+                    throw new ArgumentException($"{ArgumentName} needs an asset path such as Assets/MyGame/Resources/ShooterKit/{FileName}");
                 }
 
                 found = args[i + 1];

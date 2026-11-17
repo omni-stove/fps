@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroy"/>) の調整値をアセットとして持つ。<see cref="ToSpec"/> で <see cref="SearchAndDestroySpec"/> に変換する。
     /// 設置地点の数はシーンが決めるので持たない。新しく作ったときの値は <see cref="SearchAndDestroySpec"/> の既定値と同じ。
     /// <see cref="SearchAndDestroyRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "SearchAndDestroy", menuName = "Fps/Modes/Search And Destroy")]
+    [CreateAssetMenu(fileName = "SearchAndDestroy", menuName = "Shooter/Modes/Search And Destroy")]
     public sealed class SearchAndDestroyDefinition : ScriptableObject
     {
         [SerializeField, Min(1f), Tooltip("1 ラウンドの制限時間 (秒)。設置すると止まる")]

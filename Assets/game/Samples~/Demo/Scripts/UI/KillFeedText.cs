@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルフィードの行に出す文。言葉の入る印と武器の欄は表のキー <c>hud.killFeed.*</c> の <see cref="LocalizedText"/> で返し、

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="IWinCondition"/> が調べた結果。決着がついたか、ついたなら勝った陣営 (引き分けなら null)。</summary>
     public readonly struct ModeOutcome

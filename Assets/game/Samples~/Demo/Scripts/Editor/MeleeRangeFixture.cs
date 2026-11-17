@@ -1,9 +1,9 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 殴る的。敵 (MeleeEnemyRangeFixture) の視界 (EnemySpec.DefaultSightRange) の外に置き、的を殴っている間に撃たれないようにする。
     public sealed class MeleeRangeFixture : ITpsRangeFixture

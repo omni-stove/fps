@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>爆破 (<see cref="SearchAndDestroy"/>) の爆弾の状態。</summary>
     public enum BombState

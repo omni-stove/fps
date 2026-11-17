@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャンペーンのセーブのスロット名。ミッションごとに <see cref="Prefix"/> + ミッション Id のスロットに置く。

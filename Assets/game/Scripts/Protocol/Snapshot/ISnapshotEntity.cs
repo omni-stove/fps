@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// スナップショットに並ぶ 1 つの物。中身をいくつかの部分 (ビット) に分け、前のスナップショットの同じ <see cref="EntityId"/> の物から

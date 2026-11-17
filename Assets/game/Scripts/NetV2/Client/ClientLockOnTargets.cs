@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     // ネット対戦の相手は、最新のスナップショットで生きている自分以外のプレイヤー。狙う点は画面に出している (補間した) 姿の体の中ほどにし、
     // サーバーも撃った人が見ていた tick の体の中ほどで確かめる (ServerLockOn)。

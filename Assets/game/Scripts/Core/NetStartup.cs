@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 起動したプロセスが画面を持つかの判断をまとめる。Unity の Dedicated Server ターゲット (<c>UNITY_SERVER</c>) でビルドされたときは、

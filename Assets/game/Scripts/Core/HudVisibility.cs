@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// HUD の各項目を出すか。<see cref="For"/> で <see cref="HudDensity"/> から決める。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// Unity 抜きのサーバーが <c>-rules &lt;名前&gt;</c> で読む、1 つの試合のルールのファイル (<c>server-data/rules/&lt;名前&gt;.json</c>)。

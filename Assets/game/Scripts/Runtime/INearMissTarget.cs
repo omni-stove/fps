@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 全キャラクターを毎発探さず登録したものだけ調べるのは、ルールが Off の (誰も登録しない) ときに弾ごとの手間を 0 にするため。
     public interface INearMissTarget

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 相手を何で持つか (Unity の当たり・ネット対戦のプレイヤー) は場所で違うので、集め方を外から渡す。
     public interface ILockOnTargets

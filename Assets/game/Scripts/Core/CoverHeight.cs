@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>カバーにした壁の高さの区分。</summary>
     public enum CoverHeight

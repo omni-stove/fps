@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 並びはシーンの階層順で、スナップショットと要求は乗り物をこの並びの番号で指す。サーバーとクライアントが同じ番号で数えられるようにするため。
     public sealed class NetMapVehicles

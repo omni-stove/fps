@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器のアセット (<see cref="WeaponDefinition"/>・<see cref="WeaponCatalogAsset"/>・<see cref="LoadoutDefinition"/>) に値を入れ、読み直して確かめる。
@@ -14,8 +14,8 @@ namespace Fps.Editor
     {
         public const string CatalogFileName = "WeaponCatalog.asset";
 
-        /// <summary>武器のアセットを置く、出力先ルート (<see cref="FpsKitRoot.Output"/>) の下のフォルダ。</summary>
-        public static string Folder => FpsKitRoot.OutputPath("Weapons");
+        /// <summary>武器のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
+        public static string Folder => ShooterKitRoot.OutputPath("Weapons");
 
         /// <summary><see cref="Folder"/> の下の武器の一覧 (<see cref="CatalogFileName"/>)。</summary>
         public static string CatalogPath => Folder + "/" + CatalogFileName;

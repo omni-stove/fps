@@ -1,20 +1,20 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
-using ZiplineLine = Fps.Runtime.Traversal.Zipline;
-using ZiplineRule = Fps.Core.Zipline;
+using ZiplineLine = Shooter.Runtime.Traversal.Zipline;
+using ZiplineRule = Shooter.Core.Zipline;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class ZiplineMovementTests
     {

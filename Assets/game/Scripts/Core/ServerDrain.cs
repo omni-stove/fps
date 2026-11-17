@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 専用サーバーが終了を求められてから (SIGTERM など) 止まるまでの「止まる準備中」(drain) を決める。

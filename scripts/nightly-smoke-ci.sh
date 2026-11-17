@@ -26,7 +26,7 @@ trap 'rm -rf "$license_dir"' EXIT
 	printf '%s' "$UNITY_LICENSE" | tr -d '\r' >"$license_dir/Unity_lic.ulf"
 )
 
-echo "nightly-smoke-ci: running Fps.Editor.SmokeSuite.RunAll with $image"
+echo "nightly-smoke-ci: running Shooter.Editor.SmokeSuite.RunAll with $image"
 status=0
 docker run --rm \
 	--workdir /project \
@@ -35,7 +35,7 @@ docker run --rm \
 	"$image" \
 	unity-editor -batchmode \
 	-projectPath /project \
-	-executeMethod Fps.Editor.SmokeSuite.RunAll \
+	-executeMethod Shooter.Editor.SmokeSuite.RunAll \
 	-logFile /dev/stdout || status=$?
 
 # コンテナの root が書いた Library などを、後の actions/cache が読み書きできるようにする

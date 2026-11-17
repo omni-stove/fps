@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 座席の入力を受け取って、乗り物の動き方や武器に使うもの。<see cref="Vehicle.AddInputSink"/> で登録すると、

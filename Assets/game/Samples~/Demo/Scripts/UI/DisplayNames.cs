@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // データは表示名をキーの文字列でしか持たない (キットは言語を扱わない) ので、キーを文にするのはここに寄せる。
     // キーが空なら Id をそのまま出し、足したばかりの武器などでも名前の欄が空にならないようにする。

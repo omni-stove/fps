@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     // 既定値 (default) を乗っていないことにするため、番号に 1 を足して持つ。
     public struct VehicleSeatSync

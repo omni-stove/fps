@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒した相手の倒す直前の数秒。

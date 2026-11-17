@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾で壊せる建物。子孫の <see cref="DestructiblePiece"/> を部品として、耐久値と崩落の判断は <see cref="StructureIntegrity"/> に任せる。

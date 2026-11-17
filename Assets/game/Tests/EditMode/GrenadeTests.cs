@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// グレネードを投げる (<see cref="GrenadeThrower"/>) ことと、爆発 (<see cref="ThrownGrenade.Explode"/>) が半径内の

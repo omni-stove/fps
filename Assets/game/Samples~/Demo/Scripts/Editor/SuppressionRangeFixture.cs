@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 敵 (EnemyAgent) ではなく受け皿だけの的にするのは、射撃場に NavMesh が無く、敵を置くと NavMesh の外にいるエラーで smoke が落ちるため。
     public sealed class SuppressionRangeFixture : ITpsRangeFixture

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="VaultProbe.Evaluate"/> が乗り越えられるか、<see cref="VaultProbe.EvaluateMantle"/> がよじ登れるかを決めた結果。

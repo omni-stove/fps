@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの対戦マップの出現地点と拠点 (<c>server-data/maps/&lt;マップ&gt;.points.json</c>)。Unity 抜きのサーバーはシーンを読めないので、

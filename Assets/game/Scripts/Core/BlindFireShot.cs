@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 遮蔽物に隠れたまま撃つブラインドファイアの、弾の始点と向き。座標は Y が上、左右は壁に向いたときの左右 (<see cref="CoverProbe.RightAlong"/>)。

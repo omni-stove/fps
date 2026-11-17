@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 陣営を持つ bot が狙う相手を選ぶ。自分と違う陣営で生きている候補のうち、いちばん近いものを選ぶ。

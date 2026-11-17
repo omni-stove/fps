@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// キルコンファームド (<see cref="Fps.Core.KillConfirmed"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
+    /// キルコンファームド (<see cref="Shooter.Core.KillConfirmed"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
     /// 倒しただけでは点が入らず、倒れた人の落としたタグ (<see cref="Pickup"/>) を敵が拾えば確定 (<see cref="KillConfirmedSpec.PointsPerConfirm"/> 点)、味方が拾えば阻止 (0 点) になる。
     /// </summary>
     /// <remarks>
@@ -14,14 +14,14 @@ namespace Fps.Runtime
     /// <item>始めたときに全参加者の <see cref="DropOnDeath"/> の <see cref="DropOnDeath.DecideDrops"/> にタグを足すフックを掛ける。
     /// DropOnDeath の無い参加者 (実行時に作られるプレイヤーなど) には、タグだけを落とす DropOnDeath を付ける。
     /// 前から掛かっていたフックは先に呼び、止めるときに戻す。</item>
-    /// <item>落ちたタグは <see cref="Fps.Core.KillConfirmed.DropTag"/> に登録し、<see cref="Pickup.Collected"/> を
-    /// <see cref="Fps.Core.KillConfirmed.Collect"/> に渡す。消えるまでの秒数は Core が数え、消えたら Pickup を壊す
+    /// <item>落ちたタグは <see cref="Shooter.Core.KillConfirmed.DropTag"/> に登録し、<see cref="Pickup.Collected"/> を
+    /// <see cref="Shooter.Core.KillConfirmed.Collect"/> に渡す。消えるまでの秒数は Core が数え、消えたら Pickup を壊す
     /// (Pickup 自身の <see cref="Pickup.LifetimeSeconds"/> は 0 にする)。</item>
     /// <item>参加者でない者に拾われたタグは、点も阻止も数えずに無くす。</item>
     /// <item>出現点に戻した参加者は、残っているタグの範囲から出たことにする (倒れた場所のタグの範囲に入ったまま数えられ、
     /// 戻った瞬間に遠くから自分のタグを拾ってしまわないように)。</item>
     /// <item>試合が終わったら残ったタグの Pickup を壊す。</item>
-    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Fps.Core.KillConfirmed"/> を入れる
+    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Shooter.Core.KillConfirmed"/> を入れる
     /// (得点は確定数)。タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
     /// </list>
     /// </remarks>

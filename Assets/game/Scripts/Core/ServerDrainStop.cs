@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ServerDrain"/> が止まると決めた理由。</summary>
     public enum ServerDrainStop

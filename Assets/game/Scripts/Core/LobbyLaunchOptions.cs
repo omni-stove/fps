@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ロビーを使った起動の設定。コマンドライン引数 <c>-lobby quickmatch</c> から作る。つなぐサーバーはロビーで決まるので、

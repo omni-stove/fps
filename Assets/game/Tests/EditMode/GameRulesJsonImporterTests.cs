@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="GameRulesJsonImporter"/> を一時フォルダに走らせて、書いた JSON がそのルールの値になることと、
@@ -94,7 +94,7 @@ namespace Fps.Tests.EditMode
                 .WithParachute(Parachute.On)
                 .WithStealth(Stealth.On)
                 .WithSuppression(Suppression.On)
-                .WithPing(Fps.Core.Ping.On)
+                .WithPing(Shooter.Core.Ping.On)
                 .WithAbilities(Abilities.On)
                 .WithSlowMotion(SlowMotion.On));
             var path = WriteJson("Actions.json", GameRulesJson.Write(rules));

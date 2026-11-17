@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // TuningJson に並べず分けるのは、近接の調整値を読む側 (MeleeActionInstaller) だけがこの形を知ればよいようにするため。
     public static class MeleeJson

@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary><see cref="GameRules"/> と <see cref="ActionRules"/> の With 系メソッドが 1 項目だけを差し替えた複製を返すことを確かめる。</summary>
     public sealed class RulesWithTests

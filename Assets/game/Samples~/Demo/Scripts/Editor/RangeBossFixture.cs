@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // ボスの受け口 (BossController) を射撃場で試すための仮のボス。個々のボスの作りではなく、
     // 弱点以外が効きにくいこと・体力の半分で段階が進み弱点が出て速くなることを目で確かめるためだけの中身。
@@ -60,7 +60,7 @@ namespace Fps.Editor
         }
 
         /// <summary>ボスの調整値 (<see cref="BossDefinition"/>) のアセット。無ければ下の定数で作り、あれば値を変えずに配線する。</summary>
-        public static string DefaultDefinitionPath => FpsKitRoot.OutputPath("Bosses") + "/" + FixtureName + ".asset";
+        public static string DefaultDefinitionPath => ShooterKitRoot.OutputPath("Bosses") + "/" + FixtureName + ".asset";
 
         public string DefinitionPath => _definitionPath;
 

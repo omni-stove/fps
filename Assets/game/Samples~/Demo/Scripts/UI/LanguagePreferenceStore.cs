@@ -1,12 +1,12 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 操作設定 (ControlSettings) と別のキーにするのは、言語は game 側の UI の設定で、キットの操作設定は言語を持たないため
     public sealed class LanguagePreferenceStore
     {
-        public const string DefaultKey = "Fps.Language";
+        public const string DefaultKey = "Shooter.Language";
 
         private readonly GameLanguage? _defaultLanguage;
 

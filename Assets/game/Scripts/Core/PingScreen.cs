@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 印をカメラから見た画面のどこに出すかを決める。画面の中ならその位置に、外 (後ろも含む) なら画面の中心から印の方へ伸ばした線が

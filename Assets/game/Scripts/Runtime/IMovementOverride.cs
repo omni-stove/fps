@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerController"/> の通常の移動 (<see cref="PlayerMotor"/>) を横取りする動き (スライディング・はしご・乗り物の座席など)。

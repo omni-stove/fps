@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーへ送った確かめの便 (番号付き) のうち、<see cref="TimeoutSeconds"/> 以内に返事が来なかった割合 (パケットロス) を数える。

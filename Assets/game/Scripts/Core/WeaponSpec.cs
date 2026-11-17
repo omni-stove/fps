@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 武器 1 種類の不変な設定。生成時に値を検査し、不正なら例外を投げる。

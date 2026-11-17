@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 度合いの計算と遮蔽点の判断は Unity 抜きで回せる Core のテスト (SuppressionMeterTests・SuppressedCoverBehaviorTests) に置き、ここは部品のつなぎだけを見る。
     public sealed class SuppressionTests

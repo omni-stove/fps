@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 部位の倍率を Hitbox の HitZone に寄せないのは、エンジンや燃料のような部位が乗り物ごとに違い、決まった種類に収まらないため。
     [DisallowMultipleComponent]

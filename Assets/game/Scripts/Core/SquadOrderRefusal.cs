@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>分隊への指示を出さなかった理由。</summary>
     public enum SquadOrderRefusal

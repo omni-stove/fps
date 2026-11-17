@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 調整値をコンストラクターで受けるのは、ゲームが別の値で作ったものを PlayerActions.Register すれば、同じ型の組み込みと入れ替わるため。
     // 敵への取り付けもここで行うのは、オフラインでルールが決まる口がプレイヤーの取り付け (GameBootstrap・CampaignRunner) しか無いため。

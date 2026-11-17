@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
+using Shooter.Core;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     // 失敗したら make export-server-data で書き出し直し、server-data/maps をコミットする
     public sealed class ServerDataMapsTests
@@ -83,7 +83,7 @@ namespace Fps.Net.Tests
         {
             using (var stream = new MemoryStream())
             {
-                FpsMapFile.Write(stream, map);
+                ShooterMapFile.Write(stream, map);
                 return stream.ToArray();
             }
         }

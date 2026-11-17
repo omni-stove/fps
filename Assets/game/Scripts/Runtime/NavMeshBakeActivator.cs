@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 床を実行時に作るシーン (GameBootstrap) では焼いた NavMesh を保存できないので、置いた足場から Play 中に焼き、
     // 焼き終えてから敵を有効にする。先に有効にすると NavMeshAgent が NavMesh に乗れずエラーになる。
-    // Fps.Runtime は AI Navigation パッケージを参照しないので、NavMeshSurface ではなくエンジンの NavMeshBuilder で焼く。
+    // Shooter.Runtime は AI Navigation パッケージを参照しないので、NavMeshSurface ではなくエンジンの NavMeshBuilder で焼く。
     [DisallowMultipleComponent]
     public sealed class NavMeshBakeActivator : MonoBehaviour
     {

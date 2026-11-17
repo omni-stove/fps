@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャンペーンの敵の判断。毎 tick 知覚を受け取り、どこへ動き・どこを向き・撃つかを決める。

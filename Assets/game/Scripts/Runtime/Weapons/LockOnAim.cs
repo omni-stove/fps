@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using NVector3 = System.Numerics.Vector3;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public sealed class LockOnAim : MonoBehaviour
     {

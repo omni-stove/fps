@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 試合の陣営。0 以上の整数の ID で区別する。2 チームのモードでは 0 が <see cref="Team.Alpha"/>、1 が <see cref="Team.Bravo"/> にあたる。

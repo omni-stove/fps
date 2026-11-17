@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クイックマッチがサーバーのロビーを探すのに使う、ロビーのサービス (EOS の Connect と Lobby インターフェース) の口。
-    /// Fps.NetV2.Client は EOS の SDK を参照しないので、実装は <c>Fps.NetEos.EosLobbyBackend</c> にあり、
+    /// Shooter.NetV2.Client は EOS の SDK を参照しないので、実装は <c>Shooter.NetEos.EosLobbyBackend</c> にあり、
     /// <see cref="QuickMatchSearch"/> に渡す。
     /// </summary>
     /// <remarks>

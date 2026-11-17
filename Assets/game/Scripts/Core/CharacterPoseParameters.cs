@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 人型のリグの Animator に渡すパラメーターの値。<see cref="CharacterPose.Evaluate"/> が作る。

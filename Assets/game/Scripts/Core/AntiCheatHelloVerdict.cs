@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>相手の Hello を受け取ったときにすること (<see cref="AntiCheatPeers.ReceiveHello"/>)。</summary>
     public enum AntiCheatHelloVerdict

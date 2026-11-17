@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>プレイヤーのダウンの状態 (Netcode の <c>NetDownedState</c> の中身)。HUD に出す丸めた値で送る。</summary>
     public struct DownedSync

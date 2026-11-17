@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="ControlSettings"/> が持つ数値の設定。値はすべて整数で、範囲は <see cref="ControlSettings.RangeOf"/> が決める。

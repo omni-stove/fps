@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 音の合図の字幕の書き方。「[種類 向き]」で、向きが分からなければ「[種類]」、遠ければ末尾に「遠く」を足す。

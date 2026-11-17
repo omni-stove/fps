@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 段階の計算は BossPhases に任せ、ここは体力を読んで渡し、返ってきた段階を判断・速さ・弱点・イベントへ当てはめるだけにする。
     // 個々のボスの動きは持たない。動きは段階の EnemySpec と IEnemyBehavior、または MoveSpeedMultiplier を読む側が作る。

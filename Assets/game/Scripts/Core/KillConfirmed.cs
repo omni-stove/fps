@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルコンファームドのルール。Alpha と Bravo の 2 チームで戦い、倒しただけでは点が入らない。倒れた人はタグを落とし

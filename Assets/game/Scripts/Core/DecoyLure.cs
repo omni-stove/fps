@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 敵の目標そのものは替えず、知覚の Target だけを囮に差し替える。囮は陣営の参加者ではないので、陣営やタグで選ぶ目標の候補に入れると
     // モードの勝ち負けや選び直しの間隔に巻き込まれる。

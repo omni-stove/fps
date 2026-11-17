@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
-# Unity を使わない専用サーバー (dotnet/Fps.Server) を入れるイメージ。コンテキストはリポジトリのルートで、送るものは Dockerfile.dockerignore で絞る:
-#   docker buildx build --platform linux/amd64,linux/arm64 -f docker/server/Dockerfile -t fps-server:local .
+# Unity を使わない専用サーバー (dotnet/Shooter.Server) を入れるイメージ。コンテキストはリポジトリのルートで、送るものは Dockerfile.dockerignore で絞る:
+#   docker buildx build --platform linux/amd64,linux/arm64 -f docker/server/Dockerfile -t shooter-server:local .
 # EOS を使うなら先に make eos-sdk で dotnet/ThirdParty/EOSSDK に SDK を置く。起動の仕方と環境変数は docs/dedicated-server.md を参照。
 
 # エミュレーションで SDK を動かすと何倍も遅いので、コンパイルはビルドするマシンのアーキテクチャで行い、-r で相手のアーキテクチャ向けに出す
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG TARGETARCH
-ARG FPS_BUILD_VERSION=
+ARG SHOOTER_BUILD_VERSION=
 WORKDIR /src
 # EOS の SDK のソースをアナライザの対象から外す設定がここにあり、無いと警告がエラーになってビルドが通らない
 COPY .editorconfig ./
@@ -18,8 +18,8 @@ RUN case "$TARGETARCH" in \
       arm64) rid=linux-arm64 ;; \
       *) echo "unsupported TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
     esac \
-    && dotnet publish dotnet/Fps.Server/Fps.Server.csproj -c Release -r "$rid" --self-contained \
-      -p:FpsBuildVersion="$FPS_BUILD_VERSION" -p:DebugType=none \
+    && dotnet publish dotnet/Shooter.Server/Shooter.Server.csproj -c Release -r "$rid" --self-contained \
+      -p:ShooterBuildVersion="$SHOOTER_BUILD_VERSION" -p:DebugType=none \
       -p:PublishDocumentationFile=false -p:PublishReferencesDocumentationFiles=false -o /out
 # SDK を入れたときは、その配布の条件をライブラリと一緒に配る
 RUN for notice in license.txt ThirdPartySoftwareNotice.txt; do \
@@ -35,16 +35,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Unity のサーバーのイメージと uid を揃え、どちらのイメージに替えても同じ権限の設定 (ボリュームや securityContext) で動くようにする
-RUN useradd --system --uid 10001 --user-group --create-home --home-dir /home/fps --shell /usr/sbin/nologin fps
+RUN useradd --system --uid 10001 --user-group --create-home --home-dir /home/shooter --shell /usr/sbin/nologin shooter
 
-WORKDIR /opt/fps-server
+WORKDIR /opt/shooter-server
 
 # サーバーの実行ファイルとデータは root の持ち物のままにし、実行するユーザーからは書き換えられないようにする
 COPY --from=build /out/ ./
 COPY server-data/ server-data/
 
-ENV FPS_SERVER_ADDRESS=0.0.0.0 \
-    FPS_SERVER_PORT=7777
+ENV SHOOTER_SERVER_ADDRESS=0.0.0.0 \
+    SHOOTER_SERVER_PORT=7777
 
 EXPOSE 7777/udp
 
@@ -53,7 +53,7 @@ EXPOSE 7777/udp
 # docker stop -t 700 / docker run --stop-timeout 700 / compose の stop_grace_period: 700s を指定する (docs/dedicated-server.md)
 STOPSIGNAL SIGTERM
 
-USER fps:fps
+USER shooter:shooter
 
-# Unity のイメージと違って入り口のスクリプトを挟まないのは、サーバー自身が FPS_SERVER_ADDRESS / FPS_SERVER_PORT を読むため
-ENTRYPOINT ["/usr/bin/tini", "--", "/opt/fps-server/fps-server"]
+# Unity のイメージと違って入り口のスクリプトを挟まないのは、サーバー自身が SHOOTER_SERVER_ADDRESS / SHOOTER_SERVER_PORT を読むため
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/shooter-server/shooter-server"]

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 武器の演出 (銃声・マズルフラッシュ・曳光弾・着弾の火花と音と銃痕・リロード音) を受け持つ。撃つ人 (プレイヤー・NetPlayer・敵) の本体に付ける。
@@ -23,10 +23,10 @@ namespace Fps.Runtime
     /// 上限を超えたら古いものから取り上げる。部品はキャラの外の <see cref="PoolRoot"/> の下に置く (キャラが動いても着弾の跡は動かない)。
     /// 銃痕だけは撃った者が消えても残るよう、シーンに 1 つの <see cref="ImpactDecals"/> に貼る。</item>
     /// <item>リロード音は、同じ階層の <see cref="WeaponController.ReloadStarted"/> (オフラインのプレイヤー) と、
-    /// <see cref="PlayReload"/> を呼ぶ側 (ネット対戦では <c>Fps.Net.NetPlayer</c>) から鳴らす。</item>
+    /// <see cref="PlayReload"/> を呼ぶ側 (ネット対戦では <c>Shooter.Net.NetPlayer</c>) から鳴らす。</item>
     /// <item>銃声とリロード音を鳴らしたら、字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。自分のリロード音は位置を付けない。</item>
     /// </list>
-    /// 専用サーバーでは <c>Fps.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
+    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
     /// </remarks>
     [DisallowMultipleComponent]
     public sealed class WeaponPresentation : MonoBehaviour
@@ -178,7 +178,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// この本体が手元のプレイヤーか (銃声とリロード音を 2D で鳴らす)。代入しなければ、同じ階層に <see cref="WeaponController"/> があるか
-        /// <see cref="Damageable.IsLocalPlayer"/> なら true。ネット対戦では <c>Fps.Net.NetPlayer</c> が持ち主かどうかを代入する。
+        /// <see cref="Damageable.IsLocalPlayer"/> なら true。ネット対戦では <c>Shooter.Net.NetPlayer</c> が持ち主かどうかを代入する。
         /// </summary>
         public bool IsLocal
         {
@@ -901,7 +901,7 @@ namespace Fps.Runtime
             _warnedMissingCatalog = true;
             Debug.LogWarning(
                 $"{LogTag} no PresentationCatalog at Resources/{PresentationCatalog.ResourcePath}; weapon sounds and effects are off. "
-                + "Run Fps/Build Presentation Assets (Fps.Editor.PresentationAssetBuilder.Build)",
+                + "Run Shooter/Build Presentation Assets (Shooter.Editor.PresentationAssetBuilder.Build)",
                 this);
         }
 

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="IAbility"/> に渡す、使っている枠とその持ち主。<see cref="AbilityHost"/> が枠に能力を入れるたびに作る。

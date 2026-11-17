@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 三人称のカメラをキャラのどちらの肩越しに置くか。

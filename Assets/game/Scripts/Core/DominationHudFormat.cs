@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の拠点の呼び名と、画面・ログ・通信で揃える切り捨てたポイント。拠点は番号の順に A, B, C ... と呼ぶ。

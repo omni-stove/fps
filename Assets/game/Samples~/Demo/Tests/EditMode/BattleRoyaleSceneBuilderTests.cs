@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="BattleRoyaleSceneBuilder"/> の広いマップの置き場所・ルール・分隊の配置・地形・拾える物・エリアの予定と、
     /// <see cref="BattleRoyaleSmokeRun"/> の引数と予定の縮め方を確かめる。シーンを組んで NavMesh を焼く処理は、開いているシーンを置き換える
-    /// (NewScene Single) ので <c>-executeMethod Fps.Editor.BattleRoyaleSceneBuilder.Build</c> と <see cref="BattleRoyaleSmokeRun"/> で確かめる。
+    /// (NewScene Single) ので <c>-executeMethod Shooter.Editor.BattleRoyaleSceneBuilder.Build</c> と <see cref="BattleRoyaleSmokeRun"/> で確かめる。
     /// </summary>
     public sealed class BattleRoyaleSceneBuilderTests
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>対戦で送り合うメッセージを、受け取る側ごとにそろえる。</summary>
     public static class MatchMessages

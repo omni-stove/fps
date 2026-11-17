@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 死亡から復活までの待ち時間。<see cref="Start"/> で数え始め、<see cref="Tick"/> に経過時間を渡すと、

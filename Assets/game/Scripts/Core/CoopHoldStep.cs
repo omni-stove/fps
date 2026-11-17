@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="CoopHold.Tick"/> の 1 回で起きたこと。</summary>
     public enum CoopHoldStep

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 耐久そのものを持たないのは、Damageable が持つ体力と二重に持って食い違わないようにするため。
     public sealed class VehicleDurability

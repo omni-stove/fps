@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // Core は Unity を参照しないので、物理で調べるのは Runtime に任せ、ここは結果の値だけを持つ。
     public readonly struct DeploySurvey

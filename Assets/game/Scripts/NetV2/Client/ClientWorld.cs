@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クライアントが自分の移動を予測する世界。サーバー (<c>ServerMapData</c>) と同じ <c>.fpsmap</c> と <c>.ladders.json</c> を読み、
@@ -94,11 +94,11 @@ namespace Fps.NetV2
                 return false;
             }
 
-            var path = Path.Combine(directory, map + FpsMapFile.Extension);
+            var path = Path.Combine(directory, map + ShooterMapFile.Extension);
             if (!File.Exists(path))
             {
                 error = "map " + map + " has no collision: " + path
-                    + " does not exist; export it with make export-server-data (Fps/Net/Export Server Data) and rebuild";
+                    + " does not exist; export it with make export-server-data (Shooter/Net/Export Server Data) and rebuild";
                 return false;
             }
 
@@ -107,7 +107,7 @@ namespace Fps.NetV2
             {
                 using (var stream = File.OpenRead(path))
                 {
-                    geometry = FpsMapFile.Read(stream);
+                    geometry = ShooterMapFile.Read(stream);
                 }
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is UnauthorizedAccessException || e is ArgumentException)

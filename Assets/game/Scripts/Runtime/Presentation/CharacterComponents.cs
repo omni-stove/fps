@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラ (プレイヤー・NetPlayer・敵) の本体に付ける演出と行動のコンポーネントを決める。

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="FootstepCadence.Advance"/> が鳴らすよう求める音の種類。</summary>
     public enum FootstepCueKind

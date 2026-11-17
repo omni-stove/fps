@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 設定画面で割り当てを変えられる 1 か所。Player マップの <see cref="ActionName"/> の、<see cref="Device"/> の入力グループの最初の割り当て

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 建物1つ分の部品の耐久値と、壊れたかどうか。<see cref="Layout"/> の隣接を支えとして、

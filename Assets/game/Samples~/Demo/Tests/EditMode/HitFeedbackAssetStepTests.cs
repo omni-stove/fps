@@ -1,13 +1,13 @@
 using System;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="HitFeedbackAssetStep"/> を一時フォルダに走らせて、生成物・作り直したときの同一性・一括実行での順番を確かめる。

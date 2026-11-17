@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒した相手のある時点の目の位置と体の向き。

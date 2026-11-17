@@ -1,21 +1,21 @@
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
-    /// 取り込んだサンプルのフォルダ (<see cref="Root"/>) を、Editor の読み込み時に出力先ルートの既定 (<see cref="FpsKitRoot.UseDefaultOutput"/>) にする。
+    /// 取り込んだサンプルのフォルダ (<see cref="Root"/>) を、Editor の読み込み時に出力先ルートの既定 (<see cref="ShooterKitRoot.UseDefaultOutput"/>) にする。
     /// サンプルは Package Manager から取り込むと <c>Assets/Samples/&lt;パッケージ&gt;/&lt;版&gt;/&lt;サンプル&gt;</c> に置かれ、場所が決まっていないので、
     /// このアセンブリの asmdef の場所から決める。
     /// </summary>
     [InitializeOnLoad]
     public static class DemoSample
     {
-        public const string AssemblyName = "Fps.Samples.Editor";
+        public const string AssemblyName = "Shooter.Samples.Editor";
         public const string LogTag = "[DemoSample]";
 
         /// <summary>asmdef から見たサンプルのルートの位置 (<c>&lt;ルート&gt;/Scripts/Editor/</c>)。</summary>
@@ -29,11 +29,11 @@ namespace Fps.Editor
             var root = Root;
             if (root != null)
             {
-                FpsKitRoot.UseDefaultOutput(root);
+                ShooterKitRoot.UseDefaultOutput(root);
             }
         }
 
-        /// <summary>サンプルのルート (例: <c>Assets/Samples/FpsKitDemo</c>)。asmdef が Assets/ の下に見つからなければ null。</summary>
+        /// <summary>サンプルのルート (例: <c>Assets/Samples/ShooterKitDemo</c>)。asmdef が Assets/ の下に見つからなければ null。</summary>
         public static string Root => RootOf(CompilationPipeline.GetAssemblyDefinitionFilePathFromAssemblyName(AssemblyName));
 
         /// <summary>asmdefPath (<c>&lt;ルート&gt;/Scripts/Editor/*.asmdef</c>) のルート。Assets/ の下でなければ null。</summary>
@@ -65,7 +65,7 @@ namespace Fps.Editor
         /// </summary>
         public static void WriteMenuSceneSettings()
         {
-            var root = FpsKitRoot.Output;
+            var root = ShooterKitRoot.Output;
             // 出力先がサンプルのルートと違っても、同梱の設定そのものを更新する。別の場所に作ると同じ Resources パスが 2 つになり、どちらが読まれるか決まらない。
             var path = KitPaths.Combine(Root ?? root, MenuSceneSettingsRelativePath);
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(path)?.Replace('\\', '/'));

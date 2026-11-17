@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 音とエフェクトの参照をまとめて持つ。武器ごとのもの (銃声・リロード音・マズルフラッシュ) は武器の Id
-    /// (<see cref="Fps.Core.WeaponSpec.Id"/>) で <see cref="TryGetWeapon"/> から引き、どの武器にも共通のもの
+    /// (<see cref="Shooter.Core.WeaponSpec.Id"/>) で <see cref="TryGetWeapon"/> から引き、どの武器にも共通のもの
     /// (着弾・曳光弾・足音・着地・被弾の声・爆発・ヒットマーカーの音) はプロパティで引く。
     /// ヒットマーカーは Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読み、
     /// 置いていなければ音を鳴らさずに見た目だけ出す。
     /// 武器の演出 (<see cref="WeaponPresentation"/>) も同じく <see cref="Load"/> で読む。
-    /// 中身は Fps.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset) で、
+    /// 中身は Shooter.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset) で、
     /// 本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
     /// <remarks>
@@ -20,13 +20,13 @@ namespace Fps.Runtime
     /// <item>カタログの置き場所: 演出ごとに自分の ScriptableObject のカタログを 1 つ持ち、どこかの Resources フォルダの
     /// <c>Presentation/&lt;名前&gt;Catalog.asset</c> に置く (Resources からのパスは <see cref="CatalogResourcePath"/>)。
     /// このカタログに枠を足さず、演出ごとにファイルを分ける。</item>
-    /// <item>仮素材の生成: 仮素材とカタログは Fps.Editor.IPresentationAssetStep の実装が作り、Fps.Editor.PresentationAssetSteps.BuildAll から
+    /// <item>仮素材の生成: 仮素材とカタログは Shooter.Editor.IPresentationAssetStep の実装が作り、Shooter.Editor.PresentationAssetSteps.BuildAll から
     /// まとめて実行される。既存のアセットは GUID を保って中身だけ更新する。</item>
     /// <item>任意の枠: 素材の枠は空でもよい。空の枠の演出だけを出さずに続行し、戦闘や他の演出は止めない
     /// (カタログ自体が無いときも同じで、警告は 1 度だけ)。必須にするのは仮素材が必ず埋める枠だけで、Validate で確かめる。</item>
     /// </list>
     /// </remarks>
-    [CreateAssetMenu(fileName = "PresentationCatalog", menuName = "Fps/Presentation Catalog")]
+    [CreateAssetMenu(fileName = "PresentationCatalog", menuName = "Shooter/Presentation Catalog")]
     public sealed class PresentationCatalog : ScriptableObject
     {
         /// <summary>演出のカタログを置く、Resources からのフォルダ。</summary>
@@ -316,7 +316,7 @@ namespace Fps.Runtime
         {
         }
 
-        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Fps.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
+        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Shooter.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
         public WeaponPresentationAssets(
             string weaponId, AudioClip fire, AudioClip reload, GameObject muzzleFlash, GameObject thirdPersonMuzzleFlash = null)
         {

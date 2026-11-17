@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="ImpactDecals"/> が銃痕を面に沿って浮かせて貼り、キャラには貼らず、上限を超えたら古いものから剥がしてログに出すことを確かめる。

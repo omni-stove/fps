@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 既定の HUD の作り役。<see cref="GameSignals"/> にこの画面のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) か、その HUD の値

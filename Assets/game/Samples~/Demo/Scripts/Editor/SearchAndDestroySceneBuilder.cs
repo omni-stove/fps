@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroyRunner"/>) のシーン SearchAndDestroy を組む。ルールは <see cref="GameRulesAssetBuilder.SearchAndDestroyPath"/>
@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// 両陣営の出現点から同じ距離の左右に設置地点 A・B (<see cref="SiteCenters"/>) と、爆弾の見た目 (<see cref="BombObject"/>) を足す。
     /// 地図が左右対称なので、攻守が入れ替わっても出現点は陣営のまま変えない。爆弾の秒数や勝ち数は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
     /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.SearchAndDestroySceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.SearchAndDestroySceneBuilder.Build</code>
     /// </summary>
     public sealed class SearchAndDestroySceneBuilder : ModeSceneBuilder
     {
@@ -23,7 +23,7 @@ namespace Fps.Editor
         /// <summary>Runner に配線する調整値のアセット (<see cref="SearchAndDestroyDefinition"/>)。</summary>
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.SearchAndDestroyName);
 
-        public const string MenuPath = "Fps/Build Search And Destroy Scene";
+        public const string MenuPath = "Shooter/Build Search And Destroy Scene";
 
         public const string SitesRootName = "BombSites";
         public const string BombObjectName = "Bomb";
@@ -59,7 +59,7 @@ namespace Fps.Editor
         /// <example><c>SiteObjectName(1)</c> は <c>BombSite-B</c></example>
         public static string SiteObjectName(int index)
         {
-            return "BombSite-" + Fps.Core.SearchAndDestroyText.SiteName(index);
+            return "BombSite-" + Shooter.Core.SearchAndDestroyText.SiteName(index);
         }
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)
@@ -73,12 +73,12 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// path の調整値のアセットを返す。無ければ <see cref="Fps.Core.SearchAndDestroySpec"/> の既定値で作る。既にあれば値は変えない。
+        /// path の調整値のアセットを返す。無ければ <see cref="Shooter.Core.SearchAndDestroySpec"/> の既定値で作る。既にあれば値は変えない。
         /// </summary>
         public static SearchAndDestroyDefinition LoadOrCreateDefinition(string path)
         {
             return ModeDefinitionAssets.LoadOrCreate<SearchAndDestroyDefinition>(
-                path, d => d.CopyFrom(new Fps.Core.SearchAndDestroySpec()));
+                path, d => d.CopyFrom(new Shooter.Core.SearchAndDestroySpec()));
         }
 
         protected override void AddModeObjects(ModeSceneContext context)

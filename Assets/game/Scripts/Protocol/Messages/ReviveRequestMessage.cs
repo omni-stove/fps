@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>持ち主が倒れた味方 <see cref="TargetPlayerId"/> の蘇生を頼む。届く範囲か・味方かはサーバーが確かめる。</summary>
     public sealed class ReviveRequestMessage : IMessage

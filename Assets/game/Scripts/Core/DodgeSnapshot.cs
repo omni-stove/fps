@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="DodgeMotion"/> の中身 1 回分 (<see cref="DodgeMotion.Capture"/> で写し、<see cref="DodgeMotion.Restore"/> で戻す)。

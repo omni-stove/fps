@@ -1,0 +1,23 @@
+{
+    "name": "Shooter.Samples.Net.Editor",
+    "rootNamespace": "Shooter.Editor",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Editor",
+        "Shooter.Samples.Editor",
+        "Shooter.Runtime",
+        "Shooter.Runtime.UI",
+        "Unity.AI.Navigation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

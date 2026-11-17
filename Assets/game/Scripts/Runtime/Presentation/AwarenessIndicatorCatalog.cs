@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 枠は任意 (PresentationCatalog の規約)。無いか空なら EnemyStealth は仮の印 (AwarenessMarker) を出す。
-    [CreateAssetMenu(fileName = "AwarenessIndicatorCatalog", menuName = "Fps/Awareness Indicator Catalog")]
+    [CreateAssetMenu(fileName = "AwarenessIndicatorCatalog", menuName = "Shooter/Awareness Indicator Catalog")]
     public sealed class AwarenessIndicatorCatalog : ScriptableObject
     {
         public const string CatalogName = "AwarenessIndicator";

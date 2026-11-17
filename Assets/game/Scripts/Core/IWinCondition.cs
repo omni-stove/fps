@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 試合の終わり方。<see cref="ModeSession"/> は渡された順に調べ、最初に決着を返した条件で終える。

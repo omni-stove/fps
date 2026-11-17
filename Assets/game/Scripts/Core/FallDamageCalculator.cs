@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 着地 1 回分の落下ダメージを計算する (<see cref="GameRules.FallDamage"/> が On のとき)。

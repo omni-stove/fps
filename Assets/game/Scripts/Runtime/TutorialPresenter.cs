@@ -1,12 +1,12 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// 射撃場のチュートリアル。Bootstrap シーン (Fps.Editor.BootstrapSceneBuilder が生成) の <see cref="GameBootstrap"/> と同じ GameObject に置く。
+    /// 射撃場のチュートリアル。Bootstrap シーン (Shooter.Editor.BootstrapSceneBuilder が生成) の <see cref="GameBootstrap"/> と同じ GameObject に置く。
     /// Start で、まだ一度も終えていないか (<see cref="TutorialProgressStore"/>)、メニューのチュートリアルから来たとき
     /// (<see cref="IMenuNavigator.TakeTutorialRequest"/>) だけ始め (<see cref="TutorialSteps.ShouldStart"/>)、そうでなければ自分を無効にする。
     /// 毎フレーム、プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>: ADS・リロード・しゃがみ・カバー)・
@@ -99,7 +99,7 @@ namespace Fps.Runtime
             var bootstrap = GetComponent<GameBootstrap>();
             if (bootstrap == null)
             {
-                Debug.LogError(LogTag + " needs a GameBootstrap on the same GameObject; rerun Fps.Editor.BootstrapSceneBuilder.Build", this);
+                Debug.LogError(LogTag + " needs a GameBootstrap on the same GameObject; rerun Shooter.Editor.BootstrapSceneBuilder.Build", this);
                 enabled = false;
                 return;
             }

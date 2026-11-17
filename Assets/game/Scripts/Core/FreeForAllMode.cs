@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// フリーフォーオール (全員が敵の個人戦) のモード。1 人 1 陣営 (<see cref="FreeForAll"/>) で、別の人を倒すと pointsPerKill 点 (<see cref="KillScore"/>)、

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="NavPath"/> の角の 1 つと、そこから次の角までの渡り方。</summary>
     public readonly struct NavPathPoint

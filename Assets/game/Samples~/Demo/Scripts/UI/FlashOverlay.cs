@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 残りを毎フレーム読みに行くのは、目くらましが延びても知らせ (Started) は来ないため。
     // 被弾の赤 (DamageVignetteView) と同じく HUD の量では隠さない。見えないことそのものが効き目だから。

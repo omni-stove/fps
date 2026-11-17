@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
-using LadderRule = Fps.Core.Ladder;
+using LadderRule = Shooter.Core.Ladder;
 
-namespace Fps.Runtime.Traversal
+namespace Shooter.Runtime.Traversal
 {
     /// <summary>
     /// プレイヤーをはしご (<see cref="Ladder"/>) で上り下りさせる移動の横取り。<see cref="Bind"/> で <see cref="PlayerController"/> に登録する

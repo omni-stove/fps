@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 自機の今のアクション (<see cref="PlayerActionReader.Current"/>) を、プリミティブで作った仮の体 (<see cref="Prefabs"/> があればその形) で見せる自機モック。

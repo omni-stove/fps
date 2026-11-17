@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-// ルールの列挙 Fps.Core.Zipline と同じ名前なので、Fps.Runtime に置くと GameRulesDefinition などが書いている Zipline がこの型を指してしまう。
-namespace Fps.Runtime.Traversal
+// ルールの列挙 Shooter.Core.Zipline と同じ名前なので、Shooter.Runtime に置くと GameRulesDefinition などが書いている Zipline がこの型を指してしまう。
+namespace Shooter.Runtime.Traversal
 {
     // 見た目は持たない。線の形は置く側 (シーンの生成スクリプトやプレハブ) が決め、ここは掴まる線分と滑り方だけを持つ。
     [DisallowMultipleComponent]

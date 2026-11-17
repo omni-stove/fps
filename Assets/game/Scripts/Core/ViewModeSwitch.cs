@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 実行中に一人称と三人称を入れ替えるときの決まり。入れ替え先 (<see cref="Other"/>) と、入れ替えたか断ったかのログの文面を決める。

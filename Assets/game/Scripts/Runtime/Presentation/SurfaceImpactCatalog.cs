@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾が当たった面の材質 (<see cref="SurfaceMaterial"/> の Id) ごとの銃痕・着弾エフェクト・着弾音。
     /// Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読み、<see cref="WeaponPresentation"/> が着弾ごとに
     /// <see cref="Resolve"/> で引く。置いていなければ <see cref="WeaponPresentation"/> は <see cref="PresentationCatalog"/> の火花と音を使う。
-    /// 中身は Fps.Editor.SurfaceImpactAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
+    /// 中身は Shooter.Editor.SurfaceImpactAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// </summary>
-    [CreateAssetMenu(fileName = "SurfaceImpactCatalog", menuName = "Fps/Surface Impact Catalog")]
+    [CreateAssetMenu(fileName = "SurfaceImpactCatalog", menuName = "Shooter/Surface Impact Catalog")]
     public sealed class SurfaceImpactCatalog : ScriptableObject
     {
         /// <summary>演出のカタログの名前 (<see cref="PresentationCatalog.CatalogResourcePath"/> に渡す)。</summary>

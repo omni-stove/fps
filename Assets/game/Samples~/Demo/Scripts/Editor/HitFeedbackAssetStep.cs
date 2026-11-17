@@ -1,27 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 血の演出 (<see cref="BloodPresenter"/>) の仮素材と <see cref="HitFeedbackCatalog"/> を作る手順。
     /// 部位ごとの血しぶき (赤い粒) と、壁の血痕 (赤い円のテクスチャを貼った Quad) を <see cref="Folder"/> に、カタログを <see cref="CatalogPath"/> に置く。
     /// 血しぶきは <see cref="PresentationCatalogAssetStep"/> が作る半透明の粒の材質 (<see cref="PresentationAssetBuilder.AlphaMaterialName"/>) を借りるので、それより後に実行する。
     /// 既存のアセットは GUID を保って中身だけ更新する。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HitFeedbackAssetStep.BuildDefault</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.HitFeedbackAssetStep.BuildDefault</code>
     /// </summary>
     public sealed class HitFeedbackAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = PresentationCatalogAssetStep.StepOrder + 10;
 
-        public const string MenuPath = "Fps/Build Hit Feedback Assets";
+        public const string MenuPath = "Shooter/Build Hit Feedback Assets";
         public const string LogTag = "[HitFeedbackAssetStep]";
 
         public const string HeadSprayEffect = "BloodSprayHead";
@@ -88,7 +88,7 @@ namespace Fps.Editor
             if (particleMaterial == null)
             {
                 throw new InvalidOperationException(
-                    $"particle material '{particleMaterialPath}' was not found; run {PresentationAssetBuilder.MenuPath} (Fps.Editor.PresentationAssetBuilder.Build) first");
+                    $"particle material '{particleMaterialPath}' was not found; run {PresentationAssetBuilder.MenuPath} (Shooter.Editor.PresentationAssetBuilder.Build) first");
             }
 
             SceneBuildHelpers.EnsureFolder(folder);

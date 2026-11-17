@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。

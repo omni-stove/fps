@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="NavPath"/> がどこまで届いているか。</summary>
     public enum NavPathStatus

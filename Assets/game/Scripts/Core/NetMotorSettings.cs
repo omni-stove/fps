@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ネット対戦のプレイヤーの移動の値 (Unity では MotorSettings と NetPlayer.prefab の CharacterController・NetworkPlayerMotor に焼いてある値)。

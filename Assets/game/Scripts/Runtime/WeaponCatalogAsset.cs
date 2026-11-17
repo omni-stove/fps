@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 武器の一覧をアセットとして持つ。<see cref="ToCatalog"/> で Core の <see cref="WeaponCatalog"/> に変換する。
     /// 空・null 要素・Id の重複は、どのアセットかを添えて <see cref="WeaponDefinitionException"/> にする。
     /// </summary>
-    [CreateAssetMenu(fileName = "WeaponCatalog", menuName = "Fps/Weapon Catalog")]
+    [CreateAssetMenu(fileName = "WeaponCatalog", menuName = "Shooter/Weapon Catalog")]
     public sealed class WeaponCatalogAsset : ScriptableObject
     {
         [SerializeField, Tooltip("武器の定義。並び順がカタログの順になる")]

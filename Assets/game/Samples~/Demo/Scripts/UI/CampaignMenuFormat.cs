@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>キャンペーンのメニュー (<see cref="CampaignMenu"/>) に出す文言。<see cref="GameText"/> から今の言語で引く。</summary>
     public static class CampaignMenuFormat

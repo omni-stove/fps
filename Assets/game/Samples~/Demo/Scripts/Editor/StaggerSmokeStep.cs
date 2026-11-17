@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // batchmode には入力が無いので、脚を撃つ代わりに脚の当たり判定 (Hitbox.ApplyHit) へ直接当て、近接の代わりにプレイヤーの Damageable へ近接のダメージを渡す。
     public sealed class StaggerSmokeStep : ITpsActionSmokeStep

@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拠点制圧 (<see cref="Domination"/>) の HUD に出す文。表のキー <c>mode.domination.*</c> の <see cref="LocalizedText"/> で返す。

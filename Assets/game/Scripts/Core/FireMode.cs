@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 射撃モード。トリガーを押し続けたときの振る舞いを表す。

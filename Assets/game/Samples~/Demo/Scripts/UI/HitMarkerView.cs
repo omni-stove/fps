@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾が当たったことを照準の周りに出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。

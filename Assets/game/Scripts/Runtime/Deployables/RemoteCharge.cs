@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃たれて壊れるのは置ける物の土台 (Deployable) が受け持つ。ここは貼った先に付いていくことと、起爆されたら爆発することだけを持つ。
     // 貼った先の子にしないのは、人や標的の子にすると、その体の当たり判定や GetComponentInParent が C4 の Damageable を拾うため。

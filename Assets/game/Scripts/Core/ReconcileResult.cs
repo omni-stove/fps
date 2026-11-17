@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PredictionBuffer{TInput, TState}.Reconcile"/> の結果。</summary>
     public readonly struct ReconcileResult

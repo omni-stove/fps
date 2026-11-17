@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: BattleRifle
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 07895118-2fb7-4b50-aa16-8f8afef0fc79
   _nameKey: weapon.ref.battleRifle
   _description: "Valorant \u306E Guardian (\u5B9F\u9283\u306F M14 / Mk14 EBR \u98A8) \u3092\u53C2\u8003\u3002\u4F53 65\u30FB\u6BCE\u79D2 5.25 \u767A\u30FB12 \u767A\u306E\u30BB\u30DF\u30AA\u30FC\u30C8\u3067\u3001\u8DDD\u96E2\u3067\u6E1B\u3089\u306A\u3044\u30021.5 \u500D\u306E\u7167\u6E96\u3002"

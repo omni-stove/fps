@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 動かす物理 (CharacterController か自前の当たり判定か) は持ち主で違うので、ここでは速度と時間だけを進める。
     public sealed class KnockbackFlight

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 値がすべて文字列の、入れ子の無い JSON オブジェクト (<c>{"KEY": "value", ...}</c>) を読み書きする。

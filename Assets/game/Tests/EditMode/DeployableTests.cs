@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode でも Physics の問い合わせは効くので、作った後に SyncTransforms してから撃つ。
     public sealed class DeployableTests
@@ -65,7 +65,7 @@ namespace Fps.Tests.EditMode
             Assert.That(shield.Damageable.Health.Current, Is.EqualTo(MaxHealth));
             Assert.That(shield.Damageable.ReportsKills, Is.False);
             Assert.That(shield.GetComponent<UnityEngine.AI.NavMeshObstacle>(), Is.Not.Null, "enemies walk around it");
-            Assert.That(shield.GetComponentInChildren<Fps.Runtime.CoverPoint>(), Is.Null, "enemies do not take cover behind it");
+            Assert.That(shield.GetComponentInChildren<Shooter.Runtime.CoverPoint>(), Is.Null, "enemies do not take cover behind it");
             Assert.Throws<System.InvalidOperationException>(() => shield.Initialize(_owner, "Owner", Kind, 2, null, MaxHealth));
         }
 

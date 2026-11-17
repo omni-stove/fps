@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke に足す、爆発する置き物 (<see cref="ExplosivePropRangeFixture"/>) の手順。

@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public static class WindUpSoundAssetBuilder
     {
-        public const string MenuPath = "Fps/Build Wind-Up Sounds";
+        public const string MenuPath = "Shooter/Build Wind-Up Sounds";
         public const string LogTag = "[WindUpSoundAssetBuilder]";
 
         public const string ChargeRifleId = "0a90a121-a287-4aae-8fcf-885ddf59da79";

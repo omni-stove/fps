@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 覗き込み (ADS) のズーム。腰だめ (<see cref="Progress"/> = 0) から覗き込み切った状態 (1) までの進み具合を

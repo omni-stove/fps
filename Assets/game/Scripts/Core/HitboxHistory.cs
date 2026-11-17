@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// エンティティ 1 体分の位置の履歴。tick ごとの位置を固定長のリングバッファに記録し、

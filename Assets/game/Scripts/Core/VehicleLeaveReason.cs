@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>乗り物から降りた理由。</summary>
     public enum VehicleLeaveReason

@@ -23,7 +23,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      # タグ名は unity-builder の中でシェルのコマンドラインに埋め込まれ、zip の名前にも使うので、Fps.Core.BuildVersion と同じ規則
+      # タグ名は unity-builder の中でシェルのコマンドラインに埋め込まれ、zip の名前にも使うので、Shooter.Core.BuildVersion と同じ規則
       # (v の直後が数字なら v を外す、英数字と . - _ だけで . と - では始まらず 32 文字以内) で先に確かめ、通ったものだけを使う
       - id: version
         name: Resolve the build version from the tag
@@ -85,7 +85,7 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: ${{ matrix.target }}
-          buildMethod: Fps.Editor.ClientBuilder.Build
+          buildMethod: Shooter.Editor.ClientBuilder.Build
           customParameters: -clientPlatform ${{ matrix.platform }}
           versioning: Custom
           version: ${{ needs.version.outputs.version }}
@@ -95,22 +95,22 @@ jobs:
           set -euo pipefail
           case "$PLATFORM" in
           windows)
-            test -f Builds/client-windows/fps.exe
-            test -d Builds/client-windows/fps_Data
+            test -f Builds/client-windows/shooter.exe
+            test -d Builds/client-windows/shooter_Data
             ;;
           macos)
-            test -f Builds/client-macos/fps.app/Contents/Info.plist
-            test -f Builds/client-macos/fps.app/Contents/MacOS/fps
+            test -f Builds/client-macos/shooter.app/Contents/Info.plist
+            test -f Builds/client-macos/shooter.app/Contents/MacOS/shooter
             ;;
           esac
 
       # actions/upload-artifact は実行権限とシンボリックリンクを落とすので、先に zip にしてから渡す。
-      # zip の中は fps-<版>-<platform>/ の 1 階層にまとめ、展開したときにファイルが散らばらないようにする
+      # zip の中は shooter-<版>-<platform>/ の 1 階層にまとめ、展開したときにファイルが散らばらないようにする
       - id: package
         name: Package the zip
         run: |
           set -euo pipefail
-          name="fps-$VERSION-$PLATFORM"
+          name="shooter-$VERSION-$PLATFORM"
           stage="dist/$name"
 
           # unity-builder のコンテナは root で書き出すので、ランナーのユーザーで読み書きできるようにする
@@ -124,7 +124,7 @@ jobs:
 
           if [ "$PLATFORM" = macos ]; then
             # Linux 上のビルドで実行権限が付かないことがあり、無いと macOS で「壊れている」と出て開けない
-            chmod +x "$stage/fps.app/Contents/MacOS/"*
+            chmod +x "$stage/shooter.app/Contents/MacOS/"*
           fi
 
           (cd dist && zip -r -y -X -9 -q "$name.zip" "$name")
@@ -163,7 +163,7 @@ jobs:
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
         run: |
           set -euo pipefail
-          assets=("dist/fps-$VERSION-windows.zip" "dist/fps-$VERSION-macos.zip")
+          assets=("dist/shooter-$VERSION-windows.zip" "dist/shooter-$VERSION-macos.zip")
           for asset in "${assets[@]}"; do
             if [ ! -f "$asset" ]; then
               echo "::error::$asset was not built"

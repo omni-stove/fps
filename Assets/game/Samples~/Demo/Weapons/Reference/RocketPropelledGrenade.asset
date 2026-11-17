@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: RocketPropelledGrenade
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: b9daae5b-9015-46cf-b104-6f9a9ba9c623
   _nameKey: weapon.ref.rocketPropelledGrenade
   _description: "THE FINALS \u306E RPG-7 (\u5B9F\u9283\u306F RPG-7) \u3092\u53C2\u8003\u3002\u7206\u767A 110 \u3067\u30011.5 m \u307E\u3067\u306F\u6E1B\u3089\u305A 5.5 m \u307E\u3067\u5C4A\u304F\u30021 \u767A\u305A\u3064\u6483\u3061\u3001\u30EA\u30ED\u30FC\u30C9\u306F 2.15 \u79D2\u3002\u5F3E\u901F\u306F\u8CC7\u6599\u306B\u7121\u3044\u306E\u3067\u9045\u3081\u306E 60 m/s \u306B\u3057\u305F\u3002"

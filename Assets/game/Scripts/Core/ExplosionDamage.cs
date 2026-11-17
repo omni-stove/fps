@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆発 1 回が、中心から離れた相手に与えるダメージ。<see cref="FullDamageRadius"/> までは <see cref="MaxDamage"/>、

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary><see cref="ClientProjectiles"/> が動かす、飛ぶ弾 1 本の見た目。</summary>
     public interface IClientProjectileView

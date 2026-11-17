@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// クライアントが接続の承認データ (バイト列) に載せる、ビルドの版と切断して戻ってきた人を見分ける鍵 (<see cref="RejoinKey"/>)。

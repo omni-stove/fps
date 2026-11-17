@@ -54,7 +54,7 @@ jobs:
       review-allowed-bots: "omni-stove-agent"  # 自前の Issue Worker の PR はレビューする。外部 App は "*" にすると起動してしまうので名指しで許可
       # Issue Worker と同じ Unity 固有の規約で見させる。.meta などはレビュー対象から外しているので、それらを書き換えるコードの側で見る
       # エディタが書き出す YAML とバイナリ、取り込んだ外部ライブラリは diff を読んでも判断できないので外す。挙動を決める .json と .cs は外さない
-      review-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: flag scripts that regenerate existing .meta files (their GUIDs are what scenes and assets reference), changes that rely on hand-editing .unity / .prefab / .asset files instead of wiring references in code or editor scripts, and Unity dependencies leaking into dotnet/Fps.Core."
+      review-instructions: "Follow AGENTS.md and .agents/refs/scriptability-rules.md. This is a Unity project: flag scripts that regenerate existing .meta files (their GUIDs are what scenes and assets reference), changes that rely on hand-editing .unity / .prefab / .asset files instead of wiring references in code or editor scripts, and Unity dependencies leaking into dotnet/Shooter.Core."
       review-exclude-patterns: |
         *.meta
         *.unity

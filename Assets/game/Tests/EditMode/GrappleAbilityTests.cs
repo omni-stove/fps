@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode でも Physics の Raycast と CharacterController.Move はコライダーに当たるので、置いたら SyncTransforms してから使う。
     // AbilityHost の Update は走らないので、能力は Step、移動は PlayerController.Tick を交互に呼んで進める。

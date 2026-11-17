@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="WeaponPresentation"/> が射撃・着弾・リロードで音とエフェクトを出し、プールの上限を超えて作らず使い回すことを、
@@ -383,7 +383,7 @@ namespace Fps.Tests.EditMode
             presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null));
 
             LogAssert.Expect(LogType.Log, "[Presentation] impact material=flesh character=True zone=Head source=legacy");
-            presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null, "flesh", true, Fps.Core.HitZone.Head));
+            presenter.PlayImpact(new ImpactInfo(new Vector3(0f, 0f, 20f), Vector3.back, null, "flesh", true, Shooter.Core.HitZone.Head));
         }
 
         [Test]
@@ -450,7 +450,7 @@ namespace Fps.Tests.EditMode
             presenter.SurfaceImpacts = SurfaceCatalog(out _, out var fallback);
 
             LogAssert.Expect(LogType.Log, "[Presentation] impact material=default character=True zone=Head source=surface:default");
-            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, null, true, Fps.Core.HitZone.Head));
+            presenter.PlayImpact(new ImpactInfo(Vector3.forward, Vector3.back, null, null, true, Shooter.Core.HitZone.Head));
 
             Assert.That(presenter.EffectPoolFor(fallback.Effect).ActiveCount, Is.EqualTo(1));
             Assert.That(presenter.Decals.ActiveCount, Is.Zero);

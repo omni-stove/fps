@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     public sealed class CameraShake : MonoBehaviour
@@ -344,7 +344,7 @@ namespace Fps.Runtime
         {
             if (settings == null)
             {
-                Debug.LogWarning($"{LogTag} {source} was not found; run Fps.Editor.PresentationAssetSteps.BuildAll. The screen does not shake", this);
+                Debug.LogWarning($"{LogTag} {source} was not found; run Shooter.Editor.PresentationAssetSteps.BuildAll. The screen does not shake", this);
                 return null;
             }
 

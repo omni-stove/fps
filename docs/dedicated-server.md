@@ -1,9 +1,9 @@
 # 専用サーバー
 
-専用サーバーは Unity を使わない .NET のプログラム (`dotnet/Fps.Server`) で、試合のルールや当たりの判定は Unity のクライアントと
-同じ `Fps.Core` のコードで行う。マップ・ルール・調整値は Unity の Editor で `server-data/` に書き出したファイルから読む。
-イメージは `docker/server/Dockerfile` で作り、コンテナはユーザー `fps` (uid 10001) で動いて `7777/udp` で待ち受ける。
-クライアントはゲームの通常のビルド (`make build`) で、`Fps.Protocol` の通信手順でつなぐ (下の「クライアントからつなぐ」)。
+専用サーバーは Unity を使わない .NET のプログラム (`dotnet/Shooter.Server`) で、試合のルールや当たりの判定は Unity のクライアントと
+同じ `Shooter.Core` のコードで行う。マップ・ルール・調整値は Unity の Editor で `server-data/` に書き出したファイルから読む。
+イメージは `docker/server/Dockerfile` で作り、コンテナはユーザー `shooter` (uid 10001) で動いて `7777/udp` で待ち受ける。
+クライアントはゲームの通常のビルド (`make build`) で、`Shooter.Protocol` の通信手順でつなぐ (下の「クライアントからつなぐ」)。
 
 Unity の Editor の中でサーバーを兼ねる遊び方 (Host・`-mode host`) と、プレイヤーが Host になるロビー (`-lobby create|join`、
 メニューの「ロビーを作る／入る」) は無い。オンラインでは専用サーバーにつなぐ。
@@ -33,20 +33,20 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
 
 ```sh
 make server-dotnet                                   # 0.0.0.0:7777 で待ち受ける
-FPS_SERVER_PORT=9000 make server-dotnet              # ポートを変える
-dotnet run --project dotnet/Fps.Server/Fps.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
+SHOOTER_SERVER_PORT=9000 make server-dotnet              # ポートを変える
+dotnet run --project dotnet/Shooter.Server/Shooter.Server.csproj -- -mode server -rules Domination -map NetArena01   # 拠点制圧で動かす
 ```
 
 ## イメージを作る
 
-`dotnet/Fps.Server` を self-contained で `dotnet publish` したものと `server-data/`、EOS の C# SDK のライブラリ
+`dotnet/Shooter.Server` を self-contained で `dotnet publish` したものと `server-data/`、EOS の C# SDK のライブラリ
 (`dotnet/ThirdParty/EOSSDK` に置いてあれば) を入れる。Unity も Editor を閉じることも要らない。
 
 ```sh
 make eos-sdk ARGS="--fetch"                            # (任意) EOS の SDK を Unity を使わずに置く。無ければ EOS 無しのイメージになる
-make server-image                                      # fps-server:local を作る (Docker が動いているマシンのアーキテクチャ)
+make server-image                                      # shooter-server:local を作る (Docker が動いているマシンのアーキテクチャ)
 make server-image ARGS="--platform linux/arm64"        # arm64 のイメージを作る
-make server-image ARGS="--tag fps-server:dev --version v0.2.0"
+make server-image ARGS="--tag shooter-server:dev --version v0.2.0"
 ```
 
 `make eos-sdk ARGS="--fetch"` は `Packages/packages-lock.json` に固定した PlayEveryWare のプラグインから SDK を取る
@@ -66,26 +66,26 @@ Epic Developer Portal の SDK の zip から置く (`make eos-sdk ARGS="--from <
 [Version] 0.2.0
 ```
 
-EOS のロビーは版ごとに分かれる (`fps-server:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
+EOS のロビーは版ごとに分かれる (`shooter-server:<版>` のバケツ) ので、クライアントとサーバーは同じ版でビルドしたものを使う。
 クライアントは承認のデータに自分の版を載せ、サーバーは版が違うクライアントを断る。
 サーバーには `[Net] rejected client <Id>: version mismatch (client 0.1.0, server 0.2.0)` が出て、クライアントは
 「版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。」を出してメインメニューに戻る。
-通信の手順の版 (`MatchProtocol.Version`) が違うクライアントも `fps:rejected:protocol-mismatch` で断る。
+通信の手順の版 (`MatchProtocol.Version`) が違うクライアントも `shooter:rejected:protocol-mismatch` で断る。
 
 ## 起動する
 
 ```sh
-docker run --rm --name fps-server -p 7777:7777/udp fps-server:local
+docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local
 docker compose -f docker/server/compose.yaml up -d     # stop_grace_period: 700s を書いてある
 ```
 
-ログは標準出力に出る (`docker logs -f fps-server`)。待ち受けを始めると次の行が出る。
+ログは標準出力に出る (`docker logs -f shooter-server`)。待ち受けを始めると次の行が出る。
 
 ```
 [Net] server listening on 0.0.0.0:7777
 ```
 
-止めるときは `docker stop -t 700 fps-server`。サーバーは SIGTERM を受けてもすぐには止まらず、今の試合が終わるのを待つ
+止めるときは `docker stop -t 700 shooter-server`。サーバーは SIGTERM を受けてもすぐには止まらず、今の試合が終わるのを待つ
 (次の「試合が終わってから止める」)。`-t` を付けないと docker は 10 秒で SIGKILL を送るので、試合の途中で落ちる。
 サーバーは止まる前につないでいるクライアントへ止まると知らせて切り、クライアントは「サーバーが止まりました。」を出してメインメニューに戻る。
 知らせが届かずに切れたとき (サーバーが落ちた・回線が切れた) は、クライアントは切断に気づいたところで
@@ -116,10 +116,10 @@ docker が SIGKILL を送るまでの猶予は、待つ秒数とロビーを閉�
 止める側で指定する。
 
 ```sh
-docker stop -t 700 fps-server                                   # 止めるたびに指定する
-docker run --rm --stop-timeout 700 -p 7777:7777/udp fps-server:local   # コンテナを作るときに決めておく
+docker stop -t 700 shooter-server                                   # 止めるたびに指定する
+docker run --rm --stop-timeout 700 -p 7777:7777/udp shooter-server:local   # コンテナを作るときに決めておく
 docker compose -f docker/server/compose.yaml stop                # stop_grace_period: 700s を書いてある
-docker kill -s TERM fps-server; docker kill -s TERM fps-server  # 2 回送るとすぐ止まる
+docker kill -s TERM shooter-server; docker kill -s TERM shooter-server  # 2 回送るとすぐ止まる
 ```
 
 `-drain-timeout` を変えたら猶予もそれに合わせる (例: `-drain-timeout 1800` なら `-t 1810` 以上)。
@@ -140,8 +140,8 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
 | 環境変数 | 既定 | 内容 |
 | --- | --- | --- |
-| `FPS_SERVER_PORT` | `7777` | 待ち受ける UDP のポート。変えたら `-p` の両側も同じ番号にする |
-| `FPS_SERVER_ADDRESS` | `0.0.0.0` | 待ち受ける IPv4 アドレス。コンテナの外からつなぐには `0.0.0.0` のままにする |
+| `SHOOTER_SERVER_PORT` | `7777` | 待ち受ける UDP のポート。変えたら `-p` の両側も同じ番号にする |
+| `SHOOTER_SERVER_ADDRESS` | `0.0.0.0` | 待ち受ける IPv4 アドレス。コンテナの外からつなぐには `0.0.0.0` のままにする |
 | `EOS_PRODUCT_ID` | なし | EOS の認証情報。`-transport eos` と `-register-lobby` で使う |
 | `EOS_SANDBOX_ID` | なし | 同上 |
 | `EOS_DEPLOYMENT_ID` | なし | 同上 |
@@ -149,11 +149,11 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 | `EOS_CLIENT_SECRET` | なし | 同上 |
 
 待ち受けのアドレスとポートは環境変数で渡す。`-address` / `-port` と環境変数の両方で渡すと
-`[Net] invalid arguments: -port is given more than once (FPS_SERVER_PORT is set too) ...` を出して終了コード 2 で終わる。
+`[Net] invalid arguments: -port is given more than once (SHOOTER_SERVER_PORT is set too) ...` を出して終了コード 2 で終わる。
 `-net-latency` / `-net-loss` / `-net-jitter` は使えず、付けると同じく終了コード 2 で終わる。
 
 ```sh
-docker run --rm -e FPS_SERVER_PORT=9000 -p 9000:9000/udp fps-server:local
+docker run --rm -e SHOOTER_SERVER_PORT=9000 -p 9000:9000/udp shooter-server:local
 ```
 
 ### EOS で待ち受ける
@@ -164,10 +164,10 @@ docker run --rm -e FPS_SERVER_PORT=9000 -p 9000:9000/udp fps-server:local
 
 ```sh
 # eos.env の中身は 1 行に 1 つ、EOS_PRODUCT_ID=... の形
-docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -transport eos
+docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -transport eos
 ```
 
-`-transport eos` は EOS の P2P (ソケット名 `fps`) で待ち受け、Device ID でログインできたら
+`-transport eos` は EOS の P2P (ソケット名 `shooter`) で待ち受け、Device ID でログインできたら
 `[Net] EOS server ready id=<サーバーの ID> ...` を出す。クライアントは `-mode client -transport eos -eos-server <サーバーの ID>` でつなぐ
 (EAC については [anti-cheat.md](anti-cheat.md))。
 認証情報が欠けていると `[Net] EOS credentials missing, using UDP` と足りない変数の名前を出し、UDP で待ち受ける。
@@ -183,10 +183,10 @@ EOS の SDK か認証情報が無いと、理由を出して終了コード 3 �
 ロビーに載せられるのは UDP で待ち受けるサーバーだけで、`-transport eos` と一緒には使えない。
 
 ```sh
-docker run --rm --env-file eos.env -p 7777:7777/udp fps-server:local -register-lobby 203.0.113.10:7777
+docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -register-lobby 203.0.113.10:7777
 ```
 
-ロビーは `fps-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
+ロビーは `shooter-server:<版>` のバケツに、最大 8 人で作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
 Device ID でログインしたユーザー。
 
 | 属性 | 値 |
@@ -233,18 +233,18 @@ Device ID でログインしたユーザー。
 メインメニューの「ONLINE - QUICK MATCH」と起動引数の `-lobby quickmatch` は、`-register-lobby` で載ったサーバーを探してつなぐ。
 
 - メニューのクイックマッチは、起動引数に `-address`・`-port`・`-eos-server` があればロビーを探さずにそのサーバーへつなぐ。
-- 探すには EOS のプラグイン (`Fps.NetEos`) と認証情報 (環境変数か `eos.local.json`) が要る。メニューのクイックマッチで、
+- 探すには EOS のプラグイン (`Shooter.NetEos`) と認証情報 (環境変数か `eos.local.json`) が要る。メニューのクイックマッチで、
   EOS がビルドに無いか認証情報が揃っていない UDP のときは、`[Lobby] the EOS lobby is not available ...; quick match connects to 127.0.0.1:7777`
   を出して手元のサーバー (`make server-dotnet`) へつなぐ。`-lobby quickmatch` と EOS のクイックマッチは、探せなければ理由を出して止まる。
-- `fps-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
+- `shooter-server:<自分の版>` のバケツを探し、`version` が自分の版と同じで、`players` がロビーの最大人数より少なく、
   `server` が IPv4:ポートのロビーのうち、`players` がいちばん多いもの (同じならロビー ID の順で先のもの) を選ぶ。
   クライアントはロビーには入らず、`server` のアドレスへ UDP でつなぐ。クイックマッチは UDP だけで、`-lobby quickmatch -transport eos` は理由を出して終了コード 2 で断られる
   (EOS でつなぐなら `-mode client -transport eos -eos-server <サーバーの ID>`)。
 
 ```
-[Lobby] logging in to search fps-server:0.2.0
+[Lobby] logging in to search shooter-server:0.2.0
 [Lobby] logged in with the device id user=<自分の ID>
-[Lobby] found 2 lobby(s) in fps-server:0.2.0
+[Lobby] found 2 lobby(s) in shooter-server:0.2.0
 [Lobby] quick match picked id=<ロビー Id> server=203.0.113.10:7777 players=1/8; connecting client 203.0.113.10:7777
 ```
 
@@ -275,7 +275,7 @@ Device ID でログインしたユーザー。
 置いてあり、チームデスマッチのときは使われない。
 
 ```sh
-docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetArena01 -rules Domination
+docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map NetArena01 -rules Domination
 ```
 
 試合が始まると、サーバーのログに拠点の数と、占領・中立化のたびに次の行が出る。
@@ -345,14 +345,14 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
 1 イベント 1 行の JSON で標準出力に出す。付けないとき (`-log-format text`、既定) はこれまでのログのままで、JSON の行は出ない。
 
 ```sh
-docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -log-format json
+docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -log-format json
 ```
 
 同じ標準出力に今までのログの行も混ざるので、jq では各行を文字列として読み (`-R`)、JSON として読めて `type` のある行だけを拾う。
 
 ```sh
-docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type?)'
-docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
+docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type?)'
+docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 ```
 
 ```
@@ -413,7 +413,7 @@ cp templates/github-workflows/map-data.yml .github/workflows/
   EOS の SDK は `scripts/eos-sdk.sh --fetch` で取るので、EOS のライブラリは amd64 のイメージにだけ入り、arm64 のイメージは UDP だけで待ち受ける。
   push する前に amd64 のイメージを起動し、`[Version] <版>` と `[Net] server listening on 0.0.0.0:7777` を出し、uid 10001 で動き、
   SIGTERM で終了コード 0 で止まることを確かめる (`scripts/server-image-smoke.sh`。手元でも `make server-image` の後に
-  `bash scripts/server-image-smoke.sh fps-server:local` で同じことを確かめられる)。PR でもここまでを push せずに走らせる。
+  `bash scripts/server-image-smoke.sh shooter-server:local` で同じことを確かめられる)。PR でもここまでを push せずに走らせる。
   要らなければ `on:` の `pull_request` を消し、ファイルを絞るなら `paths` を足す。
 - `map-data.yml`: 毎晩 Unity でマップのデータ (`server-data/maps`) を書き出し直し (`scripts/nightly-server-data-ci.sh`)、
   コミットしたものと違えば失敗する。[GameCI](https://game.ci/docs/github/activation) の手順で作った Secrets の `UNITY_LICENSE` が要る。

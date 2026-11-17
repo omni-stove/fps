@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>言語の一覧 (<see cref="GameLanguageList"/>) の 1 行。言語・その言語自身での名前・その言語を選ぶ OS の言語。</summary>
     public sealed class GameLanguageEntry

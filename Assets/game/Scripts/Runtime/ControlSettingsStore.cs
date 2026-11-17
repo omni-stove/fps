@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="ControlSettings"/> を <see cref="PlayerPrefs"/> の 1 つのキーに JSON の文字列 (<see cref="ControlSettings.ToJson"/>) で読み書きする。
@@ -12,7 +12,7 @@ namespace Fps.Runtime
     public sealed class ControlSettingsStore
     {
         /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
-        public const string DefaultKey = "Fps.ControlSettings";
+        public const string DefaultKey = "Shooter.ControlSettings";
 
         /// <param name="key">PlayerPrefs のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         public ControlSettingsStore(string key = DefaultKey)

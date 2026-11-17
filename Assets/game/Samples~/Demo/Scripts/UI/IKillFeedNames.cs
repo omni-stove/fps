@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="KillFeedView"/> が <see cref="CombatEvents.Killed"/> の 1 件を、名前・チーム・武器の表示名の付いた行にするための引き先。

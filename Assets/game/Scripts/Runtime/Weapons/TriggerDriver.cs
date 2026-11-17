@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃ち方 (ITriggerModel) に押す・離す・時間を渡す順を、プレイヤー・敵・タレットで揃える。
     public sealed class TriggerDriver

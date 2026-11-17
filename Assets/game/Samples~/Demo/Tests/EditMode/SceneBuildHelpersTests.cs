@@ -1,6 +1,6 @@
 using System;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -9,7 +9,7 @@ using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// シーン生成スクリプトの共通部分。既存のビルダー (EnemyTestSceneBuilder・MissionTestSceneBuilder) の出力が

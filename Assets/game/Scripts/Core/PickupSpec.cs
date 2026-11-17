@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拾える物 1 つの中身。種類ごとの作り方 (<see cref="Weapon"/>・<see cref="ReserveAmmo"/>・<see cref="Health"/>・<see cref="Armor"/>・<see cref="Tag"/>・<see cref="Item"/>) で作る。

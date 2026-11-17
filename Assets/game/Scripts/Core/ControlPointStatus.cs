@@ -1,10 +1,10 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// HUD に出す拠点 1 つの状態 (占領しているチーム・-100 (Bravo) から +100 (Alpha) の進み・押し合い)。
-    /// 通信の手順 (Netcode の NetControlPointState・Fps.Protocol の ControlPointSnapshot) に依らずに HUD が描けるよう、ここで受け取る。
+    /// 通信の手順 (Netcode の NetControlPointState・Shooter.Protocol の ControlPointSnapshot) に依らずに HUD が描けるよう、ここで受け取る。
     /// </summary>
     public readonly struct ControlPointStatus : IEquatable<ControlPointStatus>
     {

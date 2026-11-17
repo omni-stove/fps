@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ゲームで選べる言語の一覧。設定画面に並べる順と、言語ごとの名前・初めて起動したときに選ぶ OS の言語を持つ。

@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 処刑技・背後から倒す技の値は敵が出さないので並べず、MeleeSpec の既定のままにする。
     [Serializable]

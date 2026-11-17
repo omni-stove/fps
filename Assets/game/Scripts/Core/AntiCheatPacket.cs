@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ピアの間で EAC のために送るパケットの形式。ゲームのデータとは別のチャネルで送る。

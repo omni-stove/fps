@@ -1,12 +1,12 @@
 using System.Linq;
 using System;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class DamageableTests
     {
@@ -95,7 +95,7 @@ namespace Fps.Tests.EditMode
             var source = new Vector3(1f, 0f, -5f);
 
             _damageable.TakeDamage(5, source);
-            _damageable.ApplyHit(10, Fps.Core.HitZone.Body, 0f, Fps.Core.DamageFalloff.None);
+            _damageable.ApplyHit(10, Shooter.Core.HitZone.Body, 0f, Shooter.Core.DamageFalloff.None);
             LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
             _damageable.TakeDamage(15, source);
             _damageable.TakeDamage(15, source);
@@ -128,7 +128,7 @@ namespace Fps.Tests.EditMode
         {
             _damageable.Initialize("dummy", 50);
             _damageable.TakeDamage(45);
-            Fps.Core.Health reset = null;
+            Shooter.Core.Health reset = null;
             _damageable.HealthReset += health => reset = health;
 
             _damageable.RestoreHealth(30);

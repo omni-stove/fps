@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ルールの <see cref="SlowMotion"/> を <see cref="TimeScaleArbiter.ApplyRules"/> に入れる。持ち主はプレイヤーにするので、

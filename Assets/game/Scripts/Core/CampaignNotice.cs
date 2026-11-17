@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キャンペーンが HUD に一時的に出す案内。<see cref="Notice"/> が <see cref="HudNotice.None"/> なら何も出さない。

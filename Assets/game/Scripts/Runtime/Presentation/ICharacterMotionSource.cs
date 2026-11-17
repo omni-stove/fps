@@ -1,9 +1,9 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャラの本体が、接地・しゃがみ・ダッシュの今の状態を演出 (<see cref="CharacterAudio"/>) に見せる。
     /// オフラインのプレイヤー (<see cref="PlayerController"/>)・敵 (<see cref="EnemyAgent"/>)・ネット対戦のプレイヤー
-    /// (<c>Fps.Net.NetworkPlayerMotor</c>) が実装し、演出は相手の種類を知らずに同じ規則で音を決める。
+    /// (<c>Shooter.Net.NetworkPlayerMotor</c>) が実装し、演出は相手の種類を知らずに同じ規則で音を決める。
     /// 速さは演出の側が本体の位置の差から測るので、ここには持たせない。
     /// </summary>
     public interface ICharacterMotionSource

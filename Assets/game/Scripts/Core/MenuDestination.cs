@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>メインメニューのボタンで選ぶ行き先。オフラインの行き先でどのシーンをどう読むかは <see cref="MenuRoute.Plan(MenuDestination, string)"/> が決める。</summary>
     public enum MenuDestination

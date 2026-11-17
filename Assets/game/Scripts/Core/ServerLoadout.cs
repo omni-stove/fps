@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーが試合で全員に持たせるロードアウト (<see cref="LoadoutRule"/> に合うスロット順の <see cref="WeaponSpec"/> と持ち替え秒数) と、

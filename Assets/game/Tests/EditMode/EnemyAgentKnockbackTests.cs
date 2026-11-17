@@ -1,15 +1,15 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // 着地すると NavMeshAgent を有効に戻すが、Edit Mode には焼いた NavMesh が無いので、着地と NavMesh への寄せは KnockbackSmokeRun で確かめる。
     public sealed class EnemyAgentKnockbackTests

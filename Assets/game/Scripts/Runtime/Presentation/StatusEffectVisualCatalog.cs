@@ -2,14 +2,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// 状態異常の種類 (<see cref="Fps.Core.StatusEffectSpec.KindId"/>) ごとの、かかっている体に付ける見た目。
+    /// 状態異常の種類 (<see cref="Shooter.Core.StatusEffectSpec.KindId"/>) ごとの、かかっている体に付ける見た目。
     /// <see cref="StatusEffectVisuals"/> が <see cref="Load"/> で読む。置き場所と枠の扱いは <see cref="PresentationCatalog"/> の規約に従い、
     /// カタログが無い・種類の枠が空なら <see cref="StatusEffectVisuals"/> がコードで形を作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "StatusEffectVisualsCatalog", menuName = "Fps/Status Effect Visuals Catalog")]
+    [CreateAssetMenu(fileName = "StatusEffectVisualsCatalog", menuName = "Shooter/Status Effect Visuals Catalog")]
     public sealed class StatusEffectVisualCatalog : ScriptableObject
     {
         /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す名前。</summary>

@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面の中央の下に、近くで Interact したら何が起きるかを 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。

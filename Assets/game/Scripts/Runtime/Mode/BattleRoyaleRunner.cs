@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) をシーンで進める。分隊 (<see cref="Squads"/>) で戦い、倒れた人は戻らず、最後に残った分隊が勝つ。

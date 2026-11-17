@@ -1,7 +1,7 @@
 using System.Numerics;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 1 人のプレイヤー (人と Bot) の、全員に見せる状態。Netcode では NetPlayer・NetworkPlayerMotor・NetPlayerWeapon の同期値と

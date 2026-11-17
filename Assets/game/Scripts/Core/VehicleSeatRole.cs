@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>乗り物の座席の種類。</summary>
     public enum VehicleSeatRole

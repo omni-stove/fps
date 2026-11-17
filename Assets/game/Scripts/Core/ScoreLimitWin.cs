@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>得点が <see cref="ScoreLimit"/> に届いた陣営の勝ち。</summary>
     public sealed class ScoreLimitWin : IWinCondition

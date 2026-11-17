@@ -1,6 +1,6 @@
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,7 +8,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 既定の HUD の作り役 (<see cref="DefaultHudFactory"/>) が、Bootstrap の出した自分のプレイヤーと HUD の値に HUD を 1 つ作り、

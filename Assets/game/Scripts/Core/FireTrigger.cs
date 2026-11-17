@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// トリガーの入力 (押されているか・今フレームに押されたか) から、撃とうとするかを <see cref="FireMode"/> で決める。

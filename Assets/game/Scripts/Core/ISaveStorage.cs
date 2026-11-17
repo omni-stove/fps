@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// セーブデータの文字列を名前 (スロット) ごとに置く場所。Core はファイルに触れないので、実際の読み書きは Runtime 側で実装する。

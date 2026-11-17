@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ClientBuildOptionsTests
     {
         private static string[] Args(string commandLine)
@@ -40,7 +40,7 @@ namespace Fps.Core.Tests
         [TestCase("Windows", ClientPlatform.Windows)]
         public void ParsesPlatform(string value, ClientPlatform expected)
         {
-            var options = ParseOrFail("-batchmode -executeMethod Fps.Editor.ClientBuilder.Build -clientPlatform " + value);
+            var options = ParseOrFail("-batchmode -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform " + value);
 
             Assert.That(options.Platform, Is.EqualTo(expected));
         }
@@ -85,9 +85,9 @@ namespace Fps.Core.Tests
             var mac = new ClientBuildOptions(ClientPlatform.MacOS);
 
             Assert.That(windows.OutputDirectory, Is.EqualTo("Builds/client-windows"));
-            Assert.That(windows.ExecutablePath, Is.EqualTo("Builds/client-windows/fps.exe"));
+            Assert.That(windows.ExecutablePath, Is.EqualTo("Builds/client-windows/shooter.exe"));
             Assert.That(mac.OutputDirectory, Is.EqualTo("Builds/client-macos"));
-            Assert.That(mac.ExecutablePath, Is.EqualTo("Builds/client-macos/fps.app"));
+            Assert.That(mac.ExecutablePath, Is.EqualTo("Builds/client-macos/shooter.app"));
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace Fps.Core.Tests
         [Test]
         public void FormatsForLogs()
         {
-            Assert.That(new ClientBuildOptions(ClientPlatform.Windows).ToString(), Is.EqualTo("windows -> Builds/client-windows/fps.exe"));
+            Assert.That(new ClientBuildOptions(ClientPlatform.Windows).ToString(), Is.EqualTo("windows -> Builds/client-windows/shooter.exe"));
         }
     }
 }

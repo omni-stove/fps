@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 字幕 (SubtitleFeed) と分けるのは、あちらは素材があって実際に鳴った音だけを流すが、敵の耳には音の素材の有無に関わらず届けたいため。
     public static class StealthNoise

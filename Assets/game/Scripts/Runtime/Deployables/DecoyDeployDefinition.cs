@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DeployDecoy", menuName = "Fps/Abilities/Deploy Decoy")]
+    [CreateAssetMenu(fileName = "DeployDecoy", menuName = "Shooter/Abilities/Deploy Decoy")]
     public sealed class DecoyDeployDefinition : DeployAbilityDefinition
     {
         public const string BodyName = "Body";

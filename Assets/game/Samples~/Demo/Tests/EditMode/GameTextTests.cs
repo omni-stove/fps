@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary>
     /// <see cref="GameText"/> が渡された関数から引くたびに表を受け取り、表が無ければキーそのものを返すこと。

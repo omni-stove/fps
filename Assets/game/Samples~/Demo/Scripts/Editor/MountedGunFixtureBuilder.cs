@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 地面に据えた仮の固定銃座。+Z が前で、銃の後ろに座席を 1 つだけ置き、動き方は付けない (固定銃座の形)。
     // 盾はシーンに残るよう、作るときに MountedGun に付けさせる (Play で付けると保存したシーンに盾が無く、置き方を確かめられない)。

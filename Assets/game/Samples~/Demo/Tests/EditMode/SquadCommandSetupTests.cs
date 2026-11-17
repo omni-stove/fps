@@ -1,14 +1,14 @@
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 分隊への指示の取り付け (SquadCommandActionInstaller)、射撃場に置く物 (SquadCommandRangeFixture)、smoke の手順 (SquadCommandSmokeStep) が

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦の、自分のロードアウトを選ぶ画面 (<see cref="GameUi.LoadoutSelect"/>) とサーバーへの送信をつなぐ。

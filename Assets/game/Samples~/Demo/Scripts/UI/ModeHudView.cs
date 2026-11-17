@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインのモード (<see cref="ModeRunnerBase"/>) の HUD。画面左上に残り時間・陣営ごとの得点・派生モードが足す行・試合結果を出す。

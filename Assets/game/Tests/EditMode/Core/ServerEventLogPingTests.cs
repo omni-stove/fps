@@ -2,9 +2,9 @@ using System;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerEventLogPingTests
     {
         private const string _matchId = "6c1f3b2a9d0e4f5a8b7c6d5e4f3a2b1c";

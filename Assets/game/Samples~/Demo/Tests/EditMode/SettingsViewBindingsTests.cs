@@ -1,8 +1,8 @@
 using System.Linq;
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,7 +10,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 設定画面のキーとボタンの割り当て: 変えるとすぐ効き、重なりを知らせて取り消せ、既定に戻せ、閉じると保存されて起動し直しても残ること。
@@ -41,8 +41,8 @@ namespace Fps.Tests.EditMode
             // 案内の文を日本語で確かめるので、この機械で保存した言語に依らないようにする
             Localizer.Apply(GameLanguage.Japanese);
             var suffix = Guid.NewGuid().ToString("N");
-            _store = new ControlSettingsStore("Fps.Tests.SettingsViewBindings.Settings." + suffix);
-            _bindingStore = new InputBindingOverridesStore("Fps.Tests.SettingsViewBindings.Bindings." + suffix);
+            _store = new ControlSettingsStore("Shooter.Tests.SettingsViewBindings.Settings." + suffix);
+            _bindingStore = new InputBindingOverridesStore("Shooter.Tests.SettingsViewBindings.Bindings." + suffix);
             _asset = ProjectActionsClone.Create();
             _view = new SettingsView(_store, _bindingStore, _asset);
             _container = new VisualElement();

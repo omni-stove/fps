@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="CoverProbe.Evaluate"/> の結果。</summary>
     public readonly struct CoverProbeResult

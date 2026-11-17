@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -9,7 +9,7 @@ using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// EnemyAgent の組み立て (部品の解決・設定の検査・ログ・死亡の伝達) を確かめる。
@@ -398,7 +398,7 @@ namespace Fps.Tests.EditMode
             try
             {
                 // 撃った者 (-z 側) へ向いた点。敵から 3m ほどで、点から撃った者への向きは点の向きとほぼ同じ。
-                var marker = new GameObject("Cover-A").AddComponent<Fps.Runtime.CoverPoint>();
+                var marker = new GameObject("Cover-A").AddComponent<Shooter.Runtime.CoverPoint>();
                 marker.transform.SetParent(registryObject.transform, false);
                 marker.transform.SetPositionAndRotation(new Vector3(2f, 0f, -2f), Quaternion.LookRotation(Vector3.back));
                 marker.Height = CoverHeight.Low;

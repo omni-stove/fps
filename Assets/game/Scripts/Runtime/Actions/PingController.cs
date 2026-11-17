@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Ping の入力 (<see cref="PlayerActionReader.PressedCommands"/> の <see cref="PlayerCommands.Ping"/>) で、照準の先の敵か場所に印を付ける。
@@ -53,7 +53,7 @@ namespace Fps.Runtime
         private PingSpec _spec;
         private bool _specApplied;
         private PingBoard _board;
-        private Fps.Core.Ping _rule = Fps.Core.Ping.Off;
+        private Shooter.Core.Ping _rule = Shooter.Core.Ping.Off;
         private bool _configured;
         private Damageable _self;
         private ViewRig _rig;
@@ -67,9 +67,9 @@ namespace Fps.Runtime
         public event Action<PingController> Changed;
 
         /// <summary>今のルールで付けられるか。<see cref="Configure"/> の前は Off。</summary>
-        public Fps.Core.Ping Rule => _rule;
+        public Shooter.Core.Ping Rule => _rule;
 
-        public bool UsesPing => _configured && _rule == Fps.Core.Ping.On;
+        public bool UsesPing => _configured && _rule == Shooter.Core.Ping.On;
 
         /// <summary>
         /// 今の値の <see cref="PingSpec"/>。<see cref="Configure"/> の後はそのときの値で、前は Inspector の値から作る。値が不正なら ArgumentOutOfRangeException。
@@ -201,7 +201,7 @@ namespace Fps.Runtime
             _board = null;
             _shared = markers;
             _sharedVersion = markers.Version;
-            _rule = Fps.Core.Ping.On;
+            _rule = Shooter.Core.Ping.On;
             _configured = true;
             _lastRefusal = PingRefusal.None;
             _self = GetComponent<Damageable>();

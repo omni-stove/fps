@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="PresentationCatalog"/> の武器 Id での引き当てと検査を、メモリ上のインスタンスで確かめる。</summary>
     public sealed class PresentationCatalogTests

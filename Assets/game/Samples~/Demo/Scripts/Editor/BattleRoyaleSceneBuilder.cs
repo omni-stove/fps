@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// バトルロイヤルの広いマップ (<see cref="BuildSceneList.BattleRoyaleScene"/>) を組む。Runner は <see cref="BattleRoyaleRunner"/>、
     /// ルールは <see cref="GameRulesAssetBuilder.BattleRoyalePath"/> (倒れたら戻らない・ダウンして分隊の味方が起こせる)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.BattleRoyaleSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.BattleRoyaleSceneBuilder.Build</code>
     /// 試合が最後の分隊まで進むことは <see cref="BattleRoyaleSmokeRun"/> で確かめる。
     /// </summary>
     /// <remarks>
@@ -34,7 +34,7 @@ namespace Fps.Editor
     {
         public static string ScenePathValue => BuildSceneList.BattleRoyaleScene;
         public static string RulesPathValue => GameRulesAssetBuilder.BattleRoyalePath;
-        public const string MenuPath = "Fps/Build Battle Royale Scene";
+        public const string MenuPath = "Shooter/Build Battle Royale Scene";
 
         public const int SquadCount = 6;
         public const int SquadSize = 3;

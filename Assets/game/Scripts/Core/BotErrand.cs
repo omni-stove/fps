@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// bot が戦いのほかにする用事 (<see cref="BattleRoyaleBotPlanner.Plan"/> が決める) か、人が出した分隊の指示 (<see cref="IsOrder"/>)。

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>起動したプロセスでクライアントをどう始めるか (<see cref="NetClientLaunch.ResolveStart"/>)。</summary>
     public enum NetClientStart

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 遮られているかを見ないのは、世界の当たりを知るのがオフラインの SprayDelivery とサーバーの ServerSpray だけだから。
     public static class SprayCone

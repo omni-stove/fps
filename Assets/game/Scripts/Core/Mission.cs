@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ミッション全体の状態。</summary>
     public enum MissionState

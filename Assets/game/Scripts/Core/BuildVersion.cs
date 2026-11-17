@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ビルドの版 (PlayerSettings.bundleVersion、実行時の Application.version) に入れる文字列の検証と正規化。

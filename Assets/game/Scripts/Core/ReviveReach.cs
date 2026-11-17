@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ネット対戦の蘇生の要求を、<see cref="TeamDeathmatchSession.TryRevive"/> に渡してよいか確かめる。

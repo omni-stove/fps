@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     public readonly struct TriggerPull
     {

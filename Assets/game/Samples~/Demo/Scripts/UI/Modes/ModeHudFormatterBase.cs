@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// モードの書式役 (<see cref="IModeHudFormatter"/>) の土台。残り時間・陣営ごとの得点・リスポーンまでの秒数・結果を

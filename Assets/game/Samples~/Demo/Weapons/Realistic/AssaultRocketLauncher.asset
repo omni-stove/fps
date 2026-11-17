@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: AssaultRocketLauncher
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: bc443423-7f93-439b-a628-d79f839b2afc
   _nameKey: weapon.real.assaultRocketLauncher
   _description: "Battlefield 4 \u306E SMAW (\u5B9F\u9283\u306F Mk 153 SMAW) \u3092\u53C2\u8003\u3002\u6B69\u5175\u306B\u306F\u7206\u767A 112\u30FB\u534A\u5F84 4 m\u3002BF4 \u3067\u306F 40 m/s \u304B\u3089 110 m/s \u307E\u3067\u52A0\u901F\u3059\u308B\u304C\u3001\u30AD\u30C3\u30C8\u306F\u4E00\u5B9A\u306E\u901F\u3055\u306A\u306E\u3067 80 m/s \u306B\u3057\u305F\u3002"

@@ -1,13 +1,13 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using UnityEngine;
-using ZiplineLine = Fps.Runtime.Traversal.Zipline;
-using ZiplineRule = Fps.Core.Zipline;
+using ZiplineLine = Shooter.Runtime.Traversal.Zipline;
+using ZiplineRule = Shooter.Core.Zipline;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // batchmode には入力が無いので、Interact の代わりに ZiplineMovement.TryGrab を、Jump の代わりに MoveFilter への差し込みを使う。
     // 射撃場のルールは Zipline を Off のままにしているので、まず掴まれないことを確かめてから、この手順の間だけ On にする。

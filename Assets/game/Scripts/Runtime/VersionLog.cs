@@ -1,10 +1,10 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// 起動時にビルドの版 (Application.version、ビルド時に <c>Fps.Editor.BuildVersionStamper</c> が入れたもの) を
+    /// 起動時にビルドの版 (Application.version、ビルド時に <c>Shooter.Editor.BuildVersionStamper</c> が入れたもの) を
     /// <c>[Version] 0.2.0</c> の形でログに出す。クライアントと専用サーバーのどちらのビルドにも入り、どのシーンから始めても出る。
     /// </summary>
     public static class VersionLog

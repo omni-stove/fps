@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="EosP2PNotice"/> の種類。</summary>
     public enum EosP2PNoticeKind

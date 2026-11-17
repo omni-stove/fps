@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ガンゲーム (<see cref="GunGame"/>) の <c>[Mode] gungame</c> のログの文言。段は 1 から数えて書く。

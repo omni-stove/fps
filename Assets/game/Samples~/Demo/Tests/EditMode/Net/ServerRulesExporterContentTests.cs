@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     public sealed class ServerRulesExporterContentTests
     {
@@ -18,7 +18,7 @@ namespace Fps.Net.Tests
         [SetUp]
         public void SetUp()
         {
-            // プロジェクトの Resources/FpsKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
+            // プロジェクトの Resources/ShooterKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
             GameContent.Use(Create<GameContent>("Empty"));
             _directory = Path.Combine(Path.GetTempPath(), "ServerRulesExporterContentTests-" + Guid.NewGuid().ToString("N"));
         }

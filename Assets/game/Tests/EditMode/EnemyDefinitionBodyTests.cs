@@ -1,13 +1,13 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Update は Edit Mode では走らないので、向き直りは Face を、怯みは Bind した StaggerReaction へ当てた弾で直接確かめる。
     public sealed class EnemyDefinitionBodyTests

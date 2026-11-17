@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// <see cref="AntiCheatPacket"/> を形を変えずに運ぶのは、EOS の P2P のピア同士と同じ Hello とメッセージの手順を

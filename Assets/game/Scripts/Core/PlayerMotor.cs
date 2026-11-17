@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーの移動量を計算する (歩き・ダッシュ・しゃがみ・ジャンプ・重力)。衝突判定はせず、

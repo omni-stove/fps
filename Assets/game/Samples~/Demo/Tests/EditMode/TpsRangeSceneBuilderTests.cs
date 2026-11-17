@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class TpsRangeSceneBuilderTests
     {
@@ -48,7 +48,7 @@ namespace Fps.Tests.EditMode
         public void SavesToTheTpsRangeSceneOfTheBuildList()
         {
             Assert.That(TpsRangeSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.TpsRangeScene));
-            Assert.That(TpsRangeSceneBuilder.MenuPath, Is.EqualTo("Fps/Build TPS Range Scene"));
+            Assert.That(TpsRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build TPS Range Scene"));
         }
 
         [Test]

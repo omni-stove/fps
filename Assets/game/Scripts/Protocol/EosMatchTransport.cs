@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// EOS の P2P で <see cref="IMatchTransport"/> を実装する。相手は IP アドレスではなく ProductUserId で指定する。
@@ -14,7 +14,7 @@ namespace Fps.Protocol
     /// </summary>
     /// <remarks>
     /// <para>
-    /// ソケット名とチャンネルは Netcode の EOS の transport (<c>Fps.NetEos.EosP2PTransport</c>) と同じにする:
+    /// ソケット名とチャンネルは Netcode の EOS の transport (<c>Shooter.NetEos.EosP2PTransport</c>) と同じにする:
     /// 落ちてよいものはチャンネル 0、順に届くものはチャンネル 2 で送り、チャンネル 3 は Easy Anti-Cheat のために空けておく。
     /// どのパケットも <see cref="PacketSplitter"/> の形にし、その中身の先頭 1 バイトで、データ・切断の知らせ・往復時間を測る ping/pong を分ける。
     /// </para>
@@ -30,7 +30,7 @@ namespace Fps.Protocol
     public sealed class EosMatchTransport : IMatchTransport, IConnectionUserIds
     {
         /// <summary>P2P のソケット名。英数字 1〜32 文字で、サーバーとクライアントで同じであること。</summary>
-        public const string SocketName = "fps";
+        public const string SocketName = "shooter";
 
         /// <summary>EOS P2P の 1 パケットの上限 (EOS_P2P_MAX_PACKET_SIZE)。</summary>
         public const int MaxPacketSize = 1170;

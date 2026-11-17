@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拾える物 (<see cref="Pickup"/>) から武器と予備弾を受け取れる持ち主。プレイヤーの <see cref="WeaponController"/> と bot の <see cref="EnemyAgent"/> が実装する。

@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// ホードのシーン Horde を組む。Runner は <see cref="HordeRunner"/>、ルールは <see cref="GameRulesAssetBuilder.HordePath"/>、
     /// 通貨と波の調整値は <see cref="DefinitionPath"/> (<see cref="HordeDefinition"/>。無いときだけ作る)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.HordeSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.HordeSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向く。床は 60m 四方):
@@ -32,8 +32,8 @@ namespace Fps.Editor
     {
         public static string ScenePathValue => BuildSceneList.HordeScene;
         public static string RulesPathValue => GameRulesAssetBuilder.HordePath;
-        public static string DefinitionPath => FpsKitRoot.OutputPath("Modes/Horde.asset");
-        public const string MenuPath = "Fps/Build Horde Scene";
+        public static string DefinitionPath => ShooterKitRoot.OutputPath("Modes/Horde.asset");
+        public const string MenuPath = "Shooter/Build Horde Scene";
 
         public const string BaseRootName = "Base";
         public const string BaseMarkerName = "Base-Marker";

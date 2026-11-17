@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: RampingLmg
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 4b42f966-c0b8-430c-99aa-a6544cc97431
   _nameKey: weapon.ref.rampingLmg
   _description: "Valorant \u306E Odin (\u5B9F\u9283\u306F PKM / Negev \u306E\u3088\u3046\u306A\u30D9\u30EB\u30C8\u7D66\u5F3E\u6A5F\u95A2\u9283) \u3092\u53C2\u8003\u3002\u4F53 38\u30FB100 \u767A\u3067\u3001\u6483\u3061\u7D9A\u3051\u308B\u3068\u6BCE\u79D2 12 \u767A\u304B\u3089 15.6 \u767A\u306B\u4E0A\u304C\u308B\u3002Valorant \u306F\u8997\u3044\u305F\u3068\u304D\u306B\u4E0A\u304C\u308B\u304C\u3001\u30AD\u30C3\u30C8\u3067\u306F\u6483\u3061\u7D9A\u3051\u3066\u4E0A\u3052\u308B\u300230 m \u304B\u3089 31 \u306B\u6E1B\u308B\u3002"

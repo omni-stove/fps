@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 時間の速さ (スローモーション) の口。<see cref="Request"/> で理由・倍率・秒数を受け、一番遅いものを Time.timeScale にし、

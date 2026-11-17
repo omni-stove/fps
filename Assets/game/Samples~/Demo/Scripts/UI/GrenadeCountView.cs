@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 残りのグレネードの数 (<see cref="HudText.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。

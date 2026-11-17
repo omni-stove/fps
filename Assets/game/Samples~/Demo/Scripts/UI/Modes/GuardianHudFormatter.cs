@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガーディアンの HUD の行 (表のキー <c>mode.guardian.*</c> の <see cref="LocalizedText"/>)。

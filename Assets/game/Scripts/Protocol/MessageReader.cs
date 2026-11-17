@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// <see cref="MessageWriter"/> が書いたバイト列を先頭から読む。データは送り手を信じずに読み、

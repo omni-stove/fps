@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SideSpawnSelector"/> に渡す、陣営ごとの出現点 1 か所。</summary>
     public readonly struct SideSpawn

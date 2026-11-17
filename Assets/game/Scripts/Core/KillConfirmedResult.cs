@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="KillConfirmed.Collect"/> でタグを拾おうとした結果。</summary>
     public enum KillConfirmedResult

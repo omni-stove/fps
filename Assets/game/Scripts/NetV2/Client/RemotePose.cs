@@ -1,7 +1,7 @@
 using System.Numerics;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>他のプレイヤーの、ある tick の見た目の姿。</summary>
     public readonly struct RemotePose
@@ -30,7 +30,7 @@ namespace Fps.NetV2
         public string WeaponId { get; }
 
         /// <summary>行の姿。伏せとしゃがみはサーバーが同時に立てないので、伏せを先に見る。</summary>
-        public static RemotePose From(in Fps.Protocol.PlayerSnapshot row)
+        public static RemotePose From(in Shooter.Protocol.PlayerSnapshot row)
         {
             var stance = row.IsProne ? PlayerStance.Prone : row.IsCrouched ? PlayerStance.Crouching : PlayerStance.Standing;
             return new RemotePose(row.Position, row.Yaw, stance, row.WeaponId);

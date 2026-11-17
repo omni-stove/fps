@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 能力が渡した <see cref="IMovementOverride"/> を包み、能力を使っている間だけ有効にして、選ばれている間は

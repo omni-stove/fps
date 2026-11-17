@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// キルコンファームド (<see cref="KillConfirmed"/>) で倒れた人が落とした 1 枚のタグ。<see cref="KillConfirmed.DropTag"/> が作り、

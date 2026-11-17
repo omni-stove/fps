@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="EosMatchTransport"/> の待ち時間の調整値。</summary>
     public sealed class EosTransportOptions

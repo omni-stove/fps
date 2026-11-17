@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Interact (キーボードは E の長押し) で <see cref="HordeRunner.TryInteract()"/> を呼び、近くの防衛物を通貨で直す・置く。

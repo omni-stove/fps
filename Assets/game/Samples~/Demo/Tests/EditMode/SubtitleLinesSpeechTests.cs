@@ -1,8 +1,8 @@
 using System;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     public sealed class SubtitleLinesSpeechTests
     {

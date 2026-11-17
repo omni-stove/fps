@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// PvE の 1 つの波の値。何体出すか・敵をどれだけ強くするか・同時に何体まで出しておくか・全滅させた後に何秒休むか。

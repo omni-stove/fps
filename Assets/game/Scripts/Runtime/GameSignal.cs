@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="GameSignals"/> の項目 1 つ。今の値 (<see cref="Value"/>) と、値を出したときのイベント (<see cref="Changed"/>) を持つ。

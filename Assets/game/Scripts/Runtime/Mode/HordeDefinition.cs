@@ -1,17 +1,17 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ホードの調整値 (通貨の入り方・防衛物を買える時期・補強の費用と届く距離・倒したときの点・波の敵の陣営と動かし方・波の式) をアセットとして持つ。
     /// <see cref="HordeRunner"/> が読み、<see cref="ToSpec"/> で <see cref="HordeSpec"/>、<see cref="CreateSchedule"/> で波の予定を作る。
     /// これがあれば、補強の費用と届く距離はシーンの <see cref="HordeFortification"/>、敵の値は <see cref="WaveSpawner"/> の Inspector の値に代わる。
     /// 新しく作ったときの値は <see cref="HordeSpec"/> と <see cref="WaveSpawner"/> の既定値と同じ。
-    /// 中身は Fps.Editor.HordeSceneBuilder が無いときだけ作る。
+    /// 中身は Shooter.Editor.HordeSceneBuilder が無いときだけ作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "Horde", menuName = "Fps/Horde")]
+    [CreateAssetMenu(fileName = "Horde", menuName = "Shooter/Horde")]
     public sealed class HordeDefinition : ScriptableObject
     {
         [Header("通貨")]

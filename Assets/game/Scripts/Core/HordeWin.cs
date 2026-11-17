@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ホードの勝ち負け。波の予定 (<see cref="WaveSchedule"/>) の最後の波を全滅させたら守る側の勝ち、

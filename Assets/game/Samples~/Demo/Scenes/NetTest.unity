@@ -569,7 +569,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &833123794
 GameObject:
@@ -614,7 +614,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &859599361
 GameObject:
@@ -645,7 +645,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b52d08f7e6a14c93812f5a0d3c9e4b61, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpectatorCamera
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpectatorCamera
 --- !u!20 &859599363
 Camera:
   m_ObjectHideFlags: 0
@@ -755,7 +755,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &904333369
 GameObject:
@@ -1009,7 +1009,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 0
 --- !u!1 &1626666776
 GameObject:
@@ -1153,7 +1153,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9e70b561ee7f4ae38a2f14eb48ea7ad, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetControlPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetControlPoint
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &1707472881
 MonoBehaviour:
@@ -1166,7 +1166,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcb5f65ffd8f19cf190023a618ffcf0f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ControlPointZone
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ControlPointZone
   _index: 0
   _radius: 5
   _height: 6
@@ -1242,7 +1242,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9a451b05825014eef9948f3993cd4b73, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetBootstrap
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetBootstrap
   _playerPrefab: {fileID: 4261732149052537490, guid: 1d2cc7a9416b24bae9cf2f29ed6e4ac8, type: 3}
   _matchPrefab: {fileID: 880139535695014619, guid: b580f92b12dd34c75999c3469999c987, type: 3}
   _defaultMode: 0
@@ -1305,7 +1305,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 0
 --- !u!1 &2080850995
 GameObject:
@@ -1385,7 +1385,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

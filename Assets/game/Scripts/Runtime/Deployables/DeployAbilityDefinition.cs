@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 置く物の種類ごとに派生クラスを作り (例: ShieldDeployDefinition)、仮の形と種類ごとの部品だけを書かせる。
     // 置く・見本を出す・数を守る流れは DeployAbility にまとめ、種類ごとに書き直させない。

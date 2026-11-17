@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らないので、Turret.Tick を手で進める。Physics の問い合わせは効くので、動かした後は SyncTransforms する。
     // タレットは原点に +Z 向きで置き、持ち主は Alpha、敵は Bravo の陣営を持たせる。
@@ -74,7 +74,7 @@ namespace Fps.Tests.EditMode
             Assert.That(turret.Head.name, Is.EqualTo(Turret.HeadName));
             Assert.That(turret.Head.position.y, Is.LessThan(TurretSpec.DefaultHeight));
             Assert.That(turret.GetComponent<NavMeshObstacle>(), Is.Not.Null);
-            Assert.That(turret.GetComponentInChildren<Fps.Runtime.CoverPoint>(), Is.Null);
+            Assert.That(turret.GetComponentInChildren<Shooter.Runtime.CoverPoint>(), Is.Null);
             Assert.That(turret.Damageable.Health.Current, Is.EqualTo(TurretSpec.DefaultMaxHealth));
             Assert.That(turret.IsArmed, Is.True);
             Assert.That(Turret.Armed, Has.Member(turret));

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 部品を組み合わせて作るゲームモードの本体。チーム分け (<see cref="ITeamLayout"/>)・得点 (<see cref="IScoreRule"/>)・

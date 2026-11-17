@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ネットワークの transport。コマンドライン引数 <c>-transport udp|eos</c> に対応する。</summary>
     public enum NetTransportKind

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 伏せ (<see cref="Prone.On"/>) の調整値。生成時に値を検査し、以後は変わらない。

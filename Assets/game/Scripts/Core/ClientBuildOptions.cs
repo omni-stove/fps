@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// クライアント (プレイヤー) のビルド設定。コマンドライン引数 <c>-clientPlatform windows|macos</c> から作り、
@@ -14,15 +14,15 @@ namespace Fps.Core
         /// <summary>ビルドの出力をまとめるディレクトリ (プロジェクトのルートからの相対パス、gitignore 済み)。</summary>
         public const string OutputRoot = "Builds";
 
-        /// <summary>実行ファイルの名前。PlayerSettings.productName と同じにして、Windows の <c>fps_Data</c> と名前をそろえる。</summary>
-        public const string ExecutableName = "fps";
+        /// <summary>実行ファイルの名前。PlayerSettings.productName と同じにして、Windows の <c>shooter_Data</c> と名前をそろえる。</summary>
+        public const string ExecutableName = "shooter";
 
         public ClientPlatform Platform { get; }
 
         /// <summary>出力先のディレクトリ。例: <c>Builds/client-windows</c>。</summary>
         public string OutputDirectory => OutputRoot + "/client-" + PlatformName(Platform);
 
-        /// <summary>BuildPipeline に渡すパス。Windows は <c>fps.exe</c>、macOS は <c>fps.app</c> (バンドルのディレクトリ)。</summary>
+        /// <summary>BuildPipeline に渡すパス。Windows は <c>shooter.exe</c>、macOS は <c>shooter.app</c> (バンドルのディレクトリ)。</summary>
         public string ExecutablePath => OutputDirectory + "/" + ExecutableName + ExecutableExtension(Platform);
 
         public ClientBuildOptions(ClientPlatform platform)

@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="Pickup.Collected"/> で渡す、1 回拾われたときの情報。</summary>
     public readonly struct PickupCollection

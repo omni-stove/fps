@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <remarks>
     /// 乗り降り・耐久・爆発はサーバーが決めるので、シーンの乗り物の部品 (<see cref="Vehicle"/>・<see cref="VehicleImpactDamage"/>) は止め、

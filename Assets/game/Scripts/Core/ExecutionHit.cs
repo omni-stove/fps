@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ExecutionSession.ReportLethal"/> で、体力が 0 になった人をどう扱ったか。</summary>
     public enum ExecutionHit

@@ -2,15 +2,15 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="WeaponJsonImporter"/> を一時フォルダに走らせて、テストの JSON (<see cref="TestWeaponJson"/>) が同じ値の武器になることと、

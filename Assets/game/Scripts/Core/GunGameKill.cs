@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="GunGame.ReportKill"/> で 1 回のキルが段をどう動かしたか。段は 0 から数え、勝った人は段の数と同じ値。</summary>
     public readonly struct GunGameKill

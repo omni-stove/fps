@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ServerDrain"/> の段階。</summary>
     public enum ServerDrainState

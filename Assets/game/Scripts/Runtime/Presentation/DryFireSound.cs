@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾切れでトリガーを引いたときの空撃ちの音を鳴らす。撃つ人の本体に付ける。音は <see cref="WeaponExtrasCatalog"/> から武器の Id で引く。
-    /// オフラインでは同じ階層の <see cref="WeaponController.DryFired"/> を購読し、ネット対戦では <c>Fps.Net.NetPlayer</c> が
+    /// オフラインでは同じ階層の <see cref="WeaponController.DryFired"/> を購読し、ネット対戦では <c>Shooter.Net.NetPlayer</c> が
     /// <see cref="Play"/> を呼ぶ。手元のプレイヤー (<see cref="IsLocal"/>) は 2D、それ以外は本体の位置から 3D で鳴らす。
-    /// 専用サーバーでは有効になったときに自分を止める (<c>Fps.Net.HeadlessPresentation</c> も止める)。
+    /// 専用サーバーでは有効になったときに自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DryFireSound : MonoBehaviour

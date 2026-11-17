@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 通信の手順の状態からも作れるよう、Domination そのものは持たない。
     public sealed class DominationStatus

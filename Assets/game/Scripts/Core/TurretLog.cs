@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた・消えた・撃たれて止めたは DeployLog に出す。ここはタレットが自分で動いた (狙った・撃った・倒した・控えた) ことだけ。
     public static class TurretLog

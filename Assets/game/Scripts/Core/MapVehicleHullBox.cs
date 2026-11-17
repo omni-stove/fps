@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 車体を箱 1 つにまとめないのは、屋根の無い車の座席のように開いた所から中の人に弾が届くようにするため (Unity の当たり判定と同じ形)。
     public sealed class MapVehicleHullBox

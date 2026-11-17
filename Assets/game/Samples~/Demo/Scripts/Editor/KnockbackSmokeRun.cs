@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 射撃場 (Bootstrap / TpsRange) には NavMesh も敵も無いので、敵とプレイヤーが同じ床にいる EnemyAiTest で確かめる。
     // 投げると着弾点と信管で爆発の位置がぶれるので、グレネードはその場に作ってすぐ爆発させる。
@@ -39,8 +39,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.KnockbackSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.KnockbackSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.KnockbackSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.KnockbackSmokeRun.RequestedAt";
 
         private static readonly string _enemyLaunchLog =
             $"{Knockback.LogTag} id={EnemyTestSceneBuilder.EnemyId} launched kind={DamageKind.Explosion} ";

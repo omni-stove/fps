@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 倒された人がいつ戻るか。<see cref="ModeSession"/> が倒された・抜けた・時間が進んだを知らせ、

@@ -1,4 +1,4 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="CharacterAnimator"/> がどの部品から状態を読むか。</summary>
     public enum CharacterAnimatorSource

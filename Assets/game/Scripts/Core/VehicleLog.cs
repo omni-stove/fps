@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>乗り物の乗り降りのログの書式。どれも <see cref="Tag"/> で始まる。</summary>
     public static class VehicleLog

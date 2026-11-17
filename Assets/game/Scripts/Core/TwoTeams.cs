@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="Side.Alpha"/> と <see cref="Side.Bravo"/> の 2 陣営に参加順で交互に分ける (<see cref="TeamAssigner"/> と同じ順)。

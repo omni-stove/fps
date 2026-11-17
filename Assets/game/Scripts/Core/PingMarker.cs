@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 付けた印 1 つ。値は変わらず、追う・見失うなどは <see cref="PingBoard"/> が新しい値に置き換える。

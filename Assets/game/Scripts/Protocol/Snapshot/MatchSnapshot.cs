@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 試合全体の状態。Netcode では NetTeamDeathmatch の同期値 (スコア・残り時間・試合の進み・ルール・目標) に分かれていたもの。

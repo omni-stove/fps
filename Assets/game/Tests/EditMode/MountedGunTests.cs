@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Awake も Update も走らないので、MountedGun は TryInitialize で、座席の入力は VehicleSeat.SubmitInput で手で進める。
     // 銃座は原点に +Z 向きで置き、銃の回る点は高さ 1.1m、座席はその 0.9m 後ろ。熱は 1 発 0.25 で、上限で 1 秒止まり、毎秒 0.5 冷める。

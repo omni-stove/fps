@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     public sealed class VehicleCorrectedMessage : IMessage
     {

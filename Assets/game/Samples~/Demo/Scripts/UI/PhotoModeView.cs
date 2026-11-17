@@ -1,11 +1,11 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 時間を止めるかはポーズ画面 (PauseMenu.TimeMode) に任せ、ここでは触らない。オンラインでは時間が進んだまま自分のカメラだけ自由にする
     [DisallowMultipleComponent]

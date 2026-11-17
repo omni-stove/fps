@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインで、この体にかかっている状態異常 (Core の <see cref="StatusEffects"/>) を毎フレーム進め、ダメージを <see cref="Damageable"/> に入れる。

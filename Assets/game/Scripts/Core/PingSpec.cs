@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 印 (<see cref="PingMarker"/>) の寿命・同時に付けられる数・届く距離・敵に吸い付く角度。生成時に値を検査し、以後は変わらない。

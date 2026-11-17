@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>敵に付いた印の新しい位置。次の知らせで上書きされるので、落ちてもよい届け方で送る。</summary>
     public sealed class PingMovedMessage : IMessage

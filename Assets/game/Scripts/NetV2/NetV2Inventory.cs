@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     public sealed class NetV2Inventory : IInventoryControl
     {

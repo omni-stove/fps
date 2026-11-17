@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public readonly struct CharacterMotorInput
     {
@@ -127,13 +127,13 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(rules));
             }
 
-            var input = rules.Cover == Fps.Core.Cover.On ? this : WithoutCover();
-            input = rules.Dodge == Fps.Core.Dodge.On ? input : input.WithoutDodge();
+            var input = rules.Cover == Shooter.Core.Cover.On ? this : WithoutCover();
+            input = rules.Dodge == Shooter.Core.Dodge.On ? input : input.WithoutDodge();
             return input.With(
-                vaultAllowed: rules.Vault == Fps.Core.Vault.On,
-                proneAllowed: rules.Prone == Fps.Core.Prone.On,
-                ladderAllowed: rules.Ladder == Fps.Core.Ladder.On,
-                jumpAllowed: rules.Jump == Fps.Core.Jump.On);
+                vaultAllowed: rules.Vault == Shooter.Core.Vault.On,
+                proneAllowed: rules.Prone == Shooter.Core.Prone.On,
+                ladderAllowed: rules.Ladder == Shooter.Core.Ladder.On,
+                jumpAllowed: rules.Jump == Shooter.Core.Jump.On);
         }
 
         public CharacterMotorInput With(

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーの視点の種類。どちらでも狙いと当たり判定はキャラの目から行い、変わるのはカメラの置き場所と自分の体の見え方だけ。

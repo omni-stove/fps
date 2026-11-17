@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 体力。ダメージと回復を受け、0 になったら死亡する。死亡後はダメージも回復も受けない。

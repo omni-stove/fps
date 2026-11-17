@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた時点で 1 回呼び、そこから間隔ごとに呼ぶ。消える時刻ちょうどの呼び声は出さない (呼んだ直後に消えて、敵が何も無い所へ向かう)。
     public sealed class DecoyState

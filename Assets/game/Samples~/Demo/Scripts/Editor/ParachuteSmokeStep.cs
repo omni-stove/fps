@@ -1,11 +1,11 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、パラシュートを確かめる手順。高い台 (<see cref="ParachuteTowerFixture"/>) と組で使う。

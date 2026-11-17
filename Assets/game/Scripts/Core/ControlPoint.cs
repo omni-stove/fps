@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拠点制圧の拠点 1 つの占領の判定。半径の中にいる各チームの人数を <see cref="Update"/> で受け取り、占領の進みを動かす。

@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerController"/> を持つプレイヤーに <see cref="ParachuteMovement"/> を付け、ルールの <see cref="ActionRules.Parachute"/> と、<see cref="KitTuning"/> から読む traversal.json の parachute の値を入れる。

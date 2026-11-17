@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 壁に張り付くカバーの判定。物理で調べた壁の様子 (<see cref="CoverWallSample"/>) から、

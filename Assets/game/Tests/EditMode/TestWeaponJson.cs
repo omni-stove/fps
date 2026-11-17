@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="TestWeapons"/> と同じ値の武器の JSON。ゲームの武器の JSON (サンプルの Weapons/Json) を変えても取り込みのテストが動かないよう、テストの側に持つ。

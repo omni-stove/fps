@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 敵が隠れに行く遮蔽点 1 つ (<see cref="CoverPointSelector"/> に渡す)。座標は Y が上、長さは m。

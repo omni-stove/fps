@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Protocol;
-using Fps.Runtime;
+using Shooter.Protocol;
+using Shooter.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// サーバーから届いた壊れる建物の状態 (<see cref="StructureStateMessage"/>) を、マップのシーンの見た目 (<see cref="DestructibleStructure"/>) と

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 つの目標の状態と進み具合の写し。<see cref="Mission.Snapshot"/> で書き出し、<see cref="Mission.Restore"/> で戻す。不変。

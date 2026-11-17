@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 物理で調べた、カバーにするかもしれない壁の様子 1 回分 (<see cref="CoverProbe.Evaluate"/> に渡す)。

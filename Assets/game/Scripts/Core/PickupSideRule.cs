@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PickupEligibility"/> の、陣営で拾える人を絞るやり方。</summary>
     public enum PickupSideRule

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.NetV2;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.NetV2;
+using Shooter.Protocol;
 using UnityEngine;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// クライアントの EOS の通信路を PlayEveryWare のプラグインの P2P (<see cref="EosClientP2P"/>) で、クイックマッチのロビーの検索を

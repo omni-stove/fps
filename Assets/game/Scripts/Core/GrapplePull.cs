@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 動かす物理 (CharacterController) は持ち主にあるので、ここでは毎 Tick 実際の位置を受け取って速さと残りの距離だけを決める。
     public sealed class GrapplePull

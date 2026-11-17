@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// <see cref="StringsAudit"/> が比べる、言語ごとの文言のキーと、それを持つ表の名前。

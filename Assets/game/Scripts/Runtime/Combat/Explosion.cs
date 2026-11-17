@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 1 回の爆発。<see cref="Detonate"/> は半径内の <see cref="Damageable"/> に <see cref="ExplosionDamage"/> を与え (中心から体の狙う点・頭の高さ・足元までのどれかの線が
@@ -132,7 +132,7 @@ namespace Fps.Runtime
         /// <summary>
         /// center に <see cref="PresentationCatalog"/> の爆発のエフェクトと音を出し、音を鳴らしたら字幕のために <see cref="SubtitleFeed.Raise"/> で知らせる。
         /// Play 中でない・専用サーバー・カタログか素材が無いときは何もしない。
-        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Fps.Net.NetCombatFeed</c>) も呼ぶ。
+        /// ネット対戦ではサーバーから爆発を受け取ったクライアント (<c>Shooter.Net.NetCombatFeed</c>) も呼ぶ。
         /// </summary>
         public static void PlayEffects(Vector3 center)
         {

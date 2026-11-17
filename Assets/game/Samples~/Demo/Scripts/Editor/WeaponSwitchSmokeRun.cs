@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器のアセットと Bootstrap シーンを生成し直して Play Mode に入り、プレイヤーの <see cref="WeaponController"/> を
@@ -23,7 +23,7 @@ namespace Fps.Editor
     /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。batchmode には入力が無いので、Next / Previous / Attack の代わりに
     /// <see cref="WeaponController.SelectNext"/>・<see cref="WeaponController.PullTrigger"/> などを呼ぶ。
     /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.WeaponSwitchSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.WeaponSwitchSmokeRun.Run -logFile -</code>
     /// </summary>
     [InitializeOnLoad]
     public static class WeaponSwitchSmokeRun
@@ -39,8 +39,8 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.WeaponSwitchSmokeRun.Active";
-        private const string RequestedAtKey = "Fps.WeaponSwitchSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.WeaponSwitchSmokeRun.Active";
+        private const string RequestedAtKey = "Shooter.WeaponSwitchSmokeRun.RequestedAt";
 
         private static readonly List<string> _errors = new List<string>();
         private static int _hitLogs;

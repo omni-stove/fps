@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 弾が当たった面の材質 (着弾の火花・音・弾痕を材質ごとに出し分けるための Id)。コライダーの GameObject か、その親に付ける。

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// HardpointRunner が有効な拠点にいる参加者をハードポイントに伝え、有効な拠点だけを光らせ、モードの状態 (ModeStatus) の Detail に進めているハードポイントを入れることを確かめる。

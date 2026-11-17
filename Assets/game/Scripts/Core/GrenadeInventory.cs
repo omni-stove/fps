@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 出撃ごとに持つ投げ物。<see cref="GrenadeCatalog.Carried"/> の種類ごとに <see cref="GrenadePouch"/> を 1 つ持ち、

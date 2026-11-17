@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>印が消えた知らせと、その訳。</summary>
     public sealed class PingRemovedMessage : IMessage

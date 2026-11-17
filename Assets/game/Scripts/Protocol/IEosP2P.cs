@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// <see cref="EosMatchTransport"/> が使う EOS の P2P の呼び出しを、SDK の型を出さずに表したもの。相手は ProductUserId の文字列で表す。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core.Navigation
+namespace Shooter.Core.Navigation
 {
     public readonly struct NavTriangle : IEquatable<NavTriangle>
     {

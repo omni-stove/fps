@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 置いた・消えたは DeployLog に、爆発の当たりは Explosion のログに出す。ここは何に貼ったかと、起爆したことだけ。
     public static class RemoteChargeLog

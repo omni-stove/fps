@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 書式 (<see cref="LoadoutFormat"/> など) が画面に出す文字を引く先。今の言語の <see cref="StringTable"/> を返す関数を

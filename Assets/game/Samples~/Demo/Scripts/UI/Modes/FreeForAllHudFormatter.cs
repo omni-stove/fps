@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// フリーフォーオール (<see cref="FreeForAllRunner"/>) の HUD の書式役。<see cref="ModeStatus.Detail"/> の自分の順位 (<see cref="FreeForAllStanding"/>) を、

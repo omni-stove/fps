@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>プレイヤー (<see cref="Player"/>) と敵 (<see cref="Enemy"/>) のよろめきの値の組。<see cref="StaggerJson"/> が読む。</summary>
     public sealed class StaggerTuning

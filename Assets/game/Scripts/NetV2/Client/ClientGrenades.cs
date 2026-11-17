@@ -1,7 +1,7 @@
 using System;
-using Fps.Protocol;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦で投げるグレネードの種類。持っている種類 (<see cref="GrenadePouchSync"/>) はサーバーが決めるので、ここは選んだ種類の Id だけを持つ。

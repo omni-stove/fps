@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // カメラの借り方・戻し方・壁で止める動かし方は死亡カメラの自由カメラと同じなので、DeathCamView を共有して二重に持たない
     public sealed class PhotoModeCamera

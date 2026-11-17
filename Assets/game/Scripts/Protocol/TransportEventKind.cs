@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="TransportEvent"/> の種類。</summary>
     public enum TransportEventKind

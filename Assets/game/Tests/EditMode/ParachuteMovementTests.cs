@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// パラシュート (<see cref="ParachuteMovement"/>) が空中の十分な高さでだけ開き、開いている間は移動を横取りしてゆっくり降り、

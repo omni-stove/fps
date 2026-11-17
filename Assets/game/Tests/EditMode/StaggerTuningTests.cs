@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Awake が走らないので、取り付けの後に Bind を直接呼んで、怯みの値が届いたかを見る。
     public sealed class StaggerTuningTests
@@ -22,7 +22,7 @@ namespace Fps.Tests.EditMode
         {
             _savedRule = StaggerReaction.ActiveRule;
 
-            // プロジェクトの Resources/FpsKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
+            // プロジェクトの Resources/ShooterKit に置かれた入口の欄に左右されないよう、空の入口に替えておく。
             GameContent.Use(Content("Empty"));
 
             _player = Track(new GameObject("Player"));

@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode でも Physics の問い合わせはコライダーを見つけるので、置いたら SyncTransforms してから撃つ。Update は走らないので Tick を直接呼ぶ。
     public sealed class EnemyShieldTests

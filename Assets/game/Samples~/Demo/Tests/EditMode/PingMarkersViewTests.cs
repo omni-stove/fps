@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 既定の印の表示 (PingMarkersView) が、画面の中の印をその位置に、外の印を端に寄せて向きを出すことと、
@@ -39,7 +39,7 @@ namespace Fps.Tests.EditMode
             pingerObject.transform.position = new Vector3(0f, 1f, 0f);
             _pinger = pingerObject.AddComponent<PingController>();
             _pinger.Clock = () => _now;
-            _pinger.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Fps.Core.Ping.On)));
+            _pinger.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Shooter.Core.Ping.On)));
 
             var wall = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
             wall.transform.position = new Vector3(0f, 1f, 10f);
@@ -140,7 +140,7 @@ namespace Fps.Tests.EditMode
             _view.Bind(CloneLayout());
             Assert.That(_view.TryGetPlacement(marker.Id, out _), Is.True);
 
-            _pinger.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Fps.Core.Ping.Off)));
+            _pinger.Configure(GameRules.Default.WithActions(GameRules.Default.Actions.WithPing(Shooter.Core.Ping.Off)));
             Assert.That(_view.Markers, Is.Null, "turning Ping off clears the signal and the view");
             Assert.That(_view.ShownCount, Is.Zero);
 

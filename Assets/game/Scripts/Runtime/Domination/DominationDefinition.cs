@@ -1,15 +1,15 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 拠点制圧 (<see cref="DominationRunner"/>) の調整値をアセットとして持つ。拠点の数はシーンの <see cref="ControlPointZone"/> で決まるので持たず、
     /// <see cref="ToSpec"/> に渡す。新しく作ったときの値は <see cref="DominationRunner"/> の既定値と同じ。
-    /// 中身は Fps.Editor.ModeTuningAssetBuilder が無ければ作る。
+    /// 中身は Shooter.Editor.ModeTuningAssetBuilder が無ければ作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "Domination", menuName = "Fps/Modes/Domination")]
+    [CreateAssetMenu(fileName = "Domination", menuName = "Shooter/Modes/Domination")]
     public sealed class DominationDefinition : ScriptableObject
     {
         [SerializeField, Min(0.01f), Tooltip("1 人で中立の拠点を占領し終えるまでの秒数")]

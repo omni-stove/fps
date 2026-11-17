@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="ExtensionPoints"/> が差し込み口を実装した public な具象クラスだけを順に作ることを確かめる。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 一定の間隔で試し直し、全体の期限を過ぎたら諦めるための時刻の管理。時刻は呼び出し側が渡す (秒)。

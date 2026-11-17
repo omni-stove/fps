@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 倒されてからリスポーンするまで、自分のカメラに何を映すか。

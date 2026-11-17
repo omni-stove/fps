@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>はしごにどこからつかまるか (<see cref="LadderSpan.Probe"/>)。</summary>
     public enum LadderEntry

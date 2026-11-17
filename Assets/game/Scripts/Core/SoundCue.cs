@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 聞いている人から見た音の合図 1 つ (種類・向き・距離)。<see cref="TryLocate"/> で、鳴った位置と聞いている人の位置と向きから作る。

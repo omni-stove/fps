@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>プレイヤーに <see cref="GrenadeThrower"/> があれば、グレネードの有無と数をルールにする (<see cref="GrenadeThrower.Configure"/>)。</summary>
     public sealed class GrenadeActionInstaller : IPlayerActionInstaller

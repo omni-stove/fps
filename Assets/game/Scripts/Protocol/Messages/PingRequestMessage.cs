@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>持ち主が向いた先に印を付ける要求。何に当たったか・付けてよいかはサーバーが決める。</summary>
     public sealed class PingRequestMessage : IMessage

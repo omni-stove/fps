@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke に足す手順。<see cref="DebrisCrushRangeFixture"/> の柱の根元を、プレイヤーとその武器の帰属で

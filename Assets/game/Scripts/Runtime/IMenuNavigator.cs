@@ -1,7 +1,7 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// メインメニューとの行き来のうち、ゲーム進行 (射撃場のチュートリアル・オンラインの起動) が使う部分。<see cref="GameUi.Menu"/> から使う。

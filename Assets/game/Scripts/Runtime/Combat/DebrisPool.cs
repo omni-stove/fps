@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 建造物が壊れたときに出す破片 (Rigidbody 付きの小さな Cube。<see cref="DebrisPrefab"/> があればその形) をまとめて持つ。破片は見た目だけで、

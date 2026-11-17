@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 印 (<see cref="GameSignals.Pings"/>) を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。

@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 拠点制圧 (<see cref="DominationRunner"/>) を一人称で遊ぶシーン Domination を生成する。床 (NavMeshSurface 付き)・外周の壁・遮蔽物を置いて
@@ -17,7 +17,7 @@ namespace Fps.Editor
     /// ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>)、Bravo の敵 (<see cref="EnemyAgent"/>)、拠点 A/B/C
     /// (<see cref="ControlPointZone"/> と旗竿の目印)、<see cref="DominationRunner"/> (調整値は <see cref="DefinitionPath"/>、無ければ既定値で作る) を置く。プレイヤー・ライト・HUD は実行時に GameBootstrap が作る。
     /// 保存したシーンは Build Settings に (並びを変えずに) 加える。何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.DominationSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.DominationSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 配置 (上から見て、床は x = ±20、z = -10..50。プレイヤーは原点で +Z を向く):
@@ -42,7 +42,7 @@ namespace Fps.Editor
             return definition;
         }
 
-        public const string MenuPath = "Fps/Build Domination Scene";
+        public const string MenuPath = "Shooter/Build Domination Scene";
         public const string LogTag = "[DominationSceneBuilder]";
 
         public const string FloorName = ModeSceneBuilder.FloorName;

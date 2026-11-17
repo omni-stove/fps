@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="ShellEjector"/> が薬莢のインスタンスに付け、最初の衝突を <see cref="ShellEjector.Land"/> に知らせる。

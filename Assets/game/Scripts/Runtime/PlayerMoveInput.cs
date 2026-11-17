@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerController.ApplyInput"/> に渡す 1 フレーム分の移動とボタンの入力。Play 中は PlayerController が Input Actions から作る。

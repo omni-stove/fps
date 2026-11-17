@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>対戦のメッセージ全体の決まり。</summary>
     public static class MatchProtocol
@@ -9,7 +9,7 @@ namespace Fps.Protocol
         /// </summary>
         public const ushort Version = 17;
 
-        /// <summary>切断・拒否の理由 (<c>Fps.Core.DisconnectNotice</c> の符号) の最長のバイト数。</summary>
+        /// <summary>切断・拒否の理由 (<c>Shooter.Core.DisconnectNotice</c> の符号) の最長のバイト数。</summary>
         public const int MaxReasonBytes = 128;
 
         /// <summary>武器や表面の素材の Id の最長のバイト数 (UTF-8)。</summary>

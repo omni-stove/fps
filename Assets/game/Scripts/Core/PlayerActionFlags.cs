@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="PlayerActionState"/> の、その瞬間に立っている状態の組み合わせ。</summary>
     [Flags]

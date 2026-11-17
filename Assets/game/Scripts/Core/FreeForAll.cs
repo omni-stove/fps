@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 人 1 陣営のチーム分け。joinIndex 番目に参加した人を ID joinIndex の陣営に入れ、

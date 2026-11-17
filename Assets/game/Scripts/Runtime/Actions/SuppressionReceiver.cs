@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // プレイヤーと敵で影響は違うが、ニアミスの受け取りと度合いの計算・ログは同じなので、受け皿だけを共通の部品にする
     // (影響は PlayerSuppression と EnemySuppression が度合いを読んで決める)。

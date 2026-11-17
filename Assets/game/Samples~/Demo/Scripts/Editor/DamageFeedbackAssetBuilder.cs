@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 被弾の画面効果と低体力の演出の仮素材 (端が赤く中央が透明な画像・心音・息切れの音) と <see cref="DamageFeedbackCatalog"/> を作るか上書きする。
@@ -105,7 +105,7 @@ namespace Fps.Editor
             if (catalog == null)
             {
                 throw new InvalidOperationException(
-                    $"damage feedback catalog '{CatalogPath}' was not found; run {PresentationAssetSteps.MenuPath} (Fps.Editor.PresentationAssetSteps.BuildAll) first");
+                    $"damage feedback catalog '{CatalogPath}' was not found; run {PresentationAssetSteps.MenuPath} (Shooter.Editor.PresentationAssetSteps.BuildAll) first");
             }
 
             catalog.Validate();

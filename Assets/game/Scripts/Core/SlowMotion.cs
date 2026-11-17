@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 時間の速さを変えられるか。全員の時間が変わるので、オフラインに限る (オンラインでは On でも変えない)。

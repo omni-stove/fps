@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 何人かで同時に押し続けると済む操作の進み。押している人数が <see cref="CoopHoldSpec.RequiredCount"/> 以上の間だけ

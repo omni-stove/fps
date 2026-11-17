@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// ハードポイント (<see cref="Fps.Core.Hardpoint"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
+    /// ハードポイント (<see cref="Shooter.Core.Hardpoint"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
     /// 拠点は <see cref="ControlPointZone"/> を使い、番号の順に有効になる。
     /// </summary>
     /// <remarks>
@@ -15,11 +15,11 @@ namespace Fps.Runtime
     /// <item>拠点は <see cref="SetZones"/> で渡したもの。渡していなければ始めるときにシーンの ControlPointZone をすべて使う。
     /// 番号は 0 から抜けも重なりもなく、2 つ以上あること (でなければ理由をログに出して止まる)。</item>
     /// <item>毎 Tick の前に、有効な拠点の範囲にいる生きた参加者を調べ (<see cref="ControlPointZone.Scan"/>)、
-    /// <see cref="Fps.Core.Hardpoint.SetPlayerPoint"/> に伝える。</item>
+    /// <see cref="Shooter.Core.Hardpoint.SetPlayerPoint"/> に伝える。</item>
     /// <item>有効な拠点の円盤だけを光らせて確保しているチームの色に塗り、他の拠点は暗くする (<see cref="ControlPointZone.SetHighlight"/>)。</item>
     /// <item>bot (<see cref="EnemyAgent"/>) には有効な拠点の中を往復する巡回路を渡し、拠点が移るたびに渡し直す。
     /// 敵を見つけたら EnemyAgent がいつもどおり追って撃ち、見失えば巡回路 (有効な拠点) に戻る。</item>
-    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Fps.Core.Hardpoint"/> を入れる。
+    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Shooter.Core.Hardpoint"/> を入れる。
     /// 拠点が移ったときと拠点の様子が変わったときに <c>[Mode] hardpoint</c> のログを出す。</item>
     /// </list>
     /// </remarks>

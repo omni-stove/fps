@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生役。倒した相手の倒す直前の数秒 (<see cref="KillCamClip"/>) を、

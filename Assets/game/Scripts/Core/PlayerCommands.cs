@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>移動と射撃のほかにプレイヤーが出す指示のボタンの組み合わせ。押されたものと押されているものを分けて持つ。</summary>
     [Flags]

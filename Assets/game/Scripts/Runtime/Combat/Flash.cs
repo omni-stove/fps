@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 長さはサーバー (ServerFlash) と同じ Core の BlindEffect で決め、ここは目の位置と向き、見通せるかだけを Unity の世界から取る。
     public static class Flash

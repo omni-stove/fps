@@ -1,14 +1,14 @@
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Update・OnEnable は Edit Mode では走らないので、ゲージのたまり方は Core のテストに、仲間を探して伝えるところと頭上の印は射撃場の smoke に任せる。
     public sealed class EnemyStealthTests

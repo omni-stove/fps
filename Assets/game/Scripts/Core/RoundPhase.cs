@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="RoundSession"/> の進み具合。</summary>
     public enum RoundPhase

@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class BuildVersionTests
     {
         private static readonly string[] _blankValueArgs = { "-buildVersion", " " };
@@ -126,7 +126,7 @@ namespace Fps.Core.Tests
         public void ParsesAndNormalizesFlag()
         {
             var ok = BuildVersion.TryParseArgs(
-                Args("-batchmode -executeMethod Fps.Editor.ServerBuilder.Build -serverPlatform linux -buildVersion v0.2.0"),
+                Args("-batchmode -executeMethod Shooter.Editor.ServerBuilder.Build -serverPlatform linux -buildVersion v0.2.0"),
                 out var version,
                 out var error);
 

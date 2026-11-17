@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public static class ContextMeleeLog
     {

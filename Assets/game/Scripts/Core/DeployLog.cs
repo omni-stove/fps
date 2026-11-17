@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // smoke とテストが期待する行を同じ関数で作れるよう、文言はここにまとめる。
     public static class DeployLog

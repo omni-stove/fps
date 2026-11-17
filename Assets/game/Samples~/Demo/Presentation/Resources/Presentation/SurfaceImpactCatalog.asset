@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f3d0444b56158b5f04a143e7cbef546, type: 3}
   m_Name: SurfaceImpactCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.SurfaceImpactCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SurfaceImpactCatalog
   _surfaces:
   - _materialId: default
     _decal: {fileID: 2100000, guid: 87dc5959419f24f44af342afcb9ac47c, type: 2}

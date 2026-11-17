@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9d3a7c15e2f84b06b1c8a4e6f0d52b73, type: 3}
   m_Name: Suppression
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.GameRulesDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameRulesDefinition
   _friendlyFire: 0
   _respawnMode: 0
   _waveIntervalSeconds: 10

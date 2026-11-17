@@ -1,7 +1,7 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary><see cref="ViewModeSwitch"/> が逆の視点を返し、入れ替えと断りのログを決まった文面で出すことを確かめる。</summary>
     public sealed class ViewModeSwitchTests

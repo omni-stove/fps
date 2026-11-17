@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 枠が空なら FlashOverlay が無地の色で覆い、音は鳴らさない。カタログが無ければ既定の値で同じようにする。
-    [CreateAssetMenu(fileName = "FlashOverlayCatalog", menuName = "Fps/Flash Overlay Catalog")]
+    [CreateAssetMenu(fileName = "FlashOverlayCatalog", menuName = "Shooter/Flash Overlay Catalog")]
     public sealed class FlashOverlayCatalog : ScriptableObject
     {
         public const string CatalogName = "FlashOverlay";

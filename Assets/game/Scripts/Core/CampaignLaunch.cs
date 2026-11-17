@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// メニューからキャンペーンのシーンへ渡す選択。どのミッション (<see cref="MissionId"/>) をどの難易度 (<see cref="Difficulty"/>) で始めるか。

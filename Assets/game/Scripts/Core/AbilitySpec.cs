@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 能力 1 つ分の回数と時間 (<see cref="AbilitySlot"/>) の設定。生成時に値を検査し、以後は変わらない。

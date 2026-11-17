@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>コマンドライン引数 <c>-lobby quickmatch</c> で選ぶ、起動時のロビーの操作。</summary>
     public enum LobbyCommand

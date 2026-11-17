@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="CoverState.Step"/> 1 回で起きた、ログに出す状態の変化。</summary>
     public enum CoverTransition

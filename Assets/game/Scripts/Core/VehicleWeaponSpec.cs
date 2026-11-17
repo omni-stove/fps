@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り物に付いた武器 1 つの設定 (<see cref="VehicleSpec.Weapons"/> の 1 つ)。生成時に値を検査し、以後は変わらない。

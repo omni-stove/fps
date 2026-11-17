@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 仮の音とエフェクトを手続きで作り、それをまとめた <see cref="PresentationCatalog"/> を作るか上書きする。
@@ -16,20 +16,20 @@ namespace Fps.Editor
     /// エフェクトは ParticleSystem をコードで設定したプレハブにして、使う材質・テクスチャと一緒に <see cref="PresentationFolder"/> に置く。
     /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる (2 回走らせても差分が出ない)。
     /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.PresentationAssetBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.PresentationAssetBuilder.Build</code>
     /// 演出の仮素材をまとめて作る入口 (<see cref="PresentationAssetSteps.BuildAll"/>) からは <see cref="PresentationCatalogAssetStep"/> として呼ばれる。
     /// </summary>
     public static class PresentationAssetBuilder
     {
-        public static string AudioFolder => FpsKitRoot.OutputPath("Audio");
-        public static string PresentationFolder => FpsKitRoot.OutputPath("Presentation");
+        public static string AudioFolder => ShooterKitRoot.OutputPath("Audio");
+        public static string PresentationFolder => ShooterKitRoot.OutputPath("Presentation");
         /// <summary>
         /// カタログの置き場所。実行時に <see cref="PresentationCatalog.Load"/> で読めるよう、Resources の
         /// <see cref="PresentationCatalog.ResourcePath"/> に置く。
         /// </summary>
         public static string CatalogPath => PresentationFolder + "/Resources/" + PresentationCatalog.ResourcePath + ".asset";
 
-        public const string MenuPath = "Fps/Build Presentation Assets";
+        public const string MenuPath = "Shooter/Build Presentation Assets";
         public const string LogTag = "[PresentationAssetBuilder]";
 
         public const string RifleFireSound = "RifleFire";
@@ -177,7 +177,7 @@ namespace Fps.Editor
             if (catalog == null)
             {
                 throw new InvalidOperationException(
-                    $"presentation catalog '{CatalogPath}' was not found; run {MenuPath} (Fps.Editor.PresentationAssetBuilder.Build) first");
+                    $"presentation catalog '{CatalogPath}' was not found; run {MenuPath} (Shooter.Editor.PresentationAssetBuilder.Build) first");
             }
 
             catalog.Validate();
@@ -469,7 +469,7 @@ namespace Fps.Editor
             fresh.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             fresh.SetOverrideTag("RenderType", "Transparent");
             fresh.renderQueue = (int)RenderQueue.Transparent;
-#if FPS_URP
+#if SHOOTER_URP
             // 新規作成のときだけ URP の MaterialPostprocessor がこの処理でキーワードと無効なパスを書き足し、上書き (CopySerialized) では走らない。
             // 先にここで揃えておかないと、作り直したときにファイルが変わる。
             BaseShaderGUI.SetMaterialKeywords(fresh, null, UnityEditor.Rendering.Universal.ShaderGUI.ParticleGUI.SetMaterialKeywords);

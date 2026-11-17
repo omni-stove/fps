@@ -1,13 +1,13 @@
 using System.Linq;
 using System;
 using System.IO;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// サンプルの武器の JSON (<see cref="SamplesFolder"/>) を一時フォルダに取り込むと、<see cref="WeaponAssetBuilder"/> の武器と
@@ -39,7 +39,7 @@ namespace Fps.Tests.EditMode
         {
             var imported = WeaponJsonImporter.ImportFrom(SamplesFolder, _folder, null);
 
-            Assert.That(imported.Count(), Is.EqualTo(System.IO.Directory.GetFiles(FpsKitRoot.PhysicalPath(SamplesFolder), "*.json").Length));
+            Assert.That(imported.Count(), Is.EqualTo(System.IO.Directory.GetFiles(ShooterKitRoot.PhysicalPath(SamplesFolder), "*.json").Length));
             AssertSameSpec(Load("Rifle").ToSpec(), WeaponAssetBuilder.RifleSpec());
             AssertSameSpec(Load("Handgun").ToSpec(), WeaponAssetBuilder.HandgunSpec());
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());

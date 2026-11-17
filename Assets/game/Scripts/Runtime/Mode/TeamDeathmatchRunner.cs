@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="ModeRunnerBase"/> の最小の派生。<see cref="SideCount"/> 個の陣営 (<see cref="Squads"/>) でキル数を競い、

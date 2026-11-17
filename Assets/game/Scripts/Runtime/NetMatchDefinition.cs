@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ネット対戦の試合の設定 (点数・時間・体力・拠点・ロードアウト) と、プレイヤーの移動と体の寸法。
-    /// .NET の専用サーバーはアセットを読めないので、書き出し (Fps.Editor.ServerRulesExporter) がルールのアセットごとに
+    /// .NET の専用サーバーはアセットを読めないので、書き出し (Shooter.Editor.ServerRulesExporter) がルールのアセットごとに
     /// <c>server-data/rules/&lt;ルール名&gt;.json</c> (<see cref="NetMatchFile"/>) にし、クライアントは承認のときにサーバーからその値を受け取る。
     /// 書き出すルールは入口 (<see cref="GameContent"/>) のルールと <see cref="Rules"/> の並び。
     /// ロードアウトと武器の一覧は、クライアントと同じく入口のものを先に使う (<see cref="PickLoadout"/>・<see cref="PickCatalog"/>)。
     /// </summary>
-    [CreateAssetMenu(fileName = "NetMatch", menuName = "Fps/Net Match Definition")]
+    [CreateAssetMenu(fileName = "NetMatch", menuName = "Shooter/Net Match Definition")]
     public sealed class NetMatchDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("サーバーに書き出すルール。入口 (GameContent) のルールに加えて、この並びの順に書き出す")]

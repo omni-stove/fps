@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="BattleRoyaleBotPlanner.Plan"/> に渡す、bot が拾えると判定した物 1 つ。</summary>
     public readonly struct BotPickupOption

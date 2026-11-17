@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 置ける物 (展開式の盾) を試す場所。プレイヤーは各レーンの手前 (PlayerZ) に立って +Z へ置く。
     // 左手前の隅 (x = -35..-22, z = -36..-25) の、自爆兵の囲いの視界の外に置く。

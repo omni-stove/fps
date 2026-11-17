@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 時間とともに縮むエリアの予定。最初の円から、段階 (<see cref="ZonePhase"/>) ごとに待ってから次の円へ縮む。

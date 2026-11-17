@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// オフラインのキルフィードの引き先。名前・チーム・自分かどうかは <see cref="OfflineParticipants"/> から引く。

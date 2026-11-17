@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// EAC の P2P セッションでの相手 (transport の ID) ごとの状態を持ち、何をすべきかを決める。

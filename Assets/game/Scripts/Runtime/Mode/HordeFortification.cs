@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ホードで通貨を払って直す・置く防衛物。同じ GameObject の <see cref="DestructibleStructure"/> の部品を、壊れていない状態に戻すことで直す。

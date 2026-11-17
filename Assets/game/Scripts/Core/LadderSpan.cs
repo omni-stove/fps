@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// はしご 1 本の形。<see cref="Bottom"/> は、はしごの面 (つかまる人が向き合う面) が地面と交わる線の真ん中で、

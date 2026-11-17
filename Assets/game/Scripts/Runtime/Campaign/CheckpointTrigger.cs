@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャンペーンのチェックポイント。プレイヤー (<see cref="PlayerTag"/> の付いた Collider) がトリガーの Collider に入ったら、

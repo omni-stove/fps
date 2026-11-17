@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 武器とルールのアセットと Domination シーン (<see cref="DominationSceneBuilder"/>) を生成し直して Play Mode に入り、
@@ -22,7 +22,7 @@ namespace Fps.Editor
     /// 敵がプレイヤーとの撃ち合いに入るかどうかで変わるので合否には使わない。
     /// すべて成り立てば終了コード 0、そうでなければ 1 で終わる。試合の制限時間は <see cref="SecondsArgument"/> で変えられる。
     /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.DominationSmokeRun.Run -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.DominationSmokeRun.Run -logFile -</code>
     /// </summary>
     /// <remarks>
     /// 制限時間は、開いたシーンの <see cref="DominationRunner.TimeLimitSeconds"/> を Play の前に書き換えて縮める (シーンのファイルは保存しない)。
@@ -60,9 +60,9 @@ namespace Fps.Editor
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        private const string ActiveKey = "Fps.DominationSmokeRun.Active";
-        private const string SecondsKey = "Fps.DominationSmokeRun.Seconds";
-        private const string RequestedAtKey = "Fps.DominationSmokeRun.RequestedAt";
+        private const string ActiveKey = "Shooter.DominationSmokeRun.Active";
+        private const string SecondsKey = "Shooter.DominationSmokeRun.Seconds";
+        private const string RequestedAtKey = "Shooter.DominationSmokeRun.RequestedAt";
 
         private static readonly string _playingLog = DominationLog.Tag + " state=" + GameModeState.Playing + " ";
         private static readonly string _endedLog = DominationLog.Tag + " ended winner=";

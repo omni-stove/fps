@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="EnemyAgent"/> のうち、NavMesh のリンク (はしご <see cref="Traversal.Ladder"/> が張るものなど) を渡る処理。

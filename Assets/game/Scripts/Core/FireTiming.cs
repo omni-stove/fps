@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ラグ補償に使う時刻の換算。サーバーの時刻 (秒) を tick に直し、撃った側が見ていた時点 (<see cref="ShotTime"/>) を求める。

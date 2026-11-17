@@ -1,10 +1,10 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="CharacterAnimator"/> にキャラの状態を渡す部品。プレイヤー (PlayerController) でも敵 (EnemyAgent) でもないキャラ
-    /// (ネット対戦の NetPlayer) が本体に付ける。Fps.Runtime は Fps.Net を参照できないので、この形で受け取る。
+    /// (ネット対戦の NetPlayer) が本体に付ける。Shooter.Runtime は Shooter.Net を参照できないので、この形で受け取る。
     /// 水平の速さは CharacterAnimator が本体の位置の変化から求めて渡す (速度が全員には同期されないため)。
     /// </summary>
     public interface ICharacterPoseSource

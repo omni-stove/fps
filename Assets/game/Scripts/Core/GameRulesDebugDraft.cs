@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ルールのデバッグパネルで編集中の値。<see cref="GameRulesDebugField"/> の各項目を選択肢の番号 (<see cref="Options"/> の添字) で持ち、

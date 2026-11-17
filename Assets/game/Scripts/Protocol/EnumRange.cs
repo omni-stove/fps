@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 1 バイトで送る列挙の値の数。値が 0 から隙間なく並ぶ列挙だけを扱い、読むときは数より小さい値だけを受け取る

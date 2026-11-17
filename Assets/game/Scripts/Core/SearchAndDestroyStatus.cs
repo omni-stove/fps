@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆破の Runner が <see cref="ModeStatus.Detail"/> に入れる、爆破固有の状態。試合 (<see cref="Game"/>) と、この画面で操作しているプレイヤーの ID。

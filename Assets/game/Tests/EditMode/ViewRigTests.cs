@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,7 +9,7 @@ using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 一人称と三人称で、カメラの置き場所・体の描き方・射撃の始点と向きがどう変わるか (変わらないか)。

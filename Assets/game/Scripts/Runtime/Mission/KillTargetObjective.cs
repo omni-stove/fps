@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 指定した <see cref="Damageable"/> が死ぬたびに、目標を 1 進める。
     /// 標的を指定しなければ、この GameObject と子孫の Damageable をすべて標的にする。
-    /// 目標が Active でない間の撃破は数えない (<see cref="Fps.Core.Mission.Progress"/> の決まりどおり)。
+    /// 目標が Active でない間の撃破は数えない (<see cref="Shooter.Core.Mission.Progress"/> の決まりどおり)。
     /// MissionRunner は Inspector で指定しなければシーンから探す。
     /// </summary>
     [DisallowMultipleComponent]

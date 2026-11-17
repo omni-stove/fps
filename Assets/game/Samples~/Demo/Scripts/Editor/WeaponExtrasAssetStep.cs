@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 薬莢と空撃ちの仮素材 (小さい円柱の薬莢のプレハブ・手続き生成の薬莢の落下音とカチッという空撃ちの音) と、それをまとめた
@@ -144,7 +144,7 @@ namespace Fps.Editor
             if (catalog == null)
             {
                 throw new InvalidOperationException(
-                    $"weapon extras catalog '{CatalogPath}' was not found; run {PresentationAssetSteps.MenuPath} (Fps.Editor.PresentationAssetSteps.BuildAll) first");
+                    $"weapon extras catalog '{CatalogPath}' was not found; run {PresentationAssetSteps.MenuPath} (Shooter.Editor.PresentationAssetSteps.BuildAll) first");
             }
 
             catalog.Validate();

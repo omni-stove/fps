@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>射撃場のチュートリアルの手順。並び順は <see cref="TutorialSteps.Order"/>。</summary>
     public enum TutorialStep

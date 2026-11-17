@@ -1,9 +1,9 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DeployShield", menuName = "Fps/Abilities/Deploy Shield")]
+    [CreateAssetMenu(fileName = "DeployShield", menuName = "Shooter/Abilities/Deploy Shield")]
     public sealed class ShieldDeployDefinition : DeployAbilityDefinition
     {
         public const string PlateName = "Plate";

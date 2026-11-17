@@ -1,13 +1,13 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using UnityEngine;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
-using LadderRule = Fps.Core.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
+using LadderRule = Shooter.Core.Ladder;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、はしごの台 (<see cref="LadderRangeFixture"/>) を確かめる手順。

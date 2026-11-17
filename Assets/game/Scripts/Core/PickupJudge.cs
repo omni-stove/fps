@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拾える物を拾おうとしたときに何が起きるかを決める。状態は変えず、反映は呼ぶ側が <see cref="PickupOutcome"/> に従って行う。

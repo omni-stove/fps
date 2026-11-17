@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 敵味方の色を、今効いている設定の色の組 (<see cref="ControlSettings.Palette"/>) から Unity の <see cref="Color"/> で引く。

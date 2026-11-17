@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class EnemyBrainStandDownTests
     {
         // 視認 20m、攻撃 10m、見失って 1 秒で Search、Search 2 秒、反応 0.5 秒、撃ち始めの 2 発は散らばる。

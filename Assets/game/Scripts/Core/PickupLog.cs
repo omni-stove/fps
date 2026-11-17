@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>拾える物の <c>[Pickup]</c> 付きログの文言。名前が空なら <c>-</c> と書く。</summary>
     public static class PickupLog

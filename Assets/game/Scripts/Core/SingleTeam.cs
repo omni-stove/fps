@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 全員を 1 つの陣営 (<see cref="Side"/>) に入れるチーム分け。PvE のように、相手が参加者ではない (外から出てくる敵と戦う) モードで使う。

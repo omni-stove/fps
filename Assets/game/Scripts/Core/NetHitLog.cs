@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>サーバー権威のヒットスキャンが出す <c>[Net]</c> 付きログの文言。</summary>
     public static class NetHitLog

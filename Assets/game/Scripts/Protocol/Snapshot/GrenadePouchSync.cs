@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>持ち主にだけ送るグレネードの残り (Netcode の <c>NetGrenadeState</c> の中身)。</summary>
     /// <remarks>

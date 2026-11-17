@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らず入力も無いので、Update が集める入力を Advance へ直接渡す。
     // UIDocument が木を作らないことがあるので、PauseMenuTests と同じく Hud.uxml を複製して Bind に渡す
@@ -322,7 +322,7 @@ namespace Fps.Tests.EditMode
             var time = new DateTime(2026, 11, 14, 9, 30, 5, 120);
             Assert.That(ScreenshotPhotoCapture.FileNameFor(time), Is.EqualTo("photo_20261114_093005_120.png"));
 
-            var directory = Path.Combine(Path.GetTempPath(), "fps-photo-test-" + Guid.NewGuid().ToString("N"));
+            var directory = Path.Combine(Path.GetTempPath(), "shooter-photo-test-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             try
             {

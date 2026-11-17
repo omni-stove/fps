@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 命中 1 回分のダメージを計算する。結果は <see cref="Health.TakeDamage(int)"/> にそのまま渡せる。

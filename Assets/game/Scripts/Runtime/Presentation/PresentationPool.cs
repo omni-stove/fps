@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 演出の部品 (エフェクト・曳光弾・音源) を使い回すための、上限付きのプール。<see cref="WeaponPresentation"/> が持つ。

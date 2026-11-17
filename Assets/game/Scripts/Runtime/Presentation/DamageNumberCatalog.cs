@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DamageNumberCatalog", menuName = "Fps/Damage Number Catalog")]
+    [CreateAssetMenu(fileName = "DamageNumberCatalog", menuName = "Shooter/Damage Number Catalog")]
     public sealed class DamageNumberCatalog : ScriptableObject
     {
         public const string CatalogName = "DamageNumber";

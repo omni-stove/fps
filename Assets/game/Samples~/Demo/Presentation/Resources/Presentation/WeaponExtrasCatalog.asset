@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b231d26f64b2a388cbb5adf2264a533d, type: 3}
   m_Name: WeaponExtrasCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponExtrasCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponExtrasCatalog
   _weapons:
   - _weaponId: 6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83
     _shellPrefab: {fileID: 5607472273078574921, guid: 1701fd5433dcb43a09b53ff4ae881fc8, type: 3}

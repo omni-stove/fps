@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 分隊への指示 (<see cref="GameSignals.SquadOrder"/>) の印を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。

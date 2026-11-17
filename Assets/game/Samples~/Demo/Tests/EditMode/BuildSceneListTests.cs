@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class BuildSceneListTests
     {
@@ -25,12 +25,12 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheMenuLoadsTheListedScenes()
         {
-            var root = Fps.Runtime.MenuSceneSettings.LoadSceneRoot();
-            var scenes = Fps.Runtime.MenuSceneSettings.LoadScenes();
+            var root = Shooter.Runtime.MenuSceneSettings.LoadSceneRoot();
+            var scenes = Shooter.Runtime.MenuSceneSettings.LoadScenes();
 
-            Assert.That(Fps.Core.MenuRoute.MainMenuSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.MainMenuScene));
-            Assert.That(Fps.Core.MenuRoute.RangeSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.BootstrapScene));
-            Assert.That(Fps.Core.MenuRoute.CampaignSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.CampaignScene));
+            Assert.That(Shooter.Core.MenuRoute.MainMenuSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.MainMenuScene));
+            Assert.That(Shooter.Core.MenuRoute.RangeSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.BootstrapScene));
+            Assert.That(Shooter.Core.MenuRoute.CampaignSceneUnder(root, scenes), Is.EqualTo(BuildSceneList.CampaignScene));
         }
 
         [Test]
@@ -58,10 +58,10 @@ namespace Fps.Tests.EditMode
         public void ListHasOneFeatureSceneForEachOnOffRuleRightAfterTheTpsRange()
         {
             var scenes = BuildSceneList.Scenes.ToList();
-            var fields = Fps.Core.GameRulesDebugDraft.Fields.Where(Fps.Core.GameRulesDebugDraft.IsToggle).ToArray();
+            var fields = Shooter.Core.GameRulesDebugDraft.Fields.Where(Shooter.Core.GameRulesDebugDraft.IsToggle).ToArray();
             var expected = fields.Select(BuildSceneList.FeatureScene).ToArray();
 
-            Assert.That(BuildSceneList.FeatureScene(Fps.Core.GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Scenes/Feature_Zipline.unity"));
+            Assert.That(BuildSceneList.FeatureScene(Shooter.Core.GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Scenes/Feature_Zipline.unity"));
             Assert.That(BuildSceneList.FeatureScenes, Is.EqualTo(expected));
             Assert.That(expected, Has.Length.EqualTo(25));
             var start = scenes.IndexOf(BuildSceneList.TpsRangeScene) + 1;

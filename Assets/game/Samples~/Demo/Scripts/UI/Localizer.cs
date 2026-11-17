@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 画面に出す文字を、今の言語 (<see cref="Language"/>。選んだ言語は <see cref="LanguagePreferenceStore"/> に保存する) の

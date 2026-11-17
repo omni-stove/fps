@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>モードの HUD に出す、陣営 1 つ分の得点の行。<see cref="ModeHudText.Scores"/> が作る。</summary>
     public readonly struct ModeHudScoreLine

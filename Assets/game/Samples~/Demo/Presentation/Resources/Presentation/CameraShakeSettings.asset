@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 748aa232155ac9884965703dd68dc9ef, type: 3}
   m_Name: CameraShakeSettings
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.CameraShakeSettings
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CameraShakeSettings
   _decayPerSecond: 1.25
   _frequency: 15
   _maxAngles: {x: 4, y: 4, z: 3}

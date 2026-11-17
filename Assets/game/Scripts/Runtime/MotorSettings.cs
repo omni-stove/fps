@@ -1,12 +1,12 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // コンポーネントごとに値を持たせると、オフライン (PlayerController) とネット対戦 (NetworkPlayerMotor) で歩く速さなどが食い違うので、
     // 両方が同じアセット (割り当てが無ければ入口 GameContent の Motor、それも無ければ Resources の ResourcePath、それも無ければ MotorSpec.Default) を読む。
-    [CreateAssetMenu(fileName = "MotorSettings", menuName = "Fps/Motor Settings")]
+    [CreateAssetMenu(fileName = "MotorSettings", menuName = "Shooter/Motor Settings")]
     public sealed class MotorSettings : ScriptableObject
     {
         public const string ResourcePath = "Movement/MotorSettings";

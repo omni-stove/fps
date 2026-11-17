@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="HordeRunner"/> が波を越えたら勝ち・全員倒れたら負けにし、倒れた味方を波の間に戻し、敵を倒すと通貨を入れ、

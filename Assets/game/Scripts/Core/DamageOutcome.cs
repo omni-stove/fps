@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="TeamDeathmatchSession.ApplyDamage"/> の結果。<see cref="FriendlyFire.Reflect"/> で跳ね返したときは、

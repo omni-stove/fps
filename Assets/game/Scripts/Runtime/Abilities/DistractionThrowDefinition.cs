@@ -1,10 +1,10 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "DistractionThrow", menuName = "Fps/Abilities/Distraction Throw")]
+    [CreateAssetMenu(fileName = "DistractionThrow", menuName = "Shooter/Abilities/Distraction Throw")]
     public sealed class DistractionThrowDefinition : AbilityDefinition
     {
         [SerializeField, Min(0.01f), Tooltip("視線の向きへの初速 (m/s)")]

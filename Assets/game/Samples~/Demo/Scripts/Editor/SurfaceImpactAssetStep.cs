@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 材質ごとの着弾の仮素材 (銃痕のテクスチャと材質・着弾のエフェクト・着弾音) と <see cref="SurfaceImpactCatalog"/> を作る手順。
@@ -42,9 +42,9 @@ namespace Fps.Editor
         private static readonly int[] WobbleFrequencies = { 3, 5, 7, 11 };
         private static readonly float[] WobbleAmplitudes = { 0.05f, 0.04f, 0.03f, 0.02f };
 
-        public static string AudioFolder => FpsKitRoot.OutputPath("Audio/SurfaceImpact");
+        public static string AudioFolder => ShooterKitRoot.OutputPath("Audio/SurfaceImpact");
 
-        public static string AssetFolder => FpsKitRoot.OutputPath("Presentation/SurfaceImpact");
+        public static string AssetFolder => ShooterKitRoot.OutputPath("Presentation/SurfaceImpact");
 
         /// <summary>カタログの置き場所。実行時に <see cref="SurfaceImpactCatalog.Load"/> で読めるよう、Resources の <see cref="SurfaceImpactCatalog.ResourcePath"/> に置く。</summary>
         public static string CatalogPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + SurfaceImpactCatalog.ResourcePath + ".asset";

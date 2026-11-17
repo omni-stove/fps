@@ -1,13 +1,13 @@
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>シーン生成スクリプトのテストが、空のシーンを今のシーンに足して使うための入口。</summary>
     public static class TestScenes
     {
         /// <summary>Untitled シーンの代わりに開いておく、保存済みの空のシーン。Assets の外なのでアセットにはならない。</summary>
-        public const string BaseScenePath = "Temp/FpsTestBase.unity";
+        public const string BaseScenePath = "Temp/ShooterTestBase.unity";
 
         /// <summary>
         /// 空のシーンを Additive で作って返す。使い終えたら <c>EditorSceneManager.CloseScene(scene, true)</c> で閉じる。
@@ -33,12 +33,12 @@ namespace Fps.Tests.EditMode
         /// 保存済みのシーンでプレイヤーに配線されているべき武器 (rifle, handgun のアセット)。
         /// どちらかのアセットが無ければ null を含むので、比べると失敗する (先に WeaponAssetBuilder.Build を走らせる)。
         /// </summary>
-        public static Fps.Runtime.WeaponDefinition[] ExpectedPlayerWeapons()
+        public static Shooter.Runtime.WeaponDefinition[] ExpectedPlayerWeapons()
         {
             return new[]
             {
-                UnityEditor.AssetDatabase.LoadAssetAtPath<Fps.Runtime.WeaponDefinition>(Fps.Editor.WeaponAssetBuilder.RiflePath),
-                UnityEditor.AssetDatabase.LoadAssetAtPath<Fps.Runtime.WeaponDefinition>(Fps.Editor.WeaponAssetBuilder.HandgunPath),
+                UnityEditor.AssetDatabase.LoadAssetAtPath<Shooter.Runtime.WeaponDefinition>(Shooter.Editor.WeaponAssetBuilder.RiflePath),
+                UnityEditor.AssetDatabase.LoadAssetAtPath<Shooter.Runtime.WeaponDefinition>(Shooter.Editor.WeaponAssetBuilder.HandgunPath),
             };
         }
 

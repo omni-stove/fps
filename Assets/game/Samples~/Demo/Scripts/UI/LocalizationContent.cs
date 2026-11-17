@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 入口 (GameContent) はキットの物で言語を扱わないので、Resources の外に置いた表を重ねる先は UI の側に別に持つ。
-    // 名前ではなく型で探すので、Resources/FpsKit/ に好きな名前で 1 つ置けばよい。
-    [CreateAssetMenu(fileName = "LocalizationContent", menuName = "Fps/Localization Content")]
+    // 名前ではなく型で探すので、Resources/ShooterKit/ に好きな名前で 1 つ置けばよい。
+    [CreateAssetMenu(fileName = "LocalizationContent", menuName = "Shooter/Localization Content")]
     public sealed class LocalizationContent : ScriptableObject
     {
         private static LocalizationContent _override;

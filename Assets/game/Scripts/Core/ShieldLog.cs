@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 敵の状態のログ (EnemyAgent.LogTag) と同じ [AI] に出す。盾持ちの出来事を、同じ敵の状態の移り変わりと並べて読めるように。
     public static class ShieldLog

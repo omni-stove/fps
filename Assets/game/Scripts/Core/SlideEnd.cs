@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SlideMotion"/> のスライディングが終わった理由。</summary>
     public enum SlideEnd

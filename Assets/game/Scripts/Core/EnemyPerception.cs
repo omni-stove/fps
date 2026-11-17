@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 1 tick 分の敵の知覚。視線判定や音の検出は呼び出し側が行って渡す。

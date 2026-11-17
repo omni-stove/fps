@@ -1,15 +1,15 @@
 using System.Linq;
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class BootstrapSceneBuilderTests
     {
@@ -18,7 +18,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void UsesDefaultPathWithoutArgument()
         {
-            var args = new[] { "Unity", "-batchmode", "-executeMethod", "Fps.Editor.BootstrapSceneBuilder.Build" };
+            var args = new[] { "Unity", "-batchmode", "-executeMethod", "Shooter.Editor.BootstrapSceneBuilder.Build" };
 
             Assert.That(BootstrapSceneBuilder.ResolveScenePath(args), Is.EqualTo(BootstrapSceneBuilder.DefaultScenePath));
             Assert.That(BootstrapSceneBuilder.ResolveScenePath(null), Is.EqualTo(BootstrapSceneBuilder.DefaultScenePath));

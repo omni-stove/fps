@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// BattleRoyaleRunner が出した状態を、既定の HUD (<see cref="ModeHudView"/> と <see cref="BattleRoyaleHudFormatter"/>) が分隊・順位・エリアの文にすることを確かめる。

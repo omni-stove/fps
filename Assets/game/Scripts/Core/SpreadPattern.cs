@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 武器の弾のばらつき。散らばりの半角は腰撃ち／覗き込み (ADS) と移動の速さから <see cref="WeaponSpec"/> の値で決め、

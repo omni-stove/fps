@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 座席に座っている人の 1 フレーム分の入力。<see cref="VehicleSeat.SubmitInput"/> で渡し、<see cref="IVehicleInputSink"/> が動き方や武器に使う。

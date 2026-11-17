@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>持ち主が次の出現で持つ武器の Id (スロット順) を頼む。返事は <see cref="LoadoutAnswerMessage"/>。</summary>
     public sealed class LoadoutRequestMessage : IMessage

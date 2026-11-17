@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 仮の形の代わりに差し替えたプレハブを置く。見た目だけの物は弾・視線・移動を遮ってはいけないので、当たり判定を外して置ける。

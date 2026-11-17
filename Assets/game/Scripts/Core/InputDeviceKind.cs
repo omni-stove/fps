@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 操作設定 (<see cref="ControlSettings"/>) を分ける入力機器の種類。

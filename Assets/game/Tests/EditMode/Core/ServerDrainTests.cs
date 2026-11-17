@@ -1,9 +1,9 @@
 using System;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ServerDrainTests
     {
         private static readonly char[] _separators = { ' ' };
@@ -16,7 +16,7 @@ namespace Fps.Core.Tests
         [Test]
         public void TheTimeoutDefaultsTo600SecondsWhenTheFlagIsAbsent()
         {
-            Assert.That(ServerDrain.ResolveTimeoutSeconds(Args("fps-server -batchmode -mode server"), 0), Is.EqualTo(600));
+            Assert.That(ServerDrain.ResolveTimeoutSeconds(Args("shooter-server -batchmode -mode server"), 0), Is.EqualTo(600));
             Assert.That(ServerDrain.DefaultTimeoutSeconds, Is.EqualTo(600));
         }
 
@@ -25,7 +25,7 @@ namespace Fps.Core.Tests
         [TestCase("-DRAIN-TIMEOUT 30", 30)]
         public void AWrittenTimeoutIsKeptIncludingZero(string flags, int parsed)
         {
-            Assert.That(ServerDrain.ResolveTimeoutSeconds(Args("fps-server -mode server " + flags), parsed), Is.EqualTo(parsed));
+            Assert.That(ServerDrain.ResolveTimeoutSeconds(Args("shooter-server -mode server " + flags), parsed), Is.EqualTo(parsed));
         }
 
         [Test]

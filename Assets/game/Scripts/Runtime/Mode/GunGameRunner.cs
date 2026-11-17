@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガンゲーム (<see cref="GunGame"/>) を進める <see cref="ModeRunnerBase"/>。全員が別の陣営 (<see cref="FreeForAll"/>) で、

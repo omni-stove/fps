@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="DestructibleStructure"/> の部品 1 つ。建造物の子孫に置き、添字・最大耐久値・地面に接しているか・当たり判定のコライダーを持つ。

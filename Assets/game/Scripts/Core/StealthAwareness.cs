@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 知覚の差し込みと振る舞いを 1 つにまとめるのは、判断の前にためたゲージと最後に見た場所を、判断の後の置き換えで同じ tick のうちに使うため。
     public sealed class StealthAwareness : IBrainPerceptionContributor, IEnemyBehavior

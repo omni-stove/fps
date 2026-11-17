@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// スコアボードの 1 行。参加者 1 人分の Id・名前・チーム・キル数・デス数・接続状態で、文は持たない。並べ方は <see cref="ScoreboardRows"/> が決める。

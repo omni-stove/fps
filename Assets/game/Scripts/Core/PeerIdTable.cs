@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 相手を表す文字列 (EOS の ProductUserId など) と、transport が Netcode に渡す数値 ID を対応づける。

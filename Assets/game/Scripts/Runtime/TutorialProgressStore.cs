@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 射撃場のチュートリアルを終えたことを <see cref="PlayerPrefs"/> の 1 つのキーに整数 (終えたら 1) で読み書きする。
@@ -9,7 +9,7 @@ namespace Fps.Runtime
     public sealed class TutorialProgressStore
     {
         /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
-        public const string DefaultKey = "Fps.TutorialCompleted";
+        public const string DefaultKey = "Shooter.TutorialCompleted";
 
         /// <param name="key">PlayerPrefs のキー。テストでは本物の記録を壊さないよう別のキーを渡す。</param>
         public TutorialProgressStore(string key = DefaultKey)

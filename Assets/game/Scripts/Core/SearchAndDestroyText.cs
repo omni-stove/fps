@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroy"/>) の <c>[SearchAndDestroy]</c> 付きのログの文言と、設置地点の名前。

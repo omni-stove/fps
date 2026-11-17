@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// モードの状態 (<see cref="ModeStatus"/>) を <see cref="ModeHudView"/> に出す文にする役。<see cref="ModeStatus.Detail"/> の型ごとに

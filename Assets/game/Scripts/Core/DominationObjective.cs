@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 別の進行役 (オンラインでは <see cref="TeamDeathmatchSession"/>) が回している試合に、拠点制圧 (<see cref="Domination"/>) を重ねて動かす。

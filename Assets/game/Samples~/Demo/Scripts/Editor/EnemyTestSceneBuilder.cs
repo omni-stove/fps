@@ -1,23 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 敵 AI の動作確認用シーン EnemyAiTest を生成する。床に <see cref="NavMeshSurface"/> を置いて NavMesh を焼き、
     /// NavMeshData をシーンの隣にアセットとして保存してから、敵 (<see cref="EnemyAgent"/>、倒れると予備弾と回復を落とす <see cref="DropOnDeath"/> 付き)・
     /// 拾える物の出現点 (<see cref="PickupSpawnPoint"/>) と <see cref="GameBootstrap"/> (床は生成しない設定) を置く。プレイヤーとライトは実行時に GameBootstrap が作る。
     /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.EnemyTestSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.EnemyTestSceneBuilder.Build</code>
     /// </summary>
     /// <remarks>
     /// 配置 (上から見て、プレイヤーは原点で +Z を向く):
@@ -35,7 +35,7 @@ namespace Fps.Editor
         /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Fps/Build Enemy AI Test Scene";
+        public const string MenuPath = "Shooter/Build Enemy AI Test Scene";
         public const string LogTag = "[EnemyTestSceneBuilder]";
 
         public const string FloorName = "Floor";
@@ -58,7 +58,7 @@ namespace Fps.Editor
         public const string LowCoverName = "LowCover";
 
         /// <summary>
-        /// 右手前の低い壁。上端 (1.05m) は <see cref="Fps.Core.MotorSpec.DefaultCoverLowWallHeight"/> 未満で、しゃがんだ敵 (<see cref="EnemyAgent.DefaultCrouchHeight"/>) が隠れる。
+        /// 右手前の低い壁。上端 (1.05m) は <see cref="Shooter.Core.MotorSpec.DefaultCoverLowWallHeight"/> 未満で、しゃがんだ敵 (<see cref="EnemyAgent.DefaultCrouchHeight"/>) が隠れる。
         /// プレイヤーの目 (1.6m) から巡回路の最後の地点は、この壁の上を越えて見える。
         /// </summary>
         public static readonly Vector3 LowCoverCenter = new Vector3(10f, 0.525f, 2f);

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: GrenadeLauncher40mm
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: e2680d20-0aa4-4a9c-baeb-31430634d792
   _nameKey: weapon.real.grenadeLauncher40mm
   _description: "Battlefield 4 \u306E M320 HE (\u5B9F\u9283\u306F M320 (40mm \u69B4\u5F3E)) \u3092\u53C2\u8003\u300245 m/s \u3067\u91CD\u529B 7.2 m/s\xB2 \u306E\u5F27\u3092\u63CF\u304F\u3002\u76F4\u6483 100 \u306F\u5F53\u305F\u308A 25 \u3068\u7206\u767A 75 \u306B\u5206\u3051\u305F\u30020.5 \u79D2\u307E\u3067\u306E\u4E0D\u767A\u306F\u5165\u308C\u3066\u3044\u306A\u3044\u3002"

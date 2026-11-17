@@ -1,11 +1,11 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
-    /// TPS の射撃場に、印 (<see cref="Fps.Runtime.PingController"/>) を試す場所を置く。左奥 (<see cref="ShowPoint"/> の周り) に、
+    /// TPS の射撃場に、印 (<see cref="Shooter.Runtime.PingController"/>) を試す場所を置く。左奥 (<see cref="ShowPoint"/> の周り) に、
     /// 立つ位置 (<see cref="StandPoint"/>)、敵を見せる位置 (<see cref="ShowPoint"/>)、敵を隠す壁 (<see cref="Blind"/>) とその裏 (<see cref="HiddenPoint"/>) を
     /// 手前から奥へ一直線に並べる。smoke (<see cref="PingSmokeStep"/>) は標的ダミーを見せる位置に置いて印を付け、壁の裏へ動かして見失わせる。
     /// 位置はどれも床の高さで、子の空の GameObject (<see cref="StandName"/> など) にも置くので、シーンを開いて場所を確かめられる。
@@ -19,8 +19,8 @@ namespace Fps.Editor
         public const string HiddenName = "Hidden";
 
         /// <summary>
-        /// 敵を隠す壁の高さ (m)。標的ダミーの頭 (<see cref="Fps.Runtime.TargetDummy.HeadLocalPosition"/>) と、
-        /// 肩越しのカメラ (<see cref="Fps.Runtime.ViewRig.DefaultThirdPersonOffset"/>) より高く、立って覗いても裏が見えない。
+        /// 敵を隠す壁の高さ (m)。標的ダミーの頭 (<see cref="Shooter.Runtime.TargetDummy.HeadLocalPosition"/>) と、
+        /// 肩越しのカメラ (<see cref="Shooter.Runtime.ViewRig.DefaultThirdPersonOffset"/>) より高く、立って覗いても裏が見えない。
         /// </summary>
         public const float BlindHeight = 2.5f;
 

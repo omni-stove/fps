@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: SquadAutomaticWeapon
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: e250274d-82be-401c-a098-2ee06295b582
   _nameKey: weapon.ref.squadAutomaticWeapon
   _description: "CS2 \u306E M249 (\u5B9F\u9283\u306F FN M249 MINIMI) \u3092\u53C2\u8003\u3002\u4F53 32\u30FB750 RPM\u30FB100 \u767A\u3002RangeModifier 0.97 \u3092 50 m \u3067 0.89 \u500D\u306B\u7F6E\u304D\u63DB\u3048\u305F\u3002\u79FB\u52D5\u306E\u500D\u7387\u306F 195/250\u3002"

@@ -1,7 +1,7 @@
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Interact で拾う物の近くで出す案内 (<see cref="PickupHint"/>) の文 (表のキー <c>hud.pickup.*</c> の <see cref="LocalizedText"/>)。

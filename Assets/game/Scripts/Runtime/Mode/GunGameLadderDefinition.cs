@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガンゲームの武器の並びと制限時間・リスポーンの秒数をアセットとして持つ。<see cref="ToLadder"/> で Core の <see cref="GunGameLadder"/> に、
     /// <see cref="CreateSession"/> でモードに変換する。
     /// 段の武器と近接の武器は <see cref="WeaponDefinition"/> で持ち、Id と名前のキーはその <see cref="WeaponDefinition.ToSpec"/> から取る。
-    /// 中身は Fps.Editor.GunGameSceneBuilder が作る。
+    /// 中身は Shooter.Editor.GunGameSceneBuilder が作る。
     /// </summary>
-    [CreateAssetMenu(fileName = "GunGameLadder", menuName = "Fps/Gun Game Ladder")]
+    [CreateAssetMenu(fileName = "GunGameLadder", menuName = "Shooter/Gun Game Ladder")]
     public sealed class GunGameLadderDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("0 段目からの武器の並び。今の段の武器で倒すと次の段へ進み、最後の段の武器で倒したら勝ち")]

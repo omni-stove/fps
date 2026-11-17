@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ダッシュ中に伏せたときの飛び込み 1 回の水平の動き。<see cref="TryStart"/> した向きへ <see cref="ProneSpec.DiveDistance"/> を

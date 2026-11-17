@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>キャンペーンの敵の状態。</summary>
     public enum EnemyState

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>サーバーのログの形式。コマンドライン引数 <c>-log-format text|json</c> に対応する。</summary>
     public enum ServerLogFormat

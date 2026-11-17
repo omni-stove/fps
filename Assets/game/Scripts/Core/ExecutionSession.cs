@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// エクスキューション。<see cref="RoundSession"/> を使う 2 チーム (<see cref="TwoTeams"/>) のラウンド制で、ラウンド中は戻らない (<see cref="NoRespawn"/>)。

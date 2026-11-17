@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// TPS の射撃場 (<see cref="TpsRangeSceneBuilder"/>) に置く物 1 つ分。public な具象クラスで引数なしのコンストラクターを持てば、

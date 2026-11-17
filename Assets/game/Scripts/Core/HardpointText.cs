@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ハードポイント (<see cref="Hardpoint"/>) の <c>[Mode]</c> 付きログの文言。言語に依らない文字列で返す。

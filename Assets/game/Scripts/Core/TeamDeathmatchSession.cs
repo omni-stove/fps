@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// サーバーで動かすチームデスマッチの進行役。<see cref="TeamDeathmatch"/> (点数・時間・リスポーン待ち) に、
@@ -24,7 +24,7 @@ namespace Fps.Core
     /// (RespawnSeconds が 0 でも倒したことより先にリスポーンを出さない)。</item>
     /// <item>再開までの秒数 (<see cref="RestartDelaySeconds"/>) を渡したときは、終わってからその秒数だけ
     /// <see cref="Tick"/> が進んだら <see cref="Restart"/> して同じ顔ぶれ・同じチーム分けで次の試合を始める。</item>
-    /// <item><see cref="ActionRules.Downed"/> が <see cref="Fps.Core.Downed.Revive"/> なら、体力が 0 になっても倒さずにダウンさせる
+    /// <item><see cref="ActionRules.Downed"/> が <see cref="Shooter.Core.Downed.Revive"/> なら、体力が 0 になっても倒さずにダウンさせる
     /// (<see cref="ApplyDamage"/>)。ダウン中は <see cref="IsAlive"/> のまま、自動回復せず、動けるプレイヤー (<see cref="SelectSpawn"/> と
     /// <see cref="FindNearestEnemy"/> が数える人) には入らない。ダウン中の体力が尽きるか出血の秒数が過ぎると倒れ、
     /// 味方が <see cref="TryRevive"/> を押し続けると起き上がる。チームの全員がダウンか死亡になったら、ダウン中の人もその場で倒す。</item>
@@ -218,7 +218,7 @@ namespace Fps.Core
             ReconnectGraceSeconds = reconnectGraceSeconds;
 
             var actions = spec.Rules.Actions;
-            if (actions.Downed == Fps.Core.Downed.Revive)
+            if (actions.Downed == Shooter.Core.Downed.Revive)
             {
                 _downed = new DownedTracker(
                     DownedTracker.HealthFor(maxHealth, actions.DownedHealthFraction),
@@ -469,7 +469,7 @@ namespace Fps.Core
         /// 体力が減るはずの人 (跳ね返しなら attackerId) が出現直後の無敵の最中なら、何もせず <see cref="DamageOutcome.Ignored"/> を返す。
         /// 撃った人の無敵はここでは解かない (外れた射撃でも解くので、呼び出し側が <see cref="EndSpawnProtection"/> を呼ぶ)。
         /// <para>
-        /// <see cref="ActionRules.Downed"/> が <see cref="Fps.Core.Downed.Revive"/> のときは、体力が 0 になっても倒さずにダウンさせ、
+        /// <see cref="ActionRules.Downed"/> が <see cref="Shooter.Core.Downed.Revive"/> のときは、体力が 0 になっても倒さずにダウンさせ、
         /// <see cref="Downed"/> を出して <see cref="DamageOutcome.Downed"/> を返す。ただし自滅 (跳ね返しを含む) と、
         /// ダウンさせるとチームに動ける人がいなくなるときは、ダウンさせずにその場で倒す。
         /// ダウン中の人へのダメージはダウン中の体力を減らし (味方からは上の味方撃ちのルールに従う)、0 になったら倒す。

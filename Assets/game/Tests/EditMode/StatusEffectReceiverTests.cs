@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// オフラインの燃焼 (<see cref="StatusEffectReceiver"/>) が、間隔ごとにダメージを入れ、時間切れで消え、倒したらかけた者のキルにすることを確かめる。

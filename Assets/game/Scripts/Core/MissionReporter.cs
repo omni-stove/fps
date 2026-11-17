@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="Mission"/> の状態の変化を、タグ付きの 1 行のテキストにして sink に渡す。

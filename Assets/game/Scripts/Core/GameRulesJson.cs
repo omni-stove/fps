@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="GameRules"/> を JSON から読む。項目は <see cref="GameRules"/> の構成と同じで、名前はコンストラクターの引数名

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 時間を自分で読まず Tick で受けるのは、Unity の外 (dotnet のテスト) でも同じ計算を回すため。
     public sealed class SuppressionMeter

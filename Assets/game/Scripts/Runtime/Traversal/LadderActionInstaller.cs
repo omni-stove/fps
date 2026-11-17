@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
-using LadderRule = Fps.Core.Ladder;
+using LadderRule = Shooter.Core.Ladder;
 
-namespace Fps.Runtime.Traversal
+namespace Shooter.Runtime.Traversal
 {
     /// <summary>
     /// プレイヤーの <see cref="PlayerController"/> に <see cref="LadderMovement"/> を付け、ルールの <see cref="ActionRules.Ladder"/> に従わせる。

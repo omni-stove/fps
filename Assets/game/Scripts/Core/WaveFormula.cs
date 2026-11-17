@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 波の番号 (1 から) から <see cref="Wave"/> を決める式。敵の数と強さの倍率は番号に比例して増え、同時に出す上限と休憩は一定。

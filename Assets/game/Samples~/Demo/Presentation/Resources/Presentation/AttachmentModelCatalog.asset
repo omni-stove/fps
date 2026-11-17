@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 37674df5c20448cb862d9d154f9e91e2, type: 3}
   m_Name: AttachmentModelCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.AttachmentModelCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.AttachmentModelCatalog
   _attachments:
   - _itemId: 2451a5a1-24e5-45ed-bbc1-8b23276152f8
     _prefab: {fileID: 0}

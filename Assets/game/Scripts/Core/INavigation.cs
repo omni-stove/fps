@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 経路の問い合わせの差し込み口。Unity では NavMesh、Unity 抜きのサーバーでは自前の経路のデータが実装する。

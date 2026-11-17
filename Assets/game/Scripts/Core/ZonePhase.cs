@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 縮むエリア (<see cref="ZoneSchedule"/>) の段階 1 つ。<see cref="WaitSeconds"/> だけ今の円のまま待ち、

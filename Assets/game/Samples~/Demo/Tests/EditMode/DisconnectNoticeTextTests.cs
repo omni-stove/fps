@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class DisconnectNoticeTextTests
     {
@@ -48,9 +48,9 @@ namespace Fps.Tests.EditMode
                 Is.EqualTo("版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。"));
         }
 
-        [TestCase("fps:version-mismatch:")]
-        [TestCase("fps:version-mismatch:<b>red</b>")]
-        [TestCase("fps:version-mismatch:v0.2.0")]
+        [TestCase("shooter:version-mismatch:")]
+        [TestCase("shooter:version-mismatch:<b>red</b>")]
+        [TestCase("shooter:version-mismatch:v0.2.0")]
         public void AnUnreadableServerVersionIsLeftOut(string reason)
         {
             var text = For(reason, false);
@@ -71,7 +71,7 @@ namespace Fps.Tests.EditMode
         public void ARejectionSaysTheServerRefused()
         {
             Assert.That(For(DisconnectNotice.RejectedReason("invalid-payload"), false), Is.EqualTo(DisconnectNoticeText.RejectedMessage));
-            Assert.That(For("fps:rejected:Not Allowed!", false), Is.EqualTo(DisconnectNoticeText.RejectedMessage));
+            Assert.That(For("shooter:rejected:Not Allowed!", false), Is.EqualTo(DisconnectNoticeText.RejectedMessage));
             Assert.That(Localizer.Resolve(DisconnectNoticeText.RejectedMessage), Is.EqualTo("サーバーに接続を断られました。"));
         }
 
@@ -95,7 +95,7 @@ namespace Fps.Tests.EditMode
 
         [TestCase(null)]
         [TestCase("Disconnected due to host shutting down.")]
-        [TestCase("fps:something-new")]
+        [TestCase("shooter:something-new")]
         public void WithoutAKnownCodeAConnectedClientTimedOut(string reason)
         {
             Assert.That(For(reason, true), Is.EqualTo(DisconnectNoticeText.TimedOutMessage));

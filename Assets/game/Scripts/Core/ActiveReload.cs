@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// リロード中に決まった間で押すと早く終わる仕組み (アクティブリロード) を使うか。

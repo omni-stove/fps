@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // ScriptableObject.CreateInstance が型を見つけられるよう、ファイル名と同じ名前の最上位の型にする。
     public sealed class RecordingAbilityDefinition : AbilityDefinition

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// スナップショットの物の並び。読むたびに作り直さず、確保した配列を使い回す。要素は ref で直接書き換える。

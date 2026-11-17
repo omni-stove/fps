@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では Update が走らないので、座席の入力は VehicleSeat.SubmitInput で手で流す。動かした後は SyncTransforms する。
     // 乗り物は原点に +Z 向きで置き、座席は運転席 (0) と銃座 (1)。銃は銃座が操作し、左右 -90〜90 度・上下 -10〜30 度・90 度/秒で回る。

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 武器の一覧。<see cref="WeaponSpec.Id"/> で引ける。生成後は変わらない。

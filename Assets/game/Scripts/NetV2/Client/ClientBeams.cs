@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ビーム (<see cref="RoundDelivery.Beam"/>) の線。当たりはサーバーが決めるので、ここでは見せるだけ。

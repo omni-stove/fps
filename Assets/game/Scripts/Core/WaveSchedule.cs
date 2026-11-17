@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// PvE の波を順に進める。各波の値 (<see cref="Wave"/>) は表 (<see cref="FromTable"/>) か式 (<see cref="FromFormula"/>) から決める。

@@ -1,14 +1,14 @@
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Update は Edit Mode では走らないので、止めている間の動きは Core の EnemyInterruption のテストと Play での確認に任せる。
     public sealed class EnemyAgentInterruptTests

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>全員に送る爆発。投げた人がもう抜けていても演出は出す (<see cref="HasThrower"/> が false)。</summary>
     public sealed class ExplosionMessage : IMessage

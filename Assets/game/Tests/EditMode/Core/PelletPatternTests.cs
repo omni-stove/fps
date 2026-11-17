@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Numerics;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class PelletPatternTests
     {
         private static readonly RoundSpec _shotgun = new RoundSpec(range: 40f, pelletCount: 8, pelletSpreadDegrees: 5f);

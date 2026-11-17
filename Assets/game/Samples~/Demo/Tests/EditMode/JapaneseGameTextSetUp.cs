@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Fps.Runtime;
+using Shooter.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Shooter.Core.Tests
 {
     /// <summary>
     /// この名前空間のテストの間、画面の文字 (<see cref="GameText"/>) をゲームと同じ日本語の文字列表
@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
         public const string LanguageListFolder = LayerFolder + "/Languages";
 
         /// <summary>
-        /// 言語の一覧をリポジトリから、ゲーム (Fps.Runtime の Localizer) と同じくファイル名 (拡張子なし) の順に重ねて読む。
+        /// 言語の一覧をリポジトリから、ゲーム (Shooter.Runtime の Localizer) と同じくファイル名 (拡張子なし) の順に重ねて読む。
         /// 読めない所が 1 つでもあればテストを失敗にする。
         /// </summary>
         public static GameLanguageList LoadLanguageList()
@@ -66,7 +66,7 @@ namespace Fps.Core.Tests
         }
 
         /// <summary>
-        /// language の文字列表をリポジトリから、ゲーム (Fps.Runtime の Localizer) と同じ順に重ねて読む。
+        /// language の文字列表をリポジトリから、ゲーム (Shooter.Runtime の Localizer) と同じ順に重ねて読む。
         /// 見つからない・読めなければテストを失敗にする。
         /// </summary>
         public static StringTable LoadTable(GameLanguage language)

@@ -1,10 +1,10 @@
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="AbilityHost"/> の枠に差し込む能力の振る舞い。プレイヤー 1 人の 1 枠ごとに <see cref="AbilityDefinition.CreateAbility"/> が作る。
-    /// 回数・待ち時間・効果が出るまでの秒数は枠 (<see cref="Fps.Core.AbilitySlot"/>) が持つので、ここでは持たない。
+    /// 回数・待ち時間・効果が出るまでの秒数は枠 (<see cref="Shooter.Core.AbilitySlot"/>) が持つので、ここでは持たない。
     /// 呼ばれる順は <see cref="CanUse"/> → <see cref="Begin"/> → (毎フレーム) <see cref="Tick"/> → <see cref="End"/>。
-    /// 移動を変えたいときは <see cref="AbilityContext.OverrideMovement"/> を使う (その間 <see cref="Fps.Core.PlayerActionConditions.AbilityMoving"/> が立つ)。
+    /// 移動を変えたいときは <see cref="AbilityContext.OverrideMovement"/> を使う (その間 <see cref="Shooter.Core.PlayerActionConditions.AbilityMoving"/> が立つ)。
     /// </summary>
     public interface IAbility
     {

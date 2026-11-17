@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // ルールを敵ごとでなく見られる側に持たせるのは、敵は相手を選び直すので、相手ごとにルールが違う場面 (bot 同士の戦いなど) でも今までどおりにできるようにするため。
     [DisallowMultipleComponent]

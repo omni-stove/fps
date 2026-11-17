@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 被弾の画面効果と低体力の演出 (<c>DamageVignetteView</c>) の素材と値。
     /// <see cref="PresentationCatalog"/> の規約どおり Resources の <see cref="ResourcePath"/> に置き、<see cref="Load"/> で読む。
-    /// 中身は Fps.Editor.DamageFeedbackAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
+    /// 中身は Shooter.Editor.DamageFeedbackAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
     /// 素材の枠はどれも空でよく、空の枠の演出だけを出さない (画像が無ければ端を赤くせず、音が無ければ鳴らさない)。
     /// </summary>
-    [CreateAssetMenu(fileName = "DamageFeedbackCatalog", menuName = "Fps/Damage Feedback Catalog")]
+    [CreateAssetMenu(fileName = "DamageFeedbackCatalog", menuName = "Shooter/Damage Feedback Catalog")]
     public sealed class DamageFeedbackCatalog : ScriptableObject
     {
         /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す演出の名前。</summary>

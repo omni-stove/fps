@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="ModeSession"/> を 1 ラウンドとして繰り返すラウンド制の試合。2 つの陣営 (<see cref="ITeamLayout.FixedSides"/>) が

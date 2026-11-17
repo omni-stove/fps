@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using Epic.OnlineServices;
 using Epic.OnlineServices.P2P;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 using UnityEngine;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// クライアントの <see cref="EosMatchTransport"/> のために、PlayEveryWare のプラグインの SDK で P2P を呼ぶ。
@@ -17,7 +17,7 @@ namespace Fps.NetEos
     /// </remarks>
     internal sealed class EosClientP2P : IEosP2P
     {
-        private const string _displayName = "fps-client";
+        private const string _displayName = "shooter-client";
 
         private readonly EosCredentials _credentials;
         private readonly Queue<EosP2PNotice> _notices = new Queue<EosP2PNotice>();

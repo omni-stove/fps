@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // .fpsmap には名前を持たせないので、サーバーはシーンの並び順 (剛体・建物の何番目か) と部品の添字から番号を引く。
     // 0 は動かない物、1〜65535 は剛体、65536 以上は (建物 + 1) × 65536 + 部品。

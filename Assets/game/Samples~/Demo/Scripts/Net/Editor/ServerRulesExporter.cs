@@ -1,16 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
-    /// Unity 抜きのサーバー (dotnet/Fps.Server) はアセットとシーンを読めないので、試合の設定 (<see cref="NetMatchDefinition"/>、
+    /// Unity 抜きのサーバー (dotnet/Shooter.Server) はアセットとシーンを読めないので、試合の設定 (<see cref="NetMatchDefinition"/>、
     /// <see cref="NetSceneBuilder.MatchDefinitionPath"/>) とルールのアセットを <c>server-data/rules/&lt;ルール名&gt;.json</c> に、
     /// 各マップの出現地点と拠点を <c>server-data/maps/&lt;マップ&gt;.points.json</c> に、
     /// 印・グレネード・持ち物・吹き飛ばし・ボットの調整値を <c>server-data/tuning/</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
@@ -18,10 +18,10 @@ namespace Fps.Editor
     /// 調整値は <see cref="KitTuning"/> と同じ順 (入口の欄、無ければ Resources) で読む。
     /// サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
     /// </summary>
-    /// <remarks>make export-server-rules: unity run . -- -executeMethod Fps.Editor.ServerRulesExporter.Export</remarks>
+    /// <remarks>make export-server-rules: unity run . -- -executeMethod Shooter.Editor.ServerRulesExporter.Export</remarks>
     public static class ServerRulesExporter
     {
-        public const string MenuPath = "Fps/Server Data/Export Rules And Points";
+        public const string MenuPath = "Shooter/Server Data/Export Rules And Points";
         public const string LogTag = "[ServerRulesExporter]";
         public const string DataFolder = "server-data";
         public const string RulesFolder = DataFolder + "/rules";

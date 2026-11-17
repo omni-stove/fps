@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 目的地へ向かっているのに進めていないことを見つけ、立て直し (<see cref="StuckRecovery"/>) を軽いものから順に返す。

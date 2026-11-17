@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>バトルロイヤル (<see cref="BattleRoyaleSession"/>) の分隊 1 つの順位。同時に脱落した分隊は同じ順位になる。</summary>
     public readonly struct SquadPlacement

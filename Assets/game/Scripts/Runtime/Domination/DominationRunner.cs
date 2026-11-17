@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// 拠点制圧 (<see cref="Fps.Core.Domination"/>) をシーンで進める。Start で <see cref="GameBootstrap"/> の生成物と、シーンの
+    /// 拠点制圧 (<see cref="Shooter.Core.Domination"/>) をシーンで進める。Start で <see cref="GameBootstrap"/> の生成物と、シーンの
     /// <see cref="ControlPointZone"/>・<see cref="EnemyAgent"/> を拾い、調整値のアセット (<see cref="Definition"/>) か、それが無ければ Inspector の設定から
     /// <see cref="DominationSpec"/> を作って試合を始める。
     /// プレイヤーは Alpha (Id <see cref="PlayerId"/>)、敵は名前の順に Bravo (Id 1, 2, ...) として加える。
@@ -16,9 +16,9 @@ namespace Fps.Runtime
     /// <remarks>
     /// <list type="bullet">
     /// <item>Update で、各拠点に範囲の参加者を調べさせ (<see cref="ControlPointZone.Scan"/>)、生きている参加者がいる拠点を
-    /// <see cref="ControlPointMap.Locate"/> で決めて <see cref="Fps.Core.Domination.SetPlayerPoint"/> に渡してから <see cref="Fps.Core.Domination.Tick"/> する。</item>
-    /// <item>倒れたら、倒した者 (<see cref="CombatEvents.CurrentAttribution"/>) が参加者なら <see cref="Fps.Core.Domination.ReportKill"/>、
-    /// そうでなければ <see cref="Fps.Core.Domination.ReportDeath"/> に渡し、<see cref="EffectiveRespawnSeconds"/> 秒後に自チームの出現点へ戻す。
+    /// <see cref="ControlPointMap.Locate"/> で決めて <see cref="Shooter.Core.Domination.SetPlayerPoint"/> に渡してから <see cref="Shooter.Core.Domination.Tick"/> する。</item>
+    /// <item>倒れたら、倒した者 (<see cref="CombatEvents.CurrentAttribution"/>) が参加者なら <see cref="Shooter.Core.Domination.ReportKill"/>、
+    /// そうでなければ <see cref="Shooter.Core.Domination.ReportDeath"/> に渡し、<see cref="EffectiveRespawnSeconds"/> 秒後に自チームの出現点へ戻す。
     /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
@@ -434,7 +434,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 試合の時間を deltaSeconds 進める。倒れている参加者の待ち時間を進めて戻し、拠点にいる参加者を伝えてから
-        /// <see cref="Fps.Core.Domination.Tick"/> する。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
+        /// <see cref="Shooter.Core.Domination.Tick"/> する。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
         /// </summary>
         public void Tick(float deltaSeconds)
         {

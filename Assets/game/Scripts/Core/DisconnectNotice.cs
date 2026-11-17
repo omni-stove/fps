@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// クライアントがサーバーとの接続を失った理由を分ける (<see cref="DisconnectKind"/>)。どう言うかは UI が決める。
@@ -15,7 +15,7 @@ namespace Fps.Core
     public sealed class DisconnectNotice
     {
         /// <summary>このゲームのサーバーが送る切断理由の符号の接頭辞。</summary>
-        public const string ReasonPrefix = "fps:";
+        public const string ReasonPrefix = "shooter:";
 
         /// <summary>サーバーが止まるときに、つないでいるクライアントへ送る切断理由。</summary>
         public const string ServerStoppedReason = ReasonPrefix + "server-stopped";
@@ -165,7 +165,7 @@ namespace Fps.Core
             return new DisconnectNotice(DisconnectKind.TimedOut, wasConnected, null, null, null, raw);
         }
 
-        /// <summary>ログに出す 1 行の中身。例: <c>kind=VersionMismatch connected=False server-version=0.2.0 reason="fps:version-mismatch:0.2.0"</c>。</summary>
+        /// <summary>ログに出す 1 行の中身。例: <c>kind=VersionMismatch connected=False server-version=0.2.0 reason="shooter:version-mismatch:0.2.0"</c>。</summary>
         public string Describe()
         {
             var text = "kind=" + Kind + " connected=" + WasConnected;

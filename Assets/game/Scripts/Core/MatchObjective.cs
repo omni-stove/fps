@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// オンラインの試合の勝敗を何で決めるか。値の並びはアセットに乗るので、足すときは後ろに足す。

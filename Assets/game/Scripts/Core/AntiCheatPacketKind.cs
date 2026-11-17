@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="AntiCheatPacket"/> の種類。値は通信路に載るので変えない。</summary>
     public enum AntiCheatPacketKind : byte

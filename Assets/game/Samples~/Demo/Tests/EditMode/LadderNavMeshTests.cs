@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
@@ -8,9 +8,9 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// はしご (<see cref="LadderComponent"/>) が張る NavMesh のリンクで、敵と Bot が地面から台の上へ (と、その逆へ) 経路を引けること。

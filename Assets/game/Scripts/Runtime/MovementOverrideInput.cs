@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary><see cref="IMovementOverride.Step"/> に渡す、その Tick の入力と接地。</summary>
     public readonly struct MovementOverrideInput

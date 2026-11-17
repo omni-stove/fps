@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // AwarenessIndicatorCatalog に印のプレハブが無いときだけ使う仮の印。形と色はコードで決め、ゲームはカタログで差し替える。
     [DisallowMultipleComponent]

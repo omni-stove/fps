@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 専用サーバーが <c>-register-lobby</c> で作るロビーの決まりごと。クライアントはこの属性を見て、
@@ -25,10 +25,10 @@ namespace Fps.Core
         public const string TeamDeathmatchMode = "tdm";
 
         /// <summary>サーバーのロビーのバケット ID の接頭辞。同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないようにする。</summary>
-        public const string BucketPrefix = "fps-server:";
+        public const string BucketPrefix = "shooter-server:";
 
         /// <summary>サーバーが Device ID で初めてログインしたときに作るユーザーの表示名。プレイヤーと見分けるために分ける。</summary>
-        public const string DisplayName = "fps-server";
+        public const string DisplayName = "shooter-server";
 
         /// <summary>ログイン・作成・属性の更新に失敗したとき、やり直すまでの秒数。</summary>
         public const float RetryIntervalSeconds = 5f;

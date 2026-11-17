@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 近くで Interact したら何が起きるかの案内。どの物が出しているか (<see cref="Source"/>) と、何が起きるか (<see cref="Detail"/>) を持つ。

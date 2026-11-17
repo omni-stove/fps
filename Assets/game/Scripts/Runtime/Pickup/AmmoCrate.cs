@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 置きっぱなしの弾薬箱。範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が Interact (キーボードは E の長押し) をすると、
@@ -367,7 +367,7 @@ namespace Fps.Runtime
         {
             if (_visualPrefab != null)
             {
-                return Fps.Runtime.VisualPrefab.Instantiate(_visualPrefab, transform, VisualName, stripColliders: false).transform;
+                return Shooter.Runtime.VisualPrefab.Instantiate(_visualPrefab, transform, VisualName, stripColliders: false).transform;
             }
 
             var visual = GameObject.CreatePrimitive(PrimitiveType.Cube);

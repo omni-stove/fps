@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ホードのリスポーン。倒れた人は波 (<see cref="WaveSchedule"/>) を越えるまで待ち、波の間 (休憩中) になったらまとめて戻る。

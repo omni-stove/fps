@@ -1,13 +1,13 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// HUD (左下に体力、右下に弾倉/予備、上中央に残り時間とその下に一時的な案内、中央に照準)。同じ GameObject の <see cref="UIDocument"/> に出す。
-    /// 出す値は <see cref="GameSignals.HudModel"/> に出ている <see cref="HudModel"/> (オフラインは GameBootstrap、ネット対戦は Fps.NetV2 の NetV2Hud が出す) で、
+    /// 出す値は <see cref="GameSignals.HudModel"/> に出ている <see cref="HudModel"/> (オフラインは GameBootstrap、ネット対戦は Shooter.NetV2 の NetV2Hud が出す) で、
     /// 出ていない間は自分の <see cref="Model"/> (仮の表示) を出す (<see cref="ShownModel"/>)。<see cref="HudView"/> が Label に写す。
     /// 照準を読むプレイヤーの部品 (<see cref="WeaponController"/>・<see cref="AimDownSights"/>・<see cref="PlayerController"/>) は <see cref="GameSignals.LocalPlayer"/> から受け、
     /// 受けている間だけ、時間で進みイベントの無いリロードの進み (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類
@@ -266,7 +266,7 @@ namespace Fps.Runtime
 
         public PhotoModeView PhotoMode => GetComponent<PhotoModeView>();
 
-        /// <summary>ポーズを開いている間の時間の扱い (<see cref="Fps.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
+        /// <summary>ポーズを開いている間の時間の扱い (<see cref="Shooter.Runtime.PauseMenu.TimeMode"/>) を決める。ポーズメニューが無ければ何もしない。</summary>
         public void SetPauseTimeMode(PauseTimeMode mode)
         {
             var pause = PauseMenu;

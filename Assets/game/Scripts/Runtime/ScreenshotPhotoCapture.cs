@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public sealed class ScreenshotPhotoCapture : IPhotoCapture
     {

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 二人で使う物 (<see cref="CoopInteractable"/>) の使い方の例。済んだら扉の板 (<see cref="Panel"/>) を

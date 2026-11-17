@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 168a8e3492ca853da2505be07255d9f7, type: 3}
   m_Name: DamageFeedbackCatalog
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DamageFeedbackCatalog
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DamageFeedbackCatalog
   _vignette: {fileID: 2800000, guid: e5f4cd9fcea12409fb18db7941b30cb0, type: 2}
   _tint: {r: 1, g: 1, b: 1, a: 1}
   _hitPeakIntensity: 0.8

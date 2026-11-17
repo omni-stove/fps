@@ -5,13 +5,13 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 今ある SmokeRun (<see cref="Runs"/>) を 1 つの Editor で順に走らせ、1 つでも失敗したら終了コード 1、
     /// すべて通れば 0 で Editor を終える (nightly の workflow と <c>make nightly-local</c> から呼ぶ)。
     /// 各 SmokeRun は Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Fps.Editor.SmokeSuite.RunAll -logFile -</code>
+    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.SmokeSuite.RunAll -logFile -</code>
     /// </summary>
     /// <remarks>
     /// 各 SmokeRun は終わるときに <see cref="TakeOver"/> を呼び、スイートが走っている間は Editor を閉じずに結果をここへ渡す。
@@ -32,11 +32,11 @@ namespace Fps.Editor
         /// </summary>
         public const float RunTimeoutSeconds = 600f;
 
-        private const string ActiveKey = "Fps.SmokeSuite.Active";
-        private const string NextKey = "Fps.SmokeSuite.Next";
-        private const string RunningKey = "Fps.SmokeSuite.Running";
-        private const string StartedAtKey = "Fps.SmokeSuite.StartedAt";
-        private const string ResultsKey = "Fps.SmokeSuite.Results";
+        private const string ActiveKey = "Shooter.SmokeSuite.Active";
+        private const string NextKey = "Shooter.SmokeSuite.Next";
+        private const string RunningKey = "Shooter.SmokeSuite.Running";
+        private const string StartedAtKey = "Shooter.SmokeSuite.StartedAt";
+        private const string ResultsKey = "Shooter.SmokeSuite.Results";
 
         private const int NotRunning = -1;
         private const char ResultSeparator = ';';

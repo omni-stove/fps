@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// ホード (<see cref="Horde"/>) の設定。陣営と通貨の入り方、防衛物を買える時期と費用・操作の届く距離、倒したときの点、

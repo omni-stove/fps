@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 投げたグレネードの球の大きさ・重さ・跳ね返り・摩擦・回転の減りと、手放す距離が <see cref="GrenadeSpec"/> (grenade.json) から来ることを確かめる。

@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>SideMember と EnemySenses.SelectHostile が、自分と違う陣営で生きているいちばん近い相手を選ぶことを確かめる。</summary>
     public sealed class SideTargetingTests

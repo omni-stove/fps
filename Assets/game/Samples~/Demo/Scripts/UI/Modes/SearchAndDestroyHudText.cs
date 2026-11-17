@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroy"/>) の HUD に出す文。表のキー <c>mode.snd.*</c> と引数の <see cref="LocalizedText"/> で返し、受け取った側が今の言語で文にする。

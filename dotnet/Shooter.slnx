@@ -1,0 +1,14 @@
+<Solution>
+  <Project Path="Shooter.Core/Shooter.Core.csproj" />
+  <Project Path="Shooter.Core.Tests/Shooter.Core.Tests.csproj" />
+  <Project Path="Shooter.EosSdk/Shooter.EosSdk.csproj" />
+  <Project Path="Shooter.EosSdk.Tests/Shooter.EosSdk.Tests.csproj" />
+  <Project Path="Shooter.NetV2.Client/Shooter.NetV2.Client.csproj" />
+  <Project Path="Shooter.NetV2.Client.Tests/Shooter.NetV2.Client.Tests.csproj" />
+  <Project Path="Shooter.Protocol/Shooter.Protocol.csproj" />
+  <Project Path="Shooter.Protocol.Tests/Shooter.Protocol.Tests.csproj" />
+  <Project Path="Shooter.Server.Eos/Shooter.Server.Eos.csproj" />
+  <Project Path="Shooter.Server.Eos.Tests/Shooter.Server.Eos.Tests.csproj" />
+  <Project Path="Shooter.Server/Shooter.Server.csproj" />
+  <Project Path="Shooter.Server.Tests/Shooter.Server.Tests.csproj" />
+</Solution>

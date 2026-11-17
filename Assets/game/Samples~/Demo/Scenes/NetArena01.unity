@@ -166,7 +166,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 103
   _maxHealth: 100
   _grounded: 0
@@ -424,7 +424,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 63
   _maxHealth: 100
   _grounded: 0
@@ -570,7 +570,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 33
   _maxHealth: 100
   _grounded: 0
@@ -765,7 +765,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 54
   _maxHealth: 100
   _grounded: 0
@@ -911,7 +911,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 50
   _maxHealth: 100
   _grounded: 0
@@ -1057,7 +1057,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 1
   _maxHealth: 100
   _grounded: 1
@@ -1203,7 +1203,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 92
   _maxHealth: 100
   _grounded: 0
@@ -1349,7 +1349,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 31
   _maxHealth: 100
   _grounded: 0
@@ -1495,7 +1495,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 22
   _maxHealth: 100
   _grounded: 0
@@ -1641,7 +1641,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 51
   _maxHealth: 100
   _grounded: 0
@@ -1830,7 +1830,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &92340722
 GameObject:
@@ -1926,7 +1926,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 49
   _maxHealth: 100
   _grounded: 0
@@ -2072,7 +2072,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 88
   _maxHealth: 100
   _grounded: 0
@@ -2214,7 +2214,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &130103477
 GameObject:
@@ -2263,7 +2263,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 66
   _maxHealth: 100
   _grounded: 0
@@ -2409,7 +2409,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 82
   _maxHealth: 100
   _grounded: 0
@@ -2555,7 +2555,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 70
   _maxHealth: 100
   _grounded: 0
@@ -2701,7 +2701,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 3
   _maxHealth: 100
   _grounded: 1
@@ -2847,7 +2847,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 81
   _maxHealth: 100
   _grounded: 0
@@ -2989,7 +2989,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &180086906
 GameObject:
@@ -3038,7 +3038,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 76
   _maxHealth: 100
   _grounded: 0
@@ -3184,7 +3184,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 35
   _maxHealth: 100
   _grounded: 0
@@ -3330,7 +3330,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 12
   _maxHealth: 100
   _grounded: 1
@@ -3476,7 +3476,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 17
   _maxHealth: 100
   _grounded: 0
@@ -3622,7 +3622,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 28
   _maxHealth: 100
   _grounded: 0
@@ -3880,7 +3880,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 91
   _maxHealth: 100
   _grounded: 0
@@ -4026,7 +4026,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 62
   _maxHealth: 100
   _grounded: 0
@@ -4172,7 +4172,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 78
   _maxHealth: 100
   _grounded: 0
@@ -4318,7 +4318,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 77
   _maxHealth: 100
   _grounded: 0
@@ -4464,7 +4464,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 30
   _maxHealth: 100
   _grounded: 0
@@ -4610,7 +4610,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 15
   _maxHealth: 100
   _grounded: 1
@@ -4756,7 +4756,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 65
   _maxHealth: 100
   _grounded: 0
@@ -4902,7 +4902,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 8
   _maxHealth: 100
   _grounded: 1
@@ -5044,7 +5044,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &251903657
 GameObject:
@@ -5093,7 +5093,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 91
   _maxHealth: 100
   _grounded: 0
@@ -5239,7 +5239,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 23
   _maxHealth: 100
   _grounded: 0
@@ -5452,7 +5452,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 37
   _maxHealth: 100
   _grounded: 0
@@ -5598,7 +5598,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 4
   _maxHealth: 100
   _grounded: 1
@@ -5744,7 +5744,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 38
   _maxHealth: 100
   _grounded: 0
@@ -5890,7 +5890,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 32
   _maxHealth: 100
   _grounded: 0
@@ -6036,7 +6036,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 31
   _maxHealth: 100
   _grounded: 0
@@ -6182,7 +6182,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 87
   _maxHealth: 100
   _grounded: 0
@@ -6328,7 +6328,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 44
   _maxHealth: 100
   _grounded: 0
@@ -6474,7 +6474,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 37
   _maxHealth: 100
   _grounded: 0
@@ -6620,7 +6620,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 40
   _maxHealth: 100
   _grounded: 0
@@ -6766,7 +6766,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 80
   _maxHealth: 100
   _grounded: 0
@@ -6912,7 +6912,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 32
   _maxHealth: 100
   _grounded: 0
@@ -7054,7 +7054,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &417261620
 GameObject:
@@ -7103,7 +7103,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 22
   _maxHealth: 100
   _grounded: 0
@@ -7249,7 +7249,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 27
   _maxHealth: 100
   _grounded: 0
@@ -7395,7 +7395,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 45
   _maxHealth: 100
   _grounded: 0
@@ -7541,7 +7541,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 47
   _maxHealth: 100
   _grounded: 0
@@ -7687,7 +7687,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 48
   _maxHealth: 100
   _grounded: 0
@@ -7833,7 +7833,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 92
   _maxHealth: 100
   _grounded: 0
@@ -7979,7 +7979,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 46
   _maxHealth: 100
   _grounded: 0
@@ -8125,7 +8125,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 49
   _maxHealth: 100
   _grounded: 0
@@ -8271,7 +8271,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 15
   _maxHealth: 100
   _grounded: 1
@@ -8417,7 +8417,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 6
   _maxHealth: 100
   _grounded: 1
@@ -8563,7 +8563,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 82
   _maxHealth: 100
   _grounded: 0
@@ -8709,7 +8709,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 84
   _maxHealth: 100
   _grounded: 0
@@ -8855,7 +8855,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 86
   _maxHealth: 100
   _grounded: 0
@@ -9001,7 +9001,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 8
   _maxHealth: 100
   _grounded: 1
@@ -9147,7 +9147,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 60
   _maxHealth: 100
   _grounded: 0
@@ -9289,7 +9289,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &520517362
 GameObject:
@@ -9338,7 +9338,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 79
   _maxHealth: 100
   _grounded: 0
@@ -9484,7 +9484,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 100
   _maxHealth: 100
   _grounded: 0
@@ -9630,7 +9630,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 100
   _maxHealth: 100
   _grounded: 0
@@ -9776,7 +9776,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 59
   _maxHealth: 100
   _grounded: 0
@@ -9922,7 +9922,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 9
   _maxHealth: 100
   _grounded: 1
@@ -10068,7 +10068,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 11
   _maxHealth: 100
   _grounded: 1
@@ -10214,7 +10214,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 72
   _maxHealth: 100
   _grounded: 0
@@ -10360,7 +10360,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 36
   _maxHealth: 100
   _grounded: 0
@@ -10506,7 +10506,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 27
   _maxHealth: 100
   _grounded: 0
@@ -10652,7 +10652,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 60
   _maxHealth: 100
   _grounded: 0
@@ -10798,7 +10798,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 97
   _maxHealth: 100
   _grounded: 0
@@ -10944,7 +10944,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 75
   _maxHealth: 100
   _grounded: 0
@@ -11292,7 +11292,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 97
   _maxHealth: 100
   _grounded: 0
@@ -11485,7 +11485,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 85
   _maxHealth: 100
   _grounded: 0
@@ -11631,7 +11631,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 68
   _maxHealth: 100
   _grounded: 0
@@ -11777,7 +11777,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 50
   _maxHealth: 100
   _grounded: 0
@@ -11923,7 +11923,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 45
   _maxHealth: 100
   _grounded: 0
@@ -12069,7 +12069,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 75
   _maxHealth: 100
   _grounded: 0
@@ -12215,7 +12215,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 59
   _maxHealth: 100
   _grounded: 0
@@ -12361,7 +12361,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 46
   _maxHealth: 100
   _grounded: 0
@@ -12507,7 +12507,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 39
   _maxHealth: 100
   _grounded: 0
@@ -12653,7 +12653,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 5
   _maxHealth: 100
   _grounded: 1
@@ -12799,7 +12799,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 2
   _maxHealth: 100
   _grounded: 1
@@ -12945,7 +12945,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 0
   _maxHealth: 100
   _grounded: 1
@@ -13091,7 +13091,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 38
   _maxHealth: 100
   _grounded: 0
@@ -13237,7 +13237,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 3
   _maxHealth: 100
   _grounded: 1
@@ -13383,7 +13383,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 4
   _maxHealth: 100
   _grounded: 1
@@ -13529,7 +13529,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 53
   _maxHealth: 100
   _grounded: 0
@@ -13675,7 +13675,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 29
   _maxHealth: 100
   _grounded: 0
@@ -13821,7 +13821,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 47
   _maxHealth: 100
   _grounded: 0
@@ -13967,7 +13967,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 34
   _maxHealth: 100
   _grounded: 0
@@ -14113,7 +14113,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 98
   _maxHealth: 100
   _grounded: 0
@@ -14259,7 +14259,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 71
   _maxHealth: 100
   _grounded: 0
@@ -14405,7 +14405,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 39
   _maxHealth: 100
   _grounded: 0
@@ -14551,7 +14551,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 63
   _maxHealth: 100
   _grounded: 0
@@ -14697,7 +14697,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 68
   _maxHealth: 100
   _grounded: 0
@@ -14843,7 +14843,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 95
   _maxHealth: 100
   _grounded: 0
@@ -14989,7 +14989,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 61
   _maxHealth: 100
   _grounded: 0
@@ -15135,7 +15135,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 13
   _maxHealth: 100
   _grounded: 1
@@ -15281,7 +15281,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 18
   _maxHealth: 100
   _grounded: 0
@@ -15410,7 +15410,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9e70b561ee7f4ae38a2f14eb48ea7ad, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetControlPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetControlPoint
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &880268318
 MonoBehaviour:
@@ -15423,7 +15423,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcb5f65ffd8f19cf190023a618ffcf0f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ControlPointZone
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ControlPointZone
   _index: 0
   _radius: 5
   _height: 6
@@ -15520,7 +15520,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 62
   _maxHealth: 100
   _grounded: 0
@@ -15666,7 +15666,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 102
   _maxHealth: 100
   _grounded: 0
@@ -15812,7 +15812,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 29
   _maxHealth: 100
   _grounded: 0
@@ -15958,7 +15958,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 20
   _maxHealth: 100
   _grounded: 0
@@ -16216,7 +16216,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 74
   _maxHealth: 100
   _grounded: 0
@@ -16343,7 +16343,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ae12e9dcc63cf1730799cf491789721, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DebrisPool
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DebrisPool
   _capacity: 200
   _lifetime: 4
   _debrisPrefab: {fileID: 0}
@@ -16409,7 +16409,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 61
   _maxHealth: 100
   _grounded: 0
@@ -16645,7 +16645,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 88
   _maxHealth: 100
   _grounded: 0
@@ -16904,7 +16904,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 70
   _maxHealth: 100
   _grounded: 0
@@ -17162,7 +17162,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 102
   _maxHealth: 100
   _grounded: 0
@@ -17308,7 +17308,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 77
   _maxHealth: 100
   _grounded: 0
@@ -17450,7 +17450,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &948093700
 GameObject:
@@ -17499,7 +17499,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 17
   _maxHealth: 100
   _grounded: 0
@@ -17645,7 +17645,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 81
   _maxHealth: 100
   _grounded: 0
@@ -17791,7 +17791,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 12
   _maxHealth: 100
   _grounded: 1
@@ -17937,7 +17937,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 89
   _maxHealth: 100
   _grounded: 0
@@ -18083,7 +18083,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 36
   _maxHealth: 100
   _grounded: 0
@@ -18229,7 +18229,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 30
   _maxHealth: 100
   _grounded: 0
@@ -18410,7 +18410,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 78
   _maxHealth: 100
   _grounded: 0
@@ -18668,7 +18668,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 13
   _maxHealth: 100
   _grounded: 1
@@ -18857,7 +18857,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1051523206
 GameObject:
@@ -18889,7 +18889,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3de31b9d751ab81bac075357295bc24c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetDestructibleStructure
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetDestructibleStructure
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &1051523208
 MonoBehaviour:
@@ -18929,7 +18929,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f0ecedbd6627623e4211ff240ff0258, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructibleStructure
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructibleStructure
   _destructionEnabled: 0
   _hasAuthority: 1
   _spawnDebris: 1
@@ -19005,7 +19005,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 10
   _maxHealth: 100
   _grounded: 1
@@ -19186,7 +19186,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 52
   _maxHealth: 100
   _grounded: 0
@@ -19332,7 +19332,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 95
   _maxHealth: 100
   _grounded: 0
@@ -19478,7 +19478,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 85
   _maxHealth: 100
   _grounded: 0
@@ -19620,7 +19620,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1117268504
 GameObject:
@@ -19718,7 +19718,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 54
   _maxHealth: 100
   _grounded: 0
@@ -19864,7 +19864,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 2
   _maxHealth: 100
   _grounded: 1
@@ -20010,7 +20010,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 69
   _maxHealth: 100
   _grounded: 0
@@ -20156,7 +20156,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 56
   _maxHealth: 100
   _grounded: 0
@@ -20302,7 +20302,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 58
   _maxHealth: 100
   _grounded: 0
@@ -20448,7 +20448,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 26
   _maxHealth: 100
   _grounded: 0
@@ -20706,7 +20706,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 87
   _maxHealth: 100
   _grounded: 0
@@ -20852,7 +20852,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 24
   _maxHealth: 100
   _grounded: 0
@@ -21222,7 +21222,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 99
   _maxHealth: 100
   _grounded: 0
@@ -21592,7 +21592,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 40
   _maxHealth: 100
   _grounded: 0
@@ -21738,7 +21738,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 79
   _maxHealth: 100
   _grounded: 0
@@ -21974,7 +21974,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 66
   _maxHealth: 100
   _grounded: 0
@@ -22120,7 +22120,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 43
   _maxHealth: 100
   _grounded: 0
@@ -22266,7 +22266,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 56
   _maxHealth: 100
   _grounded: 0
@@ -22412,7 +22412,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 28
   _maxHealth: 100
   _grounded: 0
@@ -22554,7 +22554,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1313097713
 GameObject:
@@ -22603,7 +22603,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 72
   _maxHealth: 100
   _grounded: 0
@@ -22749,7 +22749,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 67
   _maxHealth: 100
   _grounded: 0
@@ -22895,7 +22895,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 58
   _maxHealth: 100
   _grounded: 0
@@ -23041,7 +23041,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 74
   _maxHealth: 100
   _grounded: 0
@@ -23187,7 +23187,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 103
   _maxHealth: 100
   _grounded: 0
@@ -23333,7 +23333,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 67
   _maxHealth: 100
   _grounded: 0
@@ -23479,7 +23479,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 25
   _maxHealth: 100
   _grounded: 0
@@ -23625,7 +23625,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 33
   _maxHealth: 100
   _grounded: 0
@@ -23879,7 +23879,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1422582040
 GameObject:
@@ -23928,7 +23928,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 7
   _maxHealth: 100
   _grounded: 1
@@ -24074,7 +24074,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 90
   _maxHealth: 100
   _grounded: 0
@@ -24216,7 +24216,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &1436653965
 GameObject:
@@ -24265,7 +24265,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 90
   _maxHealth: 100
   _grounded: 0
@@ -24411,7 +24411,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 20
   _maxHealth: 100
   _grounded: 0
@@ -24647,7 +24647,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 10
   _maxHealth: 100
   _grounded: 1
@@ -24793,7 +24793,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 41
   _maxHealth: 100
   _grounded: 0
@@ -25006,7 +25006,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 101
   _maxHealth: 100
   _grounded: 0
@@ -25148,7 +25148,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &1467456299
 GameObject:
@@ -25197,7 +25197,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 42
   _maxHealth: 100
   _grounded: 0
@@ -25455,7 +25455,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 34
   _maxHealth: 100
   _grounded: 0
@@ -25584,7 +25584,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3de31b9d751ab81bac075357295bc24c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetDestructibleStructure
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetDestructibleStructure
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &1507986039
 MonoBehaviour:
@@ -25624,7 +25624,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9f0ecedbd6627623e4211ff240ff0258, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructibleStructure
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructibleStructure
   _destructionEnabled: 0
   _hasAuthority: 1
   _spawnDebris: 1
@@ -25700,7 +25700,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 11
   _maxHealth: 100
   _grounded: 1
@@ -25846,7 +25846,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 42
   _maxHealth: 100
   _grounded: 0
@@ -25992,7 +25992,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 89
   _maxHealth: 100
   _grounded: 0
@@ -26228,7 +26228,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 64
   _maxHealth: 100
   _grounded: 0
@@ -26486,7 +26486,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 7
   _maxHealth: 100
   _grounded: 1
@@ -26632,7 +26632,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 19
   _maxHealth: 100
   _grounded: 0
@@ -26778,7 +26778,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 25
   _maxHealth: 100
   _grounded: 0
@@ -26924,7 +26924,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 83
   _maxHealth: 100
   _grounded: 0
@@ -27070,7 +27070,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 35
   _maxHealth: 100
   _grounded: 0
@@ -27212,7 +27212,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1612492201
 GameObject:
@@ -27373,7 +27373,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 26
   _maxHealth: 100
   _grounded: 0
@@ -27601,7 +27601,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 1
 --- !u!1 &1627725197
 GameObject:
@@ -27650,7 +27650,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 19
   _maxHealth: 100
   _grounded: 0
@@ -27796,7 +27796,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 57
   _maxHealth: 100
   _grounded: 0
@@ -27942,7 +27942,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 64
   _maxHealth: 100
   _grounded: 0
@@ -28088,7 +28088,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 86
   _maxHealth: 100
   _grounded: 0
@@ -28318,7 +28318,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 96
   _maxHealth: 100
   _grounded: 0
@@ -28464,7 +28464,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 51
   _maxHealth: 100
   _grounded: 0
@@ -28610,7 +28610,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 69
   _maxHealth: 100
   _grounded: 0
@@ -28737,7 +28737,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9a451b05825014eef9948f3993cd4b73, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetBootstrap
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetBootstrap
   _playerPrefab: {fileID: 4261732149052537490, guid: 1d2cc7a9416b24bae9cf2f29ed6e4ac8, type: 3}
   _matchPrefab: {fileID: 880139535695014619, guid: b580f92b12dd34c75999c3469999c987, type: 3}
   _defaultMode: 0
@@ -28804,7 +28804,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 5
   _maxHealth: 100
   _grounded: 1
@@ -28932,7 +28932,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b52d08f7e6a14c93812f5a0d3c9e4b61, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpectatorCamera
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpectatorCamera
 --- !u!20 &1717754163
 Camera:
   m_ObjectHideFlags: 0
@@ -29046,7 +29046,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 80
   _maxHealth: 100
   _grounded: 0
@@ -29192,7 +29192,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 84
   _maxHealth: 100
   _grounded: 0
@@ -29338,7 +29338,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 24
   _maxHealth: 100
   _grounded: 0
@@ -29484,7 +29484,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 9
   _maxHealth: 100
   _grounded: 1
@@ -29720,7 +29720,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 55
   _maxHealth: 100
   _grounded: 0
@@ -29935,7 +29935,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 16
   _maxHealth: 100
   _grounded: 0
@@ -30193,7 +30193,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 94
   _maxHealth: 100
   _grounded: 0
@@ -30322,7 +30322,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9e70b561ee7f4ae38a2f14eb48ea7ad, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetControlPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetControlPoint
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &1790910643
 MonoBehaviour:
@@ -30335,7 +30335,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcb5f65ffd8f19cf190023a618ffcf0f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ControlPointZone
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ControlPointZone
   _index: 1
   _radius: 5
   _height: 6
@@ -30432,7 +30432,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 57
   _maxHealth: 100
   _grounded: 0
@@ -30675,7 +30675,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 41
   _maxHealth: 100
   _grounded: 0
@@ -30821,7 +30821,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 94
   _maxHealth: 100
   _grounded: 0
@@ -30967,7 +30967,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 93
   _maxHealth: 100
   _grounded: 0
@@ -31113,7 +31113,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 43
   _maxHealth: 100
   _grounded: 0
@@ -31259,7 +31259,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 52
   _maxHealth: 100
   _grounded: 0
@@ -31405,7 +31405,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 44
   _maxHealth: 100
   _grounded: 0
@@ -31551,7 +31551,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 93
   _maxHealth: 100
   _grounded: 0
@@ -31697,7 +31697,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 6
   _maxHealth: 100
   _grounded: 1
@@ -31892,7 +31892,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 14
   _maxHealth: 100
   _grounded: 1
@@ -32150,7 +32150,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 21
   _maxHealth: 100
   _grounded: 0
@@ -32296,7 +32296,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 53
   _maxHealth: 100
   _grounded: 0
@@ -32442,7 +32442,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 83
   _maxHealth: 100
   _grounded: 0
@@ -32588,7 +32588,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 16
   _maxHealth: 100
   _grounded: 0
@@ -32717,7 +32717,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9e70b561ee7f4ae38a2f14eb48ea7ad, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetControlPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetControlPoint
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &1957344340
 MonoBehaviour:
@@ -32730,7 +32730,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dcb5f65ffd8f19cf190023a618ffcf0f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.ControlPointZone
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.ControlPointZone
   _index: 2
   _radius: 5
   _height: 6
@@ -32827,7 +32827,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 99
   _maxHealth: 100
   _grounded: 0
@@ -33085,7 +33085,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 96
   _maxHealth: 100
   _grounded: 0
@@ -33231,7 +33231,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 76
   _maxHealth: 100
   _grounded: 0
@@ -33377,7 +33377,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 1
   _maxHealth: 100
   _grounded: 1
@@ -33523,7 +33523,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 73
   _maxHealth: 100
   _grounded: 0
@@ -33781,7 +33781,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 23
   _maxHealth: 100
   _grounded: 0
@@ -33927,7 +33927,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 101
   _maxHealth: 100
   _grounded: 0
@@ -34073,7 +34073,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 21
   _maxHealth: 100
   _grounded: 0
@@ -34219,7 +34219,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 71
   _maxHealth: 100
   _grounded: 0
@@ -34365,7 +34365,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 0
   _maxHealth: 100
   _grounded: 1
@@ -34511,7 +34511,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 73
   _maxHealth: 100
   _grounded: 0
@@ -34657,7 +34657,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 48
   _maxHealth: 100
   _grounded: 0
@@ -34799,7 +34799,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d3a8b61f0e24c97a9c6d4e2b81f7a05, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Net::Fps.Net.NetSpawnPoint
+  m_EditorClassIdentifier: Shooter.Net::Shooter.Net.NetSpawnPoint
   _team: 2
 --- !u!1 &2102351286
 GameObject:
@@ -34848,7 +34848,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 18
   _maxHealth: 100
   _grounded: 0
@@ -35106,7 +35106,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 55
   _maxHealth: 100
   _grounded: 0
@@ -35252,7 +35252,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 65
   _maxHealth: 100
   _grounded: 0
@@ -35398,7 +35398,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 98
   _maxHealth: 100
   _grounded: 0
@@ -35544,7 +35544,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbb476189e940aebf9fcc6d092d72916, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DestructiblePiece
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DestructiblePiece
   _index: 14
   _maxHealth: 100
   _grounded: 1

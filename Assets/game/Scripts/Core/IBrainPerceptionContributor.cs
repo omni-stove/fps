@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     // IPerceptionContributor (EnemyAgent が知覚を組み立てた直後に通す口) と分けるのは、こちらは判断と同じ tick の中で brain と経過秒を要るため。
     public interface IBrainPerceptionContributor

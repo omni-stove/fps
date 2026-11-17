@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーが味方の bot に出している指示。<see cref="GameSignals.SquadOrder"/> で UI に渡す。指示を出していない間は信号の値が null。

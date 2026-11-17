@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="EnemyAgent.IsFacing"/> が、体を目標へ向け切るまで撃たせないことと、データの撃ち始める距離が敵に届くことを確かめる。</summary>
     public sealed class EnemyAimTests

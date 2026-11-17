@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 爆破 (<see cref="SearchAndDestroy"/>) をシーンで進める <see cref="ModeRunnerBase"/> の派生。設置地点 (<see cref="BombSite"/>) と

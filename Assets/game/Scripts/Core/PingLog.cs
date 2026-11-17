@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>印 (<see cref="PingMarker"/>) の <c>[Ping]</c> 付きログの文言。</summary>
     public static class PingLog

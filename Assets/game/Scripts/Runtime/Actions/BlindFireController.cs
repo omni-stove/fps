@@ -1,9 +1,9 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 遮蔽物に隠れたまま狙わずに撃つブラインドファイアを受け持つ、プレイヤーのコンポーネント。

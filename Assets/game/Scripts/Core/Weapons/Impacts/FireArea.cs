@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 燃える範囲 (焼夷グレネード) の決まり。中にいる相手に間隔ごとに状態異常をかけ直すだけにし、範囲が直接ダメージを与えないのは、

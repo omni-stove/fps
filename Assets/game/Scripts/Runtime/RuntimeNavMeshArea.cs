@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 床を GameBootstrap が実行時に作るシーン (TPS の射撃場など) では、シーンを作るときに NavMesh を焼けない。
     // そこで床ができた後 (Start) にこの範囲だけ焼き、NavMesh が無いまま動き出さないよう、焼いてから敵などを有効にする。

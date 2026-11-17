@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// やられ演出 (<see cref="DeathBody"/>)。<see cref="Mode"/> が <see cref="DeathBody.Collapse"/> のとき、倒れた瞬間 (<see cref="Present"/>) に
@@ -551,7 +551,7 @@ namespace Fps.Runtime
                 _warnedMissingRagdollCatalog = true;
                 Debug.LogWarning(
                     $"{LogTag} no RagdollCatalog at Resources/{RagdollCatalog.ResourcePath}; bodies collapse as one piece. "
-                    + "Run Fps/Build All Presentation Assets (Fps.Editor.PresentationAssetSteps.BuildAll)",
+                    + "Run Shooter/Build All Presentation Assets (Shooter.Editor.PresentationAssetSteps.BuildAll)",
                     this);
             }
 

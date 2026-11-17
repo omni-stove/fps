@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 届いた間隔ではなく貯めた距離で測るのは、落ちてよい届け方の位置が遅れてまとめて着いても、速く送り続けて先へ進めないようにするため。
     public sealed class VehicleDriveCheck

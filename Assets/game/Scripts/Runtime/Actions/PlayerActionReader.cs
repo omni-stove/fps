@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーの今のアクションを毎フレーム 1 つの <see cref="PlayerActionState"/> にまとめて <see cref="Current"/> で渡す。
@@ -295,7 +295,7 @@ namespace Fps.Runtime
             AddIfMissing(missing, ads, nameof(AimDownSights));
             AddIfMissing(missing, cover, nameof(CoverController));
             AddIfMissing(missing, blindFire, nameof(BlindFireController));
-            AddIfMissing(missing, damageable, nameof(Fps.Runtime.Damageable));
+            AddIfMissing(missing, damageable, nameof(Shooter.Runtime.Damageable));
             AddIfMissing(missing, rig, nameof(ViewRig));
             return missing;
         }

@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// プレイヤーのカバーの状態 (Netcode の <c>NetCoverState</c> の中身)。予測で巻き戻せるよう、<see cref="CoverSnapshot"/> に

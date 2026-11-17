@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>爆破 (<see cref="SearchAndDestroy"/>) のラウンドが終わった理由。</summary>
     public enum RoundEndReason

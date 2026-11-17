@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2d561c5026e68ad9f85b874d2627723f, type: 3}
   m_Name: DeployDecoy
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.DecoyDeployDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.DecoyDeployDefinition
   _id: deploy-decoy
   _maxCharges: 1
   _rechargeSeconds: 20

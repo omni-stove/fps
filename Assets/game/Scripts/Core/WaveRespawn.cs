@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 試合開始から <see cref="WaveIntervalSeconds"/> ごとに波が来る。波の時刻までに倒されてから <see cref="RespawnSeconds"/> 以上たった人を、

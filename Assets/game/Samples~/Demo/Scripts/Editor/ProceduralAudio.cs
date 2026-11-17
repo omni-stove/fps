@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>音の層の波形。ノイズに重ねる音程のある成分の形。</summary>
     public enum ToneWaveform

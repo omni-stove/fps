@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の HUD に出す文 (表のキー <c>mode.br.*</c> の <see cref="LocalizedText"/>)。

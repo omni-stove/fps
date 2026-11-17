@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 照準の先の何に印を付けるかを決める。照準の Ray が最初に当たったものと、印を付けられる敵の一覧から選ぶ。

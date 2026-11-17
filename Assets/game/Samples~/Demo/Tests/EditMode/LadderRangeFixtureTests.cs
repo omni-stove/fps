@@ -1,13 +1,13 @@
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
+using Shooter.Core;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>射撃場に置くはしごの台 (<see cref="LadderRangeFixture"/>) と、その smoke の手順 (<see cref="LadderSmokeStep"/>) が見つかり、決まりどおりに置かれること。</summary>
     public sealed class LadderRangeFixtureTests

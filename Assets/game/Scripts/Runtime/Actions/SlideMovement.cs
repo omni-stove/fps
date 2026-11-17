@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ダッシュ中にしゃがむと滑り込むスライディングを受け持つ、プレイヤーのコンポーネント。<see cref="PlayerController"/> の移動を
@@ -288,7 +288,7 @@ namespace Fps.Runtime
 
             LimitIfBlocked(mover, direction);
 
-            if (input.JumpPressed && input.IsGrounded && mover.JumpRule == Fps.Core.Jump.On)
+            if (input.JumpPressed && input.IsGrounded && mover.JumpRule == Shooter.Core.Jump.On)
             {
                 return Jump(mover, direction, deltaSeconds);
             }

@@ -1,4 +1,4 @@
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     public sealed class RagdollCatalogAssetStep : IPresentationAssetStep
     {

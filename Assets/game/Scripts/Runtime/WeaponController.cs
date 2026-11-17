@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ヒットスキャン射撃。プレイヤーのカメラに付ける。Attack を武器の射撃モードに従って (Auto は押している間、Semi は押すたびに) <see cref="Weapon.TryFire"/> を呼び、
@@ -409,7 +409,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// Attack の押す・離すと時間を今の武器の撃ち方 (<see cref="Fps.Core.Weapon.Trigger"/>) に渡し、返った発数ぶん撃つ。
+        /// Attack の押す・離すと時間を今の武器の撃ち方 (<see cref="Shooter.Core.Weapon.Trigger"/>) に渡し、返った発数ぶん撃つ。
         /// Auto は押している間、Semi は押したフレームだけ撃つ。連射間隔は撃ち方と <see cref="Weapon"/> が制限する。撃てたら true。
         /// 押したフレームに弾倉が空で撃てなければ <see cref="DryFired"/> を呼ぶ (<see cref="IsDryFire"/>)。押し続けている間は鳴らさない。
         /// <see cref="Rules"/> の <see cref="GameRules.ReloadMode"/> が <see cref="ReloadMode.Auto"/> なら、撃って弾倉が空になったときと、空撃ちしたときに
@@ -987,7 +987,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// Id が weaponId の持ち武器に予備弾を amount 足し (<see cref="Fps.Core.Weapon.AddReserveAmmo"/>)、実際に足した数を返す。
+        /// Id が weaponId の持ち武器に予備弾を amount 足し (<see cref="Shooter.Core.Weapon.AddReserveAmmo"/>)、実際に足した数を返す。
         /// 持っていない武器 (武器を持っていないときはどの武器も) なら 0。
         /// </summary>
         public int AddReserveAmmo(string weaponId, int amount)

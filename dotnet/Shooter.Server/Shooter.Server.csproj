@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity 抜きで動く専用サーバー。試合のロジックは Shooter.Core、通信の形は Shooter.Protocol を Unity と共有する -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <RootNamespace>Shooter.Server</RootNamespace>
+    <AssemblyName>shooter-server</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <!-- InformationalVersion ではなく専用の鍵にするのは、SDK が既定の 1.0.0 や +<sha> を入れ、焼き込んでいないことと見分けられないため -->
+  <ItemGroup Condition="'$(ShooterBuildVersion)' != ''">
+    <AssemblyMetadata Include="ShooterBuildVersion" Value="$(ShooterBuildVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Shooter.Server.Tests" />
+    <InternalsVisibleTo Include="Shooter.NetV2.Client.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shooter.Core/Shooter.Core.csproj" />
+    <ProjectReference Include="../Shooter.Protocol/Shooter.Protocol.csproj" />
+    <ProjectReference Include="../Shooter.EosSdk/Shooter.EosSdk.csproj" />
+    <ProjectReference Include="../Shooter.Server.Eos/Shooter.Server.Eos.csproj" />
+  </ItemGroup>
+</Project>

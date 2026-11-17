@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,9 +12,9 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場に置く仮のボス (<see cref="Fps.Editor.RangeBossFixture"/>) が、隠れた弱点を持つボスを置くことを確かめる。</summary>
+    /// <summary>射撃場に置く仮のボス (<see cref="Shooter.Editor.RangeBossFixture"/>) が、隠れた弱点を持つボスを置くことを確かめる。</summary>
     public sealed class RangeBossFixtureTests
     {
         private string _folder;
@@ -132,7 +132,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheDefaultDefinitionSitsUnderTheBossesFolder()
         {
-            Assert.That(RangeBossFixture.DefaultDefinitionPath, Is.EqualTo(FpsKitRoot.OutputPath("Bosses") + "/RangeBoss.asset"));
+            Assert.That(RangeBossFixture.DefaultDefinitionPath, Is.EqualTo(ShooterKitRoot.OutputPath("Bosses") + "/RangeBoss.asset"));
             Assert.That(new RangeBossFixture().DefinitionPath, Is.EqualTo(RangeBossFixture.DefaultDefinitionPath));
             Assert.Throws<ArgumentException>(() => new RangeBossFixture("Packages/RangeBoss.asset"));
         }

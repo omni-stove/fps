@@ -1,9 +1,9 @@
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor.Build;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// Assets に写しを置かず、ビルドの StreamingAssets にだけ server-data/maps を入れる (<see cref="MapCollisionFiles"/>)。

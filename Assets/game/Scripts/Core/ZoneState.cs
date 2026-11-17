@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 縮むエリア (<see cref="ZoneSchedule.Evaluate"/>) のある時刻での様子。位置は水平面 (X がワールドの x、Y がワールドの z) で持つ。

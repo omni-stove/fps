@@ -1,7 +1,7 @@
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class FakeCharacterMotionSource : MonoBehaviour, ICharacterMotionSource
     {

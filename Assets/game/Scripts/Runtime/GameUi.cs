@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// UI からゲーム進行への口の登録口。ポーズ (<see cref="Pause"/>)・ロードアウトの選択 (<see cref="LoadoutSelect"/>)・持ち物 (<see cref="InventoryScreen"/>)・
@@ -97,7 +97,7 @@ namespace Fps.Runtime
             _defaultInventoryScreen = screen ?? throw new ArgumentNullException(nameof(screen));
         }
 
-        // 通信の手順 (Fps.NetV2) は UI のアセンブリを参照しないので、メニューが読むこの置き場に入れさせる。
+        // 通信の手順 (Shooter.NetV2) は UI のアセンブリを参照しないので、メニューが読むこの置き場に入れさせる。
         public static IOnlineMatchStarter OnlineStarter { get; set; }
 
         // ドメインの再読み込みを切った Play でも、前の Play のクライアントへメニューのボタンをつながない。

@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ホードの防衛物に対して、通貨を払ってできること。</summary>
     public enum HordeFortificationAction

@@ -1,10 +1,10 @@
 using System;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="ModeDefinitionAssets"/> がモードの調整値のアセットを無ければ既定値で作り、あれば値を変えずに返すことを確かめる。
@@ -44,7 +44,7 @@ namespace Fps.Tests.EditMode
             var tdm = ModeTestSceneBuilder.LoadOrCreateDefinition(_folder + "/TeamDeathmatch.asset");
 
             Assert.That(AssetDatabase.LoadAssetAtPath<SearchAndDestroyDefinition>(_folder + "/SearchAndDestroy.asset"), Is.SameAs(snd));
-            Assert.That(snd.FuseSeconds, Is.EqualTo(Fps.Core.SearchAndDestroySpec.DefaultFuseSeconds));
+            Assert.That(snd.FuseSeconds, Is.EqualTo(Shooter.Core.SearchAndDestroySpec.DefaultFuseSeconds));
             Assert.That(kc.TagLifetimeSeconds, Is.EqualTo(KillConfirmedRunner.DefaultTagLifetimeSeconds));
             Assert.That(tdm.ScoreLimit, Is.EqualTo(TeamDeathmatchRunner.DefaultScoreLimit));
         }

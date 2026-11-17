@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 撃たれて壊れるのは置ける物の土台 (Deployable) が受け持つ。ここは有効になるまでの時間と、敵が入ったら爆発することだけを持つ。
     [DisallowMultipleComponent]

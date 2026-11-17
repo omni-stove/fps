@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SpectateTargets.Pick"/> に渡す、観戦で映せるかもしれないプレイヤー 1 人分。</summary>
     public readonly struct SpectateCandidate

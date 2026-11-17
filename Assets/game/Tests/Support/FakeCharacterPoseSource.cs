@@ -1,8 +1,8 @@
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>テスト用の <see cref="ICharacterPoseSource"/>。決めた状態を返し、渡された速さを記録する。</summary>
     public sealed class FakeCharacterPoseSource : MonoBehaviour, ICharacterPoseSource

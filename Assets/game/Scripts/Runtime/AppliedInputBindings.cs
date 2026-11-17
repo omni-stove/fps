@@ -2,11 +2,11 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 設定画面で変えた割り当ての上書き (<see cref="InputBindingOverridesStore"/>) を、プロジェクト全体の Input Actions (<see cref="InputSystem.actions"/>) に入れる。
-    /// オフラインのプレイヤー (<see cref="PlayerController"/> など) もオンラインのプレイヤー (Fps.Net の NetPlayer など) も同じアセットのアクションを使うので、
+    /// オフラインのプレイヤー (<see cref="PlayerController"/> など) もオンラインのプレイヤー (Shooter.Net の NetPlayer など) も同じアセットのアクションを使うので、
     /// シーンを読む前 (どのプレイヤーの Awake よりも前) に 1 回入れれば両方に効く。
     /// </summary>
     public static class AppliedInputBindings

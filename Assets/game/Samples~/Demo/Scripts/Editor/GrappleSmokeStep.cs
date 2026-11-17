@@ -1,10 +1,10 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // batchmode には入力が無いので、Ability1 / Ability2 の代わりに AbilityHost.TryUse を、照準の代わりに FirstPersonLook を回し、
     // Jump の代わりに MoveFilter への差し込みを使う。射撃場のルールは Abilities を Off のままにしているので、

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// ガンゲーム (<see cref="GunGame"/>) の HUD の行 (表のキー <c>mode.gungame.*</c> の <see cref="LocalizedText"/>)。段は 1 から数えて書く。

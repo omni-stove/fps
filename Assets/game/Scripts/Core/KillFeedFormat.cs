@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// プレイヤーを Id で呼ぶときの名前。言葉を含まない識別なので、ログ・ネームプレート・キルフィードのどれでも同じ文字列にする。

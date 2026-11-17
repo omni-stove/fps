@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "ViewmodelCatalog", menuName = "Fps/Viewmodel Catalog")]
+    [CreateAssetMenu(fileName = "ViewmodelCatalog", menuName = "Shooter/Viewmodel Catalog")]
     public sealed class ViewmodelCatalog : ScriptableObject
     {
         public const string CatalogName = "Viewmodel";

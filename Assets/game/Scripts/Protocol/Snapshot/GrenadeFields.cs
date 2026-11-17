@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary><see cref="GrenadeSnapshot"/> の部分。</summary>
     [Flags]

@@ -1,10 +1,10 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
-    /// シーンで 1 つのミッションを進める。Awake で <see cref="MissionDefinition"/> から <see cref="Fps.Core.Mission"/> を作り、
+    /// シーンで 1 つのミッションを進める。Awake で <see cref="MissionDefinition"/> から <see cref="Shooter.Core.Mission"/> を作り、
     /// 状態の変化を <see cref="MissionReporter"/> の書式で Debug.Log に出す。
     /// トリガー (<see cref="ReachAreaTrigger"/> など) は <see cref="Resolve"/> でこれを見つけ、<see cref="Mission"/> を直接進める。
     /// 定義が無い・不正なときはエラーを出して自分を無効にする。

@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     // Edit Mode では EnemyAgent の Update が走らないので、判断 (ChargerEnemyBehavior) は知覚を作って直接進め、体を動かす EnemyCharger は Tick を呼ぶ。
     // NavMesh が無いので、EnemyCharger は Transform を直に動かす。

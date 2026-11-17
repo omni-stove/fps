@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
-using Fps.Runtime.Traversal;
+using Shooter.Core;
+using Shooter.Runtime;
+using Shooter.Runtime.Traversal;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using LadderComponent = Fps.Runtime.Traversal.Ladder;
-using LadderRule = Fps.Core.Ladder;
+using LadderComponent = Shooter.Runtime.Traversal.Ladder;
+using LadderRule = Shooter.Core.Ladder;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// はしご (<see cref="LadderMovement"/>) で、前からつかまって上り上の足場に降りる・上の端からつかまって下り地面に降りる・ジャンプで離れること、

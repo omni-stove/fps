@@ -1,10 +1,10 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// メニューから移るシーンの名前 (拡張子なし)。<see cref="Default"/> は <see cref="MenuRoute"/> の既定の名前で、
-    /// ゲームはデータ (Fps.Runtime の MenuSceneSettings) で上書きする。シーンの経路は <see cref="MenuRoute"/> がルートの下に組む。
+    /// ゲームはデータ (Shooter.Runtime の MenuSceneSettings) で上書きする。シーンの経路は <see cref="MenuRoute"/> がルートの下に組む。
     /// </summary>
     public sealed class MenuScenes
     {

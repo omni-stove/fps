@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Fps.Editor;
+using Shooter.Editor;
 using NUnit.Framework;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class SmokeSuiteTests
     {
@@ -70,7 +70,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(SmokeSuite.HasQuitArgument(new[] { "Unity", "-batchmode", "-quit" }), Is.True);
             Assert.That(SmokeSuite.HasQuitArgument(new[] { "Unity", "-QUIT" }), Is.True);
-            Assert.That(SmokeSuite.HasQuitArgument(new[] { "Unity", "-batchmode", "-executeMethod", "Fps.Editor.SmokeSuite.RunAll" }), Is.False);
+            Assert.That(SmokeSuite.HasQuitArgument(new[] { "Unity", "-batchmode", "-executeMethod", "Shooter.Editor.SmokeSuite.RunAll" }), Is.False);
             Assert.Throws<ArgumentNullException>(() => SmokeSuite.HasQuitArgument(null));
         }
 

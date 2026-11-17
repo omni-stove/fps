@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using Epic.OnlineServices;
 using Epic.OnlineServices.Lobby;
 using Epic.OnlineServices.Platform;
-using Fps.Core;
-using Fps.NetV2;
+using Shooter.Core;
+using Shooter.NetV2;
 using UnityEngine;
 // Lobby と Connect の名前空間を両方開くと型名がぶつかりうるので、Connect は別名で参照する
 using EosConnect = Epic.OnlineServices.Connect;
 // SDK の名前空間に同名の型が増えても、こちらを指すようにする
-using LobbyInfo = Fps.Core.LobbyInfo;
+using LobbyInfo = Shooter.Core.LobbyInfo;
 
-namespace Fps.NetEos
+namespace Shooter.NetEos
 {
     /// <summary>
     /// EOS の Connect (Device ID) と Lobby インターフェースで、クイックマッチがサーバーのロビーを探す <see cref="ILobbyBackend"/> を実装する。
@@ -43,7 +43,7 @@ namespace Fps.NetEos
         public EosLobbyBackend(EosCredentials credentials, string displayName)
         {
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
-            _displayName = string.IsNullOrWhiteSpace(displayName) ? "fps-player" : displayName;
+            _displayName = string.IsNullOrWhiteSpace(displayName) ? "shooter-player" : displayName;
         }
 
         public event Action<string> LoggedOut;
@@ -371,11 +371,11 @@ namespace Fps.NetEos
         /// ロビーの公開の属性のうち、文字列と整数のものを読む。読めない・形の合わない属性は飛ばす
         /// (クイックマッチの選び方が、欠けた属性のロビーを選ばないので、ロビーごと捨てなくてよい)。
         /// </summary>
-        private static List<Fps.Core.LobbyAttribute> ReadAttributes(LobbyDetails details, string lobbyId)
+        private static List<Shooter.Core.LobbyAttribute> ReadAttributes(LobbyDetails details, string lobbyId)
         {
             var countOptions = new LobbyDetailsGetAttributeCountOptions();
             var count = details.GetAttributeCount(ref countOptions);
-            var attributes = new List<Fps.Core.LobbyAttribute>((int)Math.Min(count, 64u));
+            var attributes = new List<Shooter.Core.LobbyAttribute>((int)Math.Min(count, 64u));
             for (uint i = 0; i < count; i++)
             {
                 var copyOptions = new LobbyDetailsCopyAttributeByIndexOptions { AttrIndex = i };
@@ -393,7 +393,7 @@ namespace Fps.NetEos
                     continue;
                 }
 
-                // EOS は属性キーの大文字・小文字を区別せず、大文字にして返すことがある。作る側 (Fps.Core.LobbyAttribute) の表記に戻す
+                // EOS は属性キーの大文字・小文字を区別せず、大文字にして返すことがある。作る側 (Shooter.Core.LobbyAttribute) の表記に戻す
                 key = key.ToLowerInvariant();
                 try
                 {
@@ -403,14 +403,14 @@ namespace Fps.NetEos
                             var text = Text(data.Value.AsUtf8);
                             if (text != null)
                             {
-                                attributes.Add(Fps.Core.LobbyAttribute.OfText(key, text));
+                                attributes.Add(Shooter.Core.LobbyAttribute.OfText(key, text));
                             }
 
                             break;
                         case AttributeType.Int64:
                             if (data.Value.AsInt64.HasValue)
                             {
-                                attributes.Add(Fps.Core.LobbyAttribute.OfNumber(key, data.Value.AsInt64.Value));
+                                attributes.Add(Shooter.Core.LobbyAttribute.OfNumber(key, data.Value.AsInt64.Value));
                             }
 
                             break;

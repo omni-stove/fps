@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// キャンペーンの 1 ミッションの定義。ミッション Id (<see cref="Id"/>、セーブのスロット・メニューの選択・カタログの照合に使う) と
     /// 目標の一覧をアセットとして持ち、<see cref="CreateMission"/> で
-    /// <see cref="Fps.Core.Mission"/> を作る。検証は <see cref="Fps.Core.Mission"/> と <see cref="Objective"/> に任せ、
+    /// <see cref="Shooter.Core.Mission"/> を作る。検証は <see cref="Shooter.Core.Mission"/> と <see cref="Objective"/> に任せ、
     /// 失敗したらどのアセットのどの目標かを添えて <see cref="MissionDefinitionException"/> を投げる。
     /// ミッションだけ視点やアクションを変えるときは、変える項目だけをルールの JSON (<see cref="GameRulesJson"/> の形) で
     /// <see cref="RulesOverride"/> に書く。キャンペーンは難易度のルールにこれを重ねて使う (<see cref="ApplyRulesOverride"/>)。
     /// </summary>
-    [CreateAssetMenu(fileName = "Mission", menuName = "Fps/Mission Definition")]
+    [CreateAssetMenu(fileName = "Mission", menuName = "Shooter/Mission Definition")]
     public sealed class MissionDefinition : ScriptableObject
     {
         [SerializeField, Tooltip("ミッション Id (英数字・'_'・'-' の 1-64 文字)。セーブのスロット名・メニューの選択・MissionCatalog の照合に使う。アセット名とは別")]
@@ -121,7 +121,7 @@ namespace Fps.Runtime
             _objectives = copy;
         }
 
-        /// <summary>定義から新しい <see cref="Fps.Core.Mission"/> を作る。呼ぶたびに進み具合が 0 のミッションを返す。</summary>
+        /// <summary>定義から新しい <see cref="Shooter.Core.Mission"/> を作る。呼ぶたびに進み具合が 0 のミッションを返す。</summary>
         /// <exception cref="MissionDefinitionException">定義が不正なとき。</exception>
         public Mission CreateMission()
         {
@@ -129,7 +129,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 目標の定義を <see cref="Objective"/> に変換して <see cref="Fps.Core.Mission"/> を作る。
+        /// 目標の定義を <see cref="Objective"/> に変換して <see cref="Shooter.Core.Mission"/> を作る。
         /// 文字列の前後の空白は取り除き、空の前提は無視する (Inspector で配列の要素を増やしただけの空欄を許す)。
         /// </summary>
         /// <param name="source">エラーメッセージに出す定義の名前。</param>
@@ -249,7 +249,7 @@ namespace Fps.Runtime
         }
     }
 
-    /// <summary><see cref="MissionDefinition"/> の内容が不正で <see cref="Fps.Core.Mission"/> を作れない。</summary>
+    /// <summary><see cref="MissionDefinition"/> の内容が不正で <see cref="Shooter.Core.Mission"/> を作れない。</summary>
     public sealed class MissionDefinitionException : Exception
     {
         public MissionDefinitionException(string message)

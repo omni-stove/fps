@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 試合のルール (ゲームモード) に共通する操作。時間は <see cref="Tick"/> で外から進め、

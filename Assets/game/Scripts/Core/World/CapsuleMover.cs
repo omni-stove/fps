@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// Unity の CharacterController と同じ規則で、<see cref="IWorldCollision"/> の上の縦向きのカプセルを動かす。

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// ネット対戦の、対戦で選べる武器 (ロードアウトとその一覧のアセット) と、今の武器の引き金 (<see cref="ClientTrigger"/>)。

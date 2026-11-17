@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// チュートリアルの手順を進めるために、1 フレーム分のプレイヤーの様子をまとめた値 (<see cref="TutorialSteps.Observe"/> に渡す)。

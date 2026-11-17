@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) をシーンで進める。2 チームのラウンド制で、ラウンド中は戻らない。

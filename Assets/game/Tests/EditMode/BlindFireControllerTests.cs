@@ -1,15 +1,15 @@
 using System.Linq;
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// 床・壁・壁の向こうの標的を置き、<see cref="CoverController.Tick"/> と <see cref="PlayerController.Tick"/> でカバーに入ってから

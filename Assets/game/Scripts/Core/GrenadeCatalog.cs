@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>投げ物の種類の並び (<see cref="Types"/>) と、出撃のたびに持つ種類 (<see cref="Carried"/>)。</summary>
     public sealed class GrenadeCatalog

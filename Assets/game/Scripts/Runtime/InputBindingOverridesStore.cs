@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// Input Actions の割り当ての上書きを、<see cref="InputActionRebindingExtensions.SaveBindingOverridesAsJson(IInputActionCollection2)"/> の JSON で
@@ -12,7 +12,7 @@ namespace Fps.Runtime
     public sealed class InputBindingOverridesStore
     {
         /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
-        public const string DefaultKey = "Fps.InputBindingOverrides";
+        public const string DefaultKey = "Shooter.InputBindingOverrides";
 
         /// <param name="key">PlayerPrefs のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
         public InputBindingOverridesStore(string key = DefaultKey)

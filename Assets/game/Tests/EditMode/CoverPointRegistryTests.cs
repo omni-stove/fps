@@ -1,16 +1,16 @@
 using System;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
-    /// CoverPointRegistry が印 (Fps.Runtime.CoverPoint) から selector を作り、敵どうしで点を共有させることを確かめる。
+    /// CoverPointRegistry が印 (Shooter.Runtime.CoverPoint) から selector を作り、敵どうしで点を共有させることを確かめる。
     /// 印は NavMesh の無い遠く (x = 500) に置くので、位置は寄せられずにそのまま使われる。
     /// </summary>
     public sealed class CoverPointRegistryTests
@@ -144,9 +144,9 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => _registry.SetPoints(null));
         }
 
-        private Fps.Runtime.CoverPoint Marker(string name, Vector3 offset, Vector3 facing, CoverHeight height)
+        private Shooter.Runtime.CoverPoint Marker(string name, Vector3 offset, Vector3 facing, CoverHeight height)
         {
-            var marker = new GameObject(name).AddComponent<Fps.Runtime.CoverPoint>();
+            var marker = new GameObject(name).AddComponent<Shooter.Runtime.CoverPoint>();
             marker.transform.SetParent(_root.transform, false);
             marker.transform.SetPositionAndRotation(Origin + offset, Quaternion.LookRotation(facing));
             marker.Height = height;

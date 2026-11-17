@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// グレネード 1 種類のバランス値。<see cref="Id"/> で引き、信管・投げる間隔・初速と、信管が切れたときの効果 (<see cref="Impact"/>: 爆発・状態異常・範囲効果)、

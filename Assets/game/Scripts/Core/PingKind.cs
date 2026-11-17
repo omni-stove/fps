@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>印 (<see cref="PingMarker"/>) を何に付けたか。</summary>
     public enum PingKind

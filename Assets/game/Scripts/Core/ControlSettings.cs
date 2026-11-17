@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 操作設定。<see cref="HoldAction"/> ごとの <see cref="HoldMode"/> を、キーボード／マウスとゲームパッドで別々に持ち、

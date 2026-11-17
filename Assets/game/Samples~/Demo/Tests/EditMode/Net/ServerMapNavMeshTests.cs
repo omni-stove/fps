@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core.Navigation;
-using Fps.Editor;
+using Shooter.Core.Navigation;
+using Shooter.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Net.Tests
+namespace Shooter.Net.Tests
 {
     public sealed class ServerMapNavMeshTests
     {

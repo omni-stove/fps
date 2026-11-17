@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 射撃場のチュートリアルの進み。手順 (<see cref="Order"/>: 移動・照準・射撃・リロード・しゃがみ・カバー) を順に 1 つずつ進め、

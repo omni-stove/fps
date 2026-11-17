@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 能力の枠は 2 つとも埋まっている (グラップルと盾) ので、この手順の間だけ盾の枠をタレットに入れ替え、終えたら戻す。
     // 射撃場のルールは Abilities を Off のまま配る (ほかの手順の前提を変えない) ので、この手順の間だけ On にする。

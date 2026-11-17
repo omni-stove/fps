@@ -1,0 +1,17 @@
+{
+    "name": "Shooter.Runtime",
+    "rootNamespace": "Shooter.Runtime",
+    "references": [
+        "Shooter.Core",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

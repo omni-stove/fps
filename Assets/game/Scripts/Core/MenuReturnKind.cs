@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>ゲーム進行がメニューへ戻した (またはメニューに留めた) 理由の分け方。<see cref="MenuReturnReason.Kind"/>。</summary>
     public enum MenuReturnKind

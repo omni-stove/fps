@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="ParachuteMotion.Evaluate"/> の、パラシュートを開けるかの判定。</summary>
     public enum ParachuteOpenVerdict

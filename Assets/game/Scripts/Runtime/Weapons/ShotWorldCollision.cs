@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using NVector3 = System.Numerics.Vector3;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // Core の弾道 (BallisticFlight) を Unity の物理に当てる。撃った本人と、撃った者の弾を通す置いた物は ShotCast と同じく当たりから外す。
     public sealed class ShotWorldCollision : IWorldCollision

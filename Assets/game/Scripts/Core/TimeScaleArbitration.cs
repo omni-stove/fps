@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 時間の速さの要求 (理由・倍率・秒数) をまとめ、Time.timeScale と Time.fixedDeltaTime に入れる値を決める。

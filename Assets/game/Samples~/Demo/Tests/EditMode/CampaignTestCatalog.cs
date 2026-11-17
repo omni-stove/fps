@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// メニューのテストに使うミッションの一覧。<see cref="Mission01"/> のシーンは <see cref="MenuRoute.CampaignScene"/>

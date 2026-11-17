@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 乗り越えの軌跡。始点からの変位 (m、Y が上) を結んだ折れ線を、一定の速さ <see cref="Speed"/> でたどる。

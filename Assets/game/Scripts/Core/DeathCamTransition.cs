@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="DeathCamSwitch.Update"/> で起きた切り替え。</summary>
     public enum DeathCamTransition

@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 地面に残る範囲の効果 (スモーク・炎など) 1 つ。中心・半径・寿命を持ち、寿命が来たら消える。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 能力の枠で今もう一度押すと何ができるか (<see cref="IAbilityFollowUp.TryGetFollowUp"/>)。何をどう言うかは UI が決める。

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="BotDriver"/> が決めた 1 tick 分の Bot の入力。人のプレイヤーと同じ移動と射撃に渡す。

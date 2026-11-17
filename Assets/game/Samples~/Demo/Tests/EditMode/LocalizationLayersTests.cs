@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// <see cref="Localizer"/> が言語ごとの表を重ねて読み、読めない言語は日本語に戻し、
@@ -34,8 +34,8 @@ namespace Fps.Tests.EditMode
             Localizer.Apply(GameLanguage.Japanese);
             // 本物の設定 (DefaultKey) を壊さないよう、テストごとに別のキーを使う。
             var suffix = Guid.NewGuid().ToString("N");
-            _legacyKey = "Fps.Tests.LegacySettings." + suffix;
-            _store = new LanguagePreferenceStore("Fps.Tests.Language." + suffix, _legacyKey, GameLanguage.Japanese);
+            _legacyKey = "Shooter.Tests.LegacySettings." + suffix;
+            _store = new LanguagePreferenceStore("Shooter.Tests.Language." + suffix, _legacyKey, GameLanguage.Japanese);
         }
 
         [TearDown]

@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     // 一周しない範囲では、近いほうへ回ると範囲の外を通ることがあるので、範囲の中をまっすぐ回る。
     public sealed class VehicleWeaponAim

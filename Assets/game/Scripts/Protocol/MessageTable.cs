@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// 受け取るメッセージの種類ごとに 1 つのインスタンスを持ち、届いたバイト列をその Id のインスタンスに読み込む。

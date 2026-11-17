@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>時間の速さの要求を受けたか、断ったならその理由。</summary>
     public enum TimeScaleRefusal

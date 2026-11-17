@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// Bot の判断 (<see cref="EnemyDecision"/>) と今の位置・向きから、人のプレイヤーと同じ形の 1 tick 分の入力 (<see cref="BotInputPlan"/>) を作る。

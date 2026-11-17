@@ -1,4 +1,4 @@
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary><see cref="SprintInput.Changed"/> で渡す、変化した後の状態と理由。</summary>
     public readonly struct SprintChange

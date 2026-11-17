@@ -1,12 +1,12 @@
 using System;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     public sealed class TutorialPresenterTests
     {
@@ -32,7 +32,7 @@ namespace Fps.Tests.EditMode
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
             _world = bootstrap.Build();
-            _store = new TutorialProgressStore("Fps.Tests.TutorialCompleted." + Guid.NewGuid().ToString("N"));
+            _store = new TutorialProgressStore("Shooter.Tests.TutorialCompleted." + Guid.NewGuid().ToString("N"));
             _presenter = _host.AddComponent<TutorialPresenter>();
             _presenter.Store = _store;
         }

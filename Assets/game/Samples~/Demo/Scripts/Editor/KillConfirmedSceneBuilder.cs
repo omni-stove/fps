@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// キルコンファームドのシーン (<see cref="BuildSceneList.KillConfirmedScene"/>) を組む。Runner は <see cref="KillConfirmedRunner"/>、
@@ -13,7 +13,7 @@ namespace Fps.Editor
     /// bot にはタグだけを落とす <see cref="DropOnDeath"/> (<see cref="ConfigureBotDrop"/>) を付ける。タグは Runner が始めたときにフックで足し、
     /// 実行時に作られるプレイヤーの DropOnDeath も Runner が付ける。得点・時間・タグの秒数・確定の点・タグの半径は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
     /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.KillConfirmedSceneBuilder.Build</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.KillConfirmedSceneBuilder.Build</code>
     /// </summary>
     public sealed class KillConfirmedSceneBuilder : ModeSceneBuilder
     {
@@ -23,7 +23,7 @@ namespace Fps.Editor
         /// <summary>Runner に配線する調整値のアセット (<see cref="KillConfirmedDefinition"/>)。</summary>
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.KillConfirmedName);
 
-        public const string MenuPath = "Fps/Build Kill Confirmed Scene";
+        public const string MenuPath = "Shooter/Build Kill Confirmed Scene";
 
         /// <summary>プレイヤーの陣営の bot の数。プレイヤーを合わせて <see cref="EnemySideBots"/> と同じ人数になる。</summary>
         public const int PlayerSideBots = 2;
@@ -80,7 +80,7 @@ namespace Fps.Editor
         {
             return ModeDefinitionAssets.LoadOrCreate<KillConfirmedDefinition>(
                 path,
-                d => d.CopyFrom(new Fps.Core.KillConfirmedSpec(
+                d => d.CopyFrom(new Shooter.Core.KillConfirmedSpec(
                     KillConfirmedRunner.DefaultScoreLimit,
                     KillConfirmedRunner.DefaultTimeLimitSeconds,
                     KillConfirmedRunner.DefaultRespawnSeconds,

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// <see cref="SquadCount"/> 個の分隊 (ID 0 から SquadCount - 1 の陣営) に、1 隊 <see cref="SquadSize"/> 人までで分ける。

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     public static class InputActionLabels
     {

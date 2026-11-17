@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// JSON (<see cref="GameRulesJson"/> の形) からモードのルールのアセット (<see cref="GameRulesDefinition"/>) を作るか上書きする。
@@ -16,11 +16,11 @@ namespace Fps.Editor
     /// どれか 1 つでも読めない・値が不正・書けない場所なら、1 つも保存せずに、ファイル名と項目名を添えた例外を投げる
     /// (batchmode では Unity が終了コード 1 で終わる)。
     /// Editor を閉じた状態で次のように呼べる (<see cref="OutputArgument"/> を省くと <see cref="GameRulesAssets.Folder"/>):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.GameRulesJsonImporter.Import -rulesJson Assets/MyGame/Rules/Json -rulesOut Assets/MyGame/Rules</code>
+    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GameRulesJsonImporter.Import -rulesJson Assets/MyGame/Rules/Json -rulesOut Assets/MyGame/Rules</code>
     /// </summary>
     public static class GameRulesJsonImporter
     {
-        public const string MenuPath = "Fps/Import Game Rules From JSON";
+        public const string MenuPath = "Shooter/Import Game Rules From JSON";
         public const string LogTag = "[GameRulesJsonImporter]";
 
         /// <summary>読む JSON のファイルか、JSON を並べたフォルダ (直下の <c>*.json</c> だけを読む)。プロジェクトのフォルダからの相対か絶対パス。</summary>
@@ -149,7 +149,7 @@ namespace Fps.Editor
 
         /// <summary>
         /// source がファイルならそれだけを、フォルダなら直下の <c>*.json</c> をファイル名の順 (序数比較) に返す。
-        /// 区切りは / に揃える。<c>Packages/</c> で始まる source は <see cref="FpsKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
+        /// 区切りは / に揃える。<c>Packages/</c> で始まる source は <see cref="ShooterKitRoot.PhysicalPath"/> でディスク上のパスに直してから読む。
         /// </summary>
         /// <exception cref="ArgumentException">source が空・存在しない・.json でない、またはフォルダに .json が 1 つも無い。</exception>
         public static IReadOnlyList<string> FindJsonFiles(string source)
@@ -159,7 +159,7 @@ namespace Fps.Editor
                 throw new ArgumentException($"{LogTag} the game rules JSON path must not be empty", nameof(source));
             }
 
-            var trimmed = FpsKitRoot.PhysicalPath(source.Trim().Replace('\\', '/').TrimEnd('/'));
+            var trimmed = ShooterKitRoot.PhysicalPath(source.Trim().Replace('\\', '/').TrimEnd('/'));
             if (File.Exists(trimmed))
             {
                 if (!trimmed.EndsWith(JsonExtension, StringComparison.OrdinalIgnoreCase))

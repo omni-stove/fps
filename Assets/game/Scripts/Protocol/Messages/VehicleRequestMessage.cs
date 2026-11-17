@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     // 乗れるか (距離・空き・壊れていないか) はサーバーが決めるので、クライアントは乗りたい乗り物と座席を言うだけにする。
     public sealed class VehicleRequestMessage : IMessage

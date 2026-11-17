@@ -16,7 +16,7 @@ fail() {
 
 # Export は Editor を自分で閉じないので -quit を足す。例外で失敗すれば Unity は 0 以外で終わる
 status=0
-bash scripts/unity-ci.sh Fps.Editor.MapCollisionExporter.Export -quit || status=$?
+bash scripts/unity-ci.sh Shooter.Editor.MapCollisionExporter.Export -quit || status=$?
 [ "$status" -eq 0 ] || fail "MapCollisionExporter.Export exited with code $status; look for [MapCollision] in the log above"
 
 # 消えたマップのファイルを Export が消した分と、新しいマップの分も差分に数える

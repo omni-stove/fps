@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 隠すときはコンポーネントでなく GameObject ごと切る。TargetDummy などの復活は子のコライダーと描画を一斉に有効へ戻すので、
     // コンポーネントの有効だけで隠すと、復活のたびに弱点が出てしまう。

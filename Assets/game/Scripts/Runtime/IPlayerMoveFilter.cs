@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// <see cref="PlayerController.Tick"/> に渡された 1 フレーム分の入力を、姿勢と移動を決める前に書き換える

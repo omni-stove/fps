@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
-    [CreateAssetMenu(fileName = "ItemIconCatalog", menuName = "Fps/Item Icon Catalog")]
+    [CreateAssetMenu(fileName = "ItemIconCatalog", menuName = "Shooter/Item Icon Catalog")]
     public sealed class ItemIconCatalog : ScriptableObject
     {
         public const string CatalogName = "ItemIcon";

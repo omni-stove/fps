@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// クライアントから届いた射撃 (始点・向き・見ていた時点) をサーバーで受け付けてよいか調べる。

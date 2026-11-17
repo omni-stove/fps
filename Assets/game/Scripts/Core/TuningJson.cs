@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// グレネード (<see cref="GrenadeCatalog"/>)・印 (<see cref="PingSpec"/>)・吹き飛ばし (<see cref="KnockbackSpec"/>) の調整値を JSON から読む。

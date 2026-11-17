@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// EOS のプラットフォームを作るのに要る認証情報。リポジトリは公開なのでコミットせず、

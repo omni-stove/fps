@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     public sealed class BvhWorldCollision : IWorldCollision
     {

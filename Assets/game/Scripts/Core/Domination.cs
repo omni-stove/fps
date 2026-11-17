@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 拠点制圧のルール。Alpha と Bravo の 2 チームが <see cref="DominationSpec.PointCount"/> 個の拠点 (<see cref="ControlPoint"/>) を取り合い、

@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// 他のプレイヤーを表示するサーバーの tick (小数)。届いた最新の tick から <see cref="DelayTicks"/> 遅らせた所を目指し、

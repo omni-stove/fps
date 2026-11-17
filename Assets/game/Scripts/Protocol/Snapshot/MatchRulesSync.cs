@@ -1,6 +1,6 @@
-using Fps.Core;
+using Shooter.Core;
 
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>
     /// クライアントが表示と予測に使う試合のルール (Netcode の <c>NetMatchRules</c> の中身)。判定はサーバーが自分のルールでやり直す。

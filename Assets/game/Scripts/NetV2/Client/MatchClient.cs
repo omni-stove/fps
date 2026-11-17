@@ -1,9 +1,9 @@
 using System;
 using System.Globalization;
-using Fps.Core;
-using Fps.Protocol;
+using Shooter.Core;
+using Shooter.Protocol;
 
-namespace Fps.NetV2
+namespace Shooter.NetV2
 {
     /// <summary>
     /// クライアントの、サーバーとのやり取り。通信路でつなぎ、承認を頼み、差分のスナップショットを組み立てて受け取ったと知らせ、

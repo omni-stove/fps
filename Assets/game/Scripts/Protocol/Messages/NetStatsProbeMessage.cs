@@ -1,4 +1,4 @@
-namespace Fps.Protocol
+namespace Shooter.Protocol
 {
     /// <summary>クライアントが往復時間を測るために送る番号。サーバーは <see cref="NetStatsEchoMessage"/> で返す。</summary>
     public sealed class NetStatsProbeMessage : IMessage

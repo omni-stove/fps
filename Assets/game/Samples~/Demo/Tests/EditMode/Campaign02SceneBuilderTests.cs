@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary><see cref="Campaign02Mission"/> の配置を <see cref="CampaignSceneBuilder"/> で置いて確かめる。</summary>
     public sealed class Campaign02SceneBuilderTests

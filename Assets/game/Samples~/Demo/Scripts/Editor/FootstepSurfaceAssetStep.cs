@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Fps.Runtime;
+using Shooter.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     /// <summary>
     /// 床の材質ごとの足音と着地音の仮素材を手続きで作り (<see cref="ProceduralAudio"/>)、<see cref="FootstepSurfaceCatalog"/> にまとめる手順。

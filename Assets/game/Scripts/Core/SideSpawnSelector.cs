@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 陣営ごとの出現点から、倒れた人を戻す点を選ぶ。自陣営の点のうち、いちばん近い敵までの距離が最も長い点を選ぶ。

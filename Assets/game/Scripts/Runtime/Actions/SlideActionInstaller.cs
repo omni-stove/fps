@@ -1,7 +1,7 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// プレイヤーに <see cref="SlideMovement"/> を (無ければ) 付け、<see cref="ActionRules.Slide"/> で有効・無効を決める。

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     // 敵の目印や銃は弾・視線・突進や爆発の線を遮ってはいけない。差し替えのプレハブに当たり判定が付いていても外して置く。
     internal static class EnemyVisualPrefab

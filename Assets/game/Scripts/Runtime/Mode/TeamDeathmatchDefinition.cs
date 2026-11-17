@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// チームデスマッチの調整値 (<see cref="TeamDeathmatchSpec"/> の得点・制限時間・リスポーン・陣営の数と人数・キル 1 回の点) をアセットとして持つ。
@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 新しく作ったときの値は <see cref="TeamDeathmatchRunner"/> の既定値と同じ。
     /// <see cref="TeamDeathmatchRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "TeamDeathmatch", menuName = "Fps/Modes/Team Deathmatch")]
+    [CreateAssetMenu(fileName = "TeamDeathmatch", menuName = "Shooter/Modes/Team Deathmatch")]
     public sealed class TeamDeathmatchDefinition : ScriptableObject
     {
         [SerializeField, Min(1), Tooltip("勝利に必要なキル数")]

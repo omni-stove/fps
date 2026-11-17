@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になる。

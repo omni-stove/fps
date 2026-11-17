@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// 立ち・しゃがみ・伏せのカプセル・目の寸法を出す。低い姿勢ではカプセルを足元に合わせたまま縮め (足元の Y は変えない)、

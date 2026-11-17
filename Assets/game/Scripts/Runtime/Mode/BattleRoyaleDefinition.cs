@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の分隊の数と人数・制限時間・bot の用事を決め直す間隔と探す半径・パラシュートで降ろす高さをアセットとして持つ。
@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 武器を手放させるか・縮むエリア・地面と上空のどちらから始めるかはシーンの組み方なので Runner の側に置く。
     /// <see cref="BattleRoyaleRunner.Definition"/> に配線するか入口 (<see cref="GameContent.BattleRoyale"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "BattleRoyale", menuName = "Fps/Modes/Battle Royale")]
+    [CreateAssetMenu(fileName = "BattleRoyale", menuName = "Shooter/Modes/Battle Royale")]
     public sealed class BattleRoyaleDefinition : ScriptableObject
     {
         [SerializeField, Min(2), Tooltip("分隊の数。参加者の陣営の ID はこれより小さいこと")]

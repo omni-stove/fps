@@ -1,8 +1,8 @@
 using System;
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 
-namespace Fps.Runtime
+namespace Shooter.Runtime
 {
     /// <summary>
     /// 協力して開ける物 1 種類の値をアセットとして持つ。要る人数・押し続ける秒数・欠けたときに戻すか (<see cref="ToSpec"/> で
@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 新しく作ったときの値は <see cref="CoopHoldSpec"/> と <see cref="CoopDoor"/> の既定値と同じ。
     /// <see cref="CoopInteractable"/> に配線すると、それと、それに開く合図をもらう扉は Inspector の値の代わりにこれを読む。
     /// </summary>
-    [CreateAssetMenu(fileName = "CoopInteractable", menuName = "Fps/Coop Interactable")]
+    [CreateAssetMenu(fileName = "CoopInteractable", menuName = "Shooter/Coop Interactable")]
     public sealed class CoopInteractableDefinition : ScriptableObject
     {
         [SerializeField, Min(1), Tooltip("同時に押している必要のある人数")]

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>
     /// セーブデータ用の小さな JSON の読み書き。外部パッケージに頼らず Core だけで使う。

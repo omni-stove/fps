@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Globalization;
-using Fps.Core;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // 射撃場のルールは Abilities を Off のまま配る (ほかの手順の前提を変えない) ので、この手順の間だけ On にする。
     // 押し続けた入力は smoke から渡せないので、使ったら次の Tick で離したことになり、その場の見本の判定で置くか断る。

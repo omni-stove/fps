@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Fps.Core;
-using Fps.Editor;
-using Fps.Runtime;
+using Shooter.Core;
+using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace Fps.Tests.EditMode
+namespace Shooter.Tests.EditMode
 {
     /// <summary>
     /// GunGameRunner が段に合わせて持ち武器を替え、状態 (ModeStatus) に段を読めるガンゲームを載せ、最後の段の武器で倒した人の勝ちで終えることを確かめる。

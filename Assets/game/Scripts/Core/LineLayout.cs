@@ -1,6 +1,6 @@
 using System;
 
-namespace Fps.Core
+namespace Shooter.Core
 {
     /// <summary>物を等間隔で 1 列に並べるときの、列の中心からの横方向のずれ。</summary>
     public static class LineLayout

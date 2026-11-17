@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
   m_Name: ScoutRifle
-  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 28e92fe5-5b1b-44c7-a8ee-80521adff062
   _nameKey: weapon.ref.scoutRifle
   _description: "Apex Legends \u306E G7 \u30B9\u30AB\u30A6\u30C8 (\u5B9F\u9283\u306F M1A / SVD \u98A8) \u3092\u53C2\u8003\u3002\u4F53 36 (\u30AD\u30C3\u30C8\u3067\u306F 18)\u30FB246 RPM\u30FB14 \u767A\u3002Apex \u3068\u540C\u3058\u304F\u5F3E\u304C\u98DB\u3093\u3067\u843D\u3061\u308B (761 m/s)\u3002Apex \u306F\u4F53\u529B\u3068\u30B7\u30FC\u30EB\u30C9\u3067 200 \u306A\u306E\u3067\u3001\u30AD\u30C3\u30C8\u306E\u4F53\u529B 100 \u306B\u5408\u308F\u305B\u3066\u30C0\u30E1\u30FC\u30B8\u3092\u534A\u5206\u306B\u3057\u305F\u3002"

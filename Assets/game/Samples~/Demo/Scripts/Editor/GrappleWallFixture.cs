@@ -1,8 +1,8 @@
-using Fps.Core;
+using Shooter.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Fps.Editor
+namespace Shooter.Editor
 {
     // グラップルを試す、-X を向いた高い壁 2 枚。開けた場所の右 (x = 21..33, z = -8..-1) の、狙撃兵と盾持ちの視界の外に置く。
     // 片方は掴めて縁の上に立てる奥行きがあり、もう片方は同じ形で掴めないレイヤーに置く。手順は GrappleSmokeStep。

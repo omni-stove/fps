@@ -24,6 +24,9 @@ namespace Shooter.Protocol
                 new InventoryRequestMessage(),
                 new VehicleRequestMessage(),
                 new VehicleMoveMessage(),
+                new ChatRequestMessage(),
+                new MapVoteRequestMessage(),
+                new SpectateRequestMessage(),
             };
         }
 
@@ -39,6 +42,7 @@ namespace Shooter.Protocol
                 new AntiCheatToClientMessage(),
                 new SnapshotMessage(),
                 new StructureStateMessage(),
+                new MapVoteStateMessage(),
                 new ShotMessage(),
                 new HitConfirmMessage(),
                 new DamageTakenMessage(),
@@ -59,6 +63,7 @@ namespace Shooter.Protocol
                 new AreaEffectMessage(),
                 new InventoryStateMessage(),
                 new VehicleCorrectedMessage(),
+                new ChatMessage(),
             };
         }
 

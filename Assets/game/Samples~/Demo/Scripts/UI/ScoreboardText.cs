@@ -14,6 +14,8 @@ namespace Shooter.Runtime
 
         public static LocalizedText ConnectionCaption => new LocalizedText("hud.scoreboard.connectionCaption");
 
+        public static LocalizedText AssistsCaption => new LocalizedText("assist.scoreboard.caption");
+
         public static LocalizedText PlayerName(int playerId)
         {
             return new LocalizedText("hud.scoreboard.player", playerId);

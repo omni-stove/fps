@@ -5,18 +5,11 @@ using System.Text;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// <see cref="WeaponJsonImporter"/> が読む JSON の文法だけを扱う。
-    /// オブジェクトは <see cref="Dictionary{TKey,TValue}"/> (キーは string)、配列は <see cref="List{T}"/>、文字列は string、
-    /// 数は <see cref="WeaponJsonNumber"/>、true/false は bool、null は null で返す。
-    /// </summary>
     public static class WeaponJsonSyntax
     {
         private const int _maxDepth = 32;
         private const char _byteOrderMark = (char)0xFEFF;
 
-        /// <summary>text 全体を 1 つの JSON 値として読む。</summary>
-        /// <exception cref="FormatException">文法に合わない・同じキーが 2 度ある。メッセージに行と列を含む。</exception>
         public static object Parse(string text)
         {
             if (text == null)
@@ -377,7 +370,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>JSON の数。文法は確かめてあり、<see cref="Text"/> は書かれたままの文字列。</summary>
     public sealed class WeaponJsonNumber
     {
         public WeaponJsonNumber(string text, bool isInteger)
@@ -388,7 +380,6 @@ namespace Shooter.Editor
 
         public string Text { get; }
 
-        /// <summary>小数点も指数も無い。</summary>
         public bool IsInteger { get; }
 
         public override string ToString()

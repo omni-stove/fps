@@ -87,7 +87,6 @@ namespace Shooter.Core
             return CurrentIndex != previous ? new BossPhaseChange(previous, CurrentIndex, _phases[previous], Current, healthFraction) : (BossPhaseChange?)null;
         }
 
-        // 条件を待たずに次へ進める。ボスの行動の区切り (仕掛けを壊された・演出が終わったなど) で外から進めるのに使う。
         public BossPhaseChange? Advance(float healthFraction)
         {
             if (!(healthFraction >= 0f) || healthFraction > 1f)

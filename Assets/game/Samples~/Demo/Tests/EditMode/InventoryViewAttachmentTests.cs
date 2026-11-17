@@ -81,7 +81,7 @@ namespace Shooter.Tests.EditMode
             var view = CreateBoundView(source);
             view.SetOpen(true);
             var ledger = new ProgressionLedger(new ProgressionSpec(
-                100, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
+                100, 50, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
 
             view.ShowUnlocks(ledger, new PlayerProfile(600, 0, 0, 0, 0));
             view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle);
@@ -103,7 +103,7 @@ namespace Shooter.Tests.EditMode
             var view = CreateBoundView(source);
             view.SetOpen(true);
             var ledger = new ProgressionLedger(new ProgressionSpec(
-                100, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
+                100, 50, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
             view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle);
 
             view.ShowUnlocks(ledger, new PlayerProfile(1500, 0, 0, 0, 0));

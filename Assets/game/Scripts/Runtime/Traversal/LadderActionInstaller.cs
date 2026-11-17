@@ -4,14 +4,10 @@ using LadderRule = Shooter.Core.Ladder;
 
 namespace Shooter.Runtime.Traversal
 {
-    /// <summary>
-    /// プレイヤーの <see cref="PlayerController"/> に <see cref="LadderMovement"/> を付け、ルールの <see cref="ActionRules.Ladder"/> に従わせる。
-    /// つかまっている間にしまわせる武器と覗き込みは、プレイヤーとその子から探す。
-    /// Off で、まだ付けていなければ何も付けない (はしごを使わないゲームでは移動の横取りを増やさない)。
-    /// </summary>
+    // Off で、まだ付けていなければ何も付けないのは、はしごを使わないゲームで移動の横取りを増やさないため。
     public sealed class LadderActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。ほかのアクションのコンポーネントは読まないので、組み込みの回避と乗り越え (<see cref="MoveActionInstaller"/>) の後に置く。</summary>
+        // ほかのアクションのコンポーネントは読まないので、組み込みの回避と乗り越え (MoveActionInstaller) の後に置く。
         public const int InstallOrder = 350;
 
         public int Order => InstallOrder;

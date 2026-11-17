@@ -1,0 +1,8 @@
+{
+  "voice.local": "送信中",
+  "voice.speaking": "{0} が話している",
+  "voice.unknownSpeaker": "プレイヤー {0}",
+  "voice.settings.section": "ボイスチャット",
+  "voice.settings.microphone": "マイク",
+  "voice.settings.volume": "声の音量"
+}

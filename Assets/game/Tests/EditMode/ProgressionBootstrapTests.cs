@@ -11,7 +11,7 @@ namespace Shooter.Tests.EditMode
         private const string ScopeId = "scope";
 
         private static readonly ProgressionSpec _spec = new ProgressionSpec(
-            100, 0, 250, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(ScopeId, 2) });
+            100, 0, 0, 250, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(ScopeId, 2) });
 
         [SetUp]
         public void SetUp()

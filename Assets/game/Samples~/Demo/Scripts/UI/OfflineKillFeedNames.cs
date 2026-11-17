@@ -13,7 +13,9 @@ namespace Shooter.Runtime
             var killerObject = CombatEvents.OfflineObject(entry.KillerId);
             var killer = NameOf(entry.KillerId);
             var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
-            return new KillFeedLine(entry, killer, victim, WeaponNameOf(killerObject, entry.WeaponId));
+            return new KillFeedLine(
+                entry, killer, victim, WeaponNameOf(killerObject, entry.WeaponId),
+                ParticipantKillFeedNames.AnyLocal(_participants, entry.AssisterIds));
         }
 
         private KillFeedName NameOf(int id)

@@ -15,7 +15,7 @@ namespace Shooter.Tests.EditMode
     {
         // 試合 1 回で 250 XP、レベル 2 は 500 XP から。SMG はレベル 2 で使えるようになる
         private static readonly ProgressionSpec _profileSpec = new ProgressionSpec(
-            100, 0, 250, 0, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(LoadoutTestAssets.SmgId, 2) });
+            100, 0, 0, 250, 0, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(LoadoutTestAssets.SmgId, 2) });
 
         private GameObject _owner;
         private MainMenuScreen _screen;

@@ -4,7 +4,7 @@ namespace Shooter.Protocol
 {
     /// <summary><see cref="InputFrame"/> で押されているボタン。</summary>
     [Flags]
-    public enum InputButtons : byte
+    public enum InputButtons : ushort
     {
         None = 0,
         Sprint = 1,
@@ -19,6 +19,8 @@ namespace Shooter.Protocol
         Dodge = 32,
         /// <summary>この tick に Prone が押された (伏せる・起き上がる)。</summary>
         Prone = 64,
-        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone,
+        LeanLeft = 128,
+        LeanRight = 256,
+        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight,
     }
 }

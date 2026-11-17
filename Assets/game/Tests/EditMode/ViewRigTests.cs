@@ -817,6 +817,296 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => _rig.Mode = (ViewMode)99);
         }
 
+        [Test]
+        public void FirstPersonLeanShiftsTheCameraSidewaysAndTiltsIt()
+        {
+            _rig.Initialize(_eye, _camera);
+            Lean(1f);
+
+            _rig.UpdateCameraPosition();
+
+            // 既定の MotorSpec は 0.4m・15 度
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, new Vector3(0.4f, 0f, 0f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.LeanAmount, Is.EqualTo(1f));
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(-15f).Within(1e-4f));
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, Quaternion.Euler(0f, 0f, -15f)), Is.LessThan(0.01f));
+            Assert.That(_camera.transform.up.x, Is.GreaterThan(0f), "leaning right tilts the top of the view to the right");
+        }
+
+        [Test]
+        public void HalfALeanToTheLeftShiftsAndTiltsHalfAsFar()
+        {
+            _rig.Initialize(_eye, _camera);
+            Lean(-0.5f);
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, new Vector3(-0.2f, 0f, 0f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(7.5f).Within(1e-4f));
+            Assert.That(_camera.transform.up.x, Is.LessThan(0f));
+        }
+
+        [Test]
+        public void LeanUsesTheSourcesMotorSpec()
+        {
+            _rig.Initialize(_eye, _camera);
+            var source = Lean(1f);
+            source.Spec = new MotorSpec(
+                MotorSpec.DefaultWalkSpeed,
+                MotorSpec.DefaultSprintSpeed,
+                MotorSpec.DefaultJumpHeight,
+                MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl,
+                MotorSpec.DefaultCrouchSpeed,
+                leanSideOffset: 0.25f,
+                leanAngleDegrees: 10f);
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, new Vector3(0.25f, 0f, 0f)), Is.LessThan(1e-4f));
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(-10f).Within(1e-4f));
+        }
+
+        [Test]
+        public void LeanFollowsTheBodyYawAndTheEyePitch()
+        {
+            _rig.Initialize(_eye, _camera);
+            _body.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            _eye.localRotation = Quaternion.Euler(-30f, 0f, 0f);
+            Lean(1f);
+
+            _rig.UpdateCameraPosition();
+
+            // 東を向いた体の右は南 (-z)。見上げても横へずれるだけで、高さは変わらない
+            Assert.That(Vector3.Distance(_camera.transform.position, _eye.position + new Vector3(0f, 0f, -0.4f)), Is.LessThan(1e-4f));
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, new Vector3(0.4f, 0f, 0f)), Is.LessThan(1e-4f));
+        }
+
+        [Test]
+        public void FirstPersonLeanStopsShortOfAWall()
+        {
+            _rig.Initialize(_eye, _camera);
+            // 壁の手前の面は目の 0.4m 右。カメラの球 (半径 0.2m) はその手前で止まる
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = _eye.position + new Vector3(0.5f, 0f, 0f);
+            _wall.transform.localScale = new Vector3(0.2f, 4f, 4f);
+            Physics.SyncTransforms();
+            Lean(1f);
+
+            _rig.UpdateCameraPosition();
+
+            var x = _camera.transform.localPosition.x;
+            Assert.That(x, Is.LessThanOrEqualTo(0.4f - _rig.CollisionRadius + 1e-3f), "the camera must not enter the wall");
+            Assert.That(x, Is.GreaterThan(0.1f), "it still leans as far as the wall allows");
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(-15f).Within(1e-4f));
+        }
+
+        [Test]
+        public void FirstPersonLeanAgainstAWallTouchingTheEyeStaysOnTheEye()
+        {
+            _rig.Initialize(_eye, _camera);
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            // 手前の面は目の 0.15m 右で、カメラの球 (半径 0.2m) は目にいるうちから壁に掛かっている
+            _wall.transform.position = _eye.position + new Vector3(0.25f, 0f, 0f);
+            _wall.transform.localScale = new Vector3(0.2f, 4f, 4f);
+            Physics.SyncTransforms();
+            Lean(1f);
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition.x, Is.LessThan(0.01f), "the third-person minimum length does not push the camera into the wall");
+            Assert.That(_camera.transform.localPosition.x, Is.GreaterThanOrEqualTo(0f));
+        }
+
+        [Test]
+        public void StandingUpPutsTheCameraBackOnTheEye()
+        {
+            _rig.Initialize(_eye, _camera);
+            var source = Lean(1f);
+            _rig.UpdateCameraPosition();
+
+            source.State = FakeCharacterMotorStateSource.Motor();
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(0f));
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, Quaternion.identity), Is.LessThan(0.01f));
+        }
+
+        [Test]
+        public void LeanTiltIsAddedOnTopOfWhatOthersWriteToTheCamera()
+        {
+            _rig.Initialize(_eye, _camera);
+            var source = Lean(1f);
+            _rig.UpdateCameraPosition();
+
+            // 照準器の揺れ (AimDownSights) がカメラの向きを書き直した
+            var sway = Quaternion.Euler(-2f, 1f, 0f);
+            _camera.transform.localRotation = sway;
+            _rig.UpdateCameraPosition();
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, sway * Quaternion.Euler(0f, 0f, -15f)), Is.LessThan(0.01f));
+
+            _rig.UpdateCameraPosition();
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, sway * Quaternion.Euler(0f, 0f, -15f)), Is.LessThan(0.01f),
+                "the tilt is not stacked frame after frame");
+
+            source.State = FakeCharacterMotorStateSource.Motor();
+            _rig.UpdateCameraPosition();
+            Assert.That(Quaternion.Angle(_camera.transform.localRotation, sway), Is.LessThan(0.01f), "only the tilt is taken off");
+        }
+
+        [Test]
+        public void WithoutAMotorSourceTheCameraDoesNotLean()
+        {
+            _rig.Initialize(_eye, _camera);
+
+            _rig.UpdateCameraPosition();
+
+            Assert.That(_rig.MotorSource, Is.Null);
+            Assert.That(_rig.LeanAmount, Is.EqualTo(0f));
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(_camera.transform.localRotation, Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void AnInvalidOrMissingLeanStateDoesNotLean()
+        {
+            _rig.Initialize(_eye, _camera);
+            var source = Lean(float.NaN);
+
+            _rig.UpdateCameraPosition();
+            Assert.That(_rig.LeanAmount, Is.EqualTo(0f));
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+
+            source.State = FakeCharacterMotorStateSource.Motor(lean: 1f);
+            source.HasState = false;
+            _rig.UpdateCameraPosition();
+            Assert.That(_rig.LeanAmount, Is.EqualTo(0f));
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void AnAssignedMotorSourceIsUsedInsteadOfTheBodys()
+        {
+            _rig.Initialize(_eye, _camera);
+            Lean(1f);
+            var other = new GameObject("Other").AddComponent<FakeCharacterMotorStateSource>();
+            try
+            {
+                other.State = FakeCharacterMotorStateSource.Motor(lean: -1f);
+                _rig.MotorSource = other;
+
+                _rig.UpdateCameraPosition();
+
+                Assert.That(_rig.MotorSource, Is.SameAs(other));
+                Assert.That(_rig.LeanAmount, Is.EqualTo(-1f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(other.gameObject);
+            }
+        }
+
+        [Test]
+        public void ThirdPersonLeanMovesTheCameraToTheLeaningShoulderAndBack()
+        {
+            InitializeLocalThirdPerson();
+            LogAssert.Expect(LogType.Log, "[View] shoulder=Left");
+            _rig.Shoulder = ShoulderSide.Left;
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds);
+            var source = Lean(1f);
+
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds);
+
+            Assert.That(_rig.CameraShoulder, Is.EqualTo(ShoulderSide.Right));
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Left), "the chosen shoulder is kept");
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f),
+                "third person moves to the shoulder instead of shifting the camera");
+            Assert.That(_rig.LeanRollDegrees, Is.EqualTo(0f), "third person does not tilt the camera");
+
+            source.State = FakeCharacterMotorStateSource.Motor();
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds);
+
+            Assert.That(_rig.CameraShoulder, Is.EqualTo(ShoulderSide.Left));
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, LeftShoulderOffset()), Is.LessThan(1e-4f));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ThirdPersonLeanBlendsAcrossInsteadOfJumping()
+        {
+            InitializeLocalThirdPerson();
+            Lean(-1f);
+            var right = ViewRig.DefaultThirdPersonOffset.x;
+
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds / 3f);
+
+            Assert.That(_rig.CameraShoulder, Is.EqualTo(ShoulderSide.Left));
+            Assert.That(_rig.IsSwappingShoulder, Is.True);
+            Assert.That(_camera.transform.localPosition.x, Is.LessThan(right).And.GreaterThan(-right));
+        }
+
+        [Test]
+        public void SwappingWhileLeaningChangesTheShoulderToReturnTo()
+        {
+            InitializeLocalThirdPerson();
+            var source = Lean(1f);
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds);
+            LogAssert.Expect(LogType.Log, "[View] shoulder=Left");
+
+            _rig.Tick(true, ShoulderBlend.DefaultSeconds);
+
+            Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Left));
+            Assert.That(_rig.CameraShoulder, Is.EqualTo(ShoulderSide.Right), "the lean still holds the camera on its side");
+
+            source.State = FakeCharacterMotorStateSource.Motor();
+            _rig.Tick(false, ShoulderBlend.DefaultSeconds);
+            Assert.That(_rig.CameraShoulder, Is.EqualTo(ShoulderSide.Left));
+        }
+
+        [TestCase(1f, ShoulderSide.Right)]
+        [TestCase(0.01f, ShoulderSide.Right)]
+        [TestCase(-0.5f, ShoulderSide.Left)]
+        [TestCase(0f, ShoulderSide.Left)]
+        public void CameraShoulderFollowsTheLeanSide(float lean, ShoulderSide expected)
+        {
+            LogAssert.Expect(LogType.Log, "[View] shoulder=Left");
+            _rig.Shoulder = ShoulderSide.Left;
+
+            Assert.That(_rig.CameraShoulderFor(lean), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void LeanEyeOffsetRejectsAMissingSpec()
+        {
+            _rig.Initialize(_eye, _camera);
+
+            Assert.Throws<ArgumentNullException>(() => _rig.LeanEyeOffset(1f, null));
+            var bare = new GameObject("Bare");
+            try
+            {
+                var uninitialized = bare.AddComponent<ViewRig>();
+                Assert.Throws<InvalidOperationException>(() => uninitialized.LeanEyeOffset(1f, MotorSpec.Default));
+            }
+            finally
+            {
+                Object.DestroyImmediate(bare);
+            }
+        }
+
+        // 体に移動の状態の読み元を付け、リーンの傾きだけを決めた状態にする。
+        private FakeCharacterMotorStateSource Lean(float amount)
+        {
+            var source = _body.GetComponent<FakeCharacterMotorStateSource>();
+            if (source == null)
+            {
+                source = _body.AddComponent<FakeCharacterMotorStateSource>();
+            }
+
+            source.State = FakeCharacterMotorStateSource.Motor(lean: amount);
+            return source;
+        }
+
         private static Vector3 LeftShoulderOffset()
         {
             var offset = ViewRig.DefaultThirdPersonOffset;

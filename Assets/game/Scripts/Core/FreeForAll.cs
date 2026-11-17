@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 人 1 陣営のチーム分け。joinIndex 番目に参加した人を ID joinIndex の陣営に入れ、
-    /// その陣営に誰かいれば (明示して入れた人がいれば) 次の空いている ID へずらす。
-    /// </summary>
     public sealed class FreeForAll : ITeamLayout
     {
         private static readonly Side[] _none = Array.Empty<Side>();

@@ -4,10 +4,8 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 待ち受けるアドレスとポートを環境変数からも受け取るのは、Docker のイメージの入り口 (<c>docker/server/entrypoint.sh</c>) と
-    /// 同じ意味にし、引数と両方で渡したら同じく 2 回指定したとして断るため。
-    /// </summary>
+    // 待ち受けるアドレスとポートを環境変数からも受け取るのは、Docker のイメージの入り口 (docker/server/entrypoint.sh) と
+    // 同じ意味にし、引数と両方で渡したら同じく 2 回指定したとして断るため。
     internal sealed class ServerLaunch
     {
         public const string AddressVariable = "SHOOTER_SERVER_ADDRESS";
@@ -15,12 +13,12 @@ namespace Shooter.Server
 
         public const string UnknownVersion = "unknown";
 
-        /// <summary>Unity のサーバーも <c>-map</c> が無ければこのシーンのまま始めるため。</summary>
+        // Unity のサーバーも -map が無ければこのシーンのまま始めるため。
         public const string DefaultMap = MenuRoute.NetSceneName;
 
         public const string RulesFlag = "-rules";
 
-        /// <summary>Unity の NetMatch.prefab がこのルールに配線されているため。</summary>
+        // Unity の NetMatch.prefab がこのルールに配線されているため。
         public const string DefaultRules = "TeamDeathmatch";
 
         private ServerLaunch(NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat)
@@ -46,7 +44,6 @@ namespace Shooter.Server
 
         public AntiCheatSettings AntiCheat { get; }
 
-        /// <summary>EOS の認証情報が無くて UDP に切り替えたときなど、実際に使う設定だけを差し替える。</summary>
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -59,10 +56,8 @@ namespace Shooter.Server
             return TryParse(args, environment, null, out launch, out error);
         }
 
-        /// <summary>
-        /// builtVersion (ビルドに焼き込んだ版、<see cref="ServerBuildVersion"/>) は <c>-buildVersion</c> が無いときに使う。
-        /// イメージの版を入り口の引数で渡すと、<c>docker run</c> で <c>-buildVersion</c> を足した人が「2 回指定」で起動できなくなるため。
-        /// </summary>
+        // builtVersion (ビルドに焼き込んだ版、ServerBuildVersion) は -buildVersion が無いときに使う。
+        // イメージの版を入り口の引数で渡すと、docker run で -buildVersion を足した人が「2 回指定」で起動できなくなるため。
         public static bool TryParse(
             IReadOnlyList<string> args, Func<string, string> environment, string builtVersion, out ServerLaunch launch, out string error)
         {

@@ -15,12 +15,15 @@ namespace Shooter.Runtime
 
         public LocalizedText WeaponName { get; }
 
-        public KillFeedLine(KillFeedEntry entry, KillFeedName killer, KillFeedName victim, LocalizedText weaponName)
+        public bool LocalAssisted { get; }
+
+        public KillFeedLine(KillFeedEntry entry, KillFeedName killer, KillFeedName victim, LocalizedText weaponName, bool localAssisted = false)
         {
             Entry = entry;
             Killer = killer;
             Victim = victim;
             WeaponName = weaponName;
+            LocalAssisted = localAssisted && !killer.IsLocal && !victim.IsLocal;
         }
 
         public bool Highlighted => Killer.IsLocal || Victim.IsLocal;
@@ -32,7 +35,7 @@ namespace Shooter.Runtime
         public bool Equals(KillFeedLine other)
         {
             return Entry == other.Entry && Killer == other.Killer && Victim == other.Victim
-                && WeaponName == other.WeaponName;
+                && WeaponName == other.WeaponName && LocalAssisted == other.LocalAssisted;
         }
 
         public override bool Equals(object obj)
@@ -52,12 +55,14 @@ namespace Shooter.Runtime
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Entry, Killer, Victim, WeaponName);
+            return HashCode.Combine(Entry, Killer, Victim, WeaponName, LocalAssisted);
         }
 
         public override string ToString()
         {
-            return Entry + " killerName=" + Killer.Text + " victimName=" + Victim.Text;
+            // アシストしていない行は前と同じ文字列のままにして、それを読むログやテストを変えずに済ませる。
+            var assist = LocalAssisted ? " localAssist=True" : string.Empty;
+            return Entry + " killerName=" + Killer.Text + " victimName=" + Victim.Text + assist;
         }
     }
 }

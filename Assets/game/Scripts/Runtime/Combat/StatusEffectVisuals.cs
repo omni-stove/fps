@@ -4,18 +4,12 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 状態異常にかかっている体に付ける見た目を、種類ごとに出し消しする。オフラインの <see cref="StatusEffectReceiver"/> と、
-    /// ネット対戦のクライアント (Shooter.NetV2.NetV2Client) が相手の体に付ける。
-    /// 見た目は <see cref="StatusEffectVisualCatalog"/> の参照から取り、無ければ燃焼 (<see cref="StatusEffectKinds.Burn"/>) だけコードで炎を作る。
-    /// 専用サーバーでは何も出さない。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class StatusEffectVisuals : MonoBehaviour
     {
         public const string ObjectNamePrefix = "StatusEffect_";
 
-        // 体の大きさが分からないときの、足元からの高さと体の高さ (m)。人型のカプセルに合わせる。
+        // 体の大きさが分からないときは、人型のカプセルに合わせる。
         private const float _fallbackCenterHeight = 1f;
         private const float _fallbackBodyHeight = 1.8f;
 
@@ -27,7 +21,6 @@ namespace Shooter.Runtime
 
         private readonly Dictionary<string, Shown> _shown = new Dictionary<string, Shown>();
 
-        /// <summary>host に付いた見た目の出し手。無ければ付ける。</summary>
         public static StatusEffectVisuals For(GameObject host)
         {
             if (host == null)
@@ -44,7 +37,6 @@ namespace Shooter.Runtime
             return kindId != null && _shown.ContainsKey(kindId);
         }
 
-        /// <summary>kindId の見た目を出す。もう出ている・出す見た目が無い・専用サーバーなら何もしない。</summary>
         public void Show(string kindId)
         {
             if (string.IsNullOrEmpty(kindId) || _shown.ContainsKey(kindId) || NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))

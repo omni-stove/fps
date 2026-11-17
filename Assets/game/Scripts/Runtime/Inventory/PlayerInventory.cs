@@ -36,13 +36,8 @@ namespace Shooter.Runtime
 
         public WeaponController Weapons => _weapons;
 
-        /// <summary>
-        /// アタッチメントの Id を受け取り、もう付けられるかを返す述語。<see cref="Attach"/> は使えない物を付けない。
-        /// null なら <see cref="ProgressionBootstrap.IsUnlocked"/> (今のプロフィールのレベル) で決める。
-        /// </summary>
         public Func<string, bool> IsAvailable { get; set; }
 
-        // 持ち武器を持ち物の山として置き、弾薬アイテムを決めた武器の予備弾を持ち物の弾薬から出し入れさせる
         public void Bind(WeaponController weapons)
         {
             if (_weapons == weapons)
@@ -98,7 +93,6 @@ namespace Shooter.Runtime
             Changed?.Invoke();
         }
 
-        // 最初の持ち物に戻し、持っている武器を置き直して、その最初の予備弾まで弾薬を足す (出直したとき)
         // 付けた物は最初の持ち物にまた入るので、武器からは戻さずに外す。出直しの経路ごとに外すと漏れる経路で付けた物が増えるため、ここでまとめて外す
         public void Refill()
         {

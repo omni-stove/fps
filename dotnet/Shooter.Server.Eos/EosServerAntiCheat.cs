@@ -5,12 +5,10 @@ using Shooter.EosSdk;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>SDK の無いビルドでも呼べる入り口。SDK の型は <c>#if EOS_SDK</c> の中にだけ置く。</summary>
+    // SDK の無いビルドでも呼べるよう、SDK の型は #if EOS_SDK の中にだけ置く。
     internal static class EosServerAntiCheat
     {
-        /// <summary>
-        /// プラットフォームはまだ作らず、モジュールの起動で作る。起動の失敗をサーバーの起動の失敗として 1 か所で知らせるため。
-        /// </summary>
+        // プラットフォームはまだ作らずモジュールの起動で作るのは、起動の失敗をサーバーの起動の失敗として 1 か所で知らせるため。
         public static bool TryPrepare(
             EosCredentials credentials,
             string version,

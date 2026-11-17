@@ -196,6 +196,142 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutAMotorStateTheLeanSwimAndWallRunStayDown()
+        {
+            _animator.TryBind();
+
+            var parameters = _animator.Refresh(DeltaSeconds);
+
+            Assert.That(_animator.MotorSource, Is.Null);
+            Assert.That(parameters.Lean, Is.EqualTo(0f));
+            Assert.That(parameters.Swimming, Is.False);
+            Assert.That(parameters.WallRun, Is.EqualTo(CharacterPose.WallRunNone));
+        }
+
+        [Test]
+        public void MotorStateOnTheBodyDrivesLeanSwimmingAndWallRun()
+        {
+            var motor = _player.AddComponent<FakeCharacterMotorStateSource>();
+            _animator.TryBind();
+            Assert.That(_animator.MotorSource, Is.SameAs(motor));
+
+            motor.State = FakeCharacterMotorStateSource.Motor(lean: -0.5f);
+            var leaning = _animator.Refresh(DeltaSeconds);
+            Assert.That(leaning.Lean, Is.EqualTo(-0.5f));
+            Assert.That(leaning.Swimming, Is.False);
+            Assert.That(leaning.WallRun, Is.EqualTo(CharacterPose.WallRunNone));
+
+            motor.State = FakeCharacterMotorStateSource.Motor(swimming: true);
+            var swimming = _animator.Refresh(DeltaSeconds);
+            Assert.That(swimming.Swimming, Is.True);
+            Assert.That(swimming.Lean, Is.EqualTo(0f));
+
+            motor.State = FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Left);
+            var wallRunning = _animator.Refresh(DeltaSeconds);
+            Assert.That(wallRunning.WallRun, Is.EqualTo(CharacterPose.WallRunLeft));
+            Assert.That(wallRunning.Swimming, Is.False);
+
+            motor.State = FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Right);
+            Assert.That(_animator.Refresh(DeltaSeconds).WallRun, Is.EqualTo(CharacterPose.WallRunRight));
+
+            motor.HasState = false;
+            Assert.That(_animator.Refresh(DeltaSeconds).WallRun, Is.EqualTo(CharacterPose.WallRunNone), "no state yet means no wall run");
+        }
+
+        [Test]
+        public void MotorStateOverridesThePoseSourcesValuesAndKeepsTheRest()
+        {
+            var body = CreateNetworkBody(out var source, out var animator);
+            try
+            {
+                var motor = body.AddComponent<FakeCharacterMotorStateSource>();
+                motor.State = FakeCharacterMotorStateSource.Motor(lean: 1f);
+                source.Crouching = true;
+                animator.TryBind();
+
+                var parameters = animator.Refresh(DeltaSeconds);
+
+                Assert.That(animator.Source, Is.EqualTo(CharacterAnimatorSource.Network));
+                Assert.That(parameters.Lean, Is.EqualTo(1f));
+                Assert.That(parameters.Crouch, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(body);
+            }
+        }
+
+        [Test]
+        public void AnAssignedMotorSourceIsReadWhenTheBodyHasNone()
+        {
+            var holder = new GameObject("MotorHolder");
+            try
+            {
+                var motor = holder.AddComponent<FakeCharacterMotorStateSource>();
+                motor.State = FakeCharacterMotorStateSource.Motor(swimming: true);
+                _animator.MotorSource = motor;
+                _animator.TryBind();
+
+                Assert.That(_animator.MotorSource, Is.SameAs(motor));
+                Assert.That(_animator.Refresh(DeltaSeconds).Swimming, Is.True);
+
+                Object.DestroyImmediate(holder);
+                Assert.That(_animator.MotorSource, Is.Null, "a destroyed source counts as none");
+                Assert.That(_animator.Refresh(DeltaSeconds).Swimming, Is.False);
+            }
+            finally
+            {
+                if (holder != null)
+                {
+                    Object.DestroyImmediate(holder);
+                }
+            }
+        }
+
+        [Test]
+        public void AMotorStateOutOfRangeIsSkippedWithOneWarning()
+        {
+            var motor = _player.AddComponent<FakeCharacterMotorStateSource>();
+            motor.State = FakeCharacterMotorStateSource.Motor(lean: float.NaN);
+            _animator.TryBind();
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[CharacterAnimator\] 'Player' の移動の状態のリーンか壁走りが範囲の外"));
+
+            var first = _animator.Refresh(DeltaSeconds);
+            _animator.Refresh(DeltaSeconds);
+
+            Assert.That(first.Lean, Is.EqualTo(0f));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void RigTiltsWithTheMotorStateAndStandsUpWhenTurnedOff()
+        {
+            var motor = _player.AddComponent<FakeCharacterMotorStateSource>();
+            motor.Spec = new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, leanAngleDegrees: 30f);
+            motor.State = FakeCharacterMotorStateSource.Motor(lean: 1f);
+            _animator.TryBind();
+            _animator.RigPrefab = _rigPrefab;
+            _animator.BuildRig();
+
+            _animator.Refresh(DeltaSeconds);
+            var expected = PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(lean: 1f), 30f);
+            Assert.That(Quaternion.Angle(_animator.Rig.localRotation, expected), Is.LessThan(0.01f), "the first refresh after placing the rig snaps to the pose");
+            Assert.That(_animator.Rig.localPosition, Is.EqualTo(new Vector3(0f, -1f, 0f)), "the rig still stands on the feet");
+
+            motor.State = FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Left);
+            _animator.Refresh(DeltaSeconds);
+            var wallRun = PlayerMockPose.TraversalLean(FakeCharacterMotorStateSource.Motor(wallRun: WallRunSide.Left), 30f);
+            Assert.That(Quaternion.Angle(_animator.Rig.localRotation, wallRun), Is.GreaterThan(0.01f), "later changes blend in");
+            _animator.Refresh(10f);
+            Assert.That(Quaternion.Angle(_animator.Rig.localRotation, wallRun), Is.LessThan(0.01f));
+
+            _animator.TiltsRigWithMotor = false;
+            _animator.Refresh(10f);
+            Assert.That(Quaternion.Angle(_animator.Rig.localRotation, Quaternion.identity), Is.LessThan(0.01f));
+            Assert.That(_animator.Refresh(DeltaSeconds).WallRun, Is.EqualTo(CharacterPose.WallRunLeft), "the parameters still go to the Animator");
+        }
+
+        [Test]
         public void ChangedMotorSpeedsRebuildThePose()
         {
             _animator.TryBind();

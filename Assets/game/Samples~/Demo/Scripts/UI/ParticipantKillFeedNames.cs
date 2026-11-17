@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Shooter.Core;
 
 namespace Shooter.Runtime
@@ -17,7 +18,30 @@ namespace Shooter.Runtime
         {
             var killer = NameOf(entry.KillerId);
             var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
-            return new KillFeedLine(entry, killer, victim, default);
+            return new KillFeedLine(entry, killer, victim, default, AnyLocal(Participants, entry.AssisterIds));
+        }
+
+        public static bool AnyLocal(IParticipants participants, IReadOnlyList<int> ids)
+        {
+            if (participants == null)
+            {
+                throw new ArgumentNullException(nameof(participants));
+            }
+
+            if (ids == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < ids.Count; i++)
+            {
+                if (participants.TryGet(ids[i], out var participant) && participant.IsLocal)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private KillFeedName NameOf(int id)

@@ -9,62 +9,32 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットと TpsRange シーン (<see cref="TpsRangeSceneBuilder"/>) を生成し直して Play Mode に入り、
-    /// プレイヤーをコードから動かして、このシーンで TPS のアクションが成り立つことを確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>肩越し視点 (<see cref="ViewMode.ThirdPerson"/>) で始まっている。</item>
-    /// <item>低い遮蔽物 (<see cref="TpsRangeSceneBuilder.LowCoverName"/>) の前でカバーに入り (<c>[Cover] enter</c>)、張り付いたまま狙わずに撃つ (<c>[Combat] blind-fire</c>)。</item>
-    /// <item>カバーを出て乗り越えの壁 (<see cref="TpsRangeSceneBuilder.VaultWallName"/>) の手前に立ち、前へ進みながら Jump を押して乗り越え
-    /// (<c>[Player] vault=Vault</c> → <c>[Player] vaulting=true</c> → <c>vaulting=false</c>)、壁の向こう側に降りる。
-    /// ふつうのジャンプで越えたら失敗にする。</item>
-    /// <item>開けた場所 (<see cref="TpsRangeSceneBuilder.OpenAreaName"/>) で右へ回避し (<c>[Player] dodging=true</c> → <c>dodging=false</c>)、
-    /// 転がっている間は撃てず、終わったら撃てる。</item>
-    /// <item>同じ開けた場所で手榴弾を投げ、残りが <see cref="GameRulesAssetBuilder.TpsRangeGrenadeCount"/> から 1 つ減り
-    /// (<c>[Grenade] thrown remaining=</c>)、信管が切れて爆発する (<c>[Grenade] exploded</c>)。</item>
-    /// <item>プレイヤーのすぐ前で小さな爆発を起こして巻き込ませ、それまでの射撃と合わせて画面の揺れのトラウマが
-    /// 発砲・爆発・被弾のそれぞれで足される (<c>[CameraShake] trauma +… source=fire|explosion|damage</c>)。</item>
-    /// <item>足された手順 (<see cref="ITpsActionSmokeStep"/>、<see cref="ExtraSteps"/>) を <see cref="ITpsActionSmokeStep.Order"/> の順に 1 つずつ終える。
-    /// 時間の上限は手順ごとの <see cref="ITpsActionSmokeStep.TimeoutSeconds"/>。</item>
-    /// </list>
-    /// どれかが成り立たないか、Play 中にエラー・例外・Assert のログが出たら終了コード 1、すべて成り立てば 0 で終わる。
-    /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.TpsRangeSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// batchmode には入力が無いので、Cover / Attack / 移動とジャンプ / Dodge / Grenade の代わりに <see cref="CoverController.Tick"/>・
-    /// <see cref="WeaponController.PullTrigger"/>・<see cref="PlayerController.MoveFilter"/> への差し込み・<see cref="PlayerController.TryStartDodge"/>・
-    /// <see cref="GrenadeThrower.TryThrow"/> を使う。
-    /// 乗り越えは接地しているフレームにだけ Jump を押し、その Jump で <see cref="PlayerController.VaultStarted"/> が呼ばれて
-    /// <see cref="PlayerController.IsVaulting"/> が true になることを確かめる。
-    /// </remarks>
+    // batchmode には入力が無いので、Cover / Attack / 移動とジャンプ / Dodge / Grenade の代わりに CoverController.Tick・
+    // WeaponController.PullTrigger・PlayerController.MoveFilter への差し込み・PlayerController.TryStartDodge・GrenadeThrower.TryThrow を使う。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class TpsRangeSmokeRun
     {
         public const string LogTag = "[TpsRangeSmokeRun]";
 
-        /// <summary>Play Mode に入ってから操作し始めるまでに待つ秒数。GameBootstrap の Awake と各コンポーネントの初期化を済ませるため。</summary>
+        // GameBootstrap の Awake と各コンポーネントの初期化を済ませてから操作し始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>操作し始めてから、すべての手順が終わるまでに待つ秒数の上限。乗り越えで歩く分と、手榴弾の信管 (<see cref="GrenadeSpec.DefaultFuseSeconds"/>) を見込む。</summary>
+        // 乗り越えで歩く分と、手榴弾の信管 (GrenadeSpec.DefaultFuseSeconds) を見込む。
         public const float ExerciseTimeoutSeconds = 25f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>カバーに入る前に置く位置の、体の表面から遮蔽物の手前の面までの隙間 (m)。<see cref="MotorSpec.DefaultCoverMaxEnterDistance"/> に収まる。</summary>
+        // MotorSpec.DefaultCoverMaxEnterDistance に収まる隙間にする。
         public const float StandOffFromCover = 0.3f;
 
-        /// <summary>
-        /// 乗り越える前に置く位置の、体の表面から壁の手前の面までの隙間 (m)。体の中心から壁までが <see cref="MotorSpec.DefaultVaultReach"/> に収まり、
-        /// 最初の Jump で乗り越えられる。届かないとふつうのジャンプになり、低い壁はそれでも越えられてしまうので乗り越えを確かめられない。
-        /// </summary>
+        // 体の中心から壁までが MotorSpec.DefaultVaultReach に収まり、最初の Jump で乗り越えられる隙間にする。
+        // 届かないとふつうのジャンプになり、低い壁はそれでも越えられてしまうので乗り越えを確かめられない。
         public const float StandOffFromVaultWall = 0.3f;
 
-        /// <summary>乗り越え始めた向きと、壁を越える向き (+Z) とのなす角の余弦の下限。</summary>
         public const float MinVaultDirectionDot = 0.9f;
 
-        /// <summary>回避で少なくとも動くべき水平の距離の、<see cref="MotorSpec.DodgeDistance"/> に対する割合。床との摩擦や最後のフレームの端数を見込む。</summary>
+        // 床との摩擦や最後のフレームの端数を見込み、回避で動くべき距離は MotorSpec.DodgeDistance の一部で足りるとする。
         public const float MinDodgeDistanceRatio = 0.5f;
 
         public const float CloseExplosionDistance = 2f;
@@ -143,12 +113,6 @@ namespace Shooter.Editor
             Done,
         }
 
-        /// <summary>
-        /// 読み込み済みのアセンブリから見つけた足された手順を、<see cref="ITpsActionSmokeStep.Order"/> の順に新しく作って返す。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">
-        /// 手順の型に public な引数なしのコンストラクターが無い、名前が空、名前が重なる、または <see cref="ITpsActionSmokeStep.TimeoutSeconds"/> が 0 より大きい有限値でない。
-        /// </exception>
         public static IReadOnlyList<ITpsActionSmokeStep> ExtraSteps()
         {
             var steps = ExtensionPoints.CreateAll<ITpsActionSmokeStep>(s => s.Order);
@@ -179,7 +143,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -433,10 +396,6 @@ namespace Shooter.Editor
             Report(problem);
         }
 
-        /// <summary>
-        /// 今の手順を 1 つ進める。次のフレームを待つ手順ではそのまま返す。進められない理由があれば返す (null なら問題なし)。
-        /// 各手順は、前の手順の結果を確かめてから行う。
-        /// </summary>
         private static string Advance()
         {
             var bootstrap = UnityEngine.Object.FindAnyObjectByType<GameBootstrap>();
@@ -574,7 +533,6 @@ namespace Shooter.Editor
                 return problem;
             }
 
-            // 遮蔽物の手前 (-Z 側) の面の真ん中に、+Z (遮蔽物) を向いて立たせる。
             var bounds = wall.bounds;
             var standOff = GameBootstrap.PlayerRadius + StandOffFromCover;
             var position = new Vector3(bounds.center.x, GameBootstrap.PlayerSpawn.y, bounds.min.z - standOff);
@@ -1125,11 +1083,8 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 乗り越えの手順で、入力の代わりに前進を押し続け、乗り越え始めるまでは接地しているフレームにだけ Jump を押す差し込み。
-        /// 乗り越え始めたら Jump をやめ、降りた先でふつうに跳ばないようにする。
-        /// 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
-        /// </summary>
+        // 乗り越え始めたら Jump をやめ、降りた先でふつうに跳ばないようにする。
+        // 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
         private sealed class ForwardJumpFilter : IPlayerMoveFilter
         {
             private readonly PlayerController _mover;
@@ -1146,7 +1101,6 @@ namespace Shooter.Editor
 
             public bool IsPast => _mover.transform.position.z > _pastZ;
 
-            /// <summary>接地しているフレームに Jump を押したか。乗り越えの条件のうち接地はここで満たしているので、押して乗り越えなければふつうのジャンプになっている。</summary>
             public bool JumpedWhileGrounded { get; private set; }
 
             public void Filter(ref Vector2 move, ref bool sprint, ref bool crouch, ref bool jumpPressed)

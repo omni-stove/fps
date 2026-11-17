@@ -203,7 +203,6 @@ namespace Shooter.Core
             return Place(copy, item, weight, 1, ref next) == 1;
         }
 
-        // 持ち武器 held に合わせて武器の山を足し引きする。入り切らなかった武器の Id を返す (その武器は持ち物の外で持つ)
         public IReadOnlyList<string> HoldWeapons(IReadOnlyList<WeaponSpec> held)
         {
             return HoldWeapons(held, null);
@@ -397,7 +396,7 @@ namespace Shooter.Core
             return IsFree(_stacks, x, y, width, height, handle) ? InventoryMoveResult.Moved : InventoryMoveResult.Blocked;
         }
 
-        // 持っている武器は残し、他を最初の持ち物に戻す。武器を先に置くのは、大きい武器の場所を小さいアイテムに取られないようにするため
+        // 武器を先に置くのは、大きい武器の場所を小さいアイテムに取られないようにするため
         public void Fill()
         {
             var weapons = new List<ItemSpec>();
@@ -654,7 +653,7 @@ namespace Shooter.Core
             }
         }
 
-        // 番号を使い切ったら、今使っていない一番小さい番号を使う。山は StackLimit までなので必ず見つかる
+        // 山は StackLimit までなので、使っていない番号は必ず見つかる
         private static int NextHandle(List<InventoryEntry> stacks, ref int nextHandle)
         {
             if (nextHandle <= MaxHandle)

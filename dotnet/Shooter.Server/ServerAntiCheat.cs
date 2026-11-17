@@ -8,20 +8,14 @@ using Shooter.Server.Eos;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// Unity の <c>Shooter.NetEos.EosAntiCheat</c> がホストで行っていた Hello のやりとり・登録・中継・切断を、承認した接続について行う。
-    /// EAC が無効でも Hello は送り合い、片方だけ有効な組み合わせを今と同じ理由で切る。
-    /// </summary>
-    /// <remarks>
-    /// 相手ごとの判断は <see cref="AntiCheatPeers"/>、SDK の呼び出しは <see cref="IAntiCheatServerBackend"/> に任せ、
-    /// ここはその間をつなぐ。時刻を tick の秒数の和で数えるのは、テストから時間を進められるようにするため。
-    /// </remarks>
+    // Unity の Shooter.NetEos.EosAntiCheat と同じく EAC が無効でも Hello は送り合い、片方だけ有効な組み合わせを同じ理由で切る。
+    // 時刻を tick の秒数の和で数えるのは、テストから時間を進められるようにするため。
     internal sealed class ServerAntiCheat : IServerModule, IDisposable
     {
-        /// <summary>Unity の <c>EosAntiCheat.HelloIntervalSeconds</c> とそろえる。</summary>
+        // Unity の EosAntiCheat.HelloIntervalSeconds とそろえる。
         public const double HelloIntervalSeconds = 1;
 
-        /// <summary>Unity の <c>EosAntiCheat.HelloTimeoutSeconds</c> とそろえる。</summary>
+        // Unity の EosAntiCheat.HelloTimeoutSeconds とそろえる。
         public const double HelloTimeoutSeconds = 15;
 
         private const string _tag = AntiCheatSettings.LogTag + " ";
@@ -39,8 +33,6 @@ namespace Shooter.Server
         private IAntiCheatServerBackend _backend;
         private double _now;
 
-        /// <param name="settings">EAC を使うか。</param>
-        /// <param name="createBackend">有効なときに SDK の側を作る。無効なら null でよい。</param>
         public ServerAntiCheat(AntiCheatSettings settings, Func<TextWriter, IAntiCheatServerBackend> createBackend)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));

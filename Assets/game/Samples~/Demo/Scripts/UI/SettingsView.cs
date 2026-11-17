@@ -41,6 +41,16 @@ namespace Shooter.Runtime
 
         public const string AimAssistButtonName = "settings-aim-assist";
 
+        public const string InvertLookYButtonName = "settings-invert-look-y";
+
+        public const string RumbleButtonName = "settings-rumble";
+
+        public const string VoiceMicrophoneButtonName = "settings-voice-microphone";
+
+        public const string VoiceVolumeSliderName = "settings-voice-volume";
+
+        public const string VoiceVolumeValueName = VoiceVolumeSliderName + "-value";
+
         public static string OnText => Localizer.Get("settings.on");
 
         public static string OffText => Localizer.Get("settings.off");
@@ -62,6 +72,9 @@ namespace Shooter.Runtime
 
         // 視点と音の見出しではなく、血の表示と同じ演出の見出しに並べる数値。
         private static readonly ControlValue[] _effectValues = { ControlValue.CameraShakeIntensity, ControlValue.ViewmodelMotionIntensity };
+
+        // 視点と音の見出しではなく、振動の On/Off と同じゲームパッドの見出しに並べる数値。
+        private static readonly ControlValue[] _gamepadValues = { ControlValue.StickDeadzone, ControlValue.RumbleStrength };
 
         private static bool _warnedMissingStyle;
 
@@ -92,6 +105,14 @@ namespace Shooter.Runtime
         private Button _subtitlesButton;
         private Button _bloodButton;
         private Button _aimAssistButton;
+        private Button _invertLookYButton;
+        private Button _rumbleButton;
+        private Button _voiceMicrophoneButton;
+        private SliderInt _voiceVolumeSlider;
+        private Label _voiceVolumeLabel;
+        private readonly VoiceSettingsStore _voiceStore;
+        private VoiceSettings _voiceEditing;
+        private VoiceSettings _voiceSaved;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -101,13 +122,15 @@ namespace Shooter.Runtime
             InputBindingOverridesStore bindingStore = null,
             InputActionAsset actions = null,
             ISettingsSink sink = null,
-            LanguagePreferenceStore languageStore = null)
+            LanguagePreferenceStore languageStore = null,
+            VoiceSettingsStore voiceStore = null)
         {
             _store = store ?? new ControlSettingsStore();
             _bindingStore = bindingStore ?? new InputBindingOverridesStore();
             _actionAsset = actions;
             _sink = sink ?? AppliedControlSettings.Sink;
             _languageStore = languageStore ?? new LanguagePreferenceStore();
+            _voiceStore = voiceStore ?? new VoiceSettingsStore();
         }
 
         public event Action BackRequested;
@@ -115,6 +138,10 @@ namespace Shooter.Runtime
         public ControlSettingsStore Store => _store;
 
         public LanguagePreferenceStore LanguageStore => _languageStore;
+
+        public VoiceSettingsStore VoiceStore => _voiceStore;
+
+        public VoiceSettings Voice => _voiceEditing;
 
         public bool IsOpen => _root != null;
 
@@ -130,7 +157,8 @@ namespace Shooter.Runtime
 
         public RebindResult PendingConflict => _pendingConflict;
 
-        public bool HasUnsavedChanges => _editing != null && (!_editing.Equals(_saved) || _bindingsDirty);
+        public bool HasUnsavedChanges =>
+            _editing != null && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved));
 
         public static string RebindButtonName(RebindSlot slot)
         {
@@ -176,8 +204,20 @@ namespace Shooter.Runtime
 
         public static string FormatValue(ControlValue value, int amount)
         {
-            var number = amount.ToString(CultureInfo.InvariantCulture);
-            return value == ControlValue.FieldOfView ? number + "°" : number + "%";
+            switch (value)
+            {
+                case ControlValue.FieldOfView:
+                    return amount.ToString(CultureInfo.InvariantCulture) + "°";
+                case ControlValue.StickDeadzone:
+                    return (amount / 10m).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+                default:
+                    return amount.ToString(CultureInfo.InvariantCulture) + "%";
+            }
+        }
+
+        public static string FormatVoiceVolume(int percent)
+        {
+            return percent.ToString(CultureInfo.InvariantCulture) + "%";
         }
 
         public static string FormatMode(HoldMode mode)
@@ -259,6 +299,8 @@ namespace Shooter.Runtime
 
             _editing = _sink.Current;
             _saved = _editing;
+            _voiceEditing = _voiceStore.Load();
+            _voiceSaved = _voiceEditing;
             _bindings = CreateBindings();
             _bindingsDirty = false;
             _pendingConflict = null;
@@ -282,6 +324,8 @@ namespace Shooter.Runtime
             DetachElements();
             _editing = null;
             _saved = null;
+            _voiceEditing = null;
+            _voiceSaved = null;
             _bindings?.Dispose();
             _bindings = null;
             _bindingsDirty = false;
@@ -310,6 +354,11 @@ namespace Shooter.Runtime
             _subtitlesButton = null;
             _bloodButton = null;
             _aimAssistButton = null;
+            _invertLookYButton = null;
+            _rumbleButton = null;
+            _voiceMicrophoneButton = null;
+            _voiceVolumeSlider = null;
+            _voiceVolumeLabel = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -363,6 +412,22 @@ namespace Shooter.Runtime
                 catch (Exception e)
                 {
                     Debug.LogError($"{LogTag} could not save the settings to '{_store.Key}': {e.Message}");
+                    Debug.LogException(e);
+                    failed = true;
+                }
+            }
+
+            if (!_voiceEditing.Equals(_voiceSaved))
+            {
+                try
+                {
+                    _voiceStore.Save(_voiceEditing);
+                    _voiceSaved = _voiceEditing;
+                    Debug.Log($"{LogTag} saved the voice settings {_voiceEditing.ToJson()}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"{LogTag} could not save the voice settings to '{_voiceStore.Key}': {e.Message}");
                     Debug.LogException(e);
                     failed = true;
                 }
@@ -423,6 +488,30 @@ namespace Shooter.Runtime
             Edit(_editing.WithAimAssist(enabled));
         }
 
+        public void SetInvertLookY(bool invert)
+        {
+            EnsureOpen();
+            Edit(_editing.WithInvertLookY(invert));
+        }
+
+        public void SetRumbleEnabled(bool enabled)
+        {
+            EnsureOpen();
+            Edit(_editing.WithRumbleEnabled(enabled));
+        }
+
+        public void SetMicrophoneEnabled(bool enabled)
+        {
+            EnsureOpen();
+            EditVoice(_voiceEditing.WithMicrophoneEnabled(enabled));
+        }
+
+        public void SetVoiceVolume(int percent)
+        {
+            EnsureOpen();
+            EditVoice(new VoiceSettings(_voiceEditing.MicrophoneEnabled, percent));
+        }
+
         public void SetLanguage(GameLanguage language)
         {
             EnsureOpen();
@@ -456,6 +545,7 @@ namespace Shooter.Runtime
         public void ResetToDefaults()
         {
             EnsureOpen();
+            EditVoice(VoiceSettings.Default);
             Edit(ControlSettings.Default);
         }
 
@@ -622,6 +712,17 @@ namespace Shooter.Runtime
             Refresh();
         }
 
+        private void EditVoice(VoiceSettings settings)
+        {
+            if (settings.Equals(_voiceEditing))
+            {
+                return;
+            }
+
+            _voiceEditing = settings;
+            RefreshVoice();
+        }
+
         private VisualElement Build()
         {
             var root = new VisualElement { name = RootName };
@@ -642,7 +743,7 @@ namespace Shooter.Runtime
             content.Add(NewLabel(Localizer.Get("settings.section.viewAndSound"), "settings__section"));
             foreach (var value in ControlSettings.Values)
             {
-                if (Array.IndexOf(_effectValues, value) < 0)
+                if (Array.IndexOf(_effectValues, value) < 0 && Array.IndexOf(_gamepadValues, value) < 0)
                 {
                     content.Add(BuildSliderRow(value));
                 }
@@ -651,8 +752,14 @@ namespace Shooter.Runtime
                 if (value == ControlValue.AdsSensitivity)
                 {
                     content.Add(BuildAimAssistRow());
+                    content.Add(BuildInvertLookYRow());
                 }
             }
+
+            content.Add(NewLabel(Localizer.Get("settings.section.gamepad"), "settings__section"));
+            content.Add(BuildSliderRow(ControlValue.StickDeadzone));
+            content.Add(BuildRumbleRow());
+            content.Add(BuildSliderRow(ControlValue.RumbleStrength));
 
             content.Add(NewLabel(Localizer.Get("settings.section.effects"), "settings__section"));
             foreach (var value in _effectValues)
@@ -666,6 +773,10 @@ namespace Shooter.Runtime
             content.Add(BuildPaletteRow());
             content.Add(BuildPaletteSampleRow());
             content.Add(BuildSubtitlesRow());
+
+            content.Add(NewLabel(Localizer.Get(VoiceText.SettingsSectionKey), "settings__section"));
+            content.Add(BuildVoiceMicrophoneRow());
+            content.Add(BuildVoiceVolumeRow());
 
             content.Add(NewLabel(Localizer.Get("settings.section.language"), "settings__section"));
             content.Add(BuildLanguageRow());
@@ -879,6 +990,77 @@ namespace Shooter.Runtime
             return row;
         }
 
+        private VisualElement BuildInvertLookYRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.invertLookY"), "settings__caption"));
+            _invertLookYButton = NewButton(InvertLookYButtonName, string.Empty, () => SetInvertLookY(!_editing.InvertLookY));
+            _invertLookYButton.AddToClassList("settings__mode");
+            row.Add(_invertLookYButton);
+            return row;
+        }
+
+        private VisualElement BuildRumbleRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.rumble"), "settings__caption"));
+            _rumbleButton = NewButton(RumbleButtonName, string.Empty, () => SetRumbleEnabled(!_editing.RumbleEnabled));
+            _rumbleButton.AddToClassList("settings__mode");
+            row.Add(_rumbleButton);
+            return row;
+        }
+
+        private VisualElement BuildVoiceMicrophoneRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get(VoiceText.MicrophoneKey), "settings__caption"));
+            _voiceMicrophoneButton = NewButton(
+                VoiceMicrophoneButtonName, string.Empty, () => SetMicrophoneEnabled(!_voiceEditing.MicrophoneEnabled));
+            _voiceMicrophoneButton.AddToClassList("settings__mode");
+            row.Add(_voiceMicrophoneButton);
+            return row;
+        }
+
+        private VisualElement BuildVoiceVolumeRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get(VoiceText.VolumeKey), "settings__caption"));
+
+            _voiceVolumeSlider = new SliderInt(0, VoiceSettings.MaxVolumePercent) { name = VoiceVolumeSliderName };
+            _voiceVolumeSlider.AddToClassList("settings__slider");
+            _voiceVolumeSlider.RegisterValueChangedCallback(
+                evt => SetVoiceVolume(Math.Max(0, Math.Min(VoiceSettings.MaxVolumePercent, evt.newValue))));
+            row.Add(_voiceVolumeSlider);
+
+            _voiceVolumeLabel = NewLabel(string.Empty, "settings__value");
+            _voiceVolumeLabel.name = VoiceVolumeValueName;
+            row.Add(_voiceVolumeLabel);
+            return row;
+        }
+
+        private void RefreshVoice()
+        {
+            if (_voiceEditing == null)
+            {
+                return;
+            }
+
+            if (_voiceMicrophoneButton != null)
+            {
+                _voiceMicrophoneButton.text = FormatOnOff(_voiceEditing.MicrophoneEnabled);
+            }
+
+            if (_voiceVolumeSlider != null)
+            {
+                _voiceVolumeSlider.SetValueWithoutNotify(_voiceEditing.VolumePercent);
+            }
+
+            if (_voiceVolumeLabel != null)
+            {
+                _voiceVolumeLabel.text = FormatVoiceVolume(_voiceEditing.VolumePercent);
+            }
+        }
+
         private VisualElement BuildLanguageRow()
         {
             var row = NewRow();
@@ -953,6 +1135,24 @@ namespace Shooter.Runtime
             {
                 _aimAssistButton.text = FormatOnOff(_editing.AimAssist);
             }
+
+            if (_invertLookYButton != null)
+            {
+                _invertLookYButton.text = FormatOnOff(_editing.InvertLookY);
+            }
+
+            if (_rumbleButton != null)
+            {
+                _rumbleButton.text = FormatOnOff(_editing.RumbleEnabled);
+            }
+
+            // 振動を切っている間は強さが効かないので、動かしても何も変わらないスライダーを触らせない。
+            if (_sliders.TryGetValue(ControlValue.RumbleStrength, out var rumbleStrength))
+            {
+                rumbleStrength.SetEnabled(_editing.RumbleEnabled);
+            }
+
+            RefreshVoice();
 
             if (_languageButton != null)
             {
@@ -1156,6 +1356,10 @@ namespace Shooter.Runtime
                     return Localizer.Get("settings.value.cameraShake");
                 case ControlValue.ViewmodelMotionIntensity:
                     return Localizer.Get("settings.value.viewmodelMotion");
+                case ControlValue.StickDeadzone:
+                    return Localizer.Get("settings.value.stickDeadzone");
+                case ControlValue.RumbleStrength:
+                    return Localizer.Get("settings.value.rumbleStrength");
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }
@@ -1199,6 +1403,10 @@ namespace Shooter.Runtime
                     return "camera-shake";
                 case ControlValue.ViewmodelMotionIntensity:
                     return "viewmodel-motion";
+                case ControlValue.StickDeadzone:
+                    return "stick-deadzone";
+                case ControlValue.RumbleStrength:
+                    return "rumble-strength";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

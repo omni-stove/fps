@@ -40,6 +40,8 @@ namespace Shooter.Runtime
 
         public const string DeathsCaption = "D";
 
+        public static string AssistsCaption => Localizer.Resolve(ScoreboardText.AssistsCaption);
+
         public static string ConnectionCaption => Localizer.Resolve(ScoreboardText.ConnectionCaption);
 
         private static readonly IReadOnlyList<ScoreboardSection> _empty =
@@ -247,6 +249,7 @@ namespace Shooter.Runtime
             var caption = Row(CaptionRowClass);
             caption.Add(Cell(string.Empty, NameCellClass));
             caption.Add(Cell(KillsCaption, CountCellClass));
+            caption.Add(Cell(AssistsCaption, CountCellClass));
             caption.Add(Cell(DeathsCaption, CountCellClass));
             caption.Add(Cell(ConnectionCaption, ConnectionCellClass));
             element.Add(caption);
@@ -266,6 +269,7 @@ namespace Shooter.Runtime
 
                 header.Add(teamName);
                 header.Add(Cell(ScoreboardText.Count(section.Kills), CountCellClass));
+                header.Add(Cell(ScoreboardText.Count(section.Assists), CountCellClass));
                 header.Add(Cell(ScoreboardText.Count(section.Deaths), CountCellClass));
                 header.Add(Cell(string.Empty, ConnectionCellClass));
                 box.Add(header);
@@ -285,6 +289,7 @@ namespace Shooter.Runtime
 
                     row.Add(Cell(NameOrEmpty(entry.Name), NameCellClass));
                     row.Add(Cell(ScoreboardText.Count(entry.Kills), CountCellClass));
+                    row.Add(Cell(ScoreboardText.Count(entry.Assists), CountCellClass));
                     row.Add(Cell(ScoreboardText.Count(entry.Deaths), CountCellClass));
                     row.Add(Cell(ConnectionTextOrEmpty(entry.Connection), ConnectionCellClass));
                     box.Add(row);

@@ -72,7 +72,6 @@ namespace Shooter.Core
                 return AttachmentRejection.NoRoom;
             }
 
-            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき
             if (!setAttachments(next))
             {
                 if (replaced != null)

@@ -11,25 +11,17 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// シーン生成スクリプト (<c>EnemyTestSceneBuilder</c>、<c>MissionTestSceneBuilder</c>、
-    /// <c>CampaignSceneBuilder</c>) に共通の処理。パスの検査、フォルダの作成、
-    /// 地形と NavMesh、目標の区域、敵の生成をまとめる。どれも呼び出し元の出力を変えないよう、元の実装をそのまま移した。
-    /// </summary>
     public static class SceneBuildHelpers
     {
-        /// <summary>NavMeshAgent の既定のエージェント (Humanoid)。</summary>
         public const int HumanoidAgentTypeId = 0;
 
         public const float EnemyAcceleration = 8f;
 
-        /// <summary>Assets/ 以下の .asset であることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateAssetPath(string path)
         {
             return ValidateAssetPath(path, ".asset");
         }
 
-        /// <summary>Assets/ 以下の extension (例: ".mat") のファイルであることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateAssetPath(string path, string extension)
         {
             if (string.IsNullOrWhiteSpace(path))
@@ -59,7 +51,6 @@ namespace Shooter.Editor
             return normalized;
         }
 
-        /// <summary>path のフォルダを (親も含めて) 作る。既にあれば何もしない。</summary>
         public static void EnsureFolder(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -82,7 +73,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>scene が読み込み済みの有効なシーンであることを確かめる。</summary>
         public static void RequireLoaded(Scene scene)
         {
             if (!scene.IsValid() || !scene.isLoaded)
@@ -91,7 +81,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>scene が読み込み済みで、まだ何も置かれていないことを確かめる。what は例外の文に出す生成物の名前。</summary>
         public static void RequireEmpty(Scene scene, string what)
         {
             RequireLoaded(scene);
@@ -103,12 +92,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// プレイヤーに配線する武器の定義の並び weapons が 1 本以上で null を含まないことを確かめる。
-        /// 値の検査 (<see cref="WeaponDefinition.ToSpec"/>) は読み込み時 (<c>WeaponAssetBuilder.LoadPlayerLoadout</c>) に済んでいる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">weapons が null。</exception>
-        /// <exception cref="ArgumentException">weapons が空か null を含む。</exception>
+        // 値の検査 (WeaponDefinition.ToSpec) は読み込み時 (WeaponAssetBuilder.LoadPlayerLoadout) に済んでいるので、ここでは並びだけを見る。
         public static void RequirePlayerWeapons(IReadOnlyList<WeaponDefinition> weapons, string parameterName)
         {
             if (weapons == null)
@@ -130,21 +114,14 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// path の MissionDefinition を configure で上書きする。無ければ作る。既存のアセットは GUID を保つので、
-        /// それを参照しているシーンは壊れない。configure は不正な定義なら例外を投げ、そのときは保存しない。
-        /// </summary>
+        // 既存のアセットは GUID を保つので、それを参照しているシーンは壊れない。
         public static MissionDefinition CreateOrUpdateMissionDefinition(string path, Action<MissionDefinition> configure)
         {
             return CreateOrUpdateAsset(path, configure);
         }
 
-        /// <summary>
-        /// path の ScriptableObject (型 T) を configure で上書きする。無ければ作る。既存のアセットは GUID を保つので、
-        /// それを参照しているシーンやアセットは壊れない。configure は不正な中身なら例外を投げ、そのときは保存しない
-        /// (新しく作ったインスタンスは捨てる)。configure は値を検査してから書き込むと、既存のアセットのメモリ上の中身も汚さない。
-        /// path に別の型のアセットがあれば例外を投げる。
-        /// </summary>
+        // 既存のアセットは GUID を保つので、それを参照しているシーンやアセットは壊れない。
+        // configure が例外を投げても保存はしないが、既存のアセットのメモリ上の中身は書き換わるので、configure は値を検査してから書き込む。
         public static T CreateOrUpdateAsset<T>(string path, Action<T> configure)
             where T : ScriptableObject
         {
@@ -198,10 +175,6 @@ namespace Shooter.Editor
             return asset;
         }
 
-        /// <summary>
-        /// owner に Humanoid 用の NavMeshSurface を付けて返す。surface は collectObjects に従って集めた地形の
-        /// 物理コライダーから焼く。焼くのは <see cref="BakeNavMesh(NavMeshSurface)"/>。
-        /// </summary>
         public static NavMeshSurface AddNavMeshSurface(GameObject owner, CollectObjects collectObjects)
         {
             if (owner == null)
@@ -216,7 +189,6 @@ namespace Shooter.Editor
             return surface;
         }
 
-        /// <summary>動かない Plane の床を置く。parent が null ならシーンの直下に置く。</summary>
         public static GameObject CreateStaticPlane(Scene scene, Transform parent, string name, Vector3 position, Vector3 scale)
         {
             var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -228,7 +200,6 @@ namespace Shooter.Editor
             return plane;
         }
 
-        /// <summary>動かない直方体 (壁・遮蔽物) を置く。center は中心、size は大きさ。parent が null ならシーンの直下に置く。</summary>
         public static GameObject CreateStaticBox(Scene scene, Transform parent, string name, Vector3 center, Vector3 size)
         {
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -240,11 +211,6 @@ namespace Shooter.Editor
             return box;
         }
 
-        /// <summary>
-        /// target に材質 materialId の <see cref="SurfaceMaterial"/> を付けて (既にあればその Id を書き換えて) 返す。
-        /// 子のコライダーにも効く (<see cref="SurfaceMaterial.IdOf"/>)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">target が null。</exception>
         public static SurfaceMaterial SetSurfaceMaterial(GameObject target, string materialId)
         {
             if (target == null)
@@ -261,16 +227,11 @@ namespace Shooter.Editor
             return surface;
         }
 
-        /// <summary>名前ごとの材質の表 ids から name の材質の Id を引く。載っていない・ids が null なら <see cref="SurfaceMaterial.DefaultId"/>。</summary>
         public static string SurfaceIdOf(IReadOnlyDictionary<string, string> ids, string name)
         {
             return ids != null && name != null && ids.TryGetValue(name, out var id) ? SurfaceMaterial.Normalize(id) : SurfaceMaterial.DefaultId;
         }
 
-        /// <summary>
-        /// surface の NavMesh を焼いて (アセットには保存せず) 返す。焼いた NavMesh はすぐ NavMesh のクエリに使える。
-        /// 保存は <see cref="SaveNavMeshData"/>。
-        /// </summary>
         public static NavMeshData BakeNavMesh(NavMeshSurface surface)
         {
             if (surface == null)
@@ -288,7 +249,6 @@ namespace Shooter.Editor
             return data;
         }
 
-        /// <summary>surface の焼いた NavMeshData を assetPath に保存する (既にあれば置き換える)。</summary>
         public static NavMeshData SaveNavMeshData(NavMeshSurface surface, string assetPath)
         {
             if (surface == null)
@@ -314,10 +274,6 @@ namespace Shooter.Editor
             return data;
         }
 
-        /// <summary>
-        /// 焼いた NavMesh に points (足元) がすべて乗っていることを確かめる。乗っていない点があれば、
-        /// what (例外の文に出す点の種類) を添えて例外を投げる。
-        /// </summary>
         public static void RequireOnNavMesh(IEnumerable<Vector3> points, float radius, string what)
         {
             if (points == null)
@@ -335,10 +291,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 焼いた NavMesh の上で from から points (足元) のそれぞれへ歩いて行けることを確かめる。
-        /// 行けない点があれば、what を添えて例外を投げる。
-        /// </summary>
         public static void RequireReachable(Vector3 from, IEnumerable<Vector3> points, float radius, string what)
         {
             if (points == null)
@@ -364,11 +316,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 床に置く薄い板の目印。BoxCollider はトリガーにし、板の上に triggerHeight の高さまで伸ばす。
-        /// CharacterController が確実にトリガーを通知するよう、動かない kinematic の Rigidbody を付ける。
-        /// position は板の底面の中心 (床の高さ)。シーンにはまだ移さない。
-        /// </summary>
+        // CharacterController が確実にトリガーを通知するよう、動かない kinematic の Rigidbody を付ける。
         public static GameObject CreateAreaPad(string name, Vector3 position, Vector3 padScale, float triggerHeight)
         {
             if (!(padScale.y > 0f) || !(triggerHeight >= padScale.y))
@@ -394,12 +342,6 @@ namespace Shooter.Editor
             return pad;
         }
 
-        /// <summary>
-        /// カプセルの敵 (<see cref="EnemyAgent"/>、発見ゲージの <see cref="EnemyStealth"/>、NavMeshAgent、Damageable、胴の Hitbox、演出の
-        /// <see cref="CharacterComponents.Attach"/>) を feet (足元) に置く。
-        /// patrolRoute が空なら Idle のまま、その場で待つ。parent が null ならシーンの直下に置く。
-        /// 敵は weapon の武器で撃つ (<see cref="EnemyAgent.WeaponDefinition"/> に配線する)。
-        /// </summary>
         public static EnemyAgent CreateEnemy(
             Scene scene,
             Transform parent,
@@ -459,11 +401,6 @@ namespace Shooter.Editor
             return agent;
         }
 
-        /// <summary>
-        /// rootName の GameObject に <see cref="CoverPointRegistry"/> を付け、その子に placements の遮蔽点
-        /// (<see cref="Shooter.Runtime.CoverPoint"/>) を並べて registry に配線する。parent が null ならシーンの直下に置く。
-        /// 名前が重なっていれば何も置かずに例外を投げる。敵には <see cref="EnemyAgent.CoverRegistry"/> で渡す。
-        /// </summary>
         public static CoverPointRegistry CreateCoverPoints(
             Scene scene, Transform parent, string rootName, IReadOnlyList<CoverPointPlacement> placements)
         {
@@ -502,7 +439,6 @@ namespace Shooter.Editor
             return registry;
         }
 
-        /// <summary>遮蔽点の足元と覗く位置をすべて並べる (NavMesh に乗っているか・行けるかを確かめるため)。</summary>
         public static List<Vector3> CoverStandPoints(IEnumerable<CoverPointPlacement> placements)
         {
             if (placements == null)
@@ -520,7 +456,6 @@ namespace Shooter.Editor
             return points;
         }
 
-        /// <summary>from から to を水平に向く回転。同じ位置なら +Z を向く。</summary>
         public static Quaternion FacingTowards(Vector3 from, Vector3 to)
         {
             var direction = to - from;
@@ -541,7 +476,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>敵の体の大きさ・速さ・体力。</summary>
     public readonly struct EnemyBody
     {
         public float Height { get; }
@@ -563,26 +497,20 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>遮蔽点 1 つの置き方 (<see cref="SceneBuildHelpers.CreateCoverPoints"/>)。座標はすべてワールド。</summary>
     public readonly struct CoverPointPlacement
     {
         public string Name { get; }
 
-        /// <summary>隠れるときに立つ足元。</summary>
         public Vector3 Position { get; }
 
-        /// <summary>この点から壁へ向かう向き。水平の成分が要る。</summary>
         public Vector3 Facing { get; }
 
         public CoverHeight Height { get; }
 
-        /// <summary>覗くときに立つ位置の、<see cref="Position"/> からのずれ。0 ならその場で立ち上がって覗く。</summary>
         public Vector3 PeekOffset { get; }
 
         public Vector3 PeekPosition => Position + PeekOffset;
 
-        /// <exception cref="ArgumentException">name が空のとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">facing に水平の成分が無いとき。</exception>
         public CoverPointPlacement(string name, Vector3 position, Vector3 facing, CoverHeight height, Vector3 peekOffset)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -602,13 +530,11 @@ namespace Shooter.Editor
             PeekOffset = peekOffset;
         }
 
-        /// <summary>低い壁の点。その場で立ち上がって覗く。</summary>
         public static CoverPointPlacement Low(string name, Vector3 position, Vector3 facing)
         {
             return new CoverPointPlacement(name, position, facing, CoverHeight.Low, Vector3.zero);
         }
 
-        /// <summary>高い壁の点。覗くときは peekOffset だけ (壁の端の外へ) 出る。</summary>
         public static CoverPointPlacement High(string name, Vector3 position, Vector3 facing, Vector3 peekOffset)
         {
             return new CoverPointPlacement(name, position, facing, CoverHeight.High, peekOffset);

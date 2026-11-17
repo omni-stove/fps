@@ -3,20 +3,11 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ルールのデバッグパネルで編集中の値。<see cref="GameRulesDebugField"/> の各項目を選択肢の番号 (<see cref="Options"/> の添字) で持ち、
-    /// <see cref="Build"/> で元のルール (<see cref="Base"/>) にそれらを当てた <see cref="GameRules"/> を作る。パネルに出さない項目は元のまま残す。
-    /// カバーとブラインドファイアは <see cref="ActionRules"/> の制約に合わせて連動させる
-    /// (ブラインドファイアを入れるとカバーも入り、カバーを切るとブラインドファイアも切れる)。
-    /// </summary>
     public sealed class GameRulesDebugDraft
     {
         public const string LogTag = "[RulesDebug]";
 
-        /// <summary>
-        /// グレネードを入れたのに元のルールの <see cref="ActionRules.GrenadeCount"/> が 0 のときに持たせる数。
-        /// 0 のままでは入れても投げられず、切り替えた効き目を確かめられないため。
-        /// </summary>
+        // グレネードを入れたのに元のルールの GrenadeCount が 0 だと、入れても投げられず切り替えた効き目を確かめられないので、この数を持たせる。
         public const int DefaultGrenadeCount = 3;
 
         private const string _grenadeCountName = "GrenadeCount";
@@ -29,7 +20,6 @@ namespace Shooter.Core
 
         private readonly int[] _values = new int[_allFields.Length];
 
-        /// <param name="baseRules">初期値と、パネルに出さない項目の値を取るルール。</param>
         public GameRulesDebugDraft(GameRules baseRules)
         {
             Base = baseRules ?? throw new ArgumentNullException(nameof(baseRules));
@@ -39,33 +29,22 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>パネルに出す項目。<see cref="GameRulesDebugField"/> の定義順。</summary>
         public static IReadOnlyList<GameRulesDebugField> Fields => _readOnlyFields;
 
-        /// <summary>初期値と、パネルに出さない項目の値を取るルール。</summary>
         public GameRules Base { get; }
 
-        /// <summary>
-        /// field の選択肢の名前。添字が <see cref="Get"/> と <see cref="Set"/> の値になる。
-        /// 真偽値は { "Off", "On" }、列挙は定義順の名前。
-        /// </summary>
         public static IReadOnlyList<string> Options(GameRulesDebugField field)
         {
             var type = EnumTypeOf(field);
             return type == null ? _boolOptions : Enum.GetNames(type);
         }
 
-        /// <summary>
-        /// field をオンオフの 1 つのトグルで出せるか。選択肢が { "Off", 何か } の 2 つのときだけ true で、
-        /// トグルの入りは添字 1 にあたる。それ以外はドロップダウンで出す。
-        /// </summary>
         public static bool IsToggle(GameRulesDebugField field)
         {
             var options = Options(field);
             return options.Count == 2 && options[0] == "Off";
         }
 
-        /// <summary>rules の field の値を選択肢の添字で返す。</summary>
         public static int Read(GameRules rules, GameRulesDebugField field)
         {
             if (rules == null)
@@ -111,16 +90,12 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>編集中の field の値 (選択肢の添字)。</summary>
         public int Get(GameRulesDebugField field)
         {
             return _values[IndexOf(field)];
         }
 
-        /// <summary>
-        /// field を選択肢の添字 option にする。範囲外なら <see cref="ArgumentOutOfRangeException"/> で、値は変えない。
-        /// <see cref="GameRulesDebugField.BlindFire"/> を入れるとカバーも入れ、<see cref="GameRulesDebugField.Cover"/> を切るとブラインドファイアも切る。
-        /// </summary>
+        // ブラインドファイアはカバーが On のときしか入れられない (ActionRules の制約) ので、カバーとブラインドファイアを連動させる。
         public void Set(GameRulesDebugField field, int option)
         {
             var index = IndexOf(field);
@@ -140,7 +115,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary><see cref="Base"/> に編集中の値を当てたルール。パネルに出さない項目は <see cref="Base"/> のまま。</summary>
         public GameRules Build()
         {
             var cover = (Cover)Get(GameRulesDebugField.Cover);
@@ -189,10 +163,6 @@ namespace Shooter.Core
                 .WithActions(actions);
         }
 
-        /// <summary>
-        /// before から after で変わった項目を「名前: 前 -> 後」で、<see cref="Fields"/> の順に返す。
-        /// グレネードを入れたときに <see cref="DefaultGrenadeCount"/> を持たせた分も GrenadeCount として最後に入る。
-        /// </summary>
         public static IReadOnlyList<string> Changes(GameRules before, GameRules after)
         {
             if (before == null)
@@ -225,7 +195,6 @@ namespace Shooter.Core
             return changes;
         }
 
-        /// <summary>適用したときのログ。before は今のシーンが使っているルール、after は上書きに使うルール。</summary>
         public static string FormatApplyLog(GameRules before, GameRules after)
         {
             var changes = Changes(before, after);
@@ -233,7 +202,6 @@ namespace Shooter.Core
             return $"{LogTag} apply: {body}";
         }
 
-        /// <summary>リセットしたときのログ。</summary>
         public static string FormatResetLog()
         {
             return $"{LogTag} reset: GameRulesOverride cleared, reloading with the scene rules";
@@ -250,7 +218,6 @@ namespace Shooter.Core
             return index;
         }
 
-        /// <summary>field の値の列挙型。真偽値の項目なら null。</summary>
         private static Type EnumTypeOf(GameRulesDebugField field)
         {
             switch (field)

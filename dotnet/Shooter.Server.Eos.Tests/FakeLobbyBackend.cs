@@ -4,7 +4,6 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos.Tests
 {
-    /// <summary>要求を記録し、テストから完了させる <see cref="IServerLobbyBackend"/>。</summary>
     internal sealed class FakeLobbyBackend : IServerLobbyBackend
     {
         public event Action<string, string> Removed;
@@ -20,6 +19,8 @@ namespace Shooter.Server.Eos.Tests
         public string CreatedBucket { get; private set; }
 
         public int CreatedMaxMembers { get; private set; }
+
+        public bool CreatedVoiceRoom { get; private set; }
 
         public IReadOnlyList<LobbyAttribute> CreatedAttributes { get; private set; }
 
@@ -39,7 +40,7 @@ namespace Shooter.Server.Eos.Tests
 
         public Action<string> PendingDestroy { get; private set; }
 
-        /// <summary>Tick のたびに呼ぶ。SDK が Tick の中で完了を知らせるのをまねる。</summary>
+        // SDK が Tick の中で完了を知らせるのをまねるため、Tick のたびに呼ぶ。
         public Action OnTick { get; set; }
 
         public void Tick()
@@ -54,11 +55,12 @@ namespace Shooter.Server.Eos.Tests
             PendingLogin = done;
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        public void CreateLobby(string bucketId, int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             Creates++;
             CreatedBucket = bucketId;
             CreatedMaxMembers = maxMembers;
+            CreatedVoiceRoom = voiceRoom;
             CreatedAttributes = attributes;
             PendingCreate = done;
         }

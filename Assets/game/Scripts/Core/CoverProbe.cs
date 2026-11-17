@@ -3,22 +3,12 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 壁に張り付くカバーの判定。物理で調べた壁の様子 (<see cref="CoverWallSample"/>) から、
-    /// 入れるか・低い壁か高い壁か・左右の端にいるか・覗くときの横の移動量を決める。座標は Y が上、左右は壁に向いたときの左右。
-    /// </summary>
     public static class CoverProbe
     {
-        /// <summary>端の検査で、壁沿いに左右へずらす距離 (m)。</summary>
         public const float EdgeProbeDistance = 0.3f;
 
-        /// <summary>張り付いたときの、体の表面と壁の隙間 (m)。</summary>
         public const float WallGap = 0.05f;
 
-        /// <summary>
-        /// 法線の上下の成分 (長さ 1 にしたとき) の絶対値の上限。これを超える面は床・天井・急な斜面で、壁として扱わない。
-        /// 0.3 は鉛直から約 17° までの傾きを壁と見なす。
-        /// </summary>
         public const float MaxWallNormalUp = 0.3f;
 
         // 角度と距離の境界ちょうどを float の丸めで落とさないための余裕。
@@ -26,12 +16,6 @@ namespace Shooter.Core
 
         private const float _minLength = 1e-6f;
 
-        /// <summary>
-        /// sample を判定する。facing は向いている方向 (上下の成分は無視する)、spec は入れる距離・角度と低い壁の高さを読む移動の設定。
-        /// カバー中は壁へ向かう方向 (法線の逆) を渡せば、角度の条件に関わらず <see cref="CoverProbeResult.IsWall"/> で壁が残っているかが分かる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">sample の値が有限でないとき。</exception>
-        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
         public static CoverProbeResult Evaluate(CoverWallSample sample, Vector3 facing, MotorSpec spec)
         {
             if (spec == null)
@@ -76,11 +60,6 @@ namespace Shooter.Core
             return new CoverProbeResult(true, FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees), height, edges, normal, sample.Distance);
         }
 
-        /// <summary>
-        /// 覗くときに壁沿いに横へ出る量 (m、右が正)。低い壁は立つだけなので 0、高い壁で端にいなければ 0。
-        /// 両端とも開いている (狭い柱) なら preferredSide (負なら左、それ以外は右) へ出る。出る距離は spec の <see cref="MotorSpec.CoverPeekSideDistance"/>。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
         public static float PeekOffset(CoverProbeResult result, float preferredSide, MotorSpec spec)
         {
             if (spec == null)
@@ -107,8 +86,6 @@ namespace Shooter.Core
             return result.IsAtRightEdge ? peekSideDistance : 0f;
         }
 
-        /// <summary>壁に張り付いたときの、体の中心から壁までの水平距離 (体の半径 + <see cref="WallGap"/>)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">bodyRadius が負か有限でないとき。</exception>
         public static float HoldDistance(float bodyRadius)
         {
             if (!(bodyRadius >= 0f) || float.IsInfinity(bodyRadius))
@@ -119,8 +96,6 @@ namespace Shooter.Core
             return bodyRadius + WallGap;
         }
 
-        /// <summary>壁に向いたときの右 (壁沿い、水平、長さ 1)。normal は壁のこちら向きの法線。</summary>
-        /// <exception cref="ArgumentException">normal に水平の成分が無いとき。</exception>
         public static Vector3 RightAlong(Vector3 normal)
         {
             var into = -Horizontal(normal);
@@ -133,7 +108,6 @@ namespace Shooter.Core
             return Vector3.Normalize(Vector3.Cross(Vector3.UnitY, into));
         }
 
-        /// <summary>v の上下の成分を落として長さ 1 にする。水平の成分が無ければ 0。</summary>
         public static Vector3 Horizontal(Vector3 v)
         {
             var flat = new Vector3(v.X, 0f, v.Z);

@@ -1,5 +1,3 @@
-using System;
-
 namespace Shooter.Core
 {
     public sealed class AimAssistSpec
@@ -26,7 +24,6 @@ namespace Shooter.Core
 
         public float MaxDistance { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲外のとき。</exception>
         public AimAssistSpec(
             float slowdownDegrees = DefaultSlowdownDegrees,
             float slowdownScale = DefaultSlowdownScale,

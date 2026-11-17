@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    // 期待値は ProgressionSpec.Default の調整値 (キル 100・頭 +50・試合 250・勝ち +500、レベル 2 は 500 から) から出す。
+    // 期待値は ProgressionSpec.Default の調整値 (キル 100・頭 +50・アシスト 50・試合 250・勝ち +500、レベル 2 は 500 から) から出す。
     public sealed class ProgressionRecorderTests
     {
         private const string WeaponId = "rifle";
@@ -99,6 +99,94 @@ namespace Shooter.Tests.EditMode
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 1, 0));
 
             Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(250, 0, 1, 1, 0)));
+        }
+
+        [Test]
+        public void AnAssistAddsTheAssistXpAndIsSavedWithTheMatch()
+        {
+            _recorder.Install();
+
+            LogAssert.Expect(LogType.Log, "[Progression] assist xp=+50 total=50 level=1 levelUp=false");
+            Kill(_enemy, _otherEnemy, true, _player);
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(50, 0, 0, 0, 0, 1)));
+            Assert.That(_storage.Has(ProfileStore.Slot), Is.False, "assists are saved when the match ends");
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            var expected = new PlayerProfile(300, 0, 0, 1, 0, 1);
+            Assert.That(_recorder.Profile, Is.EqualTo(expected));
+            Assert.That(new ProfileStore(_storage).Load(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TheKillerIsNotAlsoCountedAsAnAssister()
+        {
+            _recorder.Install();
+
+            Kill(_player, _enemy, false, _player, _otherEnemy);
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(100, 1, 0, 0, 0, 0)));
+        }
+
+        [Test]
+        public void OneKillGivesAtMostOneAssist()
+        {
+            _recorder.Install();
+
+            Kill(_enemy, _otherEnemy, false, _player, _player);
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(50, 0, 0, 0, 0, 1)));
+        }
+
+        [Test]
+        public void AssistsByOthersOnSuicidesAndOnFriendlyKillsAreNotCounted()
+        {
+            _recorder.Install();
+
+            Kill(_enemy, _otherEnemy, false, _otherEnemy);
+            Kill(_enemy, _otherEnemy, headshot: false);
+            Kill(_enemy, _enemy, false, _player);
+            CombatEvents.RaiseKilled(new KillFeedEntry(
+                CombatEvents.OfflineId(_enemy),
+                CombatEvents.OfflineId(_otherEnemy),
+                WeaponId,
+                headshot: false,
+                friendly: true,
+                assisterIds: new[] { CombatEvents.OfflineId(_player) }));
+            CombatEvents.RaiseKilled(new KillFeedEntry(
+                CombatEvents.OfflineId(_enemy),
+                CombatEvents.OfflineId(_otherEnemy),
+                WeaponId,
+                headshot: false,
+                friendly: false,
+                assisterIds: new[] { int.MaxValue }));
+
+            Assert.That(_recorder.Profile, Is.EqualTo(PlayerProfile.Empty));
+        }
+
+        [Test]
+        public void AVersion1SaveKeepsItsXpAndLevelAndCountsAssistsFromThere()
+        {
+            _storage.Write(ProfileStore.Slot, "{\"version\":1,\"xp\":480,\"kills\":4,\"deaths\":1,\"matches\":1,\"wins\":0}");
+
+            _recorder.Install();
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(480, 4, 1, 1, 0, 0)));
+            Assert.That(_recorder.Level, Is.EqualTo(1));
+            Assert.That(_storage.Has(ProfileStore.RejectedSlot), Is.False);
+
+            LogAssert.Expect(LogType.Log, "[Progression] level up 1->2 total=530");
+            Kill(_enemy, _otherEnemy, false, _player);
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(530, 4, 1, 1, 0, 1)));
+            Assert.That(_recorder.Level, Is.EqualTo(2));
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            Assert.That(
+                _storage.Text(ProfileStore.Slot),
+                Is.EqualTo("{\"version\":2,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0}"));
         }
 
         [Test]
@@ -234,10 +322,16 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => new ProgressionRecorder(_storage, ProgressionSpec.Default, null));
         }
 
-        private static void Kill(GameObject killer, GameObject victim, bool headshot)
+        private static void Kill(GameObject killer, GameObject victim, bool headshot, params GameObject[] assisters)
         {
+            var assisterIds = new int[assisters.Length];
+            for (var i = 0; i < assisters.Length; i++)
+            {
+                assisterIds[i] = CombatEvents.OfflineId(assisters[i]);
+            }
+
             CombatEvents.RaiseKilled(
-                new KillFeedEntry(CombatEvents.OfflineId(killer), CombatEvents.OfflineId(victim), WeaponId, headshot, friendly: false));
+                new KillFeedEntry(CombatEvents.OfflineId(killer), CombatEvents.OfflineId(victim), WeaponId, headshot, friendly: false, assisterIds));
         }
 
         private GameObject Character(string name, bool local)

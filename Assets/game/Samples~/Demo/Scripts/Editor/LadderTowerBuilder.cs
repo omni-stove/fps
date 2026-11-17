@@ -5,28 +5,16 @@ using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 試し場所に置く、はしごの付いた台。動かない直方体の台 (<see cref="PlatformName"/>) の 1 つの側面にはしご (<see cref="LadderName"/>、
-    /// <see cref="LadderComponent"/>) を立て、はしごの見た目として当たり判定の無い 2 本の柱と横木を付ける。見た目はサンプルの仮のもの。
-    /// </summary>
     public static class LadderTowerBuilder
     {
         public const string PlatformName = "Platform";
         public const string LadderName = "Ladder";
         public const string VisualName = "Visual";
 
-        /// <summary>柱と横木の太さ (m)。</summary>
         public const float BarThickness = 0.06f;
 
-        /// <summary>横木の間隔 (m)。</summary>
         public const float RungSpacing = 0.3f;
 
-        /// <summary>
-        /// scene の最上位に name の GameObject を baseCenter (台の底面の中心) に置き、その下に大きさ size の台と、
-        /// 台の ladderSide (水平の向き) の側面に立てたはしごを置いて返す。はしごの高さは台の高さ (size.y)、幅は width。
-        /// つかまる人は ladderSide の逆を向いて台に向き合う。
-        /// </summary>
-        /// <exception cref="ArgumentException">ladderSide が水平の単位ベクトルの ±X・±Z でない、size のどれかが 0 以下、width が 0 以下。</exception>
         public static GameObject Create(Scene scene, string name, Vector3 baseCenter, Vector3 size, Vector3 ladderSide, float width)
         {
             SceneBuildHelpers.RequireLoaded(scene);
@@ -64,9 +52,6 @@ namespace Shooter.Editor
             return root;
         }
 
-        /// <summary>
-        /// <see cref="Create"/> で置いたものが床の上で占める範囲。台と、はしごの前で上り下りする人の体の分 (approach) を含む。
-        /// </summary>
         public static Bounds Footprint(Vector3 baseCenter, Vector3 size, Vector3 ladderSide, float approach)
         {
             var bounds = new Bounds(baseCenter + (Vector3.up * (size.y / 2f)), size);
@@ -74,9 +59,6 @@ namespace Shooter.Editor
             return bounds;
         }
 
-        /// <summary>
-        /// <see cref="Create"/> で置いたはしごの形の値 (下端の真ん中と、つかまる人の向き)。置く前に試し場所の手順や検査が読む。
-        /// </summary>
         public static (Vector3 Bottom, Vector3 Facing) LadderPlacement(Vector3 baseCenter, Vector3 size, Vector3 ladderSide)
         {
             return (baseCenter + (ladderSide * HalfDepthTowards(size, ladderSide)), -ladderSide);

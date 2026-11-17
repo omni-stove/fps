@@ -65,6 +65,30 @@ namespace Shooter.Runtime
         [SerializeField, Min(1), Tooltip("占領を速める人数の上限")]
         private int _maxCapturers = DominationSpec.DefaultMaxCapturers;
 
+        [Header("試合の間")]
+        [SerializeField, Tooltip("次の試合のマップの候補 (マップのシーン名)。空なら今のマップのまま続ける")]
+        private List<string> _mapPool = new List<string>();
+
+        [SerializeField, Min(0f), Tooltip("次のマップの投票を受け付ける秒数。0 なら投票しない")]
+        private float _mapVoteSeconds = NetMatchSettings.DefaultMapVoteSeconds;
+
+        [SerializeField, Min(0), Tooltip("チームの人数の差の上限。超えたら次の試合の前に並べ直す。0 なら並べ直さない")]
+        private int _maxTeamSizeDifference = NetMatchSettings.DefaultMaxTeamSizeDifference;
+
+        [Header("非公開の試合")]
+        [SerializeField, Tooltip("ロビーに載せず、参加コードで入る試合にする")]
+        private bool _privateMatch;
+
+        [SerializeField, Tooltip("参加コード。英数字と - _ で 16 文字まで。空なら無し")]
+        private string _joinCode = string.Empty;
+
+        [Header("チャット")]
+        [SerializeField, Min(0f), Tooltip("1 人がチャットを続けて送れる最短の間隔 (秒)")]
+        private float _chatIntervalSeconds = NetMatchSettings.DefaultChatIntervalSeconds;
+
+        [SerializeField, Range(1, NetMatchSettings.MaxMaxChatLength), Tooltip("チャットの 1 行の文字数の上限")]
+        private int _maxChatLength = NetMatchSettings.DefaultMaxChatLength;
+
         [Header("プレイヤーの移動と体")]
         [SerializeField, Tooltip("移動の値。空なら入口 (GameContent) の Motor、それも無ければ Resources の MotorSettings")]
         private MotorSettings _motorSettings;
@@ -119,9 +143,34 @@ namespace Shooter.Runtime
             set => _motorSettings = value;
         }
 
+        public IReadOnlyList<string> MapPool => _mapPool ??= new List<string>();
+
+        public bool PrivateMatch
+        {
+            get => _privateMatch;
+            set => _privateMatch = value;
+        }
+
+        public string JoinCode
+        {
+            get => _joinCode;
+            set => _joinCode = value ?? string.Empty;
+        }
+
+        public int MaxTeamSizeDifference
+        {
+            get => _maxTeamSizeDifference;
+            set => _maxTeamSizeDifference = value;
+        }
+
         public void SetRules(IEnumerable<GameRulesDefinition> rules)
         {
             _rules = rules == null ? new List<GameRulesDefinition>() : new List<GameRulesDefinition>(rules);
+        }
+
+        public void SetMapPool(IEnumerable<string> mapIds)
+        {
+            _mapPool = mapIds == null ? new List<string>() : new List<string>(mapIds);
         }
 
         // クライアント (NetV2Weapons) とサーバーへの書き出しで選ぶ順がずれないよう、どちらもここで選ぶ
@@ -164,12 +213,20 @@ namespace Shooter.Runtime
                 _captureSeconds,
                 _pointsPerSecond,
                 _maxCapturers,
-                _maxPlayers);
+                _maxPlayers,
+                _mapPool,
+                _mapVoteSeconds,
+                _maxTeamSizeDifference,
+                _privateMatch,
+                _joinCode,
+                _chatIntervalSeconds,
+                _maxChatLength);
         }
 
         /// <summary>
         /// プレイヤーの移動と体の寸法。移動は <see cref="MotorSettings.Resolve"/>、伏せは <see cref="MotorSettings.ResolveProne"/> で、
         /// 伏せの高さはその高さをカプセルが取れる高さに収めたもの (<see cref="NetMotorSettings.FitProneHeight"/>)。
+        /// 水泳と壁走りはオフラインと同じ値で動かすため、<see cref="TraversalTuning.Current"/> から取る。
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">寸法・移動・伏せの値が条件に合わない。</exception>
         public NetMotorSettings ToMotor()
@@ -182,11 +239,14 @@ namespace Shooter.Runtime
                 _crouchHeight,
                 NetMotorSettings.FitProneHeight(prone.Height, _crouchHeight, _radius),
                 _radius);
+            var traversal = TraversalTuning.Current;
             return new NetMotorSettings(
                 MotorSettings.Resolve(_motorSettings),
                 stance,
                 new CapsuleMoverSpec(_slopeLimitDegrees, _stepOffset, _skinWidth, CapsuleMoverSpec.DefaultLayerMask),
-                prone);
+                prone,
+                traversal.Swim,
+                traversal.WallRun);
         }
 
         /// <summary>

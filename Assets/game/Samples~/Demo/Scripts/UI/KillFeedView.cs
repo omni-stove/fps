@@ -23,6 +23,10 @@ namespace Shooter.Runtime
 
         public const string FriendlyClass = "kill-feed__friendly";
 
+        public const string AssistRowClass = "kill-feed__row--assist";
+
+        public const string AssistClass = "kill-feed__assist";
+
         private readonly KillFeed _feed = new KillFeed();
         private IKillFeedNames _names;
         private OfflineKillFeedNames _offlineNames;
@@ -173,6 +177,13 @@ namespace Shooter.Runtime
 
             row.Add(weapon);
             row.Add(CreateName(line.Victim, hud));
+
+            if (line.LocalAssisted)
+            {
+                row.AddToClassList(AssistRowClass);
+                row.Add(CreateLabel(Localizer.Resolve(KillFeedText.AssistMark), AssistClass));
+            }
+
             return row;
         }
 

@@ -6,9 +6,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 射撃の要求に付いたロックオンの相手を、撃った人から見える範囲にいるか確かめる。だめなら誘導しない。
-    /// </summary>
     internal sealed class ServerLockOn
     {
         public ServerLockOn(ServerCombat combat)
@@ -18,9 +15,6 @@ namespace Shooter.Server
 
         public ServerCombat Combat { get; }
 
-        /// <summary>
-        /// shooterId が round で撃った request のロックオンの相手のうち、誘導してよい相手。いなければ null。
-        /// </summary>
         public int? Resolve(int shooterId, RoundSpec round, FireRequestMessage request)
         {
             ArgumentNullException.ThrowIfNull(round);

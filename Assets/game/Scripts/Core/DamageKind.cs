@@ -17,5 +17,8 @@ namespace Shooter.Core
 
         // 乗り物が人や物にぶつかったダメージ。Environment に寄せないのは、運転していた人に帰属し、轢かれたと見分けられるようにするため。
         Vehicle,
+
+        // 息が切れたダメージ。Other に寄せないのは、Inspector の Kill や落下と分けて、溺れたと見分けられるようにするため。
+        Drowning,
     }
 }

@@ -12,19 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ゲームが差し替えるもののうち、抜けていると動かない・出ないものをまとめて洗い出し、一覧をログに出す。見るのは次のもの:
-    /// <list type="bullet">
-    /// <item>Assets/ の下の武器 (<see cref="WeaponDefinition"/>) の Id に、<see cref="PresentationCatalog"/> の音とエフェクトがあるか。
-    /// カタログ自体が無い・<see cref="PresentationCatalog.Validate"/> に通らないときも出す。</item>
-    /// <item>武器に Id と名前のキーがあるか (キーを文にする表は game 側が持つので、表にキーがあるかは game 側の点検が見る)。</item>
-    /// <item><see cref="RequiredReferenceAttribute"/> を付けた参照が、ビルドに入るシーン・Assets/ の下のプレハブ・アセットで空でないか。</item>
-    /// <item>game 側の Editor のアセンブリに置いた点検 (<see cref="IReplacementAuditCheck"/>)。</item>
-    /// </list>
-    /// 漏れがあれば終了コード <see cref="FindingsExitCode"/>、点検そのものが失敗したら <see cref="ErrorExitCode"/>、無ければ
-    /// <see cref="SuccessExitCode"/> で Editor を閉じる (batchmode のときだけ)。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ReplacementAudit.Run -logFile -</code>
-    /// </summary>
+    // 名前のキーを文にする表は game 側が持つので、武器はキーがあるかだけを見て、表にキーがあるかは game 側の点検に任せる。
     public static class ReplacementAudit
     {
         public const string LogTag = "[ReplacementAudit]";
@@ -34,14 +22,11 @@ namespace Shooter.Editor
         public const int FindingsExitCode = 1;
         public const int ErrorExitCode = 2;
 
-        /// <summary>武器・プレハブ・アセットを探すフォルダ。パッケージの中の同梱物は、ゲームが差し替える前の仮のものなので見ない。</summary>
+        // パッケージの中の同梱物は、ゲームが差し替える前の仮のものなので見ない。
         public const string SearchFolder = "Assets";
 
         private static readonly Dictionary<Type, FieldInfo[]> _requiredFields = new Dictionary<Type, FieldInfo[]>();
 
-        /// <summary>
-        /// 点検して一覧をログに出す。batchmode なら終了コード付きで Editor を閉じる (<c>-executeMethod</c> から呼ぶ)。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void Run()
         {
@@ -73,7 +58,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>プロジェクトを点検し、見つけた漏れを返す。何もログに出さず、Editor も閉じない。</summary>
         public static IReadOnlyList<ReplacementAuditFinding> Collect()
         {
             var findings = new List<ReplacementAuditFinding>();
@@ -95,8 +79,6 @@ namespace Shooter.Editor
             return findings;
         }
 
-        /// <summary>findings が空なら <see cref="SuccessExitCode"/>、そうでなければ <see cref="FindingsExitCode"/>。</summary>
-        /// <exception cref="ArgumentNullException">findings が null。</exception>
         public static int ExitCodeFor(IReadOnlyCollection<ReplacementAuditFinding> findings)
         {
             if (findings == null)
@@ -107,8 +89,6 @@ namespace Shooter.Editor
             return findings.Count == 0 ? SuccessExitCode : FindingsExitCode;
         }
 
-        /// <summary>ログに出す一覧。1 行目に件数と終了コード、続けて 1 件 1 行。</summary>
-        /// <exception cref="ArgumentNullException">findings が null。</exception>
         public static string Format(IReadOnlyCollection<ReplacementAuditFinding> findings)
         {
             if (findings == null)
@@ -133,8 +113,6 @@ namespace Shooter.Editor
             return text.ToString();
         }
 
-        /// <summary>catalog が無い、または <see cref="PresentationCatalog.Validate"/> に通らなければ findings に足す。</summary>
-        /// <exception cref="ArgumentNullException">findings が null。</exception>
         public static void CheckPresentationCatalog(PresentationCatalog catalog, ICollection<ReplacementAuditFinding> findings)
         {
             if (findings == null)
@@ -161,11 +139,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 武器ごとに、Id が空でないか、catalog に Id の音とエフェクトがあるか、名前のキーが空でないかを見て、
-        /// 足りなければ findings に足す。catalog が null なら音とエフェクトは見ない (<see cref="CheckPresentationCatalog"/> が出す)。null の武器は飛ばす。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">weapons か findings が null。</exception>
+        // catalog が無いことは CheckPresentationCatalog が出すので、null なら音とエフェクトは見ない。
         public static void CheckWeapons(
             IEnumerable<WeaponDefinition> weapons,
             PresentationCatalog catalog,
@@ -209,15 +183,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// target の <see cref="RequiredReferenceAttribute"/> を付けた参照のうち、空のもの (配列なら空の並びと空の要素) を findings に足す。
-        /// 参照先のアセットが消えているものも空として出す。
-        /// </summary>
-        /// <param name="target">見るコンポーネントかアセット。</param>
-        /// <param name="where">findings に書く場所 (シーンのパスと階層など)。</param>
-        /// <param name="findings">見つけた漏れを足す先。</param>
-        /// <exception cref="ArgumentNullException">target か findings が null。</exception>
-        /// <exception cref="ArgumentException">where が空。</exception>
         public static void CheckRequiredReferences(Object target, string where, ICollection<ReplacementAuditFinding> findings)
         {
             if (target == null)
@@ -277,7 +242,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>type (基底の型も含む) のフィールドのうち <see cref="RequiredReferenceAttribute"/> を付けたもの。</summary>
         public static FieldInfo[] RequiredFieldsOf(Type type)
         {
             if (type == null)
@@ -307,10 +271,6 @@ namespace Shooter.Editor
             return result;
         }
 
-        /// <summary>root と子孫のコンポーネント (無効のものも) の必須の参照を <see cref="CheckRequiredReferences"/> で見る。</summary>
-        /// <param name="root">見る GameObject。</param>
-        /// <param name="where">場所の頭 (シーンかプレハブのパス)。後ろに階層を付ける。</param>
-        /// <param name="findings">見つけた漏れを足す先。</param>
         public static void CheckGameObject(GameObject root, string where, ICollection<ReplacementAuditFinding> findings)
         {
             if (root == null)

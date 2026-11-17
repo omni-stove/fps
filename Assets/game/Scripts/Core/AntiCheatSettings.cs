@@ -3,25 +3,16 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// Easy Anti-Cheat (EAC) を使うかどうかの決定。コマンドライン引数・エディタかどうか・ネットワークの起動設定から決める。
-    /// EAC はクライアント (Anti-Cheat Client インターフェース) と .NET の専用サーバー (Anti-Cheat Server インターフェース) で使い、
-    /// 相手を EOS の ProductUserId で登録するので EOS の transport が要る。
-    /// </summary>
+    // EAC は相手を EOS の ProductUserId で登録するので、EOS の transport でなければ使わない。
     public sealed class AntiCheatSettings
     {
-        /// <summary>EAC を無効にする。開発ビルドや、ブートストラッパーを通さずに起動するときに使う。</summary>
         public const string NoEacFlag = "-noeac";
 
-        /// <summary>エディタでも EAC を有効にする (エディタでは既定で無効)。</summary>
         public const string EacFlag = "-eac";
 
-        /// <summary>ログの接頭辞。</summary>
         public const string LogTag = "[AntiCheat]";
 
-        /// <summary>
-        /// EAC で切るときの <see cref="DisconnectNotice.RejectedReason"/> の訳。サーバーとクライアントのどちらが先に切っても同じ文を出すため 1 つにする。
-        /// </summary>
+        // サーバーとクライアントのどちらが先に切っても同じ文を出すため、1 つにする。
         public const string RejectedDetail = "anti-cheat";
 
         private AntiCheatSettings(bool enabled, string reason)
@@ -30,13 +21,10 @@ namespace Shooter.Core
             Reason = reason;
         }
 
-        /// <summary>EAC のセッションを始め、ピアを登録するか。</summary>
         public bool Enabled { get; }
 
-        /// <summary>有効・無効になった理由。ログ向け。</summary>
         public string Reason { get; }
 
-        /// <summary>理由を添えた無効の設定。</summary>
         public static AntiCheatSettings Disabled(string reason)
         {
             if (string.IsNullOrWhiteSpace(reason))
@@ -47,16 +35,6 @@ namespace Shooter.Core
             return new AntiCheatSettings(false, reason);
         }
 
-        /// <summary>
-        /// EAC を使うかを決める。上から順に、<see cref="NoEacFlag"/> があれば無効、UDP の transport なら無効、
-        /// 専用サーバー (<c>-mode server</c>) なら無効、エディタで <see cref="EacFlag"/> が無ければ無効、それ以外は有効。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="isEditor">エディタで動いているか。</param>
-        /// <param name="options">実際に使うネットワークの設定 (EOS から UDP に切り替えた後のもの)。</param>
-        /// <param name="settings">成功したときの設定。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
-        /// <returns><see cref="NoEacFlag"/> と <see cref="EacFlag"/> が両方ある場合だけ false。</returns>
         public static bool TryResolve(
             IReadOnlyList<string> args,
             bool isEditor,
@@ -111,10 +89,8 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// .NET の専用サーバーで EAC を使うかを決める。既定で無効にするのは、EAC を通さないクライアント (<see cref="NoEacFlag"/>) が
-        /// 専用サーバーにつなげる今の運用を、ポータルでクライアントとサーバーの保護を用意するまで変えないため。
-        /// </summary>
+        // 専用サーバーで既定で無効にするのは、EAC を通さないクライアント (NoEacFlag) が専用サーバーにつなげる今の運用を、
+        // ポータルでクライアントとサーバーの保護を用意するまで変えないため。
         public static bool TryResolveDedicatedServer(
             IReadOnlyList<string> args,
             NetLaunchOptions options,
@@ -162,7 +138,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary><c>[AntiCheat] enabled ...</c> / <c>[AntiCheat] disabled ...</c> の形のログ行。</summary>
         public string Describe()
         {
             return LogTag + " " + Reason;

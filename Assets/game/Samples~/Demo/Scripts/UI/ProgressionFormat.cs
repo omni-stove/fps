@@ -39,6 +39,11 @@ namespace Shooter.Runtime
             return GameText.Format("progression.kills", kills);
         }
 
+        public static string Assists(int assists)
+        {
+            return GameText.Format("assist.profile.assists", assists);
+        }
+
         public static string Deaths(int deaths)
         {
             return GameText.Format("progression.deaths", deaths);

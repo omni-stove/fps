@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    // プレイヤーと敵の振りの時間を同じ決まりで進める。当たりの判定と踏み込みの動きは呼ぶ側が行う。
     public sealed class MeleeSwing
     {
         private MeleeSpec _spec;

@@ -413,7 +413,6 @@ namespace Shooter.Core.Tests
             return ids;
         }
 
-        /// <summary>通知を "id:状態" と "MissionCompleted" / "MissionFailed" の空白区切りで記録する。</summary>
         private static Func<string> Record(Mission mission)
         {
             var log = new List<string>();

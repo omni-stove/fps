@@ -10,6 +10,8 @@ namespace Shooter.Runtime
 
         public static LocalizedText Suicide => new LocalizedText("hud.killFeed.suicide");
 
+        public static LocalizedText AssistMark => new LocalizedText("assist.killFeed.mark");
+
         public const string NoWeapon = "-";
 
         public static string Unknown(int id)

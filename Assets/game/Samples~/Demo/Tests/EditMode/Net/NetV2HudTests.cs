@@ -112,8 +112,8 @@ namespace Shooter.Net.Tests
             Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(rows), "the same rows are not published again every tick");
             Assert.That(rows, Is.EqualTo(new[]
             {
-                new ScoreboardEntry(_localId, BotRoster.ScoreboardName(_localId), Team.Bravo, 2, 1, ScoreboardConnection.Connected, true),
-                new ScoreboardEntry(_otherId, BotRoster.ScoreboardName(_otherId), Team.Alpha, 0, 0, ScoreboardConnection.Connected, false),
+                new ScoreboardEntry(_localId, BotRoster.ScoreboardName(_localId), Team.Bravo, 2, 1, 0, ScoreboardConnection.Connected, true),
+                new ScoreboardEntry(_otherId, BotRoster.ScoreboardName(_otherId), Team.Alpha, 0, 0, 0, ScoreboardConnection.Connected, false),
             }));
 
             snapshot.Players[1].Kills = 1;

@@ -1,0 +1,10 @@
+{
+  "minimap.compass.N": "北",
+  "minimap.compass.NE": "北東",
+  "minimap.compass.E": "東",
+  "minimap.compass.SE": "南東",
+  "minimap.compass.S": "南",
+  "minimap.compass.SW": "南西",
+  "minimap.compass.W": "西",
+  "minimap.compass.NW": "北西"
+}

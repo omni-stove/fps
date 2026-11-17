@@ -41,9 +41,9 @@ namespace Shooter.Tests.EditMode
 
         private static ScoreboardEntry Entry(
             int id, Team team, int kills, int deaths,
-            ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false)
+            ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false, int assists = 0)
         {
-            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, 0, connection, isLocal);
+            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, assists, connection, isLocal);
         }
 
         private VisualElement[] PlayerRows()
@@ -84,12 +84,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(IsShown, Is.True);
             var teams = _view.Element.Query<VisualElement>(className: ScoreboardView.TeamRowClass).ToList();
             Assert.That(teams.Select(t => Texts(t)[0]), Is.EqualTo(new[] { "ALPHA", "BRAVO" }));
-            Assert.That(Texts(teams[0]).Skip(1).Take(2), Is.EqualTo(new[] { "4", "3" }), "team totals");
+            Assert.That(Texts(teams[0]).Skip(1).Take(3), Is.EqualTo(new[] { "4", "0", "3" }), "team totals");
 
             var rows = PlayerRows();
             Assert.That(rows.Select(r => Texts(r)[0]), Is.EqualTo(new[] { "Player 2", "Player 0", "Player 1" }));
-            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { "Player 2", "3", "1", Localizer.Resolve(ScoreboardText.DisconnectedText) }));
-            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { "Player 0", "1", "2", Localizer.Resolve(ScoreboardText.ConnectedText) }));
+            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { "Player 2", "3", "0", "1", Localizer.Resolve(ScoreboardText.DisconnectedText) }));
+            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { "Player 0", "1", "0", "2", Localizer.Resolve(ScoreboardText.ConnectedText) }));
             Assert.That(rows[0].ClassListContains(ScoreboardView.DisconnectedRowClass), Is.True);
             Assert.That(rows[1].ClassListContains(ScoreboardView.LocalRowClass), Is.True);
             Assert.That(rows[2].ClassListContains(ScoreboardView.LocalRowClass), Is.False);
@@ -114,7 +114,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(you, Does.Not.StartWith("hud."), "the key exists in the current language's table");
             Assert.That(target, Does.Not.StartWith("hud."), "the key exists in the current language's table");
             Assert.That(PlayerRows().Select(r => Texts(r)[0]), Is.EqualTo(new[] { you, "[BOT] Bot 1", "enemy-1", target }));
-            Assert.That(Texts(PlayerRows()[0])[3], Is.Empty, "no connection state offline");
+            Assert.That(Texts(PlayerRows()[0])[4], Is.Empty, "no connection state offline");
         }
 
         [Test]
@@ -136,8 +136,38 @@ namespace Shooter.Tests.EditMode
             GameSignals.Scoreboard.Publish(new[] { Entry(0, Team.Alpha, 1, 0), Entry(1, Team.Bravo, 0, 1) });
 
             var rows = PlayerRows();
-            Assert.That(Texts(rows[0]).Take(3), Is.EqualTo(new[] { "Player 0", "1", "0" }));
-            Assert.That(Texts(rows[1]).Take(3), Is.EqualTo(new[] { "Player 1", "0", "1" }));
+            Assert.That(Texts(rows[0]).Take(4), Is.EqualTo(new[] { "Player 0", "1", "0", "0" }));
+            Assert.That(Texts(rows[1]).Take(4), Is.EqualTo(new[] { "Player 1", "0", "0", "1" }));
+        }
+
+        [Test]
+        public void TheAssistColumnSitsBetweenKillsAndDeathsWithTeamTotals()
+        {
+            GameSignals.Scoreboard.Publish(
+                new[]
+                {
+                    Entry(0, Team.Alpha, 2, 1, isLocal: true, assists: 3),
+                    Entry(1, Team.Alpha, 2, 1, assists: 1),
+                    Entry(2, Team.Bravo, 0, 4, assists: 2),
+                });
+
+            _view.SetOpen(true);
+
+            var caption = _view.Element.Q<VisualElement>(className: ScoreboardView.CaptionRowClass);
+            Assert.That(
+                Texts(caption).Skip(1).Take(3),
+                Is.EqualTo(new[] { ScoreboardView.KillsCaption, Localizer.Resolve(ScoreboardText.AssistsCaption), ScoreboardView.DeathsCaption }));
+            Assert.That(ScoreboardView.AssistsCaption, Does.Not.StartWith("assist."), "the key exists in the current language's table");
+
+            var teams = _view.Element.Query<VisualElement>(className: ScoreboardView.TeamRowClass).ToList();
+            Assert.That(Texts(teams[0]).Skip(1).Take(3), Is.EqualTo(new[] { "4", "4", "2" }), "Alpha totals");
+            Assert.That(Texts(teams[1]).Skip(1).Take(3), Is.EqualTo(new[] { "0", "2", "4" }), "Bravo totals");
+
+            var rows = PlayerRows();
+            Assert.That(rows.Select(r => Texts(r)[0]), Is.EqualTo(new[] { "Player 0", "Player 1", "Player 2" }), "more assists come first on equal kills");
+            Assert.That(Texts(rows[0]).Take(4), Is.EqualTo(new[] { "Player 0", "2", "3", "1" }));
+            Assert.That(Texts(rows[1]).Take(4), Is.EqualTo(new[] { "Player 1", "2", "1", "1" }));
+            Assert.That(Texts(rows[2]).Take(4), Is.EqualTo(new[] { "Player 2", "0", "2", "4" }));
         }
 
         [Test]
@@ -193,8 +223,8 @@ namespace Shooter.Tests.EditMode
 
             var rows = PlayerRows();
             Assert.That(rows, Has.Length.EqualTo(2));
-            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { Localizer.Resolve(ScoreboardText.LocalPlayerName), "1", "0", string.Empty }));
-            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { Localizer.Resolve(ScoreboardText.TargetName(1)), "0", "1", string.Empty }));
+            Assert.That(Texts(rows[0]), Is.EqualTo(new[] { Localizer.Resolve(ScoreboardText.LocalPlayerName), "1", "0", "0", string.Empty }));
+            Assert.That(Texts(rows[1]), Is.EqualTo(new[] { Localizer.Resolve(ScoreboardText.TargetName(1)), "0", "0", "1", string.Empty }));
             Assert.That(rows[0].ClassListContains(ScoreboardView.LocalRowClass), Is.True);
         }
 

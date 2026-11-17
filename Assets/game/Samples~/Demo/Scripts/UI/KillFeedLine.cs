@@ -22,16 +22,24 @@ namespace Shooter.Runtime
         /// <summary>武器の名前 (<see cref="WeaponSpec.Name"/> など)。武器によらない死か、名前が分からなければ <c>default</c>。</summary>
         public LocalizedText WeaponName { get; }
 
+        /// <summary>
+        /// この画面のプレイヤーが <see cref="KillFeedEntry.AssisterIds"/> に入っているか (倒した本人ではなくアシストした)。
+        /// 倒した側か倒された側がこの画面のプレイヤーなら false。
+        /// </summary>
+        public bool LocalAssisted { get; }
+
         /// <param name="entry">元の 1 件。</param>
         /// <param name="killer">倒した側の名前。</param>
         /// <param name="victim">倒された側の名前。</param>
         /// <param name="weaponName">武器の名前。武器によらない死か、名前が分からなければ <c>default</c>。</param>
-        public KillFeedLine(KillFeedEntry entry, KillFeedName killer, KillFeedName victim, LocalizedText weaponName)
+        /// <param name="localAssisted">この画面のプレイヤーがアシストした行か。killer か victim がこの画面のプレイヤーなら無視して false にする。</param>
+        public KillFeedLine(KillFeedEntry entry, KillFeedName killer, KillFeedName victim, LocalizedText weaponName, bool localAssisted = false)
         {
             Entry = entry;
             Killer = killer;
             Victim = victim;
             WeaponName = weaponName;
+            LocalAssisted = localAssisted && !killer.IsLocal && !victim.IsLocal;
         }
 
         /// <summary>この画面のプレイヤーが倒したか倒された行か。</summary>
@@ -46,7 +54,7 @@ namespace Shooter.Runtime
         public bool Equals(KillFeedLine other)
         {
             return Entry == other.Entry && Killer == other.Killer && Victim == other.Victim
-                && WeaponName == other.WeaponName;
+                && WeaponName == other.WeaponName && LocalAssisted == other.LocalAssisted;
         }
 
         public override bool Equals(object obj)
@@ -66,13 +74,18 @@ namespace Shooter.Runtime
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Entry, Killer, Victim, WeaponName);
+            return HashCode.Combine(Entry, Killer, Victim, WeaponName, LocalAssisted);
         }
 
-        /// <summary>ログ用。言語によらない (例: <c>killer=1 victim=2 weapon=rifle headshot=True friendly=False killerName=P1 victimName=P2</c>)。</summary>
+        /// <summary>
+        /// ログ用。言語によらない (例: <c>killer=1 victim=2 weapon=rifle headshot=True friendly=False killerName=P1 victimName=P2</c>)。
+        /// この画面のプレイヤーがアシストした行だけ、後ろに <c> localAssist=True</c> を付ける。
+        /// </summary>
         public override string ToString()
         {
-            return Entry + " killerName=" + Killer.Text + " victimName=" + Victim.Text;
+            // アシストしていない行は前と同じ文字列のままにして、それを読むログやテストを変えずに済ませる。
+            var assist = LocalAssisted ? " localAssist=True" : string.Empty;
+            return Entry + " killerName=" + Killer.Text + " victimName=" + Victim.Text + assist;
         }
     }
 }

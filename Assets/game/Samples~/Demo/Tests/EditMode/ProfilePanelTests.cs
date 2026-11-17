@@ -75,7 +75,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(_panel.LevelText, Is.EqualTo("レベル 2"));
             Assert.That(_panel.TotalXpText, Is.EqualTo("累計 700 XP"));
             Assert.That(_panel.XpToNextText, Is.EqualTo("レベル 3 まで あと 800 XP"));
-            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 7", "倒れた数 2", "K/D 3.50", "試合数 3", "勝った数 1" }));
+            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 7", "アシスト 0", "倒れた数 2", "K/D 3.50", "試合数 3", "勝った数 1" }));
             Assert.That(_container.ClassListContains(ProfilePanel.PanelClass), Is.True);
             Assert.That(_container.Q<Button>(ProfilePanel.BackButtonName).text, Is.EqualTo("戻る"));
         }
@@ -95,7 +95,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_panel.LevelText, Is.EqualTo("レベル 1"));
             Assert.That(_panel.XpToNextText, Is.EqualTo("レベル 2 まで あと 500 XP"));
-            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 0", "倒れた数 0", "K/D 0.00", "試合数 0", "勝った数 0" }));
+            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 0", "アシスト 0", "倒れた数 0", "K/D 0.00", "試合数 0", "勝った数 0" }));
             Assert.That(_panel.UnlockLines, Is.EqualTo(new[] { "レベル 2: ショットガン" }));
         }
 
@@ -114,7 +114,18 @@ namespace Shooter.Tests.EditMode
         {
             Open(new PlayerProfile(0, 4, 0, 1, 0));
 
-            Assert.That(_panel.StatLines[2], Is.EqualTo("K/D 4.00"));
+            Assert.That(_panel.StatLines[3], Is.EqualTo("K/D 4.00"));
+        }
+
+        [Test]
+        public void TheRecordShowsTheAssistsAfterTheKills()
+        {
+            Open(new PlayerProfile(0, 2, 5, 1, 0, 9));
+
+            Assert.That(_panel.StatLines[0], Is.EqualTo("倒した数 2"));
+            Assert.That(_panel.StatLines[1], Is.EqualTo("アシスト 9"));
+            Assert.That(_panel.StatLines[1], Is.EqualTo(ProgressionFormat.Assists(9)));
+            Assert.That(_panel.StatLines[3], Is.EqualTo("K/D 0.40"), "assists do not count toward K/D");
         }
 
         [Test]
@@ -132,11 +143,11 @@ namespace Shooter.Tests.EditMode
         {
             Open(PlayerProfile.Empty);
 
-            _panel.Show(new PlayerProfile(600, 3, 1, 2, 2));
+            _panel.Show(new PlayerProfile(600, 3, 1, 2, 2, 4));
 
             Assert.That(_panel.LevelText, Is.EqualTo("レベル 2"));
             Assert.That(_panel.XpToNextText, Is.EqualTo("レベル 3 まで あと 900 XP"));
-            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 3", "倒れた数 1", "K/D 3.00", "試合数 2", "勝った数 2" }));
+            Assert.That(_panel.StatLines, Is.EqualTo(new[] { "倒した数 3", "アシスト 4", "倒れた数 1", "K/D 3.00", "試合数 2", "勝った数 2" }));
             Assert.That(_panel.UnlockLines, Is.EqualTo(new[] { "レベル 3: DMR", "レベル 3: サプレッサー" }));
         }
 

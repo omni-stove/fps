@@ -153,6 +153,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(state.WallRun.Side, Is.EqualTo(Shooter.Core.WallRunSide.Right));
             Assert.That(state.WallRun.Normal, Is.EqualTo(Vector3.Zero), "the snapshot has no wall direction");
             Assert.That(state.AirJumpsUsed, Is.EqualTo(1));
+            Assert.That(SnapshotMotion.ToState(new PlayerSnapshot { JumpGraceLeft = 0.05f }).JumpGraceLeft, Is.EqualTo(0.05f));
             Assert.That(SnapshotMotion.ToState(new PlayerSnapshot()).WallRun, Is.EqualTo(CharacterWallRunState.None));
             Assert.That(SnapshotMotion.ToState(new PlayerSnapshot()).Swim, Is.EqualTo(CharacterSwimState.None));
         }
@@ -313,6 +314,55 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(used, Is.EqualTo(1), "the second jump is made in the air");
             for (var tick = 0; tick < serverStates.Length; tick += 5)
+            {
+                Assert.That(
+                    client.Reconcile(tick, SnapshotMotion.ToState(Row(serverStates[tick]))).Outcome,
+                    Is.EqualTo(ReconcileOutcome.Matched),
+                    "tick " + tick);
+            }
+        }
+
+        [Test]
+        public void AJumpInTheGraceStartedFromARowIsPredictedLikeTheServer()
+        {
+            var settings = NetMotorSettings.Default;
+            var world = new WorldMap(new[]
+            {
+                WorldCollider.Box(1, 0, WorldCollider.StaticGroup, new Vector3(0f, -0.5f, 0f), new Vector3(50f, 0.5f, 50f), Quaternion.Identity),
+            });
+            var motor = new MotorSpec(
+                settings.Motor.WalkSpeed,
+                settings.Motor.SprintSpeed,
+                settings.Motor.JumpHeight,
+                settings.Motor.Gravity,
+                settings.Motor.AirControl,
+                settings.Motor.CrouchSpeed,
+                jumpGraceSeconds: 0.1f);
+            OwnerPrediction Jumper() => new OwnerPrediction(new CharacterMotorSimulation(
+                new CharacterBody(new BvhWorldCollision(world), settings.Mover, settings.Stance), new PlayerMotor(motor), _tickSeconds, -50f));
+            var plain = new CharacterMotorState(_spawn + new Vector3(0f, 3f, 0f), Vector3.Zero, false, false);
+            var leftTheEdge = new CharacterMotorState(
+                plain.Position, plain.Velocity, false, plain.Stance, plain.Cover, plain.Dodge, plain.Vault, plain.Prone, plain.Ladder,
+                plain.Knockback, plain.Lean, plain.Swim, plain.WallRun, 0, 0.05f);
+            var server = Jumper();
+            var client = Jumper();
+            server.Start(-1, leftTheEdge);
+            client.Start(-1, SnapshotMotion.ToState(Row(leftTheEdge)));
+
+            var serverStates = new CharacterMotorState[10];
+            for (var tick = 0; tick < serverStates.Length; tick++)
+            {
+                var frame = new InputFrame(tick, Vector2.Zero, 0f, tick == 0 ? InputButtons.Jump : InputButtons.None);
+                var input = SnapshotMotion.ToInput(frame, false, default);
+                client.Predict(frame, input);
+                serverStates[tick] = server.Predict(frame, input);
+            }
+
+            var jumpSpeed = MathF.Sqrt(2f * motor.Gravity * motor.JumpHeight);
+            Assert.That(serverStates[0].Velocity.Y, Is.EqualTo(jumpSpeed - (motor.Gravity * _tickSeconds)).Within(1e-4f), "the press in the grace is the ground jump");
+            Assert.That(serverStates[0].JumpGraceLeft, Is.Zero);
+            Assert.That(serverStates[0].AirJumpsUsed, Is.Zero);
+            for (var tick = 0; tick < serverStates.Length; tick++)
             {
                 Assert.That(
                     client.Reconcile(tick, SnapshotMotion.ToState(Row(serverStates[tick]))).Outcome,
@@ -509,6 +559,7 @@ namespace Shooter.NetV2.Tests
                 Swimming = state.Swim.IsSwimming,
                 WallRunSide = (Shooter.Protocol.WallRunSide)(byte)state.WallRun.Side,
                 AirJumpsUsed = (byte)state.AirJumpsUsed,
+                JumpGraceLeft = state.JumpGraceLeft,
             };
         }
 

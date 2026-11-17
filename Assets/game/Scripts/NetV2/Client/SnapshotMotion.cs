@@ -38,7 +38,8 @@ namespace Shooter.NetV2
                 wallRunSide == Shooter.Core.WallRunSide.None
                     ? CharacterWallRunState.None
                     : new CharacterWallRunState(wallRunSide, 0f, Vector3.Zero),
-                row.AirJumpsUsed);
+                row.AirJumpsUsed,
+                row.JumpGraceLeft);
         }
 
         // 巻き戻すかを決める値 (泳いでいるか・壁走りの向き・リーンの向き) を authoritative のまま変えないのは、変えると食い違いを見逃すため。
@@ -72,7 +73,8 @@ namespace Shooter.NetV2
                 lean,
                 CompleteSwim(authoritative, predicted.Swim, water, geometry),
                 CompleteWallRun(authoritative, predicted.WallRun),
-                authoritative.AirJumpsUsed);
+                authoritative.AirJumpsUsed,
+                authoritative.JumpGraceLeft);
         }
 
         public static CharacterMotorState WithWallRun(CharacterMotorState state, CharacterWallRunState wallRun)
@@ -91,7 +93,8 @@ namespace Shooter.NetV2
                 state.Lean,
                 state.Swim,
                 wallRun,
-                state.AirJumpsUsed);
+                state.AirJumpsUsed,
+                state.JumpGraceLeft);
         }
 
         private static CharacterSwimState CompleteSwim(

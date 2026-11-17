@@ -17,6 +17,7 @@ namespace Shooter.Runtime
         private CharacterLeanState _lean;
         private CharacterWallRunState _wallRun;
         private int _airJumpsUsed;
+        private float _jumpGraceLeft;
         private LeanController _leanSource;
         private CoverController _cover;
         private CharacterBody _leanBody;
@@ -60,6 +61,10 @@ namespace Shooter.Runtime
         public CharacterLeanState Lean => _lean;
 
         public int AirJumpsUsed => _airJumpsUsed;
+
+        public float JumpGraceLeft => _jumpGraceLeft;
+
+        public bool IsInJumpGrace => _controller != null && JumpGraceStep.IsOpen(_controller.isGrounded, _jumpGraceLeft);
 
         public LeanController LeanSource
         {
@@ -179,10 +184,14 @@ namespace Shooter.Runtime
             }
         }
 
-        // 地上のジャンプは PlayerMotor.Step が跳ぶので、空中の分だけをここで数える。
-        private void StepAirJump(Vector2 move, bool jumpPressed, float yawRadians)
+        // 地上のジャンプは PlayerMotor.Step が跳ぶので、空中の分だけをここで数える。猶予の間の押下は地上のジャンプなので数えない。
+        private bool StepAirJump(Vector2 move, bool jumpPressed, float yawRadians, float jumpGraceLeft, float deltaSeconds)
         {
-            _airJumpsUsed = _motor.StepAirJump(_airJumpsUsed, jumpPressed, _controller.isGrounded, move.ToNumerics(), yawRadians);
+            var grounded = _controller.isGrounded;
+            var inJumpGrace = JumpGraceStep.IsOpen(grounded, jumpGraceLeft);
+            _airJumpsUsed = _motor.StepAirJump(_airJumpsUsed, jumpPressed, grounded, move.ToNumerics(), yawRadians, inJumpGrace);
+            _jumpGraceLeft = JumpGraceStep.Step(jumpGraceLeft, grounded, jumpPressed, _motor.Spec, deltaSeconds);
+            return inJumpGrace;
         }
 
         // 跳んだ tick に着地・つかまったときも 0 に戻すので、CharacterMotorSimulation.Finish と同じく tick の終わりで戻す。
@@ -191,6 +200,11 @@ namespace Shooter.Runtime
             if (footing || _swim.IsSwimming || _wallRun.IsRunning || IsMovementOverridden)
             {
                 _airJumpsUsed = 0;
+            }
+
+            if (footing)
+            {
+                _jumpGraceLeft = _motor.Spec.JumpGraceSeconds;
             }
 
             UpdateLean(move, sprint, crouch, lean, deltaSeconds);
@@ -291,7 +305,8 @@ namespace Shooter.Runtime
                 _lean,
                 _swim,
                 _wallRun,
-                _airJumpsUsed);
+                _airJumpsUsed,
+                _jumpGraceLeft);
         }
 
         private void ResetTraversal()
@@ -300,6 +315,7 @@ namespace Shooter.Runtime
             SetWallRun(CharacterWallRunState.None);
             _lean = CharacterLeanState.None;
             _airJumpsUsed = 0;
+            _jumpGraceLeft = 0f;
             _wallSensor = null;
             _wallSensorBody = null;
         }

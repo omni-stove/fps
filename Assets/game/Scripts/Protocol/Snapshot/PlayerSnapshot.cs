@@ -57,6 +57,9 @@ namespace Shooter.Protocol
 
         public byte AirJumpsUsed { get; set; }
 
+        // 持ち主の予測が巻き戻した tick から猶予の続きを数えられるよう、地上のジャンプの猶予の残りも載せる
+        public float JumpGraceLeft { get; set; }
+
         public int Assists { get; set; }
 
         public int EntityId => PlayerId;
@@ -160,7 +163,8 @@ namespace Shooter.Protocol
                 || LeanStep(Lean) != LeanStep(baseline.Lean)
                 || Swimming != baseline.Swimming
                 || WallRunSide != baseline.WallRunSide
-                || AirJumpsUsed != baseline.AirJumpsUsed)
+                || AirJumpsUsed != baseline.AirJumpsUsed
+                || !Same.Bits(JumpGraceLeft, baseline.JumpGraceLeft))
             {
                 bits |= PlayerFields.Traversal;
             }
@@ -272,6 +276,12 @@ namespace Shooter.Protocol
                 writer.WriteBool(Swimming);
                 writer.WriteByte((byte)WallRunSide);
                 writer.WriteByte(AirJumpsUsed);
+                if (!(JumpGraceLeft >= 0f) || float.IsInfinity(JumpGraceLeft))
+                {
+                    throw new System.InvalidOperationException("jump grace must be finite and not negative");
+                }
+
+                writer.WriteSingle(JumpGraceLeft);
             }
 
             if ((fields & PlayerFields.Assists) != 0)
@@ -388,6 +398,11 @@ namespace Shooter.Protocol
                 Swimming = reader.ReadBool();
                 WallRunSide = (WallRunSide)reader.ReadByteBelow(EnumRange<WallRunSide>.Count, "wall run side");
                 AirJumpsUsed = reader.ReadByte();
+                JumpGraceLeft = reader.ReadFiniteSingle("jump grace");
+                if (JumpGraceLeft < 0f)
+                {
+                    throw new MessageReadException("jump grace must not be negative");
+                }
             }
 
             if ((fields & PlayerFields.Assists) != 0)
@@ -481,6 +496,7 @@ namespace Shooter.Protocol
                 Swimming = baseline.Swimming;
                 WallRunSide = baseline.WallRunSide;
                 AirJumpsUsed = baseline.AirJumpsUsed;
+                JumpGraceLeft = baseline.JumpGraceLeft;
             }
 
             if ((missing & PlayerFields.Assists) != 0)

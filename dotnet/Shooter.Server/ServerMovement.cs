@@ -356,6 +356,7 @@ namespace Shooter.Server
                 row.Swimming = state.Swim.IsSwimming;
                 row.WallRunSide = (Shooter.Protocol.WallRunSide)(byte)state.WallRun.Side;
                 row.AirJumpsUsed = (byte)Math.Min(byte.MaxValue, state.AirJumpsUsed);
+                row.JumpGraceLeft = state.JumpGraceLeft;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))

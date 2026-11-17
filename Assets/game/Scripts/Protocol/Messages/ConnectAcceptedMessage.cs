@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     // 起動したかを知らないので、自分の持つ既定値で予測すると片方だけ変えたときに毎 tick ずれるため。
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 9;
+        public const byte CurrentVersion = 10;
 
         // .NET のサーバーと Netcode のプレイヤーの既定と同じにする。
         public const float DefaultKillPlaneY = -50f;
@@ -180,6 +180,7 @@ namespace Shooter.Protocol
             writer.WriteSingle(motor.LeanSpeed);
             writer.WriteInt32(motor.AirJumps);
             writer.WriteSingle(motor.AirJumpSpeed);
+            writer.WriteSingle(motor.JumpGraceSeconds);
 
             var swim = settings.Swim;
             writer.WriteSingle(swim.Speed);
@@ -244,6 +245,7 @@ namespace Shooter.Protocol
             var leanSpeed = reader.ReadFiniteSingle("lean speed");
             var airJumps = reader.ReadInt32AtLeast(0, "air jumps");
             var airJumpSpeed = reader.ReadFiniteSingle("air jump speed");
+            var jumpGraceSeconds = reader.ReadFiniteSingle("jump grace seconds");
             var swim = new float[3];
             for (var i = 0; i < swim.Length; i++)
             {
@@ -267,7 +269,7 @@ namespace Shooter.Protocol
                         new Shooter.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
                         motor[13], motor[14], motor[15], motor[16], motor[17], motor[18],
                         motor[19], motor[20], motor[21], motor[22], motor[23], motor[24], motor[25], motor[26], motor[27], motor[28],
-                        leanSideOffset, leanAngleDegrees, leanSpeed, airJumps, airJumpSpeed),
+                        leanSideOffset, leanAngleDegrees, leanSpeed, airJumps, airJumpSpeed, jumpGraceSeconds),
                     new Shooter.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Shooter.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]),

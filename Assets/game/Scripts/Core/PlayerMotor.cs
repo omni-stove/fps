@@ -32,14 +32,22 @@ namespace Shooter.Core
             bool jumpPressed,
             bool isGrounded,
             float deltaSeconds,
-            float carrySpeedMultiplier = 1f)
+            float carrySpeedMultiplier = 1f,
+            bool inJumpGrace = false)
         {
             var sprinting = sprint && !crouched;
             var speed = crouched ? Spec.CrouchSpeed : sprinting ? Spec.SprintSpeed : Spec.WalkSpeed;
             var gait = crouched ? CarryGaits.Crouch : sprinting ? CarryGaits.Sprint : CarryGaits.Walk;
             var direction = sprinting ? Spec.SprintDirection : Spec.WalkDirection;
             return StepAtSpeed(
-                moveInput, yawRadians, speed * CarryScale(gait, carrySpeedMultiplier), direction, jumpPressed, isGrounded, deltaSeconds);
+                moveInput,
+                yawRadians,
+                speed * CarryScale(gait, carrySpeedMultiplier),
+                direction,
+                jumpPressed,
+                isGrounded,
+                inJumpGrace,
+                deltaSeconds);
         }
 
         public Vector3 StepProne(
@@ -51,11 +59,18 @@ namespace Shooter.Core
         public Vector3 StepAtSpeed(
             Vector2 moveInput, float yawRadians, float speed, bool jumpPressed, bool isGrounded, float deltaSeconds)
         {
-            return StepAtSpeed(moveInput, yawRadians, speed, Spec.WalkDirection, jumpPressed, isGrounded, deltaSeconds);
+            return StepAtSpeed(moveInput, yawRadians, speed, Spec.WalkDirection, jumpPressed, isGrounded, false, deltaSeconds);
         }
 
         private Vector3 StepAtSpeed(
-            Vector2 moveInput, float yawRadians, float speed, MoveDirectionScale direction, bool jumpPressed, bool isGrounded, float deltaSeconds)
+            Vector2 moveInput,
+            float yawRadians,
+            float speed,
+            MoveDirectionScale direction,
+            bool jumpPressed,
+            bool isGrounded,
+            bool inJumpGrace,
+            float deltaSeconds)
         {
             if (!(speed >= 0f) || float.IsInfinity(speed))
             {
@@ -85,7 +100,8 @@ namespace Shooter.Core
             var applyGravity = true;
             var jumped = false;
 
-            if (isGrounded)
+            // 猶予の間の押下も地上のジャンプとして横の速さを目標の速さに合わせるのは、縁から一歩遅れて押しただけで跳ぶ向きが変わらないようにするため。
+            if (isGrounded || (jumpPressed && inJumpGrace))
             {
                 horizontal = desired;
                 if (jumpPressed)
@@ -120,7 +136,8 @@ namespace Shooter.Core
         }
 
         // 地上のジャンプは Step の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、回数を受け取って返す別の口にする。
-        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded, Vector2 moveInput, float yawRadians)
+        public int StepAirJump(
+            int airJumpsUsed, bool jumpPressed, bool isGrounded, Vector2 moveInput, float yawRadians, bool inJumpGrace = false)
         {
             if (airJumpsUsed < 0)
             {
@@ -137,7 +154,7 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(yawRadians), yawRadians, "yawRadians must be finite");
             }
 
-            var used = AirJumpStep.Step(airJumpsUsed, isGrounded, jumpPressed, Spec, out var jumped);
+            var used = AirJumpStep.Step(airJumpsUsed, isGrounded, inJumpGrace, jumpPressed, Spec, out var jumped);
             if (jumped)
             {
                 var horizontal = TurnToInput(new Vector2(Velocity.X, Velocity.Z), moveInput, yawRadians);

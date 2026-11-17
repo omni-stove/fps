@@ -1,0 +1,21 @@
+{
+  "rewards": [
+    { "id": "uav", "nameKey": "streak.uav", "killsRequired": 3 },
+    { "id": "airstrike", "nameKey": "streak.airstrike", "killsRequired": 5 }
+  ],
+  "uav": {
+    "durationSeconds": 20,
+    "range": 80
+  },
+  "airstrike": {
+    "shellCount": 5,
+    "intervalSeconds": 0.35,
+    "spread": 6,
+    "explosion": {
+      "maxDamage": 150,
+      "radius": 6,
+      "fullDamageRadius": 2,
+      "structureDamageAtCenter": 100
+    }
+  }
+}

@@ -130,6 +130,14 @@ namespace Fps.Tests.EditMode
             Assert.That(vehicle.Seats[1].ViewPoint, Is.Not.Null);
             Assert.That(vehicle.Seats[2].Role, Is.EqualTo(VehicleSeatRole.Gunner));
             Assert.That(vehicle.Seats[2].Pose, Is.EqualTo(VehicleSeatPose.Standing));
+            Assert.That(vehicle.Seats[1].Spec.OwnWeaponArcDegrees, Is.EqualTo(VehicleFixtureBuilder.PassengerArcDegrees));
+            Assert.That(vehicle.FiringOf(vehicle.Seats[0]), Is.EqualTo(VehicleSeatFiring.None));
+            Assert.That(vehicle.FiringOf(vehicle.Seats[1]), Is.EqualTo(VehicleSeatFiring.OwnWeapon));
+            Assert.That(vehicle.FiringOf(vehicle.Seats[2]), Is.EqualTo(VehicleSeatFiring.VehicleWeapon));
+            Assert.That(vehicle.WeaponMounts.Count, Is.EqualTo(1));
+            Assert.That(vehicle.WeaponMounts[0].name, Is.EqualTo(VehicleFixtureBuilder.GunName));
+            Assert.That(vehicle.WeaponMounts[0].Spec.PitchMaxDegrees, Is.EqualTo(VehicleFixtureBuilder.GunPitchMaxDegrees));
+            Assert.That(vehicle.WeaponMounts[0].Muzzle.name, Is.EqualTo(VehicleFixtureBuilder.MuzzleName));
             Assert.That(Find(TpsRangeSceneBuilder.VehicleExitBlockerName).GetComponent<BoxCollider>(), Is.Not.Null);
 
             var rider = new GameObject("Rider").AddComponent<VehicleTestRider>();

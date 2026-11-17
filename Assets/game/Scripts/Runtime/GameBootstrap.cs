@@ -123,6 +123,7 @@ namespace Fps.Runtime
         private BootstrapWorld _world;
         private LocalPlayerSignal _publishedPlayer;
         private HudModel _publishedHudModel;
+        private HudWeaponBinding _hudWeapon;
         private HudDensity? _publishedDensity;
         private bool _publishedPauseTimeMode;
 
@@ -357,13 +358,15 @@ namespace Fps.Runtime
                 BindDeathBodies(dummies, rules);
                 ApplyZoneDamage(dummies, rules);
                 // 残り時間は MatchRunner が試合を始めたときに繋ぐ。
-                var hudModel = CreateHudModel(playerDamageable, weapon);
+                var hudModel = CreateHudModel(playerDamageable, weapon, player.GetComponent<PlayerVehicleRider>(), out _hudWeapon);
                 _world = new BootstrapWorld(
                     floor, player, controller, camera, look, mover, lightComponent, weapon, targets, dummies, playerDamageable,
                     hudModel, rig, ads, rules, regen, actionReader, grenades, deathCamera, abilities);
             }
             catch
             {
+                _hudWeapon?.Dispose();
+                _hudWeapon = null;
                 DestroySafely(targets);
                 DestroySafely(light);
                 DestroySafely(player);
@@ -382,7 +385,8 @@ namespace Fps.Runtime
             ClearSignals();
             if (_world != null)
             {
-                ReleaseHudModel(_world);
+                ReleaseHudModel(_world, _hudWeapon);
+                _hudWeapon = null;
             }
         }
 
@@ -1112,8 +1116,9 @@ namespace Fps.Runtime
         /// <summary>
         /// プレイヤーの体力と武器を写す <see cref="HudModel"/> を作る。体力や武器が作り直されたとき
         /// (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は写し直す。
+        /// 乗り物の座席の武器に座っている間は、その武器を写す (<see cref="HudWeaponBinding"/>)。
         /// </summary>
-        private static HudModel CreateHudModel(Damageable player, WeaponController weapon)
+        private static HudModel CreateHudModel(Damageable player, WeaponController weapon, PlayerVehicleRider rider, out HudWeaponBinding weaponBinding)
         {
             var model = new HudModel();
             if (player != null)
@@ -1122,25 +1127,16 @@ namespace Fps.Runtime
                 model.BindHealth(player.Health);
             }
 
-            if (weapon != null)
-            {
-                weapon.WeaponChanged += model.BindWeapon;
-                model.BindWeapon(weapon.Weapon);
-            }
-
+            weaponBinding = new HudWeaponBinding(model, weapon, rider);
             return model;
         }
 
-        private static void ReleaseHudModel(BootstrapWorld world)
+        private static void ReleaseHudModel(BootstrapWorld world, HudWeaponBinding weaponBinding)
         {
+            weaponBinding?.Dispose();
             if (world.PlayerDamageable != null)
             {
                 world.PlayerDamageable.HealthReset -= world.HudModel.BindHealth;
-            }
-
-            if (world.Weapon != null)
-            {
-                world.Weapon.WeaponChanged -= world.HudModel.BindWeapon;
             }
 
             world.HudModel.UnbindAll();

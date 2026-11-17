@@ -162,5 +162,81 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new VehiclePartSpec("engine", float.NaN));
             Assert.That(new VehiclePartSpec("armor", 0f).DamageMultiplier, Is.Zero);
         }
+
+        [Test]
+        public void TheSeatFiresTheVehicleWeaponItsOwnWeaponOrNothing()
+        {
+            var weapons = new[] { new VehicleWeaponSpec("mg", 2) };
+            var spec = new VehicleSpec("jeep", 800, _threeSeats, weapons);
+
+            Assert.That(spec.FiringOf(0), Is.EqualTo(VehicleSeatFiring.None), "the driver cannot shoot");
+            Assert.That(spec.FiringOf(1), Is.EqualTo(VehicleSeatFiring.OwnWeapon));
+            Assert.That(spec.FiringOf(2), Is.EqualTo(VehicleSeatFiring.VehicleWeapon));
+            Assert.That(new VehicleSpec("jeep", 800, _threeSeats).FiringOf(2), Is.EqualTo(VehicleSeatFiring.None));
+            Assert.Throws<ArgumentOutOfRangeException>(() => spec.FiringOf(3));
+        }
+
+        [Test]
+        public void AVehicleWeaponOnTheDriverSeatLetsTheDriverShoot()
+        {
+            var spec = new VehicleSpec("jet", 800, _threeSeats, new[] { new VehicleWeaponSpec("cannon", 0) });
+
+            Assert.That(spec.FiringOf(0), Is.EqualTo(VehicleSeatFiring.VehicleWeapon));
+        }
+
+        [Test]
+        public void AVehicleWeaponTakesPrecedenceOverTheOwnWeaponArc()
+        {
+            var spec = new VehicleSpec("jeep", 800, _threeSeats, new[] { new VehicleWeaponSpec("mg", 1) });
+
+            Assert.That(spec.FiringOf(1), Is.EqualTo(VehicleSeatFiring.VehicleWeapon));
+        }
+
+        [Test]
+        public void TheOwnWeaponArcIsCenteredOnTheSeatFront()
+        {
+            var seat = new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Seat, 120f, 2f);
+
+            Assert.That(seat.CanFireOwnWeapon, Is.True);
+            Assert.That(seat.OwnWeaponSpreadMultiplier, Is.EqualTo(2f));
+            Assert.That(seat.AllowsOwnWeaponAt(0f), Is.True);
+            Assert.That(seat.AllowsOwnWeaponAt(60f), Is.True);
+            Assert.That(seat.AllowsOwnWeaponAt(-60f), Is.True);
+            Assert.That(seat.AllowsOwnWeaponAt(61f), Is.False);
+            Assert.That(seat.AllowsOwnWeaponAt(180f), Is.False);
+            Assert.That(seat.AllowsOwnWeaponAt(360f), Is.True, "angles wrap");
+
+            var all = new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Seat, 360f);
+            Assert.That(all.AllowsOwnWeaponAt(180f), Is.True);
+
+            var none = new VehicleSeatSpec(VehicleSeatRole.Passenger);
+            Assert.That(none.CanFireOwnWeapon, Is.False);
+            Assert.That(none.AllowsOwnWeaponAt(0f), Is.False);
+            Assert.That(none.OwnWeaponSpreadMultiplier, Is.EqualTo(VehicleSeatSpec.DefaultOwnWeaponSpreadMultiplier));
+
+            var driver = new VehicleSeatSpec(VehicleSeatRole.Driver, VehicleSeatPose.Seated, VehicleCameraView.Chase, 120f);
+            Assert.That(driver.CanFireOwnWeapon, Is.False, "the driver keeps both hands on the controls");
+            Assert.That(driver.AllowsOwnWeaponAt(0f), Is.False);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => seat.AllowsOwnWeaponAt(float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Seat, 90f, 0.5f));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Seat, 90f, float.PositiveInfinity));
+        }
+
+        [Test]
+        public void WeaponLogsCarryTheTag()
+        {
+            Assert.That(
+                VehicleLog.Firing("Jeep", "Player", 1, VehicleSeatFiring.OwnWeapon),
+                Is.EqualTo("[Vehicle] 'Jeep' firing rider=Player seat=1 with=OwnWeapon"));
+            Assert.That(
+                VehicleLog.WeaponFired("Jeep", "Player", 2, "mg", -12.54f, 3f, "Dummy", 25, 99),
+                Is.EqualTo("[Vehicle] 'Jeep' fire rider=Player seat=2 weapon=mg yaw=-12.5 pitch=3.0 hit=Dummy dmg=25 ammo=99"));
+            Assert.That(
+                VehicleLog.WeaponFired("Jeep", "Player", 2, "mg", 0f, 0f, null, 0, 0),
+                Is.EqualTo("[Vehicle] 'Jeep' fire rider=Player seat=2 weapon=mg yaw=0.0 pitch=0.0 hit=- dmg=0 ammo=0"));
+        }
     }
 }

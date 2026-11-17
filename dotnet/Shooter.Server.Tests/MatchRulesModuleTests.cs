@@ -497,6 +497,58 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void AnAssistIsToldInTheKillTheLogsAndTheSnapshot()
+        {
+            Start(Plain());
+            Join(1);
+            Join(2);
+            Join(3);
+            Assert.That(TeamOf(1), Is.EqualTo(TeamOf(3)));
+            Assert.That(TeamOf(2), Is.Not.EqualTo(TeamOf(1)));
+
+            Assert.That(_module.ApplyDamage(1, 2, 40), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(_module.ApplyDamage(3, 2, 100, new KillShot(3, 2, TestRules.RifleId, HitZone.Body)), Is.EqualTo(DamageOutcome.Killed));
+
+            var feed = _transport.Read<KilledMessage>(1, Copy).Single();
+            Assert.That(feed.KillerId, Is.EqualTo(3));
+            Assert.That(feed.VictimId, Is.EqualTo(2));
+            Assert.That(feed.WeaponId, Is.EqualTo(TestRules.RifleId));
+            Assert.That(feed.AssisterCount, Is.EqualTo(1));
+            Assert.That(feed.AssisterId(0), Is.EqualTo(1));
+            Assert.That(_log.ToString(), Does.Contain("[Match] kill killer=3 victim=2 assists=1"));
+            Assert.That(JsonOf("kill").Single(), Does.Contain("\"killerId\":\"3\"").And.EndWith(",\"assisterIds\":\"1\"}"));
+
+            var assister = default(PlayerSnapshot);
+            Assert.That(_module.FillPlayer(1, ref assister), Is.True);
+            Assert.That(assister.Assists, Is.EqualTo(1));
+            Assert.That(assister.Kills, Is.Zero);
+            var killer = default(PlayerSnapshot);
+            Assert.That(_module.FillPlayer(3, ref killer), Is.True);
+            Assert.That(killer.Assists, Is.Zero);
+            Assert.That(killer.Kills, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AKillWithoutAnAssistCarriesNoAssisters()
+        {
+            Start(Plain());
+            Join(1);
+            Join(2);
+            Join(3);
+            _module.ApplyDamage(1, 2, 40);
+            _module.ApplyDamage(3, 2, 100);
+            Advance(NetMatchSettings.Default.RespawnSeconds + 0.1f);
+
+            _module.ApplyDamage(3, 2, 100);
+
+            var feed = _transport.Read<KilledMessage>(1, Copy);
+            Assert.That(feed, Has.Count.EqualTo(2));
+            Assert.That(feed[0].AssisterCount, Is.EqualTo(1));
+            Assert.That(feed[1].AssisterCount, Is.Zero, "the reused message must not keep the last kill's assisters");
+            Assert.That(JsonOf("kill")[1], Does.Not.Contain("assisterIds"));
+        }
+
+        [Test]
         public void MapWithoutPointsCannotStartTheRules()
         {
             var e = Assert.Throws<InvalidOperationException>(() => Start(Plain(), points: false));

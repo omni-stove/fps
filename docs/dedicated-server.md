@@ -390,7 +390,7 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `player_joined` | プレイヤーが試合に入った | `matchId`、`playerId`、`productUserId`、`team` (`Alpha` / `Bravo`)、`rejoined` (切断から戻り、前の成績を引き継いだなら `true`) |
 | `player_left` | プレイヤーが試合から抜けた (切断を含む) | `matchId`、`playerId`、`productUserId` |
 | `match_started` | 両チームがそろって試合が始まった | `matchId`、`players` (試合に入っている人数) |
-| `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)。自滅では `killerId` と `victimId` が同じ |
+| `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)、`assisterIds` (アシストした人の Id をカンマ区切りで、与えたダメージの多い順。いなければ出さない)。自滅では `killerId` と `victimId` が同じ |
 | `match_ended` | 試合が終わった | `matchId`、`winner` (`Alpha` / `Bravo`、引き分けなら `draw`)、`scoreAlpha`、`scoreBravo` |
 | `ping_placed` | プレイヤーが印を付けた (ルールの `ping` が `On` のときだけ)。印は同じ陣営の人にだけ配る | `matchId`、`playerId`、`productUserId`、`team`、`pingId` (試合の中で一意の印の番号。`[Ping] net` のログの `id=` と同じ)、`kind` (`Enemy` / `Location`)、`targetId` (敵の印なら印の付いた敵のプレイヤー Id)、`refreshed` (同じ敵に付け直したなら `true`) |
 | `ping_refused` | 印を付けようとして断った。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`RuleOff` / `Dead` / `InvalidAim` / `TooSoon` / `NoTarget`) |

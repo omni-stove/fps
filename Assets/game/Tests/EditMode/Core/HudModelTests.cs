@@ -361,6 +361,96 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void AMatchWithoutATimeLimitHidesTheTime()
+        {
+            var model = new HudModel();
+            model.BindMatch(new Match(30f, 1, _playerId));
+            Assert.That(model.HasTime, Is.True);
+
+            var changes = Record(model);
+            model.BindMatch(new Match(float.PositiveInfinity, 1, _playerId));
+
+            Assert.That(model.HasTime, Is.False);
+            Assert.That(model.RemainingSeconds, Is.Null);
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Time }));
+        }
+
+        [Test]
+        public void TimeIsShownOnlyAfterSetTime()
+        {
+            var model = new HudModel();
+            Assert.That(model.HasTime, Is.False);
+
+            model.SetTime(5f);
+            Assert.That(model.HasTime, Is.True);
+
+            model.ClearTime();
+            Assert.That(model.HasTime, Is.False);
+        }
+
+        [Test]
+        public void SoloResultFollowsTheBoundMatch()
+        {
+            var model = new HudModel();
+            var match = new Match(float.PositiveInfinity, 1, _playerId);
+            model.BindMatch(match);
+            match.Start();
+            Assert.That(model.SoloResult, Is.Null);
+            var changes = Record(model);
+
+            match.ReportKill(_playerId, _playerId + 1);
+
+            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Won));
+            Assert.That(model.HasResult, Is.False, "a solo result is not a team result");
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Result }));
+
+            model.BindMatch(null);
+            Assert.That(model.SoloResult, Is.Null);
+        }
+
+        [Test]
+        public void BindingAnEndedMatchShowsItsResultAtOnce()
+        {
+            var match = new Match(10f, 1, _playerId);
+            match.Start();
+            match.ReportDeath(_playerId);
+            var model = new HudModel();
+
+            model.BindMatch(match);
+
+            Assert.That(model.SoloResult, Is.EqualTo(MatchResult.Lost));
+        }
+
+        [Test]
+        public void RestartKeyChangesTheResult()
+        {
+            var model = new HudModel();
+            var changes = Record(model);
+
+            model.SetRestartKey("R");
+            model.SetRestartKey("R");
+            Assert.That(model.RestartKey, Is.EqualTo("R"));
+
+            model.SetRestartKey(null);
+            Assert.That(model.RestartKey, Is.EqualTo(string.Empty));
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Result, HudField.Result }));
+        }
+
+        [Test]
+        public void UnbindAllStopsFollowingTheMatchResult()
+        {
+            var model = new HudModel();
+            var match = new Match(float.PositiveInfinity, 1, _playerId);
+            model.BindMatch(match);
+            match.Start();
+
+            model.UnbindAll();
+            match.ReportDeath(_playerId);
+
+            Assert.That(model.SoloResult, Is.Null);
+        }
+
+        [Test]
         public void NoticeStartsEmptyAndFollowsTheCampaign()
         {
             var model = new HudModel();

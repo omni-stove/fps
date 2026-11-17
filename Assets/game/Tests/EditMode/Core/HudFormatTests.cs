@@ -267,6 +267,18 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void SoloResultSaysClearedOrFailedWithTheRestartKey()
+        {
+            Assert.That(GameText.Resolve(HudFormat.SoloResult(MatchResult.Won)), Is.EqualTo("クリア"));
+            Assert.That(GameText.Resolve(HudFormat.SoloResult(MatchResult.Lost)), Is.EqualTo("失敗"));
+            Assert.That(HudFormat.SoloResult(MatchResult.Won), Is.EqualTo(new LocalizedText("hud.solo.won")));
+            Assert.That(GameText.Resolve(HudFormat.Restart("R")), Is.EqualTo("[R] でやり直す"));
+            Assert.That(HudFormat.Restart("R"), Is.EqualTo(new LocalizedText("hud.solo.restart", "R")));
+            Assert.Throws<ArgumentException>(() => HudFormat.Restart(string.Empty));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SoloResult((MatchResult)99));
+        }
+
+        [Test]
         public void WordsAreKeysWithTheirArguments()
         {
             Assert.That(HudFormat.TeamName(Team.Alpha), Is.EqualTo(new LocalizedText("hud.team.alpha")));

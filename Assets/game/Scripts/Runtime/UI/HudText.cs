@@ -39,9 +39,21 @@ namespace Fps.Runtime
             return team.HasValue && score.HasValue ? HudFormat.TeamScore(team.Value, score.Value) : default;
         }
 
-        public static LocalizedText Result(bool hasResult, Team? winner)
+        /// <summary>チームの結果があればそれを、無ければソロの試合の勝敗を出す。どちらも無ければ空の文。</summary>
+        public static LocalizedText Result(bool hasResult, Team? winner, MatchResult? soloResult)
         {
-            return hasResult ? HudFormat.Result(winner) : default;
+            if (hasResult)
+            {
+                return HudFormat.Result(winner);
+            }
+
+            return soloResult.HasValue ? HudFormat.SoloResult(soloResult.Value) : default;
+        }
+
+        /// <summary>ソロの試合が終わっていて、やり直すキーがあるときだけ案内を出す。</summary>
+        public static LocalizedText Restart(MatchResult? soloResult, string restartKey)
+        {
+            return soloResult.HasValue && !string.IsNullOrEmpty(restartKey) ? HudFormat.Restart(restartKey) : default;
         }
 
         public static LocalizedText WeaponName(WeaponSpec spec)

@@ -23,7 +23,7 @@ namespace Fps.Runtime
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
     /// <item>両チームのポイント・残り時間・拠点ごとの状態を <see cref="DominationStatus"/> にして <see cref="GameSignals.Domination"/> に出し、止めたら消す。
-    /// HUD があればスコアボードにキル数とデス数を渡す。</item>
+    /// 参加者ごとのキル数とデス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。</item>
     /// <item>終わったらプレイヤーの移動と射撃を止め、<see cref="MatchRunner"/> と同じく <see cref="RestartActionPath"/> (キーボードの R) で
     /// 今のシーンを読み込み直して最初からやり直す。</item>
     /// </list>
@@ -81,13 +81,13 @@ namespace Fps.Runtime
         private readonly List<Participant> _participants = new List<Participant>();
         private readonly Dictionary<Damageable, Participant> _byDamageable = new Dictionary<Damageable, Participant>();
         private readonly List<Damageable> _candidates = new List<Damageable>();
-        private readonly List<ScoreboardEntry> _scoreboardEntries = new List<ScoreboardEntry>();
         private readonly SpawnSelector _spawnSelector = new SpawnSelector(0f);
         private ControlPointZone[] _zones = Array.Empty<ControlPointZone>();
         private ControlPointMap _map;
         private Domination _domination;
         private BootstrapWorld _world;
         private DominationStatus _publishedStatus;
+        private ScoreboardEntry[] _publishedScoreboard;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _restartAction;
@@ -103,6 +103,9 @@ namespace Fps.Runtime
 
         /// <summary>最後に <see cref="GameSignals.Domination"/> に出した状態。出す前と止めた後は null。</summary>
         public DominationStatus Status => _publishedStatus;
+
+        /// <summary>最後に <see cref="GameSignals.Scoreboard"/> に出した一覧。出す前と止めた後は null。</summary>
+        public IReadOnlyList<ScoreboardEntry> PublishedScoreboard => _publishedScoreboard;
 
         /// <summary>終了後に押すと再開するアクション。解決できなければ null (試合は進むが再開できない)。</summary>
         public InputAction RestartAction => _restartAction;
@@ -537,6 +540,13 @@ namespace Fps.Runtime
             }
 
             _publishedStatus = null;
+
+            if (_publishedScoreboard != null)
+            {
+                GameSignals.Scoreboard.ClearIfCurrent(_publishedScoreboard);
+            }
+
+            _publishedScoreboard = null;
             _zones = Array.Empty<ControlPointZone>();
             _map = null;
             _world = null;
@@ -816,30 +826,32 @@ namespace Fps.Runtime
             GameSignals.Domination.Publish(_publishedStatus);
         }
 
-        /// <summary>自分 (Alpha) と敵 (Bravo) のキル数・デス数を HUD のスコアボードに渡す。HUD が無ければ何もしない。</summary>
+        /// <summary>自分 (Alpha) と敵 (Bravo) のキル数・デス数を <see cref="GameSignals.Scoreboard"/> に出す。</summary>
         private void ShowScoreboard()
         {
-            var scoreboard = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Scoreboard : null;
-            if (!GameUi.IsAlive(scoreboard) || _domination == null)
+            if (_domination == null)
             {
                 return;
             }
 
-            _scoreboardEntries.Clear();
-            foreach (var participant in _participants)
+            // 止めるときに自分の出した一覧かを参照で見分けるので、出すたびに新しい配列にする
+            var entries = new ScoreboardEntry[_participants.Count];
+            for (var i = 0; i < _participants.Count; i++)
             {
+                var participant = _participants[i];
                 var isLocal = participant.Enemy == null;
-                _scoreboardEntries.Add(new ScoreboardEntry(
+                entries[i] = new ScoreboardEntry(
                     participant.Id,
-                    isLocal ? ScoreboardRows.LocalPlayerName : LocalizedText.Literal(participant.Name ?? string.Empty),
+                    isLocal ? ScoreboardName.LocalPlayer : ScoreboardName.Literal(participant.Name),
                     participant.Team,
                     _domination.GetKills(participant.Id),
                     _domination.GetDeaths(participant.Id),
                     ScoreboardConnection.None,
-                    isLocal));
+                    isLocal);
             }
 
-            scoreboard.SetEntries(_scoreboardEntries, Team.Alpha);
+            _publishedScoreboard = entries;
+            GameSignals.Scoreboard.Publish(entries);
         }
 
         private InputAction ResolveRestartAction()

@@ -351,7 +351,7 @@ namespace Fps.Runtime
                 IHud hudComponent = null;
                 if (!NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
                 {
-                    CreateHud(playerDamageable, weapon, grenades, abilities, rules, out hudComponent, out hudPanelSettings, out hud);
+                    CreateHud(playerDamageable, weapon, rules, out hudComponent, out hudPanelSettings, out hud);
                 }
 
                 _world = new BootstrapWorld(
@@ -1036,15 +1036,13 @@ namespace Fps.Runtime
 
         /// <summary>
         /// HUD を作り (<see cref="GameUi.CreateHud"/>)、プレイヤーの体力と武器を渡し、rules の <see cref="GameRules.HudDensity"/> で出す項目を決める。オフラインなので、ポーズ中は時間を止める
-        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残り (<see cref="IHud.AttachGrenadeCount"/>) と能力の枠 (<see cref="IHud.AttachAbilitySlots"/>) も出す。
+        /// (<see cref="PauseTimeMode.Freeze"/>)。グレネードの残りと能力の枠は、HUD が <see cref="GameSignals.LocalPlayer"/> から読んで出す。
         /// 生成役が登録されていなければ、既定の UI を外して使う場合もあるので失敗にせず、out をすべて null にして専用サーバーと同じく HUD 無しで進める。
         /// 作った後の設定で失敗したら、呼び出し元が片付けられるよう out に入れてから例外を投げる。
         /// </summary>
         private static void CreateHud(
             Damageable player,
             WeaponController weapon,
-            GrenadeThrower grenades,
-            AbilityHost abilities,
             GameRules rules,
             out IHud hud,
             out PanelSettings panelSettings,
@@ -1061,16 +1059,6 @@ namespace Fps.Runtime
 
             panelSettings = hud.OwnedPanelSettings;
             hudObject = hud.gameObject;
-            if (grenades != null)
-            {
-                hud.AttachGrenadeCount().Show(grenades);
-            }
-
-            if (abilities != null)
-            {
-                hud.AttachAbilitySlots().Show(abilities);
-            }
-
             hud.ApplyDensity(rules.HudDensity);
             hud.SetPauseTimeMode(PauseTimeMode.Freeze);
         }

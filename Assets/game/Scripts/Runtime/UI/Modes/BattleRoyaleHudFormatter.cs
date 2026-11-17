@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
+using Fps.Core;
+using UnityEngine;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
     /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の HUD に出す文 (表のキー <c>mode.br.*</c> の <see cref="LocalizedText"/>)。
     /// 得点の欄には分隊ごとの残り人数 (脱落した分隊は順位) を、
     /// その下に残り分隊の数・自分の順位・縮むエリアの案内・自分の分隊の様子・ダウンや蘇生の進み・武器を持っていない案内を出す。
     /// </summary>
-    public static class BattleRoyaleHudText
+    public sealed class BattleRoyaleHudFormatter : IModeHudFormatter
     {
         /// <summary>武器を持っていない人への案内。</summary>
         public static LocalizedText NoWeapon => new LocalizedText("mode.br.noWeapon");
@@ -115,7 +117,7 @@ namespace Fps.Core
         /// <param name="session">読むモード。</param>
         /// <param name="localPlayerId">この画面で操作している人。いなければ null。</param>
         /// <param name="reviveTargetId">localPlayerId がいま起こしている相手。起こしていなければ null。</param>
-        /// <param name="zoneLine">縮むエリアの 1 行 (<see cref="ZoneHudText.Line"/>)。エリアが無ければ <c>default</c> (空の文)。</param>
+        /// <param name="zoneLine">縮むエリアの 1 行 (<see cref="ZoneHudFormatter.Line"/>)。エリアが無ければ <c>default</c> (空の文)。</param>
         /// <param name="unarmed">localPlayerId が武器を持っていなければ true。</param>
         public static IReadOnlyList<LocalizedText> Lines(
             BattleRoyaleSession session, int? localPlayerId, int? reviveTargetId, LocalizedText zoneLine, bool unarmed)
@@ -186,6 +188,46 @@ namespace Fps.Core
             }
 
             return ModeHudText.Result(session.Mode);
+        }
+
+        public LocalizedText Time(ModeStatus status)
+        {
+            if (!(status.Detail is BattleRoyaleStatus detail))
+            {
+                return ModeStatusFormat.Remaining(status);
+            }
+
+            var mode = detail.Session.Mode;
+            return float.IsPositiveInfinity(mode.TimeLimitSeconds)
+                ? ModeStatusFormat.Clock(mode.ElapsedSeconds)
+                : ModeStatusFormat.Clock(mode.RemainingSeconds);
+        }
+
+        public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status)
+        {
+            return status.Detail is BattleRoyaleStatus detail ? Squads(detail.Session, status.OwnSide) : ModeStatusFormat.Scores(status);
+        }
+
+        public void AppendLines(ModeStatus status, List<LocalizedText> lines)
+        {
+            ModeStatusFormat.AppendRespawn(status, lines);
+            if (status.Detail is BattleRoyaleStatus detail)
+            {
+                var zoneLine = detail.Zone.HasValue ? ZoneHudFormatter.Line(detail.Zone.Value) : default;
+                lines.AddRange(Lines(detail.Session, detail.LocalPlayerId, detail.ReviveTargetId, zoneLine, detail.IsLocalPlayerUnarmed));
+            }
+        }
+
+        public LocalizedText Result(ModeStatus status)
+        {
+            return status.Detail is BattleRoyaleStatus detail ? Result(detail.Session) : ModeStatusFormat.Result(status);
+        }
+
+        // SubsystemRegistration は BeforeSceneLoad より先に走るので、ゲームが BeforeSceneLoad で登録した書式役がこれを置き換えられる
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterDefault()
+        {
+            ModeHudFormatters.Register<BattleRoyaleStatus>(new BattleRoyaleHudFormatter());
         }
     }
 }

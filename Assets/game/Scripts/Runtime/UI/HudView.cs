@@ -88,6 +88,9 @@ namespace Fps.Runtime
         /// <summary>Hud.uxml の試合結果の Label。結果が空のときは隠す。</summary>
         public const string ResultLabelName = "hud-result";
 
+        /// <summary>ソロの試合の結果の下に出す、やり直すキーの案内。レイアウトに無ければ出さない。</summary>
+        public const string RestartLabelName = "hud-result-restart";
+
         /// <summary>Hud.uxml の、弾数の下に出すリロードの進みのバー。進みが無いときは隠す。</summary>
         public const string ReloadBarName = "hud-reload-bar";
 
@@ -161,6 +164,9 @@ namespace Fps.Runtime
         public Label FirstScoreLabel { get; }
         public Label SecondScoreLabel { get; }
         public Label ResultLabel { get; }
+
+        /// <summary>やり直すキーの案内。レイアウトに無ければ null。</summary>
+        public Label RestartLabel { get; }
         public VisualElement ReloadBar { get; }
         public VisualElement ReloadFill { get; }
         public VisualElement ReloadWindow { get; }
@@ -209,6 +215,8 @@ namespace Fps.Runtime
             FirstScoreLabel = Require<Label>(root, FirstScoreLabelName);
             SecondScoreLabel = Require<Label>(root, SecondScoreLabelName);
             ResultLabel = Require<Label>(root, ResultLabelName);
+            // 後から足した欄なので、ゲームが差し替えた古いレイアウトに無くても HUD を出せるようにする。
+            RestartLabel = root.Q<Label>(RestartLabelName);
             ReloadBar = Require<VisualElement>(root, ReloadBarName);
             ReloadFill = Require<VisualElement>(ReloadBar, ReloadFillName);
             ReloadWindow = Require<VisualElement>(ReloadBar, ReloadWindowName);
@@ -384,7 +392,7 @@ namespace Fps.Runtime
         private void ShowTime()
         {
             TimeLabel.text = HudNumberFormat.Time(_model);
-            TimePanel.style.display = Display(_visibility.Time);
+            TimePanel.style.display = Display(_visibility.Time && _model.HasTime);
         }
 
         /// <summary>案内の文を入れ、空なら Label ごと隠す (背景の帯だけが残らないように)。</summary>
@@ -395,7 +403,11 @@ namespace Fps.Runtime
 
         private void ShowResult()
         {
-            ShowOrHide(ResultLabel, GameText.Resolve(HudText.Result(_model.HasResult, _model.Winner)));
+            ShowOrHide(ResultLabel, GameText.Resolve(HudText.Result(_model.HasResult, _model.Winner, _model.SoloResult)));
+            if (RestartLabel != null)
+            {
+                ShowOrHide(RestartLabel, GameText.Resolve(HudText.Restart(_model.SoloResult, _model.RestartKey)));
+            }
         }
 
         /// <summary>点数を入れてチームの色で塗る。点数が無いか HUD の量で消すなら欄ごと隠す。</summary>

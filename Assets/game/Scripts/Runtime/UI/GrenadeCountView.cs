@@ -7,8 +7,9 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// 残りのグレネードの数 (<see cref="HudFormat.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachGrenadeCount"/> で受け取ってプレイヤーの <see cref="GrenadeThrower"/> を
-    /// <see cref="Show"/> し、ネット対戦の HUD (<c>Fps.Net.NetHud</c>) がサーバーから届いた数を <see cref="ShowCount"/> する。
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
+    /// 自分のプレイヤーの <see cref="GrenadeThrower"/> の残りを出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
+    /// ネット対戦の HUD (<c>Fps.NetV2.NetV2Hud</c>) はサーバーから届いた数を <see cref="ShowCount"/> する。
     /// ルールでグレネードを使わない間は隠す。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
@@ -24,6 +25,10 @@ namespace Fps.Runtime
         private bool _countShown;
         private int _count;
         private LocalizedText _typeName;
+        private bool _subscribed;
+
+        // 出しているグレネードが GameSignals から来たか。来ていれば、要素を持っていない間にプレイヤーが消されたことを、受けたときに隠して合わせる
+        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
@@ -66,7 +71,13 @@ namespace Fps.Runtime
         /// <summary>thrower の残りを出し始める。前に出していたものは手放す。null なら出すのをやめる。</summary>
         public void Show(GrenadeThrower thrower)
         {
-            if (_source != null)
+            _showsSignal = false;
+            Watch(thrower);
+        }
+
+        private void Watch(GrenadeThrower thrower)
+        {
+            if (!ReferenceEquals(_source, null))
             {
                 _source.Changed -= OnChanged;
             }
@@ -96,7 +107,8 @@ namespace Fps.Runtime
         /// </summary>
         public void ShowCount(bool usesGrenades, LocalizedText typeName, int remaining)
         {
-            if (_source != null)
+            _showsSignal = false;
+            if (!ReferenceEquals(_source, null))
             {
                 _source.Changed -= OnChanged;
                 _source = null;
@@ -146,6 +158,14 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            Subscribe();
+            var player = GameSignals.LocalPlayer.Value;
+            if (player != null || _showsSignal)
+            {
+                ShowPlayer(player);
+                return;
+            }
+
             Refresh();
         }
 
@@ -156,16 +176,60 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.style.display = DisplayStyle.None;
         }
 
         private void OnDestroy()
         {
-            if (_source != null)
+            Unsubscribe();
+            if (!ReferenceEquals(_source, null))
             {
                 _source.Changed -= OnChanged;
                 _source = null;
             }
+        }
+
+        private void ShowPlayer(LocalPlayerSignal player)
+        {
+            Watch(player?.Grenades);
+            _showsSignal = true;
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.LocalPlayer.Changed += HandleLocalPlayerChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleLocalPlayerChanged(LocalPlayerSignal player)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+                return;
+            }
+
+            // ShowCount で出している数は、プレイヤーが消されたことでは隠さない
+            if (player == null && !_showsSignal)
+            {
+                return;
+            }
+
+            ShowPlayer(player);
         }
 
         private void OnChanged(GrenadeThrower thrower)

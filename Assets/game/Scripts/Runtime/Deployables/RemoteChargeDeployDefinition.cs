@@ -10,8 +10,6 @@ namespace Fps.Runtime
     {
         public const string BodyName = "Body";
 
-        public const string DetonateHintKey = "hud.remoteCharge.detonate";
-
         private const int MaxHits = 32;
 
         private static readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
@@ -56,11 +54,13 @@ namespace Fps.Runtime
             set => _nameKey = value;
         }
 
+        public override string DisplayNameKey => _nameKey != null ? _nameKey.Trim() : string.Empty;
+
         public LocalizedText Name
         {
             get
             {
-                var key = _nameKey != null ? _nameKey.Trim() : string.Empty;
+                var key = DisplayNameKey;
                 return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(Id);
             }
         }
@@ -187,18 +187,6 @@ namespace Fps.Runtime
         public override int Detonate(IReadOnlyList<Deployable> placed, AbilityContext context)
         {
             return RemoteCharge.DetonateAll(placed);
-        }
-
-        public override bool TryGetDetonateHint(int placedCount, out LocalizedText hint)
-        {
-            if (placedCount < 1)
-            {
-                hint = default;
-                return false;
-            }
-
-            hint = new LocalizedText(DetonateHintKey, Name, placedCount);
-            return true;
         }
 
         // 置く物の上 (+Y) を面の向きに合わせる。前 (+Z) は狙った向きを面に沿わせた向きにし、面を真正面から狙ったときは面の上側に向ける。

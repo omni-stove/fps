@@ -4,13 +4,12 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// <see cref="GuardianRunner"/> がリーダーの頭上に目印を出し、リーダーが倒れたチームを戻さず、HUD に両リーダーの生死を出すことを確かめる。
+    /// <see cref="GuardianRunner"/> がリーダーの頭上に目印を出し、リーダーが倒れたチームを戻さず、状態 (ModeStatus) に両リーダーの生死を載せることを確かめる。
     /// リーダーは乱数で選ばれるので、誰がリーダーかは <see cref="GuardianRunner.Leaders"/> から引いて確かめる。
     /// </summary>
     public sealed class GuardianRunnerTests
@@ -86,7 +85,6 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0, Vector3.zero);
             var enemyA = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
             var enemyB = Member("Bot-1-2", 1, new Vector3(4f, 0f, 30f));
-            var hud = BoundHudView();
             _runner.BeginGuardian(new[] { player, enemyA, enemyB }, new[] { SpawnPoint(1, new Vector3(0f, 0f, 40f)) }, player);
 
             var leaderId = _runner.Leaders.GetLeader(Side.Bravo).Value;
@@ -99,7 +97,7 @@ namespace Fps.Tests.EditMode
 
             KillBy(player, leader);
             Assert.That(_runner.MarkerOf(leaderId).IsShown, Is.False, "the marker goes away with the leader");
-            Assert.That(hud.Lines, Does.Contain("BRAVO リーダー 撃破 (復活不可)"));
+            Assert.That(Detail().Leaders.HasLeaderFallen(Side.Bravo), Is.True, "the status carries the fallen leader");
 
             KillBy(player, other);
             _runner.Tick(RespawnSeconds * 2f);
@@ -108,7 +106,8 @@ namespace Fps.Tests.EditMode
             Assert.That(leader.IsAlive, Is.False);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Alpha));
-            Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)Side.Alpha));
         }
 
         [Test]
@@ -118,7 +117,6 @@ namespace Fps.Tests.EditMode
             var allyA = Member("Bot-0-1", 0, new Vector3(4f, 0f, 0f));
             var allyB = Member("Bot-0-2", 0, new Vector3(-4f, 0f, 0f));
             var enemy = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
-            var hud = BoundHudView();
             _runner.BeginGuardian(new[] { player, allyA, allyB, enemy }, new[] { SpawnPoint(0, new Vector3(0f, 0f, -5f)) }, player);
 
             var ownLeader = _runner.MemberOf(_runner.Leaders.GetLeader(Side.Alpha).Value);
@@ -133,13 +131,14 @@ namespace Fps.Tests.EditMode
             Assert.That(player.IsAlive, Is.False);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing), "some allies are still standing");
             Assert.That(_runner.Session.IsEliminated(ModeRunnerBase.LocalPlayerId), Is.True);
-            Assert.That(hud.Lines, Does.Contain("リーダーが倒れたため復活なし"));
-            Assert.That(hud.Lines, Does.Not.Contain(Localizer.Resolve(HudFormat.Respawn(0))).And.Not.Contain(Localizer.Resolve(HudFormat.Respawn(1))));
-
-            var leaderLines = GuardianText.Leaders(_runner.Leaders, Side.Alpha);
-            Assert.That(leaderLines[0], Is.EqualTo(GuardianText.Leader(Side.Alpha, true)), "the own leader comes first");
-            Assert.That(leaderLines[1], Is.EqualTo(GuardianText.Leader(Side.Bravo, false)));
-            Assert.That(hud.Lines, Does.Contain("ALPHA リーダー 撃破 (復活不可)").And.Contain("BRAVO リーダー 生存"));
+            var detail = Detail();
+            Assert.That(detail.LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
+            Assert.That(detail.IsLocalPlayerEliminated, Is.True);
+            Assert.That(detail.Leaders, Is.SameAs(_runner.Leaders));
+            Assert.That(detail.Leaders.HasLeaderFallen(Side.Alpha), Is.True);
+            Assert.That(detail.Leaders.HasLeaderFallen(Side.Bravo), Is.False);
+            Assert.That(_runner.Status.OwnSide, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(_runner.Status.RespawnSeconds, Is.Null, "no respawn countdown once the leader is down");
         }
 
         [Test]
@@ -147,12 +146,12 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", 0, Vector3.zero);
             var enemy = Member("Bot-1-1", 1, new Vector3(0f, 0f, 30f));
-            var hud = BoundHudView();
 
             _runner.BeginGuardian(new[] { player, enemy }, new SideSpawnPoint[0], player);
 
             Assert.That(_runner.Leaders.GetLeader(Side.Alpha), Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId), "the player is the only Alpha");
-            Assert.That(hud.Lines[0], Is.EqualTo("あなたがリーダー"));
+            Assert.That(Detail().LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
+            Assert.That(Detail().IsLocalPlayerEliminated, Is.False);
             Assert.That(_runner.MarkerOf(ModeRunnerBase.LocalPlayerId), Is.Null);
         }
 
@@ -195,11 +194,11 @@ namespace Fps.Tests.EditMode
             return point;
         }
 
-        private ModeHudView BoundHudView()
+        private GuardianStatus Detail()
         {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
+            Assert.That(_runner.Status, Is.Not.Null);
+            Assert.That(_runner.Status.Detail, Is.InstanceOf<GuardianStatus>());
+            return (GuardianStatus)_runner.Status.Detail;
         }
 
         private GameObject Track(GameObject go)

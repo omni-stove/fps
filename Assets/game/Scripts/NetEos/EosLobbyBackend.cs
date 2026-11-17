@@ -21,6 +21,8 @@ namespace Shooter.NetEos
         private readonly EosCredentials _credentials;
         private readonly string _displayName;
         private readonly HashSet<string> _matchLobbies = new HashSet<string>(StringComparer.Ordinal);
+        private readonly MemberLobbyApi _memberApi;
+        private readonly MemberLobbies _members;
         private PlatformInterface _platform;
         private LobbyInterface _lobby;
         private EosConnect.ConnectInterface _connect;
@@ -29,15 +31,24 @@ namespace Shooter.NetEos
         private EosDeviceLogin _refresh;
         private ulong _authExpirationNotification;
         private ulong _loginStatusNotification;
+        private ulong _memberUpdateNotification;
         private bool _disposed;
 
         public EosLobbyBackend(EosCredentials credentials, string displayName)
         {
             _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
             _displayName = string.IsNullOrWhiteSpace(displayName) ? "shooter-player" : displayName;
+            _memberApi = new MemberLobbyApi(this);
+            _members = new MemberLobbies(_memberApi, message => Debug.Log(message));
         }
 
         public event Action<string> LoggedOut;
+
+        public event Action<string, string> MemberAttributesChanged
+        {
+            add => _members.MemberAttributesChanged += value;
+            remove => _members.MemberAttributesChanged -= value;
+        }
 
         private bool PlatformAlive => _platform != null && ReferenceEquals(EosPlatform.Current, _platform);
 
@@ -170,33 +181,33 @@ namespace Shooter.NetEos
         public void CreateMemberLobby(
             string bucketId, int maxMembers, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
-            RejectUnsupported(done);
+            _members.Create(bucketId, maxMembers, attributes, done);
         }
 
         public void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
         {
-            RejectUnsupported(done);
+            _members.Join(lobbyId, done);
         }
 
         public void LeaveMemberLobby(string lobbyId, Action<string> done)
         {
-            RejectUnsupported(done);
+            _members.Leave(lobbyId, done);
         }
 
         public void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
         {
-            RejectUnsupported(done);
+            _members.Read(lobbyId, done);
         }
 
         public void SetMemberAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
         {
-            RejectUnsupported(done);
+            _members.SetMemberAttributes(lobbyId, attributes, done);
         }
 
         public void ReadMemberAttributes(
             string lobbyId, string userId, Action<IReadOnlyList<Shooter.Core.LobbyAttribute>, string> done)
         {
-            RejectUnsupported(done);
+            _members.ReadMemberAttributes(lobbyId, userId, done);
         }
 
         public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
@@ -313,7 +324,13 @@ namespace Shooter.NetEos
                     LeaveQuietly(lobbyId);
                 }
             }
+            else
+            {
+                // 出る要求を送れないので、送れなかったログを出させずに忘れる
+                _members.Forget();
+            }
 
+            _members.Dispose();
             _matchLobbies.Clear();
             _login?.Cancel();
             _login = null;
@@ -331,10 +348,16 @@ namespace Shooter.NetEos
                 {
                     _connect.RemoveNotifyLoginStatusChanged(_loginStatusNotification);
                 }
+
+                if (_memberUpdateNotification != 0)
+                {
+                    _lobby.RemoveNotifyLobbyMemberUpdateReceived(_memberUpdateNotification);
+                }
             }
 
             _authExpirationNotification = 0;
             _loginStatusNotification = 0;
+            _memberUpdateNotification = 0;
             LoggedOut = null;
         }
 
@@ -376,6 +399,17 @@ namespace Shooter.NetEos
                 Debug.LogWarning("[Lobby] EOS connect notifications could not be registered; the login will not be refreshed");
             }
 
+            if (_memberUpdateNotification == 0)
+            {
+                var options = new AddNotifyLobbyMemberUpdateReceivedOptions();
+                _memberUpdateNotification = _lobby.AddNotifyLobbyMemberUpdateReceived(ref options, null, HandleMemberUpdate);
+                if (_memberUpdateNotification == 0)
+                {
+                    // クイックマッチには要らないのでログインは失敗にしない。パーティは属性を読み直すまで変化に気づけない
+                    Debug.LogWarning("[Lobby] EOS lobby member update notifications could not be registered");
+                }
+            }
+
             _localUserId = userId;
             done(userId.ToString(), null);
         }
@@ -413,6 +447,7 @@ namespace Shooter.NetEos
             EosPlatform.ForgetLogin(_localUserId);
             _localUserId = null;
             _matchLobbies.Clear();
+            _members.Forget();
             _refresh?.Cancel();
             _refresh = null;
             LoggedOut?.Invoke(reason);
@@ -430,7 +465,9 @@ namespace Shooter.NetEos
             var result = _lobby.CopyLobbyDetailsHandle(ref options, out var details);
             if (result != Result.Success || details == null)
             {
-                error = "reading the EOS match lobby id=" + lobbyId + " failed: " + result;
+                error = result == Result.NotFound
+                    ? LobbyBackendErrors.NotFound
+                    : "reading the EOS lobby id=" + lobbyId + " failed: " + result;
                 return null;
             }
 
@@ -536,11 +573,34 @@ namespace Shooter.NetEos
         {
             var countOptions = new LobbyDetailsGetAttributeCountOptions();
             var count = details.GetAttributeCount(ref countOptions);
+            return ReadAttributes(count, (uint index, out Epic.OnlineServices.Lobby.Attribute? copied) =>
+            {
+                var copyOptions = new LobbyDetailsCopyAttributeByIndexOptions { AttrIndex = index };
+                return details.CopyAttributeByIndex(ref copyOptions, out copied);
+            }, lobbyId);
+        }
+
+        /// <summary>
+        /// メンバー <paramref name="member"/> の公開の属性のうち、文字列と整数のものを読む。読めない・形の合わない属性は
+        /// ロビーの属性と同じく飛ばす (パーティは欠けた属性を「まだ書いていない」として扱う)。
+        /// </summary>
+        private static List<Shooter.Core.LobbyAttribute> ReadMemberAttributes(LobbyDetails details, ProductUserId member, string lobbyId)
+        {
+            var countOptions = new LobbyDetailsGetMemberAttributeCountOptions { TargetUserId = member };
+            var count = details.GetMemberAttributeCount(ref countOptions);
+            return ReadAttributes(count, (uint index, out Epic.OnlineServices.Lobby.Attribute? copied) =>
+            {
+                var copyOptions = new LobbyDetailsCopyMemberAttributeByIndexOptions { TargetUserId = member, AttrIndex = index };
+                return details.CopyMemberAttributeByIndex(ref copyOptions, out copied);
+            }, lobbyId);
+        }
+
+        private static List<Shooter.Core.LobbyAttribute> ReadAttributes(uint count, CopyAttributeAt copy, string lobbyId)
+        {
             var attributes = new List<Shooter.Core.LobbyAttribute>((int)Math.Min(count, 64u));
             for (uint i = 0; i < count; i++)
             {
-                var copyOptions = new LobbyDetailsCopyAttributeByIndexOptions { AttrIndex = i };
-                var result = details.CopyAttributeByIndex(ref copyOptions, out var copied);
+                var result = copy(i, out var copied);
                 if (result != Result.Success || !copied.HasValue || !copied.Value.Data.HasValue)
                 {
                     Debug.LogWarning("[Lobby] skipped attribute " + i + " of id=" + lobbyId + ": " + result);
@@ -606,27 +666,21 @@ namespace Shooter.NetEos
             return true;
         }
 
-        private void RejectUnsupported<T>(Action<T, string> done)
-            where T : class
+        private void HandleMemberUpdate(ref LobbyMemberUpdateReceivedCallbackInfo info)
         {
-            if (done == null)
+            if (_disposed)
             {
-                throw new ArgumentNullException(nameof(done));
+                return;
             }
 
-            ThrowIfDisposed();
-            done(null, LobbyBackendErrors.NotSupported);
-        }
-
-        private void RejectUnsupported(Action<string> done)
-        {
-            if (done == null)
+            var lobbyId = Text(info.LobbyId);
+            var member = info.TargetUserId;
+            if (lobbyId == null || member == null || !member.IsValid())
             {
-                throw new ArgumentNullException(nameof(done));
+                return;
             }
 
-            ThrowIfDisposed();
-            done(LobbyBackendErrors.NotSupported);
+            _memberApi.RaiseMemberUpdate(lobbyId, member.ToString());
         }
 
         private void ThrowIfDisposed()
@@ -647,6 +701,243 @@ namespace Shooter.NetEos
 
             var text = value.ToString();
             return string.IsNullOrEmpty(text) ? null : text;
+        }
+
+        private delegate Result CopyAttributeAt(uint index, out Epic.OnlineServices.Lobby.Attribute? attribute);
+
+        /// <summary>
+        /// <see cref="MemberLobbies"/> から呼ばれ、ログイン済みの EOS の Lobby インターフェースを 1 つずつ呼ぶ。
+        /// ログインとプラットフォームは外側の <see cref="EosLobbyBackend"/> のものを使う。
+        /// </summary>
+        private sealed class MemberLobbyApi : IMemberLobbyApi
+        {
+            private readonly EosLobbyBackend _owner;
+
+            public MemberLobbyApi(EosLobbyBackend owner)
+            {
+                _owner = owner;
+            }
+
+            public event Action<string, string> MemberUpdateReceived;
+
+            public void RaiseMemberUpdate(string lobbyId, string userId)
+            {
+                MemberUpdateReceived?.Invoke(lobbyId, userId);
+            }
+
+            public void CreateLobby(string bucketId, int maxMembers, Action<string, string> done)
+            {
+                if (!Ready(out var unavailable))
+                {
+                    done(null, unavailable);
+                    return;
+                }
+
+                var options = new CreateLobbyOptions
+                {
+                    LocalUserId = _owner._localUserId,
+                    MaxLobbyMembers = (uint)maxMembers,
+                    // 公開の検索に出さない。Device ID のユーザーにはフレンドもプレゼンスも無いので、ID で入るほかに入り口は無い
+                    PermissionLevel = LobbyPermissionLevel.Joinviapresence,
+                    PresenceEnabled = false,
+                    AllowInvites = false,
+                    BucketId = bucketId,
+                    DisableHostMigration = false,
+                    EnableRTCRoom = false,
+                    EnableJoinById = true,
+                    RejoinAfterKickRequiresInvite = false,
+                };
+                _owner._lobby.CreateLobby(ref options, null, (ref CreateLobbyCallbackInfo info) =>
+                {
+                    if (info.ResultCode != Result.Success)
+                    {
+                        done(null, "creating the EOS member lobby failed: " + info.ResultCode);
+                        return;
+                    }
+
+                    done(Text(info.LobbyId), null);
+                });
+            }
+
+            public void UpdateLobbyAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
+            {
+                Modify(lobbyId, attributes, false, done);
+            }
+
+            public void UpdateMemberAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
+            {
+                Modify(lobbyId, attributes, true, done);
+            }
+
+            public void JoinLobby(string lobbyId, Action<string> done)
+            {
+                if (!Ready(out var unavailable))
+                {
+                    done(unavailable);
+                    return;
+                }
+
+                var options = new JoinLobbyByIdOptions
+                {
+                    LobbyId = lobbyId,
+                    LocalUserId = _owner._localUserId,
+                    PresenceEnabled = false,
+                };
+                _owner._lobby.JoinLobbyById(ref options, null, (ref JoinLobbyByIdCallbackInfo info) =>
+                {
+                    // 打ち間違えたコードは ID の形をしていないことがあり、無いロビーと同じに扱う
+                    done(info.ResultCode == Result.Success
+                        ? null
+                        : info.ResultCode == Result.InvalidParameters
+                            ? LobbyBackendErrors.NotFound
+                            : Failure("joining", lobbyId, info.ResultCode));
+                });
+            }
+
+            public void LeaveLobby(string lobbyId, Action<string> done)
+            {
+                if (!Ready(out var unavailable))
+                {
+                    done(unavailable);
+                    return;
+                }
+
+                var options = new LeaveLobbyOptions { LobbyId = lobbyId, LocalUserId = _owner._localUserId };
+                _owner._lobby.LeaveLobby(ref options, null, (ref LeaveLobbyCallbackInfo info) =>
+                    done(info.ResultCode == Result.Success ? null : Failure("leaving", lobbyId, info.ResultCode)));
+            }
+
+            public LobbyInfo CopyLobby(string lobbyId, out string error)
+            {
+                return Ready(out error) ? _owner.CopyLobby(lobbyId, out error) : null;
+            }
+
+            public IReadOnlyList<Shooter.Core.LobbyAttribute> CopyMemberAttributes(string lobbyId, string userId, out string error)
+            {
+                if (!Ready(out error))
+                {
+                    return null;
+                }
+
+                var member = ProductUserId.FromString(userId);
+                if (member == null || !member.IsValid())
+                {
+                    error = "not an EOS product user id: " + userId;
+                    return null;
+                }
+
+                var options = new CopyLobbyDetailsHandleOptions { LobbyId = lobbyId, LocalUserId = _owner._localUserId };
+                var result = _owner._lobby.CopyLobbyDetailsHandle(ref options, out var details);
+                if (result != Result.Success || details == null)
+                {
+                    error = Failure("reading", lobbyId, result);
+                    return null;
+                }
+
+                try
+                {
+                    error = null;
+                    return ReadMemberAttributes(details, member, lobbyId);
+                }
+                finally
+                {
+                    details.Release();
+                }
+            }
+
+            private void Modify(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, bool member, Action<string> done)
+            {
+                if (!Ready(out var unavailable))
+                {
+                    done(unavailable);
+                    return;
+                }
+
+                var modificationOptions = new UpdateLobbyModificationOptions { LobbyId = lobbyId, LocalUserId = _owner._localUserId };
+                var result = _owner._lobby.UpdateLobbyModification(ref modificationOptions, out var modification);
+                if (result != Result.Success || modification == null)
+                {
+                    done(Failure("preparing the update of", lobbyId, result));
+                    return;
+                }
+
+                try
+                {
+                    foreach (var attribute in attributes)
+                    {
+                        var data = new AttributeData
+                        {
+                            Key = attribute.Key,
+                            Value = attribute.IsText
+                                ? new AttributeDataValue { AsUtf8 = attribute.Text }
+                                : new AttributeDataValue { AsInt64 = attribute.Number },
+                        };
+                        if (member)
+                        {
+                            var addOptions = new LobbyModificationAddMemberAttributeOptions
+                            {
+                                Attribute = data,
+                                Visibility = LobbyAttributeVisibility.Public,
+                            };
+                            result = modification.AddMemberAttribute(ref addOptions);
+                        }
+                        else
+                        {
+                            var addOptions = new LobbyModificationAddAttributeOptions
+                            {
+                                Attribute = data,
+                                Visibility = LobbyAttributeVisibility.Public,
+                            };
+                            result = modification.AddAttribute(ref addOptions);
+                        }
+
+                        if (result != Result.Success)
+                        {
+                            done("setting " + attribute + " on the EOS lobby id=" + lobbyId + " failed: " + result);
+                            return;
+                        }
+                    }
+
+                    var updateOptions = new UpdateLobbyOptions { LobbyModificationHandle = modification };
+                    _owner._lobby.UpdateLobby(ref updateOptions, null, (ref UpdateLobbyCallbackInfo info) =>
+                        done(info.ResultCode == Result.Success ? null : Failure("updating", lobbyId, info.ResultCode)));
+                }
+                finally
+                {
+                    // UpdateLobby は呼んだ時点で変更を写し取るので、完了を待たずに解放してよい
+                    modification.Release();
+                }
+            }
+
+            /// <summary>
+            /// 外側が捨てられた後も、入ったままのロビーから出る要求は送れるよう、捨てられたかは見ない
+            /// (返事を捨てるかは <see cref="MemberLobbies"/> が決める)。
+            /// </summary>
+            private bool Ready(out string error)
+            {
+                if (_owner._localUserId == null)
+                {
+                    error = "not logged in to EOS";
+                    return false;
+                }
+
+                if (!_owner.PlatformAlive)
+                {
+                    error = "the EOS platform was released";
+                    return false;
+                }
+
+                error = null;
+                return true;
+            }
+
+            /// <summary>EOS の失敗の結果を理由にする。ロビーが無い・入っていないときは決まった符号にする。</summary>
+            private static string Failure(string action, string lobbyId, Result result)
+            {
+                return result == Result.NotFound
+                    ? LobbyBackendErrors.NotFound
+                    : action + " the EOS member lobby id=" + lobbyId + " failed: " + result;
+            }
         }
     }
 }

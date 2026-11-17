@@ -9,6 +9,8 @@ namespace Shooter.NetV2
     {
         event Action<string> LoggedOut;
 
+        event Action<string, string> MemberAttributesChanged;
+
         void Tick();
 
         void Login(Action<string, string> done);

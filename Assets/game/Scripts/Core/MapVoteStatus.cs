@@ -14,6 +14,7 @@ namespace Shooter.Core
 
         /// <param name="candidates">候補。並びはそのまま持つ。null なら空。</param>
         /// <param name="myVote">自分が入れた候補のマップ Id。まだ入れていなければ null か空文字。</param>
+        /// <param name="remainingSeconds">投票の残り秒数。</param>
         /// <param name="decidedMapId">決まったマップ Id。まだ決まっていなければ null か空文字。</param>
         /// <exception cref="ArgumentException">candidates に default の候補か同じマップ Id が 2 度ある、myVote か decidedMapId が候補に無い。</exception>
         /// <exception cref="ArgumentOutOfRangeException">remainingSeconds が負か有限でない。</exception>

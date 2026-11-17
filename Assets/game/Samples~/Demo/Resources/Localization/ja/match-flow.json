@@ -1,0 +1,8 @@
+{
+  "mapVote.title": "次のマップを選ぶ",
+  "mapVote.remaining": "残り {0} 秒",
+  "mapVote.votes": "{0} 票",
+  "mapVote.decided": "次のマップ: {0}",
+  "map.NetTest": "テスト場",
+  "map.NetArena01": "アリーナ"
+}

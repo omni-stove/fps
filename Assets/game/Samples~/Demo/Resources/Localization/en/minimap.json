@@ -1,0 +1,10 @@
+{
+  "minimap.compass.N": "N",
+  "minimap.compass.NE": "NE",
+  "minimap.compass.E": "E",
+  "minimap.compass.SE": "SE",
+  "minimap.compass.S": "S",
+  "minimap.compass.SW": "SW",
+  "minimap.compass.W": "W",
+  "minimap.compass.NW": "NW"
+}

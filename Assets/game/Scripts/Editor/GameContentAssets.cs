@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Shooter.Core;
 using Shooter.Runtime;
 using UnityEditor;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace Shooter.Editor
 
         // パッケージの同梱物はゲームが差し替える前の仮のものなので、Assets/ の下のアセットだけを候補にする。
         public const string SearchFolder = "Assets";
+
+        public const string TuningFolder = "Tuning";
 
         private static readonly Slot[] _slots =
         {
@@ -51,13 +54,36 @@ namespace Shooter.Editor
             new Slot("CameraShake", typeof(CameraShakeSettings), c => c.CameraShake, (c, v) => c.CameraShake = (CameraShakeSettings)v),
         };
 
+        // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。
+        private static readonly TuningSlot[] _tuningSlots =
+        {
+            new TuningSlot("GrenadeTuning", KitTuning.GrenadeResourcePath, c => c.GrenadeTuning, (c, v) => c.GrenadeTuning = v),
+            new TuningSlot("PingTuning", KitTuning.PingResourcePath, c => c.PingTuning, (c, v) => c.PingTuning = v),
+            new TuningSlot("KnockbackTuning", KitTuning.KnockbackResourcePath, c => c.KnockbackTuning, (c, v) => c.KnockbackTuning = v),
+            new TuningSlot("InventoryTuning", KitTuning.InventoryResourcePath, c => c.InventoryTuning, (c, v) => c.InventoryTuning = v),
+            new TuningSlot("SuppressionTuning", KitTuning.SuppressionResourcePath, c => c.SuppressionTuning, (c, v) => c.SuppressionTuning = v),
+            new TuningSlot("SquadTuning", SquadCommandActionInstaller.TuningResourcePath, c => c.SquadTuning, (c, v) => c.SquadTuning = v),
+            new TuningSlot("StaggerTuning", StaggerActionInstaller.TuningResourcePath, c => c.StaggerTuning, (c, v) => c.StaggerTuning = v),
+            new TuningSlot("MeleeTuning", MeleeActionInstaller.TuningResourcePath, c => c.MeleeTuning, (c, v) => c.MeleeTuning = v),
+            new TuningSlot("TraversalTuning", TraversalJson.ResourcePath, c => c.TraversalTuning, (c, v) => c.TraversalTuning = v),
+            new TuningSlot("StealthTuning", StealthActionInstaller.TuningResourcePath, c => c.StealthTuning, (c, v) => c.StealthTuning = v),
+            new TuningSlot("BotsTuning", KitTuning.BotsResourcePath, c => c.BotsTuning, (c, v) => c.BotsTuning = v),
+            new TuningSlot("StreaksTuning", StreakJson.ResourcePath, c => c.StreaksTuning, (c, v) => c.StreaksTuning = v),
+            new TuningSlot("AimAssistTuning", AimAssist.TuningResourcePath, c => c.AimAssistTuning, (c, v) => c.AimAssistTuning = v),
+            new TuningSlot("ProgressionTuning", ProgressionRecorder.ResourcePath, c => c.ProgressionTuning, (c, v) => c.ProgressionTuning = v),
+            new TuningSlot("SkillTuning", ProgressionRecorder.SkillResourcePath, c => c.SkillTuning, (c, v) => c.SkillTuning = v),
+            new TuningSlot("MinimapTuning", MinimapJson.ResourcePath, c => c.MinimapTuning, (c, v) => c.MinimapTuning = v),
+            new TuningSlot("AssistTuning", KitTuning.AssistResourcePath, c => c.AssistTuning, (c, v) => c.AssistTuning = v),
+            new TuningSlot("RumbleTuning", GamepadRumble.TuningResourcePath, c => c.RumbleTuning, (c, v) => c.RumbleTuning = v),
+        };
+
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);
 
         [MenuItem(MenuPath)]
         public static void Create()
         {
             var path = ResolvePath(Environment.GetCommandLineArgs(), DefaultPath);
-            var content = CreateOrFill(path, FindInProject);
+            var content = CreateOrFill(path, FindInProject, FindTuningInProject);
             Selection.activeObject = content;
         }
 
@@ -88,11 +114,16 @@ namespace Shooter.Editor
             return SceneBuildHelpers.ValidateAssetPath(found ?? fallback);
         }
 
-        public static GameContent CreateOrFill(string path, Func<Type, IReadOnlyList<Object>> find)
+        public static GameContent CreateOrFill(string path, Func<Type, IReadOnlyList<Object>> find, Func<string, IReadOnlyList<TextAsset>> findTuning)
         {
             if (find == null)
             {
                 throw new ArgumentNullException(nameof(find));
+            }
+
+            if (findTuning == null)
+            {
+                throw new ArgumentNullException(nameof(findTuning));
             }
 
             if (!path.Contains("/Resources/" + GameContent.ResourceFolder + "/", StringComparison.Ordinal))
@@ -102,13 +133,13 @@ namespace Shooter.Editor
                     + " move it there or pass it to GameContent.Use");
             }
 
-            var content = SceneBuildHelpers.CreateOrUpdateAsset<GameContent>(path, c => FillEmpty(c, find));
+            var content = SceneBuildHelpers.CreateOrUpdateAsset<GameContent>(path, c => FillEmpty(c, find, findTuning));
             Debug.Log($"{LogTag} saved '{path}'");
             return content;
         }
 
-        // 文言の表と調整値の JSON は空でも Resources のものが読まれるので埋めない。
-        public static IReadOnlyList<string> FillEmpty(GameContent content, Func<Type, IReadOnlyList<Object>> find)
+        // 文言の表は空でも Resources のものが読まれるので埋めない。
+        public static IReadOnlyList<string> FillEmpty(GameContent content, Func<Type, IReadOnlyList<Object>> find, Func<string, IReadOnlyList<TextAsset>> findTuning)
         {
             if (content == null)
             {
@@ -118,6 +149,11 @@ namespace Shooter.Editor
             if (find == null)
             {
                 throw new ArgumentNullException(nameof(find));
+            }
+
+            if (findTuning == null)
+            {
+                throw new ArgumentNullException(nameof(findTuning));
             }
 
             var left = new List<string>();
@@ -140,6 +176,32 @@ namespace Shooter.Editor
                 Debug.Log(candidates.Count == 0
                     ? $"{LogTag} {slot.Name} left empty: no {slot.Type.Name} in the project"
                     : $"{LogTag} {slot.Name} left empty: {candidates.Count} {slot.Type.Name} assets ({string.Join(", ", candidates.Select(c => c.name))}); choose one in the Inspector");
+            }
+
+            foreach (var slot in _tuningSlots)
+            {
+                if (slot.Get(content) != null)
+                {
+                    continue;
+                }
+
+                var candidates = (findTuning(slot.FileName) ?? Array.Empty<TextAsset>()).Where(c => c != null).ToList();
+                if (candidates.Count == 1)
+                {
+                    slot.Set(content, candidates[0]);
+                    Debug.Log($"{LogTag} {slot.Name} = '{candidates[0].name}'");
+                    continue;
+                }
+
+                // 見つからない欄は、空のままでもキットの Resources/Tuning/<名前> が読まれるので、埋められなかった欄に数えない。
+                if (candidates.Count == 0)
+                {
+                    Debug.Log($"{LogTag} {slot.Name} left empty: no {slot.FileName} in the project, so Resources/{slot.ResourcePath} is read");
+                    continue;
+                }
+
+                left.Add(slot.Name);
+                Debug.Log($"{LogTag} {slot.Name} left empty: {candidates.Count} {slot.FileName} files; choose one in the Inspector");
             }
 
             if (content.Enemies.Count == 0)
@@ -175,6 +237,68 @@ namespace Shooter.Editor
                 .Select(p => AssetDatabase.LoadAssetAtPath(p, type))
                 .Where(a => a != null)
                 .ToList();
+        }
+
+        // キットの Resources/Tuning/ にある同梱のものは欄が空でも読まれ、C# のスクリプトも TextAsset なので、どちらも候補にしない。
+        public static IReadOnlyList<TextAsset> FindTuningInProject(string fileName)
+        {
+            var bundled = ShooterKitRoot.BundledPath("Resources/" + TuningFolder);
+            return AssetDatabase.FindAssets("t:" + nameof(TextAsset), new[] { SearchFolder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Distinct(StringComparer.Ordinal)
+                .Where(p => IsTuningCandidate(p, fileName, bundled))
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .Select(p => AssetDatabase.LoadAssetAtPath<TextAsset>(p))
+                .Where(a => a != null && !(a is MonoScript))
+                .ToList();
+        }
+
+        public static bool IsTuningCandidate(string assetPath, string fileName, string bundledTuningFolder)
+        {
+            if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(fileName))
+            {
+                return false;
+            }
+
+            var normalized = assetPath.Replace('\\', '/');
+            if (!string.Equals(System.IO.Path.GetFileNameWithoutExtension(normalized), fileName, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(bundledTuningFolder))
+            {
+                return true;
+            }
+
+            var folder = bundledTuningFolder.Replace('\\', '/').TrimEnd('/') + "/";
+            return !normalized.StartsWith(folder, StringComparison.Ordinal);
+        }
+
+        private sealed class TuningSlot
+        {
+            public TuningSlot(string name, string resourcePath, Func<GameContent, TextAsset> get, Action<GameContent, TextAsset> set)
+            {
+                Name = name;
+                ResourcePath = resourcePath;
+                FileName = resourcePath.Substring(resourcePath.LastIndexOf('/') + 1);
+                Get = c =>
+                {
+                    var value = get(c);
+                    return value != null ? value : null;
+                };
+                Set = set;
+            }
+
+            public string Name { get; }
+
+            public string ResourcePath { get; }
+
+            public string FileName { get; }
+
+            public Func<GameContent, TextAsset> Get { get; }
+
+            public Action<GameContent, TextAsset> Set { get; }
         }
 
         private sealed class Slot

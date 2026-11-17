@@ -243,7 +243,7 @@ namespace Shooter.Tests.EditMode
                 { typeof(LoadoutDefinition), new Object[] { Track(ScriptableObject.CreateInstance<LoadoutDefinition>()) } },
             };
 
-            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0]);
+            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
 
             Assert.That(content.WeaponCatalog, Is.SameAs(catalog));
             Assert.That(content.Rules, Is.Null);
@@ -271,7 +271,7 @@ namespace Shooter.Tests.EditMode
                 { typeof(BattleRoyaleDefinition), new Object[] { royaleA, royaleB } },
             };
 
-            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0]);
+            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
 
             Assert.That(content.FreeForAll, Is.SameAs(freeForAll));
             Assert.That(content.Guardian, Is.SameAs(guardian));
@@ -280,6 +280,60 @@ namespace Shooter.Tests.EditMode
             Assert.That(content.BattleRoyale, Is.Null);
             Assert.That(left, Does.Contain("BattleRoyale"));
             Assert.That(left, Does.Not.Contain("FreeForAll").And.Not.Contain("Guardian").And.Not.Contain("Execution").And.Not.Contain("CaptureTheFlag"));
+        }
+
+        [Test]
+        public void FillEmptyTakesTheOnlyTuningFileOfEachName()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            var minimap = Track(new TextAsset("{}"));
+            var assist = Track(new TextAsset("{}"));
+            var rumbleA = Track(new TextAsset("{}"));
+            var rumbleB = Track(new TextAsset("{}"));
+            var keptGrenade = Track(new TextAsset("{}"));
+            content.GrenadeTuning = keptGrenade;
+            var files = new Dictionary<string, TextAsset[]>
+            {
+                { "minimap", new[] { minimap } },
+                { "assist", new[] { assist } },
+                { "rumble", new[] { rumbleA, rumbleB } },
+                { "grenade", new[] { Track(new TextAsset("{}")) } },
+            };
+            var asked = new List<string>();
+
+            var left = GameContentAssets.FillEmpty(content, _ => new Object[0], name =>
+            {
+                asked.Add(name);
+                return files.TryGetValue(name, out var found) ? found : new TextAsset[0];
+            });
+
+            Assert.That(content.MinimapTuning, Is.SameAs(minimap));
+            Assert.That(content.AssistTuning, Is.SameAs(assist));
+            Assert.That(content.RumbleTuning, Is.Null);
+            Assert.That(content.GrenadeTuning, Is.SameAs(keptGrenade), "a filled slot is kept");
+            Assert.That(content.PingTuning, Is.Null);
+            Assert.That(left, Does.Contain("RumbleTuning"));
+            Assert.That(left, Does.Not.Contain("MinimapTuning").And.Not.Contain("AssistTuning").And.Not.Contain("GrenadeTuning"));
+            Assert.That(left, Does.Not.Contain("PingTuning"), "a tuning slot with no file falls back to Resources/Tuning");
+            Assert.That(asked, Does.Contain("aim-assist").And.Contain("skill").And.Contain("progression").And.Not.Contain("grenade"));
+            Assert.That(asked, Has.Count.EqualTo(17));
+        }
+
+        [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]
+        [TestCase("Assets/MyGame/Resources/Tuning/minimap.txt", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]
+        [TestCase("Assets/MyGame/Tuning/aim-assist.json", "aim-assist", "Assets/game/Resources/Tuning", true)]
+        [TestCase("Assets/MyGame/Tuning/minimap-old.json", "minimap", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/MyGame/Tuning/assist.json", "aim-assist", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/MyGame/Tuning/Minimap.json", "minimap", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/game/Resources/Tuning/minimap.json", "minimap", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/game/Resources/Tuning/minimap.json", "minimap", "Assets/game/Resources/Tuning/", false)]
+        [TestCase("Assets/game/Resources/TuningExtra/minimap.json", "minimap", "Assets/game/Resources/Tuning", true)]
+        [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", null, true)]
+        [TestCase("", "minimap", "Assets/game/Resources/Tuning", false)]
+        [TestCase("Assets/MyGame/Tuning/minimap.json", "", "Assets/game/Resources/Tuning", false)]
+        public void ATuningCandidateHasTheFileNameAndIsNotTheBundledCopy(string assetPath, string fileName, string bundled, bool expected)
+        {
+            Assert.That(GameContentAssets.IsTuningCandidate(assetPath, fileName, bundled), Is.EqualTo(expected));
         }
 
         [Test]

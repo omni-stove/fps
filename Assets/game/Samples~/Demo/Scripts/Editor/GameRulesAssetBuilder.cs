@@ -35,6 +35,9 @@ namespace Fps.Editor
         public static string CampaignHardPath => Folder + "/CampaignHard.asset";
         public static string RangePath => Folder + "/Range.asset";
         public static string TpsRangePath => Folder + "/TpsRange.asset";
+
+        /// <summary>機能ごとのシーン (<see cref="FeatureSceneBuilder"/>) のルールを置く、<see cref="Folder"/> の下のフォルダ。</summary>
+        public static string FeatureFolder => Folder + "/Features";
         public static string DominationPath => Folder + "/Domination.asset";
 
         public const string DominationName = "Domination";
@@ -196,6 +199,56 @@ namespace Fps.Editor
         public static GameRules TpsRangeRules()
         {
             return RangeRules().WithActions(TpsRangeActions()).WithViewMode(ViewMode.ThirdPerson);
+        }
+
+        /// <summary>
+        /// 機能ごとのシーンの土台のルール。射撃場と同じく味方撃ちなし・個別リスポーン・体は消える・死亡カメラなしで、予備弾は有限、建造物は壊れず、
+        /// オンオフで切り替える項目はどれもキットの既定 (<see cref="ActionRules.Default"/>・<see cref="GameRules.Default"/>) のまま。視点は一人称。
+        /// </summary>
+        public static GameRules FeatureBaseRules()
+        {
+            return new GameRules(
+                FriendlyFire.Off,
+                RespawnMode.Individual,
+                GameRules.DefaultWaveIntervalSeconds,
+                4f,
+                20f,
+                DeathBody.Vanish,
+                DeathCamera.None,
+                false,
+                1f,
+                Destruction.Off,
+                ActionRules.Default)
+                .WithMaxWeapons(DemoMaxWeapons);
+        }
+
+        /// <summary>
+        /// field の機能を試すシーンのルール。<see cref="FeatureBaseRules"/> の field だけを On にする
+        /// (<see cref="GameRulesDebugDraft"/> と同じく、ブラインドファイアはカバーも、グレネードは数も一緒に入れる)。
+        /// ダウンは倒れる手段が要るので落下ダメージも入れる。
+        /// </summary>
+        /// <exception cref="ArgumentException">field がオンオフの項目 (<see cref="GameRulesDebugDraft.IsToggle"/>) でない。</exception>
+        public static GameRules FeatureRules(GameRulesDebugField field)
+        {
+            if (!GameRulesDebugDraft.IsToggle(field))
+            {
+                throw new ArgumentException($"{field} is not an on/off rule", nameof(field));
+            }
+
+            var draft = new GameRulesDebugDraft(FeatureBaseRules());
+            draft.Set(field, 1);
+            if (field == GameRulesDebugField.Downed)
+            {
+                draft.Set(GameRulesDebugField.FallDamage, (int)FallDamage.On);
+            }
+
+            return draft.Build();
+        }
+
+        /// <summary>field の機能のシーンのルールのアセットのパス (<see cref="FeatureFolder"/>/&lt;field&gt;.asset)。</summary>
+        public static string FeatureRulesPath(GameRulesDebugField field)
+        {
+            return FeatureFolder + "/" + field + ".asset";
         }
 
         /// <summary>
@@ -407,6 +460,23 @@ namespace Fps.Editor
             BuildAt(
                 TeamDeathmatchPath, CampaignEasyPath, CampaignNormalPath, CampaignHardPath, RangePath, TpsRangePath, DominationPath);
             BuildModesAt(Folder);
+        }
+
+        /// <summary>
+        /// path のルールを読む。無ければ field の <see cref="FeatureRules"/> で作る。あれば値は変えない (ゲーム側で調整した値を残す)。
+        /// </summary>
+        public static GameRulesDefinition LoadOrBuildFeatureRules(GameRulesDebugField field, string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
+            {
+                return LoadRules(path);
+            }
+
+            var rules = FeatureRules(field);
+            var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => Configure(d, rules));
+            Debug.Log($"{LogTag} saved '{path}'");
+            return built;
         }
 
         /// <summary>

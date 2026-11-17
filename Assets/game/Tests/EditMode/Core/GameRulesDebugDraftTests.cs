@@ -15,6 +15,8 @@ namespace Fps.Core.Tests
         private static readonly string[] _deathCameraOptions = { "None", "Killer", "Ally", "Free", "KillCam" };
         private static readonly string[] _hudDensityOptions = { "Full", "Minimal", "Hardcore" };
         private static readonly string[] _downedOptions = { "Off", "Revive" };
+        private static readonly string[] _viewModeOptions = { "FirstPerson", "ThirdPerson" };
+        private static readonly string[] _viewModeToThirdPerson = { "ViewMode: FirstPerson -> ThirdPerson" };
 
         private static readonly string[] _expectedChanges =
         {
@@ -53,7 +55,7 @@ namespace Fps.Core.Tests
 #pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
-            Assert.That(defined.Length, Is.EqualTo(30));
+            Assert.That(defined.Length, Is.EqualTo(31));
         }
 
         [Test]
@@ -102,6 +104,21 @@ namespace Fps.Core.Tests
 
             Assert.That(built.Actions.Jump, Is.EqualTo(Jump.Off));
             Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(_jumpTurnedOff));
+        }
+
+        [Test]
+        public void ViewModeIsADropdownThatSwitchesToThirdPerson()
+        {
+            var draft = new GameRulesDebugDraft(GameRules.Default);
+            Assert.That(draft.Get(GameRulesDebugField.ViewMode), Is.EqualTo((int)ViewMode.FirstPerson));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.ViewMode), Is.EqualTo(_viewModeOptions));
+            Assert.That(GameRulesDebugDraft.IsToggle(GameRulesDebugField.ViewMode), Is.False);
+
+            draft.Set(GameRulesDebugField.ViewMode, (int)ViewMode.ThirdPerson);
+            var built = draft.Build();
+
+            Assert.That(built.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(_viewModeToThirdPerson));
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Fps.Core;
 using Fps.Editor;
 using Fps.Runtime;
@@ -770,6 +771,93 @@ namespace Fps.Tests.EditMode
                 Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), name);
                 Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), name);
             }
+        }
+
+        [Test]
+        public void FeatureRulesTurnOnOnlyTheirOwnField()
+        {
+            var toggles = GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).ToArray();
+            var baseRules = GameRulesAssetBuilder.FeatureBaseRules();
+
+            foreach (var field in toggles)
+            {
+                var rules = GameRulesAssetBuilder.FeatureRules(field);
+
+                Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(1), field + " is on");
+                Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.FirstPerson), field + ": F2 switches the view at run time");
+                foreach (var other in toggles)
+                {
+                    if (other == field || IsTurnedOnWith(field, other))
+                    {
+                        continue;
+                    }
+
+                    Assert.That(
+                        GameRulesDebugDraft.Read(rules, other),
+                        Is.EqualTo(GameRulesDebugDraft.Read(baseRules, other)),
+                        $"{field} scene leaves {other} as in the base rules");
+                }
+            }
+        }
+
+        [Test]
+        public void FeatureBaseRulesKeepEveryToggleAtTheKitDefault()
+        {
+            var baseRules = GameRulesAssetBuilder.FeatureBaseRules();
+
+            foreach (var field in GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle))
+            {
+                Assert.That(GameRulesDebugDraft.Read(baseRules, field), Is.EqualTo(GameRulesDebugDraft.Read(GameRules.Default, field)), field.ToString());
+            }
+
+            Assert.That(baseRules.InfiniteReserve, Is.False);
+            Assert.That(baseRules.Destruction, Is.EqualTo(Destruction.Off));
+            Assert.That(baseRules.FallDamage, Is.EqualTo(FallDamage.Off));
+            Assert.That(baseRules.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
+            Assert.That(baseRules.Actions.Jump, Is.EqualTo(Jump.On), "the kit default keeps jumping on");
+        }
+
+        [Test]
+        public void FeatureRulesBringWhatTheFeatureNeeds()
+        {
+            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.BlindFire).Actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Grenade).Actions.GrenadeCount, Is.EqualTo(GameRulesDebugDraft.DefaultGrenadeCount));
+            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Downed).FallDamage, Is.EqualTo(FallDamage.On), "falling off the tower downs the player");
+        }
+
+        [Test]
+        public void FeatureRulesRejectFieldsThatAreNotOnOff()
+        {
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.HudDensity));
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.ViewMode));
+        }
+
+        [Test]
+        public void FeatureRulesPathIsNamedAfterTheField()
+        {
+            Assert.That(GameRulesAssetBuilder.FeatureRulesPath(GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Rules/Features/Zipline.asset"));
+        }
+
+        [Test]
+        public void LoadOrBuildFeatureRulesCreatesOnceAndKeepsEditedValues()
+        {
+            var path = _folder + "/Zipline.asset";
+
+            var built = GameRulesAssetBuilder.LoadOrBuildFeatureRules(GameRulesDebugField.Zipline, path);
+            Assert.That(built, Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path)));
+            Assert.That(built.ToRules().Actions.Zipline, Is.EqualTo(Zipline.On));
+
+            GameRulesAssetBuilder.Configure(built, GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Zipline).WithFallDamage(FallDamage.On));
+            var loaded = GameRulesAssetBuilder.LoadOrBuildFeatureRules(GameRulesDebugField.Zipline, path);
+
+            Assert.That(loaded, Is.SameAs(built));
+            Assert.That(loaded.ToRules().FallDamage, Is.EqualTo(FallDamage.On), "an existing asset is not overwritten");
+        }
+
+        private static bool IsTurnedOnWith(GameRulesDebugField field, GameRulesDebugField other)
+        {
+            return (field == GameRulesDebugField.BlindFire && other == GameRulesDebugField.Cover)
+                || (field == GameRulesDebugField.Downed && other == GameRulesDebugField.FallDamage);
         }
 
         private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> list)

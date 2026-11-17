@@ -28,5 +28,6 @@
   "debug.rules.field.AimToFire": "構えないと撃てない",
   "debug.rules.field.Jump": "ジャンプ",
   "debug.rules.field.FallDamage": "落下ダメージ",
-  "debug.rules.field.HudDensity": "HUD の情報量"
+  "debug.rules.field.HudDensity": "HUD の情報量",
+  "debug.rules.field.ViewMode": "視点"
 }

@@ -94,5 +94,8 @@ namespace Fps.Core
 
         /// <summary><see cref="GameRules.HudDensity"/>。</summary>
         HudDensity,
+
+        /// <summary><see cref="GameRules.ViewMode"/>。</summary>
+        ViewMode,
     }
 }

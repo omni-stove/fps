@@ -28,5 +28,6 @@
   "debug.rules.field.AimToFire": "Aim to fire",
   "debug.rules.field.Jump": "Jump",
   "debug.rules.field.FallDamage": "Fall damage",
-  "debug.rules.field.HudDensity": "HUD density"
+  "debug.rules.field.HudDensity": "HUD density",
+  "debug.rules.field.ViewMode": "View"
 }

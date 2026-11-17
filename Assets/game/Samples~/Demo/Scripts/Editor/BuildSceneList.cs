@@ -38,6 +38,29 @@ namespace Fps.Editor
         /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
         public static string TpsRangeScene => FpsKitRoot.OutputScene("TpsRange");
 
+        /// <summary>機能ごとのシーンの名前の頭。後ろにルールの項目 (<see cref="Fps.Core.GameRulesDebugField"/>) の名前を付ける。</summary>
+        public const string FeatureScenePrefix = "Feature_";
+
+        /// <summary>
+        /// field の機能だけを試すシーン。ルールは <see cref="GameRulesAssetBuilder.FeatureRulesPath"/>。生成は <see cref="FeatureSceneBuilder"/>。
+        /// </summary>
+        public static string FeatureScene(Fps.Core.GameRulesDebugField field) => FpsKitRoot.OutputScene(FeatureScenePrefix + field);
+
+        /// <summary>機能ごとのシーンすべて。<see cref="FeatureSceneBuilder.All"/> の順。</summary>
+        public static IReadOnlyList<string> FeatureScenes
+        {
+            get
+            {
+                var scenes = new List<string>();
+                foreach (var feature in FeatureSceneBuilder.All())
+                {
+                    scenes.Add(FeatureScene(feature.Field));
+                }
+
+                return scenes;
+            }
+        }
+
         /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
         public static string DominationScene => FpsKitRoot.OutputScene("Domination");
 
@@ -78,31 +101,40 @@ namespace Fps.Editor
         public static string NetArena01Scene => FpsKitRoot.OutputScene("NetArena01");
 
         /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
-        public static IReadOnlyList<string> Scenes => new[]
+        public static IReadOnlyList<string> Scenes
         {
-            MainMenuScene,
-            BootstrapScene,
-            EnemyAiTestScene,
-            MissionTestScene,
-            DestructionTestScene,
-            CampaignScene,
-            Campaign02Scene,
-            TpsRangeScene,
-            DominationScene,
-            WaveTestScene,
-            FreeForAllScene,
-            KillConfirmedScene,
-            GunGameScene,
-            HardpointScene,
-            GuardianScene,
-            ExecutionScene,
-            SearchAndDestroyScene,
-            HordeScene,
-            BattleRoyaleScene,
-            ModeTestScene,
-            NetArena01Scene,
-            NetTestScene,
-        };
+            get
+            {
+                var scenes = new List<string>
+                {
+                    MainMenuScene,
+                    BootstrapScene,
+                    EnemyAiTestScene,
+                    MissionTestScene,
+                    DestructionTestScene,
+                    CampaignScene,
+                    Campaign02Scene,
+                    TpsRangeScene,
+                    DominationScene,
+                    WaveTestScene,
+                    FreeForAllScene,
+                    KillConfirmedScene,
+                    GunGameScene,
+                    HardpointScene,
+                    GuardianScene,
+                    ExecutionScene,
+                    SearchAndDestroyScene,
+                    HordeScene,
+                    BattleRoyaleScene,
+                    ModeTestScene,
+                    NetArena01Scene,
+                    NetTestScene,
+                };
+
+                scenes.InsertRange(scenes.IndexOf(TpsRangeScene) + 1, FeatureScenes);
+                return scenes;
+            }
+        }
 
         /// <summary>
         /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>)。

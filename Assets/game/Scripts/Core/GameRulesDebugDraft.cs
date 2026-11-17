@@ -106,6 +106,7 @@ namespace Fps.Core
                 case GameRulesDebugField.Jump: return (int)actions.Jump;
                 case GameRulesDebugField.FallDamage: return (int)rules.FallDamage;
                 case GameRulesDebugField.HudDensity: return (int)rules.HudDensity;
+                case GameRulesDebugField.ViewMode: return (int)rules.ViewMode;
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
             }
         }
@@ -184,6 +185,7 @@ namespace Fps.Core
                 .WithDestruction((Destruction)Get(GameRulesDebugField.Destruction))
                 .WithFallDamage((FallDamage)Get(GameRulesDebugField.FallDamage))
                 .WithHudDensity((HudDensity)Get(GameRulesDebugField.HudDensity))
+                .WithViewMode((ViewMode)Get(GameRulesDebugField.ViewMode))
                 .WithActions(actions);
         }
 
@@ -283,6 +285,7 @@ namespace Fps.Core
                 case GameRulesDebugField.Jump: return typeof(Jump);
                 case GameRulesDebugField.FallDamage: return typeof(FallDamage);
                 case GameRulesDebugField.HudDensity: return typeof(HudDensity);
+                case GameRulesDebugField.ViewMode: return typeof(ViewMode);
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
             }
         }

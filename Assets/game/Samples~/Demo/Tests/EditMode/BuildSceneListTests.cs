@@ -55,6 +55,20 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ListHasOneFeatureSceneForEachOnOffRuleRightAfterTheTpsRange()
+        {
+            var scenes = BuildSceneList.Scenes.ToList();
+            var fields = Fps.Core.GameRulesDebugDraft.Fields.Where(Fps.Core.GameRulesDebugDraft.IsToggle).ToArray();
+            var expected = fields.Select(BuildSceneList.FeatureScene).ToArray();
+
+            Assert.That(BuildSceneList.FeatureScene(Fps.Core.GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Scenes/Feature_Zipline.unity"));
+            Assert.That(BuildSceneList.FeatureScenes, Is.EqualTo(expected));
+            Assert.That(expected, Has.Length.EqualTo(25));
+            var start = scenes.IndexOf(BuildSceneList.TpsRangeScene) + 1;
+            Assert.That(scenes.Skip(start).Take(expected.Length), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void ListHasEveryModeSceneNamedAfterItsRules()
         {
             foreach (var name in GameRulesAssetBuilder.ModeNames)

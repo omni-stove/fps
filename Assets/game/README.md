@@ -77,6 +77,8 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 - 取り込んだサンプルは、Editor を開いたときに自分のフォルダを出力先ルートの既定にする (`Fps.Editor.DemoSample`)。ビルダーと smoke は、`-fpsKitRoot` を付けなければサンプルのフォルダの下に書く。
 - 取り込んだら **Fps > Build Main Menu Scene** を一度実行する。メインメニューのシーンを作り、メニューから移るシーンのルート (`MenuSceneSettings` の Scene Root) を取り込んだ場所に書き直す。
+- 機能を 1 つずつ試すなら **Fps > Build Feature Scenes** (`Fps.Editor.FeatureSceneBuilder.Build`) を実行する。ルールのオンオフの項目 (F1 パネルのトグル) ごとに小さなシーン `Scenes/Feature_<項目名>.unity` (例: `Feature_Zipline`) を 1 つずつ作り、その機能の試し場所だけを置く。ルール (`Rules/Features/<項目名>.asset`) はその項目だけを On にしたもので、無ければ作り、あれば値を変えない。
+- Editor と Development Build では、どのシーンでも F1 でルールのデバッグパネルを開いて項目 (視点も含む) を切り替えて読み直し、F2 で一人称と三人称をその場で入れ替える (`ViewModeDebugToggle`、ログは `[ViewSwitch]`)。F2 はルールを変えないので、読み直すとルールの視点に戻る。
 - このリポジトリでは、`Assets/Samples/FpsKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクになっていて、取り込んだのと同じ形で開ける。サンプルを直すときは `Assets/game/Samples~/Demo` の下を直す。
 
 ## Unity の起動コマンド

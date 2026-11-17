@@ -5,7 +5,7 @@
   "regenDelaySeconds": 5,
   "regenPerSecond": 15,
   "deathBody": "Collapse",
-  "deathCamera": "None",
+  "deathCamera": "Fallen",
   "infiniteReserve": false,
   "reserveAmmoMultiplier": 1,
   "destruction": "Off",

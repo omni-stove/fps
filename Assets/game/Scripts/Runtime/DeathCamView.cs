@@ -11,10 +11,11 @@ namespace Fps.Runtime
     /// 倒されてからリスポーンまでの観戦で、自分のカメラを借りて動かす部分。いつ始めて止めるか・何を映すかは持ち主
     /// (ネット対戦の NetDeathCamera、オフラインの <see cref="PlayerDeathCamera"/>) が決め、ここはカメラの置き方と入力だけを受け持つ。
     /// <list type="bullet">
-    /// <item><see cref="Begin"/> で <see cref="ViewRig"/> を三人称にして止め (カメラはこちらが置く)、視点操作 (<see cref="FirstPersonLook.InputSuspended"/>) と
+    /// <item><see cref="Begin(Vector3, float)"/> で <see cref="ViewRig"/> を三人称 (倒れた主観では一人称のまま) にして止め (カメラはこちらが置く)、視点操作 (<see cref="FirstPersonLook.InputSuspended"/>) と
     /// 覗き込み (<see cref="AimDownSights"/>) を止め、Move・Next・Previous の入力を使えるようにする。</item>
     /// <item><see cref="Restore"/> でカメラの位置・ViewRig の視点・入力を元に戻す。</item>
-    /// <item>倒した相手の方を向く (<see cref="Frame"/>)、味方の肩越し (<see cref="FrameAlly"/>)、自由カメラ (<see cref="MoveFree"/>) のどれかでカメラを置く。</item>
+    /// <item>倒した相手の方を向く (<see cref="Frame"/>)、味方の肩越し (<see cref="FrameAlly"/>)、自由カメラ (<see cref="MoveFree"/>)、
+    /// 倒れた主観 (<see cref="FrameFallen"/>) のどれかでカメラを置く。</item>
     /// </list>
     /// 壁にめり込まないよう縮めるのは <see cref="ViewRig.ResolveBoomPosition(Vector3, Vector3, Transform)"/>、自由カメラが壁を抜けないのは
     /// <see cref="ViewRig.ResolveFreeMove"/> で決める。
@@ -40,6 +41,7 @@ namespace Fps.Runtime
         private Camera _camera;
         private Vector3 _deathEye;
         private float _fallbackYaw;
+        private float _deathPitch;
         private Vector3 _savedCameraLocalPosition;
         private Quaternion _savedCameraLocalRotation;
         private ViewMode _savedMode;
@@ -189,6 +191,15 @@ namespace Fps.Runtime
         /// </summary>
         public void Begin(Vector3 deathEye, float fallbackYaw)
         {
+            Begin(deathEye, fallbackYaw, false);
+        }
+
+        /// <summary>
+        /// <see cref="Begin(Vector3, float)"/> の、keepFirstPerson が true なら ViewRig を一人称のままにするもの。
+        /// 倒れた主観 (<see cref="FrameFallen"/>) で、床の近くに下ろしたカメラに自分の体を映さない (一人称と同じく影だけにする) ために使う。
+        /// </summary>
+        public void Begin(Vector3 deathEye, float fallbackYaw, bool keepFirstPerson)
+        {
             if (_engaged)
             {
                 return;
@@ -218,13 +229,15 @@ namespace Fps.Runtime
                 _savedCameraLocalRotation = _camera.transform.localRotation;
             }
 
+            _deathPitch = _camera != null ? Mathf.DeltaAngle(0f, _camera.transform.eulerAngles.x) : 0f;
+
             if (_rig != null)
             {
                 // カメラはこちらが置くので、ViewRig の LateUpdate に目からのオフセットへ戻させない
                 _rigWasEnabled = _rig.enabled;
                 _savedMode = _rig.Mode;
                 _rig.enabled = false;
-                _rig.Mode = ViewMode.ThirdPerson;
+                _rig.Mode = keepFirstPerson ? ViewMode.FirstPerson : ViewMode.ThirdPerson;
                 _rig.ApplyBodyVisibility(true);
             }
 
@@ -316,6 +329,30 @@ namespace Fps.Runtime
             DeathCamFraming.LookAt(
                 position.ToNumerics(), look.ToNumerics(), _fallbackYaw, LookAngles.DefaultMaxPitch, out var yaw, out var pitch);
             _camera.transform.SetPositionAndRotation(position, Quaternion.Euler(pitch, yaw, 0f));
+        }
+
+        /// <summary>
+        /// 倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れ始めてから elapsed 秒のカメラを置く。倒れた目から真下の
+        /// <see cref="FallenView.Eye"/> (壁や床があれば手前) へ下ろし、倒れた時の体の向きのまま、上下の向きと横の傾きを fallen に従って変える。
+        /// groundY は倒れた足元の高さ。借りていなければ何もしない。
+        /// </summary>
+        public void FrameFallen(FallenView fallen, float groundY, float elapsed)
+        {
+            if (fallen == null)
+            {
+                throw new ArgumentNullException(nameof(fallen));
+            }
+
+            if (!_engaged || _camera == null)
+            {
+                return;
+            }
+
+            _freeActive = false;
+            var eye = fallen.Eye(_deathEye.ToNumerics(), groundY, elapsed).ToUnity();
+            var position = _rig != null ? _rig.ResolveBoomPosition(_deathEye, eye - _deathEye) : eye;
+            var rotation = Quaternion.Euler(fallen.Pitch(_deathPitch, elapsed), _fallbackYaw, fallen.Roll(elapsed));
+            _camera.transform.SetPositionAndRotation(position, rotation);
         }
 
         /// <summary>

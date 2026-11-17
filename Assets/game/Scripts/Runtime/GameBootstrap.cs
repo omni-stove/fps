@@ -937,11 +937,57 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 倒れたときと体力を作り直したとき (キャンペーンの再開) に、しゃがみと伏せを解除し、覗き込みを即座に腰だめへ戻す。
+        /// 倒れている間は操作も手放させる (<see cref="HoldControlWhileDead"/>)。
         /// </summary>
         private static void WireDeathAndRespawn(Damageable damageable, PlayerController mover, AimDownSights ads)
         {
             damageable.Died += _ => ResetStance(mover, ads, CrouchInput.ReasonDeath, ProneInput.ReasonDeath);
             damageable.HealthReset += _ => ResetStance(mover, ads, CrouchInput.ReasonRespawn, ProneInput.ReasonRespawn);
+            if (mover != null)
+            {
+                HoldControlWhileDead(damageable, mover);
+            }
+        }
+
+        /// <summary>
+        /// damageable が倒れて (ダウンを含む) から体力を作り直す (リスポーン・起こされる) まで、mover の <see cref="PlayerController.Handoff"/> を引き取る。
+        /// 同じ口を見る武器 (<see cref="WeaponController.Handoff"/>) と能力も、その間は撃つ・リロード・持ち替え・移動の入力を読まない。
+        /// 部品を止めるモードやキャンペーンが無い場面 (射撃場・機能シーン) でも、倒れたまま撃てないようにするため。
+        /// 部品の有効・無効ではなく口で止めるのは、モードの <see cref="SideMember.SetActing"/> と取り合わないため。
+        /// 引き取りに使う holder を返す。
+        /// </summary>
+        internal static object HoldControlWhileDead(Damageable damageable, PlayerController mover)
+        {
+            if (damageable == null)
+            {
+                throw new ArgumentNullException(nameof(damageable));
+            }
+
+            if (mover == null)
+            {
+                throw new ArgumentNullException(nameof(mover));
+            }
+
+            var holder = new DeadControlHold();
+            damageable.Died += dead =>
+            {
+                if (mover != null && mover.Handoff.Claim(holder))
+                {
+                    Debug.Log(PlayerController.LogTag + " control held while " + dead.Id + " is dead", mover);
+                }
+            };
+            damageable.HealthReset += _ =>
+            {
+                if (mover != null && mover.Handoff.Release(holder))
+                {
+                    Debug.Log(PlayerController.LogTag + " control returned to " + damageable.Id, mover);
+                }
+            };
+            return holder;
+        }
+
+        private sealed class DeadControlHold
+        {
         }
 
         private static void ResetStance(PlayerController mover, AimDownSights ads, string crouchReason, string proneReason)

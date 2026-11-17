@@ -1,10 +1,11 @@
 using System;
+using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 
-namespace Fps.Core.Tests
+namespace Fps.Tests.EditMode
 {
-    // 文は JapaneseGameTextSetUp が読ませる日本語の表 (Resources/Localization/ja/squad.json) から引く。
+    // 文は JapaneseLanguageSetUp が効かせる日本語の表 (Resources/Localization/ja/squad.json) から引く。
     public sealed class SquadOrderTextTests
     {
         [Test]
@@ -32,7 +33,7 @@ namespace Fps.Core.Tests
         {
             foreach (var language in new[] { GameLanguage.Japanese, GameLanguage.English })
             {
-                var table = JapaneseGameTextSetUp.LoadTable(language);
+                var table = Localizer.TableOf(language);
                 foreach (var kind in new[] { BotErrandKind.Hold, BotErrandKind.Attack, BotErrandKind.Follow })
                 {
                     Assert.That(table.Get(SquadOrderText.ReplyKey(kind)), Is.Not.EqualTo(SquadOrderText.ReplyKey(kind)), language + " " + kind);

@@ -308,6 +308,44 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void KillingTheTargetStandsDownInsteadOfRushingToTheBody()
+        {
+            PrepareShootableEnemy(Damageable.DefaultMaxHealth);
+            var player = new GameObject("Player");
+            try
+            {
+                var target = player.AddComponent<Damageable>();
+                target.Initialize("player-1", 10);
+                _agent.Target = target;
+
+                _agent.Brain.Tick(0.1f, new EnemyPerception(
+                    System.Numerics.Vector3.Zero, new System.Numerics.Vector3(0f, 0f, 5f), true, false, null));
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Attack));
+                Assert.That(_agent.StandDownIfTargetFell(), Is.False, "the target is still alive");
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Attack));
+
+                target.TakeDamage(10);
+                LogAssert.Expect(LogType.Log, "[AI] id=enemy-1 stand-down target=player-1 prev=Attack");
+                Assert.That(_agent.StandDownIfTargetFell(), Is.True);
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Idle));
+
+                var decision = _agent.Brain.Tick(0.1f, _agent.Perceive());
+                Assert.That(decision.MoveTo.HasValue, Is.False, "it does not head to where the target fell");
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Idle));
+
+                _agent.Alert(new Vector3(4f, 0f, 0f));
+                _agent.Brain.Tick(0.1f, _agent.Perceive());
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Search));
+                Assert.That(_agent.StandDownIfTargetFell(), Is.False, "the same fallen target does not cancel a later search");
+                Assert.That(_agent.State, Is.EqualTo(EnemyState.Search));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+            }
+        }
+
+        [Test]
         public void BeingShotIsPerceivedOnceWithTheShooterAndTheHealthLeft()
         {
             var damageable = PrepareShootableEnemy(Damageable.DefaultMaxHealth);

@@ -253,6 +253,13 @@ namespace Fps.Core
 
         public int Add(string itemId, int count)
         {
+            return Add(itemId, count, 0f);
+        }
+
+        // 武器から外した物を戻すとき、武器の重さにまだ入っている分 (freedWeight) を空きに数える
+        public int Add(string itemId, int count, float freedWeight)
+        {
+            SpecGuard.NonNegativeFinite(freedWeight, nameof(freedWeight));
             if (count < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
@@ -263,7 +270,7 @@ namespace Fps.Core
                 return 0;
             }
 
-            var added = Place(_stacks, item, WeightOf(item), count, ref _nextHandle);
+            var added = Place(_stacks, item, WeightOf(item), count, ref _nextHandle, freedWeight);
             if (added > 0)
             {
                 Changed?.Invoke();

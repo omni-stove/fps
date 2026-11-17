@@ -97,7 +97,7 @@ namespace Fps.Core
             }
 
             // 先に外した物を入れるのは、setAttachments で溢れた弾が確かめた空きを先に使い、外した物が消えるのを防ぐため
-            if (inventory.RoomFor(item.Id, item.Weight) < 1 || inventory.Add(item.Id, 1) != 1)
+            if (inventory.RoomFor(item.Id, item.Weight) < 1 || inventory.Add(item.Id, 1, item.Weight) != 1)
             {
                 return AttachmentRejection.NoRoom;
             }

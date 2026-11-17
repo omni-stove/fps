@@ -153,6 +153,7 @@ namespace Fps.Runtime
             var weapon = GetComponentInChildren<WeaponController>();
             if (weapon != null && weapon.IsInitialized)
             {
+                weapon.ClearAttachments();
                 weapon.ApplyRules(weapon.Rules);
             }
         }

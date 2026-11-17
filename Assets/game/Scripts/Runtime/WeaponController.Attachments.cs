@@ -38,6 +38,19 @@ namespace Fps.Runtime
             _attachments.Clear();
         }
 
+        /// <summary>付けた物を持ち物へ戻さずに外し、武器を付ける前の値にする。持ち物を最初の状態に戻した後 (出直し) に呼び、付けた物が持ち物と武器の両方に残って増えるのを防ぐ。</summary>
+        public void ClearAttachments()
+        {
+            EnsureInitialized();
+            if (_attachments.Count == 0)
+            {
+                return;
+            }
+
+            _attachments.Clear();
+            _specs = ToSpecs(_loadedDefinitions);
+        }
+
         public IReadOnlyList<string> AttachmentsOf(string weaponId)
         {
             return weaponId != null && _attachments.TryGetValue(weaponId, out var attached) ? attached : WeaponAttachments.None;

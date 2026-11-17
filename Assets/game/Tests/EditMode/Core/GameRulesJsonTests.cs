@@ -150,8 +150,8 @@ namespace Fps.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(20));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(26));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(22));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(27));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
 

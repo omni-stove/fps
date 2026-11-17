@@ -123,7 +123,7 @@ namespace Fps.Core.Tests
             Assert.That(HudFormat.Ammo(0, 90, true), Is.EqualTo("Reloading / 90"));
             Assert.That(GameText.Resolve(HudFormat.Respawn(3)), Is.EqualTo("Respawn in 3 s"));
             Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA wins"));
-            Assert.That(GameText.Resolve(ScoreboardRows.LocalPlayerName), Is.EqualTo("You"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.scoreboard.you")), Is.EqualTo("You"));
             Assert.That(SubtitleText.Format(new SoundCue(SoundCueKind.Gunshot, SoundCueDirection.BackLeft, SoundCue.FarDistance)), Is.EqualTo("[Gunshot back left far]"));
             Assert.That(GameText.Resolve(ZoneHudText.Closed), Is.EqualTo("Final zone"));
         }

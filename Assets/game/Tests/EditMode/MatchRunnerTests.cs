@@ -1,5 +1,6 @@
 using System.Linq;
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -22,6 +23,7 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
+            GameSignals.ResetAll();
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
@@ -57,6 +59,14 @@ namespace Fps.Tests.EditMode
             }
 
             Object.DestroyImmediate(_host);
+            GameSignals.ResetAll();
+        }
+
+        private static IReadOnlyList<ScoreboardSection> PublishedSections()
+        {
+            var entries = GameSignals.Scoreboard.Value;
+            Assert.That(entries, Is.Not.Null, "the scoreboard is published");
+            return ScoreboardRows.Build(entries, Team.Alpha);
         }
 
         [Test]
@@ -185,13 +195,14 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BeginListsThePlayerAndTheTargetsOnTheScoreboard()
         {
-            var sections = DefaultHud.Scoreboard.Sections;
+            Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(_runner.PublishedScoreboard));
+            var sections = PublishedSections();
 
             Assert.That(sections[0].Team, Is.EqualTo(Team.Alpha));
             Assert.That(sections[0].Rows.Count(), Is.EqualTo(1));
             var player = sections[0].Rows[0];
             Assert.That(player.PlayerId, Is.EqualTo(MatchRunner.PlayerId));
-            Assert.That(player.Name, Is.EqualTo(ScoreboardRows.LocalPlayerName));
+            Assert.That(player.Name, Is.EqualTo(ScoreboardName.LocalPlayer));
             Assert.That(player.IsLocal, Is.True);
             Assert.That(player.Connection, Is.EqualTo(ScoreboardConnection.None));
 
@@ -201,7 +212,7 @@ namespace Fps.Tests.EditMode
             {
                 var target = sections[1].Rows[i];
                 Assert.That(target.PlayerId, Is.EqualTo(MatchRunner.PlayerId + i + 1));
-                Assert.That(target.Name, Is.EqualTo(ScoreboardRows.TargetName(i + 1)));
+                Assert.That(target.Name, Is.EqualTo(ScoreboardName.Target(i + 1)));
                 Assert.That(target.IsLocal, Is.False);
                 Assert.That(target.Kills, Is.Zero);
                 Assert.That(target.Deaths, Is.Zero);
@@ -211,23 +222,51 @@ namespace Fps.Tests.EditMode
         [Test]
         public void KillsAndDeathsUpdateTheScoreboardRightAway()
         {
-            var scoreboard = DefaultHud.Scoreboard;
+            var published = new List<IReadOnlyList<ScoreboardEntry>>();
+            GameSignals.Scoreboard.Changed += published.Add;
             var firstTargetId = MatchRunner.PlayerId + 1;
 
             _world.Targets[0].Damageable.Kill();
 
-            Assert.That(scoreboard.Sections[0].Rows[0].Kills, Is.EqualTo(1));
+            Assert.That(published, Has.Count.EqualTo(1), "a kill publishes once");
+            var sections = PublishedSections();
+            Assert.That(sections[0].Rows[0].Kills, Is.EqualTo(1));
             Assert.That(_runner.TargetDeaths(firstTargetId), Is.EqualTo(1));
-            var targets = scoreboard.Sections[1].Rows;
+            var targets = sections[1].Rows;
             Assert.That(targets[targets.Count - 1].PlayerId, Is.EqualTo(firstTargetId), "the target killed the most is listed last");
             Assert.That(targets[targets.Count - 1].Deaths, Is.EqualTo(1));
-            Assert.That(scoreboard.Sections[1].Deaths, Is.EqualTo(1));
+            Assert.That(sections[1].Deaths, Is.EqualTo(1));
 
             LogAssert.Expect(LogType.Log, "[Match] state=Lost kills=1 remaining=30.0");
             _world.PlayerDamageable.Kill();
 
             Assert.That(_runner.PlayerDeaths, Is.EqualTo(1));
-            Assert.That(scoreboard.Sections[0].Rows[0].Deaths, Is.EqualTo(1));
+            Assert.That(PublishedSections()[0].Rows[0].Deaths, Is.EqualTo(1));
+            Assert.That(published[published.Count - 1], Is.Not.SameAs(published[0]), "each publish is a new list");
+            GameSignals.Scoreboard.Changed -= published.Add;
+        }
+
+        [Test]
+        public void StopClearsThePublishedScoreboard()
+        {
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.Null);
+            Assert.That(_runner.PublishedScoreboard, Is.Null);
+        }
+
+        [Test]
+        public void StopKeepsAScoreboardPublishedByAnotherRunner()
+        {
+            var other = new[]
+            {
+                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+            };
+            GameSignals.Scoreboard.Publish(other);
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(other));
         }
 
         [Test]
@@ -238,7 +277,7 @@ namespace Fps.Tests.EditMode
             _world.Targets[0].Damageable.Kill();
 
             Assert.That(_runner.TargetDeaths(MatchRunner.PlayerId + 1), Is.Zero);
-            Assert.That(DefaultHud.Scoreboard.Sections[1].Deaths, Is.Zero);
+            Assert.That(PublishedSections()[1].Deaths, Is.Zero);
         }
 
         [Test]

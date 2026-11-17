@@ -193,6 +193,83 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheLeanAndTheDoubleJumpArePredictedWithTheServerAndTheLeanIsShownToTheOtherPlayer()
+        {
+            var rulesPath = Path.Combine(_root, "server-data", "rules", ServerLaunch.DefaultRules + ".json");
+            File.WriteAllText(rulesPath, Replace(File.ReadAllText(rulesPath), "\"airJumps\": 0", "\"airJumps\": 1"));
+
+            StartServer();
+            var mover = Join();
+            var watcher = Join();
+            var id = mover.Client.PlayerId;
+            Pump(() => mover.Match.IsPredicting && watcher.Match.IsPredicting && HasRemote(watcher, id));
+            Pump(() => mover.Match.LocalState.IsGrounded && ServerRow(mover).IsGrounded && mover.Match.Prediction.PendingFrames < 4);
+            var corrections = mover.Match.Corrections;
+
+            mover.HeldButtons = InputButtons.LeanRight;
+            Pump(() => mover.Match.LocalState.Lean.Amount > 0.5f
+                && ServerRow(mover).Lean > 0.5f
+                && watcher.Match.TrySampleRemote(id, out var leaning) && leaning.Lean > 0.5f);
+            mover.HeldButtons = InputButtons.LeanLeft;
+            Pump(() => mover.Match.LocalState.Lean.Amount < -0.5f
+                && watcher.Match.TrySampleRemote(id, out var leaning) && leaning.Lean < -0.5f);
+            mover.HeldButtons = InputButtons.None;
+            Pump(() => mover.Match.LocalState.Lean.Amount == 0f
+                && ServerRow(mover).Lean == 0f
+                && watcher.Match.TrySampleRemote(id, out var upright) && upright.Lean == 0f);
+
+            mover.Buttons = InputButtons.Jump;
+            Pump(() => !mover.Match.LocalState.IsGrounded && mover.Match.LocalState.Velocity.Y < 1f);
+            mover.Buttons = InputButtons.Jump;
+            Pump(() => mover.Match.LocalState.AirJumpsUsed == 1 && ServerRow(mover).AirJumpsUsed == 1);
+            Pump(() => mover.Match.LocalState.IsGrounded && ServerRow(mover).IsGrounded && mover.Match.Prediction.PendingFrames < 4);
+
+            Assert.That(mover.Match.LocalState.AirJumpsUsed, Is.Zero, "landing gives the air jump back");
+            Assert.That(ServerRow(mover).AirJumpsUsed, Is.Zero);
+            Assert.That(mover.Match.Corrections - corrections, Is.LessThanOrEqualTo(2), "the prediction leans and jumps twice with the server");
+        }
+
+        [Test]
+        public void ThePredictionSwimsInTheMapsWaterWithTheServerAndTheOtherPlayerSeesTheSwimmer()
+        {
+            // 出現する所ごと水に沈め、胸より上に水面を置く。クライアントが水を読まなければ泳ぎの出入りで毎回巻き戻される
+            var water = new NetMapWater(new[]
+            {
+                new MapWater(new WaterBox(new Vector3(-200f, -20f, -200f), new Vector3(200f, 3f, 200f), 3f)),
+            });
+            File.WriteAllText(
+                Path.Combine(_root, "server-data", "maps", ServerLaunch.DefaultMap + NetMapWater.Extension), NetMapWater.Write(water));
+
+            StartServer();
+            var swimmer = Join();
+            var watcher = Join();
+            var id = swimmer.Client.PlayerId;
+            Pump(() => swimmer.Match.IsPredicting && watcher.Match.IsPredicting && HasRemote(watcher, id));
+            Pump(() => swimmer.Match.LocalState.IsSwimming
+                && ServerRow(swimmer).Swimming
+                && watcher.Match.TrySampleRemote(id, out var pose) && pose.Swimming);
+            Pump(() => swimmer.Match.Prediction.PendingFrames < 4);
+            var corrections = swimmer.Match.Corrections;
+
+            var start = swimmer.Match.LocalState.Position;
+            var elapsed = Stopwatch.StartNew();
+            Pump(() =>
+            {
+                swimmer.Move = new Vector2(0f, 1f);
+                return elapsed.Elapsed > TimeSpan.FromSeconds(1);
+            });
+            swimmer.Move = Vector2.Zero;
+            Pump(() => swimmer.Match.Prediction.PendingFrames < 4
+                && Horizontal(ServerRow(swimmer).Position - swimmer.Match.LocalState.Position) < 0.01f);
+
+            Assert.That(swimmer.Match.LocalState.IsSwimming, Is.True);
+            Assert.That(swimmer.Match.LocalState.Swim.SurfaceY, Is.EqualTo(3f), "the prediction reads the surface from the map's water");
+            Assert.That(Horizontal(swimmer.Match.LocalState.Position - start), Is.GreaterThan(1f), "swimming forward");
+            Assert.That(swimmer.Match.Corrections - corrections, Is.LessThanOrEqualTo(2), "the prediction swims in the server's water");
+            Assert.That(Output(), Does.Contain("water=1"), "the server read the same water");
+        }
+
+        [Test]
         public void AClientOfAnotherVersionIsToldTheVersionsDiffer()
         {
             StartServer();
@@ -417,6 +494,9 @@ namespace Shooter.NetV2.Tests
 
             public InputButtons Buttons { get; set; }
 
+            // Buttons は 1 tick だけ押すので、リーンのように押し続けるものはこちらに置く
+            public InputButtons HeldButtons { get; set; }
+
             public DisconnectNotice Notice { get; private set; }
 
             public void Update(float deltaSeconds)
@@ -430,7 +510,7 @@ namespace Shooter.NetV2.Tests
                 var ticks = Match.Advance(deltaSeconds);
                 for (var i = 0; i < ticks; i++)
                 {
-                    Match.Step(Move, 0f, Buttons);
+                    Match.Step(Move, 0f, Buttons | HeldButtons);
                     Buttons = InputButtons.None;
                 }
 

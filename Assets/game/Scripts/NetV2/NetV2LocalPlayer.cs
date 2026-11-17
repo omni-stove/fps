@@ -65,8 +65,14 @@ namespace Shooter.NetV2
         private InputAction _nextSeat;
         [NonSerialized]
         private InputAction _previousSeat;
+        [NonSerialized]
+        private InputAction _leanLeft;
+        [NonSerialized]
+        private InputAction _leanRight;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
+        private LeanInput _leanInput = new LeanInput();
+        private MotorSpec _motor;
         private ControlSettings _controlSettings = ControlSettings.Default;
         private bool _listeningToSettings;
         private InputDeviceKind _device = InputDeviceKind.KeyboardMouse;
@@ -86,8 +92,17 @@ namespace Shooter.NetV2
         private bool _interactLatched;
         private bool _nextSeatLatched;
         private bool _previousSeatLatched;
+        private bool _leanLeftLatched;
+        private bool _leanRightLatched;
 
         public Camera Camera => _camera;
+
+        // オフラインの LeanController と同じく、押している間だけ傾けるか押すたびに切り替えるかを選べる。
+        public HoldMode LeanMode
+        {
+            get => _leanInput.Mode;
+            set => _leanInput.Mode = value;
+        }
 
         public FirstPersonLook Look => _look;
 
@@ -95,11 +110,16 @@ namespace Shooter.NetV2
 
         public Vector3 AimDirection => _camera.transform.forward;
 
-        public static NetV2LocalPlayer Create(StanceGeometry geometry, Func<bool> canStand, Vector3 position, float yaw)
+        public static NetV2LocalPlayer Create(StanceGeometry geometry, MotorSpec motor, Func<bool> canStand, Vector3 position, float yaw)
         {
             if (geometry == null)
             {
                 throw new ArgumentNullException(nameof(geometry));
+            }
+
+            if (motor == null)
+            {
+                throw new ArgumentNullException(nameof(motor));
             }
 
             if (canStand == null)
@@ -125,6 +145,7 @@ namespace Shooter.NetV2
             var player = root.AddComponent<NetV2LocalPlayer>();
             AttachPresentation(root, true);
             player._geometry = geometry;
+            player._motor = motor;
             player._eye = eye;
             player._camera = camera;
             player._sprintInput = new SprintInput();
@@ -146,13 +167,17 @@ namespace Shooter.NetV2
             return presentation;
         }
 
+        // 撃つ位置は目なので、サーバーが当たりの頭をずらすのと同じ量 (LeanStep.EyeOffset) だけ目を横へずらす。
+        // 本体は yaw で回っているので、ずらす向きは本体の右 (ローカルの x) になる。
         public void Show(CharacterMotorState state)
         {
             transform.position = NetV2Math.ToUnity(state.Position);
             var eyeY = _geometry.Shape(state.Stance).EyeY;
-            if (!Mathf.Approximately(_eye.localPosition.y, eyeY))
+            var side = state.Lean.IsValid ? state.Lean.Amount * _motor.LeanSideOffset : 0f;
+            var eye = new Vector3(side, eyeY, 0f);
+            if (_eye.localPosition != eye)
             {
-                _eye.localPosition = new Vector3(0f, eyeY, 0f);
+                _eye.localPosition = eye;
             }
         }
 
@@ -175,10 +200,20 @@ namespace Shooter.NetV2
             var cover = Take(ref _coverLatched) && !paused;
             var dodge = Take(ref _dodgeLatched) && !paused;
             var prone = Take(ref _proneLatched) && !paused;
+            var leanLeftPressed = Take(ref _leanLeftLatched);
+            var leanRightPressed = Take(ref _leanRightLatched);
+
+            // ポーズ画面のボタンを押したつもりで傾かないよう、開いている間は押していないことにする (LeanController と同じ)
+            _leanInput.Update(
+                !paused && _leanLeft != null && _leanLeft.IsPressed(),
+                leanLeftPressed && !paused,
+                !paused && _leanRight != null && _leanRight.IsPressed(),
+                leanRightPressed && !paused);
             var aim = IsAiming;
             var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
             yaw = degrees * Mathf.Deg2Rad;
-            buttons = SnapshotMotion.Buttons(sprint, jump, crouch, cover, aim, dodge, prone);
+            buttons = SnapshotMotion.Buttons(
+                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive);
         }
 
         // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
@@ -240,6 +275,7 @@ namespace Shooter.NetV2
         {
             _crouchInput.Release(reason);
             _sprintInput.Release(reason);
+            _leanInput.Release();
         }
 
         private void Awake()
@@ -271,6 +307,8 @@ namespace Shooter.NetV2
             _interact = Find(actions, InputActionPaths.Interact, false);
             _nextSeat = Find(actions, InputActionPaths.Next, false);
             _previousSeat = Find(actions, InputActionPaths.Previous, false);
+            _leanLeft = Find(actions, InputActionPaths.LeanLeft);
+            _leanRight = Find(actions, InputActionPaths.LeanRight);
         }
 
         private void OnDestroy()
@@ -312,6 +350,8 @@ namespace Shooter.NetV2
             _interactLatched |= Pressed(_interact);
             _nextSeatLatched |= Pressed(_nextSeat);
             _previousSeatLatched |= Pressed(_previousSeat);
+            _leanLeftLatched |= Pressed(_leanLeft);
+            _leanRightLatched |= Pressed(_leanRight);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

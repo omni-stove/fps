@@ -402,6 +402,9 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
+ルールのファイルの `match.maxTeamSizeDifference` が 1 以上で、次の試合を始めるときに 2 チームの人数の差がそれを超えていれば、
+多いチームの最近入った人 (Bot も含む) から少ないチームへ移し、移した人ごとに `team_balanced` と `[Match] balanced player=3 from=Alpha to=Bravo` を出す。
+接続のときに同じパーティの Id を名乗った人はまとめて移すか、移さない。移すと差が縮まらない組は移さない。`0` (既定) なら移さない。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
 ## CI のテンプレート

@@ -69,7 +69,6 @@ namespace Shooter.NetV2.Tests
         // 定数配列を直接渡すと CA1861 になるので params で受ける
         private static string[] Strings(params string[] values) => values;
 
-        /// <summary>メンバー用ロビー L1 を属性なしで作り終える。</summary>
         private void CreateL1()
         {
             _api.Lobbies["L1"] = Party("L1", _self);
@@ -528,7 +527,6 @@ namespace Shooter.NetV2.Tests
             Assert.That(_api.Calls, Is.Empty, "rejected requests do not reach the service");
         }
 
-        /// <summary>EOS の Lobby インターフェースの代わり。呼ばれた順を記録し、返事はテストが 1 つずつ返す。</summary>
         private sealed class FakeMemberLobbyApi : IMemberLobbyApi
         {
             private readonly Queue<Action<string, string>> _creates = new Queue<Action<string, string>>();
@@ -542,11 +540,9 @@ namespace Shooter.NetV2.Tests
 
             public Dictionary<string, LobbyInfo> Lobbies { get; } = new Dictionary<string, LobbyInfo>();
 
-            /// <summary>"lobbyId/userId" ごとのメンバーの属性。</summary>
             public Dictionary<string, IReadOnlyList<LobbyAttribute>> MemberAttributes { get; } =
                 new Dictionary<string, IReadOnlyList<LobbyAttribute>>();
 
-            /// <summary>null でなければ、写す要求をこの理由で失敗させる。</summary>
             public string CopyError { get; set; }
 
             public void CreateLobby(string bucketId, int maxMembers, Action<string, string> done)

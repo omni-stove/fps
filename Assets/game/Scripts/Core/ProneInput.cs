@@ -24,6 +24,8 @@ namespace Shooter.Core
 
         public const string ReasonOverride = "override";
 
+        public const string ReasonSwim = "swim";
+
         private bool _wasSprinting;
 
         public event Action<ProneInput, string> Changed;

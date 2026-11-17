@@ -1,5 +1,6 @@
 using System;
 using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
 namespace Shooter.NetV2
@@ -14,18 +15,29 @@ namespace Shooter.NetV2
         private const string _bodyName = "Body";
 
         private StanceGeometry _geometry;
+        private float _leanAngleDegrees;
         private Transform _body;
         private Vector3 _standingScale;
         private float _standingY;
         private PlayerStance _stance = PlayerStance.Standing;
+        private Quaternion _tilt = Quaternion.identity;
+        private bool _snapTilt = true;
 
         public int PlayerId { get; private set; }
 
-        public static NetV2RemotePlayer Create(int playerId, StanceGeometry geometry, Transform parent)
+        public Quaternion Tilt => _tilt;
+
+        // 傾ける角度はオフラインと同じ移動の値 (MotorSpec.LeanAngleDegrees) を、サーバーのルールから受け取る。
+        public static NetV2RemotePlayer Create(int playerId, StanceGeometry geometry, MotorSpec motor, Transform parent)
         {
             if (geometry == null)
             {
                 throw new ArgumentNullException(nameof(geometry));
+            }
+
+            if (motor == null)
+            {
+                throw new ArgumentNullException(nameof(motor));
             }
 
             var root = new GameObject("NetV2Remote" + playerId.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -33,6 +45,7 @@ namespace Shooter.NetV2
             var remote = root.AddComponent<NetV2RemotePlayer>();
             remote.PlayerId = playerId;
             remote._geometry = geometry;
+            remote._leanAngleDegrees = Mathf.Clamp(motor.LeanAngleDegrees, 0f, 90f);
             remote._body = CreateBody(geometry, root.transform);
             remote._standingScale = remote._body.localScale;
             remote._standingY = remote._body.localPosition.y;
@@ -47,6 +60,13 @@ namespace Shooter.NetV2
             {
                 ApplyStance(pose.Stance);
             }
+
+            // 泳ぎと壁走りは補間されず 1 tick で切り替わるので、オフラインの CharacterAnimator と同じ速さで寄せる。
+            // 出てきた直後は前の傾きが無いので、起き上がった姿から倒れ込まないよう、そのまま置く。
+            var target = PlayerMockPose.TraversalLean(pose.Lean, pose.Swimming, pose.WallRun, _leanAngleDegrees);
+            _tilt = _snapTilt ? target : Quaternion.Slerp(_tilt, target, PlayerMockPose.BlendFactor(Time.deltaTime));
+            _snapTilt = false;
+            PlaceBody();
         }
 
         private static Transform CreateBody(StanceGeometry geometry, Transform parent)
@@ -81,7 +101,18 @@ namespace Shooter.NetV2
             var scale = _standingScale;
             scale.y *= shape.Height / standing.Height;
             _body.localScale = scale;
-            _body.localPosition = new Vector3(0f, _standingY + shape.CenterY - standing.CenterY, 0f);
+            PlaceBody();
+        }
+
+        // オフラインの体と同じく足元を軸に回すため、見た目の位置も傾きで回す。見た目だけを回すと体の中心を軸に回り、足が地面から浮く。
+        private void PlaceBody()
+        {
+            var standing = _geometry.Standing;
+            var shape = _geometry.Shape(_stance);
+            var upright = new Vector3(0f, _standingY + shape.CenterY - standing.CenterY, 0f);
+            var feet = new Vector3(0f, shape.BottomY, 0f);
+            _body.localPosition = feet + (_tilt * (upright - feet));
+            _body.localRotation = _tilt;
         }
     }
 }

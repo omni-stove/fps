@@ -9,6 +9,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using UnderwaterPresenter = Shooter.Runtime.Traversal.UnderwaterPresenter;
+using WaterVolumes = Shooter.Runtime.Traversal.WaterVolumes;
 
 namespace Shooter.Tests.EditMode
 {
@@ -262,6 +264,104 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerGetsTheMinimapRumbleDeadzoneLeanAndUnderwaterParts()
+        {
+            var player = _world.Player;
+
+            Assert.That(player.GetComponent<MinimapPublisher>(), Is.Not.Null);
+            Assert.That(player.GetComponent<StickDeadzoneApplier>(), Is.Not.Null);
+
+            var rumble = player.GetComponent<GamepadRumble>();
+            Assert.That(rumble, Is.Not.Null);
+            Assert.That(rumble.Rig, Is.SameAs(_world.Rig), "the rumble listens for shots from the view it belongs to");
+
+            var underwater = player.GetComponent<UnderwaterPresenter>();
+            Assert.That(underwater, Is.Not.Null);
+            Assert.That(underwater.Eye, Is.SameAs(_world.Camera.transform), "under water is judged at the camera");
+            Assert.That(underwater.Damageable, Is.SameAs(_world.PlayerDamageable), "drowning hurts the player");
+
+            Assert.That(player.GetComponent<LeanController>(), Is.Not.Null, "the lean installer runs with the other actions");
+            Assert.That(PlayerActions.Installers.Any(i => i is LeanActionInstaller), Is.True);
+        }
+
+        [Test]
+        public void TheMinimapAndTheUnderwaterPartsAreOnlyOnThePlayer()
+        {
+            foreach (var dummy in _world.Targets)
+            {
+                Assert.That(dummy.GetComponent<MinimapPublisher>(), Is.Null, dummy.name);
+                Assert.That(dummy.GetComponent<GamepadRumble>(), Is.Null, dummy.name);
+                Assert.That(dummy.GetComponent<UnderwaterPresenter>(), Is.Null, dummy.name);
+            }
+        }
+
+        [Test]
+        public void ThePlayerHandsItsMotorStateToTheLeaningViewAndBody()
+        {
+            var source = _world.Player.GetComponent<ICharacterMotorStateSource>();
+
+            Assert.That(source, Is.InstanceOf<PlayerMotorStateSource>());
+            Assert.That(((PlayerMotorStateSource)source).Mover, Is.SameAs(_world.Mover));
+            Assert.That(source.Spec, Is.Not.Null);
+            Assert.That(source.TryGetMotorState(out _), Is.False, "Edit Mode leaves the mover uninitialized, so there is no state yet");
+        }
+
+        [Test]
+        public void TheDamageablesRecordAssistsWithTheAssistTuning()
+        {
+            var asset = Resources.Load<TextAsset>(KitTuning.AssistResourcePath);
+            Assert.That(asset, Is.Not.Null, "Resources/" + KitTuning.AssistResourcePath + ".json");
+            var expected = AssistJson.Parse(asset.text, KitTuning.AssistResourcePath);
+
+            var spec = KillFeedAssists.Ledger.Spec;
+
+            Assert.That(spec, Is.SameAs(KitTuning.Assist));
+            Assert.That(spec.WindowSeconds, Is.EqualTo(expected.WindowSeconds));
+            Assert.That(spec.MinDamage, Is.EqualTo(expected.MinDamage));
+        }
+
+        [Test]
+        public void SwimmingBlocksFiringAndAimingUntilThePlayerLeavesTheWater()
+        {
+            var move = new InputAction("Move", InputActionType.Value, expectedControlType: "Vector2");
+            var sprint = new InputAction("Sprint", InputActionType.Button);
+            var crouch = new InputAction("Crouch", InputActionType.Button);
+            var jump = new InputAction("Jump", InputActionType.Button);
+            try
+            {
+                var mover = _world.Mover;
+                mover.Initialize(_world.Controller, _world.Look, move, sprint, crouch, jump, MotorSpec.Default);
+                mover.SwimTuning = SwimTuning.Default;
+                mover.Water = new WaterVolumes(new[]
+                {
+                    new WaterBox(new System.Numerics.Vector3(-10f, -1f, -10f), new System.Numerics.Vector3(10f, 4f, 10f), 3f),
+                });
+                Assert.That(_world.Weapon.IsFireBlocked, Is.False, "dry before the tick");
+                Assert.That(_world.Ads.AdsBlocker(), Is.False);
+
+                mover.Tick(Vector2.zero, false, false, false, 0.02f);
+
+                Assert.That(mover.IsSwimming, Is.True);
+                Assert.That(_world.Weapon.IsFireBlocked, Is.True);
+                Assert.That(_world.Ads.AdsBlocker(), Is.True);
+
+                mover.Water = NoWaterVolumes.Instance;
+                mover.Tick(Vector2.zero, false, false, false, 0.02f);
+
+                Assert.That(mover.IsSwimming, Is.False);
+                Assert.That(_world.Weapon.IsFireBlocked, Is.False);
+                Assert.That(_world.Ads.AdsBlocker(), Is.False);
+            }
+            finally
+            {
+                move.Dispose();
+                sprint.Dispose();
+                crouch.Dispose();
+                jump.Dispose();
+            }
+        }
+
+        [Test]
         public void PlayerWeaponsUseTheWiredReserveRules()
         {
             Assert.That(_world.Weapon.Rules, Is.SameAs(_world.Rules));
@@ -292,6 +392,77 @@ namespace Shooter.Tests.EditMode
             {
                 DestroyWorld(world);
                 Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void WithoutSceneTuningThePlayerReadsTheGameWideMovementValues()
+        {
+            Assert.That(_world.Mover.MotorSettings, Is.Null);
+            Assert.That(_world.Mover.WallRunTuning, Is.SameAs(TraversalTuning.Current.WallRun));
+            Assert.That(_world.Mover.SwimTuning, Is.SameAs(TraversalTuning.Current.Swim));
+        }
+
+        [Test]
+        public void TheSceneMotorSettingsAndTraversalReachThePlayer()
+        {
+            var host = new GameObject("Bootstrap-Tuning");
+            var settings = ScriptableObject.CreateInstance<MotorSettings>();
+            settings.AirJumps = 1;
+            var traversal = new TextAsset("{ \"swim\": { \"speed\": 4 }, \"wallRun\": { \"enabled\": true } }") { name = "SceneTraversal" };
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.MotorSettings = settings;
+                bootstrap.TraversalTuningJson = traversal;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Mover.MotorSettings, Is.SameAs(settings));
+                Assert.That(world.Mover.Spec.AirJumps, Is.EqualTo(1));
+                Assert.That(world.Mover.WallRunTuning.Enabled, Is.True);
+                Assert.That(world.Mover.SwimTuning.Speed, Is.EqualTo(4f));
+                Assert.That(world.Player.GetComponent<UnderwaterPresenter>().Swim, Is.SameAs(world.Mover.SwimTuning), "breath and drowning use the same swim values");
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(settings);
+                Object.DestroyImmediate(traversal);
+            }
+        }
+
+        [Test]
+        public void AnUnreadableSceneTraversalFallsBackToTheGameWideValuesWithAnError()
+        {
+            var host = new GameObject("Bootstrap-BadTraversal");
+            var traversal = new TextAsset("{ \"wallRun\": { \"maxSeconds\": -1 } }") { name = "BadTraversal" };
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.TraversalTuningJson = traversal;
+
+                LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(@"^\[Tuning\] .*BadTraversal"));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Mover.WallRunTuning, Is.SameAs(TraversalTuning.Current.WallRun));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(traversal);
             }
         }
 

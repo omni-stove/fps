@@ -20,7 +20,8 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
 
 - 書き出すマップは `-map` で選べるマップ (`BuildSceneList.ServerScenes`、既定は `NetTest` と `NetArena01`)。
   無いシーンは `NetSceneBuilder`・`ArenaSceneBuilder` で作ってから書き出す。
-- 試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値・ロードアウトと選べる武器・移動の値と体の寸法) は
+- 試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値・マップの候補と投票の秒数・人数の差の上限・非公開と参加コード・チャットの上限・
+  ロードアウトと選べる武器・移動の値と体の寸法) は
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
   入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
   `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
@@ -172,6 +173,14 @@ docker run --rm -e SHOOTER_SERVER_PORT=9000 -p 9000:9000/udp shooter-server:loca
 コードの合わない人・コードを送らなかった人は、版を比べた後に `[Net] rejected client <番号>: wrong join code for the private match`
 (送らなかったときは `no join code for the private match`) で断る。送られたコードはログに出さない。
 `-register-lobby` と一緒に使うと、ロビーに `private` と `join_code` の属性が付く。
+コードは小文字を大文字にそろえて比べるので、`abc234` と `ABC234` は同じコードとして通る。
+
+```sh
+docker run --rm -p 7777:7777/udp shooter-server:local --private                       # コードを作らせる
+docker run --rm -p 7777:7777/udp shooter-server:local --join-code ROOM-42             # コードを決める (非公開にもなる)
+docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local \
+  --private -register-lobby 203.0.113.10:7777                                          # コードで探せるロビーに載せる
+```
 
 ### EOS で待ち受ける
 
@@ -205,7 +214,11 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
 
 ロビーは `shooter-server:<版>` のバケツに作り、次の公開の属性を付ける。ロビーのオーナーはサーバーが
 Device ID でログインしたユーザー。ロビーでは RTC 部屋を開くので、ID で入ったクライアントのメンバーはそこでボイスを使える。
-メンバーの上限は、試合の人数 (既定は 8 人) にサーバー自身の 1 人を足した数 (EOS の上限の 64 人まで)。
+メンバーの上限は、試合の人数 (ルールの `match.maxPlayers`、既定は 8 人) にサーバー自身の 1 人を足した数 (EOS の上限の 64 人まで)。
+
+ボイスの部屋はこのロビーのものなので、`-register-lobby` を付けないサーバー (`-transport eos` だけのものも) にはボイスが無い。
+テキストのチャットはロビーを使わず試合の通信で送るので、ロビーが無くても使える。
+敵の声はサーバーではなく、受ける側のクライアントが切る。
 
 | 属性 | 値 |
 | --- | --- |
@@ -316,6 +329,36 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
 3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。円の中に立つと占領が進み、両チームがいると止まる。
 
+## ルールのファイルの対戦の周りの欄
+
+`server-data/rules/<ルール名>.json` の `match` には、点数や時間のほかに次の欄がある。`make export-server-rules` が
+`NetMatchDefinition` の値で書き出し、手で直してもよい (直したらイメージを作り直す)。欄を省くと既定の値になり、
+範囲の外の値や知らない欄があると、`[Server] cannot read rules <ルール名>: ...` に欄の名前 (`match.mapVoteSeconds` など) を添えて出し、
+終了コード 3 で終わる。
+
+| 欄 | 既定 | 範囲 | 内容 |
+| --- | --- | --- | --- |
+| `mapPool` | `[]` | マップの Id を 16 個まで (重複・`/` は不可) | 次の試合で替えられるマップ (下の「次の試合のマップの候補を置く」) |
+| `mapVoteSeconds` | `0` | 0 以上 | 試合の合間のマップの投票の秒数。`0` なら投票しない |
+| `maxTeamSizeDifference` | `0` | 0 以上の整数 | 次の試合を始めるときに許す 2 チームの人数の差。`0` なら人数をそろえない (下の「チームの人数をそろえる」) |
+| `privateMatch` | `false` | `true` / `false` | 参加コードの合う人だけを入れる (上の「非公開の試合」) |
+| `joinCode` | `""` | 英数字と `-` `_` で 16 文字まで | 非公開の試合の参加コード。非公開で空なら起動のときに作る。`--join-code` があればそちらを使う |
+| `chatIntervalSeconds` | `1` | 0 以上 | 1 人がチャットを送れる間隔の秒数 (下の「チャットの上限」) |
+| `maxChatLength` | `120` | 1〜170 | チャットの 1 行の文字数の上限 |
+
+書き出したままのファイルはどれも既定の値で、投票・人数の調整はせず、公開の試合になる。
+
+```json
+"maxPlayers": 8,
+"mapPool": [],
+"mapVoteSeconds": 0,
+"maxTeamSizeDifference": 0,
+"privateMatch": false,
+"joinCode": "",
+"chatIntervalSeconds": 1,
+"maxChatLength": 120
+```
+
 ## 次の試合のマップの候補を置く
 
 ルールのファイル (`server-data/rules/<ルール名>.json`) の `match.mapPool` に、次の試合で替えられるマップの Id (シーン名) を並べる。
@@ -374,6 +417,78 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 `[MapVote] net next match map NetTest -> NetArena02` を出して、つないだままそのマップのシーンを読み込み直す。
 シーンがビルドに無ければ、最初につないだときと同じくエラーにして抜ける。
 
+## チームの人数をそろえる
+
+入ってきた人は、今までどおり人数の少ないチームへ入る。接続のときにパーティの Id (`ConnectionPayload.PartyId`) を送った人は、
+同じ Id の仲間が多くいるチームへ入る。そのチームの人 (Bot は数えない) がすでに `maxPlayers` の半分 (端数は切り上げ) いれば、
+人数の少ないチームへ入る。
+切断してつなぎ直した人は、パーティより前のチームに戻る。
+
+ルールのファイルの `match.maxTeamSizeDifference` を 1 以上にすると、次の試合を始めるときに 2 チームの人数の差がそれを超えていれば、
+多いチームの最近入った人 (Bot も含む) から少ないチームへ移す。
+
+```json
+"maxTeamSizeDifference": 1,
+```
+
+- 同じパーティの人はまとめて移すか、移さない。移すと差が縮まらない組は移さない。
+- 試合の途中では移さない。`0` (既定) なら移さない。
+- 移した人ごとに次の行を出す (`-log-format json` なら `team_balanced` も出す)。
+
+```
+[Match] balanced player=3 from=Alpha to=Bravo
+```
+
+## チャットの上限
+
+チャットは全体 (`All`) とチーム (`Team`) の 2 つで、チームの文はサーバーが送った人の今のチームの人にだけ配る。
+ルールのファイルの `match.chatIntervalSeconds` (1 人が送れる間隔の秒数) と `match.maxChatLength` (1 行の文字数) で上限を決める。
+
+```json
+"chatIntervalSeconds": 1,
+"maxChatLength": 120
+```
+
+- 本文は前後の空白を落とし、改行を空白 1 つにしてから数える。空の文は `Empty`、長すぎる文は `TooLong`、
+  前に受け付けた文から `chatIntervalSeconds` たっていない文は `TooSoon` で断り、断った文は誰にも配らない (送った人にも返さない)。
+- `maxChatLength` は 170 まで (通信の 1 つのメッセージの上限 512 バイトに、UTF-8 で 3 バイトの文字が収まる数)。
+- 本文の差し替えや伏せ字はしない (するならゲームの側で)。ログにも本文は出さず、長さだけを出す。
+
+試合を用意するたびに上限を、受け付けるたびと断るたび (1 秒に 1 行まで) に次の行を出す (`-log-format json` なら `chat` と `chat_refused` も出す)。
+
+```
+[Chat] gate interval=1.00 maxLength=120
+[Chat] accepted sender=1 channel=Team length=5 at=12.50
+[Chat] refused sender=1 reason=TooSoon
+```
+
+## 設定を試す
+
+マップの投票と人数の調整を試すには、ルールのファイル (例: `server-data/rules/TeamDeathmatch.json`) の `match` を次のように直して起動する。
+
+```json
+"mapPool": ["NetTest", "NetArena01"],
+"mapVoteSeconds": 15,
+"maxTeamSizeDifference": 1,
+```
+
+```sh
+dotnet run --project dotnet/Shooter.Server/Shooter.Server.csproj -- -mode server -rules TeamDeathmatch -map NetTest
+```
+
+1. 起動のログに `[Server] map pool loaded 2 maps: NetTest, NetArena01` と `[Server] public match` が出る。
+2. クライアント (`-mode client -address 127.0.0.1`) を 3 つつなぐと、Alpha に 2 人・Bravo に 1 人入る。
+3. 試合が終わると `[MapVote] opened current=NetTest candidates=[NetArena01] seconds=15.0` が出る。
+   15 秒後 (または `restartDelaySeconds` の長いほう) に `[MapVote] decided map=NetArena01 ...` と `[Match] map changed from=NetTest to=NetArena01` が出る。
+4. 差が 1 のままなら誰も移さない。投票の間に Bravo の 1 人を切ると差が 2 になり、次の試合を始めるときに
+   Alpha で後から入った人について `[Match] balanced player=.. from=Alpha to=Bravo` が出る。
+
+非公開を試すには、同じサーバーを `--join-code TEST-1` を付けて起動し直す。
+
+1. 起動のログに `[Server] private match join_code=TEST-1` が出る。
+2. コードを送らないクライアント (`-mode client -address 127.0.0.1`) は、サーバーに `[Net] rejected client <番号>: no join code for the private match` が出て断られ、
+   メインメニューに戻る。
+
 ## サーバーがすること
 
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む。作業ディレクトリの `server-data/`、
@@ -387,7 +502,10 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - 水の場所は `server-data/maps/<マップ名>.water.json` (`make export-server-data` がシーンの有効な `Water` の軸にそろった箱と水面の高さを書き出す) から読む。
   ファイルが無いマップは水が無いものとして動く。起動時の `[Server] map ...` の `water=` が読んだ数。次の試合でマップを替えると、新しいマップの水で泳ぐ。
+  クライアントの予測も同じファイルを読む (`[Net] map collision ...` の `water=`)。
   入力の `LeanLeft`・`LeanRight` のビットで傾け (両方なら傾けない)、スナップショットの人の欄に傾き・泳いでいるか・壁走りの側・使った空中のジャンプの回数を載せる。
+  クライアントは自分の予測をこれらと照らし合わせ、水面・息・壁の向きなど欄に無いものは同じ tick の予測と水から埋める。
+  他の人の体は、オフラインと同じく傾き (`leanAngleDegrees`)・泳ぎ・壁走りの側で足元を軸に傾けて見せる。
   傾く向きが替わる・泳ぎ始める/やめる・潜る/顔を出す・壁を走り始める/離れる・空中で跳ぶたびに
   `[Net] lean owner=.. tick=.. side=left|right|none`・`[Net] swim ... swimming=..`・`[Net] swim ... underwater=..`・`[Net] wallrun ... running=.. side=..`・`[Net] airjump ... used=..` を出す。
   潜ったまま息 (`swimBreathSeconds`) が切れると `[Net] swim ... outOfBreath=..` を出し、撃った人のいないダメージとしてルールに通して `[Net] drown owner=.. tick=.. damage=.. outcome=..` を出す。
@@ -494,9 +612,7 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
-ルールのファイルの `match.maxTeamSizeDifference` が 1 以上で、次の試合を始めるときに 2 チームの人数の差がそれを超えていれば、
-多いチームの最近入った人 (Bot も含む) から少ないチームへ移し、移した人ごとに `team_balanced` と `[Match] balanced player=3 from=Alpha to=Bravo` を出す。
-接続のときに同じパーティの Id を名乗った人はまとめて移すか、移さない。移すと差が縮まらない組は移さない。`0` (既定) なら移さない。
+`map_vote`・`map_changed` は「試合の合間のマップの投票」、`team_balanced` は「チームの人数をそろえる」、`chat`・`chat_refused` は「チャットの上限」の設定で出る。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
 ## CI のテンプレート

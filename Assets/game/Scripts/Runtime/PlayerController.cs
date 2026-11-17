@@ -112,6 +112,24 @@ namespace Shooter.Runtime
             set => _motorSettings = value;
         }
 
+        // setter で作り直さないのは、初期化の前に値だけ置く使い方 (Inspector・テスト) で、置くたびに初期化が走らないようにするため。
+        // GameBootstrap のように付けた時点の Awake で既に初期化された後に設定を替えるときは、こちらで PlayerMotor から作り直す。
+        public void UseMotorSettings(MotorSettings settings)
+        {
+            if (!IsInitialized)
+            {
+                _motorSettings = settings;
+                return;
+            }
+
+            // 不正な値で投げたときに、設定だけ替わって動きは前の値のままという食い違いを残さないよう、作れることを確かめてから置く。
+            var spec = MotorSettings.Resolve(settings);
+            var prone = _proneSpecAssigned ? _proneSpec : MotorSettings.ResolveProne(settings);
+            _motorSettings = settings;
+            _proneSpec = prone;
+            Initialize(_controller, _look, _moveAction, _sprintAction, _crouchAction, _jumpAction, spec);
+        }
+
         // 初期化の前でも、初期化したときに使われる値を返すため設定から作る。
         public MotorSpec Spec => _motor != null ? _motor.Spec : MotorSettings.ResolveOrDefault(_motorSettings);
 
@@ -177,6 +195,7 @@ namespace Shooter.Runtime
             CancelDive();
             CancelMantle();
             EndMovementOverride();
+            ResetTraversal();
         }
 
         // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。
@@ -225,7 +244,9 @@ namespace Shooter.Runtime
                 crouchDevice,
                 _jumpAction.WasPressedThisFrame(),
                 _dodgeAction != null && _dodgeAction.WasPressedThisFrame(),
-                _proneAction != null && _proneAction.WasPressedThisFrame());
+                _proneAction != null && _proneAction.WasPressedThisFrame(),
+                ReadLean(),
+                _jumpAction.IsPressed());
         }
 
         public void ApplyInput(PlayerMoveInput input, float deltaSeconds)
@@ -238,6 +259,23 @@ namespace Shooter.Runtime
             if (IsControlHandedOff)
             {
                 input = PlayerMoveInput.Idle(_device, _crouchDevice);
+            }
+
+            // 潜る入力をしゃがみの切り替え (Toggle) に通すと、水から上がったときにしゃがんだままになるので、ボタンを押している間だけ潜らせる。
+            if (IsSwimming)
+            {
+                ReleaseSprint(SprintInput.ReasonSwim);
+                _ascendHeld = input.JumpHeld;
+                try
+                {
+                    Tick(input.Move, false, input.CrouchHeld, input.JumpPressed, input.Lean, deltaSeconds);
+                }
+                finally
+                {
+                    _ascendHeld = false;
+                }
+
+                return;
             }
 
             // ダッシュとしゃがみを解釈する前に始める。回避が解いたしゃがみとダッシュを、同じフレームの押下で戻さないため。
@@ -257,14 +295,24 @@ namespace Shooter.Runtime
             // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
             var crouch = UpdateCrouch(
                 input.CrouchHeld, input.CrouchPressed, jumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
-            Tick(input.Move, sprint, crouch, jumpPressed, deltaSeconds);
+            Tick(input.Move, sprint, crouch, jumpPressed, input.Lean, deltaSeconds);
         }
 
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
         {
+            Tick(move, sprint, crouch, jumpPressed, 0, deltaSeconds);
+        }
+
+        public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, int lean, float deltaSeconds)
+        {
             if (!IsInitialized)
             {
                 throw new InvalidOperationException("PlayerController is not initialized");
+            }
+
+            if (lean < -1 || lean > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be -1, 0 or 1");
             }
 
             if (!_controller.enabled || !_controller.gameObject.activeInHierarchy)
@@ -278,38 +326,76 @@ namespace Shooter.Runtime
             FilterInputForProne(ref sprint, ref jumpPressed);
             FilterInputForMantle(ref sprint, ref crouch, ref jumpPressed);
 
+            var wasSwimming = _swim.IsSwimming;
+            UpdateSwim(deltaSeconds);
+
             Vector3 displacement;
+            var paddled = false;
             var movementOverride = SelectMovementOverride();
+            var wallRun = WallRunMotion.None;
             if (movementOverride != null)
             {
+                StopWallRun();
                 displacement = StepMovementOverride(movementOverride, move, sprint, crouch, jumpPressed, deltaSeconds);
+            }
+            else if (_swim.IsSwimming && !IsVaulting && !IsMantling)
+            {
+                StopWallRun();
+                UpdateStance(false, false);
+                if (!TryClimbOutOfWater(jumpPressed, deltaSeconds, out displacement))
+                {
+                    displacement = Paddle(move, crouch, jumpPressed, wasSwimming, deltaSeconds);
+                    paddled = true;
+                }
             }
             else
             {
                 UpdateStance(crouch, IsProneActive);
-                if (!TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
+                if (TryOverrideMove(move, jumpPressed, deltaSeconds, out displacement))
+                {
+                    StopWallRun();
+                }
+                else
                 {
                     var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
-                    var carry = CarrySpeedMultiplier;
-                    displacement = IsProne
-                        ? _motor.StepProne(
-                            move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
-                        : _motor.Step(
-                            move.ToNumerics(),
-                            yawRadians,
-                            sprint,
-                            IsCrouched,
-                            jumpPressed && _jumpRule == Jump.On,
-                            _controller.isGrounded,
-                            deltaSeconds,
-                            carry).ToUnity();
+                    var jump = jumpPressed && _jumpRule == Jump.On;
+
+                    // CharacterMotorSimulation と同じく壁走りを先に試し、壁に付いていない tick だけ空中のジャンプとふつうの移動に回す。
+                    wallRun = TryRunOnWall(move, jump, yawRadians, deltaSeconds, out displacement);
+                    if (wallRun == WallRunMotion.None)
+                    {
+                        var carry = CarrySpeedMultiplier;
+                        StepAirJump(move, jump, yawRadians);
+                        displacement = IsProne
+                            ? _motor.StepProne(
+                                move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
+                            : _motor.Step(
+                                move.ToNumerics(),
+                                yawRadians,
+                                sprint,
+                                IsCrouched,
+                                jump,
+                                _controller.isGrounded,
+                                deltaSeconds,
+                                carry).ToUnity();
+                    }
                 }
             }
 
-            _controller.Move(displacement);
-            var grounded = _controller.isGrounded;
-            ReportLanding(grounded);
-            ReportGrounded(grounded);
+            var before = transform.position;
+            var collisions = _controller.Move(displacement);
+            if (paddled)
+            {
+                StopPaddlingAgainst(collisions);
+            }
+
+            SettleWallRun(wallRun, transform.position - before, collisions, deltaSeconds);
+
+            // 泳いでいる間は水底や天井に触れても立っていないので、着地・足音・落下のダメージに数えない。
+            var footing = _controller.isGrounded && !_swim.IsSwimming;
+            ReportLanding(footing);
+            ReportGrounded(footing);
+            FinishTraversal(footing, move, sprint, crouch, lean, deltaSeconds);
         }
 
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
@@ -486,6 +572,8 @@ namespace Shooter.Runtime
             CancelDive();
             CancelMantle();
             EndMovementOverride();
+            ResetTraversal();
+            _leanBody = null;
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);
             _dive = new ProneDive(_proneSpec);

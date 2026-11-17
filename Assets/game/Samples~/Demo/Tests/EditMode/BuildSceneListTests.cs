@@ -69,6 +69,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ListHasTheTraversalFeatureScenesRightAfterTheRuleFeatureScenes()
+        {
+            var scenes = BuildSceneList.Scenes.ToList();
+            var expected = new[]
+            {
+                DemoSample.Root + "/Scenes/Feature_Lean.unity",
+                DemoSample.Root + "/Scenes/Feature_Swim.unity",
+                DemoSample.Root + "/Scenes/Feature_WallRun.unity",
+                DemoSample.Root + "/Scenes/Feature_DoubleJump.unity",
+            };
+
+            Assert.That(BuildSceneList.TraversalFeatureScenes, Is.EqualTo(expected));
+            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.WallRun), Is.EqualTo(expected[2]));
+            Assert.That(BuildSceneList.FeatureScenes.Intersect(expected), Is.Empty, "no on/off rule shares a traversal scene's name");
+            var start = scenes.IndexOf(BuildSceneList.FeatureScenes.Last()) + 1;
+            Assert.That(scenes.Skip(start).Take(expected.Length), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void ListHasEveryModeSceneNamedAfterItsRules()
         {
             foreach (var name in GameRulesAssetBuilder.ModeNames)

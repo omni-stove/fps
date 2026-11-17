@@ -611,7 +611,7 @@ namespace Shooter.NetV2
             {
                 var start = _match.LocalState;
                 _local = NetV2LocalPlayer.Create(
-                    _client.Motor.Stance, _match.Prediction.Simulation.Body.HasHeadroomToStand, NetV2Math.ToUnity(start.Position), OwnYaw());
+                    _client.Motor.Stance, _client.Motor.Motor, _match.Prediction.Simulation.Body.HasHeadroomToStand, NetV2Math.ToUnity(start.Position), OwnYaw());
                 _presentation = _local.GetComponent<WeaponPresentation>();
                 _dryFire = _local.GetComponent<DryFireSound>();
 
@@ -1355,7 +1355,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            _remotes.Add(playerId, NetV2RemotePlayer.Create(playerId, _client.Motor.Stance, _remoteRoot));
+            _remotes.Add(playerId, NetV2RemotePlayer.Create(playerId, _client.Motor.Stance, _client.Motor.Motor, _remoteRoot));
             Debug.Log(LogTag + " player " + playerId.ToString(CultureInfo.InvariantCulture) + " is in view", this);
         }
 

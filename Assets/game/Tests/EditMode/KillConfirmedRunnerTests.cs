@@ -110,6 +110,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheTagUsesTheRadiusAndPointsOfTheModeSpec()
+        {
+            _runner.TagRadius = 0.5f;
+            var player = Member("Player", 0, Vector3.zero);
+            var bot = Member("Bot-1-1", 1, new Vector3(0f, 0f, 10f));
+            Begin(new KillConfirmed(new KillConfirmedSpec(10, 300f, RespawnSeconds, TagLifetimeSeconds, 3, 4f)), new[] { player, bot }, player, null);
+            var tag = KillAndFindTag(bot, player);
+
+            Assert.That(tag.Radius, Is.EqualTo(4f), "the mode's spec wins over the Inspector radius");
+
+            Assert.That(tag.TryCollect(player.Damageable, out _), Is.True);
+            Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(3d));
+            Assert.That(_runner.KillConfirmed.GetConfirmed(Side.Alpha), Is.EqualTo(1));
+        }
+
+        [Test]
         public void AnAllyPickingUpTheTagDeniesIt()
         {
             var player = Member("Player", 0, Vector3.zero);
@@ -226,6 +242,8 @@ namespace Fps.Tests.EditMode
             _runner.TimeLimitSeconds = 120f;
             _runner.RespawnSeconds = 4f;
             _runner.TagLifetimeSeconds = 15f;
+            _runner.PointsPerConfirm = 2;
+            _runner.TagRadius = 2.5f;
 
             var spec = _runner.CreateSpec();
 
@@ -233,6 +251,8 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(120f));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(4f));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(15f));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(2));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(2.5f));
 
             _runner.TagLifetimeSeconds = 0f;
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec());
@@ -248,6 +268,8 @@ namespace Fps.Tests.EditMode
             definition.TimeLimitSeconds = 90f;
             definition.RespawnSeconds = 2f;
             definition.TagLifetimeSeconds = 6f;
+            definition.PointsPerConfirm = 3;
+            definition.TagPickupRadius = 4f;
             _runner.Definition = definition;
 
             var spec = _runner.CreateSpec();
@@ -256,6 +278,8 @@ namespace Fps.Tests.EditMode
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(90f));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(2f));
             Assert.That(spec.TagLifetimeSeconds, Is.EqualTo(6f));
+            Assert.That(spec.PointsPerConfirm, Is.EqualTo(3));
+            Assert.That(spec.TagPickupRadius, Is.EqualTo(4f));
 
             _runner.Definition = null;
             Assert.That(_runner.CreateSpec().ScoreLimit, Is.EqualTo(40), "without the asset the Inspector values come back");

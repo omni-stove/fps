@@ -11,7 +11,7 @@ namespace Fps.Editor
     /// ルールは <see cref="GameRulesAssetBuilder.KillConfirmedPath"/>。地形と遮蔽物は土台の既定のまま、2 チームが 3 人ずつ
     /// (プレイヤーの陣営 0 に bot 2 体、陣営 1 に bot 3 体) で向かい合う。
     /// bot にはタグだけを落とす <see cref="DropOnDeath"/> (<see cref="ConfigureBotDrop"/>) を付ける。タグは Runner が始めたときにフックで足し、
-    /// 実行時に作られるプレイヤーの DropOnDeath も Runner が付ける。得点・時間・タグの秒数は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
+    /// 実行時に作られるプレイヤーの DropOnDeath も Runner が付ける。得点・時間・タグの秒数・確定の点・タグの半径は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
     /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
     /// <code>unity -batchmode -quit -projectPath . -executeMethod Fps.Editor.KillConfirmedSceneBuilder.Build</code>
     /// </summary>
@@ -70,6 +70,7 @@ namespace Fps.Editor
             runner.TimeLimitSeconds = KillConfirmedRunner.DefaultTimeLimitSeconds;
             runner.RespawnSeconds = KillConfirmedRunner.DefaultRespawnSeconds;
             runner.TagLifetimeSeconds = KillConfirmedRunner.DefaultTagLifetimeSeconds;
+            runner.PointsPerConfirm = KillConfirmedRunner.DefaultPointsPerConfirm;
             runner.TagRadius = KillConfirmedRunner.DefaultTagRadius;
             return runner;
         }
@@ -83,7 +84,9 @@ namespace Fps.Editor
                     KillConfirmedRunner.DefaultScoreLimit,
                     KillConfirmedRunner.DefaultTimeLimitSeconds,
                     KillConfirmedRunner.DefaultRespawnSeconds,
-                    KillConfirmedRunner.DefaultTagLifetimeSeconds)));
+                    KillConfirmedRunner.DefaultTagLifetimeSeconds,
+                    KillConfirmedRunner.DefaultPointsPerConfirm,
+                    KillConfirmedRunner.DefaultTagRadius)));
         }
 
         protected override void AddModeObjects(ModeSceneContext context)

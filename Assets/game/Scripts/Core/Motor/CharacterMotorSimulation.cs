@@ -405,45 +405,26 @@ namespace Shooter.Core
         // 倒れている間は Restrained がしゃがみを入れるが、潜らせると倒れただけで溺れるので潜らせない
         private Vector3 Paddle(bool wasSwimming, CharacterMotorInput input, Vector3 startVelocity, float surfaceY)
         {
-            var tuning = _swim;
-            var horizontal = PlayerMotor.ToWorld(input.Move, input.Yaw) * (tuning.Speed * input.CarrySpeedMultiplier);
-            var vertical = startVelocity.Y;
-            if (!wasSwimming)
+            var gap = SwimStep.FloatY(surfaceY, Body.Geometry) - Body.Position.Y;
+            var velocity = SwimStep.Paddle(
+                wasSwimming,
+                input.Move,
+                input.Yaw,
+                input.Crouch && !input.Downed,
+                input.Jump,
+                startVelocity.Y,
+                gap,
+                input.CarrySpeedMultiplier,
+                _swim,
+                TickSeconds,
+                out var displacement);
+            var contacts = Body.Move(displacement);
+            if ((velocity.Y < 0f && (contacts & CapsuleContacts.Below) != 0) || (velocity.Y > 0f && (contacts & CapsuleContacts.Above) != 0))
             {
-                // 入った tick に落ちる速さを泳ぐ速さまで消す。高くから飛び込んでも、浅い底に落下の速さのまま着かないため
-                vertical = Math.Max(vertical, -tuning.Speed);
+                velocity = new Vector3(velocity.X, 0f, velocity.Z);
             }
 
-            float rise;
-            if (input.Crouch && !input.Downed)
-            {
-                vertical = -tuning.Speed;
-                rise = vertical * TickSeconds;
-            }
-            else
-            {
-                var gap = SwimStep.FloatY(surfaceY, Body.Geometry) - Body.Position.Y;
-                var toward = gap > 0f ? 1f : (gap < 0f ? -1f : 0f);
-                vertical = input.Jump && toward > 0f
-                    ? tuning.Speed
-                    : MoveTowards(vertical, toward * tuning.Speed, tuning.Buoyancy * TickSeconds);
-                rise = vertical * TickSeconds;
-
-                // 浮く高さを越えた分を次の tick で戻すと、水面で上下に揺れ続けるので、越える tick はちょうどで止める
-                if ((toward > 0f && rise > gap) || (toward < 0f && rise < gap))
-                {
-                    rise = gap;
-                    vertical = 0f;
-                }
-            }
-
-            var contacts = Body.Move(new Vector3(horizontal.X * TickSeconds, rise, horizontal.Y * TickSeconds));
-            if ((vertical < 0f && (contacts & CapsuleContacts.Below) != 0) || (vertical > 0f && (contacts & CapsuleContacts.Above) != 0))
-            {
-                vertical = 0f;
-            }
-
-            return new Vector3(horizontal.X, vertical, horizontal.Y);
+            return velocity;
         }
 
         // 落下の下限を確かめ、作業用に戻した回避・伏せの中身を状態へ写す

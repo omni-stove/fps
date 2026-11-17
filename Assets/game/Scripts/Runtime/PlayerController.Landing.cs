@@ -63,7 +63,7 @@ namespace Shooter.Runtime
             }
 
             var health = target.Health;
-            var damage = FallDamageCalculator.Calculate(fallSpeed, _motor.Spec, health.Max);
+            var damage = FallDamageCalculator.Calculate(fallSpeed, _motor.Spec, health.Max, IsLandingInWater());
             if (damage <= 0)
             {
                 return;

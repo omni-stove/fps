@@ -1,0 +1,115 @@
+/* ミニマップ (MinimapView) とコンパス (CompassView)。寸法は Hud.uss と同じく HUD の基準解像度 (1920x1080) で決める。 */
+
+/* 右上の丸い地図。印の中心を MinimapView が left / top (%) に置く。縁に寄せた印がはみ出して見えるよう、切り取らない。 */
+.minimap {
+    position: absolute;
+    top: 40px;
+    right: 32px;
+    width: 220px;
+    height: 220px;
+    border-radius: 110px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* 印の形と色は MinimapView が描く。中心を置いた位置に合わせる。 */
+.minimap__contact {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    translate: -50% -50%;
+}
+
+.minimap__contact--ping {
+    width: 12px;
+    height: 12px;
+}
+
+.minimap__contact--objective {
+    width: 16px;
+    height: 16px;
+}
+
+/* 半径の外の印は小さく薄くして、縁に寄せたことが分かるようにする。 */
+.minimap__contact--edge {
+    scale: 0.8 0.8;
+    opacity: 0.6;
+}
+
+/* 中心の自分。 */
+.minimap__self {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    translate: -50% -50%;
+}
+
+/* 上の帯。中央が自分の向きで、文字・目盛り・印の中心を CompassView が left (%) に置く。上中央の残り時間の欄 (top 24px) より上に収める。 */
+.compass {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 640px;
+    height: 22px;
+    translate: -50% 0;
+    overflow: hidden;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.compass__label {
+    position: absolute;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    translate: -50% 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    white-space: nowrap;
+}
+
+.compass__label--primary {
+    font-size: 16px;
+    color: rgb(255, 255, 255);
+}
+
+.compass__tick {
+    position: absolute;
+    bottom: 0;
+    width: 2px;
+    height: 6px;
+    translate: -50% 0;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ピン・目標の向き。色は CompassView が background-color で塗る。 */
+.compass__marker {
+    position: absolute;
+    bottom: 3px;
+    width: 8px;
+    height: 8px;
+    translate: -50% 0;
+    rotate: 45deg;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.6);
+}
+
+.compass__marker--objective {
+    rotate: 0deg;
+}
+
+.compass__center {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    translate: -50% 0;
+    background-color: rgba(255, 210, 60, 0.9);
+}

@@ -2,6 +2,7 @@
     <!-- HUD。GameBootstrap と NetHud が UIDocument に読み込み、Shooter.Runtime.HudView が name で Label を探して文字列を入れる。 -->
     <!-- text の "#キー" は文字列表 (Demo サンプルの Localization/Resources/Strings と Resources/Localization/(言語)/) のキーで、Hud が Shooter.Runtime.LocalizedTexts で今の言語の文字にする。 -->
     <Style src="Hud.uss" />
+    <Style src="Minimap.uss" />
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <!-- 被弾と低体力で画面端を赤くする画像。ほかの表示の後ろに描くよう最初に置く。DamageVignetteView が出すときだけ画像と不透明度を入れて出す。 -->
         <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
@@ -89,6 +90,10 @@
         <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
         <!-- 分隊への指示の印 (守る場所・狙う敵)。SquadOrderMarkerView が GameSignals.SquadOrder の指示があるときだけ、印 (squad-order__marker) を足して出す。 -->
         <ui:VisualElement name="squad-order" class="squad-order" picking-mode="Ignore" style="display: none;" />
+        <!-- 右上の丸い地図。MinimapView が GameSignals.Minimap に値があるときだけ、印 (minimap__contact) と自分 (minimap__self) を足して出す。 -->
+        <ui:VisualElement name="minimap" class="minimap" picking-mode="Ignore" style="display: none;" />
+        <!-- 上の帯の方位とピン・目標の向き。CompassView が GameSignals.Minimap に値があるときだけ、文字・目盛り・印を足して出す。 -->
+        <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->
@@ -119,6 +124,8 @@
                 <ui:VisualElement name="kill-cam-progress" class="kill-cam__progress-fill" picking-mode="Ignore" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <!-- ネット対戦で味方を観戦している間の、見ている味方・前と次へ替える操作・復活までの秒数。SpectateView を付けたときだけ、GameSignals.Spectate に値がある間に行 (spectate__row) を入れて出す。 -->
+        <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />
         <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->

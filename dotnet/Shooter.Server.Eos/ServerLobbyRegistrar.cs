@@ -40,7 +40,7 @@ namespace Shooter.Server.Eos
         /// <param name="service">ログイン前のロビーのサービス。</param>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
         /// <param name="version">サーバーの版。</param>
-        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
+        /// <param name="maxPlayers">試合に入れる人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。ロビーのメンバーの上限は <see cref="ServerLobby.MaxMembers"/> で決める。</param>
         /// <param name="schedule">やり直す間隔と、登録できないまま待つ期限。</param>
         /// <param name="log">ログの出力先。</param>
         public ServerLobbyRegistrar(
@@ -236,8 +236,10 @@ namespace Shooter.Server.Eos
 
             _step = Step.Creating;
             var players = _players;
+            // ServerLobby.Attributes が voice_enabled=1 を載せるので、RTC 部屋もいつも開く
             _service.CreateLobby(
-                _maxPlayers,
+                ServerLobby.MaxMembers(_maxPlayers),
+                true,
                 ServerLobby.Attributes(_endpoint, _version, players),
                 (lobby, error) => HandleCreated(lobby, error, players));
         }

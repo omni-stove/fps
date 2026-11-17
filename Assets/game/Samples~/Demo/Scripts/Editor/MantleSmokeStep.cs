@@ -6,27 +6,16 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) に足す、崖のぼりの手順。段は <see cref="MantleLedgesFixture"/>。
-    /// <list type="number">
-    /// <item>射撃場のルールで崖のぼり (<see cref="ActionRules.Mantle"/>) が On になっている。</item>
-    /// <item>薄い段の前で <see cref="PlayerController.TryStartMantle"/> しても登らず、<c>[Player] mantle=TooNarrow</c> が出る。</item>
-    /// <item>天井のある段の前でも登らず、<c>[Player] mantle=Blocked</c> が出る。</item>
-    /// <item>登れる段の前で、前へ進みながら接地しているフレームに Jump を押すと (乗り越えと同じ入力)、
-    /// <c>[Player] mantle=Mantle</c> → <c>[Player] mantling=true</c> → <c>mantling=false</c> の順に出て、段の上に立つ。
-    /// 登っている間は <see cref="PlayerActionReader"/> の状態に <see cref="PlayerActionConditions.Mantling"/> が立つ。ふつうのジャンプになったら失敗にする。</item>
-    /// </list>
-    /// 低い壁を今までどおり乗り越えることは、組み込みの乗り越えの手順が崖のぼりを On にしたルールで確かめる。
-    /// </summary>
+    // 低い壁を今までどおり乗り越えることは、組み込みの乗り越えの手順が崖のぼりを On にしたルールで確かめるので、ここでは見ない。
     public sealed class MantleSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary>段の前に置く位置の、体の表面から段の手前の面までの隙間 (m)。体の中心から面までが <see cref="MotorSpec.DefaultVaultReach"/> に収まる。</summary>
+        // 体の中心から段の手前の面までが MotorSpec.DefaultVaultReach に収まる隙間にする。
         public const float StandOff = 0.3f;
 
-        /// <summary>段の前に移してから調べ始めるまでに待つ、Editor の更新の回数。移した位置で接地し直すのを待つ。</summary>
+        // 移した位置で接地し直すのを待ってから調べ始める。
         public const int SettleUpdates = 3;
 
-        /// <summary>登り終えた足元の高さの、段の上端からの許容のずれ (m)。CharacterController の skinWidth を見込む。</summary>
+        // CharacterController の skinWidth を見込んだ許容にする。
         public const float FeetTolerance = 0.15f;
 
         private static readonly string _tooNarrowLog = ProbeLogPrefix(VaultVerdict.TooNarrow);
@@ -333,10 +322,8 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 入力の代わりに、よじ登り始めるまでは前進を押し続けて接地しているフレームにだけ Jump を押し、始めたら何も押さない差し込み。
-        /// 登った後も前へ進むと奥の縁から落ちるので止める。先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
-        /// </summary>
+        // 登った後も前へ進むと奥の縁から落ちるので、よじ登り始めたら何も押さない。
+        // 先に差し込まれていたもの (カバー) は後から呼び、カバーの制限を上書きしない。
         private sealed class ClimbFilter : IPlayerMoveFilter
         {
             private readonly MantleSmokeStep _step;

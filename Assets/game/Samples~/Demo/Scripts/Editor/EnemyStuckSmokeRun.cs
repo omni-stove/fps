@@ -9,49 +9,29 @@ using UnityEngine.AI;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// EnemyAiTest で敵をわざと詰まらせ、<see cref="EnemyAgent"/> の立て直しをログで確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>床の外 (<see cref="UnreachablePoint"/>) を巡回地点にして床の端で止まらせ、
-    /// <c>stuck recovery=Repath</c> → <c>Sidestep</c> → <c>AbandonGoal</c> の順に立て直す。その後 <see cref="WalkSeconds"/> の間、
-    /// 次の巡回地点へ向けて新たに詰まらずに歩ける。</item>
-    /// <item>次に床の外 (<see cref="OffMeshOffset"/>) へ動かして NavMesh から外し、立て直しが進んで出現地点へ <c>warped</c> する。</item>
-    /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
-    /// </list>
-    /// 敵が目標に気を取られないよう、Play 直後にプレイヤーを無効にする。
-    /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>Unity -batchmode -projectPath . -executeMethod Shooter.Editor.EnemyStuckSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
-    /// </remarks>
+    // 敵が目標に気を取られないよう、Play 直後にプレイヤーを無効にする。
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class EnemyStuckSmokeRun
     {
         public const string LogTag = "[EnemyStuckSmokeRun]";
 
-        /// <summary>Play Mode に入ってからこれだけ待っても終わらなければ失敗にする (秒)。</summary>
         public const float TimeoutSeconds = 60f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
         public const int FailureExitCode = 1;
 
-        /// <summary>床 (40m 四方) の外にある、届かない巡回地点。</summary>
         public static readonly Vector3 UnreachablePoint = new Vector3(0f, 0f, 30f);
 
-        /// <summary>届かない地点をあきらめた後に向かう巡回地点。</summary>
         public static readonly Vector3 ReachablePoint = new Vector3(14f, 0f, 2f);
 
-        /// <summary>目的地をあきらめた後、新たに詰まらずに歩けることを見る秒数。</summary>
         public const float WalkSeconds = 3f;
 
-        /// <summary>
-        /// NavMesh から外すときに床の端から外へ出す量 (メートル)。NavMeshAgent を有効にし直したときに Unity が自動で NavMesh に
-        /// 乗せない遠さにし (2.5m では乗せられた)、<see cref="EnemyAgent.OffMeshSnapRadius"/> より遠くして近くの NavMesh にも戻れなくする。
-        /// </summary>
+        // NavMeshAgent を有効にし直したときに Unity が自動で NavMesh に乗せない遠さにし (2.5m では乗せられた)、
+        // EnemyAgent.OffMeshSnapRadius より遠くして近くの NavMesh にも戻れなくする。
         public const float OffMeshOffset = 10f;
 
         private const string ActiveKey = "Shooter.EnemyStuckSmokeRun.Active";
@@ -83,7 +63,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -220,7 +199,6 @@ namespace Shooter.Editor
             Report();
         }
 
-        /// <summary>プレイヤーを外して、敵に届かない巡回地点を渡す。組み立てられなければ失敗で終える。</summary>
         private static bool Setup()
         {
             _enemy = UnityEngine.Object.FindAnyObjectByType<EnemyAgent>();
@@ -242,7 +220,6 @@ namespace Shooter.Editor
             return true;
         }
 
-        /// <summary>敵を床の端より外へ動かし、NavMesh から外す。</summary>
         private static void Displace()
         {
             _displaced = true;

@@ -9,14 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 薬莢と空撃ちの仮素材 (小さい円柱の薬莢のプレハブ・手続き生成の薬莢の落下音とカチッという空撃ちの音) と、それをまとめた
-    /// <see cref="WeaponExtrasCatalog"/> を作るか上書きする手順。<see cref="PresentationAssetSteps.BuildAll"/> から実行される。
-    /// 武器は <see cref="PresentationAssetBuilder.WeaponEntries"/> のすべての Id に既定の素材を入れ、射撃場の武器の JSON
-    /// (<see cref="WeaponAssetBuilder.RangeWeaponSources"/>) のすべてに、その値から決めた置いたときの見た目 (<see cref="WeaponLook"/>) と
-    /// 薬莢 (<see cref="ShellFor"/>) を入れる。
-    /// 既存のアセットは GUID を保って中身だけ更新する (<see cref="PresentationAssetBuilder"/> と同じ書き出し方)。
-    /// </summary>
     public sealed class WeaponExtrasAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = PresentationCatalogAssetStep.StepOrder + 10;
@@ -35,10 +27,9 @@ namespace Shooter.Editor
         public const string PickupModelFolderName = "WeaponModels";
         public const string PickupModelPrefix = "WeaponModel_";
 
-        /// <summary>薬莢の材質に使う URP のシェーダー。</summary>
         public const string LitShaderName = "Universal Render Pipeline/Lit";
 
-        /// <summary>薬莢の重さ (kg)。軽いので、跳ねたり転がったりしやすい。</summary>
+        // 軽くして、跳ねたり転がったりしやすくする。
         public const float ShellMass = 0.01f;
 
         public static string CatalogPath =>
@@ -53,9 +44,6 @@ namespace Shooter.Editor
             BuildAt(PresentationAssetBuilder.AudioFolder, PresentationAssetBuilder.PresentationFolder, CatalogPath);
         }
 
-        /// <summary>
-        /// 武器ごとの薬莢のプレハブと落下音・空撃ちの音の組み合わせ。武器の Id は <see cref="PresentationAssetBuilder.WeaponEntries"/> と同じ並び。
-        /// </summary>
         public static IReadOnlyList<(string WeaponId, string Shell, string LandSound, string DryFire)> WeaponEntries()
         {
             return new[]
@@ -97,7 +85,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>薬莢のプレハブの名前と、円柱の直径・長さ (m)。</summary>
         public static IReadOnlyList<(string Name, float Diameter, float Length)> ShellShapes()
         {
             return new[]
@@ -108,7 +95,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>書き出すすべての音の設計図。名前がそのままファイル名 (.wav) になる。</summary>
         public static IReadOnlyList<SoundSpec> SoundSpecs()
         {
             return new[]
@@ -134,10 +120,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// <see cref="CatalogPath"/> のカタログを読み、<see cref="WeaponExtrasCatalog.Validate"/> に通ることを確かめて返す。
-        /// 無ければ (または別の型なら) 先に <see cref="PresentationAssetSteps.BuildAll"/> を走らせるよう例外を投げる。
-        /// </summary>
         public static WeaponExtrasCatalog LoadCatalog()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponExtrasCatalog>(CatalogPath);
@@ -151,10 +133,7 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>
-        /// <see cref="PresentationAssetBuilder.WeaponEntries"/> の武器の Id のうち、<see cref="WeaponEntries"/> に無いもの。
-        /// 武器を足したのにここへ足し忘れたら <see cref="BuildAt"/> が止まる。
-        /// </summary>
+        // 武器を足したのにここへ足し忘れたら BuildAt が止まるよう、足りない Id を返す。
         public static IReadOnlyList<string> MissingWeaponIds()
         {
             var covered = new HashSet<string>(StringComparer.Ordinal);
@@ -175,10 +154,6 @@ namespace Shooter.Editor
             return missing;
         }
 
-        /// <summary>
-        /// audioFolder に音を、presentationFolder に薬莢のプレハブと材質を、catalogPath にそれをまとめたカタログを
-        /// 作るか上書きして保存し、カタログを返す。フォルダは Assets/ 以下で、無ければ作る。
-        /// </summary>
         public static WeaponExtrasCatalog BuildAt(string audioFolder, string presentationFolder, string catalogPath)
         {
             audioFolder = PresentationAssetBuilder.ValidateFolderPath(audioFolder, nameof(audioFolder));

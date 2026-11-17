@@ -6,11 +6,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// キャンペーンのミッション 1 つ分の配置 (地形・敵・遮蔽点・目標・拾える物・チェックポイント) と保存先。
-    /// <see cref="CampaignSceneBuilder"/> はこれを受け取ってシーンと定義を作る。
-    /// 作るときに、目標を進める物がそろっているか・名前や Id が重ならないかを確かめ、だめなら <see cref="ArgumentException"/> を投げる。
-    /// </summary>
     public sealed class CampaignMissionSpec
     {
         public CampaignMissionSpec(
@@ -55,45 +50,34 @@ namespace Shooter.Editor
             Validate();
         }
 
-        /// <summary>ミッション Id。定義の Id (<see cref="MissionDefinition.Id"/>)・セーブのスロット・カタログの Id に使う。</summary>
         public string Id { get; }
 
-        /// <summary>ミッション名を引く言語の表のキー。定義とカタログに入れる。</summary>
         public string NameKey { get; }
 
         public string ScenePath { get; }
         public string DefinitionPath { get; }
 
-        /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
+        // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public string NavMeshDataPath { get; }
 
-        /// <summary>床 (10m 四方の Plane) の中心と拡大率。</summary>
         public Vector3 FloorCenter { get; }
 
         public Vector3 FloorScale { get; }
 
-        /// <summary>壁。地形として NavMesh に焼く。</summary>
         public IReadOnlyList<LevelBox> Walls { get; }
 
-        /// <summary>遮蔽物。地形として NavMesh に焼く。</summary>
         public IReadOnlyList<LevelBox> Covers { get; }
 
-        /// <summary>敵が使う遮蔽点。空でなければ <see cref="CampaignCoverPointsElement"/> をちょうど 1 つ置く。</summary>
         public IReadOnlyList<CoverPointPlacement> CoverPoints { get; }
 
-        /// <summary>目標。定義順に並ぶ。</summary>
         public IReadOnlyList<ObjectiveDefinition> Objectives { get; }
 
-        /// <summary>シーンの直下に置く物。この順に置く。</summary>
         public IReadOnlyList<CampaignElement> Elements { get; }
 
-        /// <summary>チェックポイント。<see cref="CampaignRunner"/> の後ろに、この順に置く。</summary>
         public IReadOnlyList<CampaignCheckpoint> Checkpoints { get; }
 
-        /// <summary>GameBootstrap がプレイヤーを出す足元。ここから全員・全地点へ歩いて行けなければならない。</summary>
         public static Vector3 PlayerStart => GameBootstrap.PlayerSpawn - (Vector3.up * (GameBootstrap.PlayerHeight / 2f));
 
-        /// <summary>敵の全員。<see cref="Elements"/> の順に、各組の中の順で並べる。</summary>
         public IReadOnlyList<EnemyPlacement> AllEnemies()
         {
             var all = new List<EnemyPlacement>();
@@ -108,10 +92,6 @@ namespace Shooter.Editor
             return all;
         }
 
-        /// <summary>
-        /// NavMesh の上で <see cref="PlayerStart"/> から行かなければならない点 (足元)。
-        /// チェックポイント・目標の範囲・敵の位置と巡回地点・拾える物・遮蔽点の立つ位置と覗く位置。
-        /// </summary>
         public IReadOnlyList<Vector3> RequiredPoints()
         {
             var points = new List<Vector3>();
@@ -298,7 +278,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary><see cref="CampaignMissionSpec.Elements"/> の 1 つ。シーンの直下に <see cref="ObjectName"/> の GameObject を置く。</summary>
     public abstract class CampaignElement
     {
         protected CampaignElement(string objectName)
@@ -314,17 +293,13 @@ namespace Shooter.Editor
         public string ObjectName { get; }
     }
 
-    /// <summary>目標の範囲の進め方。</summary>
     public enum CampaignAreaKind
     {
-        /// <summary>入ったら進める (<see cref="ReachAreaTrigger"/>)。</summary>
         Reach,
 
-        /// <summary>中で Interact したら進める (<see cref="InteractObjective"/>)。</summary>
         Interact,
     }
 
-    /// <summary>床の印とトリガーで目標を進める範囲。</summary>
     public sealed class CampaignAreaElement : CampaignElement
     {
         public CampaignAreaElement(string objectName, CampaignAreaKind kind, string objectiveId, Vector3 position, Vector3 padScale)
@@ -349,7 +324,6 @@ namespace Shooter.Editor
         public CampaignAreaKind Kind { get; }
         public string ObjectiveId { get; }
 
-        /// <summary>床の印の底面の中心 (足元)。</summary>
         public Vector3 Position { get; }
 
         public Vector3 PadScale { get; }
@@ -365,11 +339,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>
-    /// 敵の組。<see cref="CampaignElement.ObjectName"/> の GameObject の子に敵を置く。
-    /// <see cref="KillObjectiveId"/> があれば、組の全員を標的にする <see cref="KillTargetObjective"/> を付ける。
-    /// <see cref="RevealObjectiveId"/> があれば、敵を非アクティブで置き、その目標が Active になったら <see cref="ObjectiveReveal"/> で出す。
-    /// </summary>
     public sealed class CampaignEnemyGroupElement : CampaignElement
     {
         public CampaignEnemyGroupElement(
@@ -414,14 +383,11 @@ namespace Shooter.Editor
 
         public IReadOnlyList<EnemyPlacement> Enemies { get; }
 
-        /// <summary>組の全員の撃破で進める目標。null なら目標に関わらない。</summary>
         public string KillObjectiveId { get; }
 
-        /// <summary>Active になったら敵を出す目標。null なら最初から置いておく。</summary>
         public string RevealObjectiveId { get; }
     }
 
-    /// <summary><see cref="CampaignMissionSpec.CoverPoints"/> を置く場所。敵の全員がここの registry を共有する。</summary>
     public sealed class CampaignCoverPointsElement : CampaignElement
     {
         public CampaignCoverPointsElement(string objectName)
@@ -430,10 +396,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>
-    /// 拾える物の組。<see cref="CampaignElement.ObjectName"/> の GameObject の子に、武器と予備弾は入ったら拾う出現点 (<see cref="PickupSpawnPoint"/>)、
-    /// 弾薬箱は何度でも使える <see cref="AmmoCrate"/> として置く。
-    /// </summary>
     public sealed class CampaignPickupsElement : CampaignElement
     {
         public CampaignPickupsElement(string objectName, IReadOnlyList<CampaignPickupPlacement> pickups)
@@ -464,17 +426,14 @@ namespace Shooter.Editor
         public IReadOnlyList<CampaignPickupPlacement> Pickups { get; }
     }
 
-    /// <summary>拾える物の種類。</summary>
     public enum CampaignPickupKind
     {
         Weapon,
         Ammo,
 
-        /// <summary>置きっぱなしで、Interact で何度でも補給できる弾薬箱。</summary>
         AmmoCrate,
     }
 
-    /// <summary>拾える物 1 つ。武器 (<see cref="Weapon"/>)・予備弾 (<see cref="Ammo"/>)・弾薬箱 (<see cref="AmmoCrate"/>) で作る。</summary>
     public sealed class CampaignPickupPlacement
     {
         private CampaignPickupPlacement(CampaignPickupKind kind, string objectName, Vector3 feet, string weaponId, int amount, float respawnSeconds)
@@ -508,13 +467,10 @@ namespace Shooter.Editor
 
         public Vector3 Feet { get; }
 
-        /// <summary>渡す武器の Id。武器でなければ null。</summary>
         public string WeaponId { get; }
 
-        /// <summary>武器なら既に持っていたときに足す予備弾、予備弾なら足す数。</summary>
         public int Amount { get; }
 
-        /// <summary>拾われてから再び出るまでの秒数。0 なら一度きり。</summary>
         public float RespawnSeconds { get; }
 
         public static CampaignPickupPlacement Weapon(string objectName, Vector3 feet, string weaponId, int ammoIfOwned, float respawnSeconds)
@@ -543,7 +499,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>チェックポイント 1 つ。</summary>
     public sealed class CampaignCheckpoint
     {
         public CampaignCheckpoint(string objectName, string id, Vector3 feet)
@@ -565,10 +520,9 @@ namespace Shooter.Editor
 
         public string ObjectName { get; }
 
-        /// <summary>セーブデータに残るので、一度出したら変えない。</summary>
+        // セーブデータに残るので、一度出したら変えない。
         public string Id { get; }
 
-        /// <summary>床の印の底面の中心 (足元)。</summary>
         public Vector3 Feet { get; }
     }
 }

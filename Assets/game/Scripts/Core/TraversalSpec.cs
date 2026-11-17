@@ -32,17 +32,32 @@ namespace Shooter.Core
         public const float DefaultSpeed = 3f;
         public const float DefaultBuoyancy = 12f;
         public const float DefaultBreathSeconds = 15f;
+        public const int DefaultDrownDamage = 10;
+        public const float DefaultDrownIntervalSeconds = 1f;
 
         public static readonly SwimTuning Default = new SwimTuning();
 
-        public SwimTuning(float speed = DefaultSpeed, float buoyancy = DefaultBuoyancy, float breathSeconds = DefaultBreathSeconds)
+        public SwimTuning(
+            float speed = DefaultSpeed,
+            float buoyancy = DefaultBuoyancy,
+            float breathSeconds = DefaultBreathSeconds,
+            int drownDamage = DefaultDrownDamage,
+            float drownIntervalSeconds = DefaultDrownIntervalSeconds)
         {
             TuningChecks.RequireNonNegativeFinite(speed, nameof(speed));
             TuningChecks.RequireNonNegativeFinite(buoyancy, nameof(buoyancy));
             TuningChecks.RequirePositiveFinite(breathSeconds, nameof(breathSeconds));
+            if (drownDamage < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(drownDamage), drownDamage, "drownDamage must not be negative");
+            }
+
+            TuningChecks.RequirePositiveFinite(drownIntervalSeconds, nameof(drownIntervalSeconds));
             Speed = speed;
             Buoyancy = buoyancy;
             BreathSeconds = breathSeconds;
+            DrownDamage = drownDamage;
+            DrownIntervalSeconds = drownIntervalSeconds;
         }
 
         public float Speed { get; }
@@ -50,6 +65,10 @@ namespace Shooter.Core
         public float Buoyancy { get; }
 
         public float BreathSeconds { get; }
+
+        public int DrownDamage { get; }
+
+        public float DrownIntervalSeconds { get; }
     }
 
     public sealed class WallRunTuning

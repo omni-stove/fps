@@ -293,7 +293,7 @@ namespace Fps.Runtime
                 box.AddToClassList(SectionClass);
 
                 var header = Row(TeamRowClass);
-                var teamName = Cell(Localizer.Resolve(HudFormat.TeamName(section.Team)), NameCellClass);
+                var teamName = Cell(Localizer.Resolve(HudText.TeamName(section.Team)), NameCellClass);
                 if (hud != null)
                 {
                     teamName.style.color = hud.TeamColor(section.Team);

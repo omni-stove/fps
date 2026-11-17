@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// Core の書式 (<see cref="HudFormat"/> など) が画面に出す文字を引く先。今の言語の <see cref="StringTable"/> を返す関数を
+    /// Core の書式 (<see cref="LoadoutFormat"/> など) が画面に出す文字を引く先。今の言語の <see cref="StringTable"/> を返す関数を
     /// <see cref="Use"/> で受け取り、引くたびに呼ぶ (言語が変わった後に組み立てた文字は新しい言語になる)。
     /// ゲームでは Fps.Runtime の Localizer が渡す。
     /// 引き先が無い・null を返すときはキーそのものを返し、どのキーを引いたかが画面で分かるようにする。

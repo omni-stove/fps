@@ -20,12 +20,11 @@ namespace Fps.Runtime
     /// 敵からいちばん離れた点 (<see cref="SideSpawnSelector"/>) に戻し、体力を満たす。ダメージの処理の途中で生き返らせないよう、すぐには戻さない。</item>
     /// <item>Update で <see cref="Tick"/> し、状態が変わるたび・倒れるたび・終わったときに <c>[Mode]</c> のログ (<see cref="ModeLog"/>) を出す。
     /// 同じ時に、残り時間・得点・自分のリスポーンまでの秒数・勝敗・派生モードの状態 (<see cref="HudDetail"/>) を <see cref="ModeStatus"/> にして
-    /// <see cref="GameSignals.ModeStatus"/> に出す。移す途中の今の文 (<see cref="HudTime()"/>・<see cref="HudScores(Side?)"/>・
-    /// 派生モードの行 (<see cref="AppendHudTexts"/>・<see cref="AppendHudLines"/>)・<see cref="HudResult()"/>) も載せる。止めたら消す。</item>
+    /// <see cref="GameSignals.ModeStatus"/> に出す。止めたら消す。</item>
     /// <item>終わったら全員の操作と行動を止め、<see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) でシーンを読み直す。</item>
     /// <item><see cref="HidesTargetDummies"/> が true (既定) なら、始めたときに GameBootstrap の標的ダミーを隠す。</item>
     /// <item>ModeSession をラウンドとして繰り返す派生は、始め方 (<see cref="StartSession"/>)・進め方 (<see cref="AdvanceSession"/>)・
-    /// 倒れ方 (<see cref="InterceptDeath"/>)・HUD (<see cref="HudScores(Side?)"/> など)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
+    /// 倒れ方 (<see cref="InterceptDeath"/>)・終わりのログ (<see cref="SessionEndedLog"/>) を置き換える。</item>
     /// <item>試合の終わりを自分で決める派生は <see cref="EndsMatchWithSession"/> を false にし、終わったときに <see cref="EndMatch"/> を呼ぶ。</item>
     /// </list>
     /// </remarks>
@@ -54,7 +53,6 @@ namespace Fps.Runtime
         private readonly List<SideSpawnPoint> _spawnPoints = new List<SideSpawnPoint>();
         private readonly Queue<int> _pendingRespawns = new Queue<int>();
         private readonly HashSet<Side> _warnedMissingSpawn = new HashSet<Side>();
-        private readonly List<string> _hudLines = new List<string>();
         private ModeSession _session;
         private SideMember _localPlayer;
         private ModeStatus _publishedStatus;
@@ -152,22 +150,9 @@ namespace Fps.Runtime
         {
         }
 
-        /// <summary>HUD の得点の下に足す行を lines に入れる。HUD を書き直すたびに空の lines で呼ばれる。</summary>
-        protected virtual void AppendHudLines(List<string> lines)
-        {
-        }
-
-        /// <summary>
-        /// HUD の得点の下に足す行を、表のキーの文で lines に入れる。<see cref="AppendHudLines"/> の行の後に並ぶ。
-        /// lines にはリスポーンの行などが先に入っているので、消さずに足す。
-        /// </summary>
-        protected virtual void AppendHudTexts(List<LocalizedText> lines)
-        {
-        }
-
         /// <summary>
         /// <see cref="ModeStatus.Detail"/> に入れる、このモード固有の状態 (そのモードの Core の状態)。既定は null。
-        /// UI はこの型の書式役があればそれで文にし、無ければ移す途中の今の文を出す。
+        /// UI はこの型の書式役があればそれで文にし、無ければ既定の書式役 (残り時間・得点・結果) で出す。
         /// </summary>
         protected virtual object HudDetail => null;
 
@@ -205,33 +190,6 @@ namespace Fps.Runtime
         {
             return false;
         }
-
-        /// <summary>HUD の残り時間。既定は <see cref="ModeHudText.Time"/>。</summary>
-        protected virtual LocalizedText HudTime()
-        {
-            return HudTime(_session);
-        }
-
-        /// <summary>HUD の陣営ごとの得点の行。既定は <see cref="ModeHudText.Scores"/>。</summary>
-        protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(Side? ownSide)
-        {
-            return HudScores(_session, ownSide);
-        }
-
-        /// <summary>HUD の結果。空の文なら結果を出さない。既定は <see cref="ModeHudText.Result"/>。</summary>
-        protected virtual LocalizedText HudResult()
-        {
-            return HudResult(_session);
-        }
-
-        /// <summary><see cref="HudTime()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
-        protected virtual LocalizedText HudTime(ModeSession session) => ModeHudText.Time(session);
-
-        /// <summary><see cref="HudScores(Side?)"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
-        protected virtual IReadOnlyList<ModeHudScoreLine> HudScores(ModeSession session, Side? ownSide) => ModeHudText.Scores(session, ownSide);
-
-        /// <summary><see cref="HudResult()"/> の既定が呼ぶ。session を渡される形で置き換えたい派生用。</summary>
-        protected virtual LocalizedText HudResult(ModeSession session) => ModeHudText.Result(session);
 
         /// <summary>
         /// ModeSession が終わったときに出すログ。null なら出さない。既定は <see cref="ModeLog.Ended"/>。
@@ -681,23 +639,8 @@ namespace Fps.Runtime
                 respawnSeconds = _session.GetRespawnRemaining(LocalPlayerId);
             }
 
-            // ModeStatus は出した後も UI が持つので、行の並びは使い回さずに毎回作る。
-            var lineTexts = new List<LocalizedText>();
-            if (respawnSeconds.HasValue)
-            {
-                lineTexts.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(respawnSeconds.Value)));
-            }
-
-            _hudLines.Clear();
-            AppendHudLines(_hudLines);
-            foreach (var line in _hudLines)
-            {
-                lineTexts.Add(LiteralOrEmpty(line));
-            }
-
-            AppendHudTexts(lineTexts);
-
             var ownSide = _localPlayer != null ? _localPlayer.Side : (Side?)null;
+            // ModeStatus は出した後も UI が持つので、得点の並びは使い回さずに毎回作る。
             var sideScores = new SideScore[_session.Sides.Count];
             for (var i = 0; i < sideScores.Length; i++)
             {
@@ -713,21 +656,8 @@ namespace Fps.Runtime
                 respawnSeconds.HasValue ? Math.Max(0f, respawnSeconds.Value) : (float?)null,
                 _matchOver,
                 _matchOver ? _matchWinner : null,
-                HudDetail,
-                HudTime(),
-                HudScores(ownSide),
-                lineTexts,
-                HudResult());
+                HudDetail);
             GameSignals.ModeStatus.Publish(_publishedStatus);
-        }
-
-        /// <summary>
-        /// 派生モードが文字列で作った HUD の文を、表を引かずにそのまま運ぶ文にする。null は空の文。
-        /// 派生モードの文はまだ表のキーになっていないので、<see cref="AppendHudLines"/> の行や置き換えた <see cref="HudResult()"/> がこれで包む。
-        /// </summary>
-        protected static LocalizedText LiteralOrEmpty(string text)
-        {
-            return text == null ? default : LocalizedText.Literal(text);
         }
 
         private int RequireMember(SideMember member)

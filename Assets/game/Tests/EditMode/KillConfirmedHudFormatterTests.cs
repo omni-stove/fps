@@ -41,7 +41,7 @@ namespace Fps.Tests.EditMode
         public void TheRespawnCountdownComesBeforeTheTagLines()
         {
             var mode = Played();
-            var status = new ModeStatus(120f, null, Side.Alpha, 0.5f, false, null, mode, default, null, null, default);
+            var status = new ModeStatus(120f, null, Side.Alpha, 0.5f, false, null, mode);
 
             Assert.That(ModeHudFormatters.For(status), Is.InstanceOf<KillConfirmedHudFormatter>());
             var lines = new List<LocalizedText>();

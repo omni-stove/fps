@@ -15,7 +15,7 @@ namespace Fps.Runtime
         /// <example><c>TeamScore(Team.Alpha, 12.9f)</c> は <c>ALPHA 12</c></example>
         public static LocalizedText TeamScore(Team team, float score)
         {
-            return HudFormat.TeamScore(team, DominationHudFormat.DisplayedScore(score));
+            return HudText.TeamScore(team, DominationHudFormat.DisplayedScore(score));
         }
 
         /// <summary>拠点の呼び名と持ち主。中立なら <see cref="Neutral"/>。</summary>
@@ -25,7 +25,7 @@ namespace Fps.Runtime
             return new LocalizedText(
                 "mode.domination.pointOwner",
                 DominationHudFormat.PointName(pointIndex),
-                owner.HasValue ? HudFormat.TeamName(owner.Value) : Neutral);
+                owner.HasValue ? HudText.TeamName(owner.Value) : Neutral);
         }
     }
 }

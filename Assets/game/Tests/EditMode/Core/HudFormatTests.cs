@@ -6,121 +6,6 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class HudFormatTests
     {
-        [TestCase(100, "100")]
-        [TestCase(75, "75")]
-        [TestCase(0, "0")]
-        public void HealthIsTheNumberOnly(int current, string expected)
-        {
-            Assert.That(HudFormat.Health(current), Is.EqualTo(expected));
-        }
-
-        [TestCase(30, false, "30")]
-        [TestCase(0, false, "0")]
-        [TestCase(0, true, "リロード中")]
-        public void MagazineIsTheMagazineCountOrTheReloadingText(int magazine, bool reloading, string expected)
-        {
-            Assert.That(HudFormat.Magazine(magazine, reloading), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void MagazineRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Magazine(-1, false));
-        }
-
-        [TestCase(10, "次の試合まで 10 秒")]
-        [TestCase(1, "次の試合まで 1 秒")]
-        [TestCase(0, "次の試合まで 0 秒")]
-        public void NextMatchShowsTheSecondsLeft(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.NextMatch(seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void NextMatchRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.NextMatch(-1));
-        }
-
-        [TestCase(12, "ダウン中 あと 12 秒")]
-        [TestCase(1, "ダウン中 あと 1 秒")]
-        [TestCase(0, "ダウン中 あと 0 秒")]
-        public void DownedShowsTheBleedoutSecondsLeft(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.Downed(seconds)), Is.EqualTo(expected));
-        }
-
-        [TestCase(12, 40, "ダウン中 あと 12 秒 (蘇生 40%)")]
-        [TestCase(3, 99, "ダウン中 あと 3 秒 (蘇生 99%)")]
-        [TestCase(12, 0, "ダウン中 あと 12 秒")]
-        public void DownedAddsTheReviveProgressOnlyWhileSomeoneRevives(int seconds, int percent, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.Downed(seconds, percent)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void DownedRejectsNegativeSecondsAndPercentOutOfRange()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(-1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(-1, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(5, -1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Downed(5, 101));
-        }
-
-        [TestCase(0, "蘇生中 0%")]
-        [TestCase(40, "蘇生中 40%")]
-        [TestCase(100, "蘇生中 100%")]
-        public void RevivingShowsThePercent(int percent, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.Reviving(percent)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void RevivingRejectsPercentOutOfRange()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Reviving(-1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Reviving(101));
-        }
-
-        [TestCase(1, "保護中 あと 1 秒")]
-        [TestCase(2, "保護中 あと 2 秒")]
-        public void SpawnProtectedShowsTheSeconds(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.SpawnProtected(seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void SpawnProtectedRejectsNegativeSeconds()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SpawnProtected(-1));
-        }
-
-        [Test]
-        public void StatusEffectShowsTheKindAndTheSeconds()
-        {
-            Assert.That(GameText.Resolve(HudFormat.StatusEffect(StatusEffectKinds.Burn, 3)), Is.EqualTo("燃焼中 あと 3 秒"));
-        }
-
-        [Test]
-        public void StatusEffectRejectsAnEmptyKindAndNegativeSeconds()
-        {
-            Assert.Throws<ArgumentException>(() => HudFormat.StatusEffect(string.Empty, 1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.StatusEffect(StatusEffectKinds.Burn, -1));
-        }
-
-        [TestCase(15, "操作がありません あと 15 秒で切断されます")]
-        [TestCase(1, "操作がありません あと 1 秒で切断されます")]
-        public void IdleWarningShowsTheSecondsUntilTheKick(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.IdleWarning(seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void IdleWarningRejectsNegativeSeconds()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.IdleWarning(-1));
-        }
-
         [TestCase(0f, 0)]
         [TestCase(0.426f, 42)]
         [TestCase(0.999f, 99)]
@@ -132,88 +17,6 @@ namespace Fps.Core.Tests
         public void RevivePercentRoundsDownAndReachesOneHundredOnlyWhenDone(float progress, int expected)
         {
             Assert.That(HudFormat.RevivePercent(progress), Is.EqualTo(expected));
-        }
-
-        [TestCase(RespawnMode.Individual, 3, "リスポーンまで 3 秒")]
-        [TestCase(RespawnMode.Wave, 7, "リスポーンまで 7 秒")]
-        [TestCase(RespawnMode.None, 0, "次の試合まで復活なし")]
-        [TestCase(RespawnMode.None, -1, "次の試合まで復活なし")]
-        public void RespawnNoticeFollowsTheRespawnMode(RespawnMode mode, int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.RespawnNotice(mode, seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void RespawnNoticeRejectsNegativeSecondsAndUnknownModes()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.RespawnNotice(RespawnMode.Wave, -1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.RespawnNotice((RespawnMode)99, 1));
-        }
-
-        [TestCase(3, "チェックポイントから再開まで 3 秒")]
-        [TestCase(0, "チェックポイントから再開まで 0 秒")]
-        public void CheckpointRestartShowsTheSecondsLeft(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.CheckpointRestart(seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void CheckpointRestartRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.CheckpointRestart(-1));
-        }
-
-        [Test]
-        public void HealthRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Health(-1));
-        }
-
-        [TestCase(30, 90, "30 / 90")]
-        [TestCase(0, 0, "0 / 0")]
-        [TestCase(7, 120, "7 / 120")]
-        public void AmmoIsMagazineSlashReserve(int magazine, int reserve, string expected)
-        {
-            Assert.That(HudFormat.Ammo(magazine, reserve), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void AmmoRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(-1, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1));
-        }
-
-        [TestCase(30, 90, false, "30 / 90")]
-        [TestCase(0, 90, true, "リロード中 / 90")]
-        [TestCase(12, 0, true, "リロード中 / 0")]
-        public void AmmoShowsReloadingInPlaceOfTheMagazine(int magazine, int reserve, bool reloading, string expected)
-        {
-            Assert.That(HudFormat.Ammo(magazine, reserve, reloading), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void AmmoWhileReloadingStillRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(-1, 0, true));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1, true));
-        }
-
-        [TestCase(30, 90, false, false, "30 / 90")]
-        [TestCase(30, 90, false, true, "30 / ∞")]
-        [TestCase(0, 0, false, true, "0 / ∞")]
-        [TestCase(0, 90, true, true, "リロード中 / ∞")]
-        [TestCase(0, 90, true, false, "リロード中 / 90")]
-        public void AmmoShowsInfinityInPlaceOfAnInfiniteReserve(int magazine, int reserve, bool reloading, bool infinite, string expected)
-        {
-            Assert.That(HudFormat.Ammo(magazine, reserve, reloading, infinite), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void AmmoWithAnInfiniteReserveStillRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(-1, 0, false, true));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ammo(0, -1, false, true));
         }
 
         [TestCase(25, 100, true)]
@@ -234,22 +37,6 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.IsLowHealth(0, 0));
         }
 
-        [TestCase(Team.Alpha, 0, "ALPHA 0")]
-        [TestCase(Team.Bravo, 3, "BRAVO 3")]
-        [TestCase(Team.Alpha, 12, "ALPHA 12")]
-        public void TeamScoreIsTheTeamNameAndTheScore(Team team, int score, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.TeamScore(team, score)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void TeamScoreRejectsNegativeAndUnknownTeams()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.TeamScore(Team.Alpha, -1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.TeamName((Team)99));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Opponent((Team)99));
-        }
-
         [Test]
         public void OpponentIsTheOtherTeam()
         {
@@ -258,96 +45,49 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ResultNamesTheWinnerOrADraw()
+        public void DisplayedSecondsRoundsUpAndStopsAtNinetyNineMinutes()
         {
-            Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA の勝ち"));
-            Assert.That(GameText.Resolve(HudFormat.Result(Team.Bravo)), Is.EqualTo("BRAVO の勝ち"));
-            Assert.That(HudFormat.Result(null), Is.EqualTo(HudFormat.Draw));
-            Assert.That(GameText.Resolve(HudFormat.Draw), Is.EqualTo("引き分け"));
-        }
-
-        [Test]
-        public void SoloResultSaysClearedOrFailedWithTheRestartKey()
-        {
-            Assert.That(GameText.Resolve(HudFormat.SoloResult(MatchResult.Won)), Is.EqualTo("クリア"));
-            Assert.That(GameText.Resolve(HudFormat.SoloResult(MatchResult.Lost)), Is.EqualTo("失敗"));
-            Assert.That(HudFormat.SoloResult(MatchResult.Won), Is.EqualTo(new LocalizedText("hud.solo.won")));
-            Assert.That(GameText.Resolve(HudFormat.Restart("R")), Is.EqualTo("[R] でやり直す"));
-            Assert.That(HudFormat.Restart("R"), Is.EqualTo(new LocalizedText("hud.solo.restart", "R")));
-            Assert.Throws<ArgumentException>(() => HudFormat.Restart(string.Empty));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.SoloResult((MatchResult)99));
-        }
-
-        [Test]
-        public void WordsAreKeysWithTheirArguments()
-        {
-            Assert.That(HudFormat.TeamName(Team.Alpha), Is.EqualTo(new LocalizedText("hud.team.alpha")));
-            Assert.That(HudFormat.TeamScore(Team.Bravo, 3), Is.EqualTo(new LocalizedText("hud.score", new LocalizedText("hud.team.bravo"), 3)));
-            Assert.That(HudFormat.Result(Team.Alpha), Is.EqualTo(new LocalizedText("hud.wins", new LocalizedText("hud.team.alpha"))));
-            Assert.That(HudFormat.Draw, Is.EqualTo(new LocalizedText("hud.draw")));
-            Assert.That(HudFormat.Respawn(3), Is.EqualTo(new LocalizedText("hud.respawn", 3)));
-            Assert.That(HudFormat.Downed(12, 40), Is.EqualTo(new LocalizedText("hud.downedWithRevive", new LocalizedText("hud.downed", 12), 40)));
-            Assert.That(HudFormat.Reloading, Is.EqualTo(new LocalizedText("hud.reloading")));
-        }
-
-        [TestCase(3, "リスポーンまで 3 秒")]
-        [TestCase(0, "リスポーンまで 0 秒")]
-        public void RespawnShowsTheSecondsLeft(int seconds, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.Respawn(seconds)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void RespawnRejectsNegative()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Respawn(-1));
-        }
-
-        [TestCase(180f, "03:00")]
-        [TestCase(65f, "01:05")]
-        [TestCase(59f, "00:59")]
-        [TestCase(10f, "00:10")]
-        [TestCase(0f, "00:00")]
-        public void TimeIsMinutesAndSecondsWithTwoDigits(float remaining, string expected)
-        {
-            Assert.That(HudFormat.Time(remaining), Is.EqualTo(expected));
-        }
-
-        [TestCase(59.01f, "01:00")]
-        [TestCase(0.2f, "00:01")]
-        [TestCase(1f, "00:01")]
-        public void TimeRoundsUpSoZeroMeansTimeUp(float remaining, string expected)
-        {
-            Assert.That(HudFormat.Time(remaining), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void TimeTreatsNegativeAndNaNAsZero()
-        {
-            Assert.That(HudFormat.Time(-5f), Is.EqualTo("00:00"));
-            Assert.That(HudFormat.Time(float.NaN), Is.EqualTo("00:00"));
-        }
-
-        [Test]
-        public void TimeStopsAtNinetyNineMinutes()
-        {
-            Assert.That(HudFormat.Time(100f * 60f), Is.EqualTo("99:59"));
-            Assert.That(HudFormat.Time(float.PositiveInfinity), Is.EqualTo("99:59"));
+            Assert.That(HudFormat.DisplayedSeconds(65f), Is.EqualTo(65));
+            Assert.That(HudFormat.DisplayedSeconds(59.01f), Is.EqualTo(60));
+            Assert.That(HudFormat.DisplayedSeconds(0.2f), Is.EqualTo(1));
+            Assert.That(HudFormat.DisplayedSeconds(0f), Is.EqualTo(0));
+            Assert.That(HudFormat.DisplayedSeconds(-5f), Is.EqualTo(0));
+            Assert.That(HudFormat.DisplayedSeconds(float.NaN), Is.EqualTo(0));
+            Assert.That(HudFormat.DisplayedSeconds(100f * 60f), Is.EqualTo(HudFormat.MaxDisplayedSeconds));
+            Assert.That(HudFormat.DisplayedSeconds(float.PositiveInfinity), Is.EqualTo(HudFormat.MaxDisplayedSeconds));
             Assert.That(HudFormat.DisplayedSeconds(float.MaxValue), Is.EqualTo(HudFormat.MaxDisplayedSeconds));
-        }
-
-        [TestCase(0, "グレネード 0")]
-        [TestCase(2, "グレネード 2")]
-        [TestCase(12, "グレネード 12")]
-        public void GrenadesIsThePrefixAndTheCount(int remaining, string expected)
-        {
-            Assert.That(GameText.Resolve(HudFormat.Grenades(remaining)), Is.EqualTo(expected));
+            Assert.That(HudFormat.MaxDisplayedSeconds, Is.EqualTo(99 * 60 + 59));
         }
 
         [Test]
-        public void GrenadesRejectsANegativeCount()
+        public void OpponentRejectsUnknownTeams()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Grenades(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Opponent((Team)99));
+        }
+
+        [Test]
+        public void DisplayedScoreRoundsDownAndClamps()
+        {
+            Assert.That(HudFormat.DisplayedScore(3.7d), Is.EqualTo(3));
+            Assert.That(HudFormat.DisplayedScore(-1d), Is.Zero);
+            Assert.That(HudFormat.DisplayedScore(double.NaN), Is.Zero);
+            Assert.That(HudFormat.DisplayedScore(1e12d), Is.EqualTo(int.MaxValue));
+        }
+
+        [TestCase(3.42f, 35)]
+        [TestCase(3f, 30)]
+        [TestCase(0.01f, 1)]
+        [TestCase(0f, 0)]
+        public void AbilityWaitTenthsRoundsUpToATenth(float seconds, int expected)
+        {
+            Assert.That(HudFormat.AbilityWaitTenths(seconds), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AbilityWaitTenthsRejectsNegativeAndInfiniteSeconds()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.AbilityWaitTenths(-1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.AbilityWaitTenths(float.PositiveInfinity));
         }
     }
 }

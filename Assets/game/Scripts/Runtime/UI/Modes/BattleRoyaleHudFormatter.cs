@@ -111,7 +111,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 得点の下に出す行。残り分隊の数、localPlayerId がいれば自分の順位、zoneLine (空の文でなければ)、自分の分隊の様子、
-        /// 自分がダウン中ならその案内 (<see cref="HudFormat.Downed(int, int)"/>)、reviveTargetId を起こしているならその進み、
+        /// 自分がダウン中ならその案内 (<see cref="HudText.Downed(int, int)"/>)、reviveTargetId を起こしているならその進み、
         /// unarmed なら <see cref="NoWeapon"/>。
         /// </summary>
         /// <param name="session">読むモード。</param>
@@ -161,13 +161,13 @@ namespace Fps.Runtime
             if (session.IsDowned(local.Value))
             {
                 var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
+                lines.Add(HudText.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
                 return lines;
             }
 
             if (reviveTargetId.HasValue && mode.HasPlayer(reviveTargetId.Value) && session.IsDowned(reviveTargetId.Value))
             {
-                lines.Add(HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(reviveTargetId.Value))));
+                lines.Add(HudText.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(reviveTargetId.Value))));
             }
 
             if (unarmed && session.IsStanding(local.Value))

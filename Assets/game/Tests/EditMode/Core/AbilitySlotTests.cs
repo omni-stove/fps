@@ -171,42 +171,6 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void HudShowsChargesWaitAndUse()
-        {
-            var slot = new AbilitySlot(new AbilitySpec(2, 4f, 1f, 0f));
-            Assert.That(HudFormat.Ability(1, slot), Is.EqualTo(new LocalizedText("hud.ability", 1, 2, 2)));
-
-            slot.TryStart();
-            Assert.That(HudFormat.Ability(1, slot), Is.EqualTo(new LocalizedText("hud.ability.active", 1, 1, 2)));
-
-            slot.End();
-            slot.Tick(0.42f);
-            Assert.That(HudFormat.Ability(2, slot), Is.EqualTo(new LocalizedText("hud.ability.wait", 2, 1, 2, "0.6")));
-
-            slot.Tick(1f);
-            Assert.That(HudFormat.Ability(2, slot), Is.EqualTo(new LocalizedText("hud.ability", 2, 1, 2)));
-        }
-
-        [Test]
-        public void HudShowsOnlyTheCountWhenChargesNeverReturn()
-        {
-            var slot = new AbilitySlot(new AbilitySpec(1, 0f, 0f, 0f));
-            slot.TryStart();
-            slot.End();
-
-            Assert.That(HudFormat.Ability(1, slot), Is.EqualTo(new LocalizedText("hud.ability", 1, 0, 1)));
-        }
-
-        [Test]
-        public void HudRejectsInvalidArguments()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.Ability(0, new AbilitySlot(AbilitySpec.Default)));
-            Assert.Throws<ArgumentNullException>(() => HudFormat.Ability(1, null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.AbilityWaitSeconds(-1f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => HudFormat.AbilityWaitSeconds(float.PositiveInfinity));
-        }
-
-        [Test]
         public void RefundGivesBackTheChargeAndClearsTheCooldown()
         {
             var slot = new AbilitySlot(new AbilitySpec(2, 5f, 3f, 0f));
@@ -279,15 +243,6 @@ namespace Fps.Core.Tests
             slot.TryStart();
             slot.Reset();
             Assert.That(heard, Is.EqualTo(6), "resetting a spent slot fills it");
-        }
-
-        [Test]
-        public void WaitSecondsRoundUpToATenth()
-        {
-            Assert.That(HudFormat.AbilityWaitSeconds(3.42f), Is.EqualTo("3.5"));
-            Assert.That(HudFormat.AbilityWaitSeconds(3f), Is.EqualTo("3.0"));
-            Assert.That(HudFormat.AbilityWaitSeconds(0.01f), Is.EqualTo("0.1"));
-            Assert.That(HudFormat.AbilityWaitSeconds(0f), Is.EqualTo("0.0"));
         }
     }
 }

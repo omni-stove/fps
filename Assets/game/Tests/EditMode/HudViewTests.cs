@@ -439,7 +439,7 @@ namespace Fps.Tests.EditMode
             var view = new HudView(CloneLayout(), model);
 
             model.SetResult(null);
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.Draw)));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.ClearResult();
@@ -462,9 +462,9 @@ namespace Fps.Tests.EditMode
 
             match.ReportKill(0, 1);
 
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.SoloResult(MatchResult.Won))));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchResult.Won))));
             Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-            Assert.That(view.RestartLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Restart("R"))));
+            Assert.That(view.RestartLabel.text, Is.EqualTo(Localizer.Resolve(HudText.Restart("R"))));
             Assert.That(view.RestartLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             model.SetRestartKey(string.Empty);
@@ -484,7 +484,7 @@ namespace Fps.Tests.EditMode
 
             model.SetResult(Team.Alpha);
 
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Alpha))));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.Result(Team.Alpha))));
         }
 
         [Test]
@@ -517,7 +517,7 @@ namespace Fps.Tests.EditMode
             match.ReportDeath(0);
 
             Assert.That(view.RestartLabel, Is.Null);
-            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.SoloResult(MatchResult.Lost))));
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudText.SoloResult(MatchResult.Lost))));
         }
 
         [Test]
@@ -594,11 +594,11 @@ namespace Fps.Tests.EditMode
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
 
             notice.ShowSaved(1f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointSaved)));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudText.CheckpointSaved)));
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
 
             notice.ShowRestartCountdown(2f);
-            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.CheckpointRestart(2))));
+            Assert.That(view.NoticeLabel.text, Is.EqualTo(Localizer.Resolve(HudText.CheckpointRestart(2))));
 
             notice.Clear();
             Assert.That(view.NoticeLabel.text, Is.Empty);
@@ -891,21 +891,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheNumberFormatMatchesTheHudFormat()
+        public void TheNumberFormatWritesHealthAmmoAndTime()
         {
-            Assert.That(HudNumberFormat.Health(75), Is.EqualTo(HudFormat.Health(75)));
-            Assert.That(HudNumberFormat.Health((int?)null), Is.EqualTo(HudFormat.NoHealth));
-            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, false)));
-            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, true), Is.EqualTo(HudFormat.Ammo(0, 90, true, false)));
-            Assert.That(HudNumberFormat.Ammo(30, 90, false, true, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, true)));
-            Assert.That(HudNumberFormat.Ammo(0, 90, true, true, true), Is.EqualTo(HudFormat.Ammo(0, 90, true, true)));
-            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, false), Is.EqualTo(HudFormat.Magazine(30, false)));
-            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, false), Is.EqualTo(HudFormat.Magazine(0, true)));
-            Assert.That(HudNumberFormat.Ammo(null, null, false, false, true), Is.EqualTo(HudFormat.NoAmmo));
-            Assert.That(HudNumberFormat.Ammo(null, null, false, false, false), Is.EqualTo(HudFormat.NoMagazine));
-            Assert.That(HudNumberFormat.Time(65), Is.EqualTo(HudFormat.Time(65f)));
-            Assert.That(HudNumberFormat.Time(HudFormat.MaxDisplayedSeconds), Is.EqualTo(HudFormat.Time(HudFormat.MaxDisplayedSeconds)));
-            Assert.That(HudNumberFormat.Time((int?)null), Is.EqualTo(HudFormat.NoTime));
+            var reloading = GameText.Resolve(HudNumberFormat.Reloading);
+            Assert.That(HudNumberFormat.Health(75), Is.EqualTo("75"));
+            Assert.That(HudNumberFormat.Health((int?)null), Is.EqualTo("--"));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, true), Is.EqualTo("30 / 90"));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, true), Is.EqualTo(reloading + " / 90"));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, true, true), Is.EqualTo("30 / ∞"));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, true, true), Is.EqualTo(reloading + " / ∞"));
+            Assert.That(HudNumberFormat.Ammo(30, 90, false, false, false), Is.EqualTo("30"));
+            Assert.That(HudNumberFormat.Ammo(0, 90, true, false, false), Is.EqualTo(reloading));
+            Assert.That(HudNumberFormat.Ammo(null, null, false, false, true), Is.EqualTo("-- / --"));
+            Assert.That(HudNumberFormat.Ammo(null, null, false, false, false), Is.EqualTo("--"));
+            Assert.That(HudNumberFormat.Time(65), Is.EqualTo("01:05"));
+            Assert.That(HudNumberFormat.Time((int?)null), Is.EqualTo("--:--"));
+        }
+
+        [Test]
+        public void RemainingTimeRoundsUpAndStopsAt99Minutes59()
+        {
+            Assert.That(HudNumberFormat.RemainingTime(65f), Is.EqualTo("01:05"));
+            Assert.That(HudNumberFormat.RemainingTime(0.2f), Is.EqualTo("00:01"));
+            Assert.That(HudNumberFormat.RemainingTime(0f), Is.EqualTo("00:00"));
+            Assert.That(HudNumberFormat.RemainingTime(-3f), Is.EqualTo("00:00"));
+            Assert.That(HudNumberFormat.RemainingTime(float.NaN), Is.EqualTo("00:00"));
+            Assert.That(HudNumberFormat.RemainingTime(HudFormat.MaxDisplayedSeconds), Is.EqualTo("99:59"));
+            Assert.That(HudNumberFormat.RemainingTime(float.PositiveInfinity), Is.EqualTo("99:59"));
         }
 
         [Test]

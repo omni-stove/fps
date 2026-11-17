@@ -26,7 +26,7 @@ namespace Fps.Runtime
     /// <summary>
     /// <see cref="ModeStatus.Detail"/> の型ごとの書式役 (<see cref="IModeHudFormatter"/>) の置き場。
     /// 引くときは Detail の型そのもの、無ければその基底の型の順に探し、どれも登録が無ければ (Detail が null のときも)
-    /// <see cref="ModeStatus"/> が運ぶ今の文をそのまま使う書式役 (<see cref="StatusText"/>) を返す。
+    /// 残り時間・得点・リスポーンまでの秒数・結果だけを出す既定の書式役 (<see cref="Default"/>) を返す。
     /// </summary>
     /// <remarks>
     /// 登録はシーンを読む前に済ませる。同じ型を登録し直すと置き換わるので、ドメインの再読み込みを切った Play で登録を繰り返しても重ならない。
@@ -35,8 +35,8 @@ namespace Fps.Runtime
     {
         private static readonly Dictionary<Type, IModeHudFormatter> _formatters = new Dictionary<Type, IModeHudFormatter>();
 
-        /// <summary><see cref="ModeStatus"/> の今の文 (Time・Scores・Lines・Result) をそのまま返す書式役。</summary>
-        public static IModeHudFormatter StatusText { get; } = new StatusTextFormatter();
+        /// <summary>登録の無いモードの書式役。残り時間・陣営ごとの得点・リスポーンまでの秒数・結果を <see cref="ModeStatus"/> の値から出す。</summary>
+        public static IModeHudFormatter Default { get; } = new DefaultFormatter();
 
         /// <summary>Detail が TDetail (とその派生) のモードの書式役を formatter にする。</summary>
         /// <exception cref="ArgumentNullException">formatter が null。</exception>
@@ -70,7 +70,7 @@ namespace Fps.Runtime
             return _formatters.Remove(detailType);
         }
 
-        /// <summary>status の Detail の型の書式役。登録が無ければ <see cref="StatusText"/>。</summary>
+        /// <summary>status の Detail の型の書式役。登録が無ければ <see cref="Default"/>。</summary>
         /// <exception cref="ArgumentNullException">status が null。</exception>
         public static IModeHudFormatter For(ModeStatus status)
         {
@@ -87,18 +87,11 @@ namespace Fps.Runtime
                 }
             }
 
-            return StatusText;
+            return Default;
         }
 
-        private sealed class StatusTextFormatter : IModeHudFormatter
+        private sealed class DefaultFormatter : ModeHudFormatterBase
         {
-            public LocalizedText Time(ModeStatus status) => status.Time;
-
-            public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status) => status.Scores;
-
-            public void AppendLines(ModeStatus status, List<LocalizedText> lines) => lines.AddRange(status.Lines);
-
-            public LocalizedText Result(ModeStatus status) => status.Result;
         }
     }
 }

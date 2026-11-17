@@ -15,7 +15,7 @@ namespace Fps.Runtime
     /// <see cref="Changed"/> で知らせる。
     /// 言語の表が見つからない・壊れているときは警告を出して <see cref="FallbackLanguage"/> の表で続け、それも読めなければエラーを出し、
     /// 読めた分だけ (無ければキーそのものを出す空の表) で続ける。無いキーは <c>[Localization]</c> 付きの警告で知らせる。
-    /// Core の書式 (<see cref="HudFormat"/> など) が引く <see cref="GameText"/> にも、Play の開始時とエディターの読み込み時に同じ表を渡す。
+    /// Core の書式 (<see cref="LoadoutFormat"/> など) が引く <see cref="GameText"/> にも、Play の開始時とエディターの読み込み時に同じ表を渡す。
     /// 選べる言語は Resources の <see cref="LanguageListFolder"/> にある一覧 (<see cref="LanguageList"/>) で決まり、同じ時に <see cref="GameLanguages"/> に渡す。
     /// </summary>
     public static class Localizer
@@ -483,7 +483,7 @@ namespace Fps.Runtime
             _ = TableOf(Language);
         }
 
-        // Core の書式 (HudFormat など) は Unity に依らないので、今の言語の表を GameText 越しに渡す。
+        // Core の書式 (LoadoutFormat など) は Unity に依らないので、今の言語の表を GameText 越しに渡す。
         // Edit Mode (テストやエディター拡張) では Play の初期化が走らないので、エディターの読み込みでも渡す。
 #if UNITY_EDITOR
         [UnityEditor.InitializeOnLoadMethod]

@@ -3,11 +3,9 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 軌跡は <see cref="VaultProbe.PlanPath"/> が作る形 (始点が 0 の 4 頂点) に限り、始点以外の 3 頂点だけを持つ。
-    /// 速さは持たず、<see cref="ToPath"/> で <see cref="MotorSpec.VaultSpeed"/> を渡して戻す (スナップショットに速さを載せずに済むよう、両端が同じ設定で動く前提にする)。
-    /// 軌跡を作るときの当たりの検査は始めた tick にしか行わないので、巻き戻した tick から再シミュレーションしても頂点を持っていれば同じ道をたどれる。
-    /// </summary>
+    // 軌跡は VaultProbe.PlanPath が作る形 (始点が 0 の 4 頂点) に限り、始点以外の 3 頂点だけを持つ。
+    // 速さは持たず、ToPath で MotorSpec.VaultSpeed を渡して戻す (スナップショットに速さを載せずに済むよう、両端が同じ設定で動く前提にする)。
+    // 軌跡を作るときの当たりの検査は始めた tick にしか行わないので、巻き戻した tick から再シミュレーションしても頂点を持っていれば同じ道をたどれる。
     public readonly struct CharacterVaultState : IEquatable<CharacterVaultState>
     {
         public const int PointCount = 4;
@@ -85,7 +83,6 @@ namespace Shooter.Core
             return points[1].Equals(Rise) && points[2].Equals(Cross) && points[3].Equals(Land);
         }
 
-        /// <param name="speed">軌跡をたどる速さ。乗り越えを始めた側と同じ <see cref="MotorSpec.VaultSpeed"/>。</param>
         public VaultPath ToPath(float speed)
         {
             if (!IsVaulting)

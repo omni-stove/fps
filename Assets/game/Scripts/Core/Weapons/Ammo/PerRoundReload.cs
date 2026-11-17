@@ -61,7 +61,6 @@ namespace Shooter.Core
 
         public float? HeatFraction => null;
 
-        // リロード中でも込めた弾があれば撃てる。撃つとリロードは止まる (Consume)。
         public bool CanFire => _magazine.CanFire;
 
         public void Consume()

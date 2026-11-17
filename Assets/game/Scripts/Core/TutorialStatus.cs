@@ -2,18 +2,9 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 射撃場のチュートリアルの今の段階。今の手順と何番目か・射撃の手順で当てた回数・押すキーのアクション (<see cref="ActionPath"/>) と
-    /// その表記に使う入力機器 (<see cref="Device"/>) を持つ。文にするのは UI。
-    /// </summary>
+    // Core に表示の文を持たせないよう、押すキーはアクションのパスと表記に使う入力機器で持ち、文にするのは UI に任せる。
     public readonly struct TutorialStatus : IEquatable<TutorialStatus>
     {
-        /// <summary>steps の今の段階。</summary>
-        /// <param name="steps">チュートリアルの進み。</param>
-        /// <param name="actionPath">今の手順で押すアクションのパス (Player/Move など)。すべて終えていれば使わず null にする。</param>
-        /// <param name="device">キーの表記に使う入力機器。</param>
-        /// <exception cref="ArgumentNullException">steps が null。</exception>
-        /// <exception cref="ArgumentException">終えていない手順で actionPath が空。</exception>
         public TutorialStatus(TutorialSteps steps, string actionPath, InputDeviceKind device)
         {
             if (steps == null)
@@ -36,28 +27,20 @@ namespace Shooter.Core
             Device = device;
         }
 
-        /// <summary>すべての手順を終えたか。</summary>
         public bool IsComplete { get; }
 
-        /// <summary>今の手順。<see cref="IsComplete"/> なら使わない。</summary>
         public TutorialStep Step { get; }
 
-        /// <summary>今の手順の番号 (1 始まり)。すべて終えたら <see cref="StepCount"/>。</summary>
         public int StepNumber { get; }
 
-        /// <summary>手順の数。</summary>
         public int StepCount { get; }
 
-        /// <summary>射撃の手順で、ここまでに当てた回数。他の手順では 0。</summary>
         public int Hits { get; }
 
-        /// <summary>射撃の手順で当てる回数。</summary>
         public int HitsRequired { get; }
 
-        /// <summary>今の手順で押すアクションのパス。<see cref="IsComplete"/> なら null。</summary>
         public string ActionPath { get; }
 
-        /// <summary>キーの表記に使う入力機器 (最後に操作した機器)。</summary>
         public InputDeviceKind Device { get; }
 
         public bool Equals(TutorialStatus other)

@@ -26,7 +26,6 @@ namespace Shooter.Core
         // 位置を変える先へ届かないとき (経路が塞がれたなど)、撃たずに歩き続けて黙ってしまわないよう、諦めてその場から狙い直す。
         public float RelocateGiveUpSeconds { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。</exception>
         public SniperSpec(float aimSeconds, float shotDamageMultiplier, float reaimDelaySeconds, float relocateGiveUpSeconds)
         {
             // 0 秒にすると光線を見せずに撃てて、見てから避けられる一発という前提が崩れる。

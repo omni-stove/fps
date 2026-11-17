@@ -2,9 +2,6 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// プレイヤーの乗り越えの状態 (Netcode の <c>NetVaultState</c> の中身)。経路は始めた位置からの相対の 3 点。
-    /// </summary>
     public struct VaultSync
     {
         public bool IsVaulting { get; set; }
@@ -15,7 +12,6 @@ namespace Shooter.Protocol
 
         public Vector3 Land { get; set; }
 
-        /// <summary>乗り越え始めてからの秒数。</summary>
         public float Elapsed { get; set; }
 
         public static VaultSync None => default;

@@ -158,10 +158,8 @@ namespace Shooter.Core
             && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone
             && Lean.IsValid && Swim.IsValid && WallRun.IsValid && AirJumpsUsed >= 0;
 
-        /// <summary>
-        /// 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
-        /// 待ち時間の食い違いだけでは巻き戻さない (次に始められるかが変われば、そのとき転がっているかが食い違う)。
-        /// </summary>
+        // 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
+        // 待ち時間の食い違いだけでは巻き戻さない (次に始められるかが変われば、そのとき転がっているかが食い違う)。
         public static float PositionError(CharacterMotorState predicted, CharacterMotorState authoritative)
         {
             if (predicted.Stance != authoritative.Stance)

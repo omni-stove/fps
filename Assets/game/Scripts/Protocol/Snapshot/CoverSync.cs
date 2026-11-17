@@ -2,21 +2,14 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// プレイヤーのカバーの状態 (Netcode の <c>NetCoverState</c> の中身)。予測で巻き戻せるよう、<see cref="CoverSnapshot"/> に
-    /// 見た目に使う縁・上端の高さ・実際に出した覗き量を足したもの。
-    /// </summary>
     public struct CoverSync
     {
         public CoverSnapshot Snapshot { get; set; }
 
-        /// <summary>張り付いている物の上端のワールドの高さ。</summary>
         public float TopY { get; set; }
 
-        /// <summary>覗ける縁。</summary>
         public CoverEdge Edges { get; set; }
 
-        /// <summary>実際に出した覗き量。</summary>
         public float AppliedPeek { get; set; }
 
         public static CoverSync Out => default;

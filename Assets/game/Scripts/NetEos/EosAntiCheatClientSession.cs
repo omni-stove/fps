@@ -6,11 +6,7 @@ using UnityEngine;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// クライアントの EAC を、Anti-Cheat Client の ClientServer モードで動かす。
-    /// .NET のサーバーは Anti-Cheat Server インターフェースでクライアントを登録するので、このモードで始める。
-    /// EOS のプラットフォームとログインは、つなぐときに通信路が済ませたものを使う。
-    /// </summary>
+    // Anti-Cheat Client を ClientServer モードで始めるのは、.NET のサーバーが Anti-Cheat Server インターフェースでクライアントを登録するため。
     internal sealed class EosAntiCheatClientSession : IAntiCheatClientSession
     {
         private AntiCheatClientInterface _client;

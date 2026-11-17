@@ -2,24 +2,9 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 倒されてからリスポーンまでの観戦 (<see cref="DeathCamera.Ally"/>) で、どの味方を映すかの選び方。
-    /// 映せるのは、見ている本人と同じチームで生きている (ダウン中も含む) 本人以外のプレイヤー。
-    /// 並びは Id の昇順で、どの端末でも同じ順に回る。Next / Previous は並びの端で反対側へ回り込む。
-    /// 映していた味方が倒れたり抜けたりしたら、その Id の次 (大きい方) の味方へ移る。
-    /// </summary>
+    // どの端末でも同じ順に回るよう、Id の昇順に並べる。
     public static class SpectateTargets
     {
-        /// <summary>
-        /// 映す味方の Id。映せる味方がいなければ null。
-        /// </summary>
-        /// <param name="candidates">試合にいるプレイヤー。本人や敵・倒れているプレイヤーを含んでよい。null は空とみなす。</param>
-        /// <param name="viewer">見ている本人の Id。</param>
-        /// <param name="team">見ている本人のチーム。</param>
-        /// <param name="current">今映している味方の Id。まだ選んでいなければ null。</param>
-        /// <param name="step">
-        /// 0 なら今の味方を保つ (映せなくなっていれば次の味方)、正なら Next を押した回数、負なら Previous を押した回数。
-        /// </param>
         public static ulong? Pick(IReadOnlyList<SpectateCandidate> candidates, ulong viewer, Team team, ulong? current, int step)
         {
             var allies = Allies(candidates, viewer, team);
@@ -56,12 +41,6 @@ namespace Shooter.Core
             return allies[Wrap((long)start + moves, count)];
         }
 
-        /// <summary>
-        /// 実際に使うやられ演出。<see cref="DeathCamera.Ally"/> なのに映せる味方がいない (オフラインや、味方が全員倒れている) ときは
-        /// <see cref="DeathCamera.Free"/> に落とす。それ以外は rule のまま。
-        /// </summary>
-        /// <param name="rule">試合のルールのやられ演出。</param>
-        /// <param name="hasAlly">映せる味方がいるか (<see cref="Pick"/> が null でないか)。</param>
         public static DeathCamera ResolveMode(DeathCamera rule, bool hasAlly)
         {
             return rule == DeathCamera.Ally && !hasAlly ? DeathCamera.Free : rule;

@@ -10,10 +10,8 @@ using EosRtcAudio = Epic.OnlineServices.RTCAudio;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// プロセスに 1 つの EOS プラットフォームを作って持つ。認証情報はコミットせず、呼び出し側から受け取る。
-    /// PlayEveryWare の EOSManager (StreamingAssets の設定ファイルを読む) は使わず、SDK を直接呼ぶ。
-    /// </summary>
+    // PlayEveryWare の EOSManager は StreamingAssets の設定ファイルから認証情報を読むので使わず、SDK を直接呼ぶ。
+    // 認証情報をコミットせずに済むよう、呼び出し側から受け取る。
     internal static class EosPlatform
     {
         private const string _productName = "shooter";
@@ -23,22 +21,15 @@ namespace Shooter.NetEos
         private static bool _quitHooked;
         private static int _lastTickFrame = -1;
 
-        /// <summary>作成済みのプラットフォーム。無ければ null。</summary>
         public static PlatformInterface Current => _platform;
 
-        /// <summary>RTC インターフェース。プラットフォームが無いか、RTC を使えない (オプションを受け付けなかった) なら null。</summary>
         public static EosRtc.RTCInterface Rtc => _platform?.GetRTCInterface();
 
-        /// <summary>RTC Audio インターフェース。<see cref="Rtc"/> が無ければ null。</summary>
         public static EosRtcAudio.RTCAudioInterface RtcAudio => Rtc?.GetAudioInterface();
 
-        /// <summary>
-        /// このプロセスで Device ID のログインに成功したユーザー。まだなら null。
-        /// ロビーと transport が同じユーザーを使い、ログインを 1 回で済ませるために持つ。
-        /// </summary>
+        // ロビーと transport が同じユーザーを使い、ログインを 1 回で済ませるために持つ。
         public static ProductUserId LocalUserId => _platform != null && _localUserId != null && _localUserId.IsValid() ? _localUserId : null;
 
-        /// <summary><see cref="EosDeviceLogin"/> がログインに成功したときに呼ぶ。</summary>
         public static void RememberLogin(ProductUserId userId)
         {
             if (_platform != null && userId != null && userId.IsValid())
@@ -47,7 +38,6 @@ namespace Shooter.NetEos
             }
         }
 
-        /// <summary>ログインが切れたユーザーを忘れ、次のログインで Device ID からやり直させる。</summary>
         public static void ForgetLogin(ProductUserId userId)
         {
             if (_localUserId != null && userId != null
@@ -57,10 +47,6 @@ namespace Shooter.NetEos
             }
         }
 
-        /// <summary>
-        /// プラットフォームを作る (作成済みならそれを返す)。SDK の初期化・ネイティブライブラリの読み込みの失敗は
-        /// 例外にせず <paramref name="error"/> で返す。
-        /// </summary>
         public static PlatformInterface Acquire(EosCredentials credentials, out string error)
         {
             if (credentials == null)
@@ -139,9 +125,7 @@ namespace Shooter.NetEos
             return _platform;
         }
 
-        /// <summary>
-        /// SDK のコールバックを進める。毎フレーム呼ぶ。ロビーと transport の両方から呼ばれるので、1 フレームに 1 回だけ進める。
-        /// </summary>
+        // ロビーと transport の両方から呼ばれるので、1 フレームに 1 回だけ進める。
         public static void Tick()
         {
             if (_platform == null || _lastTickFrame == Time.frameCount)

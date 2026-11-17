@@ -932,6 +932,20 @@
     background-size: 100% 100%;
 }
 
+/* スコープの縁と照準器の照準。ScopeOverlayView が縁と形を描き、画像の照準は子に入れて中央に置く。 */
+.scope-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.scope-overlay__image {
+    position: absolute;
+    background-size: 100% 100%;
+}
+
 /* キルカムの再生中の枠。画面の縁を囲み、見出しと進みを上中央に置く。KillCamView が見出しと進みの幅 (%) を入れる。 */
 .kill-cam {
     position: absolute;

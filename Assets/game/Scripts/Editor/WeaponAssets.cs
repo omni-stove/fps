@@ -175,6 +175,7 @@ namespace Shooter.Editor
             definition.ExtraZoomLevels = extraZoomLevels;
             definition.BreathHold.Set(aim.BreathHold);
             definition.SwayDegrees = aim.SwayDegrees;
+            definition.Sight.Set(aim.Sight);
 
             // 同じ Id の弾薬の種類は前の要素に写し、そちらにだけある見た目と音の参照を残す。
             var previous = definition.AmmoTypes;

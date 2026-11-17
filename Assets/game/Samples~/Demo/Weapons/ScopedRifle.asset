@@ -48,3 +48,9 @@ MonoBehaviour:
     _recoverSeconds: 3
     _swayMultiplier: 0.1
   _swayDegrees: 0.6
+  _sight:
+    _enabled: 1
+    _reticleId: mildot
+    _scopeOverlay: 1
+    _eyeViewInThirdPerson: 1
+    _aimedInProgress: 0.9

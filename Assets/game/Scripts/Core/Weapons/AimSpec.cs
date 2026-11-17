@@ -25,7 +25,8 @@ namespace Shooter.Core
             float blindFireSpreadDegrees = 0f,
             IEnumerable<float> zoomLevels = null,
             BreathHoldSpec breathHold = null,
-            float swayDegrees = 0f)
+            float swayDegrees = 0f,
+            SightSpec sight = null)
         {
             HipSpreadDegrees = SpecGuard.Angle(hipSpreadDegrees, nameof(hipSpreadDegrees));
             AdsSpreadDegrees = SpecGuard.Angle(adsSpreadDegrees, nameof(adsSpreadDegrees));
@@ -38,6 +39,7 @@ namespace Shooter.Core
             ZoomLevels = zoomLevels == null ? _defaultZoomLevels : Array.AsReadOnly(CopyZoomLevels(zoomLevels));
             BreathHold = breathHold;
             SwayDegrees = SpecGuard.Angle(swayDegrees, nameof(swayDegrees));
+            Sight = sight ?? SightSpec.Default;
         }
 
         public float HipSpreadDegrees { get; }
@@ -63,6 +65,8 @@ namespace Shooter.Core
         public BreathHoldSpec BreathHold { get; }
 
         public float SwayDegrees { get; }
+
+        public SightSpec Sight { get; }
 
         private static float[] CopyZoomLevels(IEnumerable<float> zoomLevels)
         {

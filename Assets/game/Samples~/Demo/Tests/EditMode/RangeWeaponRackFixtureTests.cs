@@ -48,7 +48,7 @@ namespace Shooter.Tests.EditMode
 
                 Assert.That(placed.name, Is.EqualTo(RangeWeaponRackFixture.RootName));
                 Assert.That(placed.scene, Is.EqualTo(scene));
-                var points = placed.GetComponentsInChildren<PickupSpawnPoint>();
+                var points = placed.GetComponentsInChildren<PickupSpawnPoint>().Where(p => p.Contents.Kind == PickupKind.Weapon).ToArray();
                 Assert.That(points.Select(p => p.Contents.Weapon), Is.EqualTo(range.Weapons));
                 for (var i = 0; i < points.Length; i++)
                 {
@@ -59,6 +59,55 @@ namespace Shooter.Tests.EditMode
                     Assert.That(points[i].Contents.Amount, Is.EqualTo(range.Weapons[i].ToSpec().MagazineSize));
                     Assert.That(fixture.Footprint.Contains(points[i].transform.position + (Vector3.up * 0.5f)), Is.True, points[i].name);
                 }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void TheOpticsOfTheTuningFollowTheWeaponsAsItemPickups()
+        {
+            var range = WeaponAssetBuilder.LoadRangeWeapons();
+            var optics = RangeWeaponRackFixture.OpticItemIds(KitTuning.Items);
+            Assert.That(optics, Is.EqualTo(new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "a2c5e73b-69fa-4402-b0ef-3c4297973226" }), "the red dot and the 4x scope");
+            Assert.That(range.Weapons.Count + optics.Count, Is.LessThanOrEqualTo(RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows));
+
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                var fixture = new RangeWeaponRackFixture();
+                var placed = fixture.Place(scene, GameRules.Default);
+
+                var items = placed.GetComponentsInChildren<PickupSpawnPoint>().Where(p => p.Contents.Kind == PickupKind.Item).ToArray();
+                Assert.That(items.Select(p => p.Contents.ItemId), Is.EqualTo(optics));
+                for (var i = 0; i < items.Length; i++)
+                {
+                    Assert.That(items[i].transform.position, Is.EqualTo(RangeWeaponRackFixture.SlotPosition(range.Weapons.Count + i)));
+                    Assert.That(items[i].Contents.Amount, Is.EqualTo(1));
+                    Assert.That(items[i].CollectMode, Is.EqualTo(PickupCollectMode.Look));
+                }
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void TooManyWeaponsAndOpticsPlaceNothing()
+        {
+            var weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
+            _created.Add(weapon);
+            weapon.AssignIdIfEmpty();
+            var weapons = Enumerable.Repeat(weapon, RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows).ToArray();
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                Assert.Throws<InvalidOperationException>(() => RangeWeaponRackFixture.Place(scene, weapons, new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8" }));
+
+                Assert.That(scene.GetRootGameObjects(), Is.Empty);
             }
             finally
             {

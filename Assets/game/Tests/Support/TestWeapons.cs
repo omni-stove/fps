@@ -134,7 +134,7 @@ namespace Shooter.Tests.EditMode
                     new ExplosionSpec(new ExplosionDamage(150, 6f, 1.5f), 200, DetonationTrigger.OnLifetimeEnd),
                     burning,
                     new AreaEffectSpec(4f, 8f, 1f, 5, burning, "fx.fire")),
-                new AimSpec(1f, 0.2f, 0.5f, 3f, 1f, 20f, 0.25f, 6f, new[] { 30f, 15f }, new BreathHoldSpec(4f, 2f, 0.1f), 1.5f),
+                new AimSpec(1f, 0.2f, 0.5f, 3f, 1f, 20f, 0.25f, 6f, new[] { 30f, 15f }, new BreathHoldSpec(4f, 2f, 0.1f), 1.5f, new SightSpec("mildot", true, true, 0.8f)),
                 new[]
                 {
                     new AmmoTypeSpec(EveryPartStandardAmmoId, "ammo.everything.standard"),

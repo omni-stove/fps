@@ -51,6 +51,12 @@
       "recoverSeconds": 3,
       "swayMultiplier": 0.1
     },
-    "swayDegrees": 0.6
+    "swayDegrees": 0.6,
+    "sight": {
+      "reticleId": "mildot",
+      "scopeOverlay": true,
+      "eyeViewInThirdPerson": true,
+      "aimedInProgress": 0.9
+    }
   }
 }

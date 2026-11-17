@@ -167,7 +167,7 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
+        /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="ScopeOverlayView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
         /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="StreakView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。グレネード・能力の枠・ストリーク・拠点制圧は、出すものを渡されるまで隠れている。
@@ -186,6 +186,7 @@ namespace Shooter.Runtime
             AddIfMissing<DamageDirectionView>(hudObject);
             AddIfMissing<GrenadeWarningView>(hudObject);
             AddIfMissing<DamageVignetteView>(hudObject);
+            AddIfMissing<ScopeOverlayView>(hudObject);
             AddIfMissing<FlashOverlay>(hudObject);
             AddIfMissing<KillFeedView>(hudObject);
             AddIfMissing<SubtitleView>(hudObject);
@@ -219,6 +220,11 @@ namespace Shooter.Runtime
         public DamageVignetteView DamageVignette => GetComponent<DamageVignetteView>();
 
         public FlashOverlay FlashOverlay => GetComponent<FlashOverlay>();
+
+        public ScopeOverlayView ScopeOverlay => GetComponent<ScopeOverlayView>();
+
+        /// <summary>照準を読むこの画面のプレイヤーの覗き込み。いなければ null。</summary>
+        public AimDownSights Ads => _ads;
 
         /// <summary>同じ GameObject のキルフィード。<see cref="AddViews"/> で付けていなければ null。</summary>
         public KillFeedView KillFeed => GetComponent<KillFeedView>();
@@ -659,7 +665,7 @@ namespace Shooter.Runtime
         /// <summary>
         /// 照準の線を、武器の今の散らばり (<see cref="WeaponController.CrosshairConeDegrees"/>) の縁をカメラ (<see cref="AimDownSights.Camera"/>) の
         /// 視野角で画面に写した位置 (<see cref="SpreadPattern.ScreenRadius"/>) に置き、撃った後の開き (<see cref="WeaponController.CrosshairSpreadFraction"/>) を足す。
-        /// 照準を出すかは <see cref="ShowsCrosshair"/> で決める (一人称の ADS 中とダッシュ中は隠す)。
+        /// 照準を出すかは <see cref="ShowsCrosshair"/> で決める (一人称か照準器越し (<see cref="SightView.ThroughSight"/>) の ADS 中とダッシュ中は隠す)。
         /// カメラが無ければ縁は 0 で出す。値の源は <see cref="GameSignals.LocalPlayer"/> の武器・ADS・プレイヤーと、武器の親の階層の <see cref="ViewRig"/>。
         /// 自分のプレイヤーがいなければ何もしない (出す側が照準を書く)。
         /// </summary>
@@ -673,7 +679,8 @@ namespace Shooter.Runtime
             var aiming = _ads != null && _ads.IsAiming;
             var sprinting = _mover != null && _mover.IsSprinting;
             var view = _rig != null ? _rig.Mode : ViewMode.FirstPerson;
-            var shown = ShowsCrosshair(view, aiming, sprinting);
+            var throughSight = _ads != null && _ads.IsInitialized && _ads.SightView.ThroughSight;
+            var shown = ShowsCrosshair(throughSight ? ViewMode.FirstPerson : view, aiming, sprinting);
             ShownModel.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), shown);
             RefreshAimBlock(shown);
         }

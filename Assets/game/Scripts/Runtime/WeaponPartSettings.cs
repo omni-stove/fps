@@ -790,6 +790,49 @@ namespace Shooter.Runtime
         }
     }
 
+    [Serializable]
+    public sealed class SightSettings
+    {
+        [SerializeField, Tooltip("照準器の見た目と覗き方を決める。切ってあれば照準器を持たない")]
+        private bool _enabled;
+
+        [SerializeField, Tooltip("照準の見た目のキー (ReticleCatalog の Id)。空なら照準を出さない (スコープの縁を出すときは既定の十字)")]
+        private string _reticleId = string.Empty;
+
+        [SerializeField, Tooltip("構えきったら画面をスコープの縁で覆い、一人称の武器を隠す")]
+        private bool _scopeOverlay;
+
+        [SerializeField, Tooltip("三人称でも、構えるにつれてカメラを肩越しから目へ寄せる")]
+        private bool _eyeViewInThirdPerson;
+
+        [SerializeField, UnityEngine.Range(0.01f, 1f), Tooltip("覗き込みの進み具合がこれ以上で照準と縁を出す")]
+        private float _aimedInProgress = SightSpec.DefaultAimedInProgress;
+
+        public bool Enabled { get => _enabled; set => _enabled = value; }
+
+        public string ReticleId { get => _reticleId; set => _reticleId = value ?? string.Empty; }
+
+        public bool ScopeOverlay { get => _scopeOverlay; set => _scopeOverlay = value; }
+
+        public bool EyeViewInThirdPerson { get => _eyeViewInThirdPerson; set => _eyeViewInThirdPerson = value; }
+
+        public float AimedInProgress { get => _aimedInProgress; set => _aimedInProgress = value; }
+
+        public SightSpec ToSpec() => _enabled ? new SightSpec(_reticleId, _scopeOverlay, _eyeViewInThirdPerson, _aimedInProgress) : null;
+
+        public void Set(SightSpec spec)
+        {
+            _enabled = spec != null && !spec.IsDefault;
+            if (_enabled)
+            {
+                _reticleId = spec.ReticleId;
+                _scopeOverlay = spec.ScopeOverlay;
+                _eyeViewInThirdPerson = spec.EyeViewInThirdPerson;
+                _aimedInProgress = spec.AimedInProgress;
+            }
+        }
+    }
+
     /// <summary>弾の性質 (<see cref="RoundSpec"/>) 1 つ分。弾薬の種類 (<see cref="AmmoTypeSettings"/>) が武器の弾を上書きするのに使う。</summary>
     [Serializable]
     public sealed class RoundSettings

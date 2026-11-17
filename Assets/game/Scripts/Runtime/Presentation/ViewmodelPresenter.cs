@@ -35,6 +35,7 @@ namespace Shooter.Runtime
         private Damageable _damageable;
         private WeaponPresentation _presentation;
         private ViewmodelMotion _motion;
+        private AimDownSights _ads;
 
         private GameObject _instance;
         private Vector3 _hipPosition;
@@ -45,6 +46,7 @@ namespace Shooter.Runtime
         private IReadOnlyList<string> _attachments = WeaponAttachments.None;
         private AttachmentModelCatalog _attachmentModels;
         private bool _attachmentModelsResolved;
+        private bool _hiddenBySight;
 
         public ViewmodelCatalog Catalog
         {
@@ -97,6 +99,12 @@ namespace Shooter.Runtime
 
         public WeaponSockets Sockets => _instance != null ? _sockets : WeaponSockets.None;
 
+        /// <summary>照準器のスコープの縁 (<see cref="SightView.HidesViewmodel"/>) が画面を覆うので、モデルを描かずにいるか。</summary>
+        public bool IsHiddenBySight => _instance != null && _hiddenBySight;
+
+        /// <summary>照準器の出し方。null なら同じ GameObject の <see cref="AimDownSights.SightView"/>。</summary>
+        public Func<SightView> SightSource { get; set; }
+
         public ViewmodelMotion Motion
         {
             get
@@ -148,6 +156,7 @@ namespace Shooter.Runtime
                 if (!WeaponAttachments.SameAs(attachments, _attachments))
                 {
                     Attach(attachments);
+                    HideForSight(_hiddenBySight, true);
                     Debug.Log($"{AttachedLogPrefix} weapon={wanted} attached={WeaponAttachments.Describe(attachments)} sight={_sockets.Sight != null}", this);
                 }
 
@@ -183,6 +192,43 @@ namespace Shooter.Runtime
 
             var progress = Mathf.Clamp01(_motion.AdsProgress());
             _instance.transform.localPosition = Vector3.Lerp(_hipPosition, _adsPosition, progress);
+            HideForSight(CurrentSightView().HidesViewmodel, false);
+        }
+
+        private SightView CurrentSightView()
+        {
+            if (SightSource != null)
+            {
+                return SightSource();
+            }
+
+            // 組み立てる側が AimDownSights をこれより後に付けるので、見つかるまで探し直す。
+            if (_ads == null)
+            {
+                _ads = GetComponent<AimDownSights>();
+            }
+
+            return _ads != null && _ads.IsInitialized ? _ads.SightView : SightView.None;
+        }
+
+        // 消して出し直すと付けた物とソケットを作り直すことになり、銃口の炎の出る位置も失うので、描くのだけを止める。
+        private void HideForSight(bool hide, bool force)
+        {
+            if (_instance == null || (!force && hide == _hiddenBySight))
+            {
+                return;
+            }
+
+            _hiddenBySight = hide;
+            foreach (var renderer in _instance.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = !hide;
+            }
+
+            if (!force)
+            {
+                Debug.Log($"{LogTag} sight hidden={(hide ? "true" : "false")} weapon={_weaponId}", this);
+            }
         }
 
         public static string FormatSpawnLog(string weaponId, string prefabName, bool hasMuzzle)
@@ -320,6 +366,7 @@ namespace Shooter.Runtime
 
             _motion.Settings = SwaySettingsFor(entry);
             _motion.ResetMotion();
+            _hiddenBySight = false;
 
             var hasMuzzle = _sockets.Muzzle != null;
             Debug.Log(

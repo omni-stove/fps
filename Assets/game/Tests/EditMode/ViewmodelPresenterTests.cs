@@ -117,6 +117,50 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AScopeOverlayStopsDrawingTheModelButKeepsItsSockets()
+        {
+            var view = SightView.None;
+            _presenter.SightSource = () => view;
+            _presenter.Refresh();
+            var instance = _presenter.Instance;
+            var renderer = instance.GetComponent<Renderer>();
+            Assert.That(renderer.enabled, Is.True);
+            Assert.That(_presenter.IsHiddenBySight, Is.False);
+
+            view = SightView.Of(new SightSpec(scopeOverlay: true), ViewMode.FirstPerson, 1f);
+            _presenter.Refresh();
+
+            Assert.That(_presenter.Instance, Is.SameAs(instance), "not respawned");
+            Assert.That(_presenter.IsHiddenBySight, Is.True);
+            Assert.That(renderer.enabled, Is.False);
+            Assert.That(_presenter.Sockets.Muzzle, Is.Not.Null);
+            Assert.That(_logs, Does.Contain(ViewmodelPresenter.LogTag + " sight hidden=true weapon=" + RifleId));
+
+            view = SightView.Of(new SightSpec("redDot"), ViewMode.FirstPerson, 1f);
+            _presenter.Refresh();
+
+            Assert.That(_presenter.IsHiddenBySight, Is.False, "a red dot keeps the gun on screen");
+            Assert.That(renderer.enabled, Is.True);
+        }
+
+        [Test]
+        public void ANewWeaponIsDrawnAgainAfterTheScope()
+        {
+            var view = SightView.Of(new SightSpec(scopeOverlay: true), ViewMode.FirstPerson, 1f);
+            _presenter.SightSource = () => view;
+            _presenter.Refresh();
+            Assert.That(_presenter.Instance.GetComponent<Renderer>().enabled, Is.False);
+
+            view = SightView.None;
+            _held = HandgunId;
+            _presenter.Refresh();
+
+            Assert.That(_presenter.CurrentWeaponId, Is.EqualTo(HandgunId));
+            Assert.That(_presenter.IsHiddenBySight, Is.False);
+            Assert.That(_presenter.Instance.GetComponent<Renderer>().enabled, Is.True);
+        }
+
+        [Test]
         public void TheMuzzleSocketIsFoundForTheWeaponPresentation()
         {
             var presentation = _body.AddComponent<WeaponPresentation>();

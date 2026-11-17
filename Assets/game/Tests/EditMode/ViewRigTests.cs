@@ -215,6 +215,47 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AScopeInThirdPersonPullsTheCameraToTheEyeAndHidesTheBody()
+        {
+            var sight = new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true);
+            var progress = 0f;
+            _rig.SightSource = () => SightView.Of(sight, _rig.Mode, progress);
+            InitializeLocalThirdPerson();
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f));
+            Assert.That(_rig.IsBodyHiddenBySight, Is.False);
+
+            progress = 0.5f;
+            _rig.UpdateCameraPosition();
+
+            // 半分では smoothstep でも半分まで寄る
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset * 0.5f), Is.LessThan(1e-4f));
+            Assert.That(_rig.IsBodyHiddenBySight, Is.True);
+            Assert.That(_body.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.ShadowsOnly));
+
+            progress = 1f;
+            _rig.UpdateCameraPosition();
+            Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero));
+
+            progress = 0f;
+            _rig.UpdateCameraPosition();
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f));
+            Assert.That(_rig.IsBodyHiddenBySight, Is.False);
+            Assert.That(_body.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On));
+        }
+
+        [Test]
+        public void ASightThatStaysOnTheShoulderKeepsTheThirdPersonCamera()
+        {
+            var sight = new SightSpec("redDot");
+            _rig.SightSource = () => SightView.Of(sight, _rig.Mode, 1f);
+            InitializeLocalThirdPerson();
+
+            Assert.That(Vector3.Distance(_camera.transform.localPosition, ViewRig.DefaultThirdPersonOffset), Is.LessThan(1e-4f));
+            Assert.That(_rig.IsBodyHiddenBySight, Is.False);
+            Assert.That(_body.GetComponent<Renderer>().shadowCastingMode, Is.EqualTo(ShadowCastingMode.On));
+        }
+
+        [Test]
         public void DefaultsToTheRightShoulder()
         {
             Assert.That(_rig.Shoulder, Is.EqualTo(ShoulderSide.Right));

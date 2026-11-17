@@ -836,6 +836,57 @@ namespace Shooter.Tests.EditMode
             Assert.That(Quaternion.Angle(_camera.transform.localRotation, expected), Is.LessThan(1e-2f));
         }
 
+        [Test]
+        public void TheSightViewFollowsTheWeaponsSightAndTheProgress()
+        {
+            Initialize();
+            var sight = new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true);
+            _ads.WeaponSource = () => new WeaponSpec(_rifleId, "Scoped", WeaponCategory.MarksmanRifle, aim: new AimSpec(sight: sight));
+            Assert.That(_ads.Sight, Is.SameAs(sight));
+
+            _ads.Tick(true, true, 0.05f);
+            Assert.That(_ads.SightView.ThroughSight, Is.True, "first person with no ViewRig");
+            Assert.That(_ads.SightView.ScopeOverlay, Is.False, "a third of the way in");
+
+            _ads.Tick(true, false, 1f);
+            Assert.That(_ads.SightView.ScopeOverlay, Is.True);
+            Assert.That(_ads.SightView.HidesViewmodel, Is.True);
+            Assert.That(_ads.SightView.ReticleId, Is.EqualTo("mildot"));
+            Assert.That(_ads.SightView.EyeBlend, Is.Zero);
+
+            _ads.ViewModeSource = () => ViewMode.ThirdPerson;
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.SightView.EyeBlend, Is.EqualTo(1f), "the scope takes the camera to the eye in third person");
+            Assert.That(_ads.SightView.ScopeOverlay, Is.True);
+
+            _ads.ResetView();
+            Assert.That(_ads.SightView.ScopeOverlay, Is.False);
+            Assert.That(_ads.SightView.EyeBlend, Is.Zero);
+        }
+
+        [Test]
+        public void WithoutAWeaponTheSightIsTheDefault()
+        {
+            Initialize();
+            _ads.Tick(true, true, 1f);
+
+            Assert.That(_ads.Sight, Is.SameAs(SightSpec.Default));
+            Assert.That(_ads.SightView.ShowsReticle, Is.False);
+            Assert.That(_ads.SightView.ScopeOverlay, Is.False);
+        }
+
+        [Test]
+        public void SightLogNamesTheShownReticle()
+        {
+            var scope = SightView.Of(new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true), ViewMode.ThirdPerson, 1f);
+            Assert.That(SightLog.Format(scope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=mildot eye=true"));
+
+            var plainScope = SightView.Of(new SightSpec(scopeOverlay: true), ViewMode.FirstPerson, 1f);
+            Assert.That(SightLog.Format(plainScope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=default eye=false"));
+
+            Assert.That(SightLog.Format(SightView.None), Is.EqualTo("[View] sight aimedIn=false overlay=false reticle=- eye=false"));
+        }
+
         private static WeaponSpec Scoped(string id)
         {
             return new WeaponSpec(id, "Scoped", WeaponCategory.MarksmanRifle, aim: new AimSpec(zoomLevels: new[] { 30f, 15f, 7.5f }));

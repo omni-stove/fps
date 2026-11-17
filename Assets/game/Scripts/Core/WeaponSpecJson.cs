@@ -194,7 +194,7 @@ namespace Shooter.Core
         {
             HipSpreadDegreesItem, AdsSpreadDegreesItem, MoveSpreadDegreesItem, RecoilPitchDegreesItem, RecoilYawDegreesItem,
             RecoilRecoveryPerSecondItem, RecoilRecoveryDelaySecondsItem, BlindFireSpreadDegreesItem, ZoomLevelsItem, BreathHoldItem,
-            SwayDegreesItem,
+            SwayDegreesItem, SightSpecJson.SightItem,
         };
 
         public static IReadOnlyList<string> AmmoTypeItemNames { get; } = new[] { IdItem, NameKeyItem, RoundItem, ImpactItem };
@@ -744,6 +744,7 @@ namespace Shooter.Core
             var zoomLevels = ReadZoomLevels(part);
             var breathHold = ReadNested(part, BreathHoldItem, _breathHoldItems, p => new BreathHoldSpec(
                 p.RequireFloat(MaxHoldSecondsItem), p.RequireFloat(RecoverSecondsItem), p.RequireFloat(SwayMultiplierItem)));
+            var sight = ReadNested(part, SightSpecJson.SightItem, SightSpecJson.ItemNames, p => SightSpecJson.Read(p.Fields));
 
             return part.Build(() => new AimSpec(
                 part.Float(HipSpreadDegreesItem, 0f),
@@ -756,7 +757,8 @@ namespace Shooter.Core
                 part.Float(BlindFireSpreadDegreesItem, 0f),
                 zoomLevels,
                 breathHold,
-                part.Float(SwayDegreesItem, 0f)));
+                part.Float(SwayDegreesItem, 0f),
+                sight));
         }
 
         private static float[] ReadZoomLevels(Part part)
@@ -816,6 +818,7 @@ namespace Shooter.Core
             }
 
             writer.Float(SwayDegreesItem, aim.SwayDegrees);
+            SightSpecJson.Write(writer, aim.Sight);
         }
 
         private static List<AmmoTypeSpec> ReadAmmoTypes(ServerDataJson.Fields fields)

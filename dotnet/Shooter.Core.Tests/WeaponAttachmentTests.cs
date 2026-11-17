@@ -722,5 +722,28 @@ namespace Shooter.Core.Tests
                 return true;
             }
         }
+
+        [Test]
+        public void AnOpticWithASightReplacesTheWeaponsSight()
+        {
+            var holo = new ItemSpec(_pistolSightId, "item.holo", attachment: new AttachmentSpec("optic", sight: new SightSpec("holo")));
+            var scoped = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, aim: new AimSpec(sight: new SightSpec("mildot", scopeOverlay: true)));
+            var catalog = new ItemCatalog(new[] { _rifleItem, holo, _suppressor }, InventoryRule.Default);
+
+            Assert.That(WeaponAttachments.Apply(scoped, new[] { _pistolSightId }, catalog).Aim.Sight.ReticleId, Is.EqualTo("holo"));
+            Assert.That(WeaponAttachments.Apply(scoped, new[] { _pistolSightId }, catalog).Aim.Sight.ScopeOverlay, Is.False);
+            Assert.That(WeaponAttachments.Apply(scoped, new[] { _suppressorId }, catalog).Aim.Sight, Is.SameAs(scoped.Aim.Sight), "a muzzle keeps the sight");
+        }
+
+        [Test]
+        public void AnOpticThatOnlySetsTheZoomDropsTheWeaponsScope()
+        {
+            var scoped = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, aim: new AimSpec(sight: new SightSpec("mildot", scopeOverlay: true)));
+
+            var spec = WeaponAttachments.Apply(scoped, new[] { _scopeId }, Catalog());
+
+            Assert.That(spec.Aim.Sight, Is.SameAs(SightSpec.Default));
+            Assert.That(spec.Aim.ZoomLevels, Is.EqualTo(Floats(30f, 15f)));
+        }
     }
 }

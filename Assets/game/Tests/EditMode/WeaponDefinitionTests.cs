@@ -223,6 +223,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Impact.AreaEffect, Is.Null);
             Assert.That(spec.Aim.ZoomLevels, Is.EqualTo(new[] { AdsZoom.DefaultFieldOfView }));
             Assert.That(spec.Aim.BreathHold, Is.Null);
+            Assert.That(spec.Aim.Sight, Is.SameAs(SightSpec.Default));
             Assert.That(spec.AmmoTypes, Is.Empty);
         }
 
@@ -250,6 +251,25 @@ namespace Shooter.Tests.EditMode
             definition.Delivery = RoundDelivery.Projectile;
             Assert.That(definition.ToSpec().Round.Projectile.Speed, Is.EqualTo(30f));
             Assert.That(definition.ToSpec().Round.Beam, Is.Null);
+        }
+
+        [Test]
+        public void TheSightIsUsedOnlyWhileEnabled()
+        {
+            var definition = NewDefinition("Scoped");
+            definition.Sight.ReticleId = "mildot";
+            definition.Sight.ScopeOverlay = true;
+            Assert.That(definition.ToSpec().Aim.Sight, Is.SameAs(SightSpec.Default), "kept but off");
+
+            definition.Sight.Enabled = true;
+            var sight = definition.ToSpec().Aim.Sight;
+            Assert.That(sight.ReticleId, Is.EqualTo("mildot"));
+            Assert.That(sight.ScopeOverlay, Is.True);
+            Assert.That(sight.EyeViewInThirdPerson, Is.False);
+            Assert.That(sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
+
+            definition.Sight.Set(SightSpec.Default);
+            Assert.That(definition.Sight.Enabled, Is.False);
         }
 
         [Test]

@@ -36,6 +36,7 @@ namespace Shooter.Core
             var speed = 1f;
             var weight = spec.Weight;
             IReadOnlyList<float> zoom = null;
+            SightSpec sight = null;
             foreach (var item in attached)
             {
                 var a = item.Attachment;
@@ -50,6 +51,11 @@ namespace Shooter.Core
                 speed *= a.MoveSpeedMultiplier;
                 weight += item.Weight;
                 zoom = a.ZoomLevels ?? zoom;
+                if (a.IsOptic)
+                {
+                    // 倍率だけ決めた照準器でも武器のスコープの縁や照準を残さないよう、照準器ごと替える。
+                    sight = a.Sight ?? SightSpec.Default;
+                }
             }
 
             var aim = spec.Aim;
@@ -64,7 +70,8 @@ namespace Shooter.Core
                 aim.BlindFireSpreadDegrees,
                 zoom ?? aim.ZoomLevels,
                 aim.BreathHold,
-                aim.SwayDegrees);
+                aim.SwayDegrees,
+                sight ?? aim.Sight);
 
             var ammo = spec.Ammo;
             var newAmmo = new AmmoSpec(

@@ -141,13 +141,6 @@ namespace Shooter.Server
             return count;
         }
 
-        /// <param name="connection">入ってきた接続。</param>
-        /// <param name="rejoinKey">切断して戻ってきたと見分ける鍵。</param>
-        /// <param name="productUserId">EOS の product user id。無ければ null。</param>
-        /// <param name="partyId">
-        /// 入っているパーティの Id (<see cref="ConnectionExtras.PartyId"/>)。同じ Id の人がもういれば、満員でない限りそのチームに入れる。
-        /// 無ければ null。
-        /// </param>
         public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null)
         {
             if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))

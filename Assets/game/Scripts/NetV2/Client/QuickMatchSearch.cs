@@ -7,7 +7,7 @@ namespace Shooter.NetV2
 {
     /// <summary>
     /// クイックマッチで、専用サーバーが <c>-register-lobby</c> で載せたロビーを探してつなぐサーバーを決める。
-    /// ログインし、自分の版のバケット (<see cref="ServerLobby.BucketId"/>) を探し、<see cref="LobbySelector.PickServer"/> で選んだサーバーの
+    /// ログインし、自分の版のバケット (<see cref="ServerLobby.BucketId"/>) を探し、<see cref="LobbySelector.PickServer(IReadOnlyList{LobbyInfo}, string, int)"/> で選んだサーバーの
     /// 公開アドレスへ UDP でつなぐ起動設定 (<see cref="ServerLobby.ConnectOptions"/>) を返す。パーティで探すときは全員が入れる空きのあるサーバーだけを選ぶ。
     /// つなげるサーバーが無ければ間を置いて探し直し、期限で諦める。
     /// ロビーには入らない。ログは <c>[Lobby]</c> 付きで出す。

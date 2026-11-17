@@ -89,6 +89,55 @@ namespace Shooter.Server
             return roots;
         }
 
+        /// <summary>
+        /// 起動したマップ (current) のほかに、次の試合のマップの候補 (mapPool) をすべて読む。current と同じ名前の候補は読み直さない。
+        /// 試合の途中で読めないと分かっても止めるしかないので、1 つでも読めなければ何も返さない。
+        /// </summary>
+        /// <returns>current を先頭に、候補を並べた順に重ねずに並べたもの。</returns>
+        public static bool TryLoadPool(
+            ServerMapData current, IReadOnlyList<string> mapPool, IReadOnlyList<string> searchRoots, out IReadOnlyList<ServerMapData> maps, out string error)
+        {
+            ArgumentNullException.ThrowIfNull(current);
+            ArgumentNullException.ThrowIfNull(mapPool);
+            ArgumentNullException.ThrowIfNull(searchRoots);
+
+            maps = null;
+            var loaded = new List<ServerMapData> { current };
+            var names = new HashSet<string>(StringComparer.Ordinal) { current.Name };
+            foreach (var name in mapPool)
+            {
+                if (!names.Add(name))
+                {
+                    continue;
+                }
+
+                if (!TryLoad(name, searchRoots, out var data, out var problem))
+                {
+                    error = "map pool: " + problem;
+                    return false;
+                }
+
+                loaded.Add(data);
+            }
+
+            maps = loaded;
+            error = null;
+            return true;
+        }
+
+        /// <example><c>[Server] map pool loaded 2 maps: NetArena01, NetArena02</c></example>
+        public static string PoolLogLine(IReadOnlyList<ServerMapData> maps)
+        {
+            ArgumentNullException.ThrowIfNull(maps);
+            var names = new string[maps.Count];
+            for (var i = 0; i < maps.Count; i++)
+            {
+                names[i] = maps[i].Name;
+            }
+
+            return ServerProgram.LogTag + " map pool loaded " + maps.Count.ToString(CultureInfo.InvariantCulture) + " maps: " + string.Join(", ", names);
+        }
+
         public static bool TryLoad(string map, IReadOnlyList<string> searchRoots, out ServerMapData data, out string error)
         {
             ArgumentNullException.ThrowIfNull(searchRoots);

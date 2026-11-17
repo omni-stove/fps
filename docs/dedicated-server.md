@@ -129,7 +129,7 @@ Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
 | 引数 | 内容 |
 | --- | --- |
-| `-map <マップ名>` | 遊ぶマップ。`server-data/maps/<マップ名>.*` を読む。無ければ `NetTest` |
+| `-map <マップ名>` | 最初の試合のマップ。`server-data/maps/<マップ名>.*` を読む。無ければルールの `mapPool` の先頭、それも空なら `NetTest` |
 | `-rules <ルール名>` | 試合のルール。`server-data/rules/<ルール名>.json` を読む。無ければ `TeamDeathmatch` |
 | `-bots <人数>` | 人と Bot を合わせてこの人数になるまで Bot を足す |
 | `-transport udp\|eos` | 待ち受ける通信路。既定は `udp` |
@@ -290,6 +290,34 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 
 2 つのクライアントを `-mode client -address <サーバーのアドレス>` でつなぐと、それぞれ別のチームに入る。HUD に A・B・C の
 3 つの拠点が並び、拠点の床の円と HUD の文字が持ち主のチームの色で塗られる。円の中に立つと占領が進み、両チームがいると止まる。
+
+## 次の試合のマップの候補を置く
+
+ルールのファイル (`server-data/rules/<ルール名>.json`) の `match.mapPool` に、次の試合で替えられるマップの Id (シーン名) を並べる。
+
+```json
+"mapPool": ["NetTest", "NetArena01"],
+```
+
+起動するとき、サーバーは最初のマップ (`-map`、無ければ候補の先頭) と候補のマップをすべて読み、マップごとの `[Server] map ...` の行に続けて次の行を出す。
+
+```
+[Server] map NetTest colliders=... from=...
+[Server] map NetArena01 colliders=... from=...
+[Server] map pool loaded 2 maps: NetTest, NetArena01
+```
+
+- 候補のマップが 1 つでも読めなければ `[Server] map pool: map <Id> has no collision: ...` のように理由を出し、終了コード 3 で終わる。
+- 候補のマップに出現地点 (`.points.json`) が無い・どちらかのチームの出現地点が無い・拠点制圧のルールで拠点が無いときも、
+  試合の合間に止まらないよう、起動のうちに `[Server] failed to start: map <Id> has no spawn points: ...` や
+  `[Server] failed to start: cannot change to map <Id> ...` を出して終了コード 1 で終わる。
+- 候補が空 (`[]`) なら今までどおり 1 つのマップだけを読み、`map pool` の行は出さない。
+
+マップを替えるのは、試合が終わって次の試合を始めるときだけ。替えると `[Match] map changed from=<前の Id> to=<次の Id>` を出し、
+(`-log-format json` なら JSON の `map_changed` も出す) 当たり判定・出現地点・拠点・はしご・壊せる建物・乗り物・Bot の NavMesh を
+新しいマップのものにしてから、全員を新しいマップの出現地点へ置き直す。壊れた建物は、マップを替えると壊れていない状態に戻る。
+次の試合のマップを選ぶ仕組み (投票) が選ばなければ、同じマップのまま続ける。
+途中から入る人には承認のメッセージで今のマップを知らせる。
 
 ## サーバーがすること
 

@@ -7,6 +7,7 @@ namespace Shooter.Server
 {
     internal sealed class ServerContext
     {
+        private readonly ServerMapData _startMap;
 
         public ServerContext(
             NetLaunchOptions options,
@@ -26,7 +27,7 @@ namespace Shooter.Server
             Options = options ?? throw new ArgumentNullException(nameof(options));
             Version = version;
             Log = log ?? throw new ArgumentNullException(nameof(log));
-            Map = map ?? throw new ArgumentNullException(nameof(map));
+            _startMap = map ?? throw new ArgumentNullException(nameof(map));
             Match = match ?? throw new ArgumentNullException(nameof(match));
             Messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
             Control = control ?? throw new ArgumentNullException(nameof(control));
@@ -38,7 +39,11 @@ namespace Shooter.Server
 
         public TextWriter Log { get; }
 
-        public ServerMapData Map { get; }
+        /// <summary>
+        /// 今の試合のマップ。試合がマップを持てば (<see cref="ServerMatch.UseMaps"/>) それを返し、次の試合でマップを替えるとこれも替わる。
+        /// 試合がマップを持たない (マップを替えないテストなど) ときは渡されたマップ。
+        /// </summary>
+        public ServerMapData Map => Match.Map ?? _startMap;
 
         public IWorldCollision World => Map.World;
 

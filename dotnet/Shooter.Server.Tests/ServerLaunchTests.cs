@@ -74,6 +74,17 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheFirstMapIsTheArgumentThenTheFirstCandidateThenTheDefault()
+        {
+            var pool = new List<string> { "NetArena02", "NetArena01" };
+
+            Assert.That(Parse(Env(), "-map", "NetArena01").StartMap(pool), Is.EqualTo("NetArena01"));
+            Assert.That(Parse(Env()).StartMap(pool), Is.EqualTo("NetArena02"));
+            Assert.That(Parse(Env()).StartMap(new List<string>()), Is.EqualTo(ServerLaunch.DefaultMap));
+            Assert.That(Parse(Env(), "-map", "NetArena01").StartMap(new List<string>()), Is.EqualTo("NetArena01"));
+        }
+
+        [Test]
         public void TheBuiltVersionIsUsedWithoutTheArgument()
         {
             Assert.That(ServerLaunch.TryParse(System.Array.Empty<string>(), _ => null, "v0.3.0", out var launch, out var error), Is.True, error);

@@ -135,6 +135,50 @@ namespace Shooter.Server.Tests
             Assert.That(error, Does.Contain("not a scene name"));
         }
 
+        [Test]
+        public void ThePoolLoadsEveryCandidateAfterTheCurrentMapOnce()
+        {
+            TestMaps.Write(_second.Path, "NetArena01");
+            TestMaps.Write(_second.Path, "NetArena02");
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var current, out var error), Is.True, error);
+
+            Assert.That(ServerMapData.TryLoadPool(current, Ids("NetArena02", "NetArena01"), Roots(), out var maps, out error), Is.True, error);
+
+            Assert.That(maps, Has.Count.EqualTo(2));
+            Assert.That(maps[0], Is.SameAs(current));
+            Assert.That(maps[1].Name, Is.EqualTo("NetArena02"));
+            Assert.That(ServerMapData.PoolLogLine(maps), Is.EqualTo("[Server] map pool loaded 2 maps: NetArena01, NetArena02"));
+        }
+
+        [Test]
+        public void AnEmptyPoolKeepsOnlyTheCurrentMap()
+        {
+            TestMaps.Write(_second.Path, "NetArena01");
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var current, out var error), Is.True, error);
+
+            Assert.That(ServerMapData.TryLoadPool(current, Ids(), Roots(), out var maps, out error), Is.True, error);
+
+            Assert.That(maps, Is.EqualTo(new[] { current }));
+        }
+
+        [Test]
+        public void ACandidateThatCannotBeReadFailsThePool()
+        {
+            TestMaps.Write(_second.Path, "NetArena01");
+            TestMaps.Write(_second.Path, "NetArena03", navigation: false);
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var current, out var error), Is.True, error);
+
+            Assert.That(ServerMapData.TryLoadPool(current, Ids("NetArena02"), Roots(), out var maps, out error), Is.False);
+            Assert.That(maps, Is.Null);
+            Assert.That(error, Does.StartWith("map pool: map NetArena02 has no collision: NetArena02.fpsmap"));
+
+            Assert.That(ServerMapData.TryLoadPool(current, Ids("NetArena03"), Roots(), out _, out error), Is.False);
+            Assert.That(error, Does.StartWith("map pool: map NetArena03 has no navmesh"));
+        }
+
+        // 定数配列を直接渡すと CA1861 になるので params で受ける
+        private static string[] Ids(params string[] ids) => ids;
+
         private string[] Roots()
         {
             return new[] { _first.Path, _second.Path };

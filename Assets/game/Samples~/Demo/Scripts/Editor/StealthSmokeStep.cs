@@ -255,7 +255,7 @@ namespace Fps.Editor
 
             var remaining = HorizontalDistance(_enemy.GroundPosition, _alertSpot);
             if (_stealth.Stage == AwarenessStage.Alerted
-                && (_alertDistance - remaining >= MinInvestigateProgress || remaining <= EnemyBrain.ArrivalDistance + 0.5f))
+                && (_alertDistance - remaining >= MinInvestigateProgress || remaining <= _enemy.Brain.Spec.ArrivalDistance + 0.5f))
             {
                 _sawInvestigate = true;
             }

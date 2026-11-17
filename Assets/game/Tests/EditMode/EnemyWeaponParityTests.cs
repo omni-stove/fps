@@ -37,8 +37,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void GaitRatiosMatchThePlayerDefaults()
         {
-            Assert.That(EnemyGait.SprintRatio, Is.EqualTo(PlayerController.DefaultSprintSpeed / PlayerController.DefaultWalkSpeed).Within(1e-5f));
-            Assert.That(EnemyGait.CrouchRatio, Is.EqualTo(PlayerController.DefaultCrouchSpeed / PlayerController.DefaultWalkSpeed).Within(1e-5f));
+            Assert.That(EnemySpec.DefaultSprintRatio, Is.EqualTo(PlayerController.DefaultSprintSpeed / PlayerController.DefaultWalkSpeed).Within(1e-5f));
+            Assert.That(EnemySpec.DefaultCrouchRatio, Is.EqualTo(PlayerController.DefaultCrouchSpeed / PlayerController.DefaultWalkSpeed).Within(1e-5f));
         }
 
         [Test]
@@ -64,10 +64,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void SpeedScalesTheWalkSpeed()
         {
-            Assert.That(EnemyGait.Speed(3.5f, sprinting: false, crouching: false), Is.EqualTo(3.5f));
-            Assert.That(EnemyGait.Speed(3.5f, sprinting: true, crouching: false), Is.EqualTo(3.5f * EnemyGait.SprintRatio).Within(1e-5f));
-            Assert.That(EnemyGait.Speed(3.5f, sprinting: true, crouching: true), Is.EqualTo(3.5f * EnemyGait.CrouchRatio).Within(1e-5f));
-            Assert.Throws<System.ArgumentOutOfRangeException>(() => EnemyGait.Speed(-1f, false, false));
+            Assert.That(EnemyGait.Speed(3.5f, sprinting: false, crouching: false, 1.6f, 0.5f), Is.EqualTo(3.5f));
+            Assert.That(EnemyGait.Speed(3.5f, sprinting: true, crouching: false, 1.6f, 0.5f), Is.EqualTo(5.6f).Within(1e-5f));
+            Assert.That(EnemyGait.Speed(3.5f, sprinting: true, crouching: true, 1.6f, 0.5f), Is.EqualTo(1.75f).Within(1e-5f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => EnemyGait.Speed(-1f, false, false, 1.6f, 0.5f));
         }
 
         [Test]

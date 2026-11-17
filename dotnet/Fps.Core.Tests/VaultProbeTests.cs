@@ -20,7 +20,12 @@ namespace Fps.Core.Tests
 
         private static VaultProbeResult Evaluate(VaultObstacleSample sample, Vector3? facing = null, bool clear = true)
         {
-            return VaultProbe.Evaluate(sample, facing ?? _forward, MotorSpec.DefaultVaultMaxHeight, _radius, _ => clear);
+            return VaultProbe.Evaluate(sample, facing ?? _forward, MotorSpec.Default, _radius, _ => clear);
+        }
+
+        private static MotorSpec VaultHeight(float vaultMaxHeight)
+        {
+            return new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, vaultMaxHeight: vaultMaxHeight);
         }
 
         private static Vector3 Facing(float yawDegrees)
@@ -33,7 +38,7 @@ namespace Fps.Core.Tests
         public void NothingInFrontIsNoObstacle()
         {
             var called = false;
-            var result = VaultProbe.Evaluate(VaultObstacleSample.None, _forward, 1.2f, _radius, _ => called = true);
+            var result = VaultProbe.Evaluate(VaultObstacleSample.None, _forward, MotorSpec.Default, _radius, _ => called = true);
 
             Assert.That(result.Verdict, Is.EqualTo(VaultVerdict.NoObstacle));
             Assert.That(result.CanVault, Is.False);
@@ -78,8 +83,8 @@ namespace Fps.Core.Tests
         {
             var sample = Sample(topHeight: 1.4f);
 
-            Assert.That(VaultProbe.Evaluate(sample, _forward, 1.2f, _radius, _ => true).Verdict, Is.EqualTo(VaultVerdict.TooHigh));
-            Assert.That(VaultProbe.Evaluate(sample, _forward, 1.5f, _radius, _ => true).Verdict, Is.EqualTo(VaultVerdict.Vault));
+            Assert.That(VaultProbe.Evaluate(sample, _forward, MotorSpec.Default, _radius, _ => true).Verdict, Is.EqualTo(VaultVerdict.TooHigh));
+            Assert.That(VaultProbe.Evaluate(sample, _forward, VaultHeight(1.5f), _radius, _ => true).Verdict, Is.EqualTo(VaultVerdict.Vault));
         }
 
         [TestCase(0f)]
@@ -245,7 +250,7 @@ namespace Fps.Core.Tests
             AssertNear(points[1], new Vector3(0f, 0.95f, 0.2f));
             AssertNear(points[2], new Vector3(0f, 0.95f, 1.4f));
             AssertNear(points[3], new Vector3(0f, 0.8f, 1.4f));
-            Assert.That(result.Path.Speed, Is.EqualTo(VaultProbe.Speed));
+            Assert.That(result.Path.Speed, Is.EqualTo(MotorSpec.DefaultVaultSpeed));
         }
 
         [Test]
@@ -305,7 +310,7 @@ namespace Fps.Core.Tests
         public void ChecksThePlannedPath()
         {
             VaultPath checkedPath = null;
-            var result = VaultProbe.Evaluate(Sample(), _forward, 1.2f, _radius, path =>
+            var result = VaultProbe.Evaluate(Sample(), _forward, MotorSpec.Default, _radius, path =>
             {
                 checkedPath = path;
                 return true;
@@ -318,7 +323,7 @@ namespace Fps.Core.Tests
         public void DoesNotCheckThePathWhenTheShapeAlreadyFails()
         {
             var called = false;
-            VaultProbe.Evaluate(Sample(topHeight: 2f), _forward, 1.2f, _radius, _ => called = true);
+            VaultProbe.Evaluate(Sample(topHeight: 2f), _forward, MotorSpec.Default, _radius, _ => called = true);
 
             Assert.That(called, Is.False);
         }
@@ -336,13 +341,13 @@ namespace Fps.Core.Tests
             AssertNear(path.Points[1], new Vector3(0f, rise, approach));
             AssertNear(path.Points[2], new Vector3(0f, rise, landing));
             AssertNear(path.Points[3], new Vector3(0f, 0f, landing));
-            Assert.That(path.Speed, Is.EqualTo(VaultProbe.Speed));
+            Assert.That(path.Speed, Is.EqualTo(MotorSpec.DefaultVaultSpeed));
         }
 
         [Test]
         public void PathGoesStraightUpWhenAlreadyAgainstTheWall()
         {
-            var path = VaultProbe.PlanPath(_forward, 0.5f, 1f, 0.4f, _radius);
+            var path = VaultProbe.PlanPath(_forward, 0.5f, 1f, 0.4f, _radius, MotorSpec.DefaultVaultSpeed);
 
             Assert.That(path.Points[1].Z, Is.EqualTo(0f));
         }
@@ -365,12 +370,11 @@ namespace Fps.Core.Tests
         {
             Func<VaultPath, bool> clear = _ => true;
 
-            Assert.Throws<ArgumentNullException>(() => VaultProbe.Evaluate(Sample(), _forward, 1.2f, _radius, null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.Evaluate(Sample(), _forward, -1f, _radius, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.Evaluate(Sample(), _forward, float.NaN, _radius, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.Evaluate(Sample(), _forward, 1.2f, -0.1f, clear));
+            Assert.Throws<ArgumentNullException>(() => VaultProbe.Evaluate(Sample(), _forward, MotorSpec.Default, _radius, null));
+            Assert.Throws<ArgumentNullException>(() => VaultProbe.Evaluate(Sample(), _forward, null, _radius, clear));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.Evaluate(Sample(), _forward, MotorSpec.Default, -0.1f, clear));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => VaultProbe.Evaluate(Sample(), new Vector3(float.NaN, 0f, 1f), 1.2f, _radius, clear));
+                () => VaultProbe.Evaluate(Sample(), new Vector3(float.NaN, 0f, 1f), MotorSpec.Default, _radius, clear));
             Assert.Throws<ArgumentOutOfRangeException>(() => Evaluate(Sample(distance: float.NaN)));
             Assert.Throws<ArgumentOutOfRangeException>(() => Evaluate(Sample(topHeight: float.PositiveInfinity)));
             Assert.Throws<ArgumentOutOfRangeException>(() => Evaluate(Sample(depth: float.NaN)));
@@ -381,12 +385,14 @@ namespace Fps.Core.Tests
         [Test]
         public void PlanPathRejectsInvalidArguments()
         {
-            Assert.Throws<ArgumentException>(() => VaultProbe.PlanPath(Vector3.UnitY, 0.8f, 1f, 0.4f, _radius));
-            Assert.Throws<ArgumentException>(() => VaultProbe.PlanPath(new Vector3(float.NaN, 0f, 1f), 0.8f, 1f, 0.4f, _radius));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, -1f, 1f, 0.4f, _radius));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, float.NaN, 0.4f, _radius));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, float.PositiveInfinity, _radius));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, 0.4f, -1f));
+            Assert.Throws<ArgumentException>(() => VaultProbe.PlanPath(Vector3.UnitY, 0.8f, 1f, 0.4f, _radius, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentException>(() => VaultProbe.PlanPath(new Vector3(float.NaN, 0f, 1f), 0.8f, 1f, 0.4f, _radius, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, -1f, 1f, 0.4f, _radius, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, float.NaN, 0.4f, _radius, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, float.PositiveInfinity, _radius, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, 0.4f, -1f, MotorSpec.DefaultVaultSpeed));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, 0.4f, _radius, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanPath(_forward, 0.8f, 1f, 0.4f, _radius, float.PositiveInfinity));
         }
 
         private static void AssertNear(Vector3 actual, Vector3 expected)

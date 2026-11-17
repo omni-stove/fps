@@ -61,7 +61,7 @@ namespace Fps.Runtime
 
             if (_detour.HasValue)
             {
-                if (Time.time < _detourEndsAt && HorizontalDistance(GroundPosition, _detour.Value) > EnemyBrain.ArrivalDistance)
+                if (Time.time < _detourEndsAt && HorizontalDistance(GroundPosition, _detour.Value) > _arrivalDistance)
                 {
                     return;
                 }
@@ -144,7 +144,7 @@ namespace Fps.Runtime
         {
             // 寄り道中も元の目的地に近づけたかで測る。寄り道先で測ると、寄り道しただけで立ち直ったことになる。
             var ground = GroundPosition;
-            var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > EnemyBrain.ArrivalDistance
+            var heading = _goal.HasValue && HorizontalDistance(ground, _goal.Value) > _arrivalDistance
                 ? _goal
                 : null;
             // 経路の角の取得は毎回ヒープを確保するので、経路の向きを使う立て直し中だけ計算する。
@@ -316,7 +316,7 @@ namespace Fps.Runtime
             return delta.magnitude;
         }
 
-        private void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
+        internal void Face(System.Numerics.Vector3? lookAt, float deltaSeconds)
         {
             if (!lookAt.HasValue)
             {

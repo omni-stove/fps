@@ -13,6 +13,7 @@ namespace Fps.Core
         private float _phaseElapsed;
         private float _reaimRemaining;
         private SniperSpec _spec = SniperSpec.Default;
+        private float _arrivalDistance = EnemySpec.DefaultArrivalDistance;
 
         public event Action<SniperPhase, SniperPhase> PhaseChanged;
 
@@ -113,6 +114,7 @@ namespace Fps.Core
             }
 
             _spec = brain.Spec.Sniper;
+            _arrivalDistance = brain.Spec.ArrivalDistance;
             var target = perception.Target;
             var seen = target.HasValue
                 && perception.HasLineOfSight
@@ -125,7 +127,7 @@ namespace Fps.Core
                 case SniperPhase.Relocating:
                     _phaseElapsed += deltaSeconds;
                     var perch = _perches[_perchIndex];
-                    if (HorizontalDistance(perception.Self, perch) <= EnemyBrain.ArrivalDistance)
+                    if (HorizontalDistance(perception.Self, perch) <= _arrivalDistance)
                     {
                         Hold(_spec.ReaimDelaySeconds);
                         decision = new EnemyDecision(null, look, false, false);
@@ -203,7 +205,7 @@ namespace Fps.Core
                 return (nearest + 1) % _perches.Length;
             }
 
-            return HorizontalDistance(self, _perches[0]) > EnemyBrain.ArrivalDistance ? 0 : -1;
+            return HorizontalDistance(self, _perches[0]) > _arrivalDistance ? 0 : -1;
         }
 
         private void Hold(float reaimSeconds)

@@ -112,7 +112,7 @@ namespace Fps.Server
                 + "s restartDelay=" + Text(_match.RestartDelaySeconds) + "s reconnectGrace=" + Text(settings.ReconnectGraceSeconds)
                 + "s spawnPoints=" + Text(points.SpawnPoints.Count));
             _log.WriteLine(MatchLog.Rules(_data.File.Name.Length > 0 ? _data.File.Name : _data.Name, rules));
-            _log.WriteLine(NetDownedLog.Settings(rules.Actions, ReviveReach.DefaultRange));
+            _log.WriteLine(NetDownedLog.Settings(rules.Actions, rules.Actions.ReviveRange));
             _log.WriteLine(MatchLog.Loadout(_data.File.LoadoutName, _loadout));
             for (var i = 0; i < _loadout.Weapons.Count; i++)
             {

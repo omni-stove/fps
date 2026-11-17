@@ -284,7 +284,7 @@ namespace Fps.Runtime
             MeleeSpec spec;
             try
             {
-                spec = new MeleeSpec(_damage, _reach, _arcDegrees, _swingSeconds, _cooldownSeconds, _impactSeconds, _lungeDistance);
+                spec = CreateSpec();
             }
             catch (ArgumentException e)
             {
@@ -294,6 +294,22 @@ namespace Fps.Runtime
 
             _swing = new MeleeSwing(spec);
             return _swing;
+        }
+
+        /// <summary>
+        /// 敵のデータ (<see cref="EnemyAgent.EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から近接の設定を作る。
+        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
+        /// </summary>
+        public MeleeSpec CreateSpec()
+        {
+            var agent = _agent != null ? _agent : GetComponent<EnemyAgent>();
+            var definition = agent != null ? agent.EffectiveDefinition : null;
+            if (definition != null)
+            {
+                return definition.ToMeleeSpec();
+            }
+
+            return new MeleeSpec(_damage, _reach, _arcDegrees, _swingSeconds, _cooldownSeconds, _impactSeconds, _lungeDistance);
         }
     }
 }

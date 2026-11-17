@@ -33,7 +33,9 @@ namespace Fps.Runtime.Traversal
                 return;
             }
 
-            PlayerActions.GetOrAdd<ZiplineMovement>(player).Configure(rules);
+            var zipline = PlayerActions.GetOrAdd<ZiplineMovement>(player);
+            zipline.ApplyTuning(TraversalTuning.Current.Zipline);
+            zipline.Configure(rules);
         }
     }
 }

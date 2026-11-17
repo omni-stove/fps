@@ -25,7 +25,7 @@ namespace Fps.Core.Tests
                 aimErrorPerMeter,
                 BotInputSpec.DefaultAimErrorRefreshSeconds,
                 BotInputSpec.DefaultFireToleranceDegrees,
-                EnemyBrain.ArrivalDistance,
+                EnemySpec.DefaultArrivalDistance,
                 sprintDistance,
                 BotInputSpec.DefaultSprintMaxAngleDegrees,
                 crouchWhenHolding);

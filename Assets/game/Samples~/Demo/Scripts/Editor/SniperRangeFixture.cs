@@ -20,7 +20,7 @@ namespace Fps.Editor
         public const float DeckWidth = 3f;
         public const float DeckLength = 7f;
 
-        // 足場は高台の端から少し内側に置く。端に寄せると、足場に着いたかの判定の距離 (EnemyBrain.ArrivalDistance) の内側が NavMesh の外になる。
+        // 足場は高台の端から少し内側に置く。端に寄せると、足場に着いたかの判定の距離 (EnemySpec.ArrivalDistance) の内側が NavMesh の外になる。
         public const float PerchInset = 1f;
 
         public const float SightRange = 18f;

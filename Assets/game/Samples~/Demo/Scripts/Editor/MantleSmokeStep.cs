@@ -20,7 +20,7 @@ namespace Fps.Editor
     /// </summary>
     public sealed class MantleSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary>段の前に置く位置の、体の表面から段の手前の面までの隙間 (m)。体の中心から面までが <see cref="VaultProbe.MaxReach"/> に収まる。</summary>
+        /// <summary>段の前に置く位置の、体の表面から段の手前の面までの隙間 (m)。体の中心から面までが <see cref="MotorSpec.DefaultVaultReach"/> に収まる。</summary>
         public const float StandOff = 0.3f;
 
         /// <summary>段の前に移してから調べ始めるまでに待つ、Editor の更新の回数。移した位置で接地し直すのを待つ。</summary>

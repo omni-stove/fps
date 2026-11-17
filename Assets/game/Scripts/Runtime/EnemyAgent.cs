@@ -135,7 +135,7 @@ namespace Fps.Runtime
         private Vector3[] _patrolRoute = Array.Empty<Vector3>();
 
         [Header("Brain")]
-        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain と Cover の値と種類ごとの値の代わりにこれを使う。空なら入口 (GameContent) の同じ種類のデータ、それも無ければこの下の値を使う")]
+        [SerializeField, Tooltip("敵のデータ (視界・反応・散らばり・遮蔽・種類ごとの値)。設定すると、この下の Brain・Body・Cover の値と種類ごとの値の代わりにこれを使う。空なら入口 (GameContent) の同じ種類のデータ、それも無ければこの下の値を使う")]
         private EnemyDefinition _definition;
 
         [SerializeField, Tooltip("敵の種類")]
@@ -246,6 +246,12 @@ namespace Fps.Runtime
             }
         }
 
+        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.SprintRatio"/> を掛けた、走るときの速さ。</summary>
+        public float SprintSpeed => WalkSpeed * _sprintRatio;
+
+        /// <summary><see cref="WalkSpeed"/> に敵の設定の <see cref="EnemySpec.CrouchRatio"/> を掛けた、しゃがんで動くときの速さ。</summary>
+        public float CrouchSpeed => WalkSpeed * _crouchRatio;
+
         public bool IsSprinting => _sprinting;
         public bool IsAiming => _aiming;
 
@@ -276,8 +282,28 @@ namespace Fps.Runtime
 
         public EnemyArchetype Archetype => _archetype;
 
-        public float StaggerResistance =>
-            EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance) ?? EnemySpec.DefaultStaggerResistanceFor(_archetype);
+        /// <summary>
+        /// 怯みにくさ。初期化後は判断の設定の値。初期化前は <see cref="CreateSpec"/> と同じく、敵のデータがあればその値、無ければ Inspector の値。
+        /// </summary>
+        public float StaggerResistance
+        {
+            get
+            {
+                if (_brain != null)
+                {
+                    return _brain.Spec.StaggerResistance;
+                }
+
+                var definition = EffectiveDefinition;
+                if (definition != null && !_specApplied)
+                {
+                    return EnemyDefinition.StaggerResistanceOrArchetype(definition.StaggerResistance)
+                        ?? EnemySpec.DefaultStaggerResistanceFor(definition.Archetype);
+                }
+
+                return EnemyDefinition.StaggerResistanceOrArchetype(_staggerResistance) ?? EnemySpec.DefaultStaggerResistanceFor(_archetype);
+            }
+        }
 
         /// <summary><see cref="SetErrand"/> で渡した行き先 (足元)。無ければ null。</summary>
         public Vector3? Errand => _errand;
@@ -309,6 +335,9 @@ namespace Fps.Runtime
         public float AttackRange => _attackRange;
         public float FireRange => _fireRange;
         public float EyeHeight => _eyeHeight;
+
+        /// <summary>狙う向きへ向き直る速さ (度/秒)。</summary>
+        public float TurnSpeed => _turnSpeed;
         public float CrouchHeight => _crouchHeight;
         public float CrouchEyeHeight => _crouchEyeHeight;
 
@@ -414,6 +443,7 @@ namespace Fps.Runtime
 
             // 知覚 (視界の距離) や SightRange などはフィールドを読むので、敵のデータから作った値もフィールドに揃える。
             CopySpec(spec);
+            CopyBody(EffectiveDefinition);
 
             WeaponSpec weaponSpec;
             try
@@ -619,6 +649,20 @@ namespace Fps.Runtime
             _recoilControl = spec.RecoilControl;
         }
 
+        // 体の値は EnemySpec に無く ApplySpec・ChangeSpec でも変わらないので、波の強さやボスの段階を渡した後も敵のデータから読む。
+        private void CopyBody(EnemyDefinition definition)
+        {
+            if (definition == null)
+            {
+                return;
+            }
+
+            _turnSpeed = definition.TurnSpeed;
+            _eyeHeight = definition.EyeHeight;
+            _crouchHeight = definition.CrouchHeight;
+            _crouchEyeHeight = definition.CrouchEyeHeight;
+        }
+
         /// <summary>遮蔽点の段階が変わったときのログ。</summary>
         public static string FormatCoverLog(string id, EnemyCoverPhase phase, string point)
         {
@@ -786,9 +830,9 @@ namespace Fps.Runtime
             bool steered;
             if (_order.IsOrder)
             {
-                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ EnemyBrain.ArrivalDistance (Default の値) で決める。
+                // NavMesh で動く敵は bots.json を読まず、着いたかを NoteOrderArrival と同じ敵の設定の到着距離で決める。
                 decision = BotDriver.FollowOrder(
-                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, BotInputSpec.Default, out steered);
+                    decision, _brain.State, _order, GroundPosition.ToNumerics(), _orderSpec, OrderInput(), out steered);
                 moveTo = steered ? decision.MoveTo : CoverMoveTo(decision);
                 NoteOrderArrival();
             }
@@ -823,12 +867,12 @@ namespace Fps.Runtime
             _aiming = !_unarmed && _brain.IsAiming;
             // 構えている間はプレイヤーと同じくダッシュしない。撃つ前から歩いて狙ってくるのが見えるように。
             _sprinting = _sprintAllowed && EnemyGait.IsSprinting(_brain.State, phase, _crouching, firing || _aiming);
-            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching);
+            _agent.speed = EnemyGait.Speed(GaitWalkSpeed, _sprinting, _crouching, _sprintRatio, _crouchRatio);
         }
 
         /// <summary>
         /// 今のフレームで判断の移動先の代わりに向かう <see cref="Errand"/>。巡回・待機・捜索の間か、戦いより優先する行き先か、武器を持っていなければ返す。
-        /// 着いていれば (<see cref="EnemyBrain.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
+        /// 着いていれば (<see cref="EnemySpec.ArrivalDistance"/> 以内) その場に留まるよう null にせず今の足元を返す。
         /// </summary>
         private System.Numerics.Vector3? ErrandMoveTo()
         {
@@ -845,7 +889,7 @@ namespace Fps.Runtime
             }
 
             var destination = _errand.Value;
-            return HorizontalDistance(GroundPosition, destination) > EnemyBrain.ArrivalDistance
+            return HorizontalDistance(GroundPosition, destination) > _arrivalDistance
                 ? destination.ToNumerics()
                 : GroundPosition.ToNumerics();
         }
@@ -877,7 +921,7 @@ namespace Fps.Runtime
                 }
             }
 
-            return HorizontalDistance(GroundPosition, stand) > EnemyBrain.ArrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
+            return HorizontalDistance(GroundPosition, stand) > _arrivalDistance ? stand.ToNumerics() : (System.Numerics.Vector3?)null;
         }
 
         /// <summary>しゃがむ・立つ。Y 向きのカプセルの当たり判定があれば、足元の高さを変えずに縮める・戻す。</summary>

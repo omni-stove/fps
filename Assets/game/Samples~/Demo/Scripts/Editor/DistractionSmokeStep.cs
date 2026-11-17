@@ -216,7 +216,7 @@ namespace Fps.Editor
             }
 
             var remaining = HorizontalDistance(_enemy.GroundPosition, _spot);
-            if (_spotDistance - remaining < MinInvestigateProgress && remaining > EnemyBrain.ArrivalDistance + 0.5f)
+            if (_spotDistance - remaining < MinInvestigateProgress && remaining > _enemy.Brain.Spec.ArrivalDistance + 0.5f)
             {
                 return _stealth.Stage == AwarenessStage.Alerted ? null : $"the guard stopped investigating at {_stealth.Stage} before walking to the clatter";
             }

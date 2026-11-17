@@ -246,6 +246,33 @@ namespace Fps.Runtime
             Register();
         }
 
+        public void ApplyTuning(ParachuteTuning tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            _minOpenHeight = tuning.MinOpenHeight;
+            _descentSpeed = tuning.DescentSpeed;
+            _horizontalSpeed = tuning.HorizontalSpeed;
+            _steerAcceleration = tuning.SteerAcceleration;
+
+            // 同じ値で作り直すと、ルールを入れ直しただけで開いているパラシュートが閉じてしまう。
+            if (_motion == null
+                || (_motion.MinOpenHeight.Equals(_minOpenHeight)
+                    && _motion.DescentSpeed.Equals(_descentSpeed)
+                    && _motion.HorizontalSpeed.Equals(_horizontalSpeed)
+                    && _motion.SteerAcceleration.Equals(_steerAcceleration)))
+            {
+                return;
+            }
+
+            var motion = new ParachuteMotion(_minOpenHeight, _descentSpeed, _horizontalSpeed, _steerAcceleration);
+            Close(ParachuteCloseReason.Interrupted);
+            _motion = motion;
+        }
+
         /// <summary>
         /// 足元から下へ Ray を飛ばし、自分の体を除いて最も近い地面までの高さ (m) を測る。
         /// <see cref="ProbeDistance"/> の中に無ければ正の無限大。

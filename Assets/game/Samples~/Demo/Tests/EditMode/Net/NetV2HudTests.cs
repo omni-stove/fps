@@ -126,6 +126,28 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheScoreboardShowsTheAssistsOfEachRowAndRepublishesWhenTheyChange()
+        {
+            var snapshot = Snapshot(MatchObjective.None);
+            snapshot.Players[0].Assists = 3;
+
+            _hud.Apply(snapshot);
+            var rows = GameSignals.Scoreboard.Value;
+
+            Assert.That(rows[0].Assists, Is.EqualTo(3));
+            Assert.That(rows[1].Assists, Is.Zero);
+
+            snapshot.Players[1].Assists = 1;
+            _hud.Apply(snapshot);
+
+            var changed = GameSignals.Scoreboard.Value;
+            Assert.That(changed, Is.Not.SameAs(rows), "an assist alone changes the rows");
+            Assert.That(changed[0].Assists, Is.EqualTo(3));
+            Assert.That(changed[1].Assists, Is.EqualTo(1));
+            Assert.That(rows[1].Assists, Is.Zero);
+        }
+
+        [Test]
         public void DominationPublishesThePointsInOrderUntilOneIsMissing()
         {
             var snapshot = Snapshot(MatchObjective.Domination);

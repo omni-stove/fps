@@ -47,6 +47,16 @@ namespace Shooter.Core
             return $"{LogTag} id={id} use refused nothing-ready";
         }
 
+        public static string UseRefusedDead(string id)
+        {
+            return $"{LogTag} id={id} use refused dead";
+        }
+
+        public static string RewardUnavailable(string id, string rewardId, string missing)
+        {
+            return $"{LogTag} id={id} use refused reward={rewardId} missing={missing}";
+        }
+
         private static string Counts(StreakStatus status)
         {
             return "kills=" + status.Kills.ToString(CultureInfo.InvariantCulture) + " ready=" + status.ReadyCount.ToString(CultureInfo.InvariantCulture);

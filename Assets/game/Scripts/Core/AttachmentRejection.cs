@@ -15,5 +15,7 @@ namespace Shooter.Core
         NotAttached,
 
         NoRoom,
+
+        Locked,
     }
 }

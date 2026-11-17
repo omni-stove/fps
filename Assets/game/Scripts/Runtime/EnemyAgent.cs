@@ -703,6 +703,9 @@ namespace Fps.Runtime
         private void Start()
         {
             Debug.Log($"{LogTag} id={Id} state={_brain.State}", this);
+
+            // GameBootstrap は Awake で組み立てるので、Start まで待ってからプレイヤーと同じルールの部位倍率を読む。
+            _self.ApplySceneRules();
             ApplyPatrolRoute();
             var sideMember = GetComponent<SideMember>();
             if (sideMember != null)

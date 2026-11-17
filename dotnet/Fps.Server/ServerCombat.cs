@@ -86,6 +86,8 @@ namespace Fps.Server
 
         internal MatchRulesModule Rules => _rules;
 
+        internal ZoneDamageMultipliers ZoneDamage => _data.Rules.ZoneDamage;
+
         internal ServerAreaEffects AreaEffects => _areaEffects;
 
         internal ServerFlash Flash => _flash;

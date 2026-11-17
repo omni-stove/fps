@@ -29,11 +29,6 @@ namespace Fps.Core
 
         public float Distance { get; }
 
-        public static ImpactHit Character(HitZone zone, Vector3 point, float distance)
-        {
-            return Character(zone, point, distance, ZoneDamageMultipliers.Default);
-        }
-
         public static ImpactHit Character(HitZone zone, Vector3 point, float distance, ZoneDamageMultipliers multipliers)
         {
             return new ImpactHit(true, zone, multipliers ?? throw new ArgumentNullException(nameof(multipliers)), point, distance);

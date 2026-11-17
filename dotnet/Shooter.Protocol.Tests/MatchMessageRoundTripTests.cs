@@ -27,6 +27,95 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.ClientVersion, Is.EqualTo("1.2.3"));
             Assert.That(got.RejoinKey, Is.EqualTo("0123abcd"));
             Assert.That(got.DisplayName, Is.EqualTo("ぷれいやー"));
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.SkillRating, Is.Null);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestWithoutExtrasKeepsTheOldLayout()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "0123abcd", DisplayName = "ぷれいやー" });
+
+            Assert.That(writer.Length, Is.EqualTo(2 + 1 + 2 + 7 + 10 + 17));
+            Assert.That(ConnectRequestMessage.CurrentVersion, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ConnectRequestWithExtras()
+        {
+            var sent = new ConnectRequestMessage
+            {
+                ClientVersion = "1.2.3",
+                RejoinKey = "0123abcd",
+                DisplayName = "p",
+                PartyId = "party-1",
+                JoinCode = "AB12",
+                SkillRating = -25,
+                ProductUserId = "0123456789abcdef0123456789abcdef",
+            };
+
+            var got = ToServer<ConnectRequestMessage>(sent);
+
+            Assert.That(got.HasExtras, Is.True);
+            Assert.That(got.DisplayName, Is.EqualTo("p"));
+            Assert.That(got.PartyId, Is.EqualTo("party-1"));
+            Assert.That(got.JoinCode, Is.EqualTo("AB12"));
+            Assert.That(got.SkillRating, Is.EqualTo(-25));
+            Assert.That(got.ProductUserId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
+        }
+
+        [Test]
+        public void AConnectRequestWithOnlyASkillRatingCarriesIt()
+        {
+            var got = ToServer<ConnectRequestMessage>(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", SkillRating = 0 });
+
+            Assert.That(got.SkillRating, Is.EqualTo(0));
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestWithoutExtrasClearsTheExtrasReadBefore()
+        {
+            ToServer<ConnectRequestMessage>(
+                new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", PartyId = "party", JoinCode = "CODE", SkillRating = 9, ProductUserId = "u" });
+
+            var got = ToServer<ConnectRequestMessage>(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k" });
+
+            Assert.That(got.HasExtras, Is.False);
+            Assert.That(got.PartyId, Is.Empty);
+            Assert.That(got.JoinCode, Is.Empty);
+            Assert.That(got.SkillRating, Is.Null);
+            Assert.That(got.ProductUserId, Is.Empty);
+        }
+
+        [Test]
+        public void AConnectRequestRefusesToWriteAnOverlongExtra()
+        {
+            var writer = new MessageWriter();
+            var request = new ConnectRequestMessage
+            {
+                ClientVersion = "1.2.3",
+                RejoinKey = "k",
+                JoinCode = new string('c', ConnectionExtras.MaxJoinCodeLength + 1),
+            };
+
+            Assert.Throws<System.ArgumentException>(() => writer.WriteMessage(request));
+            Assert.That(writer.Length, Is.Zero);
+        }
+
+        [Test]
+        public void AConnectRequestWithCutOffExtrasIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectRequestMessage { ClientVersion = "1.2.3", RejoinKey = "k", PartyId = "party" });
+            var whole = writer.ToArray();
+
+            Assert.Throws<MessageReadException>(() => _server.Read(new System.ArraySegment<byte>(whole, 0, whole.Length - 1)));
         }
 
         [Test]

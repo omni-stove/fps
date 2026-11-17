@@ -22,7 +22,7 @@
         <ui:Label name="hud-notice" text="" class="hud__notice" picking-mode="Ignore" style="display: none;" />
         <!-- 試合結果 (勝ったチーム・引き分け、ソロの試合のクリア・失敗)。試合が終わっている間だけ HudView が出す。 -->
         <ui:Label name="hud-result" text="" class="hud__result" picking-mode="Ignore" style="display: none;" />
-        <!-- ソロの試合が終わったときの、やり直すキーの案内。HudView が結果と一緒に出す。 -->
+        <!-- ソロの試合が終わったときの、やり直すキーの案内。HudView が結果と一緒に出す。この後ろに、試合の後のマップの投票の枠 (map-vote) を MapVoteView がコードで足す。 -->
         <ui:Label name="hud-result-restart" text="" class="hud__result-restart" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
             <ui:Label text="#hud.caption.health" class="hud__caption" picking-mode="Ignore" />
@@ -129,7 +129,6 @@
         <!-- ネット対戦で味方を観戦している間の、見ている味方・前と次へ替える操作・復活までの秒数。SpectateView が、GameSignals.Spectate に値がある間だけ行 (spectate__row) を入れて出す。 -->
         <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
         <!-- ボイスチャットで、自分が声を送っている印と話している人の名前。VoiceIndicatorView が、出す行 (voice__row) がある間だけ出す。 -->
-        <!-- 試合の後のマップの投票の枠 (map-vote) は、MapVoteView が試合結果 (hud-result-restart) のすぐ後ろにコードで足す。 -->
         <ui:VisualElement name="voice" class="voice" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />

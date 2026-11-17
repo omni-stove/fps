@@ -81,7 +81,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
+        // GameSignals.ChatSender より先に使う。差し替えのための口で、空なら GameSignals.ChatSender で送る。
         public Action<ChatChannel, string> Sender { get; set; }
+
+        public bool CanSend => Sender != null || GameSignals.ChatSender.HasValue;
 
         public InputActionAsset Actions
         {
@@ -202,7 +205,7 @@ namespace Shooter.Runtime
                 throw new ArgumentOutOfRangeException(nameof(channel), channel, "channel must be a defined ChatChannel");
             }
 
-            if (Sender == null || _field == null || _state.IsOpen)
+            if (!CanSend || _field == null || _state.IsOpen)
             {
                 return false;
             }
@@ -246,7 +249,8 @@ namespace Shooter.Runtime
 
             var text = (_field != null ? _field.value : null)?.Trim() ?? string.Empty;
             var sender = Sender;
-            if (text.Length == 0 || sender == null)
+            var signalSender = sender == null ? GameSignals.ChatSender.Value : null;
+            if (text.Length == 0 || (sender == null && signalSender == null))
             {
                 Close();
                 return false;
@@ -254,7 +258,14 @@ namespace Shooter.Runtime
 
             try
             {
-                sender(_channel, text);
+                if (sender != null)
+                {
+                    sender(_channel, text);
+                }
+                else
+                {
+                    signalSender.Send(_channel, text);
+                }
             }
             catch (Exception e)
             {
@@ -647,6 +658,7 @@ namespace Shooter.Runtime
             {
                 GameSignals.Chat.Changed += HandleChatChanged;
                 GameSignals.Participants.Changed += HandleParticipantsChanged;
+                GameSignals.ChatSender.Changed += HandleChatSenderChanged;
                 _subscribed = true;
             }
         }
@@ -655,10 +667,16 @@ namespace Shooter.Runtime
         {
             if (_subscribed)
             {
-                GameSignals.Chat.Changed -= HandleChatChanged;
-                GameSignals.Participants.Changed -= HandleParticipantsChanged;
+                RemoveHandlers();
                 _subscribed = false;
             }
+        }
+
+        private void RemoveHandlers()
+        {
+            GameSignals.Chat.Changed -= HandleChatChanged;
+            GameSignals.Participants.Changed -= HandleParticipantsChanged;
+            GameSignals.ChatSender.Changed -= HandleChatSenderChanged;
         }
 
         private void HandleChatChanged(IReadOnlyList<ChatLine> lines)
@@ -666,8 +684,7 @@ namespace Shooter.Runtime
             // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
             if (this == null)
             {
-                GameSignals.Chat.Changed -= HandleChatChanged;
-                GameSignals.Participants.Changed -= HandleParticipantsChanged;
+                RemoveHandlers();
                 return;
             }
 
@@ -678,12 +695,27 @@ namespace Shooter.Runtime
         {
             if (this == null)
             {
-                GameSignals.Chat.Changed -= HandleChatChanged;
-                GameSignals.Participants.Changed -= HandleParticipantsChanged;
+                RemoveHandlers();
                 return;
             }
 
             Render();
+        }
+
+        private void HandleChatSenderChanged(IChatSender sender)
+        {
+            if (this == null)
+            {
+                RemoveHandlers();
+                return;
+            }
+
+            // 切断で送り先が消えたのに開いたままだと、Enter で書いた文が黙って捨てられるので、ここで閉じて入力を戻す。
+            if (_state.IsOpen && !CanSend)
+            {
+                Debug.Log($"{LogTag} the chat sender went away while typing; closing the input", this);
+                Cancel();
+            }
         }
 
         private static StyleSheet LoadStyleSheet()

@@ -7,8 +7,6 @@ namespace Shooter.NetV2
     // 試合の合間はまだ前のマップで動いているため。次の試合の始まりは、スナップショットの試合の状態が Ended から抜けたことで知る。
     public sealed class ClientMapChange
     {
-        private GameModeState? _state;
-
         public string CurrentMap { get; private set; } = string.Empty;
 
         public string PendingMap { get; private set; }
@@ -17,7 +15,6 @@ namespace Shooter.NetV2
         {
             CurrentMap = map ?? string.Empty;
             PendingMap = null;
-            _state = null;
         }
 
         // 決まっていない投票の様子 (空の Id) が届いたら、新しい投票が始まったので前に決まったマップを捨てる。
@@ -26,12 +23,12 @@ namespace Shooter.NetV2
             PendingMap = string.IsNullOrEmpty(mapId) || string.Equals(mapId, CurrentMap, StringComparison.Ordinal) ? null : mapId;
         }
 
+        // 決まったマップは Ended の間にしか入らず、Ended 以外の状態で残っていれば抜けたあとなので、直前の状態は見ない。
+        // 読み込み中は状態を見られず抜けた瞬間を取りこぼすため。
         public bool TryTakeChange(GameModeState state, out string map)
         {
-            var previous = _state;
-            _state = state;
             map = null;
-            if (PendingMap == null || previous != GameModeState.Ended || state == GameModeState.Ended)
+            if (PendingMap == null || state == GameModeState.Ended)
             {
                 return false;
             }

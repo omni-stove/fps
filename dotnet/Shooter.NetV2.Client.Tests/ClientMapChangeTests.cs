@@ -73,6 +73,15 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void ADecisionKeptThroughASceneLoadIsTakenOnTheFirstSnapshotAfterEnded()
+        {
+            _change.Decide("NetArena02");
+
+            Assert.That(_change.TryTakeChange(GameModeState.Waiting, out var map), Is.True, "the Ended state passed while the scene was loading");
+            Assert.That(map, Is.EqualTo("NetArena02"));
+        }
+
+        [Test]
         public void EnteringTheNewMapForgetsTheOldStateAndMakesItCurrent()
         {
             _change.TryTakeChange(GameModeState.Ended, out _);

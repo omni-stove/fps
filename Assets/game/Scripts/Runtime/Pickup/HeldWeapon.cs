@@ -4,7 +4,6 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>手放した武器 1 本。その定義と、手放したときの残弾と付けていた物 (持ち物のアイテムの Id)。</summary>
     public readonly struct HeldWeapon
     {
         private readonly IReadOnlyList<string> _attachments;

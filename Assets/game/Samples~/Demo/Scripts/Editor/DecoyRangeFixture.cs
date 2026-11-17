@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 囮を試す場所。プレイヤーは手前 (PlayerGround) に立って +Z へ囮を置き、奥で囮の方を向いて立つ敵に気づかせる。
     // 右手前の隅 (x = 28..36, z = -37..-26) の、ほかの敵の居場所から囮の呼び声 (DecoySpec.DefaultCallRadius) が届かない所に置く。
     // 敵は無効のまま置き、smoke の手順 (DecoySmokeStep) が自分の番に有効にする。ほかの手順の間に撃ち合いを始めないように。
     // 敵が囮のあった場所まで歩いて調べに行けるよう、敵の足元から囮の置き場所までを NavMesh の床で覆う。

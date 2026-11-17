@@ -8,33 +8,26 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 床の材質ごとの足音と着地音の仮素材を手続きで作り (<see cref="ProceduralAudio"/>)、<see cref="FootstepSurfaceCatalog"/> にまとめる手順。
-    /// 材質は <see cref="Surfaces"/> の default / concrete / metal / wood で、足音は材質ごとに <see cref="FootstepVariants"/> 種類
-    /// (同じ音の連続を避けて選ぶため)、着地音は 1 種類。音は <see cref="AudioFolder"/> に WAV で、カタログは <see cref="CatalogPath"/> に置く。
-    /// 既存のアセットは GUID を保って中身だけ更新し、同じコードからは同じファイルができる。
-    /// <see cref="PresentationAssetSteps.BuildAll"/> から呼ばれる。
-    /// </summary>
     public sealed class FootstepSurfaceAssetStep : IPresentationAssetStep
     {
         public const string LogTag = "[FootstepSurfaceAssetStep]";
 
-        /// <summary>この手順の <see cref="Order"/>。PresentationCatalog の手順 (<see cref="PresentationCatalogAssetStep.StepOrder"/>) より後にする。</summary>
+        // PresentationCatalog の手順 (PresentationCatalogAssetStep.StepOrder) より後にする。
         public const int StepOrder = 100;
 
         public const string ConcreteId = "concrete";
         public const string MetalId = "metal";
         public const string WoodId = "wood";
 
-        /// <summary>材質ごとの足音の種類の数。</summary>
+        // 同じ音の連続を避けて選べるよう、材質ごとに足音を複数作る。
         public const int FootstepVariants = 3;
 
-        /// <summary>足音の種類ごとに音程に掛ける倍率。同じ材質でも少しずつ違う音にする。</summary>
+        // 同じ材質でも少しずつ違う音にするため、種類ごとに音程をずらす。
         private static readonly float[] VariantPitch = { 1f, 0.93f, 1.08f };
 
         public static string AudioFolder => PresentationAssetBuilder.AudioFolder + "/Footsteps";
 
-        /// <summary>カタログの置き場所。実行時に <see cref="FootstepSurfaceCatalog.Load"/> で読めるよう Resources の下に置く。</summary>
+        // 実行時に FootstepSurfaceCatalog.Load で読めるよう Resources の下に置く。
         public static string CatalogPath =>
             PresentationAssetBuilder.PresentationFolder + "/Resources/" + FootstepSurfaceCatalog.ResourcePath + ".asset";
 
@@ -47,26 +40,21 @@ namespace Shooter.Editor
             BuildAt(AudioFolder, CatalogPath);
         }
 
-        /// <summary>作る材質の Id。先頭は <see cref="SurfaceMaterial.DefaultId"/>。</summary>
         public static IReadOnlyList<string> Surfaces()
         {
             return new[] { SurfaceMaterial.DefaultId, ConcreteId, MetalId, WoodId };
         }
 
-        /// <summary>materialId の variant 番目 (0 から) の足音のファイル名 (拡張子なし)。</summary>
         public static string FootstepSoundName(string materialId, int variant)
         {
             return "Footstep_" + materialId + "_" + (variant + 1).ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>materialId の着地音のファイル名 (拡張子なし)。</summary>
         public static string LandingSoundName(string materialId)
         {
             return "Landing_" + materialId;
         }
 
-        /// <summary>materialId の足音 (<see cref="FootstepVariants"/> 個) と着地音 (1 個) の設計図。</summary>
-        /// <exception cref="ArgumentException">materialId が <see cref="Surfaces"/> に無い。</exception>
         public static (IReadOnlyList<SoundSpec> Footsteps, SoundSpec Landing) SoundSpecsFor(string materialId)
         {
             var index = IndexOf(materialId);
@@ -81,10 +69,6 @@ namespace Shooter.Editor
             return (footsteps, landing);
         }
 
-        /// <summary>
-        /// audioFolder に足音と着地音を、catalogPath にそれをまとめたカタログを作るか上書きして保存し、カタログを返す。
-        /// フォルダは Assets/ 以下で、無ければ作る。カタログは書き込む前に <see cref="FootstepSurfaceCatalog.Validate"/> に通す。
-        /// </summary>
         public static FootstepSurfaceCatalog BuildAt(string audioFolder, string catalogPath)
         {
             audioFolder = PresentationAssetBuilder.ValidateFolderPath(audioFolder, nameof(audioFolder));
@@ -161,14 +145,12 @@ namespace Shooter.Editor
             switch (materialId)
             {
                 case ConcreteId:
-                    // 硬い面: 低音の胴鳴りを抑え、高めのノイズの擦れを短く立てる
                     return new[]
                     {
                         new SoundLayer(0f, 0.12f, 0.002f, 0.02f, 1f, 1800f * pitch, 0.2f, 120f * pitch, 80f * pitch),
                         new SoundLayer(0f, 0.04f, 0.0005f, 0.006f, 0.5f, 6000f * pitch),
                     };
                 case MetalId:
-                    // 金属: 短い打撃のあとに、非整数倍の 2 つの音程が尾を引いて鳴る
                     return new[]
                     {
                         new SoundLayer(0f, 0.05f, 0.0005f, 0.01f, 0.8f, 4000f * pitch),
@@ -176,7 +158,6 @@ namespace Shooter.Editor
                         new SoundLayer(0f, 0.25f, 0.001f, 0.05f, 0f, 0f, 0.3f, 1370f * pitch, 1330f * pitch),
                     };
                 case WoodId:
-                    // 木: 中低域のこもった打音と、軽いきしみ
                     return new[]
                     {
                         new SoundLayer(0f, 0.15f, 0.002f, 0.04f, 0.6f, 900f * pitch, 0.6f, 230f * pitch, 160f * pitch),

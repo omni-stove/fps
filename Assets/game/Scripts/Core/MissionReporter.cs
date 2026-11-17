@@ -2,11 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="Mission"/> の状態の変化を、タグ付きの 1 行のテキストにして sink に渡す。
-    /// 書式は <c>[Mission] objective=&lt;id&gt; state=&lt;state&gt;</c>、<c>[Mission] completed</c>、<c>[Mission] failed</c>。
-    /// Dispose すると購読をやめる。
-    /// </summary>
     public sealed class MissionReporter : IDisposable
     {
         public const string Tag = "[Mission]";
@@ -17,8 +12,6 @@ namespace Shooter.Core
         private readonly Action<string> _sink;
         private bool _disposed;
 
-        /// <param name="mission">見張るミッション。</param>
-        /// <param name="sink">1 行ずつ受け取る先 (Unity では Debug.Log)。</param>
         public MissionReporter(Mission mission, Action<string> sink)
         {
             _mission = mission ?? throw new ArgumentNullException(nameof(mission));
@@ -29,7 +22,6 @@ namespace Shooter.Core
             _mission.MissionFailed += OnFailed;
         }
 
-        /// <summary>目標 1 つの状態を表す行。</summary>
         public static string FormatObjective(string id, ObjectiveState state)
         {
             if (id == null)
@@ -40,10 +32,7 @@ namespace Shooter.Core
             return $"{Tag} objective={id} state={state}";
         }
 
-        /// <summary>
-        /// すべての目標の今の状態を定義順に流し、終わっていればミッションの結果も流す。
-        /// 開始直後の状態は <see cref="Mission"/> が通知しないので、開始時に 1 度呼ぶ。
-        /// </summary>
+        // 開始直後の状態は Mission が通知しないので、開始時に 1 度呼んで今の状態を流す。
         public void ReportAll()
         {
             ThrowIfDisposed();

@@ -10,13 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 血の演出 (<see cref="BloodPresenter"/>) の仮素材と <see cref="HitFeedbackCatalog"/> を作る手順。
-    /// 部位ごとの血しぶき (赤い粒) と、壁の血痕 (赤い円のテクスチャを貼った Quad) を <see cref="Folder"/> に、カタログを <see cref="CatalogPath"/> に置く。
-    /// 血しぶきは <see cref="PresentationCatalogAssetStep"/> が作る半透明の粒の材質 (<see cref="PresentationAssetBuilder.AlphaMaterialName"/>) を借りるので、それより後に実行する。
-    /// 既存のアセットは GUID を保って中身だけ更新する。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.HitFeedbackAssetStep.BuildDefault</code>
-    /// </summary>
+    // 血しぶきは PresentationCatalogAssetStep が作る半透明の粒の材質 (PresentationAssetBuilder.AlphaMaterialName) を借りるので、それより後に実行する。
     public sealed class HitFeedbackAssetStep : IPresentationAssetStep
     {
         public const int StepOrder = PresentationCatalogAssetStep.StepOrder + 10;
@@ -32,25 +26,21 @@ namespace Shooter.Editor
         public const string DecalTextureName = "BloodDecal";
         public const string DecalMaterialName = "BloodDecal";
 
-        /// <summary>血痕のテクスチャの 1 辺 (px)。</summary>
         public const int DecalTextureSize = 64;
 
-        /// <summary>血痕の円の中の色。</summary>
         public static readonly Color32 DecalColor = new Color32(120, 6, 6, 255);
 
         public static string Folder => PresentationAssetBuilder.PresentationFolder + "/Blood";
 
-        /// <summary>カタログの置き場所。実行時に <see cref="HitFeedbackCatalog.Load"/> で読めるよう Resources の下に置く。</summary>
+        // 実行時に HitFeedbackCatalog.Load で読めるよう Resources の下に置く。
         public static string CatalogPath => PresentationAssetBuilder.PresentationFolder + "/Resources/" + HitFeedbackCatalog.ResourcePath + ".asset";
 
-        /// <summary>血しぶきが借りる粒の材質の置き場所 (<see cref="PresentationAssetBuilder"/> の生成物)。</summary>
         public static string ParticleMaterialPath => PresentationAssetBuilder.PresentationFolder + "/" + PresentationAssetBuilder.AlphaMaterialName + ".mat";
 
         public string Name => "HitFeedbackCatalog";
 
         public int Order => StepOrder;
 
-        /// <summary>部位ごとの血しぶきの名前。<see cref="HitZone"/> のすべての値を持つ。</summary>
         public static IReadOnlyList<(HitZone Zone, string Effect)> SprayEntries()
         {
             return new[]
@@ -73,11 +63,6 @@ namespace Shooter.Editor
             BuildAt(Folder, CatalogPath, ParticleMaterialPath);
         }
 
-        /// <summary>
-        /// folder に血しぶきと血痕の素材を、catalogPath にそれをまとめたカタログを作るか上書きして保存し、カタログを返す。
-        /// 血しぶきの粒には particleMaterialPath の材質を使う。フォルダは Assets/ 以下で、無ければ作る。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">particleMaterialPath に材質が無い (先に <see cref="PresentationAssetBuilder.Build"/> を走らせる)。</exception>
         public static HitFeedbackCatalog BuildAt(string folder, string catalogPath, string particleMaterialPath)
         {
             folder = PresentationAssetBuilder.ValidateFolderPath(folder, nameof(folder));
@@ -140,9 +125,6 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>
-        /// 血痕のテクスチャの画素 (下の行から)。中心から半径の 0.8 までは <see cref="DecalColor"/> で不透明、そこから縁へ透明になる円。
-        /// </summary>
         public static Color32[] DecalPixels()
         {
             var pixels = new Color32[DecalTextureSize * DecalTextureSize];

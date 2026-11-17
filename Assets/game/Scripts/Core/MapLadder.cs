@@ -2,10 +2,7 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 対戦マップに置いたはしご 1 本の形と調整値。Unity 抜きのサーバーとクライアントの予測が同じはしごで動くよう、
-    /// <see cref="NetMapLadders"/> で書き出したものを読む。
-    /// </summary>
+    // Unity 抜きのサーバーとクライアントの予測が同じはしごで動くよう、シーンからではなく NetMapLadders で書き出したものを読む。
     public sealed class MapLadder
     {
         public MapLadder(LadderSpan span, LadderSpec spec)

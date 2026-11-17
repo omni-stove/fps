@@ -104,7 +104,7 @@ namespace Shooter.Server.Eos
             });
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        public void CreateLobby(string bucketId, int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
             ArgumentNullException.ThrowIfNull(attributes);
@@ -123,7 +123,16 @@ namespace Shooter.Server.Eos
                 AllowInvites = false,
                 BucketId = bucketId,
                 DisableHostMigration = true,
-                EnableRTCRoom = false,
+                EnableRTCRoom = voiceRoom,
+                // オーナーは RTC 部屋に自動で入る。音声の機器を持たないサーバーが機器を開こうとしないよう、入出力を手動にして黙らせておく
+                LocalRTCOptions = voiceRoom
+                    ? new LocalRTCOptions
+                    {
+                        UseManualAudioInput = true,
+                        UseManualAudioOutput = true,
+                        LocalAudioDeviceInputStartsMuted = true,
+                    }
+                    : (LocalRTCOptions?)null,
                 EnableJoinById = true,
                 RejoinAfterKickRequiresInvite = false,
             };

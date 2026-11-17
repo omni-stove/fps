@@ -16,7 +16,7 @@ namespace Shooter.Core
     /// <item>味方へのダメージは <see cref="GameRules.FriendlyFire"/> に従い、無視する・与える・撃った本人に跳ね返すを切り替える (自滅はいつも数える)。</item>
     /// <item>プレイヤーごとに <see cref="HealthRegenerator"/> を持ち、<see cref="TeamDeathmatchSpec.Rules"/> に従って
     /// 試合中だけ体力を自動回復させる。</item>
-    /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill"/> (味方に倒されたときと跳ね返しで倒れたときは
+    /// <item>体力が 0 になったら <see cref="TeamDeathmatch.ReportKill(int, int, IReadOnlyList{int})"/> (味方に倒されたときと跳ね返しで倒れたときは
     /// <see cref="TeamDeathmatch.ReportDeath"/>) を呼び、リスポーン待ちが終わったら
     /// 体力を満タンに戻して地点を選び <see cref="Spawned"/> を出す。いつ待ちが終わるかは
     /// <see cref="GameRules.RespawnMode"/> に従う (None では試合中は戻らず、全滅したチームの負けになる)。</item>
@@ -28,6 +28,9 @@ namespace Shooter.Core
     /// (<see cref="ApplyDamage"/>)。ダウン中は <see cref="IsAlive"/> のまま、自動回復せず、動けるプレイヤー (<see cref="SelectSpawn"/> と
     /// <see cref="FindNearestEnemy"/> が数える人) には入らない。ダウン中の体力が尽きるか出血の秒数が過ぎると倒れ、
     /// 味方が <see cref="TryRevive"/> を押し続けると起き上がる。チームの全員がダウンか死亡になったら、ダウン中の人もその場で倒す。</item>
+    /// <item>敵から受けたダメージを <see cref="DamageLedger"/> に記録し、倒されたときに <see cref="AssistSpec"/> に従ってアシストした人を決める。
+    /// アシストは <see cref="TeamDeathmatch.ReportKill(int, int, IReadOnlyList{int})"/> で数え、<see cref="Killed"/> でも渡す。
+    /// 記録の時刻は <see cref="Tick"/> で進めた秒数で、倒された人が出現し直すか抜けたらその人の記録を捨てる。</item>
     /// <item>出現 (参加・リスポーン・<see cref="Restart"/>) から <see cref="GameRules.SpawnProtectionSeconds"/> の間は、どこからのダメージも受けない
     /// (<see cref="GetSpawnProtectionRemaining"/>)。その間に自分が撃ったら、呼び出し側が <see cref="EndSpawnProtection"/> ですぐ解く。
     /// 0 なら無敵にしない。</item>
@@ -43,7 +46,7 @@ namespace Shooter.Core
         public event Action Started;
 
         /// <summary>
-        /// <see cref="Restart"/> で点数・キル数・デス数・残り時間・体力を初期値に戻した直後に呼ばれる。
+        /// <see cref="Restart"/> で点数・キル数・デス数・アシスト数・残り時間・体力を初期値に戻した直後に呼ばれる。
         /// 続けて <see cref="ScoreChanged"/> (0, 0)、各プレイヤーの <see cref="PlayerChanged"/> と <see cref="Spawned"/>、
         /// 両チームがそろっていれば <see cref="Started"/> の順に出る。
         /// </summary>
@@ -52,11 +55,15 @@ namespace Shooter.Core
         /// <summary>チームの点数が変わったときに呼ばれる。引数は (Alpha の点数, Bravo の点数)。</summary>
         public event Action<int, int> ScoreChanged;
 
-        /// <summary>プレイヤーのチーム・キル数・デス数・体力のどれかが変わったときに呼ばれる。引数は playerId。</summary>
+        /// <summary>プレイヤーのチーム・キル数・デス数・アシスト数・体力のどれかが変わったときに呼ばれる。引数は playerId。</summary>
         public event Action<int> PlayerChanged;
 
-        /// <summary>プレイヤーが倒されたときに呼ばれる。引数は (killerId, victimId)。</summary>
-        public event Action<int, int> Killed;
+        /// <summary>
+        /// プレイヤーが倒されたときに呼ばれる。引数は (killerId, victimId, アシストした Id)。
+        /// アシストした Id は <see cref="DamageLedger.TakeAssisters"/> の並びで、参加中の人だけを含む。
+        /// 敵に倒されたとき (キルが数えられたとき) だけ入り、味方撃ち・自滅・跳ね返しでは空。null にならない。
+        /// </summary>
+        public event Action<int, int, IReadOnlyList<int>> Killed;
 
         /// <summary>参加したときとリスポーンするときに、出現する地点を知らせる。引数は (playerId, 地点)。</summary>
         public event Action<int, SpawnPoint> Spawned;
@@ -92,8 +99,13 @@ namespace Shooter.Core
         public const float DefaultReconnectGraceSeconds = 60f;
 
         private static readonly Team[] _teams = { Team.Alpha, Team.Bravo };
+        private static readonly int[] _noAssisters = Array.Empty<int>();
 
         private readonly TeamDeathmatch _match;
+        private readonly DamageLedger _ledger;
+
+        // DamageLedger に渡す時刻。Tick で進めた秒数を試合の状態によらず足す。
+        private double _clock;
         private readonly SpawnSelector _selector;
         private readonly SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
@@ -140,6 +152,9 @@ namespace Shooter.Core
         /// <summary>参加したときとリスポーンしたときの体力。</summary>
         public int MaxHealth { get; }
 
+        /// <summary>アシストの調整値。</summary>
+        public AssistSpec Assist => _ledger.Spec;
+
         public GameModeState State => _match.State;
         public float RemainingSeconds => _match.RemainingSeconds;
         public Team? Winner => _match.Winner;
@@ -165,6 +180,7 @@ namespace Shooter.Core
         /// 終わってから自動で次の試合を始めるまでの秒数。0 以上の有限値。null なら自動では始めない。
         /// </param>
         /// <param name="reconnectGraceSeconds">切断した人の成績を残す秒数。0 以上の有限値。0 なら残さない。</param>
+        /// <param name="assist">アシストの調整値。null なら <see cref="AssistSpec.Default"/>。</param>
         public TeamDeathmatchSession(
             TeamDeathmatchSpec spec,
             int maxHealth,
@@ -172,7 +188,8 @@ namespace Shooter.Core
             SpawnSelector selector,
             Func<int, Vector3> positionOf,
             float? restartDelaySeconds = null,
-            float reconnectGraceSeconds = DefaultReconnectGraceSeconds)
+            float reconnectGraceSeconds = DefaultReconnectGraceSeconds,
+            AssistSpec assist = null)
         {
             if (spec == null)
             {
@@ -214,6 +231,7 @@ namespace Shooter.Core
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
+            _ledger = new DamageLedger(assist ?? AssistSpec.Default);
             _restartDelaySeconds = restartDelaySeconds;
             ReconnectGraceSeconds = reconnectGraceSeconds;
 
@@ -248,6 +266,8 @@ namespace Shooter.Core
         public int GetKills(int playerId) => _match.GetKills(playerId);
 
         public int GetDeaths(int playerId) => _match.GetDeaths(playerId);
+
+        public int GetAssists(int playerId) => _match.GetAssists(playerId);
 
         public int GetScore(Team team) => _match.GetScore(team);
 
@@ -357,7 +377,7 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// プレイヤーを参加させる。key の成績が残っていれば (<see cref="FindHeld"/>) そのチームに戻してキル数とデス数を引き継ぎ、
+        /// プレイヤーを参加させる。key の成績が残っていれば (<see cref="FindHeld"/>) そのチームに戻してキル数・デス数・アシスト数を引き継ぎ、
         /// 残っていなければ <see cref="NextTeam"/> に入れて 0 から数える。<see cref="PlayerChanged"/> と
         /// <see cref="Spawned"/> を出し、両チームがそろったら試合を始める。
         /// </summary>
@@ -383,7 +403,7 @@ namespace Shooter.Core
             if (key != null && _held.TryGetValue(key, out var held))
             {
                 team = held.Team;
-                _match.AddPlayer(playerId, team, held.Kills, held.Deaths);
+                _match.AddPlayer(playerId, team, held.Kills, held.Deaths, held.Assists);
                 _held.Remove(key);
             }
             else
@@ -409,7 +429,7 @@ namespace Shooter.Core
         /// <summary>
         /// プレイヤーを抜く。チームの点数はそのまま残し、リスポーン待ちとダウンは取り消す。抜けた人にはそれ以後キルを付けない。
         /// 抜けたことでチームの全員がダウンか死亡になったら、ダウン中の人をその場で倒す。
-        /// 鍵を付けて参加していて <see cref="ReconnectGraceSeconds"/> が 0 より大きければ、チーム・キル数・デス数をその秒数だけ残す。
+        /// 鍵を付けて参加していて <see cref="ReconnectGraceSeconds"/> が 0 より大きければ、チーム・キル数・デス数・アシスト数をその秒数だけ残す。
         /// 残す間もチームの人数には数えない。
         /// </summary>
         /// <returns>成績を残したら true。</returns>
@@ -424,7 +444,7 @@ namespace Shooter.Core
                 if (ReconnectGraceSeconds > 0f)
                 {
                     _held[key] = new HeldPlayer(
-                        playerId, GetTeam(playerId), GetKills(playerId), GetDeaths(playerId), ReconnectGraceSeconds);
+                        playerId, GetTeam(playerId), GetKills(playerId), GetDeaths(playerId), GetAssists(playerId), ReconnectGraceSeconds);
                     held = true;
                 }
             }
@@ -433,6 +453,7 @@ namespace Shooter.Core
             _health.Remove(playerId);
             _regenerators.Remove(playerId);
             _spawnProtection.Remove(playerId);
+            _ledger.Clear(playerId);
             if (_downed != null)
             {
                 _downed.RemovePlayer(playerId);
@@ -440,6 +461,34 @@ namespace Shooter.Core
             }
 
             return held;
+        }
+
+        /// <summary>
+        /// 終わった試合と次の試合の間に、playerId を team へ移す。キル数とデス数はそのまま (次の <see cref="Restart"/> で 0 に戻る)。
+        /// </summary>
+        /// <returns>チームが変わったら true。もう team にいれば何もせず false。</returns>
+        /// <exception cref="InvalidOperationException">試合が終わっていない。</exception>
+        public bool ChangeTeam(int playerId, Team team)
+        {
+            FindHealth(playerId);
+            Side.FromTeam(team);
+
+            // 試合中に移すと、その人のキルが入った点数と移った先のチームが食い違うので、終わった後だけにする
+            if (State != GameModeState.Ended)
+            {
+                throw new InvalidOperationException("a player can only change teams after the match has ended, but it is " + State);
+            }
+
+            if (GetTeam(playerId) == team)
+            {
+                return false;
+            }
+
+            var kills = GetKills(playerId);
+            var deaths = GetDeaths(playerId);
+            _match.RemovePlayer(playerId);
+            _match.AddPlayer(playerId, team, kills, deaths);
+            return true;
         }
 
         /// <summary>key で参加中の人がいれば true。前の接続が切れたと分かる前に同じ人がつなぎ直してきたときに立つ。</summary>
@@ -453,7 +502,7 @@ namespace Shooter.Core
 
         /// <summary>
         /// attackerId が victimId に amount のダメージを与える。体力が 0 になったら倒したことにして
-        /// <see cref="TeamDeathmatch.ReportKill"/> を呼ぶ。ネットワーク側のダメージ処理はすべてここを通す。
+        /// <see cref="TeamDeathmatch.ReportKill(int, int, IReadOnlyList{int})"/> を呼ぶ。ネットワーク側のダメージ処理はすべてここを通す。
         /// 味方へのダメージは <see cref="TeamDeathmatchSpec.Rules"/> の <see cref="GameRules.FriendlyFire"/> に従う。
         /// <list type="bullet">
         /// <item><see cref="FriendlyFire.Off"/>: 無視して <see cref="DamageOutcome.Ignored"/> を返す。</item>
@@ -523,6 +572,7 @@ namespace Shooter.Core
                 return DamageOutcome.Ignored;
             }
 
+            _ledger.Record(victimId, attackerId, amount, byAlly, _clock);
             _busy++;
             try
             {
@@ -602,20 +652,31 @@ namespace Shooter.Core
         {
             var alphaBefore = _match.GetScore(Team.Alpha);
             var bravoBefore = _match.GetScore(Team.Bravo);
+
+            var assisters = scores && killerId != victimId ? PresentPlayers(_ledger.TakeAssisters(victimId, killerId, _clock)) : _noAssisters;
             if (scores)
             {
-                _match.ReportKill(killerId, victimId);
+                _match.ReportKill(killerId, victimId, assisters);
             }
             else
             {
                 _match.ReportDeath(victimId);
             }
 
-            Killed?.Invoke(killerId, victimId);
+            Killed?.Invoke(killerId, victimId, assisters);
             PlayerChanged?.Invoke(victimId);
             if (killerId != victimId && scores)
             {
                 PlayerChanged?.Invoke(killerId);
+            }
+
+            foreach (var assisterId in assisters)
+            {
+                // Killed や PlayerChanged の受け手が抜けさせた人は飛ばす
+                if (_health.ContainsKey(assisterId))
+                {
+                    PlayerChanged?.Invoke(assisterId);
+                }
             }
 
             var alpha = _match.GetScore(Team.Alpha);
@@ -624,6 +685,26 @@ namespace Shooter.Core
             {
                 ScoreChanged?.Invoke(alpha, bravo);
             }
+        }
+
+        /// <summary>ids のうち参加中の人だけを、並びを変えずに返す。</summary>
+        private int[] PresentPlayers(IReadOnlyList<int> ids)
+        {
+            if (ids.Count == 0)
+            {
+                return _noAssisters;
+            }
+
+            var present = new List<int>(ids.Count);
+            foreach (var id in ids)
+            {
+                if (_health.ContainsKey(id))
+                {
+                    present.Add(id);
+                }
+            }
+
+            return present.Count == 0 ? _noAssisters : present.ToArray();
         }
 
         /// <summary>
@@ -742,6 +823,12 @@ namespace Shooter.Core
 
             var waitingForRestart = _restartPending && State == GameModeState.Ended;
 
+            // 無限の秒数は _match.Tick が断るので、ここで時計を壊して DamageLedger に渡さないよう足さずにおく。
+            if (!float.IsInfinity(deltaSeconds))
+            {
+                _clock += deltaSeconds;
+            }
+
             TickHeld(deltaSeconds);
 
             // この Tick の中で出現した人 (リスポーン・Restart) の無敵を減らさないよう、_match.Tick より先に回す
@@ -780,11 +867,11 @@ namespace Shooter.Core
         public bool Finish(Team? winner) => _match.Finish(winner);
 
         /// <summary>
-        /// 終わった試合を同じ顔ぶれ・同じチーム分けで始め直す。チームの点数、各プレイヤーのキル数とデス数、
-        /// 残り時間を初期値に戻し、全員を体力満タンにしてダウンを消し、出現直後の無敵を付け直して、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
+        /// 終わった試合を同じ顔ぶれ・同じチーム分けで始め直す。チームの点数、各プレイヤーのキル数とデス数とアシスト数、
+        /// 残り時間を初期値に戻し、受けたダメージの記録を捨て、全員を体力満タンにしてダウンを消し、出現直後の無敵を付け直して、自分のチームの地点へ出現させる (<see cref="Spawned"/>)。
         /// ダウンしていた人には、<see cref="PlayerChanged"/> を出し終えた後に <see cref="DownedChanged"/> を出す。
         /// 両チームに 1 人以上いればそのまま始まり、いなければ Waiting に戻って参加を待つ。
-        /// 切断した人の残している成績もキル数とデス数を 0 にする (チームと残す時間はそのまま)。
+        /// 切断した人の残している成績もキル数・デス数・アシスト数を 0 にする (チームと残す時間はそのまま)。
         /// </summary>
         /// <exception cref="InvalidOperationException">試合がまだ終わっていない。</exception>
         public void Restart()
@@ -797,6 +884,7 @@ namespace Shooter.Core
             _restartPending = false;
             _restartRemaining = 0f;
             _match.Reset();
+            _ledger.Reset();
 
             // 前の試合の成績を次の試合へ持ち込ませない
             _heldKeys.Clear();
@@ -960,11 +1048,12 @@ namespace Shooter.Core
             Spawned?.Invoke(playerId, SelectSpawn(playerId));
         }
 
-        /// <summary>体力を満タンにし、出現直後の無敵を付け直し、ダウンを消す。ダウンしていたら true。</summary>
+        /// <summary>体力を満タンにし、出現直後の無敵を付け直し、受けたダメージの記録とダウンを消す。ダウンしていたら true。</summary>
         private bool ResetHealth(int playerId)
         {
             var health = new Health(MaxHealth);
             _health[playerId] = health;
+            _ledger.Clear(playerId);
             _regenerators[playerId] = new HealthRegenerator(health, Spec.Rules);
 
             var protection = Spec.Rules.SpawnProtectionSeconds;

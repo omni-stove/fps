@@ -150,6 +150,26 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheAssistTextsAreReadFromTheAssistTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var assist = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("assist.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(assist.Keys.All(key => key.StartsWith("assist.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(assist.Contains("assist.scoreboard.caption"), Is.True, code);
+                Assert.That(assist.Contains("assist.killFeed.mark"), Is.True, code);
+                Assert.That(assist.Contains("assist.profile.assists"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Format("assist.profile.assists", 4), Is.EqualTo("アシスト 4"));
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

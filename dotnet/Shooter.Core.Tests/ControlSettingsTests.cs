@@ -86,11 +86,11 @@ namespace Shooter.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':9,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':10,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
-                    "'showBlood':true,'showNetStats':false," +
+                    "'showBlood':true,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,'showNetStats':false," +
                     "'colorPalette':'standard','showSubtitles':false,'aimAssist':true}")));
         }
 
@@ -141,7 +141,7 @@ namespace Shooter.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':10,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':11,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -154,9 +154,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':10}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':11}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 10"));
+            Assert.That(problems[0], Does.Contain("version 11"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -251,6 +251,8 @@ namespace Shooter.Core.Tests
         [TestCase(ControlValue.EffectsVolume, 0, 100, 100)]
         [TestCase(ControlValue.CameraShakeIntensity, 0, 100, 100)]
         [TestCase(ControlValue.ViewmodelMotionIntensity, 0, 100, 100)]
+        [TestCase(ControlValue.StickDeadzone, 0, 500, 125)]
+        [TestCase(ControlValue.RumbleStrength, 0, 100, 100)]
         public void ValueRangesAndDefaults(ControlValue value, int min, int max, int expectedDefault)
         {
             var range = ControlSettings.RangeOf(value);
@@ -320,6 +322,9 @@ namespace Shooter.Core.Tests
         [TestCase(ControlValue.FieldOfView, 91)]
         [TestCase(ControlValue.MasterVolume, -1)]
         [TestCase(ControlValue.EffectsVolume, 101)]
+        [TestCase(ControlValue.StickDeadzone, -1)]
+        [TestCase(ControlValue.StickDeadzone, 501)]
+        [TestCase(ControlValue.RumbleStrength, 101)]
         public void WithValueRejectsValuesOutsideTheRange(ControlValue value, int amount)
         {
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.With(value, amount));
@@ -383,7 +388,7 @@ namespace Shooter.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -784,7 +789,7 @@ namespace Shooter.Core.Tests
         {
             var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
 
-            Assert.That(json, Does.StartWith(Json("{'version':9,")));
+            Assert.That(json, Does.StartWith(Json("{'version':10,")));
             Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true}")));
             Assert.That(json, Does.Not.Contain("language"));
         }
@@ -802,12 +807,13 @@ namespace Shooter.Core.Tests
 
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")).And.Not.Contain("language"));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")).And.Not.Contain("language"));
         }
 
         [TestCase(5)]
         [TestCase(8)]
         [TestCase(9)]
+        [TestCase(10)]
         public void AVersionWithoutALanguageReportsTheLanguageKeyAsUnknown(int version)
         {
             var json = version >= 8 ? ControlSettings.Default.ToJson() : WithoutPresentation(ControlSettings.Default.ToJson());
@@ -906,7 +912,7 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
             Assert.That(loaded.ShowBlood, Is.True);
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")));
         }
 
         [Test]
@@ -1040,16 +1046,14 @@ namespace Shooter.Core.Tests
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.AimAssist, Is.True);
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")).And.EndWith(Json(",'aimAssist':true}")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")).And.EndWith(Json(",'aimAssist':true}")));
         }
 
         [Test]
         public void VersionEightReportsTheAimAssistKeyAsUnknown()
         {
-            var versionEight = ControlSettings.Default
-                .WithAimAssist(false)
-                .ToJson()
-                .Replace("\"version\":9", "\"version\":8", StringComparison.Ordinal);
+            var versionEight = WithoutGamepadFeel(ControlSettings.Default.WithAimAssist(false).ToJson())
+                .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":8", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionEight, out var problems);
 
@@ -1076,14 +1080,283 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.ShowBlood, Is.False, "the saved value");
         }
 
+        [Test]
+        public void GamepadFeelDefaultsKeepTheInputAsItWas()
+        {
+            var settings = ControlSettings.Default;
+
+            Assert.That(settings.InvertLookY, Is.False);
+            Assert.That(settings.StickDeadzone, Is.EqualTo(0.125f));
+            Assert.That(settings.RumbleEnabled, Is.True);
+            Assert.That(settings.RumbleStrength, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void DeadzoneIsHeldInThousandthsAndRumbleStrengthInPercent()
+        {
+            var settings = ControlSettings.Default.WithStickDeadzone(500).WithRumbleStrength(40);
+
+            Assert.That(settings.Get(ControlValue.StickDeadzone), Is.EqualTo(500));
+            Assert.That(settings.StickDeadzone, Is.EqualTo(0.5f));
+            Assert.That(settings.Get(ControlValue.RumbleStrength), Is.EqualTo(40));
+            Assert.That(settings.RumbleStrength, Is.EqualTo(0.4f).Within(1e-6f));
+            Assert.That(ControlSettings.Default.WithStickDeadzone(0).StickDeadzone, Is.Zero);
+            Assert.That(settings.WithStickDeadzone(500), Is.SameAs(settings));
+            Assert.That(settings.WithRumbleStrength(40), Is.SameAs(settings));
+        }
+
+        [TestCase(-1)]
+        [TestCase(501)]
+        public void WithStickDeadzoneRejectsValuesOutsideTheRange(int permille)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithStickDeadzone(permille));
+        }
+
+        [TestCase(-1)]
+        [TestCase(101)]
+        public void WithRumbleStrengthRejectsValuesOutsideTheRange(int percent)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithRumbleStrength(percent));
+        }
+
+        [Test]
+        public void WithInvertLookYChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.MouseSensitivity, 150)
+                .WithAimAssist(false)
+                .WithRumbleEnabled(false);
+
+            var inverted = settings.WithInvertLookY(true);
+
+            Assert.That(inverted.InvertLookY, Is.True);
+            Assert.That(settings.InvertLookY, Is.False, "the original does not change");
+            Assert.That(inverted.Get(ControlValue.MouseSensitivity), Is.EqualTo(150));
+            Assert.That(inverted.AimAssist, Is.False);
+            Assert.That(inverted.RumbleEnabled, Is.False);
+            Assert.That(inverted, Is.Not.EqualTo(settings));
+            Assert.That(inverted.WithInvertLookY(false), Is.EqualTo(settings));
+            Assert.That(inverted.WithInvertLookY(false).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithInvertLookY(false), Is.SameAs(settings));
+            Assert.That(inverted.WithInvertLookY(true), Is.SameAs(inverted));
+        }
+
+        [TestCase(2.5f)]
+        [TestCase(-0.75f)]
+        [TestCase(0f)]
+        public void ApplyInvertLookYKeepsTheVerticalLookWhenOff(float lookUp)
+        {
+            Assert.That(ControlSettings.Default.ApplyInvertLookY(lookUp), Is.EqualTo(lookUp));
+            Assert.That(ControlSettings.Default.WithInvertLookY(true).WithInvertLookY(false).ApplyInvertLookY(lookUp), Is.EqualTo(lookUp));
+        }
+
+        [TestCase(2.5f, -2.5f)]
+        [TestCase(-0.75f, 0.75f)]
+        [TestCase(0f, 0f)]
+        public void ApplyInvertLookYFlipsTheVerticalLookWhenOn(float lookUp, float expected)
+        {
+            var inverted = ControlSettings.Default.WithInvertLookY(true);
+
+            Assert.That(inverted.ApplyInvertLookY(lookUp), Is.EqualTo(expected));
+            Assert.That(inverted.ApplyInvertLookY(inverted.ApplyInvertLookY(lookUp)), Is.EqualTo(lookUp), "flipping twice gives the input back");
+        }
+
+        [Test]
+        public void WithRumbleEnabledChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .WithRumbleStrength(30)
+                .WithInvertLookY(true)
+                .WithShowBlood(false);
+
+            var off = settings.WithRumbleEnabled(false);
+
+            Assert.That(off.RumbleEnabled, Is.False);
+            Assert.That(settings.RumbleEnabled, Is.True, "the original does not change");
+            Assert.That(off.Get(ControlValue.RumbleStrength), Is.EqualTo(30), "the strength is kept for when it is turned back on");
+            Assert.That(off.InvertLookY, Is.True);
+            Assert.That(off.ShowBlood, Is.False);
+            Assert.That(off, Is.Not.EqualTo(settings));
+            Assert.That(off.WithRumbleEnabled(true), Is.EqualTo(settings));
+            Assert.That(off.WithRumbleEnabled(true).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithRumbleEnabled(true), Is.SameAs(settings));
+            Assert.That(off.WithRumbleEnabled(false), Is.SameAs(off));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheGamepadFeel()
+        {
+            var changed = ControlSettings.Default
+                .WithInvertLookY(true)
+                .WithStickDeadzone(200)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(50);
+
+            foreach (var other in new[]
+            {
+                changed.With(ControlValue.MasterVolume, 10),
+                changed.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle),
+                changed.WithShowNetStats(true),
+                changed.WithPalette(ColorPalette.BlueYellow),
+                changed.WithShowSubtitles(true),
+                changed.WithShowBlood(false),
+                changed.WithAimAssist(false),
+            })
+            {
+                Assert.That(other.InvertLookY, Is.True);
+                Assert.That(other.Get(ControlValue.StickDeadzone), Is.EqualTo(200));
+                Assert.That(other.RumbleEnabled, Is.False);
+                Assert.That(other.Get(ControlValue.RumbleStrength), Is.EqualTo(50));
+            }
+        }
+
+        [Test]
+        public void RoundTripsTheGamepadFeel()
+        {
+            var settings = ControlSettings.Default
+                .WithShowSubtitles(true)
+                .WithInvertLookY(true)
+                .WithStickDeadzone(80)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(35);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(
+                json,
+                Does.Contain(Json(",'showBlood':true,'invertLookY':true,'stickDeadzone':80,'rumble':false,'rumbleStrength':35,'showNetStats':false,")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.InvertLookY, Is.True);
+            Assert.That(loaded.StickDeadzone, Is.EqualTo(0.08f).Within(1e-6f));
+            Assert.That(loaded.RumbleEnabled, Is.False);
+            Assert.That(loaded.RumbleStrength, Is.EqualTo(0.35f).Within(1e-6f));
+        }
+
+        // 版 9 (視点の上下反転・デッドゾーン・振動を足す前) の保存を読むと、足した欄は何も言わずに初期値になり、ほかの欄は残る
+        [Test]
+        public void ReadsVersionNineWithTheGamepadFeelDefaultsAndNoProblems()
+        {
+            const string versionNine =
+                "{'version':9,'keyboardMouse':{'sprint':'toggle','crouch':'hold','aim':'hold'}," +
+                "'gamepad':{'sprint':'hold','crouch':'toggle','aim':'toggle'}," +
+                "'mouseSensitivity':150,'gamepadSensitivity':80,'adsSensitivity':120," +
+                "'fieldOfView':75,'masterVolume':40,'effectsVolume':0,'cameraShake':30,'viewmodelMotion':0," +
+                "'showBlood':false,'showNetStats':true," +
+                "'colorPalette':'redGreen','showSubtitles':true,'aimAssist':false}";
+            var expected = ControlSettings.Default
+                .With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle)
+                .With(InputDeviceKind.Gamepad, HoldAction.Sprint, HoldMode.Hold)
+                .With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle)
+                .With(ControlValue.MouseSensitivity, 150)
+                .With(ControlValue.GamepadSensitivity, 80)
+                .With(ControlValue.AdsSensitivity, 120)
+                .With(ControlValue.FieldOfView, 75)
+                .With(ControlValue.MasterVolume, 40)
+                .With(ControlValue.EffectsVolume, 0)
+                .With(ControlValue.CameraShakeIntensity, 30)
+                .With(ControlValue.ViewmodelMotionIntensity, 0)
+                .WithShowBlood(false)
+                .WithShowNetStats(true)
+                .WithPalette(ColorPalette.RedGreen)
+                .WithShowSubtitles(true)
+                .WithAimAssist(false);
+
+            var loaded = ControlSettings.FromJson(Json(versionNine), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(expected), "every saved value is kept");
+            Assert.That(loaded.InvertLookY, Is.False);
+            Assert.That(loaded.Get(ControlValue.StickDeadzone), Is.EqualTo(125));
+            Assert.That(loaded.RumbleEnabled, Is.True);
+            Assert.That(loaded.Get(ControlValue.RumbleStrength), Is.EqualTo(100));
+            Assert.That(
+                loaded.ToJson(),
+                Does.StartWith(Json("{'version':10,"))
+                    .And.Contain(Json(",'showBlood':false,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,")));
+        }
+
+        [Test]
+        public void VersionNineReportsTheGamepadFeelKeysAsUnknown()
+        {
+            var versionNine = ControlSettings.Default
+                .WithInvertLookY(true)
+                .WithStickDeadzone(300)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(20)
+                .ToJson()
+                .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":9", StringComparison.Ordinal);
+
+            var loaded = ControlSettings.FromJson(versionNine, out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default), "a version 9 file cannot have these entries");
+            Assert.That(problems, Has.Count.EqualTo(4));
+            Assert.That(
+                string.Join("\n", problems),
+                Does.Contain("'invertLookY'").And.Contain("'stickDeadzone'").And.Contain("'rumble'").And.Contain("'rumbleStrength'"));
+        }
+
+        // 上下反転・振動が欠けている・真偽値でないなら、その項目だけ初期値
+        [TestCase(",'invertLookY':true", "", "invertLookY")]
+        [TestCase("'invertLookY':true", "'invertLookY':'true'", "invertLookY")]
+        [TestCase("'invertLookY':true", "'invertLookY':1", "invertLookY")]
+        [TestCase(",'rumble':false", "", "rumble")]
+        [TestCase("'rumble':false", "'rumble':'off'", "rumble")]
+        [TestCase("'rumble':false", "'rumble':null", "rumble")]
+        public void BrokenGamepadFeelFlagFallsBackOnlyForThatFlag(string from, string to, string reported)
+        {
+            var valid = ControlSettings.Default.WithInvertLookY(true).WithRumbleEnabled(false).WithStickDeadzone(250).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'" + reported + "'"));
+            Assert.That(loaded.InvertLookY, Is.EqualTo(reported != "invertLookY"));
+            Assert.That(loaded.RumbleEnabled, Is.EqualTo(reported == "rumble"));
+            Assert.That(loaded.Get(ControlValue.StickDeadzone), Is.EqualTo(250), "the saved value");
+        }
+
+        [TestCase("'stickDeadzone':125,", "", ControlValue.StickDeadzone, 125, "missing")]
+        [TestCase("'stickDeadzone':125", "'stickDeadzone':900", ControlValue.StickDeadzone, 500, "outside")]
+        [TestCase("'stickDeadzone':125", "'stickDeadzone':-4", ControlValue.StickDeadzone, 0, "outside")]
+        [TestCase("'rumbleStrength':100", "'rumbleStrength':'50'", ControlValue.RumbleStrength, 100, "integer")]
+        [TestCase("'rumbleStrength':100", "'rumbleStrength':250", ControlValue.RumbleStrength, 100, "outside")]
+        public void BrokenGamepadFeelValueFallsBackOnlyForThatValue(string from, string to, ControlValue value, int expected, string reported)
+        {
+            var valid = ControlSettings.Default.WithInvertLookY(true).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain(reported));
+            Assert.That(loaded.Get(value), Is.EqualTo(expected));
+            Assert.That(loaded.InvertLookY, Is.True, "the saved value");
+        }
+
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
         }
 
+        private static string WithoutGamepadFeel(string json)
+        {
+            return json.Replace(
+                Json(",'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100"),
+                string.Empty,
+                StringComparison.Ordinal);
+        }
+
         private static string AsVersion(string json, int version)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
+            if (version < 10)
+            {
+                old = WithoutGamepadFeel(old);
+            }
+
             return version >= 9 ? old : old.Replace(Json(",'aimAssist':true"), string.Empty, StringComparison.Ordinal);
         }
 

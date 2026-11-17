@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 盾持ちを試す仮の敵。射撃場の床は実行時に作られ NavMesh が無いので、殴ってくる敵 (MeleeEnemyRangeFixture) と同じく自前の足場を Play 中に焼く。
+    // 射撃場の床は実行時に作られ NavMesh が無いので、殴ってくる敵 (MeleeEnemyRangeFixture) と同じく自前の足場を Play 中に焼く。
     // 開けた場所で回避を試す smoke の手順に反応しないよう、右手前の隅に置いて視界を狭める (開けた場所の中心から SightRange の外)。
     public sealed class ShieldEnemyRangeFixture : ITpsRangeFixture
     {

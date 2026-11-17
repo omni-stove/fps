@@ -5,12 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ガンゲームの武器の並びと制限時間・リスポーンの秒数をアセットとして持つ。<see cref="ToLadder"/> で Core の <see cref="GunGameLadder"/> に、
-    /// <see cref="CreateSession"/> でモードに変換する。
-    /// 段の武器と近接の武器は <see cref="WeaponDefinition"/> で持ち、Id と名前のキーはその <see cref="WeaponDefinition.ToSpec"/> から取る。
-    /// 中身は Shooter.Editor.GunGameSceneBuilder が作る。
-    /// </summary>
     [CreateAssetMenu(fileName = "GunGameLadder", menuName = "Shooter/Gun Game Ladder")]
     public sealed class GunGameLadderDefinition : ScriptableObject
     {
@@ -29,10 +23,8 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("倒れてから出現点に戻るまでの秒数")]
         private float _respawnSeconds = GunGameRunner.DefaultRespawnSeconds;
 
-        /// <summary>0 段目からの武器の並び。</summary>
         public IReadOnlyList<WeaponDefinition> Tiers => _tiers ?? Array.Empty<WeaponDefinition>();
 
-        /// <summary>近接の武器。</summary>
         public IReadOnlyList<WeaponDefinition> MeleeWeapons => _meleeWeapons ?? Array.Empty<WeaponDefinition>();
 
         public bool DemotesOnMelee
@@ -41,34 +33,28 @@ namespace Shooter.Runtime
             set => _demotesOnMelee = value;
         }
 
-        /// <summary>制限時間 (秒)。新しく作ったときは <see cref="GunGameRunner.DefaultTimeLimitSeconds"/>。</summary>
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
             set => _timeLimitSeconds = value;
         }
 
-        /// <summary>倒れてから戻るまでの秒数。新しく作ったときは <see cref="GunGameRunner.DefaultRespawnSeconds"/>。</summary>
         public float RespawnSeconds
         {
             get => _respawnSeconds;
             set => _respawnSeconds = value;
         }
 
-        /// <summary>段の武器をまとめて差し替える。null は空にする。</summary>
         public void SetTiers(IEnumerable<WeaponDefinition> tiers)
         {
             _tiers = tiers == null ? Array.Empty<WeaponDefinition>() : new List<WeaponDefinition>(tiers).ToArray();
         }
 
-        /// <summary>近接の武器をまとめて差し替える。null は空にする。</summary>
         public void SetMeleeWeapons(IEnumerable<WeaponDefinition> weapons)
         {
             _meleeWeapons = weapons == null ? Array.Empty<WeaponDefinition>() : new List<WeaponDefinition>(weapons).ToArray();
         }
 
-        /// <summary>定義を変換して <see cref="GunGameLadder"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="WeaponDefinitionException">段が無い、空の段がある、どれかの武器の定義が不正、近接の武器に空の要素があるとき。</exception>
         public GunGameLadder ToLadder()
         {
             var source = SourceName;
@@ -95,10 +81,6 @@ namespace Shooter.Runtime
             return new GunGameLadder(converted, meleeIds, _demotesOnMelee);
         }
 
-        /// <summary>
-        /// gunGame を、この定義の制限時間とリスポーンの秒数で進めるモードを作る (<see cref="GunGameRunner.CreateSession(GunGame, float, float)"/>)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">制限時間が 0 以下か、リスポーンの秒数が負か有限でないとき。メッセージにアセット名を含む。</exception>
         public ModeSession CreateSession(GunGame gunGame)
         {
             if (gunGame == null)

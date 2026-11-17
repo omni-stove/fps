@@ -28,6 +28,11 @@ namespace Shooter.Core
         public const string VehicleEnteredType = "vehicle_entered";
         public const string VehicleLeftType = "vehicle_left";
         public const string VehicleExplodedType = "vehicle_exploded";
+        public const string ChatType = "chat";
+        public const string ChatRefusedType = "chat_refused";
+        public const string MapVoteType = "map_vote";
+        public const string MapChangedType = "map_changed";
+        public const string TeamBalancedType = "team_balanced";
 
         /// <summary>試合を見分ける新しい Id (32 桁の小文字の 16 進数)。次の試合を始めるたびに作り直す。</summary>
         public static string NewMatchId()
@@ -93,8 +98,11 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>killer が victim を倒した。teamKill は味方に倒された (点数の入らない) キルか。自滅では killer と victim が同じ。</summary>
-        /// <example><c>{"type":"kill","time":"...","matchId":"6c1f...","killerId":"0","victimId":"1","teamKill":"false"}</c></example>
+        /// <summary>
+        /// killer が victim を倒した。teamKill は味方に倒された (点数の入らない) キルか。自滅では killer と victim が同じ。
+        /// assisterIds はアシストした人の Id で、いれば <c>assisterIds</c> にカンマ区切りで出す (いなければ項目ごと出さない)。
+        /// </summary>
+        /// <example><c>{"type":"kill","time":"...","matchId":"6c1f...","killerId":"0","victimId":"1","teamKill":"false","assisterIds":"2,3"}</c></example>
         public static string Kill(
             DateTime utcNow,
             string matchId,
@@ -102,12 +110,30 @@ namespace Shooter.Core
             string killerProductUserId,
             int victimId,
             string victimProductUserId,
-            bool teamKill)
+            bool teamKill,
+            IReadOnlyList<int> assisterIds = null)
         {
             var values = BeginMatch(KillType, utcNow, matchId);
             AddPlayer(values, "killerId", "killerProductUserId", killerId, killerProductUserId);
             AddPlayer(values, "victimId", "victimProductUserId", victimId, victimProductUserId);
             values.Add(Pair("teamKill", Bool(teamKill)));
+            if (assisterIds != null && assisterIds.Count > 0)
+            {
+                // 値はすべて文字列という決まりを守るため、配列にせずカンマ区切りの 1 つの文字列にする
+                var ids = new string[assisterIds.Count];
+                for (var i = 0; i < ids.Length; i++)
+                {
+                    if (assisterIds[i] < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(assisterIds), assisterIds[i], "assister ids must not be negative");
+                    }
+
+                    ids[i] = Number(assisterIds[i]);
+                }
+
+                values.Add(Pair("assisterIds", string.Join(",", ids)));
+            }
+
             return FlatJsonObject.Format(values);
         }
 
@@ -221,6 +247,78 @@ namespace Shooter.Core
             values.Add(Pair("riders", Number(riders)));
             values.Add(Pair("damaged", Number(damaged)));
             values.Add(Pair("killed", Number(killed)));
+            return FlatJsonObject.Format(values);
+        }
+
+        // 本文はプレイヤーが書いたものなので出さず、長さだけを出す (ChatLine.ToString と同じ)。
+        /// <example><c>{"type":"chat","time":"...","matchId":"6c1f...","playerId":"1","channel":"Team","length":"12"}</c></example>
+        public static string Chat(DateTime utcNow, string matchId, int playerId, string productUserId, ChatChannel channel, int length)
+        {
+            if (!Enum.IsDefined(typeof(ChatChannel), channel))
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, "channel must be a ChatChannel");
+            }
+
+            if (length <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(length), length, "length must be positive");
+            }
+
+            var values = BeginMatch(ChatType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("channel", channel.ToString()));
+            values.Add(Pair("length", Number(length)));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <summary>プレイヤーのチャットを断った。</summary>
+        /// <example><c>{"type":"chat_refused","time":"...","matchId":"6c1f...","playerId":"1","reason":"TooSoon"}</c></example>
+        public static string ChatRefused(DateTime utcNow, string matchId, int playerId, string productUserId, ChatRefusal reason)
+        {
+            if (reason == ChatRefusal.None || !Enum.IsDefined(typeof(ChatRefusal), reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason must be a ChatRefusal other than None");
+            }
+
+            var values = BeginMatch(ChatRefusedType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("reason", reason.ToString()));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <summary>プレイヤーが次のマップに mapId を選んだ (選び直しも 1 行)。</summary>
+        /// <example><c>{"type":"map_vote","time":"...","matchId":"6c1f...","playerId":"1","mapId":"NetArena02"}</c></example>
+        public static string MapVote(DateTime utcNow, string matchId, int playerId, string productUserId, string mapId)
+        {
+            var values = BeginMatch(MapVoteType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("mapId", RequireText(mapId, nameof(mapId))));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <summary>次の試合のマップを fromMapId から toMapId に替えた。matchId は替える前の (終わった) 試合。</summary>
+        /// <example><c>{"type":"map_changed","time":"...","matchId":"6c1f...","fromMapId":"NetArena01","toMapId":"NetArena02"}</c></example>
+        public static string MapChanged(DateTime utcNow, string matchId, string fromMapId, string toMapId)
+        {
+            var values = BeginMatch(MapChangedType, utcNow, matchId);
+            values.Add(Pair("fromMapId", RequireText(fromMapId, nameof(fromMapId))));
+            values.Add(Pair("toMapId", RequireText(toMapId, nameof(toMapId))));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <summary>人数をそろえるため、プレイヤーを from から to のチームへ移した。移した人ごとに 1 行。</summary>
+        /// <example><c>{"type":"team_balanced","time":"...","matchId":"6c1f...","playerId":"1","from":"Alpha","to":"Bravo"}</c></example>
+        public static string TeamBalanced(DateTime utcNow, string matchId, int playerId, string productUserId, Team from, Team to)
+        {
+            if (from == to)
+            {
+                throw new ArgumentException("a balanced player must change teams (from and to are both " + from + ")", nameof(to));
+            }
+
+            var values = BeginMatch(TeamBalancedType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("from", MatchLog.TeamName(from)));
+            values.Add(Pair("to", MatchLog.TeamName(to)));
             return FlatJsonObject.Format(values);
         }
 

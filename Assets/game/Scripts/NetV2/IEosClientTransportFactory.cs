@@ -13,5 +13,11 @@ namespace Shooter.NetV2
         IMatchTransport Create(EosCredentials credentials, Action<string> log);
 
         ILobbyBackend CreateLobbyBackend(EosCredentials credentials);
+
+        /// <summary>
+        /// 試合のボイスチャットを作る。EOS のプラットフォームとログインは、ロビーのサービスか通信路が済ませたものを使うので、
+        /// どちらかがログインしてから <see cref="IVoiceSession.Join"/> する。
+        /// </summary>
+        IVoiceSession CreateVoiceSession(Action<string> log);
     }
 }

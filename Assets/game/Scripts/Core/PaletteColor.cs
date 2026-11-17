@@ -3,15 +3,9 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="TeamPalette"/> の 1 色。赤・緑・青を 0〜1 で持つ (不透明)。Core は UnityEngine を参照しないので、Unity の Color には使う側で直す。
-    /// </summary>
+    // Unity の Color を使わないのは、Core が UnityEngine を参照しないため。Unity の Color には使う側で直す。
     public readonly struct PaletteColor : IEquatable<PaletteColor>
     {
-        /// <param name="r">赤 (0〜1)。</param>
-        /// <param name="g">緑 (0〜1)。</param>
-        /// <param name="b">青 (0〜1)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">どれかが 0〜1 の外か有限でない。</exception>
         public PaletteColor(float r, float g, float b)
         {
             R = Check(r, nameof(r));
@@ -19,16 +13,12 @@ namespace Shooter.Core
             B = Check(b, nameof(b));
         }
 
-        /// <summary>赤 (0〜1)。</summary>
         public float R { get; }
 
-        /// <summary>緑 (0〜1)。</summary>
         public float G { get; }
 
-        /// <summary>青 (0〜1)。</summary>
         public float B { get; }
 
-        /// <summary>0〜255 の値から作る。</summary>
         public static PaletteColor FromBytes(byte r, byte g, byte b)
         {
             return new PaletteColor(r / 255f, g / 255f, b / 255f);

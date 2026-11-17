@@ -217,7 +217,12 @@ namespace Shooter.Core.Tests
             var spec = Spec();
             var motor = new PlayerMotor(spec);
             var jumped = 0;
-            motor.Jumped += () => jumped++;
+            var number = 0;
+            motor.Jumped += n =>
+            {
+                jumped++;
+                number = n;
+            };
 
             var height = motor.Step(Vector2.Zero, 0f, false, false, true, true, dt).Y;
             var peak = height;
@@ -228,6 +233,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(jumped, Is.EqualTo(1));
+            Assert.That(number, Is.EqualTo(PlayerMotor.GroundJumpNumber));
             Assert.That(peak, Is.EqualTo(spec.JumpHeight).Within(0.01f));
         }
 
@@ -247,7 +253,7 @@ namespace Shooter.Core.Tests
         {
             var motor = new PlayerMotor(Spec());
             var jumped = 0;
-            motor.Jumped += () => jumped++;
+            motor.Jumped += _ => jumped++;
 
             motor.Step(Vector2.Zero, 0f, false, false, true, false, _dt);
 

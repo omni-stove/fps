@@ -147,9 +147,33 @@ namespace Shooter.Tests.EditMode
             Assert.That(content.ProgressionTuning, Is.SameAs(progression));
         }
 
+        [Test]
+        public void TheMinimapAssistAndRumbleTuningAreKeptAndStartEmpty()
+        {
+            var content = Content("A");
+
+            Assert.That(content.MinimapTuning, Is.Null);
+            Assert.That(content.AssistTuning, Is.Null);
+            Assert.That(content.RumbleTuning, Is.Null);
+
+            var minimap = Track(new TextAsset("{}"));
+            var assist = Track(new TextAsset("{}"));
+            var rumble = Track(new TextAsset("{}"));
+            content.MinimapTuning = minimap;
+            content.AssistTuning = assist;
+            content.RumbleTuning = rumble;
+
+            Assert.That(content.MinimapTuning, Is.SameAs(minimap));
+            Assert.That(content.AssistTuning, Is.SameAs(assist));
+            Assert.That(content.RumbleTuning, Is.SameAs(rumble));
+        }
+
         [TestCase("_streaksTuning", "Resources/Tuning/streaks")]
         [TestCase("_aimAssistTuning", "Resources/Tuning/aim-assist")]
         [TestCase("_progressionTuning", "Resources/Tuning/progression")]
+        [TestCase("_minimapTuning", "Resources/Tuning/minimap")]
+        [TestCase("_assistTuning", "Resources/Tuning/assist")]
+        [TestCase("_rumbleTuning", "Resources/Tuning/rumble")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);

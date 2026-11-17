@@ -405,6 +405,9 @@ namespace Shooter.NetV2
                     row.Team,
                     Math.Max(0, row.Kills),
                     Math.Max(0, row.Deaths),
+
+                    // スナップショットの行がまだアシスト数を運ばないので、届くようになるまで 0 にしておく
+                    0,
                     ScoreboardConnection.Connected,
                     row.PlayerId == _localId));
             }

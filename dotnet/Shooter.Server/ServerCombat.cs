@@ -99,7 +99,7 @@ namespace Shooter.Server
             _match = context.Match;
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
-            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles);
+            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles, _movement.Settings.Motor);
             _shotTrace = new ServerShotTrace(_hitboxes);
             _structures = new ServerStructures(context.Map, _log);
             var rules = _data.Rules;

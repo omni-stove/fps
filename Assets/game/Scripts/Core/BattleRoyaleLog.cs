@@ -5,48 +5,35 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の <c>[Mode]</c> 付きログの文言。参加者の出入りや状態・キルは <see cref="ModeLog"/> のものを使い、
-    /// ここにはダウン・蘇生・出血・全滅で倒れたこと・分隊の脱落と順位を置く。人は ID、分隊は陣営の ID の数字で書き、分からない人は <c>-</c>。
-    /// </summary>
     public static class BattleRoyaleLog
     {
         public const string Tag = ModeLog.Tag;
 
-        /// <example><c>[Mode] downed player=2 by=0</c>、ダウンさせた人が分からなければ <c>[Mode] downed player=2 by=-</c></example>
         public static string Downed(int playerId, int? downerId)
         {
             return Tag + " downed player=" + Number(playerId) + " by=" + Optional(downerId);
         }
 
-        /// <example><c>[Mode] revived player=2 by=3</c></example>
         public static string Revived(int reviverId, int playerId)
         {
             return Tag + " revived player=" + Number(playerId) + " by=" + Number(reviverId);
         }
 
-        /// <example><c>[Mode] bledout player=2 credit=0</c>、倒したことにする敵がいなければ <c>credit=-</c></example>
         public static string BledOut(int playerId, int? creditId)
         {
             return Tag + " bledout player=" + Number(playerId) + " credit=" + Optional(creditId);
         }
 
-        /// <summary>分隊に立っている人がいなくなり、ダウン中の人を倒した。</summary>
-        /// <example><c>[Mode] squad-wiped player=3 credit=0</c></example>
         public static string SquadWiped(int playerId, int? creditId)
         {
             return Tag + " squad-wiped player=" + Number(playerId) + " credit=" + Optional(creditId);
         }
 
-        /// <summary>分隊が脱落した。順位と、まだ残っている分隊の数を書く。</summary>
-        /// <example><c>[Mode] eliminated squad=2 place=3 remaining=2</c></example>
         public static string Eliminated(Side squad, int place, int remaining)
         {
             return Tag + " eliminated squad=" + Number(squad.Id) + " place=" + Number(place) + " remaining=" + Number(remaining);
         }
 
-        /// <summary>試合が終わったときの全分隊の順位。順位の昇順 (同じなら分隊の ID の昇順) に並べる。</summary>
-        /// <example><c>[Mode] placements winner=1 1:squad=1 2:squad=0 3:squad=2 3:squad=3</c>、引き分けなら <c>winner=draw</c></example>
         public static string Placements(BattleRoyaleSession session)
         {
             if (session == null)
@@ -65,8 +52,6 @@ namespace Shooter.Core
             return text.ToString();
         }
 
-        /// <summary>bot の用事 (<see cref="BotErrand"/>) が変わった。用事が無ければ行き先は書かない。</summary>
-        /// <example><c>[Mode] errand player=3 kind=Collect at=(4.00, 0.00, 12.00)</c>、用事が無ければ <c>[Mode] errand player=3 kind=None</c></example>
         public static string Errand(int playerId, BotErrandKind kind, Vector3 destination)
         {
             var text = Tag + " errand player=" + Number(playerId) + " kind=" + kind;
@@ -80,8 +65,6 @@ namespace Shooter.Core
                 + ", " + destination.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
         }
 
-        /// <summary>始めたときに上空からパラシュートで降ろそうとした (<see cref="BattleRoyaleStart.Parachute"/>)。開けなかったら地面から始める。</summary>
-        /// <example><c>[Mode] drop player=0 height=60.00 parachute=Open</c>、ルールで開けなければ <c>parachute=RuleOff</c></example>
         public static string Drop(int playerId, float height, ParachuteOpenVerdict verdict)
         {
             return Tag + " drop player=" + Number(playerId)

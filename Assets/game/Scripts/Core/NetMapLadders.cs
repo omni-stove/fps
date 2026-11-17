@@ -3,10 +3,8 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 つの対戦マップのはしご (<c>server-data/maps/&lt;マップ&gt;.ladders.json</c>)。NavMesh のリンクの両端からは幅・向き・調整値を作れないので、
-    /// Unity の Editor がシーンのはしごから書き出す (<see cref="Write"/>)。並びはシーンの階層順で、スナップショットははしごをこの並びの番号で指す。
-    /// </summary>
+    // NavMesh のリンクの両端からは幅・向き・調整値を作れないので、Unity の Editor がシーンのはしごから書き出したものを読む。
+    // 並びはシーンの階層順で、スナップショットははしごをこの並びの番号で指す。
     public sealed class NetMapLadders
     {
         public const string Extension = ".ladders.json";

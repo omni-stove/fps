@@ -4,29 +4,33 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>検索で見つかった専用サーバーのロビーから、つなぐものを選ぶ。</summary>
     public static class LobbySelector
     {
+        public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version)
+        {
+            return PickServer(lobbies, version, 1);
+        }
+
         /// <summary>
-        /// 専用サーバーが <c>-register-lobby</c> で載せたロビー (<see cref="ServerLobby"/>) のうち、つなげるものの中で
-        /// いちばん人数 (<see cref="ServerLobby.PlayersKey"/>) の多いもの (同じなら ID の順で先のもの) を返す。
-        /// つなげるのは <see cref="ServerRejection"/> が null のもの。
+        /// <see cref="PickServer(IReadOnlyList{LobbyInfo}, string)"/> と同じ選び方で、<paramref name="partySize"/> 人がまとめて入れるサーバーのロビーを返す。
         /// </summary>
         /// <param name="lobbies">検索結果。null の要素は無視する。</param>
         /// <param name="version">自分のビルドの版 (Application.version)。</param>
+        /// <param name="partySize">入る人数 (パーティならその人数。1 以上)。</param>
         /// <returns>つなぐサーバーのロビー。無ければ null。</returns>
-        public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version)
+        public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize)
         {
             if (lobbies == null)
             {
                 throw new ArgumentNullException(nameof(lobbies));
             }
 
+            ThrowIfInvalidPartySize(partySize);
             LobbyInfo best = null;
             long bestPlayers = 0;
             foreach (var lobby in lobbies)
             {
-                if (lobby == null || ServerRejection(lobby, version) != null)
+                if (lobby == null || ServerRejection(lobby, version, partySize) != null)
                 {
                     continue;
                 }
@@ -44,18 +48,31 @@ namespace Shooter.Core
             return best;
         }
 
+        public static string ServerRejection(LobbyInfo lobby, string version)
+        {
+            return ServerRejection(lobby, version, 1);
+        }
+
         /// <summary>
-        /// サーバーのロビーにつなげない理由。つなげるなら null。
-        /// 版 (<see cref="ServerLobby.VersionKey"/>) が自分と違う、人数 (<see cref="ServerLobby.PlayersKey"/>) が
-        /// ロビーの最大人数に達している、アドレス (<see cref="ServerLobby.ServerKey"/>) が無いか IPv4:port でない、のどれか。
+        /// <paramref name="partySize"/> 人で入るときに、サーバーのロビーにつなげない理由。つなげるなら null。
+        /// <see cref="ServerRejection(LobbyInfo, string)"/> の理由に加え、空きがあっても人数に足りなければ
+        /// <c>room for 2 (party of 3)</c> の形の理由を返す。
         /// </summary>
         /// <param name="lobby">検索で見つかったロビー。</param>
         /// <param name="version">自分のビルドの版 (Application.version)。空なら "0" として比べる。</param>
-        public static string ServerRejection(LobbyInfo lobby, string version)
+        /// <param name="partySize">入る人数 (1 以上)。</param>
+        public static string ServerRejection(LobbyInfo lobby, string version, int partySize)
         {
             if (lobby == null)
             {
                 throw new ArgumentNullException(nameof(lobby));
+            }
+
+            ThrowIfInvalidPartySize(partySize);
+
+            if (lobby.IsPrivate)
+            {
+                return "private";
             }
 
             // バケットにも版は入っているが、切り詰めた版が衝突したときや古いサーバーの残りを、属性でも弾く
@@ -80,25 +97,38 @@ namespace Shooter.Core
                 return "no player count";
             }
 
-            if (players >= lobby.MaxMembers)
+            var free = ServerLobby.PlayerSlots(lobby) - players;
+            if (free <= 0)
             {
                 return "full";
+            }
+
+            if (free < partySize)
+            {
+                return "room for " + free.ToString(CultureInfo.InvariantCulture)
+                    + " (party of " + partySize.ToString(CultureInfo.InvariantCulture) + ")";
             }
 
             return null;
         }
 
-        /// <summary>
-        /// つなげるサーバーが無かったときのログ・案内向けの理由。<c>no server to join among 3 found (full x2, version 0.2 (this build is 0.3) x1)</c> の形。
-        /// </summary>
+        public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version)
+        {
+            return DescribeNoServer(lobbies, version, 1);
+        }
+
+        /// <summary><paramref name="partySize"/> 人で入れるサーバーが無かったときの理由。形は <see cref="DescribeNoServer(IReadOnlyList{LobbyInfo}, string)"/> と同じ。</summary>
         /// <param name="lobbies">検索結果。null の要素は無視する。</param>
         /// <param name="version">自分のビルドの版。</param>
-        public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version)
+        /// <param name="partySize">入る人数 (1 以上)。</param>
+        public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize)
         {
             if (lobbies == null)
             {
                 throw new ArgumentNullException(nameof(lobbies));
             }
+
+            ThrowIfInvalidPartySize(partySize);
 
             var reasons = new List<string>();
             var counts = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -111,7 +141,7 @@ namespace Shooter.Core
                 }
 
                 found++;
-                var reason = ServerRejection(lobby, version);
+                var reason = ServerRejection(lobby, version, partySize);
                 if (reason == null)
                 {
                     continue;
@@ -141,6 +171,14 @@ namespace Shooter.Core
 
             return "no server to join among " + found.ToString(CultureInfo.InvariantCulture)
                 + " found (" + string.Join(", ", parts) + ")";
+        }
+
+        private static void ThrowIfInvalidPartySize(int partySize)
+        {
+            if (partySize < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(partySize), partySize, "must be at least 1");
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Shooter.Core.Tests
     {
         private const int _alpha = 1;
         private const int _bravo = 11;
+        private static readonly int[] _assisterAlpha2 = { _alpha + 1 };
 
         [Test]
         public void TheDefaultsAreTwoSidesOfEightAndOnePointPerKill()
@@ -16,6 +17,32 @@ namespace Shooter.Core.Tests
             Assert.That(spec.SideCount, Is.EqualTo(2));
             Assert.That(spec.SideCapacity, Is.EqualTo(8));
             Assert.That(spec.PointsPerKill, Is.EqualTo(1));
+            Assert.That(spec.PointsPerAssist, Is.Zero);
+        }
+
+        [Test]
+        public void AnAssistScoresPointsPerAssistForTheKillersTeam()
+        {
+            var match = new TeamDeathmatch(new TeamDeathmatchSpec(10, 60f, 3f, null, 2, 8, 2, 1));
+            match.AddPlayer(_alpha, Team.Alpha);
+            match.AddPlayer(_alpha + 1, Team.Alpha);
+            match.AddPlayer(_bravo, Team.Bravo);
+            match.Start();
+
+            match.ReportKill(_alpha, _bravo, _assisterAlpha2);
+
+            Assert.That(match.GetScore(Team.Alpha), Is.EqualTo(3));
+            Assert.That(match.GetAssists(_alpha + 1), Is.EqualTo(1));
+            Assert.That(match.GetAssists(_alpha), Is.Zero);
+        }
+
+        [Test]
+        public void ANegativePointsPerAssistIsRejected()
+        {
+            var error = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new TeamDeathmatchSpec(10, 60f, 3f, null, 2, 8, 1, -1));
+
+            Assert.That(error.ParamName, Is.EqualTo("pointsPerAssist"));
         }
 
         [Test]

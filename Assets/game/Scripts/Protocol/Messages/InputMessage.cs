@@ -9,7 +9,7 @@ namespace Shooter.Protocol
     /// </summary>
     public sealed class InputMessage : IMessage
     {
-        public const byte CurrentVersion = 2;
+        public const byte CurrentVersion = 3;
 
         /// <summary>1 つに載せる tick の最大数。</summary>
         public const int MaxFrames = 16;
@@ -87,7 +87,7 @@ namespace Shooter.Protocol
             {
                 writer.WriteVector2(_frames[i].Move);
                 writer.WriteSingle(_frames[i].Yaw);
-                writer.WriteByte((byte)_frames[i].Buttons);
+                writer.WriteUInt16((ushort)_frames[i].Buttons);
             }
         }
 
@@ -111,7 +111,13 @@ namespace Shooter.Protocol
             {
                 var move = reader.ReadFiniteVector2("move input");
                 var yaw = reader.ReadFiniteSingle("yaw");
-                var buttons = (InputButtons)reader.ReadByteBelow((int)InputButtons.All + 1, "input buttons");
+                var buttons = (InputButtons)reader.ReadUInt16();
+                if ((buttons & ~InputButtons.All) != 0)
+                {
+                    throw new MessageReadException(
+                        "input buttons " + ((int)buttons).ToString(CultureInfo.InvariantCulture) + " include an unknown button");
+                }
+
                 _frames[i] = new InputFrame(firstTick + i, move, yaw, buttons);
             }
 

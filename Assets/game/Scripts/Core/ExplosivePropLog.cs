@@ -3,16 +3,13 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>爆発する置き物 (<see cref="ExplosiveCharge"/>) の <c>[Explosive]</c> 付きログの文言。</summary>
     public static class ExplosivePropLog
     {
         public const string Tag = "[Explosive]";
 
-        /// <summary><see cref="Exploded"/> の行の始まり。smoke が爆発を見分けるのに使う。</summary>
+        // smoke が爆発の行を見分けるのに使うので、行の始まりを公開する。
         public const string ExplodedPrefix = Tag + " exploded ";
 
-        /// <summary>耐久が減ったが残っているとき。</summary>
-        /// <example><c>[Explosive] damaged id=Barrel_A dmg=10 hp=10/20</c></example>
         public static string Damaged(string id, int damage, ExplosiveCharge charge)
         {
             if (charge == null)
@@ -30,11 +27,6 @@ namespace Shooter.Core
                 charge.Spec.MaxHealth);
         }
 
-        /// <summary>
-        /// 耐久が 0 になり爆発を待ち始めたとき (step が <see cref="ExplosiveChargeStep.Triggered"/> か <see cref="ExplosiveChargeStep.Ignited"/>)。
-        /// 燃え始めたなら <c>ignited</c>、そうでなければ <c>triggered</c>。
-        /// </summary>
-        /// <example><c>[Explosive] ignited id=GasCan chained=true delay=2.00</c></example>
         public static string Triggered(string id, ExplosiveChargeStep step, ExplosiveCharge charge)
         {
             if (charge == null)
@@ -57,8 +49,6 @@ namespace Shooter.Core
                 charge.RemainingSeconds);
         }
 
-        /// <summary>爆発したとき。x, y, z は爆発の中心。</summary>
-        /// <example><c>[Explosive] exploded id=Barrel_B chained=true at=(-12.5, 0.5, 14.0) damaged=1 killed=1 structures=2</c></example>
         public static string Exploded(
             string id, bool chained, float x, float y, float z, int damaged, int killed, int structureHits)
         {
@@ -76,8 +66,6 @@ namespace Shooter.Core
                 structureHits);
         }
 
-        /// <summary>爆発が人 (Damageable) にダメージを与えたとき。</summary>
-        /// <example><c>[Explosive] hit id=Barrel_A target=Dummy dmg=150 distance=1.0</c></example>
         public static string Hit(string id, string targetId, int damage, float distance)
         {
             return string.Format(

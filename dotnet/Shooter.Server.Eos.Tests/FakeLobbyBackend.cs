@@ -20,6 +20,8 @@ namespace Shooter.Server.Eos.Tests
 
         public int CreatedMaxMembers { get; private set; }
 
+        public bool CreatedVoiceRoom { get; private set; }
+
         public IReadOnlyList<LobbyAttribute> CreatedAttributes { get; private set; }
 
         public string UpdatedLobbyId { get; private set; }
@@ -53,11 +55,12 @@ namespace Shooter.Server.Eos.Tests
             PendingLogin = done;
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        public void CreateLobby(string bucketId, int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             Creates++;
             CreatedBucket = bucketId;
             CreatedMaxMembers = maxMembers;
+            CreatedVoiceRoom = voiceRoom;
             CreatedAttributes = attributes;
             PendingCreate = done;
         }

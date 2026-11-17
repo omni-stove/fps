@@ -237,7 +237,7 @@ namespace Shooter.Tests.EditMode
                 new[] { WeaponCategory.Handgun },
             });
             var ledger = new ProgressionLedger(new ProgressionSpec(
-                100, 50, 250, 500, new[] { 0, 500, 1500, 3000 }, new[] { new ProgressionUnlock(_smg, 4) }));
+                100, 50, 50, 250, 500, new[] { 0, 500, 1500, 3000 }, new[] { new ProgressionUnlock(_smg, 4) }));
             var selection = new LoadoutSelection(rule, catalog, null, new[] { _rifle, _handgun }, id => id != _smg && id != _pistol);
             _panel.Dispose();
             _panel = new LoadoutSelectPanel(_container, selection, ledger);

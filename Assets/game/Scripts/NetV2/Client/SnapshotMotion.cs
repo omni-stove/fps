@@ -29,7 +29,11 @@ namespace Shooter.NetV2
                     : CharacterVaultState.None,
                 row.Prone,
                 row.Ladder,
-                knockback);
+                knockback,
+                CharacterLeanState.None,
+                CharacterSwimState.None,
+                CharacterWallRunState.None,
+                row.AirJumpsUsed);
         }
 
         // ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は入力で送らないので、

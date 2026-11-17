@@ -41,6 +41,7 @@ namespace Shooter.NetV2
         private readonly Dictionary<int, AreaEffectZone> _areaZones = new Dictionary<int, AreaEffectZone>();
         private readonly Dictionary<int, GameObject> _grenadeViews = new Dictionary<int, GameObject>();
         private readonly List<int> _goneGrenades = new List<int>();
+        private readonly List<INetV2ClientPart> _parts = new List<INetV2ClientPart>();
         private GrenadeCarrier _grenadeCarrier;
         private float _ownYaw;
         private NetV2Structures _structures;
@@ -75,6 +76,9 @@ namespace Shooter.NetV2
         public MatchClient Client => _client;
 
         public ClientMatch Match => _match;
+
+        /// <summary>自分のプレイヤーの視点と入力。自分の行が届いて予測を始めるまでと、マップを出た後は null。</summary>
+        public NetV2LocalPlayer LocalPlayer => _local;
 
         public GameObject GrenadePrefab { get; set; }
 
@@ -260,6 +264,7 @@ namespace Shooter.NetV2
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;
             _client.Disconnected += HandleDisconnected;
+            _parts.AddRange(NetV2ClientParts.Create(_client, SendReliable));
             if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
             {
                 Leave(ExitMisconfigured, AntiCheatSettings.LogTag + " " + antiCheatError);
@@ -349,6 +354,11 @@ namespace Shooter.NetV2
 
             StepOwner(Time.deltaTime);
             _weaponHooks.StatusEffects.Tick(Time.deltaTime);
+            foreach (var part in _parts)
+            {
+                part.Tick(Time.deltaTime);
+            }
+
             ShowRemotes();
             ShowGrenades();
             _weaponHooks.Projectiles.Tick(Time.deltaTime);
@@ -377,6 +387,12 @@ namespace Shooter.NetV2
                 _menu = null;
             }
 
+            foreach (var part in _parts)
+            {
+                part.Dispose();
+            }
+
+            _parts.Clear();
             _match?.Detach();
             _antiCheat?.End();
             _client?.Dispose();
@@ -915,6 +931,10 @@ namespace Shooter.NetV2
             _loadout.Apply(snapshot, _client.PlayerId);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
+            foreach (var part in _parts)
+            {
+                part.Apply(snapshot);
+            }
         }
 
         // リロードを始めた (サーバーの自動リロードを含む) ときにリロード音を鳴らす (Netcode の NetPlayer と同じ)
@@ -1056,13 +1076,26 @@ namespace Shooter.NetV2
                     _match?.Vehicles.Correct(corrected);
                     break;
                 default:
-                    if (!_weaponHooks.Handle(message))
+                    if (!_weaponHooks.Handle(message) && !HandleByParts(message))
                     {
                         _pings.Handle(message, Time.time);
                     }
 
                     break;
             }
+        }
+
+        private bool HandleByParts(IMessage message)
+        {
+            foreach (var part in _parts)
+            {
+                if (part.Handle(message))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void DrawBeam(BeamView beam)
@@ -1428,5 +1461,24 @@ namespace Shooter.NetV2
                 return true;
             }
         }
+    }
+
+    /// <summary>
+    /// <see cref="NetV2Client"/> に差し込む機能の部品 (チャット・投票・観戦など)。<see cref="NetV2ClientParts.Create"/> がつないだときに作り、
+    /// クライアントが消えるときに <see cref="IDisposable.Dispose"/> で後片付けする。
+    /// </summary>
+    public interface INetV2ClientPart : IDisposable
+    {
+        /// <summary>
+        /// サーバーから届いたメッセージのうち、<see cref="NetV2Client"/> と武器の受け口が受け持たなかったもの。
+        /// 受け持ったら true を返し、後の部品と印には渡さない。
+        /// </summary>
+        bool Handle(IMessage message);
+
+        /// <summary>マップに入った後に届いたスナップショット。</summary>
+        void Apply(SnapshotMessage snapshot);
+
+        /// <summary>マップに入った後の毎フレーム。</summary>
+        void Tick(float deltaSeconds);
     }
 }

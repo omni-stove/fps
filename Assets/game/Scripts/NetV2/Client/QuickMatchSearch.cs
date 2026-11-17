@@ -16,6 +16,7 @@ namespace Shooter.NetV2
         private Action<NetLaunchOptions> _ready;
         private Action<string> _failed;
         private Step _step;
+        private int _partySize = 1;
         private float _now;
         private string _lastRetryReason;
         private bool _disposed;
@@ -51,6 +52,19 @@ namespace Shooter.NetV2
 
         public void Begin(float now, Action<NetLaunchOptions> ready, Action<string> failed)
         {
+            Begin(now, 1, ready, failed);
+        }
+
+        /// <summary>
+        /// <paramref name="partySize"/> 人がまとめて入れるサーバーを探す手順を始める。空きが人数に足りないサーバーは選ばない。
+        /// <paramref name="ready"/> か <paramref name="failed"/> のどちらかを 1 回だけ呼ぶ。
+        /// </summary>
+        /// <param name="now">今の時刻 (秒)。<see cref="Tick"/> と同じ時計で渡す。</param>
+        /// <param name="partySize">入る人数 (パーティなら <see cref="PartySession.MatchPlayers"/>。1 以上)。</param>
+        /// <param name="ready">サーバーが決まったときに、つなぐ起動設定を受け取る。</param>
+        /// <param name="failed">諦めたときに理由を受け取る。</param>
+        public void Begin(float now, int partySize, Action<NetLaunchOptions> ready, Action<string> failed)
+        {
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(QuickMatchSearch));
@@ -61,12 +75,19 @@ namespace Shooter.NetV2
                 throw new InvalidOperationException("the quick match search has already begun");
             }
 
+            if (partySize < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(partySize), partySize, "must be at least 1");
+            }
+
             _ready = ready ?? throw new ArgumentNullException(nameof(ready));
             _failed = failed ?? throw new ArgumentNullException(nameof(failed));
+            _partySize = partySize;
             _now = now;
             _schedule.Start(now);
             _step = Step.LoggingIn;
-            _log(LogPrefix + "logging in to search " + BucketId);
+            _log(LogPrefix + "logging in to search " + BucketId
+                + (partySize == 1 ? "" : " for a party of " + partySize.ToString(CultureInfo.InvariantCulture)));
             _backend.Login(Once<string>(HandleLoggedIn));
         }
 
@@ -152,10 +173,10 @@ namespace Shooter.NetV2
 
             var found = lobbies ?? Array.Empty<LobbyInfo>();
             _log(LogPrefix + "found " + found.Count.ToString(CultureInfo.InvariantCulture) + " lobby(s) in " + BucketId);
-            var lobby = LobbySelector.PickServer(found, _version);
+            var lobby = LobbySelector.PickServer(found, _version, _partySize);
             if (lobby == null)
             {
-                Retry(LobbySelector.DescribeNoServer(found, _version));
+                Retry(LobbySelector.DescribeNoServer(found, _version, _partySize));
                 return;
             }
 
@@ -174,7 +195,7 @@ namespace Shooter.NetV2
             lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
             _step = Step.Ready;
             _log(LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
-                + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + lobby.MaxMembers.ToString(CultureInfo.InvariantCulture)
+                + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + ServerLobby.PlayerSlots(lobby).ToString(CultureInfo.InvariantCulture)
                 + "; connecting " + options);
             _ready(options);
         }

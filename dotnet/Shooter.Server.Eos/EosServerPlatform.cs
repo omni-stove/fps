@@ -81,6 +81,8 @@ namespace Shooter.Server.Eos
                         IsServer = false,
                         Flags = PlatformFlags.DisableOverlay | PlatformFlags.DisableSocialOverlay,
                         CacheDirectory = cacheDirectory,
+                        // null のままだと RTC が無効になり、RTC 部屋を開くロビーを作れない
+                        RTCOptions = new RTCOptions(),
                     };
                     platform = PlatformInterface.Create(ref options);
                 }

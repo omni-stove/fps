@@ -17,11 +17,15 @@ namespace Shooter.Server
         private readonly IWorldCollision _world;
         private readonly LagCompensator _lag;
         private readonly List<int> _ids = new List<int>();
+        private readonly List<(int Id, RewoundBody Body)> _rewound = new List<(int Id, RewoundBody Body)>();
         private readonly ServerVehicles _vehicles;
+        private readonly MotorSpec _motor;
 
-        public ServerHitboxes(ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null)
+        public ServerHitboxes(
+            ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null, MotorSpec motor = null)
         {
             _vehicles = vehicles;
+            _motor = motor ?? MotorSpec.Default;
             _bodies = bodies ?? throw new ArgumentNullException(nameof(bodies));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _lag = lag ?? new LagCompensator();
@@ -44,7 +48,8 @@ namespace Shooter.Server
             {
                 if (body.HasSpawned)
                 {
-                    _lag.Record(tick, body.PlayerId, body.Position, body.Stance != PlayerStance.Standing);
+                    _lag.Record(
+                        tick, body.PlayerId, body.Position, body.Stance != PlayerStance.Standing, LeanStep.EyeOffset(body.Lean, body.Yaw, _motor));
                 }
             }
 
@@ -66,7 +71,8 @@ namespace Shooter.Server
             }
 
             var crouched = _lag.RewindCrouched(clamped).TryGetValue(playerId, out var c) && c;
-            center = position + new Vector3(0f, _bodies.Geometry.Shape(crouched).CenterY, 0f);
+            var lean = _lag.RewindLean(clamped).TryGetValue(playerId, out var l) ? l : Vector3.Zero;
+            center = Rewound(position, crouched, lean).Center;
             return true;
         }
 
@@ -168,44 +174,74 @@ namespace Shooter.Server
 
             var clamped = _lag.ClampTick(tick, LastRecordedTick);
             found |= NearerVehicle(origin, unit, found ? hit.Distance : range, clamped, shooterId, ref hit);
-            var rewound = _lag.Rewind(clamped);
+            foreach (var (id, body) in RewindBodies(clamped, shooterId, hittable))
+            {
+                var limit = found ? hit.Distance : range;
+                var thickness = radius > 0f && StartsGrazing(origin, body.Bottom, body.Top, body.Radius, radius) ? 0f : radius;
+
+                // 球と体のカプセルが触れるのは、球の中心の線が体を弾の半径だけ太らせたカプセルに触れるとき
+                if (!RayCapsule(origin, unit, body.Bottom, body.Top, body.Radius + thickness, limit, out var distance, out var normal))
+                {
+                    continue;
+                }
+
+                var point = origin + (unit * distance) - (normal * thickness);
+                hit = ShotHit.Target(point, normal, distance, id, body.Position, body.Crouched, body.Zone(point));
+                found = true;
+            }
+
+            hit = hit.WithRewind(LastRecordedTick - clamped);
+            return found;
+        }
+
+        private List<(int Id, RewoundBody Body)> RewindBodies(float clamped, int shooterId, Func<int, bool> hittable)
+        {
+            var positions = _lag.Rewind(clamped);
             var crouched = _lag.RewindCrouched(clamped);
+            var leans = _lag.RewindLean(clamped);
             _ids.Clear();
             foreach (var body in _bodies.All)
             {
                 _ids.Add(body.PlayerId);
             }
 
-            var geometry = _bodies.Geometry;
+            _rewound.Clear();
             foreach (var id in _ids)
             {
-                if (id == shooterId || !rewound.TryGetValue(id, out var position) || !hittable(id))
+                if (id == shooterId || !positions.TryGetValue(id, out var position) || !hittable(id))
                 {
                     continue;
                 }
 
                 var isCrouched = crouched.TryGetValue(id, out var c) && c;
-                var shape = geometry.Shape(isCrouched);
-                geometry.SphereCenters(shape, out var bottomY, out var topY);
-                var p = position + new Vector3(0f, bottomY, 0f);
-                var q = position + new Vector3(0f, topY, 0f);
-                var limit = found ? hit.Distance : range;
-                var thickness = radius > 0f && StartsGrazing(origin, p, q, geometry.Radius, radius) ? 0f : radius;
-
-                // 球と体のカプセルが触れるのは、球の中心の線が体を弾の半径だけ太らせたカプセルに触れるとき
-                if (!RayCapsule(origin, unit, p, q, geometry.Radius + thickness, limit, out var distance, out var normal))
-                {
-                    continue;
-                }
-
-                var point = origin + (unit * distance) - (normal * thickness);
-                var bottom = position.Y + shape.CenterY - (shape.Height / 2f);
-                hit = ShotHit.Target(point, normal, distance, id, position, isCrouched, Zone(point.Y, bottom, shape.Height));
-                found = true;
+                var lean = leans.TryGetValue(id, out var l) ? l : Vector3.Zero;
+                _rewound.Add((id, Rewound(position, isCrouched, lean)));
             }
 
-            hit = hit.WithRewind(LastRecordedTick - clamped);
-            return found;
+            return _rewound;
+        }
+
+        // 回す角度を MotorSpec.LeanAngleDegrees (見た目の体の角度) にしないのは、傾けた人の目 (カメラと撃つ位置) は LeanStep.EyeOffset だけずれるので、
+        // 頭の当たりもその目の所へ合わせるため
+        private RewoundBody Rewound(Vector3 position, bool crouched, Vector3 lean)
+        {
+            var geometry = _bodies.Geometry;
+            var shape = geometry.Shape(crouched);
+            geometry.SphereCenters(shape, out var bottomY, out var topY);
+            var feetY = shape.CenterY - (shape.Height / 2f);
+            var feet = position + new Vector3(0f, feetY, 0f);
+            var up = Vector3.UnitY;
+            var side = new Vector3(lean.X, 0f, lean.Z);
+            var shift = side.Length();
+            var eye = shape.EyeY - feetY;
+            if (shift > 1e-6f && eye > 1e-4f)
+            {
+                var sin = Math.Min(shift / eye, 1f);
+                up = (side / shift * sin) + (Vector3.UnitY * MathF.Sqrt(1f - (sin * sin)));
+            }
+
+            return new RewoundBody(
+                position, crouched, shape, feet, up, feet + (up * (bottomY - feetY)), feet + (up * (topY - feetY)), geometry.Radius);
         }
 
         // 車体は人より手前で弾を止めるので、人の当たりより先に、世界の当たりと比べて近い方を残す。
@@ -322,6 +358,46 @@ namespace Shooter.Server
         private static bool IsFinite(Vector3 v)
         {
             return float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
+        }
+
+        private readonly struct RewoundBody
+        {
+            public RewoundBody(
+                Vector3 position, bool crouched, StanceShape shape, Vector3 feet, Vector3 up, Vector3 bottom, Vector3 top, float radius)
+            {
+                Position = position;
+                Crouched = crouched;
+                Shape = shape;
+                Feet = feet;
+                Up = up;
+                Bottom = bottom;
+                Top = top;
+                Radius = radius;
+            }
+
+            public Vector3 Position { get; }
+
+            public bool Crouched { get; }
+
+            public StanceShape Shape { get; }
+
+            public Vector3 Feet { get; }
+
+            public Vector3 Up { get; }
+
+            public Vector3 Bottom { get; }
+
+            public Vector3 Top { get; }
+
+            public float Radius { get; }
+
+            public Vector3 Center => Feet + (Up * (Shape.Height / 2f));
+
+            // 傾けた体でも頭と足を分けられるよう、高さではなく体の軸に沿った足元からの長さで分ける
+            public HitZone Zone(Vector3 point)
+            {
+                return ServerHitboxes.Zone(Vector3.Dot(point - Feet, Up), 0f, Shape.Height);
+            }
         }
     }
 

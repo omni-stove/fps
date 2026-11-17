@@ -3,18 +3,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 二人で使う物 (<see cref="CoopInteractable"/>) の使い方の例。済んだら扉の板 (<see cref="Panel"/>) を
-    /// <see cref="OpenOffset"/> だけ <see cref="OpenSeconds"/> かけて動かし、通れるようにする。
-    /// 板は自分の Collider ごと動くので、通れるかどうかは板の位置だけで決まる。
-    /// 二人で使う物に値のアセット (<see cref="CoopInteractable.Definition"/>) があれば、動かす量と秒数は自分の値の代わりにそれを読む。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class CoopDoor : MonoBehaviour
     {
         public const string LogTag = CoopInteractable.LogTag;
 
-        /// <summary>板を真上に引き上げる。</summary>
         public static readonly Vector3 DefaultOpenOffset = new Vector3(0f, 3f, 0f);
 
         public const float DefaultOpenSeconds = 1f;
@@ -38,7 +31,6 @@ namespace Shooter.Runtime
         private Vector3 _activeOffset;
         private float _activeSeconds;
 
-        /// <summary>済んだら開く二人で使う物。差し替えたら <see cref="Bind"/> し直す。</summary>
         public CoopInteractable Interactable
         {
             get => _interactable;
@@ -51,14 +43,12 @@ namespace Shooter.Runtime
             set => _panel = value;
         }
 
-        /// <summary>Inspector の動かす量。二人で使う物に値のアセットがあれば、開くときはそちらを使う。</summary>
         public Vector3 OpenOffset
         {
             get => _openOffset;
             set => _openOffset = value;
         }
 
-        /// <summary>Inspector の開き切るまでの秒数。二人で使う物に値のアセットがあれば、開くときはそちらを使う。</summary>
         public float OpenSeconds
         {
             get => _openSeconds;
@@ -73,10 +63,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>開き始めたら true (開き切る前も含む)。</summary>
         public bool IsOpening { get; private set; }
 
-        /// <summary>開き切ったら true。</summary>
         public bool IsOpen { get; private set; }
 
         private void Start()
@@ -97,10 +85,6 @@ namespace Shooter.Runtime
             Advance(Time.deltaTime);
         }
 
-        /// <summary>
-        /// <see cref="Interactable"/> (空なら同じ GameObject のもの) の <see cref="CoopInteractable.Completed"/> を受けるようにする。
-        /// 二人で使う物か板が無いか、二人で使う物の <see cref="CoopInteractable.Definition"/> の扉の値が不正なら理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool Bind()
         {
             Unbind();
@@ -132,11 +116,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 開き始める。既に開き始めていれば何もせず false を返す。動かす量と秒数は二人で使う物の <see cref="CoopInteractable.Definition"/>、
-        /// 無ければ <see cref="OpenOffset"/>・<see cref="OpenSeconds"/> で、秒数が 0 ならすぐ開き切る。
-        /// アセットの扉の値が不正なら理由を Debug.LogError に出して開かずに false を返す。
-        /// </summary>
         public bool Open()
         {
             if (IsOpening || _panel == null)
@@ -164,7 +143,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>開いている途中なら deltaSeconds だけ板を動かす (Update から呼ぶ)。</summary>
         public void Advance(float deltaSeconds)
         {
             if (!IsOpening || IsOpen || _panel == null)

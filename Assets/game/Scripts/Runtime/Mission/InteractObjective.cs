@@ -4,15 +4,9 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーがトリガーの Collider の中で Interact (キーボードは E の長押し) を行ったら目標を進める。
-    /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="InteractActionPath"/> を
-    /// コードで解決するので、Inspector の配線は要らない。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class InteractObjective : ObjectiveAreaBase
     {
-        /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -20,7 +14,6 @@ namespace Shooter.Runtime
         private InputAction _interactAction;
         private bool _enabledInteractAction;
 
-        /// <summary>読んでいる Interact アクション。未解決なら null。</summary>
         public InputAction InteractAction => _interactAction;
 
         protected override ObjectiveZoneMode Mode => ObjectiveZoneMode.Interact;
@@ -56,9 +49,6 @@ namespace Shooter.Runtime
             Unsubscribe();
         }
 
-        /// <summary>
-        /// 入力を経ずに操作したことにする。範囲の中にプレイヤーがいて目標が Active なら進めて true を返す。
-        /// </summary>
         public bool Interact()
         {
             if (Zone == null)

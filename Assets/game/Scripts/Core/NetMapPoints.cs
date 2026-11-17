@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 つの対戦マップの出現地点と拠点 (<c>server-data/maps/&lt;マップ&gt;.points.json</c>)。Unity 抜きのサーバーはシーンを読めないので、
-    /// Unity の Editor がシーンの目印から書き出す (<see cref="Write"/>)。
-    /// </summary>
+    // Unity 抜きのサーバーはシーンを読めないので、Unity の Editor がシーンの目印から書き出したものを読む。
     public sealed class NetMapPoints
     {
         public const string Extension = ".points.json";
@@ -32,7 +29,7 @@ namespace Shooter.Core
             ControlPoints = new List<ControlPointArea>(controlPoints ?? throw new ArgumentNullException(nameof(controlPoints))).AsReadOnly();
         }
 
-        /// <summary>並びはシーンの階層順。<see cref="SpawnSelector"/> の同点の決め手になるので並べ替えない。</summary>
+        // 並びはシーンの階層順。SpawnSelector の同点の決め手になるので並べ替えない。
         public IReadOnlyList<SpawnPoint> SpawnPoints { get; }
 
         public IReadOnlyList<ControlPointArea> ControlPoints { get; }

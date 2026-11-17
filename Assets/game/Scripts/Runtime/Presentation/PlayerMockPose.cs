@@ -64,6 +64,11 @@ namespace Shooter.Runtime
         // 真横 (90) だと体が床にめり込むので少し手前で止める。
         public const float DownedRollDegrees = 80f;
 
+        // 真横 (90) まで倒すと、足元を軸に回した体が水面より下へ沈むので少し起こす。
+        public const float SwimPitchDegrees = 70f;
+
+        public const float WallRunTiltDegrees = 20f;
+
         public const float CoverShift = 0.2f;
 
         public const float BodyKickDistance = 0.08f;
@@ -154,6 +159,59 @@ namespace Shooter.Runtime
             }
 
             return Quaternion.identity;
+        }
+
+        public static Quaternion BodyLean(
+            PlayerActionState state, Vector3 localMove, Vector3 localCoverNormal, CharacterMotorState motor, float leanAngleDegrees)
+        {
+            if (state.IsDowned || state.IsVaulting || state.IsDodging || state.IsInCover)
+            {
+                return BodyLean(state, localMove, localCoverNormal);
+            }
+
+            return TraversalLean(motor, leanAngleDegrees);
+        }
+
+        public static Quaternion TraversalLean(CharacterMotorState motor, float leanAngleDegrees)
+        {
+            return TraversalLean(motor.Lean.Amount, motor.IsSwimming, motor.WallRun.Side, leanAngleDegrees);
+        }
+
+        public static Quaternion TraversalLean(CharacterPoseParameters parameters, float leanAngleDegrees)
+        {
+            return TraversalLean(parameters.Lean, parameters.Swimming, (WallRunSide)parameters.WallRun, leanAngleDegrees);
+        }
+
+        public static Quaternion TraversalLean(float lean, bool swimming, WallRunSide wallRun, float leanAngleDegrees)
+        {
+            if (!(lean >= -1f && lean <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be between -1 and 1");
+            }
+
+            if (!(leanAngleDegrees >= 0f && leanAngleDegrees <= 90f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(leanAngleDegrees), leanAngleDegrees, "leanAngleDegrees must be between 0 and 90");
+            }
+
+            switch (wallRun)
+            {
+                case WallRunSide.Left:
+                    return LeanToward(Vector3.right, WallRunTiltDegrees);
+                case WallRunSide.Right:
+                    return LeanToward(Vector3.left, WallRunTiltDegrees);
+                case WallRunSide.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(wallRun), wallRun, "wallRun is not a defined WallRunSide");
+            }
+
+            if (swimming)
+            {
+                return Quaternion.Euler(SwimPitchDegrees, 0f, 0f);
+            }
+
+            return LeanToward(Vector3.right, leanAngleDegrees * lean);
         }
 
         public static Vector3 BodyShift(PlayerActionState state, Vector3 localCoverNormal)

@@ -6,35 +6,18 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 弾で壊せる建物。子孫の <see cref="DestructiblePiece"/> を部品として、耐久値と崩落の判断は <see cref="StructureIntegrity"/> に任せる。
-    /// 部品の隣接は、部品のコライダーの範囲を <see cref="AdjacencyMargin"/> だけ広げて重なる組とみなして組み立て時に作る (手で設定しない)。
-    /// 組み立ては Awake か最初に触れたときに行うので、Awake が走らない Edit Mode でも使える。
-    /// 部品が壊れる (直接でも崩落でも) と、部品の当たり判定・見た目・NavMeshObstacle を無効にし、<see cref="DebrisPool"/> に破片を出す。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item><see cref="DestructionEnabled"/> が false (既定) の間は弾が当たっても何もしない。</item>
-    /// <item><see cref="HasAuthority"/> が false (ネットのクライアント) の間はダメージを無視し、<see cref="ApplyDestroyedBitset"/> だけを反映する。</item>
-    /// <item><see cref="DebrisCrushEnabled"/> が false (既定) の間は、破片はキャラクターに当たってもダメージを与えない。</item>
-    /// </list>
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class DestructibleStructure : MonoBehaviour, IStructureHittable
     {
         public const string LogTag = "[Destruction]";
 
-        /// <summary>隣接とみなすために、部品のコライダーの範囲を各方向へ広げる量 (m)。</summary>
         public const float AdjacencyMargin = 0.05f;
 
-        /// <summary>直接壊れた部品 1 つから出す小さな破片の数。</summary>
         public const int FragmentsPerDestroyedPiece = 4;
 
-        /// <summary>小さな破片の一辺の上限と下限 (m)。部品の一番短い辺の半分を、この範囲に収める。</summary>
         public const float MaxFragmentSize = 0.3f;
         public const float MinFragmentSize = 0.05f;
 
-        /// <summary>小さな破片を着弾点から遠ざける速さ (m/s)。</summary>
         public const float FragmentSpeed = 3f;
 
         [SerializeField, Tooltip("弾で壊れるか。false の間は当たっても何もしない")]
@@ -66,54 +49,39 @@ namespace Shooter.Runtime
         private readonly Dictionary<Collider, int> _pieceByCollider = new Dictionary<Collider, int>();
         private bool _buildFailed;
 
-        /// <summary>
-        /// 権威側で部品が壊れたときに、<see cref="StructureIntegrity.ApplyDamage"/> の結果を渡して呼ばれる。
-        /// 部品の見た目を消して破片を出した後に呼ぶ。<see cref="ApplyDestroyedBitset"/> では呼ばない。
-        /// </summary>
         public event Action<StructureDamageResult> PiecesDestroyed;
 
-        /// <summary>弾で壊れるか。既定は false。</summary>
         public bool DestructionEnabled
         {
             get => _destructionEnabled;
             set => _destructionEnabled = value;
         }
 
-        /// <summary>ダメージを計算する側か。既定は true。false ならダメージを無視する。</summary>
         public bool HasAuthority
         {
             get => _hasAuthority;
             set => _hasAuthority = value;
         }
 
-        /// <summary>壊れたときに破片を出すか。既定は true。見た目の要らない専用サーバーでは false にする。</summary>
         public bool SpawnDebris
         {
             get => _spawnDebris;
             set => _spawnDebris = value;
         }
 
-        /// <summary>破片を出す先。未設定なら最初に破片を出すときに <see cref="DebrisPool.GetOrCreate"/> で決める。</summary>
         public DebrisPool DebrisPool
         {
             get => _debrisPool;
             set => _debrisPool = value;
         }
 
-        /// <summary>
-        /// 権威側で壊したときの破片が、キャラクターに当たるとダメージを与えるか。既定は false (破片は見た目だけ)。
-        /// true なら破片に <see cref="DebrisCrusher"/> を付け、壊した時の帰属 (<see cref="CombatEvents.CurrentAttribution"/>) を持ち越す。
-        /// <see cref="ApplyDestroyedBitset"/> で出す破片には付けない (ダメージは権威側だけが計算する)。
-        /// </summary>
+        // ApplyDestroyedBitset で出す破片に DebrisCrusher を付けないのは、ダメージを権威側だけが計算するため。
         public bool DebrisCrushEnabled
         {
             get => _debrisCrushEnabled;
             set => _debrisCrushEnabled = value;
         }
 
-        /// <summary>破片が当たったときのダメージの出し方。読むたびに今の設定から作る。</summary>
-        /// <exception cref="ArgumentNullException">null を設定した。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Inspector で不正な値 (負の値・有限でない値) にされている。</exception>
         public DebrisCrushDamage CrushDamage
         {
             get => new DebrisCrushDamage(_crushMinSpeed, _crushDamagePerMomentum, _crushMaxDamage);
@@ -130,7 +98,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>部品の耐久値と壊れたかどうか。初めて触れたときに組み立てる。部品の設定が不正なら例外を投げる。</summary>
+        // Awake が走らない Edit Mode でも使えるよう、初めて触れたときにも組み立てる。
         public StructureIntegrity Integrity
         {
             get
@@ -144,7 +112,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>部品。添字の順に並ぶ。初めて触れたときに組み立てる。</summary>
         public IReadOnlyList<DestructiblePiece> Pieces
         {
             get
@@ -154,7 +121,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>壊れている部品の集合 (<see cref="StructureIntegrity.ToBitset"/>)。ネットの同期に使う。</summary>
         public ulong[] DestroyedBitset => Integrity.ToBitset();
 
         private void Awake()
@@ -168,11 +134,6 @@ namespace Shooter.Runtime
             TryEnsureBuilt();
         }
 
-        /// <summary>
-        /// 子孫の部品を集め直し、すべて壊れていない状態に戻して、隣接を作り直す。部品を足したり動かしたりした後に呼ぶ。
-        /// 部品の設定が不正なら例外を投げ、前の耐久値の状態を残す (部品の見た目は壊れていない状態に戻っていることがある)。
-        /// 範囲の求まらない非アクティブな部品は、どの部品とも隣接しない。
-        /// </summary>
         public void Build()
         {
             var pieces = CollectPieces();
@@ -196,13 +157,7 @@ namespace Shooter.Runtime
             _buildFailed = false;
         }
 
-        /// <summary>
-        /// collider の部品に damage の被害を与える。<see cref="DestructionEnabled"/> が false か <see cref="HasAuthority"/> が false なら何もしない。
-        /// この建物の部品でないコライダーなら何もしない。部品が壊れたら見た目を消し、破片を出し、ログを出して <see cref="PiecesDestroyed"/> を呼ぶ。
-        /// <see cref="DebrisCrushEnabled"/> なら、呼ばれた時の <see cref="CombatEvents.CurrentAttribution"/> を壊した者として破片に持たせる
-        /// (撃つ側は <see cref="CombatEvents.Attribute(GameObject, string)"/> で囲んで呼ぶ)。
-        /// 部品の設定が不正で組み立てられないときは、エラーを 1 度ログに出して以後は何もしない (撃った側を止めないため)。
-        /// </summary>
+        // 部品の設定が不正で組み立てられないときに投げないのは、撃った側を止めないため。エラーを 1 度ログに出して以後は何もしない。
         public void ApplyStructureHit(Collider collider, Vector3 point, int damage)
         {
             if (damage < 0)
@@ -241,12 +196,6 @@ namespace Shooter.Runtime
             PiecesDestroyed?.Invoke(result);
         }
 
-        /// <summary>
-        /// 権威側から受け取った壊れた部品の集合 (<see cref="DestroyedBitset"/> の形) をそのまま反映する。崩落の計算はしない。
-        /// 新たに壊れた部品は見た目を消して破片を出し、壊れていないことになった部品は元に戻す。
-        /// <see cref="DestructionEnabled"/> と <see cref="HasAuthority"/> に関わらず反映する。
-        /// </summary>
-        /// <param name="bitset">要素数は <see cref="StructureIntegrity.BitsetLength"/>。部品数以降のビットは 0。不正なら例外を投げ、状態は変えない。</param>
         public void ApplyDestroyedBitset(ulong[] bitset)
         {
             var integrity = Integrity;
@@ -290,13 +239,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>権威側で部品が壊れたときのログ。</summary>
         public static string FormatDestroyedLog(string structureName, IReadOnlyList<int> destroyed, IReadOnlyList<int> collapsed)
         {
             return $"{LogTag} structure={structureName} destroyed={FormatIds(destroyed)} collapsed={FormatIds(collapsed)}";
         }
 
-        /// <summary><see cref="ApplyDestroyedBitset"/> で状態が変わったときのログ。</summary>
         public static string FormatSyncedLog(string structureName, IReadOnlyList<int> destroyed, IReadOnlyList<int> restored)
         {
             return $"{LogTag} structure={structureName} synced destroyed={FormatIds(destroyed)} restored={FormatIds(restored)}";

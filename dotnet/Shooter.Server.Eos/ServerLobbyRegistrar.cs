@@ -218,8 +218,10 @@ namespace Shooter.Server.Eos
 
             _step = Step.Creating;
             var players = _players;
+            // ServerLobby.Attributes が voice_enabled=1 を載せるので、RTC 部屋もいつも開く
             _service.CreateLobby(
-                _maxPlayers,
+                ServerLobby.MaxMembers(_maxPlayers),
+                true,
                 ServerLobby.Attributes(_endpoint, _version, players),
                 (lobby, error) => HandleCreated(lobby, error, players));
         }

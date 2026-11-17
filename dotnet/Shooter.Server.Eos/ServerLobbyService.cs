@@ -95,13 +95,17 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        public void CreateLobby(int maxPlayers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        /// <param name="maxMembers">オーナーのサーバーを含むメンバーの上限 (<see cref="ServerLobby.MaxMembers"/>)。</param>
+        /// <param name="voiceRoom">RTC 部屋を開き、入ったメンバーがボイスで話せるようにするか。</param>
+        /// <param name="attributes">作った直後に付ける公開の属性。</param>
+        /// <param name="done">作ったロビーか、失敗の理由を受け取る。</param>
+        public void CreateLobby(int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
-            if (maxPlayers < LobbyLaunchOptions.MinMaxPlayers || maxPlayers > LobbyLaunchOptions.MaxMaxPlayers)
+            if (maxMembers < LobbyLaunchOptions.MinMaxPlayers || maxMembers > LobbyLaunchOptions.MaxMaxPlayers)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(maxPlayers), maxPlayers,
+                    nameof(maxMembers), maxMembers,
                     "must be between " + LobbyLaunchOptions.MinMaxPlayers + " and " + LobbyLaunchOptions.MaxMaxPlayers);
             }
 
@@ -118,7 +122,7 @@ namespace Shooter.Server.Eos
             }
 
             _operation = Operation.Create;
-            _backend.CreateLobby(_bucketId, maxPlayers, copied, Once<LobbyInfo>((lobby, error) =>
+            _backend.CreateLobby(_bucketId, maxMembers, voiceRoom, copied, Once<LobbyInfo>((lobby, error) =>
             {
                 _operation = Operation.None;
                 if (error == null && lobby == null)
@@ -136,6 +140,7 @@ namespace Shooter.Server.Eos
 
                 Current = lobby;
                 _log.WriteLine(LogPrefix + "created id=" + lobby.Id + " max=" + lobby.MaxMembers + " owner=" + lobby.OwnerUserId
+                    + (voiceRoom ? " rtc=on" : "")
                     + (copied.Length == 0 ? "" : " " + Describe(copied)));
                 _log.WriteLine(LogPrefix + "members=" + lobby.DescribeMembers() + " id=" + lobby.Id);
                 if (!_leaveWhenSettled)

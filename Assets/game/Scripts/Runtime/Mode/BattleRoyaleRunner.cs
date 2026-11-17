@@ -6,44 +6,20 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) をシーンで進める。分隊 (<see cref="Squads"/>) で戦い、倒れた人は戻らず、最後に残った分隊が勝つ。
-    /// 分隊の数と人数・制限時間・bot の用事を決め直す間隔と探す半径・パラシュートで降ろす高さは、
-    /// <see cref="Definition"/>、入口 (<see cref="GameContent.BattleRoyale"/>)、Inspector の値の順で読む。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>始めたとき、<see cref="StartsUnarmed"/> なら全員の武器を手放させ (<see cref="WeaponController.Disarm"/>・<see cref="EnemyAgent.Disarm"/>)、
-    /// シーンの拾える物 (<see cref="PickupSpawnPoint"/> など) から拾って戦わせる。</item>
-    /// <item>始めたとき、<see cref="Zone"/> (無ければシーンの <see cref="ShrinkingZone"/>) を参加者だけを相手に始め、終わったら止める。エリアは自分の Update で進む。</item>
-    /// <item>参加者の体力が 0 になったら、分隊にほかに立っている人がいればダウンさせ (<see cref="Damageable.IsDowned"/>)、操作を止める。
-    /// プレイヤーは Interact (キーボードは E、ゲームパッドは Y) を押し続けると ルールの <see cref="ActionRules.ReviveRange"/> 以内のダウンした分隊の味方を起こし、
-    /// bot は範囲にダウンした分隊の味方がいれば起こす。</item>
-    /// <item>倒れて戻らなくなった人 (分隊が全滅した・出血した) は、持っていた武器と <see cref="DropOnDeath.Drops"/> を <see cref="DropOnDeath"/> で足元に落とす。
-    /// ダウンしただけでは落とさない (起こされたら持ったまま戦うので)。DropOnDeath が無い参加者には始めたときに付ける。</item>
-    /// <item>bot には <see cref="EffectiveBotPlanIntervalSeconds"/> ごとに <see cref="BattleRoyaleBotPlanner"/> で用事 (エリアの中へ移る・味方を起こす・拾える物を取る) を決めて渡す
-    /// (<see cref="EnemyAgent.SetErrand"/>)。用事が変わるたびに <c>[Mode] errand</c> のログを出す。</item>
-    /// <item>HUD に出す分隊ごとの残り人数と順位・エリアの様子・自分が起こしている相手・武器を持っているかは <see cref="BattleRoyaleStatus"/> にして渡す。</item>
-    /// <item>分隊が脱落するたびに <c>[Mode] eliminated</c>、終わったら <c>[Mode] ended</c> と全分隊の順位 <c>[Mode] placements</c> のログ (<see cref="BattleRoyaleLog"/>) を出す。</item>
-    /// <item>ダウン・ルールはシーンの <see cref="GameBootstrap"/> のルールから読む。ダウンを使わないルールでも、このモードはダウンを使う。</item>
-    /// <item><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> なら、始めたときにプレイヤーを上空に出してパラシュートで降ろす (<c>[Mode] drop</c>)。既定は地面から。</item>
-    /// </list>
-    /// </remarks>
+    // ダウンしただけでは持ち物を落とさないのは、起こされたら持ったまま戦うため。
     public sealed class BattleRoyaleRunner : ModeRunnerBase
     {
         public const int DefaultSquadCount = BattleRoyaleSession.DefaultSquadCount;
         public const int DefaultSquadSize = BattleRoyaleSession.DefaultSquadSize;
 
-        /// <summary>制限時間の既定値。0 は制限なし (縮むエリアで決着させる)。</summary>
+        // 既定は制限なしにし、縮むエリアで決着させる。
         public const float DefaultTimeLimitSeconds = 0f;
 
-        /// <summary>bot の用事を決め直す既定の間隔 (秒)。毎フレーム拾える物を探すと重いので間をあける。</summary>
+        // 毎フレーム拾える物を探すと重いので、bot の用事を決め直すのは間をあける。
         public const float DefaultBotPlanIntervalSeconds = 0.5f;
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
-        /// <summary><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> のとき、出現点からどれだけ上に出すか (m) の既定値。</summary>
         public const float DefaultDropHeight = 60f;
 
         [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の分隊の数と人数・制限時間・bot の間隔と半径・降ろす高さの代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
@@ -90,28 +66,22 @@ namespace Shooter.Runtime
         private int? _localReviveTarget;
         private float _untilBotPlan;
 
-        /// <summary>進めているバトルロイヤル。開始前は null。</summary>
         public BattleRoyaleSession BattleRoyale => _battleRoyale;
 
         public override bool HasSquads => true;
 
-        /// <summary>動かしている縮むエリア。無ければ null。</summary>
         public ShrinkingZone RunningZone => _runningZone;
 
-        /// <summary>この画面で操作しているプレイヤーがいま起こしている相手。起こしていなければ null。</summary>
         public SideMember LocalReviveTarget => _localReviveTarget.HasValue ? MemberOf(_localReviveTarget.Value) : null;
 
-        /// <summary>調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値で始める。</summary>
         public BattleRoyaleDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public BattleRoyaleDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.BattleRoyale);
 
-        /// <summary>いま bot の用事を決め直す間隔 (秒)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotPlanIntervalSeconds"/>。</summary>
         public float EffectiveBotPlanIntervalSeconds
         {
             get
@@ -121,7 +91,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>いま bot がダウンした味方と拾える物を探す半径 (m)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="BotSearchRadius"/>。</summary>
         public float EffectiveBotSearchRadius
         {
             get
@@ -131,7 +100,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>いまパラシュートで降ろす高さ (m)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="DropHeight"/>。</summary>
         public float EffectiveDropHeight
         {
             get
@@ -153,7 +121,6 @@ namespace Shooter.Runtime
             set => _squadSize = value;
         }
 
-        /// <summary>制限時間 (秒)。0 なら制限なし。</summary>
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
@@ -166,14 +133,12 @@ namespace Shooter.Runtime
             set => _startsUnarmed = value;
         }
 
-        /// <summary>縮むエリア。null なら始めるときにシーンから探す。</summary>
         public ShrinkingZone Zone
         {
             get => _zone;
             set => _zone = value;
         }
 
-        /// <summary>Inspector の間隔。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float BotPlanIntervalSeconds
         {
             get => _botPlanIntervalSeconds;
@@ -186,11 +151,6 @@ namespace Shooter.Runtime
             set => _botSearchRadius = value;
         }
 
-        /// <summary>
-        /// 始めたときにプレイヤーをどこから始めさせるか。既定は <see cref="BattleRoyaleStart.Ground"/> (出現点の地面)。
-        /// <see cref="BattleRoyaleStart.Parachute"/> なら、<see cref="ParachuteMovement"/> を持つ参加者 (bot は持たない) を
-        /// 出現点の <see cref="EffectiveDropHeight"/> 上に出してパラシュートを開かせる。ルールでパラシュートを開けなければその参加者は地面から始める。
-        /// </summary>
         public BattleRoyaleStart StartFrom
         {
             get => _start;
@@ -205,7 +165,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> のとき、出現点からどれだけ上に出すか (m)。</summary>
         public float DropHeight
         {
             get => _dropHeight;
@@ -220,10 +179,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// バトルロイヤルを作る。timeLimitSeconds が 0 なら制限なし。actions のダウンが Off なら Revive にして使う (このモードはダウンが前提)。
-        /// 値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
+        // このモードはダウンが前提なので、actions のダウンが Off でも Revive にして使う。
         public static BattleRoyaleSession CreateBattleRoyale(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions)
         {
             if (actions == null)
@@ -241,10 +197,6 @@ namespace Shooter.Runtime
             return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned);
         }
 
-        /// <summary>
-        /// <see cref="EffectiveDefinition"/> があればその値で、無ければ Inspector の値で、actions を使うバトルロイヤルを組む。
-        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public BattleRoyaleSession CreateConfiguredBattleRoyale(ActionRules actions)
         {
             var definition = EffectiveDefinition;
@@ -253,10 +205,6 @@ namespace Shooter.Runtime
                 : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions);
         }
 
-        /// <summary>
-        /// battleRoyale をこの Runner で始める (<see cref="ModeRunnerBase.Begin"/>)。Edit Mode のテストと、シーンを使わずに始めるときに使う。
-        /// battleRoyale は始める前で参加者がいないこと。
-        /// </summary>
         public void Begin(
             BattleRoyaleSession battleRoyale,
             IReadOnlyList<SideMember> members,
@@ -286,10 +234,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// actor が、ルールの <see cref="ActionRules.ReviveRange"/> (足元どうしで測る) 以内でいちばん近いダウンした分隊の味方を deltaSeconds だけ起こす。誰もいなければ <see cref="ReviveStep.Rejected"/>。
-        /// Play 中はプレイヤーが Interact を押している間と、範囲に味方のいる bot について、Tick の前に呼ばれる。
-        /// </summary>
         public ReviveStep HoldRevive(SideMember actor, float deltaSeconds)
         {
             if (!IsStarted)
@@ -318,10 +262,6 @@ namespace Shooter.Runtime
             return step;
         }
 
-        /// <summary>
-        /// bot の用事を今すぐ決め直して渡す。Play 中は <see cref="EffectiveBotPlanIntervalSeconds"/> ごとに呼ばれる。
-        /// NavMesh の無い Edit Mode のテストでも、渡した用事 (<see cref="EnemyAgent.Errand"/>) は確かめられる。
-        /// </summary>
         public void PlanBots()
         {
             if (!IsStarted)
@@ -584,10 +524,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// member に <see cref="ParachuteMovement"/> があれば、出現した位置の <see cref="DropHeight"/> 上でパラシュートを開かせ、結果を <c>[Mode] drop</c> のログに出す。
-        /// 開けなければ (ルールが Off など) 地面に残して警告を出す。無い参加者 (NavMesh で動く bot) は地面から始める。
-        /// </summary>
         private void DropByParachute(SideMember member)
         {
             var parachute = member.GetComponent<ParachuteMovement>();
@@ -624,10 +560,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// member に DropOnDeath を付け (無ければ)、倒れたとき (ダウンも含む) には落とさないようにする。
-        /// 戻らなくなったときに <see cref="DropBelongings"/> が持ち物を落とす。
-        /// </summary>
         private static void PrepareDrops(SideMember member)
         {
             var drop = member.GetComponent<DropOnDeath>();
@@ -639,7 +571,6 @@ namespace Shooter.Runtime
             drop.DecideDrops = (context, drops) => drops.Clear();
         }
 
-        /// <summary>member が持っていた武器 (今の予備弾を持っていたときに足す弾にして) と、DropOnDeath の Drops を足元に落とし、武器を手放させる。</summary>
         private void DropBelongings(SideMember member)
         {
             if (member == null)
@@ -854,10 +785,8 @@ namespace Shooter.Runtime
             Debug.Log(BattleRoyaleLog.Placements(_battleRoyale), this);
         }
 
-        /// <summary>
-        /// Interact を有効にする。OnEnable / OnDisable を書くと基底の同名のメッセージ (再開の入力の出し入れ) が呼ばれなくなるので、
-        /// 始めたときに有効にし、<see cref="ModeRunnerBase.Stop"/> (破棄時) で戻す。
-        /// </summary>
+        // OnEnable / OnDisable を書くと基底の同名のメッセージ (再開の入力の出し入れ) が呼ばれなくなるので、
+        // 始めたときに有効にし、ModeRunnerBase.Stop (破棄時) で戻す。
         private void AcquireInteractAction()
         {
             // Edit Mode では破棄で無効に戻せないことがあるので、Play 中だけ有効にする。

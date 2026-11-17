@@ -5,27 +5,17 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 同じ GameObject の <see cref="Damageable"/> が倒れたら、倒れた位置 (足元) に <see cref="Drops"/> の拾える物を落とす。
-    /// 落とす物はモードが <see cref="DecideDrops"/> で決め直せる (例: タグを落とす・武器を落とさない)。
-    /// 落とした物は <see cref="LifetimeSeconds"/> 後に消え、<see cref="Dropped"/> で知らせる (モードはそこで <see cref="Pickup.Collected"/> を購読する)。
-    /// </summary>
-    /// <remarks>
-    /// 有効な間だけ Died を購読する。Edit Mode では OnEnable が走らないので <see cref="Bind"/> を直接呼ぶ。
-    /// 2 つ以上落とすときは、重ならないよう足元の周りの円 (<see cref="SpreadRadius"/>) に等間隔で並べる。
-    /// </remarks>
+    // 有効な間だけ Died を購読する。Edit Mode では OnEnable が走らないので、Bind を直接呼べるようにする。
     [DisallowMultipleComponent]
     public sealed class DropOnDeath : MonoBehaviour
     {
         public const string LogTag = PickupLog.Tag;
 
-        /// <summary>落とした物が消えるまでの既定の秒数。倒され続けるモードで拾われない物が溜まり続けないようにする。</summary>
+        // 倒され続けるモードで拾われない物が溜まり続けないよう、落とした物は既定で消す。
         public const float DefaultLifetimeSeconds = 30f;
 
-        /// <summary>2 つ以上落とすときに並べる円の既定の半径 (m)。</summary>
         public const float DefaultSpreadRadius = 0.75f;
 
-        /// <summary>既定で落とす予備弾の数。</summary>
         public const int DefaultAmmoAmount = 30;
 
         [SerializeField, Tooltip("倒れたときに落とす物 (モードが DecideDrops で決め直せる)")]
@@ -49,17 +39,10 @@ namespace Shooter.Runtime
         private readonly List<PickupContents> _decided = new List<PickupContents>();
         private Damageable _damageable;
 
-        /// <summary>
-        /// モードが落とす物を決めるフック。倒れるたびに、<see cref="Drops"/> の写しを入れた drops で呼ばれ、
-        /// drops を書き換える (空にすれば何も落とさない)。null なら <see cref="Drops"/> をそのまま落とす。
-        /// 例外を投げたらエラーを出して何も落とさない。
-        /// </summary>
         public Action<DropContext, List<PickupContents>> DecideDrops { get; set; }
 
-        /// <summary>落としたときに、この部品と落とした物 (落とさなかったときは空) を渡して呼ばれる。</summary>
         public event Action<DropOnDeath, IReadOnlyList<Pickup>> Dropped;
 
-        /// <summary>倒れたときに落とす物。null の要素は飛ばす。設定すると写しを持つ。</summary>
         public IReadOnlyList<PickupContents> Drops
         {
             get => _drops ?? Array.Empty<PickupContents>();
@@ -89,35 +72,30 @@ namespace Shooter.Runtime
             set => _collectMode = value;
         }
 
-        /// <summary>落とした物が消えるまでの秒数。0 なら消えない。負の値は 0 にする。</summary>
         public float LifetimeSeconds
         {
             get => _lifetimeSeconds;
             set => _lifetimeSeconds = Mathf.Max(0f, value);
         }
 
-        /// <summary>落とした物の <see cref="Pickup.LookAngleDegrees"/>。次に落とす物から使う。</summary>
         public float LookAngleDegrees
         {
             get => _lookAngleDegrees;
             set => _lookAngleDegrees = float.IsNaN(value) ? 0f : Mathf.Clamp(value, 0f, Pickup.MaxLookAngleDegrees);
         }
 
-        /// <summary>2 つ以上落とすときに並べる円の半径 (m)。負の値は 0 にする。</summary>
         public float SpreadRadius
         {
             get => _spreadRadius;
             set => _spreadRadius = Mathf.Max(0f, value);
         }
 
-        /// <summary>落とした物の見た目 (<see cref="Pickup.VisualPrefab"/>)。null なら仮の箱。次に落とす物から使う。</summary>
         public GameObject VisualPrefab
         {
             get => _visualPrefab;
             set => _visualPrefab = value;
         }
 
-        /// <summary>購読している体力。未購読なら null。</summary>
         public Damageable Damageable => _damageable;
 
         private void OnEnable()
@@ -138,7 +116,6 @@ namespace Shooter.Runtime
             Unbind();
         }
 
-        /// <summary>damageable が倒れたら落とすようにする。前に購読していたものは外す。</summary>
         public void Bind(Damageable damageable)
         {
             if (damageable == null)
@@ -156,7 +133,6 @@ namespace Shooter.Runtime
             _damageable.Died += OnDied;
         }
 
-        /// <summary>購読を外す。</summary>
         public void Unbind()
         {
             if (_damageable != null)
@@ -167,10 +143,6 @@ namespace Shooter.Runtime
             _damageable = null;
         }
 
-        /// <summary>
-        /// contents の物を groundPosition の周りに落とし、<c>[Pickup] dropped</c> を出して <see cref="Dropped"/> を呼ぶ。落とした物を返す。
-        /// 不正な中身はエラーを出して飛ばす。倒れたときに呼ばれる。モードがコードから落とすのにも使える。
-        /// </summary>
         public IReadOnlyList<Pickup> Drop(IReadOnlyList<PickupContents> contents, Vector3 groundPosition)
         {
             if (contents == null)
@@ -213,7 +185,7 @@ namespace Shooter.Runtime
             return result;
         }
 
-        /// <summary>count 個を並べるときの index 番目の、足元からのずれ。1 個なら真下 (ずれ 0)。</summary>
+        // 2 つ以上落とすときは、重ならないよう足元の周りの円に等間隔で並べる。
         public static Vector3 SpreadOffset(int index, int count, float radius)
         {
             if (count <= 1 || radius <= 0f)

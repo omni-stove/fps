@@ -3,11 +3,8 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 1 つの対戦マップの壊せる建物の部品の並び (<c>server-data/maps/&lt;マップ&gt;.structures.json</c>)。
-    /// .fpsmap は部品の形しか持たないので、Unity 抜きのサーバーが同じ耐久値と崩れ方で壊せるよう、Unity の Editor が建物ごとの
-    /// <see cref="StructureLayout"/> を書き出す (<see cref="Write"/>)。並びは .fpsmap の建物の番号 (<see cref="MapColliderGroups.Piece"/>) の順。
-    /// </summary>
+    // .fpsmap は部品の形しか持たないので、Unity 抜きのサーバーが同じ耐久値と崩れ方で壊せるよう、Unity の Editor が建物ごとの
+    // StructureLayout を書き出したものを読む。並びは .fpsmap の建物の番号 (MapColliderGroups.Piece) の順。
     public sealed class NetMapStructures
     {
         public const string Extension = ".structures.json";

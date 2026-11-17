@@ -9,50 +9,29 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットと旗取りのシーン (<see cref="CaptureTheFlagSceneBuilder"/>) を生成し直して Play Mode に入り、
-    /// 制限時間を縮めた試合を bot だけで走らせて、ログで次を確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>試合が始まり、両陣営に bot がいる。</item>
-    /// <item>bot が敵の旗を拾う (<c>[Mode] flag-taken</c>)。</item>
-    /// <item>bot が敵の旗を自陣の台へ運んで点を取る (<c>[Mode] flag-captured</c>)。</item>
-    /// <item>時間か得点の上限で試合が終わる (<c>[Mode] ended winner=...</c>)。</item>
-    /// </list>
-    /// Play 中にエラー・例外・Assert のログが出たら失敗にする。すべて成り立てば終了コード 0、そうでなければ 1 で終わる。
-    /// 試合の制限時間は <see cref="SecondsArgument"/> で変えられる。
-    /// <see cref="SmokeSuite"/> には入れていない (試合が数分かかるので)。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.CaptureTheFlagSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// batchmode には入力が無いので、プレイヤーは出現点に立ったままで、旗を運ぶのは bot だけになる。
-    /// 制限時間は、Runner が読む調整値 (<see cref="CaptureTheFlagRunner.EffectiveDefinition"/>) を複製して縮め (<see cref="Shorten"/>)、
-    /// 開いたシーンの Runner に Play の前に配線して変える (シーンのファイルは保存しない)。
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
-    /// </remarks>
+    // 試合が数分かかるので SmokeSuite には入れていない。
+    // batchmode には入力が無いので、プレイヤーは出現点に立ったままで、旗を運ぶのは bot だけになる。
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class CaptureTheFlagSmokeRun
     {
         public const string LogTag = "[CaptureTheFlagSmokeRun]";
 
-        /// <summary>試合の制限時間 (秒) を渡す引数。例: <c>-captureTheFlagSmokeSeconds 240</c>。</summary>
         public const string SecondsArgument = "-captureTheFlagSmokeSeconds";
 
-        /// <summary>
-        /// 既定の試合の制限時間 (秒)。台どうしは 50m 離れていて、bot が敵の台まで行って戻る (100m ほど) のに 30 秒ほどかかる。
-        /// 撃ち合いで倒れて出直す分を何度か足しても、1 回は運び込める長さ。
-        /// </summary>
+        // 台どうしは 50m 離れていて、bot が敵の台まで行って戻る (100m ほど) のに 30 秒ほどかかる。
+        // 撃ち合いで倒れて出直す分を何度か足しても、1 回は運び込める長さにする。
         public const float DefaultSeconds = 180f;
 
-        /// <summary><see cref="SecondsArgument"/> で渡せる最短の秒数。bot が敵の台まで行って戻るだけの長さ。</summary>
+        // bot が敵の台まで行って戻るだけの長さより短いと、旗を運び込めない。
         public const float MinimumSeconds = 30f;
 
-        /// <summary>Play Mode に入ってから見始めるまでに待つ秒数。GameBootstrap の Awake と Runner の Start を済ませるため。</summary>
+        // GameBootstrap の Awake と Runner の Start を済ませてから見始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>制限時間を過ぎてから、終わりのログが出るまでに待つ秒数の上限。</summary>
         public const float GraceSeconds = 30f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
@@ -75,7 +54,6 @@ namespace Shooter.Editor
         private static double _playStartedAt = -1d;
         private static bool _finished;
 
-        /// <summary><see cref="Classify"/> が見分けるログの行。</summary>
         public enum LineKind
         {
             Other,
@@ -100,7 +78,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -142,10 +119,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="SecondsArgument"/> の値を読む。無ければ <see cref="DefaultSeconds"/>。
-        /// 値が無い・<see cref="MinimumSeconds"/> 以上の有限な数でなければ <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static float ParseSeconds(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -176,11 +149,7 @@ namespace Shooter.Editor
             return DefaultSeconds;
         }
 
-        /// <summary>
-        /// source の複製の制限時間だけを seconds にして返す。source が null なら既定値の定義から作る。source は変えない。
-        /// 複製はアセットにもシーンにも保存されず、アンロードもされない (<see cref="HideFlags.DontSave"/>)。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">複製した値が <see cref="CaptureTheFlagDefinition.ToSpec"/> に通らない。</exception>
+        // 複製に HideFlags.DontSave を付けるのは、アセットにもシーンにも保存されず、アンロードもされないようにするため。
         public static CaptureTheFlagDefinition Shorten(CaptureTheFlagDefinition source, float seconds)
         {
             var copy = source != null
@@ -202,7 +171,6 @@ namespace Shooter.Editor
             return copy;
         }
 
-        /// <summary>line が旗を拾った・運んで点を取った・試合が終わったのどの <c>[Mode]</c> の行か。どれでもなければ <see cref="LineKind.Other"/>。</summary>
         public static LineKind Classify(string line)
         {
             if (line == null)
@@ -340,7 +308,6 @@ namespace Shooter.Editor
             Report(problem);
         }
 
-        /// <summary>今の手順を 1 つ進める。次のフレームを待つ手順ではそのまま返す。進められない理由があれば返す (null なら問題なし)。</summary>
         private static string Advance(float seconds)
         {
             var runner = UnityEngine.Object.FindAnyObjectByType<CaptureTheFlagRunner>();

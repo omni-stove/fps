@@ -1,0 +1,62 @@
+{
+  "id": "05e08bbf-1757-464a-a142-8dcdd0c86ba9",
+  "nameKey": "weapon.real.combatPumpShotgun",
+  "description": "Battlefield 6 の M87A1 (実銃は Mossberg 590A1) を参考。1 粒 8.4@0m→7.2@9m→5.6@16m→3.8@31m × 16 粒・約 70 RPM・8 発 (薬室の 1 発込み)・弾速 400 m/s。段階で減るダメージを 9〜31 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。ポンプの往復はデータに無いので推測で、粒の広がりも推測で 2.5 度にした。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "category": "Shotgun",
+  "shotNoiseRadius": 60,
+  "weight": 3.4,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 0.86,
+      "leavesAds": false
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 8,
+    "reserveAmmo": 32,
+    "reloadSeconds": 0.64,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.7
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 60,
+    "pelletCount": 16,
+    "pelletSpreadDegrees": 2.5,
+    "radius": 0,
+    "projectile": {
+      "speed": 400,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 0.15,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 8,
+    "falloff": {
+      "startDistance": 9,
+      "endDistance": 31,
+      "minMultiplier": 0.45
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2.43,
+    "adsSpreadDegrees": 0.05,
+    "moveSpreadDegrees": 0.61,
+    "recoilPitchDegrees": 3.56,
+    "recoilYawDegrees": 1.35,
+    "recoilRecoveryPerSecond": 17.5,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

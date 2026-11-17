@@ -1,0 +1,54 @@
+{
+  "id": "28e92fe5-5b1b-44c7-a8ee-80521adff062",
+  "nameKey": "weapon.ref.scoutRifle",
+  "description": "Apex Legends の G7 スカウト (実銃は M1A / SVD 風) を参考。体 36 (キットでは 18)・246 RPM・14 発。Apex と同じく弾が飛んで落ちる (761 m/s)。Apex は体力とシールドで 200 なので、キットの体力 100 に合わせてダメージを半分にした。",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 50,
+  "weight": 4.3,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2439
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 14,
+    "reserveAmmo": 56,
+    "reloadSeconds": 2.4,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 761,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 1.5,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 18,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.2,
+    "moveSpreadDegrees": 4,
+    "recoilPitchDegrees": 1.5,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [32.2],
+    "swayDegrees": 0
+  }
+}

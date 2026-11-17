@@ -1,0 +1,58 @@
+{
+  "id": "2f3825b8-dac2-4744-8025-d2909cbb57d4",
+  "nameKey": "weapon.real.rollerDelayedSmg",
+  "description": "Battlefield 6 の PW5A3 (実銃は HK MP5) を参考。25@0m→20@9m→16.7@21m→14.3@36m→12.5@75m・771 RPM・31 発 (薬室の 1 発込み)・弾速 408 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 50,
+  "weight": 2.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0778
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 31,
+    "reserveAmmo": 186,
+    "reloadSeconds": 2.52,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 408,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 0.49,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 25,
+    "falloff": {
+      "startDistance": 9,
+      "endDistance": 75,
+      "minMultiplier": 0.5
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.8,
+    "adsSpreadDegrees": 0.05,
+    "moveSpreadDegrees": 0.46,
+    "recoilPitchDegrees": 0.55,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 13.75,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

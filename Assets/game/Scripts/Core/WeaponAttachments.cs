@@ -97,7 +97,8 @@ namespace Fps.Core
                 ammoTypes,
                 spec.ShotNoiseRadius * noise,
                 weight,
-                spec.MoveSpeedMultiplier * speed);
+                spec.MoveSpeedMultiplier * speed,
+                spec.Description);
         }
 
         public static IReadOnlyList<string> Keep(ItemCatalog catalog, string weaponId, IEnumerable<string> attachmentItemIds)

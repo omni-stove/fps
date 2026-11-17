@@ -141,6 +141,9 @@ namespace Fps.Core
         /// <summary>持っている間に移動の速さへ掛ける倍率。0 以上の有限値。どの武器を数えるかは <see cref="CarryLoadSpec.MultiplierSource"/>。</summary>
         public float MoveSpeedMultiplier { get; }
 
+        /// <summary>作る人向けのメモ (どの銃を模したか・どんな役回りか)。プレイヤーには見せない。null は空文字にする。</summary>
+        public string Description { get; }
+
         /// <param name="id">識別子。前後の空白は除く。除いた後が小文字・ハイフン区切りの UUID (例: 3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13)。</param>
         /// <param name="nameKey">画面に出す名前を引く表のキー。null・空白のみなら名前は <paramref name="id"/> になる。</param>
         /// <param name="category">武器の種別。定義済みの値のみ。</param>
@@ -245,7 +248,8 @@ namespace Fps.Core
             IEnumerable<AmmoTypeSpec> ammoTypes = null,
             float shotNoiseRadius = DefaultShotNoiseRadius,
             float weight = DefaultWeight,
-            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier)
+            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier,
+            string description = null)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -275,6 +279,7 @@ namespace Fps.Core
             ShotNoiseRadius = shotNoiseRadius;
             Weight = weight;
             MoveSpeedMultiplier = moveSpeedMultiplier;
+            Description = description ?? string.Empty;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -282,7 +287,7 @@ namespace Fps.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

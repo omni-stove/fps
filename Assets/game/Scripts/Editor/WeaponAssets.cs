@@ -134,6 +134,7 @@ namespace Fps.Editor
             definition.ShotNoiseRadius = spec.ShotNoiseRadius;
             definition.Weight = spec.Weight;
             definition.MoveSpeedMultiplier = spec.MoveSpeedMultiplier;
+            definition.Description = spec.Description;
 
             var trigger = spec.Trigger;
             definition.Burst.Set(trigger.Burst);

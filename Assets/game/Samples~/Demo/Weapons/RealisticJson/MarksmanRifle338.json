@@ -1,0 +1,58 @@
+{
+  "id": "30a00b4b-12b2-4754-bbe3-0641cddfbd74",
+  "nameKey": "weapon.real.marksmanRifle338",
+  "description": "Battlefield 6 の SVK-8.6 (実銃は SVCh (.338)) を参考。66.7@0m→59.9@9m→50@21m・150 RPM・11 発 (薬室の 1 発込み)・弾速 680 m/s。段階で減るダメージを 9〜21 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 70,
+  "weight": 5.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.4
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 11,
+    "reserveAmmo": 88,
+    "reloadSeconds": 2.97,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 600,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 680,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 0.88,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 67,
+    "falloff": {
+      "startDistance": 9,
+      "endDistance": 21,
+      "minMultiplier": 0.75
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4.85,
+    "adsSpreadDegrees": 0.05,
+    "moveSpreadDegrees": 1.21,
+    "recoilPitchDegrees": 2.99,
+    "recoilYawDegrees": 1.37,
+    "recoilRecoveryPerSecond": 5.38,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [16.43],
+    "swayDegrees": 0
+  }
+}

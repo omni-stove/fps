@@ -1,0 +1,61 @@
+{
+  "id": "b9daae5b-9015-46cf-b104-6f9a9ba9c623",
+  "nameKey": "weapon.ref.rocketPropelledGrenade",
+  "description": "THE FINALS の RPG-7 (実銃は RPG-7) を参考。爆発 110 で、1.5 m までは減らず 5.5 m まで届く。1 発ずつ撃ち、リロードは 2.15 秒。弾速は資料に無いので遅めの 60 m/s にした。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 7,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 3,
+    "reloadSeconds": 2.15,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 60,
+      "gravityMultiplier": 0.2,
+      "lifetimeSeconds": 4,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 110,
+      "radius": 5.5,
+      "fullDamageRadius": 1.5,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [42.1],
+    "swayDegrees": 0
+  }
+}

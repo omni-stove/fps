@@ -1,0 +1,52 @@
+{
+  "id": "f717ab18-ce5d-4680-98e5-780c10a8b781",
+  "nameKey": "weapon.ref.suppressedSmg",
+  "description": "CS2 の MP5-SD (実銃は HK MP5SD) を参考。体 28・750 RPM・30 発で、消音なので銃声の届く距離を短くした。RangeModifier 0.87 を 50 m で 0.58 倍に置き換えた。移動の倍率は 235/250。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 15,
+  "weight": 3.4,
+  "moveSpeedMultiplier": 0.94,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.08
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 30,
+    "reserveAmmo": 90,
+    "reloadSeconds": 2.97,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 80,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 28,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.58
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2.5,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 0.35,
+    "recoilYawDegrees": 0.25,
+    "recoilRecoveryPerSecond": 12,
+    "recoilRecoveryDelaySeconds": 0.12,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

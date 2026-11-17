@@ -243,6 +243,29 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void TheDescriptionReadsBackAfterTheNameKey()
+        {
+            const string json = "{\"id\": \"" + _rifleId + "\", \"nameKey\": \"weapon.rifle\", "
+                + "\"description\": \"AK 系の \\\"7.62 mm\\\" 小銃\", \"category\": \"AssaultRifle\"}";
+
+            var read = WeaponSpecJson.Parse(json, "described.json");
+            var written = WeaponSpecJson.Write(read);
+
+            Assert.That(read.Description, Is.EqualTo("AK 系の \"7.62 mm\" 小銃"));
+            Assert.That(written, Does.Contain("  \"nameKey\": \"weapon.rifle\",\n  \"description\": \"AK 系の \\\"7.62 mm\\\" 小銃\",\n  \"category\""));
+            Assert.That(WeaponSpecJson.Parse(written, "described.json").Description, Is.EqualTo("AK 系の \"7.62 mm\" 小銃"));
+        }
+
+        [Test]
+        public void AWeaponWithoutADescriptionIsWrittenWithoutTheItem()
+        {
+            var read = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\"}", "bare.json");
+
+            Assert.That(read.Description, Is.Empty);
+            Assert.That(WeaponSpecJson.Write(read), Does.Not.Contain("\"description\""));
+        }
+
+        [Test]
         public void AStatusEffectWithoutAKindBurns()
         {
             var read = WeaponSpecJson.Parse(

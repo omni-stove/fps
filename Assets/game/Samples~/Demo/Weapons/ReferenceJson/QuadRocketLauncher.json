@@ -1,0 +1,61 @@
+{
+  "id": "a9ea0da7-d5a2-4754-8658-f172f0bb1ae5",
+  "nameKey": "weapon.ref.quadRocketLauncher",
+  "description": "Team Fortress 2 のロケットランチャー (実銃は SMAW のような筒型) を参考。爆発 90・半径 2.8 m・弾速 21 m/s・0.8 秒に 1 発で 4 発込め、1 発ずつ 0.8 秒で込める。爆風で跳べる扱い。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 7.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 4,
+    "reserveAmmo": 20,
+    "reloadSeconds": 0.92,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.8
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 21,
+      "gravityMultiplier": 0,
+      "lifetimeSeconds": 8,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 90,
+      "radius": 2.8,
+      "fullDamageRadius": 0.5,
+      "structureDamageAtCenter": 80,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

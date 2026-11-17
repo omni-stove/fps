@@ -1,0 +1,52 @@
+{
+  "id": "2f9fcfb4-cacb-4fe1-a325-327eaa1c4c8d",
+  "nameKey": "weapon.ref.heavyMarksmanRifle",
+  "description": "CS2 の G3SG1 (実銃は HK G3SG/1) を参考。体 80・240 RPM・20 発で SCAR-20 と同じ撃ち合いだが、リロードが 4.67 秒と遅く重い。",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 70,
+  "weight": 5.5,
+  "moveSpeedMultiplier": 0.86,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.25
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 20,
+    "reserveAmmo": 40,
+    "reloadSeconds": 4.67,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 80,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.92
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.2,
+    "moveSpreadDegrees": 4,
+    "recoilPitchDegrees": 1.5,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [28.78, 10.99],
+    "swayDegrees": 0
+  }
+}

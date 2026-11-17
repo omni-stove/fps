@@ -1,0 +1,58 @@
+{
+  "id": "1962ad25-8df7-4de7-9443-aea170e5b4a9",
+  "nameKey": "weapon.real.pdw46",
+  "description": "Battlefield 6 の PW7A2 (実銃は HK MP7) を参考。16.7@0m→14.3@21m→12.5@75m・947 RPM・31 発 (薬室の 1 発込み)・弾速 576 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 50,
+  "weight": 1.9,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0634
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 31,
+    "reserveAmmo": 248,
+    "reloadSeconds": 2.1,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 576,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 0.35,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 17,
+    "falloff": {
+      "startDistance": 21,
+      "endDistance": 75,
+      "minMultiplier": 0.75
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.8,
+    "adsSpreadDegrees": 0.05,
+    "moveSpreadDegrees": 0.46,
+    "recoilPitchDegrees": 0.5,
+    "recoilYawDegrees": 0.31,
+    "recoilRecoveryPerSecond": 11.5,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

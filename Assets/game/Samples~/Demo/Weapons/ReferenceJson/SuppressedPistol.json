@@ -1,0 +1,52 @@
+{
+  "id": "4708d6a0-356e-41b1-ab4c-3eecfae248ef",
+  "nameKey": "weapon.ref.suppressedPistol",
+  "description": "CS2 の USP-S (実銃は消音器付きの HK USP .45) を参考。体 35・0.17 秒に 1 発・12 発で、銃声が届く距離を短くした。RangeModifier 0.91 を 50 m で 0.69 倍に置き換えた。",
+  "category": "Handgun",
+  "shotNoiseRadius": 12,
+  "weight": 0.77,
+  "moveSpeedMultiplier": 0.96,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.17
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 12,
+    "reserveAmmo": 24,
+    "reloadSeconds": 2.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 35,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.69
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.6,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 1.2,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 5,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

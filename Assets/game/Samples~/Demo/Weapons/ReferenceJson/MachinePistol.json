@@ -1,0 +1,52 @@
+{
+  "id": "cf9d33f4-8e39-41cf-9d38-00a92fed35ad",
+  "nameKey": "weapon.ref.machinePistol",
+  "description": "Valorant の Stinger (実銃は MAC-10 のような小型 SMG) を参考。体 27・毎秒 16 発・20 発で、15 m から 23 に減る。Valorant の覗くと 4 点バーストになる撃ち方は入れていない。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 50,
+  "weight": 2.8,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0625
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 20,
+    "reserveAmmo": 60,
+    "reloadSeconds": 2.25,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 27,
+    "falloff": {
+      "startDistance": 15,
+      "endDistance": 20,
+      "minMultiplier": 0.85
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3.5,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 0.45,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 12,
+    "recoilRecoveryDelaySeconds": 0.12,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [53.32],
+    "swayDegrees": 0
+  }
+}

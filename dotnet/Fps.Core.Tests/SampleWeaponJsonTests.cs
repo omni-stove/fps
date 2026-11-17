@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using NUnit.Framework;
 
@@ -8,6 +10,8 @@ namespace Fps.Core.Tests
     // サンプルの武器の JSON は後の武器を足すときの手本になるので、Write が書く部品の形のまま置かれていることを確かめる。
     public sealed class SampleWeaponJsonTests
     {
+        private static readonly string[] _referenceFolders = { "ReferenceJson", "RealisticJson" };
+
         [Test]
         public void SampleWeaponJsonReadsAndIsWrittenTheSameWay()
         {
@@ -120,6 +124,76 @@ namespace Fps.Core.Tests
             }
 
             Assert.That(ticks * spray.TickSeconds, Is.InRange(2f, 8f), "seconds of flame before overheating");
+        }
+
+        [Test]
+        public void ReferenceWeaponJsonReadsAndIsWrittenTheSameWayWithIdsOfItsOwn()
+        {
+            var ids = new HashSet<string>(ReadAll(SampleWeaponJsonFolder()).Select(spec => spec.Id));
+            foreach (var path in _referenceFolders.SelectMany(folder => Directory.GetFiles(ReferenceWeaponJsonFolder(folder), "*.json")))
+            {
+                var text = File.ReadAllText(path);
+                var spec = WeaponSpecJson.Parse(text, path);
+
+                Assert.That(WeaponSpecJson.Write(spec), Is.EqualTo(text), path);
+                Assert.That(ids.Add(spec.Id), Is.True, path + " reuses the id " + spec.Id);
+            }
+        }
+
+        [TestCaseSource(nameof(_referenceFolders))]
+        public void EveryWeaponCategoryHasFourReferenceWeapons(string folder)
+        {
+            var specs = ReadAll(ReferenceWeaponJsonFolder(folder));
+
+            foreach (var category in Enum.GetValues<WeaponCategory>())
+            {
+                Assert.That(specs.Count(spec => spec.Category == category), Is.EqualTo(4), category.ToString());
+            }
+        }
+
+        [TestCaseSource(nameof(_referenceFolders))]
+        public void EveryReferenceWeaponSaysWhatItIsModelledOnAndHasANameInEveryLanguage(string folder)
+        {
+            var languages = Directory.GetDirectories(LocalizationFolder()).Where(folder => File.Exists(Path.Combine(folder, "items.json"))).ToList();
+            Assert.That(languages, Has.Count.GreaterThanOrEqualTo(2));
+
+            foreach (var spec in ReadAll(ReferenceWeaponJsonFolder(folder)))
+            {
+                Assert.That(spec.Description, Is.Not.Empty, spec.Id);
+                Assert.That(spec.NameKey, Does.StartWith("weapon."), spec.Id);
+                foreach (var language in languages)
+                {
+                    var items = File.ReadAllText(Path.Combine(language, "items.json"));
+                    Assert.That(items, Does.Contain("\"" + spec.NameKey + "\":"), language + " has no name for " + spec.NameKey);
+                }
+            }
+        }
+
+        [TestCaseSource(nameof(_referenceFolders))]
+        public void ReferenceShotgunsFirePelletsOrSlugsAndBoltSnipersCycleBetweenShots(string folder)
+        {
+            var specs = ReadAll(ReferenceWeaponJsonFolder(folder));
+
+            Assert.That(specs.Where(spec => spec.Category == WeaponCategory.Shotgun).Count(spec => spec.Round.PelletCount > 1), Is.GreaterThanOrEqualTo(3));
+            Assert.That(specs.Where(spec => spec.Category == WeaponCategory.SniperRifle).Count(spec => spec.Trigger.Cycle != null), Is.GreaterThanOrEqualTo(2));
+            Assert.That(specs.Where(spec => spec.Category == WeaponCategory.Launcher).All(spec => spec.Impact.Explosion != null), Is.True);
+            Assert.That(specs.Where(spec => spec.Category == WeaponCategory.SniperRifle).All(spec => spec.Damage * DamageCalculator.HeadMultiplier >= 100), Is.True, "a sniper kills with one headshot");
+        }
+
+        private static List<WeaponSpec> ReadAll(string folder)
+        {
+            return Directory.GetFiles(folder, "*.json").Select(path => WeaponSpecJson.Parse(File.ReadAllText(path), path)).ToList();
+        }
+
+        private static string ReferenceWeaponJsonFolder(string folder)
+        {
+            return Path.Combine(Path.GetDirectoryName(SampleWeaponJsonFolder()), folder);
+        }
+
+        private static string LocalizationFolder()
+        {
+            var samples = new DirectoryInfo(SampleWeaponJsonFolder());
+            return Path.Combine(samples.Parent.Parent.Parent.Parent.FullName, "Resources", "Localization");
         }
 
         private static string SampleWeaponJsonFolder()

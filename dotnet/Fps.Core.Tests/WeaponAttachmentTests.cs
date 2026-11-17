@@ -53,7 +53,8 @@ namespace Fps.Core.Tests
             round: new RoundSpec(range: 100f),
             aim: new AimSpec(hipSpreadDegrees: 4f, adsSpreadDegrees: 1f, moveSpreadDegrees: 2f, recoilPitchDegrees: 2f, recoilYawDegrees: 1f),
             shotNoiseRadius: 50f,
-            weight: 3f);
+            weight: 3f,
+            description: "test rifle");
 
         private static string[] Strings(params string[] values) => values;
 
@@ -82,6 +83,7 @@ namespace Fps.Core.Tests
             Assert.That(spec.Weight, Is.EqualTo(4.25f).Within(1e-4f));
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.Id, Is.EqualTo(_rifleId));
+            Assert.That(spec.Description, Is.EqualTo("test rifle"));
         }
 
         [Test]

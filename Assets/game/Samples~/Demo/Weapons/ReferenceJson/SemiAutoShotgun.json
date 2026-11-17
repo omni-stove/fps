@@ -1,0 +1,52 @@
+{
+  "id": "c17f182c-308a-4c2f-b23b-f8d0ce0afd74",
+  "nameKey": "weapon.ref.semiAutoShotgun",
+  "description": "CS2 の XM1014 (実銃は Benelli M4) を参考。20 × 6 粒のセミオートで 0.35 秒に 1 発、1 発ずつ込める。RangeModifier 0.7 を 50 m で 0.25 倍に置き換えた。移動の倍率は 215/250。",
+  "category": "Shotgun",
+  "shotNoiseRadius": 60,
+  "weight": 3.8,
+  "moveSpeedMultiplier": 0.86,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.35
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 7,
+    "reserveAmmo": 32,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.6
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 50,
+    "pelletCount": 6,
+    "pelletSpreadDegrees": 4.5,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 20,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.25
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.5,
+    "adsSpreadDegrees": 0.5,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

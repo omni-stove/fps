@@ -1,0 +1,48 @@
+{
+  "id": "bf33ede9-55f0-479c-ab15-77cadae90535",
+  "nameKey": "weapon.ref.rapidFireSmg",
+  "description": "Apex Legends の R-99 (実銃は KRISS Vector 風) を参考。体 12 (キットでは 6)・1080 RPM・青の拡張マガジン相当の 24 発。撃ち切りが早い。Apex は体力とシールドで 200 なので、キットの体力 100 に合わせてダメージを半分にした。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 50,
+  "weight": 2.7,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0556
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 24,
+    "reserveAmmo": 120,
+    "reloadSeconds": 1.8,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 70,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 6,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2.5,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 0.25,
+    "recoilYawDegrees": 0.25,
+    "recoilRecoveryPerSecond": 12,
+    "recoilRecoveryDelaySeconds": 0.12,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

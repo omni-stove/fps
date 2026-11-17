@@ -1,0 +1,52 @@
+{
+  "id": "886fa55c-c980-4d7b-ad90-d16e5a872c7f",
+  "nameKey": "weapon.ref.magnumPistol",
+  "description": "CS2 の Desert Eagle (実銃は IMI Desert Eagle .50AE) を参考。体 53・0.225 秒に 1 発・7 発で、反動が大きい。RangeModifier 0.85 を 50 m で 0.53 倍に置き換えた。",
+  "category": "Handgun",
+  "shotNoiseRadius": 50,
+  "weight": 2,
+  "moveSpeedMultiplier": 0.92,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.225
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 7,
+    "reserveAmmo": 21,
+    "reloadSeconds": 2.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 53,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.53
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3,
+    "adsSpreadDegrees": 0.6,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 3,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 5,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

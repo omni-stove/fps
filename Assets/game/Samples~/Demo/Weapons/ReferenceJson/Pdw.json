@@ -1,0 +1,52 @@
+{
+  "id": "6b1ce288-952f-4ead-b23b-337df82d3a02",
+  "nameKey": "weapon.ref.pdw",
+  "description": "CS2 の P90 (実銃は FN P90) を参考。体 26・857 RPM・50 発の大容量。RangeModifier 0.86 を 50 m で 0.55 倍に置き換えた。移動の倍率は 230/250。",
+  "category": "SubmachineGun",
+  "shotNoiseRadius": 50,
+  "weight": 2.6,
+  "moveSpeedMultiplier": 0.92,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.07
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 50,
+    "reserveAmmo": 100,
+    "reloadSeconds": 3.37,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 80,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 26,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.55
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2.5,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 1.5,
+    "recoilPitchDegrees": 0.35,
+    "recoilYawDegrees": 0.25,
+    "recoilRecoveryPerSecond": 12,
+    "recoilRecoveryDelaySeconds": 0.12,
+    "blindFireSpreadDegrees": 6,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

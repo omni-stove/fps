@@ -1,0 +1,61 @@
+{
+  "id": "bc443423-7f93-439b-a628-d79f839b2afc",
+  "nameKey": "weapon.real.assaultRocketLauncher",
+  "description": "Battlefield 4 の SMAW (実銃は Mk 153 SMAW) を参考。歩兵には爆発 112・半径 4 m。BF4 では 40 m/s から 110 m/s まで加速するが、キットは一定の速さなので 80 m/s にした。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 7.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 5,
+    "reloadSeconds": 5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 80,
+      "gravityMultiplier": 0.12,
+      "lifetimeSeconds": 3.75,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 112,
+      "radius": 4,
+      "fullDamageRadius": 0.35,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [42.1],
+    "swayDegrees": 0
+  }
+}

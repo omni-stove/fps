@@ -1,0 +1,61 @@
+{
+  "id": "c60edf2f-2afc-422c-97f2-c0bed85d2039",
+  "nameKey": "weapon.ref.breakActionGrenadeLauncher",
+  "description": "Quake III Arena のグレネードランチャーの弾 (爆発 100・半径 3.8 m・弾速 18 m/s で跳ね、2.5 秒で起爆) を、M79 のような中折れ式の 1 発込めに載せた。Quake III にはリロードが無いので、リロードは M79 に合わせた。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 2.7,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 10,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 18,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 2.5,
+      "onWorldHit": "Bounce"
+    }
+  },
+  "impact": {
+    "damage": 20,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 100,
+      "radius": 3.8,
+      "fullDamageRadius": 0.5,
+      "structureDamageAtCenter": 80,
+      "detonation": "OnLifetimeEnd"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  }
+}

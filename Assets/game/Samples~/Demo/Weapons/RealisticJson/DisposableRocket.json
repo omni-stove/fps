@@ -1,0 +1,61 @@
+{
+  "id": "b1e55e1f-f9a2-4c60-bdd8-b4a313cb2583",
+  "nameKey": "weapon.real.disposableRocket",
+  "description": "Battlefield 4 の AT4 (実銃は AT4 (M136)) を参考。一定の 70 m/s で飛び、歩兵には爆発 112・1.5 m まで減らず 5 m まで届く。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 6.7,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 1,
+    "reloadSeconds": 4.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 70,
+      "gravityMultiplier": 0.12,
+      "lifetimeSeconds": 4.29,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 112,
+      "radius": 5,
+      "fullDamageRadius": 1.5,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [42.1],
+    "swayDegrees": 0
+  }
+}

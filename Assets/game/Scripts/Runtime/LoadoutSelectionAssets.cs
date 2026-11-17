@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Shooter.Core;
 
@@ -13,6 +14,7 @@ namespace Shooter.Runtime
         /// loadout のルール (<see cref="LoadoutDefinition.ToRule"/>) と catalog の武器 (<see cref="WeaponCatalogAsset.ToCatalog"/>) から
         /// <see cref="LoadoutSelection"/> を作る。最初に選んでおく並びは preferred、次に fallback、どちらも合わなければ
         /// loadout の既定の武器で決める。どちらかのアセットが未設定・不正なら false と理由を返す。
+        /// isAvailable (武器の Id を受け取り、もう使えるかを返す) は <see cref="LoadoutSelection"/> にそのまま渡す。null なら全部使える。
         /// </summary>
         public static bool TryCreate(
             LoadoutDefinition loadout,
@@ -20,7 +22,8 @@ namespace Shooter.Runtime
             IReadOnlyList<string> preferred,
             IReadOnlyList<string> fallback,
             out LoadoutSelection selection,
-            out string error)
+            out string error,
+            Func<string, bool> isAvailable = null)
         {
             selection = null;
 
@@ -64,7 +67,7 @@ namespace Shooter.Runtime
                 fallbackIds = ids;
             }
 
-            selection = new LoadoutSelection(rule, weapons, preferred, fallbackIds);
+            selection = new LoadoutSelection(rule, weapons, preferred, fallbackIds, isAvailable);
             error = null;
             return true;
         }

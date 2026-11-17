@@ -18,6 +18,7 @@ namespace Shooter.Runtime
     /// ロードアウトのボタンは、オンラインと同じアセット (<see cref="Loadout"/>・<see cref="Catalog"/>、MenuSceneBuilder が配線) から
     /// 選ぶ画面 (<see cref="LoadoutSelectPanel"/>) を差し込み口に出し、決めた並びを <see cref="LoadoutStore"/> に保存する。
     /// 送るのはオンラインに入ってから (ネット対戦のクライアントが保存した並びを送る)。
+    /// プロフィールのボタンは、成長の記録 (<see cref="Progression"/>) のレベル・戦績を <see cref="ProfilePanel"/> で差し込み口に出す。
     /// <see cref="Show"/> は <see cref="SettingsView"/> を取り付ける (<see cref="InstallSettingsView"/>)。
     /// キャンペーンのボタンは、ミッションの一覧 (<see cref="Missions"/>、MenuSceneBuilder が配線) とセーブ (<see cref="SaveStorage"/>) から
     /// ミッションと難易度を選ぶ画面 (<see cref="CampaignPanel"/>) を差し込み口に出し、決めた始め方で <see cref="MenuNavigator.StartCampaign"/> を呼ぶ。
@@ -39,6 +40,7 @@ namespace Shooter.Runtime
         public const string CampaignButtonName = "menu-campaign";
         public const string QuickMatchButtonName = "menu-quick-match";
         public const string LoadoutButtonName = "menu-loadout";
+        public const string ProfileButtonName = "menu-profile";
         public const string RangeButtonName = "menu-range";
         public const string TutorialButtonName = "menu-tutorial";
         public const string SettingsButtonName = "menu-settings";
@@ -47,9 +49,13 @@ namespace Shooter.Runtime
         public const string SettingsSlotName = "menu-settings-slot";
         public const string LoadoutSlotName = "menu-loadout-slot";
         public const string CampaignSlotName = "menu-campaign-slot";
+        public const string ProfileSlotName = "menu-profile-slot";
 
         /// <summary>設定画面がまだ差し込まれていないときに出す案内。</summary>
         public static string SettingsUnavailableNotice => Localizer.Get("menu.settingsUnavailable");
+
+        /// <summary>成長を記録していない (<see cref="Progression"/> が無い) ときに出す案内。</summary>
+        public static string ProfileUnavailableNotice => Localizer.Get("menu.profileUnavailable");
 
         /// <summary>ロードアウトのアセットが使えないときに出す案内。reason に理由を入れる。</summary>
         public static string LoadoutUnavailableNotice(string reason)
@@ -69,6 +75,7 @@ namespace Shooter.Runtime
             CampaignButtonName,
             QuickMatchButtonName,
             LoadoutButtonName,
+            ProfileButtonName,
             RangeButtonName,
             TutorialButtonName,
             SettingsButtonName,
@@ -95,6 +102,9 @@ namespace Shooter.Runtime
         private LoadoutPreferenceStore _loadoutStore = new LoadoutPreferenceStore();
         private VisualElement _campaignSlot;
         private CampaignSelectPanel _campaignPanel;
+        private VisualElement _profileSlot;
+        private ProfilePanel _profilePanel;
+        private ProgressionRecorder _progression;
         private ISaveStorage _saveStorage;
         private Label _notice;
         private LocalizedText _noticeSource;
@@ -190,8 +200,27 @@ namespace Shooter.Runtime
             set => _loadoutStore = value ?? new LoadoutPreferenceStore();
         }
 
-        // 設定・ロードアウト・キャンペーンのどれかを開いている間は、メニューのボタンとその移動を止める
-        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null;
+        /// <summary>
+        /// プロフィールを出し、ロードアウトで使えない武器を決める成長の記録。null を入れると <see cref="ProgressionBootstrap.Recorder"/> に戻す (テストで差し替える)。
+        /// どちらも無ければプロフィールは開かず、武器は全部使える。
+        /// </summary>
+        public ProgressionRecorder Progression
+        {
+            get => _progression ?? ProgressionBootstrap.Recorder;
+            set => _progression = value;
+        }
+
+        /// <summary>プロフィールの差し込み口。<see cref="Bind"/> の前は null。</summary>
+        public VisualElement ProfileSlot => _profileSlot;
+
+        /// <summary>出しているプロフィール。閉じていれば null。</summary>
+        public ProfilePanel ProfilePanel => _profilePanel;
+
+        /// <summary>プロフィールを開いているか。</summary>
+        public bool IsProfileOpen => _profilePanel != null;
+
+        // 設定・ロードアウト・キャンペーン・プロフィールのどれかを開いている間は、メニューのボタンとその移動を止める
+        private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null || _profilePanel != null;
 
         /// <summary>出している案内。出していなければ null。</summary>
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
@@ -337,6 +366,8 @@ namespace Shooter.Runtime
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{LoadoutSlotName}'");
             _campaignSlot = root.Q<VisualElement>(CampaignSlotName)
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{CampaignSlotName}'");
+            _profileSlot = root.Q<VisualElement>(ProfileSlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{ProfileSlotName}'");
 
             for (var i = 0; i < _buttons.Count; i++)
             {
@@ -380,6 +411,7 @@ namespace Shooter.Runtime
             SetDisplayed(_settingsSlot, false);
             SetDisplayed(_loadoutSlot, false);
             SetDisplayed(_campaignSlot, false);
+            SetDisplayed(_profileSlot, false);
             ShowNotice(null);
         }
 
@@ -493,6 +525,7 @@ namespace Shooter.Runtime
         /// ロードアウトの選択を差し込み口に出す。最初に選んでおく並びは保存した並び (<see cref="LoadoutStore"/>)、
         /// なければ <see cref="Loadout"/> の既定の武器。アセットが未設定・不正なら理由を案内に出して開かない。
         /// 決めた並びは保存して閉じ、Cancel では保存せずに閉じる。
+        /// 今のプロフィール (<see cref="Progression"/>) のレベルで使えない武器は鍵を付けて並べ、選べない。
         /// </summary>
         public void OpenLoadout()
         {
@@ -501,7 +534,10 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (!LoadoutSelectionAssets.TryCreate(EffectiveLoadout, EffectiveCatalog, _loadoutStore.Load(), null, out var selection, out var error))
+            var progression = Progression;
+            Func<string, bool> isAvailable = progression != null ? progression.IsUnlocked : (Func<string, bool>)null;
+            if (!LoadoutSelectionAssets.TryCreate(
+                    EffectiveLoadout, EffectiveCatalog, _loadoutStore.Load(), null, out var selection, out var error, isAvailable))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
                 ShowNotice(LoadoutUnavailableNotice(error));
@@ -511,7 +547,7 @@ namespace Shooter.Runtime
             ShowNotice(null);
             SetDisplayed(_loadoutSlot, true);
             SetButtonsEnabled(false);
-            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection);
+            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger);
             _loadoutPanel.Confirmed += SaveLoadout;
             _loadoutPanel.Cancelled += CloseLoadout;
         }
@@ -529,6 +565,68 @@ namespace Shooter.Runtime
             SetDisplayed(_loadoutSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(LoadoutButtonName));
+        }
+
+        /// <summary>
+        /// 今のプロフィール (<see cref="Progression"/>) のレベル・XP・戦績と次のアンロックを差し込み口に出す。
+        /// アンロックの名前は <see cref="Catalog"/> の武器と持ち物の表 (<see cref="KitTuning.Items"/>) から引く。
+        /// 成長を記録していなければ案内を出して開かない。「戻る」・キャンセルで閉じる。
+        /// </summary>
+        public void OpenProfile()
+        {
+            if (_profileSlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            var progression = Progression;
+            if (progression == null)
+            {
+                Debug.LogWarning(MenuNavigator.LogTag + " cannot open the profile: no progression recorder is installed", this);
+                ShowNotice(ProfileUnavailableNotice);
+                return;
+            }
+
+            ShowNotice(null);
+            SetDisplayed(_profileSlot, true);
+            SetButtonsEnabled(false);
+            _profilePanel = new ProfilePanel(_profileSlot, progression.Ledger, progression.Profile, ProfileWeapons(), KitTuning.Items);
+            _profilePanel.Cancelled += CloseProfile;
+        }
+
+        /// <summary>プロフィールを閉じて差し込み口を空にし、プロフィールのボタンにフォーカスを戻す。開いていなければ何もしない。</summary>
+        public void CloseProfile()
+        {
+            if (_profilePanel == null)
+            {
+                return;
+            }
+
+            _profilePanel.Dispose();
+            _profilePanel = null;
+            SetDisplayed(_profileSlot, false);
+            SetButtonsEnabled(true);
+            FocusAt(IndexOf(ProfileButtonName));
+        }
+
+        // 武器の一覧が壊れていてもプロフィールは出せるので、名前の代わりに Id を出す (ProfilePanel は一覧が無ければ Id を出す)
+        private WeaponCatalog ProfileWeapons()
+        {
+            var catalog = EffectiveCatalog;
+            if (catalog == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return catalog.ToCatalog();
+            }
+            catch (WeaponDefinitionException e)
+            {
+                Debug.LogWarning(MenuNavigator.LogTag + " the profile shows unlock ids because the weapon catalog is invalid: " + e.Message, this);
+                return null;
+            }
         }
 
         private void SaveLoadout(IReadOnlyList<string> weaponIds)
@@ -786,6 +884,9 @@ namespace Shooter.Runtime
                 case LoadoutButtonName:
                     OpenLoadout();
                     break;
+                case ProfileButtonName:
+                    OpenProfile();
+                    break;
                 case RangeButtonName:
                     Choose(MenuDestination.Range);
                     break;
@@ -917,6 +1018,12 @@ namespace Shooter.Runtime
                 _campaignPanel = null;
             }
 
+            if (_profilePanel != null)
+            {
+                _profilePanel.Dispose();
+                _profilePanel = null;
+            }
+
             foreach (var undo in _unbind)
             {
                 undo();
@@ -931,6 +1038,7 @@ namespace Shooter.Runtime
             _settingsSlot = null;
             _loadoutSlot = null;
             _campaignSlot = null;
+            _profileSlot = null;
         }
 
         private static void SetDisplayed(VisualElement element, bool displayed)

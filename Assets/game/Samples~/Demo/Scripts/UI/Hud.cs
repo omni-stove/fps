@@ -444,6 +444,8 @@ namespace Shooter.Runtime
             if (inventoryView != null && ownInventory != null)
             {
                 inventoryView.Source = ownInventory;
+                var progression = ProgressionBootstrap.Recorder;
+                inventoryView.ShowUnlocks(progression?.Ledger, progression?.Profile);
             }
 
             if (_weapon == null)

@@ -217,6 +217,92 @@
     color: rgb(255, 120, 100);
 }
 
+/* プロフィールの差し込み口と、Shooter.Runtime.ProfilePanel が作る中身。 */
+.menu__profile-slot {
+    position: absolute;
+    left: 760px;
+    top: 160px;
+    right: 160px;
+}
+
+.profile {
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.profile__title {
+    margin: 0 0 16px 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.profile__level {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 44px;
+    color: rgb(255, 196, 64);
+    -unity-font-style: bold;
+}
+
+.profile__xp {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.profile__section {
+    margin: 16px 0 0 0;
+}
+
+.profile__section-title {
+    margin: 0 0 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.profile__stat,
+.profile__unlock {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    white-space: normal;
+}
+
+.profile__unlock {
+    color: rgb(190, 240, 190);
+}
+
+.profile__back {
+    height: 56px;
+    margin: 20px 0 0 0;
+    padding: 0 20px;
+    border-width: 0;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.profile__back:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.profile__back:focus {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.2);
+    color: rgb(255, 255, 255);
+}
+
 .menu__settings-slot {
     position: absolute;
     left: 760px;

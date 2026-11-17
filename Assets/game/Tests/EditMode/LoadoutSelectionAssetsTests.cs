@@ -54,6 +54,41 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AWeaponThatIsNotAvailableIsListedButCannotBeChosen()
+        {
+            var saved = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
+
+            Assert.That(
+                LoadoutSelectionAssets.TryCreate(
+                    _assets.Loadout, _assets.Catalog, saved, null, out var selection, out var error, id => id != LoadoutTestAssets.SmgId),
+                Is.True, error);
+
+            Assert.That(selection.OptionsAt(0)[1].Id, Is.EqualTo(LoadoutTestAssets.SmgId), "the locked weapon stays in the list");
+            Assert.That(selection.IsAvailableAt(0, 0), Is.True);
+            Assert.That(selection.IsAvailableAt(0, 1), Is.False);
+            Assert.That(selection.RestoredPreference, Is.False, "the saved locked weapon is not restored");
+            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+            Assert.That(selection.Select(0, 1), Is.False);
+            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+            Assert.That(selection.Validate(), Is.Null);
+        }
+
+        [Test]
+        public void AWeaponBecomesAvailableWhenThePredicateSaysSo()
+        {
+            var unlocked = false;
+            LoadoutSelectionAssets.TryCreate(
+                _assets.Loadout, _assets.Catalog, null, null, out var selection, out _, id => unlocked || id != LoadoutTestAssets.SmgId);
+            Assert.That(selection.Select(0, 1), Is.False);
+
+            unlocked = true;
+
+            Assert.That(selection.IsAvailableAt(0, 1), Is.True);
+            Assert.That(selection.Select(0, 1), Is.True);
+            Assert.That(selection.WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+        }
+
+        [Test]
         public void FailsWithAReasonWhenAnAssetIsMissingOrBroken()
         {
             Assert.That(LoadoutSelectionAssets.TryCreate(null, _assets.Catalog, null, null, out var selection, out var error), Is.False);

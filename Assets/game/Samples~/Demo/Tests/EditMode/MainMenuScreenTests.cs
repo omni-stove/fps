@@ -13,6 +13,10 @@ namespace Shooter.Tests.EditMode
 {
     public sealed class MainMenuScreenTests
     {
+        // 試合 1 回で 250 XP、レベル 2 は 500 XP から。SMG はレベル 2 で使えるようになる
+        private static readonly ProgressionSpec _profileSpec = new ProgressionSpec(
+            100, 0, 250, 0, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(LoadoutTestAssets.SmgId, 2) });
+
         private GameObject _owner;
         private MainMenuScreen _screen;
         private VisualElement _root;
@@ -39,11 +43,15 @@ namespace Shooter.Tests.EditMode
             // 本物のセーブ (persistentDataPath) を読み書きしないよう、キャンペーンのテストはメモリの置き場所を使う
             _screen.SaveStorage = new MemorySaveStorage();
             CampaignLaunchSelection.Clear();
+            ProgressionBootstrap.Uninstall();
+            CombatEvents.ClearSubscribers();
         }
 
         [TearDown]
         public void TearDown()
         {
+            ProgressionBootstrap.Uninstall();
+            CombatEvents.ClearSubscribers();
             _store.Delete();
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
@@ -98,10 +106,11 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定とロードアウトは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 2));
+            // 設定・ロードアウト・プロフィールは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 3));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.SettingsButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.LoadoutButtonName));
+            Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.ProfileButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Is.Unique);
         }
 
@@ -343,6 +352,113 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_screen.IsLoadoutOpen, Is.False);
                 Assert.That(_screen.Notice, Is.Null);
             }
+        }
+
+        [Test]
+        public void ProfileOpensWithTheRecordedLevelAndStatsAndClosesBackToItsButton()
+        {
+            var storage = new MemorySaveStorage();
+            new ProfileStore(storage).Save(new PlayerProfile(600, 3, 1, 2, 1));
+            var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(storage, _profileSpec, new OfflineParticipants()));
+            _screen.Bind(_root);
+
+            _screen.OpenProfile();
+
+            Assert.That(_screen.IsProfileOpen, Is.True);
+            Assert.That(_screen.ProfilePanel.Container, Is.SameAs(_screen.ProfileSlot));
+            Assert.That(_screen.ProfileSlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_screen.ProfilePanel.Profile, Is.EqualTo(recorder.Profile));
+            Assert.That(_screen.ProfilePanel.Level, Is.EqualTo(2));
+            Assert.That(_screen.ProfilePanel.LevelText, Is.EqualTo(ProgressionFormat.Level(2)));
+            Assert.That(_screen.ProfilePanel.TotalXpText, Is.EqualTo(ProgressionFormat.TotalXp(600)));
+            Assert.That(_screen.ProfilePanel.StatLines, Has.Member(ProgressionFormat.Kills(3)));
+            Assert.That(_screen.ProfilePanel.StatLines, Has.Member(ProgressionFormat.Matches(2)));
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+            Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the profile is open");
+            _screen.OpenLoadout();
+            Assert.That(_screen.IsLoadoutOpen, Is.False, "only one overlay at a time");
+
+            _screen.ProfilePanel.Cancel();
+
+            Assert.That(_screen.IsProfileOpen, Is.False);
+            Assert.That(_screen.ProfileSlot.childCount, Is.Zero);
+            Assert.That(_screen.ProfileSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.ProfileButtonName)));
+        }
+
+        [Test]
+        public void AProfileWithoutASaveOpensAtLevelOne()
+        {
+            ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _profileSpec, new OfflineParticipants()));
+            _screen.Bind(_root);
+
+            _screen.OpenProfile();
+
+            Assert.That(_screen.IsProfileOpen, Is.True);
+            Assert.That(_screen.ProfilePanel.Profile, Is.EqualTo(PlayerProfile.Empty));
+            Assert.That(_screen.ProfilePanel.Level, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ProfileWithoutARecorderOnlyShowsANotice()
+        {
+            _screen.Bind(_root);
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Menu\] cannot open the profile"));
+
+            _screen.OpenProfile();
+
+            Assert.That(_screen.IsProfileOpen, Is.False);
+            Assert.That(_screen.Notice, Is.EqualTo(MainMenuScreen.ProfileUnavailableNotice));
+            Assert.That(_screen.ProfileSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+        }
+
+        [Test]
+        public void ALockedWeaponCannotBeChosenInTheLoadoutUntilTheLevelIsReached()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _profileSpec, new OfflineParticipants()));
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+
+                _screen.OpenLoadout();
+
+                var selection = _screen.LoadoutPanel.Selection;
+                Assert.That(selection.OptionsAt(0)[1].Id, Is.EqualTo(LoadoutTestAssets.SmgId));
+                Assert.That(selection.IsAvailableAt(0, 1), Is.False, "the SMG needs level 2");
+                Assert.That(_screen.LoadoutPanel.Select(0, 1), Is.False);
+                Assert.That(selection.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                _screen.CloseLoadout();
+
+                // 試合 2 回 (250 XP ずつ) でレベル 2 になる
+                CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+                CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+                Assert.That(recorder.Level, Is.EqualTo(2));
+
+                _screen.OpenLoadout();
+
+                Assert.That(_screen.LoadoutPanel.Selection.IsAvailableAt(0, 1), Is.True);
+                Assert.That(_screen.LoadoutPanel.Select(0, 1), Is.True);
+                Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+                Assert.That(_store.Load(), Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+            }
+        }
+
+        [Test]
+        public void TheProgressionSetOnTheScreenWinsOverTheInstalledOne()
+        {
+            var installed = ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _profileSpec, new OfflineParticipants()));
+            Assert.That(_screen.Progression, Is.SameAs(installed));
+
+            var own = new ProgressionRecorder(new MemorySaveStorage(), _profileSpec, new OfflineParticipants());
+            _screen.Progression = own;
+            Assert.That(_screen.Progression, Is.SameAs(own));
+
+            _screen.Progression = null;
+            Assert.That(_screen.Progression, Is.SameAs(installed));
         }
 
         [Test]

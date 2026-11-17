@@ -126,6 +126,50 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnAttachmentThatIsNotAvailableStaysInTheInventory()
+        {
+            var (inventory, weapons) = NewArmedPlayer();
+            inventory.IsAvailable = id => id != _magazineId;
+
+            inventory.Attach(Handle(inventory, _magazineId));
+
+            Assert.That(inventory.Inventory.CountOf(_magazineId), Is.EqualTo(1));
+            Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+            Assert.That(weapons.Weapon.Spec.MagazineSize, Is.EqualTo(30));
+
+            inventory.Attach(Handle(inventory, _suppressorId));
+
+            Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.EqualTo(new[] { _suppressorId }), "other attachments still go on");
+        }
+
+        [Test]
+        public void WithoutAPredicateTheProfileLevelDecidesWhatCanBeAttached()
+        {
+            var storage = new MemorySaveStorage();
+            var spec = new ProgressionSpec(100, 0, 0, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(_magazineId, 2) });
+            ProgressionBootstrap.Install(new ProgressionRecorder(storage, spec, new OfflineParticipants()));
+            try
+            {
+                var (inventory, weapons) = NewArmedPlayer();
+
+                inventory.Attach(Handle(inventory, _magazineId));
+                Assert.That(inventory.Inventory.CountOf(_magazineId), Is.EqualTo(1), "level 1 cannot use a level 2 unlock");
+                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+
+                ProgressionBootstrap.Uninstall();
+                new ProfileStore(storage).Save(new PlayerProfile(500, 5, 0, 0, 0));
+                ProgressionBootstrap.Install(new ProgressionRecorder(storage, spec, new OfflineParticipants()));
+
+                inventory.Attach(Handle(inventory, _magazineId));
+                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.EqualTo(new[] { _magazineId }), "level 2 unlocks the magazine");
+            }
+            finally
+            {
+                ProgressionBootstrap.Uninstall();
+            }
+        }
+
+        [Test]
         public void NothingIsAttachedWhileUnarmed()
         {
             var (inventory, weapons) = NewArmedPlayer();

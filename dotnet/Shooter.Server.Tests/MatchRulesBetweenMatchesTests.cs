@@ -75,8 +75,9 @@ namespace Shooter.Server.Tests
         [Test]
         public void TwoMatchesInARowKeepTheTeamsAndWriteNoNewEvents()
         {
+            // 3 対 1 (差 2) が上限に収まるので、人数をそろえずに同じチームのまま続く
             Start(new NetMatchSettings(
-                scoreLimit: 1, restartDelaySeconds: 1f, maxTeamSizeDifference: 1, mapPool: _maps, mapVoteSeconds: 0.5f));
+                scoreLimit: 1, restartDelaySeconds: 1f, maxTeamSizeDifference: 2, mapPool: _maps, mapVoteSeconds: 0.5f));
             for (var id = 1; id <= 5; id++)
             {
                 Join(id);
@@ -116,6 +117,114 @@ namespace Shooter.Server.Tests
             Assert.That(_transport.Read<ChatMessage>(1, m => m), Is.Empty);
         }
 
+        [Test]
+        public void FourAgainstOneIsEvenedOutBeforeTheNextMatch()
+        {
+            Start(new NetMatchSettings(scoreLimit: 1, restartDelaySeconds: 1f, maxTeamSizeDifference: 1));
+            for (var id = 1; id <= 8; id++)
+            {
+                Join(id);
+            }
+
+            // 奇数が Alpha、偶数が Bravo に入る。Bravo を 2 だけ残して 4 対 1 にする
+            Leave(4);
+            Leave(6);
+            Leave(8);
+            Assert.That(_match.CountPlayers(Team.Alpha), Is.EqualTo(4));
+            Assert.That(_match.CountPlayers(Team.Bravo), Is.EqualTo(1));
+            var firstMatch = _match.MatchId;
+
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(JsonOf(ServerEventLog.TeamBalancedType), Is.Empty);
+            Advance(1.1f);
+
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_match.CountPlayers(Team.Alpha), Is.EqualTo(3));
+            Assert.That(_match.CountPlayers(Team.Bravo), Is.EqualTo(2));
+            Assert.That(TeamOf(7), Is.EqualTo(Team.Bravo));
+            Assert.That(_module.Session.GetTeam(7), Is.EqualTo(Team.Bravo));
+            Assert.That(SnapshotTeamOf(7), Is.EqualTo(Team.Bravo));
+            Assert.That(SnapshotTeamOf(1), Is.EqualTo(Team.Alpha));
+            Assert.That(JsonOf(ServerEventLog.TeamBalancedType), Is.EqualTo(new[]
+            {
+                ServerEventLog.TeamBalanced(_time, firstMatch, 7, null, Team.Alpha, Team.Bravo),
+            }));
+            Assert.That(_log.ToString(), Does.Contain("[Match] balanced player=7 from=Alpha to=Bravo"));
+
+            // 移った人は次の試合で前の味方の敵になる
+            Assert.That(_module.ApplyDamage(1, 7, 100), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(JsonOf(ServerEventLog.KillType).Last(), Does.Contain("\"teamKill\":\"false\""));
+        }
+
+        [Test]
+        public void APartyIsMovedTogether()
+        {
+            Start(new NetMatchSettings(scoreLimit: 1, restartDelaySeconds: 1f, maxTeamSizeDifference: 1));
+            Join(1);
+            Join(2);
+            Join(3, "party-a");
+            Join(4);
+            Join(5);
+            Join(6);
+            Join(7, "party-a");
+            Join(8);
+            Leave(4);
+            Leave(6);
+            Leave(8);
+
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Advance(1.1f);
+
+            // 最近入った 7 のパーティ (3・7) を一緒に移し、4 対 1 が 2 対 3 になる
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(TeamOf(3), Is.EqualTo(Team.Bravo));
+            Assert.That(TeamOf(7), Is.EqualTo(Team.Bravo));
+            Assert.That(TeamOf(5), Is.EqualTo(Team.Alpha));
+            Assert.That(_match.CountPlayers(Team.Alpha), Is.EqualTo(2));
+            Assert.That(_match.CountPlayers(Team.Bravo), Is.EqualTo(3));
+            Assert.That(JsonOf(ServerEventLog.TeamBalancedType), Has.Count.EqualTo(2));
+        }
+
+        [Test]
+        public void ALimitOfZeroLeavesFourAgainstOne()
+        {
+            Start(new NetMatchSettings(scoreLimit: 1, restartDelaySeconds: 1f));
+            for (var id = 1; id <= 8; id++)
+            {
+                Join(id);
+            }
+
+            Leave(4);
+            Leave(6);
+            Leave(8);
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Advance(1.1f);
+
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_match.CountPlayers(Team.Alpha), Is.EqualTo(4));
+            Assert.That(_match.CountPlayers(Team.Bravo), Is.EqualTo(1));
+            Assert.That(JsonOf(ServerEventLog.TeamBalancedType), Is.Empty);
+        }
+
+        private void Leave(int id)
+        {
+            Assert.That(_match.Leave(new ConnectionId((ulong)id)), Is.True);
+        }
+
+        private Team TeamOf(int id)
+        {
+            Assert.That(_match.TryGetPlayer(id, out var player), Is.True);
+            return player.Team;
+        }
+
+        private Team SnapshotTeamOf(int id)
+        {
+            var row = default(PlayerSnapshot);
+            Assert.That(_module.FillPlayer(id, ref row), Is.True);
+            return row.Team;
+        }
+
         private void Start(NetMatchSettings settings)
         {
             var rules = GameRules.Default
@@ -124,7 +233,7 @@ namespace Shooter.Server.Tests
                 .WithIdleKickSeconds(0f)
                 .WithRegenPerSecond(0f);
             var events = new ServerEventWriter(true, _json, _log);
-            _match = new ServerMatch(settings.RestartDelaySeconds, _log, events, () => _time);
+            _match = new ServerMatch(settings.RestartDelaySeconds, _log, events, () => _time, settings.MaxTeamSizeDifference);
             var context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
                 "1.0.0",
@@ -139,9 +248,9 @@ namespace Shooter.Server.Tests
             _module = module;
         }
 
-        private void Join(int id)
+        private void Join(int id, string partyId = null)
         {
-            _match.Join(new ConnectionId((ulong)id), "device" + id);
+            _match.Join(new ConnectionId((ulong)id), "device" + id, null, partyId);
         }
 
         private Team[] Teams()
@@ -160,7 +269,10 @@ namespace Shooter.Server.Tests
 
         private List<string> JsonOf(string type)
         {
-            return _json.ToString().Split('\n').Where(line => line.Contains("\"type\":\"" + type + "\"", StringComparison.Ordinal)).ToList();
+            return _json.ToString().Split('\n')
+                .Select(line => line.TrimEnd('\r'))
+                .Where(line => line.Contains("\"type\":\"" + type + "\"", StringComparison.Ordinal))
+                .ToList();
         }
     }
 }

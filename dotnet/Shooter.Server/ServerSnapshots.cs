@@ -104,6 +104,8 @@ namespace Shooter.Server
             status.Objective = _objective;
             snapshot.HasOwner = true;
 
+            // 倒れて観戦している人にも生きている人と同じく全員の行を送るので、映す相手の行を別に足さない。
+            // 映せるのは同じチームの人だけで、生きている味方が受け取る行より敵の情報は増えない
             foreach (var player in match.Players)
             {
                 if (snapshot.Players.Count == snapshot.Players.MaxCount)

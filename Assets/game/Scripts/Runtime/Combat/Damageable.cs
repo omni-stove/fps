@@ -159,10 +159,16 @@ namespace Shooter.Runtime
 
             var health = Health;
             var wasAlive = !health.IsDead;
+            var before = health.Current;
             health.TakeDamage(amount);
             if (!wasAlive)
             {
                 return;
+            }
+
+            if (ReportsKills)
+            {
+                RecordForAssists(before - health.Current);
             }
 
             Damaged?.Invoke(this, new DamageReport(amount, sourcePosition, zone, direction, kind));
@@ -174,18 +180,35 @@ namespace Shooter.Runtime
 
             if (health.IsDead && ReportsKills)
             {
-                CombatEvents.RaiseKilled(KillFeedEntryFor(zone));
+                var entry = KillFeedEntryFor(zone);
+                Debug.Log(KillLog.Killed(entry), this);
+                CombatEvents.RaiseKilled(entry);
             }
         }
 
+        // 渡された量ではなく減った体力を記録するのは、残り体力を超えた分までアシストの量に数えないため。
+        private void RecordForAssists(int dealt)
+        {
+            var attribution = CombatEvents.CurrentAttribution;
+            if (!attribution.HasValue || dealt <= 0)
+            {
+                return;
+            }
+
+            // オフラインの Damageable は陣営を持たないので、味方撃ちは KillFeedEntry と同じく false として扱う。
+            KillFeedAssists.Ledger.Record(CombatEvents.OfflineId(gameObject), attribution.Value.KillerId, dealt, friendly: false, KillFeedAssists.Now);
+        }
+
         // 帰属が無い死 (Inspector の Kill・落下など) は、KillFeedEntry の決まりに合わせて自滅として出す。
+        // 自滅でも台帳から引くのは、倒れた相手の記録を消すためと、自滅の前に削った人をアシストに載せるため。
         private KillFeedEntry KillFeedEntryFor(HitZone? zone)
         {
             var victimId = CombatEvents.OfflineId(gameObject);
             var attribution = CombatEvents.CurrentAttribution;
             var killerId = attribution.HasValue ? attribution.Value.KillerId : victimId;
             var weaponId = attribution.HasValue ? attribution.Value.WeaponId : string.Empty;
-            return new KillFeedEntry(killerId, victimId, weaponId, zone == HitZone.Head, friendly: false);
+            var assisterIds = KillFeedAssists.Ledger.TakeAssisters(victimId, killerId, KillFeedAssists.Now);
+            return new KillFeedEntry(killerId, victimId, weaponId, zone == HitZone.Head, friendly: false, assisterIds);
         }
 
         [ContextMenu("Kill")]
@@ -246,6 +269,9 @@ namespace Shooter.Runtime
             if (_health != null)
             {
                 _health.Died -= OnHealthDied;
+
+                // 倒れずに満たし直したとき (ラウンドの切り替えなど) に、前の撃ち合いの分を次の死のアシストへ持ち越さないため。
+                KillFeedAssists.Forget(gameObject);
             }
 
             // Inspector で 0 以下にされていても Health の例外で落ちないよう 1 に揃える。

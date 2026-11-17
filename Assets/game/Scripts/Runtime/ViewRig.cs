@@ -21,6 +21,9 @@ namespace Shooter.Runtime
     /// どちらの視点でも狙いは <see cref="ResolveAim"/> で、画面中央が指す点へ目から撃つ (<see cref="AimSolver"/>)。
     /// 三人称では、この端末のプレイヤーの視点 (<see cref="IsLocalView"/>) の間だけ <see cref="SwapShoulderActionPath"/> を読み、
     /// 押すたびにカメラを反対の肩へ <see cref="ShoulderBlend.DefaultSeconds"/> 秒で移す。カメラだけの話なので同期はしない。
+    /// リーンの傾き (<see cref="CharacterMotorState.Lean"/>) は <see cref="MotorSource"/> (未設定なら同じ GameObject の <see cref="ICharacterMotorStateSource"/>) から読む。
+    /// 一人称ではカメラを <see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/> だけ横へずらし (壁があれば手前まで)、
+    /// <see cref="MotorSpec.LeanAngleDegrees"/> まで傾ける。三人称では傾けている間だけカメラを傾けた側の肩へ寄せ、戻せば選んでいた肩へ戻す。
     /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、目はその親、入力はプロジェクト全体のアクション。
     /// カメラの視野角は操作設定 (<see cref="ControlSettings.FieldOfView"/>) にし、設定画面で変えるとその場で直す (<see cref="ApplyControlSettings"/>)。
     /// </summary>
@@ -87,6 +90,13 @@ namespace Shooter.Runtime
         private bool _listeningToSettings;
         private AimDownSights _ads;
         private bool _bodyHiddenBySight;
+        private ShoulderSide _chosenShoulder = ShoulderSide.Right;
+        private ICharacterMotorStateSource _motorSource;
+        private float _leanAmount;
+        private float _leanRollDegrees;
+        private Quaternion _appliedLeanRoll = Quaternion.identity;
+        private Quaternion _rolledRotation = Quaternion.identity;
+        private bool _hasLeanRoll;
 
         /// <summary>
         /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
@@ -118,21 +128,54 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// 三人称のカメラをどちらの肩越しに置くか (補間の目標)。既定は <see cref="ShoulderSide.Right"/>。
+        /// 三人称のカメラをどちらの肩越しに置くか (プレイヤーが選んだ肩)。既定は <see cref="ShoulderSide.Right"/>。
         /// Left なら <see cref="ThirdPersonOffset"/> の x を反転した位置へ向かう。変えると <see cref="Tick"/> で
         /// <see cref="ShoulderBlend.DefaultSeconds"/> 秒かけて移り、<c>[View] shoulder=Left</c> のようにログに出す。
+        /// リーンで傾けている間は、カメラはこれによらず傾けた側の肩へ向かう (<see cref="CameraShoulder"/>)。
         /// </summary>
         public ShoulderSide Shoulder
         {
-            get => _shoulder.Target;
+            get => _chosenShoulder;
             set
             {
-                if (_shoulder.SetTarget(value))
+                if (value != ShoulderSide.Right && value != ShoulderSide.Left)
                 {
-                    ReportShoulder();
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "unknown shoulder side");
                 }
+
+                if (value == _chosenShoulder)
+                {
+                    return;
+                }
+
+                _chosenShoulder = value;
+                ReportShoulder();
+                _shoulder.SetTarget(CameraShoulderFor(_leanAmount));
             }
         }
+
+        /// <summary>
+        /// 三人称のカメラが今向かっている肩 (補間の目標)。リーンで傾けている間は傾けた側、そうでなければ <see cref="Shoulder"/>。
+        /// </summary>
+        public ShoulderSide CameraShoulder => _shoulder.Target;
+
+        /// <summary>
+        /// リーンの傾きを読む移動の状態の読み元。null (か破棄済み) なら、カメラを置き直すたびに同じ GameObject から探す。
+        /// 見つからなければ傾けない。
+        /// </summary>
+        public ICharacterMotorStateSource MotorSource
+        {
+            get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
+            set => _motorSource = value;
+        }
+
+        /// <summary>最後にカメラを置き直したときのリーンの傾き。左 -1〜右 1。読み元が無いか値が不正なら 0。</summary>
+        public float LeanAmount => _leanAmount;
+
+        /// <summary>
+        /// 一人称のカメラに今掛けている横の傾き (度)。右へ傾けると負 (カメラの z 軸まわりに時計回り)。三人称と傾けていないときは 0。
+        /// </summary>
+        public float LeanRollDegrees => _leanRollDegrees;
 
         /// <summary>
         /// 照準器の出し方 (<see cref="SightView.EyeBlend"/> で三人称のカメラを目へ寄せ、<see cref="SightView.HidesBody"/> で体を隠す)。
@@ -268,9 +311,13 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             _isLive = false;
-            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定を外す。
+            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定とカメラの傾きを外す。
             _bodyHiddenBySight = false;
             ApplyBodyVisibility(false);
+            if (IsInitialized)
+            {
+                ApplyLeanRoll(0f);
+            }
         }
 
         private void LateUpdate()
@@ -282,7 +329,8 @@ namespace Shooter.Runtime
 
         /// <summary>
         /// 1 フレーム分進める。swapPressedThisFrame が true で、三人称かつこの端末のプレイヤーの視点 (<see cref="IsLocalView"/>) なら
-        /// 肩を入れ替える。それから肩の補間を deltaSeconds だけ進め、カメラを置き直す (<see cref="UpdateCameraPosition"/>)。
+        /// 選んでいる肩 (<see cref="Shoulder"/>) を入れ替える。リーンの傾きを読んでカメラの向かう肩 (<see cref="CameraShoulder"/>) を決め、
+        /// 肩の補間を deltaSeconds だけ進め、カメラを置き直す (<see cref="UpdateCameraPosition"/>)。
         /// </summary>
         /// <param name="swapPressedThisFrame">今フレームに肩の入れ替えが押されたか。</param>
         /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
@@ -294,12 +342,24 @@ namespace Shooter.Runtime
 
             if (swapPressedThisFrame && _isLocalView && _mode == ViewMode.ThirdPerson)
             {
-                _shoulder.Toggle();
+                _chosenShoulder = _chosenShoulder == ShoulderSide.Right ? ShoulderSide.Left : ShoulderSide.Right;
                 ReportShoulder();
             }
 
+            _shoulder.SetTarget(CameraShoulderFor(ReadLean(out _)));
             _shoulder.Tick(deltaSeconds);
             UpdateCameraPosition();
+        }
+
+        /// <summary>リーンの傾き lean のときにカメラが向かう肩。傾けていれば傾けた側、傾けていなければ選んでいる肩 (<see cref="Shoulder"/>)。</summary>
+        public ShoulderSide CameraShoulderFor(float lean)
+        {
+            if (lean > 0f)
+            {
+                return ShoulderSide.Right;
+            }
+
+            return lean < 0f ? ShoulderSide.Left : _chosenShoulder;
         }
 
         /// <summary>
@@ -447,7 +507,10 @@ namespace Shooter.Runtime
 
         /// <summary>
         /// カメラを目からのオフセット (x に <see cref="ShoulderOffsetSign"/> を掛けたもの) へ置く。
-        /// 三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める (肩の入れ替えの途中でも同じ)。
+        /// 一人称でリーンしていれば、目から <see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/> だけ横へずらし、
+        /// 傾き × <see cref="MotorSpec.LeanAngleDegrees"/> だけカメラを傾ける (<see cref="LeanRollDegrees"/>)。
+        /// 目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める (肩の入れ替えの途中やリーンでも同じ)。
+        /// 一人称のリーンは目まで縮めてよいので、三人称の下限 (<see cref="MinBoomLength"/>) は使わない。
         /// 肩の補間は進めない (進めるのは <see cref="Tick"/>)。
         /// </summary>
         public void UpdateCameraPosition()
@@ -457,9 +520,18 @@ namespace Shooter.Runtime
             var sight = _mode == ViewMode.ThirdPerson ? CurrentSightView() : SightView.None;
             HideBodyForSight(sight.HidesBody);
 
+            var lean = ReadLean(out var leanSpec);
+            var firstPersonLean = _mode == ViewMode.FirstPerson && lean != 0f;
+            ApplyLeanRoll(firstPersonLean ? -lean * leanSpec.LeanAngleDegrees : 0f);
+
             var shoulderOffset = _thirdPersonOffset;
             shoulderOffset.x *= _shoulder.OffsetSign;
             var offset = CameraBoom.TowardEye(CameraBoom.Offset(_mode, shoulderOffset.ToNumerics()), sight.EyeBlend).ToUnity();
+            if (firstPersonLean)
+            {
+                offset += LeanEyeOffset(lean, leanSpec);
+            }
+
             var cameraTransform = _camera.transform;
             var desired = offset.magnitude;
             if (desired < 1e-6f)
@@ -478,8 +550,80 @@ namespace Shooter.Runtime
                 blockedAt = hitDistance * (desired / worldLength);
             }
 
-            var length = CameraBoom.Length(desired, blockedAt, _minBoomLength);
+            // 下限を残すと、壁際のリーンでカメラが壁の中に止まる。
+            var minLength = _mode == ViewMode.FirstPerson ? 0f : _minBoomLength;
+            var length = CameraBoom.Length(desired, blockedAt, minLength);
             cameraTransform.localPosition = offset * (length / desired);
+        }
+
+        /// <summary>
+        /// リーンの傾き lean のときの、一人称のカメラの目からのずれ (目のローカル座標)。体の向き (yaw) で <see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/>
+        /// を求め、目の向きと拡縮で直す。当たり判定の目のずれと同じ計算にする。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">spec が null。</exception>
+        public Vector3 LeanEyeOffset(float lean, MotorSpec spec)
+        {
+            EnsureInitialized();
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var yaw = transform.eulerAngles.y * Mathf.Deg2Rad;
+            var world = LeanStep.EyeOffset(lean, yaw, spec).ToUnity();
+            return _eye.InverseTransformVector(world);
+        }
+
+        // 読み元が無い・状態がまだ無い・値が不正なら傾けない (0)。読んだ値は LeanAmount に残す。
+        private float ReadLean(out MotorSpec spec)
+        {
+            spec = null;
+            _leanAmount = 0f;
+            if (CharacterMotorStateSources.IsMissing(_motorSource))
+            {
+                _motorSource = TryGetComponent<ICharacterMotorStateSource>(out var found) ? found : null;
+            }
+
+            if (_motorSource == null || !_motorSource.TryGetMotorState(out var state) || !state.Lean.IsValid)
+            {
+                return 0f;
+            }
+
+            spec = _motorSource.Spec;
+            if (spec == null)
+            {
+                return 0f;
+            }
+
+            _leanAmount = state.Lean.Amount;
+            return _leanAmount;
+        }
+
+        // カメラの向きは照準器の揺れ (AimDownSights) も書く。前のフレームに自分が書いた向きのままなら自分の傾きだけを外し、
+        // 書き直されていればそれを傾けていない向きとして、その上に傾きを掛ける。
+        private void ApplyLeanRoll(float degrees)
+        {
+            var cameraTransform = _camera.transform;
+            var current = cameraTransform.localRotation;
+            var unrolled = _hasLeanRoll && current == _rolledRotation ? current * Quaternion.Inverse(_appliedLeanRoll) : current;
+            _leanRollDegrees = degrees;
+            if (degrees == 0f)
+            {
+                if (_hasLeanRoll)
+                {
+                    cameraTransform.localRotation = unrolled;
+                    _hasLeanRoll = false;
+                    _appliedLeanRoll = Quaternion.identity;
+                }
+
+                return;
+            }
+
+            var roll = Quaternion.Euler(0f, 0f, degrees);
+            cameraTransform.localRotation = unrolled * roll;
+            _appliedLeanRoll = roll;
+            _rolledRotation = cameraTransform.localRotation;
+            _hasLeanRoll = true;
         }
 
         /// <summary>
@@ -823,7 +967,7 @@ namespace Shooter.Runtime
 
         private void ReportShoulder()
         {
-            Debug.Log(FormatShoulderLog(_shoulder.Target), this);
+            Debug.Log(FormatShoulderLog(_chosenShoulder), this);
         }
 
         private void RefreshSwapShoulderAction()

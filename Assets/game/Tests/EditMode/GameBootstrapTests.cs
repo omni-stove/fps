@@ -735,7 +735,7 @@ namespace Fps.Tests.EditMode
                 _rules.ViewMode = ViewMode.ThirdPerson;
                 bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 bootstrap.RulesDefinition = _rules;
-                bootstrap.PlayerMaxHealth = 150;
+                _rules.PlayerMaxHealth = 150;
                 bootstrap.ThirdPersonOffset = new Vector3(0.4f, 0.1f, -4f);
                 bootstrap.MinBoomLength = 0.5f;
                 bootstrap.AdsTransitionSeconds = 0.4f;

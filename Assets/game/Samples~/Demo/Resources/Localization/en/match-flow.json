@@ -1,0 +1,8 @@
+{
+  "mapVote.title": "Vote for the next map",
+  "mapVote.remaining": "Time left: {0}s",
+  "mapVote.votes": "Votes: {0}",
+  "mapVote.decided": "Next map: {0}",
+  "map.NetTest": "Test Grounds",
+  "map.NetArena01": "Arena"
+}

@@ -195,7 +195,7 @@ namespace Shooter.NetV2
             lobby.TryGetNumber(ServerLobby.PlayersKey, out var players);
             _step = Step.Ready;
             _log(LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
-                + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + lobby.MaxMembers.ToString(CultureInfo.InvariantCulture)
+                + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + ServerLobby.PlayerSlots(lobby).ToString(CultureInfo.InvariantCulture)
                 + "; connecting " + options);
             _ready(options);
         }

@@ -19,6 +19,7 @@ namespace Shooter.Server.Eos
     /// </summary>
     /// <remarks>
     /// ロビーは公開 (検索で見つかる)・プレゼンス無し・ID での参加を許可・ホスト移行なしで作る。
+    /// ボイスを使うロビーは RTC 部屋を開き、ID で入ったクライアントのメンバーがそこで話せるようにする。
     /// 属性は作成の直後に公開の属性として付け、付けられなければロビーを閉じて失敗にする。
     /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
     /// </remarks>
@@ -112,7 +113,7 @@ namespace Shooter.Server.Eos
             });
         }
 
-        public void CreateLobby(string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        public void CreateLobby(string bucketId, int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
             ArgumentNullException.ThrowIfNull(attributes);
@@ -131,7 +132,16 @@ namespace Shooter.Server.Eos
                 AllowInvites = false,
                 BucketId = bucketId,
                 DisableHostMigration = true,
-                EnableRTCRoom = false,
+                EnableRTCRoom = voiceRoom,
+                // オーナーは RTC 部屋に自動で入る。音声の機器を持たないサーバーが機器を開こうとしないよう、入出力を手動にして黙らせておく
+                LocalRTCOptions = voiceRoom
+                    ? new LocalRTCOptions
+                    {
+                        UseManualAudioInput = true,
+                        UseManualAudioOutput = true,
+                        LocalAudioDeviceInputStartsMuted = true,
+                    }
+                    : (LocalRTCOptions?)null,
                 EnableJoinById = true,
                 RejoinAfterKickRequiresInvite = false,
             };

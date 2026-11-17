@@ -58,7 +58,10 @@ namespace Shooter.Core
             return BucketPrefix + LobbyLaunchOptions.BucketVersion(version);
         }
 
-        /// <summary>ロビーを作るときに付ける属性 (server・mode・version・players)。</summary>
+        /// <summary>
+        /// ロビーを作るときに付ける属性 (server・mode・version・players・voice_enabled)。
+        /// サーバーのロビーはいつも RTC 部屋を開いて作るので、voice_enabled は 1。
+        /// </summary>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
         /// <param name="version">アプリのバージョン。空なら "0"。</param>
         /// <param name="players">今の人数 (0 以上)。</param>
@@ -75,7 +78,40 @@ namespace Shooter.Core
                 LobbyAttribute.OfText(ModeKey, TeamDeathmatchMode),
                 LobbyAttribute.OfText(VersionKey, LobbyLaunchOptions.BucketVersion(version)),
                 PlayersAttribute(players),
+                LobbyAttribute.OfNumber(VoiceEnabledKey, 1),
             };
+        }
+
+        /// <summary>
+        /// 試合の人数 <paramref name="maxPlayers"/> のサーバーが作るロビーのメンバーの上限。
+        /// ボイスのためにプレイヤーもメンバーとして入り、オーナーのサーバー自身も 1 人分を使うので 1 足す。
+        /// EOS のロビーの上限 (<see cref="LobbyLaunchOptions.MaxMaxPlayers"/>) を超えないよう切り詰める。
+        /// </summary>
+        /// <param name="maxPlayers">試合に入れる人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
+        public static int MaxMembers(int maxPlayers)
+        {
+            if (maxPlayers < NetMatchSettings.MinMaxPlayers || maxPlayers > NetMatchSettings.MaxMaxPlayers)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxPlayers), maxPlayers,
+                    "must be between " + NetMatchSettings.MinMaxPlayers + " and " + NetMatchSettings.MaxMaxPlayers);
+            }
+
+            return Math.Min(maxPlayers + 1, LobbyLaunchOptions.MaxMaxPlayers);
+        }
+
+        /// <summary>
+        /// サーバーのロビー <paramref name="lobby"/> に入れるプレイヤーの数。ボイスのあるロビー (<see cref="LobbyInfo.VoiceEnabled"/>) は
+        /// サーバー自身の 1 人分を <see cref="LobbyInfo.MaxMembers"/> から除き、ボイスの無いロビーは最大人数をそのまま使う。
+        /// </summary>
+        public static int PlayerSlots(LobbyInfo lobby)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            return lobby.VoiceEnabled ? lobby.MaxMembers - 1 : lobby.MaxMembers;
         }
 
         /// <summary>人数の属性。</summary>

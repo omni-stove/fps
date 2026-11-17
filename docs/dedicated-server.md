@@ -303,6 +303,9 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
+- 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・
+  空中の重力と効きは `server-data/tuning/knockback.json` (無ければ既定値) から読み、承認 (`ConnectAccepted`) でクライアントの予測にも渡す。
+  飛んでいる状態は持ち主のスナップショットで送り、予測は飛ばされた tick から入力をやり直す。ログは `[Net] knockback owner=.. launched|landed ..`。
 - 持ち物 (アイテムの種類・マス目や重さの決め方・出現のたびに持つアイテム) は `server-data/tuning/inventory.json`
   (無ければアイテムなし) から読み、出現のたびに持たせ直す。持ち主の置き直す・使う・捨てるの頼みを確かめ、中身が変わった tick に
   持ち主にだけ送る。決め方の `countWeightInCarryLoad` が true なら、持ち物の重さを移動の遅さに数える。

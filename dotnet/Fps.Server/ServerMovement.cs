@@ -25,6 +25,7 @@ namespace Fps.Server
         private readonly Dictionary<int, Mover> _byPlayer = new Dictionary<int, Mover>();
         private ServerContext _context;
         private TextWriter _log;
+        private KnockbackSpec _knockback = KnockbackSpec.Default;
         private float _now;
 
         public ServerMovement(ServerMotorSettings settings, int tickRate = TickClock.DefaultTickRate)
@@ -53,6 +54,7 @@ namespace Fps.Server
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _log = context.Log;
+            _knockback = context.Rules?.Knockback ?? KnockbackSpec.Default;
             _context.Bodies.Teleported += HandleTeleported;
             _context.Bodies.DownedChanged += HandleDownedChanged;
         }
@@ -130,6 +132,7 @@ namespace Fps.Server
             {
                 SpawnPosition = spawn,
                 Ladders = _context.Map.Ladders.Ladders,
+                Knockback = _knockback,
             };
             var mover = new Mover(player, simulation)
             {
@@ -215,6 +218,32 @@ namespace Fps.Server
             return true;
         }
 
+        /// <summary>
+        /// 吹き飛ばしの値 (<see cref="ServerRulesData.Knockback"/>)。飛んでいる間の動きはクライアントの予測にも同じ値を渡す
+        /// (<see cref="ConnectAcceptedMessage.Knockback"/>)。
+        /// </summary>
+        public KnockbackSpec Knockback => _knockback;
+
+        /// <summary>
+        /// 最後に処理した入力の後の状態を velocity で吹き飛ばす。動くのは次の入力から (持ち主の予測がその状態から入力をやり直せるように)。
+        /// </summary>
+        public bool Launch(int playerId, Vector3 velocity)
+        {
+            if (!float.IsFinite(velocity.X) || !float.IsFinite(velocity.Y) || !float.IsFinite(velocity.Z))
+            {
+                throw new ArgumentOutOfRangeException(nameof(velocity), velocity, "velocity must be finite");
+            }
+
+            if (!_byPlayer.TryGetValue(playerId, out var mover))
+            {
+                return false;
+            }
+
+            mover.State = CharacterMotorSimulation.Launch(mover.State, velocity);
+            _log.WriteLine(ServerMovementLog.KnockbackLaunched(playerId, mover.LastProcessedTick, velocity));
+            return true;
+        }
+
         public bool SetDowned(int playerId, bool downed)
         {
             if (!_byPlayer.TryGetValue(playerId, out var mover))
@@ -267,6 +296,7 @@ namespace Fps.Server
             {
                 snapshot.Owner.LastProcessedInputTick = own.LastProcessedTick;
                 snapshot.Owner.CarrySpeedMultiplier = CarrySpeedMultiplier(own);
+                snapshot.Owner.Knockback = own.State.Knockback;
             }
         }
 
@@ -400,6 +430,11 @@ namespace Fps.Server
             if (previous.IsVaulting != current.IsVaulting)
             {
                 _log.WriteLine(ServerMovementLog.Vault(playerId, tick, current.IsVaulting));
+            }
+
+            if (previous.IsKnockedBack && !current.IsKnockedBack)
+            {
+                _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
             }
 
             // 着地した tick の速度は、まだ接地中の吸着の速度に戻る前の落下速度を持っている

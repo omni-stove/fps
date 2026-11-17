@@ -321,7 +321,7 @@ namespace Fps.NetV2.Tests
         {
             Assert.That(
                 ClientWorld.TryLoad(Path.Combine(_root, "server-data", "maps"), client.Map, out var world, out var error), Is.True, error);
-            return world.CreateSimulation(client.Motor, client.TickRate, client.KillPlaneY);
+            return world.CreateSimulation(client.Motor, client.TickRate, client.KillPlaneY, client.Knockback);
         }
 
         private void Pump(Func<bool> until)

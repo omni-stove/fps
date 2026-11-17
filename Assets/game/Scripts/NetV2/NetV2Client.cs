@@ -469,7 +469,7 @@ namespace Fps.NetV2
                 + " height=" + motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
                 + " radius=" + motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
                 + " proneSpeed=" + motor.Prone.Speed.ToString(CultureInfo.InvariantCulture), this);
-            _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
+            _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY, _client.Knockback));
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
             _weaponHooks.Beams.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);

@@ -43,6 +43,21 @@ namespace Fps.Core
             CharacterVaultState vault,
             CharacterProneState prone,
             CharacterLadderState ladder)
+            : this(position, velocity, isGrounded, stance, cover, dodge, vault, prone, ladder, CharacterKnockbackState.None)
+        {
+        }
+
+        public CharacterMotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            PlayerStance stance,
+            CharacterCoverState cover,
+            DodgeSnapshot dodge,
+            CharacterVaultState vault,
+            CharacterProneState prone,
+            CharacterLadderState ladder,
+            CharacterKnockbackState knockback)
         {
             Position = position;
             Velocity = velocity;
@@ -53,6 +68,7 @@ namespace Fps.Core
             Vault = vault;
             Prone = prone;
             Ladder = ladder;
+            Knockback = knockback;
         }
 
         public Vector3 Position { get; }
@@ -77,6 +93,10 @@ namespace Fps.Core
 
         public CharacterLadderState Ladder { get; }
 
+        public CharacterKnockbackState Knockback { get; }
+
+        public bool IsKnockedBack => Knockback.IsFlying;
+
         public bool IsDiving => Prone.IsDiving;
 
         public bool IsClimbing => Ladder.IsClimbing;
@@ -86,7 +106,7 @@ namespace Fps.Core
         public bool IsVaulting => Vault.IsVaulting;
 
         public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
-            && Prone.IsValid && Ladder.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone;
+            && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone;
 
         /// <summary>
         /// 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
@@ -108,6 +128,7 @@ namespace Fps.Core
 
             if (predicted.IsDodging != authoritative.IsDodging || predicted.IsVaulting != authoritative.IsVaulting
                 || predicted.IsDiving != authoritative.IsDiving
+                || predicted.IsKnockedBack != authoritative.IsKnockedBack
                 || predicted.Ladder.IsClimbing != authoritative.Ladder.IsClimbing
                 || (predicted.Ladder.IsClimbing && predicted.Ladder.Index != authoritative.Ladder.Index))
             {
@@ -115,6 +136,11 @@ namespace Fps.Core
             }
 
             return Vector3.Distance(predicted.Position, authoritative.Position);
+        }
+
+        public CharacterMotorState WithKnockback(CharacterKnockbackState knockback)
+        {
+            return new CharacterMotorState(Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback);
         }
 
         public bool Equals(CharacterMotorState other)
@@ -127,7 +153,8 @@ namespace Fps.Core
                 && Dodge.Equals(other.Dodge)
                 && Vault.Equals(other.Vault)
                 && Prone.Equals(other.Prone)
-                && Ladder.Equals(other.Ladder);
+                && Ladder.Equals(other.Ladder)
+                && Knockback.Equals(other.Knockback);
         }
 
         public override bool Equals(object obj)
@@ -150,7 +177,8 @@ namespace Fps.Core
             unchecked
             {
                 return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ ((int)Stance << 1)
-                    ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode();
+                    ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode()
+                    ^ Knockback.GetHashCode();
             }
         }
 

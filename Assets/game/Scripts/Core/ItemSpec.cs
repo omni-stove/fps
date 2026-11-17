@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Fps.Core
 {
@@ -29,7 +31,9 @@ namespace Fps.Core
             int useHealth = DefaultUseHealth,
             int useArmor = DefaultUseArmor,
             string weaponId = null,
-            string ammoItemId = null)
+            string ammoItemId = null,
+            AttachmentSpec attachment = null,
+            IEnumerable<string> attachmentSlots = null)
         {
             Id = SpecGuard.LowercaseUuid(id, nameof(id));
             NameKey = SpecGuard.NameKey(nameKey);
@@ -65,6 +69,18 @@ namespace Fps.Core
             {
                 throw new ArgumentException("a weapon item cannot be its own ammo", nameof(ammoItemId));
             }
+
+            Attachment = attachment;
+            AttachmentSlots = Slots(attachmentSlots);
+            if (Attachment != null && (WeaponId != null || IsUsable))
+            {
+                throw new ArgumentException("an attachment item cannot be a weapon or be used up (using it attaches it)", nameof(attachment));
+            }
+
+            if (AttachmentSlots.Count > 0 && WeaponId == null)
+            {
+                throw new ArgumentException("attachmentSlots needs a weaponId", nameof(attachmentSlots));
+            }
         }
 
         public string Id { get; }
@@ -91,13 +107,54 @@ namespace Fps.Core
 
         public string AmmoItemId { get; }
 
+        public AttachmentSpec Attachment { get; }
+
+        public IReadOnlyList<string> AttachmentSlots { get; }
+
         public bool IsWeapon => WeaponId != null;
+
+        public bool IsAttachment => Attachment != null;
+
+        public bool HasSlot(string slot)
+        {
+            foreach (var candidate in AttachmentSlots)
+            {
+                if (string.Equals(candidate, slot, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public bool IsUsable => UseHealth > 0 || UseArmor > 0;
 
         public int WidthWhen(bool rotated) => rotated ? Height : Width;
 
         public int HeightWhen(bool rotated) => rotated ? Width : Height;
+
+        private static ReadOnlyCollection<string> Slots(IEnumerable<string> attachmentSlots)
+        {
+            var list = new List<string>();
+            if (attachmentSlots == null)
+            {
+                return list.AsReadOnly();
+            }
+
+            foreach (var slot in attachmentSlots)
+            {
+                var name = AttachmentSpec.SlotName(slot, nameof(attachmentSlots));
+                if (list.Contains(name))
+                {
+                    throw new ArgumentException("attachment slot '" + name + "' is listed twice", nameof(attachmentSlots));
+                }
+
+                list.Add(name);
+            }
+
+            return list.AsReadOnly();
+        }
 
         private static int Between(int value, int min, int max, string name)
         {

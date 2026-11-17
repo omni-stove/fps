@@ -28,6 +28,21 @@ namespace Fps.Core
         public const string UseArmorItem = "useArmor";
         public const string WeaponIdItem = "weaponId";
         public const string AmmoItemIdItem = "ammoItemId";
+        public const string AttachmentItem = "attachment";
+        public const string AttachmentSlotsItem = "attachmentSlots";
+
+        public const string SlotItem = "slot";
+        public const string WeaponIdsItem = "weaponIds";
+        public const string RangeMultiplierItem = "rangeMultiplier";
+        public const string HipSpreadMultiplierItem = "hipSpreadMultiplier";
+        public const string AdsSpreadMultiplierItem = "adsSpreadMultiplier";
+        public const string MoveSpreadMultiplierItem = "moveSpreadMultiplier";
+        public const string RecoilMultiplierItem = "recoilMultiplier";
+        public const string ReloadSecondsMultiplierItem = "reloadSecondsMultiplier";
+        public const string MagazineSizeBonusItem = "magazineSizeBonus";
+        public const string ShotNoiseRadiusMultiplierItem = "shotNoiseRadiusMultiplier";
+        public const string MoveSpeedMultiplierItem = "moveSpeedMultiplier";
+        public const string ZoomLevelsItem = "zoomLevels";
 
         public const string CountItem = "count";
 
@@ -59,6 +74,24 @@ namespace Fps.Core
             UseArmorItem,
             WeaponIdItem,
             AmmoItemIdItem,
+            AttachmentItem,
+            AttachmentSlotsItem,
+        };
+
+        public static IReadOnlyList<string> AttachmentItemNames { get; } = new[]
+        {
+            SlotItem,
+            WeaponIdsItem,
+            RangeMultiplierItem,
+            HipSpreadMultiplierItem,
+            AdsSpreadMultiplierItem,
+            MoveSpreadMultiplierItem,
+            RecoilMultiplierItem,
+            ReloadSecondsMultiplierItem,
+            MagazineSizeBonusItem,
+            ShotNoiseRadiusMultiplierItem,
+            MoveSpeedMultiplierItem,
+            ZoomLevelsItem,
         };
 
         public static IReadOnlyList<string> StartingItemNames { get; } = new[] { IdItem, CountItem };
@@ -95,7 +128,9 @@ namespace Fps.Core
 
                 try
                 {
-                    return new ItemCatalog(items, rule, starting);
+                    var catalog = new ItemCatalog(items, rule, starting);
+                    catalog.CheckAttachments();
+                    return catalog;
                 }
                 catch (ArgumentException e)
                 {
@@ -131,6 +166,9 @@ namespace Fps.Core
         {
             var weaponId = fields.ReadString(WeaponIdItem, null);
             var weight = fields.ReadFloat(WeightItem, ItemSpec.DefaultWeight);
+            var attachmentFields = fields.Object(AttachmentItem, AttachmentItemNames);
+            var attachment = attachmentFields == null ? null : ReadAttachment(attachmentFields);
+            var slots = Texts(fields, AttachmentSlotsItem);
 
             // 武器の重さは武器のデータ (WeaponSpec.Weight) から取るので、ここにも書くとどちらが効くか読み手が迷う
             if (!string.IsNullOrWhiteSpace(weaponId) && weight != ItemSpec.DefaultWeight)
@@ -152,12 +190,61 @@ namespace Fps.Core
                     fields.ReadInt(UseHealthItem, ItemSpec.DefaultUseHealth),
                     fields.ReadInt(UseArmorItem, ItemSpec.DefaultUseArmor),
                     weaponId,
-                    fields.ReadString(AmmoItemIdItem, null));
+                    fields.ReadString(AmmoItemIdItem, null),
+                    attachment,
+                    slots);
             }
             catch (ArgumentException e)
             {
                 throw fields.Rejected(Known(ItemItemNames, e.ParamName) ? fields.ItemPath(e.ParamName) : fields.Path, e.Message, e);
             }
+        }
+
+        private static AttachmentSpec ReadAttachment(ServerDataJson.Fields fields)
+        {
+            var zoomNodes = fields.Find(ZoomLevelsItem) == null ? null : fields.Array(ZoomLevelsItem);
+            List<float> zoomLevels = null;
+            if (zoomNodes != null)
+            {
+                zoomLevels = new List<float>(zoomNodes.Count);
+                for (var i = 0; i < zoomNodes.Count; i++)
+                {
+                    zoomLevels.Add(fields.ToFloat(fields.ElementPath(ZoomLevelsItem, i), zoomNodes[i]));
+                }
+            }
+
+            try
+            {
+                return new AttachmentSpec(
+                    fields.ReadString(SlotItem, null),
+                    Texts(fields, WeaponIdsItem),
+                    fields.ReadFloat(RangeMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(HipSpreadMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(AdsSpreadMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(MoveSpreadMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(RecoilMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(ReloadSecondsMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadInt(MagazineSizeBonusItem, AttachmentSpec.DefaultMagazineSizeBonus),
+                    fields.ReadFloat(ShotNoiseRadiusMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    fields.ReadFloat(MoveSpeedMultiplierItem, AttachmentSpec.DefaultMultiplier),
+                    zoomLevels);
+            }
+            catch (ArgumentException e)
+            {
+                throw fields.Rejected(Known(AttachmentItemNames, e.ParamName) ? fields.ItemPath(e.ParamName) : fields.Path, e.Message, e);
+            }
+        }
+
+        private static List<string> Texts(ServerDataJson.Fields fields, string name)
+        {
+            var nodes = fields.Array(name);
+            var texts = new List<string>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                texts.Add(fields.ToText(fields.ElementPath(name, i), nodes[i]));
+            }
+
+            return texts;
         }
 
         private static bool Known(IReadOnlyList<string> names, string name)

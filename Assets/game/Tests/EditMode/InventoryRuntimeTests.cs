@@ -533,6 +533,20 @@ namespace Fps.Tests.EditMode
             {
                 Inventory.TryTake(handle, count, out _);
             }
+
+            public List<int> Attached { get; } = new List<int>();
+
+            public List<(int, string)> Detached { get; } = new List<(int, string)>();
+
+            public void Attach(int handle)
+            {
+                Attached.Add(handle);
+            }
+
+            public void Detach(int weaponHandle, string itemId)
+            {
+                Detached.Add((weaponHandle, itemId));
+            }
         }
     }
 }

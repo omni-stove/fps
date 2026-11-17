@@ -32,17 +32,74 @@ namespace Fps.Protocol
                     continue;
                 }
 
-                var itemIndex = IndexOf(message, item.Id);
+                var itemIndex = ItemIndex(message, inventory, item);
                 if (itemIndex < 0)
                 {
-                    itemIndex = message.AddItem(new InventoryStateMessage.Item(
-                        item.Id, (ushort)item.MaxStack, inventory.WeightOf(item), (byte)item.Width, (byte)item.Height));
+                    continue;
                 }
 
-                message.AddEntry(new InventoryStateMessage.Entry(
-                    (ushort)entry.Handle, (byte)itemIndex, (ushort)Math.Min(entry.Count, ushort.MaxValue), (byte)Math.Min(entry.X, byte.MaxValue),
-                    (byte)Math.Min(entry.Y, byte.MaxValue), entry.Rotated));
+                var attached = new List<byte>();
+                if (item.IsWeapon)
+                {
+                    foreach (var attachedId in inventory.AttachmentsOf(item.WeaponId))
+                    {
+                        if (inventory.Catalog.TryFind(attachedId, out var attachedItem))
+                        {
+                            var attachedIndex = ItemIndex(message, inventory, attachedItem);
+                            if (attachedIndex >= 0)
+                            {
+                                attached.Add((byte)attachedIndex);
+                            }
+                        }
+                    }
+                }
+
+                message.AddEntry(
+                    new InventoryStateMessage.Entry(
+                        (ushort)entry.Handle, (byte)itemIndex, (ushort)Math.Min(entry.Count, ushort.MaxValue), (byte)Math.Min(entry.X, byte.MaxValue),
+                        (byte)Math.Min(entry.Y, byte.MaxValue), entry.Rotated),
+                    attached);
             }
+        }
+
+        public static List<KeyValuePair<string, IReadOnlyList<string>>> ToAttachments(InventoryStateMessage message, ItemCatalog catalog)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            if (catalog == null)
+            {
+                throw new ArgumentNullException(nameof(catalog));
+            }
+
+            var attachments = new List<KeyValuePair<string, IReadOnlyList<string>>>();
+            for (var i = 0; i < message.EntryCount; i++)
+            {
+                var sent = message.EntryAt(i);
+                if (sent.AttachedCount == 0 || !catalog.TryFind(message.ItemAt(sent.ItemIndex).ItemId, out var weapon) || !weapon.IsWeapon)
+                {
+                    continue;
+                }
+
+                var ids = new List<string>(sent.AttachedCount);
+                for (var a = 0; a < sent.AttachedCount; a++)
+                {
+                    var id = message.ItemAt(message.AttachedItemAt(i, a)).ItemId;
+                    if (catalog.TryFindAttachment(id, out _))
+                    {
+                        ids.Add(id);
+                    }
+                }
+
+                if (ids.Count > 0)
+                {
+                    attachments.Add(new KeyValuePair<string, IReadOnlyList<string>>(weapon.WeaponId, ids.AsReadOnly()));
+                }
+            }
+
+            return attachments;
         }
 
         public static ItemCatalog ToCatalog(InventoryStateMessage message, ItemCatalog local)
@@ -88,7 +145,10 @@ namespace Fps.Protocol
                         known?.UseHealth ?? 0,
                         known?.UseArmor ?? 0,
                         // 弾薬アイテムは送った中に無いことがあり、表に無い弾薬を指すと表を作れないので、弾薬は付けない (撃つのはサーバー)
-                        known?.WeaponId));
+                        known?.WeaponId,
+                        null,
+                        known?.Attachment,
+                        known?.WeaponId != null ? known.AttachmentSlots : null));
                 }
                 catch (ArgumentException)
                 {
@@ -125,6 +185,23 @@ namespace Fps.Protocol
             }
 
             return entries;
+        }
+
+        private static int ItemIndex(InventoryStateMessage message, Inventory inventory, ItemSpec item)
+        {
+            var index = IndexOf(message, item.Id);
+            if (index >= 0)
+            {
+                return index;
+            }
+
+            if (message.ItemCount == InventoryStateMessage.MaxCount)
+            {
+                return -1;
+            }
+
+            return message.AddItem(new InventoryStateMessage.Item(
+                item.Id, (ushort)item.MaxStack, inventory.WeightOf(item), (byte)item.Width, (byte)item.Height));
         }
 
         private static int IndexOf(InventoryStateMessage message, string itemId)

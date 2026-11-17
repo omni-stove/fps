@@ -13,6 +13,7 @@ namespace Fps.Runtime
         private bool _unarmed;
         private readonly System.Random _random = new System.Random();
         private readonly RecoilState _recoil = new RecoilState();
+        private IReadOnlyList<string> _weaponAttachments = Fps.Core.WeaponAttachments.None;
         private readonly TriggerDriver _trigger = new TriggerDriver();
         private int _spreadSeed;
         private int _shotCount;
@@ -65,9 +66,9 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 拾った武器を持つ。bot は 1 本しか持たないので、別の武器を持っていればそれと持ち替える (<see cref="EquipWeapon"/>、今の <see cref="WeaponRules"/>)。
-        /// 弾数は ammo があればその数、null なら満タン。同じ Id の武器を持っていれば何もせず false。
+        /// 弾数は ammo があればその数、null なら満タン。付いていた物 attachments は効かせ、手放すときにそのまま渡す。同じ Id の武器を持っていれば何もせず false。
         /// </summary>
-        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null)
+        public bool AddWeapon(WeaponDefinition definition, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null)
         {
             if (definition == null)
             {
@@ -81,15 +82,16 @@ namespace Fps.Runtime
                 return false;
             }
 
-            EquipWeapon(definition, _weaponRules, ammo);
+            EquipWeapon(definition, _weaponRules, ammo, attachments);
             return true;
         }
 
         /// <summary>
-        /// Id が droppedWeaponId の今の武器を手放して definition の武器を持つ (<see cref="AddWeapon"/> と同じ弾数)。手放した武器の定義と残弾を dropped に入れて true。
-        /// 今の武器の Id が droppedWeaponId でない・definition と同じなら何もせず false。
+        /// Id が droppedWeaponId の今の武器を手放して definition の武器を持つ (<see cref="AddWeapon"/> と同じ弾数と付けた物)。
+        /// 手放した武器の定義と残弾と付けていた物を dropped に入れて true。今の武器の Id が droppedWeaponId でない・definition と同じなら何もせず false。
         /// </summary>
-        public bool SwapWeapon(string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, out HeldWeapon dropped)
+        public bool SwapWeapon(
+            string droppedWeaponId, WeaponDefinition definition, WeaponAmmo ammo, IReadOnlyList<string> attachments, out HeldWeapon dropped)
         {
             if (definition == null)
             {
@@ -103,8 +105,8 @@ namespace Fps.Runtime
                 return false;
             }
 
-            var leaving = new HeldWeapon(_weaponDefinition, WeaponAmmo.Of(current));
-            if (!AddWeapon(definition, ammo))
+            var leaving = new HeldWeapon(_weaponDefinition, WeaponAmmo.Of(current), _weaponAttachments);
+            if (!AddWeapon(definition, ammo, attachments))
             {
                 return false;
             }
@@ -135,16 +137,19 @@ namespace Fps.Runtime
             set => _weaponDefinition = value;
         }
 
+        public IReadOnlyList<string> HeldAttachments => _weaponAttachments;
+
         /// <summary>武器を作るときの予備弾のルール。既定は <see cref="GameRules.Default"/>。<see cref="EquipWeapon"/> で変える。</summary>
         public GameRules WeaponRules => _weaponRules;
 
         /// <summary>
         /// 持つ武器を definition に替え、rules (null なら今の <see cref="WeaponRules"/>) の予備弾で満タンに作り直す (ammo があればその弾数にする)。リロード中なら取り消す。
+        /// attachments (持ち物のアイテムの Id) は、持ち物の表 (<see cref="KitTuning.Items"/>) でその武器に付く物だけを効かせる。
         /// 以後の <see cref="Respawn"/> もこの武器とルールで作り直す。未初期化なら定義とルールを覚えるだけで、<see cref="TryInitialize"/> がそれで作る。
         /// 武器を持っていなければ (<see cref="IsUnarmed"/>)、持った状態に戻す。
         /// 定義が不正なら <see cref="WeaponDefinitionException"/> を投げ、今の武器はそのまま残す。
         /// </summary>
-        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null, WeaponAmmo ammo = null)
+        public void EquipWeapon(WeaponDefinition definition, GameRules rules = null, WeaponAmmo ammo = null, IReadOnlyList<string> attachments = null)
         {
             if (definition == null)
             {
@@ -152,8 +157,11 @@ namespace Fps.Runtime
             }
 
             var spec = definition.ToSpec();
+            var kept = WeaponAttachments.Keep(KitTuning.Items, spec.Id, attachments);
+            spec = WeaponAttachments.Apply(spec, kept, KitTuning.Items);
             var weaponRules = rules ?? _weaponRules;
             _weaponDefinition = definition;
+            _weaponAttachments = kept;
             _weaponRules = weaponRules;
             _unarmed = false;
             if (_brain == null)
@@ -171,7 +179,7 @@ namespace Fps.Runtime
                 : new Weapon(spec, weaponRules);
             _weapon.Reloaded += OnReloaded;
             _recoil.Reset();
-            Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine}", this);
+            Debug.Log($"{LogTag} id={Id} equip weapon={spec.LogName} ammo={_weapon.AmmoInMagazine} attachments={WeaponAttachments.Describe(kept)}", this);
         }
 
         public static Vector3 WithRecoil(Vector3 direction, RecoilState recoil, float control)

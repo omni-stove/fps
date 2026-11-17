@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using Fps.Core;
 using Fps.Protocol;
 
@@ -33,6 +34,7 @@ namespace Fps.NetV2
 
             var catalog = InventorySync.ToCatalog(message, _local);
             var entries = InventorySync.ToEntries(message, catalog);
+            var attachments = InventorySync.ToAttachments(message, catalog);
             if (Inventory == null || !SameLayout(Inventory.Catalog, catalog))
             {
                 if (Inventory != null)
@@ -42,6 +44,7 @@ namespace Fps.NetV2
 
                 Inventory = new Inventory(catalog);
                 Inventory.Replace(entries);
+                Inventory.ReplaceAttachments(attachments);
                 Inventory.Changed += OnInventoryChanged;
                 _log?.Invoke($"{LogTag} received items={catalog.Items.Count} stacks={entries.Count} grid={catalog.Rule.GridWidth}x{catalog.Rule.GridHeight}");
                 Changed?.Invoke();
@@ -49,6 +52,7 @@ namespace Fps.NetV2
             }
 
             Inventory.Replace(entries);
+            Inventory.ReplaceAttachments(attachments);
         }
 
         public void Move(int handle, int x, int y, bool rotated)
@@ -77,7 +81,22 @@ namespace Fps.NetV2
             Send(InventoryAction.Drop, handle, 0, 0, false, Math.Max(0, Math.Min(count, ushort.MaxValue)));
         }
 
-        private void Send(InventoryAction action, int handle, int x, int y, bool rotated, int count)
+        public void Attach(int handle)
+        {
+            Send(InventoryAction.Attach, handle, 0, 0, false, 0);
+        }
+
+        public void Detach(int weaponHandle, string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId) || Encoding.UTF8.GetByteCount(itemId) > MatchProtocol.MaxContentIdBytes)
+            {
+                return;
+            }
+
+            Send(InventoryAction.Detach, weaponHandle, 0, 0, false, 0, itemId);
+        }
+
+        private void Send(InventoryAction action, int handle, int x, int y, bool rotated, int count, string itemId = "")
         {
             if (handle <= 0 || handle > Inventory.MaxHandle)
             {
@@ -90,6 +109,7 @@ namespace Fps.NetV2
             _request.Y = (byte)y;
             _request.Rotated = rotated;
             _request.Count = (ushort)count;
+            _request.ItemId = itemId;
             if (!_send(_request))
             {
                 _log?.Invoke($"{LogTag} could not send {action} handle={handle}; not connected");

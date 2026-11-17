@@ -111,6 +111,12 @@ namespace Fps.Server
                 case InventoryAction.Drop:
                     Drop(playerId, inventory, request.Handle, request.Count);
                     break;
+                case InventoryAction.Attach:
+                    Attach(playerId, inventory, request.Handle);
+                    break;
+                case InventoryAction.Detach:
+                    Detach(playerId, inventory, request.Handle, request.ItemId);
+                    break;
             }
         }
 
@@ -188,6 +194,48 @@ namespace Fps.Server
             _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " item=" + dropped.ItemId + " count=" + Text(dropped.Count) + " discarded");
         }
 
+        private void Attach(int playerId, Inventory inventory, int handle)
+        {
+            var weapons = _combat?.WeaponsOf(playerId);
+            var weaponId = weapons != null && _rules.CanFire(playerId) ? weapons.CurrentSpec?.Id : null;
+            var result = InventoryAttachments.Attach(
+                inventory,
+                handle,
+                weaponId,
+                weapons != null ? weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                next => SetAttachments(weapons, inventory, weaponId, next),
+                out var itemId,
+                out var replaced);
+            _log.WriteLine(LogTag + " attach owner=" + Text(playerId) + " handle=" + Text(handle) + " item=" + (itemId ?? "-") + " weapon=" + (weaponId ?? "-")
+                + " replaced=" + (replaced ?? "-") + (result == AttachmentRejection.None ? string.Empty : " rejected=" + result));
+        }
+
+        private void Detach(int playerId, Inventory inventory, int weaponHandle, string itemId)
+        {
+            var weapons = _combat?.WeaponsOf(playerId);
+            var weaponId = weapons != null && _rules.CanFire(playerId) ? inventory.WeaponIdOf(weaponHandle) : null;
+            var result = InventoryAttachments.Detach(
+                inventory,
+                weaponId,
+                weapons != null ? weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                itemId,
+                next => SetAttachments(weapons, inventory, weaponId, next));
+            _log.WriteLine(LogTag + " detach owner=" + Text(playerId) + " weapon=" + (weaponId ?? "-") + " item=" + (string.IsNullOrEmpty(itemId) ? "-" : itemId)
+                + (result == AttachmentRejection.None ? string.Empty : " rejected=" + result));
+        }
+
+        // 持ち物の武器の重さは武器の値から取るので、武器の値を替えてから揃える
+        private static bool SetAttachments(ServerPlayerWeapons weapons, Inventory inventory, string weaponId, IReadOnlyList<string> next)
+        {
+            if (!weapons.SetAttachments(weaponId, next, inventory.Catalog))
+            {
+                return false;
+            }
+
+            inventory.HoldWeapons(weapons.Specs, weapons.AttachmentsOf);
+            return true;
+        }
+
         private Inventory GetOrAdd(int playerId)
         {
             if (!_inventories.TryGetValue(playerId, out var inventory))
@@ -218,11 +266,18 @@ namespace Fps.Server
         private void HandlePlayerSpawned(int playerId)
         {
             var inventory = GetOrAdd(playerId);
+            // Fill が武器の重さを使って最初の持ち物を置くので、出直しで外れた付けた物の重さを先に武器へ反映する
+            if (_combat != null)
+            {
+                var spawned = _combat.WeaponsOf(playerId);
+                inventory.HoldWeapons(spawned.Specs, spawned.AttachmentsOf);
+            }
+
             inventory.Fill();
             if (_combat != null)
             {
                 var weapons = _combat.WeaponsOf(playerId);
-                foreach (var weaponId in inventory.HoldWeapons(weapons.Specs))
+                foreach (var weaponId in inventory.HoldWeapons(weapons.Specs, weapons.AttachmentsOf))
                 {
                     _log.WriteLine(LogTag + " weapon owner=" + Text(playerId) + " weapon=" + weaponId + " does not fit; held outside the inventory");
                 }

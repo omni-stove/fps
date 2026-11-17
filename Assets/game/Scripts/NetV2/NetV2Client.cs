@@ -269,6 +269,7 @@ namespace Fps.NetV2
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
             _inventory = new NetV2Inventory(SendReliable);
+            _weapons.OwnAttachments = weaponId => _inventory.Inventory?.AttachmentsOf(weaponId);
         }
 
         private void Connect(NetLaunchOptions requested)
@@ -488,7 +489,7 @@ namespace Fps.NetV2
 
             try
             {
-                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
+                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
                 _hud.BindStatusEffects(_weaponHooks.StatusEffects);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
                 if (_hud.Hud.InventoryScreen != null)
@@ -550,7 +551,7 @@ namespace Fps.NetV2
         private LockOnAim AttachLockOn(NetV2LocalPlayer local)
         {
             var lockOn = local.gameObject.AddComponent<LockOnAim>();
-            lockOn.RoundSource = () => ClientFire.CurrentRound(CurrentOwner(), _weapons.SpecFor(ClientFire.CurrentWeaponId(CurrentOwner())));
+            lockOn.RoundSource = () => ClientFire.CurrentRound(CurrentOwner(), _weapons.OwnSpecFor(ClientFire.CurrentWeaponId(CurrentOwner())));
             lockOn.LookSource = () =>
             {
                 var definition = _weapons.DefinitionFor(ClientFire.CurrentWeaponId(CurrentOwner()));

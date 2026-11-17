@@ -27,7 +27,7 @@ namespace Fps.Core
         public event Action Reloaded;
 
         // 連射間隔を 0 にした Spec。内側の Weapon はこれで作る
-        private readonly WeaponSpec _innerSpec;
+        private WeaponSpec _innerSpec;
         private readonly GameRules _rules;
         private Weapon _weapon;
         private IAmmoPool _pool;
@@ -53,8 +53,8 @@ namespace Fps.Core
             _weapon = CreateWeapon();
         }
 
-        /// <summary>作るときに渡された設定。</summary>
-        public WeaponSpec Spec { get; }
+        /// <summary>作るときに渡された設定。付けた物を変えると <see cref="ChangeSpec"/> で替わる。</summary>
+        public WeaponSpec Spec { get; private set; }
 
         public int AmmoInMagazine => _weapon.AmmoInMagazine;
         public int ReserveAmmo => _weapon.ReserveAmmo;
@@ -214,6 +214,54 @@ namespace Fps.Core
             _weapon.UseAmmoPool(null);
             _weapon = CreateWeapon();
             Changed?.Invoke();
+        }
+
+        /// <summary>弾数と弾薬の種類を残して武器の値を替える。弾倉が減って溢れる弾が予備弾の受け皿に入りきらなければ、弾を失わないよう何も変えずに false を返す。</summary>
+        public bool ChangeSpec(WeaponSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (!string.Equals(spec.Id, Spec.Id, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("spec is for weapon '" + spec.Id + "', not '" + Spec.Id + "'", nameof(spec));
+            }
+
+            var magazine = _weapon.AmmoInMagazine;
+            var excess = magazine - spec.MagazineSize;
+            if (excess > 0 && _weapon.AmmoPool != null && _weapon.AmmoPool.Room < excess)
+            {
+                return false;
+            }
+
+            _weapon.CancelReload();
+            if (excess > 0)
+            {
+                magazine = spec.MagazineSize;
+                if (_weapon.AmmoPool != null)
+                {
+                    _weapon.AmmoPool.Put(excess);
+                }
+            }
+
+            var reserve = _weapon.ReserveAmmo + (excess > 0 && _weapon.AmmoPool == null ? excess : 0);
+            var ammoType = _weapon.AmmoTypes.Index;
+            _weapon.Reloaded -= HandleReloaded;
+            _weapon.UseAmmoPool(null);
+            Spec = spec;
+            _innerSpec = spec.WithFireInterval(0f);
+            _weapon = new Weapon(_innerSpec, magazine, reserve, _rules);
+            _weapon.Reloaded += HandleReloaded;
+            if (_pool != null)
+            {
+                _weapon.UseAmmoPool(_pool);
+            }
+
+            _weapon.AmmoTypes.TrySelect(ammoType);
+            Changed?.Invoke();
+            return true;
         }
 
         // 予備弾を pool から出し入れするようにする。満タン戻し (Refill) で武器を作り直しても同じ pool を使い続ける

@@ -7,13 +7,15 @@ using System.Text;
 namespace Fps.Core
 {
     /// <summary>
-    /// キャンペーンのセーブデータ。チェックポイントに着いた時点のミッションの進み具合とプレイヤーの状態 (体力・武器ごとの残弾・持っていた武器) を持つ。不変。
+    /// キャンペーンのセーブデータ。チェックポイントに着いた時点のミッションの進み具合とプレイヤーの状態 (体力・武器ごとの残弾と付けた物・持っていた武器) を持つ。不変。
     /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして <see cref="ISaveStorage"/> に置く。
     /// </summary>
     public sealed class CampaignSave
     {
-        /// <summary>このコードが書き出すセーブデータの形式のバージョン。武器ごとの残弾を持つ。</summary>
-        public const int CurrentVersion = 2;
+        /// <summary>このコードが書き出すセーブデータの形式のバージョン。武器ごとの残弾と付けた物を持つ。</summary>
+        public const int CurrentVersion = 3;
+
+        public const int WithoutAttachmentsVersion = 2;
 
         /// <summary>武器を 1 本しか持てなかった頃の形式のバージョン。読み込めるが書き出さない。</summary>
         public const int LegacySingleWeaponVersion = 1;
@@ -33,6 +35,7 @@ namespace Fps.Core
         private const string _equippedWeaponIdKey = "equippedWeaponId";
         private const string _weaponsKey = "weapons";
         private const string _weaponIdKey = "id";
+        private const string _attachmentsKey = "attachments";
         private const string _objectivesKey = "objectives";
         private const string _objectiveIdKey = "id";
         private const string _objectiveStateKey = "state";
@@ -48,7 +51,12 @@ namespace Fps.Core
             _versionKey, _missionIdKey, _checkpointIdKey, _healthKey, _ammoInMagazineKey, _reserveAmmoKey, _objectivesKey,
         };
 
-        private static readonly string[] _weaponKeys = { _weaponIdKey, _ammoInMagazineKey, _reserveAmmoKey };
+        private static readonly string[] _weaponKeys = { _weaponIdKey, _ammoInMagazineKey, _reserveAmmoKey, _attachmentsKey };
+
+        private static readonly string[] _withoutAttachmentsWeaponKeys = { _weaponIdKey, _ammoInMagazineKey, _reserveAmmoKey };
+
+        private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> _noAttachments =
+            new ReadOnlyDictionary<string, IReadOnlyList<string>>(new Dictionary<string, IReadOnlyList<string>>());
 
         private static readonly string[] _objectiveKeys = { _objectiveIdKey, _objectiveStateKey, _objectiveCountKey };
 
@@ -70,6 +78,8 @@ namespace Fps.Core
         /// <summary>武器ごとの残弾。持っていた並びの順。Id は重複しない。</summary>
         public IReadOnlyList<WeaponAmmo> Weapons { get; }
 
+        public IReadOnlyDictionary<string, IReadOnlyList<string>> Attachments { get; }
+
         /// <summary>各目標の状態と進み具合。<see cref="Mission.Restore"/> に渡す。</summary>
         public IReadOnlyList<ObjectiveProgress> Objectives { get; }
 
@@ -79,13 +89,15 @@ namespace Fps.Core
         /// <param name="weapons">武器ごとの残弾。null を含まず、Id が重複しないこと。</param>
         /// <param name="equippedWeaponId">持っていた武器の Id。null は空文字 (分からない) として扱う。空でなければ weapons のどれかの Id であること。</param>
         /// <param name="objectives">各目標の状態と進み具合 (<see cref="Mission.Snapshot"/> の結果)。null を含まず、Id が重複しないこと。</param>
+        /// <param name="attachments">武器の Id ごとの付けた物。null なら何も付けていない。Id は weapons のどれかで、付けた物は空文字・null を含まないこと。</param>
         public CampaignSave(
             string missionId,
             string checkpointId,
             int health,
             IEnumerable<WeaponAmmo> weapons,
             string equippedWeaponId,
-            IEnumerable<ObjectiveProgress> objectives)
+            IEnumerable<ObjectiveProgress> objectives,
+            IReadOnlyDictionary<string, IReadOnlyList<string>> attachments = null)
         {
             if (missionId == null)
             {
@@ -153,7 +165,36 @@ namespace Fps.Core
                 list.Add(objective);
             }
 
+            var attached = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+            if (attachments != null)
+            {
+                foreach (var pair in attachments)
+                {
+                    if (!weaponIds.Contains(pair.Key ?? string.Empty))
+                    {
+                        throw new ArgumentException($"attachments are for weapon '{pair.Key}', which is not one of the saved weapons", nameof(attachments));
+                    }
+
+                    var itemIds = new List<string>();
+                    foreach (var itemId in pair.Value ?? WeaponAttachments.None)
+                    {
+                        if (string.IsNullOrEmpty(itemId))
+                        {
+                            throw new ArgumentException($"attachments of weapon '{pair.Key}' must not contain an empty id", nameof(attachments));
+                        }
+
+                        itemIds.Add(itemId);
+                    }
+
+                    if (itemIds.Count > 0)
+                    {
+                        attached[pair.Key] = itemIds.AsReadOnly();
+                    }
+                }
+            }
+
             Version = CurrentVersion;
+            Attachments = attached.Count > 0 ? new ReadOnlyDictionary<string, IReadOnlyList<string>>(attached) : _noAttachments;
             MissionId = missionId;
             CheckpointId = checkpointId ?? string.Empty;
             Health = health;
@@ -206,8 +247,22 @@ namespace Fps.Core
                 SaveJson.AppendString(builder, weapon.WeaponId);
                 builder.Append(',');
                 AppendKey(builder, _ammoInMagazineKey).Append(weapon.AmmoInMagazine.ToString(CultureInfo.InvariantCulture)).Append(',');
-                AppendKey(builder, _reserveAmmoKey).Append(weapon.ReserveAmmo.ToString(CultureInfo.InvariantCulture));
-                builder.Append('}');
+                AppendKey(builder, _reserveAmmoKey).Append(weapon.ReserveAmmo.ToString(CultureInfo.InvariantCulture)).Append(',');
+                AppendKey(builder, _attachmentsKey).Append('[');
+                if (Attachments.TryGetValue(weapon.WeaponId, out var attached))
+                {
+                    for (var a = 0; a < attached.Count; a++)
+                    {
+                        if (a > 0)
+                        {
+                            builder.Append(',');
+                        }
+
+                        SaveJson.AppendString(builder, attached[a]);
+                    }
+                }
+
+                builder.Append("]}");
             }
 
             builder.Append("],");
@@ -238,7 +293,8 @@ namespace Fps.Core
         /// <summary>
         /// <see cref="ToJson"/> で書き出した文字列から読む。<see cref="LegacySingleWeaponVersion"/> の形式 (武器 1 本ぶんの弾数) も読み、
         /// その弾数は <see cref="LegacyWeaponId"/> (rifle) の残弾として、持っていた武器も rifle として扱う。
-        /// JSON として壊れている、項目が欠けている・余分・型違い・範囲外、バージョンがどちらでもないときは
+        /// <see cref="WithoutAttachmentsVersion"/> の形式は、どの武器にも何も付けていないものとして読む。
+        /// JSON として壊れている、項目が欠けている・余分・型違い・範囲外、バージョンがどれでもないときは
         /// <see cref="FormatException"/> を投げる。
         /// </summary>
         public static CampaignSave FromJson(string json)
@@ -255,10 +311,11 @@ namespace Fps.Core
 
             // 形式が変わっても判別できるよう、バージョンは他の項目より先に確かめる。
             var version = ReadInt(root, _versionKey);
-            if (version != CurrentVersion && version != LegacySingleWeaponVersion)
+            if (version != CurrentVersion && version != WithoutAttachmentsVersion && version != LegacySingleWeaponVersion)
             {
                 throw new FormatException(
-                    $"unsupported save data version {version.ToString(CultureInfo.InvariantCulture)} (expected {CurrentVersion.ToString(CultureInfo.InvariantCulture)} or {LegacySingleWeaponVersion.ToString(CultureInfo.InvariantCulture)})");
+                    $"unsupported save data version {version.ToString(CultureInfo.InvariantCulture)} (expected {CurrentVersion.ToString(CultureInfo.InvariantCulture)}, "
+                    + $"{WithoutAttachmentsVersion.ToString(CultureInfo.InvariantCulture)} or {LegacySingleWeaponVersion.ToString(CultureInfo.InvariantCulture)})");
             }
 
             var legacy = version == LegacySingleWeaponVersion;
@@ -272,6 +329,7 @@ namespace Fps.Core
             {
                 List<WeaponAmmo> weapons;
                 string equippedWeaponId;
+                var attachments = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
                 if (legacy)
                 {
                     weapons = new List<WeaponAmmo>
@@ -283,7 +341,7 @@ namespace Fps.Core
                 else
                 {
                     equippedWeaponId = ReadString(root, _equippedWeaponIdKey);
-                    weapons = ReadWeapons(ReadArray(root, _weaponsKey));
+                    weapons = ReadWeapons(ReadArray(root, _weaponsKey), version == CurrentVersion ? attachments : null);
                 }
 
                 var objectives = new List<ObjectiveProgress>(items.Count);
@@ -301,7 +359,7 @@ namespace Fps.Core
                         ReadInt(entry, _objectiveCountKey)));
                 }
 
-                return new CampaignSave(missionId, checkpointId, health, weapons, equippedWeaponId, objectives);
+                return new CampaignSave(missionId, checkpointId, health, weapons, equippedWeaponId, objectives, attachments);
             }
             catch (ArgumentException e)
             {
@@ -310,7 +368,7 @@ namespace Fps.Core
             }
         }
 
-        private static List<WeaponAmmo> ReadWeapons(List<object> items)
+        private static List<WeaponAmmo> ReadWeapons(List<object> items, Dictionary<string, IReadOnlyList<string>> attachments)
         {
             var weapons = new List<WeaponAmmo>(items.Count);
             foreach (var item in items)
@@ -320,11 +378,29 @@ namespace Fps.Core
                     throw new FormatException($"invalid save data: each of '{_weaponsKey}' must be an object");
                 }
 
-                RejectUnknownKeys(entry, _weaponKeys);
-                weapons.Add(new WeaponAmmo(
-                    ReadString(entry, _weaponIdKey),
-                    ReadInt(entry, _ammoInMagazineKey),
-                    ReadInt(entry, _reserveAmmoKey)));
+                RejectUnknownKeys(entry, attachments != null ? _weaponKeys : _withoutAttachmentsWeaponKeys);
+                var weaponId = ReadString(entry, _weaponIdKey);
+                weapons.Add(new WeaponAmmo(weaponId, ReadInt(entry, _ammoInMagazineKey), ReadInt(entry, _reserveAmmoKey)));
+                if (attachments == null)
+                {
+                    continue;
+                }
+
+                var itemIds = new List<string>();
+                foreach (var attached in ReadArray(entry, _attachmentsKey))
+                {
+                    if (!(attached is string itemId))
+                    {
+                        throw new FormatException($"invalid save data: each of '{_attachmentsKey}' must be a string");
+                    }
+
+                    itemIds.Add(itemId);
+                }
+
+                if (itemIds.Count > 0)
+                {
+                    attachments[weaponId] = itemIds;
+                }
             }
 
             return weapons;

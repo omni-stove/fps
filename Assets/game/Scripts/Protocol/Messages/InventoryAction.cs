@@ -7,5 +7,9 @@ namespace Fps.Protocol
         Use = 1,
 
         Drop = 2,
+
+        Attach = 3,
+
+        Detach = 4,
     }
 }

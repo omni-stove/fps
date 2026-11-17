@@ -13,6 +13,7 @@ namespace Fps.Core
 
         private readonly List<InventoryEntry> _stacks = new List<InventoryEntry>();
         private readonly Dictionary<string, float> _weaponWeights = new Dictionary<string, float>(StringComparer.Ordinal);
+        private readonly Dictionary<string, IReadOnlyList<string>> _attachments = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         private int _nextHandle = 1;
 
         public Inventory(ItemCatalog catalog)
@@ -78,6 +79,12 @@ namespace Fps.Core
         // 武器の山は持ち武器から作る (HoldWeapons) ので、アイテムとしては入らない
         public int RoomFor(string itemId)
         {
+            return RoomFor(itemId, 0f);
+        }
+
+        public int RoomFor(string itemId, float freedWeight)
+        {
+            SpecGuard.NonNegativeFinite(freedWeight, nameof(freedWeight));
             if (!Catalog.TryFind(itemId, out var item) || item.IsWeapon)
             {
                 return 0;
@@ -85,7 +92,57 @@ namespace Fps.Core
 
             var copy = new List<InventoryEntry>(_stacks);
             var next = _nextHandle;
-            return Place(copy, item, WeightOf(item), int.MaxValue, ref next);
+            return Place(copy, item, WeightOf(item), int.MaxValue, ref next, freedWeight);
+        }
+
+        public bool HasRoomAfterTaking(int handle, string itemId, float freedWeight = 0f)
+        {
+            SpecGuard.NonNegativeFinite(freedWeight, nameof(freedWeight));
+            var at = IndexOfHandle(handle);
+            if (at < 0 || !Catalog.TryFind(itemId, out var item) || item.IsWeapon)
+            {
+                return false;
+            }
+
+            var copy = new List<InventoryEntry>(_stacks);
+            if (copy[at].Count > 1)
+            {
+                copy[at] = copy[at].WithCount(copy[at].Count - 1);
+            }
+            else
+            {
+                copy.RemoveAt(at);
+            }
+
+            var next = _nextHandle;
+            return Place(copy, item, WeightOf(item), 1, ref next, freedWeight) == 1;
+        }
+
+        public IReadOnlyList<string> AttachmentsOf(string weaponId)
+        {
+            return weaponId != null && _attachments.TryGetValue(weaponId, out var attached) ? attached : WeaponAttachments.None;
+        }
+
+        public void ReplaceAttachments(IEnumerable<KeyValuePair<string, IReadOnlyList<string>>> attachments)
+        {
+            if (attachments == null)
+            {
+                throw new ArgumentNullException(nameof(attachments));
+            }
+
+            var next = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+            foreach (var pair in attachments)
+            {
+                if (pair.Key != null && pair.Value != null && pair.Value.Count > 0)
+                {
+                    next[pair.Key] = pair.Value;
+                }
+            }
+
+            if (SetAttachments(next))
+            {
+                Changed?.Invoke();
+            }
         }
 
         public float WeightOf(ItemSpec item)
@@ -96,6 +153,25 @@ namespace Fps.Core
             }
 
             return item.IsWeapon && _weaponWeights.TryGetValue(item.WeaponId, out var weight) ? weight : item.Weight;
+        }
+
+        public bool TryGetWeaponWeight(string weaponId, out float weight)
+        {
+            weight = 0f;
+            return weaponId != null && _weaponWeights.TryGetValue(weaponId, out weight);
+        }
+
+        // 武器の値を作り直すと HoldWeapons で重さが揃うが、それは溢れる弾の空きを判定した後になる。付け外しの前に重さだけ先に替えられるようにする
+        public void SetWeaponWeight(string weaponId, float weight)
+        {
+            SpecGuard.NonNegativeFinite(weight, nameof(weight));
+            if (weaponId == null || !_weaponWeights.TryGetValue(weaponId, out var current) || current == weight)
+            {
+                return;
+            }
+
+            _weaponWeights[weaponId] = weight;
+            Changed?.Invoke();
         }
 
         public string WeaponIdOf(int handle)
@@ -130,12 +206,27 @@ namespace Fps.Core
         // 持ち武器 held に合わせて武器の山を足し引きする。入り切らなかった武器の Id を返す (その武器は持ち物の外で持つ)
         public IReadOnlyList<string> HoldWeapons(IReadOnlyList<WeaponSpec> held)
         {
+            return HoldWeapons(held, null);
+        }
+
+        public IReadOnlyList<string> HoldWeapons(IReadOnlyList<WeaponSpec> held, Func<string, IReadOnlyList<string>> attachmentsOf)
+        {
             if (held == null)
             {
                 throw new ArgumentNullException(nameof(held));
             }
 
-            var changed = false;
+            var attachments = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+            foreach (var spec in held)
+            {
+                var attached = spec != null ? attachmentsOf?.Invoke(spec.Id) : null;
+                if (attached != null && attached.Count > 0)
+                {
+                    attachments[spec.Id] = attached;
+                }
+            }
+
+            var changed = SetAttachments(attachments);
             foreach (var spec in held)
             {
                 if (spec != null)
@@ -181,6 +272,13 @@ namespace Fps.Core
 
         public int Add(string itemId, int count)
         {
+            return Add(itemId, count, 0f);
+        }
+
+        // 武器から外した物を戻すとき、武器の重さにまだ入っている分 (freedWeight) を空きに数える
+        public int Add(string itemId, int count, float freedWeight)
+        {
+            SpecGuard.NonNegativeFinite(freedWeight, nameof(freedWeight));
             if (count < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
@@ -191,7 +289,7 @@ namespace Fps.Core
                 return 0;
             }
 
-            var added = Place(_stacks, item, WeightOf(item), count, ref _nextHandle);
+            var added = Place(_stacks, item, WeightOf(item), count, ref _nextHandle, freedWeight);
             if (added > 0)
             {
                 Changed?.Invoke();
@@ -331,12 +429,13 @@ namespace Fps.Core
 
         public void Clear()
         {
-            if (_stacks.Count == 0)
+            if (_stacks.Count == 0 && _attachments.Count == 0)
             {
                 return;
             }
 
             _stacks.Clear();
+            _attachments.Clear();
             _nextHandle = 1;
             Changed?.Invoke();
         }
@@ -402,9 +501,9 @@ namespace Fps.Core
 
         public int HeightOf(InventoryEntry stack) => HeightOf(stack.ItemId, stack.Rotated);
 
-        private int Place(List<InventoryEntry> stacks, ItemSpec item, float weight, int count, ref int nextHandle)
+        private int Place(List<InventoryEntry> stacks, ItemSpec item, float weight, int count, ref int nextHandle, float freedWeight = 0f)
         {
-            var remaining = Math.Min(count, Allowed(stacks, item, weight));
+            var remaining = Math.Min(count, Allowed(stacks, item, weight, freedWeight));
             var wanted = remaining;
             for (var i = 0; i < stacks.Count && remaining > 0; i++)
             {
@@ -440,7 +539,7 @@ namespace Fps.Core
             return wanted - remaining;
         }
 
-        private int Allowed(List<InventoryEntry> stacks, ItemSpec item, float weight)
+        private int Allowed(List<InventoryEntry> stacks, ItemSpec item, float weight, float freedWeight)
         {
             var allowed = int.MaxValue;
             if (item.MaxCarried > 0)
@@ -450,7 +549,7 @@ namespace Fps.Core
 
             if (Rule.MaxWeight > 0f && weight > 0f)
             {
-                var spare = Rule.MaxWeight - WeightOf(stacks);
+                var spare = Rule.MaxWeight - WeightOf(stacks) + freedWeight;
                 var byWeight = spare <= 0f ? 0 : (int)Math.Floor((spare + _weightTolerance) / weight);
                 allowed = Math.Min(allowed, Math.Max(0, byWeight));
             }
@@ -606,6 +705,35 @@ namespace Fps.Core
             }
 
             return total;
+        }
+
+        private bool SetAttachments(Dictionary<string, IReadOnlyList<string>> next)
+        {
+            var same = next.Count == _attachments.Count;
+            if (same)
+            {
+                foreach (var pair in next)
+                {
+                    if (!_attachments.TryGetValue(pair.Key, out var current) || !WeaponAttachments.SameAs(current, pair.Value))
+                    {
+                        same = false;
+                        break;
+                    }
+                }
+            }
+
+            if (same)
+            {
+                return false;
+            }
+
+            _attachments.Clear();
+            foreach (var pair in next)
+            {
+                _attachments[pair.Key] = pair.Value;
+            }
+
+            return true;
         }
 
         private static bool Holds(IReadOnlyList<WeaponSpec> held, string weaponId)

@@ -48,6 +48,8 @@ namespace Fps.Runtime
             {
                 _weapons.WeaponChanged -= OnWeaponChanged;
                 _weapons.LoadoutReplaced -= HoldWeapons;
+                _weapons.AttachmentsReleased -= TakeBackAttachments;
+                _weapons.AttachmentsRestored -= SpendAttachments;
                 _weapons.UseAmmoPools(null);
             }
 
@@ -59,6 +61,9 @@ namespace Fps.Runtime
 
             _weapons.WeaponChanged += OnWeaponChanged;
             _weapons.LoadoutReplaced += HoldWeapons;
+            _weapons.AttachmentsReleased += TakeBackAttachments;
+            _weapons.AttachmentsRestored += SpendAttachments;
+            _weapons.AttachmentCatalog = Inventory.Catalog;
             ConnectWeapons();
         }
 
@@ -79,6 +84,7 @@ namespace Fps.Runtime
             _inventory.Fill();
             if (_weapons != null)
             {
+                _weapons.AttachmentCatalog = catalog;
                 ConnectWeapons();
             }
 
@@ -87,8 +93,15 @@ namespace Fps.Runtime
         }
 
         // 最初の持ち物に戻し、持っている武器を置き直して、その最初の予備弾まで弾薬を足す (出直したとき)
+        // 付けた物は最初の持ち物にまた入るので、武器からは戻さずに外す。出直しの経路ごとに外すと漏れる経路で付けた物が増えるため、ここでまとめて外す
         public void Refill()
         {
+            // Fill が武器の重さを使って最初の持ち物を置くので、付けた物を先に外して武器の重さを揃える
+            if (_weapons != null)
+            {
+                _weapons.ClearAttachments();
+            }
+
             Inventory.Fill();
             HoldWeapons();
             Restock();
@@ -160,6 +173,39 @@ namespace Fps.Runtime
             Debug.Log($"{LogTag} drop owner={name} item={dropped.ItemId} count={dropped.Count} pickup={pickup.name}", this);
         }
 
+        public void Attach(int handle)
+        {
+            var weaponId = CanChangeWeapons ? _weapons.Weapon?.Spec.Id : null;
+            var result = InventoryAttachments.Attach(
+                Inventory,
+                handle,
+                weaponId,
+                _weapons != null && weaponId != null ? _weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                next => _weapons.SetAttachments(weaponId, next),
+                out var itemId,
+                out var replaced);
+            Debug.Log(
+                $"{LogTag} attach owner={name} handle={handle} item={itemId ?? "-"} weapon={weaponId ?? "-"} replaced={replaced ?? "-"}"
+                + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),
+                this);
+        }
+
+        public void Detach(int weaponHandle, string itemId)
+        {
+            var weaponId = CanChangeWeapons ? Inventory.WeaponIdOf(weaponHandle) : null;
+            var result = InventoryAttachments.Detach(
+                Inventory,
+                weaponId,
+                weaponId != null ? _weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
+                itemId,
+                next => _weapons.SetAttachments(weaponId, next));
+            Debug.Log(
+                $"{LogTag} detach owner={name} weapon={weaponId ?? "-"} item={itemId ?? "-"}" + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),
+                this);
+        }
+
+        private bool CanChangeWeapons => _weapons != null && _weapons.IsInitialized && !_weapons.IsUnarmed && Damageable != null && !Damageable.IsDowned;
+
         private void DropWeapon(string weaponId)
         {
             if (_weapons == null || !_weapons.IsInitialized || !_weapons.DropWeapon(weaponId, out var dropped))
@@ -168,8 +214,11 @@ namespace Fps.Runtime
                 return;
             }
 
-            var pickup = Pickup.Create(PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo), DropPosition(), PickupCollectMode.Look);
-            Debug.Log($"{LogTag} drop owner={name} weapon={weaponId} ammo={dropped.Ammo.AmmoInMagazine} pickup={pickup.name}", this);
+            var pickup = Pickup.Create(
+                PickupContents.ForDroppedWeapon(dropped.Definition, dropped.Ammo, attachments: dropped.Attachments), DropPosition(), PickupCollectMode.Look);
+            Debug.Log(
+                $"{LogTag} drop owner={name} weapon={weaponId} ammo={dropped.Ammo.AmmoInMagazine} attachments={WeaponAttachments.Describe(dropped.Attachments)} pickup={pickup.name}",
+                this);
         }
 
         private Vector3 DropPosition()
@@ -204,7 +253,7 @@ namespace Fps.Runtime
                 }
             }
 
-            foreach (var weaponId in _inventory.HoldWeapons(held))
+            foreach (var weaponId in _inventory.HoldWeapons(held, _weapons.AttachmentsOf))
             {
                 Debug.LogWarning($"{LogTag} weapon owner={name} weapon={weaponId} does not fit; held outside the inventory", this);
             }
@@ -231,6 +280,39 @@ namespace Fps.Runtime
             if (added > 0)
             {
                 Debug.Log($"{LogTag} restock owner={name} ammo={added}", this);
+            }
+        }
+
+        private void TakeBackAttachments(IReadOnlyList<string> released)
+        {
+            if (_inventory == null)
+            {
+                return;
+            }
+
+            var freed = 0f;
+            foreach (var itemId in released)
+            {
+                // 付けた物の重さはまだ武器の重さに数えられているので、戻した分も含めた累積を空きに足して判定する
+                freed += _inventory.Catalog.TryFind(itemId, out var item) ? item.Weight : 0f;
+                if (_inventory.Add(itemId, 1, freed) < 1)
+                {
+                    Debug.LogWarning($"{LogTag} attachment owner={name} item={itemId} does not fit; lost", this);
+                }
+            }
+        }
+
+        // セーブから戻した付けた物は持ち物にも最初の分が入っているので、付けた分だけ引く
+        private void SpendAttachments(IReadOnlyList<string> restored)
+        {
+            if (_inventory == null)
+            {
+                return;
+            }
+
+            foreach (var itemId in restored)
+            {
+                _inventory.Remove(itemId, 1);
             }
         }
 

@@ -1,16 +1,19 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fps.Protocol
 {
     // 大きさと重さも送るのは、クライアントがサーバーと違うアイテムの表を持っていても並べて描けるようにするため
     public sealed class InventoryStateMessage : IMessage
     {
-        public const byte CurrentVersion = 1;
+        public const byte CurrentVersion = 2;
 
         public const int MaxCount = byte.MaxValue;
 
         private Item[] _items = Array.Empty<Item>();
         private Entry[] _entries = Array.Empty<Entry>();
+        private byte[] _attached = Array.Empty<byte>();
+        private int _attachedCount;
 
         public ushort Id => MessageIds.InventoryState;
 
@@ -34,6 +37,7 @@ namespace Fps.Protocol
         {
             ItemCount = 0;
             EntryCount = 0;
+            _attachedCount = 0;
         }
 
         public Item ItemAt(int index)
@@ -70,13 +74,46 @@ namespace Fps.Protocol
 
         public void AddEntry(Entry entry)
         {
+            AddEntry(entry, Array.Empty<byte>());
+        }
+
+        public void AddEntry(Entry entry, IReadOnlyList<byte> attachedItems)
+        {
             if (EntryCount == MaxCount)
             {
                 throw new InvalidOperationException("at most " + MaxCount + " inventory entries fit");
             }
 
+            if (attachedItems == null)
+            {
+                throw new ArgumentNullException(nameof(attachedItems));
+            }
+
+            if (attachedItems.Count > MaxCount)
+            {
+                throw new ArgumentException("at most " + MaxCount + " attached items fit on one entry", nameof(attachedItems));
+            }
+
             Grow(ref _entries, EntryCount + 1);
-            _entries[EntryCount++] = entry;
+            Grow(ref _attached, _attachedCount + attachedItems.Count);
+            var start = _attachedCount;
+            foreach (var item in attachedItems)
+            {
+                _attached[_attachedCount++] = item;
+            }
+
+            _entries[EntryCount++] = entry.WithAttached(start, attachedItems.Count);
+        }
+
+        public byte AttachedItemAt(int entryIndex, int index)
+        {
+            var entry = EntryAt(entryIndex);
+            if ((uint)index >= (uint)entry.AttachedCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "index must be below " + entry.AttachedCount);
+            }
+
+            return _attached[entry.AttachedStart + index];
         }
 
         public void Write(MessageWriter writer)
@@ -107,6 +144,11 @@ namespace Fps.Protocol
                 writer.WriteByte(entry.X);
                 writer.WriteByte(entry.Y);
                 writer.WriteBool(entry.Rotated);
+                writer.WriteByte((byte)entry.AttachedCount);
+                for (var a = 0; a < entry.AttachedCount; a++)
+                {
+                    writer.WriteByte(_attached[entry.AttachedStart + a]);
+                }
             }
         }
 
@@ -132,6 +174,7 @@ namespace Fps.Protocol
             ItemCount = itemCount;
             var entryCount = reader.ReadByte();
             Grow(ref _entries, entryCount);
+            _attachedCount = 0;
             for (var i = 0; i < entryCount; i++)
             {
                 var handle = reader.ReadUInt16();
@@ -140,7 +183,15 @@ namespace Fps.Protocol
                 var x = reader.ReadByte();
                 var y = reader.ReadByte();
                 var rotated = reader.ReadBool();
-                _entries[i] = new Entry(handle, itemIndex, count, x, y, rotated);
+                var attachedCount = reader.ReadByte();
+                var start = _attachedCount;
+                Grow(ref _attached, _attachedCount + attachedCount);
+                for (var a = 0; a < attachedCount; a++)
+                {
+                    _attached[_attachedCount++] = reader.ReadByteBelow(itemCount, "inventory entry attached item");
+                }
+
+                _entries[i] = new Entry(handle, itemIndex, count, x, y, rotated).WithAttached(start, attachedCount);
             }
 
             EntryCount = entryCount;
@@ -179,7 +230,14 @@ namespace Fps.Protocol
         public readonly struct Entry
         {
             public Entry(ushort handle, byte itemIndex, ushort count, byte x, byte y, bool rotated)
+                : this(handle, itemIndex, count, x, y, rotated, 0, 0)
             {
+            }
+
+            private Entry(ushort handle, byte itemIndex, ushort count, byte x, byte y, bool rotated, int attachedStart, int attachedCount)
+            {
+                AttachedStart = attachedStart;
+                AttachedCount = attachedCount;
                 Handle = handle;
                 ItemIndex = itemIndex;
                 Count = count;
@@ -199,6 +257,12 @@ namespace Fps.Protocol
             public byte Y { get; }
 
             public bool Rotated { get; }
+
+            public int AttachedStart { get; }
+
+            public int AttachedCount { get; }
+
+            public Entry WithAttached(int start, int count) => new Entry(Handle, ItemIndex, Count, X, Y, Rotated, start, count);
         }
     }
 }

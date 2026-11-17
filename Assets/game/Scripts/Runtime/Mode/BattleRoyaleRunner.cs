@@ -613,14 +613,14 @@ namespace Fps.Runtime
                 var items = controller.Loadout.Items;
                 for (var i = 0; i < held.Count && i < items.Count; i++)
                 {
-                    contents.Add(PickupContents.ForWeapon(held[i], AmmoToDrop(items[i])));
+                    contents.Add(PickupContents.ForWeapon(held[i], AmmoToDrop(items[i])).WithAttachments(controller.AttachmentsOf(items[i].Spec.Id)));
                 }
             }
 
             var agent = member.GetComponent<EnemyAgent>();
             if (agent != null && agent.Weapon != null && agent.WeaponDefinition != null)
             {
-                contents.Add(PickupContents.ForWeapon(agent.WeaponDefinition, AmmoToDrop(agent.Weapon)));
+                contents.Add(PickupContents.ForWeapon(agent.WeaponDefinition, AmmoToDrop(agent.Weapon)).WithAttachments(agent.HeldAttachments));
             }
 
             foreach (var extra in drop.Drops)

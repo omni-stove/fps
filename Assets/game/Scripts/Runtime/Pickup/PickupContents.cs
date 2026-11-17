@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -33,6 +34,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("武器を誰かが落としたときの予備弾。弾倉の弾数が -1 なら使わない")]
         private int _carriedReserve;
 
+        [SerializeField, Tooltip("武器に付いている物 (持ち物のアイテムの Id、Tuning/inventory.json の items の id)。拾った人の武器に付く")]
+        private string[] _attachments;
+
         [SerializeField, Tooltip("アイテムは渡すアイテムの Id (Tuning/inventory.json の items の id)")]
         private string _itemId;
 
@@ -61,6 +65,9 @@ namespace Fps.Runtime
                 ? new WeaponAmmo(_weapon.Id, _carriedMagazine, Math.Max(0, _carriedReserve))
                 : null;
 
+        public IReadOnlyList<string> Attachments =>
+            _kind == PickupKind.Weapon && _attachments != null && _attachments.Length > 0 ? _attachments : WeaponAttachments.None;
+
         public string ItemId => _kind == PickupKind.Item ? _itemId : null;
 
         public PickupEligibility Eligibility => PickupEligibility.Of(_sideRule, new Side(Math.Max(0, _sideId)));
@@ -78,9 +85,11 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 誰かが手放した武器。持っていなければ ammo の弾数で持ち武器に加え、持っていれば ammo の弾倉と予備弾を合わせた数を予備弾に足す。
+        /// attachments はその武器に付いていた物で、拾った人の武器にそのまま付く。
         /// ammo の武器の Id が weapon の Id と違えば <see cref="ArgumentException"/>。
         /// </summary>
-        public static PickupContents ForDroppedWeapon(WeaponDefinition weapon, WeaponAmmo ammo, PickupEligibility eligibility = default)
+        public static PickupContents ForDroppedWeapon(
+            WeaponDefinition weapon, WeaponAmmo ammo, PickupEligibility eligibility = default, IReadOnlyList<string> attachments = null)
         {
             if (weapon == null)
             {
@@ -100,6 +109,7 @@ namespace Fps.Runtime
             var contents = Create(PickupKind.Weapon, ammo.AmmoInMagazine + ammo.ReserveAmmo, weapon, eligibility, PickupSpec.NoOwner, null);
             contents._carriedMagazine = ammo.AmmoInMagazine;
             contents._carriedReserve = ammo.ReserveAmmo;
+            contents._attachments = ToArray(attachments);
             return contents;
         }
 
@@ -133,6 +143,18 @@ namespace Fps.Runtime
             return contents;
         }
 
+        public PickupContents WithAttachments(IReadOnlyList<string> attachments)
+        {
+            if (_kind != PickupKind.Weapon)
+            {
+                throw new ArgumentException("only a Weapon pickup carries attachments", nameof(attachments));
+            }
+
+            var copy = Clone();
+            copy._attachments = ToArray(attachments);
+            return copy;
+        }
+
         public PickupContents WithAmount(int amount)
         {
             var copy = Clone();
@@ -164,7 +186,7 @@ namespace Fps.Runtime
                         throw new ArgumentException("a Weapon pickup needs a WeaponDefinition");
                     }
 
-                    return PickupSpec.Weapon(_weapon.Id, _amount, eligibility, _weapon.Weight);
+                    return PickupSpec.Weapon(_weapon.Id, _amount, eligibility, _weapon.Weight + AttachedWeight());
                 case PickupKind.ReserveAmmo:
                     return PickupSpec.ReserveAmmo(_amount, _weapon != null ? _weapon.Id : null, eligibility);
                 case PickupKind.Health:
@@ -186,7 +208,41 @@ namespace Fps.Runtime
         /// <summary>同じ中身の写し。落とすたびに別の物として持たせるのに使う。</summary>
         public PickupContents Clone()
         {
-            return (PickupContents)MemberwiseClone();
+            var copy = (PickupContents)MemberwiseClone();
+            copy._attachments = _attachments != null ? (string[])_attachments.Clone() : null;
+            return copy;
+        }
+
+        // 持ち物に入るかは付いた物ごとの重さで見るので、武器の重さに付いた物の重さを足す
+        private float AttachedWeight()
+        {
+            var catalog = KitTuning.Items;
+            var weight = 0f;
+            foreach (var itemId in WeaponAttachments.Keep(catalog, _weapon.Id, Attachments))
+            {
+                if (catalog.TryFind(itemId, out var item))
+                {
+                    weight += item.Weight;
+                }
+            }
+
+            return weight;
+        }
+
+        private static string[] ToArray(IReadOnlyList<string> attachments)
+        {
+            if (attachments == null || attachments.Count == 0)
+            {
+                return null;
+            }
+
+            var copy = new string[attachments.Count];
+            for (var i = 0; i < copy.Length; i++)
+            {
+                copy[i] = attachments[i];
+            }
+
+            return copy;
         }
 
         public override string ToString()

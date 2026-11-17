@@ -89,6 +89,7 @@
       "nameKey": "weapon.rifle",
       "iconId": "rifle",
       "weaponId": "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83",
+      "attachmentSlots": ["optic", "muzzle", "underbarrel", "magazine"],
       "ammoItemId": "212170da-0998-4fa9-9457-761c75a2a797",
       "width": 4,
       "height": 2
@@ -98,6 +99,7 @@
       "nameKey": "weapon.burstRifle",
       "iconId": "burstRifle",
       "weaponId": "9795f821-8fac-4c4f-90f8-c0a80841de96",
+      "attachmentSlots": ["optic", "muzzle", "underbarrel", "magazine"],
       "ammoItemId": "212170da-0998-4fa9-9457-761c75a2a797",
       "width": 4,
       "height": 2
@@ -107,6 +109,7 @@
       "nameKey": "weapon.handgun",
       "iconId": "handgun",
       "weaponId": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45",
+      "attachmentSlots": ["optic", "muzzle"],
       "ammoItemId": "02e07a84-f063-4b41-8f63-17a410a3d069",
       "width": 2,
       "height": 1
@@ -116,6 +119,7 @@
       "nameKey": "weapon.ricochetPistol",
       "iconId": "ricochetPistol",
       "weaponId": "a9ae4aeb-607f-41a8-875f-2e8deed9bfa6",
+      "attachmentSlots": ["optic", "muzzle"],
       "ammoItemId": "02e07a84-f063-4b41-8f63-17a410a3d069",
       "width": 2,
       "height": 1
@@ -125,12 +129,88 @@
       "nameKey": "weapon.shotgun",
       "iconId": "shotgun",
       "weaponId": "07e1b9a8-f64c-4474-bc38-dbf14d66b135",
+      "attachmentSlots": ["optic", "underbarrel"],
       "ammoItemId": "825cc0f1-5eb0-4aa8-bf91-31b7519c975e",
       "width": 4,
       "height": 2
+    },
+    {
+      "id": "2451a5a1-24e5-45ed-bbc1-8b23276152f8",
+      "nameKey": "item.redDot",
+      "iconId": "redDot",
+      "weight": 0.2,
+      "attachment": {
+        "slot": "optic",
+        "adsSpreadMultiplier": 0.8,
+        "zoomLevels": [45]
+      }
+    },
+    {
+      "id": "a2c5e73b-69fa-4402-b0ef-3c4297973226",
+      "nameKey": "item.scope4x",
+      "iconId": "scope4x",
+      "weight": 0.6,
+      "width": 2,
+      "height": 1,
+      "attachment": {
+        "slot": "optic",
+        "weaponIds": ["6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "9795f821-8fac-4c4f-90f8-c0a80841de96"],
+        "adsSpreadMultiplier": 0.6,
+        "moveSpreadMultiplier": 1.2,
+        "zoomLevels": [25, 15]
+      }
+    },
+    {
+      "id": "8d8c8546-59d4-4b4c-ba71-890664e5c260",
+      "nameKey": "item.suppressor",
+      "iconId": "suppressor",
+      "weight": 0.4,
+      "width": 2,
+      "height": 1,
+      "attachment": {
+        "slot": "muzzle",
+        "rangeMultiplier": 0.9,
+        "shotNoiseRadiusMultiplier": 0.3
+      }
+    },
+    {
+      "id": "3fc98d19-5fb3-4680-bd5f-30d30d14f84e",
+      "nameKey": "item.compensator",
+      "iconId": "compensator",
+      "weight": 0.2,
+      "attachment": {
+        "slot": "muzzle",
+        "recoilMultiplier": 0.7
+      }
+    },
+    {
+      "id": "6142e02c-15a1-4fe8-9f31-015752f1ca2e",
+      "nameKey": "item.foregrip",
+      "iconId": "foregrip",
+      "weight": 0.3,
+      "attachment": {
+        "slot": "underbarrel",
+        "hipSpreadMultiplier": 0.8,
+        "recoilMultiplier": 0.85
+      }
+    },
+    {
+      "id": "eb45e06b-489d-410d-ae0d-f1095df96a0b",
+      "nameKey": "item.extendedMagazine",
+      "iconId": "extendedMagazine",
+      "weight": 0.3,
+      "attachment": {
+        "slot": "magazine",
+        "weaponIds": ["6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "9795f821-8fac-4c4f-90f8-c0a80841de96"],
+        "reloadSecondsMultiplier": 1.15,
+        "magazineSizeBonus": 10
+      }
     }
   ],
   "starting": [
-    { "id": "31d5979e-6067-49d9-b70c-fdcf44dc77d1", "count": 2 }
+    { "id": "31d5979e-6067-49d9-b70c-fdcf44dc77d1", "count": 2 },
+    { "id": "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "count": 1 },
+    { "id": "8d8c8546-59d4-4b4c-ba71-890664e5c260", "count": 1 },
+    { "id": "6142e02c-15a1-4fe8-9f31-015752f1ca2e", "count": 1 }
   ]
 }

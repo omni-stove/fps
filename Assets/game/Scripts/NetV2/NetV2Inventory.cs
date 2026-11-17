@@ -27,5 +27,9 @@ namespace Fps.NetV2
         public void Use(int handle) => _client.Use(handle);
 
         public void Drop(int handle, int count) => _client.Drop(handle, count);
+
+        public void Attach(int handle) => _client.Attach(handle);
+
+        public void Detach(int weaponHandle, string itemId) => _client.Detach(weaponHandle, itemId);
     }
 }

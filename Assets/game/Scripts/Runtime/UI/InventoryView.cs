@@ -32,6 +32,9 @@ namespace Fps.Runtime
         public const string DropKey = "hud.inventory.drop";
         public const string DropOneKey = "hud.inventory.dropOne";
         public const string DropAllKey = "hud.inventory.dropAll";
+        public const string AttachKey = "hud.inventory.attach";
+        public const string DetachKey = "hud.inventory.detach";
+        public const string AttachedKey = "hud.inventory.attached";
         public const string HintKey = "hud.inventory.hint";
 
         public const string PanelClass = "inventory";
@@ -49,6 +52,7 @@ namespace Fps.Runtime
         public const string ItemNameClass = "inventory__item-name";
         public const string ItemCountClass = "inventory__item-count";
         public const string DetailsClass = "inventory__details";
+        public const string AttachedClass = "inventory__attached";
         public const string ButtonClass = "inventory__button";
         public const string HintClass = "inventory__hint";
         public const string EmptyClass = "inventory__empty";
@@ -394,12 +398,18 @@ namespace Fps.Runtime
             {
                 details.Add(MakeButton(EquipKey, () => _source?.Use(handle)));
                 details.Add(MakeButton(DropKey, () => _source?.Drop(handle, 1)));
+                AddAttached(details, inventory, item, handle);
                 return details;
             }
 
             if (item != null && item.IsUsable)
             {
                 details.Add(MakeButton(UseKey, () => _source?.Use(handle)));
+            }
+
+            if (item != null && item.IsAttachment)
+            {
+                details.Add(MakeButton(AttachKey, () => _source?.Attach(handle)));
             }
 
             details.Add(MakeButton(DropOneKey, () => _source?.Drop(handle, 1)));
@@ -409,6 +419,20 @@ namespace Fps.Runtime
             }
 
             return details;
+        }
+
+        private void AddAttached(VisualElement details, Inventory inventory, ItemSpec weapon, int weaponHandle)
+        {
+            foreach (var itemId in inventory.AttachmentsOf(weapon.WeaponId))
+            {
+                inventory.Catalog.TryFind(itemId, out var attached);
+                var row = new VisualElement();
+                row.AddToClassList(AttachedClass);
+                row.Add(MakeLabel(Localizer.Resolve(new LocalizedText(AttachedKey, NameOf(attached, itemId))), ItemNameClass));
+                var id = itemId;
+                row.Add(MakeButton(DetachKey, () => _source?.Detach(weaponHandle, id)));
+                details.Add(row);
+            }
         }
 
         private void BeginDrag(int handle, VisualElement box, PointerDownEvent e)

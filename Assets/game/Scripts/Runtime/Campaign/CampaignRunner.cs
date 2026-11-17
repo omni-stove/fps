@@ -687,7 +687,8 @@ namespace Fps.Runtime
                 _player.Health.Current,
                 _weapon.SnapshotAmmo(),
                 _weapon.Weapon.Spec.Id,
-                _mission.Snapshot());
+                _mission.Snapshot(),
+                _weapon.SnapshotAttachments());
 
             try
             {
@@ -900,7 +901,7 @@ namespace Fps.Runtime
 
             MovePlayerTo(save.CheckpointId);
             _player.RestoreHealth(save.Health);
-            _weapon.RestoreLoadout(save.Weapons, save.EquippedWeaponId);
+            _weapon.RestoreLoadout(save.Weapons, save.EquippedWeaponId, save.Attachments);
             _lastCheckpointId = save.CheckpointId;
 
             Debug.Log(

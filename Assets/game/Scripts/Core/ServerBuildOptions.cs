@@ -3,25 +3,19 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 専用サーバーのビルド設定。コマンドライン引数 <c>-serverPlatform macos|linux</c> から作り、
-    /// 出力先 <c>Builds/server-&lt;platform&gt;/</c> と実行ファイルのパスを決める。
-    /// </summary>
     public sealed class ServerBuildOptions
     {
         public const string PlatformFlag = "-serverPlatform";
 
-        /// <summary>ビルドの出力をまとめるディレクトリ (プロジェクトのルートからの相対パス、gitignore 済み)。</summary>
         public const string OutputRoot = "Builds";
 
         public const string ExecutableName = "shooter-server";
 
         public ServerPlatform Platform { get; }
 
-        /// <summary>出力先のディレクトリ。例: <c>Builds/server-linux</c>。</summary>
         public string OutputDirectory => OutputRoot + "/server-" + PlatformName(Platform);
 
-        /// <summary>BuildPipeline に渡す実行ファイルのパス。Linux は Unity の慣例どおり <c>.x86_64</c> を付ける。</summary>
+        // Linux は Unity の慣例どおり .x86_64 を付ける。
         public string ExecutablePath => OutputDirectory + "/" + ExecutableName + ExecutableExtension(Platform);
 
         public ServerBuildOptions(ServerPlatform platform)
@@ -34,14 +28,7 @@ namespace Shooter.Core
             Platform = platform;
         }
 
-        /// <summary>
-        /// コマンドライン引数を解析する。<c>-serverPlatform</c> が無ければ <paramref name="defaultPlatform"/> を使う。
-        /// 知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="defaultPlatform">-serverPlatform が無いときの OS。</param>
-        /// <param name="options">成功したときの設定。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
+        // Unity 自身の -batchmode なども混ざるので、知らない引数は無視する。
         public static bool TryParse(
             IReadOnlyList<string> args,
             ServerPlatform defaultPlatform,
@@ -94,7 +81,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>出力先やログに使う小文字の名前 (macos / linux)。</summary>
         public static string PlatformName(ServerPlatform platform)
         {
             switch (platform)

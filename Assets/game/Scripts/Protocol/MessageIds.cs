@@ -1,11 +1,9 @@
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 対戦のメッセージの <see cref="IMessage.Id"/>。送る向きと種類ごとに範囲を分け、後から足しても既存の Id を動かさない。
-    /// </summary>
+    // 後から足しても既存の Id を動かさないよう、送る向きと種類ごとに範囲を分ける
+    // (接続 1-15、クライアントからの入力と要求 16-47、状態 48-63、サーバーからのイベント 64-)。
     public static class MessageIds
     {
-        // 接続 (1-15)
         public const ushort ConnectRequest = 1;
         public const ushort ConnectAccepted = 2;
         public const ushort ConnectRejected = 3;
@@ -15,7 +13,6 @@ namespace Shooter.Protocol
         public const ushort AntiCheatToServer = 7;
         public const ushort AntiCheatToClient = 8;
 
-        // クライアントからの入力と要求 (16-47)
         public const ushort Input = 16;
         public const ushort FireRequest = 17;
         public const ushort WeaponActionRequest = 18;
@@ -28,11 +25,9 @@ namespace Shooter.Protocol
         public const ushort VehicleRequest = 25;
         public const ushort VehicleMove = 26;
 
-        // 状態 (48-63)
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;
 
-        // サーバーからのイベント (64-)
         public const ushort Shot = 64;
         public const ushort HitConfirm = 65;
         public const ushort DamageTaken = 66;

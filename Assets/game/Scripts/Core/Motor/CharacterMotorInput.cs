@@ -17,12 +17,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <summary>
-        /// prone はこの tick に伏せのボタンが押されたか。proneAllowed (ルール) が false なら伏せていても解き、
-        /// ladderAllowed (ルール) が false ならはしごにつかまっていても離す。
-        /// carrySpeedMultiplier は持ち物による速さの倍率 (<see cref="CarryLoadSpec.SpeedMultiplier"/>)。送られてこず、動かす側が持っている武器から入れる。
-        /// jumpAllowed (ルール) が false なら、jump は乗り越え・伏せから立つ・はしごから離れるにだけ使い、ふつうには跳ばない。
-        /// </summary>
         public CharacterMotorInput(
             Vector2 move,
             float yaw,

@@ -2,31 +2,21 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// クライアントがつないで最初に送る承認のデータ。中身は Netcode の承認データ (<see cref="ConnectionPayload"/>) と同じく、
-    /// ビルドの版と戻ってきた人を見分ける鍵 (端末の Id か EOS の ProductUserId) に、表示名を足したもの。
-    /// </summary>
-    /// <remarks>
-    /// 版と鍵の文字の妥当性はサーバーが <see cref="ConnectionApproval"/> で確かめるので、ここでは長さだけを絞る。
-    /// </remarks>
+    // 版と鍵の文字の妥当性はサーバーが ConnectionApproval で確かめるので、ここでは長さだけを絞る。
     public sealed class ConnectRequestMessage : IMessage
     {
         public const byte CurrentVersion = 1;
 
-        /// <summary>表示名の最長のバイト数 (UTF-8)。</summary>
         public const int MaxDisplayNameBytes = 64;
 
         public ushort Id => MessageIds.ConnectRequest;
 
         public byte Version => CurrentVersion;
 
-        /// <summary>クライアントの <see cref="MatchProtocol.Version"/>。</summary>
         public ushort ProtocolVersion { get; set; } = MatchProtocol.Version;
 
-        /// <summary>クライアントのビルドの版 (<see cref="BuildVersion"/> で正規化したもの)。</summary>
         public string ClientVersion { get; set; } = "";
 
-        /// <summary>切断して戻ってきた人を見分ける鍵 (<see cref="Shooter.Core.RejoinKey"/>)。</summary>
         public string RejoinKey { get; set; } = "";
 
         public string DisplayName { get; set; } = "";

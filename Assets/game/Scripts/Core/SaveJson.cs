@@ -5,17 +5,12 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// セーブデータ用の小さな JSON の読み書き。外部パッケージに頼らず Core だけで使う。
-    /// 読み込みはオブジェクト・配列・文字列・整数・true/false/null を扱い、小数と指数は受け付けない。
-    /// 読んだ値は <see cref="Dictionary{TKey,TValue}"/> (キーは string)、<see cref="List{T}"/>、string、long、bool、null で返す。
-    /// </summary>
+    // 外部パッケージに頼らず Core だけで使えるよう、セーブデータに要る分だけの JSON を自前で読み書きする。
     internal static class SaveJson
     {
-        /// <summary>入れ子の深さの上限。壊れたデータで再帰が深くなりすぎないようにする。</summary>
+        // 壊れたデータで再帰が深くなりすぎないよう、入れ子の深さに上限を設ける。
         private const int _maxDepth = 32;
 
-        /// <summary>text 全体を 1 つの JSON 値として読む。文法に合わなければ <see cref="FormatException"/>。</summary>
         public static object Parse(string text)
         {
             if (text == null)
@@ -27,7 +22,6 @@ namespace Shooter.Core
             return parser.ParseDocument();
         }
 
-        /// <summary>value を JSON の文字列リテラルとして書き足す。</summary>
         public static void AppendString(StringBuilder builder, string value)
         {
             builder.Append('"');
@@ -289,7 +283,6 @@ namespace Shooter.Core
                 return (char)value;
             }
 
-            /// <summary>JSON の数の文法のうち整数だけを読む。long に収まらなければ例外にする。</summary>
             private long ParseInteger()
             {
                 var negative = TryConsume('-');

@@ -3,18 +3,13 @@ using System.Globalization;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// クライアントが毎 tick 送る移動の入力。落ちてもよい届け方で送れるよう、まだサーバーが処理したと分からない直近の tick を
-    /// 続けて <see cref="MaxFrames"/> 個まで載せる。最後に受け取ったスナップショットの tick も載せ、サーバーが差分の基準にする。
-    /// </summary>
+    // 落ちてもよい届け方で送れるよう、まだサーバーが処理したと分からない直近の tick を続けて MaxFrames 個まで載せる。
     public sealed class InputMessage : IMessage
     {
         public const byte CurrentVersion = 2;
 
-        /// <summary>1 つに載せる tick の最大数。</summary>
         public const int MaxFrames = 16;
 
-        /// <summary>まだスナップショットを受け取っていないことを表す <see cref="AckedSnapshotTick"/>。</summary>
         public const int NoSnapshot = -1;
 
         private readonly InputFrame[] _frames = new InputFrame[MaxFrames];
@@ -23,13 +18,10 @@ namespace Shooter.Protocol
 
         public byte Version => CurrentVersion;
 
-        /// <summary>クライアントが最後に受け取って組み立てられたスナップショットの tick。無ければ <see cref="NoSnapshot"/>。</summary>
         public int AckedSnapshotTick { get; set; } = NoSnapshot;
 
-        /// <summary>載せている tick の数。</summary>
         public int Count { get; private set; }
 
-        /// <summary>古い順の index 番目の tick の入力。</summary>
         public InputFrame this[int index]
         {
             get
@@ -48,8 +40,6 @@ namespace Shooter.Protocol
             Count = 0;
         }
 
-        /// <summary>frame を一番新しい tick として足す。</summary>
-        /// <exception cref="InvalidOperationException">もう <see cref="MaxFrames"/> 個ある、または前の tick の次でない。</exception>
         public void Add(InputFrame frame)
         {
             if (Count == MaxFrames)

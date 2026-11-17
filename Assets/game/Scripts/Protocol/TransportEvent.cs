@@ -2,12 +2,9 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary><see cref="IMatchTransport.TryReceive"/> が返す 1 つの出来事。</summary>
     public readonly struct TransportEvent
     {
-        /// <summary>
-        /// 切断の理由の最長のバイト数 (UTF-8)。理由は切断の知らせ 1 つに載せるので、どの通信路でも 1 つのパケットに収まる長さにする。
-        /// </summary>
+        // 理由は切断の知らせ 1 つに載せるので、どの通信路でも 1 つのパケットに収まる長さにする。
         public const int MaxReasonBytes = 255;
 
         private readonly string _reason;
@@ -24,24 +21,14 @@ namespace Shooter.Protocol
 
         public TransportEventKind Kind { get; }
 
-        /// <summary>出来事が起きた接続。</summary>
         public ConnectionId Connection { get; }
 
-        /// <summary><see cref="TransportEventKind.Data"/> のとき、届いたチャンネル。</summary>
         public TransportChannel Channel { get; }
 
-        /// <summary>
-        /// <see cref="TransportEventKind.Data"/> のとき、届いたデータ。実装の受信用の配列を指すことがあり、
-        /// 次に <see cref="IMatchTransport.TryReceive"/> を呼ぶまでしか中身を保証しない。それ以外では空。
-        /// </summary>
+        // 実装の受信用の配列を指すことがあるので、次に IMatchTransport.TryReceive を呼ぶまでしか中身を保証しない。
         public ArraySegment<byte> Payload { get; }
 
-        /// <summary>
-        /// <see cref="TransportEventKind.Disconnected"/> のとき、切った側が <see cref="IMatchTransport.Disconnect"/> か
-        /// <see cref="IMatchTransport.Shutdown"/> に渡した理由。自分から切ったなら自分が渡した理由。
-        /// 知らせが無い (相手が黙って消えた・つながらなかった) ときや、それ以外の出来事では空文字。
-        /// 相手が自由に送れる値なので、画面に出すなら <c>Shooter.Core.DisconnectNotice.Classify</c> で分けてから使う。
-        /// </summary>
+        // 相手が自由に送れる値なので、画面に出すなら Shooter.Core.DisconnectNotice.Classify で分けてから使う。
         public string Reason => _reason ?? "";
 
         public static TransportEvent Connected(ConnectionId connection)

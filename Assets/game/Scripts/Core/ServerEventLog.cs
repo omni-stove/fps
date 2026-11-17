@@ -4,16 +4,8 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// サーバーの起動・終了と試合のイベントを、運用のために機械で読める 1 行の JSON (<see cref="FlatJsonObject.Format"/>) にする。
-    /// サーバーを <c>-log-format json</c> (<see cref="ServerLogFormat.Json"/>) で起動したときだけ、標準出力に 1 イベント 1 行で出す。
-    /// </summary>
-    /// <remarks>
-    /// どの行も <c>type</c> と <c>time</c> (UTC の ISO 8601、ミリ秒まで) で始まり、試合のイベントには <c>matchId</c> が続く。
-    /// 値はすべて文字列 (数も <c>"3"</c>)。プレイヤーは <c>playerId</c> (サーバーのクライアント Id) で表し、
-    /// EOS でつないだ人には <c>productUserId</c> も付ける。表示名などの人の名前は出さない。
-    /// 項目の一覧は docs/dedicated-server.md にある。
-    /// </remarks>
+    // 項目の一覧は docs/dedicated-server.md に書いてあり、運用がそれを前提に読むので、項目を変えたらそちらも直す。
+    // 表示名などの人の名前は出さない。
     public static class ServerEventLog
     {
         public const string ServerStartedType = "server_started";
@@ -29,14 +21,11 @@ namespace Shooter.Core
         public const string VehicleLeftType = "vehicle_left";
         public const string VehicleExplodedType = "vehicle_exploded";
 
-        /// <summary>試合を見分ける新しい Id (32 桁の小文字の 16 進数)。次の試合を始めるたびに作り直す。</summary>
         public static string NewMatchId()
         {
             return Guid.NewGuid().ToString("N");
         }
 
-        /// <summary>待ち受けを始めた。</summary>
-        /// <example><c>{"type":"server_started","time":"2026-11-13T09:00:00.000Z","version":"0.2.0","transport":"udp","endpoint":"0.0.0.0:7777"}</c></example>
         public static string ServerStarted(DateTime utcNow, string version, NetTransportKind transport, string endpoint)
         {
             var values = Begin(ServerStartedType, utcNow);
@@ -46,15 +35,11 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>終了を求められた (SIGTERM など)。</summary>
-        /// <example><c>{"type":"server_stopping","time":"2026-11-13T09:30:00.000Z"}</c></example>
         public static string ServerStopping(DateTime utcNow)
         {
             return FlatJsonObject.Format(Begin(ServerStoppingType, utcNow));
         }
 
-        /// <summary>両チームがそろって試合が始まった。players は試合に入っている人数。</summary>
-        /// <example><c>{"type":"match_started","time":"...","matchId":"6c1f...","players":"2"}</c></example>
         public static string MatchStarted(DateTime utcNow, string matchId, int playerCount)
         {
             if (playerCount < 0)
@@ -67,11 +52,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>
-        /// プレイヤーが試合に入った。rejoined は切断してから戻り、前の成績を引き継いだか。
-        /// productUserId は EOS の ProductUserId で、EOS でつないでいないなら null (項目ごと出さない)。
-        /// </summary>
-        /// <example><c>{"type":"player_joined","time":"...","matchId":"6c1f...","playerId":"1","productUserId":"0002...","team":"Bravo","rejoined":"false"}</c></example>
         public static string PlayerJoined(DateTime utcNow, string matchId, int playerId, string productUserId, Team team, bool rejoined)
         {
             var values = BeginMatch(PlayerJoinedType, utcNow, matchId);
@@ -81,11 +61,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>
-        /// プレイヤーが試合から抜けた (切断を含む)。
-        /// productUserId は EOS の ProductUserId で、EOS でつないでいないなら null (項目ごと出さない)。
-        /// </summary>
-        /// <example><c>{"type":"player_left","time":"...","matchId":"6c1f...","playerId":"1"}</c></example>
         public static string PlayerLeft(DateTime utcNow, string matchId, int playerId, string productUserId)
         {
             var values = BeginMatch(PlayerLeftType, utcNow, matchId);
@@ -93,8 +68,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>killer が victim を倒した。teamKill は味方に倒された (点数の入らない) キルか。自滅では killer と victim が同じ。</summary>
-        /// <example><c>{"type":"kill","time":"...","matchId":"6c1f...","killerId":"0","victimId":"1","teamKill":"false"}</c></example>
         public static string Kill(
             DateTime utcNow,
             string matchId,
@@ -111,8 +84,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>試合が終わった。winner は勝ったチーム、引き分けなら <see cref="MatchLog.Draw"/>。</summary>
-        /// <example><c>{"type":"match_ended","time":"...","matchId":"6c1f...","winner":"Alpha","scoreAlpha":"30","scoreBravo":"12"}</c></example>
         public static string MatchEnded(DateTime utcNow, string matchId, Team? winner, int alphaScore, int bravoScore)
         {
             if (alphaScore < 0)
@@ -133,7 +104,6 @@ namespace Shooter.Core
         }
 
         // 位置は出さない。運用で要るのは誰がどれだけ付けたかで、毎回の座標は行を太らせるだけのため。
-        /// <example><c>{"type":"ping_placed","time":"...","matchId":"6c1f...","playerId":"1","team":"Alpha","pingId":"4","kind":"Enemy","targetId":"2","refreshed":"false"}</c></example>
         public static string PingPlaced(
             DateTime utcNow, string matchId, int playerId, string productUserId, Team team, int pingId, PingKind kind, int? targetId, bool refreshed)
         {
@@ -161,7 +131,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <example><c>{"type":"ping_refused","time":"...","matchId":"6c1f...","playerId":"1","reason":"TooSoon"}</c></example>
         public static string PingRefused(DateTime utcNow, string matchId, int playerId, string productUserId, PingRefusal reason)
         {
             if (reason == PingRefusal.None || !Enum.IsDefined(typeof(PingRefusal), reason))
@@ -175,7 +144,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <example><c>{"type":"vehicle_entered","time":"...","matchId":"6c1f...","playerId":"1","vehicle":"0","vehicleId":"jeep","seat":"0","role":"Driver"}</c></example>
         public static string VehicleEntered(
             DateTime utcNow, string matchId, int playerId, string productUserId, int vehicle, string vehicleId, int seat, VehicleSeatRole role)
         {
@@ -185,7 +153,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <example><c>{"type":"vehicle_left","time":"...","matchId":"6c1f...","playerId":"1","vehicle":"0","vehicleId":"jeep","seat":"0","reason":"Request"}</c></example>
         public static string VehicleLeft(
             DateTime utcNow, string matchId, int playerId, string productUserId, int vehicle, string vehicleId, int seat, VehicleLeaveReason reason)
         {
@@ -201,7 +168,6 @@ namespace Shooter.Core
         }
 
         // 壊した人は、最後に傷めた人が抜けていれば出さない。乗り物の Id と並びの番号は、どのマップのどの車かを運用で数えるため両方出す。
-        /// <example><c>{"type":"vehicle_exploded","time":"...","matchId":"6c1f...","vehicle":"0","vehicleId":"jeep","attackerId":"2","riders":"1","damaged":"2","killed":"1"}</c></example>
         public static string VehicleExploded(
             DateTime utcNow, string matchId, int vehicle, string vehicleId, int? attackerId, string attackerProductUserId, int riders, int damaged,
             int killed)
@@ -224,8 +190,6 @@ namespace Shooter.Core
             return FlatJsonObject.Format(values);
         }
 
-        /// <summary>ログの <c>time</c> の書式。UTC でなければ例外。</summary>
-        /// <example><c>2026-11-13T09:00:00.123Z</c></example>
         public static string FormatTime(DateTime utcNow)
         {
             if (utcNow.Kind != DateTimeKind.Utc)

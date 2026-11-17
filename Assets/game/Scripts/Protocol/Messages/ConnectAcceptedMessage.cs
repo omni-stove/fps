@@ -1,50 +1,38 @@
 namespace Shooter.Protocol
 {
-    /// <summary>サーバーが承認したときに返す、クライアントのプレイヤーとサーバーの時計。</summary>
-    /// <remarks>
-    /// マップはクライアントの <c>-map</c> ではなくここで受け取る。<c>-map</c> はホスト・サーバーだけが選び、クライアントは
-    /// つないだサーバーのマップへ合わせる (Netcode のシーン管理と同じ意味) ため。
-    /// 移動の値 (<see cref="Motor"/>) もここで受け取る。サーバーは起動したルールのファイルの値で動かし、クライアントはどのルールで
-    /// 起動したかを知らないので、自分の持つ既定値で予測すると片方だけ変えたときに毎 tick ずれるため。
-    /// </remarks>
+    // マップはクライアントの -map ではなくここで受け取る。-map はホスト・サーバーだけが選び、クライアントは
+    // つないだサーバーのマップへ合わせる (Netcode のシーン管理と同じ意味) ため。
+    // 移動の値 (Motor) もここで受け取る。サーバーは起動したルールのファイルの値で動かし、クライアントはどのルールで
+    // 起動したかを知らないので、自分の持つ既定値で予測すると片方だけ変えたときに毎 tick ずれるため。
     public sealed class ConnectAcceptedMessage : IMessage
     {
         public const byte CurrentVersion = 8;
 
-        /// <summary><see cref="KillPlaneY"/> の既定。.NET のサーバーと Netcode のプレイヤーの既定と同じ。</summary>
+        // .NET のサーバーと Netcode のプレイヤーの既定と同じにする。
         public const float DefaultKillPlaneY = -50f;
 
         public ushort Id => MessageIds.ConnectAccepted;
 
         public byte Version => CurrentVersion;
 
-        /// <summary>このクライアントのプレイヤーの Id。スナップショットとイベントはこの Id で自分を指す。</summary>
         public int PlayerId { get; set; }
 
         public string ServerVersion { get; set; } = "";
 
-        /// <summary>サーバーの 1 秒あたりの tick 数。</summary>
         public int TickRate { get; set; } = 1;
 
-        /// <summary>承認した時点のサーバーの tick。</summary>
         public int ServerTick { get; set; }
 
-        /// <summary>サーバーの試合のマップ (シーン名。<see cref="Shooter.Core.NetLaunchOptions.IsMapName"/> に通る)。</summary>
         public string Map { get; set; } = "";
 
-        /// <summary>試合の最大の体力。スナップショットは今の体力だけを運ぶので、HUD のゲージの満タンをここで知る。</summary>
+        // スナップショットは今の体力だけを運ぶので、HUD のゲージの満タンをここで知る。
         public int MaxHealth { get; set; } = 1;
 
-        /// <summary>サーバーがプレイヤーを動かす値 (移動・体の寸法・カプセルの移動・伏せ)。</summary>
         public Shooter.Core.NetMotorSettings Motor { get; set; } = Shooter.Core.NetMotorSettings.Default;
 
-        /// <summary>この高さより下に落ちたら出現地点へ戻す (サーバーの移動と同じ値)。</summary>
         public float KillPlaneY { get; set; } = DefaultKillPlaneY;
 
-        /// <summary>
-        /// サーバーが爆発で吹き飛ばす値 (<c>knockback.json</c>)。移動の値と同じく、クライアントが自分の既定で予測すると
-        /// サーバーだけ変えたときに飛んでいる間ずっとずれるので、ここで受け取る。
-        /// </summary>
+        // 移動の値と同じく、クライアントが自分の既定で予測するとサーバーだけ変えたときに飛んでいる間ずっとずれるので、ここで受け取る。
         public Shooter.Core.KnockbackSpec Knockback { get; set; } = Shooter.Core.KnockbackSpec.Default;
 
         public void Write(MessageWriter writer)

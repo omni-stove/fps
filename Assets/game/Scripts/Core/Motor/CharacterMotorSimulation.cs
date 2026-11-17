@@ -4,11 +4,9 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になる。
-    /// 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
-    /// カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
-    /// </summary>
+    // 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になるようにする。
+    // 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
+    // カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
     public sealed class CharacterMotorSimulation
     {
         public const string ReasonDowned = "downed";
@@ -39,7 +37,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <summary>prone は伏せの速さと飛び込み。伏せの高さは body の <see cref="StanceGeometry.Prone"/> を使う。</summary>
         public CharacterMotorSimulation(CharacterBody body, PlayerMotor motor, float tickSeconds, float killPlaneY, ProneSpec prone)
         {
             Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -70,7 +67,7 @@ namespace Shooter.Core
 
         public ProneSpec ProneSpec { get; }
 
-        /// <summary>つかまれるはしご。状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。</summary>
+        // 状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。
         public IReadOnlyList<MapLadder> Ladders
         {
             get => _ladders;
@@ -93,7 +90,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>吹き飛ばされている間の重力・空中の効き・着地と打ち切りの秒数。予測とサーバーで同じ値を渡す。</summary>
         public KnockbackSpec Knockback
         {
             get => _knockbackSpec;
@@ -117,10 +113,7 @@ namespace Shooter.Core
             return new Vector3(MathF.Sin(yaw), 0f, MathF.Cos(yaw));
         }
 
-        /// <summary>
-        /// state を velocity で吹き飛ばした状態。動かすのは次の <see cref="Step"/> から。
-        /// 速さは <see cref="KnockbackSpec.TryGetVelocity"/> で決める (オフラインの吹き飛ばしと同じ計算にするため)。
-        /// </summary>
+        // 速さは KnockbackSpec.TryGetVelocity で決める (オフラインの吹き飛ばしと同じ計算にするため)。
         public static CharacterMotorState Launch(CharacterMotorState state, Vector3 velocity)
         {
             return state.WithKnockback(state.Knockback.Launch(velocity));

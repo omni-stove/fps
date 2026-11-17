@@ -3,59 +3,29 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 爆破 (サーチアンドデストロイ) のルール。<see cref="RoundSession"/> で Alpha と Bravo がラウンドを取り合い、
-    /// 先に <see cref="SearchAndDestroySpec.WinsToWin"/> 勝した陣営の勝ちで終わる。リスポーンはなく (<see cref="NoRespawn"/>)、
-    /// <see cref="SearchAndDestroySpec.SwapEveryRounds"/> ラウンドごとに攻守が入れ替わる。時間は <see cref="Tick"/> で外から進める。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>各ラウンドの待ちに入るとき、攻撃側でいちばん ID の小さい参加者に爆弾を持たせる。攻撃側に誰もいなければ持ち主のいない <see cref="BombState.Dropped"/>。</item>
-    /// <item>持ち主が倒れるか抜けたら、爆弾はその場に落ちる (<see cref="BombDropped"/>)。倒れたことは次の <see cref="Tick"/> で気づくが、
-    /// このクラスの <see cref="ReportKill"/>・<see cref="ReportDeath"/>・<see cref="RemovePlayer"/> を通せばその場で落とす。
-    /// 落ちた爆弾は、生きている攻撃側が <see cref="PickUpBomb"/> で拾える。</item>
-    /// <item>持ち主が設置地点の中で長押しを続けている間 (<see cref="SetPlanting"/>) 設置が進み、<see cref="SearchAndDestroySpec.PlantSeconds"/> 続けたら設置になる。
-    /// 離すか別の地点に移ると 0 からやり直す。設置するとラウンドの制限時間は止まり、<see cref="SearchAndDestroySpec.FuseSeconds"/> 後に起爆する。</item>
-    /// <item>設置後、生きている防衛側の誰かが長押しを続けている間 (<see cref="SetDefusing"/>) 解除が進み、<see cref="SearchAndDestroySpec.DefuseSeconds"/> に届いたら解除になる。
-    /// 誰も続けていなければ 0 に戻る。解除し終わる時刻と起爆の時刻が同じなら解除を先にする。</item>
-    /// <item>攻撃側の勝ち: 起爆するか、防衛側が全滅する。防衛側の勝ち: 解除するか、設置前に攻撃側が全滅するか、設置前に制限時間が切れる。
-    /// 設置前に両陣営が同時に全滅したら引き分け (どちらの勝ちにも数えない)。設置後は攻撃側が全滅しても起爆か解除まで続く。</item>
-    /// <item>全滅は <see cref="ModeSession"/> と同じく <see cref="Tick"/> の頭でまとめて調べる (同じ間の相打ちを報告の順によらず同時に扱うため)。</item>
-    /// </list>
-    /// 参加者は <see cref="Mode"/> に直接加えてもよい (<see cref="ModeSession.AddPlayer(int, Side)"/>)。陣営は 2 チーム (<see cref="TwoTeams"/>) で、
-    /// ラウンドをまたいで変わらない。攻めるか守るかは <see cref="Attacker"/> と <see cref="Defender"/> が決める。
-    /// <see cref="Mode"/> の制限時間は無限で、ラウンドの残り時間は <see cref="RoundRemaining"/> が持つ。
-    /// </remarks>
+    // 倒れたことは次の Tick で気づくので、その場で爆弾を落とせるよう ReportKill・ReportDeath・RemovePlayer をこのクラスにも置く。
+    // 全滅は ModeSession と同じく Tick の頭でまとめて調べる (同じ間の相打ちを報告の順によらず同時に扱うため)。
     public sealed class SearchAndDestroy
     {
-        /// <summary>ラウンドの開始前の待ちに入ったときに呼ばれる。引数はラウンドの番号 (1 から)。爆弾はもう配り終えている。体力と位置はここで戻す。</summary>
+        // 体力と位置は Core の外にあるので、受けた側がここで戻す。
         public event Action<int> PreparationStarted;
 
-        /// <summary>待ちが終わってラウンドが始まったときに呼ばれる。引数はラウンドの番号 (1 から)。</summary>
         public event Action<int> RoundStarted;
 
-        /// <summary>ラウンドが終わったときに呼ばれる。引数は勝った陣営 (引き分けなら null) と終わった理由。</summary>
         public event Action<Side?, RoundEndReason> RoundEnded;
 
-        /// <summary>攻守が入れ替わったときに呼ばれる。<see cref="RoundEnded"/> の後、次の <see cref="PreparationStarted"/> の前。</summary>
         public event Action SidesSwapped;
 
-        /// <summary>試合が終わった瞬間に 1 度だけ呼ばれる。引数は先取数に届いた陣営。</summary>
         public event Action<Side> Ended;
 
-        /// <summary>落ちていた爆弾を拾ったときに呼ばれる。引数は拾った人。</summary>
         public event Action<int> BombPickedUp;
 
-        /// <summary>持ち主が倒れるか抜けて、爆弾が落ちたときに呼ばれる。引数はそれまでの持ち主。</summary>
         public event Action<int> BombDropped;
 
-        /// <summary>設置し終えたときに呼ばれる。引数は設置した人と設置地点の番号。</summary>
         public event Action<int, int> BombPlanted;
 
-        /// <summary>解除し終えたときに呼ばれる。引数は解除した人。この後の <see cref="Tick"/> でラウンドが終わる。</summary>
         public event Action<int> BombDefused;
 
-        /// <summary>起爆したときに呼ばれる。引数は設置地点の番号。この後の <see cref="Tick"/> でラウンドが終わる。</summary>
         public event Action<int> BombDetonated;
 
         private readonly ModeSession _mode;
@@ -72,67 +42,48 @@ namespace Shooter.Core
 
         public SearchAndDestroySpec Spec { get; }
 
-        /// <summary>1 ラウンドを表す ModeSession。参加者の出入りと、ラウンド中のキル数とデス数はここで見る。</summary>
         public ModeSession Mode => _mode;
 
         public RoundSession Rounds => _rounds;
 
         public RoundPhase Phase => _rounds.Phase;
 
-        /// <summary>今のラウンドの番号 (1 から)。開始前は 0。</summary>
         public int RoundNumber => _rounds.RoundNumber;
 
-        /// <summary>今のラウンドで攻める (爆弾を持つ) 陣営。</summary>
         public Side Attacker => _rounds.Attacker;
 
-        /// <summary>今のラウンドで守る陣営。</summary>
         public Side Defender => _rounds.Defender;
 
-        /// <summary>試合に勝った陣営。終わる前は null。</summary>
         public Side? Winner => _rounds.Winner;
 
         public BombState Bomb { get; private set; }
 
-        /// <summary>爆弾の持ち主。<see cref="BombState.Carried"/> 以外では null。</summary>
         public int? CarrierId { get; private set; }
 
-        /// <summary>設置した地点の番号。<see cref="BombState.Planted"/>・<see cref="BombState.Defused"/>・<see cref="BombState.Detonated"/> 以外では null。</summary>
         public int? PlantedSite { get; private set; }
 
-        /// <summary>設置した人。設置前は null。</summary>
         public int? PlanterId { get; private set; }
 
-        /// <summary>設置が進んでいる地点。進んでいなければ null。</summary>
         public int? PlantingSite { get; private set; }
 
-        /// <summary>設置の進み (秒)。0 から <see cref="SearchAndDestroySpec.PlantSeconds"/>。</summary>
         public float PlantProgress { get; private set; }
 
-        /// <summary>最後の <see cref="Tick"/> で解除を進めた防衛側。進めていなければ null。</summary>
         public int? DefuserId { get; private set; }
 
-        /// <summary>解除の進み (秒)。0 から <see cref="SearchAndDestroySpec.DefuseSeconds"/>。</summary>
         public float DefuseProgress { get; private set; }
 
-        /// <summary>ラウンドの残り時間 (秒)。設置すると止まる。</summary>
         public float RoundRemaining { get; private set; }
 
-        /// <summary>起爆までの残り (秒)。設置前は <see cref="SearchAndDestroySpec.FuseSeconds"/> のまま。</summary>
         public float FuseRemaining { get; private set; }
 
-        /// <summary>最後に終わったラウンドの理由。まだ 1 ラウンドも終わっていなければ null。</summary>
         public RoundEndReason? LastRoundEnd { get; private set; }
 
-        /// <summary>最後に終わったラウンドの勝者。引き分けか、まだ終わっていなければ null。</summary>
         public Side? LastRoundWinner { get; private set; }
 
-        /// <summary>設置の進みの割合 (0 から 1)。</summary>
         public float PlantFraction => PlantProgress / Spec.PlantSeconds;
 
-        /// <summary>解除の進みの割合 (0 から 1)。</summary>
         public float DefuseFraction => DefuseProgress / Spec.DefuseSeconds;
 
-        /// <param name="spec">試合の設定。</param>
         public SearchAndDestroy(SearchAndDestroySpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
@@ -153,13 +104,8 @@ namespace Shooter.Core
             ResetRoundState();
         }
 
-        /// <summary>試合を始め、1 ラウンド目の待ちに入る。Waiting のときだけ呼べる。</summary>
         public void Start() => _rounds.Start();
 
-        /// <summary>
-        /// ラウンドの勝ち数・攻守・爆弾・最後のラウンドの結果を初期値に戻し、Waiting に戻す。参加者と陣営分けは残す。
-        /// どの状態からでも呼べ、イベントのハンドラの中で呼ぶとその後のイベントは出さない。
-        /// </summary>
         public void Reset()
         {
             _generation++;
@@ -169,7 +115,6 @@ namespace Shooter.Core
             LastRoundWinner = null;
         }
 
-        /// <summary>プレイヤーを side に加える。待ちの間に攻撃側へ入り、爆弾の持ち主がいなければ持たせる。</summary>
         public void AddPlayer(int playerId, Side side)
         {
             _mode.AddPlayer(playerId, side);
@@ -179,10 +124,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// プレイヤーを抜く。爆弾を持っていたら、ラウンド中ならその場に落とし (<see cref="BombDropped"/>)、待ちの間なら次の攻撃側に持たせる。
-        /// 抜けたことで陣営が全滅した場合は、次の <see cref="Tick"/> で扱う。
-        /// </summary>
         public void RemovePlayer(int playerId)
         {
             _mode.RemovePlayer(playerId);
@@ -203,33 +144,22 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>side が勝ったラウンドの数。</summary>
         public int GetRoundWins(Side side) => _rounds.GetRoundWins(side);
 
-        /// <summary>playerId が今のラウンドで攻撃側なら true。</summary>
         public bool IsAttacker(int playerId) => _mode.GetSide(playerId) == Attacker;
 
-        /// <summary>
-        /// killerId が victimId を倒したことを報告する (<see cref="RoundSession.ReportKill"/>)。倒された人が爆弾を持っていれば、その場で落とす。
-        /// </summary>
         public void ReportKill(int killerId, int victimId)
         {
             _rounds.ReportKill(killerId, victimId);
             DropIfCarrierDown();
         }
 
-        /// <summary>playerId が倒した相手なしで倒れたことを報告する (<see cref="RoundSession.ReportDeath"/>)。爆弾を持っていれば、その場で落とす。</summary>
         public void ReportDeath(int playerId)
         {
             _rounds.ReportDeath(playerId);
             DropIfCarrierDown();
         }
 
-        /// <summary>
-        /// playerId が設置地点 site の中で長押しを続けているかを伝える。続けていなければ null。次の <see cref="Tick"/> から数える。
-        /// 爆弾を持っている生きた攻撃側のものだけが設置を進める。どの状態でも呼べる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">playerId が参加していないか、site が地点の番号の外。</exception>
         public void SetPlanting(int playerId, int? site)
         {
             _mode.GetSide(playerId);
@@ -248,11 +178,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// playerId が設置された爆弾のそばで長押しを続けているかを伝える。次の <see cref="Tick"/> から数える。
-        /// 生きた防衛側のものだけが解除を進める。どの状態でも呼べる。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">playerId が参加していない。</exception>
         public void SetDefusing(int playerId, bool defusing)
         {
             _mode.GetSide(playerId);
@@ -266,10 +191,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 落ちている爆弾を playerId に拾わせる。ラウンド中で、爆弾が落ちていて、playerId が生きている攻撃側のときだけ拾って true を返す。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">playerId が参加していない。</exception>
         public bool PickUpBomb(int playerId)
         {
             var side = _mode.GetSide(playerId);
@@ -288,11 +209,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進める。ラウンド中は、倒れた持ち主の爆弾を落とし、設置・解除・起爆とラウンドの残り時間を進めてから
-        /// <see cref="RoundSession.Tick"/> する。1 回の Tick が長くても、設置し終えた時刻から起爆までの時間を数え始める。
-        /// 待ちの間は待ちだけを進め、待ちが終わった Tick の余りは設置と残り時間に回さない。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsPositiveInfinity(deltaSeconds))
@@ -350,7 +266,6 @@ namespace Shooter.Core
             AssignBomb();
         }
 
-        /// <summary>攻撃側でいちばん ID の小さい参加者に爆弾を持たせる。攻撃側に誰もいなければ持ち主なしで落ちていることにする。</summary>
         private void AssignBomb()
         {
             int? carrier = null;
@@ -495,7 +410,6 @@ namespace Shooter.Core
             BombPlanted?.Invoke(playerId, site);
         }
 
-        /// <summary>持ち主が生きていて、設置地点で長押しを続けていればその地点。</summary>
         private int? PlantCandidate()
         {
             if (Bomb != BombState.Carried || !CarrierId.HasValue)
@@ -512,7 +426,6 @@ namespace Shooter.Core
             return site;
         }
 
-        /// <summary>長押しを続けている、生きた防衛側のうち ID がいちばん小さい人。</summary>
         private int? FirstDefuser()
         {
             int? first = null;
@@ -571,7 +484,7 @@ namespace Shooter.Core
             return ModeOutcome.Decided(_decidedWinner);
         }
 
-        /// <summary>爆弾と全滅でラウンドを終える。時間切れは <see cref="SearchAndDestroy"/> が数えるので、ここでは扱わない。</summary>
+        // 時間切れは SearchAndDestroy が数えるので、ここでは扱わない。
         private sealed class BombWin : IWinCondition
         {
             private readonly SearchAndDestroy _owner;

@@ -13,7 +13,7 @@ namespace Shooter.Protocol
 
         public VehicleAction Action { get; set; }
 
-        /// <summary>乗るときの乗り物の番号。降りる・移るときは今乗っている乗り物なので読まない。</summary>
+        // 降りる・移るときは今乗っている乗り物なので読まない。
         public int Vehicle { get; set; }
 
         public int Seat { get; set; } = AnySeat;

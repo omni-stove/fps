@@ -20,7 +20,6 @@ namespace Shooter.Core
 
         public float MaxThickness { get; }
 
-        // 並びに無い素材は抜けやすさ 1 (MaxThickness のまま)。
         public IReadOnlyList<PenetrationMaterialSpec> Materials { get; }
 
         public float PenetrabilityOf(string surfaceMaterialId)

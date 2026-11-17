@@ -1,6 +1,5 @@
 namespace Shooter.Protocol
 {
-    /// <summary>全員に送るキルログの 1 行 (<c>Shooter.Core.KillFeedEntry</c> の中身)。自滅なら倒した人と倒された人が同じ。</summary>
     public sealed class KilledMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -17,7 +16,6 @@ namespace Shooter.Protocol
 
         public bool Headshot { get; set; }
 
-        /// <summary>味方を倒したか。</summary>
         public bool Friendly { get; set; }
 
         public void Write(MessageWriter writer)

@@ -4,10 +4,7 @@ using System.Text;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 切断の理由 (<see cref="TransportEvent.Reason"/>) を通信路に載せるバイト列との間で変える。どの <see cref="IMatchTransport"/> の実装も
-    /// 同じ形で載せ、相手の実装が違っても読めるようにする。
-    /// </summary>
+    // どの IMatchTransport の実装も切断の理由を同じ形で載せ、相手の実装が違っても読めるようにする。
     public static class TransportReason
     {
         private static readonly UTF8Encoding _utf8 = new UTF8Encoding(false, true);
@@ -40,9 +37,7 @@ namespace Shooter.Protocol
             return bytes;
         }
 
-        /// <summary>
-        /// 相手が自由に送れるので投げずに、長すぎる・UTF-8 として正しくないものは知らせが無かったもの (空文字) とする。
-        /// </summary>
+        // 相手が自由に送れるので投げずに、長すぎる・UTF-8 として正しくないものは知らせが無かったもの (空文字) とする。
         public static string Decode(ReadOnlySpan<byte> bytes)
         {
             if (bytes.IsEmpty || bytes.Length > TransportEvent.MaxReasonBytes)

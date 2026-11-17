@@ -3,12 +3,8 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 拠点 1 つの占領の状態 (Netcode の <c>NetControlPointState</c> の中身)。拠点はマップの番号 (<see cref="Index"/>、HUD では 0 = A) で指す。
-    /// </summary>
     public struct ControlPointSnapshot : ISnapshotEntity<ControlPointSnapshot>
     {
-        /// <summary><see cref="ControlPercent"/> の絶対値の最大。</summary>
         public const int FullPercent = 100;
 
         public int Index { get; set; }
@@ -16,13 +12,10 @@ namespace Shooter.Protocol
 
         public bool HasOwner { get; set; }
 
-        /// <summary>占領しているチーム。<see cref="HasOwner"/> が false なら使わない。</summary>
         public Team Owner { get; set; }
 
-        /// <summary>占領の進み (-100〜100)。正なら Alpha、負なら Bravo に傾いている。</summary>
         public sbyte ControlPercent { get; set; }
 
-        /// <summary>両チームがいて押し合っているか。</summary>
         public bool Contested { get; set; }
 
         public int EntityId => Index;

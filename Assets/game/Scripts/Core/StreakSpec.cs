@@ -148,18 +148,22 @@ namespace Shooter.Core
 
         public const int DefaultStructureDamageAtCenter = 100;
 
+        public const float DefaultRange = 100f;
+
         public static readonly StreakAirstrikeSpec Default = new StreakAirstrikeSpec();
 
         public StreakAirstrikeSpec(
             int shellCount = DefaultShellCount,
             float intervalSeconds = DefaultIntervalSeconds,
             float spread = DefaultSpread,
-            ExplosionSpec explosion = null)
+            ExplosionSpec explosion = null,
+            float range = DefaultRange)
         {
             ShellCount = SpecGuard.AtLeast(shellCount, 1, nameof(shellCount));
             IntervalSeconds = SpecGuard.NonNegativeFinite(intervalSeconds, nameof(intervalSeconds));
             Spread = SpecGuard.NonNegativeFinite(spread, nameof(spread));
             Explosion = explosion ?? DefaultExplosion();
+            Range = SpecGuard.PositiveFinite(range, nameof(range));
         }
 
         public int ShellCount { get; }
@@ -169,6 +173,9 @@ namespace Shooter.Core
         public float Spread { get; }
 
         public ExplosionSpec Explosion { get; }
+
+        /// <summary>照準の先を空爆の中心にするとき、照準が届く距離 (m)。</summary>
+        public float Range { get; }
 
         public static ExplosionSpec DefaultExplosion()
         {

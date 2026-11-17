@@ -59,6 +59,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Airstrike.Explosion.Damage.Radius, Is.EqualTo(StreakAirstrikeSpec.DefaultRadius));
             Assert.That(spec.Airstrike.Explosion.Damage.FullDamageRadius, Is.EqualTo(StreakAirstrikeSpec.DefaultFullDamageRadius));
             Assert.That(spec.Airstrike.Explosion.StructureDamageAtCenter, Is.EqualTo(StreakAirstrikeSpec.DefaultStructureDamageAtCenter));
+            Assert.That(spec.Airstrike.Range, Is.EqualTo(StreakAirstrikeSpec.DefaultRange));
         }
 
         [Test]

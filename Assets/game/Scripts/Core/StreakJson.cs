@@ -38,7 +38,7 @@ namespace Shooter.Core
 
         public static IReadOnlyList<string> UavItemNames { get; } = new[] { DurationSecondsItem, RangeItem };
 
-        public static IReadOnlyList<string> AirstrikeItemNames { get; } = new[] { ShellCountItem, IntervalSecondsItem, SpreadItem, ExplosionItem };
+        public static IReadOnlyList<string> AirstrikeItemNames { get; } = new[] { ShellCountItem, IntervalSecondsItem, SpreadItem, ExplosionItem, RangeItem };
 
         // 空爆は落ちた所で爆ぜるので、武器の explosion にある detonation は受け付けない。
         public static IReadOnlyList<string> ExplosionItemNames { get; } = new[]
@@ -121,9 +121,10 @@ namespace Shooter.Core
             var spread = fields.ReadFloat(SpreadItem, StreakAirstrikeSpec.DefaultSpread);
             var explosionFields = fields.Object(ExplosionItem, ExplosionItemNames);
             var explosion = explosionFields == null ? null : ReadExplosion(explosionFields);
+            var range = fields.ReadFloat(RangeItem, StreakAirstrikeSpec.DefaultRange);
             try
             {
-                return new StreakAirstrikeSpec(shellCount, intervalSeconds, spread, explosion);
+                return new StreakAirstrikeSpec(shellCount, intervalSeconds, spread, explosion, range);
             }
             catch (ArgumentException e)
             {

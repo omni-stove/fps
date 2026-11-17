@@ -227,6 +227,10 @@ namespace Shooter.Core.Tests
             Assert.That(StreakLog.Died("Player", 3, tracker.Died()), Is.EqualTo("[Streak] id=Player died lost=3 kills=0 ready=1"));
             Assert.That(StreakLog.Used("Player", "uav", tracker.Use(out _)), Is.EqualTo("[Streak] id=Player used reward=uav kills=0 ready=0"));
             Assert.That(StreakLog.NothingToUse("Player"), Is.EqualTo("[Streak] id=Player use refused nothing-ready"));
+            Assert.That(StreakLog.UseRefusedDead("Player"), Is.EqualTo("[Streak] id=Player use refused dead"));
+            Assert.That(
+                StreakLog.RewardUnavailable("Player", "uav", "PingController"),
+                Is.EqualTo("[Streak] id=Player use refused reward=uav missing=PingController"));
         }
 
         private static void KillTimes(StreakTracker tracker, int count)

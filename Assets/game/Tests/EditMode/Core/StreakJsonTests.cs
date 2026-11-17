@@ -11,7 +11,7 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedItemNames = { "rewards", "uav", "airstrike" };
         private static readonly string[] _expectedRewardItemNames = { "id", "nameKey", "killsRequired" };
         private static readonly string[] _expectedUavItemNames = { "durationSeconds", "range" };
-        private static readonly string[] _expectedAirstrikeItemNames = { "shellCount", "intervalSeconds", "spread", "explosion" };
+        private static readonly string[] _expectedAirstrikeItemNames = { "shellCount", "intervalSeconds", "spread", "explosion", "range" };
         private static readonly string[] _expectedExplosionItemNames = { "maxDamage", "radius", "fullDamageRadius", "structureDamageAtCenter" };
 
         [Test]
@@ -22,7 +22,7 @@ namespace Shooter.Core.Tests
                 + " {\"id\": \"uav\", \"nameKey\": \"reward.radar\", \"killsRequired\": 7}],"
                 + " \"uav\": {\"durationSeconds\": 12.5, \"range\": 150},"
                 + " \"airstrike\": {\"shellCount\": 8, \"intervalSeconds\": 0.2, \"spread\": 3,"
-                + " \"explosion\": {\"maxDamage\": 90, \"radius\": 4, \"fullDamageRadius\": 1, \"structureDamageAtCenter\": 40}}}",
+                + " \"explosion\": {\"maxDamage\": 90, \"radius\": 4, \"fullDamageRadius\": 1, \"structureDamageAtCenter\": 40}, \"range\": 70}}",
                 _source);
 
             Assert.That(spec.Rewards.Count, Is.EqualTo(2));
@@ -42,6 +42,7 @@ namespace Shooter.Core.Tests
             Assert.That(spec.Airstrike.Explosion.Damage.FullDamageRadius, Is.EqualTo(1f));
             Assert.That(spec.Airstrike.Explosion.StructureDamageAtCenter, Is.EqualTo(40));
             Assert.That(spec.Airstrike.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnImpact));
+            Assert.That(spec.Airstrike.Range, Is.EqualTo(70f));
             Assert.That(spec.FindReward("uav"), Is.SameAs(spec.Rewards[1]));
             Assert.That(spec.FindReward("missing"), Is.Null);
         }
@@ -68,7 +69,9 @@ namespace Shooter.Core.Tests
             Assert.That(empty.Airstrike.Explosion.Damage.Radius, Is.EqualTo(6f));
             Assert.That(empty.Airstrike.Explosion.Damage.FullDamageRadius, Is.EqualTo(2f));
             Assert.That(empty.Airstrike.Explosion.StructureDamageAtCenter, Is.EqualTo(100));
+            Assert.That(empty.Airstrike.Range, Is.EqualTo(100f));
 
+            Assert.That(partial.Airstrike.Range, Is.EqualTo(100f));
             Assert.That(partial.Uav.Range, Is.EqualTo(50f));
             Assert.That(partial.Uav.DurationSeconds, Is.EqualTo(20f));
             Assert.That(partial.Airstrike.ShellCount, Is.EqualTo(5));
@@ -118,6 +121,7 @@ namespace Shooter.Core.Tests
             var damage = Reject("{\"airstrike\": {\"explosion\": {\"maxDamage\": -1}}}");
             var full = Reject("{\"airstrike\": {\"explosion\": {\"radius\": 2, \"fullDamageRadius\": 2}}}");
             var structure = Reject("{\"airstrike\": {\"explosion\": {\"structureDamageAtCenter\": -5}}}");
+            var airstrikeRange = Reject("{\"airstrike\": {\"range\": 0}}");
 
             Assert.That(kills.SourceName, Is.EqualTo(_source));
             Assert.That(kills.Item, Is.EqualTo("rewards[0].killsRequired"));
@@ -131,6 +135,7 @@ namespace Shooter.Core.Tests
             Assert.That(damage.Item, Is.EqualTo("airstrike.explosion.maxDamage"));
             Assert.That(full.Item, Is.EqualTo("airstrike.explosion.fullDamageRadius"));
             Assert.That(structure.Item, Is.EqualTo("airstrike.explosion.structureDamageAtCenter"));
+            Assert.That(airstrikeRange.Item, Is.EqualTo("airstrike.range"));
         }
 
         [Test]

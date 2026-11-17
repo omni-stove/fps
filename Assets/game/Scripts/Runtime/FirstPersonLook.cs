@@ -13,7 +13,8 @@ namespace Shooter.Runtime
     /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
     /// <see cref="Recoil"/> があれば、その反動のずれを pitch の軸にだけ足す (本体の yaw と <see cref="Yaw"/> / <see cref="Pitch"/> は変えない)。
     /// 解決できなければエラーを出して自分を無効にする。
-    /// 感度には操作設定 (<see cref="ControlSettings"/>) のマウス・ゲームパッドごとの倍率を掛け、設定画面で変えるとその場で効く。
+    /// 感度には操作設定 (<see cref="ControlSettings"/>) のマウス・ゲームパッドごとの倍率を掛け、縦には上下反転 (<see cref="ControlSettings.InvertLookY"/>) を効かせる。
+    /// どちらも設定画面で変えるとその場で効く。デスカム・観戦・乗り物・ネット対戦・写真のモードも Look をここ (<see cref="ReadLookDegrees(InputAction, float)"/>) で読むので同じになる。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class FirstPersonLook : MonoBehaviour
@@ -183,7 +184,7 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
+        /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) と上下反転 (<see cref="ControlSettings.InvertLookY"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
         /// 設定画面で変わるたびに入れ直す (Edit Mode では Awake が走らないので初期値)。変えると次のフレームから使う。
         /// </summary>
         public ControlSettings ControlSettings
@@ -369,9 +370,19 @@ namespace Shooter.Runtime
                 return Vector2.zero;
             }
 
+            return ToLookDegrees(raw, action.activeControl?.device is Pointer, deltaSeconds);
+        }
+
+        /// <summary>
+        /// Look 入力の値 raw を、今の感度と操作設定の上下反転 (<see cref="ControlSettings.ApplyInvertLookY"/>) で回転量 (度) にしたもの。
+        /// x は正で右、y は正で上。fromPointer はマウスやタッチの入力か (false ならスティック)。
+        /// </summary>
+        public Vector2 ToLookDegrees(Vector2 raw, bool fromPointer, float deltaSeconds)
+        {
             // マウスやタッチの delta はフレームあたりの移動量なので deltaTime を掛けない。スティックは速度として扱う。
-            var isPointer = action.activeControl?.device is Pointer;
-            return isPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
+            var degrees = fromPointer ? raw * EffectiveMouseSensitivity : raw * (EffectiveStickSensitivity * deltaSeconds);
+            degrees.y = _controlSettings.ApplyInvertLookY(degrees.y);
+            return degrees;
         }
 
         // 射撃 (WeaponController.Update) が反動を足した後に向きへ反映する。

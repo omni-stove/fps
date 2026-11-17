@@ -144,6 +144,18 @@ namespace Shooter.Editor
         }
 
         /// <summary>
+        /// Web 版 (WebGL) に入れるシーン。メインメニューから行けて、オンラインを使わないものだけにする
+        /// (キャンペーンと、射撃場・チュートリアル)。先頭が起動時のシーン。
+        /// </summary>
+        public static IReadOnlyList<string> WebScenes => new[]
+        {
+            MainMenuScene,
+            BootstrapScene,
+            CampaignScene,
+            Campaign02Scene,
+        };
+
+        /// <summary>
         /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>)。
         /// 知らない名前なら <see cref="ArgumentException"/>。
         /// </summary>

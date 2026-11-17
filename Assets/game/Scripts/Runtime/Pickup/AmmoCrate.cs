@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// 置きっぱなしの弾薬箱。範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が Interact (キーボードは E の長押し) をすると、
     /// 持ち武器すべての予備弾を上限まで足す (<see cref="Refill"/>)。拾っても消えず、<see cref="CooldownSeconds"/> 経てば何度でも使える。
     /// 足したかどうかと数は <c>[AmmoCrate]</c> のログに出す。
-    /// 範囲にプレイヤーがいる間は、HUD の <see cref="IInteractPrompt"/> に使い方 (<see cref="PromptKey"/>) か満タン (<see cref="FullKey"/>) を出す。
+    /// 範囲にプレイヤーがいる間は、<see cref="GameSignals.InteractHint"/> に使えるか満タンかの案内 (<see cref="AmmoCrateHint"/>) を出し、離れたら消す。
     /// </summary>
     /// <remarks>
     /// 見た目は <see cref="VisualPrefab"/>、空なら仮の箱を作る。どちらも固い物として当たり判定を残す (身を隠せる物として置くため)。
@@ -27,12 +27,6 @@ namespace Fps.Runtime
         public const float DefaultRadius = 1.6f;
         public const float DefaultCooldownSeconds = 1f;
         public const string VisualName = "Visual";
-
-        /// <summary>使える間の案内の文のキー。{0} は Interact のキー。</summary>
-        public const string PromptKey = "hud.ammoCrate.prompt";
-
-        /// <summary>どの武器も満タンの間の案内の文のキー。</summary>
-        public const string FullKey = "hud.ammoCrate.full";
 
         /// <summary>仮の箱の大きさ (m)。</summary>
         public static readonly Vector3 DefaultVisualSize = new Vector3(0.9f, 0.5f, 0.6f);
@@ -53,13 +47,12 @@ namespace Fps.Runtime
         private GameObject _visualPrefab;
 
         private readonly HashSet<Collider> _inside = new HashSet<Collider>();
-        private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _interactAction;
         private bool _enabledInteractAction;
         private float _readyAt;
-        private IHud _hud;
+        private InteractHintSlot _hint;
 
         public float Radius
         {
@@ -127,13 +120,23 @@ namespace Fps.Runtime
 
         private void OnTriggerEnter(Collider other)
         {
+            HandleEnter(other);
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            HandleExit(other);
+        }
+
+        public void HandleEnter(Collider other)
+        {
             if (other != null && other.GetComponentInParent<Damageable>() != null)
             {
                 _inside.Add(other);
             }
         }
 
-        private void OnTriggerExit(Collider other)
+        public void HandleExit(Collider other)
         {
             if (other != null)
             {
@@ -175,12 +178,12 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// player に出す案内。使えれば Interact のキー (keyLabel) を入れた <see cref="PromptKey"/>、どの武器も満タンなら <see cref="FullKey"/>。
+        /// player に出す案内。予備弾を足せる武器があるかと <see cref="InteractActionPath"/> を入れる。
         /// 倒れている・武器を持たないなら案内は出さない (false)。
         /// </summary>
-        public static bool TryDescribe(Damageable player, string keyLabel, out LocalizedText text)
+        public static bool TryDescribe(Damageable player, out AmmoCrateHint hint)
         {
-            text = default;
+            hint = default;
             if (player == null || player.IsDead || player.IsDowned)
             {
                 return false;
@@ -198,7 +201,7 @@ namespace Fps.Runtime
                 room |= state.Room > 0;
             }
 
-            text = room ? new LocalizedText(PromptKey, keyLabel ?? string.Empty) : new LocalizedText(FullKey);
+            hint = new AmmoCrateHint(room, InteractActionPath);
             return true;
         }
 
@@ -381,42 +384,21 @@ namespace Fps.Runtime
             Interact();
         }
 
-        private void UpdatePrompt()
+        internal void UpdatePrompt()
         {
             var player = _inside.Count > 0 ? LocalPlayerInside() : null;
-            if (player == null)
+            if (player == null || !TryDescribe(player, out var hint))
             {
                 HidePrompt();
                 return;
             }
 
-            // HUD はプレイヤーが範囲に入ったときにだけ探す (シーン全体を見るので毎フレームは探さない)。
-            if (!GameUi.IsAlive(_hud))
-            {
-                _hud = GameUi.FindHud();
-            }
-
-            var prompt = GameUi.IsAlive(_hud) ? _hud.InteractPrompt : null;
-            if (prompt == null)
-            {
-                return;
-            }
-
-            if (!TryDescribe(player, _keyLabel.For(_interactAction), out var text))
-            {
-                prompt.Hide(this);
-                return;
-            }
-
-            prompt.Show(this, text);
+            (_hint ?? (_hint = new InteractHintSlot(this))).Show(hint);
         }
 
         private void HidePrompt()
         {
-            if (GameUi.IsAlive(_hud))
-            {
-                _hud.InteractPrompt?.Hide(this);
-            }
+            _hint?.Clear();
         }
     }
 }

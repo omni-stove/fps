@@ -638,6 +638,90 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheHudShowsAHudModelPublishedByAnotherSource()
+        {
+            GameSignals.ResetAll();
+            var hud = Hud.Create("HudViewTests.SignalHud", null, null, null);
+            var changes = 0;
+            hud.ShownModelChanged += () => changes++;
+            try
+            {
+                Assert.That(hud.ShownModel, Is.SameAs(hud.Model));
+                Assert.That(hud.ShowsTeamScores, Is.False, "the offline HUD has no team scores");
+
+                hud.ApplyDensity(HudDensity.Minimal);
+                var other = new HudModel();
+                other.SetHealth(42, 100);
+                other.SetScores(Team.Bravo, 3, 5);
+                GameSignals.HudModel.Publish(other);
+
+                Assert.That(hud.ShownModel, Is.SameAs(other));
+                Assert.That(changes, Is.EqualTo(1));
+                Assert.That(hud.ShowsTeamScores, Is.True);
+                Assert.That(other.ShowsReserveAmmo, Is.False, "the HUD's density is applied to the shown model");
+                hud.ApplyDensity(HudDensity.Full);
+                Assert.That(other.ShowsReserveAmmo, Is.True);
+                if (hud.View != null)
+                {
+                    Assert.That(hud.View.HealthLabel.text, Is.EqualTo(HudNumberFormat.Health(other)));
+                }
+
+                GameSignals.HudModel.Publish(other);
+                Assert.That(changes, Is.EqualTo(1), "publishing the same model again keeps the view");
+
+                GameSignals.HudModel.Publish(hud.Model);
+                Assert.That(hud.ShownModel, Is.SameAs(hud.Model), "its own model published by the bootstrap is the same as none");
+                Assert.That(changes, Is.EqualTo(2));
+
+                GameSignals.HudModel.Publish(other);
+                GameSignals.HudModel.Clear();
+                Assert.That(hud.ShownModel, Is.SameAs(hud.Model));
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
+        public void TheHudFollowsTheDensityPauseTimeModeAndPaletteViewerOnGameSignals()
+        {
+            GameSignals.ResetAll();
+            GameSignals.HudDensity.Publish(HudDensity.Hardcore);
+            var hud = Hud.Create("HudViewTests.SignalHud", null, null, null);
+            try
+            {
+                Assert.That(hud.Visibility.Density, Is.EqualTo(HudDensity.Hardcore), "a value published before the HUD is applied at once");
+                Assert.That(hud.FollowsTeamPalette, Is.False, "nothing published, nothing followed");
+
+                GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
+                Assert.That(hud.PauseMenu.TimeMode, Is.EqualTo(PauseTimeMode.KeepRunning));
+
+                GameSignals.PaletteViewer.Publish(Team.Bravo);
+                Assert.That(hud.FollowsTeamPalette, Is.True);
+                Assert.That(hud.TeamColor(Team.Bravo), Is.EqualTo(TeamColors.Of(TeamColors.Current, Team.Bravo, Team.Bravo)));
+
+                GameSignals.HudDensity.Publish(HudDensity.Minimal);
+                Assert.That(hud.Visibility.Density, Is.EqualTo(HudDensity.Minimal));
+
+                GameSignals.HudDensity.Clear();
+                GameSignals.PauseTimeMode.Clear();
+                Assert.That(hud.Visibility.Density, Is.EqualTo(HudDensity.Minimal), "clearing keeps what is shown");
+                Assert.That(hud.PauseMenu.TimeMode, Is.EqualTo(PauseTimeMode.KeepRunning));
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
         public void ShowsTheModelTextAtOnce()
         {
             var model = new HudModel();

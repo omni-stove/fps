@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fps.Core;
@@ -133,6 +134,77 @@ namespace Fps.Tests.EditMode
 
             Assert.That(hud.LoadoutSelect, Is.SameAs(_view));
             Assert.That(_root.Q<VisualElement>(LoadoutSelectView.UxmlName).ClassListContains("hud__loadout"), Is.True);
+        }
+
+        [Test]
+        public void TheLastBoundViewIsTheActiveOne()
+        {
+            Assert.That(LoadoutSelectView.Active, Is.SameAs(_view));
+
+            var other = new GameObject("OtherLoadoutSelect");
+            try
+            {
+                var otherView = other.AddComponent<LoadoutSelectView>();
+                otherView.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
+                Assert.That(LoadoutSelectView.Active, Is.SameAs(otherView));
+
+                otherView.Unbind();
+                Assert.That(LoadoutSelectView.Active, Is.SameAs(_view), "an unbound view gives the screen back");
+            }
+            finally
+            {
+                Object.DestroyImmediate(other);
+            }
+
+            _view.Unbind();
+            Assert.That(LoadoutSelectView.Active, Is.Not.SameAs(_view));
+        }
+
+        [Test]
+        public void TheDefaultLoadoutSelectDrivesTheActiveView()
+        {
+            var screen = GameUi.LoadoutSelect;
+            var received = new List<IReadOnlyList<string>>();
+            Action<IReadOnlyList<string>> receive = ids => received.Add(ids);
+            screen.Confirmed += receive;
+            try
+            {
+                Assert.That(screen.IsOpen, Is.False);
+
+                screen.Open(LoadoutSelectPanelTests.Selection());
+                Assert.That(_view.IsOpen, Is.True);
+                Assert.That(screen.IsOpen, Is.True);
+
+                _view.Panel.Select(1, 1);
+                Assert.That(_view.Panel.Confirm(), Is.True);
+                Assert.That(received.Count, Is.EqualTo(1));
+                Assert.That(received[0], Is.EqualTo(_view.Selection.WeaponIds));
+
+                screen.ShowSending();
+                Assert.That(_view.Panel.Status, Is.EqualTo(LoadoutFormat.Sending));
+                screen.ShowAnswer(false, "the match is over");
+                Assert.That(_view.Panel.Status, Is.EqualTo(LoadoutFormat.Rejected("the match is over")));
+
+                screen.Close();
+                Assert.That(_view.IsOpen, Is.False);
+                Assert.That(screen.IsOpen, Is.False);
+            }
+            finally
+            {
+                screen.Confirmed -= receive;
+            }
+        }
+
+        [Test]
+        public void TheDefaultLoadoutSelectDoesNothingWithoutAView()
+        {
+            _view.Unbind();
+            var screen = GameUi.LoadoutSelect;
+
+            screen.Open(LoadoutSelectPanelTests.Selection());
+
+            Assert.That(_view.IsOpen, Is.False);
+            Assert.DoesNotThrow(() => screen.ShowAnswer(true, null));
         }
     }
 }

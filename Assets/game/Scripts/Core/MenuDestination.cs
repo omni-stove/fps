@@ -6,7 +6,7 @@ namespace Fps.Core
         /// <summary>キャンペーン (Campaign01)。</summary>
         Campaign,
 
-        /// <summary>オンライン: 専用サーバーを探してつなぐ (<c>-lobby quickmatch</c> と同じ)。始めるのは MenuNavigator.OnlineStarter。</summary>
+        /// <summary>オンライン: 専用サーバーを探してつなぐ (<c>-lobby quickmatch</c> と同じ)。始めるのは GameUi.OnlineStarter。</summary>
         QuickMatch,
 
         /// <summary>射撃場 (Bootstrap)。</summary>

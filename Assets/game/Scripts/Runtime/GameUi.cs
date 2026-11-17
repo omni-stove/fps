@@ -101,6 +101,16 @@ namespace Fps.Runtime
             _defaultInventoryScreen = screen ?? throw new ArgumentNullException(nameof(screen));
         }
 
+        // 通信の手順 (Fps.NetV2) は UI のアセンブリを参照しないので、メニューが読むこの置き場に入れさせる。
+        public static IOnlineMatchStarter OnlineStarter { get; set; }
+
+        // ドメインの再読み込みを切った Play でも、前の Play のクライアントへメニューのボタンをつながない。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnlineStarter()
+        {
+            OnlineStarter = null;
+        }
+
         /// <summary>既定のメニューとの行き来を menu にする。<see cref="Menu"/> を差し替えていればそちらを使い続ける。</summary>
         /// <exception cref="ArgumentNullException">menu が null。</exception>
         public static void UseDefaultMenu(IMenuNavigator menu)

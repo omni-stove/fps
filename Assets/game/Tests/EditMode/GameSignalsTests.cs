@@ -29,6 +29,10 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(GameSignals.LocalPlayer.Value, Is.Null);
             Assert.That(GameSignals.HudModel.Value, Is.Null);
+            Assert.That(GameSignals.Inventory.Value, Is.Null);
+            Assert.That(GameSignals.GrenadeCount.Value, Is.Null);
+            Assert.That(GameSignals.LocalBlindSeconds.Value, Is.Null);
+            Assert.That(GameSignals.Participants.Value, Is.Null);
             Assert.That(GameSignals.ModeStatus.Value, Is.Null);
             Assert.That(GameSignals.Domination.Value, Is.Null);
             Assert.That(GameSignals.Scoreboard.Value, Is.Null);
@@ -133,6 +137,10 @@ namespace Fps.Tests.EditMode
             GameSignals.ModeStatus.Changed += _ => heard++;
             GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(null, null, null, null, null, null, null, null));
             GameSignals.HudModel.Publish(new HudModel());
+            GameSignals.Inventory.Publish(new FakeInventory());
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 0, null));
+            GameSignals.LocalBlindSeconds.Publish(() => 1f);
+            GameSignals.Participants.Publish(new ParticipantTable());
             GameSignals.ModeStatus.Publish(Status());
             GameSignals.Scoreboard.Publish(Array.Empty<ScoreboardEntry>());
             GameSignals.InteractHint.Publish(new InteractHint(this, "detail"));
@@ -179,6 +187,39 @@ namespace Fps.Tests.EditMode
         private static ModeStatus Status()
         {
             return new ModeStatus(30f, new[] { new SideScore(Side.Alpha, 1d) }, Side.Alpha, null, false, null, null, default, null, null, default);
+        }
+
+        [Test]
+        public void ANullableStructSignalHoldsAZeroCount()
+        {
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(false, 0, null));
+
+            Assert.That(GameSignals.GrenadeCount.HasValue, Is.True, "a count of zero with grenades off is still something to show");
+            Assert.That(GameSignals.GrenadeCount.ClearIfCurrent(new GrenadeCountStatus(false, 0, string.Empty)), Is.True);
+            Assert.That(GameSignals.GrenadeCount.HasValue, Is.False);
+        }
+
+        private sealed class FakeInventory : IInventoryControl
+        {
+            public event Action Changed
+            {
+                add { }
+                remove { }
+            }
+
+            public Inventory Inventory => null;
+
+            public void Move(int handle, int x, int y, bool rotated)
+            {
+            }
+
+            public void Use(int handle)
+            {
+            }
+
+            public void Drop(int handle, int count)
+            {
+            }
         }
     }
 }

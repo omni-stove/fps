@@ -428,20 +428,55 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ACountFromTheServerIsKeptWithoutALocalPlayer()
+        public void ThePublishedCountShowsWithoutALocalPlayerAndWinsOverIt()
         {
             var hud = CreateHud();
             var view = hud.GrenadeCount;
 
-            view.ShowCount(true, 3);
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 3, null));
+            Assert.That(view.Source, Is.Null);
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(3))));
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
             hud.RebuildView();
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(3))), "rebinding with no published player keeps the count");
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(3))), "rebinding catches up with the published count");
 
             var thrower = CreateThrower(_twoGrenades);
             GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(thrower.gameObject, null, null, null, null, thrower, null, null));
-            view.ShowCount(true, 1);
-            GameSignals.LocalPlayer.Clear();
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(1))), "clearing the player does not hide a count shown directly");
+            Assert.That(view.Source, Is.Null, "the published count wins while it is out");
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(3))));
+
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(false, 3, null));
+            Assert.That(view.Text, Is.Empty, "grenades off by the rule");
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            GameSignals.GrenadeCount.Clear();
+            Assert.That(view.Source, Is.SameAs(thrower), "clearing the count goes back to the local player");
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(2))));
+        }
+
+        [Test]
+        public void ThePublishedCountNamesTheTypeById()
+        {
+            var view = CreateHud().GrenadeCount;
+            Assume.That(KitTuning.Grenades.TryFind(GrenadeSpec.DefaultId, out var frag), Is.True);
+
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 2, GrenadeSpec.DefaultId));
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(frag.Name, 2))));
+
+            GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, -1, "not-in-the-json"));
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(LocalizedText.Literal("not-in-the-json"), 0))), "an unknown Id is shown as it is");
+        }
+
+        [Test]
+        public void GrenadeCountStatusComparesByValue()
+        {
+            Assert.That(new GrenadeCountStatus(true, 2, "a"), Is.EqualTo(new GrenadeCountStatus(true, 2, "a")));
+            Assert.That(new GrenadeCountStatus(true, 2, "a"), Is.Not.EqualTo(new GrenadeCountStatus(true, 2, "b")));
+            Assert.That(new GrenadeCountStatus(true, 2, null), Is.EqualTo(new GrenadeCountStatus(true, 2, string.Empty)));
+            Assert.That(new GrenadeCountStatus(true, 2, null).HasType, Is.False);
+            Assert.That(new GrenadeCountStatus(true, -4, null).Remaining, Is.Zero);
+            Assert.That(default(GrenadeCountStatus).TypeId, Is.Empty);
         }
 
         [Test]

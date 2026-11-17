@@ -14,7 +14,7 @@ namespace Fps.NetV2
     /// ゲームのネット対戦のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
     /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
     /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
-    /// (<see cref="NetV2RemotePlayer"/>)・HUD (<see cref="NetV2Hud"/>) を作る。シーンをまたいで残る。
+    /// (<see cref="NetV2RemotePlayer"/>)・HUD に出す値 (<see cref="NetV2Hud"/>) と HUD (<see cref="GameUi.CreateHud"/>) を作る。シーンをまたいで残る。
     /// </summary>
     /// <remarks>
     /// <para>
@@ -33,7 +33,7 @@ namespace Fps.NetV2
     /// <para>
     /// 起動引数は <see cref="NetClientLaunch"/> が読む。<c>-mode client</c> なら起動してすぐ <c>-address</c> か <c>-eos-server</c> のサーバーへ、
     /// <c>-lobby quickmatch</c> なら起動してすぐ専用サーバーのロビーを探して (<see cref="QuickMatchSearch"/>) つなぐ。
-    /// メニューのクイックマッチ (<see cref="MenuNavigator.OnlineStarter"/>) は、<c>-address</c>・<c>-port</c>・<c>-eos-server</c> があればそのサーバーへ、
+    /// メニューのクイックマッチ (<see cref="GameUi.OnlineStarter"/>) は、<c>-address</c>・<c>-port</c>・<c>-eos-server</c> があればそのサーバーへ、
     /// 無ければロビーを探してつなぐ。EOS のロビーが使えない (EOS がビルドに無い・認証情報が揃わない) UDP のときは、
     /// <see cref="NetClientLaunch.DefaultServer"/> へつなぐ。
     /// </para>
@@ -49,6 +49,7 @@ namespace Fps.NetV2
         public const string ObjectName = "NetV2Client";
         public const string LogTag = "[Net]";
         public const string CombatLogTag = "[Combat]";
+        public const string HudObjectName = "NetV2HUDView";
 
         // Netcode のクライアント (NetBootstrap) と同じ終了コード
         public const int ExitDisconnected = 0;
@@ -97,6 +98,7 @@ namespace Fps.NetV2
         private bool _wasReloading;
         private bool _startedFromMenu;
         private NetV2Hud _hud;
+        private IHud _hudView;
         private Transform _remoteRoot;
         private IMenuNavigator _menu;
         private AsyncOperation _mapLoad;
@@ -132,7 +134,7 @@ namespace Fps.NetV2
                 return;
             }
 
-            MenuNavigator.OnlineStarter = new MenuStarter(server);
+            GameUi.OnlineStarter = new MenuStarter(server);
             switch (start)
             {
                 case NetClientStart.Connect:
@@ -487,20 +489,21 @@ namespace Fps.NetV2
                 AddRemote(id);
             }
 
+            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
+            _hud.BindStatusEffects(_weaponHooks.StatusEffects);
+            _hud.BindInventory(_inventory);
+
+            // HUD は値を出し始めてから作る。作った HUD が出ている値に合わせて出せるように。作れなくても HUD 無しで試合は続ける
             try
             {
-                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
-                _hud.BindStatusEffects(_weaponHooks.StatusEffects);
-                _loadout.Bind(_hud.Hud.LoadoutSelect);
-                if (_hud.Hud.InventoryScreen != null)
-                {
-                    _hud.Hud.InventoryScreen.Source = _inventory;
-                }
+                _hudView = GameUi.CreateHud(HudObjectName, null, null, null);
             }
             catch (InvalidOperationException e)
             {
                 Debug.LogError(LogTag + " cannot create the HUD: " + e.Message, this);
             }
+
+            _loadout.Bind(GameUi.LoadoutSelect);
 
             if (_client.LatestSnapshot != null)
             {
@@ -541,10 +544,6 @@ namespace Fps.NetV2
 
             _match.SendInput();
             _local.Show(_match.LocalState);
-            if (_lockOn != null && _hud != null)
-            {
-                _lockOn.ShowOn(_hud.Hud.Model);
-            }
         }
 
         // 誘導の向きを決めるのはサーバーなので、ここでは相手を捉えて HUD と音に出し、撃つときにロックした相手の Id を送るだけにする。
@@ -1359,6 +1358,12 @@ namespace Fps.NetV2
                 Destroy(_local.gameObject);
             }
 
+            if (GameUi.IsAlive(_hudView))
+            {
+                Destroy(_hudView.gameObject);
+            }
+
+            _hudView = null;
             if (_hud != null)
             {
                 Destroy(_hud.gameObject);

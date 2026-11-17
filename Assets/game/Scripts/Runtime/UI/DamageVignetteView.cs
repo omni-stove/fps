@@ -32,6 +32,7 @@ namespace Fps.Runtime
         private bool _catalogResolved;
         private DamageFeedback _feedback;
         private Hud _hud;
+        private HudModel _model;
         private AudioSource _heartbeatSource;
         private AudioSource _oneShotSource;
 
@@ -88,8 +89,8 @@ namespace Fps.Runtime
             _hud = GetComponent<Hud>();
             if (_hud != null)
             {
-                _hud.Model.Changed += OnModelChanged;
-                SetHealthFraction(_hud.Model.HealthFraction);
+                _hud.ShownModelChanged += OnShownModelChanged;
+                WatchModel(_hud.ShownModel);
             }
         }
 
@@ -98,9 +99,11 @@ namespace Fps.Runtime
             CombatEvents.DamageTaken -= OnDamageTaken;
             if (_hud != null)
             {
-                _hud.Model.Changed -= OnModelChanged;
+                _hud.ShownModelChanged -= OnShownModelChanged;
                 _hud = null;
             }
+
+            WatchModel(null);
 
             StopHeartbeat();
             _feedback?.Reset();
@@ -190,9 +193,32 @@ namespace Fps.Runtime
 
         private void OnModelChanged(HudField field)
         {
-            if (field == HudField.Health && _hud != null)
+            if (field == HudField.Health && _model != null)
             {
-                SetHealthFraction(_hud.Model.HealthFraction);
+                SetHealthFraction(_model.HealthFraction);
+            }
+        }
+
+        private void OnShownModelChanged()
+        {
+            if (_hud != null)
+            {
+                WatchModel(_hud.ShownModel);
+            }
+        }
+
+        private void WatchModel(HudModel model)
+        {
+            if (_model != null)
+            {
+                _model.Changed -= OnModelChanged;
+            }
+
+            _model = model;
+            if (_model != null)
+            {
+                _model.Changed += OnModelChanged;
+                SetHealthFraction(_model.HealthFraction);
             }
         }
 

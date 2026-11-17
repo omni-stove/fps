@@ -4,40 +4,42 @@ using Fps.Core;
 using Fps.Protocol;
 using Fps.Runtime;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Fps.NetV2
 {
     /// <summary>
-    /// ネット対戦の HUD。表示はオフライン・Netcode のクライアントと同じ <see cref="Hud"/> (Hud.uxml) を使い、
-    /// 届いたスナップショットの値をその <see cref="Hud.Model"/> に流すだけにする (Netcode の <c>NetHud</c> と同じ出し方)。
+    /// ネット対戦の HUD に出す値。届いたスナップショットの値を自分の <see cref="Model"/> に書き、それを <see cref="GameSignals.HudModel"/> に出す。
+    /// 拠点・スコアボード・グレネードの残り・持ち物・目くらまし・参加者・HUD の量・ポーズ中の時間の扱い・色の組の視点も <see cref="GameSignals"/> に出し、
+    /// 消すときに自分の出したものだけを消す。どう出すかは UI が決める (UI が無ければ HUD 無しで進む)。
     /// </summary>
     /// <remarks>
-    /// 値が変わったときだけ書き直す。毎 tick 届くスナップショットのたびに文を作り直さないため。
+    /// 値が変わったときだけ書き直す。毎 tick 届くスナップショットのたびに出し直さないため。
     /// 案内の欄の優先は <c>NetHud</c> と同じ: 試合の終わり、放置の警告、ダウン中、倒れている間のリスポーンの案内、出現直後の無敵。
     /// Individual のリスポーンまでの秒数はスナップショットに無いので、倒れている間は出さない。
-    /// 拠点制圧の試合では、拠点ごとの状態を <see cref="ControlPointsView"/> に出す (Netcode の <c>NetHud</c> と同じ部品)。
+    /// 拠点制圧の試合では、拠点ごとの状態を <see cref="GameSignals.Domination"/> に出す。
     /// </remarks>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(Hud))]
     public sealed class NetV2Hud : MonoBehaviour
     {
         public const string ObjectName = "NetV2HUD";
 
-        private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
+        private readonly HudModel _model = new HudModel();
         private readonly ParticipantTable _participants = new ParticipantTable();
         private readonly List<ControlPointStatus> _controlPoints = new List<ControlPointStatus>();
-        private ControlPointsView _controlPointsView;
-        private Hud _hud;
+        private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
+        private Roster _roster;
         private int _localId;
         private int _maxHealth = 1;
         private bool _shown;
         private Team _team;
+        private bool _teamPublished;
         private int _health;
         private int _alpha;
         private int _bravo;
         private int _remainingSeconds = -1;
         private HudDensity _density = HudDensity.Full;
+        private bool _densityPublished;
+        private bool _pausePublished;
         private WeaponSync _weapon;
         private HudNotice _notice;
         private bool _noticeShown;
@@ -50,18 +52,19 @@ namespace Fps.NetV2
         private Func<string, WeaponSpec> _findWeapon;
         private WeaponSpec _weaponSpec;
         private float? _localCharge;
-        private GrenadeCountView _grenadeCount;
-        private bool _grenadesShown;
-        private bool _grenadesEnabled;
-        private string _grenadeTypeId;
-        private int _grenadeRemaining = -1;
-        private int _grenadeTypes = -1;
+        private GrenadeCountStatus? _grenades;
+        private DominationStatus _domination;
+        private ScoreboardEntry[] _publishedScoreboard;
+        private Func<float> _blindSeconds;
+        private IInventoryControl _inventory;
 
-        public Hud Hud => _hud;
+        public HudModel Model => _model;
+
+        public IParticipants Participants => _roster;
 
         /// <summary>
-        /// 持ち主のグレネードの残りを出す。typeId はクライアントが選んだ投げる種類。種類を切り替えて持っているときは、
-        /// 種類の名前を調整値の JSON (<see cref="KitTuning.Grenades"/>) から Id で引いて添える。pouch が null なら変えない。
+        /// 持ち主のグレネードの残りを <see cref="GameSignals.GrenadeCount"/> に出す。typeId はクライアントが選んだ投げる種類。
+        /// 種類を切り替えて持っているときだけ種類の Id を添える。pouch が null なら変えない。
         /// </summary>
         public void ShowGrenades(GrenadePouchSync pouch, string typeId)
         {
@@ -70,36 +73,32 @@ namespace Fps.NetV2
                 return;
             }
 
-            var remaining = pouch.RemainingOf(typeId);
-            if (_grenadesShown && pouch.Enabled == _grenadesEnabled && remaining == _grenadeRemaining && pouch.Count == _grenadeTypes
-                && string.Equals(typeId, _grenadeTypeId, StringComparison.Ordinal))
+            // 1 種類しか持たないなら、オフラインと同じく種類の名前を添えない
+            var status = new GrenadeCountStatus(pouch.Enabled, pouch.RemainingOf(typeId), pouch.Count > 1 ? typeId : null);
+            if (_grenades == status)
             {
                 return;
             }
 
-            _grenadesShown = true;
-            _grenadesEnabled = pouch.Enabled;
-            _grenadeRemaining = remaining;
-            _grenadeTypes = pouch.Count;
-            _grenadeTypeId = typeId;
-            if (_grenadeCount == null)
-            {
-                _grenadeCount = GrenadeCountView.AttachTo(_hud);
-            }
-
-            // 1 種類しか持たないなら、オフラインと同じく種類の名前を添えない
-            LocalizedText name = default;
-            if (pouch.Count > 1)
-            {
-                name = KitTuning.Grenades.TryFind(typeId, out var spec) ? spec.Name : LocalizedText.Literal(typeId);
-            }
-
-            _grenadeCount.ShowCount(pouch.Enabled, name, remaining);
+            _grenades = status;
+            GameSignals.GrenadeCount.Publish(status);
         }
 
-        public IParticipants Participants => _participants;
+        public void BindInventory(IInventoryControl inventory)
+        {
+            if (_inventory != null)
+            {
+                GameSignals.Inventory.ClearIfCurrent(_inventory);
+            }
 
-        /// <summary>HUD を作る。作れなければ作りかけを消して例外を投げる (Resources に HUD のレイアウトかテーマが無い)。</summary>
+            _inventory = inventory;
+            if (_inventory != null)
+            {
+                GameSignals.Inventory.Publish(_inventory);
+            }
+        }
+
+        /// <summary>値を出し始める。ポーズを開いても対戦は止まらないので、<see cref="GameSignals.PauseTimeMode"/> は <see cref="PauseTimeMode.KeepRunning"/> にする。</summary>
         // 武器の値を引く口を受け取るのは、溜め・熱・弾薬の種類を出すかを武器の値で決めるため (WeaponSync は無い項目にも 0 を運ぶ)。
         public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon)
         {
@@ -108,30 +107,16 @@ namespace Fps.NetV2
                 throw new ArgumentNullException(nameof(findWeapon));
             }
 
-            var hud = Hud.Create(ObjectName, null, null, null);
-            try
-            {
-                var netHud = hud.gameObject.AddComponent<NetV2Hud>();
-                netHud._hud = hud;
-                netHud._localId = localPlayerId;
-                netHud._maxHealth = Math.Max(1, maxHealth);
-                netHud._findWeapon = findWeapon;
-
-                // 対戦では止めても相手は止まらない
-                hud.PauseMenu.TimeMode = PauseTimeMode.KeepRunning;
-                var killFeed = hud.KillFeed;
-                if (killFeed != null)
-                {
-                    killFeed.Names = new Names(netHud);
-                }
-
-                return netHud;
-            }
-            catch
-            {
-                Destroy(hud.gameObject);
-                throw;
-            }
+            var netHud = new GameObject(ObjectName).AddComponent<NetV2Hud>();
+            netHud._localId = localPlayerId;
+            netHud._maxHealth = Math.Max(1, maxHealth);
+            netHud._findWeapon = findWeapon;
+            netHud._roster = new Roster(netHud);
+            GameSignals.HudModel.Publish(netHud._model);
+            GameSignals.Participants.Publish(netHud._roster);
+            GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
+            netHud._pausePublished = true;
+            return netHud;
         }
 
         // 溜めは押している手元の引き金の値を毎フレーム出す。スナップショットの溜めは撃った後にしか変わらないため。
@@ -140,7 +125,7 @@ namespace Fps.NetV2
             _localCharge = fraction;
             if (fraction.HasValue && _weaponSpec?.Trigger.Charge != null)
             {
-                _hud.Model.SetCharge(Math.Min(1f, Math.Max(0f, fraction.Value)));
+                _model.SetCharge(Math.Min(1f, Math.Max(0f, fraction.Value)));
             }
         }
 
@@ -153,7 +138,7 @@ namespace Fps.NetV2
             }
 
             _latest = snapshot;
-            var model = _hud.Model;
+            var model = _model;
             var match = snapshot.Match;
             _participants.Clear();
             var own = -1;
@@ -168,19 +153,21 @@ namespace Fps.NetV2
             }
 
             var density = Enum.IsDefined(typeof(HudDensity), match.Rules.HudDensity) ? match.Rules.HudDensity : HudDensity.Full;
-            if (!_shown || density != _density)
+            if (!_densityPublished || density != _density)
             {
                 _density = density;
-                _hud.ApplyDensity(density);
+                _densityPublished = true;
+                GameSignals.HudDensity.Publish(density);
             }
 
             if (own >= 0)
             {
                 var row = snapshot.Players[own];
-                if (!_shown || row.Team != _team)
+                if (!_teamPublished || row.Team != _team)
                 {
                     _team = row.Team;
-                    _hud.UseTeamPalette(_team);
+                    _teamPublished = true;
+                    GameSignals.PaletteViewer.Publish(_team);
                 }
 
                 if (!_shown || row.Health != _health)
@@ -244,14 +231,21 @@ namespace Fps.NetV2
             Refresh();
         }
 
-        /// <summary>自分にかかっている状態異常の残りを、effects から読んで出す。目くらましの間は <see cref="FlashOverlay"/> で画面を白くする。</summary>
+        /// <summary>
+        /// 自分にかかっている状態異常の残りを、effects から読んで出す。目くらましの残りを読む関数は <see cref="GameSignals.LocalBlindSeconds"/> に出す。
+        /// </summary>
         public void BindStatusEffects(ClientStatusEffects effects)
         {
             _statusEffects = effects;
-            var flash = _hud.FlashOverlay;
-            if (flash != null)
+            if (_blindSeconds != null)
             {
-                flash.Track(effects != null ? () => effects.RemainingSeconds(_localId, StatusEffectKinds.Blind) : (Func<float>)null);
+                GameSignals.LocalBlindSeconds.ClearIfCurrent(_blindSeconds);
+            }
+
+            _blindSeconds = effects != null ? () => effects.RemainingSeconds(_localId, StatusEffectKinds.Blind) : (Func<float>)null;
+            if (_blindSeconds != null)
+            {
+                GameSignals.LocalBlindSeconds.Publish(_blindSeconds);
             }
 
             Refresh();
@@ -352,16 +346,18 @@ namespace Fps.NetV2
 
             _notice = notice;
             _noticeShown = true;
-            _hud.Model.SetNotice(notice);
+            _model.SetNotice(notice);
         }
 
         private void ShowControlPoints(SnapshotMessage snapshot)
         {
-            if (snapshot.Match.Objective != MatchObjective.Domination)
+            var match = snapshot.Match;
+            if (match.Objective != MatchObjective.Domination)
             {
-                if (_controlPointsView != null)
+                if (_domination != null)
                 {
-                    _controlPointsView.Clear();
+                    GameSignals.Domination.ClearIfCurrent(_domination);
+                    _domination = null;
                 }
 
                 return;
@@ -382,50 +378,40 @@ namespace Fps.NetV2
                 _controlPoints.Add(new ControlPointStatus(point.HasOwner ? point.Owner : (Team?)null, point.ControlPercent, point.Contested));
             }
 
-            var view = EnsureControlPointsView();
-            var alpha = _hud.TeamColor(Team.Alpha);
-            var bravo = _hud.TeamColor(Team.Bravo);
-            if (view.ColorOf(Team.Alpha) != alpha || view.ColorOf(Team.Bravo) != bravo)
-            {
-                view.SetTeamColors(alpha, bravo);
-            }
-
-            view.Show(_controlPoints);
-        }
-
-        // 拠点制圧のときだけ要るビューなので、Hud.AddViews では付けずに初めて要るときに付ける (Netcode の NetHud と同じ)
-        private ControlPointsView EnsureControlPointsView()
-        {
-            if (_controlPointsView != null)
-            {
-                return _controlPointsView;
-            }
-
-            _controlPointsView = GetComponent<ControlPointsView>();
-            if (_controlPointsView == null)
-            {
-                _controlPointsView = gameObject.AddComponent<ControlPointsView>();
-            }
-
-            // 木を作ったときの Bind には間に合っていないので、今の木があればここで要素を渡す (作り直したときは Hud が渡す)
-            var document = GetComponent<UIDocument>();
-            var root = document != null ? document.rootVisualElement : null;
-            if (_controlPointsView.Element == null && root != null && root.childCount > 0)
-            {
-                _controlPointsView.Bind(root);
-            }
-
-            return _controlPointsView;
-        }
-
-        private void ShowScoreboard(SnapshotMessage snapshot)
-        {
-            var scoreboard = _hud.Scoreboard;
-            if (scoreboard == null)
+            var ended = match.State == GameModeState.Ended;
+            var winner = ended && match.HasWinner ? match.Winner : (Team?)null;
+            var remaining = Math.Max(0, match.RemainingSeconds);
+            if (_domination != null && SameDomination(_domination, match.AlphaPoints, match.BravoPoints, remaining, ended, winner, _controlPoints))
             {
                 return;
             }
 
+            _domination = new DominationStatus(match.AlphaPoints, match.BravoPoints, remaining, _controlPoints.ToArray(), ended, winner);
+            GameSignals.Domination.Publish(_domination);
+        }
+
+        private static bool SameDomination(
+            DominationStatus status, float alpha, float bravo, float remaining, bool ended, Team? winner, List<ControlPointStatus> points)
+        {
+            if (status.AlphaScore != alpha || status.BravoScore != bravo || status.RemainingSeconds != remaining || status.IsEnded != ended
+                || status.Winner != winner || status.Points.Count != points.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < points.Count; i++)
+            {
+                if (!status.Points[i].Equals(points[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ShowScoreboard(SnapshotMessage snapshot)
+        {
             _scoreboard.Clear();
             for (var i = 0; i < snapshot.Players.Count; i++)
             {
@@ -440,32 +426,117 @@ namespace Fps.NetV2
                     row.PlayerId == _localId));
             }
 
-            scoreboard.SetEntries(_scoreboard, _team);
+            if (_publishedScoreboard != null && SameEntries(_publishedScoreboard, _scoreboard))
+            {
+                return;
+            }
+
+            // 出すたびに新しい配列にするのは、受けた側が持っている前の一覧を書き換えないため。
+            _publishedScoreboard = _scoreboard.ToArray();
+            GameSignals.Scoreboard.Publish(_publishedScoreboard);
         }
 
-        /// <summary>キルフィードの名前。Id は .NET のサーバーのプレイヤー Id で、名前は Netcode のクライアントと同じく <see cref="BotRoster.KillFeedName"/>。</summary>
-        private sealed class Names : IKillFeedNames
+        private static bool SameEntries(ScoreboardEntry[] published, List<ScoreboardEntry> entries)
+        {
+            if (published.Length != entries.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                if (!published[i].Equals(entries[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void OnDestroy()
+        {
+            ClearSignals();
+        }
+
+        /// <summary>
+        /// 出した値を <see cref="GameSignals"/> から消す。後から別の側が出した値は消さない。破棄時に呼ばれ、何度呼んでもよい。
+        /// </summary>
+        public void ClearSignals()
+        {
+            GameSignals.HudModel.ClearIfCurrent(_model);
+            if (_roster != null)
+            {
+                GameSignals.Participants.ClearIfCurrent(_roster);
+            }
+
+            if (_pausePublished)
+            {
+                GameSignals.PauseTimeMode.ClearIfCurrent(PauseTimeMode.KeepRunning);
+                _pausePublished = false;
+            }
+
+            if (_densityPublished)
+            {
+                GameSignals.HudDensity.ClearIfCurrent(_density);
+                _densityPublished = false;
+            }
+
+            if (_teamPublished)
+            {
+                GameSignals.PaletteViewer.ClearIfCurrent(_team);
+                _teamPublished = false;
+            }
+
+            if (_domination != null)
+            {
+                GameSignals.Domination.ClearIfCurrent(_domination);
+                _domination = null;
+            }
+
+            if (_publishedScoreboard != null)
+            {
+                GameSignals.Scoreboard.ClearIfCurrent(_publishedScoreboard);
+                _publishedScoreboard = null;
+            }
+
+            if (_grenades.HasValue)
+            {
+                GameSignals.GrenadeCount.ClearIfCurrent(_grenades);
+                _grenades = null;
+            }
+
+            if (_blindSeconds != null)
+            {
+                GameSignals.LocalBlindSeconds.ClearIfCurrent(_blindSeconds);
+                _blindSeconds = null;
+            }
+
+            if (_inventory != null)
+            {
+                GameSignals.Inventory.ClearIfCurrent(_inventory);
+                _inventory = null;
+            }
+        }
+
+        // 抜けた人もスナップショットから消えるので、表に無くても Id から名前を作り、チームだけ無しにする。
+        private sealed class Roster : IParticipants
         {
             private readonly NetV2Hud _owner;
 
-            public Names(NetV2Hud owner)
+            public Roster(NetV2Hud owner)
             {
                 _owner = owner;
             }
 
-            public KillFeedLine Describe(KillFeedEntry entry)
+            public bool TryGet(int id, out Participant participant)
             {
-                var killer = NameOf(entry.KillerId);
-                var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
-                return new KillFeedLine(entry, killer, victim, default);
-            }
+                if (!_owner._participants.TryGet(id, out participant))
+                {
+                    participant = new Participant(id, BotRoster.KillFeedName(id), null, id == _owner._localId);
+                }
 
-            private KillFeedName NameOf(int playerId)
-            {
-                // 抜けた人もスナップショットから消えるので、表に無くても Id から名前を作り、チームだけ無しにする。
-                return _owner._participants.TryGet(playerId, out var participant)
-                    ? new KillFeedName(participant)
-                    : new KillFeedName(BotRoster.KillFeedName(playerId), null, playerId == _owner._localId);
+                return true;
             }
         }
     }

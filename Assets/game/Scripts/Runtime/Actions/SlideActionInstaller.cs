@@ -5,6 +5,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// プレイヤーに <see cref="SlideMovement"/> を (無ければ) 付け、<see cref="ActionRules.Slide"/> で有効・無効を決める。
+    /// 調整値は <see cref="KitTuning"/> から読む traversal.json の slide の値を渡す。
     /// カバー中 (<see cref="CoverController.IsInCover"/>) は始めず、死亡・リスポーンでやめさせる。
     /// 組み込みの並び (<see cref="PlayerActions"/>) は変えず、読み込み時に <see cref="PlayerActions.Register"/> で自分を足す。
     /// </summary>
@@ -27,6 +28,7 @@ namespace Fps.Runtime
             var cover = player.GetComponent<CoverController>();
             slide.Blocker = () => cover != null && cover.IsInCover;
             slide.BindDamageable(player.GetComponent<Damageable>());
+            slide.ApplyTuning(TraversalTuning.Current.Slide);
             slide.Configure(rules);
         }
 

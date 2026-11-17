@@ -30,5 +30,7 @@ namespace Shooter.NetEos
         {
             return new EosVoiceSession(log);
         }
+
+        public string LocalProductUserId => EosPlatform.LocalUserId?.ToString();
     }
 }

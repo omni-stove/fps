@@ -18,6 +18,8 @@ namespace Shooter.NetV2.Tests
 
         public InputMessage LastInput { get; private set; }
 
+        public ConnectRequestMessage LastConnectRequest { get; private set; }
+
         public bool ShutDown { get; private set; }
 
         public void Listen(string address, ushort port)
@@ -47,6 +49,21 @@ namespace Shooter.NetV2.Tests
                 }
 
                 LastInput = copy;
+            }
+
+            // 表は種類ごとに入れ物を使い回すので、次に読む前に写しておく
+            if (message is ConnectRequestMessage request)
+            {
+                LastConnectRequest = new ConnectRequestMessage
+                {
+                    ClientVersion = request.ClientVersion,
+                    RejoinKey = request.RejoinKey,
+                    DisplayName = request.DisplayName,
+                    PartyId = request.PartyId,
+                    JoinCode = request.JoinCode,
+                    SkillRating = request.SkillRating,
+                    ProductUserId = request.ProductUserId,
+                };
             }
         }
 

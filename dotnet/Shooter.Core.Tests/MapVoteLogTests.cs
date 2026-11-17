@@ -88,6 +88,15 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ClientMapChangingShowsBothMaps()
+        {
+            Assert.That(
+                MapVoteLog.ClientMapChanging("NetArena01", "NetArena02"),
+                Is.EqualTo("[MapVote] net next match map NetArena01 -> NetArena02"));
+            Assert.That(MapVoteLog.ClientMapChanging("", "bad map"), Is.EqualTo("[MapVote] net next match map none -> bad_map"));
+        }
+
+        [Test]
         public void OpenedRefusesNull()
         {
             Assert.Throws<ArgumentNullException>(() => MapVoteLog.Opened(null));

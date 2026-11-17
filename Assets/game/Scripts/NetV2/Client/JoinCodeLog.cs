@@ -63,6 +63,26 @@ namespace Shooter.NetV2
             return Tag + " join code: " + outcome + " reason=" + Token(reason);
         }
 
+        public static string Busy()
+        {
+            return "a join code search is already running";
+        }
+
+        public static string Unavailable(string reason)
+        {
+            return "the lobby service is not available: " + Token(reason);
+        }
+
+        public static string NotConnected(string reason)
+        {
+            return "found the server but cannot connect: " + Token(reason);
+        }
+
+        public static string Connecting(string endpoint)
+        {
+            return Tag + " join code: connecting to " + Token(endpoint);
+        }
+
         private static string Count(int value) => value.ToString(CultureInfo.InvariantCulture);
 
         private static string Token(string text) => string.IsNullOrEmpty(text) ? "none" : text;

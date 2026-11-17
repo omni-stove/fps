@@ -58,6 +58,11 @@ namespace Shooter.Core
             return sent ? line : line + " (not connected; not sent)";
         }
 
+        public static string ClientMapChanging(string fromMapId, string toMapId)
+        {
+            return Tag + " net next match map " + Token(fromMapId) + " -> " + Token(toMapId);
+        }
+
         // 送られてきたマップ Id に空白があってもログの区切りが崩れないよう、空白は _ に、空なら none にする。
         private static string Token(string text)
         {

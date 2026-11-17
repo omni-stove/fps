@@ -7,6 +7,16 @@ namespace Shooter.NetV2
     {
         public const string Tag = "[Party]";
 
+        public static string Off(string reason)
+        {
+            return Tag + " party and join code are off: " + reason;
+        }
+
+        public static string On(string version)
+        {
+            return Tag + " party and join code are on version=" + version;
+        }
+
         public static string LoggingIn()
         {
             return Tag + " logging in";

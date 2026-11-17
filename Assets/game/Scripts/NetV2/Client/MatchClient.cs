@@ -19,13 +19,22 @@ namespace Shooter.NetV2
         private readonly MessageWriter _writer = new MessageWriter();
         private readonly ConnectRequestMessage _request = new ConnectRequestMessage();
         private readonly SnapshotHistory _snapshots = new SnapshotHistory();
+        private readonly Func<ConnectionExtras> _extras;
         private ConnectionId _server;
         private string _serverReason;
         private bool _leaving;
         private bool _disposed;
 
         public MatchClient(IMatchTransport transport, string clientVersion, string rejoinKey, string displayName, Action<string> log)
+            : this(transport, clientVersion, rejoinKey, displayName, null, log)
         {
+        }
+
+        // 値でなく読む関数を受けるのは、EOS の通信路ではログインが済んで通信路がつながるまで自分の ProductUserId が決まらないため。
+        public MatchClient(
+            IMatchTransport transport, string clientVersion, string rejoinKey, string displayName, Func<ConnectionExtras> extras, Action<string> log)
+        {
+            _extras = extras;
             _transport = transport ?? throw new ArgumentNullException(nameof(transport));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             if (!ConnectionPayload.IsNormalizedVersion(clientVersion))
@@ -79,6 +88,8 @@ namespace Shooter.NetV2
         public int UnresolvedSnapshots => _snapshots.Unresolved;
 
         public DisconnectNotice Notice { get; private set; }
+
+        public ConnectionExtras SentExtras { get; private set; } = ConnectionExtras.None;
 
         public void Connect(string address, ushort port)
         {
@@ -187,6 +198,13 @@ namespace Shooter.NetV2
 
             _server = connection;
             State = MatchClientState.Approving;
+            var extras = _extras?.Invoke() ?? ConnectionExtras.None;
+            _request.PartyId = extras.PartyId ?? "";
+            _request.JoinCode = extras.JoinCode ?? "";
+            _request.SkillRating = extras.SkillRating;
+            _request.ProductUserId = extras.ProductUserId ?? "";
+            SentExtras = extras;
+            _log(ConnectLog.Requesting(extras));
             Write(_request, TransportChannel.Reliable);
         }
 

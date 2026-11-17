@@ -53,6 +53,65 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void WithoutExtrasTheRequestCarriesNoPartyCodeSkillOrUserId()
+        {
+            _client.Connect("127.0.0.1", 7777);
+            _transport.Connected();
+            _client.Poll();
+
+            var request = _transport.LastConnectRequest;
+            Assert.That(request.HasExtras, Is.False);
+            Assert.That(request.ClientVersion, Is.EqualTo("0.2.0"));
+            Assert.That(_client.SentExtras, Is.SameAs(ConnectionExtras.None));
+            Assert.That(_log, Has.Some.EqualTo("[Net] connect request party=none joinCode=none skill=none productUserId=none"));
+        }
+
+        [Test]
+        public void TheExtrasAreReadWhenTheTransportConnectsAndSentInTheRequest()
+        {
+            var transport = new FakeTransport();
+            var log = new List<string>();
+            string userId = null;
+            var reads = 0;
+            using var client = new MatchClient(transport, "0.2.0", "device1", "tester", () =>
+            {
+                reads++;
+                return new ConnectionExtras("party-1", "ABC234", 1640, userId);
+            }, log.Add);
+
+            client.Connect("127.0.0.1", 7777);
+            userId = "0123456789abcdef0123456789abcdef";
+            Assert.That(reads, Is.EqualTo(0), "the EOS user id is only known once the transport has logged in");
+
+            transport.Connected();
+            client.Poll();
+
+            Assert.That(reads, Is.EqualTo(1));
+            var request = transport.LastConnectRequest;
+            Assert.That(request.PartyId, Is.EqualTo("party-1"));
+            Assert.That(request.JoinCode, Is.EqualTo("ABC234"));
+            Assert.That(request.SkillRating, Is.EqualTo(1640));
+            Assert.That(request.ProductUserId, Is.EqualTo("0123456789abcdef0123456789abcdef"));
+            Assert.That(client.SentExtras.PartyId, Is.EqualTo("party-1"));
+            Assert.That(log, Has.Some.EqualTo(
+                "[Net] connect request party=party-1 joinCode=ABC234 skill=1640 productUserId=0123456789abcdef0123456789abcdef"));
+        }
+
+        [Test]
+        public void ANullExtrasSourceResultSendsNoExtras()
+        {
+            var transport = new FakeTransport();
+            using var client = new MatchClient(transport, "0.2.0", "device1", "tester", () => null, _ => { });
+
+            client.Connect("127.0.0.1", 7777);
+            transport.Connected();
+            client.Poll();
+
+            Assert.That(transport.LastConnectRequest.HasExtras, Is.False);
+            Assert.That(client.SentExtras, Is.SameAs(ConnectionExtras.None));
+        }
+
+        [Test]
         public void ServerStoppingIsTheServerStoppedNoticeEvenWhenTheTransportGivesNoReason()
         {
             Connect();

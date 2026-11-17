@@ -370,6 +370,10 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 [Match] map changed from=NetTest to=NetArena02
 ```
 
+ネット対戦のクライアント (`NetV2Client`) は、決まったマップを覚えておき、スナップショットの試合の状態が `Ended` から抜けた (次の試合が始まった) ときに
+`[MapVote] net next match map NetTest -> NetArena02` を出して、つないだままそのマップのシーンを読み込み直す。
+シーンがビルドに無ければ、最初につないだときと同じくエラーにして抜ける。
+
 ## サーバーがすること
 
 - 起動時に `server-data/maps/<マップ名>.fpsmap` と `.fpsnav` を読む。作業ディレクトリの `server-data/`、

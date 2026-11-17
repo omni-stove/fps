@@ -161,6 +161,21 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void EveryStateTellsTheDecidedMapAndEmptyUntilItIsDecided()
+        {
+            var decided = new List<string>();
+            var part = new NetV2MapVotePart(Send, _logs.Add, decided.Add);
+
+            part.Handle(State(10f, MapVoteStateMessage.NotChosen, ("NetArena02", 0), ("NetArena03", 0)));
+            part.Handle(State(0f, 1, ("NetArena02", 0), ("NetArena03", 1)));
+            part.Handle(State(10f, MapVoteStateMessage.NotChosen, ("NetArena02", 0), ("NetArena02", 0)));
+            part.Dispose();
+            part.Handle(State(0f, 0, ("NetArena02", 1)));
+
+            Assert.That(decided, Is.EqualTo(new[] { "", "NetArena03", "" }), "a malformed vote closes it, and nothing is told after disposing");
+        }
+
+        [Test]
         public void RefusesANullSend()
         {
             Assert.Throws<ArgumentNullException>(() => new NetV2MapVotePart(null));

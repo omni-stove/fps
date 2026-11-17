@@ -33,6 +33,12 @@ namespace Fps.Runtime
         [SerializeField, Min(0), Tooltip("何ラウンドごとに攻守を入れ替えるか。0 なら入れ替えない")]
         private int _swapEveryRounds = SearchAndDestroySpec.DefaultSwapEveryRounds;
 
+        [SerializeField, Min(0.1f), Tooltip("攻撃側が落ちた爆弾を拾う距離 (m、水平)")]
+        private float _bombPickupRadius = SearchAndDestroySpec.DefaultBombPickupRadius;
+
+        [SerializeField, Min(0.1f), Tooltip("防衛側が設置された爆弾を解除できる距離 (m、水平)")]
+        private float _defuseRadius = SearchAndDestroySpec.DefaultDefuseRadius;
+
         public float RoundSeconds
         {
             get => _roundSeconds;
@@ -75,6 +81,18 @@ namespace Fps.Runtime
             set => _swapEveryRounds = value;
         }
 
+        public float BombPickupRadius
+        {
+            get => _bombPickupRadius;
+            set => _bombPickupRadius = value;
+        }
+
+        public float DefuseRadius
+        {
+            get => _defuseRadius;
+            set => _defuseRadius = value;
+        }
+
         /// <summary>地点が siteCount 個の <see cref="SearchAndDestroySpec"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
         /// <exception cref="InvalidOperationException">値か siteCount が不正なとき。メッセージにアセット名を含む。</exception>
         public SearchAndDestroySpec ToSpec(int siteCount)
@@ -82,7 +100,8 @@ namespace Fps.Runtime
             try
             {
                 return new SearchAndDestroySpec(
-                    siteCount, _roundSeconds, _plantSeconds, _defuseSeconds, _fuseSeconds, _winsToWin, _preparationSeconds, _swapEveryRounds);
+                    siteCount, _roundSeconds, _plantSeconds, _defuseSeconds, _fuseSeconds, _winsToWin, _preparationSeconds, _swapEveryRounds,
+                    _bombPickupRadius, _defuseRadius);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -105,6 +124,8 @@ namespace Fps.Runtime
             _winsToWin = spec.WinsToWin;
             _preparationSeconds = spec.PreparationSeconds;
             _swapEveryRounds = spec.SwapEveryRounds;
+            _bombPickupRadius = spec.BombPickupRadius;
+            _defuseRadius = spec.DefuseRadius;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed search and destroy definition)" : name;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -11,9 +12,11 @@ namespace Fps.Runtime
     /// <item>印: <see cref="PingResourcePath"/> (<see cref="Ping"/>)。オフラインの <see cref="PingController"/> とネット対戦が使う。</item>
     /// <item>吹き飛ばし: <see cref="KnockbackResourcePath"/> (<see cref="Knockback"/>)。プレイヤーの <see cref="KnockbackMovement"/> と <see cref="EnemyAgent"/> が使う。</item>
     /// <item>持ち物: <see cref="InventoryResourcePath"/> (<see cref="Items"/>、<see cref="InventoryJson"/> の形)。オフラインの <see cref="PlayerInventory"/> とネット対戦が使う。</item>
+    /// <item>ボット: <see cref="BotsResourcePath"/> (<see cref="Bots"/>、サーバーの bots.json と同じ形)。</item>
     /// </list>
+    /// ほかの調整値も <see cref="Load{T}"/> に入口の欄と Resources のパスを渡せば同じ規則で読める。
     /// ファイルが無ければ Spec の既定値 (<see cref="GrenadeCatalog.Default"/>・<see cref="PingSpec.Default"/>・<see cref="KnockbackSpec.Default"/>・
-    /// <see cref="ItemCatalog.Empty"/>) で動く。
+    /// <see cref="ItemCatalog.Empty"/>・<see cref="NetBotSpec.Default"/>) で動く。
     /// 壊れている・値が不正なら、ファイル名と項目名を添えたエラーを出して既定値で続ける。
     /// 初めて使うときに読み、Play の間は持ち続ける (Play の開始時に読み直す)。
     /// </summary>
@@ -32,33 +35,28 @@ namespace Fps.Runtime
 
         public const string InventoryResourcePath = "Tuning/inventory";
 
+        public const string BotsResourcePath = "Tuning/bots";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
-        private static ItemCatalog _items;
-        private static GrenadeCatalog _grenades;
-        private static PingSpec _ping;
-        private static KnockbackSpec _knockback;
+        private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
         /// <summary>グレネードの種類の調整値。<see cref="GrenadeResourcePath"/> が無いか読めなければ <see cref="GrenadeCatalog.Default"/>。</summary>
-        public static GrenadeCatalog Grenades =>
-            _grenades ?? (_grenades = Load(c => c.GrenadeTuning, GrenadeResourcePath, TuningJson.ParseGrenades, GrenadeCatalog.Default));
+        public static GrenadeCatalog Grenades => Load(c => c.GrenadeTuning, GrenadeResourcePath, TuningJson.ParseGrenades, GrenadeCatalog.Default);
 
         /// <summary>印の調整値。<see cref="PingResourcePath"/> が無いか読めなければ <see cref="PingSpec.Default"/>。</summary>
-        public static PingSpec Ping => _ping ?? (_ping = Load(c => c.PingTuning, PingResourcePath, TuningJson.ParsePing, PingSpec.Default));
+        public static PingSpec Ping => Load(c => c.PingTuning, PingResourcePath, TuningJson.ParsePing, PingSpec.Default);
 
         /// <summary>吹き飛ばしの調整値。<see cref="KnockbackResourcePath"/> が無いか読めなければ <see cref="KnockbackSpec.Default"/>。</summary>
-        public static KnockbackSpec Knockback =>
-            _knockback ?? (_knockback = Load(c => c.KnockbackTuning, KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default));
+        public static KnockbackSpec Knockback => Load(c => c.KnockbackTuning, KnockbackResourcePath, TuningJson.ParseKnockback, KnockbackSpec.Default);
 
-        public static ItemCatalog Items =>
-            _items ?? (_items = Load(c => c.InventoryTuning, InventoryResourcePath, InventoryJson.Parse, ItemCatalog.Empty));
+        public static ItemCatalog Items => Load(c => c.InventoryTuning, InventoryResourcePath, InventoryJson.Parse, ItemCatalog.Empty);
 
-        /// <summary>読んだ値を捨て、次に使うときに Resources から読み直させる。</summary>
+        public static NetBotSpec Bots => Load(c => c.BotsTuning, BotsResourcePath, TuningJson.ParseBots, NetBotSpec.Default);
+
+        /// <summary>読んだ値を捨て、次に使うときに入口か Resources から読み直させる。</summary>
         public static void Reload()
         {
-            _items = null;
-            _grenades = null;
-            _ping = null;
-            _knockback = null;
+            _loaded.Clear();
         }
 
         /// <summary>
@@ -95,7 +93,49 @@ namespace Fps.Runtime
             }
         }
 
-        private static T Load<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
+        /// <summary>
+        /// 入口 (<see cref="GameContent.Current"/>) の select の欄の JSON を、それが空なら <c>Resources/&lt;path&gt;.json</c> を parse で読む。
+        /// どちらも無ければ fallback。壊れていればエラーを出して fallback (<see cref="Read{T}"/>)。
+        /// 結果は path ごとに覚え、<see cref="Reload"/> (入口を替えたときと Play の開始時) まで読み直さない。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">select・parse・fallback が null。</exception>
+        /// <exception cref="ArgumentException">path が空。</exception>
+        /// <exception cref="InvalidOperationException">同じ path を別の型で読んだ。</exception>
+        public static T Load<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
+            where T : class
+        {
+            if (select == null)
+            {
+                throw new ArgumentNullException(nameof(select));
+            }
+
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("a Resources path such as Tuning/grenade is required", nameof(path));
+            }
+
+            if (parse == null)
+            {
+                throw new ArgumentNullException(nameof(parse));
+            }
+
+            if (fallback == null)
+            {
+                throw new ArgumentNullException(nameof(fallback));
+            }
+
+            if (_loaded.TryGetValue(path, out var cached))
+            {
+                return cached as T
+                    ?? throw new InvalidOperationException($"{LogTag} '{path}' is already read as {cached.GetType().Name}, not {typeof(T).Name}");
+            }
+
+            var spec = LoadUncached(select, path, parse, fallback);
+            _loaded[path] = spec;
+            return spec;
+        }
+
+        private static T LoadUncached<T>(Func<GameContent, TextAsset> select, string path, Func<string, string, T> parse, T fallback)
             where T : class
         {
             var fromContent = GameContent.Pick(select);

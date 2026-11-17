@@ -1,0 +1,7 @@
+{
+  "mode.ctf.atBase": "{0} の旗: 台にある",
+  "mode.ctf.carried": "{0} の旗: 運ばれている",
+  "mode.ctf.dropped": "{0} の旗: 落ちている (戻るまで {1} 秒)",
+  "mode.ctf.carrying": "{0} の旗を運んでいる: 自陣の台へ",
+  "mode.ctf.carryingWaitForFlag": "{0} の旗を運んでいる: 自陣の旗が台に戻ると得点できる"
+}

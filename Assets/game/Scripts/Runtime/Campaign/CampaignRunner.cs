@@ -26,7 +26,7 @@ namespace Fps.Runtime
     /// GameBootstrap がプレイヤーを作り終えていればすぐ、まだなら <see cref="GameBootstrap.Built"/> を待って始める。
     /// トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
     /// セーブの場所 (<see cref="Storage"/>) とシーンの読み直し (<see cref="SceneReloader"/>) は差し替えられる。
-    /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、GameBootstrap の HUD があればそこに表示する。
+    /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、始めている間は <see cref="GameSignals.CampaignNotice"/> に置く (どう出すかは UI が決める)。
     /// 始めるときにルール (メニューの選択 <see cref="CampaignLaunchSelection.Current"/> かコマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
     /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>、無ければ <see cref="RulesDefinition"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
     /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
@@ -178,7 +178,7 @@ namespace Fps.Runtime
         /// <summary>HUD に一時的に出す案内 (セーブした・再開まで N 秒)。</summary>
         public CampaignNotice Notice => _notice;
 
-        /// <summary>案内を出している HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
+        /// <summary>HUD の量を効かせている HUD。HUD が無い (専用サーバーなど) か開始前なら null。</summary>
         public IHud BoundHud => _hud;
 
         /// <summary>秒数を読むミッションの一覧。null なら入口 (<see cref="GameContent"/>) の一覧を使う。</summary>
@@ -333,7 +333,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
-        /// world に HUD があれば <see cref="Notice"/> を出させる。セーブの置き場所は <see cref="Storage"/>、無ければ
+        /// world に HUD があれば HUD の量を効かせる (<see cref="BindHud"/>)。セーブの置き場所は <see cref="Storage"/>、無ければ
         /// <see cref="FileSaveStorage.CreateDefault"/>。ルールは <see cref="TryResolveRules"/> で決める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
@@ -510,22 +510,15 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// <see cref="Notice"/> を出す HUD を差し替える。null なら出さない。前の HUD からは外す。
+        /// HUD の量を効かせる HUD を差し替える。null なら効かせない。
         /// 始めたときのルール (<see cref="Rules"/>) があれば、その <see cref="GameRules.HudDensity"/> を HUD に効かせる。
         /// <see cref="TryBeginWith"/> が GameBootstrap の HUD で呼ぶ。<see cref="Begin"/> を直接呼んだときは自分で呼ぶ。
         /// </summary>
         public void BindHud(IHud hud)
         {
-            if (GameUi.IsAlive(_hud) && _hud != hud)
-            {
-                _hud.BindNotice(null);
-            }
-
             _hud = hud;
             if (GameUi.IsAlive(_hud))
             {
-                _hud.BindNotice(_notice);
-
                 // 難易度のルールは GameBootstrap のルールと別のことがあるので、HUD の量も始めたときのルールで決め直す
                 if (_activeRules != null)
                 {
@@ -641,6 +634,7 @@ namespace Fps.Runtime
             _reloadPending = false;
             _reloadRemaining = 0f;
             _notice.Clear();
+            GameSignals.CampaignNotice.Publish(_notice);
 
             _player.Died += OnPlayerDied;
             _mission.MissionCompleted += OnMissionCompleted;
@@ -759,6 +753,7 @@ namespace Fps.Runtime
         {
             BindHud(null);
             _notice.Clear();
+            GameSignals.CampaignNotice.ClearIfCurrent(_notice);
 
             if (_player != null)
             {

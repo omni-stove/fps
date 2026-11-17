@@ -9,7 +9,9 @@ namespace Fps.Runtime
     /// </summary>
     public interface IOnlineMatchStarter
     {
-        /// <summary>destination のオンラインの試合を始める。始められなければ false と、メニューに出す理由 refusal。</summary>
-        bool Start(MenuDestination destination, out LocalizedText refusal);
+        /// <summary>
+        /// destination のオンラインの試合を始める。始められなければ false と、メニューに留まる理由 refusal (無ければ null。どう言うかはメニューが決める)。
+        /// </summary>
+        bool Start(MenuDestination destination, out MenuReturnReason refusal);
     }
 }

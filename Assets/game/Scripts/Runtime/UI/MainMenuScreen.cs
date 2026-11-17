@@ -225,7 +225,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// PanelSettings と UIDocument を持つ子の GameObject を作り、MainMenu.uxml を読み込んでボタンをつなぐ。
-        /// 戻ってきたときの案内 (<see cref="MenuNavigator.TakeNotice"/>) があれば出す。既に出していれば何もしない。
+        /// 戻ってきた理由 (<see cref="MenuNavigator.TakeReturnReason"/>) があれば <see cref="ShowReturnReason"/> で出す。既に出していれば何もしない。
         /// </summary>
         /// <exception cref="InvalidOperationException">Resources にレイアウトかテーマが無い。</exception>
         public void Show()
@@ -271,7 +271,7 @@ namespace Fps.Runtime
 
             Bind(_document.rootVisualElement);
             InstallSettingsView(new SettingsView());
-            ShowNotice(MenuNavigator.TakeNotice());
+            ShowReturnReason(MenuNavigator.TakeReturnReason());
             FocusAt(0);
         }
 
@@ -734,6 +734,15 @@ namespace Fps.Runtime
         {
             _noticeSource = text;
             ShowNoticeText(Localizer.Resolve(text));
+        }
+
+        /// <summary>
+        /// メニューに戻った理由を、今の言語の文 (<see cref="DisconnectNoticeText.For(MenuReturnReason)"/>) にして案内に出す。
+        /// 言語が変わったら文にし直す。null なら案内を隠す。
+        /// </summary>
+        public void ShowReturnReason(MenuReturnReason reason)
+        {
+            ShowNotice(DisconnectNoticeText.For(reason));
         }
 
         private void ShowNoticeText(string text)

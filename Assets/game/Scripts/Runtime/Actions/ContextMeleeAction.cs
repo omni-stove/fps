@@ -15,6 +15,7 @@ namespace Fps.Runtime
 
         [SerializeField, Range(1f, MeleeSpec.MaxArcDegrees), Tooltip("相手の背後とみなす、相手の真後ろを中心にした扇の全体の角度 (度)")]
         private float _behindArcDegrees = ContextMeleeSelector.DefaultBehindArcDegrees;
+        private bool _behindArcSetByCode;
 
         [SerializeField, Tooltip("怯んだ相手への処刑技を登録するか。値は MeleeController の近接の値 (MeleeSpec) から作る")]
         private bool _includeFinisher = true;
@@ -73,7 +74,22 @@ namespace Fps.Runtime
         public float BehindArcDegrees
         {
             get => _behindArcDegrees;
-            set => _behindArcDegrees = Mathf.Clamp(value, 1f, MeleeSpec.MaxArcDegrees);
+            set
+            {
+                _behindArcDegrees = Mathf.Clamp(value, 1f, MeleeSpec.MaxArcDegrees);
+                _behindArcSetByCode = true;
+            }
+        }
+
+        // Attach は何度も呼ばれるので、ゲームがコードで渡した角度を調整値で戻さないよう、setter 経由の値があれば何もしない。
+        public void ApplyTunedBehindArc(float degrees)
+        {
+            if (_behindArcSetByCode)
+            {
+                return;
+            }
+
+            _behindArcDegrees = Mathf.Clamp(degrees, 1f, MeleeSpec.MaxArcDegrees);
         }
 
         public bool IncludeFinisher

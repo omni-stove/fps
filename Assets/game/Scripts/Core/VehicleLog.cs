@@ -100,6 +100,31 @@ namespace Fps.Core
             return $"{Tag} '{vehicle}' part '{part}' is not in the spec; it takes damage unscaled";
         }
 
+        public static string Ram(string vehicle, string target, int damage, float speed, string driver, int health)
+        {
+            var by = string.IsNullOrEmpty(driver) ? "-" : driver;
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' ram target={2} dmg={3} speed={4:0.0} by={5} hp={6}",
+                Tag,
+                vehicle,
+                target,
+                damage,
+                speed,
+                by,
+                health);
+        }
+
+        public static string MissingMotor(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' has no IVehicleMotor; the driver's input moves nothing";
+        }
+
+        public static string Righted(string vehicle, float tiltDegrees)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' righted tilt={2:0}", Tag, vehicle, tiltDegrees);
+        }
+
         /// <example><c>[Vehicle] 'Jeep' wrecked riders=2</c></example>
         public static string Wrecked(string vehicle, int riders)
         {

@@ -80,6 +80,8 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(BuildSceneList.FreeForAllScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.FreeForAllName)));
             Assert.That(BuildSceneList.SearchAndDestroyScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.SearchAndDestroyName)));
+            Assert.That(BuildSceneList.CaptureTheFlagScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.CaptureTheFlagName)));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.CaptureTheFlagScene));
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.BattleRoyaleName)));
             Assert.Throws<ArgumentException>(() => BuildSceneList.ModeScene("TeamDeathmatch"));
             Assert.That(BuildSceneList.Scenes.Last(), Is.EqualTo(BuildSceneList.NetTestScene), "the mode scenes go before the net scene");

@@ -83,6 +83,8 @@ namespace Fps.Runtime
 
         public OwnWeaponSeatModifier OwnWeaponModifier => _ownWeapon;
 
+        public IVehicleSeatInputFilter SeatInputFilter { get; set; }
+
         /// <summary>今のカメラ。乗っていなければ意味を持たない。</summary>
         public VehicleCameraView CameraView => _camera != null ? _camera.View : VehicleCameraView.Chase;
 
@@ -224,10 +226,7 @@ namespace Fps.Runtime
                 SwitchSeat(-1);
             }
 
-            if (_seat != null)
-            {
-                _seat.SubmitInput(this, ReadSeatInput(), Time.deltaTime);
-            }
+            SubmitSeatInput(Time.deltaTime);
         }
 
         private void LateUpdate()
@@ -478,6 +477,20 @@ namespace Fps.Runtime
                 _reload.WasPressedThisFrame(),
                 view.position,
                 view.forward);
+        }
+
+        // Update から呼ぶ。Update の走らない Edit Mode のテストからも、差し込み (SeatInputFilter) を通した入力を流せるよう public にする。
+        public bool SubmitSeatInput(float deltaSeconds)
+        {
+            var seat = _seat;
+            if (seat == null)
+            {
+                return false;
+            }
+
+            var input = ReadSeatInput();
+            SeatInputFilter?.Filter(seat, ref input);
+            return seat.SubmitInput(this, input, deltaSeconds);
         }
 
         void IVehicleRider.OnBoarded(VehicleSeat seat)

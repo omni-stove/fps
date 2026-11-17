@@ -14,6 +14,15 @@ namespace Fps.Editor
         public const string BodyName = "Body";
         public const string DriverSeatName = "Seat_Driver";
         public const string PassengerSeatName = "Seat_Passenger";
+        public const string GunnerSeatName = "Seat_Gunner";
+        public const string GunnerVehicleId = "car-gunner";
+        public const string GunName = "Gun";
+        public const string MuzzleName = "Muzzle";
+        public const string BarrelName = "Barrel";
+
+        public const float GunPitchMinDegrees = -10f;
+        public const float GunPitchMaxDegrees = 30f;
+        public const float GunTurnSpeedDegreesPerSecond = 120f;
 
         public const float WheelRadius = 0.4f;
         public const float WheelWidth = 0.3f;
@@ -39,19 +48,50 @@ namespace Fps.Editor
         public static readonly Vector3 RightExitLocal = new Vector3(2f, 0f, 0.2f);
         public static readonly Vector3 RearExitLocal = new Vector3(0f, 0f, -3f);
 
-        public static VehicleSpec Spec()
+        // 銃座は屋根の後ろに立ち、銃は立った腰の高さで回る。
+        public static readonly Vector3 GunnerSeatLocal = new Vector3(0f, BodyCenter.y + (BodySize.y / 2f), -1.2f);
+        public static readonly Vector3 GunnerEnterLocal = new Vector3(0f, 0f, -2.6f);
+        public static readonly Vector3 GunLocal = new Vector3(0f, GunnerSeatLocal.y + 1f, -0.6f);
+        public static readonly Vector3 MuzzleLocal = new Vector3(0f, 0f, 1f);
+
+        public static VehicleSpec Spec(string gunnerWeaponId = null)
         {
+            if (gunnerWeaponId == null)
+            {
+                return new VehicleSpec(
+                    VehicleId,
+                    VehicleSpec.DefaultMaxHealth,
+                    new[]
+                    {
+                        new VehicleSeatSpec(VehicleSeatRole.Driver, VehicleSeatPose.Seated, VehicleCameraView.Chase),
+                        new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Chase),
+                    });
+            }
+
             return new VehicleSpec(
-                VehicleId,
+                GunnerVehicleId,
                 VehicleSpec.DefaultMaxHealth,
                 new[]
                 {
                     new VehicleSeatSpec(VehicleSeatRole.Driver, VehicleSeatPose.Seated, VehicleCameraView.Chase),
                     new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Chase),
+                    new VehicleSeatSpec(VehicleSeatRole.Gunner, VehicleSeatPose.Standing, VehicleCameraView.Chase),
+                },
+                new[]
+                {
+                    new VehicleWeaponSpec(
+                        gunnerWeaponId,
+                        2,
+                        VehicleWeaponSpec.DefaultYawMinDegrees,
+                        VehicleWeaponSpec.DefaultYawMaxDegrees,
+                        GunPitchMinDegrees,
+                        GunPitchMaxDegrees,
+                        GunTurnSpeedDegreesPerSecond),
                 });
         }
 
-        public static Vehicle Create(Scene scene, Transform parent, string name, Vector3 position, Quaternion rotation)
+        public static Vehicle Create(
+            Scene scene, Transform parent, string name, Vector3 position, Quaternion rotation, WeaponDefinition gunnerWeapon = null)
         {
             if (!scene.IsValid() || !scene.isLoaded)
             {
@@ -112,10 +152,17 @@ namespace Fps.Editor
                 passenger.SetEnterPoints(CreatePoint(root.transform, "Enter_Passenger", PassengerEnterLocal));
                 passenger.SetExitPoints(rightExit, leftExit);
 
+                if (gunnerWeapon != null)
+                {
+                    var gunner = CreateSeat(root.transform, GunnerSeatName, GunnerSeatLocal);
+                    gunner.SetEnterPoints(CreatePoint(root.transform, "Enter_Gunner", GunnerEnterLocal));
+                    CreateGun(root.transform, gunnerWeapon);
+                }
+
                 var vehicle = root.AddComponent<Vehicle>();
                 vehicle.SetExitPoints(rearExit);
                 vehicle.RefreshSeats();
-                vehicle.Configure(Spec());
+                vehicle.Configure(Spec(gunnerWeapon != null ? gunnerWeapon.Id : null));
 
                 var motor = root.AddComponent<SimpleCarMotor>();
                 motor.SetWheels(wheels);
@@ -172,6 +219,25 @@ namespace Fps.Editor
             tire.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
             tire.transform.localScale = new Vector3(WheelRadius * 2f, WheelWidth / 2f, WheelRadius * 2f);
             return new CarWheel(collider, visual, steers, drives);
+        }
+
+        // 銃の見た目は車体の箱と同じく試すための目印なので、差し替える参照は持たない。屋根の上の乗り手や弾を遮らないよう当たり判定は外す。
+        private static VehicleWeaponMount CreateGun(Transform parent, WeaponDefinition weapon)
+        {
+            var gun = new GameObject(GunName).AddComponent<VehicleWeaponMount>();
+            gun.transform.SetParent(parent, false);
+            gun.transform.localPosition = GunLocal;
+            gun.transform.localRotation = Quaternion.identity;
+            gun.SetWeapon(weapon);
+            gun.SetMuzzle(CreatePoint(gun.transform, MuzzleName, MuzzleLocal));
+
+            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            barrel.name = BarrelName;
+            UnityEngine.Object.DestroyImmediate(barrel.GetComponent<Collider>());
+            barrel.transform.SetParent(gun.transform, false);
+            barrel.transform.localPosition = new Vector3(0f, 0f, MuzzleLocal.z / 2f);
+            barrel.transform.localScale = new Vector3(0.12f, 0.12f, MuzzleLocal.z);
+            return gun;
         }
 
         private static VehicleSeat CreateSeat(Transform parent, string name, Vector3 localPosition)

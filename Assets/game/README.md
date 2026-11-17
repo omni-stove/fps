@@ -154,6 +154,30 @@ public sealed class HealthOnlyHud : MonoBehaviour
 ポーズ・ロードアウトの選択・持ち物・メニューとの行き来は、UI が `GameUi.Pause`・`LoadoutSelect`・`InventoryScreen`・`Menu` に自分の実装を入れる (サンプルは既定を `UseDefault…` で入れる)。
 既定の HUD を止めたら `GameUi.Pause` は必須 (無いとポーズ中も操作が止まらない)。
 
+## 乗り物を足す
+
+キットは乗り降り・座席・耐久・座席の武器・固定銃座を持ち、動き方は `IVehicleMotor` で差し込む。同梱の動き方は車 (`SimpleCarMotor`) だけ。
+組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder` で、試走場は **Fps > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
+
+### 座席を並べる
+
+1. 乗り物の根元に `Vehicle` を付け、その子に座席ごとの `VehicleSeat` を置く。座席の番号は子の並び順 (0 から)。
+2. 座席の種類・姿勢・カメラは各 `VehicleSeat` の欄で決める。乗り物の値 (Id・耐久・部位・爆発・乗り込める距離・追うカメラ) は `VehicleDefinition` (Create > Fps > Vehicle Definition) に入れて `Vehicle` に配線する。コードで組むなら、座席と同じ番号の順に `VehicleSeatSpec` を並べた `VehicleSpec` を `Vehicle.Configure` に渡す。
+   - 運転席 (`Driver`) の入力だけが動き方に届く。運転席が無ければ動かない乗り物 (固定銃座など) になる。
+   - 座席の武器は、乗り物の子に `VehicleWeaponMount` を置き、操作する座席の番号をその欄に入れる。
+   - 助手席から自分の武器で撃たせるなら、その座席の撃てる向きの範囲 (`OwnWeaponArcDegrees`) を 0 より大きくする。
+3. 座席ごとに乗る位置 (`SetEnterPoints`) と降りる位置 (`SetExitPoints`、並びの順に試す) を置く。どの座席からでも使う降りる位置は `Vehicle.SetExitPoints`。
+
+### 動き方を差し込む (`IVehicleMotor`)
+
+1. `IVehicleMotor` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付け、`VehicleMotorLink` も付ける。`VehicleMotorLink` が運転席の入力を `VehicleMotorInput` (`Throttle`・`Steer`・`Brake`・`Vertical`) にして `SetInput` に渡す。
+2. `SetInput` では入力を覚えるだけにし、力は `FixedUpdate` で掛ける。座席の入力は `Update` で届くので、その場で掛けると描画の頻度で物理が変わる。
+3. 運転席が空くと `VehicleMotorInput.Idle` が届くので、そのときはアクセルなどを放す。
+4. 調整値は自分の Spec や ScriptableObject に持たせ、`Configure` などで入れる (`SimpleCarMotor` と `CarSpec` が例)。
+
+入力の対応: `Throttle` は移動の前後、`Steer` は左右、`Brake` はダッシュ、`Vertical` はジャンプ (+1) としゃがみ (-1)。空を飛ぶものは `Vertical` を上昇・下降に使う。
+プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
+
 ## 文言・言語 (サンプルの決まり)
 
 キットは言語と文を扱わない。武器などの表示名はキー (ただの文字列) としてデータに持ち、それを文にするのは UI。ここからはサンプルの UI (`Localizer`・`GameText`・`LocalizedTexts`) の決まりで、自分の UI を作るなら従わなくてよい。

@@ -30,6 +30,7 @@ namespace Fps.Editor
         public static string EnemyAiTestScene => FpsKitRoot.OutputScene("EnemyAiTest");
         public static string MissionTestScene => FpsKitRoot.OutputScene("MissionTest");
         public static string DestructionTestScene => FpsKitRoot.OutputScene("DestructionTest");
+        public static string VehicleRangeScene => FpsKitRoot.OutputScene("VehicleRange");
         public static string CampaignScene => FpsKitRoot.OutputScene(Fps.Core.MenuRoute.CampaignSceneName);
 
         /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
@@ -112,6 +113,7 @@ namespace Fps.Editor
                     EnemyAiTestScene,
                     MissionTestScene,
                     DestructionTestScene,
+                    VehicleRangeScene,
                     CampaignScene,
                     Campaign02Scene,
                     TpsRangeScene,

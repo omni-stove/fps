@@ -365,6 +365,8 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | 移動 (歩き・ダッシュ・しゃがみの速さ、ジャンプ、重力、空中の操作) | `MotorSettings` (**Assets > Create > Fps > Motor Settings**) | `Motor` |
 | 敵 AI (視界・反応・散らばり・遮蔽・怯み・種類ごとの値) | `EnemyDefinition` (**Assets > Create > Fps > Enemy Definition**) | `Enemies` |
 | グレネード・印・吹き飛ばし | JSON ([グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値)) | `GrenadeTuning`・`PingTuning`・`KnockbackTuning` |
+| 爆発する置き物 (耐久・ダメージ・半径・連鎖の遅れ・燃え方) | `ExplosivePropDefinition` (**Assets > Create > Fps > Explosive Prop**) | 置き物の `ExplosiveProp` の Definition |
+| 協力して開ける物 (要る人数・押し続ける秒数) と扉の開く量・秒数 | `CoopInteractableDefinition` (**Assets > Create > Fps > Coop Interactable**) | `CoopInteractable` の Definition (それで開く `CoopDoor` も読む) |
 | メニューから移るシーン | `MenuSceneSettings` (**Assets > Create > Fps > Menu Scene Settings**) | `MenuScenes` |
 | そのほか (ステルス・印・分隊・ボスなど) | コンポーネントの Inspector ([Inspector から変えられる値](#inspector-から変えられる値)) | — |
 

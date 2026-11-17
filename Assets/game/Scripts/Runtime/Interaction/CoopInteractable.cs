@@ -31,6 +31,9 @@ namespace Fps.Runtime
         // 足元の位置が床に置いたトリガーの下の面にちょうど乗っても、浮動小数の誤差で外と判定しない程度の幅。
         private const float RangeToleranceMeters = 0.05f;
 
+        [SerializeField, Tooltip("この物の値のアセット。配線すると下の人数・秒数・欠けたときに戻すか (と、これで開く扉の開き方) の代わりにこれを読む。空なら下の値を使う")]
+        private CoopInteractableDefinition _definition;
+
         [SerializeField, Min(1), Tooltip("同時に押している必要のある人数")]
         private int _requiredCount = CoopHoldSpec.DefaultRequiredCount;
 
@@ -61,7 +64,13 @@ namespace Fps.Runtime
         /// <summary>済んだとき (押し続ける秒数に届いたとき) に 1 度出す。<see cref="ResetHold"/> すればまた出る。</summary>
         public event Action<CoopInteractable> Completed;
 
-        /// <summary>今の設定。<see cref="Configure"/> で差し替える。</summary>
+        /// <summary>
+        /// 値のアセット。null なら Inspector の値 (既定は <see cref="CoopHoldSpec"/> と <see cref="CoopDoor"/> の Default* の値) を使う。
+        /// 差し替えは <see cref="Configure(CoopInteractableDefinition)"/> で行う。
+        /// </summary>
+        public CoopInteractableDefinition Definition => _definition;
+
+        /// <summary>今の設定。<see cref="Configure(CoopHoldSpec)"/> で差し替える。<see cref="Definition"/> か Inspector の値が不正なら例外を投げる。</summary>
         public CoopHoldSpec Spec => Hold.Spec;
 
         public int RequiredCount => Hold.Spec.RequiredCount;
@@ -88,13 +97,24 @@ namespace Fps.Runtime
         /// <summary>読んでいる Interact アクション。未解決なら null。</summary>
         public InputAction InteractAction => _interactAction;
 
-        private CoopHold Hold => _hold ??= new CoopHold(new CoopHoldSpec(_requiredCount, _holdSeconds, _resetOnInterrupt));
+        private CoopHold Hold => _hold ??= new CoopHold(CreateSpec());
 
         private void Start()
         {
             if (!HasTriggerCollider())
             {
                 Debug.LogError($"{LogTag} '{name}' に isTrigger の Collider がありません。", this);
+                enabled = false;
+                return;
+            }
+
+            try
+            {
+                _ = Hold;
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
+                Debug.LogError($"{LogTag} '{name}' の設定が不正です: {e.Message}", this);
                 enabled = false;
                 return;
             }
@@ -150,6 +170,25 @@ namespace Fps.Runtime
             _resetOnInterrupt = spec.ResetOnInterrupt;
             _hold = new CoopHold(spec);
             _loggedHoldingCount = 0;
+        }
+
+        /// <summary>
+        /// definition を <see cref="Definition"/> に入れ、その人数と秒数で <see cref="Configure(CoopHoldSpec)"/> する。
+        /// これで開く扉 (<see cref="CoopDoor"/>) は、次に開くときから definition の開き方を使う。
+        /// </summary>
+        /// <exception cref="ArgumentNullException">definition が null。</exception>
+        /// <exception cref="InvalidOperationException">definition の値が不正。今の設定はそのまま残る。</exception>
+        public void Configure(CoopInteractableDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            var spec = definition.ToSpec();
+            definition.ValidateDoor();
+            _definition = definition;
+            Configure(spec);
         }
 
         /// <summary>経過と完了を消して、もう一度使えるようにする。押している人はそのまま。</summary>
@@ -337,6 +376,13 @@ namespace Fps.Runtime
         private static GameObject HolderOf(Collider collider)
         {
             return collider.attachedRigidbody != null ? collider.attachedRigidbody.gameObject : collider.gameObject;
+        }
+
+        private CoopHoldSpec CreateSpec()
+        {
+            return _definition != null
+                ? _definition.ToSpec()
+                : new CoopHoldSpec(_requiredCount, _holdSeconds, _resetOnInterrupt);
         }
 
         private bool HasTriggerCollider()

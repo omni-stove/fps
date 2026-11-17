@@ -5,6 +5,7 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
+using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -12,6 +13,7 @@ namespace Fps.Tests.EditMode
     /// <summary>
     /// グレネードを投げる (<see cref="GrenadeThrower"/>) ことと、爆発 (<see cref="ThrownGrenade.Explode"/>) が半径内の
     /// <see cref="Damageable"/> と建造物に当たり、壁の向こうには当たらないことを確かめる。
+    /// HUD (<see cref="GrenadeCountView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の残りを出すことも確かめる。
     /// Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
     /// </summary>
     public sealed class GrenadeTests
@@ -41,6 +43,7 @@ namespace Fps.Tests.EditMode
             new GrenadeCatalog(new[] { GrenadeSpec.Default, _smoke }, new[] { GrenadeSpec.DefaultId, _smoke.Id });
 
         private readonly List<GameObject> _created = new List<GameObject>();
+        private PanelSettings _hudSettings;
 
         [TearDown]
         public void TearDown()
@@ -54,6 +57,13 @@ namespace Fps.Tests.EditMode
             }
 
             _created.Clear();
+            if (_hudSettings != null)
+            {
+                Object.DestroyImmediate(_hudSettings);
+                _hudSettings = null;
+            }
+
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -396,6 +406,45 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheGrenadeCountShowsTheLocalPlayersThrowerFromTheSignal()
+        {
+            var view = CreateHud().GrenadeCount;
+            var thrower = CreateThrower(_twoGrenades);
+            Assert.That(view.Source, Is.Null, "nothing to show before a local player is published");
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(thrower.gameObject, null, null, null, null, thrower, null, null));
+            Assert.That(view.Source, Is.SameAs(thrower));
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(2))));
+            Assert.That(((Label)view.Element).text, Is.EqualTo(view.Text));
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            thrower.Configure(GameRules.Default);
+            Assert.That(view.Text, Is.Empty, "the view rereads the thrower when its rule turns grenades off");
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            GameSignals.LocalPlayer.Clear();
+            Assert.That(view.Source, Is.Null);
+        }
+
+        [Test]
+        public void ACountFromTheServerIsKeptWithoutALocalPlayer()
+        {
+            var hud = CreateHud();
+            var view = hud.GrenadeCount;
+
+            view.ShowCount(true, 3);
+            hud.RebuildView();
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(3))), "rebinding with no published player keeps the count");
+
+            var thrower = CreateThrower(_twoGrenades);
+            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(thrower.gameObject, null, null, null, null, thrower, null, null));
+            view.ShowCount(true, 1);
+            GameSignals.LocalPlayer.Clear();
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudFormat.Grenades(1))), "clearing the player does not hide a count shown directly");
+        }
+
+        [Test]
         public void AStickyGrenadeStaysWhereItTouchesAWall()
         {
             var wall = CreateBox("Wall", new Vector3(0f, 1.5f, 3f), new Vector3(4f, 3f, 0.2f)).GetComponent<Collider>();
@@ -467,6 +516,14 @@ namespace Fps.Tests.EditMode
             _created.Add(grenade.gameObject);
             Physics.SyncTransforms();
             return grenade;
+        }
+
+        private Hud CreateHud()
+        {
+            var hud = Hud.Create("GrenadeTests.Hud", null, null, null);
+            _created.Add(hud.gameObject);
+            _hudSettings = hud.OwnedPanelSettings;
+            return hud;
         }
 
         private GrenadeThrower CreateThrower(GameRules rules)

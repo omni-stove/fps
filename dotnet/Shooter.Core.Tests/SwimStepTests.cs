@@ -85,7 +85,7 @@ namespace Shooter.Core.Tests
             }
 
             Assert.That(swim.IsUnderwater, Is.True);
-            Assert.That(drownedAt, Is.EqualTo(_expectedDrownedTicks),"1 s is held, so the first event comes when the time passes 1 s");
+            Assert.That(drownedAt, Is.EqualTo(_expectedDrownedTicks), "1 s is held, so the first event comes when the time passes 1 s");
             Assert.That(swim.Drownings, Is.EqualTo(3));
             Assert.That(swim.BreathUsedSeconds, Is.EqualTo(0.25f));
         }

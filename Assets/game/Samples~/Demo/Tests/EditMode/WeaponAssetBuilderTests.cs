@@ -76,6 +76,37 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheReferenceAndRealisticSamplesAreBuiltIntoTheirOwnFoldersAndLists()
+        {
+            Assert.That(WeaponAssetBuilder.ReferenceJsonFolder, Is.EqualTo(DemoSample.Root + "/Weapons/ReferenceJson"));
+            Assert.That(WeaponAssetBuilder.ReferenceFolder, Is.EqualTo(DemoSample.Root + "/Weapons/Reference"));
+            Assert.That(WeaponAssetBuilder.ReferenceWeaponsPath, Is.EqualTo(DemoSample.Root + "/Weapons/ReferenceWeapons.asset"));
+            Assert.That(WeaponAssetBuilder.RealisticJsonFolder, Is.EqualTo(DemoSample.Root + "/Weapons/RealisticJson"));
+            Assert.That(WeaponAssetBuilder.RealisticFolder, Is.EqualTo(DemoSample.Root + "/Weapons/Realistic"));
+            Assert.That(WeaponAssetBuilder.RealisticWeaponsPath, Is.EqualTo(DemoSample.Root + "/Weapons/RealisticWeapons.asset"));
+
+            foreach (var (jsonFolder, folder, catalog) in new[]
+            {
+                (WeaponAssetBuilder.ReferenceJsonFolder, WeaponAssetBuilder.ReferenceFolder, WeaponAssetBuilder.LoadReferenceWeapons()),
+                (WeaponAssetBuilder.RealisticJsonFolder, WeaponAssetBuilder.RealisticFolder, WeaponAssetBuilder.LoadRealisticWeapons()),
+            })
+            {
+                var names = WeaponJsonImporter.FindJsonFiles(jsonFolder).Select(System.IO.Path.GetFileNameWithoutExtension).ToArray();
+                Assert.That(names, Has.Length.EqualTo(32), jsonFolder);
+                Assert.That(catalog.Weapons.Select(d => d.name), Is.EqualTo(names), $"rerun {nameof(WeaponAssetBuilder)}.Build");
+                foreach (var definition in catalog.Weapons)
+                {
+                    Assert.That(AssetDatabase.GetAssetPath(definition), Is.EqualTo(folder + "/" + definition.name + ".asset"));
+                    var json = System.IO.File.ReadAllText(FpsKitRoot.PhysicalPath(jsonFolder + "/" + definition.name + ".json"));
+                    Assert.That(
+                        WeaponSpecJson.Write(definition.ToSpec()),
+                        Is.EqualTo(WeaponSpecJson.Write(WeaponJsonImporter.ParseSpec(json, definition.name + ".json"))),
+                        $"{definition.name}: rerun {nameof(WeaponAssetBuilder)}.Build");
+                }
+            }
+        }
+
+        [Test]
         public void BuildsEveryJsonWeaponAndListsThemForTheRange()
         {
             var jsonFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WeaponAssetBuilderTests_" + Guid.NewGuid().ToString("N"));

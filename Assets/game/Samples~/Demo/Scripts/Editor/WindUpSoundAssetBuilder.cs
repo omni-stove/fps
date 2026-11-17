@@ -12,6 +12,8 @@ namespace Fps.Editor
         public const string LogTag = "[WindUpSoundAssetBuilder]";
 
         public const string ChargeRifleId = "0a90a121-a287-4aae-8fcf-885ddf59da79";
+        public const string MinigunId = "4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13";
+        public const string BoltSniperId = "5b2af293-a0d8-45cb-af68-8c63628c80d1";
 
         public const string SpinLoopSound = "MinigunSpin";
         public const string ChargeLoopSound = "ChargeHum";
@@ -63,9 +65,9 @@ namespace Fps.Editor
             }
 
             audioFolder = PresentationAssetBuilder.ValidateFolderPath(audioFolder, nameof(audioFolder));
-            var minigun = Find(weapons, BootstrapSceneBuilder.MinigunId);
+            var minigun = Find(weapons, MinigunId);
             var chargeRifle = Find(weapons, ChargeRifleId);
-            var boltSniper = Find(weapons, BootstrapSceneBuilder.BoltSniperId);
+            var boltSniper = Find(weapons, BoltSniperId);
 
             SceneBuildHelpers.EnsureFolder(audioFolder);
             var clips = new Dictionary<string, AudioClip>(StringComparer.Ordinal);

@@ -1,0 +1,168 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: MagnumPistol
+  m_EditorClassIdentifier: Fps.Runtime::Fps.Runtime.WeaponDefinition
+  _id: 886fa55c-c980-4d7b-ad90-d16e5a872c7f
+  _nameKey: weapon.ref.magnumPistol
+  _description: "CS2 \u306E Desert Eagle (\u5B9F\u9283\u306F IMI Desert Eagle .50AE) \u3092\u53C2\u8003\u3002\u4F53 53\u30FB0.225 \u79D2\u306B 1 \u767A\u30FB7 \u767A\u3067\u3001\u53CD\u52D5\u304C\u5927\u304D\u3044\u3002RangeModifier 0.85 \u3092 50 m \u3067 0.53 \u500D\u306B\u7F6E\u304D\u63DB\u3048\u305F\u3002"
+  _category: 6
+  _fireMode: 1
+  _magazineSize: 7
+  _reserveAmmo: 21
+  _fireInterval: 0.225
+  _reloadSeconds: 2.2
+  _damage: 53
+  _range: 60
+  _falloffStart: 0
+  _falloffEnd: 50
+  _falloffMinMultiplier: 0.53
+  _explosionRadius: 0
+  _adsFieldOfView: 55
+  _blindFireSpreadDegrees: 5
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.6
+  _recoilPitchDegrees: 3
+  _recoilYawDegrees: 0.6
+  _recoilRecoveryPerSecond: 15
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 3
+  _adsSpreadDegrees: 0.6
+  _moveSpreadDegrees: 2
+  _shotNoiseRadius: 50
+  _weight: 2
+  _moveSpeedMultiplier: 0.92
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
+  _charge:
+    _enabled: 0
+    _chargeSeconds: 1
+    _minChargeFraction: 0.25
+    _fullChargeDamageMultiplier: 2
+    _firesWhenFull: 0
+    _firesBelowMin: 0
+    _fullChargeSpeedMultiplier: 1
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 0
+  _reloadSecondsPerRound: 0
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 0
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 60
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 5
+    _onWorldHit: 0
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 0
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 0
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _ammoTypes: []

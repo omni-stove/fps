@@ -63,7 +63,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":8").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -175,7 +175,54 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":8"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void SavesTheAimAssistAndLoadsItBackAfterARestart()
+        {
+            var settings = ControlSettings.Default.WithAimAssist(false);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.AimAssist, Is.False);
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"aimAssist\":false"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void VersionEightDataSilentlyGetsTheAimAssistOnAndIsRewrittenAsVersionNine()
+        {
+            // エイムアシストを足す前のゲームが書いた形式。
+            var saved = ControlSettings.Default.WithShowBlood(false).With(ControlValue.GamepadSensitivity, 140);
+            var versionEight = OldVersion(saved.ToJson(), 8, null);
+            Assert.That(versionEight, Does.Contain("\"version\":8").And.Not.Contain("aimAssist"));
+            PlayerPrefs.SetString(_store.Key, versionEight);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9").And.Contain("\"aimAssist\":true"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ABrokenAimAssistFlagFallsBackToOnWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithShowBlood(false).ToJson().Replace("\"aimAssist\":true", "\"aimAssist\":\"off\""));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*aimAssist"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.AimAssist, Is.True);
+            Assert.That(loaded.ShowBlood, Is.False, "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -300,10 +347,15 @@ namespace Shooter.Tests.EditMode
             return json.Replace(",\"cameraShake\":100,\"viewmodelMotion\":100,\"showBlood\":true", string.Empty);
         }
 
-        // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。
+        // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。版 8 までは版 9 で足したエイムアシストを持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 9)
+            {
+                old = old.Replace(",\"aimAssist\":true", string.Empty);
+            }
+
             return language == null ? old : old.Insert(old.Length - 1, ",\"language\":\"" + language + "\"");
         }
     }

@@ -22,6 +22,7 @@ namespace Shooter.Runtime
     /// 出現点は <see cref="SetSpawnPoints"/> で渡した Transform (足元の位置) から <see cref="SpawnSelector"/> で選ぶ。渡していないチームは、
     /// 試合を始めたときにそのチームの参加者が立っていた位置を使う。倒れている間のプレイヤーは動けず撃てない。</item>
     /// <item>状態の変化・拠点の占領と中立化・終了と勝者・キルとリスポーンを <see cref="DominationLog"/> の書式 (<c>[Domination]</c>) でログに出す。</item>
+    /// <item>終わったら、プレイヤーの勝敗・キル数・デス数・Alpha のポイント (切り捨て) を <see cref="CombatEvents.MatchFinished"/> で 1 度だけ知らせる。</item>
     /// <item>両チームのポイント・残り時間・拠点ごとの状態を <see cref="DominationStatus"/> にして <see cref="GameSignals.Domination"/> に出し、止めたら消す。
     /// 参加者ごとのキル数とデス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。</item>
     /// <item>終わったらプレイヤーの移動と射撃を止め、<see cref="MatchRunner"/> と同じく <see cref="RestartActionPath"/> (キーボードの R) で
@@ -785,6 +786,19 @@ namespace Shooter.Runtime
 
             SetPlayerControl(false);
             AcquireRestartAction();
+            CombatEvents.RaiseMatchFinished(ResultOf(_domination, winner));
+        }
+
+        // 得点は小数を含みうるが、表示と同じく切り捨てて渡す。
+        private static MatchResult ResultOf(Domination domination, Team? winner)
+        {
+            var outcome = !winner.HasValue ? MatchOutcome.Draw : winner.Value == Team.Alpha ? MatchOutcome.Won : MatchOutcome.Lost;
+            var score = domination.GetScore(Team.Alpha);
+            return new MatchResult(
+                outcome,
+                domination.GetKills(PlayerId),
+                domination.GetDeaths(PlayerId),
+                score > 0f ? (int)Math.Min(int.MaxValue, Math.Floor(score)) : 0);
         }
 
         private void OnPointCaptured(int pointIndex, Team team)

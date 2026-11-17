@@ -20,10 +20,15 @@ namespace Shooter.Tests.EditMode
         private readonly List<Object> _objects = new List<Object>();
         private RecordingModeRunner _runner;
 
+        private readonly List<MatchResult> _results = new List<MatchResult>();
+
         [SetUp]
         public void SetUp()
         {
             GameSignals.ResetAll();
+            CombatEvents.ClearSubscribers();
+            _results.Clear();
+            CombatEvents.MatchFinished += _results.Add;
             _runner = Track(new GameObject("Runner")).AddComponent<RecordingModeRunner>();
             _runner.Factory = () => TeamDeathmatchRunner.CreateSession(3, 4, 60f, 2, RespawnSeconds);
         }
@@ -32,6 +37,7 @@ namespace Shooter.Tests.EditMode
         public void TearDown()
         {
             _runner.Stop();
+            CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
             for (var i = _objects.Count - 1; i >= 0; i--)
             {
@@ -279,6 +285,97 @@ namespace Shooter.Tests.EditMode
             var status = GameSignals.ModeStatus.Value;
             Assert.That(status.IsEnded, Is.True);
             Assert.That(status.Winner, Is.EqualTo((Side?)Side.Alpha));
+        }
+
+        [Test]
+        public void WinningRaisesTheLocalPlayersResultOnce()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+
+            KillBy(player, a);
+            Assert.That(_results, Is.Empty, "nothing is raised before the end");
+            KillBy(player, b);
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 2, 0, 2) }));
+        }
+
+        [Test]
+        public void LosingRaisesTheLocalPlayersDeathsAndOwnSideScore()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+
+            KillBy(a, player);
+            KillBy(a, b);
+
+            Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 0, 1, 0) }));
+        }
+
+        [Test]
+        public void ATiedTimeUpRaisesADraw()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+
+            KillBy(player, a);
+            KillBy(b, player);
+            _runner.Tick(60f);
+
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(_runner.Session.Winner, Is.Null);
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Draw, 1, 1, 1) }));
+        }
+
+        [Test]
+        public void EndingTheMatchAgainRaisesNothing()
+        {
+            var player = Member("Player", 0, Vector3.zero);
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
+            KillBy(player, a);
+            KillBy(player, b);
+
+            _runner.EndMatchFor(Side.Bravo);
+            _runner.EndMatchFor(null);
+            _runner.Tick(60f);
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 2, 0, 2) }));
+        }
+
+        [Test]
+        public void EndMatchCalledByTheModeDecidesTheOutcomeFromTheWinner()
+        {
+            var player = Member("Player", 1, Vector3.zero);
+            var bot = Member("Bot-A", 0, new Vector3(0f, 0f, 10f));
+            Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
+
+            _runner.EndMatchFor(new Side(1));
+
+            Assert.That(_results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 0, 0, 0) }));
+        }
+
+        [Test]
+        public void AMatchWithoutALocalPlayerRaisesNothing()
+        {
+            var a = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
+            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
+            var c = Member("Bot-C", 2, new Vector3(0f, 0f, 14f));
+            _runner.Begin(_runner.Factory(), new[] { a, b, c }, Array.Empty<SideSpawnPoint>());
+
+            KillBy(a, b);
+            KillBy(a, c);
+
+            Assert.That(_runner.IsMatchOver, Is.True);
+            Assert.That(_results, Is.Empty);
         }
 
         [Test]

@@ -86,12 +86,12 @@ namespace Shooter.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':8,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':9,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
                     "'showBlood':true,'showNetStats':false," +
-                    "'colorPalette':'standard','showSubtitles':false}")));
+                    "'colorPalette':'standard','showSubtitles':false,'aimAssist':true}")));
         }
 
         [Test]
@@ -141,7 +141,7 @@ namespace Shooter.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':9,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':10,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -154,9 +154,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':9}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':10}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 9"));
+            Assert.That(problems[0], Does.Contain("version 10"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -383,7 +383,7 @@ namespace Shooter.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -719,7 +719,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + "}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
@@ -784,8 +784,8 @@ namespace Shooter.Core.Tests
         {
             var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
 
-            Assert.That(json, Does.StartWith(Json("{'version':8,")));
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true}")));
+            Assert.That(json, Does.StartWith(Json("{'version':9,")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true}")));
             Assert.That(json, Does.Not.Contain("language"));
         }
 
@@ -795,27 +795,24 @@ namespace Shooter.Core.Tests
         {
             var settings = ControlSettings.Default.WithShowSubtitles(true).WithPalette(ColorPalette.RedGreen);
             var json = version == 6 ? WithoutPresentation(settings.ToJson()) : settings.ToJson();
-            var old = json.Replace("\"version\":8", "\"version\":" + version, StringComparison.Ordinal);
+            var old = AsVersion(json, version);
             var withLanguage = old.Insert(old.Length - 1, ",\"language\":\"fr\"");
 
             var loaded = ControlSettings.FromJson(withLanguage, out var problems);
 
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")).And.Not.Contain("language"));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")).And.Not.Contain("language"));
         }
 
         [TestCase(5)]
         [TestCase(8)]
+        [TestCase(9)]
         public void AVersionWithoutALanguageReportsTheLanguageKeyAsUnknown(int version)
         {
-            var json = WithoutPresentation(ControlSettings.Default.ToJson());
-            if (version == 8)
-            {
-                json = ControlSettings.Default.ToJson();
-            }
+            var json = version >= 8 ? ControlSettings.Default.ToJson() : WithoutPresentation(ControlSettings.Default.ToJson());
 
-            var withLanguage = json.Replace("\"version\":8", "\"version\":" + version, StringComparison.Ordinal);
+            var withLanguage = AsVersion(json, version);
             withLanguage = withLanguage.Insert(withLanguage.Length - 1, ",\"language\":\"en\"");
 
             var loaded = ControlSettings.FromJson(withLanguage, out var problems);
@@ -898,8 +895,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ReadsVersionSixWithThePresentationDefaultsAndNoProblems()
         {
-            var versionSix = WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson())
-                .Replace("\"version\":8", "\"version\":6", StringComparison.Ordinal);
+            var versionSix = AsVersion(WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson()), 6);
             versionSix = versionSix.Insert(versionSix.Length - 1, ",\"language\":\"en\"");
             Assert.That(versionSix, Does.Not.Contain("cameraShake"));
 
@@ -910,7 +906,7 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
             Assert.That(loaded.ShowBlood, Is.True);
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")));
         }
 
         [Test]
@@ -927,11 +923,12 @@ namespace Shooter.Core.Tests
         [Test]
         public void VersionSixReportsThePresentationKeysAsUnknown()
         {
-            var versionSix = ControlSettings.Default
-                .With(ControlValue.CameraShakeIntensity, 0)
-                .WithShowBlood(false)
-                .ToJson()
-                .Replace("\"version\":8", "\"version\":6", StringComparison.Ordinal);
+            var versionSix = AsVersion(
+                ControlSettings.Default
+                    .With(ControlValue.CameraShakeIntensity, 0)
+                    .WithShowBlood(false)
+                    .ToJson(),
+                6);
 
             var loaded = ControlSettings.FromJson(versionSix, out var problems);
 
@@ -975,10 +972,121 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.ShowBlood, Is.False, "the saved value");
         }
 
+        [Test]
+        public void AimAssistIsOnByDefault()
+        {
+            Assert.That(ControlSettings.Default.AimAssist, Is.True);
+        }
+
+        [Test]
+        public void WithAimAssistChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.GamepadSensitivity, 150)
+                .WithShowSubtitles(true)
+                .WithShowBlood(false);
+
+            var off = settings.WithAimAssist(false);
+
+            Assert.That(off.AimAssist, Is.False);
+            Assert.That(settings.AimAssist, Is.True, "the original does not change");
+            Assert.That(off.Get(ControlValue.GamepadSensitivity), Is.EqualTo(150));
+            Assert.That(off.ShowSubtitles, Is.True);
+            Assert.That(off.ShowBlood, Is.False);
+            Assert.That(off, Is.Not.EqualTo(settings));
+            Assert.That(off.WithAimAssist(true), Is.EqualTo(settings));
+            Assert.That(off.WithAimAssist(true).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithAimAssist(true), Is.SameAs(settings));
+            Assert.That(off.WithAimAssist(false), Is.SameAs(off));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheAimAssist()
+        {
+            var off = ControlSettings.Default.WithAimAssist(false);
+
+            Assert.That(off.With(ControlValue.MasterVolume, 10).AimAssist, Is.False);
+            Assert.That(off.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle).AimAssist, Is.False);
+            Assert.That(off.WithShowNetStats(true).AimAssist, Is.False);
+            Assert.That(off.WithPalette(ColorPalette.BlueYellow).AimAssist, Is.False);
+            Assert.That(off.WithShowSubtitles(true).AimAssist, Is.False);
+            Assert.That(off.WithShowBlood(false).AimAssist, Is.False);
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void RoundTripsTheAimAssist(bool enabled)
+        {
+            var settings = ControlSettings.Default.WithShowSubtitles(true).WithAimAssist(enabled);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + "}")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.AimAssist, Is.EqualTo(enabled));
+        }
+
+        [Test]
+        public void ReadsVersionEightWithTheAimAssistOnAndNoProblems()
+        {
+            var saved = ControlSettings.Default.WithShowBlood(false).WithPalette(ColorPalette.RedGreen);
+            var versionEight = AsVersion(saved.ToJson(), 8);
+            Assert.That(versionEight, Does.StartWith(Json("{'version':8,")).And.Not.Contain("aimAssist"));
+
+            var loaded = ControlSettings.FromJson(versionEight, out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded.AimAssist, Is.True);
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':9,")).And.EndWith(Json(",'aimAssist':true}")));
+        }
+
+        [Test]
+        public void VersionEightReportsTheAimAssistKeyAsUnknown()
+        {
+            var versionEight = ControlSettings.Default
+                .WithAimAssist(false)
+                .ToJson()
+                .Replace("\"version\":9", "\"version\":8", StringComparison.Ordinal);
+
+            var loaded = ControlSettings.FromJson(versionEight, out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default), "a version 8 file cannot have this entry");
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'aimAssist'"));
+        }
+
+        // エイムアシストが欠けている・真偽値でないなら、その項目だけ初期値 (効かせる)
+        [TestCase(",'aimAssist':false", "")]
+        [TestCase("'aimAssist':false", "'aimAssist':'false'")]
+        [TestCase("'aimAssist':false", "'aimAssist':0")]
+        [TestCase("'aimAssist':false", "'aimAssist':null")]
+        public void BrokenAimAssistFlagFallsBackOnlyForThatFlag(string from, string to)
+        {
+            var valid = ControlSettings.Default.WithShowBlood(false).WithAimAssist(false).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("aimAssist"));
+            Assert.That(loaded.AimAssist, Is.True, "the default");
+            Assert.That(loaded.ShowBlood, Is.False, "the saved value");
+        }
+
         /// <summary>今の形式から、バージョン 7 で足した揺れの強さと血の表示を除く (初期値のときだけ)。</summary>
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
+        }
+
+        /// <summary>今の形式の json を version の形にする。9 より前は、バージョン 9 で足したエイムアシストを除く (初期値のときだけ)。</summary>
+        private static string AsVersion(string json, int version)
+        {
+            var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
+            return version >= 9 ? old : old.Replace(Json(",'aimAssist':true"), string.Empty, StringComparison.Ordinal);
         }
 
         /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>

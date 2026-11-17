@@ -16,6 +16,7 @@
   "settings.value.effectsVolume": "Effects volume",
   "settings.value.cameraShake": "Screen shake",
   "settings.value.viewmodelMotion": "Weapon sway",
+  "settings.aimAssist": "Aim assist (gamepad)",
   "settings.blood": "Show blood",
   "settings.palette": "Team colors",
   "settings.palette.standard": "Standard",

@@ -422,6 +422,20 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void MatchFinishedPassesTheResultAndIsDroppedByClearSubscribers()
+        {
+            var results = new List<MatchResult>();
+            CombatEvents.MatchFinished += results.Add;
+            var result = new MatchResult(MatchOutcome.Won, 3, 1, 25);
+
+            CombatEvents.RaiseMatchFinished(result);
+            CombatEvents.ClearSubscribers();
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            Assert.That(results, Is.EqualTo(new[] { result }));
+        }
+
+        [Test]
         public void ClearSubscribersDropsExplosionAndLandingHandlers()
         {
             var count = 0;

@@ -428,7 +428,8 @@ namespace Shooter.Server
             if (_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
             {
                 var state = mover.State;
-                body.SetPose(state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder);
+                body.SetPose(
+                    state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder, state.Lean.Amount);
             }
         }
 

@@ -110,7 +110,7 @@ namespace Fps.NetV2.Tests
             Assert.That(watcher.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(mover.Notice.WasConnected, Is.True);
             Assert.That(_serverThread.Join(_timeout), Is.True);
-            Assert.That(_exitCode, Is.EqualTo(0), _output.ToString());
+            Assert.That(_exitCode, Is.EqualTo(0), Output());
         }
 
         [Test]
@@ -118,27 +118,27 @@ namespace Fps.NetV2.Tests
         {
             var network = new FakeEosNetwork();
             StartServer(network);
-            Assert.That(_output.ToString(), Does.Contain("[Net] EOS server ready id=" + _eosServerId));
+            Assert.That(Output(), Does.Contain("[Net] EOS server ready id=" + _eosServerId));
 
             var first = Join(EosClient(network, _eosFirstId), _eosServerId.ToUpperInvariant());
             var second = Join(EosClient(network, _eosSecondId), _eosServerId);
             Pump(() => first.Match.IsPredicting && second.Match.IsPredicting
                 && HasRemote(first, second.Client.PlayerId) && HasRemote(second, first.Client.PlayerId));
 
-            var log = _output.ToString();
+            var log = Output();
             Assert.That(log, Does.Contain("\"type\":\"server_started\"").And.Contain("\"transport\":\"eos\""));
             Assert.That(log, Does.Contain("\"type\":\"player_joined\"").And.Contain("\"productUserId\":\"" + _eosFirstId + "\""));
             Assert.That(log, Does.Contain("\"productUserId\":\"" + _eosSecondId + "\""));
 
             first.Client.Leave();
-            Pump(() => _output.ToString().Contains("\"type\":\"player_left\"", StringComparison.Ordinal) && !HasRemote(second, first.Client.PlayerId));
+            Pump(() => Output().Contains("\"type\":\"player_left\"", StringComparison.Ordinal) && !HasRemote(second, first.Client.PlayerId));
             Assert.That(PlayerLeftLine(), Does.Contain("\"productUserId\":\"" + _eosFirstId + "\""));
 
             _stop.Raise();
             Pump(() => second.Notice != null);
             Assert.That(second.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(_serverThread.Join(_timeout), Is.True);
-            Assert.That(_exitCode, Is.EqualTo(0), _output.ToString());
+            Assert.That(_exitCode, Is.EqualTo(0), Output());
         }
 
         [Test]
@@ -251,7 +251,7 @@ namespace Fps.NetV2.Tests
 
         private string PlayerLeftLine()
         {
-            foreach (var line in _output.ToString().Split('\n'))
+            foreach (var line in Output().Split('\n'))
             {
                 if (line.Contains("\"type\":\"player_left\"", StringComparison.Ordinal))
                 {
@@ -302,7 +302,7 @@ namespace Fps.NetV2.Tests
                 createEos);
             _serverThread = new Thread(() => _exitCode = ServerProgram.Run(args, ServerModules.Create, runtime)) { IsBackground = true };
             _serverThread.Start();
-            Pump(() => _output.ToString().Contains("[Net] server listening on", StringComparison.Ordinal));
+            Pump(() => Output().Contains("[Net] server listening on", StringComparison.Ordinal));
         }
 
         private Player Join(IMatchTransport transport = null, string address = "127.0.0.1")
@@ -322,6 +322,15 @@ namespace Fps.NetV2.Tests
             Assert.That(
                 ClientWorld.TryLoad(Path.Combine(_root, "server-data", "maps"), client.Map, out var world, out var error), Is.True, error);
             return world.CreateSimulation(client.Motor, client.TickRate, client.KillPlaneY, client.Knockback);
+        }
+
+        // TextWriter.Synchronized は書き込みをその writer 自身で lock するだけなので、サーバーのスレッドが書く間に読むと StringBuilder が壊れる
+        private string Output()
+        {
+            lock (_synchronizedOutput)
+            {
+                return _output.ToString();
+            }
         }
 
         private void Pump(Func<bool> until)
@@ -346,7 +355,7 @@ namespace Fps.NetV2.Tests
             }
             while (watch.Elapsed < _timeout);
 
-            Assert.Fail("timed out waiting for the server and the clients\n" + _output);
+            Assert.Fail("timed out waiting for the server and the clients\n" + Output());
         }
 
         internal static ushort FreePort()

@@ -151,6 +151,30 @@ namespace Shooter.Core
             return new Vector3(horizontal.X * deltaSeconds, verticalDisplacement, horizontal.Y * deltaSeconds);
         }
 
+        /// <summary>
+        /// <see cref="Step"/> の前に呼ぶ。地上のジャンプは <see cref="Step"/> の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、
+        /// 回数を受け取って返す別の口にする。
+        /// </summary>
+        /// <param name="airJumpsUsed">着地してから空中で跳んだ回数。0 以上。</param>
+        /// <param name="jumpPressed">今フレームにジャンプが押されたか。</param>
+        /// <param name="isGrounded">接地しているか。</param>
+        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded)
+        {
+            if (airJumpsUsed < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(airJumpsUsed), airJumpsUsed, "airJumpsUsed must not be negative");
+            }
+
+            var used = AirJumpStep.Step(airJumpsUsed, isGrounded, jumpPressed, Spec, out var jumped);
+            if (jumped)
+            {
+                Velocity = new Vector3(Velocity.X, Spec.AirJumpSpeed, Velocity.Z);
+                Jumped?.Invoke();
+            }
+
+            return used;
+        }
+
         private float CarryScale(CarryGaits gait, float carrySpeedMultiplier)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))

@@ -21,11 +21,19 @@ namespace Shooter.Core
         }
 
         public NetMotorSettings(MotorSpec motor, StanceGeometry stance, CapsuleMoverSpec mover, ProneSpec prone)
+            : this(motor, stance, mover, prone, SwimTuning.Default, WallRunTuning.Default)
+        {
+        }
+
+        public NetMotorSettings(
+            MotorSpec motor, StanceGeometry stance, CapsuleMoverSpec mover, ProneSpec prone, SwimTuning swim, WallRunTuning wallRun)
         {
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             Mover = mover ?? throw new ArgumentNullException(nameof(mover));
             Prone = prone ?? throw new ArgumentNullException(nameof(prone));
+            Swim = swim ?? throw new ArgumentNullException(nameof(swim));
+            WallRun = wallRun ?? throw new ArgumentNullException(nameof(wallRun));
         }
 
         public static NetMotorSettings Default { get; } = new NetMotorSettings(
@@ -48,6 +56,10 @@ namespace Shooter.Core
 
         /// <summary>伏せの速さと飛び込み。伏せの高さは <see cref="Stance"/> の <see cref="StanceGeometry.Prone"/> を使う。</summary>
         public ProneSpec Prone { get; }
+
+        public SwimTuning Swim { get; }
+
+        public WallRunTuning WallRun { get; }
 
         /// <summary>
         /// PlayerController と同じく、カプセルが取れる高さ (半径の 2 倍以上、しゃがみ以下) に収める。

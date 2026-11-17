@@ -25,6 +25,67 @@ namespace Shooter.Core.Tests
             Assert.That(spec.Zipline.HangOffset, Is.EqualTo(1.3f));
             Assert.That(spec.Zipline.RegrabSeconds, Is.EqualTo(0.5f));
             Assert.That(spec.Zipline.SpreadMoveFraction, Is.EqualTo(1f));
+            Assert.That(spec.Swim.Speed, Is.EqualTo(3f));
+            Assert.That(spec.Swim.Buoyancy, Is.EqualTo(12f));
+            Assert.That(spec.Swim.BreathSeconds, Is.EqualTo(15f));
+            Assert.That(spec.WallRun.Enabled, Is.False, "a game turns wall running on");
+            Assert.That(spec.WallRun.MaxSeconds, Is.EqualTo(1.5f));
+            Assert.That(spec.WallRun.MinSpeed, Is.EqualTo(5f));
+            Assert.That(spec.WallRun.GravityScale, Is.EqualTo(0.25f));
+            Assert.That(spec.WallRun.JumpOffSpeed, Is.EqualTo(7f));
+        }
+
+        [Test]
+        public void ReadsTheSwimAndWallRunItems()
+        {
+            var spec = TraversalJson.Parse(
+                "{\"swim\": {\"speed\": 2.5, \"buoyancy\": 9, \"breathSeconds\": 20},"
+                + " \"wallRun\": {\"enabled\": true, \"maxSeconds\": 2, \"minSpeed\": 6, \"gravityScale\": 0.4, \"jumpOffSpeed\": 8}}",
+                "traversal.json");
+
+            Assert.That(spec.Swim.Speed, Is.EqualTo(2.5f));
+            Assert.That(spec.Swim.Buoyancy, Is.EqualTo(9f));
+            Assert.That(spec.Swim.BreathSeconds, Is.EqualTo(20f));
+            Assert.That(spec.WallRun.Enabled, Is.True);
+            Assert.That(spec.WallRun.MaxSeconds, Is.EqualTo(2f));
+            Assert.That(spec.WallRun.MinSpeed, Is.EqualTo(6f));
+            Assert.That(spec.WallRun.GravityScale, Is.EqualTo(0.4f));
+            Assert.That(spec.WallRun.JumpOffSpeed, Is.EqualTo(8f));
+            Assert.That(spec.Slide, Is.SameAs(SlideTuning.Default));
+        }
+
+        [Test]
+        public void OmittedSwimAndWallRunItemsUseTheDefaults()
+        {
+            var spec = TraversalJson.Parse("{\"swim\": {\"speed\": 4}, \"wallRun\": {\"enabled\": true}}", "traversal.json");
+
+            Assert.That(spec.Swim.Speed, Is.EqualTo(4f));
+            Assert.That(spec.Swim.Buoyancy, Is.EqualTo(SwimTuning.DefaultBuoyancy));
+            Assert.That(spec.Swim.BreathSeconds, Is.EqualTo(SwimTuning.DefaultBreathSeconds));
+            Assert.That(spec.WallRun.Enabled, Is.True);
+            Assert.That(spec.WallRun.MaxSeconds, Is.EqualTo(WallRunTuning.DefaultMaxSeconds));
+            Assert.That(spec.WallRun.JumpOffSpeed, Is.EqualTo(WallRunTuning.DefaultJumpOffSpeed));
+
+            var empty = TraversalJson.Parse("{}", "traversal.json");
+            Assert.That(empty.Swim, Is.SameAs(SwimTuning.Default));
+            Assert.That(empty.WallRun, Is.SameAs(WallRunTuning.Default));
+        }
+
+        [TestCase("{\"swim\": {\"speed\": -1}}", "swim.speed")]
+        [TestCase("{\"swim\": {\"buoyancy\": -2}}", "swim.buoyancy")]
+        [TestCase("{\"swim\": {\"breathSeconds\": 0}}", "swim.breathSeconds")]
+        [TestCase("{\"wallRun\": {\"maxSeconds\": 0}}", "wallRun.maxSeconds")]
+        [TestCase("{\"wallRun\": {\"minSpeed\": -1}}", "wallRun.minSpeed")]
+        [TestCase("{\"wallRun\": {\"gravityScale\": -0.5}}", "wallRun.gravityScale")]
+        [TestCase("{\"wallRun\": {\"jumpOffSpeed\": -3}}", "wallRun.jumpOffSpeed")]
+        [TestCase("{\"wallRun\": {\"enabled\": 1}}", "wallRun.enabled")]
+        [TestCase("{\"swim\": {\"grabRadius\": 1}}", "swim.grabRadius")]
+        public void ABadSwimOrWallRunValueNamesItsItem(string text, string item)
+        {
+            var e = Assert.Throws<TuningJsonException>(() => TraversalJson.Parse(text, "traversal.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
+            Assert.That(e.SourceName, Is.EqualTo("traversal.json"));
         }
 
         [Test]
@@ -109,6 +170,10 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZiplineTuning(grabRadius: -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZiplineTuning(regrabSeconds: float.NaN));
             Assert.Throws<ArgumentOutOfRangeException>(() => new ZiplineTuning(spreadMoveFraction: -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SwimTuning(speed: float.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SwimTuning(breathSeconds: float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WallRunTuning(maxSeconds: -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WallRunTuning(gravityScale: float.NaN));
         }
     }
 }

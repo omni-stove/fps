@@ -298,6 +298,9 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
 - はしごの形と調整値は `server-data/maps/<マップ名>.ladders.json` から読む。サーバーとクライアントの予測はどちらもこの並びの番号で
   はしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。起動時の `[Server] map ...` の `ladders=` が読んだ本数。
   伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
+  リーン (`leanSideOffset`・`leanAngleDegrees`・`leanSpeed`)・空中のジャンプ (`airJumps`・`airJumpSpeed`)・水泳 (`swimSpeed`・`swimBuoyancy`・`swimBreathSeconds`)・
+  壁走り (`wallRunEnabled`・`wallRunMaxSeconds`・`wallRunMinSpeed`・`wallRunGravityScale`・`wallRunJumpOffSpeed`) も同じ `motor` から読み、
+  承認のメッセージでクライアントの予測に渡す。水泳と壁走りの値は `make export-server-rules` が `Resources/Tuning/traversal.json` (入口の欄が先) から書き出す。
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - 乗り物は `server-data/maps/<マップ名>.vehicles.json` (`make export-server-data` がシーンの有効な `Vehicle` から書き出す) から読む。
   サーバーとクライアントはどちらもこの並びの番号で乗り物を指す。ファイルが無いマップは乗り物が無いものとして動く (`[Server] map ...` の `vehicles=`)。

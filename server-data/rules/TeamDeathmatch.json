@@ -135,7 +135,20 @@
     "proneHeight": 1,
     "proneSpeed": 1.2,
     "diveDistance": 2.5,
-    "diveSeconds": 0.5
+    "diveSeconds": 0.5,
+    "leanSideOffset": 0.4,
+    "leanAngleDegrees": 15,
+    "leanSpeed": 6,
+    "airJumps": 0,
+    "airJumpSpeed": 6.5,
+    "swimSpeed": 3,
+    "swimBuoyancy": 12,
+    "swimBreathSeconds": 15,
+    "wallRunEnabled": false,
+    "wallRunMaxSeconds": 1.5,
+    "wallRunMinSpeed": 5,
+    "wallRunGravityScale": 0.25,
+    "wallRunJumpOffSpeed": 7
   },
   "loadout": {
     "name": "DefaultLoadout",

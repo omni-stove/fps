@@ -28,5 +28,11 @@ namespace Shooter.Core
 
         /// <summary>手元の武器 (ビューモデル) の揺れの強さ (%)。0 で揺らさない。</summary>
         ViewmodelMotionIntensity,
+
+        /// <summary>ゲームパッドのスティックのデッドゾーン (‰)。倒した量がこれより小さい間は入力を 0 とみなす。</summary>
+        StickDeadzone,
+
+        /// <summary>ゲームパッドの振動の強さ (%)。</summary>
+        RumbleStrength,
     }
 }

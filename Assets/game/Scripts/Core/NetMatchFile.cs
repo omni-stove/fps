@@ -98,6 +98,19 @@ namespace Shooter.Core
         public const string ProneSpeedItem = "proneSpeed";
         public const string DiveDistanceItem = "diveDistance";
         public const string DiveSecondsItem = "diveSeconds";
+        public const string LeanSideOffsetItem = "leanSideOffset";
+        public const string LeanAngleDegreesItem = "leanAngleDegrees";
+        public const string LeanSpeedItem = "leanSpeed";
+        public const string AirJumpsItem = "airJumps";
+        public const string AirJumpSpeedItem = "airJumpSpeed";
+        public const string SwimSpeedItem = "swimSpeed";
+        public const string SwimBuoyancyItem = "swimBuoyancy";
+        public const string SwimBreathSecondsItem = "swimBreathSeconds";
+        public const string WallRunEnabledItem = "wallRunEnabled";
+        public const string WallRunMaxSecondsItem = "wallRunMaxSeconds";
+        public const string WallRunMinSpeedItem = "wallRunMinSpeed";
+        public const string WallRunGravityScaleItem = "wallRunGravityScale";
+        public const string WallRunJumpOffSpeedItem = "wallRunJumpOffSpeed";
 
         private const string _kind = "match rules JSON";
 
@@ -117,6 +130,9 @@ namespace Shooter.Core
             StandingHeightItem, StandingCenterYItem,
             StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
             ProneHeightItem, ProneSpeedItem, DiveDistanceItem, DiveSecondsItem,
+            LeanSideOffsetItem, LeanAngleDegreesItem, LeanSpeedItem, AirJumpsItem, AirJumpSpeedItem,
+            SwimSpeedItem, SwimBuoyancyItem, SwimBreathSecondsItem,
+            WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -330,6 +346,21 @@ namespace Shooter.Core
             writer.Float(ProneSpeedItem, file.Motor.Prone.Speed);
             writer.Float(DiveDistanceItem, file.Motor.Prone.DiveDistance);
             writer.Float(DiveSecondsItem, file.Motor.Prone.DiveSeconds);
+            writer.Float(LeanSideOffsetItem, motor.LeanSideOffset);
+            writer.Float(LeanAngleDegreesItem, motor.LeanAngleDegrees);
+            writer.Float(LeanSpeedItem, motor.LeanSpeed);
+            writer.Int(AirJumpsItem, motor.AirJumps);
+            writer.Float(AirJumpSpeedItem, motor.AirJumpSpeed);
+            var swim = file.Motor.Swim;
+            writer.Float(SwimSpeedItem, swim.Speed);
+            writer.Float(SwimBuoyancyItem, swim.Buoyancy);
+            writer.Float(SwimBreathSecondsItem, swim.BreathSeconds);
+            var wallRun = file.Motor.WallRun;
+            writer.Bool(WallRunEnabledItem, wallRun.Enabled);
+            writer.Float(WallRunMaxSecondsItem, wallRun.MaxSeconds);
+            writer.Float(WallRunMinSpeedItem, wallRun.MinSpeed);
+            writer.Float(WallRunGravityScaleItem, wallRun.GravityScale);
+            writer.Float(WallRunJumpOffSpeedItem, wallRun.JumpOffSpeed);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -447,6 +478,8 @@ namespace Shooter.Core
                 var crouchHeight = fields.ReadFloat(CrouchHeightItem, ds.Crouched.Height);
                 var radius = fields.ReadFloat(RadiusItem, ds.Radius);
                 var prone = ReadProne(fields, dp);
+                var swim = ReadSwim(fields, d.Swim);
+                var wallRun = ReadWallRun(fields, d.WallRun);
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
@@ -484,7 +517,12 @@ namespace Shooter.Core
                         fields.ReadFloat(CoverPeekSlideSecondsItem, dm.CoverPeekSlideSeconds),
                         fields.ReadFloat(LadderTopEntryDepthItem, dm.LadderTopEntryDepth),
                         fields.ReadFloat(LadderMinApproachDotItem, dm.LadderMinApproachDot),
-                        fields.ReadFloat(LadderMinApproachSpeedItem, dm.LadderMinApproachSpeed)),
+                        fields.ReadFloat(LadderMinApproachSpeedItem, dm.LadderMinApproachSpeed),
+                        fields.ReadFloat(LeanSideOffsetItem, dm.LeanSideOffset),
+                        fields.ReadFloat(LeanAngleDegreesItem, dm.LeanAngleDegrees),
+                        fields.ReadFloat(LeanSpeedItem, dm.LeanSpeed),
+                        fields.ReadInt(AirJumpsItem, dm.AirJumps),
+                        fields.ReadFloat(AirJumpSpeedItem, dm.AirJumpSpeed)),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),
@@ -497,7 +535,9 @@ namespace Shooter.Core
                         fields.ReadFloat(StepOffsetItem, dc.StepOffset),
                         fields.ReadFloat(SkinWidthItem, dc.SkinWidth),
                         dc.LayerMask),
-                    prone);
+                    prone,
+                    swim,
+                    wallRun);
             }
             catch (ArgumentException e)
             {
@@ -579,6 +619,49 @@ namespace Shooter.Core
                 var item = e.ParamName == "height" ? ProneHeightItem
                     : e.ParamName == "speed" ? ProneSpeedItem
                     : e.ParamName;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static SwimTuning ReadSwim(ServerDataJson.Fields fields, SwimTuning fallback)
+        {
+            try
+            {
+                return new SwimTuning(
+                    fields.ReadFloat(SwimSpeedItem, fallback.Speed),
+                    fields.ReadFloat(SwimBuoyancyItem, fallback.Buoyancy),
+                    fields.ReadFloat(SwimBreathSecondsItem, fallback.BreathSeconds));
+            }
+            catch (ArgumentException e)
+            {
+                // SwimTuning の引数名には項目名の頭の swim が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "speed" ? SwimSpeedItem
+                    : e.ParamName == "buoyancy" ? SwimBuoyancyItem
+                    : e.ParamName == "breathSeconds" ? SwimBreathSecondsItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static WallRunTuning ReadWallRun(ServerDataJson.Fields fields, WallRunTuning fallback)
+        {
+            try
+            {
+                return new WallRunTuning(
+                    fields.ReadBool(WallRunEnabledItem, fallback.Enabled),
+                    fields.ReadFloat(WallRunMaxSecondsItem, fallback.MaxSeconds),
+                    fields.ReadFloat(WallRunMinSpeedItem, fallback.MinSpeed),
+                    fields.ReadFloat(WallRunGravityScaleItem, fallback.GravityScale),
+                    fields.ReadFloat(WallRunJumpOffSpeedItem, fallback.JumpOffSpeed));
+            }
+            catch (ArgumentException e)
+            {
+                // WallRunTuning の引数名には項目名の頭の wallRun が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "maxSeconds" ? WallRunMaxSecondsItem
+                    : e.ParamName == "minSpeed" ? WallRunMinSpeedItem
+                    : e.ParamName == "gravityScale" ? WallRunGravityScaleItem
+                    : e.ParamName == "jumpOffSpeed" ? WallRunJumpOffSpeedItem
+                    : null;
                 throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }
         }

@@ -13,6 +13,9 @@ namespace Shooter.Protocol.Tests
         // 承認の末尾に並ぶ吹き飛ばしの値 (力 3 種類 × 3 個と、そのほか 9 個)
         private const int _knockbackBytes = 18 * 4;
 
+        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・水泳 3 個・壁走りの入切 (1 バイト)・壁走り 4 個
+        private const int _traversalBytes = (3 * 4) + 4 + 4 + (3 * 4) + 1 + (4 * 4);
+
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
@@ -181,6 +184,53 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void ConnectAcceptedCarriesTheLeanAirJumpSwimAndWallRunValues()
+        {
+            var motor = new NetMotorSettings(
+                new MotorSpec(
+                    5f, 8f, 1.2f, 20f, 0.1f, 2.5f,
+                    leanSideOffset: 0.55f, leanAngleDegrees: 20f, leanSpeed: 4f, airJumps: 2, airJumpSpeed: 5.5f),
+                NetMotorSettings.Default.Stance,
+                CapsuleMoverSpec.Default,
+                ProneSpec.Default,
+                new SwimTuning(2.5f, 9f, 20f),
+                new WallRunTuning(true, 2f, 6f, 0.3f, 8f));
+
+            var got = ToClient<ConnectAcceptedMessage>(
+                new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100, Motor = motor, KillPlaneY = -30f });
+
+            Assert.That(got.Motor.Motor.LeanSideOffset, Is.EqualTo(0.55f));
+            Assert.That(got.Motor.Motor.LeanAngleDegrees, Is.EqualTo(20f));
+            Assert.That(got.Motor.Motor.LeanSpeed, Is.EqualTo(4f));
+            Assert.That(got.Motor.Motor.AirJumps, Is.EqualTo(2));
+            Assert.That(got.Motor.Motor.AirJumpSpeed, Is.EqualTo(5.5f));
+            Assert.That(got.Motor.Swim.Speed, Is.EqualTo(2.5f));
+            Assert.That(got.Motor.Swim.Buoyancy, Is.EqualTo(9f));
+            Assert.That(got.Motor.Swim.BreathSeconds, Is.EqualTo(20f));
+            Assert.That(got.Motor.WallRun.Enabled, Is.True);
+            Assert.That(got.Motor.WallRun.MaxSeconds, Is.EqualTo(2f));
+            Assert.That(got.Motor.WallRun.MinSpeed, Is.EqualTo(6f));
+            Assert.That(got.Motor.WallRun.GravityScale, Is.EqualTo(0.3f));
+            Assert.That(got.Motor.WallRun.JumpOffSpeed, Is.EqualTo(8f));
+            Assert.That(got.KillPlaneY, Is.EqualTo(-30f), "the values after the new ones still line up");
+        }
+
+        [Test]
+        public void ConnectAcceptedWithANonPositiveBreathIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
+            var bytes = writer.AsSegment().ToArray();
+
+            // 息の秒数は水泳の 3 番目で、後ろに壁走りの入切 (1 バイト) と 4 個、落ちる高さ、吹き飛ばしの値が続く
+            var breathSeconds = bytes.Length - _knockbackBytes - 4 - (4 * 4) - 1 - 4;
+            Assert.That(System.BitConverter.ToSingle(bytes, breathSeconds), Is.EqualTo(SwimTuning.DefaultBreathSeconds), "the offset points at the breath");
+            System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, breathSeconds, 4), 0f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
         public void ConnectAcceptedWithMotorSettingsOutOfRangeIsUnreadable()
         {
             var writer = new MessageWriter();
@@ -188,7 +238,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (19 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - _knockbackBytes - 4 - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var walkSpeed = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -202,7 +252,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 重さの倍率の下限は持ち物の値の 4 番目 (重さと倍率の数え方 2 バイト、遅くならない重さ、1 kg ごとの減り) で、後ろに動きの 1 バイトが続く
-            var minWeightMultiplier = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
+            var minWeightMultiplier = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, minWeightMultiplier, 4), 1.5f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -215,7 +265,7 @@ namespace Shooter.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            var weightSource = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var weightSource = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             bytes[weightSource] = 9;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -229,7 +279,7 @@ namespace Shooter.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と持ち物の値、体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
-            var walkForward = bytes.Length - _knockbackBytes - 4 - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var walkForward = bytes.Length - _knockbackBytes - 4 - _traversalBytes - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkForward, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));

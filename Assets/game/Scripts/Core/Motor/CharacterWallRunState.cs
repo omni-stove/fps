@@ -17,7 +17,7 @@ namespace Shooter.Core
         {
         }
 
-        /// <param name="lastWall">走り終えた壁の法線。着地するまで同じ壁に付き直さないために、走っていない間だけ持つ。無ければ 0。</param>
+        // lastWall は、着地するまで同じ壁に付き直さないために、走っていない間だけ持つ。
         public CharacterWallRunState(WallRunSide side, float elapsed, Vector3 normal, Vector3 lastWall)
         {
             Side = side;

@@ -12,8 +12,6 @@ namespace Shooter.Protocol
     public sealed class SnapshotList<T>
         where T : struct, ISnapshotEntity<T>
     {
-        private static readonly T _empty;
-
         private readonly string _what;
 
         // 読むたびに文字列をつなぐと GC を起こすので、読み損ねたときに出す名前は先に作っておく。
@@ -141,7 +139,7 @@ namespace Shooter.Protocol
                 }
                 else if (item.OptionalBits != 0)
                 {
-                    bits &= ~(item.OptionalBits & ~item.ChangedBits(in _empty));
+                    bits &= ~(item.OptionalBits & ~item.ChangedBits(default(T)));
                 }
 
                 writer.WriteInt32(item.EntityId);
@@ -186,7 +184,7 @@ namespace Shooter.Protocol
                 item.ReadBits(reader, id, bits);
                 if (!hasBaseline && bits != all)
                 {
-                    item.FillFrom(in _empty);
+                    item.FillFrom(default(T));
                 }
 
                 Count = i + 1;

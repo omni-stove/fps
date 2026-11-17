@@ -17,7 +17,7 @@ namespace Fps.Runtime
     /// <item>狙う・守る指示は <see cref="GameSignals.SquadOrder"/> に出す。どう出すかは UI が決める。
     /// 狙う敵が倒れるか、指示を受けた bot が誰もその指示を続けていなければ印を消す。</item>
     /// </list>
-    /// 値は Inspector の値から作る <see cref="Spec"/> に従う。オフラインの bot だけが相手で、ネット対戦の bot には出さない。
+    /// 値は Inspector の値から作る <see cref="Spec"/> に従い、プレイヤーに付けるときは <see cref="SquadCommandActionInstaller"/> が squad.json の値を書き込む。オフラインの bot だけが相手で、ネット対戦の bot には出さない。
     /// </summary>
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
     [DisallowMultipleComponent]

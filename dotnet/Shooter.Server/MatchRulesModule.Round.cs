@@ -23,7 +23,7 @@ namespace Shooter.Server
             }
 
             var phase = source();
-            if (phase.HasValue && !Enum.IsDefined(typeof(RoundPhase), phase.Value))
+            if (phase.HasValue && !Enum.IsDefined(phase.Value))
             {
                 throw new InvalidOperationException("the round phase source returned an undefined RoundPhase " + phase.Value);
             }

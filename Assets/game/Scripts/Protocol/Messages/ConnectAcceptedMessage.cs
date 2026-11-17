@@ -9,7 +9,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 5;
+        public const byte CurrentVersion = 6;
 
         /// <summary><see cref="KillPlaneY"/> の既定。.NET のサーバーと Netcode のプレイヤーの既定と同じ。</summary>
         public const float DefaultKillPlaneY = -50f;
@@ -86,6 +86,12 @@ namespace Fps.Protocol
             writer.WriteSingle(motor.VaultMaxHeight);
             writer.WriteSingle(motor.MantleMaxHeight);
             writer.WriteSingle(motor.MantleSpeed);
+            writer.WriteSingle(motor.DodgeCooldownSeconds);
+            writer.WriteSingle(motor.VaultSpeed);
+            writer.WriteSingle(motor.VaultReach);
+            writer.WriteSingle(motor.VaultMaxAngleDegrees);
+            writer.WriteSingle(motor.VaultMinHeight);
+            writer.WriteSingle(motor.VaultMaxDepth);
             WriteDirection(writer, motor.WalkDirection);
             WriteDirection(writer, motor.SprintDirection);
             var carry = motor.CarryLoad;
@@ -129,7 +135,7 @@ namespace Fps.Protocol
         // 範囲の検査は Core の型の作り方に任せ、通らない値は読めないメッセージとして断る
         private static Fps.Core.NetMotorSettings ReadMotor(MessageReader reader)
         {
-            var motor = new float[13];
+            var motor = new float[19];
             for (var i = 0; i < motor.Length; i++)
             {
                 motor[i] = reader.ReadFiniteSingle("motor value");
@@ -171,7 +177,8 @@ namespace Fps.Protocol
                         motor[0], motor[1], motor[2], motor[3], motor[4], motor[5], motor[6], motor[7], motor[8], motor[9], motor[10], motor[11], motor[12],
                         new Fps.Core.MoveDirectionScale(direction[0], direction[1], direction[2]),
                         new Fps.Core.MoveDirectionScale(direction[3], direction[4], direction[5]),
-                        new Fps.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits)),
+                        new Fps.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
+                        motor[13], motor[14], motor[15], motor[16], motor[17], motor[18]),
                     new Fps.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Fps.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Fps.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));

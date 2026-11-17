@@ -51,7 +51,7 @@ namespace Fps.Tests.EditMode
             Assert.That(MantleLedgesFixture.CeilingClearance, Is.LessThan(GameBootstrap.PlayerHeight), "the ceiling leaves no room to stand");
             Assert.That(
                 GameBootstrap.PlayerRadius + MantleSmokeStep.StandOff,
-                Is.LessThanOrEqualTo(VaultProbe.MaxReach),
+                Is.LessThanOrEqualTo(MotorSpec.DefaultVaultReach),
                 "the smoke stands within reach of the ledges");
         }
 

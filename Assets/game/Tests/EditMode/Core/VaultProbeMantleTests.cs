@@ -27,7 +27,7 @@ namespace Fps.Core.Tests
 
         private static VaultProbeResult Evaluate(VaultObstacleSample sample, Func<VaultPath, bool> isPathClear = null, Vector3? facing = null)
         {
-            return VaultProbe.EvaluateMantle(sample, facing ?? _facing, _vaultMax, _mantleMax, _radius, _speed, isPathClear ?? (_ => true));
+            return VaultProbe.EvaluateMantle(sample, facing ?? _facing, MotorSpec.Default, _radius, isPathClear ?? (_ => true));
         }
 
         [Test]
@@ -112,7 +112,7 @@ namespace Fps.Core.Tests
         public void TheShapeIsCheckedLikeTheVault()
         {
             Assert.That(Evaluate(VaultObstacleSample.None).Verdict, Is.EqualTo(VaultVerdict.NoObstacle));
-            Assert.That(Evaluate(Ledge(1.8f, distance: VaultProbe.MaxReach + 0.1f)).Verdict, Is.EqualTo(VaultVerdict.TooFar));
+            Assert.That(Evaluate(Ledge(1.8f, distance: MotorSpec.DefaultVaultReach + 0.1f)).Verdict, Is.EqualTo(VaultVerdict.TooFar));
             Assert.That(
                 Evaluate(new VaultObstacleSample(_distance, Vector3.UnitY, 1.8f, float.PositiveInfinity)).Verdict,
                 Is.EqualTo(VaultVerdict.NotAWall));
@@ -155,18 +155,15 @@ namespace Fps.Core.Tests
             Func<VaultPath, bool> clear = _ => true;
             var ledge = Ledge(1.8f);
 
-            Assert.Throws<ArgumentNullException>(() => VaultProbe.EvaluateMantle(ledge, _facing, _vaultMax, _mantleMax, _radius, _speed, null));
+            Assert.Throws<ArgumentNullException>(() => VaultProbe.EvaluateMantle(ledge, _facing, MotorSpec.Default, _radius, null));
+            Assert.Throws<ArgumentNullException>(() => VaultProbe.EvaluateMantle(ledge, _facing, null, _radius, clear));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => VaultProbe.EvaluateMantle(ledge, new Vector3(float.NaN, 0f, 1f), _vaultMax, _mantleMax, _radius, _speed, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.EvaluateMantle(ledge, _facing, -1f, _mantleMax, _radius, _speed, clear));
+                () => VaultProbe.EvaluateMantle(ledge, new Vector3(float.NaN, 0f, 1f), MotorSpec.Default, _radius, clear));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.EvaluateMantle(ledge, _facing, MotorSpec.Default, -0.1f, clear));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => VaultProbe.EvaluateMantle(ledge, _facing, _vaultMax, float.PositiveInfinity, _radius, _speed, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.EvaluateMantle(ledge, _facing, _vaultMax, _mantleMax, -0.1f, _speed, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.EvaluateMantle(ledge, _facing, _vaultMax, _mantleMax, _radius, 0f, clear));
+                () => VaultProbe.EvaluateMantle(Ledge(float.NaN), _facing, MotorSpec.Default, _radius, clear));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => VaultProbe.EvaluateMantle(Ledge(float.NaN), _facing, _vaultMax, _mantleMax, _radius, _speed, clear));
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => VaultProbe.EvaluateMantle(Ledge(1.8f, -1f), _facing, _vaultMax, _mantleMax, _radius, _speed, clear));
+                () => VaultProbe.EvaluateMantle(Ledge(1.8f, -1f), _facing, MotorSpec.Default, _radius, clear));
 
             Assert.Throws<ArgumentException>(() => VaultProbe.PlanMantlePath(Vector3.UnitY, _distance, 1.8f, _radius, _speed));
             Assert.Throws<ArgumentOutOfRangeException>(() => VaultProbe.PlanMantlePath(_facing, -1f, 1.8f, _radius, _speed));

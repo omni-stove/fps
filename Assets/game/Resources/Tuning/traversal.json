@@ -1,0 +1,22 @@
+{
+  "slide": {
+    "startSpeed": 11,
+    "deceleration": 8,
+    "endSpeed": 3,
+    "minSeconds": 0.4,
+    "maxSeconds": 3,
+    "slopeAcceleration": 20
+  },
+  "parachute": {
+    "minOpenHeight": 6,
+    "descentSpeed": 4,
+    "horizontalSpeed": 6,
+    "steerAcceleration": 8
+  },
+  "zipline": {
+    "grabRadius": 1.5,
+    "hangOffset": 1.3,
+    "regrabSeconds": 0.5,
+    "spreadMoveFraction": 1
+  }
+}

@@ -6,22 +6,14 @@ namespace Fps.Core
     /// <summary>
     /// 乗り越え (<see cref="Vault.On"/>) の判定。物理で調べた前方の障害物 (<see cref="VaultObstacleSample"/>) の高さと奥行きから、
     /// 乗り越えられるか (<see cref="MotorSpec.VaultMaxHeight"/> 以下で、向こう側に立てる) と、その軌跡 (<see cref="VaultPath"/>) を決める。
+    /// 届く距離・向きの角度・最低の高さ・奥行きの上限・速さは <see cref="MotorSpec"/> の Vault* の値を使う。
     /// 軌跡は、障害物の手前へ寄りながら上端より <see cref="Clearance"/> 上まで上がり、向こう側の面から体の半径 + <see cref="WallGap"/> 先まで水平に越え、
     /// 足元の高さまで下りる。座標は Y が上、変位は始めたときの足元から。
-    /// <see cref="MaxDepth"/> より厚く、上に体が立てる (<see cref="MantleFootingDepth"/> 以上の) 台なら、越えずに上に乗る軌跡 (<see cref="PlanMantlePath"/>) にする。
+    /// <see cref="MotorSpec.VaultMaxDepth"/> より厚く、上に体が立てる (<see cref="MantleFootingDepth"/> 以上の) 台なら、越えずに上に乗る軌跡 (<see cref="PlanMantlePath"/>) にする。
     /// </summary>
     public static partial class VaultProbe
     {
-        /// <summary>乗り越えられる、体の中心から手前の面までの水平距離の上限 (m)。</summary>
-        public const float MaxReach = 1.0f;
-
-        /// <summary>向いている方向と障害物へ向かう方向 (法線の逆) のなす角の上限 (度)。</summary>
-        public const float MaxAngleDegrees = 45f;
-
-        /// <summary>上端がこの高さ (足元から、m) 未満の障害物は段差として扱い、乗り越えない。</summary>
-        public const float MinHeight = 0.3f;
-
-        /// <summary>前方の障害物を探す Ray の、いちばん低いものの足元からの高さ (m)。<see cref="MinHeight"/> より上で、低い障害物にも当たる高さ。</summary>
+        /// <summary>前方の障害物を探す Ray の、いちばん低いものの足元からの高さ (m)。既定の <see cref="MotorSpec.DefaultVaultMinHeight"/> より上で、低い障害物にも当たる高さ。</summary>
         public const float LowestProbeHeight = 0.35f;
 
         /// <summary>
@@ -48,9 +40,6 @@ namespace Fps.Core
         /// <summary><see cref="FaceWidthProbeCount"/> の上限。</summary>
         public const int MaxFaceWidthProbes = 32;
 
-        /// <summary>乗り越えられる奥行きの上限 (m)。これより厚い物は台で、向こう側へ降りられないとみなす。</summary>
-        public const float MaxDepth = 1.0f;
-
         /// <summary>越えるときの、足元と障害物の上端の隙間 (m)。</summary>
         public const float Clearance = 0.15f;
 
@@ -60,31 +49,28 @@ namespace Fps.Core
         /// </summary>
         public const float WallGap = 0.1f;
 
-        /// <summary>軌跡をたどる速さ (m/s)。体の半径 0.5 m で、0.8 m 先の高さ 1 m・厚さ 0.4 m の壁を越えるのに約 0.65 秒。</summary>
-        public const float Speed = 6f;
-
         // 角度と距離の境界ちょうどを float の丸めで落とさないための余裕。
         private const float _boundaryEpsilon = 1e-4f;
 
         /// <summary>
-        /// sample を判定する。facing は向いている方向 (上下の成分は無視する)、maxHeight は <see cref="MotorSpec.VaultMaxHeight"/>。
+        /// sample を判定する。facing は向いている方向 (上下の成分は無視する)、spec は高さの上限・届く距離・角度・最低の高さ・奥行き・速さを読む移動の設定。
         /// 形が乗り越えられるものなら <see cref="PlanPath"/> で軌跡を作り、isPathClear (物理で軌跡の上を体が通れるか) が false なら
         /// <see cref="VaultVerdict.Blocked"/> にする。理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・NarrowFace・TooDeep・Blocked の順に調べ、最初に当たったものを返す。
         /// 厚い台の上に乗れるときも <see cref="VaultVerdict.Vault"/> を返し、軌跡は台の上で終わる。
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">sample・facing・maxHeight・bodyRadius の値が不正なとき。</exception>
-        /// <exception cref="ArgumentNullException">isPathClear が null のとき。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">sample・facing・bodyRadius の値が不正なとき。</exception>
+        /// <exception cref="ArgumentNullException">spec か isPathClear が null のとき。</exception>
         public static VaultProbeResult Evaluate(
-            VaultObstacleSample sample, Vector3 facing, float maxHeight, float bodyRadius, Func<VaultPath, bool> isPathClear)
+            VaultObstacleSample sample, Vector3 facing, MotorSpec spec, float bodyRadius, Func<VaultPath, bool> isPathClear)
         {
             if (!IsFinite(facing))
             {
                 throw new ArgumentOutOfRangeException(nameof(facing), facing, "facing must be finite");
             }
 
-            if (!(maxHeight >= 0f) || float.IsInfinity(maxHeight))
+            if (spec == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(maxHeight), maxHeight, "maxHeight must be finite and not negative");
+                throw new ArgumentNullException(nameof(spec));
             }
 
             ValidateRadius(bodyRadius);
@@ -101,12 +87,12 @@ namespace Fps.Core
             ValidateSample(sample);
             var height = sample.TopHeight;
             var depth = sample.Depth;
-            if (!TryReachWall(sample, out var into, out var rejected))
+            if (!TryReachWall(sample, spec.VaultReach, out var into, out var rejected))
             {
                 return new VaultProbeResult(rejected, height, depth, Vector3.Zero, null);
             }
 
-            var verdict = Classify(into, facing, height, depth, maxHeight, sample.Width, bodyRadius);
+            var verdict = Classify(into, facing, height, depth, spec, sample.Width, bodyRadius);
             var onto = verdict == VaultVerdict.TooDeep && depth >= MantleFootingDepth(bodyRadius) - _boundaryEpsilon;
             if (verdict != VaultVerdict.Vault && !onto)
             {
@@ -115,19 +101,19 @@ namespace Fps.Core
 
             // 崖のぼりは乗り越えられる高さを受け持たないので、ここで乗せないと、ジャンプの無いルールでは腰の高さの台に上がれない
             var path = onto
-                ? PlanMantlePath(into, sample.Distance, height, bodyRadius, Speed)
-                : PlanPath(into, sample.Distance, height, depth, bodyRadius);
+                ? PlanMantlePath(into, sample.Distance, height, bodyRadius, spec.VaultSpeed)
+                : PlanPath(into, sample.Distance, height, depth, bodyRadius, spec.VaultSpeed);
             verdict = isPathClear(path) ? VaultVerdict.Vault : VaultVerdict.Blocked;
             return new VaultProbeResult(verdict, height, depth, into, path);
         }
 
         /// <summary>
         /// direction (障害物へ向かう水平の向き) にある、手前の面まで distance・上端 topHeight・奥行き depth の障害物を、
-        /// 半径 bodyRadius の体で越える軌跡を作る。頂点は始点・上がりきった所・越えきった所・降りきった所の 4 つ。
+        /// 半径 bodyRadius の体で越える軌跡を作る。頂点は始点・上がりきった所・越えきった所・降りきった所の 4 つで、speed (<see cref="MotorSpec.VaultSpeed"/>) でたどる。
         /// </summary>
         /// <exception cref="ArgumentException">direction に水平の成分が無いとき。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">距離・高さ・奥行き・半径が負か有限でないとき。</exception>
-        public static VaultPath PlanPath(Vector3 direction, float distance, float topHeight, float depth, float bodyRadius)
+        /// <exception cref="ArgumentOutOfRangeException">距離・高さ・奥行き・半径が負か有限でない、または speed が正の有限値でないとき。</exception>
+        public static VaultPath PlanPath(Vector3 direction, float distance, float topHeight, float depth, float bodyRadius, float speed)
         {
             var into = CoverProbe.Horizontal(direction);
             if (!IsFinite(direction) || into == Vector3.Zero)
@@ -139,6 +125,7 @@ namespace Fps.Core
             ValidateLength(topHeight, nameof(topHeight));
             ValidateLength(depth, nameof(depth));
             ValidateRadius(bodyRadius);
+            ValidateSpeed(speed);
 
             // 手前へ寄るのは体の表面が面の WallGap 手前に来るまで。すでにそれより近ければ寄らずに真上へ上がる。
             var approach = Math.Max(0f, distance - bodyRadius - WallGap);
@@ -151,7 +138,7 @@ namespace Fps.Core
                 (into * landing) + up,
                 into * landing,
             };
-            return new VaultPath(points, Speed);
+            return new VaultPath(points, speed);
         }
 
         /// <summary>
@@ -305,19 +292,19 @@ namespace Fps.Core
         public delegate bool FaceRaycast(Vector3 origin, Vector3 direction, float maxDistance, out Vector3 normal, out float distance);
 
         private static VaultVerdict Classify(
-            Vector3 into, Vector3 facing, float height, float depth, float maxHeight, float width, float bodyRadius)
+            Vector3 into, Vector3 facing, float height, float depth, MotorSpec spec, float width, float bodyRadius)
         {
-            if (!Faces(facing, into))
+            if (!Faces(facing, into, spec.VaultMaxAngleDegrees))
             {
                 return VaultVerdict.NotFacing;
             }
 
-            if (height < MinHeight)
+            if (height < spec.VaultMinHeight)
             {
                 return VaultVerdict.TooLow;
             }
 
-            if (height > maxHeight + _boundaryEpsilon)
+            if (height > spec.VaultMaxHeight + _boundaryEpsilon)
             {
                 return VaultVerdict.TooHigh;
             }
@@ -327,7 +314,7 @@ namespace Fps.Core
                 return VaultVerdict.NarrowFace;
             }
 
-            return depth > MaxDepth + _boundaryEpsilon ? VaultVerdict.TooDeep : VaultVerdict.Vault;
+            return depth > spec.VaultMaxDepth + _boundaryEpsilon ? VaultVerdict.TooDeep : VaultVerdict.Vault;
         }
 
         private static void ValidateSample(VaultObstacleSample sample)
@@ -348,10 +335,10 @@ namespace Fps.Core
             }
         }
 
-        private static bool TryReachWall(VaultObstacleSample sample, out Vector3 into, out VaultVerdict rejected)
+        private static bool TryReachWall(VaultObstacleSample sample, float reach, out Vector3 into, out VaultVerdict rejected)
         {
             into = Vector3.Zero;
-            if (sample.Distance > MaxReach + _boundaryEpsilon)
+            if (sample.Distance > reach + _boundaryEpsilon)
             {
                 rejected = VaultVerdict.TooFar;
                 return false;
@@ -369,7 +356,7 @@ namespace Fps.Core
             return true;
         }
 
-        private static bool Faces(Vector3 facing, Vector3 into)
+        private static bool Faces(Vector3 facing, Vector3 into, float maxAngleDegrees)
         {
             var forward = CoverProbe.Horizontal(facing);
             if (forward == Vector3.Zero)
@@ -377,7 +364,7 @@ namespace Fps.Core
                 return false;
             }
 
-            var limit = (float)Math.Cos(MaxAngleDegrees * Math.PI / 180.0);
+            var limit = (float)Math.Cos(maxAngleDegrees * Math.PI / 180.0);
             return Vector3.Dot(forward, into) >= limit - _boundaryEpsilon;
         }
 

@@ -17,28 +17,27 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// 崖のぼり (<see cref="Mantle.On"/>) の判定。sample の上端が minHeight (<see cref="MotorSpec.VaultMaxHeight"/>、これ以下は乗り越えの受け持ち) より高く
-        /// maxHeight (<see cref="MotorSpec.MantleMaxHeight"/>) 以下で、縁の奥行きが <see cref="MantleFootingDepth"/> 以上なら <see cref="PlanMantlePath"/> で軌跡を作り、
+        /// 崖のぼり (<see cref="Mantle.On"/>) の判定。sample の上端が <see cref="MotorSpec.VaultMaxHeight"/> (これ以下は乗り越えの受け持ち) より高く
+        /// <see cref="MotorSpec.MantleMaxHeight"/> 以下で、縁の奥行きが <see cref="MantleFootingDepth"/> 以上なら <see cref="PlanMantlePath"/> で軌跡を作り、
         /// isPathClear (物理で軌跡の上を体が通れるか) が false なら <see cref="VaultVerdict.Blocked"/> にする (上がる間の頭上か、縁の上が塞がっている)。
         /// 理由は TooFar・NotAWall・NotFacing・TooLow・TooHigh・NarrowFace・TooNarrow・Blocked の順に調べ、最初に当たったものを返す。通れば <see cref="VaultVerdict.Mantle"/>。
         /// sample の Depth は、手前の面から <see cref="MantleFootingDepth"/> より先まで測ったもの (それより厚ければ無限大でよい)。
         /// </summary>
         /// <param name="sample">前方への Ray で測った段の標本。</param>
         /// <param name="facing">向いている向き。</param>
-        /// <param name="minHeight">これ以下の高さは乗り越えの受け持ちで、崖のぼりは TooLow にする。</param>
-        /// <param name="maxHeight">これより高い段には登らない。</param>
+        /// <param name="spec">
+        /// 高さの下限 (<see cref="MotorSpec.VaultMaxHeight"/>)・上限 (<see cref="MotorSpec.MantleMaxHeight"/>)・速さ (<see cref="MotorSpec.MantleSpeed"/>)・
+        /// 届く距離 (<see cref="MotorSpec.VaultReach"/>)・向きの角度 (<see cref="MotorSpec.VaultMaxAngleDegrees"/>) を読む移動の設定。
+        /// </param>
         /// <param name="bodyRadius">体の半径。</param>
         /// <param name="isPathClear">軌跡の上を体が通れるかを物理で調べる関数。</param>
-        /// <param name="speed">軌跡をたどる速さ (<see cref="MotorSpec.MantleSpeed"/>)。</param>
-        /// <exception cref="ArgumentOutOfRangeException">sample・facing・高さ・bodyRadius・speed の値が不正なとき。</exception>
-        /// <exception cref="ArgumentNullException">isPathClear が null のとき。</exception>
+        /// <exception cref="ArgumentOutOfRangeException">sample・facing・bodyRadius の値が不正なとき。</exception>
+        /// <exception cref="ArgumentNullException">spec か isPathClear が null のとき。</exception>
         public static VaultProbeResult EvaluateMantle(
             VaultObstacleSample sample,
             Vector3 facing,
-            float minHeight,
-            float maxHeight,
+            MotorSpec spec,
             float bodyRadius,
-            float speed,
             Func<VaultPath, bool> isPathClear)
         {
             if (!IsFinite(facing))
@@ -46,10 +45,12 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(facing), facing, "facing must be finite");
             }
 
-            ValidateLength(minHeight, nameof(minHeight));
-            ValidateLength(maxHeight, nameof(maxHeight));
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
             ValidateRadius(bodyRadius);
-            ValidateSpeed(speed);
             if (isPathClear == null)
             {
                 throw new ArgumentNullException(nameof(isPathClear));
@@ -63,18 +64,18 @@ namespace Fps.Core
             ValidateSample(sample);
             var height = sample.TopHeight;
             var depth = sample.Depth;
-            if (!TryReachWall(sample, out var into, out var rejected))
+            if (!TryReachWall(sample, spec.VaultReach, out var into, out var rejected))
             {
                 return new VaultProbeResult(rejected, height, depth, Vector3.Zero, null);
             }
 
-            var verdict = ClassifyMantle(into, facing, height, depth, minHeight, maxHeight, bodyRadius, sample.Width);
+            var verdict = ClassifyMantle(into, facing, height, depth, spec, bodyRadius, sample.Width);
             if (verdict != VaultVerdict.Mantle)
             {
                 return new VaultProbeResult(verdict, height, depth, into, null);
             }
 
-            var path = PlanMantlePath(into, sample.Distance, height, bodyRadius, speed);
+            var path = PlanMantlePath(into, sample.Distance, height, bodyRadius, spec.MantleSpeed);
             verdict = isPathClear(path) ? VaultVerdict.Mantle : VaultVerdict.Blocked;
             return new VaultProbeResult(verdict, height, depth, into, path);
         }
@@ -114,20 +115,20 @@ namespace Fps.Core
         }
 
         private static VaultVerdict ClassifyMantle(
-            Vector3 into, Vector3 facing, float height, float depth, float minHeight, float maxHeight, float bodyRadius, float width)
+            Vector3 into, Vector3 facing, float height, float depth, MotorSpec spec, float bodyRadius, float width)
         {
-            if (!Faces(facing, into))
+            if (!Faces(facing, into, spec.VaultMaxAngleDegrees))
             {
                 return VaultVerdict.NotFacing;
             }
 
             // 境界ちょうどの高さは乗り越えの受け持ち (Evaluate は maxHeight + ε まで乗り越える) なので、ここでは低いとみなす。
-            if (height <= minHeight + _boundaryEpsilon)
+            if (height <= spec.VaultMaxHeight + _boundaryEpsilon)
             {
                 return VaultVerdict.TooLow;
             }
 
-            if (height > maxHeight + _boundaryEpsilon)
+            if (height > spec.MantleMaxHeight + _boundaryEpsilon)
             {
                 return VaultVerdict.TooHigh;
             }

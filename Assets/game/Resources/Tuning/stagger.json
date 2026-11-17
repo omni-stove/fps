@@ -1,0 +1,28 @@
+{
+  "player": {
+    "flinchSeconds": 0,
+    "kneelSeconds": 0,
+    "stumbleSeconds": 0.4,
+    "blastSeconds": 0.6,
+    "headDamage": 20,
+    "limbDamage": 8,
+    "meleeDamage": 1,
+    "explosionDamage": 1,
+    "windowSeconds": 1,
+    "immunitySeconds": 1,
+    "moveMultiplier": 0.35,
+    "turnMultiplier": 0.35
+  },
+  "enemy": {
+    "flinchSeconds": 0.5,
+    "kneelSeconds": 1.5,
+    "stumbleSeconds": 1,
+    "blastSeconds": 1,
+    "headDamage": 20,
+    "limbDamage": 8,
+    "meleeDamage": 1,
+    "explosionDamage": 1,
+    "windowSeconds": 1,
+    "immunitySeconds": 2
+  }
+}

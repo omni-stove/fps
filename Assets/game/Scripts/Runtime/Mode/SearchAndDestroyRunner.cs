@@ -20,8 +20,8 @@ namespace Fps.Runtime
     /// bot はその場にいれば長押ししているとみなす。</item>
     /// <item>bot は、爆弾を持てば設置地点 (ラウンドの番号で A, B, ... を順に選ぶ) へ、爆弾が落ちれば攻撃側がそこへ、設置されれば両陣営がそこへ向かうよう
     /// 巡回路 (<see cref="EnemyAgent.SetPatrolRoute"/>) を差し替える。ラウンドの頭でシーンの巡回路に戻す。</item>
-    /// <item>HUD の時計は待ち・ラウンドの残り・起爆までの秒数を、得点の欄はラウンドの勝ち数と役割を、その下に爆弾の様子
-    /// (設置後は「起爆まで n 秒」) を出す (<see cref="SearchAndDestroyText"/>)。ラウンドと爆弾の出来事は <c>[SearchAndDestroy]</c> のログに出す。</item>
+    /// <item>HUD には試合と自分のプレイヤーの ID (<see cref="SearchAndDestroyStatus"/>) を <see cref="ModeStatus.Detail"/> で渡し、何をどう出すかは UI が決める。
+    /// ラウンドと爆弾の出来事は <c>[SearchAndDestroy]</c> のログに出す (<see cref="SearchAndDestroyText"/>)。</item>
     /// <item>どちらかが先取数に届いたら試合を終える (<see cref="ModeRunnerBase.EndMatch"/>)。R で読み直して最初から。</item>
     /// </list>
     /// </remarks>
@@ -75,7 +75,6 @@ namespace Fps.Runtime
         private float _defuseRadius = DefaultDefuseRadius;
 
         private readonly Dictionary<EnemyAgent, Vector3[]> _homeRoutes = new Dictionary<EnemyAgent, Vector3[]>();
-        private readonly List<string> _textLines = new List<string>();
         private SearchAndDestroy _game;
         private BombSite[] _sortedSites = Array.Empty<BombSite>();
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -321,16 +320,7 @@ namespace Fps.Runtime
             UpdateObjectiveInput();
         }
 
-        protected override LocalizedText HudTime(ModeSession session) => SearchAndDestroyText.Clock(_game);
-
-        protected override IReadOnlyList<ModeHudScoreLine> HudScores(ModeSession session, Side? ownSide) => SearchAndDestroyText.Scores(_game, ownSide);
-
-        protected override LocalizedText HudResult(ModeSession session) => SearchAndDestroyText.Result(_game);
-
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            lines.AddRange(SearchAndDestroyText.Lines(_game, LocalPlayer != null ? LocalPlayerId : (int?)null));
-        }
+        protected override object HudDetail => _game != null ? new SearchAndDestroyStatus(_game, LocalPlayer != null ? LocalPlayerId : (int?)null) : null;
 
         protected override void OnStop()
         {

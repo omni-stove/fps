@@ -287,7 +287,20 @@ namespace Shooter.Runtime
             _inputRow.style.display = DisplayStyle.Flex;
             RefreshFade();
             RefreshDisplay();
-            _field.Focus();
+            var field = _field;
+            field.Focus();
+
+            // 表示を変えた直後は配置が終わっておらず Focus が効かないことがあるので、次の更新でもう一度置く
+            if (field.panel != null && field.focusController?.focusedElement != field)
+            {
+                field.schedule.Execute(() =>
+                {
+                    if (this != null && _state.IsOpen && _field == field)
+                    {
+                        field.Focus();
+                    }
+                });
+            }
 
             Debug.Log($"{LogTag} opened channel={channel} suspended={_state.SuspendedActions.Count}", this);
             return true;

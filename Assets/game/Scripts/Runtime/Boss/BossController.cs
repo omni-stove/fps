@@ -13,9 +13,13 @@ namespace Fps.Runtime
     public sealed class BossController : MonoBehaviour
     {
         public const string LogTag = "[Boss]";
+        public const string DefaultPhaseId = "Phase1";
+
+        [SerializeField, Tooltip("ボスの調整値。入れると初期化のときに下の段階と部位の倍率をこれで置き換える。空なら下の値を使う")]
+        private BossDefinition _definition;
 
         [SerializeField, Tooltip("段階。上から順に進む。最初の段階は始めから入っている")]
-        private BossPhaseEntry[] _phases = { new BossPhaseEntry("Phase1", 1f, 1f, Array.Empty<string>()) };
+        private BossPhaseEntry[] _phases = DefaultPhases();
 
         [Header("Zone multipliers")]
         [SerializeField, Min(0f)]
@@ -55,6 +59,55 @@ namespace Fps.Runtime
 
         public IReadOnlyList<BossPhaseEntry> PhaseEntries => _phases;
 
+        // 初期化の後に入れ替えると、その場で段階と部位の倍率を定義の値にし、今の体力で最初の段階から当て直す。
+        // 定義が不正なら何も変えずに例外を投げる。
+        public BossDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                if (ReferenceEquals(_definition, value))
+                {
+                    return;
+                }
+
+                if (value != null && _state != null)
+                {
+                    var phases = value.CreatePhases();
+                    var multipliers = value.CreateZoneMultipliers();
+                    Configure(value.Phases, multipliers);
+                    _definition = value;
+                    _self.ZoneMultipliers = multipliers;
+                    UsePhases(phases);
+                    return;
+                }
+
+                _definition = value;
+            }
+        }
+
+        public static BossPhaseEntry[] DefaultPhases()
+        {
+            return new[] { new BossPhaseEntry(DefaultPhaseId, 1f, 1f, Array.Empty<string>()) };
+        }
+
+        public static BossPhases CreatePhases(IReadOnlyList<BossPhaseEntry> entries)
+        {
+            if (entries == null || entries.Count == 0)
+            {
+                throw new ArgumentException("a boss needs at least one phase entry");
+            }
+
+            var phases = new BossPhase[entries.Count];
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i] ?? throw new ArgumentException("phase entry " + i + " is null");
+                phases[i] = entry.ToPhase(i == 0);
+            }
+
+            return new BossPhases(phases);
+        }
+
         public ZoneDamageMultipliers CreateZoneMultipliers()
         {
             return new ZoneDamageMultipliers(_headMultiplier, _bodyMultiplier, _limbMultiplier, _weakPointMultiplier);
@@ -62,19 +115,7 @@ namespace Fps.Runtime
 
         public BossPhases CreatePhases()
         {
-            if (_phases == null || _phases.Length == 0)
-            {
-                throw new ArgumentException("a boss needs at least one phase entry");
-            }
-
-            var phases = new BossPhase[_phases.Length];
-            for (var i = 0; i < _phases.Length; i++)
-            {
-                var entry = _phases[i] ?? throw new ArgumentException("phase entry " + i + " is null");
-                phases[i] = entry.ToPhase(i == 0);
-            }
-
-            return new BossPhases(phases);
+            return CreatePhases(_phases);
         }
 
         public void Configure(IReadOnlyList<BossPhaseEntry> phases, ZoneDamageMultipliers multipliers)
@@ -131,12 +172,18 @@ namespace Fps.Runtime
             ZoneDamageMultipliers multipliers;
             try
             {
+                if (_definition != null)
+                {
+                    Configure(_definition.Phases, _definition.CreateZoneMultipliers());
+                }
+
                 phases = CreatePhases();
                 multipliers = CreateZoneMultipliers();
             }
-            catch (ArgumentException e)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
             {
-                Debug.LogError($"{LogTag} id={Id} の設定が不正です: {e.Message}", this);
+                var source = _definition != null ? $" (定義 '{_definition.name}')" : string.Empty;
+                Debug.LogError($"{LogTag} id={Id} の設定が不正です{source}: {e.Message}", this);
                 return false;
             }
 
@@ -156,13 +203,19 @@ namespace Fps.Runtime
 
             if (_self == null)
             {
-                _self = GetComponent<Damageable>();
-                if (_self == null)
+                var self = GetComponent<Damageable>();
+                if (self == null)
                 {
                     throw new InvalidOperationException($"BossController '{name}' needs a Damageable");
                 }
 
-                _self.ZoneMultipliers = CreateZoneMultipliers();
+                if (_definition != null)
+                {
+                    Configure(_definition.Phases, _definition.CreateZoneMultipliers());
+                }
+
+                self.ZoneMultipliers = CreateZoneMultipliers();
+                _self = self;
             }
 
             Begin(phases);

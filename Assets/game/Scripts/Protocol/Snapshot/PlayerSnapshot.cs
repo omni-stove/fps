@@ -47,6 +47,8 @@ namespace Fps.Protocol
 
         public DownedSync Downed { get; set; }
 
+        public VehicleSeatSync Vehicle { get; set; }
+
         /// <summary>持っている武器の Id。持っていなければ空。</summary>
         public string WeaponId { get; set; }
 
@@ -151,6 +153,11 @@ namespace Fps.Protocol
                 bits |= PlayerFields.SpawnProtection;
             }
 
+            if (!Vehicle.SameAs(baseline.Vehicle))
+            {
+                bits |= PlayerFields.Vehicle;
+            }
+
             return (int)bits;
         }
 
@@ -235,6 +242,11 @@ namespace Fps.Protocol
             if ((fields & PlayerFields.Ladder) != 0)
             {
                 WriteLadder(writer, Ladder);
+            }
+
+            if ((fields & PlayerFields.Vehicle) != 0)
+            {
+                Vehicle.Write(writer);
             }
         }
 
@@ -323,6 +335,11 @@ namespace Fps.Protocol
             {
                 Ladder = ReadLadder(reader);
             }
+
+            if ((fields & PlayerFields.Vehicle) != 0)
+            {
+                Vehicle = VehicleSeatSync.Read(reader);
+            }
         }
 
         public void FillFrom(in PlayerSnapshot baseline)
@@ -397,6 +414,11 @@ namespace Fps.Protocol
             if ((missing & PlayerFields.Ladder) != 0)
             {
                 Ladder = baseline.Ladder;
+            }
+
+            if ((missing & PlayerFields.Vehicle) != 0)
+            {
+                Vehicle = baseline.Vehicle;
             }
 
             Present = PlayerFields.All;

@@ -37,18 +37,19 @@ namespace Fps.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsAntiCheatMovementRulesCombatBotsAndSnapshots()
+        public void WithoutRegisterLobbyAddsAntiCheatMovementRulesVehiclesCombatBotsAndSnapshots()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(7));
+            Assert.That(_modules, Has.Count.EqualTo(8));
             Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
             Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
             Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
             Assert.That(_modules[2], Is.InstanceOf<MatchRulesModule>());
-            Assert.That(_modules[3], Is.InstanceOf<ServerCombat>());
-            Assert.That(_modules[4], Is.InstanceOf<ServerInventories>());
-            Assert.That(_modules[5], Is.InstanceOf<ServerBots>());
-            Assert.That(_modules[6], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[3], Is.InstanceOf<ServerVehicles>());
+            Assert.That(_modules[4], Is.InstanceOf<ServerCombat>());
+            Assert.That(_modules[5], Is.InstanceOf<ServerInventories>());
+            Assert.That(_modules[6], Is.InstanceOf<ServerBots>());
+            Assert.That(_modules[7], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]

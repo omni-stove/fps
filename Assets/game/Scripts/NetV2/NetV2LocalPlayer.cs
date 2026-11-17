@@ -66,6 +66,12 @@ namespace Fps.NetV2
         private InputAction _switchAmmoType;
         [NonSerialized]
         private InputAction _switchGrenade;
+        [NonSerialized]
+        private InputAction _interact;
+        [NonSerialized]
+        private InputAction _nextSeat;
+        [NonSerialized]
+        private InputAction _previousSeat;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private ControlSettings _controlSettings = ControlSettings.Default;
@@ -84,6 +90,9 @@ namespace Fps.NetV2
         private bool _proneLatched;
         private bool _switchAmmoTypeLatched;
         private bool _switchGrenadeLatched;
+        private bool _interactLatched;
+        private bool _nextSeatLatched;
+        private bool _previousSeatLatched;
 
         public Camera Camera => _camera;
 
@@ -229,6 +238,25 @@ namespace Fps.NetV2
 
         public bool TakeSwitchGrenade() => Take(ref _switchGrenadeLatched);
 
+        public bool TakeInteract() => Take(ref _interactLatched);
+
+        public bool TakeNextSeat() => Take(ref _nextSeatLatched);
+
+        public bool TakePreviousSeat() => Take(ref _previousSeatLatched);
+
+        public void ReadDrive(out Vector2 move, out bool boost, out float vertical)
+        {
+            var paused = GameUi.IsPauseOpen;
+            move = paused || _move == null ? Vector2.zero : Vector2.ClampMagnitude(_move.ReadValue<Vector2>(), 1f);
+            boost = !paused && _sprint != null && _sprint.IsPressed();
+            vertical = paused ? 0f : (_jump != null && _jump.IsPressed() ? 1f : 0f) - (_crouch != null && _crouch.IsPressed() ? 1f : 0f);
+        }
+
+        public void ShowSeated(Vector3 origin, bool crouched)
+        {
+            Show(new CharacterMotorState(NetV2Math.ToNumerics(origin), System.Numerics.Vector3.Zero, true, crouched));
+        }
+
         /// <summary>撃ったときにダッシュを解く (Netcode のクライアントと同じ)。reason はログに出す理由。</summary>
         public void ReleaseSprint(string reason)
         {
@@ -268,6 +296,9 @@ namespace Fps.NetV2
             _prone = Find(actions, InputActionPaths.Prone);
             _switchAmmoType = Find(actions, _switchAmmoTypePath, false);
             _switchGrenade = Find(actions, InputActionPaths.SwitchGrenade, false);
+            _interact = Find(actions, InputActionPaths.Interact, false);
+            _nextSeat = Find(actions, InputActionPaths.Next, false);
+            _previousSeat = Find(actions, InputActionPaths.Previous, false);
         }
 
         private void OnDestroy()
@@ -306,6 +337,9 @@ namespace Fps.NetV2
             _proneLatched |= Pressed(_prone);
             _switchAmmoTypeLatched |= Pressed(_switchAmmoType);
             _switchGrenadeLatched |= Pressed(_switchGrenade);
+            _interactLatched |= Pressed(_interact);
+            _nextSeatLatched |= Pressed(_nextSeat);
+            _previousSeatLatched |= Pressed(_previousSeat);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

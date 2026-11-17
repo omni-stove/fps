@@ -24,9 +24,11 @@ namespace Fps.Server
         private readonly IWorldCollision _world;
         private readonly LagCompensator _lag;
         private readonly List<int> _ids = new List<int>();
+        private readonly ServerVehicles _vehicles;
 
-        public ServerHitboxes(ServerBodies bodies, IWorldCollision world, LagCompensator lag = null)
+        public ServerHitboxes(ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null)
         {
+            _vehicles = vehicles;
             _bodies = bodies ?? throw new ArgumentNullException(nameof(bodies));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _lag = lag ?? new LagCompensator();
@@ -182,6 +184,7 @@ namespace Fps.Server
             }
 
             var clamped = _lag.ClampTick(tick, LastRecordedTick);
+            found |= NearerVehicle(origin, unit, found ? hit.Distance : range, clamped, shooterId, ref hit);
             var rewound = _lag.Rewind(clamped);
             var crouched = _lag.RewindCrouched(clamped);
             _ids.Clear();
@@ -220,6 +223,19 @@ namespace Fps.Server
 
             hit = hit.WithRewind(LastRecordedTick - clamped);
             return found;
+        }
+
+        // 車体は人より手前で弾を止めるので、人の当たりより先に、世界の当たりと比べて近い方を残す。
+        private bool NearerVehicle(Vector3 origin, Vector3 unit, float limit, float tick, int shooterId, ref ShotHit hit)
+        {
+            if (_vehicles == null
+                || !_vehicles.Raycast(origin, unit, limit, tick, shooterId, out var vehicle, out var distance, out var normal, out var multiplier))
+            {
+                return false;
+            }
+
+            hit = ShotHit.Vehicle(origin + (unit * distance), normal, distance, vehicle, multiplier);
+            return true;
         }
 
         private static HitZone Zone(float hitY, float bottom, float height)
@@ -335,8 +351,10 @@ namespace Fps.Server
     {
         private ShotHit(
             Vector3 point, Vector3 normal, float distance, bool hitTarget, int targetId, Vector3 targetPosition, bool targetCrouched,
-            HitZone zone, int colliderId, int layer, float rewindTicks)
+            HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f)
         {
+            VehicleIndex = vehicle;
+            DamageMultiplier = damageMultiplier;
             Point = point;
             Normal = normal;
             Distance = distance;
@@ -375,6 +393,12 @@ namespace Fps.Server
         /// <summary>巻き戻した tick 数 (記録した最新の tick − 判定に使った tick)。</summary>
         public float RewindTicks { get; }
 
+        public int VehicleIndex { get; }
+
+        public bool HitVehicle => VehicleIndex >= 0;
+
+        public float DamageMultiplier { get; }
+
         public static ShotHit World(WorldHit hit)
         {
             return new ShotHit(hit.Point, hit.Normal, hit.Distance, false, 0, default, false, HitZone.Body, hit.ColliderId, hit.Layer, 0f);
@@ -386,10 +410,16 @@ namespace Fps.Server
             return new ShotHit(point, normal, distance, true, targetId, targetPosition, crouched, zone, -1, 0, 0f);
         }
 
+        public static ShotHit Vehicle(Vector3 point, Vector3 normal, float distance, int vehicle, float damageMultiplier)
+        {
+            return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, vehicle, damageMultiplier);
+        }
+
         public ShotHit WithRewind(float rewindTicks)
         {
             return new ShotHit(
-                Point, Normal, Distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, rewindTicks);
+                Point, Normal, Distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, rewindTicks, VehicleIndex,
+                DamageMultiplier);
         }
     }
 }

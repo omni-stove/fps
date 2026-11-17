@@ -26,6 +26,7 @@ namespace Fps.Protocol
         Prone = 1 << 10,
         /// <summary>はしごの上り下りと、次につかまれるまでの待ち。</summary>
         Ladder = 1 << 11,
-        All = (1 << 12) - 1,
+        Vehicle = 1 << 12,
+        All = (1 << 13) - 1,
     }
 }

@@ -22,6 +22,8 @@ namespace Fps.Protocol
                 new PingRequestMessage(),
                 new ReviveRequestMessage(),
                 new InventoryRequestMessage(),
+                new VehicleRequestMessage(),
+                new VehicleMoveMessage(),
             };
         }
 
@@ -56,6 +58,7 @@ namespace Fps.Protocol
                 new StatusEffectMessage(),
                 new AreaEffectMessage(),
                 new InventoryStateMessage(),
+                new VehicleCorrectedMessage(),
             };
         }
 

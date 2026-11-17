@@ -77,6 +77,7 @@ namespace Fps.NetV2
         private GrenadeCarrier _grenadeCarrier;
         private float _ownYaw;
         private NetV2Structures _structures;
+        private NetV2Vehicles _vehicles;
         private ClientWeaponHooks _weaponHooks;
         private ClientTrigger _heldContinuous;
         private string _heldContinuousWeaponId;
@@ -256,6 +257,7 @@ namespace Fps.NetV2
             }
 
             _structures = new NetV2Structures(this);
+            _vehicles = new NetV2Vehicles(this);
             _weaponHooks = new ClientWeaponHooks(_weapons.SpecFor);
             _weaponHooks.StatusEffects.Started += ShowStatusEffect;
             _weaponHooks.StatusEffects.Ended += HideStatusEffect;
@@ -480,6 +482,7 @@ namespace Fps.NetV2
             _match.LadderGrabbed += HandleLadderGrabbed;
             var scene = SceneManager.GetActiveScene();
             _structures.Enter(scene, _world);
+            _vehicles.Enter(scene, _match.Vehicles, _client.Motor.Stance, _weapons);
             CollectControlPoints(scene);
             _remoteRoot = new GameObject("NetV2Players").transform;
             foreach (var id in _match.RemotePlayerIds)
@@ -531,7 +534,21 @@ namespace Fps.NetV2
             }
 
             _match.SendInput();
-            _local.Show(_match.LocalState);
+            _vehicles.Show(_match.Interpolation.RenderTick, _local);
+            if (ticks > 0)
+            {
+                _vehicles.SendMove(_client);
+            }
+
+            // 座席にいる間の位置は乗り物の動きで決まるので、予測ではなく見せている乗り物の座席に置く
+            if (_vehicles.TrySeatOrigin(out var seated, out var crouched))
+            {
+                _local.ShowSeated(seated, crouched);
+            }
+            else
+            {
+                _local.Show(_match.LocalState);
+            }
         }
 
         // 誘導の向きを決めるのはサーバーなので、ここでは相手を捉えて HUD と音に出し、撃つときにロックした相手の Id を送るだけにする。
@@ -667,6 +684,10 @@ namespace Fps.NetV2
 
             var direction = NetV2Math.ToNumerics(_local.AimDirection);
             Trigger(direction);
+
+            var state = _match.LocalState;
+            var feet = NetV2Math.ToUnity(state.Position) + (Vector3.up * _client.Motor.Stance.Shape(state.Stance).BottomY);
+            _vehicles.SendRequests(_local, _client, feet);
 
             if (_local.TakeReload())
             {
@@ -1060,6 +1081,9 @@ namespace Fps.NetV2
                 case StructureStateMessage structure:
                     _structures.Receive(structure);
                     break;
+                case VehicleCorrectedMessage corrected:
+                    _match?.Vehicles.Correct(corrected);
+                    break;
                 default:
                     if (!_weaponHooks.Handle(message))
                     {
@@ -1364,6 +1388,7 @@ namespace Fps.NetV2
             _weaponHooks?.AreaEffects.Clear();
             _areaZones.Clear();
             _structures?.Leave();
+            _vehicles?.Leave();
             _weaponHooks?.Projectiles.Detach();
             _weaponHooks?.Beams.Detach();
             _weaponHooks?.Spray.Detach();

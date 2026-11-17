@@ -66,5 +66,9 @@ namespace Fps.Core
         Overheated,
 
         Undercharged,
+
+        SeatCannotFire,
+
+        OutsideSeatArc,
     }
 }

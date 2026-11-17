@@ -23,6 +23,11 @@ namespace Fps.NetV2
             return new UnityEngine.Quaternion(q.X, q.Y, q.Z, q.W);
         }
 
+        public static System.Numerics.Quaternion ToNumerics(UnityEngine.Quaternion q)
+        {
+            return new System.Numerics.Quaternion(q.x, q.y, q.z, q.w);
+        }
+
         /// <summary>yaw (ラジアン) の向きを Unity の回転にする。</summary>
         public static UnityEngine.Quaternion YawRotation(float yaw)
         {

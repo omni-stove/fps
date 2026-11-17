@@ -20,6 +20,8 @@ namespace Fps.Server
         private readonly List<ShotTraceSegment> _segments = new List<ShotTraceSegment>();
         private readonly PelletHits<int> _pelletHits = new PelletHits<int>();
         private bool _collectingPelletHits;
+        // ペレットごとに乗り物のヒットマーカーを出さないよう、1 回の射撃で 1 度だけ送る
+        private bool _vehicleHitConfirmed;
 
         /// <summary>
         /// 射撃 1 発。撃てる状態・武器と連射の間隔・始点を確かめ、弾倉から 1 発消費してから、<see cref="ShotPlanner"/> で弾を並べ、
@@ -51,8 +53,17 @@ namespace Fps.Server
                 return false;
             }
 
-            var spec = shooter.Weapons.CurrentSpec;
-            var weaponCheck = _rules.Loadout.TryFire(shooterId, spec, request.WeaponId, _now);
+            var seatCheck = CheckSeat(shooterId, request, out var weapons, out var spreadMultiplier);
+            if (seatCheck != ShotRejection.None)
+            {
+                WarnRejected(shooterId, seatCheck);
+                return false;
+            }
+
+            var spec = weapons.CurrentSpec;
+            var weaponCheck = weapons == shooter.Weapons
+                ? _rules.Loadout.TryFire(shooterId, spec, request.WeaponId, _now)
+                : CheckMountFire(weapons, spec, request.WeaponId);
             if (weaponCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, weaponCheck);
@@ -81,14 +92,14 @@ namespace Fps.Server
                 return false;
             }
 
-            var chargeCheck = shooter.Weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
+            var chargeCheck = weapons.AcceptCharge(request.ChargeFraction, out var chargeFraction);
             if (chargeCheck != ShotRejection.None)
             {
                 WarnRejected(shooterId, chargeCheck);
                 return false;
             }
 
-            var ammo = shooter.Weapons.TryFire();
+            var ammo = weapons.TryFire();
             if (ammo != ShotRejection.None)
             {
                 WarnRejected(shooterId, ammo);
@@ -99,13 +110,13 @@ namespace Fps.Server
             _rules.NotifyFired(shooterId);
 
             var origin = blind == BlindFireAim.Blind ? blindOrigin : request.Origin;
-            var round = shooter.Weapons.CurrentRound;
-            var plan = PlanShot(shooter, spec, round, request, motion, blind == BlindFireAim.Blind, origin);
+            var round = weapons.CurrentRound;
+            var plan = PlanShot(shooter, spec, round, request, motion, blind == BlindFireAim.Blind, origin, spreadMultiplier);
             var shot = new ServerShot(
                 shooterId,
                 spec,
                 round,
-                shooter.Weapons.CurrentImpact,
+                weapons.CurrentImpact,
                 chargeFraction,
                 request.HasLockTarget ? _lockOn.Resolve(shooterId, round, request) : null,
                 time.ToTick(),
@@ -122,6 +133,7 @@ namespace Fps.Server
         private void Deliver(in ServerShot shot, ShotPlan plan)
         {
             _segments.Clear();
+            _vehicleHitConfirmed = false;
             foreach (var planned in plan.Rounds)
             {
                 switch (shot.Round.Delivery)
@@ -281,6 +293,49 @@ namespace Fps.Server
             return Fire(fighter, _botFire);
         }
 
+        private ShotRejection CheckMountFire(ServerPlayerWeapons mount, WeaponSpec spec, string weaponId)
+        {
+            if (!string.Equals(spec.Id, weaponId, StringComparison.Ordinal))
+            {
+                return ShotRejection.WeaponMismatch;
+            }
+
+            if (!_mountBudgets.TryGetValue(mount, out var budget))
+            {
+                // ビームと火炎の撃ち方は最短の間隔が 0 なので、ServerLoadout と同じく照射の間隔で制限する
+                var round = spec.Round;
+                budget = round.Delivery == RoundDelivery.Beam ? new ShotBudget(round.Beam.TickSeconds)
+                    : round.Delivery == RoundDelivery.Spray ? new ShotBudget(round.Spray.TickSeconds)
+                    : new ShotBudget(TriggerModels.For(spec));
+                _mountBudgets.Add(mount, budget);
+            }
+
+            return budget.TryConsume(_now) ? ShotRejection.None : ShotRejection.FireRateExceeded;
+        }
+
+        private ShotRejection CheckSeat(int shooterId, FireRequestMessage request, out ServerPlayerWeapons weapons, out float spreadMultiplier)
+        {
+            var fighter = _fighters[shooterId];
+            weapons = fighter.Weapons;
+            spreadMultiplier = 1f;
+            if (_vehicles == null || !_vehicles.TryGetSeat(shooterId, out var vehicle, out var seat))
+            {
+                return ShotRejection.None;
+            }
+
+            switch (_vehicles.FiringOf(shooterId, out _, out _, out var weapon))
+            {
+                case VehicleSeatFiring.VehicleWeapon:
+                    weapons = MountWeapons(vehicle, weapon);
+                    return _vehicles.AllowsVehicleWeapon(vehicle, weapon, request.Direction) ? ShotRejection.None : ShotRejection.OutsideSeatArc;
+                case VehicleSeatFiring.OwnWeapon:
+                    spreadMultiplier = _vehicles.MapOf(vehicle).Spec.Seats[seat].OwnWeaponSpreadMultiplier;
+                    return _vehicles.AllowsOwnWeapon(vehicle, seat, request.Direction) ? ShotRejection.None : ShotRejection.OutsideSeatArc;
+                default:
+                    return ShotRejection.SeatCannotFire;
+            }
+        }
+
         /// <summary>
         /// 押している間出続ける届け方の照射 1 回ぶん、shooterId が今も weaponId を構えて撃てるかを確かめ、consume なら弾 (熱) を 1 発使う。
         /// <see cref="Fire"/> の検査を照射のたびに通さないのは、始点・向き・発射番号・連射の枠は押したときの要求にしか無いため。
@@ -294,7 +349,8 @@ namespace Fps.Server
                 return false;
             }
 
-            var spec = fighter.Weapons.CurrentSpec;
+            var weapons = ActiveWeapons(fighter);
+            var spec = weapons.CurrentSpec;
             if (spec == null)
             {
                 rejection = ShotRejection.NoWeapon;
@@ -316,7 +372,7 @@ namespace Fps.Server
 
             if (consume)
             {
-                rejection = fighter.Weapons.TryFire();
+                rejection = weapons.TryFire();
             }
 
             return rejection == ShotRejection.None;
@@ -346,7 +402,14 @@ namespace Fps.Server
         /// 散らばりは武器の値と、サーバーの知る覗き込みと移動の速さで決める (持ち主の予測と同じ計算)。
         /// </summary>
         private ShotPlan PlanShot(
-            Fighter shooter, WeaponSpec spec, RoundSpec round, FireRequestMessage request, CharacterMotorState motion, bool blindFire, Vector3 origin)
+            Fighter shooter,
+            WeaponSpec spec,
+            RoundSpec round,
+            FireRequestMessage request,
+            CharacterMotorState motion,
+            bool blindFire,
+            Vector3 origin,
+            float spreadMultiplier = 1f)
         {
             var shooterId = shooter.PlayerId;
             var numbering = shooter.Shots.Assign(request.ShotIndex, request.ShotGeneration);
@@ -363,7 +426,7 @@ namespace Fps.Server
             var speed = new Vector2(velocity.X, velocity.Z).Length();
             var walk = _movement.Settings.Motor.WalkSpeed;
             var moveFraction = float.IsFinite(speed) && float.IsFinite(walk) ? SpreadPattern.MoveFraction(speed, walk) : 0f;
-            var cone = SpreadPattern.ConeDegrees(spec, _movement.IsAiming(shooterId) ? 1f : 0f, moveFraction);
+            var cone = SpreadPattern.ConeDegrees(spec, _movement.IsAiming(shooterId) ? 1f : 0f, moveFraction) * spreadMultiplier;
             var plan = ShotPlanner.Plan(round, origin, request.Direction, cone, shooterId, numbering.Index);
             if (blindFire)
             {

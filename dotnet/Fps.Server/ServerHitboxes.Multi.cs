@@ -31,6 +31,12 @@ namespace Fps.Server
                 return 0f;
             }
 
+            // 車体の厚さは .fpsmap に無く測れないので、抜けない物として扱う
+            if (hit.HitVehicle)
+            {
+                return float.PositiveInfinity;
+            }
+
             if (!IsFinite(direction) || direction.LengthSquared() < 1e-12f)
             {
                 throw new ArgumentException("direction must be finite and not zero", nameof(direction));
@@ -117,6 +123,12 @@ namespace Fps.Server
             }
 
             var clamped = _lag.ClampTick(tick, LastRecordedTick);
+            var vehicleHit = default(ShotHit);
+            if (NearerVehicle(origin, unit, range, clamped, shooterId, ref vehicleHit))
+            {
+                _many.Add(vehicleHit);
+            }
+
             var rewound = _lag.Rewind(clamped);
             var crouched = _lag.RewindCrouched(clamped);
             _ids.Clear();

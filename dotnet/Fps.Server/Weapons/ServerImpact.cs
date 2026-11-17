@@ -20,14 +20,25 @@ namespace Fps.Server
         /// <summary>shot の弾が direction へ進んで hit に当たった。</summary>
         public void Apply(in ServerShot shot, Vector3 direction, in ShotHit hit)
         {
-            var impactHit = hit.HitTarget ? ImpactHit.Character(hit.Zone, hit.Point, hit.Distance, _combat.ZoneDamage) : ImpactHit.Structure(hit.Point, hit.Distance);
+            // 乗り物は Unity と同じく部位 (HitZone) を持つ的として距離減衰を掛け、そのあと当たった部位の倍率を掛ける
+            var impactHit = hit.HitTarget ? ImpactHit.Character(hit.Zone, hit.Point, hit.Distance, _combat.ZoneDamage)
+                : hit.HitVehicle ? ImpactHit.Character(HitZone.Body, hit.Point, hit.Distance, ZoneDamageMultipliers.Default)
+                : ImpactHit.Structure(hit.Point, hit.Distance);
             var orders = ImpactResolver.Resolve(shot.Impact, impactHit, shot.Weapon.Trigger.Charge, shot.ChargeFraction);
             foreach (var order in orders)
             {
                 switch (order.Kind)
                 {
                     case ImpactOrderKind.Damage:
-                        _combat.DamagePlayer(shot, direction, hit, order.Amount);
+                        if (hit.HitVehicle)
+                        {
+                            _combat.DamageVehicle(shot, hit, order.Amount);
+                        }
+                        else
+                        {
+                            _combat.DamagePlayer(shot, direction, hit, order.Amount);
+                        }
+
                         break;
                     case ImpactOrderKind.StructureDamage:
                         _combat.DamageStructure(hit.ColliderId, order.Point, order.Amount, order.Radius);

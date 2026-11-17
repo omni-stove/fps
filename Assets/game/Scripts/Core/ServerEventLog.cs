@@ -25,6 +25,9 @@ namespace Fps.Core
         public const string MatchEndedType = "match_ended";
         public const string PingPlacedType = "ping_placed";
         public const string PingRefusedType = "ping_refused";
+        public const string VehicleEnteredType = "vehicle_entered";
+        public const string VehicleLeftType = "vehicle_left";
+        public const string VehicleExplodedType = "vehicle_exploded";
 
         /// <summary>試合を見分ける新しい Id (32 桁の小文字の 16 進数)。次の試合を始めるたびに作り直す。</summary>
         public static string NewMatchId()
@@ -172,6 +175,55 @@ namespace Fps.Core
             return FlatJsonObject.Format(values);
         }
 
+        /// <example><c>{"type":"vehicle_entered","time":"...","matchId":"6c1f...","playerId":"1","vehicle":"0","vehicleId":"jeep","seat":"0","role":"Driver"}</c></example>
+        public static string VehicleEntered(
+            DateTime utcNow, string matchId, int playerId, string productUserId, int vehicle, string vehicleId, int seat, VehicleSeatRole role)
+        {
+            var values = BeginVehicle(VehicleEnteredType, utcNow, matchId, playerId, productUserId, vehicle, vehicleId);
+            values.Add(Pair("seat", Number(seat)));
+            values.Add(Pair("role", role.ToString()));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <example><c>{"type":"vehicle_left","time":"...","matchId":"6c1f...","playerId":"1","vehicle":"0","vehicleId":"jeep","seat":"0","reason":"Request"}</c></example>
+        public static string VehicleLeft(
+            DateTime utcNow, string matchId, int playerId, string productUserId, int vehicle, string vehicleId, int seat, VehicleLeaveReason reason)
+        {
+            if (!Enum.IsDefined(typeof(VehicleLeaveReason), reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason must be a VehicleLeaveReason");
+            }
+
+            var values = BeginVehicle(VehicleLeftType, utcNow, matchId, playerId, productUserId, vehicle, vehicleId);
+            values.Add(Pair("seat", Number(seat)));
+            values.Add(Pair("reason", reason.ToString()));
+            return FlatJsonObject.Format(values);
+        }
+
+        // 壊した人は、最後に傷めた人が抜けていれば出さない。乗り物の Id と並びの番号は、どのマップのどの車かを運用で数えるため両方出す。
+        /// <example><c>{"type":"vehicle_exploded","time":"...","matchId":"6c1f...","vehicle":"0","vehicleId":"jeep","attackerId":"2","riders":"1","damaged":"2","killed":"1"}</c></example>
+        public static string VehicleExploded(
+            DateTime utcNow, string matchId, int vehicle, string vehicleId, int? attackerId, string attackerProductUserId, int riders, int damaged,
+            int killed)
+        {
+            if (riders < 0 || damaged < 0 || killed < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(riders), "riders, damaged and killed must not be negative");
+            }
+
+            var values = BeginMatch(VehicleExplodedType, utcNow, matchId);
+            AddVehicle(values, vehicle, vehicleId);
+            if (attackerId.HasValue)
+            {
+                AddPlayer(values, "attackerId", "attackerProductUserId", attackerId.Value, attackerProductUserId);
+            }
+
+            values.Add(Pair("riders", Number(riders)));
+            values.Add(Pair("damaged", Number(damaged)));
+            values.Add(Pair("killed", Number(killed)));
+            return FlatJsonObject.Format(values);
+        }
+
         /// <summary>ログの <c>time</c> の書式。UTC でなければ例外。</summary>
         /// <example><c>2026-11-13T09:00:00.123Z</c></example>
         public static string FormatTime(DateTime utcNow)
@@ -215,6 +267,26 @@ namespace Fps.Core
             {
                 values.Add(Pair(productUserIdKey, productUserId));
             }
+        }
+
+        private static List<KeyValuePair<string, string>> BeginVehicle(
+            string type, DateTime utcNow, string matchId, int playerId, string productUserId, int vehicle, string vehicleId)
+        {
+            var values = BeginMatch(type, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            AddVehicle(values, vehicle, vehicleId);
+            return values;
+        }
+
+        private static void AddVehicle(List<KeyValuePair<string, string>> values, int vehicle, string vehicleId)
+        {
+            if (vehicle < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(vehicle), vehicle, "vehicle must not be negative");
+            }
+
+            values.Add(Pair("vehicle", Number(vehicle)));
+            values.Add(Pair("vehicleId", RequireText(vehicleId, nameof(vehicleId))));
         }
 
         private static string RequireText(string value, string paramName)

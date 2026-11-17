@@ -53,7 +53,9 @@ namespace Fps.Server
                 var toPoint = point - origin;
                 var distance = toPoint.Length();
                 var toward = distance > 1e-4f ? toPoint / distance : unit;
-                if (distance > 1e-4f && _world.Raycast(origin, toward, distance, RaycastLayers, out _))
+                if (distance > 1e-4f
+                    && (_world.Raycast(origin, toward, distance, RaycastLayers, out _)
+                        || (_vehicles != null && _vehicles.BlocksLine(origin, point, clamped, shooterId))))
                 {
                     continue;
                 }

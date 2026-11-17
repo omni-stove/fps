@@ -244,6 +244,49 @@ namespace Fps.Server
             return true;
         }
 
+        /// <summary>
+        /// 乗り物の座席に置く。座っている間は入力の tick と向きだけを受け取り、体は乗り物のモジュールが毎 tick ここで座席へ置き直す。
+        /// 置き直しを <see cref="Teleport"/> にしないのは、巻き戻しの記録を捨てずに、乗っている人にも遅れを補って当てるため。
+        /// </summary>
+        public bool Ride(int playerId, Vector3 position, Vector3 velocity, bool crouched)
+        {
+            if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+            {
+                throw new ArgumentOutOfRangeException(nameof(position), position, "position must be finite");
+            }
+
+            if (!_byPlayer.TryGetValue(playerId, out var mover))
+            {
+                return false;
+            }
+
+            mover.Riding = true;
+            mover.State = new CharacterMotorState(position, velocity, true, crouched);
+            mover.Simulation.Place(mover.State);
+            Publish(mover);
+            return true;
+        }
+
+        /// <summary>座席から外す。体は座席に置いたままなので、降ろす側が続けて置き直す。</summary>
+        public bool Dismount(int playerId)
+        {
+            if (!_byPlayer.TryGetValue(playerId, out var mover) || !mover.Riding)
+            {
+                return false;
+            }
+
+            mover.Riding = false;
+            mover.State = new CharacterMotorState(mover.State.Position, Vector3.Zero, false, false);
+            mover.Simulation.Place(mover.State);
+            Publish(mover);
+            return true;
+        }
+
+        public bool IsRiding(int playerId)
+        {
+            return _byPlayer.TryGetValue(playerId, out var mover) && mover.Riding;
+        }
+
         public bool SetDowned(int playerId, bool downed)
         {
             if (!_byPlayer.TryGetValue(playerId, out var mover))
@@ -332,6 +375,7 @@ namespace Fps.Server
 
         private void Apply(Mover mover, InputFrame frame)
         {
+
             var input = new CharacterMotorInput(
                     frame.Move,
                     frame.Yaw,
@@ -348,6 +392,15 @@ namespace Fps.Server
                     false,
                     CarrySpeedMultiplier(mover))
                 .WithRules(_settings.Rules.Actions);
+
+            if (mover.Riding)
+            {
+                mover.Yaw = input.Yaw;
+                mover.Aiming = input.Restrained().Aim;
+                mover.LastProcessedTick = frame.Tick;
+                Publish(mover);
+                return;
+            }
 
             var previous = mover.State;
             var current = mover.Simulation.Step(previous, input);
@@ -488,6 +541,8 @@ namespace Fps.Server
             public bool Aiming { get; set; }
 
             public bool Downed { get; set; }
+
+            public bool Riding { get; set; }
 
             public float NextWarning { get; set; }
         }

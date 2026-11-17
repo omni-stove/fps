@@ -23,6 +23,8 @@ namespace Shooter.Protocol
 
         public int AllBits => (int)VehicleFields.All;
 
+        public int OptionalBits => 0;
+
         public int ChangedBits(in VehicleSnapshot baseline)
         {
             var bits = VehicleFields.None;

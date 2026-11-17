@@ -137,6 +137,10 @@ namespace Shooter.Protocol
                         bits = item.ChangedBits(in baseline._items[at]);
                     }
                 }
+                else if (item.OptionalBits != 0)
+                {
+                    bits &= ~(item.OptionalBits & ~item.ChangedBits(default(T)));
+                }
 
                 writer.WriteInt32(item.EntityId);
                 writer.WriteUInt16((ushort)bits);
@@ -144,7 +148,10 @@ namespace Shooter.Protocol
             }
         }
 
-        /// <summary>並びを読む。hasBaseline が false なら、どの物も全部の部分が載っていなければ壊れているとみなす。</summary>
+        /// <summary>
+        /// 並びを読む。hasBaseline が false なら、どの物も <see cref="ISnapshotEntity{T}.OptionalBits"/> 以外の部分が全部載っていなければ
+        /// 壊れているとみなし、載っていない部分は default の値で埋める。
+        /// </summary>
         internal void Read(MessageReader reader, bool hasBaseline)
         {
             Count = 0;
@@ -165,8 +172,9 @@ namespace Shooter.Protocol
                 // 前に同じ位置にあった中身を残したまま読むのは、変わっていない Id の文字列を作り直さないため。
                 ref var item = ref _items[i];
                 var all = item.AllBits;
+                var required = all & ~item.OptionalBits;
                 var bits = reader.ReadUInt16();
-                if ((bits & ~all) != 0 || (!hasBaseline && bits != all))
+                if ((bits & ~all) != 0 || (!hasBaseline && (bits & required) != required))
                 {
                     throw new MessageReadException(
                         _what + " " + id.ToString(CultureInfo.InvariantCulture) + " has unexpected parts "
@@ -174,6 +182,11 @@ namespace Shooter.Protocol
                 }
 
                 item.ReadBits(reader, id, bits);
+                if (!hasBaseline && bits != all)
+                {
+                    item.FillFrom(default(T));
+                }
+
                 Count = i + 1;
             }
         }

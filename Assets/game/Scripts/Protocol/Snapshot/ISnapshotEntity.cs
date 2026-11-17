@@ -18,6 +18,12 @@ namespace Shooter.Protocol
         /// <summary>全部の部分。</summary>
         int AllBits { get; }
 
+        /// <summary>
+        /// 基準無しで全部を送るときでも、default の物と同じ値なら載せない部分。受け取る側は default の値で埋める。
+        /// </summary>
+        /// <remarks>使わないゲームでも全部を送るたびに 1 人あたりのバイトが増えないよう、後から足した部分をここに入れる。</remarks>
+        int OptionalBits { get; }
+
         /// <summary>baseline から変わった部分。</summary>
         int ChangedBits(in T baseline);
 

@@ -361,6 +361,225 @@ namespace Shooter.Protocol.Tests
             Assert.That(allocated, Is.Zero);
         }
 
+        [Test]
+        public void LeanSwimWallRunAirJumpsAndAssistsRoundTrip()
+        {
+            var sent = Build(100, 0f);
+            sent.Players[0].Lean = -1f;
+            sent.Players[0].Swimming = true;
+            sent.Players[0].WallRunSide = WallRunSide.Right;
+            sent.Players[0].AirJumpsUsed = 2;
+            sent.Players[0].Assists = 7;
+            sent.Players[1].Lean = 1f;
+            sent.Players[1].WallRunSide = WallRunSide.Left;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Players[0].Lean, Is.EqualTo(-1f));
+            Assert.That(got.Players[0].Swimming, Is.True);
+            Assert.That(got.Players[0].WallRunSide, Is.EqualTo(WallRunSide.Right));
+            Assert.That(got.Players[0].AirJumpsUsed, Is.EqualTo(2));
+            Assert.That(got.Players[0].Assists, Is.EqualTo(7));
+            Assert.That(got.Players[1].Lean, Is.EqualTo(1f));
+            Assert.That(got.Players[1].Swimming, Is.False);
+            Assert.That(got.Players[1].WallRunSide, Is.EqualTo(WallRunSide.Left));
+            Assert.That(got.Players[1].Assists, Is.Zero);
+            AssertSame(sent, got);
+        }
+
+        [Test]
+        public void LeanIsSentInStepsOfOne127th()
+        {
+            var sent = Build(100, 0f);
+            sent.Players[0].Lean = 0.5f;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Players[0].Lean, Is.EqualTo(64f / 127f));
+            Assert.That(got.Players[0].ChangedBits(sent.Players[0]), Is.Zero);
+        }
+
+        [Test]
+        public void AFullSnapshotLeavesOutTheNewPartsWhileTheyAreDefault()
+        {
+            var plain = Build(100, 0f);
+            var leaning = Build(100, 0f);
+            leaning.Players[0].Lean = 0.25f;
+            var assisting = Build(100, 0f);
+            assisting.Players[1].Assists = 1;
+
+            // 体を傾ける・泳ぐ・壁走り・空中ジャンプの 4 バイトと、アシストの 4 バイト
+            Assert.That(Size(leaning, null), Is.EqualTo(Size(plain, null) + 4));
+            Assert.That(Size(assisting, null), Is.EqualTo(Size(plain, null) + 4));
+            Assert.That(Send(plain, null).Players[0].Lean, Is.Zero);
+        }
+
+        [Test]
+        public void AFullSnapshotResetsTheNewPartsLeftOutToDefault()
+        {
+            var table = MatchMessages.CreateClientTable();
+            var writer = new MessageWriter();
+            var leaning = Build(100, 0f);
+            leaning.Players[0].Lean = 1f;
+            leaning.Players[0].Swimming = true;
+            leaning.Players[0].Assists = 3;
+            writer.WriteMessage(leaning);
+            table.Read(writer.AsSegment());
+            writer.Reset();
+            writer.WriteMessage(Build(101, 0f));
+
+            var got = (SnapshotMessage)table.Read(writer.AsSegment());
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.All));
+            Assert.That(got.Players[0].Lean, Is.Zero);
+            Assert.That(got.Players[0].Swimming, Is.False);
+            Assert.That(got.Players[0].Assists, Is.Zero);
+        }
+
+        [Test]
+        public void ADeltaCarriesTheNewPartsOnlyWhenTheyChange()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Players[0].Swimming = true;
+            current.Players[1].Assists = 2;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Traversal));
+            Assert.That(got.Players[1].Present, Is.EqualTo(PlayerFields.Assists));
+            Assert.That(got.TryResolve(received), Is.True);
+            AssertSame(current, got);
+        }
+
+        [Test]
+        public void ANewcomerInADeltaCarriesTheNewPartsEvenWhenDefault()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Players[1].PlayerId = 9;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[1].Present, Is.EqualTo(PlayerFields.All));
+        }
+
+        [TestCase(1.01f)]
+        [TestCase(-1.5f)]
+        [TestCase(float.NaN)]
+        public void LeanOutsideMinusOneToOneIsNotWritten(float lean)
+        {
+            var sent = Build(100, 0f);
+            sent.Players[0].Lean = lean;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void NegativeAssistsAreNotWritten()
+        {
+            var sent = Build(100, 0f);
+            sent.Players[0].Assists = -1;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void HandWrittenNewPartsAreReadable()
+        {
+            var got = (SnapshotMessage)MatchMessages.CreateClientTable().Read(OnePlayerDelta(PlayerFields.Traversal | PlayerFields.Assists, w =>
+            {
+                w.WriteByte(unchecked((byte)(sbyte)-127));
+                w.WriteBool(true);
+                w.WriteByte((byte)WallRunSide.Left);
+                w.WriteByte(1);
+                w.WriteInt32(4);
+            }));
+
+            Assert.That(got.Players[0].Lean, Is.EqualTo(-1f));
+            Assert.That(got.Players[0].Swimming, Is.True);
+            Assert.That(got.Players[0].WallRunSide, Is.EqualTo(WallRunSide.Left));
+            Assert.That(got.Players[0].AirJumpsUsed, Is.EqualTo(1));
+            Assert.That(got.Players[0].Assists, Is.EqualTo(4));
+        }
+
+        [TestCase(0x80, 0, 0)]
+        [TestCase(0, 3, 0)]
+        [TestCase(0, 0, 2)]
+        public void UnreadableTraversalIsRejected(int lean, int wallRunSide, int swimming)
+        {
+            var data = OnePlayerDelta(PlayerFields.Traversal, w =>
+            {
+                w.WriteByte((byte)lean);
+                w.WriteByte((byte)swimming);
+                w.WriteByte((byte)wallRunSide);
+                w.WriteByte(0);
+            });
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
+        }
+
+        [Test]
+        public void NegativeAssistsAreUnreadable()
+        {
+            var data = OnePlayerDelta(PlayerFields.Assists, w => w.WriteInt32(-1));
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
+        }
+
+        [Test]
+        public void AFullSnapshotMustStillCarryTheOlderParts()
+        {
+            var data = OnePlayer(null, PlayerFields.Optional, w =>
+            {
+                w.WriteByte(0);
+                w.WriteBool(false);
+                w.WriteByte(0);
+                w.WriteByte(0);
+                w.WriteInt32(0);
+            });
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
+        }
+
+        // Build と同じ試合の部分に、player 1 の bits の部分だけを parts で手で書き足した、持ち主も他の物も無いスナップショット
+        private static ArraySegment<byte> OnePlayerDelta(PlayerFields bits, Action<MessageWriter> parts)
+        {
+            return OnePlayer(Build(4, 0f), bits, parts);
+        }
+
+        private static ArraySegment<byte> OnePlayer(SnapshotMessage baseline, PlayerFields bits, Action<MessageWriter> parts)
+        {
+            const int listCount = 5;
+            var empty = Build(5, 0f);
+            empty.HasOwner = false;
+            empty.Players.Clear();
+            empty.Grenades.Clear();
+            empty.ControlPoints.Clear();
+            empty.Projectiles.Clear();
+            empty.Vehicles.Clear();
+            empty.Baseline = baseline;
+            var head = new MessageWriter();
+            head.WriteMessage(empty);
+            var bytes = head.ToArray();
+
+            var writer = new MessageWriter();
+            writer.WriteBytes(new ArraySegment<byte>(bytes, 0, bytes.Length - listCount));
+            writer.WriteByte(1);
+            writer.WriteInt32(1);
+            writer.WriteUInt16((ushort)bits);
+            parts(writer);
+            for (var i = 1; i < listCount; i++)
+            {
+                writer.WriteByte(0);
+            }
+
+            return new ArraySegment<byte>(writer.ToArray());
+        }
+
         private static SnapshotMessage Build(int tick, float moved)
         {
             var snapshot = new SnapshotMessage();

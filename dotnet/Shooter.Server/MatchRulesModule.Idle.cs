@@ -9,7 +9,8 @@ namespace Shooter.Server
     internal sealed partial class MatchRulesModule
     {
         private const InputButtons _pressedButtons = InputButtons.Jump | InputButtons.Cover | InputButtons.Dodge;
-        private const InputButtons _heldButtons = InputButtons.Sprint | InputButtons.Crouch | InputButtons.Aim;
+        private const InputButtons _heldButtons =
+            InputButtons.Sprint | InputButtons.Crouch | InputButtons.Aim | InputButtons.LeanLeft | InputButtons.LeanRight;
 
         private readonly Dictionary<int, InputFrame> _lastInputs = new Dictionary<int, InputFrame>();
         private readonly List<int> _idleIds = new List<int>();

@@ -33,8 +33,10 @@ namespace Shooter.NetV2
         /// <summary>
         /// 自分がオーナーのメンバー用ロビー (パーティ) を <paramref name="bucketId"/> に作って入る。成功したら作ったロビーを渡す。
         /// </summary>
+        /// <param name="bucketId">ロビーを置くバケット。</param>
         /// <param name="maxMembers">入れる最大人数 (1 以上)。</param>
         /// <param name="attributes">ロビーに付ける公開の属性。無ければ空。</param>
+        /// <param name="done">完了のコールバック。成功なら (ロビー, null)、失敗なら (null, 理由)。</param>
         void CreateMemberLobby(
             string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done);
 

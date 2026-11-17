@@ -369,6 +369,21 @@ namespace Shooter.Core
         /// <exception cref="ArgumentException">すでに参加している、または同じ鍵の人が参加中 (<see cref="IsKeyInUse"/>)。</exception>
         public Team Join(int playerId, string key = null)
         {
+            return Join(playerId, key, null);
+        }
+
+        /// <summary>
+        /// <see cref="Join(int, string)"/> と同じだが、key の成績が残っていなければ <see cref="NextTeam"/> ではなく team に入れる。
+        /// 専用サーバーが試合の枠でパーティを見て決めたチームを、ルールの側にもそのまま使うため。
+        /// </summary>
+        /// <param name="team">入れるチーム。null なら <see cref="NextTeam"/>。</param>
+        public Team Join(int playerId, string key, Team? team)
+        {
+            if (team.HasValue && !Enum.IsDefined(typeof(Team), team.Value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(team), team, "team must be a Team or null");
+            }
+
             if (_health.ContainsKey(playerId))
             {
                 throw new ArgumentException($"player {playerId} has already joined", nameof(playerId));
@@ -379,17 +394,17 @@ namespace Shooter.Core
                 throw new ArgumentException($"key is already used by player {owner}", nameof(key));
             }
 
-            Team team;
+            Team joined;
             if (key != null && _held.TryGetValue(key, out var held))
             {
-                team = held.Team;
-                _match.AddPlayer(playerId, team, held.Kills, held.Deaths);
+                joined = held.Team;
+                _match.AddPlayer(playerId, joined, held.Kills, held.Deaths);
                 _held.Remove(key);
             }
             else
             {
-                team = NextTeam;
-                _match.AddPlayer(playerId, team);
+                joined = team ?? NextTeam;
+                _match.AddPlayer(playerId, joined);
             }
 
             if (key != null)
@@ -403,7 +418,7 @@ namespace Shooter.Core
             PlayerChanged?.Invoke(playerId);
             Spawned?.Invoke(playerId, SelectSpawn(playerId));
             TryStart();
-            return team;
+            return joined;
         }
 
         /// <summary>

@@ -111,6 +111,23 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ATwoPlayerPartyIsApprovedOntoTheSameTeam()
+        {
+            Start(TestRules.Data(settings: new NetMatchSettings(maxPlayers: 4)));
+            Assert.That(_server.Match.MaxPlayers, Is.EqualTo(4));
+
+            Join("device1", "party-1");
+            Join("device2", "party-1");
+            Join("device3", "bad party");
+
+            Assert.That(TeamOf(1), Is.EqualTo(Team.Alpha));
+            Assert.That(TeamOf(2), Is.EqualTo(Team.Alpha));
+            Assert.That(TeamOf(3), Is.EqualTo(Team.Bravo));
+            Assert.That(_server.Match.TryGetPlayer(3, out var third) ? third.PartyId : "missing", Is.Null);
+            Assert.That(_log.ToString(), Does.Contain("[Net] client 3 sent a malformed party id; joining without a party"));
+        }
+
+        [Test]
         public void TheLobbyIsCreatedWithTheMatchsMaxPlayers()
         {
             using var backend = new FakeLobbyBackend();
@@ -163,22 +180,28 @@ namespace Shooter.Server.Tests
             _server.Start();
         }
 
-        private TestClient Request(string key)
+        private TestClient Request(string key, string partyId = "")
         {
             var client = new TestClient();
             _clients.Add(client);
             client.Connect(_port);
             Pump(() => client.Connected);
-            client.SendRequest("0.2.0", key, MatchProtocol.Version);
+            client.SendRequest("0.2.0", key, MatchProtocol.Version, partyId);
             Pump(() => client.Disconnected || client.Accepted != null);
             return client;
         }
 
-        private TestClient Join(string key)
+        private TestClient Join(string key, string partyId = "")
         {
-            var client = Request(key);
+            var client = Request(key, partyId);
             Assert.That(client.Accepted, Is.Not.Null, "the server did not approve the client: " + client.DisconnectReason);
             return client;
+        }
+
+        private Team TeamOf(int playerId)
+        {
+            Assert.That(_server.Match.TryGetPlayer(playerId, out var player), Is.True);
+            return player.Team;
         }
 
         private void Pump(Func<bool> until)

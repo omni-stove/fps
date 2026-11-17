@@ -396,6 +396,41 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ATwoPlayerPartyJoinsTheSameTeamInTheRulesToo()
+        {
+            Start(Plain());
+            _match.Join(new ConnectionId(1), "device1", null, "party-1");
+            _match.Join(new ConnectionId(2), "device2", null, "party-1");
+            Join(3);
+
+            Assert.That(TeamOf(1), Is.EqualTo(Team.Alpha));
+            Assert.That(TeamOf(2), Is.EqualTo(Team.Alpha));
+            Assert.That(TeamOf(3), Is.EqualTo(Team.Bravo));
+            Assert.That(_module.Session.GetTeam(2), Is.EqualTo(Team.Alpha));
+            Assert.That(_module.Session.GetTeam(3), Is.EqualTo(Team.Bravo));
+            Assert.That(_log.ToString(), Does.Not.Contain("joined the rules as"));
+        }
+
+        [Test]
+        public void AReturningPartyMemberGoesBackToTheirOldTeam()
+        {
+            Start(Plain());
+            Join(1);
+            _match.Join(new ConnectionId(2), "device2", null, "party-1");
+            _match.Join(new ConnectionId(3), "device3", null, "party-2");
+            Assert.That(TeamOf(2), Is.EqualTo(Team.Bravo));
+            Assert.That(TeamOf(3), Is.EqualTo(Team.Alpha));
+
+            // 戻ってきた 2 は、同じパーティの人がいなくても前の Bravo に戻る。party-2 の 3 がいる Alpha には入れない
+            _match.Leave(new ConnectionId(2));
+            _match.Join(new ConnectionId(4), "device2", null, "party-2");
+
+            Assert.That(TeamOf(4), Is.EqualTo(Team.Bravo));
+            Assert.That(_module.Session.GetTeam(4), Is.EqualTo(Team.Bravo));
+            Assert.That(JsonOf("player_joined").Last(), Does.Contain("\"rejoined\":\"true\""));
+        }
+
+        [Test]
         public void BodiesUseTheBodySizeFromTheRules()
         {
             var motor = new NetMotorSettings(MotorSpec.Default, new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f), CapsuleMoverSpec.Default);

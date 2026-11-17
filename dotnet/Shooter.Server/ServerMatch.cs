@@ -22,6 +22,7 @@ namespace Shooter.Server
         private readonly Func<DateTime> _utcNow;
         private float _restartRemaining;
         private int _botCount;
+        private int _maxPlayers = NetMatchSettings.DefaultMaxPlayers;
 
         public ServerMatch(float restartDelaySeconds, TextWriter log, ServerEventWriter events, Func<DateTime> utcNow)
         {
@@ -78,6 +79,25 @@ namespace Shooter.Server
         public TeamChooser ChooseTeam { get; set; }
 
         /// <summary>
+        /// 試合に入れる人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。パーティを同じチームに入れるとき、
+        /// その半分 (<see cref="TeamAssigner.TeamCapacity"/>) に届いたチームを満員と見る。
+        /// </summary>
+        public int MaxPlayers
+        {
+            get => _maxPlayers;
+            set
+            {
+                if (value < NetMatchSettings.MinMaxPlayers || value > NetMatchSettings.MaxMaxPlayers)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(value), value, "MaxPlayers must be between " + NetMatchSettings.MinMaxPlayers + " and " + NetMatchSettings.MaxMaxPlayers);
+                }
+
+                _maxPlayers = value;
+            }
+        }
+
+        /// <summary>
         /// Bot の Id と重ならない範囲に収めるのは、成績の行や JSON の playerId で Bot と見分けられなくなるため。
         /// </summary>
         public static bool TryGetPlayerId(ConnectionId connection, out int playerId)
@@ -116,11 +136,20 @@ namespace Shooter.Server
             return count;
         }
 
-        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null)
+        /// <param name="partyId">
+        /// 入っているパーティの Id (<see cref="ConnectionExtras.PartyId"/>)。同じ Id の人がもういれば、満員でない限りそのチームに入れる。
+        /// 無ければ null。
+        /// </param>
+        public ServerPlayer Join(ConnectionId connection, string rejoinKey, string productUserId = null, string partyId = null)
         {
             if (productUserId != null && !NetLaunchOptions.IsProductUserId(productUserId))
             {
                 throw new ArgumentException("'" + productUserId + "' is not an EOS product user id", nameof(productUserId));
+            }
+
+            if (partyId != null && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            {
+                throw new ArgumentException("'" + partyId + "' is not a party id", nameof(partyId));
             }
 
             if (!TryGetPlayerId(connection, out var playerId))
@@ -133,7 +162,7 @@ namespace Shooter.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            return Add(connection, playerId, rejoinKey, productUserId);
+            return Add(connection, playerId, rejoinKey, productUserId, partyId);
         }
 
         /// <summary>Bot は接続を持たないので <see cref="ConnectionId.None"/> で加え、送る側はそれを読み飛ばす。</summary>
@@ -150,7 +179,7 @@ namespace Shooter.Server
             }
 
             _botCount++;
-            return Add(ConnectionId.None, playerId, null, null);
+            return Add(ConnectionId.None, playerId, null, null, null);
         }
 
         public bool LeaveBot(int playerId)
@@ -164,13 +193,20 @@ namespace Shooter.Server
             return true;
         }
 
-        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId)
+        private ServerPlayer Add(ConnectionId connection, int playerId, string rejoinKey, string productUserId, string partyId)
         {
             var rejoined = false;
             var team = ChooseTeam != null
                 ? ChooseTeam(rejoinKey, out rejoined)
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId);
+
+            // パーティより前のチームを先に見るのは、つなぎ直すたびに試合の途中でチームが変わらないようにするため
+            if (!rejoined && partyId != null)
+            {
+                team = ChooseWithParty(partyId);
+            }
+
+            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {
@@ -186,6 +222,47 @@ namespace Shooter.Server
             PlayerJoined?.Invoke(player);
             TryStart();
             return player;
+        }
+
+        private Team ChooseWithParty(string partyId)
+        {
+            var alphaParty = 0;
+            var bravoParty = 0;
+            var alphaHumans = 0;
+            var bravoHumans = 0;
+            foreach (var player in _players.Values)
+            {
+                if (player.IsBot)
+                {
+                    continue;
+                }
+
+                var alpha = player.Team == Team.Alpha;
+                if (alpha)
+                {
+                    alphaHumans++;
+                }
+                else
+                {
+                    bravoHumans++;
+                }
+
+                if (string.Equals(player.PartyId, partyId, StringComparison.Ordinal))
+                {
+                    if (alpha)
+                    {
+                        alphaParty++;
+                    }
+                    else
+                    {
+                        bravoParty++;
+                    }
+                }
+            }
+
+            return TeamAssigner.Choose(
+                CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore,
+                alphaParty, bravoParty, alphaHumans, bravoHumans, TeamAssigner.TeamCapacity(MaxPlayers));
         }
 
         public bool Leave(ConnectionId connection)

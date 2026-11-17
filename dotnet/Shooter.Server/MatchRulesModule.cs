@@ -354,7 +354,8 @@ namespace Shooter.Server
             }
 
             _bodies.Add(playerId);
-            var team = _session.Join(playerId, key);
+            // 試合の枠がパーティを見て決めたチームは Session の NextTeam と違いうるので、枠のチームをそのまま渡す
+            var team = _session.Join(playerId, key, player.Team);
             if (team != player.Team)
             {
                 _log.WriteLine(MatchLog.Tag + " player " + Text(playerId) + " joined the rules as " + team + " but the match as " + player.Team);

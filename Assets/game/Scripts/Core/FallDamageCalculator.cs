@@ -39,10 +39,7 @@ namespace Shooter.Core
             return Math.Min(Math.Max(damage, 0), maxHealth - 1);
         }
 
-        /// <summary>
-        /// <see cref="Calculate(float, MotorSpec, int)"/> と同じだが、intoWater (着地した足元が水の中。<see cref="SwimStep.IsInWater"/>) なら 0。
-        /// 引数を確かめてから 0 を返すのは、水があるかで壊れた値を見逃すかが変わらないようにするため。
-        /// </summary>
+        // 水の中でも引数を確かめてから 0 を返すのは、水があるかで壊れた値を見逃すかが変わらないようにするため。
         public static int Calculate(float fallSpeed, MotorSpec spec, int maxHealth, bool intoWater)
         {
             var damage = Calculate(fallSpeed, spec, maxHealth);

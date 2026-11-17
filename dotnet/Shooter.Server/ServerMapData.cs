@@ -95,11 +95,7 @@ namespace Shooter.Server
             return roots;
         }
 
-        /// <summary>
-        /// 起動したマップ (current) のほかに、次の試合のマップの候補 (mapPool) をすべて読む。current と同じ名前の候補は読み直さない。
-        /// 試合の途中で読めないと分かっても止めるしかないので、1 つでも読めなければ何も返さない。
-        /// </summary>
-        /// <returns>current を先頭に、候補を並べた順に重ねずに並べたもの。</returns>
+        // 1 つでも読めなければ何も返さないのは、試合の途中で読めないと分かっても止めるしかないため。
         public static bool TryLoadPool(
             ServerMapData current, IReadOnlyList<string> mapPool, IReadOnlyList<string> searchRoots, out IReadOnlyList<ServerMapData> maps, out string error)
         {
@@ -131,7 +127,6 @@ namespace Shooter.Server
             return true;
         }
 
-        /// <example><c>[Server] map pool loaded 2 maps: NetArena01, NetArena02</c></example>
         public static string PoolLogLine(IReadOnlyList<ServerMapData> maps)
         {
             ArgumentNullException.ThrowIfNull(maps);

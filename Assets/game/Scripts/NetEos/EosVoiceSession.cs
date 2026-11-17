@@ -9,15 +9,6 @@ using EosRtcAudio = Epic.OnlineServices.RTCAudio;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// 試合のロビーの RTC 部屋で話す <see cref="IVoiceSession"/>。望む値を覚えて反映する手順は <see cref="VoiceSession"/> に任せ、
-    /// ここでは EOS の Lobby・RTC・RTC Audio インターフェースを呼ぶ。送るの入り切りは <c>UpdateSending</c>、
-    /// 参加者ごとに受けるかは <c>UpdateReceiving</c>、音量は <c>UpdateReceivingVolume</c> で行う。
-    /// </summary>
-    /// <remarks>
-    /// EOS のプラットフォームとログインは、<see cref="EosLobbyBackend"/> か通信路が済ませたものを使う。
-    /// ロビーにはメンバーとして先に入っておく (<see cref="ILobbyBackend.JoinMatchLobby"/>)。
-    /// </remarks>
     internal sealed class EosVoiceSession : IVoiceSession
     {
         private readonly VoiceSession _session;
@@ -54,10 +45,7 @@ namespace Shooter.NetEos
 
         public bool IsSending => _session.IsSending;
 
-        /// <summary>
-        /// ロビーの RTC 部屋に入るときの自分の音声の設定。押している間だけ話すので、マイクを切った状態で入り、
-        /// <c>UpdateSending</c> で送り始める。
-        /// </summary>
+        // マイクを切った状態で入るのは、押している間だけ話すため。送り始めるのは UpdateSending。
         public static LocalRTCOptions RoomOptions()
         {
             return new LocalRTCOptions { LocalAudioDeviceInputStartsMuted = true };
@@ -77,10 +65,9 @@ namespace Shooter.NetEos
 
         public void Dispose() => _session.Dispose();
 
-        /// <summary>EOS の Lobby・RTC・RTC Audio インターフェースで、ロビーの RTC 部屋 1 つを呼ぶ。</summary>
         private sealed class Room : IVoiceRtc
         {
-            /// <summary>EOS の受ける音量で、音量を変えない値 (0 から 100 のうち 50)。</summary>
+            // 50 なのは、EOS の受ける音量 (0〜100) で音量を変えない値が 50 のため。
             private const float _eosUnityVolume = 50f;
 
             private readonly Action<string> _log;
@@ -386,7 +373,6 @@ namespace Shooter.NetEos
                     && string.Equals(Text(roomName), _roomName, StringComparison.Ordinal);
             }
 
-            /// <summary>SDK の文字列を string にする。null や空なら null。</summary>
             private static string Text(Utf8String value)
             {
                 // Utf8String の演算子を通さずに null を判定する
@@ -400,7 +386,6 @@ namespace Shooter.NetEos
             }
         }
 
-        /// <summary>部屋に入った時点のプラットフォームとログインと、そこから取ったインターフェース。</summary>
         private sealed class PlatformInterfaceHandle
         {
             private readonly Epic.OnlineServices.Platform.PlatformInterface _platform;
@@ -424,7 +409,6 @@ namespace Shooter.NetEos
 
             public EosRtcAudio.RTCAudioInterface Audio { get; }
 
-            /// <summary>部屋に入ったときのプラットフォームが、まだ解放されていないか。</summary>
             public bool Alive => _platform != null && ReferenceEquals(EosPlatform.Current, _platform);
 
             public static PlatformInterfaceHandle Acquire(out string error)

@@ -6,7 +6,7 @@ Write scripts in sh.
 
 Write tests and their expected values with each change, but do not run the Unity tests.
 
-Write a code comment, `///` included, only to say why the code is not written another way.
+Write a code comment with `//`, only to say why the code is not written another way.
 
 This repo is a shooter kit; each game replaces its content. In kit code:
 

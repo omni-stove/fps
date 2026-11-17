@@ -3,13 +3,9 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>ネット対戦で味方を見ている間の状態。見ている人は参加者の Id で持ち、名前に引くのは UI (<see cref="IParticipants"/>)。</summary>
+    // 見ている人を名前でなく参加者の Id で持つのは、名前に引くのを UI (IParticipants) に任せるため。
     public readonly struct SpectateStatus : IEquatable<SpectateStatus>
     {
-        /// <param name="targetId">見ている参加者の Id。見られる味方がいなければ null。</param>
-        /// <param name="candidateCount">切り替えて見られる人の数。</param>
-        /// <param name="reason">観戦になっている理由。</param>
-        /// <exception cref="ArgumentOutOfRangeException">candidateCount が負か、targetId があるのに 0、reason が定義に無い値。</exception>
         public SpectateStatus(int? targetId, int candidateCount, SpectateReason reason)
         {
             if (candidateCount < 0)

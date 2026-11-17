@@ -2,15 +2,12 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>次のマップの投票の今の様子。候補のマップの Id と票数、締め切りまでの秒、決まった候補の番号を全員に送る。</summary>
     public sealed class MapVoteStateMessage : IMessage
     {
         public const byte CurrentVersion = 1;
 
-        /// <summary>1 回の投票に並べられる候補の最大数。</summary>
         public const int MaxCandidates = 16;
 
-        /// <summary>まだ決まっていないことを表す <see cref="ChosenIndex"/>。</summary>
         public const int NotChosen = -1;
 
         private readonly string[] _mapIds = new string[MaxCandidates];
@@ -23,10 +20,8 @@ namespace Shooter.Protocol
 
         public int CandidateCount { get; private set; }
 
-        /// <summary>締め切りまでの秒。</summary>
         public float RemainingSeconds { get; set; }
 
-        /// <summary>決まった候補の番号。まだなら <see cref="NotChosen"/>。</summary>
         public int ChosenIndex
         {
             get => _chosenIndex;
@@ -58,7 +53,6 @@ namespace Shooter.Protocol
             CandidateCount = 0;
         }
 
-        /// <exception cref="InvalidOperationException">もう <see cref="MaxCandidates"/> 個ある。</exception>
         public void AddCandidate(string mapId, int votes)
         {
             if (votes < 0)

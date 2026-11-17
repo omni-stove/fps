@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>ゲームパッドの振動の調整値 (<see cref="RumbleSpec"/>) を、平らな JSON から読む。書いていない項目は既定値。</summary>
     public static class RumbleJson
     {
         public const string FireLowItem = "fireLow";
@@ -33,8 +32,6 @@ namespace Shooter.Core
             ExplosionRadiusItem,
         };
 
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">JSON が壊れている、知らない項目がある、値の型か範囲が違う。</exception>
         public static RumbleSpec Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, _kind);

@@ -32,7 +32,6 @@ namespace Shooter.Runtime
 
         private float Now => Clock != null ? Clock() : Time.time;
 
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public void ApplySpec(MinimapSpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));

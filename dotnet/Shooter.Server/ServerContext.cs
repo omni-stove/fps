@@ -39,10 +39,6 @@ namespace Shooter.Server
 
         public TextWriter Log { get; }
 
-        /// <summary>
-        /// 今の試合のマップ。試合がマップを持てば (<see cref="ServerMatch.UseMaps"/>) それを返し、次の試合でマップを替えるとこれも替わる。
-        /// 試合がマップを持たない (マップを替えないテストなど) ときは渡されたマップ。
-        /// </summary>
         public ServerMapData Map => Match.Map ?? _startMap;
 
         public IWorldCollision World => Map.World;

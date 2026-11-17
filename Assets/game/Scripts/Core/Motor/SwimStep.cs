@@ -3,10 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 泳ぐか・目が水中か・息を、tick の初めの位置から決める。泳ぐときの動きは <see cref="CharacterMotorSimulation"/> が受け持つ。
-    /// 胸と目の高さは泳ぐ間の姿勢である立ちの寸法で測る (しゃがんだまま水に入った tick も、入ったかの答えを姿勢で変えないため)。
-    /// </summary>
+    // 胸と目の高さを泳ぐ間の姿勢である立ちの寸法で測るのは、しゃがんだまま水に入った tick も、入ったかの答えを姿勢で変えないため。
     public static class SwimStep
     {
         public static CharacterSwimState Step(
@@ -67,10 +64,7 @@ namespace Shooter.Core
             return new CharacterSwimState(true, surfaceY, underwater, breath, drownings);
         }
 
-        /// <summary>
-        /// 胸の Y (本体のローカル)。立ちのカプセルの中心と目の間に置く。
-        /// 値として持たせないのは、体の寸法を変えたゲームでも胸が体に付いて動くようにするため。
-        /// </summary>
+        // 胸の高さを値として持たせないのは、体の寸法を変えたゲームでも胸が体に付いて動くようにするため。
         public static float ChestY(StanceGeometry geometry)
         {
             if (geometry == null)

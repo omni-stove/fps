@@ -3,18 +3,8 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 次の試合の前に、2 チームの人数の差を上限に収めるため誰を移すかを決める。差が上限を超えているときだけ、多いチームの
-    /// 最近入った人から少ないチームへ移す。同じパーティの人はまとめて移すか、移さない。
-    /// </summary>
     public static class TeamBalancer
     {
-        /// <param name="alpha">Alpha にいる人。入った順 (古い人が先)。</param>
-        /// <param name="bravo">Bravo にいる人。入った順 (古い人が先)。</param>
-        /// <param name="maxDifference">人数の差の上限。0 なら誰も移さない。</param>
-        /// <returns>移す人。移す順 (最近入った人が先)。</returns>
-        /// <exception cref="ArgumentOutOfRangeException">maxDifference が負。</exception>
-        /// <exception cref="ArgumentException">同じ playerId が 2 回以上ある。</exception>
         public static IReadOnlyList<TeamMove> Plan(IReadOnlyList<TeamBalanceMember> alpha, IReadOnlyList<TeamBalanceMember> bravo, int maxDifference)
         {
             if (alpha == null)

@@ -34,62 +34,46 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheDefaultsUseTheLanguageOfTheOperatingSystem()
+        public void TheDefaultsAreTheKitDefaults()
         {
-            var expected = Localizer.FromSystemLanguage(Application.systemLanguage);
+            Assert.That(_store.Defaults, Is.EqualTo(ControlSettings.Default));
+        }
 
-            Assert.That(_store.Defaults, Is.EqualTo(ControlSettings.DefaultFor(expected)));
+        [Test]
+        public void VersionFiveDataLoadsSilently()
+        {
+            var versionFive = OldVersion(WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson()), 5, null);
+            PlayerPrefs.SetString(_store.Key, versionFive);
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default.WithShowSubtitles(true)));
+            LogAssert.NoUnexpectedReceived();
         }
 
         [TestCase("ja")]
-        [TestCase("en")]
-        public void TheFirstLoadUsesTheGivenDefaultLanguage(string code)
+        [TestCase("fr")]
+        public void TheLanguageOfVersionSevenDataIsSkippedSilentlyAndDroppedOnTheNextSave(string code)
         {
-            var language = new GameLanguage(code);
-            var store = new ControlSettingsStore(_store.Key, language);
+            // 言語を game 側に移す前のゲームが書いた形式。言語の読み移しは game 側 (サンプルの LanguagePreferenceStore) がする。
+            var saved = ControlSettings.Default.WithPalette(ColorPalette.RedGreen).With(ControlValue.MasterVolume, 30);
+            PlayerPrefs.SetString(_store.Key, OldVersion(saved.ToJson(), 7, code));
 
-            Assert.That(store.Load(), Is.EqualTo(ControlSettings.DefaultFor(language)));
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":8").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
         [Test]
-        public void TheSavedLanguageSurvivesARestartWhateverTheDefault()
+        public void ALanguageInTheCurrentVersionIsAnUnknownKey()
         {
-            new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Save(ControlSettings.Default.WithLanguage(GameLanguage.English));
+            PlayerPrefs.SetString(_store.Key, OldVersion(ControlSettings.Default.ToJson(), ControlSettings.CurrentVersion, "ja"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*ignored unknown key 'language'"));
 
-            Assert.That(new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load().Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"language\":\"en\""));
-            LogAssert.NoUnexpectedReceived();
-        }
-
-        [Test]
-        public void VersionFiveDataSilentlyGetsTheDefaultLanguage()
-        {
-            // 言語を足す前のゲームが書いた形式。
-            var versionFive = WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson())
-                .Replace("\"version\":7", "\"version\":5")
-                .Replace(",\"language\":\"ja\"", string.Empty);
-            PlayerPrefs.SetString(_store.Key, versionFive);
-
-            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.English).Load();
-
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            LogAssert.NoUnexpectedReceived();
-        }
-
-        [Test]
-        public void AnUnknownLanguageFallsBackToTheDefaultLanguageWithAWarning()
-        {
-            PlayerPrefs.SetString(
-                _store.Key,
-                ControlSettings.Default.WithPalette(ColorPalette.RedGreen).ToJson().Replace("\"language\":\"ja\"", "\"language\":\"fr\""));
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*language"));
-
-            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.English).Load();
-
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
+            Assert.That(_store.Load(), Is.EqualTo(ControlSettings.Default));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -191,7 +175,7 @@ namespace Fps.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":7"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":8"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -217,19 +201,16 @@ namespace Fps.Tests.EditMode
         public void VersionSixDataSilentlyGetsThePresentationDefaults()
         {
             // 揺れの強さと血の表示を足す前のゲームが書いた形式。
-            var versionSix = WithoutPresentation(
-                    ControlSettings.Default.WithPalette(ColorPalette.BlueYellow).WithLanguage(GameLanguage.English).ToJson())
-                .Replace("\"version\":7", "\"version\":6");
+            var versionSix = OldVersion(WithoutPresentation(ControlSettings.Default.WithPalette(ColorPalette.BlueYellow).ToJson()), 6, "en");
             Assert.That(versionSix, Does.Not.Contain("showBlood"));
             PlayerPrefs.SetString(_store.Key, versionSix);
 
-            var loaded = new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load();
+            var loaded = _store.Load();
 
             Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(ControlSettings.RangeOf(ControlValue.CameraShakeIntensity).Default));
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(ControlSettings.RangeOf(ControlValue.ViewmodelMotionIntensity).Default));
             Assert.That(loaded.ShowBlood, Is.EqualTo(ControlSettings.Default.ShowBlood));
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.BlueYellow), "the saved value");
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English), "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -317,6 +298,13 @@ namespace Fps.Tests.EditMode
         private static string WithoutPresentation(string json)
         {
             return json.Replace(",\"cameraShake\":100,\"viewmodelMotion\":100,\"showBlood\":true", string.Empty);
+        }
+
+        // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。
+        private static string OldVersion(string json, int version, string language)
+        {
+            var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            return language == null ? old : old.Insert(old.Length - 1, ",\"language\":\"" + language + "\"");
         }
     }
 }

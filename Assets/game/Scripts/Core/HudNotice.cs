@@ -16,7 +16,7 @@ namespace Fps.Core
         StatusEffect,
     }
 
-    // 文や LocalizedText で持たないのは、Core から文言を出さず、何をどう言うかを UI に任せるため。
+    // 文や文言のキーで持たないのは、Core から文言を出さず、何をどう言うかを UI に任せるため。
     public readonly struct HudNotice : IEquatable<HudNotice>
     {
         public HudNoticeKind Kind { get; }

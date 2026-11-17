@@ -234,7 +234,6 @@ namespace Fps.Tests.EditMode
             Assert.That(ladder.TierCount, Is.EqualTo(3));
             Assert.That(ladder.Tiers[0].WeaponId, Is.EqualTo(TestWeapons.RifleId));
             Assert.That(ladder.Tiers[1].NameKey, Is.EqualTo(TestWeapons.LauncherNameKey));
-            Assert.That(GameText.Resolve(ladder.Tiers[1].Name), Is.EqualTo("Launcher"));
             Assert.That(ladder.IsMelee(KnifeId), Is.True);
             Assert.That(ladder.DemotesOnMelee, Is.True);
 

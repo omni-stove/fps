@@ -16,19 +16,19 @@ namespace Fps.Tests.EditMode
     /// </summary>
     public sealed class LocalizedTextsTests
     {
-        private ControlSettings _appliedBefore;
+        private GameLanguage _languageBefore;
 
         [SetUp]
         public void SetUp()
         {
-            _appliedBefore = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(_appliedBefore.WithLanguage(GameLanguage.Japanese));
+            _languageBefore = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
         }
 
         [TearDown]
         public void TearDown()
         {
-            AppliedControlSettings.Apply(_appliedBefore);
+            Localizer.Apply(_languageBefore);
         }
 
         [Test]
@@ -52,7 +52,7 @@ namespace Fps.Tests.EditMode
             Assert.That(texts.KeyOf(plain), Is.Null);
 
             LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
-            AppliedControlSettings.Apply(AppliedControlSettings.Current.WithLanguage(GameLanguage.English));
+            Localizer.Apply(GameLanguage.English);
             texts.Refresh();
 
             Assert.That(keyed.text, Is.EqualTo("Paused"));
@@ -99,7 +99,7 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(range.text, Is.EqualTo("射撃場"));
 
-                AppliedControlSettings.Apply(AppliedControlSettings.Current.WithLanguage(GameLanguage.English));
+                Localizer.Apply(GameLanguage.English);
 
                 Assert.That(range.text, Is.EqualTo("FIRING RANGE"));
                 Assert.That(screen.Buttons.Select(b => b.text), Has.None.StartsWith(LocalizedTexts.KeyPrefix));
@@ -122,7 +122,7 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(note.text, Is.EqualTo("オンラインでは試合は止まりません"));
 
-                AppliedControlSettings.Apply(AppliedControlSettings.Current.WithLanguage(GameLanguage.English));
+                Localizer.Apply(GameLanguage.English);
 
                 Assert.That(note.text, Is.EqualTo("The match does not stop while online"));
             }
@@ -148,7 +148,7 @@ namespace Fps.Tests.EditMode
                 var note = pause.Element.Q<Label>(PauseMenu.NoteLabelName);
                 pause.Unbind();
 
-                AppliedControlSettings.Apply(AppliedControlSettings.Current.WithLanguage(GameLanguage.English));
+                Localizer.Apply(GameLanguage.English);
 
                 Assert.That(note.text, Is.EqualTo("オンラインでは試合は止まりません"));
             }

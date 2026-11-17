@@ -62,7 +62,7 @@ namespace Fps.Tests.EditMode
 
             thrower.ApplyCatalog(_fragAndSmoke);
             thrower.SelectNext();
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(_smoke.Name, 2))));
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(DisplayNames.Of(_smoke), 2))));
         }
 
         [Test]
@@ -122,7 +122,7 @@ namespace Fps.Tests.EditMode
             Assume.That(KitTuning.Grenades.TryFind(GrenadeSpec.DefaultId, out var frag), Is.True);
 
             GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, 2, GrenadeSpec.DefaultId));
-            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(frag.Name, 2))));
+            Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(DisplayNames.Of(frag), 2))));
 
             GameSignals.GrenadeCount.Publish(new GrenadeCountStatus(true, -1, "not-in-the-json"));
             Assert.That(view.Text, Is.EqualTo(Localizer.Resolve(HudText.Grenades(LocalizedText.Literal("not-in-the-json"), 0))), "an unknown Id is shown as it is");

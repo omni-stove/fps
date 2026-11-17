@@ -32,8 +32,8 @@ namespace Fps.Runtime
         /// <summary>キルログに出す武器の Id。</summary>
         public const string WeaponId = "grenade";
 
-        /// <summary>キルログに出す武器の名前。</summary>
-        public static LocalizedText Name => new LocalizedText("weapon.grenade");
+        /// <summary>キルログに出す武器の名前を引く、game 側の言語の表のキー。</summary>
+        public const string NameKey = "weapon.grenade";
 
         [SerializeField, Min(0f), Tooltip("投げてから爆発するまでの秒数")]
         private float _fuseSeconds = GrenadeSpec.DefaultFuseSeconds;

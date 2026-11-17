@@ -28,14 +28,11 @@ namespace Fps.Core
         /// <summary>ミッション内で一意な識別子。</summary>
         public string Id { get; }
 
-        /// <summary>プレイヤーに見せる説明の、言語の表 (<see cref="StringTable"/>) のキー。無ければ空文字。</summary>
-        public string DescriptionKey { get; }
-
         /// <summary>
-        /// プレイヤーに見せる説明。<see cref="DescriptionKey"/> の文の <c>{0}</c> に <see cref="RequiredCount"/> を差し込む
-        /// (数を表の文に直に書くと、定義の数を変えたときに説明だけ古いまま残るため)。<see cref="DescriptionKey"/> が空なら <c>default</c> (文にすると空文字)。
+        /// プレイヤーに見せる説明を引く、game 側の言語の表のキー。無ければ空文字。
+        /// 表の文には数を直に書かず <see cref="RequiredCount"/> を差し込む (定義の数を変えたときに説明だけ古いまま残らないよう)。
         /// </summary>
-        public LocalizedText Description => DescriptionKey.Length == 0 ? default : new LocalizedText(DescriptionKey, RequiredCount);
+        public string DescriptionKey { get; }
 
         /// <summary>完了までに必要な進み具合。1 以上。</summary>
         public int RequiredCount { get; }

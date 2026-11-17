@@ -236,13 +236,13 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheImportedNameIsReadFromTheTableByItsKey()
+        public void TheImportedNameIsStoredAsItsKey()
         {
             WeaponJsonImporter.ImportFrom(_samplesFolder + "/Launcher.json", _folder, null);
 
             var launcher = Load("Launcher");
             Assert.That(launcher.NameKey, Is.EqualTo(TestWeapons.LauncherNameKey), "the asset stores the key, not the text");
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(launcher.ToSpec().Name), Is.EqualTo("Launcher"));
+            Assert.That(launcher.ToSpec().NameKey, Is.EqualTo(TestWeapons.LauncherNameKey));
         }
 
         [TestCase("\"\"", "")]
@@ -255,7 +255,7 @@ namespace Fps.Tests.EditMode
                 "Rifle.json");
 
             Assert.That(spec.NameKey, Is.EqualTo(expected));
-            Assert.That(spec.Name, Is.EqualTo(expected.Length > 0 ? new LocalizedText(expected) : LocalizedText.Literal(spec.Id)));
+            Assert.That(spec.LogName, Is.EqualTo(expected.Length > 0 ? expected : spec.Id));
         }
 
         [Test]

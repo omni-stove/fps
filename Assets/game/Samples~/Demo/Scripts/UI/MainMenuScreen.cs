@@ -617,7 +617,7 @@ namespace Fps.Runtime
             foreach (var mission in catalog.Missions)
             {
                 var hasSave = ProbeSave(storage, mission.Id);
-                missions.Add(new CampaignMenuMission(mission.Id, Localizer.Resolve(mission.DisplayName), hasSave));
+                missions.Add(new CampaignMenuMission(mission.Id, Localizer.Resolve(DisplayNames.Mission(mission.DisplayNameKey)), hasSave));
             }
 
             var last = CampaignLaunchSelection.Current;

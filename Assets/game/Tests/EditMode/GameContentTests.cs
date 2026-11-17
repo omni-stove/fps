@@ -12,8 +12,6 @@ namespace Fps.Tests.EditMode
 {
     public sealed class GameContentTests
     {
-        private const string TextKey = "menu.title";
-
         private readonly List<Object> _created = new List<Object>();
         private WeaponDefinition _rifle;
         private WeaponDefinition _handgun;
@@ -102,20 +100,6 @@ namespace Fps.Tests.EditMode
 
             Assert.That(runner.EffectiveDefinition, Is.SameAs(wired));
             Assert.That(runner.CreateSpec().ScoreLimit, Is.EqualTo(5));
-        }
-
-        [Test]
-        public void SwappingTheEntrySwapsTheText()
-        {
-            GameContent.Use(Content("A", title: "Game A"));
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Get(TextKey), Is.EqualTo("Game A"));
-            Assert.That(Localizer.TableOf(GameLanguage.English).Get(TextKey), Is.Not.EqualTo("Game A"), "only the language the tables are for");
-
-            GameContent.Use(Content("B", title: "Game B"));
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Get(TextKey), Is.EqualTo("Game B"));
-
-            GameContent.Use(null);
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Get(TextKey), Is.Not.EqualTo("Game B"));
         }
 
         [Test]
@@ -235,7 +219,7 @@ namespace Fps.Tests.EditMode
                 () => GameContentAssets.ResolvePath(new[] { "-gameContent", "Assets/A.asset", "-gameContent", "Assets/B.asset" }, "Assets/Y.asset"));
         }
 
-        private GameContent Content(string name, float regenPerSecond = 10f, WeaponDefinition weapon = null, int scoreLimit = 50, string title = null)
+        private GameContent Content(string name, float regenPerSecond = 10f, WeaponDefinition weapon = null, int scoreLimit = 50)
         {
             var content = Track(ScriptableObject.CreateInstance<GameContent>());
             content.name = name;
@@ -266,13 +250,6 @@ namespace Fps.Tests.EditMode
             content.Domination.ScoreLimit = scoreLimit;
             content.KillConfirmed = Track(ScriptableObject.CreateInstance<KillConfirmedDefinition>());
             content.KillConfirmed.name = name + "-KillConfirmed";
-
-            if (title != null)
-            {
-                var table = Track(new TextAsset("{ \"" + TextKey + "\": \"" + title + "\" }"));
-                table.name = "menu";
-                content.SetTexts(new[] { new GameContentTextTables(GameLanguages.Code(GameLanguage.Japanese), new[] { table }) });
-            }
 
             return content;
         }

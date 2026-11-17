@@ -188,8 +188,8 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AVersionMismatchNamesBothVersionsAndAFailedStartShowsItsDetail()
         {
-            var applied = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+            var applied = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
             try
             {
                 _screen.Bind(_root);
@@ -206,15 +206,15 @@ namespace Fps.Tests.EditMode
             }
             finally
             {
-                AppliedControlSettings.Apply(applied);
+                Localizer.Apply(applied);
             }
         }
 
         [Test]
         public void ADisconnectReasonIsLookedUpByTheMenuAndFollowsTheLanguage()
         {
-            var applied = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+            var applied = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
             try
             {
                 _screen.Bind(_root);
@@ -223,16 +223,16 @@ namespace Fps.Tests.EditMode
                     MenuReturnReason.Disconnected(DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, true, "0.1.0"), 0));
                 Assert.That(_screen.Notice, Is.EqualTo("サーバーが止まりました。"));
 
-                AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+                Localizer.Apply(GameLanguage.English);
                 Assert.That(_screen.Notice, Is.EqualTo("The server stopped."));
 
                 _screen.ShowNotice((string)null);
-                AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+                Localizer.Apply(GameLanguage.Japanese);
                 Assert.That(_screen.Notice, Is.Null, "a hidden notice stays hidden after the language changes");
             }
             finally
             {
-                AppliedControlSettings.Apply(applied);
+                Localizer.Apply(applied);
             }
         }
 

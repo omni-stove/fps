@@ -7,19 +7,19 @@ namespace Fps.Tests.EditMode
 {
     public sealed class DisconnectNoticeTextTests
     {
-        private ControlSettings _applied;
+        private GameLanguage _applied;
 
         [SetUp]
         public void SetUp()
         {
-            _applied = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+            _applied = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
         }
 
         [TearDown]
         public void TearDown()
         {
-            AppliedControlSettings.Apply(_applied);
+            Localizer.Apply(_applied);
         }
 
         private static LocalizedText For(string reason, bool wasConnected, string localVersion = "0.1.0")

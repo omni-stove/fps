@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Fps.Core;
 using Fps.Runtime;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -18,8 +17,9 @@ namespace Fps.Editor
     /// <list type="bullet">
     /// <item>Assets/ の下の武器 (<see cref="WeaponDefinition"/>) の Id に、<see cref="PresentationCatalog"/> の音とエフェクトがあるか。
     /// カタログ自体が無い・<see cref="PresentationCatalog.Validate"/> に通らないときも出す。</item>
-    /// <item>文言の表 (<see cref="Localizer.ReadResources"/>) が言語ごとに読めるか、どの言語にも同じキーがあるか、武器の名前のキーがどの言語にもあるか。</item>
+    /// <item>武器に Id と名前のキーがあるか (キーを文にする表は game 側が持つので、表にキーがあるかは game 側の点検が見る)。</item>
     /// <item><see cref="RequiredReferenceAttribute"/> を付けた参照が、ビルドに入るシーン・Assets/ の下のプレハブ・アセットで空でないか。</item>
+    /// <item>game 側の Editor のアセンブリに置いた点検 (<see cref="IReplacementAuditCheck"/>)。</item>
     /// </list>
     /// 漏れがあれば終了コード <see cref="FindingsExitCode"/>、点検そのものが失敗したら <see cref="ErrorExitCode"/>、無ければ
     /// <see cref="SuccessExitCode"/> で Editor を閉じる (batchmode のときだけ)。Editor を閉じた状態で次のように呼べる:
@@ -81,14 +81,17 @@ namespace Fps.Editor
             var catalog = PresentationCatalog.Load();
             CheckPresentationCatalog(catalog, findings);
 
-            var strings = AuditedStrings.Read(GameLanguages.All, Localizer.ReadResources, findings);
-            CheckStringKeys(strings, findings);
-
-            CheckWeapons(LoadAssets<WeaponDefinition>(), catalog, strings, findings);
+            CheckWeapons(LoadAssets<WeaponDefinition>(), catalog, findings);
 
             CheckBuildScenes(findings);
             CheckPrefabs(findings);
             CheckScriptableObjects(findings);
+
+            foreach (var check in ExtensionPoints.CreateAll<IReplacementAuditCheck>(_ => 0))
+            {
+                check.Check(findings);
+            }
+
             return findings;
         }
 
@@ -159,67 +162,18 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// strings の読めた言語どうしでキーを比べ、ほかの言語にあって自分に無いキーを 1 つずつ findings に足す。
-        /// キーは序数の順、言語は <see cref="AuditedStrings.ReadableLanguages"/> の順に並べる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">どちらかが null。</exception>
-        public static void CheckStringKeys(AuditedStrings strings, ICollection<ReplacementAuditFinding> findings)
-        {
-            if (strings == null)
-            {
-                throw new ArgumentNullException(nameof(strings));
-            }
-
-            if (findings == null)
-            {
-                throw new ArgumentNullException(nameof(findings));
-            }
-
-            var languages = strings.ReadableLanguages;
-            var allKeys = new SortedSet<string>(StringComparer.Ordinal);
-            foreach (var language in languages)
-            {
-                allKeys.UnionWith(strings.KeysOf(language));
-            }
-
-            foreach (var key in allKeys)
-            {
-                foreach (var language in languages)
-                {
-                    if (strings.TryGetTable(language, key, out _))
-                    {
-                        continue;
-                    }
-
-                    var holder = languages.First(other => strings.TryGetTable(other, key, out _));
-                    strings.TryGetTable(holder, key, out var table);
-                    findings.Add(new ReplacementAuditFinding(
-                        ReplacementAuditArea.Strings,
-                        GameLanguages.Code(language),
-                        $"key '{key}' is missing ({GameLanguages.Code(holder)} has it in '{table}')"));
-                }
-            }
-        }
-
-        /// <summary>
-        /// 武器ごとに、Id が空でないか、catalog に Id の音とエフェクトがあるか、名前のキーが strings の読めた言語のすべてにあるかを見て、
+        /// 武器ごとに、Id が空でないか、catalog に Id の音とエフェクトがあるか、名前のキーが空でないかを見て、
         /// 足りなければ findings に足す。catalog が null なら音とエフェクトは見ない (<see cref="CheckPresentationCatalog"/> が出す)。null の武器は飛ばす。
         /// </summary>
-        /// <exception cref="ArgumentNullException">weapons・strings・findings のどれかが null。</exception>
+        /// <exception cref="ArgumentNullException">weapons か findings が null。</exception>
         public static void CheckWeapons(
             IEnumerable<WeaponDefinition> weapons,
             PresentationCatalog catalog,
-            AuditedStrings strings,
             ICollection<ReplacementAuditFinding> findings)
         {
             if (weapons == null)
             {
                 throw new ArgumentNullException(nameof(weapons));
-            }
-
-            if (strings == null)
-            {
-                throw new ArgumentNullException(nameof(strings));
             }
 
             if (findings == null)
@@ -248,22 +202,9 @@ namespace Fps.Editor
                         $"weapon id '{id}' has no sounds or effects in presentation catalog '{catalog.name}'"));
                 }
 
-                var nameKey = weapon.NameKey.Trim();
-                if (nameKey.Length == 0)
+                if (weapon.NameKey.Trim().Length == 0)
                 {
                     findings.Add(new ReplacementAuditFinding(ReplacementAuditArea.Strings, where, "the weapon has no name key"));
-                    continue;
-                }
-
-                foreach (var language in strings.ReadableLanguages)
-                {
-                    if (!strings.TryGetTable(language, nameKey, out _))
-                    {
-                        findings.Add(new ReplacementAuditFinding(
-                            ReplacementAuditArea.Strings,
-                            where,
-                            $"name key '{nameKey}' is missing from the {GameLanguages.Code(language)} strings"));
-                    }
                 }
             }
         }
@@ -469,7 +410,7 @@ namespace Fps.Editor
             }
         }
 
-        private static List<T> LoadAssets<T>()
+        public static List<T> LoadAssets<T>()
             where T : Object
         {
             var assets = new List<T>();
@@ -502,7 +443,7 @@ namespace Fps.Editor
             }
         }
 
-        private static string WhereIs(Object asset)
+        public static string WhereIs(Object asset)
         {
             var path = AssetDatabase.GetAssetPath(asset);
             if (!string.IsNullOrEmpty(path))

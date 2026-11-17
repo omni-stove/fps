@@ -104,12 +104,9 @@ namespace Fps.Runtime
         [SerializeField]
         private BattleRoyaleDefinition _battleRoyale;
 
-        [Header("キャラクター・文言・メニュー")]
+        [Header("キャラクター・メニュー")]
         [SerializeField, Tooltip("プレイヤー・敵に置く人型のリグ (根に Animator)。空なら Resources/Characters/CharacterRig")]
         private GameObject _characterRig;
-
-        [SerializeField, Tooltip("言語ごとの文言の表。Resources/Localization/<言語>/ の表の後に重ね、同じキーはこちらが勝つ")]
-        private List<GameContentTextTables> _texts = new List<GameContentTextTables>();
 
         [SerializeField, Tooltip("メニューから移るシーンの名前。空なら Resources/Menu/MenuSceneSettings")]
         private MenuSceneSettings _menuScenes;
@@ -335,8 +332,6 @@ namespace Fps.Runtime
             set => _characterRig = value;
         }
 
-        public IReadOnlyList<GameContentTextTables> Texts => _texts ??= new List<GameContentTextTables>();
-
         public MenuSceneSettings MenuScenes
         {
             get => _menuScenes;
@@ -526,36 +521,14 @@ namespace Fps.Runtime
             return null;
         }
 
-        public IReadOnlyList<TextAsset> TextsFor(string languageCode)
-        {
-            var tables = new List<TextAsset>();
-            foreach (var entry in Texts)
-            {
-                if (entry == null || !string.Equals(entry.Language.Trim(), languageCode, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                tables.AddRange(entry.Tables.Where(t => t != null));
-            }
-
-            return tables;
-        }
-
         public void SetEnemies(IEnumerable<EnemyDefinition> enemies)
         {
             _enemies = enemies == null ? new List<EnemyDefinition>() : new List<EnemyDefinition>(enemies);
         }
 
-        public void SetTexts(IEnumerable<GameContentTextTables> texts)
-        {
-            _texts = texts == null ? new List<GameContentTextTables>() : new List<GameContentTextTables>(texts);
-        }
-
-        // 文言と調整値は読んだものを持ち続けるので、入口が替わったら読み直させる。
+        // 調整値は読んだものを持ち続けるので、入口が替わったら読み直させる。
         private static void ForgetLoaded()
         {
-            Localizer.Reload();
             KitTuning.Reload();
         }
 

@@ -236,26 +236,5 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentException>(() => new CampaignMenuStart(launch, CampaignStartMode.Continue, true));
             Assert.Throws<ArgumentNullException>(() => new CampaignMenuStart(null, CampaignStartMode.Continue, false));
         }
-
-        [Test]
-        public void EveryStartItemHasALabel()
-        {
-            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
-#pragma warning disable CA2263
-            foreach (CampaignMenuItemKind kind in Enum.GetValues(typeof(CampaignMenuItemKind)))
-#pragma warning restore CA2263
-            {
-                if (kind == CampaignMenuItemKind.Mission || kind == CampaignMenuItemKind.Difficulty)
-                {
-                    continue;
-                }
-
-                Assert.That(CampaignMenuFormat.ItemLabel(kind), Is.Not.Empty, kind.ToString());
-            }
-
-            Assert.That(CampaignMenuFormat.DifficultyLabel(CampaignDifficulty.Easy), Is.EqualTo("かんたん"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => CampaignMenuFormat.DifficultyLabel((CampaignDifficulty)99));
-            Assert.That(CampaignMenuFormat.ConfirmRestartQuestion("Operation One"), Does.Contain("Operation One"));
-        }
     }
 }

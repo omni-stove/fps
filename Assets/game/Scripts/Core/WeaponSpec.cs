@@ -35,20 +35,6 @@ namespace Fps.Core
         /// <summary>画面に出す名前を引く表のキー (例: <c>weapon.rifle</c>)。前後の空白を除いた値で、生成時に空なら空文字。</summary>
         public string NameKey { get; }
 
-        /// <summary>
-        /// 画面に出す名前。<see cref="NameKey"/> があればそのキーの文、無ければ <see cref="Id"/> をそのまま出す <see cref="LocalizedText.Literal"/>。
-        /// </summary>
-        public LocalizedText Name => NameOf(Id, NameKey);
-
-        /// <summary>
-        /// id と nameKey (前後の空白は除く) の武器の画面に出す名前 (<see cref="Name"/>)。<see cref="WeaponSpec"/> を作らずに名前だけ要るところで使う。null は空文字にする。
-        /// </summary>
-        public static LocalizedText NameOf(string id, string nameKey)
-        {
-            var key = SpecGuard.NameKey(nameKey);
-            return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(id ?? string.Empty);
-        }
-
         /// <summary>ログに書く名前。<see cref="NameKey"/> があればキー、無ければ <see cref="Id"/>。表は引かない。</summary>
         public string LogName => NameKey.Length > 0 ? NameKey : Id;
 

@@ -14,8 +14,6 @@ namespace Fps.Core
 
         public string NameKey { get; }
 
-        public LocalizedText Name => NameKey.Length > 0 ? new LocalizedText(NameKey) : LocalizedText.Literal(Id);
-
         public RoundSpec Round { get; }
 
         public ImpactSpec Impact { get; }

@@ -52,15 +52,6 @@ namespace Fps.Runtime
 
         public override string DisplayNameKey => _nameKey != null ? _nameKey.Trim() : string.Empty;
 
-        public LocalizedText Name
-        {
-            get
-            {
-                var key = DisplayNameKey;
-                return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(Id);
-            }
-        }
-
         public float ArmSeconds
         {
             get => _armSeconds;
@@ -109,16 +100,10 @@ namespace Fps.Runtime
             set => _armedVolume = value;
         }
 
-        public static bool TryFindName(GameObject owner, string kindId, out LocalizedText name)
+        /// <summary>owner が持つ、種類の Id が kindId の定義。キルログの名前 (<see cref="DisplayNameKey"/>) を引くのに使う。</summary>
+        public static bool TryFind(GameObject owner, string kindId, out MineDeployDefinition mine)
         {
-            if (TryFindEquipped<MineDeployDefinition>(owner, kindId, out var mine))
-            {
-                name = mine.Name;
-                return true;
-            }
-
-            name = default;
-            return false;
+            return TryFindEquipped(owner, kindId, out mine);
         }
 
         public MineSpec ToMineSpec()

@@ -44,8 +44,8 @@ namespace Fps.Runtime
             var gunGame = detail.GunGame;
             var id = detail.LocalPlayerId.Value;
             var next = gunGame.GetNextWeapon(id);
-            lines.Add(Tier(gunGame.GetTier(id), gunGame.Ladder.TierCount, gunGame.GetWeapon(id).Name));
-            lines.Add(Next(next.HasValue ? next.Value.Name : default));
+            lines.Add(Tier(gunGame.GetTier(id), gunGame.Ladder.TierCount, DisplayNames.Of(gunGame.GetWeapon(id))));
+            lines.Add(Next(next.HasValue ? DisplayNames.Of(next.Value) : default));
         }
 
         public LocalizedText Result(ModeStatus status) => ModeStatusFormat.Result(status);

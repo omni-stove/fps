@@ -185,9 +185,6 @@ namespace Fps.Runtime
         /// <summary>メニューに出す名前の、言語の表のキー。</summary>
         public string DisplayNameKey => _displayNameKey ?? string.Empty;
 
-        /// <summary>メニューに出す名前。<see cref="DisplayNameKey"/> が空なら <c>default</c> (文にすると空文字)。</summary>
-        public LocalizedText DisplayName => string.IsNullOrWhiteSpace(_displayNameKey) ? default : new LocalizedText(_displayNameKey.Trim());
-
         /// <summary>SceneManager.LoadScene に渡せるシーンのパス (Assets/ から始まり .unity で終わる)。</summary>
         public string ScenePath => _scenePath ?? string.Empty;
 

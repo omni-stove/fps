@@ -67,7 +67,7 @@ namespace Fps.Runtime
 
         private static LocalizedText WeaponName(PickupHint hint)
         {
-            return WeaponSpec.NameOf(hint.ContentId, hint.NameKey);
+            return DisplayNames.Of(hint.NameKey, hint.ContentId);
         }
     }
 }

@@ -86,12 +86,12 @@ namespace Fps.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':7,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':8,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
                     "'showBlood':true,'showNetStats':false," +
-                    "'colorPalette':'standard','showSubtitles':false,'language':'ja'}")));
+                    "'colorPalette':'standard','showSubtitles':false}")));
         }
 
         [Test]
@@ -141,7 +141,7 @@ namespace Fps.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':8,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':9,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -152,20 +152,11 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void BrokenDataFallsBackToTheGivenLanguage()
-        {
-            var loaded = ControlSettings.FromJson("{not json", GameLanguage.English, out var problems);
-
-            Assert.That(loaded, Is.EqualTo(ControlSettings.DefaultFor(GameLanguage.English)));
-            Assert.That(problems, Has.Count.EqualTo(1));
-        }
-
-        [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':8}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':9}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 8"));
+            Assert.That(problems[0], Does.Contain("version 9"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -392,7 +383,7 @@ namespace Fps.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -728,7 +719,7 @@ namespace Fps.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'language':'ja'}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
@@ -789,111 +780,49 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheDefaultLanguageIsJapanese()
+        public void TheCurrentFormatHasNoLanguage()
         {
-            Assert.That(ControlSettings.Default.Language, Is.EqualTo(GameLanguage.Japanese));
+            var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
+
+            Assert.That(json, Does.StartWith(Json("{'version':8,")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true}")));
+            Assert.That(json, Does.Not.Contain("language"));
         }
 
-        [Test]
-        public void DefaultForChangesOnlyTheLanguage()
+        [TestCase(6)]
+        [TestCase(7)]
+        public void VersionsSixAndSevenSkipTheirLanguageWithoutProblems(int version)
         {
-            var english = ControlSettings.DefaultFor(GameLanguage.English);
+            var settings = ControlSettings.Default.WithShowSubtitles(true).WithPalette(ColorPalette.RedGreen);
+            var json = version == 6 ? WithoutPresentation(settings.ToJson()) : settings.ToJson();
+            var old = json.Replace("\"version\":8", "\"version\":" + version, StringComparison.Ordinal);
+            var withLanguage = old.Insert(old.Length - 1, ",\"language\":\"fr\"");
 
-            Assert.That(english.Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(english.WithLanguage(GameLanguage.Japanese), Is.EqualTo(ControlSettings.Default));
-            Assert.That(ControlSettings.DefaultFor(GameLanguage.Japanese), Is.SameAs(ControlSettings.Default));
-        }
+            var loaded = ControlSettings.FromJson(withLanguage, out var problems);
 
-        [Test]
-        public void WithLanguageChangesOnlyTheLanguage()
-        {
-            var settings = ControlSettings.Default.With(ControlValue.FieldOfView, 80).WithPalette(ColorPalette.BlueYellow);
-
-            var english = settings.WithLanguage(GameLanguage.English);
-
-            Assert.That(english.Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(settings.Language, Is.EqualTo(GameLanguage.Japanese), "the original does not change");
-            Assert.That(english.Get(ControlValue.FieldOfView), Is.EqualTo(80));
-            Assert.That(english.Palette, Is.EqualTo(ColorPalette.BlueYellow));
-            Assert.That(english, Is.Not.EqualTo(settings));
-            Assert.That(english.WithLanguage(GameLanguage.English), Is.SameAs(english));
-            Assert.That(english.WithLanguage(GameLanguage.Japanese), Is.EqualTo(settings));
-            Assert.That(english.WithLanguage(GameLanguage.Japanese).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
-        }
-
-        [Test]
-        public void WithLanguageRejectsUnknownLanguages()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithLanguage(default));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.FromJson("{}", default, out _));
-        }
-
-        [TestCase("ja", "'language':'ja'")]
-        [TestCase("en", "'language':'en'")]
-        public void RoundTripsTheLanguage(string code, string written)
-        {
-            var language = new GameLanguage(code);
-            var settings = ControlSettings.Default.WithShowSubtitles(true).WithLanguage(language);
-
-            // 読む側の既定の言語に引きずられず、保存した言語に戻る
-            var other = language == GameLanguage.Japanese ? GameLanguage.English : GameLanguage.Japanese;
-            var loaded = ControlSettings.FromJson(settings.ToJson(), other, out var problems);
-
-            Assert.That(settings.ToJson(), Does.EndWith(Json("," + written + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")).And.Not.Contain("language"));
         }
 
-        [TestCase("ja")]
-        [TestCase("en")]
-        public void ReadsVersionFiveWithTheGivenLanguageAndNoProblems(string fallbackCode)
+        [TestCase(5)]
+        [TestCase(8)]
+        public void AVersionWithoutALanguageReportsTheLanguageKeyAsUnknown(int version)
         {
-            var fallback = new GameLanguage(fallbackCode);
-            var versionFive = Json(_validV2.Replace("'version':2", "'version':5", StringComparison.Ordinal)
-                .Replace(
-                    "'effectsVolume':0}",
-                    "'effectsVolume':0,'showNetStats':true,'colorPalette':'redGreen','showSubtitles':true}",
-                    StringComparison.Ordinal));
+            var json = WithoutPresentation(ControlSettings.Default.ToJson());
+            if (version == 8)
+            {
+                json = ControlSettings.Default.ToJson();
+            }
 
-            var loaded = ControlSettings.FromJson(versionFive, fallback, out var problems);
+            var withLanguage = json.Replace("\"version\":8", "\"version\":" + version, StringComparison.Ordinal);
+            withLanguage = withLanguage.Insert(withLanguage.Length - 1, ",\"language\":\"en\"");
 
-            Assert.That(problems, Is.Empty);
-            Assert.That(loaded.Language, Is.EqualTo(fallback));
-            Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
-        }
+            var loaded = ControlSettings.FromJson(withLanguage, out var problems);
 
-        [Test]
-        public void VersionFiveReportsTheLanguageKeyAsUnknown()
-        {
-            var versionFive = WithoutPresentation(ControlSettings.Default.WithLanguage(GameLanguage.English).ToJson())
-                .Replace("\"version\":7", "\"version\":5", StringComparison.Ordinal);
-
-            var loaded = ControlSettings.FromJson(versionFive, GameLanguage.Japanese, out var problems);
-
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.Japanese), "a version 5 file cannot have a language");
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default));
             Assert.That(problems, Has.Count.EqualTo(1));
             Assert.That(problems[0], Does.Contain("'language'"));
-        }
-
-        // 言語が欠けている・文字列でない・知らない言語コードなら、その項目だけ読む側の既定の言語
-        [TestCase(",'language':'en'", "")]
-        [TestCase("'language':'en'", "'language':'EN'")]
-        [TestCase("'language':'en'", "'language':'fr'")]
-        [TestCase("'language':'en'", "'language':'English'")]
-        [TestCase("'language':'en'", "'language':1")]
-        [TestCase("'language':'en'", "'language':null")]
-        public void BrokenLanguageFallsBackOnlyForTheLanguage(string from, string to)
-        {
-            var valid = ControlSettings.Default.WithPalette(ColorPalette.RedGreen).WithLanguage(GameLanguage.English).ToJson();
-            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
-
-            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), GameLanguage.Japanese, out var problems);
-
-            Assert.That(problems, Has.Count.EqualTo(1));
-            Assert.That(problems[0], Does.Contain("language"));
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.Japanese), "the reader's default");
-            Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen), "the saved value");
         }
 
         [Test]
@@ -922,8 +851,7 @@ namespace Fps.Core.Tests
         {
             var settings = ControlSettings.Default
                 .With(ControlValue.CameraShakeIntensity, 40)
-                .WithShowSubtitles(true)
-                .WithLanguage(GameLanguage.English);
+                .WithShowSubtitles(true);
 
             var hidden = settings.WithShowBlood(false);
 
@@ -931,7 +859,6 @@ namespace Fps.Core.Tests
             Assert.That(settings.ShowBlood, Is.True, "the original does not change");
             Assert.That(hidden.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(40));
             Assert.That(hidden.ShowSubtitles, Is.True);
-            Assert.That(hidden.Language, Is.EqualTo(GameLanguage.English));
             Assert.That(hidden, Is.Not.EqualTo(settings));
             Assert.That(hidden.WithShowBlood(true), Is.EqualTo(settings));
             Assert.That(hidden.WithShowBlood(true).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
@@ -948,7 +875,6 @@ namespace Fps.Core.Tests
             Assert.That(hidden.WithShowNetStats(true).ShowBlood, Is.False);
             Assert.That(hidden.WithPalette(ColorPalette.BlueYellow).ShowBlood, Is.False);
             Assert.That(hidden.WithShowSubtitles(true).ShowBlood, Is.False);
-            Assert.That(hidden.WithLanguage(GameLanguage.English).ShowBlood, Is.False);
         }
 
         [TestCase(true)]
@@ -972,20 +898,19 @@ namespace Fps.Core.Tests
         [Test]
         public void ReadsVersionSixWithThePresentationDefaultsAndNoProblems()
         {
-            var versionSix = WithoutPresentation(
-                    ControlSettings.Default.WithShowSubtitles(true).WithLanguage(GameLanguage.English).ToJson())
-                .Replace("\"version\":7", "\"version\":6", StringComparison.Ordinal);
+            var versionSix = WithoutPresentation(ControlSettings.Default.WithShowSubtitles(true).ToJson())
+                .Replace("\"version\":8", "\"version\":6", StringComparison.Ordinal);
+            versionSix = versionSix.Insert(versionSix.Length - 1, ",\"language\":\"en\"");
             Assert.That(versionSix, Does.Not.Contain("cameraShake"));
 
-            var loaded = ControlSettings.FromJson(versionSix, GameLanguage.Japanese, out var problems);
+            var loaded = ControlSettings.FromJson(versionSix, out var problems);
 
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.Get(ControlValue.CameraShakeIntensity), Is.EqualTo(100));
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
             Assert.That(loaded.ShowBlood, Is.True);
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.Language, Is.EqualTo(GameLanguage.English), "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':7,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':8,")));
         }
 
         [Test]
@@ -1006,7 +931,7 @@ namespace Fps.Core.Tests
                 .With(ControlValue.CameraShakeIntensity, 0)
                 .WithShowBlood(false)
                 .ToJson()
-                .Replace("\"version\":7", "\"version\":6", StringComparison.Ordinal);
+                .Replace("\"version\":8", "\"version\":6", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionSix, out var problems);
 

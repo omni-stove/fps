@@ -12,9 +12,8 @@ namespace Fps.Core.Tests
             var objective = new Objective("a", "campaign.mission.Test.objective.a");
 
             Assert.That(objective.DescriptionKey, Is.EqualTo("campaign.mission.Test.objective.a"));
-            Assert.That(objective.Description, Is.EqualTo(new LocalizedText("campaign.mission.Test.objective.a", 1)));
-            Assert.That(new Objective("c", "key", 4).Description.Args, Is.EqualTo(new object[] { 4 }));
-            Assert.That(new Objective("b", null).Description.IsEmpty, Is.True);
+            Assert.That(new Objective("c", "key", 4).RequiredCount, Is.EqualTo(4));
+            Assert.That(new Objective("b", null).DescriptionKey, Is.Empty);
             Assert.That(objective.RequiredCount, Is.EqualTo(1));
             Assert.That(objective.Optional, Is.False);
             Assert.That(objective.Prerequisites, Is.Empty);

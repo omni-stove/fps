@@ -19,11 +19,11 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheTierLinesCountTiersFromOne()
         {
-            Assert.That(Localizer.Resolve(GunGameHudFormatter.Tier(1, 3, _tiers[1].Name)), Is.EqualTo("段 2/3 Launcher"));
-            Assert.That(Localizer.Resolve(GunGameHudFormatter.Tier(3, 3, _tiers[2].Name)), Is.EqualTo("段 3/3 Handgun"), "the finisher stays on the last tier");
-            Assert.That(Localizer.Resolve(GunGameHudFormatter.Next(_tiers[2].Name)), Is.EqualTo("次: Handgun"));
+            Assert.That(Localizer.Resolve(GunGameHudFormatter.Tier(1, 3, DisplayNames.Of(_tiers[1]))), Is.EqualTo("段 2/3 Launcher"));
+            Assert.That(Localizer.Resolve(GunGameHudFormatter.Tier(3, 3, DisplayNames.Of(_tiers[2]))), Is.EqualTo("段 3/3 Handgun"), "the finisher stays on the last tier");
+            Assert.That(Localizer.Resolve(GunGameHudFormatter.Next(DisplayNames.Of(_tiers[2]))), Is.EqualTo("次: Handgun"));
             Assert.That(Localizer.Resolve(GunGameHudFormatter.Next(default)), Is.EqualTo("次: なし (この武器で倒せば勝ち)"));
-            Assert.That(GunGameHudFormatter.Tier(1, 3, _tiers[1].Name), Is.EqualTo(new LocalizedText("mode.gungame.tier", 2, 3, new LocalizedText("weapon.launcher"))));
+            Assert.That(GunGameHudFormatter.Tier(1, 3, DisplayNames.Of(_tiers[1])), Is.EqualTo(new LocalizedText("mode.gungame.tier", 2, 3, new LocalizedText("weapon.launcher"))));
             Assert.That(GunGameHudFormatter.Tier(1, 3, default), Is.EqualTo(new LocalizedText("mode.gungame.tier", 2, 3, "-")));
             Assert.That(GunGameHudFormatter.Next(default), Is.EqualTo(GunGameHudFormatter.LastTier));
             Assert.That(GunGameHudFormatter.LastTier.Key, Is.EqualTo("mode.gungame.lastTier"));

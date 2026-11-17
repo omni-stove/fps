@@ -196,16 +196,16 @@ namespace Fps.Tests.EditMode
             _view.Names = new FixedNames();
             _view.Show(new KillFeedEntry(2, 2, "", false, false));
             Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
-            var before = AppliedControlSettings.Current;
+            var before = Localizer.Language;
             try
             {
-                AppliedControlSettings.Apply(before.WithLanguage(GameLanguage.English));
+                Localizer.Apply(GameLanguage.English);
 
                 Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[Suicide]"));
             }
             finally
             {
-                AppliedControlSettings.Apply(before);
+                Localizer.Apply(before);
             }
 
             Assert.That(_view.Element[0].Query<Label>().ToList().ConvertAll(l => l.text)[0], Is.EqualTo("[" + Localizer.Resolve(KillFeedText.Suicide) + "]"));

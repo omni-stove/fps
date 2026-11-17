@@ -21,14 +21,10 @@ namespace Fps.Tests.EditMode
 
         private InputActionAsset _asset;
         private PlayerBindings _bindings;
-        private ControlSettings _appliedBefore;
 
         [SetUp]
         public void SetUp()
         {
-            // 重なりの名前を日本語で確かめるので、この機械で保存した言語に依らないようにする
-            _appliedBefore = AppliedControlSettings.Current;
-            AppliedControlSettings.Apply(_appliedBefore.WithLanguage(GameLanguage.Japanese));
             _asset = ProjectActionsClone.Create();
             _bindings = new PlayerBindings(_asset);
         }
@@ -38,7 +34,6 @@ namespace Fps.Tests.EditMode
         {
             _bindings.Dispose();
             ProjectActionsClone.Destroy(_asset);
-            AppliedControlSettings.Apply(_appliedBefore);
         }
 
         [Test]
@@ -56,7 +51,6 @@ namespace Fps.Tests.EditMode
                 Assert.That(binding.isPartOfComposite, Is.EqualTo(slot.Part != null), slot.ToString());
                 Assert.That(_bindings.PathOf(slot), Is.Not.Empty, slot.ToString());
                 Assert.That(_bindings.DisplayOf(slot), Is.Not.Empty, slot.ToString());
-                Assert.That(PlayerBindings.LabelOf(slot.ActionName, slot.Part), Is.Not.EqualTo(slot.ActionName), "every row has a label for the player");
             }
         }
 
@@ -105,21 +99,6 @@ namespace Fps.Tests.EditMode
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot("Ping", InputDeviceKind.Gamepad)));
         }
 
-        [TestCase("Melee", "近接攻撃")]
-        [TestCase("Prone", "伏せ")]
-        [TestCase("Ability1", "アビリティ 1")]
-        [TestCase("Ability2", "アビリティ 2")]
-        [TestCase("SquadCommand", "分隊への指示")]
-        [TestCase("SwitchAmmoType", "弾薬の切り替え")]
-        [TestCase("CycleMagnification", "倍率の切り替え")]
-        [TestCase("HoldBreath", "息止め")]
-        [TestCase("SwitchGrenade", "グレネードの切り替え")]
-        [TestCase("Inventory", "持ち物")]
-        public void NewButtonsAreLabelledInJapanese(string actionName, string label)
-        {
-            Assert.That(PlayerBindings.LabelOf(actionName), Is.EqualTo(label));
-        }
-
         [Test]
         public void SlotsPointAtTheFirstBindingOfTheirGroup()
         {
@@ -148,7 +127,8 @@ namespace Fps.Tests.EditMode
             Assert.That(conflicts.Count(), Is.EqualTo(1));
             Assert.That(conflicts[0].ActionName, Is.EqualTo("Interact"));
             Assert.That(conflicts[0].Part, Is.Null);
-            Assert.That(conflicts[0].Label, Is.EqualTo(PlayerBindings.LabelOf("Interact")));
+            Assert.That(conflicts[0].BindingIndex, Is.EqualTo(_bindings.BindingIndexOf(new RebindSlot("Interact", InputDeviceKind.KeyboardMouse))));
+            Assert.That(conflicts[0].ToString(), Does.StartWith("Interact["));
         }
 
         [Test]
@@ -159,7 +139,8 @@ namespace Fps.Tests.EditMode
             Assert.That(conflicts.Count(), Is.EqualTo(1));
             Assert.That(conflicts[0].ActionName, Is.EqualTo("Move"));
             Assert.That(conflicts[0].Part, Is.EqualTo("up"));
-            Assert.That(conflicts[0].Label, Is.EqualTo("前へ移動"));
+            Assert.That(conflicts[0].BindingIndex, Is.EqualTo(_bindings.BindingIndexOf(MoveUpKey)));
+            Assert.That(conflicts[0].ToString(), Does.StartWith("Move/up["));
         }
 
         [Test]

@@ -15,9 +15,6 @@ namespace Fps.Core
         /// <summary>武器の名前を引く表のキー (<see cref="WeaponSpec.NameKey"/>)。生成時に空なら空文字。</summary>
         public string NameKey => _nameKey ?? string.Empty;
 
-        /// <summary>HUD に出す武器の名前。<see cref="NameKey"/> があればそのキーの文、無ければ <see cref="WeaponId"/> をそのまま出す。</summary>
-        public LocalizedText Name => NameKey.Length > 0 ? new LocalizedText(NameKey) : LocalizedText.Literal(WeaponId);
-
         /// <summary>ログに書く名前。<see cref="NameKey"/> があればキー、無ければ <see cref="WeaponId"/>。</summary>
         public string LogName => NameKey.Length > 0 ? NameKey : WeaponId;
 

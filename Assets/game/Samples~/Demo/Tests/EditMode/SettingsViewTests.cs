@@ -20,7 +20,9 @@ namespace Fps.Tests.EditMode
     {
         private ControlSettings _appliedBefore;
         private float _volumeBefore;
+        private GameLanguage _languageBefore;
         private ControlSettingsStore _store;
+        private LanguagePreferenceStore _languageStore;
         private SettingsView _view;
         private VisualElement _container;
 
@@ -29,9 +31,13 @@ namespace Fps.Tests.EditMode
         {
             _appliedBefore = AppliedControlSettings.Current;
             _volumeBefore = AudioListener.volume;
+            _languageBefore = Localizer.Language;
             AppliedControlSettings.Apply(ControlSettings.Default);
-            _store = new ControlSettingsStore("Fps.Tests.SettingsView." + Guid.NewGuid().ToString("N"));
-            _view = new SettingsView(_store);
+            Localizer.Apply(GameLanguage.Japanese);
+            var suffix = Guid.NewGuid().ToString("N");
+            _store = new ControlSettingsStore("Fps.Tests.SettingsView." + suffix);
+            _languageStore = new LanguagePreferenceStore("Fps.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
+            _view = new SettingsView(_store, languageStore: _languageStore);
             _container = new VisualElement();
         }
 
@@ -40,8 +46,10 @@ namespace Fps.Tests.EditMode
         {
             _view.Close();
             PlayerPrefs.DeleteKey(_store.Key);
+            PlayerPrefs.DeleteKey(_languageStore.Key);
             PlayerPrefs.Save();
             AppliedControlSettings.Apply(_appliedBefore);
+            Localizer.Apply(_languageBefore);
             AudioListener.volume = _volumeBefore;
         }
 
@@ -435,10 +443,10 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheScreenIsInTheLanguageOfTheSettings()
+        public void TheScreenIsInTheCurrentLanguage()
         {
             LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+            Localizer.Apply(GameLanguage.English);
 
             _view.Open(_container);
 
@@ -471,7 +479,6 @@ namespace Fps.Tests.EditMode
                 Localizer.Changed -= record;
             }
 
-            Assert.That(AppliedControlSettings.Current.Language, Is.EqualTo(GameLanguage.English));
             Assert.That(Localizer.Language, Is.EqualTo(GameLanguage.English));
             Assert.That(_view.Root.parent, Is.SameAs(_container));
             Assert.That(_container.childCount, Is.EqualTo(1), "the old screen is gone");
@@ -491,9 +498,8 @@ namespace Fps.Tests.EditMode
             _view.Close();
 
             // 起動し直したときと同じく、OS の言語が日本語でも保存した言語で読む
-            var restarted = new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load();
-            Assert.That(restarted.Language, Is.EqualTo(GameLanguage.English));
-            Assert.That(restarted.Get(ControlValue.FieldOfView), Is.EqualTo(70));
+            Assert.That(new LanguagePreferenceStore(_languageStore.Key, null, GameLanguage.Japanese).Load(), Is.EqualTo(GameLanguage.English));
+            Assert.That(new ControlSettingsStore(_store.Key).Load().Get(ControlValue.FieldOfView), Is.EqualTo(70));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -517,7 +523,8 @@ namespace Fps.Tests.EditMode
 
             _view.SetLanguage(GameLanguage.English);
 
-            Assert.That(new ControlSettingsStore(_store.Key, GameLanguage.Japanese).Load().Language, Is.EqualTo(GameLanguage.English), "kept across a restart");
+            Assert.That(new LanguagePreferenceStore(_languageStore.Key, null, GameLanguage.Japanese).Load(), Is.EqualTo(GameLanguage.English), "kept across a restart");
+            Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "the control settings are not saved for a language change");
             Assert.That(_view.HasUnsavedChanges, Is.False);
             Assert.That(_container.Q<Button>(SettingsView.LanguageButtonName).text, Is.EqualTo("English"));
             Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
@@ -568,7 +575,8 @@ namespace Fps.Tests.EditMode
 
             _view.ResetToDefaults();
 
-            Assert.That(AppliedControlSettings.Current, Is.EqualTo(ControlSettings.DefaultFor(GameLanguage.English)));
+            Assert.That(AppliedControlSettings.Current, Is.EqualTo(ControlSettings.Default));
+            Assert.That(Localizer.Language, Is.EqualTo(GameLanguage.English));
             Assert.That(_container.Q<Label>(SettingsView.TitleName).text, Is.EqualTo("Settings"));
         }
 
@@ -578,7 +586,7 @@ namespace Fps.Tests.EditMode
             _view.Open(_container);
             _view.Close();
 
-            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));
+            Localizer.Apply(GameLanguage.English);
 
             Assert.That(_view.IsOpen, Is.False);
             Assert.That(_container.childCount, Is.Zero);

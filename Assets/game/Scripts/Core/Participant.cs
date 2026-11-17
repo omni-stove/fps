@@ -9,7 +9,7 @@ namespace Fps.Core
 
         public int Id { get; }
 
-        // LocalizedText にしないのは、P12 や [BOT] B1 のような言語によらない固有の名前だけを持たせ、Core から文言を出さないため。
+        // 文言のキーにしないのは、P12 や [BOT] B1 のような言語によらない固有の名前だけを持たせ、Core から文言を出さないため。
         public string Name => _name ?? string.Empty;
 
         public Team? Team { get; }

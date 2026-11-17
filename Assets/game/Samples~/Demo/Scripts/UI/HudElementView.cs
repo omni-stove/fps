@@ -88,7 +88,7 @@ namespace Fps.Runtime
         {
         }
 
-        private void HandleLanguageChanged(Fps.Core.GameLanguage language)
+        private void HandleLanguageChanged(GameLanguage language)
         {
             // 破棄の後に届いた通知では消えた要素に書かない。
             if (this == null || Element == null)

@@ -41,7 +41,6 @@ namespace Fps.Tests.EditMode
             var kill = mission.Objectives[1];
             Assert.That(kill.Id, Is.EqualTo("kill"));
             Assert.That(kill.DescriptionKey, Is.EqualTo("Kill 3"));
-            Assert.That(kill.Description, Is.EqualTo(new LocalizedText("Kill 3", 3)));
             Assert.That(kill.RequiredCount, Is.EqualTo(3));
             Assert.That(kill.Optional, Is.False);
             Assert.That(kill.Prerequisites, Is.EqualTo(new[] { "reach" }));
@@ -64,13 +63,15 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void AnEmptyNameKeyHasNoName()
+        public void TheNameKeyIsKeptAsGiven()
         {
-            Assert.That(_definition.DisplayName.IsEmpty, Is.True);
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
 
-            _definition.DisplayNameKey = " campaign.mission.Op.name ";
+            _definition.DisplayNameKey = "campaign.mission.Op.name";
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo("campaign.mission.Op.name"));
 
-            Assert.That(_definition.DisplayName, Is.EqualTo(new LocalizedText("campaign.mission.Op.name")));
+            _definition.DisplayNameKey = null;
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
         }
 
         [Test]
@@ -179,7 +180,6 @@ namespace Fps.Tests.EditMode
             try
             {
                 Assert.That(copy.DisplayNameKey, Is.EqualTo("campaign.mission.Op.name"));
-                Assert.That(copy.DisplayName, Is.EqualTo(new LocalizedText("campaign.mission.Op.name")));
                 Assert.That(copy.Objectives.Count(), Is.EqualTo(2));
                 var b = copy.Objectives[1];
                 Assert.That(b.Id, Is.EqualTo("b"));

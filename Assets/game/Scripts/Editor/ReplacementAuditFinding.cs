@@ -8,7 +8,7 @@ namespace Fps.Editor
         /// <summary>音とエフェクト (<see cref="Fps.Runtime.PresentationCatalog"/>) の漏れ。</summary>
         Presentation,
 
-        /// <summary>文言の表 (Resources/Localization/&lt;言語&gt;/) の漏れ。</summary>
+        /// <summary>文言のキーと、game 側の言語の表の漏れ。</summary>
         Strings,
 
         /// <summary>シーン・プレハブ・アセットの必須の参照 (<see cref="Fps.Runtime.RequiredReferenceAttribute"/>) の漏れ。</summary>

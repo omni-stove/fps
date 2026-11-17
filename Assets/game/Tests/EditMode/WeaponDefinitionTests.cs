@@ -42,7 +42,6 @@ namespace Fps.Tests.EditMode
 
             Assert.That(spec.Id, Does.Match(_uuidPattern));
             Assert.That(spec.NameKey, Is.Empty, "the name key is left empty");
-            Assert.That(spec.Name, Is.EqualTo(LocalizedText.Literal(spec.Id)), "an empty name key shows the id");
             Assert.That(spec.Category, Is.EqualTo(rifle.Category));
             Assert.That(spec.FireMode, Is.EqualTo(rifle.FireMode));
             Assert.That(spec.MagazineSize, Is.EqualTo(rifle.MagazineSize));
@@ -174,7 +173,6 @@ namespace Fps.Tests.EditMode
 
             Assert.That(spec.Id, Is.EqualTo(_handgunId));
             Assert.That(spec.NameKey, Is.EqualTo("weapon.handgun"));
-            Assert.That(spec.Name, Is.EqualTo(new LocalizedText("weapon.handgun")));
             Assert.That(spec.Category, Is.EqualTo(WeaponCategory.Handgun));
             Assert.That(spec.FireMode, Is.EqualTo(FireMode.Semi));
             Assert.That(spec.MagazineSize, Is.EqualTo(12));

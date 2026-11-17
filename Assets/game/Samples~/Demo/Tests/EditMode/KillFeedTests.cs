@@ -247,7 +247,7 @@ namespace Fps.Tests.EditMode
             var id = "00000000-0000-4000-8000-000000000001";
             var spec = new WeaponSpec(id, null, WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
 
-            Assert.That(Localizer.Resolve(KillFeedText.Weapon(spec.Name, false, false)), Is.EqualTo("[" + id + "]"));
+            Assert.That(Localizer.Resolve(KillFeedText.Weapon(DisplayNames.Of(spec), false, false)), Is.EqualTo("[" + id + "]"));
         }
 
         [Test]

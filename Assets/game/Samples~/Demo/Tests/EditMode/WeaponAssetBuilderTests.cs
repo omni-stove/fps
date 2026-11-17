@@ -225,7 +225,7 @@ namespace Fps.Tests.EditMode
             var knife = built.ToSpec();
             Assert.That(knife.Id, Is.EqualTo(WeaponAssetBuilder.KnifeId));
             Assert.That(knife.NameKey, Is.EqualTo(WeaponAssetBuilder.KnifeNameKey));
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(knife.Name), Is.EqualTo("ナイフ"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(DisplayNames.Of(knife)), Is.EqualTo("ナイフ"));
 
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(_catalogPath);
             Assert.That(catalog.TryFind(WeaponAssetBuilder.KnifeId, out _), Is.False, "the knife is not a gun to carry");
@@ -397,8 +397,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(rifleAsset.NameKey, Is.EqualTo(WeaponAssetBuilder.RifleNameKey), "the asset stores the key, not the text");
             Assert.That(handgunAsset.NameKey, Is.EqualTo(WeaponAssetBuilder.HandgunNameKey), "the asset stores the key, not the text");
-            Assert.That(rifle.Name, Is.EqualTo(new LocalizedText(WeaponAssetBuilder.RifleNameKey)));
-            Assert.That(handgun.Name, Is.EqualTo(new LocalizedText(WeaponAssetBuilder.HandgunNameKey)));
+            Assert.That(DisplayNames.Of(rifle), Is.EqualTo(new LocalizedText(WeaponAssetBuilder.RifleNameKey)));
+            Assert.That(DisplayNames.Of(handgun), Is.EqualTo(new LocalizedText(WeaponAssetBuilder.HandgunNameKey)));
         }
 
         [Test]
@@ -412,9 +412,9 @@ namespace Fps.Tests.EditMode
                 }
             }
 
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.RifleSpec().Name), Is.EqualTo("Rifle"));
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.HandgunSpec().Name), Is.EqualTo("Handgun"));
-            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(WeaponAssetBuilder.LauncherSpec().Name), Is.EqualTo("Launcher"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(DisplayNames.Of(WeaponAssetBuilder.RifleSpec())), Is.EqualTo("Rifle"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(DisplayNames.Of(WeaponAssetBuilder.HandgunSpec())), Is.EqualTo("Handgun"));
+            Assert.That(Localizer.TableOf(GameLanguage.Japanese).Resolve(DisplayNames.Of(WeaponAssetBuilder.LauncherSpec())), Is.EqualTo("Launcher"));
         }
 
         [Test]

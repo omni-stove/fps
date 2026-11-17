@@ -36,6 +36,7 @@ namespace Fps.NetV2
             }
 
             _prediction = new OwnerPrediction(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            Vehicles = new ClientVehicles(client.PlayerId);
             _clock = new TickClock(client.TickRate);
             Interpolation = new InterpolationClock(client.TickRate);
             _client.SnapshotReceived += HandleSnapshot;
@@ -65,6 +66,8 @@ namespace Fps.NetV2
         public OwnerPrediction Prediction => _prediction;
 
         public InterpolationClock Interpolation { get; }
+
+        public ClientVehicles Vehicles { get; }
 
         /// <summary>予測を始めたか (自分の行が届いたか)。</summary>
         public bool IsPredicting => _prediction.IsStarted;
@@ -111,6 +114,13 @@ namespace Fps.NetV2
             if (!CharacterMotorInput.IsValid(move, yaw))
             {
                 throw new ArgumentException("move and yaw must be finite");
+            }
+
+            // 座席にいる間の移動とボタンは乗り物の操作に使うので、歩く入力としてはサーバーに送らない (覗き込みだけは射撃のばらつきに効く)
+            if (Vehicles.LocalSeat.IsRiding)
+            {
+                move = Vector2.Zero;
+                buttons &= InputButtons.Aim;
             }
 
             var frame = new InputFrame(_nextTick, ClampMove(move), SnapshotMotion.WrapYaw(yaw), buttons);
@@ -182,6 +192,7 @@ namespace Fps.NetV2
 
         private void HandleSnapshot(SnapshotMessage snapshot)
         {
+            Vehicles.Apply(snapshot);
             var players = snapshot.Players;
             _present.Clear();
             for (var i = 0; i < players.Count; i++)
@@ -230,6 +241,12 @@ namespace Fps.NetV2
             {
                 _prediction.Start(processed, state);
                 _nextTick = processed + 1;
+                return;
+            }
+
+            if (row.Vehicle.IsRiding)
+            {
+                _prediction.Rebase(processed, state);
                 return;
             }
 

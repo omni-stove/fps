@@ -20,8 +20,10 @@ namespace Fps.Server
             string directory,
             NetMapPoints points = null,
             NetMapStructures structures = null,
-            NetMapLadders ladders = null)
+            NetMapLadders ladders = null,
+            NetMapVehicles vehicles = null)
         {
+            Vehicles = vehicles ?? NetMapVehicles.None;
             Points = points;
             Structures = structures;
             Ladders = ladders ?? NetMapLadders.None;
@@ -62,6 +64,8 @@ namespace Fps.Server
         /// <summary>はしご。書き出す前のマップでもはしごが無いだけで動けるよう、ファイルが無ければ空。</summary>
         public NetMapLadders Ladders { get; }
 
+        public NetMapVehicles Vehicles { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
@@ -70,6 +74,7 @@ namespace Fps.Server
             + " controlPoints=" + (Points == null ? "none" : Points.ControlPoints.Count.ToString(CultureInfo.InvariantCulture))
             + " structures=" + (Structures == null ? "none" : Structures.Structures.Count.ToString(CultureInfo.InvariantCulture))
             + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
+            + " vehicles=" + Vehicles.Vehicles.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
         /// <summary>
@@ -203,9 +208,24 @@ namespace Fps.Server
                 }
             }
 
+            NetMapVehicles vehicles = null;
+            var vehiclesPath = Path.Combine(directory, map + NetMapVehicles.Extension);
+            if (File.Exists(vehiclesPath))
+            {
+                try
+                {
+                    vehicles = NetMapVehicles.Parse(File.ReadAllText(vehiclesPath), vehiclesPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + vehiclesPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles);
             }
             catch (ArgumentException e)
             {

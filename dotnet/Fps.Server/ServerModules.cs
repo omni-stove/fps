@@ -59,11 +59,14 @@ namespace Fps.Server
 
             // スナップショットは移動が tick の入力を処理し、ルールと戦闘がその tick を進めた後の状態を載せるので、どれより後にも登録する。
             // 戦闘はルールが出現させた後の位置を当たり判定に残すので、ルールより後
+            // 乗り物は乗っている人を座席へ置き直してから戦闘に当たり判定を残させるので、戦闘より先
             var movement = new ServerMovement(motorSettings);
             var rules = new MatchRulesModule();
-            var combat = new ServerCombat(rules, movement);
+            var vehicles = new ServerVehicles(rules, movement);
+            var combat = new ServerCombat(rules, movement, vehicles);
             modules.Add(movement);
             modules.Add(rules);
+            modules.Add(vehicles);
             modules.Add(combat);
 
             // 持ち物は出現 (ルール) の後に持たせ直し、その tick のうちに持ち主へ送る
@@ -71,7 +74,7 @@ namespace Fps.Server
 
             // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
             modules.Add(new ServerBots(rules, movement, combat));
-            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat }));
+            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat, vehicles }));
 
             if (!launch.Options.RegistersLobby)
             {

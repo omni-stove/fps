@@ -25,8 +25,8 @@ namespace Fps.Server
             {
                 var last = segments[segments.Count - 1];
 
-                // 人に当たった弾はそこで止まり、ダメージを与える。跳ねるのは世界の面だけ。
-                if (!last.HasHit || last.Hit.HitTarget)
+                // 人と乗り物に当たった弾はそこで止まり、ダメージを与える。跳ねるのは世界の面だけ。
+                if (!last.HasHit || last.Hit.HitTarget || last.Hit.HitVehicle)
                 {
                     return;
                 }
@@ -62,7 +62,9 @@ namespace Fps.Server
         {
             var moved = hit.HitTarget
                 ? ShotHit.Target(hit.Point, hit.Normal, distance, hit.TargetId, hit.TargetPosition, hit.TargetCrouched, hit.Zone)
-                : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
+                : hit.HitVehicle
+                    ? ShotHit.Vehicle(hit.Point, hit.Normal, distance, hit.VehicleIndex, hit.DamageMultiplier)
+                    : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
             return moved.WithRewind(hit.RewindTicks);
         }
     }

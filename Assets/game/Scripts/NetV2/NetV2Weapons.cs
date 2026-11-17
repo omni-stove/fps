@@ -21,6 +21,9 @@ namespace Fps.NetV2
 
         public Func<string, IReadOnlyList<string>> OwnAttachments { get; set; }
 
+        // 乗り物の座席の武器はロードアウトにも一覧にも無く、マップのシーンの乗り物が持つので、そこから引く口を外に開ける。
+        public Func<string, WeaponDefinition> SceneDefinitions { get; set; }
+
         // クライアントは試合の設定のアセットを持たないので、サーバーへの書き出しと同じ選び方に入口だけを渡す
         public LoadoutDefinition Loadout => NetMatchDefinition.PickLoadout(null);
 
@@ -91,6 +94,12 @@ namespace Fps.NetV2
                 return null;
             }
 
+            var scene = SceneDefinitions?.Invoke(weaponId);
+            if (scene != null)
+            {
+                return scene;
+            }
+
             var loadout = Loadout;
             if (loadout != null)
             {
@@ -128,6 +137,22 @@ namespace Fps.NetV2
             {
                 error = "before the server equips a weapon";
                 return false;
+            }
+
+            var scene = SceneDefinitions?.Invoke(weaponId);
+            if (scene != null)
+            {
+                try
+                {
+                    spec = scene.ToSpec();
+                    error = null;
+                    return true;
+                }
+                catch (WeaponDefinitionException e)
+                {
+                    error = "with an invalid vehicle weapon: " + e.Message;
+                    return false;
+                }
             }
 
             var loadout = Loadout;

@@ -25,6 +25,8 @@ namespace Fps.Protocol
         public const ushort PingRequest = 22;
         public const ushort ReviveRequest = 23;
         public const ushort InventoryRequest = 24;
+        public const ushort VehicleRequest = 25;
+        public const ushort VehicleMove = 26;
 
         // 状態 (48-63)
         public const ushort Snapshot = 48;
@@ -50,5 +52,6 @@ namespace Fps.Protocol
         public const ushort StatusEffect = 80;
         public const ushort AreaEffect = 81;
         public const ushort InventoryState = 82;
+        public const ushort VehicleCorrected = 83;
     }
 }

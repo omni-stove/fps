@@ -44,6 +44,10 @@ namespace Fps.Server
         private readonly ServerLockOn _lockOn;
         private readonly ServerAreaEffects _areaEffects;
         private readonly ServerFlash _flash;
+        private readonly ServerVehicles _vehicles;
+        // 座席の武器の弾と連射の間隔は、座る人が代わっても武器に残るので、人ではなく乗り物と武器の番号で持つ
+        private readonly Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons> _mounts =
+            new Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons>();
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -55,8 +59,14 @@ namespace Fps.Server
         private double _now;
         private float _nextRejectWarningTime = float.NegativeInfinity;
 
-        public ServerCombat(MatchRulesModule rules, ServerMovement movement)
+        public ServerCombat(MatchRulesModule rules, ServerMovement movement, ServerVehicles vehicles = null)
         {
+            _vehicles = vehicles;
+            if (vehicles != null)
+            {
+                vehicles.Combat = this;
+            }
+
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _impact = new ServerImpact(this);
@@ -101,7 +111,7 @@ namespace Fps.Server
             _match = context.Match;
             _bodies = context.Bodies;
             _data = context.Rules ?? throw new InvalidOperationException("no match rules are loaded; start the server with " + ServerLaunch.RulesFlag);
-            _hitboxes = new ServerHitboxes(_bodies, context.World);
+            _hitboxes = new ServerHitboxes(_bodies, context.World, null, _vehicles);
             _shotTrace = new ServerShotTrace(_hitboxes);
             _structures = new ServerStructures(context.Map, _log);
             var rules = _data.Rules;
@@ -130,6 +140,11 @@ namespace Fps.Server
                 {
                     body.SetWeapons(fighter.Weapons.CurrentSpec, fighter.Weapons.Specs);
                 }
+            }
+
+            foreach (var mount in _mounts.Values)
+            {
+                mount.Tick(deltaSeconds);
             }
 
             TickGrenades(deltaSeconds);
@@ -168,17 +183,18 @@ namespace Fps.Server
                     Fire(fighter, fire);
                     break;
                 case WeaponActionRequestMessage action:
+                    var weapons = ActiveWeapons(fighter);
                     if (action.Action == WeaponAction.ActiveReload)
                     {
-                        fighter.Weapons.TryActiveReload();
+                        weapons.TryActiveReload();
                     }
                     else if (action.Action == WeaponAction.Reload)
                     {
-                        fighter.Weapons.TryReload();
+                        weapons.TryReload();
                     }
                     else if (action.Action == WeaponAction.SwitchAmmoType)
                     {
-                        fighter.Weapons.TrySwitchAmmoType();
+                        weapons.TrySwitchAmmoType();
                     }
 
                     break;
@@ -223,16 +239,18 @@ namespace Fps.Server
                 ref var row = ref players[i];
                 if (_fighters.TryGetValue(row.PlayerId, out var fighter))
                 {
-                    row.WeaponId = fighter.Weapons.CurrentSpec?.Id ?? "";
+                    row.WeaponId = ActiveWeapons(fighter).CurrentSpec?.Id ?? "";
                     row.LastHitDirection = fighter.LastHitDirection;
                 }
             }
 
             if (_fighters.TryGetValue(receiver.PlayerId, out var own))
             {
+                // 座席の武器に座っている間は、持ち主の画面と射撃がその武器を今の武器として扱うよう、座席の武器を載せる
                 var owner = snapshot.Owner;
-                owner.Weapon = own.Weapons.Sync();
-                own.Weapons.FillIds(owner.EquippedWeaponIds);
+                var active = ActiveWeapons(own);
+                owner.Weapon = active.Sync();
+                active.FillIds(owner.EquippedWeaponIds);
                 own.Grenades.Fill(owner.Grenades);
             }
 
@@ -270,6 +288,7 @@ namespace Fps.Server
 
         private void HandleMatchStarted()
         {
+            _mounts.Clear();
             ClearGrenades();
             _projectiles.Clear();
             _statusEffects.Clear();
@@ -295,6 +314,41 @@ namespace Fps.Server
             {
                 _log.WriteLine("[Net] fall owner=" + Text(player.PlayerId) + " tick=" + Text(tick)
                     + " speed=" + fallSpeed.ToString("F2", CultureInfo.InvariantCulture) + " damage=" + Text(damage) + " outcome=" + outcome);
+            }
+        }
+
+        private ServerPlayerWeapons ActiveWeapons(Fighter fighter)
+        {
+            if (_vehicles == null
+                || _vehicles.FiringOf(fighter.PlayerId, out var vehicle, out _, out var weapon) != VehicleSeatFiring.VehicleWeapon)
+            {
+                return fighter.Weapons;
+            }
+
+            return MountWeapons(vehicle, weapon);
+        }
+
+        private ServerPlayerWeapons MountWeapons(int vehicle, int weapon)
+        {
+            if (!_mounts.TryGetValue((vehicle, weapon), out var mount))
+            {
+                mount = new ServerPlayerWeapons(PlayerIds.None, _log, () => _now);
+                mount.Equip(new[] { _vehicles.MapOf(vehicle).Weapons[weapon] }, _data.File.SwitchSeconds, _data.Rules);
+                _mounts.Add((vehicle, weapon), mount);
+            }
+
+            return mount;
+        }
+
+        internal void DamageVehicle(in ServerShot shot, in ShotHit hit, int amount)
+        {
+            var damage = DamageCalculator.Scale(amount, hit.DamageMultiplier);
+            var attacker = _match.TryGetPlayer(shot.ShooterId, out _) ? shot.ShooterId : (int?)null;
+            _vehicles.Damage(hit.VehicleIndex, damage, attacker);
+            if (attacker.HasValue && damage > 0 && !_vehicleHitConfirmed)
+            {
+                _vehicleHitConfirmed = _collectingPelletHits;
+                SendHitConfirm(shot.ShooterId, damage, HitZone.Body, DamageOutcome.Damaged);
             }
         }
 

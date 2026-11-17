@@ -11,6 +11,8 @@ namespace Fps.Core
     {
         public const string DefaultId = "vehicle";
 
+        public const string ExplosionWeaponId = "vehicle";
+
         public const int DefaultMaxHealth = 1000;
 
         /// <summary>座席の乗る位置からこの距離 (m) までなら乗り込める。</summary>

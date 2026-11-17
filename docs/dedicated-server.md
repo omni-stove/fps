@@ -297,6 +297,11 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
   はしごを指すので、同じファイルを読む。ファイルが無いマップははしごが無いものとして動く。起動時の `[Server] map ...` の `ladders=` が読んだ本数。
   伏せの寸法と速さはルールのファイルの `motor` の `proneHeight`・`proneSpeed`・`diveDistance`・`diveSeconds` (無ければ既定値) で決まる。
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
+- 乗り物は `server-data/maps/<マップ名>.vehicles.json` (`make export-server-data` がシーンの有効な `Vehicle` から書き出す) から読む。
+  サーバーとクライアントはどちらもこの並びの番号で乗り物を指す。ファイルが無いマップは乗り物が無いものとして動く (`[Server] map ...` の `vehicles=`)。
+  乗り物の当たり判定は `.fpsmap` に入れず、ファイルの車体の箱で、撃った人が見ていた tick まで巻き戻して当てる。
+  座席はサーバーが決める (距離・空き・壊れていないか)。運転席のクライアントが自分の物理で動かした姿を送り、サーバーは `drive` の速さの上限とマップの物で確かめ、
+  外れていれば `[Vehicle] '<id>#<番号>' corrected driver=.. reason=..` を出して姿を直す。乗り降り・傷み・爆発は `[Vehicle]` で始まる行に出す。
 - ルールを読むと `[Server] rules <名前> objective=...` を出す。マップの出現地点と拠点は `server-data/maps/<マップ名>.points.json`、
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
@@ -383,6 +388,9 @@ docker logs fps-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `match_ended` | 試合が終わった | `matchId`、`winner` (`Alpha` / `Bravo`、引き分けなら `draw`)、`scoreAlpha`、`scoreBravo` |
 | `ping_placed` | プレイヤーが印を付けた (ルールの `ping` が `On` のときだけ)。印は同じ陣営の人にだけ配る | `matchId`、`playerId`、`productUserId`、`team`、`pingId` (試合の中で一意の印の番号。`[Ping] net` のログの `id=` と同じ)、`kind` (`Enemy` / `Location`)、`targetId` (敵の印なら印の付いた敵のプレイヤー Id)、`refreshed` (同じ敵に付け直したなら `true`) |
 | `ping_refused` | 印を付けようとして断った。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`RuleOff` / `Dead` / `InvalidAim` / `TooSoon` / `NoTarget`) |
+| `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
+| `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
+| `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。

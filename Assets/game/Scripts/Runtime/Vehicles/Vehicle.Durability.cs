@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     public sealed partial class Vehicle
     {
-        public const string ExplosionWeaponId = "vehicle";
+        public const string ExplosionWeaponId = VehicleSpec.ExplosionWeaponId;
 
         private readonly List<Collider> _blastColliders = new List<Collider>();
         private VehicleDurability _durability;

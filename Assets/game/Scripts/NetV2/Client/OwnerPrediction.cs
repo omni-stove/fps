@@ -133,6 +133,31 @@ namespace Fps.NetV2
         }
 
         /// <summary>
+        /// 乗り物の座席にいる間の照合。座席の位置は乗り物の動きで決まり入力からやり直せないので、比べずにサーバーの状態を今の予測にする。
+        /// まだ処理されていない入力は送り直すために残す。
+        /// </summary>
+        public void Rebase(int lastProcessedInputTick, CharacterMotorState authoritative)
+        {
+            if (!IsStarted)
+            {
+                throw new InvalidOperationException("prediction has not started");
+            }
+
+            if (lastProcessedInputTick > LastProcessedTick)
+            {
+                LastProcessedTick = lastProcessedInputTick;
+                while (_frameCount > 0 && _frames[_frameStart].Tick <= lastProcessedInputTick)
+                {
+                    _frameStart = (_frameStart + 1) % _frames.Length;
+                    _frameCount--;
+                }
+            }
+
+            _buffer.Reset(_buffer.CurrentTick, authoritative);
+            _simulation.Place(authoritative);
+        }
+
+        /// <summary>
         /// サーバーがまだ処理していない入力を、新しい方から最大 <see cref="InputMessage.MaxFrames"/> 個、古い順に message へ入れ直す。
         /// </summary>
         public void FillInput(InputMessage message)

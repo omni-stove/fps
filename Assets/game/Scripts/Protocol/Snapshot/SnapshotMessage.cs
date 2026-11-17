@@ -19,7 +19,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 9;
+        public const byte CurrentVersion = 10;
 
         /// <summary>基準が無い (全部が載っている) ことを表す <see cref="BaselineTick"/>。</summary>
         public const int NoBaseline = -1;
@@ -28,6 +28,7 @@ namespace Fps.Protocol
         public const int MaxGrenades = 64;
         public const int MaxControlPoints = 16;
         public const int MaxProjectiles = 128;
+        public const int MaxVehicles = 64;
 
         private readonly OwnerSnapshot _owner = new OwnerSnapshot();
         private readonly SnapshotList<PlayerSnapshot> _players = new SnapshotList<PlayerSnapshot>(MaxPlayers, "player");
@@ -36,6 +37,7 @@ namespace Fps.Protocol
             new SnapshotList<ControlPointSnapshot>(MaxControlPoints, "control point");
         private readonly SnapshotList<ProjectileSnapshot> _projectiles =
             new SnapshotList<ProjectileSnapshot>(MaxProjectiles, "projectile");
+        private readonly SnapshotList<VehicleSnapshot> _vehicles = new SnapshotList<VehicleSnapshot>(MaxVehicles, "vehicle");
 
         private MatchSnapshot _match;
         private MatchFields _matchPresent = MatchFields.All;
@@ -72,6 +74,8 @@ namespace Fps.Protocol
 
         public SnapshotList<ProjectileSnapshot> Projectiles => _projectiles;
 
+        public SnapshotList<VehicleSnapshot> Vehicles => _vehicles;
+
         /// <summary>送る側が中身を入れ直す前に、前の中身と基準を捨てる。確保した並びは使い回す。</summary>
         public void Clear()
         {
@@ -92,6 +96,7 @@ namespace Fps.Protocol
             _grenades.Clear();
             _controlPoints.Clear();
             _projectiles.Clear();
+            _vehicles.Clear();
         }
 
         /// <summary>other の中身を写す (後で差分の基準に使うため取っておく)。<see cref="Baseline"/> は写さない。</summary>
@@ -114,6 +119,7 @@ namespace Fps.Protocol
             _grenades.CopyFrom(other._grenades);
             _controlPoints.CopyFrom(other._controlPoints);
             _projectiles.CopyFrom(other._projectiles);
+            _vehicles.CopyFrom(other._vehicles);
         }
 
         /// <summary>
@@ -140,7 +146,8 @@ namespace Fps.Protocol
             if (!_players.CanFillFrom(baseline._players)
                 || !_grenades.CanFillFrom(baseline._grenades)
                 || !_controlPoints.CanFillFrom(baseline._controlPoints)
-                || !_projectiles.CanFillFrom(baseline._projectiles))
+                || !_projectiles.CanFillFrom(baseline._projectiles)
+                || !_vehicles.CanFillFrom(baseline._vehicles))
             {
                 return false;
             }
@@ -156,6 +163,7 @@ namespace Fps.Protocol
             _grenades.FillFrom(baseline._grenades);
             _controlPoints.FillFrom(baseline._controlPoints);
             _projectiles.FillFrom(baseline._projectiles);
+            _vehicles.FillFrom(baseline._vehicles);
             IsComplete = true;
             return true;
         }
@@ -193,6 +201,7 @@ namespace Fps.Protocol
             _grenades.Write(writer, baseline?._grenades);
             _controlPoints.Write(writer, baseline?._controlPoints);
             _projectiles.Write(writer, baseline?._projectiles);
+            _vehicles.Write(writer, baseline?._vehicles);
         }
 
         public void Read(MessageReader reader)
@@ -225,13 +234,15 @@ namespace Fps.Protocol
             _grenades.Read(reader, hasBaseline);
             _controlPoints.Read(reader, hasBaseline);
             _projectiles.Read(reader, hasBaseline);
+            _vehicles.Read(reader, hasBaseline);
 
             IsComplete = _matchPresent == MatchFields.All
                 && (!HasOwner || _owner.Present == OwnerFields.All)
                 && _players.IsComplete
                 && _grenades.IsComplete
                 && _controlPoints.IsComplete
-                && _projectiles.IsComplete;
+                && _projectiles.IsComplete
+                && _vehicles.IsComplete;
         }
 
         private static void ExpectAll(bool hasBaseline, int present, int all, string what)

@@ -199,7 +199,7 @@ namespace Fps.Server
         /// ルールで壊せるなら建物に被害を与え、ダメージを与えた相手ごとに本人たちへヒット・被弾を、全員に爆発を送る。キルフィードは weaponId で出す。
         /// 起こした人が抜けていれば、攻撃者のいないダメージ (倒れたら自滅) として与える。爆発はサーバーの時刻で起きるので巻き戻さない。
         /// </summary>
-        internal void Explode(Vector3 center, ExplosionSpec explosion, int throwerId, string weaponId)
+        internal (int Damaged, int Killed) Explode(Vector3 center, ExplosionSpec explosion, int throwerId, string weaponId)
         {
             ArgumentNullException.ThrowIfNull(explosion);
             ArgumentNullException.ThrowIfNull(weaponId);
@@ -232,6 +232,7 @@ namespace Fps.Server
 
             var structures = _structures.ApplyAround(center, explosion.StructureDamageAtCenter, explosion.Damage.Radius, _changedStructures, _log);
             SendStructureChanges();
+            var vehicles = _vehicles?.ApplyExplosion(center, explosion.Damage, thrower) ?? 0;
 
             _explosion.Center = center;
             _explosion.HasThrower = thrower.HasValue;
@@ -240,7 +241,7 @@ namespace Fps.Server
             SendToAll(_explosion);
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} net exploded thrower={1} at=({2:0.0}, {3:0.0}, {4:0.0}) damaged={5} killed={6} structures={7}",
+                "{0} net exploded thrower={1} at=({2:0.0}, {3:0.0}, {4:0.0}) damaged={5} killed={6} structures={7} vehicles={8}",
                 tag,
                 throwerId,
                 center.X,
@@ -248,7 +249,9 @@ namespace Fps.Server
                 center.Z,
                 damaged,
                 killed,
-                structures));
+                structures,
+                vehicles));
+            return (damaged, killed);
         }
 
         private DamageOutcome ExplodeOn(int? thrower, int victimId, Vector3 center, ExplosionDamage explosion, string weaponId, string tag)

@@ -36,7 +36,7 @@ namespace Fps.Server.Tests
             Assert.That(data.World.Raycast(new Vector3(0f, 5f, 0f), -Vector3.UnitY, 10f, ~0, out var hit), Is.True);
             Assert.That(hit.Point.Y, Is.EqualTo(0.5f).Within(1e-4f));
             Assert.That(data.Navigation.SamplePosition(new Vector3(0.2f, 0.5f, 0.2f), 1f, ~0, out _), Is.True);
-            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none structures=none ladders=0 from="));
+            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none structures=none ladders=0 vehicles=0 from="));
         }
 
         [Test]
@@ -59,6 +59,31 @@ namespace Fps.Server.Tests
 
             Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.Contain("NetArena01.ladders.json"));
+        }
+
+        [Test]
+        public void LoadsTheVehiclesBesideTheCollision()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(
+                Path.Combine(directory, "NetArena01" + NetMapVehicles.Extension),
+                "{ \"vehicles\": [ { \"id\": \"cart\", \"position\": [1, 0.5, 2], \"seats\": [ { \"role\": \"Driver\", \"sit\": [0, 1, 0] } ] } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Vehicles.Vehicles, Has.Count.EqualTo(1));
+            Assert.That(data.Vehicles.Vehicles[0].Position, Is.EqualTo(new Vector3(1f, 0.5f, 2f)));
+            Assert.That(data.LogLine, Does.Contain(" vehicles=1 "));
+        }
+
+        [Test]
+        public void BrokenVehiclesAreAnError()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(Path.Combine(directory, "NetArena01" + NetMapVehicles.Extension), "{ \"vehicles\": [ { \"id\": \"cart\" } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("NetArena01.vehicles.json"));
         }
 
         [Test]

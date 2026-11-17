@@ -29,6 +29,10 @@ namespace Fps.Core
         /// <summary>乗り込めなかった・移れなかった理由: 指定した座席が破棄されている。</summary>
         public const string ReasonSeatRemoved = "seat_removed";
 
+        public const string ReasonUnknownVehicle = "unknown_vehicle";
+
+        public const string ReasonNotRiding = "not_riding";
+
         /// <summary>降りられなかった理由: 降りる場所がすべて塞がっている。</summary>
         public const string ReasonExitBlocked = "exit_blocked";
 
@@ -134,6 +138,32 @@ namespace Fps.Core
             }
 
             return $"{Tag} '{vehicle}' wrecked riders={riders}";
+        }
+
+        /// <example><c>[Vehicle] 'jeep#0' corrected driver=1 reason=TooFast generation=1 at=(1.0, 0.5, 2.0)</c></example>
+        public static string Corrected(string vehicle, string driver, VehicleMoveRejection reason, int generation, float x, float y, float z)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' corrected driver={2} reason={3} generation={4} at=({5:0.0}, {6:0.0}, {7:0.0})",
+                Tag,
+                vehicle,
+                driver,
+                reason,
+                generation,
+                x,
+                y,
+                z);
+        }
+
+        public static string MoveDropped(string vehicle, string rider, VehicleMoveRejection reason)
+        {
+            return $"{Tag} '{vehicle}' move dropped rider={rider} reason={reason}";
+        }
+
+        public static string NetName(string vehicleId, int index)
+        {
+            return vehicleId + "#" + index.ToString(CultureInfo.InvariantCulture);
         }
 
         public static string Firing(string vehicle, string rider, int seat, VehicleSeatFiring firing)

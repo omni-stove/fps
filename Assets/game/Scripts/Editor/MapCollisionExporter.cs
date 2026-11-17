@@ -174,6 +174,12 @@ namespace Fps.Editor
                     WriteText(laddersPath, NetMapLadders.Write(ladders));
                     written.Add(laddersPath);
                     Debug.Log(LogTag + " wrote " + laddersPath + " from " + scenePath + " (" + ladders.Ladders.Count + " ladders)");
+
+                    var vehicles = MapVehicleExporter.Collect(scene.GetRootGameObjects());
+                    var vehiclesPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapVehicles.Extension);
+                    WriteText(vehiclesPath, NetMapVehicles.Write(vehicles));
+                    written.Add(vehiclesPath);
+                    Debug.Log(LogTag + " wrote " + vehiclesPath + " from " + scenePath + " (" + vehicles.Vehicles.Count + " vehicles)");
                 }
             }
             finally
@@ -297,6 +303,7 @@ namespace Fps.Editor
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapStructures.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapVehicles.Extension));
             foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))
@@ -358,8 +365,9 @@ namespace Fps.Editor
             var unsupported = new List<string>();
             foreach (var collider in colliders)
             {
+                // 乗り物は動くので、サーバーは .fpsmap の形ではなく乗り物の書き出し (MapVehicleExporter) の車体で当てる
                 if (!collider.enabled || !collider.gameObject.activeInHierarchy || collider.isTrigger
-                    || collider is CharacterController || collider is WheelCollider)
+                    || collider is CharacterController || collider is WheelCollider || collider.GetComponentInParent<Vehicle>(true) != null)
                 {
                     continue;
                 }

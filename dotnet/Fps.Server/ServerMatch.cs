@@ -290,6 +290,32 @@ namespace Fps.Server
             }
         }
 
+        public void WriteVehicleEntered(int playerId, int vehicle, string vehicleId, int seat, VehicleSeatRole role)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.VehicleEntered(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), vehicle, vehicleId, seat, role));
+            }
+        }
+
+        public void WriteVehicleLeft(int playerId, int vehicle, string vehicleId, int seat, VehicleLeaveReason reason)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.VehicleLeft(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), vehicle, vehicleId, seat, reason));
+            }
+        }
+
+        public void WriteVehicleExploded(int vehicle, string vehicleId, int? attackerId, int riders, int damaged, int killed)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.VehicleExploded(
+                    _utcNow(), MatchId, vehicle, vehicleId, attackerId, attackerId.HasValue ? ProductUserIdOf(attackerId.Value) : null, riders,
+                    damaged, killed));
+            }
+        }
+
         private string ProductUserIdOf(int playerId)
         {
             return _players.TryGetValue(playerId, out var player) ? player.ProductUserId : null;

@@ -66,8 +66,8 @@ namespace Fps.Protocol.Tests
             var baseline = Build(100, 0f);
             var current = Build(101, 0f);
 
-            // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。
-            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6;
+            // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。乗り物は並びの数だけ。
+            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6 + 1;
             Assert.That(Size(current, baseline), Is.EqualTo(expected));
         }
 

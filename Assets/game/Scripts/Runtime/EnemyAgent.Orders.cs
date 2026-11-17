@@ -23,6 +23,7 @@ namespace Fps.Runtime
         private SideMember _orderLeader;
         private SquadOrderSpec _orderSpec = SquadOrderSpec.Default;
         private bool _orderArrived;
+        private BotInputSpec _orderInput = BotInputSpec.Default;
 
         /// <summary>今の分隊の指示。無ければ <see cref="BotErrand.None"/>。行き先は狙う敵・付いていく人に合わせて毎フレーム更新する。</summary>
         public BotErrand Order => _order;
@@ -190,6 +191,26 @@ namespace Fps.Runtime
             SubtitleFeed.Reply(SquadOrderReply.TargetDown(Id));
         }
 
+        // 指示の判断は BotInputSpec の到着距離しか使わないので、ほかは既定のまま到着距離だけを敵の設定にそろえる。
+        private BotInputSpec OrderInput()
+        {
+            if (!_orderInput.ArrivalDistance.Equals(_arrivalDistance))
+            {
+                var d = BotInputSpec.Default;
+                _orderInput = new BotInputSpec(
+                    d.MaxTurnDegreesPerSecond,
+                    d.AimErrorPerMeter,
+                    d.AimErrorRefreshSeconds,
+                    d.FireToleranceDegrees,
+                    _arrivalDistance,
+                    d.SprintDistance,
+                    d.SprintMaxAngleDegrees,
+                    d.CrouchWhenHolding);
+            }
+
+            return _orderInput;
+        }
+
         private void NoteOrderArrival()
         {
             if (_order.Kind != BotErrandKind.Hold || _orderArrived)
@@ -197,7 +218,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (HorizontalDistance(GroundPosition, _order.Destination.ToUnity()) <= EnemyBrain.ArrivalDistance)
+            if (HorizontalDistance(GroundPosition, _order.Destination.ToUnity()) <= _arrivalDistance)
             {
                 _orderArrived = true;
                 Debug.Log(SquadOrderLog.Arrived(Id, _order.Destination), this);

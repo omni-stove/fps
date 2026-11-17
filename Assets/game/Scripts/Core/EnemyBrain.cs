@@ -25,9 +25,6 @@ namespace Fps.Core
     /// </remarks>
     public sealed class EnemyBrain
     {
-        /// <summary>巡回地点に着いたとみなす距離（メートル）。</summary>
-        public const float ArrivalDistance = 0.5f;
-
         /// <summary>状態が変わるたびに（変わる前, 変わった後）で呼ばれる。</summary>
         public event Action<EnemyState, EnemyState> StateChanged;
 
@@ -523,7 +520,7 @@ namespace Fps.Core
             switch (CoverPhase)
             {
                 case EnemyCoverPhase.Moving:
-                    if (Vector3.Distance(self, point) > ArrivalDistance)
+                    if (Vector3.Distance(self, point) > _spec.ArrivalDistance)
                     {
                         return new EnemyDecision(point, _coverThreat, false, false);
                     }
@@ -647,7 +644,7 @@ namespace Fps.Core
             }
 
             SetState(EnemyState.Patrol);
-            if (Vector3.Distance(self, _route[_routeIndex]) <= ArrivalDistance)
+            if (Vector3.Distance(self, _route[_routeIndex]) <= _spec.ArrivalDistance)
             {
                 _routeIndex = (_routeIndex + 1) % _route.Length;
             }

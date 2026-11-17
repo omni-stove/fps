@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
@@ -65,7 +66,46 @@ namespace Shooter.Core
             return Tag + " kill killer=" + Number(killerId) + " victim=" + Number(victimId);
         }
 
-        /// <summary>同じ陣営に倒された (点の入らない) ことを、<see cref="Kill"/> と区別して書く。</summary>
+        /// <summary>アシストした人を添えたキル。アシストが無い (null か空) なら <see cref="Kill(int, int)"/> と同じ。</summary>
+        /// <example><c>[Mode] kill killer=0 victim=2 assists=1,3</c></example>
+        public static string Kill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
+            var text = Kill(killerId, victimId);
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text).Append(" assists=");
+            for (var i = 0; i < assisterIds.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(Number(assisterIds[i]));
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>playerId のキル数・デス数・アシスト数。試合が終わったときに参加者ごとに書く。</summary>
+        /// <example><c>[Mode] stats player=0 kills=3 deaths=1 assists=2</c></example>
+        public static string Stats(ModeSession session, int playerId)
+        {
+            if (session == null)
+            {
+                throw new ArgumentNullException(nameof(session));
+            }
+
+            return Tag + " stats player=" + Number(playerId)
+                + " kills=" + Number(session.GetKills(playerId))
+                + " deaths=" + Number(session.GetDeaths(playerId))
+                + " assists=" + Number(session.GetAssists(playerId));
+        }
+
+        /// <summary>同じ陣営に倒された (点の入らない) ことを、<see cref="Kill(int, int)"/> と区別して書く。</summary>
         /// <example><c>[Mode] teamkill killer=1 victim=2</c></example>
         public static string TeamKill(int killerId, int victimId)
         {

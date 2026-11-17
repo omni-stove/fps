@@ -10,6 +10,7 @@ namespace Shooter.Core
         public const int DefaultSideCount = 2;
         public const int DefaultSideCapacity = 8;
         public const int DefaultPointsPerKill = 1;
+        public const int DefaultPointsPerAssist = 0;
 
         /// <summary>どちらかのチームがこの点数に届いたら試合が終わる。1 以上。</summary>
         public int ScoreLimit { get; }
@@ -33,6 +34,9 @@ namespace Shooter.Core
         /// <summary>別の陣営を 1 回倒すごとに入る点。1 以上。</summary>
         public int PointsPerKill { get; }
 
+        /// <summary>別の陣営を倒すのを 1 回アシストするごとに入る点。0 以上。0 ならアシストでは点が入らない。</summary>
+        public int PointsPerAssist { get; }
+
         /// <param name="scoreLimit">勝利に必要な点数。1 以上。</param>
         /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい有限値。</param>
         /// <param name="respawnSeconds">リスポーンまでの秒数。0 以上の有限値。</param>
@@ -40,6 +44,7 @@ namespace Shooter.Core
         /// <param name="sideCount">陣営の数。2 以上。</param>
         /// <param name="sideCapacity">1 つの陣営の人数の上限。1 以上。</param>
         /// <param name="pointsPerKill">キル 1 回の点。1 以上。</param>
+        /// <param name="pointsPerAssist">アシスト 1 回の点。0 以上。</param>
         public TeamDeathmatchSpec(
             int scoreLimit,
             float timeLimitSeconds,
@@ -47,7 +52,8 @@ namespace Shooter.Core
             GameRules rules = null,
             int sideCount = DefaultSideCount,
             int sideCapacity = DefaultSideCapacity,
-            int pointsPerKill = DefaultPointsPerKill)
+            int pointsPerKill = DefaultPointsPerKill,
+            int pointsPerAssist = DefaultPointsPerAssist)
         {
             if (scoreLimit <= 0)
             {
@@ -79,6 +85,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(pointsPerKill), pointsPerKill, "pointsPerKill must be at least 1");
             }
 
+            if (pointsPerAssist < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pointsPerAssist), pointsPerAssist, "pointsPerAssist must not be negative");
+            }
+
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
             RespawnSeconds = respawnSeconds;
@@ -86,6 +97,7 @@ namespace Shooter.Core
             SideCount = sideCount;
             SideCapacity = sideCapacity;
             PointsPerKill = pointsPerKill;
+            PointsPerAssist = pointsPerAssist;
         }
     }
 }

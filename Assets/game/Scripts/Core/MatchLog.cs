@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace Shooter.Core
 {
@@ -99,8 +101,32 @@ namespace Shooter.Core
                 + " victim=" + victimId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>アシストした人を添えたキル。アシストが無い (null か空) なら <see cref="Kill(int, int)"/> と同じ。</summary>
+        /// <example><c>[Match] kill killer=0 victim=1 assists=2,3</c></example>
+        public static string Kill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
+            var text = Kill(killerId, victimId);
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text).Append(" assists=");
+            for (var i = 0; i < assisterIds.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(assisterIds[i].ToString(CultureInfo.InvariantCulture));
+            }
+
+            return builder.ToString();
+        }
+
         /// <summary>
-        /// 味方に倒された (<see cref="FriendlyFire.On"/>) ことを、点数の入る <see cref="Kill"/> と区別して書く。
+        /// 味方に倒された (<see cref="FriendlyFire.On"/>) ことを、点数の入る <see cref="Kill(int, int)"/> と区別して書く。
         /// </summary>
         /// <example><c>[Match] teamkill killer=0 victim=2</c></example>
         public static string TeamKill(int killerId, int victimId)

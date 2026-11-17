@@ -18,6 +18,7 @@ namespace Shooter.Server.Eos
         private readonly string _endpoint;
         private readonly string _version;
         private readonly int _maxPlayers;
+        private readonly NetMatchSettings _match;
         private readonly RetrySchedule _schedule;
         private readonly TextWriter _log;
         private Action<string> _failed;
@@ -34,8 +35,21 @@ namespace Shooter.Server.Eos
 
         public ServerLobbyRegistrar(
             ServerLobbyService service, string endpoint, string version, int maxPlayers, RetrySchedule schedule, TextWriter log)
+            : this(service, endpoint, version, maxPlayers, NetMatchSettings.Default, schedule, log)
+        {
+        }
+
+        public ServerLobbyRegistrar(
+            ServerLobbyService service, string endpoint, string version, NetMatchSettings match, RetrySchedule schedule, TextWriter log)
+            : this(service, endpoint, version, (match ?? throw new ArgumentNullException(nameof(match))).MaxPlayers, match, schedule, log)
+        {
+        }
+
+        private ServerLobbyRegistrar(
+            ServerLobbyService service, string endpoint, string version, int maxPlayers, NetMatchSettings match, RetrySchedule schedule, TextWriter log)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _match = match;
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             if (!NetLaunchOptions.TryParseEndpoint(endpoint, out _, out _))
@@ -222,7 +236,7 @@ namespace Shooter.Server.Eos
             _service.CreateLobby(
                 ServerLobby.MaxMembers(_maxPlayers),
                 true,
-                ServerLobby.Attributes(_endpoint, _version, players),
+                ServerLobby.Attributes(_endpoint, _version, players, _match),
                 (lobby, error) => HandleCreated(lobby, error, players));
         }
 

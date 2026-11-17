@@ -6,6 +6,9 @@ namespace Fps.Core
     // 一周しない範囲では、近いほうへ回ると範囲の外を通ることがあるので、範囲の中をまっすぐ回る。
     public sealed class VehicleWeaponAim
     {
+        // 角度に直すと float の丸めで端ちょうどの向きがわずかに外へ出るので、この差までは届くとみなす。
+        private const float _reachToleranceDegrees = 1e-3f;
+
         public VehicleWeaponAim(VehicleWeaponSpec spec)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
@@ -73,6 +76,29 @@ namespace Fps.Core
                 : YawDegrees + Math.Clamp(yawDelta, -maxStep, maxStep);
             PitchDegrees += Math.Clamp(pitchDelta, -maxStep, maxStep);
             return Math.Abs(yawDelta) <= maxStep && Math.Abs(pitchDelta) <= maxStep;
+        }
+
+        // 範囲の端で止まった銃は向けた先へ届かないまま撃ててしまうので、撃つ側 (敵の銃手など) が届くかを先に確かめられるようにする。
+        public bool CanReach(Vector3 localDirection)
+        {
+            if (!TryToAngles(localDirection, out var yaw, out var pitch))
+            {
+                return false;
+            }
+
+            return Math.Abs(TurretTargeting.DeltaDegrees(ClampYaw(yaw), yaw)) <= _reachToleranceDegrees
+                && Math.Abs(ClampPitch(pitch) - pitch) <= _reachToleranceDegrees;
+        }
+
+        public float OffsetDegrees(Vector3 localDirection)
+        {
+            if (!IsFinite(localDirection) || localDirection.LengthSquared() < 1e-12f)
+            {
+                throw new ArgumentException($"localDirection must be finite and non-zero: {localDirection}", nameof(localDirection));
+            }
+
+            var cos = Vector3.Dot(LocalDirection, Vector3.Normalize(localDirection));
+            return MathF.Acos(Math.Clamp(cos, -1f, 1f)) * (180f / MathF.PI);
         }
 
         public static bool TryToAngles(Vector3 localDirection, out float yawDegrees, out float pitchDegrees)

@@ -141,12 +141,40 @@ namespace Fps.Core
             return $"{Tag} '{vehicle}' firing rider={rider} seat={seat} with={firing}";
         }
 
+        // heat は熱で撃つ武器だけが持つ。弾倉の武器の行を変えず、読んでいる側をそのままにするため末尾に足す。
         public static string WeaponFired(
-            string vehicle, string rider, int seat, string weaponId, float yawDegrees, float pitchDegrees, string hit, int damage, int ammo)
+            string vehicle,
+            string rider,
+            int seat,
+            string weaponId,
+            float yawDegrees,
+            float pitchDegrees,
+            string hit,
+            int damage,
+            int ammo,
+            float? heat = null)
         {
             var yaw = yawDegrees.ToString("0.0", CultureInfo.InvariantCulture);
             var pitch = pitchDegrees.ToString("0.0", CultureInfo.InvariantCulture);
-            return $"{Tag} '{vehicle}' fire rider={rider} seat={seat} weapon={weaponId} yaw={yaw} pitch={pitch} hit={hit ?? "-"} dmg={damage} ammo={ammo}";
+            var line = $"{Tag} '{vehicle}' fire rider={rider} seat={seat} weapon={weaponId} yaw={yaw} pitch={pitch} hit={hit ?? "-"} dmg={damage} ammo={ammo}";
+            return heat.HasValue ? line + " heat=" + heat.Value.ToString("0.00", CultureInfo.InvariantCulture) : line;
+        }
+
+        public static string Overheated(string vehicle, int seat, string weaponId, float lockSeconds)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' overheated seat={2} weapon={3} lock={4:0.00}",
+                Tag,
+                vehicle,
+                seat,
+                weaponId,
+                lockSeconds);
+        }
+
+        public static string Cooled(string vehicle, int seat, string weaponId)
+        {
+            return $"{Tag} '{vehicle}' cooled seat={seat} weapon={weaponId}";
         }
     }
 }

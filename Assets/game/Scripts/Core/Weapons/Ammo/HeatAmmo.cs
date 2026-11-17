@@ -4,19 +4,13 @@ namespace Fps.Core
 {
     public sealed class HeatAmmo : IAmmoModel
     {
-        // 0.1 を 10 回足すと float では 1 にわずかに届かないので、この差までは上限に達したとみなす。
-        private const float _fullTolerance = 1e-4f;
-
         private readonly MagazineAmmo _magazine;
-        private float _heat;
-        private float _sinceShot;
-        private float _overheatRemaining;
 
         public HeatAmmo(HeatSpec heat, MagazineAmmo magazine)
         {
             Spec = heat ?? throw new ArgumentNullException(nameof(heat));
             _magazine = magazine ?? throw new ArgumentNullException(nameof(magazine));
-            _sinceShot = heat.CoolDelaySeconds;
+            Heat = new WeaponHeat(heat);
         }
 
         public event Action Reloaded
@@ -27,7 +21,9 @@ namespace Fps.Core
 
         public HeatSpec Spec { get; }
 
-        public bool IsOverheated { get; private set; }
+        public WeaponHeat Heat { get; }
+
+        public bool IsOverheated => Heat.IsOverheated;
 
         // 弾倉は減らさないので、HUD やセーブには作ったときの値をそのまま返す。
         public int AmmoInMagazine => _magazine.AmmoInMagazine;
@@ -51,27 +47,13 @@ namespace Fps.Core
 
         public float ReloadProgress => 0f;
 
-        public float? HeatFraction => _heat;
+        public float? HeatFraction => Heat.Fraction;
 
-        public bool CanFire => !IsOverheated;
+        public bool CanFire => Heat.CanFire;
 
         public void Consume()
         {
-            if (!CanFire)
-            {
-                throw new InvalidOperationException("cannot fire while overheated");
-            }
-
-            _heat = Math.Min(1f, _heat + Spec.HeatPerShot);
-            _sinceShot = 0f;
-            if (_heat < 1f - _fullTolerance)
-            {
-                return;
-            }
-
-            _heat = 1f;
-            IsOverheated = true;
-            _overheatRemaining = Spec.OverheatSeconds;
+            Heat.AddShot();
         }
 
         public int AddReserveAmmo(int amount)
@@ -112,26 +94,7 @@ namespace Fps.Core
 
         public void Tick(float deltaSeconds)
         {
-            SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
-            float cooling;
-            if (IsOverheated)
-            {
-                var held = Math.Min(deltaSeconds, _overheatRemaining);
-                _overheatRemaining -= held;
-                cooling = deltaSeconds - held;
-            }
-            else
-            {
-                var before = _sinceShot;
-                _sinceShot = Math.Min(Spec.CoolDelaySeconds, _sinceShot + deltaSeconds);
-                cooling = deltaSeconds - (_sinceShot - before);
-            }
-
-            _heat = Math.Max(0f, _heat - (Spec.CoolPerSecond * cooling));
-            if (IsOverheated && _heat <= 0f)
-            {
-                IsOverheated = false;
-            }
+            Heat.Tick(deltaSeconds);
         }
     }
 }

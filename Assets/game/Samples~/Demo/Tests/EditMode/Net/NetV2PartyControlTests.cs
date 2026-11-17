@@ -116,6 +116,41 @@ namespace Shooter.Net.Tests
         public void RefusesANullSession()
         {
             Assert.Throws<ArgumentNullException>(() => new NetV2PartyControl(null));
+            Assert.Throws<ArgumentNullException>(() => new NetV2PartyControl(null, () => 1000));
+        }
+
+        [Test]
+        public void RefusesANullSkillRatingSource()
+        {
+            var session = new PartySession(new FakeLobbyBackend(), _version, _logs.Add);
+
+            Assert.Throws<ArgumentNullException>(() => new NetV2PartyControl(session, null));
+            session.Dispose();
+        }
+
+        [Test]
+        public void TickAndTheAverageTakeTheCurrentSkillRating()
+        {
+            _control.Dispose();
+            int? rating = 1000;
+            _backend = new FakeLobbyBackend();
+            _control = new NetV2PartyControl(new PartySession(_backend, _version, _logs.Add), () => rating);
+
+            _control.Tick(1f);
+            Assert.That(_control.Session.SkillRating, Is.EqualTo(1000));
+
+            rating = 1250;
+            Assert.That(_control.SkillAverage, Is.EqualTo(1250), "without a party the average is the own rating, read when asked");
+            Assert.That(_control.Session.SkillRating, Is.EqualTo(1250));
+
+            rating = null;
+            _control.Tick(2f);
+            Assert.That(_control.Session.SkillRating, Is.Null);
+            Assert.That(_control.SkillAverage, Is.Null);
+
+            _control.Dispose();
+            rating = 900;
+            Assert.That(_control.SkillAverage, Is.EqualTo(900), "a disposed control still hands over the own rating");
         }
     }
 }

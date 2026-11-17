@@ -12,6 +12,7 @@ namespace Shooter.NetV2
         private readonly int _maxMembers;
         private readonly float _pollIntervalSeconds;
         private readonly Action<string> _log;
+        private readonly Dictionary<string, int?> _memberSkills = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
 
         private LoginStep _login;
         private string _userId;
@@ -34,6 +35,10 @@ namespace Shooter.NetV2
         private long? _followedMatch;
         private bool _baselineLeader;
         private bool _reportedUnreadable;
+
+        private int? _skillRating;
+        private int? _writtenSkill;
+        private bool _skillsUnsupported;
 
         private bool _polling;
         private float _now;
@@ -93,6 +98,47 @@ namespace Shooter.NetV2
         public bool IsLeader => _phase == PartyPhase.InParty && IsSelf(_leader);
 
         public int MatchPlayers => _phase == PartyPhase.InParty ? Math.Max(1, _lobby.MemberCount) : 1;
+
+        public int? SkillRating => _skillRating;
+
+        // 他のメンバーの値を読むのはリーダーだけなので、リーダーでないメンバーには自分の値だけの平均になる。
+        public int? SkillAverage
+        {
+            get
+            {
+                if (_phase != PartyPhase.InParty)
+                {
+                    return _skillRating;
+                }
+
+                var ratings = new List<int?>(_lobby.MemberCount);
+                foreach (var member in _lobby.Members)
+                {
+                    if (IsSelf(member))
+                    {
+                        ratings.Add(_skillRating);
+                    }
+                    else
+                    {
+                        ratings.Add(_memberSkills.TryGetValue(member, out var skill) ? skill : null);
+                    }
+                }
+
+                return ServerLobby.SkillAverage(ratings);
+            }
+        }
+
+        public void SetSkillRating(int? skillRating)
+        {
+            ThrowIfDisposed();
+            if (_skillRating == skillRating)
+            {
+                return;
+            }
+
+            _skillRating = skillRating;
+            FlushWrite();
+        }
 
         public void Create()
         {
@@ -383,9 +429,15 @@ namespace Shooter.NetV2
 
             ApplyLobby(lobby);
             var leader = _leader;
-            if (leader == null || IsSelf(leader))
+            if (leader == null)
             {
                 _polling = false;
+                return;
+            }
+
+            if (IsSelf(leader))
+            {
+                ReadMemberSkills(lobby);
                 return;
             }
 
@@ -402,11 +454,15 @@ namespace Shooter.NetV2
             }
 
             _lobby = lobby;
+            ForgetLeftMembers(lobby);
             var leader = PartyLobby.Leader(lobby);
             if (!string.Equals(leader, _leader, StringComparison.OrdinalIgnoreCase))
             {
                 _log(PartyLog.LeaderChanged(lobby.Id, _leader, leader));
                 _leader = leader;
+
+                // リーダーでなかった間は読んでいないので、前にリーダーだったときの古い値を平均に混ぜない
+                _memberSkills.Clear();
                 _state = PartyState.Idle;
                 _baselineLeader = true;
                 _reportedUnreadable = false;
@@ -500,32 +556,158 @@ namespace Shooter.NetV2
             return true;
         }
 
+        // サービスは書いた属性だけを足し替えるので、リーダーの状態と実力の値は 1 回の書き込みにまとめても互いを消さない。
         private void FlushWrite()
         {
-            if (_writing || _pendingWrite == null || _phase != PartyPhase.InParty)
+            if (_writing || _phase != PartyPhase.InParty)
             {
                 return;
             }
 
-            var attributes = _pendingWrite;
+            var leaderWrite = _pendingWrite;
+            var skill = !_skillsUnsupported && _skillRating.HasValue && _skillRating != _writtenSkill ? _skillRating : null;
+            if (leaderWrite == null && !skill.HasValue)
+            {
+                return;
+            }
+
+            var attributes = new List<LobbyAttribute>();
+            if (leaderWrite != null)
+            {
+                attributes.AddRange(leaderWrite);
+            }
+
+            if (skill.HasValue)
+            {
+                attributes.AddRange(PartyLobby.SkillAttributes(skill.Value));
+            }
+
             _writing = true;
             _backend.SetMemberAttributes(_lobby.Id, attributes, Once(_generation, error =>
             {
                 _writing = false;
                 if (error != null)
                 {
+                    if (leaderWrite == null)
+                    {
+                        SkillSharingFailed("writing the skill rating", error);
+                        return;
+                    }
+
                     RetryOrGiveUp("writing the leader state", error);
                     return;
                 }
 
-                if (ReferenceEquals(_pendingWrite, attributes))
+                if (ReferenceEquals(_pendingWrite, leaderWrite))
                 {
                     _pendingWrite = null;
-                    return;
+                }
+
+                if (skill.HasValue)
+                {
+                    _writtenSkill = skill;
                 }
 
                 FlushWrite();
             }));
+        }
+
+        private void ReadMemberSkills(LobbyInfo lobby)
+        {
+            var others = new List<string>(lobby.MemberCount);
+            foreach (var member in lobby.Members)
+            {
+                if (!IsSelf(member))
+                {
+                    others.Add(member);
+                }
+            }
+
+            if (_skillsUnsupported || others.Count == 0)
+            {
+                _polling = false;
+                return;
+            }
+
+            var remaining = others.Count;
+            foreach (var member in others)
+            {
+                var memberId = member;
+                _backend.ReadMemberAttributes(lobby.Id, memberId, Once<IReadOnlyList<LobbyAttribute>>(_generation, (attributes, error) =>
+                {
+                    HandleSkillRead(memberId, attributes, error);
+                    remaining--;
+                    if (remaining == 0)
+                    {
+                        _polling = false;
+                    }
+                }));
+            }
+        }
+
+        private void HandleSkillRead(string memberId, IReadOnlyList<LobbyAttribute> attributes, string error)
+        {
+            if (error != null)
+            {
+                SkillSharingFailed("reading the skill rating of " + memberId, error);
+                return;
+            }
+
+            // 読み終わる前に抜けたメンバーを残すと、次に同じ人が入るまで平均に混ざり続ける
+            if (!_lobby.HasMember(memberId) || !IsLeader)
+            {
+                return;
+            }
+
+            var skill = PartyLobby.ReadSkill(attributes ?? Array.Empty<LobbyAttribute>());
+            if (_memberSkills.TryGetValue(memberId, out var before) && before == skill)
+            {
+                return;
+            }
+
+            _memberSkills[memberId] = skill;
+            _log(PartyLog.MemberSkill(_lobby.Id, memberId, skill));
+        }
+
+        // 実力の値を共有できなくてもパーティは組めるので、RetryOrGiveUp と違いパーティを畳まず、値を載せるのと読むのをやめるだけにする。
+        private void SkillSharingFailed(string what, string error)
+        {
+            if (!LobbyBackendErrors.IsNotSupported(error))
+            {
+                _log(PartyLog.Retrying(what, _lobby.Id, error));
+                return;
+            }
+
+            if (_skillsUnsupported)
+            {
+                return;
+            }
+
+            _skillsUnsupported = true;
+            _memberSkills.Clear();
+            _log(PartyLog.SkillsUnavailable(_lobby.Id, what));
+        }
+
+        private void ForgetLeftMembers(LobbyInfo lobby)
+        {
+            if (_memberSkills.Count == 0)
+            {
+                return;
+            }
+
+            var left = new List<string>();
+            foreach (var member in _memberSkills.Keys)
+            {
+                if (!lobby.HasMember(member))
+                {
+                    left.Add(member);
+                }
+            }
+
+            foreach (var member in left)
+            {
+                _memberSkills.Remove(member);
+            }
         }
 
         private void RetryOrGiveUp(string what, string error)
@@ -581,6 +763,8 @@ namespace Shooter.NetV2
             _followedMatch = null;
             _baselineLeader = false;
             _reportedUnreadable = false;
+            _writtenSkill = null;
+            _memberSkills.Clear();
             _polling = false;
             Publish();
         }

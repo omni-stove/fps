@@ -32,11 +32,13 @@ namespace Shooter.Tests.EditMode
             var spec = ProgressionJson.Parse(Resources.Load<TextAsset>("Tuning/progression").text, "Resources/Tuning/progression.json");
             var known = new HashSet<string>();
             var starting = new HashSet<string>();
+            var weaponIdOfItem = new Dictionary<string, string>();
             foreach (var item in inventory.Items)
             {
                 if (item.IsWeapon)
                 {
                     known.Add(item.WeaponId);
+                    weaponIdOfItem[item.Id] = item.WeaponId;
                 }
 
                 if (item.IsAttachment)
@@ -48,6 +50,10 @@ namespace Shooter.Tests.EditMode
             foreach (var entry in inventory.Starting)
             {
                 starting.Add(entry.ItemId);
+                if (weaponIdOfItem.TryGetValue(entry.ItemId, out var weaponId))
+                {
+                    starting.Add(weaponId);
+                }
             }
 
             foreach (var unlock in spec.Unlocks)

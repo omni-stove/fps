@@ -37,7 +37,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ATableWithOnlyLevelOneStaysAtLevelOne()
         {
-            var ledger = new ProgressionLedger(new ProgressionSpec(1, 1, 1, 1, new[] { 0 }, Array.Empty<ProgressionUnlock>()));
+            var ledger = new ProgressionLedger(new ProgressionSpec(1, 1, 1, 1, _singleLevel, Array.Empty<ProgressionUnlock>()));
 
             Assert.That(ledger.LevelOf(0), Is.EqualTo(1));
             Assert.That(ledger.LevelOf(int.MaxValue), Is.EqualTo(1));

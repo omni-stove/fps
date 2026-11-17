@@ -13,7 +13,7 @@ namespace Shooter.Core.Tests
         {
             Assert.That(
                 ProgressionLog.Configured(ProgressionSpec.Default),
-                Is.EqualTo("[Progression] configured kill=100 headshot=50 match=250 win=500 levels=10 maxXp=22500 unlocks=0"));
+                Is.EqualTo("[Progression] configured kill=100 headshot=50 assist=50 match=250 win=500 levels=10 maxXp=22500 unlocks=0"));
         }
 
         [Test]
@@ -22,6 +22,14 @@ namespace Shooter.Core.Tests
             var award = _ledger.RecordKill(PlayerProfile.Empty, true);
 
             Assert.That(ProgressionLog.Killed(true, award), Is.EqualTo("[Progression] kill head=true xp=+150 total=150 level=1 levelUp=false"));
+        }
+
+        [Test]
+        public void TheAssistLineShowsTheGainAndTheLevel()
+        {
+            var award = _ledger.RecordAssist(new PlayerProfile(460, 4, 0, 0, 0));
+
+            Assert.That(ProgressionLog.Assisted(award), Is.EqualTo("[Progression] assist xp=+50 total=510 level=2 levelUp=true"));
         }
 
         [Test]
@@ -39,8 +47,8 @@ namespace Shooter.Core.Tests
         public void TheProfileLinesShowTheValues()
         {
             Assert.That(
-                ProgressionLog.Loaded(new PlayerProfile(900, 1, 1, 1, 1), 2),
-                Is.EqualTo("[Progression] profile xp=900 kills=1 deaths=1 matches=1 wins=1 level=2"));
+                ProgressionLog.Loaded(new PlayerProfile(900, 1, 1, 1, 1, 2), 2),
+                Is.EqualTo("[Progression] profile xp=900 kills=1 assists=2 deaths=1 matches=1 wins=1 level=2"));
             Assert.That(ProgressionLog.ProfileRejected("bad"), Is.EqualTo("[Progression] profile rejected: bad"));
             Assert.That(ProgressionLog.ProfileKept("profile-rejected"), Is.EqualTo("[Progression] kept the rejected profile in slot=profile-rejected"));
         }
@@ -58,7 +66,7 @@ namespace Shooter.Core.Tests
         {
             Assert.That(
                 ProgressionLog.Saved(new PlayerProfile(900, 1, 1, 1, 1)),
-                Is.EqualTo("[Progression] saved xp=900 kills=1 deaths=1 matches=1 wins=1"));
+                Is.EqualTo("[Progression] saved xp=900 kills=1 assists=0 deaths=1 matches=1 wins=1"));
             Assert.That(ProgressionLog.SaveFailed("disk full"), Is.EqualTo("[Progression] could not save the profile: disk full"));
         }
 
@@ -68,6 +76,7 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Configured(null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Loaded(null, 1));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Killed(false, null));
+            Assert.Throws<ArgumentNullException>(() => ProgressionLog.Assisted(null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.MatchRecorded(new MatchResult(MatchOutcome.Lost, 0, 0, 0), null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.LeveledUp(null));
             Assert.Throws<ArgumentNullException>(() => ProgressionLog.Saved(null));

@@ -159,9 +159,10 @@ namespace Shooter.Core
             var vault = state.Vault;
             var startVelocity = state.Velocity;
             var ladder = AdvanceRegrab(state.Ladder);
+            var swim = SwimStep.Step(state.Swim, state.Position, state.IsGrounded, Body.Geometry, _water, _swim, TickSeconds);
             var traversal = new TraversalStates(
-                LeanStep.Step(state.Lean, input.Lean, _motor.Spec, TickSeconds),
-                SwimStep.Step(state.Swim, state.Position, state.IsGrounded, Body.Geometry, _water, _swim, TickSeconds),
+                LeanStep.Step(state, input, swim, Body, _motor.Spec, TickSeconds),
+                swim,
                 WallRunStep.Step(state.WallRun, Body, startVelocity, state.IsGrounded, _wallRun, TickSeconds),
                 state.AirJumpsUsed);
             if (state.IsKnockedBack)
@@ -302,7 +303,7 @@ namespace Shooter.Core
                 // 転がっていない間も待ち時間を減らす
                 _dodge.Step(TickSeconds);
                 _motor.SetVelocity(startVelocity);
-                traversal = traversal.WithAirJumpsUsed(_motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded));
+                traversal = traversal.WithAirJumpsUsed(_motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded, move, input.Yaw));
                 var displacement = stance == PlayerStance.Prone
                     ? _motor.StepProne(move, input.Yaw, ProneSpec.Speed, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier)
                     : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier);
@@ -459,6 +460,12 @@ namespace Shooter.Core
                 knockback = CharacterKnockbackState.None;
                 traversal = default;
                 Place(new CharacterMotorState(position, velocity, grounded, false));
+            }
+
+            // 跳んだ tick に着地・つかまったときも 0 にするので、tick の頭で数える AirJumpStep ではなく終わりで戻す
+            if (grounded || ladder.IsClimbing || traversal.Swim.IsSwimming || traversal.WallRun.IsRunning)
+            {
+                traversal = traversal.WithAirJumpsUsed(0);
             }
 
             var prone = new CharacterProneState(

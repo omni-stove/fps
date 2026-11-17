@@ -9,6 +9,7 @@ namespace Shooter.Core.Tests
         private static readonly ProgressionSpec _spec = new ProgressionSpec(
             100,
             50,
+            30,
             250,
             500,
             new[] { 0, 100, 300, 600 },
@@ -37,7 +38,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ATableWithOnlyLevelOneStaysAtLevelOne()
         {
-            var ledger = new ProgressionLedger(new ProgressionSpec(1, 1, 1, 1, _singleLevel, Array.Empty<ProgressionUnlock>()));
+            var ledger = new ProgressionLedger(new ProgressionSpec(1, 1, 1, 1, 1, _singleLevel, Array.Empty<ProgressionUnlock>()));
 
             Assert.That(ledger.LevelOf(0), Is.EqualTo(1));
             Assert.That(ledger.LevelOf(int.MaxValue), Is.EqualTo(1));
@@ -71,6 +72,31 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AnAssistAddsTheAssistXpAndCountsTheAssistButNotAKill()
+        {
+            var before = new PlayerProfile(80, 2, 1, 1, 0, 4);
+
+            var award = _ledger.RecordAssist(before);
+
+            Assert.That(award.Xp, Is.EqualTo(30));
+            Assert.That(award.Profile, Is.EqualTo(new PlayerProfile(110, 2, 1, 1, 0, 5)));
+            Assert.That(award.PreviousLevel, Is.EqualTo(1));
+            Assert.That(award.Level, Is.EqualTo(2));
+            Assert.That(award.LeveledUp, Is.True, "110 xp passes the level 2 row");
+            Assert.That(before, Is.EqualTo(new PlayerProfile(80, 2, 1, 1, 0, 4)), "the old profile does not change");
+        }
+
+        [Test]
+        public void KillsAndMatchesKeepTheAssists()
+        {
+            var kill = _ledger.RecordKill(new PlayerProfile(0, 0, 0, 0, 0, 3), false);
+            var match = _ledger.RecordMatch(kill.Profile, new MatchResult(MatchOutcome.Lost, 1, 0, 10));
+
+            Assert.That(kill.Profile.Assists, Is.EqualTo(3));
+            Assert.That(match.Profile, Is.EqualTo(new PlayerProfile(350, 1, 0, 1, 0, 3)));
+        }
+
+        [Test]
         public void AWonMatchAddsTheMatchAndWinXpAndCountsTheWin()
         {
             var award = _ledger.RecordMatch(new PlayerProfile(100, 3, 1, 4, 2), new MatchResult(MatchOutcome.Won, 3, 2, 30));
@@ -96,14 +122,16 @@ namespace Shooter.Core.Tests
         [Test]
         public void ZeroXpSourcesGiveNothingButStillCount()
         {
-            var ledger = new ProgressionLedger(new ProgressionSpec(0, 0, 0, 0, _twoLevels, Array.Empty<ProgressionUnlock>()));
+            var ledger = new ProgressionLedger(new ProgressionSpec(0, 0, 0, 0, 0, _twoLevels, Array.Empty<ProgressionUnlock>()));
 
             var kill = ledger.RecordKill(PlayerProfile.Empty, true);
-            var match = ledger.RecordMatch(kill.Profile, new MatchResult(MatchOutcome.Won, 1, 0, 1));
+            var assist = ledger.RecordAssist(kill.Profile);
+            var match = ledger.RecordMatch(assist.Profile, new MatchResult(MatchOutcome.Won, 1, 0, 1));
 
             Assert.That(kill.Xp, Is.EqualTo(0));
+            Assert.That(assist.Xp, Is.EqualTo(0));
             Assert.That(match.Xp, Is.EqualTo(0));
-            Assert.That(match.Profile, Is.EqualTo(new PlayerProfile(0, 1, 0, 1, 1)));
+            Assert.That(match.Profile, Is.EqualTo(new PlayerProfile(0, 1, 0, 1, 1, 1)));
             Assert.That(match.LeveledUp, Is.False);
         }
 
@@ -120,8 +148,13 @@ namespace Shooter.Core.Tests
             Assert.That(match.Xp, Is.EqualTo(0));
             Assert.That(match.Profile, Is.EqualTo(new PlayerProfile(max, 0, max, max, max)));
 
-            var huge = new ProgressionLedger(new ProgressionSpec(max, max, max, max, _singleLevel, Array.Empty<ProgressionUnlock>()));
+            var assist = _ledger.RecordAssist(new PlayerProfile(max - 5, 0, 0, 0, 0, max));
+            Assert.That(assist.Xp, Is.EqualTo(5));
+            Assert.That(assist.Profile, Is.EqualTo(new PlayerProfile(max, 0, 0, 0, 0, max)));
+
+            var huge = new ProgressionLedger(new ProgressionSpec(max, max, max, max, max, _singleLevel, Array.Empty<ProgressionUnlock>()));
             Assert.That(huge.RecordKill(PlayerProfile.Empty, true).Profile.Xp, Is.EqualTo(max));
+            Assert.That(huge.RecordAssist(PlayerProfile.Empty).Profile.Xp, Is.EqualTo(max));
             Assert.That(huge.RecordMatch(PlayerProfile.Empty, new MatchResult(MatchOutcome.Won, 0, 0, 0)).Profile.Xp, Is.EqualTo(max));
         }
 
@@ -161,6 +194,7 @@ namespace Shooter.Core.Tests
         {
             Assert.Throws<ArgumentNullException>(() => new ProgressionLedger(null));
             Assert.Throws<ArgumentNullException>(() => _ledger.RecordKill(null, false));
+            Assert.Throws<ArgumentNullException>(() => _ledger.RecordAssist(null));
             Assert.Throws<ArgumentNullException>(() => _ledger.RecordMatch(null, new MatchResult(MatchOutcome.Won, 0, 0, 0)));
             Assert.Throws<ArgumentNullException>(() => _ledger.LevelOf(null));
             Assert.Throws<ArgumentNullException>(() => _ledger.IsUnlocked("burst", (PlayerProfile)null));
@@ -179,7 +213,7 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionAward(PlayerProfile.Empty, 0, 2, 1));
             Assert.That(
                 new ProgressionAward(new PlayerProfile(150, 1, 0, 0, 0), 150, 1, 2).ToString(),
-                Is.EqualTo("+150 xp level 1->2 (xp=150 kills=1 deaths=0 matches=0 wins=0)"));
+                Is.EqualTo("+150 xp level 1->2 (xp=150 kills=1 assists=0 deaths=0 matches=0 wins=0)"));
         }
     }
 }

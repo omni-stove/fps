@@ -19,6 +19,11 @@ namespace Fps.Core
             return $"{Tag} '{gun}' is not a mounted gun reason={reason}";
         }
 
+        public static string ShieldFallback(string gun, string problem)
+        {
+            return $"{Tag} '{gun}' {problem}; using the placeholder shield";
+        }
+
         public static string Seek(string enemy, string gun, float distance)
         {
             return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' seek gun={2} distance={3:0.0}", Tag, enemy, gun, distance);

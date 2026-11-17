@@ -144,7 +144,7 @@ namespace Fps.Runtime
             }
             catch (ArgumentException e)
             {
-                Debug.LogError(MountedGunLog.Invalid(name, e.Message), this);
+                Debug.LogError(MountedGunLog.ShieldFallback(name, e.Message), this);
                 return BulletShield.CreatePlaceholder(Mount.transform, PlaceholderShieldLocalPosition, PlaceholderShieldLocalScale);
             }
         }

@@ -216,7 +216,7 @@ namespace Fps.Runtime
             // 目標がいないのは射角の外ではないので、降りる理由が OutOfArc にならないよう届くものとして渡す。
             var order = _behavior.Man(deltaSeconds, visible, !hasTarget || canAim, pointing);
 
-            var aim = canAim ?(aimPoint - mount.transform.position).normalized : Vector3.zero;
+            var aim = canAim ? (aimPoint - mount.transform.position).normalized : Vector3.zero;
             _agent.Seat.SubmitInput(_agent, new VehicleSeatInput(Vector2.zero, 0f, false, order.Fire, false, false, muzzle, aim), deltaSeconds);
 
             if (order.Leave.HasValue && _agent.TryLeaveVehicle())

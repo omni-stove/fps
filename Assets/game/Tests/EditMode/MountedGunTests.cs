@@ -94,6 +94,19 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AShieldPrefabWithoutARootColliderFallsBackToThePlaceholder()
+        {
+            var prefab = Track(new GameObject("NoCollider"));
+            _mounted.ShieldPrefab = prefab;
+
+            LogAssert.Expect(LogType.Error, new Regex("(?s)\\[MountedGun\\].*shield prefab 'NoCollider' has no collider on its root.*using the placeholder shield"));
+            Assert.That(_mounted.TryInitialize(), Is.True);
+
+            Assert.That(_mounted.Shield.name, Is.EqualTo(BulletShield.PlaceholderName));
+            Assert.That(_mounted.Shield.Collider, Is.Not.Null);
+        }
+
+        [Test]
         public void AVehicleThatIsNotAMountedGunIsRefused()
         {
             var root = Track(new GameObject("Jeep"));

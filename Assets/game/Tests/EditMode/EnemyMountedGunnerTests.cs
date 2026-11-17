@@ -159,6 +159,28 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ItLeavesBecauseTheTargetIsLostWhenThereIsNoTargetAnymore()
+        {
+            Engage();
+            LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape("[MountedGun] 'enemy-1' seek gun=Post distance=")));
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Post' board rider=enemy-1 seat=0 role=Gunner");
+            LogAssert.Expect(LogType.Log, "[MountedGun] 'enemy-1' man gun=Post");
+            _gunner.Tick(Step);
+            Assert.That(_agent.IsRiding, Is.True);
+
+            _agent.Target = null;
+
+            _gunner.Tick(0.6f);
+            Assert.That(_agent.IsRiding, Is.True, "still within the give-up time");
+
+            LogAssert.Expect(LogType.Log, "[MountedGun] 'enemy-1' leave gun=Post cause=TargetLost");
+            _gunner.Tick(0.6f);
+
+            Assert.That(_agent.IsRiding, Is.False);
+            Assert.That(_gunner.Manned, Is.Null);
+        }
+
+        [Test]
         public void ItDoesNotFireWhileTheTargetIsHidden()
         {
             Engage();

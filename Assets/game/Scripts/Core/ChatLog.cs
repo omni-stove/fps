@@ -44,5 +44,57 @@ namespace Shooter.Core
 
             return Tag + " refused sender=" + senderId.ToString(CultureInfo.InvariantCulture) + " reason=" + reason;
         }
+
+        public static string Received(ChatLine line)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} received sender={1} channel={2} length={3} at={4:0.00}",
+                Tag,
+                line.SenderId,
+                line.Channel,
+                line.Text.Length,
+                line.SentAtSeconds);
+        }
+
+        public static string IgnoredChannel(int senderId, int channel)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} ignored a line with an unknown channel sender={1} channel={2}",
+                Tag,
+                senderId,
+                channel);
+        }
+
+        public static string Sent(ChatChannel channel, int length, bool sent)
+        {
+            if (!Enum.IsDefined(typeof(ChatChannel), channel))
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, "channel must be a defined ChatChannel");
+            }
+
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                sent ? "{0} sent channel={1} length={2}" : "{0} could not send channel={1} length={2} (not connected)",
+                Tag,
+                channel,
+                length);
+        }
+
+        public static string NotSent(ChatChannel channel, ChatRefusal reason)
+        {
+            if (!Enum.IsDefined(typeof(ChatChannel), channel))
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, "channel must be a defined ChatChannel");
+            }
+
+            if (reason == ChatRefusal.None || !Enum.IsDefined(typeof(ChatRefusal), reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason must be a defined ChatRefusal other than None");
+            }
+
+            return Tag + " not sent channel=" + channel + " reason=" + reason;
+        }
     }
 }

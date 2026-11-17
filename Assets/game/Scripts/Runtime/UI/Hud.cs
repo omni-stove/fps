@@ -278,11 +278,6 @@ namespace Fps.Runtime
             return AbilitySlotsView.AttachTo(this);
         }
 
-        IDominationHud IHud.AttachDomination()
-        {
-            return DominationView.AttachTo(this);
-        }
-
         // エディターの GetComponent は見つからなくても「null と等しい」オブジェクトを返すので、インターフェースに変える前に本当の null にする
         private static T AsInterface<T>(Component component)
             where T : class

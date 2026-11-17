@@ -24,8 +24,8 @@ namespace Fps.Runtime
         /// <summary>オフラインのモード (<see cref="ModeRunnerBase"/>) の今の状態。モードを進めていなければ null。</summary>
         public static GameSignal<ModeStatus> ModeStatus { get; } = new GameSignal<ModeStatus>(nameof(ModeStatus));
 
-        /// <summary>拠点制圧の試合。進めていなければ null。</summary>
-        public static GameSignal<Domination> Domination { get; } = new GameSignal<Domination>(nameof(Domination));
+        /// <summary>拠点制圧の試合の今の状態。進めていなければ null。</summary>
+        public static GameSignal<DominationStatus> Domination { get; } = new GameSignal<DominationStatus>(nameof(Domination));
 
         /// <summary>スコアボードの行。出すものが無ければ null。</summary>
         public static GameSignal<IReadOnlyList<ScoreboardEntry>> Scoreboard { get; } =

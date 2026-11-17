@@ -116,7 +116,6 @@ namespace Fps.Tests.EditMode
             IHud asInterface = hud;
             Assert.That(asInterface.AttachGrenadeCount(), Is.SameAs(hud.GrenadeCount), "Attach returns the view that is already there");
             Assert.That(asInterface.AttachAbilitySlots(), Is.SameAs(hud.AbilitySlots));
-            Assert.That(asInterface.AttachDomination(), Is.SameAs(hud.Domination));
             Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
             Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }

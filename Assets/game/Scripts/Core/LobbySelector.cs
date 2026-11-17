@@ -4,17 +4,8 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>検索で見つかった専用サーバーのロビーから、つなぐものを選ぶ。</summary>
     public static class LobbySelector
     {
-        /// <summary>
-        /// 専用サーバーが <c>-register-lobby</c> で載せたロビー (<see cref="ServerLobby"/>) のうち、つなげるものの中で
-        /// いちばん人数 (<see cref="ServerLobby.PlayersKey"/>) の多いもの (同じなら ID の順で先のもの) を返す。
-        /// つなげるのは <see cref="ServerRejection(LobbyInfo, string)"/> が null のもの。
-        /// </summary>
-        /// <param name="lobbies">検索結果。null の要素は無視する。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。</param>
-        /// <returns>つなぐサーバーのロビー。無ければ null。</returns>
         public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version)
         {
             return PickServer(lobbies, version, 1);
@@ -57,13 +48,6 @@ namespace Shooter.Core
             return best;
         }
 
-        /// <summary>
-        /// Quick Match でサーバーのロビーにつなげない理由。つなげるなら null。
-        /// 参加コードで入る非公開の試合 (<see cref="LobbyInfo.IsPrivate"/>) である、版 (<see cref="ServerLobby.VersionKey"/>) が自分と違う、人数 (<see cref="ServerLobby.PlayersKey"/>) が
-        /// 入れるプレイヤーの数 (<see cref="ServerLobby.PlayerSlots"/>) に達している、アドレス (<see cref="ServerLobby.ServerKey"/>) が無いか IPv4:port でない、のどれか。
-        /// </summary>
-        /// <param name="lobby">検索で見つかったロビー。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。空なら "0" として比べる。</param>
         public static string ServerRejection(LobbyInfo lobby, string version)
         {
             return ServerRejection(lobby, version, 1);
@@ -128,11 +112,6 @@ namespace Shooter.Core
             return null;
         }
 
-        /// <summary>
-        /// つなげるサーバーが無かったときのログ・案内向けの理由。<c>no server to join among 3 found (full x2, version 0.2 (this build is 0.3) x1)</c> の形。
-        /// </summary>
-        /// <param name="lobbies">検索結果。null の要素は無視する。</param>
-        /// <param name="version">自分のビルドの版。</param>
         public static string DescribeNoServer(IReadOnlyList<LobbyInfo> lobbies, string version)
         {
             return DescribeNoServer(lobbies, version, 1);

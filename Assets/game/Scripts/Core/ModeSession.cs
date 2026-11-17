@@ -4,41 +4,20 @@ using System.Collections.ObjectModel;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 部品を組み合わせて作るゲームモードの本体。チーム分け (<see cref="ITeamLayout"/>)・得点 (<see cref="IScoreRule"/>)・
-    /// リスポーン (<see cref="IRespawnPolicy"/>)・勝利条件 (<see cref="IWinCondition"/>) を受け取り、参加者と陣営ごとの得点、
-    /// キル数とデス数とアシスト数、残り時間を持つ。時間は <see cref="Tick"/> で外から進める。
-    /// 終了後は何を報告しても状態が変わらない。次の試合は <see cref="Reset"/> で同じ顔ぶれのまま始め直す。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>別の陣営を倒すと倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。味方や自分を倒したときは Deaths だけ増える。
-    /// 別の陣営を倒したときに渡されたアシストの Id は、倒された人と別の陣営の人だけ Assists を増やし、得点の部品が返した点をその人の陣営に入れる。</item>
-    /// <item>リスポーンの部品を渡したときは、倒された人をリスポーン待ちにし、戻るまでの重ねての報告を無視する。
-    /// null のときは倒されたことを数えるだけで、待ちも脱落も扱わない (リスポーンを外で扱うモード向け)。</item>
-    /// <item><see cref="Tick"/> は、陣営の脱落を知らせ (<see cref="Eliminated"/>)、勝利条件の <see cref="IWinCondition.CheckStanding"/> を調べ、
-    /// 時間で入る点を足し (得点上限に届く時刻があればそこで止めて終える)、リスポーン待ちを進め、時間切れなら終える、の順に進める。</item>
-    /// </list>
-    /// </remarks>
     public sealed class ModeSession : IGameMode
     {
-        /// <summary>状態が変わるたびに新しい状態を渡して呼ばれる。Ended では <see cref="Ended"/> より先に呼ばれ、その時点で Winner は確定済み。</summary>
         public event Action<GameModeState> StateChanged;
 
-        /// <summary>倒されたプレイヤーがリスポーンできるようになったときに呼ばれる。引数は playerId。</summary>
         public event Action<int> RespawnReady;
 
-        /// <summary>
-        /// 陣営が脱落した (1 人以上いて、全員が戻らない形で倒れている) ことを <see cref="Tick"/> の頭で知らせる。陣営ごとに 1 度だけ呼ばれ、
-        /// 誰かが戻るか加わって脱落でなくなった後にまた脱落したら、もう一度呼ばれる。勝利条件を調べるより先に呼ぶ。
-        /// </summary>
         public event Action<Side> Eliminated;
 
-        /// <summary>試合が終わった瞬間に 1 度だけ呼ばれる。引数は勝った陣営で、引き分けなら null。</summary>
         public event Action<Side?> Ended;
 
         private readonly ITeamLayout _layout;
         private readonly IScoreRule[] _scoreRules;
+
+        // null を許すのは、リスポーンを外で扱うモードが倒されたことを数えるだけで、待ちも脱落も任せないようにするため。
         private readonly IRespawnPolicy _respawn;
         private readonly IWinCondition[] _winConditions;
         private readonly double? _scoreLimit;
@@ -52,38 +31,26 @@ namespace Shooter.Core
 
         public GameModeState State { get; private set; }
 
-        /// <summary>試合の制限時間 (秒)。0 より大きい。<see cref="float.PositiveInfinity"/> なら時間切れにならない。</summary>
         public float TimeLimitSeconds { get; }
 
-        /// <summary>残り時間 (秒)。開始前は TimeLimitSeconds のまま、終了後は終了した時点の値のまま。</summary>
         public float RemainingSeconds { get; private set; }
 
-        /// <summary>試合が始まってから進んだ秒数。</summary>
         public double ElapsedSeconds { get; private set; }
 
-        /// <summary>勝った陣営。終了前と、引き分けで終わったときは null。</summary>
         public Side? Winner { get; private set; }
 
-        /// <summary>勝利条件のうちいちばん低い得点の上限。どの条件も持たなければ null。</summary>
         public double? ScoreLimit => _scoreLimit;
 
-        /// <summary>倒された人をリスポーン待ちにするなら true (リスポーンの部品を渡した)。</summary>
         public bool TracksDowns => _respawn != null;
 
         public ITeamLayout Layout => _layout;
 
         public int PlayerCount => _players.Count;
 
-        /// <summary>
-        /// 得点を持つ陣営 (ID の昇順)。チーム分けの <see cref="ITeamLayout.FixedSides"/> と、これまでに誰かが入った陣営。
-        /// 抜けて誰もいなくなった陣営も得点を持ったまま残る。
-        /// </summary>
         public IReadOnlyList<Side> Sides => _sidesView;
 
-        /// <summary>次に <see cref="Join"/> した人が入る陣営。どこにも入れなければ null。</summary>
         public Side? NextSide => _layout.Assign(_joinCount, CountMembers);
 
-        /// <summary>得点がいちばん多い陣営。いちばん多い陣営が複数あるか、陣営が 1 つもなければ null。</summary>
         public Side? LeadingSide
         {
             get
@@ -110,14 +77,8 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>Wave のように、まとめて戻す次の時刻までの秒数。そういう仕組みがないときと、Playing 以外のときは null。</summary>
         public float? SecondsUntilNextWave => State == GameModeState.Playing && _respawn != null ? _respawn.SecondsUntilNextWave : null;
 
-        /// <param name="layout">チーム分け。</param>
-        /// <param name="timeLimitSeconds">制限時間 (秒)。0 より大きい値。<see cref="float.PositiveInfinity"/> なら時間切れにならない。</param>
-        /// <param name="scoreRules">得点の部品。空でもよい。null を含まない。</param>
-        /// <param name="respawnPolicy">リスポーンの部品。null なら倒されたことを数えるだけで、待ちも脱落も扱わない。</param>
-        /// <param name="winConditions">勝利条件。調べる順に並べる。空でもよい (時間切れは引き分けになる)。null を含まない。</param>
         public ModeSession(
             ITeamLayout layout,
             float timeLimitSeconds,
@@ -155,7 +116,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>試合を始める。Waiting のときだけ呼べる。</summary>
         public void Start()
         {
             if (State != GameModeState.Waiting)
@@ -167,11 +127,6 @@ namespace Shooter.Core
             StateChanged?.Invoke(State);
         }
 
-        /// <summary>
-        /// 次の試合のために、陣営の得点・各プレイヤーのキル数とデス数とアシスト数・残り時間・経過時間・勝者・リスポーン待ち・脱落を初期値に戻し、
-        /// 全員を生き返らせて Waiting に戻す。参加者と陣営分け、参加順の番号はそのまま残す。
-        /// どの状態からでも呼べる。状態が変わったときだけ <see cref="StateChanged"/> を出す。
-        /// </summary>
         public void Reset()
         {
             foreach (var side in _sides)
@@ -201,10 +156,6 @@ namespace Shooter.Core
             StateChanged?.Invoke(State);
         }
 
-        /// <summary>プレイヤーを参加させ、チーム分けに従って陣営を割り当てる。キル数とデス数は 0 から数える。</summary>
-        /// <returns>割り当てた陣営。</returns>
-        /// <exception cref="ArgumentException">すでに参加している。</exception>
-        /// <exception cref="InvalidOperationException">どの陣営にも空きがない。</exception>
         public Side Join(int playerId)
         {
             if (_players.ContainsKey(playerId))
@@ -219,22 +170,12 @@ namespace Shooter.Core
             return side;
         }
 
-        /// <summary>プレイヤーを side に加える。参加順の番号は進めない。キル数とデス数とアシスト数は 0 から数える。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">side がチーム分けにない。</exception>
-        /// <exception cref="ArgumentException">すでに参加している。</exception>
-        /// <exception cref="InvalidOperationException">side が満員。</exception>
         public void AddPlayer(int playerId, Side side)
         {
             AddPlayer(playerId, side, 0, 0, 0);
         }
 
-        /// <summary>
-        /// プレイヤーを side に加え、キル数とデス数を kills と deaths から、アシスト数を 0 から数える。
-        /// 陣営の得点は動かさない。参加順の番号は進めない。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">kills か deaths が負、または side がチーム分けにない。</exception>
-        /// <exception cref="ArgumentException">すでに参加している。</exception>
-        /// <exception cref="InvalidOperationException">side が満員。</exception>
+        // 戻ってきた人の kills を引き継いでも陣営の得点を動かさないのは、そのキルの点は抜ける前にもう入っているため。
         public void AddPlayer(int playerId, Side side, int kills, int deaths)
         {
             AddPlayer(playerId, side, kills, deaths, 0);
@@ -287,10 +228,6 @@ namespace Shooter.Core
             record.Assists = assists;
         }
 
-        /// <summary>
-        /// プレイヤーを抜く。待っていたリスポーンは取り消す。陣営の得点はそのまま残す。
-        /// 抜けたことで陣営が脱落した場合は、次の <see cref="Tick"/> で扱う。
-        /// </summary>
         public void RemovePlayer(int playerId)
         {
             if (!_players.Remove(playerId))
@@ -309,10 +246,8 @@ namespace Shooter.Core
 
         public int GetDeaths(int playerId) => Find(playerId).Deaths;
 
-        /// <summary>別の陣営の人を倒すのを手伝った (アシストした) 回数。</summary>
         public int GetAssists(int playerId) => Find(playerId).Assists;
 
-        /// <summary>参加中のプレイヤーの id を昇順で返す。</summary>
         public IReadOnlyList<int> GetPlayerIds()
         {
             var ids = new List<int>(_players.Keys);
@@ -320,7 +255,6 @@ namespace Shooter.Core
             return ids;
         }
 
-        /// <summary>side に今いる人数。</summary>
         public int CountMembers(Side side)
         {
             var count = 0;
@@ -335,16 +269,12 @@ namespace Shooter.Core
             return count;
         }
 
-        /// <summary>倒されてまだ戻っていない間は true。リスポーンの部品がなければ常に false。</summary>
         public bool IsDown(int playerId) => Find(playerId).IsDown;
 
-        /// <summary>倒されてリスポーンを待っている間は true。</summary>
         public bool IsAwaitingRespawn(int playerId) => Find(playerId).IsDown && _respawn.WillReturn(this, playerId);
 
-        /// <summary>倒されていて、この試合のうちにはもう戻らない間は true。</summary>
         public bool IsEliminated(int playerId) => Find(playerId).IsDown && !_respawn.WillReturn(this, playerId);
 
-        /// <summary>side に 1 人以上いて、全員が <see cref="IsEliminated"/> なら true。</summary>
         public bool IsSideEliminated(Side side)
         {
             if (_respawn == null)
@@ -371,14 +301,11 @@ namespace Shooter.Core
             return hasMember;
         }
 
-        /// <summary><see cref="RespawnReady"/> が出るまでの秒数。リスポーンを待っていないときは null。制限時間より後になる場合もそのまま返す。</summary>
         public float? GetRespawnRemaining(int playerId)
         {
             return IsAwaitingRespawn(playerId) ? _respawn.GetRemaining(playerId) : null;
         }
 
-        /// <summary>side の得点。小数を含みうる。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">side がチーム分けにない。</exception>
         public double GetScore(Side side)
         {
             if (!_layout.Contains(side))
@@ -389,11 +316,6 @@ namespace Shooter.Core
             return _scores.TryGetValue(side, out var score) ? score : 0d;
         }
 
-        /// <summary>
-        /// 目標を果たしたなどで side に points を足す。得点上限に届いたら side の勝ちで終える。Playing 以外では何もしない。
-        /// </summary>
-        /// <param name="side">点を足す陣営。</param>
-        /// <param name="points">足す点。0 以上の有限値。</param>
         public void AddScore(Side side, double points)
         {
             if (!_layout.Contains(side))
@@ -415,12 +337,6 @@ namespace Shooter.Core
             AddScoreAndCheckLimit(side, points);
         }
 
-        /// <summary>
-        /// このセッションの得点の外 (別に数えている拠点のポイントなど) で決まった勝敗で、試合をすぐ終える。
-        /// Playing のときだけ終えて <see cref="Ended"/> を出し、true を返す。それ以外では何もせず false を返す。
-        /// </summary>
-        /// <param name="winner">勝った陣営。引き分けなら null。</param>
-        /// <exception cref="ArgumentOutOfRangeException">winner がチーム分けにない。</exception>
         public bool Finish(Side? winner)
         {
             if (winner.HasValue && !_layout.Contains(winner.Value))
@@ -437,28 +353,11 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// killerId が victimId を、アシストなしで倒したことを報告する。
-        /// <see cref="ReportKill(int, int, IReadOnlyList{int})"/> にアシストの Id を空で渡すのと同じ。
-        /// </summary>
         public void ReportKill(int killerId, int victimId)
         {
             ReportKill(killerId, victimId, null);
         }
 
-        /// <summary>
-        /// killerId が victimId を倒したことを報告する。別の陣営を倒したら倒した人の Kills が増え、得点の部品が返した点が倒した人の陣営に入る。
-        /// あわせて assisterIds のうち、参加中で、倒した人でも倒された人でもなく、倒された人と別の陣営の人の Assists を 1 ずつ増やし
-        /// (同じ Id は 1 度だけ数える)、得点の部品が返したアシストの点をその人の陣営に入れる。
-        /// 味方や自滅では倒された人の Deaths だけ増え、アシストも数えない。
-        /// 点を足した陣営が得点上限に届いたら、その陣営の勝ちで終える (倒した側の陣営を先に足す)。
-        /// Waiting・Ended の間と、リスポーンを扱うときに倒された人がすでに倒れているとき (二重の報告) は何もしない。
-        /// </summary>
-        /// <param name="killerId">倒した人。</param>
-        /// <param name="victimId">倒された人。</param>
-        /// <param name="assisterIds">
-        /// アシストした Id (<see cref="DamageLedger.TakeAssisters"/> の返す値など)。null なら空。抜けた人の Id が混じっていてもよい (数えずに飛ばす)。
-        /// </param>
         public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             var killer = Find(killerId, nameof(killerId));
@@ -494,10 +393,6 @@ namespace Shooter.Core
             BeginDown(victimId, victim);
         }
 
-        /// <summary>
-        /// assisterIds のうちアシストに数える人の Assists を増やし、得点の部品が返した点を gains の同じ陣営の行に足す
-        /// (無い陣営なら行を加える)。
-        /// </summary>
         private void CountAssists(int killerId, int victimId, Side victimSide, IReadOnlyList<int> assisterIds, List<SidePoints> gains)
         {
             if (assisterIds == null || assisterIds.Count == 0)
@@ -536,10 +431,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// playerId が倒した相手なしで死んだこと (落下・環境ダメージなど) を報告する。自滅と同じく Deaths だけ増やす。
-        /// Waiting・Ended の間と、リスポーンを扱うときにすでに倒れているときは何もしない。
-        /// </summary>
         public void ReportDeath(int playerId)
         {
             var player = Find(playerId, nameof(playerId));
@@ -553,12 +444,6 @@ namespace Shooter.Core
             BeginDown(playerId, player);
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進める。順に、脱落した陣営を知らせ、勝利条件の <see cref="IWinCondition.CheckStanding"/> で決着すれば時間を進めずに終える。
-        /// 続けて得点の部品から 1 秒あたりの点を集めて目標を進め、点を足す。得点上限に届く陣営があれば先に届いた時刻で止め、
-        /// 先に届いた陣営の勝ち (同時なら引き分け) で終える。届かなければリスポーン待ちを進め、
-        /// 残り時間が 0 になったら <see cref="IWinCondition.CheckTimeUp"/> で勝敗を決めて終える。Playing 以外では何もしない。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsPositiveInfinity(deltaSeconds))
@@ -680,7 +565,6 @@ namespace Shooter.Core
             _sides.Insert(~index, side);
         }
 
-        /// <summary>side に points を足し、得点上限に届いたら side の勝ちで終える。終えたら true。</summary>
         private bool AddScoreAndCheckLimit(Side side, double points)
         {
             var score = _scores[side] + points;
@@ -710,7 +594,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>新しく脱落した陣営を知らせる。ハンドラの中で Playing でなくなったら true。</summary>
         private bool NotifyEliminated()
         {
             if (_respawn == null)
@@ -852,7 +735,6 @@ namespace Shooter.Core
             public int Deaths { get; set; }
             public int Assists { get; set; }
 
-            /// <summary>倒されてから、まだ戻っていない間は true。リスポーンの部品がなければ立たない。</summary>
             public bool IsDown { get; set; }
 
             public PlayerRecord(Side side)

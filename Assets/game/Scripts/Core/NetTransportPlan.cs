@@ -3,13 +3,9 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 要求された transport と手元の認証情報から、実際に使う transport を決めた結果。
-    /// EOS を要求されても認証情報が揃わなければ UDP (従来の直接接続) に切り替える。
-    /// </summary>
     public sealed class NetTransportPlan
     {
-        /// <summary>UDP に切り替えたときに出す 1 行。Netcode のサーバー・.NET のサーバー・v2 のクライアントで同じ文にする。</summary>
+        // Netcode のサーバー・.NET のサーバー・v2 のクライアントで同じ文にするため、ここに 1 つだけ持つ。
         public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
 
         private static readonly IReadOnlyList<string> _none = Array.Empty<string>();
@@ -17,21 +13,14 @@ namespace Shooter.Core
         private static readonly AntiCheatSettings _antiCheatNotResolved =
             AntiCheatSettings.Disabled("disabled: not resolved for this plan");
 
-        /// <summary>実際に使う設定。UDP に切り替えたときは transport だけを差し替えたもの。</summary>
         public NetLaunchOptions Options { get; }
 
-        /// <summary>EOS を使うときの認証情報。UDP では null。</summary>
         public EosCredentials Credentials { get; }
 
-        /// <summary>EOS を要求されたが認証情報が無く、UDP に切り替えたか。</summary>
         public bool FellBackToUdp { get; }
 
-        /// <summary>切り替えの原因になった、見つからなかった認証情報の名前。切り替えていなければ空。</summary>
         public IReadOnlyList<string> MissingCredentials { get; }
 
-        /// <summary>
-        /// Easy Anti-Cheat の設定。<see cref="Decide"/> の直後は無効で、<see cref="WithAntiCheat"/> で差し替える。
-        /// </summary>
         public AntiCheatSettings AntiCheat { get; }
 
         private NetTransportPlan(
@@ -48,15 +37,12 @@ namespace Shooter.Core
             AntiCheat = antiCheat;
         }
 
-        /// <summary>UDP に切り替えたときに <see cref="CredentialsMissingLog"/> に続けて出す、足りない認証情報と置き場所の 1 行。</summary>
         public string DescribeMissingCredentials()
         {
             return "[Net] missing EOS settings: " + string.Join(", ", MissingCredentials)
                 + " (set them as environment variables or in " + EosCredentials.LocalFileName + ")";
         }
 
-        /// <summary>Easy Anti-Cheat の設定だけを差し替えた計画を返す。</summary>
-        /// <exception cref="ArgumentException">EOS を使わない計画で EAC を有効にしようとした。</exception>
         public NetTransportPlan WithAntiCheat(AntiCheatSettings antiCheat)
         {
             if (antiCheat == null)
@@ -72,9 +58,6 @@ namespace Shooter.Core
             return new NetTransportPlan(Options, Credentials, FellBackToUdp, MissingCredentials, antiCheat);
         }
 
-        /// <param name="requested">コマンドライン引数から作った設定。</param>
-        /// <param name="credentials">揃った認証情報。揃っていなければ null。</param>
-        /// <param name="missingCredentials">見つからなかった認証情報の名前。null なら空とみなす。</param>
         public static NetTransportPlan Decide(
             NetLaunchOptions requested,
             EosCredentials credentials,

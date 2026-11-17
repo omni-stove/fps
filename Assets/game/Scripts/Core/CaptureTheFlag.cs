@@ -12,7 +12,7 @@ namespace Shooter.Core
     /// <item>生きている敵が旗に触れる (<see cref="Touch"/>) と、台にあっても落ちていても持つ (<see cref="FlagState.Carried"/>)。</item>
     /// <item>運ぶ人が倒れるか抜けたら、旗はその場に落ちる (<see cref="FlagState.Dropped"/>)。このクラスの <see cref="ReportKill"/>・<see cref="ReportDeath"/>・
     /// <see cref="RemovePlayer"/> を通せばその場で落とし、<see cref="Session"/> に直接報告したときは次の <see cref="ModeSession.Tick"/> で落とす
-    /// (リスポーンが 0 秒だとその場で戻って倒れたことが残らないので、そのときはこのクラスを通す)。</item>
+    /// (リスポーンが 0 秒だとその場で戻って倒れたことが残らないので、そのときはこのクラスを通すか、報告の直後に <see cref="DropCarriedFlag"/> を呼ぶ)。</item>
     /// <item>落ちた旗は生きている味方が触れると台に戻り、誰も触れなくても <see cref="CaptureTheFlagSpec.ReturnSeconds"/> 秒で戻る。</item>
     /// <item>敵の旗を運ぶ人が自陣の台に着いたとき (<see cref="ReachBase"/>)、自陣の旗が台にあれば点が入り、運んでいた旗は敵の台に戻る。
     /// 自陣の旗が台に無ければ何も起きず、運び続ける。</item>
@@ -219,6 +219,21 @@ namespace Shooter.Core
             {
                 DropFrom(playerId);
             }
+        }
+
+        /// <summary>
+        /// playerId が運んでいる旗を、その場に落とす (<see cref="FlagDropped"/>)。倒れたことを <see cref="Session"/> に直接報告した直後に呼ぶ
+        /// (シーンの Runner は報告を土台に任せ、その後で落とす)。試合中で運んでいれば落として true、それ以外は何もせず false。
+        /// </summary>
+        public bool DropCarriedFlag(int playerId)
+        {
+            if (Session.State != GameModeState.Playing || !IsCarrying(playerId))
+            {
+                return false;
+            }
+
+            DropFrom(playerId);
+            return true;
         }
 
         /// <summary>

@@ -70,7 +70,7 @@ namespace Shooter.Core
 
         /// <summary>
         /// tick 時点のしゃがみ。tick 以下で最も新しい記録の値を返す。
-        /// 最も古い記録より前・最も新しい記録より後・記録が無い・NaN のときは false を返す (<see cref="HitboxHistory.TrySample"/> と同じ範囲)。
+        /// 最も古い記録より前・最も新しい記録より後・記録が無い・NaN のときは false を返す (<see cref="HitboxHistory.TrySample(float, out System.Numerics.Vector3)"/> と同じ範囲)。
         /// </summary>
         public bool TrySample(float tick, out bool crouched)
         {

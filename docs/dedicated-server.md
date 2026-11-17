@@ -311,6 +311,7 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  巻き戻すのは位置・しゃがみ・リーンの傾きで、傾けた人の体は足元を軸に、目がリーンのずれ (`MotorSpec.LeanSideOffset`) の所へ来るまで回す。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
 - 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・

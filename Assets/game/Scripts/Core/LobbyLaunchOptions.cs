@@ -20,6 +20,8 @@ namespace Shooter.Core
 
         public const float QuickMatchTimeoutSeconds = 30f;
 
+        public const float JoinCodeTimeoutSeconds = 15f;
+
         public const int MaxSearchResults = 25;
 
         public const int MaxBucketVersionLength = 32;

@@ -88,6 +88,7 @@ namespace Shooter.Net.Tests
                 Path.Combine(_directory, "inventory.json"),
                 Path.Combine(_directory, "knockback.json"),
                 Path.Combine(_directory, "bots.json"),
+                Path.Combine(_directory, "assist.json"),
             }));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "knockback.json")), Is.EqualTo(knockback));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(bots));
@@ -102,6 +103,24 @@ namespace Shooter.Net.Tests
 
             var resources = Resources.Load<TextAsset>(KitTuning.KnockbackResourcePath);
             Assert.That(File.ReadAllText(Path.Combine(_directory, "knockback.json")), Is.EqualTo(resources.text));
+        }
+
+        [Test]
+        public void TheAssistOfGameContentIsWrittenAndWithoutItTheResourcesOne()
+        {
+            ServerRulesExporter.ExportTuning(_directory);
+            var resources = Resources.Load<TextAsset>(KitTuning.AssistResourcePath);
+            Assert.That(File.ReadAllText(Path.Combine(_directory, "assist.json")), Is.EqualTo(resources.text));
+
+            const string assist = "{ \"windowSeconds\": 4 }";
+            var content = Create<GameContent>("Game");
+            content.AssistTuning = Text("GameAssist", assist);
+            GameContent.Use(content);
+
+            ServerRulesExporter.ExportTuning(_directory);
+
+            Assert.That(File.ReadAllText(Path.Combine(_directory, "assist.json")), Is.EqualTo(assist));
+            Assert.That(AssistJson.Parse(assist, "assist.json").WindowSeconds, Is.EqualTo(4f));
         }
 
         [Test]

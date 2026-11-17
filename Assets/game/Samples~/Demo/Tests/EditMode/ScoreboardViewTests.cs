@@ -43,7 +43,7 @@ namespace Shooter.Tests.EditMode
             int id, Team team, int kills, int deaths,
             ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false)
         {
-            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, connection, isLocal);
+            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, 0, connection, isLocal);
         }
 
         private VisualElement[] PlayerRows()
@@ -101,10 +101,10 @@ namespace Shooter.Tests.EditMode
             GameSignals.Scoreboard.Publish(
                 new[]
                 {
-                    new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 3, 0, ScoreboardConnection.None, true),
-                    new ScoreboardEntry(1, ScoreboardName.Bot(1), Team.Alpha, 2, 0, ScoreboardConnection.None, false),
-                    new ScoreboardEntry(2, ScoreboardName.Literal("enemy-1"), Team.Alpha, 1, 0, ScoreboardConnection.None, false),
-                    new ScoreboardEntry(3, ScoreboardName.Target(2), Team.Alpha, 0, 0, ScoreboardConnection.None, false),
+                    new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 3, 0, 0, ScoreboardConnection.None, true),
+                    new ScoreboardEntry(1, ScoreboardName.Bot(1), Team.Alpha, 2, 0, 0, ScoreboardConnection.None, false),
+                    new ScoreboardEntry(2, ScoreboardName.Literal("enemy-1"), Team.Alpha, 1, 0, 0, ScoreboardConnection.None, false),
+                    new ScoreboardEntry(3, ScoreboardName.Target(2), Team.Alpha, 0, 0, 0, ScoreboardConnection.None, false),
                 });
 
             _view.SetOpen(true);
@@ -187,8 +187,8 @@ namespace Shooter.Tests.EditMode
 
             GameSignals.Scoreboard.Publish(new[]
             {
-                new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 1, 0, ScoreboardConnection.None, true),
-                new ScoreboardEntry(1, ScoreboardName.Target(1), Team.Bravo, 0, 1, ScoreboardConnection.None, false),
+                new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 1, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(1, ScoreboardName.Target(1), Team.Bravo, 0, 1, 0, ScoreboardConnection.None, false),
             });
 
             var rows = PlayerRows();

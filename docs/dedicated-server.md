@@ -24,7 +24,7 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
   入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
   `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
-- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`・`assist.json`) は、オフラインと同じく入口の欄の JSON、
   無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。

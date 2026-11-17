@@ -27,6 +27,7 @@ namespace Shooter.Editor
         public const string InventoryFileName = "inventory.json";
         public const string KnockbackFileName = "knockback.json";
         public const string BotsFileName = "bots.json";
+        public const string AssistFileName = "assist.json";
 
         public const string AllDefaultsJson = "{}\n";
 
@@ -176,6 +177,7 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, InventoryFileName, c => c.InventoryTuning, KitTuning.InventoryResourcePath, InventoryJson.Parse),
                 ExportTuningFile(directory, KnockbackFileName, c => c.KnockbackTuning, KitTuning.KnockbackResourcePath, TuningJson.ParseKnockback),
                 ExportTuningFile(directory, BotsFileName, c => c.BotsTuning, KitTuning.BotsResourcePath, TuningJson.ParseBots),
+                ExportTuningFile(directory, AssistFileName, c => c.AssistTuning, KitTuning.AssistResourcePath, AssistJson.Parse),
             };
         }
 

@@ -5,7 +5,7 @@ namespace Shooter.Core
 {
     /// <summary>
     /// ガンゲームの段の進み方と勝ち方。<see cref="ModeSession"/> の勝利条件として渡し、キルは <see cref="ReportKill"/> で別に伝える
-    /// (どの武器で倒したかは <see cref="ModeSession.ReportKill"/> に渡らないため)。
+    /// (どの武器で倒したかは <see cref="ModeSession.ReportKill(int, int)"/> に渡らないため)。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -64,7 +64,7 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// killerId が victimId を weaponId の武器で倒したことを伝え、段を動かして結果を返す。<see cref="ModeSession.ReportKill"/> の後に呼ぶ。
+        /// killerId が victimId を weaponId の武器で倒したことを伝え、段を動かして結果を返す。<see cref="ModeSession.ReportKill(int, int)"/> の後に呼ぶ。
         /// 動かさなかったときも、前後の段が同じ結果を返す。
         /// </summary>
         /// <param name="session">このガンゲームを勝利条件に持つモード。陣営と状態を読む。</param>

@@ -87,6 +87,55 @@
     color: rgba(255, 255, 255, 0.6);
 }
 
+/* レベルが足りず選べない武器。:disabled の 0.4 では鍵とレベルまで読みにくいので、薄さを抑えて背景を暗くする。 */
+.loadout-select__option--locked {
+    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.loadout-select__option--locked:disabled {
+    opacity: 0.65;
+}
+
+.loadout-select__option-lock {
+    flex-direction: row;
+    align-items: center;
+    margin: 6px 0 0 0;
+}
+
+/* 鍵の形。上の丸い掛け金と下の四角い胴を重ねる。 */
+.loadout-select__lock-icon {
+    width: 16px;
+    height: 20px;
+    margin: 0 8px 0 0;
+    align-items: center;
+}
+
+.loadout-select__lock-shackle {
+    width: 10px;
+    height: 9px;
+    border-width: 2px;
+    border-bottom-width: 0;
+    border-color: rgb(255, 196, 64);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.loadout-select__lock-body {
+    width: 16px;
+    height: 11px;
+    border-radius: 2px;
+    background-color: rgb(255, 196, 64);
+}
+
+.loadout-select__lock-level {
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+    color: rgb(255, 196, 64);
+    -unity-font-style: bold;
+}
+
 .loadout-select__no-option {
     margin: 0;
     padding: 0;

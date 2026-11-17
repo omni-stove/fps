@@ -77,6 +77,69 @@ namespace Shooter.Tests.EditMode
             Assert.That(Buttons(view), Is.EqualTo(new[] { "今の武器に付ける", "1 個捨てる" }));
         }
 
+        [Test]
+        public void AnAttachmentAboveTheLevelShowsTheLockedTextAndCannotBeAttached()
+        {
+            var source = new FakeControl(Catalog(InventoryRule.Default));
+            var view = CreateBoundView(source);
+            view.SetOpen(true);
+            var ledger = new ProgressionLedger(new ProgressionSpec(
+                100, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
+
+            view.ShowUnlocks(ledger, new PlayerProfile(600, 0, 0, 0, 0));
+            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle);
+
+            Assert.That(Buttons(view), Is.EqualTo(new[] { "今の武器に付ける", "1 個捨てる" }));
+            Assert.That(AttachButton(view).enabledSelf, Is.False);
+            Assert.That(LockedTexts(view), Is.EqualTo(new[] { "レベル 3 になると付けられます" }));
+
+            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _compensatorId).Handle);
+
+            Assert.That(AttachButton(view).enabledSelf, Is.True, "the compensator is not in the unlock table");
+            Assert.That(LockedTexts(view), Is.Empty);
+        }
+
+        [Test]
+        public void ReachingTheLevelOrDroppingTheLedgerLetsTheAttachmentBeAttached()
+        {
+            var source = new FakeControl(Catalog(InventoryRule.Default));
+            var view = CreateBoundView(source);
+            view.SetOpen(true);
+            var ledger = new ProgressionLedger(new ProgressionSpec(
+                100, 50, 250, 500, new[] { 0, 500, 1500 }, new[] { new ProgressionUnlock(_suppressorId, 3) }));
+            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle);
+
+            view.ShowUnlocks(ledger, new PlayerProfile(1500, 0, 0, 0, 0));
+            Assert.That(AttachButton(view).enabledSelf, Is.True);
+            Assert.That(LockedTexts(view), Is.Empty);
+
+            view.ShowUnlocks(ledger, PlayerProfile.Empty);
+            Assert.That(LockedTexts(view), Is.EqualTo(new[] { "レベル 3 になると付けられます" }));
+
+            view.ShowUnlocks(null, null);
+            Assert.That(AttachButton(view).enabledSelf, Is.True);
+            Assert.That(LockedTexts(view), Is.Empty);
+        }
+
+        [Test]
+        public void ShowUnlocksNeedsAProfileWithALedger()
+        {
+            var view = CreateBoundView(new FakeControl(Catalog(InventoryRule.Default)));
+            var ledger = new ProgressionLedger(ProgressionSpec.Default);
+
+            Assert.Throws<System.ArgumentNullException>(() => view.ShowUnlocks(ledger, null));
+        }
+
+        private static Button AttachButton(InventoryView view)
+        {
+            return view.Element.Query<Button>(className: InventoryView.ButtonClass).ToList().Single(b => b.text == "今の武器に付ける");
+        }
+
+        private static string[] LockedTexts(InventoryView view)
+        {
+            return view.Element.Query<Label>(className: InventoryView.LockedClass).ToList().Select(l => l.text).ToArray();
+        }
+
         // 付ける物を 1 つずつ持って始める
         private static ItemCatalog Catalog(InventoryRule rule)
         {

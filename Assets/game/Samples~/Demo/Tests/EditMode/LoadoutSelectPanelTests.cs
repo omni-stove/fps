@@ -221,6 +221,102 @@ namespace Shooter.Tests.EditMode
             Assert.DoesNotThrow(() => _panel.Dispose());
         }
 
+        // SMG はレベル 4 で使える。Pistol はアンロックの表に無いが述語が断る
+        private void OpenWithLocks()
+        {
+            var catalog = new WeaponCatalog(new[]
+            {
+                Spec(_rifle, "weapon.rifle", WeaponCategory.AssaultRifle),
+                Spec(_handgun, "weapon.handgun", WeaponCategory.Handgun),
+                Spec(_smg, "SMG", WeaponCategory.SubmachineGun),
+                Spec(_pistol, "Pistol", WeaponCategory.Handgun),
+            });
+            var rule = new LoadoutRule(new[]
+            {
+                new[] { WeaponCategory.AssaultRifle, WeaponCategory.SubmachineGun },
+                new[] { WeaponCategory.Handgun },
+            });
+            var ledger = new ProgressionLedger(new ProgressionSpec(
+                100, 50, 250, 500, new[] { 0, 500, 1500, 3000 }, new[] { new ProgressionUnlock(_smg, 4) }));
+            var selection = new LoadoutSelection(rule, catalog, null, new[] { _rifle, _handgun }, id => id != _smg && id != _pistol);
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, selection, ledger);
+            _panel.Confirmed += ids => _confirmed.Add(ids);
+        }
+
+        private static string LockText(Button option)
+        {
+            return option.Q<Label>(className: LoadoutSelectPanel.LockLevelClass)?.text;
+        }
+
+        [Test]
+        public void ALockedOptionShowsALockWithItsLevelAndCannotBePressed()
+        {
+            OpenWithLocks();
+
+            var smg = _panel.OptionButton(0, 1);
+            Assert.That(smg.ClassListContains(LoadoutSelectPanel.LockedOptionClass), Is.True);
+            Assert.That(smg.Q(className: LoadoutSelectPanel.LockIconClass), Is.Not.Null);
+            Assert.That(LockText(smg), Is.EqualTo("レベル 4 で解放"));
+            Assert.That(smg.enabledSelf, Is.False);
+
+            var rifle = _panel.OptionButton(0, 0);
+            Assert.That(rifle.ClassListContains(LoadoutSelectPanel.LockedOptionClass), Is.False);
+            Assert.That(rifle.Q(className: LoadoutSelectPanel.OptionLockClass), Is.Null);
+            Assert.That(rifle.enabledSelf, Is.True);
+        }
+
+        [Test]
+        public void AnOptionLockedForAnotherReasonShowsTheLockWithoutALevel()
+        {
+            OpenWithLocks();
+
+            var pistol = _panel.OptionButton(1, 1);
+            Assert.That(pistol.ClassListContains(LoadoutSelectPanel.LockedOptionClass), Is.True);
+            Assert.That(LockText(pistol), Is.EqualTo("ロック中"));
+        }
+
+        [Test]
+        public void WithoutALedgerTheLockHasNoLevel()
+        {
+            var rule = new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle, WeaponCategory.SubmachineGun } });
+            var catalog = new WeaponCatalog(new[]
+            {
+                Spec(_rifle, "weapon.rifle", WeaponCategory.AssaultRifle),
+                Spec(_smg, "SMG", WeaponCategory.SubmachineGun),
+            });
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, new LoadoutSelection(rule, catalog, null, null, id => id != _smg));
+
+            Assert.That(LockText(_panel.OptionButton(0, 1)), Is.EqualTo("ロック中"));
+        }
+
+        [Test]
+        public void ALockedOptionCannotBeSelectedNorCycledTo()
+        {
+            OpenWithLocks();
+
+            Assert.That(_panel.Select(0, 1), Is.False);
+            Assert.That(_panel.Cycle(1), Is.False, "the rifle is the only weapon of slot 0 that can be used");
+            Assert.That(_panel.Selection.WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }));
+            Assert.That(_panel.Confirm(), Is.True);
+            Assert.That(_confirmed[0], Is.EqualTo(new[] { _rifle, _handgun }));
+        }
+
+        [Test]
+        public void LeavingBusyKeepsTheLockedOptionsDisabled()
+        {
+            OpenWithLocks();
+
+            _panel.SetBusy(true);
+            Assert.That(_panel.OptionButton(0, 0).enabledSelf, Is.False);
+
+            _panel.SetBusy(false);
+            Assert.That(_panel.OptionButton(0, 0).enabledSelf, Is.True);
+            Assert.That(_panel.OptionButton(0, 1).enabledSelf, Is.False);
+            Assert.That(_panel.OptionButton(1, 1).enabledSelf, Is.False);
+        }
+
         [Test]
         public void RejectsNulls()
         {

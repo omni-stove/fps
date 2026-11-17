@@ -1,0 +1,20 @@
+{
+  "progression.title": "Profile",
+  "progression.back": "Back",
+  "progression.level": "Level {0}",
+  "progression.totalXp": "{0} XP total",
+  "progression.xpToNext": "{0} XP to level {1}",
+  "progression.maxLevel": "Max level",
+  "progression.statsTitle": "Record",
+  "progression.kills": "Kills {0}",
+  "progression.deaths": "Deaths {0}",
+  "progression.killDeathRatio": "K/D {0}",
+  "progression.matches": "Matches {0}",
+  "progression.wins": "Wins {0}",
+  "progression.nextUnlocksTitle": "Next unlocks",
+  "progression.unlock": "Level {0}: {1}",
+  "progression.allUnlocked": "Everything is unlocked",
+  "progression.locked": "Locked",
+  "progression.lockedUntil": "Unlocks at level {0}",
+  "progression.attachmentLocked": "Can be attached at level {0}"
+}

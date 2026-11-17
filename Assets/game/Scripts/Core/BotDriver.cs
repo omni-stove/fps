@@ -115,10 +115,10 @@ namespace Fps.Core
         /// 分隊の指示 order を、bot 自身の判断 decision (state はそのときの状態) より優先させた判断を返す。
         /// overridesMove は移動先を指示で決めたら true で、呼び出し側は遮蔽点への移動などを足さずに返した MoveTo へ動かす。
         /// <list type="bullet">
-        /// <item><see cref="BotErrandKind.Hold"/>: 行き先に着く (<see cref="EnemyBrain.ArrivalDistance"/> 以内) まで動き、着いたら留まる。
+        /// <item><see cref="BotErrandKind.Hold"/>: 行き先に着く (input の <see cref="BotInputSpec.ArrivalDistance"/> 以内) まで動き、着いたら留まる。
         /// 向きと射撃は判断のままなので、撃たれたり敵が見えたりすれば反撃するが、追って離れない。しゃがむのは着いてから。</item>
         /// <item><see cref="BotErrandKind.Attack"/>: 撃ち合っている (Chase・Attack・TakeCover) 間は判断のまま (呼び出し側が狙う敵を指示の敵にしておく)。
-        /// そうでなければ敵の居場所へ向かってそちらを向き、撃たない。</item>
+        /// そうでなければ敵の居場所へ向かって (input の <see cref="BotInputSpec.ArrivalDistance"/> 以内なら留まって) そちらを向き、撃たない。</item>
         /// <item><see cref="BotErrandKind.Follow"/>: <see cref="SquadOrderSpec.LeashDistance"/> より離れたら撃ち合っていても戻る。
         /// 撃ち合っていなければ <see cref="SquadOrderSpec.FollowDistance"/> より離れたら寄り、それ以内では留まる (巡回や捜索で離れない)。
         /// 撃ち合っていて LeashDistance 以内なら判断のまま。</item>
@@ -126,14 +126,25 @@ namespace Fps.Core
         /// </list>
         /// 距離は水平面で測る。
         /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
+        /// <exception cref="ArgumentNullException">spec か input が null。</exception>
         /// <exception cref="ArgumentException">指示の行き先か position が有限でない。</exception>
         public static EnemyDecision FollowOrder(
-            EnemyDecision decision, EnemyState state, BotErrand order, Vector3 position, SquadOrderSpec spec, out bool overridesMove)
+            EnemyDecision decision,
+            EnemyState state,
+            BotErrand order,
+            Vector3 position,
+            SquadOrderSpec spec,
+            BotInputSpec input,
+            out bool overridesMove)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (input == null)
+            {
+                throw new ArgumentNullException(nameof(input));
             }
 
             overridesMove = false;
@@ -150,11 +161,12 @@ namespace Fps.Core
 
             var engaged = state == EnemyState.Chase || state == EnemyState.Attack || state == EnemyState.TakeCover;
             var distance = Vector2.Distance(Flat(position), Flat(order.Destination));
+            var arrived = distance <= input.ArrivalDistance;
             switch (order.Kind)
             {
                 case BotErrandKind.Hold:
                     overridesMove = true;
-                    return distance > EnemyBrain.ArrivalDistance
+                    return !arrived
                         ? new EnemyDecision(order.Destination, decision.LookAt, decision.Fire, false)
                         : new EnemyDecision(null, decision.LookAt, decision.Fire, decision.Crouch);
                 case BotErrandKind.Attack:
@@ -164,7 +176,7 @@ namespace Fps.Core
                     }
 
                     overridesMove = true;
-                    return new EnemyDecision(distance > EnemyBrain.ArrivalDistance ? order.Destination : (Vector3?)null, order.Destination, false);
+                    return new EnemyDecision(!arrived ? order.Destination : (Vector3?)null, order.Destination, false);
                 default:
                     if (distance > spec.LeashDistance || (!engaged && distance > spec.FollowDistance))
                     {

@@ -6,9 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 固定銃座を 2 つ置く。手前の銃座 (PlayerGunName) は床の西の端の的へ向け、乗って撃ち続けて熱を試す。
-    // 奥の銃座 (EnemyGunName) は射撃場の真ん中へ向け、その後ろに銃座を使う敵を置く。敵の視界は手前の銃座に届かない広さにし、
-    // 熱を試している間は撃たれず、奥へ近づくと敵が銃座に乗って撃ってくるようにする。
+    // 奥の銃座を使う敵の視界は手前の銃座に届かない広さにし、熱を試している間は撃たれず、奥へ近づくと敵が銃座に乗って撃ってくるようにする。
     // 撃った弾が射撃場の物に当たらないよう、ほかの物の無い西の端 (x = -38..-25, z = 9.5..24.5) に置く。
     // 射撃場の床は実行時に作られ NavMesh が無いので、敵の足場は殴ってくる敵 (MeleeEnemyRangeFixture) と同じく Play 中に焼く。
     public sealed class MountedGunRangeFixture : ITpsRangeFixture

@@ -4,17 +4,12 @@ using System.IO;
 
 namespace Shooter.Editor
 {
-    /// <summary>音の層の波形。ノイズに重ねる音程のある成分の形。</summary>
     public enum ToneWaveform
     {
         Sine,
         Saw,
     }
 
-    /// <summary>
-    /// 音の 1 層。startSeconds から durationSeconds の間だけ鳴り、attackSeconds で立ち上がってから decaySeconds を時定数として
-    /// 指数的に減衰する。ノイズ (lowpassHz の 1 次ローパスを通す) と、toneStartHz から toneEndHz へ指数的に動く音程の成分を足す。
-    /// </summary>
     public sealed class SoundLayer
     {
         public SoundLayer(
@@ -101,10 +96,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>
-    /// 手続きで作る音 1 つの設計図。name は書き出すファイルの名前 (拡張子なし)、seed はノイズの種。
-    /// 同じ設計図からは常に同じサンプルができる。
-    /// </summary>
     public sealed class SoundSpec
     {
         public SoundSpec(string name, uint seed, float lengthSeconds, float peak, IReadOnlyList<SoundLayer> layers)
@@ -156,21 +147,16 @@ namespace Shooter.Editor
 
         public float LengthSeconds { get; }
 
-        /// <summary>出来上がりの振幅の最大値。すべての層を足した後、最大値がこの値になるよう全体を拡大・縮小する。</summary>
         public float Peak { get; }
 
         public IReadOnlyList<SoundLayer> Layers { get; }
     }
 
-    /// <summary>
-    /// <see cref="SoundSpec"/> からモノラルのサンプルを作り、16 bit PCM の WAV に書き出す。
-    /// 乱数は自前の xorshift にして、Unity や .NET の乱数の実装が変わっても同じ WAV になるようにしている。
-    /// </summary>
+    // 乱数は自前の xorshift にして、Unity や .NET の乱数の実装が変わっても同じ WAV になるようにしている。
     public static class ProceduralAudio
     {
         public const int DefaultSampleRate = 44100;
 
-        /// <summary>spec の音のサンプル (-1〜1) を作る。長さは lengthSeconds × sampleRate (切り上げ)。</summary>
         public static float[] Synthesize(SoundSpec spec, int sampleRate = DefaultSampleRate)
         {
             if (spec == null)
@@ -214,7 +200,6 @@ namespace Shooter.Editor
             return samples;
         }
 
-        /// <summary>モノラル・16 bit PCM の WAV ファイルの中身を作る。範囲外のサンプルは -1〜1 に切り詰める。</summary>
         public static byte[] EncodeWav(IReadOnlyList<float> samples, int sampleRate = DefaultSampleRate)
         {
             if (samples == null)
@@ -267,7 +252,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>spec を合成して WAV の中身にする。</summary>
         public static byte[] Render(SoundSpec spec, int sampleRate = DefaultSampleRate)
         {
             return EncodeWav(Synthesize(spec, sampleRate), sampleRate);

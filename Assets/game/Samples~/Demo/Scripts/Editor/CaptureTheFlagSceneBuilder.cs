@@ -8,21 +8,12 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 旗取り (<see cref="CaptureTheFlagRunner"/>) のシーン CaptureTheFlag を組む。ルールは <see cref="GameRulesAssetBuilder.CaptureTheFlagPath"/>
-    /// (個別リスポーン・ダウンなし)。配置は土台の既定 (プレイヤーの陣営 0 = Alpha に bot 2 体、陣営 1 = Bravo に bot 3 体で 3 対 3) に、
-    /// 両陣営の出現点の後ろに旗の台 (<see cref="FlagBase"/>、<see cref="BaseCenters"/>) と旗の見た目 (<see cref="FlagObject"/>) を足す。
-    /// 旗と台の形は <see cref="FlagObject.ModelPrefab"/>・<see cref="FlagBase.MarkerPrefab"/> を空にして置くので、Play 中に仮の形が作られる
-    /// (ゲームはシーンの Inspector で差し替える)。得点の上限や旗が戻る秒数は <see cref="DefinitionPath"/> のアセットを Runner に配線して読ませる
-    /// (無ければ既定値で作り、あれば値を変えない)。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CaptureTheFlagSceneBuilder.Build</code>
-    /// </summary>
+    // 旗と台の形は FlagObject.ModelPrefab・FlagBase.MarkerPrefab を空にして置き、Play 中に仮の形を作らせる。ゲームはシーンの Inspector で差し替える。
     public sealed class CaptureTheFlagSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.CaptureTheFlagScene;
         public static string RulesPathValue => GameRulesAssetBuilder.CaptureTheFlagPath;
 
-        /// <summary>Runner に配線する調整値のアセット (<see cref="CaptureTheFlagDefinition"/>)。</summary>
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.CaptureTheFlagName);
 
         public const string MenuPath = "Shooter/Build Capture The Flag Scene";
@@ -30,13 +21,9 @@ namespace Shooter.Editor
         public const string BasesRootName = "FlagBases";
         public const string FlagsRootName = "Flags";
 
-        /// <summary>出現点の列から台までの、自陣の奥への距離 (m)。</summary>
         public const float BaseDepth = 5f;
 
-        /// <summary>
-        /// 陣営ごとの台の足元。<see cref="CaptureTheFlag.FlagSides"/> の順 (Alpha、Bravo)。どちらも床の中央の列 (x = 0) で、
-        /// 自陣の出現点の列から <see cref="BaseDepth"/> だけ奥 (Alpha は z = -5、Bravo は z = 45) にあり、両陣営から同じ距離。
-        /// </summary>
+        // CaptureTheFlag.FlagSides の順 (Alpha、Bravo) に並べる。どちらも床の中央の列 (x = 0) で自陣の奥に置き、両陣営から同じ距離にする。
         public static readonly IReadOnlyList<Vector3> BaseCenters = new[]
         {
             new Vector3(0f, 0f, DefaultNearSpawnZ - BaseDepth),
@@ -54,24 +41,16 @@ namespace Shooter.Editor
             new CaptureTheFlagSceneBuilder().BuildSceneFromMenu();
         }
 
-        /// <summary>side の台の GameObject の名前。</summary>
-        /// <example><c>BaseObjectName(Side.Bravo)</c> は <c>FlagBase-1</c></example>
         public static string BaseObjectName(Side side)
         {
             return "FlagBase-" + side.Id;
         }
 
-        /// <summary>side の旗の GameObject の名前。</summary>
-        /// <example><c>FlagObjectName(Side.Alpha)</c> は <c>Flag-0</c></example>
         public static string FlagObjectName(Side side)
         {
             return "Flag-" + side.Id;
         }
 
-        /// <summary>
-        /// path の調整値のアセットを返す。無ければ <see cref="CaptureTheFlagDefinition"/> の既定値で作る。既にあれば値は変えず、通ることだけ確かめる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">既にあるアセットの値が不正か、path に別の型のアセットがある。</exception>
         public static CaptureTheFlagDefinition LoadOrCreateDefinition(string path)
         {
             var definition = ModeDefinitionAssets.LoadOrCreate<CaptureTheFlagDefinition>(path, _ => { });
@@ -96,7 +75,6 @@ namespace Shooter.Editor
                 throw new InvalidOperationException($"{GetType().Name}.AddRunner must add a CaptureTheFlagRunner");
             }
 
-            // 焼き終えた NavMesh で、旗を取りに・運びに台へ歩いて行けることを確かめる (行けなければ保存しない)。
             SceneBuildHelpers.RequireOnNavMesh(BaseCenters, NavMeshCheckRadius, "flag base");
             SceneBuildHelpers.RequireReachable(PlayerFeet, BaseCenters, NavMeshCheckRadius, "flag base");
 

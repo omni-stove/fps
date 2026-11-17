@@ -10,23 +10,11 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// PvE の波 (<see cref="WaveSpawner"/>) を試すシーン WaveTest を生成する。床・壁・低い壁は敵 AI のテストシーンと同じ
-    /// (<see cref="EnemyTestSceneBuilder.CreateLevel"/>) で、NavMesh を焼いてシーンの隣に保存してから、
-    /// <see cref="GameBootstrap"/> (床は生成しない設定)、無効にした敵の雛形、敵陣営の出現点 (<see cref="SideSpawnPoint"/>)、
-    /// <see cref="WaveSpawner"/> を置く。プレイヤーとライトは実行時に GameBootstrap が作る。
-    /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WaveTestSceneBuilder.Build</code>
-    /// </summary>
-    /// <remarks>
-    /// プレイヤーは原点で +Z を向き、z = 8 の壁の裏 (z = 16〜17) の 3 か所から敵が出て、プレイヤーへ向かってくる。
-    /// 波は WaveSpawner の既定の式 (1 波目 3 体、波ごとに 2 体と強さ 0.25 倍ずつ増え、同時に 4 体まで、休憩 5 秒、5 波) で決める。
-    /// </remarks>
     public static class WaveTestSceneBuilder
     {
         public static string ScenePath => BuildSceneList.WaveTestScene;
 
-        /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
+        // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public const string MenuPath = "Shooter/Build Wave Test Scene";
@@ -37,18 +25,16 @@ namespace Shooter.Editor
         public const string TemplateName = "EnemyTemplate";
         public const string TemplateId = "wave-template";
 
-        /// <summary>敵に持たせる武器の Id。シーンを生成するときに武器の一覧から引く。</summary>
         public const string EnemyWeaponId = WeaponAssetBuilder.RifleId;
 
-        /// <summary>敵の陣営。プレイヤーは <see cref="ModeRunnerBase"/> と同じく陣営 0 にする。</summary>
+        // プレイヤーは ModeRunnerBase と同じく陣営 0 なので、敵はそれと別の陣営にする。
         public static readonly Side EnemySide = Side.Bravo;
 
         public static readonly Side PlayerSide = Side.Alpha;
 
-        /// <summary>雛形を置く足元。無効なので動かないが、複製の初期位置にならないよう出現点から離しておく。</summary>
+        // 雛形は無効なので動かないが、複製の初期位置にならないよう出現点から離しておく。
         public static readonly Vector3 TemplateFeet = new Vector3(0f, 0f, 19f);
 
-        /// <summary>出現点の名前と足元。壁の裏の左・中・右。</summary>
         public static readonly IReadOnlyList<(string Name, Vector3 Feet)> SpawnPoints = new[]
         {
             ("WaveSpawn-West", new Vector3(-14f, 0f, 16f)),
@@ -56,7 +42,6 @@ namespace Shooter.Editor
             ("WaveSpawn-East", new Vector3(14f, 0f, 16f)),
         };
 
-        /// <summary>プレイヤーの出現位置 (GameBootstrap の既定)。出現点からここへ歩いて行けることを確かめる。</summary>
         public static readonly Vector3 PlayerFeet = Vector3.zero;
 
         public const float EnemyHeight = EnemyTestSceneBuilder.EnemyHeight;
@@ -76,10 +61,6 @@ namespace Shooter.Editor
             BuildAt(ScenePath, NavMeshDataPath);
         }
 
-        /// <summary>
-        /// シーンを生成して NavMesh を焼き、両方を保存して Build Settings に加える (既存の並びは変えない)。
-        /// 出現点が NavMesh に乗っていないか、プレイヤーの位置へ歩いて行けなければ例外を投げる (batchmode では終了コード 1 になる)。
-        /// </summary>
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -119,11 +100,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{scenePath}' and '{navMeshDataPath}'");
         }
 
-        /// <summary>
-        /// GameBootstrap (床は作らない)、無効にした敵の雛形、敵陣営の出現点、<see cref="WaveSpawner"/> を置き、参照をすべてここで設定する。
-        /// プレイヤーは playerWeapons を持ち、敵は enemyWeapons から <see cref="EnemyWeaponId"/> で引いた武器で撃つ。
-        /// Id が enemyWeapons に無ければ何も置かずに <see cref="KeyNotFoundException"/> を投げる。
-        /// </summary>
         public static WaveSpawner CreateActors(Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, WeaponCatalogAsset enemyWeapons)
         {
             SceneBuildHelpers.RequireLoaded(scene);

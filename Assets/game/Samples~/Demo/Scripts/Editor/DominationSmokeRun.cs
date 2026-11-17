@@ -9,52 +9,29 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットと Domination シーン (<see cref="DominationSceneBuilder"/>) を生成し直して Play Mode に入り、
-    /// 制限時間を縮めた試合を走らせて、ログで次を確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>試合が始まる (<c>[Domination] state=Playing</c>)。</item>
-    /// <item>プレイヤーが拠点 A に立ち続けて占領し (<c>[Domination] captured point=A team=Alpha</c>)、Alpha にポイントが入る。</item>
-    /// <item>時間かスコア上限で試合が終わる (<c>[Domination] ended winner=...</c>)。</item>
-    /// <item>再開すると (<c>[Domination] restart</c>) シーンが読み直され、新しい試合が始まる。</item>
-    /// </list>
-    /// Play 中にエラー・例外・Assert のログが出たら失敗にする。敵が拠点を取ったか (<c>team=Bravo</c>) は結果の行に数を出すが、
-    /// 敵がプレイヤーとの撃ち合いに入るかどうかで変わるので合否には使わない。
-    /// すべて成り立てば終了コード 0、そうでなければ 1 で終わる。試合の制限時間は <see cref="SecondsArgument"/> で変えられる。
-    /// <see cref="SmokeSuite"/> には入れていない。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.DominationSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// 制限時間は、開いたシーンの <see cref="DominationRunner.TimeLimitSeconds"/> を Play の前に書き換えて縮める (シーンのファイルは保存しない)。
-    /// 調整値のアセット (<see cref="DominationRunner.Definition"/>) が配線されていれば、その値を Runner に写して外してから縮める。
-    /// batchmode には入力が無いので、拠点 A へは歩かせずに移し、倒れて戻されたら生き返った後にまた移す。
-    /// 再開も R の入力の代わりに <see cref="DominationRunner.Restart"/> を呼ぶ (R から Restart へつなぐのは DominationRunner の Update)。
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
-    /// </remarks>
+    // 敵が拠点を取ったか (team=Bravo) は結果の行に数を出すが、敵がプレイヤーとの撃ち合いに入るかどうかで変わるので合否には使わない。
+    // batchmode には入力が無いので、拠点 A へは歩かせずに移し、倒れて戻されたら生き返った後にまた移す。
+    // 再開も R の入力の代わりに DominationRunner.Restart を呼ぶ (R から Restart へつなぐのは DominationRunner の Update)。
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class DominationSmokeRun
     {
         public const string LogTag = "[DominationSmokeRun]";
 
-        /// <summary>試合の制限時間 (秒) を渡す引数。例: <c>-dominationSmokeSeconds 60</c>。</summary>
         public const string SecondsArgument = "-dominationSmokeSeconds";
 
-        /// <summary>
-        /// 既定の試合の制限時間 (秒)。拠点 A を 1 人で占領し終える <see cref="DominationRunner.DefaultCaptureSeconds"/> 秒に、
-        /// 倒されて戻ってくる分を何度か足しても収まる長さ。
-        /// </summary>
+        // 拠点 A を 1 人で占領し終える DominationRunner.DefaultCaptureSeconds 秒に、倒されて戻ってくる分を何度か足しても収まる長さにする。
         public const float DefaultSeconds = 40f;
 
-        /// <summary>Play Mode に入ってから見始めるまでに待つ秒数。GameBootstrap の Awake と DominationRunner の Start を済ませるため。</summary>
+        // GameBootstrap の Awake と DominationRunner の Start を済ませてから見始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>制限時間を過ぎてから、終了と再開が済むまでに待つ秒数の上限。</summary>
         public const float GraceSeconds = 30f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>プレイヤーを移す拠点の番号 (A)。Alpha の出現点にいちばん近い。</summary>
+        // Alpha の出現点にいちばん近い拠点 A にする。
         public const int PlayerPointIndex = 0;
 
         public const int SuccessExitCode = 0;
@@ -103,7 +80,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -148,11 +124,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="SecondsArgument"/> の値を読む。無ければ <see cref="DefaultSeconds"/>。
-        /// 値が無い・拠点を占領し終える <see cref="DominationRunner.DefaultCaptureSeconds"/> 秒より長い有限な数でなければ
-        /// <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static float ParseSeconds(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -326,7 +297,6 @@ namespace Shooter.Editor
             Report(problem);
         }
 
-        /// <summary>今の手順を 1 つ進める。次のフレームを待つ手順ではそのまま返す。進められない理由があれば返す (null なら問題なし)。</summary>
         private static string Advance(float seconds)
         {
             var runner = UnityEngine.Object.FindAnyObjectByType<DominationRunner>();

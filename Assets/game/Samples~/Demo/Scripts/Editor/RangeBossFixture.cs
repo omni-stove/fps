@@ -59,7 +59,6 @@ namespace Shooter.Editor
             _definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
         }
 
-        /// <summary>ボスの調整値 (<see cref="BossDefinition"/>) のアセット。無ければ下の定数で作り、あれば値を変えずに配線する。</summary>
         public static string DefaultDefinitionPath => ShooterKitRoot.OutputPath("Bosses") + "/" + FixtureName + ".asset";
 
         public string DefinitionPath => _definitionPath;
@@ -93,7 +92,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>path のボスの定義を返す。無ければ射撃場のボスの値で作って保存する。既にあれば値は変えない。</summary>
         public static BossDefinition LoadOrCreateDefinition(string path)
         {
             return ModeDefinitionAssets.LoadOrCreate<BossDefinition>(

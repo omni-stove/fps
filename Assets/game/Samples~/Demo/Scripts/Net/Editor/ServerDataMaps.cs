@@ -18,7 +18,6 @@ namespace Shooter.Editor
             return BuildSceneList.ServerScenes;
         }
 
-        /// <summary>.NET のサーバーが選べるマップ (<see cref="BuildSceneList.ServerScenes"/>) のシーンのうち、無いものを生成する。</summary>
         public static void EnsureScenes()
         {
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(NetSceneBuilder.ScenePath) == null)

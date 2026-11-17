@@ -8,9 +8,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 射撃場で拾える武器 (WeaponAssetBuilder.LoadRangeWeapons、サンプルの武器の JSON すべて) を、標的の奥 (x = -1.25..18.75, z = 28.5..37.5) に
-    // 一覧の順で左から右・手前から奥へ並べ、その続きに照準器のアタッチメント (Tuning/inventory.json の倍率か照準器を決めた物) を並べる。
-    // サンプルの武器を足す issue は JSON を置くだけで、ここに拾える武器が 1 つ増える。
+    // 武器をサンプルの武器の JSON すべて (WeaponAssetBuilder.LoadRangeWeapons) から並べるのは、サンプルの武器を足す issue が JSON を置くだけで拾える武器を増やせるようにするため。
     // 武器のモデルに照準を合わせて拾う (Look) ので、隣の武器と範囲が重なっても狙った 1 本だけを拾える。
     public sealed class RangeWeaponRackFixture : ITpsRangeFixture
     {
@@ -24,10 +22,9 @@ namespace Shooter.Editor
         public const float RowSpacing = 3f;
         public const float RespawnSeconds = 5f;
 
-        /// <summary>拾える範囲の半径 (m)。武器の前に立って見下ろせば届く広さ。</summary>
+        // 武器の前に立って見下ろせば届く広さにする。
         public const float PickupRadius = 1.5f;
 
-        /// <summary>手前の左端の武器の足元。</summary>
         public static readonly Vector3 FirstSlot = new Vector3(0f, 0f, 30f);
 
         public static readonly Vector3 Size = new Vector3((Columns - 1) * ColumnSpacing + 2.5f, 2f, (Rows - 1) * RowSpacing + 3f);
@@ -39,7 +36,6 @@ namespace Shooter.Editor
         public Bounds Footprint => new Bounds(
             FirstSlot + new Vector3((Columns - 1) * ColumnSpacing / 2f, Size.y / 2f, (Rows - 1) * RowSpacing / 2f), Size);
 
-        /// <summary>一覧の index 番目の武器を置く足元。</summary>
         public static Vector3 SlotPosition(int index)
         {
             if (index < 0 || index >= Columns * Rows)
@@ -56,7 +52,6 @@ namespace Shooter.Editor
             return Place(scene, WeaponAssetBuilder.LoadRangeWeapons().Weapons, OpticItemIds(KitTuning.Items));
         }
 
-        /// <summary>items の照準器のアタッチメント (<see cref="AttachmentSpec.IsOptic"/>) の Id。一覧の順。</summary>
         public static IReadOnlyList<string> OpticItemIds(ItemCatalog items)
         {
             if (items == null)
@@ -76,22 +71,11 @@ namespace Shooter.Editor
             return ids;
         }
 
-        /// <summary>
-        /// weapons を並べた <see cref="RootName"/> を scene の最上位に置く。どれも範囲 (<see cref="PickupRadius"/>) で武器のモデルに照準を合わせて
-        /// Interact を押すと拾い、<see cref="RespawnSeconds"/> 後にまた出る。既に持っている武器なら、その武器の弾倉 1 つ分の予備弾になる。
-        /// 持てる武器の数の上限 (<see cref="GameRules.MaxWeapons"/>) に届いていれば、今の武器を足元に落として持ち替える。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">weapons が棚 (<see cref="Columns"/> × <see cref="Rows"/>) に収まらない。何も置かない。</exception>
         public static GameObject Place(Scene scene, IReadOnlyList<WeaponDefinition> weapons)
         {
             return Place(scene, weapons, Array.Empty<string>());
         }
 
-        /// <summary>
-        /// <see cref="Place(Scene, IReadOnlyList{WeaponDefinition})"/> の、武器の続きに opticItemIds のアイテムを 1 つずつ拾える所を並べる形。
-        /// 照準器を拾って持ち物から武器に付け、一人称と三人称 (F2) で覗き比べるためのもの。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">武器と照準器が棚 (<see cref="Columns"/> × <see cref="Rows"/>) に収まらない。何も置かない。</exception>
         public static GameObject Place(Scene scene, IReadOnlyList<WeaponDefinition> weapons, IReadOnlyList<string> opticItemIds)
         {
             if (weapons == null)

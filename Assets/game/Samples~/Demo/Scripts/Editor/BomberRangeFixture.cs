@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 自爆兵を試す仮の敵。射撃場の床は実行時に作られ NavMesh が無いので、殴ってくる敵 (MeleeEnemyRangeFixture) と同じく自前の足場を Play 中に焼く。
+    // 射撃場の床は実行時に作られ NavMesh が無いので、殴ってくる敵 (MeleeEnemyRangeFixture) と同じく自前の足場を Play 中に焼く。
     // 手前の左 (出現位置の左下) に置き、視界と爆発がほかの物 (殴る的・パラシュートの塔・滑り込みの坂) に届かないようにする。
     public sealed class BomberRangeFixture : ITpsRangeFixture
     {

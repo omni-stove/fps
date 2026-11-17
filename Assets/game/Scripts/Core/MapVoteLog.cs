@@ -36,6 +36,28 @@ namespace Shooter.Core
                 + " votes=" + decision.Votes.ToString(CultureInfo.InvariantCulture);
         }
 
+        public static string ClientChanged(MapVoteStatus? status)
+        {
+            return status.HasValue ? Tag + " net " + status.Value : Tag + " net ended";
+        }
+
+        public static string ClientMalformed(int candidateCount)
+        {
+            return Tag + " net dropped a malformed vote candidates=" + candidateCount.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string ClientRequested(int candidateIndex, string mapId, MapVoteCast result, bool sent)
+        {
+            var line = Tag + " net request index=" + candidateIndex.ToString(CultureInfo.InvariantCulture)
+                + " map=" + Token(mapId) + " result=" + result;
+            if (result != MapVoteCast.Cast && result != MapVoteCast.Changed)
+            {
+                return line + " (not sent)";
+            }
+
+            return sent ? line : line + " (not connected; not sent)";
+        }
+
         // 送られてきたマップ Id に空白があってもログの区切りが崩れないよう、空白は _ に、空なら none にする。
         private static string Token(string text)
         {

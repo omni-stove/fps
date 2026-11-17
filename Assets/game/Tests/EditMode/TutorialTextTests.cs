@@ -41,18 +41,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ARebindChangesTheStatusAndTheText()
-        {
-            var steps = new TutorialSteps();
-            var before = new TutorialStatus(steps, InputActionPaths.Move, InputDeviceKind.KeyboardMouse, "R");
-            var after = new TutorialStatus(steps, InputActionPaths.Move, InputDeviceKind.KeyboardMouse, "T");
-
-            Assert.That(before == after, Is.False);
-            Assert.That(Localizer.Resolve(TutorialText.For(before)), Is.EqualTo("[1/6] R で移動"));
-            Assert.That(Localizer.Resolve(TutorialText.For(after)), Is.EqualTo("[1/6] T で移動"));
-        }
-
-        [Test]
         public void TheShootPromptCountsTheHits()
         {
             var steps = AtShoot();

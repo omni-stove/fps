@@ -340,10 +340,7 @@ namespace Fps.Runtime
 
         private void PublishStatus(InputDeviceKind device)
         {
-            var actionPath = _steps.IsComplete ? null : ActionPathFor(_steps.Current);
-            // 割り当てを替えたら段階が変わって出し直されるよう、今のキーの表記を段階に持たせる
-            var keyLabel = actionPath == null ? null : TutorialText.KeyLabelFor(actionPath, device);
-            var status = new TutorialStatus(_steps, actionPath, device, keyLabel);
+            var status = new TutorialStatus(_steps, _steps.IsComplete ? null : ActionPathFor(_steps.Current), device);
             if (_status == status)
             {
                 return;

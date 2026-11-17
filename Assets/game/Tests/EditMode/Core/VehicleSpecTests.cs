@@ -237,6 +237,13 @@ namespace Fps.Core.Tests
             Assert.That(
                 VehicleLog.WeaponFired("Jeep", "Player", 2, "mg", 0f, 0f, null, 0, 0),
                 Is.EqualTo("[Vehicle] 'Jeep' fire rider=Player seat=2 weapon=mg yaw=0.0 pitch=0.0 hit=- dmg=0 ammo=0"));
+            Assert.That(
+                VehicleLog.WeaponFired("Post", "Player", 0, "mg", 0f, 0f, null, 0, 1, 0.3f),
+                Is.EqualTo("[Vehicle] 'Post' fire rider=Player seat=0 weapon=mg yaw=0.0 pitch=0.0 hit=- dmg=0 ammo=1 heat=0.30"));
+            Assert.That(
+                VehicleLog.Overheated("Post", 0, "mg", 1.5f),
+                Is.EqualTo("[Vehicle] 'Post' overheated seat=0 weapon=mg lock=1.50"));
+            Assert.That(VehicleLog.Cooled("Post", 0, "mg"), Is.EqualTo("[Vehicle] 'Post' cooled seat=0 weapon=mg"));
         }
     }
 }

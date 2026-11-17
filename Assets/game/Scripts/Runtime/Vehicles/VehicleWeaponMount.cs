@@ -45,6 +45,7 @@ namespace Fps.Runtime
         private bool _wasHeld;
         private int _shotIndex;
         private int _inputFrame = -1;
+        private bool _overheated;
 
         public event Action<VehicleWeaponMount> Fired;
 
@@ -81,6 +82,7 @@ namespace Fps.Runtime
         {
             _weaponSpec = null;
             _armed = null;
+            _overheated = false;
             _spec = null;
             _aim = null;
         }
@@ -99,6 +101,7 @@ namespace Fps.Runtime
         {
             _weaponSpec = weapon ?? throw new ArgumentNullException(nameof(weapon));
             _armed = null;
+            _overheated = false;
             _spec = null;
             _aim = null;
         }
@@ -108,6 +111,7 @@ namespace Fps.Runtime
             _weapon = definition != null ? definition : throw new ArgumentNullException(nameof(definition));
             _weaponSpec = null;
             _armed = null;
+            _overheated = false;
             _spec = null;
             _aim = null;
         }
@@ -155,6 +159,7 @@ namespace Fps.Runtime
             {
                 _weaponSpec = weapon;
                 _armed = null;
+                _overheated = false;
             }
 
             Apply(spec);
@@ -213,6 +218,7 @@ namespace Fps.Runtime
             weapon?.Tick(deltaSeconds);
             _trigger.Bind(weapon?.Trigger);
             _trigger.Advance(deltaSeconds);
+            NoteHeat(weapon);
         }
 
         public void ApplyPose()
@@ -258,6 +264,26 @@ namespace Fps.Runtime
             {
                 FireRound(rider, weapon);
             }
+
+            NoteHeat(weapon);
+        }
+
+        // 熱が上限に届いた・冷めきった切り替わりだけを出す。毎フレーム出すと、撃てない間のログで発射のログが読めなくなる。
+        private void NoteHeat(Weapon weapon)
+        {
+            if (!(weapon?.Ammo is HeatAmmo ammo) || ammo.IsOverheated == _overheated)
+            {
+                return;
+            }
+
+            _overheated = ammo.IsOverheated;
+            var vehicle = Vehicle != null ? Vehicle.name : name;
+            var seat = Spec.SeatIndex;
+            Debug.Log(
+                _overheated
+                    ? VehicleLog.Overheated(vehicle, seat, weapon.Spec.Id, ammo.Heat.OverheatRemainingSeconds)
+                    : VehicleLog.Cooled(vehicle, seat, weapon.Spec.Id),
+                this);
         }
 
         private void FireRound(IVehicleRider rider, Weapon weapon)
@@ -321,7 +347,8 @@ namespace Fps.Runtime
                     Aim.PitchDegrees,
                     hit,
                     damage,
-                    weapon.AmmoInMagazine),
+                    weapon.AmmoInMagazine,
+                    weapon.Ammo.HeatFraction),
                 this);
 
             // ペレットごとに出すと 1 回の射撃でヒットマーカーが何度も出るので、相手ごとにまとめてから出す。

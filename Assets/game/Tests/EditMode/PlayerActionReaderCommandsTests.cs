@@ -34,6 +34,11 @@ namespace Shooter.Tests.EditMode
         [TestCase(PlayerCommands.Ability2, InputActionPaths.Ability2)]
         [TestCase(PlayerCommands.SquadCommand, InputActionPaths.SquadCommand)]
         [TestCase(PlayerCommands.UseStreak, InputActionPaths.UseStreak)]
+        [TestCase(PlayerCommands.LeanLeft, InputActionPaths.LeanLeft)]
+        [TestCase(PlayerCommands.LeanRight, InputActionPaths.LeanRight)]
+        [TestCase(PlayerCommands.Chat, InputActionPaths.Chat)]
+        [TestCase(PlayerCommands.TeamChat, InputActionPaths.TeamChat)]
+        [TestCase(PlayerCommands.PushToTalk, InputActionPaths.PushToTalk)]
         public void ResolvesEachCommandFromTheProjectWideActions(PlayerCommands command, string path)
         {
             Assert.That(PlayerActionReader.CommandActionPath(command), Is.EqualTo(path));

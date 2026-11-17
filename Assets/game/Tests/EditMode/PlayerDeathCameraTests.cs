@@ -237,6 +237,124 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void FallenDropsTheOwnEyeToTheFloorTiltedAndRestoresOnRespawn()
+        {
+            var deathCam = Player(out var rig);
+            var camera = rig.Camera;
+            rig.UpdateCameraPosition();
+            var localPosition = camera.transform.localPosition;
+            var eye = rig.Eye.position;
+            deathCam.Mode = DeathCamera.Fallen;
+            deathCam.FallSeconds = 1f;
+            deathCam.FallenEyeHeight = 0.2f;
+            deathCam.FallenRollDegrees = 80f;
+            deathCam.FallenPitchDegrees = 10f;
+
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            deathCam.GetComponent<Damageable>().Kill();
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] started on Player \(Fallen\)"));
+            Assert.That(deathCam.Step(DeathCamera.Fallen, false, false), Is.EqualTo(DeathCamTransition.Started));
+            Assert.That(Vector3.Distance(camera.transform.position, eye), Is.LessThan(1e-4f), "starts from the own eye, not from above");
+            Assert.That(rig.enabled, Is.False);
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.FirstPerson), "stays first person so the own body is drawn as a shadow only");
+
+            // 半分の時間: 目 (1.6) から足元 (1.0) + 0.2 までの 0.4 のうち 0.25 落ち、傾きは 0.75 進む。
+            deathCam.Advance(0, Vector2.zero, Vector2.zero, 0.5f);
+            Assert.That(deathCam.FallenElapsed, Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(camera.transform.position.y, Is.EqualTo(eye.y - 0.1f).Within(1e-4f));
+            Assert.That(camera.transform.position.x, Is.EqualTo(eye.x).Within(1e-4f));
+            Assert.That(camera.transform.position.z, Is.EqualTo(eye.z).Within(1e-4f));
+            Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.z), Is.EqualTo(60f).Within(1e-2f));
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] fallen view settled on Player at \(0\.0, 1\.2, 0\.0\)"));
+            deathCam.Advance(0, Vector2.one, Vector2.one, 0.6f);
+            Assert.That(camera.transform.position.y, Is.EqualTo(1.2f).Within(1e-4f), "0.2m above the feet");
+            Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.z), Is.EqualTo(80f).Within(1e-2f));
+            Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.x), Is.EqualTo(10f).Within(1e-2f));
+            Assert.That(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.y), Is.EqualTo(0f).Within(1e-2f), "keeps the body's yaw");
+
+            deathCam.Advance(0, Vector2.one, Vector2.one, 5f);
+            Assert.That(camera.transform.position.y, Is.EqualTo(1.2f).Within(1e-4f), "stays down; move input does not fly it");
+
+            deathCam.GetComponent<Damageable>().ResetHealth();
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathCam\] stopped on Player \(Respawned\)"));
+            Assert.That(deathCam.Step(DeathCamera.Fallen, true, false), Is.EqualTo(DeathCamTransition.Respawned));
+            Assert.That(camera.transform.localPosition, Is.EqualTo(localPosition));
+            Assert.That(rig.enabled, Is.True);
+            Assert.That(deathCam.FallenElapsed, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void FallenMidJumpSettlesOnTheFloorBelowNotInTheAir()
+        {
+            var deathCam = Player(out var rig);
+            var camera = rig.Camera;
+            var floor = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            floor.transform.position = new Vector3(0f, -2.5f, 0f);
+            Physics.SyncTransforms();
+            deathCam.Mode = DeathCamera.Fallen;
+            deathCam.FallSeconds = 1f;
+            deathCam.FallenEyeHeight = 0.2f;
+
+            // 足元 (y=1) は空中で、床の上面は y=-2。
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            deathCam.GetComponent<Damageable>().Kill();
+            deathCam.Step(DeathCamera.Fallen, false, false);
+            Assert.That(deathCam.FallenGroundY, Is.EqualTo(-2f).Within(1e-3f));
+
+            deathCam.Advance(0, Vector2.zero, Vector2.zero, 2f);
+            Assert.That(camera.transform.position.y, Is.InRange(-1.9f, -1.5f), "about 0.2m above the floor, not above the airborne feet");
+        }
+
+        [Test]
+        public void FallenHolstersTheWeaponAndHidesTheOwnShell()
+        {
+            var deathCam = Player(out var rig);
+            var weapon = rig.Camera.gameObject.AddComponent<WeaponController>();
+            var torso = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            torso.name = "Torso";
+            torso.transform.SetParent(deathCam.transform, false);
+            var body = DeathBodyPresenter.Attach(deathCam.gameObject);
+            body.Bind(deathCam.GetComponent<Damageable>(), DeathBody.Collapse);
+            deathCam.Mode = DeathCamera.Fallen;
+
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            deathCam.GetComponent<Damageable>().Kill();
+            var shell = body.Shell;
+            Assert.That(shell, Is.Not.Null);
+            Track(shell);
+
+            deathCam.Step(DeathCamera.Fallen, false, false);
+
+            Assert.That(weapon.IsHolstered, Is.True, "no gun floating in front of the fallen view");
+            foreach (var shellRenderer in shell.GetComponentsInChildren<Renderer>(true))
+            {
+                Assert.That(shellRenderer.shadowCastingMode, Is.EqualTo(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly), shellRenderer.name);
+            }
+
+            deathCam.GetComponent<Damageable>().ResetHealth();
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            Assert.That(weapon.IsHolstered, Is.False, "the weapon comes back on respawn");
+        }
+
+        [Test]
+        public void FallenSettingsAreKeptInRange()
+        {
+            var deathCam = Player(out _);
+
+            deathCam.FallSeconds = -1f;
+            deathCam.FallenEyeHeight = float.NaN;
+            deathCam.FallenRollDegrees = 200f;
+            deathCam.FallenPitchDegrees = -200f;
+
+            Assert.That(deathCam.FallSeconds, Is.EqualTo(0f));
+            Assert.That(deathCam.FallenEyeHeight, Is.EqualTo(FallenView.DefaultEyeHeight));
+            Assert.That(deathCam.FallenRollDegrees, Is.EqualTo(FallenView.MaxDegrees));
+            Assert.That(deathCam.FallenPitchDegrees, Is.EqualTo(-FallenView.MaxDegrees));
+            Assert.That(deathCam.FallenMotion.Seconds, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void NoneKeepsTheOwnView()
         {
             var deathCam = Player(out var rig);

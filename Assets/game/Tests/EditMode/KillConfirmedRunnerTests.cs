@@ -112,7 +112,7 @@ namespace Fps.Tests.EditMode
             _runner.TagRadius = 0.5f;
             var player = Member("Player", 0, Vector3.zero);
             var bot = Member("Bot-1-1", 1, new Vector3(0f, 0f, 10f));
-            Begin(new KillConfirmed(new KillConfirmedSpec(10, 300f, RespawnSeconds, TagLifetimeSeconds, 3, 4f)), new[] { player, bot }, player, null);
+            Begin(new KillConfirmed(new KillConfirmedSpec(10, 300f, RespawnSeconds, TagLifetimeSeconds, 3, 4f)), new[] { player, bot }, player);
             var tag = KillAndFindTag(bot, player);
 
             Assert.That(tag.Radius, Is.EqualTo(4f), "the mode's spec wins over the Inspector radius");

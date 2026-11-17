@@ -162,7 +162,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.RegenDelaySeconds, Is.EqualTo(3f));
             Assert.That(rules.RegenPerSecond, Is.EqualTo(25f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
-            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.None));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen));
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1.5f));
         }
@@ -179,7 +179,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.RegenDelaySeconds, Is.EqualTo(5f));
             Assert.That(rules.RegenPerSecond, Is.EqualTo(15f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
-            Assert.That(rules.DeathCamera, Is.EqualTo(expected.DeathCamera));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen));
             Assert.That(rules.InfiniteReserve, Is.EqualTo(expected.InfiniteReserve));
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
         }
@@ -192,6 +192,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.RegenDelaySeconds, Is.EqualTo(7f));
             Assert.That(rules.RegenPerSecond, Is.EqualTo(10f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Collapse));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen));
             Assert.That(rules.InfiniteReserve, Is.False);
             Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(0.6f));
         }
@@ -206,7 +207,7 @@ namespace Fps.Tests.EditMode
             Assert.That(rules.RegenDelaySeconds, Is.EqualTo(4f));
             Assert.That(rules.RegenPerSecond, Is.EqualTo(20f));
             Assert.That(rules.DeathBody, Is.EqualTo(DeathBody.Vanish));
-            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.None));
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen));
             Assert.That(rules.InfiniteReserve, Is.True);
         }
 
@@ -785,6 +786,7 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(1), field + " is on");
                 Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.FirstPerson), field + ": F2 switches the view at run time");
+                Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen), field + ": the player collapses in first person");
                 foreach (var other in toggles)
                 {
                     if (other == field || IsTurnedOnWith(field, other))

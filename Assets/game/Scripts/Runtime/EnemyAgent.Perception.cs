@@ -11,6 +11,7 @@ namespace Fps.Runtime
         private readonly List<IPerceptionContributor> _contributors = new List<IPerceptionContributor>();
         private Damageable _target;
         private Damageable _perceivedTarget;
+        private Damageable _fallenTarget;
         private Vector3? _pendingNoise;
         private bool _pendingHit;
         private Vector3? _pendingHitSource;
@@ -201,6 +202,41 @@ namespace Fps.Runtime
 
             _target = target;
             Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
+        }
+
+        /// <summary>
+        /// 目標が倒れた (ダウンを含む) 最初の 1 回だけ、戦いをやめさせる (<see cref="EnemyBrain.StandDown"/>)。
+        /// 倒れた目標は見えなくなるので、放っておくと見失ったとみなして倒れた位置へ駆け寄ってしまう。
+        /// 同じ目標が倒れたままの間は呼び直さず、その間に聞いた物音を Search しに行けるようにする。やめさせたら true。
+        /// </summary>
+        internal bool StandDownIfTargetFell()
+        {
+            var target = _target;
+            if (target == null || !target.IsDead)
+            {
+                _fallenTarget = null;
+                return false;
+            }
+
+            if (target == _fallenTarget)
+            {
+                return false;
+            }
+
+            _fallenTarget = target;
+            var previous = _brain.State;
+            if (!_brain.StandDown())
+            {
+                return false;
+            }
+
+            Debug.Log(FormatStandDownLog(Id, target.Id, previous), this);
+            return true;
+        }
+
+        public static string FormatStandDownLog(string id, string targetId, EnemyState previous)
+        {
+            return $"{LogTag} id={id} stand-down target={targetId} prev={previous}";
         }
 
         /// <summary>

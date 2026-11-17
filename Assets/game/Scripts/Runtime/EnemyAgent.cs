@@ -734,6 +734,7 @@ namespace Fps.Runtime
             _recoil.Tick(deltaSeconds);
 
             var member = GetComponent<SideMember>();
+            StandDownIfTargetFell();
 
             // 狙う指示の敵を目標にしている間は、陣営やタグで選び直すと指示の敵から外れてしまう。
             var pinned = TickOrder();
@@ -1013,6 +1014,7 @@ namespace Fps.Runtime
             _brain.Restart();
             _target = null;
             _perceivedTarget = null;
+            _fallenTarget = null;
             _nextTargetSearch = 0f;
             Debug.Log($"{LogTag} id={Id} {logVerb} at={ground.ToString("F1")} state={_brain.State}", this);
         }

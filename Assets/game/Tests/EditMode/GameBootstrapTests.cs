@@ -86,6 +86,41 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void DeadPlayerCannotFireReloadOrMoveUntilRespawned()
+        {
+            var damageable = _world.PlayerDamageable;
+            Assert.That(_world.Mover.IsControlHandedOff, Is.False);
+            Assert.That(_world.Weapon.IsInputHandedOff, Is.False);
+
+            LogAssert.Expect(LogType.Log, "[Player] control held while Player is dead");
+            damageable.Kill();
+
+            Assert.That(_world.Mover.IsControlHandedOff, Is.True, "no move input while dead");
+            Assert.That(_world.Weapon.IsInputHandedOff, Is.True, "no fire, reload or weapon switch while dead");
+
+            LogAssert.Expect(LogType.Log, "[Player] control returned to Player");
+            damageable.ResetHealth();
+
+            Assert.That(_world.Mover.IsControlHandedOff, Is.False);
+            Assert.That(_world.Weapon.IsInputHandedOff, Is.False);
+        }
+
+        [Test]
+        public void DeathHoldDoesNotReleaseAVehicleSeatsClaim()
+        {
+            var seat = new object();
+            _world.Mover.Handoff.Claim(seat);
+
+            _world.PlayerDamageable.Kill();
+            _world.PlayerDamageable.ResetHealth();
+
+            Assert.That(_world.Mover.Handoff.IsHeldBy(seat), Is.True, "respawning only returns what the death took");
+            Assert.That(_world.Mover.IsControlHandedOff, Is.True);
+            _world.Mover.Handoff.Release(seat);
+            Assert.That(_world.Mover.IsControlHandedOff, Is.False);
+        }
+
+        [Test]
         public void ClearSignalsRemovesOnlyWhatTheBootstrapPublished()
         {
             var bootstrap = _host.GetComponent<GameBootstrap>();

@@ -19,6 +19,10 @@ namespace Fps.Runtime
     /// <item><see cref="DeathCamera.KillCam"/>: 倒した相手の倒す直前の <see cref="KillCamSeconds"/> 秒を、その肩越しで再生 (<see cref="KillCamReplay"/>) してから Killer と同じにする。
     /// 生きている間、場にいる <see cref="Damageable"/> (<see cref="KillCamScanSeconds"/> 秒ごとに探し直す) と撃った者 (<see cref="CombatEvents.ShotFired"/>) の
     /// 目と向きを相手ごとの <see cref="KillCamBuffer"/> にためておき、倒れたら倒した相手の分を切り出す。記録が無い相手ならすぐ Killer にする。</item>
+    /// <item><see cref="DeathCamera.Fallen"/>: 自分の目のまま、倒れた目の真下の床 (<see cref="FallenGroundY"/>) の近くへ崩れ落ち、横に傾いて止まる
+    /// (<see cref="FallenView"/>。落ち方は <see cref="FallSeconds"/>・<see cref="FallenEyeHeight"/>・<see cref="FallenRollDegrees"/>・<see cref="FallenPitchDegrees"/>)。
+    /// 視点は一人称のままにして自分の体を影だけにし、倒れた抜け殻 (<see cref="DeathBodyPresenter.Shell"/>) も影だけにし、武器はしまわせる
+    /// (<see cref="WeaponController.Holster"/>)。床の近くのカメラに自分の脚や銃が映らないように。</item>
     /// </list>
     /// カメラの置き方と入力はネット対戦の NetDeathCamera と同じ <see cref="DeathCamView"/> に任せる。
     /// モードの試合が終わったら (<see cref="ModeRunnerBase.IsMatchOver"/>、<see cref="MatchRunner"/> の試合の終わり) 試合の終わりの見せ方に譲ってすぐ戻す。
@@ -45,6 +49,21 @@ namespace Fps.Runtime
         [SerializeField, Min(_minKillCamSeconds), Tooltip("キルカム (KillCam) で再生する、倒される直前の長さ (秒)")]
         private float _killCamSeconds = KillCamBuffer.DefaultSeconds;
 
+        [SerializeField, Min(0f), Tooltip("倒れた主観 (Fallen) で倒れ切るまでの秒数")]
+        private float _fallSeconds = FallenView.DefaultSeconds;
+
+        [SerializeField, Min(0f), Tooltip("倒れた主観 (Fallen) で倒れた後の目の、足元からの高さ (m)")]
+        private float _fallenEyeHeight = FallenView.DefaultEyeHeight;
+
+        [SerializeField, Range(-FallenView.MaxDegrees, FallenView.MaxDegrees), Tooltip("倒れた主観 (Fallen) で倒れた後の横の傾き (度、正が左)")]
+        private float _fallenRollDegrees = FallenView.DefaultRollDegrees;
+
+        [SerializeField, Range(-FallenView.MaxDegrees, FallenView.MaxDegrees), Tooltip("倒れた主観 (Fallen) で倒れた後の上下の向き (度、正が下)")]
+        private float _fallenPitchDegrees = FallenView.DefaultPitchDegrees;
+
+        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れた目から床を探す下向きの距離 (m)。これより下に床が無ければ足元の高さを使う。</summary>
+        public const float FallenGroundProbeDistance = 50f;
+
         /// <summary>キルカムのために姿勢をためる相手を、場から探し直す間隔 (秒)。後から出てきた相手を拾うため。</summary>
         public const float KillCamScanSeconds = 1f;
 
@@ -61,6 +80,12 @@ namespace Fps.Runtime
         private KillCamReplay _replay;
         private bool _shotsSubscribed;
         private readonly List<SpectateCandidate> _candidates = new List<SpectateCandidate>();
+
+        // Fallen で倒れ始めてからの秒数と、倒れた足元の高さ
+        private float _fallenElapsed;
+        private float _fallenGroundY;
+        private bool _fallenSettled;
+        private WeaponController _holsteredWeapon;
 
         private Damageable _damageable;
         private DeathCamView _view;
@@ -104,6 +129,43 @@ namespace Fps.Runtime
             get => _freeSpeed;
             set => _freeSpeed = Mathf.Max(0f, value);
         }
+
+        public float FallSeconds
+        {
+            get => _fallSeconds;
+            set => _fallSeconds = FiniteOr(Mathf.Max(0f, value), FallenView.DefaultSeconds);
+        }
+
+        public float FallenEyeHeight
+        {
+            get => _fallenEyeHeight;
+            set => _fallenEyeHeight = FiniteOr(Mathf.Max(0f, value), FallenView.DefaultEyeHeight);
+        }
+
+        public float FallenRollDegrees
+        {
+            get => _fallenRollDegrees;
+            set => _fallenRollDegrees = FiniteOr(Mathf.Clamp(value, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultRollDegrees);
+        }
+
+        public float FallenPitchDegrees
+        {
+            get => _fallenPitchDegrees;
+            set => _fallenPitchDegrees = FiniteOr(Mathf.Clamp(value, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultPitchDegrees);
+        }
+
+        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で落ち着く床の高さ。映していなければ 0。</summary>
+        public float FallenGroundY => IsActive ? _fallenGroundY : 0f;
+
+        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れ始めてからの秒数。映していなければ 0。</summary>
+        public float FallenElapsed => IsActive ? _fallenElapsed : 0f;
+
+        /// <summary>今の設定の倒れ方。Inspector で範囲の外の値が入っていれば、範囲に収めて使う。</summary>
+        public FallenView FallenMotion => new FallenView(
+            FiniteOr(Mathf.Max(0f, _fallSeconds), FallenView.DefaultSeconds),
+            FiniteOr(Mathf.Max(0f, _fallenEyeHeight), FallenView.DefaultEyeHeight),
+            FiniteOr(Mathf.Clamp(_fallenRollDegrees, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultRollDegrees),
+            FiniteOr(Mathf.Clamp(_fallenPitchDegrees, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultPitchDegrees));
 
         /// <summary>
         /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒される直前の長さ (秒)。変えるとそれまでにためた姿勢は捨てる
@@ -390,7 +452,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 今の状態を渡して、カメラを始めるか止める。始めたらその場でカメラを倒れた位置の上へ置いて見下ろし (Free はここから飛び始める)、
+        /// 今の状態を渡して、カメラを始めるか止める。始めたらその場でカメラを倒れた位置の上へ置いて見下ろし (Free はここから飛び始める。Fallen は自分の目に置いて倒れ始める)、
         /// 止めたら元に戻す。オフラインのプレイヤーはいつもこの画面の視点を持つ。Play 中は LateUpdate が自分の体力と試合の終わりを渡して毎フレーム呼ぶ。
         /// </summary>
         public DeathCamTransition Step(DeathCamera mode, bool isAlive, bool matchEnded)
@@ -403,9 +465,23 @@ namespace Fps.Runtime
                     break;
                 case DeathCamTransition.Started:
                     ClearAlly();
-                    _view.Begin(EyeOf(gameObject), transform.eulerAngles.y);
+                    var fallen = mode == DeathCamera.Fallen;
+                    var eye = EyeOf(gameObject);
+                    _view.Begin(eye, transform.eulerAngles.y, fallen);
                     Debug.Log(LogTag + " started on " + name + " (" + mode + ") at " + DeathCamView.FormatPosition(_view.DeathEye), this);
-                    Frame(null);
+                    _fallenElapsed = 0f;
+                    _fallenSettled = false;
+                    _fallenGroundY = ResolveFallenGroundY(eye);
+                    if (fallen)
+                    {
+                        HideOwnBodyFromFallenView();
+                        _view.FrameFallen(FallenMotion, _fallenGroundY, 0f);
+                    }
+                    else
+                    {
+                        Frame(null);
+                    }
+
                     if (mode == DeathCamera.KillCam)
                     {
                         BeginKillCam();
@@ -453,10 +529,85 @@ namespace Fps.Runtime
                 case DeathCamera.Ally:
                     WatchAlly(spectateStep, move, lookDegrees, deltaSeconds);
                     break;
+                case DeathCamera.Fallen:
+                    AdvanceFallen(deltaSeconds);
+                    break;
                 default:
                     _view.MoveFree(move, lookDegrees, _freeSpeed, deltaSeconds);
                     break;
             }
+        }
+
+        private void AdvanceFallen(float deltaSeconds)
+        {
+            var fallen = FallenMotion;
+            if (deltaSeconds > 0f && !float.IsInfinity(deltaSeconds))
+            {
+                _fallenElapsed += deltaSeconds;
+            }
+
+            _view.FrameFallen(fallen, _fallenGroundY, _fallenElapsed);
+            if (!_fallenSettled && fallen.IsSettled(_fallenElapsed) && _view.Camera != null)
+            {
+                _fallenSettled = true;
+                Debug.Log(LogTag + " fallen view settled on " + name + " at " + DeathCamView.FormatPosition(_view.Camera.transform.position), this);
+            }
+        }
+
+        // 足元の高さだけでは、跳んでいる途中に倒れると空中で止まってしまうので、目の真下の床を探す
+        private float ResolveFallenGroundY(Vector3 eye)
+        {
+            var feet = _damageable != null ? _damageable.GroundPoint.y : transform.position.y;
+            var hits = Physics.RaycastAll(eye, Vector3.down, FallenGroundProbeDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            var nearest = float.PositiveInfinity;
+            var ground = feet;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null || hit.collider.transform.IsChildOf(transform) || hit.distance >= nearest)
+                {
+                    continue;
+                }
+
+                nearest = hit.distance;
+                ground = hit.point.y;
+            }
+
+            return ground;
+        }
+
+        private void HideOwnBodyFromFallenView()
+        {
+            var weapon = GetComponentInChildren<WeaponController>();
+            if (weapon != null && weapon.Holster.Claim(this))
+            {
+                _holsteredWeapon = weapon;
+            }
+
+            // 抜け殻は倒れたとき (Died) に作られ、リスポーンで消えるので、戻さなくてよい
+            var body = GetComponent<DeathBodyPresenter>();
+            var shell = body != null ? body.Shell : null;
+            if (shell != null)
+            {
+                foreach (var shellRenderer in shell.GetComponentsInChildren<Renderer>(true))
+                {
+                    shellRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                }
+            }
+        }
+
+        private void ReleaseHolster()
+        {
+            if (_holsteredWeapon != null)
+            {
+                _holsteredWeapon.Holster.Release(this);
+            }
+
+            _holsteredWeapon = null;
+        }
+
+        private static float FiniteOr(float value, float fallback)
+        {
+            return float.IsNaN(value) || float.IsInfinity(value) ? fallback : value;
         }
 
         private void Frame(Vector3? killerEye)
@@ -601,6 +752,7 @@ namespace Fps.Runtime
         {
             _replay.Stop(reason);
             _killCamClip = KillCamClip.Empty;
+            ReleaseHolster();
             _view.Restore(true);
             ClearAlly();
             _killer = null;

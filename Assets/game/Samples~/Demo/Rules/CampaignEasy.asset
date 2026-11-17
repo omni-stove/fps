@@ -18,7 +18,7 @@ MonoBehaviour:
   _regenDelaySeconds: 3
   _regenPerSecond: 25
   _deathBody: 1
-  _deathCamera: 0
+  _deathCamera: 5
   _infiniteReserve: 0
   _reserveAmmoMultiplier: 1.5
   _destruction: 0

@@ -22,5 +22,10 @@ namespace Fps.Core
         /// 相手の記録が無ければすぐ <see cref="Killer"/> にする。値を保存・同期に使うので、最後に足している。
         /// </summary>
         KillCam,
+
+        /// <summary>
+        /// 自分の目のまま床へ崩れ落ち、横に傾いた主観 (<see cref="FallenView"/>) で止める。値を保存・同期に使うので、最後に足している。
+        /// </summary>
+        Fallen,
     }
 }

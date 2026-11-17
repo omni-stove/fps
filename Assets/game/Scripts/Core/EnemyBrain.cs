@@ -220,6 +220,37 @@ namespace Fps.Core
             }
         }
 
+        /// <summary>
+        /// 目標を倒し終えたときに戦いをやめる。Chase・Attack・TakeCover・Search なら使っていた遮蔽点を放し、最後に見た位置と見失いや捜索の経過を忘れて、
+        /// 巡回ルートの今の地点から Patrol (ルートが無ければ Idle) に戻す。倒れた目標の最後に見た位置へ向かわないようにするため。
+        /// それ以外の状態では何もせず false を返す。
+        /// </summary>
+        public bool StandDown()
+        {
+            switch (State)
+            {
+                case EnemyState.Chase:
+                case EnemyState.Attack:
+                case EnemyState.TakeCover:
+                case EnemyState.Search:
+                    ReleaseCoverPoint();
+                    CoverPhase = EnemyCoverPhase.None;
+                    _lastSeen = default;
+                    _searchPoint = default;
+                    _reactionElapsed = 0f;
+                    _shotsInAttack = 0;
+                    _lostElapsed = 0f;
+                    _searchElapsed = 0f;
+                    _coverElapsed = 0f;
+                    _coverThreat = default;
+                    _unreachableCover.Clear();
+                    SetState(_route.Length > 0 ? EnemyState.Patrol : EnemyState.Idle);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>時間を deltaSeconds 進め、この tick の決定を返す。</summary>
         /// <param name="deltaSeconds">前の tick からの経過秒。0 以上。</param>
         /// <param name="perception">この tick の知覚。</param>

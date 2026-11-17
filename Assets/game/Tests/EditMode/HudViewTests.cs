@@ -837,7 +837,7 @@ namespace Fps.Tests.EditMode
         public void TheNumberFormatMatchesTheHudFormat()
         {
             Assert.That(HudNumberFormat.Health(75), Is.EqualTo(HudFormat.Health(75)));
-            Assert.That(HudNumberFormat.Health(null), Is.EqualTo(HudFormat.NoHealth));
+            Assert.That(HudNumberFormat.Health((int?)null), Is.EqualTo(HudFormat.NoHealth));
             Assert.That(HudNumberFormat.Ammo(30, 90, false, false, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, false)));
             Assert.That(HudNumberFormat.Ammo(0, 90, true, false, true), Is.EqualTo(HudFormat.Ammo(0, 90, true, false)));
             Assert.That(HudNumberFormat.Ammo(30, 90, false, true, true), Is.EqualTo(HudFormat.Ammo(30, 90, false, true)));
@@ -848,7 +848,7 @@ namespace Fps.Tests.EditMode
             Assert.That(HudNumberFormat.Ammo(null, null, false, false, false), Is.EqualTo(HudFormat.NoMagazine));
             Assert.That(HudNumberFormat.Time(65), Is.EqualTo(HudFormat.Time(65f)));
             Assert.That(HudNumberFormat.Time(HudFormat.MaxDisplayedSeconds), Is.EqualTo(HudFormat.Time(HudFormat.MaxDisplayedSeconds)));
-            Assert.That(HudNumberFormat.Time(null), Is.EqualTo(HudFormat.NoTime));
+            Assert.That(HudNumberFormat.Time((int?)null), Is.EqualTo(HudFormat.NoTime));
         }
 
         [Test]

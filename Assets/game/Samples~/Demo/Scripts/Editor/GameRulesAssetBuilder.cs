@@ -134,7 +134,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、死亡カメラなし、予備弾は有限で 1.5 倍、
+        /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1.5 倍、
         /// 建造物は壊れない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignEasyRules()
@@ -146,7 +146,7 @@ namespace Fps.Editor
                 3f,
                 25f,
                 DeathBody.Collapse,
-                DeathCamera.None,
+                DeathCamera.Fallen,
                 false,
                 1.5f,
                 Destruction.Off,
@@ -155,25 +155,29 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
+        /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
         /// アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignNormalRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions()).WithMaxWeapons(DemoMaxWeapons);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions())
+                .WithDeathCamera(DeathCamera.Fallen)
+                .WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
-        /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
+        /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
         /// アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignHardRules()
         {
-            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions()).WithMaxWeapons(DemoMaxWeapons);
+            return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions())
+                .WithDeathCamera(DeathCamera.Fallen)
+                .WithMaxWeapons(DemoMaxWeapons);
         }
 
         /// <summary>
-        /// 射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、死亡カメラなし、予備弾は無限、建造物は弾で壊れる。
+        /// 射撃場。味方撃ちなし、個別リスポーン、4 秒後から毎秒 20 回復、体は消える、倒れた主観で崩れ落ちる、予備弾は無限、建造物は弾で壊れる。
         /// アクションは <see cref="RangeActions"/>。
         /// </summary>
         public static GameRules RangeRules()
@@ -185,7 +189,7 @@ namespace Fps.Editor
                 4f,
                 20f,
                 DeathBody.Vanish,
-                DeathCamera.None,
+                DeathCamera.Fallen,
                 true,
                 1f,
                 Destruction.On,
@@ -202,7 +206,7 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// 機能ごとのシーンの土台のルール。射撃場と同じく味方撃ちなし・個別リスポーン・体は消える・死亡カメラなしで、予備弾は有限、建造物は壊れず、
+        /// 機能ごとのシーンの土台のルール。射撃場と同じく味方撃ちなし・個別リスポーン・体は消える・倒れた主観で崩れ落ちるで、予備弾は有限、建造物は壊れず、
         /// オンオフで切り替える項目はどれもキットの既定 (<see cref="ActionRules.Default"/>・<see cref="GameRules.Default"/>) のまま。視点は一人称。
         /// </summary>
         public static GameRules FeatureBaseRules()
@@ -214,7 +218,7 @@ namespace Fps.Editor
                 4f,
                 20f,
                 DeathBody.Vanish,
-                DeathCamera.None,
+                DeathCamera.Fallen,
                 false,
                 1f,
                 Destruction.Off,

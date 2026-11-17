@@ -13,7 +13,7 @@ namespace Shooter.Core
         public const float GroundedVerticalSpeed = -2f;
 
         // CharacterMotorSimulation が吹き飛ばし中に入力で寄せるかを決める閾値と同じ
-        private const float MinTurnInputSquared = 1e-4f;
+        private const float _minTurnInputSquared = 1e-4f;
 
         /// <summary>地上のジャンプが何段目か。<see cref="Jumped"/> に渡す。</summary>
         public const int GroundJumpNumber = 1;
@@ -206,7 +206,7 @@ namespace Shooter.Core
         {
             // スティックの遊び程度の入力で向きを変えると、手を離しかけただけで横へ跳んでしまう
             var input = ClampLength(moveInput);
-            if (input.LengthSquared() <= MinTurnInputSquared)
+            if (input.LengthSquared() <= _minTurnInputSquared)
             {
                 return horizontal;
             }

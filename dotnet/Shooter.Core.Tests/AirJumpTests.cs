@@ -19,6 +19,10 @@ namespace Shooter.Core.Tests
         private static readonly Vector3 _high = new Vector3(0f, 10f, 0f);
         private static readonly LadderSpan _span = new LadderSpan(new Vector3(0f, 0f, 3f), Vector3.UnitZ, 3f, 0.8f);
 
+        private static readonly int[] _twoThree = { 2, 3 };
+        private static readonly int[] _oneTwo = { 1, 2 };
+        private static readonly int[] _oneTwoOne = { 1, 2, 1 };
+
         private readonly List<WorldCollider> _colliders = new List<WorldCollider>();
 
         [SetUp]
@@ -97,7 +101,7 @@ namespace Shooter.Core.Tests
             Assert.That(second, Is.EqualTo(2));
             Assert.That(third, Is.EqualTo(2));
             Assert.That(motor.Velocity.Y, Is.EqualTo(-1f), "the third press finds no air jumps left");
-            Assert.That(numbers, Is.EqualTo(new[] { 2, 3 }), "the ground jump is 1, so the first air jump is 2");
+            Assert.That(numbers, Is.EqualTo(_twoThree), "the ground jump is 1, so the first air jump is 2");
         }
 
         [Test]
@@ -174,13 +178,13 @@ namespace Shooter.Core.Tests
             var refused = simulation.Step(air, Input(jump: true));
             Assert.That(refused.AirJumpsUsed, Is.EqualTo(1));
             Assert.That(refused.Velocity.Y, Is.EqualTo(air.Velocity.Y - (_gravity * _tick)).Within(_tolerance));
-            Assert.That(numbers, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(numbers, Is.EqualTo(_oneTwo));
 
             var landed = StepUntil(simulation, refused, Input(), s => s.IsGrounded, 240);
             Assert.That(landed.AirJumpsUsed, Is.Zero);
 
             simulation.Step(landed, Input(jump: true));
-            Assert.That(numbers, Is.EqualTo(new[] { 1, 2, 1 }));
+            Assert.That(numbers, Is.EqualTo(_oneTwoOne));
         }
 
         [Test]

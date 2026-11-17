@@ -6,6 +6,7 @@ namespace Fps.Core
     /// 能力 1 枠の回数と時間。使うと回数を 1 つ減らして待ち時間を始め、効果が出るまでの秒数 (<see cref="AbilitySpec.WindupSeconds"/>) の後に効果を出す。
     /// 回数は上限より少ない間、使っている最中も含めて <see cref="AbilitySpec.RechargeSeconds"/> ごとに 1 つずつ戻る。
     /// 能力をいつ終えるかは持ち主が決め、<see cref="End"/> で知らせる。時間は <see cref="Tick"/> で進める。
+    /// 回数・段階・待ち時間・効果が出るまで・回数の戻りのどれかが変わると <see cref="Changed"/> を呼ぶ。
     /// </summary>
     public sealed class AbilitySlot
     {
@@ -17,6 +18,11 @@ namespace Fps.Core
         }
 
         public AbilitySpec Spec { get; }
+
+        /// <summary>
+        /// 回数・段階・待ち時間・効果が出るまで・回数の戻りのどれかが変わったときに呼ばれる。待ち時間や回数の戻りが進む間は <see cref="Tick"/> のたびに呼ばれる。
+        /// </summary>
+        public event Action Changed;
 
         /// <summary>残りの回数。0 以上 <see cref="AbilitySpec.MaxCharges"/> 以下。</summary>
         public int Charges { get; private set; }
@@ -101,6 +107,7 @@ namespace Fps.Core
                 return false;
             }
 
+            var before = Snapshot();
             Charges--;
             CooldownRemaining = Spec.CooldownSeconds;
             if (Spec.WindupSeconds > 0f)
@@ -114,6 +121,7 @@ namespace Fps.Core
                 WindupRemaining = 0f;
             }
 
+            NotifyIfChanged(before);
             return true;
         }
 
@@ -126,6 +134,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative and must be finite");
             }
 
+            var before = Snapshot();
             var step = AbilitySlotStep.None;
             CooldownRemaining = Math.Max(0f, CooldownRemaining - deltaSeconds);
 
@@ -156,6 +165,7 @@ namespace Fps.Core
                 RechargeElapsed = 0f;
             }
 
+            NotifyIfChanged(before);
             return step;
         }
 
@@ -167,30 +177,50 @@ namespace Fps.Core
                 return false;
             }
 
+            var before = Snapshot();
             Phase = AbilityPhase.Idle;
             WindupRemaining = 0f;
+            NotifyIfChanged(before);
             return true;
         }
 
         // 回数は使い始めた時点で減るので、置けない所で離したなど効果を出さずに終えた能力が、その 1 回を返すのに使う。
         public void Refund()
         {
+            var before = Snapshot();
             Charges = Math.Min(Spec.MaxCharges, Charges + 1);
             CooldownRemaining = 0f;
             if (Charges >= Spec.MaxCharges)
             {
                 RechargeElapsed = 0f;
             }
+
+            NotifyIfChanged(before);
         }
 
         /// <summary>回数を上限に戻し、待ち時間を消し、使っていない状態にする (出撃し直したときなど)。</summary>
         public void Reset()
         {
+            var before = Snapshot();
             Charges = Spec.MaxCharges;
             Phase = AbilityPhase.Idle;
             CooldownRemaining = 0f;
             WindupRemaining = 0f;
             RechargeElapsed = 0f;
+            NotifyIfChanged(before);
+        }
+
+        private (int Charges, AbilityPhase Phase, float Cooldown, float Windup, float Recharge) Snapshot()
+        {
+            return (Charges, Phase, CooldownRemaining, WindupRemaining, RechargeElapsed);
+        }
+
+        private void NotifyIfChanged((int Charges, AbilityPhase Phase, float Cooldown, float Windup, float Recharge) before)
+        {
+            if (before != Snapshot())
+            {
+                Changed?.Invoke();
+            }
         }
     }
 }

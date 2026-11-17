@@ -317,6 +317,66 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void BeginPublishesTheParticipantsOnTheScoreboard()
+        {
+            Begin();
+
+            var entries = GameSignals.Scoreboard.Value;
+            Assert.That(entries, Is.SameAs(_runner.PublishedScoreboard));
+            Assert.That(entries, Is.EqualTo(new[]
+            {
+                new ScoreboardEntry(DominationRunner.PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(1, ScoreboardName.Literal("enemy-1"), Team.Bravo, 0, 0, ScoreboardConnection.None, false),
+            }));
+        }
+
+        [Test]
+        public void AKillPublishesTheNewCounts()
+        {
+            Begin();
+            var before = GameSignals.Scoreboard.Value;
+
+            LogAssert.Expect(LogType.Log, "[Domination] kill killer=0 victim=1");
+            using (CombatEvents.Attribute(_world.Player, "rifle"))
+            {
+                _enemyBody.Kill();
+            }
+
+            var entries = GameSignals.Scoreboard.Value;
+            Assert.That(entries, Is.Not.SameAs(before), "each publish is a new list");
+            Assert.That(entries[0].Kills, Is.EqualTo(1));
+            Assert.That(entries[0].Deaths, Is.Zero);
+            Assert.That(entries[1].Kills, Is.Zero);
+            Assert.That(entries[1].Deaths, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void StopClearsThePublishedScoreboard()
+        {
+            Begin();
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.Null);
+            Assert.That(_runner.PublishedScoreboard, Is.Null);
+        }
+
+        [Test]
+        public void StopKeepsAScoreboardPublishedByAnotherRunner()
+        {
+            Begin();
+            var other = new[]
+            {
+                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+            };
+            GameSignals.Scoreboard.Publish(other);
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(other));
+        }
+
+        [Test]
         public void DuplicatePointIndicesAreRejected()
         {
             var second = CreateZone("PointB", 0, new Vector3(30f, 0f, 0f));

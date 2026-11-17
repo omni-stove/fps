@@ -427,7 +427,6 @@ namespace Fps.Core.Tests
             Assert.That(game.Phase, Is.EqualTo(RoundPhase.Ended));
             Assert.That(game.Winner, Is.EqualTo(Side.Alpha));
             Assert.That(ended, Is.EqualTo(new List<Side> { Side.Alpha }));
-            Assert.That(GameText.Resolve(SearchAndDestroyText.Result(game)), Is.EqualTo("ALPHA の勝ち"));
 
             game.Tick(_fuseSeconds);
             Assert.That(game.RoundNumber, Is.EqualTo(2));
@@ -466,51 +465,9 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ClockShowsTheFuseAfterThePlant()
+        public void LogLinesNameTheRoundAndTheSite()
         {
-            var game = Create(preparationSeconds: 5f);
-            game.Start();
-            Assert.That(SearchAndDestroyText.Clock(game), Is.EqualTo(LocalizedText.Literal("00:05")));
-
-            game.Tick(5f);
-            Assert.That(SearchAndDestroyText.Clock(game), Is.EqualTo(LocalizedText.Literal("01:00")));
-
-            Plant(game, 0);
-            game.Tick(0.5f);
-            Assert.That(SearchAndDestroyText.Clock(game), Is.EqualTo(LocalizedText.Literal("00:20")));
-            Assert.That(SearchAndDestroyText.Lines(game, _bravoOne), Has.Member(SearchAndDestroyText.Fuse(0, _fuseSeconds - 0.5f)));
-        }
-
-        [Test]
-        public void LinesShowTheRoleAndThePlantProgressOfTheCarrier()
-        {
-            var game = Create();
-            game.Start();
-            game.SetPlanting(_alphaOne, 1);
-            game.Tick(1f);
-
-            var lines = new List<string>();
-            foreach (var line in SearchAndDestroyText.Lines(game, _alphaOne))
-            {
-                lines.Add(GameText.Resolve(line));
-            }
-
-            Assert.That(lines, Is.EqualTo(new List<string>
-            {
-                "ラウンド 1 (3 勝先取)",
-                "あなたは攻撃側: 爆弾を設置地点に設置する",
-                "爆弾を持っている: 設置地点で長押しして設置",
-                "設置中 B 33%",
-            }));
-        }
-
-        [Test]
-        public void TextFormatsTheFuseAndTheRoundResult()
-        {
-            Assert.That(SearchAndDestroyText.Fuse(1, 12.3f), Is.EqualTo(new LocalizedText("mode.snd.fuse", "B", 13)));
-            Assert.That(GameText.Resolve(SearchAndDestroyText.Fuse(1, 12.3f)), Is.EqualTo("爆弾 B に設置: 起爆まで 13 秒"));
-            Assert.That(GameText.Resolve(SearchAndDestroyText.RoundResult(Side.Bravo, RoundEndReason.Detonated)), Is.EqualTo("BRAVO の勝ち (起爆)"));
-            Assert.That(GameText.Resolve(SearchAndDestroyText.RoundResult(null, RoundEndReason.BothEliminated)), Is.EqualTo("引き分け (同時に全滅)"));
+            Assert.That(SearchAndDestroyText.SiteName(1), Is.EqualTo("B"));
             Assert.That(
                 SearchAndDestroyText.RoundEndLog(3, Side.Bravo, RoundEndReason.Defused, 1, 2),
                 Is.EqualTo("[SearchAndDestroy] round_end round=3 winner=1 reason=Defused wins=0:1,1:2"));
@@ -518,21 +475,15 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void ScoresShowRoundWinsAndRolesWithTheOwnSideFirst()
+        public void TheStatusCarriesTheGameAndTheLocalPlayer()
         {
             var game = Create();
-            game.Start();
-            Plant(game, 0);
-            game.Tick(_fuseSeconds);
+            var status = new SearchAndDestroyStatus(game, _alphaOne);
 
-            var lines = SearchAndDestroyText.Scores(game, Side.Bravo);
-
-            Assert.That(lines.Count, Is.EqualTo(2));
-            Assert.That(GameText.Resolve(lines[0].Text), Is.EqualTo("BRAVO 0 (防衛)"));
-            Assert.That(lines[0].IsOwn, Is.True);
-            Assert.That(lines[0].IsLeading, Is.False);
-            Assert.That(GameText.Resolve(lines[1].Text), Is.EqualTo("ALPHA 1 (攻撃)"));
-            Assert.That(lines[1].IsLeading, Is.True);
+            Assert.That(status.Game, Is.SameAs(game));
+            Assert.That(status.LocalPlayerId, Is.EqualTo(_alphaOne));
+            Assert.That(new SearchAndDestroyStatus(game, null).LocalPlayerId, Is.Null);
+            Assert.Throws<ArgumentNullException>(() => new SearchAndDestroyStatus(null, _alphaOne));
         }
 
         private static void Plant(SearchAndDestroy game, int site)

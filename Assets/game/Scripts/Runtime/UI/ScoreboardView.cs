@@ -12,9 +12,10 @@ namespace Fps.Runtime
     /// <see cref="ToggleActionPath"/> (Tab / ゲームパッドの View) を押している間だけ出す。
     /// </summary>
     /// <remarks>
-    /// 一覧の中身は持ち主が <see cref="SetEntries"/> で渡す。オンラインは Fps.Net の NetHud が
-    /// NetTeamDeathmatch.Players の変化のたびに、オフラインは <see cref="MatchRunner"/> がキル・デスのたびに渡す。
-    /// 並べ方は Core の <see cref="ScoreboardRows"/> が決める。名前などの文は作り直すときに今の言語 (<see cref="Localizer.Resolve"/>) で文にし、
+    /// オフラインの一覧は、要素を持っている間 <see cref="GameSignals.Scoreboard"/> を購読して受ける (<see cref="MatchRunner"/> と
+    /// <see cref="DominationRunner"/> がキル・デスのたびに出す)。自分の行のチームの欄を先に出し、自分の行が無ければ Alpha を先にする。
+    /// オンラインは NetV2 の NetV2Hud が <see cref="SetEntries"/> で渡す。
+    /// 並べ方は Core の <see cref="ScoreboardRows"/> を使う。名前などの文は作り直すときに <see cref="ScoreboardText"/> と今の言語 (<see cref="Localizer.Resolve"/>) で文にし、
     /// 言語が変わったら作り直す。閉じている間に届いた一覧は覚えておくだけにし、
     /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
     /// </remarks>
@@ -64,7 +65,7 @@ namespace Fps.Runtime
 
         public const string DeathsCaption = "D";
 
-        public static string ConnectionCaption => Localizer.Resolve(ScoreboardRows.ConnectionCaption);
+        public static string ConnectionCaption => Localizer.Resolve(ScoreboardText.ConnectionCaption);
 
         private static readonly IReadOnlyList<ScoreboardSection> _empty =
             ScoreboardRows.Build(Array.Empty<ScoreboardEntry>(), Team.Alpha);
@@ -72,6 +73,9 @@ namespace Fps.Runtime
         private IReadOnlyList<ScoreboardSection> _sections = _empty;
         private bool _open;
         private bool _dirty = true;
+        private bool _subscribed;
+        // 一覧が GameSignals から来たものか。要素を持っていない間に消されたら、次に要素を受けたときに空にするため
+        private bool _fromSignal;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _toggleAction;
@@ -101,6 +105,11 @@ namespace Fps.Runtime
         /// <param name="firstTeam">先に出すチーム。</param>
         public void SetEntries(IEnumerable<ScoreboardEntry> entries, Team firstTeam)
         {
+            ApplyEntries(entries, firstTeam, false);
+        }
+
+        private void ApplyEntries(IEnumerable<ScoreboardEntry> entries, Team firstTeam, bool fromSignal)
+        {
             IReadOnlyList<ScoreboardSection> sections;
             try
             {
@@ -113,6 +122,7 @@ namespace Fps.Runtime
             }
 
             _sections = sections;
+            _fromSignal = fromSignal;
             MarkDirty();
         }
 
@@ -120,7 +130,25 @@ namespace Fps.Runtime
         public void ClearEntries()
         {
             _sections = _empty;
+            _fromSignal = false;
             MarkDirty();
+        }
+
+        /// <summary>entries のうち自分の行 (<see cref="ScoreboardEntry.IsLocal"/>) のチーム。自分の行が無ければ Alpha。</summary>
+        public static Team FirstTeamOf(IReadOnlyList<ScoreboardEntry> entries)
+        {
+            if (entries != null)
+            {
+                for (var i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i].IsLocal)
+                    {
+                        return entries[i].Team;
+                    }
+                }
+            }
+
+            return Team.Alpha;
         }
 
         /// <summary>
@@ -147,10 +175,67 @@ namespace Fps.Runtime
         protected override void OnBound(VisualElement element)
         {
             element.AddToClassList(BoardClass);
+            Subscribe();
+
+            // 要素を持っていない間の通知は受けていないので、今の値に合わせる
+            if (GameSignals.Scoreboard.HasValue)
+            {
+                ShowSignal(GameSignals.Scoreboard.Value);
+            }
+            else if (_fromSignal)
+            {
+                ClearEntries();
+            }
 
             // 新しい木の要素は空なので、前の木で作った行があっても作り直す
             _dirty = true;
             Refresh();
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Scoreboard.Changed += HandleScoreboardChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.Scoreboard.Changed -= HandleScoreboardChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleScoreboardChanged(IReadOnlyList<ScoreboardEntry> entries)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Scoreboard.Changed -= HandleScoreboardChanged;
+                return;
+            }
+
+            ShowSignal(entries);
+        }
+
+        private void ShowSignal(IReadOnlyList<ScoreboardEntry> entries)
+        {
+            if (entries == null)
+            {
+                ClearEntries();
+                return;
+            }
+
+            ApplyEntries(entries, FirstTeamOf(entries), true);
         }
 
         protected override void OnLanguageChanged()
@@ -160,6 +245,7 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.Clear();
             element.style.display = DisplayStyle.None;
         }
@@ -231,8 +317,8 @@ namespace Fps.Runtime
                 }
 
                 header.Add(teamName);
-                header.Add(Cell(ScoreboardRows.Count(section.Kills), CountCellClass));
-                header.Add(Cell(ScoreboardRows.Count(section.Deaths), CountCellClass));
+                header.Add(Cell(ScoreboardText.Count(section.Kills), CountCellClass));
+                header.Add(Cell(ScoreboardText.Count(section.Deaths), CountCellClass));
                 header.Add(Cell(string.Empty, ConnectionCellClass));
                 box.Add(header);
 
@@ -249,9 +335,9 @@ namespace Fps.Runtime
                         row.AddToClassList(DisconnectedRowClass);
                     }
 
-                    row.Add(Cell(Localizer.Resolve(entry.Name), NameCellClass));
-                    row.Add(Cell(ScoreboardRows.Count(entry.Kills), CountCellClass));
-                    row.Add(Cell(ScoreboardRows.Count(entry.Deaths), CountCellClass));
+                    row.Add(Cell(NameOrEmpty(entry.Name), NameCellClass));
+                    row.Add(Cell(ScoreboardText.Count(entry.Kills), CountCellClass));
+                    row.Add(Cell(ScoreboardText.Count(entry.Deaths), CountCellClass));
                     row.Add(Cell(ConnectionTextOrEmpty(entry.Connection), ConnectionCellClass));
                     box.Add(row);
                 }
@@ -260,12 +346,26 @@ namespace Fps.Runtime
             }
         }
 
+        // 知らない名前の種類が来ても一覧ごと出せなくならないよう、空欄にする
+        private string NameOrEmpty(ScoreboardName name)
+        {
+            try
+            {
+                return Localizer.Resolve(ScoreboardText.Name(name));
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                Debug.LogWarning($"{LogTag} unknown name {name}", this);
+                return string.Empty;
+            }
+        }
+
         // 新しいサーバーが知らない値を送ってきても一覧ごと出せなくならないよう、空欄にする
         private string ConnectionTextOrEmpty(ScoreboardConnection connection)
         {
             try
             {
-                return Localizer.Resolve(ScoreboardRows.ConnectionText(connection));
+                return Localizer.Resolve(ScoreboardText.ConnectionText(connection));
             }
             catch (ArgumentOutOfRangeException)
             {

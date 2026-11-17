@@ -43,9 +43,6 @@ namespace Fps.Runtime
         /// <summary>残り時間を出す試合を差し替える。null なら仮の表示に戻す。</summary>
         void BindMatch(Match match);
 
-        /// <summary>一時的な案内の源を差し替える。null なら案内を消す。</summary>
-        void BindNotice(CampaignNotice notice);
-
         /// <summary>
         /// viewer のチームから見た敵味方の色で塗り、設定の色の組が変わったら塗り直す。viewer が null なら Alpha を味方の色にする。
         /// </summary>

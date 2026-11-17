@@ -245,17 +245,54 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudHintsAtDetonatingOnlyWhileChargesArePlaced()
+        public void DetonatingIsOfferedOnlyWhileChargesArePlaced()
         {
             _host.Equip(0, _definition);
-            Assert.That(_host.TryGetHint(0, out _), Is.False);
+            Assert.That(_host.TryGetFollowUp(0, out _), Is.False);
 
             Tap();
             Face(_asideOnTheWall);
             HoldAndRelease();
 
-            Assert.That(_host.TryGetHint(0, out var hint), Is.True);
-            Assert.That(hint, Is.EqualTo(new LocalizedText(RemoteChargeDeployDefinition.DetonateHintKey, new LocalizedText(RemoteChargeSpec.DefaultNameKey), 2)));
+            Assert.That(_host.TryGetFollowUp(0, out var followUp), Is.True);
+            Assert.That(followUp, Is.EqualTo(AbilityFollowUp.Detonate(Kind, RemoteChargeSpec.DefaultNameKey, 2)));
+            Assert.That(followUp.Kind, Is.EqualTo(AbilityFollowUpKind.Detonate));
+            Assert.That(
+                AbilitySlotsView.FollowUpText(followUp),
+                Is.EqualTo(new LocalizedText(AbilitySlotsView.DetonateKey, new LocalizedText(RemoteChargeSpec.DefaultNameKey), 2)));
+
+            _host.Configure(GameRules.Default);
+            Assert.That(_host.TryGetFollowUp(0, out _), Is.False, "nothing is offered while abilities are off");
+        }
+
+        [Test]
+        public void TheHostIsHeardWhenThePlacedChargesChange()
+        {
+            _host.Equip(0, _definition);
+            var heard = 0;
+            _host.Changed += _ => heard++;
+
+            var placed = Tap();
+            Assert.That(heard, Is.GreaterThan(0));
+
+            heard = 0;
+            _host.Step(PlayerCommands.None, PlayerCommands.None, 0f);
+            Assert.That(heard, Is.Zero, "nothing moved");
+
+            placed.Deployable.Remove(DeployRemoval.Discarded);
+            _host.Step(PlayerCommands.None, PlayerCommands.None, 0f);
+            Assert.That(heard, Is.EqualTo(1), "a charge removed outside the host changes what a press does");
+        }
+
+        [Test]
+        public void TheDetonateHintNamesTheChargeByIdWithoutANameKey()
+        {
+            _definition.NameKey = " ";
+
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
+            Assert.That(
+                AbilitySlotsView.FollowUpText(AbilityFollowUp.Detonate(Kind, _definition.DisplayNameKey, 1)),
+                Is.EqualTo(new LocalizedText(AbilitySlotsView.DetonateKey, LocalizedText.Literal(Kind), 1)));
         }
 
         [Test]

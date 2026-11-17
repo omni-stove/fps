@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Fps.Core;
+using UnityEngine;
+
+namespace Fps.Runtime
+{
+    /// <summary>
+    /// ホード (<see cref="Horde"/>) の HUD の行 (表のキー <c>mode.horde.*</c> の <see cref="LocalizedText"/>)。
+    /// 時間は経過時間を出し、得点 (倒した敵の数) の下に波の番号・残りの敵か次の波までの秒数・通貨・近くの防衛物の案内を出す。
+    /// </summary>
+    public sealed class HordeHudFormatter : IModeHudFormatter
+    {
+        /// <summary>自分が倒れていて、戦っている波を味方が越えれば戻れるときに出す行。</summary>
+        public static LocalizedText ReturnsAfterWave => new LocalizedText("mode.horde.returnsAfterWave");
+
+        public static LocalizedText Victory => new LocalizedText("mode.horde.victory");
+        public static LocalizedText Defeat => new LocalizedText("mode.horde.defeat");
+
+        /// <example><c>Wave(2, 5)</c> は <c>WAVE 2/5</c>、終わりが無ければ <c>WAVE 2</c>、始まる前は <c>WAVE -/5</c></example>
+        public static LocalizedText Wave(int number, int? waveCount)
+        {
+            var current = number > 0 ? number.ToString(CultureInfo.InvariantCulture) : "-";
+            return waveCount.HasValue
+                ? new LocalizedText("mode.horde.wave", current, waveCount.Value)
+                : new LocalizedText("mode.horde.waveEndless", current);
+        }
+
+        /// <example><c>RemainingEnemies(4)</c> は <c>残りの敵 4</c></example>
+        public static LocalizedText RemainingEnemies(int remaining)
+        {
+            return new LocalizedText("mode.horde.remainingEnemies", Math.Max(0, remaining));
+        }
+
+        /// <summary>秒は <see cref="HudFormat.DisplayedSeconds"/> と同じく切り上げる。</summary>
+        /// <example><c>NextWave(4.2f)</c> は <c>次の波まで 5 秒</c></example>
+        public static LocalizedText NextWave(float restSeconds)
+        {
+            return new LocalizedText("mode.horde.nextWave", HudFormat.DisplayedSeconds(restSeconds));
+        }
+
+        /// <example><c>Currency(120)</c> は <c>通貨 120</c></example>
+        public static LocalizedText Currency(int currency)
+        {
+            return new LocalizedText("mode.horde.currency", currency);
+        }
+
+        /// <summary>防衛物にできることの名前。</summary>
+        public static LocalizedText ActionName(HordeFortificationAction action)
+        {
+            switch (action)
+            {
+                case HordeFortificationAction.Build:
+                    return new LocalizedText("mode.horde.build");
+                case HordeFortificationAction.Repair:
+                    return new LocalizedText("mode.horde.repair");
+                default:
+                    return LocalizedText.Literal("-");
+            }
+        }
+
+        /// <summary>
+        /// 近くの防衛物の案内。払えるときはキー (空なら省く) と値段を、払えないときは理由を添える。
+        /// </summary>
+        /// <example>
+        /// <c>Prompt(new HordeFortificationOffer(Repair, "Wall-North", 30, Ok, "E"))</c> は <c>[E] Wall-North を直す (30)</c>、
+        /// 波の途中なら <c>Wall-North を直す (30): 波の間だけ</c>
+        /// </example>
+        public static LocalizedText Prompt(HordeFortificationOffer offer)
+        {
+            var body = new LocalizedText("mode.horde.prompt", Word(offer.StructureName), ActionName(offer.Action), offer.Cost);
+            switch (offer.Verdict)
+            {
+                case HordePurchaseVerdict.Ok:
+                    return string.IsNullOrWhiteSpace(offer.KeyLabel) ? body : new LocalizedText("mode.horde.promptKey", offer.KeyLabel.Trim(), body);
+                case HordePurchaseVerdict.WaveInProgress:
+                    return new LocalizedText("mode.horde.promptBetweenWaves", body);
+                case HordePurchaseVerdict.NotEnoughCurrency:
+                    return new LocalizedText("mode.horde.promptNotEnoughCurrency", body);
+                default:
+                    return body;
+            }
+        }
+
+        public LocalizedText Time(ModeStatus status)
+        {
+            return status.Detail is HordeStatus detail
+                ? ModeStatusFormat.Clock(detail.Horde.Session.ElapsedSeconds)
+                : ModeStatusFormat.Remaining(status);
+        }
+
+        public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status) => ModeStatusFormat.Scores(status);
+
+        public void AppendLines(ModeStatus status, List<LocalizedText> lines)
+        {
+            ModeStatusFormat.AppendRespawn(status, lines);
+            if (!(status.Detail is HordeStatus detail))
+            {
+                return;
+            }
+
+            var horde = detail.Horde;
+            var schedule = horde.Schedule;
+            lines.Add(Wave(schedule.WaveNumber, schedule.WaveCount));
+            if (schedule.Phase == WavePhase.Fighting)
+            {
+                lines.Add(RemainingEnemies(schedule.RemainingEnemies));
+            }
+            else if (schedule.Phase == WavePhase.Resting)
+            {
+                lines.Add(NextWave(schedule.RestRemaining));
+            }
+
+            lines.Add(Currency(horde.Currency));
+
+            var session = horde.Session;
+            if (session.State == GameModeState.Ended)
+            {
+                lines.Add(horde.IsVictory ? Victory : Defeat);
+                return;
+            }
+
+            if (detail.LocalPlayerId.HasValue && session.IsAwaitingRespawn(detail.LocalPlayerId.Value) && !horde.IsBetweenWaves)
+            {
+                lines.Add(ReturnsAfterWave);
+                return;
+            }
+
+            if (detail.Offer.HasValue)
+            {
+                lines.Add(Prompt(detail.Offer.Value));
+            }
+        }
+
+        public LocalizedText Result(ModeStatus status) => ModeStatusFormat.Result(status);
+
+        // 空白を含む名前はログと同じく詰めて出す (HUD とログで同じ防衛物が同じ名前に見えるように)
+        private static string Word(string value) => string.IsNullOrEmpty(value) ? "-" : value.Replace(' ', '_');
+
+        // SubsystemRegistration は BeforeSceneLoad より先に走るので、ゲームが BeforeSceneLoad で登録した書式役がこれを置き換えられる
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void RegisterDefault()
+        {
+            ModeHudFormatters.Register<HordeStatus>(new HordeHudFormatter());
+        }
+    }
+}

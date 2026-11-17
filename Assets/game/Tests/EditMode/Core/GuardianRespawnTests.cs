@@ -12,7 +12,6 @@ namespace Fps.Core.Tests
         private static readonly int[] _three = { 3 };
         private static readonly string[] _chosenZeroAndOne = { "Side 0:0", "Side 1:1" };
         private static readonly string[] _fellBravoOne = { "Side 1:1" };
-        private static readonly string[] _leaderLinesOwnBravo = { "BRAVO リーダー 撃破 (復活不可)", "ALPHA リーダー 生存" };
 
         [Test]
         public void StartingTheMatchPicksOneLeaderPerTeam()
@@ -244,23 +243,8 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheHudListsTheOwnLeaderFirst()
+        public void TheLeaderLogsNameTheSideAndPlayer()
         {
-            var session = Playing(out var leaders);
-            session.ReportKill(0, 1);
-
-            var ownBravo = GuardianText.Leaders(leaders, Side.Bravo);
-            var resolved = new string[ownBravo.Count];
-            for (var i = 0; i < ownBravo.Count; i++)
-            {
-                resolved[i] = GameText.Resolve(ownBravo[i]);
-            }
-
-            Assert.That(resolved, Is.EqualTo(_leaderLinesOwnBravo));
-            Assert.That(ownBravo[0], Is.EqualTo(new LocalizedText("mode.guardian.leader", ModeHudText.SideName(Side.Bravo), GuardianText.Fallen)));
-            Assert.That(GameText.Resolve(GuardianText.Leaders(leaders, null)[0]), Is.EqualTo("ALPHA リーダー 生存"));
-            Assert.That(GameText.Resolve(GuardianText.YouAreLeader), Is.EqualTo("あなたがリーダー"));
-            Assert.That(GameText.Resolve(GuardianText.NoRespawnLeaderDown), Is.EqualTo("リーダーが倒れたため復活なし"));
             Assert.That(GuardianText.LeaderChosenLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader side=1 player=4"));
             Assert.That(GuardianText.LeaderFellLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader-down side=1 player=4 respawn=off"));
         }

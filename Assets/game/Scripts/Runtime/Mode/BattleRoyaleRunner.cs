@@ -21,8 +21,7 @@ namespace Fps.Runtime
     /// ダウンしただけでは落とさない (起こされたら持ったまま戦うので)。DropOnDeath が無い参加者には始めたときに付ける。</item>
     /// <item>bot には <see cref="BotPlanIntervalSeconds"/> ごとに <see cref="BattleRoyaleBotPlanner"/> で用事 (エリアの中へ移る・味方を起こす・拾える物を取る) を決めて渡す
     /// (<see cref="EnemyAgent.SetErrand"/>)。用事が変わるたびに <c>[Mode] errand</c> のログを出す。</item>
-    /// <item>HUD の得点の欄に分隊ごとの残り人数 (脱落した分隊は順位)、その下に残り分隊の数・自分の順位・次の縮小まで・自分の分隊の様子を出す。
-    /// 時間は制限時間があれば残り、無ければ経過を出す。</item>
+    /// <item>HUD に出す分隊ごとの残り人数と順位・エリアの様子・自分が起こしている相手・武器を持っているかは <see cref="BattleRoyaleStatus"/> にして渡す。</item>
     /// <item>分隊が脱落するたびに <c>[Mode] eliminated</c>、終わったら <c>[Mode] ended</c> と全分隊の順位 <c>[Mode] placements</c> のログ (<see cref="BattleRoyaleLog"/>) を出す。</item>
     /// <item>ダウン・ルールはシーンの <see cref="GameBootstrap"/> のルールから読む。ダウンを使わないルールでも、このモードはダウンを使う。</item>
     /// <item><see cref="StartFrom"/> が <see cref="BattleRoyaleStart.Parachute"/> なら、始めたときにプレイヤーを上空に出してパラシュートで降ろす (<c>[Mode] drop</c>)。既定は地面から。</item>
@@ -435,33 +434,22 @@ namespace Fps.Runtime
             return true;
         }
 
-        protected override LocalizedText HudTime()
+        protected override object HudDetail
         {
-            var mode = _battleRoyale.Mode;
-            return float.IsPositiveInfinity(mode.TimeLimitSeconds)
-                ? LocalizedText.Literal(HudFormat.Time((float)mode.ElapsedSeconds))
-                : base.HudTime();
-        }
+            get
+            {
+                if (_battleRoyale == null)
+                {
+                    return null;
+                }
 
-        protected override IReadOnlyList<ModeHudScoreLine> HudScores(Side? ownSide)
-        {
-            return BattleRoyaleHudText.Squads(_battleRoyale, ownSide);
-        }
-
-        protected override LocalizedText HudResult()
-        {
-            return BattleRoyaleHudText.Result(_battleRoyale);
-        }
-
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            var local = LocalPlayer;
-            var localId = local != null ? IdOf(local) : -1;
-            var controller = local != null ? local.GetComponentInChildren<WeaponController>(true) : null;
-            var unarmed = controller != null && controller.IsInitialized && controller.IsUnarmed;
-            var zoneLine = _runningZone != null ? _runningZone.HudLine : default;
-            lines.AddRange(BattleRoyaleHudText.Lines(
-                _battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zoneLine, unarmed));
+                var local = LocalPlayer;
+                var localId = IdOf(local);
+                var controller = local != null ? local.GetComponentInChildren<WeaponController>(true) : null;
+                var unarmed = controller != null && controller.IsInitialized && controller.IsUnarmed;
+                var zone = _runningZone != null && _runningZone.IsRunning ? _runningZone.State : (ZoneState?)null;
+                return new BattleRoyaleStatus(_battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zone, unarmed);
+            }
         }
 
         // 順位を付け終えてから終えたいので、ModeSession の終わりではなく BattleRoyaleSession.Ended で EndMatch を呼ぶ。

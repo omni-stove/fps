@@ -1,11 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fps.Core;
+using Fps.Runtime;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
-namespace Fps.Core.Tests
+namespace Fps.Tests.EditMode
 {
-    // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
+    /// <summary>
+    /// エクスキューションの HUD の文 (<see cref="ExecutionHudText"/>) と、<see cref="ExecutionStatus"/> をそれで文にする書式役 (<see cref="ExecutionHudFormatter"/>) を確かめる。
+    /// </summary>
     public sealed class ExecutionHudTextTests
     {
         private const int _alphaOne = 0;
@@ -30,6 +37,25 @@ namespace Fps.Core.Tests
         {
             "ラウンド 2 (2 本先取)", "前のラウンド: ALPHA の勝ち", "開始まで 3 秒", "ALPHA 残り 1", "BRAVO 残り 2",
         };
+
+        private GameObject _owner;
+
+        [SetUp]
+        public void SetUp()
+        {
+            GameSignals.ResetAll();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (_owner != null)
+            {
+                Object.DestroyImmediate(_owner);
+            }
+
+            GameSignals.ResetAll();
+        }
 
         [Test]
         public void TheSmallTextsReadNaturally()
@@ -155,28 +181,81 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheLogLinesNameThePlayers()
+        public void TheFormatterIsRegisteredForTheExecutionStatus()
         {
-            var execution = Create();
-            execution.Start();
-            execution.Tick(3f);
-            WinRoundForAlpha(execution);
+            var status = Status(Create(), Side.Alpha, _alphaOne, null);
 
-            Assert.That(ExecutionLog.Downed(2, 0), Is.EqualTo("[Mode] downed player=2 by=0"));
-            Assert.That(ExecutionLog.Downed(2, null), Is.EqualTo("[Mode] downed player=2 by=-"));
-            Assert.That(ExecutionLog.Revived(3, 2), Is.EqualTo("[Mode] revived player=2 by=3"));
-            Assert.That(ExecutionLog.Executed(0, 2), Is.EqualTo("[Mode] executed victim=2 by=0"));
-            Assert.That(ExecutionLog.BledOut(2, null), Is.EqualTo("[Mode] bledout player=2 credit=-"));
-            Assert.That(ExecutionLog.Preparing(2), Is.EqualTo("[Mode] round=2 preparing"));
-            Assert.That(ExecutionLog.Live(2), Is.EqualTo("[Mode] round=2 live"));
-            Assert.That(ExecutionLog.RoundEnded(execution.Round, Side.Alpha), Is.EqualTo("[Mode] round=2 ended winner=0 wins=0:1,1:0"));
-            Assert.That(ExecutionLog.RoundEnded(execution.Round, null), Is.EqualTo("[Mode] round=2 ended winner=draw wins=0:1,1:0"));
-            Assert.Throws<ArgumentNullException>(() => ExecutionLog.RoundEnded(null, null));
+            Assert.That(ModeHudFormatters.For(status), Is.InstanceOf<ExecutionHudFormatter>());
+        }
+
+        [Test]
+        public void TheFormatterReadsTheSessionTheLocalPlayerAndTheInteractTarget()
+        {
+            var execution = ExecutingAtFiftySeconds();
+            var status = Status(execution, Side.Alpha, _alphaOne, _bravoOne);
+            var formatter = new ExecutionHudFormatter();
+
+            Assert.That(formatter.Time(status), Is.EqualTo(LocalizedText.Literal("00:50")));
+            var scores = formatter.Scores(status);
+            Assert.That(scores.Select(score => GameText.Resolve(score.Text)).ToArray(), Is.EqualTo(new[] { "ALPHA 0", "BRAVO 0" }));
+            Assert.That(scores[0].IsOwn, Is.True);
+            var lines = new List<LocalizedText>();
+            formatter.AppendLines(status, lines);
+            Assert.That(Resolved(lines), Is.EqualTo(_expectedExecuting));
+            Assert.That(formatter.Result(status).IsEmpty, Is.True);
+        }
+
+        [Test]
+        public void TheModeHudShowsTheExecutionStatus()
+        {
+            var execution = ExecutingAtFiftySeconds();
+            _owner = new GameObject(nameof(TheModeHudShowsTheExecutionStatus));
+            var view = _owner.AddComponent<ModeHudView>();
+            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
+
+            view.Show(Status(execution, Side.Alpha, _alphaOne, _bravoOne));
+
+            Assert.That(view.TimeText, Is.EqualTo("00:50"));
+            Assert.That(view.ScoreTexts, Is.EqualTo(new[] { "ALPHA 0", "BRAVO 0" }));
+            Assert.That(view.Lines, Is.EqualTo(_expectedExecuting));
+            Assert.That(view.ResultText, Is.Empty);
+        }
+
+        [Test]
+        public void TheFormatterRejectsAnotherDetail()
+        {
+            var formatter = new ExecutionHudFormatter();
+            var other = new ModeStatus(null, null, null, null, false, null, new object(), default, null, null, default);
+
+            Assert.Throws<ArgumentException>(() => formatter.Time(other));
+            Assert.Throws<ArgumentException>(() => formatter.Scores(other));
+            Assert.Throws<ArgumentException>(() => formatter.AppendLines(other, new List<LocalizedText>()));
+            Assert.Throws<ArgumentException>(() => formatter.Result(other));
+            Assert.Throws<ArgumentNullException>(() => formatter.Time(null));
+            Assert.Throws<ArgumentNullException>(() => formatter.AppendLines(Status(Create(), null, null, null), null));
         }
 
         private static string[] Resolved(IReadOnlyList<LocalizedText> lines)
         {
             return lines.Select(GameText.Resolve).ToArray();
+        }
+
+        private static ModeStatus Status(ExecutionSession execution, Side? ownSide, int? localPlayerId, int? interactTargetId)
+        {
+            return new ModeStatus(
+                null, null, ownSide, null, false, null, new ExecutionStatus(execution, localPlayerId, interactTargetId), default, null, null, default);
+        }
+
+        /// <summary>ラウンド 1 の残り 50 秒で、ALPHA の 1 人がダウンした BRAVO の 1 人にとどめを 1 秒ぶん刺している。</summary>
+        private static ExecutionSession ExecutingAtFiftySeconds()
+        {
+            var execution = Create();
+            execution.Start();
+            execution.Tick(3f);
+            execution.Tick(10f);
+            execution.ReportLethal(_bravoOne, _alphaOne);
+            execution.Interact(_alphaOne, _bravoOne, 1f);
+            return execution;
         }
 
         private static ExecutionSession Create()

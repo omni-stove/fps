@@ -49,7 +49,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Scenes = null;
             MenuNavigator.SceneRoot = null;
             MenuNavigator.TakeTutorialRequest();
-            MenuNavigator.TakeNotice();
+            MenuNavigator.TakeReturnReason();
             CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
         }
@@ -186,6 +186,31 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void AVersionMismatchNamesBothVersionsAndAFailedStartShowsItsDetail()
+        {
+            var applied = AppliedControlSettings.Current;
+            AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.Japanese));
+            try
+            {
+                _screen.Bind(_root);
+
+                _screen.ShowReturnReason(MenuReturnReason.Disconnected(
+                    DisconnectNotice.Classify(DisconnectNotice.VersionMismatchReason("0.2.0"), false, "0.1.0"), 5));
+                Assert.That(_screen.Notice, Is.EqualTo("版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。"));
+
+                _screen.ShowReturnReason(MenuReturnReason.OnlineFailed(7, "[QuickMatch] no lobby was found"));
+                Assert.That(_screen.Notice, Is.EqualTo("[QuickMatch] no lobby was found"));
+
+                _screen.ShowReturnReason(null);
+                Assert.That(_screen.Notice, Is.Null);
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(applied);
+            }
+        }
+
+        [Test]
         public void ADisconnectReasonIsLookedUpByTheMenuAndFollowsTheLanguage()
         {
             var applied = AppliedControlSettings.Current;
@@ -194,7 +219,8 @@ namespace Fps.Tests.EditMode
             {
                 _screen.Bind(_root);
 
-                _screen.ShowNotice(DisconnectNotice.ServerStoppedMessage);
+                _screen.ShowReturnReason(
+                    MenuReturnReason.Disconnected(DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, true, "0.1.0"), 0));
                 Assert.That(_screen.Notice, Is.EqualTo("サーバーが止まりました。"));
 
                 AppliedControlSettings.Apply(ControlSettings.Default.WithLanguage(GameLanguage.English));

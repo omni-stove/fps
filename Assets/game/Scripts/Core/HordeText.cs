@@ -1,84 +1,12 @@
-using System;
 using System.Globalization;
 
 namespace Fps.Core
 {
     /// <summary>
-    /// ホード (<see cref="Horde"/>) の HUD の行 (表のキー <c>mode.horde.*</c> の <see cref="LocalizedText"/>) と <c>[Mode]</c> のログ。
+    /// ホード (<see cref="Horde"/>) の <c>[Mode]</c> のログ。
     /// </summary>
     public static class HordeText
     {
-        /// <summary>自分が倒れていて、戦っている波を味方が越えれば戻れるときに出す行。</summary>
-        public static LocalizedText ReturnsAfterWave => new LocalizedText("mode.horde.returnsAfterWave");
-
-        public static LocalizedText Victory => new LocalizedText("mode.horde.victory");
-        public static LocalizedText Defeat => new LocalizedText("mode.horde.defeat");
-
-        /// <example><c>Wave(2, 5)</c> は <c>WAVE 2/5</c>、終わりが無ければ <c>WAVE 2</c>、始まる前は <c>WAVE -/5</c></example>
-        public static LocalizedText Wave(int number, int? waveCount)
-        {
-            var current = number > 0 ? Number(number) : "-";
-            return waveCount.HasValue
-                ? new LocalizedText("mode.horde.wave", current, waveCount.Value)
-                : new LocalizedText("mode.horde.waveEndless", current);
-        }
-
-        /// <example><c>RemainingEnemies(4)</c> は <c>残りの敵 4</c></example>
-        public static LocalizedText RemainingEnemies(int remaining)
-        {
-            return new LocalizedText("mode.horde.remainingEnemies", Math.Max(0, remaining));
-        }
-
-        /// <summary>秒は <see cref="HudFormat.DisplayedSeconds"/> と同じく切り上げる。</summary>
-        /// <example><c>NextWave(4.2f)</c> は <c>次の波まで 5 秒</c></example>
-        public static LocalizedText NextWave(float restSeconds)
-        {
-            return new LocalizedText("mode.horde.nextWave", HudFormat.DisplayedSeconds(restSeconds));
-        }
-
-        /// <example><c>Currency(120)</c> は <c>通貨 120</c></example>
-        public static LocalizedText Currency(int currency)
-        {
-            return new LocalizedText("mode.horde.currency", currency);
-        }
-
-        /// <summary>防衛物にできることの名前。</summary>
-        public static LocalizedText ActionName(HordeFortificationAction action)
-        {
-            switch (action)
-            {
-                case HordeFortificationAction.Build:
-                    return new LocalizedText("mode.horde.build");
-                case HordeFortificationAction.Repair:
-                    return new LocalizedText("mode.horde.repair");
-                default:
-                    return LocalizedText.Literal("-");
-            }
-        }
-
-        /// <summary>
-        /// 近くの防衛物の案内。払えるときはキー (空なら省く) と値段を、払えないときは理由を添える。
-        /// </summary>
-        /// <example>
-        /// <c>Prompt("E", Repair, "Wall-North", 30, Ok)</c> は <c>[E] Wall-North を直す (30)</c>、
-        /// 波の途中なら <c>Wall-North を直す (30): 波の間だけ</c>
-        /// </example>
-        public static LocalizedText Prompt(string keyLabel, HordeFortificationAction action, string structureName, int cost, HordePurchaseVerdict verdict)
-        {
-            var body = new LocalizedText("mode.horde.prompt", Word(structureName), ActionName(action), cost);
-            switch (verdict)
-            {
-                case HordePurchaseVerdict.Ok:
-                    return string.IsNullOrWhiteSpace(keyLabel) ? body : new LocalizedText("mode.horde.promptKey", keyLabel.Trim(), body);
-                case HordePurchaseVerdict.WaveInProgress:
-                    return new LocalizedText("mode.horde.promptBetweenWaves", body);
-                case HordePurchaseVerdict.NotEnoughCurrency:
-                    return new LocalizedText("mode.horde.promptNotEnoughCurrency", body);
-                default:
-                    return body;
-            }
-        }
-
         /// <example><c>[Mode] wave start number=2/5 enemies=6</c></example>
         public static string WaveStartedLog(int number, int? waveCount, int enemyCount)
         {

@@ -184,11 +184,8 @@ namespace Fps.Runtime
             return 0;
         }
 
-        public virtual bool TryGetDetonateHint(int placedCount, out LocalizedText hint)
-        {
-            hint = default;
-            return false;
-        }
+        // 起爆の案内のように、置いた物を名前で呼ぶ UI が引く表のキー。空なら Id で呼ぶ。
+        public virtual string DisplayNameKey => string.Empty;
 
         // 足元が原点、前が +Z で、spec の大きさに収める。置けるかの判定がこの大きさで調べるため。
         protected abstract GameObject CreatePlaceholder(DeploySpec spec);

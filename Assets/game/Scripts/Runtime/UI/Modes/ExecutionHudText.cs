@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Fps.Core;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) の HUD に出す文。得点の欄には両チームが取ったラウンドの数を、
     /// その下にラウンドの番号・待ちの残り・両チームの残り人数・自分のダウンやインタラクトの進みを出す。
     /// 表のキー <c>mode.execution.*</c> (陣営名や残り人数などの共通の文は <c>hud.*</c>) と引数の <see cref="LocalizedText"/> で返し、
-    /// 受け取った側が今の言語で文にする。
+    /// 受け取った側が今の言語で文にする。<see cref="ExecutionHudFormatter"/> が <see cref="ExecutionStatus"/> を読んでこれを呼ぶ。
     /// </summary>
     public static class ExecutionHudText
     {

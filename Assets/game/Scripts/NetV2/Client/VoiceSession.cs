@@ -10,8 +10,8 @@ namespace Shooter.NetV2
     /// </summary>
     public sealed class VoiceSession : IVoiceSession
     {
-        public const float DefaultVolume = 1f;
-        public const float MaxVolume = 2f;
+        public const float DefaultVolume = Shooter.Core.VoiceSettings.DefaultVolume;
+        public const float MaxVolume = Shooter.Core.VoiceSettings.MaxVolume;
 
         private readonly IVoiceRtc _rtc;
         private readonly Action<string> _log;

@@ -33,6 +33,13 @@ namespace Shooter.Core
         public const string PointsPerSecondItem = "pointsPerSecond";
         public const string MaxCapturersItem = "maxCapturers";
         public const string MaxPlayersItem = "maxPlayers";
+        public const string MapPoolItem = "mapPool";
+        public const string MapVoteSecondsItem = "mapVoteSeconds";
+        public const string MaxTeamSizeDifferenceItem = "maxTeamSizeDifference";
+        public const string PrivateMatchItem = "privateMatch";
+        public const string JoinCodeItem = "joinCode";
+        public const string ChatIntervalSecondsItem = "chatIntervalSeconds";
+        public const string MaxChatLengthItem = "maxChatLength";
 
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
@@ -118,7 +125,8 @@ namespace Shooter.Core
         {
             ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, RestartDelaySecondsItem, MaxHealthItem, MinEnemySpawnDistanceItem,
             ReconnectGraceSecondsItem, MaxShotOriginOffsetItem, DominationScoreLimitItem, CaptureSecondsItem, PointsPerSecondItem,
-            MaxCapturersItem, MaxPlayersItem,
+            MaxCapturersItem, MaxPlayersItem, MapPoolItem, MapVoteSecondsItem, MaxTeamSizeDifferenceItem, PrivateMatchItem, JoinCodeItem,
+            ChatIntervalSecondsItem, MaxChatLengthItem,
         };
 
         public NetMatchFile(
@@ -252,6 +260,13 @@ namespace Shooter.Core
             writer.Float(PointsPerSecondItem, s.PointsPerSecond);
             writer.Int(MaxCapturersItem, s.MaxCapturers);
             writer.Int(MaxPlayersItem, s.MaxPlayers);
+            writer.StringArray(MapPoolItem, s.MapPool);
+            writer.Float(MapVoteSecondsItem, s.MapVoteSeconds);
+            writer.Int(MaxTeamSizeDifferenceItem, s.MaxTeamSizeDifference);
+            writer.Bool(PrivateMatchItem, s.PrivateMatch);
+            writer.String(JoinCodeItem, s.JoinCode ?? string.Empty);
+            writer.Float(ChatIntervalSecondsItem, s.ChatIntervalSeconds);
+            writer.Int(MaxChatLengthItem, s.MaxChatLength);
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -387,13 +402,32 @@ namespace Shooter.Core
                     match.ReadFloat(CaptureSecondsItem, d.CaptureSeconds),
                     match.ReadFloat(PointsPerSecondItem, d.PointsPerSecond),
                     match.ReadInt(MaxCapturersItem, d.MaxCapturers),
-                    match.ReadInt(MaxPlayersItem, d.MaxPlayers));
+                    match.ReadInt(MaxPlayersItem, d.MaxPlayers),
+                    ReadMapPool(match),
+                    match.ReadFloat(MapVoteSecondsItem, d.MapVoteSeconds),
+                    match.ReadInt(MaxTeamSizeDifferenceItem, d.MaxTeamSizeDifference),
+                    match.ReadBool(PrivateMatchItem, d.PrivateMatch),
+                    match.ReadString(JoinCodeItem, d.JoinCode),
+                    match.ReadFloat(ChatIntervalSecondsItem, d.ChatIntervalSeconds),
+                    match.ReadInt(MaxChatLengthItem, d.MaxChatLength));
             }
             catch (ArgumentException e)
             {
                 // NetMatchSettings の引数名は項目名と同じ
                 throw match.Rejected(e.ParamName == null ? match.Path : match.ItemPath(e.ParamName), e.Message, e);
             }
+        }
+
+        private static List<string> ReadMapPool(ServerDataJson.Fields match)
+        {
+            var nodes = match.Array(MapPoolItem);
+            var mapIds = new List<string>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                mapIds.Add(match.ToText(match.ElementPath(MapPoolItem, i), nodes[i]));
+            }
+
+            return mapIds;
         }
 
         private static NetMotorSettings ReadMotor(ServerDataJson.Fields fields)

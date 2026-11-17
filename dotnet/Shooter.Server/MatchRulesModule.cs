@@ -179,8 +179,32 @@ namespace Shooter.Server
                 case LoadoutRequestMessage loadout:
                     ServerChooseLoadout(player, loadout.WeaponIds);
                     break;
+                case ChatRequestMessage chat:
+                    OnChatRequest(player, chat);
+                    break;
+                case MapVoteRequestMessage vote:
+                    OnMapVoteRequest(player, vote);
+                    break;
+                case SpectateRequestMessage spectate:
+                    OnSpectateRequest(player, spectate);
+                    break;
             }
         }
+
+        // 機能ごとの中身を MatchRulesModule.<機能>.cs に分けて書けるよう、イベントにせず partial method にする (書かれていなければ呼び出しごと消える)
+        partial void OnChatRequest(ServerPlayer player, ChatRequestMessage request);
+
+        partial void OnMapVoteRequest(ServerPlayer player, MapVoteRequestMessage request);
+
+        partial void OnSpectateRequest(ServerPlayer player, SpectateRequestMessage request);
+
+        partial void OnPlayerJoined(ServerPlayer player);
+
+        partial void OnPlayerLeft(ServerPlayer player);
+
+        partial void OnMatchEnded(Team? winner);
+
+        partial void OnNextMatchStarting();
 
         public void Stop()
         {
@@ -339,6 +363,7 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
+            OnPlayerJoined(player);
         }
 
         private void HandlePlayerLeft(ServerPlayer player)
@@ -350,6 +375,7 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {
                 _log.WriteLine(MatchLog.Held(playerId, _session.ReconnectGraceSeconds));
@@ -360,6 +386,7 @@ namespace Shooter.Server
 
         private void HandleMatchRestarted()
         {
+            OnNextMatchStarting();
             if (_session.State == GameModeState.Ended)
             {
                 _session.Restart();
@@ -404,6 +431,7 @@ namespace Shooter.Server
             ObjectiveMatchEnded();
             _match.End(winner);
             _reviveHolds.Clear();
+            OnMatchEnded(winner);
         }
 
         private void HandleHeldExpired(HeldPlayer held)

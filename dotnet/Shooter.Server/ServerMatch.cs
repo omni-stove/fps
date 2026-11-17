@@ -10,7 +10,7 @@ namespace Shooter.Server
     /// 試合の枠だけを持つ。点数・勝ち負け・時間はルールのモジュールが決めて <see cref="SetScores"/> と <see cref="End"/> で知らせる。
     /// 枠と決め方を分けるのは、ルールのモジュールを差し替えても出入り・チーム分け・JSON のイベントが変わらないようにするため。
     /// </summary>
-    internal sealed class ServerMatch
+    internal sealed partial class ServerMatch
     {
         public const float DefaultRestartDelaySeconds = 10f;
 
@@ -343,6 +343,9 @@ namespace Shooter.Server
 
         private void Restart()
         {
+            // 終わった試合の Id で記録できるよう、Id を作り直す前に替える
+            ChangeMapForNextMatch();
+            BalanceTeamsForNextMatch();
             State = GameModeState.Waiting;
             _restartRemaining = 0f;
             AlphaScore = 0;
@@ -352,6 +355,11 @@ namespace Shooter.Server
             Restarted?.Invoke();
             TryStart();
         }
+
+        // 中身を ServerMatch.Maps.cs・ServerMatch.Balance.cs に分けて書けるよう partial method にする (書かれていなければ何もしない)
+        partial void ChangeMapForNextMatch();
+
+        partial void BalanceTeamsForNextMatch();
 
         private void TryStart()
         {

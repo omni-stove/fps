@@ -5,30 +5,19 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 武器の一覧をアセットとして持つ。<see cref="ToCatalog"/> で Core の <see cref="WeaponCatalog"/> に変換する。
-    /// 空・null 要素・Id の重複は、どのアセットかを添えて <see cref="WeaponDefinitionException"/> にする。
-    /// </summary>
     [CreateAssetMenu(fileName = "WeaponCatalog", menuName = "Shooter/Weapon Catalog")]
     public sealed class WeaponCatalogAsset : ScriptableObject
     {
         [SerializeField, Tooltip("武器の定義。並び順がカタログの順になる")]
         private List<WeaponDefinition> _weapons = new List<WeaponDefinition>();
 
-        /// <summary>定義順の武器。中身を書き換えるときは <see cref="SetWeapons"/> を使う。</summary>
         public IReadOnlyList<WeaponDefinition> Weapons => _weapons ??= new List<WeaponDefinition>();
 
-        /// <summary>武器をまとめて差し替える。null は空にする。渡した列は複製して持つ (定義アセットそのものは共有する)。</summary>
         public void SetWeapons(IEnumerable<WeaponDefinition> weapons)
         {
             _weapons = weapons == null ? new List<WeaponDefinition>() : new List<WeaponDefinition>(weapons);
         }
 
-        /// <summary>
-        /// Id が id の武器の定義を探す。無い・null なら false と null。Id は <see cref="WeaponSpec.Id"/> (前後の空白を除いた値) と
-        /// 大文字小文字を区別して比べる。
-        /// </summary>
-        /// <exception cref="WeaponDefinitionException">一覧か、そのどれかの定義が不正なとき (見つかるかどうかに関わらず)。</exception>
         public bool TryFind(string id, out WeaponDefinition definition)
         {
             // 不正な一覧から一部だけ引けてしまわないよう、先に全体を検証する。
@@ -52,8 +41,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>定義を変換して <see cref="WeaponCatalog"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="WeaponDefinitionException">一覧か、そのどれかの定義が不正なとき。</exception>
         public WeaponCatalog ToCatalog()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed weapon catalog)" : name;

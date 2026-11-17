@@ -21,8 +21,7 @@ namespace Shooter.Runtime
 
         public bool IsOn => Receiver != null && Receiver.Rule == Suppression.On;
 
-        // 差し替えの口。Configure で On にしたときに空なら既定の SuppressionVignette を入れるので、ゲームはその前後どちらで入れてもよい。
-        // 外れる演出には 0 を渡し、画面に残らないようにする。
+        // 外れる演出に 0 を渡すのは、画面に残さないため。
         public ISuppressionPresenter Presenter
         {
             get => IsAlive(_presenter) ? _presenter : null;
@@ -39,7 +38,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public void Configure(Suppression rule, SuppressionSpec spec)
         {
             if (spec == null)

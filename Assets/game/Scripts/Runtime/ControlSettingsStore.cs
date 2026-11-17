@@ -4,17 +4,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="ControlSettings"/> を <see cref="PlayerPrefs"/> の 1 つのキーに JSON の文字列 (<see cref="ControlSettings.ToJson"/>) で読み書きする。
-    /// 読めなかった所は初期値 (範囲の外の数値は範囲に収めた値) に戻し、理由を <c>[Input]</c> 付きの警告で出す。
-    /// 古い形式も警告なしに読み、次に保存したときに今の形式で書き直す。
-    /// </summary>
     public sealed class ControlSettingsStore
     {
-        /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
         public const string DefaultKey = "Shooter.ControlSettings";
 
-        /// <param name="key">PlayerPrefs のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
+        // キーを渡せるのは、テストで本物の設定を壊さないよう別のキーを使うため。
         public ControlSettingsStore(string key = DefaultKey)
         {
             if (key == null)
@@ -30,16 +24,10 @@ namespace Shooter.Runtime
             Key = key;
         }
 
-        /// <summary>読み書きする PlayerPrefs のキー。</summary>
         public string Key { get; }
 
-        /// <summary>まだ保存していないときに <see cref="Load"/> が返す設定 (<see cref="ControlSettings.Default"/>)。</summary>
         public ControlSettings Defaults => ControlSettings.Default;
 
-        /// <summary>
-        /// 保存した設定を読む。まだ保存していなければ警告を出さずに <see cref="Defaults"/> を返す。
-        /// 壊れた値や欠けた値はその所だけ初期値にし、理由ごとに警告を出す。
-        /// </summary>
         public ControlSettings Load()
         {
             if (!PlayerPrefs.HasKey(Key))
@@ -58,7 +46,6 @@ namespace Shooter.Runtime
             return settings;
         }
 
-        /// <summary>settings を保存し、すぐディスクに書き出す。</summary>
         public void Save(ControlSettings settings)
         {
             if (settings == null)
@@ -70,7 +57,6 @@ namespace Shooter.Runtime
             PlayerPrefs.Save();
         }
 
-        /// <summary>保存した設定を消す。次の <see cref="Load"/> は初期値を返す。</summary>
         public void Delete()
         {
             PlayerPrefs.DeleteKey(Key);

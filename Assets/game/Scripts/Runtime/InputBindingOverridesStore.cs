@@ -4,17 +4,11 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Input Actions の割り当ての上書きを、<see cref="InputActionRebindingExtensions.SaveBindingOverridesAsJson(IInputActionCollection2)"/> の JSON で
-    /// <see cref="PlayerPrefs"/> の 1 つのキーに読み書きする。上書きが 1 つも無ければキーを消す。
-    /// 読めなかったときは上書きをすべて外し (既定の割り当てで遊べるように)、理由を <c>[Input]</c> 付きの警告で出す。
-    /// </summary>
     public sealed class InputBindingOverridesStore
     {
-        /// <summary>ゲームが使う PlayerPrefs のキー。</summary>
         public const string DefaultKey = "Shooter.InputBindingOverrides";
 
-        /// <param name="key">PlayerPrefs のキー。テストでは本物の設定を壊さないよう別のキーを渡す。</param>
+        // キーを渡せるのは、テストで本物の設定を壊さないよう別のキーを使うため。
         public InputBindingOverridesStore(string key = DefaultKey)
         {
             if (key == null)
@@ -30,16 +24,10 @@ namespace Shooter.Runtime
             Key = key;
         }
 
-        /// <summary>読み書きする PlayerPrefs のキー。</summary>
         public string Key { get; }
 
-        /// <summary>保存した上書きがあるか。</summary>
         public bool HasSaved => PlayerPrefs.HasKey(Key);
 
-        /// <summary>
-        /// 保存した上書きを actions に入れる。前から入っていた上書きは外す。まだ保存していなければ警告を出さずに上書きを外すだけで false。
-        /// 壊れていれば警告を出して上書きを外し false。読めたら true。
-        /// </summary>
         public bool Load(InputActionAsset actions)
         {
             if (actions == null)
@@ -77,7 +65,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>actions の上書きを保存し、すぐディスクに書き出す。上書きが無ければキーを消す。</summary>
         public void Save(InputActionAsset actions)
         {
             if (actions == null)
@@ -95,7 +82,6 @@ namespace Shooter.Runtime
             PlayerPrefs.Save();
         }
 
-        /// <summary>保存した上書きを消す。次の <see cref="Load"/> は既定の割り当てに戻す。</summary>
         public void Delete()
         {
             PlayerPrefs.DeleteKey(Key);

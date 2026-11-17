@@ -4,14 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生役。倒した相手の倒す直前の数秒 (<see cref="KillCamClip"/>) を、
-    /// その時々の相手の目から肩越し (<see cref="DeathCamView.FrameAlly"/>) にカメラを置いて再生する。
-    /// 記録が無ければ再生せずに終わり、持ち主 (オフラインの <see cref="PlayerDeathCamera"/>・ネット対戦の NetDeathCamera) はすぐ倒した相手を映す (<see cref="DeathCamera.Killer"/>)。
-    /// 再生の速さは持ち主の設定 (<see cref="PlayerDeathCamera.KillCamSpeed"/>) を始めるときに受ける。
-    /// 再生している間は <see cref="GameSignals.KillCam"/> に今の再生 (<see cref="KillCamStatus"/>) を出し、終えたら消す。枠と文字は UI が決める。
-    /// 再生はカメラだけのもので、リスポーンまでの待ちは止めない。
-    /// </summary>
     public sealed class KillCamReplay
     {
         private readonly Component _owner;
@@ -22,32 +14,17 @@ namespace Shooter.Runtime
         private Transform _killerRoot;
         private float _speed = 1f;
 
-        /// <param name="owner">倒されて再生を見るプレイヤー。ログの名前に使う。</param>
-        /// <exception cref="ArgumentNullException">owner が null。</exception>
         public KillCamReplay(Component owner)
         {
             _owner = owner != null ? owner : throw new ArgumentNullException(nameof(owner));
         }
 
-        /// <summary>いま再生しているか。</summary>
         public bool IsPlaying => _playback != null && !_playback.IsFinished;
 
-        /// <summary>再生しているクリップの先頭からの位置 (秒)。再生していなければ 0。</summary>
         public float Elapsed => IsPlaying ? _playback.Elapsed : 0f;
 
-        /// <summary>再生の速さ。始めるときに受けた値。</summary>
         public float Speed => _speed;
 
-        /// <summary>
-        /// clip の再生を始め、カメラをクリップの先頭へ置く。clip が空なら再生せずに false (記録が無いログを出す)。
-        /// 再生中に呼ぶと前の再生を途中でやめてから始める。
-        /// </summary>
-        /// <param name="clip">倒した相手の倒す直前の数秒。null は空とみなす。</param>
-        /// <param name="killerName">倒した相手の名前。</param>
-        /// <param name="weaponId">倒した武器の Id。分からなければ空文字か null。</param>
-        /// <param name="killerRoot">倒した相手の本体。カメラを壁で縮める判定でその体を除く。無ければ null。</param>
-        /// <param name="view">借りているカメラ。</param>
-        /// <param name="speed">再生の速さ (1 で記録どおり)。<see cref="KillCamPlayback.IsValidSpeed"/> でなければ警告を出して 1 倍で再生する。</param>
         public bool Begin(KillCamClip clip, string killerName, string weaponId, Transform killerRoot, DeathCamView view, float speed)
         {
             Stop("restarted");
@@ -68,11 +45,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 再生を deltaSeconds 秒 (速さを掛ける前) 進めてカメラを置く。まだ再生中なら true。
-        /// この呼び出しで最後に着いたら、終わったログを出し false (呼び出し側はこのフレームから倒した相手を映す)。
-        /// 再生していなければ何もせず false。
-        /// </summary>
         public bool Advance(DeathCamView view, float deltaSeconds)
         {
             if (!IsPlaying)
@@ -94,7 +66,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>再生中なら途中でやめ、reason を添えたログを出す。再生していなければ何もしない。</summary>
         public void Stop(string reason)
         {
             if (!IsPlaying)

@@ -89,7 +89,7 @@ namespace Shooter.Runtime
             return base.CreateAbility();
         }
 
-        // 足元が原点で spec の大きさに収まる、胴 (カプセル) と頭 (球) の人の形。どちらも当たり判定を持ち、敵の視線と弾を受ける。
+        // 胴と頭のどちらにも当たり判定を持たせるのは、敵の視線と弾を受けるため。
         protected override GameObject CreatePlaceholder(DeploySpec spec)
         {
             var root = new GameObject(Id);

@@ -5,14 +5,10 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ヒットスキャン (Raycast) の共通処理。射撃と視線判定の両方で使い、プレイヤーの射撃と敵の射撃で
-    /// 同じダメージの流れ (Raycast → <see cref="Hitbox"/> → <see cref="DamageCalculator"/> → <see cref="Damageable"/>) を通す。
-    /// 撃った本人のコライダー (shooterRoot の子孫) とトリガーは無視する。
-    /// </summary>
+    // プレイヤーの射撃と敵の射撃で同じダメージの流れ (Raycast → Hitbox → DamageCalculator → Damageable) を通すよう、ここにまとめる。
     public static class Hitscan
     {
-        /// <summary>1 回の Raycast で調べる命中の上限。これを超える数のコライダーが一直線に並ぶと遠いものを取りこぼす。</summary>
+        // これを超える数のコライダーが一直線に並ぶと遠いものを取りこぼす。
         public const int MaxHits = ShotCast.MaxHits;
         private static readonly List<INearMissTarget> _nearMissTargets = new List<INearMissTarget>();
 
@@ -21,7 +17,6 @@ namespace Shooter.Runtime
 
         public static IReadOnlyList<INearMissTarget> NearMissTargets => _nearMissTargets;
 
-        /// <exception cref="ArgumentNullException">target が null。</exception>
         public static bool RegisterNearMissTarget(INearMissTarget target)
         {
             if (target == null)
@@ -38,7 +33,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <exception cref="ArgumentNullException">target が null。</exception>
         public static bool UnregisterNearMissTarget(INearMissTarget target)
         {
             if (target == null)
@@ -51,9 +45,6 @@ namespace Shooter.Runtime
 
         // Fire の中だけでなく公開するのは、弾を届ける IShotDelivery (プレイヤー・敵・タレットの射撃) からも同じ判定を通すため。
         // 弾が当たった相手 (struck が相手の子孫) はニアミスではなく被弾として扱うので数えない。
-        /// <param name="travelled">弾が進んだ距離 (当たったならそこまで、外れたなら射程)。</param>
-        /// <exception cref="ArgumentException">direction が 0。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">travelled が 0 以上の有限値でない。</exception>
         public static int ReportNearMisses(Vector3 origin, Vector3 direction, float travelled, Transform shooterRoot, Collider struck)
         {
             if (direction.sqrMagnitude < 1e-12f)
@@ -179,48 +170,12 @@ namespace Shooter.Runtime
             NearMissed = null;
         }
 
-        /// <summary>
-        /// origin から direction へ maxDistance まで Raycast し、shooterRoot の子孫とトリガーと、
-        /// shooterRoot の弾を通す置いた物 (<see cref="Deployable.LetsThrough(Collider, GameObject)"/>) を除いた最も近い命中を返す。
-        /// </summary>
-        /// <param name="origin">始点。</param>
-        /// <param name="direction">向き。長さは問わないが 0 ではないこと。</param>
-        /// <param name="maxDistance">距離。0 より大きい有限値。</param>
-        /// <param name="shooterRoot">無視するコライダーの根。null なら何も無視しない。</param>
-        /// <param name="hit">最も近い命中。</param>
         public static bool TryFirstHit(Vector3 origin, Vector3 direction, float maxDistance, Transform shooterRoot, out RaycastHit hit)
         {
             return ShotCast.TryFirst(origin, direction, maxDistance, Physics.DefaultRaycastLayers, shooterRoot, out hit);
         }
 
-        /// <summary>
-        /// 1 発撃つ。最初に当たったコライダーに <see cref="Hitbox"/> があれば <see cref="Hitbox.ApplyHit"/> でダメージを与え、
-        /// <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> をログに出す。
-        /// 壁など Hitbox の無いものに当たるか、持ち主がいないか既に死んでいれば、そこで止まりダメージは 0。
-        /// 構えた盾 (<see cref="BulletShield"/>) に当たったときも、そこで止まりダメージは 0 で、建造物への被害も出さない。
-        /// 置いた物 (<see cref="Deployable"/>) は、撃った者の弾を通すものなら素通りし、通さないものならそこで止まって耐久で受ける
-        /// (<see cref="Deployable.TryStopBullet"/>。結果の <see cref="HitscanResult.Damage"/> は 0)。
-        /// Hitbox の無いものに当たったときは <see cref="StructureDamage.Apply"/> に baseDamage と explosionRadius を渡す
-        /// (結果の <see cref="HitscanResult.Damage"/> には含めない)。
-        /// </summary>
-        /// <param name="origin">銃口 (目) の位置。</param>
-        /// <param name="direction">撃つ向き。0 ではないこと。</param>
-        /// <param name="range">射程。0 より大きい有限値。</param>
-        /// <param name="baseDamage">武器の基本ダメージ。0 以上。</param>
-        /// <param name="falloff">距離減衰の設定。</param>
-        /// <param name="shooterRoot">
-        /// 撃った本人。自分のコライダーには当たらない。null でなければ、その位置を撃った者の位置として
-        /// <see cref="Damageable.Damaged"/> に渡す。
-        /// </param>
-        /// <param name="explosionRadius">建造物への被害を広げる半径 (m)。0 以上の有限値。0 なら当たった物だけ。</param>
-        /// <param name="weaponId">
-        /// 撃った武器の Id。<see cref="CombatEvents.ShotFired"/> と、倒したときの <see cref="CombatEvents.Killed"/> に渡す。null なら空文字。
-        /// </param>
-        /// <remarks>
-        /// 値の検査を通ったら <see cref="CombatEvents.ShotFired"/> と、弾の線の近くにいた相手への <see cref="NearMissed"/>
-        /// (<see cref="ReportNearMisses"/>)、何かに当たったら <see cref="CombatEvents.Impact"/> を出す。
-        /// <see cref="CombatEvents.HitConfirmed"/> は出さない (撃った本人のクライアントで出すもので、ここを使う敵には要らない)。
-        /// </remarks>
+        // CombatEvents.HitConfirmed は撃った本人のクライアントで出すもので、ここを使う敵には要らないので出さない。
         public static HitscanResult Fire(
             Vector3 origin,
             Vector3 direction,
@@ -266,10 +221,6 @@ namespace Shooter.Runtime
             return Fire(request, new PlannedRound(origin.ToNumerics(), direction.ToNumerics(), 0));
         }
 
-        /// <summary>
-        /// request の届け方 (<see cref="ShotDeliveries"/>) で round を 1 本撃ち、<see cref="Fire(Vector3, Vector3, float, int, DamageFalloff, Transform, float, string)"/>
-        /// と同じ結果とログにする。生きている相手に当てたときだけ <c>[Combat] hit zone=.. dmg=.. id=.. hp=..</c> を出し、死んでいた相手へのダメージは 0 にする。
-        /// </summary>
         public static HitscanResult Fire(ShotRequest request, PlannedRound round)
         {
             var outcome = ShotDeliveries.Deliver(request, round);
@@ -289,14 +240,6 @@ namespace Shooter.Runtime
             return new HitscanResult(true, outcome.RaycastHit, outcome.Hitbox, outcome.Damage);
         }
 
-        /// <summary>
-        /// eye から target の狙う点 (<see cref="Damageable.AimPoint"/>) まで遮るものが無いか調べる。
-        /// 間に target 以外のコライダーがあれば false (見る側の弾を通す置いた物は数えない)。target が死んでいるか maxDistance より遠ければ false。
-        /// </summary>
-        /// <param name="eye">目の位置。</param>
-        /// <param name="target">見たい相手。null なら false。</param>
-        /// <param name="maxDistance">見える距離。0 より大きい有限値。</param>
-        /// <param name="viewerRoot">見る側。自分のコライダーは遮るものに数えない。</param>
         public static bool HasLineOfSight(Vector3 eye, Damageable target, float maxDistance, Transform viewerRoot)
         {
             if (!(maxDistance > 0f) || float.IsInfinity(maxDistance))
@@ -357,22 +300,16 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="Hitscan.Fire"/> の結果。</summary>
     public readonly struct HitscanResult
     {
-        /// <summary>何にも当たらなかった結果。</summary>
         public static HitscanResult Miss => default;
 
-        /// <summary>何かに当たったか (壁を含む)。</summary>
         public bool Hit { get; }
 
-        /// <summary>最初に当たった命中。<see cref="Hit"/> が false なら既定値。</summary>
         public RaycastHit RaycastHit { get; }
 
-        /// <summary>当たった部位。Hitbox の無いものに当たったか外れたなら null。</summary>
         public Hitbox Hitbox { get; }
 
-        /// <summary>与えたダメージ。</summary>
         public int Damage { get; }
 
         public HitscanResult(bool hit, RaycastHit raycastHit, Hitbox hitbox, int damage)

@@ -3,17 +3,10 @@ using UnityEngine.AI;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="EnemyAgent"/> のうち、NavMesh のリンク (はしご <see cref="Traversal.Ladder"/> が張るものなど) を渡る処理。
-    /// NavMeshAgent に任せるとリンクの端と端をまっすぐ結んで動き、はしごでは足場の角を突き抜けるので、自分で動かす
-    /// (<see cref="NavMeshAgent.autoTraverseOffMeshLink"/> を切る)。
-    /// はしごのリンクなら、はしごの下 (上の足場) まで歩き、<see cref="Traversal.Ladder.ClimbSpeed"/> で上り下りしてから、リンクの先へ歩く。
-    /// はしごでないリンクは、端から端へ歩きの速さでまっすぐ動く。渡っている間は判断を止め、撃たない。
-    /// はしごを渡り始めたら <c>[AI] id=.. ladder=.. climb=Up|Down</c>、渡り終えたら <c>climb=Done</c> をログに出す。
-    /// </summary>
+    // NavMeshAgent に任せるとリンクの端と端をまっすぐ結んで動き、はしごでは足場の角を突き抜けるので、
+    // NavMeshAgent.autoTraverseOffMeshLink を切って自分で動かす。
     public sealed partial class EnemyAgent
     {
-        /// <summary>渡っているリンクの端と、はしごの張ったリンクの端がこれ以内なら、そのはしごのリンクとみなす (m)。</summary>
         public const float LadderLinkTolerance = 1f;
 
         private bool _traversingLink;
@@ -23,22 +16,15 @@ namespace Shooter.Runtime
         private float _linkClimbSpeed;
         private Vector3 _linkFacing;
 
-        /// <summary>NavMesh のリンクを渡っている最中か。</summary>
         public bool IsTraversingLink => _traversingLink;
 
-        /// <summary>今渡っているはしご。はしごを渡っていなければ null。</summary>
         public Traversal.Ladder ClimbingLadder => _traversingLink ? _linkLadder : null;
 
-        /// <summary>はしごを渡るときのログ。例: <c>[AI] id=enemy-1 ladder=Ladder climb=Up</c>。</summary>
         public static string FormatLadderLog(string id, string ladder, string climb)
         {
             return $"{LogTag} id={id} ladder={(string.IsNullOrEmpty(ladder) ? "-" : ladder)} climb={climb}";
         }
 
-        /// <summary>
-        /// NavMesh のリンクの上にいれば、このフレームの分だけ渡って true を返す (呼んだ側は判断と移動を飛ばす)。
-        /// リンクの上にいなければ、渡っている途中の状態を捨てて false。
-        /// </summary>
         private bool TraverseOffMeshLink(float deltaSeconds)
         {
             if (!_agent.enabled || !_agent.isOnNavMesh || !_agent.isOnOffMeshLink)

@@ -5,26 +5,14 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 視点操作 (一人称・三人称共通)。Look 入力で本体 (この GameObject) を yaw、子の pitch の軸を pitch (±85°) で回す。
-    /// 有効な間はカーソルをロックする (ポーズ画面かロードアウトの選択が開いている間 (<see cref="GameUi.IsPauseOpen"/>・<see cref="GameUi.IsLoadoutSelectOpen"/>) を除く)。参照はコードで解決するので Inspector の配線は要らない:
-    /// pitch の軸は、本体に <see cref="ViewRig"/> があればその目 (カメラの親)、無ければ子階層の <see cref="Camera"/>。
-    /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の <see cref="LookActionPath"/>。
-    /// 三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回る。
-    /// <see cref="Recoil"/> があれば、その反動のずれを pitch の軸にだけ足す (本体の yaw と <see cref="Yaw"/> / <see cref="Pitch"/> は変えない)。
-    /// 解決できなければエラーを出して自分を無効にする。
-    /// 感度には操作設定 (<see cref="ControlSettings"/>) のマウス・ゲームパッドごとの倍率を掛け、設定画面で変えるとその場で効く。
-    /// </summary>
+    // pitch の軸を ViewRig の目にするのは、三人称でもカメラは目の子なので、目を回せば肩越しのカメラも一緒に回るため。
     [DisallowMultipleComponent]
     public sealed class FirstPersonLook : MonoBehaviour
     {
-        /// <summary>Assets/InputSystem_Actions.inputactions の Look アクション。</summary>
         public const string LookActionPath = InputActionPaths.Look;
 
-        /// <summary>マウスの 1 ピクセルあたりの回転 (度)。</summary>
         public const float DefaultMouseSensitivity = 0.1f;
 
-        /// <summary>スティックを倒し切ったときの毎秒の回転 (度)。</summary>
         public const float DefaultStickSensitivity = 180f;
 
         [SerializeField, Min(0f), Tooltip("マウスの 1 ピクセルあたりの回転 (度)")]
@@ -50,36 +38,23 @@ namespace Shooter.Runtime
         private float _appliedRecoilPitchUp;
         private float _pitchLimit = LookAngles.DefaultMaxPitch;
 
-        /// <summary>
-        /// 視点に足す反動。null なら足さない。射撃 (<see cref="WeaponController.Recoil"/>) と同じものを配線する。
-        /// ずれは毎フレームの LateUpdate で pitch の軸に足す。ずれが変わらないフレームは軸を書き換えないので、反動の無い武器では今までと同じ。
-        /// </summary>
+        // ずれが変わらないフレームは軸を書き換えないので、反動の無い武器では今までと同じ。
         public RecoilState Recoil { get; set; }
 
-        /// <summary>今 pitch の軸に足している反動の上向きの角度 (度)。視点の上限で削られた後の値。</summary>
         public float AppliedRecoilPitchUp => _appliedRecoilPitchUp;
 
-        /// <summary>今 pitch の軸に足している反動の左右の角度 (度)。正で右。</summary>
         public float AppliedRecoilYaw => _recoilYaw;
 
-        /// <summary>pitch を回す Transform (ViewRig の目、無ければカメラ)。未初期化なら null。</summary>
         public Transform PitchPivot => _pitchPivot;
 
-        /// <summary>読んでいる Look アクション。未初期化なら null。</summary>
         public InputAction LookAction => _lookAction;
 
         public bool IsInitialized => _pitchPivot != null && _lookAction != null;
         public float Yaw => _angles.Yaw;
         public float Pitch => _angles.Pitch;
 
-        /// <summary>pitch の上限 (度)。<see cref="PitchLimit"/> はこれより広げられない。</summary>
         public float MaxPitch => _angles.MaxPitch;
 
-        /// <summary>
-        /// 今向ける pitch の上限 (度、水平から上下それぞれ)。既定は <see cref="MaxPitch"/>。伏せ (<see cref="PlayerController.ProneSpec"/>) が絞る。
-        /// 狭めたときに今の向きが外にあれば、その場で上限まで戻す。<see cref="MaxPitch"/> より大きい値は <see cref="MaxPitch"/> として扱う。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">0 以下か NaN のとき。</exception>
         public float PitchLimit
         {
             get => _pitchLimit;
@@ -111,11 +86,7 @@ namespace Shooter.Runtime
             set => _stickSensitivity = Mathf.Max(0f, value);
         }
 
-        /// <summary>
-        /// マウスとスティックの両方の感度に掛ける倍率。既定は 1。覗き込み (<see cref="AimDownSights"/>) が視野角に合わせて下げる。
-        /// 保存する設定ではないので、シリアライズしない。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">負か、有限でない値のとき。</exception>
+        // 保存する設定ではないので、シリアライズしない。
         public float SensitivityMultiplier
         {
             get => _sensitivityMultiplier;
@@ -165,7 +136,6 @@ namespace Shooter.Runtime
 
         // 置き換えでなく足し込むのは、渡す部品とこの部品の Update の順が決まっておらず、次に回すまでに 2 度渡されても取りこぼさないため。
         // 回せば空にするので、同じ角度を 2 度回すことは無い。
-        /// <exception cref="ArgumentOutOfRangeException">x か y が有限でないとき。</exception>
         public void AddAssistDegrees(Vector2 degrees)
         {
             if (!IsFinite(degrees.x) || !IsFinite(degrees.y))
@@ -182,32 +152,19 @@ namespace Shooter.Runtime
             _pendingAssistDegrees = Vector2.zero;
         }
 
-        /// <summary>
-        /// 感度の倍率 (<see cref="ControlSettings.LookSensitivity"/>) を決める操作設定。Awake で <see cref="AppliedControlSettings.Current"/> を読み、
-        /// 設定画面で変わるたびに入れ直す (Edit Mode では Awake が走らないので初期値)。変えると次のフレームから使う。
-        /// </summary>
         public ControlSettings ControlSettings
         {
             get => _controlSettings;
             set => _controlSettings = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>
-        /// 今効いているマウスの感度 (<see cref="MouseSensitivity"/> × 設定のマウス感度 × <see cref="SensitivityMultiplier"/>)。
-        /// </summary>
         public float EffectiveMouseSensitivity =>
             _mouseSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.KeyboardMouse) * _sensitivityMultiplier;
 
-        /// <summary>
-        /// 今効いているスティックの感度 (<see cref="StickSensitivity"/> × 設定のゲームパッド感度 × <see cref="SensitivityMultiplier"/>)。
-        /// </summary>
         public float EffectiveStickSensitivity =>
             _stickSensitivity * _controlSettings.LookSensitivity(InputDeviceKind.Gamepad) * _sensitivityMultiplier;
 
-        /// <summary>
-        /// Look 入力を読まずに向きを止めるか。既定は false。デスカムの間のように、すぐ戻す一時停止に使う。
-        /// 無効にするのと違い、カーソルのロックとアクションの有効状態は保つので、止めている間にカーソルが出ない。
-        /// </summary>
+        // コンポーネントを無効にするのと違い、カーソルのロックとアクションの有効状態は保つので、止めている間にカーソルが出ない。
         public bool InputSuspended { get; set; }
 
         private void Awake()
@@ -290,10 +247,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 有効で初期化済みの視点操作がシーンにあればカーソルをロックして隠し、無ければ外して出す。
-        /// ポーズ画面を閉じたときに呼ぶ (開いている間に視点操作が有効・無効になっていることがあるため、開く前の状態には戻さない)。
-        /// </summary>
+        // ポーズ画面を開いている間に視点操作が有効・無効になっていることがあるので、開く前の状態には戻さずシーンから決め直す。
         public static void RefreshCursorLock()
         {
             if (GameUi.IsLoadoutSelectOpen || GameUi.IsInventoryOpen)
@@ -327,11 +281,6 @@ namespace Shooter.Runtime
             Turn(ReadLookDegrees(Time.deltaTime), fromPointer);
         }
 
-        /// <summary>
-        /// Look 入力の回転量 (度、<see cref="ReadLookDegrees(float)"/> の値) でこの視点を回す。Play 中は Update が毎フレーム呼ぶ。
-        /// fromPointer が false なら <see cref="AssistLookScale"/> を掛けて <see cref="PendingAssistDegrees"/> を足す。
-        /// どちらでも <see cref="PendingAssistDegrees"/> は空にし、全体に <see cref="TurnMultiplier"/> を掛ける。
-        /// </summary>
         public void Turn(Vector2 lookDegrees, bool fromPointer)
         {
             var degrees = fromPointer ? lookDegrees : (lookDegrees * _assistLookScale) + _pendingAssistDegrees;
@@ -345,11 +294,7 @@ namespace Shooter.Runtime
             ApplyLookDelta(degrees);
         }
 
-        /// <summary>
-        /// このフレームの Look 入力を、今の感度で回転量 (度) にしたもの。x は正で右、y は正で上。
-        /// <see cref="InputSuspended"/> でも読めるので、視点を止めている間に別のカメラ (観戦の自由カメラ) を同じ感度で回すのに使う。
-        /// 未初期化なら zero。
-        /// </summary>
+        // InputSuspended でも読むのは、視点を止めている間に別のカメラ (観戦の自由カメラ) を同じ感度で回すため。
         public Vector2 ReadLookDegrees(float deltaSeconds)
         {
             return ReadLookDegrees(_lookAction, deltaSeconds);
@@ -380,9 +325,6 @@ namespace Shooter.Runtime
             ApplyRecoil();
         }
 
-        /// <summary>
-        /// <see cref="Recoil"/> の今のずれを pitch の軸に反映する。足しているずれと同じなら何もしない。Play 中は LateUpdate が毎フレーム呼ぶ。
-        /// </summary>
         public void ApplyRecoil()
         {
             if (!IsInitialized)
@@ -403,10 +345,6 @@ namespace Shooter.Runtime
             ApplyRotation();
         }
 
-        /// <summary>
-        /// pitch の軸 (<see cref="ViewRig"/> の目か、子階層のカメラ) とプロジェクト全体の Look アクションを探して初期化する。
-        /// 見つからなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryInitializeFromHierarchy()
         {
             var camera = FindChildCamera(transform);
@@ -441,7 +379,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>参照を直接渡して初期化する。pitchPivot はこの Transform の子孫であること。</summary>
         public void Initialize(Transform pitchPivot, InputAction lookAction)
         {
             if (pitchPivot == null)
@@ -480,9 +417,6 @@ namespace Shooter.Runtime
             SyncAnglesFromTransforms();
         }
 
-        /// <summary>
-        /// 回転量 (度) を加える。x は正で右、y は正で上を向く。本体は yaw だけ、カメラは pitch だけ回す。
-        /// </summary>
         public void ApplyLookDelta(Vector2 degrees)
         {
             if (!IsInitialized)
@@ -508,7 +442,6 @@ namespace Shooter.Runtime
             _pitchPivot.localRotation = Quaternion.Euler(pitch, _recoilYaw, 0f);
         }
 
-        /// <summary>子孫 (自分自身は除く) から最初の Camera を探す。無ければ null。</summary>
         public static Camera FindChildCamera(Transform body)
         {
             if (body == null)

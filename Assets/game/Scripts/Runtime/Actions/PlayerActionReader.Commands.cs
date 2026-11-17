@@ -5,12 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerActionReader"/> のうち、移動と射撃のほかの指示のボタン (<see cref="PlayerCommands"/>) を読む処理。
-    /// プロジェクト全体のアクションの Melee / Prone / Ping / Ability1 / Ability2 / SquadCommand / UseStreak を毎フレーム読み、
-    /// <see cref="PressedCommands"/> と <see cref="HeldCommands"/> にするだけで、それで何かを動かすのは読む側。
-    /// 入力アセットに無いアクションは警告を出し、押されないものとして扱う。
-    /// </summary>
     public sealed partial class PlayerActionReader
     {
         private static readonly PlayerCommands[] _commands =
@@ -30,14 +24,10 @@ namespace Shooter.Runtime
         private PlayerCommands _pressedCommands;
         private PlayerCommands _heldCommands;
 
-        /// <summary>最後の <see cref="ReadCommands"/> で、そのフレームに押されたボタン。</summary>
         public PlayerCommands PressedCommands => _pressedCommands;
 
-        /// <summary>最後の <see cref="ReadCommands"/> で、押されていたボタン。</summary>
         public PlayerCommands HeldCommands => _heldCommands;
 
-        /// <summary>command のアクションのパス (<see cref="InputActionPaths"/>)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">command が 1 つのボタンでない。</exception>
         public static string CommandActionPath(PlayerCommands command)
         {
             switch (command)
@@ -61,18 +51,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>command を読んでいるアクション。無ければ null。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">command が 1 つのボタンでない。</exception>
         public InputAction CommandAction(PlayerCommands command)
         {
             return _commandActions[CommandIndex(command)];
         }
 
-        /// <summary>
-        /// command を読むアクションを差し替える。null なら読まない。
-        /// 動作中なら、自分が有効にした前のアクションを戻してから新しいものを有効にする。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">command が 1 つのボタンでない。</exception>
         public void SetCommandAction(PlayerCommands command, InputAction action)
         {
             var index = CommandIndex(command);
@@ -88,10 +71,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// プロジェクト全体のアクションから指示のボタンを探して <see cref="SetCommandAction"/> する。
-        /// 入力アセットが無ければ false、一部のアクションが無ければ警告を出してそれだけ読まない (true)。
-        /// </summary>
         public bool TryResolveCommandActions()
         {
             AppliedInputBindings.EnsureLoaded();
@@ -118,7 +97,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>今のフレームの指示のボタンを読んで <see cref="PressedCommands"/> と <see cref="HeldCommands"/> にし、押されたものを返す。</summary>
         public PlayerCommands ReadCommands()
         {
             var pressed = PlayerCommands.None;

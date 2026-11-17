@@ -6,49 +6,25 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 一人称と三人称のどちらにも使える視点の土台。プレイヤーの本体に付け、次の階層を前提にする:
-    /// <code>
-    /// 本体 (yaw を回す。ViewRig と FirstPersonLook)
-    ///   └ 目 (pitch を回す。射撃の始点)
-    ///       └ カメラ (目からのオフセットは ViewRig が決める)
-    ///           ├ ShakeRoot (画面の揺れの演出が使う。<see cref="ShakeRoot"/>)
-    ///           └ ViewmodelRoot (一人称の武器と腕を置く。<see cref="ViewmodelRoot"/>)
-    /// </code>
-    /// ShakeRoot と ViewmodelRoot は初期化 (<see cref="Initialize"/>) のときに名前で探し、無ければ作る。どちらも ViewRig は動かさない。
-    /// <see cref="Mode"/> が <see cref="ViewMode.FirstPerson"/> ならカメラを目に重ねて自分の体を影だけにし、
-    /// <see cref="ViewMode.ThirdPerson"/> なら目から <see cref="ThirdPersonOffset"/> 離して置き (壁があれば手前まで縮める)、体を描く。
-    /// どちらの視点でも狙いは <see cref="ResolveAim"/> で、画面中央が指す点へ目から撃つ (<see cref="AimSolver"/>)。
-    /// 三人称では、この端末のプレイヤーの視点 (<see cref="IsLocalView"/>) の間だけ <see cref="SwapShoulderActionPath"/> を読み、
-    /// 押すたびにカメラを反対の肩へ <see cref="ShoulderBlend.DefaultSeconds"/> 秒で移す。カメラだけの話なので同期はしない。
-    /// 参照はコードで解決するので Inspector の配線は要らない: カメラは子階層の <see cref="Camera"/>、目はその親、入力はプロジェクト全体のアクション。
-    /// カメラの視野角は操作設定 (<see cref="ControlSettings.FieldOfView"/>) にし、設定画面で変えるとその場で直す (<see cref="ApplyControlSettings"/>)。
-    /// </summary>
+    // 肩の入れ替えはカメラだけの話なので同期はしない。
     [DisallowMultipleComponent]
     public sealed class ViewRig : MonoBehaviour
     {
-        /// <summary>三人称のカメラの、目のローカル座標での既定の位置。右肩の上・後ろ。</summary>
         public static readonly Vector3 DefaultThirdPersonOffset = new Vector3(0.5f, 0.2f, -2.5f);
 
-        /// <summary>カメラが壁にめり込まないよう目から飛ばす球の半径 (m)。</summary>
         public const float DefaultCollisionRadius = 0.2f;
 
-        /// <summary><see cref="ResolveFreeMove"/> で、壁に当たる手前に残す隙間 (m)。触れたままだと次の移動で重なりとみなして除き、壁を抜けてしまうため。</summary>
+        // 触れたままだと次の移動で重なりとみなして除き、壁を抜けてしまうので、壁の手前にこれだけ隙間を残す。
         public const float FreeMoveSkin = 0.05f;
 
-        /// <summary>狙う点を探すカメラの Ray の既定の長さ (m)。武器の射程が分からないとき (ネットの射撃など) に使う。</summary>
         public const float DefaultAimDistance = 1000f;
 
-        /// <summary>肩を入れ替える入力のパス (プロジェクト全体の Input Actions)。</summary>
         public const string SwapShoulderActionPath = InputActionPaths.SwapShoulder;
 
-        /// <summary>視点の状態のログに付けるタグ。<see cref="AimDownSights.LogTag"/> と揃える。</summary>
         public const string ViewLogTag = AimDownSights.LogTag;
 
-        /// <summary>画面の揺れ用にカメラの直下に置く GameObject の名前。</summary>
         public const string ShakeRootName = "ShakeRoot";
 
-        /// <summary>ビューモデル用にカメラの直下に置く GameObject の名前。</summary>
         public const string ViewmodelRootName = "ViewmodelRoot";
 
         private const string LogTag = "[ViewRig]";
@@ -88,9 +64,6 @@ namespace Shooter.Runtime
         private AimDownSights _ads;
         private bool _bodyHiddenBySight;
 
-        /// <summary>
-        /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
-        /// </summary>
         public ViewMode Mode
         {
             get => _mode;
@@ -110,18 +83,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>三人称のカメラの位置 (目のローカル座標、m)。</summary>
         public Vector3 ThirdPersonOffset
         {
             get => _thirdPersonOffset;
             set => _thirdPersonOffset = value;
         }
 
-        /// <summary>
-        /// 三人称のカメラをどちらの肩越しに置くか (補間の目標)。既定は <see cref="ShoulderSide.Right"/>。
-        /// Left なら <see cref="ThirdPersonOffset"/> の x を反転した位置へ向かう。変えると <see cref="Tick"/> で
-        /// <see cref="ShoulderBlend.DefaultSeconds"/> 秒かけて移り、<c>[View] shoulder=Left</c> のようにログに出す。
-        /// </summary>
         public ShoulderSide Shoulder
         {
             get => _shoulder.Target;
@@ -134,27 +101,16 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 照準器の出し方 (<see cref="SightView.EyeBlend"/> で三人称のカメラを目へ寄せ、<see cref="SightView.HidesBody"/> で体を隠す)。
-        /// null なら同じ GameObject の <see cref="AimDownSights.SightView"/> (無ければ寄せない)。
-        /// </summary>
         public Func<SightView> SightSource { get; set; }
 
-        /// <summary>照準器で目へ寄せたために、三人称でも自分の体を影だけにしているか。</summary>
         public bool IsBodyHiddenBySight => _bodyHiddenBySight && isActiveAndEnabled;
 
-        /// <summary>今 <see cref="ThirdPersonOffset"/> の x に掛けている符号。右肩で +1、左肩で -1、入れ替えの途中はその間。</summary>
         public float ShoulderOffsetSign => _shoulder.OffsetSign;
 
-        /// <summary>肩を入れ替えている途中か。</summary>
         public bool IsSwappingShoulder => _shoulder.IsBlending;
 
-        /// <summary>
-        /// この端末のプレイヤーの視点か。最後に <see cref="ApplyBodyVisibility"/> へ渡した値で、true の間だけ肩の入れ替えの入力を読む。
-        /// </summary>
         public bool IsLocalView => _isLocalView;
 
-        /// <summary>肩を入れ替える入力。見つからなかったか未設定なら null (肩は入れ替わらないが、視点はそのまま使える)。</summary>
         public InputAction SwapShoulderAction => _swapShoulderAction;
 
         public float CollisionRadius
@@ -163,8 +119,6 @@ namespace Shooter.Runtime
             set => _collisionRadius = Mathf.Max(0f, value);
         }
 
-        /// <summary>三人称のカメラが壁に寄ったときも、目からこれ以上は近づけない距離 (m)。0 以上の有限値。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負か有限でないとき。</exception>
         public float MinBoomLength
         {
             get => _minBoomLength;
@@ -179,19 +133,13 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>pitch を回し、射撃の始点になる目。未初期化なら null。</summary>
         public Transform Eye => _eye;
 
-        /// <summary>目の子のカメラ。未初期化なら null。</summary>
         public Camera Camera => _camera;
 
-        /// <summary>カメラの直下の、画面の揺れの演出が使う Transform (<see cref="ShakeRootName"/>)。未初期化なら null。</summary>
         public Transform ShakeRoot => _shakeRoot;
 
-        /// <summary>
-        /// カメラの直下の、一人称の武器と腕を置く Transform (<see cref="ViewmodelRootName"/>)。<see cref="ShakeRoot"/> とは兄弟で、
-        /// 揺れの演出が ShakeRoot を動かしてもこちらは動かない。未初期化なら null。
-        /// </summary>
+        // ShakeRoot の子にせず兄弟にするのは、揺れの演出が ShakeRoot を動かしても一人称の武器と腕を動かさないため。
         public Transform ViewmodelRoot => _viewmodelRoot;
 
         public bool IsInitialized => _eye != null && _camera != null;
@@ -225,11 +173,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// カメラの視野角を操作設定の <see cref="ControlSettings.FieldOfView"/> にする。Awake と、設定画面で変わったときに呼ばれる。
-        /// 同じ本体に初期化済みの <see cref="AimDownSights"/> があれば、視野角はそちらが腰だめと覗き込みの間で毎フレーム書くので触らない
-        /// (AimDownSights が同じ設定を自分で受け取る)。未初期化なら何もしない。
-        /// </summary>
+        // 同じ本体に初期化済みの AimDownSights があれば、視野角はそちらが腰だめと覗き込みの間で毎フレーム書き、
+        // 同じ設定を自分で受け取るので触らない。
         public void ApplyControlSettings(ControlSettings settings)
         {
             if (settings == null)
@@ -280,12 +225,6 @@ namespace Shooter.Runtime
             Tick(swapPressed, Time.deltaTime);
         }
 
-        /// <summary>
-        /// 1 フレーム分進める。swapPressedThisFrame が true で、三人称かつこの端末のプレイヤーの視点 (<see cref="IsLocalView"/>) なら
-        /// 肩を入れ替える。それから肩の補間を deltaSeconds だけ進め、カメラを置き直す (<see cref="UpdateCameraPosition"/>)。
-        /// </summary>
-        /// <param name="swapPressedThisFrame">今フレームに肩の入れ替えが押されたか。</param>
-        /// <param name="deltaSeconds">進める秒数。0 以上の有限値。</param>
         public void Tick(bool swapPressedThisFrame, float deltaSeconds)
         {
             EnsureInitialized();
@@ -302,10 +241,6 @@ namespace Shooter.Runtime
             UpdateCameraPosition();
         }
 
-        /// <summary>
-        /// 肩の入れ替えの入力を差し替える。null なら入力を読まない。
-        /// 動作中なら、自分が有効にした古いアクションを戻してから、この端末の視点のときだけ新しいものを有効にする。
-        /// </summary>
         public void SetSwapShoulderAction(InputAction action)
         {
             if (action == _swapShoulderAction)
@@ -318,17 +253,12 @@ namespace Shooter.Runtime
             RefreshSwapShoulderAction();
         }
 
-        /// <summary>肩を入れ替えたときのログ。例: <c>[View] shoulder=Left</c>。</summary>
         public static string FormatShoulderLog(ShoulderSide side)
         {
             return $"{ViewLogTag} shoulder={side}";
         }
 
-        /// <summary>
-        /// 子階層のカメラと、その親 (目) を探して初期化する。見つからなければ理由を Debug.LogError に出して false を返す。
-        /// 肩の入れ替えの入力 (<see cref="SwapShoulderActionPath"/>) もプロジェクト全体のアクションから探す。
-        /// こちらは無くても視点は使えるので、警告を出すだけで初期化は続ける。
-        /// </summary>
+        // 肩の入れ替えの入力は無くても視点は使えるので、見つからなくても警告を出すだけで初期化は続ける。
         public bool TryInitializeFromHierarchy()
         {
             var camera = FirstPersonLook.FindChildCamera(transform);
@@ -352,10 +282,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 参照を直接渡して初期化する。eye はこの本体の子孫 (本体自身ではない)、camera は eye の直下であること。
-        /// カメラの直下の <see cref="ShakeRoot"/> と <see cref="ViewmodelRoot"/> は名前で探し、無ければ作る (<see cref="EnsureCameraChild"/>)。
-        /// </summary>
         public void Initialize(Transform eye, Camera camera)
         {
             if (eye == null)
@@ -384,10 +310,6 @@ namespace Shooter.Runtime
             _viewmodelRoot = EnsureCameraChild(camera, ViewmodelRootName);
         }
 
-        /// <summary>
-        /// camera の直下で名前が name の Transform を返す。無ければ位置・回転・拡縮を揃えた空の GameObject をカメラと同じレイヤーで作る。
-        /// 何度呼んでも同じ名前のものは 1 つだけ。
-        /// </summary>
         public static Transform EnsureCameraChild(Camera camera, string name)
         {
             if (camera == null)
@@ -418,10 +340,7 @@ namespace Shooter.Runtime
             return created;
         }
 
-        /// <summary>
-        /// body に ViewRig があり、その子のカメラが目の下にあれば目を返す。無ければ null。
-        /// <see cref="FirstPersonLook"/> が pitch を回す Transform を選ぶのに使う (ViewRig の Awake より先でも決まるよう、自分で探す)。
-        /// </summary>
+        // ViewRig の Awake より先でも決まるよう、初期化済みの値を読まずに自分で探す。
         public static Transform FindEye(Transform body)
         {
             if (body == null)
@@ -445,11 +364,6 @@ namespace Shooter.Runtime
             return IsEyeOf(eye, body) ? eye : null;
         }
 
-        /// <summary>
-        /// カメラを目からのオフセット (x に <see cref="ShoulderOffsetSign"/> を掛けたもの) へ置く。
-        /// 三人称では目からカメラへ球を飛ばし、自分の体以外に当たればその手前まで縮める (肩の入れ替えの途中でも同じ)。
-        /// 肩の補間は進めない (進めるのは <see cref="Tick"/>)。
-        /// </summary>
         public void UpdateCameraPosition()
         {
             EnsureInitialized();
@@ -482,20 +396,12 @@ namespace Shooter.Runtime
             cameraTransform.localPosition = offset * (length / desired);
         }
 
-        /// <summary>
-        /// origin からワールド座標の offset の先へカメラを置くときの位置。間に自分の体以外があれば、三人称のカメラと同じ半径・レイヤーで
-        /// 球を飛ばして手前まで縮める (<see cref="CameraBoom.Length"/>)。デスカムのように目からのオフセットでなくカメラを置くときに使う。
-        /// 初期化していなくても使える。
-        /// </summary>
         public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset)
         {
             return ResolveBoomPosition(origin, offset, null);
         }
 
-        /// <summary>
-        /// <see cref="ResolveBoomPosition(Vector3, Vector3)"/> の、自分の体に加えて ignoreRoot の子孫にも当たらないもの。
-        /// 他のプレイヤーの目からその肩越しへカメラを置くとき (観戦) に、その体で縮まないよう ignoreRoot に渡す。null なら自分の体だけ除く。
-        /// </summary>
+        // ignoreRoot を除けるのは、他のプレイヤーの目からその肩越しへカメラを置くとき (観戦) に、その体で縮まないようにするため。
         public Vector3 ResolveBoomPosition(Vector3 origin, Vector3 offset, Transform ignoreRoot)
         {
             var desired = offset.magnitude;
@@ -512,17 +418,12 @@ namespace Shooter.Runtime
             return origin + (direction * length);
         }
 
-        /// <summary>
-        /// 自由に動かすカメラ (観戦) を from から delta だけ動かした先。三人称のカメラと同じ半径・レイヤーの球を飛ばし、
-        /// 壁 (自分の体を除く) の <see cref="FreeMoveSkin"/> 手前で止め、残りは当たった面に沿って 1 回だけ滑らせる。
-        /// 動き始めにもう重なっているもの (壁の中から始めたときなど) では止めないので、重なりからは抜け出せる。初期化していなくても使える。
-        /// </summary>
+        // 動き始めにもう重なっているもの (壁の中から始めたときなど) では止めないので、重なりからは抜け出せる。
         public Vector3 ResolveFreeMove(Vector3 from, Vector3 delta)
         {
             var position = from;
             var remaining = delta;
 
-            // 1 回目は進む向き、2 回目は当たった面に沿って滑る分
             for (var i = 0; i < 2; i++)
             {
                 var length = remaining.magnitude;
@@ -545,11 +446,7 @@ namespace Shooter.Runtime
             return position;
         }
 
-        /// <summary>
-        /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称 (か三人称で照準器がカメラを目へ寄せている間、
-        /// <see cref="IsBodyHiddenBySight"/>) なら影だけ描いて視界をふさがず、それ以外 (三人称や他人のプレイヤー) は普通に描く。<see cref="ViewmodelRoot"/> の配下は体ではないので触らない。
-        /// isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
-        /// </summary>
+        // 自分の視点で一人称のときは、視界をふさがないよう影だけ描く。ViewmodelRoot の配下は体ではないので触らない。
         public void ApplyBodyVisibility(bool isLocalView)
         {
             _isLocalView = isLocalView;
@@ -595,23 +492,12 @@ namespace Shooter.Runtime
             ApplyBodyVisibility(_isLocalView);
         }
 
-        /// <summary>
-        /// 画面中央で狙う射撃の始点と向き。始点は目、向きは目からカメラの正面が指す点へ。
-        /// カメラが目に重なっていれば (一人称) カメラの正面をそのまま返す。
-        /// </summary>
-        /// <param name="aimDistance">狙う点を探す距離 (m)。武器の射程を渡す。0 より大きい有限値。</param>
-        /// <param name="origin">射撃の始点 (目の位置)。</param>
-        /// <param name="direction">射撃の向き (単位ベクトル)。</param>
         public void ResolveAim(float aimDistance, out Vector3 origin, out Vector3 direction)
         {
             EnsureInitialized();
             ResolveAim(_camera.transform, _eye, aimDistance, transform, _collisionMask, out origin, out direction);
         }
 
-        /// <summary>
-        /// <see cref="ResolveAim(float, out Vector3, out Vector3)"/> の本体。camera の正面の Ray をカメラと目の間を飛ばして撃ち、
-        /// shooterRoot の子孫とトリガーを除いた最初の命中 (無ければ aimDistance 先) を狙う点にする。
-        /// </summary>
         public static void ResolveAim(
             Transform camera,
             Transform eye,
@@ -635,24 +521,12 @@ namespace Shooter.Runtime
             direction = AimSolver.DirectionFromEye(origin.ToNumerics(), aimPoint.ToNumerics(), forward.ToNumerics()).ToUnity();
         }
 
-        /// <summary>
-        /// 目から画面中央が指す点への線が、その点より margin 以上手前で物に遮られているか (<see cref="AimSolver.IsBlocked"/>)。
-        /// 遮られていれば blockPoint に目からの線が当たった点を返す。当たる物は <see cref="ResolveAim(float, out Vector3, out Vector3)"/> と同じ
-        /// (カメラの壁抜け防止と同じレイヤー、自分の体と弾の抜ける自分の置いた物を除く)。
-        /// </summary>
-        /// <param name="aimDistance">狙う点を探す距離 (m)。武器の射程を渡す。0 より大きい有限値。</param>
-        /// <param name="margin">狙う点からこれより手前の命中だけを遮りとみなす距離 (m)。0 以上の有限値。</param>
-        /// <param name="blockPoint">遮った物に目からの線が当たった点。遮られていなければ目の位置。</param>
         public bool TryFindAimBlock(float aimDistance, float margin, out Vector3 blockPoint)
         {
             EnsureInitialized();
             return TryFindAimBlock(_camera.transform, _eye, aimDistance, transform, _collisionMask, margin, out blockPoint);
         }
 
-        /// <summary>
-        /// <see cref="TryFindAimBlock(float, float, out Vector3)"/> の本体。狙う点は <see cref="ResolveAim(Transform, Transform, float, Transform, LayerMask, out Vector3, out Vector3)"/>
-        /// と同じく決め、目からその点へ Raycast する。一人称でも同じ手順で判定する。
-        /// </summary>
         public static bool TryFindAimBlock(
             Transform camera,
             Transform eye,
@@ -706,7 +580,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // camera の正面の Ray をカメラと目の間を飛ばして撃ち、最初の命中 (無ければ aimDistance 先) を返す。
         private static Vector3 FindAimPoint(Transform camera, Vector3 eye, float aimDistance, Transform shooterRoot, LayerMask mask)
         {
             var cameraPosition = camera.position;
@@ -750,7 +623,6 @@ namespace Shooter.Runtime
             return found;
         }
 
-        // バッファの先頭 count 件から、ignoreRoot の子孫を除いた最も近い命中を選ぶ。
         private static bool TryNearest(int count, Transform ignoreRoot, out float distance, out int index)
         {
             return TryNearest(count, ignoreRoot, null, false, out distance, out index);

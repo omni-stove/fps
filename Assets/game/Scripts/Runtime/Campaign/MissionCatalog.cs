@@ -6,13 +6,6 @@ using UnityEngine.Serialization;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンのミッションの一覧。ミッションごとに Id・表示名・シーン・<see cref="MissionDefinition"/> を持つ。
-    /// メニューはここから選んで <see cref="CampaignLaunchSelection.Launch"/> でシーンを開く。
-    /// キャンペーン全体の間合い (やられてから読み直すまでの秒数 <see cref="ReloadDelaySeconds"/>、セーブしたと出す秒数 <see cref="SavedNoticeSeconds"/>) も持ち、
-    /// <see cref="CampaignRunner"/> が読む。
-    /// Editor の MissionCatalogBuilder が生成するので、Inspector では書き換えない。
-    /// </summary>
     [CreateAssetMenu(fileName = "MissionCatalog", menuName = "Shooter/Mission Catalog")]
     public sealed class MissionCatalog : ScriptableObject
     {
@@ -28,26 +21,20 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("チェックポイントでセーブしたときに HUD へ「セーブしました」を出しておく秒数")]
         private float _savedNoticeSeconds = DefaultSavedNoticeSeconds;
 
-        /// <summary>定義順のミッション。中身を書き換えるときは <see cref="SetMissions"/> を使う。</summary>
         public IReadOnlyList<MissionCatalogEntry> Missions => _missions ??= new List<MissionCatalogEntry>();
 
-        /// <summary>プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上の有限の値。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負・NaN・無限大を設定したとき。</exception>
         public float ReloadDelaySeconds
         {
             get => _reloadDelaySeconds;
             set => _reloadDelaySeconds = RequireSeconds(value, nameof(ReloadDelaySeconds));
         }
 
-        /// <summary>セーブしたときに HUD へ「セーブしました」を出しておく秒数。0 以上の有限の値。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負・NaN・無限大を設定したとき。</exception>
         public float SavedNoticeSeconds
         {
             get => _savedNoticeSeconds;
             set => _savedNoticeSeconds = RequireSeconds(value, nameof(SavedNoticeSeconds));
         }
 
-        /// <summary>seconds が秒数として使える (0 以上の有限の値) か。</summary>
         public static bool IsValidSeconds(float seconds)
         {
             return seconds >= 0f && !float.IsInfinity(seconds);
@@ -63,7 +50,6 @@ namespace Shooter.Runtime
             return value;
         }
 
-        /// <summary>ミッションをまとめて差し替える。null は空にする。要素は複製して持つ (MissionDefinition のアセットは共有する)。</summary>
         public void SetMissions(IEnumerable<MissionCatalogEntry> missions)
         {
             var copy = new List<MissionCatalogEntry>();
@@ -78,10 +64,6 @@ namespace Shooter.Runtime
             _missions = copy;
         }
 
-        /// <summary>
-        /// 一覧を検証する。秒数の不正、空・null 要素・Id の重複、各ミッションの不正 (<see cref="MissionCatalogEntry.Validate"/>) は、
-        /// どのアセットのどのミッションかを添えて <see cref="MissionCatalogException"/> にする。
-        /// </summary>
         public void Validate()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed mission catalog)" : name;
@@ -126,11 +108,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 定義の Id (<see cref="MissionDefinition.Id"/>) が id のミッションを探す。無ければ false と null。
-        /// Id は大文字小文字を区別して比べる。定義のアセット名は見ない。
-        /// </summary>
-        /// <exception cref="MissionCatalogException">一覧が不正なとき (見つかるかどうかに関わらず)。</exception>
         public bool TryFind(string id, out MissionCatalogEntry entry)
         {
             // 不正な一覧から一部だけ引けてしまわないよう、先に全体を検証する。
@@ -149,7 +126,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="MissionCatalog"/> の 1 ミッション。</summary>
     [Serializable]
     public sealed class MissionCatalogEntry
     {
@@ -182,10 +158,8 @@ namespace Shooter.Runtime
 
         public string Id => _id ?? string.Empty;
 
-        /// <summary>メニューに出す名前の、言語の表のキー。</summary>
         public string DisplayNameKey => _displayNameKey ?? string.Empty;
 
-        /// <summary>SceneManager.LoadScene に渡せるシーンのパス (Assets/ から始まり .unity で終わる)。</summary>
         public string ScenePath => _scenePath ?? string.Empty;
 
         public MissionDefinition Definition => _definition;
@@ -195,11 +169,6 @@ namespace Shooter.Runtime
             return new MissionCatalogEntry(_id, _displayNameKey, _scenePath, _definition);
         }
 
-        /// <summary>
-        /// Id がミッション Id として使え (<see cref="CampaignLaunch.IsValidMissionId"/>)、表示名のキーが空でなく、シーンのパスが Assets/ 以下の .unity で、
-        /// 定義があってその <see cref="MissionDefinition.Id"/> が空でなく Id と同じで、ミッションに変換できることを確かめる。
-        /// 不正なら <see cref="MissionCatalogException"/>。
-        /// </summary>
         public void Validate()
         {
             if (!CampaignLaunch.IsValidMissionId(Id))
@@ -247,7 +216,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="MissionCatalog"/> の中身が不正なときに投げる。</summary>
     public sealed class MissionCatalogException : Exception
     {
         public MissionCatalogException(string message)

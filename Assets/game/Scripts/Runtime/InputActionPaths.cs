@@ -1,8 +1,5 @@
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Assets/InputSystem_Actions.inputactions の Player マップにあるアクションのパス。
-    /// </summary>
     public static class InputActionPaths
     {
         public const string Move = "Player/Move";

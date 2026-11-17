@@ -7,10 +7,8 @@ namespace Shooter.Runtime
     {
         bool BlocksFire { get; }
 
-        // true の間に始まったリロードは、WeaponController が次の Tick で取り消す。新しく始めることもできない。
         bool BlocksReload { get; }
 
-        // 照準の広がり (CurrentConeDegrees) に掛ける倍率。0 以上の有限値。変えないなら 1。
         float SpreadMultiplier { get; }
 
         // 倍率とは別に足し引きも受けるのは、腰撃ちでも ADS でも同じ度数だけ広げたいもの (制圧) があるから。

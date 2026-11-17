@@ -4,14 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 今効いている操作設定。Play の開始時に <see cref="ControlSettingsStore"/> から読み、全体の音量を <see cref="AudioListener.volume"/> に、
-    /// 揺れの強さを <see cref="CameraShake.GlobalMultiplier"/>・<see cref="ViewmodelMotion.GlobalMultiplier"/> に、血の表示を <see cref="BloodPresenter.BloodEnabled"/> に入れる。
-    /// 設定画面が <see cref="Sink"/> (<see cref="ISettingsSink"/>) 越しに <see cref="Apply"/> で変えると <see cref="Changed"/> で配り、
-    /// <see cref="FirstPersonLook"/>・<see cref="AimDownSights"/>・<see cref="ViewRig"/>・<see cref="PlayerController"/> などが
-    /// その場で使い直す。効果音を鳴らす側は <see cref="ControlSettings.EffectsVolume"/> を音量に掛ける。
-    /// 保存はしない (保存は設定画面を閉じたときに <see cref="ControlSettingsStore.Save"/> で行う)。
-    /// </summary>
     public static class AppliedControlSettings
     {
         public const string LogTag = "[Settings]";
@@ -19,16 +11,10 @@ namespace Shooter.Runtime
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static ControlSettings _current;
 
-        /// <summary>
-        /// 設定が変わったとき (<see cref="Apply"/> で違う値を入れたとき)。購読した側は受け取った設定をすぐ使い直す。
-        /// 1 つの購読先が投げても、ほかの購読先には届ける。
-        /// </summary>
         public static event Action<ControlSettings> Changed;
 
-        /// <summary><see cref="Current"/> を読み <see cref="Apply"/> で効かせる、設定画面に渡す先。</summary>
         public static ISettingsSink Sink { get; } = new AppliedSink();
 
-        /// <summary>今効いている設定。まだ読んでいなければ <see cref="ControlSettingsStore"/> (既定のキー) から読む。</summary>
         public static ControlSettings Current
         {
             get
@@ -42,10 +28,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// settings を今効いている設定にし、全体の音量を <see cref="AudioListener.volume"/> に、揺れの強さと血の表示を各演出に入れる。
-        /// 前と違う値なら <see cref="Changed"/> を呼ぶ。
-        /// </summary>
         public static void Apply(ControlSettings settings)
         {
             if (settings == null)

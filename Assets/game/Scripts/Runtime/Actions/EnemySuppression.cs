@@ -36,7 +36,6 @@ namespace Shooter.Runtime
         public bool IsHoldingCover => _behavior.IsHolding && Agent != null && Agent.State == EnemyState.TakeCover;
 
         // Off では敵に部品を増やさず、もう付いているものだけを Off にする。
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public static void ConfigureAll(Suppression rule, SuppressionSpec spec)
         {
             if (spec == null)
@@ -64,7 +63,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public void Configure(Suppression rule, SuppressionSpec spec)
         {
             if (spec == null)

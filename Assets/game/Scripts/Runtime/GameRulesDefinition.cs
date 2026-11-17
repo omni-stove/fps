@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// モード 1 つ分のルールをアセットとして持つ。<see cref="ToRules"/> で不変の <see cref="GameRules"/> に変換して使う。
-    /// 検証は <see cref="GameRules"/> に任せ、失敗したらどのアセットの値かを添えて <see cref="GameRulesDefinitionException"/> を投げる。
-    /// 新しく作ったときの値は <see cref="GameRules.Default"/> と同じ。
-    /// 実際に使う値はアセット (Assets/game/Rules/*.asset、Shooter.Editor.GameRulesAssetBuilder が作る) の側にある。
-    /// </summary>
     [CreateAssetMenu(fileName = "GameRules", menuName = "Shooter/Game Rules")]
     public sealed class GameRulesDefinition : ScriptableObject
     {
@@ -485,8 +479,6 @@ namespace Shooter.Runtime
             set => _streaks = value;
         }
 
-        /// <summary>定義を不変の <see cref="GameRules"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="GameRulesDefinitionException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ToRules()
         {
             try
@@ -553,10 +545,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="ToRules"/> と同じ変換を、例外の代わりに戻り値で失敗を知らせて行う。
-        /// 成功したら rules に結果を入れ error を null にして true、失敗したら rules を null、error にアセット名を含む理由を入れて false。
-        /// </summary>
         public bool TryToRules(out GameRules rules, out string error)
         {
             try
@@ -573,7 +561,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>rules の値をすべて写す。rules は検査済みなので、写した後は必ず <see cref="ToRules"/> に通る。</summary>
+        // rules は検査済みなので、写した後は検査し直さなくても必ず ToRules に通る。
         public void CopyFrom(GameRules rules)
         {
             if (rules == null)
@@ -639,7 +627,6 @@ namespace Shooter.Runtime
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;
     }
 
-    /// <summary><see cref="GameRulesDefinition"/> の内容が不正で <see cref="GameRules"/> に変換できない。</summary>
     public sealed class GameRulesDefinitionException : Exception
     {
         public GameRulesDefinitionException(string message)

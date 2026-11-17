@@ -57,22 +57,18 @@ namespace Fps.Core
             }
 
             inventory.TryTake(handle, 1, out _);
-            // 外した物は setAttachments の前に入れる。後だと溢れた弾が空きを先に使い、外した物が消えるため
-            if (replaced != null && catalog.TryFind(replaced, out var removed)
-                && inventory.Add(replaced, 1, removed.Weight) != 1)
+            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。付ける前の持ち物に戻す
+            if (!setAttachments(next))
             {
                 inventory.Add(item.Id, 1, 0f);
                 return AttachmentRejection.NoRoom;
             }
 
-            // 武器が断るのは、弾倉が減って溢れる弾が持ち物に入らないとき。付ける前の持ち物に戻す
-            if (!setAttachments(next))
+            // 外した物は setAttachments の後に入れる。先に入れると、武器の重さにも数えられた同じ物で空きが減り、溢れる弾の判定が厳しくなるため
+            if (replaced != null && catalog.TryFind(replaced, out var removed)
+                && inventory.Add(replaced, 1, removed.Weight) != 1)
             {
-                if (replaced != null)
-                {
-                    inventory.Remove(replaced, 1);
-                }
-
+                setAttachments(current);
                 inventory.Add(item.Id, 1, 0f);
                 return AttachmentRejection.NoRoom;
             }
@@ -108,15 +104,20 @@ namespace Fps.Core
                 return AttachmentRejection.NotAttached;
             }
 
-            // 先に外した物を入れるのは、setAttachments で溢れた弾が確かめた空きを先に使い、外した物が消えるのを防ぐため
-            if (inventory.RoomFor(item.Id, item.Weight) < 1 || inventory.Add(item.Id, 1, item.Weight) != 1)
+            if (inventory.RoomFor(item.Id, item.Weight) < 1)
             {
                 return AttachmentRejection.NoRoom;
             }
 
+            // 外した物は setAttachments の後に入れる。先に入れると、武器の重さにも数えられた同じ物で空きが減り、溢れる弾の判定が厳しくなるため
             if (!setAttachments(next))
             {
-                inventory.Remove(item.Id, 1);
+                return AttachmentRejection.NoRoom;
+            }
+
+            if (inventory.Add(item.Id, 1, item.Weight) != 1)
+            {
+                setAttachments(current);
                 return AttachmentRejection.NoRoom;
             }
 

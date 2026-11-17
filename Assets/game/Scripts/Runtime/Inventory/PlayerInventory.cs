@@ -291,7 +291,9 @@ namespace Fps.Runtime
 
             foreach (var itemId in released)
             {
-                if (_inventory.Add(itemId, 1) < 1)
+                // 付けた物の重さはまだ武器の重さに数えられているので、その分を空きに足して判定する
+                var freed = _inventory.Catalog.TryFind(itemId, out var item) ? item.Weight : 0f;
+                if (_inventory.Add(itemId, 1, freed) < 1)
                 {
                     Debug.LogWarning($"{LogTag} attachment owner={name} item={itemId} does not fit; lost", this);
                 }

@@ -62,7 +62,10 @@ namespace Shooter.Server
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
             Match = new ServerMatch(
-                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference);
+                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference)
+            {
+                MaxPlayers = MaxPlayers,
+            };
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }
@@ -408,10 +411,26 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            // 名乗ったパーティの Id が読めなくても断らずに 1 人として入れるのは、Id は人数をそろえるときにまとめて移すためだけに使うから
-            var partyId = ConnectionExtras.IsValidField(request.PartyId, ConnectionExtras.MaxPartyIdLength) ? request.PartyId : null;
-            Match.Join(connection, rejoinKey, productUserId, partyId);
+            Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request));
             _host.OnConnected(connection);
+        }
+
+        // パーティの Id はチームを決めるのにしか使わないので、形が違っても断らずに無いものとして入れる
+        private string PartyIdOf(ConnectionId connection, ConnectRequestMessage request)
+        {
+            var partyId = request.PartyId;
+            if (string.IsNullOrEmpty(partyId))
+            {
+                return null;
+            }
+
+            if (!ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            {
+                _log.WriteLine("[Net] client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " sent a malformed party id; joining without a party");
+                return null;
+            }
+
+            return partyId;
         }
 
         private string VerifiedProductUserId(ConnectionId connection)

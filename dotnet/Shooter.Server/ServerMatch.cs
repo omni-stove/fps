@@ -20,6 +20,7 @@ namespace Shooter.Server
         private readonly Func<DateTime> _utcNow;
         private float _restartRemaining;
         private int _botCount;
+        private int _maxPlayers = NetMatchSettings.DefaultMaxPlayers;
         private long _joinCount;
 
         public ServerMatch(
@@ -86,6 +87,22 @@ namespace Shooter.Server
 
         // ルールのモジュールが、切断した人を同じチームに戻すために差し替えられるようにする。
         public TeamChooser ChooseTeam { get; set; }
+
+        // その半分 (TeamAssigner.TeamCapacity) に届いたチームを満員と見るのは、チームごとの定員を別の設定に増やさないため。
+        public int MaxPlayers
+        {
+            get => _maxPlayers;
+            set
+            {
+                if (value < NetMatchSettings.MinMaxPlayers || value > NetMatchSettings.MaxMaxPlayers)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(value), value, "MaxPlayers must be between " + NetMatchSettings.MinMaxPlayers + " and " + NetMatchSettings.MaxMaxPlayers);
+                }
+
+                _maxPlayers = value;
+            }
+        }
 
         // Bot の Id と重ならない範囲に収めるのは、成績の行や JSON の playerId で Bot と見分けられなくなるため。
         public static bool TryGetPlayerId(ConnectionId connection, out int playerId)
@@ -184,6 +201,13 @@ namespace Shooter.Server
             var team = ChooseTeam != null
                 ? ChooseTeam(rejoinKey, out rejoined)
                 : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
+
+            // パーティより前のチームを先に見るのは、つなぎ直すたびに試合の途中でチームが変わらないようにするため
+            if (!rejoined && !string.IsNullOrEmpty(partyId))
+            {
+                team = ChooseWithParty(partyId);
+            }
+
             var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount);
             _players.Add(playerId, player);
             if (connection.IsValid)
@@ -200,6 +224,47 @@ namespace Shooter.Server
             PlayerJoined?.Invoke(player);
             TryStart();
             return player;
+        }
+
+        private Team ChooseWithParty(string partyId)
+        {
+            var alphaParty = 0;
+            var bravoParty = 0;
+            var alphaHumans = 0;
+            var bravoHumans = 0;
+            foreach (var player in _players.Values)
+            {
+                if (player.IsBot)
+                {
+                    continue;
+                }
+
+                var alpha = player.Team == Team.Alpha;
+                if (alpha)
+                {
+                    alphaHumans++;
+                }
+                else
+                {
+                    bravoHumans++;
+                }
+
+                if (string.Equals(player.PartyId, partyId, StringComparison.Ordinal))
+                {
+                    if (alpha)
+                    {
+                        alphaParty++;
+                    }
+                    else
+                    {
+                        bravoParty++;
+                    }
+                }
+            }
+
+            return TeamAssigner.Choose(
+                CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore,
+                alphaParty, bravoParty, alphaHumans, bravoHumans, TeamAssigner.TeamCapacity(MaxPlayers));
         }
 
         public bool Leave(ConnectionId connection)

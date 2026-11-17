@@ -72,7 +72,11 @@ namespace Shooter.Server.Tests
         {
             Send(new ConnectRequestMessage
             {
-                ClientVersion = version, RejoinKey = key, DisplayName = "tester", ProtocolVersion = protocol, PartyId = partyId,
+                ClientVersion = version,
+                RejoinKey = key,
+                DisplayName = "tester",
+                ProtocolVersion = protocol,
+                PartyId = partyId,
             });
         }
 

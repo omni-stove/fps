@@ -376,6 +376,8 @@ namespace Shooter.Core
         /// <see cref="Join(int, string)"/> と同じだが、key の成績が残っていなければ <see cref="NextTeam"/> ではなく team に入れる。
         /// 専用サーバーが試合の枠でパーティを見て決めたチームを、ルールの側にもそのまま使うため。
         /// </summary>
+        /// <param name="playerId">参加するプレイヤーの Id。</param>
+        /// <param name="key">切断して戻ってきたと見分ける鍵。</param>
         /// <param name="team">入れるチーム。null なら <see cref="NextTeam"/>。</param>
         public Team Join(int playerId, string key, Team? team)
         {

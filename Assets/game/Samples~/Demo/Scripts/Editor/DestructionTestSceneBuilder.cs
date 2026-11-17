@@ -11,26 +11,13 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 建造物破壊の動作確認用シーン DestructionTest を生成する。床に <see cref="NavMeshSurface"/> を置いて NavMesh を焼き、
-    /// NavMeshData をシーンの隣にアセットとして保存してから、壊せる小屋 (<see cref="DestructibleStructure"/>)・破片の置き場
-    /// (<see cref="DebrisPool"/>)・<see cref="GameBootstrap"/> (床は生成しない設定) を置く。
-    /// プレイヤーは launcher を持って始まり、小屋が壊れるかは射撃場のルール (<see cref="GameRulesAssetBuilder.RangePath"/>) の
-    /// <see cref="Destruction"/> で決める。プレイヤーとライトは実行時に GameBootstrap が作る。
-    /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.DestructionTestSceneBuilder.Build</code>
-    /// </summary>
-    /// <remarks>
-    /// 配置 (上から見て、プレイヤーは原点で +Z を向く):
-    /// GameBootstrap が z = 10 に標的ダミーを並べるので、小屋はその奥の <see cref="HutCenter"/> に置き、正面の壁は z = 18 になる。
-    /// 小屋は <see cref="HutWidth"/> × <see cref="HutDepth"/> の床面に高さ <see cref="WallHeight"/> の壁 4 面と屋根を 1m の Cube で組む。
-    /// 壁の角の部品は正面と背面の壁に含め、左右の壁は角を除いた列にする。
-    /// </remarks>
+    // GameBootstrap が z = 10 に標的ダミーを並べるので、小屋はその奥に置く。
+    // 壁の角の部品は正面と背面の壁に含め、左右の壁は角を除いた列にする (DestructionSmokeRun が角を正面・背面として撃つ)。
     public static class DestructionTestSceneBuilder
     {
         public static string ScenePath => BuildSceneList.DestructionTestScene;
 
-        /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
+        // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
         public const string MenuPath = "Shooter/Build Destruction Test Scene";
@@ -47,44 +34,33 @@ namespace Shooter.Editor
         public const string RightWallName = "Right";
         public const string RoofName = "Roof";
 
-        /// <summary>Plane は 10m 四方なので、6 倍で 60m 四方 (x, z とも ±30m)。小屋の奥にも歩ける余白を残す。</summary>
+        // Plane は 10m 四方なので、6 倍で 60m 四方にして小屋の奥にも歩ける余白を残す。
         public static readonly Vector3 FloorScale = new Vector3(6f, 1f, 6f);
 
-        /// <summary>小屋の床面の中心 (地面の高さ)。</summary>
         public static readonly Vector3 HutCenter = new Vector3(0f, 0f, 20f);
 
-        /// <summary>小屋の x 方向の幅 (部品の数 = m)。</summary>
         public const int HutWidth = 4;
 
-        /// <summary>小屋の z 方向の奥行き (部品の数 = m)。</summary>
         public const int HutDepth = 4;
 
-        /// <summary>
-        /// 壁の高さ (部品の数 = m)。launcher の被害の半径 (<see cref="WeaponAssetBuilder.LauncherExplosionRadius"/>) より低いと、
-        /// 下段を撃つたびに屋根まで直接壊れてしまい、下段を失って支えの無くなった部品の崩落が起きにくくなる。
-        /// </summary>
+        // launcher の被害の半径 (WeaponAssetBuilder.LauncherExplosionRadius) より低いと、
+        // 下段を撃つたびに屋根まで直接壊れてしまい、下段を失って支えの無くなった部品の崩落が起きにくくなる。
         public const int WallHeight = 4;
 
-        /// <summary>部品 1 つの一辺 (m)。</summary>
         public const float PieceSize = 1f;
 
         public const int PieceMaxHealth = DestructiblePiece.DefaultMaxHealth;
 
-        /// <summary>壁の部品の数。角は正面と背面に含める。</summary>
         public const int WallPieceCount = ((HutWidth * 2) + ((HutDepth - 2) * 2)) * WallHeight;
 
-        /// <summary>屋根の部品の数。</summary>
         public const int RoofPieceCount = HutWidth * HutDepth;
 
         public const int PieceCount = WallPieceCount + RoofPieceCount;
 
-        /// <summary>地面に接する (壁の下段の) 部品の数。</summary>
         public const int GroundedPieceCount = WallPieceCount / WallHeight;
 
-        /// <summary>NavMesh に乗っていることを確かめる点を探す半径 (メートル)。</summary>
         public const float NavMeshCheckRadius = 1f;
 
-        /// <summary>小屋の外周から、NavMesh に乗っていることを確かめる点までの距離 (m)。</summary>
         public const float AroundHutDistance = 2f;
 
         [MenuItem(MenuPath)]
@@ -99,10 +75,6 @@ namespace Shooter.Editor
             BuildAt(ScenePath, NavMeshDataPath);
         }
 
-        /// <summary>
-        /// シーンを生成して NavMesh を焼き、両方を保存して Build Settings に加える (既存の並びは変えない)。
-        /// 武器・ルールのアセットが無いか不正なら何も保存せずに例外を投げる (batchmode では終了コード 1 になる)。
-        /// </summary>
         public static void BuildAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -136,11 +108,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{scenePath}' and '{navMeshDataPath}'");
         }
 
-        /// <summary>
-        /// プレイヤーに持たせる武器。launcher (<see cref="WeaponAssetBuilder.LoadLauncher"/>) を先頭にし、
-        /// 続けて既定のロードアウト (<see cref="WeaponAssetBuilder.LoadPlayerLoadout"/>) を並べる。
-        /// どれかのアセットが無いか不正なら例外を投げる。
-        /// </summary>
         public static WeaponDefinition[] LoadPlayerWeapons()
         {
             var launcher = WeaponAssetBuilder.LoadLauncher();
@@ -151,7 +118,6 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>プレイヤーの立つ位置と、小屋の四方の外側。焼いた NavMesh に乗っているべき点 (足元)。</summary>
         public static Vector3[] NavMeshCheckPoints()
         {
             var halfX = (HutWidth * PieceSize / 2f) + AroundHutDistance;
@@ -166,7 +132,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>床 (NavMeshSurface 付き) を空のシーンに置き、床の NavMeshSurface を返す。焼くのは呼び出し側。</summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
             SceneBuildHelpers.RequireEmpty(scene, "the level");
@@ -178,12 +143,6 @@ namespace Shooter.Editor
             return surface;
         }
 
-        /// <summary>
-        /// GameBootstrap (床は作らない)・破片の置き場・小屋を置き、小屋を返す。参照はすべてここで設定する。
-        /// プレイヤーは playerWeapons (通常は <see cref="LoadPlayerWeapons"/>) を持ち、rules を効かせる。
-        /// 小屋が弾で壊れるかは rules の <see cref="GameRules.Destruction"/> で決める。
-        /// 引数が不正なら何も置かずに例外を投げる。
-        /// </summary>
         public static DestructibleStructure CreateActors(
             Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, GameRulesDefinition rules, GameObject pieceVisualPrefab = null)
         {
@@ -216,10 +175,7 @@ namespace Shooter.Editor
             return hut;
         }
 
-        /// <summary>
-        /// <see cref="HutCenter"/> に小屋を置いて返す。壁 4 面 (下段は地面に接する) と屋根を 1m の Cube の部品で組み、
-        /// 部品の添字は作った順に 0 から振る。部品の隣接は <see cref="DestructibleStructure"/> がコライダーの重なりから作る。
-        /// </summary>
+        // 部品の隣接は DestructibleStructure がコライダーの重なりから作るので、ここでは並べるだけにする。
         public static DestructibleStructure CreateHut(Scene scene, bool destructionEnabled, GameObject pieceVisualPrefab = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);

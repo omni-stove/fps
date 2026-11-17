@@ -6,23 +6,9 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、分隊への指示 (<see cref="SquadCommandController"/>) を確かめる手順。
-    /// <list type="number">
-    /// <item>陣営の無いプレイヤーが指示しても出ない (<c>[Squad] refused reason=NoSide</c>) ことを確かめ、プレイヤーに味方の bot
-    /// (<see cref="SquadCommandRangeFixture.BotName"/>) と同じ陣営を持たせる。</item>
-    /// <item><see cref="SquadCommandRangeFixture.StandPoint"/> から地面 (<see cref="SquadCommandRangeFixture.HoldPoint"/>) を指して指示すると、
-    /// bot が受けて (<c>[Squad] accepted ... kind=Hold</c>) 応答 (<see cref="SubtitleFeed.SquadReplied"/>) を字幕に出し、そこへ移って着く (<c>[Squad] arrived</c>)。
-    /// 守る指示が <see cref="GameSignals.SquadOrder"/> に出て、それを購読する HUD (<see cref="SquadOrderMarkerView"/>) に印が出る。</item>
-    /// <item>標的ダミーを <see cref="SquadCommandRangeFixture.TargetPoint"/> に置いて指して指示すると、bot がそのダミーを狙う (<c>[Squad] engage</c>)。</item>
-    /// <item>長押し (<see cref="SquadCommandController.Recall"/>) で付いてこさせると (<c>[Squad] order kind=Follow</c>)、
-    /// bot がプレイヤーの近く (<see cref="SquadOrderSpec.FollowDistance"/>) まで戻る。</item>
-    /// </list>
-    /// 入力の代わりに <see cref="FirstPersonLook.ApplyLookDelta"/> で照準を合わせ、<see cref="SquadCommandController.TryOrder"/> を呼ぶ。
-    /// </summary>
+    // batchmode には入力が無いので、FirstPersonLook.ApplyLookDelta で照準を合わせ、SquadCommandController.TryOrder を直接呼ぶ。
     public sealed class SquadCommandSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary><see cref="Order"/>。</summary>
         public const int StepOrder = 510;
 
         // NavMesh を焼くのを待ち、守る場所まで歩き、ダミーを狙い、戻ってくるまで。

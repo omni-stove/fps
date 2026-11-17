@@ -10,21 +10,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ルールのオンオフの項目 (<see cref="GameRulesDebugDraft.IsToggle"/>) ごとに、その機能だけを試す小さなシーン
-    /// (<see cref="BuildSceneList.FeatureScene"/>) を 1 つずつ生成する。シーンにはその機能の試し場所 (<see cref="Stations"/>) だけを置き、
-    /// ルールは <see cref="GameRulesAssetBuilder.FeatureRules"/> (その項目だけ On) を <see cref="GameRulesAssetBuilder.FeatureRulesPath"/> に置いて配線する。
-    /// 実行中は F1 (ルールのデバッグパネル) で同じ項目を切って見比べ、F2 (<see cref="ViewModeDebugToggle"/>) で一人称と三人称を入れ替える。
-    /// プレイヤー・標的ダミー・HUD は実行時に GameBootstrap が作る。保存したシーンは Build Settings に (並びを変えずに) 加える。
-    /// 何度実行しても同じ結果になる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.FeatureSceneBuilder.Build</code>
-    /// </summary>
-    /// <remarks>
-    /// 試し場所は TPS の射撃場の置く物 (<see cref="ITpsRangeFixture"/>) をそのまま使い、射撃場の配置に意味があるもの
-    /// (<see cref="FeaturePlacement.InPlace"/>) 以外は、置いてから根ごと出現位置の右前 (<see cref="FeaturePlacement.BesideSpawn"/>) へ平行に移す。
-    /// 置く物は子と線の端 (ジップライン) を根から見た位置で持つので、移しても形は崩れない。
-    /// 床は出現位置・標的ダミー・試し場所が収まる最小の正方形 (<see cref="FloorHalfExtent"/>)。
-    /// </remarks>
+    // 試し場所は TPS の射撃場の置く物 (ITpsRangeFixture) をそのまま使い、射撃場の配置に意味があるもの以外は置いてから根ごと平行に移す。
+    // 置く物は子と線の端 (ジップライン) を根から見た位置で持つので、移しても形は崩れない。
     public static class FeatureSceneBuilder
     {
         public const string MenuPath = "Shooter/Build Feature Scenes";
@@ -33,22 +20,18 @@ namespace Shooter.Editor
         public const string BootstrapObjectName = "GameBootstrap";
         public const string FloorName = GameBootstrap.FloorName;
 
-        /// <summary><see cref="FeaturePlacement.BesideSpawn"/> の試し場所の左端の x (m)。標的ダミー (x = -4..4、半径 0.5) の右に空ける。</summary>
+        // 標的ダミー (x = -4..4、半径 0.5) にかからないよう、その右に空ける。
         public const float BesideSpawnMinX = 6f;
 
-        /// <summary><see cref="FeaturePlacement.BesideSpawn"/> の試し場所の手前の端の z (m)。</summary>
         public const float BesideSpawnMinZ = 3f;
 
-        /// <summary>試し場所の外側に残す床の幅 (m)。</summary>
         public const float FloorMargin = 6f;
 
-        /// <summary>床の半分の広さの下限 (m)。標的ダミーの列 (z = 10) と回避・グレネードの分。</summary>
+        // 試し場所が無くても、標的ダミーの列 (z = 10) と回避・グレネードの分の床は残す。
         public const float MinFloorHalfExtent = 15f;
 
-        /// <summary>床の半分の広さをこの倍数に切り上げる (m)。</summary>
         public const float FloorStep = 5f;
 
-        /// <summary>機能ごとのシーンの組み立て。オンオフの項目すべてを 1 つずつ、<see cref="GameRulesDebugDraft.Fields"/> の順に並べる。</summary>
         public static IReadOnlyList<FeatureScene> All()
         {
             var scenes = new List<FeatureScene>();
@@ -63,8 +46,6 @@ namespace Shooter.Editor
             return scenes;
         }
 
-        /// <summary>field の機能の試し場所。標的ダミーと開けた床だけで試せる機能 (予備弾・アクティブリロード・回避・グレネードなど) は空。呼ぶたびに作り直す。</summary>
-        /// <exception cref="ArgumentException">field がオンオフの項目でない。</exception>
         public static IReadOnlyList<FeatureStation> Stations(GameRulesDebugField field)
         {
             if (!GameRulesDebugDraft.IsToggle(field))
@@ -129,11 +110,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// feature のシーンを scenePath に生成・保存し、Build Settings に加える (既存の並びは変えない)。
-        /// rulesPath のルールが無ければ <see cref="GameRulesAssetBuilder.FeatureRules"/> で作り、あれば値を変えずに使う。
-        /// 武器のアセットが無いか不正なら何も保存せずに例外を投げる (batchmode では終了コード 1 になる)。
-        /// </summary>
         public static void BuildAt(FeatureScene feature, string scenePath, string rulesPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -162,13 +138,7 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved '{scenePath}' for {feature.Field} and registered it in Build Settings");
         }
 
-        /// <summary>
-        /// 空のシーンに床、GameBootstrap (床は作らない、weapons と rules を配線) と MatchRunner を置いた GameObject を入れ、
-        /// stations の置く物を順に置いて移し、GameBootstrap を返す。置く物の前に GameBootstrap を置くのは、敵を置く物がその武器を引くため。
-        /// 引数が不正か置く物が決まりを守らなければ、置いた物を消して例外を投げる。
-        /// </summary>
-        /// <exception cref="ArgumentException">stations の名前が空か、組み込みの物やほかの置く物と重なる。</exception>
-        /// <exception cref="InvalidOperationException">置く物が null を返した、別のシーンや子に置いた、または名前と違う名前で置いた。</exception>
+        // 置く物の前に GameBootstrap を置くのは、敵を置く物がその武器を引くため。
         public static GameBootstrap PopulateScene(
             Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules, IReadOnlyList<FeatureStation> stations)
         {
@@ -221,11 +191,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// stations を置くシーンの床の x, z 方向の半分の広さ (m)。出現位置・標的ダミー・移した後の試し場所から <see cref="FloorMargin"/> 離れるまでを、
-        /// <see cref="MinFloorHalfExtent"/> 以上で <see cref="FloorStep"/> の倍数に切り上げる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">stations が null。</exception>
         public static float FloorHalfExtent(IReadOnlyList<FeatureStation> stations)
         {
             if (stations == null)
@@ -244,7 +209,6 @@ namespace Shooter.Editor
             return Mathf.Ceil(half / FloorStep) * FloorStep;
         }
 
-        /// <summary>半分の広さ half の床にする Plane の倍率。Plane は 10m 四方。</summary>
         public static Vector3 FloorScale(float half)
         {
             return new Vector3(half * 2f / 10f, 1f, half * 2f / 10f);
@@ -303,10 +267,8 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>機能ごとのシーン 1 つ分。試す項目と、置く試し場所。</summary>
     public sealed class FeatureScene
     {
-        /// <exception cref="ArgumentNullException">stations が null。</exception>
         public FeatureScene(GameRulesDebugField field, IReadOnlyList<FeatureStation> stations)
         {
             Field = field;
@@ -318,23 +280,15 @@ namespace Shooter.Editor
         public IReadOnlyList<FeatureStation> Stations { get; }
     }
 
-    /// <summary>試し場所をどこに置くか。</summary>
     public enum FeaturePlacement
     {
-        /// <summary>TPS の射撃場と同じ位置。出現位置や標的ダミーとの位置関係に意味がある置く物 (遮蔽物・怯みの敵など)。</summary>
         InPlace,
 
-        /// <summary>
-        /// 出現位置の右前。置く物の範囲の左端を <see cref="FeatureSceneBuilder.BesideSpawnMinX"/>、手前の端を
-        /// <see cref="FeatureSceneBuilder.BesideSpawnMinZ"/> に合わせ、標的ダミーの列にかからないようにする。
-        /// </summary>
         BesideSpawn,
     }
 
-    /// <summary>機能ごとのシーンの試し場所 1 つ。TPS の射撃場の置く物と、それを置く場所。</summary>
     public readonly struct FeatureStation
     {
-        /// <exception cref="ArgumentNullException">fixture が null。</exception>
         public FeatureStation(ITpsRangeFixture fixture, FeaturePlacement placement)
         {
             Fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
@@ -345,7 +299,6 @@ namespace Shooter.Editor
 
         public FeaturePlacement Placement { get; }
 
-        /// <summary>置く物を移す量。水平だけ。<see cref="FeaturePlacement.InPlace"/> なら 0。</summary>
         public Vector3 Offset
         {
             get
@@ -361,7 +314,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>移した後の、置く物が床の上で占める範囲 (ワールド座標)。</summary>
         public Bounds Footprint
         {
             get
@@ -375,7 +327,6 @@ namespace Shooter.Editor
 
     // ここから下は機能ごとのシーンだけで使う置く物。public にすると TPS の射撃場の生成 (ExtensionPoints) が拾って射撃場にも置くので internal にする。
 
-    /// <summary>はしごの付いた台。はしごは出現位置の側 (-X) に立てる。高さは機能ごとに変える。</summary>
     internal sealed class FeatureLadderTowerFixture : ITpsRangeFixture
     {
         public const string FixtureName = "LadderTower";
@@ -403,7 +354,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>壊せる小屋と、その破片の置き場。壊れるかはルールの Destruction で決まる。</summary>
     internal sealed class FeatureHutFixture : ITpsRangeFixture
     {
         public const string FixtureName = "HutYard";
@@ -448,7 +398,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>Bootstrap の射撃場と同じ低い遮蔽物と高い遮蔽物 (<see cref="BootstrapSceneBuilder.Covers"/>)。出現位置と標的の間に置く。</summary>
     internal sealed class FeatureCoversFixture : ITpsRangeFixture
     {
         public int Order => 0;
@@ -483,10 +432,8 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>乗り越え用の低い壁。TPS の射撃場の壁と同じ高さと厚さで、出現位置の前に +Z へ越える向きに置く。</summary>
     internal sealed class FeatureVaultWallFixture : ITpsRangeFixture
     {
-        /// <summary>壁の中心の z (m)。出現位置と標的ダミーの間。</summary>
         public const float WallZ = 4f;
 
         public const float WallWidth = 4f;

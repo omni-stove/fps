@@ -8,21 +8,10 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器のアセットを作るか上書きする。<see cref="JsonFolder"/> に置いた武器の JSON をすべて同じ名前の <see cref="WeaponDefinition"/> にし
-    /// (<see cref="WeaponJsonImporter"/>)、それをファイル名の順に並べた射撃場で拾える武器の一覧 (<see cref="RangeWeaponsPath"/> の
-    /// <see cref="WeaponCatalogAsset"/>) を作る。他のゲームを参考にしたサンプル (<see cref="ReferenceJsonFolder"/>・<see cref="RealisticJsonFolder"/>) も
-    /// 同じように、それぞれのフォルダのアセットと一覧 (<see cref="ReferenceWeaponsPath"/>・<see cref="RealisticWeaponsPath"/>) にする。続けて <see cref="RiflePath"/>・<see cref="HandgunPath"/> の武器を rifle・handgun の順に
-    /// 並べた <see cref="CatalogPath"/> の <see cref="WeaponCatalogAsset"/> と、それをスロットに入れた <see cref="LoadoutPath"/> の
-    /// <see cref="LoadoutDefinition"/> を作り、近接で倒したときの武器のナイフ (<see cref="KnifePath"/>) を作る。サンプルの武器を足すときは、<see cref="JsonFolder"/> に JSON を 1 つ置いて走らせ直すだけでよい。
-    /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
-    /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.WeaponAssetBuilder.Build</code>
-    /// </summary>
+    // サンプルの武器を足すときは JsonFolder に JSON を 1 つ置いて走らせ直すだけでよいよう、JSON から武器のアセットと射撃場の一覧を作る。
+    // 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンやプレハブは壊れない。
     public static class WeaponAssetBuilder
     {
-        /// <summary>武器のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => WeaponAssets.Folder;
 
         public static string RiflePath => Folder + "/Rifle.asset";
@@ -32,10 +21,8 @@ namespace Shooter.Editor
         public static string LauncherPath => Folder + "/Launcher.asset";
         public static string KnifePath => Folder + "/Knife.asset";
 
-        /// <summary>サンプルの武器の JSON を置くフォルダ。ここの *.json をすべて <see cref="Folder"/> の武器のアセットにする。</summary>
         public static string JsonFolder => Folder + "/Json";
 
-        /// <summary>射撃場で拾える武器の一覧。<see cref="JsonFolder"/> の武器をすべて、JSON のファイル名の順に並べる。</summary>
         public static string RangeWeaponsPath => Folder + "/RangeWeapons.asset";
 
         public static string ReferenceJsonFolder => Folder + "/ReferenceJson";
@@ -59,105 +46,79 @@ namespace Shooter.Editor
         public const string LauncherId = "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96";
         public const string KnifeId = "f4df3778-7da1-49c7-88a6-3f4769c23f9e";
 
-        /// <summary>武器の名前を引く表のキー。文は Resources/Localization/&lt;言語&gt;/items.json にある。</summary>
         public const string RifleNameKey = "weapon.rifle";
         public const string HandgunNameKey = "weapon.handgun";
         public const string LauncherNameKey = "weapon.launcher";
         public const string KnifeNameKey = "weapon.knife";
 
-        /// <summary>launcher の 1 発が建造物に被害を広げる半径 (m)。</summary>
         public const float LauncherExplosionRadius = 4f;
 
-        /// <summary>launcher の連射間隔 (秒)。弾倉が 1 発なので、実際の間隔はリロード時間で決まる。</summary>
+        // 弾倉が 1 発なので、実際の間隔はリロード時間で決まる。
         public const float LauncherFireInterval = 0.5f;
 
-        /// <summary>rifle を覗き込み切ったときの縦の視野角 (度)。共通の初期値 (<see cref="AdsZoom.DefaultFieldOfView"/>) より狭く、遠くを狙いやすくする。</summary>
+        // 共通の初期値 (AdsZoom.DefaultFieldOfView) より狭くして、遠くを狙いやすくする。
         public const float RifleAdsFieldOfView = 45f;
 
-        /// <summary>handgun を覗き込み切ったときの縦の視野角 (度)。近距離で使うので rifle より広い。</summary>
+        // 近距離で使うので rifle より広くする。
         public const float HandgunAdsFieldOfView = 55f;
 
-        /// <summary>rifle を隠れたまま撃ったときの散らばりの最大角度 (度)。</summary>
         public const float RifleBlindFireSpreadDegrees = 8f;
 
-        /// <summary>rifle のアクティブリロードの判定の幅の始まり (リロード時間に対する割合)。</summary>
         public const float RifleActiveReloadWindowStart = 0.5f;
 
-        /// <summary>rifle のアクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0.5〜0.65 になる。</summary>
         public const float RifleActiveReloadWindowLength = 0.15f;
 
-        /// <summary>rifle のアクティブリロードに失敗したときに足される秒数。</summary>
         public const float RifleActiveReloadFailSeconds = 0.6f;
 
-        /// <summary>
-        /// rifle の 1 発ごとの縦の反動 (度)。連射間隔 0.1 秒が反動の戻り待ち (<see cref="WeaponSpec.DefaultRecoilRecoveryDelaySeconds"/>) より短いので、
-        /// 撃ち続ける間は戻らずに上へ溜まり、30 発撃ち切ると 15° 上がる。
-        /// </summary>
+        // 連射間隔 0.1 秒が反動の戻り待ち (WeaponSpec.DefaultRecoilRecoveryDelaySeconds) より短いので、
+        // 撃ち続ける間は戻らずに上へ溜まり、30 発撃ち切ると 15° 上がる。
         public const float RifleRecoilPitchDegrees = 0.5f;
 
-        /// <summary>rifle の 1 発ごとの横の反動の最大 (度)。縦より小さくし、溜まる向きを上に寄せる。</summary>
+        // 縦より小さくし、溜まる向きを上に寄せる。
         public const float RifleRecoilYawDegrees = 0.2f;
 
-        /// <summary>rifle の反動が戻る速さ (度/秒)。撃ち切った 15° が離してから約 1.5 秒で戻る。</summary>
+        // 撃ち切った 15° が、離してから約 1.5 秒で戻る速さにする。
         public const float RifleRecoilRecoveryPerSecond = 10f;
 
-        /// <summary>rifle を腰だめで撃ったときの散らばりの最大角度 (度)。</summary>
         public const float RifleHipSpreadDegrees = 3f;
 
-        /// <summary>rifle を覗き込み切って撃ったときの散らばりの最大角度 (度)。腰撃ちの 1/6 まで絞れる。</summary>
         public const float RifleAdsSpreadDegrees = 0.5f;
 
-        /// <summary>rifle を走りながら撃ったときに散らばりへ足す最大角度 (度)。</summary>
         public const float RifleMoveSpreadDegrees = 3f;
 
-        /// <summary>rifle の重さ (kg)。</summary>
         public const float RifleWeight = 3.5f;
 
-        /// <summary>handgun の 1 発ごとの縦の反動 (度)。rifle の 1 発より大きく跳ねる。</summary>
+        // rifle の 1 発より大きく跳ねるようにする。
         public const float HandgunRecoilPitchDegrees = 2.5f;
 
-        /// <summary>handgun の 1 発ごとの横の反動の最大 (度)。</summary>
         public const float HandgunRecoilYawDegrees = 0.6f;
 
-        /// <summary>
-        /// handgun の反動が戻る速さ (度/秒)。連射間隔 0.2 秒のうち戻り待ち 0.15 秒を除いた 0.05 秒で
-        /// 1 発分 (縦横で最大約 2.57°) が戻るので、最短間隔で撃ち続けても上へは溜まらない。
-        /// </summary>
+        // 連射間隔 0.2 秒のうち戻り待ち 0.15 秒を除いた 0.05 秒で 1 発分 (縦横で最大約 2.57°) が戻るので、
+        // 最短間隔で撃ち続けても上へは溜まらない。
         public const float HandgunRecoilRecoveryPerSecond = 60f;
 
-        /// <summary>handgun を腰だめで撃ったときの散らばりの最大角度 (度)。近距離用なので rifle より狭い。</summary>
+        // 近距離用なので rifle より狭くする。
         public const float HandgunHipSpreadDegrees = 2f;
 
-        /// <summary>handgun を覗き込み切って撃ったときの散らばりの最大角度 (度)。片手寄りの構えなので rifle ほどは絞れない。</summary>
+        // 片手寄りの構えなので rifle ほどは絞れなくする。
         public const float HandgunAdsSpreadDegrees = 0.8f;
 
-        /// <summary>handgun を走りながら撃ったときに散らばりへ足す最大角度 (度)。軽いので rifle より小さい。</summary>
+        // 軽いので rifle より小さくする。
         public const float HandgunMoveSpreadDegrees = 1.5f;
 
-        /// <summary>handgun の重さ (kg)。</summary>
         public const float HandgunWeight = 1f;
 
-        /// <summary>launcher の重さ (kg)。</summary>
         public const float LauncherWeight = 7f;
 
-        /// <summary>handgun を隠れたまま撃ったときの散らばりの最大角度 (度)。片手で構えるので rifle より広い。</summary>
+        // 片手で構えるので rifle より広くする。
         public const float HandgunBlindFireSpreadDegrees = 12f;
 
-        /// <summary>handgun のアクティブリロードの判定の幅の始まり (リロード時間に対する割合)。</summary>
         public const float HandgunActiveReloadWindowStart = 0.45f;
 
-        /// <summary>handgun のアクティブリロードの判定の幅の長さ (リロード時間に対する割合)。0.45〜0.65 になる。</summary>
         public const float HandgunActiveReloadWindowLength = 0.2f;
 
-        /// <summary>handgun のアクティブリロードに失敗したときに足される秒数。</summary>
         public const float HandgunActiveReloadFailSeconds = 0.4f;
 
-        /// <summary>
-        /// rifle の値 (AssaultRifle、Auto、30/90 発、0.1 秒、リロード 2 秒、25 ダメージ、射程 100m、20〜60m で 0.5 倍まで減衰、
-        /// ADS の視野角 <see cref="RifleAdsFieldOfView"/>、ブラインドファイアの散らばり 8°、アクティブリロードの判定の幅 0.5〜0.65・失敗 0.6 秒、
-        /// 反動 上 0.5°・左右 ±0.2°・戻り 10°/秒、散らばり 腰 3°・ADS 0.5°・移動 +3°)。
-        /// オフラインのプレイヤー (<see cref="WeaponController"/>) と、配置でこの Id を指定した敵 (<see cref="EnemyAgent"/>) が使う。
-        /// </summary>
         public static WeaponSpec RifleSpec()
         {
             return new WeaponSpec(
@@ -186,39 +147,18 @@ namespace Shooter.Editor
                 weight: RifleWeight);
         }
 
-        /// <summary>
-        /// <see cref="RiflePath"/> の rifle の定義を読む (プレイヤーの武器は <see cref="LoadPlayerLoadout"/>、敵の武器は
-        /// <see cref="LoadCatalog"/> の一覧から配置ごとに引く)。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
-        /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
-        /// </summary>
         public static WeaponDefinition LoadRifle()
         {
             return LoadDefinition(RiflePath);
         }
 
-        /// <summary>path の <see cref="WeaponDefinition"/> を読み、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめて返す。</summary>
         public static WeaponDefinition LoadDefinition(string path) => WeaponAssets.LoadDefinition(path);
 
-        /// <summary>
-        /// <see cref="CatalogPath"/> の武器の一覧を読む。シーン生成スクリプトが敵の配置ごとの武器を引くのに使う。
-        /// 無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
-        /// 一覧が不正なら <see cref="WeaponDefinitionException"/> を投げ、壊れた定義をシーンに配線しない。
-        /// </summary>
         public static WeaponCatalogAsset LoadCatalog() => WeaponAssets.LoadCatalog(CatalogPath);
 
-        /// <summary>
-        /// catalog から、Id が weaponId の武器の定義を引く。placementId は失敗したときにどの配置かを示すためだけに使う。
-        /// </summary>
-        /// <exception cref="KeyNotFoundException">weaponId の武器が catalog に無いとき。メッセージに配置の Id と武器の Id を含む。</exception>
-        /// <exception cref="WeaponDefinitionException">catalog が不正なとき。</exception>
         public static WeaponDefinition FindInCatalog(WeaponCatalogAsset catalog, string placementId, string weaponId) =>
             WeaponAssets.FindInCatalog(catalog, placementId, weaponId);
 
-        /// <summary>
-        /// handgun の値 (Handgun、Semi、12/48 発、0.2 秒、リロード 1.5 秒、34 ダメージ、射程 60m、15〜40m で 0.6 倍まで減衰、
-        /// ADS の視野角 <see cref="HandgunAdsFieldOfView"/>、ブラインドファイアの散らばり 12°、アクティブリロードの判定の幅 0.45〜0.65・失敗 0.4 秒、
-        /// 反動 上 2.5°・左右 ±0.6°・戻り 60°/秒、散らばり 腰 2°・ADS 0.8°・移動 +1.5°)。
-        /// </summary>
         public static WeaponSpec HandgunSpec()
         {
             return new WeaponSpec(
@@ -247,11 +187,7 @@ namespace Shooter.Editor
                 weight: HandgunWeight);
         }
 
-        /// <summary>
-        /// launcher の値 (Launcher、Semi、1/4 発、<see cref="LauncherFireInterval"/> 秒、リロード 3 秒、120 ダメージ、射程 150m、減衰なし、
-        /// 建造物への被害の半径 <see cref="LauncherExplosionRadius"/>m、着弾で <see cref="LauncherExplosion"/> の爆発)。
-        /// 建造物を壊す確認用で、既定のロードアウトとカタログには入れない。
-        /// </summary>
+        // 建造物を壊す確認用なので、既定のロードアウトとカタログには入れない。
         public static WeaponSpec LauncherSpec()
         {
             var flat = new WeaponSpec(
@@ -277,10 +213,8 @@ namespace Shooter.Editor
             return new ExplosionSpec(new ExplosionDamage(100, 5f, 1f), 100);
         }
 
-        /// <summary>
-        /// ナイフの値。近接 (<see cref="MeleeController.MeleeWeapon"/>) で倒したときの武器の Id と名前に使い、銃としては持たせない。
-        /// 当たりとダメージは <see cref="MeleeController"/> の値 (<see cref="MeleeSpec"/>) で決まる。
-        /// </summary>
+        // ナイフは近接 (MeleeController.MeleeWeapon) で倒したときの武器の Id と名前に使うだけで銃としては持たせず、
+        // 当たりとダメージは MeleeController の値 (MeleeSpec) で決まる。
         public static WeaponSpec KnifeSpec()
         {
             // WeaponCategory に近接が無く、銃としては撃たないので、射撃の値は近接の既定の値に寄せるだけにする。
@@ -298,36 +232,23 @@ namespace Shooter.Editor
                 DamageFalloff.None);
         }
 
-        /// <summary><see cref="KnifePath"/> のナイフの定義を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。</summary>
         public static WeaponDefinition LoadKnife()
         {
             return LoadDefinition(KnifePath);
         }
 
-        /// <summary>
-        /// <see cref="LauncherPath"/> の launcher の定義を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう例外を投げる。
-        /// 値が不正でも例外を投げ、壊れた定義をシーンに配線しない。
-        /// </summary>
         public static WeaponDefinition LoadLauncher()
         {
             return LoadDefinition(LauncherPath);
         }
 
-        /// <summary>
-        /// <see cref="LoadoutPath"/> のデフォルトロードアウトを読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう
-        /// 例外を投げる。値が不正でも例外を投げ、壊れたロードアウトを配線しない。
-        /// </summary>
         public static LoadoutDefinition LoadDefaultLoadout()
         {
             return LoadLoadout(LoadoutPath);
         }
 
-        /// <summary>
-        /// オフラインのプレイヤーの既定ロードアウト。<see cref="LoadDefaultLoadout"/> のスロット順の武器の定義 (rifle, handgun) で、
-        /// シーン生成スクリプトが <see cref="GameBootstrap.WeaponDefinitions"/> に配線する。
-        /// ネット対戦と同じアセットから引くので、並びを変えるときは <see cref="DefaultLoadoutSlots"/> だけを直せばよい。
-        /// 持ち替え秒数 (<see cref="LoadoutDefinition.SwitchSeconds"/>) はオフラインでは使わない。
-        /// </summary>
+        // ネット対戦と同じアセットから引くので、並びを変えるときは DefaultLoadoutSlots だけを直せばよい。
+        // 持ち替え秒数 (LoadoutDefinition.SwitchSeconds) はオフラインでは使わない。
         public static WeaponDefinition[] LoadPlayerLoadout()
         {
             var loadout = LoadDefaultLoadout();
@@ -341,10 +262,9 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>path の <see cref="LoadoutDefinition"/> を読み、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめて返す。</summary>
         public static LoadoutDefinition LoadLoadout(string path) => WeaponAssets.LoadLoadout(path);
 
-        /// <summary>デフォルトロードアウトのスロット 0 が許す種別。Handgun 以外のすべて (種別が増えたら自動で入る)。</summary>
+        // 種別が増えたら自動で入るよう、列挙から Handgun 以外のすべてを集める。
         public static WeaponCategory[] DefaultPrimaryCategories()
         {
             var categories = new List<WeaponCategory>();
@@ -359,13 +279,11 @@ namespace Shooter.Editor
             return categories.ToArray();
         }
 
-        /// <summary>デフォルトロードアウトのスロット 1 が許す種別。Handgun だけ。</summary>
         public static WeaponCategory[] DefaultSecondaryCategories()
         {
             return new[] { WeaponCategory.Handgun };
         }
 
-        /// <summary>デフォルトロードアウトのスロット。0 番は <see cref="DefaultPrimaryCategories"/> で rifle、1 番は <see cref="DefaultSecondaryCategories"/> で handgun。</summary>
         public static LoadoutSlotDefinition[] DefaultLoadoutSlots(WeaponDefinition rifle, WeaponDefinition handgun)
         {
             return new[]
@@ -375,10 +293,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>
-        /// <see cref="RangeWeaponsPath"/> の射撃場で拾える武器の一覧を読む。無ければ (または別の型なら) 先に <see cref="Build"/> を走らせるよう
-        /// 例外を投げる。一覧が不正でも例外を投げ、壊れた定義をシーンに配線しない。
-        /// </summary>
         public static WeaponCatalogAsset LoadRangeWeapons() => WeaponAssets.LoadCatalog(RangeWeaponsPath);
 
         public static WeaponCatalogAsset LoadReferenceWeapons() => WeaponAssets.LoadCatalog(ReferenceWeaponsPath);
@@ -413,12 +327,6 @@ namespace Shooter.Editor
             BuildKnifeAt(KnifePath);
         }
 
-        /// <summary>
-        /// jsonFolder の *.json をすべて folder の同じ名前の <see cref="WeaponDefinition"/> にし、それを JSON のファイル名の順に並べた
-        /// <see cref="WeaponCatalogAsset"/> を rangeWeaponsPath に作るか上書きして、武器の定義を返す。
-        /// rangeWeaponsPath は folder の武器のアセットと重ならない Assets/ 以下の .asset であること。
-        /// </summary>
-        /// <exception cref="WeaponJsonException">JSON が不正。何も保存しない。</exception>
         public static IReadOnlyList<WeaponDefinition> BuildFromJsonAt(string jsonFolder, string folder, string rangeWeaponsPath)
         {
             rangeWeaponsPath = SceneBuildHelpers.ValidateAssetPath(rangeWeaponsPath);
@@ -430,10 +338,6 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>
-        /// path に launcher の定義を作るか上書きして保存し、返す。カタログとロードアウトには入れないので、
-        /// <see cref="BuildAt"/> のパスと重ならない Assets/ 以下の .asset であること。
-        /// </summary>
         public static WeaponDefinition BuildLauncherAt(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -445,10 +349,6 @@ namespace Shooter.Editor
             return launcher;
         }
 
-        /// <summary>
-        /// path にナイフの定義を作るか上書きして保存し、返す。射撃場の一覧・カタログ・ロードアウトには入れないので、
-        /// それらのパスと重ならない Assets/ 以下の .asset であること。
-        /// </summary>
         public static WeaponDefinition BuildKnifeAt(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -460,11 +360,6 @@ namespace Shooter.Editor
             return knife;
         }
 
-        /// <summary>
-        /// riflePath・handgunPath に武器の定義を、catalogPath にそれを並べたカタログを、loadoutPath にそれをスロットに入れた
-        /// デフォルトロードアウトを作るか上書きして保存し、カタログを返す。
-        /// 4 つのパスは互いに異なる Assets/ 以下の .asset であること。
-        /// </summary>
         public static WeaponCatalogAsset BuildAt(string riflePath, string handgunPath, string catalogPath, string loadoutPath)
         {
             riflePath = SceneBuildHelpers.ValidateAssetPath(riflePath);
@@ -495,14 +390,11 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>definition の中身を spec の値にし、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめる。</summary>
         public static void Configure(WeaponDefinition definition, WeaponSpec spec) => WeaponAssets.Configure(definition, spec);
 
-        /// <summary>catalog の一覧を weapons にし、<see cref="WeaponCatalogAsset.ToCatalog"/> に通ることを確かめる。</summary>
         public static void Configure(WeaponCatalogAsset catalog, IEnumerable<WeaponDefinition> weapons) =>
             WeaponAssets.Configure(catalog, weapons);
 
-        /// <summary>loadout のスロットを slots に、持ち替え秒数を switchSeconds にし、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめる。</summary>
         public static void Configure(LoadoutDefinition loadout, IEnumerable<LoadoutSlotDefinition> slots, float switchSeconds) =>
             WeaponAssets.Configure(loadout, slots, switchSeconds);
 

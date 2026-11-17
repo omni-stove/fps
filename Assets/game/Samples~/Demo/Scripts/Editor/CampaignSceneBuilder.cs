@@ -12,54 +12,21 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// キャンペーンのミッション (<see cref="Missions"/>: Campaign01 と <see cref="Campaign02Mission"/>) のシーンとミッション定義を生成する。
-    /// ミッションごとの配置は <see cref="CampaignMissionSpec"/> で受け取り、次の順にシーンの直下へ置く:
-    /// 地形 (床・壁・遮蔽物、<see cref="LevelObjectName"/>) を置いて <see cref="NavMeshSurface"/> で NavMesh を焼き、
-    /// NavMeshData をシーンの隣に保存してから、<see cref="GameBootstrap"/> (床は作らない)、<see cref="MissionRunner"/>、
-    /// <see cref="CampaignMissionSpec.Elements"/> (目標の範囲・敵の組・遮蔽点)、セーブと再開を受け持つ <see cref="CampaignRunner"/>、
-    /// <see cref="CampaignMissionSpec.Checkpoints"/> の <see cref="CheckpointTrigger"/>。参照はすべてここでコードから設定する。
-    /// ルールは CampaignNormal を既定にし、CampaignRunner には <c>-difficulty</c> 用に CampaignEasy / Normal / Hard を配線する
-    /// (先に <see cref="GameRulesAssetBuilder.Build"/> を走らせておく)。
-    /// 保存したシーンは Build Settings の末尾に加える (先頭の起動シーンは変えない)。何度実行しても同じ結果になる。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CampaignSceneBuilder.Build</code>
-    /// </summary>
-    /// <remarks>
-    /// Campaign01 は 3 つの目標 (区域 A に到達 → 敵 4 体を倒す → 出口に到達) と敵 4 体、
-    /// 2 つのチェックポイント (開始地点 <c>start</c>・区域 A <c>area_a</c>) を持つ。
-    /// 配置 (上から見て、プレイヤーは原点で +Z を向く。床は x = ±15、z = -10〜70):
-    /// <list type="bullet">
-    /// <item>z &lt; 30 は開始区画。GameBootstrap が実行時に z = 10 へ標的ダミーを並べる。</item>
-    /// <item>z = 30〜40 の幅いっぱいが区域 A。z = 40 の仕切りの中央 (x = ±2.5) にだけ出入口がある。</item>
-    /// <item>出入口の 3m 先 (z = 43) に幅 16m の衝立があり、区域 A より手前からは仕切りの向こうが見えない
-    /// (KillTargetObjective は目標が Active になる前の撃破を数えないので、区域 A に入る前に敵を撃てないようにする)。</item>
-    /// <item>衝立の左右の出口を、待ち伏せの敵 2 体 (handgun) が z = 49 から見張る。その奥の z = 55 と z = 63 を、
-    /// 巡回の敵 2 体 (rifle) が左右に往復する。</item>
-    /// <item>奥の区画の 3 つの遮蔽物の南北の面の左右の端に遮蔽点 (<see cref="CoverPoints"/>) があり、敵 4 体が 1 つの
-    /// <see cref="CoverPointRegistry"/> を共有する。撃たれた敵はプレイヤーの方向を遮る点へ移り、端の外へ出て覗いて撃つ。</item>
-    /// <item>出口は北の壁の手前 (0, 0, 66)。</item>
-    /// <item>チェックポイントは開始地点 (原点、プレイヤーは出現した時点で踏んでいる) と区域 A の中 (0, 0, 34)。</item>
-    /// </list>
-    /// </remarks>
     public static class CampaignSceneBuilder
     {
         public static string ScenePath => BuildSceneList.CampaignScene;
         public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
-        /// <summary>キャンペーンの焼いた NavMesh のファイル名。</summary>
         public const string NavMeshDataFileName = "NavMesh-Level.asset";
 
-        /// <summary>焼いた NavMesh。Unity の慣習どおりシーン名のフォルダに置く。</summary>
+        // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MissionId + "/" + NavMeshDataFileName);
 
         public const string MenuPath = "Shooter/Build Campaign Scenes";
         public const string LogTag = "[CampaignSceneBuilder]";
 
-        /// <summary>Campaign01 のミッション Id。定義 (<see cref="DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>
         public const string MissionId = "Campaign01";
 
-        /// <summary>Campaign01 の名前を引くキー。文は Resources/Localization/&lt;言語コード&gt;/campaign.json に書く。</summary>
         public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
 
         public const string ReachAreaAId = "reach_area_a";
@@ -78,9 +45,6 @@ namespace Shooter.Editor
         public const string StartCheckpointObjectName = "Checkpoint_Start";
         public const string AreaACheckpointObjectName = "Checkpoint_AreaA";
 
-        // ---- 地形 ----
-
-        /// <summary>床の中心。Plane は 10m 四方なので、<see cref="FloorScale"/> で x = ±15、z = -10〜70 になる。</summary>
         public static readonly Vector3 FloorCenter = new Vector3(0f, 0f, 30f);
 
         public static readonly Vector3 FloorScale = new Vector3(3f, 1f, 8f);
@@ -88,18 +52,16 @@ namespace Shooter.Editor
         public const float WallHeight = 3f;
         public const float WallThickness = 0.5f;
 
-        /// <summary>区域 A と奥の区画を分ける仕切りの z。</summary>
         public const float DividerZ = 40f;
 
-        /// <summary>仕切りの出入口の半幅 (x = ±2.5)。</summary>
         public const float DoorwayHalfWidth = 2.5f;
 
-        /// <summary>出入口の先で視線を遮る衝立の z と半幅。</summary>
+        // KillTargetObjective は目標が Active になる前の撃破を数えないので、区域 A に入る前に敵を撃てないよう、
+        // 出入口の先に衝立を置いて区域 A より手前からは仕切りの向こうを見えなくする。
         public const float BaffleZ = 43f;
 
         public const float BaffleHalfWidth = 8f;
 
-        /// <summary>壁 (外周・仕切り・衝立)。高さはすべて <see cref="WallHeight"/>。</summary>
         public static readonly IReadOnlyList<LevelBox> Walls = new[]
         {
             new LevelBox("Wall_South", new Vector3(0f, WallHeight / 2f, -10f), new Vector3(30f, WallHeight, WallThickness)),
@@ -120,7 +82,7 @@ namespace Shooter.Editor
                 new Vector3(BaffleHalfWidth * 2f, WallHeight, WallThickness)),
         };
 
-        /// <summary>奥の区画の遮蔽物。高さ 2m で、敵の目 (1.6m) からもプレイヤーの目からも体を隠せる。</summary>
+        // 高さ 2m にして、敵の目 (1.6m) からもプレイヤーの目からも体を隠せるようにする。
         public static readonly IReadOnlyList<LevelBox> Covers = new[]
         {
             new LevelBox("Cover_1", new Vector3(-5f, 1f, 50f), new Vector3(3f, 2f, 1f)),
@@ -132,19 +94,12 @@ namespace Shooter.Editor
 
         public const string PickupsObjectName = "Pickups";
 
-        /// <summary>武器を既に持っていたときに足す予備弾。ランチャーの弾 2 発。</summary>
         public const int WeaponPickupAmmoIfOwned = 2;
 
-        /// <summary>弾薬箱 1 つで足す予備弾。</summary>
         public const int AmmoPickupAmount = 60;
 
-        /// <summary>弾薬箱が拾われてから再び出るまでの秒数。武器は一度きり。</summary>
         public const float AmmoPickupRespawnSeconds = 60f;
 
-        /// <summary>
-        /// Campaign01 の拾える物。開始区画の左右にランチャーと予備弾、区域 A の東の壁際に何度でも使える弾薬箱、
-        /// 敵のいる区画の西の奥 (出口の手前) に予備弾。
-        /// </summary>
         public static IReadOnlyList<CampaignPickupPlacement> Pickups()
         {
             return new[]
@@ -156,31 +111,20 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>遮蔽点を置く、遮蔽物の面からの距離 (m)。敵の半径 (0.5m) で削られた NavMesh の縁より少し外。</summary>
+        // 敵の半径 (0.5m) で削られた NavMesh の縁より少し外に置く。
         public const float CoverPointStandOff = 0.7f;
 
-        /// <summary>遮蔽点を置く、遮蔽物の端からの内側への距離 (m)。</summary>
         public const float CoverPointEdgeInset = 0.5f;
 
-        /// <summary>
-        /// 覗くときに遮蔽物の端の外へ出る距離 (m)。立つ位置から端までの距離に足す。
-        /// 斜め前のプレイヤーでも遮蔽物の厚み (1m) の角に遮られないよう、体の幅より大きく出る。
-        /// </summary>
+        // 斜め前のプレイヤーでも遮蔽物の厚み (1m) の角に遮られないよう、体の幅より大きく出る。
         public const float CoverPeekOutset = 1.5f;
 
-        /// <summary>
-        /// 遮蔽物 (<see cref="Covers"/>) の横に置く遮蔽点。遮蔽物は高さ 2m で立ったまま隠れる高い壁なので、どれも覗くときは
-        /// 近い方の端の外へ出る。南北の両面の左右の端に 1 つずつ置き、南から来るプレイヤーにも、回り込んで北に回ったプレイヤーにも使える。
-        /// </summary>
         public static IReadOnlyList<CoverPointPlacement> CoverPoints()
         {
             return HighCoverPoints(Covers);
         }
 
-        /// <summary>
-        /// 立ったまま隠れる高い遮蔽物 (直方体) の横に置く遮蔽点。南北の両面の左右の端に 1 つずつ置き、
-        /// 覗くときは近い方の端の外へ <see cref="CoverPeekOutset"/> だけ出る。
-        /// </summary>
+        // 南北の両面の左右の端に置くので、南から来るプレイヤーにも、回り込んで北に回ったプレイヤーにも使える。
         public static IReadOnlyList<CoverPointPlacement> HighCoverPoints(IEnumerable<LevelBox> covers)
         {
             if (covers == null)
@@ -209,10 +153,6 @@ namespace Shooter.Editor
             return points;
         }
 
-        /// <summary>
-        /// しゃがんで隠れる低い遮蔽物 (<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満の直方体) の横に置く遮蔽点。
-        /// 南北の両面の左右の端に 1 つずつ置き、覗くときはその場で立ち上がる。高すぎる遮蔽物があれば <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static IReadOnlyList<CoverPointPlacement> LowCoverPoints(IEnumerable<LevelBox> covers)
         {
             if (covers == null)
@@ -247,49 +187,35 @@ namespace Shooter.Editor
             return points;
         }
 
-        // ---- 目標 ----
-
-        /// <summary>区域 A の床の中心。仕切りの手前、幅いっぱい (z = 30〜40)。</summary>
         public static readonly Vector3 AreaAPosition = new Vector3(0f, 0f, 35f);
 
         public static readonly Vector3 AreaAPadScale = new Vector3(29f, 0.1f, 10f);
 
-        /// <summary>出口の床の中心。</summary>
         public static readonly Vector3 ExitPosition = new Vector3(0f, 0f, 66f);
 
         public static readonly Vector3 ExitPadScale = new Vector3(6f, 0.1f, 4f);
 
-        /// <summary>区域のトリガーの高さ。プレイヤー (2m) より高い。</summary>
+        // プレイヤー (2m) より高くする。
         public const float AreaTriggerHeight = 2.5f;
 
-        // ---- チェックポイント (#74) ----
-
-        /// <summary>開始地点のチェックポイント (足元)。GameBootstrap がプレイヤーを置く位置。</summary>
         public static readonly Vector3 StartCheckpointPosition = new Vector3(0f, 0f, 0f);
 
-        /// <summary>区域 A のチェックポイント (足元)。区域 A の中で、仕切りの向こうから見えない位置。</summary>
+        // 区域 A の中で、仕切りの向こうから見えない位置に置く。
         public static readonly Vector3 AreaACheckpointPosition = new Vector3(0f, 0f, 34f);
 
-        /// <summary>開始地点のチェックポイントの Id。セーブデータに残るので変えない。</summary>
+        // チェックポイントの Id はセーブデータに残るので変えない。
         public const string StartCheckpointId = "start";
 
-        /// <summary>区域 A のチェックポイントの Id。セーブデータに残るので変えない。</summary>
         public const string AreaACheckpointId = "area_a";
 
-        /// <summary>
-        /// チェックポイントの床の印の大きさ。区域 A の印 (厚さ 0.1m) より厚くして、重なる所で面がちらつかないようにする。
-        /// 区域 A のチェックポイントは区域 A の中 (z = 32〜36) に収まる。
-        /// </summary>
+        // 区域 A の印 (厚さ 0.1m) より厚くして、重なる所で面がちらつかないようにする。
         public static readonly Vector3 CheckpointPadScale = new Vector3(4f, 0.15f, 4f);
-
-        // ---- 敵 ----
 
         public const float EnemyHeight = 2f;
         public const float EnemyRadius = 0.5f;
         public const float EnemySpeed = 3.5f;
         public const int EnemyMaxHealth = 100;
 
-        /// <summary>巡回する敵。最初の地点に置き、2 つの地点を往復する。射程の長い rifle を持つ。</summary>
         public static readonly IReadOnlyList<EnemyPlacement> Patrollers = new[]
         {
             EnemyPlacement.Patrol(
@@ -298,10 +224,7 @@ namespace Shooter.Editor
                 "Enemy-Patrol-2", "patrol-2", WeaponAssetBuilder.RifleId, new Vector3(11f, 0f, 63f), new Vector3(-11f, 0f, 63f)),
         };
 
-        /// <summary>
-        /// 区域 A の先で待ち伏せる敵。巡回せず、衝立の左右の出口を向いて立つ。
-        /// 出口までは 8m ほどで handgun の減衰が始まる距離 (15m) より近いので、handgun を持たせる。
-        /// </summary>
+        // 見張る出口までは 8m ほどで handgun の減衰が始まる距離 (15m) より近いので、handgun を持たせる。
         public static readonly IReadOnlyList<EnemyPlacement> Ambushers = new[]
         {
             EnemyPlacement.Ambush(
@@ -310,10 +233,8 @@ namespace Shooter.Editor
                 "Enemy-Ambush-2", "ambush-2", WeaponAssetBuilder.HandgunId, new Vector3(12f, 0f, 49f), new Vector3(11.5f, 0f, 41.5f)),
         };
 
-        /// <summary>点が NavMesh 上にあるかを確かめるときに探す半径 (メートル)。</summary>
         public const float NavMeshCheckRadius = 1f;
 
-        /// <summary>巡回の敵、待ち伏せの敵の順に並べた全員。</summary>
         public static IReadOnlyList<EnemyPlacement> AllEnemies()
         {
             var all = new List<EnemyPlacement>(Patrollers);
@@ -321,16 +242,11 @@ namespace Shooter.Editor
             return all;
         }
 
-        /// <summary>Campaign01 の <see cref="AllEnemies"/> の武器を引く (<see cref="ResolveEnemyWeapons(CampaignMissionSpec, WeaponCatalogAsset)"/>)。</summary>
         public static WeaponDefinition[] ResolveEnemyWeapons(WeaponCatalogAsset catalog)
         {
             return ResolveEnemyWeapons(Campaign01(), catalog);
         }
 
-        /// <summary>
-        /// spec の <see cref="CampaignMissionSpec.AllEnemies"/> と同じ順に、各配置の <see cref="EnemyPlacement.WeaponId"/> の武器を catalog から引く。
-        /// どれかの Id が catalog に無ければ、配置の Id と武器の Id を添えて <see cref="KeyNotFoundException"/> を投げる。
-        /// </summary>
         public static WeaponDefinition[] ResolveEnemyWeapons(CampaignMissionSpec spec, WeaponCatalogAsset catalog)
         {
             if (spec == null)
@@ -353,7 +269,6 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>Campaign01 の目標。定義順に、前の目標を前提にする。</summary>
         public static IReadOnlyList<ObjectiveDefinition> CampaignObjectives()
         {
             return new[]
@@ -364,7 +279,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>Campaign01 の配置。上の定数と一覧から組み立てる。</summary>
         public static CampaignMissionSpec Campaign01()
         {
             return new CampaignMissionSpec(
@@ -394,17 +308,12 @@ namespace Shooter.Editor
                 });
         }
 
-        /// <summary>生成するミッション。この順に作り、ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) にもこの順に並べる。</summary>
+        // ミッションの一覧 (MissionCatalogBuilder) にもこの順に並ぶ。
         public static IReadOnlyList<CampaignMissionSpec> Missions()
         {
             return new[] { Campaign01(), Campaign02Mission.Spec() };
         }
 
-        /// <summary>
-        /// <see cref="Missions"/> の定義アセットとシーンを既定の場所に生成し、シーンを Build Settings に加え、
-        /// ミッションの一覧 (<see cref="MissionCatalogBuilder"/>) も作り直す。
-        /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -423,13 +332,11 @@ namespace Shooter.Editor
             MissionCatalogBuilder.Build();
         }
 
-        /// <summary>Campaign01 を definitionPath・navMeshDataPath・scenePath に生成・保存する。</summary>
         public static void BuildAt(string scenePath, string definitionPath, string navMeshDataPath)
         {
             BuildAt(Campaign01(), scenePath, definitionPath, navMeshDataPath);
         }
 
-        /// <summary>spec を spec の既定の場所に生成・保存する。</summary>
         public static void BuildAt(CampaignMissionSpec spec)
         {
             if (spec == null)
@@ -440,7 +347,6 @@ namespace Shooter.Editor
             BuildAt(spec, spec.ScenePath, spec.DefinitionPath, spec.NavMeshDataPath);
         }
 
-        /// <summary>spec の定義を definitionPath に、焼いた NavMesh を navMeshDataPath に、シーンを scenePath に生成・保存する。</summary>
         public static void BuildAt(CampaignMissionSpec spec, string scenePath, string definitionPath, string navMeshDataPath)
         {
             if (spec == null)
@@ -490,11 +396,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} saved mission={spec.Id} '{definitionPath}', '{navMeshDataPath}' and '{scenePath}' and registered the scene in Build Settings");
         }
 
-        /// <summary>
-        /// キャンペーンの難易度別のルール (<see cref="GameRulesAssetBuilder.CampaignEasyPath"/> /
-        /// <see cref="GameRulesAssetBuilder.CampaignNormalPath"/> / <see cref="GameRulesAssetBuilder.CampaignHardPath"/>) を読む。
-        /// どれかが無いか不正なら例外を投げる。
-        /// </summary>
         public static CampaignRules LoadRules()
         {
             return new CampaignRules(
@@ -503,13 +404,11 @@ namespace Shooter.Editor
                 GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.CampaignHardPath));
         }
 
-        /// <summary>definition の中身を Campaign01 にし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition)
         {
             Configure(definition, Campaign01());
         }
 
-        /// <summary>definition の中身を spec の Id・表示名・目標にし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition, CampaignMissionSpec spec)
         {
             if (definition == null)
@@ -530,7 +429,6 @@ namespace Shooter.Editor
             definition.CreateMission();
         }
 
-        /// <summary>Campaign01 を置く (<see cref="PopulateScene(Scene, CampaignMissionSpec, MissionDefinition, IReadOnlyList{WeaponDefinition}, WeaponCatalogAsset, CampaignRules)"/>)。</summary>
         public static CampaignLayout PopulateScene(
             Scene scene,
             MissionDefinition definition,
@@ -541,17 +439,6 @@ namespace Shooter.Editor
             return PopulateScene(scene, Campaign01(), definition, playerWeapons, enemyWeapons, rules);
         }
 
-        /// <summary>
-        /// 空のシーンに spec の地形を置いて NavMesh を焼き (アセットには保存しない)、GameBootstrap・MissionRunner・
-        /// spec の目標の範囲・敵の組・遮蔽点・CampaignRunner・チェックポイントを置いて
-        /// 参照をすべて設定する。焼いた NavMesh に敵の位置・巡回地点・区域・チェックポイントが乗っていて、開始地点から
-        /// 歩いて行けることを確かめ、そうでなければ例外を投げる。失敗したときは置いた物をすべて片付ける。
-        /// Edit Mode では Awake/Start が走らないので、ミッションと敵は Play したときに動き出す。
-        /// プレイヤーは playerWeapons (通常は <see cref="WeaponAssetBuilder.LoadPlayerLoadout"/> の rifle, handgun) を持ち、敵は配置ごとに
-        /// <see cref="EnemyPlacement.WeaponId"/> の武器を enemyWeapons から引いて撃つ。Id が enemyWeapons に無ければ
-        /// 何も置かずに <see cref="KeyNotFoundException"/> を投げる。
-        /// ルールは GameBootstrap と CampaignRunner の既定に rules の Normal を、CampaignRunner の <c>-difficulty</c> 用に 3 つとも配線する。
-        /// </summary>
         public static CampaignLayout PopulateScene(
             Scene scene,
             CampaignMissionSpec spec,
@@ -683,10 +570,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 拾える物として置ける武器。catalog の武器と、プレイヤーにも敵にも持たせないのでカタログに入れていないランチャー
-        /// (<see cref="WeaponAssetBuilder.LoadLauncher"/>)。
-        /// </summary>
+        // ランチャーはプレイヤーにも敵にも持たせないのでカタログに入れていないため、拾える物の武器として足す。
         public static IReadOnlyList<WeaponDefinition> LoadPickupWeapons(WeaponCatalogAsset catalog)
         {
             if (catalog == null)
@@ -704,7 +588,6 @@ namespace Shooter.Editor
             return weapons;
         }
 
-        /// <summary>spec の拾える物の武器がすべて weapons にあることを確かめ、無ければ <see cref="KeyNotFoundException"/> を投げる。</summary>
         public static void ResolvePickupWeapons(CampaignMissionSpec spec, IReadOnlyList<WeaponDefinition> weapons)
         {
             if (spec == null)
@@ -727,10 +610,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// element の拾える物の出現点を、シーンの直下の <see cref="CampaignElement.ObjectName"/> の子に置く。武器は Id で weapons から引き、
-        /// 無ければ何も置かずに <see cref="KeyNotFoundException"/> を投げる。
-        /// </summary>
         public static GameObject CreatePickups(Scene scene, CampaignPickupsElement element, IReadOnlyList<WeaponDefinition> weapons)
         {
             if (element == null)
@@ -806,16 +685,12 @@ namespace Shooter.Editor
             return null;
         }
 
-        /// <summary>Campaign01 の地形を置く (<see cref="CreateLevel(Scene, CampaignMissionSpec)"/>)。</summary>
         public static NavMeshSurface CreateLevel(Scene scene)
         {
             return CreateLevel(scene, Campaign01());
         }
 
-        /// <summary>
-        /// spec の地形 (床・壁・遮蔽物) を <see cref="LevelObjectName"/> の下に置き、その子だけから焼く NavMeshSurface を返す。
-        /// 子だけを集めるので、同時に開いている他のシーンの物は NavMesh に入らない。
-        /// </summary>
+        // LevelObjectName の子だけから焼くので、同時に開いている他のシーンの物は NavMesh に入らない。
         public static NavMeshSurface CreateLevel(Scene scene, CampaignMissionSpec spec)
         {
             if (spec == null)
@@ -845,7 +720,6 @@ namespace Shooter.Editor
             return surface;
         }
 
-        /// <summary>Campaign01 の、NavMesh の上で開始地点から行かなければならない点 (<see cref="CampaignMissionSpec.RequiredPoints"/>)。</summary>
         public static IReadOnlyList<Vector3> RequiredPoints()
         {
             return Campaign01().RequiredPoints();
@@ -884,10 +758,6 @@ namespace Shooter.Editor
             return trigger;
         }
 
-        /// <summary>
-        /// group の敵を group の GameObject の子に置き、enemies に足す。weapons は <see cref="CampaignMissionSpec.AllEnemies"/> の順の武器で、
-        /// 先頭から enemies に入っている数だけ飛ばした所から使う。
-        /// </summary>
         private static void CreateEnemyGroup(
             Scene scene,
             CampaignEnemyGroupElement group,
@@ -946,10 +816,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// feet (足元) に床の印とトリガーを置いた <see cref="CheckpointTrigger"/> を作る。
-        /// 印の中心は床から厚さの半分だけ上がるので、再開位置のずれはその分を引き、プレイヤーの足が床に着く高さにする。
-        /// </summary>
+        // 印の中心は床から厚さの半分だけ上がるので、再開位置のずれはその分を引き、プレイヤーの足が床に着く高さにする。
         private static CheckpointTrigger CreateCheckpoint(
             Scene scene,
             string name,
@@ -968,14 +835,12 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>キャンペーンの難易度別のルール。<see cref="CampaignSceneBuilder.LoadRules"/> で読む。</summary>
     public sealed class CampaignRules
     {
         public GameRulesDefinition Easy { get; }
         public GameRulesDefinition Normal { get; }
         public GameRulesDefinition Hard { get; }
 
-        /// <exception cref="ArgumentNullException">どれかが null。</exception>
         public CampaignRules(GameRulesDefinition easy, GameRulesDefinition normal, GameRulesDefinition hard)
         {
             Easy = easy != null ? easy : throw new ArgumentNullException(nameof(easy));
@@ -984,7 +849,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>地形の直方体 1 つ。</summary>
     public readonly struct LevelBox
     {
         public string Name { get; }
@@ -999,21 +863,17 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>敵 1 体の置き方。</summary>
     public sealed class EnemyPlacement
     {
         public string Name { get; }
         public string Id { get; }
 
-        /// <summary>持たせる武器の Id (<see cref="WeaponDefinition.Id"/> の UUID)。シーンを生成するときに武器の一覧から引く。</summary>
         public string WeaponId { get; }
 
-        /// <summary>置く位置 (足元)。</summary>
         public Vector3 Position { get; }
 
         public Quaternion Rotation { get; }
 
-        /// <summary>巡回地点 (足元)。空なら巡回せずその場で待つ。</summary>
         public IReadOnlyList<Vector3> PatrolRoute { get; }
 
         public bool Patrols => PatrolRoute.Count > 0;
@@ -1039,13 +899,11 @@ namespace Shooter.Editor
             PatrolRoute = patrolRoute;
         }
 
-        /// <summary>from に置き、from と to を往復する敵。weaponId の武器で撃つ。</summary>
         public static EnemyPlacement Patrol(string name, string id, string weaponId, Vector3 from, Vector3 to)
         {
             return new EnemyPlacement(name, id, weaponId, from, SceneBuildHelpers.FacingTowards(from, to), new[] { from, to });
         }
 
-        /// <summary>position に立ち、watch の方を向いて待つ敵。weaponId の武器で撃つ。</summary>
         public static EnemyPlacement Ambush(string name, string id, string weaponId, Vector3 position, Vector3 watch)
         {
             return new EnemyPlacement(
@@ -1053,32 +911,24 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>CampaignSceneBuilder.PopulateScene が置いたもの。</summary>
     public sealed class CampaignLayout
     {
         public GameBootstrap Bootstrap { get; }
         public MissionRunner Runner { get; }
         public NavMeshSurface Surface { get; }
 
-        /// <summary>目標の範囲 (<see cref="ReachAreaTrigger"/> と <see cref="InteractObjective"/>)。置いた順。</summary>
         public IReadOnlyList<ObjectiveAreaBase> Areas { get; }
 
-        /// <summary>敵の組の撃破で進める目標。置いた順。</summary>
         public IReadOnlyList<KillTargetObjective> KillObjectives { get; }
 
-        /// <summary>目標が Active になるまで敵を隠しておくもの。置いた順。</summary>
         public IReadOnlyList<ObjectiveReveal> Reveals { get; }
 
-        /// <summary>全員。<see cref="CampaignMissionSpec.AllEnemies"/> と同じ順。</summary>
         public IReadOnlyList<EnemyAgent> Enemies { get; }
 
-        /// <summary>セーブと再開を受け持つ。<see cref="Runner"/> と <see cref="Bootstrap"/> につないである。</summary>
         public CampaignRunner Campaign { get; }
 
-        /// <summary>チェックポイント。<see cref="CampaignMissionSpec.Checkpoints"/> と同じ順。</summary>
         public IReadOnlyList<CheckpointTrigger> Checkpoints { get; }
 
-        /// <summary>遮蔽点をまとめたもの。<see cref="Enemies"/> の全員に渡してある。遮蔽点が無いミッションでは null。</summary>
         public CoverPointRegistry CoverRegistry { get; }
 
         public CampaignLayout(
@@ -1105,7 +955,6 @@ namespace Shooter.Editor
             CoverRegistry = coverRegistry;
         }
 
-        /// <summary>objectiveId を進める範囲。無ければ <see cref="KeyNotFoundException"/>。</summary>
         public ObjectiveAreaBase Area(string objectiveId)
         {
             foreach (var area in Areas)
@@ -1119,7 +968,6 @@ namespace Shooter.Editor
             throw new KeyNotFoundException($"no area progresses objective '{objectiveId}'");
         }
 
-        /// <summary>objectiveId を進める撃破の目標。無ければ <see cref="KeyNotFoundException"/>。</summary>
         public KillTargetObjective KillObjective(string objectiveId)
         {
             foreach (var kill in KillObjectives)
@@ -1133,7 +981,6 @@ namespace Shooter.Editor
             throw new KeyNotFoundException($"no kill objective progresses objective '{objectiveId}'");
         }
 
-        /// <summary>objectiveId が Active になったら敵を出すもの。無ければ <see cref="KeyNotFoundException"/>。</summary>
         public ObjectiveReveal Reveal(string objectiveId)
         {
             foreach (var reveal in Reveals)
@@ -1147,7 +994,6 @@ namespace Shooter.Editor
             throw new KeyNotFoundException($"nothing is revealed by objective '{objectiveId}'");
         }
 
-        /// <summary>Id が checkpointId のチェックポイント。無ければ <see cref="KeyNotFoundException"/>。</summary>
         public CheckpointTrigger Checkpoint(string checkpointId)
         {
             foreach (var checkpoint in Checkpoints)

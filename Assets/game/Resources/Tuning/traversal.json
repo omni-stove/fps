@@ -22,7 +22,9 @@
   "swim": {
     "speed": 3,
     "buoyancy": 12,
-    "breathSeconds": 15
+    "breathSeconds": 15,
+    "drownDamage": 10,
+    "drownIntervalSeconds": 1
   },
   "wallRun": {
     "enabled": false,

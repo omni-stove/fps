@@ -6,20 +6,8 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 試し用の何もしない能力 (<see cref="NullAbilityDefinition"/>) のアセットを <see cref="NullAbilityPath"/> に、
-    /// グラップル (<see cref="GrappleAbilityDefinition"/>) のアセットを <see cref="GrappleAbilityPath"/> に作るか上書きする。
-    /// 回数・回数の戻り・待ち時間・効果が出るまでの秒数がどれも見えるよう、どれも 0 でない値にする。
-    /// あわせて、展開式の盾を置く能力 (<see cref="ShieldDeployDefinition"/>) を <see cref="ShieldAbilityPath"/> に、
-    /// 自動で撃つタレットを置く能力 (<see cref="TurretDeployDefinition"/>) を <see cref="TurretAbilityPath"/> に、
-    /// 敵の気を引く囮を置く能力 (<see cref="DecoyDeployDefinition"/>) を <see cref="DecoyAbilityPath"/> に、
-    /// 敵が踏むと爆発する地雷を置く能力 (<see cref="MineDeployDefinition"/>) を <see cref="MineAbilityPath"/> に、
-    /// 壁や人に貼ってもう一度押すと起爆する C4 を置く能力 (<see cref="RemoteChargeDeployDefinition"/>) を <see cref="RemoteChargeAbilityPath"/> に、
-    /// 物を投げて敵の注意をそらす能力 (<see cref="DistractionThrowDefinition"/>) を <see cref="DistractionAbilityPath"/> に作る。
-    /// 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。何度実行しても同じ結果になる。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.AbilityAssetBuilder.Build</code>
-    /// </summary>
+    // 何もしない能力は、回数・回数の戻り・待ち時間・効果が出るまでの秒数がどれも見えるよう、どれも 0 でない値にする。
+    // 既存のアセットは GUID を保って中身だけ更新するので、参照しているシーンは壊れない。
     public static class AbilityAssetBuilder
     {
         public const string MenuPath = "Shooter/Build Ability Assets";
@@ -66,7 +54,6 @@ namespace Shooter.Editor
         public const float DistractionRechargeSeconds = 10f;
         public const float DistractionCooldownSeconds = 1f;
 
-        // 振りかぶってから手を離すまでの間。
         public const float DistractionWindupSeconds = 0.15f;
 
         public const string GrappleAbilityId = "grapple";
@@ -74,16 +61,12 @@ namespace Shooter.Editor
         public const float GrappleRechargeSeconds = 8f;
         public const float GrappleCooldownSeconds = 1f;
 
-        // 撃ってから縄が刺さるまでの間。引き寄せは効果が出てから始まる。
         public const float GrappleWindupSeconds = 0.1f;
 
-        /// <summary>
-        /// 射撃場のグラップルが掴める面のレイヤー (Default だけ)。キットはプロジェクトのレイヤーやタグを足せないので、
-        /// 掴めない面は組み込みの別のレイヤー (<see cref="GrappleWallFixture.NotGrabbableLayer"/>) に置いて試す。
-        /// </summary>
+        // キットはプロジェクトのレイヤーやタグを足せないので、掴めるのは Default だけにし、
+        // 掴めない面は組み込みの別のレイヤー (GrappleWallFixture.NotGrabbableLayer) に置いて試す。
         public const int GrappleGrabbableLayers = 1 << 0;
 
-        /// <summary>能力のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => ShooterKitRoot.OutputPath("Abilities");
 
         public static string NullAbilityPath => Folder + "/NullAbility.asset";
@@ -267,7 +250,6 @@ namespace Shooter.Editor
             return BuildShieldAt(ShieldAbilityPath);
         }
 
-        /// <summary>path に何もしない能力を作るか上書きして保存し、返す。path に別の型のアセットがあれば例外を投げる。</summary>
         public static NullAbilityDefinition BuildAt(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -286,7 +268,6 @@ namespace Shooter.Editor
             return ability;
         }
 
-        /// <summary><see cref="NullAbilityPath"/> の能力を読む。無ければ <see cref="Build"/> と同じものを作る (あれば中身は上書きしない)。</summary>
         public static NullAbilityDefinition LoadOrBuildNullAbility()
         {
             var existing = AssetDatabase.LoadAssetAtPath<NullAbilityDefinition>(NullAbilityPath);

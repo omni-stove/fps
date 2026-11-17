@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Shooter.Core
 {
@@ -68,7 +69,7 @@ namespace Shooter.Core
             _session = new ModeSession(
                 new TwoTeams(),
                 spec.TimeLimitSeconds,
-                new IScoreRule[] { new KillScore(spec.PointsPerKill) },
+                new IScoreRule[] { new KillScore(spec.PointsPerKill, spec.PointsPerAssist) },
                 RespawnPolicy.FromRules(spec.Rules, spec.RespawnSeconds),
                 winConditions);
             _session.StateChanged += state => StateChanged?.Invoke(state);
@@ -80,7 +81,7 @@ namespace Shooter.Core
         public void Start() => _session.Start();
 
         /// <summary>
-        /// 次の試合のために、チームの点数・各プレイヤーのキル数とデス数・残り時間・勝者・波の時刻を初期値に戻し、
+        /// 次の試合のために、チームの点数・各プレイヤーのキル数とデス数とアシスト数・残り時間・勝者・波の時刻を初期値に戻し、
         /// リスポーン待ちを取り消して全員を生き返らせ、Waiting に戻す。参加者とチーム分けはそのまま残す。
         /// どの状態からでも呼べる。状態が変わったときだけ <see cref="StateChanged"/> を出す。
         /// </summary>
@@ -102,6 +103,15 @@ namespace Shooter.Core
         }
 
         /// <summary>
+        /// プレイヤーを team に加え、キル数・デス数・アシスト数を kills・deaths・assists から数える。切断して戻ってきた人の成績を引き継ぐときに使う。
+        /// チームの点数は動かさない (そのキルとアシストは抜ける前にもう入っている)。
+        /// </summary>
+        public void AddPlayer(int playerId, Team team, int kills, int deaths, int assists)
+        {
+            _session.AddPlayer(playerId, Side.FromTeam(team), kills, deaths, assists);
+        }
+
+        /// <summary>
         /// プレイヤーを抜く。待っていたリスポーンは取り消す。チームの点数はそのまま残す。
         /// None で抜けたことによりチームが全滅した場合は、次の <see cref="Tick"/> で終える。
         /// </summary>
@@ -114,6 +124,8 @@ namespace Shooter.Core
         public int GetKills(int playerId) => _session.GetKills(playerId);
 
         public int GetDeaths(int playerId) => _session.GetDeaths(playerId);
+
+        public int GetAssists(int playerId) => _session.GetAssists(playerId);
 
         /// <summary>倒されてリスポーンを待っている間は true。None では戻らないので常に false。</summary>
         public bool IsAwaitingRespawn(int playerId) => _session.IsAwaitingRespawn(playerId);
@@ -131,15 +143,25 @@ namespace Shooter.Core
         /// <summary>Wave で次の波が来るまでの秒数。Wave 以外のときと、Playing 以外のときは null。</summary>
         public float? SecondsUntilNextWave => _session.SecondsUntilNextWave;
 
-        // 点はキル 1 回につき整数の PointsPerKill しか入らないので、double で持っていても整数のまま。
+        // 点はキル 1 回・アシスト 1 回につき整数の PointsPerKill・PointsPerAssist しか入らないので、double で持っていても整数のまま。
         public int GetScore(Team team) => (int)_session.GetScore(Side.FromTeam(team));
 
         /// <summary>
-        /// killerId が victimId を倒したことを報告する。別チームを倒したら倒した側のチームに <see cref="TeamDeathmatchSpec.PointsPerKill"/> 点入り、
-        /// 倒した人の Kills が増える。同じチームや自滅では加点せず、倒された人の Deaths だけ増える。
-        /// Waiting・Ended の間と、倒された人がすでに倒れているとき (二重の報告) は何もしない。
+        /// killerId が victimId を、アシストなしで倒したことを報告する。<see cref="ReportKill(int, int, IReadOnlyList{int})"/> を参照。
         /// </summary>
         public void ReportKill(int killerId, int victimId) => _session.ReportKill(killerId, victimId);
+
+        /// <summary>
+        /// killerId が victimId を倒したことを報告する。別チームを倒したら倒した側のチームに <see cref="TeamDeathmatchSpec.PointsPerKill"/> 点入り、
+        /// 倒した人の Kills が増える。assisterIds のうち倒した人と同じチームの人 (倒した人を除く) は Assists が増え、
+        /// 1 人につき <see cref="TeamDeathmatchSpec.PointsPerAssist"/> 点が入る。
+        /// 同じチームや自滅では加点せず、倒された人の Deaths だけ増える。
+        /// Waiting・Ended の間と、倒された人がすでに倒れているとき (二重の報告) は何もしない。
+        /// </summary>
+        /// <param name="killerId">倒した人。</param>
+        /// <param name="victimId">倒された人。</param>
+        /// <param name="assisterIds">アシストした Id。null なら空。抜けた人の Id は数えずに飛ばす。</param>
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds) => _session.ReportKill(killerId, victimId, assisterIds);
 
         /// <summary>
         /// playerId が倒した相手なしで死んだこと (落下・環境ダメージなど) を報告する。自滅と同じく Deaths だけ増やし、

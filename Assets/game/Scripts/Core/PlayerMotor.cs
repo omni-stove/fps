@@ -12,8 +12,18 @@ namespace Shooter.Core
         /// <summary>接地中かつジャンプしないときの縦速度。地面に吸着させるための小さな負値。</summary>
         public const float GroundedVerticalSpeed = -2f;
 
-        /// <summary>接地中にジャンプした瞬間に 1 度だけ呼ばれる。</summary>
-        public event Action Jumped;
+        // CharacterMotorSimulation が吹き飛ばし中に入力で寄せるかを決める閾値と同じ
+        private const float _minTurnInputSquared = 1e-4f;
+
+        /// <summary>地上のジャンプが何段目か。<see cref="Jumped"/> に渡す。</summary>
+        public const int GroundJumpNumber = 1;
+
+        /// <summary>
+        /// 跳んだ瞬間に 1 度だけ呼ばれる。引数は何段目か。地上のジャンプ (<see cref="Step"/>) は <see cref="GroundJumpNumber"/>、
+        /// 着地してから n 回目の空中のジャンプ (<see cref="StepAirJump"/>) は n + 1。壁からのジャンプ (<see cref="JumpWith"/>) は空中のジャンプの回数を 0 に戻すので
+        /// <see cref="GroundJumpNumber"/>。
+        /// </summary>
+        public event Action<int> Jumped;
 
         public MotorSpec Spec { get; }
 
@@ -145,7 +155,7 @@ namespace Shooter.Core
             Velocity = new Vector3(horizontal.X, verticalEnd, horizontal.Y);
             if (jumped)
             {
-                Jumped?.Invoke();
+                Jumped?.Invoke(GroundJumpNumber);
             }
 
             return new Vector3(horizontal.X * deltaSeconds, verticalDisplacement, horizontal.Y * deltaSeconds);
@@ -155,24 +165,65 @@ namespace Shooter.Core
         /// <see cref="Step"/> の前に呼ぶ。地上のジャンプは <see cref="Step"/> の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、
         /// 回数を受け取って返す別の口にする。
         /// </summary>
+        /// <remarks>
+        /// 跳んだら縦の速さを <see cref="MotorSpec.AirJumpSpeed"/> にし、横の速さはその大きさのまま入力の向きへ回す
+        /// (入力が無ければ今の向きのまま)。続く <see cref="Step"/> は空中なので、そこから <see cref="MotorSpec.AirControl"/> で寄せる。
+        /// </remarks>
         /// <param name="airJumpsUsed">着地してから空中で跳んだ回数。0 以上。</param>
         /// <param name="jumpPressed">今フレームにジャンプが押されたか。</param>
         /// <param name="isGrounded">接地しているか。</param>
-        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded)
+        /// <param name="moveInput">移動入力 (<see cref="Step"/> と同じ)。</param>
+        /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
+        /// <returns>この後の空中で跳んだ回数。接地中は 0。</returns>
+        public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded, Vector2 moveInput, float yawRadians)
         {
             if (airJumpsUsed < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(airJumpsUsed), airJumpsUsed, "airJumpsUsed must not be negative");
             }
 
+            if (!IsFinite(moveInput.X) || !IsFinite(moveInput.Y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(moveInput), moveInput, "moveInput must be finite");
+            }
+
+            if (!IsFinite(yawRadians))
+            {
+                throw new ArgumentOutOfRangeException(nameof(yawRadians), yawRadians, "yawRadians must be finite");
+            }
+
             var used = AirJumpStep.Step(airJumpsUsed, isGrounded, jumpPressed, Spec, out var jumped);
             if (jumped)
             {
-                Velocity = new Vector3(Velocity.X, Spec.AirJumpSpeed, Velocity.Z);
-                Jumped?.Invoke();
+                var horizontal = TurnToInput(new Vector2(Velocity.X, Velocity.Z), moveInput, yawRadians);
+                Velocity = new Vector3(horizontal.X, Spec.AirJumpSpeed, horizontal.Y);
+                Jumped?.Invoke(GroundJumpNumber + used);
             }
 
             return used;
+        }
+
+        /// <summary>
+        /// 速度を入れて <see cref="Jumped"/> を知らせる。壁から跳ぶ速さは <see cref="WallRunStep"/> が決めるが、
+        /// 跳んだ知らせは地上と空中のジャンプと同じくこのクラスの 1 か所から出すため。
+        /// </summary>
+        /// <param name="velocity">跳んだ速度 (m/s)。各成分が有限値。</param>
+        public void JumpWith(Vector3 velocity)
+        {
+            SetVelocity(velocity);
+            Jumped?.Invoke(GroundJumpNumber);
+        }
+
+        private static Vector2 TurnToInput(Vector2 horizontal, Vector2 moveInput, float yawRadians)
+        {
+            // スティックの遊び程度の入力で向きを変えると、手を離しかけただけで横へ跳んでしまう
+            var input = ClampLength(moveInput);
+            if (input.LengthSquared() <= _minTurnInputSquared)
+            {
+                return horizontal;
+            }
+
+            return Vector2.Normalize(ToWorld(input, yawRadians)) * horizontal.Length();
         }
 
         private float CarryScale(CarryGaits gait, float carrySpeedMultiplier)

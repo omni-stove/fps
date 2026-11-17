@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace Shooter.Core
 {
@@ -49,6 +51,13 @@ namespace Shooter.Core
             return Tag + " left player=" + playerId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>人数をそろえるため、次の試合の前にプレイヤーのチームを移したこと。</summary>
+        /// <example><c>[Match] balanced player=3 from=Alpha to=Bravo</c></example>
+        public static string TeamBalanced(int playerId, Team from, Team to)
+        {
+            return Tag + " balanced player=" + playerId.ToString(CultureInfo.InvariantCulture) + " from=" + TeamName(from) + " to=" + TeamName(to);
+        }
+
         /// <summary>切断した人の成績を残し始めたこと。</summary>
         /// <example><c>[Match] holding player=1 for=60s</c></example>
         public static string Held(int playerId, float seconds)
@@ -92,8 +101,32 @@ namespace Shooter.Core
                 + " victim=" + victimId.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>アシストした人を添えたキル。アシストが無い (null か空) なら <see cref="Kill(int, int)"/> と同じ。</summary>
+        /// <example><c>[Match] kill killer=0 victim=1 assists=2,3</c></example>
+        public static string Kill(int killerId, int victimId, IReadOnlyList<int> assisterIds)
+        {
+            var text = Kill(killerId, victimId);
+            if (assisterIds == null || assisterIds.Count == 0)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text).Append(" assists=");
+            for (var i = 0; i < assisterIds.Count; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(assisterIds[i].ToString(CultureInfo.InvariantCulture));
+            }
+
+            return builder.ToString();
+        }
+
         /// <summary>
-        /// 味方に倒された (<see cref="FriendlyFire.On"/>) ことを、点数の入る <see cref="Kill"/> と区別して書く。
+        /// 味方に倒された (<see cref="FriendlyFire.On"/>) ことを、点数の入る <see cref="Kill(int, int)"/> と区別して書く。
         /// </summary>
         /// <example><c>[Match] teamkill killer=0 victim=2</c></example>
         public static string TeamKill(int killerId, int victimId)

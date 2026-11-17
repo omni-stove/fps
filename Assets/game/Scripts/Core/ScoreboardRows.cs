@@ -5,7 +5,7 @@ namespace Shooter.Core
 {
     /// <summary>
     /// スコアボードの並べ方。参加者をチームごとに分け、キルの多い順に並べる。行に出す文はスコアボードの UI が作る。
-    /// キル数が同じならデス数の少ない順、それも同じなら <see cref="ScoreboardEntry.PlayerId"/> の小さい順にして、
+    /// キル数が同じならアシスト数の多い順、それも同じならデス数の少ない順、それも同じなら <see cref="ScoreboardEntry.PlayerId"/> の小さい順にして、
     /// 一覧が届くたびに同点の行が入れ替わって見えないようにする。
     /// </summary>
     public static class ScoreboardRows
@@ -55,7 +55,7 @@ namespace Shooter.Core
         }
 
         /// <summary>
-        /// 並べる順。a を先に出すなら負。キルの多い順、デス数の少ない順、<see cref="ScoreboardEntry.PlayerId"/> の小さい順。
+        /// 並べる順。a を先に出すなら負。キルの多い順、アシストの多い順、デス数の少ない順、<see cref="ScoreboardEntry.PlayerId"/> の小さい順。
         /// </summary>
         public static int Compare(ScoreboardEntry a, ScoreboardEntry b)
         {
@@ -63,6 +63,12 @@ namespace Shooter.Core
             if (byKills != 0)
             {
                 return byKills;
+            }
+
+            var byAssists = b.Assists.CompareTo(a.Assists);
+            if (byAssists != 0)
+            {
+                return byAssists;
             }
 
             var byDeaths = a.Deaths.CompareTo(b.Deaths);

@@ -7,6 +7,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class ModeLogTests
     {
+        private static readonly int[] _assister2 = { 2 };
+        private static readonly int[] _assisters2And3 = { 2, 3 };
         private static ModeSession ThreeSides(double scoreLimit = 3d)
         {
             var session = new ModeSession(
@@ -57,6 +59,21 @@ namespace Shooter.Core.Tests
                 ModeLog.Spawn(2, new Side(1), new Vector3(4f, 0f, -6.126f)),
                 Is.EqualTo("[Mode] spawn player=2 side=1 at=(4.00, 0.00, -6.13)"));
             Assert.That(ModeLog.Restart(), Is.EqualTo("[Mode] restart"));
+        }
+
+        [Test]
+        public void KillsListTheirAssistersAndStatsListAssists()
+        {
+            var session = ThreeSides();
+            session.Start();
+            session.ReportKill(0, 1, _assister2);
+
+            Assert.That(ModeLog.Kill(0, 1, _assisters2And3), Is.EqualTo("[Mode] kill killer=0 victim=1 assists=2,3"));
+            Assert.That(ModeLog.Kill(0, 1, Array.Empty<int>()), Is.EqualTo("[Mode] kill killer=0 victim=1"));
+            Assert.That(ModeLog.Kill(0, 1, null), Is.EqualTo("[Mode] kill killer=0 victim=1"));
+            Assert.That(ModeLog.Stats(session, 2), Is.EqualTo("[Mode] stats player=2 kills=0 deaths=0 assists=1"));
+            Assert.That(ModeLog.Stats(session, 0), Is.EqualTo("[Mode] stats player=0 kills=1 deaths=0 assists=0"));
+            Assert.Throws<ArgumentNullException>(() => ModeLog.Stats(null, 0));
         }
 
         [Test]

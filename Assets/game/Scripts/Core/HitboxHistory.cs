@@ -4,9 +4,13 @@ using System.Numerics;
 namespace Shooter.Core
 {
     /// <summary>
-    /// エンティティ 1 体分の位置の履歴。tick ごとの位置を固定長のリングバッファに記録し、
-    /// 小数の tick を渡すと前後の記録から線形補間した位置を返す。容量を超えたら古い記録から上書きする。
+    /// エンティティ 1 体分の位置とリーンの傾きの履歴。tick ごとの値を固定長のリングバッファに記録し、
+    /// 小数の tick を渡すと前後の記録から線形補間した値を返す。容量を超えたら古い記録から上書きする。
     /// </summary>
+    /// <remarks>
+    /// 傾きは量と向きの角度ではなく、目の横のずれ (<see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/>) を世界の向きで持つ。
+    /// 向きの角度を補間すると -π と π の境で逆に回るが、ずれのベクトルなら位置と同じく線形に補間できるため。
+    /// </remarks>
     public sealed class HitboxHistory
     {
         /// <summary>既定の容量。60Hz で約 1 秒分。</summary>
@@ -14,6 +18,7 @@ namespace Shooter.Core
 
         private readonly int[] _ticks;
         private readonly Vector3[] _positions;
+        private readonly Vector3[] _leans;
         private int _start;
 
         /// <summary>保持できる記録の数。</summary>
@@ -32,25 +37,40 @@ namespace Shooter.Core
 
             _ticks = new int[capacity];
             _positions = new Vector3[capacity];
+            _leans = new Vector3[capacity];
         }
 
         /// <summary>
-        /// tick の位置を記録する。tick は前回以上でなければならない。前回と同じ tick なら上書きする。
+        /// tick の位置を、傾けていないものとして記録する。tick は前回以上でなければならない。前回と同じ tick なら上書きする。
         /// tick が飛んでもよく、間は前後の記録から補間される。
         /// </summary>
         public void Record(int tick, Vector3 position)
         {
+            Record(tick, position, Vector3.Zero);
+        }
+
+        /// <summary>
+        /// tick の位置とリーンの傾き (目の横のずれ。傾けていなければ zero) を記録する。tick の決まりは <see cref="Record(int, Vector3)"/> と同じ。
+        /// </summary>
+        public void Record(int tick, Vector3 position, Vector3 lean)
+        {
+            if (!IsFinite(lean))
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be finite");
+            }
+
             if (Count > 0)
             {
-                var newest = _ticks[IndexOf(Count - 1)];
-                if (tick < newest)
+                var newest = IndexOf(Count - 1);
+                if (tick < _ticks[newest])
                 {
                     throw new ArgumentOutOfRangeException(nameof(tick), tick, "tick must not be older than the newest record");
                 }
 
-                if (tick == newest)
+                if (tick == _ticks[newest])
                 {
-                    _positions[IndexOf(Count - 1)] = position;
+                    _positions[newest] = position;
+                    _leans[newest] = lean;
                     return;
                 }
             }
@@ -69,6 +89,7 @@ namespace Shooter.Core
 
             _ticks[index] = tick;
             _positions[index] = position;
+            _leans[index] = lean;
         }
 
         /// <summary>
@@ -77,7 +98,14 @@ namespace Shooter.Core
         /// </summary>
         public bool TrySample(float tick, out Vector3 position)
         {
+            return TrySample(tick, out position, out _);
+        }
+
+        /// <summary>tick 時点の位置とリーンの傾き。補間のしかたと false を返すときは <see cref="TrySample(float, out Vector3)"/> と同じ。</summary>
+        public bool TrySample(float tick, out Vector3 position, out Vector3 lean)
+        {
             position = default;
+            lean = default;
             if (Count == 0 || float.IsNaN(tick))
             {
                 return false;
@@ -108,12 +136,14 @@ namespace Shooter.Core
             if (_ticks[before] == tick || lo == Count - 1)
             {
                 position = _positions[before];
+                lean = _leans[before];
                 return true;
             }
 
             var after = IndexOf(lo + 1);
             var t = (float)((tick - (double)_ticks[before]) / ((double)_ticks[after] - _ticks[before]));
             position = Vector3.Lerp(_positions[before], _positions[after], t);
+            lean = Vector3.Lerp(_leans[before], _leans[after], t);
             return true;
         }
 
@@ -135,6 +165,13 @@ namespace Shooter.Core
         private int IndexOf(int logical)
         {
             return (_start + logical) % Capacity;
+        }
+
+        private static bool IsFinite(Vector3 v)
+        {
+            return !float.IsNaN(v.X) && !float.IsInfinity(v.X)
+                && !float.IsNaN(v.Y) && !float.IsInfinity(v.Y)
+                && !float.IsNaN(v.Z) && !float.IsInfinity(v.Z);
         }
     }
 }

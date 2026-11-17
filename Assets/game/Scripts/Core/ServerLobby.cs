@@ -67,12 +67,31 @@ namespace Shooter.Core
         /// <param name="players">今の人数 (0 以上)。</param>
         public static IReadOnlyList<LobbyAttribute> Attributes(string endpoint, string version, int players)
         {
+            return Attributes(endpoint, version, players, NetMatchSettings.Default);
+        }
+
+        /// <summary>
+        /// 試合の設定 <paramref name="match"/> のサーバーのロビーに付ける属性。<see cref="Attributes(string, string, int)"/> の属性に加え、
+        /// 非公開 (<see cref="NetMatchSettings.PrivateMatch"/>) なら <see cref="PrivateKey"/> を 1 にし、参加コードがあれば
+        /// 揃えたコード (<see cref="JoinCode.TryNormalize"/>) を <see cref="JoinCodeKey"/> に載せる。
+        /// </summary>
+        /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
+        /// <param name="version">アプリのバージョン。空なら "0"。</param>
+        /// <param name="players">今の人数 (0 以上)。</param>
+        /// <param name="match">サーバーの試合の設定。</param>
+        public static IReadOnlyList<LobbyAttribute> Attributes(string endpoint, string version, int players, NetMatchSettings match)
+        {
             if (string.IsNullOrWhiteSpace(endpoint))
             {
                 throw new ArgumentException("must not be null or blank", nameof(endpoint));
             }
 
-            return new[]
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            var attributes = new List<LobbyAttribute>
             {
                 LobbyAttribute.OfText(ServerKey, endpoint),
                 LobbyAttribute.OfText(ModeKey, TeamDeathmatchMode),
@@ -80,6 +99,18 @@ namespace Shooter.Core
                 PlayersAttribute(players),
                 LobbyAttribute.OfNumber(VoiceEnabledKey, 1),
             };
+
+            if (match.PrivateMatch)
+            {
+                // コードが無くても非公開の印は付け、誰も入れないサーバーを Quick Match が選ばないようにする
+                attributes.Add(LobbyAttribute.OfNumber(PrivateKey, 1));
+                if (JoinCode.TryNormalize(match.JoinCode, out var code))
+                {
+                    attributes.Add(LobbyAttribute.OfText(JoinCodeKey, code));
+                }
+            }
+
+            return attributes;
         }
 
         /// <summary>

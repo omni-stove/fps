@@ -245,6 +245,8 @@ namespace Shooter.Core
 
             public double PointsForKill(ModeSession session, int killerId, int victimId) => 0d;
 
+            public double PointsForAssist(ModeSession session, int assisterId, int victimId) => 0d;
+
             public double PointsPerSecond(ModeSession session, Side side) => 0d;
 
             public void Advance(ModeSession session, float seconds) => _owner.Advance(seconds);

@@ -29,6 +29,7 @@ namespace Shooter.Core
         public const string VehicleLeftType = "vehicle_left";
         public const string VehicleExplodedType = "vehicle_exploded";
         public const string ChatType = "chat";
+        public const string ChatRefusedType = "chat_refused";
         public const string MapVoteType = "map_vote";
         public const string MapChangedType = "map_changed";
         public const string TeamBalancedType = "team_balanced";
@@ -246,6 +247,21 @@ namespace Shooter.Core
             AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
             values.Add(Pair("channel", channel.ToString()));
             values.Add(Pair("length", Number(length)));
+            return FlatJsonObject.Format(values);
+        }
+
+        /// <summary>プレイヤーのチャットを断った。</summary>
+        /// <example><c>{"type":"chat_refused","time":"...","matchId":"6c1f...","playerId":"1","reason":"TooSoon"}</c></example>
+        public static string ChatRefused(DateTime utcNow, string matchId, int playerId, string productUserId, ChatRefusal reason)
+        {
+            if (reason == ChatRefusal.None || !Enum.IsDefined(typeof(ChatRefusal), reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reason), reason, "reason must be a ChatRefusal other than None");
+            }
+
+            var values = BeginMatch(ChatRefusedType, utcNow, matchId);
+            AddPlayer(values, "playerId", "productUserId", playerId, productUserId);
+            values.Add(Pair("reason", reason.ToString()));
             return FlatJsonObject.Format(values);
         }
 

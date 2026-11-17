@@ -55,6 +55,18 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ReadsTheDrownItems()
+        {
+            var spec = TraversalJson.Parse("{\"swim\": {\"drownDamage\": 25, \"drownIntervalSeconds\": 0.5}}", "traversal.json");
+            var omitted = TraversalJson.Parse("{\"swim\": {\"speed\": 4}}", "traversal.json");
+
+            Assert.That(spec.Swim.DrownDamage, Is.EqualTo(25));
+            Assert.That(spec.Swim.DrownIntervalSeconds, Is.EqualTo(0.5f));
+            Assert.That(omitted.Swim.DrownDamage, Is.EqualTo(SwimTuning.DefaultDrownDamage));
+            Assert.That(omitted.Swim.DrownIntervalSeconds, Is.EqualTo(SwimTuning.DefaultDrownIntervalSeconds));
+        }
+
+        [Test]
         public void OmittedSwimAndWallRunItemsUseTheDefaults()
         {
             var spec = TraversalJson.Parse("{\"swim\": {\"speed\": 4}, \"wallRun\": {\"enabled\": true}}", "traversal.json");
@@ -74,6 +86,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"swim\": {\"speed\": -1}}", "swim.speed")]
         [TestCase("{\"swim\": {\"buoyancy\": -2}}", "swim.buoyancy")]
         [TestCase("{\"swim\": {\"breathSeconds\": 0}}", "swim.breathSeconds")]
+        [TestCase("{\"swim\": {\"drownDamage\": -1}}", "swim.drownDamage")]
+        [TestCase("{\"swim\": {\"drownIntervalSeconds\": 0}}", "swim.drownIntervalSeconds")]
         [TestCase("{\"wallRun\": {\"maxSeconds\": 0}}", "wallRun.maxSeconds")]
         [TestCase("{\"wallRun\": {\"minSpeed\": -1}}", "wallRun.minSpeed")]
         [TestCase("{\"wallRun\": {\"gravityScale\": -0.5}}", "wallRun.gravityScale")]

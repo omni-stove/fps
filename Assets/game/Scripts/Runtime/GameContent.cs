@@ -178,6 +178,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("アイテムのアイコン (アイコンの Id ごと)。空なら Resources/Presentation/ItemIconCatalog、それも無ければ持ち物の画面が名前の箱を描く")]
         private ItemIconCatalog _itemIcons;
 
+        [SerializeField, Tooltip("水中の色・音・水しぶき。空なら Resources/Presentation/WaterCatalog、それも無ければ既定の色だけで覆う")]
+        private WaterCatalog _water;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -489,6 +492,12 @@ namespace Shooter.Runtime
         {
             get => _itemIcons;
             set => _itemIcons = value;
+        }
+
+        public WaterCatalog Water
+        {
+            get => _water;
+            set => _water = value;
         }
 
         public static GameContent Current

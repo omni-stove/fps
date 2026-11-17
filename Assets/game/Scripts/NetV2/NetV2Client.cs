@@ -110,6 +110,9 @@ namespace Shooter.NetV2
 
         public ClientMatch Match => _match;
 
+        /// <summary>自分のプレイヤーの視点と入力。自分の行が届いて予測を始めるまでと、マップを出た後は null。</summary>
+        public NetV2LocalPlayer LocalPlayer => _local;
+
         public GameObject GrenadePrefab { get; set; }
 
         /// <summary>今動いているクライアント。無ければ null。</summary>

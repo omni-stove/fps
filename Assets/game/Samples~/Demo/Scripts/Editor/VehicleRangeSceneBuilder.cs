@@ -11,10 +11,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 乗り物を試す試走場 VehicleRange。プレイヤーは原点で +Z を向いて出て、GameBootstrap が z = 10 (x = -4..4) に標的ダミーを並べる。
-    // 銃座付きの車は出現位置のすぐ右後ろで +X を向き、その先の平地の直線の奥に坂 (上り・平ら・下り) を置く。
-    // 銃座で撃つ的は直線の右 (z = -14)、障害物は出現位置の奥の別の道 (z = 18 の前後) に置く。
-    // 固定銃座と、それで壊す仮の車は出現位置の左後ろに向かい合わせ、敵は奥の端に置く。
     // 敵は smoke の撃つ所から銃声の届く半径 (どの武器も 50m 以下) より遠くに置き、smoke の間に寄って来ないようにする。
     public static class VehicleRangeSceneBuilder
     {

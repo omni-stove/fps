@@ -5,12 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ビルドに入れるシーンの一覧と、Build Settings への登録の仕方を 1 か所にまとめる。
-    /// シーンの生成スクリプトは保存したシーンを <see cref="RegisterStartScene"/> (起動時のシーン) か <see cref="Register"/> で登録し、
-    /// .NET のサーバーへの書き出し (マップのデータ) は <see cref="ServerScenes"/> を使う。
-    /// 一覧をまとめて登録し直すなら <see cref="RegisterAll"/> (メニューの <see cref="MenuPath"/>) を呼ぶ。
-    /// </summary>
     public static class BuildSceneList
     {
         public const string MenuPath = "Shooter/Register Build Scenes";
@@ -18,13 +12,8 @@ namespace Shooter.Editor
 
         // シーンはどれも出力先ルート (ShooterKitRoot.Output) の Scenes の下に置く。ルートは引数と EditorPrefs で変わるので、読むたびに組む。
 
-        /// <summary>
-        /// メインメニュー。起動時のシーンなので Build Settings の先頭に置く。実行時に読む側 (<see cref="Shooter.Core.MenuRoute"/>) と同じ名前で、
-        /// 出力先ルートが既定なら同じパス。
-        /// </summary>
         public static string MainMenuScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.MainMenuSceneName);
 
-        /// <summary>射撃場。メニューから読む。</summary>
         public static string BootstrapScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.RangeSceneName);
 
         public static string EnemyAiTestScene => ShooterKitRoot.OutputScene("EnemyAiTest");
@@ -33,21 +22,14 @@ namespace Shooter.Editor
         public static string VehicleRangeScene => ShooterKitRoot.OutputScene("VehicleRange");
         public static string CampaignScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.CampaignSceneName);
 
-        /// <summary>キャンペーンの 2 本目のミッション。ミッションの一覧 (MissionCatalog) から読む。</summary>
         public static string Campaign02Scene => ShooterKitRoot.OutputScene("Campaign02");
 
-        /// <summary>TPS のアクションを試す射撃場。ルールは <see cref="GameRulesAssetBuilder.TpsRangePath"/>。</summary>
         public static string TpsRangeScene => ShooterKitRoot.OutputScene("TpsRange");
 
-        /// <summary>機能ごとのシーンの名前の頭。後ろにルールの項目 (<see cref="Shooter.Core.GameRulesDebugField"/>) の名前を付ける。</summary>
         public const string FeatureScenePrefix = "Feature_";
 
-        /// <summary>
-        /// field の機能だけを試すシーン。ルールは <see cref="GameRulesAssetBuilder.FeatureRulesPath"/>。生成は <see cref="FeatureSceneBuilder"/>。
-        /// </summary>
         public static string FeatureScene(Shooter.Core.GameRulesDebugField field) => ShooterKitRoot.OutputScene(FeatureScenePrefix + field);
 
-        /// <summary>機能ごとのシーンすべて。<see cref="FeatureSceneBuilder.All"/> の順。</summary>
         public static IReadOnlyList<string> FeatureScenes
         {
             get
@@ -62,50 +44,36 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>拠点を取り合うモード。ルールは <see cref="GameRulesAssetBuilder.DominationPath"/>。</summary>
         public static string DominationScene => ShooterKitRoot.OutputScene("Domination");
 
-        /// <summary>PvE の波で敵を出す部品 (WaveSpawner) を試すシーン。</summary>
         public static string WaveTestScene => ShooterKitRoot.OutputScene("WaveTest");
 
         // 対戦・PvE モード。名前とルールはそれぞれ GameRulesAssetBuilder.ModeNames と <名前>Path に揃える (一致はテストで確かめる)。
         public static string FreeForAllScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.FreeForAllName);
 
-        /// <summary>キルコンファームド。生成は <see cref="KillConfirmedSceneBuilder"/>。</summary>
         public static string KillConfirmedScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.KillConfirmedName);
 
-        /// <summary>ガンゲーム。生成は <see cref="GunGameSceneBuilder"/>。</summary>
         public static string GunGameScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.GunGameName);
 
-        /// <summary>ハードポイント。生成は <see cref="HardpointSceneBuilder"/>。</summary>
         public static string HardpointScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HardpointName);
 
         public static string GuardianScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.GuardianName);
         public static string ExecutionScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.ExecutionName);
         public static string SearchAndDestroyScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.SearchAndDestroyName);
 
-        /// <summary>旗取り。生成は <see cref="CaptureTheFlagSceneBuilder"/>。</summary>
         public static string CaptureTheFlagScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.CaptureTheFlagName);
 
         public static string HordeScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
         public static string BattleRoyaleScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
 
-        /// <summary><see cref="ModeSceneBuilder"/> の動作確認用シーン (最小の TDM)。生成は <see cref="ModeTestSceneBuilder"/>。</summary>
         public static string ModeTestScene => ShooterKitRoot.OutputScene("ModeTest");
 
-        /// <summary>
-        /// ネット対戦の既定のマップ (<see cref="Shooter.Core.MenuRoute.NetSceneName"/>)。.NET のサーバーが <c>-map</c> を省いたときに使い、
-        /// クライアントはつないだサーバーのマップとしてこのシーンへ移る。生成は Shooter.Samples.Net.Editor の NetSceneBuilder。
-        /// </summary>
         public static string NetTestScene => ShooterKitRoot.OutputScene(Shooter.Core.MenuRoute.NetSceneName);
 
-        /// <summary>
-        /// ネット対戦のマップ。サーバーは <c>-map NetArena01</c> でこのシーンへ移る。生成は Shooter.Samples.Net.Editor の ArenaSceneBuilder
-        /// (この Editor のアセンブリは Shooter.Samples.Net.Editor を参照しないため文字列で持つ。一致はテストで確かめる)。
-        /// </summary>
+        // この Editor のアセンブリは Shooter.Samples.Net.Editor を参照しないので、ArenaSceneBuilder のマップ名を文字列で持つ (一致はテストで確かめる)。
         public static string NetArena01Scene => ShooterKitRoot.OutputScene("NetArena01");
 
-        /// <summary>ビルドに入れるシーン。この順に Build Settings へ並べる (先頭が起動時のシーン)。</summary>
+        // この順に Build Settings へ並べるので、先頭は起動時のシーンにする。
         public static IReadOnlyList<string> Scenes
         {
             get
@@ -143,10 +111,7 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// Web 版 (WebGL) に入れるシーン。メインメニューから行けて、オンラインを使わないものだけにする
-        /// (キャンペーンと、射撃場・チュートリアル)。先頭が起動時のシーン。
-        /// </summary>
+        // オンラインはブラウザで使えないので、メニューから行けるオフラインのシーンだけにして、たどり着けないシーンで重くしない。
         public static IReadOnlyList<string> WebScenes => new[]
         {
             MainMenuScene,
@@ -155,10 +120,6 @@ namespace Shooter.Editor
             Campaign02Scene,
         };
 
-        /// <summary>
-        /// <see cref="GameRulesAssetBuilder.ModeNames"/> の name のモードのシーン (<c>&lt;出力先ルート&gt;/Scenes/&lt;名前&gt;.unity</c>)。
-        /// 知らない名前なら <see cref="ArgumentException"/>。
-        /// </summary>
         public static string ModeScene(string name)
         {
             switch (name)
@@ -189,28 +150,19 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// .NET のサーバーが <c>-map</c> で選べるマップのシーン。マップのデータ (server-data/maps) をこれらから書き出す。
-        /// 先頭が <c>-map</c> を省いたときのマップ。出力先ルートが変わるので、読むたびに組む。
-        /// </summary>
+        // 先頭が -map を省いたときのマップになる。出力先ルートが変わるので、読むたびに組む。
         public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene };
 
-        /// <summary>path を起動時のシーンとして Build Settings の先頭に有効な状態で置く (<see cref="WithStartScene"/>)。</summary>
         public static void RegisterStartScene(string path)
         {
             EditorBuildSettings.scenes = WithStartScene(EditorBuildSettings.scenes, path);
         }
 
-        /// <summary>path を Build Settings に有効な状態で加える (<see cref="WithScene"/>)。</summary>
         public static void Register(string path)
         {
             EditorBuildSettings.scenes = WithScene(EditorBuildSettings.scenes, path);
         }
 
-        /// <summary>
-        /// <see cref="Scenes"/> のうちプロジェクトにあるものを、この順に有効な状態で Build Settings に並べ直す (<see cref="Arrange"/>)。
-        /// 一覧に無いシーンは後ろに残す。無いシーンは警告を出して飛ばす。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void RegisterAll()
         {
@@ -235,10 +187,6 @@ namespace Shooter.Editor
             Debug.Log($"{LogTag} registered {EditorBuildSettings.scenes.Length} scene(s)");
         }
 
-        /// <summary>
-        /// Build Settings のシーン一覧の先頭に path を有効な状態で置く。既にあるものは先頭へ移し、
-        /// 他のシーンは順番と有効/無効をそのまま残す。
-        /// </summary>
         public static EditorBuildSettingsScene[] WithStartScene(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
             path = BootstrapSceneBuilder.ValidateScenePath(path);
@@ -260,10 +208,6 @@ namespace Shooter.Editor
             return scenes.ToArray();
         }
 
-        /// <summary>
-        /// Build Settings のシーン一覧に path を有効な状態で加える。既にあれば位置を変えずに有効にし (重複は落とす)、
-        /// 他のシーンは順番と有効/無効をそのまま残す。
-        /// </summary>
         public static EditorBuildSettingsScene[] WithScene(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
             path = BootstrapSceneBuilder.ValidateScenePath(path);
@@ -303,10 +247,6 @@ namespace Shooter.Editor
             return scenes.ToArray();
         }
 
-        /// <summary>
-        /// <see cref="Scenes"/> のうち exists が true のものを、この順に有効な状態で先に並べ、current のうち一覧に無いシーンを
-        /// 元の順番と有効/無効のまま後ろに残す。重複と空のパスは落とす。
-        /// </summary>
         public static EditorBuildSettingsScene[] Arrange(IReadOnlyList<EditorBuildSettingsScene> current, Func<string, bool> exists)
         {
             if (exists == null)

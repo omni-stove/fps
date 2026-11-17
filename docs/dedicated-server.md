@@ -24,7 +24,7 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
   入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
   `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
-- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`・`assist.json`) は、オフラインと同じく入口の欄の JSON、
   無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
@@ -311,6 +311,7 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  巻き戻すのは位置・しゃがみ・リーンの傾きで、傾けた人の体は足元を軸に、目がリーンのずれ (`MotorSpec.LeanSideOffset`) の所へ来るまで回す。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
 - 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・
@@ -396,12 +397,16 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
 | `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
 | `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
-| `chat` | プレイヤーがチャットを送った。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (本文の文字数) |
+| `chat` | プレイヤーのチャットを配った。`All` は全員に、`Team` は送った人と同じチームの人にだけ配る。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (前後の空白と改行を落とした本文の文字数) |
+| `chat_refused` | チャットを断った。断った文は送った人にも返さない。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`Empty` / `TooLong` / `TooSoon`) |
 | `map_vote` | プレイヤーが次のマップに投票した (選び直しも 1 行) | `matchId`、`playerId`、`productUserId`、`mapId` |
 | `map_changed` | 次の試合のマップを替えた | `matchId` (終わった試合)、`fromMapId`、`toMapId` |
 | `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |
 
 試合が終わって次の試合が始まるとき、残っている人には `player_joined` を出し直さない。次の試合の顔ぶれの人数は `match_started` の `players` で分かる。
+ルールのファイルの `match.maxTeamSizeDifference` が 1 以上で、次の試合を始めるときに 2 チームの人数の差がそれを超えていれば、
+多いチームの最近入った人 (Bot も含む) から少ないチームへ移し、移した人ごとに `team_balanced` と `[Match] balanced player=3 from=Alpha to=Bravo` を出す。
+接続のときに同じパーティの Id を名乗った人はまとめて移すか、移さない。移すと差が縮まらない組は移さない。`0` (既定) なら移さない。
 標準出力に書けなくなったとき (受け手のパイプが閉じたなど) は `[Net] cannot write match events to stdout (...)` を一度だけ出し、以後は JSON の行を出さない。試合は止めない。
 
 ## CI のテンプレート

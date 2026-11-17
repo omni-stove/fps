@@ -335,6 +335,7 @@ namespace Shooter.Server
                     : VaultSync.None;
                 row.Prone = state.Prone;
                 row.Ladder = state.Ladder;
+                row.AirJumpsUsed = (byte)state.AirJumpsUsed;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
@@ -427,7 +428,8 @@ namespace Shooter.Server
             if (_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
             {
                 var state = mover.State;
-                body.SetPose(state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder);
+                body.SetPose(
+                    state.Position, mover.Yaw, state.Stance, state.Ladder.IsClimbing ? state.Ladder.Index : CharacterLadderState.NoLadder, state.Lean.Amount);
             }
         }
 

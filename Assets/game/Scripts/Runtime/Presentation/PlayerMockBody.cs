@@ -18,6 +18,8 @@ namespace Shooter.Runtime
     /// (プリミティブのカプセル) は組み立てている間だけ消し、外すときに元へ戻す。
     /// 読み元は <see cref="GameBootstrap"/> が <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
     /// 無ければエラーを出して自分を無効にする。部品は Play 中の最初の LateUpdate で組み立てる (<see cref="Build"/>)。
+    /// リーン・水泳・壁走りの傾きは <see cref="MotorSource"/> (未設定なら同じ GameObject の <see cref="ICharacterMotorStateSource"/>) から読み、
+    /// 無ければ傾けない。
     /// </summary>
     [DisallowMultipleComponent]
     // PlayerActionReader (100) がそのフレームの状態を組み立て、ViewRig がカメラを置き終えてから姿勢を決める。
@@ -72,9 +74,20 @@ namespace Shooter.Runtime
         private MockPartPose _viewPose;
         private bool _showsBody = true;
         private ViewRig _viewRig;
+        private ICharacterMotorStateSource _motorSource;
+        private bool _warnedInvalidMotor;
 
         /// <summary>見せるアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
+
+        /// <summary>
+        /// リーン・水泳・壁走りを読む移動の状態の読み元。null (か破棄済み) なら、LateUpdate のたびに同じ GameObject から探す。
+        /// </summary>
+        public ICharacterMotorStateSource MotorSource
+        {
+            get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
+            set => _motorSource = value;
+        }
 
         /// <summary>胴・頭・銃の見た目。次に組み立てるとき (<see cref="Build"/>) から使う。null を設定するとすべて仮の形になる。</summary>
         public PlayerMockBodyPrefabs Prefabs
@@ -218,9 +231,48 @@ namespace Shooter.Runtime
             var eye = _reader.Rig.Eye;
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
 
-            Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance);
+            if (TryReadMotor(out var motor, out var leanAngleDegrees))
+            {
+                Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance, motor, leanAngleDegrees);
+            }
+            else
+            {
+                Apply(_reader.Current, velocity, _reader.Cover.CoverNormal, pitch, feetY, Time.deltaTime, mover.Stance);
+            }
+
             var armed = _reader.Weapon == null || !_reader.Weapon.IsHolstered;
             ShowGuns(armed, armed && !HasViewmodel());
+        }
+
+        // 読み元は PlayerController より後に付くことがあるので、見つかるまで探し直す。
+        private bool TryReadMotor(out CharacterMotorState motor, out float leanAngleDegrees)
+        {
+            motor = default;
+            leanAngleDegrees = 0f;
+            if (CharacterMotorStateSources.IsMissing(_motorSource))
+            {
+                _motorSource = TryGetComponent<ICharacterMotorStateSource>(out var found) ? found : null;
+            }
+
+            if (_motorSource == null || !_motorSource.TryGetMotorState(out motor))
+            {
+                return false;
+            }
+
+            var spec = _motorSource.Spec ?? _reader.Mover.Spec;
+            if (!motor.Lean.IsValid || !motor.WallRun.IsValid)
+            {
+                if (!_warnedInvalidMotor)
+                {
+                    Debug.LogWarning($"{LogTag} '{name}' の移動の状態のリーンか壁走りが範囲の外なので、傾けずに見せます。", this);
+                    _warnedInvalidMotor = true;
+                }
+
+                return false;
+            }
+
+            leanAngleDegrees = spec.LeanAngleDegrees;
+            return true;
         }
 
         /// <summary>
@@ -350,6 +402,40 @@ namespace Shooter.Runtime
             float deltaSeconds,
             StanceGeometry stance = null)
         {
+            ApplyPose(state, worldVelocity, worldCoverNormal, aimPitch, feetLocalY, deltaSeconds, stance, null, 0f);
+        }
+
+        /// <summary>
+        /// <see cref="Apply(PlayerActionState, Vector3, Vector3, Quaternion, float, float, StanceGeometry)"/> に、移動の状態 motor の
+        /// 壁走り・水泳・リーンの傾き (<see cref="PlayerMockPose.BodyLean(PlayerActionState, Vector3, Vector3, CharacterMotorState, float)"/>) を足す。
+        /// </summary>
+        /// <param name="motor">移動の Core の今の状態。</param>
+        /// <param name="leanAngleDegrees">リーンで傾け切ったときの角度 (<see cref="MotorSpec.LeanAngleDegrees"/>)。0〜90 度。</param>
+        public void Apply(
+            PlayerActionState state,
+            Vector3 worldVelocity,
+            Vector3 worldCoverNormal,
+            Quaternion aimPitch,
+            float feetLocalY,
+            float deltaSeconds,
+            StanceGeometry stance,
+            CharacterMotorState motor,
+            float leanAngleDegrees)
+        {
+            ApplyPose(state, worldVelocity, worldCoverNormal, aimPitch, feetLocalY, deltaSeconds, stance, motor, leanAngleDegrees);
+        }
+
+        private void ApplyPose(
+            PlayerActionState state,
+            Vector3 worldVelocity,
+            Vector3 worldCoverNormal,
+            Quaternion aimPitch,
+            float feetLocalY,
+            float deltaSeconds,
+            StanceGeometry stance,
+            CharacterMotorState? motor,
+            float leanAngleDegrees)
+        {
             if (!IsBuilt)
             {
                 throw new InvalidOperationException($"PlayerMockBody '{name}' is not built");
@@ -367,7 +453,9 @@ namespace Shooter.Runtime
             var localNormal = transform.InverseTransformDirection(worldCoverNormal);
             var targetScale = PlayerMockPose.StanceScale(state, stance);
             var targetShift = PlayerMockPose.BodyShift(state, localNormal);
-            var targetLean = PlayerMockPose.BodyLean(state, localMove, localNormal);
+            var targetLean = motor.HasValue
+                ? PlayerMockPose.BodyLean(state, localMove, localNormal, motor.Value, leanAngleDegrees)
+                : PlayerMockPose.BodyLean(state, localMove, localNormal);
             var targetGun = PlayerMockPose.BodyGun(state, aimPitch, stance);
             var targetView = PlayerMockPose.ViewModel(state);
 

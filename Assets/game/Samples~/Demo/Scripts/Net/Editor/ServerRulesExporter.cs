@@ -9,16 +9,8 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// Unity 抜きのサーバー (dotnet/Shooter.Server) はアセットとシーンを読めないので、試合の設定 (<see cref="NetMatchDefinition"/>、
-    /// <see cref="NetSceneBuilder.MatchDefinitionPath"/>) とルールのアセットを <c>server-data/rules/&lt;ルール名&gt;.json</c> に、
-    /// 各マップの出現地点と拠点を <c>server-data/maps/&lt;マップ&gt;.points.json</c> に、
-    /// 印・グレネード・持ち物・吹き飛ばし・ボットの調整値を <c>server-data/tuning/</c> に書き出す。ルールのファイルには試合の設定の移動の値と体の寸法も入れる。
-    /// ルールは入口 (<see cref="GameContent"/>) のルールと <see cref="NetMatchDefinition.Rules"/> の並び (<see cref="RulesToExport"/>)、
-    /// 調整値は <see cref="KitTuning"/> と同じ順 (入口の欄、無ければ Resources) で読む。
-    /// サーバーは <c>-rules &lt;ルール名&gt;</c> でルールを選ぶ。
-    /// </summary>
-    /// <remarks>make export-server-rules: unity run . -- -executeMethod Shooter.Editor.ServerRulesExporter.Export</remarks>
+    // Unity 抜きのサーバー (dotnet/Shooter.Server) はアセットとシーンを読めないので、試合の設定・ルール・出現地点・調整値を JSON に書き出して渡す。
+    // 調整値をオフラインと揃えるため、KitTuning と同じ順 (入口の欄、無ければ Resources) で読む。
     public static class ServerRulesExporter
     {
         public const string MenuPath = "Shooter/Server Data/Export Rules And Points";
@@ -35,6 +27,7 @@ namespace Shooter.Editor
         public const string InventoryFileName = "inventory.json";
         public const string KnockbackFileName = "knockback.json";
         public const string BotsFileName = "bots.json";
+        public const string AssistFileName = "assist.json";
 
         public const string AllDefaultsJson = "{}\n";
 
@@ -184,6 +177,7 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, InventoryFileName, c => c.InventoryTuning, KitTuning.InventoryResourcePath, InventoryJson.Parse),
                 ExportTuningFile(directory, KnockbackFileName, c => c.KnockbackTuning, KitTuning.KnockbackResourcePath, TuningJson.ParseKnockback),
                 ExportTuningFile(directory, BotsFileName, c => c.BotsTuning, KitTuning.BotsResourcePath, TuningJson.ParseBots),
+                ExportTuningFile(directory, AssistFileName, c => c.AssistTuning, KitTuning.AssistResourcePath, AssistJson.Parse),
             };
         }
 

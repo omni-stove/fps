@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// キルカム (<see cref="DeathCamera.KillCam"/>) の演出。再生の速さと、再生している間に出す枠と文字を受け持つ。
-    /// カメラを動かすのはキルカムの側 (<see cref="KillCamReplay"/>) で、ここはその上に重ねる見せ方だけを決める。
+    /// キルカム (<see cref="DeathCamera.KillCam"/>) の演出。再生の速さと、再生に合わせた見せ方を受け持つ。
+    /// カメラを動かすのはキルカムの側 (<see cref="KillCamReplay"/>) で、枠と文字は UI が <see cref="GameSignals.KillCam"/> から出す。
     /// <see cref="KillCamPresentations.Current"/> に入れると差し替えられる。
     /// </summary>
     public interface IKillCamPresentation
@@ -16,25 +16,25 @@ namespace Fps.Runtime
         /// </summary>
         float PlaybackSpeed { get; }
 
-        /// <summary>再生を始めた。枠と文字を出す。</summary>
+        /// <summary>再生を始めた。</summary>
         void Begin(KillCamShot shot);
 
         /// <summary>再生が進んだ。progress は 0 から 1。</summary>
         void Progress(float progress);
 
-        /// <summary>再生を終えた。completed は最後まで再生したか (リスポーンなどで途中でやめたら false)。枠と文字を消す。</summary>
+        /// <summary>再生を終えた。completed は最後まで再生したか (リスポーンなどで途中でやめたら false)。</summary>
         void End(bool completed);
     }
 
     /// <summary><see cref="IKillCamPresentation.Begin"/> に渡す、1 回の再生の情報。</summary>
     public readonly struct KillCamShot
     {
-        public KillCamShot(GameObject viewer, Camera camera, LocalizedText caption, string killerName, float durationSeconds)
+        public KillCamShot(GameObject viewer, Camera camera, string killerName, string weaponId, float durationSeconds)
         {
             Viewer = viewer;
             Camera = camera;
-            Caption = caption;
             KillerName = killerName ?? string.Empty;
+            WeaponId = weaponId ?? string.Empty;
             DurationSeconds = durationSeconds;
         }
 
@@ -44,11 +44,10 @@ namespace Fps.Runtime
         /// <summary>再生を映しているカメラ。見つからなければ null。</summary>
         public Camera Camera { get; }
 
-        /// <summary>見出し (<see cref="KillCamText.Caption"/>)。</summary>
-        public LocalizedText Caption { get; }
-
-        /// <summary>倒した相手の名前 (ログ用)。null にならない。</summary>
+        /// <summary>倒した相手の名前。null にならない。</summary>
         public string KillerName { get; }
+
+        public string WeaponId { get; }
 
         /// <summary>再生するクリップの長さ (秒、速さを掛ける前)。</summary>
         public float DurationSeconds { get; }

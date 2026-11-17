@@ -17,7 +17,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            KillCamPresentations.Current = null;
+            GameSignals.ResetAll();
             foreach (var created in _created)
             {
                 if (created != null)
@@ -30,77 +30,97 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheDefaultPresentationIsTheHudFrameUnlessReplaced()
+        public void CaptionNamesTheKiller()
         {
-            Assert.That(KillCamPresentations.Current, Is.InstanceOf<DefaultKillCamPresentation>());
-            Assert.That(KillCamPresentations.Current.PlaybackSpeed, Is.EqualTo(1f));
+            var caption = KillCamText.Caption(LocalizedText.Literal("Enemy-1"));
 
-            var replaced = new StubPresentation();
-            KillCamPresentations.Current = replaced;
-            Assert.That(KillCamPresentations.Current, Is.SameAs(replaced));
-
-            KillCamPresentations.Current = null;
-            Assert.That(KillCamPresentations.Current, Is.InstanceOf<DefaultKillCamPresentation>());
+            Assert.That(caption.Key, Is.EqualTo("hud.killCam.caption"));
+            Assert.That(KillCamText.Caption(new KillCamStatus("Enemy-1", "rifle", 4f, 0f, 1f)).Key, Is.EqualTo("hud.killCam.caption"));
+            Assert.That(Localizer.Resolve(KillCamText.Caption(new KillCamStatus("Enemy-1", "rifle", 4f, 0f, 1f))),
+                Is.EqualTo(Localizer.Resolve(caption)));
         }
 
         [Test]
-        public void TheDefaultPresentationShowsTheCaptionAndProgressOnTheHudUntilTheEnd()
+        public void WithoutAReplayTheFrameIsHiddenAndThePresentationIsPlain()
+        {
+            CreateHudView(out var element);
+
+            Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(KillCamPresentations.Current, Is.SameAs(KillCamPresentations.Plain), "the UI no longer registers a presentation");
+        }
+
+        [Test]
+        public void ThePublishedReplayShowsTheCaptionAndProgressUntilItIsCleared()
         {
             var view = CreateHudView(out var element);
-            Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
-
-            var presentation = new DefaultKillCamPresentation();
             var caption = KillCamText.Caption(LocalizedText.Literal("Enemy-1"));
-            LogAssert.Expect(LogType.Log, new Regex(@"^\[KillCam\] showing the frame "".*Enemy-1.*""$"));
-            presentation.Begin(new KillCamShot(null, null, caption, "Enemy-1", 4f));
+            var status = new KillCamStatus("Enemy-1", "rifle", 4f, 0f, 1f);
 
-            Assert.That(presentation.View, Is.SameAs(view));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[KillCam\] showing the frame "".*Enemy-1.*""$"));
+            GameSignals.KillCam.Publish(status);
+
             Assert.That(view.IsShown, Is.True);
             Assert.That(view.Caption, Is.EqualTo(Localizer.Resolve(caption)));
             Assert.That(view.Caption, Does.Contain("Enemy-1").And.Not.Contain("hud.killCam.caption"));
             Assert.That(element.Q<Label>(KillCamView.CaptionName).text, Is.EqualTo(view.Caption));
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.Progress, Is.EqualTo(0f));
 
-            presentation.Progress(0.25f);
+            GameSignals.KillCam.Publish(status.At(1f));
             Assert.That(view.Progress, Is.EqualTo(0.25f));
             Assert.That(element.Q(KillCamView.ProgressName).style.width.value, Is.EqualTo(Length.Percent(25f)));
-            presentation.Progress(2f);
-            Assert.That(view.Progress, Is.EqualTo(1f), "progress is clamped");
+            GameSignals.KillCam.Publish(status.At(4f));
+            Assert.That(view.Progress, Is.EqualTo(1f));
 
             LogAssert.Expect(LogType.Log, "[KillCam] hiding the frame");
-            presentation.End(false);
+            GameSignals.KillCam.Clear();
             Assert.That(view.IsShown, Is.False);
             Assert.That(view.Caption, Is.Empty);
-            Assert.That(presentation.View, Is.Null);
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
         [Test]
-        public void ACaptionShownBeforeBindingAppearsWhenTheElementArrives()
+        public void AReplayOfAnotherKillerReplacesTheCaption()
+        {
+            var view = CreateHudView(out _);
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[KillCam\] showing the frame "".*Enemy-1.*""$"));
+            GameSignals.KillCam.Publish(new KillCamStatus("Enemy-1", "rifle", 4f, 2f, 1f));
+
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[KillCam\] showing the frame "".*Enemy-2.*""$"));
+            GameSignals.KillCam.Publish(new KillCamStatus("Enemy-2", "pistol", 2f, 0.5f, 1f));
+
+            Assert.That(view.Caption, Does.Contain("Enemy-2").And.Not.Contain("Enemy-1"));
+            Assert.That(view.Progress, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void AReplayPublishedBeforeBindingAppearsWhenTheElementArrives()
         {
             var host = new GameObject("Hud");
             _created.Add(host);
             var view = host.AddComponent<KillCamView>();
+            GameSignals.KillCam.Publish(new KillCamStatus("Enemy-1", "rifle", 4f, 2f, 1f));
+            Assert.That(view.IsShown, Is.False, "an unbound view does not follow the signal");
 
-            view.Show(LocalizedText.Literal("KILLCAM Enemy-1"));
             var root = LoadLayout();
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[KillCam\] showing the frame "".*Enemy-1.*""$"));
             view.Bind(root);
 
             var element = root.Q(KillCamView.UxmlName);
             Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-            Assert.That(element.Q<Label>(KillCamView.CaptionName).text, Is.EqualTo("KILLCAM Enemy-1"));
+            Assert.That(element.Q<Label>(KillCamView.CaptionName).text, Does.Contain("Enemy-1"));
+            Assert.That(view.Progress, Is.EqualTo(0.5f));
         }
 
         [Test]
-        public void WithoutAHudTheDefaultPresentationDrawsNothing()
+        public void AnUnboundViewStopsFollowingTheSignal()
         {
-            var presentation = new DefaultKillCamPresentation();
+            var view = CreateHudView(out _);
+            view.Unbind();
 
-            presentation.Begin(new KillCamShot(null, null, KillCamText.Caption(LocalizedText.Literal("Turret")), "Turret", 1f));
-            presentation.Progress(0.5f);
-            presentation.End(true);
+            GameSignals.KillCam.Publish(new KillCamStatus("Enemy-1", "rifle", 4f, 0f, 1f));
 
-            Assert.That(presentation.View, Is.Null);
+            Assert.That(view.IsShown, Is.False);
         }
 
         private KillCamView CreateHudView(out VisualElement element)
@@ -123,23 +143,6 @@ namespace Fps.Tests.EditMode
             var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
             Assert.That(layout, Is.Not.Null);
             return layout.Instantiate();
-        }
-
-        private sealed class StubPresentation : IKillCamPresentation
-        {
-            public float PlaybackSpeed => 1f;
-
-            public void Begin(KillCamShot shot)
-            {
-            }
-
-            public void Progress(float progress)
-            {
-            }
-
-            public void End(bool completed)
-            {
-            }
         }
     }
 }

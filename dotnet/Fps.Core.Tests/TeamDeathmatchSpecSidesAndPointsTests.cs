@@ -81,7 +81,7 @@ namespace Fps.Core.Tests
             var spec = new TeamDeathmatchSpec(10, 60f, 3f, null, 3);
 
             var error = Assert.Throws<ArgumentException>(() => new TeamDeathmatch(spec));
-            StringAssert.Contains("3", error.Message);
+            Assert.That(error.Message, Does.Contain("3"));
         }
 
         [TestCase(1, 8, 1, "sideCount")]

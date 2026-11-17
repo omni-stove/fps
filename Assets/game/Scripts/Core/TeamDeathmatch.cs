@@ -31,7 +31,7 @@ namespace Fps.Core
         /// <summary>試合が終わった瞬間に 1 度だけ呼ばれる。引数は勝ったチームで、同点なら null。</summary>
         public event Action<Team?> Ended;
 
-        private const int TwoTeamSideCount = 2;
+        private const int _twoTeamSideCount = 2;
 
         private readonly ModeSession _session;
 
@@ -52,10 +52,10 @@ namespace Fps.Core
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
 
             // Team (Alpha・Bravo) で受け答えする API なので、3 つ以上の陣営は黙って 2 つにせず断る。
-            if (spec.SideCount != TwoTeamSideCount)
+            if (spec.SideCount != _twoTeamSideCount)
             {
                 throw new ArgumentException(
-                    $"team deathmatch supports exactly {TwoTeamSideCount} sides, but the spec has {spec.SideCount}; use TeamDeathmatchRunner for more sides",
+                    $"team deathmatch supports exactly {_twoTeamSideCount} sides, but the spec has {spec.SideCount}; use TeamDeathmatchRunner for more sides",
                     nameof(spec));
             }
 

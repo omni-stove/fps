@@ -46,6 +46,22 @@ namespace Shooter.Core
                 placement.Replaced.HasValue ? placement.Replaced.Value.Id.ToString(CultureInfo.InvariantCulture) : "none");
         }
 
+        /// <summary>見えていなくても追う敵の印 (<see cref="PingBoard.Reveal"/>) を付けた。target は敵の名前。</summary>
+        /// <example><c>[Ping] revealed id=4 target=Dummy_0 at=(1.00, 1.10, 10.00) life=30.00 refreshed=false</c></example>
+        public static string Revealed(PingPlacement placement, string target)
+        {
+            var marker = placement.Marker;
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} revealed id={1} target={2} at={3} life={4:0.00} refreshed={5}",
+                Tag,
+                marker.Id,
+                Token(target),
+                Point(marker.Position),
+                marker.ExpiresAt - marker.PlacedAt,
+                placement.Refreshed ? "true" : "false");
+        }
+
         /// <summary>印を付けようとして付けなかった。</summary>
         /// <example><c>[Ping] refused reason=RuleOff</c></example>
         public static string Refused(PingRefusal reason)

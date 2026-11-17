@@ -39,6 +39,11 @@ namespace Shooter.NetV2.Tests
 
         private static readonly string[] _updateMemberCalls = { "update-member id=L1 ready=1,team=a" };
         private static readonly string[] _joinedL1 = { "L1" };
+        private static readonly string[] _joinWrongLog = { "[Lobby] member lobby join failed id=WRONG reason=not-found" };
+        private static readonly string[] _joinCopyLeaveL2Calls = { "join id=L2", "copy id=L2", "leave id=L2" };
+        private static readonly string[] _joinWrongCalls = { "join id=WRONG" };
+        private static readonly string[] _copyL1Calls = { "copy id=L1" };
+        private static readonly string[] _leaveL1Calls = { "leave id=L1" };
         private static readonly string[] _joinL2Calls = { "join id=L2" };
         private static readonly string[] _createJoinLeaveCalls =
         {
@@ -220,9 +225,9 @@ namespace Shooter.NetV2.Tests
             _api.AnswerJoin(LobbyBackendErrors.NotFound);
 
             Assert.That(LobbyBackendErrors.IsNotFound(failure), Is.True);
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=WRONG" }));
+            Assert.That(_api.Calls, Is.EqualTo(_joinWrongCalls));
             Assert.That(_lobbies.Joined, Is.Empty);
-            Assert.That(_log, Is.EqualTo(new[] { "[Lobby] member lobby join failed id=WRONG reason=not-found" }));
+            Assert.That(_log, Is.EqualTo(_joinWrongLog));
         }
 
         [Test]
@@ -234,7 +239,7 @@ namespace Shooter.NetV2.Tests
             _api.AnswerJoin(null);
 
             Assert.That(failure, Is.EqualTo("reading the EOS lobby id=L2 failed: InvalidState"));
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=L2", "copy id=L2", "leave id=L2" }));
+            Assert.That(_api.Calls, Is.EqualTo(_joinCopyLeaveL2Calls));
             Assert.That(_lobbies.Joined, Is.Empty);
         }
 
@@ -245,7 +250,7 @@ namespace Shooter.NetV2.Tests
             LobbyInfo joined = null;
             _lobbies.Join("L1", (lobby, _) => joined = lobby);
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "copy id=L1" }));
+            Assert.That(_api.Calls, Is.EqualTo(_copyL1Calls));
             Assert.That(joined.Id, Is.EqualTo("L1"));
         }
 
@@ -256,8 +261,8 @@ namespace Shooter.NetV2.Tests
             var failure = "not answered";
             _lobbies.Leave("L1", error => failure = error);
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "leave id=L1" }));
-            Assert.That(_lobbies.Joined, Is.EquivalentTo(new[] { "L1" }), "still joined until the service answers");
+            Assert.That(_api.Calls, Is.EqualTo(_leaveL1Calls));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(_joinedL1), "still joined until the service answers");
             _api.AnswerLeave(null);
 
             Assert.That(failure, Is.Null);
@@ -286,7 +291,7 @@ namespace Shooter.NetV2.Tests
             _api.AnswerLeave("leaving the EOS member lobby id=L1 failed: TimedOut");
 
             Assert.That(failure, Is.EqualTo("leaving the EOS member lobby id=L1 failed: TimedOut"));
-            Assert.That(_lobbies.Joined, Is.EquivalentTo(new[] { "L1" }));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(_joinedL1));
             Assert.That(_log, Has.Member("[Lobby] member lobby leave failed id=L1 reason=leaving the EOS member lobby id=L1 failed: TimedOut"));
         }
 

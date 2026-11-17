@@ -10,6 +10,9 @@ namespace Fps.Protocol.Tests
         // 重さと倍率の数え方 (1 + 1 バイト)、遅くならない重さ・1 kg ごとの減り・重さの倍率の下限 (4 バイトずつ)、動き (1 バイト)
         private const int _carryLoadBytes = 1 + 1 + (3 * 4) + 1;
 
+        // 承認の末尾に並ぶ吹き飛ばしの値 (力 3 種類 × 3 個と、そのほか 9 個)
+        private const int _knockbackBytes = 18 * 4;
+
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
@@ -95,8 +98,8 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (13 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
-            var walkSpeed = bytes.Length - 4 - ((13 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            // 歩く速さ (移動の値の先頭) を負にする。最後の 4 バイトは落ちる高さ、その前に移動の値が並ぶ (19 + 6 個、持ち物の値、6 + 3 + 1 + 6 個)
+            var walkSpeed = bytes.Length - _knockbackBytes - 4 - ((19 + 6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkSpeed, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -110,7 +113,7 @@ namespace Fps.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 重さの倍率の下限は持ち物の値の 4 番目 (重さと倍率の数え方 2 バイト、遅くならない重さ、1 kg ごとの減り) で、後ろに動きの 1 バイトが続く
-            var minWeightMultiplier = bytes.Length - 4 - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
+            var minWeightMultiplier = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - 1 - 4;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, minWeightMultiplier, 4), 1.5f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -123,7 +126,7 @@ namespace Fps.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            var weightSource = bytes.Length - 4 - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var weightSource = bytes.Length - _knockbackBytes - 4 - ((6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             bytes[weightSource] = 9;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
@@ -137,7 +140,7 @@ namespace Fps.Protocol.Tests
             var bytes = writer.AsSegment().ToArray();
 
             // 歩きの前の倍率 (向きの倍率の先頭) を負にする。その後ろに向きの倍率 6 個と持ち物の値、体・カプセル・伏せの値 (6 + 3 + 1 + 6 個)、落ちる高さが並ぶ
-            var walkForward = bytes.Length - 4 - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
+            var walkForward = bytes.Length - _knockbackBytes - 4 - ((6 + 6 + 3 + 1 + 6) * 4) - _carryLoadBytes;
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, walkForward, 4), -1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));

@@ -104,7 +104,7 @@ namespace Fps.Tests.EditMode
             Side? winner = null,
             object detail = null)
         {
-            return new ModeStatus(remaining, sideScores, ownSide, respawn, isEnded, winner, detail, default, null, null, default);
+            return new ModeStatus(remaining, sideScores, ownSide, respawn, isEnded, winner, detail);
         }
     }
 }

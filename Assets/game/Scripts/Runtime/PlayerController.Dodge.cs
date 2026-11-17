@@ -10,7 +10,7 @@ namespace Fps.Runtime
     /// <see cref="DodgeRule"/> が <see cref="Dodge.On"/> で接地しているときに Dodge を押すと、移動入力の向き (無ければ後ろ) へ
     /// <see cref="DodgeMotion"/> で転がる。転がっている間は <see cref="TryOverrideMove"/> で移動を差し替え、しゃがみ・ダッシュ・ジャンプを止める。
     /// 始めるときにしゃがみとダッシュを解き (押し直すまで戻らない)、<see cref="DodgeStarted"/> を呼ぶ (ADS を解くのは購読した側)。
-    /// <see cref="DodgeBlocker"/> が true を返す間 (カバー中) は始めない。終わってから <see cref="DodgeMotion.DefaultCooldownSeconds"/> は次を始めない。
+    /// <see cref="DodgeBlocker"/> が true を返す間 (カバー中) は始めない。終わってから <see cref="MotorSpec.DodgeCooldownSeconds"/> は次を始めない。
     /// </summary>
     public sealed partial class PlayerController
     {

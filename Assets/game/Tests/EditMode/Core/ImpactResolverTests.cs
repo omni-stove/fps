@@ -16,7 +16,7 @@ namespace Fps.Core.Tests
         {
             var impact = new ImpactSpec(33, _falloff);
 
-            var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(zone, Vector3.One, distance));
+            var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(zone, Vector3.One, distance, ZoneDamageMultipliers.Default));
 
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
@@ -54,7 +54,7 @@ namespace Fps.Core.Tests
         {
             var impact = new ImpactSpec(25, areaEffect: new AreaEffectSpec(4f, 5f, 1f, 2));
 
-            var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f));
+            var orders = ImpactResolver.Resolve(impact, ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f, ZoneDamageMultipliers.Default));
 
             Assert.That(orders.Count, Is.EqualTo(1));
             Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
@@ -66,7 +66,7 @@ namespace Fps.Core.Tests
             var burn = new StatusEffectSpec(3f, 0.5f, 4);
             var point = new Vector3(1f, 2f, 3f);
 
-            var orders = ImpactResolver.Resolve(new ImpactSpec(25, statusEffect: burn), ImpactHit.Character(HitZone.Body, point, 0f));
+            var orders = ImpactResolver.Resolve(new ImpactSpec(25, statusEffect: burn), ImpactHit.Character(HitZone.Body, point, 0f, ZoneDamageMultipliers.Default));
 
             Assert.That(orders.Count, Is.EqualTo(2));
             Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
@@ -92,7 +92,7 @@ namespace Fps.Core.Tests
             var explosion = new ExplosionSpec(new ExplosionDamage(100, 5f));
             var point = new Vector3(1f, 2f, 3f);
 
-            var orders = ImpactResolver.Resolve(new ImpactSpec(25, explosion: explosion), ImpactHit.Character(HitZone.Body, point, 7f));
+            var orders = ImpactResolver.Resolve(new ImpactSpec(25, explosion: explosion), ImpactHit.Character(HitZone.Body, point, 7f, ZoneDamageMultipliers.Default));
 
             Assert.That(orders.Count, Is.EqualTo(2));
             Assert.That(orders[0].Kind, Is.EqualTo(ImpactOrderKind.Damage));
@@ -175,7 +175,7 @@ namespace Fps.Core.Tests
         {
             var charge = new ChargeSpec(1f, 0.2f, 3f);
             var impact = new ImpactSpec(30);
-            var hit = ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f);
+            var hit = ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f, ZoneDamageMultipliers.Default);
 
             Assert.That(ImpactResolver.Resolve(impact, hit, charge, 1f)[0].Amount, Is.EqualTo(90));
             Assert.That(ImpactResolver.Resolve(impact, hit, charge, 0.5f)[0].Amount, Is.EqualTo(60));
@@ -187,7 +187,7 @@ namespace Fps.Core.Tests
         {
             Assert.Throws<ArgumentNullException>(() => ImpactResolver.Resolve(null, ImpactHit.Structure(Vector3.Zero, 0f)));
             Assert.Throws<ArgumentOutOfRangeException>(() => ImpactHit.Structure(Vector3.Zero, -1f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ImpactHit.Character(HitZone.Body, Vector3.Zero, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ImpactHit.Character(HitZone.Body, Vector3.Zero, float.NaN, ZoneDamageMultipliers.Default));
             Assert.Throws<ArgumentNullException>(() => ImpactHit.Character(HitZone.Body, Vector3.Zero, 0f, null));
             Assert.Throws<ArgumentOutOfRangeException>(() => ImpactOrder.Damage(-1));
             Assert.Throws<ArgumentNullException>(() => ImpactOrder.Detonate(null, Vector3.Zero));

@@ -11,6 +11,19 @@ namespace Fps.Core
         public const float DefaultSearchSeconds = 6f;
         public const float DefaultReactionSeconds = 0.6f;
 
+        // 以下は bots.json で敵の判断を変えられるようにする前の bot と同じ値で、省いたデータの bot の挙動を変えない。
+        // 撃ち始める距離を攻撃距離にそろえ、Attack になるまで撃たない
+        public const float DefaultFireRange = DefaultAttackRange;
+
+        // 狙いの合い方は BotDriver が照準の許し (BotInputSpec.FireToleranceDegrees) で見るので、体の向きでは止めない
+        public const float DefaultFacingToleranceDegrees = EnemySpec.MaxFireToleranceDegrees;
+
+        // 外し方は BotDriver の照準の誤差が持つので、散らばりを足さない
+        public const float DefaultRangeSpreadDegrees = 0f;
+        public const float DefaultOpeningSpreadDegrees = 0f;
+        public const float DefaultSettledSpreadDegrees = 0f;
+        public const int DefaultOpeningShots = 0;
+
         // 体の原点 (カプセルの中心) は床から 1m 上にあるので、NavMesh を探す半径はそれより広くとる
         public const float DefaultNavSampleRadius = 2.5f;
         public const float DefaultRepathSeconds = 0.5f;
@@ -19,7 +32,22 @@ namespace Fps.Core
         public const float DefaultStuckProgress = 0.5f;
 
         public static NetBotSpec Default { get; } = new NetBotSpec(
-            new EnemySpec(DefaultSightRange, DefaultAttackRange, DefaultLoseSightSeconds, DefaultSearchSeconds, DefaultReactionSeconds),
+            new EnemySpec(
+                DefaultSightRange,
+                DefaultAttackRange,
+                DefaultLoseSightSeconds,
+                DefaultSearchSeconds,
+                DefaultReactionSeconds,
+                DefaultOpeningSpreadDegrees,
+                DefaultSettledSpreadDegrees,
+                DefaultOpeningShots,
+                EnemySpec.DefaultCoverHideSeconds,
+                EnemySpec.DefaultCoverPeekSeconds,
+                EnemySpec.DefaultCoverHealthFraction,
+                EnemyArchetype.Rifleman,
+                fireRange: 0f,
+                fireToleranceDegrees: DefaultFacingToleranceDegrees,
+                rangeSpreadDegrees: DefaultRangeSpreadDegrees),
             BotInputSpec.Default,
             DefaultNavSampleRadius,
             DefaultRepathSeconds,

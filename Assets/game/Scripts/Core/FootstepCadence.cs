@@ -57,13 +57,13 @@ namespace Fps.Core
         /// 着地音を鳴らす最小の落下の速さ (m/s)。坂を下るときなどの接地の揺れ (1 フレームぶんの重力程度) を着地にしないための値で、
         /// 1.2m のジャンプの着地 (約 7 m/s) より十分小さい。
         /// </summary>
-        public const float MinLandingFallSpeed = 2.5f;
+        public const float DefaultMinLandingFallSpeed = 2.5f;
 
         /// <summary>着地音が最大の音量になる落下の速さ (m/s)。</summary>
-        public const float HardLandingFallSpeed = 12f;
+        public const float DefaultHardLandingFallSpeed = 12f;
 
         /// <summary><see cref="MinLandingFallSpeed"/> ちょうどで着地したときの音量。</summary>
-        public const float MinLandingVolume = 0.35f;
+        public const float DefaultMinLandingVolume = 0.35f;
 
         /// <summary>
         /// ダッシュしているかが分からないキャラ (ネットワークの他人) で、歩きの速さの何倍を超えたらダッシュと見なすか
@@ -83,13 +83,19 @@ namespace Fps.Core
         /// <param name="walkVolume">歩きの足音の音量。[0, 1]。</param>
         /// <param name="sprintVolume">ダッシュの足音の音量。[0, 1]。</param>
         /// <param name="crouchVolume">しゃがみの足音の音量。[0, 1]。</param>
+        /// <param name="minLandingFallSpeed">着地音を鳴らす最小の落下の速さ (m/s)。0 より大きい有限値。</param>
+        /// <param name="hardLandingFallSpeed">着地音が最大の音量になる落下の速さ (m/s)。minLandingFallSpeed より大きい有限値。</param>
+        /// <param name="minLandingVolume">minLandingFallSpeed ちょうどで着地したときの音量。[0, 1]。</param>
         public FootstepCadence(
             float walkStride = DefaultWalkStride,
             float sprintStride = DefaultSprintStride,
             float crouchStride = DefaultCrouchStride,
             float walkVolume = DefaultWalkVolume,
             float sprintVolume = DefaultSprintVolume,
-            float crouchVolume = DefaultCrouchVolume)
+            float crouchVolume = DefaultCrouchVolume,
+            float minLandingFallSpeed = DefaultMinLandingFallSpeed,
+            float hardLandingFallSpeed = DefaultHardLandingFallSpeed,
+            float minLandingVolume = DefaultMinLandingVolume)
         {
             WalkStride = RequirePositive(walkStride, nameof(walkStride));
             SprintStride = RequirePositive(sprintStride, nameof(sprintStride));
@@ -97,6 +103,15 @@ namespace Fps.Core
             WalkVolume = RequireVolume(walkVolume, nameof(walkVolume));
             SprintVolume = RequireVolume(sprintVolume, nameof(sprintVolume));
             CrouchVolume = RequireVolume(crouchVolume, nameof(crouchVolume));
+            MinLandingFallSpeed = RequirePositive(minLandingFallSpeed, nameof(minLandingFallSpeed));
+            HardLandingFallSpeed = RequirePositive(hardLandingFallSpeed, nameof(hardLandingFallSpeed));
+            if (!(hardLandingFallSpeed > minLandingFallSpeed))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(hardLandingFallSpeed), hardLandingFallSpeed, nameof(hardLandingFallSpeed) + " must be greater than " + nameof(minLandingFallSpeed));
+            }
+
+            MinLandingVolume = RequireVolume(minLandingVolume, nameof(minLandingVolume));
         }
 
         public float WalkStride { get; }
@@ -105,6 +120,9 @@ namespace Fps.Core
         public float WalkVolume { get; }
         public float SprintVolume { get; }
         public float CrouchVolume { get; }
+        public float MinLandingFallSpeed { get; }
+        public float HardLandingFallSpeed { get; }
+        public float MinLandingVolume { get; }
 
         /// <summary>次の足音までの歩幅の進み ([0, 1))。</summary>
         public float Progress => _progress;
@@ -155,7 +173,7 @@ namespace Fps.Core
         /// 落下の速さ fallSpeed (m/s、下向きを正) で着地したときの着地音の音量。<see cref="MinLandingFallSpeed"/> 未満なら 0 (鳴らさない)。
         /// そこから <see cref="HardLandingFallSpeed"/> まで <see cref="MinLandingVolume"/> から 1 へ直線で上げ、それより速くても 1。
         /// </summary>
-        public static float LandingVolume(float fallSpeed)
+        public float LandingVolume(float fallSpeed)
         {
             if (float.IsNaN(fallSpeed))
             {

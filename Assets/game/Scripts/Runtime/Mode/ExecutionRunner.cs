@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 namespace Fps.Runtime
 {
     /// <summary>
     /// エクスキューション (<see cref="ExecutionSession"/>) をシーンで進める。2 チームのラウンド制で、ラウンド中は戻らない。
+    /// 勝つラウンド数・準備の秒数・ラウンドの時間・とどめの秒数と距離は、<see cref="Definition"/>、入口 (<see cref="GameContent.Execution"/>)、Inspector の値の順で読む。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
     /// <item>参加者の体力が 0 になったら倒さずにダウンさせ (<see cref="Damageable.IsDowned"/>)、操作を止める。
     /// とどめを刺されるか出血で倒れるまで、ラウンドからは外れない。</item>
-    /// <item>プレイヤーは Interact (キーボードは E、ゲームパッドは Y) を押し続けると、<see cref="InteractRange"/> 以内でいちばん近いダウン中の人に
-    /// 敵ならとどめを刺し (<see cref="ExecuteSeconds"/> 秒)、味方なら起こす (ルールの <see cref="ActionRules.ReviveSeconds"/> 秒)。
+    /// <item>プレイヤーは Interact (キーボードは E、ゲームパッドは Y) を押し続けると、届くダウン中の人のうちいちばん近い人に
+    /// 敵なら <see cref="EffectiveExecuteRange"/> 以内でとどめを刺し (<see cref="ExecutionSession.ExecuteSeconds"/> 秒)、
+    /// 味方ならルールの <see cref="ActionRules.ReviveRange"/> 以内で起こす (ルールの <see cref="ActionRules.ReviveSeconds"/> 秒)。距離は足元どうしで測る。
     /// 起き上がった人は最大体力の <see cref="ActionRules.DownedHealthFraction"/> でその場に立つ。</item>
     /// <item>ラウンドの待ちに入るたびに、全員を自陣営の出現点に 1 人ずつ並べ直して体力を満たし、待ちの間は操作を止める。</item>
     /// <item>HUD には試合・自分のプレイヤーの ID・自分が長押ししている相手 (<see cref="ExecutionStatus"/>) を <see cref="ModeStatus.Detail"/> で渡し、
@@ -30,13 +33,16 @@ namespace Fps.Runtime
         public const float DefaultExecuteSeconds = ExecutionSession.DefaultExecuteSeconds;
 
         /// <summary>
-        /// ダウン中の人にインタラクトできる距離 (m) の既定値。足元どうしで測る。ダウン中の体は倒れて横に伸びるので、
+        /// ダウン中の敵にとどめを刺せる距離 (m) の既定値。足元どうしで測る。ダウン中の体は倒れて横に伸びるので、
         /// 立った人どうしで測るネット対戦の蘇生 (<see cref="ReviveReach.DefaultRange"/>) より少し長くする。
         /// </summary>
-        public const float DefaultInteractRange = 2f;
+        public const float DefaultExecuteRange = 2f;
 
         /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
+
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の勝ち数・待ち・制限時間・とどめの秒数と距離の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
+        private ExecutionDefinition _definition;
 
         [SerializeField, Min(1), Tooltip("試合に勝つのに要るラウンドの勝ち数")]
         private int _winsToWin = DefaultWinsToWin;
@@ -50,8 +56,9 @@ namespace Fps.Runtime
         [SerializeField, Min(0.1f), Tooltip("とどめを刺すのに Interact を押し続ける秒数")]
         private float _executeSeconds = DefaultExecuteSeconds;
 
-        [SerializeField, Min(0.1f), Tooltip("ダウン中の人にインタラクトできる距離 (m)。足元どうしで測る")]
-        private float _interactRange = DefaultInteractRange;
+        // 蘇生とも兼ねていた欄の名前。シーンに入っていた値は、とどめの距離として引き継ぐ。
+        [SerializeField, FormerlySerializedAs("_interactRange"), Min(0.1f), Tooltip("ダウン中の敵にとどめを刺せる距離 (m)。足元どうしで測る。味方を起こせる距離はルールの reviveRange")]
+        private float _executeRange = DefaultExecuteRange;
 
         private ExecutionSession _execution;
         private bool _subscribed;
@@ -66,6 +73,26 @@ namespace Fps.Runtime
 
         /// <summary>この画面で操作しているプレイヤーがいまインタラクトを押している相手。押していなければ null。</summary>
         public SideMember LocalInteractTarget => _localInteractTarget.HasValue ? MemberOf(_localInteractTarget.Value) : null;
+
+        /// <summary>調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値で始める。</summary>
+        public ExecutionDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public ExecutionDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Execution);
+
+        /// <summary>いまとどめを刺せる距離 (m)。<see cref="EffectiveDefinition"/> があればその値、無ければ Inspector の <see cref="ExecuteRange"/>。</summary>
+        public float EffectiveExecuteRange
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.ExecuteRange : _executeRange;
+            }
+        }
 
         public int WinsToWin
         {
@@ -91,10 +118,11 @@ namespace Fps.Runtime
             set => _executeSeconds = value;
         }
 
-        public float InteractRange
+        /// <summary>Inspector のとどめの距離。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
+        public float ExecuteRange
         {
-            get => _interactRange;
-            set => _interactRange = value;
+            get => _executeRange;
+            set => _executeRange = value;
         }
 
         /// <summary>
@@ -110,6 +138,18 @@ namespace Fps.Runtime
 
             var withDowned = actions.Downed == Downed.Revive ? actions : actions.WithDowned(Downed.Revive);
             return new ExecutionSession(winsToWin, preparationSeconds, roundTimeLimitSeconds, withDowned, executeSeconds);
+        }
+
+        /// <summary>
+        /// <see cref="EffectiveDefinition"/> があればその値で、無ければ Inspector の値で、actions を使うエクスキューションを組む。
+        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
+        public ExecutionSession CreateConfiguredExecution(ActionRules actions)
+        {
+            var definition = EffectiveDefinition;
+            return definition != null
+                ? definition.CreateExecution(actions)
+                : CreateExecution(_winsToWin, _preparationSeconds, _roundTimeLimitSeconds, actions, _executeSeconds);
         }
 
         /// <summary>
@@ -146,7 +186,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// actor が、<see cref="InteractRange"/> 以内でいちばん近いダウン中の人へのインタラクトを deltaSeconds だけ押した。
+        /// actor が、届くダウン中の人 (敵は <see cref="EffectiveExecuteRange"/>、味方はルールの <see cref="ActionRules.ReviveRange"/> 以内) のうちいちばん近い人へのインタラクトを deltaSeconds だけ押した。
         /// 誰もいなければ <see cref="ExecutionStep.Rejected"/>。Play 中はプレイヤーが Interact を押している間、Tick の前に呼ばれる。
         /// </summary>
         public ExecutionStep HoldInteract(SideMember actor, float deltaSeconds)
@@ -179,7 +219,7 @@ namespace Fps.Runtime
 
         protected override ModeSession CreateSession()
         {
-            _execution = CreateExecution(_winsToWin, _preparationSeconds, _roundTimeLimitSeconds, ResolveActions(), _executeSeconds);
+            _execution = CreateConfiguredExecution(ResolveActions());
             return _execution.Mode;
         }
 
@@ -283,8 +323,10 @@ namespace Fps.Runtime
         private int NearestDowned(SideMember actor)
         {
             var from = actor.GroundPosition.ToNumerics();
+            var actorSide = _execution.Mode.GetSide(IdOf(actor));
             var nearest = -1;
             var nearestDistance = float.PositiveInfinity;
+            var executeRange = EffectiveExecuteRange;
             foreach (var targetId in _execution.GetDownedIds())
             {
                 var target = MemberOf(targetId);
@@ -294,7 +336,8 @@ namespace Fps.Runtime
                 }
 
                 var to = target.GroundPosition.ToNumerics();
-                if (!ReviveReach.IsWithin(from, to, _interactRange))
+                var range = _execution.Mode.GetSide(targetId) == actorSide ? _execution.Actions.ReviveRange : executeRange;
+                if (!ReviveReach.IsWithin(from, to, range))
                 {
                     continue;
                 }

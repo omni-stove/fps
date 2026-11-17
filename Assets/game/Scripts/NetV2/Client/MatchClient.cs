@@ -100,6 +100,9 @@ namespace Fps.NetV2
         /// <summary>サーバーが落ちたプレイヤーを出現地点へ戻す高さ。</summary>
         public float KillPlaneY { get; private set; } = ConnectAcceptedMessage.DefaultKillPlaneY;
 
+        /// <summary>サーバーが吹き飛ばす値。予測はこの値で飛ばす (<see cref="ClientWorld.CreateSimulation"/>)。</summary>
+        public KnockbackSpec Knockback { get; private set; } = KnockbackSpec.Default;
+
         /// <summary>組み立てられた最新のスナップショット。まだ無ければ null。</summary>
         public SnapshotMessage LatestSnapshot => _snapshots.Latest;
 
@@ -298,6 +301,7 @@ namespace Fps.NetV2
             MaxHealth = accepted.MaxHealth;
             Motor = accepted.Motor;
             KillPlaneY = accepted.KillPlaneY;
+            Knockback = accepted.Knockback;
             State = MatchClientState.Connected;
             _log(LogTag + " client connected id=" + PlayerId.ToString(CultureInfo.InvariantCulture) + " (local) server version="
                 + ServerVersion + " map=" + Map + " tickRate=" + TickRate.ToString(CultureInfo.InvariantCulture));

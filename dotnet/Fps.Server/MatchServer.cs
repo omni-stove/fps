@@ -385,6 +385,7 @@ namespace Fps.Server
             // 移動のモジュールは同じルールのファイルの値 (ServerModules.MotorSettingsFrom) で動くので、クライアントの予測にも同じ値を渡す
             _accepted.Motor = _rules?.Motor ?? NetMotorSettings.Default;
             _accepted.KillPlaneY = ServerMotorSettings.DefaultKillPlaneY;
+            _accepted.Knockback = _rules?.Knockback ?? KnockbackSpec.Default;
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 

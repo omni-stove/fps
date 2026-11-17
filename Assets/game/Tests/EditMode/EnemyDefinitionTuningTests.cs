@@ -34,9 +34,9 @@ namespace Fps.Tests.EditMode
         [Test]
         public void SpecDefaultsMatchTheConstantsUsedToday()
         {
-            Assert.That(EnemySpec.DefaultArrivalDistance, Is.EqualTo(EnemyBrain.ArrivalDistance));
-            Assert.That(EnemySpec.DefaultSprintRatio, Is.EqualTo(EnemyGait.SprintRatio));
-            Assert.That(EnemySpec.DefaultCrouchRatio, Is.EqualTo(EnemyGait.CrouchRatio));
+            Assert.That(EnemySpec.DefaultArrivalDistance, Is.EqualTo(0.5f));
+            Assert.That(EnemySpec.DefaultSprintRatio, Is.EqualTo(1.6f));
+            Assert.That(EnemySpec.DefaultCrouchRatio, Is.EqualTo(0.5f));
             Assert.That(EnemySpec.DefaultRecoilControl, Is.EqualTo(EnemyAgent.RecoilControl));
 
             Assert.That(EnemySpec.Default.ArrivalDistance, Is.EqualTo(0.5f));
@@ -84,9 +84,9 @@ namespace Fps.Tests.EditMode
         [Test]
         public void NewDefinitionHasTodaysBehaviorValues()
         {
-            Assert.That(_definition.ArrivalDistance, Is.EqualTo(EnemyBrain.ArrivalDistance));
-            Assert.That(_definition.SprintRatio, Is.EqualTo(EnemyGait.SprintRatio));
-            Assert.That(_definition.CrouchRatio, Is.EqualTo(EnemyGait.CrouchRatio));
+            Assert.That(_definition.ArrivalDistance, Is.EqualTo(0.5f));
+            Assert.That(_definition.SprintRatio, Is.EqualTo(1.6f));
+            Assert.That(_definition.CrouchRatio, Is.EqualTo(0.5f));
             Assert.That(_definition.RecoilControl, Is.EqualTo(EnemyAgent.RecoilControl));
             Assert.That(_definition.TurnSpeed, Is.EqualTo(360f));
             Assert.That(_definition.EyeHeight, Is.EqualTo(1.6f));

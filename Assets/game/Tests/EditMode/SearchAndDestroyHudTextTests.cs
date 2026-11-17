@@ -163,7 +163,7 @@ namespace Fps.Tests.EditMode
         public void TheFormatterRejectsAnotherDetail()
         {
             var formatter = new SearchAndDestroyHudFormatter();
-            var other = new ModeStatus(null, null, null, null, false, null, new object(), default, null, null, default);
+            var other = new ModeStatus(null, null, null, null, false, null, new object());
 
             Assert.Throws<ArgumentException>(() => formatter.Time(other));
             Assert.Throws<ArgumentException>(() => formatter.Scores(other));
@@ -175,7 +175,7 @@ namespace Fps.Tests.EditMode
 
         private static ModeStatus Status(SearchAndDestroy game, Side? ownSide, int? localPlayerId)
         {
-            return new ModeStatus(null, null, ownSide, null, false, null, new SearchAndDestroyStatus(game, localPlayerId), default, null, null, default);
+            return new ModeStatus(null, null, ownSide, null, false, null, new SearchAndDestroyStatus(game, localPlayerId));
         }
 
         private static string[] Resolved(IReadOnlyList<LocalizedText> lines)

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// <see cref="PlayerController"/> を持つプレイヤーに <see cref="ParachuteMovement"/> を付け、ルールの <see cref="ActionRules.Parachute"/> を入れる。
+    /// <see cref="PlayerController"/> を持つプレイヤーに <see cref="ParachuteMovement"/> を付け、ルールの <see cref="ActionRules.Parachute"/> と、<see cref="KitTuning"/> から読む traversal.json の parachute の値を入れる。
     /// 起動時に <see cref="PlayerActions.Register"/> で自分を登録する。
     /// </summary>
     public sealed class ParachuteActionInstaller : IPlayerActionInstaller
@@ -25,6 +25,7 @@ namespace Fps.Runtime
             }
 
             var parachute = PlayerActions.GetOrAdd<ParachuteMovement>(player);
+            parachute.ApplyTuning(TraversalTuning.Current.Parachute);
             if (!parachute.IsInitialized)
             {
                 parachute.Initialize(mover);

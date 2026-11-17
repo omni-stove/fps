@@ -31,6 +31,7 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             StaggerReaction.ActiveRule = _savedRule;
+            StaggerReaction.ActiveSpec = null;
             Object.DestroyImmediate(_player);
             if (_enemyHost != null)
             {

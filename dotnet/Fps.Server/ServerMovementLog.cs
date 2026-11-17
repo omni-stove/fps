@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using Fps.Core;
 
 namespace Fps.Server
@@ -41,6 +42,21 @@ namespace Fps.Server
         {
             var log = Head("ladder", playerId, tick) + " climbing=" + Bool(ladder >= 0);
             return ladder >= 0 ? log + " ladder=" + ladder.ToString(CultureInfo.InvariantCulture) : log;
+        }
+
+        public static string KnockbackLaunched(int playerId, int tick, Vector3 velocity)
+        {
+            return Head("knockback", playerId, tick) + " launched velocity=" + Vector(velocity);
+        }
+
+        public static string KnockbackLanded(int playerId, int tick, Vector3 position)
+        {
+            return Head("knockback", playerId, tick) + " landed at=" + Vector(position);
+        }
+
+        private static string Vector(Vector3 value)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "({0:0.0}, {1:0.0}, {2:0.0})", value.X, value.Y, value.Z);
         }
 
         private static string Head(string what, int playerId, int tick)

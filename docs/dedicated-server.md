@@ -15,14 +15,17 @@ Unity の Editor の中でサーバーを兼ねる遊び方 (Host・`-mode host`
 ```sh
 make export-server-data     # 各マップのコリジョン (.fpsmap)・NavMesh (.fpsnav)・壊せる建物・はしご → server-data/maps/
 make export-server-rules    # 試合の設定とルール → server-data/rules/、出現地点と拠点 → server-data/maps/<マップ>.points.json、
-                            # 印とグレネードの調整値と持ち物 → server-data/tuning/
+                            # 印・グレネード・持ち物・吹き飛ばし・ボットの調整値 → server-data/tuning/
 ```
 
 - 書き出すマップは `-map` で選べるマップ (`BuildSceneList.ServerScenes`、既定は `NetTest` と `NetArena01`)。
   無いシーンは `NetSceneBuilder`・`ArenaSceneBuilder` で作ってから書き出す。
 - 試合の設定 (点数・時間・リスポーン・体力・拠点制圧の値・ロードアウトと選べる武器・移動の値と体の寸法) は
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
-  ルールのアセット (`TeamDeathmatch`・`Domination`) ごとに `server-data/rules/<ルール名>.json` にする。
+  入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
+  `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+  無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
 
@@ -300,6 +303,9 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
+- 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・
+  空中の重力と効きは `server-data/tuning/knockback.json` (無ければ既定値) から読み、承認 (`ConnectAccepted`) でクライアントの予測にも渡す。
+  飛んでいる状態は持ち主のスナップショットで送り、予測は飛ばされた tick から入力をやり直す。ログは `[Net] knockback owner=.. launched|landed ..`。
 - 持ち物 (アイテムの種類・マス目や重さの決め方・出現のたびに持つアイテム) は `server-data/tuning/inventory.json`
   (無ければアイテムなし) から読み、出現のたびに持たせ直す。持ち主の置き直す・使う・捨てるの頼みを確かめ、中身が変わった tick に
   持ち主にだけ送る。決め方の `countWeightInCarryLoad` が true なら、持ち物の重さを移動の遅さに数える。

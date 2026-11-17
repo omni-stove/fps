@@ -297,14 +297,15 @@ namespace Fps.Editor
                 return $"ping {Id(_markerId)} is not in GameSignals.Pings ({GameSignals.Pings})";
             }
 
-            if (world.Hud == null)
+            var hud = DefaultHudFactory.Current;
+            if (hud == null)
             {
                 Debug.Log($"{PingLog.Tag} smoke: the TPS range has no HUD, so the screen edge is not checked");
                 _phase = Phase.WaitExpired;
                 return null;
             }
 
-            var view = world.Hud.gameObject.GetComponent<PingMarkersView>();
+            var view = hud.GetComponent<PingMarkersView>();
             if (view == null || !view.TryGetPlacement(_markerId, out var placement) || placement.IsOnScreen)
             {
                 return Time.realtimeSinceStartup - _waitStartedAt > _viewWaitSeconds

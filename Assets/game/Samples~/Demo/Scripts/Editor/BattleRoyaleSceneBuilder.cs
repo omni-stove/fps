@@ -311,7 +311,6 @@ namespace Fps.Editor
             runner.SquadSize = SquadSize;
             runner.TimeLimitSeconds = BattleRoyaleRunner.DefaultTimeLimitSeconds;
             runner.StartsUnarmed = true;
-            runner.ReviveRange = BattleRoyaleRunner.DefaultReviveRange;
             runner.BotPlanIntervalSeconds = BattleRoyaleRunner.DefaultBotPlanIntervalSeconds;
             runner.BotSearchRadius = BattleRoyaleBotPlanner.DefaultSearchRadius;
             return runner;

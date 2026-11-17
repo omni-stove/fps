@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
     /// </remarks>
     [DisallowMultipleComponent]
-    public sealed class ScoreboardView : HudElementView, IScoreboard
+    public sealed class ScoreboardView : HudElementView
     {
         /// <summary>Hud.uxml のスコアボードの要素。</summary>
         public const string UxmlName = "scoreboard";
@@ -293,7 +293,7 @@ namespace Fps.Runtime
                 box.AddToClassList(SectionClass);
 
                 var header = Row(TeamRowClass);
-                var teamName = Cell(Localizer.Resolve(HudFormat.TeamName(section.Team)), NameCellClass);
+                var teamName = Cell(Localizer.Resolve(HudText.TeamName(section.Team)), NameCellClass);
                 if (hud != null)
                 {
                     teamName.style.color = hud.TeamColor(section.Team);

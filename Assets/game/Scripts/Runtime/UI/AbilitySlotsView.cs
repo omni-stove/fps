@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何ができるか (<see cref="AbilityHost.TryGetFollowUp"/>、置いた C4 の起爆など) があれば、
+    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudText.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何ができるか (<see cref="AbilityHost.TryGetFollowUp"/>、置いた C4 の起爆など) があれば、
     /// その案内 (<see cref="FollowUpText"/>) を行に添える。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
     /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
     /// 自分のプレイヤーの <see cref="AbilityHost"/> を出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AbilitySlotsView : HudElementView, IAbilitySlots
+    public sealed class AbilitySlotsView : HudElementView
     {
         /// <summary>Hud.uxml の能力の枠の VisualElement。</summary>
         public const string UxmlName = "ability-slots";
@@ -257,7 +257,7 @@ namespace Fps.Runtime
 
         private static LocalizedText Describe(AbilityHost host, int index, AbilitySlot slot)
         {
-            var line = HudFormat.Ability(index + 1, slot);
+            var line = HudText.Ability(index + 1, slot);
             return host.TryGetFollowUp(index, out var followUp) ? new LocalizedText(WithHintKey, line, FollowUpText(followUp)) : line;
         }
 

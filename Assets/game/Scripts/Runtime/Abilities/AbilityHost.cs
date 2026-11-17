@@ -176,7 +176,7 @@ namespace Fps.Runtime
             if (slot != null && (reason == AbilityUseBlock.Cooldown || reason == AbilityUseBlock.NoCharges))
             {
                 var wait = slot.SecondsUntilReady;
-                line += float.IsInfinity(wait) ? " wait=never" : " wait=" + HudFormat.AbilityWaitSeconds(wait);
+                line += float.IsInfinity(wait) ? " wait=never" : " wait=" + (HudFormat.AbilityWaitTenths(wait) / 10.0).ToString("0.0", CultureInfo.InvariantCulture);
             }
 
             return line;

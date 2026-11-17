@@ -23,7 +23,6 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            KillCamPresentations.Current = null;
             GameSignals.ResetAll();
             for (var i = _objects.Count - 1; i >= 0; i--)
             {
@@ -115,8 +114,6 @@ namespace Fps.Tests.EditMode
             var deathCam = Player(out var rig);
             var killer = Killer();
             deathCam.Mode = DeathCamera.KillCam;
-            var presentation = new RecordingPresentation();
-            KillCamPresentations.Current = presentation;
 
             deathCam.Step(DeathCamera.KillCam, true, false);
             RecordWalk(deathCam, killer, 20);
@@ -130,7 +127,6 @@ namespace Fps.Tests.EditMode
 
             Assert.That(deathCam.IsReplayingKillCam, Is.False);
             Assert.That(rig.enabled, Is.True);
-            Assert.That(presentation.Calls[presentation.Calls.Count - 1], Is.EqualTo("End:False"));
             Assert.That(GameSignals.KillCam.Value, Is.Null, "the stopped replay leaves the signal");
         }
 
@@ -140,7 +136,7 @@ namespace Fps.Tests.EditMode
             var deathCam = Player(out _);
             var killer = Killer();
             deathCam.Mode = DeathCamera.KillCam;
-            KillCamPresentations.Current = new RecordingPresentation { PlaybackSpeed = 2f };
+            deathCam.KillCamSpeed = 2f;
             var seen = new List<KillCamStatus?>();
             GameSignals.KillCam.Changed += status => seen.Add(status);
 
@@ -188,13 +184,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ThePresentationSetsTheSpeedAndSeesTheReplay()
+        public void TheConfiguredSpeedPlaysTheReplayFaster()
         {
-            var deathCam = Player(out var rig);
+            var deathCam = Player(out _);
             var killer = Killer();
             deathCam.Mode = DeathCamera.KillCam;
-            var presentation = new RecordingPresentation { PlaybackSpeed = 2f };
-            KillCamPresentations.Current = presentation;
+            deathCam.KillCamSpeed = 2f;
 
             deathCam.Step(DeathCamera.KillCam, true, false);
             RecordWalk(deathCam, killer, 20);
@@ -202,17 +197,14 @@ namespace Fps.Tests.EditMode
 
             LogAssert.Expect(LogType.Log, "[KillCam] replaying Killer for 2.0s at 2.00x on Player");
             deathCam.Step(DeathCamera.KillCam, false, false);
-            Assert.That(presentation.Shot.KillerName, Is.EqualTo("Killer"));
-            Assert.That(presentation.Shot.WeaponId, Is.EqualTo("rifle"));
-            Assert.That(presentation.Shot.Camera, Is.SameAs(rig.Camera));
-            Assert.That(presentation.Shot.DurationSeconds, Is.EqualTo(2f).Within(1e-4f));
 
             deathCam.Advance(0, Vector2.zero, Vector2.zero, 0.5f);
-            Assert.That(presentation.LastProgress, Is.EqualTo(0.5f).Within(1e-4f), "twice as fast");
+            Assert.That(deathCam.IsReplayingKillCam, Is.True);
+            Assert.That(GameSignals.KillCam.Value.Value.Progress, Is.EqualTo(0.5f).Within(1e-4f), "twice as fast");
 
+            LogAssert.Expect(LogType.Log, "[KillCam] finished replaying Killer on Player; switching to the killer view");
             deathCam.Advance(0, Vector2.zero, Vector2.zero, 0.5f);
             Assert.That(deathCam.IsReplayingKillCam, Is.False, "two seconds at 2x take one second");
-            Assert.That(presentation.Calls, Is.EqualTo(new[] { "Begin", "Progress", "Progress", "End:True" }));
         }
 
         [Test]
@@ -221,13 +213,13 @@ namespace Fps.Tests.EditMode
             var deathCam = Player(out _);
             var killer = Killer();
             deathCam.Mode = DeathCamera.KillCam;
-            KillCamPresentations.Current = new RecordingPresentation { PlaybackSpeed = 0f };
+            deathCam.KillCamSpeed = 0f;
 
             deathCam.Step(DeathCamera.KillCam, true, false);
             RecordWalk(deathCam, killer, 20);
             Die(deathCam, killer);
 
-            LogAssert.Expect(LogType.Warning, "[KillCam] RecordingPresentation returned playback speed 0; replaying at 1.00x");
+            LogAssert.Expect(LogType.Warning, "[KillCam] Player has playback speed 0; replaying at 1.00x");
             LogAssert.Expect(LogType.Log, "[KillCam] replaying Killer for 2.0s at 1.00x on Player");
             deathCam.Step(DeathCamera.KillCam, false, false);
         }
@@ -309,34 +301,6 @@ namespace Fps.Tests.EditMode
         {
             _objects.Add(go);
             return go;
-        }
-
-        private sealed class RecordingPresentation : IKillCamPresentation
-        {
-            public readonly List<string> Calls = new List<string>();
-
-            public float PlaybackSpeed { get; set; } = 1f;
-
-            public KillCamShot Shot { get; private set; }
-
-            public float LastProgress { get; private set; }
-
-            public void Begin(KillCamShot shot)
-            {
-                Shot = shot;
-                Calls.Add("Begin");
-            }
-
-            public void Progress(float progress)
-            {
-                LastProgress = progress;
-                Calls.Add("Progress");
-            }
-
-            public void End(bool completed)
-            {
-                Calls.Add("End:" + completed);
-            }
         }
     }
 }

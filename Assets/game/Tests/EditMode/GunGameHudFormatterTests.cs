@@ -63,7 +63,7 @@ namespace Fps.Tests.EditMode
         private static ModeStatus Status(GunGameStatus detail, float? respawnSeconds)
         {
             var scores = new[] { new SideScore(new Side(0), 2d), new SideScore(new Side(1), 1d) };
-            return new ModeStatus(90f, scores, new Side(0), respawnSeconds, false, null, detail, default, null, null, default);
+            return new ModeStatus(90f, scores, new Side(0), respawnSeconds, false, null, detail);
         }
     }
 }

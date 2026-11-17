@@ -185,7 +185,6 @@ namespace Fps.Tests.EditMode
             var a = Member("Bot-A", 0, new Vector3(0f, 0f, 10f));
             var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
             var hud = BoundHudView();
-            _runner.ExtraHudLine = "extra";
             Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(hud.IsShown, Is.True);
@@ -193,28 +192,14 @@ namespace Fps.Tests.EditMode
             Assert.That(hud.ScoreTexts[0], Is.EqualTo("BRAVO 0"));
             Assert.That(hud.Scores[0].Text, Is.EqualTo(ModeHudText.ScoreText(Side.Bravo, 0d)));
             Assert.That(hud.Scores[0].IsOwn, Is.True);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "extra" }));
+            Assert.That(hud.Lines, Is.Empty);
 
             KillBy(b, player);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "リスポーンまで 1 秒", "extra" }));
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "リスポーンまで 1 秒" }));
             Assert.That(hud.ScoreTexts[2], Is.EqualTo("SIDE 2 1"));
             Assert.That(hud.Scores[2].IsLeading, Is.True);
-        }
-
-        [Test]
-        public void TheHudShowsKeyedLinesAfterTheStringLines()
-        {
-            var player = Member("Player", 1, Vector3.zero);
-            var a = Member("Bot-A", 0, new Vector3(0f, 0f, 10f));
-            var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
-            var hud = BoundHudView();
-            _runner.ExtraHudLine = "extra";
-            _runner.ExtraHudText = HardpointHudFormatter.Contested;
-            Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
-
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "extra", "争奪中" }));
         }
 
         [Test]
@@ -271,7 +256,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0, Vector3.zero);
             var bot = Member("Bot-A", 1, new Vector3(0f, 0f, 10f));
             Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
-            var other = new ModeStatus(null, null, null, null, false, null, null, default, null, null, default);
+            var other = new ModeStatus(null, null, null, null, false, null, null);
             GameSignals.ModeStatus.Publish(other);
 
             _runner.Stop();
@@ -301,8 +286,6 @@ namespace Fps.Tests.EditMode
             Assert.That(status.Winner, Is.Null);
             Assert.That(status.Detail, Is.Null);
             Assert.That(status.SideScores, Is.EquivalentTo(new[] { new SideScore(Side.Alpha, 0d), new SideScore(Side.Bravo, 0d), new SideScore(new Side(2), 0d) }));
-            Assert.That(status.Time, Is.EqualTo(LocalizedText.Literal("01:00")));
-            Assert.That(status.Scores[0].Side, Is.EqualTo(new Side(1)), "the current texts keep the own side first");
 
             KillBy(b, player);
             _runner.Tick(0.25f);
@@ -310,7 +293,6 @@ namespace Fps.Tests.EditMode
             Assert.That(published, Has.Count.EqualTo(2), "a tick publishes once");
             status = GameSignals.ModeStatus.Value;
             Assert.That(status.RespawnSeconds, Is.EqualTo(RespawnSeconds - 0.25f).Within(1e-4f));
-            Assert.That(status.Lines, Is.EqualTo(new[] { HudFormat.Respawn(1) }));
             Assert.That(status.SideScores, Has.Member(new SideScore(new Side(2), 1d)));
         }
 
@@ -328,7 +310,6 @@ namespace Fps.Tests.EditMode
             var status = GameSignals.ModeStatus.Value;
             Assert.That(status.IsEnded, Is.True);
             Assert.That(status.Winner, Is.EqualTo((Side?)Side.Alpha));
-            Assert.That(status.Result, Is.EqualTo(ModeHudText.Result(_runner.Session)));
         }
 
         [Test]
@@ -352,13 +333,12 @@ namespace Fps.Tests.EditMode
             var hud = BoundHudView();
             ModeHudFormatters.Register<FakeDetail>(new FakeDetailFormatter());
             _runner.Detail = new FakeDetail();
-            _runner.ExtraHudLine = "extra";
 
             Begin(new[] { player, bot }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(hud.TimeText, Is.EqualTo("fake time"));
             Assert.That(hud.ScoreTexts, Is.EqualTo(new[] { "fake score" }));
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "fake line" }), "the formatter replaces the runner's lines");
+            Assert.That(hud.Lines, Is.EqualTo(new[] { "fake line" }), "the formatter writes the lines");
             Assert.That(hud.ResultText, Is.Empty);
         }
 
@@ -406,17 +386,6 @@ namespace Fps.Tests.EditMode
             finally
             {
                 _runner.Stop();
-
-                // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-                if (world.Hud != null)
-                {
-                    Object.DestroyImmediate(world.Hud.gameObject);
-                }
-
-                if (world.HudPanelSettings != null)
-                {
-                    Object.DestroyImmediate(world.HudPanelSettings);
-                }
 
                 Object.DestroyImmediate(world.Player);
                 Object.DestroyImmediate(world.Light.gameObject);

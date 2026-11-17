@@ -254,6 +254,7 @@ namespace Fps.Tests.EditMode
                 layout.Bootstrap.Built += built => built.Weapon.Initialize(built.Camera.transform, attack, reload);
                 layout.Campaign.Storage = storage;
                 layout.Campaign.SceneReloader = () => { };
+                DefaultHudFactory.Register();
                 LogAssert.Expect(LogType.Warning, new Regex(@"^\[Campaign\] GameBootstrap '.*' がまだプレイヤーを生成していない"));
                 Assert.That(layout.Campaign.BeginFromSceneOrWait(), Is.True);
                 Assert.That(layout.Campaign.IsWaitingForBootstrap, Is.True);
@@ -266,15 +267,18 @@ namespace Fps.Tests.EditMode
 
                 Assert.That(layout.Campaign.IsStarted, Is.True, "the campaign starts as soon as GameBootstrap has built the player");
                 Assert.That(layout.Campaign.IsWaitingForBootstrap, Is.False);
-                Assert.That(layout.Campaign.BoundHud, Is.SameAs(world.Hud));
+                Assert.That(layout.Campaign.PublishedHudDensity, Is.EqualTo((HudDensity?)layout.Campaign.Rules.HudDensity));
+                Assert.That(GameSignals.HudDensity.Value, Is.EqualTo(layout.Campaign.PublishedHudDensity), "the campaign's rules decide the HUD density");
                 Assert.That(layout.Runner.IsStarted, Is.True);
 
-                // 案内の文字列を確かめるため、既定の生成役が作った HUD を具体クラスで読む
-                var hud = (Hud)world.Hud;
+                // 案内を確かめるため、既定の作り役が作った HUD を具体クラスで読む
+                var hud = DefaultHudFactory.Current;
+                Assert.That(hud, Is.Not.Null);
+                Assert.That(hud.ShownModel, Is.SameAs(world.HudModel));
                 var player = world.Controller;
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=start "));
                 Assert.That(layout.Checkpoint(CampaignSceneBuilder.StartCheckpointId).HandleEnter(player), Is.True);
-                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
+                Assert.That(hud.ShownModel.Notice, Is.EqualTo(HudNotice.CheckpointSaved));
 
                 layout.Runner.Progress(CampaignSceneBuilder.ReachAreaAId);
                 LogAssert.Expect(LogType.Log, new Regex(@"^\[Campaign\] saved mission=Campaign01 checkpoint=area_a "));
@@ -287,21 +291,22 @@ namespace Fps.Tests.EditMode
                 Assert.That(saved.EquippedWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
                 layout.Campaign.Tick(layout.Campaign.SavedNoticeSeconds);
-                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "the saved notice disappears");
+                Assert.That(hud.ShownModel.Notice, Is.EqualTo(HudNotice.None), "the saved notice disappears");
 
                 LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");
                 LogAssert.Expect(LogType.Log, "[Campaign] player died; reloading in 3s from checkpoint=area_a");
                 world.PlayerDamageable.Kill();
-                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
+                Assert.That(hud.ShownModel.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
                 layout.Campaign.Tick(1.5f);
-                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
+                Assert.That(hud.ShownModel.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
 
                 layout.Campaign.Stop();
-                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "stopping takes the notice off the HUD");
+                Assert.That(hud.ShownModel.Notice, Is.EqualTo(HudNotice.None), "stopping takes the notice off the HUD");
             }
             finally
             {
                 layout.Campaign.Stop();
+                DefaultHudFactory.Unregister();
                 DestroyWorld(world);
                 attack.Dispose();
                 reload.Dispose();
@@ -756,17 +761,6 @@ namespace Fps.Tests.EditMode
             if (world == null)
             {
                 return;
-            }
-
-            // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-            if (world.Hud != null)
-            {
-                Object.DestroyImmediate(world.Hud.gameObject);
-            }
-
-            if (world.HudPanelSettings != null)
-            {
-                Object.DestroyImmediate(world.HudPanelSettings);
             }
 
             if (world.Floor != null)

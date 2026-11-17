@@ -293,16 +293,6 @@ namespace Fps.Tests.EditMode
                 return;
             }
 
-            if (world.Hud != null)
-            {
-                Object.DestroyImmediate(world.Hud.gameObject);
-            }
-
-            if (world.HudPanelSettings != null)
-            {
-                Object.DestroyImmediate(world.HudPanelSettings);
-            }
-
             Object.DestroyImmediate(world.Player);
             Object.DestroyImmediate(world.Light.gameObject);
             Object.DestroyImmediate(world.TargetRoot);

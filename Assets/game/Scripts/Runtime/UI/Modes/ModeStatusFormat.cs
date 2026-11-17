@@ -8,7 +8,7 @@ namespace Fps.Runtime
     {
         public static LocalizedText Clock(double seconds)
         {
-            return LocalizedText.Literal(HudFormat.Time((float)seconds));
+            return LocalizedText.Literal(HudNumberFormat.RemainingTime((float)seconds));
         }
 
         public static LocalizedText Remaining(ModeStatus status)
@@ -61,7 +61,7 @@ namespace Fps.Runtime
 
             if (status.RespawnSeconds.HasValue)
             {
-                lines.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(status.RespawnSeconds.Value)));
+                lines.Add(HudText.Respawn(HudFormat.DisplayedSeconds(status.RespawnSeconds.Value)));
             }
         }
 
@@ -77,7 +77,7 @@ namespace Fps.Runtime
                 return default;
             }
 
-            return status.Winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(status.Winner.Value)) : HudFormat.Draw;
+            return status.Winner.HasValue ? HudText.Wins(ModeHudText.SideName(status.Winner.Value)) : HudText.Draw;
         }
 
         private static Side? LeadingSide(IReadOnlyList<SideScore> scores)

@@ -67,7 +67,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_view.AlphaScoreText, Is.EqualTo(Localizer.Resolve(DominationHudText.TeamScore(Team.Alpha, 30f))));
             Assert.That(_view.TimeText, Is.EqualTo("00:00"));
             Assert.That(_view.PointTexts, Is.EqualTo(new[] { Localizer.Resolve(DominationHudText.PointOwner(0, Team.Alpha)) }));
-            Assert.That(_view.ResultText, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Alpha))));
+            Assert.That(_view.ResultText, Is.EqualTo(Localizer.Resolve(HudText.Result(Team.Alpha))));
             var result = _view.Element.Q<Label>(className: DominationView.ResultClass);
             Assert.That(result.text, Is.EqualTo(_view.ResultText));
             Assert.That(result.style.display.value, Is.EqualTo(DisplayStyle.Flex));

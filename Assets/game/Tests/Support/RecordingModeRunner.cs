@@ -14,10 +14,6 @@ namespace Fps.Tests.EditMode
 
         public List<string> Events { get; } = new List<string>();
 
-        public string ExtraHudLine { get; set; }
-
-        public LocalizedText ExtraHudText { get; set; }
-
         /// <summary><see cref="ModeStatus.Detail"/> に入れるもの。</summary>
         public object Detail { get; set; }
 
@@ -38,22 +34,6 @@ namespace Fps.Tests.EditMode
         protected override void OnEnded(Side? winner)
         {
             Events.Add("ended " + (winner.HasValue ? winner.Value.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) : "draw"));
-        }
-
-        protected override void AppendHudLines(List<string> lines)
-        {
-            if (!string.IsNullOrEmpty(ExtraHudLine))
-            {
-                lines.Add(ExtraHudLine);
-            }
-        }
-
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            if (!ExtraHudText.IsEmpty)
-            {
-                lines.Add(ExtraHudText);
-            }
         }
     }
 }

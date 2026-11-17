@@ -1,0 +1,12 @@
+{
+  "footstepNoiseRadius": 12,
+  "walkStride": 2.2,
+  "sprintStride": 2.6,
+  "crouchStride": 1.5,
+  "walkVolume": 0.6,
+  "sprintVolume": 0.85,
+  "crouchVolume": 0.2,
+  "minLandingFallSpeed": 2.5,
+  "hardLandingFallSpeed": 12,
+  "minLandingVolume": 0.35
+}

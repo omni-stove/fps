@@ -13,6 +13,8 @@ namespace Fps.Protocol
         Grenades = 1 << 2,
         /// <summary>持ち物による移動の速さの倍率。</summary>
         CarrySpeed = 1 << 3,
-        All = Weapon | Loadout | Grenades | CarrySpeed,
+        /// <summary>吹き飛ばされている最中の速さと秒数。</summary>
+        Knockback = 1 << 4,
+        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback,
     }
 }

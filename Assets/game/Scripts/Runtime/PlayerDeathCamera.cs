@@ -49,6 +49,9 @@ namespace Fps.Runtime
         [SerializeField, Min(_minKillCamSeconds), Tooltip("キルカム (KillCam) で再生する、倒される直前の長さ (秒)")]
         private float _killCamSeconds = KillCamBuffer.DefaultSeconds;
 
+        [SerializeField, Min(0.01f), Tooltip("キルカム (KillCam) の再生の速さ (1 で記録どおり、0.5 で半分の速さ)")]
+        private float _killCamSpeed = 1f;
+
         [SerializeField, Min(0f), Tooltip("倒れた主観 (Fallen) で倒れ切るまでの秒数")]
         private float _fallSeconds = FallenView.DefaultSeconds;
 
@@ -184,6 +187,16 @@ namespace Fps.Runtime
                     ClearKillCamSubjects();
                 }
             }
+        }
+
+        /// <summary>
+        /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生の速さ (1 で記録どおり)。再生を始めるときに読み、
+        /// 0 より大きい有限値でなければ警告を出して 1 倍で再生する。
+        /// </summary>
+        public float KillCamSpeed
+        {
+            get => _killCamSpeed;
+            set => _killCamSpeed = value;
         }
 
         /// <summary>いまキルカムで倒した相手の記録を再生しているか。</summary>
@@ -409,7 +422,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _replay.Begin(clip, _killer.name, _killerWeaponId, _killer.transform, _view);
+            _replay.Begin(clip, _killer.name, _killerWeaponId, _killer.transform, _view, _killCamSpeed);
         }
 
         private static bool TryPoseOf(GameObject target, out KillCamPose pose)

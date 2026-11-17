@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 残りのグレネードの数 (<see cref="HudFormat.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
+    /// 残りのグレネードの数 (<see cref="HudText.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
     /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
     /// 自分のプレイヤーの <see cref="GrenadeThrower"/> の残りを出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
     /// <see cref="GrenadeThrower"/> を持たない画面 (ネット対戦) の残りは <see cref="GameSignals.GrenadeCount"/> を購読して出し、出ている間はそちらを先にする。
@@ -14,7 +14,7 @@ namespace Fps.Runtime
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GrenadeCountView : HudElementView, IGrenadeCount
+    public sealed class GrenadeCountView : HudElementView
     {
         /// <summary>Hud.uxml の残りのグレネードの数の Label。</summary>
         public const string UxmlName = "grenade-count";
@@ -119,7 +119,7 @@ namespace Fps.Runtime
                 typeName = default;
             }
 
-            var text = typeName.IsEmpty ? HudFormat.Grenades(remaining) : HudFormat.Grenades(typeName, remaining);
+            var text = typeName.IsEmpty ? HudText.Grenades(remaining) : HudText.Grenades(typeName, remaining);
             Text = shown ? Localizer.Resolve(text) : string.Empty;
 
             if (Element is Label label)

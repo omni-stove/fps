@@ -14,7 +14,7 @@ namespace Fps.NetV2
     /// ゲームのネット対戦のクライアント。Fps.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
     /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
     /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
-    /// (<see cref="NetV2RemotePlayer"/>)・HUD に出す値 (<see cref="NetV2Hud"/>) と HUD (<see cref="GameUi.CreateHud"/>) を作る。シーンをまたいで残る。
+    /// (<see cref="NetV2RemotePlayer"/>)・HUD に出す値 (<see cref="NetV2Hud"/>) を作る。HUD は UI がその値を見て作る。シーンをまたいで残る。
     /// </summary>
     /// <remarks>
     /// <para>
@@ -49,7 +49,6 @@ namespace Fps.NetV2
         public const string ObjectName = "NetV2Client";
         public const string LogTag = "[Net]";
         public const string CombatLogTag = "[Combat]";
-        public const string HudObjectName = "NetV2HUDView";
 
         // Netcode のクライアント (NetBootstrap) と同じ終了コード
         public const int ExitDisconnected = 0;
@@ -98,7 +97,6 @@ namespace Fps.NetV2
         private bool _wasReloading;
         private bool _startedFromMenu;
         private NetV2Hud _hud;
-        private IHud _hudView;
         private Transform _remoteRoot;
         private IMenuNavigator _menu;
         private AsyncOperation _mapLoad;
@@ -471,7 +469,7 @@ namespace Fps.NetV2
                 + " height=" + motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
                 + " radius=" + motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
                 + " proneSpeed=" + motor.Prone.Speed.ToString(CultureInfo.InvariantCulture), this);
-            _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY));
+            _match = new ClientMatch(_client, _world.CreateSimulation(motor, _client.TickRate, _client.KillPlaneY, _client.Knockback));
             _weaponHooks.Projectiles.Attach(
                 new NetV2Projectiles(_weapons), _world.Collision, Physics.DefaultRaycastLayers, NetV2Math.ToNumerics(Physics.gravity), _client.PlayerId);
             _weaponHooks.Beams.Attach(_world.Collision, Physics.DefaultRaycastLayers, _client.PlayerId);
@@ -492,16 +490,6 @@ namespace Fps.NetV2
             _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
             _hud.BindStatusEffects(_weaponHooks.StatusEffects);
             _hud.BindInventory(_inventory);
-
-            // HUD は値を出し始めてから作る。作った HUD が出ている値に合わせて出せるように。作れなくても HUD 無しで試合は続ける
-            try
-            {
-                _hudView = GameUi.CreateHud(HudObjectName, null, null, null);
-            }
-            catch (InvalidOperationException e)
-            {
-                Debug.LogError(LogTag + " cannot create the HUD: " + e.Message, this);
-            }
 
             _loadout.Bind(GameUi.LoadoutSelect);
 
@@ -1358,12 +1346,6 @@ namespace Fps.NetV2
                 Destroy(_local.gameObject);
             }
 
-            if (GameUi.IsAlive(_hudView))
-            {
-                Destroy(_hudView.gameObject);
-            }
-
-            _hudView = null;
             if (_hud != null)
             {
                 Destroy(_hud.gameObject);

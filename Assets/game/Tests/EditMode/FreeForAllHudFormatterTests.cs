@@ -57,11 +57,7 @@ namespace Fps.Tests.EditMode
                 null,
                 true,
                 new Side(3),
-                new FreeForAllStanding(2, 2, 1, -2),
-                default,
-                null,
-                null,
-                default);
+                new FreeForAllStanding(2, 2, 1, -2));
 
             Assert.That(formatter.Scores(status).Select(s => Localizer.Resolve(s.Text)), Is.EqualTo(new[] { "SIDE 2 1", "SIDE 3 3" }));
             Assert.That(Localizer.Resolve(formatter.Result(status)), Is.EqualTo("SIDE 3 の勝ち"));
@@ -77,7 +73,7 @@ namespace Fps.Tests.EditMode
 
         private static ModeStatus Status(FreeForAllStanding standing, float? respawn)
         {
-            return new ModeStatus(60f, null, new Side(0), respawn, false, null, standing, default, null, null, default);
+            return new ModeStatus(60f, null, new Side(0), respawn, false, null, standing);
         }
     }
 }

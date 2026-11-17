@@ -117,7 +117,7 @@ namespace Fps.Runtime
             if (alpha != _shownAlpha)
             {
                 _shownAlpha = alpha;
-                AlphaScoreText = Localizer.Resolve(HudFormat.TeamScore(Team.Alpha, alpha));
+                AlphaScoreText = Localizer.Resolve(HudText.TeamScore(Team.Alpha, alpha));
                 SetText(_alphaLabel, AlphaScoreText);
             }
 
@@ -125,7 +125,7 @@ namespace Fps.Runtime
             if (bravo != _shownBravo)
             {
                 _shownBravo = bravo;
-                BravoScoreText = Localizer.Resolve(HudFormat.TeamScore(Team.Bravo, bravo));
+                BravoScoreText = Localizer.Resolve(HudText.TeamScore(Team.Bravo, bravo));
                 SetText(_bravoLabel, BravoScoreText);
             }
 
@@ -133,7 +133,7 @@ namespace Fps.Runtime
             if (seconds != _shownSeconds)
             {
                 _shownSeconds = seconds;
-                TimeText = HudFormat.Time(_source.RemainingSeconds);
+                TimeText = HudNumberFormat.RemainingTime(_source.RemainingSeconds);
                 SetText(_timeLabel, TimeText);
             }
 
@@ -155,7 +155,7 @@ namespace Fps.Runtime
             if (_source.IsEnded != _shownEnded)
             {
                 _shownEnded = _source.IsEnded;
-                ResultText = _source.IsEnded ? Localizer.Resolve(HudFormat.Result(_source.Winner)) : string.Empty;
+                ResultText = _source.IsEnded ? Localizer.Resolve(HudText.Result(_source.Winner)) : string.Empty;
                 SetText(_resultLabel, ResultText);
                 if (_resultLabel != null)
                 {

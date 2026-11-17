@@ -295,7 +295,7 @@ namespace Fps.Core
                     decision = new EnemyDecision(null, spot, false);
                     return true;
                 case AwarenessStage.Alerted:
-                    decision = Vector3.Distance(perception.Self, spot) > EnemyBrain.ArrivalDistance
+                    decision = Vector3.Distance(perception.Self, spot) > brain.Spec.ArrivalDistance
                         ? new EnemyDecision(spot, spot, false)
                         : new EnemyDecision(null, null, false);
                     return true;

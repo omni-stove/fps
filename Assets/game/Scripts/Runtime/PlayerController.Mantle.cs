@@ -201,7 +201,7 @@ namespace Fps.Runtime
             forward.Normalize();
             var feetY = VaultFeetY();
             var spec = _motor.Spec;
-            if (!TryFindVaultFace(feetY, forward, spec.MantleMaxHeight, out var hit))
+            if (!TryFindVaultFace(feetY, forward, spec.MantleMaxHeight, spec.VaultReach, out var hit))
             {
                 return VaultProbeResult.None;
             }
@@ -212,8 +212,7 @@ namespace Fps.Runtime
             var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureMantleDepth(hit, into, VaultProbe.MantleFootingDepth(radius));
             var width = MeasureVaultFaceWidth(hit, into, radius);
             var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth, width);
-            return VaultProbe.EvaluateMantle(
-                sample, forward.ToNumerics(), spec.VaultMaxHeight, spec.MantleMaxHeight, radius, spec.MantleSpeed, IsVaultPathClear);
+            return VaultProbe.EvaluateMantle(sample, forward.ToNumerics(), spec, radius, IsVaultPathClear);
         }
 
         // 手前の面から立つのに要る奥行きより先から、当たったコライダーへ戻る Ray で向こうの面を探す。始点が中 (もっと奥まである) なら当たらないので無限大とする。

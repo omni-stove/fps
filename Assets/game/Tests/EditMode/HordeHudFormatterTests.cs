@@ -112,7 +112,7 @@ namespace Fps.Tests.EditMode
 
         private static ModeStatus Status(HordeStatus detail, bool isEnded)
         {
-            return new ModeStatus(null, null, Side.Alpha, null, isEnded, null, detail, default, null, null, default);
+            return new ModeStatus(null, null, Side.Alpha, null, isEnded, null, detail);
         }
 
         private static List<LocalizedText> Lines(ModeStatus status)

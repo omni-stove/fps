@@ -18,10 +18,10 @@ namespace Fps.Runtime.Traversal
         // はしごや乗り物の座席など、後から足す横取りと並べられるよう間を空けておく。
         public const int OverridePriority = 100;
 
-        public const float DefaultGrabRadius = 1.5f;
-        public const float DefaultHangOffset = 1.3f;
-        public const float DefaultRegrabSeconds = 0.5f;
-        public const float DefaultSpreadMoveFraction = 1f;
+        public const float DefaultGrabRadius = ZiplineTuning.DefaultGrabRadius;
+        public const float DefaultHangOffset = ZiplineTuning.DefaultHangOffset;
+        public const float DefaultRegrabSeconds = ZiplineTuning.DefaultRegrabSeconds;
+        public const float DefaultSpreadMoveFraction = ZiplineTuning.DefaultSpreadMoveFraction;
 
         public const string ReasonEnd = "end";
         public const string ReasonJump = "jump";
@@ -105,6 +105,19 @@ namespace Fps.Runtime.Traversal
         }
 
         public float RegrabRemaining => _regrabRemaining;
+
+        public void ApplyTuning(ZiplineTuning tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            GrabRadius = tuning.GrabRadius;
+            HangOffset = tuning.HangOffset;
+            RegrabSeconds = tuning.RegrabSeconds;
+            SpreadMoveFraction = tuning.SpreadMoveFraction;
+        }
 
         public Vector3 HandPosition => transform.position + (Vector3.up * _hangOffset);
 

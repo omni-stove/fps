@@ -162,6 +162,12 @@ namespace Fps.Runtime
             }
         }
 
+        // GameBootstrap は Awake で組み立てるので、シーンに置かれた標的は Start まで待ってからそのルールを読む。
+        private void Start()
+        {
+            _damageable.ApplySceneRules();
+        }
+
         private void Update()
         {
             Tick(Time.deltaTime);

@@ -106,6 +106,40 @@ namespace Fps.Runtime
                 _turnMultiplier);
         }
 
+        // 調整値はプレイヤーが Awake で結び付いた後に届くので、結び付いた後でも差し替えられるようにする。怯んでいる最中なら解いてから替える。
+        public void ApplySpec(StaggerSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _flinchSeconds = spec.FlinchSeconds;
+            _kneelSeconds = spec.KneelSeconds;
+            _stumbleSeconds = spec.StumbleSeconds;
+            _blastSeconds = spec.BlastSeconds;
+            _headDamage = spec.HeadDamage;
+            _limbDamage = spec.LimbDamage;
+            _meleeDamage = spec.MeleeDamage;
+            _explosionDamage = spec.ExplosionDamage;
+            _windowSeconds = spec.WindowSeconds;
+            _immunitySeconds = spec.ImmunitySeconds;
+            _moveMultiplier = spec.MoveMultiplier;
+            _turnMultiplier = spec.TurnMultiplier;
+
+            if (_judge == null)
+            {
+                return;
+            }
+
+            var current = _judge.Current;
+            _judge = new StaggerJudge(spec);
+            if (current != StaggerKind.None)
+            {
+                Recover(current);
+            }
+        }
+
         // Edit Mode では Awake が走らないので、テストからも呼べるように分けておく。
         public bool Bind()
         {

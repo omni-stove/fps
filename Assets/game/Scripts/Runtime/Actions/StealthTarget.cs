@@ -8,9 +8,6 @@ namespace Fps.Runtime
     [DisallowMultipleComponent]
     public sealed class StealthTarget : MonoBehaviour
     {
-        // 歩き (足音の大きさ 0.6) で 7 m、しゃがみ (0.2) で 2.4 m。しゃがめば見張りの真後ろを抜けられる。
-        public const float DefaultFootstepNoiseRadius = 12f;
-
         [SerializeField]
         private Stealth _rule = Stealth.Off;
 
@@ -23,9 +20,9 @@ namespace Fps.Runtime
         private bool _prone;
 
         [SerializeField, Min(0f), Tooltip("大きさ 1 の足音が敵に聞こえる距離 (m)。歩き・しゃがみ・ダッシュ・着地の大きさを掛ける。0 なら足音で気づかれない")]
-        private float _footstepNoiseRadius = DefaultFootstepNoiseRadius;
+        private float _footstepNoiseRadius = StealthNoiseSpec.DefaultFootstepNoiseRadius;
 
-        private readonly FootstepCadence _cadence = new FootstepCadence();
+        private FootstepCadence _cadence = StealthNoiseSpec.Default.CreateCadence();
 
         private PlayerController _player;
         private ICharacterMotionSource _motion;
@@ -81,6 +78,19 @@ namespace Fps.Runtime
 
                 _footstepNoiseRadius = value;
             }
+        }
+
+        public FootstepCadence Cadence => _cadence;
+
+        public void ApplyNoise(StealthNoiseSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            FootstepNoiseRadius = spec.FootstepNoiseRadius;
+            _cadence = spec.CreateCadence();
         }
 
         public AwarenessPosture Posture

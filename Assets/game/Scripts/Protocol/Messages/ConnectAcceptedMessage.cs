@@ -9,7 +9,7 @@ namespace Fps.Protocol
     /// </remarks>
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 5;
+        public const byte CurrentVersion = 7;
 
         /// <summary><see cref="KillPlaneY"/> の既定。.NET のサーバーと Netcode のプレイヤーの既定と同じ。</summary>
         public const float DefaultKillPlaneY = -50f;
@@ -41,6 +41,12 @@ namespace Fps.Protocol
         /// <summary>この高さより下に落ちたら出現地点へ戻す (サーバーの移動と同じ値)。</summary>
         public float KillPlaneY { get; set; } = DefaultKillPlaneY;
 
+        /// <summary>
+        /// サーバーが爆発で吹き飛ばす値 (<c>knockback.json</c>)。移動の値と同じく、クライアントが自分の既定で予測すると
+        /// サーバーだけ変えたときに飛んでいる間ずっとずれるので、ここで受け取る。
+        /// </summary>
+        public Fps.Core.KnockbackSpec Knockback { get; set; } = Fps.Core.KnockbackSpec.Default;
+
         public void Write(MessageWriter writer)
         {
             writer.WriteInt32(PlayerId);
@@ -51,6 +57,7 @@ namespace Fps.Protocol
             writer.WriteInt32(MaxHealth);
             WriteMotor(writer, Motor ?? throw new System.InvalidOperationException("motor settings must be set"));
             writer.WriteSingle(KillPlaneY);
+            WriteKnockback(writer, Knockback ?? throw new System.InvalidOperationException("knockback settings must be set"));
         }
 
         public void Read(MessageReader reader)
@@ -68,6 +75,52 @@ namespace Fps.Protocol
             MaxHealth = reader.ReadInt32AtLeast(1, "max health");
             Motor = ReadMotor(reader);
             KillPlaneY = reader.ReadFiniteSingle("kill plane y");
+            Knockback = ReadKnockback(reader);
+        }
+
+        private static void WriteKnockback(MessageWriter writer, Fps.Core.KnockbackSpec spec)
+        {
+            WriteForce(writer, spec.Explosion);
+            WriteForce(writer, spec.Melee);
+            WriteForce(writer, spec.Charge);
+            writer.WriteSingle(spec.MinSpeed);
+            writer.WriteSingle(spec.MinAirSeconds);
+            writer.WriteSingle(spec.MaxAirSeconds);
+            writer.WriteSingle(spec.AirControl);
+            writer.WriteSingle(spec.Gravity);
+            writer.WriteSingle(spec.RecoverSeconds);
+            writer.WriteSingle(spec.LandingSnapRadius);
+            writer.WriteSingle(spec.PlayerWeight);
+            writer.WriteSingle(spec.EnemyWeight);
+        }
+
+        private static void WriteForce(MessageWriter writer, Fps.Core.KnockbackForce force)
+        {
+            writer.WriteSingle(force.Speed);
+            writer.WriteSingle(force.UpwardRatio);
+            writer.WriteSingle(force.WeightFactor);
+        }
+
+        private static Fps.Core.KnockbackSpec ReadKnockback(MessageReader reader)
+        {
+            var values = new float[18];
+            for (var i = 0; i < values.Length; i++)
+            {
+                values[i] = reader.ReadFiniteSingle("knockback value");
+            }
+
+            try
+            {
+                return new Fps.Core.KnockbackSpec(
+                    new Fps.Core.KnockbackForce(values[0], values[1], values[2]),
+                    new Fps.Core.KnockbackForce(values[3], values[4], values[5]),
+                    new Fps.Core.KnockbackForce(values[6], values[7], values[8]),
+                    values[9], values[10], values[11], values[12], values[13], values[14], values[15], values[16], values[17]);
+            }
+            catch (System.ArgumentException e)
+            {
+                throw new MessageReadException("knockback settings are out of range: " + e.Message, e);
+            }
         }
 
         private static void WriteMotor(MessageWriter writer, Fps.Core.NetMotorSettings settings)
@@ -86,6 +139,12 @@ namespace Fps.Protocol
             writer.WriteSingle(motor.VaultMaxHeight);
             writer.WriteSingle(motor.MantleMaxHeight);
             writer.WriteSingle(motor.MantleSpeed);
+            writer.WriteSingle(motor.DodgeCooldownSeconds);
+            writer.WriteSingle(motor.VaultSpeed);
+            writer.WriteSingle(motor.VaultReach);
+            writer.WriteSingle(motor.VaultMaxAngleDegrees);
+            writer.WriteSingle(motor.VaultMinHeight);
+            writer.WriteSingle(motor.VaultMaxDepth);
             WriteDirection(writer, motor.WalkDirection);
             WriteDirection(writer, motor.SprintDirection);
             var carry = motor.CarryLoad;
@@ -129,7 +188,7 @@ namespace Fps.Protocol
         // 範囲の検査は Core の型の作り方に任せ、通らない値は読めないメッセージとして断る
         private static Fps.Core.NetMotorSettings ReadMotor(MessageReader reader)
         {
-            var motor = new float[13];
+            var motor = new float[19];
             for (var i = 0; i < motor.Length; i++)
             {
                 motor[i] = reader.ReadFiniteSingle("motor value");
@@ -171,7 +230,8 @@ namespace Fps.Protocol
                         motor[0], motor[1], motor[2], motor[3], motor[4], motor[5], motor[6], motor[7], motor[8], motor[9], motor[10], motor[11], motor[12],
                         new Fps.Core.MoveDirectionScale(direction[0], direction[1], direction[2]),
                         new Fps.Core.MoveDirectionScale(direction[3], direction[4], direction[5]),
-                        new Fps.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits)),
+                        new Fps.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
+                        motor[13], motor[14], motor[15], motor[16], motor[17], motor[18]),
                     new Fps.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Fps.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Fps.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]));

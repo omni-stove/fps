@@ -44,8 +44,6 @@ namespace Fps.Tests.EditMode
             _store.Delete();
             if (_world != null)
             {
-                Object.DestroyImmediate(_world.Hud != null ? _world.Hud.gameObject : null);
-                Object.DestroyImmediate(_world.HudPanelSettings);
                 Object.DestroyImmediate(_world.TargetRoot);
                 Object.DestroyImmediate(_world.Light != null ? _world.Light.gameObject : null);
                 Object.DestroyImmediate(_world.Player);

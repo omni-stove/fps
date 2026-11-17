@@ -41,10 +41,10 @@ namespace Fps.Core
             return Tag + " stopped replaying " + killer + " on " + owner + " (" + reason + ")";
         }
 
-        /// <summary>演出が使えない再生の速さを返したので、1 倍で再生する。</summary>
-        public static string InvalidSpeed(string presentation, float speed)
+        /// <summary>owner に設定した再生の速さが使えないので、1 倍で再生する。</summary>
+        public static string InvalidSpeed(string owner, float speed)
         {
-            return Tag + " " + presentation + " returned playback speed "
+            return Tag + " " + owner + " has playback speed "
                 + speed.ToString(CultureInfo.InvariantCulture) + "; replaying at 1.00x";
         }
     }

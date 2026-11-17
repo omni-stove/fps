@@ -30,7 +30,7 @@ namespace Fps.Tests.EditMode
         {
             _timeScaleBefore = Time.timeScale;
             Time.timeScale = 1f;
-            _hud = Hud.Create("TestPhotoHud", null, null, null);
+            _hud = Hud.Create("TestPhotoHud");
             _pause = _hud.PauseMenu;
             _photo = _hud.PhotoMode;
             _root = CloneLayout();

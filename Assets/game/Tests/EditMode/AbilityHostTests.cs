@@ -381,7 +381,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheHudShowsChargesAndTheWaitWhileAbilitiesAreOn()
         {
-            _hud = Hud.Create("AbilityHostTests.Hud", null, null, null);
+            _hud = Hud.Create("AbilityHostTests.Hud");
             var view = AbilitySlotsView.AttachTo(_hud);
             Assert.That(AbilitySlotsView.AttachTo(_hud), Is.SameAs(view), "attached once");
             _host.Equip(0, _null);
@@ -443,7 +443,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheHudShowsTheLocalPlayersSlotsFromTheSignal()
         {
-            _hud = Hud.Create("AbilityHostTests.Hud", null, null, null);
+            _hud = Hud.Create("AbilityHostTests.Hud");
             var view = _hud.AbilitySlots;
             _host.Configure(_on);
             _host.Equip(0, _null);
@@ -467,14 +467,12 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudInterfaceAttachesTheView()
+        public void TheHudCarriesTheViewFromTheStart()
         {
-            _hud = Hud.Create("AbilityHostTests.Hud", null, null, null);
-            IHud asInterface = _hud;
+            _hud = Hud.Create("AbilityHostTests.Hud");
 
-            var slots = asInterface.AttachAbilitySlots();
-
-            Assert.That(slots, Is.SameAs(_hud.GetComponent<AbilitySlotsView>()));
+            Assert.That(_hud.AbilitySlots, Is.Not.Null);
+            Assert.That(_hud.GetComponents<AbilitySlotsView>(), Has.Length.EqualTo(1));
         }
 
         [Test]

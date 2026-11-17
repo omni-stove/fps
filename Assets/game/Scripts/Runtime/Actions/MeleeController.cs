@@ -72,6 +72,8 @@ namespace Fps.Runtime
         private InputAction _meleeAction;
         private bool _enabledMeleeAction;
         private bool _hooked;
+        [NonSerialized]
+        private bool _specApplied;
         private Melee _rule = Melee.Off;
         private Vector3 _lungeDirection = Vector3.forward;
 
@@ -91,7 +93,28 @@ namespace Fps.Runtime
         public MeleeSpec Spec
         {
             get => EnsureSwing().Spec;
-            set => EnsureSwing().Spec = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                EnsureSwing().Spec = value ?? throw new ArgumentNullException(nameof(value));
+                _specApplied = true;
+            }
+        }
+
+        // Attach は何度も呼ばれるので、コードで Spec を渡された値を調整値の JSON で消さないために印を持つ。
+        public bool SpecApplied => _specApplied;
+
+        /// <summary>コードで Spec が渡されていないときだけ、調整値を入れる。渡されていればそのまま残す。</summary>
+        public void ApplyTuning(MeleeSpec tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            if (!_specApplied)
+            {
+                EnsureSwing().Spec = tuning;
+            }
         }
 
         // null なら同じ GameObject で IMeleePresenter を実装したコンポーネントを探す (無ければ演出なし)。

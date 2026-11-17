@@ -10,7 +10,7 @@ namespace Shooter.Core
         /// <summary>
         /// 専用サーバーが <c>-register-lobby</c> で載せたロビー (<see cref="ServerLobby"/>) のうち、つなげるものの中で
         /// いちばん人数 (<see cref="ServerLobby.PlayersKey"/>) の多いもの (同じなら ID の順で先のもの) を返す。
-        /// つなげるのは <see cref="ServerRejection"/> が null のもの。
+        /// つなげるのは <see cref="ServerRejection(LobbyInfo, string)"/> が null のもの。
         /// </summary>
         /// <param name="lobbies">検索結果。null の要素は無視する。</param>
         /// <param name="version">自分のビルドの版 (Application.version)。</param>

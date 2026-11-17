@@ -396,7 +396,12 @@ namespace Shooter.Core.Tests
         public void QueriesDoNotAllocate()
         {
             var results = new int[8];
-            RunQueries(results);
+            // 1 回の呼び出しでは JIT の段階的コンパイルが測定中に走り、その分の確保が混ざるため、先に十分回す
+            for (var i = 0; i < 1000; i++)
+            {
+                RunQueries(results);
+            }
+
             var before = GC.GetAllocatedBytesForCurrentThread();
             for (var i = 0; i < 1000; i++)
             {

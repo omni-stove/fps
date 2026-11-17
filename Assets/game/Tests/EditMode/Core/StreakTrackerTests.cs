@@ -6,6 +6,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class StreakTrackerTests
     {
+        private static readonly string[] _uavOnly = { "uav" };
+
         [Test]
         public void ANewTrackerHasNoKillsAndListsTheRewardsInOrder()
         {
@@ -186,7 +188,7 @@ namespace Shooter.Core.Tests
             Assert.That(status.ReadyCount, Is.EqualTo(0));
             Assert.That(tracker.ReadyRewardIds, Is.Empty);
             KillTimes(tracker, 3);
-            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(new[] { "uav" }), "a reset starts a new life");
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_uavOnly), "a reset starts a new life");
         }
 
         [Test]

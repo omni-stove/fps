@@ -6,7 +6,13 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class StreakJsonTests
     {
-        private const string Source = "streaks.json";
+        private const string _source = "streaks.json";
+
+        private static readonly string[] _expectedItemNames = { "rewards", "uav", "airstrike" };
+        private static readonly string[] _expectedRewardItemNames = { "id", "nameKey", "killsRequired" };
+        private static readonly string[] _expectedUavItemNames = { "durationSeconds", "range" };
+        private static readonly string[] _expectedAirstrikeItemNames = { "shellCount", "intervalSeconds", "spread", "explosion" };
+        private static readonly string[] _expectedExplosionItemNames = { "maxDamage", "radius", "fullDamageRadius", "structureDamageAtCenter" };
 
         [Test]
         public void ReadsEveryItem()
@@ -17,7 +23,7 @@ namespace Shooter.Core.Tests
                 + " \"uav\": {\"durationSeconds\": 12.5, \"range\": 150},"
                 + " \"airstrike\": {\"shellCount\": 8, \"intervalSeconds\": 0.2, \"spread\": 3,"
                 + " \"explosion\": {\"maxDamage\": 90, \"radius\": 4, \"fullDamageRadius\": 1, \"structureDamageAtCenter\": 40}}}",
-                Source);
+                _source);
 
             Assert.That(spec.Rewards.Count, Is.EqualTo(2));
             Assert.That(spec.Rewards[0].Id, Is.EqualTo("airstrike"));
@@ -43,8 +49,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void LeftOutItemsUseTheDefaults()
         {
-            var empty = StreakJson.Parse("{}", Source);
-            var partial = StreakJson.Parse("{\"uav\": {\"range\": 50}, \"airstrike\": {\"explosion\": {\"radius\": 10}}}", Source);
+            var empty = StreakJson.Parse("{}", _source);
+            var partial = StreakJson.Parse("{\"uav\": {\"range\": 50}, \"airstrike\": {\"explosion\": {\"radius\": 10}}}", _source);
 
             Assert.That(empty.Rewards.Count, Is.EqualTo(2));
             Assert.That(empty.Rewards[0].Id, Is.EqualTo("uav"));
@@ -75,7 +81,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void AnEmptyRewardListTurnsTheRewardsOff()
         {
-            var spec = StreakJson.Parse("{\"rewards\": []}", Source);
+            var spec = StreakJson.Parse("{\"rewards\": []}", _source);
 
             Assert.That(spec.Rewards, Is.Empty);
             Assert.That(spec.Uav.Range, Is.EqualTo(80f));
@@ -84,7 +90,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ARewardWithoutANameKeyHasAnEmptyKey()
         {
-            var spec = StreakJson.Parse("{\"rewards\": [{\"id\": \"uav\", \"killsRequired\": 2}]}", Source);
+            var spec = StreakJson.Parse("{\"rewards\": [{\"id\": \"uav\", \"killsRequired\": 2}]}", _source);
 
             Assert.That(spec.Rewards[0].DisplayNameKey, Is.EqualTo(string.Empty));
         }
@@ -92,11 +98,11 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheItemNamesAreTheConstructorArguments()
         {
-            Assert.That(StreakJson.ItemNames, Is.EqualTo(new[] { "rewards", "uav", "airstrike" }));
-            Assert.That(StreakJson.RewardItemNames, Is.EqualTo(new[] { "id", "nameKey", "killsRequired" }));
-            Assert.That(StreakJson.UavItemNames, Is.EqualTo(new[] { "durationSeconds", "range" }));
-            Assert.That(StreakJson.AirstrikeItemNames, Is.EqualTo(new[] { "shellCount", "intervalSeconds", "spread", "explosion" }));
-            Assert.That(StreakJson.ExplosionItemNames, Is.EqualTo(new[] { "maxDamage", "radius", "fullDamageRadius", "structureDamageAtCenter" }));
+            Assert.That(StreakJson.ItemNames, Is.EqualTo(_expectedItemNames));
+            Assert.That(StreakJson.RewardItemNames, Is.EqualTo(_expectedRewardItemNames));
+            Assert.That(StreakJson.UavItemNames, Is.EqualTo(_expectedUavItemNames));
+            Assert.That(StreakJson.AirstrikeItemNames, Is.EqualTo(_expectedAirstrikeItemNames));
+            Assert.That(StreakJson.ExplosionItemNames, Is.EqualTo(_expectedExplosionItemNames));
             Assert.That(StreakJson.ResourcePath, Is.EqualTo("Tuning/streaks"));
         }
 
@@ -113,7 +119,7 @@ namespace Shooter.Core.Tests
             var full = Reject("{\"airstrike\": {\"explosion\": {\"radius\": 2, \"fullDamageRadius\": 2}}}");
             var structure = Reject("{\"airstrike\": {\"explosion\": {\"structureDamageAtCenter\": -5}}}");
 
-            Assert.That(kills.SourceName, Is.EqualTo(Source));
+            Assert.That(kills.SourceName, Is.EqualTo(_source));
             Assert.That(kills.Item, Is.EqualTo("rewards[0].killsRequired"));
             Assert.That(kills.Message, Does.StartWith("streak JSON 'streaks.json' item 'rewards[0].killsRequired' is invalid: "));
             Assert.That(kills.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
@@ -177,12 +183,12 @@ namespace Shooter.Core.Tests
             Assert.That(notObject.Item, Is.EqualTo("uav"));
             Assert.That(nullValue.Item, Is.EqualTo("airstrike"));
             Assert.That(broken.Item, Is.Null);
-            Assert.That(broken.SourceName, Is.EqualTo(Source));
+            Assert.That(broken.SourceName, Is.EqualTo(_source));
             Assert.That(topArray.Item, Is.Null);
             Assert.That(
                 Assert.Throws<TuningJsonException>(() => StreakJson.Parse("{\"x\": 1}", null)).SourceName,
                 Is.EqualTo("(unnamed streak JSON)"));
-            Assert.Throws<ArgumentNullException>(() => StreakJson.Parse(null, Source));
+            Assert.Throws<ArgumentNullException>(() => StreakJson.Parse(null, _source));
         }
 
         [Test]
@@ -201,7 +207,7 @@ namespace Shooter.Core.Tests
 
         private static TuningJsonException Reject(string json)
         {
-            return Assert.Throws<TuningJsonException>(() => StreakJson.Parse(json, Source));
+            return Assert.Throws<TuningJsonException>(() => StreakJson.Parse(json, _source));
         }
     }
 }

@@ -96,12 +96,13 @@ namespace Fps.Runtime
         // 付けた物は最初の持ち物にまた入るので、武器からは戻さずに外す。出直しの経路ごとに外すと漏れる経路で付けた物が増えるため、ここでまとめて外す
         public void Refill()
         {
-            Inventory.Fill();
+            // Fill が武器の重さを使って最初の持ち物を置くので、付けた物を先に外して武器の重さを揃える
             if (_weapons != null)
             {
                 _weapons.ClearAttachments();
             }
 
+            Inventory.Fill();
             HoldWeapons();
             Restock();
         }

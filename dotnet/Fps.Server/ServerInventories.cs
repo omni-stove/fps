@@ -266,6 +266,13 @@ namespace Fps.Server
         private void HandlePlayerSpawned(int playerId)
         {
             var inventory = GetOrAdd(playerId);
+            // Fill が武器の重さを使って最初の持ち物を置くので、出直しで外れた付けた物の重さを先に武器へ反映する
+            if (_combat != null)
+            {
+                var spawned = _combat.WeaponsOf(playerId);
+                inventory.HoldWeapons(spawned.Specs, spawned.AttachmentsOf);
+            }
+
             inventory.Fill();
             if (_combat != null)
             {

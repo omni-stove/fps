@@ -64,6 +64,7 @@ namespace Shooter.Tests.EditMode
             _player.Initialize(_controller, look, _move, _sprint, _crouch, _jump, Spec());
             _player.Water = NoWaterVolumes.Instance;
             _player.SwimTuning = SwimTuning.Default;
+            _player.WallRunTuning = WallRunTuning.Default;
             _player.SwimmingChanged += _swimChanges.Add;
         }
 
@@ -330,9 +331,122 @@ namespace Shooter.Tests.EditMode
             Assert.That(PlayerTraversalLog.Swimming(false, 2.5f), Is.EqualTo("[Player] swimming=false"));
         }
 
+        [Test]
+        public void TheWallRunLogNamesTheSide()
+        {
+            Assert.That(PlayerTraversalLog.WallRunning(WallRunSide.Left), Is.EqualTo("[Player] wallRun=left"));
+            Assert.That(PlayerTraversalLog.WallRunning(WallRunSide.Right), Is.EqualTo("[Player] wallRun=right"));
+            Assert.That(PlayerTraversalLog.WallRunning(WallRunSide.None), Is.EqualTo("[Player] wallRun=none"));
+        }
+
+        [Test]
+        public void AJumpAlongAWallStartsAWallRunWhenTheTuningTurnsItOn()
+        {
+            _player.WallRunTuning = new WallRunTuning(enabled: true);
+            PlaceWallOnTheRight();
+            Settle();
+
+            SprintAlongTheWallAndJump();
+            _player.Tick(Forward, true, false, false, _tick);
+
+            Assert.That(_player.IsWallRunning, Is.True);
+            Assert.That(_player.WallRun.Side, Is.EqualTo(WallRunSide.Right));
+            Assert.That(_player.WallRun.Normal.X, Is.EqualTo(-1f).Within(1e-3f), "the wall faces the player (-x)");
+            Assert.That(_player.TryGetMotorState(out var state), Is.True);
+            Assert.That(state.WallRun.IsRunning, Is.True, "the pose reads the wall run from the motor state");
+
+            // 重力を弱める (既定 0.25 倍) ので、同じ時間ふつうに落ちるより縦の速さが落ちない
+            var vertical = _player.Motor.Velocity.Y;
+            _player.Tick(Forward, true, false, false, _tick);
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(vertical - (20f * WallRunTuning.DefaultGravityScale * _tick)).Within(1e-3f));
+        }
+
+        [Test]
+        public void TheWallRunIsOffUnlessTheTuningTurnsItOn()
+        {
+            PlaceWallOnTheRight();
+            Settle();
+
+            SprintAlongTheWallAndJump();
+            TickFor(0.2f, Forward, true);
+
+            Assert.That(WallRunTuning.Default.Enabled, Is.False);
+            Assert.That(_player.IsWallRunning, Is.False);
+        }
+
+        [Test]
+        public void JumpingOffTheWallPushesAwayFromItAndEndsTheRun()
+        {
+            _player.WallRunTuning = new WallRunTuning(enabled: true);
+            PlaceWallOnTheRight();
+            Settle();
+            SprintAlongTheWallAndJump();
+            _player.Tick(Forward, true, false, false, _tick);
+            Assert.That(_player.IsWallRunning, Is.True);
+
+            _player.Tick(Forward, true, false, true, _tick);
+
+            Assert.That(_player.IsWallRunning, Is.False);
+            Assert.That(_player.Motor.Velocity.X, Is.EqualTo(-WallRunTuning.DefaultJumpOffSpeed).Within(1e-3f), "pushed off the wall on the right");
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(Mathf.Sqrt(2f * 20f * 1.2f) - (20f * _tick)).Within(1e-3f), "as high as a ground jump");
+            Assert.That(_player.AirJumpsUsed, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UseMotorSettingsRebuildsTheMotorFromTheSettings()
+        {
+            var settings = ScriptableObject.CreateInstance<MotorSettings>();
+            _created.Add(settings);
+            settings.AirJumps = 1;
+
+            _player.UseMotorSettings(settings);
+
+            Assert.That(_player.MotorSettings, Is.SameAs(settings));
+            Assert.That(_player.IsInitialized, Is.True);
+            Assert.That(_player.Spec.AirJumps, Is.EqualTo(1));
+            Assert.That(_player.Motor.Spec.AirJumps, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UseMotorSettingsKeepsTheOldSettingsWhenTheNewOnesAreInvalid()
+        {
+            var good = ScriptableObject.CreateInstance<MotorSettings>();
+            var bad = ScriptableObject.CreateInstance<MotorSettings>();
+            _created.Add(good);
+            _created.Add(bad);
+            good.AirJumps = 1;
+            bad.WalkSpeed = -1f;
+            _player.UseMotorSettings(good);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _player.UseMotorSettings(bad));
+
+            Assert.That(_player.MotorSettings, Is.SameAs(good));
+            Assert.That(_player.Spec.AirJumps, Is.EqualTo(1));
+        }
+
+        private static readonly Vector2 Forward = new Vector2(0f, 1f);
+
         private static MotorSpec Spec(int airJumps = MotorSpec.DefaultAirJumps)
         {
             return new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, 10f, 20f, airJumps: airJumps);
+        }
+
+        // 体の右 (+x) の面から 0.2 m 先に、前 (+z) へ長い壁を置く。壁を探す距離 (半径 + CharacterWallSensor.ReachBeyondRadius) より近い
+        private void PlaceWallOnTheRight()
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(wall);
+            wall.transform.position = new Vector3(0.8f, 1.5f, 10f);
+            wall.transform.localScale = new Vector3(0.2f, 3f, 30f);
+            Physics.SyncTransforms();
+        }
+
+        // ダッシュ (8 m/s) は壁走りに要る壁沿いの速さ (WallRunTuning.DefaultMinSpeed) を超える
+        private void SprintAlongTheWallAndJump()
+        {
+            TickFor(0.1f, Forward, true);
+            _player.Tick(Forward, true, false, true, _tick);
+            Assert.That(_player.IsGrounded, Is.False, "in the air after the jump");
         }
 
         private static WaterVolumes Pool(float surfaceY)
@@ -342,10 +456,15 @@ namespace Shooter.Tests.EditMode
 
         private void TickFor(float seconds, int lean = 0)
         {
+            TickFor(seconds, Vector2.zero, false, lean);
+        }
+
+        private void TickFor(float seconds, Vector2 move, bool sprint, int lean = 0)
+        {
             var ticks = Mathf.RoundToInt(seconds / _tick);
             for (var i = 0; i < ticks; i++)
             {
-                _player.Tick(Vector2.zero, false, false, false, lean, _tick);
+                _player.Tick(move, sprint, false, false, lean, _tick);
             }
         }
 

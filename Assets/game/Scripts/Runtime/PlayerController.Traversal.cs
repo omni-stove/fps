@@ -12,12 +12,16 @@ namespace Shooter.Runtime
     {
         private IWaterVolumes _water = Traversal.WaterVolumes.Scene;
         private SwimTuning _swimTuning;
+        private WallRunTuning _wallRunTuning;
         private CharacterSwimState _swim;
         private CharacterLeanState _lean;
+        private CharacterWallRunState _wallRun;
         private int _airJumpsUsed;
         private LeanController _leanSource;
         private CoverController _cover;
         private CharacterBody _leanBody;
+        private CharacterWallSensor _wallSensor;
+        private CharacterBody _wallSensorBody;
 
         // Tick の引数に足さないのは、縁へ上がる崖のぼりは押した瞬間だけで試し、押したままの間は毎 tick 縁を調べ直させないため。
         private bool _ascendHeld;
@@ -38,9 +42,20 @@ namespace Shooter.Runtime
             set => _swimTuning = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        // 既定は切ってある (WallRunTuning.DefaultEnabled) ので、壁走りは traversal の調整値で入れたゲームとシーンでだけ効く。
+        public WallRunTuning WallRunTuning
+        {
+            get => _wallRunTuning ??= TraversalTuning.Current.WallRun;
+            set => _wallRunTuning = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
         public CharacterSwimState Swim => _swim;
 
         public bool IsSwimming => _swim.IsSwimming;
+
+        public CharacterWallRunState WallRun => _wallRun;
+
+        public bool IsWallRunning => _wallRun.IsRunning;
 
         public CharacterLeanState Lean => _lean;
 
@@ -173,7 +188,7 @@ namespace Shooter.Runtime
         // 跳んだ tick に着地・つかまったときも 0 に戻すので、CharacterMotorSimulation.Finish と同じく tick の終わりで戻す。
         private void FinishTraversal(bool footing, Vector2 move, bool sprint, bool crouch, int lean, float deltaSeconds)
         {
-            if (footing || _swim.IsSwimming || IsMovementOverridden)
+            if (footing || _swim.IsSwimming || _wallRun.IsRunning || IsMovementOverridden)
             {
                 _airJumpsUsed = 0;
             }
@@ -275,15 +290,116 @@ namespace Shooter.Runtime
                 CharacterKnockbackState.None,
                 _lean,
                 _swim,
-                CharacterWallRunState.None,
+                _wallRun,
                 _airJumpsUsed);
         }
 
         private void ResetTraversal()
         {
             SetSwim(CharacterSwimState.None);
+            SetWallRun(CharacterWallRunState.None);
             _lean = CharacterLeanState.None;
             _airJumpsUsed = 0;
+            _wallSensor = null;
+            _wallSensorBody = null;
+        }
+
+        // CharacterMotorSimulation.StepWallRun と同じく、切ってある・接地している・壁走りできない姿勢の tick は壁を調べない (使わないゲームと地上の tick に Raycast を払わせない)。
+        private WallRunMotion TryRunOnWall(Vector2 move, bool jump, float yawRadians, float deltaSeconds, out Vector3 displacement)
+        {
+            displacement = Vector3.zero;
+            var grounded = _controller.isGrounded;
+            if (!(deltaSeconds > 0f) || float.IsInfinity(deltaSeconds) || grounded || !WallRunTuning.Enabled || !CanWallRun())
+            {
+                SetWallRun(WallRunStep.Stop(_wallRun, grounded));
+                return WallRunMotion.None;
+            }
+
+            var sensor = PlaceWallSensor();
+            var position = transform.position.ToNumerics();
+            var wall = _wallRun.IsRunning
+                ? sensor.Follow(position, _wallRun.Side, _wallRun.Normal)
+                : sensor.Probe(position, yawRadians);
+            var run = WallRunStep.Step(
+                _wallRun, wall, _motor.Velocity, move.ToNumerics(), jump, grounded, _motor.Spec, WallRunTuning, deltaSeconds);
+            SetWallRun(run.State);
+            switch (run.Motion)
+            {
+                case WallRunMotion.JumpedOff:
+                    _motor.JumpWith(run.Velocity);
+                    _airJumpsUsed = 0;
+                    break;
+                case WallRunMotion.Running:
+                    _motor.SetVelocity(run.Velocity);
+                    break;
+                default:
+                    return WallRunMotion.None;
+            }
+
+            displacement = run.Displacement.ToUnity();
+            return run.Motion;
+        }
+
+        // CharacterMotorSimulation.MoveOnWall と同じく、壁沿いの出っ張りに止められたら次の tick に遅くなったとして終えるよう、進めた分だけを横の速さにする。
+        private void SettleWallRun(WallRunMotion motion, Vector3 moved, CollisionFlags collisions, float deltaSeconds)
+        {
+            if (motion == WallRunMotion.None || !(deltaSeconds > 0f) || float.IsInfinity(deltaSeconds))
+            {
+                return;
+            }
+
+            var velocity = _motor.Velocity;
+            if (motion == WallRunMotion.Running)
+            {
+                velocity = new NVector3(moved.x / deltaSeconds, velocity.Y, moved.z / deltaSeconds);
+            }
+
+            if ((collisions & CollisionFlags.Above) != 0 && velocity.Y > 0f)
+            {
+                velocity = new NVector3(velocity.X, 0f, velocity.Z);
+            }
+
+            _motor.SetVelocity(velocity);
+        }
+
+        private void StopWallRun()
+        {
+            SetWallRun(WallRunStep.Stop(_wallRun, _controller != null && _controller.isGrounded));
+        }
+
+        private void SetWallRun(CharacterWallRunState next)
+        {
+            var was = _wallRun.IsRunning;
+            _wallRun = next;
+            if (was != next.IsRunning)
+            {
+                Debug.Log(PlayerTraversalLog.WallRunning(next.Side), this);
+            }
+        }
+
+        // CharacterMotorSimulation と同じく、立って、カバーに入っておらず、倒れていないときだけ壁に付く。
+        private bool CanWallRun()
+        {
+            if (_currentStance != PlayerStance.Standing || IsInCover)
+            {
+                return false;
+            }
+
+            var target = ResolveFallDamageTarget();
+            return target == null || !target.IsDowned;
+        }
+
+        // 壁はリーンと同じ体 (自分のコライダーを除く Unity の当たり) で調べる。体を作り直したときだけ測る部品も作り直す。
+        private CharacterWallSensor PlaceWallSensor()
+        {
+            var body = PlaceLeanBody();
+            if (_wallSensor == null || !ReferenceEquals(_wallSensorBody, body))
+            {
+                _wallSensor = new CharacterWallSensor(body);
+                _wallSensorBody = body;
+            }
+
+            return _wallSensor;
         }
 
         private bool IsLandingInWater()

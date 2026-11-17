@@ -44,6 +44,23 @@ namespace Shooter.Editor
             }
         }
 
+        // ルールの入り切りでなく移動の調整値で試す機能のシーン。名前は同じ Feature_ で並べる (ルールの名前と重ならないことはテストで確かめる)。
+        public static string TraversalFeatureScene(TraversalFeature feature) => ShooterKitRoot.OutputScene(FeatureScenePrefix + feature);
+
+        public static IReadOnlyList<string> TraversalFeatureScenes
+        {
+            get
+            {
+                var scenes = new List<string>();
+                foreach (var feature in TraversalFeatureSceneBuilder.Features)
+                {
+                    scenes.Add(TraversalFeatureScene(feature));
+                }
+
+                return scenes;
+            }
+        }
+
         public static string DominationScene => ShooterKitRoot.OutputScene("Domination");
 
         public static string WaveTestScene => ShooterKitRoot.OutputScene("WaveTest");
@@ -106,7 +123,9 @@ namespace Shooter.Editor
                     NetTestScene,
                 };
 
-                scenes.InsertRange(scenes.IndexOf(TpsRangeScene) + 1, FeatureScenes);
+                var features = new List<string>(FeatureScenes);
+                features.AddRange(TraversalFeatureScenes);
+                scenes.InsertRange(scenes.IndexOf(TpsRangeScene) + 1, features);
                 return scenes;
             }
         }

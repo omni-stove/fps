@@ -90,6 +90,12 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("腰だめから覗き込み切るまで (と戻るまで) の秒数")]
         private float _adsTransitionSeconds = AdsZoom.DefaultTransitionSeconds;
 
+        [SerializeField, Tooltip("このシーンのプレイヤーの移動の調整値。空なら入口 (GameContent) の Motor、Resources の MotorSettings、既定の値の順に引く")]
+        private MotorSettings _motorSettings;
+
+        [SerializeField, Tooltip("このシーンのプレイヤーの泳ぎと壁走りの調整値 (traversal の JSON)。空なら入口 (GameContent) か Resources の traversal.json。JSON に書いていない項目はキットの既定の値")]
+        private TextAsset _traversalTuning;
+
         private BootstrapWorld _world;
         private LocalPlayerSignal _publishedPlayer;
         private HudModel _publishedHudModel;
@@ -241,6 +247,19 @@ namespace Shooter.Runtime
             set => _adsTransitionSeconds = AdsZoom.ValidateTransitionSeconds(value, nameof(value));
         }
 
+        public MotorSettings MotorSettings
+        {
+            get => _motorSettings;
+            set => _motorSettings = value;
+        }
+
+        // TraversalTuning や Traversal と名付けないのは、同じ名前の静的クラス (ゲーム全体の traversal の引き先) と名前空間をこのクラスの中から指せなくなるため。
+        public TextAsset TraversalTuningJson
+        {
+            get => _traversalTuning;
+            set => _traversalTuning = value;
+        }
+
         private void Awake()
         {
             try
@@ -387,7 +406,20 @@ namespace Shooter.Runtime
                 configuredRules != null ? configuredRules.PlayerMaxHealth : inspectorMaxHealth,
                 ValidateThirdPersonOffset(_thirdPersonOffset, nameof(ThirdPersonOffset)),
                 ValidateNonNegativeFinite(_minBoomLength, nameof(MinBoomLength)),
-                AdsZoom.ValidateTransitionSeconds(_adsTransitionSeconds, nameof(AdsTransitionSeconds)));
+                AdsZoom.ValidateTransitionSeconds(_adsTransitionSeconds, nameof(AdsTransitionSeconds)),
+                _motorSettings,
+                ResolveTraversal());
+        }
+
+        // 読めない JSON で試合を止めず、ほかの調整値と同じく (KitTuning) エラーを出してゲーム全体の traversal の値で続ける。
+        private TraversalSpec ResolveTraversal()
+        {
+            if (_traversalTuning == null)
+            {
+                return null;
+            }
+
+            return KitTuning.Read(_traversalTuning.text, _traversalTuning.name, TraversalJson.Parse, TraversalTuning.Current);
         }
 
         private static int ValidatePlayerMaxHealth(int value, string paramName)
@@ -514,7 +546,7 @@ namespace Shooter.Runtime
 
                 // CharacterComponents は敵とネットのプレハブにも付けるので、一人称で手元に出すビューモデルは手元のプレイヤーにだけここで付ける。
                 player.AddComponent<ViewmodelPresenter>();
-                AttachPlayerFeedback(player, rig, camera, damageable);
+                AttachPlayerFeedback(player, rig, camera, damageable, tuning.Traversal?.Swim);
                 WireDeathAndRespawn(damageable, mover, ads);
                 KnockbackMovement.Attach(mover, damageable);
 
@@ -628,6 +660,18 @@ namespace Shooter.Runtime
             {
                 throw new InvalidOperationException(
                     "PlayerController could not resolve its references or Move/Sprint/Crouch/Jump actions; see the error above");
+            }
+
+            // Awake は付けた時点で既定の引き先から初期化しているので、シーンの調整値はその後に渡して作り直させる。
+            if (tuning.MotorSettings != null)
+            {
+                mover.UseMotorSettings(tuning.MotorSettings);
+            }
+
+            if (tuning.Traversal != null)
+            {
+                mover.SwimTuning = tuning.Traversal.Swim;
+                mover.WallRunTuning = tuning.Traversal.WallRun;
             }
 
             // 射撃は視点の向きで撃つのでカメラに付ける。参照の解決は FirstPersonLook と同じく Play 中の Awake に任せる。
@@ -850,7 +894,7 @@ namespace Shooter.Runtime
 
         // 手元のプレイヤーにだけ付ける。敵とネットのプレハブにも付く CharacterComponents に入れると、地図・振動・スティック・水中の画面が操作していない体の分まで動くため。
         // Play 中は付けた Awake / OnEnable が自力で参照を解決するが、Edit Mode では走らないので、要る参照はここで渡す。
-        private static void AttachPlayerFeedback(GameObject player, ViewRig rig, Camera camera, Damageable damageable)
+        private static void AttachPlayerFeedback(GameObject player, ViewRig rig, Camera camera, Damageable damageable, SwimTuning swim)
         {
             player.AddComponent<PlayerMotorStateSource>();
             player.AddComponent<MinimapPublisher>();
@@ -870,6 +914,12 @@ namespace Shooter.Runtime
             }
 
             underwater.Damageable = damageable;
+
+            // 息と溺れも PlayerController の泳ぎと同じシーンの値で数え、泳ぐ速さと息の長さが別々の調整値から来ないようにする。
+            if (swim != null)
+            {
+                underwater.Swim = swim;
+            }
         }
 
         // 乗っている間に止める覗き込み・カバー・グレネードを拾うので、それらを付けた後 (PlayerActions.Attach の後) に呼ぶ。
@@ -1084,12 +1134,20 @@ namespace Shooter.Runtime
 
         private readonly struct PlayerTuning
         {
-            public PlayerTuning(int maxHealth, Vector3 thirdPersonOffset, float minBoomLength, float adsTransitionSeconds)
+            public PlayerTuning(
+                int maxHealth,
+                Vector3 thirdPersonOffset,
+                float minBoomLength,
+                float adsTransitionSeconds,
+                MotorSettings motorSettings,
+                TraversalSpec traversal)
             {
                 MaxHealth = maxHealth;
                 ThirdPersonOffset = thirdPersonOffset;
                 MinBoomLength = minBoomLength;
                 AdsTransitionSeconds = adsTransitionSeconds;
+                MotorSettings = motorSettings;
+                Traversal = traversal;
             }
 
             public int MaxHealth { get; }
@@ -1099,6 +1157,11 @@ namespace Shooter.Runtime
             public float MinBoomLength { get; }
 
             public float AdsTransitionSeconds { get; }
+
+            // null なら PlayerController が自分の引き先 (入口・Resources・既定) から読む。
+            public MotorSettings MotorSettings { get; }
+
+            public TraversalSpec Traversal { get; }
         }
     }
 

@@ -11,7 +11,6 @@ namespace Shooter.NetV2
         private readonly MatchClient _client;
         private readonly Func<IMessage, bool> _send;
         private readonly Func<NetV2LocalPlayer> _localPlayer;
-        private readonly Func<RoundPhase?> _roundPhase;
         private ClientSpectate _spectate;
         private NetV2LocalPlayer _viewOwner;
         private DeathCamView _view;
@@ -19,12 +18,11 @@ namespace Shooter.NetV2
         private bool _disposed;
 
         public NetV2SpectatePart(
-            MatchClient client, Func<IMessage, bool> send, Func<NetV2LocalPlayer> localPlayer = null, Func<RoundPhase?> roundPhase = null)
+            MatchClient client, Func<IMessage, bool> send, Func<NetV2LocalPlayer> localPlayer = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _send = send ?? throw new ArgumentNullException(nameof(send));
             _localPlayer = localPlayer ?? (() => NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null);
-            _roundPhase = roundPhase;
         }
 
         public ClientSpectate Spectate => _spectate;
@@ -53,8 +51,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            var round = _roundPhase != null ? _roundPhase() : null;
-            _spectate.Update(Mathf.Max(0f, deltaSeconds), round);
+            _spectate.Update(Mathf.Max(0f, deltaSeconds));
             if (_view != null && _view.IsEngaged)
             {
                 var step = _view.ReadSpectateStep();

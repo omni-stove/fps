@@ -32,6 +32,63 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void TheRoundPhaseRoundTrips()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.Round = RoundPhase.Live;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.HasRound, Is.True);
+            Assert.That(got.Match.Round, Is.EqualTo(RoundPhase.Live));
+        }
+
+        [Test]
+        public void AMatchWithoutRoundsCarriesNoRoundPhase()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.HasRound = false;
+            sent.Match.Round = RoundPhase.Ended;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.HasRound, Is.False);
+            Assert.That(got.Match.Round, Is.EqualTo(RoundPhase.Waiting));
+        }
+
+        [Test]
+        public void AChangedRoundPhaseSendsOnlyItsTwoBytesAndResolves()
+        {
+            var baseline = Build(100, 0f);
+            var unchanged = Build(101, 0f);
+            var current = Build(101, 0f);
+            current.Match.Round = RoundPhase.Live;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(2));
+            Assert.That(got.IsComplete, Is.False);
+            Assert.That(got.TryResolve(received), Is.True);
+            AssertSame(current, got);
+        }
+
+        [Test]
+        public void AnUnchangedRoundPhaseIsTakenFromTheBaseline()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 1f);
+            current.Match.AlphaScore = 7;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+            Assert.That(got.TryResolve(received), Is.True);
+
+            Assert.That(got.Match.HasRound, Is.True);
+            Assert.That(got.Match.Round, Is.EqualTo(RoundPhase.Preparing));
+        }
+
+        [Test]
         public void DeltaCarriesOnlyChangedPartsAndResolvesToTheSameValues()
         {
             var baseline = Build(100, 0f);
@@ -596,6 +653,8 @@ namespace Shooter.Protocol.Tests
             match.Objective = MatchObjective.Domination;
             match.AlphaPoints = 10;
             match.BravoPoints = 20;
+            match.HasRound = true;
+            match.Round = RoundPhase.Preparing;
 
             snapshot.HasOwner = true;
             snapshot.Owner.LastProcessedInputTick = tick - 2;
@@ -715,6 +774,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(am.Objective, Is.EqualTo(em.Objective));
             Assert.That(am.AlphaPoints, Is.EqualTo(em.AlphaPoints));
             Assert.That(am.BravoPoints, Is.EqualTo(em.BravoPoints));
+            Assert.That(am.HasRound, Is.EqualTo(em.HasRound));
+            Assert.That(am.Round, Is.EqualTo(em.Round));
 
             Assert.That(actual.HasOwner, Is.EqualTo(expected.HasOwner));
             Assert.That(actual.Owner.LastProcessedInputTick, Is.EqualTo(expected.Owner.LastProcessedInputTick));

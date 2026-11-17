@@ -29,7 +29,10 @@ namespace Shooter.Server
                 return null;
             }
 
-            if (_data.Rules.DeathCamera != DeathCamera.Ally || _session.State != GameModeState.Playing || _session.IsAlive(viewerId))
+            // ラウンドの合間にやられ演出の決まりと生死を見ないのは、クライアントの ClientSpectate が同じ決まりで観戦を始めるため
+            var betweenRounds = CurrentRoundPhase() == RoundPhase.Preparing;
+            if (!betweenRounds
+                && (_data.Rules.DeathCamera != DeathCamera.Ally || _session.State != GameModeState.Playing || _session.IsAlive(viewerId)))
             {
                 _spectating.Remove(viewerId);
                 return null;

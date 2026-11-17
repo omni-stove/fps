@@ -8,6 +8,7 @@ using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using SceneWater = Shooter.Runtime.Traversal.Water;
 
 namespace Shooter.Tests.EditMode
 {
@@ -231,6 +232,45 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(MapCollisionExporter.MapName("Assets/Scenes/NetArena01.unity"), Is.EqualTo("NetArena01"));
             Assert.Throws<ArgumentException>(() => MapCollisionExporter.MapName("Assets/Scenes/NetArena01.prefab"));
+        }
+
+        [Test]
+        public void CollectsEnabledWaterAsBoxesThatReadBack()
+        {
+            var pool = AddWater("Pool", new Vector3(2f, 0f, 3f), new Vector3(4f, 3f, 6f), 2f);
+            AddWater("Off", new Vector3(-5f, 0f, 0f), new Vector3(2f, 2f, 2f), 1f).enabled = false;
+            AddWater("Inactive", new Vector3(5f, 0f, 0f), new Vector3(2f, 2f, 2f), 1f).gameObject.SetActive(false);
+
+            var water = MapCollisionExporter.CollectWater(new[] { _root });
+
+            Assert.That(water.Water, Has.Count.EqualTo(1));
+            var box = water.Water[0].Box;
+            Assert.That(box, Is.EqualTo(pool.Box));
+            Assert.That(box.Min, Is.EqualTo(ToNumerics(_origin)));
+            Assert.That(box.Max, Is.EqualTo(ToNumerics(_origin + new Vector3(4f, 3f, 6f))));
+            Assert.That(box.SurfaceY, Is.EqualTo(_origin.y + 2f));
+            var read = NetMapWater.Parse(NetMapWater.Write(water), "test");
+            Assert.That(read.Water[0].Box, Is.EqualTo(box));
+        }
+
+        [Test]
+        public void ThrowsOnWaterWhoseSurfaceIsAboveTheBox()
+        {
+            AddWater("Overflow", Vector3.zero, new Vector3(2f, 1f, 2f), 3f);
+
+            var error = Assert.Throws<InvalidOperationException>(() => MapCollisionExporter.CollectWater(new[] { _root }));
+            Assert.That(error.Message, Does.Contain("MapCollisionExporterTests/Overflow"));
+        }
+
+        private SceneWater AddWater(string name, Vector3 bottom, Vector3 size, float surfaceHeight)
+        {
+            var gameObject = new GameObject(name);
+            gameObject.transform.SetParent(_root.transform, false);
+            gameObject.transform.localPosition = bottom;
+            var water = gameObject.AddComponent<SceneWater>();
+            water.Size = size;
+            water.SurfaceHeight = surfaceHeight;
+            return water;
         }
 
         private GameObject Box(string name, Vector3 position, Quaternion rotation, Vector3 scale, Vector3 size, Vector3 center)

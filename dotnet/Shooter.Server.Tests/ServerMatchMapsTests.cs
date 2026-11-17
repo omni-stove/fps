@@ -9,7 +9,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // 2 つのマップの候補で起動し、次の試合でマップを替えると、出現地点・当たり判定・拠点・乗り物が新しいマップのものになることを確かめる
+    // 2 つのマップの候補で起動し、次の試合でマップを替えると、出現地点・当たり判定・拠点・乗り物・水が新しいマップのものになることを確かめる
     public sealed class ServerMatchMapsTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
@@ -182,6 +182,32 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheNextMatchSwimsInTheWaterOfTheNewMap()
+        {
+            var water = new NetMapWater(new[]
+            {
+                new MapWater(new WaterBox(
+                    new Vector3(_secondAlpha.X - 4f, _secondFloorTop, _secondAlpha.Z - 4f),
+                    new Vector3(_secondAlpha.X + 4f, _secondFloorTop + 5f, _secondAlpha.Z + 4f),
+                    _secondFloorTop + 3f)),
+            });
+            Start(maps: SecondMap(water));
+            Join(1);
+            Join(2);
+            Idle(1, 10);
+            Assert.That(_movement.TryGetState(1, out var before), Is.True);
+            Assert.That(before.IsSwimming, Is.False, "the first map has no water");
+
+            EndTheMatch();
+            _match.RequestNextMap(_secondMap);
+            Step(_restartDelaySeconds + _tickSeconds);
+            Idle(1, 10);
+
+            Assert.That(_movement.TryGetState(1, out var after), Is.True);
+            Assert.That(after.IsSwimming, Is.True, _log.ToString());
+        }
+
+        [Test]
         public void DominationUsesTheControlPointsOfTheNewMap()
         {
             Start(GameRules.Default.WithObjective(MatchObjective.Domination));
@@ -312,12 +338,12 @@ namespace Shooter.Server.Tests
             return new ServerMapData(_firstMap, world, TestMaps.NavMesh(), "memory", points, vehicles: vehicles);
         }
 
-        private static ServerMapData SecondMap()
+        private static ServerMapData SecondMap(NetMapWater water = null)
         {
             var points = new NetMapPoints(
                 new[] { new SpawnPoint(_secondAlpha, Team.Alpha), new SpawnPoint(_secondBravo, Team.Bravo) },
                 new[] { new ControlPointArea(0, new Vector3(0f, _secondFloorTop, 10f), 4f, 3f) });
-            return new ServerMapData(_secondMap, SecondWorld(), TestMaps.NavMesh(), "memory", points);
+            return new ServerMapData(_secondMap, SecondWorld(), TestMaps.NavMesh(), "memory", points, water: water);
         }
 
         private static WorldMap SecondWorld()

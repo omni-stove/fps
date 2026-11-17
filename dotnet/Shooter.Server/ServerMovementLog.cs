@@ -44,6 +44,42 @@ namespace Shooter.Server
             return ladder >= 0 ? log + " ladder=" + ladder.ToString(CultureInfo.InvariantCulture) : log;
         }
 
+        public static string Lean(int playerId, int tick, int side)
+        {
+            return Head("lean", playerId, tick) + " side=" + (side < 0 ? "left" : side > 0 ? "right" : "none");
+        }
+
+        public static string Swim(int playerId, int tick, bool swimming)
+        {
+            return Head("swim", playerId, tick) + " swimming=" + Bool(swimming);
+        }
+
+        public static string Underwater(int playerId, int tick, bool underwater)
+        {
+            return Head("swim", playerId, tick) + " underwater=" + Bool(underwater);
+        }
+
+        public static string OutOfBreath(int playerId, int tick, int drownings)
+        {
+            return Head("swim", playerId, tick) + " outOfBreath=" + drownings.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string DrownDamage(int playerId, int tick, int damage, DamageOutcome outcome)
+        {
+            return Head("drown", playerId, tick) + " damage=" + damage.ToString(CultureInfo.InvariantCulture) + " outcome=" + outcome;
+        }
+
+        public static string WallRun(int playerId, int tick, WallRunSide side)
+        {
+            var log = Head("wallrun", playerId, tick) + " running=" + Bool(side != WallRunSide.None);
+            return side == WallRunSide.None ? log : log + " side=" + (side == WallRunSide.Left ? "left" : "right");
+        }
+
+        public static string AirJump(int playerId, int tick, int used)
+        {
+            return Head("airjump", playerId, tick) + " used=" + used.ToString(CultureInfo.InvariantCulture);
+        }
+
         public static string KnockbackLaunched(int playerId, int tick, Vector3 velocity)
         {
             return Head("knockback", playerId, tick) + " launched velocity=" + Vector(velocity);

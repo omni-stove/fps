@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// クライアントがサーバーとの接続を失った理由を分け (<see cref="DisconnectKind"/>)、メニューに出す文を決める。
+    /// クライアントがサーバーとの接続を失った理由を分ける (<see cref="DisconnectKind"/>)。どう言うかは UI が決める。
     /// サーバーは切るとき・断るときに <see cref="ServerStoppedReason"/> などの理由の符号を Netcode の切断理由として送り、
     /// クライアントは受け取った切断理由とつながっていたかどうかから <see cref="Classify"/> で分ける。
     /// </summary>
@@ -35,21 +35,13 @@ namespace Fps.Core
         /// <summary>断った訳の符号の最長の文字数。これより長い・使えない文字を含む符号は捨てる。</summary>
         public const int MaxDetailLength = 32;
 
-        public static LocalizedText ServerStoppedMessage => new LocalizedText("net.disconnect.serverStopped");
-        public static LocalizedText TimedOutMessage => new LocalizedText("net.disconnect.timedOut");
-        public static LocalizedText ConnectTimedOutMessage => new LocalizedText("net.disconnect.connectTimedOut");
-        public static LocalizedText RejectedMessage => new LocalizedText("net.disconnect.rejected");
-        public static LocalizedText VersionMismatchMessage => new LocalizedText("net.disconnect.versionMismatch");
-        public static LocalizedText ServerDrainingMessage => new LocalizedText("net.disconnect.serverDraining");
-        public static LocalizedText IdleKickedMessage => new LocalizedText("net.disconnect.idleKicked");
-
         private DisconnectNotice(
-            DisconnectKind kind, bool wasConnected, LocalizedText message, string serverVersion, string detail, string rawReason)
+            DisconnectKind kind, bool wasConnected, string serverVersion, string localVersion, string detail, string rawReason)
         {
             Kind = kind;
             WasConnected = wasConnected;
-            Message = message;
             ServerVersion = serverVersion;
+            LocalVersion = localVersion;
             Detail = detail;
             RawReason = rawReason;
         }
@@ -59,11 +51,11 @@ namespace Fps.Core
         /// <summary>切れる前にサーバーとつながっていた (承認された) なら true。</summary>
         public bool WasConnected { get; }
 
-        /// <summary>メニューに出す文 (表のキー <c>net.disconnect.*</c>)。メニューが今の言語で文にする。</summary>
-        public LocalizedText Message { get; }
-
         /// <summary><see cref="DisconnectKind.VersionMismatch"/> でサーバーが知らせてきた版。読めなければ null。</summary>
         public string ServerVersion { get; }
+
+        /// <summary><see cref="DisconnectKind.VersionMismatch"/> のときの、このゲームの版。読めなければ null。</summary>
+        public string LocalVersion { get; }
 
         /// <summary><see cref="DisconnectKind.Rejected"/> でサーバーが知らせてきた断った訳の符号。読めなければ null。</summary>
         public string Detail { get; }
@@ -123,14 +115,13 @@ namespace Fps.Core
         /// <item><see cref="ServerStoppedReason"/> なら <see cref="DisconnectKind.ServerStopped"/>。</item>
         /// <item><see cref="IdleKickedReason"/> なら <see cref="DisconnectKind.IdleKicked"/>。</item>
         /// <item><see cref="VersionMismatchPrefix"/> で始まれば <see cref="DisconnectKind.VersionMismatch"/>。</item>
-        /// <item><see cref="RejectedPrefix"/> で始まれば <see cref="DisconnectKind.Rejected"/>。訳が <see cref="ServerDrainingDetail"/> なら
-        /// 文は <see cref="ServerDrainingMessage"/>、それ以外は <see cref="RejectedMessage"/>。</item>
+        /// <item><see cref="RejectedPrefix"/> で始まれば <see cref="DisconnectKind.Rejected"/>。読める訳の符号は <see cref="Detail"/> に入れる。</item>
         /// <item>それ以外 (空、知らない符号、Netcode や transport の文言) は <see cref="DisconnectKind.TimedOut"/>。</item>
         /// </list>
         /// </summary>
         /// <param name="reason">Netcode の切断理由 (NetworkManager.DisconnectReason)。null は空として扱う。</param>
-        /// <param name="wasConnected">切れる前に承認されてつながっていたか。タイムアウトの文を分けるのに使う。</param>
-        /// <param name="localVersion">このゲームの版。版の違いの文に添える。読めなければ添えない。</param>
+        /// <param name="wasConnected">切れる前に承認されてつながっていたか。</param>
+        /// <param name="localVersion">このゲームの版。版の違いのときに <see cref="LocalVersion"/> に入れる。読めなければ入れない。</param>
         public static DisconnectNotice Classify(string reason, bool wasConnected, string localVersion)
         {
             var raw = reason ?? "";
@@ -138,12 +129,12 @@ namespace Fps.Core
 
             if (string.Equals(code, ServerStoppedReason, StringComparison.Ordinal))
             {
-                return new DisconnectNotice(DisconnectKind.ServerStopped, wasConnected, ServerStoppedMessage, null, null, raw);
+                return new DisconnectNotice(DisconnectKind.ServerStopped, wasConnected, null, null, null, raw);
             }
 
             if (string.Equals(code, IdleKickedReason, StringComparison.Ordinal))
             {
-                return new DisconnectNotice(DisconnectKind.IdleKicked, wasConnected, IdleKickedMessage, null, null, raw);
+                return new DisconnectNotice(DisconnectKind.IdleKicked, wasConnected, null, null, null, raw);
             }
 
             if (code.StartsWith(VersionMismatchPrefix, StringComparison.Ordinal))
@@ -155,8 +146,7 @@ namespace Fps.Core
                 }
 
                 var local = ConnectionPayload.IsNormalizedVersion(localVersion) ? localVersion : null;
-                return new DisconnectNotice(
-                    DisconnectKind.VersionMismatch, wasConnected, VersionMismatchText(serverVersion, local), serverVersion, null, raw);
+                return new DisconnectNotice(DisconnectKind.VersionMismatch, wasConnected, serverVersion, local, null, raw);
             }
 
             if (code.StartsWith(RejectedPrefix, StringComparison.Ordinal))
@@ -167,26 +157,10 @@ namespace Fps.Core
                     detail = null;
                 }
 
-                var message = string.Equals(detail, ServerDrainingDetail, StringComparison.Ordinal) ? ServerDrainingMessage : RejectedMessage;
-                return new DisconnectNotice(DisconnectKind.Rejected, wasConnected, message, null, detail, raw);
+                return new DisconnectNotice(DisconnectKind.Rejected, wasConnected, null, null, detail, raw);
             }
 
-            return new DisconnectNotice(
-                DisconnectKind.TimedOut, wasConnected, wasConnected ? TimedOutMessage : ConnectTimedOutMessage, null, null, raw);
-        }
-
-        /// <summary>
-        /// 版の違いを伝える文。両方の版が分かれば添える。
-        /// 例: <c>版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。</c>
-        /// </summary>
-        public static LocalizedText VersionMismatchText(string serverVersion, string localVersion)
-        {
-            if (string.IsNullOrEmpty(serverVersion) || string.IsNullOrEmpty(localVersion))
-            {
-                return new LocalizedText("net.disconnect.versionMismatchAdvice", VersionMismatchMessage);
-            }
-
-            return new LocalizedText("net.disconnect.versionMismatchDetail", serverVersion, localVersion);
+            return new DisconnectNotice(DisconnectKind.TimedOut, wasConnected, null, null, null, raw);
         }
 
         /// <summary>ログに出す 1 行の中身。例: <c>kind=VersionMismatch connected=False server-version=0.2.0 reason="fps:version-mismatch:0.2.0"</c>。</summary>

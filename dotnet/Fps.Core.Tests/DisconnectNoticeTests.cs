@@ -12,8 +12,6 @@ namespace Fps.Core.Tests
             var notice = DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, wasConnected, "0.2.0");
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
-            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.serverStopped")));
-            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("サーバーが止まりました。"));
             Assert.That(notice.WasConnected, Is.EqualTo(wasConnected));
         }
 
@@ -32,10 +30,7 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
             Assert.That(notice.ServerVersion, Is.EqualTo("0.2.0"));
-            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.versionMismatchDetail", "0.2.0", "0.1.0")));
-            Assert.That(
-                GameText.Resolve(notice.Message),
-                Is.EqualTo("版が違います (サーバー 0.2.0 / このゲーム 0.1.0)。サーバーと同じ版のゲームでつないでください。"));
+            Assert.That(notice.LocalVersion, Is.EqualTo("0.1.0"));
         }
 
         [TestCase("fps:version-mismatch:")]
@@ -47,16 +42,15 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.VersionMismatch));
             Assert.That(notice.ServerVersion, Is.Null);
-            Assert.That(notice.Message, Is.EqualTo(new LocalizedText("net.disconnect.versionMismatchAdvice", DisconnectNotice.VersionMismatchMessage)));
-            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("版が違います。サーバーと同じ版のゲームでつないでください。"));
+            Assert.That(notice.LocalVersion, Is.EqualTo("0.1.0"));
         }
 
         [Test]
         public void AnUnreadableLocalVersionIsLeftOut()
         {
-            var notice = DisconnectNotice.Classify(DisconnectNotice.VersionMismatchReason("0.2.0"), false, null);
-
-            Assert.That(GameText.Resolve(notice.Message), Is.EqualTo("版が違います。サーバーと同じ版のゲームでつないでください。"));
+            Assert.That(DisconnectNotice.Classify(DisconnectNotice.VersionMismatchReason("0.2.0"), false, null).LocalVersion, Is.Null);
+            Assert.That(DisconnectNotice.Classify(DisconnectNotice.VersionMismatchReason("0.2.0"), false, "v0.1.0").LocalVersion, Is.Null);
+            Assert.That(DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, false, "0.1.0").LocalVersion, Is.Null, "only a version mismatch keeps it");
         }
 
         [Test]
@@ -66,18 +60,15 @@ namespace Fps.Core.Tests
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
             Assert.That(notice.Detail, Is.EqualTo("invalid-payload"));
-            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.RejectedMessage));
         }
 
         [Test]
-        public void ADrainingServerSaysItIsGettingReadyToStop()
+        public void ADrainingServerKeepsItsDetail()
         {
             var notice = DisconnectNotice.Classify(DisconnectNotice.RejectedReason(DisconnectNotice.ServerDrainingDetail), false, "0.2.0");
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
             Assert.That(notice.Detail, Is.EqualTo("server-draining"));
-            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.ServerDrainingMessage));
-            Assert.That(GameText.Resolve(notice.Message), Does.StartWith("サーバーが止まる準備中"));
             Assert.That(notice.Describe(), Does.Contain("detail=server-draining"));
         }
 
@@ -91,14 +82,12 @@ namespace Fps.Core.Tests
         }
 
         [Test]
-        public void TheIdleKickedReasonSaysThePlayerWasIdle()
+        public void TheIdleKickedReasonMeansThePlayerWasIdle()
         {
             var notice = DisconnectNotice.Classify(DisconnectNotice.IdleKickedReason, true, "0.2.0");
 
             Assert.That(DisconnectNotice.IdleKickedReason, Is.EqualTo("fps:idle-kicked"));
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.IdleKicked));
-            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.IdleKickedMessage));
-            Assert.That(GameText.Resolve(notice.Message), Does.Contain("放置"));
             Assert.That(notice.WasConnected, Is.True);
             Assert.That(notice.Describe(), Is.EqualTo("kind=IdleKicked connected=True reason=\"fps:idle-kicked\""));
         }
@@ -114,17 +103,16 @@ namespace Fps.Core.Tests
             var notice = DisconnectNotice.Classify(reason, true, "0.2.0");
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.TimedOut));
-            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.TimedOutMessage));
             Assert.That(notice.RawReason, Is.EqualTo(reason ?? ""));
         }
 
         [Test]
-        public void WithoutAKnownCodeAClientThatNeverConnectedCouldNotConnect()
+        public void WithoutAKnownCodeAClientThatNeverConnectedTimedOutBeforeConnecting()
         {
             var notice = DisconnectNotice.Classify(null, false, "0.2.0");
 
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.TimedOut));
-            Assert.That(notice.Message, Is.EqualTo(DisconnectNotice.ConnectTimedOutMessage));
+            Assert.That(notice.WasConnected, Is.False);
         }
 
         [Test]

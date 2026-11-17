@@ -108,7 +108,7 @@ namespace Fps.NetV2.Tests
 
             Assert.That(mover.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
             Assert.That(watcher.Notice.Kind, Is.EqualTo(DisconnectKind.ServerStopped));
-            Assert.That(mover.Notice.Message, Is.EqualTo(DisconnectNotice.ServerStoppedMessage));
+            Assert.That(mover.Notice.WasConnected, Is.True);
             Assert.That(_serverThread.Join(_timeout), Is.True);
             Assert.That(_exitCode, Is.EqualTo(0), _output.ToString());
         }

@@ -21,7 +21,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Scenes = MenuScenes.Default;
             MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
             MenuNavigator.TakeTutorialRequest();
-            MenuNavigator.TakeNotice();
+            MenuNavigator.TakeReturnReason();
             CampaignLaunchSelection.Clear();
         }
 
@@ -32,7 +32,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Scenes = null;
             MenuNavigator.SceneRoot = null;
             MenuNavigator.TakeTutorialRequest();
-            MenuNavigator.TakeNotice();
+            MenuNavigator.TakeReturnReason();
             CampaignLaunchSelection.Clear();
             MenuNavigator.OnlineStarter = null;
             Time.timeScale = 1f;
@@ -46,12 +46,19 @@ namespace Fps.Tests.EditMode
 
             Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.True);
             Assert.That(refusal.IsEmpty, Is.True);
-            starter.Refuse = true;
+            starter.Refusal = MenuReturnReason.OnlineFailed(3, "no lobby");
+            LogAssert.Expect(LogType.Log, MenuNavigator.LogTag + " QuickMatch refused (return=OnlineFailed exit=3 detail=\"no lobby\")");
             Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out refusal), Is.False);
-            Assert.That(refusal.Key, Is.EqualTo("refused"));
+            Assert.That(refusal, Is.EqualTo(LocalizedText.Literal("no lobby")), "the menu turns the typed refusal into text");
+
+            starter.Refusal = MenuReturnReason.Disconnected(
+                DisconnectNotice.Classify(DisconnectNotice.RejectedReason(DisconnectNotice.ServerDrainingDetail), false, "0.1.0"), 5);
+            LogAssert.Expect(LogType.Log, new Regex(Regex.Escape(MenuNavigator.LogTag + " QuickMatch refused (return=Disconnected exit=5 kind=Rejected")));
+            Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out refusal), Is.False);
+            Assert.That(refusal, Is.EqualTo(DisconnectNoticeText.ServerDrainingMessage));
             Assert.That(MenuNavigator.Go(MenuDestination.Range), Is.True, "only the online buttons go to the starter");
 
-            Assert.That(starter.Started, Is.EqualTo(new[] { MenuDestination.QuickMatch, MenuDestination.QuickMatch }));
+            Assert.That(starter.Started, Is.EqualTo(new[] { MenuDestination.QuickMatch, MenuDestination.QuickMatch, MenuDestination.QuickMatch }));
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.RangeScene) }));
         }
 
@@ -189,12 +196,13 @@ namespace Fps.Tests.EditMode
             MenuNavigator.Go(MenuDestination.Tutorial);
             _host.Loaded.Clear();
             Time.timeScale = 0f;
+            var reason = MenuReturnReason.Disconnected(DisconnectNotice.Classify(DisconnectNotice.ServerStoppedReason, true, "0.1.0"), 0);
             var calls = new List<int>();
             void Handler() => calls.Add(_host.Loaded.Count);
             MenuNavigator.ReturningToMenu += Handler;
             try
             {
-                Assert.That(MenuNavigator.ReturnToMenu(DisconnectNotice.ServerStoppedMessage), Is.True);
+                Assert.That(MenuNavigator.ReturnToMenu(reason), Is.True);
             }
             finally
             {
@@ -205,16 +213,17 @@ namespace Fps.Tests.EditMode
             Assert.That(_host.Loaded, Is.EqualTo(new[] { _host.IndexOf(MenuRoute.MainMenuScene) }));
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a paused game is resumed");
             Assert.That(MenuNavigator.PendingTutorial, Is.False);
-            Assert.That(MenuNavigator.TakeNotice(), Is.EqualTo(DisconnectNotice.ServerStoppedMessage), "the key is kept for the menu to look up");
-            Assert.That(MenuNavigator.TakeNotice().IsEmpty, Is.True, "the notice is shown only once");
+            Assert.That(MenuNavigator.TakeReturnReason(), Is.SameAs(reason), "the typed reason is kept for the menu to turn into text");
+            Assert.That(MenuNavigator.TakeReturnReason(), Is.Null, "the reason is shown only once");
         }
 
         [Test]
-        public void ReturnToMenuWithoutANoticeLeavesNone()
+        public void ReturnToMenuWithoutAReasonLeavesNone()
         {
-            Assert.That(MenuNavigator.ReturnToMenu(LocalizedText.Literal(" ")), Is.True);
+            Assert.That(MenuNavigator.ReturnToMenu(MenuReturnReason.OnlineFailed(3, "stale")), Is.True);
+            Assert.That(MenuNavigator.ReturnToMenu(), Is.True);
 
-            Assert.That(MenuNavigator.PendingNotice.IsEmpty, Is.True);
+            Assert.That(MenuNavigator.PendingReturnReason, Is.Null, "returning without a reason drops an earlier one");
         }
 
         [Test]
@@ -250,7 +259,7 @@ namespace Fps.Tests.EditMode
             LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(MenuRoute.MainMenuScene) + ".*not in the build settings"));
             try
             {
-                Assert.That(MenuNavigator.ReturnToMenu(LocalizedText.Literal("bye")), Is.False);
+                Assert.That(MenuNavigator.ReturnToMenu(MenuReturnReason.OnlineFailed(3, "bye")), Is.False);
             }
             finally
             {
@@ -259,7 +268,7 @@ namespace Fps.Tests.EditMode
 
             Assert.That(called, Is.False, "nothing is torn down when the game cannot leave");
             Assert.That(_host.Loaded, Is.Empty);
-            Assert.That(MenuNavigator.PendingNotice.IsEmpty, Is.True);
+            Assert.That(MenuNavigator.PendingReturnReason, Is.Null);
         }
 
         [Test]
@@ -378,13 +387,13 @@ namespace Fps.Tests.EditMode
         {
             public List<MenuDestination> Started { get; } = new List<MenuDestination>();
 
-            public bool Refuse { get; set; }
+            public MenuReturnReason Refusal { get; set; }
 
-            public bool Start(MenuDestination destination, out LocalizedText refusal)
+            public bool Start(MenuDestination destination, out MenuReturnReason refusal)
             {
                 Started.Add(destination);
-                refusal = Refuse ? new LocalizedText("refused") : default;
-                return !Refuse;
+                refusal = Refusal;
+                return Refusal == null;
             }
         }
     }

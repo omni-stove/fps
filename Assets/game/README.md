@@ -406,13 +406,13 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | `GameUi.HudFactory` | `IHudFactory` (作るのは `IHud`) | オフラインの HUD とプレイヤーのデバッグ表示 (`GameBootstrap` が作る) | `Fps.Runtime.UI` の HUD。ポーズメニュー・ロードアウトの選択・字幕なども、この HUD の GameObject に載っている |
 | `GameUi.Pause` | `IPauseState` | ポーズ画面が開いているか (開いている間は操作を止める) | 既定の HUD のポーズメニュー |
 | `GameUi.LoadoutSelect` | `ILoadoutSelect` | カーソルを解放してロードアウトの画面を開いているか | 既定の HUD のロードアウトの画面 |
-| `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る・メニューで選んだチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
+| `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る (戻った理由は `MenuReturnReason`。接続を失った理由 `DisconnectNotice` か、オンラインを始められなかった訳と終了コード。文にするのはメニュー)・メニューで選んだチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
 - 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
 - ネット対戦の HUD は `GameUi.HudFactory` を通らない (`NetV2Hud` が既定の `Hud` を作る)。
 - 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず `GameSignals.ModeStatus` に、拠点制圧の状態 (両チームのポイント・残り時間・拠点ごとの `ControlPointStatus`・勝敗) は `GameSignals.Domination` に `DominationStatus` で、オフラインのスコアボードの行 (Id・名前の種類と番号の `ScoreboardName`・チーム・キル数・デス数・接続状態) は `IHud.Scoreboard` には渡さず `GameSignals.Scoreboard` に `ScoreboardEntry` の並びで出す (自分の HUD で出すなら購読し、並べ方は `ScoreboardRows`、文は既定の UI の `ScoreboardText` を参考にする)。グレネードの残りと能力の枠は HUD に渡さず、自分のプレイヤーの部品を `GameSignals.LocalPlayer` に `LocalPlayerSignal` で出す (自分の HUD で出すなら購読し、`Grenades` の `GrenadeThrower.Changed`・`Abilities` の `AbilityHost.Changed` で読み直す)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さないが、ゲーム進行は返した値の `Show` を呼ばない。
+- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず `GameSignals.ModeStatus` に、拠点制圧の状態 (両チームのポイント・残り時間・拠点ごとの `ControlPointStatus`・勝敗) は `GameSignals.Domination` に `DominationStatus` で、オフラインのスコアボードの行 (Id・名前の種類と番号の `ScoreboardName`・チーム・キル数・デス数・接続状態) は `IHud.Scoreboard` には渡さず `GameSignals.Scoreboard` に `ScoreboardEntry` の並びで出す (自分の HUD で出すなら購読し、並べ方は `ScoreboardRows`、文は既定の UI の `ScoreboardText` を参考にする)。キャンペーンの案内 (セーブした・再開まで N 秒) は `GameSignals.CampaignNotice` に `CampaignNotice` で出す (`HudModel.BindNotice` に渡せば既定の HUD と同じに出る)。グレネードの残りと能力の枠は HUD に渡さず、自分のプレイヤーの部品を `GameSignals.LocalPlayer` に `LocalPlayerSignal` で出す (自分の HUD で出すなら購読し、`Grenades` の `GrenadeThrower.Changed`・`Abilities` の `AbilityHost.Changed` で読み直す)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さないが、ゲーム進行は返した値の `Show` を呼ばない。
 - 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
 - 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`、入口の `AwarenessIndicator` が先) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
@@ -450,7 +450,6 @@ public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
 
     public void ApplyDensity(HudDensity density) { }
     public void BindMatch(Match match) { }
-    public void BindNotice(CampaignNotice notice) { }
     public void UseTeamPalette(Team? viewer) { }
     public void SetPauseTimeMode(PauseTimeMode mode) { }
     public IGrenadeCount AttachGrenadeCount() => this;

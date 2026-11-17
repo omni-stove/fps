@@ -54,6 +54,7 @@ namespace Fps.Tests.EditMode
             _storage = new FileSaveStorage(_root);
             _reloads = 0;
             CampaignLaunchSelection.Clear();
+            GameSignals.ResetAll();
         }
 
         [TearDown]
@@ -73,6 +74,7 @@ namespace Fps.Tests.EditMode
             _assets.Clear();
             Object.DestroyImmediate(_definition);
             CampaignLaunchSelection.Clear();
+            GameSignals.ResetAll();
 
             if (Directory.Exists(_root))
             {
@@ -194,6 +196,24 @@ namespace Fps.Tests.EditMode
             scene.Campaign.Tick(1f);
             Assert.That(_reloads, Is.EqualTo(1));
             Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
+        }
+
+        [Test]
+        public void TheNoticeIsOnGameSignalsWhileTheCampaignRuns()
+        {
+            var scene = BuildScene();
+            Assert.That(GameSignals.CampaignNotice.Value, Is.Null);
+
+            BeginQuietly(scene);
+            Assert.That(GameSignals.CampaignNotice.Value, Is.SameAs(scene.Campaign.Notice));
+
+            scene.Campaign.Stop();
+            Assert.That(GameSignals.CampaignNotice.Value, Is.Null, "stopping takes the notice off the signal");
+
+            var other = new CampaignNotice();
+            GameSignals.CampaignNotice.Publish(other);
+            scene.Campaign.Stop();
+            Assert.That(GameSignals.CampaignNotice.Value, Is.SameAs(other), "stopping leaves a notice someone else published");
         }
 
         [Test]

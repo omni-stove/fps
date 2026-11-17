@@ -52,9 +52,9 @@ namespace Fps.Runtime
                 return MenuNavigator.TakeTutorialRequest();
             }
 
-            public bool ReturnToMenu(LocalizedText notice)
+            public bool ReturnToMenu(MenuReturnReason reason)
             {
-                return MenuNavigator.ReturnToMenu(notice);
+                return MenuNavigator.ReturnToMenu(reason);
             }
         }
     }

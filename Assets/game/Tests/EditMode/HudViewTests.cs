@@ -606,6 +606,38 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheHudFollowsTheCampaignNoticeOnGameSignals()
+        {
+            GameSignals.ResetAll();
+            var saved = new CampaignNotice();
+            saved.ShowSaved(1f);
+            GameSignals.CampaignNotice.Publish(saved);
+            var hud = Hud.Create("HudViewTests.NoticeHud", null, null, null);
+            try
+            {
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "a notice published before the HUD is shown at once");
+
+                var countdown = new CampaignNotice();
+                GameSignals.CampaignNotice.Publish(countdown);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "a new source replaces the old one");
+                countdown.ShowRestartCountdown(3f);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
+                saved.ShowSaved(2f);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)), "the replaced source is no longer followed");
+
+                GameSignals.CampaignNotice.Clear();
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "clearing the signal takes the notice off the HUD");
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
         public void ShowsTheModelTextAtOnce()
         {
             var model = new HudModel();

@@ -108,7 +108,7 @@ namespace Fps.Tests.EditMode
                 return false;
             }
 
-            public bool ReturnToMenu(LocalizedText notice)
+            public bool ReturnToMenu(MenuReturnReason reason)
             {
                 return false;
             }

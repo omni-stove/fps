@@ -126,7 +126,7 @@ namespace Fps.Protocol.Tests
             Assert.That(clientEvent.Reason, Is.EqualTo(reason));
             var notice = DisconnectNotice.Classify(clientEvent.Reason, true, null);
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
-            Assert.That(notice.Message.Key, Is.EqualTo(DisconnectNotice.ServerDrainingMessage.Key));
+            Assert.That(notice.Detail, Is.EqualTo(DisconnectNotice.ServerDrainingDetail));
             Assert.That(client.IsActive, Is.False);
         }
 
@@ -188,7 +188,7 @@ namespace Fps.Protocol.Tests
             Assert.That(clientEvent.Reason, Is.Empty);
             var notice = DisconnectNotice.Classify(clientEvent.Reason, false, null);
             Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.TimedOut));
-            Assert.That(notice.Message.Key, Is.EqualTo(DisconnectNotice.ConnectTimedOutMessage.Key));
+            Assert.That(notice.WasConnected, Is.False);
             Assert.That(client.IsActive, Is.False);
         }
 

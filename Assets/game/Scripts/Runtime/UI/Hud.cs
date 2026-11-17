@@ -454,6 +454,8 @@ namespace Fps.Runtime
 
             _model.BindHealth(_player != null ? _player.Health : null);
             _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
+            GameSignals.CampaignNotice.Changed += _model.BindNotice;
+            _model.BindNotice(GameSignals.CampaignNotice.Value);
 
             // オフラインのプレイヤーは持ち物を自分で持つ。ネット対戦は持ち主の HUD が届いた持ち物を後から渡す
             var inventoryView = InventoryScreen;
@@ -472,15 +474,6 @@ namespace Fps.Runtime
         public void BindMatch(Match match)
         {
             _model.BindMatch(match);
-        }
-
-        /// <summary>
-        /// 一時的な案内の源を差し替える。null なら案内を消す。<see cref="CampaignRunner"/> がキャンペーンを始めたときに呼び、
-        /// 止めるときに null で外す。
-        /// </summary>
-        public void BindNotice(CampaignNotice notice)
-        {
-            _model.BindNotice(notice);
         }
 
         /// <summary>
@@ -882,6 +875,7 @@ namespace Fps.Runtime
                 _weapon.WeaponChanged -= _model.BindWeapon;
             }
 
+            GameSignals.CampaignNotice.Changed -= _model.BindNotice;
             _player = null;
             _weapon = null;
             _ads = null;

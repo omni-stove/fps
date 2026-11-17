@@ -28,6 +28,22 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AZeroSlowdownScaleTurnsTheSlowdownOff()
+        {
+            var off = new AimAssistSpec(
+                slowdownDegrees: 5f,
+                slowdownScale: 0f,
+                magnetismDegrees: 3f,
+                magnetismDegreesPerSecond: 20f,
+                magnetismSeconds: 0.5f,
+                maxDistance: 50f);
+
+            var result = AimAssistSolver.Solve(off, 1f, false, 0f, Vector3.Zero, new Vector3(0f, 0f, 1f), new[] { Point(4f, 0f, 20f) });
+
+            Assert.That(result.LookScale, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void ATargetOutsideTheSlowdownAngleLeavesTheLookAlone()
         {
             var result = Solve(true, 0f, 1f, Point(6f, 0f, 20f), Point(0f, -7f, 20f));

@@ -15,7 +15,8 @@ namespace Shooter.Server.Tests
         public static WeaponSpec Handgun() => new WeaponSpec(
             HandgunId, "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None);
 
-        public static NetMatchFile File(GameRules rules = null, NetMatchSettings settings = null, string name = "TeamDeathmatch", WeaponSpec rifle = null)
+        public static NetMatchFile File(
+            GameRules rules = null, NetMatchSettings settings = null, string name = "TeamDeathmatch", WeaponSpec rifle = null, NetMotorSettings motor = null)
         {
             rifle ??= Rifle();
             return new NetMatchFile(
@@ -27,7 +28,8 @@ namespace Shooter.Server.Tests
                 new[] { rifle, Handgun() },
                 0.4f,
                 "WeaponCatalog",
-                new WeaponCatalog(new[] { rifle, Handgun() }));
+                new WeaponCatalog(new[] { rifle, Handgun() }),
+                motor);
         }
 
         public static ServerRulesData Data(GameRules rules = null, NetMatchSettings settings = null, PingSpec ping = null, string name = "TeamDeathmatch")

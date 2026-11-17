@@ -40,6 +40,9 @@ namespace Shooter.Server
 
         public event Action<ServerPlayer, int, float> Landed;
 
+        // 息が切れたダメージの出来事の数を渡す。体力はルールが持つので、ここでは与えずに落下と同じく戦闘のモジュールに任せる。
+        public event Action<ServerPlayer, int, int> Drowned;
+
         public string Name => "movement";
 
         public int TickRate { get; }
@@ -143,13 +146,14 @@ namespace Shooter.Server
             {
                 SpawnPosition = spawn,
                 Ladders = _context.Map.Ladders.Ladders,
+                Water = _context.Map.Water,
                 Knockback = _knockback,
                 Swim = _settings.Swim,
                 WallRun = _settings.WallRun,
             };
         }
 
-        // 体は作るときに世界の当たりとはしごを受け取るので、作り直す。乗り物も替わるので座席から外し、置き直しは続くルールの出現に任せる
+        // 体は作るときに世界の当たり・はしご・水を受け取るので、作り直す。乗り物も替わるので座席から外し、置き直しは続くルールの出現に任せる
         private void HandleMapChanged(ServerMapData map)
         {
             foreach (var mover in _byPlayer.Values)
@@ -310,6 +314,16 @@ namespace Shooter.Server
                 : 0;
         }
 
+        public int DrownDamage(int drownings)
+        {
+            if (drownings < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(drownings), drownings, "drownings must not be negative");
+            }
+
+            return (int)Math.Min(int.MaxValue, (long)drownings * _settings.Swim.DrownDamage);
+        }
+
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {
             ArgumentNullException.ThrowIfNull(snapshot);
@@ -338,7 +352,10 @@ namespace Shooter.Server
                     : VaultSync.None;
                 row.Prone = state.Prone;
                 row.Ladder = state.Ladder;
-                row.AirJumpsUsed = (byte)state.AirJumpsUsed;
+                row.Lean = state.Lean.Amount;
+                row.Swimming = state.Swim.IsSwimming;
+                row.WallRunSide = (Shooter.Protocol.WallRunSide)(byte)state.WallRun.Side;
+                row.AirJumpsUsed = (byte)Math.Min(byte.MaxValue, state.AirJumpsUsed);
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
@@ -396,7 +413,8 @@ namespace Shooter.Server
                     frame.Has(InputButtons.Prone),
                     false,
                     false,
-                    CarrySpeedMultiplier(mover))
+                    CarrySpeedMultiplier(mover),
+                    lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)))
                 .WithRules(_settings.Rules.Actions);
 
             if (mover.Riding)
@@ -495,6 +513,41 @@ namespace Shooter.Server
             if (previous.IsKnockedBack && !current.IsKnockedBack)
             {
                 _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
+            }
+
+            // 傾きは毎 tick 少しずつ変わるので、向きが替わったときだけ出す
+            var leanBefore = Math.Sign(previous.Lean.Amount);
+            var leanAfter = Math.Sign(current.Lean.Amount);
+            if (leanBefore != leanAfter)
+            {
+                _log.WriteLine(ServerMovementLog.Lean(playerId, tick, leanAfter));
+            }
+
+            if (previous.Swim.IsSwimming != current.Swim.IsSwimming)
+            {
+                _log.WriteLine(ServerMovementLog.Swim(playerId, tick, current.Swim.IsSwimming));
+            }
+
+            if (previous.Swim.IsUnderwater != current.Swim.IsUnderwater)
+            {
+                _log.WriteLine(ServerMovementLog.Underwater(playerId, tick, current.Swim.IsUnderwater));
+            }
+
+            if (previous.WallRun.Side != current.WallRun.Side)
+            {
+                _log.WriteLine(ServerMovementLog.WallRun(playerId, tick, current.WallRun.Side));
+            }
+
+            if (current.AirJumpsUsed > previous.AirJumpsUsed)
+            {
+                _log.WriteLine(ServerMovementLog.AirJump(playerId, tick, current.AirJumpsUsed));
+            }
+
+            var drownings = current.Swim.DrowningsSince(previous.Swim);
+            if (drownings > 0)
+            {
+                _log.WriteLine(ServerMovementLog.OutOfBreath(playerId, tick, drownings));
+                Drowned?.Invoke(mover.Player, tick, drownings);
             }
 
             // 着地した tick の速度は、まだ接地中の吸着の速度に戻る前の落下速度を持っている

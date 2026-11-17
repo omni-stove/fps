@@ -385,6 +385,121 @@ namespace Shooter.Core.Tests
                 Is.EqualTo("no server to join among 3 found (private x2, full x1)"));
         }
 
+        private static LobbyInfo CodeServer(string id, string code, long players, string version = _version)
+        {
+            var match = new NetMatchSettings(privateMatch: true, joinCode: code);
+            return new LobbyInfo(
+                id, "server-" + id, ServerLobby.MaxMembers(8), Ids("server-" + id),
+                ServerLobby.Attributes("203.0.113." + (id.Length + 1) + ":7777", version, (int)players, match));
+        }
+
+        [Test]
+        public void JoinCodePicksThePrivateServerWithTheCodeIgnoringCaseAndSpaces()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                Server("public", "203.0.113.9:7777", 0),
+                CodeServer("other", "ZZZ999", 0),
+                CodeServer("mine", "ABC234", 3),
+            };
+
+            var outcome = LobbySelector.PickByJoinCode(lobbies, " abc 234 ", _version, 1, out var picked);
+
+            Assert.That(outcome, Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(picked.Id, Is.EqualTo("mine"));
+        }
+
+        [Test]
+        public void JoinCodeIsNotFoundWithoutALobbyWithThatCode()
+        {
+            var lobbies = new List<LobbyInfo> { Server("public", "203.0.113.9:7777", 0), CodeServer("other", "ZZZ999", 0), null };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out var picked), Is.EqualTo(JoinCodeOutcome.NotFound));
+            Assert.That(picked, Is.Null);
+            Assert.That(LobbySelector.PickByJoinCode(new List<LobbyInfo>(), "ABC234", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.NotFound));
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.NotFound));
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, null, _version, 1, out _), Is.EqualTo(JoinCodeOutcome.NotFound));
+        }
+
+        [Test]
+        public void JoinCodeNeverMatchesAPublicServerWithoutACode()
+        {
+            var lobbies = new List<LobbyInfo> { Server("public", "203.0.113.9:7777", 0) };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "public", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.NotFound));
+        }
+
+        [Test]
+        public void JoinCodeReportsAFullServer()
+        {
+            var lobbies = new List<LobbyInfo> { CodeServer("mine", "ABC234", 8) };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out var picked), Is.EqualTo(JoinCodeOutcome.Full));
+            Assert.That(picked, Is.Null);
+        }
+
+        [Test]
+        public void JoinCodeReportsAServerWithoutRoomForTheParty()
+        {
+            var lobbies = new List<LobbyInfo> { CodeServer("mine", "ABC234", 6) };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 2, out _), Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 3, out _), Is.EqualTo(JoinCodeOutcome.Full));
+        }
+
+        [Test]
+        public void JoinCodeReportsAServerOnAnotherVersion()
+        {
+            var lobbies = new List<LobbyInfo> { CodeServer("mine", "ABC234", 0, "0.2.0") };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.VersionMismatch));
+        }
+
+        [Test]
+        public void JoinCodeReportsFullBeforeAnotherVersion()
+        {
+            var lobbies = new List<LobbyInfo> { CodeServer("old", "ABC234", 0, "0.2.0"), CodeServer("full", "ABC234", 8) };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.Full));
+        }
+
+        [Test]
+        public void JoinCodePrefersAJoinableServerAndBreaksTiesByLobbyId()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                CodeServer("c-full", "ABC234", 8),
+                CodeServer("b-open", "ABC234", 1),
+                CodeServer("a-open", "ABC234", 0),
+            };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out var picked), Is.EqualTo(JoinCodeOutcome.Joined));
+            Assert.That(picked.Id, Is.EqualTo("a-open"));
+        }
+
+        [Test]
+        public void JoinCodeFailsOnAServerWithoutAnAddress()
+        {
+            var attributes = new List<LobbyAttribute>
+            {
+                LobbyAttribute.OfText(ServerLobby.VersionKey, _version),
+                LobbyAttribute.OfNumber(ServerLobby.PlayersKey, 0),
+                LobbyAttribute.OfNumber(ServerLobby.PrivateKey, 1),
+                LobbyAttribute.OfText(ServerLobby.JoinCodeKey, "ABC234"),
+            };
+            var lobbies = new List<LobbyInfo> { new LobbyInfo("broken", "server-broken", 8, Ids("server-broken"), attributes) };
+
+            Assert.That(LobbySelector.PickByJoinCode(lobbies, "ABC234", _version, 1, out _), Is.EqualTo(JoinCodeOutcome.Failed));
+        }
+
+        [Test]
+        public void JoinCodeRejectsInvalidArguments()
+        {
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.PickByJoinCode(null, "ABC234", _version, 1, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => LobbySelector.PickByJoinCode(new List<LobbyInfo>(), "ABC234", _version, 0, out _));
+        }
+
         [Test]
         public void ComparesVersionsTheWayTheServerWritesThem()
         {

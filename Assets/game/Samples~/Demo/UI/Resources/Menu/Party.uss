@@ -1,0 +1,153 @@
+/* パーティの画面の見た目。基準解像度は 1920x1080。差し込み口の位置は差し込む側 (メインメニューなど) が決める。 */
+
+.party {
+    width: 640px;
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.party__title {
+    margin: 0 0 12px 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.party__stage {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.party__leader-note {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgb(255, 196, 64);
+}
+
+.party__caption {
+    margin: 12px 0 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.party__invite-code {
+    margin: 0;
+    font-size: 28px;
+    -unity-font-style: bold;
+}
+
+.party__members {
+    margin: 0 0 8px 0;
+}
+
+.party__member {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    margin: 0 0 4px 0;
+    padding: 0 12px;
+    border-left-width: 4px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.party__member--leader {
+    border-color: rgb(255, 196, 64);
+}
+
+.party__member-name {
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+}
+
+.party__leader-badge {
+    margin: 0;
+    padding: 2px 10px;
+    border-radius: 4px;
+    background-color: rgba(255, 196, 64, 0.3);
+    font-size: 16px;
+    color: rgb(255, 230, 170);
+    -unity-font-style: bold;
+}
+
+.party__empty {
+    margin: 0 0 8px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.party__button {
+    height: 56px;
+    margin: 8px 0 0 0;
+    padding: 0 20px;
+    border-width: 0;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+}
+
+.party__button:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.party__button:focus {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.2);
+    color: rgb(255, 255, 255);
+}
+
+.party__button:disabled {
+    opacity: 0.4;
+}
+
+.party__join-row {
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+.party__code-field {
+    flex-grow: 1;
+    height: 56px;
+    margin: 8px 12px 0 0;
+    font-size: 24px;
+}
+
+.party__code-field:disabled {
+    opacity: 0.4;
+}
+
+.party__join {
+    min-width: 160px;
+}
+
+.party__back {
+    margin-top: 20px;
+}
+
+.party__notice {
+    margin: 12px 0 0 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(255, 196, 64);
+    white-space: normal;
+}
+
+.party__notice--error {
+    color: rgb(255, 120, 100);
+}

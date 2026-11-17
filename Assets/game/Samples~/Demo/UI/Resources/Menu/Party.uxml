@@ -1,0 +1,30 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- パーティの画面。Shooter.Runtime.PartyPanel が差し込み口へ読み込み、name で要素を探して GameSignals.Party の値で中身を書き換える。 -->
+    <!-- text の "#キー" は文字列表 (Demo サンプルの Resources/Localization/ja/match-flow.json など) のキーで、PartyPanel が Shooter.Runtime.LocalizedTexts で今の言語の文字にする。 -->
+    <Style src="Party.uss" />
+    <ui:VisualElement name="party" class="party">
+        <ui:Label text="#party.title" class="party__title" />
+        <!-- 入っていない・入るところ・入っている・試合を探しているのどれか。 -->
+        <ui:Label name="party-stage" text="" class="party__stage" />
+        <ui:Label name="party-leader-note" text="#party.youAreLeader" class="party__leader-note" style="display: none;" />
+        <!-- 招待のコード。読むだけの欄なので選んで写せる。コードが無いときは PartyPanel が隠す。 -->
+        <ui:VisualElement name="party-invite" class="party__invite" style="display: none;">
+            <ui:Label text="#party.inviteCode" class="party__caption" />
+            <ui:TextField name="party-invite-code" class="party__invite-code" />
+        </ui:VisualElement>
+        <ui:Label text="#party.members" class="party__caption" />
+        <!-- メンバーの行は PartyPanel が作る。リーダーの行には印が付く。 -->
+        <ui:VisualElement name="party-members" class="party__members" />
+        <ui:Label name="party-no-members" text="#party.noMembers" class="party__empty" />
+        <!-- 並び順がゲームパッドで上下に動かすフォーカスの順番。 -->
+        <ui:Button name="party-create" text="#party.create" class="party__button" />
+        <ui:VisualElement class="party__join-row">
+            <ui:TextField name="party-code-field" class="party__code-field" />
+            <ui:Button name="party-join" text="#party.join" class="party__button party__join" />
+        </ui:VisualElement>
+        <ui:Button name="party-leave" text="#party.leave" class="party__button" />
+        <!-- 案内 (コードの誤り・使えないなど)。空のときは PartyPanel が隠す。 -->
+        <ui:Label name="party-notice" text="" class="party__notice" style="display: none;" />
+        <ui:Button name="party-back" text="#party.back" class="party__button party__back" />
+    </ui:VisualElement>
+</ui:UXML>

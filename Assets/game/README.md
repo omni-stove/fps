@@ -186,13 +186,15 @@ Editor からは **Window > General > Test Runner** の EditMode タブで同じ
 
 | 入口の欄 | 使う所 | 入口より先に使うもの | 入口が空のとき |
 | --- | --- | --- | --- |
-| `Rules` | `GameBootstrap`・`CampaignRunner` (難易度を選ばないとき)・`NetTeamDeathmatch` | シーンの `RulesDefinition`・`Rules` | `GameRules.Default` (警告) |
+| `Rules` | `GameBootstrap` (プレイヤーの最大体力 `playerMaxHealth`・部位の倍率 `zoneDamage` も)・`CampaignRunner` (難易度を選ばないとき)・`NetTeamDeathmatch`・`ExecutionRunner`/`BattleRoyaleRunner` (蘇生の距離 `reviveRange`)・専用サーバーへの書き出し | シーンの `RulesDefinition`・`Rules` | `GameRules.Default` (警告) |
 | `Motor` | プレイヤーの移動 (`PlayerController`・`NetworkPlayerMotor`) | コンポーネントの `MotorSettings` | `Resources/Movement/MotorSettings`、無ければ `MotorSpec.Default` |
-| `Enemies` | `EnemyAgent` の判断。Inspector の種類 (`Archetype`) と同じ種類の最初のもの | `EnemyAgent` の `Definition` | `EnemyAgent` の Inspector の値 |
-| `GrenadeTuning`・`PingTuning`・`KnockbackTuning` (JSON) | [グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値) | — | `Resources/Tuning/*.json`、無ければ既定値 |
+| `Enemies` | `EnemyAgent` の判断・動き・体と、`EnemyStealth`・`EnemyMelee` ([敵の定義](#敵の定義-enemydefinition))。Inspector の種類 (`Archetype`) と同じ種類の最初のもの | `EnemyAgent` の `Definition` | `EnemyAgent`・`EnemyStealth`・`EnemyMelee` の Inspector の値 |
+| `GrenadeTuning`・`PingTuning`・`KnockbackTuning`・`InventoryTuning` (JSON) | グレネード・印・吹き飛ばし ([調整値の JSON](#調整値の-json))・持ち物 (`InventoryJson` の形)。オフラインと専用サーバーの両方 | — | `Resources/Tuning/<名前>.json`、無ければ既定値 |
+| `SuppressionTuning`・`SquadTuning`・`StaggerTuning`・`MeleeTuning`・`TraversalTuning`・`StealthTuning` (JSON) | 実行時にプレイヤー (制圧とよろめきは敵にも) に付けるコンポーネント ([調整値の JSON](#調整値の-json)) | — | `Resources/Tuning/<名前>.json`、無ければ既定値 |
+| `BotsTuning` (JSON) | 専用サーバーの Bot ([調整値の JSON](#調整値の-json))。書き出しが `server-data/tuning/bots.json` に写す | — | `Resources/Tuning/bots.json`、無ければ既定値 |
 | `WeaponCatalog`・`Loadout` | メニューのロードアウト選択 (`MainMenuScreen`)・ネット対戦 (`NetTeamDeathmatch`)。オフラインのプレイヤーの武器は `Loadout` のスロットの武器 | `MainMenuScreen`・`NetTeamDeathmatch` の `Catalog`・`Loadout`、`GameBootstrap` の `WeaponDefinitions` | 選べない・持たない (エラー) |
-| `Missions` | メニューのキャンペーン | `MainMenuScreen` の `Missions` | キャンペーンを開けない |
-| `TeamDeathmatch`・`Domination`・`Hardpoint`・`KillConfirmed`・`SearchAndDestroy`・`Horde`・`GunGameLadder` | 各モードの `*Runner` | Runner の `Definition` (`GunGameRunner` は `Ladder`) | Runner の Inspector の値 (`GunGameRunner` は始められない) |
+| `Missions` | メニューのキャンペーン・`CampaignRunner` ([ミッションの Id](#ミッションの-id)) | `MainMenuScreen` の `Missions` | キャンペーンを開けない |
+| `TeamDeathmatch`・`Domination`・`Hardpoint`・`KillConfirmed`・`SearchAndDestroy`・`Horde`・`GunGameLadder`・`FreeForAll`・`Guardian`・`Execution`・`BattleRoyale` | 各モードの `*Runner` ([モードの定義](#モードの定義))。`MatchRunner` (射撃場のソロの試合) は `FreeForAll` の制限時間と点の上限を読む | Runner の `Definition` (`GunGameRunner` は `Ladder`) | Runner の Inspector の値 (`GunGameRunner` は始められない) |
 | `CharacterRig` | プレイヤー・敵の人型のリグ (`CharacterAnimator`) | `CharacterAnimator` の `RigPrefab` | `Resources/Characters/CharacterRig` |
 | `Texts` (言語コードと表の並び) | 文言 (`Localizer`・`GameText`) | — | `Resources/Localization/<言語>/` の表だけ |
 | `MenuScenes` | メニューから移るシーン (`MenuNavigator`) | — | `Resources/Menu/MenuSceneSettings`、無ければ既定の名前 |
@@ -287,17 +289,34 @@ Editor からは **Fps > Import Weapons From JSON** でフォルダを選ぶ (�
 成功すると `[GameRulesJsonImporter] saved '...'` が出る。失敗したときの扱い (1 つも保存せず終了コード 1) は武器と同じ。
 Editor からは **Fps > Import Game Rules From JSON**。
 
-### グレネード・印・吹き飛ばしの調整値
+項目の名前は `GameRules`・`ActionRules` のコンストラクターの引数名と同じ (`Fps.Core.GameRulesJson.ItemNames`・`ActionItemNames`)。省いた項目は `GameRules.Default` の値になる。
+体力・部位の倍率・蘇生の距離は次の項目で決める。
 
-グレネード (`GrenadeSpec`)・印 (`PingSpec`)・吹き飛ばし (`KnockbackSpec`) の値は、取り込みをせずに Play の開始時に Resources の JSON から読む (`Fps.Runtime.KitTuning`)。
+| 項目 | 既定 | 意味と使う所 |
+| --- | --- | --- |
+| `playerMaxHealth` | 100 | オフラインのプレイヤーの最大体力 (1 以上)。`GameBootstrap` はルールがあればこれで作り、Inspector の `PlayerMaxHealth` はルールが無いときだけ使う。ネット対戦の体力は `NetMatchDefinition` の `maxHealth` |
+| `zoneDamage` | `{ "head": 2, "body": 1, "limb": 0.75 }` | 頭・胴・手足に当たったときのダメージの倍率。省いた部位は既定。プレイヤー・標的ダミー・シーンの敵 (`Damageable.ApplyRules`) と専用サーバーの当たりが使う。ボスの段階が決める倍率 (`BossDefinition`) はこれより優先し、弱点の倍率はルールでは変えない |
+| `actions.reviveRange` | 1.5 | ダウンした味方を起こせる距離 (m、0 より大きい)。オフラインの `ExecutionRunner`・`BattleRoyaleRunner` と専用サーバーが使う。Execution のとどめを刺せる距離は [モードの定義](#モードの定義) の `ExecuteRange` |
+
+### 調整値の JSON
+
+グレネード (`GrenadeSpec`)・印 (`PingSpec`)・吹き飛ばし (`KnockbackSpec`) と、実行時にプレイヤーや敵に付けるコンポーネント (制圧・分隊への指示・よろめき・近接・スライディング/パラシュート/ジップライン・足音) と専用サーバーの Bot の値は、
+取り込みをせずに JSON から読む (`Fps.Runtime.KitTuning`)。どれも、入口の欄 (`GameContent` の `<名前>Tuning`) の JSON → `Resources/Tuning/<名前>.json` → 既定値 の順で最初に見つかったものを使う。
 オフラインの `GrenadeThrower`・`PingController` も、ネット対戦のサーバー (`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`) も同じ値を使う。
-吹き飛ばしはプレイヤーの `KnockbackMovement` と敵の `EnemyAgent` が使い、重さはプレイヤーが `playerWeight`、敵が `enemyWeight` を読む。
+吹き飛ばしはプレイヤーの `KnockbackMovement` と敵の `EnemyAgent`、専用サーバーの爆発 (プレイヤーと Bot) が使い、重さはプレイヤーが `playerWeight`、敵と Bot が `enemyWeight` を読む。
 
 | Resources のパス | 項目 (名前は Spec のコンストラクターの引数名。省いた項目は既定値) |
 | --- | --- |
-| `Tuning/grenade.json` | 種類の並び `types` と、出撃のたびに持つ種類の Id の並び `carried` (省くと先頭の種類だけ)。1 種類は `id` (UUID)・`nameKey`・`fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・`stickiness` (`None`・`Surfaces`・`SurfacesAndCharacters`) と、信管が切れたときの効果を `impact` (武器の JSON と同じ書き方で `explosion`・`statusEffect`・`areaEffect`、投げ物だけの `blind` (`radius`・`durationSeconds`・`backFraction`)) か、爆発だけなら平らな `maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` で書く。`types` の無い 1 つのオブジェクトは、その 1 種類だけを持つ |
+| `Tuning/grenade.json` | 種類の並び `types` と、出撃のたびに持つ種類の Id の並び `carried` (省くと先頭の種類だけ)。1 種類は `id` (UUID)・`nameKey`・`fuseSeconds`・`throwSeconds`・`throwSpeed`・`throwLiftSpeed`・地面で水平の速さと回転を減らす割合 `rollDamping` (4 /s)・`stickiness` (`None`・`Surfaces`・`SurfacesAndCharacters`) と、投げた球の半径 `bodyRadius` (0.08 m)・重さ `mass` (0.4 kg)・跳ね返り `bounciness` (0.35)・摩擦 `friction` (0.6)・回転の減り `angularDamping` (0.05)、目から視線の向きへグレネードを出す距離 `releaseDistance` (0.7 m)、信管が切れたときの効果を `impact` (武器の JSON と同じ書き方で `explosion`・`statusEffect`・`areaEffect`、投げ物だけの `blind` (`radius`・`durationSeconds`・`backFraction`)) か、爆発だけなら平らな `maxDamage`・`damageRadius`・`fullDamageRadius`・`structureDamageAtCenter` で書く。`types` の無い 1 つのオブジェクトは、その 1 種類だけを持つ。球の当たりと手放す距離はオフラインと専用サーバーの両方が投げた種類の値を使う |
 | `Tuning/ping.json` | `lifetimeSeconds`・`maxMarkers`・`maxDistance`・`enemyAimToleranceDegrees`・`minIntervalSeconds` |
 | `Tuning/knockback.json` | 力 (`KnockbackForce`) は種類 (`explosion`・`melee`・`charge`) を頭に付けて開く: `explosionSpeed`・`explosionUpwardRatio`・`explosionWeightFactor`・`meleeSpeed`・`meleeUpwardRatio`・`meleeWeightFactor`・`chargeSpeed`・`chargeUpwardRatio`・`chargeWeightFactor`。ほかは `minSpeed`・`minAirSeconds`・`maxAirSeconds`・`airControl`・`gravity`・`recoverSeconds`・`landingSnapRadius`・`playerWeight`・`enemyWeight` |
+| `Tuning/suppression.json` | 制圧 (`SuppressionSpec`。`SuppressionActionInstaller` がプレイヤーと敵に渡す): 近くを抜けた弾とみなす距離 `nearMissRadius` (1.5 m)・1 発でたまる量 `buildPerNearMiss` (0.2)・減り始めるまで `decayDelaySeconds` (0.75)・毎秒の減り `decayPerSecond` (0.4)・制圧された境目 `suppressedLevel` (0.5)・解ける境目 `releasedLevel` (0.2)・満ちたときの散らばり `maxSpreadDegrees` (4)・照準の広がり `maxCrosshairSpread` (0.6)・画面の縁の濃さ `maxVignetteAlpha` (0.65) |
+| `Tuning/squad.json` | 分隊への指示 (`SquadOrderSpec`。`SquadCommandActionInstaller` が `SquadCommandController` に渡す): 長押しの秒数 `holdSeconds` (0.5)・照準の先を探す距離 `maxDistance` (150 m)・敵を指したとみなす角度 `enemyAimToleranceDegrees` (3)・分隊の無いモードで指示が届く距離 `nearbyRadius` (30 m)・付いてくる bot が寄ってくる距離 `followDistance` (3 m)・撃ち合いをやめて戻る距離 `leashDistance` (15 m) |
+| `Tuning/stagger.json` | よろめき (`StaggerSpec`。`StaggerActionInstaller` がプレイヤーの `PlayerStagger` と敵の `StaggerReaction` に渡す)。`player` と `enemy` の入れ子に、種類ごとの長さ `flinchSeconds`・`kneelSeconds`・`stumbleSeconds`・`blastSeconds`、よろめくのに要るダメージ `headDamage`・`limbDamage`・`meleeDamage`・`explosionDamage`、ダメージを数える秒数 `windowSeconds`、よろめいた後によろめかない秒数 `immunitySeconds` を書く。`player` だけはよろめいている間の動きと向きの倍率 `moveMultiplier`・`turnMultiplier` も書ける。既定は `player` が 0・0・0.4・0.6・20・8・1・1・1・1・0.35・0.35、`enemy` が 0.5・1.5・1・1・20・8・1・1・1・2 (並びは上の順) |
+| `Tuning/melee.json` | 近接 (`MeleeSpec`。`MeleeActionInstaller`・`ContextMeleeActionInstaller` がプレイヤーに渡す): `damage` (50)・`reach` (2 m)・`arcDegrees` (90)・`swingSeconds` (0.5)・`cooldownSeconds` (0.4)・`impactSeconds` (0.2)・`lungeDistance` (0.75 m)、とどめ `finisherSeconds` (1.2)・`finisherHealth` (25)・`finisherAmmo` (30)・`finisherInterruptible` (true)、背後からの倒し `takedownSeconds` (1.5)・`takedownInterruptible` (true)・見ていた敵のゲージ `takedownWitnessAwareness` (1)、相手に合わせる秒数 `alignSeconds` (0.15)・立つ距離 `standDistance` (1.2 m)・背後とみなす角度 `behindArcDegrees` (90)。敵の近接は [敵の定義](#敵の定義-enemydefinition) の `Melee` |
+| `Tuning/traversal.json` | `slide` (`SlideMovement`): `startSpeed` (11)・`deceleration` (8)・`endSpeed` (3)・`minSeconds` (0.4)・`maxSeconds` (3)・`slopeAcceleration` (20)。`parachute` (`ParachuteMovement`): `minOpenHeight` (6 m)・`descentSpeed` (4)・`horizontalSpeed` (6)・`steerAcceleration` (8)。`zipline` (`ZiplineMovement`): `grabRadius` (1.5 m)・`hangOffset` (1.3 m)・`regrabSeconds` (0.5)・`spreadMoveFraction` (1) |
+| `Tuning/stealth.json` | 足音 (`StealthNoiseSpec`。`StealthActionInstaller` が `StealthTarget` に渡す): 大きさ 1 の足音が聞こえる距離 `footstepNoiseRadius` (12 m)・歩幅 `walkStride` (2.2)・`sprintStride` (2.6)・`crouchStride` (1.5)・音の大きさ `walkVolume` (0.6)・`sprintVolume` (0.85)・`crouchVolume` (0.2)・着地で音が出る落下の速さ `minLandingFallSpeed` (2.5)・最大の音になる速さ `hardLandingFallSpeed` (12)・着地の音の最小 `minLandingVolume` (0.35) |
+| `Tuning/bots.json` | 専用サーバーの Bot (`NetBotSpec`)。判断 (`EnemySpec`): `sightRange` (40)・`attackRange` (25)・`fireRange` (省くと `attackRange`)・`loseSightSeconds` (2)・`searchSeconds` (6)・`reactionSeconds` (0.6)・体の向きの許し `facingToleranceDegrees` (180)・`openingSpreadDegrees` (0)・`settledSpreadDegrees` (0)・`rangeSpreadDegrees` (0)・`openingShots` (0)・`coverHideSeconds` (1.5)・`coverPeekSeconds` (2)・`coverHealthFraction` (0.5)・`archetype` (`Rifleman`)・`staggerResistance` (省くと種類ごとの既定)・`sprintRatio` (1.6)・`crouchRatio` (0.5)・`recoilControl` (0.75)。入力 (`BotInputSpec`): `maxTurnDegreesPerSecond` (240)・`aimErrorPerMeter` (0.03)・`aimErrorRefreshSeconds` (0.5)・照準の許し `fireToleranceDegrees` (3)・道の角と行き先に着いたとみなす `arrivalDistance` (0.5)・`sprintDistance` (8)・`sprintMaxAngleDegrees` (30)・`crouchWhenHolding` (false)。経路: `navSampleRadius` (2.5)・`repathSeconds` (0.5)・`repathDistance` (1)・`stuckSeconds` (2)・`stuckProgress` (0.5)。オフラインの敵は読まない ([敵の定義](#敵の定義-enemydefinition) を使う) |
 
 ```json
 {
@@ -320,11 +339,110 @@ Editor からは **Fps > Import Game Rules From JSON**。
 - `damagePerTick` か `statusEffect` のある範囲効果は燃える範囲 (焼夷グレネード) になる。出た直後と `tickSeconds` ごとに、中にいる人 (投げた本人も) に `statusEffect` をかけ直す。書かなければ `tickSeconds` ごとに `damagePerTick` を与え、出た後も `FireArea.DefaultBurnSeconds` (3 秒) 燃える燃焼をかける。外に出た人は燃焼が切れるまで燃える (ログは `[StatusEffect] afflict`)。ネット対戦ではサーバーがかけ、味方撃ちが `On` でなければ味方にはかけない。燃焼の範囲で見た目のプレハブが無ければ、仮の球の代わりに炎の粒子を出す。
 
 - パッケージにも同じパスの JSON (今の既定値) が入っている (`Packages/com.omnistove.fps/Resources/Tuning/`)。利用側に同じパスのファイルを置くと
-  どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `GrenadeTuning`・`PingTuning`・`KnockbackTuning` に
+  どちらが読まれるか決まらないので、ゲームの値は入口 ([ゲームの中身を差し替える](#ゲームの中身を差し替える-入口のアセット)) の `<名前>Tuning` の欄 (`GrenadeTuning`・`PingTuning`・`KnockbackTuning`・`SuppressionTuning`・`SquadTuning`・`StaggerTuning`・`MeleeTuning`・`TraversalTuning`・`StealthTuning`・`BotsTuning`) に
   JSON を入れる (入口の JSON があれば Resources の JSON は読まない。ログは `[Tuning] read GameContent '<入口>' (<JSON>)`)。
   コードからは `GrenadeThrower.ApplySpec`・`PingController.ApplySpec`・`NetTeamDeathmatch.GrenadeSpec`・`PingSpec`、`KnockbackMovement`・`EnemyAgent` の `KnockbackSpec`・`KnockbackWeight` に渡す。
+- 制圧・分隊・よろめき・近接・スライディング/パラシュート/ジップライン・足音は、それぞれの `*ActionInstaller` がコンポーネントを付けるときに読んで渡す。`bots.json` はオフラインでは読まず、[専用サーバーへの書き出し](#専用サーバーへの書き出し) が `server-data/tuning/` に写す。
 - ファイルが無ければ既定値で動く。壊れている・値が不正なら `[Tuning]` 付きのエラーにファイル名と項目名を出し、既定値で続ける。
 - Play 中に生まれたコンポーネントは、Inspector の値をこの JSON の値で上書きする (Play 中に Inspector で変えた値はその後に効く)。
+
+### 移動の値 (MotorSettings とネット対戦の motor)
+
+プレイヤーの移動は `MotorSettings` (入口の `Motor`) から読む。ネット対戦では、書き出し ([専用サーバーへの書き出し](#専用サーバーへの書き出し)) が `NetMatchDefinition` の Motor (空なら入口の `Motor`、それも無ければ `Resources/Movement/MotorSettings`) を
+ルールのファイル (`server-data/rules/<ルール名>.json`) の `motor` に同じ名前の項目で書き、サーバーは承認 (`ConnectAccepted`) でそれをクライアントの予測に送る。オフライン・クライアント・サーバーが同じ値で動く。
+省いた項目は既定値 (`MotorSpec`・`ProneSpec` の `Default*`) になる。歩き・ダッシュ・しゃがみの速さ・ジャンプ・重力・空中の操作のほかに、次の値を書ける。
+
+| `motor` の項目 (`MotorSettings` の欄) | 既定 | 意味 |
+| --- | --- | --- |
+| `safeFallSpeed` | 12 | 着地の落下の速さ (m/s) がこれ以下ならダメージを受けない (ルールの `fallDamage` が On のとき) |
+| `lethalFallSpeed` | 25 | 着地の落下の速さがこれ以上なら倒れる |
+| `dodgeDistance` | 3 | 回避 1 回で動く水平距離 (m) |
+| `dodgeSeconds` | 0.35 | 回避 1 回の秒数 |
+| `dodgeCooldownSeconds` | 0.5 | 回避が終わってから次の回避を始められるまでの秒数 |
+| `vaultMaxHeight` | 1.2 | 乗り越えられる障害物の足元からの高さの上限 (m) |
+| `vaultMinHeight` | 0.3 | 上端がこれ未満の障害物は段差として歩いて上がる (m) |
+| `vaultMaxDepth` | 1 | 乗り越えられる奥行きの上限 (m)。厚い物は台で、向こうへ降りない |
+| `vaultSpeed` | 6 | 乗り越える速さ (m/s) |
+| `vaultReach` | 1 | 乗り越え・よじ登りが届く、体の中心から障害物の手前の面までの水平距離 (m) |
+| `vaultMaxAngleDegrees` | 45 | 乗り越え・よじ登りで、向きと障害物へ向かう向きのなす角の上限 (度) |
+| `mantleMaxHeight` | 2.2 | よじ登れる段の高さの上限 (m) |
+| `mantleSpeed` | 3 | よじ登る速さ (m/s) |
+| `coverMaxEnterDistance` | 1 | カバーに入れる、体の中心から壁までの水平距離の上限 (m) |
+| `coverMaxEnterAngleDegrees` | 45 | カバーに入るときの、向きと壁へ向かう向きのなす角の上限 (度) |
+| `coverLowWallHeight` | 1.1 | 上端がこれ未満の壁は低い壁 (しゃがんで隠れる)、以上は高い壁 (端から横に出て覗く) (m) |
+| `coverPeekSideDistance` | 0.6 | 高い壁の端から覗くときに横へ出る距離 (m) |
+| `coverEnterSeconds` | 0.15 | カバーに入るとき壁へ寄せる秒数 |
+| `coverBackHoldSeconds` | 0.2 | カバー中に後ろの入力をこれだけ続けると出る (秒) |
+| `coverPeekSlideSeconds` | 0.15 | 高い壁の端から横に出る・戻る秒数 |
+| `ladderTopEntryDepth` | 0.3 | はしごの上の端からつかまったときの、上の足場からの足元の深さ (m) |
+| `ladderMinApproachDot` | 0.5 | 動く向きとはしごへ向かう向きのなす角の余弦がこれ以上ならつかまる |
+| `ladderMinApproachSpeed` | 0.5 | 水平の速さ (m/s) がこれ未満ならはしごへ進んでいるとみなさない |
+| `proneHeight` | 1 | 伏せのカプセルの高さ (m) |
+| `proneSpeed` | 1.2 | 伏せている間の水平速度 (m/s) |
+| `diveDistance` | 2.5 | ダッシュ中に伏せたとき飛び込んで滑る水平距離 (m) |
+| `diveSeconds` | 0.5 | 飛び込みの秒数 |
+| (`MotorSettings` の Prone Max Pitch Degrees。`ProneSpec.MaxPitchDegrees`) | 30 | 伏せている間に上下を向ける角度の上限 (度)。オフラインだけ |
+| (`MotorSettings` の Prone Spread Scale。`ProneSpec.SpreadScale`) | 0.5 | 伏せている間に弾の散らばりと照準の広がりに掛ける倍率。オフラインだけ |
+
+- `MotorSettings` を変えたら、ルールを書き出し直してサーバーを作り直す。クライアントは承認のときに受け取るので作り直さなくてよい。
+- ルールのファイルの `match` の `maxPlayers` (既定 8、1〜64。`NetMatchDefinition` の Max Players) は試合に入れる人の数 (Bot は数えない)。満員ならサーバーは参加を `server-full` で断り、クイックマッチのロビーもこの人数で作る。
+
+### 敵の定義 (EnemyDefinition)
+
+オフラインの敵 (`EnemyAgent`) は、配線した `Definition`、無ければ入口の `Enemies` の同じ種類の最初のものから読む。視界・射撃・遮蔽・怯み・種類ごとの値のほかに、次の欄がある。
+`EnemyStealth`・`EnemyMelee` も同じ定義を先に使い、定義が無いときだけ自分の Inspector の値を使う (`EnemyStealth.ApplySpec` でコードから渡した値は定義より優先する)。
+
+| 欄 (見出し) | 既定 | 意味 |
+| --- | --- | --- |
+| `RecoilControl` (射撃) | 0.75 | たまった反動のうち、撃つたびに打ち消す割合 (0〜1) |
+| `ArrivalDistance` (動き) | 0.5 | 行き先にこの水平距離 (m) まで近づいたら着いたとみなす |
+| `SprintRatio` (動き) | 1.6 | 走るときに歩きの速さへ掛ける倍率。足の運び (`CharacterAnimator`) も合わせる |
+| `CrouchRatio` (動き) | 0.5 | しゃがんで動くときに歩きの速さへ掛ける倍率 |
+| `TurnSpeed` (動き) | 360 | 狙う向きへ向き直る速さ (度/秒) |
+| `EyeHeight` (体) | 1.6 | 立っているときの足元からの目の高さ (m) |
+| `CrouchHeight` (体) | 1 | しゃがんだときの当たり判定の高さ (m) |
+| `CrouchEyeHeight` (体) | 0.8 | しゃがんだときの足元からの目の高さ (m) |
+| `Awareness` (発見ゲージ) | 下の表 | ステルスで見つかるまでのゲージのたまり方・減り方と物音の聞こえ方 (`EnemyStealth`) |
+| `Melee` (近接) | 下の表 | 近づいた目標を殴るときの値 (`EnemyMelee`) |
+
+`Awareness` の欄と既定 (名前は `AwarenessSpec` の値の名前): 視野の全角 `FieldOfViewDegrees` (120)・1 秒でたまる量 `GainPerSecond` (1)・距離でたまり方を落とさない距離 `FullGainDistance` (3 m)・視認距離の端の係数 `FarGainFactor` (0.15)・視野の端の係数 `PeripheralGainFactor` (0.4)・
+しゃがみ `CrouchGainFactor` (0.5)・伏せ `ProneGainFactor` (0.25)・止まっている `StillGainFactor` (0.5)・動きの係数が 1 になる速さ `FullMotionSpeed` (6 m/s)・減り始めるまで `DecayDelaySeconds` (3)・毎秒の減り `DecayPerSecond` (0.1)・
+気づき `NoticeThreshold` (0.2)・警戒 `AlertThreshold` (0.6)・交戦を保つ境目 `EngagedHoldThreshold` (0.8)・仲間に交戦を伝える範囲 `AlarmRadius` (15 m)・銃声 1 発 `GunshotGain` (0.4)・足音 1 歩 `FootstepGain` (0.1)・物音を調べに行くときの量 `InvestigateLevel` (0.75)。
+
+`Melee` の欄と既定 (名前は `MeleeSpec` の値の名前): `Damage` (50)・`Reach` (2 m)・`ArcDegrees` (90)・`SwingSeconds` (0.5)・`CooldownSeconds` (0.4)・`ImpactSeconds` (0.2)・`LungeDistance` (0.75 m)。
+
+専用サーバーの Bot はこの定義を読まず、`bots.json` ([調整値の JSON](#調整値の-json)) の同じ名前の項目を使う。
+
+### モードの定義
+
+各モードの `*Runner` は、配線した `Definition` → 入口のモードの欄 → Runner の Inspector の値 の順で読む。定義は **Assets > Create > Fps > Modes > <モード名>** (Horde と Gun Game Ladder は **Assets > Create > Fps > Horde**・**Gun Game Ladder**) で作る。
+これまでの得点・制限時間・リスポーンのほかに、次の欄がある (既定はデータを書かないときの今の値)。
+
+| 定義 (入口の欄) | 欄と既定 |
+| --- | --- |
+| `TeamDeathmatchDefinition` (`TeamDeathmatch`) | 陣営の数 `SideCount` (2。`SideMember` の陣営 Id はこれ未満)・1 陣営の人数の上限 `SideCapacity` (8)・キル 1 回の点 `PointsPerKill` (1) |
+| `KillConfirmedDefinition` (`KillConfirmed`) | タグ 1 枚で確定したときの点 `PointsPerConfirm` (1)・タグを拾える半径 `TagPickupRadius` (1 m) |
+| `SearchAndDestroyDefinition` (`SearchAndDestroy`) | 攻撃側が落ちた爆弾を拾う距離 `BombPickupRadius` (1.5 m)・防衛側が解除できる距離 `DefuseRadius` (2 m) |
+| `HordeDefinition` (`Horde`) | 敵 1 体を倒したときの点 `KillScore` (1)・防衛物を置く費用 `BuildCost` (40)・部品 1 つを直す費用 `RepairCostPerPiece` (4)・直す・置くのに近づく距離 `InteractRadius` (3.5 m)・波の敵の陣営 `EnemySide` (陣営 Id 1)・Idle・Patrol の敵を向かわせる間隔 `AlertInterval` (3 秒)・敵対者に近すぎる出現点を避ける距離 `MinSpawnDistance` (8 m)・倒された敵を消すまで `CorpseSeconds` (5 秒、0 なら消さない) |
+| `GunGameLadderDefinition` (`GunGameLadder`) | 制限時間 `TimeLimitSeconds` (600)・リスポーン `RespawnSeconds` (2) |
+| `FreeForAllDefinition` (`FreeForAll`、新規) | 制限時間 `TimeLimitSeconds` (300)・点の上限 `ScoreLimit` (15)・リスポーン `RespawnSeconds` (3)・キル 1 回の点 `PointsPerKill` (1)。`MatchRunner` (射撃場のソロの試合) もここから制限時間と勝利に必要なキル数を読む |
+| `GuardianDefinition` (`Guardian`、新規) | 制限時間 `TimeLimitSeconds` (300)・リーダーが生きている間のリスポーン `RespawnSeconds` (3)・キル 1 回の点 `PointsPerKill` (1) |
+| `ExecutionDefinition` (`Execution`、新規) | 勝つのに要るラウンド数 `WinsToWin` (3)・ラウンド前の待ち `PreparationSeconds` (3)・ラウンドの制限時間 `RoundTimeLimitSeconds` (120)・とどめに押し続ける秒数 `ExecuteSeconds` (1.5)・とどめを刺せる距離 `ExecuteRange` (2 m)。味方を起こす距離はルールの `actions.reviveRange` |
+| `BattleRoyaleDefinition` (`BattleRoyale`、新規) | 分隊の数 `SquadCount` (4)・1 隊の人数 `SquadSize` (2)・制限時間 `TimeLimitSeconds` (0 は制限なし)・bot の用事を決め直す間隔 `BotPlanIntervalSeconds` (0.5)・bot が味方と拾える物を探す半径 `BotSearchRadius` (25 m)・パラシュートで降ろす高さ `DropHeight` (60 m)。蘇生の距離はルールの `actions.reviveRange` |
+
+### ミッションの Id
+
+ミッションはアセットの名前ではなく Id で引く。`MissionDefinition` の `Id` (英数字・`_`・`-` の 1〜64 文字) は、セーブのスロット名・メニューの選択・`MissionCatalog` の照合に使う。
+`MissionCatalog` の各ミッションの Id は、そのミッションの `MissionDefinition` の Id と同じにする (違う・空なら `MissionCatalog.Validate` が `MissionCatalogException` を出す)。`CampaignRunner` はシーンの `MissionDefinition` の Id でセーブと選択を照合する。
+`MissionCatalog` には、プレイヤーが倒れてからチェックポイントで読み直すまでの秒数 `ReloadDelaySeconds` (3) と、セーブの案内を出しておく秒数 `SavedNoticeSeconds` (2.5) もある (`CampaignRunner` は配線した一覧、無ければ入口の `Missions` から読む)。
+
+### 専用サーバーへの書き出し
+
+サンプルの `Fps.Editor.ServerRulesExporter.Export` (**Fps > Server Data > Export Rules And Points**、リポジトリでは `make export-server-rules`) は、オフラインと同じ順で値を読んで `server-data/` に書く。手順はリポジトリの `docs/dedicated-server.md`。
+
+- ルールは、入口 (`GameContent`) の `Rules` を先に、続けて `NetMatchDefinition` の Rules の並びの順に (同じものは 1 度だけ) `server-data/rules/<ルール名>.json` に書く。どちらにも無ければ書かずにエラーにする。
+- ロードアウトと選べる武器は、入口の `Loadout`・`WeaponCatalog` を先に、無ければ `NetMatchDefinition` のものを使う (クライアントと同じ)。移動の値は [移動の値](#移動の値-motorsettings-とネット対戦の-motor)。
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、入口の欄の JSON、無ければ `Resources/Tuning/<名前>.json` を `server-data/tuning/` に写す。どちらも無ければ既定値になる `{}` を書く。
 
 ### Inspector から変えられる値
 
@@ -335,12 +453,9 @@ Editor からは **Fps > Import Game Rules From JSON**。
 | `WeaponDefinition` (`<root>/Weapons/*.asset`) | 弾数・連射間隔・リロード・ダメージ・射程・距離減衰・爆発半径・ADS の視野角・ブラインドファイアの散らばり・アクティブリロードの判定・反動・弾の散らばり・銃声が敵に聞こえる距離 (消音した武器は小さくする) |
 | `WeaponCatalogAsset`・`LoadoutDefinition` | 使える武器の一覧と、最初に持つ武器 |
 | `GameRulesDefinition` (`<root>/Rules/*.asset`) | フレンドリーファイア・リスポーン・自動回復・死亡時の見せ方・弾薬・建造物の破壊・ダウンやカバーなどのアクション・スポーン保護・落下ダメージ・HUD の量・勝敗の決め方 |
-| `GrenadeThrower` (プレイヤーのコンポーネント) | 爆発までの秒数・投げる間隔・初速・ダメージ・爆発の半径・建造物への被害 |
-| `EnemyStealth` (敵のコンポーネント) | 発見ゲージの視野・たまる速さと距離・角度・姿勢・動きの係数・減り方・気づき/警戒/交戦の境目・仲間に交戦を伝える範囲・銃声と足音でゲージに足す量・物音を調べに行くときの量 (音だけではこれより上がらない)・頭上の印のプレハブ |
-| `StealthTarget` (プレイヤーのコンポーネント) | 明るさの代わりの係数 (暗がりを作るゲームがここを書き換える)・伏せているか・足音が敵に聞こえる距離 |
+| `EnemyStealth` (敵のコンポーネント) | 頭上の印のプレハブ (発見ゲージの値は [敵の定義](#敵の定義-enemydefinition) の `Awareness`) |
+| `StealthTarget` (プレイヤーのコンポーネント) | 明るさの代わりの係数 (暗がりを作るゲームがここを書き換える)・伏せているか (足音の聞こえる距離と歩幅は `stealth.json`) |
 | `DistractionThrowDefinition` (能力のアセット) | 物を投げる初速と上向きの速さ・落ちた音が敵に聞こえる距離・消すまでの秒数・投げる物の見た目と落ちた音 (空なら仮の球で、音は鳴らさない) |
-| `PingController` (プレイヤーのコンポーネント) | 印が消えるまでの秒数・同時に付けられる数・照準の先を探す距離・照準が外れていても敵に付ける角度・続けて付ける間隔 |
-| `SquadCommandController` (プレイヤーのコンポーネント) | 長押しとみなす秒数・照準の先を探す距離・照準が外れていても敵を指したとみなす角度・分隊の無いモードで指示が届く距離・付いてくる bot が寄ってくる距離と撃ち合いをやめて戻る距離 |
 | `BossDefinition` (ボスのアセット、`BossController.Definition` に配線) | 段階ごとの体力の閾値・動きの速さの倍率・出す弱点 (`BossWeakPoint` の Id)、部位ごとのダメージ倍率 (頭・胴・手足・弱点)、`BossStrafeMotion` の往復の速さと幅。空なら `BossController`・`BossStrafeMotion` の Inspector の値を使う |
 
 JSON から取り込み直すと、そのアセットの値は JSON の値で上書きされる。Inspector で変えた値を残したいなら、JSON にも同じ値を書く。
@@ -364,14 +479,22 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 | --- | --- | --- |
 | 武器 (弾数・連射・ダメージ・反動など) | `WeaponDefinition` (JSON から取り込む: [武器を JSON から取り込む](#武器を-json-から取り込む)) | `WeaponCatalog`・`Loadout` |
 | ルール (味方撃ち・リスポーン・回復・HUD の量・勝敗など) | `GameRulesDefinition` (JSON から取り込む: [モードのルールを JSON から取り込む](#モードのルールを-json-から取り込む)) | `Rules` |
-| モードの得点・制限時間・リスポーンなど | モードごとの定義 (`TeamDeathmatchDefinition`・`DominationDefinition`・`HardpointDefinition`・`KillConfirmedDefinition`・`SearchAndDestroyDefinition`・`HordeDefinition`・`GunGameLadderDefinition`)。**Assets > Create > Fps > Modes** などで作る | モード名の欄 |
-| 移動 (歩き・ダッシュ・しゃがみの速さ、ジャンプ、重力、空中の操作) | `MotorSettings` (**Assets > Create > Fps > Motor Settings**) | `Motor` |
-| 敵 AI (視界・反応・散らばり・遮蔽・怯み・種類ごとの値) | `EnemyDefinition` (**Assets > Create > Fps > Enemy Definition**) | `Enemies` |
-| グレネード・印・吹き飛ばし | JSON ([グレネード・印・吹き飛ばしの調整値](#グレネード印吹き飛ばしの調整値)) | `GrenadeTuning`・`PingTuning`・`KnockbackTuning` |
+| モードの得点・制限時間・リスポーンなど | モードごとの定義 (`TeamDeathmatchDefinition`・`DominationDefinition`・`HardpointDefinition`・`KillConfirmedDefinition`・`SearchAndDestroyDefinition`・`HordeDefinition`・`GunGameLadderDefinition`・`FreeForAllDefinition`・`GuardianDefinition`・`ExecutionDefinition`・`BattleRoyaleDefinition`)。**Assets > Create > Fps > Modes** などで作る ([モードの定義](#モードの定義)) | モード名の欄 |
+| 移動 (歩き・ダッシュ・しゃがみの速さ、ジャンプ、重力、空中の操作、落下・回避・乗り越え・よじ登り・カバー・はしご・伏せ) | `MotorSettings` (**Assets > Create > Fps > Motor Settings**。ネット対戦はルールのファイルの `motor`: [移動の値](#移動の値-motorsettings-とネット対戦の-motor)) | `Motor` |
+| 敵 AI (視界・反応・散らばり・反動の制御・遮蔽・怯み・到着距離・走る/しゃがむ速さ・旋回・目の高さ・発見ゲージ・近接・種類ごとの値) | `EnemyDefinition` (**Assets > Create > Fps > Enemy Definition**: [敵の定義](#敵の定義-enemydefinition)) | `Enemies` |
+| 専用サーバーの Bot | JSON (`bots.json`: [調整値の JSON](#調整値の-json)) | `BotsTuning` |
+| グレネード・印・吹き飛ばし | JSON ([調整値の JSON](#調整値の-json)) | `GrenadeTuning`・`PingTuning`・`KnockbackTuning` |
+| 制圧・分隊への指示・よろめき・近接・スライディング/パラシュート/ジップライン・足音 | JSON ([調整値の JSON](#調整値の-json)) | `SuppressionTuning`・`SquadTuning`・`StaggerTuning`・`MeleeTuning`・`TraversalTuning`・`StealthTuning` |
+| プレイヤーの最大体力・部位のダメージ倍率・蘇生の距離 | ルール (`playerMaxHealth`・`zoneDamage`・`actions.reviveRange`: [モードのルールを JSON から取り込む](#モードのルールを-json-から取り込む)) | `Rules` |
+| ネット対戦の試合の人数 (`maxPlayers`)・点数・時間・体力 | `NetMatchDefinition` (書き出してルールのファイルの `match` に: [専用サーバーへの書き出し](#専用サーバーへの書き出し)) | — |
 | 爆発する置き物 (耐久・ダメージ・半径・連鎖の遅れ・燃え方) | `ExplosivePropDefinition` (**Assets > Create > Fps > Explosive Prop**) | 置き物の `ExplosiveProp` の Definition |
 | 協力して開ける物 (要る人数・押し続ける秒数) と扉の開く量・秒数 | `CoopInteractableDefinition` (**Assets > Create > Fps > Coop Interactable**) | `CoopInteractable` の Definition (それで開く `CoopDoor` も読む) |
+| キャンペーンのミッション (Id・やられた後の読み直しとセーブの案内の秒数) | `MissionDefinition`・`MissionCatalog` (**Assets > Create > Fps > Mission Definition**・**Mission Catalog**: [ミッションの Id](#ミッションの-id)) | `Missions` |
+| 弾薬箱 (補給の間隔・範囲の半径) | `PickupDefinition` (**Assets > Create > Fps > Pickup**) | `AmmoCrate` の Definition |
+| ボス (段階・弱点・部位の倍率・往復の速さと幅) | `BossDefinition` (**Assets > Create > Fps > Boss**: [ボスの段階と弱点](#ボスの段階と弱点)) | `BossController` の Definition |
+| 乗り物 (Id・耐久・乗れる距離・追うカメラ) | `VehicleDefinition` (**Assets > Create > Fps > Vehicle Definition**) | `Vehicle` の Definition |
 | メニューから移るシーン | `MenuSceneSettings` (**Assets > Create > Fps > Menu Scene Settings**) | `MenuScenes` |
-| そのほか (ステルス・印・分隊・ボスなど) | コンポーネントの Inspector ([Inspector から変えられる値](#inspector-から変えられる値)) | — |
+| そのほか (明るさの係数・物を投げる能力など) | コンポーネントと能力のアセットの Inspector ([Inspector から変えられる値](#inspector-から変えられる値)) | — |
 
 ## 見た目と音を差し替える
 

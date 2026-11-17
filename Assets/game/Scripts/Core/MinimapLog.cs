@@ -18,6 +18,14 @@ namespace Shooter.Core
             return $"{LogTag} configured {spec}";
         }
 
+        public static string Contacts(int allies, int enemies, int pings, int objectives)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} contacts allies={1} enemies={2} pings={3} objectives={4}",
+                LogTag, allies, enemies, pings, objectives);
+        }
+
         public static string ValueReplaced(string source, string item, float value, float fallback)
         {
             return string.Format(

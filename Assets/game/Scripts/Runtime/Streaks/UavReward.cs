@@ -24,9 +24,17 @@ namespace Shooter.Runtime
             }
 
             var marked = 0;
+            // 印を断られても回り続けるのは、印の規則が切ってあってもミニマップには載せるため。
+            var marking = true;
             foreach (var candidate in UnityEngine.Object.FindObjectsByType<Damageable>(FindObjectsInactive.Exclude))
             {
                 if (!IsEnemyOf(user, candidate))
+                {
+                    continue;
+                }
+
+                MinimapReveals.Reveal(candidate, durationSeconds);
+                if (!marking)
                 {
                     continue;
                 }
@@ -37,7 +45,7 @@ namespace Shooter.Runtime
                 }
                 else if (pings.LastRefusal != Shooter.Core.PingRefusal.NoTarget)
                 {
-                    break;
+                    marking = false;
                 }
             }
 

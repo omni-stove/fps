@@ -8,7 +8,8 @@ namespace Fps.Runtime
     /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生役。倒した相手の倒す直前の数秒 (<see cref="KillCamClip"/>) を、
     /// その時々の相手の目から肩越し (<see cref="DeathCamView.FrameAlly"/>) にカメラを置いて再生する。
     /// 記録が無ければ再生せずに終わり、持ち主 (オフラインの <see cref="PlayerDeathCamera"/>・ネット対戦の NetDeathCamera) はすぐ倒した相手を映す (<see cref="DeathCamera.Killer"/>)。
-    /// 演出 (速さ・枠・文字) は始めるときの <see cref="KillCamPresentations.Current"/> に任せ、演出が例外を投げてもログに出して再生は続ける。
+    /// 再生の速さは始めるときの <see cref="KillCamPresentations.Current"/> に任せ、演出が例外を投げてもログに出して再生は続ける。
+    /// 再生している間は <see cref="GameSignals.KillCam"/> に今の再生 (<see cref="KillCamStatus"/>) を出し、終えたら消す。枠と文字は UI が決める。
     /// 再生はカメラだけのもので、リスポーンまでの待ちは止めない。
     /// </summary>
     public sealed class KillCamReplay
@@ -18,6 +19,7 @@ namespace Fps.Runtime
         private KillCamPlayback _playback;
         private IKillCamPresentation _presentation;
         private string _killerName = string.Empty;
+        private KillCamStatus? _status;
         private Transform _killerRoot;
         private float _speed = 1f;
 
@@ -42,11 +44,11 @@ namespace Fps.Runtime
         /// 再生中に呼ぶと前の再生を途中でやめてから始める。
         /// </summary>
         /// <param name="clip">倒した相手の倒す直前の数秒。null は空とみなす。</param>
-        /// <param name="killerName">倒した相手の名前 (ログ用)。</param>
-        /// <param name="caption">演出に出させる見出し。</param>
+        /// <param name="killerName">倒した相手の名前。</param>
+        /// <param name="weaponId">倒した武器の Id。分からなければ空文字か null。</param>
         /// <param name="killerRoot">倒した相手の本体。カメラを壁で縮める判定でその体を除く。無ければ null。</param>
         /// <param name="view">借りているカメラ。</param>
-        public bool Begin(KillCamClip clip, string killerName, LocalizedText caption, Transform killerRoot, DeathCamView view)
+        public bool Begin(KillCamClip clip, string killerName, string weaponId, Transform killerRoot, DeathCamView view)
         {
             Stop("restarted");
             _killerName = killerName ?? string.Empty;
@@ -62,9 +64,10 @@ namespace Fps.Runtime
             _presentation = KillCamPresentations.Current;
             _speed = ReadSpeed(_presentation);
             Debug.Log(KillCamLog.Replaying(_owner.name, _killerName, _playback.Clip.Duration, _speed), _owner);
-            var shot = new KillCamShot(_owner.gameObject, view != null ? view.Camera : null, caption, _killerName, _playback.Clip.Duration);
+            var shot = new KillCamShot(_owner.gameObject, view != null ? view.Camera : null, _killerName, weaponId, _playback.Clip.Duration);
             Notify(p => p.Begin(shot));
             Frame(view);
+            Publish(new KillCamStatus(_killerName, weaponId, _playback.Clip.Duration, 0f, _speed));
             return true;
         }
 
@@ -85,6 +88,7 @@ namespace Fps.Runtime
             {
                 Notify(p => p.Progress(1f));
                 Notify(p => p.End(true));
+                Publish(_status.Value.At(_status.Value.DurationSeconds));
                 Debug.Log(KillCamLog.Finished(_owner.name, _killerName), _owner);
                 Clear();
                 return false;
@@ -93,6 +97,7 @@ namespace Fps.Runtime
             Frame(view);
             var progress = _playback.Progress;
             Notify(p => p.Progress(progress));
+            Publish(_status.Value.At(_playback.Elapsed));
             return true;
         }
 
@@ -163,8 +168,21 @@ namespace Fps.Runtime
             }
         }
 
+        private void Publish(KillCamStatus status)
+        {
+            _status = status;
+            GameSignals.KillCam.Publish(status);
+        }
+
         private void Clear()
         {
+            // 別の持ち主が後から出した再生まで消さないよう、自分が出した値のときだけ消す
+            if (_status.HasValue)
+            {
+                GameSignals.KillCam.ClearIfCurrent(_status);
+            }
+
+            _status = null;
             _playback = null;
             _presentation = null;
             _killerRoot = null;

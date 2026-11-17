@@ -24,6 +24,8 @@ namespace Fps.Runtime
         private bool _enabledProne;
         private Prone _proneRule = Prone.Off;
         private ProneSpec _proneSpec = ProneSpec.Default;
+        // コードで渡した伏せを、後から TryInitializeFromHierarchy で MotorSettings の値に戻さないため。
+        private bool _proneSpecAssigned;
         private ProneInput _proneInput;
         private ProneDive _dive;
 
@@ -65,7 +67,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// 伏せの調整値。既定は <see cref="ProneSpec.Default"/>。初期化済みで変えると、伏せの寸法を作り直し (伏せていれば今の姿勢に当て直す)、飛び込みはやめる。
+        /// 伏せの調整値。既定は <see cref="ProneSpec.Default"/> で、<see cref="TryInitializeFromHierarchy"/> は (ここで渡していなければ)
+        /// <see cref="MotorSettings"/> の伏せ (<see cref="MotorSettings.ResolveProne"/>) にする。初期化済みで変えると、伏せの寸法を作り直し (伏せていれば今の姿勢に当て直す)、飛び込みはやめる。
         /// 伏せの高さが CharacterController に合わないとき (半径の 2 倍未満・しゃがみより高い) は、合う範囲に収めて警告を出す。
         /// </summary>
         public ProneSpec ProneSpec
@@ -74,6 +77,7 @@ namespace Fps.Runtime
             set
             {
                 _proneSpec = value ?? throw new ArgumentNullException(nameof(value));
+                _proneSpecAssigned = true;
                 if (!IsInitialized)
                 {
                     return;

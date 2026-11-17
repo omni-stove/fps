@@ -250,6 +250,38 @@ namespace Fps.Core.Tests
         }
 
         [Test]
+        public void ChangedIsRaisedOnlyWhenChargesPhaseOrTimesMove()
+        {
+            var slot = new AbilitySlot(new AbilitySpec(2, 5f, 1f, 0.5f));
+            var heard = 0;
+            slot.Changed += () => heard++;
+
+            slot.Tick(1f);
+            Assert.That(heard, Is.Zero, "a full, idle slot has nothing to tick");
+
+            Assert.That(slot.TryStart(), Is.True);
+            Assert.That(heard, Is.EqualTo(1), "starting spends a charge");
+
+            slot.Tick(0.25f);
+            Assert.That(heard, Is.EqualTo(2), "the cooldown, windup and recharge move");
+
+            Assert.That(slot.End(), Is.True);
+            Assert.That(heard, Is.EqualTo(3), "ending leaves the running phase");
+            Assert.That(slot.End(), Is.False);
+            Assert.That(heard, Is.EqualTo(3), "ending an idle slot changes nothing");
+
+            slot.Refund();
+            Assert.That(heard, Is.EqualTo(4), "a refund gives the charge back");
+
+            slot.Reset();
+            Assert.That(heard, Is.EqualTo(4), "resetting a full, ready slot changes nothing");
+
+            slot.TryStart();
+            slot.Reset();
+            Assert.That(heard, Is.EqualTo(6), "resetting a spent slot fills it");
+        }
+
+        [Test]
         public void WaitSecondsRoundUpToATenth()
         {
             Assert.That(HudFormat.AbilityWaitSeconds(3.42f), Is.EqualTo("3.5"));

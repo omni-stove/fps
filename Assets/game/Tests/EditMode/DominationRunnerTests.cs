@@ -13,7 +13,7 @@ namespace Fps.Tests.EditMode
 {
     /// <summary>
     /// <see cref="DominationRunner"/> が、拠点にいるプレイヤーを Domination に伝えて占領・得点・終了まで進め、
-    /// キルとデスを渡し、倒れた側を出現点へ戻し、HUD に <see cref="DominationView"/> を出すことを確かめる。
+    /// キルとデスを渡し、倒れた側を出現点へ戻し、試合の状態を <see cref="GameSignals.Domination"/> に出すことを確かめる。
     /// NavMesh の上を歩く敵と R での再開は Play で確かめる (手順は PR 本文)。
     /// </summary>
     public sealed class DominationRunnerTests
@@ -40,6 +40,7 @@ namespace Fps.Tests.EditMode
         public void SetUp()
         {
             CombatEvents.ClearSubscribers();
+            GameSignals.ResetAll();
 
             _host = new GameObject("Bootstrap");
             _created.Add(_host);
@@ -114,6 +115,7 @@ namespace Fps.Tests.EditMode
 
             _created.Clear();
             CombatEvents.ClearSubscribers();
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -253,30 +255,125 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void HudShowsScoresTimeAndOwners()
+        public void BeginAndTickPublishTheScoresTimeAndPoints()
         {
+            var published = new List<DominationStatus>();
+            GameSignals.Domination.Changed += published.Add;
+
             Begin();
 
-            var view = _world.Hud.gameObject.GetComponent<DominationView>();
-            Assert.That(view, Is.Not.Null);
-            Assert.That(_runner.View, Is.SameAs(view));
-            Assert.That(view.AlphaScoreText, Is.EqualTo("ALPHA 0"));
-            Assert.That(view.BravoScoreText, Is.EqualTo("BRAVO 0"));
-            Assert.That(view.TimeText, Is.EqualTo(HudFormat.Time(TimeLimit)));
-            Assert.That(view.PointTexts, Is.EqualTo(new[] { "A --" }));
-            Assert.That(view.ResultText, Is.Empty);
+            Assert.That(published, Has.Count.EqualTo(1), "Begin publishes once");
+            var status = GameSignals.Domination.Value;
+            Assert.That(status, Is.SameAs(published[0]));
+            Assert.That(status, Is.SameAs(_runner.Status));
+            Assert.That(status.AlphaScore, Is.EqualTo(0f));
+            Assert.That(status.BravoScore, Is.EqualTo(0f));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(TimeLimit));
+            Assert.That(status.Points, Is.EqualTo(new[] { new ControlPointStatus(null, 0, false) }));
+            Assert.That(status.IsEnded, Is.False);
 
             LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
             _runner.Tick(CaptureSeconds);
             _runner.Tick(1.5f);
-            view.Refresh();
 
-            Assert.That(view.AlphaScoreText, Is.EqualTo("ALPHA 15"));
-            Assert.That(view.TimeText, Is.EqualTo("00:58"));
-            Assert.That(view.PointTexts, Is.EqualTo(new[] { "A ALPHA" }));
+            Assert.That(published, Has.Count.EqualTo(3), "each tick publishes");
+            status = GameSignals.Domination.Value;
+            Assert.That(status.AlphaScore, Is.EqualTo(15f).Within(1e-4f));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(TimeLimit - CaptureSeconds - 1.5f).Within(1e-4f));
+            Assert.That(status.Points, Is.EqualTo(new[] { new ControlPointStatus(Team.Alpha, ControlPointStatus.FullPercent, false) }));
 
             _runner.Tick(10f);
-            Assert.That(view.ResultText, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Alpha))));
+
+            status = GameSignals.Domination.Value;
+            Assert.That(status.IsEnded, Is.True);
+            Assert.That(status.Winner, Is.EqualTo(Team.Alpha));
+
+            _runner.Tick(1f);
+            Assert.That(published, Has.Count.EqualTo(4), "an ended match no longer publishes");
+            GameSignals.Domination.Changed -= published.Add;
+        }
+
+        [Test]
+        public void StopClearsThePublishedStatus()
+        {
+            Begin();
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Domination.Value, Is.Null);
+            Assert.That(_runner.Status, Is.Null);
+        }
+
+        [Test]
+        public void StopKeepsAStatusPublishedByAnotherRunner()
+        {
+            Begin();
+            var other = new DominationStatus(0f, 0f, 1f, null, false, null);
+            GameSignals.Domination.Publish(other);
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Domination.Value, Is.SameAs(other));
+        }
+
+        [Test]
+        public void BeginPublishesTheParticipantsOnTheScoreboard()
+        {
+            Begin();
+
+            var entries = GameSignals.Scoreboard.Value;
+            Assert.That(entries, Is.SameAs(_runner.PublishedScoreboard));
+            Assert.That(entries, Is.EqualTo(new[]
+            {
+                new ScoreboardEntry(DominationRunner.PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+                new ScoreboardEntry(1, ScoreboardName.Literal("enemy-1"), Team.Bravo, 0, 0, ScoreboardConnection.None, false),
+            }));
+        }
+
+        [Test]
+        public void AKillPublishesTheNewCounts()
+        {
+            Begin();
+            var before = GameSignals.Scoreboard.Value;
+
+            LogAssert.Expect(LogType.Log, "[Domination] kill killer=0 victim=1");
+            using (CombatEvents.Attribute(_world.Player, "rifle"))
+            {
+                _enemyBody.Kill();
+            }
+
+            var entries = GameSignals.Scoreboard.Value;
+            Assert.That(entries, Is.Not.SameAs(before), "each publish is a new list");
+            Assert.That(entries[0].Kills, Is.EqualTo(1));
+            Assert.That(entries[0].Deaths, Is.Zero);
+            Assert.That(entries[1].Kills, Is.Zero);
+            Assert.That(entries[1].Deaths, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void StopClearsThePublishedScoreboard()
+        {
+            Begin();
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.Null);
+            Assert.That(_runner.PublishedScoreboard, Is.Null);
+        }
+
+        [Test]
+        public void StopKeepsAScoreboardPublishedByAnotherRunner()
+        {
+            Begin();
+            var other = new[]
+            {
+                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, ScoreboardConnection.None, true),
+            };
+            GameSignals.Scoreboard.Publish(other);
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Scoreboard.Value, Is.SameAs(other));
         }
 
         [Test]

@@ -24,8 +24,8 @@ namespace Fps.Runtime
         /// <summary>オフラインのモード (<see cref="ModeRunnerBase"/>) の今の状態。モードを進めていなければ null。</summary>
         public static GameSignal<ModeStatus> ModeStatus { get; } = new GameSignal<ModeStatus>(nameof(ModeStatus));
 
-        /// <summary>拠点制圧の試合。進めていなければ null。</summary>
-        public static GameSignal<Domination> Domination { get; } = new GameSignal<Domination>(nameof(Domination));
+        /// <summary>拠点制圧の試合の今の状態。進めていなければ null。</summary>
+        public static GameSignal<DominationStatus> Domination { get; } = new GameSignal<DominationStatus>(nameof(Domination));
 
         /// <summary>スコアボードの行。出すものが無ければ null。</summary>
         public static GameSignal<IReadOnlyList<ScoreboardEntry>> Scoreboard { get; } =
@@ -34,8 +34,8 @@ namespace Fps.Runtime
         /// <summary>近くで Interact したら何が起きるかの案内。無ければ null。</summary>
         public static GameSignal<InteractHint?> InteractHint { get; } = new GameSignal<InteractHint?>(nameof(InteractHint));
 
-        /// <summary>射撃場のチュートリアルの進み。チュートリアルをしていなければ null。</summary>
-        public static GameSignal<TutorialSteps> Tutorial { get; } = new GameSignal<TutorialSteps>(nameof(Tutorial));
+        /// <summary>射撃場のチュートリアルの今の段階。チュートリアルをしていなければ null。</summary>
+        public static GameSignal<TutorialStatus?> Tutorial { get; } = new GameSignal<TutorialStatus?>(nameof(Tutorial));
 
         /// <summary>再生しているキルカム。再生していなければ null。</summary>
         public static GameSignal<KillCamStatus?> KillCam { get; } = new GameSignal<KillCamStatus?>(nameof(KillCam));

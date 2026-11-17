@@ -351,6 +351,45 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ExecutionSession(1, 0f, 0f, actions, _executeSeconds));
         }
 
+        [Test]
+        public void TheLogLinesNameThePlayers()
+        {
+            var execution = Create(preparationSeconds: 3f);
+            execution.Start();
+            execution.Tick(3f);
+            foreach (var bravo in new[] { _bravoOne, _bravoTwo })
+            {
+                execution.ReportLethal(bravo, _alphaOne);
+                execution.Interact(_alphaOne, bravo, _executeSeconds);
+            }
+
+            execution.Tick(0f);
+
+            Assert.That(ExecutionLog.Downed(2, 0), Is.EqualTo("[Mode] downed player=2 by=0"));
+            Assert.That(ExecutionLog.Downed(2, null), Is.EqualTo("[Mode] downed player=2 by=-"));
+            Assert.That(ExecutionLog.Revived(3, 2), Is.EqualTo("[Mode] revived player=2 by=3"));
+            Assert.That(ExecutionLog.Executed(0, 2), Is.EqualTo("[Mode] executed victim=2 by=0"));
+            Assert.That(ExecutionLog.BledOut(2, null), Is.EqualTo("[Mode] bledout player=2 credit=-"));
+            Assert.That(ExecutionLog.Preparing(2), Is.EqualTo("[Mode] round=2 preparing"));
+            Assert.That(ExecutionLog.Live(2), Is.EqualTo("[Mode] round=2 live"));
+            Assert.That(ExecutionLog.RoundEnded(execution.Round, Side.Alpha), Is.EqualTo("[Mode] round=2 ended winner=0 wins=0:1,1:0"));
+            Assert.That(ExecutionLog.RoundEnded(execution.Round, null), Is.EqualTo("[Mode] round=2 ended winner=draw wins=0:1,1:0"));
+            Assert.Throws<ArgumentNullException>(() => ExecutionLog.RoundEnded(null, null));
+        }
+
+        [Test]
+        public void TheStatusCarriesTheSessionTheLocalPlayerAndTheInteractTarget()
+        {
+            var execution = Create();
+            var status = new ExecutionStatus(execution, _alphaOne, _bravoOne);
+
+            Assert.That(status.Session, Is.SameAs(execution));
+            Assert.That(status.LocalPlayerId, Is.EqualTo(_alphaOne));
+            Assert.That(status.InteractTargetId, Is.EqualTo(_bravoOne));
+            Assert.That(new ExecutionStatus(execution, null, null).LocalPlayerId, Is.Null);
+            Assert.Throws<ArgumentNullException>(() => new ExecutionStatus(null, _alphaOne, null));
+        }
+
         private static ExecutionSession Create(
             int winsToWin = 3, float preparationSeconds = 0f, Downed downed = Downed.Revive, float roundSeconds = _roundSeconds)
         {

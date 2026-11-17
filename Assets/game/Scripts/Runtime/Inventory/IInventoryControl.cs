@@ -14,5 +14,9 @@ namespace Fps.Runtime
         void Use(int handle);
 
         void Drop(int handle, int count);
+
+        void Attach(int handle);
+
+        void Detach(int weaponHandle, string itemId);
     }
 }

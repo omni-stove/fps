@@ -165,7 +165,11 @@ namespace Fps.Tests.EditMode
             var player = NewPlayer(Catalog(InventoryRule.Default));
             var pickup = Pickup.Create(PickupContents.ForItem(_caseId, 1), Vector3.zero, PickupCollectMode.Interact);
 
-            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
+            Assert.That(pickup.TryDescribe(player, out var hint), Is.True);
+            Assert.That(hint.Action, Is.EqualTo(PickupHintAction.Item));
+            Assert.That(hint.ContentId, Is.EqualTo(_caseId));
+            Assert.That(hint.Count, Is.EqualTo(1));
+            Assert.That(PickupPrompt.TryDescribe(hint, "E", out var text), Is.True);
             Assert.That(text.Key, Is.EqualTo(PickupPrompt.ItemKey));
             Assert.That(Localizer.Resolve(text), Does.Contain("工具箱"));
         }
@@ -528,6 +532,20 @@ namespace Fps.Tests.EditMode
             public void Drop(int handle, int count)
             {
                 Inventory.TryTake(handle, count, out _);
+            }
+
+            public List<int> Attached { get; } = new List<int>();
+
+            public List<(int, string)> Detached { get; } = new List<(int, string)>();
+
+            public void Attach(int handle)
+            {
+                Attached.Add(handle);
+            }
+
+            public void Detach(int weaponHandle, string itemId)
+            {
+                Detached.Add((weaponHandle, itemId));
             }
         }
     }

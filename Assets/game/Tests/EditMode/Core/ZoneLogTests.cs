@@ -68,16 +68,5 @@ namespace Fps.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => ZoneLog.Stage(state, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => ZoneLog.Stage(Schedule().Evaluate(100f), 1));
         }
-
-        [Test]
-        public void HudLineShowsTheTimeUntilTheNextShrink()
-        {
-            var schedule = Schedule();
-
-            Assert.That(ZoneHudText.Line(schedule.Evaluate(17.5f)), Is.EqualTo(new LocalizedText("hud.zone.waiting", "00:13")));
-            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(17.5f))), Is.EqualTo("エリア縮小まで 00:13"));
-            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(40f))), Is.EqualTo("エリア縮小中 00:10"));
-            Assert.That(GameText.Resolve(ZoneHudText.Line(schedule.Evaluate(100f))), Is.EqualTo("最終エリア"));
-        }
     }
 }

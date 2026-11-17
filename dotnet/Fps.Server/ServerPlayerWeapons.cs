@@ -28,6 +28,9 @@ namespace Fps.Server
         private double _burstUntil;
         private Func<WeaponSpec, IAmmoPool> _poolFor;
 
+        private IReadOnlyList<WeaponSpec> _baseSpecs = Array.Empty<WeaponSpec>();
+        private readonly Dictionary<string, IReadOnlyList<string>> _attachments = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
         public ServerPlayerWeapons(int playerId, TextWriter log, Func<double> now)
         {
             _playerId = playerId;
@@ -88,7 +91,57 @@ namespace Fps.Server
             _chargeFraction = 0f;
             _chargeFrom = _now();
             _burstRoundsLeft = 0;
+            _baseSpecs = new List<WeaponSpec>(specs).AsReadOnly();
+            _attachments.Clear();
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
+        }
+
+        public IReadOnlyList<string> AttachmentsOf(string weaponId)
+        {
+            return weaponId != null && _attachments.TryGetValue(weaponId, out var attached) ? attached : WeaponAttachments.None;
+        }
+
+        public bool SetAttachments(string weaponId, IReadOnlyList<string> attachments, ItemCatalog catalog)
+        {
+            ArgumentNullException.ThrowIfNull(catalog);
+            var items = Items;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (!string.Equals(items[i].Spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var kept = WeaponAttachments.Keep(catalog, weaponId, attachments);
+                if (!items[i].ChangeSpec(WeaponAttachments.Apply(_baseSpecs[i], kept, catalog)))
+                {
+                    _log.WriteLine("[Net] attachments player=" + Text(_playerId) + " weapon=" + weaponId + " attached=" + WeaponAttachments.Describe(kept)
+                        + " rejected=NoRoomForAmmo");
+                    return false;
+                }
+
+                if (kept.Count == 0)
+                {
+                    _attachments.Remove(weaponId);
+                }
+                else
+                {
+                    _attachments[weaponId] = kept;
+                }
+
+                var specs = new WeaponSpec[items.Count];
+                for (var s = 0; s < specs.Length; s++)
+                {
+                    specs[s] = items[s].Spec;
+                }
+
+                Specs = specs;
+                _log.WriteLine("[Net] attachments player=" + Text(_playerId) + " weapon=" + weaponId + " attached=" + WeaponAttachments.Describe(kept)
+                    + " magazine=" + Text(items[i].AmmoInMagazine) + "/" + Text(items[i].Spec.MagazineSize));
+                return true;
+            }
+
+            return false;
         }
 
         // 武器ごとの予備弾の受け皿 (持ち物の弾薬) を決める。今の武器と、この後に持たせる (Equip) 武器に使う。null で外す

@@ -192,6 +192,19 @@ namespace Fps.Tests.EditMode
             _definition.NameKey = " ";
 
             Assert.That(_definition.Name, Is.EqualTo(LocalizedText.Literal(Kind)));
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
+        }
+
+        [Test]
+        public void APlacedMineOffersNoFollowUp()
+        {
+            var host = _owner.AddComponent<AbilityHost>();
+            host.Configure(GameRules.Default.WithActions(ActionRules.Default.WithAbilities(Abilities.On)));
+            host.Equip(0, _definition);
+            Place();
+
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo(MineSpec.DefaultNameKey));
+            Assert.That(host.TryGetFollowUp(0, out _), Is.False, "a mine is not detonated by hand");
         }
 
         [Test]

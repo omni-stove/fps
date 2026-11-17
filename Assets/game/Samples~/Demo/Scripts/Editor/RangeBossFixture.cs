@@ -46,6 +46,24 @@ namespace Fps.Editor
         public static readonly Vector3 WeakPointLocalPosition = new Vector3(0f, 1.4f, 0.75f);
         public static readonly Vector3 WeakPointScale = new Vector3(0.6f, 0.6f, 0.6f);
 
+        private readonly string _definitionPath;
+
+        public RangeBossFixture()
+            : this(DefaultDefinitionPath)
+        {
+        }
+
+        // 既にある射撃場のボスの定義をテストが書き換えたり、手で変えた値にテストが左右されたりしないよう、テストは別の場所を渡す。
+        public RangeBossFixture(string definitionPath)
+        {
+            _definitionPath = SceneBuildHelpers.ValidateAssetPath(definitionPath);
+        }
+
+        /// <summary>ボスの調整値 (<see cref="BossDefinition"/>) のアセット。無ければ下の定数で作り、あれば値を変えずに配線する。</summary>
+        public static string DefaultDefinitionPath => FpsKitRoot.OutputPath("Bosses") + "/" + FixtureName + ".asset";
+
+        public string DefinitionPath => _definitionPath;
+
         public int Order => 100;
 
         public string Name => FixtureName;
@@ -75,8 +93,19 @@ namespace Fps.Editor
             };
         }
 
+        /// <summary>path のボスの定義を返す。無ければ射撃場のボスの値で作って保存する。既にあれば値は変えない。</summary>
+        public static BossDefinition LoadOrCreateDefinition(string path)
+        {
+            return ModeDefinitionAssets.LoadOrCreate<BossDefinition>(
+                path,
+                d => d.Configure(Phases(), ZoneMultipliers, StrafeSpeed, StrafeHalfWidth));
+        }
+
         public GameObject Place(Scene scene, GameRules rules)
         {
+            // 射撃場は NewScene(Single) の後に置く物を置くので、ここで読めばアンロードされない。
+            var definition = LoadOrCreateDefinition(_definitionPath);
+
             var root = new GameObject(FixtureName);
             try
             {
@@ -94,7 +123,10 @@ namespace Fps.Editor
                 // 最初の段階では隠れている。Play の最初のフレームに一瞬見えないよう、保存する時点で隠しておく。
                 weakPoint.SetActive(false);
 
-                root.AddComponent<BossController>().Configure(Phases(), ZoneMultipliers);
+                // 定義が外されても同じボスになるよう、Inspector の値にも同じものを入れておく。
+                var boss = root.AddComponent<BossController>();
+                boss.Configure(Phases(), ZoneMultipliers);
+                boss.Definition = definition;
                 root.AddComponent<BossStrafeMotion>().Configure(StrafeSpeed, StrafeHalfWidth);
                 root.AddComponent<TargetDummy>().Initialize(damageable, RespawnDelay);
 

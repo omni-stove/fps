@@ -24,6 +24,7 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             KillCamPresentations.Current = null;
+            GameSignals.ResetAll();
             for (var i = _objects.Count - 1; i >= 0; i--)
             {
                 if (_objects[i] != null)
@@ -130,6 +131,60 @@ namespace Fps.Tests.EditMode
             Assert.That(deathCam.IsReplayingKillCam, Is.False);
             Assert.That(rig.enabled, Is.True);
             Assert.That(presentation.Calls[presentation.Calls.Count - 1], Is.EqualTo("End:False"));
+            Assert.That(GameSignals.KillCam.Value, Is.Null, "the stopped replay leaves the signal");
+        }
+
+        [Test]
+        public void TheReplayIsPublishedForTheUiUntilItEnds()
+        {
+            var deathCam = Player(out _);
+            var killer = Killer();
+            deathCam.Mode = DeathCamera.KillCam;
+            KillCamPresentations.Current = new RecordingPresentation { PlaybackSpeed = 2f };
+            var seen = new List<KillCamStatus?>();
+            GameSignals.KillCam.Changed += status => seen.Add(status);
+
+            deathCam.Step(DeathCamera.KillCam, true, false);
+            RecordWalk(deathCam, killer, 20);
+            Die(deathCam, killer);
+            Assert.That(GameSignals.KillCam.Value, Is.Null, "nothing is published before the replay starts");
+
+            deathCam.Step(DeathCamera.KillCam, false, false);
+            var started = GameSignals.KillCam.Value;
+            Assert.That(started.HasValue, Is.True);
+            Assert.That(started.Value.KillerName, Is.EqualTo("Killer"));
+            Assert.That(started.Value.WeaponId, Is.EqualTo("rifle"));
+            Assert.That(started.Value.DurationSeconds, Is.EqualTo(2f).Within(1e-4f));
+            Assert.That(started.Value.Speed, Is.EqualTo(2f));
+            Assert.That(started.Value.Progress, Is.EqualTo(0f));
+            Assert.That(started.Value.RemainingSeconds, Is.EqualTo(1f).Within(1e-4f));
+
+            deathCam.Advance(0, Vector2.zero, Vector2.zero, 0.25f);
+            Assert.That(GameSignals.KillCam.Value.Value.ElapsedSeconds, Is.EqualTo(0.5f).Within(1e-4f), "twice as fast");
+            Assert.That(GameSignals.KillCam.Value.Value.RemainingSeconds, Is.EqualTo(0.75f).Within(1e-4f));
+
+            deathCam.Advance(0, Vector2.zero, Vector2.zero, 1f);
+            Assert.That(deathCam.IsReplayingKillCam, Is.False);
+            Assert.That(GameSignals.KillCam.Value, Is.Null, "the finished replay leaves the signal");
+            Assert.That(seen.Count, Is.EqualTo(4), "start, one step, the end at full progress, then cleared");
+            Assert.That(seen[2].Value.Progress, Is.EqualTo(1f));
+            Assert.That(seen[3], Is.Null);
+        }
+
+        [Test]
+        public void AKillerWithoutARecordPublishesNothing()
+        {
+            var deathCam = Player(out _);
+            var killer = Track(new GameObject("Turret"));
+            deathCam.Mode = DeathCamera.KillCam;
+
+            deathCam.Step(DeathCamera.KillCam, true, false);
+            deathCam.RecordKillCam(0d);
+            Die(deathCam, killer);
+            LogAssert.Expect(LogType.Log, "[KillCam] no record of Turret for Player; switching to the killer view");
+            deathCam.Step(DeathCamera.KillCam, false, false);
+
+            Assert.That(GameSignals.KillCam.Value, Is.Null);
         }
 
         [Test]
@@ -147,7 +202,8 @@ namespace Fps.Tests.EditMode
 
             LogAssert.Expect(LogType.Log, "[KillCam] replaying Killer for 2.0s at 2.00x on Player");
             deathCam.Step(DeathCamera.KillCam, false, false);
-            Assert.That(presentation.Shot.Caption.Key, Is.EqualTo("hud.killCam.caption"));
+            Assert.That(presentation.Shot.KillerName, Is.EqualTo("Killer"));
+            Assert.That(presentation.Shot.WeaponId, Is.EqualTo("rifle"));
             Assert.That(presentation.Shot.Camera, Is.SameAs(rig.Camera));
             Assert.That(presentation.Shot.DurationSeconds, Is.EqualTo(2f).Within(1e-4f));
 

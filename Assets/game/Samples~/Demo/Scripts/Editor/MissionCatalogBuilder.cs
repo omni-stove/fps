@@ -20,10 +20,10 @@ namespace Fps.Editor
         public const string MenuPath = "Fps/Build Mission Catalog";
         public const string LogTag = "[MissionCatalogBuilder]";
 
-        /// <summary>Campaign01 のミッション Id。定義のアセット名 (<see cref="CampaignSceneBuilder.DefinitionPath"/>) と同じ。</summary>
+        /// <summary>Campaign01 のミッション Id。定義 (<see cref="CampaignSceneBuilder.DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>
         public const string Campaign01Id = CampaignSceneBuilder.MissionId;
 
-        /// <summary>Campaign02 のミッション Id。定義のアセット名 (<see cref="Campaign02Mission.DefinitionPath"/>) と同じ。</summary>
+        /// <summary>Campaign02 のミッション Id。定義 (<see cref="Campaign02Mission.DefinitionPath"/>) の <see cref="MissionDefinition.Id"/> に入れる。</summary>
         public const string Campaign02Id = Campaign02Mission.MissionId;
 
         /// <summary>カタログに入れるミッションの、定義とシーンの場所。</summary>
@@ -64,8 +64,9 @@ namespace Fps.Editor
         }
 
         /// <summary>
-        /// catalogPath に missions のカタログを作るか上書きして保存し、返す。
-        /// 各ミッションの定義が無い・シーンが無い・カタログとして不正 (<see cref="MissionCatalog.Validate"/>) なら何も保存せずに例外を投げる。
+        /// catalogPath に missions のカタログを作るか上書きして保存し、返す。各ミッションの定義の <see cref="MissionDefinition.Id"/> は
+        /// <see cref="MissionSource.Id"/> にそろえて一緒に保存する (定義のアセット名は変えない)。
+        /// 各ミッションの定義が無い・シーンが無い・カタログとして不正 (<see cref="MissionCatalog.Validate"/>) なら、定義の Id も元に戻し、何も保存せずに例外を投げる。
         /// </summary>
         public static MissionCatalog BuildAt(string catalogPath, IReadOnlyList<MissionSource> missions)
         {
@@ -76,12 +77,30 @@ namespace Fps.Editor
             }
 
             var entries = new List<MissionCatalogEntry>(missions.Count);
-            foreach (var mission in missions)
+            var previousIds = new List<(MissionDefinition Definition, string Id)>(missions.Count);
+            MissionCatalog catalog;
+            try
             {
-                entries.Add(LoadEntry(mission));
-            }
+                foreach (var mission in missions)
+                {
+                    var entry = LoadEntry(mission);
+                    previousIds.Add((entry.Definition, entry.Definition.Id));
+                    AssignId(entry.Definition, mission.Id);
+                    entries.Add(entry);
+                }
 
-            var catalog = SceneBuildHelpers.CreateOrUpdateAsset<MissionCatalog>(catalogPath, c => Configure(c, entries));
+                catalog = SceneBuildHelpers.CreateOrUpdateAsset<MissionCatalog>(catalogPath, c => Configure(c, entries));
+            }
+            catch
+            {
+                // 保存しなかった Id がメモリ上の定義に残ると、後で別のビルダーが SaveAssets したときに書き出されてしまう。
+                for (var i = previousIds.Count - 1; i >= 0; i--)
+                {
+                    previousIds[i].Definition.Id = previousIds[i].Id;
+                }
+
+                throw;
+            }
 
             Debug.Log($"{LogTag} saved '{catalogPath}' with {string.Join(", ", entries.ConvertAll(e => e.Id))}");
             return catalog;
@@ -132,6 +151,26 @@ namespace Fps.Editor
             }
 
             return new MissionCatalogEntry(mission.Id, mission.NameKey, scenePath, definition);
+        }
+
+        /// <summary>
+        /// definition の <see cref="MissionDefinition.Id"/> を id にする。同じなら何もしない。変えたら dirty にし、
+        /// <see cref="BuildAt"/> がカタログと一緒に保存する (Id を持つ前に作った定義もこれで Id を持つ)。
+        /// </summary>
+        public static void AssignId(MissionDefinition definition, string id)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (string.Equals(definition.Id, id, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            definition.Id = id;
+            EditorUtility.SetDirty(definition);
         }
     }
 }

@@ -15,8 +15,10 @@
         </ui:VisualElement>
         <!-- 一時的な案内 (セーブした・再開まで N 秒)。HudView が空のときは隠す。 -->
         <ui:Label name="hud-notice" text="" class="hud__notice" picking-mode="Ignore" style="display: none;" />
-        <!-- 試合結果 (勝ったチーム・引き分け)。試合が終わっている間だけ HudView が出す。 -->
+        <!-- 試合結果 (勝ったチーム・引き分け、ソロの試合のクリア・失敗)。試合が終わっている間だけ HudView が出す。 -->
         <ui:Label name="hud-result" text="" class="hud__result" picking-mode="Ignore" style="display: none;" />
+        <!-- ソロの試合が終わったときの、やり直すキーの案内。HudView が結果と一緒に出す。 -->
+        <ui:Label name="hud-result-restart" text="" class="hud__result-restart" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
             <ui:Label text="#hud.caption.health" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />
@@ -79,9 +81,9 @@
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <!-- 爆発に巻き込まれる距離のグレネード。GrenadeWarningView が 1 個ごとに印 (grenade-warning__marker) を足し、中央を囲む円周上の向きに置く。 -->
         <ui:VisualElement name="grenade-warning" class="grenade-warning" picking-mode="Ignore" style="display: none;" />
-        <!-- 敵や場所に付けた印。オフラインのプレイヤーの PingController が PingMarkersView を付けたときだけ、印ごとの子要素 (ping-marker) を足して出す。 -->
+        <!-- 敵や場所に付けた印。PingMarkersView が GameSignals.Pings の印ごとに子要素 (ping-marker) を足して出す。 -->
         <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
-        <!-- 分隊への指示の印 (守る場所・狙う敵)。プレイヤーの SquadCommandController が SquadOrderMarkerView を付けたときだけ、印 (squad-order__marker) を足して出す。 -->
+        <!-- 分隊への指示の印 (守る場所・狙う敵)。SquadOrderMarkerView が GameSignals.SquadOrder の指示があるときだけ、印 (squad-order__marker) を足して出す。 -->
         <ui:VisualElement name="squad-order" class="squad-order" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
@@ -101,7 +103,7 @@
         <ui:VisualElement name="net-control-points" class="net-control-points" picking-mode="Ignore" style="display: none;" />
         <!-- オフラインのモードの残り時間・陣営ごとの得点・モードが足す行・結果。ModeRunnerBase が ModeHudView に渡している間だけ出し、行は ModeHudView が足す。 -->
         <ui:VisualElement name="mode-hud" class="mode-hud" picking-mode="Ignore" style="display: none;" />
-        <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が TutorialPromptView に文を渡している間だけ出す。 -->
+        <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が GameSignals.Tutorial に段階を出している間だけ TutorialPromptView が出す。 -->
         <ui:Label name="tutorial-prompt" text="" class="tutorial-prompt" picking-mode="Ignore" style="display: none;" />
         <ui:Label name="interact-prompt" text="" class="interact-prompt" picking-mode="Ignore" style="display: none;" />
         <!-- キルカムの再生中の枠と見出し (hud.killCam.caption) と再生の進み。再生している間だけ KillCamView が出す。 -->

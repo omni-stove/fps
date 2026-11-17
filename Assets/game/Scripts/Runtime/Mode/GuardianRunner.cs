@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// <remarks>
     /// <list type="bullet">
     /// <item>リーダーの頭上にチームの色の目印 (<see cref="GuardianLeaderMarker"/>) を出し、倒れたら隠す。自分がリーダーのときは自分には出さない (HUD で知らせる)。</item>
-    /// <item>HUD には両チームのリーダーの生死 (自分のチームが先) と、自分がリーダーであること・リーダーが倒れて戻れないことを出す。</item>
+    /// <item>HUD に出すリーダーの生死と、自分がリーダーか・リーダーが倒れて戻れないかは <see cref="GuardianStatus"/> にして渡す。</item>
     /// <item>リーダーが決まったとき・倒れたときに <c>[Mode] leader</c>・<c>[Mode] leader-down</c> のログ (<see cref="GuardianText"/>) を出す。</item>
     /// </list>
     /// </remarks>
@@ -124,28 +124,19 @@ namespace Fps.Runtime
             return session;
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
+        protected override object HudDetail
         {
-            if (_leaders == null || Session == null)
+            get
             {
-                return;
-            }
-
-            var local = LocalPlayer;
-            var ownSide = local != null ? local.Side : (Side?)null;
-            if (local != null && Session.HasPlayer(LocalPlayerId))
-            {
-                if (_leaders.GetLeader(local.Side) == LocalPlayerId && !_leaders.HasLeaderFallen(local.Side))
+                if (_leaders == null || Session == null)
                 {
-                    lines.Add(GuardianText.YouAreLeader);
+                    return null;
                 }
-                else if (Session.State == GameModeState.Playing && Session.IsEliminated(LocalPlayerId) && _leaders.HasLeaderFallen(local.Side))
-                {
-                    lines.Add(GuardianText.NoRespawnLeaderDown);
-                }
-            }
 
-            lines.AddRange(GuardianText.Leaders(_leaders, ownSide));
+                var localId = LocalPlayer != null && Session.HasPlayer(LocalPlayerId) ? LocalPlayerId : (int?)null;
+                var eliminated = localId.HasValue && Session.State == GameModeState.Playing && Session.IsEliminated(LocalPlayerId);
+                return new GuardianStatus(_leaders, localId, eliminated);
+            }
         }
 
         private void OnLeaderChosen(Side side, int playerId)

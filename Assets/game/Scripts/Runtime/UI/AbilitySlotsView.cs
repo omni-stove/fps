@@ -6,9 +6,11 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何が起きるかの案内 (置いた C4 の起爆など) があれば行に添える。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
-    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。オフラインの <see cref="GameBootstrap"/> が <see cref="IHud.AttachAbilitySlots"/> で受け取って
-    /// プレイヤーの <see cref="AbilityHost"/> を <see cref="Show"/> する。待ち時間は時間で減りイベントが無いので、毎フレーム読み直す。
+    /// 能力の枠ごとの回数と待ち時間 (<see cref="HudFormat.Ability"/>) を、体力の上に 1 枠 1 行で出す。今押すと何ができるか (<see cref="AbilityHost.TryGetFollowUp"/>、置いた C4 の起爆など) があれば、
+    /// その案内 (<see cref="FollowUpText"/>) を行に添える。Hud.uxml の <see cref="UxmlName"/> に行を入れる。
+    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
+    /// 自分のプレイヤーの <see cref="AbilityHost"/> を出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
+    /// 出している枠は <see cref="AbilityHost.Changed"/> で読み直す。
     /// ルールで能力を使わない間と、枠がすべて空の間は隠し、空の枠の行も隠す。枠だけで見て使えない (待ち時間・使用中・回数切れ) 枠の行には
     /// <see cref="WaitingRowClass"/> を付ける。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
@@ -25,13 +27,20 @@ namespace Fps.Runtime
         /// <summary>今は使えない枠の行に足す USS クラス。</summary>
         public const string WaitingRowClass = "ability-slots__row--waiting";
 
-        /// <summary>枠の行に能力ごとの案内 (<see cref="AbilityHost.TryGetHint"/>) を添えるときの書式。{0} が枠の行、{1} が案内。</summary>
+        /// <summary>枠の行に今押すと何ができるかの案内 (<see cref="FollowUpText"/>) を添えるときの書式。{0} が枠の行、{1} が案内。</summary>
         public const string WithHintKey = "hud.ability.withHint";
+
+        /// <summary>置いた物を起爆できるときの案内 (<see cref="AbilityFollowUpKind.Detonate"/>)。{0} が置いた物の名前、{1} が置いている数。</summary>
+        public const string DetonateKey = "hud.remoteCharge.detonate";
 
         private readonly string[] _texts = new string[AbilityHost.SlotCount];
         private readonly bool[] _waiting = new bool[AbilityHost.SlotCount];
         private readonly Label[] _rows = new Label[AbilityHost.SlotCount];
         private AbilityHost _source;
+        private bool _subscribed;
+
+        // 出している枠が GameSignals から来たか。来ていれば、要素を持っていない間にプレイヤーが消されたことを、受けたときに隠して合わせる
+        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
@@ -90,8 +99,29 @@ namespace Fps.Runtime
         /// <summary>host の枠を出し始める。前に出していたものは手放す。null なら出すのをやめる。</summary>
         public void Show(AbilityHost host)
         {
-            _source = host;
-            Refresh();
+            _showsSignal = false;
+            Watch(host);
+        }
+
+        /// <summary>
+        /// followUp の案内。置いた物を呼ぶ名前は <see cref="AbilityFollowUp.TargetNameKey"/> の表から引き、キーが空なら <see cref="AbilityFollowUp.TargetId"/> にする。
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">followUp の種類に案内が無い。</exception>
+        public static LocalizedText FollowUpText(AbilityFollowUp followUp)
+        {
+            switch (followUp.Kind)
+            {
+                case AbilityFollowUpKind.Detonate:
+                    return new LocalizedText(DetonateKey, TargetName(followUp), followUp.Count);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(followUp), followUp.Kind, "no hint for this follow-up kind");
+            }
+        }
+
+        private static LocalizedText TargetName(AbilityFollowUp followUp)
+        {
+            var key = followUp.TargetNameKey ?? string.Empty;
+            return key.Length > 0 ? new LocalizedText(key) : LocalizedText.Literal(followUp.TargetId ?? string.Empty);
         }
 
         /// <summary>出している枠の今の回数と待ち時間を読み直して行に写す。</summary>
@@ -128,6 +158,14 @@ namespace Fps.Runtime
                 _rows[i] = row;
             }
 
+            Subscribe();
+            var player = GameSignals.LocalPlayer.Value;
+            if (player != null || _showsSignal)
+            {
+                ShowPlayer(player);
+                return;
+            }
+
             Refresh();
         }
 
@@ -138,23 +176,89 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.Clear();
             element.style.display = DisplayStyle.None;
             Array.Clear(_rows, 0, _rows.Length);
         }
 
-        private void LateUpdate()
+        private void OnDestroy()
         {
-            if (_source != null)
+            Unsubscribe();
+            if (!ReferenceEquals(_source, null))
             {
-                Refresh();
+                _source.Changed -= HandleHostChanged;
+                _source = null;
             }
+        }
+
+        private void Watch(AbilityHost host)
+        {
+            if (!ReferenceEquals(_source, null))
+            {
+                _source.Changed -= HandleHostChanged;
+            }
+
+            _source = host;
+            if (!ReferenceEquals(_source, null))
+            {
+                _source.Changed += HandleHostChanged;
+            }
+
+            Refresh();
+        }
+
+        private void ShowPlayer(LocalPlayerSignal player)
+        {
+            Watch(player?.Abilities);
+            _showsSignal = true;
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.LocalPlayer.Changed += HandleLocalPlayerChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleLocalPlayerChanged(LocalPlayerSignal player)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+                return;
+            }
+
+            ShowPlayer(player);
+        }
+
+        private void HandleHostChanged(AbilityHost host)
+        {
+            if (this == null)
+            {
+                host.Changed -= HandleHostChanged;
+                return;
+            }
+
+            Refresh();
         }
 
         private static LocalizedText Describe(AbilityHost host, int index, AbilitySlot slot)
         {
             var line = HudFormat.Ability(index + 1, slot);
-            return host.TryGetHint(index, out var hint) ? new LocalizedText(WithHintKey, line, hint) : line;
+            return host.TryGetFollowUp(index, out var followUp) ? new LocalizedText(WithHintKey, line, FollowUpText(followUp)) : line;
         }
 
         private void WriteRow(int index, bool visible)

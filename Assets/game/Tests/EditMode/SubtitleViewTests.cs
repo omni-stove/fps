@@ -147,6 +147,33 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ASquadReplyBecomesTheBotsLineEvenWithSubtitlesOff()
+        {
+            AppliedControlSettings.Apply(ControlSettings.Default.WithShowSubtitles(false).WithLanguage(GameLanguage.Japanese));
+            var view = CreateBoundView();
+
+            view.Show(SquadOrderReply.Accepted("Bot_1", BotErrandKind.Hold));
+            Assert.That(Texts(view), Is.EqualTo(new[] { "Bot_1: 了解、そこを守る" }));
+
+            view.Show(SquadOrderReply.TargetDown("Bot_1"));
+            Assert.That(Texts(view), Is.EqualTo(new[] { "Bot_1: 片付けた、戻る" }), "the same bot stays on one line");
+        }
+
+        [Test]
+        public void SquadRepliesReachEverySubscriber()
+        {
+            var received = new List<SquadOrderReply>();
+            Action<SquadOrderReply> thrower = _ => throw new InvalidOperationException("boom");
+            SubtitleFeed.SquadReplied += thrower;
+            SubtitleFeed.SquadReplied += received.Add;
+            LogAssert.Expect(LogType.Exception, new Regex("boom"));
+
+            SubtitleFeed.Reply(SquadOrderReply.Accepted("Bot_1", BotErrandKind.Attack));
+
+            Assert.That(received, Is.EqualTo(new[] { SquadOrderReply.Accepted("Bot_1", BotErrandKind.Attack) }));
+        }
+
+        [Test]
         public void AThrowingSubscriberDoesNotStopTheOthers()
         {
             var received = new List<SoundCueSource>();

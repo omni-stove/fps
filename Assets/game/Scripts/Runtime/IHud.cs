@@ -43,9 +43,6 @@ namespace Fps.Runtime
         /// <summary>残り時間を出す試合を差し替える。null なら仮の表示に戻す。</summary>
         void BindMatch(Match match);
 
-        /// <summary>一時的な案内の源を差し替える。null なら案内を消す。</summary>
-        void BindNotice(CampaignNotice notice);
-
         /// <summary>
         /// viewer のチームから見た敵味方の色で塗り、設定の色の組が変わったら塗り直す。viewer が null なら Alpha を味方の色にする。
         /// </summary>
@@ -63,10 +60,5 @@ namespace Fps.Runtime
         /// 能力の枠ごとの回数と待ち時間の表示を (無ければ) 付けて返す。画面に出す場所が見つからなければエラーをログに出し、出せないまま返す。
         /// </summary>
         IAbilitySlots AttachAbilitySlots();
-
-        /// <summary>
-        /// 拠点制圧 (<see cref="Domination"/>) の表示を (無ければ) 付けて返す。画面に出す場所が見つからなければエラーをログに出し、出せないまま返す。
-        /// </summary>
-        IDominationHud AttachDomination();
     }
 }

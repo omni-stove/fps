@@ -16,7 +16,7 @@ namespace Fps.Runtime
         public const string LogTag = "[Menu]";
 
         private static IMenuSceneHost _host = SceneManagerHost.Instance;
-        private static LocalizedText _notice;
+        private static MenuReturnReason _returnReason;
         private static bool _pendingTutorial;
         private static MenuScenes _scenes;
         private static string _sceneRoot;
@@ -63,8 +63,8 @@ namespace Fps.Runtime
         /// <summary>射撃場にまだ渡していない、メニューでチュートリアルを選んだこと。</summary>
         public static bool PendingTutorial => _pendingTutorial;
 
-        /// <summary>メニューに戻ったときに出す案内 (切断の理由など)。無ければ <c>default</c>。</summary>
-        public static LocalizedText PendingNotice => _notice;
+        /// <summary>メニューがまだ受け取っていない、メニューに戻った理由 (切断の理由など)。無ければ null。</summary>
+        public static MenuReturnReason PendingReturnReason => _returnReason;
 
         /// <summary>
         /// オンラインのボタンを始める手順。ネット対戦のクライアント (Fps.NetV2) が起動時に入れる。null ならオンラインは始められない。
@@ -80,7 +80,8 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// destination へ進む。オンラインの行き先は <see cref="OnlineStarter"/> に任せ、断られたか無ければ false と理由 refusal を返す。
+        /// destination へ進む。オンラインの行き先は <see cref="OnlineStarter"/> に任せ、断られたか無ければ false と、
+        /// 断った理由をメニューに出す文 (<see cref="DisconnectNoticeText.For(MenuReturnReason)"/>) refusal を返す。
         /// シーンへ移る行き先で読むシーンが Build Settings に無ければ、エラーログを出して false (refusal は空) を返す。
         /// </summary>
         public static bool Go(MenuDestination destination, out LocalizedText refusal)
@@ -96,7 +97,14 @@ namespace Fps.Runtime
                 }
 
                 Debug.Log(LogTag + " " + destination + " -> " + starter.GetType().Name);
-                return starter.Start(destination, out refusal);
+                var started = starter.Start(destination, out var reason);
+                if (!started)
+                {
+                    Debug.Log(LogTag + " " + destination + " refused" + (reason != null ? " (" + reason.Describe() + ")" : ""));
+                    refusal = DisconnectNoticeText.For(reason);
+                }
+
+                return started;
             }
 
             return Execute(Plan(destination));
@@ -154,10 +162,10 @@ namespace Fps.Runtime
         /// メニューへ戻る。<see cref="ReturningToMenu"/> を呼び、止めていた時間とカーソルを戻してから MainMenu を読む。
         /// MainMenu が Build Settings に無ければエラーログを出して false を返し、今のシーンに留まる。
         /// </summary>
-        /// <param name="notice">
-        /// メニューに出す案内。メニューが出すときに、その時点の言語で文にする。<c>default</c> か、表を引かない空白だけの文なら出さない。
+        /// <param name="reason">
+        /// メニューに戻った理由。メニューが <see cref="TakeReturnReason"/> で受け取り、その時点の言語で文にする。null なら何も出さない。
         /// </param>
-        public static bool ReturnToMenu(LocalizedText notice = default)
+        public static bool ReturnToMenu(MenuReturnReason reason = null)
         {
             var transition = MenuRoute.BackToMenu(SceneRoot, Scenes);
             var buildIndex = _host.BuildIndexOf(transition.ScenePath);
@@ -188,9 +196,9 @@ namespace Fps.Runtime
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             _pendingTutorial = false;
-            _notice = notice.IsLiteral && string.IsNullOrWhiteSpace(notice.Key) ? default : notice;
+            _returnReason = reason;
 
-            Debug.Log(LogTag + " back to the menu" + (_notice.IsEmpty ? "" : " (" + _notice + ")"));
+            Debug.Log(LogTag + " back to the menu" + (_returnReason == null ? "" : " (" + _returnReason.Describe() + ")"));
             _host.Load(buildIndex);
             return true;
         }
@@ -203,12 +211,12 @@ namespace Fps.Runtime
             return requested;
         }
 
-        /// <summary>メニューに出す案内を受け取り、持っていた分は消す。無ければ <c>default</c>。</summary>
-        public static LocalizedText TakeNotice()
+        /// <summary>メニューに戻った理由を受け取り、持っていた分は消す。無ければ null。</summary>
+        public static MenuReturnReason TakeReturnReason()
         {
-            var notice = _notice;
-            _notice = default;
-            return notice;
+            var reason = _returnReason;
+            _returnReason = null;
+            return reason;
         }
 
         private static bool Execute(MenuTransition transition)
@@ -245,7 +253,7 @@ namespace Fps.Runtime
         {
             _host = SceneManagerHost.Instance;
             _pendingTutorial = false;
-            _notice = default;
+            _returnReason = null;
             _scenes = null;
             ReturningToMenu = null;
             OnlineStarter = null;

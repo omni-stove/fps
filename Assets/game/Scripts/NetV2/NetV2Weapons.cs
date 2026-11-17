@@ -15,6 +15,11 @@ namespace Fps.NetV2
         private ClientTrigger _trigger;
         private string _triggerError;
         private readonly Dictionary<string, WeaponSpec> _specs = new Dictionary<string, WeaponSpec>(StringComparer.Ordinal);
+        private string _ownWeaponId;
+        private IReadOnlyList<string> _ownAttachments = WeaponAttachments.None;
+        private WeaponSpec _ownSpec;
+
+        public Func<string, IReadOnlyList<string>> OwnAttachments { get; set; }
 
         public LoadoutDefinition Loadout => GameContent.Pick<LoadoutDefinition>(c => c.Loadout);
 
@@ -54,6 +59,27 @@ namespace Fps.NetV2
             }
 
             return spec;
+        }
+
+        // 他人の同じ武器に自分の付けた物を効かせないよう、SpecFor とは分ける
+        public WeaponSpec OwnSpecFor(string weaponId)
+        {
+            var spec = SpecFor(weaponId);
+            var attached = spec != null && OwnAttachments != null ? OwnAttachments(weaponId) ?? WeaponAttachments.None : WeaponAttachments.None;
+            if (spec == null || attached.Count == 0)
+            {
+                return spec;
+            }
+
+            // 毎 tick 引くので、武器と付けた物が変わったときだけ作り直す
+            if (!string.Equals(_ownWeaponId, weaponId, StringComparison.Ordinal) || !WeaponAttachments.SameAs(_ownAttachments, attached))
+            {
+                _ownWeaponId = weaponId;
+                _ownAttachments = attached;
+                _ownSpec = WeaponAttachments.Apply(spec, attached, KitTuning.Items);
+            }
+
+            return _ownSpec;
         }
 
         // 見た目と音は WeaponSpec に載らないので、武器の定義そのものを値と同じ順 (ロードアウト・一覧) に探す。

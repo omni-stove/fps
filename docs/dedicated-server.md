@@ -308,6 +308,10 @@ docker run --rm --name fps-server -p 7777:7777/udp fps-server:local -map NetAren
   (持ち物の重さを移動の遅さに数えるときは、武器の分は移動のルールが武器として数えるので除く)。使うとその武器に持ち替え、捨てられない。
   武器のアイテムに `ammoItemId` があれば、その武器の予備弾は持ち物の弾薬アイテムの数になり、リロードで減る。出現のたびに、持たせた武器の
   最初の予備弾の合計まで弾薬を足す。ログは `[Inventory] equip owner=..`・`[Inventory] restock owner=..`。
+  `attachment` を持つアイテムは武器に付ける物で、武器のアイテムの `attachmentSlots` にあるその取り付け口 (`slot`) に付く (`weaponIds` があればその武器だけ)。
+  持ち物から構えている武器に付けると持ち物のマスから消え、重さは武器の重さに足し、`attachment` の倍率と弾倉の増減を武器の値に掛ける。
+  同じ取り付け口の物は持ち物に戻し、外した物も持ち物に戻す (入らなければ付け替え・取り外しを断る)。弾倉が減って入らない弾は持ち物の弾薬に戻す。
+  付けた物は持ち物の状態の武器の山に載せて持ち主に送り、出現で武器を持たせ直すと外れる。ログは `[Inventory] attach|detach owner=..`・`[Net] attachments player=..`。
 - 壊せる建物の部品の並びは `server-data/maps/<マップ名>.structures.json` から読む。
   無いマップでは `[Destruction] map <マップ名> has N destructible structure(s) but no ...` を出し、部品は壊れない壁として残る。
   破片が当たるダメージ (DebrisCrush) はまだ無い。

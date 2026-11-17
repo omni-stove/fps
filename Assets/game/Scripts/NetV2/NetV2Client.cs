@@ -38,7 +38,8 @@ namespace Fps.NetV2
     /// <see cref="NetClientLaunch.DefaultServer"/> へつなぐ。
     /// </para>
     /// <para>
-    /// サーバーとの接続を失ったら (つながらない・断られたを含む)、Netcode のクライアントと同じ理由の文 (<see cref="DisconnectNotice"/>) を添えてメニューへ戻る。
+    /// サーバーとの接続を失ったら (つながらない・断られたを含む)、Netcode のクライアントと同じ理由 (<see cref="DisconnectNotice"/>) を
+    /// <see cref="MenuReturnReason"/> に入れてメニューへ戻る。
     /// batchmode のプレイヤーでは Netcode のクライアントと同じ終了コードで終わる。
     /// </para>
     /// </remarks>
@@ -268,6 +269,7 @@ namespace Fps.NetV2
             _pings = new ClientPings(line => Debug.Log(line, this));
             _loadout = new NetV2LoadoutChooser(_weapons, SendReliable, this);
             _inventory = new NetV2Inventory(SendReliable);
+            _weapons.OwnAttachments = weaponId => _inventory.Inventory?.AttachmentsOf(weaponId);
         }
 
         private void Connect(NetLaunchOptions requested)
@@ -487,7 +489,7 @@ namespace Fps.NetV2
 
             try
             {
-                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.SpecFor);
+                _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
                 _hud.BindStatusEffects(_weaponHooks.StatusEffects);
                 _loadout.Bind(_hud.Hud.LoadoutSelect);
                 if (_hud.Hud.InventoryScreen != null)
@@ -549,7 +551,7 @@ namespace Fps.NetV2
         private LockOnAim AttachLockOn(NetV2LocalPlayer local)
         {
             var lockOn = local.gameObject.AddComponent<LockOnAim>();
-            lockOn.RoundSource = () => ClientFire.CurrentRound(CurrentOwner(), _weapons.SpecFor(ClientFire.CurrentWeaponId(CurrentOwner())));
+            lockOn.RoundSource = () => ClientFire.CurrentRound(CurrentOwner(), _weapons.OwnSpecFor(ClientFire.CurrentWeaponId(CurrentOwner())));
             lockOn.LookSource = () =>
             {
                 var definition = _weapons.DefinitionFor(ClientFire.CurrentWeaponId(CurrentOwner()));
@@ -1274,7 +1276,7 @@ namespace Fps.NetV2
             }
 
             Debug.Log(LogTag + " disconnected from server " + notice.Describe(), this);
-            Finish(ExitDisconnected, notice.Message);
+            Finish(MenuReturnReason.Disconnected(notice, ExitDisconnected));
         }
 
         private void HandleReturningToMenu()
@@ -1299,13 +1301,13 @@ namespace Fps.NetV2
             _client?.Leave();
             if (notice != null)
             {
-                Finish(exitCode, notice.Message);
+                Finish(MenuReturnReason.Disconnected(notice, exitCode));
                 return;
             }
 
             if (_startedFromMenu)
             {
-                Finish(exitCode, LocalizedText.Literal(message));
+                Finish(MenuReturnReason.OnlineFailed(exitCode, message));
                 return;
             }
 
@@ -1317,7 +1319,7 @@ namespace Fps.NetV2
         }
 
         // メニューへ戻る。起動引数でつないだときも、残っても遊べないので戻す (batchmode では先に終了する)
-        private void Finish(int exitCode, LocalizedText notice)
+        private void Finish(MenuReturnReason reason)
         {
             if (_finished)
             {
@@ -1327,7 +1329,7 @@ namespace Fps.NetV2
             _finished = true;
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
             {
-                Application.Quit(exitCode);
+                Application.Quit(reason.ExitCode);
                 return;
             }
 
@@ -1345,7 +1347,7 @@ namespace Fps.NetV2
                 _menu = null;
             }
 
-            menu.ReturnToMenu(notice);
+            menu.ReturnToMenu(reason);
             Destroy(gameObject);
         }
 
@@ -1410,9 +1412,9 @@ namespace Fps.NetV2
                 _server = server;
             }
 
-            public bool Start(MenuDestination destination, out LocalizedText refusal)
+            public bool Start(MenuDestination destination, out MenuReturnReason refusal)
             {
-                refusal = default;
+                refusal = null;
                 if (Current != null)
                 {
                     if (!Current._finished)

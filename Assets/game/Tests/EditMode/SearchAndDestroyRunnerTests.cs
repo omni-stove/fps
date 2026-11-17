@@ -6,7 +6,6 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -187,8 +186,7 @@ namespace Fps.Tests.EditMode
         public void EliminatingTheDefendersEndsTheMatchAtWinsToWin()
         {
             _runner.WinsToWin = 1;
-            var hud = BoundHudView();
-            Begin(hud);
+            Begin();
 
             _bravoOne.Damageable.Kill();
             _bravoTwo.Damageable.Kill();
@@ -197,25 +195,43 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Game.Phase, Is.EqualTo(RoundPhase.Ended));
             Assert.That(_runner.Game.Winner, Is.EqualTo((Side?)Side.Alpha));
             Assert.That(_runner.IsMatchOver, Is.True);
-            Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)Side.Alpha));
 
             _runner.Tick(1f);
             Assert.That(_bravoOne.IsAlive, Is.False, "nobody comes back after the match");
         }
 
         [Test]
-        public void TheHudShowsTheFuseAfterThePlant()
+        public void TheStatusCarriesTheGameWithTheClockInIt()
         {
-            var hud = BoundHudView();
-            Begin(hud);
-            Assert.That(hud.TimeText, Is.EqualTo("01:00"));
-            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 0 (攻撃)"));
+            Begin();
+            var detail = (SearchAndDestroyStatus)_runner.Status.Detail;
+            Assert.That(detail.Game, Is.SameAs(_runner.Game));
+            Assert.That(detail.LocalPlayerId, Is.Null, "nobody plays on this screen");
+            Assert.That(_runner.Status.OwnSide, Is.Null);
+            Assert.That(_runner.Status.RemainingSeconds, Is.Null, "the round clock stops at the plant, so the game keeps it instead of the mode");
 
             _alphaOne.transform.position = SiteA;
             _runner.Tick(PlantSeconds);
 
-            Assert.That(hud.TimeText, Is.EqualTo("00:02"));
-            Assert.That(hud.Lines, Has.Member("爆弾 A に設置: 起爆まで 2 秒"));
+            detail = (SearchAndDestroyStatus)_runner.Status.Detail;
+            Assert.That(detail.Game.Bomb, Is.EqualTo(BombState.Planted));
+            Assert.That(detail.Game.FuseRemaining, Is.EqualTo(FuseSeconds).Within(0.001f));
+        }
+
+        [Test]
+        public void TheStatusNamesTheLocalPlayer()
+        {
+            _runner.Begin(
+                new[] { _alphaOne, _alphaTwo, _bravoOne, _bravoTwo },
+                new[] { _alphaSpawnOne, _alphaSpawnTwo, _bravoSpawnOne },
+                _alphaTwo);
+
+            var detail = (SearchAndDestroyStatus)_runner.Status.Detail;
+            Assert.That(detail.LocalPlayerId, Is.EqualTo(ModeRunnerBase.LocalPlayerId));
+            Assert.That(_runner.IdOf(_alphaTwo), Is.EqualTo(ModeRunnerBase.LocalPlayerId));
+            Assert.That(_runner.Status.OwnSide, Is.EqualTo((Side?)Side.Alpha));
         }
 
         [Test]
@@ -330,7 +346,7 @@ namespace Fps.Tests.EditMode
             return definition;
         }
 
-        private void Begin(ModeHudView hud = null)
+        private void Begin()
         {
             _runner.Begin(
                 new[] { _alphaOne, _alphaTwo, _bravoOne, _bravoTwo },
@@ -362,13 +378,6 @@ namespace Fps.Tests.EditMode
             site.transform.position = position;
             site.Index = index;
             return site;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private GameObject Track(GameObject go)

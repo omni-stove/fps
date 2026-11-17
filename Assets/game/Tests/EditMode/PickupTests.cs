@@ -238,8 +238,8 @@ namespace Fps.Tests.EditMode
             pickup.HandleEnter(player.GetComponent<Collider>());
 
             Assert.That(pickup.LocalPlayerInside(), Is.SameAs(player));
-            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
-            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponKey, "E", launcher.Name)));
+            Assert.That(pickup.TryDescribe(player, out var hint), Is.True);
+            Assert.That(hint, Is.EqualTo(new PickupHint(PickupHintAction.TakeWeapon, launcher.Id, launcher.NameKey, 0, Pickup.InteractActionPath)));
         }
 
         [Test]
@@ -296,8 +296,8 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(wall);
             Physics.SyncTransforms();
             Assert.That(Pickup.LookedAt(player), Is.SameAs(pickup));
-            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
-            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponKey, "E", launcher.Name)));
+            Assert.That(pickup.TryDescribe(player, out var hint), Is.True);
+            Assert.That(hint, Is.EqualTo(new PickupHint(PickupHintAction.TakeWeapon, launcher.Id, launcher.NameKey, 0, Pickup.InteractActionPath)));
             Assert.That(pickup.Interact(), Is.True);
             Assert.That(weapons.Loadout.Count, Is.EqualTo(2));
         }
@@ -405,8 +405,8 @@ namespace Fps.Tests.EditMode
             var reserve = weapons.Weapon.ReserveAmmo;
             var launcher = NewWeapon("Launcher", TestWeapons.LauncherSpec());
             var pickup = Pickup.Create(PickupContents.ForWeapon(launcher, 2), new Vector3(0f, 0f, 2f), PickupCollectMode.Interact);
-            Assert.That(pickup.TryDescribe(player, "E", out var text), Is.True);
-            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.WeaponSwapKey, "E", launcher.Name)));
+            Assert.That(pickup.TryDescribe(player, out var hint), Is.True);
+            Assert.That(hint, Is.EqualTo(new PickupHint(PickupHintAction.SwapWeapon, launcher.Id, launcher.NameKey, 0, Pickup.InteractActionPath)));
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] dropped by=Player pickup=Pickup-Weapon kind=Weapon weapon=" + rifle.Id));
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Pickup\] collected .* added dropped=" + rifle.Id + "$"));
@@ -455,12 +455,85 @@ namespace Fps.Tests.EditMode
             var touch = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero);
             var interact = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero, PickupCollectMode.Interact);
 
-            Assert.That(touch.TryDescribe(player, "E", out _), Is.False, "touch pickups are taken without a key");
-            Assert.That(interact.TryDescribe(player, "E", out _), Is.False, "health is full");
+            Assert.That(touch.TryDescribe(player, out _), Is.False, "touch pickups are taken without a key");
+            Assert.That(interact.TryDescribe(player, out _), Is.False, "health is full");
 
             player.TakeDamage(50);
-            Assert.That(interact.TryDescribe(player, "E", out var text), Is.True);
-            Assert.That(text, Is.EqualTo(new LocalizedText(PickupPrompt.HealthKey, "E")));
+            Assert.That(interact.TryDescribe(player, out var hint), Is.True);
+            Assert.That(hint, Is.EqualTo(new PickupHint(PickupHintAction.Health, null, null, 0, Pickup.InteractActionPath)));
+        }
+
+        [Test]
+        public void TheHintIsPublishedWhileThePlayerCanTakeItAndClearedWhenTheyLeave()
+        {
+            GameSignals.ResetAll();
+            try
+            {
+                var player = NewCollector("Player");
+                player.IsLocalPlayer = true;
+                player.TakeDamage(50);
+                var pickup = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero, PickupCollectMode.Interact);
+
+                pickup.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.HasValue, Is.False, "no one is in range");
+
+                pickup.HandleEnter(player.GetComponent<Collider>());
+                pickup.UpdatePrompt();
+                var expected = new InteractHint(pickup, new PickupHint(PickupHintAction.Health, null, null, 0, Pickup.InteractActionPath));
+                Assert.That(GameSignals.InteractHint.Value, Is.EqualTo(expected));
+
+                pickup.HandleExit(player.GetComponent<Collider>());
+                pickup.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.HasValue, Is.False, "leaving the range clears the hint");
+
+                pickup.HandleEnter(player.GetComponent<Collider>());
+                pickup.UpdatePrompt();
+                player.ResetHealth();
+                pickup.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.HasValue, Is.False, "a full player has nothing to take");
+            }
+            finally
+            {
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
+        public void LeavingDoesNotClearAnotherPickupsHint()
+        {
+            GameSignals.ResetAll();
+            try
+            {
+                var player = NewCollector("Player");
+                player.IsLocalPlayer = true;
+                player.TakeDamage(50);
+                var first = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero, PickupCollectMode.Interact);
+                var second = Pickup.Create(PickupContents.ForHealth(10), Vector3.zero, PickupCollectMode.Interact);
+                first.HandleEnter(player.GetComponent<Collider>());
+                second.HandleEnter(player.GetComponent<Collider>());
+
+                first.UpdatePrompt();
+                second.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.Value?.Source, Is.SameAs(second), "the newer hint replaces the older one");
+
+                first.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.Value?.Source, Is.SameAs(second), "an unchanged hint does not take it back every frame");
+
+                second.HandleExit(player.GetComponent<Collider>());
+                second.UpdatePrompt();
+                first.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.Value?.Source, Is.SameAs(first), "the hint comes back once the other is cleared");
+
+                second.HandleEnter(player.GetComponent<Collider>());
+                second.UpdatePrompt();
+                first.HandleExit(player.GetComponent<Collider>());
+                first.UpdatePrompt();
+                Assert.That(GameSignals.InteractHint.Value?.Source, Is.SameAs(second), "leaving clears only its own hint");
+            }
+            finally
+            {
+                GameSignals.ResetAll();
+            }
         }
 
         [Test]

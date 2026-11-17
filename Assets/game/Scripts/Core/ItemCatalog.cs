@@ -124,6 +124,51 @@ namespace Fps.Core
             return TryFindWeapon(weaponId, out var weapon) && weapon.AmmoItemId != null && TryFind(weapon.AmmoItemId, out ammo);
         }
 
+        public bool TryFindAttachment(string itemId, out ItemSpec attachment)
+        {
+            attachment = TryFind(itemId, out var item) && item.IsAttachment ? item : null;
+            return attachment != null;
+        }
+
+        public IReadOnlyList<string> SlotsOf(string weaponId)
+        {
+            return TryFindWeapon(weaponId, out var weapon) ? weapon.AttachmentSlots : Array.Empty<string>();
+        }
+
+        public bool CanAttach(string weaponId, string attachmentItemId)
+        {
+            return TryFindAttachment(attachmentItemId, out var attachment)
+                && TryFindWeapon(weaponId, out var weapon)
+                && weapon.HasSlot(attachment.Attachment.Slot)
+                && attachment.Attachment.Fits(weaponId);
+        }
+
+        // 付ける先の武器が表にあり、その取り付け口を持つかを確かめる。サーバーから届いた表は一部のアイテムしか持たないので、作るときではなく読むときに確かめる
+        public void CheckAttachments()
+        {
+            foreach (var item in Items)
+            {
+                if (!item.IsAttachment)
+                {
+                    continue;
+                }
+
+                foreach (var weaponId in item.Attachment.WeaponIds)
+                {
+                    if (!TryFindWeapon(weaponId, out var weapon))
+                    {
+                        throw new ArgumentException("attachment item " + item.Id + " fits weapon " + weaponId + ", which is not one of the items", "items");
+                    }
+
+                    if (!weapon.HasSlot(item.Attachment.Slot))
+                    {
+                        throw new ArgumentException(
+                            "attachment item " + item.Id + " goes on slot '" + item.Attachment.Slot + "', which weapon item " + weapon.Id + " does not have", "items");
+                    }
+                }
+            }
+        }
+
         private static int WeaponIndexIn(IReadOnlyList<ItemSpec> items, string weaponId)
         {
             for (var i = 0; i < items.Count; i++)

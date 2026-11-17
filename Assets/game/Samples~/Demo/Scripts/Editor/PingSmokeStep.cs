@@ -14,7 +14,8 @@ namespace Fps.Editor
     /// <item>標的ダミーを <see cref="PingRangeFixture.ShowPoint"/> に置き、<see cref="PingRangeFixture.StandPoint"/> から照準を合わせて付ける
     /// (<c>[Ping] placed ... kind=Enemy</c>)。</item>
     /// <item>ダミーを壁の裏 (<see cref="PingRangeFixture.HiddenPoint"/>) へ動かすと見失い (<c>[Ping] lost</c>)、印は最後に見た位置に残る。</item>
-    /// <item>右を向くと、印は HUD (<see cref="PingMarkersView"/>) で画面の左端に寄って向きが出る (<c>[Ping] screen ... onScreen=false edge=Left</c>)。</item>
+    /// <item>右を向くと、<see cref="GameSignals.Pings"/> に出た印は、それを購読する HUD (<see cref="PingMarkersView"/>) で画面の左端に寄って向きが出る
+    /// (<c>[Ping] screen ... onScreen=false edge=Left</c>)。</item>
     /// <item>付けてから <see cref="PingSpec.LifetimeSeconds"/> 秒で消える (<c>[Ping] expired</c>)。</item>
     /// </list>
     /// 入力の代わりに <see cref="FirstPersonLook.ApplyLookDelta"/> で照準を合わせ、<see cref="PingController.TryPing"/> を呼ぶ。
@@ -30,8 +31,8 @@ namespace Fps.Editor
         // 照準を合わせ直すフレーム数。肩越しのカメラは向きを変えると位置も動くので、何度か合わせ直して揃える。
         private const int _aimFrames = 3;
 
-        // HUD に表示が付くまで待つ秒数。PingController は HUD を PingController.ViewSearchIntervalSeconds ごとに探す。
-        private const float _viewWaitSeconds = PingController.ViewSearchIntervalSeconds * 3f;
+        // 振り向いた後、HUD が LateUpdate で印を置き直すまで待つ秒数。フレームが遅い CI でも数フレームは回る長さにする。
+        private const float _viewWaitSeconds = 3f;
 
         // 見失った後の印の位置と、最後に見た位置のずれの許容 (m)。
         private const float _positionTolerance = 0.01f;
@@ -291,6 +292,11 @@ namespace Fps.Editor
 
         private string CheckOffScreen(BootstrapWorld world)
         {
+            if (!SignalHas(_markerId))
+            {
+                return $"ping {Id(_markerId)} is not in GameSignals.Pings ({GameSignals.Pings})";
+            }
+
             if (world.Hud == null)
             {
                 Debug.Log($"{PingLog.Tag} smoke: the TPS range has no HUD, so the screen edge is not checked");
@@ -320,6 +326,25 @@ namespace Fps.Editor
             return null;
         }
 
+        private static bool SignalHas(int id)
+        {
+            var markers = GameSignals.Pings.Value;
+            if (markers == null)
+            {
+                return false;
+            }
+
+            foreach (var marker in markers)
+            {
+                if (marker.Id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private string CheckExpired()
         {
             if (!HasLog($"{PingLog.Tag} expired id={Id(_markerId)} "))
@@ -327,9 +352,9 @@ namespace Fps.Editor
                 return null;
             }
 
-            if (_controller.TryGetMarker(_markerId, out _))
+            if (_controller.TryGetMarker(_markerId, out _) || SignalHas(_markerId))
             {
-                return $"ping {Id(_markerId)} logged that it expired but is still on the board";
+                return $"ping {Id(_markerId)} logged that it expired but is still on the board or in GameSignals.Pings";
             }
 
             var lived = Time.time - _placedAt;

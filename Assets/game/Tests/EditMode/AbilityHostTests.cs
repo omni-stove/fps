@@ -13,7 +13,8 @@ namespace Fps.Tests.EditMode
     /// <summary>
     /// 能力の枠 (<see cref="AbilityHost"/>): ルールの Off で使えないこと、入力で使って回数が減り待ち時間の間は断ること、
     /// 効果が出るまでの秒数と呼ばれる順、止められたとき、移動の横取りで <see cref="PlayerActionConditions.AbilityMoving"/> が立つこと、
-    /// HUD (<see cref="AbilitySlotsView"/>) に回数と待ち時間が出ること。
+    /// 回数・待ち時間・ルールが変わると <see cref="AbilityHost.Changed"/> を呼ぶこと、
+    /// HUD (<see cref="AbilitySlotsView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の枠の回数と待ち時間を出すこと。
     /// </summary>
     public sealed class AbilityHostTests
     {
@@ -64,6 +65,7 @@ namespace Fps.Tests.EditMode
             Object.DestroyImmediate(_player);
             Object.DestroyImmediate(_null);
             Object.DestroyImmediate(_recording);
+            GameSignals.ResetAll();
         }
 
         [Test]
@@ -390,21 +392,77 @@ namespace Fps.Tests.EditMode
             Assert.That(view.Element.style.display.value, Is.EqualTo(UnityEngine.UIElements.DisplayStyle.None));
 
             _host.Configure(_on);
-            view.Refresh();
-            Assert.That(view.IsShown, Is.True);
+            Assert.That(view.IsShown, Is.True, "the view rereads the slots when the host changes");
             Assert.That(view.Text(0), Is.EqualTo(Localizer.Resolve(new LocalizedText("hud.ability", 1, 2, 2))));
             Assert.That(view.Text(1), Is.Empty, "the empty slot shows nothing");
             Assert.That(view.IsWaiting(0), Is.False);
 
             _host.TryUse(0);
             _host.Step(PlayerCommands.None, 0.25f);
-            view.Refresh();
             Assert.That(view.Text(0), Is.EqualTo(Localizer.Resolve(new LocalizedText("hud.ability.wait", 1, 1, 2, "0.8"))));
             Assert.That(view.IsWaiting(0), Is.True);
             Assert.That(view.Element.childCount, Is.EqualTo(AbilityHost.SlotCount));
             Assert.That(view.Element[0].ClassListContains(AbilitySlotsView.WaitingRowClass), Is.True);
 
             view.Show(null);
+            Assert.That(view.IsShown, Is.False);
+        }
+
+        [Test]
+        public void ChangedIsRaisedWhenTheSlotsTheRuleOrTheWaitChange()
+        {
+            var heard = 0;
+            _host.Changed += host =>
+            {
+                Assert.That(host, Is.SameAs(_host));
+                heard++;
+            };
+
+            _host.Equip(0, _null);
+            Assert.That(heard, Is.EqualTo(1), "equipping a slot");
+
+            _host.Configure(_on);
+            Assert.That(heard, Is.EqualTo(2), "the rule");
+
+            _host.Step(PlayerCommands.None, 0.25f);
+            Assert.That(heard, Is.EqualTo(2), "a full, ready slot does not change with time");
+
+            _host.Step(PlayerCommands.Ability1, 0f);
+            Assert.That(heard, Is.EqualTo(3), "using the ability inside a step is heard once");
+
+            _host.Step(PlayerCommands.None, 0.25f);
+            Assert.That(heard, Is.EqualTo(4), "the cooldown and recharge move");
+
+            _host.Equip(new AbilityDefinition[] { _null, _recording });
+            Assert.That(heard, Is.EqualTo(5), "equipping a list is heard once");
+
+            _host.ResetSlots();
+            Assert.That(heard, Is.EqualTo(5), "the slots were already full and ready");
+        }
+
+        [Test]
+        public void TheHudShowsTheLocalPlayersSlotsFromTheSignal()
+        {
+            _hud = Hud.Create("AbilityHostTests.Hud", null, null, null);
+            var view = _hud.AbilitySlots;
+            _host.Configure(_on);
+            _host.Equip(0, _null);
+            Assert.That(view.Source, Is.Null, "nothing to show before a local player is published");
+
+            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(_player, null, null, null, null, null, _host, null));
+            Assert.That(view.Source, Is.SameAs(_host));
+            Assert.That(view.Text(0), Is.EqualTo(Localizer.Resolve(new LocalizedText("hud.ability", 1, 2, 2))));
+
+            _host.TryUse(0);
+            Assert.That(view.Text(0), Is.EqualTo(Localizer.Resolve(new LocalizedText("hud.ability.active", 1, 1, 2))));
+            _host.Step(PlayerCommands.None, 0.25f);
+            Assert.That(view.Text(0), Is.EqualTo(Localizer.Resolve(new LocalizedText("hud.ability.wait", 1, 1, 2, "0.8"))));
+
+            _hud.RebuildView();
+            Assert.That(view.Source, Is.SameAs(_host), "a rebuilt HUD picks the published player up again");
+
+            GameSignals.LocalPlayer.Clear();
+            Assert.That(view.Source, Is.Null);
             Assert.That(view.IsShown, Is.False);
         }
 

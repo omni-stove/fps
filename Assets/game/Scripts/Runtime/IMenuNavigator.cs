@@ -17,8 +17,9 @@ namespace Fps.Runtime
         bool TakeTutorialRequest();
 
         /// <summary>
-        /// メニューへ戻り、notice をメニューに出す (空なら出さない)。メニューのシーンがビルドに無ければエラーログを出して false を返し、今のシーンに留まる。
+        /// メニューへ戻り、戻った理由 reason をメニューに渡す (null なら何も出さない。どう言うかはメニューが決める)。
+        /// メニューのシーンがビルドに無ければエラーログを出して false を返し、今のシーンに留まる。
         /// </summary>
-        bool ReturnToMenu(LocalizedText notice);
+        bool ReturnToMenu(MenuReturnReason reason);
     }
 }

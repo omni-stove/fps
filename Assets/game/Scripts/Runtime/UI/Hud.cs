@@ -157,7 +157,7 @@ namespace Fps.Runtime
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
-        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
+        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
@@ -187,6 +187,8 @@ namespace Fps.Runtime
             AddIfMissing<GrenadeCountView>(hudObject);
             AddIfMissing<AbilitySlotsView>(hudObject);
             AddIfMissing<DominationView>(hudObject);
+            AddIfMissing<PingMarkersView>(hudObject);
+            AddIfMissing<SquadOrderMarkerView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -239,6 +241,10 @@ namespace Fps.Runtime
         /// <summary>同じ GameObject の拠点制圧の表示。<see cref="AddViews"/> で付けていなければ null。</summary>
         public DominationView Domination => GetComponent<DominationView>();
 
+        public PingMarkersView PingMarkers => GetComponent<PingMarkersView>();
+
+        public SquadOrderMarkerView SquadOrder => GetComponent<SquadOrderMarkerView>();
+
         /// <summary>同じ GameObject のポーズメニュー。<see cref="AddViews"/> で付けていなければ null。</summary>
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 
@@ -276,11 +282,6 @@ namespace Fps.Runtime
         IAbilitySlots IHud.AttachAbilitySlots()
         {
             return AbilitySlotsView.AttachTo(this);
-        }
-
-        IDominationHud IHud.AttachDomination()
-        {
-            return DominationView.AttachTo(this);
         }
 
         // エディターの GetComponent は見つからなくても「null と等しい」オブジェクトを返すので、インターフェースに変える前に本当の null にする
@@ -453,6 +454,8 @@ namespace Fps.Runtime
 
             _model.BindHealth(_player != null ? _player.Health : null);
             _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
+            GameSignals.CampaignNotice.Changed += _model.BindNotice;
+            _model.BindNotice(GameSignals.CampaignNotice.Value);
 
             // オフラインのプレイヤーは持ち物を自分で持つ。ネット対戦は持ち主の HUD が届いた持ち物を後から渡す
             var inventoryView = InventoryScreen;
@@ -471,15 +474,6 @@ namespace Fps.Runtime
         public void BindMatch(Match match)
         {
             _model.BindMatch(match);
-        }
-
-        /// <summary>
-        /// 一時的な案内の源を差し替える。null なら案内を消す。<see cref="CampaignRunner"/> がキャンペーンを始めたときに呼び、
-        /// 止めるときに null で外す。
-        /// </summary>
-        public void BindNotice(CampaignNotice notice)
-        {
-            _model.BindNotice(notice);
         }
 
         /// <summary>
@@ -881,6 +875,7 @@ namespace Fps.Runtime
                 _weapon.WeaponChanged -= _model.BindWeapon;
             }
 
+            GameSignals.CampaignNotice.Changed -= _model.BindNotice;
             _player = null;
             _weapon = null;
             _ads = null;

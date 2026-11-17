@@ -116,7 +116,6 @@ namespace Fps.Tests.EditMode
             IHud asInterface = hud;
             Assert.That(asInterface.AttachGrenadeCount(), Is.SameAs(hud.GrenadeCount), "Attach returns the view that is already there");
             Assert.That(asInterface.AttachAbilitySlots(), Is.SameAs(hud.AbilitySlots));
-            Assert.That(asInterface.AttachDomination(), Is.SameAs(hud.Domination));
             Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
             Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }
@@ -1069,8 +1068,8 @@ namespace Fps.Tests.EditMode
         {
             var grenades = DefaultHud.GetComponent<GrenadeCountView>();
 
-            Assert.That(grenades, Is.Not.Null, "GameBootstrap attaches the grenade count through IHud");
-            Assert.That(grenades.Source, Is.SameAs(_world.Grenades));
+            Assert.That(grenades, Is.Not.Null, "the default HUD carries the grenade count from the start");
+            Assert.That(grenades.Source, Is.SameAs(_world.Grenades), "the view reads the published local player");
         }
 
         [Test]
@@ -1079,9 +1078,20 @@ namespace Fps.Tests.EditMode
             var slots = DefaultHud.GetComponent<AbilitySlotsView>();
 
             Assert.That(_world.Abilities, Is.Not.Null, "PlayerActions.Attach gives the player an AbilityHost");
-            Assert.That(slots, Is.Not.Null, "GameBootstrap attaches the ability slots through IHud");
-            Assert.That(slots.Source, Is.SameAs(_world.Abilities));
+            Assert.That(slots, Is.Not.Null, "the default HUD carries the ability slots from the start");
+            Assert.That(slots.Source, Is.SameAs(_world.Abilities), "the view reads the published local player");
             Assert.That(slots.IsShown, Is.False, "the default rules keep abilities off and no ability is equipped");
+        }
+
+        [Test]
+        public void ClearingTheLocalPlayerEmptiesTheGrenadeCountAndTheAbilitySlots()
+        {
+            _host.GetComponent<GameBootstrap>().ClearSignals();
+
+            Assert.That(DefaultHud.GrenadeCount.Source, Is.Null);
+            Assert.That(DefaultHud.GrenadeCount.Text, Is.Empty);
+            Assert.That(DefaultHud.AbilitySlots.Source, Is.Null);
+            Assert.That(DefaultHud.AbilitySlots.IsShown, Is.False);
         }
 
         [Test]

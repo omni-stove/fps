@@ -447,6 +447,80 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ASoloMatchShowsClearedOrFailedWithTheRestartKey()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            Assert.That(view.RestartLabel, Is.Not.Null, "the default layout has the restart hint");
+            var match = new Match(float.PositiveInfinity, 1, 0);
+            model.BindMatch(match);
+            match.Start();
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.SetRestartKey("R");
+            Assert.That(view.RestartLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "no hint before the match ends");
+
+            match.ReportKill(0, 1);
+
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.SoloResult(MatchResult.Won))));
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.RestartLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Restart("R"))));
+            Assert.That(view.RestartLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            model.SetRestartKey(string.Empty);
+            Assert.That(view.RestartLabel.style.display.value, Is.EqualTo(DisplayStyle.None), "no key, no hint");
+            Assert.That(view.ResultLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+        }
+
+        [Test]
+        public void ATeamResultWinsOverASoloResult()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            var match = new Match(10f, 1, 0);
+            model.BindMatch(match);
+            match.Start();
+            match.ReportDeath(0);
+
+            model.SetResult(Team.Alpha);
+
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.Result(Team.Alpha))));
+        }
+
+        [Test]
+        public void TheTimeIsHiddenWithoutATimeLimit()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            Assert.That(view.TimePanel.style.display.value, Is.EqualTo(DisplayStyle.None), "no match, no timer");
+
+            model.BindMatch(new Match(30f, 1, 0));
+            Assert.That(view.TimePanel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            model.BindMatch(new Match(float.PositiveInfinity, 1, 0));
+            Assert.That(view.TimePanel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ALayoutWithoutTheRestartHintStillWorks()
+        {
+            var root = CloneLayout();
+            var hint = root.Q<Label>(HudView.RestartLabelName);
+            hint.RemoveFromHierarchy();
+            var model = new HudModel();
+            var match = new Match(float.PositiveInfinity, 1, 0);
+            model.BindMatch(match);
+            model.SetRestartKey("R");
+            var view = new HudView(root, model);
+
+            match.Start();
+            match.ReportDeath(0);
+
+            Assert.That(view.RestartLabel, Is.Null);
+            Assert.That(view.ResultLabel.text, Is.EqualTo(Localizer.Resolve(HudFormat.SoloResult(MatchResult.Lost))));
+        }
+
+        [Test]
         public void ReloadingAndLowHealthChangeTheStyle()
         {
             var model = new HudModel();
@@ -529,6 +603,38 @@ namespace Fps.Tests.EditMode
             notice.Clear();
             Assert.That(view.NoticeLabel.text, Is.Empty);
             Assert.That(view.NoticeLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheHudFollowsTheCampaignNoticeOnGameSignals()
+        {
+            GameSignals.ResetAll();
+            var saved = new CampaignNotice();
+            saved.ShowSaved(1f);
+            GameSignals.CampaignNotice.Publish(saved);
+            var hud = Hud.Create("HudViewTests.NoticeHud", null, null, null);
+            try
+            {
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "a notice published before the HUD is shown at once");
+
+                var countdown = new CampaignNotice();
+                GameSignals.CampaignNotice.Publish(countdown);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "a new source replaces the old one");
+                countdown.ShowRestartCountdown(3f);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
+                saved.ShowSaved(2f);
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)), "the replaced source is no longer followed");
+
+                GameSignals.CampaignNotice.Clear();
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "clearing the signal takes the notice off the HUD");
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
         }
 
         [Test]

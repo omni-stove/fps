@@ -211,7 +211,7 @@ namespace Fps.Tests.EditMode
             var b = Member("Bot-B", 2, new Vector3(0f, 0f, 12f));
             var hud = BoundHudView();
             _runner.ExtraHudLine = "extra";
-            _runner.ExtraHudText = HardpointText.Contested;
+            _runner.ExtraHudText = HardpointHudFormatter.Contested;
             Begin(new[] { player, a, b }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(hud.Lines, Is.EqualTo(new[] { "extra", "争奪中" }));

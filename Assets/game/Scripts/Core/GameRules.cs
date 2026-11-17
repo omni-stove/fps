@@ -10,7 +10,8 @@ namespace Fps.Core
         /// <summary>
         /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
         /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない、
-        /// 持てる武器の数に上限なし、撃ち切ったら自動でリロード (<see cref="ReloadMode.Auto"/>)、一人称 (<see cref="ViewMode.FirstPerson"/>)。
+        /// 持てる武器の数に上限なし、撃ち切ったら自動でリロード (<see cref="ReloadMode.Auto"/>)、一人称 (<see cref="ViewMode.FirstPerson"/>)、
+        /// プレイヤーの最大体力 <see cref="DefaultPlayerMaxHealth"/>、部位のダメージ倍率 <see cref="ZoneDamageMultipliers.Default"/>。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -32,6 +33,12 @@ namespace Fps.Core
 
         /// <summary><see cref="MaxWeapons"/> に書ける最大の値。持ち武器を送る電文 (<c>OwnerSnapshot.MaxWeapons</c>) に収まる数。</summary>
         public const int MaxWeaponsLimit = byte.MaxValue;
+
+        /// <summary>
+        /// <see cref="Default"/> の <see cref="PlayerMaxHealth"/>。Core は Runtime の <c>Damageable.DefaultMaxHealth</c> を参照できないので同じ値を持ち、
+        /// 揃っていることは EditMode のテストで確かめる。
+        /// </summary>
+        public const int DefaultPlayerMaxHealth = 100;
 
         /// <summary>味方に弾が当たったときの扱い。</summary>
         public FriendlyFire FriendlyFire { get; }
@@ -98,6 +105,15 @@ namespace Fps.Core
         /// <summary>プレイヤーの視点。一人称か三人称 (肩越し)。</summary>
         public ViewMode ViewMode { get; }
 
+        /// <summary>プレイヤーの最大体力。1 以上。</summary>
+        public int PlayerMaxHealth { get; }
+
+        /// <summary>
+        /// 頭・胴・手足 (と弱点) に当たったときのダメージ倍率。null にならない。
+        /// ルールの JSON と <c>GameRulesDefinition</c> が書けるのは頭・胴・手足で、弱点は <see cref="ZoneDamageMultipliers.Default"/> のまま。
+        /// </summary>
+        public ZoneDamageMultipliers ZoneDamage { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -118,6 +134,8 @@ namespace Fps.Core
         /// <param name="maxWeapons">持てる武器の数。0 なら上限なし。0 以上 <see cref="MaxWeaponsLimit"/> 以下。</param>
         /// <param name="reloadMode">撃ち切ったときのリロード。定義済みの値。</param>
         /// <param name="viewMode">プレイヤーの視点。定義済みの値。</param>
+        /// <param name="playerMaxHealth">プレイヤーの最大体力。1 以上。</param>
+        /// <param name="zoneDamage">部位のダメージ倍率。null なら <see cref="ZoneDamageMultipliers.Default"/>。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -138,7 +156,9 @@ namespace Fps.Core
             float idleKickSeconds = 0f,
             int maxWeapons = 0,
             ReloadMode reloadMode = ReloadMode.Auto,
-            ViewMode viewMode = ViewMode.FirstPerson)
+            ViewMode viewMode = ViewMode.FirstPerson,
+            int playerMaxHealth = DefaultPlayerMaxHealth,
+            ZoneDamageMultipliers zoneDamage = null)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -231,6 +251,11 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(viewMode), viewMode, "viewMode is not a defined ViewMode");
             }
 
+            if (playerMaxHealth < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerMaxHealth), playerMaxHealth, "playerMaxHealth must be at least 1");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -251,6 +276,8 @@ namespace Fps.Core
             MaxWeapons = maxWeapons;
             ReloadMode = reloadMode;
             ViewMode = viewMode;
+            PlayerMaxHealth = playerMaxHealth;
+            ZoneDamage = zoneDamage ?? ZoneDamageMultipliers.Default;
         }
 
         /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -324,6 +351,23 @@ namespace Fps.Core
         /// <summary><see cref="ViewMode"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
         public GameRules WithViewMode(ViewMode value) => Copy(viewMode: value);
 
+        /// <summary><see cref="PlayerMaxHealth"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithPlayerMaxHealth(int value) => Copy(playerMaxHealth: value);
+
+        /// <summary>
+        /// <see cref="ZoneDamage"/> だけを value にした複製。value が null なら <see cref="ArgumentNullException"/>
+        /// (<see cref="WithActions"/> と同じく、差し替えたつもりの値が黙って既定に戻らないようにするため)。
+        /// </summary>
+        public GameRules WithZoneDamage(ZoneDamageMultipliers value)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            return Copy(zoneDamage: value);
+        }
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -344,7 +388,9 @@ namespace Fps.Core
             float? idleKickSeconds = null,
             int? maxWeapons = null,
             ReloadMode? reloadMode = null,
-            ViewMode? viewMode = null)
+            ViewMode? viewMode = null,
+            int? playerMaxHealth = null,
+            ZoneDamageMultipliers zoneDamage = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -366,7 +412,9 @@ namespace Fps.Core
                 idleKickSeconds ?? IdleKickSeconds,
                 maxWeapons ?? MaxWeapons,
                 reloadMode ?? ReloadMode,
-                viewMode ?? ViewMode);
+                viewMode ?? ViewMode,
+                playerMaxHealth ?? PlayerMaxHealth,
+                zoneDamage ?? ZoneDamage);
         }
     }
 }

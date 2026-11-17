@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ViewModeDebugToggle"/> がこの端末のプレイヤーの視点だけを一人称と三人称で入れ替え、
-    /// 視点が無いときや死亡カメラ・乗り物のカメラが借りているときは断ることを確かめる。
-    /// </summary>
     public sealed class ViewModeDebugToggleTests
     {
         private GameObject _body;

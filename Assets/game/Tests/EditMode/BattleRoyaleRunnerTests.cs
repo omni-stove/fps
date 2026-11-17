@@ -11,11 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// BattleRoyaleRunner が倒れた参加者をダウンさせて分隊の味方に起こさせ、全滅した分隊に持ち物を落とさせて順位を付け、
-    /// 縮むエリアを始めて終わりに止め、始めたときに武器を手放させることを確かめる。
-    /// bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者 (プレイヤーには WeaponController) で確かめる。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者 (プレイヤーには WeaponController) で確かめる。
     public sealed class BattleRoyaleRunnerTests
     {
         private static readonly Vector3 ZeroSpawn = new Vector3(0f, 0f, 0f);

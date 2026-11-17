@@ -3,17 +3,10 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 音の合図の字幕の書き方。「[種類 向き]」で、向きが分からなければ「[種類]」、遠ければ末尾に「遠く」を足す。
-    /// 語は <see cref="GameText"/> から今の言語で引く。
-    /// </summary>
     public static class SubtitleText
     {
-        /// <summary>遠い合図 (<see cref="SoundCue.IsFar"/>) の末尾に足す語。</summary>
         public static string FarText => GameText.Get("subtitle.far");
 
-        /// <summary>cue の字幕 (例: 「[銃声 左後ろ]」「[爆発]」「[足音 右 遠く]」)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">種類か向きが定義済みの値でない。</exception>
         public static string Format(SoundCue cue)
         {
             var text = "[" + KindText(cue.Kind);
@@ -30,7 +23,6 @@ namespace Shooter.Runtime
             return text + "]";
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">kind が定義済みの値でない。</exception>
         public static string KindText(SoundCueKind kind)
         {
             switch (kind)
@@ -46,8 +38,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>向きの語。<see cref="SoundCueDirection.None"/> は空文字。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">direction が定義済みの値でない。</exception>
         public static string DirectionText(SoundCueDirection direction)
         {
             switch (direction)

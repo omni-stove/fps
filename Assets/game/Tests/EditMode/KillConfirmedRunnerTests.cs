@@ -10,11 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// KillConfirmedRunner が、倒れた参加者に DropOnDeath でタグを落とさせ、拾われたタグを確定・阻止としてモードに渡し、
-    /// 消えたタグと試合の終わりに残ったタグを片付け、モードの状態 (ModeStatus) の Detail に進めているキルコンファームドを入れることを確かめる。
-    /// Edit Mode では物理が進まないので、タグの範囲に入ったことは <see cref="Pickup.TryCollect"/> と <see cref="Pickup.HandleEnter"/> で起こす。
-    /// </summary>
+    // Edit Mode では物理が進まないので、タグの範囲に入ったことは Pickup.TryCollect と Pickup.HandleEnter で起こす。
     public sealed class KillConfirmedRunnerTests
     {
         private const float TagLifetimeSeconds = 10f;
@@ -335,7 +331,6 @@ namespace Shooter.Tests.EditMode
             return new KillConfirmed(new KillConfirmedSpec(10, 300f, RespawnSeconds, TagLifetimeSeconds));
         }
 
-        /// <summary>killer の弾で victim を倒し、落ちたタグを返す。</summary>
         private static Pickup KillAndFindTag(SideMember victim, SideMember killer)
         {
             foreach (var pickup in KillAndCollectDrops(victim, killer))

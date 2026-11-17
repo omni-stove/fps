@@ -3,11 +3,8 @@ using NUnit.Framework;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>
-    /// この名前空間のテストの間、今の言語 (<see cref="Localizer.Language"/>) を日本語にし、終わったら前の言語に戻す。
-    /// HUD の文字 (<see cref="GameText"/> と <see cref="Localizer"/>) を確かめるテストは日本語の文を期待しているので、
-    /// 保存した言語や OS の言語 (CI は英語) で結果が変わらないようにする。
-    /// </summary>
+    // HUD の文字を確かめるテストは日本語の文を期待しているので、保存した言語や OS の言語 (CI は英語) で結果が変わらないよう、
+    // この名前空間のテストの間は今の言語を日本語にする。
     [SetUpFixture]
     public sealed class JapaneseLanguageSetUp
     {

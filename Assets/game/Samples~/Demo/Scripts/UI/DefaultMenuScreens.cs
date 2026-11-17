@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ポーズ (<see cref="PauseMenu"/>)・ロードアウトの選択 (<see cref="LoadoutSelectView"/>)・メニューとの行き来 (<see cref="MenuNavigator"/>) を、
-    /// ゲーム進行から使うインターフェースとして <see cref="GameUi"/> に既定で登録する。
-    /// シーンを読み込む前 (エディターでは読み込み時にも) に登録する。
-    /// </summary>
     public static class DefaultMenuScreens
     {
         // Edit Mode (テストやシーン生成) では Play の初期化が走らないので、エディターの読み込みでも登録する。

@@ -189,13 +189,10 @@ namespace Shooter.Core.Tests
 
             Assert.That(reassembler.Read(new ArraySegment<byte>(Array.Empty<byte>()), out _), Is.EqualTo(PacketReadResult.Malformed));
             Assert.That(reassembler.Read(new ArraySegment<byte>(new byte[] { 9, 1, 2 }), out _), Is.EqualTo(PacketReadResult.Malformed));
-            // 断片なのにヘッダしか無い
             Assert.That(reassembler.Read(new ArraySegment<byte>(new byte[] { PacketSplitter.FragmentTag, 0, 0, 0, 0, 2, 0 }), out _),
                 Is.EqualTo(PacketReadResult.Malformed));
-            // 番号が総数以上
             Assert.That(reassembler.Read(new ArraySegment<byte>(new byte[] { PacketSplitter.FragmentTag, 0, 0, 2, 0, 2, 0, 1 }), out _),
                 Is.EqualTo(PacketReadResult.Malformed));
-            // 総数が 1 (分ける必要が無い)
             Assert.That(reassembler.Read(new ArraySegment<byte>(new byte[] { PacketSplitter.FragmentTag, 0, 0, 0, 0, 1, 0, 1 }), out _),
                 Is.EqualTo(PacketReadResult.Malformed));
         }

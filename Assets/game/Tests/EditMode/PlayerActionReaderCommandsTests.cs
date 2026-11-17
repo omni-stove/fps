@@ -8,7 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="PlayerActionReader"/> が指示のボタン (<see cref="PlayerCommands"/>) のアクションを見つけて読むこと。</summary>
     public sealed class PlayerActionReaderCommandsTests
     {
         private GameObject _player;

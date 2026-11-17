@@ -2,27 +2,16 @@ using System;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面に出す文字の言語。言語コード (<see cref="Code"/>) で区別する。設定画面で選んで <see cref="LanguagePreferenceStore"/> に保存し、文字は言語ごとの <see cref="StringTable"/> から引く。
-    /// ゲームで選べる言語と並べる順・その言語自身での名前は <see cref="GameLanguages"/> の一覧 (データ) で決まる。
-    /// <c>default</c> はどの言語でもなく、言語を受け取るメソッドは <see cref="ArgumentOutOfRangeException"/> を投げる。
-    /// </summary>
     public readonly struct GameLanguage : IEquatable<GameLanguage>
     {
-        /// <summary>言語コードの長さの上限。</summary>
         public const int MaxCodeLength = 35;
 
-        /// <summary>キットの文字列表の元になっている言語。ほかの言語の表が読めないときの代わりにも使う。</summary>
         public static GameLanguage Japanese { get; } = new GameLanguage("ja");
 
-        /// <summary>キットが表を持つもう 1 つの言語。</summary>
         public static GameLanguage English { get; } = new GameLanguage("en");
 
         private readonly string _code;
 
-        /// <param name="code">言語コード (例: <c>ja</c>・<c>pt-BR</c>)。大文字小文字を区別する。</param>
-        /// <exception cref="ArgumentNullException">code が null。</exception>
-        /// <exception cref="ArgumentException">code が <see cref="IsValidCode"/> に合わない。</exception>
         public GameLanguage(string code)
         {
             if (code == null)
@@ -38,16 +27,12 @@ namespace Shooter.Runtime
             _code = code;
         }
 
-        /// <summary>言語コード。<c>default</c> なら null。</summary>
         public string Code => _code;
 
-        /// <summary><c>default</c> でなく、言語コードを持つか。</summary>
         public bool IsDefined => _code != null;
 
-        /// <summary>
-        /// code が言語コードに使えるか。保存した設定と Resources のフォルダー名 (Localization/&lt;言語コード&gt;/) に使うので、
-        /// ASCII の英字で始まり、英数字・<c>-</c>・<c>_</c> だけで <see cref="MaxCodeLength"/> 文字までに限る。
-        /// </summary>
+        // 保存した設定と Resources のフォルダー名 (Localization/<言語コード>/) に使うので、
+        // ASCII の英字で始まり、英数字・-・_ だけで MaxCodeLength 文字までに限る。
         public static bool IsValidCode(string code)
         {
             if (string.IsNullOrEmpty(code) || code.Length > MaxCodeLength || !IsAsciiLetter(code[0]))
@@ -81,7 +66,6 @@ namespace Shooter.Runtime
             return _code == null ? 0 : StringComparer.Ordinal.GetHashCode(_code);
         }
 
-        /// <summary>言語コード。<c>default</c> なら <c>(none)</c>。</summary>
         public override string ToString()
         {
             return _code ?? "(none)";

@@ -8,10 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="PlayerBindings"/> が設定画面の各行の割り当てを見つけ、上書きと重なりの検出をすること。
-    /// 上書きはアセットに残るので、プロジェクト全体のアクションの写しで試す。
-    /// </summary>
+    // 上書きはアセットに残るので、プロジェクト全体のアクションの写しで試す。
     public sealed class PlayerBindingsTests
     {
         private static readonly RebindSlot ReloadKey = new RebindSlot("Reload", InputDeviceKind.KeyboardMouse);

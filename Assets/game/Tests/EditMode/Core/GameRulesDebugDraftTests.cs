@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary><see cref="GameRulesDebugDraft"/> がパネルの値から上書き用の <see cref="GameRules"/> を組み立て、変えた項目を書き出すことを確かめる。</summary>
     public sealed class GameRulesDebugDraftTests
     {
         private static readonly string[] _offOn = { "Off", "On" };

@@ -5,11 +5,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// <see cref="GameText"/> が渡された関数から引くたびに表を受け取り、表が無ければキーそのものを返すこと。
-    /// 書式が言語の切り替えに付いていくこと (英語の表で日本語を出さないこと)。
-    /// <see cref="GameText.Resolve"/> と <see cref="GameText.Format"/> が入れ子の <see cref="LocalizedText"/> を同じ表で文にすること。
-    /// </summary>
     public sealed class GameTextTests
     {
         private Func<StringTable> _before;

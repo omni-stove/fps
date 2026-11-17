@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="MissionCatalog"/> がミッションを <see cref="MissionDefinition.Id"/> で引き (アセット名は見ない)、
-    /// 空の Id と重なった Id を拒むこと、キャンペーンの秒数を持つことを確かめる。
-    /// </summary>
     public sealed class MissionCatalogIdTests
     {
         private const string ScenePath = "Assets/game/Scenes/Campaign01.unity";

@@ -71,7 +71,6 @@ namespace Shooter.Core.Tests
             // 断った試みは数え直さないので、最初の試みから 1 秒で付けられる
             Assert.That(relay.TryPlace(_alice, Team.Alpha, PingHit.Location(_here), null, 1f, _changes, out _), Is.EqualTo(PingRefusal.None));
 
-            // 間隔は 1 人ごと
             Assert.That(relay.TryPlace(_bob, Team.Alpha, PingHit.Location(_here), null, 1f, _changes, out _), Is.EqualTo(PingRefusal.None));
             Assert.That(relay.Count, Is.EqualTo(2));
         }

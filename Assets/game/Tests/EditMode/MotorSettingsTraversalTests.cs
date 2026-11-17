@@ -8,10 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="MotorSettings"/> の落下ダメージ・回避・乗り越え・崖のぼり・伏せの値が、<see cref="MotorSpec"/>・<see cref="ProneSpec"/>・
-    /// <see cref="NetMotorSettings"/>・プレイヤーと自機モックの寸法まで届くこと。
-    /// </summary>
     public sealed class MotorSettingsTraversalTests
     {
         private const float Tolerance = 1e-5f;

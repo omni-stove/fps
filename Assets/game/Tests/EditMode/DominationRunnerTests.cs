@@ -11,11 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="DominationRunner"/> が、拠点にいるプレイヤーを Domination に伝えて占領・得点・終了まで進め、
-    /// キルとデスを渡し、倒れた側を出現点へ戻し、試合の状態を <see cref="GameSignals.Domination"/> に出すことを確かめる。
-    /// NavMesh の上を歩く敵と R での再開は Play で確かめる (手順は PR 本文)。
-    /// </summary>
     public sealed class DominationRunnerTests
     {
         // 1 秒で占領、1 秒に 10 点、30 点で勝ち、制限時間 60 秒、倒れて 2 秒で戻る。
@@ -48,7 +43,6 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
 
-            // 拠点はプレイヤーの足元 (原点) に置く。
             _zone = CreateZone("PointA", 0, Vector3.zero);
 
             _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();

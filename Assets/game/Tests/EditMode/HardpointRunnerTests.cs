@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HardpointRunner が有効な拠点にいる参加者をハードポイントに伝え、有効な拠点だけを光らせ、モードの状態 (ModeStatus) の Detail に進めているハードポイントを入れることを確かめる。
-    /// bot (EnemyAgent) は NavMesh が要るので、巡回路は <see cref="HardpointRunner.RouteAround"/> の値だけを確かめる。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、巡回路は HardpointRunner.RouteAround の値だけを確かめる。
     public sealed class HardpointRunnerTests
     {
         private const float RotateSeconds = 10f;

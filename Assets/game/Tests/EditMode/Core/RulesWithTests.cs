@@ -4,7 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary><see cref="GameRules"/> と <see cref="ActionRules"/> の With 系メソッドが 1 項目だけを差し替えた複製を返すことを確かめる。</summary>
     public sealed class RulesWithTests
     {
         // 既定とどの項目も違う値にしておき、差し替えなかった項目が既定に戻っていないことまで見分けられるようにする。

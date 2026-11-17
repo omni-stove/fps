@@ -11,9 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>
-    /// <see cref="NetV2Hud"/> が届いたスナップショットを自分の HudModel と GameSignals に出し、既定の HUD がそれを前と同じに出すこと。
-    /// </summary>
     public sealed class NetV2HudTests
     {
         private const int _localId = 3;

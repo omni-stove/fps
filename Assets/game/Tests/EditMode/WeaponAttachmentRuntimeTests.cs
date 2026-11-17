@@ -371,7 +371,6 @@ namespace Shooter.Tests.EditMode
             return action;
         }
 
-        // 付ける物を 1 つずつ持って始める
         private static ItemCatalog Catalog(InventoryRule rule)
         {
             return new ItemCatalog(

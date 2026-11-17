@@ -6,20 +6,9 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 出現前に持っていく武器を選ぶビュー。Hud.uxml の <see cref="UxmlName"/> を使い、中身は <see cref="LoadoutSelectPanel"/> が作る。
-    /// </summary>
-    /// <remarks>
-    /// 開く・閉じるのと、決めた並びをどこへ送るかは持ち主が決める。オンラインでは Shooter.NetV2 の NetV2LoadoutChooser が、
-    /// 倒されてリスポーンを待っている間に <see cref="GameUi.LoadoutSelect"/> から <see cref="Active"/> の画面を開き、<see cref="Confirmed"/> で受けた並びをサーバーへ送って
-    /// 答えを <see cref="ShowAnswer"/> で出す。
-    /// 開いている間 (Play 中) はカーソルのロックを外してマウスで押せるようにし、閉じたら <see cref="FirstPersonLook.RefreshCursorLock"/> で決め直す。
-    /// HUD の木が作り直されたときは、開いていれば同じ選択の中身で作り直す。
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class LoadoutSelectView : HudElementView
     {
-        /// <summary>Hud.uxml のロードアウト選択の要素。</summary>
         public const string UxmlName = "loadout-select";
 
         private LoadoutSelection _selection;
@@ -33,15 +22,12 @@ namespace Shooter.Runtime
         // ゲーム進行は GameUi.LoadoutSelect から開くので、どの HUD の画面に出すかを、木を受けている画面の新しい順で決める。
         private static readonly List<LoadoutSelectView> _bound = new List<LoadoutSelectView>();
 
-        /// <summary>カーソルを解放して開いているロードアウト画面があるか。<see cref="FirstPersonLook.RefreshCursorLock"/> がロックしないために見る。</summary>
         public static bool IsAnyOpen => _openCursorCount > 0;
 
         public override string ElementName => UxmlName;
 
-        /// <summary>開いているか。</summary>
         public bool IsOpen => _selection != null;
 
-        /// <summary>HUD の木を受けている画面のうち一番新しいもの。無ければ null。</summary>
         public static LoadoutSelectView Active
         {
             get
@@ -52,20 +38,14 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>開いている中身。閉じていれば null。</summary>
         public LoadoutSelection Selection => _selection;
 
-        /// <summary>今の木に作った中身。閉じているか、木を受けていなければ null。</summary>
         public LoadoutSelectPanel Panel => _panel;
 
-        /// <summary>決定でルールに合う並びを選んだとき、スロット順の武器の Id を渡す。</summary>
         public event Action<IReadOnlyList<string>> Confirmed;
 
-        /// <summary>Cancel で閉じたとき。</summary>
         public event Action Closed;
 
-        /// <summary>selection を出す。既に開いていれば中身を差し替える (案内と待ちは消す)。</summary>
-        /// <exception cref="ArgumentNullException">selection が null。</exception>
         public void Open(LoadoutSelection selection)
         {
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
@@ -76,7 +56,6 @@ namespace Shooter.Runtime
             Rebuild();
         }
 
-        /// <summary>閉じる。開いていなければ何もしない。</summary>
         public void Close()
         {
             if (_selection == null)
@@ -96,13 +75,11 @@ namespace Shooter.Runtime
             RestoreCursor();
         }
 
-        /// <summary>決めた並びを送って答えを待っている間の案内を出し、操作を止める。</summary>
         public void ShowSending()
         {
             SetStatus(LoadoutFormat.Sending, false, true);
         }
 
-        /// <summary>送った並びの答えを出し、操作を戻す。断られたなら理由をエラーで出す。</summary>
         public void ShowAnswer(bool accepted, string reason)
         {
             SetStatus(accepted ? LoadoutFormat.Accepted : LoadoutFormat.Rejected(reason), !accepted, false);

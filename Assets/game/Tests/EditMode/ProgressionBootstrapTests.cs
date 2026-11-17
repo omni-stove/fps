@@ -5,10 +5,7 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ProgressionBootstrap が置いた記録係のプロフィールで「使えるか」を答え、置き直すと前の記録係を外すことを確かめる。
-    /// 調整値はレベル 2 が 500 XP から、"scope" がレベル 2 で使えるようになる。
-    /// </summary>
+    // 期待値は調整値 (レベル 2 が 500 XP から、"scope" がレベル 2 で使えるようになる) から出す。
     public sealed class ProgressionBootstrapTests
     {
         private const string ScopeId = "scope";

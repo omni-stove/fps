@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 既定の分隊への指示の印 (SquadOrderMarkerView) が、GameSignals.SquadOrder に出された守る場所・狙う敵の上に札付きの印を出し、
-    /// 画面の外なら端に寄せ、指示を取り消すと消すことを確かめる。
-    /// </summary>
     public sealed class SquadOrderMarkerViewTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);
@@ -91,7 +87,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_view.Element, Is.Not.Null, "Hud.uxml has the squad-order element");
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown without an order");
 
-            // 指示を出すと GameSignals.SquadOrder に出され、表示はそれを受けて置き直す。
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Squad\] screen kind=Hold onScreen=true edge=None "));
             _commander.TryOrderAlong(_eye, Vector3.forward, out _);
 
@@ -145,7 +140,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_view.TryGetPlacement(out var ahead), Is.True);
             Assert.That(ahead.X, Is.EqualTo(0.5f).Within(1e-3f));
 
-            // 敵が右へ動くと、出し直さなくても次の置き直しで印が付いていく。
             target.transform.position = new Vector3(2f, 1f, 5f);
             Physics.SyncTransforms();
             _view.Refresh();

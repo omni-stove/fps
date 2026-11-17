@@ -316,7 +316,6 @@ namespace Shooter.Core.Tests
             br.Mode.AddPlayer(_threeB, _squadThree);
         }
 
-        /// <summary>分隊の 2 人を分隊 0 の 1 人目が倒す (1 人目をダウンさせ、2 人目を倒して全滅させる)。</summary>
         private static void Wipe(BattleRoyaleSession br, int first, int second)
         {
             br.ReportLethal(first, _zeroA);

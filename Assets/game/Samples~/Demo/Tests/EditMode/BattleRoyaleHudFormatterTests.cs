@@ -201,7 +201,6 @@ namespace Shooter.Tests.EditMode
             return new ModeStatus(null, scores, new Side(0), null, isEnded, isEnded ? mode.Winner : null, detail);
         }
 
-        /// <summary>4 分隊のうち 3 分隊に人がいる。分隊 0 にプレイヤーと味方、分隊 1 と 2 に 1 人ずつ。</summary>
         private static BattleRoyaleSession Create()
         {
             var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, ActionRules.Default.WithDowned(Downed.Revive));

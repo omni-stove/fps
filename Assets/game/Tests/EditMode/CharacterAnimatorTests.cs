@@ -13,10 +13,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// CharacterAnimator が読み元 (プレイヤー・敵) の状態を変えるとパラメーターを変えること、リグを足元に置いてカプセルと
-    /// 自機モックの体を隠すこと、一人称では影だけにすることを確かめる。Animator を動かす部分 (クリップの再生) は Play で確かめる。
-    /// </summary>
+    // Animator を動かす部分 (クリップの再生) は Edit Mode では動かないので Play で確かめる。
     public sealed class CharacterAnimatorTests
     {
         private const float DeltaSeconds = 0.016f;
@@ -409,7 +406,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(animator.MeasuredSpeed, Is.EqualTo(8f).Within(1e-3f));
                 Assert.That(running.Speed, Is.EqualTo(CharacterPose.RunSpeedValue).Within(1e-3f));
 
-                // 落ちるだけ (縦の移動) では足を動かさない
                 body.transform.position += new Vector3(0f, -1f, 0f);
                 Assert.That(animator.Refresh(HorizontalSpeedMeter.DefaultWindowSeconds).Speed, Is.EqualTo(CharacterPose.IdleSpeedValue));
             }

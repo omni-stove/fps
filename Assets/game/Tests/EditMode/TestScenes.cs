@@ -4,16 +4,12 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>シーン生成スクリプトのテストが、空のシーンを今のシーンに足して使うための入口。</summary>
     public static class TestScenes
     {
-        /// <summary>Untitled シーンの代わりに開いておく、保存済みの空のシーン。Assets の外なのでアセットにはならない。</summary>
+        // Assets の外に置くので、保存してもアセットにはならない。
         public const string BaseScenePath = "Temp/ShooterTestBase.unity";
 
-        /// <summary>
-        /// 空のシーンを Additive で作って返す。使い終えたら <c>EditorSceneManager.CloseScene(scene, true)</c> で閉じる。
-        /// テストの SetUp では、Single でシーンを開き直すことがあるので、ScriptableObject を作るより先に呼ぶ。
-        /// </summary>
+        // Single でシーンを開き直すことがあるので、テストの SetUp では ScriptableObject を作るより先に呼ぶ。
         public static Scene NewAdditive()
         {
             // 保存されていない Untitled シーンがあると Additive の NewScene は例外を投げ、batchmode のテストは Untitled から始まる。

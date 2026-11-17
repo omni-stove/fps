@@ -10,9 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 爆破の HUD の文 (<see cref="SearchAndDestroyHudText"/>) と、<see cref="SearchAndDestroyStatus"/> をそれで文にする書式役 (<see cref="SearchAndDestroyHudFormatter"/>) を確かめる。
-    /// </summary>
     public sealed class SearchAndDestroyHudTextTests
     {
         private const int _alphaOne = 0;
@@ -183,7 +180,6 @@ namespace Shooter.Tests.EditMode
             return lines.Select(GameText.Resolve).ToArray();
         }
 
-        /// <summary>ラウンド 1 が始まって 1 秒、爆弾を持つ ALPHA の 1 人が B に設置している。</summary>
         private static SearchAndDestroy CarrierPlantingOnB()
         {
             var game = Create();

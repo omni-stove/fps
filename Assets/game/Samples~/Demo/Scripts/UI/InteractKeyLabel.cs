@@ -5,11 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Interact の案内 (<see cref="InteractPromptView"/>) とストリークの欄 (<see cref="StreakView"/>) に入れるキーの表記。最後に触った入力機器 (キーボードとマウスかゲームパッド) の割り当てを出す。
-    /// 機器の見分けに使うアクションは初めて表記を求めたときに探し、それからは持ち続ける。
-    /// 表記か機器が変わったら、どの割り当てから決めたかを <see cref="LogTag"/> を付けて Debug.Log に出す。
-    /// </summary>
     public sealed class InteractKeyLabel
     {
         public const string LogTag = "[InteractKey]";
@@ -19,7 +14,6 @@ namespace Shooter.Runtime
         private string _lastLabel;
         private InputDeviceKind _lastDevice;
 
-        /// <summary>interact を今の機器で押すキーの表記。interact が null なら空文字。</summary>
         public string For(InputAction interact)
         {
             if (interact == null)
@@ -57,7 +51,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} label='{label}' device={_device} {Describe(interact, _deviceActions)}");
         }
 
-        /// <summary>interact の割り当てごとのパス・グループ・表示名と、機器の見分けに使ったアクションが今動かしている機器。ログに出す。</summary>
         public static string Describe(InputAction interact, InputAction[] deviceActions)
         {
             var text = new StringBuilder();

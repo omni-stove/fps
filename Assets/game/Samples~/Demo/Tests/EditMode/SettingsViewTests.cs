@@ -12,10 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="SettingsView"/> が値を変えた直後から <see cref="AppliedControlSettings"/> で効かせ、閉じたときに保存すること。
-    /// メインメニューとポーズ画面のどちらからも開けること。本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
-    /// </summary>
+    // 本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
     public sealed class SettingsViewTests
     {
         private ControlSettings _appliedBefore;
@@ -197,7 +194,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(enemy.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Enemy)));
         }
 
-        // 赤緑を選ぶと、味方と敵が青と橙になり、味方に ◆・敵に ▲ が付く。閉じると保存され、起動し直しても残る
         [Test]
         public void ChoosingRedGreenRecolorsAtOnceMarksTheSamplesAndIsSavedOnClose()
         {
@@ -260,7 +256,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OffText));
         }
 
-        // 字幕を On にするとすぐ効き (HUD の字幕は Changed で切り替わる)、閉じると保存され、起動し直しても残る
         [Test]
         public void TurningSubtitlesOnAppliesAtOnceAndIsSavedOnClose()
         {
@@ -314,7 +309,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.CameraShakeIntensity)).text, Is.EqualTo("100%"));
             Assert.That(blood.text, Is.EqualTo("オン"));
 
-            // 3 項目は「演出」の見出しの下に、揺れ・武器の揺れ・血の順で並ぶ
             var rows = shake.parent.parent;
             var heading = rows[rows.IndexOf(shake.parent) - 1] as Label;
             Assert.That(heading, Is.Not.Null);
@@ -383,7 +377,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(rows.IndexOf(aimAssist.parent), Is.EqualTo(rows.IndexOf(ads.parent) + 1));
         }
 
-        // エイムアシストを切るとすぐ効き、閉じると保存され、起動し直しても切れたまま
         [Test]
         public void TurningAimAssistOffAppliesAtOnceAndIsSavedOnClose()
         {
@@ -439,7 +432,6 @@ namespace Shooter.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
-        // 行の先頭の見出しの Label。
         private static string CaptionOf(VisualElement control)
         {
             Assert.That(control, Is.Not.Null);
@@ -559,7 +551,6 @@ namespace Shooter.Tests.EditMode
                 Is.EqualTo("Toggle"));
             Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.FieldOfView)).value, Is.EqualTo(70), "the edit survives");
 
-            // 組み直した後もボタンが効く
             _view.SetShowSubtitles(true);
             Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo("On"));
 

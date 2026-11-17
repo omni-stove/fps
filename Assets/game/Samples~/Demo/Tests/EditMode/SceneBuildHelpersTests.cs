@@ -11,10 +11,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// シーン生成スクリプトの共通部分。既存のビルダー (EnemyTestSceneBuilder・MissionTestSceneBuilder) の出力が
-    /// 切り出しの前後で変わらないことは、それぞれのテストで確かめている。ここでは共通部分そのものを確かめる。
-    /// </summary>
+    // 既存のビルダー (EnemyTestSceneBuilder・MissionTestSceneBuilder) の出力が切り出しの前後で変わらないことは
+    // それぞれのテストで確かめているので、ここでは共通部分そのものだけを確かめる。
     public sealed class SceneBuildHelpersTests
     {
         private Scene _scene;

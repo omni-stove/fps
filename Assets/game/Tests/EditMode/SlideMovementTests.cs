@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// スライディング (<see cref="SlideMovement"/>) が、ダッシュ中のしゃがみで始まり、速さが落ちるかジャンプで終わること、
-    /// ルールが Off・カバー中・乗り越え中は始まらないこと、坂では平らな床より長く滑ること。
-    /// </summary>
     public sealed class SlideMovementTests
     {
         private const float StepSeconds = 0.02f;
@@ -246,7 +242,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(slope, Is.GreaterThan(flat * TestSlope.MinSlopeRatio));
         }
 
-        /// <summary>12° の坂と、その足元から続く平らな走路。ゲームの射撃場の坂を変えてもこのテストの前提が動かないよう、テストの側に持つ。</summary>
+        // ゲームの射撃場の坂を変えてもこのテストの前提が動かないよう、坂と走路はテストの側に持つ。
         private static class TestSlope
         {
             public const float SlopeDegrees = 12f;
@@ -320,7 +316,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_slide.IsSliding, Is.False);
             var distance = _slide.Motion.Distance;
 
-            // 次の滑りの前に、立ち上がって止まる。
             for (var i = 0; i < 5; i++)
             {
                 _player.Tick(Vector2.zero, false, false, false, StepSeconds);

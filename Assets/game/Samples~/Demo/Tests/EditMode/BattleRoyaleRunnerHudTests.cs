@@ -8,9 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// BattleRoyaleRunner が出した状態を、既定の HUD (<see cref="ModeHudView"/> と <see cref="BattleRoyaleHudFormatter"/>) が分隊・順位・エリアの文にすることを確かめる。
-    /// </summary>
     public sealed class BattleRoyaleRunnerHudTests
     {
         private static readonly Vector3 ZeroSpawn = new Vector3(0f, 0f, 0f);

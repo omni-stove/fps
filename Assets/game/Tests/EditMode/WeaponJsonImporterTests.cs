@@ -12,10 +12,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="WeaponJsonImporter"/> を一時フォルダに走らせて、テストの JSON (<see cref="TestWeaponJson"/>) が同じ値の武器になることと、
-    /// 不正な JSON では何も保存しないことを確かめる。
-    /// </summary>
     public sealed class WeaponJsonImporterTests
     {
         private string _folder;
@@ -425,7 +421,6 @@ namespace Shooter.Tests.EditMode
             return TestWeaponJson.Text(name);
         }
 
-        /// <summary>rifle・handgun の定義と、それを並べたカタログを作る。</summary>
         private static void BuildTestWeapons(string riflePath, string handgunPath, string catalogPath)
         {
             var rifleSpec = TestWeapons.RifleSpec();

@@ -11,11 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 協力して開ける物の値のアセット (<see cref="CoopInteractableDefinition"/>) の人数と秒数が <see cref="CoopHoldSpec"/> に入り、
-    /// <see cref="CoopInteractable"/> とそれで開く <see cref="CoopDoor"/> が Inspector の値の代わりにそれを使うことを確かめる。
-    /// Edit Mode では Start/Update が走らないので、Bot の口 (BeginHold) と Tick・Advance を直接呼ぶ。
-    /// </summary>
+    // Edit Mode では Start/Update が走らないので、Bot の口 (BeginHold) と Tick・Advance を直接呼ぶ。
     public sealed class CoopInteractableDefinitionTests
     {
         private readonly List<Object> _created = new List<Object>();

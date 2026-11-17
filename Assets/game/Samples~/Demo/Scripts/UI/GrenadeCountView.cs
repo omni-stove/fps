@@ -5,23 +5,13 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 残りのグレネードの数 (<see cref="HudText.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
-    /// 自分のプレイヤーの <see cref="GrenadeThrower"/> の残りを出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
-    /// <see cref="GrenadeThrower"/> を持たない画面 (ネット対戦) の残りは <see cref="GameSignals.GrenadeCount"/> を購読して出し、出ている間はそちらを先にする。
-    /// ルールでグレネードを使わない間は隠す。
-    /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class GrenadeCountView : HudElementView
     {
-        /// <summary>Hud.uxml の残りのグレネードの数の Label。</summary>
         public const string UxmlName = "grenade-count";
 
         private GrenadeThrower _source;
 
-        // GameSignals.GrenadeCount から受けた残り。出ている間は _source を持たない
         private GrenadeCountStatus? _count;
         private bool _subscribed;
 
@@ -30,16 +20,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているグレネード。出していなければ null。</summary>
         public GrenadeThrower Source => _source;
 
-        /// <summary>出している文字列。グレネードを使わない間は空文字。</summary>
         public string Text { get; private set; } = string.Empty;
 
-        /// <summary>
-        /// hud に (無ければ) このビューを付けて返す。付けたばかりなら Hud に木から要素を渡し直させる。
-        /// UXML に要素が無ければエラーをログに出し、要素を持たないまま返す (文字列は <see cref="Text"/> で読める)。
-        /// </summary>
         public static GrenadeCountView AttachTo(Hud hud)
         {
             if (hud == null)
@@ -66,7 +50,6 @@ namespace Shooter.Runtime
             return view;
         }
 
-        /// <summary>thrower の残りを出し始める。前に出していたものは手放す。null なら出すのをやめる。</summary>
         public void Show(GrenadeThrower thrower)
         {
             _showsSignal = false;
@@ -90,7 +73,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>出しているグレネードの今の残りを読み直して Label に写す。</summary>
         public void Refresh()
         {
             bool shown;

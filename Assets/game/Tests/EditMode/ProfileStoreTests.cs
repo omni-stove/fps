@@ -8,10 +8,6 @@ using UnityEngine.TestTools;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ProfileStore が profile の枠にプロフィールを読み書きし、無ければ・読めなければ新しいプロフィールにし、
-    /// 読めなかった内容を profile-rejected の枠に残すことを確かめる。
-    /// </summary>
     public sealed class ProfileStoreTests
     {
         private const string Broken = "{\"version\":1,\"xp\":";

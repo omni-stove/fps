@@ -290,7 +290,6 @@ namespace Shooter.Tests.EditMode
             recoil.Kick(RecoilSpec(4f, 0f, 0f), 1, 0);
             _look.ApplyRecoil();
 
-            // 同じ軸で初期化し直すと transform から向きを読み直す。反動の分を向きに取り込まない。
             _look.Initialize(_pivot, _action);
 
             Assert.That(_look.Pitch, Is.EqualTo(0f).Within(1e-3f));

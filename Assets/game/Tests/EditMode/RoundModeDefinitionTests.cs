@@ -8,11 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ラウンド系のモードの調整値のアセット (<see cref="SearchAndDestroyDefinition"/>・<see cref="KillConfirmedDefinition"/>・
-    /// <see cref="TeamDeathmatchDefinition"/>) が既定値で作られ、値を Spec に渡し、不正な値をアセット名付きで断ることと、
-    /// <see cref="TeamDeathmatchRunner"/> がアセットの値で試合を進めることを確かめる。
-    /// </summary>
     public sealed class RoundModeDefinitionTests
     {
         private readonly List<Object> _objects = new List<Object>();

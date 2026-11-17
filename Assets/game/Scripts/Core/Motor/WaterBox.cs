@@ -48,6 +48,16 @@ namespace Shooter.Core
             return obj is WaterBox other && Equals(other);
         }
 
+        public static bool operator ==(WaterBox left, WaterBox right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(WaterBox left, WaterBox right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             unchecked

@@ -17,7 +17,12 @@ namespace Shooter.Core
         public SwimTuning Tuning
         {
             get => _tuning;
-            set => _tuning = value ?? throw new ArgumentNullException(nameof(value));
+            set
+            {
+                _tuning = value ?? throw new ArgumentNullException(nameof(value));
+                // 数え済みの回数を新しい調整値の上限に丸めるのは、差し替えで Tick が負のダメージを返さないようにするため。
+                _hits = Math.Min(_hits, DueHits());
+            }
         }
 
         public float SubmergedSeconds => _submergedSeconds;
@@ -42,18 +47,23 @@ namespace Shooter.Core
             }
 
             _submergedSeconds += seconds;
-            var over = _submergedSeconds - _tuning.BreathSeconds;
-            if (over < 0f || _tuning.DrownDamage == 0)
+            var due = DueHits();
+            if (due == 0 || _tuning.DrownDamage == 0)
             {
                 return 0;
             }
 
-            var due = (long)Math.Floor(over / _tuning.DrownIntervalSeconds) + 1;
-            var hits = due - _hits;
-            _hits = due;
+            var hits = Math.Max(0L, due - _hits);
+            _hits = Math.Max(_hits, due);
 
             // 1 フレームが極端に長くても、体力の型を超えるダメージの合計で桁あふれさせない。
             return (int)Math.Min(int.MaxValue, hits * _tuning.DrownDamage);
+        }
+
+        private long DueHits()
+        {
+            var over = _submergedSeconds - _tuning.BreathSeconds;
+            return over < 0f ? 0L : (long)Math.Floor(over / _tuning.DrownIntervalSeconds) + 1;
         }
 
         public void Reset()

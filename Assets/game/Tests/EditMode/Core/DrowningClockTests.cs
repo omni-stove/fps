@@ -7,12 +7,12 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class DrowningClockTests
     {
-        private static readonly SwimTuning Short = new SwimTuning(breathSeconds: 2f, drownDamage: 10, drownIntervalSeconds: 1f);
+        private static readonly SwimTuning _short = new SwimTuning(breathSeconds: 2f, drownDamage: 10, drownIntervalSeconds: 1f);
 
         [Test]
         public void NoDamageWhileTheBreathLasts()
         {
-            var clock = new DrowningClock(Short);
+            var clock = new DrowningClock(_short);
 
             Assert.That(clock.Tick(true, 1.5f), Is.EqualTo(0));
             Assert.That(clock.BreathLeft, Is.EqualTo(0.5f).Within(1e-5f));
@@ -23,7 +23,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void RunningOutOfBreathDamagesAtOnceAndThenEveryInterval()
         {
-            var clock = new DrowningClock(Short);
+            var clock = new DrowningClock(_short);
 
             Assert.That(clock.Tick(true, 2f), Is.EqualTo(10), "the breath runs out");
             Assert.That(clock.IsOutOfBreath, Is.True);
@@ -36,7 +36,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void SurfacingRefillsTheBreath()
         {
-            var clock = new DrowningClock(Short);
+            var clock = new DrowningClock(_short);
             clock.Tick(true, 3f);
 
             Assert.That(clock.Tick(false, 0.1f), Is.EqualTo(0));
@@ -57,7 +57,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ChangingTheTuningUsesTheNewBreath()
         {
-            var clock = new DrowningClock(Short);
+            var clock = new DrowningClock(_short);
             clock.Tick(true, 1f);
 
             clock.Tuning = new SwimTuning(breathSeconds: 1f, drownDamage: 7);
@@ -66,9 +66,21 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ChangingTheTuningNeverReturnsNegativeDamage()
+        {
+            var clock = new DrowningClock(_short);
+            clock.Tick(true, 2f);
+            clock.Tick(true, 3f);
+
+            clock.Tuning = new SwimTuning(breathSeconds: 10f, drownDamage: 10, drownIntervalSeconds: 1f);
+
+            Assert.That(clock.Tick(true, 6f), Is.EqualTo(20), "11 seconds under, one second past the new breath");
+        }
+
+        [Test]
         public void BadArgumentsAreRejected()
         {
-            var clock = new DrowningClock(Short);
+            var clock = new DrowningClock(_short);
 
             Assert.Throws<ArgumentNullException>(() => new DrowningClock(null));
             Assert.Throws<ArgumentNullException>(() => clock.Tuning = null);

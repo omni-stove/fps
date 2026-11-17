@@ -163,7 +163,9 @@ namespace Shooter.Core.Tests
             Assert.That(Input(lean: 0.5f), Is.Not.EqualTo(Input(lean: -0.5f)));
             Assert.That(Input(swimming: true), Is.Not.EqualTo(Input()));
             Assert.That(Input(wallRun: WallRunSide.Left), Is.Not.EqualTo(Input(wallRun: WallRunSide.Right)));
-            Assert.That(Input(lean: 0.5f).GetHashCode(), Is.EqualTo(Input(lean: 0.5f).GetHashCode()));
+            var sameLean = Input(lean: 0.5f);
+            Assert.That(Input(lean: 0.5f), Is.EqualTo(sameLean));
+            Assert.That(sameLean.GetHashCode(), Is.EqualTo(Input(lean: 0.5f).GetHashCode()));
             Assert.That(Input(lean: 0.5f, swimming: true, wallRun: WallRunSide.Left).ToString(), Does.Contain("lean=0.50 swim=True wallRun=Left"));
 
             var leaning = new CharacterPoseParameters(0f, false, false, CharacterPose.CoverNone, false, false, CharacterPose.NoWeapon, lean: 1f);

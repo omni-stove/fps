@@ -7,31 +7,20 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ハードポイントのシーン Hardpoint を組む。<see cref="ModeSceneBuilder"/> の既定の地形・出現点・bot (プレイヤーの陣営 0 に bot 2 体、陣営 1 に 3 体) に、
-    /// 拠点 (<see cref="ControlPointZone"/>) を <see cref="Points"/> の 4 つ置き、<see cref="HardpointRunner"/> に配線する。
-    /// ルールは <see cref="GameRulesAssetBuilder.HardpointPath"/>、秒数や得点は <see cref="DefinitionPath"/> (無ければ既定値で作る)。拠点の中心が NavMesh に乗っていて、プレイヤーの出現点から歩けることを確かめ、
-    /// 満たさなければシーンを保存せずに例外を投げる。Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.HardpointSceneBuilder.Build</code>
-    /// </summary>
     public sealed class HardpointSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.HardpointScene;
         public static string RulesPathValue => GameRulesAssetBuilder.HardpointPath;
 
-        /// <summary>Runner に配線する調整値のアセット (<see cref="HardpointDefinition"/>)。</summary>
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.HardpointName);
         public const string MenuPath = "Shooter/Build Hardpoint Scene";
 
         public const string PointsRootName = "ControlPoints";
 
-        /// <summary>拠点の範囲の半径 (m)。遮蔽物と出現点に掛からない大きさにする。</summary>
+        // 拠点の範囲が遮蔽物と出現点に掛からない大きさにする。
         public const float PointRadius = 4f;
 
-        /// <summary>
-        /// 拠点の名前と足元の中心。並びが番号 (有効になる順) で、西の中央 → 奥 (陣営 1 寄り) → 東の中央 → 手前 (陣営 0 寄り) と回る。
-        /// 手前と奥はどちらも自陣営の出現点の列から 12m、遮蔽物から半径より離す。
-        /// </summary>
+        // 並びが有効になる順。手前と奥はどちらの陣営にも偏らないよう、どちらも自陣営の出現点の列から 12m、遮蔽物から半径より離す。
         public static readonly IReadOnlyList<HardpointPlacement> Points = new[]
         {
             new HardpointPlacement("ControlPoint-A", new Vector3(-12f, 0f, 20f)),
@@ -60,7 +49,6 @@ namespace Shooter.Editor
             return runner;
         }
 
-        /// <summary>path の調整値のアセットを返す。無ければ既定値で作る。既にあれば値は変えず、通ることだけ確かめる。</summary>
         public static HardpointDefinition LoadOrCreateDefinition(string path)
         {
             var definition = ModeDefinitionAssets.LoadOrCreate<HardpointDefinition>(path, _ => { });
@@ -68,7 +56,7 @@ namespace Shooter.Editor
             return definition;
         }
 
-        /// <summary>bot は最初に有効になる拠点 (番号 0) へ向かう。始まった後は Runner が有効な拠点の巡回路に替える。</summary>
+        // 始まった後は Runner が有効な拠点の巡回路に替えるので、ここでは最初に有効になる拠点 (番号 0) へだけ向かわせる。
         protected override IReadOnlyList<Vector3> BotPatrolRoute(IReadOnlyList<ModeSideLayout> sides, int sideIndex, int spawnIndex)
         {
             return new[] { sides[sideIndex].Spawns[spawnIndex].Feet, Points[0].Center };
@@ -112,13 +100,11 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>ハードポイントの拠点 1 つの名前と足元の中心 (<see cref="HardpointSceneBuilder.Points"/>)。</summary>
     public readonly struct HardpointPlacement
     {
         public string Name { get; }
         public Vector3 Center { get; }
 
-        /// <exception cref="ArgumentException">name が空。</exception>
         public HardpointPlacement(string name, Vector3 center)
         {
             if (string.IsNullOrWhiteSpace(name))

@@ -7,16 +7,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ガンゲームのシーン GunGame を組む。全員が別の陣営 (プレイヤーが陣営 0、bot が 1 から <see cref="BotCount"/>) で撃ち合い、
-    /// Runner は <see cref="GunGameRunner"/>、ルールは <see cref="GameRulesAssetBuilder.GunGamePath"/> (予備弾は無限)。
-    /// 武器の並び (<see cref="GunGameLadderDefinition"/>) は <see cref="LadderPath"/> に作るか上書きして Runner に配線する。
-    /// 並びは <see cref="LadderWeaponPaths"/> の順 (rifle → launcher → handgun) で、近接の武器は <see cref="MeleeWeaponPaths"/> のナイフ (戻す設定はオン)。
-    /// 出現点は <see cref="SpawnPositions"/> の 8 か所を全陣営で共有し、陣営ごとに並びをずらして最初の点をばらけさせる
-    /// (Runner は自陣営の点のうち敵からいちばん離れた点に戻すので、共有していれば生きている全員から離れた点に戻る)。
-    /// Editor を閉じた状態で次のように呼べる (先に WeaponAssetBuilder.Build と GameRulesAssetBuilder.Build を走らせる):
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.GunGameSceneBuilder.Build</code>
-    /// </summary>
     public sealed class GunGameSceneBuilder : ModeSceneBuilder
     {
         public static string ScenePathValue => BuildSceneList.GunGameScene;
@@ -24,10 +14,9 @@ namespace Shooter.Editor
         public static string LadderPath => ShooterKitRoot.OutputPath("Weapons/GunGameLadder.asset");
         public const string MenuPath = "Shooter/Build Gun Game Scene";
 
-        /// <summary>bot の数。1 体ずつ別の陣営に立てる。</summary>
         public const int BotCount = 5;
 
-        /// <summary>武器の並び。0 段目は bot が最初に持つ武器 (<see cref="ModeSceneBuilder.BotWeaponId"/> の rifle) と揃える。</summary>
+        // 0 段目は bot が最初に持つ武器 (ModeSceneBuilder.BotWeaponId の rifle) と揃える。
         public static IReadOnlyList<string> LadderWeaponPaths => new[]
         {
             WeaponAssetBuilder.RiflePath,
@@ -35,16 +24,13 @@ namespace Shooter.Editor
             WeaponAssetBuilder.HandgunPath,
         };
 
-        /// <summary>近接の武器。プレイヤーの近接はこの先頭の武器で倒したことになり (<see cref="GunGameRunner"/>)、倒された人は 1 段戻る。</summary>
         public static IReadOnlyList<string> MeleeWeaponPaths => new[]
         {
             WeaponAssetBuilder.KnifePath,
         };
 
-        /// <summary>
-        /// 全陣営で共有する出現点。先頭はプレイヤーの出現点 (原点で +Z 向き)。どれも遮蔽物 (<see cref="ModeSceneBuilder.DefaultObstacles"/>) と外周の壁から離し、
-        /// 床の中ほど (z = 20) を向く。
-        /// </summary>
+        // 出現点を全陣営で共有するのは、Runner が自陣営の点のうち敵からいちばん離れた点に戻すので、共有していれば生きている全員から離れた点に戻るため。
+        // 最初の点は陣営ごとに並びをずらしてばらけさせる。
         public static readonly IReadOnlyList<ModeSpawnPlacement> SpawnPositions = new[]
         {
             new ModeSpawnPlacement(new Vector3(0f, 0f, 0f), Vector3.forward),
@@ -70,10 +56,6 @@ namespace Shooter.Editor
             new GunGameSceneBuilder().BuildSceneFromMenu();
         }
 
-        /// <summary>
-        /// プレイヤーの陣営 0 (bot なし) と、bot 1 体ずつの陣営 1 から botCount。どの陣営も <see cref="SpawnPositions"/> の全点を、
-        /// 陣営の ID だけずらした順に持つ (陣営 n の最初の点は n 番目)。botCount は 0 以上、出現点の数未満。
-        /// </summary>
         public static IReadOnlyList<ModeSideLayout> FreeForAllSides(int botCount)
         {
             if (botCount < 0 || botCount >= SpawnPositions.Count)
@@ -97,10 +79,6 @@ namespace Shooter.Editor
             return sides;
         }
 
-        /// <summary>
-        /// path に <see cref="LadderWeaponPaths"/> の並び (近接の武器は <see cref="MeleeWeaponPaths"/>・近接で戻す設定はオン) を作るか上書きして保存し、返す。
-        /// 武器のアセットが無いか不正なら、何も保存せずに例外を投げる。
-        /// </summary>
         public static GunGameLadderDefinition BuildLadder(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -123,11 +101,6 @@ namespace Shooter.Editor
             return ladder;
         }
 
-        /// <summary>
-        /// ladder の中身を tiers・meleeWeapons・demotesOnMelee にする。先にすべての武器を検査し、不正なら ladder を変えずに例外を投げる。
-        /// </summary>
-        /// <exception cref="ArgumentException">tiers が空か、tiers・meleeWeapons に null がある。</exception>
-        /// <exception cref="WeaponDefinitionException">どれかの武器の定義が不正。</exception>
         public static void Configure(
             GunGameLadderDefinition ladder,
             IReadOnlyList<WeaponDefinition> tiers,

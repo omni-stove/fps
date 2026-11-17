@@ -440,7 +440,7 @@ namespace Shooter.Editor
             }
         }
 
-        // 入力の代わりに、決めた移動としゃがみを押し続ける。先に差し込まれていたもの (カバー) は後から呼び、その制限を上書きしない。
+        // 先に差し込まれていたもの (カバー) は後から呼び、その制限を上書きしない。
         private sealed class ScriptedMoveFilter : IPlayerMoveFilter
         {
             public ScriptedMoveFilter(IPlayerMoveFilter inner)

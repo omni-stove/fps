@@ -12,18 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// サンプルの rocket launcher (<c>RocketLauncher.json</c>) と grenade launcher (<c>GrenadeLauncher.json</c>) を、射撃場と同じ届け方
-    /// (<see cref="ShotDeliveries.Deliver"/>) で撃つ smoke run。
-    /// <list type="number">
-    /// <item>ロケットが見える弾として出て、まっすぐ飛び、標的の足元に当たった所で 1 回爆発し、標的に爆風が届く。</item>
-    /// <item>グレネードが山なりに上がり、床で跳ね、武器の寿命の秒数が過ぎた所で 1 回だけ爆発し、近くの標的に爆風が届く。</item>
-    /// <item>ネット対戦のクライアントが同じ射撃を見せる弾 (<see cref="ClientProjectiles"/> の予測の弾) が、オフラインの弾と同じ所で止まる・消える。</item>
-    /// </list>
-    /// サーバーの弾の起爆はサーバーのテスト (<c>dotnet/Shooter.Server.Tests/ServerCombatTests.Projectiles.cs</c>) で確かめる。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.LauncherSmokeRun.Run -logFile -</code>
-    /// </summary>
+    // サーバーの弾の起爆はサーバーのテスト (dotnet/Shooter.Server.Tests/ServerCombatTests.Projectiles.cs) で確かめるので、ここでは見ない。
     [InitializeOnLoad]
     public static class LauncherSmokeRun
     {
@@ -39,33 +28,27 @@ namespace Shooter.Editor
         public const float ExerciseTimeoutSeconds = 30f;
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>撃つ高さ (m)。人の目の高さに合わせる。</summary>
+        // 人の目の高さに合わせる。
         public const float MuzzleHeight = 1.5f;
 
-        /// <summary>ロケットを撃つ所から標的までの距離 (m)。</summary>
         public const float RocketDummyDistance = 15f;
 
-        /// <summary>ロケットで狙う床の点が、標的の足元からどれだけ手前か (m)。</summary>
         public const float RocketAimShortOfDummy = 1f;
 
-        /// <summary>グレネードを撃ち上げる角度 (度)。</summary>
         public const float GrenadeElevationDegrees = 17f;
 
-        /// <summary>グレネードが寿命で止まると見込んだ所から、標的を横にずらす距離 (m)。弾の通り道に標的を置かない。</summary>
+        // 弾の通り道に標的を置かないよう、寿命で止まると見込んだ所から横にずらす。
         public const float GrenadeDummyOffset = 2f;
 
-        /// <summary>オフラインとクライアントで、弾の止まった所がこれ以上離れていたら同じに見えないとする (m)。</summary>
         public const float SameSpotTolerance = 0.5f;
 
-        /// <summary>爆発までの秒数がフレームの刻みでずれてよい幅 (秒)。</summary>
+        // 爆発までの秒数はフレームの刻みの分だけずれる。
         public const float FuseTolerance = 0.15f;
 
-        /// <summary>
-        /// クライアントの弾は寿命が切れた刻みでは動かさずに消すので、最後に見せた所は寿命の所から 1 フレーム分手前になる。その分まで許す (m)。
-        /// </summary>
+        // クライアントの弾は寿命が切れた刻みでは動かさずに消すので、最後に見せた所は寿命の所から 1 フレーム分手前になる。その分まで許す。
         public const float ClientExpiryTolerance = 1.5f;
 
-        /// <summary>オフラインの弾が終わってから、クライアントの弾が追いつくのを待つ秒数。両者は別の刻みで進むので、同じフレームでは終わらない。</summary>
+        // オフラインとクライアントの弾は別の刻みで進んで同じフレームでは終わらないので、クライアントの弾が追いつくのを待つ。
         public const float ClientSettleSeconds = 0.3f;
 
         public const int SuccessExitCode = 0;
@@ -558,10 +541,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// 1 回の射撃。オフラインの弾 (<see cref="ProjectileBody"/>) と、同じ射撃をネット対戦のクライアントが見せる弾
-        /// (<see cref="ClientProjectiles.LocalFired"/>) を同時に出して見比べる。
-        /// </summary>
         private sealed class Shot
         {
             private ClientProjectiles _client;
@@ -690,7 +669,6 @@ namespace Shooter.Editor
                 }
             }
 
-            /// <summary>オフラインの弾が終わった後に、サーバーから届く終わりの知らせの代わりを渡す。</summary>
             public void EndClient(ProjectileEndReason reason)
             {
                 _client.Ended(new ProjectileEndedMessage { ProjectileId = 0, Reason = reason });

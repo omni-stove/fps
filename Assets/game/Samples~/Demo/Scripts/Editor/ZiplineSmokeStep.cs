@@ -19,7 +19,6 @@ namespace Shooter.Editor
         // ジャンプで離れるまでに滑る距離 (m)。線の真ん中あたりの、床から十分高い所で離す。
         public const float JumpAfterDistance = 12f;
 
-        // 離れてから落ちたと見なす、離れた所からの下がった高さ (m)。
         public const float MinFallHeight = 1f;
 
         // 端に着いたと見なす、線の終点からの水平距離の上限 (m)。止まる所 (EndMargin) と最後のフレームの端数を見込む。

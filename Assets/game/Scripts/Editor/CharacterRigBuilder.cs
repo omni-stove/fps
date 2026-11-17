@@ -437,6 +437,9 @@ namespace Shooter.Editor
                 new AnimatorControllerParameter { name = CharacterPose.DeadParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.WeaponCategoryParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.NoWeapon },
                 new AnimatorControllerParameter { name = CharacterPose.SlideParameter, type = AnimatorControllerParameterType.Bool },
+                new AnimatorControllerParameter { name = CharacterPose.LeanParameter, type = AnimatorControllerParameterType.Float, defaultFloat = 0f },
+                new AnimatorControllerParameter { name = CharacterPose.SwimmingParameter, type = AnimatorControllerParameterType.Bool },
+                new AnimatorControllerParameter { name = CharacterPose.WallRunParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.WallRunNone },
                 new AnimatorControllerParameter { name = StaggerParameter, type = AnimatorControllerParameterType.Int, defaultInt = (int)StaggerKind.None },
             };
         }

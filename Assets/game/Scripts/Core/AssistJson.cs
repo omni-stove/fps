@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// アシストの調整値 (<see cref="AssistSpec"/>) を JSON から読む。項目の名前は <see cref="AssistSpec"/> のコンストラクターの引数名で、
-    /// 省略した項目は <see cref="AssistSpec.Default"/> の値になる。
-    /// </summary>
     public static class AssistJson
     {
         public const string WindowSecondsItem = "windowSeconds";
@@ -20,12 +16,6 @@ namespace Shooter.Core
             MinDamageItem,
         };
 
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="TuningJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="AssistSpec"/> の検査に通らない。
-        /// </exception>
         public static AssistSpec Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, _kind);

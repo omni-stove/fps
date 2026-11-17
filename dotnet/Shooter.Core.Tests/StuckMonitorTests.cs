@@ -12,7 +12,6 @@ namespace Shooter.Core.Tests
         // 2 秒進めなければ次の段階、0.5m で進めたとみなし、目的地が 2m 変われば測り直す。
         private static StuckMonitor Monitor() => new StuckMonitor(2f, 0.5f, 2f);
 
-        /// <summary>原点で <paramref name="stages"/> 段階目まで詰まらせた監視。</summary>
         private static StuckMonitor StuckAtOrigin(int stages)
         {
             var monitor = Monitor();

@@ -6,10 +6,8 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 試合の枠だけを持つ。点数・勝ち負け・時間はルールのモジュールが決めて <see cref="SetScores"/> と <see cref="End"/> で知らせる。
-    /// 枠と決め方を分けるのは、ルールのモジュールを差し替えても出入り・チーム分け・JSON のイベントが変わらないようにするため。
-    /// </summary>
+    // 点数・勝ち負け・時間はルールのモジュールに決めさせ、ここは試合の枠だけを持つ。
+    // 枠と決め方を分けるのは、ルールのモジュールを差し替えても出入り・チーム分け・JSON のイベントが変わらないようにするため。
     internal sealed partial class ServerMatch
     {
         public const float DefaultRestartDelaySeconds = 10f;
@@ -66,7 +64,6 @@ namespace Shooter.Server
 
         public float RestartDelaySeconds { get; }
 
-        /// <summary>次の試合の前にそろえる、チームの人数の差の上限。0 ならそろえない。</summary>
         public int MaxTeamSizeDifference { get; }
 
         public string MatchId { get; private set; }
@@ -88,16 +85,10 @@ namespace Shooter.Server
 
         public IEnumerable<ServerPlayer> Players => _players.Values;
 
-        /// <summary>
-        /// 参加する人のチームを決める。null なら人数の少ないほう (同じなら点の低いほう)。ルールのモジュールが、
-        /// 切断した人を同じチームに戻すために差し替える。
-        /// </summary>
+        // ルールのモジュールが、切断した人を同じチームに戻すために差し替えられるようにする。
         public TeamChooser ChooseTeam { get; set; }
 
-        /// <summary>
-        /// 試合に入れる人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。パーティを同じチームに入れるとき、
-        /// その半分 (<see cref="TeamAssigner.TeamCapacity"/>) に届いたチームを満員と見る。
-        /// </summary>
+        // その半分 (TeamAssigner.TeamCapacity) に届いたチームを満員と見るのは、チームごとの定員を別の設定に増やさないため。
         public int MaxPlayers
         {
             get => _maxPlayers;
@@ -113,9 +104,7 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// Bot の Id と重ならない範囲に収めるのは、成績の行や JSON の playerId で Bot と見分けられなくなるため。
-        /// </summary>
+        // Bot の Id と重ならない範囲に収めるのは、成績の行や JSON の playerId で Bot と見分けられなくなるため。
         public static bool TryGetPlayerId(ConnectionId connection, out int playerId)
         {
             if (connection.IsValid && connection.Value < BotRoster.FirstBotPlayerId)
@@ -185,7 +174,7 @@ namespace Shooter.Server
             return Add(connection, playerId, rejoinKey, productUserId, partyId);
         }
 
-        /// <summary>Bot は接続を持たないので <see cref="ConnectionId.None"/> で加え、送る側はそれを読み飛ばす。</summary>
+        // Bot は接続を持たないので ConnectionId.None で加え、送る側はそれを読み飛ばす。
         public ServerPlayer JoinBot(int playerId)
         {
             if (!BotRoster.IsBotId(playerId))
@@ -359,12 +348,12 @@ namespace Shooter.Server
         }
 
         // 試合の JSON のイベントを 1 か所で書き、どれも同じ試合の Id と時計を使うようにする
-        public void WriteKill(int killerId, int victimId, bool teamKill)
+        public void WriteKill(int killerId, int victimId, bool teamKill, IReadOnlyList<int> assisterIds = null)
         {
             if (_events.Enabled)
             {
                 _events.Write(ServerEventLog.Kill(
-                    _utcNow(), MatchId, killerId, ProductUserIdOf(killerId), victimId, ProductUserIdOf(victimId), teamKill));
+                    _utcNow(), MatchId, killerId, ProductUserIdOf(killerId), victimId, ProductUserIdOf(victimId), teamKill, assisterIds));
             }
         }
 
@@ -384,6 +373,22 @@ namespace Shooter.Server
             if (_events.Enabled)
             {
                 _events.Write(ServerEventLog.PingRefused(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), reason));
+            }
+        }
+
+        public void WriteChat(ChatLine line)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.Chat(_utcNow(), MatchId, line.SenderId, ProductUserIdOf(line.SenderId), line.Channel, line.Text.Length));
+            }
+        }
+
+        public void WriteChatRefused(int playerId, ChatRefusal reason)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.ChatRefused(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), reason));
             }
         }
 
@@ -418,7 +423,7 @@ namespace Shooter.Server
             return _players.TryGetValue(playerId, out var player) ? player.ProductUserId : null;
         }
 
-        /// <summary>終わった回の Tick の残りを待ちに数えないのは、Core の TeamDeathmatchSession と同じ間で次の試合を始めるため。</summary>
+        // 終わった回の Tick の残りを待ちに数えないのは、Core の TeamDeathmatchSession と同じ間で次の試合を始めるため。
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

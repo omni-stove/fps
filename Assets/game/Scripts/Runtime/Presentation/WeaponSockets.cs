@@ -3,41 +3,22 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 武器のモデルの中の、演出を出す位置 (ソケット)。モデルの配下 (自分を含む) から <see cref="MuzzleName"/> と
-    /// <see cref="ShellEjectName"/> の名前の Transform を探して覚え、+Z をその向きとして使う。
-    /// ソケットが無い (モデルが無い・その名前の子が無い・破棄された) ときは、弾の始点 (目) から右・下・前へ
-    /// <see cref="DefaultMuzzleOffset"/> と <see cref="DefaultShellEjectOffset"/> だけずらした既定の位置を返す。
-    /// </summary>
-    /// <remarks>
-    /// 探すのは作ったときの 1 回だけ。武器のモデルを差し替えたり、付けた物 (<see cref="WeaponAttachmentModels"/>) を付け直したりしたら作り直す。
-    /// </remarks>
+    // 探すのは作ったときの 1 回だけなので、武器のモデルを差し替えたり、付けた物 (WeaponAttachmentModels) を付け直したりしたら作り直す。
     public sealed class WeaponSockets
     {
-        /// <summary>銃口のソケットの名前。マズルフラッシュと曳光弾をここから出す。</summary>
         public const string MuzzleName = "Socket_Muzzle";
 
-        /// <summary>排莢口のソケットの名前。薬莢を +Z の向きへ飛ばす。</summary>
         public const string ShellEjectName = "Socket_ShellEject";
 
-        /// <summary>照準の点のソケットの名前。一人称で構えたとき、ここを画面の中央に置く (照門と照星を結ぶ線の手前の端)。</summary>
         public const string SightName = "Socket_Sight";
 
-        /// <summary>
-        /// 銃口のソケットが無いときの位置を、弾の始点 (目) からの右・下・前の距離 (m) で決める。銃のモデルが無いので、
-        /// 一人称で炎が視界の真ん中をふさがないよう右下にずらす。
-        /// </summary>
+        // 銃のモデルが無いので、一人称で炎が視界の真ん中をふさがないよう右下にずらす。
         public static readonly Vector3 DefaultMuzzleOffset = new Vector3(0.15f, -0.12f, 0.6f);
 
-        /// <summary>
-        /// 排莢口のソケットが無いときの位置を、弾の始点 (目) からの右・下・前の距離 (m) で決める。銃口より手前の、銃の右側。
-        /// </summary>
         public static readonly Vector3 DefaultShellEjectOffset = new Vector3(0.18f, -0.1f, 0.3f);
 
-        /// <summary>ソケットを持たない (どちらも既定の位置を返す) もの。</summary>
         public static readonly WeaponSockets None = new WeaponSockets(null);
 
-        /// <param name="modelRoot">武器のモデルの根。null ならソケットを持たない。</param>
         public WeaponSockets(Transform modelRoot)
         {
             ModelRoot = modelRoot;
@@ -46,40 +27,25 @@ namespace Shooter.Runtime
             Sight = FindPreferringAttachments(modelRoot, SightName);
         }
 
-        /// <summary>探した武器のモデルの根。無ければ null。</summary>
         public Transform ModelRoot { get; }
 
-        /// <summary>銃口のソケット。無いか破棄されていれば null。</summary>
         public Transform Muzzle { get; }
 
-        /// <summary>排莢口のソケット。無いか破棄されていれば null。</summary>
         public Transform ShellEject { get; }
 
-        /// <summary>照準の点のソケット。無いか破棄されていれば null。</summary>
         public Transform Sight { get; }
 
-        /// <summary>
-        /// 銃口の位置と向き (+Z が銃口の向き)。ソケットがあればその位置と回転、無ければ origin から direction へ撃ったときの
-        /// <see cref="DefaultMuzzleOffset"/> の位置と direction の向き。
-        /// </summary>
         public Pose MuzzlePose(Vector3 origin, Vector3 direction)
         {
             return SocketPose(Muzzle, origin, direction, DefaultMuzzleOffset, false);
         }
 
-        /// <summary>
-        /// 排莢口の位置と向き (+Z が薬莢を飛ばす向き)。ソケットがあればその位置と回転、無ければ origin から direction へ撃ったときの
-        /// <see cref="DefaultShellEjectOffset"/> の位置と、撃つ向きから見て水平な右の向き。
-        /// </summary>
         public Pose ShellEjectPose(Vector3 origin, Vector3 direction)
         {
             return SocketPose(ShellEject, origin, direction, DefaultShellEjectOffset, true);
         }
 
-        /// <summary>
-        /// 弾の始点 origin から direction へ撃ったときに、direction を前、水平な右を右として offset だけずらした位置。
-        /// 真上か真下へ撃ったときは水平な右が決まらないので、ずらすのは前だけにする。
-        /// </summary>
+        // 真上か真下へ撃ったときは水平な右が決まらないので、ずらすのは前だけにする。
         public static Vector3 OffsetPosition(Vector3 origin, Vector3 direction, Vector3 offset)
         {
             var forward = Forward(direction);
@@ -92,8 +58,6 @@ namespace Shooter.Runtime
             return origin + (right * offset.x) + (up * offset.y) + (forward * offset.z);
         }
 
-        /// <summary>root とその子孫 (無効なものを含む) から、名前が name と一致する (大文字小文字を区別する) 最初の Transform を探す。無ければ null。</summary>
-        /// <exception cref="ArgumentException">name が空。</exception>
         public static Transform FindSocket(Transform root, string name)
         {
             if (string.IsNullOrEmpty(name))

@@ -8,58 +8,40 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 実行中に <see cref="GameRules"/> の項目 (<see cref="GameRulesDebugField"/>) を切り替えるデバッグパネル。
-    /// Editor と Development Build だけで (<see cref="IsSupported"/>)、シーンをまたいで 1 つ常駐する (<see cref="Install"/>)。専用サーバーでは作らない。
-    /// F1 で開閉する (入力アセットは変えず <see cref="Keyboard.current"/> を直接読む)。開くと今のシーンの <see cref="GameBootstrap"/> が使ったルール
-    /// (<see cref="BootstrapWorld.Rules"/>) を初期値に、オンオフの項目はトグル、それ以外はドロップダウンで出す。
-    /// 適用 (APPLY) で <see cref="GameRulesOverride.Set"/>、リセット (RESET) で <see cref="GameRulesOverride.Clear"/> してから今のシーンを読み直す。
-    /// SLOW-MO は今のルールのまま時間の速さを要求する (<see cref="RequestSlowMotion"/>)。
-    /// 開いている間はプロジェクト全体の入力の Player マップを止め、カーソルを出す。
-    /// 表示は HUD とは別の UIDocument と PanelSettings をコードで作って出す。
-    /// </summary>
+    // デバッグ用のパネルのために HUD の uxml/uss と入力アセットを変えないよう、表示は別の UIDocument と PanelSettings をコードで作り、
+    // F1 は Keyboard.current を直接読む。
     [DisallowMultipleComponent]
     public sealed class GameRulesDebugPanel : MonoBehaviour
     {
         public const string LogTag = GameRulesDebugDraft.LogTag;
 
-        /// <summary>常駐させる GameObject の名前。</summary>
         public const string ObjectName = "GameRulesDebugPanel";
 
-        /// <summary>表示用に作る PanelSettings の名前。</summary>
         public const string PanelSettingsName = "GameRulesDebugPanelSettings";
 
-        /// <summary>パネルの枠の名前 (UI Toolkit Debugger で探すとき用)。</summary>
+        // 名前を付けるのは UI Toolkit Debugger で探すときのため。
         public const string ContainerName = "rules-debug";
 
-        /// <summary>適用ボタンの名前。</summary>
         public const string ApplyButtonName = "rules-debug-apply";
 
-        /// <summary>リセットボタンの名前。</summary>
         public const string ResetButtonName = "rules-debug-reset";
 
-        /// <summary>時間の速さを要求するボタンの名前。</summary>
         public const string SlowMotionButtonName = "rules-debug-slow-motion";
 
-        /// <summary>時間の速さを要求するボタンが <see cref="TimeScaleArbiter.Request"/> に渡す理由。</summary>
         public const string SlowMotionReason = "debug";
 
-        /// <summary><see cref="SlowMotionScale"/> の既定値。</summary>
         public const float DefaultSlowMotionScale = 0.3f;
 
-        /// <summary><see cref="SlowMotionSeconds"/> の既定値。</summary>
         public const float DefaultSlowMotionSeconds = 5f;
 
-        /// <summary>止める入力のマップ。<see cref="InputActionPaths"/> のアクションはすべてここにある。</summary>
+        // InputActionPaths のアクションはすべてこのマップにあるので、このマップだけを止める。
         public const string PlayerActionMapName = "Player";
 
-        /// <summary>項目を並べるスクロールの枠の名前。</summary>
         public const string FieldsName = "rules-debug-fields";
 
-        /// <summary>項目の見出しを引く表のキーの頭。後ろに <see cref="GameRulesDebugField"/> の名前を付ける。</summary>
         public const string FieldLabelKeyPrefix = "debug.rules.field.";
 
-        /// <summary>HUD (0) と <see cref="ActionDebugOverlay"/> (100) より手前に出す。</summary>
+        // HUD (0) と ActionDebugOverlay (100) より手前に出す。
         public const float SortingOrder = 200f;
 
         private const float ScreenMargin = 16f;
@@ -85,8 +67,6 @@ namespace Shooter.Runtime
         private float _slowMotionScale = DefaultSlowMotionScale;
         private float _slowMotionSeconds = DefaultSlowMotionSeconds;
 
-        /// <summary>時間の速さのボタンで要求する倍率 (0 より大きく 1 以下)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">範囲外。</exception>
         public float SlowMotionScale
         {
             get => _slowMotionScale;
@@ -97,8 +77,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>時間の速さのボタンで要求する実時間の秒数 (0 より大きい)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">範囲外。</exception>
         public float SlowMotionSeconds
         {
             get => _slowMotionSeconds;
@@ -109,7 +87,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>この Build でパネルを使えるか。Editor と Development Build だけ true。</summary>
         public static bool IsSupported
         {
             get
@@ -122,22 +99,17 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>常駐しているパネル。作っていなければ null。</summary>
         public static GameRulesDebugPanel Instance => _instance;
 
-        /// <summary>開いているか。</summary>
         public bool IsOpen => _draft != null;
 
-        /// <summary>開いている間の編集中の値。閉じていれば null。</summary>
         public GameRulesDebugDraft Draft => _draft;
 
-        /// <summary>field の見出しを引く表のキー。</summary>
         public static string FieldLabelKey(GameRulesDebugField field)
         {
             return FieldLabelKeyPrefix + field;
         }
 
-        /// <summary>今の言語での field の見出し。表に無ければ項目の名前をそのまま出す。</summary>
         public static string FieldLabel(GameRulesDebugField field)
         {
             return Localizer.TryGet(FieldLabelKey(field), out var text) ? text : field.ToString();
@@ -219,10 +191,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 今のシーンの <see cref="GameBootstrap"/> が使ったルールを初期値にして開く。開いていれば何もしない。
-        /// GameBootstrap が無いかまだ生成していないシーンでは警告を出して false。
-        /// </summary>
         public bool Open()
         {
             if (IsOpen)
@@ -251,10 +219,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 閉じる。restoreInput が true なら、開いたときに止めた入力を戻し、プレイヤーが視点を操作できるならカーソルをロックし直す。
-        /// 閉じていれば何もしない。
-        /// </summary>
         public void Close(bool restoreInput)
         {
             if (!IsOpen)
@@ -281,10 +245,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 編集中の値で <see cref="GameRulesOverride.Set"/> し、変えた項目をログに出して今のシーンを読み直す。
-        /// 値の組み合わせが不正なら、エラーを出して開いたまま false。
-        /// </summary>
         public bool Apply()
         {
             if (!IsOpen)
@@ -310,7 +270,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary><see cref="GameRulesOverride.Clear"/> して今のシーンを読み直す。</summary>
         public void ResetRules()
         {
             Debug.Log(GameRulesDebugDraft.FormatResetLog());
@@ -319,10 +278,7 @@ namespace Shooter.Runtime
             ReloadActiveScene();
         }
 
-        /// <summary>
-        /// <see cref="SlowMotionScale"/> の速さを <see cref="SlowMotionSeconds"/> 秒だけ <see cref="TimeScaleArbiter.Request"/> で要求する。
-        /// 受けたか断ったか (とその理由) は TimeScaleArbiter がログに出す。パネルは閉じない (ルールを読み直さずに試せるように)。
-        /// </summary>
+        // パネルを閉じないのは、ルールを読み直さずに試せるようにするため。
         public TimeScaleRefusal RequestSlowMotion()
         {
             return TimeScaleArbiter.Request(SlowMotionReason, _slowMotionScale, _slowMotionSeconds);
@@ -405,10 +361,6 @@ namespace Shooter.Runtime
 #endif
         }
 
-        /// <summary>
-        /// 表示用の PanelSettings と UIDocument を持つ GameObject を作る。作ってあれば何もしない。
-        /// 文字の描画に要るテーマは HUD と同じもの (<see cref="Hud.ThemeResourcePath"/>) を使う。見つからなければエラーを出して false。
-        /// </summary>
         private bool TryCreateDocument()
         {
             if (_documentObject != null)

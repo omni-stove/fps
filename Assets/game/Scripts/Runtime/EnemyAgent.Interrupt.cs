@@ -33,7 +33,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // 止めた側が早く終えたとき (技の中断など) に使う。理由が違えば解かない。より長い怯みなど、ほかが止めている分まで消さないように。
+        // 理由が違えば解かないのは、より長い怯みなど、ほかが止めている分まで消さないため。
         public bool Resume(string reason)
         {
             if (!_interruption.IsActive || !string.Equals(_interruption.Reason, reason, StringComparison.Ordinal))

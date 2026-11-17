@@ -41,7 +41,6 @@ namespace Shooter.Runtime
 
         public float AimingSeconds => _aimingSeconds;
 
-        /// <exception cref="ArgumentNullException">player・look・weapon のどれかが null。</exception>
         public static AimAssist Attach(GameObject player, FirstPersonLook look, AimDownSights ads, WeaponController weapon)
         {
             if (player == null)
@@ -97,11 +96,6 @@ namespace Shooter.Runtime
             Release();
         }
 
-        /// <summary>
-        /// 1 フレーム進める。device がゲームパッドで、<see cref="Look"/> の操作設定の <see cref="ControlSettings.AimAssist"/> が入のときだけ
-        /// <see cref="AimAssistSolver"/> の結果を <see cref="Look"/> に渡す。それ以外は <see cref="Look"/> の倍率を 1 に戻し、角度を渡さない。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public void Tick(float deltaSeconds, InputDeviceKind device)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

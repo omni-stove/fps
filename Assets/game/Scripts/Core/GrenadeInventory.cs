@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 出撃ごとに持つ投げ物。<see cref="GrenadeCatalog.Carried"/> の種類ごとに <see cref="GrenadePouch"/> を 1 つ持ち、
-    /// どれも <see cref="GrenadePouch.For"/> の数にする。投げる種類は <see cref="Selected"/> で、<see cref="SelectNext"/> で順に切り替える。
-    /// </summary>
     public sealed class GrenadeInventory
     {
         private readonly List<GrenadeSpec> _types = new List<GrenadeSpec>();
@@ -38,7 +34,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <summary>残りの数か、選んだ種類が変わったときに呼ばれる。</summary>
         public event Action Changed;
 
         public static GrenadeInventory Empty => new GrenadeInventory();
@@ -47,7 +42,6 @@ namespace Shooter.Core
 
         public int SelectedIndex => _types.Count == 0 ? -1 : _selected;
 
-        /// <summary>何も持たなければ null。</summary>
         public GrenadeSpec Selected => _types.Count == 0 ? null : _types[_selected];
 
         public int SelectedRemaining => _types.Count == 0 ? 0 : _pouches[_selected].Remaining;

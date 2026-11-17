@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// チームデスマッチ (<see cref="TeamDeathmatchRunner"/>) の HUD の書式役。<see cref="ModeStatus.Detail"/> がそのまま <see cref="ModeSession"/> のモードに使い、
-    /// 残り時間・陣営ごとの得点・リスポーンまでの秒数・結果だけを出す。
-    /// </summary>
     public sealed class TeamDeathmatchHudFormatter : ModeHudFormatterBase
     {
         // Edit Mode (テストやシーン生成) では Play の初期化が走らないので、エディターの読み込みでも登録する。

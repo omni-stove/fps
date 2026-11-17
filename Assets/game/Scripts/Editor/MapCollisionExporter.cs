@@ -225,10 +225,8 @@ namespace Shooter.Editor
             File.Move(temporary, path);
         }
 
-        /// <summary>
-        /// 有効なはしごをシーンの並び順で集める。スナップショットははしごをこの並びの番号で指すので、サーバーとクライアントは同じファイルを読む。
-        /// 無効なはしごはプレイ中につかまれない (Ladder.Enabled に載らない) ので書き出さない。
-        /// </summary>
+        // スナップショットははしごをこの並びの番号で指すので、サーバーとクライアントは同じファイルを読む。
+        // 無効なはしごはプレイ中につかまれない (Ladder.Enabled に載らない) ので書き出さない。
         public static NetMapLadders CollectLadders(IReadOnlyList<GameObject> roots)
         {
             if (roots == null)

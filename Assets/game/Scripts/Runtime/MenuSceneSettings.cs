@@ -4,15 +4,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// メニューから移るシーンの名前を、ゲームが <see cref="MenuRoute"/> の既定から変えるためのデータ。
-    /// 入口 (<see cref="GameContent.MenuScenes"/>) に割り当てるか Resources の <see cref="ResourcePath"/> に置くと、メニューの遷移 (MenuNavigator) がこの名前を読む。
-    /// 置かなければ、また空にした欄は既定の名前 (<see cref="MenuScenes.Default"/>) を使う。
-    /// </summary>
     [CreateAssetMenu(fileName = "MenuSceneSettings", menuName = "Shooter/Menu Scene Settings")]
     public sealed class MenuSceneSettings : ScriptableObject
     {
-        /// <summary>メインメニューのレイアウト (Resources の Menu/MainMenu) と同じフォルダ。</summary>
         public const string ResourcePath = "Menu/MenuSceneSettings";
 
         public const string LogTag = "[Menu]";
@@ -53,17 +47,12 @@ namespace Shooter.Runtime
             set => _sceneRoot = value;
         }
 
-        /// <summary>入口 (<see cref="GameContent.MenuScenes"/>) の設定、無ければ Resources の <see cref="ResourcePath"/> の設定。どちらも無ければ null。</summary>
         public static MenuSceneSettings Load()
         {
             var fromContent = GameContent.Pick(c => c.MenuScenes);
             return fromContent != null ? fromContent : Resources.Load<MenuSceneSettings>(ResourcePath);
         }
 
-        /// <summary>
-        /// Resources の設定から決めたシーンの名前。設定が無ければ <see cref="MenuScenes.Default"/>。
-        /// 設定が不正ならエラーログを出して <see cref="MenuScenes.Default"/> を返す。
-        /// </summary>
         public static MenuScenes LoadScenes()
         {
             var settings = Load();
@@ -86,10 +75,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// Resources の設定から決めたシーンのルート (<see cref="ToSceneRoot"/>)。設定が無いか欄が空なら <see cref="KitPaths.DefaultRoot"/>。
-        /// 設定が不正ならエラーログを出して <see cref="KitPaths.DefaultRoot"/> を返す。
-        /// </summary>
         public static string LoadSceneRoot()
         {
             var settings = Load();
@@ -109,8 +94,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>この設定のシーンのルート。空なら <see cref="KitPaths.DefaultRoot"/>。</summary>
-        /// <exception cref="MenuSceneSettingsException">ルートに空・<c>.</c>・<c>..</c> の区切りが入っている。</exception>
         public string ToSceneRoot()
         {
             if (string.IsNullOrWhiteSpace(_sceneRoot))
@@ -129,8 +112,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>この設定のシーンの名前。空の欄は既定の名前にする。</summary>
-        /// <exception cref="MenuSceneSettingsException">名前にフォルダの区切りや拡張子が入っている。</exception>
         public MenuScenes ToScenes()
         {
             try

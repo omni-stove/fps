@@ -12,10 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="SettingsView"/> が値を変えた直後から <see cref="AppliedControlSettings"/> で効かせ、閉じたときに保存すること。
-    /// メインメニューとポーズ画面のどちらからも開けること。本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
-    /// </summary>
+    // 本物の設定を壊さないよう、保存先はテストごとの別のキーにする。
     public sealed class SettingsViewTests
     {
         private ControlSettings _appliedBefore;
@@ -23,6 +20,7 @@ namespace Shooter.Tests.EditMode
         private GameLanguage _languageBefore;
         private ControlSettingsStore _store;
         private LanguagePreferenceStore _languageStore;
+        private VoiceSettingsStore _voiceStore;
         private SettingsView _view;
         private VisualElement _container;
 
@@ -37,7 +35,8 @@ namespace Shooter.Tests.EditMode
             var suffix = Guid.NewGuid().ToString("N");
             _store = new ControlSettingsStore("Shooter.Tests.SettingsView." + suffix);
             _languageStore = new LanguagePreferenceStore("Shooter.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
-            _view = new SettingsView(_store, languageStore: _languageStore);
+            _voiceStore = new VoiceSettingsStore("Shooter.Tests.SettingsView.Voice." + suffix);
+            _view = new SettingsView(_store, languageStore: _languageStore, voiceStore: _voiceStore);
             _container = new VisualElement();
         }
 
@@ -47,6 +46,7 @@ namespace Shooter.Tests.EditMode
             _view.Close();
             PlayerPrefs.DeleteKey(_store.Key);
             PlayerPrefs.DeleteKey(_languageStore.Key);
+            PlayerPrefs.DeleteKey(_voiceStore.Key);
             PlayerPrefs.Save();
             AppliedControlSettings.Apply(_appliedBefore);
             Localizer.Apply(_languageBefore);
@@ -197,7 +197,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(enemy.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.Standard.Enemy)));
         }
 
-        // 赤緑を選ぶと、味方と敵が青と橙になり、味方に ◆・敵に ▲ が付く。閉じると保存され、起動し直しても残る
         [Test]
         public void ChoosingRedGreenRecolorsAtOnceMarksTheSamplesAndIsSavedOnClose()
         {
@@ -260,7 +259,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo(SettingsView.OffText));
         }
 
-        // 字幕を On にするとすぐ効き (HUD の字幕は Changed で切り替わる)、閉じると保存され、起動し直しても残る
         [Test]
         public void TurningSubtitlesOnAppliesAtOnceAndIsSavedOnClose()
         {
@@ -314,7 +312,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.CameraShakeIntensity)).text, Is.EqualTo("100%"));
             Assert.That(blood.text, Is.EqualTo("オン"));
 
-            // 3 項目は「演出」の見出しの下に、揺れ・武器の揺れ・血の順で並ぶ
             var rows = shake.parent.parent;
             var heading = rows[rows.IndexOf(shake.parent) - 1] as Label;
             Assert.That(heading, Is.Not.Null);
@@ -383,7 +380,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(rows.IndexOf(aimAssist.parent), Is.EqualTo(rows.IndexOf(ads.parent) + 1));
         }
 
-        // エイムアシストを切るとすぐ効き、閉じると保存され、起動し直しても切れたまま
         [Test]
         public void TurningAimAssistOffAppliesAtOnceAndIsSavedOnClose()
         {
@@ -472,7 +468,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(strength.enabledSelf, Is.True);
             Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.RumbleStrength)).text, Is.EqualTo("100%"));
 
-            // 3 項目は「ゲームパッド」の見出しの下に、デッドゾーン・振動・振動の強さの順で並ぶ
             var rows = deadzone.parent.parent;
             var heading = rows[rows.IndexOf(deadzone.parent) - 1] as Label;
             Assert.That(heading, Is.Not.Null);
@@ -481,7 +476,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(rows.IndexOf(strength.parent), Is.EqualTo(rows.IndexOf(deadzone.parent) + 2));
         }
 
-        // 上下反転・デッドゾーン・振動を変えるとすぐ効き、閉じると保存され、開き直しても変えたまま
         [Test]
         public void ChangingTheInputFeelAppliesAtOnceAndIsSavedOnClose()
         {
@@ -587,7 +581,6 @@ namespace Shooter.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
-        // 行の先頭の見出しの Label。
         private static string CaptionOf(VisualElement control)
         {
             Assert.That(control, Is.Not.Null);
@@ -712,7 +705,6 @@ namespace Shooter.Tests.EditMode
                 Is.EqualTo("Toggle"));
             Assert.That(_container.Q<SliderInt>(SettingsView.SliderName(ControlValue.FieldOfView)).value, Is.EqualTo(70), "the edit survives");
 
-            // 組み直した後もボタンが効く
             _view.SetShowSubtitles(true);
             Assert.That(_container.Q<Button>(SettingsView.SubtitlesButtonName).text, Is.EqualTo("On"));
 

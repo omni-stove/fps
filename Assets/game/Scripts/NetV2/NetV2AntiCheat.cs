@@ -5,23 +5,13 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// クライアントが EAC のパケットを .NET のサーバーと送受信する口。
-    /// EAC の SDK の側 (<see cref="IAntiCheatClientSession"/>) は作り方 (<see cref="CreateSession"/>) を登録してもらう形にする。
-    /// EOS のプラグインに依存するアセンブリ (Shooter.NetEos) を、このアセンブリが参照しないため。
-    /// </summary>
+    // EAC の SDK の側 (IAntiCheatClientSession) を作り方 (CreateSession) で登録してもらうのは、
+    // EOS のプラグインに依存するアセンブリ (Shooter.NetEos) を、このアセンブリが参照しないため。
     public static class NetV2AntiCheat
     {
-        /// <summary>
-        /// EAC の SDK の側を作る。EOS のプラグインがあるビルドで起動時に登録される。登録が無いまま EAC が有効なら、
-        /// 守られないまま遊ばせずに起動を断る。
-        /// </summary>
+        // 登録が無いまま EAC が有効なら、守られないまま遊ばせずに起動を断る。
         public static Func<IAntiCheatClientSession> CreateSession { get; set; }
 
-        /// <summary>
-        /// サーバーとやり取りする <see cref="ClientAntiCheat"/> を作る。EAC を使うかは Netcode のクライアントと同じ
-        /// <see cref="AntiCheatSettings.TryResolve"/> で決めたものを受け取る。
-        /// </summary>
         public static bool TryCreate(
             AntiCheatSettings settings,
             MatchClient client,
@@ -61,7 +51,7 @@ namespace Shooter.NetV2
             return true;
         }
 
-        /// <summary>始められなかったときに添える。Netcode のクライアント (<c>EosAntiCheat</c>) と同じ文にする。</summary>
+        // Netcode のクライアント (EosAntiCheat) と同じ文にする。
         public static string LaunchHint => "; launch the game through the EAC bootstrapper (start_protected_game) or pass " + AntiCheatSettings.NoEacFlag;
     }
 }

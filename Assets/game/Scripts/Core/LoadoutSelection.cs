@@ -3,32 +3,12 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ロードアウトを選ぶ画面の中身。<see cref="LoadoutRule"/> のスロットごとに、<see cref="WeaponCatalog"/> の武器のうち
-    /// そのスロットが許す種別のものを一覧の順に並べ (<see cref="ListOptions"/>)、スロットごとに 1 つを選んでいる状態を持つ。
-    /// 選んだ並びがルールに合うか (同じ武器を 2 つのスロットに入れていないか) は <see cref="Validate"/> で確かめる。
-    /// </summary>
-    /// <remarks>
-    /// 並べる武器はサーバーが選択を引く一覧 (<see cref="ServerLoadout.Catalog"/>) と同じものなので、既定のロードアウトにしかない武器は並べない。
-    /// </remarks>
     public sealed class LoadoutSelection
     {
         private readonly IReadOnlyList<WeaponSpec>[] _options;
         private readonly int[] _selected;
         private readonly Func<string, bool> _isAvailable;
 
-        /// <param name="rule">スロットの並びと各スロットが許す種別。</param>
-        /// <param name="catalog">選べる武器の一覧。</param>
-        /// <param name="preferred">
-        /// 最初に選んでおくスロット順の Id (前に保存した並びなど)。null 可。本数がスロットの数と違えば使わない。
-        /// そのスロットに並ばない Id のスロットは fallback で決める。
-        /// </param>
-        /// <param name="fallback">preferred で決まらなかったスロットに選んでおく、スロット順の Id (今の並び・既定の並び)。null 可。</param>
-        /// <param name="isAvailable">
-        /// 武器の Id を受け取り、その武器がもう使えるかを返す。null なら全部使える。
-        /// 使えない武器は一覧に並んだまま選ばれず、送れない。preferred・fallback の使えない Id は並ばない Id と同じに扱う。
-        /// </param>
-        /// <exception cref="ArgumentNullException">rule か catalog が null。</exception>
         public LoadoutSelection(
             LoadoutRule rule,
             WeaponCatalog catalog,
@@ -74,20 +54,13 @@ namespace Shooter.Core
             RestoredPreference = restored;
         }
 
-        /// <summary>スロットの並びと各スロットが許す種別。</summary>
         public LoadoutRule Rule { get; }
 
-        /// <summary>スロットの数。</summary>
         public int SlotCount => _options.Length;
 
-        /// <summary>コンストラクタの preferred が全スロットでそのまま選べたら true (保存した並びを復元できた)。</summary>
         public bool RestoredPreference { get; }
 
-        /// <summary>
-        /// rule のスロットごとに、catalog の武器のうちそのスロットが許す種別 (<see cref="LoadoutRule.Accepts"/>) のものを
-        /// 一覧の順に並べる。どの武器も入らないスロットは空の列になる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">rule か catalog が null。</exception>
+        // 既定のロードアウトにしかない武器を並べず catalog だけから並べるのは、サーバーが選択を ServerLoadout.Catalog から引くため。
         public static IReadOnlyList<IReadOnlyList<WeaponSpec>> ListOptions(LoadoutRule rule, WeaponCatalog catalog)
         {
             if (rule == null)
@@ -118,24 +91,18 @@ namespace Shooter.Core
             return slots.AsReadOnly();
         }
 
-        /// <summary>slot 番のスロットに選べる武器 (一覧の順)。空のこともある。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が範囲外。</exception>
         public IReadOnlyList<WeaponSpec> OptionsAt(int slot)
         {
             RequireSlot(slot);
             return _options[slot];
         }
 
-        /// <summary>slot 番のスロットで選んでいる武器の、<see cref="OptionsAt"/> の中の位置。選べる武器が無ければ -1。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が範囲外。</exception>
         public int SelectedIndexAt(int slot)
         {
             RequireSlot(slot);
             return _selected[slot];
         }
 
-        /// <summary>slot 番のスロットで選んでいる武器。選べる武器が無ければ null。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が範囲外。</exception>
         public WeaponSpec SelectedAt(int slot)
         {
             RequireSlot(slot);
@@ -143,8 +110,6 @@ namespace Shooter.Core
             return index >= 0 ? _options[slot][index] : null;
         }
 
-        /// <summary>slot 番のスロットの option 番目の武器が使えるか。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot か option が範囲外。</exception>
         public bool IsAvailableAt(int slot, int option)
         {
             RequireSlot(slot);
@@ -157,8 +122,6 @@ namespace Shooter.Core
             return IsAvailable(_options[slot][option]);
         }
 
-        /// <summary>slot 番のスロットで option 番目の武器を選ぶ。option が範囲外か、その武器が使えなければ何もせず false。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が範囲外。</exception>
         public bool Select(int slot, int option)
         {
             RequireSlot(slot);
@@ -171,11 +134,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// slot 番のスロットの選択を、使える武器だけを数えて step だけ前後に動かし、端では反対側へ回り込む。
-        /// 移れる使える武器が無ければ何もせず false。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">slot が範囲外。</exception>
         public bool Cycle(int slot, int step)
         {
             RequireSlot(slot);
@@ -212,7 +170,6 @@ namespace Shooter.Core
             return next != current;
         }
 
-        /// <summary>選んでいる武器の Id (スロット順)。選べる武器が無いスロットは空文字。</summary>
         public IReadOnlyList<string> WeaponIds
         {
             get
@@ -227,10 +184,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 選んでいる並びを送れるか。送れるなら null、送れなければ理由。
-        /// 選べる武器が無いスロットがある・使えない武器を選んでいる・<see cref="Rule"/> に合わない (同じ武器を 2 回) なら送れない。
-        /// </summary>
         public string Validate()
         {
             var chosen = new WeaponSpec[_options.Length];

@@ -8,13 +8,10 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Unity の <c>Shooter.NetEos.EosAntiCheat</c> がホストで Anti-Cheat Client の PeerToPeer モードで行っていた登録・中継・切断を、
-    /// 専用サーバー向けの Anti-Cheat Server インターフェースで行う。専用サーバーはユーザーを持たないので、セッションはユーザー無しで始める。
-    /// </summary>
+    // 専用サーバーはユーザーを持たないので、セッションはユーザー無しで始める。
     internal sealed class EosAntiCheatServerBackend : IAntiCheatServerBackend
     {
-        /// <summary>Unity のホストがピアの認証を待つ秒数 (<c>EosAntiCheat.AuthenticationTimeoutSeconds</c>) とそろえる。</summary>
+        // Unity のホストがピアの認証を待つ秒数 (EosAntiCheat.AuthenticationTimeoutSeconds) とそろえる。
         public const uint RegisterTimeoutSeconds = 60;
 
         private const string _serverName = "shooter-server";

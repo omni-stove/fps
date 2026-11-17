@@ -8,10 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// スティックのデッドゾーンを processor の上書きとして付け、割り当ての上書き (<see cref="PlayerBindings"/>・<see cref="InputBindingOverridesStore"/>) と互いを消さないこと。
-    /// プロジェクト全体のアクションと本物の設定を壊さないよう、アセットは写しを使い、キーはテストごとに変える。
-    /// </summary>
+    // プロジェクト全体のアクションと本物の設定を壊さないよう、アセットは写しを使い、キーはテストごとに変える。
     public sealed class StickDeadzoneApplierTests
     {
         private static readonly RebindSlot ReloadKey = new RebindSlot("Reload", InputDeviceKind.KeyboardMouse);

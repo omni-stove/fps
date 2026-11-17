@@ -99,10 +99,8 @@ namespace Shooter.Runtime
 
         public WeaponSockets Sockets => _instance != null ? _sockets : WeaponSockets.None;
 
-        /// <summary>照準器のスコープの縁 (<see cref="SightView.HidesViewmodel"/>) が画面を覆うので、モデルを描かずにいるか。</summary>
         public bool IsHiddenBySight => _instance != null && _hiddenBySight;
 
-        /// <summary>照準器の出し方。null なら同じ GameObject の <see cref="AimDownSights.SightView"/>。</summary>
         public Func<SightView> SightSource { get; set; }
 
         public ViewmodelMotion Motion
@@ -175,9 +173,6 @@ namespace Shooter.Runtime
             PlaceForAim();
         }
 
-        /// <summary>
-        /// 構えきったときのモデルの根の位置。照準の点 (sightInModel、モデルの根から見た位置) が adsOffset に来るようにする。
-        /// </summary>
         public static Vector3 AimedRootPosition(Vector3 adsOffset, Vector3 sightInModel)
         {
             return adsOffset - sightInModel;

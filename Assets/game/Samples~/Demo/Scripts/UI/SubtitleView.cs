@@ -5,24 +5,12 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 音の合図の字幕を画面の下に出すビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="SubtitleFeed.CuePlayed"/> を受けるたびに、今のカメラ (<see cref="Viewer"/>) から見た向きと距離で
-    /// 「[銃声 左後ろ]」の形の行を出し (<see cref="SubtitleLines"/>)、最後の合図から <see cref="SubtitleLines.DefaultSeconds"/> 秒で消す。
-    /// 同じ種類の合図は 1 行にまとめる。設定 (<see cref="ControlSettings.ShowSubtitles"/>) が Off の間は何も出さず、
-    /// Off にしたら出している行を消す。向きは合図を受けたときに決め、後から振り向いても書き換えない。
-    /// 字幕は聞こえない人の代わりの情報なので、HUD の量 (<see cref="HudVisibility"/>) では隠さない。
-    /// <see cref="SubtitleFeed.Spoken"/> と、分隊の bot の応答 (<see cref="SubtitleFeed.SquadReplied"/>、<see cref="SquadOrderText.Reply(SquadOrderReply)"/> で文にする) は
-    /// 話した人ごとに 1 行で出す (<see cref="Show(SubtitleSpeech)"/>)。
-    /// オフラインとオンラインで同じ HUD (<see cref="Hud.AddViews"/>) に付く。専用サーバーでは購読しない。
-    /// </summary>
+    // 字幕は聞こえない人の代わりの情報なので、HUD の量 (HudVisibility) では隠さない。
     [DisallowMultipleComponent]
     public sealed class SubtitleView : HudElementView
     {
-        /// <summary>Hud.uxml の字幕の要素。</summary>
         public const string UxmlName = "subtitles";
 
-        /// <summary>1 行の Label に付けるクラス。</summary>
         public const string LineClass = "subtitles__line";
 
         private readonly SubtitleLines _lines = new SubtitleLines();
@@ -32,15 +20,11 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 向きの基準にするカメラ。null なら <see cref="Camera.main"/> を使う (オフラインの PlayerCamera とオンラインの ViewCamera は MainCamera)。
-        /// </summary>
+        // 未設定なら Camera.main を基準にするのは、オフラインの PlayerCamera もオンラインの ViewCamera も MainCamera だから。
         public Transform Viewer { get; set; }
 
-        /// <summary>設定 (<see cref="AppliedControlSettings.Current"/>) で字幕を出すことになっているか。</summary>
         public bool ShowsSubtitles => AppliedControlSettings.Current.ShowSubtitles;
 
-        /// <summary>出している行 (最初に出た順)。</summary>
         public IReadOnlyList<SubtitleLine> Lines => _lines.Lines;
 
         private void OnEnable()
@@ -77,10 +61,6 @@ namespace Shooter.Runtime
             Tick(Time.unscaledDeltaTime);
         }
 
-        /// <summary>
-        /// source の合図を、今のカメラから見た向きと距離で字幕にする。字幕が Off か、カメラから聞こえない距離なら何もしない。
-        /// カメラが無ければ向きを書かずに出す。
-        /// </summary>
         public void Show(SoundCueSource source)
         {
             if (!ShowsSubtitles || !TryLocate(source, out var cue))
@@ -94,10 +74,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// speech (分隊の bot の応答など) を 1 行出す。同じ人の行は書き換える。
-        /// 設定の字幕 (<see cref="ShowsSubtitles"/>、音の字幕) が Off でも出す。話した内容は声の素材が無いと字幕でしか伝わらないので。
-        /// </summary>
+        // 話した内容は声の素材が無いと字幕でしか伝わらないので、音の字幕の設定 (ShowsSubtitles) が Off でも出す。
         public void Show(SubtitleSpeech speech)
         {
             if (speech.Speaker == null || speech.Text == null)
@@ -111,7 +88,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>分隊の bot の応答 reply を、今の言語の文にして <see cref="Show(SubtitleSpeech)"/> で出す。</summary>
         public void Show(SquadOrderReply reply)
         {
             if (reply.Speaker == null)
@@ -122,7 +98,6 @@ namespace Shooter.Runtime
             Show(new SubtitleSpeech(reply.Speaker, SquadOrderText.Reply(reply)));
         }
 
-        /// <summary>deltaSeconds 秒進め、出し終えた行を消す。負か有限でない値では進めない。</summary>
         public void Tick(float deltaSeconds)
         {
             if (deltaSeconds > 0f && !float.IsInfinity(deltaSeconds))
@@ -136,7 +111,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>行をすべて消す。</summary>
         public void Clear()
         {
             _lines.Clear();

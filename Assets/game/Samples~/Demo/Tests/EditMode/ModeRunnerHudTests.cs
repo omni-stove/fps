@@ -9,9 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ModeRunnerBase が <see cref="GameSignals.ModeStatus"/> に出した状態が、既定の HUD (<see cref="ModeHudView"/>) に届くことを確かめる。
-    /// </summary>
     public sealed class ModeRunnerHudTests
     {
         private const float RespawnSeconds = 1f;

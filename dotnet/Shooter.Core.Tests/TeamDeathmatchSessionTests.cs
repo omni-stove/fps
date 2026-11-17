@@ -14,6 +14,7 @@ namespace Shooter.Core.Tests
 
         private Dictionary<int, Vector3> _positions;
         private List<string> _events;
+        private List<string> _assisters;
         private List<int> _downedChanged;
 
         // 定数配列を直接渡すと CA1861 になるので params で受ける
@@ -26,6 +27,7 @@ namespace Shooter.Core.Tests
         {
             _positions = new Dictionary<int, Vector3>();
             _events = new List<string>();
+            _assisters = new List<string>();
             _downedChanged = new List<int>();
         }
 
@@ -36,7 +38,9 @@ namespace Shooter.Core.Tests
             float? restartDelaySeconds = null,
             GameRules rules = null,
             FriendlyFire friendlyFire = FriendlyFire.Off,
-            float reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds)
+            float reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds,
+            int pointsPerAssist = TeamDeathmatchSpec.DefaultPointsPerAssist,
+            AssistSpec assist = null)
         {
             var points = new[]
             {
@@ -56,13 +60,14 @@ namespace Shooter.Core.Tests
                 d.ReserveAmmoMultiplier,
                 d.Destruction);
             var session = new TeamDeathmatchSession(
-                new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules),
+                new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules, pointsPerAssist: pointsPerAssist),
                 _maxHealth,
                 points,
                 new SpawnSelector(),
                 id => _positions[id],
                 restartDelaySeconds,
-                reconnectGraceSeconds);
+                reconnectGraceSeconds,
+                assist);
 
             // ネットワーク側と同じく、出現の知らせを受けたら位置を動かす
             session.Spawned += (id, point) =>
@@ -72,7 +77,11 @@ namespace Shooter.Core.Tests
             };
             session.Started += () => _events.Add("started");
             session.Restarted += () => _events.Add("restarted");
-            session.Killed += (killer, victim) => _events.Add("kill " + killer + ">" + victim);
+            session.Killed += (killer, victim, assisters) =>
+            {
+                _events.Add("kill " + killer + ">" + victim);
+                _assisters.Add(string.Join(",", assisters));
+            };
             session.ScoreChanged += (a, b) => _events.Add("score " + a + "-" + b);
             session.Ended += winner => _events.Add("ended " + (winner?.ToString() ?? "draw"));
             session.Downed += (attacker, victim) => _events.Add("down " + attacker + ">" + victim);
@@ -200,6 +209,128 @@ namespace Shooter.Core.Tests
             Assert.That(session.GetDeaths(2), Is.EqualTo(1));
             Assert.That(session.GetScore(Team.Alpha), Is.EqualTo(1));
             Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0")));
+        }
+
+        [Test]
+        public void EnemiesWhoHitTheVictimEnoughGetAnAssistAndItsPoints()
+        {
+            var session = Create(pointsPerAssist: 2, assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            _events.Clear();
+            var changed = new List<int>();
+            session.PlayerChanged += changed.Add;
+
+            session.ApplyDamage(3, 2, 30);
+            session.Tick(4f);
+            Assert.That(session.ApplyDamage(1, 2, 70), Is.EqualTo(DamageOutcome.Killed));
+
+            Assert.That(session.GetKills(1), Is.EqualTo(1));
+            Assert.That(session.GetAssists(3), Is.EqualTo(1));
+            Assert.That(session.GetAssists(1), Is.Zero);
+            Assert.That(session.GetKills(3), Is.Zero);
+            Assert.That(session.GetScore(Team.Alpha), Is.EqualTo(3));
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 3-0")));
+            Assert.That(_assisters, Is.EqualTo(Events("3")));
+            Assert.That(changed, Is.EqualTo(Ids(2, 2, 1, 3)));
+        }
+
+        [Test]
+        public void TooLittleOrTooOldDamageIsNoAssist()
+        {
+            var session = Create(assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+
+            session.ApplyDamage(3, 2, 19);
+            session.ApplyDamage(1, 2, 81);
+            session.Tick(3f);
+            session.ApplyDamage(3, 2, 30);
+            session.Tick(10.5f);
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.GetKills(1), Is.EqualTo(2));
+            Assert.That(session.GetAssists(3), Is.Zero);
+            Assert.That(_assisters, Is.EqualTo(Events(string.Empty, string.Empty)));
+        }
+
+        [Test]
+        public void DamageBeforeARespawnIsForgotten()
+        {
+            var session = Create(assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+
+            session.ApplyDamage(3, 2, 30);
+            session.ApplyDamage(2, 2, _maxHealth);
+            session.Tick(3f);
+            Assert.That(session.IsAlive(2), Is.True);
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.GetAssists(3), Is.Zero);
+            Assert.That(_assisters, Is.EqualTo(Events(string.Empty, string.Empty)));
+        }
+
+        [Test]
+        public void TeamKillsPassNoAssistersAndAlliesNeverAssist()
+        {
+            var session = Create(friendlyFire: FriendlyFire.On, assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+
+            session.ApplyDamage(2, 3, 30);
+            session.ApplyDamage(1, 3, _maxHealth);
+            session.ApplyDamage(3, 1, 50);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.GetAssists(2), Is.Zero);
+            Assert.That(session.GetAssists(3), Is.Zero);
+            Assert.That(session.GetKills(2), Is.EqualTo(1));
+            Assert.That(_assisters, Is.EqualTo(Events(string.Empty, string.Empty)));
+        }
+
+        [Test]
+        public void AnAssisterWhoLeftIsNotPassed()
+        {
+            var session = Create(assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3);
+            session.Join(4);
+            session.Join(5);
+
+            session.ApplyDamage(3, 2, 30);
+            session.ApplyDamage(5, 2, 30);
+            session.Leave(3);
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.GetAssists(5), Is.EqualTo(1));
+            Assert.That(_assisters, Is.EqualTo(Events("5")));
+        }
+
+        [Test]
+        public void AssistsAreHeldForAReconnectAndClearedByRestart()
+        {
+            var session = Create(assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));
+            session.Join(1);
+            session.Join(2);
+            session.Join(3, "key");
+            session.ApplyDamage(3, 2, 30);
+            session.ApplyDamage(1, 2, _maxHealth);
+
+            Assert.That(session.Leave(3), Is.True);
+            Assert.That(session.FindHeld("key")?.Assists, Is.EqualTo(1));
+            session.Join(4, "key");
+            Assert.That(session.GetAssists(4), Is.EqualTo(1));
+
+            session.Finish(null);
+            session.Restart();
+
+            Assert.That(session.GetAssists(4), Is.Zero);
         }
 
         [Test]
@@ -1047,7 +1178,6 @@ namespace Shooter.Core.Tests
                 actions);
         }
 
-        /// <summary>Alpha に 1 と 3、Bravo に 2 と 4 を入れて始め、ここまでのイベントを消す。</summary>
         private TeamDeathmatchSession CreateTwoOnTwo(
             GameRules rules,
             int scoreLimit = 10,

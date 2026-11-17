@@ -2,10 +2,8 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ネット対戦のプレイヤーの移動の値 (Unity では MotorSettings と NetPlayer.prefab の CharacterController・NetworkPlayerMotor に焼いてある値)。
-    /// Unity 抜きのサーバーはクライアントの予測と同じ値で動かさないと毎 tick 位置が食い違うので、<see cref="NetMatchFile"/> で同じ値を受け取る。
-    /// </summary>
+    // Unity 抜きのサーバーはクライアントの予測と同じ値で動かさないと毎 tick 位置が食い違うので、
+    // Unity では MotorSettings と NetPlayer.prefab に焼いてある値を NetMatchFile で同じく受け取る。
     public sealed class NetMotorSettings
     {
         // Unity の NetPlayer.prefab の CharacterController と NetworkPlayerMotor の既定と同じ寸法
@@ -54,17 +52,14 @@ namespace Shooter.Core
 
         public CapsuleMoverSpec Mover { get; }
 
-        /// <summary>伏せの速さと飛び込み。伏せの高さは <see cref="Stance"/> の <see cref="StanceGeometry.Prone"/> を使う。</summary>
         public ProneSpec Prone { get; }
 
         public SwimTuning Swim { get; }
 
         public WallRunTuning WallRun { get; }
 
-        /// <summary>
-        /// PlayerController と同じく、カプセルが取れる高さ (半径の 2 倍以上、しゃがみ以下) に収める。
-        /// 伏せの高さをゲームが変えても、カプセルを作れずに動けなくなるより近い高さで伏せる方がよいため。
-        /// </summary>
+        // PlayerController と同じく、カプセルが取れる高さ (半径の 2 倍以上、しゃがみ以下) に収める。
+        // 伏せの高さをゲームが変えても、カプセルを作れずに動けなくなるより近い高さで伏せる方がよいため。
         public static float FitProneHeight(float height, float crouchHeight, float radius)
         {
             var low = Math.Min(radius * 2f, crouchHeight);

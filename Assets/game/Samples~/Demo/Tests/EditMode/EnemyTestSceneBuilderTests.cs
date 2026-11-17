@@ -284,7 +284,6 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void LowCoverHidesACrouchedEnemyAndWallEndsHideUntilPeeking()
         {
-            // 原点のプレイヤーの目から、遮蔽点で隠れた敵は見えず、覗けば見える。
             var eye = new Vector3(0f, GameBootstrap.PlayerSpawn.y + GameBootstrap.EyeOffset.y, 0f);
             EnemyTestSceneBuilder.CreateLevel(_scene);
             Physics.SyncTransforms();
@@ -320,7 +319,6 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void PatrolRouteIsHiddenFirstAndThenComesIntoView()
         {
-            // 巡回路の配置が意図どおりか (プレイヤーは原点の目の高さから見る)。
             var eye = new Vector3(0f, GameBootstrap.PlayerSpawn.y + GameBootstrap.EyeOffset.y, 0f);
             EnemyTestSceneBuilder.CreateLevel(_scene);
             Physics.SyncTransforms();

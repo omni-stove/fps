@@ -8,11 +8,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="PauseMenu"/> が開閉で時間と画面を切り替えること。入力の止め方は Core の PauseState のテストで確かめ、
-    /// ここでは Unity 側の時間・表示・ボタンを見る。Edit Mode では UIDocument が木を作らないことがあるので、
-    /// Hud.uxml を複製して <see cref="HudElementView.Bind"/> に渡す。
-    /// </summary>
+    // 入力の止め方は Core の PauseState のテストで確かめるので、ここでは Unity 側の時間・表示・ボタンだけを見る。
+    // Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製して HudElementView.Bind に渡す。
     public sealed class PauseMenuTests
     {
         private Hud _hud;

@@ -3,10 +3,8 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>プレイヤーに <see cref="GrenadeThrower"/> があれば、グレネードの有無と数をルールにする (<see cref="GrenadeThrower.Configure"/>)。</summary>
     public sealed class GrenadeActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。</summary>
         public const int InstallOrder = 400;
 
         public int Order => InstallOrder;

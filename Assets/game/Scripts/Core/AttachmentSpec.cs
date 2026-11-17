@@ -64,10 +64,8 @@ namespace Shooter.Core
 
         public IReadOnlyList<float> ZoomLevels { get; }
 
-        /// <summary>付けると武器の照準器をこれに替える。null なら替えない (倍率だけ決めた照準器は <see cref="SightSpec.Default"/> に替える)。</summary>
         public SightSpec Sight { get; }
 
-        /// <summary>武器の照準器を付け替える物か (倍率か照準器を決めている)。</summary>
         public bool IsOptic => ZoomLevels != null || Sight != null;
 
         public bool Fits(string weaponId)

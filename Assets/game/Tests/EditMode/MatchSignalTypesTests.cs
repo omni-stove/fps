@@ -6,7 +6,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>ミニマップ・チャット・ボイス・マップの投票・観戦の状態の型が、範囲外の値を拒み、渡された一覧の写しを持つこと。</summary>
     public sealed class MatchSignalTypesTests
     {
         [TestCase(0f, 0f)]

@@ -8,7 +8,6 @@ namespace Shooter.Runtime
         // ほかのアクションのコンポーネントを読まないので、どこで呼んでもよい。移動の取り付け (MoveActionInstaller) の後に置く。
         public const int InstallOrder = 350;
 
-        /// <summary>よろめきの調整値 (<see cref="StaggerJson"/> の形) を置く Resources のパス (拡張子なし)。</summary>
         public const string TuningResourcePath = "Tuning/stagger";
 
         public int Order => InstallOrder;
@@ -30,7 +29,6 @@ namespace Shooter.Runtime
         }
 #endif
 
-        /// <summary>入口の <see cref="GameContent.StaggerTuning"/>、無ければ <see cref="TuningResourcePath"/>、どちらも無ければ <see cref="StaggerTuning.Default"/>。</summary>
         public static StaggerTuning Tuning => KitTuning.Load(c => c.StaggerTuning, TuningResourcePath, StaggerJson.Parse, StaggerTuning.Default);
 
         // 敵には取り付けの口が無いので、ここでルールと調整値を渡し、そのとき居る敵に StaggerReaction を付ける。

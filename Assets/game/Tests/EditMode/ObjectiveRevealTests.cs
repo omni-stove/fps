@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>Edit Mode では Start/Update が走らないので、それらが呼ぶ Bind と Refresh を直接呼んで確かめる。</summary>
+    // Edit Mode では Start/Update が走らないので、それらが呼ぶ Bind と Refresh を直接呼んで確かめる。
     public sealed class ObjectiveRevealTests
     {
         private readonly List<Object> _created = new List<Object>();

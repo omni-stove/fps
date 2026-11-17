@@ -4,13 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 敵が隠れに行く遮蔽点の印。この GameObject の位置が隠れるときに立つ足元、前 (+Z) が壁へ向かう向き
-    /// (この向きから来る弾を壁が遮る)。壁の高さの区分 <see cref="Height"/> で、低い壁ならしゃがんで隠れ、
-    /// 高い壁なら立ったまま隠れて <see cref="PeekPosition"/> へ横に出て覗く。
-    /// シーンで共有する <see cref="CoverPointRegistry"/> が集めて <see cref="CoverPointSelector"/> に渡す。
-    /// 動かない地形に置く前提で、Play 中に動かしても選ぶ位置は変わらない。
-    /// </summary>
+    // 動かない地形に置く前提なので、Play 中に動かしても選ぶ位置は変わらない。
     [DisallowMultipleComponent]
     public sealed class CoverPoint : MonoBehaviour
     {
@@ -26,32 +20,23 @@ namespace Shooter.Runtime
             set => _height = value;
         }
 
-        /// <summary>覗くときに立つ位置の、この GameObject のローカル座標でのずれ。</summary>
         public Vector3 PeekOffset
         {
             get => _peekOffset;
             set => _peekOffset = value;
         }
 
-        /// <summary>隠れるときに立つ足元 (ワールド座標)。</summary>
         public Vector3 Position => transform.position;
 
-        /// <summary>この点から壁へ向かう向き (ワールド座標)。</summary>
         public Vector3 Facing => transform.forward;
 
-        /// <summary>覗くときに立つ足元 (ワールド座標)。</summary>
         public Vector3 PeekPosition => transform.position + (transform.rotation * _peekOffset);
 
-        /// <summary>覗くときに立つ位置を、ワールド座標のずれで設定する (シーン生成スクリプト用)。</summary>
         public void SetPeekOffsetWorld(Vector3 worldOffset)
         {
             _peekOffset = Quaternion.Inverse(transform.rotation) * worldOffset;
         }
 
-        /// <summary>
-        /// 判断に渡す遮蔽点を作る。position は足元 (NavMesh に寄せた位置などを渡せる)。
-        /// 向きに水平の成分が無い (真上・真下を向いている) か座標が有限でなければ false を返し、error に理由を入れる。
-        /// </summary>
         public bool TryToCore(Vector3 position, out Shooter.Core.CoverPoint point, out string error)
         {
             try

@@ -8,32 +8,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンのセーブと再開を受け持つ。
-    /// <list type="bullet">
-    /// <item><see cref="CheckpointTrigger"/> から <see cref="SaveAt"/> を呼ばれたら、ミッションの進み具合・プレイヤーの体力・弾数・
-    /// チェックポイントの Id から <see cref="CampaignSave"/> を作り、ミッションごとのスロット <see cref="SaveSlot"/>
-    /// (<see cref="CampaignSaveSlots.For"/>) に書く。</item>
-    /// <item>プレイヤーが倒れたら武器・移動・グレネードを止め、<see cref="ReloadDelaySeconds"/> 秒 (ミッションの一覧 <see cref="MissionCatalog"/> から読む) 後にシーンを読み直す。</item>
-    /// <item>始めるときにセーブがあれば、ミッションの進み具合・チェックポイントの位置・体力・弾数を戻す。
-    /// 別のミッションのセーブや壊れたセーブは警告を出して無視し、最初から始める。
-    /// <see cref="CampaignLaunchSelection.IgnoresSaves"/> の間 (エディタでシーンを直接 Play し、まだセーブしていない) はセーブを読まずに最初から始める。
-    /// ミッションごとのスロットが無ければ、<see cref="CampaignSaveSlots.LegacyMissionId"/> だけは古いスロット <see cref="CampaignSaveSlots.Legacy"/> も読み、
-    /// 戻せたらミッションごとのスロットへ移す。</item>
-    /// <item>ミッションを達成したらセーブ (古いスロットも) を消す。</item>
-    /// </list>
-    /// Start で <see cref="MissionRunner"/> と <see cref="GameBootstrap"/> (どちらも Inspector で指定しなければシーンから) を拾い、
-    /// GameBootstrap がプレイヤーを作り終えていればすぐ、まだなら <see cref="GameBootstrap.Built"/> を待って始める。
-    /// トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
-    /// セーブの場所 (<see cref="Storage"/>) とシーンの読み直し (<see cref="SceneReloader"/>) は差し替えられる。
-    /// セーブしたことと再開までの秒数は <see cref="Notice"/> に出し、始めている間は <see cref="GameSignals.CampaignNotice"/> に置く (どう出すかは UI が決める)。
-    /// 始めるときにルール (メニューの選択 <see cref="CampaignLaunchSelection.Current"/> かコマンドライン引数 <c>-difficulty easy|normal|hard</c> があれば
-    /// <see cref="EasyRules"/> / <see cref="NormalRules"/> / <see cref="HardRules"/>、無ければ <see cref="RulesDefinition"/>) を読み、プレイヤーの自動回復 (<see cref="HealthRegen"/>) と
-    /// 武器の予備弾 (<see cref="WeaponController.ApplyRules"/>) に効かせてからセーブを戻す。セーブの予備弾には倍率を掛け直さない。
-    /// ミッションの <see cref="MissionDefinition.RulesOverride"/> があれば、難易度のルールにそれを重ねてから効かせる (視点もそのルールの <see cref="GameRules.ViewMode"/> にする)。
-    /// 同じルールの <see cref="GameRules.DeathBody"/> で、シーンの敵と標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も決める。
-    /// 状態の変化は <see cref="LogTag"/> を付けて Debug.Log に出す。
-    /// </summary>
+    // トリガーより先にミッションを戻すため、既定の実行順より前に Start を走らせる。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(-50)]
     public sealed class CampaignRunner : MonoBehaviour
@@ -77,7 +52,6 @@ namespace Shooter.Runtime
         private string _lastCheckpointId = string.Empty;
 
         // シーンを読み直すと CheckpointTrigger は未通過に戻るので、通ったチェックポイントの Id は読み直しをまたいで覚えておく。
-        // 復元できなかったとき (最初から始めるとき) と達成でセーブを消すときに空にする。
         private static readonly System.Collections.Generic.HashSet<string> _passedCheckpointIds =
             new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
 
@@ -87,79 +61,64 @@ namespace Shooter.Runtime
         private readonly CampaignNotice _notice = new CampaignNotice();
         private HudDensity? _publishedDensity;
 
-        // Start の時点でプレイヤーがまだ無かったときに、Built を待っている GameBootstrap。
         private GameBootstrap _awaitedBootstrap;
 
-        /// <summary>セーブを置く場所。null なら Start で <see cref="FileSaveStorage.CreateDefault"/> を使う。開始後は差し替えない。</summary>
         public ISaveStorage Storage
         {
             get => _storage;
             set => _storage = value;
         }
 
-        /// <summary>シーンを読み直す処理。null なら今のシーンを Build Settings の番号で読み直す。</summary>
         public Action SceneReloader
         {
             get => _sceneReloader;
             set => _sceneReloader = value;
         }
 
-        /// <summary>Start で使う MissionRunner。null ならシーンから探す。</summary>
         public MissionRunner Runner
         {
             get => _missionRunner;
             set => _missionRunner = value;
         }
 
-        /// <summary>Start でプレイヤーと HUD を受け取る GameBootstrap。null ならシーンから探す。</summary>
         public GameBootstrap Bootstrap
         {
             get => _bootstrap;
             set => _bootstrap = value;
         }
 
-        /// <summary>難易度を選ばずに始めたときに使うルール。null なら <see cref="GameRules.Default"/> を使い、開始時に警告を出す。</summary>
         public GameRulesDefinition RulesDefinition
         {
             get => _rules;
             set => _rules = value;
         }
 
-        /// <summary>Easy を選んだときに使うルール。</summary>
         public GameRulesDefinition EasyRules
         {
             get => _easyRules;
             set => _easyRules = value;
         }
 
-        /// <summary>Normal を選んだときに使うルール。</summary>
         public GameRulesDefinition NormalRules
         {
             get => _normalRules;
             set => _normalRules = value;
         }
 
-        /// <summary>Hard を選んだときに使うルール。</summary>
         public GameRulesDefinition HardRules
         {
             get => _hardRules;
             set => _hardRules = value;
         }
 
-        /// <summary>
-        /// <c>-difficulty</c> を探すコマンドライン引数。null なら <see cref="Environment.GetCommandLineArgs"/>。テストで差し替える。
-        /// 設定すると写しを持つ。
-        /// </summary>
         public IReadOnlyList<string> LaunchArgs
         {
             get => _launchArgs;
             set => _launchArgs = value != null ? new List<string>(value) : null;
         }
 
-        /// <summary>開始時にプレイヤーへ効かせたルール。開始前か、ルールを渡さずに <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> したときは null。</summary>
         public GameRules Rules => _activeRules;
 
-        /// <summary>difficulty のときに使うルールの定義。配線されていなければ null。</summary>
         public GameRulesDefinition RulesFor(CampaignDifficulty difficulty)
         {
             switch (difficulty)
@@ -175,27 +134,18 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>HUD に一時的に出す案内 (セーブした・再開まで N 秒)。</summary>
         public CampaignNotice Notice => _notice;
 
-        /// <summary><see cref="GameSignals.HudDensity"/> に出している HUD の量。開始前と止めた後は null。</summary>
         public HudDensity? PublishedHudDensity => _publishedDensity;
 
-        /// <summary>秒数を読むミッションの一覧。null なら入口 (<see cref="GameContent"/>) の一覧を使う。</summary>
         public MissionCatalog Missions
         {
             get => _missions;
             set => _missions = value;
         }
 
-        /// <summary>秒数を読むミッションの一覧 (<see cref="Missions"/>、無ければ入口の一覧)。どちらも無ければ null。</summary>
         public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
 
-        /// <summary>
-        /// プレイヤーが倒れてからシーンを読み直すまでの秒数。0 以上。設定していなければ <see cref="EffectiveMissions"/> の
-        /// <see cref="MissionCatalog.ReloadDelaySeconds"/>、一覧が無ければ <see cref="MissionCatalog.DefaultReloadDelaySeconds"/>。
-        /// 設定するとこの CampaignRunner だけ一覧の値より優先する。
-        /// </summary>
         public float ReloadDelaySeconds
         {
             get
@@ -219,10 +169,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// セーブしたときに HUD へ「セーブしました」を出しておく秒数。<see cref="EffectiveMissions"/> の
-        /// <see cref="MissionCatalog.SavedNoticeSeconds"/>、一覧が無ければ <see cref="MissionCatalog.DefaultSavedNoticeSeconds"/>。
-        /// </summary>
         public float SavedNoticeSeconds
         {
             get
@@ -234,19 +180,14 @@ namespace Shooter.Runtime
 
         public bool IsStarted => _mission != null;
 
-        /// <summary>セーブとの照合に使うミッションの Id (<see cref="MissionDefinition.Id"/>)。開始前は null。</summary>
         public string MissionId => _missionId;
 
-        /// <summary>このミッションのセーブを置くスロット (<see cref="CampaignSaveSlots.For"/>)。開始前は null。</summary>
         public string SaveSlot => _saveSlot;
 
-        /// <summary>最後にセーブした (または再開した) チェックポイントの Id。無ければ空文字。</summary>
         public string LastCheckpointId => _lastCheckpointId;
 
-        /// <summary>プレイヤーが倒れ、シーンの読み直しを待っていれば true。</summary>
         public bool IsReloadPending => _reloadPending;
 
-        /// <summary>プレイヤーがまだ無く、<see cref="GameBootstrap.Built"/> を待っていれば true。</summary>
         public bool IsWaitingForBootstrap => _awaitedBootstrap != null;
 
         private void Start()
@@ -271,11 +212,6 @@ namespace Shooter.Runtime
             Stop();
         }
 
-        /// <summary>
-        /// <see cref="Bootstrap"/> (null ならシーンの GameBootstrap) がプレイヤーを作り終えていれば <see cref="TryBeginWith"/> で始め、
-        /// まだなら <see cref="GameBootstrap.Built"/> を購読して、作り終えたときに始める。Start から呼ぶ。
-        /// 既に始まっているか待っていれば何もせず true。GameBootstrap が無い・始められないときは理由を Debug.LogError に出して false。
-        /// </summary>
         public bool BeginFromSceneOrWait()
         {
             if (IsStarted || IsWaitingForBootstrap)
@@ -302,11 +238,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// シーンの MissionRunner と <see cref="GameBootstrap"/> のプレイヤーを拾って <see cref="Begin"/> する。
-        /// 既に始まっていれば何もせず true。GameBootstrap がまだプレイヤーを作っていない・始められないときは
-        /// 理由を Debug.LogError に出して false を返す (作り終えるのを待つなら <see cref="BeginFromSceneOrWait"/> を使う)。
-        /// </summary>
         public bool TryBeginFromScene()
         {
             if (IsStarted)
@@ -331,12 +262,6 @@ namespace Shooter.Runtime
             return TryBeginWith(bootstrap.World);
         }
 
-        /// <summary>
-        /// world (GameBootstrap の生成物) のプレイヤーと、<see cref="Runner"/> (null ならシーンの MissionRunner) で <see cref="Begin"/> し、
-        /// セーブの置き場所は <see cref="Storage"/>、無ければ
-        /// <see cref="FileSaveStorage.CreateDefault"/>。ルールは <see cref="TryResolveRules"/> で決める。
-        /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBeginWith(BootstrapWorld world)
         {
             if (world == null)
@@ -386,18 +311,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 開始時に使うルールを決める。難易度は次の順に探し、見つかればその難易度のルール (<see cref="RulesFor"/>)、
-        /// どれも無ければ <see cref="RulesDefinition"/> を使う。
-        /// <list type="number">
-        /// <item>メニューの選択 <see cref="CampaignLaunchSelection.Current"/>。ミッション Id が missionId と違えば警告を出して使わない。</item>
-        /// <item><see cref="LaunchArgs"/> の <c>-difficulty</c>。読めない (値が無い・知らない難易度など) ときは警告を出し、無いものとして扱う。</item>
-        /// </list>
-        /// 選んだ難易度のルールが配線されていないときはエラーを出し、<see cref="RulesDefinition"/> を使う。
-        /// 使うルールが無ければ警告を出して <see cref="GameRules.Default"/>。
-        /// 使うルールの値が不正なら理由を Debug.LogError に出して false (rules は null)。
-        /// </summary>
-        /// <param name="missionId">このシーンのミッションの Id (<see cref="MissionDefinition.Id"/>)。選択と照合する。</param>
         public bool TryResolveRules(string missionId, out GameRules rules)
         {
             CampaignDifficulty? difficulty = null;
@@ -476,10 +389,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// rules に mission の <see cref="MissionDefinition.RulesOverride"/> を重ねる。mission が null か上書きが空なら rules のまま true。
-        /// 上書きが読めないか値が不正なら理由を Debug.LogError に出して false (rules は変えない)。
-        /// </summary>
         public bool TryApplyMissionRules(MissionDefinition mission, ref GameRules rules)
         {
             if (rules == null)
@@ -508,16 +417,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// プレイヤーの死亡とミッションの達成を購読し、storage にセーブがあれば戻す (<see cref="CampaignLaunchSelection.IgnoresSaves"/> なら戻さない)。
-        /// missionRunner はまだなら始める。始められない・参照が足りないときは例外を投げ、何も購読しない。
-        /// </summary>
-        /// <param name="missionRunner">セーブするミッション。</param>
-        /// <param name="player">プレイヤーの体力。この GameObject ごとチェックポイントへ移す。</param>
-        /// <param name="weapon">プレイヤーの武器。初期化済みであること。</param>
-        /// <param name="storage">セーブの置き場所。</param>
-        /// <param name="sceneReloader">プレイヤーが倒れたあとにシーンを読み直す処理。</param>
-        /// <remarks>ルールは効かせ直さず、プレイヤーの今の自動回復と武器のままにする。</remarks>
         public void Begin(
             MissionRunner missionRunner,
             Damageable player,
@@ -528,14 +427,7 @@ namespace Shooter.Runtime
             Begin(missionRunner, player, weapon, storage, sceneReloader, null);
         }
 
-        /// <summary>
-        /// <see cref="Begin(MissionRunner, Damageable, WeaponController, ISaveStorage, Action)"/> と同じだが、セーブを戻す前に rules を
-        /// プレイヤーに効かせる。武器は rules の予備弾で満タンに作り直し (<see cref="WeaponController.ApplyRules"/>)、
-        /// プレイヤーの <see cref="HealthRegen"/> (無ければ付ける) とアクション (<see cref="PlayerActions.Attach"/>)、落下ダメージ (<see cref="PlayerController.ApplyRules"/>)、
-        /// 倒れてから読み直すまでのカメラ (<see cref="PlayerDeathCamera"/>、無ければ付ける)、視点 (<see cref="ViewRig.Mode"/>、ViewRig があれば)、
-        /// ストリーク (<see cref="StreakController.Apply"/>) を rules で付け直す。セーブがあればその後で弾数を戻すので、
-        /// セーブの予備弾には倍率を掛け直さない。rules が null ならルールは効かせ直さない。
-        /// </summary>
+        // rules を効かせてからセーブを戻すのは、満タンに作り直した弾数をセーブの弾数で上書きし、セーブの予備弾に倍率を掛け直さないため。
         public void Begin(
             MissionRunner missionRunner,
             Damageable player,
@@ -635,10 +527,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 今の状態をチェックポイント checkpointId でセーブし、できたら true。
-        /// 開始前、ミッションの終了後、プレイヤーが倒れた後、書き込みに失敗したときは理由をログに出して false。
-        /// </summary>
         public bool SaveAt(string checkpointId)
         {
             if (!IsStarted)
@@ -702,10 +590,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// シーンの読み直しまでの時間と、HUD の案内の残り時間を deltaSeconds 進める。読み直しを待つ間は
-        /// 「チェックポイントから再開まで N 秒」を更新する。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -733,7 +617,6 @@ namespace Shooter.Runtime
             _sceneReloader();
         }
 
-        /// <summary>購読を解除してミッションから離れ、HUD の案内を外す。破棄時にも呼ばれる。</summary>
         public void Stop()
         {
             if (_publishedDensity.HasValue)
@@ -813,10 +696,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 読み込んだシーンの敵 (<see cref="EnemyAgent"/>) と標的ダミー (<see cref="TargetDummy"/>) のやられ演出を rules の
-        /// <see cref="GameRules.DeathBody"/> にする (<see cref="DeathBodyPresenter"/>)。GameBootstrap が付けた標的ダミーの設定は、難易度のルールで上書きする。
-        /// </summary>
+        // GameBootstrap が付けた標的ダミーの設定も、難易度のルールで上書きする。
         private void ApplyDeathBody(GameRules rules)
         {
             var targets = new List<Damageable>();
@@ -841,7 +721,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} deathBody={rules.DeathBody} targets={bound.ToString(CultureInfo.InvariantCulture)}", this);
         }
 
-        /// <summary>セーブがあれば今のシーンに戻す。戻せたら true。戻せないときは理由をログに出し、最初からの状態のままにする。</summary>
         private bool TryRestore()
         {
             var fromLegacy = false;
@@ -911,10 +790,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 古いスロットから戻せたセーブを、ミッションごとのスロットへ書いてから古いスロットを消す。
-        /// 書けなければ古いスロットを残す (次も古いスロットから再開できる)。
-        /// </summary>
+        // 書けなければ古いスロットを消さずに残し、次も古いスロットから再開できるようにする。
         private void MigrateLegacySave(string text)
         {
             try
@@ -935,7 +811,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>ログ用の「Id:弾倉/予備」をカンマで並べた文字列。</summary>
         private static string FormatAmmo(System.Collections.Generic.IReadOnlyList<WeaponAmmo> weapons)
         {
             var parts = new string[weapons.Count];

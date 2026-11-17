@@ -6,44 +6,27 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 印 (<see cref="GameSignals.Pings"/>) を HUD に出す既定の表示。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// 要素を持っている間は <see cref="GameSignals.Pings"/> を購読し、出された印を出す。要素を受けたときは今の印に合わせる。
-    /// 毎フレーム今のカメラから見直し、画面の中の印はその位置に、外 (後ろも含む) の印は <see cref="PingScreen.Place"/> で端に寄せて向きの矢印を出す。
-    /// 印が画面の中に入ったか端に寄ったときに <c>[Ping] screen</c>、印を受け始めたときに <c>[Ping] view</c> をログに出す。
-    /// <see cref="Hud.AddViews"/> が付ける。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class PingMarkersView : HudElementView
     {
-        /// <summary>Hud.uxml の印を入れる要素。</summary>
         public const string UxmlName = "ping-markers";
 
-        /// <summary>印 1 つの要素に付けるクラス。</summary>
         public const string MarkerClass = "ping-marker";
 
-        /// <summary>敵の印に足すクラス。</summary>
         public const string EnemyClass = "ping-marker--enemy";
 
-        /// <summary>場所の印に足すクラス。</summary>
         public const string LocationClass = "ping-marker--location";
 
-        /// <summary>画面の外の印 (端に寄せて矢印を出す) に足すクラス。</summary>
         public const string OffScreenClass = "ping-marker--offscreen";
 
-        /// <summary>印の形の要素に付けるクラス。</summary>
         public const string IconClass = "ping-marker__icon";
 
-        /// <summary>画面の外の印の向きを出す矢印の要素に付けるクラス (色は color で決める)。</summary>
         public const string ArrowClass = "ping-marker__arrow";
 
-        /// <summary>画面の外の印を寄せる端の余白。画面の高さを 1 とした量。</summary>
         public const float EdgeMargin = 0.06f;
 
-        /// <summary>矢印の三角の高さ (HUD の基準解像度での px)。</summary>
         public const float ArrowLength = 10f;
 
-        /// <summary>矢印の三角の底辺の半分 (HUD の基準解像度での px)。</summary>
         public const float ArrowHalfWidth = 7f;
 
         // カメラの縦横比が読めないときに使う。HUD の基準解像度 (1920x1080) の比。
@@ -59,15 +42,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している印の並び。出していなければ null。</summary>
         public IReadOnlyList<PingMarker> Markers => _markers;
 
-        /// <summary>
-        /// 向きの基準にするカメラ。null なら自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の視点のカメラ、それも無ければ <see cref="Camera.main"/>。
-        /// </summary>
         public Camera Viewer { get; set; }
 
-        /// <summary>今画面に出している (位置が決まった) 印の数。</summary>
         public int ShownCount
         {
             get
@@ -82,17 +60,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// markers の印を出す。null なら出すのをやめる。前と同じ並び (中身は変わっていてよい) なら置き直すだけにする。
-        /// 要素を持っている間は <see cref="GameSignals.Pings"/> が出されるたびに呼ばれる。
-        /// </summary>
         public void Show(IReadOnlyList<PingMarker> markers)
         {
             _showsSignal = false;
             Write(markers);
         }
 
-        /// <summary>印 id を今出している位置と向き。出していなければ false。</summary>
         public bool TryGetPlacement(int id, out PingScreenPlacement placement)
         {
             if (_entries.TryGetValue(id, out var entry) && entry.HasPlacement)
@@ -105,7 +78,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>出している印を、今のカメラから見て置き直す。</summary>
         public void Refresh()
         {
             var markers = _markers ?? (IReadOnlyList<PingMarker>)Array.Empty<PingMarker>();
@@ -240,9 +212,6 @@ namespace Shooter.Runtime
             return Viewer != null ? Viewer : LocalPlayerCamera();
         }
 
-        /// <summary>
-        /// 自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の視点 (<see cref="ViewRig"/>) のカメラ。無ければ <see cref="Camera.main"/>、それも無ければ null。
-        /// </summary>
         public static Camera LocalPlayerCamera()
         {
             var player = GameSignals.LocalPlayer.Value?.Player;

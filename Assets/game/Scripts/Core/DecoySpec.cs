@@ -42,7 +42,6 @@ namespace Shooter.Core
 
         public float CallIntervalSeconds { get; }
 
-        // 0 なら音で呼ばず、見えた敵だけを引きつける。
         public float CallRadius { get; }
 
         private static void RequirePositive(float value, string paramName)

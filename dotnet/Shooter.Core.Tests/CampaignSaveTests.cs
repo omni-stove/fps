@@ -410,7 +410,7 @@ namespace Shooter.Core.Tests
                 attachments);
         }
 
-        /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>
+        // 読みやすさのため ' で書いた JSON を " に直す。
         private static string Json(string text)
         {
             return text.Replace('\'', '"');

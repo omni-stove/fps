@@ -4,10 +4,8 @@ using System.Numerics;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// 軸に沿った箱と無限の半空間だけでできた世界。掃引は、凸な形への距離が掃引の距離に対して凸なことを使い、
-    /// 黄金分割探索と二分探索で解く (速さより、どの形でも同じ方法で正しく解けることを取る)。
-    /// </summary>
+    // 掃引は、凸な形への距離が掃引の距離に対して凸なことを使い、黄金分割探索と二分探索で解く。
+    // 速さより、どの形でも同じ方法で正しく解けることを取るため。
     internal sealed class FakeWorldCollision : IWorldCollision
     {
         private const int _searchIterations = 50;
@@ -31,7 +29,6 @@ namespace Shooter.Core.Tests
             return _shapes.Count - 1;
         }
 
-        /// <summary>法線 normal の向きの外側を空ける、point を通る面。</summary>
         public int AddHalfSpace(Vector3 point, Vector3 normal, int layer = 0)
         {
             var n = new Vector3D(normal).Normalized();

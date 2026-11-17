@@ -125,14 +125,12 @@ namespace Shooter.Core.Tests
             arbitration.Request("a", 0.5f, 2f);
             arbitration.Step(0f, false, 1f, BaseFixed, expired, out var timeScale, out var fixedDeltaTime);
 
-            // ポーズ画面が速さを 0 にしている間
             Assert.That(arbitration.Step(10f, true, 0f, fixedDeltaTime, expired, out var pausedScale, out _), Is.False);
             Assert.That(pausedScale, Is.EqualTo(0f));
             Assert.That(arbitration.IsPaused, Is.True);
             Assert.That(expired, Is.Empty);
             Assert.That(arbitration.Requests[0].RemainingSeconds, Is.EqualTo(2f));
 
-            // 閉じたポーズ画面が開く前の速さへ戻した
             Assert.That(arbitration.Step(0.5f, false, timeScale, fixedDeltaTime, expired, out timeScale, out fixedDeltaTime), Is.False);
             Assert.That(arbitration.IsPaused, Is.False);
             Assert.That(arbitration.Requests[0].RemainingSeconds, Is.EqualTo(1.5f).Within(Within));

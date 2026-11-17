@@ -10,11 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// GunGameRunner が段に合わせて持ち武器を替え、状態 (ModeStatus) に段を読めるガンゲームを載せ、最後の段の武器で倒した人の勝ちで終えることを確かめる。
-    /// Edit Mode では WeaponController が初期化されない (Awake が走らない) ので、持たせる武器は <see cref="WeaponController.Definitions"/> で見る。
-    /// bot (EnemyAgent) の持ち替えは EnemyAgentTests で確かめる。
-    /// </summary>
+    // Edit Mode では WeaponController が初期化されない (Awake が走らない) ので、持たせる武器は WeaponController.Definitions で見る。
     public sealed class GunGameRunnerTests
     {
         private const string KnifeId = "0d6f2c84-5b1e-4a37-9c08-3e7a1f5b2d96";

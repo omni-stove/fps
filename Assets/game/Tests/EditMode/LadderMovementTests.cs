@@ -11,11 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// はしご (<see cref="LadderMovement"/>) で、前からつかまって上り上の足場に降りる・上の端からつかまって下り地面に降りる・ジャンプで離れること、
-    /// ルールが Off ならつかまらないこと、つかまっている間は武器をしまい <see cref="PlayerActionConditions.OnLadder"/> を立てること。
-    /// 実際の <see cref="PlayerController"/> と CharacterController を、床と台の上で動かして確かめる。
-    /// </summary>
     public sealed class LadderMovementTests
     {
         private const float StepSeconds = 0.02f;

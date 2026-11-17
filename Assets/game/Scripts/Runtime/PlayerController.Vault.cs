@@ -5,34 +5,17 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerController"/> のうち、乗り越えの処理。
-    /// <see cref="VaultRule"/> が <see cref="Vault.On"/> で接地して立っているときに Jump を押すと、前方の障害物を物理で調べ
-    /// (<see cref="ProbeVault"/>)、<see cref="VaultProbe"/> が乗り越えられると決めたらジャンプの代わりにその軌跡 (<see cref="VaultPath"/>) をたどる。
-    /// 乗り越えられなければ (高すぎる壁など) ふつうにジャンプする。たどっている間は <see cref="TryOverrideMove"/> で移動を差し替え、
-    /// しゃがみ・ダッシュ・ジャンプを止める。撃たせないのは <see cref="GameBootstrap"/> が武器に配線する。
-    /// </summary>
     public sealed partial class PlayerController
     {
-        /// <summary>前方の障害物を探す Ray のうち、いちばん低いものの足元からの高さ (m)。上には <see cref="VaultProbe.ProbeHeightAt"/> の高さで並べる。</summary>
         public const float VaultProbeHeight = VaultProbe.LowestProbeHeight;
 
-        /// <summary>
-        /// 上端を測る Ray を、乗り越えられる高さよりこれだけ上から下ろす (m)。上限を少し超える壁も「高すぎる」と測れるようにするため。
-        /// ネット対戦 (NetVaultSensor) も同じ値で測る。
-        /// </summary>
+        // 上限を少し超える壁も「高すぎる」と測れるよう、乗り越えられる高さよりこれだけ上から下ろす。ネット対戦 (NetVaultSensor) も同じ値で測る。
         public const float VaultTopProbeMargin = 0.3f;
 
-        /// <summary>
-        /// 上端と奥行きを測る Ray を、当たった面から障害物の内側へずらす量 (m)。面のちょうど上を通って外さないため。
-        /// ネット対戦も同じ値で測る。
-        /// </summary>
+        // 面のちょうど上を通って外さないよう、当たった面から障害物の内側へずらす。ネット対戦も同じ値で測る。
         public const float VaultSurfaceInset = 0.02f;
 
-        /// <summary>
-        /// 奥行きは、手前の面から <see cref="MotorSpec.VaultMaxDepth"/> よりこれだけ先から戻る Ray で測る (m)。
-        /// ちょうど奥行きの上限の厚さも測れるようにするため。ネット対戦も同じ値で測る。
-        /// </summary>
+        // ちょうど奥行きの上限の厚さも測れるよう、VaultMaxDepth よりこれだけ先から戻る Ray で測る。ネット対戦も同じ値で測る。
         public const float VaultDepthSlack = 0.05f;
 
         private const int MaxVaultCastHits = 16;
@@ -45,25 +28,16 @@ namespace Shooter.Runtime
         private VaultPath _vaultPath;
         private float _vaultElapsed;
 
-        /// <summary>乗り越え始めたときに、乗り越える向き (ワールドの水平の単位ベクトル) を渡して呼ばれる。</summary>
         public event Action<Vector3> VaultStarted;
 
-        /// <summary>乗り越え終えたとき (途中でやめたときを含む) に呼ばれる。</summary>
         public event Action VaultEnded;
 
-        /// <summary>乗り越えの最中か。</summary>
         public bool IsVaulting => _vaultPath != null;
 
-        /// <summary>今たどっている軌跡。乗り越えていなければ null。</summary>
         public VaultPath VaultPath => _vaultPath;
 
-        /// <summary>最後に <see cref="ProbeVault"/> で調べた結果。</summary>
         public VaultProbeResult LastVaultProbe { get; private set; }
 
-        /// <summary>
-        /// 乗り越えを使うか。既定は <see cref="Vault.Off"/>。<see cref="PlayerActions.Attach"/> がルールの <see cref="ActionRules.Vault"/> を入れる。
-        /// Off にすると乗り越えている最中でもやめる。
-        /// </summary>
         public Vault VaultRule
         {
             get => _vaultRule;
@@ -82,23 +56,17 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>乗り越えのログ。例: <c>[Player] vaulting=true</c>。</summary>
         public static string FormatVaultingLog(bool vaulting)
         {
             return $"{LogTag} vaulting={(vaulting ? "true" : "false")}";
         }
 
-        /// <summary>障害物を調べた結果のログ。例: <c>[Player] vault=TooHigh height=2.00 depth=0.40</c>。</summary>
         public static string FormatVaultProbeLog(VaultProbeResult result)
         {
             var depth = float.IsPositiveInfinity(result.Depth) ? "inf" : result.Depth.ToString("F2", CultureInfo.InvariantCulture);
             return $"{LogTag} vault={result.Verdict} height={result.Height.ToString("F2", CultureInfo.InvariantCulture)} depth={depth}";
         }
 
-        /// <summary>
-        /// 向いている方向 (この GameObject の水平の前) の障害物を物理で調べ、<see cref="VaultProbe.Evaluate"/> で乗り越えられるかを決める。
-        /// 結果は <see cref="LastVaultProbe"/> にも残す。ルールや接地は問わない。
-        /// </summary>
         public VaultProbeResult ProbeVault()
         {
             if (!IsInitialized)
@@ -110,11 +78,6 @@ namespace Shooter.Runtime
             return LastVaultProbe;
         }
 
-        /// <summary>
-        /// 前方の障害物を乗り越え始める。<see cref="VaultRule"/> が Off・未初期化・接地していない・しゃがんでいるか伏せている・乗り越え中かよじ登り中か回避中・
-        /// 移動の横取り (<see cref="IsMovementOverridden"/>) の最中なら調べずに false。調べて障害物があれば結果を <see cref="FormatVaultProbeLog"/> でログに出し、乗り越えられなければ false。
-        /// 始めたら <c>[Player] vaulting=true</c> をログに出して <see cref="VaultStarted"/> を呼ぶ。動くのは次の <see cref="Tick"/> から。
-        /// </summary>
         public bool TryStartVault()
         {
             if (_vaultRule != Vault.On || !IsInitialized || !IsGrounded || _currentStance != PlayerStance.Standing || IsVaulting || IsMantling || IsDodging || IsMovementOverridden)
@@ -140,7 +103,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>乗り越えている最中ならやめる (その場から重力で落ちる)。やめたら true。</summary>
         public bool CancelVault()
         {
             if (!IsVaulting)
@@ -165,10 +127,6 @@ namespace Shooter.Runtime
             jumpPressed = false;
         }
 
-        /// <summary>
-        /// 乗り越えの最中か、このフレームの Jump で乗り越え始めたら、この <see cref="Tick"/> で動かす変位を displacement に入れ、overridden を true にする。
-        /// 回避より先に呼ばれる (<see cref="TryOverrideMove"/>)。乗り越えられなければ何もせず、Jump は <see cref="PlayerMotor"/> のジャンプになる。
-        /// </summary>
         private void TryOverrideMoveForVault(
             Vector2 move, bool jumpPressed, float deltaSeconds, ref bool overridden, ref Vector3 displacement)
         {

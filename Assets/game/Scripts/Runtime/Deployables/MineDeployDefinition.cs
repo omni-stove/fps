@@ -100,7 +100,6 @@ namespace Shooter.Runtime
             set => _armedVolume = value;
         }
 
-        /// <summary>owner が持つ、種類の Id が kindId の定義。キルログの名前 (<see cref="DisplayNameKey"/>) を引くのに使う。</summary>
         public static bool TryFind(GameObject owner, string kindId, out MineDeployDefinition mine)
         {
             return TryFindEquipped(owner, kindId, out mine);
@@ -131,7 +130,7 @@ namespace Shooter.Runtime
             return base.CreateAbility();
         }
 
-        // 足元が原点で spec の大きさに収まる平たい円盤。当たり判定を持たせ、敵の弾で壊せるようにする。
+        // 当たり判定を持たせるのは、敵の弾で壊せるようにするため。
         protected override GameObject CreatePlaceholder(DeploySpec spec)
         {
             var root = new GameObject(Id);

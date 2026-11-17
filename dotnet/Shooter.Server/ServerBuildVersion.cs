@@ -4,10 +4,7 @@ using System.Reflection;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// <c>dotnet publish -p:ShooterBuildVersion=&lt;版&gt;</c> でアセンブリに焼き込んだ版を読む。
-    /// Unity のサーバーが版をビルドに持つ (Application.version) のと同じく、引数なしで起動しても版が分かるようにする。
-    /// </summary>
+    // Unity のサーバーが版をビルドに持つ (Application.version) のと同じく、引数なしで起動しても版が分かるよう、アセンブリに焼き込んだ版を読む。
     internal static class ServerBuildVersion
     {
         public const string MetadataKey = "ShooterBuildVersion";
@@ -17,7 +14,7 @@ namespace Shooter.Server
             return Find(typeof(ServerBuildVersion).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>());
         }
 
-        /// <summary>焼き込んだ版。無いか空なら null。検証と正規化は <see cref="ServerLaunch"/> が引数の版と同じ規則で行う。</summary>
+        // 検証と正規化は ServerLaunch が引数の版と同じ規則で行うので、ここではしない。
         public static string Find(IEnumerable<AssemblyMetadataAttribute> metadata)
         {
             ArgumentNullException.ThrowIfNull(metadata);

@@ -9,10 +9,6 @@ using Vector3 = System.Numerics.Vector3;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// ミニマップ (MinimapView) が、出された MinimapStatus から印の数と地図の上の位置を決めることと、
-    /// HUD の量がすべて出すときでなければ隠れることを確かめる。
-    /// </summary>
     public sealed class MinimapViewTests
     {
         private const float Tolerance = 1e-4f;

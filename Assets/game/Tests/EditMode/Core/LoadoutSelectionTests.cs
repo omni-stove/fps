@@ -104,7 +104,6 @@ namespace Shooter.Core.Tests
         [Test]
         public void FallsBackPerSlotWhenThePreferredWeaponIsNotOffered()
         {
-            // 保存した後で一覧から消えた武器・別のスロットの武器は、そのスロットだけ fallback に戻す
             var selection = new LoadoutSelection(
                 PrimaryAndSecondary(), Catalog(), new[] { "removed-weapon", _pistol }, new[] { _rifle, _handgun });
 

@@ -4,14 +4,12 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>Match と TeamDeathmatch を IGameMode 越しに同じ手順で動かし、共通の振る舞いを確かめる。</summary>
     public sealed class GameModeTests
     {
         private const float _timeLimitSeconds = 10f;
         private const int _player = 1;
         private const int _enemy = 11;
 
-        /// <summary>制限時間 10 秒、_player が _enemy を 1 回倒せば終わる設定で、開始前のモードを作る。</summary>
         public static IEnumerable<TestCaseData> Modes()
         {
             yield return new TestCaseData(new Func<IGameMode>(() => new Match(_timeLimitSeconds, 1, _player)))

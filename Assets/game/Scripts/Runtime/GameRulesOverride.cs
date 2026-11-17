@@ -4,24 +4,15 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// シーンに配線された <see cref="GameRulesDefinition"/> の代わりに使う <see cref="GameRules"/> の置き場所。
-    /// <see cref="GameBootstrap"/> はこれが入っていればシーンのルールより優先する。
-    /// シーンを読み直しても <see cref="Clear"/> するまで残る。
-    /// Play を始めるたびに空に戻すので、シーンを直接開いて Play したときは上書きされていない。
-    /// </summary>
     public static class GameRulesOverride
     {
-        /// <summary>上書きに使うルール。上書きしていなければ null。</summary>
         public static GameRules Current { get; private set; }
 
-        /// <summary>rules で上書きする。前の上書きは置き換える。</summary>
         public static void Set(GameRules rules)
         {
             Current = rules ?? throw new ArgumentNullException(nameof(rules));
         }
 
-        /// <summary>上書きをやめ、シーンのルールに戻す。</summary>
         public static void Clear()
         {
             Current = null;

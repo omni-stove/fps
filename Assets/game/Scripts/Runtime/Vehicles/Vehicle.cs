@@ -5,28 +5,13 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 乗り物の土台。子の <see cref="VehicleSeat"/> を並び順に座席の番号として集め、誰がどこに座っているか (<see cref="VehicleSeating"/>) を持ち、
-    /// 乗る・移る・降りるを決めて乗る側 (<see cref="IVehicleRider"/>) に知らせる。動き方・武器は持たず、
-    /// 座席の入力を <see cref="IVehicleInputSink"/> に流すだけにする。耐久と爆発は Vehicle.Durability.cs。
-    /// <list type="bullet">
-    /// <item>乗る: 空いている座席のうち、乗る位置が <see cref="VehicleSpec.EnterRange"/> 以内で一番近いもの (<see cref="TryEnter(IVehicleRider)"/>)。</item>
-    /// <item>降りる: 座席の降りる位置、乗り物の降りる位置の順に試し、塞がっていれば次へ。どれも塞がっていれば降りない (<see cref="TryExit"/>)。
-    /// 候補が 1 つも無ければ、座席の右・左・後ろに <see cref="FallbackExitDistance"/> 離した位置を試す。</item>
-    /// <item>壊れる: 同じ GameObject の <see cref="Damageable"/> が倒れて爆発したか <see cref="Wreck"/> で、全員を降ろす (降りる場所が塞がっていても降ろす)。</item>
-    /// </list>
-    /// 乗っている間は、乗っている人と乗り物の Collider を互いにぶつからないようにする。
-    /// 設定は <see cref="Spec"/> で、<see cref="Definition"/> があればその値、無ければシリアライズした値と座席の値から作る。
-    /// 定義は Awake で <see cref="Configure(VehicleSpec)"/> に渡し、耐久は同じ GameObject の <see cref="Damageable"/> にも入れる。
-    /// ゲームのデータで上書きするときは <see cref="Configure(VehicleSpec)"/> か <see cref="Configure(VehicleDefinition)"/> を使う。
-    /// 乗り降りと座席の移動は <see cref="VehicleLog.Tag"/> 付きでログに出す。
-    /// </summary>
+    // 動き方・武器は持たず座席の入力を IVehicleInputSink に流すだけにするのは、動き方の無い乗り物 (固定銃座など) も同じ土台で済ませるため。
     [DisallowMultipleComponent]
     public sealed partial class Vehicle : MonoBehaviour
     {
         public const string LogTag = VehicleLog.Tag;
 
-        /// <summary>降りる位置の候補が 1 つも無いときに、座席から横・後ろへ離して試す距離 (m)。仮の乗り物を手早く置くためのもの。</summary>
+        // 降りる位置の候補を置かなくても降りられるよう座席の横・後ろを試すのは、仮の乗り物を手早く置けるようにするため。
         public const float FallbackExitDistance = 2f;
 
         // 降りる場所のカプセルを床から浮かせる高さ。床そのものを塞がりと数えないため。
@@ -70,19 +55,14 @@ namespace Shooter.Runtime
         private bool _initialized;
         private bool _wrecked;
 
-        /// <summary>rider が seat に乗った。</summary>
         public event Action<Vehicle, VehicleSeat, IVehicleRider> Boarded;
 
-        /// <summary>rider が from から to へ移った。</summary>
         public event Action<Vehicle, IVehicleRider, VehicleSeat, VehicleSeat> SeatChanged;
 
-        /// <summary>rider が seat から降りた。</summary>
         public event Action<Vehicle, VehicleSeat, IVehicleRider, VehicleLeaveReason> Left;
 
-        /// <summary>壊れた (乗っている人を降ろした後)。</summary>
         public event Action<Vehicle> Wrecked;
 
-        /// <summary>有効な乗り物。プレイヤーが Interact で乗る乗り物を探すのに使う。</summary>
         public static IReadOnlyList<Vehicle> Active
         {
             get
@@ -92,7 +72,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>座席。番号の順 (子の並び順)。</summary>
         public IReadOnlyList<VehicleSeat> Seats
         {
             get
@@ -111,7 +90,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>今の設定。座席が無ければ <see cref="InvalidOperationException"/>。</summary>
         public VehicleSpec Spec
         {
             get
@@ -121,7 +99,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>乗り物の値の定義。無ければ null (Inspector の値を使う)。</summary>
         public VehicleDefinition Definition => _definition;
 
         public string VehicleId => Spec.Id;
@@ -131,7 +108,6 @@ namespace Shooter.Runtime
         // OnEnable が走らない Edit Mode でも有効かを判断できるよう、isActiveAndEnabled ではなく自分で見る。
         internal bool IsLive => enabled && gameObject.activeInHierarchy;
 
-        /// <summary>乗っている人数。</summary>
         public int RiderCount
         {
             get
@@ -141,7 +117,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>降りる場所を塞いでいるとみなすレイヤー。</summary>
         public LayerMask ExitBlockMask
         {
             get => _exitBlockMask;
@@ -150,7 +125,6 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<Transform> ExitPoints => _exitPoints;
 
-        /// <summary>追うカメラの注視点 (ワールド)。</summary>
         public Vector3 ChaseFocus => transform.position + (Vector3.up * Spec.ChaseHeight);
 
         private void Awake()
@@ -208,11 +182,6 @@ namespace Shooter.Runtime
             TickDurability(Time.deltaTime);
         }
 
-        /// <summary>
-        /// 設定を差し替える。座席の数は子の <see cref="VehicleSeat"/> の数と同じであること (違えば <see cref="ArgumentException"/>)。
-        /// 座席ごとの設定は同じ番号の座席に渡す。乗っている人はそのまま。
-        /// 同じ GameObject に <see cref="Damageable"/> があれば、最大体力を <see cref="VehicleSpec.MaxHealth"/> にして満タンに戻す。
-        /// </summary>
         public void Configure(VehicleSpec spec)
         {
             if (spec == null)
@@ -316,10 +285,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 定義を差し替え、その値と座席の値から作った設定を <see cref="Configure(VehicleSpec)"/> に渡す。
-        /// 定義の値が不正なら <see cref="VehicleDefinitionException"/> で、そのときは何も変えない。
-        /// </summary>
         public void Configure(VehicleDefinition definition)
         {
             if (definition == null)
@@ -333,10 +298,6 @@ namespace Shooter.Runtime
             Configure(spec);
         }
 
-        /// <summary>
-        /// 子の座席を集め直す (コードで座席を足したあとなど)。誰かが乗っている間は <see cref="InvalidOperationException"/>。
-        /// 番号は子の並び順で、<see cref="Configure(VehicleSpec)"/> で渡した設定は捨てて座席の値と定義 (無ければ Inspector の値) から作り直す。
-        /// </summary>
         public void RefreshSeats()
         {
             if (_seating != null && CountLiveRiders() > 0)
@@ -348,9 +309,6 @@ namespace Shooter.Runtime
             CollectSeats();
         }
 
-        /// <summary>
-        /// 降りる位置の候補 (どの座席からでも使う) を差し替える。null なら無し。null の要素は飛ばす。
-        /// </summary>
         public void SetExitPoints(params Transform[] points)
         {
             var list = new List<Transform>();
@@ -396,7 +354,6 @@ namespace Shooter.Runtime
             return Spec.FiringOf(seat.Index);
         }
 
-        /// <summary>index の座席に座っている人。空いていれば (破棄されていても) null。</summary>
         public IVehicleRider OccupantOf(int index)
         {
             EnsureInitialized();
@@ -409,7 +366,6 @@ namespace Shooter.Runtime
             return IsRemoved(rider) ? null : rider;
         }
 
-        /// <summary>rider が座っているこの乗り物の座席。座っていなければ null。</summary>
         public VehicleSeat SeatOf(IVehicleRider rider)
         {
             if (rider == null)
@@ -427,11 +383,6 @@ namespace Shooter.Runtime
             return index >= 0 ? _seats[index] : null;
         }
 
-        /// <summary>
-        /// from から乗り込める座席の番号 (空いていて、乗る位置が <see cref="VehicleSpec.EnterRange"/> 以内で一番近いもの)。
-        /// 無ければ -1。distance にはその座席の乗る位置までの距離 (無ければ一番近い座席までの距離) を入れる。
-        /// 壊れていれば -1。
-        /// </summary>
         public int FindBoardableSeat(Vector3 from, out float distance)
         {
             EnsureInitialized();
@@ -470,7 +421,6 @@ namespace Shooter.Runtime
             return seat;
         }
 
-        /// <summary>rider を、乗り込める座席 (<see cref="FindBoardableSeat"/>) に乗せる。乗せられなければ理由をログに出して false。</summary>
         public bool TryEnter(IVehicleRider rider)
         {
             if (!CanEnter(rider))
@@ -492,11 +442,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// rider を seatIndex の座席に乗せる (敵や Bot が座席を選ぶとき)。requireInRange が true なら、その座席の乗る位置が
-        /// <see cref="VehicleSpec.EnterRange"/> 以内でなければ乗せない (モードが出現と同時に座らせるときは false)。
-        /// 乗せられなければ理由をログに出して false。
-        /// </summary>
         public bool TryEnter(IVehicleRider rider, int seatIndex, bool requireInRange = true)
         {
             if (!CanEnter(rider))
@@ -527,10 +472,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// rider を降ろす。降りる場所の候補を順に試し、塞がっていない最初の場所に置く。すべて塞がっていれば降ろさずにログを出して false。
-        /// 乗っていなければ false。
-        /// </summary>
         public bool TryExit(IVehicleRider rider)
         {
             var seat = RequireRiding(rider);
@@ -549,9 +490,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// rider を、降りる場所が塞がっていても降ろす。塞がっていない候補があればそこ、無ければ乗り物の上に置く。乗っていなければ false。
-        /// </summary>
         public bool ForceExit(IVehicleRider rider, VehicleLeaveReason reason)
         {
             if (!Enum.IsDefined(typeof(VehicleLeaveReason), reason))
@@ -569,10 +507,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// rider を、今の座席から direction (1 で番号の大きいほう、-1 で小さいほう) へ巡って最初の空いている座席に移す。
-        /// 空きが無ければログを出して false。乗っていなければ false。
-        /// </summary>
         public bool TrySwitchSeat(IVehicleRider rider, int direction)
         {
             if (direction != 1 && direction != -1)
@@ -597,7 +531,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>rider を seatIndex の座席に移す。今の座席か、塞がっていれば false (塞がっていればログを出す)。乗っていなければ false。</summary>
         public bool TrySwitchToSeat(IVehicleRider rider, int seatIndex)
         {
             var from = RequireRiding(rider);
@@ -628,7 +561,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>全員を、降りる場所が塞がっていても降ろす。</summary>
         public void EjectAll(VehicleLeaveReason reason)
         {
             if (_seating == null)
@@ -659,7 +591,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>壊す。乗っている人を全員降ろし、以後は乗れない。もう壊れていれば何もせず false。</summary>
         public bool Wreck()
         {
             EnsureInitialized();
@@ -675,7 +606,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>座席の入力の受け手を登録する。既に登録されていれば false。</summary>
         public bool AddInputSink(IVehicleInputSink sink)
         {
             if (sink == null)
@@ -692,7 +622,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>座席の入力の受け手の登録を外す。登録されていなければ false。</summary>
         public bool RemoveInputSink(IVehicleInputSink sink)
         {
             if (sink == null)
@@ -703,10 +632,6 @@ namespace Shooter.Runtime
             return _sinks.Remove(sink);
         }
 
-        /// <summary>
-        /// seat の降りる場所の候補を順に試し、rider が塞がれずに立てる最初の場所を返す。無ければ false。
-        /// 候補は座席の降りる位置、乗り物の降りる位置の順で、どちらも無ければ座席の右・左・後ろ。
-        /// </summary>
         public bool TryFindExit(VehicleSeat seat, IVehicleRider rider, out Vector3 feetPosition, out Quaternion rotation, out int candidateIndex)
         {
             if (seat == null)
@@ -737,7 +662,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>足元を feetPosition に置いた rider のカプセルが、乗り物と rider 自身のほかの Collider に重なるか。</summary>
         public bool IsExitBlocked(Vector3 feetPosition, IVehicleRider rider)
         {
             if (rider == null)

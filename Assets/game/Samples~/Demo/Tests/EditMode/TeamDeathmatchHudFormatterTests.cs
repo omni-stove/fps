@@ -6,10 +6,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// チームデスマッチの書式役 (<see cref="TeamDeathmatchHudFormatter"/>) と、その土台 (<see cref="ModeHudFormatterBase"/>) が
-    /// <see cref="ModeStatus"/> の値から残り時間・得点・リスポーン・結果の文を作ることを確かめる。
-    /// </summary>
     public sealed class TeamDeathmatchHudFormatterTests
     {
         private readonly TeamDeathmatchHudFormatter _formatter = new TeamDeathmatchHudFormatter();

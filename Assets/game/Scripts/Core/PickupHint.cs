@@ -2,16 +2,12 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>Interact で拾うと何が起きるか (<see cref="PickupHint.Action"/>)。</summary>
     public enum PickupHintAction
     {
-        /// <summary>持っていない武器を持ち武器に加える。</summary>
         TakeWeapon = 0,
 
-        /// <summary>持てる武器の数の上限に届いているので、今の武器を落として持ち替える。</summary>
         SwapWeapon = 1,
 
-        /// <summary>持っている武器を拾って、その武器の予備弾にする。</summary>
         WeaponAmmo = 2,
 
         ReserveAmmo = 3,
@@ -19,21 +15,11 @@ namespace Shooter.Core
         Armor = 5,
         Tag = 6,
 
-        /// <summary>アイテムを持ち物に入れる。</summary>
         Item = 7,
     }
 
-    /// <summary>
-    /// Interact で拾う物の近くで出す案内の中身 (<see cref="InteractHint.Detail"/>)。何が起きるか・何を (武器かアイテムの Id と表示名のキー)・
-    /// いくつ・どの入力 (<see cref="InputActionPath"/>) で拾うかを持つ。文にするのは UI。
-    /// </summary>
     public readonly struct PickupHint : IEquatable<PickupHint>
     {
-        /// <param name="action">拾うと何が起きるか。</param>
-        /// <param name="contentId">武器の Id かアイテムの Id。どちらでもなければ null。</param>
-        /// <param name="nameKey">武器かアイテムの表示名を引く表のキー。前後の空白は除き、null は空文字にする。</param>
-        /// <param name="count">持ち物に入るアイテムの数。アイテムでなければ 0。</param>
-        /// <param name="inputActionPath">拾う入力のアクション (例: <c>Player/Interact</c>)。null は空文字にする。</param>
         public PickupHint(PickupHintAction action, string contentId, string nameKey, int count, string inputActionPath)
         {
             Action = action;
@@ -53,10 +39,6 @@ namespace Shooter.Core
 
         public string InputActionPath { get; }
 
-        /// <summary>
-        /// outcome (<see cref="PickupJudge.Judge"/> の結果) の物を拾う案内。拾えない outcome なら案内は出さない (false)。
-        /// nameKey は武器かアイテムの表示名のキーで、武器とアイテムのときだけ持つ。
-        /// </summary>
         public static bool TryFrom(PickupOutcome outcome, string nameKey, string inputActionPath, out PickupHint hint)
         {
             hint = default;

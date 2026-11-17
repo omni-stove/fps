@@ -10,39 +10,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ゲームのネット対戦のクライアント。Shooter.Protocol と LiteNetLib (<see cref="UdpMatchTransport"/>) か、
-    /// <c>-transport eos</c> なら EOS の P2P (<see cref="NetV2Eos"/>) で .NET のサーバーへつなぎ、
-    /// 承認されたらサーバーのマップのシーンへ移って、自分のプレイヤー (<see cref="NetV2LocalPlayer"/>)・他のプレイヤー
-    /// (<see cref="NetV2RemotePlayer"/>)・HUD に出す値 (<see cref="NetV2Hud"/>) を作る。HUD は UI がその値を見て作る。シーンをまたいで残る。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// 自分の移動は Core の移動で予測して入力を送り、スナップショットで照合する。他のプレイヤーは補間して出す (<see cref="ClientMatch"/>)。
-    /// 当たりはサーバーと同じマップの <c>.fpsmap</c> と <c>.ladders.json</c> (<see cref="ClientWorld"/>) で取り、壊れた建物の部品は
-    /// サーバーの知らせで外す (<see cref="NetV2Structures"/>)。移動の値はサーバーが承認のときに送る、サーバーのルールのファイルの値
-    /// (<see cref="MatchClient.Motor"/>) を使う。はしごにつかまったら視点をはしごへ向ける。
-    /// </para>
-    /// <para>
-    /// 射撃は今の武器の撃ち方 (<see cref="NetV2Weapons"/> の <see cref="ClientTrigger"/>) で、リロード・弾薬の切り替え・グレネード・印は押したときに要求を送る。
-    /// 飛ぶ弾・ビーム・火炎・状態異常・範囲の効果の知らせとスナップショットは、機能ごとの受け口 (<see cref="ClientWeaponHooks"/>) に渡す。
-    /// 承認されたら保存してあるロードアウトを頼み、倒れている間はロードアウトを選ぶ画面を出す (<see cref="NetV2LoadoutChooser"/>)。
-    /// サーバーのイベントは、オフラインと Netcode のクライアントと同じ <see cref="CombatEvents"/> と HUD に流し、<c>[Combat]</c> の行を出す。
-    /// 印は Netcode のクライアントと同じ <see cref="PingController"/> に、拠点の持ち主はマップの <see cref="ControlPointZone"/> に出す。
-    /// </para>
-    /// <para>
-    /// 起動引数は <see cref="NetClientLaunch"/> が読む。<c>-mode client</c> なら起動してすぐ <c>-address</c> か <c>-eos-server</c> のサーバーへ、
-    /// <c>-lobby quickmatch</c> なら起動してすぐ専用サーバーのロビーを探して (<see cref="QuickMatchSearch"/>) つなぐ。
-    /// メニューのクイックマッチ (<see cref="GameUi.OnlineStarter"/>) は、<c>-address</c>・<c>-port</c>・<c>-eos-server</c> があればそのサーバーへ、
-    /// 無ければロビーを探してつなぐ。EOS のロビーが使えない (EOS がビルドに無い・認証情報が揃わない) UDP のときは、
-    /// <see cref="NetClientLaunch.DefaultServer"/> へつなぐ。
-    /// </para>
-    /// <para>
-    /// サーバーとの接続を失ったら (つながらない・断られたを含む)、Netcode のクライアントと同じ理由 (<see cref="DisconnectNotice"/>) を
-    /// <see cref="MenuReturnReason"/> に入れてメニューへ戻る。
-    /// batchmode のプレイヤーでは Netcode のクライアントと同じ終了コードで終わる。
-    /// </para>
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class NetV2Client : MonoBehaviour
     {
@@ -60,7 +27,7 @@ namespace Shooter.NetV2
 
         private const string _sceneExtension = ".unity";
 
-        /// <summary>このプロセスの端末の Id。Netcode のクライアントと同じく、同じプロセスのままつなぎ直したときだけ成績を引き継ぐ。</summary>
+        // Netcode のクライアントと同じく、同じプロセスのままつなぎ直したときだけ成績を引き継ぐよう、プロセスごとに 1 つ作る。
         private static readonly string _deviceKey = RejoinKey.NewDeviceKey();
 
         private readonly Dictionary<int, NetV2RemotePlayer> _remotes = new Dictionary<int, NetV2RemotePlayer>();
@@ -110,18 +77,12 @@ namespace Shooter.NetV2
 
         public ClientMatch Match => _match;
 
-        /// <summary>自分のプレイヤーの視点と入力。自分の行が届いて予測を始めるまでと、マップを出た後は null。</summary>
         public NetV2LocalPlayer LocalPlayer => _local;
 
         public GameObject GrenadePrefab { get; set; }
 
-        /// <summary>今動いているクライアント。無ければ null。</summary>
         public static NetV2Client Current { get; private set; }
 
-        /// <summary>
-        /// 最初のシーンを読んだ後に起動引数を読み (<see cref="NetClientLaunch.ResolveStart"/>)、メニューのクイックマッチをこのクライアントにする。
-        /// <c>-mode client</c> か <c>-lobby quickmatch</c> ならすぐつなぐ。引数が誤っていれば誤りを出して終了コード 2 で終える。
-        /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Launch()
         {
@@ -152,7 +113,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>options のサーバーへつなぐクライアントを作る。シーンをまたいで残る。</summary>
         public static NetV2Client Begin(NetLaunchOptions options, bool fromMenu)
         {
             if (options == null)
@@ -168,9 +128,6 @@ namespace Shooter.NetV2
             return client;
         }
 
-        /// <summary>
-        /// 専用サーバーのロビーを探し (<see cref="QuickMatchSearch"/>)、見つけたサーバーへつなぐクライアントを作る。シーンをまたいで残る。
-        /// </summary>
         public static NetV2Client BeginQuickMatch(bool fromMenu)
         {
             var host = new GameObject(ObjectName);
@@ -181,9 +138,7 @@ namespace Shooter.NetV2
             return client;
         }
 
-        /// <summary>
-        /// EOS のロビーを探せるか。EOS がビルドにあり、認証情報が揃っていれば (読めないファイルは誤りを出すため探す側に回す) true。
-        /// </summary>
+        // 読めない認証情報のファイルは誤りを出すため、探せない側ではなく探す側に回す。
         private static bool CanSearchLobbies()
         {
             var factory = NetV2Eos.Factory;
@@ -326,10 +281,8 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>
-        /// Netcode のクライアントと同じく、EOS を求められても認証情報が揃わなければ UDP でつなぐ。
-        /// 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
-        /// </summary>
+        // Netcode のクライアントと同じく、EOS を求められても認証情報が揃わなければ UDP でつなぐ。
+        // 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
         private bool TryPlanTransport(NetLaunchOptions requested, out NetTransportPlan plan, out string error)
         {
             plan = null;
@@ -1462,10 +1415,7 @@ namespace Shooter.NetV2
             return false;
         }
 
-        /// <summary>
-        /// メニューのクイックマッチ。起動引数でサーバーを決めていればそこへ、無ければロビーを探してつなぐ。
-        /// ロビーを探せないときは、開発中に <c>make server-dotnet</c> へつなげるよう既定のサーバーへつなぐ。
-        /// </summary>
+        // ロビーを探せないときに既定のサーバーへつなぐのは、開発中に make server-dotnet へつなげるようにするため。
         private sealed class MenuStarter : IOnlineMatchStarter
         {
             private readonly NetLaunchOptions _server;
@@ -1512,22 +1462,12 @@ namespace Shooter.NetV2
         }
     }
 
-    /// <summary>
-    /// <see cref="NetV2Client"/> に差し込む機能の部品 (チャット・投票・観戦など)。<see cref="NetV2ClientParts.Create"/> がつないだときに作り、
-    /// クライアントが消えるときに <see cref="IDisposable.Dispose"/> で後片付けする。
-    /// </summary>
     public interface INetV2ClientPart : IDisposable
     {
-        /// <summary>
-        /// サーバーから届いたメッセージのうち、<see cref="NetV2Client"/> と武器の受け口が受け持たなかったもの。
-        /// 受け持ったら true を返し、後の部品と印には渡さない。
-        /// </summary>
         bool Handle(IMessage message);
 
-        /// <summary>マップに入った後に届いたスナップショット。</summary>
         void Apply(SnapshotMessage snapshot);
 
-        /// <summary>マップに入った後の毎フレーム。</summary>
         void Tick(float deltaSeconds);
     }
 }

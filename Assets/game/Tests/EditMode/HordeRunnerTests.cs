@@ -7,11 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="HordeRunner"/> が波を越えたら勝ち・全員倒れたら負けにし、倒れた味方を波の間に戻し、敵を倒すと通貨を入れ、
-    /// 通貨で防衛物 (<see cref="HordeFortification"/>) を直す・置くことを確かめる。
-    /// WaveSpawner は NavMesh が要るので使わず、波の予定に敵を出した・倒したことを直接伝えて <see cref="HordeRunner.RewardEnemyKill"/> を呼ぶ。
-    /// </summary>
+    // WaveSpawner は NavMesh が要るので使わず、波の予定に敵を出した・倒したことを直接伝えて HordeRunner.RewardEnemyKill を呼ぶ。
     public sealed class HordeRunnerTests
     {
         private const float RestSeconds = 5f;
@@ -21,7 +17,7 @@ namespace Shooter.Tests.EditMode
         private const int BuildCost = 30;
         private const float InteractRadius = 3f;
 
-        /// <summary>防衛物の Inspector の値。Definition があれば上の値に置き換わるので、わざと違う値にしておく。</summary>
+        // Definition があれば上の値に置き換わるので、防衛物の Inspector の値はわざと違う値にしておく。
         private const int InspectorBuildCost = 70;
         private const int InspectorRepairCostPerPiece = 9;
         private const float InspectorInteractRadius = 1f;

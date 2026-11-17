@@ -43,7 +43,6 @@ namespace Shooter.Runtime
 
         public GrappleEnd Ended { get; private set; }
 
-        // 離した Tick に渡した速度。Jump で離したときの勢いをログに出すのに使う。
         public Vector3 ReleaseVelocity { get; private set; }
 
         public Vector3 Target
@@ -56,7 +55,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // wallNormal は着いたときに向く壁の外向きの法線。壁でなければ (床・天井) zero を渡し、向きを変えない。
         public void Arm(Vector3 target, Vector3 wallNormal)
         {
             RequireFinite(target, nameof(target));
@@ -70,7 +68,7 @@ namespace Shooter.Runtime
             ReleaseVelocity = Vector3.zero;
         }
 
-        // 崖のぼりに移るときなど、能力の側から終える。終えた理由は残さない (離したのではない)。
+        // 能力の側から終えたときは離したのではないので、終えた理由を残さない。
         public void Finish()
         {
             _phase = Phase.Idle;
@@ -88,7 +86,7 @@ namespace Shooter.Runtime
             return reason;
         }
 
-        // 選ばれたときの位置と勢いから引き始める。能力が効果を出した Tick と、PlayerController が選び直す Tick はずれることがあるので、ここで測る。
+        // 能力が効果を出した Tick と、PlayerController が選び直す Tick はずれることがあるので、引き始める位置と勢いは選ばれたここで測る。
         public void Begin(PlayerController mover)
         {
             if (_phase != Phase.Pulling || _started)
@@ -109,7 +107,6 @@ namespace Shooter.Runtime
                     return StepPull(mover, input, deltaSeconds);
 
                 case Phase.Hanging:
-                    // 縁で止まっている間は重力を掛けず、その場に留める。Jump なら跳ねて離れる。
                     if (input.JumpPressed)
                     {
                         var hop = Vector3.up * Mathf.Sqrt(2f * mover.Gravity * mover.JumpHeight);
@@ -124,7 +121,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // ほかの横取りに替わった・登録を外された・PlayerController が止まったとき。自分で終えたならもう Idle になっている。
         public void End(PlayerController mover)
         {
             Release(GrappleEnd.Interrupted);

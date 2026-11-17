@@ -8,23 +8,9 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 試合のルール。Unity の NetTeamDeathmatch (と .Spawn・.Roster・.Objective・.Downed・.Ping・.Loadout・.Idle・.CombatFeed)・
-    /// NetControlPoint・NetSpawnProtection がしていたことを、Core の <see cref="TeamDeathmatchSession"/> などで行う。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// 出入りとチーム分けと試合の枠は <see cref="ServerMatch"/> が持ち、ここは点数・勝ち負け・時間・出現を決めて知らせる。
-    /// チームは Session の決め方 (切断した人は同じチームへ) を <see cref="ServerMatch.ChooseTeam"/> に差し込んで 1 つにそろえる。
-    /// 次の試合は <see cref="ServerMatch"/> の待ちが終わったときに Session を <see cref="TeamDeathmatchSession.Restart"/> して始める
-    /// (Session には待ち時間を渡さず、待ちを 2 か所で数えない)。
-    /// </para>
-    /// <para>
-    /// 射撃とダメージは戦闘のモジュールが <see cref="ApplyDamage"/> を通す。スナップショットにはルールの持つ部分だけを
-    /// <see cref="Contribute"/> で載せ、位置は移動のモジュールが載せる。位置の持ち主は移動のモジュールで、ここは出現とダウンを
-    /// <see cref="ServerBodies"/> に書いて伝え、判定には <see cref="ServerBodies"/> に写された位置を使う。
-    /// </para>
-    /// </remarks>
+    // チームは Session の決め方 (切断した人は同じチームへ) を ServerMatch.ChooseTeam に差し込んで 1 つにそろえる。
+    // 次の試合は ServerMatch の待ちが終わったときに Session を TeamDeathmatchSession.Restart して始め、
+    // Session には待ち時間を渡さずに、待ちを 2 か所で数えないようにする。
     internal sealed partial class MatchRulesModule : IServerModule, ISnapshotContributor
     {
         // 不正な要求の警告を出す最短の間隔 (秒)。連打でログを埋めないため
@@ -45,10 +31,8 @@ namespace Shooter.Server
         private float _now;
         private long _tick;
 
-        /// <summary>出現・リスポーンで、戦闘のモジュールが <see cref="WeaponsFor"/> の武器を満タンで持たせ直す合図。</summary>
         public event Action<int> PlayerSpawned;
 
-        /// <summary>試合が始まるたび (次の試合も)。戦闘のモジュールが全員の弾とグレネードを満タンに戻す合図。</summary>
         public event Action MatchStarted;
 
         public string Name => "rules";
@@ -82,7 +66,8 @@ namespace Shooter.Server
                     new SpawnSelector(settings.MinEnemySpawnDistance),
                     PositionOf,
                     null,
-                    settings.ReconnectGraceSeconds);
+                    settings.ReconnectGraceSeconds,
+                    _data.Assist);
             }
             catch (ArgumentException e)
             {
@@ -131,6 +116,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
+            PrepareChat(settings);
             StartObjective();
         }
 
@@ -227,10 +213,6 @@ namespace Shooter.Server
             _session = null;
         }
 
-        /// <summary>
-        /// attackerId が victimId に amount のダメージを与える。撃った人がいないダメージ (落下など) は attackerId に null を渡し、
-        /// 倒れたら自滅として数える。shot はキルフィードに載せる武器と部位。
-        /// </summary>
         public DamageOutcome ApplyDamage(int? attackerId, int victimId, int amount, KillShot? shot = null)
         {
             if (amount < 0)
@@ -260,7 +242,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>試合の状態・各プレイヤーのチームと体力と成績・拠点を載せる。位置などの移動の状態は移動のモジュールが載せる。</summary>
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {
             ArgumentNullException.ThrowIfNull(snapshot);
@@ -280,14 +261,12 @@ namespace Shooter.Server
             FillControlPoints(snapshot.ControlPoints);
         }
 
-        /// <summary>試合中で、倒れておらずダウン中でもないときだけ撃てる。戦闘のモジュールはそれ以外の射撃を弾を減らさずに捨てる。</summary>
         public bool CanFire(int playerId)
         {
             return _session != null && _session.HasPlayer(playerId) && _session.State == GameModeState.Playing
                 && _session.IsAlive(playerId) && !_session.IsDowned(playerId);
         }
 
-        /// <summary>弾を撃った (当たらなくても) ときに戦闘のモジュールが呼ぶ。</summary>
         public void NotifyFired(int playerId)
         {
             if (_session == null || !_session.HasPlayer(playerId) || !_session.EndSpawnProtection(playerId))
@@ -332,6 +311,7 @@ namespace Shooter.Server
             snapshot.Downed = DownedOf(playerId);
             snapshot.Kills = _session.GetKills(playerId);
             snapshot.Deaths = _session.GetDeaths(playerId);
+            snapshot.Assists = _session.GetAssists(playerId);
             snapshot.HasKiller = _lastKillers.TryGetValue(playerId, out var killer);
             snapshot.KillerId = snapshot.HasKiller ? killer : 0;
             snapshot.SpawnProtectionSeconds = HudFormat.DisplayedSeconds(_session.GetSpawnProtectionRemaining(playerId));
@@ -378,6 +358,7 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
@@ -441,13 +422,13 @@ namespace Shooter.Server
         }
 
         // Session は Killed の直後に倒された人の PlayerChanged と DownedChanged を出すので、ここで記録すればそこで引ける
-        private void HandleKilled(int killerId, int victimId)
+        private void HandleKilled(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             _lastKillers[victimId] = killerId;
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
-            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId));
-            _match.WriteKill(killerId, victimId, byAlly);
-            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot));
+            _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
+            _match.WriteKill(killerId, victimId, byAlly, assisterIds);
+            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
             ObjectivePlayerKilled(victimId);
             SpectatePlayerKilled(victimId);
         }
@@ -500,27 +481,34 @@ namespace Shooter.Server
             _killed.WeaponId = entry.WeaponId;
             _killed.Headshot = entry.Headshot;
             _killed.Friendly = entry.Friendly;
+            _killed.ClearAssisters();
+            var assisters = entry.AssisterIds;
+            // 載せきれない分は例外にせず落とす。並びは与えた量の多い順なので落ちるのは寄与の小さい人で、点数とログには全員が残る
+            var count = Math.Min(assisters.Count, KilledMessage.MaxAssisters);
+            for (var i = 0; i < count; i++)
+            {
+                _killed.AddAssister(assisters[i]);
+            }
+
             SendToAll(TransportChannel.Reliable, _killed);
         }
 
-        /// <summary>
-        /// Session の Killed (killerId, victimId) をキルフィードの 1 行にする。shot を撃った人が倒した者で、倒れたのが当たった人か
-        /// 撃った本人 (跳ね返し) なら、その武器を載せる。頭への止めは当たった人をその弾で倒したときだけ。
-        /// </summary>
-        internal static KillFeedEntry KillFeedEntryFor(int killerId, int victimId, bool friendly, KillShot? shot)
+        internal static KillFeedEntry KillFeedEntryFor(
+            int killerId, int victimId, bool friendly, KillShot? shot, IReadOnlyList<int> assisterIds = null)
         {
             if (!shot.HasValue || shot.Value.ShooterId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
             var byShot = victimId == shot.Value.TargetId;
             if (!byShot && victimId != killerId)
             {
-                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly);
+                return new KillFeedEntry(killerId, victimId, null, headshot: false, friendly, assisterIds);
             }
 
-            return new KillFeedEntry(killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly);
+            return new KillFeedEntry(
+                killerId, victimId, shot.Value.WeaponId, byShot && shot.Value.Zone == HitZone.Head, friendly, assisterIds);
         }
 
         private void SendToAll(TransportChannel channel, IMessage message)

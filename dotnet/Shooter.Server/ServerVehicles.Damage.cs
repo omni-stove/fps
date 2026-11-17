@@ -64,10 +64,7 @@ namespace Shooter.Server
             return damaged;
         }
 
-        /// <summary>
-        /// 撃った人が見ていた tick (補間の割合を含む) まで巻き戻した車体の箱に線を引き、いちばん近い当たりを返す。
-        /// 撃った人の乗っている乗り物には当てない (座席から撃つ弾が自分の車体に当たらないように)。壊れた残骸にも当たる。
-        /// </summary>
+        // 座席から撃つ弾が自分の車体に当たらないよう、撃った人の乗っている乗り物には当てない。
         public bool Raycast(
             Vector3 origin, Vector3 unit, float maxDistance, float tick, int shooterId, out int vehicle, out float distance, out Vector3 normal,
             out float damageMultiplier)

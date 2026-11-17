@@ -190,7 +190,6 @@ namespace Shooter.Core.Tests
         [Test]
         public void DirectionsSpreadAroundTheAim()
         {
-            // 種を連番で変えても、向きが片側に寄らずに円錐の周り全体へ散る。
             var aim = Vector3.UnitZ;
             var left = 0;
             var right = 0;

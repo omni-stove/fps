@@ -5,16 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの今のアクションを毎フレーム 1 つの <see cref="PlayerActionState"/> にまとめて <see cref="Current"/> で渡す。
-    /// デバッグ表示 (UI が <see cref="GameSignals.LocalPlayer"/> から読む) と自機モック (<see cref="PlayerMockBody"/>) が読む。読むだけで、何も書き換えない。
-    /// 読み元: <see cref="PlayerController"/>・<see cref="AimDownSights"/>・<see cref="CoverController"/>・<see cref="BlindFireController"/>・
-    /// <see cref="Damageable"/>・<see cref="ViewRig"/> は同じ GameObject、<see cref="WeaponController"/> は子 (プレイヤーのカメラ)。
-    /// 参照はコードで解決するので Inspector の配線は要らない (<see cref="GameBootstrap"/> は <see cref="Bind"/> で直接渡す)。
-    /// 解決できないか途中で消えたら、足りないものを <see cref="LogTag"/> 付きの Debug.LogError に出して自分を無効にする。
-    /// 移動を横取りしているもの (<see cref="IMovementOverride"/>) があれば、その <see cref="IMovementOverride.Conditions"/> も立てる。
-    /// 指示のボタン (近接・伏せなど) を読むのは .Commands.cs。
-    /// </summary>
     [DisallowMultipleComponent]
     // 他の部品が Update で状態を変え終えてから読むので LateUpdate で組み立てる。さらに ViewRig などの LateUpdate より後にする。
     [DefaultExecutionOrder(100)]
@@ -35,7 +25,6 @@ namespace Shooter.Runtime
         private float _secondsSinceShot = float.PositiveInfinity;
         private bool _shotSinceRefresh;
 
-        /// <summary>最後に <see cref="Refresh"/> で組み立てた状態。まだ組み立てていなければ <c>default</c>。</summary>
         public PlayerActionState Current => _current;
 
         public PlayerController Mover => _mover;
@@ -46,7 +35,6 @@ namespace Shooter.Runtime
         public Damageable Damageable => _damageable;
         public ViewRig Rig => _rig;
 
-        /// <summary>読み元がすべて揃っているか (途中で破棄されたものがあれば false)。</summary>
         public bool IsBound =>
             _mover != null
             && _weapon != null
@@ -83,10 +71,6 @@ namespace Shooter.Runtime
             Refresh(Time.deltaTime);
         }
 
-        /// <summary>
-        /// 同じ GameObject の PlayerController・AimDownSights・CoverController・BlindFireController・Damageable・ViewRig と、
-        /// 子の WeaponController を探して <see cref="Bind"/> する。足りなければ Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryBindFromHierarchy()
         {
             var mover = GetComponent<PlayerController>();
@@ -110,10 +94,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 読み元を直接渡す。weapon はこの GameObject かその子、それ以外はこの GameObject のもの。
-        /// 前に渡した武器の購読は外し、射撃とアクティブリロードの記録は捨てる (<see cref="Current"/> は次の <see cref="Refresh"/> まで前の値)。
-        /// </summary>
         public void Bind(
             PlayerController mover,
             WeaponController weapon,
@@ -158,11 +138,6 @@ namespace Shooter.Runtime
             _weapon.WeaponChanged += OnWeaponChanged;
         }
 
-        /// <summary>
-        /// 読み元から今の状態を組み立てて <see cref="Current"/> にし、それを返す。毎フレーム <see cref="LateUpdate"/> から呼ぶ。
-        /// 読み元が未初期化 (Edit Mode や専用サーバー) でも、その部分を「していない」として組み立てる。
-        /// </summary>
-        /// <param name="deltaSeconds">前の Refresh からの秒数。射撃中かを決めるのに使う。0 以上の有限値。</param>
         public PlayerActionState Refresh(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))

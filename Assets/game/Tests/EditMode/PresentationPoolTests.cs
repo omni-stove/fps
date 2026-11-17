@@ -6,7 +6,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="PresentationPool{T}"/> の上限・使い回し・返す時刻を、ただのオブジェクトで確かめる。</summary>
     public sealed class PresentationPoolTests
     {
         private sealed class Part

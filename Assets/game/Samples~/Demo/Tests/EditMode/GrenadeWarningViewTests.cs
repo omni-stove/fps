@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="GrenadeWarningView"/> が爆発の届く距離のグレネードにだけ印を出すことと、<see cref="ThrownGrenade.DampRoll"/> が転がりを減らすことを確かめる。
-    /// Edit Mode では OnEnable が走らず <see cref="ThrownGrenade.Live"/> に載らないので、グレネードの並びを直接渡す。
-    /// </summary>
+    // Edit Mode では OnEnable が走らず ThrownGrenade.Live に載らないので、グレネードの並びを直接渡す。
     public sealed class GrenadeWarningViewTests
     {
         private readonly List<Object> _created = new List<Object>();

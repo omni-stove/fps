@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>投げ物の種類の並び (<see cref="Types"/>) と、出撃のたびに持つ種類 (<see cref="Carried"/>)。</summary>
     public sealed class GrenadeCatalog
     {
         // スナップショットが持ち主に送れる種類の数 (GrenadePouchSync.MaxTypes) に合わせる
@@ -11,8 +10,6 @@ namespace Shooter.Core
 
         public static readonly GrenadeCatalog Default = Of(GrenadeSpec.Default);
 
-        /// <param name="types">種類。1 つ以上で、Id が重ならない。</param>
-        /// <param name="carriedIds">持つ種類の Id。null なら先頭の種類だけを持つ。空なら何も持たない。</param>
         public GrenadeCatalog(IEnumerable<GrenadeSpec> types, IEnumerable<string> carriedIds = null)
         {
             if (types == null)

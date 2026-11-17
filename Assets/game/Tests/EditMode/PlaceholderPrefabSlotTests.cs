@@ -8,11 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 仮の形を作っていたコンポーネント (<see cref="DebrisPool"/>・<see cref="ThrownGrenade"/>・<see cref="GuardianLeaderMarker"/>・
-    /// <see cref="TargetDummy"/>) が、プレハブを渡されればその見た目で出し、空なら今までの仮の形で出すことを確かめる。
-    /// プレハブの代わりに、当たり判定の付いた Cube を子に持つシーンの GameObject を使う (Instantiate は同じく複製する)。
-    /// </summary>
+    // Instantiate はプレハブと同じく複製するので、プレハブの代わりに、当たり判定の付いた Cube を子に持つシーンの GameObject を使う。
     public sealed class PlaceholderPrefabSlotTests
     {
         private const string ModelName = "Model";
@@ -283,7 +279,6 @@ namespace Shooter.Tests.EditMode
             return member;
         }
 
-        /// <summary>当たり判定と Renderer の付いた Cube (<see cref="ModelName"/>) を子に持つ、プレハブ代わりの GameObject。</summary>
         private GameObject Prefab(string name)
         {
             var root = Track(new GameObject(name));

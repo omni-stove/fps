@@ -6,12 +6,6 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦のクライアントの観戦の部品。自分が倒れてから戻るまでと、ラウンドの合間に、生きている味方の目から見る。
-    /// 誰をいつ見るかは <see cref="ClientSpectate"/> が決め、ここは自分のカメラを借りて (<see cref="DeathCamView"/>) 相手の目に置き、
-    /// Next / Previous で相手を替え、状態を <see cref="GameSignals.Spectate"/> に出す。
-    /// 見られる味方がいなければカメラを借りず (借りていれば返し)、倒れたときのカメラのままにする。
-    /// </summary>
     public sealed class NetV2SpectatePart : INetV2ClientPart
     {
         private readonly MatchClient _client;
@@ -24,11 +18,6 @@ namespace Shooter.NetV2
         private SpectateStatus? _published;
         private bool _disposed;
 
-        /// <param name="client">つないだクライアント。承認された後の自分の Id・tick の頻度・体の寸法を読む。</param>
-        /// <param name="send">サーバーへ確実に届く経路で送る口。</param>
-        /// <param name="localPlayer">カメラを借りる自分のプレイヤー。null なら今のクライアント (<see cref="NetV2Client.Current"/>) のもの。</param>
-        /// <param name="roundPhase">ラウンドで進むモードの今の進み。null か、null を返せばラウンドの合間の観戦はしない。</param>
-        /// <exception cref="ArgumentNullException">client か send が null。</exception>
         public NetV2SpectatePart(
             MatchClient client, Func<IMessage, bool> send, Func<NetV2LocalPlayer> localPlayer = null, Func<RoundPhase?> roundPhase = null)
         {
@@ -38,7 +27,6 @@ namespace Shooter.NetV2
             _roundPhase = roundPhase;
         }
 
-        /// <summary>観戦の中身。最初のスナップショットを受けるまでは null。</summary>
         public ClientSpectate Spectate => _spectate;
 
         public bool Handle(IMessage message)

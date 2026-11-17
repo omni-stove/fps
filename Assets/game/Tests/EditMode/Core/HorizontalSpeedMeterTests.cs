@@ -103,7 +103,6 @@ namespace Shooter.Core.Tests
 
             Assert.That(meter.Speed, Is.EqualTo(0f));
 
-            // 移った先から測り直す
             meter.Sample(40.2f, 0f, 0.1f);
             Assert.That(meter.Speed, Is.EqualTo(2f).Within(_tolerance));
         }

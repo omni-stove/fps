@@ -9,11 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// グレネードを投げる (<see cref="GrenadeThrower"/>) ことと、爆発 (<see cref="ThrownGrenade.Explode"/>) が半径内の
-    /// <see cref="Damageable"/> と建造物に当たり、壁の向こうには当たらないことを確かめる。
-    /// Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
-    /// </summary>
+    // Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
     public sealed class GrenadeTests
     {
         private static readonly GameRules _twoGrenades =

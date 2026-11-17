@@ -231,7 +231,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_presenter.Mode, Is.EqualTo(DeathBody.Collapse));
             Assert.That(_presenter.Target, Is.SameAs(_dummy.Damageable));
 
-            // 同じ相手に繋ぎ直しても購読は 1 本だけで、抜け殻も 1 つだけ
             LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse "));
             _dummy.Damageable.Kill();
             Assert.That(CountShells("dummy"), Is.EqualTo(1));

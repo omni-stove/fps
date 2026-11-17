@@ -28,12 +28,10 @@ namespace Shooter.Server.Tests
 
         public string ServerDisconnectingReason { get; private set; }
 
-        /// <summary>最後に組み立てられた (差分なら基準で埋めた) スナップショット。</summary>
         public SnapshotMessage LatestSnapshot { get; private set; }
 
         public int UnresolvedSnapshots { get; private set; }
 
-        /// <summary>組み立てられたスナップショットのうち、差分で届いたものの数。</summary>
         public int DeltaSnapshots { get; private set; }
 
         public static ushort FreePort()

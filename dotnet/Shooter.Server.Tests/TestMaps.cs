@@ -27,7 +27,6 @@ namespace Shooter.Server.Tests
             return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders: ladders);
         }
 
-        /// <summary>床の上、原点から +Z へ 3m の所に、+Z を向いて立つ高さ 3m のはしご。</summary>
         public static NetMapLadders OneLadder()
         {
             return new NetMapLadders(new[]

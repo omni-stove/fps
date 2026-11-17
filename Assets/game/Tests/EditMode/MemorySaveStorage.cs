@@ -5,7 +5,6 @@ using Shooter.Core;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>スロットごとに置き、書き込みを失敗させられるメモリ上の <see cref="ISaveStorage"/>。</summary>
     internal sealed class MemorySaveStorage : ISaveStorage
     {
         public const string FailureMessage = "disk full";

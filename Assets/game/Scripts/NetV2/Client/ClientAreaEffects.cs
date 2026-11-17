@@ -5,9 +5,6 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// サーバーが効かせている範囲の効果 (<see cref="AreaEffectMessage"/>)。出た・変わった・消えたを知らせ、見た目を出す側 (NetV2Client) がそれに合わせて出す。
-    /// </summary>
     public sealed class ClientAreaEffects
     {
         private readonly Dictionary<int, AreaEffectState> _areas = new Dictionary<int, AreaEffectState>();
@@ -57,7 +54,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>つなぎ直しや試合の切り替えで、出していた範囲をすべて消す。</summary>
         public void Clear()
         {
             if (_areas.Count == 0)
@@ -87,7 +83,6 @@ namespace Shooter.NetV2
 
         public int AreaId { get; }
 
-        /// <summary>見た目を選ぶ種類 (AreaEffectSpec.VisualId)。空なら仮の形。</summary>
         public string KindId { get; }
 
         public Vector3 Center { get; }

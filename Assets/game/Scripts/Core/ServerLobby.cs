@@ -30,9 +30,6 @@ namespace Fps.Core
         /// <summary>サーバーが Device ID で初めてログインしたときに作るユーザーの表示名。プレイヤーと見分けるために分ける。</summary>
         public const string DisplayName = "fps-server";
 
-        /// <summary>ロビーに載せる最大人数。</summary>
-        public const int MaxPlayers = LobbyLaunchOptions.DefaultMaxPlayers;
-
         /// <summary>ログイン・作成・属性の更新に失敗したとき、やり直すまでの秒数。</summary>
         public const float RetryIntervalSeconds = 5f;
 

@@ -68,7 +68,8 @@
     "dominationScoreLimit": 100,
     "captureSeconds": 8,
     "pointsPerSecond": 1,
-    "maxCapturers": 3
+    "maxCapturers": 3,
+    "maxPlayers": 8
   },
   "motor": {
     "walkSpeed": 5,

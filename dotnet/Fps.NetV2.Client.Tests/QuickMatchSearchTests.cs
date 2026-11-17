@@ -41,7 +41,7 @@ namespace Fps.NetV2.Tests
 
         private static LobbyInfo Server(string id, string endpoint, int players, string version = _version)
         {
-            return new LobbyInfo(id, _owner, ServerLobby.MaxPlayers, new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
+            return new LobbyInfo(id, _owner, NetMatchSettings.DefaultMaxPlayers, new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
         }
 
         [Test]
@@ -58,7 +58,7 @@ namespace Fps.NetV2.Tests
             {
                 Server("quiet", "203.0.113.1:7777", 1),
                 Server("busy", "203.0.113.2:7790", 4),
-                Server("full", "203.0.113.3:7777", ServerLobby.MaxPlayers),
+                Server("full", "203.0.113.3:7777", NetMatchSettings.DefaultMaxPlayers),
             });
 
             Assert.That(_failure, Is.Null);

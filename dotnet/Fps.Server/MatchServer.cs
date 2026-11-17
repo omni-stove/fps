@@ -83,6 +83,8 @@ namespace Fps.Server
 
         public int ConnectedPlayers => Match.HumanCount;
 
+        public int MaxPlayers => (_rules?.Settings ?? NetMatchSettings.Default).MaxPlayers;
+
         public bool ListenFailed { get; private set; }
 
         public void Start()
@@ -360,7 +362,7 @@ namespace Fps.Server
 
             if (!ServerMatch.TryGetPlayerId(connection, out var playerId))
             {
-                Reject(connection, DisconnectNotice.RejectedReason("server-full"), "connection id does not fit a player id");
+                Reject(connection, DisconnectNotice.RejectedReason(DisconnectNotice.ServerFullDetail), "connection id does not fit a player id");
                 return;
             }
 
@@ -372,7 +374,24 @@ namespace Fps.Server
                 rejoinKey = productUserId;
             }
 
-            DropPreviousConnection(rejoinKey, connection);
+            var previous = PreviousConnection(rejoinKey, connection);
+            var maxPlayers = MaxPlayers;
+            if (Match.HumanCount - (previous.IsValid ? 1 : 0) >= maxPlayers)
+            {
+                Reject(
+                    connection,
+                    DisconnectNotice.RejectedReason(DisconnectNotice.ServerFullDetail),
+                    "the match is full (" + Count(Match.HumanCount) + "/" + Count(maxPlayers) + " players)");
+                return;
+            }
+
+            if (previous.IsValid)
+            {
+                Drop(
+                    previous,
+                    DisconnectNotice.RejectedReason(ReconnectedDetail),
+                    "it reconnected as client " + connection.Value.ToString(CultureInfo.InvariantCulture));
+            }
 
             _pending.Remove(connection);
             _accepted.PlayerId = playerId;
@@ -406,26 +425,19 @@ namespace Fps.Server
             return null;
         }
 
-        // 前の接続が切れたと分かる前に同じ人がつなぎ直してきたら、前の接続は戻ってこないので先に抜く
-        private void DropPreviousConnection(string rejoinKey, ConnectionId connection)
+        // 前の接続が切れたと分かる前に同じ人がつなぎ直してきたら、前の接続は戻ってこないので先に抜く。
+        // 抜く席に入るので、満員でも断らない
+        private ConnectionId PreviousConnection(string rejoinKey, ConnectionId connection)
         {
-            var previous = ConnectionId.None;
             foreach (var player in Match.Players)
             {
-                if (player.Connection != connection && string.Equals(player.RejoinKey, rejoinKey, StringComparison.Ordinal))
+                if (!player.IsBot && player.Connection != connection && string.Equals(player.RejoinKey, rejoinKey, StringComparison.Ordinal))
                 {
-                    previous = player.Connection;
-                    break;
+                    return player.Connection;
                 }
             }
 
-            if (previous.IsValid)
-            {
-                Drop(
-                    previous,
-                    DisconnectNotice.RejectedReason(ReconnectedDetail),
-                    "it reconnected as client " + connection.Value.ToString(CultureInfo.InvariantCulture));
-            }
+            return ConnectionId.None;
         }
 
         private void Reject(ConnectionId connection, string reason, string logText)

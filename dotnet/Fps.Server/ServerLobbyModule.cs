@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Fps.Core;
 using Fps.Protocol;
 using Fps.Server.Eos;
 
@@ -42,6 +43,7 @@ namespace Fps.Server
                 backend,
                 _endpoint,
                 context.Version,
+                (context.Rules?.Settings ?? NetMatchSettings.Default).MaxPlayers,
                 context.Log,
                 _clock,
                 _sleep,

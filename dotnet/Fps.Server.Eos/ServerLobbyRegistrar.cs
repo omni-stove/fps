@@ -22,6 +22,7 @@ namespace Fps.Server.Eos
         private readonly ServerLobbyService _service;
         private readonly string _endpoint;
         private readonly string _version;
+        private readonly int _maxPlayers;
         private readonly RetrySchedule _schedule;
         private readonly TextWriter _log;
         private Action<string> _failed;
@@ -39,9 +40,11 @@ namespace Fps.Server.Eos
         /// <param name="service">ログイン前のロビーのサービス。</param>
         /// <param name="endpoint">クライアントがつなぐ公開アドレス (<see cref="NetLaunchOptions.RegisterLobbyEndpoint"/>)。</param>
         /// <param name="version">サーバーの版。</param>
+        /// <param name="maxPlayers">ロビーに載せる最大人数 (<see cref="NetMatchSettings.MaxPlayers"/>)。</param>
         /// <param name="schedule">やり直す間隔と、登録できないまま待つ期限。</param>
         /// <param name="log">ログの出力先。</param>
-        public ServerLobbyRegistrar(ServerLobbyService service, string endpoint, string version, RetrySchedule schedule, TextWriter log)
+        public ServerLobbyRegistrar(
+            ServerLobbyService service, string endpoint, string version, int maxPlayers, RetrySchedule schedule, TextWriter log)
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
             _schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
@@ -51,8 +54,16 @@ namespace Fps.Server.Eos
                 throw new ArgumentException("must be an IPv4 address:port that clients can connect to (got '" + endpoint + "')", nameof(endpoint));
             }
 
+            if (maxPlayers < LobbyLaunchOptions.MinMaxPlayers || maxPlayers > LobbyLaunchOptions.MaxMaxPlayers)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxPlayers), maxPlayers,
+                    "must be between " + LobbyLaunchOptions.MinMaxPlayers + " and " + LobbyLaunchOptions.MaxMaxPlayers);
+            }
+
             _endpoint = endpoint;
             _version = version;
+            _maxPlayers = maxPlayers;
             _service.Removed += HandleRemoved;
             _service.LoggedOut += HandleLoggedOut;
         }
@@ -75,6 +86,8 @@ namespace Fps.Server.Eos
         public bool HasBegun => _step != Step.Idle;
 
         public int Players => _players;
+
+        public int MaxPlayers => _maxPlayers;
 
         /// <summary>ロビーの属性に載っている人数。まだ載っていなければ -1。</summary>
         public int PublishedPlayers => IsRegistered ? _publishedPlayers : -1;
@@ -224,7 +237,7 @@ namespace Fps.Server.Eos
             _step = Step.Creating;
             var players = _players;
             _service.CreateLobby(
-                ServerLobby.MaxPlayers,
+                _maxPlayers,
                 ServerLobby.Attributes(_endpoint, _version, players),
                 (lobby, error) => HandleCreated(lobby, error, players));
         }

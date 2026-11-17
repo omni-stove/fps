@@ -238,6 +238,7 @@ namespace Fps.NetV2
                 }
 
                 track.Record(snapshot.Tick, row.Position, row.Rotation);
+                track.TypeId = row.TypeId ?? string.Empty;
                 var carrier = row.HasStuckTo ? snapshot.Players.IndexOf(row.StuckToId) : -1;
                 if (carrier < 0)
                 {
@@ -276,6 +277,12 @@ namespace Fps.NetV2
             return true;
         }
 
+        /// <summary>grenadeId のグレネードの種類の Id (<see cref="GrenadeSpec.Id"/>)。知らないグレネードなら空文字。</summary>
+        public string GrenadeTypeId(int grenadeId)
+        {
+            return _grenades.TryGetValue(grenadeId, out var track) ? track.TypeId : string.Empty;
+        }
+
         public void ClearGrenades()
         {
             _grenades.Clear();
@@ -290,6 +297,8 @@ namespace Fps.NetV2
             private readonly Quaternion[] _rotations = new Quaternion[_capacity];
             private int _start;
             private int _count;
+
+            public string TypeId { get; set; } = string.Empty;
 
             public bool HasCarrier { get; set; }
 

@@ -14,6 +14,9 @@ namespace Shooter.Core
         // サーバーのアドレスだけでなく番号も載せるのは、同じサーバーを続けて選んでもメンバーが新しい決定と見分けられるようにするため。
         public const string MatchKey = "party_match";
 
+        // リーダーの状態と違い、どのメンバーも自分の属性に載せる。リーダーが全員分を読んで Quick Match に平均を渡すため。
+        public const string SkillKey = "party_skill";
+
         public const string IdleState = "idle";
 
         public const string SearchingState = "searching";
@@ -136,6 +139,28 @@ namespace Shooter.Core
             endpoint = server.Text;
             match = number.Number;
             return true;
+        }
+
+        public static IReadOnlyList<LobbyAttribute> SkillAttributes(int skillRating)
+        {
+            return new[] { LobbyAttribute.OfNumber(SkillKey, skillRating) };
+        }
+
+        // 値が無い・読めないメンバーを 0 でなく null にするのは、ServerLobby.SkillAverage がその人を数えないようにするため。
+        public static int? ReadSkill(IReadOnlyList<LobbyAttribute> attributes)
+        {
+            if (attributes == null)
+            {
+                throw new ArgumentNullException(nameof(attributes));
+            }
+
+            var skill = Find(attributes, SkillKey);
+            if (skill == null || skill.IsText || skill.Number < int.MinValue || skill.Number > int.MaxValue)
+            {
+                return null;
+            }
+
+            return (int)skill.Number;
         }
 
         public static NetLaunchOptions ConnectOptions(string endpoint)

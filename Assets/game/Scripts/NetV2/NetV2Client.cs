@@ -225,10 +225,15 @@ namespace Shooter.NetV2
 
             _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this));
             var party = NetV2PartyControl.Current;
-            _search.Begin(Time.unscaledTime, party != null ? party.MatchPlayers : 1, OwnSkillRating(), HandleServerFound, HandleSearchFailed);
+            _search.Begin(
+                Time.unscaledTime,
+                party != null ? party.MatchPlayers : 1,
+                party != null ? party.SkillAverage : OwnSkillRating(),
+                HandleServerFound,
+                HandleSearchFailed);
         }
 
-        private static int? OwnSkillRating()
+        internal static int? OwnSkillRating()
         {
             var recorder = ProgressionBootstrap.Recorder;
             return recorder != null ? recorder.Profile.Rating : (int?)null;

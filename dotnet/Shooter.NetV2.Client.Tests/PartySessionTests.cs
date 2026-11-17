@@ -553,6 +553,138 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheLeaderAveragesTheSkillOfEveryMember()
+        {
+            var leader = Session(_a);
+            leader.SetSkillRating(1000);
+            Assert.That(leader.SkillRating, Is.EqualTo(1000));
+            Assert.That(leader.SkillAverage, Is.EqualTo(1000), "alone before making a party");
+
+            leader.Create();
+            Settle();
+            var second = JoinParty(_b, leader);
+            second.SetSkillRating(1401);
+            var third = JoinParty(_c, leader);
+            Settle();
+
+            var lobby = _service.Only();
+            Assert.That(lobby.MemberAttributes[_a]["party_skill"].Number, Is.EqualTo(1000), "a rating set before the party is written once in it");
+            Assert.That(lobby.MemberAttributes[_b]["party_skill"].Number, Is.EqualTo(1401));
+            Assert.That(lobby.MemberAttributes.ContainsKey(_c), Is.False, "a member without a rating writes nothing");
+            Assert.That(leader.SkillAverage, Is.EqualTo(1000), "the leader has not read the members yet");
+
+            Advance();
+            Assert.That(leader.SkillAverage, Is.EqualTo(1201), "1000 and 1401 round to 1201; the member without a rating is not counted");
+            Assert.That(second.SkillAverage, Is.EqualTo(1401), "only the leader reads the other members");
+            Assert.That(third.SkillAverage, Is.Null);
+            Assert.That(_log, Has.Some.EqualTo("[Party] skill id=party-1 member=" + _b + " rating=1401"));
+            Assert.That(_log, Has.Some.EqualTo("[Party] skill id=party-1 member=" + _c + " rating=-"));
+        }
+
+        [Test]
+        public void AChangedRatingIsWrittenOnceAndALeavingMemberStopsCounting()
+        {
+            var leader = CreateParty(_a);
+            leader.SetSkillRating(1000);
+            var member = JoinParty(_b, leader);
+            member.SetSkillRating(1400);
+            Settle();
+            Advance();
+            Assert.That(leader.SkillAverage, Is.EqualTo(1200));
+
+            member.SetSkillRating(1400);
+            Settle();
+            Assert.That(_backends[member].Writes, Is.EqualTo(1), "the same rating is not written again");
+
+            member.SetSkillRating(2000);
+            Settle();
+            Assert.That(_backends[member].Writes, Is.EqualTo(2));
+            Advance();
+            Assert.That(leader.SkillAverage, Is.EqualTo(1500));
+
+            member.Leave();
+            Settle();
+            Advance();
+            Assert.That(leader.MatchPlayers, Is.EqualTo(1));
+            Assert.That(leader.SkillAverage, Is.EqualTo(1000), "a member who left no longer counts");
+
+            leader.Leave();
+            Settle();
+            Assert.That(leader.SkillAverage, Is.EqualTo(1000), "outside a party the average is the own rating");
+        }
+
+        [Test]
+        public void AFailedSkillWriteIsSentAgainWithoutLeavingTheParty()
+        {
+            var leader = CreateParty(_a);
+            var member = JoinParty(_b, leader);
+            _backends[member].FailWrites = 1;
+
+            member.SetSkillRating(1400);
+            Settle();
+            Assert.That(_log, Has.Some.EqualTo("[Party] writing the skill rating failed id=party-1: TooManyRequests; retrying"));
+            Assert.That(member.Status.Phase, Is.EqualTo(PartyPhase.InParty));
+            Assert.That(_service.Only().MemberAttributes.ContainsKey(_b), Is.False);
+
+            Advance();
+            Assert.That(_backends[member].Writes, Is.EqualTo(2), "the member writes again when it reads the party again");
+            Assert.That(_service.Only().MemberAttributes[_b]["party_skill"].Number, Is.EqualTo(1400));
+
+            Advance();
+            Assert.That(leader.SkillAverage, Is.EqualTo(1400));
+        }
+
+        [Test]
+        public void WithoutMemberAttributesThePartyStaysAndOnlyTheOwnRatingCounts()
+        {
+            var leader = CreateParty(_a);
+            var member = JoinParty(_b, leader);
+            member.SetSkillRating(1400);
+            _backends[leader].AttributesUnsupported = true;
+            Settle();
+
+            Advance();
+            Assert.That(leader.Status.Phase, Is.EqualTo(PartyPhase.InParty));
+            Assert.That(_log, Has.Some.EqualTo("[Party] reading the skill rating of " + _b
+                + " is not supported by the lobby service id=party-1; skill ratings are no longer shared in this session"));
+            Assert.That(leader.SkillAverage, Is.Null);
+
+            leader.SetSkillRating(1000);
+            Advance();
+            Assert.That(_backends[leader].Writes, Is.Zero, "the rating is not offered to a service that cannot share it");
+            Assert.That(leader.Status.Phase, Is.EqualTo(PartyPhase.InParty));
+            Assert.That(leader.SkillAverage, Is.EqualTo(1000));
+        }
+
+        [Test]
+        public void ARefusedSkillWriteIsNotOfferedAgain()
+        {
+            var leader = CreateParty(_a);
+            var member = JoinParty(_b, leader);
+            _backends[member].AttributesUnsupported = true;
+
+            member.SetSkillRating(1400);
+            Settle();
+            Assert.That(_log, Has.Some.EqualTo("[Party] writing the skill rating"
+                + " is not supported by the lobby service id=party-1; skill ratings are no longer shared in this session"));
+            Assert.That(member.Status.Phase, Is.EqualTo(PartyPhase.InParty));
+
+            member.SetSkillRating(1500);
+            Settle();
+            Assert.That(_backends[member].Writes, Is.EqualTo(1));
+            Assert.That(member.SkillAverage, Is.EqualTo(1500));
+        }
+
+        [Test]
+        public void SettingTheRatingAfterDisposeThrows()
+        {
+            var session = Session(_a);
+            session.Dispose();
+
+            Assert.Throws<ObjectDisposedException>(() => session.SetSkillRating(1000));
+        }
+
+        [Test]
         public void TheConstructorChecksItsArguments()
         {
             var backend = new FakePartyBackend(_service, _a);
@@ -676,6 +808,8 @@ namespace Shooter.NetV2.Tests
 
             public bool Unsupported { get; set; }
 
+            public bool AttributesUnsupported { get; set; }
+
             public void Tick()
             {
                 if (_disposed)
@@ -756,6 +890,12 @@ namespace Shooter.NetV2.Tests
             public void SetMemberAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
             {
                 Writes++;
+                if (AttributesUnsupported)
+                {
+                    Later(() => done(LobbyBackendErrors.NotSupported));
+                    return;
+                }
+
                 if (FailWrites > 0)
                 {
                     FailWrites--;
@@ -785,6 +925,12 @@ namespace Shooter.NetV2.Tests
 
             public void ReadMemberAttributes(string lobbyId, string userId, Action<IReadOnlyList<LobbyAttribute>, string> done)
             {
+                if (AttributesUnsupported)
+                {
+                    Later(() => done(null, LobbyBackendErrors.NotSupported));
+                    return;
+                }
+
                 if (!_service.Lobbies.TryGetValue(lobbyId, out var lobby))
                 {
                     Later(() => done(null, "NotFound"));

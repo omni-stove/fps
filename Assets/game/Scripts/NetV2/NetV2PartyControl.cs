@@ -9,13 +9,21 @@ namespace Shooter.NetV2
     public sealed class NetV2PartyControl : IPartyControl, IDisposable
     {
         private readonly PartySession _session;
+        private readonly Func<int?> _skillRating;
         private CorePartyStatus _status;
         private CorePartyStatus? _published;
         private bool _disposed;
 
         public NetV2PartyControl(PartySession session)
+            : this(session, NetV2Client.OwnSkillRating)
+        {
+        }
+
+        // 値を引く口を受け取るのは、試合の結果で変わったプロフィールの値をパーティのメンバーへ載せ直せるようにするため。
+        public NetV2PartyControl(PartySession session, Func<int?> skillRating)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
+            _skillRating = skillRating ?? throw new ArgumentNullException(nameof(skillRating));
             _status = ClientPartyStatus.ToShown(_session.Status);
             _session.StatusChanged += HandleStatusChanged;
             _published = _status;
@@ -36,6 +44,22 @@ namespace Shooter.NetV2
         public string PartyId => _disposed ? null : _session.PartyId;
 
         public int MatchPlayers => _disposed ? 1 : _session.MatchPlayers;
+
+        // クイックマッチを始める直前に引くので、Tick を待たずに今の自分の値を入れてから平均を出す。
+        public int? SkillAverage
+        {
+            get
+            {
+                var own = _skillRating();
+                if (_disposed)
+                {
+                    return own;
+                }
+
+                _session.SetSkillRating(own);
+                return _session.SkillAverage;
+            }
+        }
 
         public void Create()
         {
@@ -59,6 +83,7 @@ namespace Shooter.NetV2
         {
             if (!_disposed)
             {
+                _session.SetSkillRating(_skillRating());
                 _session.Tick(now);
             }
         }

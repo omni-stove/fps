@@ -172,5 +172,28 @@ namespace Shooter.Core.Tests
             Assert.That(PartyLobby.TryParseState(null, out _), Is.False);
             Assert.That(PartyLobby.TryParseState("MATCH", out _), Is.False);
         }
+
+        [Test]
+        public void EachMemberCarriesItsSkill()
+        {
+            var attributes = PartyLobby.SkillAttributes(1350);
+
+            Assert.That(attributes.Count, Is.EqualTo(1));
+            Assert.That(ByKey(attributes)["party_skill"].IsText, Is.False);
+            Assert.That(ByKey(attributes)["party_skill"].Number, Is.EqualTo(1350));
+            Assert.That(PartyLobby.ReadSkill(attributes), Is.EqualTo(1350));
+            Assert.That(PartyLobby.ReadSkill(PartyLobby.SkillAttributes(-20)), Is.EqualTo(-20));
+            Assert.That(PartyLobby.ReadSkill(PartyLobby.LeaderAttributes(PartyState.Idle, null, 0)), Is.Null);
+            Assert.Throws<ArgumentNullException>(() => PartyLobby.ReadSkill(null));
+        }
+
+        [Test]
+        public void AnUnreadableSkillCountsAsNone()
+        {
+            Assert.That(PartyLobby.ReadSkill(new LobbyAttribute[0]), Is.Null);
+            Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfText("party_skill", "1350") }), Is.Null);
+            Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfNumber("party_skill", 3000000000L) }), Is.Null);
+            Assert.That(PartyLobby.ReadSkill(new[] { LobbyAttribute.OfNumber("party_skill", -3000000000L) }), Is.Null);
+        }
     }
 }

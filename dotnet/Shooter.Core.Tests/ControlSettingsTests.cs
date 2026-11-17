@@ -1336,13 +1336,11 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.InvertLookY, Is.True, "the saved value");
         }
 
-        /// <summary>今の形式から、バージョン 7 で足した揺れの強さと血の表示を除く (初期値のときだけ)。</summary>
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
         }
 
-        /// <summary>今の形式から、バージョン 10 で足した視点の上下反転・デッドゾーン・振動・振動の強さを除く (初期値のときだけ)。</summary>
         private static string WithoutGamepadFeel(string json)
         {
             return json.Replace(
@@ -1351,10 +1349,6 @@ namespace Shooter.Core.Tests
                 StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// 今の形式の json を version の形にする。10 より前は、バージョン 10 で足した欄を除き、
-        /// 9 より前は、バージョン 9 で足したエイムアシストも除く (どちらも初期値のときだけ)。
-        /// </summary>
         private static string AsVersion(string json, int version)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
@@ -1366,7 +1360,7 @@ namespace Shooter.Core.Tests
             return version >= 9 ? old : old.Replace(Json(",'aimAssist':true"), string.Empty, StringComparison.Ordinal);
         }
 
-        /// <summary>読みやすさのため ' で書いた JSON を " に直す。</summary>
+        // 読みやすさのため ' で書いた JSON を " に直す。
         private static string Json(string text)
         {
             return text.Replace('\'', '"');

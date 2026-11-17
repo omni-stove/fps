@@ -7,9 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 飛ぶ弾 (<see cref="RoundDelivery.Projectile"/>)。射撃を受け入れたときに作り、毎 tick 進めて (巻き戻さない)、当たれば <see cref="ServerImpact"/> に渡す。
-    /// </summary>
     internal sealed class ServerProjectiles
     {
         private readonly List<Flying> _flying = new List<Flying>();
@@ -26,7 +23,7 @@ namespace Shooter.Server
 
         public int Count => _flying.Count;
 
-        /// <summary>shot の弾 1 本を planned の始点と向きで撃ち出す。スナップショットに載らない弾を作らないよう、載る数を超えるならいちばん古い弾を消してから作る。</summary>
+        // スナップショットに載らない弾を作らないよう、載る数を超えるならいちばん古い弾を消してから作る。
         public void Launch(in ServerShot shot, PlannedRound planned)
         {
             var projectile = shot.Round.Projectile
@@ -92,7 +89,6 @@ namespace Shooter.Server
                     : (Vector3?)null;
         }
 
-        /// <summary>飛んでいる弾をスナップショットに載せる。</summary>
         public void Contribute(SnapshotList<ProjectileSnapshot> list)
         {
             ArgumentNullException.ThrowIfNull(list);
@@ -111,7 +107,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>試合の始まりに、飛んでいる弾をすべて消す。</summary>
         public void Clear()
         {
             _flying.Clear();
@@ -191,10 +186,7 @@ namespace Shooter.Server
             public BallisticFlight Flight { get; }
         }
 
-        /// <summary>
-        /// 弾道の当たりを、記録した最新の tick (今の位置) のプレイヤーと世界に通す。<see cref="WorldHit"/> は誰に当たったかを持てないので、
-        /// 最後の当たりを <see cref="LastHit"/> に残す。
-        /// </summary>
+        // WorldHit は誰に当たったかを持てないので、最後の当たりを LastHit に残す。
         private sealed class ProjectileCollision : IWorldCollision
         {
             private readonly ServerCombat _combat;

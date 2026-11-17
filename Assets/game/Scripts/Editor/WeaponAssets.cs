@@ -6,22 +6,14 @@ using UnityEditor;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器のアセット (<see cref="WeaponDefinition"/>・<see cref="WeaponCatalogAsset"/>・<see cref="LoadoutDefinition"/>) に値を入れ、読み直して確かめる。
-    /// 値の中身 (どの武器を作るか) は持たず、JSON の取り込みやゲームのビルダーがここを通して保存する。
-    /// </summary>
     public static class WeaponAssets
     {
         public const string CatalogFileName = "WeaponCatalog.asset";
 
-        /// <summary>武器のアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => ShooterKitRoot.OutputPath("Weapons");
 
-        /// <summary><see cref="Folder"/> の下の武器の一覧 (<see cref="CatalogFileName"/>)。</summary>
         public static string CatalogPath => Folder + "/" + CatalogFileName;
 
-        /// <summary>path の <see cref="WeaponDefinition"/> を読み、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめて返す。</summary>
-        /// <exception cref="InvalidOperationException">path に武器の定義が無い。</exception>
         public static WeaponDefinition LoadDefinition(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -36,8 +28,6 @@ namespace Shooter.Editor
             return definition;
         }
 
-        /// <summary>path の <see cref="WeaponCatalogAsset"/> を読み、<see cref="WeaponCatalogAsset.ToCatalog"/> に通ることを確かめて返す。</summary>
-        /// <exception cref="InvalidOperationException">path に武器の一覧が無い。</exception>
         public static WeaponCatalogAsset LoadCatalog(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -52,8 +42,6 @@ namespace Shooter.Editor
             return catalog;
         }
 
-        /// <summary>path の <see cref="LoadoutDefinition"/> を読み、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめて返す。</summary>
-        /// <exception cref="InvalidOperationException">path にロードアウトが無い。</exception>
         public static LoadoutDefinition LoadLoadout(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -68,11 +56,6 @@ namespace Shooter.Editor
             return loadout;
         }
 
-        /// <summary>
-        /// catalog から、Id が weaponId の武器の定義を引く。placementId は失敗したときにどの配置かを示すためだけに使う。
-        /// </summary>
-        /// <exception cref="KeyNotFoundException">weaponId の武器が catalog に無いとき。メッセージに配置の Id と武器の Id を含む。</exception>
-        /// <exception cref="WeaponDefinitionException">catalog が不正なとき。</exception>
         public static WeaponDefinition FindInCatalog(WeaponCatalogAsset catalog, string placementId, string weaponId)
         {
             if (catalog == null)
@@ -89,10 +72,7 @@ namespace Shooter.Editor
             return definition;
         }
 
-        /// <summary>
-        /// definition の中身を spec の値にし、<see cref="WeaponDefinition.ToSpec"/> に通ることを確かめる。
-        /// 飛ぶ弾・ビーム・火炎・爆発の見た目と音の参照は spec に無いので、definition に入っているものを残す。
-        /// </summary>
+        // 飛ぶ弾・ビーム・火炎・爆発の見た目と音の参照は spec に無いので、definition に入っているものを残す。
         public static void Configure(WeaponDefinition definition, WeaponSpec spec)
         {
             if (definition == null)
@@ -194,7 +174,6 @@ namespace Shooter.Editor
             definition.ToSpec();
         }
 
-        /// <summary>catalog の一覧を weapons にし、<see cref="WeaponCatalogAsset.ToCatalog"/> に通ることを確かめる。</summary>
         public static void Configure(WeaponCatalogAsset catalog, IEnumerable<WeaponDefinition> weapons)
         {
             if (catalog == null)
@@ -213,7 +192,6 @@ namespace Shooter.Editor
             catalog.ToCatalog();
         }
 
-        /// <summary>loadout のスロットを slots に、持ち替え秒数を switchSeconds にし、<see cref="LoadoutDefinition.ToSpecs"/> に通ることを確かめる。</summary>
         public static void Configure(LoadoutDefinition loadout, IEnumerable<LoadoutSlotDefinition> slots, float switchSeconds)
         {
             if (loadout == null)

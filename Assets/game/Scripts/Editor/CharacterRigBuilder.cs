@@ -9,19 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// プリミティブで胴・頭・腕・脚を組んだ人型のリグを作るか上書きする。
-    /// <list type="bullet">
-    /// <item><see cref="PrefabPath"/>: 関節 (空の GameObject) とその子の見た目 (MeshFilter と MeshRenderer) を組み、根に Animator を付けたプレハブ。
-    /// <see cref="Shooter.Runtime.CharacterAnimator"/> が Resources から読み、プレイヤーと敵の子に置く。
-    /// 見た目だけのリグなので、コライダーは付けない (当たり判定は今までどおり Hitbox が持つ)。</item>
-    /// <item><see cref="ClipFolder"/>: <see cref="CharacterRigClips"/> の姿勢ごとの AnimationClip。関節の回転と腰の位置をコードでキーにする。</item>
-    /// <item><see cref="ControllerPath"/>: クリップを <see cref="CharacterPose"/> のパラメーターと怯みの <see cref="StaggerParameter"/> でつなぐ AnimatorController。</item>
-    /// </list>
-    /// 既存のアセットは GUID と中のオブジェクトを保って中身だけ書き換えるので、何度実行しても同じ結果になり、git diff が出ない。
-    /// Editor を閉じた状態で次のように呼べる:
-    /// <code>unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.CharacterRigBuilder.Build</code>
-    /// </summary>
+    // 見た目だけのリグなので、コライダーは付けない (当たり判定は今までどおり Hitbox が持つ)。
+    // 既存のアセットは GUID と中のオブジェクトを保って中身だけ書き換え、何度実行しても同じ結果にして git diff を出さない。
     public static class CharacterRigBuilder
     {
         public static string Folder => ShooterKitRoot.BundledPath("Characters");
@@ -60,19 +49,15 @@ namespace Shooter.Editor
         public const string StumbleState = "Stumble";
         public const string BlastState = "Blast";
 
-        /// <summary>怯みの種類 (<see cref="StaggerKind"/> の int) を受け取る int のパラメーター。<see cref="Shooter.Runtime.StaggerReaction"/> が書く。</summary>
         public const string StaggerParameter = Shooter.Runtime.StaggerReaction.AnimatorParameter;
 
-        /// <summary>ふつうの姿勢の間を移る秒数。</summary>
         public const float PoseTransitionSeconds = 0.15f;
 
-        /// <summary>怯みの姿勢へ移る秒数。被弾の衝撃が伝わるよう、ふつうの姿勢の間より速く移る。</summary>
+        // 被弾の衝撃が伝わるよう、ふつうの姿勢の間より速く移る。
         public const float StaggerTransitionSeconds = 0.08f;
 
-        /// <summary>ダウンへ崩れ落ちる秒数。</summary>
         public const float DownedTransitionSeconds = 0.3f;
 
-        /// <summary>死亡で倒れ込む秒数。</summary>
         public const float DeadTransitionSeconds = 0.25f;
 
         // Euler 角のままキーにすると、Animation ウィンドウと同じく Euler で補間され、180° を越える曲げでも反対回りにならない。
@@ -117,7 +102,6 @@ namespace Shooter.Editor
             new PartSpec("RightFootMesh", RightShinBone, PrimitiveType.Cube, new Vector3(0f, -0.485f, 0.05f), new Vector3(0.12f, 0.05f, 0.22f)),
         };
 
-        /// <summary>関節の名前 (根に近い順)。</summary>
         public static IReadOnlyList<string> BoneNames
         {
             get
@@ -132,7 +116,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>見た目の部品の名前。</summary>
         public static IReadOnlyList<string> PartNames
         {
             get
@@ -183,7 +166,6 @@ namespace Shooter.Editor
             return volumes;
         }
 
-        /// <summary>Animator の状態の名前 (コントローラーに並ぶ順)。</summary>
         public static IReadOnlyList<string> StateNames => new[]
         {
             LocomotionState,
@@ -200,7 +182,6 @@ namespace Shooter.Editor
             DeadState,
         };
 
-        /// <summary>怯みの種類ごとの状態の名前。<see cref="StaggerKind.None"/> は含まない。</summary>
         public static IReadOnlyList<(StaggerKind Kind, string State)> StaggerStates => new[]
         {
             (StaggerKind.Flinch, FlinchState),
@@ -215,11 +196,6 @@ namespace Shooter.Editor
             BuildAt(PrefabPath, ControllerPath, ClipFolder);
         }
 
-        /// <summary>
-        /// clipFolder にクリップを、controllerPath にコントローラーを、prefabPath にプレハブを作るか上書きして保存し、プレハブを返す。
-        /// prefabPath は Assets/ 以下の .prefab、controllerPath は Assets/ 以下の .controller、clipFolder は Assets/ 以下のフォルダであること。
-        /// パスに別の種類のアセットがあれば、何も書き換えずに例外を投げる。
-        /// </summary>
         public static GameObject BuildAt(string prefabPath, string controllerPath, string clipFolder)
         {
             prefabPath = ValidatePath(prefabPath, ".prefab", nameof(prefabPath));
@@ -257,7 +233,6 @@ namespace Shooter.Editor
             return prefab;
         }
 
-        /// <summary>根から bone までの、Animator から見たパス (例: Hips/Torso/Head)。bone が無ければ例外を投げる。</summary>
         public static string BonePath(string bone)
         {
             var segments = new List<string>();
@@ -1063,7 +1038,6 @@ namespace Shooter.Editor
         {
             public string Name { get; }
 
-            /// <summary>親の関節。根の直下なら null。</summary>
             public string Parent { get; }
 
             public Vector3 LocalPosition { get; }
@@ -1111,10 +1085,8 @@ namespace Shooter.Editor
             public string Name { get; }
             public Vector3 Position { get; }
 
-            /// <summary>1 本のクリップを流す状態のクリップ。ブレンドツリーなら null。</summary>
             public AnimationClip Clip { get; }
 
-            /// <summary>Speed で混ぜるクリップ (しきい値の小さい順)。1 本のクリップなら null。</summary>
             public BlendChild[] BlendChildren { get; }
 
             public float TransitionSeconds { get; }

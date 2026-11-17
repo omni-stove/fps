@@ -7,11 +7,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    /// <summary>
-    /// カバーの入れる距離・角度・低い壁の高さ・覗く横の距離・入る秒数・後ろの入力で出る秒数・覗く秒数と、
-    /// はしごの上から入る深さ・近づく向きと速さが、<see cref="MotorSpec"/> からルールのファイル (<see cref="NetMatchFile"/>)・
-    /// 承認の電文 (<see cref="ConnectAcceptedMessage"/>)・サーバーとクライアントが共に使う <see cref="CharacterMotorSimulation"/> まで届くこと。
-    /// </summary>
     public sealed class MotorCoverLadderTuningTests
     {
         private const float _tick = 1f / 60f;

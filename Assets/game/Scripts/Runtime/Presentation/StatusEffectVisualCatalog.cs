@@ -4,18 +4,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 状態異常の種類 (<see cref="Shooter.Core.StatusEffectSpec.KindId"/>) ごとの、かかっている体に付ける見た目。
-    /// <see cref="StatusEffectVisuals"/> が <see cref="Load"/> で読む。置き場所と枠の扱いは <see cref="PresentationCatalog"/> の規約に従い、
-    /// カタログが無い・種類の枠が空なら <see cref="StatusEffectVisuals"/> がコードで形を作る。
-    /// </summary>
     [CreateAssetMenu(fileName = "StatusEffectVisualsCatalog", menuName = "Shooter/Status Effect Visuals Catalog")]
     public sealed class StatusEffectVisualCatalog : ScriptableObject
     {
-        /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す名前。</summary>
         public const string CatalogName = "StatusEffectVisuals";
 
-        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/StatusEffectVisualsCatalog.asset)。</summary>
         public static readonly string ResourcePath = PresentationCatalog.CatalogResourcePath(CatalogName);
 
         [SerializeField, Tooltip("種類ごとの見た目。種類の Id は重複させない")]
@@ -23,19 +16,16 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<StatusEffectVisualEntry> Kinds => _kinds ??= new List<StatusEffectVisualEntry>();
 
-        /// <summary>Resources の <see cref="ResourcePath"/> から読む。無ければ null。</summary>
         public static StatusEffectVisualCatalog Load()
         {
             return Resources.Load<StatusEffectVisualCatalog>(ResourcePath);
         }
 
-        /// <summary>種類の見た目をまとめて差し替える。null は空にする。渡した列は複製して持つ。</summary>
         public void SetKinds(IEnumerable<StatusEffectVisualEntry> kinds)
         {
             _kinds = kinds == null ? new List<StatusEffectVisualEntry>() : new List<StatusEffectVisualEntry>(kinds);
         }
 
-        /// <summary>kindId の見た目。無い・枠が空なら null。</summary>
         public GameObject VisualFor(string kindId)
         {
             foreach (var entry in Kinds)

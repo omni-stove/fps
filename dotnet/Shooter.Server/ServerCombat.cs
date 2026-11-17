@@ -8,21 +8,8 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 戦闘。Unity の NetPlayer.Fire・ServerShotSequence・HitboxRewinder・NetTeamDeathmatch.Fire / .Explosion・ServerGrenadeSupply・NetGrenade・
-    /// NetPlayerWeapon (サーバー側)・NetCombatFeed がしていたことを、Core の判定と <c>.fpsmap</c> の世界 (<see cref="IWorldCollision"/>) で行う。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// ダメージはすべてルールのモジュールの <see cref="MatchRulesModule.ApplyDamage"/> を通すので、味方撃ち・出現直後の無敵・ダウン・キルの数え方と
-    /// キルフィード・JSON の <c>kill</c> の行はルールのモジュールが決めて出す。ここは撃ってよいか・何に当たったか・いくつ減らすかを決め、
-    /// 射撃・ヒット・被弾・爆発をクライアントへ送る。
-    /// </para>
-    /// <para>
-    /// 位置とリーンの傾きは移動のモジュールが写した <see cref="ServerBodies"/> を読み、tick ごとに <see cref="ServerHitboxes"/> に残して巻き戻す。
-    /// 回避・乗り越え・カバー・覗き込みと移動の速さは移動のモジュールの確定状態を読む。
-    /// </para>
-    /// </remarks>
+    // ダメージはすべてルールのモジュールの MatchRulesModule.ApplyDamage を通すので、味方撃ち・出現直後の無敵・ダウン・キルの数え方と
+    // キルフィード・JSON の kill の行はルールのモジュールが決めて出す。
     internal sealed partial class ServerCombat : IServerModule, ISnapshotContributor
     {
         public const string LogTag = "[Combat]";
@@ -87,7 +74,6 @@ namespace Shooter.Server
 
         internal ServerStructures Structures => _structures;
 
-        /// <summary>世界の当たりのほかに視線を遮る物。Bot の知覚が問い合わせる。</summary>
         internal ServerSightBlockers SightBlockers => _sightBlockers;
 
         internal ServerContext Context => _context;
@@ -228,9 +214,6 @@ namespace Shooter.Server
             _statusEffects.Clear();
         }
 
-        /// <summary>
-        /// 各プレイヤーの持っている武器と最後に受けた弾の向き、受け取る人の弾数・持たせている武器・グレネードの残り、飛んでいるグレネードを載せる。
-        /// </summary>
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {
             ArgumentNullException.ThrowIfNull(snapshot);
@@ -455,7 +438,6 @@ namespace Shooter.Server
 
             public ServerShotSequence Shots { get; } = new ServerShotSequence();
 
-            /// <summary>最後に受けた弾の進む向き。クライアントは倒れた体をこの向きへ倒す。</summary>
             public Vector3 LastHitDirection { get; set; }
         }
     }

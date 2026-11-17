@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>部品 1 つの親のローカル座標での位置と向き。</summary>
     public readonly struct MockPartPose : IEquatable<MockPartPose>
     {
         public MockPartPose(Vector3 position, Quaternion rotation)
@@ -38,98 +37,69 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>
-    /// 自機モック (<see cref="PlayerMockBody"/>) の寸法と、<see cref="PlayerActionState"/> から作る姿勢。状態を持たない計算だけを置く。
-    /// 三人称の体は足元を原点とする本体のローカル座標 (+Z が正面)、一人称の銃 (ビューモデル) はカメラのローカル座標で表す。
-    /// 同時に立つ状態の優先は ダウン &gt; 乗り越え &gt; 回避 &gt; カバー &gt; 壁走り &gt; 水泳 &gt; リーン。しゃがみはそれらと重ねて胴を縮める。
-    /// 壁走り・水泳・リーンは移動の Core の状態 (<see cref="CharacterMotorState"/>) から読む。
-    /// </summary>
     public static class PlayerMockPose
     {
-        /// <summary>胴 (カプセル) の幅・奥行き・高さ (m)。立っているとき。</summary>
         public const float TorsoWidth = 0.6f;
         public const float TorsoDepth = 0.4f;
         public const float TorsoHeight = 1.4f;
 
-        /// <summary>胴の下端の足元からの高さ (m)。</summary>
         public const float TorsoBottom = 0.05f;
 
-        /// <summary>頭 (球) の直径 (m)。</summary>
         public const float HeadDiameter = 0.36f;
 
-        /// <summary>
-        /// しゃがんだときに胴の高さに掛ける倍率。<see cref="PlayerController.DefaultCrouchHeight"/> と
-        /// <see cref="GameBootstrap.PlayerHeight"/> の比に揃え、当たり判定の縮み方と見た目を合わせる。
-        /// </summary>
+        // PlayerController.DefaultCrouchHeight と GameBootstrap.PlayerHeight の比に揃え、当たり判定の縮み方と見た目を合わせる。
         public const float CrouchScale = PlayerController.DefaultCrouchHeight / GameBootstrap.PlayerHeight;
 
-        /// <summary>伏せたときに胴の高さに掛ける倍率。<see cref="ProneSpec.DefaultHeight"/> と <see cref="GameBootstrap.PlayerHeight"/> の比 (<see cref="CrouchScale"/> と同じ考え)。</summary>
+        // CrouchScale と同じく、当たり判定の縮み方と見た目を合わせる。
         public const float ProneScale = ProneSpec.DefaultHeight / GameBootstrap.PlayerHeight;
 
-        /// <summary>立っているときの目の足元からの高さ (m)。ADS で銃をここまで上げる。</summary>
         public const float EyeHeight = 1.6f;
 
-        /// <summary>銃 (箱) の幅・高さ・長さ (m)。三人称と一人称で同じ寸法を使う。</summary>
         public static readonly Vector3 GunSize = new Vector3(0.08f, 0.12f, 0.55f);
 
         public const float DodgeLeanDegrees = 15f;
         public const float VaultLeanDegrees = 25f;
         public const float CoverLeanDegrees = 5f;
 
-        /// <summary>ダウンで横に倒す角度。真横 (90) だと体が床にめり込むので少し手前で止める。</summary>
+        // 真横 (90) だと体が床にめり込むので少し手前で止める。
         public const float DownedRollDegrees = 80f;
 
-        /// <summary>泳ぐときに体を前へ倒す角度。真横 (90) まで倒すと、足元を軸に回した体が水面より下へ沈むので少し起こす。</summary>
+        // 真横 (90) まで倒すと、足元を軸に回した体が水面より下へ沈むので少し起こす。
         public const float SwimPitchDegrees = 70f;
 
-        /// <summary>壁走りで体を壁と反対へ傾ける角度。</summary>
         public const float WallRunTiltDegrees = 20f;
 
-        /// <summary>カバー中に体を壁へ寄せる距離 (m)。</summary>
         public const float CoverShift = 0.2f;
 
-        /// <summary>1 発撃つたびに銃を後ろへ引く距離 (m) と、跳ね上げる角度。三人称の体。</summary>
         public const float BodyKickDistance = 0.08f;
         public const float BodyKickDegrees = 6f;
 
-        /// <summary>1 発撃つたびに銃を後ろへ引く距離 (m) と、跳ね上げる角度。一人称のビューモデル。</summary>
         public const float ViewKickDistance = 0.06f;
         public const float ViewKickDegrees = 8f;
 
-        /// <summary>撃った反動が戻りきるまでの秒数。</summary>
         public const float KickRecoverSeconds = 0.12f;
 
-        /// <summary>姿勢を目標へ寄せる速さ (1/秒)。大きいほど早く追いつく。</summary>
         public const float BlendRate = 14f;
 
-        /// <summary>三人称の銃の位置 (足元からの、立っているとき)。高さはしゃがみで縮める。</summary>
         public static readonly Vector3 BodyHipGunPosition = new Vector3(0.25f, 1.15f, 0.3f);
 
-        /// <summary>三人称で ADS したときの銃の位置。目の高さの少し下、体の中心寄り。</summary>
         public static readonly Vector3 BodyAimGunPosition = new Vector3(0.12f, EyeHeight - 0.08f, 0.35f);
 
         public static readonly Vector3 BodyReloadGunPosition = new Vector3(0.25f, 0.95f, 0.2f);
         public static readonly Vector3 BodyReloadGunEuler = new Vector3(35f, 0f, -25f);
 
-        /// <summary>一人称の銃の位置 (カメラのローカル)。腰だめは右下。</summary>
         public static readonly Vector3 ViewHipPosition = new Vector3(0.22f, -0.2f, 0.45f);
 
-        /// <summary>一人称で ADS したときの銃の位置。画面の中央の真下。</summary>
         public static readonly Vector3 ViewAimPosition = new Vector3(0f, -0.1f, 0.32f);
 
         public static readonly Vector3 ViewReloadPosition = new Vector3(0.22f, -0.36f, 0.4f);
         public static readonly Vector3 ViewReloadEuler = new Vector3(30f, 0f, -20f);
 
-        /// <summary>胴の高さに掛ける倍率。ダウン中は 1、伏せなら <see cref="ProneScale"/>、しゃがみなら <see cref="CrouchScale"/>、それ以外は 1。</summary>
         public static float StanceScale(PlayerActionState state)
         {
             return StanceScale(state, null);
         }
 
-        /// <summary>
-        /// 胴の高さに掛ける倍率。ダウン中は 1、伏せならそのプレイヤーの伏せの高さと立ちの高さの比、しゃがみならしゃがみの高さと立ちの高さの比、それ以外は 1。
-        /// stance が null (プレイヤーが未初期化) なら <see cref="ProneScale"/> と <see cref="CrouchScale"/> を使う。
-        /// </summary>
         public static float StanceScale(PlayerActionState state, StanceGeometry stance)
         {
             if (state.IsDowned)
@@ -150,7 +120,6 @@ namespace Shooter.Runtime
             return 1f;
         }
 
-        /// <summary>stanceScale の高さのときの胴の位置 (足元から) と拡縮 (Unity のカプセルは直径 1・高さ 2)。</summary>
         public static void Torso(float stanceScale, out Vector3 position, out Vector3 scale)
         {
             RequirePositiveFinite(stanceScale, nameof(stanceScale));
@@ -159,17 +128,12 @@ namespace Shooter.Runtime
             scale = new Vector3(TorsoWidth, height / 2f, TorsoDepth);
         }
 
-        /// <summary>stanceScale の高さのときの頭の中心 (足元から)。胴の上に載せる。</summary>
         public static Vector3 Head(float stanceScale)
         {
             RequirePositiveFinite(stanceScale, nameof(stanceScale));
             return new Vector3(0f, ((TorsoBottom + TorsoHeight) * stanceScale) + (HeadDiameter / 2f), 0f);
         }
 
-        /// <summary>
-        /// 体全体の傾き (足元を軸に回す)。ダウンは横へ倒し、乗り越えは前へ、回避は localMove の向きへ、カバーは壁 (localCoverNormal の逆) へ傾ける。
-        /// localMove は本体のローカルの移動の向き (水平成分が無ければ前とみなす)、localCoverNormal は壁の面の向き (壁から離れる向き)。
-        /// </summary>
         public static Quaternion BodyLean(PlayerActionState state, Vector3 localMove, Vector3 localCoverNormal)
         {
             if (state.IsDowned)
@@ -197,11 +161,6 @@ namespace Shooter.Runtime
             return Quaternion.identity;
         }
 
-        /// <summary>
-        /// <see cref="BodyLean(PlayerActionState, Vector3, Vector3)"/> に、移動の Core の状態 motor の壁走り・水泳・リーンを足した体全体の傾き。
-        /// ダウン・乗り越え・回避・カバーの間はそちらの傾きのまま (リーンはカバー中に効かせない)。
-        /// leanAngleDegrees は傾け切ったときの角度 (<see cref="MotorSpec.LeanAngleDegrees"/>)。
-        /// </summary>
         public static Quaternion BodyLean(
             PlayerActionState state, Vector3 localMove, Vector3 localCoverNormal, CharacterMotorState motor, float leanAngleDegrees)
         {
@@ -213,24 +172,16 @@ namespace Shooter.Runtime
             return TraversalLean(motor, leanAngleDegrees);
         }
 
-        /// <summary>motor の壁走り・水泳・リーンの傾き。<see cref="TraversalLean(float, bool, WallRunSide, float)"/> を見る。</summary>
         public static Quaternion TraversalLean(CharacterMotorState motor, float leanAngleDegrees)
         {
             return TraversalLean(motor.Lean.Amount, motor.IsSwimming, motor.WallRun.Side, leanAngleDegrees);
         }
 
-        /// <summary>
-        /// Animator に渡すパラメーターの壁走り・水泳・リーンの傾き。<see cref="CharacterPose"/> が死亡・ダウン・カバーの間はそれらを寝かせるので、そのときは傾けない。
-        /// </summary>
         public static Quaternion TraversalLean(CharacterPoseParameters parameters, float leanAngleDegrees)
         {
             return TraversalLean(parameters.Lean, parameters.Swimming, (WallRunSide)parameters.WallRun, leanAngleDegrees);
         }
 
-        /// <summary>
-        /// 足元を軸にした体全体の傾き。壁走りなら壁と反対の側へ <see cref="WallRunTiltDegrees"/>、泳いでいれば前へ <see cref="SwimPitchDegrees"/>、
-        /// それ以外は lean (-1 左〜1 右) の向きへ leanAngleDegrees × |lean| 傾ける。優先は 壁走り &gt; 水泳 &gt; リーン。
-        /// </summary>
         public static Quaternion TraversalLean(float lean, bool swimming, WallRunSide wallRun, float leanAngleDegrees)
         {
             if (!(lean >= -1f && lean <= 1f))
@@ -263,7 +214,6 @@ namespace Shooter.Runtime
             return LeanToward(Vector3.right, leanAngleDegrees * lean);
         }
 
-        /// <summary>体全体をずらす量。カバー中 (ダウンを除く) は壁へ <see cref="CoverShift"/> 寄せる。</summary>
         public static Vector3 BodyShift(PlayerActionState state, Vector3 localCoverNormal)
         {
             if (!state.IsInCover || state.IsDowned)
@@ -274,16 +224,11 @@ namespace Shooter.Runtime
             return -Horizontal(localCoverNormal) * CoverShift;
         }
 
-        /// <summary>
-        /// 三人称の銃の姿勢 (反動を除く)。リロード中とダウン中は下げて傾け、ADS なら目の高さへ上げ、それ以外は腰だめ。
-        /// 下げていないときは aimPitch (目の上下の向き) に合わせて銃口を上下させる。
-        /// </summary>
         public static MockPartPose BodyGun(PlayerActionState state, Quaternion aimPitch)
         {
             return BodyGun(state, aimPitch, null);
         }
 
-        /// <summary><see cref="BodyGun(PlayerActionState, Quaternion)"/> の高さを、そのプレイヤーの姿勢の寸法 (<see cref="StanceScale(PlayerActionState, StanceGeometry)"/>) で縮める。</summary>
         public static MockPartPose BodyGun(PlayerActionState state, Quaternion aimPitch, StanceGeometry stance)
         {
             var scale = StanceScale(state, stance);
@@ -296,7 +241,6 @@ namespace Shooter.Runtime
             return new MockPartPose(ScaleHeight(position, scale), aimPitch);
         }
 
-        /// <summary>一人称の銃の姿勢 (反動を除く)。リロード中とダウン中は下げて傾け、ADS なら中央へ寄せ、それ以外は右下。</summary>
         public static MockPartPose ViewModel(PlayerActionState state)
         {
             if (state.IsReloading || state.IsDowned)
@@ -307,9 +251,6 @@ namespace Shooter.Runtime
             return new MockPartPose(state.IsAiming ? ViewAimPosition : ViewHipPosition, Quaternion.identity);
         }
 
-        /// <summary>
-        /// pose に反動を足す。kick は 0 (なし) 〜 1 (撃った瞬間)。銃の向きの後ろへ distance 引き、銃口を degrees 跳ね上げる。
-        /// </summary>
         public static MockPartPose WithKick(MockPartPose pose, float kick, float distance, float degrees)
         {
             if (!(kick >= 0f && kick <= 1f))
@@ -326,21 +267,19 @@ namespace Shooter.Runtime
             return new MockPartPose(pose.Position + back, pose.Rotation * Quaternion.Euler(-degrees * kick, 0f, 0f));
         }
 
-        /// <summary>反動を deltaSeconds だけ戻した値。<see cref="KickRecoverSeconds"/> で 1 から 0 へ戻る。</summary>
         public static float RecoverKick(float kick, float deltaSeconds)
         {
             RequireDelta(deltaSeconds);
             return Mathf.Clamp01(kick - (deltaSeconds / KickRecoverSeconds));
         }
 
-        /// <summary>deltaSeconds の間に目標へ寄せる割合 (0〜1)。フレームの長さが変わっても同じ速さで寄るよう指数で決める。</summary>
+        // フレームの長さが変わっても同じ速さで寄るよう、割合は指数で決める。
         public static float BlendFactor(float deltaSeconds)
         {
             RequireDelta(deltaSeconds);
             return 1f - Mathf.Exp(-BlendRate * deltaSeconds);
         }
 
-        /// <summary>水平成分だけを単位ベクトルにして返す。水平成分が無い (か有限でない) なら zero。</summary>
         public static Vector3 Horizontal(Vector3 vector)
         {
             var flat = new Vector3(vector.x, 0f, vector.z);

@@ -7,26 +7,6 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャラの状態を人型のリグ (CharacterRigBuilder が作るプレハブ) の Animator に写す。プレイヤー・NetPlayer・敵の本体に付ける。
-    /// <list type="bullet">
-    /// <item>読み元 (<see cref="TryBind"/>): 同じ GameObject に <see cref="PlayerController"/> があればプレイヤーとして、それと
-    /// <see cref="WeaponController"/> (子のカメラに付く)・<see cref="AimDownSights"/>・<see cref="CoverController"/>・<see cref="Damageable"/> を読む。
-    /// 無くて <see cref="EnemyAgent"/> があれば敵として、それと NavMeshAgent・Damageable を読む。
-    /// どちらも無くて <see cref="ICharacterPoseSource"/> (ネット対戦の NetPlayer) があればそこから読み、水平の速さは本体の位置の変化から
-    /// <see cref="HorizontalSpeedMeter"/> で求めて渡す。どれも無ければ何もしない。</item>
-    /// <item>リグ (<see cref="BuildRig"/>): 本体の直下に <see cref="RigObjectName"/> の子 (根に Animator) が既にあれば
-    /// (NetSceneBuilder がプレハブに置いたリグ) それを使う。無ければ <see cref="RigPrefab"/> (未設定なら入口 <see cref="GameContent.CharacterRig"/>、それも無ければ Resources の <see cref="RigResourcePath"/>)
-    /// を本体の子に置く。どちらも足元に合わせる。本体自身のレンダラー (プリミティブのカプセル) は消し、<see cref="PlayerMockBody"/> があればその体も出さない
-    /// (一人称の銃は残す)。プレハブが無ければ警告を出してカプセルのまま止まる。</item>
-    /// <item>毎フレーム (<see cref="Refresh"/>): 状態を <see cref="CharacterPose"/> で Animator のパラメーターにして渡す。
-    /// この端末のプレイヤーの一人称 (<see cref="ViewRig"/>) ではリグを影だけにし、自分の体が視界に入らないようにする。</item>
-    /// <item>リーン・水泳・壁走り: <see cref="MotorSource"/> (未設定なら同じ GameObject の <see cref="ICharacterMotorStateSource"/>) があれば、
-    /// 読み元の種類によらずその状態から Lean・Swimming・WallRun を決める。<see cref="TiltsRigWithMotor"/> なら、リグの根もそれらの向きへ
-    /// <see cref="PlayerMockPose.TraversalLean(CharacterPoseParameters, float)"/> で傾ける (それらのクリップの無いリグでも姿勢が変わって見えるように)。</item>
-    /// </list>
-    /// 専用サーバーでは自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
-    /// </summary>
     [DisallowMultipleComponent]
     // 移動・射撃・カバー (Update) と PlayerActionReader (100)・PlayerMockBody (110) の後に、そのフレームの状態を読む。
     [DefaultExecutionOrder(120)]
@@ -34,13 +14,11 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[CharacterAnimator]";
 
-        /// <summary>リグのプレハブの Resources からのパス (どこかの Resources フォルダの Characters/CharacterRig.prefab)。</summary>
         public const string RigResourcePath = "Characters/CharacterRig";
 
-        /// <summary>本体の子に置くリグの名前。</summary>
         public const string RigObjectName = "CharacterRig";
 
-        /// <summary>Speed を寄せる秒数。歩きと走りの切り替わりで足の振りが跳ばないようにする。</summary>
+        // Speed を寄せるのは、歩きと走りの切り替わりで足の振りが跳ばないようにするため。
         public const float SpeedDampSeconds = 0.1f;
 
         [SerializeField, Tooltip("置くリグのプレハブ。空なら入口 (GameContent) のキャラクターのリグ、それも無ければ Resources の Characters/CharacterRig を読む")]
@@ -79,7 +57,6 @@ namespace Shooter.Runtime
         private Renderer _hostRenderer;
         private bool _hostRendererWasEnabled;
 
-        /// <summary>リグに置き換えて隠したカプセルの Renderer。隠していなければ null。DeathBodyPresenter が抜け殻に写さない判定に使う。</summary>
         public Renderer HiddenHostRenderer => _hostRenderer;
 
         private PlayerMockBody _mockBody;
@@ -103,60 +80,42 @@ namespace Shooter.Runtime
         private static readonly int SwimmingHash = Animator.StringToHash(CharacterPose.SwimmingParameter);
         private static readonly int WallRunHash = Animator.StringToHash(CharacterPose.WallRunParameter);
 
-        /// <summary>
-        /// 置くリグのプレハブ。null なら <see cref="BuildRig"/> が Resources の <see cref="RigResourcePath"/> を読む。
-        /// 置いた後に変えても今のリグは変わらない。
-        /// </summary>
         public GameObject RigPrefab
         {
             get => _rigPrefab;
             set => _rigPrefab = value;
         }
 
-        /// <summary>リーン・水泳・壁走りの向きへリグの根を傾けるか。既定は true。</summary>
         public bool TiltsRigWithMotor
         {
             get => _tiltsRigWithMotor;
             set => _tiltsRigWithMotor = value;
         }
 
-        /// <summary>
-        /// リーン・水泳・壁走りを読む移動の状態の読み元。<see cref="TryBind"/> が同じ GameObject の <see cref="ICharacterMotorStateSource"/> で置き換える
-        /// (無ければ設定したものを残す)。null (か破棄済み) なら、それらは <see cref="ReadState"/> の読み元の値のまま。
-        /// </summary>
         public ICharacterMotorStateSource MotorSource
         {
             get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
             set => _motorSource = value;
         }
 
-        /// <summary>リグの根の今の傾き (本体のローカル)。<see cref="TiltsRigWithMotor"/> が false なら単位回転。</summary>
         public Quaternion RigTilt => _rigTilt;
 
-        /// <summary>どの部品から状態を読むか。<see cref="TryBind"/> 前は <see cref="CharacterAnimatorSource.None"/>。</summary>
         public CharacterAnimatorSource Source => _source;
 
-        /// <summary>リグを置いたか。</summary>
         public bool IsBuilt => _rig != null;
 
-        /// <summary>置いたリグの根。無ければ null。</summary>
         public Transform Rig => _rig;
 
-        /// <summary>リグを自分で置いたか (<see cref="Dismantle"/> で壊すか)。プレハブにあったリグを使っているなら false。</summary>
         public bool OwnsRig => _rig != null && _ownsRig;
 
-        /// <summary><see cref="CharacterAnimatorSource.Network"/> で、位置の変化から求めた今の水平の速さ (m/s)。</summary>
         public float MeasuredSpeed => _speedMeter.Speed;
 
-        /// <summary>リグの Animator。無ければ null。</summary>
         public Animator Animator => _animator;
 
-        /// <summary>最後の <see cref="Refresh"/> で決めたパラメーター。まだ無ければ <see cref="HasParameters"/> が false。</summary>
         public CharacterPoseParameters Parameters => _parameters;
 
         public bool HasParameters => _hasParameters;
 
-        /// <summary>今使っている姿勢の計算。<see cref="TryBind"/> 前や読み元が無ければ null。</summary>
         public CharacterPose Pose => _pose;
 
         private void Awake()
@@ -205,11 +164,6 @@ namespace Shooter.Runtime
             Dismantle();
         }
 
-        /// <summary>
-        /// 同じ GameObject から読み元を探す。<see cref="PlayerController"/> があればプレイヤー、無くて <see cref="EnemyAgent"/> があれば敵、
-        /// どちらも無くて <see cref="ICharacterPoseSource"/> があればそれ (ネット対戦の NetPlayer)。
-        /// どれも無ければ false (ログは出さない)。
-        /// </summary>
         public bool TryBind()
         {
             _mover = GetComponent<PlayerController>();
@@ -265,11 +219,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// リグのプレハブを本体の子に置き、本体のカプセルと自機モックの体を隠す。置き済みなら何もせず true。
-        /// 本体の直下に <see cref="RigObjectName"/> の子があって根に Animator があれば、置かずにそれを使う (<see cref="OwnsRig"/> は false)。
-        /// プレハブが無ければ警告を、根に Animator が無ければエラーを出し、何も変えずに false を返す。
-        /// </summary>
         public bool BuildRig()
         {
             if (IsBuilt)
@@ -370,11 +319,6 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} rig {how} for '{name}' source={_source} renderers={_rigRenderers.Length}", this);
         }
 
-        /// <summary>
-        /// 今の状態を読み、<see cref="CharacterPose"/> でパラメーターを決めて返す。リグがあれば Animator に渡し、足元へ置き、
-        /// 一人称なら影だけにする。読み元が無ければ (<see cref="TryBind"/> 前・失敗) 例外を投げる。
-        /// </summary>
-        /// <param name="deltaSeconds">前の Refresh からの秒数。Speed を寄せるのに使う。0 以上の有限値。</param>
         public CharacterPoseParameters Refresh(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -413,10 +357,6 @@ namespace Shooter.Runtime
             return _parameters;
         }
 
-        /// <summary>
-        /// 読み元から今の状態を集める。読み元が無ければ例外を投げる。
-        /// <see cref="CharacterAnimatorSource.Network"/> の速さは、最後の <see cref="Refresh"/> までの位置の変化から求めた値 (<see cref="MeasuredSpeed"/>)。
-        /// </summary>
         public CharacterPoseInput ReadState()
         {
             CharacterPoseInput input;
@@ -481,10 +421,6 @@ namespace Shooter.Runtime
             return spec.LeanAngleDegrees;
         }
 
-        /// <summary>
-        /// リグを壊し、本体のカプセルと自機モックの体を元に戻す。置いていなければ何もしない。
-        /// プレハブにあったリグ (<see cref="OwnsRig"/> が false) は壊さず、使うのをやめるだけにする。
-        /// </summary>
         public void Dismantle()
         {
             UnsubscribeHealthReset();
@@ -628,7 +564,6 @@ namespace Shooter.Runtime
             return speed >= 0f && !float.IsInfinity(speed) ? speed : 0f;
         }
 
-        /// <summary>本体のローカルでの足元の高さ。リグの根は足元に置く。</summary>
         public float FeetLocalY()
         {
             var controller = GetComponent<CharacterController>();

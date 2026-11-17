@@ -5,23 +5,18 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// クライアントで、.NET のサーバーと EAC のパケット (<see cref="AntiCheatPacket"/>) をやり取りする。
-    /// Unity の <c>Shooter.NetEos.EosAntiCheat</c> と同じく EAC が無効でも Hello を送り、片方だけ有効なら同じ理由で抜ける。
-    /// </summary>
-    /// <remarks>
-    /// サーバーをピアとして登録しないのは、ClientServer モードの EAC ではクライアントがサーバーを登録せず、
-    /// メッセージを受け渡すだけだから。セッションを承認の後に始めるのは、サーバーが承認の前に届いたメッセージで切るため。
-    /// </remarks>
+    // Unity の Shooter.NetEos.EosAntiCheat と同じく EAC が無効でも Hello を送り、片方だけ有効なら同じ理由で抜ける。
+    // サーバーをピアとして登録しないのは、ClientServer モードの EAC ではクライアントがサーバーを登録せず、
+    // メッセージを受け渡すだけだから。セッションを承認の後に始めるのは、サーバーが承認の前に届いたメッセージで切るため。
     public sealed class ClientAntiCheat
     {
-        /// <summary>Unity の <c>EosAntiCheat.HelloIntervalSeconds</c> とそろえる。</summary>
+        // Unity の EosAntiCheat.HelloIntervalSeconds とそろえる。
         public const double HelloIntervalSeconds = 1;
 
-        /// <summary>Unity の <c>EosAntiCheat.HelloTimeoutSeconds</c> とそろえる。</summary>
+        // Unity の EosAntiCheat.HelloTimeoutSeconds とそろえる。
         public const double HelloTimeoutSeconds = 15;
 
-        /// <summary>ログでサーバーを指す Id。EOS の P2P のクライアントがホストを指していた Id とそろえ、手順書のログと同じにする。</summary>
+        // EOS の P2P のクライアントがホストを指していた Id とそろえ、手順書のログと同じにする。
         public const ulong ServerPeerId = 0;
 
         private const string _tag = AntiCheatSettings.LogTag + " ";
@@ -42,11 +37,6 @@ namespace Shooter.NetV2
         private string _pendingRemoval;
         private double _removeAt;
 
-        /// <param name="enabled">こちらの EAC を有効にするか。</param>
-        /// <param name="session">EAC の SDK の側。無効なら null でよい。</param>
-        /// <param name="send">サーバーへ確実な届け方で送る。</param>
-        /// <param name="log"><c>[AntiCheat]</c> 付きの 1 行を受け取る。</param>
-        /// <param name="remove">サーバーとの接続を終える (理由つき)。1 度だけ呼ぶ。</param>
         public ClientAntiCheat(bool enabled, IAntiCheatClientSession session, Action<IMessage> send, Action<string> log, Action<string> remove)
         {
             if (enabled && session == null)
@@ -63,13 +53,9 @@ namespace Shooter.NetV2
 
         public bool Enabled => _peers.LocalEnabled;
 
-        /// <summary>抜けた (切られた) か。</summary>
         public bool Removed => _removed;
 
-        /// <summary>
-        /// サーバーに承認されたときに呼ぶ。EAC が有効ならセッションを始め、Hello を送る。
-        /// 始められなければ false と理由を返し、呼ぶ側は守られないまま遊ばせずに抜ける。
-        /// </summary>
+        // 始められなければ false と理由を返し、呼ぶ側は守られないまま遊ばせずに抜ける。
         public bool ServerConnected(double now, out string error)
         {
             _now = now;
@@ -99,7 +85,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        /// <summary>サーバーから <see cref="AntiCheatToClientMessage"/> が届いた。</summary>
         public void HandleMessage(AntiCheatToClientMessage message, double now)
         {
             if (message == null)
@@ -128,7 +113,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>毎フレーム呼ぶ。Hello の送り直しと、Hello が来ないサーバーからの切断をする。</summary>
         public void Tick(double now)
         {
             _now = now;
@@ -161,7 +145,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>セッションを終え、サーバーを忘れる。サーバーとの接続を終えるときに呼ぶ。2 度呼んでもよい。</summary>
         public void End()
         {
             if (_sessionStarted)

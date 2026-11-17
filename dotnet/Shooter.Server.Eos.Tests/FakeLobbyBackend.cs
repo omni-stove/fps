@@ -4,7 +4,6 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos.Tests
 {
-    /// <summary>要求を記録し、テストから完了させる <see cref="IServerLobbyBackend"/>。</summary>
     internal sealed class FakeLobbyBackend : IServerLobbyBackend
     {
         public event Action<string, string> Removed;
@@ -41,7 +40,7 @@ namespace Shooter.Server.Eos.Tests
 
         public Action<string> PendingDestroy { get; private set; }
 
-        /// <summary>Tick のたびに呼ぶ。SDK が Tick の中で完了を知らせるのをまねる。</summary>
+        // SDK が Tick の中で完了を知らせるのをまねるため、Tick のたびに呼ぶ。
         public Action OnTick { get; set; }
 
         public void Tick()

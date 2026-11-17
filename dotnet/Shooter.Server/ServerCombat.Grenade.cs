@@ -12,12 +12,12 @@ namespace Shooter.Server
     // 爆発のダメージは参加中で生きている全員に、体のカプセルの最も近い点までの距離で決める。投げた本人も巻き込む
     internal sealed partial class ServerCombat
     {
-        /// <summary>グレネードのキルフィードと見た目を選ぶ Id (Unity の GrenadeThrower.WeaponId と同じ)。</summary>
+        // Unity の GrenadeThrower.WeaponId と同じ Id にする。
         public const string GrenadeWeaponId = "grenade";
 
         public const string GrenadeLogTag = "[Grenade]";
 
-        /// <summary>要求の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より少し早く届いても断らない。</summary>
+        // 要求の届く時刻は揺れるので、持ち主の時計どおりに送られた次の要求が間隔より少し早く届いても断らない。
         public const float GrenadeThrowJitterSeconds = 0.15f;
 
         // 頭の高さへの線を、カプセルの頂からどれだけ下へ引くか (m)。身をかがめて頭だけ出した相手にも当てる
@@ -34,10 +34,6 @@ namespace Shooter.Server
 
         internal int LiveGrenadeCount => _grenades.Count;
 
-        /// <summary>
-        /// point から、bottom (足元) と top (頭のてっぺん) を両端に持つ半径 radius の縦のカプセルの表面までの距離。中にあれば 0。
-        /// カプセルが半径の 2 倍より低ければ、両端の中点を中心にした球として測る。
-        /// </summary>
         internal static float DistanceToCapsule(Vector3 point, Vector3 bottom, Vector3 top, float radius)
         {
             var axis = top - bottom;
@@ -194,11 +190,7 @@ namespace Shooter.Server
             _grenades.Clear();
         }
 
-        /// <summary>
-        /// throwerId が weaponId (グレネードや爆発する弾の武器) で起こした center での爆発。参加中で生きている全員に explosion の範囲ダメージ、
-        /// ルールで壊せるなら建物に被害を与え、ダメージを与えた相手ごとに本人たちへヒット・被弾を、全員に爆発を送る。キルフィードは weaponId で出す。
-        /// 起こした人が抜けていれば、攻撃者のいないダメージ (倒れたら自滅) として与える。爆発はサーバーの時刻で起きるので巻き戻さない。
-        /// </summary>
+        // 爆発はサーバーの時刻で起きるので巻き戻さない。
         internal (int Damaged, int Killed) Explode(Vector3 center, ExplosionSpec explosion, int throwerId, string weaponId)
         {
             ArgumentNullException.ThrowIfNull(explosion);
@@ -335,10 +327,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// 爆発 1 人分の結果を本人たちに知らせる。自分の爆発・投げた人が抜けた爆発なら体力の減った本人に被弾 (爆発の中心から) だけを、
-        /// 跳ね返した味方撃ちなら投げた本人に被弾 (位置なし) だけを、それ以外は投げた人にヒット、受けた人に被弾 (爆発の中心から) を送る。
-        /// </summary>
         private void SendExplosionHit(int? thrower, int victimId, DamageOutcome outcome, int damage, Vector3 center)
         {
             if (!thrower.HasValue || thrower.Value == victimId)

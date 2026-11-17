@@ -14,15 +14,6 @@ using LobbyInfo = Shooter.Core.LobbyInfo;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Unity の <c>Shooter.NetEos.EosLobbyBackend</c> のうち、サーバーのロビーに要る部分を EOS の C# SDK で直接行う。
-    /// </summary>
-    /// <remarks>
-    /// ロビーは公開 (検索で見つかる)・プレゼンス無し・ID での参加を許可・ホスト移行なしで作る。
-    /// ボイスを使うロビーは RTC 部屋を開き、ID で入ったクライアントのメンバーがそこで話せるようにする。
-    /// 属性は作成の直後に公開の属性として付け、付けられなければロビーを閉じて失敗にする。
-    /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
-    /// </remarks>
     internal sealed class EosLobbyBackend : IServerLobbyBackend
     {
         private readonly EosCredentials _credentials;
@@ -361,7 +352,7 @@ namespace Shooter.Server.Eos
                 && string.Equals(userId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>結果は (Dispose 後でも) 1 回だけ渡すので、呼び出し側が Dispose 後の扱いを決める。</summary>
+        // 結果は (Dispose 後でも) 1 回だけ渡すので、呼び出し側が Dispose 後の扱いを決める。
         private void ApplyAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
         {
             var modificationOptions = new UpdateLobbyModificationOptions { LobbyId = lobbyId, LocalUserId = _localUserId };

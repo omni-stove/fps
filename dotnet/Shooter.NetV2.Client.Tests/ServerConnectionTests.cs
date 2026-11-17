@@ -16,10 +16,6 @@ using Shooter.Server;
 
 namespace Shooter.NetV2.Tests
 {
-    /// <summary>
-    /// <c>make server-dotnet</c> と同じ起動 (コミットした server-data・既定のマップとルール) の .NET のサーバーに、
-    /// クライアントの中身を 2 つつなぐ。
-    /// </summary>
     [NonParallelizable]
     public sealed class ServerConnectionTests
     {
@@ -262,7 +258,6 @@ namespace Shooter.NetV2.Tests
             return "";
         }
 
-        /// <param name="eos">与えれば、その偽の EOS のネットワークで <c>-transport eos -log-format json</c> のサーバーにする。</param>
         private void StartServer(FakeEosNetwork eos = null)
         {
             var environment = new Dictionary<string, string>
@@ -366,10 +361,8 @@ namespace Shooter.NetV2.Tests
             }
         }
 
-        /// <summary>
-        /// コミットした server-data の写し。対戦マップの NavMesh (.fpsnav) の書き出し (#584) がまだ無いうちもサーバーを起動できるよう、
-        /// 無ければ 1 枚の三角形の NavMesh を置く (クライアントは NavMesh を使わない)。
-        /// </summary>
+        // 対戦マップの NavMesh (.fpsnav) の書き出し (#584) がまだ無いうちもサーバーを起動できるよう、
+        // 無ければ 1 枚の三角形の NavMesh を置く (クライアントは NavMesh を使わない)。
         internal static string ServerDataCopy()
         {
             var source = Path.Combine(RepositoryRoot(), "server-data");
@@ -422,7 +415,6 @@ namespace Shooter.NetV2.Tests
 
             public Vector2 Move { get; set; }
 
-            /// <summary>次の tick に押すボタン。押しっぱなしにせず、1 tick 送ったら消す。</summary>
             public InputButtons Buttons { get; set; }
 
             public DisconnectNotice Notice { get; private set; }

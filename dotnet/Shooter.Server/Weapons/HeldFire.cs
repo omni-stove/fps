@@ -24,7 +24,6 @@ namespace Shooter.Server
 
         public ServerShot Shot { get; private set; }
 
-        /// <summary>次の照射 (噴射) の弾を、押した瞬間の検査で使った 1 発で払うか。</summary>
         public bool Prepaid { get; set; }
 
         public int Ticks { get; set; }

@@ -72,6 +72,7 @@ namespace Fps.Runtime
 
         // 倒れたときに記録した相手。消えたら null として扱う
         private GameObject _killer;
+        private string _killerWeaponId = string.Empty;
         private bool _killerResolved;
 
         // Ally で映している味方。_allyResolved は最初の選択をログに出すため
@@ -345,7 +346,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            _replay.Begin(clip, _killer.name, KillCamText.Caption(LocalizedText.Literal(_killer.name)), _killer.transform, _view);
+            _replay.Begin(clip, _killer.name, _killerWeaponId, _killer.transform, _view);
         }
 
         private static bool TryPoseOf(GameObject target, out KillCamPose pose)
@@ -539,6 +540,7 @@ namespace Fps.Runtime
             var attribution = CombatEvents.CurrentAttribution;
             var killer = attribution.HasValue ? CombatEvents.OfflineObject(attribution.Value.KillerId) : null;
             _killer = killer != null && killer != gameObject && !killer.transform.IsChildOf(transform) ? killer : null;
+            _killerWeaponId = _killer != null ? attribution.Value.WeaponId : string.Empty;
             _killerResolved = false;
 
             // 倒した相手の姿勢はこの後も記録が進むので、倒れた時点までをここで切り出しておく
@@ -602,6 +604,7 @@ namespace Fps.Runtime
             _view.Restore(true);
             ClearAlly();
             _killer = null;
+            _killerWeaponId = string.Empty;
             _killerResolved = false;
         }
 

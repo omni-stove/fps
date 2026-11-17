@@ -76,7 +76,7 @@ namespace Fps.Runtime
             _spec = null;
         }
 
-        /// <summary>設定を差し替える。乗り物の <see cref="Vehicle.Configure"/> が座席の番号ごとに呼ぶ。</summary>
+        /// <summary>設定を差し替える。乗り物の <see cref="Vehicle.Configure(VehicleSpec)"/> が座席の番号ごとに呼ぶ。</summary>
         public void ApplySpec(VehicleSeatSpec spec)
         {
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));

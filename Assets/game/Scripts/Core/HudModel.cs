@@ -5,10 +5,10 @@ namespace Fps.Core
     /// <summary>
     /// HUD に出す値と照準の状態を持つ。値は <see cref="SetHealth"/>・<see cref="SetAmmo(int, int, bool, bool)"/>・<see cref="SetTime"/> などで直接渡すか、
     /// <see cref="Health"/>・<see cref="Weapon"/>・<see cref="Match"/>・<see cref="CampaignNotice"/> を Bind してそのイベントで受ける
-    /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ書式を通し、表示が変わったときだけ
+    /// (Bind 系も中では Set 系を呼ぶ)。毎フレーム値を読みに行かず、値が来たときだけ持ち直し、値が変わったときだけ
     /// <see cref="Changed"/> を呼ぶ (残り時間は秒の桁が変わったときだけ)。Bind で源を差し替えると前の源の購読は外し、今の値をすぐ反映する。
     /// null を渡すとその項目は仮の表示に戻る。
-    /// 言葉の入る項目 (案内・点数・結果・武器名・弾薬の種類) は文にせず型の付いた値で持ち、どう言うかは HUD に任せる。
+    /// どの項目も文字列にせず数や型の付いた値で持ち、どう書くか (体力・弾数・残り時間の書式を含む) は HUD に任せる。
     /// <para>
     /// 同じ項目を Bind しながら Set 系でも書くと、次に来た方が表示に残る。ネットワークの値のように Core の型が無い源は
     /// Bind せずに Set 系だけで書く。
@@ -21,35 +21,41 @@ namespace Fps.Core
         private Match _match;
         private CampaignNotice _notice;
 
-        // 予備を出すかを後から切り替えても書き直せるよう、最後に渡された弾数を持つ (武器が無ければ null)
-        private AmmoValues? _ammo;
-
-        /// <summary>表示の文字列が変わった項目を渡して呼ばれる。呼ばれた時点で文字列は更新済み。</summary>
+        /// <summary>値が変わった項目を渡して呼ばれる。呼ばれた時点で値は更新済み。</summary>
         public event Action<HudField> Changed;
 
-        /// <summary>左下の体力。</summary>
-        public string HealthText { get; private set; } = HudFormat.NoHealth;
+        /// <summary>左下の今の体力。体力の源が無ければ null。</summary>
+        public int? CurrentHealth { get; private set; }
+
+        /// <summary>最大体力。<see cref="CurrentHealth"/> が null なら null。</summary>
+        public int? MaxHealth { get; private set; }
 
         /// <summary>体力が少なく、警告の色で出すべきか (<see cref="HudFormat.IsLowHealth"/>)。</summary>
-        public bool IsHealthLow { get; private set; }
+        public bool IsHealthLow => CurrentHealth.HasValue && HudFormat.IsLowHealth(CurrentHealth.Value, MaxHealth.Value);
 
         /// <summary>最大体力に対する今の体力の割合 ([0, 1])。体力が無い (仮の表示) なら null。</summary>
-        public float? HealthFraction { get; private set; }
+        public float? HealthFraction => CurrentHealth.HasValue ? Math.Min(1f, (float)CurrentHealth.Value / MaxHealth.Value) : (float?)null;
 
-        /// <summary>右下の「弾倉 / 予備」。<see cref="ShowsReserveAmmo"/> が false なら弾倉の数だけ。</summary>
-        public string AmmoText { get; private set; } = HudFormat.NoAmmo;
+        /// <summary>右下の弾倉の弾数。武器が無いか、熱で撃つ武器なら null。</summary>
+        public int? MagazineAmmo { get; private set; }
+
+        /// <summary>予備の弾数。<see cref="MagazineAmmo"/> が null なら null。<see cref="IsReserveInfinite"/> なら減らないので数としては出さない。</summary>
+        public int? ReserveAmmo { get; private set; }
+
+        /// <summary>予備弾が無限 (<see cref="GameRules.InfiniteReserve"/>) か。<see cref="MagazineAmmo"/> が null なら false。</summary>
+        public bool IsReserveInfinite { get; private set; }
 
         /// <summary>弾数に予備の数を並べるか (<see cref="HudVisibility.ReserveAmmo"/>)。<see cref="SetReserveAmmoShown"/> で変える。</summary>
         public bool ShowsReserveAmmo { get; private set; } = true;
 
-        /// <summary>リロード中か。<see cref="AmmoText"/> にも出るが、View が見た目を変えるのに使う。</summary>
+        /// <summary>リロード中か。<see cref="MagazineAmmo"/> が null なら false。</summary>
         public bool IsReloading { get; private set; }
 
         /// <summary>弾数の上に名前を出す、持っている武器。武器が無ければ null。</summary>
         public WeaponSpec WeaponSpec { get; private set; }
 
-        /// <summary>上中央の残り時間 (mm:ss)。</summary>
-        public string TimeText { get; private set; } = HudFormat.NoTime;
+        /// <summary>上中央の残り時間を、表示する整数の秒数 (<see cref="HudFormat.DisplayedSeconds"/>) で持つ。試合が無ければ null。</summary>
+        public int? RemainingSeconds { get; private set; }
 
         /// <summary>画面上部に一時的に出す案内。<see cref="HudNotice.None"/> なら出さない。</summary>
         public HudNotice Notice { get; private set; }
@@ -226,17 +232,27 @@ namespace Fps.Core
             }
         }
 
-        /// <summary>体力を出す。max は警告の色にするかどうかの判断にだけ使う。</summary>
+        /// <summary>今の体力と最大体力を出す。</summary>
         /// <exception cref="ArgumentOutOfRangeException">current が負か、max が 1 未満。</exception>
         public void SetHealth(int current, int max)
         {
-            ApplyHealth(HudFormat.Health(current), HudFormat.IsLowHealth(current, max), Math.Min(1f, (float)current / max));
+            if (current < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(current), current, "current must not be negative");
+            }
+
+            if (max < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(max), max, "max must be at least 1");
+            }
+
+            ApplyHealth(current, max);
         }
 
         /// <summary>体力を仮の表示に戻す。</summary>
         public void ClearHealth()
         {
-            ApplyHealth(HudFormat.NoHealth, false, null);
+            ApplyHealth(null, null);
         }
 
         /// <summary>弾倉と予備の弾数と、リロード中かどうかを出す。</summary>
@@ -246,25 +262,31 @@ namespace Fps.Core
             SetAmmo(magazine, reserve, reloading, false);
         }
 
-        /// <summary>弾数を出す。infiniteReserve なら予備の数の代わりに <see cref="HudFormat.InfiniteReserve"/> を出す。</summary>
+        /// <summary>弾倉と予備の弾数、リロード中か、予備弾が無限かを出す。</summary>
         /// <exception cref="ArgumentOutOfRangeException">magazine か reserve が負。</exception>
         public void SetAmmo(int magazine, int reserve, bool reloading, bool infiniteReserve)
         {
-            // 予備を出さないときも、負の予備を受け入れないよう同じ検証を通す
-            var full = HudFormat.Ammo(magazine, reserve, reloading, infiniteReserve);
-            _ammo = new AmmoValues(magazine, reserve, reloading, infiniteReserve);
-            ApplyAmmo(ShowsReserveAmmo ? full : HudFormat.Magazine(magazine, reloading), reloading);
+            if (magazine < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(magazine), magazine, "magazine must not be negative");
+            }
+
+            if (reserve < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reserve), reserve, "reserve must not be negative");
+            }
+
+            ApplyAmmo(magazine, reserve, reloading, infiniteReserve);
         }
 
         /// <summary>弾数を仮の表示に戻す。</summary>
         public void ClearAmmo()
         {
-            _ammo = null;
-            ApplyAmmo(ShowsReserveAmmo ? HudFormat.NoAmmo : HudFormat.NoMagazine, false);
+            ApplyAmmo(null, null, false, false);
         }
 
         /// <summary>
-        /// 弾数に予備の数を並べるかを決め、今の弾数を書き直す。false なら弾倉の数だけ (<see cref="HudFormat.Magazine"/>) にする。
+        /// 弾数に予備の数を並べるかを決める。変わったら <see cref="HudField.Ammo"/> を知らせる。
         /// HUD の量 (<see cref="HudVisibility.ReserveAmmo"/>) に合わせて HUD が呼ぶ。
         /// </summary>
         public void SetReserveAmmoShown(bool shown)
@@ -275,15 +297,7 @@ namespace Fps.Core
             }
 
             ShowsReserveAmmo = shown;
-            if (_ammo.HasValue)
-            {
-                var ammo = _ammo.Value;
-                SetAmmo(ammo.Magazine, ammo.Reserve, ammo.Reloading, ammo.InfiniteReserve);
-            }
-            else
-            {
-                ClearAmmo();
-            }
+            Changed?.Invoke(HudField.Ammo);
         }
 
         /// <summary>名前を出す武器を決める。null なら出さない。</summary>
@@ -304,16 +318,16 @@ namespace Fps.Core
             SetWeaponSpec(null);
         }
 
-        /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>
+        /// <summary>残り時間 (秒) を出す。値は秒の桁が変わったときだけ変わる (<see cref="HudFormat.DisplayedSeconds"/>)。</summary>
         public void SetTime(float remainingSeconds)
         {
-            ApplyTime(HudFormat.Time(remainingSeconds));
+            ApplyTime(HudFormat.DisplayedSeconds(remainingSeconds));
         }
 
         /// <summary>残り時間を仮の表示に戻す。</summary>
         public void ClearTime()
         {
-            ApplyTime(HudFormat.NoTime);
+            ApplyTime(null);
         }
 
         /// <summary>一時的な案内を出す。<see cref="HudNotice.None"/> なら消す。</summary>
@@ -638,39 +652,40 @@ namespace Fps.Core
             RefreshWeaponGauges();
         }
 
-        private void ApplyHealth(string text, bool low, float? fraction)
+        private void ApplyHealth(int? current, int? max)
         {
-            if (text == HealthText && low == IsHealthLow && fraction == HealthFraction)
+            if (current == CurrentHealth && max == MaxHealth)
             {
                 return;
             }
 
-            HealthText = text;
-            IsHealthLow = low;
-            HealthFraction = fraction;
+            CurrentHealth = current;
+            MaxHealth = max;
             Changed?.Invoke(HudField.Health);
         }
 
-        private void ApplyAmmo(string text, bool reloading)
+        private void ApplyAmmo(int? magazine, int? reserve, bool reloading, bool infiniteReserve)
         {
-            if (text == AmmoText && reloading == IsReloading)
+            if (magazine == MagazineAmmo && reserve == ReserveAmmo && reloading == IsReloading && infiniteReserve == IsReserveInfinite)
             {
                 return;
             }
 
-            AmmoText = text;
+            MagazineAmmo = magazine;
+            ReserveAmmo = reserve;
             IsReloading = reloading;
+            IsReserveInfinite = infiniteReserve;
             Changed?.Invoke(HudField.Ammo);
         }
 
-        private void ApplyTime(string text)
+        private void ApplyTime(int? seconds)
         {
-            if (text == TimeText)
+            if (seconds == RemainingSeconds)
             {
                 return;
             }
 
-            TimeText = text;
+            RemainingSeconds = seconds;
             Changed?.Invoke(HudField.Time);
         }
 
@@ -748,22 +763,6 @@ namespace Fps.Core
         private static bool IsFraction(float value)
         {
             return value >= 0f && value <= 1f;
-        }
-
-        private readonly struct AmmoValues
-        {
-            public readonly int Magazine;
-            public readonly int Reserve;
-            public readonly bool Reloading;
-            public readonly bool InfiniteReserve;
-
-            public AmmoValues(int magazine, int reserve, bool reloading, bool infiniteReserve)
-            {
-                Magazine = magazine;
-                Reserve = reserve;
-                Reloading = reloading;
-                InfiniteReserve = infiniteReserve;
-            }
         }
     }
 }

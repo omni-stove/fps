@@ -278,11 +278,6 @@ namespace Fps.Runtime
             return AbilitySlotsView.AttachTo(this);
         }
 
-        IDominationHud IHud.AttachDomination()
-        {
-            return DominationView.AttachTo(this);
-        }
-
         // エディターの GetComponent は見つからなくても「null と等しい」オブジェクトを返すので、インターフェースに変える前に本当の null にする
         private static T AsInterface<T>(Component component)
             where T : class
@@ -731,7 +726,7 @@ namespace Fps.Runtime
             {
                 if (RebuildView())
                 {
-                    Debug.Log($"{LogTag} ready hp={_model.HealthText} weapon={_model.WeaponSpec?.Id} ammo={_model.AmmoText} time={_model.TimeText}", this);
+                    Debug.Log($"{LogTag} ready hp={HudNumberFormat.Health(_model)} weapon={_model.WeaponSpec?.Id} ammo={HudNumberFormat.Ammo(_model)} time={HudNumberFormat.Time(_model)}", this);
                 }
             }
             catch (InvalidOperationException e)

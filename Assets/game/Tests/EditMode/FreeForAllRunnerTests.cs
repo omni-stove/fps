@@ -4,13 +4,12 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// FreeForAllRunner が 1 人 1 陣営でキルを数え、HUD に自分の順位を出し、得点上限か時間切れで勝者を決めることを確かめる。
+    /// FreeForAllRunner が 1 人 1 陣営でキルを数え、モードの状態 (ModeStatus) の Detail に自分の順位を入れ、得点上限か時間切れで勝者を決めることを確かめる。
     /// bot (EnemyAgent) は NavMesh が要るので、ここでは Damageable と SideMember だけの参加者で確かめる。
     /// </summary>
     public sealed class FreeForAllRunnerTests
@@ -62,7 +61,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0);
             var a = Member("Bot-1-1", 1);
             var b = Member("Bot-2-1", 2);
-            Begin(null, player, a, b);
+            Begin(player, a, b);
 
             KillBy(a, b);
 
@@ -73,40 +72,49 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudShowsTheOwnRankAndTheGapToTheLeader()
+        public void TheStatusCarriesTheOwnRankAndTheGapToTheLeader()
         {
             var player = Member("Player", 0);
             var a = Member("Bot-1-1", 1);
             var b = Member("Bot-2-1", 2);
-            var hud = BoundHudView();
-            Begin(hud, player, a, b);
+            Begin(player, a, b);
 
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "順位 1/3  1位と同点" }));
+            Assert.That(_runner.Status.Detail, Is.EqualTo(new FreeForAllStanding(1, 3, 0, 0)));
 
             KillBy(a, b);
             _runner.Tick(0f);
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "順位 2/3  1位と -1" }));
+            Assert.That(_runner.Status.Detail, Is.EqualTo(new FreeForAllStanding(2, 3, 0, -1)));
 
             KillBy(player, a);
             _runner.Tick(RespawnSeconds);
             KillBy(player, b);
             _runner.Tick(0f);
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Playing));
-            Assert.That(hud.Lines, Is.EqualTo(new[] { "順位 1/3  2位と +1" }));
+            Assert.That(_runner.Status.Detail, Is.EqualTo(new FreeForAllStanding(1, 3, 2, 1)));
         }
 
         [Test]
-        public void TheHudKeepsTheRespawnCountdownAboveTheRank()
+        public void TheStatusCarriesTheRespawnCountdownWithTheRank()
         {
             var player = Member("Player", 0);
             var a = Member("Bot-1-1", 1);
-            var hud = BoundHudView();
-            Begin(hud, player, a);
+            Begin(player, a);
 
             KillBy(a, player);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Is.EqualTo(new[] { Localizer.Resolve(HudFormat.Respawn(1)), "順位 2/2  1位と -1" }));
+            Assert.That(_runner.Status.RespawnSeconds, Is.EqualTo(RespawnSeconds));
+            Assert.That(_runner.Status.Detail, Is.EqualTo(new FreeForAllStanding(2, 2, 0, -1)));
+        }
+
+        [Test]
+        public void WithoutALocalPlayerTheStatusHasNoRank()
+        {
+            var a = Member("Bot-1-1", 1);
+            var b = Member("Bot-2-1", 2);
+            _runner.Begin(FreeForAllMode.Create(TimeLimit, ScoreLimit, RespawnSeconds), new[] { a, b }, Array.Empty<SideSpawnPoint>());
+
+            Assert.That(_runner.Status.Detail, Is.Null);
         }
 
         [Test]
@@ -115,8 +123,7 @@ namespace Fps.Tests.EditMode
             var player = Member("Player", 0);
             var a = Member("Bot-1-1", 1);
             var b = Member("Bot-2-1", 2);
-            var hud = BoundHudView();
-            Begin(hud, player, a, b);
+            Begin(player, a, b);
 
             KillBy(b, player);
             KillBy(b, a);
@@ -127,7 +134,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.EqualTo((Side?)new Side(2)));
-            Assert.That(hud.ResultText, Is.EqualTo("SIDE 2 の勝ち"));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)new Side(2)));
         }
 
         [Test]
@@ -137,8 +145,7 @@ namespace Fps.Tests.EditMode
             var a = Member("Bot-1-1", 1);
             var b = Member("Bot-2-1", 2);
             var c = Member("Bot-3-1", 3);
-            var hud = BoundHudView();
-            Begin(hud, player, a, b, c);
+            Begin(player, a, b, c);
 
             KillBy(player, a);
             KillBy(b, c);
@@ -146,7 +153,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(_runner.Session.Winner, Is.Null);
-            Assert.That(hud.ResultText, Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.Null);
         }
 
         [Test]
@@ -161,7 +169,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.IsStarted, Is.False);
         }
 
-        private void Begin(ModeHudView hud, params SideMember[] members)
+        private void Begin(params SideMember[] members)
         {
             _runner.Begin(FreeForAllMode.Create(TimeLimit, ScoreLimit, RespawnSeconds), members, Array.Empty<SideSpawnPoint>(), members[0]);
         }
@@ -182,13 +190,6 @@ namespace Fps.Tests.EditMode
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);
             return member;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private GameObject Track(GameObject go)

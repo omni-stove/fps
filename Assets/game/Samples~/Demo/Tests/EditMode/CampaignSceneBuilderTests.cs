@@ -87,6 +87,7 @@ namespace Fps.Tests.EditMode
         {
             var mission = _definition.CreateMission();
 
+            Assert.That(_definition.Id, Is.EqualTo(CampaignSceneBuilder.MissionId));
             Assert.That(_definition.DisplayNameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
             Assert.That(Localizer.Resolve(_definition.DisplayName), Is.EqualTo("Campaign 01"));
             Assert.That(mission.Objectives.Count, Is.EqualTo(3));
@@ -285,7 +286,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(saved.Weapons.Count(), Is.EqualTo(2), "every weapon in the loadout is saved");
                 Assert.That(saved.EquippedWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
 
-                layout.Campaign.Tick(CampaignRunner.SavedNoticeSeconds);
+                layout.Campaign.Tick(layout.Campaign.SavedNoticeSeconds);
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "the saved notice disappears");
 
                 LogAssert.Expect(LogType.Log, "[Combat] target died id=Player");

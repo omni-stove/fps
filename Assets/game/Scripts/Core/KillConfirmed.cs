@@ -5,7 +5,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// キルコンファームドのルール。Alpha と Bravo の 2 チームで戦い、倒しただけでは点が入らない。倒れた人はタグを落とし
-    /// (<see cref="DropTag"/>)、敵がそのタグを拾えば拾った人のチームに <see cref="PointsPerConfirm"/> 点入る (確定)。
+    /// (<see cref="DropTag"/>)、敵がそのタグを拾えば拾った人のチームに <see cref="KillConfirmedSpec.PointsPerConfirm"/> 点入る (確定)。
     /// 味方 (倒れた本人を含む) が拾えば点は入らずにタグが無くなる (阻止)。誰にも拾われないタグは
     /// <see cref="KillConfirmedSpec.TagLifetimeSeconds"/> 秒で消える。どちらかが ScoreLimit に届くか制限時間が切れたら終わる。
     /// </summary>
@@ -18,9 +18,6 @@ namespace Fps.Core
     /// </remarks>
     public sealed class KillConfirmed
     {
-        /// <summary>敵のタグを 1 枚拾ったときに入る点。</summary>
-        public const double PointsPerConfirm = 1d;
-
         // 小刻みな Tick を足し合わせると消える時刻にわずかに届かないことがあるので、この差までは届いたものとして扱う。
         private const double _snap = 1e-6;
 
@@ -103,7 +100,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// collectorId が tagId のタグを拾う。敵のタグなら collectorId の陣営に <see cref="PointsPerConfirm"/> 点を足して
+        /// collectorId が tagId のタグを拾う。敵のタグなら collectorId の陣営に <see cref="KillConfirmedSpec.PointsPerConfirm"/> 点を足して
         /// (得点上限に届けばその陣営の勝ちで終わる) <see cref="KillConfirmedResult.Confirmed"/>、味方のタグなら点を足さずに
         /// <see cref="KillConfirmedResult.Denied"/>。どちらでもタグは無くなる。
         /// Playing でない・タグが無い・collectorId が倒れているときは何も変えずに理由を返す (この順に調べる)。
@@ -138,7 +135,7 @@ namespace Fps.Core
             }
 
             _confirmed[side] = GetConfirmed(side) + 1;
-            Session.AddScore(side, PointsPerConfirm);
+            Session.AddScore(side, Spec.PointsPerConfirm);
             return KillConfirmedResult.Confirmed;
         }
 

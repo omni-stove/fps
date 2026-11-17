@@ -21,7 +21,7 @@ namespace Fps.Editor
     public static class MissionTestSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MissionTestScene;
-        /// <summary>定義のアセット名。表のキー (<see cref="MissionDefinition.NameKeyOf"/>) にも使う。</summary>
+        /// <summary>ミッション Id (<see cref="MissionDefinition.Id"/>) と定義のアセット名。表のキー (<see cref="MissionDefinition.NameKeyOf"/>) にも使う。</summary>
         public const string MissionId = "TestMission";
 
         public static string DefinitionPath => FpsKitRoot.OutputPath("Missions/" + MissionId + ".asset");
@@ -122,7 +122,7 @@ namespace Fps.Editor
             return SceneBuildHelpers.CreateOrUpdateMissionDefinition(path, Configure);
         }
 
-        /// <summary>definition の中身をテスト用ミッションにし、Mission に変換できることを確かめる。</summary>
+        /// <summary>definition の Id と中身をテスト用ミッションにし、Mission に変換できることを確かめる。</summary>
         public static void Configure(MissionDefinition definition)
         {
             if (definition == null)
@@ -130,6 +130,7 @@ namespace Fps.Editor
                 throw new ArgumentNullException(nameof(definition));
             }
 
+            definition.Id = MissionId;
             definition.DisplayNameKey = MissionNameKey;
             definition.SetObjectives(TestObjectives());
 

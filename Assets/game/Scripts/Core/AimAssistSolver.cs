@@ -64,8 +64,8 @@ namespace Shooter.Core
             }
 
             // 倍率 0 を掛けると視点が止まって照準を外せなくなるので、0 は減速を切る値として扱う。
-            var lookScale = spec.SlowdownScale > 0f && nearestAngle <= spec.SlowdownDegrees ? spec.SlowdownScale : 1f;
-            if (!aiming || !(aimingSeconds < spec.MagnetismSeconds) || !(nearestAngle <= spec.MagnetismDegrees))
+            var lookScale = spec.SlowdownScale > 0f && spec.SlowdownDegrees > 0f && nearestAngle <= spec.SlowdownDegrees ? spec.SlowdownScale : 1f;
+            if (!aiming || !(aimingSeconds < spec.MagnetismSeconds) || !(spec.MagnetismDegrees > 0f) || !(nearestAngle <= spec.MagnetismDegrees))
             {
                 return new AimAssistResult(lookScale, 0f, 0f);
             }

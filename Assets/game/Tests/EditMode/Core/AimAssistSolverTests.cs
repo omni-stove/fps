@@ -44,6 +44,24 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ADeadCenterTargetDoesNotTriggerPartsTurnedOffWithZeroDegrees()
+        {
+            var off = new AimAssistSpec(
+                slowdownDegrees: 0f,
+                slowdownScale: 0.4f,
+                magnetismDegrees: 0f,
+                magnetismDegreesPerSecond: 20f,
+                magnetismSeconds: 0.5f,
+                maxDistance: 50f);
+
+            var result = AimAssistSolver.Solve(off, 1f, true, 0f, Vector3.Zero, Vector3.UnitZ, new[] { Point(0f, 0f, 20f) });
+
+            Assert.That(result.LookScale, Is.EqualTo(1f));
+            Assert.That(result.YawDelta, Is.EqualTo(0f));
+            Assert.That(result.PitchUpDelta, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void ATargetOutsideTheSlowdownAngleLeavesTheLookAlone()
         {
             var result = Solve(true, 0f, 1f, Point(6f, 0f, 20f), Point(0f, -7f, 20f));

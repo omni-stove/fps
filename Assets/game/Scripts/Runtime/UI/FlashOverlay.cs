@@ -18,6 +18,10 @@ namespace Fps.Runtime
         private FlashOverlayCatalog _catalog;
         private bool _catalogResolved;
         private Func<float> _remainingSeconds;
+
+        // 読んでいる関数が GameSignals から来たか。消されたときに、LocalPlayerBlinded で受けたものまで手放さないため
+        private bool _tracksSignal;
+        private bool _subscribed;
         private AudioSource _ringingSource;
 
         public override string ElementName => UxmlName;
@@ -59,6 +63,7 @@ namespace Fps.Runtime
         public void Track(Func<float> remainingBlindSeconds)
         {
             _remainingSeconds = remainingBlindSeconds;
+            _tracksSignal = false;
             Refresh();
         }
 
@@ -91,7 +96,38 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            if (!_subscribed)
+            {
+                GameSignals.LocalBlindSeconds.Changed += HandleBlindSecondsChanged;
+                _subscribed = true;
+            }
+
+            // 要素を持っていない間の通知は受けていないので、今の値に合わせる
+            if (GameSignals.LocalBlindSeconds.HasValue || _tracksSignal)
+            {
+                HandleBlindSecondsChanged(GameSignals.LocalBlindSeconds.Value);
+            }
+
             Apply();
+        }
+
+        protected override void OnUnbinding(VisualElement element)
+        {
+            Unsubscribe();
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.LocalBlindSeconds.Changed -= HandleBlindSecondsChanged;
+                _subscribed = false;
+            }
         }
 
         private void OnEnable()
@@ -110,6 +146,24 @@ namespace Fps.Runtime
         private void LateUpdate()
         {
             Refresh();
+        }
+
+        private void HandleBlindSecondsChanged(Func<float> remainingBlindSeconds)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.LocalBlindSeconds.Changed -= HandleBlindSecondsChanged;
+                return;
+            }
+
+            if (remainingBlindSeconds == null && !_tracksSignal)
+            {
+                return;
+            }
+
+            Track(remainingBlindSeconds);
+            _tracksSignal = remainingBlindSeconds != null;
         }
 
         private void HandleLocalPlayerBlinded(StatusEffectReceiver receiver)

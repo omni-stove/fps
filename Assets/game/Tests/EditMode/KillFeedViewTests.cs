@@ -54,6 +54,35 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void PublishedParticipantsNameTheLinesUntilCleared()
+        {
+            var table = new ParticipantTable();
+            table.Set(new Participant(1, "P1", Team.Alpha, true));
+            table.Set(new Participant(2, "P2", Team.Bravo, false));
+            GameSignals.Participants.Publish(table);
+            try
+            {
+                Assert.That(_view.Names, Is.InstanceOf<ParticipantKillFeedNames>());
+
+                var line = _view.Names.Describe(new KillFeedEntry(1, 2, "rifle", false, false));
+                Assert.That(line.Killer, Is.EqualTo(new KillFeedName("P1", Team.Alpha, true)));
+                Assert.That(line.Victim, Is.EqualTo(new KillFeedName("P2", Team.Bravo, false)));
+                Assert.That(line.WeaponName.IsEmpty, Is.True, "the weapon is not looked up from the online Id");
+                Assert.That(line.Highlighted, Is.True);
+
+                var unknown = _view.Names.Describe(new KillFeedEntry(9, 9, "", false, false));
+                Assert.That(unknown.Victim, Is.EqualTo(new KillFeedName(KillFeedText.Unknown(9), null, false)));
+                Assert.That(unknown.Killer, Is.EqualTo(unknown.Victim), "a suicide names the victim twice");
+            }
+            finally
+            {
+                GameSignals.Participants.Clear();
+            }
+
+            Assert.That(_view.Names, Is.InstanceOf<OfflineKillFeedNames>());
+        }
+
+        [Test]
         public void OfflineLinesUseTheDamageableNamesAndHighlightTheLocalPlayer()
         {
             var player = CreateDamageable("Player", local: true);

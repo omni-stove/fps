@@ -74,6 +74,10 @@ namespace Fps.Runtime
         private bool _resolvedToggleAction;
         private bool _enabledToggleAction;
         private bool _countedOpen;
+        private bool _subscribed;
+
+        // 出している持ち物が GameSignals から来たか。オフラインの HUD が直に渡した持ち物は、GameSignals が空のままでも手放さない
+        private bool _showsSignal;
 
         private VisualElement _grid;
         private VisualElement _ghost;
@@ -105,6 +109,7 @@ namespace Fps.Runtime
                 }
 
                 _source = value;
+                _showsSignal = false;
                 if (_source != null)
                 {
                     _source.Changed += MarkDirty;
@@ -162,6 +167,13 @@ namespace Fps.Runtime
         protected override void OnBound(VisualElement element)
         {
             element.AddToClassList(PanelClass);
+            Subscribe();
+            var inventory = GameSignals.Inventory.Value;
+            if (inventory != null || _showsSignal)
+            {
+                ShowSignal(inventory);
+            }
+
             _dirty = true;
             Refresh();
         }
@@ -173,6 +185,7 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             CancelDrag();
             element.Clear();
             element.style.display = DisplayStyle.None;
@@ -193,7 +206,49 @@ namespace Fps.Runtime
 
         private void OnDestroy()
         {
+            Unsubscribe();
             Source = null;
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Inventory.Changed += HandleInventoryChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.Inventory.Changed -= HandleInventoryChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleInventoryChanged(IInventoryControl inventory)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Inventory.Changed -= HandleInventoryChanged;
+                return;
+            }
+
+            if (inventory == null && !_showsSignal)
+            {
+                return;
+            }
+
+            ShowSignal(inventory);
+        }
+
+        private void ShowSignal(IInventoryControl inventory)
+        {
+            Source = inventory;
+            _showsSignal = inventory != null;
         }
 
         private void Update()

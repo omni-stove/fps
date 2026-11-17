@@ -19,6 +19,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            GameSignals.ResetAll();
             foreach (var body in Object.FindObjectsByType<ProjectileBody>(FindObjectsInactive.Include))
             {
                 Object.DestroyImmediate(body.gameObject);
@@ -91,6 +92,36 @@ namespace Fps.Tests.EditMode
             aim.ShowOn(model);
             Assert.That(model.LockOnProgress, Is.Null);
             Assert.That(aim.LockedTargetId, Is.Null);
+        }
+
+        [Test]
+        public void EachTickWritesTheLockOnToThePublishedHudModel()
+        {
+            CreateTarget("target", new Vector3(0f, 1f, 20f));
+            var aiming = true;
+            var aim = Create(Guided(), () => aiming);
+            var model = new HudModel();
+            GameSignals.HudModel.Publish(model);
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on tracking target=\d+$"));
+            aim.Tick(_step);
+            Assert.That(model.LockOnProgress, Is.EqualTo(0.25f).Within(1e-4f));
+
+            aiming = false;
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on lost target=none$"));
+            aim.Tick(_step);
+            Assert.That(model.LockOnProgress, Is.Null);
+        }
+
+        [Test]
+        public void TickingWithoutAPublishedHudModelWritesNowhere()
+        {
+            CreateTarget("target", new Vector3(0f, 1f, 20f));
+            var aim = Create(Guided(), () => true);
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on tracking target=\d+$"));
+            Assert.DoesNotThrow(() => aim.Tick(_step));
+            Assert.That(aim.Progress, Is.EqualTo(0.25f).Within(1e-4f));
         }
 
         [Test]

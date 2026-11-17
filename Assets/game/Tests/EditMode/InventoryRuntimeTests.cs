@@ -41,6 +41,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            GameSignals.ResetAll();
             foreach (var created in _created)
             {
                 if (created != null)
@@ -248,6 +249,40 @@ namespace Fps.Tests.EditMode
 
             view.Select(source.Inventory.Stacks[1].Handle);
             Assert.That(Buttons(view), Is.EqualTo(new[] { "1 個捨てる" }), "a key cannot be used and there is only one");
+        }
+
+        [Test]
+        public void ThePublishedInventoryIsShownUntilCleared()
+        {
+            var view = CreateBoundView();
+            var source = new FakeControl(Catalog(InventoryRule.Default));
+
+            GameSignals.Inventory.Publish(source);
+            Assert.That(view.Source, Is.SameAs(source));
+            view.SetOpen(true);
+            Assert.That(view.IsOpen, Is.True);
+
+            GameSignals.Inventory.Clear();
+            Assert.That(view.Source, Is.Null);
+            Assert.That(view.IsOpen, Is.False, "losing the inventory closes the screen");
+        }
+
+        [Test]
+        public void ABindingViewCatchesUpWithThePublishedInventoryAndKeepsOneSetDirectly()
+        {
+            var published = new FakeControl(Catalog(InventoryRule.Default));
+            GameSignals.Inventory.Publish(published);
+            var view = CreateBoundView();
+            Assert.That(view.Source, Is.SameAs(published));
+
+            GameSignals.Inventory.Clear();
+            var direct = new FakeControl(Catalog(InventoryRule.Default));
+            view.Source = direct;
+            GameSignals.Inventory.Publish(published);
+            view.Source = direct;
+            GameSignals.Inventory.Clear();
+
+            Assert.That(view.Source, Is.SameAs(direct), "a clear only takes back what the signal gave");
         }
 
         [Test]
@@ -481,11 +516,17 @@ namespace Fps.Tests.EditMode
 
         private InventoryView CreateBoundView(IInventoryControl source)
         {
+            var view = CreateBoundView();
+            view.Source = source;
+            return view;
+        }
+
+        private InventoryView CreateBoundView()
+        {
             var gameObject = new GameObject(nameof(InventoryView));
             _created.Add(gameObject);
             var view = gameObject.AddComponent<InventoryView>();
             view.Bind(CloneLayout());
-            view.Source = source;
             return view;
         }
 

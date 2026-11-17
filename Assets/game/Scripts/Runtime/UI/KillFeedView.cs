@@ -44,6 +44,8 @@ namespace Fps.Runtime
 
         private readonly KillFeed _feed = new KillFeed();
         private IKillFeedNames _names;
+        private OfflineKillFeedNames _offlineNames;
+        private ParticipantKillFeedNames _participantNames;
         private bool _subscribed;
 
         public override string ElementName => UxmlName;
@@ -52,12 +54,31 @@ namespace Fps.Runtime
         public KillFeed Feed => _feed;
 
         /// <summary>
-        /// 1 件を行にする引き先。未設定 (null) ならオフラインの <see cref="OfflineKillFeedNames"/>。
-        /// オンラインでは Fps.Net の NetHud がプレイヤー Id とチームで引くものを設定する。差し替えても出している行はそのまま。
+        /// 1 件を行にする引き先。未設定 (null) なら、<see cref="GameSignals.Participants"/> が出ていればその表から引く <see cref="ParticipantKillFeedNames"/>、
+        /// 出ていなければオフラインの <see cref="OfflineKillFeedNames"/>。差し替えても出している行はそのまま。
         /// </summary>
         public IKillFeedNames Names
         {
-            get => _names ??= new OfflineKillFeedNames();
+            get
+            {
+                if (_names != null)
+                {
+                    return _names;
+                }
+
+                var participants = GameSignals.Participants.Value;
+                if (participants == null)
+                {
+                    return _offlineNames ??= new OfflineKillFeedNames();
+                }
+
+                if (_participantNames == null || !ReferenceEquals(_participantNames.Participants, participants))
+                {
+                    _participantNames = new ParticipantKillFeedNames(participants);
+                }
+
+                return _participantNames;
+            }
             set => _names = value;
         }
 

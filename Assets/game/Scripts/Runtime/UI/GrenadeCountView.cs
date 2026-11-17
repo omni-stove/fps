@@ -9,7 +9,7 @@ namespace Fps.Runtime
     /// 残りのグレネードの数 (<see cref="HudFormat.Grenades(int)"/>) を、弾数の上に出す。種類を切り替えて持っているときは、投げる種類の名前も添える。Hud.uxml の <see cref="UxmlName"/> を使う。
     /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.LocalPlayer"/> を購読し、
     /// 自分のプレイヤーの <see cref="GrenadeThrower"/> の残りを出し、プレイヤーが消されたら隠す。要素を受けたときは今のプレイヤーに合わせる。
-    /// ネット対戦の HUD (<c>Fps.NetV2.NetV2Hud</c>) はサーバーから届いた数を <see cref="ShowCount"/> する。
+    /// <see cref="GrenadeThrower"/> を持たない画面 (ネット対戦) の残りは <see cref="GameSignals.GrenadeCount"/> を購読して出し、出ている間はそちらを先にする。
     /// ルールでグレネードを使わない間は隠す。
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
@@ -21,10 +21,8 @@ namespace Fps.Runtime
 
         private GrenadeThrower _source;
 
-        // ShowCount で渡された値。_source があればそちらを出す
-        private bool _countShown;
-        private int _count;
-        private LocalizedText _typeName;
+        // GameSignals.GrenadeCount から受けた残り。出ている間は _source を持たない
+        private GrenadeCountStatus? _count;
         private bool _subscribed;
 
         // 出しているグレネードが GameSignals から来たか。来ていれば、要素を持っていない間にプレイヤーが消されたことを、受けたときに隠して合わせる
@@ -72,6 +70,7 @@ namespace Fps.Runtime
         public void Show(GrenadeThrower thrower)
         {
             _showsSignal = false;
+            _count = null;
             Watch(thrower);
         }
 
@@ -83,40 +82,11 @@ namespace Fps.Runtime
             }
 
             _source = thrower;
-            _countShown = false;
-            _count = 0;
             if (_source != null)
             {
                 _source.Changed += OnChanged;
             }
 
-            Refresh();
-        }
-
-        /// <summary>
-        /// <see cref="GrenadeThrower"/> を持たない画面 (ネット対戦) で、残りの数を直接出す。usesGrenades が false なら隠す。
-        /// 出していた <see cref="GrenadeThrower"/> は手放す。負の数は 0 として出す。
-        /// </summary>
-        public void ShowCount(bool usesGrenades, int remaining)
-        {
-            ShowCount(usesGrenades, default, remaining);
-        }
-
-        /// <summary>
-        /// <see cref="ShowCount(bool, int)"/> と同じく出し、typeName が空でなければ投げる種類の名前を添える。
-        /// </summary>
-        public void ShowCount(bool usesGrenades, LocalizedText typeName, int remaining)
-        {
-            _showsSignal = false;
-            if (!ReferenceEquals(_source, null))
-            {
-                _source.Changed -= OnChanged;
-                _source = null;
-            }
-
-            _countShown = usesGrenades;
-            _count = Math.Max(0, remaining);
-            _typeName = typeName;
             Refresh();
         }
 
@@ -135,11 +105,18 @@ namespace Fps.Runtime
                 var inventory = _source.Inventory;
                 typeName = inventory.Count > 1 ? inventory.Selected.Name : default;
             }
+            else if (_count.HasValue)
+            {
+                var count = _count.Value;
+                shown = count.UsesGrenades;
+                remaining = count.Remaining;
+                typeName = count.HasType ? TypeNameOf(count.TypeId) : default;
+            }
             else
             {
-                shown = _countShown;
-                remaining = _count;
-                typeName = _typeName;
+                shown = false;
+                remaining = 0;
+                typeName = default;
             }
 
             var text = typeName.IsEmpty ? HudFormat.Grenades(remaining) : HudFormat.Grenades(typeName, remaining);
@@ -159,6 +136,13 @@ namespace Fps.Runtime
         protected override void OnBound(VisualElement element)
         {
             Subscribe();
+            if (GameSignals.GrenadeCount.HasValue)
+            {
+                ShowStatus(GameSignals.GrenadeCount.Value.Value);
+                return;
+            }
+
+            _count = null;
             var player = GameSignals.LocalPlayer.Value;
             if (player != null || _showsSignal)
             {
@@ -192,8 +176,23 @@ namespace Fps.Runtime
 
         private void ShowPlayer(LocalPlayerSignal player)
         {
+            _count = null;
             Watch(player?.Grenades);
             _showsSignal = true;
+        }
+
+        private void ShowStatus(GrenadeCountStatus status)
+        {
+            Watch(null);
+            _count = status;
+            _showsSignal = true;
+            Refresh();
+        }
+
+        // 種類の名前は調整値の JSON から Id で引く。届いた Id が JSON に無ければ (サーバーとアセットが違う) Id をそのまま出す
+        private static LocalizedText TypeNameOf(string typeId)
+        {
+            return KitTuning.Grenades.TryFind(typeId, out var spec) ? spec.Name : LocalizedText.Literal(typeId);
         }
 
         private void Subscribe()
@@ -201,6 +200,7 @@ namespace Fps.Runtime
             if (!_subscribed)
             {
                 GameSignals.LocalPlayer.Changed += HandleLocalPlayerChanged;
+                GameSignals.GrenadeCount.Changed += HandleGrenadeCountChanged;
                 _subscribed = true;
             }
         }
@@ -210,6 +210,7 @@ namespace Fps.Runtime
             if (_subscribed)
             {
                 GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
+                GameSignals.GrenadeCount.Changed -= HandleGrenadeCountChanged;
                 _subscribed = false;
             }
         }
@@ -223,13 +224,33 @@ namespace Fps.Runtime
                 return;
             }
 
-            // ShowCount で出している数は、プレイヤーが消されたことでは隠さない
-            if (player == null && !_showsSignal)
+            // Show で直に渡されたものはプレイヤーが消されたことでは手放さず、届いた数が出ている間はそちらを出し続ける
+            if ((player == null && !_showsSignal) || _count.HasValue)
             {
                 return;
             }
 
             ShowPlayer(player);
+        }
+
+        private void HandleGrenadeCountChanged(GrenadeCountStatus? status)
+        {
+            if (this == null)
+            {
+                GameSignals.GrenadeCount.Changed -= HandleGrenadeCountChanged;
+                return;
+            }
+
+            if (status.HasValue)
+            {
+                ShowStatus(status.Value);
+                return;
+            }
+
+            if (_count.HasValue)
+            {
+                ShowPlayer(GameSignals.LocalPlayer.Value);
+            }
         }
 
         private void OnChanged(GrenadeThrower thrower)

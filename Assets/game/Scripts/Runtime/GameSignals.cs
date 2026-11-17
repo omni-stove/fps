@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
@@ -20,6 +21,19 @@ namespace Fps.Runtime
 
         /// <summary>この画面のプレイヤーの体力・弾・試合の残り時間などをまとめたもの。無ければ null。</summary>
         public static GameSignal<HudModel> HudModel { get; } = new GameSignal<HudModel>(nameof(HudModel));
+
+        // オフラインのプレイヤーは持ち物を自分の部品に持つので、出すのは部品に持ち物が無い画面 (ネット対戦) だけ。
+        public static GameSignal<IInventoryControl> Inventory { get; } = new GameSignal<IInventoryControl>(nameof(Inventory));
+
+        // オフラインは GrenadeThrower を LocalPlayer から読むので、出すのは GrenadeThrower が無い画面 (ネット対戦) だけ。
+        public static GameSignal<GrenadeCountStatus?> GrenadeCount { get; } = new GameSignal<GrenadeCountStatus?>(nameof(GrenadeCount));
+
+        // 値でなく読む関数にするのは、目くらましが延びても知らせは来ないので、出す側が毎フレーム読み直すため。
+        // オフラインは StatusEffectReceiver.LocalPlayerBlinded で知らせるので、出すのは受ける役が無い画面 (ネット対戦) だけ。
+        public static GameSignal<Func<float>> LocalBlindSeconds { get; } = new GameSignal<Func<float>>(nameof(LocalBlindSeconds));
+
+        // 戦闘の Id (CombatEvents.Killed) の意味がオフラインと違う画面 (ネット対戦) だけが出す。オフラインの Id は UI が部品から引ける。
+        public static GameSignal<IParticipants> Participants { get; } = new GameSignal<IParticipants>(nameof(Participants));
 
         /// <summary>オフラインのモード (<see cref="ModeRunnerBase"/>) の今の状態。モードを進めていなければ null。</summary>
         public static GameSignal<ModeStatus> ModeStatus { get; } = new GameSignal<ModeStatus>(nameof(ModeStatus));
@@ -67,6 +81,10 @@ namespace Fps.Runtime
         {
             LocalPlayer.Reset();
             HudModel.Reset();
+            Inventory.Reset();
+            GrenadeCount.Reset();
+            LocalBlindSeconds.Reset();
+            Participants.Reset();
             ModeStatus.Reset();
             Domination.Reset();
             Scoreboard.Reset();

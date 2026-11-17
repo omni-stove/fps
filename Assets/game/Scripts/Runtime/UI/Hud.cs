@@ -13,8 +13,9 @@ namespace Fps.Runtime
     /// (<see cref="HudModel.RefreshReloadProgress"/>)・溜めと熱と弾薬の種類 (<see cref="HudModel.RefreshWeaponGauges"/>)・スコープの倍率 (<see cref="AimDownSights.Magnification"/>) と
     /// 照準の広がり・表示・目からの射線の遮り (<see cref="RefreshCrosshair"/>) だけ。
     /// Health や Weapon が作り直されたとき (<see cref="Damageable.HealthReset"/> / <see cref="WeaponController.WeaponChanged"/>) は購読し直す。
-    /// オンライン (Fps.Net の NetHud) は源を渡さずに作り、<see cref="Model"/> の Set 系で値を書く。チームの点数 (左上) と
-    /// 試合結果 (中央上) はそのときだけ出る。
+    /// 自分の <see cref="Model"/> と違う <see cref="HudModel"/> が <see cref="GameSignals.HudModel"/> に出ていれば、そちらを出す (<see cref="ShownModel"/>)。
+    /// ネット対戦 (Fps.NetV2 の NetV2Hud) は源を渡さずに作らせ、自分の <see cref="HudModel"/> を出してその Set 系で値を書く。チームの点数 (左上) と
+    /// 試合結果 (中央上) はそのときだけ出る。HUD の量・ポーズ中の時間の扱い・色の組の視点も、<see cref="GameSignals"/> に出ていればそれに合わせる。
     /// ヒットマーカーなど HUD の部分ごとのビュー (<see cref="HudElementView"/>) は <see cref="Create"/> が同じ GameObject に付け
     /// (<see cref="AddViews"/>)、View を作り直すたびに Hud.uxml の要素を渡し直す。
     /// Hud.uxml にキーで書いた文字 (見出し・ポーズのボタン) は <see cref="LocalizedTexts"/> で今の言語にし、言語が変わったら書き直す。
@@ -39,6 +40,7 @@ namespace Fps.Runtime
         public static readonly Vector2Int ReferenceResolution = new Vector2Int(1920, 1080);
 
         private readonly HudModel _model = new HudModel();
+        private HudModel _shownModel;
         private HudView _view;
         private Damageable _player;
         private WeaponController _weapon;
@@ -57,8 +59,20 @@ namespace Fps.Runtime
         private bool _aimBlockCatalogResolved;
         private AimBlockSettings _aimBlockSettings;
 
-        /// <summary>表示中の文字列。</summary>
+        /// <summary>この HUD が値の源から書く値。</summary>
         public HudModel Model => _model;
+
+        /// <summary>出している値。<see cref="GameSignals.HudModel"/> に別の HudModel が出ていればそれ、無ければ <see cref="Model"/>。</summary>
+        public HudModel ShownModel => _shownModel ?? _model;
+
+        /// <summary><see cref="ShownModel"/> が別の HudModel に替わったとき。</summary>
+        public event Action ShownModelChanged;
+
+        /// <summary>
+        /// 上の欄にチームの点数を出しているか。出していれば、拠点制圧は点数と残り時間を重ねて出す <see cref="DominationView"/> でなく、
+        /// 拠点のリング (<see cref="ControlPointsView"/>) だけで出す。
+        /// </summary>
+        public bool ShowsTeamScores => ShownModel.FirstScoreTeam.HasValue;
 
         /// <summary>
         /// 目からの射線が遮られているときの照準の知らせ方 (<see cref="RefreshAimBlock"/>)。初めて読むときに <see cref="AimBlockCatalog.Load"/> で探し、
@@ -157,7 +171,7 @@ namespace Fps.Runtime
         /// <summary>
         /// HUD の部分ごとのビュー (<see cref="HitMarkerView"/>・<see cref="DamageNumberView"/>・<see cref="DamageDirectionView"/>・<see cref="GrenadeWarningView"/>・<see cref="DamageVignetteView"/>・<see cref="FlashOverlay"/>・<see cref="KillFeedView"/>・
         /// <see cref="SubtitleView"/>・<see cref="ScoreboardView"/>・<see cref="LoadoutSelectView"/>・<see cref="TutorialPromptView"/>・<see cref="ModeHudView"/>・<see cref="KillCamView"/>・
-        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
+        /// <see cref="GrenadeCountView"/>・<see cref="AbilitySlotsView"/>・<see cref="DominationView"/>・<see cref="ControlPointsView"/>・<see cref="PingMarkersView"/>・<see cref="SquadOrderMarkerView"/>) と <see cref="PauseMenu"/>・その設定画面 (<see cref="PauseSettingsView"/>)・フォトモード (<see cref="PhotoModeView"/>) を
         /// hudObject に付ける。グレネード・能力の枠・拠点制圧は、出すものを渡されるまで隠れている。
         /// オフライン (<see cref="Create"/>) とオンライン (Fps.Net の NetHud は <see cref="Create"/> を通る) で同じものを付ける。
         /// 既に付いているものは付け直さない。
@@ -187,6 +201,7 @@ namespace Fps.Runtime
             AddIfMissing<GrenadeCountView>(hudObject);
             AddIfMissing<AbilitySlotsView>(hudObject);
             AddIfMissing<DominationView>(hudObject);
+            AddIfMissing<ControlPointsView>(hudObject);
             AddIfMissing<PingMarkersView>(hudObject);
             AddIfMissing<SquadOrderMarkerView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
@@ -349,6 +364,12 @@ namespace Fps.Runtime
             {
                 domination.RefreshTeamColors();
             }
+
+            var controlPoints = GetComponent<ControlPointsView>();
+            if (controlPoints != null)
+            {
+                controlPoints.SetTeamColors(alpha, bravo);
+            }
         }
 
         private void ApplyPaletteColors()
@@ -407,7 +428,7 @@ namespace Fps.Runtime
 
             var changed = visibility != _visibility;
             _visibility = visibility;
-            _model.SetReserveAmmoShown(visibility.ReserveAmmo);
+            ShownModel.SetReserveAmmoShown(visibility.ReserveAmmo);
             _view?.ApplyVisibility(visibility);
             ApplyVisibilityToElementViews();
 
@@ -456,6 +477,7 @@ namespace Fps.Runtime
             _model.BindWeapon(_weapon != null ? _weapon.Weapon : null);
             GameSignals.CampaignNotice.Changed += _model.BindNotice;
             _model.BindNotice(GameSignals.CampaignNotice.Value);
+            SubscribeSignals();
 
             // オフラインのプレイヤーは持ち物を自分で持つ。ネット対戦は持ち主の HUD が届いた持ち物を後から渡す
             var inventoryView = InventoryScreen;
@@ -492,10 +514,7 @@ namespace Fps.Runtime
                 return false;
             }
 
-            _view = new HudView(root, _model, _visibility);
-            _view.SetTeamColors(_alphaColor, _bravoColor);
-            var aimBlockCatalog = AimBlockCatalog;
-            _view.SetAimBlockMarker(aimBlockCatalog != null ? aimBlockCatalog.Marker : null);
+            CreateView(root);
             _texts = LocalizedTexts.Bind(root);
             Localizer.Changed += HandleLanguageChanged;
             ApplyVisibilityToElementViews();
@@ -505,6 +524,87 @@ namespace Fps.Runtime
             }
 
             return true;
+        }
+
+        private void CreateView(VisualElement root)
+        {
+            _view = new HudView(root, ShownModel, _visibility);
+            _view.SetTeamColors(_alphaColor, _bravoColor);
+            var aimBlockCatalog = AimBlockCatalog;
+            _view.SetAimBlockMarker(aimBlockCatalog != null ? aimBlockCatalog.Marker : null);
+        }
+
+        private void SubscribeSignals()
+        {
+            GameSignals.HudModel.Changed += HandleHudModelChanged;
+            GameSignals.HudDensity.Changed += HandleDensityChanged;
+            GameSignals.PauseTimeMode.Changed += HandlePauseTimeModeChanged;
+            GameSignals.PaletteViewer.Changed += HandlePaletteViewerChanged;
+            HandleHudModelChanged(GameSignals.HudModel.Value);
+            HandleDensityChanged(GameSignals.HudDensity.Value);
+            HandlePauseTimeModeChanged(GameSignals.PauseTimeMode.Value);
+            HandlePaletteViewerChanged(GameSignals.PaletteViewer.Value);
+        }
+
+        private void UnsubscribeSignals()
+        {
+            GameSignals.HudModel.Changed -= HandleHudModelChanged;
+            GameSignals.HudDensity.Changed -= HandleDensityChanged;
+            GameSignals.PauseTimeMode.Changed -= HandlePauseTimeModeChanged;
+            GameSignals.PaletteViewer.Changed -= HandlePaletteViewerChanged;
+        }
+
+        private void HandleHudModelChanged(HudModel model)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                UnsubscribeSignals();
+                return;
+            }
+
+            var shown = model != null && model != _model ? model : null;
+            if (shown == _shownModel)
+            {
+                return;
+            }
+
+            _shownModel = shown;
+            ShownModel.SetReserveAmmoShown(_visibility.ReserveAmmo);
+            if (_view != null)
+            {
+                var document = GetComponent<UIDocument>();
+                _view.Dispose();
+                _view = null;
+                CreateView(document.rootVisualElement);
+            }
+
+            ShownModelChanged?.Invoke();
+        }
+
+        // 値が消されたときは今のままにする。出した側が片付けるのは HUD を消すときなので、戻す先が無いため。
+        private void HandleDensityChanged(HudDensity? density)
+        {
+            if (this != null && density.HasValue)
+            {
+                ApplyDensity(density.Value);
+            }
+        }
+
+        private void HandlePauseTimeModeChanged(PauseTimeMode? mode)
+        {
+            if (this != null && mode.HasValue)
+            {
+                SetPauseTimeMode(mode.Value);
+            }
+        }
+
+        private void HandlePaletteViewerChanged(Team? viewer)
+        {
+            if (this != null && viewer.HasValue)
+            {
+                UseTeamPalette(viewer.Value);
+            }
         }
 
         private void OnEnable()
@@ -534,22 +634,7 @@ namespace Fps.Runtime
                 _model.RefreshReloadProgress();
                 _model.RefreshWeaponGauges();
                 RefreshMagnification();
-                RefreshLockOn();
                 RefreshCrosshair();
-            }
-        }
-
-        // ロックオンは覗き込みと相手で決まり、HudModel が持つ Weapon からは読めないので、武器に渡したロックオンから読んで書く。
-        private void RefreshLockOn()
-        {
-            var lockOn = _weapon.LockOn;
-            if (lockOn != null)
-            {
-                lockOn.ShowOn(_model);
-            }
-            else
-            {
-                _model.ClearLockOn();
             }
         }
 
@@ -725,7 +810,8 @@ namespace Fps.Runtime
             {
                 if (RebuildView())
                 {
-                    Debug.Log($"{LogTag} ready hp={HudNumberFormat.Health(_model)} weapon={_model.WeaponSpec?.Id} ammo={HudNumberFormat.Ammo(_model)} time={HudNumberFormat.Time(_model)}", this);
+                    var shown = ShownModel;
+                    Debug.Log($"{LogTag} ready hp={HudNumberFormat.Health(shown)} weapon={shown.WeaponSpec?.Id} ammo={HudNumberFormat.Ammo(shown)} time={HudNumberFormat.Time(shown)}", this);
                 }
             }
             catch (InvalidOperationException e)
@@ -876,6 +962,7 @@ namespace Fps.Runtime
             }
 
             GameSignals.CampaignNotice.Changed -= _model.BindNotice;
+            UnsubscribeSignals();
             _player = null;
             _weapon = null;
             _ads = null;

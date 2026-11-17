@@ -10,8 +10,8 @@ namespace Fps.Runtime
     /// 出現前に持っていく武器を選ぶビュー。Hud.uxml の <see cref="UxmlName"/> を使い、中身は <see cref="LoadoutSelectPanel"/> が作る。
     /// </summary>
     /// <remarks>
-    /// 開く・閉じるのと、決めた並びをどこへ送るかは持ち主が決める。オンラインでは Fps.Net の NetLoadoutChooser が、
-    /// 倒されてリスポーンを待っている間に <see cref="Open"/> し、<see cref="Confirmed"/> で受けた並びをサーバーへ送って
+    /// 開く・閉じるのと、決めた並びをどこへ送るかは持ち主が決める。オンラインでは Fps.NetV2 の NetV2LoadoutChooser が、
+    /// 倒されてリスポーンを待っている間に <see cref="GameUi.LoadoutSelect"/> から <see cref="Active"/> の画面を開き、<see cref="Confirmed"/> で受けた並びをサーバーへ送って
     /// 答えを <see cref="ShowAnswer"/> で出す。
     /// 開いている間 (Play 中) はカーソルのロックを外してマウスで押せるようにし、閉じたら <see cref="FirstPersonLook.RefreshCursorLock"/> で決め直す。
     /// HUD の木が作り直されたときは、開いていれば同じ選択の中身で作り直す。
@@ -30,6 +30,9 @@ namespace Fps.Runtime
         private bool _restoreCursor;
         private static int _openCursorCount;
 
+        // ゲーム進行は GameUi.LoadoutSelect から開くので、どの HUD の画面に出すかを、木を受けている画面の新しい順で決める。
+        private static readonly List<LoadoutSelectView> _bound = new List<LoadoutSelectView>();
+
         /// <summary>カーソルを解放して開いているロードアウト画面があるか。<see cref="FirstPersonLook.RefreshCursorLock"/> がロックしないために見る。</summary>
         public static bool IsAnyOpen => _openCursorCount > 0;
 
@@ -37,6 +40,17 @@ namespace Fps.Runtime
 
         /// <summary>開いているか。</summary>
         public bool IsOpen => _selection != null;
+
+        /// <summary>HUD の木を受けている画面のうち一番新しいもの。無ければ null。</summary>
+        public static LoadoutSelectView Active
+        {
+            get
+            {
+                // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えたものはここで外す
+                _bound.RemoveAll(view => view == null);
+                return _bound.Count > 0 ? _bound[_bound.Count - 1] : null;
+            }
+        }
 
         /// <summary>開いている中身。閉じていれば null。</summary>
         public LoadoutSelection Selection => _selection;
@@ -96,6 +110,8 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            _bound.Remove(this);
+            _bound.Add(this);
             Rebuild();
         }
 
@@ -107,6 +123,7 @@ namespace Fps.Runtime
 
         protected override void OnUnbinding(VisualElement element)
         {
+            _bound.Remove(this);
             DisposePanel();
             element.Clear();
             element.style.display = DisplayStyle.None;

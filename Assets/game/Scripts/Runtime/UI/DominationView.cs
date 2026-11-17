@@ -12,6 +12,7 @@ namespace Fps.Runtime
     /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.Domination"/> を購読し、
     /// 出された状態を <see cref="Show"/> し、消されたら隠す。要素を受けたときは今の状態に合わせる。言語が変わったら今の言語で出し直す。
     /// 出している間は、残り時間をこちらで出すので Hud の残り時間の欄 (<see cref="HudView.TimeLabelName"/> の親) を隠す。
+    /// HUD が上の欄にチームの点数を出している (<see cref="Hud.ShowsTeamScores"/>) 間は出さず、拠点は <see cref="ControlPointsView"/> が出す。
     /// </summary>
     /// <remarks>
     /// 状態は毎フレーム出し直されるので、表示する整数や持ち主が変わったときだけ文字列を作り直す。
@@ -74,7 +75,8 @@ namespace Fps.Runtime
 
         private void Show(DominationStatus status)
         {
-            if (status == null)
+            var hud = GetComponent<Hud>();
+            if (status == null || (hud != null && hud.ShowsTeamScores))
             {
                 Clear();
                 return;

@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Fps.NetV2
 {
     /// <summary>
-    /// ネット対戦の、自分のロードアウトを選ぶ画面 (HUD の <see cref="LoadoutSelectView"/>) とサーバーへの送信をつなぐ。
+    /// ネット対戦の、自分のロードアウトを選ぶ画面 (<see cref="GameUi.LoadoutSelect"/>) とサーバーへの送信をつなぐ。
     /// 振る舞いは Netcode のクライアントの <c>NetLoadoutChooser</c> と同じ。
     /// </summary>
     /// <remarks>
@@ -29,7 +29,7 @@ namespace Fps.NetV2
         private readonly LoadoutRequestMessage _request = new LoadoutRequestMessage();
         private readonly Queue<Pending> _pending = new Queue<Pending>();
         private readonly UnityEngine.Object _context;
-        private LoadoutSelectView _view;
+        private ILoadoutSelect _view;
         private IReadOnlyList<string> _equipped = Array.Empty<string>();
         private bool _awaiting;
 
@@ -44,8 +44,8 @@ namespace Fps.NetV2
             _context = context;
         }
 
-        /// <summary>HUD の画面を使い始める。HUD を作れなかったときは渡さず、自動で送るだけにする。</summary>
-        public void Bind(LoadoutSelectView view)
+        /// <summary>画面を使い始める。画面が無い (UI が無い) ときは null を渡し、自動で送るだけにする。</summary>
+        public void Bind(ILoadoutSelect view)
         {
             Unbind();
             _view = view;

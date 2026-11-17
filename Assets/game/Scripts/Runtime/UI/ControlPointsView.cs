@@ -12,15 +12,14 @@ namespace Fps.Runtime
     /// 枠に沿うリングは進みが寄っている側のチームの色で、進み (<see cref="ControlPointStatus.Fill"/>) の分だけ上から時計回りに描く。
     /// 両チームがいて進みが止まっている拠点は、リングの下地を <see cref="ContestedColor"/> にする。
     /// Hud.uxml の <see cref="UxmlName"/> を使う。要素を持っている間は <see cref="GameSignals.Domination"/> を購読して拠点の状態を出し、消されたら隠す。
-    /// オンラインの HUD は拠点制圧の試合のときだけ <see cref="Show"/> で状態を直に渡す。
+    /// HUD が上の欄にチームの点数を出している (<see cref="Hud.ShowsTeamScores"/>、ネット対戦) 間だけ出し、出していなければ <see cref="DominationView"/> に任せる。
     /// </summary>
     /// <remarks>
     /// 状態は Label が無い (UIDocument の木がまだ無い) ときも <see cref="Statuses"/> と <see cref="PointNames"/> で読める。
-    /// 通信の手順ごとの状態の型から写せるよう、継がせる。
     /// 拠点の数が変わったときだけ要素を作り直し、状態が変わった拠点だけ描き直す。
     /// </remarks>
     [DisallowMultipleComponent]
-    public class ControlPointsView : HudElementView
+    public sealed class ControlPointsView : HudElementView
     {
         /// <summary>Hud.uxml のオンラインの拠点の要素。</summary>
         public const string UxmlName = "net-control-points";
@@ -48,8 +47,6 @@ namespace Fps.Runtime
         private Color _bravoColor = TeamColors.Of(TeamPalette.Standard, Team.Bravo, TeamColors.OfflineViewer);
         private bool _subscribed;
 
-        // 出している状態が GameSignals から来たか。直に渡された状態は、GameSignals が空のままでも消さない
-        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
@@ -87,20 +84,6 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>
-        /// 拠点の状態を番号の順に渡して出す。空なら <see cref="Clear"/> と同じ。数が前と同じなら、変わった拠点だけ描き直す。
-        /// </summary>
-        public void Show(IReadOnlyList<ControlPointStatus> states)
-        {
-            if (states == null)
-            {
-                throw new ArgumentNullException(nameof(states));
-            }
-
-            _showsSignal = false;
-            Write(states);
-        }
-
         private void Write(IReadOnlyList<ControlPointStatus> states)
         {
             if (states.Count != _states.Count)
@@ -129,10 +112,8 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>出すのをやめて要素を隠す。</summary>
-        public virtual void Clear()
+        private void Clear()
         {
-            _showsSignal = false;
             if (_states.Count == 0)
             {
                 return;
@@ -146,16 +127,9 @@ namespace Fps.Runtime
         protected override void OnBound(VisualElement element)
         {
             Subscribe();
-            var status = GameSignals.Domination.Value;
-            if (status != null || _showsSignal)
-            {
-                // 拠点の数が同じだと Write は描き直さないので、今の木の要素を先に作る
-                Rebuild();
-                HandleStatusChanged(status);
-                return;
-            }
-
+            // 拠点の数が同じだと Write は描き直さないので、今の木の要素を先に作る
             Rebuild();
+            HandleStatusChanged(GameSignals.Domination.Value);
         }
 
         private void OnDestroy()
@@ -190,18 +164,14 @@ namespace Fps.Runtime
                 return;
             }
 
-            if (status == null)
+            var hud = GetComponent<Hud>();
+            if (status == null || hud == null || !hud.ShowsTeamScores)
             {
-                if (_showsSignal)
-                {
-                    Clear();
-                }
-
+                Clear();
                 return;
             }
 
             Write(status.Points);
-            _showsSignal = true;
         }
 
         protected override void OnUnbinding(VisualElement element)

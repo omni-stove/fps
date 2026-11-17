@@ -132,9 +132,11 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ControlPointsShowThePublishedPoints()
+        public void ControlPointsShowThePublishedPointsWhileTheHudShowsTeamScores()
         {
+            _view.Bind(_root);
             _points.Bind(_root);
+            ShowTeamScores();
             var states = new[] { Point(Team.Alpha, 100), new ControlPointStatus(null, -40, true) };
 
             GameSignals.Domination.Publish(Status(0f, 0f, 60f, false, null, states));
@@ -142,6 +144,9 @@ namespace Fps.Tests.EditMode
             Assert.That(_points.Statuses, Is.EqualTo(states));
             Assert.That(_points.PointNames, Is.EqualTo(new[] { "A", "B" }));
             Assert.That(_points.Element.Query(className: ControlPointsView.PointClass).ToList().Count, Is.EqualTo(2));
+            Assert.That(_points.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_view.Source, Is.Null, "the scores and the time are on the HUD already, so the panel stays hidden");
+            Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
 
             GameSignals.Domination.Clear();
 
@@ -150,8 +155,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void ControlPointsStayHiddenWhileTheHudHasNoTeamScores()
+        {
+            _view.Bind(_root);
+            _points.Bind(_root);
+
+            GameSignals.Domination.Publish(Status(0f, 0f, 60f, false, null, Point(Team.Alpha, 100)));
+
+            Assert.That(_points.IsShown, Is.False);
+            Assert.That(_points.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_view.Source, Is.SameAs(GameSignals.Domination.Value), "offline the panel shows the points");
+        }
+
+        [Test]
         public void ControlPointsCatchUpWhenBound()
         {
+            ShowTeamScores();
             var states = new[] { Point(null, 20) };
             GameSignals.Domination.Publish(Status(0f, 0f, 60f, false, null, states));
 
@@ -162,17 +181,21 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ControlPointsShownDirectlyStayWhileTheSignalIsEmpty()
+        public void ControlPointsUseTheHudTeamColors()
         {
             _points.Bind(_root);
-            var states = new[] { Point(Team.Bravo, -100) };
+            ShowTeamScores();
 
-            _points.Show(states);
-            GameSignals.Domination.Publish(Status(0f, 0f, 60f, false, null, Point(null, 0)));
-            _points.Show(states);
-            GameSignals.Domination.Clear();
+            _owner.GetComponent<Hud>().SetTeamColors(Color.red, Color.blue);
 
-            Assert.That(_points.Statuses, Is.EqualTo(states), "a clear only takes back what the signal showed");
+            Assert.That(_points.ColorOf(Team.Alpha), Is.EqualTo(Color.red));
+            Assert.That(_points.ColorOf(Team.Bravo), Is.EqualTo(Color.blue));
+            Assert.That(_points.ColorOf(null), Is.EqualTo(TeamColors.Neutral));
+        }
+
+        private void ShowTeamScores()
+        {
+            _owner.GetComponent<Hud>().Model.SetScores(Team.Alpha, 0, 0);
         }
 
         private static ControlPointStatus Point(Team? owner, int percent)

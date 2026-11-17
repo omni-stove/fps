@@ -15,6 +15,7 @@ namespace Fps.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            GameSignals.ResetAll();
             foreach (var created in _created)
             {
                 if (created != null)
@@ -99,6 +100,35 @@ namespace Fps.Tests.EditMode
             Assert.That(element.style.backgroundColor.value, Is.EqualTo(catalog.Color));
             catalog.FadeSeconds = 0f;
             Assert.That(catalog.FadeSeconds, Is.EqualTo(FlashOverlayCatalog.MinFadeSeconds));
+        }
+
+        [Test]
+        public void TheBlindSecondsPublishedToGameSignalsWhitenTheScreenUntilCleared()
+        {
+            var remaining = 3f;
+            GameSignals.LocalBlindSeconds.Publish(() => remaining);
+            var overlay = CreateOverlay(out var element);
+
+            Assert.That(overlay.Opacity, Is.EqualTo(1f), "binding catches up with the published reader");
+            Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            GameSignals.LocalBlindSeconds.Clear();
+
+            Assert.That(overlay.Opacity, Is.Zero);
+            Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void ClearingTheSignalKeepsAReaderTrackedDirectly()
+        {
+            var overlay = CreateOverlay(out _);
+            overlay.Track(() => 3f);
+
+            GameSignals.LocalBlindSeconds.Publish(() => 0f);
+            overlay.Track(() => 3f);
+            GameSignals.LocalBlindSeconds.Clear();
+
+            Assert.That(overlay.Opacity, Is.EqualTo(1f), "a clear only takes back what the signal gave");
         }
 
         private FlashOverlay CreateOverlay(out VisualElement element)

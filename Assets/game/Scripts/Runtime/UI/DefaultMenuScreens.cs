@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using UnityEngine;
 
@@ -31,7 +32,70 @@ namespace Fps.Runtime
 
         private sealed class LoadoutSelectState : ILoadoutSelect
         {
+            private LoadoutSelectView _opened;
+
+            public event Action<IReadOnlyList<string>> Confirmed;
+
             public bool IsAnyOpen => LoadoutSelectView.IsAnyOpen;
+
+            public bool IsOpen => _opened != null && _opened.IsOpen;
+
+            public void Open(LoadoutSelection selection)
+            {
+                var view = LoadoutSelectView.Active;
+                if (view == null)
+                {
+                    return;
+                }
+
+                if (view != _opened)
+                {
+                    Release();
+                    _opened = view;
+                    _opened.Confirmed += HandleConfirmed;
+                }
+
+                view.Open(selection);
+            }
+
+            public void Close()
+            {
+                if (_opened != null)
+                {
+                    _opened.Close();
+                }
+            }
+
+            public void ShowSending()
+            {
+                if (_opened != null)
+                {
+                    _opened.ShowSending();
+                }
+            }
+
+            public void ShowAnswer(bool accepted, string reason)
+            {
+                if (_opened != null)
+                {
+                    _opened.ShowAnswer(accepted, reason);
+                }
+            }
+
+            private void Release()
+            {
+                if (!ReferenceEquals(_opened, null))
+                {
+                    _opened.Confirmed -= HandleConfirmed;
+                }
+
+                _opened = null;
+            }
+
+            private void HandleConfirmed(IReadOnlyList<string> weaponIds)
+            {
+                Confirmed?.Invoke(weaponIds);
+            }
         }
 
         private sealed class InventoryScreenState : IInventoryScreen

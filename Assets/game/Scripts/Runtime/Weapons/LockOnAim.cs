@@ -84,6 +84,16 @@ namespace Fps.Runtime
             }
         }
 
+        // 付けるのはこの画面のプレイヤーだけなので、出している HUD の値 (オフラインもネット対戦も GameSignals.HudModel) に書く。
+        private void ShowOnHud()
+        {
+            var model = GameSignals.HudModel.Value;
+            if (model != null)
+            {
+                ShowOn(model);
+            }
+        }
+
         public void Tick(float deltaSeconds)
         {
             var round = RoundSource?.Invoke();
@@ -103,6 +113,7 @@ namespace Fps.Runtime
             }
 
             Report();
+            ShowOnHud();
             PlaySound(LookSource?.Invoke());
         }
 
@@ -115,6 +126,7 @@ namespace Fps.Runtime
         {
             _tracker.Clear();
             Report();
+            ShowOnHud();
             if (_audio != null)
             {
                 _audio.Stop();

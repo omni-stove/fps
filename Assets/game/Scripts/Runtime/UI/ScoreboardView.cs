@@ -12,9 +12,8 @@ namespace Fps.Runtime
     /// <see cref="ToggleActionPath"/> (Tab / ゲームパッドの View) を押している間だけ出す。
     /// </summary>
     /// <remarks>
-    /// オフラインの一覧は、要素を持っている間 <see cref="GameSignals.Scoreboard"/> を購読して受ける (<see cref="MatchRunner"/> と
-    /// <see cref="DominationRunner"/> がキル・デスのたびに出す)。自分の行のチームの欄を先に出し、自分の行が無ければ Alpha を先にする。
-    /// オンラインは NetV2 の NetV2Hud が <see cref="SetEntries"/> で渡す。
+    /// 一覧は、要素を持っている間 <see cref="GameSignals.Scoreboard"/> を購読して受ける (オフラインは <see cref="MatchRunner"/> と
+    /// <see cref="DominationRunner"/> がキル・デスのたびに、ネット対戦はスナップショットが届くたびに出す)。自分の行のチームの欄を先に出し、自分の行が無ければ Alpha を先にする。
     /// 並べ方は Core の <see cref="ScoreboardRows"/> を使う。名前などの文は作り直すときに <see cref="ScoreboardText"/> と今の言語 (<see cref="Localizer.Resolve"/>) で文にし、
     /// 言語が変わったら作り直す。閉じている間に届いた一覧は覚えておくだけにし、
     /// 次に開いたときに要素を作り直す (キルのたびに見えない要素を作り直さないため)。
@@ -74,8 +73,6 @@ namespace Fps.Runtime
         private bool _open;
         private bool _dirty = true;
         private bool _subscribed;
-        // 一覧が GameSignals から来たものか。要素を持っていない間に消されたら、次に要素を受けたときに空にするため
-        private bool _fromSignal;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _toggleAction;
@@ -88,7 +85,7 @@ namespace Fps.Runtime
         public bool IsOpen => _open;
 
         /// <summary>
-        /// 最後に <see cref="SetEntries"/> で受けた一覧を並べたもの。先に出すチームの欄が先で、いつも 2 つ。
+        /// 最後に <see cref="GameSignals.Scoreboard"/> から受けた一覧を並べたもの。先に出すチームの欄が先で、いつも 2 つ。
         /// 何も受けていなければ両チームとも空。
         /// </summary>
         public IReadOnlyList<ScoreboardSection> Sections => _sections;
@@ -96,19 +93,8 @@ namespace Fps.Runtime
         /// <summary>押している間だけ一覧を出すアクション。解決できなければ null (一覧は開かない)。</summary>
         public InputAction ToggleAction => _toggleAction;
 
-        /// <summary>
-        /// 一覧の中身を差し替える。開いていればすぐ書き直す。
-        /// entries が並べられない (null・同じ Id が 2 つ・知らないチーム) ときはエラーを出して前の一覧を残す
-        /// (届いた値の誤りで HUD ごと止めないため)。
-        /// </summary>
-        /// <param name="entries">参加者。順番は問わない。</param>
-        /// <param name="firstTeam">先に出すチーム。</param>
-        public void SetEntries(IEnumerable<ScoreboardEntry> entries, Team firstTeam)
-        {
-            ApplyEntries(entries, firstTeam, false);
-        }
-
-        private void ApplyEntries(IEnumerable<ScoreboardEntry> entries, Team firstTeam, bool fromSignal)
+        // entries が並べられない (同じ Id が 2 つ・知らないチーム) ときは、エラーを出して前の一覧を残す。届いた値の誤りで HUD ごと止めないため。
+        private void ApplyEntries(IEnumerable<ScoreboardEntry> entries, Team firstTeam)
         {
             IReadOnlyList<ScoreboardSection> sections;
             try
@@ -122,15 +108,12 @@ namespace Fps.Runtime
             }
 
             _sections = sections;
-            _fromSignal = fromSignal;
             MarkDirty();
         }
 
-        /// <summary>一覧を空にする (試合が無くなったときなど)。</summary>
-        public void ClearEntries()
+        private void ClearEntries()
         {
             _sections = _empty;
-            _fromSignal = false;
             MarkDirty();
         }
 
@@ -182,7 +165,7 @@ namespace Fps.Runtime
             {
                 ShowSignal(GameSignals.Scoreboard.Value);
             }
-            else if (_fromSignal)
+            else if (_sections != _empty)
             {
                 ClearEntries();
             }
@@ -235,7 +218,7 @@ namespace Fps.Runtime
                 return;
             }
 
-            ApplyEntries(entries, FirstTeamOf(entries), true);
+            ApplyEntries(entries, FirstTeamOf(entries));
         }
 
         protected override void OnLanguageChanged()

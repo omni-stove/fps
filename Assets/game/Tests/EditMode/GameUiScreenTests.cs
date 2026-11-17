@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
@@ -29,7 +30,7 @@ namespace Fps.Tests.EditMode
         public void Pause_Replacement_IsUsedUntilCleared()
         {
             var defaultPause = GameUi.Pause;
-            GameUi.Pause = new FakeOpen { IsAnyOpen = true };
+            GameUi.Pause = new FakePause { IsAnyOpen = true };
 
             Assert.That(GameUi.IsPauseOpen, Is.True);
 
@@ -41,7 +42,7 @@ namespace Fps.Tests.EditMode
         public void LoadoutSelect_Replacement_IsUsedUntilCleared()
         {
             var defaultLoadoutSelect = GameUi.LoadoutSelect;
-            GameUi.LoadoutSelect = new FakeOpen { IsAnyOpen = true };
+            GameUi.LoadoutSelect = new FakeLoadoutSelect { IsAnyOpen = true };
 
             Assert.That(GameUi.IsLoadoutSelectOpen, Is.True);
 
@@ -90,9 +91,38 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => AppliedControlSettings.Sink.Apply(null));
         }
 
-        private sealed class FakeOpen : IPauseState, ILoadoutSelect
+        private sealed class FakePause : IPauseState
         {
             public bool IsAnyOpen { get; set; }
+        }
+
+        private sealed class FakeLoadoutSelect : ILoadoutSelect
+        {
+            public event Action<IReadOnlyList<string>> Confirmed
+            {
+                add { }
+                remove { }
+            }
+
+            public bool IsAnyOpen { get; set; }
+
+            public bool IsOpen => false;
+
+            public void Open(LoadoutSelection selection)
+            {
+            }
+
+            public void Close()
+            {
+            }
+
+            public void ShowSending()
+            {
+            }
+
+            public void ShowAnswer(bool accepted, string reason)
+            {
+            }
         }
 
         private sealed class FakeMenu : IMenuNavigator

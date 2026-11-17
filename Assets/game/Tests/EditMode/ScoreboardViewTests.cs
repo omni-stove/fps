@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace Fps.Tests.EditMode
 {
     /// <summary>
-    /// <see cref="ScoreboardView"/> が開いている間だけ一覧を出し、渡された一覧で行を作り直すこと。
+    /// <see cref="ScoreboardView"/> が開いている間だけ一覧を出し、<see cref="GameSignals.Scoreboard"/> に出された一覧で行を作り直すこと。
     /// Edit Mode では UIDocument が木を作らないことがあるので、Hud.uxml を複製した木を直接 Bind する。
     /// </summary>
     public sealed class ScoreboardViewTests
@@ -71,14 +71,13 @@ namespace Fps.Tests.EditMode
         [Test]
         public void OpeningListsEachTeamByKills()
         {
-            _view.SetEntries(
+            GameSignals.Scoreboard.Publish(
                 new[]
                 {
                     Entry(0, Team.Alpha, 1, 2, isLocal: true),
                     Entry(1, Team.Bravo, 4, 0),
                     Entry(2, Team.Alpha, 3, 1, ScoreboardConnection.Disconnected),
-                },
-                Team.Alpha);
+                });
 
             _view.SetOpen(true);
 
@@ -99,15 +98,14 @@ namespace Fps.Tests.EditMode
         [Test]
         public void KeyedAndLiteralNamesAreShownInTheCurrentLanguage()
         {
-            _view.SetEntries(
+            GameSignals.Scoreboard.Publish(
                 new[]
                 {
                     new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 3, 0, ScoreboardConnection.None, true),
                     new ScoreboardEntry(1, ScoreboardName.Bot(1), Team.Alpha, 2, 0, ScoreboardConnection.None, false),
                     new ScoreboardEntry(2, ScoreboardName.Literal("enemy-1"), Team.Alpha, 1, 0, ScoreboardConnection.None, false),
                     new ScoreboardEntry(3, ScoreboardName.Target(2), Team.Alpha, 0, 0, ScoreboardConnection.None, false),
-                },
-                Team.Alpha);
+                });
 
             _view.SetOpen(true);
 
@@ -132,10 +130,10 @@ namespace Fps.Tests.EditMode
         [Test]
         public void NewEntriesRedrawRightAwayWhileOpen()
         {
-            _view.SetEntries(new[] { Entry(0, Team.Alpha, 0, 0), Entry(1, Team.Bravo, 0, 0) }, Team.Alpha);
+            GameSignals.Scoreboard.Publish(new[] { Entry(0, Team.Alpha, 0, 0), Entry(1, Team.Bravo, 0, 0) });
             _view.SetOpen(true);
 
-            _view.SetEntries(new[] { Entry(0, Team.Alpha, 1, 0), Entry(1, Team.Bravo, 0, 1) }, Team.Alpha);
+            GameSignals.Scoreboard.Publish(new[] { Entry(0, Team.Alpha, 1, 0), Entry(1, Team.Bravo, 0, 1) });
 
             var rows = PlayerRows();
             Assert.That(Texts(rows[0]).Take(3), Is.EqualTo(new[] { "Player 0", "1", "0" }));
@@ -145,7 +143,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void EntriesReceivedWhileClosedAreShownOnOpen()
         {
-            _view.SetEntries(new[] { Entry(5, Team.Bravo, 2, 0) }, Team.Bravo);
+            GameSignals.Scoreboard.Publish(new[] { Entry(5, Team.Bravo, 2, 0) });
 
             Assert.That(PlayerRows(), Is.Empty, "nothing is built while closed");
 
@@ -154,30 +152,6 @@ namespace Fps.Tests.EditMode
             var rows = PlayerRows();
             Assert.That(rows, Has.Length.EqualTo(1));
             Assert.That(Texts(rows[0])[0], Is.EqualTo("Player 5"));
-        }
-
-        [Test]
-        public void InvalidEntriesKeepThePreviousList()
-        {
-            _view.SetEntries(new[] { Entry(0, Team.Alpha, 1, 0) }, Team.Alpha);
-            var before = _view.Sections;
-
-            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(ScoreboardView.LogTag) + " could not list the players"));
-            _view.SetEntries(new[] { Entry(1, Team.Alpha, 0, 0), Entry(1, Team.Bravo, 0, 0) }, Team.Alpha);
-
-            Assert.That(_view.Sections, Is.SameAs(before));
-        }
-
-        [Test]
-        public void ClearEntriesEmptiesBothTeams()
-        {
-            _view.SetEntries(new[] { Entry(0, Team.Alpha, 1, 0) }, Team.Alpha);
-            _view.SetOpen(true);
-
-            _view.ClearEntries();
-
-            Assert.That(_view.Sections.All(s => s.Rows.Count == 0), Is.True);
-            Assert.That(PlayerRows(), Is.Empty);
         }
 
         [Test]
@@ -271,17 +245,6 @@ namespace Fps.Tests.EditMode
             _view.Bind(_root);
 
             Assert.That(_view.Sections.All(s => s.Rows.Count == 0), Is.True);
-        }
-
-        [Test]
-        public void EntriesSetDirectlyStayWhenNothingIsPublished()
-        {
-            _view.SetEntries(new[] { Entry(3, Team.Alpha, 0, 0) }, Team.Alpha);
-            _view.Unbind();
-
-            _view.Bind(_root);
-
-            Assert.That(_view.Sections[0].Rows.Select(r => r.PlayerId), Is.EqualTo(new[] { 3 }), "NetV2 sets the list directly");
         }
 
         [Test]

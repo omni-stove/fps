@@ -8,7 +8,7 @@ namespace Fps.Runtime
     /// <summary>
     /// メインメニューと他のシーンの行き来をまとめる。メニューのボタンは <see cref="Go"/>、ポーズや切断から戻る画面は
     /// <see cref="ReturnToMenu"/>、キャンペーンの選択画面は <see cref="StartCampaign"/> を呼ぶ。どのシーンを読むかは <see cref="MenuRoute"/> が決め、ここは Build Settings から番号を引いて読む。
-    /// オンラインを選んだときは、シーンを読まずに <see cref="OnlineStarter"/> (ネット対戦のクライアント) に任せる。
+    /// オンラインを選んだときは、シーンを読まずに <see cref="GameUi.OnlineStarter"/> (ネット対戦のクライアント) に任せる。
     /// チュートリアルを選んだことは、射撃場の <see cref="TutorialPresenter"/> が <see cref="TakeTutorialRequest"/> で受け取る。
     /// </summary>
     public static class MenuNavigator
@@ -67,11 +67,6 @@ namespace Fps.Runtime
         public static MenuReturnReason PendingReturnReason => _returnReason;
 
         /// <summary>
-        /// オンラインのボタンを始める手順。ネット対戦のクライアント (Fps.NetV2) が起動時に入れる。null ならオンラインは始められない。
-        /// </summary>
-        public static IOnlineMatchStarter OnlineStarter { get; set; }
-
-        /// <summary>
         /// destination へ進む。読むシーンが Build Settings に無ければエラーログを出して false を返し、何もしない。
         /// </summary>
         public static bool Go(MenuDestination destination)
@@ -80,7 +75,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// destination へ進む。オンラインの行き先は <see cref="OnlineStarter"/> に任せ、断られたか無ければ false と、
+        /// destination へ進む。オンラインの行き先は <see cref="GameUi.OnlineStarter"/> に任せ、断られたか無ければ false と、
         /// 断った理由をメニューに出す文 (<see cref="DisconnectNoticeText.For(MenuReturnReason)"/>) refusal を返す。
         /// シーンへ移る行き先で読むシーンが Build Settings に無ければ、エラーログを出して false (refusal は空) を返す。
         /// </summary>
@@ -89,7 +84,7 @@ namespace Fps.Runtime
             refusal = default;
             if (IsOnline(destination))
             {
-                var starter = OnlineStarter;
+                var starter = GameUi.OnlineStarter;
                 if (starter == null)
                 {
                     Debug.LogError(LogTag + " " + destination + ": no online client is installed (is the Fps.NetV2 assembly in the build?)");
@@ -256,7 +251,6 @@ namespace Fps.Runtime
             _returnReason = null;
             _scenes = null;
             ReturningToMenu = null;
-            OnlineStarter = null;
         }
 
         private sealed class SceneManagerHost : IMenuSceneHost

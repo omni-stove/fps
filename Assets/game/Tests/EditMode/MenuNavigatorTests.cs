@@ -34,7 +34,7 @@ namespace Fps.Tests.EditMode
             MenuNavigator.TakeTutorialRequest();
             MenuNavigator.TakeReturnReason();
             CampaignLaunchSelection.Clear();
-            MenuNavigator.OnlineStarter = null;
+            GameUi.OnlineStarter = null;
             Time.timeScale = 1f;
         }
 
@@ -42,7 +42,7 @@ namespace Fps.Tests.EditMode
         public void TheOnlineStarterTakesQuickMatchWithoutLoadingAScene()
         {
             var starter = new FakeStarter();
-            MenuNavigator.OnlineStarter = starter;
+            GameUi.OnlineStarter = starter;
 
             Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.True);
             Assert.That(refusal.IsEmpty, Is.True);
@@ -65,7 +65,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void WithoutAnOnlineClientQuickMatchReportsAndStays()
         {
-            MenuNavigator.OnlineStarter = null;
+            GameUi.OnlineStarter = null;
             LogAssert.Expect(LogType.Error, new Regex("no online client is installed"));
 
             Assert.That(MenuNavigator.Go(MenuDestination.QuickMatch, out var refusal), Is.False);

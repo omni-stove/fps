@@ -177,6 +177,7 @@ namespace Shooter.Runtime
             CancelDive();
             CancelMantle();
             EndMovementOverride();
+            ResetTraversal();
         }
 
         // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。
@@ -225,7 +226,9 @@ namespace Shooter.Runtime
                 crouchDevice,
                 _jumpAction.WasPressedThisFrame(),
                 _dodgeAction != null && _dodgeAction.WasPressedThisFrame(),
-                _proneAction != null && _proneAction.WasPressedThisFrame());
+                _proneAction != null && _proneAction.WasPressedThisFrame(),
+                ReadLean(),
+                _jumpAction.IsPressed());
         }
 
         public void ApplyInput(PlayerMoveInput input, float deltaSeconds)
@@ -238,6 +241,23 @@ namespace Shooter.Runtime
             if (IsControlHandedOff)
             {
                 input = PlayerMoveInput.Idle(_device, _crouchDevice);
+            }
+
+            // 潜る入力をしゃがみの切り替え (Toggle) に通すと、水から上がったときにしゃがんだままになるので、ボタンを押している間だけ潜らせる。
+            if (IsSwimming)
+            {
+                ReleaseSprint(SprintInput.ReasonSwim);
+                _ascendHeld = input.JumpHeld;
+                try
+                {
+                    Tick(input.Move, false, input.CrouchHeld, input.JumpPressed, input.Lean, deltaSeconds);
+                }
+                finally
+                {
+                    _ascendHeld = false;
+                }
+
+                return;
             }
 
             // ダッシュとしゃがみを解釈する前に始める。回避が解いたしゃがみとダッシュを、同じフレームの押下で戻さないため。
@@ -257,14 +277,24 @@ namespace Shooter.Runtime
             // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
             var crouch = UpdateCrouch(
                 input.CrouchHeld, input.CrouchPressed, jumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
-            Tick(input.Move, sprint, crouch, jumpPressed, deltaSeconds);
+            Tick(input.Move, sprint, crouch, jumpPressed, input.Lean, deltaSeconds);
         }
 
         public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, float deltaSeconds)
         {
+            Tick(move, sprint, crouch, jumpPressed, 0, deltaSeconds);
+        }
+
+        public void Tick(Vector2 move, bool sprint, bool crouch, bool jumpPressed, int lean, float deltaSeconds)
+        {
             if (!IsInitialized)
             {
                 throw new InvalidOperationException("PlayerController is not initialized");
+            }
+
+            if (lean < -1 || lean > 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lean), lean, "lean must be -1, 0 or 1");
             }
 
             if (!_controller.enabled || !_controller.gameObject.activeInHierarchy)
@@ -278,11 +308,24 @@ namespace Shooter.Runtime
             FilterInputForProne(ref sprint, ref jumpPressed);
             FilterInputForMantle(ref sprint, ref crouch, ref jumpPressed);
 
+            var wasSwimming = _swim.IsSwimming;
+            UpdateSwim(deltaSeconds);
+
             Vector3 displacement;
+            var paddled = false;
             var movementOverride = SelectMovementOverride();
             if (movementOverride != null)
             {
                 displacement = StepMovementOverride(movementOverride, move, sprint, crouch, jumpPressed, deltaSeconds);
+            }
+            else if (_swim.IsSwimming && !IsVaulting && !IsMantling)
+            {
+                UpdateStance(false, false);
+                if (!TryClimbOutOfWater(jumpPressed, deltaSeconds, out displacement))
+                {
+                    displacement = Paddle(move, crouch, jumpPressed, wasSwimming, deltaSeconds);
+                    paddled = true;
+                }
             }
             else
             {
@@ -291,6 +334,8 @@ namespace Shooter.Runtime
                 {
                     var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
                     var carry = CarrySpeedMultiplier;
+                    var jump = jumpPressed && _jumpRule == Jump.On;
+                    StepAirJump(move, jump, yawRadians);
                     displacement = IsProne
                         ? _motor.StepProne(
                             move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
@@ -299,17 +344,24 @@ namespace Shooter.Runtime
                             yawRadians,
                             sprint,
                             IsCrouched,
-                            jumpPressed && _jumpRule == Jump.On,
+                            jump,
                             _controller.isGrounded,
                             deltaSeconds,
                             carry).ToUnity();
                 }
             }
 
-            _controller.Move(displacement);
-            var grounded = _controller.isGrounded;
-            ReportLanding(grounded);
-            ReportGrounded(grounded);
+            var collisions = _controller.Move(displacement);
+            if (paddled)
+            {
+                StopPaddlingAgainst(collisions);
+            }
+
+            // 泳いでいる間は水底や天井に触れても立っていないので、着地・足音・落下のダメージに数えない。
+            var footing = _controller.isGrounded && !_swim.IsSwimming;
+            ReportLanding(footing);
+            ReportGrounded(footing);
+            FinishTraversal(footing, move, sprint, crouch, lean, deltaSeconds);
         }
 
         private bool TryOverrideMove(Vector2 move, bool jumpPressed, float deltaSeconds, out Vector3 displacement)
@@ -486,6 +538,8 @@ namespace Shooter.Runtime
             CancelDive();
             CancelMantle();
             EndMovementOverride();
+            ResetTraversal();
+            _leanBody = null;
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);
             _dive = new ProneDive(_proneSpec);

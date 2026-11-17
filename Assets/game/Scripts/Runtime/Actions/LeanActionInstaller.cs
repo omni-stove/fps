@@ -34,5 +34,16 @@ namespace Shooter.Runtime
             var controller = PlayerActions.GetOrAdd<LeanController>(player);
             controller.Mode = Mode;
         }
+
+        // 組み込みの並びに足さず自分で登録するのは、IPlayerActionInstaller の決まりどおり既存のファイルを変えずに足すため。
+        // Edit Mode (テストやシーン生成) では Play の初期化が走らないので、エディターの読み込みでも登録する。
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+#endif
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Register()
+        {
+            PlayerActions.Register(new LeanActionInstaller());
+        }
     }
 }

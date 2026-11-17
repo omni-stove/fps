@@ -29,6 +29,8 @@ namespace Shooter.Core
 
         public const string ReasonProne = "prone";
 
+        public const string ReasonSwim = "swim";
+
         private readonly HoldToggleState _state = new HoldToggleState(HoldMode.Hold);
         private bool _hasMode;
         private bool _wasMoving;

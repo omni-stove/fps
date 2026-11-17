@@ -243,6 +243,45 @@ namespace Shooter.Tests.EditMode
             Assert.That(streak.Status.Value.Kills, Is.EqualTo(1), "one subscription after configuring again");
         }
 
+        [Test]
+        public void ApplyAttachesTheStreaksOnlyWhenTheRulesTurnThemOn()
+        {
+            var off = Track(new GameObject("Off"));
+            Assert.That(StreakController.Apply(off, GameRules.Default.WithStreaks(Streaks.Off)), Is.Null);
+            Assert.That(off.GetComponent<StreakController>(), Is.Null, "nothing is attached for rules without streaks");
+
+            var on = Track(new GameObject("On"));
+            var attached = StreakController.Apply(on, GameRules.Default);
+            Assert.That(attached, Is.Not.Null);
+            Assert.That(attached.enabled, Is.True);
+            Assert.That(StreakController.Apply(on, GameRules.Default), Is.SameAs(attached), "applying again reuses the attached one");
+            Assert.That(on.GetComponents<StreakController>(), Has.Length.EqualTo(1));
+
+            Assert.Throws<ArgumentNullException>(() => StreakController.Apply(null, GameRules.Default));
+            Assert.Throws<ArgumentNullException>(() => StreakController.Apply(on, null));
+        }
+
+        [Test]
+        public void ApplyingRulesWithoutStreaksStopsCountingUntilTurnedOnAgain()
+        {
+            var streak = Player(StreakSpec.Default, side: 0);
+            Kill(streak, Body("A", side: 1));
+
+            Assert.That(StreakController.Apply(streak.gameObject, GameRules.Default.WithStreaks(Streaks.Off)), Is.Null);
+
+            Assert.That(streak.enabled, Is.False);
+            Assert.That(GameSignals.Streak.Value, Is.Null, "a stopped streak takes back what it published");
+            Kill(streak, Body("B", side: 1));
+            Assert.That(streak.Status.Value.Kills, Is.EqualTo(1), "kills while stopped are not counted");
+
+            Assert.That(StreakController.Apply(streak.gameObject, GameRules.Default), Is.SameAs(streak));
+
+            Assert.That(streak.enabled, Is.True);
+            Assert.That(GameSignals.Streak.Value.Value.Kills, Is.EqualTo(1), "turning it on again keeps the count");
+            Kill(streak, Body("C", side: 1));
+            Assert.That(streak.Status.Value.Kills, Is.EqualTo(2));
+        }
+
         private StreakController Player(StreakSpec spec, int? side)
         {
             var go = Track(new GameObject("Player"));

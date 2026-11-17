@@ -255,6 +255,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), name + " maxWeapons");
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), name + " reloadMode");
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), name + " viewMode");
+            Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), name + " streaks");
 
             var a = actual.Actions;
             var b = expected.Actions;

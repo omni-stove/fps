@@ -84,6 +84,7 @@ namespace Shooter.Tests.EditMode
             definition.MaxWeapons = 2;
             definition.ReloadMode = ReloadMode.Manual;
             definition.ViewMode = ViewMode.ThirdPerson;
+            definition.Streaks = Streaks.Off;
 
             var rules = definition.ToRules();
 
@@ -132,6 +133,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.MaxWeapons, Is.EqualTo(2));
             Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
             Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(rules.Streaks, Is.EqualTo(Streaks.Off));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -184,7 +186,8 @@ namespace Shooter.Tests.EditMode
                 120f,
                 3,
                 ReloadMode.Manual,
-                ViewMode.ThirdPerson);
+                ViewMode.ThirdPerson)
+                .WithStreaks(Streaks.Off);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -238,6 +241,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("MaxWeapons")]
         [TestCase("ReloadMode")]
         [TestCase("ViewMode")]
+        [TestCase("Streaks")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -329,6 +333,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode));
+            Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -472,6 +477,9 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "ViewMode":
                     definition.ViewMode = (ViewMode)99;
+                    break;
+                case "Streaks":
+                    definition.Streaks = (Streaks)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

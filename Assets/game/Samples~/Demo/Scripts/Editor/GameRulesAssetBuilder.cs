@@ -19,6 +19,7 @@ namespace Shooter.Editor
     /// アクションは、チームデスマッチとドミネーションがダウン (蘇生あり) とアクティブリロード、キャンペーンと射撃場がカバー・ブラインドファイア・アクティブリロード、
     /// TPS 射撃場がそれに回避・乗り越え・グレネード・制圧射撃を足し、ジャンプを切ったもの。視点は TPS 射撃場だけが三人称で、他のモードは一人称。
     /// 出血・ダウン中の体力・蘇生の秒数はどのモードも <see cref="ActionRules.Default"/> の値。
+    /// ストリークはキャンペーンの 3 つだけ付けず (<see cref="Streaks.Off"/>)、他のモードは <see cref="GameRules.Default"/> のまま付ける。
     /// 何度実行しても同じ結果になる。値が不正なら保存せずに例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
     /// <see cref="BuildAt"/> の 7 つの値を変えたら、同じ値のサンプル JSON (<see cref="GameRulesJsonImporter.SamplesFolder"/>) も直す。
     /// Editor を閉じた状態で次のように呼べる:
@@ -135,7 +136,7 @@ namespace Shooter.Editor
 
         /// <summary>
         /// キャンペーン (易)。味方撃ちなし、個別リスポーン、3 秒後から毎秒 25 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1.5 倍、
-        /// 建造物は壊れない。アクションは <see cref="CampaignActions"/>。
+        /// 建造物は壊れない。ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignEasyRules()
         {
@@ -151,29 +152,32 @@ namespace Shooter.Editor
                 1.5f,
                 Destruction.Off,
                 CampaignActions())
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>
         /// キャンペーン (普通)。<see cref="GameRules.Default"/> のうち、5 秒後から毎秒 15 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 1 倍にしたもの。建造物は壊れない。
-        /// アクションは <see cref="CampaignActions"/>。
+        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignNormalRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 5f, 15f, 1f, CampaignActions())
                 .WithDeathCamera(DeathCamera.Fallen)
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>
         /// キャンペーン (難)。<see cref="GameRules.Default"/> のうち、7 秒後から毎秒 10 回復、体は倒れる、倒れた主観で崩れ落ちる、予備弾は有限で 0.6 倍にしたもの。建造物は壊れない。
-        /// アクションは <see cref="CampaignActions"/>。
+        /// ストリークは付けない。アクションは <see cref="CampaignActions"/>。
         /// </summary>
         public static GameRules CampaignHardRules()
         {
             return WithOverrides(GameRules.Default, DeathBody.Collapse, 7f, 10f, 0.6f, CampaignActions())
                 .WithDeathCamera(DeathCamera.Fallen)
-                .WithMaxWeapons(DemoMaxWeapons);
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithStreaks(Streaks.Off);
         }
 
         /// <summary>

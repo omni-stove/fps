@@ -11,7 +11,7 @@ namespace Shooter.Core
         /// 今の挙動。味方撃ちなし、個別リスポーン、自動回復なし、体は消える、死亡カメラなし、予備弾は有限で倍率 1、建造物は壊れない、アクションは <see cref="ActionRules.Default"/>、
         /// リスポーン直後の無敵なし、落下ダメージなし、HUD はすべて出す、拠点なし (<see cref="MatchObjective.None"/>)、人数を Bot で埋めない、放置しても切らない、
         /// 持てる武器の数に上限なし、撃ち切ったら自動でリロード (<see cref="ReloadMode.Auto"/>)、一人称 (<see cref="ViewMode.FirstPerson"/>)、
-        /// プレイヤーの最大体力 <see cref="DefaultPlayerMaxHealth"/>、部位のダメージ倍率 <see cref="ZoneDamageMultipliers.Default"/>。
+        /// プレイヤーの最大体力 <see cref="DefaultPlayerMaxHealth"/>、部位のダメージ倍率 <see cref="ZoneDamageMultipliers.Default"/>、ストリークを付ける (<see cref="Core.Streaks.On"/>)。
         /// </summary>
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
@@ -114,6 +114,9 @@ namespace Shooter.Core
         /// </summary>
         public ZoneDamageMultipliers ZoneDamage { get; }
 
+        /// <summary>オフラインのプレイヤーに、倒れずに倒した数で報酬を得るストリークを付けるか。</summary>
+        public Streaks Streaks { get; }
+
         /// <param name="friendlyFire">味方撃ちの扱い。定義済みの値。</param>
         /// <param name="respawnMode">リスポーン方式。定義済みの値。</param>
         /// <param name="waveIntervalSeconds">波の間隔 (秒)。0 より大きい有限値。</param>
@@ -136,6 +139,7 @@ namespace Shooter.Core
         /// <param name="viewMode">プレイヤーの視点。定義済みの値。</param>
         /// <param name="playerMaxHealth">プレイヤーの最大体力。1 以上。</param>
         /// <param name="zoneDamage">部位のダメージ倍率。null なら <see cref="ZoneDamageMultipliers.Default"/>。</param>
+        /// <param name="streaks">ストリークを付けるか。定義済みの値。</param>
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -158,7 +162,8 @@ namespace Shooter.Core
             ReloadMode reloadMode = ReloadMode.Auto,
             ViewMode viewMode = ViewMode.FirstPerson,
             int playerMaxHealth = DefaultPlayerMaxHealth,
-            ZoneDamageMultipliers zoneDamage = null)
+            ZoneDamageMultipliers zoneDamage = null,
+            Streaks streaks = Streaks.On)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -256,6 +261,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(playerMaxHealth), playerMaxHealth, "playerMaxHealth must be at least 1");
             }
 
+            if (!Enum.IsDefined(typeof(Streaks), streaks))
+            {
+                throw new ArgumentOutOfRangeException(nameof(streaks), streaks, "streaks is not a defined Streaks");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -278,6 +288,7 @@ namespace Shooter.Core
             ViewMode = viewMode;
             PlayerMaxHealth = playerMaxHealth;
             ZoneDamage = zoneDamage ?? ZoneDamageMultipliers.Default;
+            Streaks = streaks;
         }
 
         /// <summary><see cref="FriendlyFire"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
@@ -368,6 +379,9 @@ namespace Shooter.Core
             return Copy(zoneDamage: value);
         }
 
+        /// <summary><see cref="Streaks"/> だけを value にした複製。値の検査はコンストラクターと同じ。</summary>
+        public GameRules WithStreaks(Streaks value) => Copy(streaks: value);
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -390,7 +404,8 @@ namespace Shooter.Core
             ReloadMode? reloadMode = null,
             ViewMode? viewMode = null,
             int? playerMaxHealth = null,
-            ZoneDamageMultipliers zoneDamage = null)
+            ZoneDamageMultipliers zoneDamage = null,
+            Streaks? streaks = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -414,7 +429,8 @@ namespace Shooter.Core
                 reloadMode ?? ReloadMode,
                 viewMode ?? ViewMode,
                 playerMaxHealth ?? PlayerMaxHealth,
-                zoneDamage ?? ZoneDamage);
+                zoneDamage ?? ZoneDamage,
+                streaks ?? Streaks);
         }
     }
 }

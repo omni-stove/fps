@@ -135,5 +135,18 @@ namespace Fps.Core
 
             return $"{Tag} '{vehicle}' wrecked riders={riders}";
         }
+
+        public static string Firing(string vehicle, string rider, int seat, VehicleSeatFiring firing)
+        {
+            return $"{Tag} '{vehicle}' firing rider={rider} seat={seat} with={firing}";
+        }
+
+        public static string WeaponFired(
+            string vehicle, string rider, int seat, string weaponId, float yawDegrees, float pitchDegrees, string hit, int damage, int ammo)
+        {
+            var yaw = yawDegrees.ToString("0.0", CultureInfo.InvariantCulture);
+            var pitch = pitchDegrees.ToString("0.0", CultureInfo.InvariantCulture);
+            return $"{Tag} '{vehicle}' fire rider={rider} seat={seat} weapon={weaponId} yaw={yaw} pitch={pitch} hit={hit ?? "-"} dmg={damage} ammo={ammo}";
+        }
     }
 }

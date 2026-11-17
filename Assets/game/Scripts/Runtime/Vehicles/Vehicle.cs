@@ -63,6 +63,7 @@ namespace Fps.Runtime
         private readonly Dictionary<IVehicleRider, IgnoredCollisions> _ignored = new Dictionary<IVehicleRider, IgnoredCollisions>();
 
         private VehicleSeat[] _seats;
+        private VehicleWeaponMount[] _mounts = Array.Empty<VehicleWeaponMount>();
         private VehicleSeating _seating;
         private VehicleSpec _spec;
         private Damageable _damageable;
@@ -98,6 +99,15 @@ namespace Fps.Runtime
             {
                 EnsureInitialized();
                 return _seats;
+            }
+        }
+
+        public IReadOnlyList<VehicleWeaponMount> WeaponMounts
+        {
+            get
+            {
+                EnsureInitialized();
+                return _mounts;
             }
         }
 
@@ -151,6 +161,16 @@ namespace Fps.Runtime
                 Debug.LogError($"{LogTag} '{name}' の子に VehicleSeat がありません。座席を 1 つ以上置いてください。", this);
                 enabled = false;
                 return;
+            }
+
+            foreach (var mount in _mounts)
+            {
+                if (!mount.HasWeapon)
+                {
+                    Debug.LogError($"{LogTag} '{name}' の武器 '{mount.name}' に WeaponDefinition がありません。", mount);
+                    enabled = false;
+                    return;
+                }
             }
 
             if (_definition != null)
@@ -207,6 +227,75 @@ namespace Fps.Runtime
                     $"spec has {spec.Seats.Count} seats but '{name}' has {_seats.Length} VehicleSeat children", nameof(spec));
             }
 
+            RequireWeaponCount(spec);
+            for (var i = 0; i < _mounts.Length; i++)
+            {
+                if (!_mounts[i].HasWeapon || !string.Equals(_mounts[i].WeaponSpec.Id, spec.Weapons[i].WeaponId, StringComparison.Ordinal))
+                {
+                    throw new ArgumentException(
+                        $"weapon {i} of '{name}' is not '{spec.Weapons[i].WeaponId}'; pass a WeaponCatalog to change the weapon", nameof(spec));
+                }
+            }
+
+            ApplySpec(spec, null);
+        }
+
+        // 武器の Id を変える設定は、その武器の値が要るので catalog から引く。
+        public void Configure(VehicleSpec spec, WeaponCatalog weapons)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (weapons == null)
+            {
+                throw new ArgumentNullException(nameof(weapons));
+            }
+
+            EnsureInitialized();
+            if (spec.Seats.Count != _seats.Length)
+            {
+                throw new ArgumentException(
+                    $"spec has {spec.Seats.Count} seats but '{name}' has {_seats.Length} VehicleSeat children", nameof(spec));
+            }
+
+            RequireWeaponCount(spec);
+            var resolved = new WeaponSpec[_mounts.Length];
+            for (var i = 0; i < resolved.Length; i++)
+            {
+                if (!weapons.TryGet(spec.Weapons[i].WeaponId, out resolved[i]))
+                {
+                    throw new ArgumentException($"weapon id '{spec.Weapons[i].WeaponId}' is not in the catalog", nameof(weapons));
+                }
+            }
+
+            ApplySpec(spec, resolved);
+        }
+
+        private void RequireWeaponCount(VehicleSpec spec)
+        {
+            if (spec.Weapons.Count != _mounts.Length)
+            {
+                throw new ArgumentException(
+                    $"spec has {spec.Weapons.Count} weapons but '{name}' has {_mounts.Length} VehicleWeaponMount children", nameof(spec));
+            }
+        }
+
+        private void ApplySpec(VehicleSpec spec, WeaponSpec[] weapons)
+        {
+            for (var i = 0; i < _mounts.Length; i++)
+            {
+                if (weapons != null)
+                {
+                    _mounts[i].ApplySpec(spec.Weapons[i], weapons[i]);
+                }
+                else
+                {
+                    _mounts[i].ApplySpec(spec.Weapons[i]);
+                }
+            }
+
             for (var i = 0; i < _seats.Length; i++)
             {
                 _seats[i].ApplySpec(spec.Seats[i]);
@@ -239,7 +328,7 @@ namespace Fps.Runtime
             }
 
             EnsureInitialized();
-            var spec = definition.ToSpec(SeatSpecs());
+            var spec = definition.ToSpec(SeatSpecs(), WeaponSpecs());
             _definition = definition;
             Configure(spec);
         }
@@ -277,6 +366,34 @@ namespace Fps.Runtime
             }
 
             _exitPoints = list.ToArray();
+        }
+
+        public IReadOnlyList<VehicleWeaponMount> WeaponMountsOf(int seatIndex)
+        {
+            EnsureInitialized();
+            RequireSeatIndex(seatIndex);
+            var result = new List<VehicleWeaponMount>();
+            foreach (var index in Spec.WeaponsOfSeat(seatIndex))
+            {
+                result.Add(_mounts[index]);
+            }
+
+            return result;
+        }
+
+        public VehicleSeatFiring FiringOf(VehicleSeat seat)
+        {
+            if (seat == null)
+            {
+                throw new ArgumentNullException(nameof(seat));
+            }
+
+            if (seat.Vehicle != this)
+            {
+                throw new ArgumentException($"seat '{seat.name}' is not on '{name}'", nameof(seat));
+            }
+
+            return Spec.FiringOf(seat.Index);
         }
 
         /// <summary>index の座席に座っている人。空いていれば (破棄されていても) null。</summary>
@@ -1054,6 +1171,31 @@ namespace Fps.Runtime
                 _seats[i].AttachTo(this, i);
             }
 
+            foreach (var old in _mounts)
+            {
+                if (old != null)
+                {
+                    old.Detach();
+                    _sinks.Remove(old);
+                }
+            }
+
+            var mounts = new List<VehicleWeaponMount>();
+            foreach (var mount in GetComponentsInChildren<VehicleWeaponMount>(true))
+            {
+                if (mount.GetComponentInParent<Vehicle>(true) == this)
+                {
+                    mounts.Add(mount);
+                }
+            }
+
+            _mounts = mounts.ToArray();
+            for (var i = 0; i < _mounts.Length; i++)
+            {
+                _mounts[i].AttachTo(this, i);
+                AddInputSink(_mounts[i]);
+            }
+
             _seating = _seats.Length > 0 ? new VehicleSeating(_seats.Length) : null;
             _ignored.Clear();
             _spec = null;
@@ -1066,7 +1208,7 @@ namespace Fps.Runtime
             {
                 try
                 {
-                    return _definition.ToSpec(seats);
+                    return _definition.ToSpec(seats, WeaponSpecs());
                 }
                 catch (VehicleDefinitionException e)
                 {
@@ -1075,7 +1217,18 @@ namespace Fps.Runtime
                 }
             }
 
-            return new VehicleSpec(_vehicleId, _maxHealth, seats, null, null, _enterRange, _chaseDistance, _chaseHeight);
+            return new VehicleSpec(_vehicleId, _maxHealth, seats, WeaponSpecs(), null, _enterRange, _chaseDistance, _chaseHeight);
+        }
+
+        private VehicleWeaponSpec[] WeaponSpecs()
+        {
+            var weapons = new VehicleWeaponSpec[_mounts.Length];
+            for (var i = 0; i < weapons.Length; i++)
+            {
+                weapons[i] = _mounts[i].Spec;
+            }
+
+            return weapons;
         }
 
         private VehicleSeatSpec[] SeatSpecs()

@@ -28,6 +28,9 @@ namespace Fps.Runtime
         [SerializeField, Range(0f, VehicleSeatSpec.MaxOwnWeaponArcDegrees), Tooltip("座ったまま自分の武器で撃てる向きの範囲 (度)。0 は撃てない")]
         private float _ownWeaponArcDegrees = VehicleSeatSpec.DefaultOwnWeaponArcDegrees;
 
+        [SerializeField, Min(1f), Tooltip("自分の武器で撃つときの散らばりに掛ける倍率")]
+        private float _ownWeaponSpreadMultiplier = VehicleSeatSpec.DefaultOwnWeaponSpreadMultiplier;
+
         [SerializeField, Tooltip("乗り込める距離を測る点。空なら座席から測る")]
         private Transform[] _enterPoints = Array.Empty<Transform>();
 
@@ -46,7 +49,7 @@ namespace Fps.Runtime
         public int Index { get; private set; } = -1;
 
         /// <summary>この座席の設定。</summary>
-        public VehicleSeatSpec Spec => _spec ??= new VehicleSeatSpec(_role, _pose, _cameraView, _ownWeaponArcDegrees);
+        public VehicleSeatSpec Spec => _spec ??= new VehicleSeatSpec(_role, _pose, _cameraView, _ownWeaponArcDegrees, _ownWeaponSpreadMultiplier);
 
         public VehicleSeatRole Role => Spec.Role;
 
@@ -84,6 +87,7 @@ namespace Fps.Runtime
             _pose = spec.Pose;
             _cameraView = spec.CameraView;
             _ownWeaponArcDegrees = spec.OwnWeaponArcDegrees;
+            _ownWeaponSpreadMultiplier = spec.OwnWeaponSpreadMultiplier;
         }
 
         /// <summary>乗る位置を差し替える。null なら無し (座席から測る)。null の要素は飛ばす。</summary>

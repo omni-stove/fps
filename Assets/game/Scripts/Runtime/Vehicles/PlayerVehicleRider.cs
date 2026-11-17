@@ -12,7 +12,7 @@ namespace Fps.Runtime
     /// <item>Interact (<see cref="InteractActionPath"/>) で、乗っていなければ近くの乗り物 (<see cref="Vehicle.Active"/>) の乗り込める座席に乗り、乗っていれば降りる。</item>
     /// <item>乗っている間は <see cref="PlayerController.Handoff"/> と <see cref="WeaponController.Handoff"/> で歩く・撃つ操作を手放し、
     /// 移動を横取りして (<see cref="IMovementOverride"/>) 体を座席に留め、<see cref="PlayerActionConditions.InVehicle"/> を立てる。
-    /// 覗き込み・カバー・グレネードなど座席で使わない部品は止め (<see cref="SuspendWhileRiding"/>)、手元の武器 (ビューモデル) は隠す。</item>
+    /// 覗き込み・カバー・グレネードなど座席で使わない部品は止め (<see cref="SuspendWhileRiding"/>)、手元の武器 (ビューモデル) は、自分の武器で撃てる座席 (<see cref="VehicleSeatFiring.OwnWeapon"/>) でなければ隠す。</item>
     /// <item>乗っている間は、移動・ジャンプ・しゃがみ・ダッシュ・射撃・覗き込み・リロードのボタンを <see cref="VehicleSeatInput"/> にして座席に流し、
     /// Next / Previous (<see cref="NextSeatActionPath"/> / <see cref="PreviousSeatActionPath"/>) で空いている次・前の座席に移る。</item>
     /// <item>カメラは座席の <see cref="VehicleSeat.CameraView"/> にする (<see cref="VehicleCamera"/>)。</item>
@@ -23,7 +23,7 @@ namespace Fps.Runtime
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerController))]
-    public sealed class PlayerVehicleRider : MonoBehaviour, IVehicleRider, IMovementOverride
+    public sealed class PlayerVehicleRider : MonoBehaviour, IVehicleRider, IMovementOverride, IHandedOffTrigger
     {
         public const string LogTag = VehicleLog.Tag;
 
@@ -60,6 +60,11 @@ namespace Fps.Runtime
         private bool _snapYaw;
         private bool _isLive;
         private bool _claimedWeaponHandoff;
+        private OwnWeaponSeatModifier _ownWeapon;
+        private VehicleSeatFiring _firing;
+        private Weapon _seatWeapon;
+
+        public event Action<Weapon> SeatWeaponChanged;
 
         public PlayerController Mover => _mover;
 
@@ -71,6 +76,12 @@ namespace Fps.Runtime
         public Vehicle Vehicle => _seat != null ? _seat.Vehicle : null;
 
         public bool IsRiding => _seat != null;
+
+        public VehicleSeatFiring Firing => _seat != null ? _firing : VehicleSeatFiring.None;
+
+        public Weapon SeatWeapon => _seat != null ? _seatWeapon : null;
+
+        public OwnWeaponSeatModifier OwnWeaponModifier => _ownWeapon;
 
         /// <summary>今のカメラ。乗っていなければ意味を持たない。</summary>
         public VehicleCameraView CameraView => _camera != null ? _camera.View : VehicleCameraView.Chase;
@@ -490,12 +501,8 @@ namespace Fps.Runtime
             _aim.Acquire();
             _reload.Acquire();
 
-            if (_rig != null && _rig.ViewmodelRoot != null)
-            {
-                _hiddenViewmodel.Hide(_rig.ViewmodelRoot);
-            }
-
             ApplyPose(seat);
+            ApplyFiring(seat);
             _mover.RegisterMovementOverride(this);
             PlaceBody(seat.SitPosition, seat.SitYawDegrees);
             _camera.Begin(seat.CameraView);
@@ -512,6 +519,7 @@ namespace Fps.Runtime
             _seat = to;
             _snapYaw = true;
             ApplyPose(to);
+            ApplyFiring(to);
             PlaceBody(to.SitPosition, to.SitYawDegrees);
             _camera.Begin(to.CameraView);
             _camera.Place(to);
@@ -520,6 +528,7 @@ namespace Fps.Runtime
         void IVehicleRider.OnLeft(VehicleSeat seat, VehicleLeaveReason reason, Vector3 feetPosition, Quaternion rotation)
         {
             _seat = null;
+            ClearFiring();
             if (_mover == null)
             {
                 return;
@@ -587,6 +596,72 @@ namespace Fps.Runtime
 
         void IMovementOverride.End(PlayerController mover)
         {
+        }
+
+        bool IHandedOffTrigger.TryReadTrigger(out bool isPressed, out bool wasPressedThisFrame, out bool reloadPressed)
+        {
+            isPressed = false;
+            wasPressedThisFrame = false;
+            reloadPressed = false;
+            if (Firing != VehicleSeatFiring.OwnWeapon)
+            {
+                return false;
+            }
+
+            isPressed = HeldInput.IsHeld(_fire.Action);
+            wasPressedThisFrame = _fire.WasPressedThisFrame();
+            reloadPressed = _reload.WasPressedThisFrame();
+            return true;
+        }
+
+        private void ApplyFiring(VehicleSeat seat)
+        {
+            ClearFiring();
+            _firing = seat.Vehicle != null ? seat.Vehicle.FiringOf(seat) : VehicleSeatFiring.None;
+            if (_firing == VehicleSeatFiring.OwnWeapon && _weapon != null)
+            {
+                _ownWeapon = new OwnWeaponSeatModifier(seat, _weapon.transform);
+                _weapon.AddModifier(_ownWeapon);
+                _weapon.HandedOffTrigger = this;
+            }
+            else if (_rig != null && _rig.ViewmodelRoot != null)
+            {
+                _hiddenViewmodel.Hide(_rig.ViewmodelRoot);
+            }
+
+            if (_firing == VehicleSeatFiring.VehicleWeapon)
+            {
+                var mounts = seat.Vehicle.WeaponMountsOf(seat.Index);
+                _seatWeapon = mounts.Count > 0 ? mounts[0].Weapon : null;
+            }
+
+            Debug.Log(VehicleLog.Firing(seat.Vehicle != null ? seat.Vehicle.name : "-", RiderName, seat.Index, _firing), this);
+            if (_seatWeapon != null)
+            {
+                SeatWeaponChanged?.Invoke(_seatWeapon);
+            }
+        }
+
+        private void ClearFiring()
+        {
+            var hadSeatWeapon = _seatWeapon != null;
+            if (_ownWeapon != null && _weapon != null)
+            {
+                _weapon.RemoveModifier(_ownWeapon);
+                if (ReferenceEquals(_weapon.HandedOffTrigger, this))
+                {
+                    _weapon.HandedOffTrigger = null;
+                }
+            }
+
+            _ownWeapon = null;
+            _seatWeapon = null;
+            _firing = VehicleSeatFiring.None;
+            _hiddenViewmodel.Restore();
+            if (hadSeatWeapon)
+            {
+                SeatWeaponChanged?.Invoke(null);
+            }
         }
 
         private void ApplyPose(VehicleSeat seat)

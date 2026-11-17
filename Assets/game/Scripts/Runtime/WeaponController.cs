@@ -316,6 +316,8 @@ namespace Fps.Runtime
         /// </summary>
         public ControlHandoff Handoff { get; set; }
 
+        public IHandedOffTrigger HandedOffTrigger { get; set; }
+
         /// <summary><see cref="Handoff"/> を誰かが引き取っていて、入力を読まないか。</summary>
         public bool IsInputHandedOff => Handoff != null && Handoff.IsHandedOff;
 
@@ -366,6 +368,17 @@ namespace Fps.Runtime
             if (_unarmed || IsInputHandedOff)
             {
                 Tick(Time.deltaTime);
+                if (!_unarmed && HandedOffTrigger != null
+                    && HandedOffTrigger.TryReadTrigger(out var isPressed, out var wasPressed, out var reloadPressed))
+                {
+                    if (reloadPressed)
+                    {
+                        PressReload();
+                    }
+
+                    PullTrigger(isPressed, wasPressed);
+                    return;
+                }
 
                 // 乗り物やテイクダウンは武器をしまわず入力だけ手放すので、押したままの溜めが戻った時に離した扱いで撃たれないよう捨てる。
                 _trigger.Drop();

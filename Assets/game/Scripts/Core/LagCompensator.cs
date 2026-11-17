@@ -5,8 +5,8 @@ using System.Numerics;
 namespace Shooter.Core
 {
     /// <summary>
-    /// ラグ補償用に、エンティティ ID ごとの位置としゃがみの履歴を持つ。
-    /// サーバーは毎 tick 位置 (としゃがみ) を記録し、撃った側のクライアントが見ていた時点まで巻き戻した位置と姿勢で当たり判定をする。
+    /// ラグ補償用に、エンティティ ID ごとの位置・しゃがみ・リーンの傾きの履歴を持つ。
+    /// サーバーは毎 tick 位置 (としゃがみ・傾き) を記録し、撃った側のクライアントが見ていた時点まで巻き戻した位置と姿勢で当たり判定をする。
     /// </summary>
     public sealed class LagCompensator
     {
@@ -43,20 +43,34 @@ namespace Shooter.Core
         /// <summary>entityId の tick 時点の位置を記録する。初めての ID なら履歴を作る。</summary>
         public void Record(int tick, int entityId, Vector3 position)
         {
+            Record(tick, entityId, position, Vector3.Zero);
+        }
+
+        private void Record(int tick, int entityId, Vector3 position, Vector3 lean)
+        {
             if (!_histories.TryGetValue(entityId, out var history))
             {
                 history = new HitboxHistory(HistoryCapacity);
                 _histories.Add(entityId, history);
             }
 
-            history.Record(tick, position);
+            history.Record(tick, position, lean);
         }
 
-        /// <summary>entityId の tick 時点の位置としゃがみを記録する。初めての ID なら履歴を作る。</summary>
+        /// <summary>entityId の tick 時点の位置としゃがみを、傾けていないものとして記録する。初めての ID なら履歴を作る。</summary>
         public void Record(int tick, int entityId, Vector3 position, bool crouched)
         {
+            Record(tick, entityId, position, crouched, Vector3.Zero);
+        }
+
+        /// <summary>
+        /// entityId の tick 時点の位置・しゃがみ・リーンの傾き (<see cref="LeanStep.EyeOffset(float, float, MotorSpec)"/> の目の横のずれ) を記録する。
+        /// 初めての ID なら履歴を作る。
+        /// </summary>
+        public void Record(int tick, int entityId, Vector3 position, bool crouched, Vector3 lean)
+        {
             // 位置の履歴が古い tick を拒んだときに姿勢だけ記録されないよう、位置を先に記録する
-            Record(tick, entityId, position);
+            Record(tick, entityId, position, lean);
 
             if (!_stances.TryGetValue(entityId, out var stance))
             {
@@ -112,6 +126,24 @@ namespace Shooter.Core
                 if (pair.Value.TrySample(tick, out var crouched))
                 {
                     result.Add(pair.Key, crouched);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// tick 時点のリーンの傾き (目の横のずれ) を、その時点で位置が取れたエンティティだけ返す。傾きを付けずに記録した tick は zero。
+        /// 前後の記録の間は位置と同じく補間する。巻き戻し幅の上限はかけないので、<see cref="ClampTick"/> で丸めた tick を渡す。
+        /// </summary>
+        public IReadOnlyDictionary<int, Vector3> RewindLean(float tick)
+        {
+            var result = new Dictionary<int, Vector3>();
+            foreach (var pair in _histories)
+            {
+                if (pair.Value.TrySample(tick, out _, out var lean))
+                {
+                    result.Add(pair.Key, lean);
                 }
             }
 

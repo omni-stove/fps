@@ -634,6 +634,12 @@ namespace Shooter.NetV2.Tests
 
             public event Action<string> LoggedOut;
 
+            public event Action<string, string> MemberAttributesChanged
+            {
+                add { }
+                remove { }
+            }
+
             public int Logins { get; private set; }
 
             public int Writes { get; private set; }

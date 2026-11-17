@@ -36,9 +36,9 @@ namespace Shooter.NetV2
         void LeaveLobby(string lobbyId, Action<string> done);
 
         /// <summary>入っているロビーの今の中身を写す。読めなければ null と理由。</summary>
-        LobbyInfo CopyLobby(string lobbyId, out string error);
+        LobbyInfo CopyLobby(string lobbyId, out string reason);
 
         /// <summary>入っているロビーのメンバー <paramref name="userId"/> の属性を写す。読めなければ null と理由。</summary>
-        IReadOnlyList<LobbyAttribute> CopyMemberAttributes(string lobbyId, string userId, out string error);
+        IReadOnlyList<LobbyAttribute> CopyMemberAttributes(string lobbyId, string userId, out string reason);
     }
 }

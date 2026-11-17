@@ -263,14 +263,38 @@ namespace Shooter.NetV2
             }
 
             ThrowIfDisposed();
-            var attributes = _api.CopyMemberAttributes(lobbyId, userId, out var error);
-            if (error != null)
+            var attributes = _api.CopyMemberAttributes(lobbyId, userId, out var reason);
+            if (reason != null)
             {
-                done(null, error);
+                done(null, reason);
                 return;
             }
 
             done(attributes ?? Array.Empty<LobbyAttribute>(), null);
+        }
+
+        /// <summary><see cref="ILobbyBackend.ReadMemberLobby"/>。</summary>
+        public void Read(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                throw new ArgumentException("a lobby id is required", nameof(lobbyId));
+            }
+
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            ThrowIfDisposed();
+            var lobby = _api.CopyLobby(lobbyId, out var reason);
+            if (reason != null || lobby == null)
+            {
+                done(null, reason ?? LobbyBackendErrors.NotFound);
+                return;
+            }
+
+            done(lobby, null);
         }
 
         /// <summary>

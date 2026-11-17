@@ -1,0 +1,67 @@
+{
+  "id": "06f2938c-846f-460a-a51a-de952f74c962",
+  "nameKey": "weapon.real.boltRifle762",
+  "description": "Battlefield 6 の SV-98 (実銃は SV-98) を参考。80@0m→62.5@125m・37.7 RPM・11 発 (薬室の 1 発込み)・弾速 680 m/s。頭は BF の 1.34 倍ではなくキットの 2 倍。BF6 は 0 m で 80、一定の距離帯でだけ 100 になるが、キットでは距離で上がるダメージを表せないので 80 から始めた。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 90,
+  "weight": 6.2,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.59,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 11,
+    "reserveAmmo": 33,
+    "reloadSeconds": 2.98,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 1000,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 680,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 1.47,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 80,
+    "falloff": {
+      "startDistance": 125,
+      "endDistance": 126,
+      "minMultiplier": 0.78
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3.35,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0.84,
+    "recoilPitchDegrees": 1.25,
+    "recoilYawDegrees": 0.22,
+    "recoilRecoveryPerSecond": 17.5,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [21.79, 8.26],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

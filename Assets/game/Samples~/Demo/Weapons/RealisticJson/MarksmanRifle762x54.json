@@ -1,0 +1,58 @@
+{
+  "id": "c1f6ce08-79a8-4d20-a16a-6eb6cee0256d",
+  "nameKey": "weapon.real.marksmanRifle762x54",
+  "description": "Battlefield 6 の SVDM (実銃は ドラグノフ SVD) を参考。40@0m→37.5@21m→33.4@75m・300 RPM・11 発 (薬室の 1 発込み)・弾速 760 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 50,
+  "weight": 4.3,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 11,
+    "reserveAmmo": 132,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 600,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 760,
+      "gravityMultiplier": 1,
+      "lifetimeSeconds": 0.79,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 40,
+    "falloff": {
+      "startDistance": 21,
+      "endDistance": 75,
+      "minMultiplier": 0.83
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 3.35,
+    "adsSpreadDegrees": 0.05,
+    "moveSpreadDegrees": 0.84,
+    "recoilPitchDegrees": 1.47,
+    "recoilYawDegrees": 0.78,
+    "recoilRecoveryPerSecond": 4,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [16.43],
+    "swayDegrees": 0
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "id": "07895118-2fb7-4b50-aa16-8f8afef0fc79",
+  "nameKey": "weapon.ref.battleRifle",
+  "description": "Valorant の Guardian (実銃は M14 / Mk14 EBR 風) を参考。体 65・毎秒 5.25 発・12 発のセミオートで、距離で減らない。1.5 倍の照準。",
+  "category": "MarksmanRifle",
+  "shotNoiseRadius": 50,
+  "weight": 4.5,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.1905
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 12,
+    "reserveAmmo": 36,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 150,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 65,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.2,
+    "moveSpreadDegrees": 4,
+    "recoilPitchDegrees": 1.5,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [42.1],
+    "swayDegrees": 0
+  }
+}

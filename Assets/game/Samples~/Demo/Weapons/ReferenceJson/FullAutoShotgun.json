@@ -1,0 +1,52 @@
+{
+  "id": "9b4f8184-b97e-4bbd-bd01-ea55ff3a229f",
+  "nameKey": "weapon.ref.fullAutoShotgun",
+  "description": "Valorant の Judge (実銃は AA-12) を参考。17 × 12 粒のフルオートで毎秒 3.5 発・5 発。10 m から減り始め、15 m で 7 (0.41 倍)。マガジンごと替える。",
+  "category": "Shotgun",
+  "shotNoiseRadius": 60,
+  "weight": 5.2,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.2857
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 5,
+    "reserveAmmo": 15,
+    "reloadSeconds": 2.2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 40,
+    "pelletCount": 12,
+    "pelletSpreadDegrees": 5,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 17,
+    "falloff": {
+      "startDistance": 10,
+      "endDistance": 15,
+      "minMultiplier": 0.41
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.5,
+    "adsSpreadDegrees": 0.5,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 2.5,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

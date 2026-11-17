@@ -45,6 +45,20 @@ namespace Fps.Tests.EditMode
             AssertSameSpec(Load("Launcher").ToSpec(), WeaponAssetBuilder.LauncherSpec());
         }
 
+        [TestCase("ReferenceJson")]
+        [TestCase("RealisticJson")]
+        public void ImportingTheReferenceWeaponsKeepsWhatEachIsModelledOn(string folder)
+        {
+            var imported = WeaponJsonImporter.ImportFrom(DemoSample.Root + "/Weapons/" + folder, _folder, null);
+
+            Assert.That(imported.Count, Is.EqualTo(32));
+            foreach (var definition in imported)
+            {
+                Assert.That(definition.Description, Is.Not.Empty, definition.name);
+                Assert.That(definition.ToSpec().Description, Is.EqualTo(definition.Description), definition.name);
+            }
+        }
+
         [Test]
         public void TheChargeRifleSampleChargesBeforeItFires()
         {

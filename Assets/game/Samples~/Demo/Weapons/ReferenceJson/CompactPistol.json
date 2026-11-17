@@ -1,0 +1,52 @@
+{
+  "id": "343b6024-75f2-4d68-8ac6-d31fad86aa47",
+  "nameKey": "weapon.ref.compactPistol",
+  "description": "CS2 の Glock-18 (実銃は Glock 18) を参考。体 30・0.15 秒に 1 発・20 発。CS2 の 3 点バーストは入れていない。RangeModifier 0.85 を 50 m で 0.53 倍に置き換えた。移動の倍率は 240/250。",
+  "category": "Handgun",
+  "shotNoiseRadius": 50,
+  "weight": 0.62,
+  "moveSpeedMultiplier": 0.96,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.15
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 20,
+    "reserveAmmo": 60,
+    "reloadSeconds": 2.27,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 60,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 30,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.53
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 2,
+    "adsSpreadDegrees": 0.6,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 1.2,
+    "recoilYawDegrees": 0.3,
+    "recoilRecoveryPerSecond": 15,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 5,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "7f8258fd-a401-403b-93d2-60a22a69cb0b",
+  "nameKey": "weapon.ref.pumpShotgun",
+  "description": "CS2 の Nova (実銃は Benelli Nova) を参考。26 × 9 粒のポンプ式で 0.88 秒に 1 発、1 発ずつ込める。RangeModifier 0.7 を 50 m で 0.25 倍に置き換えた。移動の倍率は 220/250。",
+  "category": "Shotgun",
+  "shotNoiseRadius": 60,
+  "weight": 3.6,
+  "moveSpeedMultiplier": 0.88,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 0.88,
+      "leavesAds": false
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 8,
+    "reserveAmmo": 32,
+    "reloadSeconds": 2.5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "PerRound",
+    "reloadSecondsPerRound": 0.47
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 50,
+    "pelletCount": 9,
+    "pelletSpreadDegrees": 4,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 26,
+    "falloff": {
+      "startDistance": 0,
+      "endDistance": 50,
+      "minMultiplier": 0.25
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 1.5,
+    "adsSpreadDegrees": 0.5,
+    "moveSpreadDegrees": 2,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [55],
+    "swayDegrees": 0
+  }
+}

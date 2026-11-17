@@ -1,0 +1,61 @@
+{
+  "id": "148acbfc-9d35-4c65-96fc-36bea468eaa4",
+  "nameKey": "weapon.real.shoulderFiredRocket",
+  "description": "Battlefield 4 の RPG-7V2 (実銃は RPG-7) を参考。歩兵には爆発 112・半径 4 m。BF4 では 30 m/s で出て 80 m/s まで加速するが、キットは一定の速さなので 60 m/s にした。0.5 秒までの不発は入れていない。",
+  "category": "Launcher",
+  "shotNoiseRadius": 50,
+  "weight": 7,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.8
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 5,
+    "reloadSeconds": 4.8,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Projectile",
+    "range": 200,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0,
+    "projectile": {
+      "speed": 60,
+      "gravityMultiplier": 0.25,
+      "lifetimeSeconds": 5,
+      "onWorldHit": "Stop"
+    }
+  },
+  "impact": {
+    "damage": 0,
+    "falloff": "None",
+    "structureRadius": 0,
+    "explosion": {
+      "maxDamage": 112,
+      "radius": 4,
+      "fullDamageRadius": 0.35,
+      "structureDamageAtCenter": 100,
+      "detonation": "OnImpact"
+    }
+  },
+  "aim": {
+    "hipSpreadDegrees": 1,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 3,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 1,
+    "recoilRecoveryPerSecond": 10,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [42.1],
+    "swayDegrees": 0
+  }
+}

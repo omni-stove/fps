@@ -11,6 +11,7 @@ namespace Fps.Core
 
         public const string IdItem = "id";
         public const string NameKeyItem = "nameKey";
+        public const string DescriptionItem = "description";
         public const string CategoryItem = "category";
         public const string ShotNoiseRadiusItem = "shotNoiseRadius";
         public const string WeightItem = "weight";
@@ -156,7 +157,7 @@ namespace Fps.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
+                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -278,7 +279,8 @@ namespace Fps.Core
                     ammoTypes,
                     fields.ReadFloat(ShotNoiseRadiusItem, WeaponSpec.DefaultShotNoiseRadius),
                     fields.ReadFloat(WeightItem, WeaponSpec.DefaultWeight),
-                    fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier));
+                    fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier),
+                    fields.ReadString(DescriptionItem, string.Empty));
             }
             catch (ArgumentException e)
             {
@@ -290,6 +292,12 @@ namespace Fps.Core
         {
             writer.String(IdItem, spec.Id);
             writer.String(NameKeyItem, spec.NameKey);
+            // メモの無い武器の JSON を、メモを足す前と同じ文字列のまま書き戻す。
+            if (spec.Description.Length > 0)
+            {
+                writer.String(DescriptionItem, spec.Description);
+            }
+
             writer.Enum(CategoryItem, spec.Category);
             writer.Float(ShotNoiseRadiusItem, spec.ShotNoiseRadius);
             writer.Float(WeightItem, spec.Weight);

@@ -1,0 +1,57 @@
+{
+  "id": "4b42f966-c0b8-430c-99aa-a6544cc97431",
+  "nameKey": "weapon.ref.rampingLmg",
+  "description": "Valorant の Odin (実銃は PKM / Negev のようなベルト給弾機関銃) を参考。体 38・100 発で、撃ち続けると毎秒 12 発から 15.6 発に上がる。Valorant は覗いたときに上がるが、キットでは撃ち続けて上げる。30 m から 31 に減る。",
+  "category": "LightMachineGun",
+  "shotNoiseRadius": 60,
+  "weight": 7.5,
+  "moveSpeedMultiplier": 0.9,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.0641,
+    "spinUp": {
+      "spinUpSeconds": 1,
+      "startIntervalMultiplier": 1.3,
+      "spinDownSeconds": 0.5
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 100,
+    "reserveAmmo": 200,
+    "reloadSeconds": 5,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 120,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 38,
+    "falloff": {
+      "startDistance": 30,
+      "endDistance": 31,
+      "minMultiplier": 0.82
+    },
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 4,
+    "adsSpreadDegrees": 0.8,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 0.45,
+    "recoilYawDegrees": 0.35,
+    "recoilRecoveryPerSecond": 8,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 10,
+    "zoomLevels": [53.32],
+    "swayDegrees": 0
+  }
+}

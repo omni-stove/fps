@@ -1,0 +1,57 @@
+{
+  "id": "99dae863-8e9c-4cb7-9b8d-6dbfbf66beef",
+  "nameKey": "weapon.ref.heavySniper",
+  "description": "Valorant の Operator (実銃は L115A3 / M200 のような大口径ボルト式) を参考。体 150・毎秒 0.6 発・5 発で、2.5 倍と 5 倍のスコープ。",
+  "category": "SniperRifle",
+  "shotNoiseRadius": 90,
+  "weight": 6.5,
+  "moveSpeedMultiplier": 0.9,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.2,
+    "cycle": {
+      "cycleSeconds": 1.667,
+      "leavesAds": true
+    }
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 5,
+    "reserveAmmo": 10,
+    "reloadSeconds": 3.7,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.6,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 300,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 150,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 6,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 5,
+    "recoilPitchDegrees": 4,
+    "recoilYawDegrees": 0.6,
+    "recoilRecoveryPerSecond": 20,
+    "recoilRecoveryDelaySeconds": 0.2,
+    "blindFireSpreadDegrees": 15,
+    "zoomLevels": [26.01, 13.17],
+    "breathHold": {
+      "maxHoldSeconds": 4,
+      "recoverSeconds": 3,
+      "swayMultiplier": 0.1
+    },
+    "swayDegrees": 0.6
+  }
+}

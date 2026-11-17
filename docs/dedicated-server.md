@@ -498,7 +498,10 @@ dotnet run --project dotnet/Shooter.Server/Shooter.Server.csproj -- -mode server
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
 - 水の場所は `server-data/maps/<マップ名>.water.json` (`make export-server-data` がシーンの有効な `Water` の軸にそろった箱と水面の高さを書き出す) から読む。
   ファイルが無いマップは水が無いものとして動く。起動時の `[Server] map ...` の `water=` が読んだ数。次の試合でマップを替えると、新しいマップの水で泳ぐ。
+  クライアントの予測も同じファイルを読む (`[Net] map collision ...` の `water=`)。
   入力の `LeanLeft`・`LeanRight` のビットで傾け (両方なら傾けない)、スナップショットの人の欄に傾き・泳いでいるか・壁走りの側・使った空中のジャンプの回数を載せる。
+  クライアントは自分の予測をこれらと照らし合わせ、水面・息・壁の向きなど欄に無いものは同じ tick の予測と水から埋める。
+  他の人の体は、オフラインと同じく傾き (`leanAngleDegrees`)・泳ぎ・壁走りの側で足元を軸に傾けて見せる。
   傾く向きが替わる・泳ぎ始める/やめる・潜る/顔を出す・壁を走り始める/離れる・空中で跳ぶたびに
   `[Net] lean owner=.. tick=.. side=left|right|none`・`[Net] swim ... swimming=..`・`[Net] swim ... underwater=..`・`[Net] wallrun ... running=.. side=..`・`[Net] airjump ... used=..` を出す。
   潜ったまま息 (`swimBreathSeconds`) が切れると `[Net] swim ... outOfBreath=..` を出し、撃った人のいないダメージとしてルールに通して `[Net] drown owner=.. tick=.. damage=.. outcome=..` を出す。

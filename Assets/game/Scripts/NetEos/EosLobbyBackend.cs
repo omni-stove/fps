@@ -20,6 +20,7 @@ namespace Shooter.NetEos
     /// <remarks>
     /// Connect の認証の期限が近づいたら Device ID でログインし直し、ログインが切れたら <see cref="LoggedOut"/> で知らせる。
     /// プラットフォームが解放された後 (終了時) は SDK を呼ばず、失敗として返す。
+    /// メンバー用ロビーと試合のロビーに入る口はまだ無く、<see cref="LobbyBackendErrors.NotSupported"/> で失敗として返す。
     /// </remarks>
     internal sealed class EosLobbyBackend : ILobbyBackend
     {
@@ -175,6 +176,43 @@ namespace Shooter.NetEos
                     search.Release();
                 }
             });
+        }
+
+        public void CreateMemberLobby(
+            string bucketId, int maxMembers, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void LeaveMemberLobby(string lobbyId, Action<string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void SetMemberAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void ReadMemberAttributes(
+            string lobbyId, string userId, Action<IReadOnlyList<Shooter.Core.LobbyAttribute>, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void LeaveMatchLobby(string lobbyId, Action<string> done)
+        {
+            RejectUnsupported(done);
         }
 
         public void Dispose()
@@ -443,6 +481,29 @@ namespace Shooter.NetEos
 
             error = null;
             return true;
+        }
+
+        private void RejectUnsupported<T>(Action<T, string> done)
+            where T : class
+        {
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            ThrowIfDisposed();
+            done(null, LobbyBackendErrors.NotSupported);
+        }
+
+        private void RejectUnsupported(Action<string> done)
+        {
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            ThrowIfDisposed();
+            done(LobbyBackendErrors.NotSupported);
         }
 
         private void ThrowIfDisposed()

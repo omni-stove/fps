@@ -118,6 +118,23 @@ namespace Shooter.Core
             return found;
         }
 
+        /// <summary>非公開の試合か (<see cref="ServerLobby.PrivateKey"/> が 0 以外の整数)。属性が無ければ公開とみなして false。</summary>
+        public bool IsPrivate => TryGetNumber(ServerLobby.PrivateKey, out var value) && value != 0;
+
+        /// <summary>参加コード (<see cref="ServerLobby.JoinCodeKey"/>)。無ければ null。</summary>
+        public string JoinCode => TryGetText(ServerLobby.JoinCodeKey, out var value) ? value : null;
+
+        /// <summary>
+        /// 試合にいるプレイヤーの実力の平均 (<see cref="ServerLobby.SkillAverageKey"/>)。無い、または int に収まらなければ null。
+        /// </summary>
+        public int? SkillAverage =>
+            TryGetNumber(ServerLobby.SkillAverageKey, out var value) && value >= int.MinValue && value <= int.MaxValue
+                ? (int)value
+                : (int?)null;
+
+        /// <summary>ボイスチャットが使えるか (<see cref="ServerLobby.VoiceEnabledKey"/> が 0 以外の整数)。属性が無ければ false。</summary>
+        public bool VoiceEnabled => TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
+
         /// <summary><paramref name="userId"/> がオーナーか。ID の大文字・小文字は区別しない。</summary>
         public bool IsOwnedBy(string userId)
         {

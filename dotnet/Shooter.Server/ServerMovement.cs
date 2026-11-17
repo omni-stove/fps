@@ -354,7 +354,7 @@ namespace Shooter.Server
                 row.Ladder = state.Ladder;
                 row.Lean = state.Lean.Amount;
                 row.Swimming = state.Swim.IsSwimming;
-                row.WallRunSide = state.WallRun.Side;
+                row.WallRunSide = (Shooter.Protocol.WallRunSide)(byte)state.WallRun.Side;
                 row.AirJumpsUsed = (byte)Math.Min(byte.MaxValue, state.AirJumpsUsed);
             }
 

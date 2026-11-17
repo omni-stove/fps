@@ -4,12 +4,8 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// バトルロイヤル (<see cref="BattleRoyaleSession"/>) の分隊の数と人数・制限時間・bot の用事を決め直す間隔と探す半径・パラシュートで降ろす高さをアセットとして持つ。
-    /// 新しく作ったときの値は <see cref="BattleRoyaleRunner"/> の既定値と同じ。味方を起こせる距離と秒数はルール (<see cref="ActionRules"/>) にあるので持たない。
-    /// 武器を手放させるか・縮むエリア・地面と上空のどちらから始めるかはシーンの組み方なので Runner の側に置く。
-    /// <see cref="BattleRoyaleRunner.Definition"/> に配線するか入口 (<see cref="GameContent.BattleRoyale"/>) に置くと、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
+    // 味方を起こせる距離と秒数はルール (ActionRules) にあるので持たない。
+    // 武器を手放させるか・縮むエリア・地面と上空のどちらから始めるかはシーンの組み方なので Runner の側に置く。
     [CreateAssetMenu(fileName = "BattleRoyale", menuName = "Shooter/Modes/Battle Royale")]
     public sealed class BattleRoyaleDefinition : ScriptableObject
     {
@@ -43,7 +39,6 @@ namespace Shooter.Runtime
             set => _squadSize = value;
         }
 
-        /// <summary>制限時間 (秒)。0 なら制限なし。</summary>
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
@@ -68,9 +63,6 @@ namespace Shooter.Runtime
             set => _dropHeight = value;
         }
 
-        /// <summary>この定義の値と actions でバトルロイヤル (<see cref="BattleRoyaleRunner.CreateBattleRoyale"/>) を組む。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="ArgumentNullException">actions が null。</exception>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public BattleRoyaleSession CreateBattleRoyale(ActionRules actions)
         {
             if (actions == null)

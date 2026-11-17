@@ -3,13 +3,10 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>ストリークの報酬 (<see cref="UavReward"/>・<see cref="AirstrikeReward"/>) の <c>[Streak]</c> 付きログの文言。</summary>
     public static class StreakRewardLog
     {
         public const string Tag = "[Streak]";
 
-        /// <summary>UAV を使い、敵に印を付けた。</summary>
-        /// <example><c>[Streak] uav user=Player marked=3 seconds=30.00</c></example>
         public static string Uav(string user, int marked, float seconds)
         {
             return string.Format(
@@ -21,8 +18,6 @@ namespace Shooter.Runtime
                 seconds);
         }
 
-        /// <summary>空爆を呼んだ。</summary>
-        /// <example><c>[Streak] airstrike called user=Player at=(1.0, 0.0, 20.0) strikes=5 interval=0.40 spread=6.0</c></example>
         public static string AirstrikeCalled(string user, Vector3 center, int strikes, float intervalSeconds, float spreadRadius)
         {
             return string.Format(
@@ -38,8 +33,6 @@ namespace Shooter.Runtime
                 spreadRadius);
         }
 
-        /// <summary>空爆の 1 発が爆発した。strike は 1 から数える。</summary>
-        /// <example><c>[Streak] airstrike strike=2/5 user=Player at=(2.3, 0.1, 18.7) damaged=1 killed=1</c></example>
         public static string AirstrikeStrike(string user, int strike, int strikes, GrenadeExplosion result)
         {
             var c = result.Center;

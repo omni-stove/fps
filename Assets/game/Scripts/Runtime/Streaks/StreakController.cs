@@ -5,18 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーに付けるストリークの部品。倒れずに倒した数を <see cref="StreakTracker"/> で数え、得た報酬を UseStreak の入力で使う。
-    /// <list type="bullet">
-    /// <item><see cref="CombatEvents.Killed"/> のうち、倒した者がこの GameObject (<see cref="CombatEvents.OfflineId"/>) で、自滅でも味方殺しでもないものを数える。
-    /// 自分が倒れている間に入った分 (飛んでいる空爆など) は、倒れずに倒した数ではないので数えない。</item>
-    /// <item>同じ GameObject の <see cref="Damageable"/> が倒れたら数を 0 に戻す。得て使っていない報酬は残る。</item>
-    /// <item>UseStreak の入力 (<see cref="PlayerActionReader.PressedCommands"/> の <see cref="PlayerCommands.UseStreak"/>) で、一番先に得た報酬を
-    /// <see cref="UavReward"/> か <see cref="AirstrikeReward"/> で使う (<see cref="TryUse"/>)。</item>
-    /// <item>状態が変わるたびに <see cref="GameSignals.Streak"/> に出し、無効になるか破棄されたら自分の出した値だけを消す。</item>
-    /// </list>
-    /// 値は Play 中に生まれたとき、先に <see cref="Configure"/> で渡されていなければ調整値の JSON (<see cref="Tuning"/>) から読む。
-    /// </summary>
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(110)]
@@ -30,33 +18,19 @@ namespace Shooter.Runtime
         private bool _subscribed;
         private StreakStatus? _published;
 
-        /// <summary>
-        /// 調整値の JSON (入口の <see cref="GameContent.StreaksTuning"/>、空なら <c>Resources/Tuning/streaks</c>) の値。
-        /// 無いか読めなければ <see cref="StreakSpec.Default"/>。
-        /// </summary>
         public static StreakSpec Tuning => KitTuning.Load(c => c.StreaksTuning, StreakJson.ResourcePath, StreakJson.Parse, StreakSpec.Default);
 
-        /// <summary>今の値。<see cref="Configure"/> の前は null。</summary>
         public StreakSpec Spec => _tracker?.Spec;
 
         public bool IsConfigured => _tracker != null;
 
-        /// <summary>今の状態。<see cref="Configure"/> の前は null。</summary>
         public StreakStatus? Status => _tracker?.Status;
 
-        /// <summary>今使える報酬の Id。得た順。</summary>
         public IReadOnlyList<string> ReadyRewardIds => _tracker != null ? _tracker.ReadyRewardIds : (IReadOnlyList<string>)Array.Empty<string>();
 
-        /// <summary>空爆の着弾点を選ぶ乱数。null なら使うたびに新しく作る。テストが種を決めて差し込む。</summary>
         public System.Random Random { get; set; }
 
-        /// <summary>
-        /// rules の <see cref="GameRules.Streaks"/> に合わせて player のストリークを付け外しする。
-        /// On なら付けて (無効にしてあれば有効に戻して) 返し、Off なら付いているものを無効にして null を返す。
-        /// 無効にしても倒した数と得た報酬は捨てないので、On に戻せば続きから数える。
-        /// Play 中に付けると Awake で数え始めて自分の <see cref="Damageable"/> を探すので、Damageable を付けた後に呼ぶ。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">player か rules が null。</exception>
+        // Play 中に付けると Awake で数え始めて自分の Damageable を探すので、Damageable を付けた後に呼ぶ。
         public static StreakController Apply(GameObject player, GameRules rules)
         {
             if (player == null)
@@ -105,11 +79,6 @@ namespace Shooter.Runtime
             return streaks;
         }
 
-        /// <summary>
-        /// spec で数え直す。倒した数も得た報酬もすべて捨て、<c>[Streak] id=... rewards=...</c> をログに出して <see cref="GameSignals.Streak"/> に出す。
-        /// 有効な間 (Edit Mode では呼んだとき) から <see cref="CombatEvents.Killed"/> と自分の <see cref="Damageable.Died"/> を受ける。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null。</exception>
         public void Configure(StreakSpec spec)
         {
             if (spec == null)
@@ -131,11 +100,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 一番先に得た報酬を使う。使ったら true を返し、<c>[Streak] id=... used</c> をログに出して <see cref="GameSignals.Streak"/> を出し直す。
-        /// 何も得ていない・倒れている・報酬を動かす部品 (UAV なら <see cref="PingController"/>) が無いときは、報酬を残したまま
-        /// 理由をログに出して false を返す。空爆の部品 (<see cref="AirstrikeReward"/>) が無ければ足す。
-        /// </summary>
         public bool TryUse()
         {
             if (_tracker == null)
@@ -190,11 +154,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 倒れたことの知らせ 1 件を数える。倒した者が自分で、自滅でも味方殺しでもなく、自分が生きていれば数え、
-        /// <c>[Streak] id=... kill</c> と、報酬を得たら <c>[Streak] id=... earned</c> をログに出す。数えたら true。
-        /// 有効な間は <see cref="CombatEvents.Killed"/> から呼ばれる。
-        /// </summary>
+        // 自分が倒れている間に入った分 (飛んでいる空爆など) は、倒れずに倒した数ではないので数えない。
         public bool HandleKilled(KillFeedEntry entry)
         {
             if (_tracker == null || !IsOwnKill(entry))

@@ -5,18 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ガーディアン (VIP の護衛) をシーンで進める。試合開始時に Alpha と Bravo から 1 人ずつリーダーを選び (<see cref="GuardianMode"/>)、
-    /// リーダーが生きている間は倒れた味方が <see cref="RespawnSeconds"/> 後に戻る。リーダーが倒れたチームは戻れなくなり、全員倒れたら負け。
-    /// 制限時間・リスポーン・キル 1 回の点は、<see cref="Definition"/>、入口 (<see cref="GameContent.Guardian"/>)、Inspector の値の順で読む。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>リーダーの頭上にチームの色の目印 (<see cref="GuardianLeaderMarker"/>) を出し、倒れたら隠す。自分がリーダーのときは自分には出さない (HUD で知らせる)。</item>
-    /// <item>HUD に出すリーダーの生死と、自分がリーダーか・リーダーが倒れて戻れないかは <see cref="GuardianStatus"/> にして渡す。</item>
-    /// <item>リーダーが決まったとき・倒れたときに <c>[Mode] leader</c>・<c>[Mode] leader-down</c> のログ (<see cref="GuardianText"/>) を出す。</item>
-    /// </list>
-    /// </remarks>
+    // 自分がリーダーのときは自分の頭上に目印を出さない。自分には HUD で知らせるため。
     public sealed class GuardianRunner : ModeRunnerBase
     {
         public const float DefaultTimeLimitSeconds = 300f;
@@ -49,14 +38,12 @@ namespace Shooter.Runtime
         private GuardianRespawn _leaders;
         private Transform _markerRoot;
 
-        /// <summary>調整値のアセット。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値で始める。</summary>
         public GuardianDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public GuardianDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.Guardian);
 
         public float TimeLimitSeconds
@@ -71,14 +58,12 @@ namespace Shooter.Runtime
             set => _respawnSeconds = value;
         }
 
-        /// <summary>Inspector のキル 1 回の点。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public int PointsPerKill
         {
             get => _pointsPerKill;
             set => _pointsPerKill = value;
         }
 
-        /// <summary>リーダーを選ぶ乱数の種。負なら Play ごとに変わる。</summary>
         public int LeaderSeed
         {
             get => _leaderSeed;
@@ -91,23 +76,19 @@ namespace Shooter.Runtime
             set => _showLeaderMarkers = value;
         }
 
-        /// <summary>リーダーの頭上の目印の見た目。null なら仮の菱形。これから出す目印から使う。</summary>
         public GameObject LeaderMarkerPrefab
         {
             get => _leaderMarkerPrefab;
             set => _leaderMarkerPrefab = value;
         }
 
-        /// <summary>今のモードのリーダー。モードを組む前は null。</summary>
         public GuardianRespawn Leaders => _leaders;
 
-        /// <summary>playerId のリーダーの頭上の目印。出していなければ null。</summary>
         public GuardianLeaderMarker MarkerOf(int playerId)
         {
             return _markers.TryGetValue(playerId, out var marker) ? marker : null;
         }
 
-        /// <summary>出している目印をすべて消す。Runner を消すと目印も一緒に消える (Runner の子に置く)。</summary>
         public void ClearMarkers()
         {
             foreach (var marker in _markers.Values)
@@ -121,9 +102,6 @@ namespace Shooter.Runtime
             _markers.Clear();
         }
 
-        /// <summary>
-        /// このモードを組んで、シーンを探さずに members で始める (<see cref="ModeRunnerBase.Begin"/>)。Edit Mode のテストとスクリプトから使う。
-        /// </summary>
         public void BeginGuardian(
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,

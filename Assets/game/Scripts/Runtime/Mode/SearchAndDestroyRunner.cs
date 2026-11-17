@@ -6,31 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroy"/>) をシーンで進める <see cref="ModeRunnerBase"/> の派生。設置地点 (<see cref="BombSite"/>) と
-    /// 爆弾の見た目 (<see cref="BombObject"/>) は Inspector (シーンの生成スクリプト) で配線する。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item>各ラウンドの待ちに入るとき、参加者を自陣営の出現点 (<see cref="SideSpawnPoint"/>、名前の順) に ID の順で 1 人ずつ並べて体力を満たし、
-    /// 待ちの間は全員の操作と行動を止める。ラウンドが始まったら戻す。陣営の出現点は攻守が替わっても同じ。</item>
-    /// <item>ラウンド中は毎フレーム、生きている参加者の足元から、爆弾を持つ攻撃側が設置地点にいるか・攻撃側が落ちた爆弾の
-    /// <see cref="SearchAndDestroySpec.BombPickupRadius"/> の中にいるか (いれば拾う)・防衛側が設置された爆弾の <see cref="SearchAndDestroySpec.DefuseRadius"/> の中にいるかを調べて
-    /// <see cref="SearchAndDestroy"/> に伝える。プレイヤーは Interact (<see cref="InteractActionPath"/>、キーボードは E) を押している間だけ長押しとみなし、
-    /// bot はその場にいれば長押ししているとみなす。</item>
-    /// <item>bot は、爆弾を持てば設置地点 (ラウンドの番号で A, B, ... を順に選ぶ) へ、爆弾が落ちれば攻撃側がそこへ、設置されれば両陣営がそこへ向かうよう
-    /// 巡回路 (<see cref="EnemyAgent.SetPatrolRoute"/>) を差し替える。ラウンドの頭でシーンの巡回路に戻す。</item>
-    /// <item>HUD には試合と自分のプレイヤーの ID (<see cref="SearchAndDestroyStatus"/>) を <see cref="ModeStatus.Detail"/> で渡し、何をどう出すかは UI が決める。
-    /// ラウンドと爆弾の出来事は <c>[SearchAndDestroy]</c> のログに出す (<see cref="SearchAndDestroyText"/>)。</item>
-    /// <item>どちらかが先取数に届いたら試合を終える (<see cref="ModeRunnerBase.EndMatch"/>)。R で読み直して最初から。</item>
-    /// </list>
-    /// </remarks>
     public sealed class SearchAndDestroyRunner : ModeRunnerBase
     {
-        /// <summary>設置と解除の長押しに使うアクション。<see cref="InteractObjective"/> と同じ。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
-        /// <summary>落ちた爆弾・設置された爆弾のそばにいるとみなす上下の差 (m)。段差の上下で拾ったり解除したりしないように。</summary>
+        // 段差の上下で爆弾を拾ったり解除したりしないよう、上下の差も見る。
         public const float ReachHeight = 2f;
 
         [Header("Rules")]
@@ -81,28 +61,21 @@ namespace Shooter.Runtime
         private Vector3 _bombGround;
         private bool _hasBombGround;
 
-        /// <summary>進めている試合。開始前や開始に失敗したときは null。</summary>
         public SearchAndDestroy Game => _game;
 
-        /// <summary>
-        /// 落ちているか設置された爆弾の足元。持たれているときと、持ち主のいないまま始まったときは null。
-        /// </summary>
         public Vector3? BombGround => _hasBombGround ? _bombGround : (Vector3?)null;
 
-        /// <summary>プレイヤーが Interact を押していなくても長押ししていることにする (Edit Mode のテストと自動の確認用)。</summary>
+        // Edit Mode のテストと自動の確認で、プレイヤーが Interact を押さなくても長押ししたことにするため。
         public bool SimulatedHold { get; set; }
 
-        /// <summary>設置と解除に使う Interact アクション。解決できなければ null (プレイヤーは設置も解除もできない)。</summary>
         public InputAction InteractAction => _interactAction;
 
-        /// <summary>調整値のアセット。null なら Inspector の値 (既定は <see cref="SearchAndDestroySpec"/> の既定値) で始める。</summary>
         public SearchAndDestroyDefinition Definition
         {
             get => _definition;
             set => _definition = value;
         }
 
-        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
         public SearchAndDestroyDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.SearchAndDestroy);
 
         public float RoundSeconds
@@ -159,7 +132,6 @@ namespace Shooter.Runtime
             set => _defuseRadius = value;
         }
 
-        /// <summary>配線した設置地点 (配線した順)。</summary>
         public IReadOnlyList<BombSite> Sites => _sites ?? Array.Empty<BombSite>();
 
         public BombObject Bomb
@@ -176,7 +148,6 @@ namespace Shooter.Runtime
             return null;
         }
 
-        /// <summary>設置地点を配線する。番号は 0 から抜けなく 1 つずつであること (始めるときに確かめる)。</summary>
         public void SetSites(IReadOnlyList<BombSite> sites)
         {
             var copy = new BombSite[sites != null ? sites.Count : 0];
@@ -188,10 +159,6 @@ namespace Shooter.Runtime
             _sites = copy;
         }
 
-        /// <summary>
-        /// 地点が siteCount 個の <see cref="SearchAndDestroySpec"/> を、<see cref="Definition"/> があればその値で、無ければ Inspector の値で作る。
-        /// アセットの値が不正なら <see cref="InvalidOperationException"/>、Inspector の値が不正なら <see cref="ArgumentOutOfRangeException"/>。
-        /// </summary>
         public SearchAndDestroySpec CreateSpec(int siteCount)
         {
             var definition = EffectiveDefinition;
@@ -205,9 +172,6 @@ namespace Shooter.Runtime
                 _pickupRadius, _defuseRadius);
         }
 
-        /// <summary>
-        /// sites を番号の順に並べて返す。空・null の要素・番号の抜けや重なり・範囲が不正なものがあれば <see cref="InvalidOperationException"/>。
-        /// </summary>
         public static BombSite[] SortSites(IReadOnlyList<BombSite> sites)
         {
             if (sites == null || sites.Count == 0)
@@ -245,10 +209,6 @@ namespace Shooter.Runtime
             return sorted;
         }
 
-        /// <summary>
-        /// シーンを探さずに、配線した設置地点と members・spawnPoints でこの試合を始める (<see cref="ModeRunnerBase.Begin"/>)。
-        /// 設置地点や設定が不正なら <see cref="InvalidOperationException"/> か <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public void Begin(
             IReadOnlyList<SideMember> members,
             IReadOnlyList<SideSpawnPoint> spawnPoints,
@@ -329,10 +289,6 @@ namespace Shooter.Runtime
             _sortedSites = Array.Empty<BombSite>();
         }
 
-        /// <summary>
-        /// 生きている参加者の位置と長押しから、設置・拾う・解除を <see cref="SearchAndDestroy"/> に伝える。ラウンド中以外は何もしない。
-        /// Play 中は <see cref="ModeRunnerBase.Tick"/> の頭で呼ばれる。
-        /// </summary>
         public void UpdateObjectiveInput()
         {
             if (_game == null || _game.Phase != RoundPhase.Live || _game.Mode.State != GameModeState.Playing)
@@ -378,7 +334,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>ground がどれかの設置地点の中なら、その番号。どこでもなければ null。</summary>
         public int? SiteAt(Vector3 ground)
         {
             foreach (var site in _sortedSites)
@@ -519,7 +474,6 @@ namespace Shooter.Runtime
             ShowBomb();
         }
 
-        /// <summary>陣営ごとに、出現点を名前の順に、参加者を ID の順に組にして並べる。出現点が足りなければ先頭から使い回す。</summary>
         private void PlaceForRound()
         {
             var bySide = new Dictionary<Side, List<SideSpawnPoint>>();

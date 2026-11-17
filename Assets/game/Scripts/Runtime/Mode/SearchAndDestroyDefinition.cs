@@ -4,11 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 爆破 (<see cref="SearchAndDestroy"/>) の調整値をアセットとして持つ。<see cref="ToSpec"/> で <see cref="SearchAndDestroySpec"/> に変換する。
-    /// 設置地点の数はシーンが決めるので持たない。新しく作ったときの値は <see cref="SearchAndDestroySpec"/> の既定値と同じ。
-    /// <see cref="SearchAndDestroyRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
+    // 設置地点の数はシーンが決めるので持たず、ToSpec に渡す。
     [CreateAssetMenu(fileName = "SearchAndDestroy", menuName = "Shooter/Modes/Search And Destroy")]
     public sealed class SearchAndDestroyDefinition : ScriptableObject
     {
@@ -93,8 +89,6 @@ namespace Shooter.Runtime
             set => _defuseRadius = value;
         }
 
-        /// <summary>地点が siteCount 個の <see cref="SearchAndDestroySpec"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値か siteCount が不正なとき。メッセージにアセット名を含む。</exception>
         public SearchAndDestroySpec ToSpec(int siteCount)
         {
             try
@@ -109,7 +103,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の値 (地点の数を除く) をすべて写す。spec は検査済みなので、写した後は必ず <see cref="ToSpec"/> に通る。</summary>
         public void CopyFrom(SearchAndDestroySpec spec)
         {
             if (spec == null)

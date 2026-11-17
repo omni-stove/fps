@@ -118,7 +118,6 @@ namespace Shooter.Runtime
             Tick(Time.deltaTime);
         }
 
-        // 当てたフレームに true を返す。
         public bool Tick(float deltaSeconds)
         {
             EnsureInitialized();

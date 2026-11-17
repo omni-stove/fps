@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キルコンファームド (<see cref="KillConfirmed"/>) の調整値をアセットとして持つ。<see cref="ToSpec"/> で <see cref="KillConfirmedSpec"/> に変換する。
-    /// 新しく作ったときの値は <see cref="KillConfirmedRunner"/> の既定値と同じ。
-    /// <see cref="KillConfirmedRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
     [CreateAssetMenu(fileName = "KillConfirmed", menuName = "Shooter/Modes/Kill Confirmed")]
     public sealed class KillConfirmedDefinition : ScriptableObject
     {
@@ -60,15 +55,12 @@ namespace Shooter.Runtime
             set => _pointsPerConfirm = value;
         }
 
-        /// <summary>タグを拾える範囲の半径 (m)。<see cref="Pickup.MinRadius"/> 未満はタグを落とすときに切り上げる。</summary>
         public float TagPickupRadius
         {
             get => _tagPickupRadius;
             set => _tagPickupRadius = value;
         }
 
-        /// <summary>定義を <see cref="KillConfirmedSpec"/> に変換する。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public KillConfirmedSpec ToSpec()
         {
             try
@@ -82,7 +74,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の値をすべて写す。spec は検査済みなので、写した後は必ず <see cref="ToSpec"/> に通る。</summary>
         public void CopyFrom(KillConfirmedSpec spec)
         {
             if (spec == null)

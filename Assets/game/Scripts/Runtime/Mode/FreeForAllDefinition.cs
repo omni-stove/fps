@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// フリーフォーオール (<see cref="FreeForAllMode"/>) の制限時間・勝利に必要な点・リスポーン・キル 1 回の点をアセットとして持つ。
-    /// 新しく作ったときの値は <see cref="FreeForAllMode"/> の既定値と同じ。
-    /// <see cref="FreeForAllRunner.Definition"/> に配線するか入口 (<see cref="GameContent.FreeForAll"/>) に置くと、
-    /// <see cref="FreeForAllRunner"/> と <see cref="MatchRunner"/> は Inspector の値の代わりにこれを読む。
-    /// </summary>
     [CreateAssetMenu(fileName = "FreeForAll", menuName = "Shooter/Modes/Free For All")]
     public sealed class FreeForAllDefinition : ScriptableObject
     {
@@ -49,8 +43,6 @@ namespace Shooter.Runtime
             set => _pointsPerKill = value;
         }
 
-        /// <summary>この定義の値でモード (<see cref="FreeForAllMode.Create"/>) を組む。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
         public ModeSession CreateSession()
         {
             try

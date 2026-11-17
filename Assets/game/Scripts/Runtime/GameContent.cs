@@ -51,7 +51,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("近接攻撃の調整値の JSON。空なら Resources/Tuning/melee")]
         private TextAsset _meleeTuning;
 
-        [SerializeField, Tooltip("乗り越え・崖のぼりなどの移動の調整値の JSON。空なら Resources/Tuning/traversal")]
+        [SerializeField, Tooltip("スライディング・パラシュート・ジップラインの調整値の JSON。空なら Resources/Tuning/traversal")]
         private TextAsset _traversalTuning;
 
         [SerializeField, Tooltip("隠密の調整値の JSON。空なら Resources/Tuning/stealth")]

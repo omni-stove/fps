@@ -19,7 +19,7 @@ namespace Fps.Runtime
     /// その後はしゃがみの入力どおりで、しゃがみを押したままならしゃがみ、離していれば (頭上が空いていれば) 立つ。</item>
     /// </list>
     /// 始まりと終わりは <c>[Slide] start ..</c> / <c>[Slide] end reason=..</c> でログに出す。滑っている間は <see cref="PlayerActionConditions.Sliding"/> を立てる。
-    /// 調整値は Inspector の値 (既定は <see cref="SlideMotion"/> の Default*) で、<see cref="Configure"/> のたびに読み直す。
+    /// 調整値は <see cref="SlideActionInstaller"/> が <see cref="ApplyTuning"/> で渡す traversal.json の値 (渡さなければ Inspector の値) で、<see cref="Configure"/> のたびに読み直す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class SlideMovement : MonoBehaviour, IMovementOverride
@@ -209,6 +209,22 @@ namespace Fps.Runtime
             _maxSeconds = maxSeconds;
             _slopeAcceleration = slopeAcceleration;
             _motion = motion;
+        }
+
+        public void ApplyTuning(SlideTuning tuning)
+        {
+            if (tuning == null)
+            {
+                throw new ArgumentNullException(nameof(tuning));
+            }
+
+            _startSpeed = tuning.StartSpeed;
+            _deceleration = tuning.Deceleration;
+            _endSpeed = tuning.EndSpeed;
+            _minSeconds = tuning.MinSeconds;
+            _maxSeconds = tuning.MaxSeconds;
+            _slopeAcceleration = tuning.SlopeAcceleration;
+            RebuildMotion();
         }
 
         /// <summary>

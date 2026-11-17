@@ -8,6 +8,10 @@ namespace Shooter.NetV2.Tests
     public sealed class ClientKillFeedTests
     {
         private const string _rifleId = "3a7f5e4d-6b8c-4d9e-9f0a-2b3c4d5e6f70";
+        private static readonly int[] _assisters42 = { 4, 2 };
+        private static readonly int[] _assisters4 = { 4 };
+        private static readonly int[] _assisters98 = { 9, 8 };
+        private static readonly int[] _assisters60 = { 6, 0 };
 
         [Test]
         public void CarriesEveryFieldAndTheAssistersInOrder()
@@ -18,8 +22,8 @@ namespace Shooter.NetV2.Tests
 
             var entry = ClientKillFeed.FromMessage(killed);
 
-            Assert.That(entry, Is.EqualTo(new KillFeedEntry(1, 5, _rifleId, true, false, new[] { 4, 2 })));
-            Assert.That(entry.AssisterIds, Is.EqualTo(new[] { 4, 2 }));
+            Assert.That(entry, Is.EqualTo(new KillFeedEntry(1, 5, _rifleId, true, false, _assisters42)));
+            Assert.That(entry.AssisterIds, Is.EqualTo(_assisters42));
         }
 
         [Test]
@@ -43,8 +47,8 @@ namespace Shooter.NetV2.Tests
             killed.AddAssister(8);
             var second = ClientKillFeed.FromMessage(killed);
 
-            Assert.That(first.AssisterIds, Is.EqualTo(new[] { 4 }));
-            Assert.That(second.AssisterIds, Is.EqualTo(new[] { 9, 8 }));
+            Assert.That(first.AssisterIds, Is.EqualTo(_assisters4));
+            Assert.That(second.AssisterIds, Is.EqualTo(_assisters98));
         }
 
         [Test]
@@ -60,7 +64,7 @@ namespace Shooter.NetV2.Tests
 
             var entry = ClientKillFeed.FromMessage(received);
 
-            Assert.That(entry, Is.EqualTo(new KillFeedEntry(1, 5, _rifleId, true, false, new[] { 6, 0 })));
+            Assert.That(entry, Is.EqualTo(new KillFeedEntry(1, 5, _rifleId, true, false, _assisters60)));
         }
 
         [Test]

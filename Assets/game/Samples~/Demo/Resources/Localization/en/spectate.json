@@ -1,0 +1,7 @@
+{
+  "spectate.target": "Watching {0}",
+  "spectate.noTarget": "No teammate to watch",
+  "spectate.unknownTarget": "Player {0}",
+  "spectate.controls": "[{0}] Previous teammate   [{1}] Next teammate",
+  "spectate.respawn": "Respawn in {0} s"
+}

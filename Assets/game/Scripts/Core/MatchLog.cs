@@ -139,6 +139,11 @@ namespace Shooter.Core
             return Tag + " restart";
         }
 
+        public static string RoundPhaseChanged(RoundPhase? phase)
+        {
+            return Tag + " round phase=" + (phase.HasValue ? phase.Value.ToString() : "none");
+        }
+
         public static string MapChanged(string fromMap, string toMap)
         {
             if (string.IsNullOrEmpty(fromMap))

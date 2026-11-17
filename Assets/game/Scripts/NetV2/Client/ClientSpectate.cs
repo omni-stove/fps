@@ -37,6 +37,8 @@ namespace Shooter.NetV2
 
         public int? TargetId => Status?.TargetId;
 
+        public RoundPhase? Round { get; private set; }
+
         public void Apply(SnapshotMessage snapshot)
         {
             if (snapshot == null)
@@ -50,6 +52,7 @@ namespace Shooter.NetV2
             }
 
             _deathCamera = snapshot.Match.Rules.DeathCamera;
+            Round = snapshot.Match.HasRound ? snapshot.Match.Round : (RoundPhase?)null;
             _hasSelf = false;
             _present.Clear();
             var players = snapshot.Players;
@@ -89,6 +92,11 @@ namespace Shooter.NetV2
             {
                 _remotes.Remove(id);
             }
+        }
+
+        public bool Update(float deltaSeconds)
+        {
+            return Update(deltaSeconds, Round);
         }
 
         public bool Update(float deltaSeconds, RoundPhase? round)
@@ -152,6 +160,7 @@ namespace Shooter.NetV2
             _newestTick = -1;
             _hasSelf = false;
             _target = null;
+            Round = null;
             return SetStatus(null);
         }
 

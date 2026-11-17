@@ -123,6 +123,55 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheSnapshotsRoundPhaseStartsAndEndsWatchingBetweenRounds()
+        {
+            var preparing = Snapshot(10, DeathCamera.None, Row(_self, Team.Alpha, _health), Row(4, Team.Alpha, _health));
+            preparing.Match.HasRound = true;
+            preparing.Match.Round = RoundPhase.Preparing;
+            _spectate.Apply(preparing);
+
+            Assert.That(_spectate.Round, Is.EqualTo(RoundPhase.Preparing));
+            Assert.That(_spectate.Update(0f), Is.True);
+            Assert.That(_spectate.Status, Is.EqualTo(new SpectateStatus(4, 1, SpectateReason.BetweenRounds)));
+
+            var live = Snapshot(11, DeathCamera.None, Row(_self, Team.Alpha, _health), Row(4, Team.Alpha, _health));
+            live.Match.HasRound = true;
+            live.Match.Round = RoundPhase.Live;
+            _spectate.Apply(live);
+
+            Assert.That(_spectate.Round, Is.EqualTo(RoundPhase.Live));
+            Assert.That(_spectate.Update(0f), Is.True);
+            Assert.That(_spectate.Status, Is.Null);
+        }
+
+        [Test]
+        public void ASnapshotWithoutRoundsHasNoRoundPhaseEvenIfThePhaseByteSaysPreparing()
+        {
+            var snapshot = Snapshot(10, DeathCamera.None, Row(_self, Team.Alpha, _health), Row(4, Team.Alpha, _health));
+            snapshot.Match.HasRound = false;
+            snapshot.Match.Round = RoundPhase.Preparing;
+            _spectate.Apply(snapshot);
+
+            _spectate.Update(0f);
+
+            Assert.That(_spectate.Round, Is.Null);
+            Assert.That(_spectate.Status, Is.Null);
+        }
+
+        [Test]
+        public void ResetForgetsTheRoundPhase()
+        {
+            var snapshot = Snapshot(10, DeathCamera.None, Row(_self, Team.Alpha, _health), Row(4, Team.Alpha, _health));
+            snapshot.Match.HasRound = true;
+            snapshot.Match.Round = RoundPhase.Preparing;
+            _spectate.Apply(snapshot);
+
+            _spectate.Reset();
+
+            Assert.That(_spectate.Round, Is.Null);
+        }
+
+        [Test]
         public void NextAndPreviousCycleThroughAlliesAndTellTheServer()
         {
             _spectate.Apply(Snapshot(

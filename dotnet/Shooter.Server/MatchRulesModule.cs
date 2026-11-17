@@ -129,6 +129,7 @@ namespace Shooter.Server
             AdvanceRevives(deltaSeconds);
             _session.Tick(deltaSeconds);
             TickObjective(deltaSeconds);
+            TickRound();
             TickIdle(deltaSeconds);
             TickPings();
             TickMapVote(deltaSeconds);
@@ -299,6 +300,7 @@ namespace Shooter.Server
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
             snapshot.Rules = MatchRulesSync.From(_data.Rules);
             FillObjective(ref snapshot);
+            FillRound(ref snapshot);
         }
 
         public bool FillPlayer(int playerId, ref PlayerSnapshot snapshot)

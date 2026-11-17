@@ -25,6 +25,10 @@ namespace Shooter.Protocol
         public int AlphaPoints { get; set; }
         public int BravoPoints { get; set; }
 
+        public bool HasRound { get; set; }
+
+        public RoundPhase Round { get; set; }
+
         internal MatchFields ChangedFields(in MatchSnapshot baseline)
         {
             var fields = MatchFields.None;
@@ -48,6 +52,11 @@ namespace Shooter.Protocol
             if (Objective != baseline.Objective || AlphaPoints != baseline.AlphaPoints || BravoPoints != baseline.BravoPoints)
             {
                 fields |= MatchFields.Objective;
+            }
+
+            if (HasRound != baseline.HasRound || (HasRound && Round != baseline.Round))
+            {
+                fields |= MatchFields.Round;
             }
 
             return fields;
@@ -78,6 +87,12 @@ namespace Shooter.Protocol
                 writer.WriteInt32(AlphaPoints);
                 writer.WriteInt32(BravoPoints);
             }
+
+            if ((fields & MatchFields.Round) != 0)
+            {
+                writer.WriteBool(HasRound);
+                writer.WriteByte(HasRound ? (byte)Round : (byte)0);
+            }
         }
 
         internal void Read(MessageReader reader, MatchFields fields)
@@ -104,6 +119,12 @@ namespace Shooter.Protocol
                 Objective = (MatchObjective)reader.ReadByteBelow(EnumRange<MatchObjective>.Count, "match objective");
                 AlphaPoints = reader.ReadInt32AtLeast(0, "alpha points");
                 BravoPoints = reader.ReadInt32AtLeast(0, "bravo points");
+            }
+
+            if ((fields & MatchFields.Round) != 0)
+            {
+                HasRound = reader.ReadBool();
+                Round = (RoundPhase)reader.ReadByteBelow(EnumRange<RoundPhase>.Count, "round phase");
             }
         }
 
@@ -132,6 +153,12 @@ namespace Shooter.Protocol
                 Objective = baseline.Objective;
                 AlphaPoints = baseline.AlphaPoints;
                 BravoPoints = baseline.BravoPoints;
+            }
+
+            if ((missing & MatchFields.Round) != 0)
+            {
+                HasRound = baseline.HasRound;
+                Round = baseline.Round;
             }
         }
     }

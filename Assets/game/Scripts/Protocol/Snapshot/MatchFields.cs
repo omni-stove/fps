@@ -9,6 +9,7 @@ namespace Shooter.Protocol
         Status = 1 << 0,
         Rules = 1 << 1,
         Objective = 1 << 2,
-        All = Status | Rules | Objective,
+        Round = 1 << 3,
+        All = Status | Rules | Objective | Round,
     }
 }

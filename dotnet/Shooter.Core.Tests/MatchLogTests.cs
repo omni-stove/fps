@@ -22,6 +22,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void FormatsRoundPhaseChanged()
+        {
+            Assert.That(MatchLog.RoundPhaseChanged(RoundPhase.Preparing), Is.EqualTo("[Match] round phase=Preparing"));
+            Assert.That(MatchLog.RoundPhaseChanged(RoundPhase.Live), Is.EqualTo("[Match] round phase=Live"));
+            Assert.That(MatchLog.RoundPhaseChanged(null), Is.EqualTo("[Match] round phase=none"));
+        }
+
+        [Test]
         public void FormatsEndedInDraw()
         {
             Assert.That(MatchLog.Ended(null), Is.EqualTo("[Match] ended winner=draw"));

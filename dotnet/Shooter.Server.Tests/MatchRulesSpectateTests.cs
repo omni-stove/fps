@@ -184,6 +184,80 @@ namespace Shooter.Server.Tests
             Assert.That(_transport.Sent, Has.Count.EqualTo(sent));
         }
 
+        [Test]
+        public void BetweenRoundsALivingPlayerCanSpectateEvenWhenTheRuleDoesNotWatchAllies()
+        {
+            Start(Rules(DeathCamera.Free));
+            Join(1);
+            Join(2);
+            Join(3);
+            var phase = (RoundPhase?)RoundPhase.Preparing;
+            _rules.RoundPhaseSource = () => phase;
+
+            Assert.That(_rules.ServerSpectate(1, SpectateStep.Next), Is.EqualTo(3));
+
+            phase = RoundPhase.Live;
+            Assert.That(_rules.ServerSpectate(1, SpectateStep.Next), Is.Null);
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False);
+        }
+
+        [Test]
+        public void WhenThePreparationEndsLivingSpectatorsStopButTheDeadKeepWatching()
+        {
+            Start(Rules());
+            for (var id = 1; id <= 5; id++)
+            {
+                Join(id);
+            }
+
+            var phase = (RoundPhase?)RoundPhase.Preparing;
+            _rules.RoundPhaseSource = () => phase;
+            Tick();
+            _rules.ApplyDamage(2, 5, 1000);
+            Spectate(1, SpectateStep.Next);
+            Spectate(5, SpectateStep.Next);
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.True);
+            Assert.That(_rules.TryGetSpectateTarget(5, out _), Is.True);
+
+            phase = RoundPhase.Live;
+            Tick();
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False, "alive");
+            Assert.That(_rules.TryGetSpectateTarget(5, out _), Is.True, "dead under the Ally rule");
+            Assert.That(_log.ToString(), Does.Contain("[Match] round phase=Preparing"));
+            Assert.That(_log.ToString(), Does.Contain("[Match] round phase=Live"));
+        }
+
+        [Test]
+        public void TheSnapshotCarriesTheRoundPhaseOnlyWhenARoundModeIsAttached()
+        {
+            Start(Rules());
+            Join(1);
+            Join(2);
+
+            _transport.Sent.Clear();
+            Tick();
+            var withoutRounds = LatestMatch(1);
+            Assert.That(withoutRounds.HasRound, Is.False);
+
+            _rules.RoundPhaseSource = () => RoundPhase.Preparing;
+            _transport.Sent.Clear();
+            Tick();
+            var withRounds = LatestMatch(1);
+
+            Assert.That(withRounds.HasRound, Is.True);
+            Assert.That(withRounds.Round, Is.EqualTo(RoundPhase.Preparing));
+        }
+
+        [Test]
+        public void AnUndefinedRoundPhaseFromTheSourceIsRejected()
+        {
+            Start(Rules());
+            _rules.RoundPhaseSource = () => (RoundPhase)9;
+
+            Assert.Throws<InvalidOperationException>(() => _rules.CurrentRoundPhase());
+        }
+
         private static GameRules Rules(DeathCamera deathCamera = DeathCamera.Ally)
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithPing(Ping.Off);
@@ -270,6 +344,19 @@ namespace Shooter.Server.Tests
         {
             _match.Tick(_tickSeconds);
             _host.Tick(_tickSeconds);
+        }
+
+        private MatchSnapshot LatestMatch(int id)
+        {
+            var latest = default(MatchSnapshot);
+            var snapshots = _transport.Read<SnapshotMessage>(id, snapshot =>
+            {
+                Assert.That(snapshot.IsComplete, Is.True);
+                latest = snapshot.Match;
+                return snapshot;
+            });
+            Assert.That(snapshots, Is.Not.Empty);
+            return latest;
         }
 
         // 表は読むたびに同じスナップショットを上書きするので、読んだその場で行を写す

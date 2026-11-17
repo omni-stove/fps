@@ -116,7 +116,6 @@ namespace Fps.Tests.EditMode
             IHud asInterface = hud;
             Assert.That(asInterface.AttachGrenadeCount(), Is.SameAs(hud.GrenadeCount), "Attach returns the view that is already there");
             Assert.That(asInterface.AttachAbilitySlots(), Is.SameAs(hud.AbilitySlots));
-            Assert.That(asInterface.AttachDomination(), Is.SameAs(hud.Domination));
             Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
             Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }
@@ -1126,11 +1125,11 @@ namespace Fps.Tests.EditMode
         {
             var model = DefaultHud.Model;
 
-            Assert.That(model.HealthText, Is.EqualTo(HudFormat.Health(Damageable.DefaultMaxHealth)));
-            Assert.That(model.TimeText, Is.EqualTo(HudFormat.NoTime), "MatchRunner binds the time when it begins the match");
+            Assert.That(model.CurrentHealth, Is.EqualTo(Damageable.DefaultMaxHealth));
+            Assert.That(model.RemainingSeconds, Is.Null, "MatchRunner binds the time when it begins the match");
 
             _world.PlayerDamageable.TakeDamage(25);
-            Assert.That(model.HealthText, Is.EqualTo("75"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(75));
         }
 
         [Test]
@@ -1141,10 +1140,10 @@ namespace Fps.Tests.EditMode
             damageable.TakeDamage(40);
 
             damageable.ResetHealth();
-            Assert.That(model.HealthText, Is.EqualTo("100"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(100));
 
             damageable.TakeDamage(10);
-            Assert.That(model.HealthText, Is.EqualTo("90"));
+            Assert.That(model.CurrentHealth, Is.EqualTo(90));
         }
 
         [Test]
@@ -1155,28 +1154,32 @@ namespace Fps.Tests.EditMode
 
             // Edit Mode では WeaponController の Awake が走らないので、武器はまだ無い。
             Assert.That(controller.Weapon, Is.Null);
-            Assert.That(model.AmmoText, Is.EqualTo(HudFormat.NoAmmo));
+            Assert.That(model.MagazineAmmo, Is.Null);
 
             var attack = new InputAction("Attack", InputActionType.Button);
             var reload = new InputAction("Reload", InputActionType.Button);
             try
             {
                 controller.Initialize(_world.Camera.transform, attack, reload);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize, _rifle.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
+                Assert.That(model.MagazineAmmo, Is.EqualTo(_rifle.MagazineSize));
+                Assert.That(model.IsReserveInfinite, Is.EqualTo(_world.Rules.InfiniteReserve));
 
                 Assert.That(model.WeaponSpec.Id, Is.EqualTo(_rifle.Id));
 
                 Assert.That(controller.Weapon.TryFire(), Is.True);
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_rifle.MagazineSize - 1, _rifle.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
+                Assert.That(model.MagazineAmmo, Is.EqualTo(_rifle.MagazineSize - 1));
+                Assert.That(model.IsReserveInfinite, Is.EqualTo(_world.Rules.InfiniteReserve));
 
                 // 持ち替えると HUD は新しい武器を購読し直し、しまった武器の射撃では変わらない。
                 var rifle = controller.Weapon;
                 Assert.That(controller.SelectNext(), Is.True);
                 Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgun.Id));
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
+                Assert.That(model.MagazineAmmo, Is.EqualTo(_handgun.MagazineSize));
+                Assert.That(model.IsReserveInfinite, Is.EqualTo(_world.Rules.InfiniteReserve));
                 rifle.Tick(_rifle.FireInterval);
                 rifle.TryFire();
-                Assert.That(model.AmmoText, Is.EqualTo(HudFormat.Ammo(_handgun.MagazineSize, _handgun.ReserveAmmo, false, _world.Rules.InfiniteReserve)));
+                Assert.That(model.MagazineAmmo, Is.EqualTo(_handgun.MagazineSize));
+                Assert.That(model.IsReserveInfinite, Is.EqualTo(_world.Rules.InfiniteReserve));
             }
             finally
             {

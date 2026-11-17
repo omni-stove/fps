@@ -7,8 +7,8 @@ using UnityEngine.UIElements;
 namespace Fps.Runtime
 {
     /// <summary>
-    /// <see cref="HudModel"/> の文字列を Hud.uxml の Label に写す。<see cref="HudModel.Changed"/> が来たときだけ書き換え、
-    /// 毎フレームは何もしない。表示の判断 (書式・いつ変わるか) はすべて HudModel が持つ。
+    /// <see cref="HudModel"/> の値を文字列にして Hud.uxml の Label に写す。<see cref="HudModel.Changed"/> が来たときだけ書き換え、
+    /// 毎フレームは何もしない。いつ変わるかは HudModel が決め、数の書式は <see cref="HudNumberFormat"/> が決める。
     /// HUD の量で消す項目 (<see cref="HudVisibility"/>) は、モデルの値によらず欄ごと隠す。
     /// </summary>
     public sealed class HudView : IDisposable
@@ -364,14 +364,14 @@ namespace Fps.Runtime
 
         private void ShowHealth()
         {
-            HealthLabel.text = _model.HealthText;
+            HealthLabel.text = HudNumberFormat.Health(_model);
             HealthLabel.EnableInClassList(LowHealthClass, _model.IsHealthLow);
             HealthPanel.style.display = Display(_visibility.Health);
         }
 
         private void ShowAmmo()
         {
-            AmmoLabel.text = _model.AmmoText;
+            AmmoLabel.text = HudNumberFormat.Ammo(_model);
             AmmoLabel.EnableInClassList(ReloadingClass, _model.IsReloading);
             AmmoPanel.style.display = Display(_visibility.Ammo);
         }
@@ -383,7 +383,7 @@ namespace Fps.Runtime
 
         private void ShowTime()
         {
-            TimeLabel.text = _model.TimeText;
+            TimeLabel.text = HudNumberFormat.Time(_model);
             TimePanel.style.display = Display(_visibility.Time);
         }
 

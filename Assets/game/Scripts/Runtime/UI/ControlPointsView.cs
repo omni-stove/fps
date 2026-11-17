@@ -11,7 +11,8 @@ namespace Fps.Runtime
     /// 枠の中の呼び名 (A, B, C ...) は持ち主のチームの色 (中立なら <see cref="TeamColors.Neutral"/>) で塗り、
     /// 枠に沿うリングは進みが寄っている側のチームの色で、進み (<see cref="ControlPointStatus.Fill"/>) の分だけ上から時計回りに描く。
     /// 両チームがいて進みが止まっている拠点は、リングの下地を <see cref="ContestedColor"/> にする。
-    /// Hud.uxml の <see cref="UxmlName"/> を使い、オンラインの HUD が拠点制圧の試合のときだけ <see cref="Show"/> で状態を渡す。
+    /// Hud.uxml の <see cref="UxmlName"/> を使う。要素を持っている間は <see cref="GameSignals.Domination"/> を購読して拠点の状態を出し、消されたら隠す。
+    /// オンラインの HUD は拠点制圧の試合のときだけ <see cref="Show"/> で状態を直に渡す。
     /// </summary>
     /// <remarks>
     /// 状態は Label が無い (UIDocument の木がまだ無い) ときも <see cref="Statuses"/> と <see cref="PointNames"/> で読める。
@@ -45,6 +46,10 @@ namespace Fps.Runtime
         // 設定の色の組は PlayerPrefs から読むので、フィールドの初期化子では引けない (HUD が Hud の色で塗り直す)
         private Color _alphaColor = TeamColors.Of(TeamPalette.Standard, Team.Alpha, TeamColors.OfflineViewer);
         private Color _bravoColor = TeamColors.Of(TeamPalette.Standard, Team.Bravo, TeamColors.OfflineViewer);
+        private bool _subscribed;
+
+        // 出している状態が GameSignals から来たか。直に渡された状態は、GameSignals が空のままでも消さない
+        private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
@@ -92,6 +97,12 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(states));
             }
 
+            _showsSignal = false;
+            Write(states);
+        }
+
+        private void Write(IReadOnlyList<ControlPointStatus> states)
+        {
             if (states.Count != _states.Count)
             {
                 _states.Clear();
@@ -121,6 +132,7 @@ namespace Fps.Runtime
         /// <summary>出すのをやめて要素を隠す。</summary>
         public virtual void Clear()
         {
+            _showsSignal = false;
             if (_states.Count == 0)
             {
                 return;
@@ -133,11 +145,68 @@ namespace Fps.Runtime
 
         protected override void OnBound(VisualElement element)
         {
+            Subscribe();
+            var status = GameSignals.Domination.Value;
+            if (status != null || _showsSignal)
+            {
+                // 拠点の数が同じだと Write は描き直さないので、今の木の要素を先に作る
+                Rebuild();
+                HandleStatusChanged(status);
+                return;
+            }
+
             Rebuild();
+        }
+
+        private void OnDestroy()
+        {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (!_subscribed)
+            {
+                GameSignals.Domination.Changed += HandleStatusChanged;
+                _subscribed = true;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_subscribed)
+            {
+                GameSignals.Domination.Changed -= HandleStatusChanged;
+                _subscribed = false;
+            }
+        }
+
+        private void HandleStatusChanged(DominationStatus status)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                GameSignals.Domination.Changed -= HandleStatusChanged;
+                return;
+            }
+
+            if (status == null)
+            {
+                if (_showsSignal)
+                {
+                    Clear();
+                }
+
+                return;
+            }
+
+            Write(status.Points);
+            _showsSignal = true;
         }
 
         protected override void OnUnbinding(VisualElement element)
         {
+            Unsubscribe();
             element.Clear();
             element.style.display = DisplayStyle.None;
             _elements.Clear();

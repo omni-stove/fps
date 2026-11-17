@@ -16,7 +16,9 @@ namespace Fps.Runtime
     /// <item>壊れる: 同じ GameObject の <see cref="Damageable"/> が倒れたか <see cref="Wreck"/> で、全員を降ろす (降りる場所が塞がっていても降ろす)。</item>
     /// </list>
     /// 乗っている間は、乗っている人と乗り物の Collider を互いにぶつからないようにする。
-    /// 設定は <see cref="Spec"/> (シリアライズした値と座席の値から作る) で、ゲームのデータで上書きするときは <see cref="Configure"/> を使う。
+    /// 設定は <see cref="Spec"/> で、<see cref="Definition"/> があればその値、無ければシリアライズした値と座席の値から作る。
+    /// 定義は Awake で <see cref="Configure(VehicleSpec)"/> に渡し、耐久は同じ GameObject の <see cref="Damageable"/> にも入れる。
+    /// ゲームのデータで上書きするときは <see cref="Configure(VehicleSpec)"/> か <see cref="Configure(VehicleDefinition)"/> を使う。
     /// 乗り降りと座席の移動は <see cref="VehicleLog.Tag"/> 付きでログに出す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -32,6 +34,9 @@ namespace Fps.Runtime
 
         private static readonly List<Vehicle> _active = new List<Vehicle>();
         private static readonly Collider[] _overlapBuffer = new Collider[32];
+
+        [SerializeField, Tooltip("乗り物の値 (Id・耐久・乗り込める距離・追うカメラ)。空ならこの下の値を使う")]
+        private VehicleDefinition _definition;
 
         [SerializeField, Tooltip("乗り物の Id")]
         private string _vehicleId = VehicleSpec.DefaultId;
@@ -102,9 +107,12 @@ namespace Fps.Runtime
             get
             {
                 EnsureInitialized();
-                return _spec ??= BuildSpecFromFields();
+                return _spec ??= BuildSpec();
             }
         }
+
+        /// <summary>乗り物の値の定義。無ければ null (Inspector の値を使う)。</summary>
+        public VehicleDefinition Definition => _definition;
 
         public string VehicleId => Spec.Id;
 
@@ -142,6 +150,12 @@ namespace Fps.Runtime
             {
                 Debug.LogError($"{LogTag} '{name}' の子に VehicleSeat がありません。座席を 1 つ以上置いてください。", this);
                 enabled = false;
+                return;
+            }
+
+            if (_definition != null)
+            {
+                Configure(Spec);
             }
         }
 
@@ -175,6 +189,7 @@ namespace Fps.Runtime
         /// <summary>
         /// 設定を差し替える。座席の数は子の <see cref="VehicleSeat"/> の数と同じであること (違えば <see cref="ArgumentException"/>)。
         /// 座席ごとの設定は同じ番号の座席に渡す。乗っている人はそのまま。
+        /// 同じ GameObject に <see cref="Damageable"/> があれば、最大体力を <see cref="VehicleSpec.MaxHealth"/> にして満タンに戻す。
         /// </summary>
         public void Configure(VehicleSpec spec)
         {
@@ -201,11 +216,34 @@ namespace Fps.Runtime
             _chaseDistance = spec.ChaseDistance;
             _chaseHeight = spec.ChaseHeight;
             _spec = spec;
+
+            if (_damageable != null)
+            {
+                _damageable.MaxHealth = spec.MaxHealth;
+                _damageable.ResetHealth();
+            }
+        }
+
+        /// <summary>
+        /// 定義を差し替え、その値と座席の値から作った設定を <see cref="Configure(VehicleSpec)"/> に渡す。
+        /// 定義の値が不正なら <see cref="VehicleDefinitionException"/> で、そのときは何も変えない。
+        /// </summary>
+        public void Configure(VehicleDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            EnsureInitialized();
+            var spec = definition.ToSpec(SeatSpecs());
+            _definition = definition;
+            Configure(spec);
         }
 
         /// <summary>
         /// 子の座席を集め直す (コードで座席を足したあとなど)。誰かが乗っている間は <see cref="InvalidOperationException"/>。
-        /// 番号は子の並び順で、<see cref="Configure"/> で渡した設定は捨てて座席の値から作り直す。
+        /// 番号は子の並び順で、<see cref="Configure(VehicleSpec)"/> で渡した設定は捨てて座席の値と定義 (無ければ Inspector の値) から作り直す。
         /// </summary>
         public void RefreshSeats()
         {
@@ -1022,7 +1060,26 @@ namespace Fps.Runtime
             _spec = null;
         }
 
-        private VehicleSpec BuildSpecFromFields()
+        private VehicleSpec BuildSpec()
+        {
+            var seats = SeatSpecs();
+            if (_definition != null)
+            {
+                try
+                {
+                    return _definition.ToSpec(seats);
+                }
+                catch (VehicleDefinitionException e)
+                {
+                    // 定義の値の誤りで乗り物ごと使えなくなるより、Inspector の値で動かして誤りをログで知らせるほうを選ぶ。
+                    Debug.LogError($"{LogTag} '{name}' の定義を使えないので Inspector の値を使います: {e.Message}", this);
+                }
+            }
+
+            return new VehicleSpec(_vehicleId, _maxHealth, seats, null, null, _enterRange, _chaseDistance, _chaseHeight);
+        }
+
+        private VehicleSeatSpec[] SeatSpecs()
         {
             if (_seats.Length == 0)
             {
@@ -1035,7 +1092,7 @@ namespace Fps.Runtime
                 seats[i] = _seats[i].Spec;
             }
 
-            return new VehicleSpec(_vehicleId, _maxHealth, seats, null, null, _enterRange, _chaseDistance, _chaseHeight);
+            return seats;
         }
 
         private void OnDied(Damageable _)

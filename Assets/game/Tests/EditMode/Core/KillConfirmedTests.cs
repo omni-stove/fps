@@ -13,8 +13,6 @@ namespace Fps.Core.Tests
         private const int _bravo2 = 4;
         private const float _tagLifetime = 10f;
 
-        private static readonly string[] _expectedHudLines = { "確定 ALPHA 1 / BRAVO 0", "阻止 ALPHA 0 / BRAVO 1", "落ちているタグ 1" };
-
         [Test]
         public void SpecRejectsInvalidValues()
         {
@@ -55,7 +53,7 @@ namespace Fps.Core.Tests
             // 倒した本人でなくても、敵のチームの誰が拾っても確定する。
             Assert.That(mode.Collect(tag.Id, _alpha2), Is.EqualTo(KillConfirmedResult.Confirmed));
 
-            Assert.That(mode.Session.GetScore(Side.Alpha), Is.EqualTo(KillConfirmed.PointsPerConfirm));
+            Assert.That(mode.Session.GetScore(Side.Alpha), Is.EqualTo((double)KillConfirmedSpec.DefaultPointsPerConfirm));
             Assert.That(mode.Session.GetScore(Side.Bravo), Is.Zero);
             Assert.That(mode.GetConfirmed(Side.Alpha), Is.EqualTo(1));
             Assert.That(mode.GetDenied(Side.Alpha), Is.Zero);
@@ -248,20 +246,6 @@ namespace Fps.Core.Tests
 
             mode.Session.Start();
             Assert.That(mode.DropTag(_bravo1).Id, Is.EqualTo(1), "tag numbers start over");
-        }
-
-        [Test]
-        public void TheHudShowsConfirmsDenialsAndTagsOnTheField()
-        {
-            var mode = Start();
-            var confirmed = mode.DropTag(_bravo1);
-            mode.Collect(confirmed.Id, _alpha1);
-            var denied = mode.DropTag(_bravo2);
-            mode.Collect(denied.Id, _bravo1);
-            mode.DropTag(_alpha1);
-
-            Assert.That(Array.ConvertAll(KillConfirmedText.HudLines(mode), GameText.Resolve), Is.EqualTo(_expectedHudLines));
-            Assert.Throws<ArgumentNullException>(() => KillConfirmedText.HudLines(null));
         }
 
         [Test]

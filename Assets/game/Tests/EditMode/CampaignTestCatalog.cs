@@ -68,6 +68,7 @@ namespace Fps.Tests.EditMode
         {
             var definition = ScriptableObject.CreateInstance<MissionDefinition>();
             definition.name = id;
+            definition.Id = id;
             definition.SetObjectives(new[] { new ObjectiveDefinition("reach", "") });
             _created.Add(definition);
             return definition;

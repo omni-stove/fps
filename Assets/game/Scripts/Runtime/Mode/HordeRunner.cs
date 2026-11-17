@@ -11,9 +11,11 @@ namespace Fps.Runtime
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
-    /// <item>通貨と波の調整値は <see cref="Definition"/> (<see cref="HordeDefinition"/>) から読む。無ければ既定値で、波は Spawner の設定のまま。</item>
+    /// <item>通貨・補強の費用と届く距離・倒したときの点・敵の陣営と動かし方・波の調整値は <see cref="Definition"/> (<see cref="HordeDefinition"/>) から読み、
+    /// 始めるときに防衛物 (<see cref="HordeFortification.ApplySpec"/>) と Spawner (<see cref="WaveSpawner.ApplySpec"/>) に渡す。
+    /// 無ければ通貨と点は既定値で、補強は防衛物の、敵と波は Spawner の Inspector の値のまま。</item>
     /// <item>試合が始まったら (Playing になったら) <see cref="Spawner"/> に波の予定を渡して 1 波目を始める。Spawner の BeginOnStart は切っておく
-    /// (自分で波を始めていたら理由をログに出して止まる)。Spawner の敵の陣営は <see cref="EnemySide"/> と同じであること。</item>
+    /// (自分で波を始めていたら理由をログに出して止まる)。Definition が無いとき、Spawner の敵の陣営は <see cref="EnemySide"/> と同じであること。</item>
     /// <item>Spawner が出した敵が倒されたら通貨を入れる (<see cref="RewardEnemyKill"/>)。倒されずに消えた敵では入らない。</item>
     /// <item>最後の波を全滅させたら勝ち、全員が倒れたら負け。倒れた味方は波の間に戻る。終わったら Spawner を止め、残った敵の動きも止める。</item>
     /// <item>操作しているプレイヤーが防衛物 (<see cref="HordeFortification"/>) の近くで <see cref="TryInteract()"/> すると (入力は
@@ -24,7 +26,7 @@ namespace Fps.Runtime
     /// </remarks>
     public sealed class HordeRunner : ModeRunnerBase
     {
-        public const int DefaultEnemySideId = WaveSpawner.DefaultEnemySideId;
+        public const int DefaultEnemySideId = HordeSpec.DefaultEnemySideId;
 
         [SerializeField, RequiredReference, Tooltip("波の敵を出す WaveSpawner。シーン生成スクリプトが配線する。BeginOnStart は切っておく")]
         private WaveSpawner _spawner;
@@ -32,7 +34,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("通貨で直す・置く防衛物。空ならシーンの HordeFortification をすべて使う")]
         private HordeFortification[] _fortifications = Array.Empty<HordeFortification>();
 
-        [SerializeField, Min(0), Tooltip("波の敵の陣営の ID。WaveSpawner の敵の陣営と合わせる")]
+        [SerializeField, Min(0), Tooltip("波の敵の陣営の ID。HordeDefinition が無いときだけ使う。WaveSpawner の敵の陣営と合わせる")]
         private int _enemySideId = DefaultEnemySideId;
 
         [SerializeField, Tooltip("通貨と波の調整値。空なら入口 (GameContent) のもの、それも無ければ HordeSpec の既定値と、WaveSpawner に設定された波を使う")]
@@ -53,10 +55,10 @@ namespace Fps.Runtime
             set => _spawner = value;
         }
 
-        /// <summary>波の敵の陣営。</summary>
+        /// <summary>波の敵の陣営。<see cref="EffectiveDefinition"/> があればその陣営。設定するのは Definition が無いときに使う値。</summary>
         public Side EnemySide
         {
-            get => new Side(Math.Max(0, _enemySideId));
+            get => EffectiveDefinition is { } definition ? definition.EnemySide : new Side(Math.Max(0, _enemySideId));
             set => _enemySideId = value.Id;
         }
 
@@ -139,7 +141,14 @@ namespace Fps.Runtime
                 throw new ArgumentException($"schedule must be Waiting, but is {schedule.Phase}", nameof(schedule));
             }
 
-            Begin(PrepareHorde(schedule), members, spawnPoints, localPlayer);
+            var definition = EffectiveDefinition;
+            var spec = CreateSpec();
+            if (definition != null && _spawner != null && !_spawner.IsStarted)
+            {
+                _spawner.ApplySpec(spec);
+            }
+
+            Begin(PrepareHorde(schedule, spec, definition != null), members, spawnPoints, localPlayer);
         }
 
         protected override ModeSession CreateSession()
@@ -154,14 +163,20 @@ namespace Fps.Runtime
                 throw new InvalidOperationException($"WaveSpawner '{_spawner.name}' が自分で波を始めています。BeginOnStart を切ってください");
             }
 
-            if (_spawner.EnemySide != EnemySide)
+            var definition = EffectiveDefinition;
+            var spec = CreateSpec();
+            if (definition != null)
+            {
+                _spawner.ApplySpec(spec);
+            }
+            else if (_spawner.EnemySide != EnemySide)
             {
                 throw new InvalidOperationException(
                     $"WaveSpawner '{_spawner.name}' の敵の陣営 {_spawner.EnemySide.Id} が HordeRunner の EnemySide {EnemySide.Id} と違います");
             }
 
             _spawner.BeginOnStart = false;
-            return PrepareHorde(CreateSchedule());
+            return PrepareHorde(CreateSchedule(), spec, definition != null);
         }
 
         protected override void OnEnded(Side? winner)
@@ -324,11 +339,11 @@ namespace Fps.Runtime
             return reward;
         }
 
-        private ModeSession PrepareHorde(WaveSchedule schedule)
+        private ModeSession PrepareHorde(WaveSchedule schedule, HordeSpec spec, bool fromDefinition)
         {
             DetachHorde();
 
-            _horde = new Horde(schedule, CreateSpec());
+            _horde = new Horde(schedule, spec);
             _horde.Session.StateChanged += OnHordeStateChanged;
             schedule.WaveStarted += OnWaveStarted;
             schedule.WaveCleared += OnWaveCleared;
@@ -342,6 +357,11 @@ namespace Fps.Runtime
                 if (fortification != null && !_activeFortifications.Contains(fortification))
                 {
                     fortification.EnsurePrepared();
+                    if (fromDefinition)
+                    {
+                        fortification.ApplySpec(spec);
+                    }
+
                     _activeFortifications.Add(fortification);
                 }
             }

@@ -7,7 +7,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// キルコンファームド (<see cref="Fps.Core.KillConfirmed"/>) をシーンで進める <see cref="ModeRunnerBase"/>。陣営 0 が Alpha、陣営 1 が Bravo。
-    /// 倒しただけでは点が入らず、倒れた人の落としたタグ (<see cref="Pickup"/>) を敵が拾えば確定 (1 点)、味方が拾えば阻止 (0 点) になる。
+    /// 倒しただけでは点が入らず、倒れた人の落としたタグ (<see cref="Pickup"/>) を敵が拾えば確定 (<see cref="KillConfirmedSpec.PointsPerConfirm"/> 点)、味方が拾えば阻止 (0 点) になる。
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -21,8 +21,8 @@ namespace Fps.Runtime
     /// <item>出現点に戻した参加者は、残っているタグの範囲から出たことにする (倒れた場所のタグの範囲に入ったまま数えられ、
     /// 戻った瞬間に遠くから自分のタグを拾ってしまわないように)。</item>
     /// <item>試合が終わったら残ったタグの Pickup を壊す。</item>
-    /// <item>HUD には得点 (= 確定数) の下に、陣営ごとの確定数・阻止数と落ちているタグの数 (<see cref="KillConfirmedText.HudLines"/>) を出す。
-    /// タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
+    /// <item>モードの状態 (<see cref="ModeStatus"/>) の <see cref="ModeStatus.Detail"/> には、進めている <see cref="Fps.Core.KillConfirmed"/> を入れる
+    /// (得点は確定数)。タグを落とした・拾った・消えたときに <c>[Mode] killconfirmed</c> のログを出す。</item>
     /// </list>
     /// </remarks>
     public sealed class KillConfirmedRunner : ModeRunnerBase
@@ -31,11 +31,12 @@ namespace Fps.Runtime
         public const float DefaultTimeLimitSeconds = 300f;
         public const float DefaultRespawnSeconds = 3f;
         public const float DefaultTagLifetimeSeconds = 30f;
+        public const int DefaultPointsPerConfirm = KillConfirmedSpec.DefaultPointsPerConfirm;
 
         /// <summary>タグを拾える範囲の既定の半径 (m)。</summary>
-        public const float DefaultTagRadius = Pickup.DefaultRadius;
+        public const float DefaultTagRadius = KillConfirmedSpec.DefaultTagPickupRadius;
 
-        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の確定数・制限時間・リスポーン・タグの秒数の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
+        [SerializeField, Tooltip("このモードの調整値のアセット。配線すると下の得点上限・制限時間・リスポーン・タグの秒数・確定の点・タグの半径の代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
         private KillConfirmedDefinition _definition;
 
         [SerializeField, Min(1), Tooltip("どちらかのチームがこの確定数に届いたら試合が終わる")]
@@ -49,6 +50,9 @@ namespace Fps.Runtime
 
         [SerializeField, Min(0.01f), Tooltip("落ちたタグが誰にも拾われずに消えるまでの秒数")]
         private float _tagLifetimeSeconds = DefaultTagLifetimeSeconds;
+
+        [SerializeField, Min(1), Tooltip("敵のタグを 1 枚拾って確定させたときに入る点")]
+        private int _pointsPerConfirm = DefaultPointsPerConfirm;
 
         [SerializeField, Min(Pickup.MinRadius), Tooltip("タグを拾える範囲の半径 (m)")]
         private float _tagRadius = DefaultTagRadius;
@@ -96,7 +100,16 @@ namespace Fps.Runtime
             set => _tagLifetimeSeconds = value;
         }
 
-        /// <summary>タグを拾える範囲の半径 (m)。<see cref="Pickup.MinRadius"/> 未満は落とすときに切り上げる。</summary>
+        public int PointsPerConfirm
+        {
+            get => _pointsPerConfirm;
+            set => _pointsPerConfirm = value;
+        }
+
+        /// <summary>
+        /// <see cref="Definition"/> が無いときのタグを拾える範囲の半径 (m)。<see cref="Pickup.MinRadius"/> 未満は落とすときに切り上げる。
+        /// 落とすタグには、進めているモードの <see cref="KillConfirmedSpec.TagPickupRadius"/> を使う。
+        /// </summary>
         public float TagRadius
         {
             get => _tagRadius;
@@ -124,7 +137,8 @@ namespace Fps.Runtime
                 return definition.ToSpec();
             }
 
-            return new KillConfirmedSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds);
+            return new KillConfirmedSpec(
+                _scoreLimit, _timeLimitSeconds, _respawnSeconds, _tagLifetimeSeconds, _pointsPerConfirm, _tagRadius);
         }
 
         /// <summary>
@@ -208,13 +222,7 @@ namespace Fps.Runtime
             }
         }
 
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            if (_killConfirmed != null)
-            {
-                lines.AddRange(KillConfirmedText.HudLines(_killConfirmed));
-            }
-        }
+        protected override object HudDetail => _killConfirmed;
 
         protected override void OnStopping()
         {
@@ -327,7 +335,7 @@ namespace Fps.Runtime
                 }
 
                 pickup.LifetimeSeconds = 0f;
-                pickup.Radius = _tagRadius;
+                pickup.Radius = _killConfirmed.Spec.TagPickupRadius;
                 pickup.Collected += OnTagCollected;
                 _tagOf.Add(pickup, tag);
                 _pickupOf.Add(tag.Id, pickup);

@@ -268,6 +268,65 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheDefinitionsDefuseRadiusDecidesHowFarADefenderCanDefuse()
+        {
+            var definition = Definition("SndWideDefuse");
+            definition.PlantSeconds = PlantSeconds;
+            definition.DefuseSeconds = DefuseSeconds;
+            definition.PreparationSeconds = 0f;
+            definition.DefuseRadius = 4f;
+            _runner.Definition = definition;
+            _runner.DefuseRadius = 1f;
+
+            Begin();
+            Assert.That(_runner.Game.Spec.DefuseRadius, Is.EqualTo(4f));
+            _alphaOne.transform.position = SiteB;
+            _runner.Tick(PlantSeconds);
+            Assert.That(_runner.Game.Bomb, Is.EqualTo(BombState.Planted));
+
+            _bravoOne.transform.position = SiteB + new Vector3(3f, 0f, 0f);
+            _runner.Tick(DefuseSeconds);
+
+            Assert.That(_runner.Game.LastRoundEnd, Is.EqualTo(RoundEndReason.Defused), "3 m is inside the definition's 4 m, not the Inspector's 1 m");
+        }
+
+        [Test]
+        public void TheDefinitionsPickupRadiusDecidesHowFarAnAttackerPicksTheBombUp()
+        {
+            var definition = Definition("SndNarrowPickup");
+            definition.PreparationSeconds = 0f;
+            definition.BombPickupRadius = 0.25f;
+            _runner.Definition = definition;
+
+            Begin();
+            var fallen = new Vector3(3f, 0f, 10f);
+            _alphaOne.transform.position = fallen;
+            _alphaOne.Damageable.Kill();
+            _runner.Tick(0f);
+            Assert.That(_runner.Game.Bomb, Is.EqualTo(BombState.Dropped));
+
+            _alphaTwo.transform.position = fallen + new Vector3(0.5f, 0f, 0f);
+            _runner.Tick(0f);
+            Assert.That(_runner.Game.Bomb, Is.EqualTo(BombState.Dropped), "0.5 m is outside the definition's 0.25 m");
+
+            _alphaTwo.transform.position = fallen + new Vector3(0.2f, 0f, 0f);
+            _runner.Tick(0f);
+            Assert.That(_runner.Game.CarrierId, Is.EqualTo(_runner.IdOf(_alphaTwo)));
+        }
+
+        [Test]
+        public void TheInspectorRadiiAreUsedWithoutADefinition()
+        {
+            _runner.PickupRadius = 0.75f;
+            _runner.DefuseRadius = 3.5f;
+
+            Begin();
+
+            Assert.That(_runner.Game.Spec.BombPickupRadius, Is.EqualTo(0.75f));
+            Assert.That(_runner.Game.Spec.DefuseRadius, Is.EqualTo(3.5f));
+        }
+
+        [Test]
         public void TryBeginFailsWithAnInvalidDefinitionAndNamesIt()
         {
             var definition = Definition("BrokenSnd");

@@ -35,6 +35,18 @@ namespace Fps.Core
         /// <summary>寄っている側への進みの大きさ。0 (中立) から 1 (占領し終えた)。</summary>
         public float Fill => Math.Abs(Control);
 
+        // サーバーが送る値 (MatchRulesModule.ToPercent) と揃え、1% 未満の動きで出し直さないよう 0 に向けて切り捨てる
+        public static int PercentOf(float control)
+        {
+            if (float.IsNaN(control))
+            {
+                return 0;
+            }
+
+            var clamped = Math.Max(-1f, Math.Min(1f, control));
+            return (int)Math.Truncate(clamped * FullPercent);
+        }
+
         public bool Equals(ControlPointStatus other)
         {
             return Owner == other.Owner && ControlPercent == other.ControlPercent && Contested == other.Contested;

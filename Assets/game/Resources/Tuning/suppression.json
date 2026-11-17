@@ -1,0 +1,11 @@
+{
+  "nearMissRadius": 1.5,
+  "buildPerNearMiss": 0.2,
+  "decayDelaySeconds": 0.75,
+  "decayPerSecond": 0.4,
+  "suppressedLevel": 0.5,
+  "releasedLevel": 0.2,
+  "maxSpreadDegrees": 4,
+  "maxCrosshairSpread": 0.6,
+  "maxVignetteAlpha": 0.65
+}

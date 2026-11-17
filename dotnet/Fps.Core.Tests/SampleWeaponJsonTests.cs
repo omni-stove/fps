@@ -193,7 +193,7 @@ namespace Fps.Core.Tests
         private static string LocalizationFolder()
         {
             var samples = new DirectoryInfo(SampleWeaponJsonFolder());
-            return Path.Combine(samples.Parent.Parent.Parent.Parent.FullName, "Resources", "Localization");
+            return Path.Combine(samples.Parent.Parent.FullName, "Resources", "Localization");
         }
 
         private static string SampleWeaponJsonFolder()

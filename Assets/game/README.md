@@ -60,14 +60,16 @@ Unity を開くと Package Manager が取ってきてコンパイルする。Edi
 
 ## サンプル (Demo Game)
 
-パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI`・`Fps.Protocol`・`Fps.NetV2`・`Fps.NetV2.Client`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
-仮のゲームの中身はサンプル **Demo Game** (`Samples~/Demo`) にあり、ゲーム側が選んで取り込む。
+パッケージの本体 (`Fps.Core`・`Fps.Runtime`・`Fps.Protocol`・`Fps.NetV2`・`Fps.NetV2.Client`・`Fps.NetEos`、JSON のインポーターなどの `Fps.Editor`) は、サンプルの中身を参照しない。
+仮のゲームの中身と既定の UI・言語の表はサンプル **Demo Game** (`Samples~/Demo`) にあり、ゲーム側が選んで取り込む。サンプルを取り込まなければ画面は出ない (ゲームは HUD 無しで動く)。
 
 | 中身 | 置き場所 (サンプルのルートから) |
 | --- | --- |
 | 武器の JSON とアセット | `Weapons/` (`Weapons/Json/` に `Dmr.json`・`Rifle.json`・`Handgun.json`・`Launcher.json`・`Minigun.json`・`Shotgun.json`・`Crossbow.json`・ロックオンして追う `GuidedLauncher.json`・`RocketLauncher.json`・`GrenadeLauncher.json`・熱で撃つ `EnergyRifle.json`・`AntiMaterial.json`、射撃場で拾える武器の一覧 `Weapons/RangeWeapons.asset`) |
 | ルールの JSON とアセット | `Rules/` (`Rules/Json/` に `TeamDeathmatch`・`Domination`・`Range`・`TpsRange`・`CampaignEasy`/`Normal`/`Hard`) |
 | ミッション・シーン | `Missions/`・`Scenes/` |
+| 既定の UI (`Fps.Runtime.UI`: HUD・メニュー・ポーズ・設定) | `Scripts/UI/`・`UI/Resources/` (UXML・USS・テーマ) |
+| 言語の表 | `Resources/Localization/<言語コード>/`・`Resources/Localization/Languages/`・`Localization/Resources/Strings/` |
 | ネット対戦の試合の設定 (`NetMatchDefinition`。専用サーバーへ書き出す) | `Rules/NetMatch.asset` |
 | メニューから移るシーンのルート (`MenuSceneSettings`) | `Resources/Menu/MenuSceneSettings.asset` |
 | シーンと仮の素材を組む Editor のスクリプト・smoke・クライアントのビルド・専用サーバーへのデータの書き出し | `Scripts/Editor/` (`Fps.Samples.Editor`)・`Scripts/Net/Editor/` (`Fps.Samples.Net.Editor`) |
@@ -568,14 +570,14 @@ photo.PhotoCapture = new MyFramedCapture();
 
 画面に出す文は、言語ごとの表 (キーから文への JSON) から引く。表は Resources の次の場所から読み、前から順に重ねて、同じキーは後のものが勝つ。
 
-1. `Resources/Strings/<言語コード>.json` (パッケージの `Localization/Resources/Strings/`。まだ移していない古いキー)
+1. `Resources/Strings/<言語コード>.json` (Demo サンプルの `Localization/Resources/Strings/`。まだ移していない古いキー)
 2. `Resources/Localization/<言語コード>/` にあるすべての JSON を、ファイル名 (拡張子なし) の順に。順は大文字小文字を区別する文字コード順 (`Z` < `a`)
 
-パッケージの `Resources` も利用側の `Assets/Resources` も同じ Resources なので、**利用側の `Assets/Resources/Localization/<言語コード>/` に JSON を置けば**、パッケージの表に重なる。言語コードは `ja` (日本語) と `en` (英語)。
+取り込んだサンプルの `Resources` も利用側の `Assets/Resources` も同じ Resources なので、**利用側の `Assets/Resources/Localization/<言語コード>/` に JSON を置けば**、サンプルの表に重なる。言語コードは `ja` (日本語) と `en` (英語)。
 
 ### 文を変える (キーを上書きする)
 
-1. 変えたいキーを、パッケージの表から探す。キーの一覧は `Packages/com.omnistove.fps/Resources/Localization/ja/` (このリポジトリでは `Assets/game/Resources/Localization/ja/`) と `Packages/com.omnistove.fps/Localization/Resources/Strings/ja.json` にある。
+1. 変えたいキーを、サンプルの表から探す。キーの一覧は取り込んだサンプルの `Resources/Localization/ja/` (このリポジトリでは `Assets/game/Samples~/Demo/Resources/Localization/ja/`) と `Localization/Resources/Strings/ja.json` にある。
 
    | ファイル | 中身 |
    | --- | --- |
@@ -748,7 +750,7 @@ Editor からは **Fps > Audit Replacements** (一覧をログに出すだけで
 | --- | --- | --- |
 | `Fps.Core` | Unity に依存しないルールと計算 | 常に |
 | `Fps.Runtime` | ゲームプレイのコンポーネントとアセットの型 | 常に |
-| `Fps.Runtime.UI` | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | 常に |
+| `Fps.Runtime.UI` (サンプル) | 既定の UI (HUD・メニュー・ポーズ・設定)。起動時に `GameUi` へ自分を登録する。外すと HUD 無しで動く | サンプルを取り込んだとき |
 | `Fps.Editor` | JSON のインポーター、出力先ルート、ビルダーの共通の処理、キャラクターのリグ、入口のアセットの作成、差し替えの点検 | Editor |
 | `Fps.Protocol` | クライアントと .NET の専用サーバーが送り合うメッセージと通信路 (UDP は LiteNetLib)。Unity に依存しない | 常に |
 | `Fps.NetV2.Client` | ネット対戦のクライアントの中身 (つなぐ・予測・補間・クイックマッチのロビーの検索)。Unity に依存しない | 常に |

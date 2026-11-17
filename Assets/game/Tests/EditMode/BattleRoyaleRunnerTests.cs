@@ -7,7 +7,6 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -254,40 +253,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudShowsSquadsPlacementAndTheZone()
-        {
-            ModeHudFormatters.Register<BattleRoyaleStatus>(new BattleRoyaleHudFormatter());
-            try
-            {
-                var zone = Zone(30f, new ShrinkingZone.PhaseSettings(12f, 10f, 10f, 1f));
-                _runner.Zone = zone;
-                var player = Member("Player", 0, ZeroSpawn);
-                var enemy = Member("Bot-1-1", 1, OneSpawn);
-                var hud = BoundHudView();
-                Begin(new[] { player, enemy }, player);
-
-                Assert.That(hud.TimeText, Is.EqualTo("00:00"), "without a time limit the HUD counts up");
-                Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 残り 1"));
-                Assert.That(hud.Scores[0].IsOwn, Is.True);
-                Assert.That(hud.Lines, Does.Contain("残り分隊 2/2"));
-                Assert.That(hud.Lines, Does.Contain("順位 2 位以内"));
-                Assert.That(hud.Lines, Does.Contain("エリア縮小まで 00:12"));
-                Assert.That(hud.Lines, Does.Contain("分隊 生存 1"));
-                Assert.That(hud.ResultText, Is.Empty);
-
-                KillBy(player, enemy);
-                _runner.Tick(0f);
-
-                Assert.That(hud.Lines, Does.Contain("順位 1 位"));
-                Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
-            }
-            finally
-            {
-                ModeHudFormatters.Unregister(typeof(BattleRoyaleStatus));
-            }
-        }
-
-        [Test]
         public void BeginNeedsABattleRoyaleSession()
         {
             var player = Member("Player", 0, ZeroSpawn);
@@ -461,13 +426,6 @@ namespace Fps.Tests.EditMode
             Assert.That(_runner.Status, Is.Not.Null);
             Assert.That(_runner.Status.Detail, Is.InstanceOf<BattleRoyaleStatus>());
             return (BattleRoyaleStatus)_runner.Status.Detail;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private GameObject Track(GameObject go)

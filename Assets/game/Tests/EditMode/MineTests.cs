@@ -182,8 +182,8 @@ namespace Fps.Tests.EditMode
 
             Assert.That(kills.Count, Is.EqualTo(1));
             Assert.That(kills[0].WeaponId, Is.EqualTo(Kind));
-            var line = new OfflineKillFeedNames().Describe(kills[0]);
-            Assert.That(line.WeaponName, Is.EqualTo(new LocalizedText(MineSpec.DefaultNameKey)));
+            Assert.That(MineDeployDefinition.TryFindName(CombatEvents.OfflineObject(kills[0].KillerId), kills[0].WeaponId, out var name), Is.True);
+            Assert.That(name, Is.EqualTo(new LocalizedText(MineSpec.DefaultNameKey)));
         }
 
         [Test]

@@ -8,7 +8,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -48,7 +47,6 @@ namespace Fps.Tests.EditMode
             GameRulesAssets.Configure(_rules, _testRules);
 
             GameSignals.ResetAll();
-            DefaultHudFactory.Register();
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
@@ -61,7 +59,6 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             GameRulesOverride.Clear();
-            DefaultHudFactory.Unregister();
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
@@ -87,7 +84,6 @@ namespace Fps.Tests.EditMode
             Assert.That(GameSignals.HudModel.Value, Is.SameAs(_world.HudModel));
             Assert.That(GameSignals.HudDensity.Value, Is.EqualTo((HudDensity?)_world.Rules.HudDensity));
             Assert.That(GameSignals.PauseTimeMode.Value, Is.EqualTo((PauseTimeMode?)PauseTimeMode.Freeze), "offline pauses stop time");
-            Assert.That(DefaultHud.ShownModel, Is.SameAs(_world.HudModel), "the HUD shows the published model");
         }
 
         [Test]
@@ -139,27 +135,11 @@ namespace Fps.Tests.EditMode
             Assert.That(GameSignals.HudDensity.Value, Is.Null);
             Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);
             Assert.That(cleared, Is.EqualTo(new LocalPlayerSignal[] { null }), "subscribers hear the clear");
-            Assert.That(DefaultHudFactory.Current, Is.Null, "the default HUD goes with the player and its model");
 
             var other = new LocalPlayerSignal(null, null, null, null, null, null, null, null);
             GameSignals.LocalPlayer.Publish(other);
             bootstrap.ClearSignals();
             Assert.That(GameSignals.LocalPlayer.Value, Is.SameAs(other), "a player published by someone else stays");
-        }
-
-        [Test]
-        public void TheDefaultHudCarriesTheGrenadeAbilityAndDominationViewsFromTheStart()
-        {
-            var hud = DefaultHud;
-
-            Assert.That(hud.GrenadeCount, Is.Not.Null);
-            Assert.That(hud.AbilitySlots, Is.Not.Null);
-            Assert.That(hud.Domination, Is.Not.Null);
-
-            Assert.That(hud.GetComponents<GrenadeCountView>(), Has.Length.EqualTo(1));
-            Assert.That(hud.GetComponents<AbilitySlotsView>(), Has.Length.EqualTo(1));
-            Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
-            Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }
 
         [Test]
@@ -201,7 +181,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void PlayerHasTheActionReaderWiredToTheOverlayAndTheMockBody()
+        public void PlayerHasTheActionReaderWiredToTheMockBody()
         {
             var player = _world.Player;
             var reader = _world.ActionReader;
@@ -217,22 +197,7 @@ namespace Fps.Tests.EditMode
             Assert.That(reader.Damageable, Is.SameAs(_world.PlayerDamageable));
             Assert.That(reader.Rig, Is.SameAs(_world.Rig));
 
-            Assert.That(player.GetComponent<ActionDebugOverlay>().Reader, Is.SameAs(reader));
             Assert.That(player.GetComponent<PlayerMockBody>().Reader, Is.SameAs(reader));
-        }
-
-        [Test]
-        public void ActionDebugOverlayIsSupportedInTheEditorAndStartsVisible()
-        {
-            var overlay = _world.Player.GetComponent<ActionDebugOverlay>();
-
-            Assert.That(ActionDebugOverlay.IsSupported, Is.True);
-            Assert.That(overlay.IsVisible, Is.True);
-
-            overlay.SetVisible(false);
-            Assert.That(overlay.IsVisible, Is.False);
-            overlay.SetVisible(true);
-            Assert.That(overlay.IsVisible, Is.True);
         }
 
         [Test]
@@ -1075,82 +1040,6 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
-        {
-            var hud = DefaultHud;
-            Assert.That(hud, Is.Not.Null, "the default HUD factory builds the HUD for the published player");
-            Assert.That(hud.name, Is.EqualTo(DefaultHudFactory.HudObjectName));
-            Assert.That(hud.gameObject.activeSelf, Is.True);
-
-            var document = hud.GetComponent<UIDocument>();
-            Assert.That(document, Is.Not.Null);
-            Assert.That(document.visualTreeAsset, Is.SameAs(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath)));
-
-            var settings = hud.OwnedPanelSettings;
-            Assert.That(document.panelSettings, Is.SameAs(settings));
-            Assert.That(settings.name, Is.EqualTo(Hud.PanelSettingsName));
-            Assert.That(settings.themeStyleSheet, Is.SameAs(Resources.Load<ThemeStyleSheet>(Hud.ThemeResourcePath)));
-            Assert.That(settings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
-            Assert.That(settings.referenceResolution, Is.EqualTo(Hud.ReferenceResolution));
-        }
-
-        [Test]
-        public void HudShowsTheGrenadeCount()
-        {
-            var grenades = DefaultHud.GetComponent<GrenadeCountView>();
-
-            Assert.That(grenades, Is.Not.Null, "the default HUD carries the grenade count from the start");
-            Assert.That(grenades.Source, Is.SameAs(_world.Grenades), "the view reads the published local player");
-        }
-
-        [Test]
-        public void HudShowsTheAbilitySlots()
-        {
-            var slots = DefaultHud.GetComponent<AbilitySlotsView>();
-
-            Assert.That(_world.Abilities, Is.Not.Null, "PlayerActions.Attach gives the player an AbilityHost");
-            Assert.That(slots, Is.Not.Null, "the default HUD carries the ability slots from the start");
-            Assert.That(slots.Source, Is.SameAs(_world.Abilities), "the view reads the published local player");
-            Assert.That(slots.IsShown, Is.False, "the default rules keep abilities off and no ability is equipped");
-        }
-
-        [Test]
-        public void ClearingTheLocalPlayerEmptiesTheGrenadeCountAndTheAbilitySlots()
-        {
-            GameSignals.LocalPlayer.Clear();
-
-            Assert.That(DefaultHud, Is.Not.Null, "the HUD stays while its model is published");
-
-            Assert.That(DefaultHud.GrenadeCount.Source, Is.Null);
-            Assert.That(DefaultHud.GrenadeCount.Text, Is.Empty);
-            Assert.That(DefaultHud.AbilitySlots.Source, Is.Null);
-            Assert.That(DefaultHud.AbilitySlots.IsShown, Is.False);
-        }
-
-        [Test]
-        public void HudHasThePartViewsBoundToTheLayout()
-        {
-            var hud = DefaultHud;
-            HudElementView[] views =
-            {
-                hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt, hud.AbilitySlots, hud.Domination,
-            };
-
-            Assert.That(views, Has.None.Null);
-            Assert.That(hud.PauseMenu, Is.Not.Null);
-            Assert.That(hud.PauseMenu.TimeMode, Is.EqualTo(PauseTimeMode.Freeze), "offline pauses stop time");
-
-            // Edit Mode では UIDocument が木を作らないことがあり、そのときは View もビューの要素も無い。
-            Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
-            foreach (var view in views)
-            {
-                Assert.That(view.Element, Is.Not.Null, view.ElementName);
-                Assert.That(view.Element.name, Is.EqualTo(view.ElementName));
-                Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None), "nothing is shown until something happens");
-            }
-        }
-
-        [Test]
         public void PlayerHasThePresentationAndGrenadeComponentsAndIsTheLocalPlayer()
         {
             var player = _world.Player;
@@ -1241,79 +1130,5 @@ namespace Fps.Tests.EditMode
             Assert.That(light.type, Is.EqualTo(LightType.Directional));
             Assert.That(Quaternion.Angle(light.transform.rotation, Quaternion.Euler(GameBootstrap.LightEuler)), Is.LessThan(1e-3f));
         }
-
-        [Test]
-        public void ANewPlayerKeepsTheSameHudAndMovesItsViewsToThatPlayer()
-        {
-            var hud = DefaultHud;
-            var other = new GameObject("GameBootstrapTests.Other").AddComponent<GameBootstrap>();
-            other.CreatesFloor = false;
-            other.WeaponDefinitions = new[] { _rifle, _handgun };
-            other.RulesDefinition = _rules;
-            BootstrapWorld otherWorld = null;
-            try
-            {
-                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
-                otherWorld = other.Build();
-
-                Assert.That(DefaultHudFactory.Current, Is.SameAs(hud), "one HUD for the screen");
-                Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Has.Length.EqualTo(1));
-                Assert.That(hud.ShownModel, Is.SameAs(otherWorld.HudModel));
-                Assert.That(hud.GrenadeCount.Source, Is.SameAs(otherWorld.Grenades));
-                Assert.That(otherWorld.Player.GetComponent<ActionDebugOverlay>().Reader, Is.SameAs(otherWorld.ActionReader));
-            }
-            finally
-            {
-                DestroyWorld(otherWorld);
-                Object.DestroyImmediate(other.gameObject);
-            }
-        }
-
-        [Test]
-        public void UnregisteringTheDefaultHudRemovesItAndStopsBuildingIt()
-        {
-            var hud = DefaultHud;
-            var settings = hud.OwnedPanelSettings;
-
-            DefaultHudFactory.Unregister();
-
-            Assert.That(hud == null, Is.True, "the HUD is destroyed");
-            Assert.That(settings == null, Is.True, "with the panel settings made for it");
-            Assert.That(DefaultHudFactory.Current, Is.Null);
-
-            GameSignals.LocalPlayer.Publish(GameSignals.LocalPlayer.Value);
-            Assert.That(DefaultHudFactory.Current, Is.Null, "nothing builds a HUD once unregistered");
-
-            DefaultHudFactory.Register();
-            Assert.That(DefaultHudFactory.Current, Is.Not.Null, "registering again builds it for the published player");
-        }
-
-        [Test]
-        public void TurningTheDefaultHudOffRemovesItUntilItIsTurnedOnAgain()
-        {
-            var hud = DefaultHud;
-            try
-            {
-                DefaultHudFactory.Enabled = false;
-                Assert.That(hud == null, Is.True, "turning it off takes the HUD away");
-                Assert.That(DefaultHudFactory.Current, Is.Null);
-
-                GameSignals.LocalPlayer.Publish(GameSignals.LocalPlayer.Value);
-                Assert.That(DefaultHudFactory.Current, Is.Null, "a game with its own HUD gets no default HUD");
-
-                DefaultHudFactory.Unregister();
-                DefaultHudFactory.Register();
-                Assert.That(DefaultHudFactory.Current, Is.Null, "registering again keeps it off");
-            }
-            finally
-            {
-                DefaultHudFactory.Enabled = true;
-            }
-
-            Assert.That(DefaultHudFactory.Current, Is.Not.Null, "turning it on builds it for the published player");
-        }
-
-        // 中身を確かめるため、既定の作り役が作った HUD を具体クラスで読む
-        private static Hud DefaultHud => DefaultHudFactory.Current;
     }
 }

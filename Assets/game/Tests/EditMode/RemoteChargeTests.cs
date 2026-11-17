@@ -257,9 +257,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_host.TryGetFollowUp(0, out var followUp), Is.True);
             Assert.That(followUp, Is.EqualTo(AbilityFollowUp.Detonate(Kind, RemoteChargeSpec.DefaultNameKey, 2)));
             Assert.That(followUp.Kind, Is.EqualTo(AbilityFollowUpKind.Detonate));
-            Assert.That(
-                AbilitySlotsView.FollowUpText(followUp),
-                Is.EqualTo(new LocalizedText(AbilitySlotsView.DetonateKey, new LocalizedText(RemoteChargeSpec.DefaultNameKey), 2)));
+            Assert.That(followUp.TargetNameKey, Is.EqualTo(RemoteChargeSpec.DefaultNameKey));
 
             _host.Configure(GameRules.Default);
             Assert.That(_host.TryGetFollowUp(0, out _), Is.False, "nothing is offered while abilities are off");
@@ -285,14 +283,14 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheDetonateHintNamesTheChargeByIdWithoutANameKey()
+        public void TheDetonateFollowUpCarriesTheIdWithoutANameKey()
         {
             _definition.NameKey = " ";
 
             Assert.That(_definition.DisplayNameKey, Is.Empty);
-            Assert.That(
-                AbilitySlotsView.FollowUpText(AbilityFollowUp.Detonate(Kind, _definition.DisplayNameKey, 1)),
-                Is.EqualTo(new LocalizedText(AbilitySlotsView.DetonateKey, LocalizedText.Literal(Kind), 1)));
+            var followUp = AbilityFollowUp.Detonate(Kind, _definition.DisplayNameKey, 1);
+            Assert.That(followUp.TargetId, Is.EqualTo(Kind));
+            Assert.That(followUp.TargetNameKey, Is.Empty);
         }
 
         [Test]
@@ -311,8 +309,8 @@ namespace Fps.Tests.EditMode
             Assert.That(target.IsDead, Is.True);
             Assert.That(kills.Count, Is.EqualTo(1));
             Assert.That(kills[0].WeaponId, Is.EqualTo(Kind));
-            var line = new OfflineKillFeedNames().Describe(kills[0]);
-            Assert.That(line.WeaponName, Is.EqualTo(new LocalizedText(RemoteChargeSpec.DefaultNameKey)));
+            Assert.That(RemoteChargeDeployDefinition.TryFindName(CombatEvents.OfflineObject(kills[0].KillerId), kills[0].WeaponId, out var name), Is.True);
+            Assert.That(name, Is.EqualTo(new LocalizedText(RemoteChargeSpec.DefaultNameKey)));
         }
 
         [Test]

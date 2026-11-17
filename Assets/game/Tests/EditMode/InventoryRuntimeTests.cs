@@ -7,7 +7,6 @@ using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -161,7 +160,7 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ThePromptNamesTheItem()
+        public void ThePickupHintNamesTheItem()
         {
             var player = NewPlayer(Catalog(InventoryRule.Default));
             var pickup = Pickup.Create(PickupContents.ForItem(_caseId, 1), Vector3.zero, PickupCollectMode.Interact);
@@ -170,131 +169,6 @@ namespace Fps.Tests.EditMode
             Assert.That(hint.Action, Is.EqualTo(PickupHintAction.Item));
             Assert.That(hint.ContentId, Is.EqualTo(_caseId));
             Assert.That(hint.Count, Is.EqualTo(1));
-            Assert.That(PickupPrompt.TryDescribe(hint, "E", out var text), Is.True);
-            Assert.That(text.Key, Is.EqualTo(PickupPrompt.ItemKey));
-            Assert.That(Localizer.Resolve(text), Does.Contain("工具箱"));
-        }
-
-        [Test]
-        public void TheLayoutHasTheInventoryArea()
-        {
-            Assert.That(CloneLayout().Q<VisualElement>(InventoryView.UxmlName), Is.Not.Null);
-        }
-
-        [Test]
-        public void HudAddViewsAttachesTheInventoryScreen()
-        {
-            var hud = Hud.Create("InventoryRuntimeTests.Hud");
-            _created.Add(hud.gameObject);
-            _created.Add(hud.OwnedPanelSettings);
-
-            Assert.That(hud.InventoryScreen, Is.Not.Null, "Hud.AddViews attaches the inventory screen");
-        }
-
-        [Test]
-        public void TheScreenDoesNotOpenWithoutASource()
-        {
-            var view = CreateBoundView(null);
-
-            view.SetOpen(true);
-
-            Assert.That(view.IsOpen, Is.False);
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
-        }
-
-        [Test]
-        public void AGridIsDrawnWithEachStackAtItsPlaceAndSize()
-        {
-            var source = new FakeControl(Catalog(new InventoryRule(maxWeight: 30f, gridWidth: 8, gridHeight: 4)));
-            source.Inventory.Add(_caseId, 1);
-            var view = CreateBoundView(source);
-
-            view.SetOpen(true);
-
-            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-            Assert.That(view.Element.Query(className: InventoryView.CellClass).ToList(), Has.Count.EqualTo(32));
-            var boxes = view.Element.Query(className: InventoryView.ItemClass).ToList();
-            Assert.That(boxes, Has.Count.EqualTo(2));
-            var caseBox = boxes[1];
-            Assert.That(caseBox.style.left.value.value, Is.EqualTo(InventoryView.CellSize));
-            Assert.That(caseBox.style.width.value.value, Is.EqualTo(3 * InventoryView.CellSize));
-            Assert.That(caseBox.style.height.value.value, Is.EqualTo(2 * InventoryView.CellSize));
-            Assert.That(Labels(view, InventoryView.StatusClass), Is.EqualTo(new[] { "重さ 6.2 / 30 kg" }));
-            Assert.That(Labels(view, InventoryView.ItemCountClass), Is.EqualTo(new[] { "×2" }));
-        }
-
-        [Test]
-        public void WithoutAGridTheStacksAreListed()
-        {
-            var source = new FakeControl(Catalog(new InventoryRule(maxStacks: 4)));
-            var view = CreateBoundView(source);
-
-            view.SetOpen(true);
-
-            Assert.That(view.Element.Query(className: InventoryView.CellClass).ToList(), Is.Empty);
-            Assert.That(view.Element.Query(className: InventoryView.ListItemClass).ToList(), Has.Count.EqualTo(1));
-            Assert.That(Labels(view, InventoryView.StatusClass), Is.EqualTo(new[] { "重さ 0.2 kg    1 / 4 枠" }));
-        }
-
-        [Test]
-        public void SelectingAUsableItemOffersUseAndDrop()
-        {
-            var source = new FakeControl(Catalog(InventoryRule.Default));
-            source.Inventory.Add(_keyId, 1);
-            var view = CreateBoundView(source);
-            view.SetOpen(true);
-
-            view.Select(source.Inventory.Stacks[0].Handle);
-            Assert.That(Buttons(view), Is.EqualTo(new[] { "使う", "1 個捨てる", "全部捨てる" }));
-
-            view.Select(source.Inventory.Stacks[1].Handle);
-            Assert.That(Buttons(view), Is.EqualTo(new[] { "1 個捨てる" }), "a key cannot be used and there is only one");
-        }
-
-        [Test]
-        public void ThePublishedInventoryIsShownUntilCleared()
-        {
-            var view = CreateBoundView();
-            var source = new FakeControl(Catalog(InventoryRule.Default));
-
-            GameSignals.Inventory.Publish(source);
-            Assert.That(view.Source, Is.SameAs(source));
-            view.SetOpen(true);
-            Assert.That(view.IsOpen, Is.True);
-
-            GameSignals.Inventory.Clear();
-            Assert.That(view.Source, Is.Null);
-            Assert.That(view.IsOpen, Is.False, "losing the inventory closes the screen");
-        }
-
-        [Test]
-        public void ABindingViewCatchesUpWithThePublishedInventoryAndKeepsOneSetDirectly()
-        {
-            var published = new FakeControl(Catalog(InventoryRule.Default));
-            GameSignals.Inventory.Publish(published);
-            var view = CreateBoundView();
-            Assert.That(view.Source, Is.SameAs(published));
-
-            GameSignals.Inventory.Clear();
-            var direct = new FakeControl(Catalog(InventoryRule.Default));
-            view.Source = direct;
-            GameSignals.Inventory.Publish(published);
-            view.Source = direct;
-            GameSignals.Inventory.Clear();
-
-            Assert.That(view.Source, Is.SameAs(direct), "a clear only takes back what the signal gave");
-        }
-
-        [Test]
-        public void TheScreenRedrawsWhenTheSourceChanges()
-        {
-            var source = new FakeControl(Catalog(InventoryRule.Default));
-            var view = CreateBoundView(source);
-            view.SetOpen(true);
-
-            source.Inventory.Add(_keyId, 1);
-
-            Assert.That(view.Element.Query(className: InventoryView.ItemClass).ToList(), Has.Count.EqualTo(2));
         }
 
         [Test]
@@ -449,19 +323,6 @@ namespace Fps.Tests.EditMode
             Assert.That(inventory.Inventory.TotalWeight, Is.EqualTo(5.08f).Within(1e-4f));
         }
 
-        [Test]
-        public void SelectingAWeaponOffersEquipAndDrop()
-        {
-            var source = new FakeControl(WeaponCatalog(InventoryRule.Default));
-            source.Inventory.HoldWeapons(new[] { TestWeapons.RifleSpec() });
-            var view = CreateBoundView(source);
-            view.SetOpen(true);
-
-            view.Select(source.Inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle);
-
-            Assert.That(Buttons(view), Is.EqualTo(new[] { "装備する", "捨てる" }));
-        }
-
         private (PlayerInventory Inventory, WeaponController Weapons) NewArmedPlayer(InventoryRule rule = null, float rifleWeight = 0f)
         {
             var player = NewPlayer(WeaponCatalog(rule ?? new InventoryRule(gridWidth: 8, gridHeight: 4)));
@@ -512,82 +373,6 @@ namespace Fps.Tests.EditMode
             damageable.Initialize("Player", 100);
             go.AddComponent<PlayerInventory>().Initialize(catalog);
             return damageable;
-        }
-
-        private InventoryView CreateBoundView(IInventoryControl source)
-        {
-            var view = CreateBoundView();
-            view.Source = source;
-            return view;
-        }
-
-        private InventoryView CreateBoundView()
-        {
-            var gameObject = new GameObject(nameof(InventoryView));
-            _created.Add(gameObject);
-            var view = gameObject.AddComponent<InventoryView>();
-            view.Bind(CloneLayout());
-            return view;
-        }
-
-        private static string[] Labels(InventoryView view, string className)
-        {
-            return view.Element.Query<Label>(className: className).ToList().Select(l => l.text).ToArray();
-        }
-
-        private static string[] Buttons(InventoryView view)
-        {
-            return view.Element.Query<Button>(className: InventoryView.ButtonClass).ToList().Select(b => b.text).ToArray();
-        }
-
-        private static VisualElement CloneLayout()
-        {
-            var layout = Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath);
-            Assert.That(layout, Is.Not.Null, "Assets/game/UI/Resources/Hud/Hud.uxml should be loadable from Resources");
-            return layout.CloneTree();
-        }
-
-        private sealed class FakeControl : IInventoryControl
-        {
-            public FakeControl(ItemCatalog catalog)
-            {
-                Inventory = new Inventory(catalog);
-                Inventory.Fill();
-                Inventory.Changed += () => Changed?.Invoke();
-            }
-
-            public event Action Changed;
-
-            public Inventory Inventory { get; }
-
-            public void Move(int handle, int x, int y, bool rotated)
-            {
-                Inventory.TryMove(handle, x, y, rotated);
-            }
-
-            public void Use(int handle)
-            {
-                Inventory.TryTake(handle, 1, out _);
-            }
-
-            public void Drop(int handle, int count)
-            {
-                Inventory.TryTake(handle, count, out _);
-            }
-
-            public List<int> Attached { get; } = new List<int>();
-
-            public List<(int, string)> Detached { get; } = new List<(int, string)>();
-
-            public void Attach(int handle)
-            {
-                Attached.Add(handle);
-            }
-
-            public void Detach(int weaponHandle, string itemId)
-            {
-                Detached.Add((weaponHandle, itemId));
-            }
         }
     }
 }

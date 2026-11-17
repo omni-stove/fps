@@ -9,6 +9,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SceneLadder = Shooter.Runtime.Traversal.Ladder;
+using SceneWater = Shooter.Runtime.Traversal.Water;
 using NumericsQuaternion = System.Numerics.Quaternion;
 using NumericsVector3 = System.Numerics.Vector3;
 
@@ -175,6 +176,12 @@ namespace Shooter.Editor
                     written.Add(laddersPath);
                     Debug.Log(LogTag + " wrote " + laddersPath + " from " + scenePath + " (" + ladders.Ladders.Count + " ladders)");
 
+                    var water = CollectWater(scene.GetRootGameObjects());
+                    var waterPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapWater.Extension);
+                    WriteText(waterPath, NetMapWater.Write(water));
+                    written.Add(waterPath);
+                    Debug.Log(LogTag + " wrote " + waterPath + " from " + scenePath + " (" + water.Water.Count + " water volumes)");
+
                     var vehicles = MapVehicleExporter.Collect(scene.GetRootGameObjects());
                     var vehiclesPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapVehicles.Extension);
                     WriteText(vehiclesPath, NetMapVehicles.Write(vehicles));
@@ -270,6 +277,50 @@ namespace Shooter.Editor
             return new NetMapLadders(ladders);
         }
 
+        // 無効な水はプレイ中に泳げない (Water.Enabled に載らない) ので書き出さない。
+        public static NetMapWater CollectWater(IReadOnlyList<GameObject> roots)
+        {
+            if (roots == null)
+            {
+                throw new ArgumentNullException(nameof(roots));
+            }
+
+            var water = new List<MapWater>();
+            var invalid = new List<string>();
+            foreach (var root in roots)
+            {
+                if (root == null)
+                {
+                    continue;
+                }
+
+                foreach (var volume in root.GetComponentsInChildren<SceneWater>(false))
+                {
+                    if (!volume.enabled)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        water.Add(new MapWater(volume.Box));
+                    }
+                    catch (ArgumentException e)
+                    {
+                        invalid.Add(PathOf(volume.transform) + " (" + e.Message + ")");
+                    }
+                }
+            }
+
+            // 書き出さないと、オフラインでだけ泳げる水になる
+            if (invalid.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " these water volumes have invalid settings: " + string.Join(", ", invalid));
+            }
+
+            return new NetMapWater(water);
+        }
+
         public static WorldMap ReadFile(string path)
         {
             using (var stream = File.OpenRead(path))
@@ -301,6 +352,7 @@ namespace Shooter.Editor
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapStructures.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapWater.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapVehicles.Extension));
             foreach (var path in files)
             {

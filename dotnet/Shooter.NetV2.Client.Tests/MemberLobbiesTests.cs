@@ -37,7 +37,26 @@ namespace Shooter.NetV2.Tests
             return new LobbyInfo(id, members[0], 4, members);
         }
 
-        private static IReadOnlyList<LobbyAttribute> ModeDuo()
+        private static readonly string[] _updateMemberCalls = { "update-member id=L1 ready=1,team=a" };
+        private static readonly string[] _joinedL1 = { "L1" };
+        private static readonly string[] _joinL2Calls = { "join id=L2" };
+        private static readonly string[] _createJoinLeaveCalls =
+        {
+            "create bucket=shooter-party:0.3.0 max=4",
+            "join id=L2",
+            "leave id=L1",
+        };
+
+        private static readonly string[] _afterLateAnswersCalls =
+        {
+            "create bucket=shooter-party:0.3.0 max=4",
+            "join id=L2",
+            "leave id=L1",
+            "leave id=L3",
+            "leave id=L2",
+        };
+
+        private static LobbyAttribute[] ModeDuo()
         {
             return new[] { LobbyAttribute.OfText("mode", "duo") };
         }
@@ -278,7 +297,7 @@ namespace Shooter.NetV2.Tests
             var failure = "not answered";
             _lobbies.SetMemberAttributes("L1", new[] { LobbyAttribute.OfNumber("ready", 1), LobbyAttribute.OfText("team", "a") }, error => failure = error);
 
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "update-member id=L1 ready=1,team=a" }));
+            Assert.That(_api.Calls, Is.EqualTo(_updateMemberCalls));
             _api.AnswerUpdate(null);
             Assert.That(failure, Is.Null);
         }
@@ -375,10 +394,10 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(failure, Is.EqualTo("the lobby was left or the login ended before the request finished"));
             Assert.That(_lobbies.Joined, Is.Empty);
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=L2" }), "nothing to leave once the login is gone");
+            Assert.That(_api.Calls, Is.EqualTo(_joinL2Calls), "nothing to leave once the login is gone");
 
             _lobbies.Dispose();
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "join id=L2" }));
+            Assert.That(_api.Calls, Is.EqualTo(_joinL2Calls));
         }
 
         [Test]
@@ -406,19 +425,12 @@ namespace Shooter.NetV2.Tests
 
             _lobbies.Dispose();
             _lobbies.Dispose();
-            Assert.That(_api.Calls, Is.EqualTo(new[] { "create bucket=shooter-party:0.3.0 max=4", "join id=L2", "leave id=L1" }));
+            Assert.That(_api.Calls, Is.EqualTo(_createJoinLeaveCalls));
 
             _api.AnswerCreate("L3");
             _api.AnswerJoin(null);
             Assert.That(answered, Is.False, "no callbacks after Dispose");
-            Assert.That(_api.Calls, Is.EqualTo(new[]
-            {
-                "create bucket=shooter-party:0.3.0 max=4",
-                "join id=L2",
-                "leave id=L1",
-                "leave id=L3",
-                "leave id=L2",
-            }));
+            Assert.That(_api.Calls, Is.EqualTo(_afterLateAnswersCalls));
 
             _api.AnswerLeave("leaving the EOS member lobby id=L1 failed: TimedOut");
             Assert.That(_log, Has.Member("[Lobby] member lobby leave failed id=L1 reason=leaving the EOS member lobby id=L1 failed: TimedOut"));
@@ -430,6 +442,68 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ObjectDisposedException>(() => _lobbies.Leave("L1", _ => { }));
             Assert.Throws<ObjectDisposedException>(() => _lobbies.SetMemberAttributes("L1", ModeDuo(), _ => { }));
             Assert.Throws<ObjectDisposedException>(() => _lobbies.ReadMemberAttributes("L1", _friend, (_, _) => { }));
+            Assert.Throws<ObjectDisposedException>(() => _lobbies.Read("L1", (_, _) => { }));
+        }
+
+        [Test]
+        public void ReadingReturnsTheLobby()
+        {
+            CreateL1();
+            LobbyInfo read = null;
+            var failure = "not answered";
+            _lobbies.Read("L1", (lobby, error) =>
+            {
+                read = lobby;
+                failure = error;
+            });
+
+            Assert.That(failure, Is.Null);
+            Assert.That(read.Id, Is.EqualTo("L1"));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(_joinedL1));
+        }
+
+        [Test]
+        public void ReadingALobbyThatIsGoneReturnsNothingAndForgetsIt()
+        {
+            CreateL1();
+            _api.CopyError = LobbyBackendErrors.NotFound;
+            LobbyInfo read = Party("x", _self);
+            var failure = "not answered";
+            _lobbies.Read("L1", (lobby, error) =>
+            {
+                read = lobby;
+                failure = error;
+            });
+
+            Assert.That(read, Is.Null);
+            Assert.That(failure, Is.Null);
+            Assert.That(_lobbies.Joined, Is.Empty);
+        }
+
+        [Test]
+        public void ReadingFailsWithTheReasonWhenTheLobbyCannotBeRead()
+        {
+            CreateL1();
+            _api.CopyError = "reading the EOS lobby id=L1 failed: TimedOut";
+            LobbyInfo read = Party("x", _self);
+            string failure = null;
+            _lobbies.Read("L1", (lobby, error) =>
+            {
+                read = lobby;
+                failure = error;
+            });
+
+            Assert.That(read, Is.Null);
+            Assert.That(failure, Is.EqualTo("reading the EOS lobby id=L1 failed: TimedOut"));
+            Assert.That(_lobbies.Joined, Is.EquivalentTo(_joinedL1));
+        }
+
+        [Test]
+        public void ReadingChecksItsArguments()
+        {
+            Assert.Throws<ArgumentException>(() => _lobbies.Read("", (_, _) => { }));
+            Assert.Throws<ArgumentNullException>(() => _lobbies.Read("L1", null));
+            Assert.That(_api.Calls, Is.Empty);
         }
 
         [Test]

@@ -288,9 +288,17 @@ namespace Shooter.NetV2
 
             ThrowIfDisposed();
             var lobby = _api.CopyLobby(lobbyId, out var reason);
-            if (reason != null || lobby == null)
+            if (lobby == null && (reason == null || LobbyBackendErrors.IsNotFound(reason)))
             {
-                done(null, reason ?? LobbyBackendErrors.NotFound);
+                // もう入っていない・ロビーが無いは、ILobbyBackend.ReadMemberLobby の約束どおり (null, null) で返す
+                _joined.Remove(lobbyId);
+                done(null, null);
+                return;
+            }
+
+            if (lobby == null)
+            {
+                done(null, reason);
                 return;
             }
 

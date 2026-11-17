@@ -482,7 +482,9 @@ namespace Shooter.NetEos
             var result = _lobby.CopyLobbyDetailsHandle(ref options, out var details);
             if (result != Result.Success || details == null)
             {
-                error = "reading the EOS lobby id=" + lobbyId + " failed: " + result;
+                error = result == Result.NotFound
+                    ? LobbyBackendErrors.NotFound
+                    : "reading the EOS lobby id=" + lobbyId + " failed: " + result;
                 return null;
             }
 

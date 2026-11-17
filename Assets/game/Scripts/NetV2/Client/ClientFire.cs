@@ -4,7 +4,6 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>引き金を引いたときに、射撃を送るか・リロードを頼むか・何もしないか。</summary>
     public enum FireDecision
     {
         Hold,
@@ -12,17 +11,10 @@ namespace Shooter.NetV2
         Reload,
     }
 
-    /// <summary>
-    /// 自分の射撃を送る前の判断。撃てるか (弾・間隔・当たり) はサーバーが決めるが、サーバーが捨てると分かっている射撃は送らない
-    /// (Netcode のクライアントの <c>NetPlayer.Update</c> と <c>NetPlayerWeapon.PrepareFire</c> と同じ条件)。
-    /// </summary>
+    // 撃てるか (弾・間隔・当たり) はサーバーが決めるが、サーバーが捨てると分かっている射撃は送らない
+    // (Netcode のクライアントの NetPlayer.Update と NetPlayerWeapon.PrepareFire と同じ条件)。
     public static class ClientFire
     {
-        /// <summary>
-        /// latest の自分の行と持ち主の状態、自分の予測 predicted から決める。倒れている・ダウン中・回避中・乗り越え中・飛び込み中・
-        /// はしごにつかまっている・武器が無い・持ち替え中なら <see cref="FireDecision.Hold"/>、弾倉が空なら <see cref="FireDecision.Reload"/>。
-        /// リロード中も <see cref="FireDecision.Hold"/> だが、1 発ずつ込める武器は込めた弾があればリロード中でも <see cref="FireDecision.Fire"/> を返す。
-        /// </summary>
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted)
         {
             return Decide(latest, playerId, predicted, null);
@@ -96,7 +88,6 @@ namespace Shooter.NetV2
             return index > 0 && index <= types.Count ? types[index - 1].RoundOr(spec.Round) : spec.Round;
         }
 
-        /// <summary>今持っている武器の Id。武器が届いていなければ null。</summary>
         public static string CurrentWeaponId(OwnerSnapshot owner)
         {
             if (owner == null)

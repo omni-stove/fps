@@ -4,7 +4,6 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2.Tests
 {
-    /// <summary>クライアントの通信路の代わり。届く出来事をテストが積み、送ったメッセージを読み返せる。</summary>
     internal sealed class FakeTransport : IMatchTransport
     {
         public static readonly ConnectionId Server = new ConnectionId(1);

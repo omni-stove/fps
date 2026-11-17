@@ -4,50 +4,30 @@ using System.Collections.ObjectModel;
 
 namespace Shooter.Core
 {
-    /// <summary>ミッションの目標の状態。</summary>
     public enum ObjectiveState
     {
-        /// <summary>前提の目標が未完了で、まだ進められない。</summary>
         Locked,
 
-        /// <summary>進められる。</summary>
         Active,
 
-        /// <summary>必要な数に届いて完了した。</summary>
         Completed,
 
-        /// <summary>失敗した。</summary>
         Failed,
     }
 
-    /// <summary>
-    /// ミッションの目標の定義。不変で、進み具合は <see cref="Mission"/> が持つ。
-    /// </summary>
     public sealed class Objective
     {
-        /// <summary>ミッション内で一意な識別子。</summary>
         public string Id { get; }
 
-        /// <summary>
-        /// プレイヤーに見せる説明を引く、game 側の言語の表のキー。無ければ空文字。
-        /// 表の文には数を直に書かず <see cref="RequiredCount"/> を差し込む (定義の数を変えたときに説明だけ古いまま残らないよう)。
-        /// </summary>
+        // 表の文には数を直に書かず RequiredCount を差し込む。定義の数を変えたときに説明だけ古いまま残らないようにするため。
         public string DescriptionKey { get; }
 
-        /// <summary>完了までに必要な進み具合。1 以上。</summary>
         public int RequiredCount { get; }
 
-        /// <summary>任意の目標なら true。ミッションの成否に影響しない。</summary>
         public bool Optional { get; }
 
-        /// <summary>この目標を進める前に完了している必要がある目標の Id。</summary>
         public IReadOnlyList<string> Prerequisites { get; }
 
-        /// <param name="id">ミッション内で一意な識別子。空にはできない。</param>
-        /// <param name="descriptionKey">プレイヤーに見せる説明の、言語の表のキー。null は空文字として扱う。</param>
-        /// <param name="requiredCount">完了までに必要な進み具合。1 以上。</param>
-        /// <param name="optional">任意の目標なら true。</param>
-        /// <param name="prerequisites">先に完了している必要がある目標の Id。null なら前提なし。</param>
         public Objective(
             string id,
             string descriptionKey,

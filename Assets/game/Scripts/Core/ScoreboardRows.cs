@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    // キル数が同じならデス数の少ない順、それも同じなら ScoreboardEntry.PlayerId の小さい順にして、
+    // キル数が同じならアシスト数の多い順、それも同じならデス数の少ない順、それも同じなら ScoreboardEntry.PlayerId の小さい順にして、
     // 一覧が届くたびに同点の行が入れ替わって見えないようにする。
     public static class ScoreboardRows
     {
@@ -49,6 +49,12 @@ namespace Shooter.Core
             if (byKills != 0)
             {
                 return byKills;
+            }
+
+            var byAssists = b.Assists.CompareTo(a.Assists);
+            if (byAssists != 0)
+            {
+                return byAssists;
             }
 
             var byDeaths = a.Deaths.CompareTo(b.Deaths);

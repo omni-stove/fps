@@ -20,6 +20,7 @@ namespace Shooter.NetEos
 
         private readonly EosCredentials _credentials;
         private readonly string _displayName;
+        private readonly HashSet<string> _matchLobbies = new HashSet<string>(StringComparer.Ordinal);
         private PlatformInterface _platform;
         private LobbyInterface _lobby;
         private EosConnect.ConnectInterface _connect;
@@ -166,6 +167,136 @@ namespace Shooter.NetEos
             });
         }
 
+        public void CreateMemberLobby(
+            string bucketId, int maxMembers, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void LeaveMemberLobby(string lobbyId, Action<string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void SetMemberAttributes(string lobbyId, IReadOnlyList<Shooter.Core.LobbyAttribute> attributes, Action<string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void ReadMemberAttributes(
+            string lobbyId, string userId, Action<IReadOnlyList<Shooter.Core.LobbyAttribute>, string> done)
+        {
+            RejectUnsupported(done);
+        }
+
+        public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                throw new ArgumentException("a lobby id is required", nameof(lobbyId));
+            }
+
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            if (!CanCall(out var unavailable))
+            {
+                done(null, unavailable);
+                return;
+            }
+
+            var options = new JoinLobbyByIdOptions
+            {
+                LobbyId = lobbyId,
+                LocalUserId = _localUserId,
+                PresenceEnabled = false,
+                // ボイスを使わない人も入るので、RTC 部屋には EosVoiceSession が入るときにだけ入る
+                RTCRoomJoinActionType = LobbyRTCRoomJoinActionType.ManualJoin,
+                LocalRTCOptions = EosVoiceSession.RoomOptions(),
+            };
+            _lobby.JoinLobbyById(ref options, null, (ref JoinLobbyByIdCallbackInfo info) =>
+            {
+                if (_disposed)
+                {
+                    // 返事を待つ間に捨てられると Dispose の出る対象に入っていないので、入れた分はここで出る
+                    if (info.ResultCode == Result.Success && PlatformAlive && _localUserId != null)
+                    {
+                        LeaveQuietly(lobbyId);
+                    }
+
+                    return;
+                }
+
+                if (info.ResultCode != Result.Success)
+                {
+                    done(null, "joining the EOS match lobby id=" + lobbyId + " failed: " + info.ResultCode);
+                    return;
+                }
+
+                _matchLobbies.Add(lobbyId);
+                var lobby = CopyLobby(lobbyId, out var error);
+                if (lobby == null)
+                {
+                    // 入ったことを返せないまま残ると、呼び出し側が出ないので、ここで出ておく
+                    LeaveQuietly(lobbyId);
+                    done(null, error);
+                    return;
+                }
+
+                done(lobby, null);
+            });
+        }
+
+        public void LeaveMatchLobby(string lobbyId, Action<string> done)
+        {
+            if (string.IsNullOrEmpty(lobbyId))
+            {
+                throw new ArgumentException("a lobby id is required", nameof(lobbyId));
+            }
+
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            if (!CanCall(out var unavailable))
+            {
+                done(unavailable);
+                return;
+            }
+
+            var options = new LeaveLobbyOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
+            _lobby.LeaveLobby(ref options, null, (ref LeaveLobbyCallbackInfo info) =>
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                // もう入っていない (サーバーがロビーを閉じた・追い出された) なら、出たのと同じ
+                if (info.ResultCode != Result.Success && info.ResultCode != Result.NotFound)
+                {
+                    done("leaving the EOS match lobby id=" + lobbyId + " failed: " + info.ResultCode);
+                    return;
+                }
+
+                _matchLobbies.Remove(lobbyId);
+                done(null);
+            });
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -174,6 +305,16 @@ namespace Shooter.NetEos
             }
 
             _disposed = true;
+            if (PlatformAlive && _localUserId != null)
+            {
+                // 出ずに捨てると、EOS は接続が切れたと気づくまでメンバーとして残し、ボイスの部屋にも名前が残る
+                foreach (var lobbyId in new List<string>(_matchLobbies))
+                {
+                    LeaveQuietly(lobbyId);
+                }
+            }
+
+            _matchLobbies.Clear();
             _login?.Cancel();
             _login = null;
             _refresh?.Cancel();
@@ -271,6 +412,7 @@ namespace Shooter.NetEos
             var reason = "the EOS connect login became " + info.CurrentStatus;
             EosPlatform.ForgetLogin(_localUserId);
             _localUserId = null;
+            _matchLobbies.Clear();
             _refresh?.Cancel();
             _refresh = null;
             LoggedOut?.Invoke(reason);
@@ -280,6 +422,40 @@ namespace Shooter.NetEos
         {
             return userId != null && _localUserId != null
                 && string.Equals(userId.ToString(), _localUserId.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private LobbyInfo CopyLobby(string lobbyId, out string error)
+        {
+            var options = new CopyLobbyDetailsHandleOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
+            var result = _lobby.CopyLobbyDetailsHandle(ref options, out var details);
+            if (result != Result.Success || details == null)
+            {
+                error = "reading the EOS match lobby id=" + lobbyId + " failed: " + result;
+                return null;
+            }
+
+            try
+            {
+                return Describe(details, out error);
+            }
+            finally
+            {
+                details.Release();
+            }
+        }
+
+        // 結果を待つ相手がいないので、失敗はログにだけ出す。
+        private void LeaveQuietly(string lobbyId)
+        {
+            _matchLobbies.Remove(lobbyId);
+            var options = new LeaveLobbyOptions { LobbyId = lobbyId, LocalUserId = _localUserId };
+            _lobby.LeaveLobby(ref options, null, (ref LeaveLobbyCallbackInfo info) =>
+            {
+                if (info.ResultCode != Result.Success && info.ResultCode != Result.NotFound)
+                {
+                    Debug.LogWarning("[Lobby] leaving the EOS match lobby id=" + lobbyId + " failed: " + info.ResultCode);
+                }
+            });
         }
 
         private static List<LobbyInfo> ReadResults(LobbySearch search)
@@ -428,6 +604,29 @@ namespace Shooter.NetEos
 
             error = null;
             return true;
+        }
+
+        private void RejectUnsupported<T>(Action<T, string> done)
+            where T : class
+        {
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            ThrowIfDisposed();
+            done(null, LobbyBackendErrors.NotSupported);
+        }
+
+        private void RejectUnsupported(Action<string> done)
+        {
+            if (done == null)
+            {
+                throw new ArgumentNullException(nameof(done));
+            }
+
+            ThrowIfDisposed();
+            done(LobbyBackendErrors.NotSupported);
         }
 
         private void ThrowIfDisposed()

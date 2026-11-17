@@ -8,16 +8,9 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦の自分のプレイヤーの視点と入力。視点は <see cref="FirstPersonLook"/> が本体の yaw と目の pitch を回し、
-    /// 移動の入力は Netcode のクライアント (<c>NetworkPlayerMotor</c>) と同じ読み方で tick ごとに 1 つ作る。
-    /// 位置は予測の結果 (<see cref="Show"/>) を書き写すだけで、自分では動かさない。
-    /// </summary>
-    /// <remarks>
-    /// フレームで押したもの (ジャンプ・切り替え・回避・射撃など) は次の tick まで覚えておく。tick はフレームより遅いことがあり、取りこぼすため。
-    /// ダッシュとしゃがみは操作設定 (<see cref="ControlSettings"/>) の押し方を解釈し、送るのは解釈した後の「したいか」だけにする (サーバーは押し方を知らない)。
-    /// 射撃は押した瞬間だけでなく押している間も読む。撃つ間合いと押した・離したを武器の撃ち方 (<see cref="ClientTrigger"/>) で決めるため。
-    /// </remarks>
+    // フレームで押したもの (ジャンプ・切り替え・回避・射撃など) は次の tick まで覚えておく。tick はフレームより遅いことがあり、取りこぼすため。
+    // サーバーは押し方を知らないので、ダッシュとしゃがみは操作設定 (ControlSettings) の押し方を解釈し、送るのは解釈した後の「したいか」だけにする。
+    // 射撃は押した瞬間だけでなく押している間も読む。撃つ間合いと押した・離したを武器の撃ち方 (ClientTrigger) で決めるため。
     [DisallowMultipleComponent]
     public sealed class NetV2LocalPlayer : MonoBehaviour
     {
@@ -98,15 +91,10 @@ namespace Shooter.NetV2
 
         public FirstPersonLook Look => _look;
 
-        /// <summary>目の位置 (射撃・投げ・印の出どころ)。</summary>
         public Vector3 EyePosition => _eye.position;
 
-        /// <summary>見ている向き (長さ 1)。</summary>
         public Vector3 AimDirection => _camera.transform.forward;
 
-        /// <summary>
-        /// 自分のプレイヤーを作る。geometry は予測の体と同じ寸法、canStand は今の位置で立ち上がれるか (しゃがみの自動解除に使う)。
-        /// </summary>
         public static NetV2LocalPlayer Create(StanceGeometry geometry, Func<bool> canStand, Vector3 position, float yaw)
         {
             if (geometry == null)
@@ -147,11 +135,7 @@ namespace Shooter.NetV2
             return player;
         }
 
-        /// <summary>
-        /// 撃つ人の本体に付ける武器の演出 (銃声・マズルフラッシュ・曳光弾・薬莢・空撃ちの音・血)。Netcode の NetPlayer と同じ部品で、
-        /// 中身 (音とエフェクト) はそれぞれのカタログから武器の Id で引く。local は自分の本体か (自分の音は 2D で鳴らす)。
-        /// </summary>
-        /// <remarks>CharacterComponents.Attach を使わないのは、v2 の本体には人型のリグも手榴弾を投げる見た目も無いため。</remarks>
+        // CharacterComponents.Attach を使わないのは、v2 の本体には人型のリグも手榴弾を投げる見た目も無いため。
         public static WeaponPresentation AttachPresentation(GameObject body, bool local)
         {
             var presentation = body.AddComponent<WeaponPresentation>();
@@ -162,7 +146,6 @@ namespace Shooter.NetV2
             return presentation;
         }
 
-        /// <summary>予測した状態を書き写す。目の高さは姿勢に合わせる。</summary>
         public void Show(CharacterMotorState state)
         {
             transform.position = NetV2Math.ToUnity(state.Position);
@@ -173,10 +156,7 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>
-        /// 次の tick の入力を作る。移動は X が右・Y が前、yaw は Y 軸まわりのラジアン。
-        /// grounded は今の予測で接地しているか (空中で押したジャンプでしゃがみを解かないため)。
-        /// </summary>
+        // 空中で押したジャンプでしゃがみを解かないよう、今の予測で接地しているかを受け取る。
         public void Sample(bool grounded, out Vector2 move, out float yaw, out InputButtons buttons)
         {
             var paused = GameUi.IsPauseOpen;
@@ -206,15 +186,10 @@ namespace Shooter.NetV2
 
         public bool IsAiming => !GameUi.IsPauseOpen && !BlocksAds && _aim != null && _aim.IsPressed();
 
-        /// <summary>射撃を押したか。読むと忘れる。</summary>
         public bool TakeAttack() => Take(ref _attackLatched);
 
-        /// <summary>射撃を押し続けているか (止めのメニューを開いている間は押していないことにする)。</summary>
         public bool IsAttackHeld => !GameUi.IsPauseOpen && _attack != null && _attack.IsPressed();
 
-        /// <summary>
-        /// 視点の yaw (ラジアン) を向きに合わせる。はしごにつかまったとき、オフラインの LadderMovement と同じくはしごへ向けるのに使う。
-        /// </summary>
         public void FaceYaw(float yaw)
         {
             var degrees = yaw * Mathf.Rad2Deg;
@@ -227,13 +202,10 @@ namespace Shooter.NetV2
             transform.rotation = NetV2Math.YawRotation(yaw);
         }
 
-        /// <summary>リロードを押したか。読むと忘れる。</summary>
         public bool TakeReload() => Take(ref _reloadLatched);
 
-        /// <summary>グレネードを押したか。読むと忘れる。</summary>
         public bool TakeGrenade() => Take(ref _grenadeLatched);
 
-        /// <summary>印を押したか。読むと忘れる。</summary>
         public bool TakePing() => Take(ref _pingLatched);
 
         public bool TakeSwitchAmmoType() => Take(ref _switchAmmoTypeLatched);
@@ -259,13 +231,11 @@ namespace Shooter.NetV2
             Show(new CharacterMotorState(NetV2Math.ToNumerics(origin), System.Numerics.Vector3.Zero, true, crouched));
         }
 
-        /// <summary>撃ったときにダッシュを解く (Netcode のクライアントと同じ)。reason はログに出す理由。</summary>
         public void ReleaseSprint(string reason)
         {
             _sprintInput.Release(reason);
         }
 
-        /// <summary>死亡・置き直しのとき、切り替えのしゃがみとダッシュを解く。reason はログに出す理由。</summary>
         public void ReleaseHolds(string reason)
         {
             _crouchInput.Release(reason);

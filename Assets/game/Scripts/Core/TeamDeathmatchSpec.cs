@@ -7,6 +7,7 @@ namespace Shooter.Core
         public const int DefaultSideCount = 2;
         public const int DefaultSideCapacity = 8;
         public const int DefaultPointsPerKill = 1;
+        public const int DefaultPointsPerAssist = 0;
 
         public int ScoreLimit { get; }
 
@@ -23,6 +24,8 @@ namespace Shooter.Core
         // KillScore は double を取れるが、チームの点数と ScoreLimit を整数で扱うので整数に絞る。
         public int PointsPerKill { get; }
 
+        public int PointsPerAssist { get; }
+
         public TeamDeathmatchSpec(
             int scoreLimit,
             float timeLimitSeconds,
@@ -30,7 +33,8 @@ namespace Shooter.Core
             GameRules rules = null,
             int sideCount = DefaultSideCount,
             int sideCapacity = DefaultSideCapacity,
-            int pointsPerKill = DefaultPointsPerKill)
+            int pointsPerKill = DefaultPointsPerKill,
+            int pointsPerAssist = DefaultPointsPerAssist)
         {
             if (scoreLimit <= 0)
             {
@@ -62,6 +66,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(pointsPerKill), pointsPerKill, "pointsPerKill must be at least 1");
             }
 
+            if (pointsPerAssist < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pointsPerAssist), pointsPerAssist, "pointsPerAssist must not be negative");
+            }
+
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
             RespawnSeconds = respawnSeconds;
@@ -69,6 +78,7 @@ namespace Shooter.Core
             SideCount = sideCount;
             SideCapacity = sideCapacity;
             PointsPerKill = pointsPerKill;
+            PointsPerAssist = pointsPerAssist;
         }
     }
 }

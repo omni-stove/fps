@@ -14,11 +14,14 @@ namespace Shooter.Core
 
         public int Deaths { get; }
 
+        public int Assists { get; }
+
         public ScoreboardConnection Connection { get; }
 
         public bool IsLocal { get; }
 
-        public ScoreboardEntry(int playerId, ScoreboardName name, Team team, int kills, int deaths, ScoreboardConnection connection, bool isLocal)
+        public ScoreboardEntry(
+            int playerId, ScoreboardName name, Team team, int kills, int deaths, int assists, ScoreboardConnection connection, bool isLocal)
         {
             if (kills < 0)
             {
@@ -30,11 +33,17 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(deaths), deaths, "deaths must not be negative");
             }
 
+            if (assists < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(assists), assists, "assists must not be negative");
+            }
+
             PlayerId = playerId;
             Name = name;
             Team = team;
             Kills = kills;
             Deaths = deaths;
+            Assists = assists;
             Connection = connection;
             IsLocal = isLocal;
         }
@@ -46,6 +55,7 @@ namespace Shooter.Core
                 && Team == other.Team
                 && Kills == other.Kills
                 && Deaths == other.Deaths
+                && Assists == other.Assists
                 && Connection == other.Connection
                 && IsLocal == other.IsLocal;
         }
@@ -67,12 +77,12 @@ namespace Shooter.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(PlayerId, Name, (int)Team, Kills, Deaths, (int)Connection, IsLocal);
+            return HashCode.Combine(PlayerId, Name, (int)Team, Kills, Deaths, Assists, (int)Connection, IsLocal);
         }
 
         public override string ToString()
         {
-            return "id=" + PlayerId + " name=" + Name + " team=" + Team + " K=" + Kills + " D=" + Deaths
+            return "id=" + PlayerId + " name=" + Name + " team=" + Team + " K=" + Kills + " D=" + Deaths + " A=" + Assists
                 + " connection=" + Connection + " local=" + IsLocal;
         }
     }

@@ -4,10 +4,8 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 体の寸法の既定は Unity のネット対戦のプレイヤー (NetSceneBuilder の CharacterController と NetworkPlayerMotor の既定) と同じにする。
-    /// クライアントの予測と同じ寸法でないと、毎 tick 位置が食い違って巻き戻されるため。
-    /// </summary>
+    // 体の寸法の既定は Unity のネット対戦のプレイヤー (NetSceneBuilder の CharacterController と NetworkPlayerMotor の既定) と同じにする。
+    // クライアントの予測と同じ寸法でないと、毎 tick 位置が食い違って巻き戻されるため。
     internal sealed class ServerMotorSettings
     {
         public const float DefaultStandingHeight = 2f;
@@ -45,8 +43,24 @@ namespace Shooter.Server
             GameRules rules,
             float killPlaneY,
             Vector3 spawnPosition)
+            : this(motor, stance, mover, prone, SwimTuning.Default, WallRunTuning.Default, rules, killPlaneY, spawnPosition)
+        {
+        }
+
+        public ServerMotorSettings(
+            MotorSpec motor,
+            StanceGeometry stance,
+            CapsuleMoverSpec mover,
+            ProneSpec prone,
+            SwimTuning swim,
+            WallRunTuning wallRun,
+            GameRules rules,
+            float killPlaneY,
+            Vector3 spawnPosition)
         {
             Prone = prone ?? throw new ArgumentNullException(nameof(prone));
+            Swim = swim ?? throw new ArgumentNullException(nameof(swim));
+            WallRun = wallRun ?? throw new ArgumentNullException(nameof(wallRun));
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             Mover = mover ?? throw new ArgumentNullException(nameof(mover));
@@ -78,6 +92,10 @@ namespace Shooter.Server
 
         public ProneSpec Prone { get; }
 
+        public SwimTuning Swim { get; }
+
+        public WallRunTuning WallRun { get; }
+
         public GameRules Rules { get; }
 
         public float KillPlaneY { get; }
@@ -86,12 +104,12 @@ namespace Shooter.Server
 
         public ServerMotorSettings WithRules(GameRules rules)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, rules, KillPlaneY, SpawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, rules, KillPlaneY, SpawnPosition);
         }
 
         public ServerMotorSettings WithSpawnPosition(Vector3 spawnPosition)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Rules, KillPlaneY, spawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Rules, KillPlaneY, spawnPosition);
         }
     }
 }

@@ -2,12 +2,8 @@ using System;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 能力の枠で今もう一度押すと何ができるか (<see cref="IAbilityFollowUp.TryGetFollowUp"/>)。何をどう言うかは UI が決める。
-    /// </summary>
     public readonly struct AbilityFollowUp : IEquatable<AbilityFollowUp>
     {
-        /// <exception cref="ArgumentOutOfRangeException">count が負。</exception>
         public AbilityFollowUp(AbilityFollowUpKind kind, string targetId, string targetNameKey, int count)
         {
             if (count < 0)
@@ -23,16 +19,12 @@ namespace Shooter.Runtime
 
         public AbilityFollowUpKind Kind { get; }
 
-        /// <summary>効果を受ける物の種類の Id (起爆なら置いた物の種類)。</summary>
         public string TargetId { get; }
 
-        /// <summary>効果を受ける物の名前を引く表のキー。空なら名前は <see cref="TargetId"/>。</summary>
         public string TargetNameKey { get; }
 
-        /// <summary>効果を受ける物の数 (起爆なら置いている数)。</summary>
         public int Count { get; }
 
-        /// <summary>targetId の置いた物 count 個を起爆できる。</summary>
         public static AbilityFollowUp Detonate(string targetId, string targetNameKey, int count)
         {
             return new AbilityFollowUp(AbilityFollowUpKind.Detonate, targetId, targetNameKey, count);

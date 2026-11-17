@@ -74,6 +74,11 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `PauseTimeMode` | `PauseTimeMode?` | ポーズを開いている間の時間の扱い |
 | `PaletteViewer` | `Team?` | 敵味方の色の組をどのチームから見て塗るか |
 | `Streak` | `StreakStatus?` | この画面のプレイヤーのストリーク (倒れずに倒した数・報酬の枠・使える枠の数) |
+| `Minimap` | `MinimapStatus?` | ミニマップとコンパスに出すもの (自分の位置と向き・味方/敵/印/目標の `MinimapContact` の一覧) |
+| `Chat` | `IReadOnlyList<ChatLine>` | チャットの行 (送った人の参加者 Id・全体かチームか・本文・時刻) |
+| `Voice` | `VoiceStatus?` | ボイスチャットの状態 (自分が話しているか・話している参加者 Id・マイクが使えるか) |
+| `MapVote` | `MapVoteStatus?` | 次のマップの投票 (候補のマップ Id と票数・自分の票・残り秒数・決まったマップ Id) |
+| `Spectate` | `SpectateStatus?` | ネット対戦で味方を見ている状態 (見ている参加者 Id・候補の数・理由) |
 
 #### 購読のしかた
 

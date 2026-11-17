@@ -26,6 +26,8 @@ namespace Shooter.Protocol
 
         public int AllBits => (int)ProjectileFields.All;
 
+        public int OptionalBits => 0;
+
         public int ChangedBits(in ProjectileSnapshot baseline)
         {
             var bits = ProjectileFields.None;

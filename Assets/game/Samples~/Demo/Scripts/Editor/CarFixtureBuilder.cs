@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 位置は車の原点 (床の高さ・車体の中心の真下) から見たもの。+Z が前。
     public static class CarFixtureBuilder
     {
         public const string DefaultName = "Car";
@@ -48,7 +47,6 @@ namespace Shooter.Editor
         public static readonly Vector3 RightExitLocal = new Vector3(2f, 0f, 0.2f);
         public static readonly Vector3 RearExitLocal = new Vector3(0f, 0f, -3f);
 
-        // 銃座は屋根の後ろに立ち、銃は立った腰の高さで回る。
         public static readonly Vector3 GunnerSeatLocal = new Vector3(0f, BodyCenter.y + (BodySize.y / 2f), -1.2f);
         public static readonly Vector3 GunnerEnterLocal = new Vector3(0f, 0f, -2.6f);
         public static readonly Vector3 GunLocal = new Vector3(0f, GunnerSeatLocal.y + 1f, -0.6f);

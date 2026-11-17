@@ -5,18 +5,10 @@ using Shooter.EosSdk;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>SDK の無いビルドでも呼べる入り口。SDK の型は <c>#if EOS_SDK</c> の中にだけ置く。</summary>
+    // SDK の無いビルドでも呼べるよう、SDK の型は #if EOS_SDK の中にだけ置く。
     internal static class EosServerLobby
     {
-        /// <summary>
-        /// SDK とネイティブのライブラリが揃っていれば、ロビーのバックエンドを作る関数を返す。
-        /// プラットフォームはまだ作らず、最初のログインで作る (失敗をログインの失敗としてやり直せるように)。
-        /// </summary>
-        /// <param name="credentials">EOS の認証情報。</param>
-        /// <param name="version">サーバーの版。</param>
-        /// <param name="libraryDirectory">ネイティブのライブラリを探すフォルダ (実行ファイルの隣)。</param>
-        /// <param name="createBackend">ログの出力先からバックエンドを作る関数。</param>
-        /// <param name="error">作れないときの理由。</param>
+        // プラットフォームはまだ作らず最初のログインで作るのは、失敗をログインの失敗としてやり直せるようにするため。
         public static bool TryPrepare(
             EosCredentials credentials,
             string version,

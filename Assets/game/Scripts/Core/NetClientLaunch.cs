@@ -3,43 +3,21 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ゲームのクライアントの起動引数の読み方。クライアントは .NET の専用サーバーへつなぐだけなので、<c>-mode client</c> か
-    /// <c>-lobby quickmatch</c> で起動してすぐつなぐか、どちらも無ければメニューのクイックマッチからつなぐ。
-    /// サーバーとして動く起動 (<c>-mode server</c>) と、クライアントでは使えない引数は断る。
-    /// </summary>
     public static class NetClientLaunch
     {
-        /// <summary>引数の誤りで終えるときの終了コード。</summary>
         public const int ExitInvalidArguments = 2;
 
-        /// <summary>つなぐサーバーを決める引数。どれかがあれば、メニューのクイックマッチもロビーを探さずにそのサーバーへつなぐ。</summary>
         private static readonly string[] _serverFlags =
         {
             NetLaunchOptions.AddressFlag, NetLaunchOptions.PortFlag, NetLaunchOptions.EosServerFlag,
         };
 
-        /// <summary>サーバーだけが使う引数と、クライアントでは動かせない回線のシミュレーション。ロビーを探すときに断る。</summary>
         private static readonly string[] _unsupportedWhenSearching =
         {
             NetLaunchOptions.MapFlag, NetLaunchOptions.BotsFlag, NetLaunchOptions.RegisterLobbyFlag, NetLaunchOptions.DrainTimeoutFlag,
             NetLaunchOptions.LogFormatFlag, NetLaunchOptions.NetLatencyFlag, NetLaunchOptions.NetLossFlag, NetLaunchOptions.NetJitterFlag,
         };
 
-        /// <summary>
-        /// 起動したプロセスのクライアントの始め方を決める。
-        /// <list type="bullet">
-        /// <item><c>-lobby quickmatch</c>: <see cref="NetClientStart.QuickMatch"/>。server は null。</item>
-        /// <item><c>-mode client</c>: <see cref="NetClientStart.Connect"/>。server につなぐ。</item>
-        /// <item>どちらも無い: <see cref="NetClientStart.FromMenu"/>。<c>-address</c>・<c>-port</c>・<c>-eos-server</c> のどれかがあれば
-        /// server にそのサーバー、無ければ server は null で、メニューのクイックマッチはロビーを探す。</item>
-        /// </list>
-        /// ロビーで探したサーバーへは UDP でつなぐ (サーバーは UDP で待ち受けるときだけロビーに載る) ので、探すときに <c>-transport eos</c> は断る。
-        /// </summary>
-        /// <returns>
-        /// 引数が誤っているか、クライアントで動かせない引数があれば <see cref="NetClientStart.Invalid"/> (error に理由)。
-        /// 呼ぶ側は <see cref="ExitInvalidArguments"/> で終える。
-        /// </returns>
         public static NetClientStart ResolveStart(IReadOnlyList<string> args, out NetLaunchOptions server, out string error)
         {
             if (args == null)
@@ -72,7 +50,6 @@ namespace Shooter.Core
             return connect ? NetClientStart.Connect : NetClientStart.FromMenu;
         }
 
-        /// <summary>つなぐサーバーを決める引数 (<c>-address</c>・<c>-port</c>・<c>-eos-server</c>) があるか。</summary>
         public static bool NamesServer(IReadOnlyList<string> args)
         {
             foreach (var flag in _serverFlags)
@@ -86,10 +63,6 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>
-        /// ロビーで探せないときにメニューのクイックマッチがつなぐ既定のサーバー
-        /// (<see cref="NetLaunchOptions.DefaultAddress"/>:<see cref="NetLaunchOptions.DefaultPort"/> に UDP)。
-        /// </summary>
         public static NetLaunchOptions DefaultServer()
         {
             return new NetLaunchOptions(NetLaunchMode.Client, NetLaunchOptions.DefaultAddress, NetLaunchOptions.DefaultPort);
@@ -132,6 +105,7 @@ namespace Shooter.Core
                 }
             }
 
+            // ロビーで探したサーバーへは UDP でつなぐ (サーバーは UDP で待ち受けるときだけロビーに載る) ので、探すときに -transport eos は断る。
             var seen = false;
             for (var i = 0; i < args.Count; i++)
             {

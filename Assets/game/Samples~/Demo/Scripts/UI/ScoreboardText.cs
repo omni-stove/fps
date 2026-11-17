@@ -5,7 +5,7 @@ using Shooter.Core;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// スコアボードの行に出す文。言葉の入る名前と接続状態は表のキー <c>hud.scoreboard.*</c> の <see cref="LocalizedText"/> で返し、
+    /// スコアボードの行に出す文。言葉の入る名前と接続状態は表のキー <c>hud.scoreboard.*</c>、アシストの見出しは <c>assist.*</c> の <see cref="LocalizedText"/> で返し、
     /// <see cref="ScoreboardView"/> が今の言語で文にする。
     /// </summary>
     public static class ScoreboardText
@@ -21,6 +21,9 @@ namespace Shooter.Runtime
 
         /// <summary>接続状態の列の見出し。</summary>
         public static LocalizedText ConnectionCaption => new LocalizedText("hud.scoreboard.connectionCaption");
+
+        /// <summary>アシスト数の列の見出し。</summary>
+        public static LocalizedText AssistsCaption => new LocalizedText("assist.scoreboard.caption");
 
         /// <summary>オンラインの参加者の名前。</summary>
         /// <example><c>PlayerName(3)</c> は <c>Player 3</c></example>
@@ -78,7 +81,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>キル数・デス数の欄の文字列。</summary>
+        /// <summary>キル数・デス数・アシスト数の欄の文字列。</summary>
         /// <exception cref="ArgumentOutOfRangeException">count が負。</exception>
         public static string Count(int count)
         {

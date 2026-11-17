@@ -9,36 +9,22 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットと Bootstrap シーン (射撃場) を生成し直して Play Mode に入り、プレイヤーの TPS アクションを
-    /// コードから操作して、次の順にログが出ることを確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>プレイヤーを低い遮蔽物 (<see cref="BootstrapSceneBuilder.LowCoverName"/>) の前に置いてカバーに入る (<c>[Cover] enter</c>)。</item>
-    /// <item>張り付いたまま、狙わずに 1 発撃つ (<c>[Combat] blind-fire</c>)。</item>
-    /// <item>リロードし、判定の幅の真ん中でもう一度押してアクティブリロードを成功させる (<c>[Combat] active-reload success</c>)。</item>
-    /// <item>三人称にして肩を入れ替える (<c>[View] shoulder=Left</c>)。</item>
-    /// </list>
-    /// どれかのログが出ないか、Play 中にエラー・例外・Assert のログが出たら終了コード 1、すべて出れば 0 で終わる。
-    /// batchmode には入力が無いので、Cover / Attack / Reload / 肩の入れ替えの代わりに <see cref="CoverController.Tick"/>・
-    /// <see cref="WeaponController.PullTrigger"/>・<see cref="WeaponController.TryActiveReload"/>・<see cref="ViewRig.Tick"/> を呼ぶ。
-    /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.TpsActionSmokeRun.Run -logFile -</code>
-    /// </summary>
+    // batchmode には入力が無いので、Cover / Attack / Reload / 肩の入れ替えの代わりに CoverController.Tick・
+    // WeaponController.PullTrigger・WeaponController.TryActiveReload・ViewRig.Tick を呼ぶ。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class TpsActionSmokeRun
     {
         public const string LogTag = "[TpsActionSmokeRun]";
 
-        /// <summary>Play Mode に入ってから操作し始めるまでに待つ秒数。GameBootstrap の Awake と各コンポーネントの初期化を済ませるため。</summary>
+        // GameBootstrap の Awake と各コンポーネントの初期化を済ませてから操作し始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>操作し始めてから、すべてのログが出るまでに待つ秒数の上限。</summary>
         public const float ExerciseTimeoutSeconds = 10f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
-        /// <summary>カバーに入る前に置く位置の、体の表面から低い遮蔽物の手前の面までの隙間 (m)。<see cref="MotorSpec.DefaultCoverMaxEnterDistance"/> に収まる。</summary>
+        // MotorSpec.DefaultCoverMaxEnterDistance に収まる隙間にする。
         public const float StandOffFromCover = 0.3f;
 
         public const int SuccessExitCode = 0;
@@ -80,7 +66,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -235,10 +220,6 @@ namespace Shooter.Editor
             Report(problem);
         }
 
-        /// <summary>
-        /// 今の手順を 1 つ進める。次のフレームを待つ手順ではそのまま返す。進められない理由があれば返す (null なら問題なし)。
-        /// 各手順は、前の手順のログが出ていることを確かめてから行う。
-        /// </summary>
         private static string Advance()
         {
             var bootstrap = UnityEngine.Object.FindAnyObjectByType<GameBootstrap>();

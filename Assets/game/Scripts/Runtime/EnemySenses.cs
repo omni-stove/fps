@@ -5,17 +5,12 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 敵の知覚 (<see cref="EnemyPerception"/>) をシーンから組み立てる。判断は <see cref="EnemyBrain"/> が行い、
-    /// ここでは位置と視線 (Raycast) を測るだけ。
-    /// </summary>
     public static class EnemySenses
     {
         private static readonly List<IVisionBlocker> _visionBlockers = new List<IVisionBlocker>();
 
         public static IReadOnlyList<IVisionBlocker> VisionBlockers => _visionBlockers;
 
-        /// <exception cref="ArgumentNullException">blocker が null。</exception>
         public static bool RegisterVisionBlocker(IVisionBlocker blocker)
         {
             if (blocker == null)
@@ -32,7 +27,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <exception cref="ArgumentNullException">blocker が null。</exception>
         public static bool UnregisterVisionBlocker(IVisionBlocker blocker)
         {
             if (blocker == null)
@@ -56,13 +50,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// self の陣営から見た、いちばん近い生きている敵を members から選ぶ。体力 (<see cref="Damageable"/>) の無い相手と self 自身は選ばない。
-        /// 同じ陣営の誰かが印を付けた敵 (<see cref="PingController.IsMarkedFor"/>) がいれば、その中でいちばん近いものを先に選ぶ。
-        /// いなければ null。距離は足元 (<see cref="SideMember.GroundPosition"/>) 同士で測り、判定は <see cref="HostileSelector"/> に任せる。
-        /// </summary>
-        /// <param name="self">狙う側。</param>
-        /// <param name="members">候補 (シーンの <see cref="SideMember"/> など)。null の要素は飛ばす。</param>
         public static SideMember SelectHostile(SideMember self, IReadOnlyList<SideMember> members)
         {
             if (self == null)
@@ -138,22 +125,7 @@ namespace Shooter.Runtime
             return index >= 0 ? choices[index] : current;
         }
 
-        /// <summary>
-        /// 1 tick 分の知覚を作る。target が無いか死んでいれば Target は null。
-        /// 視線は sightRange 以内のときだけ目の高さから Raycast で調べる (それより遠ければ Raycast しない)。
-        /// 位置はどちらも足元 (地面の高さ) で渡し、巡回地点との距離の比較と揃える。
-        /// </summary>
-        /// <param name="selfGround">敵の足元。</param>
-        /// <param name="eye">敵の目の位置。</param>
-        /// <param name="target">目標。null 可。</param>
-        /// <param name="sightRange">視認距離。0 より大きい有限値。</param>
-        /// <param name="selfRoot">敵自身。自分のコライダーは視線を遮らない。</param>
-        /// <param name="noisePosition">
-        /// この tick に聞いた物音の位置 (撃たれたときの撃った者の位置など)。null なら物音は無い。
-        /// </param>
-        /// <param name="wasHit">前の知覚からこの知覚までに撃たれたか。</param>
-        /// <param name="hitSource">撃った者の位置。分からなければ null。wasHit が false なら使わない。</param>
-        /// <param name="healthFraction">今の体力の割合。0 以上 1 以下。</param>
+        // 位置はどちらも足元 (地面の高さ) で渡し、巡回地点との距離の比較と揃える。
         public static EnemyPerception Perceive(
             Vector3 selfGround,
             Vector3 eye,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Shooter.Core
 {
@@ -44,7 +45,7 @@ namespace Shooter.Core
             _session = new ModeSession(
                 new TwoTeams(),
                 spec.TimeLimitSeconds,
-                new IScoreRule[] { new KillScore(spec.PointsPerKill) },
+                new IScoreRule[] { new KillScore(spec.PointsPerKill, spec.PointsPerAssist) },
                 RespawnPolicy.FromRules(spec.Rules, spec.RespawnSeconds),
                 winConditions);
             _session.StateChanged += state => StateChanged?.Invoke(state);
@@ -67,6 +68,12 @@ namespace Shooter.Core
             _session.AddPlayer(playerId, Side.FromTeam(team), kills, deaths);
         }
 
+        // 戻ってきた人のキルとアシストは抜ける前にもうチームの点数に入っているので、成績を引き継いでもチームの点数は動かさない。
+        public void AddPlayer(int playerId, Team team, int kills, int deaths, int assists)
+        {
+            _session.AddPlayer(playerId, Side.FromTeam(team), kills, deaths, assists);
+        }
+
         public void RemovePlayer(int playerId) => _session.RemovePlayer(playerId);
 
         public bool HasPlayer(int playerId) => _session.HasPlayer(playerId);
@@ -77,6 +84,8 @@ namespace Shooter.Core
 
         public int GetDeaths(int playerId) => _session.GetDeaths(playerId);
 
+        public int GetAssists(int playerId) => _session.GetAssists(playerId);
+
         public bool IsAwaitingRespawn(int playerId) => _session.IsAwaitingRespawn(playerId);
 
         public bool IsEliminated(int playerId) => _session.IsEliminated(playerId);
@@ -85,10 +94,12 @@ namespace Shooter.Core
 
         public float? SecondsUntilNextWave => _session.SecondsUntilNextWave;
 
-        // 点はキル 1 回につき整数の PointsPerKill しか入らないので、double で持っていても整数のまま。
+        // 点はキル 1 回・アシスト 1 回につき整数の PointsPerKill・PointsPerAssist しか入らないので、double で持っていても整数のまま。
         public int GetScore(Team team) => (int)_session.GetScore(Side.FromTeam(team));
 
         public void ReportKill(int killerId, int victimId) => _session.ReportKill(killerId, victimId);
+
+        public void ReportKill(int killerId, int victimId, IReadOnlyList<int> assisterIds) => _session.ReportKill(killerId, victimId, assisterIds);
 
         public void ReportDeath(int playerId) => _session.ReportDeath(playerId);
 

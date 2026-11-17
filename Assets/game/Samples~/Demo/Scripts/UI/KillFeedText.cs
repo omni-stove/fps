@@ -3,7 +3,7 @@ using Shooter.Core;
 namespace Shooter.Runtime
 {
     /// <summary>
-    /// キルフィードの行に出す文。言葉の入る印と武器の欄は表のキー <c>hud.killFeed.*</c> の <see cref="LocalizedText"/> で返し、
+    /// キルフィードの行に出す文。言葉の入る印と武器の欄は表のキー <c>hud.killFeed.*</c>、アシストの知らせは <c>assist.*</c> の <see cref="LocalizedText"/> で返し、
     /// <see cref="KillFeedView"/> が今の言語で文にする。
     /// </summary>
     public static class KillFeedText
@@ -16,6 +16,9 @@ namespace Shooter.Runtime
 
         /// <summary>武器によらない自滅 (落下・跳ね返った味方撃ちなど) の武器の欄。</summary>
         public static LocalizedText Suicide => new LocalizedText("hud.killFeed.suicide");
+
+        /// <summary>この画面のプレイヤーがアシストした行の後ろに出す小さな知らせ。</summary>
+        public static LocalizedText AssistMark => new LocalizedText("assist.killFeed.mark");
 
         /// <summary>自滅でなく武器も分からない死 (出血など) の武器の欄。</summary>
         public const string NoWeapon = "-";

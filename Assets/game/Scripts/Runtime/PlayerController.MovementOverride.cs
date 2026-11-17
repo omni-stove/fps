@@ -5,33 +5,20 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerController"/> のうち、移動の横取り (<see cref="IMovementOverride"/>) の処理。
-    /// <see cref="Tick"/> のたびに登録されたものから有効で優先度の最も高いものを選び、選ばれたものがあれば
-    /// 姿勢と移動を <see cref="PlayerMotor"/>・回避・乗り越え・崖のぼりの代わりにそれへ任せる。
-    /// 選ばれた時点で回避・乗り越え・崖のぼりをやめさせて伏せを解き、選ばれている間は始めさせない
-    /// (<see cref="TryStartDodge"/> / <see cref="TryStartVault"/> / <see cref="TryStartMantle"/> / <see cref="UpdateProne"/>)。
-    /// 選ばれたもの・外れたものは <c>[Player] override=.. active=..</c> でログに出す。
-    /// </summary>
     public sealed partial class PlayerController
     {
         private readonly List<IMovementOverride> _movementOverrides = new List<IMovementOverride>();
         private IMovementOverride _activeMovementOverride;
 
-        /// <summary>登録されている横取り。登録した順。</summary>
         public IReadOnlyList<IMovementOverride> MovementOverrides => _movementOverrides;
 
-        /// <summary>今移動を任せている横取り。無ければ null。選び直すのは <see cref="Tick"/> のたび。</summary>
         public IMovementOverride ActiveMovementOverride => _activeMovementOverride;
 
-        /// <summary>移動を横取りされているか。</summary>
         public bool IsMovementOverridden => _activeMovementOverride != null;
 
-        /// <summary>今移動を任せている横取りが立てるビット (<see cref="IMovementOverride.Conditions"/>)。無ければ None。</summary>
         public PlayerActionConditions MovementOverrideConditions =>
             _activeMovementOverride != null ? _activeMovementOverride.Conditions : PlayerActionConditions.None;
 
-        /// <summary>横取りが選ばれた・外れたときのログ。例: <c>[Player] override=LadderClimb active=true</c>。</summary>
         public static string FormatMovementOverrideLog(IMovementOverride movementOverride, bool active)
         {
             if (movementOverride == null)
@@ -42,9 +29,6 @@ namespace Shooter.Runtime
             return $"{LogTag} override={movementOverride.GetType().Name} active={(active ? "true" : "false")}";
         }
 
-        /// <summary>
-        /// 横取りを登録する。選ばれるのは次の <see cref="Tick"/> から。既に登録されていれば何もせず false。
-        /// </summary>
         public bool RegisterMovementOverride(IMovementOverride movementOverride)
         {
             if (movementOverride == null)
@@ -61,9 +45,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 横取りの登録を外す。今選ばれていれば、その場で <see cref="IMovementOverride.End"/> を呼ぶ。登録されていなければ false。
-        /// </summary>
         public bool UnregisterMovementOverride(IMovementOverride movementOverride)
         {
             if (movementOverride == null)

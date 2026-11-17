@@ -23,6 +23,14 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheAirJumpsUsedSurviveTheRoundTripThroughARow()
+        {
+            var row = new PlayerSnapshot { Position = new Vector3(1f, 2f, 3f), AirJumpsUsed = 2 };
+
+            Assert.That(SnapshotMotion.ToState(row).AirJumpsUsed, Is.EqualTo(2));
+        }
+
+        [Test]
         public void AfterTheLaunchIsReconciledThePredictionFollowsTheServerUntilLanding()
         {
             var server = NewSimulation();

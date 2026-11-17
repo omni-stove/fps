@@ -19,6 +19,9 @@ namespace Shooter.Protocol
         Prone = 1 << 10,
         Ladder = 1 << 11,
         Vehicle = 1 << 12,
-        All = (1 << 13) - 1,
+        Traversal = 1 << 13,
+        Assists = 1 << 14,
+        All = (1 << 15) - 1,
+        Optional = Traversal | Assists,
     }
 }

@@ -13,6 +13,14 @@ namespace Shooter.Core
 
         public const string PlayersKey = "players";
 
+        public const string PrivateKey = "private";
+
+        public const string JoinCodeKey = "join_code";
+
+        public const string SkillAverageKey = "skill_average";
+
+        public const string VoiceEnabledKey = "voice_enabled";
+
         public const string TeamDeathmatchMode = "tdm";
 
         // 同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないよう、接頭辞を付ける。
@@ -33,18 +41,66 @@ namespace Shooter.Core
 
         public static IReadOnlyList<LobbyAttribute> Attributes(string endpoint, string version, int players)
         {
+            return Attributes(endpoint, version, players, NetMatchSettings.Default);
+        }
+
+        public static IReadOnlyList<LobbyAttribute> Attributes(string endpoint, string version, int players, NetMatchSettings match)
+        {
             if (string.IsNullOrWhiteSpace(endpoint))
             {
                 throw new ArgumentException("must not be null or blank", nameof(endpoint));
             }
 
-            return new[]
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            var attributes = new List<LobbyAttribute>
             {
                 LobbyAttribute.OfText(ServerKey, endpoint),
                 LobbyAttribute.OfText(ModeKey, TeamDeathmatchMode),
                 LobbyAttribute.OfText(VersionKey, LobbyLaunchOptions.BucketVersion(version)),
                 PlayersAttribute(players),
+                // サーバーのロビーはいつも RTC 部屋を開いて作るので 1。
+                LobbyAttribute.OfNumber(VoiceEnabledKey, 1),
             };
+
+            if (match.PrivateMatch)
+            {
+                // コードが無くても非公開の印は付け、誰も入れないサーバーを Quick Match が選ばないようにする
+                attributes.Add(LobbyAttribute.OfNumber(PrivateKey, 1));
+                if (JoinCode.TryNormalize(match.JoinCode, out var code))
+                {
+                    attributes.Add(LobbyAttribute.OfText(JoinCodeKey, code));
+                }
+            }
+
+            return attributes;
+        }
+
+        // ボイスのためにプレイヤーもメンバーとして入り、オーナーのサーバー自身も 1 人分を使うので 1 足す。
+        public static int MaxMembers(int maxPlayers)
+        {
+            if (maxPlayers < NetMatchSettings.MinMaxPlayers || maxPlayers > NetMatchSettings.MaxMaxPlayers)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxPlayers), maxPlayers,
+                    "must be between " + NetMatchSettings.MinMaxPlayers + " and " + NetMatchSettings.MaxMaxPlayers);
+            }
+
+            return Math.Min(maxPlayers + 1, LobbyLaunchOptions.MaxMaxPlayers);
+        }
+
+        // ボイスのあるロビーではサーバー自身もメンバーとして 1 人分を使うので、その分を除く。
+        public static int PlayerSlots(LobbyInfo lobby)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            return lobby.VoiceEnabled ? lobby.MaxMembers - 1 : lobby.MaxMembers;
         }
 
         public static LobbyAttribute PlayersAttribute(int players)

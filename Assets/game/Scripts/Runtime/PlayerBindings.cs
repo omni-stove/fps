@@ -6,29 +6,18 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// Input Actions の Player マップの割り当てを、キーボード/マウスとゲームパッドで別々に変える。
-    /// 変えられる所は <see cref="Slots"/>。新しい入力は <see cref="StartRebind"/> (Input System の PerformInteractiveRebinding) で受け取り、
-    /// 割り当ての上書き (binding override) として入れる。元のアセットは書き換えない。
-    /// ほかの割り当てとの重なりは <see cref="FindConflicts(RebindSlot)"/> で調べ、取り消すときは <see cref="RestoreOverride"/> で前の上書きに戻す。
-    /// 保存と読み込みは <see cref="InputBindingOverridesStore"/> がする。
-    /// </summary>
     public sealed class PlayerBindings : IDisposable
     {
         public const string LogTag = "[Input]";
 
-        /// <summary>割り当てを変えるアクションマップ。</summary>
         public const string MapName = "Player";
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の入力グループ (control scheme)。</summary>
         public const string KeyboardMouseGroup = "Keyboard&Mouse";
 
         public const string GamepadGroup = "Gamepad";
 
-        /// <summary>キーボード/マウスの割り当てを待っている間に押すと取り消す入力。</summary>
         public const string KeyboardCancelPath = "<Keyboard>/escape";
 
-        /// <summary>ゲームパッドの割り当てを待っている間に押すと取り消す入力。</summary>
         public const string GamepadCancelPath = "<Gamepad>/start";
 
         // 指を離すときに隣のキーへ触れたなど、ほぼ同時に来たほかの候補を比べるための待ち。
@@ -48,7 +37,7 @@ namespace Shooter.Runtime
         private static readonly string[] _gamepadExcluded = { "<Gamepad>/leftStick", "<Gamepad>/rightStick" };
 
         // ゲームパッドに空いているボタンが無く割り当てていないので、キーボードの行だけを出すアクション。_slots より先に初期化する。
-        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats", "SwitchAmmoType", "CycleMagnification", "HoldBreath", "SwitchGrenade", "Inventory", "Previous" };
+        private static readonly string[] _keyboardOnlyActions = { "Melee", "Prone", "Ability1", "Ability2", "SquadCommand", "NetStats", "SwitchAmmoType", "CycleMagnification", "HoldBreath", "SwitchGrenade", "Inventory", "Previous", "LeanLeft", "LeanRight", "Chat", "TeamChat", "PushToTalk" };
 
         private static readonly RebindSlot[] _slots = BuildSlots();
 
@@ -66,8 +55,6 @@ namespace Shooter.Runtime
         private string _previousPath;
         private bool _reenableAfterRebind;
 
-        /// <exception cref="ArgumentNullException">asset が null。</exception>
-        /// <exception cref="ArgumentException">asset に <see cref="MapName"/> のマップが無い。</exception>
         public PlayerBindings(InputActionAsset asset)
         {
             if (asset == null)
@@ -85,16 +72,9 @@ namespace Shooter.Runtime
             _map = map;
         }
 
-        /// <summary>
-        /// 設定画面で変えられる所。並びは画面の行の順で、同じ行のキーボード/マウスとゲームパッドが続く。
-        /// ゲームパッドの移動 (左スティック) と視点、メニューを開くための Pause は変えられない。
-        /// </summary>
         public static IReadOnlyList<RebindSlot> Slots => _slots;
 
-        /// <summary>
-        /// どこかで割り当ての入力を待っているか、待ち終えた直後 (同じかその次のフレーム) か。
-        /// 取り消しに押した Esc / Start でポーズ画面や設定画面まで閉じないよう、それらが見る。
-        /// </summary>
+        // 待ち終えた直後 (同じかその次のフレーム) も true にするのは、取り消しに押した Esc / Start でポーズ画面や設定画面まで閉じないようにするため。
         public static bool IsCapturingInput =>
             _capturing > 0
             || (Application.isPlaying && _lastCaptureEndFrame != int.MinValue && Time.frameCount - _lastCaptureEndFrame <= 1);
@@ -103,13 +83,10 @@ namespace Shooter.Runtime
 
         public InputActionMap Map => _map;
 
-        /// <summary>入力を待っているか。</summary>
         public bool IsRebinding => _operation != null;
 
-        /// <summary>入力を待っている所。待っていなければ null。</summary>
         public RebindSlot? RebindingSlot => _operation != null ? _rebindingSlot : (RebindSlot?)null;
 
-        /// <summary>Player マップのどれかの割り当てに上書きがあるか。</summary>
         public bool HasOverrides
         {
             get
@@ -126,7 +103,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>device の入力グループの名前。</summary>
         public static string GroupOf(InputDeviceKind device)
         {
             switch (device)
@@ -140,23 +116,17 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// slot が指す割り当ての番号 (アクションの bindings の中の位置)。部品があれば、その入力グループに入った合成の中の最初のその名前の部品。
-        /// 無ければ合成でない割り当てのうち、その入力グループに入った最初のもの。見つからなければ -1。
-        /// </summary>
         public int BindingIndexOf(RebindSlot slot)
         {
             var action = _map.FindAction(slot.ActionName);
             return action != null ? BindingIndexOf(action, slot) : -1;
         }
 
-        /// <summary>slot が指す割り当てがこのアセットにあるか。</summary>
         public bool Has(RebindSlot slot)
         {
             return BindingIndexOf(slot) >= 0;
         }
 
-        /// <summary>slot に今効いている入力のパス (上書きがあればそれ)。無ければ null。</summary>
         public string PathOf(RebindSlot slot)
         {
             var action = _map.FindAction(slot.ActionName);
@@ -164,13 +134,11 @@ namespace Shooter.Runtime
             return index >= 0 ? action.bindings[index].effectivePath : null;
         }
 
-        /// <summary>slot に上書きがあるか。</summary>
         public bool IsOverridden(RebindSlot slot)
         {
             return OverridePathOf(slot) != null;
         }
 
-        /// <summary>slot の上書き。無ければ (か slot が無ければ) null。</summary>
         public string OverridePathOf(RebindSlot slot)
         {
             var action = _map.FindAction(slot.ActionName);
@@ -178,7 +146,6 @@ namespace Shooter.Runtime
             return index >= 0 ? action.bindings[index].overridePath : null;
         }
 
-        /// <summary>slot に今効いている入力の、画面に出す名前 (例: "R")。無ければ空文字。</summary>
         public string DisplayOf(RebindSlot slot)
         {
             var action = _map.FindAction(slot.ActionName);
@@ -192,16 +159,11 @@ namespace Shooter.Runtime
             return string.IsNullOrEmpty(display) ? action.bindings[index].effectivePath ?? string.Empty : display;
         }
 
-        /// <summary>slot に今効いている入力と同じ入力を使う、Player マップのほかの割り当て。</summary>
         public IReadOnlyList<BindingConflict> FindConflicts(RebindSlot slot)
         {
             return FindConflicts(slot, PathOf(slot));
         }
 
-        /// <summary>
-        /// slot を path にしたときに、同じ入力を使う Player マップのほかの割り当て (同じアクションのほかの割り当ても含む)。
-        /// 比べるのは効いている入力のパスで、大文字と小文字は区別しない。
-        /// </summary>
         public IReadOnlyList<BindingConflict> FindConflicts(RebindSlot slot, string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -236,8 +198,6 @@ namespace Shooter.Runtime
             return conflicts;
         }
 
-        /// <summary>slot を path に上書きする。</summary>
-        /// <exception cref="ArgumentException">path が空か、slot がこのアセットに無い。</exception>
         public void ApplyOverride(RebindSlot slot, string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -249,8 +209,6 @@ namespace Shooter.Runtime
             action.ApplyBindingOverride(index, path);
         }
 
-        /// <summary>slot の上書きを overridePath に戻す。null なら上書きを外して既定の入力に戻す。</summary>
-        /// <exception cref="ArgumentException">slot がこのアセットに無い。</exception>
         public void RestoreOverride(RebindSlot slot, string overridePath)
         {
             var action = RequireAction(slot, out var index);
@@ -264,21 +222,13 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>入力を待っていればやめ、Player マップの上書きをすべて外して既定の入力に戻す。</summary>
         public void ResetAll()
         {
             CancelRebind();
             _map.RemoveAllBindingOverrides();
         }
 
-        /// <summary>
-        /// slot の新しい入力を待ち始める。次に押されたその機器のボタンかキーで上書きし、finished を呼ぶ。
-        /// 取り消し (<see cref="KeyboardCancelPath"/> / <see cref="GamepadCancelPath"/> / <see cref="CancelRebind"/>) でも finished を呼ぶ。
-        /// アクションが有効なら待つ間だけ無効にし、終わったら有効に戻す (有効なアクションは割り当てを変えられないため)。
-        /// 既に待っていれば何もせず false。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">finished が null。</exception>
-        /// <exception cref="ArgumentException">slot がこのアセットに無い。</exception>
+        // 有効なアクションは割り当てを変えられないので、待つ間だけ無効にし、終わったら有効に戻す。
         public bool StartRebind(RebindSlot slot, Action<RebindResult> finished)
         {
             if (finished == null)
@@ -346,7 +296,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>入力を待っていればやめる (割り当ては変えない)。finished は取り消しとして呼ぶ。</summary>
         public void CancelRebind()
         {
             _operation?.Cancel();
@@ -457,6 +406,7 @@ namespace Shooter.Runtime
             {
                 "Jump", "Sprint", "Crouch", "Prone", "Attack", "Aim", "Reload", "SwitchAmmoType", "CycleMagnification", "HoldBreath", "Melee", "Interact", "Next", "Previous", "Cover", "SwapShoulder",
                 "Dodge", "Grenade", "SwitchGrenade", "Ability1", "Ability2", "Ping", "SquadCommand", "Scoreboard", "NetStats", "Inventory", "UseStreak",
+                "LeanLeft", "LeanRight", "Chat", "TeamChat", "PushToTalk",
             };
 
             foreach (var action in buttons)

@@ -10,6 +10,8 @@ namespace Shooter.Protocol
 
         int AllBits { get; }
 
+        int OptionalBits { get; }
+
         int ChangedBits(in T baseline);
 
         void WriteBits(MessageWriter writer, int bits);

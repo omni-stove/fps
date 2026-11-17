@@ -4,6 +4,9 @@ using Epic.OnlineServices.Logging;
 using Epic.OnlineServices.Platform;
 using Shooter.Core;
 using UnityEngine;
+// Platform と RTC・RTC Audio の名前空間を両方開くと型名がぶつかりうるので、RTC と RTC Audio は別名で参照する
+using EosRtc = Epic.OnlineServices.RTC;
+using EosRtcAudio = Epic.OnlineServices.RTCAudio;
 
 namespace Shooter.NetEos
 {
@@ -19,6 +22,10 @@ namespace Shooter.NetEos
         private static int _lastTickFrame = -1;
 
         public static PlatformInterface Current => _platform;
+
+        public static EosRtc.RTCInterface Rtc => _platform?.GetRTCInterface();
+
+        public static EosRtcAudio.RTCAudioInterface RtcAudio => Rtc?.GetAudioInterface();
 
         // ロビーと transport が同じユーザーを使い、ログインを 1 回で済ませるために持つ。
         public static ProductUserId LocalUserId => _platform != null && _localUserId != null && _localUserId.IsValid() ? _localUserId : null;
@@ -90,6 +97,8 @@ namespace Shooter.NetEos
                     IsServer = false,
                     Flags = flags,
                     CacheDirectory = Application.temporaryCachePath,
+                    // RTCOptions を渡さないと GetRTCInterface が null を返し、ロビーの RTC 部屋 (ボイス) に入れない
+                    RTCOptions = new RTCOptions { BackgroundMode = RTCBackgroundMode.LeaveRooms },
                 };
                 _platform = PlatformInterface.Create(ref options);
             }

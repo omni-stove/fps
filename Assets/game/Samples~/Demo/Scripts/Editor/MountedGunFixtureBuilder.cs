@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 地面に据えた仮の固定銃座。+Z が前で、銃の後ろに座席を 1 つだけ置き、動き方は付けない (固定銃座の形)。
     // 盾はシーンに残るよう、作るときに MountedGun に付けさせる (Play で付けると保存したシーンに盾が無く、置き方を確かめられない)。
     public static class MountedGunFixtureBuilder
     {
@@ -133,7 +132,6 @@ namespace Shooter.Editor
             }
         }
 
-        // 床に置くものの重なりを確かめるための範囲。座席の後ろの乗る・降りる位置までを含める。
         public static Bounds FootprintOf(Vector3 origin, Quaternion rotation)
         {
             var top = GunLocal.y + MountedGun.PlaceholderShieldLocalScale.y;

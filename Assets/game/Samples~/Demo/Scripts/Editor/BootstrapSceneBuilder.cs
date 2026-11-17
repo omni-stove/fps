@@ -11,13 +11,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// Bootstrap シーン (射撃場) を生成する。シーンには <see cref="GameBootstrap"/> と試合を進める <see cref="MatchRunner"/>、
-    /// 初めて入ったとき (とメニューのチュートリアルから来たとき) に案内を出す <see cref="TutorialPresenter"/> を置いた GameObject と、カバーを試す遮蔽物 (<see cref="Covers"/>) を入れ、残りは実行時に GameBootstrap がコードで作る。
-    /// 保存したシーンは Build Settings に登録する (先頭はメインメニューなので、既にあれば位置は変えない)。
-    /// Editor を閉じた状態で次のように呼べる (保存先は -bootstrapScenePath で変えられる):
-    /// <code>unity -batchmode -quit -executeMethod Shooter.Editor.BootstrapSceneBuilder.Build</code>
-    /// </summary>
     public static class BootstrapSceneBuilder
     {
         public static string DefaultScenePath => BuildSceneList.BootstrapScene;
@@ -25,44 +18,33 @@ namespace Shooter.Editor
         public const string BootstrapObjectName = "GameBootstrap";
         public const string MenuPath = "Shooter/Build Bootstrap Scene";
 
-        /// <summary>遮蔽物をまとめる親の名前。</summary>
         public const string CoversName = "Covers";
 
         public const string LowCoverName = "Cover_Low";
         public const string HighCoverName = "Cover_High";
 
-        /// <summary>低い遮蔽物の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 未満なので、しゃがんで隠れ、立って覗き、上からブラインドファイアする。</summary>
+        // MotorSpec.DefaultCoverLowWallHeight 未満にして、しゃがんで隠れ、立って覗き、上からブラインドファイアできるようにする。
         public const float LowCoverHeight = 1f;
 
-        /// <summary>高い遮蔽物の高さ (m)。<see cref="MotorSpec.DefaultCoverLowWallHeight"/> 以上で目 (1.6m) より高いので、立ったまま隠れ、端から覗く。</summary>
+        // MotorSpec.DefaultCoverLowWallHeight 以上で目 (1.6m) より高くして、立ったまま隠れ、端から覗けるようにする。
         public const float HighCoverHeight = 2f;
 
-        /// <summary>遮蔽物の厚さ (m)。</summary>
         public const float CoverThickness = 0.4f;
 
-        /// <summary>プレイヤーの足元から遮蔽物の中心までの前方の距離 (m)。標的ダミーの列との中間。</summary>
         public const float CoverDistance = GameBootstrap.TargetDummyDistance / 2f;
 
-        /// <summary>
-        /// 射撃場の遮蔽物。プレイヤーの出現位置 (<see cref="GameBootstrap.PlayerSpawn"/>、+Z 向き) と標的ダミーの列の間に、
-        /// 真ん中の標的への射線を空けて左右に 1 つずつ置く。出現位置からの射線にかかるのは、左の低い遮蔽物が左端の標的への射線の低い所だけ。
-        /// </summary>
+        // 真ん中の標的への射線を空けて左右に 1 つずつ置き、出現位置からの射線にかかるのは、左の低い遮蔽物が左端の標的への射線の低い所だけにする。
         public static readonly IReadOnlyList<LevelBox> Covers = new[]
         {
             new LevelBox(LowCoverName, new Vector3(-3f, LowCoverHeight / 2f, CoverDistance), new Vector3(3f, LowCoverHeight, CoverThickness)),
             new LevelBox(HighCoverName, new Vector3(3f, HighCoverHeight / 2f, CoverDistance), new Vector3(1.5f, HighCoverHeight, CoverThickness)),
         };
 
-        /// <summary>低い遮蔽物 (<see cref="Covers"/> の 0 番)。</summary>
         public static LevelBox LowCover => Covers[0];
 
-        /// <summary>高い遮蔽物 (<see cref="Covers"/> の 1 番)。</summary>
         public static LevelBox HighCover => Covers[1];
 
-        /// <summary>
-        /// 遮蔽物の名前ごとの面の材質 (<see cref="SurfaceMaterial"/> の Id)。着弾の演出を材質ごとに見比べられるよう、低い壁と高い壁で変える。
-        /// 載っていない遮蔽物は <see cref="SurfaceMaterial.DefaultId"/>。
-        /// </summary>
+        // 着弾の演出を材質ごとに見比べられるよう、低い壁と高い壁で面の材質を変える。
         public static readonly IReadOnlyDictionary<string, string> CoverSurfaceIds = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [LowCoverName] = SurfaceImpactAssetStep.ConcreteId,
@@ -114,10 +96,6 @@ namespace Shooter.Editor
         // 後ろの列も遮蔽物 (CoverDistance) より手前に収めるため、横の間隔より詰める。
         public const float WeaponTableRowSpacing = 1.5f;
 
-        /// <summary>
-        /// コマンドライン引数で決まる場所に Bootstrap シーンを生成し、Build Settings に登録する。
-        /// 失敗したら例外を投げる (batchmode では Unity が終了コード 1 で終わる)。
-        /// </summary>
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -132,7 +110,6 @@ namespace Shooter.Editor
             BuildAt(path);
         }
 
-        /// <summary>path に Bootstrap シーンを生成・保存し、Build Settings に登録する。</summary>
         public static void BuildAt(string path)
         {
             path = ValidateScenePath(path);
@@ -168,12 +145,6 @@ namespace Shooter.Editor
             Debug.Log($"[BootstrapSceneBuilder] saved '{path}' and registered it in Build Settings");
         }
 
-        /// <summary>
-        /// 空のシーンに GameBootstrap と MatchRunner と TutorialPresenter を置いた GameObject と、遮蔽物 (<see cref="Covers"/>) をまとめた <see cref="CoversName"/> を入れ、
-        /// プレイヤーの武器の定義の並び weapons (通常は <see cref="LoadPlayerWeapons"/> の Reference の主武器・副武器) とルール rules
-        /// (通常は射撃場の <see cref="GameRulesAssetBuilder.RangePath"/>) を GameBootstrap に配線して、GameBootstrap の GameObject を返す。
-        /// 残りの参照は実行時にコードで解決する。
-        /// </summary>
         public static GameObject PopulateScene(Scene scene, IReadOnlyList<WeaponDefinition> weapons, GameRulesDefinition rules)
         {
             return PopulateScene(scene, weapons, rules, Array.Empty<WeaponDefinition>());
@@ -220,11 +191,7 @@ namespace Shooter.Editor
             return bootstrap;
         }
 
-        /// <summary>
-        /// <see cref="Covers"/> の遮蔽物を、シーン直下の <see cref="CoversName"/> の子として置いて親を返す。
-        /// 床は GameBootstrap が実行時に作るので、遮蔽物は床の上 (y = 0 から) に立つ大きさと位置にしてある。
-        /// 遮蔽物には <see cref="CoverSurfaceIds"/> の材質を付ける。
-        /// </summary>
+        // 床は GameBootstrap が実行時に作るので、遮蔽物は床の上 (y = 0 から) に立つ大きさと位置にしてある。
         public static GameObject CreateCovers(Scene scene)
         {
             SceneBuildHelpers.RequireLoaded(scene);
@@ -309,17 +276,11 @@ namespace Shooter.Editor
             return root;
         }
 
-        /// <summary>
-        /// Build Settings のシーン一覧の先頭に path を有効な状態で置く (<see cref="BuildSceneList.WithStartScene"/>)。
-        /// </summary>
         public static EditorBuildSettingsScene[] WithSceneFirst(IReadOnlyList<EditorBuildSettingsScene> current, string path)
         {
             return BuildSceneList.WithStartScene(current, path);
         }
 
-        /// <summary>
-        /// コマンドライン引数から保存先を決める。<see cref="ScenePathArgument"/> があればその次の値、無ければ既定の場所。
-        /// </summary>
         public static string ResolveScenePath(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -352,7 +313,6 @@ namespace Shooter.Editor
             return found == null ? DefaultScenePath : ValidateScenePath(found);
         }
 
-        /// <summary>Assets/ 以下の .unity であることを確かめ、区切りを / に揃えて返す。</summary>
         public static string ValidateScenePath(string path)
         {
             if (string.IsNullOrWhiteSpace(path))

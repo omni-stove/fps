@@ -4,13 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 拾える物 1 種類の調整値 (中身・拾い方・再出現の秒数・拾える範囲・照準の角度) をアセットとして持つ。<see cref="PickupSpawnPoint.Definition"/> に
-    /// 入れると、出現点は自分の値の代わりにこれを読む。同じアセットを入れた出現点は、アセットを変えればまとめて変わる。
-    /// 新しく作ったときの値は <see cref="PickupSpawnPoint"/> の既定値と同じ。
-    /// <see cref="AmmoCrate.Definition"/> に入れると、弾薬箱は範囲と補給の間隔 (<see cref="AmmoCrateRadius"/>・<see cref="AmmoCrateCooldownSeconds"/>、既定は
-    /// <see cref="AmmoCrate"/> の既定値) を自分の値の代わりに読む。
-    /// </summary>
     [CreateAssetMenu(fileName = "Pickup", menuName = "Shooter/Pickup")]
     public sealed class PickupDefinition : ScriptableObject
     {
@@ -36,7 +29,6 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("弾薬箱 (AmmoCrate) に入れたとき、補給してから次に補給できるまでの秒数")]
         private float _ammoCrateCooldownSeconds = AmmoCrate.DefaultCooldownSeconds;
 
-        /// <summary>中身。null は <see cref="ArgumentNullException"/>、値が不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
         {
             get => _contents;
@@ -70,14 +62,12 @@ namespace Shooter.Runtime
             set => _radius = value;
         }
 
-        /// <summary>出した物の <see cref="Pickup.LookAngleDegrees"/>。</summary>
         public float LookAngleDegrees
         {
             get => _lookAngleDegrees;
             set => _lookAngleDegrees = value;
         }
 
-        /// <summary>弾薬箱の <see cref="AmmoCrate.EffectiveRadius"/>。<see cref="AmmoCrate.MinRadius"/> 未満か有限でなければ <see cref="ArgumentOutOfRangeException"/>。</summary>
         public float AmmoCrateRadius
         {
             get => _ammoCrateRadius;
@@ -92,7 +82,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>弾薬箱の <see cref="AmmoCrate.EffectiveCooldownSeconds"/>。負か有限でなければ <see cref="ArgumentOutOfRangeException"/>。</summary>
         public float AmmoCrateCooldownSeconds
         {
             get => _ammoCrateCooldownSeconds;
@@ -107,8 +96,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>弾薬箱の範囲と補給の間隔が使えることを確かめる。中身は弾薬箱では使わないので見ない。</summary>
-        /// <exception cref="ArgumentException">どれかが不正。メッセージにアセット名を含む。</exception>
+        // 中身は弾薬箱では使わないので見ない。
         public void ValidateAmmoCrate()
         {
             if (!AmmoCrate.IsValidRadius(_ammoCrateRadius))
@@ -124,8 +112,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>中身の Core の表し。呼ぶたびに作る。</summary>
-        /// <exception cref="ArgumentException">中身が無いか不正。メッセージにアセット名を含む。</exception>
         public PickupSpec ToSpec()
         {
             if (_contents == null)
@@ -143,8 +129,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>再出現の時間を作る。</summary>
-        /// <exception cref="ArgumentException">再出現の秒数が負か有限でない。メッセージにアセット名を含む。</exception>
         public PickupRespawn CreateRespawn()
         {
             try
@@ -157,8 +141,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>中身・再出現の秒数・範囲・照準の角度がすべて使えることを確かめる。</summary>
-        /// <exception cref="ArgumentException">どれかが不正。メッセージにアセット名を含む。</exception>
         public void Validate()
         {
             ToSpec();

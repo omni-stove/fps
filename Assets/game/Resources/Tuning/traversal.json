@@ -18,5 +18,19 @@
     "hangOffset": 1.3,
     "regrabSeconds": 0.5,
     "spreadMoveFraction": 1
+  },
+  "swim": {
+    "speed": 3,
+    "buoyancy": 12,
+    "breathSeconds": 15,
+    "drownDamage": 10,
+    "drownIntervalSeconds": 1
+  },
+  "wallRun": {
+    "enabled": false,
+    "maxSeconds": 1.5,
+    "minSpeed": 5,
+    "gravityScale": 0.25,
+    "jumpOffSpeed": 7
   }
 }

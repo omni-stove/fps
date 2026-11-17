@@ -137,6 +137,22 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.01f), Tooltip("飛び込みにかかる秒数")]
         private float _diveSeconds = ProneSpec.DefaultDiveSeconds;
 
+        [Header("リーン・空中のジャンプ")]
+        [SerializeField, Min(0f), Tooltip("左右へ傾け切ったときに目を横へずらす距離 (m)")]
+        private float _leanSideOffset = MotorSpec.DefaultLeanSideOffset;
+
+        [SerializeField, Range(0f, 90f), Tooltip("左右へ傾け切ったときの体の角度 (度)")]
+        private float _leanAngleDegrees = MotorSpec.DefaultLeanAngleDegrees;
+
+        [SerializeField, Min(0.01f), Tooltip("傾きが 1 秒に進む量 (傾け切りが 1)")]
+        private float _leanSpeed = MotorSpec.DefaultLeanSpeed;
+
+        [SerializeField, Min(0), Tooltip("着地するまでに空中で跳べる回数。0 なら空中では跳べない")]
+        private int _airJumps = MotorSpec.DefaultAirJumps;
+
+        [SerializeField, Min(0f), Tooltip("空中で跳んだときの上向きの速さ (m/s)")]
+        private float _airJumpSpeed = MotorSpec.DefaultAirJumpSpeed;
+
         [Header("持ち物")]
         [SerializeField, Tooltip("重さを数える武器。Held は構えている武器だけ、Carried は持っている全部の合計、None は数えない")]
         private CarrySource _carryWeightSource = CarryLoadSpec.DefaultWeightSource;
@@ -330,7 +346,36 @@ namespace Shooter.Runtime
             set => _ladderMinApproachSpeed = value;
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
+        public float LeanSideOffset
+        {
+            get => _leanSideOffset;
+            set => _leanSideOffset = value;
+        }
+
+        public float LeanAngleDegrees
+        {
+            get => _leanAngleDegrees;
+            set => _leanAngleDegrees = value;
+        }
+
+        public float LeanSpeed
+        {
+            get => _leanSpeed;
+            set => _leanSpeed = value;
+        }
+
+        public int AirJumps
+        {
+            get => _airJumps;
+            set => _airJumps = value;
+        }
+
+        public float AirJumpSpeed
+        {
+            get => _airJumpSpeed;
+            set => _airJumpSpeed = value;
+        }
+
         public ProneSpec Prone
         {
             get => CreateProneSpec();
@@ -350,7 +395,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
         public MoveDirectionScale WalkDirection
         {
             get => new MoveDirectionScale(_walkForwardScale, _walkBackwardScale, _walkSideScale);
@@ -367,7 +411,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
         public MoveDirectionScale SprintDirection
         {
             get => new MoveDirectionScale(_sprintForwardScale, _sprintBackwardScale, _sprintSideScale);
@@ -384,7 +427,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
         public CarryLoadSpec CarryLoad
         {
             get => new CarryLoadSpec(
@@ -430,8 +472,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="Resolve"/> と同じ順で設定を探して伏せの調整値を作る。どれも無ければ <see cref="ProneSpec.Default"/>。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
         public static ProneSpec ResolveProne(MotorSettings assigned)
         {
             var settings = assigned != null ? assigned : Load();
@@ -472,10 +512,14 @@ namespace Shooter.Runtime
                 _coverPeekSlideSeconds,
                 _ladderTopEntryDepth,
                 _ladderMinApproachDot,
-                _ladderMinApproachSpeed);
+                _ladderMinApproachSpeed,
+                _leanSideOffset,
+                _leanAngleDegrees,
+                _leanSpeed,
+                _airJumps,
+                _airJumpSpeed);
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
         public ProneSpec CreateProneSpec()
         {
             return new ProneSpec(
@@ -513,6 +557,11 @@ namespace Shooter.Runtime
             _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;
             _ladderMinApproachDot = MotorSpec.DefaultLadderMinApproachDot;
             _ladderMinApproachSpeed = MotorSpec.DefaultLadderMinApproachSpeed;
+            _leanSideOffset = MotorSpec.DefaultLeanSideOffset;
+            _leanAngleDegrees = MotorSpec.DefaultLeanAngleDegrees;
+            _leanSpeed = MotorSpec.DefaultLeanSpeed;
+            _airJumps = MotorSpec.DefaultAirJumps;
+            _airJumpSpeed = MotorSpec.DefaultAirJumpSpeed;
             Prone = ProneSpec.Default;
             WalkDirection = MoveDirectionScale.Uniform;
             SprintDirection = MoveDirectionScale.Uniform;

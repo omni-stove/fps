@@ -6,7 +6,7 @@ using NVector3 = System.Numerics.Vector3;
 
 namespace Shooter.Runtime
 {
-    // Core の弾道 (BallisticFlight) を Unity の物理に当てる。撃った本人と、撃った者の弾を通す置いた物は ShotCast と同じく当たりから外す。
+    // 撃った本人と、撃った者の弾を通す置いた物を当たりから外すのは、ShotCast と同じ当たり方にするため。
     public sealed class ShotWorldCollision : IWorldCollision
     {
         private static readonly Collider[] _overlaps = new Collider[ShotCast.MaxHits];

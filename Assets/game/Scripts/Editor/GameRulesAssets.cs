@@ -5,17 +5,10 @@ using UnityEditor;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// ルールのアセット (<see cref="GameRulesDefinition"/>) に値を入れ、読み直して確かめる。
-    /// どのルールを作るかは持たず、JSON の取り込みやゲームのビルダーがここを通して保存する。
-    /// </summary>
     public static class GameRulesAssets
     {
-        /// <summary>ルールのアセットを置く、出力先ルート (<see cref="ShooterKitRoot.Output"/>) の下のフォルダ。</summary>
         public static string Folder => ShooterKitRoot.OutputPath("Rules");
 
-        /// <summary>path の <see cref="GameRulesDefinition"/> を読み、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめて返す。</summary>
-        /// <exception cref="InvalidOperationException">path にルールが無い。</exception>
         public static GameRulesDefinition Load(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -30,7 +23,6 @@ namespace Shooter.Editor
             return definition;
         }
 
-        /// <summary>definition の中身を rules の値にし、<see cref="GameRulesDefinition.ToRules"/> に通ることを確かめる。</summary>
         public static void Configure(GameRulesDefinition definition, GameRules rules)
         {
             if (definition == null)

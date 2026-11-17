@@ -8,7 +8,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。</summary>
+    // 時刻を呼ぶ側の時計 (秒) で受け取るのは、テストから時間を進められるようにするため。
     internal sealed class MatchServer : IServerControl
     {
         public const float DefaultApprovalTimeoutSeconds = 10f;
@@ -61,7 +61,8 @@ namespace Shooter.Server
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             _drain = new ServerDrain(launch.DrainTimeoutSeconds);
-            Match = new ServerMatch(restartDelaySeconds, log, events, utcNow);
+            Match = new ServerMatch(
+                restartDelaySeconds, log, events, utcNow, (rules?.Settings ?? NetMatchSettings.Default).MaxTeamSizeDifference);
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }
@@ -78,7 +79,6 @@ namespace Shooter.Server
 
         public bool ExitRequested { get; private set; }
 
-        /// <summary>止まった後にプロセスが返す終了コード。<see cref="Fail"/> されていなければ 0。</summary>
         public int ExitCode { get; private set; } = ServerProgram.ExitOk;
 
         public int ConnectedPlayers => Match.HumanCount;
@@ -408,7 +408,9 @@ namespace Shooter.Server
             Messenger.Send(connection, TransportChannel.Reliable, _accepted);
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
-            Match.Join(connection, rejoinKey, productUserId);
+            // 名乗ったパーティの Id が読めなくても断らずに 1 人として入れるのは、Id は人数をそろえるときにまとめて移すためだけに使うから
+            var partyId = ConnectionExtras.IsValidField(request.PartyId, ConnectionExtras.MaxPartyIdLength) ? request.PartyId : null;
+            Match.Join(connection, rejoinKey, productUserId, partyId);
             _host.OnConnected(connection);
         }
 

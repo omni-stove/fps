@@ -6,28 +6,14 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーを乗り物に乗せる部品。プレイヤーの本体 (<see cref="PlayerController"/> と同じ GameObject) に付ける。
-    /// <list type="bullet">
-    /// <item>Interact (<see cref="InteractActionPath"/>) で、乗っていなければ近くの乗り物 (<see cref="Vehicle.Active"/>) の乗り込める座席に乗り、乗っていれば降りる。</item>
-    /// <item>乗っている間は <see cref="PlayerController.Handoff"/> と <see cref="WeaponController.Handoff"/> で歩く・撃つ操作を手放し、
-    /// 移動を横取りして (<see cref="IMovementOverride"/>) 体を座席に留め、<see cref="PlayerActionConditions.InVehicle"/> を立てる。
-    /// 覗き込み・カバー・グレネードなど座席で使わない部品は止め (<see cref="SuspendWhileRiding"/>)、手元の武器 (ビューモデル) は、自分の武器で撃てる座席 (<see cref="VehicleSeatFiring.OwnWeapon"/>) でなければ隠す。</item>
-    /// <item>乗っている間は、移動・ジャンプ・しゃがみ・ダッシュ・射撃・覗き込み・リロードのボタンを <see cref="VehicleSeatInput"/> にして座席に流し、
-    /// Next / Previous (<see cref="NextSeatActionPath"/> / <see cref="PreviousSeatActionPath"/>) で空いている次・前の座席に移る。</item>
-    /// <item>カメラは座席の <see cref="VehicleSeat.CameraView"/> にする (<see cref="VehicleCamera"/>)。</item>
-    /// <item>倒れたら降りる。</item>
-    /// </list>
-    /// 参照はコードで解決する: PlayerController・ViewRig・FirstPersonLook・Damageable は同じ GameObject、WeaponController は子。
-    /// Edit Mode やテストでは Awake が走らないので <see cref="Bind"/> で渡す。
-    /// </summary>
+    // Edit Mode やテストでは Awake が走らないので、参照は Awake で探すだけでなく Bind でも渡せるようにする。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerController))]
     public sealed class PlayerVehicleRider : MonoBehaviour, IVehicleRider, IMovementOverride, IHandedOffTrigger
     {
         public const string LogTag = VehicleLog.Tag;
 
-        /// <summary>移動の横取りの優先度。座席に座っている間は、スライディングやはしごなどより優先する。</summary>
+        // 座席に座っている間は、スライディングやはしごなどより優先する。
         public const int MovementOverridePriority = 1000;
 
         public const string InteractActionPath = InputActionPaths.Interact;
@@ -72,7 +58,6 @@ namespace Shooter.Runtime
 
         public bool IsBound => _mover != null;
 
-        /// <summary>乗っている乗り物。乗っていなければ null。</summary>
         public Vehicle Vehicle => _seat != null ? _seat.Vehicle : null;
 
         public bool IsRiding => _seat != null;
@@ -85,10 +70,8 @@ namespace Shooter.Runtime
 
         public IVehicleSeatInputFilter SeatInputFilter { get; set; }
 
-        /// <summary>今のカメラ。乗っていなければ意味を持たない。</summary>
         public VehicleCameraView CameraView => _camera != null ? _camera.View : VehicleCameraView.Chase;
 
-        /// <summary>乗っている間に止めている部品。</summary>
         public IReadOnlyList<Behaviour> SuspendedComponents => _suspended;
 
         public string RiderName => name;
@@ -238,10 +221,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 同じ GameObject の PlayerController と、子の WeaponController を探して <see cref="Bind"/> する。
-        /// PlayerController が無ければ Debug.LogError に出して false を返す (WeaponController は無くても乗れる)。
-        /// </summary>
         public bool TryBindFromHierarchy()
         {
             var mover = GetComponent<PlayerController>();
@@ -255,11 +234,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 参照を渡す。mover はこの GameObject のもの、weapon はこの GameObject かその子のもの (null なら撃つ操作は手放さない)。
-        /// ViewRig・FirstPersonLook・Damageable はこの GameObject から探し、AimDownSights・CoverController・GrenadeThrower があれば
-        /// 乗っている間止める部品に加える。乗っている間は差し替えられない (<see cref="InvalidOperationException"/>)。
-        /// </summary>
         public void Bind(PlayerController mover, WeaponController weapon)
         {
             if (mover == null)
@@ -312,10 +286,6 @@ namespace Shooter.Runtime
             SuspendWhileRiding(GetComponent<GrenadeThrower>());
         }
 
-        /// <summary>
-        /// 乗っている間は止める部品を足す (座席で使わない操作など)。乗るときに有効なものだけ止め、降りたら有効に戻す。
-        /// null は無視する。既に足してあれば false。
-        /// </summary>
         public bool SuspendWhileRiding(Behaviour component)
         {
             if (component == null || _suspendWhileRiding.Contains(component))
@@ -327,10 +297,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// プロジェクト全体のアクションから Interact・Next・Previous・Attack・Aim・Reload を探す。
-        /// 入力アセットが無ければ警告を出して false (コードからの乗り降りはできる)。一部が無ければ警告を出してそれだけ読まない。
-        /// </summary>
         public bool TryResolveActions()
         {
             AppliedInputBindings.EnsureLoaded();
@@ -351,7 +317,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>読むアクションを差し替える。null のものは読まない。動作中なら、自分が有効にした前のアクションを戻してから差し替える。</summary>
         public void SetActions(
             InputAction interact, InputAction nextSeat, InputAction previousSeat, InputAction fire, InputAction aim, InputAction reload)
         {
@@ -373,10 +338,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 乗っていれば降り、乗っていなければ近くの乗り物 (<see cref="Vehicle.Active"/>) のうち乗り込める座席が一番近いものに乗る。
-        /// 乗り降りしたら true。近くに乗り込める乗り物が無ければ何もせず false (Interact は拾う・押すなどと共用なのでログは出さない)。
-        /// </summary>
+        // Interact は拾う・押すなどと共用なので、近くに乗り込める乗り物が無くてもログは出さない。
         public bool Interact()
         {
             if (_seat != null)
@@ -388,7 +350,6 @@ namespace Shooter.Runtime
             return vehicle != null && vehicle.TryEnter(this);
         }
 
-        /// <summary>candidates のうち、乗り込める座席がこのプレイヤーから一番近い乗り物。無ければ null。</summary>
         public Vehicle FindNearestVehicle(IEnumerable<Vehicle> candidates)
         {
             if (candidates == null)
@@ -415,21 +376,18 @@ namespace Shooter.Runtime
             return best;
         }
 
-        /// <summary>乗っていれば降りる (降りる場所がすべて塞がっていれば降りない)。降りたら true。</summary>
         public bool Exit()
         {
             var vehicle = Vehicle;
             return vehicle != null && vehicle.TryExit(this);
         }
 
-        /// <summary>乗っていれば、direction (1 で次、-1 で前) の空いている座席に移る。移ったら true。</summary>
         public bool SwitchSeat(int direction)
         {
             var vehicle = Vehicle;
             return vehicle != null && vehicle.TrySwitchSeat(this, direction);
         }
 
-        /// <summary>乗っている間のカメラを切り替える。乗っていなければ何もしない。</summary>
         public void SetCameraView(VehicleCameraView view)
         {
             if (!Enum.IsDefined(typeof(VehicleCameraView), view))
@@ -446,7 +404,6 @@ namespace Shooter.Runtime
             _camera.Place(_seat);
         }
 
-        /// <summary>今押されているボタンから、座席に流す入力を作る。</summary>
         public VehicleSeatInput ReadSeatInput()
         {
             var move = _mover != null && _mover.MoveAction != null && _mover.MoveAction.enabled
@@ -796,7 +753,7 @@ namespace Shooter.Runtime
             return action;
         }
 
-        /// <summary>読むアクション 1 つと、自分が有効にしたか。プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。</summary>
+        // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたかを覚え、それだけ後で無効に戻す。
         private sealed class ActionSlot
         {
             private bool _enabledByMe;

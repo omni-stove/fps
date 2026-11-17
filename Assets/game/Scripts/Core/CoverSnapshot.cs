@@ -3,11 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="CoverState"/> の中身 1 回分 (<see cref="CoverState.Capture"/> で写し、<see cref="CoverState.Restore"/> で戻す)。
-    /// ネット対戦の予測で過去の tick へ巻き戻して同じ入力を再シミュレーションするために、タイマーと覗く側の好みまで含める。
-    /// <c>default</c> はカバーの外で、覗く側の好みは右。
-    /// </summary>
+    // ネット対戦の予測で過去の tick へ巻き戻して同じ入力を再シミュレーションするために、タイマーと覗く側の好みまで含める。
     public readonly struct CoverSnapshot : IEquatable<CoverSnapshot>
     {
         public CoverSnapshot(
@@ -28,36 +24,26 @@ namespace Shooter.Core
             PreferredSide = preferredSide;
         }
 
-        /// <summary>カバーの外。</summary>
         public static CoverSnapshot Out => default;
 
         public CoverPhase Phase { get; }
 
         public CoverHeight Height { get; }
 
-        /// <summary>張り付いている壁の、水平で長さ 1 のこちら向きの法線。</summary>
         public Vector3 Normal { get; }
 
-        /// <summary><see cref="CoverState.PeekOffset"/>。</summary>
         public float PeekOffset { get; }
 
-        /// <summary>入りかけになってからの秒数。</summary>
         public float EnterElapsed { get; }
 
-        /// <summary>後ろの入力を続けている秒数。</summary>
         public float BackElapsed { get; }
 
-        /// <summary>両側とも端のときに覗く側。負なら左、それ以外 (0 を含む) は右。</summary>
         public float PreferredSide { get; }
 
         public bool IsInCover => Phase != CoverPhase.Out;
 
         public bool IsPeeking => Phase == CoverPhase.Peeking;
 
-        /// <summary>
-        /// <see cref="CoverState.Restore"/> に渡せる値か。列挙が定義済みで、数値がすべて有限で、秒数が負でなく、
-        /// カバー中なら法線に水平の成分がある。ネットワークから受け取った値の検査に使う。
-        /// </summary>
         public bool IsValid
         {
             get

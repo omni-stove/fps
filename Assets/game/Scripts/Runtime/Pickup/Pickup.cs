@@ -6,85 +6,48 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 拾える物。トリガーの球 (<see cref="Radius"/>) に <see cref="Damageable"/> を持つ人が入ったら (<see cref="PickupCollectMode.Touch"/>)、
-    /// 範囲にいるプレイヤーが Interact を押したら (<see cref="PickupCollectMode.Interact"/>)、
-    /// または範囲にいるプレイヤーが見た目に照準を合わせて Interact を押したら (<see cref="PickupCollectMode.Look"/>) 拾う。
-    /// Look の照準は見た目に線が当たらなくても、照準の向きから <see cref="LookAngleDegrees"/> 以内に見えていれば合っているとし、範囲にある中で照準に最も近い物を選ぶ。
-    /// 持てる武器の数の上限に届いた人が別の武器を拾うと、今の武器と持ち替え、手放した武器をその残弾のまま <see cref="PickupCollectMode.Look"/> で足元に落とす。
-    /// 拾えるかと何が起きるかは <see cref="PickupJudge"/> が決め、ここは拾った人の <see cref="IWeaponHolder"/> (プレイヤーの <see cref="WeaponController"/> か
-    /// bot の <see cref="EnemyAgent"/>。持ち武器・予備弾)・
-    /// <see cref="Damageable"/> (体力)・<see cref="IArmorHolder"/> (防具) に反映して <c>[Pickup]</c> のログを出し、<see cref="Collected"/> を呼ぶ。
-    /// タグは何にも反映せず、<see cref="Collected"/> を受けたモードが得点などを決める。
-    /// Interact で拾う物は、範囲にこの画面のプレイヤーがいて拾える間 (Look なら照準を合わせている間)、
-    /// <see cref="GameSignals.InteractHint"/> に何を拾うかの案内 (<see cref="PickupHint"/>) を出し、拾えなくなったら消す。
-    /// </summary>
-    /// <remarks>
-    /// 実行時に置くときは <see cref="Create"/> を使う (当たり判定と見た目もコードで作る)。Scene に置くなら <see cref="PickupSpawnPoint"/> を使う。
-    /// 武器の見た目は <see cref="VisualPrefab"/>、無ければ <see cref="WeaponExtrasCatalog"/> のその武器の <see cref="WeaponExtrasAssets.PickupModel"/>、
-    /// それも無ければ仮の銃の形を組む。
-    /// 当たり判定は動かない Rigidbody (kinematic) を付けたトリガーなので、Rigidbody を持たない bot のコライダーでも入ったことが分かる。
-    /// 射撃や視線の Raycast はトリガーを無視するので、拾える物は弾を遮らない。
-    /// </remarks>
+    // 当たり判定を動かない Rigidbody (kinematic) を付けたトリガーにするのは、Rigidbody を持たない bot のコライダーでも入ったことが分かるようにするため。
+    // 射撃や視線の Raycast はトリガーを無視するので、拾える物は弾を遮らない。
     [DisallowMultipleComponent]
     public sealed class Pickup : MonoBehaviour
     {
         public const string LogTag = PickupLog.Tag;
 
-        /// <summary>Assets/InputSystem_Actions.inputactions の Interact アクション。</summary>
         public const string InteractActionPath = InputActionPaths.Interact;
 
-        /// <summary>拾える範囲の既定の半径 (m)。</summary>
         public const float DefaultRadius = 1f;
 
-        /// <summary>範囲の半径の下限 (m)。</summary>
         public const float MinRadius = 0.1f;
 
-        /// <summary><see cref="Create"/> が作る見た目の子の名前。</summary>
         public const string VisualName = "Visual";
 
-        /// <summary>見た目の立方体の一辺 (m)。</summary>
         public const float VisualSize = 0.4f;
 
-        /// <summary>見た目を浮かせる、足元からの高さ (m)。</summary>
         public const float VisualHeight = 0.6f;
 
-        /// <summary>見た目が回る速さ (度/秒)。拾える物だと遠くから分かるように回す。<see cref="PickupCollectMode.Look"/> では照準を合わせやすいよう回さない。</summary>
+        // 拾える物だと遠くから分かるように回す。Look では照準を合わせやすいよう回さない。
         public const float SpinDegreesPerSecond = 90f;
 
-        /// <summary><see cref="PickupCollectMode.Look"/> で見た目を横に倒す角度 (度、前後の軸まわり)。銃を地面に寝かせて置く。</summary>
         public const float LyingRollDegrees = 90f;
 
-        /// <summary><see cref="PickupCollectMode.Look"/> で寝かせた見た目の下端と足元の間 (m)。</summary>
         public const float LyingGap = 0.02f;
 
-        /// <summary>
-        /// <see cref="PickupCollectMode.Look"/> で照準の線を伸ばす長さ (m)。三人称のカメラは体から離れているので、拾える距離は線の長さでなく範囲の球で決める。
-        /// </summary>
+        // 三人称のカメラは体から離れているので、拾える距離は線の長さでなく範囲の球で決め、線は長めに伸ばす。
         public const float LookRayLength = 30f;
 
-        /// <summary>
-        /// <see cref="PickupCollectMode.Look"/> で、照準の向きと見た目の中心への向きの間がこの角度 (度) 以内なら照準が合っているとする既定。
-        /// 足元に置いた銃は、正面を見たままでも目からこのくらい下に見える。
-        /// </summary>
+        // 足元に置いた銃は、正面を見たままでも目からこのくらい下に見える。
         public const float DefaultLookAngleDegrees = 90f;
 
-        /// <summary><see cref="LookAngleDegrees"/> の上限 (度)。</summary>
         public const float MaxLookAngleDegrees = 180f;
 
-        /// <summary>持ち替えで手放した武器を、拾った物の位置から拾った人の側へずらして置く距離 (m)。</summary>
         public const float DroppedWeaponOffset = 0.6f;
 
-        /// <summary><see cref="PickupCollectMode.Look"/> の見た目に付ける、照準の線だけが当たる判定の名前。</summary>
         public const string LookTargetName = "LookTarget";
 
-        /// <summary>仮の銃の本体 (機関部と銃床) の大きさ (m)。幅・高さ・長さ。</summary>
         public static readonly Vector3 GunBodySize = new Vector3(0.07f, 0.12f, 0.45f);
 
-        /// <summary>仮の銃の銃身の大きさ (m)。</summary>
         public static readonly Vector3 GunBarrelSize = new Vector3(0.035f, 0.035f, 0.3f);
 
-        /// <summary>仮の銃の握りの大きさ (m)。</summary>
         public static readonly Vector3 GunGripSize = new Vector3(0.05f, 0.14f, 0.07f);
 
         private const int LookHitCapacity = 16;
@@ -137,10 +100,8 @@ namespace Shooter.Runtime
         private bool _reportedInvalid;
         private int _armedFrame = -1;
 
-        /// <summary>拾われたときに呼ばれる。<see cref="DestroyOnCollect"/> なら、呼んだ後に破棄する。</summary>
         public event Action<PickupCollection> Collected;
 
-        /// <summary>中身。変えると次に拾うときから効く。null は <see cref="ArgumentNullException"/>、値が不正なら <see cref="ArgumentException"/>。</summary>
         public PickupContents Contents
         {
             get => _contents;
@@ -157,7 +118,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>中身の Core の表し。<see cref="Contents"/> が不正なら <see cref="ArgumentException"/>。</summary>
         public PickupSpec Spec => _spec ?? (_spec = (_contents ?? throw new InvalidOperationException($"Pickup '{name}' has no contents")).ToSpec());
 
         public PickupCollectMode CollectMode
@@ -174,7 +134,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>拾える範囲の半径 (m)。<see cref="MinRadius"/> 未満は切り上げる。トリガーの球にもすぐ反映する。</summary>
         public float Radius
         {
             get => _radius;
@@ -185,53 +144,36 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// <see cref="PickupCollectMode.Look"/> で、照準の向きと見た目の中心への向きの間がこの角度 (度) 以内なら、見た目に照準の線が当たらなくても照準が合っているとする。
-        /// 0 なら線が当たったときだけ。0〜<see cref="MaxLookAngleDegrees"/> に収め、NaN は 0 にする。
-        /// </summary>
         public float LookAngleDegrees
         {
             get => _lookAngleDegrees;
             set => _lookAngleDegrees = ClampLookAngle(value);
         }
 
-        /// <summary>拾われたら破棄するか。false なら無効にするだけで、<see cref="Restock"/> で戻せる。</summary>
         public bool DestroyOnCollect
         {
             get => _destroyOnCollect;
             set => _destroyOnCollect = value;
         }
 
-        /// <summary>置いてから消えるまでの秒数。0 なら消えない。時間は <see cref="Tick"/> で進む。負の値は 0 にする。</summary>
         public float LifetimeSeconds
         {
             get => _lifetimeSeconds;
             set => _lifetimeSeconds = Mathf.Max(0f, value);
         }
 
-        /// <summary>見た目。null なら武器はカタログの見た目か仮の銃、他は中身の種類で色を分けた仮の箱。見た目を作る (Awake か <see cref="Create"/>) 前に設定したものを使う。</summary>
         public GameObject VisualPrefab
         {
             get => _visualPrefab;
             set => _visualPrefab = value;
         }
 
-        /// <summary>まだ拾われていなければ true。</summary>
         public bool IsAvailable => !_collected;
 
-        /// <summary>範囲に入っている人のコライダーの数。</summary>
         public int InsideCount => _inside.Count;
 
-        /// <summary>今使っている Interact アクション。<see cref="PickupCollectMode.Interact"/> か <see cref="PickupCollectMode.Look"/> で Play 中でなければ null。</summary>
         public InputAction InteractAction => _interactAction;
 
-        /// <summary>
-        /// contents の拾える物を groundPosition (足元) に作る。トリガーの球・動かない Rigidbody・見た目 (<see cref="VisualPrefab"/> を参照) を付ける。
-        /// contents は写しを持つので、後で書き換えても作った物は変わらない。contents が不正なら何も作らずに <see cref="ArgumentException"/>。
-        /// </summary>
-        /// <param name="parent">親。null ならシーンの直下。</param>
-        /// <param name="visualPrefab">見た目 (<see cref="VisualPrefab"/>)。null なら武器はカタログの見た目か仮の銃、他は仮の箱。</param>
-        /// <param name="lookAngleDegrees">Look で照準が合っているとする角度 (<see cref="LookAngleDegrees"/>)。</param>
         public static Pickup Create(
             PickupContents contents,
             Vector3 groundPosition,
@@ -279,13 +221,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>中身の種類ごとの GameObject の名前。</summary>
         public static string ObjectName(PickupKind kind)
         {
             return "Pickup-" + kind;
         }
 
-        /// <summary>シーンにある有効な物のうち、まだ拾われていない物 (順番は決まっていない)。bot が取りに行く物を選ぶのに使う。</summary>
         public static List<Pickup> FindActive()
         {
             var found = FindObjectsByType<Pickup>(FindObjectsInactive.Exclude);
@@ -346,10 +286,6 @@ namespace Shooter.Runtime
             HandleExit(other);
         }
 
-        /// <summary>
-        /// 時間を deltaSeconds 進める。見た目を回し、<see cref="LifetimeSeconds"/> を過ぎたら消す。
-        /// <see cref="PickupCollectMode.Touch"/> なら範囲にいる人がまた拾えるようになったかを確かめる (拾えなくてもログは出さない)。
-        /// </summary>
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -385,10 +321,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// other が範囲に入った。<see cref="Damageable"/> を持つ人のコライダーなら数え、<see cref="PickupCollectMode.Touch"/> なら拾ってみる。
-        /// その人の最初のコライダーで拾えなければ、生きていれば理由をログに出す。
-        /// </summary>
         public void HandleEnter(Collider other)
         {
             if (other == null || _collected)
@@ -419,7 +351,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>other が範囲から出た。</summary>
         public void HandleExit(Collider other)
         {
             if (other != null)
@@ -433,11 +364,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 範囲にいるこの画面のプレイヤー (<see cref="Damageable.IsLocalPlayer"/>) が拾う。拾えたら true。
-        /// <see cref="PickupCollectMode.Interact"/> と <see cref="PickupCollectMode.Look"/> の入力から呼ばれる。拾い方に関わらずコードからも呼べるが、
-        /// Look ではプレイヤーが見た目に照準を合わせていなければ (<see cref="IsLookedAtBy"/>) 拾わない。
-        /// </summary>
         public bool Interact()
         {
             if (_collected)
@@ -462,21 +388,11 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// viewer が照準を合わせている <see cref="PickupCollectMode.Look"/> の物 (<see cref="LookedAt"/>) がこの物なら true。
-        /// </summary>
         public bool IsLookedAtBy(Damageable viewer)
         {
             return viewer != null && !_collected && _collectMode == PickupCollectMode.Look && LookedAt(viewer) == this;
         }
 
-        /// <summary>
-        /// viewer が照準を合わせている <see cref="PickupCollectMode.Look"/> の拾える物。無ければ null。
-        /// 照準の線を viewer の視点 (<see cref="ViewOf"/>) の正面へ <see cref="LookRayLength"/> 伸ばし、壁など固い物より手前で見た目に当たった物を、
-        /// viewer が範囲にいれば選ぶ。当たらなければ、viewer が範囲にいる物のうち、照準の向きから見た目の中心までの角度が
-        /// その物の <see cref="LookAngleDegrees"/> 以内で、固い物に遮られずに見える中で最も角度の小さい物を選ぶ。
-        /// viewer 自身のコライダーと、見た目以外のトリガーは素通りする。
-        /// </summary>
         public static Pickup LookedAt(Damageable viewer)
         {
             if (viewer == null)
@@ -504,7 +420,6 @@ namespace Shooter.Runtime
             return result;
         }
 
-        /// <summary>viewer の照準の起点。子の <see cref="WeaponController"/> が付いたカメラ、無ければ <see cref="Camera.main"/>。どちらも無ければ null。</summary>
         public static Transform ViewOf(Damageable viewer)
         {
             if (viewer == null)
@@ -582,7 +497,6 @@ namespace Shooter.Runtime
             return best;
         }
 
-        // 見た目の中心。照準の判定があればその箱の中心、無ければ見た目か足元の位置。
         private Vector3 LookPoint
         {
             get
@@ -624,7 +538,6 @@ namespace Shooter.Runtime
             return float.IsNaN(degrees) ? 0f : Mathf.Clamp(degrees, 0f, MaxLookAngleDegrees);
         }
 
-        /// <summary>範囲にいるこの画面のプレイヤー。いなければ null。</summary>
         public Damageable LocalPlayerInside()
         {
             foreach (var collider in _inside)
@@ -639,11 +552,6 @@ namespace Shooter.Runtime
             return null;
         }
 
-        /// <summary>
-        /// player に出す案内。Interact か Look で拾う物を player が今拾えるなら、何が起きるかと中身と <see cref="InteractActionPath"/> を入れた案内で true。
-        /// 拾い方が Touch・拾われた後・中身が不正・player が拾えない (満タンや倒れているなど) なら案内は出さない (false)。
-        /// Look で照準を合わせているかはここでは見ない (呼ぶ側が <see cref="IsLookedAtBy"/> で確かめる)。
-        /// </summary>
         public bool TryDescribe(Damageable player, out PickupHint hint)
         {
             hint = default;
@@ -663,12 +571,6 @@ namespace Shooter.Runtime
             return PickupHint.TryFrom(outcome, nameKey, InteractActionPath, out hint);
         }
 
-        /// <summary>
-        /// collector に拾わせてみる。拾えたら反映して <c>[Pickup] collected</c> を出し、<see cref="Collected"/> を呼んで、
-        /// 破棄するか無効にして true を返す。拾えなければ outcome に理由を入れて false (logRejection で、生きている人なら理由をログに出す)。
-        /// 拾えると判定したのに反映できなければ (武器の定義が無いなど) エラーを出し、<see cref="PickupRejection.ApplyFailed"/> で false。
-        /// 拾われた後は <see cref="PickupRejection.Gone"/> で false。
-        /// </summary>
         public bool TryCollect(Damageable collector, out PickupOutcome outcome, bool logRejection = true)
         {
             if (collector == null)
@@ -734,7 +636,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>拾われた物をまた拾えるようにする (<see cref="PickupSpawnPoint"/> が再び出すときに呼ぶ)。有効にはしない。</summary>
         public void Restock()
         {
             _collected = false;
@@ -742,13 +643,6 @@ namespace Shooter.Runtime
             _inside.Clear();
         }
 
-        /// <summary>
-        /// collector の今の状態を、拾う判定に要る形にする。陣営は <see cref="SideMember"/>、武器は子の初期化済みの <see cref="WeaponController"/>
-        /// (無ければ同じ GameObject の初期化済みの <see cref="EnemyAgent"/>)、防具は同じ GameObject の <see cref="IArmorHolder"/>、
-        /// 持ち物は同じ GameObject の <see cref="PlayerInventory"/> から読む。
-        /// どれも無ければ陣営なし・武器を持てない・防具を持てない人にする。武器を持っていない (<see cref="WeaponController.IsUnarmed"/>) 人は、
-        /// 武器を持てるが 1 本も持っていない人にする。
-        /// </summary>
         public static PickupCollector Describe(Damageable collector)
         {
             if (collector == null)
@@ -872,10 +766,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 持ち替えで手放した武器を、この物の位置から collector の側へ <see cref="DroppedWeaponOffset"/> ずらした足元に、
-        /// その残弾のまま <see cref="PickupCollectMode.Look"/> で置く。範囲の半径・照準の角度・拾える陣営はこの物と同じにする。
-        /// </summary>
         private Pickup DropWeapon(HeldWeapon dropped, Damageable collector)
         {
             var position = transform.position;
@@ -1080,7 +970,6 @@ namespace Shooter.Runtime
             _lookTarget = null;
         }
 
-        // root の座標で、子孫のすべての Renderer を囲む箱。Renderer が無ければ false。
         private static bool TryLocalBounds(Transform root, out Bounds bounds)
         {
             bounds = default;
@@ -1161,7 +1050,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>contents の武器の、地面に置いたときの見た目 (<see cref="WeaponExtrasAssets.PickupModel"/>)。武器でないか、カタログに無ければ null。</summary>
         public static GameObject WeaponModelOf(PickupContents contents)
         {
             if (contents == null || contents.Kind != PickupKind.Weapon || contents.Weapon == null)
@@ -1173,7 +1061,6 @@ namespace Shooter.Runtime
             return catalog != null && catalog.TryGetWeapon(contents.Weapon.Id, out var assets) ? assets.PickupModel : null;
         }
 
-        // 見た目の素材が無い武器の仮の形。原点を中心に、前 (+Z) を銃口にした本体・銃身・握り。
         private Transform CreateGunShape()
         {
             var root = new GameObject(VisualName).transform;
@@ -1209,7 +1096,6 @@ namespace Shooter.Runtime
             return part.transform;
         }
 
-        /// <summary>中身の種類ごとの見た目の色。</summary>
         public static Color ColorOf(PickupKind kind)
         {
             switch (kind)

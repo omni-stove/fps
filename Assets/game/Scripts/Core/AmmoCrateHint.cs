@@ -2,14 +2,9 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 弾薬箱の近くで出す案内の中身 (<see cref="InteractHint.Detail"/>)。補給できる武器があるか (<see cref="HasRoom"/>) と、
-    /// どの入力 (<see cref="InputActionPath"/>) で使うかを持つ。文にするのは UI。
-    /// </summary>
+    // 文でなく値で持つのは、文にするのが UI だから。
     public readonly struct AmmoCrateHint : IEquatable<AmmoCrateHint>
     {
-        /// <param name="hasRoom">予備弾を足せる武器があるか。無ければどの武器も満タン。</param>
-        /// <param name="inputActionPath">使う入力のアクション (例: <c>Player/Interact</c>)。null は空文字にする。</param>
         public AmmoCrateHint(bool hasRoom, string inputActionPath)
         {
             HasRoom = hasRoom;

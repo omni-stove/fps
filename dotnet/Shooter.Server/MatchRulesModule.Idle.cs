@@ -9,7 +9,8 @@ namespace Shooter.Server
     internal sealed partial class MatchRulesModule
     {
         private const InputButtons _pressedButtons = InputButtons.Jump | InputButtons.Cover | InputButtons.Dodge;
-        private const InputButtons _heldButtons = InputButtons.Sprint | InputButtons.Crouch | InputButtons.Aim;
+        private const InputButtons _heldButtons =
+            InputButtons.Sprint | InputButtons.Crouch | InputButtons.Aim | InputButtons.LeanLeft | InputButtons.LeanRight;
 
         private readonly Dictionary<int, InputFrame> _lastInputs = new Dictionary<int, InputFrame>();
         private readonly List<int> _idleIds = new List<int>();
@@ -20,10 +21,7 @@ namespace Shooter.Server
 
         internal IdleTracker IdleTracker => _idleTracker;
 
-        /// <summary>
-        /// 前の入力から操作が変わったか。押した瞬間だけ立つボタン (ジャンプ・カバー・回避) は押されていれば操作とする。
-        /// Unity の NetworkPlayerMotor.IsActivity と同じ見方。
-        /// </summary>
+        // Unity の NetworkPlayerMotor.IsActivity と同じ見方にする。
         internal static bool IsActivity(InputFrame previous, InputFrame current)
         {
             return (current.Buttons & _pressedButtons) != 0

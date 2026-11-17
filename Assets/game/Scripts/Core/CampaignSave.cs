@@ -6,24 +6,16 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// キャンペーンのセーブデータ。チェックポイントに着いた時点のミッションの進み具合とプレイヤーの状態 (体力・武器ごとの残弾と付けた物・持っていた武器) を持つ。不変。
-    /// <see cref="ToJson"/> と <see cref="FromJson"/> で文字列にして <see cref="ISaveStorage"/> に置く。
-    /// </summary>
     public sealed class CampaignSave
     {
-        /// <summary>このコードが書き出すセーブデータの形式のバージョン。武器ごとの残弾と付けた物を持つ。</summary>
         public const int CurrentVersion = 3;
 
         public const int WithoutAttachmentsVersion = 2;
 
-        /// <summary>武器を 1 本しか持てなかった頃の形式のバージョン。読み込めるが書き出さない。</summary>
         public const int LegacySingleWeaponVersion = 1;
 
-        /// <summary>
-        /// <see cref="LegacySingleWeaponVersion"/> のセーブの残弾を持たせる武器 (rifle) の Id。
-        /// その頃のプレイヤーは rifle だけを持っていた。rifle の Id は再ビルドしても変わらない (WeaponAssetBuilder.RifleId と同じ値)。
-        /// </summary>
+        // LegacySingleWeaponVersion の頃のプレイヤーは rifle だけを持っていたので、その残弾を rifle に持たせる。
+        // rifle の Id は再ビルドしても変わらない (WeaponAssetBuilder.RifleId と同じ値) ので、ここに書いておける。
         public const string LegacyWeaponId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
 
         private const string _versionKey = "version";
@@ -60,36 +52,22 @@ namespace Shooter.Core
 
         private static readonly string[] _objectiveKeys = { _objectiveIdKey, _objectiveStateKey, _objectiveCountKey };
 
-        /// <summary>セーブデータの形式のバージョン。常に <see cref="CurrentVersion"/>。</summary>
         public int Version { get; }
 
-        /// <summary>ミッションの Id。</summary>
         public string MissionId { get; }
 
-        /// <summary>最後に通ったチェックポイントの Id。まだ通っていなければ空文字。</summary>
         public string CheckpointId { get; }
 
-        /// <summary>プレイヤーの体力。1 以上。</summary>
         public int Health { get; }
 
-        /// <summary>持っていた武器の Id。<see cref="Weapons"/> のどれかの Id か、分からなければ空文字。</summary>
         public string EquippedWeaponId { get; }
 
-        /// <summary>武器ごとの残弾。持っていた並びの順。Id は重複しない。</summary>
         public IReadOnlyList<WeaponAmmo> Weapons { get; }
 
         public IReadOnlyDictionary<string, IReadOnlyList<string>> Attachments { get; }
 
-        /// <summary>各目標の状態と進み具合。<see cref="Mission.Restore"/> に渡す。</summary>
         public IReadOnlyList<ObjectiveProgress> Objectives { get; }
 
-        /// <param name="missionId">ミッションの Id。空にはできない。</param>
-        /// <param name="checkpointId">最後に通ったチェックポイントの Id。null は空文字 (まだ通っていない) として扱う。</param>
-        /// <param name="health">プレイヤーの体力。1 以上。</param>
-        /// <param name="weapons">武器ごとの残弾。null を含まず、Id が重複しないこと。</param>
-        /// <param name="equippedWeaponId">持っていた武器の Id。null は空文字 (分からない) として扱う。空でなければ weapons のどれかの Id であること。</param>
-        /// <param name="objectives">各目標の状態と進み具合 (<see cref="Mission.Snapshot"/> の結果)。null を含まず、Id が重複しないこと。</param>
-        /// <param name="attachments">武器の Id ごとの付けた物。null なら何も付けていない。Id は weapons のどれかで、付けた物は空文字・null を含まないこと。</param>
         public CampaignSave(
             string missionId,
             string checkpointId,
@@ -203,7 +181,6 @@ namespace Shooter.Core
             Objectives = new ReadOnlyCollection<ObjectiveProgress>(list);
         }
 
-        /// <summary>Id が weaponId の武器の残弾。無ければ null。</summary>
         public WeaponAmmo FindWeapon(string weaponId)
         {
             foreach (var weapon in Weapons)
@@ -217,7 +194,6 @@ namespace Shooter.Core
             return null;
         }
 
-        /// <summary>JSON の文字列に書き出す。<see cref="FromJson"/> で同じ内容に戻る。</summary>
         public string ToJson()
         {
             var builder = new StringBuilder();
@@ -290,13 +266,6 @@ namespace Shooter.Core
             return builder.ToString();
         }
 
-        /// <summary>
-        /// <see cref="ToJson"/> で書き出した文字列から読む。<see cref="LegacySingleWeaponVersion"/> の形式 (武器 1 本ぶんの弾数) も読み、
-        /// その弾数は <see cref="LegacyWeaponId"/> (rifle) の残弾として、持っていた武器も rifle として扱う。
-        /// <see cref="WithoutAttachmentsVersion"/> の形式は、どの武器にも何も付けていないものとして読む。
-        /// JSON として壊れている、項目が欠けている・余分・型違い・範囲外、バージョンがどれでもないときは
-        /// <see cref="FormatException"/> を投げる。
-        /// </summary>
         public static CampaignSave FromJson(string json)
         {
             if (json == null)
@@ -422,7 +391,7 @@ namespace Shooter.Core
             return builder.Append(':');
         }
 
-        /// <summary>セーブデータでの状態の名前。enum の名前を変えても形式が変わらないよう、ここで固定する。</summary>
+        // enum の名前を変えてもセーブデータの形式が変わらないよう、名前をここで固定する。
         private static string StateName(ObjectiveState state)
         {
             switch (state)

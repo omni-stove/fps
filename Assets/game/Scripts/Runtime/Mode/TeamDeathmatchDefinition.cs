@@ -4,12 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// チームデスマッチの調整値 (<see cref="TeamDeathmatchSpec"/> の得点・制限時間・リスポーン・陣営の数と人数・キル 1 回の点) をアセットとして持つ。
-    /// <see cref="ToSpec"/> で <see cref="TeamDeathmatchSpec"/> に変換する。ルールは <see cref="GameRulesDefinition"/> の側にあるので持たない。
-    /// 新しく作ったときの値は <see cref="TeamDeathmatchRunner"/> の既定値と同じ。
-    /// <see cref="TeamDeathmatchRunner.Definition"/> に配線すると、Runner は Inspector の値の代わりにこれを読む。
-    /// </summary>
+    // ルールは GameRulesDefinition の側にあるので持たない。
     [CreateAssetMenu(fileName = "TeamDeathmatch", menuName = "Shooter/Modes/Team Deathmatch")]
     public sealed class TeamDeathmatchDefinition : ScriptableObject
     {
@@ -30,6 +25,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Min(1), Tooltip("別の陣営を 1 回倒すごとに入る点")]
         private int _pointsPerKill = TeamDeathmatchSpec.DefaultPointsPerKill;
+
+        [SerializeField, Min(0), Tooltip("別の陣営を倒すのを 1 回アシストするごとに入る点。0 ならアシストでは点が入らない")]
+        private int _pointsPerAssist = TeamDeathmatchSpec.DefaultPointsPerAssist;
 
         public int ScoreLimit
         {
@@ -67,13 +65,18 @@ namespace Shooter.Runtime
             set => _pointsPerKill = value;
         }
 
-        /// <summary>定義と rules (null なら <see cref="GameRules.Default"/>) から <see cref="TeamDeathmatchSpec"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="InvalidOperationException">値が不正なとき。メッセージにアセット名を含む。</exception>
+        public int PointsPerAssist
+        {
+            get => _pointsPerAssist;
+            set => _pointsPerAssist = value;
+        }
+
         public TeamDeathmatchSpec ToSpec(GameRules rules = null)
         {
             try
             {
-                return new TeamDeathmatchSpec(_scoreLimit, _timeLimitSeconds, _respawnSeconds, rules, _sideCount, _sideCapacity, _pointsPerKill);
+                return new TeamDeathmatchSpec(
+                    _scoreLimit, _timeLimitSeconds, _respawnSeconds, rules, _sideCount, _sideCapacity, _pointsPerKill, _pointsPerAssist);
             }
             catch (ArgumentOutOfRangeException e)
             {
@@ -81,7 +84,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の得点・制限時間・リスポーン・陣営の数と人数・キル 1 回の点を写す。spec は検査済みなので、写した後は必ず <see cref="ToSpec"/> に通る。</summary>
         public void CopyFrom(TeamDeathmatchSpec spec)
         {
             if (spec == null)
@@ -95,6 +97,7 @@ namespace Shooter.Runtime
             _sideCount = spec.SideCount;
             _sideCapacity = spec.SideCapacity;
             _pointsPerKill = spec.PointsPerKill;
+            _pointsPerAssist = spec.PointsPerAssist;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed team deathmatch definition)" : name;

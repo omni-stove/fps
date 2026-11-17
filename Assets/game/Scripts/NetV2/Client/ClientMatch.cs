@@ -6,14 +6,7 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 承認された後の試合の見え方。自分は入力を Core の移動で予測し (<see cref="OwnerPrediction"/>)、届いたスナップショットの
-    /// 処理済みの入力の tick で照合する。他のプレイヤーは tick ごとの姿を残して少し遅らせて補間する (<see cref="RemoteTrack"/>)。
-    /// スナップショットの並びに入った人・消えた人を <see cref="PlayerAdded"/>・<see cref="PlayerRemoved"/> で知らせる。
-    /// </summary>
-    /// <remarks>
-    /// 自分の予測は、最初に自分の行が届いた時点の状態から始める。それまでは入力を送らない (サーバーは参加と同時に出現させるので、すぐ届く)。
-    /// </remarks>
+    // 自分の予測は最初に自分の行が届いた時点の状態から始め、それまでは入力を送らない。サーバーは参加と同時に出現させるので、すぐ届く。
     public sealed class ClientMatch
     {
         private readonly MatchClient _client;
@@ -25,8 +18,6 @@ namespace Shooter.NetV2
         private readonly List<int> _gone = new List<int>();
         private int _nextTick;
 
-        /// <param name="client">承認されたクライアント。</param>
-        /// <param name="simulation">自分の体の移動。サーバーと同じマップ・同じ値で作ったもの。</param>
         public ClientMatch(MatchClient client, CharacterMotorSimulation simulation)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
@@ -46,19 +37,13 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>スナップショットの並びに入った他のプレイヤー (Id)。</summary>
         public event Action<int> PlayerAdded;
 
-        /// <summary>スナップショットの並びから消えた他のプレイヤー (Id)。</summary>
         public event Action<int> PlayerRemoved;
 
-        /// <summary>
-        /// 自分の予測がはしごにつかまった。渡すのははしごの番号と、はしごを向く yaw (ラジアン)。
-        /// オフラインの LadderMovement と同じく、つかまったら視点をはしごへ向けるため。
-        /// </summary>
+        // オフラインの LadderMovement と同じく、つかまったら視点をはしごへ向けるため、はしごを向く yaw を渡す。
         public event Action<int, float> LadderGrabbed;
 
-        /// <summary>予測を照合した。巻き戻したかどうかは <see cref="ReconcileResult.Outcome"/>。</summary>
         public event Action<ReconcileResult> Reconciled;
 
         public int LocalPlayerId => _client.PlayerId;
@@ -69,25 +54,16 @@ namespace Shooter.NetV2
 
         public ClientVehicles Vehicles { get; }
 
-        /// <summary>予測を始めたか (自分の行が届いたか)。</summary>
         public bool IsPredicting => _prediction.IsStarted;
 
-        /// <summary>自分の最新の予測の状態。</summary>
         public CharacterMotorState LocalState => _prediction.Current;
 
-        /// <summary>今表示している他のプレイヤーの Id。</summary>
         public IEnumerable<int> RemotePlayerIds => _remotes.Keys;
 
-        /// <summary>巻き戻した回数。</summary>
         public int Corrections { get; private set; }
 
-        /// <summary>今の tick とその次の tick の間のどこを表示しているか (0〜1)。射撃の要求に載せる。</summary>
         public float Alpha => _clock.Alpha;
 
-        /// <summary>
-        /// deltaSeconds だけ時間を進め、進んだ tick の数を返す。呼ぶ側はその数だけ <see cref="Step"/> を呼んでから <see cref="SendInput"/> を呼ぶ。
-        /// 予測を始める前は 0 を返し、補間だけ進める。
-        /// </summary>
         public int Advance(float deltaSeconds)
         {
             var latest = _client.LatestSnapshot;
@@ -100,10 +76,7 @@ namespace Shooter.NetV2
             return _prediction.IsStarted ? ticks : 0;
         }
 
-        /// <summary>
-        /// 次の tick の入力を予測に通して覚える。移動は X が右・Y が前、yaw は Y 軸まわりのラジアン。
-        /// ダウン中か・使えない動き・持ち物の倍率は、届いている自分の行と試合のルールから入れる (サーバーと同じ答えにするため)。
-        /// </summary>
+        // サーバーと同じ答えにするため、ダウン中か・使えない動き・持ち物の倍率は、届いている自分の行と試合のルールから入れる。
         public CharacterMotorState Step(Vector2 move, float yaw, InputButtons buttons)
         {
             if (!_prediction.IsStarted)
@@ -150,7 +123,6 @@ namespace Shooter.NetV2
             return state;
         }
 
-        /// <summary>まだサーバーが処理していない入力をまとめて送る。</summary>
         public void SendInput()
         {
             if (!_prediction.IsStarted || _prediction.PendingFrames == 0)
@@ -162,14 +134,13 @@ namespace Shooter.NetV2
             _client.SendInput(_input);
         }
 
-        /// <summary>他のプレイヤーの今表示する姿。記録が無ければ false。</summary>
         public bool TrySampleRemote(int playerId, out RemotePose pose)
         {
             pose = default;
             return _remotes.TryGetValue(playerId, out var track) && track.TrySample(Interpolation.RenderTick, out pose);
         }
 
-        /// <summary>サーバーが他のプレイヤーを置き直した。前の位置から滑って見えないよう、補間の記録を捨てる。</summary>
+        // 置き直された人が前の位置から滑って見えないよう、補間の記録を捨てる。
         public void ForgetRemoteHistory(int playerId)
         {
             if (_remotes.TryGetValue(playerId, out var track))
@@ -178,7 +149,6 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>購読を外す。</summary>
         public void Detach()
         {
             _client.SnapshotReceived -= HandleSnapshot;

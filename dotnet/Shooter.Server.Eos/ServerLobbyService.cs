@@ -5,10 +5,8 @@ using Shooter.Core;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// Unity の <c>Shooter.Net.LobbyService</c> のうち、サーバーのロビーの登録に使う部分を移したもの。ログの行も同じにする。
-    /// 検索と参加を持たないのは、サーバーは自分のロビーを作るだけで、他のロビーに入らないため。
-    /// </summary>
+    // ログの行は Unity の Shooter.Net.LobbyService と同じにする。
+    // 検索と参加を持たないのは、サーバーは自分のロビーを作るだけで、他のロビーに入らないため。
     internal sealed class ServerLobbyService : IDisposable
     {
         public const string LogPrefix = "[Lobby] ";
@@ -36,10 +34,8 @@ namespace Shooter.Server.Eos
             _backend.LoggedOut += HandleLoggedOut;
         }
 
-        /// <summary>引数は理由。自分で出たときは呼ばない。</summary>
         public event Action<string> Removed;
 
-        /// <summary>ロビーに入っていれば先に <see cref="Removed"/> を呼ぶ。</summary>
         public event Action<string> LoggedOut;
 
         private enum Operation
@@ -56,7 +52,7 @@ namespace Shooter.Server.Eos
 
         public bool IsLoggedIn => LocalUserId != null;
 
-        /// <summary>属性の更新は含めない (<see cref="IsUpdating"/>)。</summary>
+        // 属性の更新はほかの操作と並べて進められるので含めない (IsUpdating)。
         public bool IsBusy => _operation != Operation.None;
 
         public bool IsUpdating => _updating;
@@ -99,13 +95,17 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        public void CreateLobby(int maxPlayers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+        /// <param name="maxMembers">オーナーのサーバーを含むメンバーの上限 (<see cref="ServerLobby.MaxMembers"/>)。</param>
+        /// <param name="voiceRoom">RTC 部屋を開き、入ったメンバーがボイスで話せるようにするか。</param>
+        /// <param name="attributes">作った直後に付ける公開の属性。</param>
+        /// <param name="done">作ったロビーか、失敗の理由を受け取る。</param>
+        public void CreateLobby(int maxMembers, bool voiceRoom, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
-            if (maxPlayers < LobbyLaunchOptions.MinMaxPlayers || maxPlayers > LobbyLaunchOptions.MaxMaxPlayers)
+            if (maxMembers < LobbyLaunchOptions.MinMaxPlayers || maxMembers > LobbyLaunchOptions.MaxMaxPlayers)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(maxPlayers), maxPlayers,
+                    nameof(maxMembers), maxMembers,
                     "must be between " + LobbyLaunchOptions.MinMaxPlayers + " and " + LobbyLaunchOptions.MaxMaxPlayers);
             }
 
@@ -122,7 +122,7 @@ namespace Shooter.Server.Eos
             }
 
             _operation = Operation.Create;
-            _backend.CreateLobby(_bucketId, maxPlayers, copied, Once<LobbyInfo>((lobby, error) =>
+            _backend.CreateLobby(_bucketId, maxMembers, voiceRoom, copied, Once<LobbyInfo>((lobby, error) =>
             {
                 _operation = Operation.None;
                 if (error == null && lobby == null)
@@ -140,6 +140,7 @@ namespace Shooter.Server.Eos
 
                 Current = lobby;
                 _log.WriteLine(LogPrefix + "created id=" + lobby.Id + " max=" + lobby.MaxMembers + " owner=" + lobby.OwnerUserId
+                    + (voiceRoom ? " rtc=on" : "")
                     + (copied.Length == 0 ? "" : " " + Describe(copied)));
                 _log.WriteLine(LogPrefix + "members=" + lobby.DescribeMembers() + " id=" + lobby.Id);
                 if (!_leaveWhenSettled)
@@ -154,7 +155,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>更新は 1 つずつ行い、ほかの操作とは並べて進められる。</summary>
         public void UpdateAttributes(IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
         {
             ArgumentNullException.ThrowIfNull(done);
@@ -187,10 +187,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>
-        /// 作ったロビーを閉じる。作成の途中なら、作り終えたところで閉じる。入っていなければ何もせず成功にする。
-        /// いつ呼んでも例外にしない。
-        /// </summary>
         public void LeaveLobby(Action<string> done = null)
         {
             if (_disposed)
@@ -231,7 +227,6 @@ namespace Shooter.Server.Eos
             }));
         }
 
-        /// <summary>ロビーに入っていれば閉じる要求を出し、バックエンドを閉じる。以後のコールバックは呼ばない。</summary>
         public void Dispose()
         {
             if (_disposed)

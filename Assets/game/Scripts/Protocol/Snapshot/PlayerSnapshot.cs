@@ -6,6 +6,7 @@ namespace Shooter.Protocol
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
         private const int _motionFlagCount = 4;
+        private const float _leanSteps = 127f;
 
         public int PlayerId { get; set; }
         public PlayerFields Present { get; set; }
@@ -48,11 +49,23 @@ namespace Shooter.Protocol
 
         public int SpawnProtectionSeconds { get; set; }
 
+        public float Lean { get; set; }
+
+        public bool Swimming { get; set; }
+
+        public WallRunSide WallRunSide { get; set; }
+
+        public byte AirJumpsUsed { get; set; }
+
+        public int Assists { get; set; }
+
         public int EntityId => PlayerId;
 
         public int PresentBits => (int)Present;
 
         public int AllBits => (int)PlayerFields.All;
+
+        public int OptionalBits => (int)PlayerFields.Optional;
 
         public int ChangedBits(in PlayerSnapshot baseline)
         {
@@ -140,6 +153,21 @@ namespace Shooter.Protocol
             if (!Vehicle.SameAs(baseline.Vehicle))
             {
                 bits |= PlayerFields.Vehicle;
+            }
+
+            // 範囲の外の Lean を既定と同じに丸めて載せずに済ませると、書くときに断れないので変わったとみなす
+            if (!IsLeanInRange(Lean)
+                || LeanStep(Lean) != LeanStep(baseline.Lean)
+                || Swimming != baseline.Swimming
+                || WallRunSide != baseline.WallRunSide
+                || AirJumpsUsed != baseline.AirJumpsUsed)
+            {
+                bits |= PlayerFields.Traversal;
+            }
+
+            if (Assists != baseline.Assists)
+            {
+                bits |= PlayerFields.Assists;
             }
 
             return (int)bits;
@@ -231,6 +259,29 @@ namespace Shooter.Protocol
             if ((fields & PlayerFields.Vehicle) != 0)
             {
                 Vehicle.Write(writer);
+            }
+
+            if ((fields & PlayerFields.Traversal) != 0)
+            {
+                if (!IsLeanInRange(Lean))
+                {
+                    throw new System.InvalidOperationException("lean must be within -1 to 1");
+                }
+
+                writer.WriteByte(unchecked((byte)LeanStep(Lean)));
+                writer.WriteBool(Swimming);
+                writer.WriteByte((byte)WallRunSide);
+                writer.WriteByte(AirJumpsUsed);
+            }
+
+            if ((fields & PlayerFields.Assists) != 0)
+            {
+                if (Assists < 0)
+                {
+                    throw new System.InvalidOperationException("assists must not be negative");
+                }
+
+                writer.WriteInt32(Assists);
             }
         }
 
@@ -324,6 +375,25 @@ namespace Shooter.Protocol
             {
                 Vehicle = VehicleSeatSync.Read(reader);
             }
+
+            if ((fields & PlayerFields.Traversal) != 0)
+            {
+                var lean = unchecked((sbyte)reader.ReadByte());
+                if (lean < -(int)_leanSteps)
+                {
+                    throw new MessageReadException("lean must be within -1 to 1");
+                }
+
+                Lean = lean / _leanSteps;
+                Swimming = reader.ReadBool();
+                WallRunSide = (WallRunSide)reader.ReadByteBelow(EnumRange<WallRunSide>.Count, "wall run side");
+                AirJumpsUsed = reader.ReadByte();
+            }
+
+            if ((fields & PlayerFields.Assists) != 0)
+            {
+                Assists = reader.ReadInt32AtLeast(0, "assists");
+            }
         }
 
         public void FillFrom(in PlayerSnapshot baseline)
@@ -405,7 +475,31 @@ namespace Shooter.Protocol
                 Vehicle = baseline.Vehicle;
             }
 
+            if ((missing & PlayerFields.Traversal) != 0)
+            {
+                Lean = baseline.Lean;
+                Swimming = baseline.Swimming;
+                WallRunSide = baseline.WallRunSide;
+                AirJumpsUsed = baseline.AirJumpsUsed;
+            }
+
+            if ((missing & PlayerFields.Assists) != 0)
+            {
+                Assists = baseline.Assists;
+            }
+
             Present = PlayerFields.All;
+        }
+
+        private static bool IsLeanInRange(float lean)
+        {
+            return lean >= -1f && lean <= 1f;
+        }
+
+        private static int LeanStep(float lean)
+        {
+            var clamped = lean >= -1f ? (lean <= 1f ? lean : 1f) : -1f;
+            return (int)System.Math.Round(clamped * _leanSteps);
         }
 
         private static void WriteProne(MessageWriter writer, in CharacterProneState prone)

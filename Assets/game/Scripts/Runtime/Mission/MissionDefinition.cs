@@ -6,14 +6,6 @@ using UnityEngine.Serialization;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャンペーンの 1 ミッションの定義。ミッション Id (<see cref="Id"/>、セーブのスロット・メニューの選択・カタログの照合に使う) と
-    /// 目標の一覧をアセットとして持ち、<see cref="CreateMission"/> で
-    /// <see cref="Shooter.Core.Mission"/> を作る。検証は <see cref="Shooter.Core.Mission"/> と <see cref="Objective"/> に任せ、
-    /// 失敗したらどのアセットのどの目標かを添えて <see cref="MissionDefinitionException"/> を投げる。
-    /// ミッションだけ視点やアクションを変えるときは、変える項目だけをルールの JSON (<see cref="GameRulesJson"/> の形) で
-    /// <see cref="RulesOverride"/> に書く。キャンペーンは難易度のルールにこれを重ねて使う (<see cref="ApplyRulesOverride"/>)。
-    /// </summary>
     [CreateAssetMenu(fileName = "Mission", menuName = "Shooter/Mission Definition")]
     public sealed class MissionDefinition : ScriptableObject
     {
@@ -24,10 +16,6 @@ namespace Shooter.Runtime
         [SerializeField, FormerlySerializedAs("_displayName"), Tooltip("プレイヤーに見せるミッション名の、言語の表のキー (campaign.mission.<Id>.name)")]
         private string _displayNameKey = string.Empty;
 
-        /// <summary>
-        /// ミッション Id。空なら空文字。
-        /// 使えるかどうか (<see cref="CampaignLaunch.IsValidMissionId"/>) は使う側 (<see cref="MissionCatalog"/>・<see cref="CampaignRunner"/>) が確かめる。
-        /// </summary>
         public string Id
         {
             get => _id ?? string.Empty;
@@ -40,26 +28,18 @@ namespace Shooter.Runtime
         [SerializeField, TextArea(3, 12), Tooltip("難易度のルールのうち、このミッションだけ変える項目を書いたルールの JSON (例: {\"viewMode\": \"ThirdPerson\", \"actions\": {\"cover\": \"On\"}})。空なら難易度のルールのまま")]
         private string _rulesOverride = string.Empty;
 
-        /// <summary>プレイヤーに見せるミッション名の、言語の表のキー。</summary>
         public string DisplayNameKey
         {
             get => _displayNameKey ?? string.Empty;
             set => _displayNameKey = value ?? string.Empty;
         }
 
-        /// <summary>Id が missionId のミッションの名前を引くキー (<c>campaign.mission.&lt;missionId&gt;.name</c>)。</summary>
-        /// <exception cref="ArgumentException">missionId が null か空白だけ。</exception>
         public static string NameKeyOf(string missionId)
         {
             RequireKeyPart(missionId, nameof(missionId));
             return "campaign.mission." + missionId + ".name";
         }
 
-        /// <summary>
-        /// Id が missionId のミッションの、Id が objectiveId の目標の説明を引くキー
-        /// (<c>campaign.mission.&lt;missionId&gt;.objective.&lt;objectiveId&gt;</c>)。
-        /// </summary>
-        /// <exception cref="ArgumentException">missionId か objectiveId が null か空白だけ。</exception>
         public static string ObjectiveKeyOf(string missionId, string objectiveId)
         {
             RequireKeyPart(missionId, nameof(missionId));
@@ -67,19 +47,12 @@ namespace Shooter.Runtime
             return "campaign.mission." + missionId + ".objective." + objectiveId;
         }
 
-        /// <summary>難易度のルールのうち、このミッションだけ変える項目を書いたルールの JSON。空白だけなら変えない。</summary>
         public string RulesOverride
         {
             get => _rulesOverride ?? string.Empty;
             set => _rulesOverride = value ?? string.Empty;
         }
 
-        /// <summary>
-        /// baseRules に <see cref="RulesOverride"/> を重ねたルール。書いていない項目 (アクションの中の項目も) は baseRules の値のまま。
-        /// <see cref="RulesOverride"/> が空白だけなら baseRules をそのまま返す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">baseRules が null。</exception>
-        /// <exception cref="MissionDefinitionException">JSON が読めないか、重ねた値が不正なとき。メッセージにアセット名を含む。</exception>
         public GameRules ApplyRulesOverride(GameRules baseRules)
         {
             if (baseRules == null)
@@ -103,10 +76,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>定義順の目標。中身を書き換えるときは <see cref="SetObjectives"/> を使う。</summary>
         public IReadOnlyList<ObjectiveDefinition> Objectives => _objectives ??= new List<ObjectiveDefinition>();
 
-        /// <summary>目標をまとめて差し替える。null は空にする。要素は複製して持つので、渡した側の変更は反映しない。</summary>
         public void SetObjectives(IEnumerable<ObjectiveDefinition> objectives)
         {
             var copy = new List<ObjectiveDefinition>();
@@ -121,20 +92,12 @@ namespace Shooter.Runtime
             _objectives = copy;
         }
 
-        /// <summary>定義から新しい <see cref="Shooter.Core.Mission"/> を作る。呼ぶたびに進み具合が 0 のミッションを返す。</summary>
-        /// <exception cref="MissionDefinitionException">定義が不正なとき。</exception>
         public Mission CreateMission()
         {
             return CreateMission(name, Objectives);
         }
 
-        /// <summary>
-        /// 目標の定義を <see cref="Objective"/> に変換して <see cref="Shooter.Core.Mission"/> を作る。
-        /// 文字列の前後の空白は取り除き、空の前提は無視する (Inspector で配列の要素を増やしただけの空欄を許す)。
-        /// </summary>
-        /// <param name="source">エラーメッセージに出す定義の名前。</param>
-        /// <param name="definitions">目標の定義。</param>
-        /// <exception cref="MissionDefinitionException">定義が不正なとき。</exception>
+        // 空の前提を無視するのは、Inspector で配列の要素を増やしただけの空欄を許すため。
         public static Mission CreateMission(string source, IReadOnlyList<ObjectiveDefinition> definitions)
         {
             source = string.IsNullOrEmpty(source) ? "(unnamed mission)" : source;
@@ -182,7 +145,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="MissionDefinition"/> の 1 目標。Inspector で編集できる形の <see cref="Objective"/>。</summary>
     [Serializable]
     public sealed class ObjectiveDefinition
     {
@@ -221,13 +183,11 @@ namespace Shooter.Runtime
         }
 
         public string Id => _id;
-        /// <summary>プレイヤーに見せる説明の、言語の表のキー。</summary>
         public string DescriptionKey => _descriptionKey ?? string.Empty;
         public int RequiredCount => _requiredCount;
         public bool Optional => _optional;
         public IReadOnlyList<string> Prerequisites => _prerequisites ?? Array.Empty<string>();
 
-        /// <summary>不変の <see cref="Objective"/> に変換する。不正な値なら <see cref="ArgumentException"/> を投げる。</summary>
         public Objective ToObjective()
         {
             var prerequisites = new List<string>();
@@ -249,7 +209,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="MissionDefinition"/> の内容が不正で <see cref="Shooter.Core.Mission"/> を作れない。</summary>
     public sealed class MissionDefinitionException : Exception
     {
         public MissionDefinitionException(string message)

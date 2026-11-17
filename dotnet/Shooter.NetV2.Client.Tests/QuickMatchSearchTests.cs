@@ -31,7 +31,6 @@ namespace Shooter.NetV2.Tests
             _backend.Dispose();
         }
 
-        /// <summary>既定の間隔 (5 秒) と期限 (30 秒) で探し始める。</summary>
         private QuickMatchSearch Begin()
         {
             var search = new QuickMatchSearch(_backend, _version, _log.Add);
@@ -41,7 +40,8 @@ namespace Shooter.NetV2.Tests
 
         private static LobbyInfo Server(string id, string endpoint, int players, string version = _version)
         {
-            return new LobbyInfo(id, _owner, NetMatchSettings.DefaultMaxPlayers, new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
+            return new LobbyInfo(
+                id, _owner, ServerLobby.MaxMembers(NetMatchSettings.DefaultMaxPlayers), new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
         }
 
         [Test]
@@ -68,6 +68,49 @@ namespace Shooter.NetV2.Tests
             Assert.That(_ready.Port, Is.EqualTo(7790));
             Assert.That(search.IsFinished, Is.True);
             Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=busy server=203.0.113.2:7790 players=4/8"));
+        }
+
+        [Test]
+        public void APartyOnlyPicksAServerWithRoomForEveryone()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 3, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 2),
+                Server("roomy", "203.0.113.2:7777", NetMatchSettings.DefaultMaxPlayers - 3),
+                Server("quiet", "203.0.113.3:7777", 1),
+            });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"), "the busiest server has room for only 2 of the 3");
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0 for a party of 3"));
+            Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=roomy server=203.0.113.2:7777 players=5/8"));
+        }
+
+        [Test]
+        public void APartySearchesAgainWhenNoServerHasRoomForEveryone()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            search.Begin(0f, 3, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(new List<LobbyInfo>
+            {
+                Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 2),
+                Server("full", "203.0.113.2:7777", NetMatchSettings.DefaultMaxPlayers),
+            });
+
+            Assert.That(_ready, Is.Null);
+            Assert.That(_log, Has.Some.EqualTo(
+                "[Lobby] no server to join among 2 found (room for 2 (party of 3) x1, full x1); searching again in 5s"));
+
+            search.Tick(5f);
+            Assert.That(_backend.Searches, Is.EqualTo(2));
+            _backend.CompleteSearch(new List<LobbyInfo> { Server("busy", "203.0.113.1:7777", NetMatchSettings.DefaultMaxPlayers - 3) });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.1"));
         }
 
         [Test]
@@ -186,6 +229,8 @@ namespace Shooter.NetV2.Tests
             var search = Begin();
 
             Assert.Throws<InvalidOperationException>(() => search.Begin(0f, _ => { }, _ => { }));
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new QuickMatchSearch(new FakeLobbyBackend(), _version, _log.Add).Begin(0f, 0, _ => { }, _ => { }));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(null, _version, _log.Add));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(_backend, _version, null));
             Assert.Throws<ArgumentNullException>(() => new QuickMatchSearch(_backend, _version, null, _log.Add));
@@ -227,6 +272,47 @@ namespace Shooter.NetV2.Tests
                 SearchedBucket = bucketId;
                 SearchedMax = maxResults;
                 _search = done;
+            }
+
+            public void CreateMemberLobby(
+                string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void LeaveMemberLobby(string lobbyId, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
+            }
+
+            public void ReadMemberLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void SetMemberAttributes(string lobbyId, IReadOnlyList<LobbyAttribute> attributes, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
+            }
+
+            public void ReadMemberAttributes(string lobbyId, string userId, Action<IReadOnlyList<LobbyAttribute>, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void JoinMatchLobby(string lobbyId, Action<LobbyInfo, string> done)
+            {
+                done(null, LobbyBackendErrors.NotSupported);
+            }
+
+            public void LeaveMatchLobby(string lobbyId, Action<string> done)
+            {
+                done(LobbyBackendErrors.NotSupported);
             }
 
             public void Dispose()

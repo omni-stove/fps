@@ -3,13 +3,8 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 組み立て終えたスナップショットを tick ごとに取っておき、次に届く差分の基準にする。
-    /// サーバーが基準に選ぶのは、こちらが入力で知らせた最新の tick から、サーバーが覚えている数 (32) までなので、それより多く取っておく。
-    /// </summary>
-    /// <remarks>
-    /// 毎 tick 届くので、入れ物は tick の剰余の位置に作り置いて使い回す (GC を起こさないため)。
-    /// </remarks>
+    // サーバーが差分の基準に選ぶのは、こちらが入力で知らせた最新の tick から、サーバーが覚えている数 (32) までなので、それより多く取っておく。
+    // 毎 tick 届くので、GC を起こさないよう、入れ物は tick の剰余の位置に作り置いて使い回す。
     public sealed class SnapshotHistory
     {
         public const int DefaultCapacity = 64;
@@ -31,22 +26,13 @@ namespace Shooter.NetV2
 
         public int Capacity => _slots.Length;
 
-        /// <summary>組み立てられた中で一番新しいスナップショット。まだ無ければ null。</summary>
         public SnapshotMessage Latest => _latest;
 
-        /// <summary>入力で知らせる、組み立てられた最新の tick。まだ無ければ <see cref="InputMessage.NoSnapshot"/>。</summary>
         public int LatestTick => _latest != null ? _latest.Tick : InputMessage.NoSnapshot;
 
-        /// <summary>差分の基準が見つからず組み立てられなかった数。</summary>
         public int Unresolved { get; private set; }
 
-        /// <summary>
-        /// 読んだばかりのスナップショットを基準で埋めて取っておく。received は表 (<see cref="MessageTable"/>) が使い回す入れ物でよい。
-        /// </summary>
-        /// <returns>
-        /// これまでで一番新しい tick として取っておけたら、その写し (<see cref="Latest"/>)。
-        /// 基準が無くて組み立てられない、または前に届いたものより古いなら null (古いものも基準としては取っておく)。
-        /// </returns>
+        // 前に届いたものより古いスナップショットも、後の差分の基準になり得るので取っておく。
         public SnapshotMessage Add(SnapshotMessage received)
         {
             if (received == null)

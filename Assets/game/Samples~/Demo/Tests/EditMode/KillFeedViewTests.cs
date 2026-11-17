@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -179,6 +180,94 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void PublishedParticipantsMarkTheLinesTheLocalPlayerAssisted()
+        {
+            var table = new ParticipantTable();
+            table.Set(new Participant(1, "P1", Team.Alpha, true));
+            table.Set(new Participant(2, "P2", Team.Alpha, false));
+            table.Set(new Participant(3, "P3", Team.Bravo, false));
+            GameSignals.Participants.Publish(table);
+            try
+            {
+                Assert.That(_view.Names.Describe(new KillFeedEntry(2, 3, "rifle", false, false, new[] { 1 })).LocalAssisted, Is.True);
+                Assert.That(_view.Names.Describe(new KillFeedEntry(2, 3, "rifle", false, false)).LocalAssisted, Is.False);
+                Assert.That(
+                    _view.Names.Describe(new KillFeedEntry(1, 3, "rifle", false, false, new[] { 1 })).LocalAssisted,
+                    Is.False,
+                    "the killer's own Id among the assisters is not an assist");
+            }
+            finally
+            {
+                GameSignals.Participants.Clear();
+            }
+        }
+
+        [Test]
+        public void OfflineLinesMarkTheAssistOfTheLocalPlayer()
+        {
+            var player = CreateDamageable("Player", local: true);
+            var ally = CreateDamageable("Ally", local: false);
+            var dummy = CreateDamageable("Dummy-1", local: false);
+
+            _view.Show(new KillFeedEntry(
+                CombatEvents.OfflineId(ally.gameObject), CombatEvents.OfflineId(dummy.gameObject), "", false, false,
+                new[] { CombatEvents.OfflineId(player.gameObject) }));
+
+            var line = _view.Feed.Lines[0];
+            Assert.That(line.LocalAssisted, Is.True);
+            Assert.That(line.Highlighted, Is.False);
+        }
+
+        [Test]
+        public void ARowTheLocalPlayerAssistedEndsWithTheAssistMark()
+        {
+            _view.Names = new FixedNames();
+
+            _view.Show(new KillFeedEntry(2, 3, "rifle", false, false, new[] { 1 }));
+
+            Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            var row = _view.Element[0];
+            Assert.That(row.ClassListContains(KillFeedView.AssistRowClass), Is.True);
+            Assert.That(row.ClassListContains(KillFeedView.LocalRowClass), Is.False);
+
+            var labels = row.Query<Label>().ToList();
+            Assert.That(labels.ConvertAll(l => l.text), Is.EqualTo(new[] { "P2", "[Rifle]", "P3", Localizer.Resolve(KillFeedText.AssistMark) }));
+            Assert.That(labels[3].ClassListContains(KillFeedView.AssistClass), Is.True);
+        }
+
+        [Test]
+        public void ARowWithoutTheLocalPlayerAmongTheAssistersHasNoAssistMark()
+        {
+            _view.Names = new FixedNames();
+
+            _view.Show(new KillFeedEntry(2, 3, "rifle", false, false, new[] { 4 }));
+
+            Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            var row = _view.Element[0];
+            Assert.That(row.ClassListContains(KillFeedView.AssistRowClass), Is.False);
+            Assert.That(row.Query<Label>(className: KillFeedView.AssistClass).ToList(), Is.Empty);
+        }
+
+        [Test]
+        public void TheAssistMarkIsRedrawnWhenTheLanguageChanges()
+        {
+            _view.Names = new FixedNames();
+            _view.Show(new KillFeedEntry(2, 3, "", false, false, new[] { 1 }));
+            Assume.That(_view.Element, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            var before = Localizer.Language;
+            try
+            {
+                Localizer.Apply(GameLanguage.English);
+
+                Assert.That(_view.Element[0].Q<Label>(className: KillFeedView.AssistClass).text, Is.EqualTo("+Assist"));
+            }
+            finally
+            {
+                Localizer.Apply(before);
+            }
+        }
+
+        [Test]
         public void ASuicideRowShowsOnlyTheVictim()
         {
             _view.Names = new FixedNames();
@@ -237,7 +326,9 @@ namespace Shooter.Tests.EditMode
         {
             public KillFeedLine Describe(KillFeedEntry entry)
             {
-                return new KillFeedLine(entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? new LocalizedText("weapon.rifle") : default);
+                return new KillFeedLine(
+                    entry, NameOf(entry.KillerId), NameOf(entry.VictimId), entry.WeaponId.Length > 0 ? new LocalizedText("weapon.rifle") : default,
+                    entry.AssisterIds.Contains(1));
             }
 
             private static KillFeedName NameOf(int id)

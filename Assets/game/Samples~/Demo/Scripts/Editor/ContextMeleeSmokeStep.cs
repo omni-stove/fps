@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    // 怯みの手順 (StaggerSmokeStep) の敵を使い、怯んでいない敵にはふつうの近接、脚を撃って怯ませた敵には処刑技が出ることを確かめる。
     // batchmode には入力が無いので、近接の入力の代わりに MeleeController.TryMelee を、脚を撃つ代わりに脚の当たり判定への直接の当たりを使う。
     // 射撃場のルールは Melee を Off のまま配る (ほかの手順の前提を変えない) ので、この手順の間だけ On にする。
     // 敵は撃ってくるので、確かめる瞬間だけ近くへ移し、待つ間は敵の視界の外へ戻す。
@@ -179,7 +178,6 @@ namespace Shooter.Editor
             return null;
         }
 
-        // 怯んでいない敵に近接を押すと、技は選ばれずふつうの近接が出る。
         private string PlainMelee(BootstrapWorld world)
         {
             if (!IsCalm())

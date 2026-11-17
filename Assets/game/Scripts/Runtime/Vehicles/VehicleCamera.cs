@@ -3,17 +3,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 座席に座っている間、プレイヤーのカメラを借りて置く部分。いつ借りて返すかは持ち主 (<see cref="PlayerVehicleRider"/>) が決める。
-    /// <list type="bullet">
-    /// <item><see cref="Begin"/> で <see cref="ViewRig"/> を止め (カメラはこちらが置く)、<see cref="Restore"/> でカメラの位置と ViewRig を元に戻す。</item>
-    /// <item><see cref="VehicleCameraView.Chase"/>: 乗り物の注視点 (<see cref="Vehicle.ChaseFocus"/>) から、視点の向きの反対へ
-    /// <see cref="VehicleSpec.ChaseDistance"/> 離して置く。間に壁があれば手前まで縮める (<see cref="ViewRig.ResolveBoomPosition(Vector3, Vector3, Transform)"/>、
-    /// 中身は <see cref="CameraBoom.Length"/>)。乗り物自身では縮めない。体の向きは乗り物の向きに付いて回るので、視点を動かさなければ乗り物の後ろから追う。</item>
-    /// <item><see cref="VehicleCameraView.Seat"/>: 座席の視点 (<see cref="VehicleSeat.ViewPoint"/>) があればそこ、無ければ目に重ねる。自分の体は影だけにする。</item>
-    /// </list>
-    /// どちらも向きは目 (視点操作の yaw と pitch) に合わせる。
-    /// </summary>
     public sealed class VehicleCamera
     {
         private readonly ViewRig _rig;
@@ -26,22 +15,17 @@ namespace Shooter.Runtime
         private bool _engaged;
         private VehicleCameraView _view;
 
-        /// <param name="rig">カメラを持つプレイヤーの ViewRig。null ならカメラを動かさない (専用サーバーや敵)。</param>
         public VehicleCamera(ViewRig rig)
         {
             _rig = rig;
         }
 
-        /// <summary><see cref="Begin"/> してから <see cref="Restore"/> するまでの間か。</summary>
         public bool IsEngaged => _engaged;
 
-        /// <summary>今のカメラ。借りていなければ意味を持たない。</summary>
         public VehicleCameraView View => _view;
 
-        /// <summary>借りているカメラ。借りていないか、カメラが無ければ null。</summary>
         public Camera Camera => _engaged ? _camera : null;
 
-        /// <summary>カメラを借りて view にする。借りている間に呼ぶと view に切り替えるだけ。</summary>
         public void Begin(VehicleCameraView view)
         {
             if (_engaged)
@@ -69,7 +53,6 @@ namespace Shooter.Runtime
             SetView(view);
         }
 
-        /// <summary>カメラを view に切り替え、自分の体の描き方を合わせる。借りていなければ何もしない。</summary>
         public void SetView(VehicleCameraView view)
         {
             if (!_engaged)
@@ -87,7 +70,6 @@ namespace Shooter.Runtime
             _rig.ApplyBodyVisibility(true);
         }
 
-        /// <summary>seat に座っている間のカメラを置く。借りていないか、カメラが無ければ何もしない。</summary>
         public void Place(VehicleSeat seat)
         {
             if (!_engaged || _camera == null || seat == null || seat.Vehicle == null)
@@ -124,7 +106,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>カメラの位置・ViewRig の視点と有効を元に戻す。借りていなければ何もしない。</summary>
         public void Restore()
         {
             if (!_engaged)
@@ -153,7 +134,6 @@ namespace Shooter.Runtime
             _camera = null;
         }
 
-        /// <summary>追うカメラの、注視点から見た位置 (ワールド)。視点の向きの反対へ distance 離す。</summary>
         public static Vector3 ChaseOffset(Quaternion viewRotation, float distance)
         {
             return viewRotation * (Vector3.back * distance);

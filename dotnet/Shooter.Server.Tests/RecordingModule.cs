@@ -5,7 +5,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    /// <summary>呼ばれたフックを共有の記録に足していくモジュール。指定したフックで投げることもできる。</summary>
     internal sealed class RecordingModule : IServerModule
     {
         private readonly List<string> _calls;
@@ -22,7 +21,6 @@ namespace Shooter.Server.Tests
 
         public bool ThrowOnStop { get; set; }
 
-        /// <summary>0 でなければ、最初の tick でこの終了コードでサーバーを止めさせる。</summary>
         public int FailOnTickWith { get; set; }
 
         public ConnectionId KickOnNextTick { get; set; }

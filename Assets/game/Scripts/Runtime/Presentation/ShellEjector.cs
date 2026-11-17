@@ -7,54 +7,31 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 撃つたびに排莢口から薬莢を物理で右上へ飛ばし、最初に何かに当たったときに落下音を 1 回鳴らす。撃つ人の本体に付ける。
-    /// 素材は <see cref="WeaponExtrasCatalog"/> から武器の Id で引く。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item><see cref="CombatEvents.ShotFired"/> を各インスタンスが自分で購読し、撃った者 (<see cref="ShotFiredInfo.Shooter"/>) の本体が自分の弾だけを扱う。
-    /// <see cref="WeaponPresentation"/> の経路に乗せないのは、薬莢の有無で銃声や着弾の演出の順番を変えないため。</item>
-    /// <item>排莢口は同じ本体の <see cref="WeaponPresentation.Sockets"/> の <see cref="WeaponSockets.ShellEjectPose"/>。
-    /// WeaponPresentation が無ければソケットの無い既定の位置。</item>
-    /// <item>薬莢はプレハブごとの <see cref="PresentationPool{T}"/> で <see cref="ShellCapacity"/> 個まで使い回し、<see cref="ShellLifetimeSeconds"/> で隠す。
-    /// 部品はキャラの外の <see cref="PoolRoot"/> の下に置き、撃った本人の体とは当たらないようにする。</item>
-    /// </list>
-    /// 専用サーバーでは有効になったときに自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
-    /// </remarks>
+    // WeaponPresentation の経路に乗せず CombatEvents.ShotFired を各インスタンスが自分で購読するのは、薬莢の有無で銃声や着弾の演出の順番を変えないため。
     [DisallowMultipleComponent]
     public sealed class ShellEjector : MonoBehaviour
     {
         public const string LogTag = WeaponPresentation.LogTag;
 
-        /// <summary>薬莢のプール (薬莢のプレハブごと) の上限。</summary>
         public const int ShellCapacity = 16;
 
-        /// <summary>出してから隠すまでの秒数。</summary>
         public const float ShellLifetimeSeconds = 4f;
 
-        /// <summary>排莢口の向き (+Z) へ飛ばす速さ (m/s)。</summary>
         public const float EjectSpeed = 2.2f;
 
-        /// <summary>上へ足す速さ (m/s)。</summary>
         public const float EjectUpSpeed = 1.6f;
 
-        /// <summary>飛ばす速さに足すばらつきの最大 (m/s)。毎回同じ軌道で重ならないように。</summary>
+        // 毎回同じ軌道で重ならないよう、飛ばす速さにばらつきを足す。
         public const float EjectJitter = 0.3f;
 
-        /// <summary>薬莢の回る速さ (rad/s)。</summary>
         public const float EjectSpin = 25f;
 
-        /// <summary>落下音が減衰し始める距離 (m)。</summary>
         public const float LandSoundMinDistance = 1f;
 
-        /// <summary>落下音が聞こえなくなる距離 (m)。銃声より小さい音なので近くでしか聞こえない。</summary>
+        // 銃声より小さい音なので近くでしか聞こえないようにする。
         public const float LandSoundMaxDistance = 25f;
 
-        /// <summary>
-        /// 薬莢を置くレイヤー。<see cref="Physics.DefaultRaycastLayers"/> に含まれないので、射撃の Raycast を遮らない
-        /// (<see cref="DebrisPool.DebrisLayer"/> と同じ)。
-        /// </summary>
+        // Physics.DefaultRaycastLayers に含まれないレイヤーに置き、射撃の Raycast を遮らないようにする (DebrisPool.DebrisLayer と同じ)。
         public const int ShellLayer = DebrisPool.DebrisLayer;
 
         private static readonly HashSet<string> _warnedWeaponIds = new HashSet<string>(StringComparer.Ordinal);
@@ -69,10 +46,6 @@ namespace Shooter.Runtime
         private Collider[] _ownColliders;
         private Transform _poolRoot;
 
-        /// <summary>
-        /// 素材を引く設定。初めて読んだときに <see cref="WeaponExtrasCatalog.Load"/> で探し、無ければ null (薬莢を出さない)。
-        /// 代入すると探さずにそれを使う。
-        /// </summary>
         public WeaponExtrasCatalog Catalog
         {
             get
@@ -92,7 +65,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>薬莢を出す位置。同じ本体の <see cref="WeaponPresentation.Sockets"/>、無ければ <see cref="WeaponSockets.None"/>。</summary>
         public WeaponSockets Sockets
         {
             get
@@ -107,10 +79,8 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>プールの部品を置く親。初めて薬莢を出すまでは null。</summary>
         public Transform PoolRoot => _poolRoot;
 
-        /// <summary>prefab の薬莢のプール。まだ一度も出していなければ null。</summary>
         public PresentationPool<PooledShell> PoolFor(GameObject prefab)
         {
             return prefab != null && _pools.TryGetValue(prefab, out var pool) ? pool : null;
@@ -145,10 +115,6 @@ namespace Shooter.Runtime
             Tick(Time.time);
         }
 
-        /// <summary>
-        /// shot の 1 発の薬莢を排莢口から飛ばし、出した薬莢を返す。カタログ・武器の素材・薬莢のプレハブのどれかが無ければ何もせず null
-        /// (カタログが無いときと武器が無いときは 1 度だけ警告する)。
-        /// </summary>
         public PooledShell Eject(ShotFiredInfo shot)
         {
             var catalog = Catalog;
@@ -204,10 +170,6 @@ namespace Shooter.Runtime
             return shell;
         }
 
-        /// <summary>
-        /// shell が最初に何かに当たったときに呼ぶ (<see cref="ShellCasing"/> が呼ぶ)。落下音を薬莢の位置で 1 回鳴らして true。
-        /// 貸していない・もう鳴らした薬莢なら何もせず false。
-        /// </summary>
         public bool Land(PooledShell shell)
         {
             if (shell == null || shell.Landed || shell.Root == null || !shell.Root.activeSelf)
@@ -225,7 +187,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>時刻 now (<see cref="Time.time"/> と同じ物差し) まで進め、出してから <see cref="ShellLifetimeSeconds"/> 経った薬莢を隠す。</summary>
         public void Tick(float now)
         {
             foreach (var pool in _pools.Values)
@@ -234,13 +195,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>排莢口の向き rotation の +Z へ <see cref="EjectSpeed"/>、上へ <see cref="EjectUpSpeed"/> で飛ばし、jitter を足した速度。</summary>
         public static Vector3 EjectVelocity(Quaternion rotation, Vector3 jitter)
         {
             return (rotation * Vector3.forward * EjectSpeed) + (Vector3.up * EjectUpSpeed) + jitter;
         }
 
-        /// <summary>薬莢を出したときのログ。例: <c>[Presentation] shell eject weapon=rifle-id pos=(0.18,-0.10,0.30)</c>。</summary>
         public static string FormatEjectLog(string weaponId, Vector3 position)
         {
             return LogTag + " shell eject weapon=" + (weaponId ?? string.Empty) + " pos=("
@@ -249,13 +208,11 @@ namespace Shooter.Runtime
                 + position.z.ToString("F2", CultureInfo.InvariantCulture) + ")";
         }
 
-        /// <summary>薬莢が接地したときのログ。例: <c>[Presentation] shell land weapon=rifle-id sound=ShellDrop</c>。音が無ければ <c>sound=none</c>。</summary>
         public static string FormatLandLog(string weaponId, AudioClip sound)
         {
             return LogTag + " shell land weapon=" + (weaponId ?? string.Empty) + " sound=" + (sound != null ? sound.name : "none");
         }
 
-        /// <summary>shooter の本体 (自分か親) の ShellEjector。無いか無効なら null。</summary>
         public static ShellEjector FindFor(GameObject shooter)
         {
             if (shooter == null)
@@ -421,7 +378,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="ShellEjector"/> がプールで使い回す薬莢 1 つ。</summary>
     public sealed class PooledShell
     {
         public PooledShell(GameObject root, Rigidbody body, AudioSource source, Collider[] colliders)
@@ -432,23 +388,18 @@ namespace Shooter.Runtime
             Colliders = colliders ?? Array.Empty<Collider>();
         }
 
-        /// <summary>プレハブから作ったインスタンス。</summary>
         public GameObject Root { get; }
 
         public Rigidbody Body { get; }
 
-        /// <summary>落下音を鳴らす音源。</summary>
         public AudioSource Source { get; }
 
         public Collider[] Colliders { get; }
 
-        /// <summary>この薬莢を出した弾の武器の Id。</summary>
         public string WeaponId { get; set; } = string.Empty;
 
-        /// <summary>接地したときに鳴らす音。無ければ null。</summary>
         public AudioClip LandSound { get; set; }
 
-        /// <summary>出してから落下音を鳴らしたか。</summary>
         public bool Landed { get; set; }
     }
 }

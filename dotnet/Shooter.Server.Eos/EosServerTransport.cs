@@ -6,15 +6,9 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary><c>-transport eos</c> の通信路の、SDK の無いビルドでも呼べる入り口。SDK の型は <c>#if EOS_SDK</c> の中にだけ置く。</summary>
+    // SDK の無いビルドでも呼べるよう、SDK の型は #if EOS_SDK の中にだけ置く。
     internal static class EosServerTransport
     {
-        /// <param name="credentials">EOS の認証情報。</param>
-        /// <param name="version">サーバーの版。</param>
-        /// <param name="libraryDirectory">ネイティブのライブラリを探すフォルダ (実行ファイルの隣)。</param>
-        /// <param name="log">ログの出力先。</param>
-        /// <param name="transport">作った通信路。待ち受けたときにログインする。</param>
-        /// <param name="error">作れないときの理由。</param>
         public static bool TryCreate(
             EosCredentials credentials,
             string version,

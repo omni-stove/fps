@@ -3,7 +3,7 @@ using System;
 namespace Shooter.Protocol
 {
     [Flags]
-    public enum InputButtons : byte
+    public enum InputButtons : ushort
     {
         None = 0,
         Sprint = 1,
@@ -13,6 +13,8 @@ namespace Shooter.Protocol
         Aim = 16,
         Dodge = 32,
         Prone = 64,
-        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone,
+        LeanLeft = 128,
+        LeanRight = 256,
+        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight,
     }
 }

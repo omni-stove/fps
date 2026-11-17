@@ -15,7 +15,7 @@ namespace Shooter.Core
 
         public event Action<int> PlayerChanged;
 
-        public event Action<int, int> Killed;
+        public event Action<int, int, IReadOnlyList<int>> Killed;
 
         public event Action<int, SpawnPoint> Spawned;
 
@@ -32,8 +32,13 @@ namespace Shooter.Core
         public const float DefaultReconnectGraceSeconds = 60f;
 
         private static readonly Team[] _teams = { Team.Alpha, Team.Bravo };
+        private static readonly int[] _noAssisters = Array.Empty<int>();
 
         private readonly TeamDeathmatch _match;
+        private readonly DamageLedger _ledger;
+
+        // DamageLedger に渡す時刻。Tick で進めた秒数を試合の状態によらず足す。
+        private double _clock;
         private readonly SpawnSelector _selector;
         private readonly SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
@@ -71,6 +76,8 @@ namespace Shooter.Core
 
         public int MaxHealth { get; }
 
+        public AssistSpec Assist => _ledger.Spec;
+
         public GameModeState State => _match.State;
         public float RemainingSeconds => _match.RemainingSeconds;
         public Team? Winner => _match.Winner;
@@ -89,7 +96,8 @@ namespace Shooter.Core
             SpawnSelector selector,
             Func<int, Vector3> positionOf,
             float? restartDelaySeconds = null,
-            float reconnectGraceSeconds = DefaultReconnectGraceSeconds)
+            float reconnectGraceSeconds = DefaultReconnectGraceSeconds,
+            AssistSpec assist = null)
         {
             if (spec == null)
             {
@@ -131,6 +139,7 @@ namespace Shooter.Core
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
             MaxHealth = maxHealth;
+            _ledger = new DamageLedger(assist ?? AssistSpec.Default);
             _restartDelaySeconds = restartDelaySeconds;
             ReconnectGraceSeconds = reconnectGraceSeconds;
 
@@ -165,6 +174,8 @@ namespace Shooter.Core
         public int GetKills(int playerId) => _match.GetKills(playerId);
 
         public int GetDeaths(int playerId) => _match.GetDeaths(playerId);
+
+        public int GetAssists(int playerId) => _match.GetAssists(playerId);
 
         public int GetScore(Team team) => _match.GetScore(team);
 
@@ -271,7 +282,7 @@ namespace Shooter.Core
             if (key != null && _held.TryGetValue(key, out var held))
             {
                 team = held.Team;
-                _match.AddPlayer(playerId, team, held.Kills, held.Deaths);
+                _match.AddPlayer(playerId, team, held.Kills, held.Deaths, held.Assists);
                 _held.Remove(key);
             }
             else
@@ -305,7 +316,7 @@ namespace Shooter.Core
                 if (ReconnectGraceSeconds > 0f)
                 {
                     _held[key] = new HeldPlayer(
-                        playerId, GetTeam(playerId), GetKills(playerId), GetDeaths(playerId), ReconnectGraceSeconds);
+                        playerId, GetTeam(playerId), GetKills(playerId), GetDeaths(playerId), GetAssists(playerId), ReconnectGraceSeconds);
                     held = true;
                 }
             }
@@ -314,6 +325,7 @@ namespace Shooter.Core
             _health.Remove(playerId);
             _regenerators.Remove(playerId);
             _spawnProtection.Remove(playerId);
+            _ledger.Clear(playerId);
             if (_downed != null)
             {
                 _downed.RemovePlayer(playerId);
@@ -321,6 +333,29 @@ namespace Shooter.Core
             }
 
             return held;
+        }
+
+        public bool ChangeTeam(int playerId, Team team)
+        {
+            FindHealth(playerId);
+            Side.FromTeam(team);
+
+            // 試合中に移すと、その人のキルが入った点数と移った先のチームが食い違うので、終わった後だけにする
+            if (State != GameModeState.Ended)
+            {
+                throw new InvalidOperationException("a player can only change teams after the match has ended, but it is " + State);
+            }
+
+            if (GetTeam(playerId) == team)
+            {
+                return false;
+            }
+
+            var kills = GetKills(playerId);
+            var deaths = GetDeaths(playerId);
+            _match.RemovePlayer(playerId);
+            _match.AddPlayer(playerId, team, kills, deaths);
+            return true;
         }
 
         // 前の接続が切れたと分かる前に同じ人がつなぎ直してきたことを見分けるために置く。
@@ -377,6 +412,7 @@ namespace Shooter.Core
                 return DamageOutcome.Ignored;
             }
 
+            _ledger.Record(victimId, attackerId, amount, byAlly, _clock);
             _busy++;
             try
             {
@@ -452,20 +488,31 @@ namespace Shooter.Core
         {
             var alphaBefore = _match.GetScore(Team.Alpha);
             var bravoBefore = _match.GetScore(Team.Bravo);
+
+            var assisters = scores && killerId != victimId ? PresentPlayers(_ledger.TakeAssisters(victimId, killerId, _clock)) : _noAssisters;
             if (scores)
             {
-                _match.ReportKill(killerId, victimId);
+                _match.ReportKill(killerId, victimId, assisters);
             }
             else
             {
                 _match.ReportDeath(victimId);
             }
 
-            Killed?.Invoke(killerId, victimId);
+            Killed?.Invoke(killerId, victimId, assisters);
             PlayerChanged?.Invoke(victimId);
             if (killerId != victimId && scores)
             {
                 PlayerChanged?.Invoke(killerId);
+            }
+
+            foreach (var assisterId in assisters)
+            {
+                // Killed や PlayerChanged の受け手が抜けさせた人は飛ばす
+                if (_health.ContainsKey(assisterId))
+                {
+                    PlayerChanged?.Invoke(assisterId);
+                }
             }
 
             var alpha = _match.GetScore(Team.Alpha);
@@ -474,6 +521,25 @@ namespace Shooter.Core
             {
                 ScoreChanged?.Invoke(alpha, bravo);
             }
+        }
+
+        private int[] PresentPlayers(IReadOnlyList<int> ids)
+        {
+            if (ids.Count == 0)
+            {
+                return _noAssisters;
+            }
+
+            var present = new List<int>(ids.Count);
+            foreach (var id in ids)
+            {
+                if (_health.ContainsKey(id))
+                {
+                    present.Add(id);
+                }
+            }
+
+            return present.Count == 0 ? _noAssisters : present.ToArray();
         }
 
         private void KillWipedOutTeams()
@@ -566,6 +632,12 @@ namespace Shooter.Core
 
             var waitingForRestart = _restartPending && State == GameModeState.Ended;
 
+            // 無限の秒数は _match.Tick が断るので、ここで時計を壊して DamageLedger に渡さないよう足さずにおく。
+            if (!float.IsInfinity(deltaSeconds))
+            {
+                _clock += deltaSeconds;
+            }
+
             TickHeld(deltaSeconds);
 
             // この Tick の中で出現した人 (リスポーン・Restart) の無敵を減らさないよう、_match.Tick より先に回す
@@ -606,6 +678,7 @@ namespace Shooter.Core
             _restartPending = false;
             _restartRemaining = 0f;
             _match.Reset();
+            _ledger.Reset();
 
             // 前の試合の成績を次の試合へ持ち込ませない
             _heldKeys.Clear();
@@ -765,6 +838,7 @@ namespace Shooter.Core
         {
             var health = new Health(MaxHealth);
             _health[playerId] = health;
+            _ledger.Clear(playerId);
             _regenerators[playerId] = new HealthRegenerator(health, Spec.Rules);
 
             var protection = Spec.Rules.SpawnProtectionSeconds;

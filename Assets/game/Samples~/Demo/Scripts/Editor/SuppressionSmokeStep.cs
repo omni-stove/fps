@@ -157,7 +157,6 @@ namespace Shooter.Editor
 
             if (_filter == null)
             {
-                // 的の右を +Z へ抜ける線。的の中心と同じ高さで、的の手前 ShotDistance m から撃つ。
                 var center = SuppressionRangeFixture.TargetCenter;
                 var origin = center + (Vector3.right * TargetMissOffset) - (Vector3.forward * ShotDistance);
                 _filter = new AimFilter(_weapon.ShotFilter, origin, Vector3.forward);

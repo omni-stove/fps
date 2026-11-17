@@ -47,21 +47,19 @@ namespace Shooter.Server
 
         public IWorldCollision World => Collision;
 
-        /// <summary>壊れた建物の部品を当たりから外すために、形の組 (<see cref="MapColliderGroups"/>) を切り替えられる型で持つ。</summary>
+        // 壊れた建物の部品を当たりから外すために、形の組 (MapColliderGroups) を切り替えられる型で持つ。
         public BvhWorldCollision Collision { get; }
 
-        /// <summary>.fpsmap から読んだ形。爆発が届く部品を探すのに使う。</summary>
         public WorldMap Source { get; }
 
         public INavigation Navigation { get; }
 
-        /// <summary>出現地点と拠点。ルールを動かさないサーバー (テストなど) では要らないので、ファイルが無ければ null。</summary>
+        // ルールを動かさないサーバー (テストなど) では要らないので、ファイルが無ければ null にする。
         public NetMapPoints Points { get; }
 
-        /// <summary>壊せる建物の部品の並び。書き出していないマップでは null で、部品は壊れない壁として残る。</summary>
         public NetMapStructures Structures { get; }
 
-        /// <summary>はしご。書き出す前のマップでもはしごが無いだけで動けるよう、ファイルが無ければ空。</summary>
+        // 書き出す前のマップでもはしごが無いだけで動けるよう、ファイルが無ければ空にする。
         public NetMapLadders Ladders { get; }
 
         public NetMapVehicles Vehicles { get; }
@@ -77,10 +75,8 @@ namespace Shooter.Server
             + " vehicles=" + Vehicles.Vehicles.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
-        /// <summary>
-        /// 作業ディレクトリを先に見るのは、リポジトリのルートから <c>dotnet run</c> したときにコミットした server-data をそのまま使うため。
-        /// 実行ファイルの隣も見るのは、イメージでは実行ファイルと server-data を並べて入れるため。
-        /// </summary>
+        // 作業ディレクトリを先に見るのは、リポジトリのルートから dotnet run したときにコミットした server-data をそのまま使うため。
+        // 実行ファイルの隣も見るのは、イメージでは実行ファイルと server-data を並べて入れるため。
         public static IReadOnlyList<string> DefaultSearchRoots()
         {
             var roots = new List<string> { Path.GetFullPath(System.IO.Directory.GetCurrentDirectory()) };

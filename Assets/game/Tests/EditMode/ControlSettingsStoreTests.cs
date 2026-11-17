@@ -63,7 +63,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -175,7 +175,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -194,7 +194,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void VersionEightDataSilentlyGetsTheAimAssistOnAndIsRewrittenAsVersionNine()
+        public void VersionEightDataSilentlyGetsTheAimAssistOnAndIsRewrittenInTheCurrentVersion()
         {
             // エイムアシストを足す前のゲームが書いた形式。
             var saved = ControlSettings.Default.WithShowBlood(false).With(ControlValue.GamepadSensitivity, 140);
@@ -207,7 +207,90 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":9").And.Contain("\"aimAssist\":true"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10").And.Contain("\"aimAssist\":true"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 視点の上下反転・デッドゾーン・振動を変えて閉じ、起動し直しても残っている
+        [Test]
+        public void SavesTheGamepadFeelAndLoadsItBackAfterARestart()
+        {
+            var settings = ControlSettings.Default
+                .WithInvertLookY(true)
+                .WithStickDeadzone(200)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(60);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.InvertLookY, Is.True);
+            Assert.That(loaded.StickDeadzone, Is.EqualTo(0.2f).Within(1e-6f));
+            Assert.That(loaded.RumbleEnabled, Is.False);
+            Assert.That(loaded.RumbleStrength, Is.EqualTo(0.6f).Within(1e-6f));
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"invertLookY\":true,\"stickDeadzone\":200,\"rumble\":false,\"rumbleStrength\":60"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 前の版の保存がある状態で起動しても、ほかの設定が消えない
+        [Test]
+        public void VersionNineDataSilentlyGetsTheGamepadFeelDefaultsAndKeepsEverythingElse()
+        {
+            var saved = ControlSettings.Default
+                .WithAimAssist(false)
+                .WithShowBlood(false)
+                .WithPalette(ColorPalette.BlueYellow)
+                .With(ControlValue.MouseSensitivity, 220)
+                .With(InputDeviceKind.Gamepad, HoldAction.Crouch, HoldMode.Hold);
+            var versionNine = OldVersion(saved.ToJson(), 9, null);
+            Assert.That(versionNine, Does.Contain("\"version\":9").And.Not.Contain("invertLookY").And.Not.Contain("rumble"));
+            PlayerPrefs.SetString(_store.Key, versionNine);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.InvertLookY, Is.EqualTo(ControlSettings.Default.InvertLookY));
+            Assert.That(loaded.StickDeadzone, Is.EqualTo(ControlSettings.Default.StickDeadzone));
+            Assert.That(loaded.RumbleEnabled, Is.EqualTo(ControlSettings.Default.RumbleEnabled));
+            Assert.That(loaded.RumbleStrength, Is.EqualTo(ControlSettings.Default.RumbleStrength));
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":10").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ABrokenRumbleFlagFallsBackToOnWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithRumbleEnabled(false).WithInvertLookY(true).ToJson()
+                    .Replace("\"rumble\":false", "\"rumble\":\"no\""));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*'rumble'"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.RumbleEnabled, Is.True);
+            Assert.That(loaded.InvertLookY, Is.True, "the saved value");
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ADeadzoneOutsideTheRangeIsClampedWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.ToJson().Replace("\"stickDeadzone\":125", "\"stickDeadzone\":800"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*stickDeadzone"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.Get(ControlValue.StickDeadzone), Is.EqualTo(ControlSettings.RangeOf(ControlValue.StickDeadzone).Max));
+            Assert.That(loaded.StickDeadzone, Is.EqualTo(0.5f));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -348,9 +431,15 @@ namespace Shooter.Tests.EditMode
         }
 
         // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。版 8 までは版 9 で足したエイムアシストを持たない (初期値のときだけ除ける)。
+        // 版 9 までは版 10 で足した視点の上下反転・デッドゾーン・振動・振動の強さを持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 10)
+            {
+                old = old.Replace(",\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100", string.Empty);
+            }
+
             if (version < 9)
             {
                 old = old.Replace(",\"aimAssist\":true", string.Empty);

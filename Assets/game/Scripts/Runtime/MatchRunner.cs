@@ -257,11 +257,8 @@ namespace Fps.Runtime
             _player.Died += OnPlayerDied;
             _match.StateChanged += OnStateChanged;
 
-            // HUD (専用サーバーでは無い) に残り時間と勝敗を出させる。
-            if (GameUi.IsAlive(world.Hud))
-            {
-                world.Hud.BindMatch(_match);
-            }
+            // HUD の値に残り時間と勝敗を写す。
+            world.HudModel.BindMatch(_match);
 
             _match.Start();
             ShowScoreboard();
@@ -391,10 +388,10 @@ namespace Fps.Runtime
             ShowRestartKey();
         }
 
-        /// <summary>HUD の結果の下に、やり直すキーを今の入力機器の表記で出す。HUD か再開のアクションが無ければ何もしない。</summary>
+        /// <summary>HUD の値の結果の下に、やり直すキーを今の入力機器の表記で出す。再開のアクションが無ければ何もしない。</summary>
         private void ShowRestartKey()
         {
-            var model = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Model : null;
+            var model = _world != null ? _world.HudModel : null;
             if (model == null || _restartAction == null)
             {
                 return;

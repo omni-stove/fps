@@ -24,7 +24,7 @@ namespace Fps.Tests.EditMode
         {
             _timeScaleBefore = Time.timeScale;
             Time.timeScale = 1f;
-            _hud = Hud.Create("TestPauseHud", null, null, null);
+            _hud = Hud.Create("TestPauseHud");
             _pause = _hud.PauseMenu;
         }
 

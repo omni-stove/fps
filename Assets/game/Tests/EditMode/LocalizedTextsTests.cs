@@ -113,7 +113,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void TheOnlinePauseNoteIsRewrittenWhenTheLanguageChanges()
         {
-            var hud = Hud.Create("LocalizedPauseHud", null, null, null);
+            var hud = Hud.Create("LocalizedPauseHud");
             try
             {
                 var pause = hud.PauseMenu;
@@ -140,7 +140,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void AnUnboundViewNoLongerFollowsTheLanguage()
         {
-            var hud = Hud.Create("UnboundPauseHud", null, null, null);
+            var hud = Hud.Create("UnboundPauseHud");
             try
             {
                 var pause = hud.PauseMenu;

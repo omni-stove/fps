@@ -12,7 +12,8 @@ namespace Fps.Runtime
     /// Editor と Development Build だけで動き (<see cref="IsSupported"/>)、それ以外と専用サーバーでは何も作らず何もしない。
     /// 表示は HUD とは別の UIDocument と PanelSettings をコードで作って出し、HUD の uxml/uss には触らない。
     /// F3 で表示と非表示を切り替える (入力アセットは変えず <see cref="Keyboard.current"/> を直接読む)。既定は表示。
-    /// 読み元は <see cref="GameBootstrap"/> が <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
+    /// 既定の HUD の作り役 (<see cref="DefaultHudFactory"/>) が <see cref="GameSignals.LocalPlayer"/> のプレイヤーに付け、その <see cref="PlayerActionReader"/> を
+    /// <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
     /// 無ければエラーを出して自分を無効にする。
     /// </summary>
     [DisallowMultipleComponent]
@@ -42,7 +43,7 @@ namespace Fps.Runtime
         private static readonly Color InactiveColor = new Color(0.7f, 0.7f, 0.7f, 1f);
         private static readonly Color ActiveColor = new Color(1f, 0.82f, 0.2f, 1f);
 
-        [SerializeField, Tooltip("Where the shown actions are read from; GameBootstrap wires it")]
+        [SerializeField, Tooltip("Where the shown actions are read from; DefaultHudFactory wires it")]
         private PlayerActionReader _reader;
 
         private bool _visible = true;

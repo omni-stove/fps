@@ -612,7 +612,7 @@ namespace Fps.Tests.EditMode
             var saved = new CampaignNotice();
             saved.ShowSaved(1f);
             GameSignals.CampaignNotice.Publish(saved);
-            var hud = Hud.Create("HudViewTests.NoticeHud", null, null, null);
+            var hud = Hud.Create("HudViewTests.NoticeHud");
             try
             {
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "a notice published before the HUD is shown at once");
@@ -638,10 +638,67 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheCampaignNoticeGoesToTheModelTheHudShows()
+        {
+            GameSignals.ResetAll();
+            var saved = new CampaignNotice();
+            saved.ShowSaved(1f);
+            GameSignals.CampaignNotice.Publish(saved);
+            var hud = Hud.Create("HudViewTests.NoticeHud");
+            try
+            {
+                var published = new HudModel();
+                GameSignals.HudModel.Publish(published);
+                Assert.That(published.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "the shown model gets the notice");
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "the model no longer shown lets it go");
+
+                saved.ShowRestartCountdown(2f);
+                Assert.That(published.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None));
+
+                GameSignals.HudModel.Clear();
+                Assert.That(published.Notice, Is.EqualTo(HudNotice.None));
+                Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)));
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
+        public void WithoutALocalPlayerTheHudLeavesThePublishedCrosshairAlone()
+        {
+            GameSignals.ResetAll();
+            var published = new HudModel();
+            published.SetCrosshair(0.5f, 12f, false);
+            GameSignals.HudModel.Publish(published);
+            var hud = Hud.Create("HudViewTests.NetHud");
+            try
+            {
+                hud.RefreshCrosshair();
+
+                Assert.That(published.CrosshairSpread, Is.EqualTo(0.5f));
+                Assert.That(published.CrosshairConeGap, Is.EqualTo(12f));
+                Assert.That(published.IsCrosshairVisible, Is.False, "whoever published the model writes its crosshair");
+            }
+            finally
+            {
+                var panel = hud.OwnedPanelSettings;
+                UnityEngine.Object.DestroyImmediate(hud.gameObject);
+                UnityEngine.Object.DestroyImmediate(panel);
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
         public void TheHudShowsAHudModelPublishedByAnotherSource()
         {
             GameSignals.ResetAll();
-            var hud = Hud.Create("HudViewTests.SignalHud", null, null, null);
+            var hud = Hud.Create("HudViewTests.SignalHud");
             var changes = 0;
             hud.ShownModelChanged += () => changes++;
             try
@@ -691,7 +748,7 @@ namespace Fps.Tests.EditMode
         {
             GameSignals.ResetAll();
             GameSignals.HudDensity.Publish(HudDensity.Hardcore);
-            var hud = Hud.Create("HudViewTests.SignalHud", null, null, null);
+            var hud = Hud.Create("HudViewTests.SignalHud");
             try
             {
                 Assert.That(hud.Visibility.Density, Is.EqualTo(HudDensity.Hardcore), "a value published before the HUD is applied at once");

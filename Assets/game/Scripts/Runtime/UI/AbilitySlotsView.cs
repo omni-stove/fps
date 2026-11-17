@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// HUD の量では弾数と同じ扱いで、弾数を出さない量 (<see cref="HudVisibility.Ammo"/> が false) では隠す (<see cref="Hud"/> が決める)。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AbilitySlotsView : HudElementView, IAbilitySlots
+    public sealed class AbilitySlotsView : HudElementView
     {
         /// <summary>Hud.uxml の能力の枠の VisualElement。</summary>
         public const string UxmlName = "ability-slots";

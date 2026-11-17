@@ -168,7 +168,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudAddViewsAttachesTheMarks()
         {
-            var hud = Hud.Create("PingMarkersViewTests.Hud", null, null, null);
+            var hud = Hud.Create("PingMarkersViewTests.Hud");
             try
             {
                 Assert.That(hud.PingMarkers, Is.Not.Null);

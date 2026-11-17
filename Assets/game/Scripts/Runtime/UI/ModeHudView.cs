@@ -9,11 +9,11 @@ namespace Fps.Runtime
     /// オフラインのモード (<see cref="ModeRunnerBase"/>) の HUD。画面左上に残り時間・陣営ごとの得点・派生モードが足す行・試合結果を出す。
     /// Hud.uxml の <see cref="UxmlName"/> の枠に、行の Label をコードで足す。要素を持っている間は <see cref="GameSignals.ModeStatus"/> を購読し、
     /// 出された状態を <see cref="ModeHudFormatters"/> の書式役で文にして出し、消されたら隠す。要素を受けたときは今の状態に合わせる。
-    /// <see cref="IModeHud"/> の Show / <see cref="Hide"/> で直に出すこともでき、要素をまだ受けていない間 (HUD の木を作り直している間) もその中身を覚えておき、受けたときに合わせる。
+    /// Show / <see cref="Hide"/> で直に出すこともでき、要素をまだ受けていない間 (HUD の木を作り直している間) もその中身を覚えておき、受けたときに合わせる。
     /// 中身が変わらない行は書き直さない (毎フレーム呼ばれるため)。
     /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
     /// </summary>
-    public sealed class ModeHudView : HudElementView, IModeHud
+    public sealed class ModeHudView : HudElementView
     {
         /// <summary>Hud.uxml のモードの枠。</summary>
         public const string UxmlName = "mode-hud";

@@ -284,14 +284,15 @@ namespace Fps.Editor
                 return $"the hold order is not in GameSignals.SquadOrder ({GameSignals.SquadOrder})";
             }
 
-            if (!GameUi.IsAlive(world.Hud))
+            var hud = DefaultHudFactory.Current;
+            if (hud == null)
             {
                 Debug.Log($"{SquadOrderLog.Tag} smoke: the TPS range has no HUD, so the order marker is not checked");
                 _phase = Phase.StageDummy;
                 return null;
             }
 
-            var view = world.Hud.gameObject.GetComponent<SquadOrderMarkerView>();
+            var view = hud.GetComponent<SquadOrderMarkerView>();
             if (view == null || view.ShownKind != BotErrandKind.Hold)
             {
                 return Time.realtimeSinceStartup - _waitStartedAt > _viewWaitSeconds
@@ -422,12 +423,13 @@ namespace Fps.Editor
         // 字幕は設定で隠していても出す決まりなので、HUD があれば必ず行がある。
         private string CheckReply(BootstrapWorld world, BotErrandKind kind)
         {
-            if (!GameUi.IsAlive(world.Hud))
+            var hud = DefaultHudFactory.Current;
+            if (hud == null)
             {
                 return null;
             }
 
-            var subtitles = world.Hud.gameObject.GetComponent<SubtitleView>();
+            var subtitles = hud.GetComponent<SubtitleView>();
             if (subtitles == null)
             {
                 return null;

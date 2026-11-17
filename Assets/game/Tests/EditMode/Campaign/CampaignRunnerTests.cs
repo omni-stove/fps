@@ -494,6 +494,36 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
+        public void TheRulesTheCampaignBeganWithDecideTheHudDensityUntilItStops()
+        {
+            var scene = BuildScene();
+            scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 3f, 20f, false, 1.5f);
+            scene.Campaign.LaunchArgs = Array.Empty<string>();
+            GameSignals.HudDensity.Publish(HudDensity.Minimal);
+
+            ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal "));
+            BeginWithWorldQuietly(scene);
+
+            var density = scene.Campaign.Rules.HudDensity;
+            Assert.That(scene.Campaign.PublishedHudDensity, Is.EqualTo((HudDensity?)density));
+            Assert.That(GameSignals.HudDensity.Value, Is.EqualTo((HudDensity?)density), "the campaign's rules replace the bootstrap's");
+
+            scene.Campaign.Stop();
+            Assert.That(scene.Campaign.PublishedHudDensity, Is.Null);
+            Assert.That(GameSignals.HudDensity.Value, Is.Null, "stopping takes back what the campaign published");
+        }
+
+        [Test]
+        public void BeginWithoutRulesPublishesNoHudDensity()
+        {
+            var scene = BuildScene();
+            BeginQuietly(scene);
+
+            Assert.That(scene.Campaign.PublishedHudDensity, Is.Null);
+            Assert.That(GameSignals.HudDensity.Value, Is.Null);
+        }
+
+        [Test]
         public void TryBeginWithReusesThePlayersHealthRegen()
         {
             var scene = BuildScene();
@@ -1215,7 +1245,7 @@ namespace Fps.Tests.EditMode
             public BootstrapWorld World()
             {
                 return new BootstrapWorld(
-                    null, Player.gameObject, Controller, null, null, null, null, Weapon, null, Array.Empty<TargetDummy>(), Player, null, null);
+                    null, Player.gameObject, Controller, null, null, null, null, Weapon, null, Array.Empty<TargetDummy>(), Player, null);
             }
 
             public void Dispose()

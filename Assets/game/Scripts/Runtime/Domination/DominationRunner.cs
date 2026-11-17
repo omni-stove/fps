@@ -88,6 +88,7 @@ namespace Fps.Runtime
         private BootstrapWorld _world;
         private DominationStatus _publishedStatus;
         private ScoreboardEntry[] _publishedScoreboard;
+        private bool _publishedPaletteViewer;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _restartAction;
@@ -547,6 +548,12 @@ namespace Fps.Runtime
             }
 
             _publishedScoreboard = null;
+            if (_publishedPaletteViewer)
+            {
+                GameSignals.PaletteViewer.ClearIfCurrent(TeamColors.OfflineViewer);
+                _publishedPaletteViewer = false;
+            }
+
             _zones = Array.Empty<ControlPointZone>();
             _map = null;
             _world = null;
@@ -813,11 +820,8 @@ namespace Fps.Runtime
 
         private void UseOfflinePalette()
         {
-            var hud = _world.Hud;
-            if (GameUi.IsAlive(hud))
-            {
-                hud.UseTeamPalette(TeamColors.OfflineViewer);
-            }
+            GameSignals.PaletteViewer.Publish(TeamColors.OfflineViewer);
+            _publishedPaletteViewer = true;
         }
 
         private void PublishStatus()

@@ -397,123 +397,87 @@ TPS の射撃場 (`Fps/Build TPS Range Scene`) の左奥に、体力の半分で
 
 ## UI を差し替える
 
-ゲーム進行 (`Fps.Runtime`) は、画面を具体的なクラスでは持たず、登録口 `Fps.Runtime.GameUi` に入っている実装を使う。
-既定の UI (`Fps.Runtime.UI`) は起動時に自分を **既定** として登録するだけなので、使う側が登録口のプロパティに自分の実装を入れれば、既定の UI のコードは呼ばれなくなる。
-ネット対戦 (`Fps.NetV2`) は `Fps.Runtime.UI` を参照せず、HUD に出す値を `NetV2Hud` がオフラインと同じ `GameSignals` に出し、HUD は `GameUi.HudFactory` で作る (既定ならオフラインと同じ `Hud`・`Hud.uxml`)。
+ゲーム進行 (`Fps.Runtime`・`Fps.NetV2`) は HUD を作らず、HUD に出すものを `Fps.Runtime.GameSignals` に型の付いた値で出すだけにする。
+HUD は UI が `GameSignals` を購読して自分で作る。既定の UI (`Fps.Runtime.UI`) の作り役 `DefaultHudFactory` は、この画面のプレイヤー (`GameSignals.LocalPlayer`) かその HUD の値 (`GameSignals.HudModel`) が出たら `Hud` (`Hud.uxml`) を 1 つ作り、どちらも消えたら片付ける。ネット対戦もオフラインと同じ `GameSignals` に出すので、同じ HUD が出る。
+UI からゲーム進行への口 (ポーズの開閉・ロードアウトの選択・持ち物・メニューとの行き来) は、登録口 `Fps.Runtime.GameUi` に入っている実装を使う。既定の UI は起動時に自分を **既定** として登録するだけなので、使う側が登録口のプロパティに自分の実装を入れれば、既定の UI のコードは呼ばれなくなる。
 
 | 登録口のプロパティ | 実装するインターフェース | 使われる所 | 既定 |
 | --- | --- | --- | --- |
-| `GameUi.HudFactory` | `IHudFactory` (作るのは `IHud`) | オフラインの HUD とプレイヤーのデバッグ表示 (`GameBootstrap` が作る) | `Fps.Runtime.UI` の HUD。ポーズメニュー・ロードアウトの選択・字幕なども、この HUD の GameObject に載っている |
 | `GameUi.Pause` | `IPauseState` | ポーズ画面が開いているか (開いている間は操作を止める) | 既定の HUD のポーズメニュー |
 | `GameUi.LoadoutSelect` | `ILoadoutSelect` | カーソルを解放してロードアウトの画面を開いているか・ネット対戦で倒れている間に画面を開き (`Open`)、決めた並び (`Confirmed`) をサーバーへ送って答えを出す (`ShowSending`・`ShowAnswer`) | 既定の HUD のロードアウトの画面 (一番新しく木を受けた `LoadoutSelectView`) |
 | `GameUi.Menu` | `IMenuNavigator` | メインメニューへ戻る (戻った理由は `MenuReturnReason`。接続を失った理由 `DisconnectNotice` か、オンラインを始められなかった訳と終了コード。文にするのはメニュー)・メニューで選んだチュートリアルを受け取る | `Fps.Runtime.UI` のメニューのシーンとの行き来 |
 
 - 入れた実装は、登録の順番に依らず既定より優先される。`null` を入れると既定に戻る。
-- 既定も自分の実装も無いときは、例外にせず HUD 無しで進む (ログに `no HUD factory is registered` などが出る)。生成役が `null` を返したときだけ `InvalidOperationException` になる。
-- ネット対戦も `GameUi.HudFactory` で HUD を作る。体力・弾・残り時間・点数は `NetV2Hud` の `HudModel` を `GameSignals.HudModel` に出し、拠点は `GameSignals.Domination`、スコアボードは `GameSignals.Scoreboard`、グレネードの残りは `GameSignals.GrenadeCount` (`GrenadeCountStatus`)、持ち物は `GameSignals.Inventory`、目くらましの残りを読む関数は `GameSignals.LocalBlindSeconds`、キルフィードの名前を引く参加者は `GameSignals.Participants`、HUD の量・ポーズ中の時間の扱い・色の組の視点は `GameSignals.HudDensity`・`PauseTimeMode`・`PaletteViewer` に出す。既定の HUD は自分と違う `HudModel` が `GameSignals.HudModel` に出ていればそれを出し、上の欄にチームの点数を出している間は拠点制圧を拠点のリング (`ControlPointsView`) だけで出す。メニューのクイックマッチの手順は `GameUi.OnlineStarter` に入れる。
-- 既定の HUD を差し替えると、その HUD に載っていたポーズメニューやロードアウトの画面も出なくなる。自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
-- `IHud` の `Model`・`Scoreboard`・`HitMarker`・`ModeHud`・`TutorialPrompt`・`InteractPrompt` は、持っていなければ `null` を返してよい。ゲーム進行はその表示を出さずに進む。オフラインのモードの状態は `IHud.ModeHud` には渡さず `GameSignals.ModeStatus` に、拠点制圧の状態 (両チームのポイント・残り時間・拠点ごとの `ControlPointStatus`・勝敗) は `GameSignals.Domination` に `DominationStatus` で、オフラインのスコアボードの行 (Id・名前の種類と番号の `ScoreboardName`・チーム・キル数・デス数・接続状態) は `IHud.Scoreboard` には渡さず `GameSignals.Scoreboard` に `ScoreboardEntry` の並びで出す (自分の HUD で出すなら購読し、並べ方は `ScoreboardRows`、文は既定の UI の `ScoreboardText` を参考にする)。キャンペーンの案内 (セーブした・再開まで N 秒) は `GameSignals.CampaignNotice` に `CampaignNotice` で出す (`HudModel.BindNotice` に渡せば既定の HUD と同じに出る)。グレネードの残りと能力の枠は HUD に渡さず、自分のプレイヤーの部品を `GameSignals.LocalPlayer` に `LocalPlayerSignal` で出す (自分の HUD で出すなら購読し、`Grenades` の `GrenadeThrower.Changed`・`Abilities` の `AbilityHost.Changed` で読み直す)。`AttachGrenadeCount()` と `AttachAbilitySlots()` は `null` を返さないが、ゲーム進行は返した値の `Show` を呼ばない。
-- 登録はシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単。
+- 既定も自分の実装も無いときは、例外にせず画面無しで進む。HUD を作る UI が無くても、ゲーム進行は `GameSignals` に値を出して進む。
+- `GameSignals` に出るもの: この画面のプレイヤーの部品 (`LocalPlayer` の `LocalPlayerSignal`。体力・武器・ADS・移動・グレネード・能力の枠・今のアクション)、体力・弾・残り時間・点数・結果 (`HudModel`。オフラインは `GameBootstrap`、ネット対戦は `NetV2Hud` が持つ)、オフラインのモードの状態 (`ModeStatus`)、拠点制圧 (`Domination` の `DominationStatus`)、スコアボードの行 (`Scoreboard` の `ScoreboardEntry` の並び。並べ方は `ScoreboardRows`、文は既定の UI の `ScoreboardText` を参考にする)、近くの操作の案内 (`InteractHint`)、チュートリアルの段階 (`Tutorial`)、キルカム (`KillCam`)、ピン (`Pings`)、分隊への指示 (`SquadOrder`)、キャンペーンの案内 (`CampaignNotice`。`HudModel.BindNotice` に渡せば既定の HUD と同じに出る)、メニューに戻った理由 (`MenuReturnReason`)、HUD の量 (`HudDensity`)、ポーズ中の時間の扱い (`PauseTimeMode`)、色の組の視点 (`PaletteViewer`)。ネット対戦だけが出すものは `GrenadeCount`・`Inventory`・`LocalBlindSeconds`・`Participants`。
+- 既定の HUD は上の欄にチームの点数を出している間、拠点制圧を拠点のリング (`ControlPointsView`) だけで出す。メニューのクイックマッチの手順は `GameUi.OnlineStarter` に入れる。
+- 既定の HUD (とプレイヤーのデバッグ表示) を止めるには `DefaultHudFactory.Enabled = false` にする。その HUD に載っていたポーズメニューやロードアウトの画面も出なくなるので、自分でポーズ画面を作るなら `GameUi.Pause` にも、その開閉を返す実装を入れる (入れないと既定の `IsAnyOpen` は常に false で、ポーズ中も操作が止まらない)。
+- 登録と既定の HUD を止めるのはシーンを読む前に済ませる。`[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]` を付けた static メソッドで入れるのが簡単 (既定の UI の登録との順番は問わない)。
 - 発見ゲージの頭上の印 (ルールの `stealth` が On のときだけ出る) は、根に `IAwarenessIndicator` を実装したコンポーネントを持つプレハブを、どこかの Resources フォルダの `Presentation/AwarenessIndicatorCatalog.asset` (`AwarenessIndicatorCatalog`、入口の `AwarenessIndicator` が先) に入れると差し替わる。敵ごとに変えるなら `EnemyStealth` の印のプレハブに入れる。どちらも空なら仮の球を出す。
 
 ### 最小の例: オフラインの HUD
 
-利用側のプロジェクトの `Assets/` の下 (例: `Assets/MyGame/MyHud.cs`) に置く。`Fps.Core`・`Fps.Runtime` は `autoReferenced` なので、asmdef を使わないスクリプト (Assembly-CSharp) からはそのまま参照できる。自分の asmdef に置くなら `references` に `Fps.Core` と `Fps.Runtime` を足す。
+利用側のプロジェクトの `Assets/` の下 (例: `Assets/MyGame/MyHud.cs`) に置く。`Fps.Core`・`Fps.Runtime`・`Fps.Runtime.UI` は `autoReferenced` なので、asmdef を使わないスクリプト (Assembly-CSharp) からはそのまま参照できる。自分の asmdef に置くなら `references` にそれらを足す。
 
 ```csharp
 using Fps.Core;
 using Fps.Runtime;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-public sealed class MyHud : MonoBehaviour, IHud, IGrenadeCount, IAbilitySlots
+public sealed class MyHud : MonoBehaviour
 {
-    private Damageable _player;
-    private WeaponController _weapon;
-    private GrenadeThrower _grenades;
+    private LocalPlayerSignal _player;
+    private HudModel _model;
 
-    public static MyHud Create(string objectName, Damageable player, WeaponController weapon)
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Register()
     {
-        var hud = new GameObject(objectName).AddComponent<MyHud>();
-        hud._player = player;
-        hud._weapon = weapon;
-        return hud;
+        DefaultHudFactory.Enabled = false;
+        var hud = new GameObject("MyHud").AddComponent<MyHud>();
+        DontDestroyOnLoad(hud.gameObject);
     }
-
-    public PanelSettings OwnedPanelSettings => null;
-    public HudModel Model => null;
-    public IScoreboard Scoreboard => null;
-    public IHitMarker HitMarker => null;
-    public IModeHud ModeHud => null;
-    public ITutorialPrompt TutorialPrompt => null;
-    public IInteractPrompt InteractPrompt => null;
-
-    public void ApplyDensity(HudDensity density) { }
-    public void BindMatch(Match match) { }
-    public void UseTeamPalette(Team? viewer) { }
-    public void SetPauseTimeMode(PauseTimeMode mode) { }
-    public IGrenadeCount AttachGrenadeCount() => this;
-    public IAbilitySlots AttachAbilitySlots() => this;
-
-    public void Show(GrenadeThrower thrower) { }
-    public void Show(AbilityHost host) { }
 
     private void OnEnable()
     {
         GameSignals.LocalPlayer.Changed += HandleLocalPlayer;
+        GameSignals.HudModel.Changed += HandleHudModel;
         HandleLocalPlayer(GameSignals.LocalPlayer.Value);
+        HandleHudModel(GameSignals.HudModel.Value);
     }
 
     private void OnDisable()
     {
         GameSignals.LocalPlayer.Changed -= HandleLocalPlayer;
+        GameSignals.HudModel.Changed -= HandleHudModel;
     }
 
-    private void HandleLocalPlayer(LocalPlayerSignal player)
-    {
-        _grenades = player?.Grenades;
-    }
+    private void HandleLocalPlayer(LocalPlayerSignal player) => _player = player;
+
+    private void HandleHudModel(HudModel model) => _model = model;
 
     private void OnGUI()
     {
         GUILayout.Label("MY HUD");
-        if (_player != null && _player.Health != null)
+        if (_model != null && _model.CurrentHealth.HasValue)
         {
-            GUILayout.Label($"HP {_player.Health.Current} / {_player.Health.Max}");
+            GUILayout.Label($"HP {_model.CurrentHealth} / {_model.MaxHealth}");
         }
 
-        if (_grenades != null && _grenades.UsesGrenades)
+        var grenades = _player?.Grenades;
+        if (grenades != null && grenades.UsesGrenades)
         {
             // 既定の HUD と同じ表のキーを引けば、言語の切り替えと文の上書きがそのまま効く
-            GUILayout.Label(Localizer.Format("hud.grenades", _grenades.Remaining));
+            GUILayout.Label(Localizer.Format("hud.grenades", grenades.Remaining));
         }
-    }
-}
-
-public sealed class MyHudFactory : IHudFactory
-{
-    public IHud Create(string objectName, Damageable player, WeaponController weapon, Match match)
-    {
-        return MyHud.Create(objectName, player, weapon);
-    }
-
-    public void AttachActionDebug(GameObject player, PlayerActionReader reader) { }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Register()
-    {
-        GameUi.HudFactory = new MyHudFactory();
     }
 }
 ```
-
-`IHud.gameObject` は `MonoBehaviour` の `gameObject` がそのまま実装になる。ゲーム進行はシーンを片付けるときにこの GameObject (と `OwnedPanelSettings`) を消す。
 
 確かめ方:
 
 1. **Fps > Build Weapon Assets**・**Fps > Build Game Rules Assets**・**Fps > Build Bootstrap Scene** を順に実行し、`<出力先ルート>/Scenes/Bootstrap.unity` を開いて Play に入る。
 2. 上の例を置く前は既定の HUD (体力・弾数・照準) が出る。置いてから Play に入り直すと、既定の HUD は出ずに左上に `MY HUD` と HP が出る。
-3. `Register` の中を `GameUi.HudFactory = null;` にすると既定の HUD に戻る。
+3. `Register` の中の `DefaultHudFactory.Enabled = false;` を消すと既定の HUD も出る。
 
 ### ポーズ・ロードアウト・メニューの様子
 

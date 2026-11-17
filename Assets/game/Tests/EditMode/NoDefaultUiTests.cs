@@ -18,7 +18,8 @@ namespace Fps.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            GameUi.HudFactory = null;
+            GameSignals.ResetAll();
+            DefaultHudFactory.Unregister();
             GameUi.Pause = null;
             GameUi.LoadoutSelect = null;
             GameUi.Menu = null;
@@ -29,7 +30,6 @@ namespace Fps.Tests.EditMode
 
             _host = new GameObject("NoDefaultUiTests");
             var bootstrap = _host.AddComponent<GameBootstrap>();
-            LogAssert.Expect(LogType.Log, GameBootstrap.NoHudLog);
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -46,8 +46,8 @@ namespace Fps.Tests.EditMode
             }
 
             Object.DestroyImmediate(_host);
+            GameSignals.ResetAll();
 
-            GameUi.UseDefaultHudFactory(new DefaultHudFactory());
             if (_defaultPause != null)
             {
                 GameUi.UseDefaultPause(_defaultPause);
@@ -67,16 +67,26 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BootstrapBuildsTheWorldWithoutAHud()
         {
-            Assert.That(GameUi.HudFactory, Is.Null);
-            Assert.That(_world.Hud, Is.Null);
-            Assert.That(_world.HudPanelSettings, Is.Null);
-            Assert.That(GameUi.FindHud(), Is.Null);
-            Assert.That(GameObject.Find(GameBootstrap.HudName), Is.Null);
+            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Is.Empty);
+            Assert.That(GameObject.Find(DefaultHudFactory.HudObjectName), Is.Null);
+            Assert.That(DefaultHudFactory.Current, Is.Null);
 
             Assert.That(_world.Player, Is.Not.Null);
             Assert.That(_world.Weapon, Is.Not.Null);
             Assert.That(_world.ActionReader, Is.Not.Null);
-            Assert.That(_world.Player.GetComponent<ActionDebugOverlay>(), Is.Null, "no factory attaches the debug overlay");
+            Assert.That(_world.Player.GetComponent<ActionDebugOverlay>(), Is.Null, "no UI attaches the debug overlay");
+        }
+
+        [Test]
+        public void TheBootstrapStillPublishesWhatAUiWouldShow()
+        {
+            Assert.That(GameSignals.LocalPlayer.Value, Is.Not.Null);
+            Assert.That(GameSignals.LocalPlayer.Value.Player, Is.SameAs(_world.Player));
+            Assert.That(GameSignals.LocalPlayer.Value.Actions, Is.SameAs(_world.ActionReader));
+            Assert.That(GameSignals.HudModel.Value, Is.SameAs(_world.HudModel));
+            Assert.That(_world.HudModel.CurrentHealth, Is.EqualTo(_world.PlayerDamageable.Health.Current), "the model follows the player without a HUD");
+            Assert.That(GameSignals.HudDensity.Value, Is.EqualTo((HudDensity?)_world.Rules.HudDensity));
+            Assert.That(GameSignals.PauseTimeMode.Value, Is.EqualTo((PauseTimeMode?)PauseTimeMode.Freeze));
         }
 
         [Test]
@@ -102,36 +112,9 @@ namespace Fps.Tests.EditMode
             _world.Targets[1].Damageable.Kill();
 
             Assert.That(match.Result, Is.EqualTo(MatchResult.Won));
+            Assert.That(_world.HudModel.SoloResult, Is.EqualTo(MatchResult.Won), "the result reaches the model even with no HUD");
             Assert.That(_world.Mover.enabled, Is.False);
             Assert.That(_world.Weapon.enabled, Is.False);
-        }
-
-        [Test]
-        public void ARegisteredFactoryThatReturnsNothingStillFails()
-        {
-            GameUi.HudFactory = new NullHudFactory();
-            try
-            {
-                Assert.Throws<System.InvalidOperationException>(() => GameUi.CreateHud("NoDefaultUiTests.Hud", null, null, null));
-            }
-            finally
-            {
-                GameUi.HudFactory = null;
-            }
-
-            Assert.That(GameUi.CreateHud("NoDefaultUiTests.Hud", null, null, null), Is.Null);
-        }
-
-        private sealed class NullHudFactory : IHudFactory
-        {
-            public IHud Create(string objectName, Damageable player, WeaponController weapon, Match match)
-            {
-                return null;
-            }
-
-            public void AttachActionDebug(GameObject player, PlayerActionReader reader)
-            {
-            }
         }
     }
 }

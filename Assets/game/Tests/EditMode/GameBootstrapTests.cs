@@ -48,6 +48,7 @@ namespace Fps.Tests.EditMode
             GameRulesAssets.Configure(_rules, _testRules);
 
             GameSignals.ResetAll();
+            DefaultHudFactory.Register();
             _host = new GameObject("Bootstrap");
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
@@ -60,6 +61,7 @@ namespace Fps.Tests.EditMode
         public void TearDown()
         {
             GameRulesOverride.Clear();
+            DefaultHudFactory.Unregister();
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
@@ -82,7 +84,10 @@ namespace Fps.Tests.EditMode
             Assert.That(player.Grenades, Is.SameAs(_world.Grenades));
             Assert.That(player.Abilities, Is.SameAs(_world.Abilities));
             Assert.That(player.Actions, Is.SameAs(_world.ActionReader));
-            Assert.That(GameSignals.HudModel.Value, Is.SameAs(DefaultHud.Model));
+            Assert.That(GameSignals.HudModel.Value, Is.SameAs(_world.HudModel));
+            Assert.That(GameSignals.HudDensity.Value, Is.EqualTo((HudDensity?)_world.Rules.HudDensity));
+            Assert.That(GameSignals.PauseTimeMode.Value, Is.EqualTo((PauseTimeMode?)PauseTimeMode.Freeze), "offline pauses stop time");
+            Assert.That(DefaultHud.ShownModel, Is.SameAs(_world.HudModel), "the HUD shows the published model");
         }
 
         [Test]
@@ -131,7 +136,10 @@ namespace Fps.Tests.EditMode
 
             Assert.That(GameSignals.LocalPlayer.Value, Is.Null);
             Assert.That(GameSignals.HudModel.Value, Is.Null);
+            Assert.That(GameSignals.HudDensity.Value, Is.Null);
+            Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);
             Assert.That(cleared, Is.EqualTo(new LocalPlayerSignal[] { null }), "subscribers hear the clear");
+            Assert.That(DefaultHudFactory.Current, Is.Null, "the default HUD goes with the player and its model");
 
             var other = new LocalPlayerSignal(null, null, null, null, null, null, null, null);
             GameSignals.LocalPlayer.Publish(other);
@@ -148,9 +156,8 @@ namespace Fps.Tests.EditMode
             Assert.That(hud.AbilitySlots, Is.Not.Null);
             Assert.That(hud.Domination, Is.Not.Null);
 
-            IHud asInterface = hud;
-            Assert.That(asInterface.AttachGrenadeCount(), Is.SameAs(hud.GrenadeCount), "Attach returns the view that is already there");
-            Assert.That(asInterface.AttachAbilitySlots(), Is.SameAs(hud.AbilitySlots));
+            Assert.That(hud.GetComponents<GrenadeCountView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.GetComponents<AbilitySlotsView>(), Has.Length.EqualTo(1));
             Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
             Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
         }
@@ -472,17 +479,6 @@ namespace Fps.Tests.EditMode
             if (world == null)
             {
                 return;
-            }
-
-            // Edit Mode では Hud の OnDestroy が走らないので、PanelSettings もここで消す。
-            if (world.Hud != null)
-            {
-                Object.DestroyImmediate(world.Hud.gameObject);
-            }
-
-            if (world.HudPanelSettings != null)
-            {
-                Object.DestroyImmediate(world.HudPanelSettings);
             }
 
             if (world.Floor != null)
@@ -1081,16 +1077,16 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
         {
-            Assert.That(_world.Hud, Is.InstanceOf<Hud>(), "the default HUD factory builds the HUD");
             var hud = DefaultHud;
-            Assert.That(hud.name, Is.EqualTo(GameBootstrap.HudName));
+            Assert.That(hud, Is.Not.Null, "the default HUD factory builds the HUD for the published player");
+            Assert.That(hud.name, Is.EqualTo(DefaultHudFactory.HudObjectName));
             Assert.That(hud.gameObject.activeSelf, Is.True);
 
             var document = hud.GetComponent<UIDocument>();
             Assert.That(document, Is.Not.Null);
             Assert.That(document.visualTreeAsset, Is.SameAs(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath)));
 
-            var settings = _world.HudPanelSettings;
+            var settings = hud.OwnedPanelSettings;
             Assert.That(document.panelSettings, Is.SameAs(settings));
             Assert.That(settings.name, Is.EqualTo(Hud.PanelSettingsName));
             Assert.That(settings.themeStyleSheet, Is.SameAs(Resources.Load<ThemeStyleSheet>(Hud.ThemeResourcePath)));
@@ -1121,7 +1117,9 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ClearingTheLocalPlayerEmptiesTheGrenadeCountAndTheAbilitySlots()
         {
-            _host.GetComponent<GameBootstrap>().ClearSignals();
+            GameSignals.LocalPlayer.Clear();
+
+            Assert.That(DefaultHud, Is.Not.Null, "the HUD stays while its model is published");
 
             Assert.That(DefaultHud.GrenadeCount.Source, Is.Null);
             Assert.That(DefaultHud.GrenadeCount.Text, Is.Empty);
@@ -1169,7 +1167,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudShowsThePlayerHealthAndWaitsForTheMatch()
         {
-            var model = DefaultHud.Model;
+            var model = _world.HudModel;
 
             Assert.That(model.CurrentHealth, Is.EqualTo(Damageable.DefaultMaxHealth));
             Assert.That(model.RemainingSeconds, Is.Null, "MatchRunner binds the time when it begins the match");
@@ -1181,7 +1179,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudFollowsTheHealthAfterItIsReset()
         {
-            var model = DefaultHud.Model;
+            var model = _world.HudModel;
             var damageable = _world.PlayerDamageable;
             damageable.TakeDamage(40);
 
@@ -1195,7 +1193,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void HudFollowsTheWeaponOnceItIsInitialized()
         {
-            var model = DefaultHud.Model;
+            var model = _world.HudModel;
             var controller = _world.Weapon;
 
             // Edit Mode では WeaponController の Awake が走らないので、武器はまだ無い。
@@ -1245,40 +1243,77 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void BuildFailsWithoutAHudFactoryAndLeavesNothingBehind()
+        public void ANewPlayerKeepsTheSameHudAndMovesItsViewsToThatPlayer()
         {
-            GameUi.HudFactory = new NullHudFactory();
-            var bootstrap = new GameObject("GameBootstrapTests.NoHud").AddComponent<GameBootstrap>();
-            var published = GameSignals.LocalPlayer.Value;
+            var hud = DefaultHud;
+            var other = new GameObject("GameBootstrapTests.Other").AddComponent<GameBootstrap>();
+            other.CreatesFloor = false;
+            other.WeaponDefinitions = new[] { _rifle, _handgun };
+            other.RulesDefinition = _rules;
+            BootstrapWorld otherWorld = null;
             try
             {
-                var ex = Assert.Throws<System.InvalidOperationException>(() => bootstrap.Build());
-                Assert.That(ex.Message, Does.Contain("returned no HUD"));
-                Assert.That(bootstrap.World, Is.Null);
-                Assert.That(GameSignals.LocalPlayer.Value, Is.SameAs(published), "a failed build publishes nothing");
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                otherWorld = other.Build();
+
+                Assert.That(DefaultHudFactory.Current, Is.SameAs(hud), "one HUD for the screen");
+                Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Has.Length.EqualTo(1));
+                Assert.That(hud.ShownModel, Is.SameAs(otherWorld.HudModel));
+                Assert.That(hud.GrenadeCount.Source, Is.SameAs(otherWorld.Grenades));
+                Assert.That(otherWorld.Player.GetComponent<ActionDebugOverlay>().Reader, Is.SameAs(otherWorld.ActionReader));
             }
             finally
             {
-                GameUi.HudFactory = null;
-                Object.DestroyImmediate(bootstrap.gameObject);
+                DestroyWorld(otherWorld);
+                Object.DestroyImmediate(other.gameObject);
             }
-
-            Assert.That(GameUi.HudFactory, Is.InstanceOf<DefaultHudFactory>(), "clearing the replacement goes back to the default");
         }
 
-        // 中身を確かめるため、既定の生成役が作った HUD を具体クラスで読む
-        private Hud DefaultHud => (Hud)_world.Hud;
-
-        private sealed class NullHudFactory : IHudFactory
+        [Test]
+        public void UnregisteringTheDefaultHudRemovesItAndStopsBuildingIt()
         {
-            public IHud Create(string objectName, Damageable player, WeaponController weapon, Match match)
+            var hud = DefaultHud;
+            var settings = hud.OwnedPanelSettings;
+
+            DefaultHudFactory.Unregister();
+
+            Assert.That(hud == null, Is.True, "the HUD is destroyed");
+            Assert.That(settings == null, Is.True, "with the panel settings made for it");
+            Assert.That(DefaultHudFactory.Current, Is.Null);
+
+            GameSignals.LocalPlayer.Publish(GameSignals.LocalPlayer.Value);
+            Assert.That(DefaultHudFactory.Current, Is.Null, "nothing builds a HUD once unregistered");
+
+            DefaultHudFactory.Register();
+            Assert.That(DefaultHudFactory.Current, Is.Not.Null, "registering again builds it for the published player");
+        }
+
+        [Test]
+        public void TurningTheDefaultHudOffRemovesItUntilItIsTurnedOnAgain()
+        {
+            var hud = DefaultHud;
+            try
             {
-                return null;
+                DefaultHudFactory.Enabled = false;
+                Assert.That(hud == null, Is.True, "turning it off takes the HUD away");
+                Assert.That(DefaultHudFactory.Current, Is.Null);
+
+                GameSignals.LocalPlayer.Publish(GameSignals.LocalPlayer.Value);
+                Assert.That(DefaultHudFactory.Current, Is.Null, "a game with its own HUD gets no default HUD");
+
+                DefaultHudFactory.Unregister();
+                DefaultHudFactory.Register();
+                Assert.That(DefaultHudFactory.Current, Is.Null, "registering again keeps it off");
+            }
+            finally
+            {
+                DefaultHudFactory.Enabled = true;
             }
 
-            public void AttachActionDebug(GameObject player, PlayerActionReader reader)
-            {
-            }
+            Assert.That(DefaultHudFactory.Current, Is.Not.Null, "turning it on builds it for the published player");
         }
+
+        // 中身を確かめるため、既定の作り役が作った HUD を具体クラスで読む
+        private static Hud DefaultHud => DefaultHudFactory.Current;
     }
 }

@@ -6,6 +6,7 @@ using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Protocol;
+using ChatChannel = Shooter.Protocol.ChatChannel;
 
 namespace Shooter.Server.Tests
 {

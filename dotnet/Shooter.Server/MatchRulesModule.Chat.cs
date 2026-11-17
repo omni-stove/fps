@@ -16,23 +16,23 @@ namespace Shooter.Server
         /// playerId の文を <see cref="ChatGate"/> に通し、通れば全体なら全員に、チームなら同じチームの人にだけ配る。
         /// 断った文は送った本人にも返さない。参加していない人と試合の無いときは理由も出さずに捨てる (印と同じ)。そのときは null。
         /// </summary>
-        internal ChatRefusal? ServerChat(int playerId, ChatChannel channel, string text)
+        internal ChatRefusal? ServerChat(int playerId, Shooter.Protocol.ChatChannel channel, string text)
         {
             if (_session == null || _chatGate == null || !_session.HasPlayer(playerId))
             {
                 return null;
             }
 
-            var refusal = _chatGate.TryAccept(playerId, channel, text, _now, out var line);
+            var refusal = _chatGate.TryAccept(playerId, (Shooter.Core.ChatChannel)(int)channel, text, _now, out var line);
             if (refusal != ChatRefusal.None)
             {
                 return RefuseChat(playerId, refusal);
             }
 
             _chatMessage.SenderId = line.SenderId;
-            _chatMessage.Channel = line.Channel;
+            _chatMessage.Channel = (Shooter.Protocol.ChatChannel)(int)line.Channel;
             _chatMessage.Text = line.Text;
-            if (line.Channel == ChatChannel.Team)
+            if (line.Channel == Shooter.Core.ChatChannel.Team)
             {
                 SendToTeam(_session.GetTeam(playerId), TransportChannel.Reliable, _chatMessage);
             }

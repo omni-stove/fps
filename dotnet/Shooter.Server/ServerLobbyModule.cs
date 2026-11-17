@@ -42,7 +42,7 @@ namespace Shooter.Server
                 backend,
                 _endpoint,
                 context.Version,
-                (context.Rules?.Settings ?? NetMatchSettings.Default).MaxPlayers,
+                context.Rules?.Settings ?? NetMatchSettings.Default,
                 context.Log,
                 _clock,
                 _sleep,

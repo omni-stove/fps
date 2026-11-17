@@ -66,7 +66,8 @@ namespace Shooter.Server.Tests
             _transport.Send(_server, TransportChannel.Reliable, new ArraySegment<byte>(bytes));
         }
 
-        public void SendRequest(string version, string key = "device1", ushort protocol = MatchProtocol.Version, string partyId = "")
+        public void SendRequest(
+            string version, string key = "device1", ushort protocol = MatchProtocol.Version, string partyId = "", string joinCode = "")
         {
             Send(new ConnectRequestMessage
             {
@@ -75,6 +76,7 @@ namespace Shooter.Server.Tests
                 DisplayName = "tester",
                 ProtocolVersion = protocol,
                 PartyId = partyId,
+                JoinCode = joinCode,
             });
         }
 

@@ -347,8 +347,8 @@ namespace Shooter.Server
         private void Approve(ConnectionId connection, ConnectRequestMessage request)
         {
             // Netcode の承認データと同じ形にして Core の判定に渡し、版の違い・読めない・drain 中の断り方と文を今のサーバーとそろえる
-            var payload = Encoding.UTF8.GetBytes(request.ClientVersion + ConnectionPayload.Separator + request.RejoinKey);
-            var verdict = ConnectionApproval.Judge(_launch.ServerVersion, payload, _drain.IsDraining);
+            var payload = Encoding.UTF8.GetBytes(request.ClientVersion + ConnectionPayload.Separator + request.RejoinKey + JoinCodeField(request));
+            var verdict = ConnectionApproval.Judge(_launch.ServerVersion, payload, _drain.IsDraining, _rules?.Settings ?? NetMatchSettings.Default);
             if (!verdict.Approved)
             {
                 Reject(connection, verdict.RejectReason, verdict.LogText);
@@ -415,6 +415,20 @@ namespace Shooter.Server
 
             Match.Join(connection, rejoinKey, productUserId, PartyIdOf(connection, request));
             _host.OnConnected(connection);
+        }
+
+        // 判定に要るのはコードだけなので、パーティなどほかの欄の形が違っても承認のデータ全体を読めなくしないよう、コードの欄だけを載せる。
+        // 形の違うコードは載せず、非公開の試合では「コードが無い」として断る
+        private static string JoinCodeField(ConnectRequestMessage request)
+        {
+            var joinCode = request.JoinCode;
+            if (!ConnectionExtras.IsValidField(joinCode, ConnectionExtras.MaxJoinCodeLength))
+            {
+                return "";
+            }
+
+            var emptyField = new string(ConnectionPayload.Separator, 2);
+            return emptyField + joinCode + emptyField;
         }
 
         // パーティの Id はチームを決めるのにしか使わないので、形が違っても断らずに無いものとして入れる

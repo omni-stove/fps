@@ -24,6 +24,10 @@ namespace Shooter.Core.Tests
             leanSideOffset: 0.4f,
             leanSpeed: 4f);
 
+        private static readonly float[] _leanRight = { 0.25f, 0.5f, 0.75f, 1f, 1f };
+        private static readonly float[] _releaseFromRight = { 0.75f, 0.5f, 0.25f, 0f, 0f };
+        private static readonly float[] _noRoom = { 0f, 0f };
+
         private readonly List<WorldCollider> _colliders = new List<WorldCollider>();
 
         [SetUp]
@@ -37,7 +41,7 @@ namespace Shooter.Core.Tests
         {
             var body = NewBody();
 
-            Assert.That(Run(body, 0f, 1, 5), Is.EqualTo(new[] { 0.25f, 0.5f, 0.75f, 1f, 1f }));
+            Assert.That(Run(body, 0f, 1, 5), Is.EqualTo(_leanRight));
             Assert.That(Run(body, 0f, -1, 5), Is.EqualTo(new[] { -0.25f, -0.5f, -0.75f, -1f, -1f }));
         }
 
@@ -64,7 +68,7 @@ namespace Shooter.Core.Tests
         {
             var body = NewBody();
 
-            Assert.That(Run(body, 1f, 0, 5), Is.EqualTo(new[] { 0.75f, 0.5f, 0.25f, 0f, 0f }));
+            Assert.That(Run(body, 1f, 0, 5), Is.EqualTo(_releaseFromRight));
             Assert.That(Run(body, -0.5f, 0, 3), Is.EqualTo(new[] { -0.25f, 0f, 0f }));
         }
 
@@ -152,7 +156,7 @@ namespace Shooter.Core.Tests
             AddWallOnTheRight(0.55f);
             var body = NewBody();
 
-            Assert.That(Run(body, 0f, 1, 2), Is.EqualTo(new[] { 0f, 0f }));
+            Assert.That(Run(body, 0f, 1, 2), Is.EqualTo(_noRoom));
         }
 
         [Test]
@@ -213,7 +217,7 @@ namespace Shooter.Core.Tests
             Assert.That(state.Lean.Amount, Is.EqualTo(0.25f));
         }
 
-        private float[] Run(CharacterBody body, float from, int lean, int ticks)
+        private static float[] Run(CharacterBody body, float from, int lean, int ticks)
         {
             var amounts = new float[ticks];
             var state = State(from);

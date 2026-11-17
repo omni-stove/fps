@@ -13,7 +13,7 @@ namespace Fps.Core.Tests
             int id, Team team, int kills, int deaths,
             ScoreboardConnection connection = ScoreboardConnection.Connected, bool isLocal = false)
         {
-            return new ScoreboardEntry(id, ScoreboardRows.PlayerName(id), team, kills, deaths, connection, isLocal);
+            return new ScoreboardEntry(id, ScoreboardName.Player(id), team, kills, deaths, connection, isLocal);
         }
 
         [Test]
@@ -174,74 +174,24 @@ namespace Fps.Core.Tests
         public void EntriesRejectNegativeCounts(int kills, int deaths)
         {
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ScoreboardEntry(0, LocalizedText.Literal("x"), Team.Alpha, kills, deaths, ScoreboardConnection.None, false));
+                () => new ScoreboardEntry(0, ScoreboardName.Literal("x"), Team.Alpha, kills, deaths, ScoreboardConnection.None, false));
         }
 
         [Test]
         public void DefaultEntryHasAnEmptyName()
         {
             Assert.That(default(ScoreboardEntry).Name.IsEmpty, Is.True);
-            Assert.That(GameText.Resolve(default(ScoreboardEntry).Name), Is.EqualTo(string.Empty));
-        }
-
-        [Test]
-        public void ALiteralNameIsShownAsItIs()
-        {
-            var entry = new ScoreboardEntry(0, LocalizedText.Literal("[BOT] Bot 1"), Team.Alpha, 0, 0, ScoreboardConnection.None, false);
-
-            Assert.That(GameText.Resolve(entry.Name), Is.EqualTo("[BOT] Bot 1"));
+            Assert.That(default(ScoreboardEntry).Name, Is.EqualTo(ScoreboardName.Literal(string.Empty)));
         }
 
         [Test]
         public void EntriesWithDifferentNamesAreNotEqual()
         {
-            var you = new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true);
+            var you = new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true);
 
-            Assert.That(you, Is.EqualTo(new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
-            Assert.That(you.GetHashCode(), Is.EqualTo(new ScoreboardEntry(0, ScoreboardRows.LocalPlayerName, Team.Alpha, 0, 0, ScoreboardConnection.None, true).GetHashCode()));
-            Assert.That(you, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardRows.PlayerName(0), Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
-        }
-
-        [TestCase(ScoreboardConnection.None, "")]
-        [TestCase(ScoreboardConnection.Connected, "接続中")]
-        [TestCase(ScoreboardConnection.Disconnected, "切断")]
-        public void ConnectionText(ScoreboardConnection connection, string expected)
-        {
-            Assert.That(GameText.Resolve(ScoreboardRows.ConnectionText(connection)), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void ConnectionTextIsKeyedAndNoneIsEmpty()
-        {
-            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.None).IsEmpty, Is.True);
-            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.Connected), Is.EqualTo(new LocalizedText("hud.scoreboard.connected")));
-            Assert.That(ScoreboardRows.ConnectionText(ScoreboardConnection.Disconnected), Is.EqualTo(new LocalizedText("hud.scoreboard.disconnected")));
-        }
-
-        [Test]
-        public void ConnectionTextRejectsUnknownValues()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => ScoreboardRows.ConnectionText((ScoreboardConnection)9));
-        }
-
-        [Test]
-        public void Names()
-        {
-            Assert.That(ScoreboardRows.PlayerName(3), Is.EqualTo(new LocalizedText("hud.scoreboard.player", 3)));
-            Assert.That(ScoreboardRows.TargetName(2), Is.EqualTo(new LocalizedText("hud.scoreboard.target", 2)));
-            Assert.That(ScoreboardRows.LocalPlayerName, Is.EqualTo(new LocalizedText("hud.scoreboard.you")));
-            Assert.That(GameText.Resolve(ScoreboardRows.PlayerName(3)), Is.EqualTo("Player 3"));
-            Assert.That(GameText.Resolve(ScoreboardRows.TargetName(2)), Is.EqualTo("標的 2"));
-            Assert.That(GameText.Resolve(ScoreboardRows.LocalPlayerName), Is.EqualTo("あなた"));
-            Assert.That(GameText.Resolve(ScoreboardRows.ConnectionCaption), Is.EqualTo("状態"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ScoreboardRows.TargetName(0));
-        }
-
-        [Test]
-        public void CountRejectsNegatives()
-        {
-            Assert.That(ScoreboardRows.Count(12), Is.EqualTo("12"));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ScoreboardRows.Count(-1));
+            Assert.That(you, Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
+            Assert.That(you.GetHashCode(), Is.EqualTo(new ScoreboardEntry(0, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, ScoreboardConnection.None, true).GetHashCode()));
+            Assert.That(you, Is.Not.EqualTo(new ScoreboardEntry(0, ScoreboardName.Player(0), Team.Alpha, 0, 0, ScoreboardConnection.None, true)));
         }
     }
 }

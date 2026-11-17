@@ -3,7 +3,7 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// スコアボードの 1 行。参加者 1 人分の名前・チーム・キル数・デス数・接続状態。並べ方は <see cref="ScoreboardRows"/> が決める。
+    /// スコアボードの 1 行。参加者 1 人分の Id・名前・チーム・キル数・デス数・接続状態で、文は持たない。並べ方は <see cref="ScoreboardRows"/> が決める。
     /// </summary>
     public readonly struct ScoreboardEntry : IEquatable<ScoreboardEntry>
     {
@@ -11,10 +11,10 @@ namespace Fps.Core
         public int PlayerId { get; }
 
         /// <summary>
-        /// 表示する名前。スコアボードが今の言語で文にする。言葉の入らない名前 (Bot や敵の名前) は <see cref="LocalizedText.Literal"/> で渡す。
-        /// <c>default(ScoreboardEntry)</c> では空の文。
+        /// 誰の行か。文にするのはスコアボードの UI。言葉の入らない名前 (敵の名前) は <see cref="ScoreboardName.Literal"/> で渡す。
+        /// <c>default(ScoreboardEntry)</c> では空の名前。
         /// </summary>
-        public LocalizedText Name { get; }
+        public ScoreboardName Name { get; }
 
         public Team Team { get; }
 
@@ -28,7 +28,7 @@ namespace Fps.Core
         public bool IsLocal { get; }
 
         /// <exception cref="ArgumentOutOfRangeException">kills か deaths が負。</exception>
-        public ScoreboardEntry(int playerId, LocalizedText name, Team team, int kills, int deaths, ScoreboardConnection connection, bool isLocal)
+        public ScoreboardEntry(int playerId, ScoreboardName name, Team team, int kills, int deaths, ScoreboardConnection connection, bool isLocal)
         {
             if (kills < 0)
             {

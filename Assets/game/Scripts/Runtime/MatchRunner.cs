@@ -16,7 +16,7 @@ namespace Fps.Runtime
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
     /// 制限時間は既定では無く (<see cref="TimeLimitSeconds"/> が 0)、HUD に残り時間も出さない。
     /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> を小さくする。
-    /// HUD があれば、開始時とキル・デスのたびに自分と標的のキル数・デス数を HUD のスコアボード (<see cref="IScoreboard"/>) に渡す。
+    /// 開始時とキル・デスのたびに自分と標的のキル数・デス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class MatchRunner : MonoBehaviour
@@ -52,8 +52,9 @@ namespace Fps.Runtime
 
         // スコアボードに出す、試合中に倒された回数 (Id ごと)。Match はプレイヤーのキル数しか数えないのでここで数える
         private readonly Dictionary<int, int> _deaths = new Dictionary<int, int>();
-        private readonly List<ScoreboardEntry> _scoreboardEntries = new List<ScoreboardEntry>();
         private Match _match;
+        // 止めるときに、後から別の側が出した一覧まで消さないよう、出した一覧を覚えておく
+        private ScoreboardEntry[] _publishedScoreboard;
         private BootstrapWorld _world;
         private Damageable _player;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -282,29 +283,33 @@ namespace Fps.Runtime
             _deaths[id] = DeathsOf(id) + 1;
         }
 
+        /// <summary>最後に <see cref="GameSignals.Scoreboard"/> に出した一覧。出す前と止めた後は null。</summary>
+        public IReadOnlyList<ScoreboardEntry> PublishedScoreboard => _publishedScoreboard;
+
         /// <summary>
-        /// 自分 (Alpha) と標的 (Bravo) のキル数・デス数を HUD のスコアボードに渡す。標的は撃ち返さないのでキル数はいつも 0。
-        /// HUD が無ければ (専用サーバー) 何もしない。
+        /// 自分 (Alpha) と標的 (Bravo) のキル数・デス数を <see cref="GameSignals.Scoreboard"/> に出す。標的は撃ち返さないのでキル数はいつも 0。
         /// </summary>
         private void ShowScoreboard()
         {
-            var scoreboard = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Scoreboard : null;
-            if (!GameUi.IsAlive(scoreboard) || _match == null)
+            if (_match == null)
             {
                 return;
             }
 
-            _scoreboardEntries.Clear();
-            _scoreboardEntries.Add(new ScoreboardEntry(
-                PlayerId, ScoreboardRows.LocalPlayerName, Team.Alpha, _match.Kills, PlayerDeaths, ScoreboardConnection.None, true));
+            // 止めるときに自分の出した一覧かを参照で見分けるので、出すたびに新しい配列にする
+            var entries = new ScoreboardEntry[_targetIds.Count + 1];
+            entries[0] = new ScoreboardEntry(
+                PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, _match.Kills, PlayerDeaths, ScoreboardConnection.None, true);
+            var i = 1;
             foreach (var targetId in _targetIds.Values)
             {
-                _scoreboardEntries.Add(new ScoreboardEntry(
-                    targetId, ScoreboardRows.TargetName(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId),
-                    ScoreboardConnection.None, false));
+                entries[i++] = new ScoreboardEntry(
+                    targetId, ScoreboardName.Target(targetId - PlayerId), Team.Bravo, 0, DeathsOf(targetId),
+                    ScoreboardConnection.None, false);
             }
 
-            scoreboard.SetEntries(_scoreboardEntries, Team.Alpha);
+            _publishedScoreboard = entries;
+            GameSignals.Scoreboard.Publish(entries);
         }
 
         /// <summary>試合の時間を deltaSeconds 進める。Play 中は Update から呼ぶ。Edit Mode のテストでは直接呼ぶ。</summary>
@@ -489,6 +494,12 @@ namespace Fps.Runtime
                 _match.StateChanged -= OnStateChanged;
             }
 
+            if (_publishedScoreboard != null)
+            {
+                GameSignals.Scoreboard.ClearIfCurrent(_publishedScoreboard);
+            }
+
+            _publishedScoreboard = null;
             _player = null;
             _world = null;
             _match = null;

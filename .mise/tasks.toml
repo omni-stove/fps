@@ -125,3 +125,7 @@ run = "bash scripts/comments.sh verify"
 [comments-test]
 description = "Run the tests of scripts/comments.sh"
 run = "bash scripts/comments-test.sh"
+
+[lint-test]
+description = "Run the tests of the /// comment check in scripts/lint.sh"
+run = "bash scripts/lint-test.sh"

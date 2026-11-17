@@ -41,10 +41,8 @@ namespace Shooter.NetV2
                 row.AirJumpsUsed);
         }
 
-        /// <summary>
-        /// 巻き戻すかを決める値 (泳いでいるか・壁走りの向き・リーンの向き) は authoritative のまま変えない。変えると食い違いを見逃す。
-        /// 走り始めを予測し損ねた壁走りの法線を空のまま返すのは、壁を調べるのに体を世界に置く必要があり、それを持つのが呼び手のため。
-        /// </summary>
+        // 巻き戻すかを決める値 (泳いでいるか・壁走りの向き・リーンの向き) を authoritative のまま変えないのは、変えると食い違いを見逃すため。
+        // 走り始めを予測し損ねた壁走りの法線を空のまま返すのは、壁を調べるのに体を世界に置く必要があり、それを持つのが呼び手のため。
         public static CharacterMotorState Complete(
             CharacterMotorState authoritative, CharacterMotorState predicted, IWaterVolumes water, StanceGeometry geometry)
         {

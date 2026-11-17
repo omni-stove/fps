@@ -6,26 +6,19 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ボイスチャットの、プレイヤーが決める設定 (マイクの入り切りと、受ける声の音量)。
-    /// JSON (<see cref="ToJson"/> / <see cref="FromJson"/>) で保存する。
-    /// </summary>
     public sealed class VoiceSettings : IEquatable<VoiceSettings>
     {
         public const int CurrentVersion = 1;
 
         public const bool DefaultMicrophoneEnabled = true;
 
-        /// <summary>受ける声の音量の既定 (%)。100 でそのまま。</summary>
         public const int DefaultVolumePercent = 100;
 
-        /// <summary>受ける声の音量の最大 (%)。EOS の RTC の受ける音量の上限 (200%) に合わせる。</summary>
+        // 200 なのは、EOS の RTC の受ける音量の上限 (200%) に合わせるため。
         public const int MaxVolumePercent = 200;
 
-        /// <summary>受ける声の音量の既定 (倍率)。</summary>
         public const float DefaultVolume = DefaultVolumePercent / 100f;
 
-        /// <summary>受ける声の音量の最大 (倍率)。</summary>
         public const float MaxVolume = MaxVolumePercent / 100f;
 
         private const string _versionKey = "version";
@@ -36,9 +29,6 @@ namespace Shooter.Core
 
         public static readonly VoiceSettings Default = new VoiceSettings(DefaultMicrophoneEnabled, DefaultVolumePercent);
 
-        /// <param name="microphoneEnabled">マイクを使うか。false なら押しても送らない。</param>
-        /// <param name="volumePercent">受ける声の音量 (%)。0 で無音、<see cref="MaxVolumePercent"/> で最大。</param>
-        /// <exception cref="ArgumentOutOfRangeException">volumePercent が範囲の外。</exception>
         public VoiceSettings(bool microphoneEnabled, int volumePercent)
         {
             if (volumePercent < 0 || volumePercent > MaxVolumePercent)
@@ -53,10 +43,8 @@ namespace Shooter.Core
 
         public bool MicrophoneEnabled { get; }
 
-        /// <summary>受ける声の音量 (%)。</summary>
         public int VolumePercent { get; }
 
-        /// <summary>受ける声の音量 (倍率)。0 で無音、1 でそのまま、<see cref="MaxVolume"/> で最大。</summary>
         public float Volume => VolumePercent / 100f;
 
         public VoiceSettings WithMicrophoneEnabled(bool enabled)
@@ -64,13 +52,11 @@ namespace Shooter.Core
             return new VoiceSettings(enabled, VolumePercent);
         }
 
-        /// <summary>音量を変えた設定。範囲の外は範囲に収める。</summary>
         public VoiceSettings WithVolumePercent(int volumePercent)
         {
             return new VoiceSettings(MicrophoneEnabled, Math.Max(0, Math.Min(MaxVolumePercent, volumePercent)));
         }
 
-        /// <summary>空白も改行も入れない 1 行の JSON。<see cref="FromJson"/> で同じ設定に読み戻せる。</summary>
         public string ToJson()
         {
             var builder = new StringBuilder();
@@ -85,11 +71,6 @@ namespace Shooter.Core
             return builder.ToString();
         }
 
-        /// <summary>
-        /// <see cref="ToJson"/> の JSON を読む。読めない所は初期値 (範囲の外の音量は範囲に収めた値) にし、理由を <paramref name="problems"/> に入れる。
-        /// 無い欄は理由を出さずに初期値で補う。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">json が null。</exception>
         public static VoiceSettings FromJson(string json, out IReadOnlyList<string> problems)
         {
             if (json == null)

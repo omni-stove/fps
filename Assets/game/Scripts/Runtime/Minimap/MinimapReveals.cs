@@ -18,8 +18,6 @@ namespace Shooter.Runtime
 
         private static float Now => Clock != null ? Clock() : Time.time;
 
-        /// <exception cref="ArgumentNullException">target が null か破棄済み。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">seconds が正の有限の値でない。</exception>
         public static void Reveal(Damageable target, float seconds)
         {
             if (target == null)
@@ -64,7 +62,6 @@ namespace Shooter.Runtime
         }
 
         // 読む前に Prune するのは、秒数の切れた敵を消すための別の Tick を持たないため。
-        /// <exception cref="ArgumentNullException">into が null。</exception>
         public static void CopyRevealedTo(List<Damageable> into)
         {
             if (into == null)

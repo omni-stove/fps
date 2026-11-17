@@ -73,7 +73,7 @@ namespace Shooter.Core
 
     public sealed class WallRunTuning
     {
-        /// <summary>切なのは、壁走りが合わないゲームでも壁際で跳んだだけで走り出さないよう、使うゲームが入れるものにするため。</summary>
+        // 既定で切なのは、壁走りが合わないゲームでも壁際で跳んだだけで走り出さないよう、使うゲームが入れるものにするため。
         public const bool DefaultEnabled = false;
 
         public const float DefaultMaxSeconds = 1.5f;

@@ -4,16 +4,12 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>ボイスチャットの今の状態。話している人は参加者の Id で持ち、名前に引くのは UI (<see cref="IParticipants"/>)。</summary>
+    // 話している人を名前でなく参加者の Id で持つのは、名前に引くのを UI (IParticipants) に任せるため。
     public readonly struct VoiceStatus : IEquatable<VoiceStatus>
     {
         // 渡された一覧を後から書き換えられても変わらないよう写しを持つ。default ではコンストラクタを通らず null になるので、読むときに空へ寄せる。
         private readonly int[] _speakingIds;
 
-        /// <param name="isLocalSpeaking">自分が話しているか。</param>
-        /// <param name="speakingIds">今話している参加者の Id。並びはそのまま持つ。null なら空。</param>
-        /// <param name="microphoneAvailable">マイクが使えるか。</param>
-        /// <exception cref="ArgumentException">speakingIds に同じ Id が 2 度ある、マイクが使えないのに自分が話している。</exception>
         public VoiceStatus(bool isLocalSpeaking, IReadOnlyList<int> speakingIds, bool microphoneAvailable)
         {
             if (isLocalSpeaking && !microphoneAvailable)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>ゲームパッドの 2 つのモーターに入れる強さ (0〜1)。</summary>
     public readonly struct RumbleMotors : IEquatable<RumbleMotors>
     {
         public static RumbleMotors Zero => default;
@@ -49,18 +48,12 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>
-    /// 受けた振動 (<see cref="RumblePulse"/>) を秒数のあいだ持ち、今モーターに入れる強さを出す。
-    /// 重なっている間はモーターごとに強い方を取る (足さない)。設定のオンオフと強さの倍率は <see cref="Sample"/> で掛ける。
-    /// </summary>
     public sealed class RumbleModel
     {
         private readonly List<Active> _active = new List<Active>();
 
-        /// <summary>まだ続いている振動の数。</summary>
         public int ActiveCount => _active.Count;
 
-        /// <summary>設定を掛ける前の、モーターごとに一番強い値。</summary>
         public RumbleMotors Current
         {
             get
@@ -77,11 +70,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// 中心から distance 離れた爆発の振動。強さは中心で pulse のまま、radius で 0 になるよう距離に比例して減る。秒数は変えない。
-        /// radius 以上離れていれば <see cref="RumblePulse.None"/>。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">distance が負か有限でない、radius が 0 以下か有限でない。</exception>
         public static RumblePulse ForExplosion(RumblePulse pulse, float distance, float radius)
         {
             if (!(distance >= 0f) || float.IsInfinity(distance))
@@ -103,10 +91,6 @@ namespace Shooter.Core
             return new RumblePulse(pulse.Low * factor, pulse.High * factor, pulse.Seconds);
         }
 
-        /// <summary>
-        /// 設定を掛けた強さ。enabled が false なら 0、そうでなければ raw の両方のモーターに strength (0〜1) を掛ける。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">strength が 0〜1 でない。</exception>
         public static RumbleMotors Apply(RumbleMotors raw, bool enabled, float strength)
         {
             if (!(strength >= 0f && strength <= 1f))
@@ -122,7 +106,6 @@ namespace Shooter.Core
             return new RumbleMotors(raw.Low * strength, raw.High * strength);
         }
 
-        /// <summary>振動を足す。何も回さない振動 (<see cref="RumblePulse.IsSilent"/>) は持たず false を返す。</summary>
         public bool Add(RumblePulse pulse)
         {
             if (pulse.IsSilent)
@@ -134,11 +117,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// deltaSeconds だけ時間を進め、秒数を使い切った振動を捨てる。使い切った振動が最後の 1 つなら true
-        /// (モーターを止める合図)。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public bool Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -167,14 +145,11 @@ namespace Shooter.Core
             return _active.Count == 0;
         }
 
-        /// <summary>今の強さ (<see cref="Current"/>) に設定を掛けたもの (<see cref="Apply"/>)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">strength が 0〜1 でない。</exception>
         public RumbleMotors Sample(bool enabled, float strength)
         {
             return Apply(Current, enabled, strength);
         }
 
-        /// <summary>続いている振動をすべて捨てる。</summary>
         public void Reset()
         {
             _active.Clear();

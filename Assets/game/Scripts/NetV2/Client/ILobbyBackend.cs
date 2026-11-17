@@ -21,6 +21,12 @@ namespace Shooter.NetV2
         /// <summary>ログインが切れた (認証の期限切れを更新できなかった・サービスから切断された)。引数は理由。</summary>
         event Action<string> LoggedOut;
 
+        /// <summary>
+        /// 入っているメンバー用ロビーで、メンバーの属性が変わった。1 つ目はロビー、2 つ目はメンバーの ProductUserId。
+        /// 新しい値は <see cref="ReadMemberAttributes"/> で読む。
+        /// </summary>
+        event Action<string, string> MemberAttributesChanged;
+
         /// <summary>SDK の処理とコールバックを進める。毎フレーム呼ぶ。</summary>
         void Tick();
 
@@ -32,6 +38,7 @@ namespace Shooter.NetV2
 
         /// <summary>
         /// 自分がオーナーのメンバー用ロビー (パーティ) を <paramref name="bucketId"/> に作って入る。成功したら作ったロビーを渡す。
+        /// ロビーは公開の検索に出さず、ロビーの ID (<see cref="LobbyInfo.Id"/>) を参加のコードとして渡した人だけが入れる。
         /// </summary>
         /// <param name="bucketId">ロビーを置くバケット。</param>
         /// <param name="maxMembers">入れる最大人数 (1 以上)。</param>
@@ -40,10 +47,16 @@ namespace Shooter.NetV2
         void CreateMemberLobby(
             string bucketId, int maxMembers, IReadOnlyList<LobbyAttribute> attributes, Action<LobbyInfo, string> done);
 
-        /// <summary>メンバー用ロビー <paramref name="lobbyId"/> に入る。成功したら入ったロビーを渡す。</summary>
+        /// <summary>
+        /// 参加のコード (メンバー用ロビーの ID) <paramref name="lobbyId"/> のロビーに入る。前後の空白は無視する。
+        /// 成功したら入ったロビーを渡す。そのロビーが無ければ <see cref="LobbyBackendErrors.NotFound"/> で失敗する。
+        /// </summary>
         void JoinMemberLobby(string lobbyId, Action<LobbyInfo, string> done);
 
-        /// <summary>メンバー用ロビー <paramref name="lobbyId"/> から出る。オーナーが出たときに誰に渡すかはサービスに任せる。</summary>
+        /// <summary>
+        /// メンバー用ロビー <paramref name="lobbyId"/> から出る。オーナーが出たときに誰に渡すかはサービスに任せる。
+        /// もう入っていない (閉じられた・追い出された) ときも成功にする。
+        /// </summary>
         void LeaveMemberLobby(string lobbyId, Action<string> done);
 
         /// <summary>

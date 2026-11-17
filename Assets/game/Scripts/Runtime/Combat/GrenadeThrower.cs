@@ -35,9 +35,6 @@ namespace Fps.Runtime
         /// <summary>キルログに出す武器の名前。</summary>
         public static LocalizedText Name => new LocalizedText("weapon.grenade");
 
-        /// <summary>目から視線の向きへ、グレネードを出す位置までの距離 (m)。体のカプセル (半径 0.5m) の外に出す。</summary>
-        public const float ReleaseDistance = 0.7f;
-
         [SerializeField, Min(0f), Tooltip("投げてから爆発するまでの秒数")]
         private float _fuseSeconds = GrenadeSpec.DefaultFuseSeconds;
 
@@ -325,7 +322,7 @@ namespace Fps.Runtime
             }
 
             var spec = Spec;
-            ResolveThrow(out var position, out var direction);
+            ResolveRelease(transform, spec, out var position, out var direction);
             if (!_inventory.TryTake(_inventory.SelectedIndex))
             {
                 return false;
@@ -340,20 +337,25 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// グレネードを出す位置と投げる向き。本体の <see cref="ViewRig"/> が初期化されていれば、目から見てカメラの正面の向きに
-        /// <see cref="ReleaseDistance"/> 進んだ所 (間に壁があれば壁の手前)。無ければ本体の位置から正面へ。
+        /// 次に投げる種類 (<see cref="Spec"/>) のグレネードを出す位置と投げる向き。本体の <see cref="ViewRig"/> が初期化されていれば、目から見てカメラの正面の向きに
+        /// <see cref="GrenadeSpec.ReleaseDistance"/> 進んだ所 (間に壁があれば壁の手前)。無ければ本体の位置から正面へ。
         /// </summary>
         public void ResolveThrow(out Vector3 position, out Vector3 direction)
         {
-            ResolveRelease(transform, out position, out direction);
+            ResolveRelease(transform, Spec, out position, out direction);
         }
 
         // 注意をそらす物 (DistractionThrowAbility) もグレネードと同じ所から同じ弧で投げるよう、本体だけから求められる形で公開する。
-        public static void ResolveRelease(Transform body, out Vector3 position, out Vector3 direction)
+        public static void ResolveRelease(Transform body, GrenadeSpec spec, out Vector3 position, out Vector3 direction)
         {
             if (body == null)
             {
                 throw new ArgumentNullException(nameof(body));
+            }
+
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
             }
 
             var rig = body.GetComponent<ViewRig>();
@@ -370,10 +372,10 @@ namespace Fps.Runtime
             }
 
             direction = direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector3.forward;
-            var distance = ReleaseDistance;
-            if (TryNearestObstacle(body, origin, direction, ReleaseDistance + ThrownGrenade.BodyRadius, out var hitDistance))
+            var distance = spec.ReleaseDistance;
+            if (TryNearestObstacle(body, origin, direction, spec.ReleaseDistance + spec.BodyRadius, out var hitDistance))
             {
-                distance = Mathf.Max(0f, hitDistance - ThrownGrenade.BodyRadius);
+                distance = Mathf.Max(0f, hitDistance - spec.BodyRadius);
             }
 
             position = origin + (direction * distance);

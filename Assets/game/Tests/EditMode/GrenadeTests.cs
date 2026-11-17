@@ -490,7 +490,7 @@ namespace Fps.Tests.EditMode
             Assert.That(grenade.IsStuck, Is.True);
             Assert.That(grenade.StuckTo, Is.SameAs(wall.transform));
             Assert.That(grenade.GetComponent<Rigidbody>().isKinematic, Is.True, "it does not bounce or fall");
-            Assert.That(grenade.transform.position, Is.EqualTo(new Vector3(0f, 1f, 2.9f - ThrownGrenade.BodyRadius)).Using(Vector3EqualityComparer.Instance));
+            Assert.That(grenade.transform.position, Is.EqualTo(new Vector3(0f, 1f, 2.9f - _sticky.BodyRadius)).Using(Vector3EqualityComparer.Instance));
             Assert.That(grenade.StickTo(wall, Vector3.zero, Vector3.up), Is.False, "it sticks only to the first thing");
         }
 

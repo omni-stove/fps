@@ -9,15 +9,11 @@ namespace Fps.Server
     /// 摩擦で滑りが転がりに変わる。人とほかのグレネードには当たらない (Unity でも全員の CharacterController との衝突を切っていた)。
     /// </summary>
     /// <remarks>
-    /// 値は Unity のグレネード (ThrownGrenade の BodyRadius・Bounciness・摩擦、NetGrenade.prefab の Rigidbody) と、
-    /// プロジェクトの物理の設定 (重力・跳ね返りのしきい値) にそろえる。
+    /// 球の半径・跳ね返り・摩擦・回転の減りは、オフラインの ThrownGrenade と同じく投げた種類の <see cref="GrenadeSpec"/> から読む。
+    /// 重力と跳ね返りのしきい値は Unity のプロジェクトの物理の設定にそろえる。
     /// </remarks>
     internal sealed partial class ServerGrenadeFlight
     {
-        public const float BodyRadius = 0.08f;
-        public const float Bounciness = 0.35f;
-        public const float Friction = 0.6f;
-        public const float AngularDamping = 0.05f;
         public const float BounceThreshold = 2f;
         public const float Gravity = -9.81f;
 
@@ -29,9 +25,14 @@ namespace Fps.Server
 
         private readonly IWorldCollision _world;
 
-        public ServerGrenadeFlight(IWorldCollision world, Vector3 position, Vector3 velocity, GrenadeStickiness stickiness = GrenadeStickiness.None)
+        public ServerGrenadeFlight(IWorldCollision world, Vector3 position, Vector3 velocity, GrenadeSpec spec)
         {
-            Stickiness = SpecGuardDefined(stickiness);
+            ArgumentNullException.ThrowIfNull(spec);
+            Stickiness = spec.Stickiness;
+            BodyRadius = spec.BodyRadius;
+            Bounciness = spec.Bounciness;
+            Friction = spec.Friction;
+            AngularDamping = spec.AngularDamping;
             _world = world ?? throw new ArgumentNullException(nameof(world));
             if (!IsFinite(position) || !IsFinite(velocity))
             {
@@ -53,6 +54,14 @@ namespace Fps.Server
         public int Bounces { get; private set; }
 
         public GrenadeStickiness Stickiness { get; }
+
+        public float BodyRadius { get; }
+
+        public float Bounciness { get; }
+
+        public float Friction { get; }
+
+        public float AngularDamping { get; }
 
         /// <summary>くっついて止まっているか。止まった後は <see cref="Step"/> で落ちず、くっついた相手に付いて動く。</summary>
         public bool IsStuck { get; private set; }
@@ -131,16 +140,6 @@ namespace Fps.Server
             IsStuck = true;
             Velocity = Vector3.Zero;
             AngularVelocity = Vector3.Zero;
-        }
-
-        private static GrenadeStickiness SpecGuardDefined(GrenadeStickiness stickiness)
-        {
-            if (!Enum.IsDefined(stickiness))
-            {
-                throw new ArgumentOutOfRangeException(nameof(stickiness), stickiness, "stickiness is not a defined GrenadeStickiness");
-            }
-
-            return stickiness;
         }
 
         private void Bounce(Vector3 normal)

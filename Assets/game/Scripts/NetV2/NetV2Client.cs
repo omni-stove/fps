@@ -588,7 +588,7 @@ namespace Fps.NetV2
 
                 if (!_grenadeViews.TryGetValue(id, out var view) || view == null)
                 {
-                    view = CreateGrenadeView();
+                    view = CreateGrenadeView(_world.GrenadeTypeId(id));
                     _grenadeViews[id] = view;
                 }
 
@@ -618,7 +618,7 @@ namespace Fps.NetV2
             return false;
         }
 
-        private GameObject CreateGrenadeView()
+        private GameObject CreateGrenadeView(string typeId)
         {
             GameObject view;
             if (GrenadePrefab != null)
@@ -630,7 +630,8 @@ namespace Fps.NetV2
             {
                 view = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 view.name = ThrownGrenade.ObjectName;
-                view.transform.localScale = Vector3.one * (ThrownGrenade.BodyRadius * 2f);
+                var spec = KitTuning.Grenades.TryFind(typeId, out var typed) ? typed : ThrownGrenade.UntypedSpec;
+                view.transform.localScale = Vector3.one * (spec.BodyRadius * 2f);
 
                 // 当たりはサーバーが取るので、見た目に Unity の物理を持たせない
                 Destroy(view.GetComponent<Collider>());

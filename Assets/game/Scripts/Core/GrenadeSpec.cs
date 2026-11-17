@@ -4,7 +4,7 @@ namespace Fps.Core
 {
     /// <summary>
     /// グレネード 1 種類のバランス値。<see cref="Id"/> で引き、信管・投げる間隔・初速と、信管が切れたときの効果 (<see cref="Impact"/>: 爆発・状態異常・範囲効果)、
-    /// 投げたときのくっつき方 (<see cref="Stickiness"/>) を持つ。
+    /// 投げたときのくっつき方 (<see cref="Stickiness"/>)、球の大きさ・重さ・跳ね方 (<see cref="BodyRadius"/> など)、手放す距離 (<see cref="ReleaseDistance"/>) を持つ。
     /// 時間は秒、速さは m/s、距離は m。生成時に値を検査し、以後は変わらない。
     /// </summary>
     public sealed class GrenadeSpec
@@ -40,6 +40,24 @@ namespace Fps.Core
         /// <summary>生成時に指定しなかったときの <see cref="StructureDamageAtCenter"/>。</summary>
         public const int DefaultStructureDamageAtCenter = 150;
 
+        /// <summary>生成時に指定しなかったときの <see cref="BodyRadius"/>。</summary>
+        public const float DefaultBodyRadius = 0.08f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="Mass"/>。</summary>
+        public const float DefaultMass = 0.4f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="Bounciness"/>。</summary>
+        public const float DefaultBounciness = 0.35f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="Friction"/>。</summary>
+        public const float DefaultFriction = 0.6f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="AngularDamping"/>。Unity の Rigidbody の既定と同じ。</summary>
+        public const float DefaultAngularDamping = 0.05f;
+
+        /// <summary>生成時に指定しなかったときの <see cref="ReleaseDistance"/>。体のカプセル (半径 0.5m) の外に出す。</summary>
+        public const float DefaultReleaseDistance = 0.7f;
+
         /// <summary>すべて既定値の Spec (破片手榴弾)。</summary>
         public static readonly GrenadeSpec Default = new GrenadeSpec();
 
@@ -55,6 +73,12 @@ namespace Fps.Core
         /// <param name="nameKey">名前を引く表のキー。空なら名前は id。</param>
         /// <param name="stickiness">定義済みの値。</param>
         /// <param name="rollDamping">地面に触れている間の転がりの減り方 (1/s)。0 以上の有限値。</param>
+        /// <param name="bodyRadius">当たり判定の球の半径 (m)。0 より大きい有限値。</param>
+        /// <param name="mass">重さ (kg)。0 より大きい有限値。</param>
+        /// <param name="bounciness">跳ね返りの強さ。0 以上 1 以下。</param>
+        /// <param name="friction">当たった面との摩擦の係数。0 以上の有限値。</param>
+        /// <param name="angularDamping">回転の減り方 (1/s)。0 以上の有限値。</param>
+        /// <param name="releaseDistance">目からグレネードを出す位置までの距離 (m)。0 以上の有限値。</param>
         public GrenadeSpec(
             float fuseSeconds = DefaultFuseSeconds,
             float throwSeconds = DefaultThrowSeconds,
@@ -67,7 +91,13 @@ namespace Fps.Core
             string id = DefaultId,
             string nameKey = DefaultNameKey,
             GrenadeStickiness stickiness = GrenadeStickiness.None,
-            float rollDamping = DefaultRollDamping)
+            float rollDamping = DefaultRollDamping,
+            float bodyRadius = DefaultBodyRadius,
+            float mass = DefaultMass,
+            float bounciness = DefaultBounciness,
+            float friction = DefaultFriction,
+            float angularDamping = DefaultAngularDamping,
+            float releaseDistance = DefaultReleaseDistance)
             : this(
                 id,
                 nameKey,
@@ -77,7 +107,13 @@ namespace Fps.Core
                 throwSpeed,
                 throwLiftSpeed,
                 stickiness,
-                rollDamping)
+                rollDamping,
+                bodyRadius,
+                mass,
+                bounciness,
+                friction,
+                angularDamping,
+                releaseDistance)
         {
         }
 
@@ -90,7 +126,13 @@ namespace Fps.Core
             float throwSpeed = DefaultThrowSpeed,
             float throwLiftSpeed = DefaultThrowLiftSpeed,
             GrenadeStickiness stickiness = GrenadeStickiness.None,
-            float rollDamping = DefaultRollDamping)
+            float rollDamping = DefaultRollDamping,
+            float bodyRadius = DefaultBodyRadius,
+            float mass = DefaultMass,
+            float bounciness = DefaultBounciness,
+            float friction = DefaultFriction,
+            float angularDamping = DefaultAngularDamping,
+            float releaseDistance = DefaultReleaseDistance)
         {
             Id = SpecGuard.LowercaseUuid(id, nameof(id));
             NameKey = SpecGuard.NameKey(nameKey);
@@ -101,6 +143,12 @@ namespace Fps.Core
             ThrowLiftSpeed = SpecGuard.NonNegativeFinite(throwLiftSpeed, nameof(throwLiftSpeed));
             Stickiness = SpecGuard.Defined(stickiness, nameof(stickiness));
             RollDamping = SpecGuard.NonNegativeFinite(rollDamping, nameof(rollDamping));
+            BodyRadius = SpecGuard.PositiveFinite(bodyRadius, nameof(bodyRadius));
+            Mass = SpecGuard.PositiveFinite(mass, nameof(mass));
+            Bounciness = SpecGuard.Fraction(bounciness, nameof(bounciness));
+            Friction = SpecGuard.NonNegativeFinite(friction, nameof(friction));
+            AngularDamping = SpecGuard.NonNegativeFinite(angularDamping, nameof(angularDamping));
+            ReleaseDistance = SpecGuard.NonNegativeFinite(releaseDistance, nameof(releaseDistance));
         }
 
         public string Id { get; }
@@ -132,6 +180,24 @@ namespace Fps.Core
         /// 地面 (上を向いた面) に触れている間、水平の速さと回転を毎秒 e^-RollDamping 倍に減らす割合 (1/s)。0 なら物理の摩擦だけで転がり続ける。
         /// </summary>
         public float RollDamping { get; }
+
+        /// <summary>当たり判定の球の半径 (m)。オフラインの球とサーバーの飛び方が同じ値を使う。</summary>
+        public float BodyRadius { get; }
+
+        /// <summary>重さ (kg)。オフラインの Rigidbody に使う (サーバーの飛び方は重さで変わらない)。</summary>
+        public float Mass { get; }
+
+        /// <summary>面に当たったときに、面へ向かう速さのうち跳ね返す割合。</summary>
+        public float Bounciness { get; }
+
+        /// <summary>当たった面との摩擦の係数。滑りを転がりに変える。</summary>
+        public float Friction { get; }
+
+        /// <summary>回転を減らす割合 (1/s)。毎秒 1 / (1 + AngularDamping × 秒) 倍になる。</summary>
+        public float AngularDamping { get; }
+
+        /// <summary>目から視線の向きへ、グレネードを出す位置までの距離 (m)。間に壁があれば球が埋まらない壁の手前に出す。</summary>
+        public float ReleaseDistance { get; }
 
         /// <summary>爆発が人に与えるダメージ。爆発しない種類なら null。</summary>
         public ExplosionDamage Explosion => Impact.Explosion?.Damage;

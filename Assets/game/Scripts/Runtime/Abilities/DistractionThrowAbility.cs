@@ -61,7 +61,7 @@ namespace Fps.Runtime
                 throw new ArgumentNullException(nameof(owner));
             }
 
-            GrenadeThrower.ResolveRelease(owner.transform, out var position, out var direction);
+            GrenadeThrower.ResolveRelease(owner.transform, ThrownGrenade.UntypedSpec, out var position, out var direction);
             var velocity = GrenadeThrower.LaunchVelocity(direction, _spec.ThrowSpeed, _spec.ThrowLiftSpeed);
             var thrown = ThrownDistraction.Spawn(owner, position, velocity, _spec, _visualPrefab, _landingSound);
             Debug.Log(ThrownDistraction.FormatThrownLog(position, velocity), owner);

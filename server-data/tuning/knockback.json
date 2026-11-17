@@ -1,0 +1,20 @@
+{
+  "explosionSpeed": 8,
+  "explosionUpwardRatio": 0.45,
+  "explosionWeightFactor": 1,
+  "meleeSpeed": 4,
+  "meleeUpwardRatio": 0.2,
+  "meleeWeightFactor": 1,
+  "chargeSpeed": 7,
+  "chargeUpwardRatio": 0.35,
+  "chargeWeightFactor": 1,
+  "minSpeed": 1.5,
+  "minAirSeconds": 0.15,
+  "maxAirSeconds": 3,
+  "airControl": 1,
+  "gravity": 20,
+  "recoverSeconds": 0.4,
+  "landingSnapRadius": 4,
+  "playerWeight": 1,
+  "enemyWeight": 1
+}

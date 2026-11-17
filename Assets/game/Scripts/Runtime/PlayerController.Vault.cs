@@ -30,8 +30,8 @@ namespace Fps.Runtime
         public const float VaultSurfaceInset = 0.02f;
 
         /// <summary>
-        /// 奥行きは、手前の面から <see cref="VaultProbe.MaxDepth"/> よりこれだけ先から戻る Ray で測る (m)。
-        /// ちょうど MaxDepth の厚さも測れるようにするため。ネット対戦も同じ値で測る。
+        /// 奥行きは、手前の面から <see cref="MotorSpec.VaultMaxDepth"/> よりこれだけ先から戻る Ray で測る (m)。
+        /// ちょうど奥行きの上限の厚さも測れるようにするため。ネット対戦も同じ値で測る。
         /// </summary>
         public const float VaultDepthSlack = 0.05f;
 
@@ -216,19 +216,20 @@ namespace Fps.Runtime
 
             forward.Normalize();
             var feetY = VaultFeetY();
-            var maxHeight = _motor.Spec.VaultMaxHeight;
-            if (!TryFindVaultFace(feetY, forward, maxHeight, out var hit))
+            var spec = _motor.Spec;
+            var maxHeight = spec.VaultMaxHeight;
+            if (!TryFindVaultFace(feetY, forward, maxHeight, spec.VaultReach, out var hit))
             {
                 return VaultProbeResult.None;
             }
 
             var into = -Vector3.ProjectOnPlane(hit.normal, Vector3.up).normalized;
             var topHeight = MeasureVaultTop(hit, into, feetY, maxHeight);
-            var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureVaultDepth(hit, into);
+            var depth = into == Vector3.zero ? float.PositiveInfinity : MeasureVaultDepth(hit, into, spec.VaultMaxDepth);
             var radius = VaultBodyRadius();
             var width = MeasureVaultFaceWidth(hit, into, radius);
             var sample = new VaultObstacleSample(hit.distance * Vector3.Dot(forward, into), hit.normal.ToNumerics(), topHeight, depth, width);
-            return VaultProbe.Evaluate(sample, forward.ToNumerics(), maxHeight, radius, IsVaultPathClear);
+            return VaultProbe.Evaluate(sample, forward.ToNumerics(), spec, radius, IsVaultPathClear);
         }
 
         // 当たったコライダーだけに上から Ray を下ろして上端を測る。始点が中 (それより高い) なら当たらないので、始点の高さ (上限より高い) とする。
@@ -240,16 +241,16 @@ namespace Fps.Runtime
             return hit.collider.Raycast(ray, out var top, startHeight) ? Mathf.Max(0f, top.point.y - feetY) : startHeight;
         }
 
-        // 手前の面から MaxDepth より先から当たったコライダーへ戻る Ray で向こうの面を探す。始点が中 (もっと厚い) なら当たらないので無限大とする。
-        private static float MeasureVaultDepth(RaycastHit hit, Vector3 into)
+        // 手前の面から奥行きの上限より先から当たったコライダーへ戻る Ray で向こうの面を探す。始点が中 (もっと厚い) なら当たらないので無限大とする。
+        private static float MeasureVaultDepth(RaycastHit hit, Vector3 into, float maxDepth)
         {
-            var reach = VaultProbe.MaxDepth + VaultDepthSlack;
+            var reach = maxDepth + VaultDepthSlack;
             var ray = new Ray(hit.point + (into * reach), -into);
             return hit.collider.Raycast(ray, out var back, reach) ? Mathf.Max(0f, reach - back.distance) : float.PositiveInfinity;
         }
 
         // 軌跡の頂点と各区間の中点に立った体を置き、どこも自分以外に重ならなければ通れるとする。
-        // 越える区間も MaxDepth までの奥行きなので中点を足せば間は体の幅ほどになり、CapsuleCast で掃くほどの粗さではない。
+        // 越える区間も奥行きの上限 (VaultMaxDepth) までなので中点を足せば間は体の幅ほどになり、CapsuleCast で掃くほどの粗さではない。
         private bool IsVaultPathClear(VaultPath path)
         {
             var points = path.Points;
@@ -267,7 +268,7 @@ namespace Fps.Runtime
         }
 
         // 1 本では張り出した縁の下をくぐるので高さを並べる。並べ方と選び方はネット対戦の CharacterVaultSensor と揃える。
-        private bool TryFindVaultFace(float feetY, Vector3 forward, float maxHeight, out RaycastHit face)
+        private bool TryFindVaultFace(float feetY, Vector3 forward, float maxHeight, float reach, out RaycastHit face)
         {
             var found = false;
             face = default;
@@ -276,7 +277,7 @@ namespace Fps.Runtime
             for (var i = 0; i < count; i++)
             {
                 var origin = new Vector3(position.x, feetY + VaultProbe.ProbeHeightAt(i), position.z);
-                if (TryVaultCast(origin, forward, VaultProbe.MaxReach, out var hit)
+                if (TryVaultCast(origin, forward, reach, out var hit)
                     && VaultProbe.IsBetterFace(found, face.normal.ToNumerics(), face.distance, hit.normal.ToNumerics(), hit.distance))
                 {
                     face = hit;

@@ -95,6 +95,9 @@ namespace Fps.Runtime
         private GameObject _indicatorObject;
         private bool _warnedIndicator;
 
+        // ApplySpec で渡された値は波の強さのように敵のデータを元に作り直したものなので、EnemyAgent と同じくデータより優先する。
+        private bool _specApplied;
+
         public static IReadOnlyList<EnemyStealth> Active => _active;
 
         public StealthAwareness Awareness => _awareness;
@@ -115,8 +118,20 @@ namespace Fps.Runtime
 
         public string Id => _agent != null ? _agent.Id : name;
 
+        /// <summary>
+        /// 敵のデータ (<see cref="EnemyAgent.EffectiveDefinition"/>) があればそこから、無ければ Inspector の値から発見ゲージの設定を作る。
+        /// <see cref="ApplySpec"/> を呼んだ後は、データがあってもその値から作る。
+        /// 値が不正なら <see cref="ArgumentException"/> (データの値なら <see cref="EnemyDefinitionException"/>)。
+        /// </summary>
         public AwarenessSpec CreateSpec()
         {
+            var agent = _agent != null ? _agent : GetComponent<EnemyAgent>();
+            var definition = agent != null ? agent.EffectiveDefinition : null;
+            if (definition != null && !_specApplied)
+            {
+                return definition.ToAwarenessSpec();
+            }
+
             return new AwarenessSpec(
                 _fieldOfViewDegrees,
                 _gainPerSecond,
@@ -169,6 +184,7 @@ namespace Fps.Runtime
             _gunshotGain = spec.GunshotGain;
             _footstepGain = spec.FootstepGain;
             _investigateLevel = spec.InvestigateLevel;
+            _specApplied = true;
         }
 
         // EnemyAgent の初期化 (Awake) の後でないと Brain が無いので、Start でつなぐ。テストからは直接呼ぶ。

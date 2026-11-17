@@ -4,7 +4,8 @@ using System.Numerics;
 namespace Fps.Core
 {
     /// <summary>
-    /// 軌跡は <see cref="VaultProbe.PlanPath"/> が作る形 (始点が 0 の 4 頂点、速さ <see cref="VaultProbe.Speed"/>) に限り、始点以外の 3 頂点だけを持つ。
+    /// 軌跡は <see cref="VaultProbe.PlanPath"/> が作る形 (始点が 0 の 4 頂点) に限り、始点以外の 3 頂点だけを持つ。
+    /// 速さは持たず、<see cref="ToPath"/> で <see cref="MotorSpec.VaultSpeed"/> を渡して戻す (スナップショットに速さを載せずに済むよう、両端が同じ設定で動く前提にする)。
     /// 軌跡を作るときの当たりの検査は始めた tick にしか行わないので、巻き戻した tick から再シミュレーションしても頂点を持っていれば同じ道をたどれる。
     /// </summary>
     public readonly struct CharacterVaultState : IEquatable<CharacterVaultState>
@@ -42,7 +43,7 @@ namespace Fps.Core
             }
 
             var points = path.Points;
-            if (points.Count != PointCount || points[0] != Vector3.Zero || !path.Speed.Equals(VaultProbe.Speed))
+            if (points.Count != PointCount || points[0] != Vector3.Zero)
             {
                 throw new ArgumentException("path must be planned by VaultProbe.PlanPath", nameof(path));
             }
@@ -84,14 +85,15 @@ namespace Fps.Core
             return points[1].Equals(Rise) && points[2].Equals(Cross) && points[3].Equals(Land);
         }
 
-        public VaultPath ToPath()
+        /// <param name="speed">軌跡をたどる速さ。乗り越えを始めた側と同じ <see cref="MotorSpec.VaultSpeed"/>。</param>
+        public VaultPath ToPath(float speed)
         {
             if (!IsVaulting)
             {
                 throw new InvalidOperationException("not vaulting");
             }
 
-            return new VaultPath(new[] { Vector3.Zero, Rise, Cross, Land }, VaultProbe.Speed);
+            return new VaultPath(new[] { Vector3.Zero, Rise, Cross, Land }, speed);
         }
 
         public bool Equals(CharacterVaultState other)

@@ -185,8 +185,6 @@ namespace Fps.Tests.EditMode
             {
                 Object.DestroyImmediate(fresh.gameObject);
             }
-
-            Assert.Throws<System.InvalidOperationException>(() => _reaction.ApplySpec(StaggerSpec.EnemyDefault), "too late once bound");
         }
     }
 }

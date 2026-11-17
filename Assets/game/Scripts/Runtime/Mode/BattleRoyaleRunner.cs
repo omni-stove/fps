@@ -15,7 +15,7 @@ namespace Fps.Runtime
     /// シーンの拾える物 (<see cref="PickupSpawnPoint"/> など) から拾って戦わせる。</item>
     /// <item>始めたとき、<see cref="Zone"/> (無ければシーンの <see cref="ShrinkingZone"/>) を参加者だけを相手に始め、終わったら止める。エリアは自分の Update で進む。</item>
     /// <item>参加者の体力が 0 になったら、分隊にほかに立っている人がいればダウンさせ (<see cref="Damageable.IsDowned"/>)、操作を止める。
-    /// プレイヤーは Interact (キーボードは E、ゲームパッドは Y) を押し続けると <see cref="ReviveRange"/> 以内のダウンした分隊の味方を起こし、
+    /// プレイヤーは Interact (キーボードは E、ゲームパッドは Y) を押し続けると ルールの <see cref="ActionRules.ReviveRange"/> 以内のダウンした分隊の味方を起こし、
     /// bot は範囲にダウンした分隊の味方がいれば起こす。</item>
     /// <item>倒れて戻らなくなった人 (分隊が全滅した・出血した) は、持っていた武器と <see cref="DropOnDeath.Drops"/> を <see cref="DropOnDeath"/> で足元に落とす。
     /// ダウンしただけでは落とさない (起こされたら持ったまま戦うので)。DropOnDeath が無い参加者には始めたときに付ける。</item>
@@ -34,9 +34,6 @@ namespace Fps.Runtime
 
         /// <summary>制限時間の既定値。0 は制限なし (縮むエリアで決着させる)。</summary>
         public const float DefaultTimeLimitSeconds = 0f;
-
-        /// <summary>ダウンした味方を起こせる距離 (m) の既定値。足元どうしで測る。倒れた体は横に伸びるので <see cref="ReviveReach.DefaultRange"/> より少し長くする。</summary>
-        public const float DefaultReviveRange = 2f;
 
         /// <summary>bot の用事を決め直す既定の間隔 (秒)。毎フレーム拾える物を探すと重いので間をあける。</summary>
         public const float DefaultBotPlanIntervalSeconds = 0.5f;
@@ -61,9 +58,6 @@ namespace Fps.Runtime
 
         [SerializeField, Tooltip("縮むエリア。空ならシーンから探す")]
         private ShrinkingZone _zone;
-
-        [SerializeField, Min(0.1f), Tooltip("ダウンした味方を起こせる距離 (m)。足元どうしで測る")]
-        private float _reviveRange = DefaultReviveRange;
 
         [SerializeField, Min(0.05f), Tooltip("bot の用事 (エリアの中へ移る・拾える物を取る) を決め直す間隔 (秒)")]
         private float _botPlanIntervalSeconds = DefaultBotPlanIntervalSeconds;
@@ -132,12 +126,6 @@ namespace Fps.Runtime
         {
             get => _zone;
             set => _zone = value;
-        }
-
-        public float ReviveRange
-        {
-            get => _reviveRange;
-            set => _reviveRange = value;
         }
 
         public float BotPlanIntervalSeconds
@@ -241,7 +229,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// actor が、<see cref="ReviveRange"/> 以内でいちばん近いダウンした分隊の味方を deltaSeconds だけ起こす。誰もいなければ <see cref="ReviveStep.Rejected"/>。
+        /// actor が、ルールの <see cref="ActionRules.ReviveRange"/> (足元どうしで測る) 以内でいちばん近いダウンした分隊の味方を deltaSeconds だけ起こす。誰もいなければ <see cref="ReviveStep.Rejected"/>。
         /// Play 中はプレイヤーが Interact を押している間と、範囲に味方のいる bot について、Tick の前に呼ばれる。
         /// </summary>
         public ReviveStep HoldRevive(SideMember actor, float deltaSeconds)
@@ -257,7 +245,7 @@ namespace Fps.Runtime
                 throw new ArgumentException($"'{(actor != null ? actor.name : "null")}' is not a member of this mode", nameof(actor));
             }
 
-            var targetId = NearestDownedSquadmate(actor, _reviveRange);
+            var targetId = NearestDownedSquadmate(actor, _battleRoyale.Actions.ReviveRange);
             if (targetId < 0)
             {
                 return ReviveStep.Rejected;

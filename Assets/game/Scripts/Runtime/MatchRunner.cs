@@ -14,7 +14,10 @@ namespace Fps.Runtime
     /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止め、
     /// HUD に勝敗と、やり直すキーを出す。
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
-    /// 制限時間は既定では無く (<see cref="TimeLimitSeconds"/> が 0)、HUD に残り時間も出さない。
+    /// 制限時間と勝利に必要なキル数は、<see cref="Definition"/>、入口 (<see cref="GameContent.FreeForAll"/>) のフリーフォーオールの定義
+    /// (<see cref="FreeForAllDefinition.TimeLimitSeconds"/>・<see cref="FreeForAllDefinition.ScoreLimit"/>)、Inspector の値の順で読む。
+    /// 標的ダミーは自分で復活し、Match はキルの数を数えるので、定義のリスポーンとキル 1 回の点は使わない。
+    /// Inspector の制限時間は既定では無く (<see cref="TimeLimitSeconds"/> が 0)、HUD に残り時間も出さない。
     /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> を小さくする。
     /// 開始時とキル・デスのたびに自分と標的のキル数・デス数をスコアボードの行にして <see cref="GameSignals.Scoreboard"/> に出し、止めたら消す。
     /// </summary>
@@ -37,6 +40,10 @@ namespace Fps.Runtime
         /// 終了後は <see cref="WeaponController"/> を止めるので、リロードと取り合うことはない。
         /// </summary>
         public const string RestartActionPath = InputActionPaths.Reload;
+
+        [SerializeField]
+        [Tooltip("試合の制限時間と勝利に必要なキル数を読むフリーフォーオールの定義。配線すると下の 2 つの代わりにこれを読む。空なら入口 (GameContent) のものを使う")]
+        private FreeForAllDefinition _definition;
 
         [SerializeField]
         [Min(0f)]
@@ -62,7 +69,17 @@ namespace Fps.Runtime
         private InputAction _restartAction;
         private bool _enabledRestartAction;
 
-        /// <summary>制限時間 (秒)。0 なら制限時間なし。次に始める試合から使う。</summary>
+        /// <summary>制限時間と勝利に必要なキル数を読む定義。null なら入口 (<see cref="GameContent"/>) のもの、それも無ければ Inspector の値を使う。</summary>
+        public FreeForAllDefinition Definition
+        {
+            get => _definition;
+            set => _definition = value;
+        }
+
+        /// <summary>配線した <see cref="Definition"/>、空なら入口 (<see cref="GameContent"/>) のもの。どちらも無ければ null。</summary>
+        public FreeForAllDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.FreeForAll);
+
+        /// <summary>Inspector の制限時間 (秒)。0 なら制限時間なし。次に始める試合から使う。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public float TimeLimitSeconds
         {
             get => _timeLimitSeconds;
@@ -77,7 +94,7 @@ namespace Fps.Runtime
             }
         }
 
-        /// <summary>勝利に必要なキル数。1 以上。次に始める試合から使う。</summary>
+        /// <summary>Inspector の勝利に必要なキル数。1 以上。次に始める試合から使う。<see cref="EffectiveDefinition"/> があるときは使わない。</summary>
         public int KillsToWin
         {
             get => _killsToWin;
@@ -96,6 +113,28 @@ namespace Fps.Runtime
         public static float MatchTimeLimit(float timeLimitSeconds)
         {
             return timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
+        }
+
+        /// <summary>
+        /// <see cref="EffectiveDefinition"/> があればその制限時間と点の上限で、無ければ Inspector の値で、まだ始めていない試合を作る。
+        /// 定義の値が不正ならアセット名を含む <see cref="ArgumentException"/>。
+        /// </summary>
+        public Match CreateMatch()
+        {
+            var definition = EffectiveDefinition;
+            if (definition == null)
+            {
+                return new Match(MatchTimeLimit(_timeLimitSeconds), _killsToWin, PlayerId);
+            }
+
+            try
+            {
+                return new Match(definition.TimeLimitSeconds, definition.ScoreLimit, PlayerId);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                throw new ArgumentException($"free for all definition '{definition.name}' is invalid: {e.Message}", e);
+            }
         }
 
         /// <summary>進めている試合。開始前や開始に失敗したときは null。</summary>
@@ -149,7 +188,7 @@ namespace Fps.Runtime
         }
 
         /// <summary>
-        /// <see cref="GameBootstrap"/> の生成物を拾い、<see cref="TimeLimitSeconds"/> と <see cref="KillsToWin"/> で試合を始める。
+        /// <see cref="GameBootstrap"/> の生成物を拾い、<see cref="CreateMatch"/> の試合を始める。
         /// 既に始まっていれば何もせず true。始められなければ理由を Debug.LogError に出して false を返す。
         /// </summary>
         public bool TryBeginFromBootstrap()
@@ -183,7 +222,7 @@ namespace Fps.Runtime
 
             try
             {
-                Begin(world, new Match(MatchTimeLimit(_timeLimitSeconds), _killsToWin, PlayerId));
+                Begin(world, CreateMatch());
             }
             catch (ArgumentException e)
             {

@@ -447,14 +447,14 @@ namespace Fps.Core
             }
         }
 
-        private static string SourceOf(string sourceName, string kind)
+        internal static string SourceOf(string sourceName, string kind)
         {
             return string.IsNullOrWhiteSpace(sourceName) ? "(unnamed " + kind + ")" : sourceName;
         }
 
         // Spec は引数名を ParamName に入れて投げ、引数名は項目名と同じなので、そのまま項目名として返せる。
         // 内側の ExplosionDamage など、項目に無い名前で投げられたときは項目に結び付けない。
-        private static TuningJsonException Rejected(string source, string kind, IReadOnlyList<string> known, ArgumentException e)
+        internal static TuningJsonException Rejected(string source, string kind, IReadOnlyList<string> known, ArgumentException e)
         {
             string item = null;
             foreach (var name in known)
@@ -471,7 +471,7 @@ namespace Fps.Core
         }
 
         /// <summary>最上位のオブジェクトの項目を、型を確かめながら取り出す。作った時点で知らない項目が無いことを確かめる。</summary>
-        private sealed class Fields
+        internal sealed class Fields
         {
             private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
 

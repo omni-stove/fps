@@ -56,6 +56,9 @@ namespace Fps.Runtime
         // 敵ごとの取り付け口が無いので、ルールはプレイヤーへの取り付け (StaggerActionInstaller) がここに入れる。
         public static Stagger ActiveRule { get; set; } = Stagger.Off;
 
+        // 敵は実行時に付くので Inspector の値はゲームから変えられない。取り付け (StaggerActionInstaller) が調整値をここに入れ、後から付く敵もこれで怯む。null なら Inspector の値。
+        public static StaggerSpec ActiveSpec { get; set; }
+
         public StaggerJudge Judge => _judge;
 
         public StaggerKind Current => _judge != null ? _judge.Current : StaggerKind.None;
@@ -104,16 +107,12 @@ namespace Fps.Runtime
                 _immunitySeconds);
         }
 
+        // 調整値は敵が Awake で結び付いた後に届くので、結び付いた後でも差し替えられるようにする。怯んでいる最中なら解いてから替える。
         public void ApplySpec(StaggerSpec spec)
         {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
-            }
-
-            if (_judge != null)
-            {
-                throw new InvalidOperationException($"StaggerReaction '{name}' is already bound; apply the spec before it starts");
             }
 
             _flinchSeconds = spec.FlinchSeconds;
@@ -126,6 +125,18 @@ namespace Fps.Runtime
             _explosionDamage = spec.ExplosionDamage;
             _windowSeconds = spec.WindowSeconds;
             _immunitySeconds = spec.ImmunitySeconds;
+
+            if (_judge == null)
+            {
+                return;
+            }
+
+            var current = _judge.Current;
+            _judge = new StaggerJudge(spec);
+            if (current != StaggerKind.None)
+            {
+                Recover(current);
+            }
         }
 
         // Edit Mode では Awake が走らないので、テストやシーン生成からも呼べるように分けておく。
@@ -141,6 +152,11 @@ namespace Fps.Runtime
             {
                 Debug.LogError($"{LogTag} '{name}' に Damageable がありません。", this);
                 return false;
+            }
+
+            if (ActiveSpec != null)
+            {
+                ApplySpec(ActiveSpec);
             }
 
             try

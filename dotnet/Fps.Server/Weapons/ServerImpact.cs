@@ -20,7 +20,7 @@ namespace Fps.Server
         /// <summary>shot の弾が direction へ進んで hit に当たった。</summary>
         public void Apply(in ServerShot shot, Vector3 direction, in ShotHit hit)
         {
-            var impactHit = hit.HitTarget ? ImpactHit.Character(hit.Zone, hit.Point, hit.Distance) : ImpactHit.Structure(hit.Point, hit.Distance);
+            var impactHit = hit.HitTarget ? ImpactHit.Character(hit.Zone, hit.Point, hit.Distance, _combat.ZoneDamage) : ImpactHit.Structure(hit.Point, hit.Distance);
             var orders = ImpactResolver.Resolve(shot.Impact, impactHit, shot.Weapon.Trigger.Charge, shot.ChargeFraction);
             foreach (var order in orders)
             {

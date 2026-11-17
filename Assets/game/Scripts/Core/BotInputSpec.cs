@@ -31,7 +31,7 @@ namespace Fps.Core
             DefaultAimErrorPerMeter,
             DefaultAimErrorRefreshSeconds,
             DefaultFireToleranceDegrees,
-            EnemyBrain.ArrivalDistance,
+            EnemySpec.DefaultArrivalDistance,
             DefaultSprintDistance,
             DefaultSprintMaxAngleDegrees,
             false);

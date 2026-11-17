@@ -17,8 +17,10 @@ namespace Fps.Runtime
     /// 自動回復と予備弾の倍率・無限・落下ダメージは <see cref="RulesDefinition"/> のルール (<see cref="GameRulesOverride"/> があればそちら) で決める (標的ダミーには効かせない)。
     /// 標的ダミーのやられ演出 (<see cref="DeathBodyPresenter"/>) も同じルールの <see cref="GameRules.DeathBody"/> で、HUD に出す量は
     /// <see cref="GameRules.HudDensity"/> で、倒れてから戻るまでに映すものは <see cref="GameRules.DeathCamera"/> で決める。
-    /// プレイヤーの最大体力・三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
-    /// (<see cref="PlayerMaxHealth"/>・<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
+    /// プレイヤーの最大体力はルールの <see cref="GameRules.PlayerMaxHealth"/> で、ルールが無いときだけこのコンポーネントの <see cref="PlayerMaxHealth"/> で決める。
+    /// プレイヤーと標的ダミーの部位のダメージ倍率は同じルールの <see cref="GameRules.ZoneDamage"/> で決める。
+    /// 三人称のカメラの位置と縮める下限・覗き込みにかかる秒数は、このコンポーネントの値
+    /// (<see cref="ThirdPersonOffset"/>・<see cref="MinBoomLength"/>・<see cref="AdsTransitionSeconds"/>) で決める。
     /// 生成物は <see cref="World"/> で読め、生成し終えたことは <see cref="Built"/> で受け取れる。
     /// 生成し終えたら、<see cref="HudModel"/> を <see cref="GameSignals.HudModel"/> に、HUD の量を <see cref="GameSignals.HudDensity"/> に、
     /// オフラインなのでポーズ中は時間を止める (<see cref="PauseTimeMode.Freeze"/>) ことを <see cref="GameSignals.PauseTimeMode"/> に、
@@ -106,7 +108,7 @@ namespace Fps.Runtime
         private GameObject _grenadePrefab;
 
         [Header("プレイヤー")]
-        [SerializeField, Min(1), Tooltip("プレイヤーの最大体力。敵の射撃はプレイヤーの Damageable に届く")]
+        [SerializeField, Min(1), Tooltip("ルールが無いときのプレイヤーの最大体力。ルールがあればその playerMaxHealth を使う。敵の射撃はプレイヤーの Damageable に届く")]
         private int _playerMaxHealth = Damageable.DefaultMaxHealth;
 
         [SerializeField, Tooltip("三人称のカメラの位置 (目のローカル座標、m)。z が目から後ろへの距離")]
@@ -126,6 +128,13 @@ namespace Fps.Runtime
 
         /// <summary>生成済みのオブジェクト。生成前や失敗時は null。</summary>
         public BootstrapWorld World => _world;
+
+        // シーンに置かれた敵や標的は GameBootstrap から組み立てられないので、自分で同じルールを探す。
+        public static GameRules FindSceneRules()
+        {
+            var bootstrap = FindAnyObjectByType<GameBootstrap>();
+            return bootstrap != null && bootstrap.World != null ? bootstrap.World.Rules : null;
+        }
 
         /// <summary>
         /// <see cref="Build"/> が生成し終えたときに、生成物を渡して 1 度だけ呼ばれる。生成に失敗したときは呼ばれない。
@@ -265,7 +274,10 @@ namespace Fps.Runtime
             set => _grenadePrefab = value;
         }
 
-        /// <summary><see cref="Build"/> で作るプレイヤーの最大体力。1 以上。生成後に変えるなら <see cref="BootstrapWorld.PlayerDamageable"/> を変える。</summary>
+        /// <summary>
+        /// ルール (<see cref="GameRulesOverride"/>・<see cref="RulesDefinition"/>・入口のルール) が無いときに <see cref="Build"/> で作るプレイヤーの最大体力。1 以上。
+        /// ルールがあれば <see cref="GameRules.PlayerMaxHealth"/> を使う。生成後に変えるなら <see cref="BootstrapWorld.PlayerDamageable"/> を変える。
+        /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">1 未満のとき。</exception>
         public int PlayerMaxHealth
         {
@@ -325,8 +337,8 @@ namespace Fps.Runtime
                 return _world;
             }
 
-            var rules = ResolveRules();
-            var tuning = ResolvePlayerTuning();
+            var rules = ResolveRules(out var configured);
+            var tuning = ResolvePlayerTuning(configured ? rules : null);
 
             GameObject floor = null;
             GameObject player = null;
@@ -343,6 +355,7 @@ namespace Fps.Runtime
                 light = CreateLight(out var lightComponent);
                 targets = CreateTargetDummies(player.transform, _targetDummyPrefab, out var dummies);
                 BindDeathBodies(dummies, rules);
+                ApplyZoneDamage(dummies, rules);
                 // 残り時間は MatchRunner が試合を始めたときに繋ぐ。
                 var hudModel = CreateHudModel(playerDamageable, weapon);
                 _world = new BootstrapWorld(
@@ -421,9 +434,11 @@ namespace Fps.Runtime
         /// <summary>
         /// <see cref="GameRulesOverride.Current"/> があればそれを使い、上書き中とログに出す。
         /// 無ければ <see cref="RulesDefinition"/> (空なら入口 <see cref="GameContent.Rules"/>) を変換する。どちらも未設定なら警告を出して <see cref="GameRules.Default"/>。
+        /// configured はルールが見つかったときに true、<see cref="GameRules.Default"/> に落ちたときに false。
         /// </summary>
-        private GameRules ResolveRules()
+        private GameRules ResolveRules(out bool configured)
         {
+            configured = true;
             var overridden = GameRulesOverride.Current;
             if (overridden != null)
             {
@@ -434,6 +449,7 @@ namespace Fps.Runtime
             var definition = GameContent.Pick(_rules, c => c.Rules);
             if (definition == null)
             {
+                configured = false;
                 Debug.LogWarning(
                     "[Bootstrap] GameRulesDefinition が設定されていないため GameRules.Default を使います。シーンか入口 (GameContent) にルールを設定してください。",
                     this);
@@ -444,10 +460,12 @@ namespace Fps.Runtime
         }
 
         // Inspector の Min は NaN や無限大を止めないので、作り始める前に確かめる。
-        private PlayerTuning ResolvePlayerTuning()
+        // 最大体力の欄はルールがあれば使わないが、それでも確かめるのは、欄の値が壊れていることをルールを外すまで気づかせないため。
+        private PlayerTuning ResolvePlayerTuning(GameRules configuredRules)
         {
+            var inspectorMaxHealth = ValidatePlayerMaxHealth(_playerMaxHealth, nameof(PlayerMaxHealth));
             return new PlayerTuning(
-                ValidatePlayerMaxHealth(_playerMaxHealth, nameof(PlayerMaxHealth)),
+                configuredRules != null ? configuredRules.PlayerMaxHealth : inspectorMaxHealth,
                 ValidateThirdPersonOffset(_thirdPersonOffset, nameof(ThirdPersonOffset)),
                 ValidateNonNegativeFinite(_minBoomLength, nameof(MinBoomLength)),
                 AdsZoom.ValidateTransitionSeconds(_adsTransitionSeconds, nameof(AdsTransitionSeconds)));
@@ -570,6 +588,7 @@ namespace Fps.Runtime
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
                 damageable.Initialize(PlayerName, tuning.MaxHealth);
+                damageable.ApplyRules(rules);
                 damageable.IsLocalPlayer = true;
                 player.AddComponent<Hitbox>().Initialize(HitZone.Body, damageable);
                 CharacterComponents.Attach(player, throwsGrenades: true);
@@ -1077,6 +1096,17 @@ namespace Fps.Runtime
             }
 
             DeathBodyPresenter.BindAll(targets, rules.DeathBody);
+        }
+
+        private static void ApplyZoneDamage(IReadOnlyList<TargetDummy> dummies, GameRules rules)
+        {
+            foreach (var dummy in dummies)
+            {
+                if (dummy != null && dummy.Damageable != null)
+                {
+                    dummy.Damageable.ApplyRules(rules);
+                }
+            }
         }
 
         /// <summary>

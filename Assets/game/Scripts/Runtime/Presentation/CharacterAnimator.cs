@@ -484,8 +484,8 @@ namespace Fps.Runtime
             {
                 // NavMeshAgent の速さは足の運びで毎フレーム変わるので、もとの歩きの速さから求める。
                 walk = _enemy.WalkSpeed;
-                sprint = walk * EnemyGait.SprintRatio;
-                crouch = walk * EnemyGait.CrouchRatio;
+                sprint = _enemy.SprintSpeed;
+                crouch = _enemy.CrouchSpeed;
             }
 
             if (_pose != null && walk.Equals(_poseWalk) && sprint.Equals(_poseSprint) && crouch.Equals(_poseCrouch))

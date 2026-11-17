@@ -63,6 +63,25 @@ description = "Package the Unity-independent .NET server (dotnet/Shooter.Server)
 # 実行権限の無いチェックアウトでも動くよう bash で呼ぶ。引数は mise がこの後ろに付ける
 run = "bash scripts/server-image.sh"
 
+[comments-extract]
+description = "Print each comment block (//, ///, /* */, trailing ones too) of the .cs files under the given files or folders as one JSON line with its id, lines, text and the next 3 non-comment lines (docs/comment-cleanup.md). --out <file> writes the JSONL there instead (pass it as ARGS through make)"
+# 引数は mise がこの後ろに付ける
+run = "python3 -B scripts/comments.py extract"
+
+[comments-apply]
+description = "Apply a JSONL of keep / delete / rewrite judgments by the ids from comments-extract (docs/comment-cleanup.md). A judgment whose comment changed since the extraction is reported and skipped; the rest are applied. Exits 1 if any judgment failed"
+# 引数は mise がこの後ろに付ける
+run = "python3 -B scripts/comments.py apply"
+
+[comments-verify]
+description = "Fail with the offending lines if the .cs changes since the branch point with a ref (default main) touch anything but comments and whitespace (docs/comment-cleanup.md)"
+# 引数は mise がこの後ろに付ける
+run = "python3 -B scripts/comments.py verify"
+
+[comments-test]
+description = "Run the unit tests of scripts/comments.py"
+run = "python3 -B -m unittest discover -s scripts/tests -p 'test_comments.py'"
+
 [test-unity]
 description = "Run the Unity EditMode tests headlessly in batch mode (close the Editor first)"
 run = "unity test --mode EditMode"

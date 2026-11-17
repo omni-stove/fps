@@ -290,6 +290,22 @@ namespace Shooter.Server
             }
         }
 
+        public void WriteChat(ChatLine line)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.Chat(_utcNow(), MatchId, line.SenderId, ProductUserIdOf(line.SenderId), line.Channel, line.Text.Length));
+            }
+        }
+
+        public void WriteChatRefused(int playerId, ChatRefusal reason)
+        {
+            if (_events.Enabled)
+            {
+                _events.Write(ServerEventLog.ChatRefused(_utcNow(), MatchId, playerId, ProductUserIdOf(playerId), reason));
+            }
+        }
+
         public void WriteVehicleEntered(int playerId, int vehicle, string vehicleId, int seat, VehicleSeatRole role)
         {
             if (_events.Enabled)

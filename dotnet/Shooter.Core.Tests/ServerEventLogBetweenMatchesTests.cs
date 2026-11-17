@@ -20,6 +20,16 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ChatRefusedNamesTheReason()
+        {
+            var line = ServerEventLog.ChatRefused(_time, _matchId, 1, _puid, ChatRefusal.TooSoon);
+
+            Assert.That(line, Is.EqualTo(
+                "{\"type\":\"chat_refused\",\"time\":\"2026-11-17T09:00:00.123Z\",\"matchId\":\"" + _matchId
+                + "\",\"playerId\":\"1\",\"productUserId\":\"" + _puid + "\",\"reason\":\"TooSoon\"}"));
+        }
+
+        [Test]
         public void MapVoteNamesTheChosenMap()
         {
             var line = ServerEventLog.MapVote(_time, _matchId, 2, null, "NetArena02");
@@ -55,6 +65,7 @@ namespace Shooter.Core.Tests
             var lines = new[]
             {
                 ServerEventLog.Chat(_time, _matchId, 1, null, ChatChannel.All, 1),
+                ServerEventLog.ChatRefused(_time, _matchId, 1, null, ChatRefusal.Empty),
                 ServerEventLog.MapVote(_time, _matchId, 1, _puid, "NetArena01"),
                 ServerEventLog.MapChanged(_time, _matchId, "NetArena01", "NetArena01"),
                 ServerEventLog.TeamBalanced(_time, _matchId, 1, _puid, Team.Bravo, Team.Alpha),
@@ -71,6 +82,8 @@ namespace Shooter.Core.Tests
         {
             Assert.That(() => ServerEventLog.Chat(_time, _matchId, 1, null, (ChatChannel)9, 3), Throws.InstanceOf<ArgumentOutOfRangeException>());
             Assert.That(() => ServerEventLog.Chat(_time, _matchId, 1, null, ChatChannel.All, 0), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => ServerEventLog.ChatRefused(_time, _matchId, 1, null, ChatRefusal.None), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => ServerEventLog.ChatRefused(_time, _matchId, 1, null, (ChatRefusal)9), Throws.InstanceOf<ArgumentOutOfRangeException>());
             Assert.That(() => ServerEventLog.MapVote(_time, _matchId, 1, null, ""), Throws.ArgumentException);
             Assert.That(() => ServerEventLog.MapChanged(_time, _matchId, null, "NetArena02"), Throws.ArgumentException);
             Assert.That(() => ServerEventLog.TeamBalanced(_time, _matchId, 1, null, Team.Alpha, Team.Alpha), Throws.ArgumentException);

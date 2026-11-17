@@ -21,7 +21,6 @@ namespace Shooter.Core
 
         public bool IsSeen { get; }
 
-        // 前に聞いてから新しく呼んだ声が、呼び声の届く範囲で聞こえたか。
         public bool IsHeard { get; }
     }
 }

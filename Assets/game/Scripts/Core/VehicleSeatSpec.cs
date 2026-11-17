@@ -2,30 +2,19 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 乗り物の 1 つの座席の設定 (<see cref="VehicleSpec.Seats"/> の 1 つ)。生成時に値を検査し、以後は変わらない。
-    /// 乗る位置・降りる位置・座る位置はシーンの置き方なので、ここではなく座席の部品が持つ。
-    /// </summary>
+    // 乗る位置・降りる位置・座る位置はシーンの置き方なので、ここではなく座席の部品が持つ。
     public sealed class VehicleSeatSpec
     {
         public const VehicleSeatPose DefaultPose = VehicleSeatPose.Seated;
 
         public const VehicleCameraView DefaultCameraView = VehicleCameraView.Chase;
 
-        /// <summary>自分の武器で撃てる向きの範囲 (度) の既定値。0 は撃てない。</summary>
         public const float DefaultOwnWeaponArcDegrees = 0f;
 
         public const float MaxOwnWeaponArcDegrees = 360f;
 
         public const float DefaultOwnWeaponSpreadMultiplier = 1.5f;
 
-        /// <param name="role">座席の種類。定義済みの値。</param>
-        /// <param name="pose">座っている間の姿勢。定義済みの値。</param>
-        /// <param name="cameraView">座っている間のカメラ。定義済みの値。</param>
-        /// <param name="ownWeaponArcDegrees">
-        /// 座ったまま自分の武器で撃てる、座席の正面を中心にした向きの範囲 (度)。0 以上 <see cref="MaxOwnWeaponArcDegrees"/> 以下。0 は撃てない。
-        /// </param>
-        /// <param name="ownWeaponSpreadMultiplier">自分の武器で撃つときの散らばりに掛ける倍率。1 以上の有限値。</param>
         public VehicleSeatSpec(
             VehicleSeatRole role,
             VehicleSeatPose pose = DefaultPose,
@@ -73,7 +62,6 @@ namespace Shooter.Core
 
         public VehicleCameraView CameraView { get; }
 
-        /// <summary>座ったまま自分の武器で撃てる向きの範囲 (度)。0 は撃てない。</summary>
         public float OwnWeaponArcDegrees { get; }
 
         public float OwnWeaponSpreadMultiplier { get; }
@@ -97,7 +85,6 @@ namespace Shooter.Core
                 || Math.Abs(TurretTargeting.DeltaDegrees(0f, yawOffsetDegrees)) <= OwnWeaponArcDegrees * 0.5f;
         }
 
-        /// <summary>しゃがみの高さにするか (<see cref="VehicleSeatPose.Standing"/> 以外)。</summary>
         public bool CrouchesRider => Pose != VehicleSeatPose.Standing;
     }
 }

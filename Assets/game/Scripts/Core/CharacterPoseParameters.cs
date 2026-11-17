@@ -3,41 +3,28 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 人型のリグの Animator に渡すパラメーターの値。<see cref="CharacterPose.Evaluate"/> が作る。
-    /// 名前は <see cref="CharacterPose.SpeedParameter"/> などの定数と対応する。
-    /// </summary>
     public readonly struct CharacterPoseParameters : IEquatable<CharacterPoseParameters>
     {
-        /// <summary>
-        /// 移動の速さを、止まっている 0・歩き 1・走り 2 にならした値。0 以上 <see cref="CharacterPose.RunSpeedValue"/> 以下。
-        /// しゃがみ中は 0 (止まっている)〜1 (しゃがみ歩き)。
-        /// </summary>
         public float Speed { get; }
 
         public bool Crouch { get; }
 
         public bool Aim { get; }
 
-        /// <summary><see cref="CharacterPose.CoverNone"/>・<see cref="CharacterPose.CoverLow"/>・<see cref="CharacterPose.CoverHigh"/> のどれか。</summary>
         public int Cover { get; }
 
         public bool Downed { get; }
 
         public bool Dead { get; }
 
-        /// <summary>持っている武器の <see cref="Core.WeaponCategory"/> の値。持っていなければ <see cref="CharacterPose.NoWeapon"/>。</summary>
         public int WeaponCategory { get; }
 
-        /// <summary>スライディングの最中か。立つときは <see cref="Crouch"/> も立つので、滑る姿勢の無いリグはしゃがみで見せる。</summary>
         public bool Slide { get; }
 
-        /// <summary>体を横へ傾けている量。-1 (左へ傾け切り)〜1 (右へ傾け切り)。</summary>
         public float Lean { get; }
 
         public bool Swimming { get; }
 
-        /// <summary><see cref="CharacterPose.WallRunNone"/>・<see cref="CharacterPose.WallRunLeft"/>・<see cref="CharacterPose.WallRunRight"/> のどれか (壁のある側)。</summary>
         public int WallRun { get; }
 
         public CharacterPoseParameters(

@@ -8,10 +8,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="SurfaceImpactAssetStep"/> を一時フォルダに走らせて、材質ごとの仮素材とカタログ・作り直したときの同一性・銃痕の画素を確かめる。
-    /// リポジトリの Assets/game/Audio と Assets/game/Presentation は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Audio と Assets/game/Presentation を触らないよう、一時フォルダに走らせる。
     public sealed class SurfaceImpactAssetStepTests
     {
         private const string BaseMap = "_BaseMap";
@@ -140,7 +137,6 @@ namespace Shooter.Tests.EditMode
             return SurfaceImpactAssetStep.BuildAt(_audioFolder, _assetFolder, _catalogPath);
         }
 
-        // 材質ごとの銃痕の材質・テクスチャ・エフェクト・音の GUID を、定義順に並べる。
         private static string[] Guids(SurfaceImpactCatalog catalog)
         {
             return catalog.Surfaces

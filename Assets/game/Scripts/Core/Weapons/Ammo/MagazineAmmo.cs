@@ -121,7 +121,6 @@ namespace Shooter.Core
             return added;
         }
 
-        // 予備弾を pool から出し入れするようにし、持っていた予備弾を pool に移す。
         // pool に既にある分は数えて足りない分だけ移すのは、作り直した武器 (持ち替えや拾い直しで同じ弾数のまま作る) が弾を増やさないようにするため。
         // 予備弾が無限なら数えないので pool を使わず false。
         public bool UsePool(IAmmoPool pool)

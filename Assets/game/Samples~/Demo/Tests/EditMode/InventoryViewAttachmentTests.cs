@@ -9,9 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 持ち物の画面 (<see cref="InventoryView"/>) が、武器に付けている物を出し、付ける物と外す物のボタンを出すことを確かめる。
-    /// </summary>
     public sealed class InventoryViewAttachmentTests
     {
         private const string _rifleAmmoId = "212170da-0998-4fa9-9457-761c75a2a797";
@@ -140,7 +137,6 @@ namespace Shooter.Tests.EditMode
             return view.Element.Query<Label>(className: InventoryView.LockedClass).ToList().Select(l => l.text).ToArray();
         }
 
-        // 付ける物を 1 つずつ持って始める
         private static ItemCatalog Catalog(InventoryRule rule)
         {
             return new ItemCatalog(

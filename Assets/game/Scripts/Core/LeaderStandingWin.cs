@@ -2,10 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 時間切れで、リーダーが倒れていない陣営がちょうど 1 つならその陣営の勝ち (<see cref="GuardianRespawn"/>)。
-    /// 両方とも生きているか両方とも倒れているときは決めず、後ろの条件 (<see cref="TimeLimitWin"/> など) に任せる。試合中は何も決めない。
-    /// </summary>
     public sealed class LeaderStandingWin : IWinCondition
     {
         private readonly GuardianRespawn _respawn;

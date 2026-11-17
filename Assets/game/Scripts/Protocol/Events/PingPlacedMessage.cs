@@ -3,7 +3,6 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>印を見せる相手 (付けた人の味方) に送る、新しい印。</summary>
     public sealed class PingPlacedMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -18,10 +17,8 @@ namespace Shooter.Protocol
 
         public Vector3 Position { get; set; }
 
-        /// <summary>敵に付いて動くか。動けば <see cref="PingMovedMessage"/> で位置が届く。</summary>
         public bool Tracking { get; set; }
 
-        /// <summary>消えるまでの秒。</summary>
         public float RemainingSeconds { get; set; }
 
         public void Write(MessageWriter writer)

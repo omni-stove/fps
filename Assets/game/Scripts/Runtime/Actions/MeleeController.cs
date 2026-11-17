@@ -89,7 +89,6 @@ namespace Shooter.Runtime
 
         public MeleeSwing Swing => EnsureSwing();
 
-        // 振っている最中に替えても、その振りは始めたときの値で終える (MeleeSwing.Spec)。
         public MeleeSpec Spec
         {
             get => EnsureSwing().Spec;
@@ -103,7 +102,6 @@ namespace Shooter.Runtime
         // Attach は何度も呼ばれるので、コードで Spec を渡された値を調整値の JSON で消さないために印を持つ。
         public bool SpecApplied => _specApplied;
 
-        /// <summary>コードで Spec が渡されていないときだけ、調整値を入れる。渡されていればそのまま残す。</summary>
         public void ApplyTuning(MeleeSpec tuning)
         {
             if (tuning == null)
@@ -117,7 +115,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // null なら同じ GameObject で IMeleePresenter を実装したコンポーネントを探す (無ければ演出なし)。
         public IMeleePresenter Presenter { get; set; }
 
         public LayerMask HitMask
@@ -132,7 +129,6 @@ namespace Shooter.Runtime
             set => _meleeWeapon = value;
         }
 
-        /// <summary>当てたときの帰属 (<see cref="CombatEvents.Attribute"/>) に渡す武器の Id。<see cref="MeleeWeapon"/> があればその Id、無ければ持っている武器の Id、素手なら空。</summary>
         public string StrikeWeaponId
         {
             get
@@ -312,7 +308,6 @@ namespace Shooter.Runtime
             return EnsureSwing().CanStart ? MeleeRefusal.None : MeleeRefusal.Cooldown;
         }
 
-        // 近接の入力 1 回ぶん。状況に合う技 (ContextMeleeAction) があればそれを出し、無ければふつうに振る。
         public bool TryMelee()
         {
             var context = GetComponent<ContextMeleeAction>();

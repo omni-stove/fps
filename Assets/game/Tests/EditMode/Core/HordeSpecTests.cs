@@ -115,7 +115,6 @@ namespace Shooter.Core.Tests
             Assert.That(horde.EnemiesKilled, Is.EqualTo(1), "the kill count stays one per enemy");
         }
 
-        /// <summary>spec のホードを、1 人の守る側で始めて最初の波の前 (買える時期) にした状態。</summary>
         private static Horde Playing(HordeSpec spec)
         {
             var horde = new Horde(WaveSchedule.FromTable(new[] { new Wave(2, 1f, 2, 5f) }), spec);

@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 目から狙う点までの線が手前の物に遮られているときの照準の知らせ方。出すか・遮りとみなす余裕 (<see cref="AimBlockSettings"/>) と、
-    /// 遮られた点に出す印の画像を持つ。印の画像が空なら HUD がコードで × の形を作る。遮られている間の照準の色は Hud.uss の
-    /// <c>hud__crosshair--blocked</c> で決める。
-    /// </summary>
     [CreateAssetMenu(fileName = "AimBlockCatalog", menuName = "Shooter/Aim Block Catalog")]
     public sealed class AimBlockCatalog : ScriptableObject
     {
@@ -37,7 +32,6 @@ namespace Shooter.Runtime
             set => _marker = value;
         }
 
-        /// <summary>GameContent の枠、無ければ Resources の <see cref="ResourcePath"/>。どちらも無ければ null (既定値で出す)。</summary>
         public static AimBlockCatalog Load()
         {
             var fromContent = GameContent.Pick(c => c.AimBlock);
@@ -55,7 +49,6 @@ namespace Shooter.Runtime
             _margin = settings.Margin;
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">余裕が負か有限でないとき。</exception>
         public AimBlockSettings ToSettings()
         {
             return new AimBlockSettings(_enabled, _margin);

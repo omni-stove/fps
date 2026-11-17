@@ -9,10 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="StringsAudit"/> が言語の表のキーと武器の名前のキーの漏れを一覧にすること。
-    /// 表とアセットはメモリ上のものを渡し、プロジェクトのものには頼らない。
-    /// </summary>
     public sealed class StringsAuditTests
     {
         private static readonly GameLanguage[] _languages = { GameLanguage.Japanese, GameLanguage.English };

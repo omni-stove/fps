@@ -1,0 +1,8 @@
+{
+  "voice.local": "Transmitting",
+  "voice.speaking": "{0} is talking",
+  "voice.unknownSpeaker": "Player {0}",
+  "voice.settings.section": "Voice chat",
+  "voice.settings.microphone": "Microphone",
+  "voice.settings.volume": "Voice volume"
+}

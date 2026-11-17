@@ -519,7 +519,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 起動のコードやテストが、Resources に置いたものの代わりに使わせる。null で Resources のものに戻す。
         public static void Use(GameContent content)
         {
             _override = content;

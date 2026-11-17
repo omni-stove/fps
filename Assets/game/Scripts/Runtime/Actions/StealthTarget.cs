@@ -15,7 +15,6 @@ namespace Shooter.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("明るさの代わりの係数。1 で明るい所、0 で敵のゲージがまったくたまらない")]
         private float _lightFactor = 1f;
 
-        // プレイヤー以外 (PlayerController の無い目標) が伏せを示すときにここを立てる。しゃがみは ICharacterMotionSource から読む。
         [SerializeField]
         private bool _prone;
 

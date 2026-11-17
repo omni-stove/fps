@@ -6,10 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HUD (<see cref="AbilitySlotsView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) の能力の枠 (<see cref="AbilityHost"/>) の回数と待ち時間を出し、
-    /// 置いた物を起爆できるときの案内 (<see cref="AbilitySlotsView.FollowUpText"/>) を置いた物の名前で作ることを確かめる。
-    /// </summary>
     public sealed class AbilitySlotsViewTests
     {
         private const string ChargeKind = "remote-charge";

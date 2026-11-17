@@ -9,9 +9,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// MinimapPublisher が LocalPlayer を中心に、味方・印・目標・見つけた敵を GameSignals.Minimap に出し、見つけた敵が秒数で消えることを確かめる。
-    /// </summary>
     public sealed class MinimapPublisherTests
     {
         private const float _tolerance = 1e-3f;

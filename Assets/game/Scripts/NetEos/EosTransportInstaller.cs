@@ -3,14 +3,10 @@ using UnityEngine;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// 起動時に、クライアントの EOS の通信路とクイックマッチのロビーの作り方 (<see cref="EosClientTransportFactory"/>) を
-    /// <see cref="NetV2Eos"/> へ登録する。Shooter.NetEos は com.playeveryware.eos があるときだけコンパイルされる。
-    /// 無ければ何も登録されず、クライアントは EOS を選ばれたときに「このビルドに無い」というエラーにする。
-    /// </summary>
+    // NetV2 から直接作らず起動時に NetV2Eos へ登録するのは、Shooter.NetEos が com.playeveryware.eos があるときだけコンパイルされるため。
+    // 無ければ何も登録されず、クライアントは EOS を選ばれたときに「このビルドに無い」というエラーにする。
     public static class EosTransportInstaller
     {
-        /// <summary>初めて Device ID でログインしたときに作るユーザーの表示名。</summary>
         public const string LobbyDisplayName = "shooter-player";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

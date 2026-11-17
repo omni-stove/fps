@@ -33,7 +33,6 @@ namespace Shooter.Core
                 killed ? "true" : "false");
         }
 
-        // 実際に増えた量を出す。満タンや上限で増えなかった分は数えない。
         public static string Reward(string attackerId, string moveId, int health, int ammo)
         {
             return string.Format(

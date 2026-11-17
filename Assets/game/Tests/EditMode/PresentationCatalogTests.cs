@@ -7,7 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary><see cref="PresentationCatalog"/> の武器 Id での引き当てと検査を、メモリ上のインスタンスで確かめる。</summary>
     public sealed class PresentationCatalogTests
     {
         private readonly List<Object> _created = new List<Object>();

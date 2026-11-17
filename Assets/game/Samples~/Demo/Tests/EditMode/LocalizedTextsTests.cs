@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// UXML にキーで書いた文字 (<see cref="LocalizedTexts"/>) と、コードで入れた文字が今の言語で出て、
-    /// 言語を変えると開いている画面 (メインメニュー・ポーズ・スコアボード) も書き換わること。
-    /// </summary>
     public sealed class LocalizedTextsTests
     {
         private GameLanguage _languageBefore;

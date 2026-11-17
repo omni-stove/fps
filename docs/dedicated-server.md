@@ -24,7 +24,7 @@ make export-server-rules    # 試合の設定とルール → server-data/rules/
   `NetMatchDefinition` のアセット (サンプルでは `Rules/NetMatch.asset`。無ければ `NetSceneBuilder` が既定の値で作る) に置き、
   入口 (`GameContent`) のルールと、`NetMatchDefinition` の Rules に並べたルール (サンプルでは `TeamDeathmatch`・`Domination`) ごとに
   `server-data/rules/<ルール名>.json` にする。ロードアウトと選べる武器は、クライアントと同じく入口のものを先に使い、無ければ `NetMatchDefinition` のもの。
-- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`) は、オフラインと同じく入口の欄の JSON、
+- 調整値 (`ping.json`・`grenade.json`・`inventory.json`・`knockback.json`・`bots.json`・`assist.json`) は、オフラインと同じく入口の欄の JSON、
   無ければ `Resources/Tuning/<名前>.json` を写す。どちらも無ければ項目を省いた `{}` (既定値) を書く。
   クライアントは承認のときにサーバーからこの値を受け取るので、ゲームが値を変えたら書き出し直してサーバーを作り直せばよい。
 - 出現地点はシーンの `NetSpawnPoint`、拠点は `ControlPointZone`、壊せる建物は `DestructibleStructure`、はしごは `SceneLadder` から読む。
@@ -311,6 +311,7 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   印の調整値は `server-data/tuning/ping.json` (無ければ既定値) から読む。拠点制圧のルールでは `[Domination] net points=3 ...` を出す。
   ルールが無いか読めなければ終了コード 3、マップに出現地点のファイルが無ければ終了コード 1 で終わる。
 - 射撃は撃った人が見ていた tick まで他の人を巻き戻して (12 tick まで) 当て、壁は `.fpsmap` で取る。
+  巻き戻すのは位置・しゃがみ・リーンの傾きで、傾けた人の体は足元を軸に、目がリーンのずれ (`MotorSpec.LeanSideOffset`) の所へ来るまで回す。
   ログは `[Net] hit ...`・`[Net] shot ...`・`[Net] rejected shot ...`・`[Grenade] net ...`。
   グレネードの調整値は `server-data/tuning/grenade.json` (無ければ既定値) から読む。
 - 爆発はダメージを与えた生きている相手を、オフラインと同じ計算 (`KnockbackSpec`) で吹き飛ばす。強さ・重さ (人は `playerWeight`、Bot は `enemyWeight`)・
@@ -389,14 +390,15 @@ docker logs shooter-server 2>&1 | jq -cR 'fromjson? | select(.type? == "kill")'
 | `player_joined` | プレイヤーが試合に入った | `matchId`、`playerId`、`productUserId`、`team` (`Alpha` / `Bravo`)、`rejoined` (切断から戻り、前の成績を引き継いだなら `true`) |
 | `player_left` | プレイヤーが試合から抜けた (切断を含む) | `matchId`、`playerId`、`productUserId` |
 | `match_started` | 両チームがそろって試合が始まった | `matchId`、`players` (試合に入っている人数) |
-| `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)。自滅では `killerId` と `victimId` が同じ |
+| `kill` | プレイヤーが倒された | `matchId`、`killerId`、`killerProductUserId`、`victimId`、`victimProductUserId`、`teamKill` (味方に倒されたなら `true`)、`assisterIds` (アシストした人の Id をカンマ区切りで、与えたダメージの多い順。いなければ出さない)。自滅では `killerId` と `victimId` が同じ |
 | `match_ended` | 試合が終わった | `matchId`、`winner` (`Alpha` / `Bravo`、引き分けなら `draw`)、`scoreAlpha`、`scoreBravo` |
 | `ping_placed` | プレイヤーが印を付けた (ルールの `ping` が `On` のときだけ)。印は同じ陣営の人にだけ配る | `matchId`、`playerId`、`productUserId`、`team`、`pingId` (試合の中で一意の印の番号。`[Ping] net` のログの `id=` と同じ)、`kind` (`Enemy` / `Location`)、`targetId` (敵の印なら印の付いた敵のプレイヤー Id)、`refreshed` (同じ敵に付け直したなら `true`) |
 | `ping_refused` | 印を付けようとして断った。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`RuleOff` / `Dead` / `InvalidAim` / `TooSoon` / `NoTarget`) |
 | `vehicle_entered` | プレイヤーが乗り物に乗った | `matchId`、`playerId`、`productUserId`、`vehicle` (マップの乗り物の並びの番号)、`vehicleId` (乗り物の Id)、`seat`、`role` (`Driver` / `Passenger` / `Gunner`) |
 | `vehicle_left` | プレイヤーが乗り物から降りた・降ろされた | `matchId`、`playerId`、`productUserId`、`vehicle`、`vehicleId`、`seat`、`reason` (`Request` / `Wrecked` / `RiderDied` / `Forced` / `RiderRemoved`) |
 | `vehicle_exploded` | 乗り物が壊れて爆発した。残骸は試合の終わりまで残る | `matchId`、`vehicle`、`vehicleId`、`attackerId` (最後に傷めた人。抜けていれば無し)、`attackerProductUserId`、`riders` (乗っていた人数)、`damaged`、`killed` |
-| `chat` | プレイヤーがチャットを送った。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (本文の文字数) |
+| `chat` | プレイヤーのチャットを配った。`All` は全員に、`Team` は送った人と同じチームの人にだけ配る。本文は出さない | `matchId`、`playerId`、`productUserId`、`channel` (`All` / `Team`)、`length` (前後の空白と改行を落とした本文の文字数) |
+| `chat_refused` | チャットを断った。断った文は送った人にも返さない。連打でログを埋めないよう、1 秒に 1 行まで | `matchId`、`playerId`、`productUserId`、`reason` (`Empty` / `TooLong` / `TooSoon`) |
 | `map_vote` | プレイヤーが次のマップに投票した (選び直しも 1 行) | `matchId`、`playerId`、`productUserId`、`mapId` |
 | `map_changed` | 次の試合のマップを替えた | `matchId` (終わった試合)、`fromMapId`、`toMapId` |
 | `team_balanced` | 人数をそろえるため、次の試合の前にプレイヤーのチームを移した。移した人ごとに 1 行 | `matchId`、`playerId`、`productUserId`、`from`、`to` (`Alpha` / `Bravo`) |

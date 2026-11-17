@@ -3,9 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 他のプレイヤーは世界に入れない。予測するクライアントには他人の確定位置が無く、当てるとサーバーと毎回食い違うため。
-    /// </summary>
+    // 他のプレイヤーは世界に入れない。予測するクライアントには他人の確定位置が無く、当てるとサーバーと毎回食い違うため。
     public sealed class CharacterBody
     {
         private readonly CapsuleMover _mover;

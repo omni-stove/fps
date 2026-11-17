@@ -4,43 +4,28 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 誰が誰をどの武器で倒したかを画面右上に並べるビュー。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// 有効な間 <see cref="CombatEvents.Killed"/> を受け、<see cref="Names"/> で名前と武器の表示名を引いた行を <see cref="Feed"/> に足す
-    /// (最大 <see cref="KillFeed.DefaultCapacity"/> 行、1 行 <see cref="KillFeed.DefaultLineSeconds"/> 秒で消える)。
-    /// </summary>
-    /// <remarks>
-    /// 名前の色はチーム (<see cref="Hud.TeamColor"/>) で、チームの無い名前は USS の既定の色のまま。この画面のプレイヤーが倒したか
-    /// 倒された行 (<see cref="KillFeedLine.Highlighted"/>) は <see cref="LocalRowClass"/> で強調する。
-    /// 印と武器の欄は描くときに今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら描き直す。
-    /// 足した行は <see cref="LogTag"/> でログにも出し、画面を見ずにネット対戦の両クライアントのフィードを突き合わせられるようにする。
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class KillFeedView : HudElementView
     {
-        /// <summary>Hud.uxml のキルフィードの要素。</summary>
         public const string UxmlName = "kill-feed";
 
-        /// <summary>行を足したときのログの頭。</summary>
         public const string LogTag = "[KillFeed]";
 
-        /// <summary>1 行の要素の USS クラス。</summary>
         public const string RowClass = "kill-feed__row";
 
-        /// <summary>この画面のプレイヤーが関わる行に足す USS クラス。</summary>
         public const string LocalRowClass = "kill-feed__row--local";
 
-        /// <summary>名前の Label の USS クラス。</summary>
         public const string NameClass = "kill-feed__name";
 
-        /// <summary>武器の欄の Label の USS クラス。</summary>
         public const string WeaponClass = "kill-feed__weapon";
 
-        /// <summary>頭への止めの行の武器の欄に足す USS クラス。</summary>
         public const string HeadshotClass = "kill-feed__weapon--headshot";
 
-        /// <summary>味方撃ちの印の Label の USS クラス。</summary>
         public const string FriendlyClass = "kill-feed__friendly";
+
+        public const string AssistRowClass = "kill-feed__row--assist";
+
+        public const string AssistClass = "kill-feed__assist";
 
         private readonly KillFeed _feed = new KillFeed();
         private IKillFeedNames _names;
@@ -50,13 +35,8 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している行。</summary>
         public KillFeed Feed => _feed;
 
-        /// <summary>
-        /// 1 件を行にする引き先。未設定 (null) なら、<see cref="GameSignals.Participants"/> が出ていればその表から引く <see cref="ParticipantKillFeedNames"/>、
-        /// 出ていなければオフラインの <see cref="OfflineKillFeedNames"/>。差し替えても出している行はそのまま。
-        /// </summary>
         public IKillFeedNames Names
         {
             get
@@ -82,7 +62,7 @@ namespace Shooter.Runtime
             set => _names = value;
         }
 
-        /// <summary>entry を行にして一番新しい行として足し、ログに出す。<see cref="CombatEvents.Killed"/> から呼ばれる。</summary>
+        // 行をログにも出すのは、画面を見ずにネット対戦の両クライアントのフィードを突き合わせられるようにするため。
         public void Show(KillFeedEntry entry)
         {
             var line = Names.Describe(entry);
@@ -91,7 +71,6 @@ namespace Shooter.Runtime
             Render();
         }
 
-        /// <summary>行の時間を deltaSeconds 進め、消えた行があれば出し直す。Play 中は Update が呼ぶ。</summary>
         public void Advance(float deltaSeconds)
         {
             var before = _feed.Count;
@@ -102,13 +81,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>名前の色 (<see cref="Hud.TeamColor"/>) が変わったときに呼ぶ。出している行をその色で塗り直す。</summary>
         public void RefreshTeamColors()
         {
             Render();
         }
 
-        /// <summary>行をすべて消す。</summary>
         public void Clear()
         {
             _feed.Clear();
@@ -200,6 +177,13 @@ namespace Shooter.Runtime
 
             row.Add(weapon);
             row.Add(CreateName(line.Victim, hud));
+
+            if (line.LocalAssisted)
+            {
+                row.AddToClassList(AssistRowClass);
+                row.Add(CreateLabel(Localizer.Resolve(KillFeedText.AssistMark), AssistClass));
+            }
+
             return row;
         }
 

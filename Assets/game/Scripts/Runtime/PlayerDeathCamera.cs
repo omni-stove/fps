@@ -6,28 +6,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オフラインのプレイヤー (<see cref="GameBootstrap"/> が作る) が倒されてから戻るまで (モードのリスポーン・キャンペーンの読み直し) のカメラ。
-    /// <see cref="Mode"/> (ルールの <see cref="GameRules.DeathCamera"/>) が None 以外のとき、倒れてから体力が戻るまでルールに従ってカメラを動かす。
-    /// <list type="bullet">
-    /// <item><see cref="DeathCamera.Killer"/>: 倒れた位置の少し上から、倒した相手 (倒れたときの <see cref="CombatEvents.CurrentAttribution"/>) の方を向く。
-    /// 相手がいない (自滅・相手が消えた) ときは倒れた位置を見下ろす。</item>
-    /// <item><see cref="DeathCamera.Ally"/>: モード (<see cref="ModeRunnerBase.Members"/>) で同じ陣営の、生きている (ダウン中も含む) 参加者の肩越しに置く。
-    /// どの味方を映すかは <see cref="SpectateTargets"/> で決め、Next / Previous で次・前の味方へ移る。
-    /// モードが無い (キャンペーン) か、映せる味方がいなければ (<see cref="SpectateTargets.ResolveMode"/>) Free と同じにする。</item>
-    /// <item><see cref="DeathCamera.Free"/>: 倒れた位置の上から、Move で向いている方へ飛び、Look で向きを変える。</item>
-    /// <item><see cref="DeathCamera.KillCam"/>: 倒した相手の倒す直前の <see cref="KillCamSeconds"/> 秒を、その肩越しで再生 (<see cref="KillCamReplay"/>) してから Killer と同じにする。
-    /// 生きている間、場にいる <see cref="Damageable"/> (<see cref="KillCamScanSeconds"/> 秒ごとに探し直す) と撃った者 (<see cref="CombatEvents.ShotFired"/>) の
-    /// 目と向きを相手ごとの <see cref="KillCamBuffer"/> にためておき、倒れたら倒した相手の分を切り出す。記録が無い相手ならすぐ Killer にする。</item>
-    /// <item><see cref="DeathCamera.Fallen"/>: 自分の目のまま、倒れた目の真下の床 (<see cref="FallenGroundY"/>) の近くへ崩れ落ち、横に傾いて止まる
-    /// (<see cref="FallenView"/>。落ち方は <see cref="FallSeconds"/>・<see cref="FallenEyeHeight"/>・<see cref="FallenRollDegrees"/>・<see cref="FallenPitchDegrees"/>)。
-    /// 視点は一人称のままにして、自分の体も倒れた抜け殻 (<see cref="DeathBodyPresenter.Shell"/>) も描かず影も落とさず、武器はしまわせる
-    /// (<see cref="WeaponController.Holster"/>)。床の近くのカメラに自分の脚や銃が映らないように。体は戻るときに描き直す。</item>
-    /// </list>
-    /// カメラの置き方と入力はネット対戦の NetDeathCamera と同じ <see cref="DeathCamView"/> に任せる。
-    /// モードの試合が終わったら (<see cref="ModeRunnerBase.IsMatchOver"/>、<see cref="MatchRunner"/> の試合の終わり) 試合の終わりの見せ方に譲ってすぐ戻す。
-    /// 武器と移動を止めるのはモード (<see cref="SideMember.SetActing"/>) とキャンペーンの役目で、ここは視点と覗き込みだけを止める。
-    /// </summary>
+    // 倒れた主観 (DeathCamera.Fallen) では、床の近くのカメラに自分の脚や銃が映らないよう、自分の体も倒れた抜け殻も描かず影も落とさず、武器はしまわせる。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Damageable))]
     public sealed class PlayerDeathCamera : MonoBehaviour
@@ -64,10 +43,9 @@ namespace Shooter.Runtime
         [SerializeField, Range(-FallenView.MaxDegrees, FallenView.MaxDegrees), Tooltip("倒れた主観 (Fallen) で倒れた後の上下の向き (度、正が下)")]
         private float _fallenPitchDegrees = FallenView.DefaultPitchDegrees;
 
-        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れた目から床を探す下向きの距離 (m)。これより下に床が無ければ足元の高さを使う。</summary>
         public const float FallenGroundProbeDistance = 50f;
 
-        /// <summary>キルカムのために姿勢をためる相手を、場から探し直す間隔 (秒)。後から出てきた相手を拾うため。</summary>
+        // 後から出てきた相手を拾うため、キルカムの姿勢をためる相手をこの間隔で場から探し直す。
         public const float KillCamScanSeconds = 1f;
 
         private const float _minKillCamSeconds = 0.1f;
@@ -99,7 +77,6 @@ namespace Shooter.Runtime
         private ModeRunnerBase _modeRunner;
         private MatchRunner _matchRunner;
 
-        // 倒れたときに記録した相手。消えたら null として扱う
         private GameObject _killer;
         private string _killerWeaponId = string.Empty;
         private bool _killerResolved;
@@ -109,7 +86,6 @@ namespace Shooter.Runtime
         private SideMember _ally;
         private bool _allyResolved;
 
-        /// <summary>倒れてから戻るまでの演出。None なら自分の視点のまま。</summary>
         public DeathCamera Mode
         {
             get => _mode;
@@ -158,23 +134,17 @@ namespace Shooter.Runtime
             set => _fallenPitchDegrees = FiniteOr(Mathf.Clamp(value, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultPitchDegrees);
         }
 
-        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で落ち着く床の高さ。映していなければ 0。</summary>
         public float FallenGroundY => IsActive ? _fallenGroundY : 0f;
 
-        /// <summary>倒れた主観 (<see cref="DeathCamera.Fallen"/>) で、倒れ始めてからの秒数。映していなければ 0。</summary>
         public float FallenElapsed => IsActive ? _fallenElapsed : 0f;
 
-        /// <summary>今の設定の倒れ方。Inspector で範囲の外の値が入っていれば、範囲に収めて使う。</summary>
         public FallenView FallenMotion => new FallenView(
             FiniteOr(Mathf.Max(0f, _fallSeconds), FallenView.DefaultSeconds),
             FiniteOr(Mathf.Max(0f, _fallenEyeHeight), FallenView.DefaultEyeHeight),
             FiniteOr(Mathf.Clamp(_fallenRollDegrees, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultRollDegrees),
             FiniteOr(Mathf.Clamp(_fallenPitchDegrees, -FallenView.MaxDegrees, FallenView.MaxDegrees), FallenView.DefaultPitchDegrees));
 
-        /// <summary>
-        /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒される直前の長さ (秒)。変えるとそれまでにためた姿勢は捨てる
-        /// (ためておく長さが変わるため)。
-        /// </summary>
+        // 変えるとためておく長さが変わるので、それまでにためた姿勢は捨てる。
         public float KillCamSeconds
         {
             get => _killCamSeconds;
@@ -189,42 +159,30 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// キルカム (<see cref="DeathCamera.KillCam"/>) の再生の速さ (1 で記録どおり)。再生を始めるときに読み、
-        /// 0 より大きい有限値でなければ警告を出して 1 倍で再生する。
-        /// </summary>
         public float KillCamSpeed
         {
             get => _killCamSpeed;
             set => _killCamSpeed = value;
         }
 
-        /// <summary>いまキルカムで倒した相手の記録を再生しているか。</summary>
         public bool IsReplayingKillCam => IsActive && _replay != null && _replay.IsPlaying;
 
-        /// <summary>キルカムのために姿勢をためている相手の数。</summary>
         public int KillCamSubjectCount => _killCamSubjects.Count;
 
-        /// <summary>試合の終わりと味方を読むモード。未設定なら倒れたときにシーンから探す。</summary>
         public ModeRunnerBase ModeRunner
         {
             get => _modeRunner;
             set => _modeRunner = value;
         }
 
-        /// <summary>いま倒されてからのカメラを映しているか。</summary>
         public bool IsActive => _switch.IsActive;
 
-        /// <summary>いま自由カメラ (Free、または Ally で映せる味方がいないとき) で動かしているか。</summary>
         public bool IsFreeCamera => IsActive && _view != null && _view.IsFreeCamera;
 
-        /// <summary>映している間、倒した相手。映していないか、相手がいない・消えたなら null。</summary>
         public GameObject Killer => IsActive && _killer != null ? _killer : null;
 
-        /// <summary>肩越しに映している味方。映していないか、味方を映していなければ null。</summary>
         public SideMember Ally => IsActive && !IsFreeCamera && _ally != null ? _ally : null;
 
-        /// <summary>rules の <see cref="GameRules.DeathCamera"/> を <see cref="Mode"/> にする。rules が null なら None。</summary>
         public void ApplyRules(GameRules rules)
         {
             _mode = rules != null ? rules.DeathCamera : DeathCamera.None;
@@ -291,12 +249,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// キルカム (<see cref="DeathCamera.KillCam"/>) のために、time (秒) の相手の目と向きをためる。<see cref="KillCamScanSeconds"/> 秒ごとに
-        /// 場の <see cref="Damageable"/> を探し直して相手に加える。無効になっている相手はためず、それまでの分も捨てる。
-        /// Play 中は LateUpdate が、ルールが KillCam で自分が生きている間だけ毎フレーム呼ぶ。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">time が有限でない。</exception>
         public void RecordKillCam(double time)
         {
             if (double.IsNaN(time) || double.IsInfinity(time))
@@ -465,10 +417,6 @@ namespace Shooter.Runtime
             _hasKillCamRecord = false;
         }
 
-        /// <summary>
-        /// 今の状態を渡して、カメラを始めるか止める。始めたらその場でカメラを倒れた位置の上へ置いて見下ろし (Free はここから飛び始める。Fallen は自分の目に置いて倒れ始める)、
-        /// 止めたら元に戻す。オフラインのプレイヤーはいつもこの画面の視点を持つ。Play 中は LateUpdate が自分の体力と試合の終わりを渡して毎フレーム呼ぶ。
-        /// </summary>
         public DeathCamTransition Step(DeathCamera mode, bool isAlive, bool matchEnded)
         {
             EnsureResolved();
@@ -511,10 +459,6 @@ namespace Shooter.Runtime
             return transition;
         }
 
-        /// <summary>
-        /// 映している間、今の <see cref="Mode"/> でカメラを 1 フレーム動かす。spectateStep は Next で +1、Previous で -1 (Ally で映す味方を替える)、
-        /// move と lookDegrees は自由カメラの移動と回転 (度)。映していなければ何もしない。Play 中は LateUpdate がこのフレームの入力を渡して呼ぶ。
-        /// </summary>
         public void Advance(int spectateStep, Vector2 move, Vector2 lookDegrees, float deltaSeconds)
         {
             if (!IsActive)
@@ -652,7 +596,6 @@ namespace Shooter.Runtime
             _view.Frame(killerEye, _height, _backDistance);
         }
 
-        // モードの参加者から映す味方を選び、その肩越しへ置く。映せる味方がいなければ自由カメラにする
         private void WatchAlly(int step, Vector2 move, Vector2 lookDegrees, float deltaSeconds)
         {
             var self = GetComponent<SideMember>();
@@ -701,9 +644,6 @@ namespace Shooter.Runtime
             _view.FrameAlly(EyeOf(_ally.gameObject), _ally.transform.eulerAngles.y, _ally.transform);
         }
 
-        /// <summary>
-        /// go の目の位置。<see cref="EnemyAgent"/> ならその目、<see cref="ViewRig"/> があればその目、体力があれば狙う点、どれも無ければ Transform の位置。
-        /// </summary>
         public static Vector3 EyeOf(GameObject go)
         {
             var agent = go.GetComponent<EnemyAgent>();

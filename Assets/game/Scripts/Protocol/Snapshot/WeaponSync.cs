@@ -1,12 +1,8 @@
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 持ち主にだけ送る今の武器の状態 (Netcode の <c>NetWeaponState</c> の中身)。他の人の弾数を送ると、リロードや持ち替えの隙が分かってしまうため。
-    /// </summary>
-    /// <remarks>
-    /// リロードの時間の値は、持ち主の画面がアクティブリロードの窓を描くのにだけ使い、無効な値なら描かない (<c>NetWeaponState.HasReloadProgress</c>)。
-    /// そのため有限かどうかを読むときに確かめない。
-    /// </remarks>
+    // 持ち主にだけ送るのは、他の人の弾数を送ると、リロードや持ち替えの隙が分かってしまうため。
+    // リロードの時間の値は、持ち主の画面がアクティブリロードの窓を描くのにだけ使い、無効な値なら描かない (NetWeaponState.HasReloadProgress)。
+    // そのため有限かどうかを読むときに確かめない。
     public struct WeaponSync
     {
         public int AmmoInMagazine { get; set; }
@@ -15,27 +11,23 @@ namespace Shooter.Protocol
 
         public bool IsReloading { get; set; }
 
-        /// <summary>持っている武器のうち今の武器の番号。</summary>
         public byte EquippedIndex { get; set; }
 
-        /// <summary>持っている武器の数。</summary>
         public byte WeaponCount { get; set; }
 
         public bool IsSwitching { get; set; }
 
-        /// <summary>リロードを始めたサーバーの時刻 (秒)。</summary>
         public double ReloadStartedAt { get; set; }
 
         public float ReloadSeconds { get; set; }
 
-        /// <summary>アクティブリロードの窓の始まり (リロードの進みの 0〜1)。</summary>
         public float ActiveReloadWindowStart { get; set; }
 
         public float ActiveReloadWindowEnd { get; set; }
 
         public float Heat { get; set; }
 
-        /// <summary>オーバーヒート中か。overheatSeconds が 1 tick より短いと、熱が 1 のスナップショットが届かないことがあるため熱とは別に運ぶ。</summary>
+        // overheatSeconds が 1 tick より短いと、熱が 1 のスナップショットが届かないことがあるため熱とは別に運ぶ。
         public bool IsOverheated { get; set; }
 
         public float ChargeFraction { get; set; }

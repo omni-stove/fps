@@ -4,21 +4,17 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    // 近接の入力で出す技を、登録された中から選ぶ。どれも当てはまらなければ null を返し、呼ぶ側がふつうの近接を出す。
-    // 座標は Y が上で、背後かどうかは水平面で測る (MeleeJudge と同じ)。
     public sealed class ContextMeleeSelector
     {
         public const float DefaultBehindArcDegrees = 90f;
 
         private const float _minLengthSquared = 1e-8f;
 
-        // 優先度の高い順。同じ優先度なら先に登録したものが前 (List.Sort は安定でないので、差し込む位置で並びを保つ)。
+        // 同じ優先度なら先に登録したものを前に置きたいが、List.Sort は安定でないので、差し込む位置で並びを保つ。
         private readonly List<ContextMeleeMove> _moves = new List<ContextMeleeMove>();
 
         public IReadOnlyList<ContextMeleeMove> Moves => _moves;
 
-        // 同じ Id があれば置き換える。置き換えたものも優先度の同じものの最後に並べ直す。
-        /// <exception cref="ArgumentNullException">move が null。</exception>
         public void Register(ContextMeleeMove move)
         {
             if (move == null)
@@ -71,7 +67,6 @@ namespace Shooter.Core
             return null;
         }
 
-        // 登録した技のうちいちばん遠くまで届くもの。相手を探す範囲に使う。技が無ければ 0。
         public float MaxReach()
         {
             var reach = 0f;
@@ -83,7 +78,6 @@ namespace Shooter.Core
             return reach;
         }
 
-        /// <exception cref="ArgumentNullException">move が null。</exception>
         public static bool Matches(ContextMeleeMove move, ContextMeleeSituation situation)
         {
             if (move == null)
@@ -96,7 +90,6 @@ namespace Shooter.Core
                 && situation.Distance <= move.Reach;
         }
 
-        // attacker が target の背中側 (target の向きの真後ろを中心に arcDegrees の扇) にいるか。
         // 向きが水平に決まらない (真上・真下を向いている、重なっている) ときは背後とみなさない。背後からの技を誤って出さないように。
         public static bool IsBehind(Vector3 targetPosition, Vector3 targetForward, Vector3 attackerPosition, float arcDegrees)
         {
@@ -121,7 +114,6 @@ namespace Shooter.Core
         }
 
         // 相手の正面から stand 離れた点ではなく、今いる向きのまま相手に寄った点にする。回り込ませると壁や他の敵にめり込みやすい。
-        // 重なっていて向きが決まらなければ、相手の向きの正面に立たせる。
         public static Vector3 StandPoint(Vector3 attackerPosition, Vector3 targetPosition, Vector3 targetForward, float standDistance)
         {
             if (!(standDistance >= 0f) || float.IsInfinity(standDistance))

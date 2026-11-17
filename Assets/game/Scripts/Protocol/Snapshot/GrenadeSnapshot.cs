@@ -3,22 +3,15 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 投げられて飛んでいるグレネード 1 個。Netcode では NetGrenade の NetworkObject を Spawn し、NetworkTransform で位置と回転を配っていた。
-    /// 並びから消えたら爆発したか片付けられた。爆発の演出は <see cref="ExplosionMessage"/> で別に届く。
-    /// </summary>
     public struct GrenadeSnapshot : ISnapshotEntity<GrenadeSnapshot>
     {
         public int GrenadeId { get; set; }
         public GrenadeFields Present { get; set; }
 
-        /// <summary>投げた人がいるか (もう抜けていれば false)。</summary>
         public bool HasThrower { get; set; }
 
-        /// <summary>投げた人。<see cref="HasThrower"/> が false なら使わない。</summary>
         public int ThrowerId { get; set; }
 
-        /// <summary>投げたグレネードの Id (武器の Id と同じ表)。</summary>
         public string WeaponId { get; set; }
 
         public string TypeId { get; set; }

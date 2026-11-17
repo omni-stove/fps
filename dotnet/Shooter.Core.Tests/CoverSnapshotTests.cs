@@ -4,10 +4,6 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// <see cref="CoverState.Capture"/> と <see cref="CoverState.Restore"/> (ネット対戦の予測の巻き戻し) と、
-    /// 種で決めるブラインドファイアの散らばり (<see cref="BlindFireShot.Spread(Vector3, float, int, int)"/>)。
-    /// </summary>
     public sealed class CoverSnapshotTests
     {
         private const float _frame = 1f / 60f;

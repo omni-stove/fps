@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 持ち物の画面 (<see cref="InventoryView"/>) が持ち物を格子か一覧で描き、選んだ物にできることのボタンを出し、
-    /// <see cref="GameSignals.Inventory"/> の持ち物を出すことを確かめる。
-    /// </summary>
     public sealed class InventoryViewTests
     {
         private const string _bandageId = "31d5979e-6067-49d9-b70c-fdcf44dc77d1";

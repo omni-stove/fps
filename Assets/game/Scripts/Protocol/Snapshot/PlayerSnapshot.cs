@@ -3,14 +3,6 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 1 人のプレイヤー (人と Bot) の、全員に見せる状態。Netcode では NetPlayer・NetworkPlayerMotor・NetPlayerWeapon の同期値と
-    /// <c>StateRpc</c>、試合の成績と出現直後の無敵の NetworkList に分かれていたもの。
-    /// </summary>
-    /// <remarks>
-    /// 位置などの移動の状態は、そのプレイヤーが最後に処理された入力の後の値。持ち主は <see cref="OwnerSnapshot.LastProcessedInputTick"/> と
-    /// 合わせて予測を照合する。
-    /// </remarks>
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
         private const int _motionFlagCount = 4;
@@ -25,12 +17,10 @@ namespace Shooter.Protocol
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
 
-        /// <summary>向き (Y 軸まわり、ラジアン)。</summary>
         public float Yaw { get; set; }
         public bool IsGrounded { get; set; }
         public bool IsCrouched { get; set; }
 
-        /// <summary>伏せているか (実際の姿勢)。<see cref="IsCrouched"/> とは同時に立たない。</summary>
         public bool IsProne { get; set; }
         public bool IsAiming { get; set; }
 
@@ -40,39 +30,31 @@ namespace Shooter.Protocol
         public CharacterProneState Prone { get; set; }
         public CharacterLadderState Ladder { get; set; }
 
-        /// <summary>0 は倒れているか、まだ試合に出ていない。</summary>
         public int Health { get; set; }
 
-        /// <summary>最後に受けた弾の進む向き。倒れた体を倒す向きにだけ使う。</summary>
         public Vector3 LastHitDirection { get; set; }
 
         public DownedSync Downed { get; set; }
 
         public VehicleSeatSync Vehicle { get; set; }
 
-        /// <summary>持っている武器の Id。持っていなければ空。</summary>
         public string WeaponId { get; set; }
 
         public int Kills { get; set; }
         public int Deaths { get; set; }
 
-        /// <summary>最後にこのプレイヤーを倒した相手がいるか。</summary>
         public bool HasKiller { get; set; }
 
-        /// <summary>最後にこのプレイヤーを倒した相手。<see cref="HasKiller"/> が false なら使わない。</summary>
         public int KillerId { get; set; }
 
-        /// <summary>出現直後の無敵の残り秒 (表示用の整数)。0 なら無敵でない。</summary>
         public int SpawnProtectionSeconds { get; set; }
 
-        /// <summary>体を傾ける量。-1 が左いっぱい、1 が右いっぱい。1/127 刻みに丸めて送る。</summary>
         public float Lean { get; set; }
 
         public bool Swimming { get; set; }
 
         public WallRunSide WallRunSide { get; set; }
 
-        /// <summary>地面を離れてから使った空中ジャンプの回数。</summary>
         public byte AirJumpsUsed { get; set; }
 
         public int Assists { get; set; }

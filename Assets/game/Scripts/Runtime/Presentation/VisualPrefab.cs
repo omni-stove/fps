@@ -4,15 +4,9 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 仮の形の代わりに差し替えたプレハブを置く。見た目だけの物は弾・視線・移動を遮ってはいけないので、当たり判定を外して置ける。
-    /// </summary>
+    // 見た目だけの物は弾・視線・移動を遮ってはいけないので、当たり判定を外して置けるようにする。
     public static class VisualPrefab
     {
-        /// <summary>
-        /// prefab を parent の子に置き (ローカルの位置・向き・大きさはプレハブのまま)、名前を objectName にする。
-        /// stripColliders なら子孫の当たり判定をすべて外す。
-        /// </summary>
         public static GameObject Instantiate(GameObject prefab, Transform parent, string objectName, bool stripColliders)
         {
             if (prefab == null)
@@ -34,7 +28,6 @@ namespace Shooter.Runtime
             return instance;
         }
 
-        /// <summary>root と子孫すべてのレイヤーを layer にする。</summary>
         public static void SetLayer(GameObject root, int layer)
         {
             if (root == null)

@@ -3,7 +3,6 @@ using Shooter.Core;
 
 namespace Shooter.NetV2
 {
-    /// <summary><see cref="PartySession"/> のログの 1 行。どれも <see cref="Tag"/> で始める。</summary>
     public static class PartyLog
     {
         public const string Tag = "[Party]";

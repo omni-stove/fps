@@ -3,21 +3,14 @@ using System.Globalization;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オンラインの HUD の右上に出す回線の表示 (Ping・パケットロス・サーバーの tick) の文字列と色の段階。
-    /// </summary>
     public static class NetStatsFormat
     {
-        /// <summary>この Ping (ms) 以上を黄色で出す。</summary>
         public const int WarningPingMs = 150;
 
-        /// <summary>この Ping (ms) 以上を赤で出す。</summary>
         public const int BadPingMs = 300;
 
-        /// <summary>まだ分からない値の代わりに出す文字列。</summary>
         public const string Unknown = "--";
 
-        /// <summary>pingMs の色の段階。null (まだ分からない) は <see cref="NetPingLevel.Good"/>。</summary>
         public static NetPingLevel PingLevel(int? pingMs)
         {
             if (!pingMs.HasValue)
@@ -33,10 +26,6 @@ namespace Shooter.Runtime
             return pingMs.Value >= WarningPingMs ? NetPingLevel.Warning : NetPingLevel.Good;
         }
 
-        /// <summary>
-        /// 「Ping 123 ms  ロス 4%  tick 5678」の形の 1 行 (表のキー <c>net.stats.line</c>)。分からない値は <see cref="Unknown"/> にする。
-        /// 負の Ping とロスは 0 に、100 を超えるロスは 100 に収める。
-        /// </summary>
         public static LocalizedText Text(int? pingMs, int? lossPercent, int? serverTick)
         {
             var ping = pingMs.HasValue ? Number(Math.Max(0, pingMs.Value)) : Unknown;
@@ -45,7 +34,6 @@ namespace Shooter.Runtime
             return new LocalizedText("net.stats.line", ping, loss, tick);
         }
 
-        /// <summary>トランスポートが返す往復時間 (ms) を表示用の int にする。int に収まらなければ <see cref="int.MaxValue"/>。</summary>
         public static int PingFromRtt(ulong rttMs)
         {
             return rttMs > int.MaxValue ? int.MaxValue : (int)rttMs;

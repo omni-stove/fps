@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オフラインのキルフィードの引き先。名前・チーム・自分かどうかは <see cref="OfflineParticipants"/> から引く。
-    /// 武器の名前 (<see cref="WeaponSpec.Name"/>) は、倒した側が持っている武器 (プレイヤーは <see cref="WeaponController"/> の全武器、敵は <see cref="EnemyAgent.Weapon"/>) から引く。
-    /// </summary>
     public sealed class OfflineKillFeedNames : IKillFeedNames
     {
         private readonly OfflineParticipants _participants = new OfflineParticipants();
@@ -17,7 +13,9 @@ namespace Shooter.Runtime
             var killerObject = CombatEvents.OfflineObject(entry.KillerId);
             var killer = NameOf(entry.KillerId);
             var victim = entry.IsSuicide ? killer : NameOf(entry.VictimId);
-            return new KillFeedLine(entry, killer, victim, WeaponNameOf(killerObject, entry.WeaponId));
+            return new KillFeedLine(
+                entry, killer, victim, WeaponNameOf(killerObject, entry.WeaponId),
+                ParticipantKillFeedNames.AnyLocal(_participants, entry.AssisterIds));
         }
 
         private KillFeedName NameOf(int id)

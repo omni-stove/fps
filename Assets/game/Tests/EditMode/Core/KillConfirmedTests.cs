@@ -50,7 +50,6 @@ namespace Shooter.Core.Tests
             Assert.That(tag.SecondsLeft, Is.EqualTo(_tagLifetime));
             Assert.That(mode.Tags.Count, Is.EqualTo(1));
 
-            // 倒した本人でなくても、敵のチームの誰が拾っても確定する。
             Assert.That(mode.Collect(tag.Id, _alpha2), Is.EqualTo(KillConfirmedResult.Confirmed));
 
             Assert.That(mode.Session.GetScore(Side.Alpha), Is.EqualTo((double)KillConfirmedSpec.DefaultPointsPerConfirm));

@@ -9,10 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 床と壁 (BoxCollider) を置き、<see cref="CoverController.Tick"/> と <see cref="PlayerController.Tick"/> を交互に呼んで、
-    /// 張り付き・壁沿いの移動・しゃがみ・覗き・出たあとの移動を確かめる。Edit Mode では Awake が走らないので参照は直接渡す。
-    /// </summary>
+    // Edit Mode では Awake が走らないので参照は直接渡す。
     public sealed class CoverControllerTests
     {
         private const float _frame = 0.02f;

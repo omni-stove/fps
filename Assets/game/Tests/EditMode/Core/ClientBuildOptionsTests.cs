@@ -38,6 +38,8 @@ namespace Shooter.Core.Tests
         [TestCase("windows", ClientPlatform.Windows)]
         [TestCase("macos", ClientPlatform.MacOS)]
         [TestCase("Windows", ClientPlatform.Windows)]
+        [TestCase("webgl", ClientPlatform.WebGL)]
+        [TestCase("WebGL", ClientPlatform.WebGL)]
         public void ParsesPlatform(string value, ClientPlatform expected)
         {
             var options = ParseOrFail("-batchmode -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform " + value);
@@ -67,9 +69,10 @@ namespace Shooter.Core.Tests
         [TestCase("-clientPlatform linux")]
         [TestCase("-clientPlatform win64")]
         [TestCase("-clientPlatform osx")]
+        [TestCase("-clientPlatform web")]
         public void RejectsUnknownPlatform(string commandLine)
         {
-            Assert.That(ParseError(commandLine), Does.Contain("windows or macos"));
+            Assert.That(ParseError(commandLine), Does.Contain("windows, macos or webgl"));
         }
 
         [Test]
@@ -83,11 +86,14 @@ namespace Shooter.Core.Tests
         {
             var windows = new ClientBuildOptions(ClientPlatform.Windows);
             var mac = new ClientBuildOptions(ClientPlatform.MacOS);
+            var web = new ClientBuildOptions(ClientPlatform.WebGL);
 
             Assert.That(windows.OutputDirectory, Is.EqualTo("Builds/client-windows"));
             Assert.That(windows.ExecutablePath, Is.EqualTo("Builds/client-windows/shooter.exe"));
             Assert.That(mac.OutputDirectory, Is.EqualTo("Builds/client-macos"));
             Assert.That(mac.ExecutablePath, Is.EqualTo("Builds/client-macos/shooter.app"));
+            Assert.That(web.OutputDirectory, Is.EqualTo("Builds/client-webgl"));
+            Assert.That(web.ExecutablePath, Is.EqualTo("Builds/client-webgl/shooter"));
         }
 
         [Test]
@@ -104,6 +110,7 @@ namespace Shooter.Core.Tests
         public void FormatsForLogs()
         {
             Assert.That(new ClientBuildOptions(ClientPlatform.Windows).ToString(), Is.EqualTo("windows -> Builds/client-windows/shooter.exe"));
+            Assert.That(new ClientBuildOptions(ClientPlatform.WebGL).ToString(), Is.EqualTo("webgl -> Builds/client-webgl/shooter"));
         }
     }
 }

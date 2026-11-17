@@ -14,7 +14,7 @@ namespace Shooter.Protocol
 
         public string KindId { get; set; } = "";
 
-        /// <summary>0 なら効果が切れた。切れた知らせを別のメッセージにしないため。</summary>
+        // 0 で効果が切れたことを表すのは、切れた知らせを別のメッセージにしないため。
         public float RemainingSeconds { get; set; }
 
         public void Write(MessageWriter writer)

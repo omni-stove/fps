@@ -8,40 +8,28 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// EOS の P2P で <see cref="IMatchTransport"/> を実装する。相手は IP アドレスではなく ProductUserId で指定する。
-    /// SDK の呼び出しは <see cref="IEosP2P"/> に任せるので、サーバー (EOS の C# SDK) とクライアント (PlayEveryWare のプラグイン) で同じ手順になる。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// ソケット名とチャンネルは Netcode の EOS の transport (<c>Shooter.NetEos.EosP2PTransport</c>) と同じにする:
-    /// 落ちてよいものはチャンネル 0、順に届くものはチャンネル 2 で送り、チャンネル 3 は Easy Anti-Cheat のために空けておく。
-    /// どのパケットも <see cref="PacketSplitter"/> の形にし、その中身の先頭 1 バイトで、データ・切断の知らせ・往復時間を測る ping/pong を分ける。
-    /// </para>
-    /// <para>
-    /// EOS は接続を閉じた理由を相手に渡せず、閉じると送りかけのパケットを捨てうるので、切るときは理由を載せた知らせを順に届くチャンネルで
-    /// データの後ろに送り、受け取った側が閉じるのを待つ (<see cref="EosTransportOptions.CloseLingerMilliseconds"/> を過ぎたらこちらから閉じる)。
-    /// </para>
-    /// <para>
-    /// サーバーは <see cref="Listen"/> の中でログインを終えるまで待つ。待ち受けられたかを戻り値と例外で知らせ、UDP と同じく
-    /// 戻った時点で待ち受けているようにするため。クライアントは画面を止めないよう、ログインからつながるまでを <see cref="TryReceive"/> で進める。
-    /// </para>
-    /// </remarks>
+    // SDK の呼び出しは IEosP2P に任せるので、サーバー (EOS の C# SDK) とクライアント (PlayEveryWare のプラグイン) で同じ手順になる。
+    // ソケット名とチャンネルは Netcode の EOS の transport (Shooter.NetEos.EosP2PTransport) と同じにする:
+    // 落ちてよいものはチャンネル 0、順に届くものはチャンネル 2 で送り、チャンネル 3 は Easy Anti-Cheat のために空けておく。
+    // EOS は接続を閉じた理由を相手に渡せず、閉じると送りかけのパケットを捨てうるので、切るときは理由を載せた知らせを順に届くチャンネルで
+    // データの後ろに送り、受け取った側が閉じるのを待つ (EosTransportOptions.CloseLingerMilliseconds を過ぎたらこちらから閉じる)。
+    // サーバーは Listen の中でログインを終えるまで待つ。待ち受けられたかを戻り値と例外で知らせ、UDP と同じく
+    // 戻った時点で待ち受けているようにするため。クライアントは画面を止めないよう、ログインからつながるまでを TryReceive で進める。
     public sealed class EosMatchTransport : IMatchTransport, IConnectionUserIds
     {
-        /// <summary>P2P のソケット名。英数字 1〜32 文字で、サーバーとクライアントで同じであること。</summary>
+        // EOS のソケット名は英数字 1〜32 文字で、サーバーとクライアントで同じでなければならない。
         public const string SocketName = "shooter";
 
-        /// <summary>EOS P2P の 1 パケットの上限 (EOS_P2P_MAX_PACKET_SIZE)。</summary>
+        // EOS P2P の 1 パケットの上限 (EOS_P2P_MAX_PACKET_SIZE)。
         public const int MaxPacketSize = 1170;
 
         public const byte UnreliableChannel = 0;
         public const byte ReliableChannel = 2;
 
-        /// <summary>分けて送るので 1 パケットに収まらなくてよい。1 つのメッセージの最長 (<see cref="MessageWriter"/>) に合わせる。</summary>
+        // 分けて送るので 1 パケットに収まらなくてよい。1 つのメッセージの最長 (MessageWriter) に合わせる。
         public const int MaxReliablePayloadSize = MessageWriter.DefaultMaxLength;
 
-        /// <summary>落ちてよいものは分けると 1 つ落ちただけで全部を失うので、1 パケットに収まる長さに限る。</summary>
+        // 落ちてよいものは分けると 1 つ落ちただけで全部を失うので、1 パケットに収まる長さに限る。
         public const int MaxUnreliablePayloadSize = MaxPacketSize - PacketSplitter.WholeHeaderSize - _frameHeaderSize;
 
         private const string _logTag = "[Net]";
@@ -90,10 +78,7 @@ namespace Shooter.Protocol
         private int _sendFailures;
         private int _malformedPackets;
 
-        /// <param name="p2p">SDK を呼ぶ部分。この通信路が持ち、止めるときに <see cref="IEosP2P.CloseAll"/> を呼ぶ。</param>
-        /// <param name="options">待ち時間の調整値。</param>
-        /// <param name="log"><c>[Net]</c> 付きの 1 行を受け取る先。null なら出さない。</param>
-        /// <param name="clockMilliseconds">単調に増えるミリ秒の時計。null ならプロセスの時計。テストで時間を進めるために差し替える。</param>
+        // clockMilliseconds は、テストで時間を進めるために差し替えられるようにしている。
         public EosMatchTransport(IEosP2P p2p, EosTransportOptions options, Action<string> log, Func<long> clockMilliseconds = null)
         {
             _p2p = p2p ?? throw new ArgumentNullException(nameof(p2p));
@@ -112,13 +97,11 @@ namespace Shooter.Protocol
 
         public bool IsActive => _active;
 
-        /// <summary>ログインした自分の ProductUserId。ログイン前は null。</summary>
         public string LocalUserId { get; private set; }
 
         private long Now => _clock();
 
-        /// <summary>EOS では待ち受けるアドレスとポートを使わない。ログインできるまで待ち、できなければ投げる。</summary>
-        /// <exception cref="InvalidOperationException">すでに待ち受けかつなぎの最中か、ログインできなかった。</exception>
+        // EOS では待ち受けるアドレスとポートを使わないので、受け取っても見ない。
         public void Listen(string address, ushort port)
         {
             ThrowIfActive();
@@ -157,8 +140,7 @@ namespace Shooter.Protocol
             }
         }
 
-        /// <summary>address はサーバーの ProductUserId。port は使わない。</summary>
-        /// <exception cref="ArgumentException">address が ProductUserId の形でない。</exception>
+        // EOS では相手を ProductUserId (address) で指すので、port は使わない。
         public void Connect(string address, ushort port)
         {
             ThrowIfActive();
@@ -761,7 +743,6 @@ namespace Shooter.Protocol
             _log(_logTag + " EOS connected to server " + _serverUserId);
         }
 
-        /// <summary>サーバーとの接続を終え、切れた (つながる前ならつながらなかった) と知らせる。</summary>
         private void EndClient(string reason)
         {
             if (_clientEnded)
@@ -956,10 +937,9 @@ namespace Shooter.Protocol
 
             public PacketReassembler Reassembler { get; }
 
-            /// <summary>つながったと知らせたか。知らせていない相手が消えても、呼ぶ側はその Id を知らないので出さない。</summary>
+            // つながったと知らせていない相手が消えても、呼ぶ側はその Id を知らないので出さないために持つ。
             public bool Reported { get; set; }
 
-            /// <summary>こちらから切り始めたか。切り始めた後に届いたデータは出さない。</summary>
             public bool Closing { get; set; }
 
             public string LocalReason { get; set; } = "";

@@ -6,22 +6,9 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 拠点制圧 (<see cref="Domination"/>) の HUD。画面の上中央に両チームのポイント・残り時間・各拠点の持ち主を出し、
-    /// 試合が終わったら勝者を出す。Hud.uxml の <see cref="UxmlName"/> を使う。
-    /// <see cref="Hud.AddViews"/> が最初から付け、出すものが来るまで隠しておく。要素を持っている間は <see cref="GameSignals.Domination"/> を購読し、
-    /// 出された状態を <see cref="Show"/> し、消されたら隠す。要素を受けたときは今の状態に合わせる。言語が変わったら今の言語で出し直す。
-    /// 出している間は、残り時間をこちらで出すので Hud の残り時間の欄 (<see cref="HudView.TimeLabelName"/> の親) を隠す。
-    /// HUD が上の欄にチームの点数を出している (<see cref="Hud.ShowsTeamScores"/>) 間は出さず、拠点は <see cref="ControlPointsView"/> が出す。
-    /// </summary>
-    /// <remarks>
-    /// 状態は毎フレーム出し直されるので、表示する整数や持ち主が変わったときだけ文字列を作り直す。
-    /// 文字列は Label が無い (UIDocument の木がまだ無い) ときも <see cref="AlphaScoreText"/> などで読める。
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class DominationView : HudElementView
     {
-        /// <summary>Hud.uxml の拠点制圧の要素。</summary>
         public const string UxmlName = "domination";
 
         public const string ScoresClass = "domination__scores";
@@ -30,7 +17,6 @@ namespace Shooter.Runtime
         public const string PointsClass = "domination__points";
         public const string PointClass = "domination__point";
 
-        /// <summary>両チームがいて占領が止まっている拠点に足す USS クラス。</summary>
         public const string ContestedClass = "domination__point--contested";
 
         public const string ResultClass = "domination__result";
@@ -45,7 +31,7 @@ namespace Shooter.Runtime
         private Label _resultLabel;
         private VisualElement _hiddenTimePanel;
 
-        // 表示中の値。変わったときだけ文字列を作り直す。
+        // 状態は毎フレーム出し直されるので、表示中の値を覚えて、表示する整数や持ち主が変わったときだけ文字列を作り直す。
         private int _shownAlpha = -1;
         private int _shownBravo = -1;
         private int _shownSeconds = -1;
@@ -55,22 +41,16 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している状態。出していなければ null。</summary>
         public DominationStatus Source => _source;
 
-        /// <summary>Alpha のチーム名と切り捨てたポイント。出していなければ空文字。</summary>
         public string AlphaScoreText { get; private set; } = string.Empty;
 
-        /// <summary>Bravo のチーム名と切り捨てたポイント。出していなければ空文字。</summary>
         public string BravoScoreText { get; private set; } = string.Empty;
 
-        /// <summary>残り時間 (mm:ss)。出していなければ空文字。</summary>
         public string TimeText { get; private set; } = string.Empty;
 
-        /// <summary>試合の結果。終わるまでは空文字。</summary>
         public string ResultText { get; private set; } = string.Empty;
 
-        /// <summary>拠点ごとの呼び名と持ち主 (番号の順)。</summary>
         public IReadOnlyList<string> PointTexts => _pointTexts;
 
         private void Show(DominationStatus status)
@@ -164,7 +144,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>チームの色 (<see cref="Hud.TeamColor"/>) が変わったときに呼ぶ。点数と拠点の欄を塗り直す。</summary>
         public void RefreshTeamColors()
         {
             ApplyScoreColors();
@@ -340,7 +319,7 @@ namespace Shooter.Runtime
             return hud != null && hud.FollowsTeamPalette ? hud.TeamColor(team) : TeamColors.Of(team, TeamColors.OfflineViewer);
         }
 
-        /// <summary>残り時間はこちらで出すので、同じ上中央にある Hud の残り時間の欄を隠す。</summary>
+        // 残り時間はこちらで出すので、同じ上中央にある Hud の残り時間の欄を隠す。
         private void HideTimePanel(VisualElement element)
         {
             if (_hiddenTimePanel != null)

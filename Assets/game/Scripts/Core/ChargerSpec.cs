@@ -44,7 +44,6 @@ namespace Shooter.Core
 
         public float ChargeSeconds => ChargeDistance / ChargeSpeed;
 
-        /// <exception cref="ArgumentOutOfRangeException">値が範囲の外。triggerDistance は chargeDistance 以下。</exception>
         public ChargerSpec(
             float triggerDistance,
             float windupSeconds,

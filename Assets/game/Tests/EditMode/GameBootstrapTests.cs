@@ -20,7 +20,6 @@ namespace Shooter.Tests.EditMode
         private WeaponDefinition _handgun;
         private GameRulesDefinition _rules;
 
-        /// <summary>SetUp で配線するルール。2 秒後から毎秒 10 回復、予備弾は 2 倍で無限。</summary>
         private static readonly GameRules _testRules = new GameRules(
             FriendlyFire.Off,
             RespawnMode.Individual,
@@ -1158,7 +1157,6 @@ namespace Shooter.Tests.EditMode
                 Assert.That(model.MagazineAmmo, Is.EqualTo(_rifle.MagazineSize - 1));
                 Assert.That(model.IsReserveInfinite, Is.EqualTo(_world.Rules.InfiniteReserve));
 
-                // 持ち替えると HUD は新しい武器を購読し直し、しまった武器の射撃では変わらない。
                 var rifle = controller.Weapon;
                 Assert.That(controller.SelectNext(), Is.True);
                 Assert.That(model.WeaponSpec.Id, Is.EqualTo(_handgun.Id));

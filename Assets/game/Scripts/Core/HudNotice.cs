@@ -25,7 +25,6 @@ namespace Shooter.Core
 
         public int RevivePercent { get; }
 
-        /// <summary><see cref="HudNoticeKind.StatusEffect"/> の種類の Id (<see cref="StatusEffectKinds"/>)。ほかは空。</summary>
         public string KindId => _kindId ?? string.Empty;
 
         // default では null になるので、読むときに空文字へ寄せる。
@@ -72,7 +71,6 @@ namespace Shooter.Core
             return WithSeconds(HudNoticeKind.SpawnProtected, seconds);
         }
 
-        /// <summary>自分にかかっている状態異常 (種類 kindId) の残り。</summary>
         public static HudNotice StatusEffect(string kindId, int seconds)
         {
             if (string.IsNullOrEmpty(kindId))

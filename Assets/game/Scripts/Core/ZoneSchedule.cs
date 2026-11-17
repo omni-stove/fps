@@ -4,12 +4,6 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 時間とともに縮むエリアの予定。最初の円から、段階 (<see cref="ZonePhase"/>) ごとに待ってから次の円へ縮む。
-    /// 次の円は今の円の中に収まるよう、中心を今の円の中から乱数で選ぶ。乱数は <see cref="Seed"/> と段階の番号だけで決まるので、
-    /// 同じシードなら実行環境によらず同じ円の列になる。円の列は作ったときにすべて決め、時刻は外から渡す (<see cref="Evaluate"/>)。
-    /// 位置は水平面 (X がワールドの x、Y がワールドの z) で持ち、高さは見ない。
-    /// </summary>
     public sealed class ZoneSchedule
     {
         private static readonly double _unitScale = 1.0 / (1UL << 53);
@@ -18,27 +12,18 @@ namespace Shooter.Core
         private readonly Vector2[] _centers;
         private readonly float[] _startSeconds;
 
-        /// <summary>最初の円の中心。</summary>
         public Vector2 InitialCenter { get; }
 
-        /// <summary>最初の円の半径 (m)。</summary>
         public float InitialRadius { get; }
 
-        /// <summary>次の円の中心を選ぶ乱数のシード。</summary>
         public int Seed { get; }
 
-        /// <summary>段階の並び。1 つ以上。</summary>
         public IReadOnlyList<ZonePhase> Phases => _phases;
 
         public int PhaseCount => _phases.Length;
 
-        /// <summary>すべての段階を終える時刻 (秒)。これ以降は最後の円のまま。</summary>
         public float TotalSeconds { get; }
 
-        /// <param name="initialCenter">最初の円の中心。各成分は有限値。</param>
-        /// <param name="initialRadius">最初の円の半径 (m)。0 より大きい有限値。</param>
-        /// <param name="phases">段階の並び。1 つ以上で、各段階の半径はその前の円の半径以下。</param>
-        /// <param name="seed">次の円の中心を選ぶ乱数のシード。</param>
         public ZoneSchedule(Vector2 initialCenter, float initialRadius, IReadOnlyList<ZonePhase> phases, int seed)
         {
             if (!IsFinite(initialCenter.X) || !IsFinite(initialCenter.Y))
@@ -92,32 +77,24 @@ namespace Shooter.Core
             TotalSeconds = (float)start;
         }
 
-        /// <summary>段階 phaseIndex を始める時刻 (秒)。</summary>
         public float PhaseStartSeconds(int phaseIndex)
         {
             CheckPhaseIndex(phaseIndex);
             return _startSeconds[phaseIndex];
         }
 
-        /// <summary>段階 phaseIndex の終わりの円の中心。</summary>
         public Vector2 TargetCenter(int phaseIndex)
         {
             CheckPhaseIndex(phaseIndex);
             return _centers[phaseIndex];
         }
 
-        /// <summary>段階 phaseIndex の終わりの円の半径 (m)。</summary>
         public float TargetRadius(int phaseIndex)
         {
             CheckPhaseIndex(phaseIndex);
             return _phases[phaseIndex].Radius;
         }
 
-        /// <summary>
-        /// 開始から elapsedSeconds 経った時点の様子。段階の境目ちょうどの時刻は後の段階 (の待ち) に入れる。
-        /// 縮んでいる間は、中心と半径を前の円から次の円へ時間に比例して動かす。
-        /// </summary>
-        /// <param name="elapsedSeconds">開始からの経過秒数。0 以上の有限値。</param>
         public ZoneState Evaluate(float elapsedSeconds)
         {
             if (!(elapsedSeconds >= 0f) || float.IsInfinity(elapsedSeconds))
@@ -171,21 +148,16 @@ namespace Shooter.Core
                 Math.Max(0f, phase.ShrinkSeconds - shrinkElapsed));
         }
 
-        /// <summary>開始から elapsedSeconds 経った時点の円の中心。</summary>
         public Vector2 CenterAt(float elapsedSeconds)
         {
             return Evaluate(elapsedSeconds).Center;
         }
 
-        /// <summary>開始から elapsedSeconds 経った時点の円の半径 (m)。</summary>
         public float RadiusAt(float elapsedSeconds)
         {
             return Evaluate(elapsedSeconds).Radius;
         }
 
-        /// <summary>
-        /// 今の中心から maxOffset 以内の、円の中で一様な点を選ぶ。maxOffset が 0 なら今の中心のまま。
-        /// </summary>
         private static Vector2 PickCenter(int seed, int phaseIndex, Vector2 current, float maxOffset)
         {
             if (!(maxOffset > 0f))

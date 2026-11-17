@@ -3,15 +3,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーに <see cref="SlideMovement"/> を (無ければ) 付け、<see cref="ActionRules.Slide"/> で有効・無効を決める。
-    /// 調整値は <see cref="KitTuning"/> から読む traversal.json の slide の値を渡す。
-    /// カバー中 (<see cref="CoverController.IsInCover"/>) は始めず、死亡・リスポーンでやめさせる。
-    /// 組み込みの並び (<see cref="PlayerActions"/>) は変えず、読み込み時に <see cref="PlayerActions.Register"/> で自分を足す。
-    /// </summary>
     public sealed class SlideActionInstaller : IPlayerActionInstaller
     {
-        /// <summary><see cref="Order"/>。<see cref="CoverActionInstaller"/> が付けたカバーを読むので、その後に呼ぶ。</summary>
+        // CoverActionInstaller が付けたカバーを読むので、その後に呼ぶ。
         public const int InstallOrder = 350;
 
         public int Order => InstallOrder;

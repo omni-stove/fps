@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>テスト用の <see cref="ICharacterMotorStateSource"/>。決めた状態を返す。<see cref="HasState"/> が false なら状態が無い。</summary>
     public sealed class FakeCharacterMotorStateSource : MonoBehaviour, ICharacterMotorStateSource
     {
         public MotorSpec Spec { get; set; } = MotorSpec.Default;
@@ -19,7 +18,6 @@ namespace Shooter.Tests.EditMode
             return HasState;
         }
 
-        /// <summary>止まって地面に立ち、リーン・水泳・壁走りだけを決めた状態。</summary>
         public static CharacterMotorState Motor(float lean = 0f, bool swimming = false, WallRunSide wallRun = WallRunSide.None)
         {
             var wallNormal = wallRun == WallRunSide.Left

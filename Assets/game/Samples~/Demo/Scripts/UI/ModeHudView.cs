@@ -5,27 +5,16 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// オフラインのモード (<see cref="ModeRunnerBase"/>) の HUD。画面左上に残り時間・陣営ごとの得点・派生モードが足す行・試合結果を出す。
-    /// Hud.uxml の <see cref="UxmlName"/> の枠に、行の Label をコードで足す。要素を持っている間は <see cref="GameSignals.ModeStatus"/> を購読し、
-    /// 出された状態を <see cref="ModeHudFormatters"/> の書式役で文にして出し、消されたら隠す。要素を受けたときは今の状態に合わせる。
-    /// Show / <see cref="Hide"/> で直に出すこともでき、要素をまだ受けていない間 (HUD の木を作り直している間) もその中身を覚えておき、受けたときに合わせる。
-    /// 中身が変わらない行は書き直さない (毎フレーム呼ばれるため)。
-    /// 受け取った文は今の言語 (<see cref="Localizer.Resolve"/>) で文にし、言語が変わったら文にし直す。
-    /// </summary>
     public sealed class ModeHudView : HudElementView
     {
-        /// <summary>Hud.uxml のモードの枠。</summary>
         public const string UxmlName = "mode-hud";
 
         public const string TimeClass = "mode-hud__time";
         public const string ScoresClass = "mode-hud__scores";
         public const string ScoreClass = "mode-hud__score";
 
-        /// <summary>自分の陣営の行に足す USS クラス。</summary>
         public const string OwnScoreClass = "mode-hud__score--own";
 
-        /// <summary>単独で首位の陣営の行に足す USS クラス。</summary>
         public const string LeadingScoreClass = "mode-hud__score--leading";
 
         public const string LinesClass = "mode-hud__lines";
@@ -54,29 +43,18 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているか。</summary>
         public bool IsShown => _shown;
 
-        /// <summary>出している残り時間 (今の言語の文)。</summary>
         public string TimeText => _time;
 
-        /// <summary>出している得点の行 (上から)。</summary>
         public IReadOnlyList<ModeHudScoreLine> Scores => _scores;
 
-        /// <summary>出している得点の行の文 (<see cref="Scores"/> と同じ順、今の言語の文)。</summary>
         public IReadOnlyList<string> ScoreTexts => _scoreTexts;
 
-        /// <summary>出している、派生モードが足した行 (上から、今の言語の文)。</summary>
         public IReadOnlyList<string> Lines => _lines;
 
-        /// <summary>出している試合結果 (今の言語の文)。試合中は空文字。</summary>
         public string ResultText => _result;
 
-        /// <summary>
-        /// 中身を差し替えて出す。scores は上から並べる順、lines は得点の下に足す行。文にして空になる行は出さない。
-        /// result が文にして空なら結果の行を隠す。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">scores が null。</exception>
         public void Show(LocalizedText time, IReadOnlyList<ModeHudScoreLine> scores, IReadOnlyList<LocalizedText> lines, LocalizedText result)
         {
             if (scores == null)
@@ -88,7 +66,6 @@ namespace Shooter.Runtime
             Write(time, scores, lines, result);
         }
 
-        /// <summary>隠す。</summary>
         public void Hide()
         {
             _showsSignal = false;
@@ -96,11 +73,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>
-        /// status を <see cref="ModeHudFormatters"/> の書式役で文にして出す。null なら隠す。
-        /// 要素を持っている間は <see cref="GameSignals.ModeStatus"/> が出されるたびに呼ばれる。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">書式役が得点の行に null を返した。</exception>
         public void Show(ModeStatus status)
         {
             if (status == null)
@@ -278,6 +250,7 @@ namespace Shooter.Runtime
             }
         }
 
+        // 毎フレーム呼ばれるので、中身が変わらない行は書き直さない。
         private static void SetText(Label label, string text)
         {
             if (label.text != text)

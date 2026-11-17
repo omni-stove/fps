@@ -4,18 +4,12 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// シーンにある拠点の範囲 (<see cref="ControlPointArea"/>) の一覧。番号が 0 から抜けも重なりもなく並んでいることを生成時に確かめ、
-    /// ある位置がどの拠点にいるかを <see cref="Locate"/> で引く。<see cref="Domination"/> の拠点の数は <see cref="Count"/> に合わせる。
-    /// </summary>
     public sealed class ControlPointMap
     {
         private readonly ControlPointArea[] _areas;
 
-        /// <summary>拠点の数。</summary>
         public int Count => _areas.Length;
 
-        /// <summary>番号 index の拠点の範囲。</summary>
         public ControlPointArea this[int index]
         {
             get
@@ -29,8 +23,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <param name="areas">拠点の範囲。並びは問わないが、番号は 0 から Count - 1 まで 1 つずつあること。1 つ以上。</param>
-        /// <exception cref="ArgumentException">空、番号が重なっている、または抜けている。</exception>
         public ControlPointMap(IReadOnlyList<ControlPointArea> areas)
         {
             if (areas == null)
@@ -66,10 +58,7 @@ namespace Shooter.Core
             _areas = sorted;
         }
 
-        /// <summary>
-        /// position がいる拠点の番号。どの範囲にもいなければ null。範囲が重なる所では、水平の距離が中心にいちばん近い拠点
-        /// (同じなら番号の小さいほう) にいるとみなす。<see cref="Domination"/> は 1 人を 1 つの拠点にしか数えないため。
-        /// </summary>
+        // 範囲が重なる所でも 1 つの拠点だけを返すのは、Domination が 1 人を 1 つの拠点にしか数えないため。
         public int? Locate(Vector3 position)
         {
             int? best = null;

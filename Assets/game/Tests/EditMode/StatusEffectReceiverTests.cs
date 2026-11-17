@@ -7,9 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// オフラインの燃焼 (<see cref="StatusEffectReceiver"/>) が、間隔ごとにダメージを入れ、時間切れで消え、倒したらかけた者のキルにすることを確かめる。
-    /// </summary>
     public sealed class StatusEffectReceiverTests
     {
         private const string _weaponId = "78afe32d-bf3f-459c-98b8-8c238290913f";

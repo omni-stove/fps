@@ -203,6 +203,7 @@ namespace Shooter.Core.Tests
         public void SwimmingInTheAirGivesTheAirJumpsBack()
         {
             var simulation = NewSimulation(Spec(airJumps: 1));
+            simulation.Water = new WaterEverywhere(12f);
             var state = Airborne(swim: new CharacterSwimState(true, 12f, true));
 
             var next = simulation.Step(state, Input());
@@ -212,7 +213,7 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void WallRunningGivesTheAirJumpsBack()
+        public void AWallRunWithNoWallEndsWithoutGivingTheAirJumpsBack()
         {
             var simulation = NewSimulation(Spec(airJumps: 1));
             var state = Airborne(wallRun: new CharacterWallRunState(WallRunSide.Left, 0.1f, Vector3.UnitX));
@@ -220,7 +221,8 @@ namespace Shooter.Core.Tests
             var next = simulation.Step(state, Input());
 
             Assert.That(next.IsGrounded, Is.False);
-            Assert.That(next.AirJumpsUsed, Is.Zero);
+            Assert.That(next.WallRun.IsRunning, Is.False);
+            Assert.That(next.AirJumpsUsed, Is.EqualTo(1), "only a tick that is still on the wall gives them back (CharacterWallRunTests)");
         }
 
         [Test]
@@ -313,6 +315,21 @@ namespace Shooter.Core.Tests
                 SpawnPosition = _start,
                 Ladders = new[] { new MapLadder(_span, LadderSpec.Default) },
             };
+        }
+
+        private sealed class WaterEverywhere : IWaterVolumes
+        {
+            private readonly float _surfaceY;
+
+            public WaterEverywhere(float surfaceY)
+            {
+                _surfaceY = surfaceY;
+            }
+
+            public float? SurfaceAt(Vector3 position)
+            {
+                return _surfaceY;
+            }
         }
     }
 }

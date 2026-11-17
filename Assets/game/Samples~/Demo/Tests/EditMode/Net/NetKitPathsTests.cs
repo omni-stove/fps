@@ -4,7 +4,6 @@ using UnityEditor;
 
 namespace Shooter.Net.Tests
 {
-    /// <summary>NetSceneBuilder が書く場所が、既定の出力先ルートで今と同じであること。</summary>
     public sealed class NetKitPathsTests
     {
         private bool _hadPreference;

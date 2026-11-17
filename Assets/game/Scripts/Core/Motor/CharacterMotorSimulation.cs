@@ -4,11 +4,9 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になる。
-    /// 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
-    /// カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
-    /// </summary>
+    // 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になるようにする。
+    // 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
+    // カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
     public sealed class CharacterMotorSimulation
     {
         public const string ReasonDowned = "downed";
@@ -19,6 +17,7 @@ namespace Shooter.Core
         private readonly PlayerMotor _motor;
         private readonly CharacterCoverSensor _coverSensor;
         private readonly CharacterVaultSensor _vaultSensor;
+        private readonly CharacterWallSensor _wallSensor;
 
         // 状態から毎 tick 戻して使う作業用。tick をまたいで中身を持ち越さない
         private readonly CoverState _cover;
@@ -43,7 +42,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <summary>prone は伏せの速さと飛び込み。伏せの高さは body の <see cref="StanceGeometry.Prone"/> を使う。</summary>
         public CharacterMotorSimulation(CharacterBody body, PlayerMotor motor, float tickSeconds, float killPlaneY, ProneSpec prone)
         {
             Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -62,6 +60,7 @@ namespace Shooter.Core
             KillPlaneY = killPlaneY;
             _coverSensor = new CharacterCoverSensor(body);
             _vaultSensor = new CharacterVaultSensor(body);
+            _wallSensor = new CharacterWallSensor(body);
             _dodge = new DodgeMotion(motor.Spec);
             _cover = new CoverState(motor.Spec);
             ProneSpec = prone ?? throw new ArgumentNullException(nameof(prone));
@@ -74,7 +73,7 @@ namespace Shooter.Core
 
         public ProneSpec ProneSpec { get; }
 
-        /// <summary>つかまれるはしご。状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。</summary>
+        // 状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。
         public IReadOnlyList<MapLadder> Ladders
         {
             get => _ladders;
@@ -97,14 +96,13 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>吹き飛ばされている間の重力・空中の効き・着地と打ち切りの秒数。予測とサーバーで同じ値を渡す。</summary>
         public KnockbackSpec Knockback
         {
             get => _knockbackSpec;
             set => _knockbackSpec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>泳げる水。予測とサーバーで同じ水を渡す (片方だけ水があると、泳ぐかが毎 tick 食い違う)。</summary>
+        // 予測とサーバーで同じ水を渡す。片方だけ水があると、泳ぐかが毎 tick 食い違う。
         public IWaterVolumes Water
         {
             get => _water;
@@ -133,6 +131,8 @@ namespace Shooter.Core
 
         public CharacterVaultSensor VaultSensor => _vaultSensor;
 
+        public CharacterWallSensor WallSensor => _wallSensor;
+
         public VaultProbeResult LastVaultProbe { get; private set; }
 
         public static Vector3 YawForward(float yaw)
@@ -140,10 +140,7 @@ namespace Shooter.Core
             return new Vector3(MathF.Sin(yaw), 0f, MathF.Cos(yaw));
         }
 
-        /// <summary>
-        /// state を velocity で吹き飛ばした状態。動かすのは次の <see cref="Step"/> から。
-        /// 速さは <see cref="KnockbackSpec.TryGetVelocity"/> で決める (オフラインの吹き飛ばしと同じ計算にするため)。
-        /// </summary>
+        // 速さは KnockbackSpec.TryGetVelocity で決める (オフラインの吹き飛ばしと同じ計算にするため)。
         public static CharacterMotorState Launch(CharacterMotorState state, Vector3 velocity)
         {
             return state.WithKnockback(state.Knockback.Launch(velocity));
@@ -163,7 +160,7 @@ namespace Shooter.Core
             var traversal = new TraversalStates(
                 LeanStep.Step(state, input, swim, Body, _motor.Spec, TickSeconds),
                 swim,
-                WallRunStep.Step(state.WallRun, Body, startVelocity, state.IsGrounded, _wallRun, TickSeconds),
+                WallRunStep.Stop(state.WallRun, state.IsGrounded),
                 state.AirJumpsUsed);
             if (state.IsKnockedBack)
             {
@@ -303,12 +300,22 @@ namespace Shooter.Core
                 // 転がっていない間も待ち時間を減らす
                 _dodge.Step(TickSeconds);
                 _motor.SetVelocity(startVelocity);
-                traversal = traversal.WithAirJumpsUsed(_motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded, move, input.Yaw));
-                var displacement = stance == PlayerStance.Prone
-                    ? _motor.StepProne(move, input.Yaw, ProneSpec.Speed, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier)
-                    : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier);
-                Body.Move(displacement);
-                velocity = _motor.Velocity;
+                var canWallRun = stance == PlayerStance.Standing && !cover.IsInCover && !input.Downed;
+                var run = StepWallRun(state.WallRun, startVelocity, move, input.Yaw, jump, state.IsGrounded, canWallRun);
+                traversal = traversal.WithWallRun(run.State);
+                if (run.Motion != WallRunMotion.None)
+                {
+                    velocity = MoveOnWall(run, ref traversal);
+                }
+                else
+                {
+                    traversal = traversal.WithAirJumpsUsed(_motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded, move, input.Yaw));
+                    var displacement = stance == PlayerStance.Prone
+                        ? _motor.StepProne(move, input.Yaw, ProneSpec.Speed, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier)
+                        : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier);
+                    Body.Move(displacement);
+                    velocity = _motor.Velocity;
+                }
             }
 
             return Finish(velocity, stance, cover, vault, input, ladder, traversal);
@@ -533,6 +540,49 @@ namespace Shooter.Core
 
             // 射撃のばらつきなど速度を読む側のために、たどっている速度を入れておく
             return displacement / TickSeconds;
+        }
+
+        // 切ってある・接地している・壁走りできない姿勢のときは壁を調べない (使わないゲームと地上の tick に Raycast を払わせない)
+        private WallRunResult StepWallRun(
+            CharacterWallRunState wallRun, Vector3 velocity, Vector2 move, float yaw, bool jump, bool grounded, bool allowed)
+        {
+            if (!allowed)
+            {
+                return WallRunResult.Resting(WallRunStep.Stop(wallRun, grounded));
+            }
+
+            var wall = !_wallRun.Enabled || grounded
+                ? WallContact.None
+                : wallRun.IsRunning
+                    ? _wallSensor.Follow(Body.Position, wallRun.Side, wallRun.Normal)
+                    : _wallSensor.Probe(Body.Position, yaw);
+            return WallRunStep.Step(wallRun, wall, velocity, move, jump, grounded, _motor.Spec, _wallRun, TickSeconds);
+        }
+
+        private Vector3 MoveOnWall(WallRunResult run, ref TraversalStates traversal)
+        {
+            if (run.Motion == WallRunMotion.JumpedOff)
+            {
+                _motor.JumpWith(run.Velocity);
+                traversal = traversal.WithAirJumpsUsed(0);
+            }
+
+            var before = Body.Position;
+            var contacts = Body.Move(run.Displacement);
+            var velocity = run.Velocity;
+            if (run.Motion == WallRunMotion.Running)
+            {
+                // 壁沿いの出っ張りに止められたとき、次の tick に速さが落ちたとして終えるよう、進めた分だけを横の速さにする
+                var moved = Body.Position - before;
+                velocity = new Vector3(moved.X / TickSeconds, velocity.Y, moved.Z / TickSeconds);
+            }
+
+            if ((contacts & CapsuleContacts.Above) != 0 && velocity.Y > 0f)
+            {
+                velocity = new Vector3(velocity.X, 0f, velocity.Z);
+            }
+
+            return velocity;
         }
 
         // 縦は PlayerMotor と同じ扱い (接地中は地面へ吸着、空中は重力の台形則) にし、段差から転がり落ちても浮かない。
@@ -882,6 +932,11 @@ namespace Shooter.Core
             public TraversalStates WithAirJumpsUsed(int airJumpsUsed)
             {
                 return new TraversalStates(Lean, Swim, WallRun, airJumpsUsed);
+            }
+
+            public TraversalStates WithWallRun(CharacterWallRunState wallRun)
+            {
+                return new TraversalStates(Lean, Swim, wallRun, AirJumpsUsed);
             }
         }
     }

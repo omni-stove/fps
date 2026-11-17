@@ -58,9 +58,6 @@ namespace Shooter.Runtime
             return body;
         }
 
-        /// <summary>
-        /// 当たりを持たない見た目だけの弾。ネット対戦のクライアントのように、飛び方と当たりを別の所 (サーバー) が決めるときに使う。
-        /// </summary>
         public static ProjectileBody Show(ProjectileSettings look, string weaponId, Vector3 position, Vector3 velocity)
         {
             var body = Create(look, weaponId);
@@ -71,7 +68,6 @@ namespace Shooter.Runtime
             return body;
         }
 
-        /// <summary>見た目だけの弾 (<see cref="Show"/>) を動かす。刺さっていたら抜いて飛ばし直す。</summary>
         public void MoveTo(Vector3 position, Vector3 velocity)
         {
             if (!_shownOnly)
@@ -92,7 +88,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>見た目だけの弾 (<see cref="Show"/>) を刺さった所に残し、武器の見た目の秒数が過ぎたら消す。</summary>
         public void StickAt(Vector3 position)
         {
             if (!_shownOnly)

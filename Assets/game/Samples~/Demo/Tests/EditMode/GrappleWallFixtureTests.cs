@@ -80,7 +80,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(GrappleWallFixture.WallHeight, Is.GreaterThan(motor.MantleMaxHeight), "a climb from the floor cannot reach the top");
             Assert.That(GrappleWallFixture.WallThickness, Is.GreaterThan(VaultProbe.MantleFootingDepth(GameBootstrap.PlayerRadius)));
 
-            // 縁に掴まった体の足元から縁までが、崖のぼりで届く高さに収まる。
             var feetBelowEdge = grapple.HangHeight + (GameBootstrap.PlayerHeight / 2f);
             Assert.That(feetBelowEdge, Is.GreaterThan(motor.VaultMaxHeight));
             Assert.That(feetBelowEdge + grapple.ArriveDistance, Is.LessThanOrEqualTo(motor.MantleMaxHeight));

@@ -8,10 +8,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ModeSceneBuilder"/> の配置の検査と既定の配置を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.ModeTestSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.ModeTestSceneBuilder.Build で確かめる。
     public sealed class ModeSceneBuilderTests
     {
         private static readonly Side Player = new Side(0);

@@ -4,7 +4,6 @@ namespace Shooter.Protocol
     {
         public const byte CurrentVersion = 2;
 
-        // InventoryAction の値の数。読むときにこれ未満かを確かめる
         private const int _actionCount = 5;
 
         public ushort Id => MessageIds.InventoryRequest;

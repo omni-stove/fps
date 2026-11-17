@@ -3,10 +3,7 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 能力が渡した <see cref="IMovementOverride"/> を包み、能力を使っている間だけ有効にして、選ばれている間は
-    /// <see cref="PlayerActionConditions.AbilityMoving"/> を必ず立てる。能力が終わると <see cref="AbilityContext"/> が登録を外す。
-    /// </summary>
+    // 能力が渡した IMovementOverride を包むのは、選ばれている間の PlayerActionConditions.AbilityMoving を能力任せにせず必ず立てるため。
     internal sealed class AbilityMovementOverride : IMovementOverride
     {
         private readonly IMovementOverride _inner;

@@ -235,7 +235,7 @@ namespace Shooter.Core.Tests
             var simulation = NewSimulation(new Pool(0f));
             var floated = Float(simulation, new Vector3(0f, -0.8f, 0f));
 
-            var next = simulation.Step(floated, Input(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.5f));
+            var next = simulation.Step(floated, Move(new Vector2(0f, 1f)).WithCarrySpeedMultiplier(0.5f));
 
             Assert.That(next.IsSwimming, Is.True);
             Assert.That(next.Velocity.Z, Is.EqualTo(SwimTuning.DefaultSpeed * 0.5f).Within(1e-4f));
@@ -274,7 +274,7 @@ namespace Shooter.Core.Tests
             Assert.That(state.IsSwimming, Is.False);
             state = Run(simulation, state, Input(), _settleTicks);
             Assert.That(state.IsGrounded, Is.True);
-            Assert.That(state.Position.Y, Is.EqualTo(-0.5f).Within(0.05f), "standing on the floor at -1.5");
+            Assert.That(state.Position.Y, Is.EqualTo(-0.5f + CapsuleMoverSpec.DefaultSkinWidth).Within(0.01f), "standing on the floor at -1.5, a skin width above it");
 
             var jumped = simulation.Step(state, Input(jump: true));
             var spec = MotorSpec.Default;
@@ -312,7 +312,7 @@ namespace Shooter.Core.Tests
             Assert.That(state.IsSwimming, Is.False);
             Assert.That(state.IsGrounded, Is.True);
             Assert.That(state.Position.Z, Is.GreaterThan(1.3f), "the body stands past the edge");
-            Assert.That(state.Position.Y, Is.EqualTo(0.7f).Within(0.05f), "the feet stand on the ledge top at -0.3");
+            Assert.That(state.Position.Y, Is.EqualTo(0.7f + CapsuleMoverSpec.DefaultSkinWidth).Within(0.01f), "the feet stand on the ledge top at -0.3, a skin width above it");
         }
 
         [Test]
@@ -397,6 +397,11 @@ namespace Shooter.Core.Tests
         private static CharacterMotorInput Input(bool jump = false, bool crouch = false)
         {
             return new CharacterMotorInput(Vector2.Zero, 0f, false, jump, crouch, false, false, false, false, true);
+        }
+
+        private static CharacterMotorInput Move(Vector2 move)
+        {
+            return new CharacterMotorInput(move, 0f, false, false, false, false, false, false, false, true);
         }
 
         private static CharacterMotorState Run(CharacterMotorSimulation simulation, CharacterMotorState state, CharacterMotorInput input, int ticks)

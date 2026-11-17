@@ -8,15 +8,9 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// サーバーから届いた壊れる建物の状態 (<see cref="StructureStateMessage"/>) を、マップのシーンの見た目 (<see cref="DestructibleStructure"/>) と
-    /// 予測の当たり (<see cref="ClientWorld"/>) に写す。
-    /// </summary>
-    /// <remarks>
-    /// サーバーは参加した直後に全部の建物の状態を送るので、マップのシーンを読み終える前に届く。届いた状態を建物ごとに残し、
-    /// シーンに入ったときに (<see cref="Enter"/>) まとめて写す。
-    /// 建物の番号は書き出し (MapCollisionExporter) と同じく、有効・無効を問わずシーンの並び順で数える。
-    /// </remarks>
+    // サーバーは参加した直後に全部の建物の状態を送るので、マップのシーンを読み終える前に届く。届いた状態を建物ごとに残し、
+    // シーンに入ったときに (Enter) まとめて写す。
+    // 建物の番号は書き出し (MapCollisionExporter) と同じく、有効・無効を問わずシーンの並び順で数える。
     internal sealed class NetV2Structures
     {
         private readonly Dictionary<int, ulong[]> _states = new Dictionary<int, ulong[]>();
@@ -29,7 +23,6 @@ namespace Shooter.NetV2
             _context = context;
         }
 
-        /// <summary>scene の建物と、予測の世界 world に今までに届いた状態を写す。</summary>
         public void Enter(Scene scene, ClientWorld world)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));

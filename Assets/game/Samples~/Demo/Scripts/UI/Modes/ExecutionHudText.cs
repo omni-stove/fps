@@ -4,16 +4,8 @@ using Shooter.Core;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// エクスキューション (<see cref="ExecutionSession"/>) の HUD に出す文。得点の欄には両チームが取ったラウンドの数を、
-    /// その下にラウンドの番号・待ちの残り・両チームの残り人数・自分のダウンやインタラクトの進みを出す。
-    /// 表のキー <c>mode.execution.*</c> (陣営名や残り人数などの共通の文は <c>hud.*</c>) と引数の <see cref="LocalizedText"/> で返し、
-    /// 受け取った側が今の言語で文にする。<see cref="ExecutionHudFormatter"/> が <see cref="ExecutionStatus"/> を読んでこれを呼ぶ。
-    /// </summary>
     public static class ExecutionHudText
     {
-        /// <example><c>Round(2, 3)</c> は <c>ラウンド 2 (3 本先取)</c></example>
-        /// <exception cref="ArgumentOutOfRangeException">roundNumber か winsToWin が 1 未満。</exception>
         public static LocalizedText Round(int roundNumber, int winsToWin)
         {
             if (roundNumber < 1)
@@ -29,9 +21,6 @@ namespace Shooter.Runtime
             return new LocalizedText("mode.execution.round", roundNumber, winsToWin);
         }
 
-        /// <summary>ラウンドが始まるまでの案内。秒数は切り上げた整数で受ける。</summary>
-        /// <example><c>Preparation(3)</c> は <c>開始まで 3 秒</c></example>
-        /// <exception cref="ArgumentOutOfRangeException">seconds が負。</exception>
         public static LocalizedText Preparation(int seconds)
         {
             if (seconds < 0)
@@ -42,8 +31,6 @@ namespace Shooter.Runtime
             return new LocalizedText("mode.execution.startsIn", seconds);
         }
 
-        /// <summary>前のラウンドの結果。winner が null なら引き分け。</summary>
-        /// <example><c>RoundResult(Side.Alpha)</c> は <c>前のラウンド: ALPHA の勝ち</c></example>
         public static LocalizedText RoundResult(Side? winner)
         {
             return new LocalizedText(
@@ -51,9 +38,6 @@ namespace Shooter.Runtime
                 winner.HasValue ? HudText.Wins(ModeHudText.SideName(winner.Value)) : HudText.Draw);
         }
 
-        /// <summary>チームの残り人数。ダウン中がいればその数を添える。</summary>
-        /// <example><c>Remaining(Side.Bravo, 3, 1)</c> は <c>BRAVO 残り 3 (ダウン 1)</c>、<c>Remaining(Side.Bravo, 3, 0)</c> は <c>BRAVO 残り 3</c></example>
-        /// <exception cref="ArgumentOutOfRangeException">remaining か downed が負か、downed が remaining より多い。</exception>
         public static LocalizedText Remaining(Side side, int remaining, int downed)
         {
             if (remaining < 0)
@@ -70,9 +54,6 @@ namespace Shooter.Runtime
             return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
         }
 
-        /// <summary>敵にとどめを刺している人の案内。</summary>
-        /// <example><c>Executing(40)</c> は <c>とどめ 40%</c></example>
-        /// <exception cref="ArgumentOutOfRangeException">percent が 0〜100 の外。</exception>
         public static LocalizedText Executing(int percent)
         {
             if (percent < 0 || percent > 100)
@@ -83,9 +64,6 @@ namespace Shooter.Runtime
             return new LocalizedText("mode.execution.executing", percent);
         }
 
-        /// <summary>
-        /// 得点の欄に出す、両チームが取ったラウンドの数。ownSide があればその行を先頭にし、単独で多いチームを先頭に立っているとする。
-        /// </summary>
         public static IReadOnlyList<ModeHudScoreLine> RoundWins(ExecutionSession session, Side? ownSide)
         {
             if (session == null)
@@ -114,13 +92,6 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        /// <summary>
-        /// 得点の下に出す行。ラウンドの番号、待ちの間は前のラウンドの結果と開始までの秒数、両チームの残り人数 (自分のチームを先に)、
-        /// localPlayerId がダウン中ならその案内 (<see cref="HudText.Downed(int, int)"/>)、interactTargetId を起こしているかとどめを刺しているならその進み。
-        /// </summary>
-        /// <param name="session">読むモード。</param>
-        /// <param name="localPlayerId">この画面で操作している人。いなければ null。</param>
-        /// <param name="interactTargetId">localPlayerId がいまインタラクトを押している相手。押していなければ null。</param>
         public static IReadOnlyList<LocalizedText> Lines(ExecutionSession session, int? localPlayerId, int? interactTargetId)
         {
             if (session == null)
@@ -169,8 +140,6 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        /// <summary>試合が終わったときの結果。ラウンドの終わりでは出さず、先取数に届いたときだけ出す。</summary>
-        /// <example>終わっていれば <c>ALPHA の勝ち</c>、終わっていなければ <c>default</c> (空の文)</example>
         public static LocalizedText Result(ExecutionSession session)
         {
             if (session == null)

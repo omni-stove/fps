@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ロードアウトをアセットとして持つ。スロットの並び (各スロットが許す種別と入れる武器) と持ち替え秒数、能力の枠に入れる能力 (<see cref="Abilities"/>)。
-    /// <see cref="ToRule"/> で Core の <see cref="LoadoutRule"/> に、<see cref="ToSpecs"/> でスロット順の <see cref="WeaponSpec"/> に変換する。
-    /// ルールに合わない・武器が空・値が不正なときは、どのアセットかを添えて <see cref="WeaponDefinitionException"/> にする。
-    /// </summary>
     [CreateAssetMenu(fileName = "Loadout", menuName = "Shooter/Loadout Definition")]
     public sealed class LoadoutDefinition : ScriptableObject
     {
@@ -24,36 +19,26 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("能力の枠に入れる能力。i 番目は AbilityHost の i 番目の枠 (0 が Ability1) に入る。空の要素はその枠を空にする")]
         private List<AbilityDefinition> _abilities = new List<AbilityDefinition>();
 
-        /// <summary>スロット順の定義。中身を書き換えるときは <see cref="SetSlots"/> を使う。</summary>
         public IReadOnlyList<LoadoutSlotDefinition> Slots => _slots ??= new List<LoadoutSlotDefinition>();
 
-        /// <summary>
-        /// 枠の順の能力 (<see cref="AbilityHost.Equip(IReadOnlyList{AbilityDefinition})"/> に渡す)。空の枠は null。
-        /// 中身を書き換えるときは <see cref="SetAbilities"/> を使う。
-        /// </summary>
         public IReadOnlyList<AbilityDefinition> Abilities => _abilities ??= new List<AbilityDefinition>();
 
-        /// <summary>能力をまとめて差し替える。null は空にする。渡した列は複製して持つ (能力のアセットは共有する)。</summary>
         public void SetAbilities(IEnumerable<AbilityDefinition> abilities)
         {
             _abilities = abilities == null ? new List<AbilityDefinition>() : new List<AbilityDefinition>(abilities);
         }
 
-        /// <summary>武器を持ち替えるのにかかる秒数。<see cref="ToRule"/> が 0 以上の有限値かを確かめる。</summary>
         public float SwitchSeconds
         {
             get => _switchSeconds;
             set => _switchSeconds = value;
         }
 
-        /// <summary>スロットをまとめて差し替える。null は空にする。渡した列は複製して持つ (各スロットと武器のアセットは共有する)。</summary>
         public void SetSlots(IEnumerable<LoadoutSlotDefinition> slots)
         {
             _slots = slots == null ? new List<LoadoutSlotDefinition>() : new List<LoadoutSlotDefinition>(slots);
         }
 
-        /// <summary>スロットが許す種別から <see cref="LoadoutRule"/> を作る。呼ぶたびに新しいインスタンスを返す。</summary>
-        /// <exception cref="WeaponDefinitionException">スロットが無い・空のスロットがある・種別が不正・持ち替え秒数が不正なとき。</exception>
         public LoadoutRule ToRule()
         {
             var source = SourceName();
@@ -90,11 +75,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// スロット順の武器を <see cref="WeaponSpec"/> に変換し、<see cref="ToRule"/> のルールに合うことを確かめて返す。
-        /// 呼ぶたびに新しい列を返す。
-        /// </summary>
-        /// <exception cref="WeaponDefinitionException">ルールか武器が不正・武器が空・ルールに合わないとき。</exception>
         public IReadOnlyList<WeaponSpec> ToSpecs()
         {
             var source = SourceName();
@@ -136,7 +116,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary><see cref="LoadoutDefinition"/> の 1 スロット。許す種別と、そこに入れる武器。</summary>
     [Serializable]
     public sealed class LoadoutSlotDefinition
     {
@@ -151,8 +130,6 @@ namespace Shooter.Runtime
         {
         }
 
-        /// <param name="allowedCategories">許す種別。null は空として扱う。渡した列は複製して持つ。</param>
-        /// <param name="weapon">入れる武器。null も持てる (<see cref="LoadoutDefinition.ToSpecs"/> が拒む)。</param>
         public LoadoutSlotDefinition(IEnumerable<WeaponCategory> allowedCategories, WeaponDefinition weapon)
         {
             _allowedCategories = allowedCategories == null
@@ -161,10 +138,8 @@ namespace Shooter.Runtime
             _weapon = weapon;
         }
 
-        /// <summary>許す種別。並びと重複はアセットに書かれたまま。</summary>
         public IReadOnlyList<WeaponCategory> AllowedCategories => _allowedCategories ??= new List<WeaponCategory>();
 
-        /// <summary>入れる武器。未設定なら null。</summary>
         public WeaponDefinition Weapon => _weapon;
     }
 }

@@ -4,14 +4,11 @@ using Epic.OnlineServices.Connect;
 
 namespace Shooter.NetEos
 {
-    /// <summary>
-    /// Connect インターフェースに Device ID でログインし、P2P に使う ProductUserId を得る。
-    /// Epic アカウントを持たない専用サーバー・ヘッドレスのクライアントでも使える。
-    /// 端末ごとに同じ ID になるので、同じ PC・同じ OS ユーザーで起動したサーバーとクライアントは互いにつながらない。
-    /// </summary>
+    // Epic アカウントでなく Device ID でログインするのは、アカウントを持たない専用サーバー・ヘッドレスのクライアントでも使えるようにするため。
+    // 端末ごとに同じ ID になるので、同じ PC・同じ OS ユーザーで起動したサーバーとクライアントは互いにつながらない。
     internal sealed class EosDeviceLogin
     {
-        /// <summary>EOS が受け付ける表示名の最大文字数。</summary>
+        // EOS が受け付ける表示名の最大文字数。
         private const int _maxDisplayNameLength = 32;
 
         private readonly ConnectInterface _connect;
@@ -19,9 +16,6 @@ namespace Shooter.NetEos
         private readonly string _deviceModel;
         private Action<ProductUserId, string> _done;
 
-        /// <param name="connect">プラットフォームの Connect インターフェース。</param>
-        /// <param name="displayName">初めてログインしたときに作るユーザーの表示名。</param>
-        /// <param name="deviceModel">Device ID を作るときの端末名。</param>
         public EosDeviceLogin(ConnectInterface connect, string displayName, string deviceModel)
         {
             _connect = connect ?? throw new ArgumentNullException(nameof(connect));
@@ -29,10 +23,6 @@ namespace Shooter.NetEos
             _deviceModel = string.IsNullOrEmpty(deviceModel) ? "unknown" : deviceModel;
         }
 
-        /// <summary>
-        /// ログインを始める。終わったら <paramref name="done"/> を、成功なら (ID, null)、失敗なら (null, 理由) で 1 回呼ぶ。
-        /// コールバックは <see cref="EosPlatform.Tick"/> の中で呼ばれる。
-        /// </summary>
         public void Begin(Action<ProductUserId, string> done)
         {
             if (_done != null)
@@ -45,7 +35,6 @@ namespace Shooter.NetEos
             _connect.CreateDeviceId(ref options, null, HandleDeviceIdCreated);
         }
 
-        /// <summary>結果を受け取らないようにする。ログイン中に transport を止めたときに呼ぶ。</summary>
         public void Cancel()
         {
             _done = null;

@@ -131,6 +131,75 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ThePositionOnlyRecordIsUpright()
+        {
+            var history = new HitboxHistory();
+            history.Record(10, Vector3.One);
+
+            Assert.That(history.TrySample(10f, out var position, out var lean), Is.True);
+            Assert.That(position, Is.EqualTo(Vector3.One));
+            Assert.That(lean, Is.EqualTo(Vector3.Zero));
+        }
+
+        [Test]
+        public void TheLeanIsInterpolatedLikeThePosition()
+        {
+            var history = new HitboxHistory();
+            history.Record(10, Vector3.Zero, Vector3.Zero);
+            history.Record(12, new Vector3(4, 0, 0), new Vector3(0f, 0f, 0.4f));
+
+            Assert.That(history.TrySample(11f, out var position, out var lean), Is.True);
+            Assert.That(position, Is.EqualTo(new Vector3(2, 0, 0)));
+            Assert.That(lean, Is.EqualTo(new Vector3(0f, 0f, 0.2f)));
+            Assert.That(history.TrySample(12f, out _, out var newest), Is.True);
+            Assert.That(newest, Is.EqualTo(new Vector3(0f, 0f, 0.4f)));
+        }
+
+        [Test]
+        public void TheLeanIsInterpolatedAcrossTheBackWithoutTurningTheLongWay()
+        {
+            // 真後ろを向いたまま左右へ振ったときの目のずれ。向きの角度なら -π と π の境で逆回りに補間される
+            var history = new HitboxHistory();
+            history.Record(1, Vector3.Zero, new Vector3(0.4f, 0f, -0.01f));
+            history.Record(2, Vector3.Zero, new Vector3(0.4f, 0f, 0.01f));
+
+            Assert.That(history.TrySample(1.5f, out _, out var lean), Is.True);
+            Assert.That(lean.X, Is.EqualTo(0.4f).Within(1e-6f));
+            Assert.That(lean.Z, Is.EqualTo(0f).Within(1e-6f));
+        }
+
+        [Test]
+        public void SameTickOverwritesTheLean()
+        {
+            var history = new HitboxHistory();
+            history.Record(1, Vector3.Zero, Vector3.UnitX);
+            history.Record(1, Vector3.Zero, Vector3.UnitZ);
+
+            Assert.That(history.TrySample(1f, out _, out var lean), Is.True);
+            Assert.That(lean, Is.EqualTo(Vector3.UnitZ));
+        }
+
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void RejectsANonFiniteLean(float value)
+        {
+            var history = new HitboxHistory();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => history.Record(1, Vector3.Zero, new Vector3(value, 0f, 0f)));
+            Assert.That(history.Count, Is.Zero);
+        }
+
+        [Test]
+        public void OutOfRangeCannotSampleTheLean()
+        {
+            var history = new HitboxHistory();
+            history.Record(10, Vector3.Zero, Vector3.UnitX);
+
+            Assert.That(history.TrySample(11f, out _, out var lean), Is.False);
+            Assert.That(lean, Is.EqualTo(Vector3.Zero));
+        }
+
+        [Test]
         public void RejectsOlderTick()
         {
             var history = new HitboxHistory();

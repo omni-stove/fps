@@ -2,9 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 旗取り (<see cref="CaptureTheFlag"/>) の設定。生成時に値を検査し、以後は変わらない。
-    /// </summary>
     public sealed class CaptureTheFlagSpec
     {
         public const int DefaultScoreLimit = 3;
@@ -15,28 +12,20 @@ namespace Shooter.Core
         public const float DefaultReturnSeconds = 20f;
         public const int DefaultPointsPerCapture = 1;
 
-        /// <summary>どちらかの陣営がこの得点に届いたら試合が終わる。1 以上。</summary>
         public int ScoreLimit { get; }
 
-        /// <summary>試合の制限時間 (秒)。0 より大きい有限値。</summary>
         public float TimeLimitSeconds { get; }
 
-        /// <summary>倒れてから戻るまでの秒数。0 以上の有限値。</summary>
         public float RespawnSeconds { get; }
 
-        /// <summary>旗に触れたことにする距離 (m、水平)。敵の旗を持つのも、落ちた自陣の旗を台に戻すのもこの距離。0 より大きい有限値。</summary>
         public float PickupRadius { get; }
 
-        /// <summary>敵の旗を運ぶ人が自陣の台に着いたことにする距離 (m、水平)。0 より大きい有限値。</summary>
         public float CaptureRadius { get; }
 
-        /// <summary>落ちた旗が誰にも触れられずに台へ戻るまでの秒数。0 より大きい有限値。</summary>
         public float ReturnSeconds { get; }
 
-        /// <summary>敵の旗を 1 回自陣の台へ運んだときに入る点。1 以上。</summary>
         public int PointsPerCapture { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">どれかの値が範囲の外。</exception>
         public CaptureTheFlagSpec(
             int scoreLimit = DefaultScoreLimit,
             float timeLimitSeconds = DefaultTimeLimitSeconds,

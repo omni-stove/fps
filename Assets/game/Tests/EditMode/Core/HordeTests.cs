@@ -271,7 +271,6 @@ namespace Shooter.Core.Tests
             return new HordeSpec(Side.Alpha, Side.Bravo, _startingCurrency, _killReward, _killRewardPerWave, onlyBetweenWaves);
         }
 
-        /// <summary>players 人の守る側で、waveCount 波 (どれも敵 2 体) の 1 波目を始めた状態。</summary>
         private static Horde Playing(int players, int waveCount, out WaveSchedule schedule)
         {
             schedule = Schedule(waveCount);

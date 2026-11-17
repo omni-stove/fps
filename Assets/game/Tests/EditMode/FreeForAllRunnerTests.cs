@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// FreeForAllRunner が 1 人 1 陣営でキルを数え、モードの状態 (ModeStatus) の Detail に自分の順位を入れ、得点上限か時間切れで勝者を決めることを確かめる。
-    /// bot (EnemyAgent) は NavMesh が要るので、ここでは Damageable と SideMember だけの参加者で確かめる。
-    /// </summary>
+    // bot (EnemyAgent) は NavMesh が要るので、Damageable と SideMember だけの参加者で確かめる。
     public sealed class FreeForAllRunnerTests
     {
         private const float TimeLimit = 30f;

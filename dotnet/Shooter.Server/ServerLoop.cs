@@ -18,7 +18,7 @@ namespace Shooter.Server
             _clock = new TickClock(tickRate);
         }
 
-        /// <summary>どのスレッドから呼んでもよい。シグナルのスレッドから試合を触らないよう、数えるだけにする。</summary>
+        // どのスレッドから呼ばれてもシグナルのスレッドから試合を触らないよう、数えるだけにする。
         public void RequestStop()
         {
             Interlocked.Increment(ref _stopRequests);

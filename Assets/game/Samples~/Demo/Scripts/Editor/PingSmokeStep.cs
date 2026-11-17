@@ -6,23 +6,9 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、印 (<see cref="PingController"/>) を確かめる手順。
-    /// <list type="number">
-    /// <item>射撃場のルールで Ping が Off なら、付けようとしても付かない (<c>[Ping] refused reason=RuleOff</c>) ことを確かめ、
-    /// プレイヤーの <see cref="PingController"/> だけを Ping を On にしたルールで設定し直す。</item>
-    /// <item>標的ダミーを <see cref="PingRangeFixture.ShowPoint"/> に置き、<see cref="PingRangeFixture.StandPoint"/> から照準を合わせて付ける
-    /// (<c>[Ping] placed ... kind=Enemy</c>)。</item>
-    /// <item>ダミーを壁の裏 (<see cref="PingRangeFixture.HiddenPoint"/>) へ動かすと見失い (<c>[Ping] lost</c>)、印は最後に見た位置に残る。</item>
-    /// <item>右を向くと、<see cref="GameSignals.Pings"/> に出た印は、それを購読する HUD (<see cref="PingMarkersView"/>) で画面の左端に寄って向きが出る
-    /// (<c>[Ping] screen ... onScreen=false edge=Left</c>)。</item>
-    /// <item>付けてから <see cref="PingSpec.LifetimeSeconds"/> 秒で消える (<c>[Ping] expired</c>)。</item>
-    /// </list>
-    /// 入力の代わりに <see cref="FirstPersonLook.ApplyLookDelta"/> で照準を合わせ、<see cref="PingController.TryPing"/> を呼ぶ。
-    /// </summary>
+    // batchmode には入力が無いので、FirstPersonLook.ApplyLookDelta で照準を合わせ、PingController.TryPing を直接呼ぶ。
     public sealed class PingSmokeStep : ITpsActionSmokeStep
     {
-        /// <summary><see cref="Order"/>。</summary>
         public const int StepOrder = 500;
 
         // 印を付けてから消えるまでを待つので、寿命に置き直しと振り向きの分を足す。
@@ -34,7 +20,6 @@ namespace Shooter.Editor
         // 振り向いた後、HUD が LateUpdate で印を置き直すまで待つ秒数。フレームが遅い CI でも数フレームは回る長さにする。
         private const float _viewWaitSeconds = 3f;
 
-        // 見失った後の印の位置と、最後に見た位置のずれの許容 (m)。
         private const float _positionTolerance = 0.01f;
 
         // 寿命より早く消えていないかの許容 (秒)。フレームの刻みの分。

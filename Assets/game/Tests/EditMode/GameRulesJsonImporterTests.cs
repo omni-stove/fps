@@ -185,7 +185,7 @@ namespace Fps.Tests.EditMode
             Assert.Throws<ArgumentException>(() => GameRulesJsonImporter.FindJsonFiles(text));
         }
 
-        [TestCase("Packages/com.omnistove.fps/Rules")]
+        [TestCase("Packages/com.omnistove.shooter-kit/Rules")]
         [TestCase("Rules")]
         [TestCase("Assets/../Rules")]
         public void OutputOutsideAssetsIsRejected(string folder)

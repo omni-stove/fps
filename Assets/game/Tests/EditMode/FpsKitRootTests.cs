@@ -33,11 +33,11 @@ namespace Fps.Tests.EditMode
             }
         }
 
-        // Assets/game の直書きにしないのは、利用側のプロジェクトに testables で入れたとき (Packages/com.omnistove.fps から読む) も通すため。
+        // Assets/game の直書きにしないのは、利用側のプロジェクトに testables で入れたとき (Packages/com.omnistove.shooter-kit から読む) も通すため。
         private static string ExpectedBundled =>
             UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(FpsKitRoot).Assembly) == null
                 ? "Assets/game"
-                : "Packages/com.omnistove.fps";
+                : "Packages/com.omnistove.shooter-kit";
 
         [Test]
         public void OutputAndBundledDefaultToTheKitFolders()
@@ -58,7 +58,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(FpsKitRoot.DefaultOutput, Is.EqualTo("Assets/MyGame"));
                 Assert.That(FpsKitRoot.Output, Is.EqualTo("Assets/MyGame"));
                 Assert.That(FpsKitRoot.ResolveOutput(null, "Assets/FromPrefs"), Is.EqualTo("Assets/FromPrefs"), "the preference still wins");
-                Assert.Throws<ArgumentException>(() => FpsKitRoot.UseDefaultOutput("Packages/com.omnistove.fps"));
+                Assert.Throws<ArgumentException>(() => FpsKitRoot.UseDefaultOutput("Packages/com.omnistove.shooter-kit"));
 
                 FpsKitRoot.UseDefaultOutput(null);
 
@@ -75,7 +75,7 @@ namespace Fps.Tests.EditMode
             Assert.That(FpsKitRoot.PhysicalPath("Assets/MyGame/Weapons/Json"), Is.EqualTo("Assets/MyGame/Weapons/Json"));
             Assert.That(FpsKitRoot.PhysicalPath(null), Is.Null);
 
-            var resolved = FpsKitRoot.PhysicalPath("Packages\\com.omnistove.fps\\Weapons\\Json");
+            var resolved = FpsKitRoot.PhysicalPath("Packages\\com.omnistove.shooter-kit\\Weapons\\Json");
             Assert.That(System.IO.Path.IsPathRooted(resolved), Is.True, resolved);
             Assert.That(resolved, Does.Not.Contain("\\"));
             Assert.That(resolved, Does.EndWith("/Weapons/Json"));
@@ -125,7 +125,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void SetPreferredOutputRejectsReadOnlyRootsWithoutSavingThem()
         {
-            Assert.Throws<ArgumentException>(() => FpsKitRoot.SetPreferredOutput("Packages/com.omnistove.fps"));
+            Assert.Throws<ArgumentException>(() => FpsKitRoot.SetPreferredOutput("Packages/com.omnistove.shooter-kit"));
             Assert.That(EditorPrefs.HasKey(FpsKitRoot.PrefsKey), Is.False);
         }
 
@@ -157,7 +157,7 @@ namespace Fps.Tests.EditMode
                 () => FpsKitRoot.ResolveOutput(new[] { FpsKitRoot.ArgumentName, "Assets/A", FpsKitRoot.ArgumentName, "Assets/B" }, null));
         }
 
-        [TestCase("Packages/com.omnistove.fps")]
+        [TestCase("Packages/com.omnistove.shooter-kit")]
         [TestCase("Assets")]
         [TestCase("ProjectSettings")]
         [TestCase("Assets/../Packages")]
@@ -170,7 +170,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void ResolveBundledUsesThePackageWhenThereIsOne()
         {
-            Assert.That(FpsKitRoot.ResolveBundled("Packages/com.omnistove.fps"), Is.EqualTo("Packages/com.omnistove.fps"));
+            Assert.That(FpsKitRoot.ResolveBundled("Packages/com.omnistove.shooter-kit"), Is.EqualTo("Packages/com.omnistove.shooter-kit"));
             Assert.That(FpsKitRoot.ResolveBundled(null), Is.EqualTo(KitPaths.DefaultRoot));
             Assert.That(FpsKitRoot.ResolveBundled(string.Empty), Is.EqualTo(KitPaths.DefaultRoot));
         }

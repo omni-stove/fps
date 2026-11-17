@@ -46,8 +46,8 @@ namespace Fps.Tests.EditMode
         }
 
         [TestCase("Assets/Samples/FpsKitDemo/Scripts/Editor/Fps.Samples.Editor.asmdef", "Assets/Samples/FpsKitDemo")]
-        [TestCase("Assets/Samples/FPS Kit/0.1.0/Demo Game/Scripts/Editor/Fps.Samples.Editor.asmdef", "Assets/Samples/FPS Kit/0.1.0/Demo Game")]
-        [TestCase("Packages/com.omnistove.fps/Scripts/Editor/Fps.Samples.Editor.asmdef", null)]
+        [TestCase("Assets/Samples/Shooter Kit/0.1.0/Demo Game/Scripts/Editor/Fps.Samples.Editor.asmdef", "Assets/Samples/Shooter Kit/0.1.0/Demo Game")]
+        [TestCase("Packages/com.omnistove.shooter-kit/Scripts/Editor/Fps.Samples.Editor.asmdef", null)]
         [TestCase("Scripts/Editor/Fps.Samples.Editor.asmdef", null)]
         [TestCase(null, null)]
         public void RootOfIsTwoFoldersAboveTheAsmdef(string asmdefPath, string expected)

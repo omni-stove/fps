@@ -6,7 +6,7 @@ namespace Fps.Core.Tests
     // Unity の EditMode テストと dotnet/Fps.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class KitPathsTests
     {
-        private const string _packageRoot = "Packages/com.omnistove.fps";
+        private const string _packageRoot = "Packages/com.omnistove.shooter-kit";
 
         [Test]
         public void DefaultRootIsTheRepositoryFolder()

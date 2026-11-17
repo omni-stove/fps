@@ -151,18 +151,18 @@ namespace Shooter.Core.Tests
             var next = simulation.Step(state, Input(new Vector2(0f, 1f), lean: 1, jump: true));
 
             Assert.That(next.Lean, Is.EqualTo(lean));
-            Assert.That(next.Swim, Is.EqualTo(swim));
+            Assert.That(next.Swim, Is.EqualTo(CharacterSwimState.None), "without water the swim ends");
             Assert.That(next.WallRun, Is.EqualTo(wallRun));
             Assert.That(next.AirJumpsUsed, Is.EqualTo(1));
         }
 
         [Test]
-        public void WaterAndTheNewTuningDoNotChangeTheMovementYet()
+        public void WaterBelowTheChestAndTheNewTuningDoNotChangeTheMovement()
         {
             AddFloor();
             var plain = NewSimulation();
             var tuned = NewSimulation();
-            tuned.Water = new WaterEverywhere(10f);
+            tuned.Water = new WaterEverywhere(0.5f);
             tuned.Swim = new SwimTuning(1f, 30f, 2f);
             tuned.WallRun = new WallRunTuning(true, 5f, 0f, 0f, 20f);
 

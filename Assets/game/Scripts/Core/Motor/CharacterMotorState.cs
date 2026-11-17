@@ -142,6 +142,9 @@ namespace Shooter.Core
 
         public bool IsSwimming => Swim.IsSwimming;
 
+        /// <summary>撃つ構え (ADS) に入れるか。シミュレーションは構えを持たないので、構えを動かす側がこれを読んで止める。</summary>
+        public bool CanAimDownSights => !IsSwimming;
+
         public bool IsWallRunning => WallRun.IsRunning;
 
         public bool IsKnockedBack => Knockback.IsFlying;

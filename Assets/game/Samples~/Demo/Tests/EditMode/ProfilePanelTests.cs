@@ -26,7 +26,7 @@ namespace Shooter.Tests.EditMode
                 new ProgressionUnlock(_dmr, 3),
                 new ProgressionUnlock(_suppressor, 3),
             };
-            return new ProgressionLedger(new ProgressionSpec(100, 50, 250, 500, new[] { 0, 500, 1500 }, unlocks));
+            return new ProgressionLedger(new ProgressionSpec(100, 50, 50, 250, 500, new[] { 0, 500, 1500 }, unlocks));
         }
 
         private static WeaponCatalog Weapons()
@@ -121,7 +121,7 @@ namespace Shooter.Tests.EditMode
         public void AnIdInNeitherCatalogIsShownAsTheId()
         {
             var ledger = new ProgressionLedger(new ProgressionSpec(
-                100, 50, 250, 500, new[] { 0, 500 }, new[] { new ProgressionUnlock(_unnamed, 2) }));
+                100, 50, 50, 250, 500, new[] { 0, 500 }, new[] { new ProgressionUnlock(_unnamed, 2) }));
             Open(PlayerProfile.Empty, ledger);
 
             Assert.That(_panel.UnlockLines, Is.EqualTo(new[] { "レベル 2: " + _unnamed }));

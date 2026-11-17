@@ -160,7 +160,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheStateTextsRoundTrip()
         {
-            foreach (PartyState state in Enum.GetValues(typeof(PartyState)))
+            foreach (PartyState state in Enum.GetValues<PartyState>())
             {
                 Assert.That(PartyLobby.TryParseState(PartyLobby.StateText(state), out var parsed), Is.True);
                 Assert.That(parsed, Is.EqualTo(state));

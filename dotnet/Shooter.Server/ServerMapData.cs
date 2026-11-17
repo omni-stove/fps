@@ -21,9 +21,11 @@ namespace Shooter.Server
             NetMapPoints points = null,
             NetMapStructures structures = null,
             NetMapLadders ladders = null,
-            NetMapVehicles vehicles = null)
+            NetMapVehicles vehicles = null,
+            NetMapWater water = null)
         {
             Vehicles = vehicles ?? NetMapVehicles.None;
+            Water = water ?? NetMapWater.None;
             Points = points;
             Structures = structures;
             Ladders = ladders ?? NetMapLadders.None;
@@ -64,6 +66,9 @@ namespace Shooter.Server
 
         public NetMapVehicles Vehicles { get; }
 
+        // はしごと同じく、書き出す前のマップでも泳げないだけで動けるよう、ファイルが無ければ空にする。
+        public NetMapWater Water { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
@@ -73,6 +78,7 @@ namespace Shooter.Server
             + " structures=" + (Structures == null ? "none" : Structures.Structures.Count.ToString(CultureInfo.InvariantCulture))
             + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
             + " vehicles=" + Vehicles.Vehicles.Count.ToString(CultureInfo.InvariantCulture)
+            + " water=" + Water.Water.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
         // 作業ディレクトリを先に見るのは、リポジトリのルートから dotnet run したときにコミットした server-data をそのまま使うため。
@@ -268,9 +274,24 @@ namespace Shooter.Server
                 }
             }
 
+            NetMapWater water = null;
+            var waterPath = Path.Combine(directory, map + NetMapWater.Extension);
+            if (File.Exists(waterPath))
+            {
+                try
+                {
+                    water = NetMapWater.Parse(File.ReadAllText(waterPath), waterPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + waterPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water);
             }
             catch (ArgumentException e)
             {

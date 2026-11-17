@@ -22,9 +22,18 @@ namespace Shooter.Server.Tests
                 new[] { new NavTriangle(0, 1, 2, 0) });
         }
 
-        public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null, NetMapLadders ladders = null)
+        public static ServerMapData Data(string name = "NetTest", NetMapPoints points = null, NetMapLadders ladders = null, NetMapWater water = null)
         {
-            return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders: ladders);
+            return new ServerMapData(name, World(), NavMesh(), "memory", points, ladders: ladders, water: water);
+        }
+
+        // 床 (上面 0.5) の上で、立った人の目 (2.1) より水面が高い。浮くと顔が出る
+        public static NetMapWater OnePool()
+        {
+            return new NetMapWater(new[]
+            {
+                new MapWater(new WaterBox(new Vector3(-10f, 0.5f, -10f), new Vector3(10f, 5f, 10f), 3.5f)),
+            });
         }
 
         public static NetMapLadders OneLadder()
@@ -36,7 +45,13 @@ namespace Shooter.Server.Tests
         }
 
         public static string Write(
-            string root, string name, bool collision = true, bool navigation = true, NetMapPoints points = null, NetMapLadders ladders = null)
+            string root,
+            string name,
+            bool collision = true,
+            bool navigation = true,
+            NetMapPoints points = null,
+            NetMapLadders ladders = null,
+            NetMapWater water = null)
         {
             var directory = Path.Combine(root, ServerMapData.DataDirectoryName, ServerMapData.MapsDirectoryName);
             Directory.CreateDirectory(directory);
@@ -64,6 +79,11 @@ namespace Shooter.Server.Tests
             if (ladders != null)
             {
                 File.WriteAllText(Path.Combine(directory, name + NetMapLadders.Extension), NetMapLadders.Write(ladders));
+            }
+
+            if (water != null)
+            {
+                File.WriteAllText(Path.Combine(directory, name + NetMapWater.Extension), NetMapWater.Write(water));
             }
 
             return directory;

@@ -6,10 +6,6 @@ namespace Shooter.Server
 {
     internal sealed partial class ServerMatch
     {
-        /// <summary>
-        /// 次の試合の前に人数をそろえるため、プレイヤーのチームを移した直後 (2 つ目の引数は移す前のチーム)。
-        /// 続けて <see cref="Restarted"/> が来る。ルールのモジュールがチームの持ち主 (Session) を合わせる。
-        /// </summary>
         public event Action<ServerPlayer, Team> TeamChanged;
 
         partial void BalanceTeamsForNextMatch()

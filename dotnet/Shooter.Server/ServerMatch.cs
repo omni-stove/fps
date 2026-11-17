@@ -63,7 +63,6 @@ namespace Shooter.Server
 
         public float RestartDelaySeconds { get; }
 
-        /// <summary>次の試合の前にそろえる、チームの人数の差の上限。0 ならそろえない。</summary>
         public int MaxTeamSizeDifference { get; }
 
         public string MatchId { get; private set; }

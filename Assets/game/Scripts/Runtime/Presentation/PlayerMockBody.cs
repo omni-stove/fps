@@ -359,12 +359,6 @@ namespace Shooter.Runtime
             ApplyPose(state, worldVelocity, worldCoverNormal, aimPitch, feetLocalY, deltaSeconds, stance, null, 0f);
         }
 
-        /// <summary>
-        /// <see cref="Apply(PlayerActionState, Vector3, Vector3, Quaternion, float, float, StanceGeometry)"/> に、移動の状態 motor の
-        /// 壁走り・水泳・リーンの傾き (<see cref="PlayerMockPose.BodyLean(PlayerActionState, Vector3, Vector3, CharacterMotorState, float)"/>) を足す。
-        /// </summary>
-        /// <param name="motor">移動の Core の今の状態。</param>
-        /// <param name="leanAngleDegrees">リーンで傾け切ったときの角度 (<see cref="MotorSpec.LeanAngleDegrees"/>)。0〜90 度。</param>
         public void Apply(
             PlayerActionState state,
             Vector3 worldVelocity,

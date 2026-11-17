@@ -33,6 +33,52 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new MatchResult(MatchOutcome.Won, -1, 0, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new MatchResult(MatchOutcome.Won, 0, -1, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => new MatchResult(MatchOutcome.Won, 0, 0, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new MatchResult(MatchOutcome.Won, 0, 0, 0, true, -1));
+        }
+
+        [Test]
+        public void AResultIsUnratedUnlessSaid()
+        {
+            var result = new MatchResult(MatchOutcome.Won, 1, 0, 10);
+
+            Assert.That(result.Rated, Is.False);
+            Assert.That(result.OpponentRating, Is.Null);
+            Assert.That(result.ToString(), Is.EqualTo("Won 1/0 score 10"));
+            Assert.That(default(MatchResult).Rated, Is.False);
+        }
+
+        [Test]
+        public void ARatedResultKeepsTheOpponentRatingIfGiven()
+        {
+            var known = new MatchResult(MatchOutcome.Lost, 1, 2, 10, true, 1200);
+            var unknown = new MatchResult(MatchOutcome.Lost, 1, 2, 10, true);
+
+            Assert.That(known.Rated, Is.True);
+            Assert.That(known.OpponentRating, Is.EqualTo(1200));
+            Assert.That(known.ToString(), Is.EqualTo("Lost 1/2 score 10 rated vs 1200"));
+            Assert.That(unknown.Rated, Is.True);
+            Assert.That(unknown.OpponentRating, Is.Null);
+            Assert.That(unknown.ToString(), Is.EqualTo("Lost 1/2 score 10 rated vs ?"));
+        }
+
+        [Test]
+        public void EqualityComparesTheRating()
+        {
+            var rated = new MatchResult(MatchOutcome.Won, 0, 0, 0, true, 1000);
+
+            Assert.That(rated, Is.EqualTo(new MatchResult(MatchOutcome.Won, 0, 0, 0, true, 1000)));
+            Assert.That(rated.GetHashCode(), Is.EqualTo(new MatchResult(MatchOutcome.Won, 0, 0, 0, true, 1000).GetHashCode()));
+            Assert.That(rated == new MatchResult(MatchOutcome.Won, 0, 0, 0, true, 1001), Is.False);
+            Assert.That(rated == new MatchResult(MatchOutcome.Won, 0, 0, 0, true), Is.False);
+            Assert.That(new MatchResult(MatchOutcome.Won, 0, 0, 0, true) == new MatchResult(MatchOutcome.Won, 0, 0, 0), Is.False);
+        }
+
+        [Test]
+        public void AnOpponentRatingNeedsARatedMatch()
+        {
+            var error = Assert.Throws<ArgumentException>(() => new MatchResult(MatchOutcome.Won, 0, 0, 0, false, 1000));
+
+            Assert.That(error.ParamName, Is.EqualTo("opponentRating"));
         }
     }
 }

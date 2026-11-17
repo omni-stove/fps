@@ -4,7 +4,6 @@ using Fps.Core;
 using Fps.Runtime;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Fps.Tests.EditMode
@@ -155,25 +154,27 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheHudShowsRoundWinsAndWhoIsLeft()
+        public void TheStatusCarriesTheExecutionAndTheLocalPlayer()
         {
             var player = Member("Player", 0, AlphaSpawn);
             var enemy = Member("Bot-1-1", 1, BravoSpawn);
-            var hud = BoundHudView();
-            Begin(new[] { player, enemy }, player, hud);
+            Begin(new[] { player, enemy }, player);
 
-            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 0"));
-            Assert.That(hud.Scores[0].IsOwn, Is.True);
-            Assert.That(hud.Lines, Does.Contain("ラウンド 1 (2 本先取)"));
-            Assert.That(hud.Lines, Does.Contain("開始まで 1 秒"));
+            var detail = (ExecutionStatus)_runner.Status.Detail;
+            Assert.That(detail.Session, Is.SameAs(_runner.Execution));
+            Assert.That(detail.LocalPlayerId, Is.EqualTo(_runner.IdOf(player)));
+            Assert.That(detail.InteractTargetId, Is.Null);
+            Assert.That(_runner.Status.OwnSide, Is.EqualTo((Side?)Side.Alpha));
 
             _runner.Tick(PreparationSeconds);
             KillBy(player, enemy);
             _runner.Tick(0f);
 
-            Assert.That(hud.Lines, Does.Contain("ALPHA 残り 1"));
-            Assert.That(hud.Lines, Does.Contain("BRAVO 残り 1 (ダウン 1)"));
-            Assert.That(hud.ResultText, Is.EqualTo(HudFormat.NoResult));
+            detail = (ExecutionStatus)_runner.Status.Detail;
+            Assert.That(detail.Session.CountRemaining(Side.Bravo), Is.EqualTo(1));
+            Assert.That(detail.Session.CountDowned(Side.Bravo), Is.EqualTo(1));
+            Assert.That(detail.InteractTargetId, Is.Null, "the player is not holding Interact");
+            Assert.That(_runner.Status.IsEnded, Is.False);
         }
 
         [Test]
@@ -181,8 +182,7 @@ namespace Fps.Tests.EditMode
         {
             var player = Member("Player", 0, AlphaSpawn);
             var enemy = Member("Bot-1-1", 1, BravoSpawn);
-            var hud = BoundHudView();
-            Begin(new[] { player, enemy }, player, hud);
+            Begin(new[] { player, enemy }, player);
 
             for (var round = 0; round < 2; round++)
             {
@@ -195,8 +195,9 @@ namespace Fps.Tests.EditMode
 
             Assert.That(_runner.Execution.Round.Phase, Is.EqualTo(RoundPhase.Ended));
             Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(hud.ResultText, Is.EqualTo("ALPHA の勝ち"));
-            Assert.That(hud.ScoreTexts[0], Is.EqualTo("ALPHA 2"));
+            var detail = (ExecutionStatus)_runner.Status.Detail;
+            Assert.That(detail.Session.Round.Winner, Is.EqualTo((Side?)Side.Alpha));
+            Assert.That(detail.Session.Round.GetRoundWins(Side.Alpha), Is.EqualTo(2));
         }
 
         [Test]
@@ -219,7 +220,7 @@ namespace Fps.Tests.EditMode
             Assert.That(execution.UsesDowned, Is.True);
         }
 
-        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, ModeHudView hud = null)
+        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer)
         {
             var execution = ExecutionRunner.CreateExecution(2, PreparationSeconds, 60f, ActionRules.Default, ExecuteSeconds);
             _runner.Begin(execution, members, _spawns, localPlayer);
@@ -254,13 +255,6 @@ namespace Fps.Tests.EditMode
             point.transform.position = position;
             point.Side = new Side(side);
             return point;
-        }
-
-        private ModeHudView BoundHudView()
-        {
-            var view = Track(new GameObject("ModeHud")).AddComponent<ModeHudView>();
-            view.Bind(Resources.Load<VisualTreeAsset>(Hud.LayoutResourcePath).CloneTree());
-            return view;
         }
 
         private GameObject Track(GameObject go)

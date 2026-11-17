@@ -17,8 +17,8 @@ namespace Fps.Runtime
     /// 敵ならとどめを刺し (<see cref="ExecuteSeconds"/> 秒)、味方なら起こす (ルールの <see cref="ActionRules.ReviveSeconds"/> 秒)。
     /// 起き上がった人は最大体力の <see cref="ActionRules.DownedHealthFraction"/> でその場に立つ。</item>
     /// <item>ラウンドの待ちに入るたびに、全員を自陣営の出現点に 1 人ずつ並べ直して体力を満たし、待ちの間は操作を止める。</item>
-    /// <item>HUD の得点の欄に両チームのラウンドの勝ち数、その下にラウンドの番号・待ちの残り・両チームの残り人数・自分のダウンや長押しの進みを出す。
-    /// 結果は先取数に届いたときだけ出し、そこで R (ゲームパッドは X) で読み直せる。</item>
+    /// <item>HUD には試合・自分のプレイヤーの ID・自分が長押ししている相手 (<see cref="ExecutionStatus"/>) を <see cref="ModeStatus.Detail"/> で渡し、
+    /// 何をどう出すかは UI が決める。先取数に届いたら R (ゲームパッドは X) で読み直せる。</item>
     /// <item>ダウン・ルールはシーンの <see cref="GameBootstrap"/> のルールから読む。ダウンを使わないルールでも、このモードはダウンを使う。</item>
     /// </list>
     /// </remarks>
@@ -235,20 +235,18 @@ namespace Fps.Runtime
             return true;
         }
 
-        protected override IReadOnlyList<ModeHudScoreLine> HudScores(Side? ownSide)
+        protected override object HudDetail
         {
-            return ExecutionHudText.RoundWins(_execution, ownSide);
-        }
+            get
+            {
+                if (_execution == null)
+                {
+                    return null;
+                }
 
-        protected override LocalizedText HudResult()
-        {
-            return ExecutionHudText.Result(_execution);
-        }
-
-        protected override void AppendHudTexts(List<LocalizedText> lines)
-        {
-            var local = LocalPlayer;
-            lines.AddRange(ExecutionHudText.Lines(_execution, local != null ? IdOf(local) : (int?)null, _localInteractTarget));
+                var local = LocalPlayer;
+                return new ExecutionStatus(_execution, local != null ? IdOf(local) : (int?)null, _localInteractTarget);
+            }
         }
 
         protected override string SessionEndedLog(Side? winner)

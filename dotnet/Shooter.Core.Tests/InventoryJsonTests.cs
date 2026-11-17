@@ -133,5 +133,47 @@ namespace Shooter.Core.Tests
 
             Assert.That(e.Item, Is.EqualTo("items"));
         }
+
+        [Test]
+        public void ReadsTheSightOfAnAttachment()
+        {
+            var catalog = InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"optic\", \"zoomLevels\": [25],"
+                + " \"sight\": { \"reticleId\": \"scope4x\", \"scopeOverlay\": true, \"eyeViewInThirdPerson\": true, \"aimedInProgress\": 0.8 } } } ] }",
+                "inventory.json");
+
+            var attachment = catalog.Items[0].Attachment;
+            Assert.That(attachment.IsOptic, Is.True);
+            Assert.That(attachment.Sight.ReticleId, Is.EqualTo("scope4x"));
+            Assert.That(attachment.Sight.ScopeOverlay, Is.True);
+            Assert.That(attachment.Sight.EyeViewInThirdPerson, Is.True);
+            Assert.That(attachment.Sight.AimedInProgress, Is.EqualTo(0.8f));
+        }
+
+        [Test]
+        public void AnAttachmentWithoutASightKeepsTheWeaponsOne()
+        {
+            var catalog = InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"muzzle\" } } ] }", "inventory.json");
+
+            Assert.That(catalog.Items[0].Attachment.Sight, Is.Null);
+            Assert.That(catalog.Items[0].Attachment.IsOptic, Is.False);
+        }
+
+        [Test]
+        public void ABadSightNamesTheItem()
+        {
+            var e = Assert.Throws<TuningJsonException>(() => InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"optic\", \"sight\": { \"aimedInProgress\": 0 } } } ] }",
+                "inventory.json"));
+
+            Assert.That(e.Item, Is.EqualTo("items[0].attachment.sight.aimedInProgress"));
+
+            var unknown = Assert.Throws<TuningJsonException>(() => InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"optic\", \"sight\": { \"color\": 1 } } } ] }",
+                "inventory.json"));
+
+            Assert.That(unknown.Item, Is.EqualTo("items[0].attachment.sight.color"));
+        }
     }
 }

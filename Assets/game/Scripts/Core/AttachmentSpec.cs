@@ -22,7 +22,8 @@ namespace Shooter.Core
             int magazineSizeBonus = DefaultMagazineSizeBonus,
             float shotNoiseRadiusMultiplier = DefaultMultiplier,
             float moveSpeedMultiplier = DefaultMultiplier,
-            IEnumerable<float> zoomLevels = null)
+            IEnumerable<float> zoomLevels = null,
+            SightSpec sight = null)
         {
             Slot = SlotName(slot, nameof(slot));
             WeaponIds = Ids(weaponIds);
@@ -36,6 +37,7 @@ namespace Shooter.Core
             ShotNoiseRadiusMultiplier = SpecGuard.NonNegativeFinite(shotNoiseRadiusMultiplier, nameof(shotNoiseRadiusMultiplier));
             MoveSpeedMultiplier = SpecGuard.NonNegativeFinite(moveSpeedMultiplier, nameof(moveSpeedMultiplier));
             ZoomLevels = Zooms(zoomLevels);
+            Sight = sight;
         }
 
         public string Slot { get; }
@@ -61,6 +63,12 @@ namespace Shooter.Core
         public float MoveSpeedMultiplier { get; }
 
         public IReadOnlyList<float> ZoomLevels { get; }
+
+        /// <summary>付けると武器の照準器をこれに替える。null なら替えない (倍率だけ決めた照準器は <see cref="SightSpec.Default"/> に替える)。</summary>
+        public SightSpec Sight { get; }
+
+        /// <summary>武器の照準器を付け替える物か (倍率か照準器を決めている)。</summary>
+        public bool IsOptic => ZoomLevels != null || Sight != null;
 
         public bool Fits(string weaponId)
         {

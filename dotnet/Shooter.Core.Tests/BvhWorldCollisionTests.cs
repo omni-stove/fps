@@ -396,7 +396,12 @@ namespace Shooter.Core.Tests
         public void QueriesDoNotAllocate()
         {
             var results = new int[8];
-            RunQueries(results);
+            // Tiered JIT promotes hot methods after many calls and allocates while doing so; warm past that so only query allocations are measured.
+            for (var i = 0; i < 1000; i++)
+            {
+                RunQueries(results);
+            }
+
             var before = GC.GetAllocatedBytesForCurrentThread();
             for (var i = 0; i < 1000; i++)
             {

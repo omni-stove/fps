@@ -198,6 +198,9 @@ namespace Shooter.Runtime
         [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("覗き込み中に照準が揺れる最大の角度 (度)")]
         private float _swayDegrees;
 
+        [SerializeField]
+        private SightSettings _sight = new SightSettings();
+
         [Header("弾薬の種類")]
         [SerializeField, Tooltip("切り替えて撃てる弾薬の種類。空なら切り替えない")]
         private AmmoTypeSettings[] _ammoTypes = Array.Empty<AmmoTypeSettings>();
@@ -476,6 +479,8 @@ namespace Shooter.Runtime
             set => _swayDegrees = value;
         }
 
+        public SightSettings Sight => _sight ??= new SightSettings();
+
         /// <summary>切り替えて撃てる弾薬の種類。null は空にする。</summary>
         public AmmoTypeSettings[] AmmoTypes
         {
@@ -554,7 +559,8 @@ namespace Shooter.Runtime
                     _blindFireSpreadDegrees,
                     ZoomLevels(),
                     BreathHold.ToSpec(),
-                    _swayDegrees);
+                    _swayDegrees,
+                    Sight.ToSpec());
                 return new WeaponSpec(
                     Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description);
             }

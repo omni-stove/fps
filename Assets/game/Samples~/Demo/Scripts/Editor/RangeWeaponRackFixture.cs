@@ -9,7 +9,8 @@ using UnityEngine.SceneManagement;
 namespace Shooter.Editor
 {
     // 射撃場で拾える武器 (WeaponAssetBuilder.LoadRangeWeapons、サンプルの武器の JSON すべて) を、標的の奥 (x = -1.25..18.75, z = 28.5..37.5) に
-    // 一覧の順で左から右・手前から奥へ並べる。サンプルの武器を足す issue は JSON を置くだけで、ここに拾える武器が 1 つ増える。
+    // 一覧の順で左から右・手前から奥へ並べ、その続きに照準器のアタッチメント (Tuning/inventory.json の倍率か照準器を決めた物) を並べる。
+    // サンプルの武器を足す issue は JSON を置くだけで、ここに拾える武器が 1 つ増える。
     // 武器のモデルに照準を合わせて拾う (Look) ので、隣の武器と範囲が重なっても狙った 1 本だけを拾える。
     public sealed class RangeWeaponRackFixture : ITpsRangeFixture
     {
@@ -52,7 +53,27 @@ namespace Shooter.Editor
 
         public GameObject Place(Scene scene, GameRules rules)
         {
-            return Place(scene, WeaponAssetBuilder.LoadRangeWeapons().Weapons);
+            return Place(scene, WeaponAssetBuilder.LoadRangeWeapons().Weapons, OpticItemIds(KitTuning.Items));
+        }
+
+        /// <summary>items の照準器のアタッチメント (<see cref="AttachmentSpec.IsOptic"/>) の Id。一覧の順。</summary>
+        public static IReadOnlyList<string> OpticItemIds(ItemCatalog items)
+        {
+            if (items == null)
+            {
+                throw new ArgumentNullException(nameof(items));
+            }
+
+            var ids = new List<string>();
+            foreach (var item in items.Items)
+            {
+                if (item.IsAttachment && item.Attachment.IsOptic)
+                {
+                    ids.Add(item.Id);
+                }
+            }
+
+            return ids;
         }
 
         /// <summary>
@@ -63,16 +84,32 @@ namespace Shooter.Editor
         /// <exception cref="InvalidOperationException">weapons が棚 (<see cref="Columns"/> × <see cref="Rows"/>) に収まらない。何も置かない。</exception>
         public static GameObject Place(Scene scene, IReadOnlyList<WeaponDefinition> weapons)
         {
+            return Place(scene, weapons, Array.Empty<string>());
+        }
+
+        /// <summary>
+        /// <see cref="Place(Scene, IReadOnlyList{WeaponDefinition})"/> の、武器の続きに opticItemIds のアイテムを 1 つずつ拾える所を並べる形。
+        /// 照準器を拾って持ち物から武器に付け、一人称と三人称 (F2) で覗き比べるためのもの。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">武器と照準器が棚 (<see cref="Columns"/> × <see cref="Rows"/>) に収まらない。何も置かない。</exception>
+        public static GameObject Place(Scene scene, IReadOnlyList<WeaponDefinition> weapons, IReadOnlyList<string> opticItemIds)
+        {
             if (weapons == null)
             {
                 throw new ArgumentNullException(nameof(weapons));
             }
 
-            if (weapons.Count > Columns * Rows)
+            if (opticItemIds == null)
+            {
+                throw new ArgumentNullException(nameof(opticItemIds));
+            }
+
+            if (weapons.Count + opticItemIds.Count > Columns * Rows)
             {
                 throw new InvalidOperationException(
-                    $"{RootName} holds {(Columns * Rows).ToString(CultureInfo.InvariantCulture)} weapons, but the range lists "
-                    + $"{weapons.Count.ToString(CultureInfo.InvariantCulture)}; add a row to {nameof(RangeWeaponRackFixture)}");
+                    $"{RootName} holds {(Columns * Rows).ToString(CultureInfo.InvariantCulture)} pickups, but the range lists "
+                    + $"{weapons.Count.ToString(CultureInfo.InvariantCulture)} weapons and {opticItemIds.Count.ToString(CultureInfo.InvariantCulture)} optics; "
+                    + $"add a row to {nameof(RangeWeaponRackFixture)}");
             }
 
             // 中身を先に作って検査し、不正なら何も置かない。
@@ -93,6 +130,11 @@ namespace Shooter.Editor
             for (var i = 0; i < weapons.Count; i++)
             {
                 CreatePickup(root.transform, weapons[i].name, contents[i], SlotPosition(i));
+            }
+
+            for (var i = 0; i < opticItemIds.Count; i++)
+            {
+                CreatePickup(root.transform, opticItemIds[i], PickupContents.ForItem(opticItemIds[i], 1), SlotPosition(weapons.Count + i));
             }
 
             return root;

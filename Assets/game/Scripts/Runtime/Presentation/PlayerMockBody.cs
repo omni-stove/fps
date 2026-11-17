@@ -71,6 +71,7 @@ namespace Shooter.Runtime
         private MockPartPose _gunPose;
         private MockPartPose _viewPose;
         private bool _showsBody = true;
+        private ViewRig _viewRig;
 
         /// <summary>見せるアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
@@ -435,7 +436,14 @@ namespace Shooter.Runtime
                 _bodyRoot.gameObject.SetActive(_showsBody);
             }
 
-            var bodyShadow = firstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            // ViewRig は後から付くことがあるので、見つかるまで探し直す。
+            if (_viewRig == null)
+            {
+                _viewRig = GetComponent<ViewRig>();
+            }
+
+            var hiddenBySight = _viewRig != null && _viewRig.IsBodyHiddenBySight;
+            var bodyShadow = firstPerson || hiddenBySight ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var bodyRenderer in _bodyRenderers)
             {
                 if (bodyRenderer != null && bodyRenderer.shadowCastingMode != bodyShadow)

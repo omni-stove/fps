@@ -85,6 +85,8 @@ namespace Shooter.Runtime
         private bool _isLocalView;
         private bool _isLive;
         private bool _listeningToSettings;
+        private AimDownSights _ads;
+        private bool _bodyHiddenBySight;
 
         /// <summary>
         /// 一人称か三人称か。変えるとカメラの位置と体の描き方をすぐ直す (有効な間だけ。無効なら次に有効になったとき)。
@@ -131,6 +133,15 @@ namespace Shooter.Runtime
                 }
             }
         }
+
+        /// <summary>
+        /// 照準器の出し方 (<see cref="SightView.EyeBlend"/> で三人称のカメラを目へ寄せ、<see cref="SightView.HidesBody"/> で体を隠す)。
+        /// null なら同じ GameObject の <see cref="AimDownSights.SightView"/> (無ければ寄せない)。
+        /// </summary>
+        public Func<SightView> SightSource { get; set; }
+
+        /// <summary>照準器で目へ寄せたために、三人称でも自分の体を影だけにしているか。</summary>
+        public bool IsBodyHiddenBySight => _bodyHiddenBySight && isActiveAndEnabled;
 
         /// <summary>今 <see cref="ThirdPersonOffset"/> の x に掛けている符号。右肩で +1、左肩で -1、入れ替えの途中はその間。</summary>
         public float ShoulderOffsetSign => _shoulder.OffsetSign;
@@ -257,6 +268,8 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             _isLive = false;
+            // 無効の間は UpdateCameraPosition が呼ばれず戻せないので、ここで隠す指定を外す。
+            _bodyHiddenBySight = false;
             ApplyBodyVisibility(false);
         }
 
@@ -441,9 +454,12 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
 
+            var sight = _mode == ViewMode.ThirdPerson ? CurrentSightView() : SightView.None;
+            HideBodyForSight(sight.HidesBody);
+
             var shoulderOffset = _thirdPersonOffset;
             shoulderOffset.x *= _shoulder.OffsetSign;
-            var offset = CameraBoom.Offset(_mode, shoulderOffset.ToNumerics()).ToUnity();
+            var offset = CameraBoom.TowardEye(CameraBoom.Offset(_mode, shoulderOffset.ToNumerics()), sight.EyeBlend).ToUnity();
             var cameraTransform = _camera.transform;
             var desired = offset.magnitude;
             if (desired < 1e-6f)
@@ -530,8 +546,8 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称なら影だけ描いて視界をふさがず、
-        /// それ以外 (三人称や他人のプレイヤー) は普通に描く。<see cref="ViewmodelRoot"/> の配下は体ではないので触らない。
+        /// 自分の体の描き方を決める。isLocalView (この端末のプレイヤーの視点) かつ一人称 (か三人称で照準器がカメラを目へ寄せている間、
+        /// <see cref="IsBodyHiddenBySight"/>) なら影だけ描いて視界をふさがず、それ以外 (三人称や他人のプレイヤー) は普通に描く。<see cref="ViewmodelRoot"/> の配下は体ではないので触らない。
         /// isLocalView の間だけ肩の入れ替えの入力を読む (<see cref="IsLocalView"/>)。
         /// </summary>
         public void ApplyBodyVisibility(bool isLocalView)
@@ -539,7 +555,8 @@ namespace Shooter.Runtime
             _isLocalView = isLocalView;
             RefreshSwapShoulderAction();
 
-            var shadowMode = isLocalView && _mode == ViewMode.FirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            var hidden = _mode == ViewMode.FirstPerson || _bodyHiddenBySight;
+            var shadowMode = isLocalView && hidden ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
             foreach (var bodyRenderer in GetComponentsInChildren<Renderer>(true))
             {
                 // ビューモデルは体ではなく、一人称でこそ描くものなので、体の描き方に巻き込まない。
@@ -548,6 +565,34 @@ namespace Shooter.Runtime
                     bodyRenderer.shadowCastingMode = shadowMode;
                 }
             }
+        }
+
+        private SightView CurrentSightView()
+        {
+            if (SightSource != null)
+            {
+                return SightSource();
+            }
+
+            // 組み立てる側が AimDownSights を ViewRig より後に付けるので、見つかるまで探し直す。
+            if (_ads == null)
+            {
+                _ads = GetComponent<AimDownSights>();
+            }
+
+            return _ads != null && _ads.IsInitialized ? _ads.SightView : SightView.None;
+        }
+
+        // 体の描き方を全部の Renderer に書き直すので、隠すかが変わったときだけ直す。
+        private void HideBodyForSight(bool hide)
+        {
+            if (hide == _bodyHiddenBySight)
+            {
+                return;
+            }
+
+            _bodyHiddenBySight = hide;
+            ApplyBodyVisibility(_isLocalView);
         }
 
         /// <summary>

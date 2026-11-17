@@ -317,6 +317,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \" \", \"penetrability\": 1}]}}}", "round.penetration.materials[0].materialId")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\"}]}}}", "round.penetration.materials[0].penetrability")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
+        [TestCase("{\"aim\": {\"sight\": {\"aimedInProgress\": 1.5}}}", "aim.sight.aimedInProgress")]
+        [TestCase("{\"aim\": {\"sight\": {\"overlay\": true}}}", "aim.sight.overlay")]
         [TestCase("{\"weight\": -1}", "weight")]
         [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
@@ -330,6 +332,41 @@ namespace Shooter.Core.Tests
 
             Assert.That(e.Item, Is.EqualTo(item));
             Assert.That(e.Message, Does.Contain("bad.json"));
+        }
+
+        [Test]
+        public void TheSightReadsBackAndADefaultSightIsNotWritten()
+        {
+            var scoped = new WeaponSpec(
+                _rifleId,
+                "weapon.scopedRifle",
+                WeaponCategory.MarksmanRifle,
+                aim: new AimSpec(sight: new SightSpec("mildot", true, true, 0.75f)));
+
+            var written = WeaponSpecJson.Write(scoped);
+            var read = WeaponSpecJson.Parse(written, "scoped.json");
+
+            Assert.That(written, Does.Contain("\"sight\""));
+            Assert.That(read.Aim.Sight.ReticleId, Is.EqualTo("mildot"));
+            Assert.That(read.Aim.Sight.ScopeOverlay, Is.True);
+            Assert.That(read.Aim.Sight.EyeViewInThirdPerson, Is.True);
+            Assert.That(read.Aim.Sight.AimedInProgress, Is.EqualTo(0.75f));
+
+            var plain = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle);
+            Assert.That(WeaponSpecJson.Write(plain), Does.Not.Contain("\"sight\""));
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(plain), "plain.json").Aim.Sight, Is.SameAs(SightSpec.Default));
+        }
+
+        [Test]
+        public void ALeftOutSightItemTakesItsDefault()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"aim\": {\"sight\": {\"reticleId\": \"redDot\"}}}", "dot.json");
+
+            Assert.That(read.Aim.Sight.ReticleId, Is.EqualTo("redDot"));
+            Assert.That(read.Aim.Sight.ScopeOverlay, Is.False);
+            Assert.That(read.Aim.Sight.EyeViewInThirdPerson, Is.False);
+            Assert.That(read.Aim.Sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
         }
 
         [TestCase("{\"category\": \"AssaultRifle\"}", "id")]

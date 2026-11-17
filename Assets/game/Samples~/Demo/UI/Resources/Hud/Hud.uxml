@@ -5,6 +5,8 @@
     <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
         <!-- 被弾と低体力で画面端を赤くする画像。ほかの表示の後ろに描くよう最初に置く。DamageVignetteView が出すときだけ画像と不透明度を入れて出す。 -->
         <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
+        <!-- スコープの縁と照準器の照準。被弾の赤の上、ほかの表示の後ろに描く。ScopeOverlayView が覗き込んでいる間だけ出す。 -->
+        <ui:VisualElement name="scope-overlay" class="scope-overlay" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
         </ui:VisualElement>

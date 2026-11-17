@@ -259,6 +259,7 @@ namespace Shooter.Runtime
             StepZoomLevel(deltaSeconds);
             Apply(_zoom.FieldOfView(_hipFieldOfView, TargetFieldOfView));
             StepBreath(deltaSeconds);
+            StepSight();
         }
 
         /// <summary>
@@ -298,6 +299,7 @@ namespace Shooter.Runtime
             SnapToFirstZoomLevel();
             Apply(_hipFieldOfView);
             ResetBreath();
+            StepSight();
         }
 
         /// <summary>

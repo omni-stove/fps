@@ -142,7 +142,10 @@
       "attachment": {
         "slot": "optic",
         "adsSpreadMultiplier": 0.8,
-        "zoomLevels": [45]
+        "zoomLevels": [45],
+        "sight": {
+          "reticleId": "redDot"
+        }
       }
     },
     {
@@ -157,7 +160,12 @@
         "weaponIds": ["6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "9795f821-8fac-4c4f-90f8-c0a80841de96"],
         "adsSpreadMultiplier": 0.6,
         "moveSpreadMultiplier": 1.2,
-        "zoomLevels": [25, 15]
+        "zoomLevels": [25, 15],
+        "sight": {
+          "reticleId": "scope4x",
+          "scopeOverlay": true,
+          "eyeViewInThirdPerson": true
+        }
       }
     },
     {

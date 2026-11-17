@@ -47,6 +47,17 @@ namespace Shooter.Core
         }
 
         /// <summary>
+        /// offset (目から見たカメラの位置) を eyeBlend (0〜1 に丸める。NaN は 0) の割合だけ目へ寄せた位置。
+        /// 動き始めと止まり際が急にならないよう、割合を smoothstep で緩めてから寄せる。
+        /// </summary>
+        public static Vector3 TowardEye(Vector3 offset, float eyeBlend)
+        {
+            var t = float.IsNaN(eyeBlend) ? 0f : Math.Max(0f, Math.Min(1f, eyeBlend));
+            var eased = t * t * (3f - (2f * t));
+            return offset * (1f - eased);
+        }
+
+        /// <summary>
         /// 腕の長さ。間を遮るものが無ければ desired のまま、あればその手前 (blockedAt) まで縮める。
         /// ただし minLength より短くはしない (desired がそれより短ければ desired)。
         /// </summary>

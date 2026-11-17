@@ -92,6 +92,7 @@ namespace Shooter.Core
             ShotNoiseRadiusMultiplierItem,
             MoveSpeedMultiplierItem,
             ZoomLevelsItem,
+            SightSpecJson.SightItem,
         };
 
         public static IReadOnlyList<string> StartingItemNames { get; } = new[] { IdItem, CountItem };
@@ -213,6 +214,9 @@ namespace Shooter.Core
                 }
             }
 
+            var sightFields = fields.Object(SightSpecJson.SightItem, SightSpecJson.ItemNames);
+            var sight = sightFields == null ? null : SightSpecJson.Read(sightFields);
+
             try
             {
                 return new AttachmentSpec(
@@ -227,7 +231,8 @@ namespace Shooter.Core
                     fields.ReadInt(MagazineSizeBonusItem, AttachmentSpec.DefaultMagazineSizeBonus),
                     fields.ReadFloat(ShotNoiseRadiusMultiplierItem, AttachmentSpec.DefaultMultiplier),
                     fields.ReadFloat(MoveSpeedMultiplierItem, AttachmentSpec.DefaultMultiplier),
-                    zoomLevels);
+                    zoomLevels,
+                    sight);
             }
             catch (ArgumentException e)
             {

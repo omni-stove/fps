@@ -104,5 +104,28 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Length(value, null));
             Assert.Throws<ArgumentOutOfRangeException>(() => CameraBoom.Length(1f, null, value));
         }
+
+        [Test]
+        public void TowardEyeMovesTheCameraOntoTheEyeAsTheBlendGrows()
+        {
+            Assert.That(CameraBoom.TowardEye(_shoulder, 0f), Is.EqualTo(_shoulder));
+            Assert.That(CameraBoom.TowardEye(_shoulder, 1f), Is.EqualTo(Vector3.Zero));
+
+            // 半分では smoothstep でも半分
+            var half = CameraBoom.TowardEye(_shoulder, 0.5f);
+            Assert.That(half.X, Is.EqualTo(0.25f).Within(1e-6f));
+            Assert.That(half.Z, Is.EqualTo(-1.25f).Within(1e-6f));
+
+            // 4 分の 1 では 0.25² × (3 − 0.5) = 0.15625 だけ寄る
+            Assert.That(CameraBoom.TowardEye(_shoulder, 0.25f).Z, Is.EqualTo(-2.5f * (1f - 0.15625f)).Within(1e-6f));
+        }
+
+        [Test]
+        public void TowardEyeClampsTheBlend()
+        {
+            Assert.That(CameraBoom.TowardEye(_shoulder, -1f), Is.EqualTo(_shoulder));
+            Assert.That(CameraBoom.TowardEye(_shoulder, 2f), Is.EqualTo(Vector3.Zero));
+            Assert.That(CameraBoom.TowardEye(_shoulder, float.NaN), Is.EqualTo(_shoulder));
+        }
     }
 }

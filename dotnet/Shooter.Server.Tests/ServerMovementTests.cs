@@ -18,6 +18,9 @@ namespace Shooter.Server.Tests
         private static readonly Vector3 _spawn = new Vector3(0f, 1.7f, 0f);
         private static readonly ConnectionId _connection = new ConnectionId(1);
 
+        // 定数配列を直接渡すと CA1861 になるので、欄に置く
+        private static readonly int[] _twoAirJumpsThenNone = { 1, 2, 2 };
+
         private readonly MessageTable _clientTable = MatchMessages.CreateClientTable();
 
         private StringWriter _log;
@@ -214,6 +217,249 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheLeanBitsTiltThePlayerAndAreLoggedAndSent()
+        {
+            Start();
+            Settle();
+
+            var rightTick = _nextInputTick;
+            for (var i = 0; i < 20; i++)
+            {
+                Send(Vector2.Zero, InputButtons.LeanRight);
+            }
+
+            _movement.TryGetState(1, out var state);
+            Assert.That(state.Lean.Amount, Is.EqualTo(1f));
+            Assert.That(_log.ToString(), Does.Contain("[Net] lean owner=1 tick=" + rightTick + " side=right"));
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].Lean, Is.EqualTo(1f));
+
+            for (var i = 0; i < 40; i++)
+            {
+                Send(Vector2.Zero, InputButtons.LeanLeft);
+            }
+
+            _movement.TryGetState(1, out state);
+            Assert.That(state.Lean.Amount, Is.EqualTo(-1f));
+            Assert.That(_log.ToString(), Does.Contain(" side=left"));
+
+            for (var i = 0; i < 20; i++)
+            {
+                Send(Vector2.Zero, InputButtons.LeanLeft | InputButtons.LeanRight);
+            }
+
+            _movement.TryGetState(1, out state);
+            Assert.That(state.Lean.Amount, Is.Zero, "both lean bits cancel out");
+            Assert.That(_log.ToString(), Does.Contain(" side=none"));
+        }
+
+        [Test]
+        public void WithoutTheLeanBitsThePlayerStaysUpright()
+        {
+            Start();
+            Settle();
+
+            for (var i = 0; i < 20; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.Sprint);
+            }
+
+            _movement.TryGetState(1, out var state);
+            Assert.That(state.Lean.Amount, Is.Zero);
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] lean "));
+        }
+
+        [Test]
+        public void ThePlayerSwimsInTheMapWaterAndIsLoggedAndSent()
+        {
+            Start(water: TestMaps.OnePool());
+
+            CharacterMotorState state = default;
+            for (var i = 0; i < 10 && !state.IsSwimming; i++)
+            {
+                Send(Vector2.Zero, InputButtons.None);
+                _movement.TryGetState(1, out state);
+            }
+
+            Assert.That(state.IsSwimming, Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Net] swim owner=1 tick=" + (_nextInputTick - 1) + " swimming=true"));
+
+            for (var i = 0; i < 2 * TickClock.DefaultTickRate; i++)
+            {
+                Send(Vector2.Zero, InputButtons.None);
+            }
+
+            // 水面 3.5 が胸 (本体の 0.3 上) に来る高さに浮く
+            _movement.TryGetState(1, out state);
+            Assert.That(state.IsSwimming, Is.True);
+            Assert.That(state.Position.Y, Is.EqualTo(3.2f).Within(1e-3f));
+            Assert.That(state.Swim.IsUnderwater, Is.False);
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].Swimming, Is.True);
+
+            for (var i = 0; i < 30; i++)
+            {
+                Send(Vector2.Zero, InputButtons.Crouch);
+            }
+
+            _movement.TryGetState(1, out state);
+            Assert.That(state.Swim.IsUnderwater, Is.True, "crouching dives");
+            Assert.That(_log.ToString(), Does.Contain(" underwater=true"));
+        }
+
+        [Test]
+        public void WithoutMapWaterThePlayerDoesNotSwim()
+        {
+            Start();
+            Settle();
+
+            _movement.TryGetState(1, out var state);
+            Assert.That(state.IsSwimming, Is.False);
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].Swimming, Is.False);
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] swim "));
+        }
+
+        [Test]
+        public void HoldingUnderwaterPastTheBreathReportsTheDrowningsAndTheirDamage()
+        {
+            Start(water: TestMaps.OnePool());
+            var drowned = new List<int>();
+            _movement.Drowned += (player, tick, count) => drowned.Add(count);
+
+            var seconds = SwimTuning.DefaultBreathSeconds + (2.5f * SwimTuning.DefaultDrownIntervalSeconds);
+            for (var i = 0; i < seconds * TickClock.DefaultTickRate; i++)
+            {
+                Send(Vector2.Zero, InputButtons.Crouch);
+            }
+
+            var total = 0;
+            drowned.ForEach(count => total += count);
+            Assert.That(total, Is.EqualTo(3), "one at the end of the breath, then one per interval");
+            Assert.That(_log.ToString(), Does.Contain(" outOfBreath=1"));
+            Assert.That(_movement.DrownDamage(total), Is.EqualTo(3 * SwimTuning.DefaultDrownDamage));
+            Assert.That(_movement.DrownDamage(int.MaxValue), Is.EqualTo(int.MaxValue));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _movement.DrownDamage(-1));
+        }
+
+        [Test]
+        public void AirJumpsAreAllowedAsManyTimesAsTheMotorSays()
+        {
+            Start(motor: new MotorSpec(
+                MotorSpec.DefaultWalkSpeed, MotorSpec.DefaultSprintSpeed, MotorSpec.DefaultJumpHeight, MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl, MotorSpec.DefaultCrouchSpeed, airJumps: 2));
+            Settle();
+
+            Send(Vector2.Zero, InputButtons.Jump);
+            var used = new List<int>();
+            var speeds = new List<float>();
+            for (var press = 0; press < 3; press++)
+            {
+                Send(Vector2.Zero, InputButtons.None);
+                Send(Vector2.Zero, InputButtons.Jump);
+                _movement.TryGetState(1, out var state);
+                Assert.That(state.IsGrounded, Is.False);
+                used.Add(state.AirJumpsUsed);
+                speeds.Add(state.Velocity.Y);
+            }
+
+            Assert.That(used, Is.EqualTo(_twoAirJumpsThenNone));
+            Assert.That(speeds[1], Is.EqualTo(MotorSpec.DefaultAirJumpSpeed).Within(0.5f), "the second air jump is taken");
+            Assert.That(speeds[2], Is.LessThan(speeds[1]), "the third press finds no air jumps left");
+            var log = _log.ToString();
+            Assert.That(log, Does.Contain("[Net] airjump owner=1 tick=" + (_nextInputTick - 5) + " used=1"));
+            Assert.That(log, Does.Contain("[Net] airjump owner=1 tick=" + (_nextInputTick - 3) + " used=2"));
+            Assert.That(log, Does.Not.Contain(" used=3"));
+
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].AirJumpsUsed, Is.EqualTo(2));
+
+            for (var i = 0; i < 2 * TickClock.DefaultTickRate; i++)
+            {
+                Send(Vector2.Zero, InputButtons.None);
+            }
+
+            _movement.TryGetState(1, out var landed);
+            Assert.That(landed.IsGrounded, Is.True);
+            Assert.That(landed.AirJumpsUsed, Is.Zero, "landing gives the air jumps back");
+        }
+
+        [Test]
+        public void WithoutAirJumpsASecondPressDoesNothing()
+        {
+            Start();
+            Settle();
+
+            Send(Vector2.Zero, InputButtons.Jump);
+            Send(Vector2.Zero, InputButtons.None);
+            _movement.TryGetState(1, out var before);
+            Send(Vector2.Zero, InputButtons.Jump);
+            _movement.TryGetState(1, out var after);
+
+            Assert.That(after.AirJumpsUsed, Is.Zero);
+            Assert.That(after.Velocity.Y, Is.LessThan(before.Velocity.Y));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] airjump "));
+        }
+
+        [Test]
+        public void JumpingBesideAWallRunsAlongItAndIsLoggedAndSent()
+        {
+            // 体 (半径 0.5) の右 0.1 に、前 (+Z) へ続く壁を立てる
+            var world = new WorldMap(new[]
+            {
+                WorldCollider.Box(1, 0, WorldCollider.StaticGroup, Vector3.Zero, new Vector3(10f, 0.5f, 10f), Quaternion.Identity),
+                WorldCollider.Box(2, 0, WorldCollider.StaticGroup, new Vector3(0.85f, 4f, 0f), new Vector3(0.25f, 4f, 10f), Quaternion.Identity),
+            });
+            Start(wallRun: new WallRunTuning(true), world: world);
+            Settle();
+
+            for (var i = 0; i < 10; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.Sprint);
+            }
+
+            Send(new Vector2(0f, 1f), InputButtons.Sprint | InputButtons.Jump);
+            CharacterMotorState state = default;
+            for (var i = 0; i < 10 && !state.IsWallRunning; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.Sprint);
+                _movement.TryGetState(1, out state);
+            }
+
+            Assert.That(state.WallRun.Side, Is.EqualTo(WallRunSide.Right));
+            Assert.That(_log.ToString(), Does.Contain("[Net] wallrun owner=1 tick=" + (_nextInputTick - 1) + " running=true side=right"));
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].WallRunSide, Is.EqualTo(WallRunSide.Right));
+        }
+
+        [Test]
+        public void WallRunningIsOffUnlessTheTuningTurnsItOn()
+        {
+            var world = new WorldMap(new[]
+            {
+                WorldCollider.Box(1, 0, WorldCollider.StaticGroup, Vector3.Zero, new Vector3(10f, 0.5f, 10f), Quaternion.Identity),
+                WorldCollider.Box(2, 0, WorldCollider.StaticGroup, new Vector3(0.85f, 4f, 0f), new Vector3(0.25f, 4f, 10f), Quaternion.Identity),
+            });
+            Start(world: world);
+            Settle();
+
+            Send(new Vector2(0f, 1f), InputButtons.Sprint | InputButtons.Jump);
+            for (var i = 0; i < 10; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.Sprint);
+                _movement.TryGetState(1, out var state);
+                Assert.That(state.IsWallRunning, Is.False);
+            }
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] wallrun "));
+        }
+
+        [Test]
         public void ADownedPlayerDoesNotWalk()
         {
             Start();
@@ -407,21 +653,36 @@ namespace Shooter.Server.Tests
             return state;
         }
 
-        private void Start(GameRules rules = null, NetMapLadders ladders = null, MotorSpec motor = null)
+        private void Start(
+            GameRules rules = null,
+            NetMapLadders ladders = null,
+            MotorSpec motor = null,
+            NetMapWater water = null,
+            WallRunTuning wallRun = null,
+            WorldMap world = null)
         {
             _transport?.Dispose();
             _transport = new RecordingTransport();
             _match = new ServerMatch(5f, _log, new ServerEventWriter(false, _log, _log), () => _time);
             var defaults = ServerMotorSettings.Default;
             var settings = new ServerMotorSettings(
-                motor ?? defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, rules ?? GameRules.Default, defaults.KillPlaneY, _spawn);
+                motor ?? defaults.Motor,
+                defaults.Stance,
+                defaults.Mover,
+                defaults.Prone,
+                defaults.Swim,
+                wallRun ?? defaults.WallRun,
+                rules ?? GameRules.Default,
+                defaults.KillPlaneY,
+                _spawn);
             _movement = new ServerMovement(settings);
             _snapshots = new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { _movement });
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_snapshots);
             var options = new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort);
-            _context = new ServerContext(options, "0.2.0", _log, TestMaps.Data(ladders: ladders), _match, new ServerMessenger(_transport), new StubControl());
+            var map = new ServerMapData("NetTest", world ?? TestMaps.World(), TestMaps.NavMesh(), "memory", ladders: ladders, water: water);
+            _context = new ServerContext(options, "0.2.0", _log, map, _match, new ServerMessenger(_transport), new StubControl());
             _host.Start(_context);
             _match.Join(_connection, "key");
             _host.OnConnected(_connection);

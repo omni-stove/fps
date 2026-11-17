@@ -330,6 +330,13 @@ docker run --rm --name shooter-server -p 7777:7777/udp shooter-server:local -map
   壁走り (`wallRunEnabled`・`wallRunMaxSeconds`・`wallRunMinSpeed`・`wallRunGravityScale`・`wallRunJumpOffSpeed`) も同じ `motor` から読み、
   承認のメッセージでクライアントの予測に渡す。水泳と壁走りの値は `make export-server-rules` が `Resources/Tuning/traversal.json` (入口の欄が先) から書き出す。
   つかまる・離れる・伏せる・起き上がる・飛び込むたびに `[Net] ladder owner=.. tick=.. climbing=..`・`[Net] prone ... prone=..`・`[Net] dive ... diving=..` を出す。
+- 水の場所は `server-data/maps/<マップ名>.water.json` (`make export-server-data` がシーンの有効な `Water` の軸にそろった箱と水面の高さを書き出す) から読む。
+  ファイルが無いマップは水が無いものとして動く。起動時の `[Server] map ...` の `water=` が読んだ数。次の試合でマップを替えると、新しいマップの水で泳ぐ。
+  入力の `LeanLeft`・`LeanRight` のビットで傾け (両方なら傾けない)、スナップショットの人の欄に傾き・泳いでいるか・壁走りの側・使った空中のジャンプの回数を載せる。
+  傾く向きが替わる・泳ぎ始める/やめる・潜る/顔を出す・壁を走り始める/離れる・空中で跳ぶたびに
+  `[Net] lean owner=.. tick=.. side=left|right|none`・`[Net] swim ... swimming=..`・`[Net] swim ... underwater=..`・`[Net] wallrun ... running=.. side=..`・`[Net] airjump ... used=..` を出す。
+  潜ったまま息 (`swimBreathSeconds`) が切れると `[Net] swim ... outOfBreath=..` を出し、撃った人のいないダメージとしてルールに通して `[Net] drown owner=.. tick=.. damage=.. outcome=..` を出す。
+  ダメージの量と間隔はルールのファイルにまだ無いので、`SwimTuning` の既定値 (10 を 1 秒ごと) になる。
 - 乗り物は `server-data/maps/<マップ名>.vehicles.json` (`make export-server-data` がシーンの有効な `Vehicle` から書き出す) から読む。
   サーバーとクライアントはどちらもこの並びの番号で乗り物を指す。ファイルが無いマップは乗り物が無いものとして動く (`[Server] map ...` の `vehicles=`)。
   乗り物の当たり判定は `.fpsmap` に入れず、ファイルの車体の箱で、撃った人が見ていた tick まで巻き戻して当てる。

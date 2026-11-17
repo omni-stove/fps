@@ -109,6 +109,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned += HandlePlayerSpawned;
             _rules.MatchStarted += HandleMatchStarted;
             _movement.Landed += HandleLanded;
+            _movement.Drowned += HandleDrowned;
 
             _log.WriteLine(LogTag + " hitscan maxRewindTicks=" + Text(_hitboxes.MaxRewindTicks)
                 + " maxShotOriginOffset=" + Text(_data.Settings.MaxShotOriginOffset)
@@ -207,6 +208,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _rules.MatchStarted -= HandleMatchStarted;
             _movement.Landed -= HandleLanded;
+            _movement.Drowned -= HandleDrowned;
             _fighters.Clear();
             _grenades.Clear();
             _projectiles.Clear();
@@ -321,6 +323,22 @@ namespace Shooter.Server
             {
                 _log.WriteLine("[Net] fall owner=" + Text(player.PlayerId) + " tick=" + Text(tick)
                     + " speed=" + fallSpeed.ToString("F2", CultureInfo.InvariantCulture) + " damage=" + Text(damage) + " outcome=" + outcome);
+            }
+        }
+
+        // 落下と同じく撃った人のいないダメージとしてルールに通し、倒れたら自滅として数えさせる
+        private void HandleDrowned(ServerPlayer player, int tick, int drownings)
+        {
+            var damage = _movement.DrownDamage(drownings);
+            if (damage <= 0)
+            {
+                return;
+            }
+
+            var outcome = _rules.ApplyDamage(null, player.PlayerId, damage);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                _log.WriteLine(ServerMovementLog.DrownDamage(player.PlayerId, tick, damage, outcome));
             }
         }
 

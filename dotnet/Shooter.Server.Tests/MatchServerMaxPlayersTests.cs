@@ -130,7 +130,8 @@ namespace Shooter.Server.Tests
             module.Tick(1, _tickSeconds);
             backend.CompleteLogin(_lobbyServer);
 
-            Assert.That(backend.CreatedMaxMembers, Is.EqualTo(2));
+            Assert.That(backend.CreatedMaxMembers, Is.EqualTo(3), "two players and the server");
+            Assert.That(backend.CreatedVoiceRoom, Is.True);
             Assert.That(module.Registration.Registrar.MaxPlayers, Is.EqualTo(2));
         }
 

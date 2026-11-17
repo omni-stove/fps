@@ -989,6 +989,33 @@
     background-color: rgb(220, 40, 40);
 }
 
+/* 観戦の欄。下中央に、見ている味方の行を先頭にして積む。SpectateView が行を入れる。 */
+.spectate {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 160px;
+    flex-direction: column;
+    align-items: center;
+}
+
+.spectate__row {
+    margin: 4px 0 0 0;
+    padding: 4px 16px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.spectate__row--target {
+    font-size: 30px;
+    -unity-font-style: bold;
+}
+
 /* フラッシュの目くらまし。FlashOverlay が色 (画像があれば画像) と不透明度を入れる。 */
 .flash-overlay {
     position: absolute;

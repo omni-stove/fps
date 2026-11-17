@@ -47,7 +47,7 @@ namespace Shooter.Core
         /// <summary>
         /// サーバーのロビーにつなげない理由。つなげるなら null。
         /// 版 (<see cref="ServerLobby.VersionKey"/>) が自分と違う、人数 (<see cref="ServerLobby.PlayersKey"/>) が
-        /// ロビーの最大人数に達している、アドレス (<see cref="ServerLobby.ServerKey"/>) が無いか IPv4:port でない、のどれか。
+        /// 入れるプレイヤーの数 (<see cref="ServerLobby.PlayerSlots"/>) に達している、アドレス (<see cref="ServerLobby.ServerKey"/>) が無いか IPv4:port でない、のどれか。
         /// </summary>
         /// <param name="lobby">検索で見つかったロビー。</param>
         /// <param name="version">自分のビルドの版 (Application.version)。空なら "0" として比べる。</param>
@@ -80,7 +80,7 @@ namespace Shooter.Core
                 return "no player count";
             }
 
-            if (players >= lobby.MaxMembers)
+            if (players >= ServerLobby.PlayerSlots(lobby))
             {
                 return "full";
             }

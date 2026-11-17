@@ -41,7 +41,8 @@ namespace Shooter.NetV2.Tests
 
         private static LobbyInfo Server(string id, string endpoint, int players, string version = _version)
         {
-            return new LobbyInfo(id, _owner, NetMatchSettings.DefaultMaxPlayers, new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
+            return new LobbyInfo(
+                id, _owner, ServerLobby.MaxMembers(NetMatchSettings.DefaultMaxPlayers), new[] { _owner }, ServerLobby.Attributes(endpoint, version, players));
         }
 
         [Test]

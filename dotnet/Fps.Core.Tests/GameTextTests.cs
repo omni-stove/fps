@@ -32,7 +32,7 @@ namespace Fps.Core.Tests
 
             Assert.That(GameText.Get("hud.reloading"), Is.EqualTo("hud.reloading"));
             Assert.That(GameText.Format("hud.respawn", 3), Is.EqualTo("hud.respawn"));
-            Assert.That(GameText.Resolve(HudFormat.Respawn(3)), Is.EqualTo("hud.respawn"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.respawn", 3)), Is.EqualTo("hud.respawn"));
             Assert.That(GameText.Resolve(LocalizedText.Literal("01:30")), Is.EqualTo("01:30"));
             Assert.That(GameText.Resolve(default), Is.Empty);
         }
@@ -47,7 +47,7 @@ namespace Fps.Core.Tests
             });
             GameText.Use(() => table);
 
-            Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("アルファ の勝ち"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.wins", new LocalizedText("hud.team.alpha"))), Is.EqualTo("アルファ の勝ち"));
         }
 
         [Test]
@@ -59,10 +59,10 @@ namespace Fps.Core.Tests
                 new KeyValuePair<string, string>("hud.team.bravo", "BRAVO"),
             });
             GameText.Use(() => table);
-            var args = new object[] { HudFormat.TeamName(Team.Bravo), "生存" };
+            var args = new object[] { new LocalizedText("hud.team.bravo"), "生存" };
 
             Assert.That(GameText.Format("mode.guardian.leader", args), Is.EqualTo("BRAVO リーダー 生存"));
-            Assert.That(args[0], Is.EqualTo(HudFormat.TeamName(Team.Bravo)));
+            Assert.That(args[0], Is.EqualTo(new LocalizedText("hud.team.bravo")));
         }
 
         [Test]
@@ -97,13 +97,11 @@ namespace Fps.Core.Tests
             var current = japanese;
             GameText.Use(() => current);
 
-            Assert.That(GameText.Resolve(HudFormat.Reloading), Is.EqualTo("リロード中"));
-            Assert.That(HudFormat.Magazine(0, true), Is.EqualTo("リロード中"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.reloading")), Is.EqualTo("リロード中"));
 
             current = english;
 
-            Assert.That(GameText.Resolve(HudFormat.Reloading), Is.EqualTo("Reloading"));
-            Assert.That(HudFormat.Magazine(0, true), Is.EqualTo("Reloading"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.reloading")), Is.EqualTo("Reloading"));
         }
 
         [Test]
@@ -120,9 +118,9 @@ namespace Fps.Core.Tests
             var english = JapaneseGameTextSetUp.LoadTable(GameLanguage.English);
             GameText.Use(() => english);
 
-            Assert.That(HudFormat.Ammo(0, 90, true), Is.EqualTo("Reloading / 90"));
-            Assert.That(GameText.Resolve(HudFormat.Respawn(3)), Is.EqualTo("Respawn in 3 s"));
-            Assert.That(GameText.Resolve(HudFormat.Result(Team.Alpha)), Is.EqualTo("ALPHA wins"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.reloading")), Is.EqualTo("Reloading"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.respawn", 3)), Is.EqualTo("Respawn in 3 s"));
+            Assert.That(GameText.Resolve(new LocalizedText("hud.wins", new LocalizedText("hud.team.alpha"))), Is.EqualTo("ALPHA wins"));
             Assert.That(GameText.Resolve(new LocalizedText("hud.scoreboard.you")), Is.EqualTo("You"));
             Assert.That(SubtitleText.Format(new SoundCue(SoundCueKind.Gunshot, SoundCueDirection.BackLeft, SoundCue.FarDistance)), Is.EqualTo("[Gunshot back left far]"));
             Assert.That(GameText.Resolve(new LocalizedText("hud.zone.closed")), Is.EqualTo("Final zone"));

@@ -74,7 +74,7 @@ namespace Fps.Tests.EditMode
         {
             Assert.That(ExecutionHudText.Round(2, 3), Is.EqualTo(new LocalizedText("mode.execution.round", 2, 3)));
             Assert.That(ExecutionHudText.Preparation(3), Is.EqualTo(new LocalizedText("mode.execution.startsIn", 3)));
-            Assert.That(ExecutionHudText.RoundResult(null), Is.EqualTo(new LocalizedText("mode.execution.previousRound", HudFormat.Draw)));
+            Assert.That(ExecutionHudText.RoundResult(null), Is.EqualTo(new LocalizedText("mode.execution.previousRound", HudText.Draw)));
             Assert.That(ExecutionHudText.Executing(40), Is.EqualTo(new LocalizedText("mode.execution.executing", 40)));
         }
 
@@ -225,7 +225,7 @@ namespace Fps.Tests.EditMode
         public void TheFormatterRejectsAnotherDetail()
         {
             var formatter = new ExecutionHudFormatter();
-            var other = new ModeStatus(null, null, null, null, false, null, new object(), default, null, null, default);
+            var other = new ModeStatus(null, null, null, null, false, null, new object());
 
             Assert.Throws<ArgumentException>(() => formatter.Time(other));
             Assert.Throws<ArgumentException>(() => formatter.Scores(other));
@@ -243,7 +243,7 @@ namespace Fps.Tests.EditMode
         private static ModeStatus Status(ExecutionSession execution, Side? ownSide, int? localPlayerId, int? interactTargetId)
         {
             return new ModeStatus(
-                null, null, ownSide, null, false, null, new ExecutionStatus(execution, localPlayerId, interactTargetId), default, null, null, default);
+                null, null, ownSide, null, false, null, new ExecutionStatus(execution, localPlayerId, interactTargetId));
         }
 
         /// <summary>ラウンド 1 の残り 50 秒で、ALPHA の 1 人がダウンした BRAVO の 1 人にとどめを 1 秒ぶん刺している。</summary>

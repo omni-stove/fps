@@ -48,7 +48,7 @@ namespace Fps.Runtime
         {
             return new LocalizedText(
                 "mode.execution.previousRound",
-                winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw);
+                winner.HasValue ? HudText.Wins(ModeHudText.SideName(winner.Value)) : HudText.Draw);
         }
 
         /// <summary>チームの残り人数。ダウン中がいればその数を添える。</summary>
@@ -116,7 +116,7 @@ namespace Fps.Runtime
 
         /// <summary>
         /// 得点の下に出す行。ラウンドの番号、待ちの間は前のラウンドの結果と開始までの秒数、両チームの残り人数 (自分のチームを先に)、
-        /// localPlayerId がダウン中ならその案内 (<see cref="HudFormat.Downed(int, int)"/>)、interactTargetId を起こしているかとどめを刺しているならその進み。
+        /// localPlayerId がダウン中ならその案内 (<see cref="HudText.Downed(int, int)"/>)、interactTargetId を起こしているかとどめを刺しているならその進み。
         /// </summary>
         /// <param name="session">読むモード。</param>
         /// <param name="localPlayerId">この画面で操作している人。いなければ null。</param>
@@ -156,13 +156,13 @@ namespace Fps.Runtime
             if (local.HasValue && session.IsDowned(local.Value))
             {
                 var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(HudFormat.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
+                lines.Add(HudText.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
             }
             else if (local.HasValue && interactTargetId.HasValue && session.IsDowned(interactTargetId.Value) && mode.HasPlayer(interactTargetId.Value))
             {
                 var target = interactTargetId.Value;
                 lines.Add(mode.GetSide(target) == ownSide
-                    ? HudFormat.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target)))
+                    ? HudText.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target)))
                     : Executing(HudFormat.RevivePercent(session.GetExecuteProgress(target))));
             }
 
@@ -184,7 +184,7 @@ namespace Fps.Runtime
                 return default;
             }
 
-            return HudFormat.Wins(ModeHudText.SideName(round.Winner.Value));
+            return HudText.Wins(ModeHudText.SideName(round.Winner.Value));
         }
     }
 }

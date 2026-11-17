@@ -80,7 +80,7 @@ namespace Fps.Tests.EditMode
 
             var lines = BattleRoyaleHudFormatter.Lines(br, _player, null, default, unarmed: false);
 
-            Assert.That(lines, Does.Contain(HudFormat.Downed(15, 0)));
+            Assert.That(lines, Does.Contain(HudText.Downed(15, 0)));
         }
 
         [Test]
@@ -198,7 +198,7 @@ namespace Fps.Tests.EditMode
                 scores[i] = new SideScore(mode.Sides[i], mode.GetScore(mode.Sides[i]));
             }
 
-            return new ModeStatus(null, scores, new Side(0), null, isEnded, isEnded ? mode.Winner : null, detail, default, null, null, default);
+            return new ModeStatus(null, scores, new Side(0), null, isEnded, isEnded ? mode.Winner : null, detail);
         }
 
         /// <summary>4 分隊のうち 3 分隊に人がいる。分隊 0 にプレイヤーと味方、分隊 1 と 2 に 1 人ずつ。</summary>

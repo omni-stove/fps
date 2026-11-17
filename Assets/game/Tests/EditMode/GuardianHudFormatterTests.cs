@@ -53,11 +53,11 @@ namespace Fps.Tests.EditMode
         {
             Playing(out var leaders);
             var formatter = new GuardianHudFormatter();
-            var ended = new ModeStatus(0f, null, Side.Alpha, null, true, Side.Bravo, new GuardianStatus(leaders, 0, false), default, null, null, default);
-            var drawn = new ModeStatus(0f, null, Side.Alpha, null, true, null, new GuardianStatus(leaders, 0, false), default, null, null, default);
+            var ended = new ModeStatus(0f, null, Side.Alpha, null, true, Side.Bravo, new GuardianStatus(leaders, 0, false));
+            var drawn = new ModeStatus(0f, null, Side.Alpha, null, true, null, new GuardianStatus(leaders, 0, false));
 
             Assert.That(Localizer.Resolve(formatter.Result(ended)), Is.EqualTo("BRAVO の勝ち"));
-            Assert.That(Localizer.Resolve(formatter.Result(drawn)), Is.EqualTo(Localizer.Resolve(HudFormat.Draw)));
+            Assert.That(Localizer.Resolve(formatter.Result(drawn)), Is.EqualTo(Localizer.Resolve(HudText.Draw)));
             Assert.That(Localizer.Resolve(formatter.Time(ended)), Is.EqualTo("00:00"));
         }
 
@@ -76,7 +76,7 @@ namespace Fps.Tests.EditMode
 
         private static List<LocalizedText> Lines(GuardianStatus detail, Side ownSide)
         {
-            var status = new ModeStatus(30f, null, ownSide, null, false, null, detail, default, null, null, default);
+            var status = new ModeStatus(30f, null, ownSide, null, false, null, detail);
             var lines = new List<LocalizedText>();
             new GuardianHudFormatter().AppendLines(status, lines);
             return lines;

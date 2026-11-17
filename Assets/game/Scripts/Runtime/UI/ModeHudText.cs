@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Fps.Core;
 
-namespace Fps.Core
+namespace Fps.Runtime
 {
     /// <summary>
     /// オフラインのモードの HUD (陣営ごとの得点・残り時間・結果) に出す文。表のキー <c>hud.*</c> と引数の <see cref="LocalizedText"/> で返す。
-    /// Alpha と Bravo にあたる陣営は既存の HUD と同じチーム名 (<see cref="HudFormat.TeamName"/>) で、それ以外は <c>SIDE n</c> で書く。
+    /// Alpha と Bravo にあたる陣営は既存の HUD と同じチーム名 (<see cref="HudText.TeamName"/>) で、それ以外は <c>SIDE n</c> で書く。
     /// 陣営名 (<see cref="SideName"/>) は、ほかのモードの文が引数に入れて使う。
     /// </summary>
     public static class ModeHudText
@@ -14,29 +15,15 @@ namespace Fps.Core
         public static LocalizedText SideName(Side side)
         {
             return side.TryGetTeam(out var team)
-                ? HudFormat.TeamName(team)
+                ? HudText.TeamName(team)
                 : new LocalizedText("hud.side", side.Id);
         }
 
-        /// <summary>
-        /// HUD に出す得点。拠点のように時間で入る点は小数になるので、届いていない点を出さないよう切り捨てる。
-        /// 負と NaN は 0、int に収まらない値は <see cref="int.MaxValue"/> にする。
-        /// </summary>
-        public static int DisplayScore(double score)
-        {
-            if (!(score > 0d))
-            {
-                return 0;
-            }
-
-            var floored = Math.Floor(score);
-            return floored >= int.MaxValue ? int.MaxValue : (int)floored;
-        }
-
+        /// <summary>時間で入る点は小数になるので、届いていない点を出さないよう <see cref="HudFormat.DisplayedScore"/> で切り捨てて出す。</summary>
         /// <example><c>ScoreText(new Side(2), 3.7d)</c> は <c>SIDE 2 3</c></example>
         public static LocalizedText ScoreText(Side side, double score)
         {
-            return HudFormat.Score(SideName(side), DisplayScore(score));
+            return HudText.Score(SideName(side), HudFormat.DisplayedScore(score));
         }
 
         /// <summary>陣営の残り人数。</summary>
@@ -53,7 +40,7 @@ namespace Fps.Core
             return new LocalizedText("hud.mode.withDowned", text, downed);
         }
 
-        /// <summary>残り時間。<see cref="HudFormat.Time"/> と同じ書式で、言語に依らないので表を引かずにそのまま運ぶ。</summary>
+        /// <summary>残り時間。<see cref="HudNumberFormat.RemainingTime"/> と同じ書式で、言語に依らないので表を引かずにそのまま運ぶ。</summary>
         public static LocalizedText Time(ModeSession session)
         {
             if (session == null)
@@ -61,7 +48,7 @@ namespace Fps.Core
                 throw new ArgumentNullException(nameof(session));
             }
 
-            return LocalizedText.Literal(HudFormat.Time(session.RemainingSeconds));
+            return LocalizedText.Literal(HudNumberFormat.RemainingTime(session.RemainingSeconds));
         }
 
         /// <summary>
@@ -109,7 +96,7 @@ namespace Fps.Core
                 return default;
             }
 
-            return session.Winner.HasValue ? HudFormat.Wins(SideName(session.Winner.Value)) : HudFormat.Draw;
+            return session.Winner.HasValue ? HudText.Wins(SideName(session.Winner.Value)) : HudText.Draw;
         }
     }
 }

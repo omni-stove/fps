@@ -169,24 +169,22 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void ModeStatusDefaultsMissingListsToEmptyAndRejectsNegativeSeconds()
+        public void ModeStatusDefaultsMissingScoresToEmptyAndRejectsNegativeSeconds()
         {
-            var status = new ModeStatus(null, null, null, null, false, null, null, default, null, null, default);
+            var status = new ModeStatus(null, null, null, null, false, null, null);
 
             Assert.That(status.SideScores, Is.Empty);
-            Assert.That(status.Scores, Is.Empty);
-            Assert.That(status.Lines, Is.Empty);
             Assert.That(status.RemainingSeconds, Is.Null);
 
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ModeStatus(-1f, null, null, null, false, null, null, default, null, null, default));
+                () => new ModeStatus(-1f, null, null, null, false, null, null));
             Assert.Throws<ArgumentOutOfRangeException>(
-                () => new ModeStatus(null, null, null, float.NaN, false, null, null, default, null, null, default));
+                () => new ModeStatus(null, null, null, float.NaN, false, null, null));
         }
 
         private static ModeStatus Status()
         {
-            return new ModeStatus(30f, new[] { new SideScore(Side.Alpha, 1d) }, Side.Alpha, null, false, null, null, default, null, null, default);
+            return new ModeStatus(30f, new[] { new SideScore(Side.Alpha, 1d) }, Side.Alpha, null, false, null, null);
         }
 
         [Test]
@@ -218,6 +216,14 @@ namespace Fps.Tests.EditMode
             }
 
             public void Drop(int handle, int count)
+            {
+            }
+
+            public void Attach(int handle)
+            {
+            }
+
+            public void Detach(int weaponHandle, string itemId)
             {
             }
         }

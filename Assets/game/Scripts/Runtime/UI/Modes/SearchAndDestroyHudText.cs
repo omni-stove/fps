@@ -15,7 +15,7 @@ namespace Fps.Runtime
         public static LocalizedText DefendRole => new LocalizedText("mode.snd.defendRole");
 
         /// <summary>
-        /// HUD の時計。待ちの間は開始までの秒数、設置前はラウンドの残り時間、設置後は起爆までの秒数 (<see cref="HudFormat.Time"/> の書式)。
+        /// HUD の時計。待ちの間は開始までの秒数、設置前はラウンドの残り時間、設置後は起爆までの秒数 (<see cref="HudNumberFormat.RemainingTime"/> の書式)。
         /// 言語に依らないので表を引かずにそのまま運ぶ。
         /// </summary>
         public static LocalizedText Clock(SearchAndDestroy game)
@@ -23,10 +23,10 @@ namespace Fps.Runtime
             Require(game);
             if (game.Phase == RoundPhase.Preparing)
             {
-                return LocalizedText.Literal(HudFormat.Time(game.Rounds.PreparationRemaining));
+                return LocalizedText.Literal(HudNumberFormat.RemainingTime(game.Rounds.PreparationRemaining));
             }
 
-            return LocalizedText.Literal(HudFormat.Time(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining));
+            return LocalizedText.Literal(HudNumberFormat.RemainingTime(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining));
         }
 
         /// <summary>
@@ -152,7 +152,7 @@ namespace Fps.Runtime
         /// <example><c>RoundResult(Side.Bravo, RoundEndReason.Detonated)</c> は <c>BRAVO の勝ち (起爆)</c>、引き分けなら <c>引き分け (同時に全滅)</c></example>
         public static LocalizedText RoundResult(Side? winner, RoundEndReason reason)
         {
-            var head = winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(winner.Value)) : HudFormat.Draw;
+            var head = winner.HasValue ? HudText.Wins(ModeHudText.SideName(winner.Value)) : HudText.Draw;
             return new LocalizedText("mode.snd.roundResult", head, ReasonText(reason));
         }
 
@@ -182,7 +182,7 @@ namespace Fps.Runtime
         {
             Require(game);
             return game.Phase == RoundPhase.Ended && game.Winner.HasValue
-                ? HudFormat.Wins(ModeHudText.SideName(game.Winner.Value))
+                ? HudText.Wins(ModeHudText.SideName(game.Winner.Value))
                 : default;
         }
 

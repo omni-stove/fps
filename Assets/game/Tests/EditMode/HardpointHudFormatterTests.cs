@@ -92,7 +92,7 @@ namespace Fps.Tests.EditMode
         {
             var session = hardpoint.Session;
             var sideScores = session.Sides.Select(side => new SideScore(side, session.GetScore(side))).ToArray();
-            return new ModeStatus(session.RemainingSeconds, sideScores, Side.Alpha, respawn, false, null, hardpoint, default, null, null, default);
+            return new ModeStatus(session.RemainingSeconds, sideScores, Side.Alpha, respawn, false, null, hardpoint);
         }
     }
 }

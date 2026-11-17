@@ -98,6 +98,13 @@ namespace Fps.Runtime
             return minutes.ToString("00", CultureInfo.InvariantCulture) + ":" + rest.ToString("00", CultureInfo.InvariantCulture);
         }
 
+        /// <summary>残り時間を <see cref="HudFormat.DisplayedSeconds"/> の秒数にして <see cref="Time(int?)"/> の書式で出す。</summary>
+        /// <example><c>RemainingTime(65f)</c> は <c>01:05</c>、<c>RemainingTime(0.2f)</c> は <c>00:01</c>、<c>RemainingTime(float.PositiveInfinity)</c> は <c>99:59</c></example>
+        public static string RemainingTime(float remainingSeconds)
+        {
+            return Time(HudFormat.DisplayedSeconds(remainingSeconds));
+        }
+
         public static string Health(HudModel model)
         {
             return Health(model.CurrentHealth);

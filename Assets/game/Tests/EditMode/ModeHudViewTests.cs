@@ -58,13 +58,14 @@ namespace Fps.Tests.EditMode
         {
             _view.Bind(_root);
 
-            GameSignals.ModeStatus.Publish(Status(null, Text("01:30"), _lines, Text("ALPHA の勝ち")));
+            GameSignals.ModeStatus.Publish(Status(null, 90f, respawn: 1.2f, isEnded: true, winner: Side.Alpha));
 
             Assert.That(_view.IsShown, Is.True);
             Assert.That(_view.TimeText, Is.EqualTo("01:30"));
-            Assert.That(_view.ScoreTexts, Is.EqualTo(new[] { "BRAVO 1", "ALPHA 3", "SIDE 2 0" }));
+            Assert.That(_view.ScoreTexts, Is.EqualTo(new[] { "BRAVO 1", "ALPHA 3", "SIDE 2 0" }), "the own side comes first");
             Assert.That(_view.Scores[0].IsOwn, Is.True);
-            Assert.That(_view.Lines, Is.EqualTo(new[] { "リスポーンまで 2 秒", "拠点 A: ALPHA" }));
+            Assert.That(_view.Scores[1].IsLeading, Is.True);
+            Assert.That(_view.Lines, Is.EqualTo(new[] { "リスポーンまで 2 秒" }));
             Assert.That(_view.ResultText, Is.EqualTo("ALPHA の勝ち"));
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
         }
@@ -73,7 +74,7 @@ namespace Fps.Tests.EditMode
         public void ClearingTheStatusHidesThePanel()
         {
             _view.Bind(_root);
-            GameSignals.ModeStatus.Publish(Status(null, Text("01:00"), null, default));
+            GameSignals.ModeStatus.Publish(Status(null, 60f));
 
             GameSignals.ModeStatus.Clear();
 
@@ -84,7 +85,7 @@ namespace Fps.Tests.EditMode
         [Test]
         public void BindingCatchesUpWithTheCurrentStatus()
         {
-            GameSignals.ModeStatus.Publish(Status(null, Text("00:45"), null, default));
+            GameSignals.ModeStatus.Publish(Status(null, 45f));
 
             _view.Bind(_root);
 
@@ -96,7 +97,7 @@ namespace Fps.Tests.EditMode
         public void AStatusClearedWhileUnboundIsHiddenWhenBoundAgain()
         {
             _view.Bind(_root);
-            GameSignals.ModeStatus.Publish(Status(null, Text("00:45"), null, default));
+            GameSignals.ModeStatus.Publish(Status(null, 45f));
             _view.Unbind();
 
             GameSignals.ModeStatus.Clear();
@@ -112,7 +113,7 @@ namespace Fps.Tests.EditMode
             _view.Bind(_root);
             _view.Unbind();
 
-            GameSignals.ModeStatus.Publish(Status(null, Text("00:30"), null, default));
+            GameSignals.ModeStatus.Publish(Status(null, 30f));
 
             Assert.That(_view.IsShown, Is.False);
         }
@@ -123,8 +124,8 @@ namespace Fps.Tests.EditMode
             _view.Bind(_root);
             Object.DestroyImmediate(_owner);
 
-            Assert.DoesNotThrow(() => GameSignals.ModeStatus.Publish(Status(null, Text("00:30"), null, default)));
-            Assert.DoesNotThrow(() => GameSignals.ModeStatus.Publish(Status(null, Text("00:29"), null, default)));
+            Assert.DoesNotThrow(() => GameSignals.ModeStatus.Publish(Status(null, 30f)));
+            Assert.DoesNotThrow(() => GameSignals.ModeStatus.Publish(Status(null, 29f)));
         }
 
         [Test]
@@ -133,7 +134,7 @@ namespace Fps.Tests.EditMode
             ModeHudFormatters.Register<BaseDetail>(new FixedFormatter("base"));
             _view.Bind(_root);
 
-            GameSignals.ModeStatus.Publish(Status(new BaseDetail(), Text("01:00"), _lines, default));
+            GameSignals.ModeStatus.Publish(Status(new BaseDetail(), 60f));
 
             Assert.That(_view.TimeText, Is.EqualTo("base time"));
             Assert.That(_view.ScoreTexts, Is.EqualTo(new[] { "base score" }));
@@ -142,16 +143,16 @@ namespace Fps.Tests.EditMode
         }
 
         [Test]
-        public void TheFormatterLookupFallsBackToTheBaseTypeThenToTheStatusTexts()
+        public void TheFormatterLookupFallsBackToTheBaseTypeThenToTheDefault()
         {
             ModeHudFormatters.Register<BaseDetail>(new FixedFormatter("base"));
-            var derived = Status(new DerivedDetail(), Text("01:00"), null, default);
-            var unknown = Status(new object(), Text("01:00"), null, default);
-            var none = Status(null, Text("01:00"), null, default);
+            var derived = Status(new DerivedDetail(), 60f);
+            var unknown = Status(new object(), 60f);
+            var none = Status(null, 60f);
 
             Assert.That(ModeHudFormatters.For(derived), Is.InstanceOf<FixedFormatter>());
-            Assert.That(ModeHudFormatters.For(unknown), Is.SameAs(ModeHudFormatters.StatusText));
-            Assert.That(ModeHudFormatters.For(none), Is.SameAs(ModeHudFormatters.StatusText));
+            Assert.That(ModeHudFormatters.For(unknown), Is.SameAs(ModeHudFormatters.Default));
+            Assert.That(ModeHudFormatters.For(none), Is.SameAs(ModeHudFormatters.Default));
 
             var exact = new FixedFormatter("derived");
             ModeHudFormatters.Register<DerivedDetail>(exact);
@@ -159,6 +160,24 @@ namespace Fps.Tests.EditMode
 
             Assert.That(ModeHudFormatters.Unregister(typeof(DerivedDetail)), Is.True);
             Assert.That(ModeHudFormatters.Unregister(typeof(DerivedDetail)), Is.False);
+        }
+
+        [Test]
+        public void WithoutARegisteredFormatterTheTimeIsHiddenWithoutALimitAndADrawIsShown()
+        {
+            _view.Bind(_root);
+
+            GameSignals.ModeStatus.Publish(Status(new object(), null));
+
+            Assert.That(_view.TimeText, Is.Empty);
+            Assert.That(_view.Element.Q<Label>(className: ModeHudView.TimeClass).style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_view.Lines, Is.Empty);
+            Assert.That(_view.ResultText, Is.Empty);
+
+            GameSignals.ModeStatus.Publish(Status(null, 0f, isEnded: true));
+
+            Assert.That(_view.TimeText, Is.EqualTo("00:00"));
+            Assert.That(_view.ResultText, Is.EqualTo("引き分け"));
         }
 
         [Test]
@@ -174,7 +193,7 @@ namespace Fps.Tests.EditMode
         {
             _view.Bind(_root);
 
-            _view.Show(Status(null, Text("00:10"), null, default));
+            _view.Show(Status(null, 10f));
             Assert.That(_view.TimeText, Is.EqualTo("00:10"));
 
             _view.Show((ModeStatus)null);
@@ -329,9 +348,10 @@ namespace Fps.Tests.EditMode
             return LocalizedText.Literal(text);
         }
 
-        private static ModeStatus Status(object detail, LocalizedText time, LocalizedText[] lines, LocalizedText result)
+        private static ModeStatus Status(object detail, float? remaining, float? respawn = null, bool isEnded = false, Side? winner = null)
         {
-            return new ModeStatus(60f, null, Side.Bravo, null, false, null, detail, time, _scores, lines, result);
+            var sideScores = new[] { new SideScore(Side.Alpha, 3d), new SideScore(Side.Bravo, 1d), new SideScore(new Side(2), 0d) };
+            return new ModeStatus(remaining, sideScores, Side.Bravo, respawn, isEnded, winner, detail);
         }
 
         private class BaseDetail

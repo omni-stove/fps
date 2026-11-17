@@ -1,3 +1,4 @@
+using Fps.Core;
 using UnityEngine;
 
 namespace Fps.Runtime

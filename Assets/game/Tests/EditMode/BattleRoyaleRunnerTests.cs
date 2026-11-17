@@ -273,7 +273,7 @@ namespace Fps.Tests.EditMode
                 Assert.That(hud.Lines, Does.Contain("順位 2 位以内"));
                 Assert.That(hud.Lines, Does.Contain("エリア縮小まで 00:12"));
                 Assert.That(hud.Lines, Does.Contain("分隊 生存 1"));
-                Assert.That(hud.ResultText, Is.EqualTo(HudFormat.NoResult));
+                Assert.That(hud.ResultText, Is.Empty);
 
                 KillBy(player, enemy);
                 _runner.Tick(0f);

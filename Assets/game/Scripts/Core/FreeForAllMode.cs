@@ -46,7 +46,7 @@ namespace Fps.Core
         }
 
         /// <summary>
-        /// side の順位と 1 位との差。得点は HUD と同じく <see cref="ModeHudText.DisplayScore"/> で数え、同点は同じ順位にする
+        /// side の順位と 1 位との差。得点は HUD と同じく <see cref="HudFormat.DisplayedScore"/> で数え、同点は同じ順位にする
         /// (5, 3, 3, 1 なら 1 位, 2 位, 2 位, 4 位)。数えるのは得点を持つ陣営 (<see cref="ModeSession.Sides"/>) で、抜けた人の陣営も含む。
         /// </summary>
         /// <exception cref="ArgumentNullException">session が null。</exception>
@@ -65,7 +65,7 @@ namespace Fps.Core
             {
                 if (s == side)
                 {
-                    own = ModeHudText.DisplayScore(session.GetScore(s));
+                    own = HudFormat.DisplayedScore(session.GetScore(s));
                     found = true;
                     break;
                 }
@@ -85,7 +85,7 @@ namespace Fps.Core
                     continue;
                 }
 
-                var score = ModeHudText.DisplayScore(session.GetScore(s));
+                var score = HudFormat.DisplayedScore(session.GetScore(s));
                 if (score > own)
                 {
                     rank++;

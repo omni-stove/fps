@@ -6,7 +6,7 @@ namespace Fps.Runtime
 {
     /// <summary>
     /// モードの書式役 (<see cref="IModeHudFormatter"/>) の土台。残り時間・陣営ごとの得点・リスポーンまでの秒数・結果を
-    /// <see cref="ModeStatus"/> の値から <see cref="ModeHudText"/>・<see cref="HudFormat"/> の文にし、派生はモード固有の行 (<see cref="AppendModeLines"/>) を足す。
+    /// <see cref="ModeStatus"/> の値から <see cref="ModeHudText"/>・<see cref="HudText"/> の文にし、派生はモード固有の行 (<see cref="AppendModeLines"/>) を足す。
     /// </summary>
     public abstract class ModeHudFormatterBase : IModeHudFormatter
     {
@@ -16,7 +16,7 @@ namespace Fps.Runtime
         public virtual LocalizedText Time(ModeStatus status)
         {
             var remaining = Require(status).RemainingSeconds;
-            return remaining.HasValue ? LocalizedText.Literal(HudFormat.Time(remaining.Value)) : default;
+            return remaining.HasValue ? LocalizedText.Literal(HudNumberFormat.RemainingTime(remaining.Value)) : default;
         }
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Fps.Runtime
 
             if (status.RespawnSeconds.HasValue)
             {
-                lines.Add(HudFormat.Respawn(HudFormat.DisplayedSeconds(status.RespawnSeconds.Value)));
+                lines.Add(HudText.Respawn(HudFormat.DisplayedSeconds(status.RespawnSeconds.Value)));
             }
 
             AppendModeLines(status, lines);
@@ -73,7 +73,7 @@ namespace Fps.Runtime
                 return default;
             }
 
-            return status.Winner.HasValue ? HudFormat.Wins(ModeHudText.SideName(status.Winner.Value)) : HudFormat.Draw;
+            return status.Winner.HasValue ? HudText.Wins(ModeHudText.SideName(status.Winner.Value)) : HudText.Draw;
         }
 
         /// <summary>リスポーンの行の後に、このモード固有の行を lines に足す。既定では何も足さない。</summary>

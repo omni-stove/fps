@@ -244,6 +244,33 @@ namespace Fps.Core
             return winner.HasValue ? Wins(TeamName(winner.Value)) : Draw;
         }
 
+        /// <summary>ソロの試合 (<see cref="Match"/>) が終わったときの結果。</summary>
+        /// <example><c>SoloResult(MatchResult.Won)</c> は <c>クリア</c>、<c>SoloResult(MatchResult.Lost)</c> は <c>失敗</c></example>
+        public static LocalizedText SoloResult(MatchResult result)
+        {
+            switch (result)
+            {
+                case MatchResult.Won:
+                    return new LocalizedText("hud.solo.won");
+                case MatchResult.Lost:
+                    return new LocalizedText("hud.solo.lost");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(result), result, "result is not a defined MatchResult");
+            }
+        }
+
+        /// <summary>ソロの試合の結果の下に出す、key を押すとやり直せるという案内。</summary>
+        /// <example><c>Restart("R")</c> は <c>[R] でやり直す</c></example>
+        public static LocalizedText Restart(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new ArgumentException("key must not be empty", nameof(key));
+            }
+
+            return new LocalizedText("hud.solo.restart", key);
+        }
+
         /// <summary>勝った陣営の名前 sideName の結果。モードごとの結果 (<see cref="ModeHudText.Result"/> など) も使う。</summary>
         /// <example><c>Wins(TeamName(Team.Alpha))</c> は <c>ALPHA の勝ち</c></example>
         public static LocalizedText Wins(LocalizedText sideName)

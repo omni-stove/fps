@@ -15,8 +15,10 @@
         </ui:VisualElement>
         <!-- 一時的な案内 (セーブした・再開まで N 秒)。HudView が空のときは隠す。 -->
         <ui:Label name="hud-notice" text="" class="hud__notice" picking-mode="Ignore" style="display: none;" />
-        <!-- 試合結果 (勝ったチーム・引き分け)。試合が終わっている間だけ HudView が出す。 -->
+        <!-- 試合結果 (勝ったチーム・引き分け、ソロの試合のクリア・失敗)。試合が終わっている間だけ HudView が出す。 -->
         <ui:Label name="hud-result" text="" class="hud__result" picking-mode="Ignore" style="display: none;" />
+        <!-- ソロの試合が終わったときの、やり直すキーの案内。HudView が結果と一緒に出す。 -->
+        <ui:Label name="hud-result-restart" text="" class="hud__result-restart" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-health-panel" class="hud__panel hud__panel--bottom-left" picking-mode="Ignore">
             <ui:Label text="#hud.caption.health" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-health" text="--" class="hud__value" picking-mode="Ignore" />

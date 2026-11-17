@@ -211,6 +211,23 @@
     text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.8);
 }
 
+/* ソロの試合の結果のすぐ下に出す、やり直すキーの案内。 */
+.hud__result-restart {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    translate: -50% -50%;
+    margin: 76px 0 0 0;
+    padding: 6px 20px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.55);
+    font-size: 26px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* 弾数の欄のすぐ上に右寄せで出す武器名。 */
 .hud__weapon-name {
     position: absolute;

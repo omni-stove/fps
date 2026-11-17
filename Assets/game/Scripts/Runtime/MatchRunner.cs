@@ -11,9 +11,11 @@ namespace Fps.Runtime
     /// ソロの試合 (<see cref="Fps.Core.Match"/>) をシーンで進める。Start で同じ GameObject (無ければシーン) の
     /// <see cref="GameBootstrap"/> が作った <see cref="BootstrapWorld"/> を拾い、試合を始めて Update で時間を進める。
     /// 標的ダミーの死亡はプレイヤーのキル、プレイヤーの死亡は敗北として Match に渡すだけで、勝敗の判断は Match が行う。
-    /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止める。
+    /// 状態が変わるたびに <see cref="MatchLog.SoloState"/> の書式で Debug.Log に出し、終わったらプレイヤーの移動と射撃を止め、
+    /// HUD に勝敗と、やり直すキーを出す。
     /// 終了後に <see cref="RestartActionPath"/> (キーボードの R、ゲームパッドの X) を押すと今のシーンを読み込み直して最初からやり直す。
-    /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> と <see cref="TimeLimitSeconds"/> を小さくする。
+    /// 制限時間は既定では無く (<see cref="TimeLimitSeconds"/> が 0)、HUD に残り時間も出さない。
+    /// 勝敗をすぐ確かめたいときは <see cref="KillsToWin"/> を小さくする。
     /// HUD があれば、開始時とキル・デスのたびに自分と標的のキル数・デス数を HUD のスコアボード (<see cref="IScoreboard"/>) に渡す。
     /// </summary>
     [DisallowMultipleComponent]
@@ -21,11 +23,11 @@ namespace Fps.Runtime
     {
         public const string LogTag = MatchLog.Tag;
 
-        /// <summary>制限時間 (秒)。</summary>
-        public const float TimeLimitSeconds = 60f;
+        /// <summary><see cref="TimeLimitSeconds"/> の既定。0 は制限時間なし。</summary>
+        public const float DefaultTimeLimitSeconds = 0f;
 
-        /// <summary>勝利に必要なキル数。標的ダミーは復活するので、同じ標的を何度倒しても数える。</summary>
-        public const int KillsToWin = 10;
+        /// <summary><see cref="KillsToWin"/> の既定。</summary>
+        public const int DefaultKillsToWin = 10;
 
         /// <summary>Match の中でのプレイヤーの ID。標的ダミーには左から 1, 2, ... を振る。</summary>
         public const int PlayerId = 0;
@@ -35,6 +37,16 @@ namespace Fps.Runtime
         /// 終了後は <see cref="WeaponController"/> を止めるので、リロードと取り合うことはない。
         /// </summary>
         public const string RestartActionPath = InputActionPaths.Reload;
+
+        [SerializeField]
+        [Min(0f)]
+        [Tooltip("制限時間 (秒)。0 なら時間切れにならず、HUD に残り時間も出さない。")]
+        private float _timeLimitSeconds = DefaultTimeLimitSeconds;
+
+        [SerializeField]
+        [Min(1)]
+        [Tooltip("勝利に必要なキル数。標的ダミーは復活するので、同じ標的を何度倒しても数える。")]
+        private int _killsToWin = DefaultKillsToWin;
 
         private readonly Dictionary<Damageable, int> _targetIds = new Dictionary<Damageable, int>();
 
@@ -48,6 +60,42 @@ namespace Fps.Runtime
         [NonSerialized]
         private InputAction _restartAction;
         private bool _enabledRestartAction;
+
+        /// <summary>制限時間 (秒)。0 なら制限時間なし。次に始める試合から使う。</summary>
+        public float TimeLimitSeconds
+        {
+            get => _timeLimitSeconds;
+            set
+            {
+                if (!(value >= 0f))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "TimeLimitSeconds must not be negative");
+                }
+
+                _timeLimitSeconds = value;
+            }
+        }
+
+        /// <summary>勝利に必要なキル数。1 以上。次に始める試合から使う。</summary>
+        public int KillsToWin
+        {
+            get => _killsToWin;
+            set
+            {
+                if (value <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "KillsToWin must be positive");
+                }
+
+                _killsToWin = value;
+            }
+        }
+
+        /// <summary><see cref="TimeLimitSeconds"/> を <see cref="Fps.Core.Match"/> に渡す値にする。0 以下は制限時間なし。</summary>
+        public static float MatchTimeLimit(float timeLimitSeconds)
+        {
+            return timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
+        }
 
         /// <summary>進めている試合。開始前や開始に失敗したときは null。</summary>
         public Match Match => _match;
@@ -134,7 +182,7 @@ namespace Fps.Runtime
 
             try
             {
-                Begin(world, new Match(TimeLimitSeconds, KillsToWin, PlayerId));
+                Begin(world, new Match(MatchTimeLimit(_timeLimitSeconds), _killsToWin, PlayerId));
             }
             catch (ArgumentException e)
             {
@@ -208,7 +256,7 @@ namespace Fps.Runtime
             _player.Died += OnPlayerDied;
             _match.StateChanged += OnStateChanged;
 
-            // HUD (専用サーバーでは無い) に残り時間を出させる。
+            // HUD (専用サーバーでは無い) に残り時間と勝敗を出させる。
             if (GameUi.IsAlive(world.Hud))
             {
                 world.Hud.BindMatch(_match);
@@ -335,6 +383,23 @@ namespace Fps.Runtime
 
             StopPlayer();
             AcquireRestartAction();
+            ShowRestartKey();
+        }
+
+        /// <summary>HUD の結果の下に、やり直すキーを今の入力機器の表記で出す。HUD か再開のアクションが無ければ何もしない。</summary>
+        private void ShowRestartKey()
+        {
+            var model = _world != null && GameUi.IsAlive(_world.Hud) ? _world.Hud.Model : null;
+            if (model == null || _restartAction == null)
+            {
+                return;
+            }
+
+            var actions = InputSystem.actions;
+            var device = TutorialPresenter.DetectDevice(
+                new[] { actions?.FindAction(InputActionPaths.Move), actions?.FindAction(InputActionPaths.Look), _restartAction },
+                InputDeviceKind.KeyboardMouse);
+            model.SetRestartKey(TutorialKeyLabels.For(_restartAction, device));
         }
 
         private void StopPlayer()

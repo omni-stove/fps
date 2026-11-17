@@ -3,8 +3,8 @@ using System;
 namespace Fps.Core
 {
     /// <summary>
-    /// ソロで標的を倒すタイムアタック形式の試合進行。
-    /// 制限時間内に規定キル数へ到達すれば勝利、時間切れかプレイヤー死亡で敗北する。
+    /// ソロで標的を倒す試合進行。
+    /// 規定キル数へ到達すれば勝利、時間切れ (制限時間があるときだけ) かプレイヤー死亡で敗北する。
     /// プレイヤーは <see cref="PlayerId"/> で区別し、標的の ID は何でもよい。
     /// 時間は <see cref="Tick"/> で外から渡す。勝敗確定後は何を呼んでも状態もカウントも変わらない。
     /// </summary>
@@ -19,8 +19,11 @@ namespace Fps.Core
         /// </summary>
         public event Action<float> RemainingSecondsChanged;
 
-        /// <summary>制限時間（秒）。</summary>
+        /// <summary>制限時間（秒）。<see cref="float.PositiveInfinity"/> なら時間切れにならない。</summary>
         public float TimeLimitSeconds { get; }
+
+        /// <summary>時間切れがあるか。</summary>
+        public bool HasTimeLimit => !float.IsPositiveInfinity(TimeLimitSeconds);
 
         /// <summary>勝利に必要なキル数。</summary>
         public int KillsToWin { get; }
@@ -33,7 +36,7 @@ namespace Fps.Core
         /// <summary>勝敗。終了前は null。</summary>
         public MatchResult? Result { get; private set; }
 
-        /// <summary>残り時間（秒）。0 未満にはならない。</summary>
+        /// <summary>残り時間（秒）。0 未満にはならない。制限時間が無ければ <see cref="float.PositiveInfinity"/> のまま。</summary>
         public float RemainingSeconds { get; private set; }
 
         public int Kills { get; private set; }
@@ -41,14 +44,14 @@ namespace Fps.Core
         /// <summary>勝敗が確定しているか。</summary>
         public bool IsOver => State == GameModeState.Ended;
 
-        /// <param name="timeLimitSeconds">制限時間（秒）。正の有限値。</param>
+        /// <param name="timeLimitSeconds">制限時間（秒）。正の値。<see cref="float.PositiveInfinity"/> なら時間切れにならない。</param>
         /// <param name="killsToWin">勝利に必要なキル数。1 以上。</param>
         /// <param name="playerId">プレイヤーの ID。</param>
         public Match(float timeLimitSeconds, int killsToWin, int playerId)
         {
-            if (!(timeLimitSeconds > 0f) || float.IsInfinity(timeLimitSeconds))
+            if (!(timeLimitSeconds > 0f))
             {
-                throw new ArgumentOutOfRangeException(nameof(timeLimitSeconds), timeLimitSeconds, "timeLimitSeconds must be positive and finite");
+                throw new ArgumentOutOfRangeException(nameof(timeLimitSeconds), timeLimitSeconds, "timeLimitSeconds must be positive");
             }
 
             if (killsToWin <= 0)
@@ -82,7 +85,7 @@ namespace Fps.Core
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must not be negative");
             }
 
-            if (State != GameModeState.Playing)
+            if (State != GameModeState.Playing || !HasTimeLimit)
             {
                 return;
             }

@@ -51,6 +51,9 @@ namespace Fps.Core
         /// <summary>上中央の残り時間 (mm:ss)。</summary>
         public string TimeText { get; private set; } = HudFormat.NoTime;
 
+        /// <summary>残り時間を出しているか。<see cref="SetTime"/> で true、<see cref="ClearTime"/> と制限時間の無い試合で false。</summary>
+        public bool HasTime { get; private set; }
+
         /// <summary>画面上部に一時的に出す案内。<see cref="HudNotice.None"/> なら出さない。</summary>
         public HudNotice Notice { get; private set; }
 
@@ -71,6 +74,12 @@ namespace Fps.Core
 
         /// <summary>勝ったチーム。結果が無いか引き分けなら null。</summary>
         public Team? Winner { get; private set; }
+
+        /// <summary>Bind したソロの試合 (<see cref="Match"/>) の勝敗。終わっていないか Bind していなければ null。</summary>
+        public MatchResult? SoloResult { get; private set; }
+
+        /// <summary>ソロの試合の結果の下に出す、やり直すキーの表記。空なら案内を出さない。</summary>
+        public string RestartKey { get; private set; } = string.Empty;
 
         /// <summary>リロードの進捗 (0〜1)。出さないときは null。</summary>
         public float? ReloadProgress { get; private set; }
@@ -157,24 +166,44 @@ namespace Fps.Core
             SetWeaponSpec(_weapon?.Spec);
         }
 
-        /// <summary>残り時間の源を差し替える。null なら仮の表示に戻す。</summary>
+        /// <summary>
+        /// 残り時間と勝敗の源を差し替える。null なら残り時間を仮の表示に戻して勝敗を消す。
+        /// 制限時間の無い試合 (<see cref="Match.HasTimeLimit"/> が false) では残り時間を出さない。
+        /// </summary>
         public void BindMatch(Match match)
         {
             if (_match != null)
             {
                 _match.RemainingSecondsChanged -= SetTime;
+                _match.StateChanged -= OnMatchStateChanged;
             }
 
             _match = match;
             if (_match != null)
             {
                 _match.RemainingSecondsChanged += SetTime;
-                SetTime(_match.RemainingSeconds);
+                _match.StateChanged += OnMatchStateChanged;
+                if (_match.HasTimeLimit)
+                {
+                    SetTime(_match.RemainingSeconds);
+                }
+                else
+                {
+                    ClearTime();
+                }
             }
             else
             {
                 ClearTime();
             }
+
+            ApplySoloResult(_match?.Result, RestartKey);
+        }
+
+        /// <summary>ソロの試合の結果の下に出す、やり直すキーの表記を変える。null か空なら案内を出さない。</summary>
+        public void SetRestartKey(string key)
+        {
+            ApplySoloResult(SoloResult, key ?? string.Empty);
         }
 
         /// <summary>案内の源を差し替える。null なら案内を消す。</summary>
@@ -216,6 +245,7 @@ namespace Fps.Core
             if (_match != null)
             {
                 _match.RemainingSecondsChanged -= SetTime;
+                _match.StateChanged -= OnMatchStateChanged;
                 _match = null;
             }
 
@@ -307,13 +337,13 @@ namespace Fps.Core
         /// <summary>残り時間 (秒) を出す。表示は秒の桁が変わったときだけ変わる (<see cref="HudFormat.Time"/>)。</summary>
         public void SetTime(float remainingSeconds)
         {
-            ApplyTime(HudFormat.Time(remainingSeconds));
+            ApplyTime(HudFormat.Time(remainingSeconds), true);
         }
 
-        /// <summary>残り時間を仮の表示に戻す。</summary>
+        /// <summary>残り時間を仮の表示に戻し、出さないようにする。</summary>
         public void ClearTime()
         {
-            ApplyTime(HudFormat.NoTime);
+            ApplyTime(HudFormat.NoTime, false);
         }
 
         /// <summary>一時的な案内を出す。<see cref="HudNotice.None"/> なら消す。</summary>
@@ -663,15 +693,33 @@ namespace Fps.Core
             Changed?.Invoke(HudField.Ammo);
         }
 
-        private void ApplyTime(string text)
+        private void ApplyTime(string text, bool hasTime)
         {
-            if (text == TimeText)
+            if (text == TimeText && hasTime == HasTime)
             {
                 return;
             }
 
             TimeText = text;
+            HasTime = hasTime;
             Changed?.Invoke(HudField.Time);
+        }
+
+        private void OnMatchStateChanged(GameModeState state)
+        {
+            ApplySoloResult(_match?.Result, RestartKey);
+        }
+
+        private void ApplySoloResult(MatchResult? result, string restartKey)
+        {
+            if (result == SoloResult && restartKey == RestartKey)
+            {
+                return;
+            }
+
+            SoloResult = result;
+            RestartKey = restartKey;
+            Changed?.Invoke(HudField.Result);
         }
 
         private void ApplyScores(Team? firstTeam, int? first, int? second)

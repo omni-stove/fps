@@ -330,7 +330,6 @@ namespace Shooter.Core.Tests
             AddRightWall();
         }
 
-        // 体の軸から 0.7 m 右 (+X) に面を向けた、Z が -10 から 10 までの壁
         private void AddRightWall()
         {
             AddBox(new Vector3(0.95f, 4f, 0f), new Vector3(0.25f, 4f, 10f));

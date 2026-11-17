@@ -329,12 +329,55 @@ namespace Fps.Tests.EditMode
             Assert.That(weapon.IsHolstered, Is.True, "no gun floating in front of the fallen view");
             foreach (var shellRenderer in shell.GetComponentsInChildren<Renderer>(true))
             {
-                Assert.That(shellRenderer.shadowCastingMode, Is.EqualTo(UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly), shellRenderer.name);
+                Assert.That(shellRenderer.enabled, Is.False, "neither the shell nor its shadow is drawn: " + shellRenderer.name);
             }
 
             deathCam.GetComponent<Damageable>().ResetHealth();
             deathCam.Step(DeathCamera.Fallen, true, false);
             Assert.That(weapon.IsHolstered, Is.False, "the weapon comes back on respawn");
+        }
+
+        [Test]
+        public void FallenHidesTheOwnBodyShadowAndShowsTheBodyAgainOnRespawn()
+        {
+            var deathCam = Player(out _);
+            var torso = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            torso.name = "Torso";
+            torso.transform.SetParent(deathCam.transform, false);
+            var torsoRenderer = torso.GetComponent<Renderer>();
+            torsoRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            var alreadyHidden = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            alreadyHidden.name = "AlreadyHidden";
+            alreadyHidden.transform.SetParent(deathCam.transform, false);
+            var alreadyHiddenRenderer = alreadyHidden.GetComponent<Renderer>();
+            alreadyHiddenRenderer.enabled = false;
+            deathCam.Mode = DeathCamera.Fallen;
+
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            Assert.That(torsoRenderer.enabled, Is.True, "alive, the first-person body still casts its shadow");
+
+            deathCam.Step(DeathCamera.Fallen, false, false);
+            Assert.That(torsoRenderer.enabled, Is.False, "no standing shadow left behind while the view falls");
+
+            deathCam.Step(DeathCamera.Fallen, true, false);
+            Assert.That(torsoRenderer.enabled, Is.True, "the body is drawn again on respawn");
+            Assert.That(alreadyHiddenRenderer.enabled, Is.False, "a renderer hidden before the fall stays hidden");
+        }
+
+        [Test]
+        public void FreeLeavesTheOwnBodyAsItWas()
+        {
+            var deathCam = Player(out _);
+            var torso = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            torso.name = "Torso";
+            torso.transform.SetParent(deathCam.transform, false);
+            var torsoRenderer = torso.GetComponent<Renderer>();
+            deathCam.Mode = DeathCamera.Free;
+
+            deathCam.Step(DeathCamera.Free, true, false);
+            deathCam.Step(DeathCamera.Free, false, false);
+
+            Assert.That(torsoRenderer.enabled, Is.True, "only the fallen view hides the own body");
         }
 
         [Test]

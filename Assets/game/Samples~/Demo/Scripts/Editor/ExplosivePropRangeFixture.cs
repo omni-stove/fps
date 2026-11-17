@@ -6,15 +6,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場に、爆発する置き物 (<see cref="ExplosiveProp"/>) を x 方向に並べる。左から標的ダミー、樽 2 つ、ガソリン缶の順で、
-    /// 樽 A を撃つと隣の標的ダミーが倒れ、樽 B が連鎖して遅れて爆発し、ガソリン缶が燃えてからさらに遅れて爆発する間隔にする。
-    /// smoke の手順は <see cref="ExplosivePropSmokeStep"/>。
-    /// </summary>
-    /// <remarks>
-    /// 置き場所は左奥の外寄り (<see cref="Center"/>)。乗り越えの壁・開けた場所・小屋・GameBootstrap の標的ダミーの列から離し、爆発の半径にほかの置く物を入れない。
-    /// 標的ダミーは近くの敵の代わりで、射撃場には NavMesh が無く <see cref="EnemyAgent"/> を置けないため。
-    /// </remarks>
+    // 爆発の半径にほかの置く物が入らないよう、乗り越えの壁・開けた場所・小屋・GameBootstrap の標的ダミーの列から離して置く。
+    // 近くの敵の代わりに標的ダミーを置くのは、射撃場には NavMesh が無く EnemyAgent を置けないため。
     public sealed class ExplosivePropRangeFixture : ITpsRangeFixture
     {
         public const string RootName = "ExplosiveProps";
@@ -22,26 +15,20 @@ namespace Shooter.Editor
         public const string SecondBarrelName = "Barrel_B";
         public const string GasCanName = "GasCan";
 
-        /// <summary>樽 A の爆発で倒れる標的ダミーの名前と Id。</summary>
         public const string DummyId = "ExplosiveDummy";
 
-        /// <summary>並べる間隔 (m)。隣の物の中心どうしの x の差。</summary>
+        // 樽 A を撃つと隣の標的ダミーが倒れ、樽 B が連鎖して遅れて爆発し、ガソリン缶が燃えてからさらに遅れて爆発する間隔にする。
         public const float Spacing = 1.6f;
 
-        /// <summary>樽 (円柱) の半径と高さ (m)。</summary>
         public const float BarrelRadius = 0.3f;
         public const float BarrelHeight = 0.9f;
 
-        /// <summary>ガソリン缶 (箱) の大きさ (m)。</summary>
         public static readonly Vector3 GasCanSize = new Vector3(0.35f, 0.45f, 0.25f);
 
-        /// <summary>樽 A の足元の位置。ほかの物はここから x 方向に <see cref="Spacing"/> ずつ並べる。</summary>
         public static readonly Vector3 Center = new Vector3(-28f, 0f, 28f);
 
-        /// <summary>樽の値。キットの既定値のまま。</summary>
         public static readonly ExplosivePropSpec BarrelSpec = ExplosivePropSpec.Default;
 
-        /// <summary>ガソリン缶の値。弱い 1 発で燃え始め、2 秒燃えてから樽より小さく爆発する。</summary>
         public static readonly ExplosivePropSpec GasCanSpec = new ExplosivePropSpec(
             maxHealth: 10,
             maxDamage: 120,
@@ -66,16 +53,12 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>標的ダミーの足元の位置。樽 A の左。</summary>
         public static Vector3 DummyPosition => Center + new Vector3(-Spacing, 0f, 0f);
 
-        /// <summary>樽 A の足元の位置。</summary>
         public static Vector3 FirstBarrelPosition => Center;
 
-        /// <summary>樽 B の足元の位置。樽 A の右。</summary>
         public static Vector3 SecondBarrelPosition => Center + new Vector3(Spacing, 0f, 0f);
 
-        /// <summary>ガソリン缶の足元の位置。樽 B の右。</summary>
         public static Vector3 GasCanPosition => Center + new Vector3(Spacing * 2f, 0f, 0f);
 
         public GameObject Place(Scene scene, GameRules rules)

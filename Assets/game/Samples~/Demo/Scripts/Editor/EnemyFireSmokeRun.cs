@@ -8,39 +8,21 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器のアセットと EnemyAiTest を生成し直し、Play Mode で走らせて、ログで次を確かめて Editor を終える。
-    /// <list type="bullet">
-    /// <item>プレイヤーの武器が撃てる (Play 直後に 1 発撃ち、<c>[Combat] fire ammo=...</c> が出る)。</item>
-    /// <item>巡回してきた敵がプレイヤーを撃つ (<c>[AI] id=enemy-1 fire ammo=...</c> が出る)。</item>
-    /// <item>
-    /// 敵が撃ち始めたら、プレイヤーの位置から撃たれたことにして敵に <see cref="HitDamage"/> のダメージを与え、
-    /// 敵が遮蔽点に移って隠れる (<c>[AI] id=enemy-1 state=TakeCover</c> の後に <c>[AI] id=enemy-1 cover phase=Hiding</c> が出る)。
-    /// </item>
-    /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
-    /// </list>
-    /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。走らせる秒数は <see cref="SecondsArgument"/> で変えられる。
-    /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.EnemyFireSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
-    /// </remarks>
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class EnemyFireSmokeRun
     {
         public const string LogTag = "[EnemyFireSmokeRun]";
 
-        /// <summary>Play Mode で走らせる秒数を渡す引数。例: <c>-enemyFireSmokeSeconds 60</c>。</summary>
         public const string SecondsArgument = "-enemyFireSmokeSeconds";
 
-        /// <summary>敵が巡回路を回って壁の端から出てきて撃ち始め、撃たれて遮蔽点に着くまでに足りる秒数。</summary>
+        // 敵が巡回路を回って壁の端から出てきて撃ち始め、撃たれて遮蔽点に着くまでに足りる秒数にする。
         public const float DefaultSeconds = 60f;
 
-        /// <summary>撃ち始めた敵に与えるダメージ。倒さずに TakeCover に移らせる量。</summary>
+        // 倒さずに TakeCover に移らせる量にする。
         public const int HitDamage = 20;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
@@ -78,7 +60,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -106,10 +87,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="SecondsArgument"/> の値を読む。無ければ <see cref="DefaultSeconds"/>。
-        /// 値が無い・正の有限な数でなければ <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static float ParseSeconds(IReadOnlyList<string> args)
         {
             if (args == null)

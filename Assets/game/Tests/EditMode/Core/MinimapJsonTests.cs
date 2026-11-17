@@ -131,5 +131,13 @@ namespace Shooter.Core.Tests
                 Is.EqualTo("[Minimap] configured radius=80 scale=1.5 update=0.25s spotted=5s rotate=false"));
             Assert.Throws<ArgumentNullException>(() => MinimapLog.Configured(null));
         }
+
+        [Test]
+        public void TheContactsLineCountsEachKind()
+        {
+            Assert.That(
+                MinimapLog.Contacts(1, 2, 3, 4),
+                Is.EqualTo("[Minimap] contacts allies=1 enemies=2 pings=3 objectives=4"));
+        }
     }
 }

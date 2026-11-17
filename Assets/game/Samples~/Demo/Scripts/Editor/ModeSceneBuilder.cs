@@ -11,25 +11,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// オフラインのモード (<see cref="ModeRunnerBase"/>) のシーンを組む土台。派生クラスは Runner (<see cref="AddRunner"/>) と、
-    /// そのモードに固有の地形 (<see cref="AddLevel"/>)・物 (<see cref="AddModeObjects"/>) だけを書けばよい。
-    /// </summary>
-    /// <remarks>
-    /// <see cref="BuildSceneAt"/> は次の順に組み、シーンと焼いた NavMesh を保存して Build Settings に加える (既存の並びは変えない)。
-    /// <list type="number">
-    /// <item>空のシーンに床 (<see cref="NavMeshSurface"/> 付き)・外周の壁・遮蔽物 (<see cref="Obstacles"/>)・派生の地形を置き、NavMesh を焼く。
-    /// 焼き方と保存は <see cref="EnemyTestSceneBuilder.BakeNavMesh"/> と同じ。bot のコライダーで穴が空かないよう、地形だけの状態で焼く。</item>
-    /// <item>出現点と巡回路が NavMesh に乗っていて、プレイヤーの出現点から全陣営の出現点へ歩けることを確かめる。</item>
-    /// <item>陣営ごとの <see cref="SideSpawnPoint"/>、<see cref="GameBootstrap"/> (床は作らない・武器とルール <see cref="RulesPath"/> を配線)、
-    /// 陣営ごとの bot (<see cref="SceneBuildHelpers.CreateEnemy"/> の <see cref="EnemyAgent"/> に <see cref="SideMember"/> を付けたもの) を置く。</item>
-    /// <item><see cref="AddRunner"/> の Runner を置き、プレイヤーの陣営 (<see cref="PlayerSide"/>) を設定してから <see cref="AddModeObjects"/> を呼ぶ。</item>
-    /// </list>
-    /// プレイヤーとライトと HUD (<see cref="ModeHudView"/> を含む) は実行時に GameBootstrap が作る。プレイヤーは原点に +Z を向いて出るので、
-    /// プレイヤーの陣営の最初の出現点はそこに置くこと (違えば何も保存せずに例外を投げる)。倒れた後は Runner が自陣営の出現点に戻す。
-    /// 何度実行しても同じ結果になる。武器のアセット・ルールのアセットが無ければ何も保存せずに止まる
-    /// (先に <see cref="WeaponAssetBuilder"/>.Build と <see cref="GameRulesAssetBuilder"/>.Build を走らせる)。
-    /// </remarks>
+    // bot のコライダーで NavMesh に穴が空かないよう、地形だけの状態で焼いてから bot を置く。
+    // GameBootstrap はプレイヤーを原点に +Z を向けて出すので、プレイヤーの陣営の最初の出現点はそこに置く (違えば何も保存せずに例外を投げる)。
     public abstract class ModeSceneBuilder
     {
         public const string FloorName = "Floor";
@@ -39,10 +22,8 @@ namespace Shooter.Editor
         public const string BootstrapObjectName = "GameBootstrap";
         public const string RunnerObjectName = "ModeRunner";
 
-        /// <summary>シーン名のフォルダに置く、焼いた NavMesh のファイル名 (<see cref="EnemyTestSceneBuilder.NavMeshDataPath"/> と同じ慣習)。</summary>
         public const string NavMeshDataFileName = "NavMesh-Floor.asset";
 
-        /// <summary>Plane は 10m 四方なので、x は ±20m、z は -10m から 50m。</summary>
         public static readonly Vector3 DefaultFloorCenter = new Vector3(0f, 0f, 20f);
 
         public static readonly Vector3 DefaultFloorScale = new Vector3(4f, 1f, 6f);
@@ -50,20 +31,13 @@ namespace Shooter.Editor
         public const float BoundaryWallHeight = 3f;
         public const float BoundaryWallThickness = 0.5f;
 
-        /// <summary>bot の体。<see cref="EnemyTestSceneBuilder"/> の敵と同じ大きさ・速さ・体力。</summary>
         public static readonly EnemyBody DefaultBotBody = new EnemyBody(
             EnemyTestSceneBuilder.EnemyHeight, EnemyTestSceneBuilder.EnemyRadius, EnemyTestSceneBuilder.EnemySpeed, EnemyTestSceneBuilder.EnemyMaxHealth);
 
-        /// <summary>出現点・巡回地点が NavMesh 上にあるかを確かめるときに探す半径 (メートル)。</summary>
         public const float NavMeshCheckRadius = EnemyTestSceneBuilder.NavMeshCheckRadius;
 
-        /// <summary>GameBootstrap がプレイヤーを出す足元。プレイヤーの陣営の最初の出現点はここに置く。</summary>
         public static readonly Vector3 PlayerFeet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
 
-        /// <summary>
-        /// 既定の遮蔽物。中央に高い壁、その左右の手前と奥に低い壁 (上端 1.05m、<see cref="EnemyTestSceneBuilder.LowCoverSize"/> と同じ高さ) を置く。
-        /// どれも出現点 (z = 0 と z = 40) から離れている。
-        /// </summary>
         public static readonly IReadOnlyList<ModeObstacle> DefaultObstacles = new[]
         {
             new ModeObstacle("Cover-Center", new Vector3(0f, 1.5f, 20f), new Vector3(8f, 3f, 1f)),
@@ -73,16 +47,12 @@ namespace Shooter.Editor
             new ModeObstacle("Cover-EastFar", new Vector3(10f, 0.525f, 27f), new Vector3(4f, 1.05f, 0.5f)),
         };
 
-        /// <summary>既定の陣営ごとの出現点を並べる x。先頭 (0) がプレイヤーの陣営ではプレイヤーの出現点になる。</summary>
         public static readonly IReadOnlyList<float> DefaultSpawnColumns = new[] { 0f, -6f, 6f, -12f, 12f };
 
-        /// <summary>既定の 2 陣営の出現点の z。陣営 0 (プレイヤー) は手前で +Z、陣営 1 は奥で -Z を向く。</summary>
         public const float DefaultNearSpawnZ = 0f;
 
         public const float DefaultFarSpawnZ = 40f;
 
-        /// <param name="scenePath">保存するシーン。Assets/ 以下の .unity。</param>
-        /// <param name="rulesPath">GameBootstrap に配線するルール (<see cref="GameRulesDefinition"/>)。Assets/ 以下の .asset。</param>
         protected ModeSceneBuilder(string scenePath, string rulesPath)
         {
             ScenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -93,57 +63,38 @@ namespace Shooter.Editor
 
         public string RulesPath { get; }
 
-        /// <summary>焼いた NavMesh を置く既定の場所 (<see cref="NavMeshDataPathFor"/>)。</summary>
         public string NavMeshDataPath => NavMeshDataPathFor(ScenePath);
 
-        /// <summary>ログの頭に付ける印。既定は <c>[派生クラス名]</c>。</summary>
         public virtual string LogTag => "[" + GetType().Name + "]";
 
-        /// <summary>GameBootstrap のプレイヤーの陣営。<see cref="Sides"/> に含まれ、最初の出現点が <see cref="PlayerFeet"/> にあること。</summary>
         protected virtual Side PlayerSide => new Side(0);
 
-        /// <summary>陣営ごとの出現点と bot の数。既定は <see cref="TwoSides"/> (プレイヤーの陣営に bot 2 体、相手に 3 体)。</summary>
         protected virtual IReadOnlyList<ModeSideLayout> Sides => TwoSides(2, 3);
 
-        /// <summary>床の中心と大きさ (Plane の拡大率)。外周の壁は床の縁の内側に沿って置く。</summary>
         protected virtual Vector3 FloorCenter => DefaultFloorCenter;
 
         protected virtual Vector3 FloorScale => DefaultFloorScale;
 
-        /// <summary>遮蔽物。既定は <see cref="DefaultObstacles"/>。</summary>
         protected virtual IReadOnlyList<ModeObstacle> Obstacles => DefaultObstacles;
 
-        /// <summary>bot に持たせる武器の Id。武器の一覧 (<see cref="WeaponAssetBuilder.LoadCatalog"/>) から引く。</summary>
         protected virtual string BotWeaponId => WeaponAssetBuilder.RifleId;
 
         protected virtual EnemyBody BotBody => DefaultBotBody;
 
-        /// <summary>
-        /// host にこのモードの Runner を付けて設定し、返す。陣営の数など Runner の設定はここで決める
-        /// (プレイヤーの陣営は戻した後に <see cref="PlayerSide"/> で上書きする)。context の <see cref="ModeSceneContext.Runner"/> はまだ null。
-        /// </summary>
+        // ここで Runner に設定したプレイヤーの陣営は、戻した後に PlayerSide で上書きされる。context.Runner はまだ null。
         protected abstract ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context);
 
-        /// <summary>
-        /// NavMesh を焼く前に、モードに固有の地形 (歩けない所・段差など) を levelRoot の下に置く。既定では何もしない。
-        /// ここで置いたコライダーは NavMesh に効く。
-        /// </summary>
+        // NavMesh を焼く前に呼ぶので、ここで置いたコライダーは NavMesh に効く。
         protected virtual void AddLevel(Scene scene, Transform levelRoot)
         {
         }
 
-        /// <summary>
-        /// Runner を置いた後に、モードに固有の物 (拠点・爆弾・拾える物など) を置いて Runner に配線する。既定では何もしない。
-        /// ここで置いた物は NavMesh に効かない (焼いた後なので)。
-        /// </summary>
+        // NavMesh を焼いた後に呼ぶので、ここで置いた物は NavMesh に効かない。
         protected virtual void AddModeObjects(ModeSceneContext context)
         {
         }
 
-        /// <summary>
-        /// 陣営ごとに bot が巡回する地点 (足元)。最初の地点がその bot の出現点。
-        /// 既定は、出現点と、次の陣営 (<see cref="Sides"/> の並びで次、最後なら先頭) の同じ番号の出現点を往復する (相手の陣地へ攻め込む)。
-        /// </summary>
+        // 既定は相手の陣地へ攻め込むよう、出現点と、次の陣営 (最後なら先頭) の同じ番号の出現点を往復する。
         protected virtual IReadOnlyList<Vector3> BotPatrolRoute(IReadOnlyList<ModeSideLayout> sides, int sideIndex, int spawnIndex)
         {
             var own = sides[sideIndex].Spawns[spawnIndex];
@@ -152,10 +103,6 @@ namespace Shooter.Editor
             return new[] { own.Feet, target.Feet };
         }
 
-        /// <summary>
-        /// 手前 (z = <see cref="DefaultNearSpawnZ"/>) の陣営 0 と奥 (z = <see cref="DefaultFarSpawnZ"/>) の陣営 1 が向かい合う配置。
-        /// どちらも <see cref="DefaultSpawnColumns"/> の x に出現点を並べる。bot の数は陣営 0 が sideZeroBots、陣営 1 が sideOneBots。
-        /// </summary>
         public static IReadOnlyList<ModeSideLayout> TwoSides(int sideZeroBots, int sideOneBots)
         {
             return new[]
@@ -165,7 +112,6 @@ namespace Shooter.Editor
             };
         }
 
-        /// <summary>z の列に <see cref="DefaultSpawnColumns"/> の x で出現点を並べ、どれも facing を向かせる。</summary>
         public static IReadOnlyList<ModeSpawnPlacement> SpawnRow(float z, Vector3 facing)
         {
             var spawns = new ModeSpawnPlacement[DefaultSpawnColumns.Count];
@@ -177,7 +123,6 @@ namespace Shooter.Editor
             return spawns;
         }
 
-        /// <summary>シーン <c>Assets/.../&lt;名前&gt;.unity</c> の NavMesh を置く <c>Assets/.../&lt;名前&gt;/NavMesh-Floor.asset</c>。</summary>
         public static string NavMeshDataPathFor(string scenePath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -186,23 +131,17 @@ namespace Shooter.Editor
             return SceneBuildHelpers.ValidateAssetPath(folder + "/" + name + "/" + NavMeshDataFileName);
         }
 
-        /// <summary>
-        /// bot の名前。陣営と、陣営の中の番号 (1 から) で決める。<see cref="ModeRunnerBase"/> は名前の順に ID を振るので、Play ごとに変わらない。
-        /// </summary>
+        // ModeRunnerBase は名前の順に ID を振るので、陣営と番号で名前を決めて Play ごとに ID が変わらないようにする。
         public static string BotName(Side side, int number)
         {
             return $"Bot-{side.Id}-{number}";
         }
 
-        /// <summary>bot の <see cref="EnemyAgent.Id"/> (ログと当たりの記録に出る)。</summary>
         public static string BotId(Side side, int number)
         {
             return $"bot-{side.Id}-{number}";
         }
 
-        /// <summary>
-        /// メニューから呼ぶとき用。変更中のシーンを保存するか尋ね、断られたら何もしない。batchmode では尋ねずに <see cref="BuildScene"/> する。
-        /// </summary>
         public void BuildSceneFromMenu()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -214,17 +153,11 @@ namespace Shooter.Editor
             BuildScene();
         }
 
-        /// <summary><see cref="ScenePath"/> と <see cref="NavMeshDataPath"/> に組む (<see cref="BuildSceneAt"/>)。</summary>
         public ModeSceneContext BuildScene()
         {
             return BuildSceneAt(ScenePath, NavMeshDataPath);
         }
 
-        /// <summary>
-        /// シーンを組んで NavMesh を焼き、両方を保存して Build Settings に加え、置いた物を返す。
-        /// 配置が不正なら、シーンを作る前に <see cref="InvalidOperationException"/> を投げる。
-        /// 焼いた NavMesh に出現点・巡回地点が乗らないか、行けない出現点があれば、シーンを保存せずに例外を投げる (batchmode では終了コード 1 になる)。
-        /// </summary>
         public ModeSceneContext BuildSceneAt(string scenePath, string navMeshDataPath)
         {
             scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
@@ -269,10 +202,6 @@ namespace Shooter.Editor
             return context;
         }
 
-        /// <summary>
-        /// sides が、陣営が重ならず、どの陣営にも出現点があり、playerSide を含み、その最初の出現点が <see cref="PlayerFeet"/> で +Z を向き、
-        /// bot の数が出現点に収まる (プレイヤーの陣営は最初の点を除いて) ことを確かめて返す。満たさなければ <see cref="InvalidOperationException"/>。
-        /// </summary>
         public static IReadOnlyList<ModeSideLayout> ValidateLayout(IReadOnlyList<ModeSideLayout> sides, Side playerSide)
         {
             if (sides == null || sides.Count == 0)
@@ -496,18 +425,14 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>1 つの陣営の出現点と bot の数 (<see cref="ModeSceneBuilder"/>)。</summary>
     public readonly struct ModeSideLayout
     {
         public Side Side { get; }
 
-        /// <summary>出現点。プレイヤーの陣営では先頭がプレイヤーの出現点。bot は残りの点に先頭から立つ。</summary>
         public IReadOnlyList<ModeSpawnPlacement> Spawns { get; }
 
         public int BotCount { get; }
 
-        /// <exception cref="ArgumentNullException">spawns が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">botCount が負。</exception>
         public ModeSideLayout(Side side, IReadOnlyList<ModeSpawnPlacement> spawns, int botCount)
         {
             if (botCount < 0)
@@ -521,15 +446,12 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>出現点 1 つ。足元の位置と、水平に向く向き。</summary>
     public readonly struct ModeSpawnPlacement
     {
         public Vector3 Feet { get; }
 
-        /// <summary>出現したときに向く方向 (水平、長さ 1)。</summary>
         public Vector3 Facing { get; }
 
-        /// <exception cref="ArgumentOutOfRangeException">facing に水平の成分が無いとき。</exception>
         public ModeSpawnPlacement(Vector3 feet, Vector3 facing)
         {
             var flat = new Vector3(facing.x, 0f, facing.z);
@@ -543,15 +465,12 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary>動かない直方体の遮蔽物 1 つ。center は中心、size は大きさ (ワールド)。</summary>
     public readonly struct ModeObstacle
     {
         public string Name { get; }
         public Vector3 Center { get; }
         public Vector3 Size { get; }
 
-        /// <exception cref="ArgumentException">name が空。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">size のどれかが 0 以下。</exception>
         public ModeObstacle(string name, Vector3 center, Vector3 size)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -570,7 +489,6 @@ namespace Shooter.Editor
         }
     }
 
-    /// <summary><see cref="ModeSceneBuilder"/> が組んだシーンと、置いた物。派生のフックに渡す。</summary>
     public sealed class ModeSceneContext
     {
         public ModeSceneContext(Scene scene, NavMeshSurface surface, WeaponCatalogAsset catalog, GameRulesDefinition rules)
@@ -583,23 +501,18 @@ namespace Shooter.Editor
 
         public Scene Scene { get; }
 
-        /// <summary>NavMesh を焼いた床の NavMeshSurface。</summary>
         public NavMeshSurface Surface { get; }
 
-        /// <summary>武器の一覧。モード固有の物 (拾える武器など) の武器はここから引く。</summary>
         public WeaponCatalogAsset Catalog { get; }
 
-        /// <summary>GameBootstrap に配線したルール。</summary>
         public GameRulesDefinition Rules { get; }
 
         public IReadOnlyList<SideSpawnPoint> SpawnPoints { get; internal set; } = Array.Empty<SideSpawnPoint>();
 
         public GameBootstrap Bootstrap { get; internal set; }
 
-        /// <summary>置いた bot。陣営の並び、陣営の中では番号の順。</summary>
         public IReadOnlyList<EnemyAgent> Bots { get; internal set; } = Array.Empty<EnemyAgent>();
 
-        /// <summary>置いた Runner。<see cref="ModeSceneBuilder.AddRunner"/> の中ではまだ null。</summary>
         public ModeRunnerBase Runner { get; internal set; }
     }
 }

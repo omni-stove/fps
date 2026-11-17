@@ -9,31 +9,16 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器のアセットと Bootstrap シーンを生成し直して Play Mode に入り、プレイヤーの <see cref="WeaponController"/> を
-    /// コードから操作して次を確かめ、Editor を終える。
-    /// <list type="bullet">
-    /// <item>プレイヤーが既定のロードアウト (rifle, handgun) を持ち、rifle を持って始まる。</item>
-    /// <item>rifle (Auto) は押し続けている間撃ち続ける。リロード中に持ち替えるとリロードは取り消される。</item>
-    /// <item>Next で handgun に持ち替えて撃てる。handgun (Semi) は押し続けても 2 発目が出ず、押し直すと撃てる。</item>
-    /// <item>Next / Previous は端で折り返す。持ち替えるたびに HUD の武器名が変わる。</item>
-    /// <item>一人称では持っている武器のビューモデル (<see cref="ViewmodelPresenter"/>) が出て、持ち替えると差し替わる。三人称では出ない。</item>
-    /// <item>Play 中にエラー・例外・Assert のログが出ない。</item>
-    /// </list>
-    /// すべて満たせば終了コード 0、そうでなければ 1 で終わる。batchmode には入力が無いので、Next / Previous / Attack の代わりに
-    /// <see cref="WeaponController.SelectNext"/>・<see cref="WeaponController.PullTrigger"/> などを呼ぶ。
-    /// Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.WeaponSwitchSmokeRun.Run -logFile -</code>
-    /// </summary>
+    // batchmode には入力が無いので、Next / Previous / Attack の代わりに WeaponController.SelectNext・WeaponController.PullTrigger などを呼ぶ。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class WeaponSwitchSmokeRun
     {
         public const string LogTag = "[WeaponSwitchSmokeRun]";
 
-        /// <summary>Play Mode に入ってから確かめ始めるまでに待つ秒数。GameBootstrap の Awake と HUD の Start を済ませるため。</summary>
+        // GameBootstrap の Awake と HUD の Start を済ませてから確かめ始める。
         public const float WarmUpSeconds = 1f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
@@ -58,7 +43,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -189,7 +173,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>シーンのプレイヤーの武器を操作し、期待と違うことを problems に足す。</summary>
         private static void Exercise(List<string> problems)
         {
             var bootstrap = UnityEngine.Object.FindAnyObjectByType<GameBootstrap>();
@@ -227,7 +210,6 @@ namespace Shooter.Editor
             Expect(problems, weapon.CurrentIndex == 0, "the player starts with the rifle");
             ExpectHudName(problems, hud, weapon);
 
-            // rifle (Auto): 押し続けている間、連射間隔ごとに撃つ。
             var rifle = weapon.Weapon;
             var rifleAmmo = rifle.AmmoInMagazine;
             Expect(problems, weapon.PullTrigger(true, true), "the rifle fires when the trigger is pressed");
@@ -241,7 +223,6 @@ namespace Shooter.Editor
             Expect(problems, weapon.Weapon.Spec.Id == WeaponAssetBuilder.HandgunId, "the handgun is held after Next");
             ExpectHudName(problems, hud, weapon);
 
-            // handgun (Semi): 押したフレームだけ撃ち、押し続けても 2 発目は出ない。
             var handgun = weapon.Weapon;
             var handgunAmmo = handgun.AmmoInMagazine;
             Expect(problems, weapon.PullTrigger(true, true), "the handgun fires when the trigger is pressed");

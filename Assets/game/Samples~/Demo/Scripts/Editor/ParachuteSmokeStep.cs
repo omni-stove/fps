@@ -7,34 +7,19 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// TPS の射撃場の smoke (<see cref="TpsRangeSmokeRun"/>) で、パラシュートを確かめる手順。高い台 (<see cref="ParachuteTowerFixture"/>) と組で使う。
-    /// <list type="number">
-    /// <item>射撃場のルールでパラシュートが Off なら、空中でなくても開こうとして <c>[Parachute] open=RuleOff</c> で断られることを見てから、
-    /// この手順の間だけプレイヤーの <see cref="ParachuteMovement.Rule"/> を On にする。落下ダメージ (<see cref="PlayerController.FallDamage"/>) も On にする。</item>
-    /// <item>地面に立ったまま開こうとして、低すぎる (<c>[Parachute] open=TooLow</c>) と断られる。</item>
-    /// <item>台の上に移して +Z へ歩かせ、端から落ちて台の上面より下がったところで開く (<c>[Parachute] opened</c>)。開いている間は
-    /// <see cref="PlayerActionConditions.Parachuting"/> が立ち、下向きの速さは <see cref="MotorSpec.SafeFallSpeed"/> を超えない。</item>
-    /// <item>着地すると閉じ (<c>[Parachute] closed reason=Landed</c>)、落下ダメージのログ (<c>[Player] fall damage=</c>) は出ず、体力も減っていない。
-    /// 降りるのに、開かずに同じ高さを落ちる時間より長くかかっている。</item>
-    /// </list>
-    /// batchmode には入力が無いので、Jump の代わりに <see cref="ParachuteMovement.TryOpen"/>、歩く入力の代わりに <see cref="PlayerController.MoveFilter"/> への差し込みを使う。
-    /// 変えたルール・落下ダメージ・差し込みは <see cref="Cleanup"/> で戻す。
-    /// </summary>
+    // batchmode には入力が無いので、Jump の代わりに ParachuteMovement.TryOpen、歩く入力の代わりに PlayerController.MoveFilter への差し込みを使う。
+    // 変えたルール・落下ダメージ・差し込みは、後の手順に残さないよう Cleanup で戻す。
     public sealed class ParachuteSmokeStep : ITpsActionSmokeStep
     {
         public const string StepName = "parachute";
 
-        /// <summary>台の端から歩いて落ちたと見なす、足元が台の上面より下がった量 (m)。端の角で開こうとして台の上面を地面と測らないため。</summary>
+        // 端の角で開こうとして台の上面を地面と測らないよう、足元が上面よりこれだけ下がってから開く。
         public const float DropBelowTopToOpen = 0.5f;
 
-        /// <summary>
-        /// 開いてから着地するまでの時間の、開かずに同じ高さを落ちる時間に対する比の下限。
-        /// 既定の値 (降りる速さ 4 m/s・重力 20 m/s²) で台の高さからなら 2 倍を超えるので、余裕を見て 1.5 にする。
-        /// </summary>
+        // 既定の値 (降りる速さ 4 m/s・重力 20 m/s²) で台の高さからなら 2 倍を超えるので、余裕を見て 1.5 にする。
         public const float MinSlowdownRatio = 1.5f;
 
-        /// <summary>台の上に移すとき、足元を上面からどれだけ浮かせるか (m)。上面にめり込まずに置くため。</summary>
+        // 台の上面にめり込まずに置くため、足元を少し浮かせる。
         public const float PlaceAboveTop = 0.05f;
 
         private static readonly string _ruleOffLog = $"{ParachuteMovement.LogTag} open={ParachuteOpenVerdict.RuleOff} ";
@@ -414,10 +399,8 @@ namespace Shooter.Editor
             return value.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// 台から歩いて降りるまで、入力の代わりに前進だけを押し続ける差し込み。開いた後も前へ流れて台の側面から離れる。
-        /// 先に差し込まれていたもの (カバー) は後から呼び、その制限を上書きしない。
-        /// </summary>
+        // 開いた後も前進を押し続けるのは、前へ流れて台の側面から離れるようにするため。
+        // 先に差し込まれていたもの (カバー) は後から呼び、その制限を上書きしない。
         private sealed class ForwardFilter : IPlayerMoveFilter
         {
             public ForwardFilter(IPlayerMoveFilter inner, float topY)
@@ -428,7 +411,6 @@ namespace Shooter.Editor
 
             public IPlayerMoveFilter Inner { get; }
 
-            /// <summary>台の上面の高さ (ワールドの y)。</summary>
             public float TopY { get; }
 
             public void Filter(ref Vector2 move, ref bool sprint, ref bool crouch, ref bool jumpPressed)

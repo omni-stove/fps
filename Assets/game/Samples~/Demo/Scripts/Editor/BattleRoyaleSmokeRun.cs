@@ -9,49 +9,29 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    /// <summary>
-    /// 武器とルールのアセットとバトルロイヤルのシーン (<see cref="BattleRoyaleSceneBuilder"/>) を生成し直して Play Mode に入り、
-    /// エリアの予定を縮めた試合を最後の分隊が決まるまで走らせて、ログで次を確かめて Editor を終える。
-    /// <list type="number">
-    /// <item>試合が <see cref="BattleRoyaleSceneBuilder.SquadCount"/> 分隊・<see cref="BattleRoyaleSceneBuilder.SquadSize"/> 人ずつで始まり、エリアが動き出す。</item>
-    /// <item>bot が武器を拾いに行く (<c>[Mode] errand ... kind=Collect</c>)。</item>
-    /// <item>ほかの分隊がすべて脱落し (<c>[Mode] eliminated</c> が分隊の数 - 1 行)、勝った分隊で終わる
-    /// (<c>[Mode] ended winner=N</c> と <c>[Mode] placements winner=N</c>。引き分けは失敗)。</item>
-    /// </list>
-    /// Play 中にエラー・例外・Assert のログが出たら失敗にする。最後に勝った分隊を書いた行を出し、すべて成り立てば終了コード 0、そうでなければ 1 で終わる。
-    /// <see cref="SmokeSuite"/> には入れていない (試合が数分かかるので)。Play Mode に入るので <c>-quit</c> は付けずに、Editor を閉じた状態で次のように呼ぶ:
-    /// <code>unity -batchmode -projectPath . -executeMethod Shooter.Editor.BattleRoyaleSmokeRun.Run -logFile -</code>
-    /// </summary>
-    /// <remarks>
-    /// batchmode には入力が無いので、プレイヤーは出現点に立ったまま (エリアに追われて倒れる) で、戦うのは bot だけになる。
-    /// エリアは、開いたシーンの <see cref="ShrinkingZone"/> の待ちと縮みの秒数を Play の前に <see cref="ZoneScaleArgument"/> 倍に縮め
-    /// (半径と外のダメージはそのまま)、円の中心がいつも同じになるようシードを <see cref="ZoneSeed"/> に固定する。シーンのファイルは保存しない。
-    /// Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
-    /// </remarks>
+    // 試合が数分かかるので SmokeSuite には入れていない。
+    // batchmode には入力が無いので、プレイヤーは出現点に立ったまま (エリアに追われて倒れる) で、戦うのは bot だけになる。
+    // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
+    // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class BattleRoyaleSmokeRun
     {
         public const string LogTag = "[BattleRoyaleSmokeRun]";
 
-        /// <summary>エリアの待ちと縮みの秒数に掛ける倍率を渡す引数。例: <c>-battleRoyaleSmokeZoneScale 0.5</c>。</summary>
         public const string ZoneScaleArgument = "-battleRoyaleSmokeZoneScale";
 
-        /// <summary>
-        /// 既定の倍率。予定 (約 6 分) を 2 分足らずにする。最初の待ちが 18 秒残り、出現点の 10m 先の武器は拾える。
-        /// 出現点から最後の円まで bot が歩く (約 130m、40 秒ほど) より、予定のほうが長い。
-        /// </summary>
+        // 予定 (約 6 分) を 2 分足らずにしても、最初の待ちが 18 秒残って出現点の 10m 先の武器は拾え、
+        // 出現点から最後の円まで bot が歩く (約 130m、40 秒ほど) より予定のほうが長い。
         public const float DefaultZoneScale = 0.3f;
 
-        /// <summary>エリアの円の中心を選ぶシード。走らせるたびに同じ円になるよう固定する。</summary>
+        // 走らせるたびに同じ円になるよう、エリアのシードを固定する。
         public const int ZoneSeed = 351;
 
-        /// <summary>Play Mode に入ってから見始めるまでに待つ秒数。GameBootstrap の Awake と Runner の Start を済ませるため。</summary>
+        // GameBootstrap の Awake と Runner の Start を済ませてから見始める。
         public const float WarmUpSeconds = 2f;
 
-        /// <summary>エリアが最後の円になってから、最後の分隊が決まるまでに待つ秒数の上限。</summary>
         public const float GraceSeconds = 180f;
 
-        /// <summary>Play Mode に入れないまま、これだけ待ったら失敗にする (秒)。</summary>
         public const float EnterTimeoutSeconds = 120f;
 
         public const int SuccessExitCode = 0;
@@ -95,7 +75,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>batchmode から <c>-executeMethod</c> で呼ぶ。終わると Editor を終了コード付きで閉じる。</summary>
         public static void Run()
         {
             try
@@ -150,10 +129,6 @@ namespace Shooter.Editor
             }
         }
 
-        /// <summary>
-        /// args から <see cref="ZoneScaleArgument"/> の値を読む。無ければ <see cref="DefaultZoneScale"/>。
-        /// 値が無い・0 より大きく 1 以下の数でなければ <see cref="ArgumentException"/> を投げる。
-        /// </summary>
         public static float ParseZoneScale(IReadOnlyList<string> args)
         {
             if (args == null)
@@ -182,8 +157,6 @@ namespace Shooter.Editor
             return DefaultZoneScale;
         }
 
-        /// <summary>phases の待ちと縮みの秒数を scale 倍にした並び。半径と外のダメージは変えない。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">scale が正の有限値でない。</exception>
         public static IReadOnlyList<ShrinkingZone.PhaseSettings> ScalePhases(IReadOnlyList<ShrinkingZone.PhaseSettings> phases, float scale)
         {
             if (phases == null)
@@ -206,7 +179,6 @@ namespace Shooter.Editor
             return scaled;
         }
 
-        /// <summary>phases をすべて終えるまでの秒数 (待ちと縮みの和)。</summary>
         public static float TotalSeconds(IReadOnlyList<ShrinkingZone.PhaseSettings> phases)
         {
             if (phases == null)
@@ -356,7 +328,6 @@ namespace Shooter.Editor
             Report(problem);
         }
 
-        /// <summary>今の手順を 1 つ進める。次のフレームを待つ手順ではそのまま返す。進められない理由があれば返す (null なら問題なし)。</summary>
         private static string Advance()
         {
             var runner = UnityEngine.Object.FindAnyObjectByType<BattleRoyaleRunner>();

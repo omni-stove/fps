@@ -96,13 +96,13 @@ namespace Fps.Core
                 return AttachmentRejection.NotAttached;
             }
 
-            if (inventory.RoomFor(item.Id, item.Weight) < 1)
+            // 先に外した物を入れるのは、setAttachments で溢れた弾が確かめた空きを先に使い、外した物が消えるのを防ぐため
+            if (inventory.RoomFor(item.Id, item.Weight) < 1 || inventory.Add(item.Id, 1) != 1)
             {
                 return AttachmentRejection.NoRoom;
             }
 
             setAttachments(next);
-            inventory.Add(item.Id, 1);
             return AttachmentRejection.None;
         }
     }

@@ -670,7 +670,7 @@ namespace Fps.Runtime
             _rig = aim.GetComponentInParent<ViewRig>(true);
             _definitions = loaded;
             _unarmed = false;
-            _attachments.Clear();
+            ReleaseAttachments();
             SetLoadout(loadout, specs, loaded, rules, resetAmmo: true);
 
             // Edit Mode では OnDisable が呼ばれず無効に戻せないので、Play 中だけ有効にする。

@@ -18,6 +18,26 @@ namespace Fps.Runtime
             set => _attachmentCatalog = value;
         }
 
+        /// <summary>武器を作り直す前に、付けていた物 (アタッチメントのアイテム Id) を渡す。持ち物に戻すために使う。</summary>
+        public event Action<IReadOnlyList<string>> AttachmentsReleased;
+
+        // 作り直しで付けた物を黙って捨てると持ち物から物が消えるので、先に持ち主へ知らせる
+        private void ReleaseAttachments()
+        {
+            if (_attachments.Count > 0 && AttachmentsReleased != null)
+            {
+                var released = new List<string>();
+                foreach (var attached in _attachments.Values)
+                {
+                    released.AddRange(attached);
+                }
+
+                AttachmentsReleased(released);
+            }
+
+            _attachments.Clear();
+        }
+
         public IReadOnlyList<string> AttachmentsOf(string weaponId)
         {
             return weaponId != null && _attachments.TryGetValue(weaponId, out var attached) ? attached : WeaponAttachments.None;
@@ -92,7 +112,24 @@ namespace Fps.Runtime
 
             _specs = specs;
             RestoreLoadout(ammo, equippedWeaponId);
+
+            if (AttachmentsRestored != null)
+            {
+                var restored = new List<string>();
+                foreach (var attached in _attachments.Values)
+                {
+                    restored.AddRange(attached);
+                }
+
+                if (restored.Count > 0)
+                {
+                    AttachmentsRestored(restored);
+                }
+            }
         }
+
+        /// <summary>セーブから付けた物を戻したときに、その Id を渡す。最初の持ち物に戻った持ち物から同じ数を引くために使う。</summary>
+        public event Action<IReadOnlyList<string>> AttachmentsRestored;
 
         public IReadOnlyDictionary<string, IReadOnlyList<string>> SnapshotAttachments()
         {

@@ -48,6 +48,8 @@ namespace Fps.Runtime
             {
                 _weapons.WeaponChanged -= OnWeaponChanged;
                 _weapons.LoadoutReplaced -= HoldWeapons;
+                _weapons.AttachmentsReleased -= TakeBackAttachments;
+                _weapons.AttachmentsRestored -= SpendAttachments;
                 _weapons.UseAmmoPools(null);
             }
 
@@ -59,6 +61,8 @@ namespace Fps.Runtime
 
             _weapons.WeaponChanged += OnWeaponChanged;
             _weapons.LoadoutReplaced += HoldWeapons;
+            _weapons.AttachmentsReleased += TakeBackAttachments;
+            _weapons.AttachmentsRestored += SpendAttachments;
             _weapons.AttachmentCatalog = Inventory.Catalog;
             ConnectWeapons();
         }
@@ -269,6 +273,36 @@ namespace Fps.Runtime
             if (added > 0)
             {
                 Debug.Log($"{LogTag} restock owner={name} ammo={added}", this);
+            }
+        }
+
+        private void TakeBackAttachments(IReadOnlyList<string> released)
+        {
+            if (_inventory == null)
+            {
+                return;
+            }
+
+            foreach (var itemId in released)
+            {
+                if (_inventory.Add(itemId, 1) < 1)
+                {
+                    Debug.LogWarning($"{LogTag} attachment owner={name} item={itemId} does not fit; lost", this);
+                }
+            }
+        }
+
+        // セーブから戻した付けた物は持ち物にも最初の分が入っているので、付けた分だけ引く
+        private void SpendAttachments(IReadOnlyList<string> restored)
+        {
+            if (_inventory == null)
+            {
+                return;
+            }
+
+            foreach (var itemId in restored)
+            {
+                _inventory.Remove(itemId, 1);
             }
         }
 

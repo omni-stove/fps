@@ -141,6 +141,7 @@
     "leanSpeed": 6,
     "airJumps": 0,
     "airJumpSpeed": 6.5,
+    "jumpGraceSeconds": 0,
     "swimSpeed": 3,
     "swimBuoyancy": 12,
     "swimBreathSeconds": 15,

@@ -65,6 +65,9 @@ namespace Shooter.Core
 
         public const float DefaultAirJumpSpeed = 6.5f;
 
+        // 0 なのは、猶予を入れる前のキットと同じく、接地している tick にしか地上のジャンプをしないままにするため。
+        public const float DefaultJumpGraceSeconds = 0f;
+
         public const float DefaultWalkSpeed = 5f;
         public const float DefaultSprintSpeed = 8f;
         public const float DefaultCrouchSpeed = 2.5f;
@@ -150,6 +153,8 @@ namespace Shooter.Core
 
         public float AirJumpSpeed { get; }
 
+        public float JumpGraceSeconds { get; }
+
         public MotorSpec(
             float walkSpeed,
             float sprintSpeed,
@@ -187,7 +192,8 @@ namespace Shooter.Core
             float leanAngleDegrees = DefaultLeanAngleDegrees,
             float leanSpeed = DefaultLeanSpeed,
             int airJumps = DefaultAirJumps,
-            float airJumpSpeed = DefaultAirJumpSpeed)
+            float airJumpSpeed = DefaultAirJumpSpeed,
+            float jumpGraceSeconds = DefaultJumpGraceSeconds)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -318,6 +324,7 @@ namespace Shooter.Core
             }
 
             RequireNotNegative(airJumpSpeed, nameof(airJumpSpeed));
+            RequireNotNegative(jumpGraceSeconds, nameof(jumpGraceSeconds));
 
             WalkSpeed = walkSpeed;
             SprintSpeed = sprintSpeed;
@@ -356,6 +363,7 @@ namespace Shooter.Core
             LeanSpeed = leanSpeed;
             AirJumps = airJumps;
             AirJumpSpeed = airJumpSpeed;
+            JumpGraceSeconds = jumpGraceSeconds;
         }
 
         private static void RequireNotNegative(float value, string name)

@@ -325,6 +325,62 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AJumpJustAfterLeavingTheGroundIsAGroundJumpThatIsNotCounted()
+        {
+            var look = _body.GetComponent<FirstPersonLook>();
+            _player.Initialize(_controller, look, _move, _sprint, _crouch, _jump, Spec(airJumps: 1, jumpGraceSeconds: 0.1f));
+            Settle();
+            Assert.That(_player.JumpGraceLeft, Is.EqualTo(0.1f), "standing fills the grace");
+
+            StepOffAnEdge();
+            Assert.That(_player.JumpGraceLeft, Is.EqualTo(0.1f), "the tick that leaves the ground keeps the whole grace");
+            Assert.That(_player.IsInJumpGrace, Is.True);
+
+            _player.Tick(Vector2.zero, false, false, true, _tick);
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(Mathf.Sqrt(2f * 20f * 1.2f) - (20f * _tick)).Within(1e-3f), "as high as a ground jump");
+            Assert.That(_player.AirJumpsUsed, Is.EqualTo(0));
+            Assert.That(_player.JumpGraceLeft, Is.Zero);
+
+            _player.Tick(Vector2.zero, false, false, true, _tick);
+            Assert.That(_player.AirJumpsUsed, Is.EqualTo(1), "the air jump is still there");
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(MotorSpec.DefaultAirJumpSpeed - (20f * _tick)).Within(1e-3f));
+        }
+
+        [Test]
+        public void AJumpAfterTheGraceRunsOutDoesNothing()
+        {
+            var look = _body.GetComponent<FirstPersonLook>();
+            _player.Initialize(_controller, look, _move, _sprint, _crouch, _jump, Spec(jumpGraceSeconds: 0.03f));
+            Settle();
+            StepOffAnEdge();
+
+            _player.Tick(Vector2.zero, false, false, false, _tick);
+            Assert.That(_player.JumpGraceLeft, Is.EqualTo(0.01f).Within(1e-4f));
+            _player.Tick(Vector2.zero, false, false, false, _tick);
+            Assert.That(_player.JumpGraceLeft, Is.Zero);
+            Assert.That(_player.IsInJumpGrace, Is.False);
+
+            var before = _player.Motor.Velocity.Y;
+            _player.Tick(Vector2.zero, false, false, true, _tick);
+
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(before - (20f * _tick)).Within(1e-3f));
+            Assert.That(_player.AirJumpsUsed, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TheDefaultSpecHasNoGraceOffTheEdge()
+        {
+            Settle();
+            StepOffAnEdge();
+
+            var before = _player.Motor.Velocity.Y;
+            _player.Tick(Vector2.zero, false, false, true, _tick);
+
+            Assert.That(_player.JumpGraceLeft, Is.Zero);
+            Assert.That(_player.Motor.Velocity.Y, Is.EqualTo(before - (20f * _tick)).Within(1e-3f));
+        }
+
+        [Test]
         public void TheSwimmingLogHasTheTag()
         {
             Assert.That(PlayerTraversalLog.Swimming(true, 2.5f), Is.EqualTo("[Player] swimming=true surface=2.50"));
@@ -426,9 +482,18 @@ namespace Shooter.Tests.EditMode
 
         private static readonly Vector2 Forward = new Vector2(0f, 1f);
 
-        private static MotorSpec Spec(int airJumps = MotorSpec.DefaultAirJumps)
+        private static MotorSpec Spec(int airJumps = MotorSpec.DefaultAirJumps, float jumpGraceSeconds = MotorSpec.DefaultJumpGraceSeconds)
         {
-            return new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, 10f, 20f, airJumps: airJumps);
+            return new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, 10f, 20f, airJumps: airJumps, jumpGraceSeconds: jumpGraceSeconds);
+        }
+
+        // 床の上から宙へ移すと、CharacterController は次に動かすまで接地のままなので、その tick が縁から踏み出した tick になる
+        private void StepOffAnEdge()
+        {
+            _body.transform.position = new Vector3(0f, 10f, 0f);
+            Physics.SyncTransforms();
+            _player.Tick(Vector2.zero, false, false, false, _tick);
+            Assert.That(_player.IsGrounded, Is.False, "off the edge");
         }
 
         // 体の右 (+x) の面から 0.2 m 先に、前 (+z) へ長い壁を置く。壁を探す距離 (半径 + CharacterWallSensor.ReachBeyondRadius) より近い

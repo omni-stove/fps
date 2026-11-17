@@ -429,6 +429,7 @@ namespace Shooter.Protocol.Tests
             sent.Players[0].Assists = 7;
             sent.Players[1].Lean = 1f;
             sent.Players[1].WallRunSide = WallRunSide.Left;
+            sent.Players[1].JumpGraceLeft = 0.075f;
 
             var got = Send(sent, null);
 
@@ -437,10 +438,12 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.Players[0].Swimming, Is.True);
             Assert.That(got.Players[0].WallRunSide, Is.EqualTo(WallRunSide.Right));
             Assert.That(got.Players[0].AirJumpsUsed, Is.EqualTo(2));
+            Assert.That(got.Players[0].JumpGraceLeft, Is.Zero);
             Assert.That(got.Players[0].Assists, Is.EqualTo(7));
             Assert.That(got.Players[1].Lean, Is.EqualTo(1f));
             Assert.That(got.Players[1].Swimming, Is.False);
             Assert.That(got.Players[1].WallRunSide, Is.EqualTo(WallRunSide.Left));
+            Assert.That(got.Players[1].JumpGraceLeft, Is.EqualTo(0.075f));
             Assert.That(got.Players[1].Assists, Is.Zero);
             AssertSame(sent, got);
         }
@@ -466,8 +469,8 @@ namespace Shooter.Protocol.Tests
             var assisting = Build(100, 0f);
             assisting.Players[1].Assists = 1;
 
-            // 体を傾ける・泳ぐ・壁走り・空中ジャンプの 4 バイトと、アシストの 4 バイト
-            Assert.That(Size(leaning, null), Is.EqualTo(Size(plain, null) + 4));
+            // 体を傾ける・泳ぐ・壁走り・空中ジャンプの 4 バイトとジャンプの猶予の 4 バイト、アシストの 4 バイト
+            Assert.That(Size(leaning, null), Is.EqualTo(Size(plain, null) + 8));
             Assert.That(Size(assisting, null), Is.EqualTo(Size(plain, null) + 4));
             Assert.That(Send(plain, null).Players[0].Lean, Is.Zero);
         }
@@ -553,6 +556,7 @@ namespace Shooter.Protocol.Tests
                 w.WriteBool(true);
                 w.WriteByte((byte)WallRunSide.Left);
                 w.WriteByte(1);
+                w.WriteSingle(0.05f);
                 w.WriteInt32(4);
             }));
 
@@ -560,7 +564,52 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.Players[0].Swimming, Is.True);
             Assert.That(got.Players[0].WallRunSide, Is.EqualTo(WallRunSide.Left));
             Assert.That(got.Players[0].AirJumpsUsed, Is.EqualTo(1));
+            Assert.That(got.Players[0].JumpGraceLeft, Is.EqualTo(0.05f));
             Assert.That(got.Players[0].Assists, Is.EqualTo(4));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void AJumpGraceThatIsNegativeOrNotFiniteIsNotWritten(float grace)
+        {
+            var sent = Build(100, 0f);
+            sent.Players[0].JumpGraceLeft = grace;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase(-0.01f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.NegativeInfinity)]
+        public void AJumpGraceThatIsNegativeOrNotFiniteIsRejected(float grace)
+        {
+            var data = OnePlayerDelta(PlayerFields.Traversal, w =>
+            {
+                w.WriteByte(0);
+                w.WriteBool(false);
+                w.WriteByte((byte)WallRunSide.None);
+                w.WriteByte(0);
+                w.WriteSingle(grace);
+            });
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
+        }
+
+        [Test]
+        public void ADeltaCarriesTheJumpGraceWhenOnlyItChanges()
+        {
+            var baseline = Build(100, 0f);
+            var current = Build(101, 0f);
+            current.Players[0].JumpGraceLeft = 0.1f;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Traversal));
+            Assert.That(got.TryResolve(received), Is.True);
+            Assert.That(got.Players[0].JumpGraceLeft, Is.EqualTo(0.1f));
+            AssertSame(current, got);
         }
 
         [TestCase(0x80, 0, 0)]
@@ -574,6 +623,7 @@ namespace Shooter.Protocol.Tests
                 w.WriteByte((byte)swimming);
                 w.WriteByte((byte)wallRunSide);
                 w.WriteByte(0);
+                w.WriteSingle(0f);
             });
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));

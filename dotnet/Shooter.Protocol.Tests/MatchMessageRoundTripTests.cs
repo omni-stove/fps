@@ -12,8 +12,8 @@ namespace Shooter.Protocol.Tests
         // 承認の末尾に並ぶ吹き飛ばしの値 (力 3 種類 × 3 個と、そのほか 9 個)
         private const int _knockbackBytes = 18 * 4;
 
-        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・水泳 3 個・壁走りの入切 (1 バイト)・壁走り 4 個
-        private const int _traversalBytes = (3 * 4) + 4 + 4 + (3 * 4) + 1 + (4 * 4);
+        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・ジャンプの猶予・水泳 3 個・壁走りの入切 (1 バイト)・壁走り 4 個
+        private const int _traversalBytes = (3 * 4) + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4);
 
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
@@ -188,7 +188,7 @@ namespace Shooter.Protocol.Tests
             var motor = new NetMotorSettings(
                 new MotorSpec(
                     5f, 8f, 1.2f, 20f, 0.1f, 2.5f,
-                    leanSideOffset: 0.55f, leanAngleDegrees: 20f, leanSpeed: 4f, airJumps: 2, airJumpSpeed: 5.5f),
+                    leanSideOffset: 0.55f, leanAngleDegrees: 20f, leanSpeed: 4f, airJumps: 2, airJumpSpeed: 5.5f, jumpGraceSeconds: 0.12f),
                 NetMotorSettings.Default.Stance,
                 CapsuleMoverSpec.Default,
                 ProneSpec.Default,
@@ -203,6 +203,7 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.Motor.Motor.LeanSpeed, Is.EqualTo(4f));
             Assert.That(got.Motor.Motor.AirJumps, Is.EqualTo(2));
             Assert.That(got.Motor.Motor.AirJumpSpeed, Is.EqualTo(5.5f));
+            Assert.That(got.Motor.Motor.JumpGraceSeconds, Is.EqualTo(0.12f));
             Assert.That(got.Motor.Swim.Speed, Is.EqualTo(2.5f));
             Assert.That(got.Motor.Swim.Buoyancy, Is.EqualTo(9f));
             Assert.That(got.Motor.Swim.BreathSeconds, Is.EqualTo(20f));
@@ -225,6 +226,28 @@ namespace Shooter.Protocol.Tests
             var breathSeconds = bytes.Length - _knockbackBytes - 4 - (4 * 4) - 1 - 4;
             Assert.That(System.BitConverter.ToSingle(bytes, breathSeconds), Is.EqualTo(SwimTuning.DefaultBreathSeconds), "the offset points at the breath");
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, breathSeconds, 4), 0f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ConnectAcceptedWithANegativeJumpGraceIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            var motor = new NetMotorSettings(
+                new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f, jumpGraceSeconds: 0.12f),
+                NetMotorSettings.Default.Stance,
+                CapsuleMoverSpec.Default,
+                ProneSpec.Default,
+                SwimTuning.Default,
+                WallRunTuning.Default);
+            writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100, Motor = motor });
+            var bytes = writer.AsSegment().ToArray();
+
+            // ジャンプの猶予は水泳 3 個の前で、後ろに壁走りの入切 (1 バイト) と 4 個、落ちる高さ、吹き飛ばしの値が続く
+            var jumpGrace = bytes.Length - _knockbackBytes - 4 - (4 * 4) - 1 - (3 * 4) - 4;
+            Assert.That(System.BitConverter.ToSingle(bytes, jumpGrace), Is.EqualTo(0.12f), "the offset points at the jump grace");
+            System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, jumpGrace, 4), -0.1f);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)));
         }

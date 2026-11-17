@@ -100,6 +100,7 @@ namespace Shooter.Core
         public const string LeanSpeedItem = "leanSpeed";
         public const string AirJumpsItem = "airJumps";
         public const string AirJumpSpeedItem = "airJumpSpeed";
+        public const string JumpGraceSecondsItem = "jumpGraceSeconds";
         public const string SwimSpeedItem = "swimSpeed";
         public const string SwimBuoyancyItem = "swimBuoyancy";
         public const string SwimBreathSecondsItem = "swimBreathSeconds";
@@ -127,7 +128,7 @@ namespace Shooter.Core
             StandingHeightItem, StandingCenterYItem,
             StandingEyeYItem, CrouchHeightItem, RadiusItem, SlopeLimitDegreesItem, StepOffsetItem, SkinWidthItem,
             ProneHeightItem, ProneSpeedItem, DiveDistanceItem, DiveSecondsItem,
-            LeanSideOffsetItem, LeanAngleDegreesItem, LeanSpeedItem, AirJumpsItem, AirJumpSpeedItem,
+            LeanSideOffsetItem, LeanAngleDegreesItem, LeanSpeedItem, AirJumpsItem, AirJumpSpeedItem, JumpGraceSecondsItem,
             SwimSpeedItem, SwimBuoyancyItem, SwimBreathSecondsItem,
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
         };
@@ -348,6 +349,7 @@ namespace Shooter.Core
             writer.Float(LeanSpeedItem, motor.LeanSpeed);
             writer.Int(AirJumpsItem, motor.AirJumps);
             writer.Float(AirJumpSpeedItem, motor.AirJumpSpeed);
+            writer.Float(JumpGraceSecondsItem, motor.JumpGraceSeconds);
             var swim = file.Motor.Swim;
             writer.Float(SwimSpeedItem, swim.Speed);
             writer.Float(SwimBuoyancyItem, swim.Buoyancy);
@@ -519,7 +521,8 @@ namespace Shooter.Core
                         fields.ReadFloat(LeanAngleDegreesItem, dm.LeanAngleDegrees),
                         fields.ReadFloat(LeanSpeedItem, dm.LeanSpeed),
                         fields.ReadInt(AirJumpsItem, dm.AirJumps),
-                        fields.ReadFloat(AirJumpSpeedItem, dm.AirJumpSpeed)),
+                        fields.ReadFloat(AirJumpSpeedItem, dm.AirJumpSpeed),
+                        fields.ReadFloat(JumpGraceSecondsItem, dm.JumpGraceSeconds)),
                     new StanceGeometry(
                         fields.ReadFloat(StandingHeightItem, ds.Standing.Height),
                         fields.ReadFloat(StandingCenterYItem, ds.Standing.CenterY),

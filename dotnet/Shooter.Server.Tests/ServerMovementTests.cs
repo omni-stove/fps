@@ -389,6 +389,27 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void StandingFillsTheJumpGraceFromTheMotorAndTheSnapshotCarriesIt()
+        {
+            Start(motor: new MotorSpec(
+                MotorSpec.DefaultWalkSpeed, MotorSpec.DefaultSprintSpeed, MotorSpec.DefaultJumpHeight, MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl, MotorSpec.DefaultCrouchSpeed, jumpGraceSeconds: 0.1f));
+            Settle();
+
+            _movement.TryGetState(1, out var standing);
+            Assert.That(standing.IsGrounded, Is.True);
+            Assert.That(standing.JumpGraceLeft, Is.EqualTo(0.1f));
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Players[0].JumpGraceLeft, Is.EqualTo(0.1f));
+
+            Send(Vector2.Zero, InputButtons.Jump);
+            _movement.TryGetState(1, out var jumped);
+            Assert.That(jumped.IsGrounded, Is.False);
+            Assert.That(jumped.JumpGraceLeft, Is.Zero, "the jump uses up the grace");
+        }
+
+        [Test]
         public void WithoutAirJumpsASecondPressDoesNothing()
         {
             Start();

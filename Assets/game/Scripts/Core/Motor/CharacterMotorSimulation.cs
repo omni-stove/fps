@@ -309,10 +309,15 @@ namespace Shooter.Core
                 }
                 else
                 {
-                    traversal = traversal.WithAirJumpsUsed(_motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded, move, input.Yaw));
+                    // 猶予を持ち越すのはこの道だけにする。回避・乗り越え・壁・はしご・泳ぎ・吹き飛ばしで宙に出たときまで残すと、歩いて縁を離れたのでないのに地上のジャンプができるため
+                    var inGrace = state.IsInJumpGrace;
+                    traversal = traversal.WithAirJumpsUsed(
+                        _motor.StepAirJump(traversal.AirJumpsUsed, jump, state.IsGrounded, move, input.Yaw, inGrace));
+                    traversal = traversal.WithJumpGraceLeft(
+                        JumpGraceStep.Step(state.JumpGraceLeft, state.IsGrounded, jump, _motor.Spec, TickSeconds));
                     var displacement = stance == PlayerStance.Prone
                         ? _motor.StepProne(move, input.Yaw, ProneSpec.Speed, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier)
-                        : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier);
+                        : _motor.Step(move, input.Yaw, sprint, crouched, jump, state.IsGrounded, TickSeconds, input.CarrySpeedMultiplier, inGrace);
                     Body.Move(displacement);
                     velocity = _motor.Velocity;
                 }
@@ -456,6 +461,12 @@ namespace Shooter.Core
                 traversal = traversal.WithAirJumpsUsed(0);
             }
 
+            // 泳いでいる間に水底へ触れても地上と数えないのは、オフラインの PlayerController が着地を数えないのと同じく、水から出た縁で地上のジャンプをさせないため
+            if (grounded && !traversal.Swim.IsSwimming)
+            {
+                traversal = traversal.WithJumpGraceLeft(_motor.Spec.JumpGraceSeconds);
+            }
+
             var prone = new CharacterProneState(
                 _proneInput.IsActive, _proneInput.WasSprinting, input.Crouch, _dive.IsDiving, _dive.Direction, _dive.Elapsed);
             return new CharacterMotorState(
@@ -472,7 +483,8 @@ namespace Shooter.Core
                 traversal.Lean,
                 traversal.Swim,
                 traversal.WallRun,
-                traversal.AirJumpsUsed);
+                traversal.AirJumpsUsed,
+                traversal.JumpGraceLeft);
         }
 
         public void Place(CharacterMotorState state)
@@ -891,15 +903,22 @@ namespace Shooter.Core
             return Math.Abs(target - current) <= maxDelta ? target : current + (Math.Sign(target - current) * maxDelta);
         }
 
-        // Finish までの道筋 (はしご・吹き飛ばし・ふつうの移動) のどれを通っても同じく状態へ写すため、4 つの段の結果をまとめて運ぶ
+        // Finish までの道筋 (はしご・吹き飛ばし・ふつうの移動) のどれを通っても同じく状態へ写すため、5 つの段の結果をまとめて運ぶ
         private readonly struct TraversalStates
         {
             public TraversalStates(CharacterLeanState lean, CharacterSwimState swim, CharacterWallRunState wallRun, int airJumpsUsed)
+                : this(lean, swim, wallRun, airJumpsUsed, 0f)
+            {
+            }
+
+            private TraversalStates(
+                CharacterLeanState lean, CharacterSwimState swim, CharacterWallRunState wallRun, int airJumpsUsed, float jumpGraceLeft)
             {
                 Lean = lean;
                 Swim = swim;
                 WallRun = wallRun;
                 AirJumpsUsed = airJumpsUsed;
+                JumpGraceLeft = jumpGraceLeft;
             }
 
             public CharacterLeanState Lean { get; }
@@ -910,14 +929,21 @@ namespace Shooter.Core
 
             public int AirJumpsUsed { get; }
 
+            public float JumpGraceLeft { get; }
+
             public TraversalStates WithAirJumpsUsed(int airJumpsUsed)
             {
-                return new TraversalStates(Lean, Swim, WallRun, airJumpsUsed);
+                return new TraversalStates(Lean, Swim, WallRun, airJumpsUsed, JumpGraceLeft);
             }
 
             public TraversalStates WithWallRun(CharacterWallRunState wallRun)
             {
-                return new TraversalStates(Lean, Swim, wallRun, AirJumpsUsed);
+                return new TraversalStates(Lean, Swim, wallRun, AirJumpsUsed, JumpGraceLeft);
+            }
+
+            public TraversalStates WithJumpGraceLeft(float jumpGraceLeft)
+            {
+                return new TraversalStates(Lean, Swim, WallRun, AirJumpsUsed, jumpGraceLeft);
             }
         }
     }

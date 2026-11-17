@@ -39,6 +39,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.LeanSpeed, Is.EqualTo(MotorSpec.DefaultLeanSpeed));
             Assert.That(spec.AirJumps, Is.EqualTo(MotorSpec.DefaultAirJumps));
             Assert.That(spec.AirJumpSpeed, Is.EqualTo(MotorSpec.DefaultAirJumpSpeed));
+            Assert.That(spec.JumpGraceSeconds, Is.EqualTo(MotorSpec.DefaultJumpGraceSeconds));
         }
 
         [Test]
@@ -53,6 +54,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.LeanSpeed, Is.EqualTo(4f));
             Assert.That(spec.AirJumps, Is.EqualTo(1));
             Assert.That(spec.AirJumpSpeed, Is.EqualTo(5.5f));
+            Assert.That(spec.JumpGraceSeconds, Is.EqualTo(0.12f));
         }
 
         [Test]
@@ -67,6 +69,18 @@ namespace Shooter.Tests.EditMode
             Assert.That(_settings.LeanSpeed, Is.EqualTo(MotorSpec.DefaultLeanSpeed));
             Assert.That(_settings.AirJumps, Is.EqualTo(MotorSpec.DefaultAirJumps));
             Assert.That(_settings.AirJumpSpeed, Is.EqualTo(MotorSpec.DefaultAirJumpSpeed));
+            Assert.That(_settings.JumpGraceSeconds, Is.EqualTo(MotorSpec.DefaultJumpGraceSeconds));
+        }
+
+        [Test]
+        public void ANegativeJumpGraceThrows()
+        {
+            var serialized = new SerializedObject(_settings);
+            serialized.FindProperty("_jumpGraceSeconds").floatValue = -0.1f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => MotorSettings.Resolve(_settings));
+            Assert.That(e.ParamName, Is.EqualTo("jumpGraceSeconds"));
         }
 
         [Test]
@@ -93,6 +107,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(motor.Motor.LeanSideOffset, Is.EqualTo(0.5f));
             Assert.That(motor.Motor.AirJumps, Is.EqualTo(1));
             Assert.That(motor.Motor.AirJumpSpeed, Is.EqualTo(5.5f));
+            Assert.That(motor.Motor.JumpGraceSeconds, Is.EqualTo(0.12f));
             Assert.That(motor.Swim.Speed, Is.EqualTo(traversal.Swim.Speed));
             Assert.That(motor.Swim.Buoyancy, Is.EqualTo(traversal.Swim.Buoyancy));
             Assert.That(motor.Swim.BreathSeconds, Is.EqualTo(traversal.Swim.BreathSeconds));
@@ -108,6 +123,7 @@ namespace Shooter.Tests.EditMode
             _settings.LeanSpeed = 4f;
             _settings.AirJumps = 1;
             _settings.AirJumpSpeed = 5.5f;
+            _settings.JumpGraceSeconds = 0.12f;
         }
     }
 }

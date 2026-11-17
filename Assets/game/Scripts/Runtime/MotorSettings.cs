@@ -153,6 +153,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("空中で跳んだときの上向きの速さ (m/s)")]
         private float _airJumpSpeed = MotorSpec.DefaultAirJumpSpeed;
 
+        [SerializeField, Min(0f), Tooltip("地面を離れてからも地上のジャンプとして跳べる秒数 (空中で跳んだ回数に数えない)。0 なら接地している間だけ")]
+        private float _jumpGraceSeconds = MotorSpec.DefaultJumpGraceSeconds;
+
         [Header("持ち物")]
         [SerializeField, Tooltip("重さを数える武器。Held は構えている武器だけ、Carried は持っている全部の合計、None は数えない")]
         private CarrySource _carryWeightSource = CarryLoadSpec.DefaultWeightSource;
@@ -376,6 +379,12 @@ namespace Shooter.Runtime
             set => _airJumpSpeed = value;
         }
 
+        public float JumpGraceSeconds
+        {
+            get => _jumpGraceSeconds;
+            set => _jumpGraceSeconds = value;
+        }
+
         public ProneSpec Prone
         {
             get => CreateProneSpec();
@@ -517,7 +526,8 @@ namespace Shooter.Runtime
                 _leanAngleDegrees,
                 _leanSpeed,
                 _airJumps,
-                _airJumpSpeed);
+                _airJumpSpeed,
+                _jumpGraceSeconds);
         }
 
         public ProneSpec CreateProneSpec()
@@ -562,6 +572,7 @@ namespace Shooter.Runtime
             _leanSpeed = MotorSpec.DefaultLeanSpeed;
             _airJumps = MotorSpec.DefaultAirJumps;
             _airJumpSpeed = MotorSpec.DefaultAirJumpSpeed;
+            _jumpGraceSeconds = MotorSpec.DefaultJumpGraceSeconds;
             Prone = ProneSpec.Default;
             WalkDirection = MoveDirectionScale.Uniform;
             SprintDirection = MoveDirectionScale.Uniform;

@@ -643,7 +643,7 @@ namespace Shooter.NetV2
 
             for (var i = 0; i < ticks; i++)
             {
-                _local.Sample(_match.LocalState.IsGrounded, out var move, out var yaw, out var buttons);
+                _local.Sample(_match.LocalState.IsGrounded || _match.LocalState.IsInJumpGrace, out var move, out var yaw, out var buttons);
                 _ownYaw = yaw;
                 _match.Step(NetV2Math.ToNumerics(move), yaw, buttons);
             }

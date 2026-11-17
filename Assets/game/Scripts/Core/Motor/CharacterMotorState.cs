@@ -91,6 +91,26 @@ namespace Shooter.Core
             CharacterSwimState swim,
             CharacterWallRunState wallRun,
             int airJumpsUsed)
+            : this(position, velocity, isGrounded, stance, cover, dodge, vault, prone, ladder, knockback, lean, swim, wallRun, airJumpsUsed, 0f)
+        {
+        }
+
+        public CharacterMotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            PlayerStance stance,
+            CharacterCoverState cover,
+            DodgeSnapshot dodge,
+            CharacterVaultState vault,
+            CharacterProneState prone,
+            CharacterLadderState ladder,
+            CharacterKnockbackState knockback,
+            CharacterLeanState lean,
+            CharacterSwimState swim,
+            CharacterWallRunState wallRun,
+            int airJumpsUsed,
+            float jumpGraceLeft)
         {
             Position = position;
             Velocity = velocity;
@@ -106,6 +126,7 @@ namespace Shooter.Core
             Swim = swim;
             WallRun = wallRun;
             AirJumpsUsed = airJumpsUsed;
+            JumpGraceLeft = jumpGraceLeft;
         }
 
         public Vector3 Position { get; }
@@ -140,6 +161,10 @@ namespace Shooter.Core
 
         public int AirJumpsUsed { get; }
 
+        public float JumpGraceLeft { get; }
+
+        public bool IsInJumpGrace => JumpGraceStep.IsOpen(IsGrounded, JumpGraceLeft);
+
         public bool IsSwimming => Swim.IsSwimming;
 
         // シミュレーションは構えを持たないので、構えを止めるのはこれを読む構えを動かす側。
@@ -159,10 +184,12 @@ namespace Shooter.Core
 
         public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
             && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone
-            && Lean.IsValid && Swim.IsValid && WallRun.IsValid && AirJumpsUsed >= 0;
+            && Lean.IsValid && Swim.IsValid && WallRun.IsValid && AirJumpsUsed >= 0
+            && JumpGraceLeft >= 0f && !float.IsInfinity(JumpGraceLeft);
 
         // 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
         // 待ち時間の食い違いだけでは巻き戻さない (次に始められるかが変われば、そのとき転がっているかが食い違う)。
+        // ジャンプの猶予の残り (JumpGraceLeft) も同じく、跳べたかが変われば位置が食い違うので比べない。
         public static float PositionError(CharacterMotorState predicted, CharacterMotorState authoritative)
         {
             if (predicted.Stance != authoritative.Stance)
@@ -201,7 +228,7 @@ namespace Shooter.Core
         public CharacterMotorState WithKnockback(CharacterKnockbackState knockback)
         {
             return new CharacterMotorState(
-                Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback, Lean, Swim, WallRun, AirJumpsUsed);
+                Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback, Lean, Swim, WallRun, AirJumpsUsed, JumpGraceLeft);
         }
 
         public bool Equals(CharacterMotorState other)
@@ -219,7 +246,8 @@ namespace Shooter.Core
                 && Lean.Equals(other.Lean)
                 && Swim.Equals(other.Swim)
                 && WallRun.Equals(other.WallRun)
-                && AirJumpsUsed == other.AirJumpsUsed;
+                && AirJumpsUsed == other.AirJumpsUsed
+                && JumpGraceLeft.Equals(other.JumpGraceLeft);
         }
 
         public override bool Equals(object obj)
@@ -243,7 +271,8 @@ namespace Shooter.Core
             {
                 return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ ((int)Stance << 1)
                     ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode()
-                    ^ Knockback.GetHashCode() ^ Lean.GetHashCode() ^ Swim.GetHashCode() ^ WallRun.GetHashCode() ^ (AirJumpsUsed << 4);
+                    ^ Knockback.GetHashCode() ^ Lean.GetHashCode() ^ Swim.GetHashCode() ^ WallRun.GetHashCode() ^ (AirJumpsUsed << 4)
+                    ^ JumpGraceLeft.GetHashCode();
             }
         }
 

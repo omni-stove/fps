@@ -136,7 +136,7 @@ namespace Shooter.Server.Tests
             // 持ち物の値、向き 6 個、移動の値 29 個が並ぶ。乗り越えの速さは移動の 15 番目
             var carryLoadBytes = 1 + 1 + (3 * 4) + 1;
             var knockbackBytes = 18 * 4;
-            var traversalBytes = (3 * 4) + 4 + 4 + (3 * 4) + 1 + (4 * 4);
+            var traversalBytes = (3 * 4) + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4);
             var motorStart = bytes.Length - knockbackBytes - 4 - traversalBytes - ((29 + 6 + 6 + 3 + 1 + 6) * 4) - carryLoadBytes;
             var vaultSpeed = motorStart + (14 * 4);
             Assert.That(BitConverter.ToSingle(bytes, vaultSpeed), Is.EqualTo(MotorSpec.DefaultVaultSpeed), "the offset points at the vault speed");

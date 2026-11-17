@@ -8,6 +8,12 @@ namespace Shooter.Core
     {
         public static int Step(int airJumpsUsed, bool grounded, bool jumpPressed, MotorSpec spec, out bool jumped)
         {
+            return Step(airJumpsUsed, grounded, false, jumpPressed, spec, out jumped);
+        }
+
+        // 猶予の間の押下は PlayerMotor.Step が地上のジャンプとして跳ぶので、ここでは跳ばずに数えもしない。
+        public static int Step(int airJumpsUsed, bool grounded, bool inJumpGrace, bool jumpPressed, MotorSpec spec, out bool jumped)
+        {
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
@@ -24,7 +30,7 @@ namespace Shooter.Core
                 return 0;
             }
 
-            if (!jumpPressed || airJumpsUsed >= spec.AirJumps)
+            if (inJumpGrace || !jumpPressed || airJumpsUsed >= spec.AirJumps)
             {
                 return airJumpsUsed;
             }

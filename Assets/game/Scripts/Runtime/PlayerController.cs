@@ -292,9 +292,9 @@ namespace Shooter.Runtime
             sprint = IsSprinting;
             var jumpPressed = input.JumpPressed && !wasProne;
 
-            // 空中で押したジャンプは跳ばない (PlayerMotor) ので、しゃがみも解かない。
+            // 空中で押したジャンプは地上のジャンプにならない (PlayerMotor) ので、しゃがみも解かない。猶予の間は地上のジャンプなので解く。
             var crouch = UpdateCrouch(
-                input.CrouchHeld, input.CrouchPressed, jumpPressed && _controller.isGrounded, sprint, input.CrouchDevice);
+                input.CrouchHeld, input.CrouchPressed, jumpPressed && (_controller.isGrounded || IsInJumpGrace), sprint, input.CrouchDevice);
             Tick(input.Move, sprint, crouch, jumpPressed, input.Lean, deltaSeconds);
         }
 
@@ -328,6 +328,10 @@ namespace Shooter.Runtime
 
             var wasSwimming = _swim.IsSwimming;
             UpdateSwim(deltaSeconds);
+
+            // CharacterMotorSimulation と同じく、猶予を持ち越すのはふつうの移動の道だけにする。横取り・泳ぎ・壁・回避などで宙に出たときまで残すと、歩いて縁を離れたのでないのに地上のジャンプができるため。
+            var jumpGraceLeft = _jumpGraceLeft;
+            _jumpGraceLeft = 0f;
 
             Vector3 displacement;
             var paddled = false;
@@ -365,7 +369,7 @@ namespace Shooter.Runtime
                     if (wallRun == WallRunMotion.None)
                     {
                         var carry = CarrySpeedMultiplier;
-                        StepAirJump(move, jump, yawRadians);
+                        var inJumpGrace = StepAirJump(move, jump, yawRadians, jumpGraceLeft, deltaSeconds);
                         displacement = IsProne
                             ? _motor.StepProne(
                                 move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
@@ -377,7 +381,8 @@ namespace Shooter.Runtime
                                 jump,
                                 _controller.isGrounded,
                                 deltaSeconds,
-                                carry).ToUnity();
+                                carry,
+                                inJumpGrace).ToUnity();
                     }
                 }
             }

@@ -124,7 +124,7 @@ namespace Shooter.Core.Tests
         public void LeanAirJumpSwimAndWallRunReadBack()
         {
             var motor = new NetMotorSettings(
-                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, leanSideOffset: 0.5f, leanAngleDegrees: 22f, leanSpeed: 5f, airJumps: 1, airJumpSpeed: 6f),
+                new MotorSpec(6f, 9f, 1.5f, 18f, 0.2f, 3f, leanSideOffset: 0.5f, leanAngleDegrees: 22f, leanSpeed: 5f, airJumps: 1, airJumpSpeed: 6f, jumpGraceSeconds: 0.15f),
                 new StanceGeometry(1.8f, 0.9f, 1.6f, 1.1f, 0.4f),
                 CapsuleMoverSpec.Default,
                 ProneSpec.Default,
@@ -143,6 +143,7 @@ namespace Shooter.Core.Tests
             Assert.That(read.Motor.LeanSpeed, Is.EqualTo(5f));
             Assert.That(read.Motor.AirJumps, Is.EqualTo(1));
             Assert.That(read.Motor.AirJumpSpeed, Is.EqualTo(6f));
+            Assert.That(read.Motor.JumpGraceSeconds, Is.EqualTo(0.15f));
             Assert.That(read.Swim.Speed, Is.EqualTo(2.5f));
             Assert.That(read.Swim.Buoyancy, Is.EqualTo(10f));
             Assert.That(read.Swim.BreathSeconds, Is.EqualTo(25f));
@@ -177,6 +178,7 @@ namespace Shooter.Core.Tests
 
             var defaults = NetMatchFile.Parse(bareText + ", \"motor\": {\"walkSpeed\": 5}}", "defaults.json").Motor;
             Assert.That(defaults.Motor.AirJumps, Is.EqualTo(MotorSpec.DefaultAirJumps));
+            Assert.That(defaults.Motor.JumpGraceSeconds, Is.EqualTo(MotorSpec.DefaultJumpGraceSeconds));
             Assert.That(defaults.Swim.Speed, Is.EqualTo(SwimTuning.DefaultSpeed));
             Assert.That(defaults.WallRun.Enabled, Is.EqualTo(WallRunTuning.DefaultEnabled));
             Assert.That(NetMotorSettings.Default.Swim, Is.SameAs(SwimTuning.Default));
@@ -250,6 +252,7 @@ namespace Shooter.Core.Tests
         [TestCase("{\"motor\": {\"airJumps\": -1}}", "motor.airJumps")]
         [TestCase("{\"motor\": {\"airJumps\": 1.5}}", "motor.airJumps")]
         [TestCase("{\"motor\": {\"airJumpSpeed\": -2}}", "motor.airJumpSpeed")]
+        [TestCase("{\"motor\": {\"jumpGraceSeconds\": -0.1}}", "motor.jumpGraceSeconds")]
         [TestCase("{\"motor\": {\"swimSpeed\": -1}}", "motor.swimSpeed")]
         [TestCase("{\"motor\": {\"swimBuoyancy\": -1}}", "motor.swimBuoyancy")]
         [TestCase("{\"motor\": {\"swimBreathSeconds\": 0}}", "motor.swimBreathSeconds")]

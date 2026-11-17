@@ -967,7 +967,7 @@ namespace Shooter.Runtime
 
         private void ReportShoulder()
         {
-            Debug.Log(FormatShoulderLog(_shoulder.Target), this);
+            Debug.Log(FormatShoulderLog(_chosenShoulder), this);
         }
 
         private void RefreshSwapShoulderAction()

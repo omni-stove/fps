@@ -36,6 +36,12 @@ namespace Shooter.Runtime
 
         public WeaponController Weapons => _weapons;
 
+        /// <summary>
+        /// アタッチメントの Id を受け取り、もう付けられるかを返す述語。<see cref="Attach"/> は使えない物を付けない。
+        /// null なら <see cref="ProgressionBootstrap.IsUnlocked"/> (今のプロフィールのレベル) で決める。
+        /// </summary>
+        public Func<string, bool> IsAvailable { get; set; }
+
         // 持ち武器を持ち物の山として置き、弾薬アイテムを決めた武器の予備弾を持ち物の弾薬から出し入れさせる
         public void Bind(WeaponController weapons)
         {
@@ -183,7 +189,8 @@ namespace Shooter.Runtime
                 _weapons != null && weaponId != null ? _weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
                 next => _weapons.SetAttachments(weaponId, next),
                 out var itemId,
-                out var replaced);
+                out var replaced,
+                IsAvailable ?? ProgressionBootstrap.IsUnlocked);
             Debug.Log(
                 $"{LogTag} attach owner={name} handle={handle} item={itemId ?? "-"} weapon={weaponId ?? "-"} replaced={replaced ?? "-"}"
                 + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),

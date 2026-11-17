@@ -10,6 +10,8 @@
             <!-- -register-lobby で載った専用サーバーから、版が同じで満員でないものを選んでつなぐ (起動引数でサーバーを決めていればそこへ)。 -->
             <ui:Button name="menu-quick-match" text="#menu.quickMatch" class="menu__button" />
             <ui:Button name="menu-loadout" text="#menu.loadout" class="menu__button" />
+            <!-- 成長の記録 (レベル・XP・戦績・次のアンロック) を出す。 -->
+            <ui:Button name="menu-profile" text="#menu.profile" class="menu__button" />
             <ui:Button name="menu-range" text="#menu.range" class="menu__button" />
             <!-- 射撃場を読み、終えたことがあってもチュートリアルを最初から出す。 -->
             <ui:Button name="menu-tutorial" text="#menu.tutorial" class="menu__button" />
@@ -24,5 +26,7 @@
         <ui:VisualElement name="menu-loadout-slot" class="menu__loadout-slot" style="display: none;" />
         <!-- キャンペーンのミッションと難易度を選ぶ画面の差し込み口。MainMenuScreen が CampaignSelectPanel で中身を作る。 -->
         <ui:VisualElement name="menu-campaign-slot" class="menu__campaign-slot" style="display: none;" />
+        <!-- プロフィールの差し込み口。MainMenuScreen が ProfilePanel で中身を作る。 -->
+        <ui:VisualElement name="menu-profile-slot" class="menu__profile-slot" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

@@ -45,6 +45,13 @@ namespace Shooter.Runtime
 
         public bool IsInstalled { get; private set; }
 
+        /// <summary>今のプロフィールのレベルで id (武器・アタッチメント) が使えるか (<see cref="ProgressionLedger.IsUnlocked(string, PlayerProfile)"/>)。</summary>
+        /// <exception cref="ArgumentException">id が null か空。</exception>
+        public bool IsUnlocked(string id)
+        {
+            return Ledger.IsUnlocked(id, Profile);
+        }
+
         /// <summary>入口の <see cref="GameContent.ProgressionTuning"/> か <see cref="ResourcePath"/> の JSON を読む。無いか読めなければ <see cref="ProgressionSpec.Default"/>。</summary>
         public static ProgressionSpec LoadSpec()
         {

@@ -589,7 +589,8 @@ namespace Shooter.Runtime
         }
 
         /// <summary>
-        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して状態を出し直してから <see cref="OnEnded"/> を呼ぶ。
+        /// 試合を終える。全員の操作と行動を止め、再開の入力を受け付け、<c>[Mode] ended</c> を出して状態を出し直してから <see cref="OnEnded"/> を呼び、
+        /// 操作しているプレイヤーがいれば、その勝敗・倒した数・倒れた数・自陣の得点を <see cref="CombatEvents.MatchFinished"/> で知らせる。
         /// <see cref="EndsMatchWithSession"/> が true なら <see cref="Session"/> が終わったときに呼ばれる。2 度目からは何もしない。
         /// </summary>
         protected void EndMatch(Side? winner)
@@ -614,6 +615,30 @@ namespace Shooter.Runtime
             Debug.Log(ModeLog.Ended(winner), this);
             RefreshHud();
             OnEnded(winner);
+            RaiseMatchFinished(winner);
+        }
+
+        // 操作しているプレイヤーがいない (bot だけの) 試合には「自分」の勝ち負けが無いので出さない。
+        private void RaiseMatchFinished(Side? winner)
+        {
+            if (_session == null || _localPlayer == null || !_session.HasPlayer(LocalPlayerId))
+            {
+                return;
+            }
+
+            var ownSide = _session.GetSide(LocalPlayerId);
+            var outcome = !winner.HasValue ? MatchOutcome.Draw : winner.Value == ownSide ? MatchOutcome.Won : MatchOutcome.Lost;
+            CombatEvents.RaiseMatchFinished(new MatchResult(
+                outcome,
+                _session.GetKills(LocalPlayerId),
+                _session.GetDeaths(LocalPlayerId),
+                ScoreOf(_session.GetScore(ownSide))));
+        }
+
+        // 得点は小数を含みうるが、表示と同じく切り捨てて渡す。
+        private static int ScoreOf(double score)
+        {
+            return score > 0d ? (int)Math.Min(int.MaxValue, Math.Floor(score)) : 0;
         }
 
         /// <summary>今の得点を <c>[Mode] score</c> でログに出す。キルのたびに呼ぶ。時間で点が入るモードは派生クラスが区切りで呼ぶ。</summary>

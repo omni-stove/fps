@@ -18,6 +18,7 @@ namespace Shooter.Runtime
     /// <item><see cref="Killed"/>: 倒れるたび。オフラインでは <see cref="Damageable"/> が倒れたときに、<see cref="Attribute"/> で決めた倒した者と武器で出す。</item>
     /// <item><see cref="Exploded"/>: 爆発するたび。オフラインでは <see cref="ThrownGrenade.Explode"/>、ネット対戦では <c>Shooter.Net.NetCombatFeed</c> が全員に。</item>
     /// <item><see cref="Landed"/>: この画面で操作しているキャラが着地するたび。オフラインでは <see cref="PlayerController"/>、ネット対戦では持ち主の <c>Shooter.Net.NetworkPlayerMotor</c>。</item>
+    /// <item><see cref="MatchFinished"/>: 試合が終わったとき、1 試合に 1 回。オフラインでは <see cref="ModeRunnerBase"/>・<see cref="MatchRunner"/>・<see cref="DominationRunner"/>。</item>
     /// </list>
     /// ネット対戦では、撃った本人の ShotFired は本人のクライアント (<c>Shooter.Net.NetPlayer</c>) が出し、それ以外はサーバーから
     /// <c>Shooter.Net.NetCombatFeed</c> が届けて各クライアントで出す (Impact の <see cref="ImpactInfo.Collider"/> は見つからなければ null で、
@@ -58,6 +59,9 @@ namespace Shooter.Runtime
 
         // 戦闘の結果 (体力・判断) は BossController が先に変え終えてから流す。演出の有無で戦いが変わらないように。
         public static event Action<BossPhaseChangedInfo> BossPhaseChanged;
+
+        /// <summary>試合が終わったとき。この画面のプレイヤーの勝敗・倒した数・倒れた数・自陣の得点を渡す。</summary>
+        public static event Action<MatchResult> MatchFinished;
 
         /// <summary>
         /// 今の帰属 (<see cref="Attribute"/> の中なら倒した者と武器)。外なら null。
@@ -174,6 +178,11 @@ namespace Shooter.Runtime
             Invoke(BossPhaseChanged, info);
         }
 
+        public static void RaiseMatchFinished(MatchResult result)
+        {
+            Invoke(MatchFinished, result);
+        }
+
         /// <summary>購読をすべて外し、帰属も消す。Play の開始時と、テストの後片付けで呼ぶ。</summary>
         public static void ClearSubscribers()
         {
@@ -186,6 +195,7 @@ namespace Shooter.Runtime
             Exploded = null;
             Landed = null;
             BossPhaseChanged = null;
+            MatchFinished = null;
             _attribution = null;
         }
 

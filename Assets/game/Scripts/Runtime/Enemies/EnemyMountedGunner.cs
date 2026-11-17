@@ -211,11 +211,12 @@ namespace Fps.Runtime
                 && distance > 1e-3f
                 && Hitscan.HasLineOfSight(muzzle, target, distance + 0.01f, gun.Vehicle.transform)
                 && !EnemySenses.IsVisionBlocked(muzzle, aimPoint);
-            var reachable = hasTarget && gun.CanAimAt(aimPoint);
-            var pointing = reachable && gun.AimOffsetDegrees(aimPoint) <= _attachedBrain.Spec.FireToleranceDegrees;
-            var order = _behavior.Man(deltaSeconds, visible, reachable, pointing);
+            var canAim = hasTarget && gun.CanAimAt(aimPoint);
+            var pointing = canAim && gun.AimOffsetDegrees(aimPoint) <= _attachedBrain.Spec.FireToleranceDegrees;
+            // 目標がいないのは射角の外ではないので、降りる理由が OutOfArc にならないよう届くものとして渡す。
+            var order = _behavior.Man(deltaSeconds, visible, !hasTarget || canAim, pointing);
 
-            var aim = reachable ? (aimPoint - mount.transform.position).normalized : Vector3.zero;
+            var aim = canAim ?(aimPoint - mount.transform.position).normalized : Vector3.zero;
             _agent.Seat.SubmitInput(_agent, new VehicleSeatInput(Vector2.zero, 0f, false, order.Fire, false, false, muzzle, aim), deltaSeconds);
 
             if (order.Leave.HasValue && _agent.TryLeaveVehicle())

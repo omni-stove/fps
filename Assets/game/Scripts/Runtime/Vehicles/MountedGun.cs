@@ -119,9 +119,7 @@ namespace Fps.Runtime
 
             if (_shield == null)
             {
-                _shield = _shieldPrefab != null
-                    ? BulletShield.Create(Mount.transform, _shieldPrefab)
-                    : BulletShield.CreatePlaceholder(Mount.transform, PlaceholderShieldLocalPosition, PlaceholderShieldLocalScale);
+                _shield = CreateShield();
             }
 
             if (!_active.Contains(this))
@@ -130,6 +128,25 @@ namespace Fps.Runtime
             }
 
             return true;
+        }
+
+        // 使えないプレハブで盾の無い銃座にすると前からの弾が銃手に通るので、誤りは出したうえで仮の板で続ける。
+        private BulletShield CreateShield()
+        {
+            if (_shieldPrefab == null)
+            {
+                return BulletShield.CreatePlaceholder(Mount.transform, PlaceholderShieldLocalPosition, PlaceholderShieldLocalScale);
+            }
+
+            try
+            {
+                return BulletShield.Create(Mount.transform, _shieldPrefab);
+            }
+            catch (ArgumentException e)
+            {
+                Debug.LogError(MountedGunLog.Invalid(name, e.Message), this);
+                return BulletShield.CreatePlaceholder(Mount.transform, PlaceholderShieldLocalPosition, PlaceholderShieldLocalScale);
+            }
         }
 
         public bool CanAimAt(Vector3 worldPoint)

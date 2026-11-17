@@ -79,7 +79,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("HoldBreath")]
         [TestCase("SwitchGrenade")]
         [TestCase("Inventory")]
-        [TestCase("UseStreak")]
+        [TestCase("Previous")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
@@ -93,9 +93,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void UseStreakIsOn4()
+        public void UseStreakIsOn4AndTheRightOfTheDpad()
         {
             Assert.That(_bindings.PathOf(new RebindSlot("UseStreak", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Keyboard>/4"));
+            Assert.That(_bindings.PathOf(new RebindSlot("UseStreak", InputDeviceKind.Gamepad)), Is.EqualTo("<Gamepad>/dpad/right"));
+            Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot("UseStreak", InputDeviceKind.Gamepad)));
+        }
+
+        [Test]
+        public void NextIsOnTheLeftOfTheDpad()
+        {
+            Assert.That(_bindings.PathOf(new RebindSlot("Next", InputDeviceKind.Gamepad)), Is.EqualTo("<Gamepad>/dpad/left"));
         }
 
         [Test]

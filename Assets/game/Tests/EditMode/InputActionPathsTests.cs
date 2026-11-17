@@ -53,6 +53,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.Dodge, "<Keyboard>/leftAlt", "<Gamepad>/dpad/down")]
         [TestCase(InputActionPaths.Grenade, "<Keyboard>/g", "<Gamepad>/leftShoulder")]
         [TestCase(InputActionPaths.Ping, "<Mouse>/middleButton", "<Gamepad>/dpad/up")]
+        [TestCase(InputActionPaths.UseStreak, "<Keyboard>/4", "<Gamepad>/dpad/right")]
         public void NewButtonsAreBoundToOneKeyAndOneGamepadControlUsedByNoOtherPlayerAction(string path, string key, string gamepad)
         {
             var action = Find(path);
@@ -98,7 +99,6 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.SwitchAmmoType, "<Keyboard>/n")]
         [TestCase(InputActionPaths.CycleMagnification, "<Keyboard>/h")]
         [TestCase(InputActionPaths.HoldBreath, "<Keyboard>/leftCtrl")]
-        [TestCase(InputActionPaths.UseStreak, "<Keyboard>/4")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);
@@ -168,17 +168,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void NextAndPreviousKeepTheirKeysAndAddTheScrollWheel()
+        public void NextAndPreviousKeepTheirKeysAndAddTheScrollWheelAndOnlyNextIsOnTheGamepad()
         {
             var next = Find(InputActionPaths.Next);
             var previous = Find(InputActionPaths.Previous);
 
             Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Mouse>/scroll/up"));
             Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/2"));
-            Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/right"));
+            Assert.That(next.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/left" && b.groups == "Gamepad"));
+            Assert.That(next.bindings, Has.None.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/right"));
             Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Mouse>/scroll/down"));
             Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/1"));
-            Assert.That(previous.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/dpad/left"));
+            Assert.That(previous.bindings, Has.None.Matches<InputBinding>(b => b.groups != null && b.groups.Contains("Gamepad")));
         }
     }
 }

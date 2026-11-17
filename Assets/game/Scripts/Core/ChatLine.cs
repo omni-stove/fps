@@ -3,18 +3,12 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    /// <summary>チャットの 1 行。送った人は参加者の Id で持ち、名前に引くのは UI (<see cref="IParticipants"/>)。</summary>
+    // 送った人を名前でなく参加者の Id で持つのは、名前に引くのを UI (IParticipants) に任せるため。
     public readonly struct ChatLine : IEquatable<ChatLine>
     {
         // default ではコンストラクタを通らず null になるので、読むときに空文字へ寄せる。
         private readonly string _text;
 
-        /// <param name="senderId">送った参加者の Id。</param>
-        /// <param name="channel">送った先のチャンネル。</param>
-        /// <param name="text">本文。</param>
-        /// <param name="sentAtSeconds">送った時刻 (秒)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">channel が定義に無い値、sentAtSeconds が負か有限でない。</exception>
         public ChatLine(int senderId, ChatChannel channel, string text, double sentAtSeconds)
         {
             if (text == null)

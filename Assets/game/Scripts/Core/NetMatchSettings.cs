@@ -140,25 +140,18 @@ namespace Shooter.Core
 
         public int MaxPlayers { get; }
 
-        /// <summary>次の試合のマップの候補 (マップ Id の並び)。空なら今のマップのまま続ける。</summary>
         public IReadOnlyList<string> MapPool { get; }
 
-        /// <summary>次のマップの投票を受け付ける秒数。0 なら投票しない。</summary>
         public float MapVoteSeconds { get; }
 
-        /// <summary>チームの人数の差の上限。0 ならチームを並べ直さない。</summary>
         public int MaxTeamSizeDifference { get; }
 
-        /// <summary>ロビーに載せず、参加コード (<see cref="JoinCode"/>) で入る試合か。</summary>
         public bool PrivateMatch { get; }
 
-        /// <summary>参加コード。無ければ null。</summary>
         public string JoinCode { get; }
 
-        /// <summary>1 人がチャットを続けて送れる最短の間隔 (秒)。0 なら間を空けなくてよい。</summary>
         public float ChatIntervalSeconds { get; }
 
-        /// <summary>チャットの 1 行の文字数の上限。</summary>
         public int MaxChatLength { get; }
 
         private static IReadOnlyList<string> CopyMapPool(IReadOnlyList<string> mapPool)

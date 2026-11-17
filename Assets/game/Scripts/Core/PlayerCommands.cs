@@ -21,19 +21,14 @@ namespace Shooter.Core
 
         UseStreak = 1 << 6,
 
-        /// <summary>左へ身を乗り出す。</summary>
         LeanLeft = 1 << 7,
 
-        /// <summary>右へ身を乗り出す。</summary>
         LeanRight = 1 << 8,
 
-        /// <summary>全員に向けたチャットを開く。</summary>
         Chat = 1 << 9,
 
-        /// <summary>チームに向けたチャットを開く。</summary>
         TeamChat = 1 << 10,
 
-        /// <summary>押している間だけ声を送る。</summary>
         PushToTalk = 1 << 11,
     }
 }

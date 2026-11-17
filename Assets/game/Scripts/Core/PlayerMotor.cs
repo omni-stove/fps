@@ -119,20 +119,7 @@ namespace Shooter.Core
             return new Vector3(horizontal.X * deltaSeconds, verticalDisplacement, horizontal.Y * deltaSeconds);
         }
 
-        /// <summary>
-        /// <see cref="Step"/> の前に呼ぶ。地上のジャンプは <see cref="Step"/> の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、
-        /// 回数を受け取って返す別の口にする。
-        /// </summary>
-        /// <remarks>
-        /// 跳んだら縦の速さを <see cref="MotorSpec.AirJumpSpeed"/> にし、横の速さはその大きさのまま入力の向きへ回す
-        /// (入力が無ければ今の向きのまま)。続く <see cref="Step"/> は空中なので、そこから <see cref="MotorSpec.AirControl"/> で寄せる。
-        /// </remarks>
-        /// <param name="airJumpsUsed">着地してから空中で跳んだ回数。0 以上。</param>
-        /// <param name="jumpPressed">今フレームにジャンプが押されたか。</param>
-        /// <param name="isGrounded">接地しているか。</param>
-        /// <param name="moveInput">移動入力 (<see cref="Step"/> と同じ)。</param>
-        /// <param name="yawRadians">向き (<see cref="Step"/> と同じ)。</param>
-        /// <returns>この後の空中で跳んだ回数。接地中は 0。</returns>
+        // 地上のジャンプは Step の中で跳ぶが、空中で跳ぶかは跳んだ回数を持つ呼び手しか決められないため、回数を受け取って返す別の口にする。
         public int StepAirJump(int airJumpsUsed, bool jumpPressed, bool isGrounded, Vector2 moveInput, float yawRadians)
         {
             if (airJumpsUsed < 0)
@@ -161,11 +148,7 @@ namespace Shooter.Core
             return used;
         }
 
-        /// <summary>
-        /// 速度を入れて <see cref="Jumped"/> を知らせる。壁から跳ぶ速さは <see cref="WallRunStep"/> が決めるが、
-        /// 跳んだ知らせは地上と空中のジャンプと同じくこのクラスの 1 か所から出すため。
-        /// </summary>
-        /// <param name="velocity">跳んだ速度 (m/s)。各成分が有限値。</param>
+        // 壁から跳ぶ速さは WallRunStep が決めるが、跳んだ知らせ Jumped は地上と空中のジャンプと同じくこのクラスの 1 か所から出すため、速度を受け取る口を置く。
         public void JumpWith(Vector3 velocity)
         {
             SetVelocity(velocity);

@@ -15,7 +15,7 @@ namespace Fps.Runtime
         [SerializeField, Tooltip("ログに出す識別子。空なら Damageable の Id (無ければ GameObject の名前)")]
         private string _id = string.Empty;
 
-        [Header("Tuning")]
+        [Header("Tuning (プレイヤーと敵は SuppressionActionInstaller が Tuning/suppression.json の値で上書きする)")]
         [SerializeField, Min(0.01f), Tooltip("弾の線がこの距離 (m) より近くを通ったらニアミス")]
         private float _nearMissRadius = SuppressionSpec.DefaultNearMissRadius;
 

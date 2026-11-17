@@ -25,6 +25,7 @@ namespace Fps.Runtime
         // 往復 1 回分 (幅の 4 倍) の中で進んだ道のり。端での折り返しを、1 フレームで大きく進んでも同じ式で求められるように持つ。
         private float _travelled;
         private bool _initialized;
+        private BossDefinition _appliedDefinition;
 
         public float Speed => _speed;
 
@@ -65,6 +66,7 @@ namespace Fps.Runtime
             }
 
             EnsureInitialized();
+            ApplyDefinition();
             if (_halfWidth <= 0f || (_self != null && _self.IsDead))
             {
                 return;
@@ -78,6 +80,32 @@ namespace Fps.Runtime
         private void Awake()
         {
             EnsureInitialized();
+            ApplyDefinition();
+        }
+
+        // BossController の定義は実行中に入れ替えられるので、入っている定義が変わったときに読み直す。
+        // 定義が空に戻っても、読んだ値は残す (Inspector の値に戻す元を持たない)。
+        private void ApplyDefinition()
+        {
+            var definition = _boss != null ? _boss.Definition : null;
+            if (definition == null || ReferenceEquals(definition, _appliedDefinition))
+            {
+                return;
+            }
+
+            _appliedDefinition = definition;
+            try
+            {
+                definition.ValidateStrafe();
+            }
+            catch (InvalidOperationException e)
+            {
+                Debug.LogError($"{BossController.LogTag} {e.Message}。往復は Inspector の値のままにします。", this);
+                return;
+            }
+
+            _speed = definition.StrafeSpeed;
+            _halfWidth = definition.StrafeHalfWidth;
         }
 
         private void Update()

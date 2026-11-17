@@ -1,0 +1,7 @@
+{
+  "spectate.target": "{0} を観戦中",
+  "spectate.noTarget": "観戦できる味方がいない",
+  "spectate.unknownTarget": "プレイヤー {0}",
+  "spectate.controls": "[{0}] 前の味方   [{1}] 次の味方",
+  "spectate.respawn": "復活まで {0} 秒"
+}

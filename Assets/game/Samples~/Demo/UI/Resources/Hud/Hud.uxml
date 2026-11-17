@@ -117,6 +117,8 @@
                 <ui:VisualElement name="kill-cam-progress" class="kill-cam__progress-fill" picking-mode="Ignore" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <!-- ネット対戦で味方を観戦している間の、見ている味方・前と次へ替える操作・復活までの秒数。SpectateView を付けたときだけ、GameSignals.Spectate に値がある間に行 (spectate__row) を入れて出す。 -->
+        <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />
         <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->

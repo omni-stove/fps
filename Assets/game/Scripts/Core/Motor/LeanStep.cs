@@ -24,7 +24,7 @@ namespace Shooter.Core
             var held = IsAllowed(state, input, swim) ? input.Lean : 0;
             var position = body.Position;
             var heldRoom = held == 0 ? 0f : Room(body, position, input.Yaw, held, spec);
-            var next = Toward(state.Lean.Amount,held * heldRoom, spec, tickSeconds);
+            var next = Toward(state.Lean.Amount, held * heldRoom, spec, tickSeconds);
             var leaning = Math.Sign(next);
 
             // 戻る途中でも、近づいた壁へ体を入れたまま戻さない

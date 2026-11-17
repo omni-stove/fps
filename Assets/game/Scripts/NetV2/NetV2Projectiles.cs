@@ -4,10 +4,6 @@ using Shooter.Runtime;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// ネット対戦の飛ぶ弾の見た目。オフラインと同じ <see cref="ProjectileBody"/> を見た目だけで出し、見た目と音は武器の定義
-    /// (<see cref="WeaponDefinition.Projectile"/>) から、ロードアウト・一覧の順に武器の Id で引く。
-    /// </summary>
     internal sealed class NetV2Projectiles : IClientProjectileViews
     {
         private readonly NetV2Weapons _weapons;

@@ -110,16 +110,12 @@ namespace Shooter.Server
             return moved < _spec.StuckProgress;
         }
 
-        /// <summary>目 eye から target への視線を、世界の当たりのほかに遮る物 (煙など) があれば true。</summary>
         public bool IsSightBlocked(Vector3 eye, Vector3 target)
         {
             return _sightBlocker.Blocks(eye, target);
         }
 
-        /// <summary>
-        /// 撃つ向き direction と、目 eye から lookAt への向きの水平の差が <see cref="EnemySpec.FireToleranceDegrees"/> 以下なら true
-        /// (オフラインの EnemyAgent.IsFacing と同じ)。lookAt が無いか真上・真下なら true。
-        /// </summary>
+        // オフラインの EnemyAgent.IsFacing と同じ見方にする。
         public bool IsFacing(Vector3 eye, Vector3 direction, Vector3? lookAt)
         {
             var tolerance = Brain.Spec.FireToleranceDegrees;
@@ -140,10 +136,6 @@ namespace Shooter.Server
             return degrees <= tolerance;
         }
 
-        /// <summary>
-        /// direction に、Attack に入ってからの発数の散らばり (<see cref="EnemyBrain.NextShotSpreadDegrees"/>) と
-        /// lookAt までの距離の散らばり (<see cref="EnemySpec.RangeSpreadDegreesAt"/>) を足した向き (長さ 1)。散らばりが 0 なら乱数を引かない。
-        /// </summary>
         public Vector3 Scatter(Vector3 eye, Vector3 direction, Vector3? lookAt)
         {
             var range = lookAt.HasValue ? Brain.Spec.RangeSpreadDegreesAt(Vector3.Distance(eye, lookAt.Value)) : 0f;

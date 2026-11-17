@@ -7,9 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// GunGameLadderDefinition の制限時間・リスポーンの秒数の既定と、不正な値でモードを作れないことを確かめる。
-    /// </summary>
     public sealed class GunGameLadderDefinitionTests
     {
         private GunGameLadderDefinition _definition;

@@ -215,7 +215,6 @@ namespace Shooter.Core.Tests
 
         private static ModeSession Create() => FreeForAllMode.Create(_timeLimit, _scoreLimit, _respawn);
 
-        /// <summary>count 人を参加順に陣営 0, 1, ... へ入れて始める。プレイヤーの ID は陣営の ID と同じ。</summary>
         private static ModeSession Started(int count)
         {
             var session = Create();
@@ -228,7 +227,6 @@ namespace Shooter.Core.Tests
             return session;
         }
 
-        /// <summary>killer が victim を times 回倒す。倒すたびに戻るまで時間を進める。</summary>
         private static void KillTimes(ModeSession session, int killer, int victim, int times)
         {
             for (var i = 0; i < times; i++)

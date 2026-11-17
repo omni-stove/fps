@@ -9,7 +9,6 @@ using LadderComponent = Shooter.Runtime.Traversal.Ladder;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場に置くはしごの台 (<see cref="LadderRangeFixture"/>) と、その smoke の手順 (<see cref="LadderSmokeStep"/>) が見つかり、決まりどおりに置かれること。</summary>
     public sealed class LadderRangeFixtureTests
     {
         private Scene _scene;

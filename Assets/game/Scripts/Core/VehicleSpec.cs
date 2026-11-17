@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 乗り物 1 台の設定。耐久・部位・座席の並び・武器・乗り込める距離・追うカメラの置き方を持つ。生成時に値を検査し、以後は変わらない。
-    /// 座席の番号は <see cref="Seats"/> の添字で、シーンの座席の部品の並びと対応させる。
-    /// </summary>
+    // 座席の番号は Seats の添字で、シーンの座席の部品の並びと対応させる。
     public sealed class VehicleSpec
     {
         public const string DefaultId = "vehicle";
@@ -15,28 +12,16 @@ namespace Shooter.Core
 
         public const int DefaultMaxHealth = 1000;
 
-        /// <summary>座席の乗る位置からこの距離 (m) までなら乗り込める。</summary>
         public const float DefaultEnterRange = 2.5f;
 
-        /// <summary>追うカメラを、注視点からどれだけ離すか (m)。</summary>
         public const float DefaultChaseDistance = 6f;
 
-        /// <summary>追うカメラの注視点を、乗り物の原点からどれだけ上に置くか (m)。</summary>
         public const float DefaultChaseHeight = 2f;
 
         private readonly VehicleSeatSpec[] _seats;
         private readonly VehicleWeaponSpec[] _weapons;
         private readonly VehiclePartSpec[] _parts;
 
-        /// <param name="id">乗り物の Id。空でない。</param>
-        /// <param name="maxHealth">耐久。1 以上。</param>
-        /// <param name="seats">座席の並び。1 つ以上で null を含まず、運転席は 1 つまで。</param>
-        /// <param name="weapons">武器。null なら無し。null を含まず、操作する座席は seats の範囲。</param>
-        /// <param name="parts">部位。null なら無し。null を含まず、Id は重ならない。</param>
-        /// <param name="enterRange">乗り込める距離 (m)。0 より大きい有限値。</param>
-        /// <param name="chaseDistance">追うカメラの注視点からの距離 (m)。0 以上の有限値。</param>
-        /// <param name="chaseHeight">追うカメラの注視点の高さ (m)。有限値。</param>
-        /// <param name="durability">傷み方と爆発。null なら <see cref="VehicleDurabilitySpec.Default"/>。</param>
         public VehicleSpec(
             string id,
             int maxHealth,
@@ -106,7 +91,6 @@ namespace Shooter.Core
 
         public IReadOnlyList<VehiclePartSpec> Parts => _parts;
 
-        /// <summary>運転席の番号。運転席が無ければ -1 (固定銃座など)。</summary>
         public int DriverSeatIndex { get; }
 
         public float EnterRange { get; }
@@ -117,7 +101,6 @@ namespace Shooter.Core
 
         public VehicleDurabilitySpec Durability { get; }
 
-        /// <summary>seatIndex の座席が操作する武器の番号 (<see cref="Weapons"/> の添字) を並びの順に返す。</summary>
         public IReadOnlyList<int> WeaponsOfSeat(int seatIndex)
         {
             if (seatIndex < 0 || seatIndex >= _seats.Length)
@@ -148,7 +131,6 @@ namespace Shooter.Core
             return _seats[seatIndex].CanFireOwnWeapon ? VehicleSeatFiring.OwnWeapon : VehicleSeatFiring.None;
         }
 
-        /// <summary>id の部位。無ければ null。</summary>
         public VehiclePartSpec FindPart(string id)
         {
             foreach (var part in _parts)

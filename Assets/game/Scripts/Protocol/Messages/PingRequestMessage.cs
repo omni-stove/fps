@@ -2,7 +2,6 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>持ち主が向いた先に印を付ける要求。何に当たったか・付けてよいかはサーバーが決める。</summary>
     public sealed class PingRequestMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -11,7 +10,6 @@ namespace Shooter.Protocol
 
         public byte Version => CurrentVersion;
 
-        /// <summary>視点から見た向き。長さはサーバーが 1 にそろえる。</summary>
         public Vector3 Direction { get; set; }
 
         public void Write(MessageWriter writer)

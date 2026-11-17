@@ -10,11 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 崖のぼり (<see cref="PlayerController.MantleRule"/>)。Jump で、乗り越えより高い段の縁によじ登って上に立つこと、
-    /// 上が狭い・頭上が塞がっている段は登らないこと、低い障害物は今までどおり乗り越えること。
-    /// Edit Mode でも Physics の Raycast と重なり判定はコライダーに当たるので、置いたら SyncTransforms してから Tick する。
-    /// </summary>
+    // Edit Mode でも Physics の Raycast と重なり判定はコライダーに当たるので、置いたら SyncTransforms してから Tick する。
     public sealed class PlayerControllerMantleTests
     {
         private const float _tolerance = 1e-4f;
@@ -24,7 +20,6 @@ namespace Shooter.Tests.EditMode
         private const float _height = 2f;
         private const float _radius = 0.5f;
 
-        // 正面 (+Z) の段の、体の中心から手前の面までの距離。
         private const float _ledgeNearZ = 0.8f;
         private const float _ledgeHeight = 1.8f;
 
@@ -125,7 +120,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(FeetY(), Is.EqualTo(_ledgeHeight).Within(0.15f), "standing on the top");
             Assert.That(_body.transform.position.z - _radius, Is.GreaterThan(_ledgeNearZ), "the whole body is past the edge");
 
-            // 縁の上で落ちずに立っていられる。
             for (var i = 0; i < 10; i++)
             {
                 _player.Tick(Vector2.zero, false, false, false, _step);
@@ -338,7 +332,6 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<System.ArgumentOutOfRangeException>(() => _player.MantleRule = (Mantle)99);
         }
 
-        // 正面 (+Z) の、体の中心から _ledgeNearZ 先に、奥行き depth・高さ height の箱を床の上に置く。
         private void PlaceBox(float height, float depth)
         {
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);

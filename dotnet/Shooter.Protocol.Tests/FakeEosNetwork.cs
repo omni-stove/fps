@@ -4,21 +4,15 @@ using NUnit.Framework;
 
 namespace Shooter.Protocol.Tests
 {
-    /// <summary>
-    /// EOS の P2P を真似るメモリ上のネットワーク。受け入れの手順 (両方が AcceptConnection して開く)・閉じた相手への通知・
-    /// 接続が無い相手へは送れないことだけを真似る。パケットは送ったその場で相手の受け取りの列に入る。
-    /// サーバーを別のスレッドで動かすテストでも使うので、どの呼び出しもネットワーク全体を 1 つの鍵で守る。
-    /// </summary>
+    // サーバーを別のスレッドで動かすテストでも使うので、どの呼び出しもネットワーク全体を 1 つの鍵で守る。
     internal sealed class FakeEosNetwork
     {
         private readonly Dictionary<string, FakeEosP2P> _users = new Dictionary<string, FakeEosP2P>(StringComparer.Ordinal);
 
         public long Now { get; set; }
 
-        /// <summary>true の間、落ちてよいパケットを捨てる。</summary>
         public bool DropUnreliable { get; set; }
 
-        /// <summary>true の間、どのパケットも捨てる (相手が黙ったように見せる)。</summary>
         public bool DropAll { get; set; }
 
         public FakeEosP2P Join(string userId)
@@ -36,7 +30,6 @@ namespace Shooter.Protocol.Tests
             return _users.TryGetValue(userId, out p2p) && p2p.Running;
         }
 
-        /// <summary>知らせの無いまま、2 人の間の接続を閉じる (経路が切れた)。</summary>
         public void Sever(string a, string b)
         {
             lock (this)
@@ -76,13 +69,10 @@ namespace Shooter.Protocol.Tests
 
         public string UserId { get; }
 
-        /// <summary>null でなければ TryBegin がこの理由で失敗する。</summary>
         public string BeginProblem { get; set; }
 
-        /// <summary>null でなければログインがこの理由で失敗する。</summary>
         public string SignInProblem { get; set; }
 
-        /// <summary>false ならログインの結果をいつまでも返さない。</summary>
         public bool SignsIn { get; set; } = true;
 
         public bool Running { get; private set; }
@@ -224,7 +214,6 @@ namespace Shooter.Protocol.Tests
             }
         }
 
-        /// <summary>知らない相手からのパケットを入れる。</summary>
         private void InjectLocked(string from, byte channel, byte[] data)
         {
             _inbox.Enqueue((from, channel, data));

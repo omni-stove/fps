@@ -4,10 +4,8 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// エディタではコミットした server-data/maps を直接読み、ビルドでは StreamingAssets に入れた写しを読む。
-    /// 写しをコミットしないのは、書き出しのたびに 2 か所を揃える手間と食い違いをなくすため (写しはビルドのときだけ作る)。
-    /// </summary>
+    // エディタではコミットした server-data/maps を直接読み、ビルドでは StreamingAssets に入れた写しを読む。
+    // 写しをコミットしないのは、書き出しのたびに 2 か所を揃える手間と食い違いをなくすため (写しはビルドのときだけ作る)。
     public static class MapCollisionFiles
     {
         public const string ServerDataFolder = "server-data/maps";

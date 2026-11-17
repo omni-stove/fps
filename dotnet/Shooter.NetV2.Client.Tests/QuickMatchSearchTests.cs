@@ -31,7 +31,6 @@ namespace Shooter.NetV2.Tests
             _backend.Dispose();
         }
 
-        /// <summary>既定の間隔 (5 秒) と期限 (30 秒) で探し始める。</summary>
         private QuickMatchSearch Begin()
         {
             var search = new QuickMatchSearch(_backend, _version, _log.Add);
@@ -243,6 +242,12 @@ namespace Shooter.NetV2.Tests
             private Action<IReadOnlyList<LobbyInfo>, string> _search;
 
             public event Action<string> LoggedOut;
+
+            public event Action<string, string> MemberAttributesChanged
+            {
+                add { }
+                remove { }
+            }
 
             public int Ticks { get; private set; }
 

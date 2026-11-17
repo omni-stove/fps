@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// Raycast → Hitbox → DamageCalculator → Damageable の流れと、視線判定・知覚の組み立てを確かめる。
-    /// Edit Mode でも Physics.Raycast はコライダーに当たるので、生成後に SyncTransforms してから撃つ。
-    /// </summary>
+    // Edit Mode でも Physics.Raycast はコライダーに当たるので、生成後に SyncTransforms してから撃つ。
     public sealed class HitscanTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1.6f, 0f);

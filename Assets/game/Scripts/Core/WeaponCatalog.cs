@@ -3,20 +3,14 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 武器の一覧。<see cref="WeaponSpec.Id"/> で引ける。生成後は変わらない。
-    /// </summary>
     public sealed class WeaponCatalog
     {
         private readonly Dictionary<string, WeaponSpec> _byId;
 
-        /// <summary>定義順の武器。</summary>
         public IReadOnlyList<WeaponSpec> All { get; }
 
-        /// <summary>武器の数。1 以上。</summary>
         public int Count => All.Count;
 
-        /// <param name="specs">武器の定義。null 要素・Id の重複・空は不可。</param>
         public WeaponCatalog(IEnumerable<WeaponSpec> specs)
         {
             if (specs == null)
@@ -51,7 +45,6 @@ namespace Shooter.Core
             All = list.AsReadOnly();
         }
 
-        /// <summary>id の武器があれば true と武器を返す。無い・null なら false と null。</summary>
         public bool TryGet(string id, out WeaponSpec spec)
         {
             if (id == null)
@@ -63,7 +56,6 @@ namespace Shooter.Core
             return _byId.TryGetValue(id, out spec);
         }
 
-        /// <summary>id の武器を返す。無ければ <see cref="KeyNotFoundException"/>。</summary>
         public WeaponSpec Get(string id)
         {
             if (id == null)
@@ -79,7 +71,6 @@ namespace Shooter.Core
             return spec;
         }
 
-        /// <summary>id の武器があれば true。null なら false。</summary>
         public bool Contains(string id)
         {
             return id != null && _byId.ContainsKey(id);

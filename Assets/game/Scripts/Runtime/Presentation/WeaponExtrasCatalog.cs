@@ -4,19 +4,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 武器ごとの薬莢と空撃ちの素材 (薬莢のプレハブ・薬莢の落下音・空撃ちの音) と、地面に置いたときの見た目を武器の Id (<see cref="Shooter.Core.WeaponSpec.Id"/>) で引く。
-    /// <see cref="ShellEjector"/>・<see cref="DryFireSound"/>・<see cref="Pickup"/> (武器の見た目) が <see cref="Load"/> で読む。
-    /// 中身は Shooter.Editor.WeaponExtrasAssetStep が生成した仮の素材で、本物の素材に替えるときはこのアセットの参照を差し替える。
-    /// 置き場所と枠の扱いは <see cref="PresentationCatalog"/> の規約に従う (どの枠も空でよく、空の枠の演出だけを出さない)。
-    /// </summary>
     [CreateAssetMenu(fileName = "WeaponExtrasCatalog", menuName = "Shooter/Weapon Extras Catalog")]
     public sealed class WeaponExtrasCatalog : ScriptableObject
     {
-        /// <summary><see cref="PresentationCatalog.CatalogResourcePath"/> に渡す名前。</summary>
         public const string CatalogName = "WeaponExtras";
 
-        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/WeaponExtrasCatalog.asset)。</summary>
         public static readonly string ResourcePath = PresentationCatalog.CatalogResourcePath(CatalogName);
 
         private static bool _warnedMissing;
@@ -24,20 +16,15 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("武器ごとの薬莢と空撃ちの素材。Id は重複させない")]
         private List<WeaponExtrasAssets> _weapons = new List<WeaponExtrasAssets>();
 
-        /// <summary>定義順の武器ごとの素材。中身を書き換えるときは <see cref="SetWeapons"/> を使う。</summary>
         public IReadOnlyList<WeaponExtrasAssets> Weapons => _weapons ??= new List<WeaponExtrasAssets>();
 
-        /// <summary>入口 (<see cref="GameContent"/>) のもの、無ければ Resources の <see cref="ResourcePath"/> から読む。どちらも無ければ null。</summary>
         public static WeaponExtrasCatalog Load()
         {
             var fromContent = GameContent.Pick(c => c.WeaponExtras);
             return fromContent != null ? fromContent : Resources.Load<WeaponExtrasCatalog>(ResourcePath);
         }
 
-        /// <summary>
-        /// カタログが無いことを 1 度だけ警告する。<see cref="ShellEjector"/> と <see cref="DryFireSound"/> で共有し、
-        /// どちらが先に気づいても 1 回だけ出す。
-        /// </summary>
+        // ShellEjector と DryFireSound のどちらが先にカタログが無いことに気づいても警告を 1 回だけ出すよう、ここで共有する。
         public static void WarnMissingOnce(UnityEngine.Object context)
         {
             if (_warnedMissing)
@@ -52,16 +39,11 @@ namespace Shooter.Runtime
                 context);
         }
 
-        /// <summary>武器ごとの素材をまとめて差し替える。null は空にする。渡した列は複製して持つ。</summary>
         public void SetWeapons(IEnumerable<WeaponExtrasAssets> weapons)
         {
             _weapons = weapons == null ? new List<WeaponExtrasAssets>() : new List<WeaponExtrasAssets>(weapons);
         }
 
-        /// <summary>
-        /// Id が weaponId の武器の素材を探す。Id は大文字小文字を区別して比べる。
-        /// 無い・weaponId が null なら false と null を返す。
-        /// </summary>
         public bool TryGetWeapon(string weaponId, out WeaponExtrasAssets assets)
         {
             assets = null;
@@ -82,12 +64,7 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// 武器が 1 つ以上あり、どの武器も Id が空でなく重複せず、仮素材が必ず埋める枠 (空撃ちの音と、薬莢を出す武器の落下音) が埋まっていることを確かめる。
-        /// 薬莢のプレハブは空でよい (光線や噴射のように薬莢を出さない武器がある)。
-        /// 足りないものはすべて並べて 1 つの例外にする。
-        /// </summary>
-        /// <exception cref="PresentationCatalogException">どれかが欠けている・重複しているとき。</exception>
+        // 光線や噴射のように薬莢を出さない武器があるので、薬莢のプレハブは空でも通す。
         public void Validate()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed weapon extras catalog)" : name;
@@ -143,7 +120,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>武器 1 種類の薬莢・空撃ち・地面に置いたときの見た目の素材。<see cref="WeaponExtrasCatalog"/> の要素。</summary>
     [Serializable]
     public sealed class WeaponExtrasAssets
     {
@@ -166,7 +142,7 @@ namespace Shooter.Runtime
         {
         }
 
-        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Shooter.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
+        // weaponId の前後の空白を除くのは、Shooter.Core.WeaponSpec.Id と同じ形にそろえるため。
         public WeaponExtrasAssets(string weaponId, GameObject shellPrefab, AudioClip shellLandSound, AudioClip dryFireSound)
         {
             _weaponId = weaponId?.Trim() ?? string.Empty;
@@ -183,7 +159,6 @@ namespace Shooter.Runtime
 
         public AudioClip DryFireSound => _dryFireSound;
 
-        /// <summary>地面に置いた (拾える) ときの銃の見た目。無ければ null。</summary>
         public GameObject PickupModel
         {
             get => _pickupModel;

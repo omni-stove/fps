@@ -47,7 +47,7 @@ namespace Shooter.Server
 
         public NetMatchSettings Settings => File.Settings;
 
-        /// <summary>移動のモジュール (#586) がクライアントの予測と同じ値で動かすための、移動と体の寸法。</summary>
+        // 移動のモジュール (#586) がクライアントの予測と同じ値で動かすために持つ。
         public NetMotorSettings Motor => File.Motor;
 
         public PingSpec Ping { get; }
@@ -56,7 +56,6 @@ namespace Shooter.Server
 
         public string PingPath { get; }
 
-        /// <summary>グレネードの種類 (信管・間隔・初速・効果) と、出撃のたびに持つ種類。</summary>
         public GrenadeCatalog Grenades { get; }
 
         public string GrenadePath { get; }
@@ -69,12 +68,10 @@ namespace Shooter.Server
 
         public string BotsPath { get; }
 
-        /// <summary>爆発で吹き飛ばす強さと、飛んでいる間の動き。</summary>
         public KnockbackSpec Knockback { get; }
 
         public string KnockbackPath { get; }
 
-        /// <summary>倒された人へのダメージのうち、どれをアシストに数えるか。</summary>
         public AssistSpec Assist { get; }
 
         public string AssistPath { get; }

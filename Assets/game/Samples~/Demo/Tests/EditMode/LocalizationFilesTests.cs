@@ -6,10 +6,7 @@ using NUnit.Framework;
 
 namespace Shooter.Core.Tests
 {
-    /// <summary>
-    /// ゲームが読む文字列表 (Demo サンプルの Assets/game/Samples~/Demo/Localization/Resources/Strings/*.json と Assets/game/Samples~/Demo/Resources/Localization/&lt;言語&gt;/*.json を重ねたもの)
-    /// が読め、どの言語にも同じキーがあり、同じキーが同じ番号の値を差し込むこと。片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまう。
-    /// </summary>
+    // 片方の言語にだけ足したキーは、もう片方でキーそのものが画面に出てしまうので、どの言語にも同じキーがあることを確かめる。
     public sealed class LocalizationFilesTests
     {
         // 重ねる表は後のものが勝つので、同じ言語の 2 つのファイルに同じキーがあると、片方を書き換えても画面が変わらないことがある。

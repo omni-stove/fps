@@ -5,9 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 近接の入力 (MeleeController) で、相手と自分の状態に合う技 (ContextMeleeSelector) があればふつうの近接の代わりに出す。
-    // 技は「位置を合わせる → 双方の操作を止めたまま演出の秒数を待つ → 結果を出す」の順に進め、演出は IContextMeleePresenter に任せる。
-    // 使えるかは近接のルール (Melee) に従う。技だけを切りたいゲームは IncludeFinisher・IncludeTakedown を切るか Selector から外す。
     [DisallowMultipleComponent]
     public sealed class ContextMeleeAction : MonoBehaviour, IWeaponModifier
     {
@@ -68,7 +65,6 @@ namespace Shooter.Runtime
 
         public bool IsBound => _melee != null && _melee.IsInitialized;
 
-        // null なら同じ GameObject で IContextMeleePresenter を実装したコンポーネントを探す (無ければ演出なし)。
         public IContextMeleePresenter Presenter { get; set; }
 
         public float BehindArcDegrees
@@ -187,7 +183,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 相手が見つからないか、合う技が無ければ false。呼ぶ側 (MeleeController) はそのときふつうの近接を出す。
         // 振れない理由 (MeleeRefusal) のログはふつうの近接の側で出すので、ここでは黙って false を返す。
         public bool TryBegin()
         {
@@ -315,7 +310,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 技の最中に振る者を見ている敵の発見ゲージを、技の WitnessAwareness まで上げる。相手 (倒される側) は数えない。
         // EnemyStealth.Active は OnEnable で入るので Edit Mode では空になる。テストから候補を渡せるよう分けておく。
         internal void NoticeWitnesses(ContextMeleeMove move, IReadOnlyList<EnemyStealth> candidates)
         {
@@ -345,7 +339,6 @@ namespace Shooter.Runtime
             _witnessCandidates.Clear();
         }
 
-        // 中断できない技なら止めずに false。倒れたなどで必ず止めるときは force。
         public bool Interrupt(ContextMeleeInterruption reason, bool force = false)
         {
             if (!_run.IsActive)
@@ -390,7 +383,6 @@ namespace Shooter.Runtime
             Debug.Log(ContextMeleeLog.Started(AttackerId, target.Id, move.Id), this);
             _presenter?.OnStarted(gameObject, target, move);
 
-            // 位置合わせの秒数が 0 の技は、始めたフレームで合わせ終える。
             if (move.AlignSeconds <= 0f)
             {
                 Align(1f);
@@ -556,7 +548,6 @@ namespace Shooter.Runtime
             var killed = target != null && target.IsDead;
             Debug.Log(ContextMeleeLog.Resolved(AttackerId, target != null ? target.Id : string.Empty, move.Id, move.Outcome, damage, killed), this);
 
-            // 技で倒しきれなかった (Damage の技) ときは、相手の一時停止を解いて戻す。
             if (!killed && target != null)
             {
                 var agent = target.GetComponent<EnemyAgent>();

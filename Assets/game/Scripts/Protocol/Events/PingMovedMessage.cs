@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>敵に付いた印の新しい位置。次の知らせで上書きされるので、落ちてもよい届け方で送る。</summary>
+    // 次の知らせで上書きされるので、落ちてもよい届け方で送る。
     public sealed class PingMovedMessage : IMessage
     {
         public const byte CurrentVersion = 1;

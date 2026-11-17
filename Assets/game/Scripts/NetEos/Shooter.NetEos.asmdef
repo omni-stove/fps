@@ -16,7 +16,8 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [
-        "SHOOTER_EOS"
+        "SHOOTER_EOS",
+        "!EOS_DISABLE"
     ],
     "versionDefines": [
         {

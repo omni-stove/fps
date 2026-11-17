@@ -103,6 +103,29 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void JoinsTheGivenTeamInsteadOfTheNextOne()
+        {
+            var session = Create();
+
+            Assert.That(session.Join(1, null, Team.Bravo), Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(2, null, Team.Bravo), Is.EqualTo(Team.Bravo));
+            Assert.That(session.Join(3, null, null), Is.EqualTo(Team.Alpha));
+            Assert.That(session.GetTeam(2), Is.EqualTo(Team.Bravo));
+            Assert.That(_positions[2], Is.EqualTo(_bravoBase));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.Join(4, null, (Team)99));
+            Assert.That(session.HasPlayer(4), Is.False);
+        }
+
+        [Test]
+        public void AHeldPlayerReturnsToTheirOldTeamEvenWhenGivenAnother()
+        {
+            var session = CreateTwoOnTwoWithKeys();
+            session.Leave(2);
+
+            Assert.That(session.Join(5, "k2", Team.Alpha), Is.EqualTo(Team.Bravo));
+        }
+
+        [Test]
         public void SpawnsJoiningPlayerAtOwnTeamPoint()
         {
             var session = Create();
@@ -1155,7 +1178,6 @@ namespace Shooter.Core.Tests
                 actions);
         }
 
-        /// <summary>Alpha に 1 と 3、Bravo に 2 と 4 を入れて始め、ここまでのイベントを消す。</summary>
         private TeamDeathmatchSession CreateTwoOnTwo(
             GameRules rules,
             int scoreLimit = 10,

@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 爆発する置き物の値のアセット (<see cref="ExplosivePropDefinition"/>) の値が <see cref="ExplosivePropSpec"/> に入り、
-    /// 置き物 (<see cref="ExplosiveProp"/>) が Inspector の値の代わりにそれを使うことを確かめる。
-    /// </summary>
     public sealed class ExplosivePropDefinitionTests
     {
         // ほかのテストやシーンの物と重ならない場所。

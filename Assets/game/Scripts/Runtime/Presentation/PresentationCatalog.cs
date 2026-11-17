@@ -4,45 +4,16 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 音とエフェクトの参照をまとめて持つ。武器ごとのもの (銃声・リロード音・マズルフラッシュ) は武器の Id
-    /// (<see cref="Shooter.Core.WeaponSpec.Id"/>) で <see cref="TryGetWeapon"/> から引き、どの武器にも共通のもの
-    /// (着弾・曳光弾・足音・着地・被弾の声・爆発・ヒットマーカーの音) はプロパティで引く。
-    /// ヒットマーカーは Resources の <see cref="ResourcePath"/> に置いたものを <see cref="Load"/> で読み、
-    /// 置いていなければ音を鳴らさずに見た目だけ出す。
-    /// 武器の演出 (<see cref="WeaponPresentation"/>) も同じく <see cref="Load"/> で読む。
-    /// 中身は Shooter.Editor.PresentationAssetBuilder が生成した仮の素材 (Assets/game/Presentation/Resources/Presentation/PresentationCatalog.asset) で、
-    /// 本物の素材に替えるときはこのアセットの参照を差し替える。
-    /// </summary>
-    /// <remarks>
-    /// 演出を足すときの規約 (このカタログもこれに従う):
-    /// <list type="bullet">
-    /// <item>カタログの置き場所: 演出ごとに自分の ScriptableObject のカタログを 1 つ持ち、どこかの Resources フォルダの
-    /// <c>Presentation/&lt;名前&gt;Catalog.asset</c> に置く (Resources からのパスは <see cref="CatalogResourcePath"/>)。
-    /// このカタログに枠を足さず、演出ごとにファイルを分ける。</item>
-    /// <item>仮素材の生成: 仮素材とカタログは Shooter.Editor.IPresentationAssetStep の実装が作り、Shooter.Editor.PresentationAssetSteps.BuildAll から
-    /// まとめて実行される。既存のアセットは GUID を保って中身だけ更新する。</item>
-    /// <item>任意の枠: 素材の枠は空でもよい。空の枠の演出だけを出さずに続行し、戦闘や他の演出は止めない
-    /// (カタログ自体が無いときも同じで、警告は 1 度だけ)。必須にするのは仮素材が必ず埋める枠だけで、Validate で確かめる。</item>
-    /// </list>
-    /// </remarks>
+    // 素材の枠を空でも続けるのは、空の枠の演出だけを出さず、戦闘や他の演出を止めないため。
     [CreateAssetMenu(fileName = "PresentationCatalog", menuName = "Shooter/Presentation Catalog")]
     public sealed class PresentationCatalog : ScriptableObject
     {
-        /// <summary>演出のカタログを置く、Resources からのフォルダ。</summary>
         public const string ResourceFolder = "Presentation";
 
-        /// <summary>演出のカタログのファイル名の後ろに付ける語。</summary>
         public const string CatalogSuffix = "Catalog";
 
-        /// <summary>Resources からのパス (どこかの Resources フォルダの Presentation/PresentationCatalog.asset)。<see cref="CatalogResourcePath"/> の "Presentation"。</summary>
         public const string ResourcePath = ResourceFolder + "/PresentationCatalog";
 
-        /// <summary>
-        /// 名前が name の演出のカタログの、Resources からのパス (<c>Presentation/&lt;name&gt;Catalog</c>、拡張子なし)。
-        /// <see cref="Resources.Load(string)"/> にそのまま渡せる。
-        /// </summary>
-        /// <exception cref="ArgumentException">name が空、空白を含む、パスの区切りを含む、または <see cref="CatalogSuffix"/> で終わる。</exception>
         public static string CatalogResourcePath(string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -107,7 +78,6 @@ namespace Shooter.Runtime
 
         public const int DefaultMaxImpactSoundsPerFrame = 2;
 
-        /// <summary>定義順の武器ごとの音とエフェクト。中身を書き換えるときは <see cref="SetWeapons"/> を使う。</summary>
         public IReadOnlyList<WeaponPresentationAssets> Weapons => _weapons ??= new List<WeaponPresentationAssets>();
 
         public int MaxImpactSoundsPerFrame
@@ -164,50 +134,40 @@ namespace Shooter.Runtime
             set => _explosion = value;
         }
 
-        /// <summary>当てたときの音。無ければ null。</summary>
         public AudioClip HitMarkerSound
         {
             get => _hitMarkerSound;
             set => _hitMarkerSound = value;
         }
 
-        /// <summary>倒したときの音。無ければ null。</summary>
         public AudioClip KillMarkerSound
         {
             get => _killMarkerSound;
             set => _killMarkerSound = value;
         }
 
-        /// <summary>ヒットマーカーの音量 ([0, 1])。</summary>
         public float HitMarkerVolume
         {
             get => _hitMarkerVolume;
             set => _hitMarkerVolume = Mathf.Clamp01(value);
         }
 
-        /// <summary>killed かどうかで鳴らす音。倒したときの音が無ければ当てたときの音。どちらも無ければ null。</summary>
         public AudioClip HitMarkerSoundFor(bool killed)
         {
             return killed && _killMarkerSound != null ? _killMarkerSound : _hitMarkerSound;
         }
 
-        /// <summary>入口 (<see cref="GameContent"/>) のもの、無ければ Resources の <see cref="ResourcePath"/> から読む。どちらも無ければ null。</summary>
         public static PresentationCatalog Load()
         {
             var fromContent = GameContent.Pick(c => c.Presentation);
             return fromContent != null ? fromContent : Resources.Load<PresentationCatalog>(ResourcePath);
         }
 
-        /// <summary>武器ごとの音とエフェクトをまとめて差し替える。null は空にする。渡した列は複製して持つ。</summary>
         public void SetWeapons(IEnumerable<WeaponPresentationAssets> weapons)
         {
             _weapons = weapons == null ? new List<WeaponPresentationAssets>() : new List<WeaponPresentationAssets>(weapons);
         }
 
-        /// <summary>
-        /// Id が weaponId の武器の音とエフェクトを探す。Id は大文字小文字を区別して比べる。
-        /// 無い・weaponId が null なら false と null を返す (演出が無い武器は鳴らさないだけで、撃つ処理は止めない)。
-        /// </summary>
         public bool TryGetWeapon(string weaponId, out WeaponPresentationAssets assets)
         {
             assets = null;
@@ -228,11 +188,6 @@ namespace Shooter.Runtime
             return false;
         }
 
-        /// <summary>
-        /// 武器が 1 つ以上あり、どの武器も Id が空でなく重複せず、すべての参照が埋まっていることを確かめる。
-        /// 足りないものはすべて並べて 1 つの例外にする。
-        /// </summary>
-        /// <exception cref="PresentationCatalogException">どれかが欠けている・重複しているとき。</exception>
         public void Validate()
         {
             var source = string.IsNullOrEmpty(name) ? "(unnamed presentation catalog)" : name;
@@ -293,7 +248,6 @@ namespace Shooter.Runtime
         }
     }
 
-    /// <summary>武器 1 種類の音とエフェクト。<see cref="PresentationCatalog"/> の要素。</summary>
     [Serializable]
     public sealed class WeaponPresentationAssets
     {
@@ -316,7 +270,7 @@ namespace Shooter.Runtime
         {
         }
 
-        /// <summary>weaponId は前後の空白を除いて持つ (<see cref="Shooter.Core.WeaponSpec.Id"/> と同じ形にそろえる)。</summary>
+        // weaponId の前後の空白を除くのは、Shooter.Core.WeaponSpec.Id と同じ形にそろえるため。
         public WeaponPresentationAssets(
             string weaponId, AudioClip fire, AudioClip reload, GameObject muzzleFlash, GameObject thirdPersonMuzzleFlash = null)
         {
@@ -335,20 +289,14 @@ namespace Shooter.Runtime
 
         public GameObject MuzzleFlash => _muzzleFlash;
 
-        /// <summary>他人が撃ったのを見るときのマズルフラッシュ。空なら null。</summary>
         public GameObject ThirdPersonMuzzleFlash => _thirdPersonMuzzleFlash;
 
-        /// <summary>
-        /// 撃った者から見るなら <see cref="MuzzleFlash"/>、他人から見るなら <see cref="ThirdPersonMuzzleFlash"/>
-        /// (空なら <see cref="MuzzleFlash"/>)。
-        /// </summary>
         public GameObject MuzzleFlashFor(bool firstPerson)
         {
             return firstPerson || _thirdPersonMuzzleFlash == null ? _muzzleFlash : _thirdPersonMuzzleFlash;
         }
     }
 
-    /// <summary><see cref="PresentationCatalog"/> の中身が足りない・重複しているときの例外。</summary>
     public sealed class PresentationCatalogException : Exception
     {
         public PresentationCatalogException(string message)

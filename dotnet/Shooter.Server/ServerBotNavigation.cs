@@ -6,10 +6,8 @@ using Shooter.Core.Navigation;
 
 namespace Shooter.Server
 {
-    /// <remarks>
-    /// 書き出した NavMesh は壊せる建物をくり抜いていないので、経路は壊れていない壁を通り抜けることがある。
-    /// 歩く区間を世界の当たり (壊れた部品は外れている) に線で問い、建物の部品に当たる経路は使わない。
-    /// </remarks>
+    // 書き出した NavMesh は壊せる建物をくり抜いていないので、経路は壊れていない壁を通り抜けることがある。
+    // 歩く区間を世界の当たり (壊れた部品は外れている) に線で問い、建物の部品に当たる経路は使わない。
     internal sealed class ServerBotNavigation
     {
         public const int AllAreas = ~0;

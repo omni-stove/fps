@@ -4,7 +4,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    /// <summary>送ったものを覚えておくだけの通路。届いたものは無い。</summary>
     internal sealed class RecordingTransport : IMatchTransport
     {
         public const int UnreliableLimit = 1200;

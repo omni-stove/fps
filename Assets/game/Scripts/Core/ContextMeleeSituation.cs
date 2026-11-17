@@ -4,7 +4,6 @@ namespace Shooter.Core
 {
     public readonly struct ContextMeleeSituation
     {
-        /// <exception cref="ArgumentOutOfRangeException">distance が負か有限でない。</exception>
         public ContextMeleeSituation(ContextMeleeConditions conditions, float distance)
         {
             if (!(distance >= 0f) || float.IsInfinity(distance))

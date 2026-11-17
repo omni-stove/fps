@@ -276,7 +276,6 @@ namespace Shooter.Tests.EditMode
             return camera.AddComponent<WeaponController>();
         }
 
-        // 目から見て右へ degrees 度、10 m 先に置く。
         private void CreateBody(string id, float degrees, int side)
         {
             var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);

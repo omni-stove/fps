@@ -4,16 +4,7 @@ using Shooter.Core;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// パーティ (EOS のメンバー用ロビー) を作る・招待のコードで入る・出る。リーダーは入るサーバーと状態を自分のメンバーの属性に書き
-    /// (<see cref="ChooseServer"/>)、メンバーは間を置いてリーダーの属性を読み、新しいサーバーが決まったら <see cref="ServerChosen"/> で知らせる。
-    /// リーダーは <see cref="PartyLobby.Leader"/> で決めるので、リーダーが抜けたら次の人がリーダーになる。
-    /// 試合につなぐときは <see cref="WithParty"/> で <see cref="ConnectionExtras.PartyId"/> を載せ、サーバーが同じチームに入れる。
-    /// </summary>
-    /// <remarks>
-    /// サービスはロビーの変化を知らせないので、<see cref="Tick"/> で間を置いてロビーとリーダーの属性を読み直す。
-    /// ログは <see cref="PartyLog"/> の行で出す。
-    /// </remarks>
+    // サービスはロビーの変化を知らせないので、Tick で間を置いてロビーとリーダーの属性を読み直す。
     public sealed class PartySession : IDisposable
     {
         private readonly ILobbyBackend _backend;
@@ -50,19 +41,11 @@ namespace Shooter.NetV2
         private PartyStatus _status = PartyStatus.None;
         private bool _disposed;
 
-        /// <param name="backend">ログイン前のロビーのサービス。このセッションが Dispose する。</param>
-        /// <param name="version">自分のビルドの版 (Application.version)。パーティのバケットと版の照合に使う。空なら "0"。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public PartySession(ILobbyBackend backend, string version, Action<string> log)
             : this(backend, version, PartyLobby.DefaultMaxMembers, PartyLobby.DefaultPollIntervalSeconds, log)
         {
         }
 
-        /// <param name="backend">ログイン前のロビーのサービス。このセッションが Dispose する。</param>
-        /// <param name="version">自分のビルドの版。空なら "0"。</param>
-        /// <param name="maxMembers">作るパーティに入れる人数 (<see cref="PartyLobby.MinMaxMembers"/> 〜 <see cref="PartyLobby.MaxMaxMembers"/>)。</param>
-        /// <param name="pollIntervalSeconds">ロビーとリーダーの属性を読み直す間隔 (秒。0 より大きいこと)。</param>
-        /// <param name="log">ログの 1 行を受け取る。</param>
         public PartySession(ILobbyBackend backend, string version, int maxMembers, float pollIntervalSeconds, Action<string> log)
         {
             if (!PartyLobby.IsValidMaxMembers(maxMembers))
@@ -90,22 +73,18 @@ namespace Shooter.NetV2
             LoggingIn,
             LoggedIn,
 
-            /// <summary>ログインが切れた。同じサービスではログインし直せないので、セッションを作り直す。</summary>
+            // 同じサービスではログインし直せないので、セッションを作り直す。
             Expired,
         }
 
-        /// <summary>状態が変わった。UI はこれを見せる。</summary>
         public event Action<PartyStatus> StatusChanged;
 
-        /// <summary>メンバーのとき、リーダーが新しく入るサーバーを決めた。受け取った起動設定でそのサーバーにつなぐ。</summary>
         public event Action<NetLaunchOptions> ServerChosen;
 
         public PartyStatus Status => _status;
 
-        /// <summary>パーティのロビーのバケット。</summary>
         public string BucketId => PartyLobby.BucketId(_version);
 
-        /// <summary>試合につなぐときに <see cref="ConnectionExtras.PartyId"/> に載せる、入っているパーティの Id。入っていなければ null。</summary>
         public string PartyId =>
             _phase == PartyPhase.InParty && ConnectionExtras.IsValidField(_lobby.Id, ConnectionExtras.MaxPartyIdLength)
                 ? _lobby.Id
@@ -113,24 +92,13 @@ namespace Shooter.NetV2
 
         public bool IsLeader => _phase == PartyPhase.InParty && IsSelf(_leader);
 
-        /// <summary>
-        /// 試合に入る人数。パーティに入っていれば最後に読んだメンバーの数、入っていなければ自分 1 人。
-        /// リーダーはこれを <see cref="QuickMatchSearch.Begin(float, int, Action{NetLaunchOptions}, Action{string})"/> に渡し、全員が入れるサーバーを探す。
-        /// </summary>
         public int MatchPlayers => _phase == PartyPhase.InParty ? Math.Max(1, _lobby.MemberCount) : 1;
 
-        /// <summary>パーティを作って入り、リーダーになる。結果は <see cref="Status"/> で知らせる。</summary>
-        /// <exception cref="InvalidOperationException">もうパーティに入っている・入ろうとしている。</exception>
         public void Create()
         {
             Begin(null);
         }
 
-        /// <summary>
-        /// 招待のコード (仲間の <see cref="PartyStatus.PartyId"/>) のパーティに入る。結果は <see cref="Status"/> で知らせ、
-        /// コードが使えなければ <see cref="PartyError.InvalidCode"/> にする。前後の空白は取り除く。
-        /// </summary>
-        /// <exception cref="InvalidOperationException">もうパーティに入っている・入ろうとしている。</exception>
         public void Join(string inviteCode)
         {
             ThrowIfDisposed();
@@ -148,7 +116,6 @@ namespace Shooter.NetV2
             Begin(code);
         }
 
-        /// <summary>パーティから出る。作っている・入ろうとしている途中なら、入れた後に出る。入っていなければ何もしない。</summary>
         public void Leave()
         {
             ThrowIfDisposed();
@@ -169,18 +136,11 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>リーダーのとき、試合を探し始めたことをメンバーに見せる。リーダーでなければ何もせず false。</summary>
         public bool BeginSearch()
         {
             return WriteLeaderState(PartyState.Searching, null);
         }
 
-        /// <summary>
-        /// リーダーのとき、入るサーバーを決めてメンバーに知らせる。同じサーバーを選び直してもメンバーはまたつなぐ。
-        /// リーダーでなければ何もせず false。
-        /// </summary>
-        /// <param name="options">リーダーがつなぐ起動設定 (クイックマッチが返したもの)。UDP のクライアントであること。</param>
-        /// <exception cref="ArgumentException">UDP のクライアントの起動設定でない。</exception>
         public bool ChooseServer(NetLaunchOptions options)
         {
             if (options == null)
@@ -196,13 +156,11 @@ namespace Shooter.NetV2
             return WriteLeaderState(PartyState.InMatch, options.Endpoint);
         }
 
-        /// <summary>リーダーのとき、試合を出た・探すのをやめたことをメンバーに見せる。リーダーでなければ何もせず false。</summary>
         public bool ReturnToIdle()
         {
             return WriteLeaderState(PartyState.Idle, null);
         }
 
-        /// <summary>extras のパーティの欄を、入っているパーティ (<see cref="PartyId"/>) にした欄を返す。</summary>
         public ConnectionExtras WithParty(ConnectionExtras extras)
         {
             if (extras == null)
@@ -213,8 +171,6 @@ namespace Shooter.NetV2
             return new ConnectionExtras(PartyId, extras.JoinCode, extras.SkillRating, extras.ProductUserId);
         }
 
-        /// <summary>サービスを進め、間を置いてロビーとリーダーの属性を読み直す。毎フレーム呼ぶ。</summary>
-        /// <param name="now">今の時刻 (秒)。</param>
         public void Tick(float now)
         {
             if (_disposed)
@@ -232,7 +188,6 @@ namespace Shooter.NetV2
             Poll();
         }
 
-        /// <summary>入っているパーティから出る要求だけ出して、バックエンドを閉じる。以後のコールバックは呼ばない。</summary>
         public void Dispose()
         {
             if (_disposed)
@@ -545,7 +500,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        /// <summary>リーダーの属性の書き込みを 1 つずつ出す。失敗したら次に読み直すときに出し直す。</summary>
         private void FlushWrite()
         {
             if (_writing || _pendingWrite == null || _phase != PartyPhase.InParty)
@@ -692,7 +646,7 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>Dispose 後と 2 回目以降の完了を捨てるコールバックにする。ログインはパーティをまたぐので世代を見ない。</summary>
+        // ログインはパーティをまたぐので世代を見ない。
         private Action<T, string> Once<T>(Action<T, string> handler)
         {
             var called = false;
@@ -708,7 +662,6 @@ namespace Shooter.NetV2
             };
         }
 
-        /// <summary>Dispose 後・2 回目以降・出た後や入り直した後 (世代が変わった後) の完了を捨てるコールバックにする。</summary>
         private Action<T, string> Once<T>(int generation, Action<T, string> handler)
         {
             var inner = Once(handler);

@@ -4,10 +4,8 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ExecutionSceneBuilder"/> の置き場所・ルール・配置を確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.ExecutionSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.ExecutionSceneBuilder.Build で確かめる。
     public sealed class ExecutionSceneBuilderTests
     {
         [Test]

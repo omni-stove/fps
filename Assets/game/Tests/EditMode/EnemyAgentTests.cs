@@ -11,10 +11,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// EnemyAgent の組み立て (部品の解決・設定の検査・ログ・死亡の伝達) を確かめる。
-    /// NavMesh 上を歩く部分は Play で確かめる (手順は PR 本文)。
-    /// </summary>
     public sealed class EnemyAgentTests
     {
         private GameObject _host;

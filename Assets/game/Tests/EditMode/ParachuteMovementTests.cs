@@ -12,17 +12,13 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// パラシュート (<see cref="ParachuteMovement"/>) が空中の十分な高さでだけ開き、開いている間は移動を横取りしてゆっくり降り、
-    /// 着地で閉じて落下ダメージを受けないこと。ルールが Off・低すぎる・ほかの動きの最中には開かないこと。
-    /// </summary>
     public sealed class ParachuteMovementTests
     {
         private const float StepSeconds = 0.02f;
         private const int MaxTicks = 2000;
         private const int MaxHealth = 100;
 
-        /// <summary>落下ダメージを受ける高さ。既定の重力 20 m/s² で開かずに落ちると約 20 m/s で、安全な速さ 12 m/s を超える。</summary>
+        // 既定の重力 20 m/s² で開かずに落ちると約 20 m/s で、安全な速さ 12 m/s を超えて落下ダメージを受ける高さ。
         private const float HighDrop = 10f;
 
         private GameObject _body;
@@ -412,7 +408,6 @@ namespace Shooter.Tests.EditMode
             Assert.Fail("the condition was not met");
         }
 
-        /// <summary>いつも有効で、その場に留める横取り。</summary>
         private sealed class HoldingOverride : IMovementOverride
         {
             public int Priority => 1;

@@ -86,7 +86,6 @@ namespace Shooter.Core.Tests
                 () => RicochetRule.TryBounce(_twoBounces, 0, new Vector3(float.NaN, 0f, 1f), Vector3.UnitY, out _, out _));
         }
 
-        // 床 (法線 +Y) へ、面とのなす角 degrees で +X の向きに当たる向き。
         private static Vector3 Toward(float degrees)
         {
             var radians = degrees * (MathF.PI / 180f);

@@ -1,6 +1,5 @@
 namespace Shooter.NetV2
 {
-    /// <summary>通信と Core が使う System.Numerics の値と、Unity の値の変換。</summary>
     internal static class NetV2Math
     {
         public static UnityEngine.Vector3 ToUnity(System.Numerics.Vector3 v)
@@ -28,7 +27,6 @@ namespace Shooter.NetV2
             return new System.Numerics.Quaternion(q.x, q.y, q.z, q.w);
         }
 
-        /// <summary>yaw (ラジアン) の向きを Unity の回転にする。</summary>
         public static UnityEngine.Quaternion YawRotation(float yaw)
         {
             return UnityEngine.Quaternion.Euler(0f, yaw * UnityEngine.Mathf.Rad2Deg, 0f);

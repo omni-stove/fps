@@ -146,7 +146,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(result.Destroyed, Is.EqualTo(new[] { bottom.Index }));
             Assert.That(result.Collapsed, Is.Empty);
 
-            // 下段をすべて壊すと、残りはすべて崩れる。
             var collapsed = 0;
             foreach (var piece in hut.Pieces)
             {

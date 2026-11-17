@@ -13,11 +13,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HUD のチャット (<see cref="ChatView"/>) が <see cref="GameSignals.Chat"/> の行を名前付きで出して薄くし、
-    /// 入力欄を開いて送ると <see cref="ChatView.Sender"/> を呼び、開いている間はポーズ画面と同じくプレイヤーの入力を止めることを確かめる。
-    /// 文は日本語の表 (Resources/Localization/ja/chat.json) から作る。
-    /// </summary>
     public sealed class ChatViewTests
     {
         private const int AliceId = 1;

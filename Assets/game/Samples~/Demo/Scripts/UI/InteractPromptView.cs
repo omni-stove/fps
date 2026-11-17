@@ -4,15 +4,8 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面の中央の下に、近くで Interact したら何が起きるかを 1 行で出すビュー。Hud.uxml の <see cref="UxmlName"/> の Label を使う。
-    /// 要素を持っている間は <see cref="GameSignals.InteractHint"/> を購読し、出された案内の中身 (<see cref="PickupHint"/>・<see cref="AmmoCrateHint"/>) を
-    /// 今の入力機器のキー (<see cref="InteractKeyLabel"/>) を入れた文にして出し、消されたら隠す。要素を受けたときは今の案内に合わせる。
-    /// 要素をまだ受けていない間も出す文を覚えておき、受けたときに合わせる。言語が変わったら文にし直す。
-    /// </summary>
     public sealed class InteractPromptView : HudElementView
     {
-        /// <summary>Hud.uxml の案内の Label。</summary>
         public const string UxmlName = "interact-prompt";
 
         private readonly InteractKeyLabel _keyLabel = new InteractKeyLabel();
@@ -29,22 +22,14 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出しているか。</summary>
         public bool IsShown => _owner != null;
 
-        /// <summary>出している文。出していなければ空文字。</summary>
         public string Text => IsShown ? _text : string.Empty;
 
-        /// <summary>今出している案内の owner。出していなければ null。</summary>
         public object Owner => _owner;
 
-        /// <summary><see cref="GameSignals.InteractHint"/> の案内に入れているキーの表記。案内を出していなければ null。</summary>
         public string HintKeyLabel => _hint.HasValue ? _hintKeyLabel : null;
 
-        /// <summary>
-        /// detail (<see cref="InteractHint.Detail"/>) の案内の文。keyLabel は Interact のキーの表示。
-        /// 文にできない中身 (知らない型を含む) なら false。
-        /// </summary>
         public static bool TryDescribe(object detail, string keyLabel, out LocalizedText text)
         {
             switch (detail)
@@ -97,10 +82,6 @@ namespace Shooter.Runtime
             Clear();
         }
 
-        /// <summary>
-        /// hint を文にして出す。null なら <see cref="GameSignals.InteractHint"/> から出していた案内を隠す。
-        /// 要素を持っている間は <see cref="GameSignals.InteractHint"/> が出されるたびに呼ばれる。
-        /// </summary>
         public void Show(InteractHint? hint)
         {
             if (hint == null || hint.Value.Source == null)

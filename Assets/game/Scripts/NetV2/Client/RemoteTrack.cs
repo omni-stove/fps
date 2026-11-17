@@ -3,12 +3,9 @@ using System.Numerics;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 他のプレイヤー 1 人の、tick ごとの位置・向き・しゃがみの記録。表示する tick (<see cref="InterpolationClock.RenderTick"/>) の前後から補間する。
-    /// </summary>
     public sealed class RemoteTrack
     {
-        /// <summary>60Hz で 1 秒分。表示は数 tick 遅れなので足りる。</summary>
+        // 60Hz で 1 秒分。表示は数 tick 遅れなので足りる。
         public const int DefaultCapacity = 64;
 
         private readonly int[] _ticks;
@@ -29,10 +26,9 @@ namespace Shooter.NetV2
 
         public int Count => _count;
 
-        /// <summary>記録の一番新しい tick。無ければ -1。</summary>
         public int NewestTick => _count > 0 ? _ticks[IndexOf(_count - 1)] : -1;
 
-        /// <summary>tick の姿を足す。記録より古い tick・同じ tick は捨てる (順が入れ替わって届いたもの)。</summary>
+        // 記録より古い tick・同じ tick は順が入れ替わって届いたものなので捨てる。
         public void Record(int tick, RemotePose pose)
         {
             if (_count > 0 && tick <= NewestTick)
@@ -52,18 +48,13 @@ namespace Shooter.NetV2
             _count++;
         }
 
-        /// <summary>記録を捨てる (置き直されて、前の位置から補間すると滑って見えるとき)。</summary>
         public void Clear()
         {
             _start = 0;
             _count = 0;
         }
 
-        /// <summary>
-        /// tick の姿を前後の記録から補間する。記録より前なら一番古い姿、後なら一番新しい姿 (先を読まない) を返す。
-        /// しゃがみは切り替わらないので、前の記録の値を使う。
-        /// </summary>
-        /// <returns>記録が無ければ false。</returns>
+        // しゃがみは補間で切り替わらないので、前の記録の値を使う。
         public bool TrySample(float tick, out RemotePose pose)
         {
             pose = default;

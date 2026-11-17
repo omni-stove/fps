@@ -9,10 +9,6 @@ using UnityEditor;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// サンプルの武器の JSON (<see cref="SamplesFolder"/>) を一時フォルダに取り込むと、<see cref="WeaponAssetBuilder"/> の武器と
-    /// コミットしてある武器のアセットと同じ値になることを確かめる。
-    /// </summary>
     public sealed class WeaponJsonSamplesTests
     {
         private string _folder;

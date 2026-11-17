@@ -3,32 +3,16 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ビルドの版 (PlayerSettings.bundleVersion、実行時の Application.version) に入れる文字列の検証と正規化。
-    /// git のタグ (<c>v0.2.0</c>) や <c>git describe --tags --always --dirty</c> の出力 (<c>v0.2.0-3-gabc1234-dirty</c>、
-    /// タグが無ければ短い sha) を受け取り、先頭の <c>v</c> を外して <c>0.2.0</c> のような形にそろえる。
-    /// </summary>
     public static class BuildVersion
     {
         public const string Flag = "-buildVersion";
 
-        /// <summary>起動時に版を出すログの接頭辞。</summary>
         public const string LogTag = "[Version]";
 
-        /// <summary>
-        /// 版の最大の長さ。EOS のロビーのバケツ ID に入れられる版の長さ (<see cref="LobbyLaunchOptions.MaxBucketVersionLength"/>) に合わせ、
-        /// 長い版が途中で切られて別の版と同じバケツに入らないようにする。
-        /// </summary>
+        // EOS のロビーのバケツ ID に入れられる版の長さに合わせ、長い版が途中で切られて別の版と同じバケツに入らないようにする。
         public const int MaxLength = LobbyLaunchOptions.MaxBucketVersionLength;
 
-        /// <summary>
-        /// text を版として検証し、正規化する。前後の空白 (git の出力の改行を含む) を落とし、<c>v</c> か <c>V</c> の直後が数字なら
-        /// その <c>v</c> を外す。空、<see cref="MaxLength"/> 文字超、英数字と <c>. - _</c> 以外を含むもの、<c>.</c> か <c>-</c> で始まるものは拒否する。
-        /// 同じ文字列を Docker イメージのタグにも付けるので、Docker のタグに使えない <c>+</c> などは通さない。
-        /// </summary>
-        /// <param name="text">タグ名や git describe の出力。</param>
-        /// <param name="version">成功したときの正規化した版。失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
+        // 同じ文字列を Docker イメージのタグにも付けるので、Docker のタグに使えない + などは通さない。
         public static bool TryNormalize(string text, out string version, out string error)
         {
             version = null;
@@ -71,7 +55,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary><see cref="TryNormalize"/> と同じだが、失敗したら <see cref="ArgumentException"/> を投げる。</summary>
         public static string Normalize(string text)
         {
             if (!TryNormalize(text, out var version, out var error))
@@ -82,13 +65,7 @@ namespace Shooter.Core
             return version;
         }
 
-        /// <summary>
-        /// コマンドライン引数から <c>-buildVersion &lt;版&gt;</c> を探して正規化する。無ければ version を null にして true を返す。
-        /// 知らない引数 (Unity 自身の <c>-batchmode</c> など) は無視する。
-        /// </summary>
-        /// <param name="args">コマンドライン引数。</param>
-        /// <param name="version">見つかったときの正規化した版。無いか失敗したときは null。</param>
-        /// <param name="error">失敗したときの理由。成功したときは null。</param>
+        // 知らない引数を拒まないのは、Unity 自身の -batchmode なども同じ引数に並ぶため。
         public static bool TryParseArgs(IReadOnlyList<string> args, out string version, out string error)
         {
             if (args == null)
@@ -136,7 +113,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>起動時に出すログの行。例: <c>[Version] 0.2.0</c>。版が空なら <c>unknown</c> と出す。</summary>
         public static string LogLine(string version)
         {
             return LogTag + " " + (string.IsNullOrWhiteSpace(version) ? "unknown" : version.Trim());

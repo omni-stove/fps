@@ -27,7 +27,6 @@ namespace Shooter.Runtime
             public Vector3 Direction { get; }
         }
 
-        /// <exception cref="ArgumentNullException">attacker か spec が null。</exception>
         public static bool TryFind(Transform attacker, Vector3 origin, Vector3 forward, MeleeSpec spec, LayerMask mask, out Result result)
         {
             if (attacker == null)

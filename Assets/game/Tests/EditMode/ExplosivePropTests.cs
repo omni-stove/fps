@@ -11,10 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 爆発する置き物 (<see cref="ExplosiveProp"/>) が弾と爆発で耐久を減らし、0 で爆発して近くの人・建造物・ほかの置き物に被害を配り、
-    /// ほかの置き物が遅れて連鎖することを確かめる。Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms する。
-    /// </summary>
+    // Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms する。
     public sealed class ExplosivePropTests
     {
         // ほかのテストやシーンの物と重ならない場所。

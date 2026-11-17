@@ -18,23 +18,14 @@ namespace Shooter.Runtime
         private float _nextTargetSearch;
         private bool _warnedNoTarget;
 
-        /// <summary>
-        /// 今の目標。null なら次の Update で <see cref="TargetTag"/> から探す。<see cref="SideMember"/> があるときは
-        /// <see cref="TargetSearchInterval"/> ごとに選び直すので、設定しても次の選び直しまでしか続かない。
-        /// </summary>
         public Damageable Target
         {
             get => _target;
             set => _target = value;
         }
 
-        // 撃つ相手と発見ゲージが見る相手。IPerceivedTargetContributor が直前の知覚の Target を差し替えていればその相手、でなければ Target。
         public Damageable PerceivedTarget => _perceivedTarget != null ? _perceivedTarget : _target;
 
-        /// <summary>
-        /// position の物音を次の知覚 1 回だけ渡す。Idle・Patrol・Search 中ならその位置を Search しに行く (<see cref="EnemyBrain"/>)。
-        /// 視界の外に出した敵を目標の方へ向かわせるのに使う。倒れていれば何もしない。
-        /// </summary>
         public void Alert(Vector3 position)
         {
             if (_brain != null && _brain.IsDead)
@@ -45,11 +36,6 @@ namespace Shooter.Runtime
             _pendingNoise = position;
         }
 
-        /// <summary>
-        /// 今の位置・目標・視線・体力の割合と、前の知覚の後に撃たれていれば撃たれたこと・撃った者の位置 (物音としても渡す) から、
-        /// 1 tick 分の知覚を組み立て、<see cref="PerceptionContributors"/> に通して返す。撃たれた情報はここで使い切るので、次の呼び出しでは撃たれていないことになる。
-        /// 未初期化なら <see cref="InvalidOperationException"/>。
-        /// </summary>
         public EnemyPerception Perceive()
         {
             if (_brain == null)
@@ -68,7 +54,6 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<IPerceptionContributor> PerceptionContributors => _contributors;
 
-        /// <exception cref="ArgumentNullException">contributor が null。</exception>
         public bool AddPerceptionContributor(IPerceptionContributor contributor)
         {
             if (contributor == null)
@@ -85,7 +70,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <exception cref="ArgumentNullException">contributor が null。</exception>
         public bool RemovePerceptionContributor(IPerceptionContributor contributor)
         {
             if (contributor == null)
@@ -124,7 +108,6 @@ namespace Shooter.Runtime
             return perception;
         }
 
-        /// <summary>体力の割合 (0 以上 1 以下)。self が無ければ 1。</summary>
         public static float HealthFraction(Damageable self)
         {
             if (self == null)
@@ -204,11 +187,8 @@ namespace Shooter.Runtime
             Debug.Log($"{LogTag} id={Id} target={target.Id}", this);
         }
 
-        /// <summary>
-        /// 目標が倒れた (ダウンを含む) 最初の 1 回だけ、戦いをやめさせる (<see cref="EnemyBrain.StandDown"/>)。
-        /// 倒れた目標は見えなくなるので、放っておくと見失ったとみなして倒れた位置へ駆け寄ってしまう。
-        /// 同じ目標が倒れたままの間は呼び直さず、その間に聞いた物音を Search しに行けるようにする。やめさせたら true。
-        /// </summary>
+        // 倒れた目標は見えなくなるので、放っておくと見失ったとみなして倒れた位置へ駆け寄ってしまう。
+        // 同じ目標が倒れたままの間は呼び直さず、その間に聞いた物音を Search しに行けるようにする。
         internal bool StandDownIfTargetFell()
         {
             var target = _target;
@@ -239,10 +219,6 @@ namespace Shooter.Runtime
             return $"{LogTag} id={id} stand-down target={targetId} prev={previous}";
         }
 
-        /// <summary>
-        /// member の陣営から見た、いちばん近い生きている敵を目標にする。force でなければ <see cref="TargetSearchInterval"/> ごとにだけ探す。
-        /// 敵がいなければ目標を外す (全員倒れている間など)。目標が変わったときだけログに出す。
-        /// </summary>
         private void ResolveHostile(SideMember member, bool force)
         {
             if (!force && Time.time < _nextTargetSearch)

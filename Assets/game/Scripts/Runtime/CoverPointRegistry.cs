@@ -6,19 +6,13 @@ using UnityEngine.AI;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// シーンの遮蔽点 (<see cref="CoverPoint"/>) をまとめ、敵 (<see cref="EnemyAgent"/>) が共有する <see cref="CoverPointSelector"/> を 1 つ持つ。
-    /// どの点をどの敵が使っているかは、この selector が持つ (同じ selector を渡した敵どうしは同じ点を選ばない)。
-    /// 点の一覧はシーン生成スクリプトが <see cref="SetPoints"/> で配線する。selector は最初に <see cref="Selector"/> を読んだときに、
-    /// 点の位置を NavMesh に寄せて作る (点は動かない地形に置く前提で、以後は作り直さない)。
-    /// 点の一覧や選び方の設定を変えたら作り直し、敵は次の Update で新しい selector に乗り換える (使っていた点は放す)。
-    /// </summary>
+    // 敵が CoverPointSelector を 1 つ共有するのは、同じ selector を渡した敵どうしが同じ点を選ばないようにするため。
+    // 点は動かない地形に置く前提なので、点の位置を NavMesh に寄せた selector は、点の一覧か選び方の設定を変えるまで作り直さない。
     [DisallowMultipleComponent]
     public sealed class CoverPointRegistry : MonoBehaviour
     {
         public const string LogTag = "[Cover]";
 
-        /// <summary>点を NavMesh に寄せるときに探す半径 (メートル)。</summary>
         public const float NavMeshSnapRadius = 1f;
 
         [SerializeField, Tooltip("シーンの遮蔽点。シーン生成スクリプトが配線する")]
@@ -38,7 +32,6 @@ namespace Shooter.Runtime
         private readonly List<CoverPoint> _markers = new List<CoverPoint>();
         private readonly List<Vector3> _peekPositions = new List<Vector3>();
 
-        /// <summary>配線した遮蔽点 (無効なものも含む)。</summary>
         public IReadOnlyList<CoverPoint> Points => _points;
 
         public float MaxDistance
@@ -71,10 +64,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 敵に渡す selector。まだ作っていなければここで作る。使える点が 1 つも無いか設定が不正なら null
-        /// (理由はログに出し、点の一覧か設定を変えるまで作り直さない)。
-        /// </summary>
         public CoverPointSelector Selector
         {
             get
@@ -88,7 +77,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>遮蔽点の一覧を置き換える。null の要素は捨てる。今の selector は捨て、次に読んだときに作り直す。</summary>
         public void SetPoints(IReadOnlyList<CoverPoint> points)
         {
             if (points == null)
@@ -109,19 +97,16 @@ namespace Shooter.Runtime
             Invalidate();
         }
 
-        /// <summary><see cref="Selector"/> の index 番目の点の印。範囲外なら null。</summary>
         public CoverPoint MarkerAt(int index)
         {
             return _built && index >= 0 && index < _markers.Count ? _markers[index] : null;
         }
 
-        /// <summary><see cref="Selector"/> の index 番目の点で覗くときに立つ足元 (NavMesh に寄せた位置)。範囲外なら null。</summary>
         public Vector3? PeekPositionAt(int index)
         {
             return _built && index >= 0 && index < _peekPositions.Count ? _peekPositions[index] : (Vector3?)null;
         }
 
-        /// <summary>marker の点をいずれかの敵が使っているか。この registry の点でなければ false。</summary>
         public bool IsOccupied(CoverPoint marker)
         {
             var selector = Selector;

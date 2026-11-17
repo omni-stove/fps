@@ -3,12 +3,8 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>キャンペーンのメニューに並べる 1 ミッション。</summary>
     public sealed class CampaignMenuMission
     {
-        /// <param name="id">ミッション Id (<see cref="CampaignLaunch.IsValidMissionId"/> を満たすこと)。</param>
-        /// <param name="displayName">メニューに出す名前。空にはできない。</param>
-        /// <param name="hasSave">再開できるセーブがあるか。</param>
         public CampaignMenuMission(string id, string displayName, bool hasSave)
         {
             CampaignLaunch.RequireValidMissionId(id, nameof(id));
@@ -34,35 +30,25 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>キャンペーンのメニューで選べる項目の種類。</summary>
     public enum CampaignMenuItemKind
     {
-        /// <summary>ミッション (<see cref="CampaignMenuItem.MissionIndex"/> 番目)。</summary>
         Mission,
 
-        /// <summary>難易度の行。左右で替える。</summary>
         Difficulty,
 
-        /// <summary>セーブから再開する。セーブがあるミッションだけに出る。</summary>
         Continue,
 
-        /// <summary>セーブを消して最初から始める。セーブがあるミッションだけに出て、押すと確認を出す。</summary>
         Restart,
 
-        /// <summary>最初から始める。セーブが無いミッションに出る。</summary>
         Start,
 
-        /// <summary>メニューに戻る。</summary>
         Back,
 
-        /// <summary>確認でセーブを消して始める。</summary>
         ConfirmRestart,
 
-        /// <summary>確認をやめる。</summary>
         CancelRestart,
     }
 
-    /// <summary>キャンペーンのメニューの 1 項目。</summary>
     public readonly struct CampaignMenuItem : IEquatable<CampaignMenuItem>
     {
         public CampaignMenuItem(CampaignMenuItemKind kind, int missionIndex = -1)
@@ -73,7 +59,6 @@ namespace Shooter.Core
 
         public CampaignMenuItemKind Kind { get; }
 
-        /// <summary><see cref="CampaignMenuItemKind.Mission"/> ならミッションの位置、それ以外は -1。</summary>
         public int MissionIndex { get; }
 
         public bool Equals(CampaignMenuItem other)
@@ -107,17 +92,13 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>キャンペーンをどう始めるか。</summary>
     public enum CampaignStartMode
     {
-        /// <summary>セーブから再開する。</summary>
         Continue,
 
-        /// <summary>開始地点から始める。</summary>
         FromBeginning,
     }
 
-    /// <summary>メニューで決めた始め方。</summary>
     public sealed class CampaignMenuStart
     {
         public CampaignMenuStart(CampaignLaunch launch, CampaignStartMode mode, bool deletesSave)
@@ -132,12 +113,10 @@ namespace Shooter.Core
             DeletesSave = deletesSave;
         }
 
-        /// <summary>CampaignLaunchSelection に入れる選択。</summary>
         public CampaignLaunch Launch { get; }
 
         public CampaignStartMode Mode { get; }
 
-        /// <summary>シーンを読む前にセーブを消すか (確認を経た「最初から」)。</summary>
         public bool DeletesSave { get; }
 
         public override string ToString()
@@ -146,26 +125,15 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary><see cref="CampaignMenu.Activate()"/> と <see cref="CampaignMenu.Cancel"/> の結果。</summary>
     public enum CampaignMenuResultKind
     {
-        /// <summary>メニューの中で状態が変わっただけ。</summary>
         None,
 
-        /// <summary>始める。<see cref="CampaignMenu.LastStart"/> に始め方がある。</summary>
         Start,
 
-        /// <summary>メインメニューに戻る。</summary>
         Back,
     }
 
-    /// <summary>
-    /// キャンペーンのメニューの状態。ミッションと難易度を選び、セーブがあるミッションには「続きから」と「最初から」を出す。
-    /// 「最初から」は確認 (<see cref="IsConfirmingRestart"/>) を挟む。
-    /// 選べる項目 (<see cref="Items"/>) を上から並べ、ゲームパッドの上下でフォーカス (<see cref="FocusIndex"/>) を動かす。
-    /// ミッションの行にフォーカスを移すとそのミッションを選び、難易度の行では左右で難易度を替える。
-    /// 画面に出すのは Shooter.Runtime の CampaignSelectPanel。
-    /// </summary>
     public sealed class CampaignMenu
     {
         private static readonly CampaignDifficulty[] _difficulties =
@@ -178,9 +146,6 @@ namespace Shooter.Core
         private int _selectedMission;
         private int _focusIndex;
 
-        /// <param name="missions">並べるミッション。1 つ以上で、null と Id の重複を含まないこと。</param>
-        /// <param name="difficulty">最初に選んでおく難易度。</param>
-        /// <param name="preferredMissionId">最初に選んでおくミッションの Id。null か一覧に無ければ先頭。</param>
         public CampaignMenu(IReadOnlyList<CampaignMenuMission> missions, CampaignDifficulty difficulty, string preferredMissionId = null)
         {
             if (missions == null)
@@ -216,7 +181,6 @@ namespace Shooter.Core
             _focusIndex = _selectedMission;
         }
 
-        /// <summary>選べる難易度。左右で替える順。</summary>
         public static IReadOnlyList<CampaignDifficulty> Difficulties => _difficulties;
 
         public IReadOnlyList<CampaignMenuMission> Missions => _missions;
@@ -227,27 +191,21 @@ namespace Shooter.Core
 
         public CampaignDifficulty Difficulty { get; private set; }
 
-        /// <summary>「最初から」の確認を出しているか。出している間の項目は確認の 2 つだけ。</summary>
         public bool IsConfirmingRestart { get; private set; }
 
-        /// <summary>今選べる項目。上から並べる順。</summary>
         public IReadOnlyList<CampaignMenuItem> Items => _items;
 
-        /// <summary>フォーカスしている項目の位置 (<see cref="Items"/> の添字)。</summary>
         public int FocusIndex => _focusIndex;
 
         public CampaignMenuItem FocusedItem => _items[_focusIndex];
 
-        /// <summary>最後に <see cref="CampaignMenuResultKind.Start"/> を返したときの始め方。まだなら null。</summary>
         public CampaignMenuStart LastStart { get; private set; }
 
-        /// <summary>kind の項目の位置。今出ていなければ -1。</summary>
         public int IndexOf(CampaignMenuItemKind kind, int missionIndex = -1)
         {
             return _items.IndexOf(new CampaignMenuItem(kind, missionIndex));
         }
 
-        /// <summary>フォーカスを step だけ動かし、端では反対側へ回り込む。ミッションの行に移ればそのミッションを選ぶ。</summary>
         public void MoveFocus(int step)
         {
             if (step == 0)
@@ -258,7 +216,6 @@ namespace Shooter.Core
             FocusOn(MenuRoute.MoveFocus(_focusIndex, step, _items.Count));
         }
 
-        /// <summary>index の項目にフォーカスを移す (マウスで指したとき)。ミッションの行ならそのミッションを選ぶ。範囲外なら false。</summary>
         public bool FocusOn(int index)
         {
             if (index < 0 || index >= _items.Count)
@@ -276,7 +233,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>index 番目のミッションを選ぶ。項目の並びが変わってもフォーカスは同じ項目に残す。確認中・範囲外なら false。</summary>
         public bool SelectMission(int index)
         {
             if (IsConfirmingRestart || index < 0 || index >= _missions.Length)
@@ -296,7 +252,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>難易度を step だけ替え、端では回り込む。確認中は替えずに false。</summary>
         public bool CycleDifficulty(int step)
         {
             if (IsConfirmingRestart || step == 0)
@@ -310,7 +265,6 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>難易度を difficulty にする。確認中は替えずに false。</summary>
         public bool SetDifficulty(CampaignDifficulty difficulty)
         {
             RequireDifficulty(difficulty, nameof(difficulty));
@@ -323,10 +277,7 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>
-        /// フォーカスしている項目を決定する。ミッションなら難易度の行へ、難易度なら最初の始め方へフォーカスを進める。
-        /// 「最初から」は確認を出し、間違えて消さないよう「やめる」にフォーカスを置く。
-        /// </summary>
+        // 「最初から」の確認では、間違えてセーブを消さないよう「やめる」にフォーカスを置く。
         public CampaignMenuResultKind Activate()
         {
             var item = FocusedItem;
@@ -361,14 +312,12 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>kind の項目にフォーカスを移して決定する (マウスで押したとき)。今出ていない項目なら何もせず <see cref="CampaignMenuResultKind.None"/>。</summary>
         public CampaignMenuResultKind Activate(CampaignMenuItemKind kind, int missionIndex = -1)
         {
             var index = IndexOf(kind, missionIndex);
             return FocusOn(index) ? Activate() : CampaignMenuResultKind.None;
         }
 
-        /// <summary>取り消し (ゲームパッドの B・Esc)。確認中なら確認を閉じ、そうでなければメインメニューへ戻る。</summary>
         public CampaignMenuResultKind Cancel()
         {
             if (IsConfirmingRestart)
@@ -380,10 +329,7 @@ namespace Shooter.Core
             return CampaignMenuResultKind.Back;
         }
 
-        /// <summary>
-        /// missionId のミッションのセーブを消したことにする (「最初から」でセーブを消したあと、シーンを読めずにメニューに残ったとき)。
-        /// 一覧に無ければ false。
-        /// </summary>
+        // 「最初から」でセーブを消したあと、シーンを読めずにメニューに残ったときに、消えたセーブを出し続けないよう使う。
         public bool ForgetSave(string missionId)
         {
             for (var i = 0; i < _missions.Length; i++)

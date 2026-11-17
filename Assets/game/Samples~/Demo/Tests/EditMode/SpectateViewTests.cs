@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 観戦の欄 (<see cref="SpectateView"/>) が <see cref="GameSignals.Spectate"/> の値で見ている味方の名前と前と次の操作の案内を出し、
-    /// 文 (<see cref="SpectateText"/>) を日本語の表 (Resources/Localization/ja/spectate.json と settings.json の操作の名前) から作ることを確かめる。
-    /// </summary>
     public sealed class SpectateViewTests
     {
         private const string ControlsLine = "[前の武器] 前の味方   [次の武器] 次の味方";

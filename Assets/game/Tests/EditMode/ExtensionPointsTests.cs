@@ -5,9 +5,6 @@ using NUnit.Framework;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ExtensionPoints"/> が差し込み口を実装した public な具象クラスだけを順に作ることを確かめる。
-    /// </summary>
     public sealed class ExtensionPointsTests
     {
         public interface IProbe

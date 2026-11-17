@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 当たり判定 1 つ分の部位。同じ GameObject か親にあるコライダーへの命中を、持ち主の <see cref="Damageable"/> に
-    /// <see cref="Zone"/> 付きで渡す。持ち主は <see cref="Initialize"/> で渡すか、未設定なら親階層から探す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class Hitbox : MonoBehaviour
     {
@@ -37,7 +33,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>持ち主。未設定なら親階層 (自分を含む) から探して覚える。見つからなければ null。</summary>
         public Damageable Owner
         {
             get
@@ -51,7 +46,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>部位と持ち主をコードで設定する。</summary>
         public void Initialize(HitZone zone, Damageable owner)
         {
             if (!Enum.IsDefined(typeof(HitZone), zone))
@@ -68,15 +62,6 @@ namespace Shooter.Runtime
             _owner = owner;
         }
 
-        /// <summary>
-        /// この部位への命中として持ち主にダメージを渡し、計算したダメージ量を返す。
-        /// 持ち主が見つからなければ <see cref="InvalidOperationException"/> を投げる。
-        /// </summary>
-        /// <param name="baseDamage">武器の基本ダメージ。0 以上。</param>
-        /// <param name="distance">射手から命中点までの距離。0 以上。</param>
-        /// <param name="falloff">距離減衰の設定。</param>
-        /// <param name="sourcePosition">撃った者の位置。分からなければ null。</param>
-        /// <param name="direction">弾の進む向き。分からなければ null。</param>
         public int ApplyHit(int baseDamage, float distance, DamageFalloff falloff, Vector3? sourcePosition = null, Vector3? direction = null)
         {
             var owner = Owner;
@@ -90,7 +75,6 @@ namespace Shooter.Runtime
             return owner.ApplyResolvedHit(damage, _zone, sourcePosition, direction, DamageKind.Bullet);
         }
 
-        /// <summary>コライダーの GameObject か、その親階層にある Hitbox を返す。無ければ null。</summary>
         public static Hitbox FindFor(Collider collider)
         {
             if (collider == null)

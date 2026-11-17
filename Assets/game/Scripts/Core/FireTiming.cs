@@ -2,19 +2,10 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// ラグ補償に使う時刻の換算。サーバーの時刻 (秒) を tick に直し、撃った側が見ていた時点 (<see cref="ShotTime"/>) を求める。
-    /// </summary>
     public static class FireTiming
     {
-        // 1 未満で最大の float。
         private const float _maxAlpha = 0.99999994f;
 
-        /// <summary>
-        /// timeSeconds 時点の tick (切り捨て)。サーバーが位置を <see cref="LagCompensator.Record(int, int, System.Numerics.Vector3, bool)"/> するときの tick に使う。
-        /// </summary>
-        /// <param name="timeSeconds">時刻 (秒)。0 以上の有限値。</param>
-        /// <param name="tickRate">1 秒あたりの tick 数。1 以上。</param>
         public static int TickAt(double timeSeconds, int tickRate)
         {
             ValidateTickRate(tickRate);
@@ -32,13 +23,6 @@ namespace Shooter.Core
             return (int)ticks;
         }
 
-        /// <summary>
-        /// クライアントが見ている他人の位置の時点。サーバーから届いている時刻 serverTimeSeconds から
-        /// 補間の遅れ interpolationDelayTicks を引き、tick と割合に分ける。0 より前にはならない。
-        /// </summary>
-        /// <param name="serverTimeSeconds">クライアントが受け取っているサーバーの時刻 (秒)。0 以上の有限値。</param>
-        /// <param name="tickRate">1 秒あたりの tick 数。1 以上。</param>
-        /// <param name="interpolationDelayTicks">他人を何 tick 遅らせて表示しているか。0 以上。</param>
         public static ShotTime ViewTime(double serverTimeSeconds, int tickRate, int interpolationDelayTicks)
         {
             ValidateTickRate(tickRate);

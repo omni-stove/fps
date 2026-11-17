@@ -4,19 +4,15 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// 通信の形 (<see cref="PlayerSnapshot"/>・<see cref="InputFrame"/>) と Core の移動 (<see cref="CharacterMotorState"/>・
-    /// <see cref="CharacterMotorInput"/>) の間の変換。.NET のサーバーの移動 (<c>ServerMovement</c>) と同じ読み方にし、予測と答えを揃える。
-    /// </summary>
+    // .NET のサーバーの移動 (ServerMovement) と同じ読み方にし、予測と答えを揃える。
     public static class SnapshotMotion
     {
-        /// <summary>行の移動の状態。サーバーはこの値を、その人の最後に処理した入力の後の状態として送る。</summary>
         public static CharacterMotorState ToState(in PlayerSnapshot row)
         {
             return ToState(row, CharacterKnockbackState.None);
         }
 
-        /// <summary>自分の行の移動の状態。吹き飛ばしは持ち主にだけ送るので (<see cref="OwnerSnapshot.Knockback"/>)、行とは別に受け取る。</summary>
+        // 吹き飛ばしは持ち主にだけ送るので (OwnerSnapshot.Knockback)、行とは別に受け取る。
         public static CharacterMotorState ToState(in PlayerSnapshot row, CharacterKnockbackState knockback)
         {
             var cover = row.Cover;
@@ -40,10 +36,8 @@ namespace Shooter.NetV2
                 row.AirJumpsUsed);
         }
 
-        /// <summary>
-        /// サーバーが frame を動かすときと同じ入力。ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は送らないので、
-        /// サーバーが配る値 (downed と rules と <see cref="OwnerSnapshot.CarrySpeedMultiplier"/>) から入れる。
-        /// </summary>
+        // ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は入力で送らないので、
+        // サーバーが配る値 (downed と rules と OwnerSnapshot.CarrySpeedMultiplier) から入れ、サーバーと同じ入力にする。
         public static CharacterMotorInput ToInput(in InputFrame frame, bool downed, in MatchRulesSync rules, float carrySpeedMultiplier = 1f)
         {
             var input = new CharacterMotorInput(
@@ -80,7 +74,6 @@ namespace Shooter.NetV2
                 jumpAllowed: rules.Jump == Jump.On);
         }
 
-        /// <summary>押したボタンを送る形にまとめる。</summary>
         public static InputButtons Buttons(bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge, bool prone = false)
         {
             var buttons = InputButtons.None;
@@ -94,7 +87,7 @@ namespace Shooter.NetV2
             return buttons;
         }
 
-        /// <summary>yaw (ラジアン) を -π〜π に収める。送る値を有限で小さく保ち、補間で遠回りしないため。</summary>
+        // -π〜π に収めるのは、送る値を有限で小さく保ち、補間で遠回りしないため。
         public static float WrapYaw(float yaw)
         {
             if (float.IsNaN(yaw) || float.IsInfinity(yaw))
@@ -116,7 +109,6 @@ namespace Shooter.NetV2
             return wrapped;
         }
 
-        /// <summary>a から b へ t (0〜1) だけ、短い向きに回した yaw (ラジアン)。</summary>
         public static float LerpYaw(float a, float b, float t)
         {
             var delta = WrapYaw(b - a);

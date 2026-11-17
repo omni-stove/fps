@@ -376,7 +376,6 @@ namespace Shooter.Runtime
             set => _airJumpSpeed = value;
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
         public ProneSpec Prone
         {
             get => CreateProneSpec();
@@ -396,7 +395,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
         public MoveDirectionScale WalkDirection
         {
             get => new MoveDirectionScale(_walkForwardScale, _walkBackwardScale, _walkSideScale);
@@ -413,7 +411,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、倍率が負か有限でない。</exception>
         public MoveDirectionScale SprintDirection
         {
             get => new MoveDirectionScale(_sprintForwardScale, _sprintBackwardScale, _sprintSideScale);
@@ -430,7 +427,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">取り出すときに、値が範囲の外。</exception>
         public CarryLoadSpec CarryLoad
         {
             get => new CarryLoadSpec(
@@ -476,8 +472,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary><see cref="Resolve"/> と同じ順で設定を探して伏せの調整値を作る。どれも無ければ <see cref="ProneSpec.Default"/>。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
         public static ProneSpec ResolveProne(MotorSettings assigned)
         {
             var settings = assigned != null ? assigned : Load();
@@ -526,7 +520,6 @@ namespace Shooter.Runtime
                 _airJumpSpeed);
         }
 
-        /// <exception cref="ArgumentOutOfRangeException">伏せの値が範囲の外。</exception>
         public ProneSpec CreateProneSpec()
         {
             return new ProneSpec(

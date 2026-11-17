@@ -9,10 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 建造物への被害の配り方 (<see cref="StructureDamage"/>) と、<see cref="Hitscan.Fire"/> からの呼び出しを確かめる。
-    /// Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
-    /// </summary>
+    // Edit Mode でも Physics の問い合わせはコライダーを見つけるので、生成後に SyncTransforms してから呼ぶ。
     public sealed class StructureDamageTests
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1.6f, 0f);

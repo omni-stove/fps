@@ -2,9 +2,7 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 武器などの Id の並び。読むたびに配列や同じ Id の文字列を作り直さず、前に読んだものを使い回す。
-    /// </summary>
+    // 読むたびに配列や同じ Id の文字列を作り直さず、前に読んだものを使い回す。
     public sealed class ContentIdList
     {
         private readonly string _what;
@@ -47,7 +45,6 @@ namespace Shooter.Protocol
             Count = 0;
         }
 
-        /// <exception cref="InvalidOperationException">もう <see cref="MaxCount"/> 個ある。</exception>
         public void Add(string id)
         {
             if (Count == MaxCount)

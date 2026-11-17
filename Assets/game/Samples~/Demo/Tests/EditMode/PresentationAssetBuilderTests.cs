@@ -10,10 +10,7 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="PresentationAssetBuilder"/> を一時フォルダに走らせて、生成物・作り直したときの同一性・カタログの引き当てを確かめる。
-    /// リポジトリの Assets/game/Audio と Assets/game/Presentation は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Audio と Assets/game/Presentation を触らないよう、一時フォルダに走らせる。
     public sealed class PresentationAssetBuilderTests
     {
         private string _folder;

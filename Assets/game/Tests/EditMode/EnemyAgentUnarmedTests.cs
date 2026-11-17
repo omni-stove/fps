@@ -7,10 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// EnemyAgent の武器なしの状態 (<see cref="EnemyAgent.Disarm"/>)、拾える物からの武器と予備弾の受け取り、モードが渡す行き先 (<see cref="EnemyAgent.SetErrand"/>) を確かめる。
-    /// 行き先へ実際に歩く部分は NavMesh が要るので Play で確かめる。
-    /// </summary>
+    // 行き先へ実際に歩く部分は NavMesh が要るので Play で確かめる。
     public sealed class EnemyAgentUnarmedTests
     {
         private GameObject _host;

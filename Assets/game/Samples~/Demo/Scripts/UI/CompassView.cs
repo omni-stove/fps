@@ -6,48 +6,31 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// ミニマップと同じ値 (<see cref="GameSignals.Minimap"/>) から、HUD の上の帯に方位とピン・目標の向きを出す既定の表示。
-    /// Hud.uxml の <see cref="UxmlName"/> を使い、見た目は Minimap.uss で決める。
-    /// 帯の中央が自分の向きで、左右の端までで <see cref="SpanDegrees"/> を見せる (<see cref="BandPosition"/>)。
-    /// 方位の文字は Localization の minimap.json (<see cref="CardinalKey"/>) から引き、言語が変わったら書き直す。
-    /// HUD の量でコンパスを出さない (<see cref="HudVisibility.Compass"/>) なら隠す。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class CompassView : HudElementView
     {
-        /// <summary>Hud.uxml の帯の要素。</summary>
         public const string UxmlName = "compass";
 
-        /// <summary>方位の文字の Label に付けるクラス。</summary>
         public const string LabelClass = "compass__label";
 
-        /// <summary>東西南北 (8 方位のうち 90 度ごと) の文字に足すクラス。</summary>
         public const string PrimaryLabelClass = "compass__label--primary";
 
-        /// <summary>目盛りに付けるクラス。</summary>
         public const string TickClass = "compass__tick";
 
-        /// <summary>ピン・目標の印に付けるクラス。</summary>
         public const string MarkerClass = "compass__marker";
 
         public const string PingMarkerClass = "compass__marker--ping";
 
         public const string ObjectiveMarkerClass = "compass__marker--objective";
 
-        /// <summary>帯の中央 (自分の向き) の印に付けるクラス。</summary>
         public const string CenterClass = "compass__center";
 
-        /// <summary>方位の文字のキーの頭。後ろに <see cref="CardinalSuffixes"/> の 1 つが付く。</summary>
         public const string CardinalKeyPrefix = "minimap.compass.";
 
-        /// <summary><see cref="SpanDegrees"/> の既定 (度)。</summary>
         public const float DefaultSpanDegrees = 180f;
 
-        /// <summary>目盛りの間隔 (度)。</summary>
         public const float TickStepDegrees = 15f;
 
-        /// <summary>北から時計回りに 45 度ごとの方位のキーの後ろ。</summary>
         public static readonly IReadOnlyList<string> CardinalSuffixes = new[] { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
 
         private static readonly int _tickCount = Mathf.RoundToInt(360f / TickStepDegrees);
@@ -64,14 +47,10 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>出している値。出していなければ null。</summary>
         public MinimapStatus? Status => _status;
 
-        /// <summary>帯に出しているピン・目標の印 (帯の外のものは除く)。</summary>
         public IReadOnlyList<Marker> Markers => _markers;
 
-        /// <summary>帯の左端から右端までに見せる角度 (度)。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">0 以下か 360 より大きいか有限でない。</exception>
         public float SpanDegrees
         {
             get => _spanDegrees;
@@ -83,8 +62,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>北から時計回りに index 番目 (45 度ごと) の方位の文字のキー。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が 0 から 7 の外。</exception>
         public static string CardinalKey(int index)
         {
             if (index < 0 || index >= CardinalSuffixes.Count)
@@ -95,7 +72,6 @@ namespace Shooter.Runtime
             return CardinalKeyPrefix + CardinalSuffixes[index];
         }
 
-        /// <summary>from から to への向き (度、北 (+Z) を 0 に時計回り、0 以上 360 未満)。上から見て同じ位置なら null。</summary>
         public static float? BearingDegrees(System.Numerics.Vector3 from, System.Numerics.Vector3 to)
         {
             var east = to.X - from.X;
@@ -114,11 +90,6 @@ namespace Shooter.Runtime
             return degrees >= 360f ? 0f : degrees;
         }
 
-        /// <summary>
-        /// headingDegrees を向いているとき、bearingDegrees の向きを帯のどこに出すか。左端 0〜右端 1 で中央が 0.5。
-        /// 左右に spanDegrees の半分より外れていれば null (端ちょうどは出す)。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">spanDegrees が 0 以下か 360 より大きいか有限でない。</exception>
         public static float? BandPosition(float headingDegrees, float bearingDegrees, float spanDegrees)
         {
             RequireSpan(spanDegrees, nameof(spanDegrees));
@@ -141,7 +112,6 @@ namespace Shooter.Runtime
             return 0.5f + delta / spanDegrees;
         }
 
-        /// <summary>今出している方位の文字 index (<see cref="CardinalKey"/>) の帯の位置。帯の外か、出していなければ false。</summary>
         public bool TryGetCardinalPosition(int index, out float x)
         {
             x = 0f;
@@ -155,7 +125,6 @@ namespace Shooter.Runtime
             return position.HasValue;
         }
 
-        /// <summary>status を出す。null なら出すのをやめる。要素を持っている間は <see cref="GameSignals.Minimap"/> が出されるたびに呼ばれる。</summary>
         public void Show(MinimapStatus? status)
         {
             _showsSignal = false;
@@ -445,7 +414,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>帯に出したピン・目標の印 1 つ。</summary>
         public readonly struct Marker
         {
             public Marker(MinimapContactKind kind, Team? team, float x)
@@ -459,7 +427,6 @@ namespace Shooter.Runtime
 
             public Team? Team { get; }
 
-            /// <summary>帯の左端 0〜右端 1。中央が 0.5。</summary>
             public float X { get; }
         }
     }

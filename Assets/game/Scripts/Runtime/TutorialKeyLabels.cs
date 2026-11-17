@@ -5,11 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// チュートリアルの案内に出す、アクションのキー (ボタン) の表記を決める。入力機器の種類の制御スキーム
-    /// (Assets/InputSystem_Actions.inputactions の Keyboard&amp;Mouse / Gamepad) に入っている最初の割り当てを、
-    /// Input System の表示名 (<c>InputAction.GetBindingDisplayString</c>) で出すので、割り当てを変えていれば変えた後のキーになる。
-    /// </summary>
     public static class TutorialKeyLabels
     {
         public const string KeyboardMouseGroup = "Keyboard&Mouse";
@@ -18,7 +13,6 @@ namespace Shooter.Runtime
         // 2D の合成 (WASD) を「上・左・下・右」の順に並べると、キーボードの並びどおり WASD と読める
         private static readonly string[] _directionOrder = { "up", "left", "down", "right" };
 
-        /// <summary>device の種類の割り当てを入れている制御スキームの名前。</summary>
         public static string GroupOf(InputDeviceKind device)
         {
             switch (device)
@@ -32,11 +26,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// action を device で操作するキーの表記。device の制御スキームの割り当てを並び順に見て、最初に見つかったものを出す。
-        /// 合成 (WASD など) は部品ごとの表記を <see cref="TutorialSteps.JoinDirectionalKeys"/> でまとめる。
-        /// </summary>
-        /// <returns>表記。device の割り当てが無ければ空文字。</returns>
         public static string For(InputAction action, InputDeviceKind device)
         {
             if (action == null)
@@ -66,7 +55,6 @@ namespace Shooter.Runtime
             return string.Empty;
         }
 
-        /// <summary>binding の groups (; 区切り) に group があるか。</summary>
         public static bool InGroup(InputBinding binding, string group)
         {
             var groups = binding.groups;
@@ -121,7 +109,6 @@ namespace Shooter.Runtime
                 }
             }
 
-            // 方向でない部品 (1D の負・正など) は書いた順に後ろへ足す
             foreach (var name in partOrder)
             {
                 if (firstByPart.TryGetValue(name, out var index))

@@ -3,10 +3,6 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 持ち主が撃ったときの要求。当たり判定はサーバーが、撃った tick と補間の割合で他の人を巻き戻して行う。
-    /// 何発目か (<see cref="ShotIndex"/>・<see cref="ShotGeneration"/>) はサーバーが自分の番号と突き合わせるだけに使う。
-    /// </summary>
     public sealed class FireRequestMessage : IMessage
     {
         public const byte CurrentVersion = 2;
@@ -21,10 +17,8 @@ namespace Shooter.Protocol
 
         public Vector3 Direction { get; set; }
 
-        /// <summary>撃ったときにクライアントが表示していた tick。</summary>
         public int ClientTick { get; set; }
 
-        /// <summary>表示していた tick と次の tick の間の割合 (0〜1)。</summary>
         public float InterpolationAlpha { get; set; }
 
         public int ShotIndex { get; set; }
@@ -39,10 +33,7 @@ namespace Shooter.Protocol
 
         public int LockTargetId { get; set; }
 
-        /// <summary>
-        /// ビームや火炎のように押している間ずっと出る撃ち方で、引き金を押した・離した知らせ。1 発ごとの要求は <see cref="TriggerEdge.None"/>。
-        /// 押しっぱなしの間に 1 発ずつ要求を送らずに済むようにするため。
-        /// </summary>
+        // ビームや火炎のように押している間ずっと出る撃ち方で、押しっぱなしの間に 1 発ずつ要求を送らずに済むよう、押した・離した知らせを運ぶ。
         public TriggerEdge Trigger { get; set; }
 
         public void Write(MessageWriter writer)

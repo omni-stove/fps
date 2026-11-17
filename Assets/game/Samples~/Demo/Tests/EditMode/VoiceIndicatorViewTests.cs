@@ -7,10 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ボイスの欄 (<see cref="VoiceIndicatorView"/>) が <see cref="GameSignals.Voice"/> の値で、自分が送っている印と話している人の名前を出し、
-    /// 文 (<see cref="VoiceText"/>) を日本語の表 (Resources/Localization/ja/voice.json) から作ることを確かめる。
-    /// </summary>
     public sealed class VoiceIndicatorViewTests
     {
         private Hud _hud;

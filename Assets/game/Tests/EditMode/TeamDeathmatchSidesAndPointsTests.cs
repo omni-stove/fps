@@ -8,11 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="TeamDeathmatchDefinition"/> の陣営の数・人数・キル 1 回の点が <see cref="TeamDeathmatchSpec"/> に渡り、
-    /// <see cref="TeamDeathmatchRunner"/> が Definition があればその値、無ければ Inspector の値で試合を作ることと、
-    /// 試合の中で別の人が撃った敵を倒すとアシストが数えられることを確かめる。
-    /// </summary>
     public sealed class TeamDeathmatchSidesAndPointsTests
     {
         private readonly List<Object> _objects = new List<Object>();

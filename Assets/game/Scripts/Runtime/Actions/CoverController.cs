@@ -5,16 +5,6 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 遮蔽物に張り付いて身を隠すカバーを受け持つ、プレイヤーのコンポーネント。
-    /// <see cref="Configure"/> でルールの <see cref="ActionRules.Cover"/> が <see cref="Cover.On"/> のときだけ有効にする。
-    /// Cover を押したとき正面の近くに壁があれば張り付き (<see cref="CoverProbe"/>・<see cref="CoverState"/>)、
-    /// 張り付いている間は <see cref="PlayerController.MoveFilter"/> として移動を壁沿いの横移動だけにし、ダッシュとジャンプを止め、
-    /// 低い壁ではしゃがませる。Aim を押すと低い壁では立って、高い壁では端から横に出て覗く。
-    /// 参照はコードで解決するので Inspector の配線は要らない: <see cref="PlayerController"/> (と、その CharacterController・FirstPersonLook) は同じ
-    /// GameObject、<see cref="ViewRig"/>・<see cref="AimDownSights"/>・<see cref="Damageable"/> は同じ GameObject にあれば使い、
-    /// 入力はプロジェクト全体のアクション (<see cref="InputSystem.actions"/>) の Cover / Aim / Move。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class CoverController : MonoBehaviour, IPlayerMoveFilter
     {
@@ -22,19 +12,15 @@ namespace Shooter.Runtime
         public const string AimActionPath = InputActionPaths.Aim;
         public const string MoveActionPath = InputActionPaths.Move;
 
-        /// <summary>無効にされて出た。</summary>
         public const string ReasonDisabled = "disabled";
 
-        /// <summary>死亡して出た。</summary>
         public const string ReasonDeath = "death";
 
-        /// <summary>体力を作り直して (リスポーンして) 出た。</summary>
         public const string ReasonRespawn = "respawn";
 
-        /// <summary>壁を探す Ray の、足元からの高さ (m)。低い壁 (1.1m 未満) にも段差より上で当たる高さ。</summary>
+        // 低い壁 (1.1m 未満) にも段差より上で当たる高さにする。
         public const float DefaultProbeHeight = 0.5f;
 
-        /// <summary>壁の上端を探すときに、上から下ろす Ray の始点の足元からの高さ (m)。これより高い壁は上端をこの高さとして扱う。</summary>
         public const float DefaultTopProbeHeight = 3f;
 
         private const string LogTag = CoverState.LogTag;
@@ -80,35 +66,25 @@ namespace Shooter.Runtime
         private CoverProbeResult _lastProbe;
         private float _coverTopY;
 
-        // 高い壁の端から覗くために、今どれだけ横に出ているか (m、壁に向いて右が正)。壁の検査はこの分を戻した位置から行う。
         private float _appliedPeek;
 
-        // カバーに入ったときの肩。左端で Left にした後、端を離れるか出たら戻す。
         private ShoulderSide _savedShoulder = ShoulderSide.Right;
         private bool _shoulderOverridden;
 
-        /// <summary>遮蔽物に張り付いている (寄せている途中を含む) か。</summary>
         public bool IsInCover => _state.IsInCover;
 
-        /// <summary>張り付いたまま身を乗り出して狙っているか (低い壁で立つ・高い壁の端から出る)。</summary>
         public bool IsPeeking => _state.IsPeeking;
 
-        /// <summary>張り付いている遮蔽物の上端の高さ (ワールドの y、m)。<see cref="IsInCover"/> が false の間は意味を持たない。</summary>
         public float CoverTopY => _coverTopY;
 
-        /// <summary>張り付いている遮蔽物の面の、こちら向きの法線 (ワールド、水平で長さ 1)。<see cref="IsInCover"/> が false の間は意味を持たない。</summary>
         public Vector3 CoverNormal => _state.Normal.ToUnity();
 
-        /// <summary>張り付いている壁の高さの区分。<see cref="IsInCover"/> が false の間は意味を持たない。</summary>
         public CoverHeight CoverHeight => _state.Height;
 
-        /// <summary>今の状態。</summary>
         public CoverPhase Phase => _state.Phase;
 
-        /// <summary>最後に調べた壁の判定 (カバーの外では Cover を押したときだけ調べる)。</summary>
         public CoverProbeResult LastProbe => _lastProbe;
 
-        /// <summary>高い壁の端から覗くために今横に出ている量 (m、壁に向いて右が正)。</summary>
         public float AppliedPeekOffset => _appliedPeek;
 
         public PlayerController Player => _player;
@@ -164,7 +140,6 @@ namespace Shooter.Runtime
             Tick(_coverAction.WasPressedThisFrame(), ReadAim(), move, Time.deltaTime);
         }
 
-        /// <summary>rules の <see cref="ActionRules.Cover"/> が <see cref="Cover.On"/> なら有効に、それ以外なら無効にする (カバー中なら出る)。</summary>
         public void Configure(GameRules rules)
         {
             if (rules == null)
@@ -183,11 +158,6 @@ namespace Shooter.Runtime
             SyncMoveFilter();
         }
 
-        /// <summary>
-        /// 同じ GameObject の <see cref="PlayerController"/> (初期化済み) とプロジェクト全体の Cover / Aim / Move を探して初期化する。
-        /// <see cref="ViewRig"/>・<see cref="AimDownSights"/>・<see cref="Damageable"/> は無くてもよい。
-        /// 見つからなければ理由を Debug.LogError に出して false を返す。
-        /// </summary>
         public bool TryInitializeFromHierarchy()
         {
             var player = GetComponent<PlayerController>();
@@ -223,10 +193,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 参照を直接渡して初期化する。player はこの GameObject の初期化済みのもの。入力は null 可 (<see cref="Tick"/> を直接呼ぶテストなど)。
-        /// <see cref="ViewRig"/>・<see cref="AimDownSights"/>・<see cref="Damageable"/> は同じ GameObject にあれば使う。
-        /// </summary>
         public void Initialize(PlayerController player, InputAction coverAction, InputAction aimAction, InputAction moveAction)
         {
             if (player == null)
@@ -271,17 +237,7 @@ namespace Shooter.Runtime
             SyncMoveFilter();
         }
 
-        /// <summary>
-        /// 1 フレーム分の入力でカバーを進める。外では Cover を押したときだけ正面の壁を調べ、中では張り付いている壁を調べ直す。
-        /// 入りかけの間は壁へ寄せて壁に向かせ、覗いている間は横に出る。状態が変わったら <c>[Cover] ..</c> をログに出す。
-        /// 回避・乗り越え・崖のぼりの最中 (<see cref="PlayerController.IsDodging"/>・<see cref="PlayerController.IsVaulting"/>・<see cref="PlayerController.IsMantling"/>) は入らない
-        /// (寄せる動きと転がり・乗り越え・よじ登りの軌跡がぶつかるため)。
-        /// 無効か未初期化なら何もしない。
-        /// </summary>
-        /// <param name="coverPressed">このフレームで Cover を押したか。</param>
-        /// <param name="aimHeld">Aim を押しているか (覗くか)。</param>
-        /// <param name="move">移動入力 (x が右、y が前)。カバー中の後ろの入力で出るのに使う。</param>
-        /// <param name="deltaSeconds">経過秒数。0 以上。</param>
+        // 回避・乗り越え・崖のぼりの最中にカバーへ入らないのは、寄せる動きと転がり・乗り越え・よじ登りの軌跡がぶつかるため。
         public void Tick(bool coverPressed, bool aimHeld, Vector2 move, float deltaSeconds)
         {
             if (!enabled || !IsInitialized)
@@ -338,10 +294,6 @@ namespace Shooter.Runtime
             UpdateShoulder();
         }
 
-        /// <summary>
-        /// カバー中だけ、移動入力を壁沿いの横移動 (しゃがみの速さ) にし、ダッシュとジャンプを止め、低い壁ではしゃがませる (覗いている間は立たせる)。
-        /// 寄せている途中と覗いている間は動かさない。高い壁ではしゃがみの入力をそのまま使う。
-        /// </summary>
         public void Filter(ref Vector2 move, ref bool sprint, ref bool crouch, ref bool jumpPressed)
         {
             if (!enabled || !IsInitialized || !_state.IsInCover)
@@ -370,8 +322,6 @@ namespace Shooter.Runtime
             move = new Vector2(Vector3.Dot(along, right), Vector3.Dot(along, forward)) * SpeedScale(crouch);
         }
 
-        /// <summary>外の理由でカバーから出る。カバー中だったら true。</summary>
-        /// <param name="reason">ログに出す理由 (<see cref="ReasonDeath"/> など)。</param>
         public bool ExitCover(string reason)
         {
             if (!_state.Release(reason))

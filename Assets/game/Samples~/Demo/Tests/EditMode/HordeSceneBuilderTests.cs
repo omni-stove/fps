@@ -7,10 +7,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="HordeSceneBuilder"/> の拠点・防衛物・出現点の配置と、シーン・ルールのパスを確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.HordeSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.HordeSceneBuilder.Build で確かめる。
     public sealed class HordeSceneBuilderTests
     {
         [Test]

@@ -5,16 +5,6 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// <see cref="GameRules"/> を JSON から読む。項目は <see cref="GameRules"/> の構成と同じで、名前はコンストラクターの引数名
-    /// (<see cref="ItemNames"/>)。アクションは <see cref="ActionsItem"/> の入れ子のオブジェクト (<see cref="ActionItemNames"/>) に、
-    /// 部位のダメージ倍率は <see cref="ZoneDamageItem"/> の入れ子のオブジェクト (<see cref="ZoneDamageItemNames"/>) に書く。
-    /// 省略した項目は <see cref="GameRules.Default"/> (入れ子の中の項目は <see cref="GameRules.Default"/> の <see cref="GameRules.Actions"/>・<see cref="GameRules.ZoneDamage"/>) の値になる。
-    /// 土台のルールを渡す <see cref="Parse(string, string, GameRules)"/> なら、省略した項目は土台の値になる (ミッションが難易度のルールの一部だけを変えるときに使う)。
-    /// 列挙は名前の文字列 (例: <c>"Off"</c>)、小数は JSON の数、整数は小数点も指数も無い数、真偽は true / false で書く。
-    /// 値の範囲の検査は <see cref="GameRules"/> と <see cref="ActionRules"/> と <see cref="ZoneDamageMultipliers"/> に任せ、どれかに引っかかれば
-    /// どのファイルのどの項目かを添えた <see cref="GameRulesJsonException"/> を投げる。
-    /// </summary>
     public static class GameRulesJson
     {
         public const string ActionsItem = "actions";
@@ -74,12 +64,11 @@ namespace Shooter.Core
         public const string JumpItem = "jump";
         public const string ReviveRangeItem = "reviveRange";
 
-        /// <summary>入れ子の深さの上限。項目は 2 段までなので、それより深いものは読む前に断る。</summary>
+        // 項目は 2 段までなので、それより深く入れ子にしたものは読む前に断る。
         private const int _maxDepth = 8;
 
         private const char _byteOrderMark = (char)0xFEFF;
 
-        /// <summary>最上位に書ける項目の名前 (<see cref="GameRules"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> ItemNames { get; } = new[]
         {
             FriendlyFireItem,
@@ -107,7 +96,6 @@ namespace Shooter.Core
             StreaksItem,
         };
 
-        /// <summary><see cref="ActionsItem"/> の中に書ける項目の名前 (<see cref="ActionRules"/> のコンストラクターの並び)。</summary>
         public static IReadOnlyList<string> ActionItemNames { get; } = new[]
         {
             DownedItem,
@@ -139,10 +127,7 @@ namespace Shooter.Core
             ReviveRangeItem,
         };
 
-        /// <summary>
-        /// <see cref="ZoneDamageItem"/> の中に書ける項目の名前 (<see cref="ZoneDamageMultipliers"/> のコンストラクターの並び)。
-        /// 弱点の倍率はルールで変えるものではないので書けず、土台のルールの値のまま。
-        /// </summary>
+        // 弱点の倍率はルールで変えるものではないので書けるようにせず、土台のルールの値のままにする。
         public static IReadOnlyList<string> ZoneDamageItemNames { get; } = new[]
         {
             HeadItem,
@@ -150,26 +135,11 @@ namespace Shooter.Core
             LimbItem,
         };
 
-        /// <summary>text を 1 つのルールとして読む。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <exception cref="ArgumentNullException">text が null。</exception>
-        /// <exception cref="GameRulesJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="GameRules"/> の検査に通らない。
-        /// </exception>
         public static GameRules Parse(string text, string sourceName)
         {
             return Parse(text, sourceName, GameRules.Default);
         }
 
-        /// <summary>text を、baseRules の上に書いた項目だけを変えるルールとして読む。省略した項目 (アクションの中の項目も) は baseRules の値になる。</summary>
-        /// <param name="text">JSON の文字列。先頭の BOM は読み飛ばす。</param>
-        /// <param name="sourceName">例外の文に出す読み込み元の名前 (ファイルのパスなど)。</param>
-        /// <param name="baseRules">省略した項目に使うルール。</param>
-        /// <exception cref="ArgumentNullException">text か baseRules が null。</exception>
-        /// <exception cref="GameRulesJsonException">
-        /// JSON の文法に合わない、知らない項目がある、型が合わない、または値が <see cref="GameRules"/> の検査に通らない。
-        /// </exception>
         public static GameRules Parse(string text, string sourceName, GameRules baseRules)
         {
             if (baseRules == null)
@@ -242,12 +212,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// rules のすべての項目を <see cref="Parse(string, string)"/> が読める JSON にする。並びは <see cref="ItemNames"/> と <see cref="ActionItemNames"/> と
-        /// <see cref="ZoneDamageItemNames"/> の順で、省略はしない。小数は読み直すと同じ float (部位の倍率は double) になる最短の形で書くので、
-        /// <see cref="Parse(string, string)"/> に通すと同じ値に戻る。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">rules が null。</exception>
         public static string Write(GameRules rules)
         {
             if (rules == null)
@@ -418,14 +382,13 @@ namespace Shooter.Core
 
             public NodeKind Kind { get; }
 
-            /// <summary>文字列ならその中身、数なら書かれたままの字句。読む側の型 (float / int) で解釈し直すため字句のまま持つ。</summary>
+            // 数を字句のまま持つのは、読む側の型 (float / int) で解釈し直すため。
             public string Text { get; }
 
             public int Line { get; }
 
             public int Column { get; }
 
-            /// <summary>オブジェクトの項目。書かれた順。</summary>
             public List<KeyValuePair<string, Node>> Members { get; } = new List<KeyValuePair<string, Node>>();
 
             public List<Node> Elements { get; } = new List<Node>();
@@ -454,7 +417,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>1 つのオブジェクトの項目を、型を確かめながら取り出す。作った時点で知らない項目が無いことを確かめる。</summary>
         private sealed class Fields
         {
             private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
@@ -639,7 +601,7 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>項目を書いた順に、2 文字の字下げで 1 行 1 項目に並べる。項目名と列挙の名前は英数字だけなので、文字列の逃がしは要らない。</summary>
+        // 項目名と列挙の名前は英数字だけなので、文字列の逃がしはしない。
         private sealed class Writer
         {
             private readonly StringBuilder _builder = new StringBuilder("{");
@@ -727,7 +689,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>JSON (RFC 8259) をそのまま読む。コメントや末尾のカンマなどの拡張は受け付けない。</summary>
         internal sealed class Parser
         {
             private readonly string _text;
@@ -971,7 +932,6 @@ namespace Shooter.Core
                 return (char)value;
             }
 
-            /// <summary>JSON の数の文法どおりに字句を切り出して返す。値への変換は読む側の型に任せる。</summary>
             private string ParseNumber()
             {
                 var start = _position;
@@ -1104,7 +1064,6 @@ namespace Shooter.Core
         }
     }
 
-    /// <summary>ルールの JSON が読めない、または値が不正。<see cref="SourceName"/> と <see cref="Item"/> でどこが悪いかを示す。</summary>
     public sealed class GameRulesJsonException : Exception
     {
         public GameRulesJsonException()
@@ -1128,10 +1087,8 @@ namespace Shooter.Core
             Item = item;
         }
 
-        /// <summary>読み込み元の名前 (ファイルのパスなど)。</summary>
         public string SourceName { get; }
 
-        /// <summary>悪い項目の名前 (入れ子は <c>actions.grenadeCount</c> の形)。JSON の文法の誤りなど、項目に結び付かないときは null。</summary>
         public string Item { get; }
     }
 }

@@ -7,10 +7,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="HardpointSceneBuilder"/> の拠点の配置と、シーン・ルールのパスを確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.HardpointSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.HardpointSceneBuilder.Build で確かめる。
     public sealed class HardpointSceneBuilderTests
     {
         [Test]

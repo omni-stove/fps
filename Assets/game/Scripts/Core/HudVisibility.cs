@@ -2,24 +2,13 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// HUD の各項目を出すか。<see cref="For"/> で <see cref="HudDensity"/> から決める。
-    /// <list type="bullet">
-    /// <item><see cref="HudDensity.Full"/>: すべて出す。</item>
-    /// <item><see cref="HudDensity.Minimal"/>: 弾数は弾倉の数だけにし (予備を出さない)、照準を <see cref="SmallCrosshairScale"/> に縮め、ミニマップとコンパスを消す。ほかは Full と同じ。</item>
-    /// <item><see cref="HudDensity.Hardcore"/>: 体力・弾数・武器名・照準・ヒットマーカー・ミニマップ・コンパスを消す。残り時間・点数・被弾方向・キルログは残す。</item>
-    /// </list>
-    /// 一時的な案内 (リスポーン・セーブ)・試合結果・リロードの進み・スコアボードは、遊ぶのに要るのでどの量でも出す (ここでは扱わない)。
-    /// </summary>
+    // 一時的な案内 (リスポーン・セーブ)・試合結果・リロードの進み・スコアボードをここで扱わないのは、遊ぶのに要るのでどの量でも出すため。
     public sealed class HudVisibility
     {
-        /// <summary>照準をそのままの大きさで出すときの倍率。</summary>
         public const float FullCrosshairScale = 1f;
 
-        /// <summary><see cref="HudDensity.Minimal"/> で照準を縮める倍率。</summary>
         public const float SmallCrosshairScale = 0.6f;
 
-        /// <summary>すべて出す。</summary>
         public static readonly HudVisibility Full = new HudVisibility(
             HudDensity.Full,
             health: true,
@@ -36,7 +25,6 @@ namespace Shooter.Core
             minimap: true,
             compass: true);
 
-        /// <summary>弾数を弾倉の数だけにし、照準を小さくし、ミニマップとコンパスを消す。</summary>
         public static readonly HudVisibility Minimal = new HudVisibility(
             HudDensity.Minimal,
             health: true,
@@ -53,7 +41,6 @@ namespace Shooter.Core
             minimap: false,
             compass: false);
 
-        /// <summary>体力・弾数・武器名・照準・ヒットマーカー・ミニマップ・コンパスを消し、残り時間・点数・被弾方向・キルログだけ残す。</summary>
         public static readonly HudVisibility Hardcore = new HudVisibility(
             HudDensity.Hardcore,
             health: false,
@@ -102,50 +89,34 @@ namespace Shooter.Core
             Compass = compass;
         }
 
-        /// <summary>この組を決めた HUD の量。</summary>
         public HudDensity Density { get; }
 
-        /// <summary>体力を出すか。</summary>
         public bool Health { get; }
 
-        /// <summary>弾数の欄を出すか。</summary>
         public bool Ammo { get; }
 
-        /// <summary>弾数に予備の数を並べるか。false なら弾倉の数 (リロード中はその案内) だけを出す。</summary>
         public bool ReserveAmmo { get; }
 
-        /// <summary>持っている武器の名前を出すか。</summary>
         public bool WeaponName { get; }
 
-        /// <summary>残り時間を出すか。</summary>
         public bool Time { get; }
 
-        /// <summary>チームの点数を出すか。</summary>
         public bool Score { get; }
 
-        /// <summary>照準を出すか。true でも一人称の ADS 中とダッシュ中は HUD が隠す。</summary>
         public bool Crosshair { get; }
 
-        /// <summary>照準の大きさの倍率 (線と隙間をまとめて縮める)。</summary>
         public float CrosshairScale { get; }
 
-        /// <summary>弾が当たった印 (と音) を出すか。</summary>
         public bool HitMarker { get; }
 
-        /// <summary>撃たれた方向を出すか。</summary>
         public bool DamageDirection { get; }
 
-        /// <summary>キルログを出すか。</summary>
         public bool KillFeed { get; }
 
-        /// <summary>右上の地図 (味方・見つけた敵・ピン・目標の印) を出すか。</summary>
         public bool Minimap { get; }
 
-        /// <summary>上の帯の方位とピン・目標の向きを出すか。</summary>
         public bool Compass { get; }
 
-        /// <summary>density の HUD で各項目を出すか。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">density が定義済みの値でない。</exception>
         public static HudVisibility For(HudDensity density)
         {
             switch (density)

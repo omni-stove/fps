@@ -5,12 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 乗り物 1 種類の値 (Id・耐久・部位の倍率・傷み方と爆発・乗り込める距離・追うカメラの置き方) をアセットとして持つ。
-    /// <see cref="Vehicle"/> に入れると、プレハブの Inspector の値の代わりにこれを使う。
-    /// 座席の並びはシーンの <see cref="VehicleSeat"/> の側にあるので、<see cref="ToSpec"/> で座席の設定と合わせて <see cref="VehicleSpec"/> にする。
-    /// 検証は <see cref="VehicleSpec"/> に任せ、失敗したらどのアセットの値かを添えて <see cref="VehicleDefinitionException"/> を投げる。
-    /// </summary>
+    // 座席の並びはシーンの VehicleSeat の側にあるので、アセットには持たず ToSpec で座席の設定と合わせる。
     [CreateAssetMenu(fileName = "Vehicle", menuName = "Shooter/Vehicle Definition")]
     public sealed class VehicleDefinition : ScriptableObject
     {
@@ -131,7 +126,6 @@ namespace Shooter.Runtime
             set => _explosionStructureDamage = value;
         }
 
-        /// <summary>この値と座席の並び seats で <see cref="VehicleSpec"/> を作る。値が不正なら <see cref="VehicleDefinitionException"/>。</summary>
         public VehicleSpec ToSpec(IReadOnlyList<VehicleSeatSpec> seats)
         {
             return ToSpec(seats, null);
@@ -157,7 +151,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>spec の Id・耐久・部位・傷み方と爆発・乗り込める距離・追うカメラの値を写す (座席・武器は持たないので写さない)。</summary>
         public void CopyFrom(VehicleSpec spec)
         {
             if (spec == null)

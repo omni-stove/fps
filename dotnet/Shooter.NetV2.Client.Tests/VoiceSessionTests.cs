@@ -36,7 +36,6 @@ namespace Shooter.NetV2.Tests
             _rtc.Dispose();
         }
 
-        /// <summary>部屋に入ってつなぎ、つないだときの送る (false) と音量 (1) の要求に応える。</summary>
         private void Connect()
         {
             var joinError = "not answered";
@@ -381,7 +380,6 @@ namespace Shooter.NetV2.Tests
             return array;
         }
 
-        /// <summary>要求を溜めておき、テストが順に応える偽の RTC。知らせはテストが起こす。</summary>
         private sealed class FakeVoiceRtc : IVoiceRtc
         {
             private Action<string> _join;

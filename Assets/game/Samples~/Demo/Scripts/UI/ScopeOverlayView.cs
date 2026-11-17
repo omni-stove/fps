@@ -5,15 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 覗き込んだ照準器の見た目。Hud.uxml の <see cref="UxmlName"/> (画面全体を覆う要素) に、照準器の出し方 (<see cref="SightView"/>) に従って
-    /// スコープの縁 (<see cref="SightView.ScopeOverlay"/>) と照準 (<see cref="SightView.ShowsReticle"/>) を描く。
-    /// 照準の見た目は <see cref="ReticleCatalog"/> から引き、画像が空なら形をコードで描く。カタログが無ければ既定の形で描く。
-    /// 出し方は <see cref="SightSource"/> から、無ければ同じ GameObject の <see cref="Hud.Ads"/> から毎フレーム読む。
-    /// </summary>
-    /// <remarks>
-    /// HUD の量 (<see cref="HudVisibility"/>) では隠さない。縁と照準はスコープ越しに見えている景色そのものだから。
-    /// </remarks>
+    // HUD の量 (HudVisibility) では隠さない。縁と照準はスコープ越しに見えている景色そのものだから。
     [DisallowMultipleComponent]
     public sealed class ScopeOverlayView : HudElementView
     {
@@ -28,7 +20,6 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>見た目を引くカタログ。初めて読んだときに <see cref="ReticleCatalog.Load"/> で探し、無ければ null (既定の形で描く)。</summary>
         public ReticleCatalog Catalog
         {
             get
@@ -49,13 +40,10 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>照準器の出し方。null なら同じ GameObject の <see cref="Hud.Ads"/> の <see cref="AimDownSights.SightView"/>。</summary>
         public Func<SightView> SightSource { get; set; }
 
-        /// <summary>最後に <see cref="Refresh"/> で描いた出し方。</summary>
         public SightView Shown { get; private set; }
 
-        /// <summary>描いている照準の見た目。照準を出していなければ null。</summary>
         public ReticleEntry Reticle { get; private set; }
 
         public bool IsShown => Shown.ScopeOverlay || Shown.ShowsReticle;
@@ -74,7 +62,6 @@ namespace Shooter.Runtime
             Refresh();
         }
 
-        /// <summary>出し方を読み直し、変わっていれば描き直す。</summary>
         public void Refresh()
         {
             var view = ReadSightView();
@@ -87,9 +74,6 @@ namespace Shooter.Runtime
             Apply();
         }
 
-        /// <summary>
-        /// 照準の大きさ (px)。縁を出すときは縁の内側の円の直径に、出さないときは画面の高さに <see cref="ReticleEntry.Size"/> を掛ける。
-        /// </summary>
         public static float ReticleSize(ReticleEntry reticle, bool scopeOverlay, float screenHeight, float lensDiameter)
         {
             if (reticle == null || !(screenHeight > 0f))

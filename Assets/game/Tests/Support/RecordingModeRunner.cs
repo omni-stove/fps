@@ -5,23 +5,18 @@ using Shooter.Runtime;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ModeRunnerBase"/> のフックが呼ばれた順を記録する。モードは <see cref="Factory"/> で組み立てる。
-    /// </summary>
     public sealed class RecordingModeRunner : ModeRunnerBase
     {
         public Func<ModeSession> Factory { get; set; }
 
         public List<string> Events { get; } = new List<string>();
 
-        /// <summary><see cref="ModeStatus.Detail"/> に入れるもの。</summary>
         public object Detail { get; set; }
 
         protected override object HudDetail => Detail;
 
         protected override ModeSession CreateSession() => Factory?.Invoke();
 
-        /// <summary><see cref="ModeRunnerBase.EndMatch"/> をテストから呼ぶ。</summary>
         public void EndMatchFor(Side? winner) => EndMatch(winner);
 
         protected override void OnKill(SideMember killer, SideMember victim)

@@ -27,7 +27,6 @@ namespace Shooter.Core.Tests
                 suppressed,
                 suppressed ? 0.6f : 0f);
 
-        // 遮蔽点の上で撃たれて隠れ、隠れ終わって覗き始めたところまで進める。
         private static EnemyBrain Peeking(SuppressedCoverBehavior behavior)
         {
             var brain = new EnemyBrain(Spec());
@@ -99,7 +98,6 @@ namespace Shooter.Core.Tests
             var behavior = new SuppressedCoverBehavior();
             var brain = Peeking(behavior);
 
-            // 覗く時間・隠れる時間を何度か回しても、制圧されている間は一度も撃たず立たない。
             for (var i = 0; i < 40; i++)
             {
                 var decision = brain.Tick(0.25f, See(false, true));

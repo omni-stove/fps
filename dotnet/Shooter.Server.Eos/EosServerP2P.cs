@@ -12,13 +12,7 @@ using EosConnect = Epic.OnlineServices.Connect;
 
 namespace Shooter.Server.Eos
 {
-    /// <summary>
-    /// <see cref="EosMatchTransport"/> のために EOS の C# SDK の P2P を呼ぶ。プラットフォームとログインはロビーと
-    /// <see cref="EosServerPlatform"/> で共有し、同じユーザーとして待ち受ける。
-    /// </summary>
-    /// <remarks>
-    /// Connect の認証の期限が近づいたら Device ID でログインし直す。切れたままだと、つないでいる人は遊べても新しい人がつなげなくなるため。
-    /// </remarks>
+    // Connect の認証の期限が近づいたら Device ID でログインし直す。切れたままだと、つないでいる人は遊べても新しい人がつなげなくなるため。
     internal sealed class EosServerP2P : IEosP2P
     {
         private const string _displayName = "shooter-server";

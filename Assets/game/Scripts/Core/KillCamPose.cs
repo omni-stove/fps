@@ -3,19 +3,12 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// キルカム (<see cref="DeathCamera.KillCam"/>) で再生する、倒した相手のある時点の目の位置と体の向き。
-    /// 向きは <see cref="DeathCamFraming"/> と同じく Unity の規則の yaw (度、+Z が 0 で +X へ回る向きが正)。
-    /// </summary>
     public readonly struct KillCamPose : IEquatable<KillCamPose>
     {
-        /// <summary>目の位置 (ワールド座標、m)。</summary>
         public Vector3 Eye { get; }
 
-        /// <summary>体の向き (度)。[0, 360) に揃える。</summary>
         public float Yaw { get; }
 
-        /// <exception cref="ArgumentException">eye か yaw が有限でない。</exception>
         public KillCamPose(Vector3 eye, float yaw)
         {
             if (!IsFinite(eye.X) || !IsFinite(eye.Y) || !IsFinite(eye.Z))
@@ -32,10 +25,7 @@ namespace Shooter.Core
             Yaw = NormalizeYaw(yaw);
         }
 
-        /// <summary>
-        /// from と to の間の t (0 から 1 に収める) の姿勢。位置は線形に、向きは短い方へ回して補間する
-        /// (359° と 1° の間で逆回りしないように)。
-        /// </summary>
+        // 向きを短い方へ回して補間するのは、359° と 1° の間で逆回りしないようにするため。
         public static KillCamPose Lerp(KillCamPose from, KillCamPose to, float t)
         {
             var clamped = float.IsNaN(t) ? 0f : Math.Max(0f, Math.Min(1f, t));

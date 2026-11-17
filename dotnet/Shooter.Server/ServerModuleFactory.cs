@@ -2,10 +2,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// 起動引数を読んでからモジュールを決めるのは、<c>-register-lobby</c> のように引数があるときだけ足すモジュールがあるため。
-    /// 足せないときは false と、ログに出す理由を返す (サーバーは設定の誤りとして終わる)。
-    /// </summary>
+    // 起動引数を読んでからモジュールを決めるのは、-register-lobby のように引数があるときだけ足すモジュールがあるため。
     internal delegate bool ServerModuleFactory(
         ServerLaunch launch, ServerRuntime runtime, ServerRulesData rules, ICollection<IServerModule> modules, out string error);
 }

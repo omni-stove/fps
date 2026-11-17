@@ -3,25 +3,13 @@ using System.Globalization;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// サーバーが毎 tick クライアントごとに送る試合の状態。Netcode の NetworkVariable・NetworkList と、毎 tick の <c>StateRpc</c>、
-    /// プレイヤー・グレネード・飛ぶ弾の Spawn・Despawn を 1 つにまとめたもの。並びに無い物は消えたものとして扱う。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// 落ちてもよい届け方で送れるよう、差分はクライアントが受け取ったと知らせてきた (<see cref="InputMessage.AckedSnapshotTick"/>)
-    /// スナップショットを基準に取る。送る側は <see cref="Baseline"/> に基準を入れて書き、変わった部分だけを載せる。
-    /// 受け取る側は読んだ後に <see cref="BaselineTick"/> のスナップショットを <see cref="TryResolve"/> に渡して、載っていない部分を埋める。
-    /// </para>
-    /// <para>
-    /// 壊れた建物の部品のように滅多に変わらず大きい状態は、毎 tick の差分に載せずに <see cref="StructureStateMessage"/> で送る。
-    /// </para>
-    /// </remarks>
+    // 落ちてもよい届け方で送れるよう、差分はクライアントが受け取ったと知らせてきた (InputMessage.AckedSnapshotTick)
+    // スナップショットを基準に取る。
+    // 壊れた建物の部品のように滅多に変わらず大きい状態は、毎 tick の差分に載せずに StructureStateMessage で送る。
     public sealed class SnapshotMessage : IMessage
     {
         public const byte CurrentVersion = 11;
 
-        /// <summary>基準が無い (全部が載っている) ことを表す <see cref="BaselineTick"/>。</summary>
         public const int NoBaseline = -1;
 
         public const int MaxPlayers = 64;
@@ -46,22 +34,17 @@ namespace Shooter.Protocol
 
         public byte Version => CurrentVersion;
 
-        /// <summary>このスナップショットのサーバーの tick。</summary>
         public int Tick { get; set; }
 
-        /// <summary>送る側が差分の基準にするスナップショット。null なら全部を書く。書くときにだけ使う。</summary>
         public SnapshotMessage Baseline { get; set; }
 
-        /// <summary>読んだスナップショットの差分の基準の tick。全部が載っていたなら <see cref="NoBaseline"/>。</summary>
         public int BaselineTick { get; private set; } = NoBaseline;
 
-        /// <summary>全部の部分が入っているか。差分を読んだ直後は false で、<see cref="TryResolve"/> で埋めると true になる。</summary>
         public bool IsComplete { get; private set; } = true;
 
-        /// <summary>試合全体の状態。並びの要素と同じく、その場で書き換えられるよう参照で返す。</summary>
+        // 並びの要素と同じく、その場で書き換えられるよう参照で返す。
         public ref MatchSnapshot Match => ref _match;
 
-        /// <summary>受け取るクライアントのプレイヤーが試合にいて、<see cref="Owner"/> が載っているか。</summary>
         public bool HasOwner { get; set; }
 
         public OwnerSnapshot Owner => _owner;
@@ -76,7 +59,6 @@ namespace Shooter.Protocol
 
         public SnapshotList<VehicleSnapshot> Vehicles => _vehicles;
 
-        /// <summary>送る側が中身を入れ直す前に、前の中身と基準を捨てる。確保した並びは使い回す。</summary>
         public void Clear()
         {
             Tick = 0;
@@ -99,7 +81,6 @@ namespace Shooter.Protocol
             _vehicles.Clear();
         }
 
-        /// <summary>other の中身を写す (後で差分の基準に使うため取っておく)。<see cref="Baseline"/> は写さない。</summary>
         public void CopyFrom(SnapshotMessage other)
         {
             if (other == null)
@@ -122,10 +103,6 @@ namespace Shooter.Protocol
             _vehicles.CopyFrom(other._vehicles);
         }
 
-        /// <summary>
-        /// 載っていなかった部分を baseline (tick が <see cref="BaselineTick"/> の、全部が入ったスナップショット) から埋める。
-        /// </summary>
-        /// <returns>埋められた (もう全部入っていた) なら true。baseline が違う・基準に無い物の差分があるなら false で、中身は変えない。</returns>
         public bool TryResolve(SnapshotMessage baseline)
         {
             if (IsComplete)

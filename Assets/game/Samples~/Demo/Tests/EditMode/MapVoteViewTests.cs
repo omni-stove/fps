@@ -10,10 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HUD に付くマップの投票 (<see cref="MapVoteView"/>) が <see cref="GameSignals.MapVote"/> の候補・票数・残り秒数を出し、
-    /// 選ぶと <see cref="MapVoteView.Voted"/> を呼ぶこと。文は日本語の表 (Resources/Localization/ja/match-flow.json) から引く。
-    /// </summary>
     public sealed class MapVoteViewTests
     {
         private Hud _hud;

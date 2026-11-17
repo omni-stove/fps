@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Runtime
 {
-    /// <summary><see cref="AbilityDefinition"/> の内容が不正で変換できない。</summary>
     public sealed class AbilityDefinitionException : Exception
     {
         public AbilityDefinitionException(string message)

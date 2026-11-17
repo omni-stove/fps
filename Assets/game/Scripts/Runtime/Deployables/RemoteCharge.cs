@@ -26,14 +26,13 @@ namespace Shooter.Runtime
 
         public RemoteChargeSpec Spec => _spec;
 
-        // 貼った先。床や壁のように動かない物でも入る。付いていた物が消えたら null。
         public Transform Anchor => _anchor;
 
         public bool IsPlaced => _spec != null && _deployable != null && !_deployable.IsRemoved;
 
         public Vector3 BlastCenter => transform.position + (transform.up * BlastLift);
 
-        // 置いた物を一度にすべて起爆する。先にすべて消してから爆発させるのは、隣の C4 が先の爆発で「壊された」として消え、爆発しなくなるのを防ぐため。
+        // 先にすべて消してから爆発させるのは、隣の C4 が先の爆発で「壊された」として消え、爆発しなくなるのを防ぐため。
         public static int DetonateAll(IReadOnlyList<Deployable> placed)
         {
             if (placed == null)
@@ -117,7 +116,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // 貼った先が動いても (歩く敵・倒れて起きる標的) 同じ所に付いていく。
         public void Follow()
         {
             if (_anchor == null)

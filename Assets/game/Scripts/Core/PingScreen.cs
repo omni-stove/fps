@@ -3,20 +3,10 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 印をカメラから見た画面のどこに出すかを決める。画面の中ならその位置に、外 (後ろも含む) なら画面の中心から印の方へ伸ばした線が
-    /// 端の余白の内側の枠に当たる点に寄せ、向きを出す。
-    /// </summary>
     public static class PingScreen
     {
         private const float _centerEpsilon = 1e-6f;
 
-        /// <param name="viewport">
-        /// カメラから見た印の位置。x, y は画面の左下が (0, 0)、右上が (1, 1)、z はカメラの正面方向の距離 (0 以下ならカメラの後ろ)。
-        /// Unity の <c>Camera.WorldToViewportPoint</c> の値。各成分は有限の値。
-        /// </param>
-        /// <param name="aspect">画面の幅 / 高さ。0 より大きい有限値。端に寄せる向きを画面の縦横比どおりにするのに使う。</param>
-        /// <param name="margin">端の余白。画面の高さを 1 とした量で、0 以上 0.5 未満、かつ幅の半分未満。</param>
         public static PingScreenPlacement Place(Vector3 viewport, float aspect, float margin)
         {
             if (!PingAim.IsFinite(viewport))

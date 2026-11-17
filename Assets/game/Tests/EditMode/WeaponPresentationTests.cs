@@ -8,10 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="WeaponPresentation"/> が射撃・着弾・リロードで音とエフェクトを出し、プールの上限を超えて作らず使い回すことを、
-    /// メモリ上のカタログで確かめる (Edit Mode では OnEnable が走らないので、PlayShot などを直接呼ぶ)。
-    /// </summary>
+    // Edit Mode では OnEnable が走らないので、PlayShot などを直接呼ぶ。
     public sealed class WeaponPresentationTests
     {
         private const string RifleId = "rifle-id";
@@ -510,7 +507,6 @@ namespace Shooter.Tests.EditMode
             return presenter;
         }
 
-        // metal と default の 2 つを持つカタログ。
         private SurfaceImpactCatalog SurfaceCatalog(out SurfaceImpactAssets metal, out SurfaceImpactAssets fallback)
         {
             metal = new SurfaceImpactAssets("metal", DecalMaterial("Metal"), 0.08f, Effect("MetalHit"), Clip("MetalHit"));

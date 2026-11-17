@@ -6,9 +6,6 @@ using UnityEditor;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="ModeDefinitionAssets"/> がモードの調整値のアセットを無ければ既定値で作り、あれば値を変えずに返すことを確かめる。
-    /// </summary>
     public sealed class ModeDefinitionAssetsTests
     {
         private string _folder;

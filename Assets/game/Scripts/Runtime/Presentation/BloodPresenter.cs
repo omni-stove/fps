@@ -7,40 +7,21 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// キャラが撃たれたときの血の演出を受け持つ。<see cref="CombatEvents.Impact"/> のうちキャラへの着弾
-    /// (<see cref="ImpactInfo.IsCharacter"/>) にだけ、部位 (<see cref="ImpactInfo.Zone"/>) に応じた血しぶきを出し、
-    /// 弾の進む向きに <see cref="HitFeedbackCatalog.WallDecalMaxDistance"/> だけ Raycast して、背後に壁があれば血痕を付ける。
-    /// 素材は <see cref="Catalog"/> (<see cref="HitFeedbackCatalog"/>) から引く。キャラ (プレイヤー・NetPlayer・敵) の本体に
-    /// <see cref="CharacterComponents.Attach"/> で付く。
-    /// </summary>
-    /// <remarks>
-    /// <list type="bullet">
-    /// <item><see cref="CombatEvents.Impact"/> は有効なインスタンス全体で 1 回だけ購読し、有効なうちの先頭のインスタンスが出す
-    /// (血はどのキャラの演出でもないので、撃った者に関係なく 1 か所で出す)。</item>
-    /// <item>着弾には弾の向きが載らないので、同じフレームの直前の <see cref="CombatEvents.ShotFired"/> の向きを使う
-    /// (どちらの発生元も、1 発ごとに射撃→着弾の順に続けて出す)。無ければ当たった面の法線の逆向き。</item>
-    /// <item>血しぶきと血痕は <see cref="PresentationPool{T}"/> で使い回し、上限を超えたら古いものから取り上げる。
-    /// 部品はキャラの外の <see cref="PoolRoot"/> の下に置く。血痕は付けた壁のコライダーが消えるか無効になったら外す。</item>
-    /// <item><see cref="BloodEnabled"/> を false にすると、新しい血を出さず、出ている血も次の <see cref="Tick"/> で消す。</item>
-    /// </list>
-    /// 専用サーバーでは <c>Shooter.Net.HeadlessPresentation</c> が止め、ここでも有効になったときに自分を止める。
-    /// </remarks>
+    // 血はどのキャラの演出でもないので、CombatEvents.Impact は有効なインスタンス全体で 1 回だけ購読し、撃った者に関係なく先頭のインスタンスが出す。
+    // 着弾には弾の向きが載らないので、同じフレームの直前の ShotFired の向きを使う (どちらの発生元も、1 発ごとに射撃→着弾の順に続けて出す)。
     [DisallowMultipleComponent]
     public sealed class BloodPresenter : MonoBehaviour
     {
         public const string LogTag = "[Blood]";
 
-        /// <summary>血しぶきのプール (エフェクトごと) の上限。</summary>
         public const int SprayCapacity = 8;
 
-        /// <summary>血痕のプールの上限。</summary>
         public const int DecalCapacity = 24;
 
-        /// <summary>血痕を壁の面から浮かせる距離 (m)。面と重なってちらつかないよう。</summary>
+        // 血痕を壁の面から浮かせるのは、面と重なってちらつかないようにするため。
         public const float DecalSurfaceOffset = 0.01f;
 
-        /// <summary>背後の壁を探す Raycast で拾える数。撃たれたキャラ自身の当たり判定を飛ばすので 1 より多く取る。</summary>
+        // 撃たれたキャラ自身の当たり判定を飛ばすので、背後の壁を探す Raycast は 1 より多く拾う。
         public const int WallProbeBufferSize = 16;
 
         private static readonly List<BloodPresenter> _enabled = new List<BloodPresenter>();
@@ -63,10 +44,6 @@ namespace Shooter.Runtime
         private HitFeedbackCatalog _catalog;
         private bool _catalogResolved;
 
-        /// <summary>
-        /// 血の表示をまとめて出すか。false にすると新しい血しぶきと血痕を出さず (ログも出さない)、出ている血は次の <see cref="Tick"/> で消す。
-        /// 設定画面から切り替える口 (<see cref="AppliedControlSettings"/> が <see cref="ControlSettings.ShowBlood"/> を入れる)。Play を始めるたびに true に戻る。
-        /// </summary>
         public static bool BloodEnabled
         {
             get => _bloodEnabled;
@@ -87,10 +64,6 @@ namespace Shooter.Runtime
             return LogTag + " enabled=" + (enabled ? "true" : "false");
         }
 
-        /// <summary>
-        /// 素材を引くカタログ。初めて読んだときに <see cref="HitFeedbackCatalog.Load"/> で探し、無ければ null (血を出さず、警告を 1 度だけ出す)。
-        /// 代入すると探さずにそれを使う。
-        /// </summary>
         public HitFeedbackCatalog Catalog
         {
             get
@@ -110,19 +83,15 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>プールの部品を置く親。初めて部品を作るまでは null。</summary>
         public Transform PoolRoot => _poolRoot;
 
-        /// <summary>血痕のプール。初めて血痕を付けるまでは null。</summary>
         public PresentationPool<PooledEffect> Decals => _decals;
 
-        /// <summary>prefab の血しぶきのプール。まだ一度も出していなければ null。</summary>
         public PresentationPool<PooledEffect> SprayPoolFor(GameObject prefab)
         {
             return prefab != null && _sprayPools.TryGetValue(prefab, out var pool) ? pool : null;
         }
 
-        /// <summary>貸している血痕 decal を付けた壁のコライダー。貸していなければ null。</summary>
         public Collider DecalAnchorOf(PooledEffect decal)
         {
             return decal != null && _decalAnchors.TryGetValue(decal, out var anchor) ? anchor : null;
@@ -170,15 +139,6 @@ namespace Shooter.Runtime
             Tick(Time.time);
         }
 
-        /// <summary>
-        /// impact がキャラへの着弾なら、部位の血しぶきを当たった点に出し、direction (弾の進む向き) の先
-        /// <see cref="HitFeedbackCatalog.WallDecalMaxDistance"/> 以内に壁があれば血痕を付ける。
-        /// キャラ以外への着弾・<see cref="BloodEnabled"/> が false・カタログが無いときは何も出さない。
-        /// 出したものは <see cref="FormatSprayLog"/>・<see cref="FormatDecalLog"/> の形でログに出す。
-        /// </summary>
-        /// <param name="impact">着弾。</param>
-        /// <param name="direction">弾の進む向き。null か長さが 0 なら <see cref="BulletDirection"/> の代わりの向き。</param>
-        /// <returns>血しぶきか血痕のどちらかを出したら true。</returns>
         public bool PlayImpact(ImpactInfo impact, Vector3? direction)
         {
             if (!_bloodEnabled || !impact.IsCharacter)
@@ -215,7 +175,6 @@ namespace Shooter.Runtime
             return shown;
         }
 
-        /// <summary>時刻 now (<see cref="Time.time"/> と同じ物差し) まで進め、出し終えた血しぶき・時間の来た血痕・壁が消えた血痕をプールに返す。</summary>
         public void Tick(float now)
         {
             if (!_bloodEnabled)
@@ -248,9 +207,6 @@ namespace Shooter.Runtime
             _decalScratch.Clear();
         }
 
-        /// <summary>
-        /// 弾の進む向き。direction が使えればその単位ベクトル、使えなければ当たった面の法線 normal の逆向き、それも無ければ +Z。
-        /// </summary>
         public static Vector3 BulletDirection(Vector3 normal, Vector3? direction)
         {
             if (direction.HasValue && direction.Value.sqrMagnitude > 1e-8f)
@@ -261,10 +217,6 @@ namespace Shooter.Runtime
             return normal.sqrMagnitude > 1e-8f ? -normal.normalized : Vector3.forward;
         }
 
-        /// <summary>
-        /// point から direction へ maxDistance までの間で、いちばん近い壁 (トリガーとキャラの当たり判定を除くコライダー) を探す。
-        /// 撃たれたキャラ自身の別の部位の当たり判定も飛ばす。
-        /// </summary>
         public static bool TryFindWall(Vector3 point, Vector3 direction, float maxDistance, out RaycastHit wall)
         {
             wall = default;
@@ -295,13 +247,11 @@ namespace Shooter.Runtime
             return found;
         }
 
-        /// <summary>血しぶきを出したときのログ。例: <c>[Blood] spray zone=Head point=(0.00, 1.70, 10.00)</c>。部位が無ければ <c>zone=none</c>。</summary>
         public static string FormatSprayLog(HitZone? zone, Vector3 point)
         {
             return LogTag + " spray zone=" + (zone.HasValue ? zone.Value.ToString() : "none") + " point=" + FormatPoint(point);
         }
 
-        /// <summary>血痕を付けたときのログ。例: <c>[Blood] decal wall=Wall material=default distance=0.84</c>。</summary>
         public static string FormatDecalLog(Collider wall, float distance)
         {
             var wallName = wall != null ? wall.name : "(unknown)";
@@ -365,7 +315,6 @@ namespace Shooter.Runtime
             ResetStatics();
         }
 
-        /// <summary>Play の開始時と同じく、静的な状態 (有効なインスタンス・<see cref="BloodEnabled"/>・直前の弾の向き・警告済みの印) を初めに戻す。</summary>
         internal static void ResetStatics()
         {
             _enabled.Clear();

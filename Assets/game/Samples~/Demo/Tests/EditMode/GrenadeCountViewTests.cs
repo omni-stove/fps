@@ -8,9 +8,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// HUD (<see cref="GrenadeCountView"/>) が自分のプレイヤー (<see cref="GameSignals.LocalPlayer"/>) と <see cref="GameSignals.GrenadeCount"/> の残りを出すことを確かめる。
-    /// </summary>
     public sealed class GrenadeCountViewTests
     {
         private static readonly GameRules _twoGrenades =

@@ -7,70 +7,37 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 画面左下のテキストチャット。Hud.uxml の <see cref="UxmlName"/> に、最近の行 (<see cref="GameSignals.Chat"/> の後ろから
-    /// <see cref="VisibleLines"/> 行) と入力欄を入れる。行は届いてから <see cref="FadeSeconds"/> 秒で <see cref="FadedRowClass"/> を付けて薄くし、
-    /// 入力欄を開いている間はすべて濃く出す。チームの行には <see cref="TeamRowClass"/> を付けて色を変える。
-    /// 送った人の名前は <see cref="GameSignals.Participants"/> から引き、引けなければ <c>?&lt;id&gt;</c> にする。
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Play 中は Chat / TeamChat の入力 (<see cref="InputActionPaths.Chat"/>・<see cref="InputActionPaths.TeamChat"/>) で入力欄を開き、
-    /// Enter で <see cref="Sender"/> に渡して閉じ、Esc で送らずに閉じる。<see cref="Sender"/> が null の間 (オフラインなど) は開かない。
-    /// </para>
-    /// <para>
-    /// 開いている間は、ポーズ画面 (<see cref="PauseMenu"/>) と同じく Core の <see cref="PauseState"/> で、Chat と同じアクションマップ (Player) の
-    /// 有効なアクションをすべて止め、閉じたら自分が止めたものだけを戻す。時間には触らない。Pause も止めるので、入力中の Esc でポーズ画面は開かない。
-    /// </para>
-    /// <para>
-    /// <see cref="Hud.AddViews"/> が付ける。送れるようにするには、送る側が <see cref="Sender"/> を渡す。
-    /// </para>
-    /// </remarks>
     [DisallowMultipleComponent]
     public sealed class ChatView : HudElementView
     {
         public const string LogTag = "[Chat]";
 
-        /// <summary>Hud.uxml のチャットの要素。</summary>
         public const string UxmlName = "chat";
 
-        /// <summary>Resources からのチャットの USS (Demo サンプルの UI/Resources/Hud/Chat.uss)。</summary>
         public const string StyleSheetResourcePath = "Hud/Chat";
 
-        /// <summary>行を並べる要素の name。</summary>
         public const string LinesName = "chat-lines";
 
-        /// <summary>入力欄の枠の name。開いている間だけ出す。</summary>
         public const string InputRowName = "chat-input";
 
-        /// <summary>入力欄の前に出す宛先 (全体・チーム) の Label の name。</summary>
         public const string PromptName = "chat-prompt";
 
-        /// <summary>入力欄の TextField の name。</summary>
         public const string FieldName = "chat-field";
 
-        /// <summary>1 行の Label に付ける USS クラス。</summary>
         public const string RowClass = "chat__row";
 
-        /// <summary>チームの行に足す USS クラス。</summary>
         public const string TeamRowClass = "chat__row--team";
 
-        /// <summary>届いてから <see cref="FadeSeconds"/> 秒たった行に足す USS クラス。</summary>
         public const string FadedRowClass = "chat__row--faded";
 
-        /// <summary>チームの宛先で開いている間の入力欄の枠に足す USS クラス。</summary>
         public const string TeamInputClass = "chat__input--team";
 
-        /// <summary>全体の行の文のキー ({0} 名前、{1} 本文)。</summary>
         public const string LineKey = "chat.line";
 
-        /// <summary>チームの行の文のキー ({0} 名前、{1} 本文)。</summary>
         public const string TeamLineKey = "chat.teamLine";
 
-        /// <summary>全体へ送る入力欄の宛先の文のキー。</summary>
         public const string AllPromptKey = "chat.prompt.all";
 
-        /// <summary>チームへ送る入力欄の宛先の文のキー。</summary>
         public const string TeamPromptKey = "chat.prompt.team";
 
         public const int DefaultVisibleLines = 6;
@@ -114,16 +81,8 @@ namespace Shooter.Runtime
 
         public override string ElementName => UxmlName;
 
-        /// <summary>
-        /// 入力欄で Enter を押したときに、宛先と前後の空白を除いた本文を渡す口。null の間は入力欄を開かない。
-        /// 投げたら入力欄を開いたまま本文を残す。
-        /// </summary>
         public Action<ChatChannel, string> Sender { get; set; }
 
-        /// <summary>
-        /// Chat / TeamChat と、開いている間に止めるアクションを探すアセット。Play 中に null なら <see cref="InputSystem.actions"/> を使う。
-        /// 開いている間に替えると、送らずに閉じてから替える。
-        /// </summary>
         public InputActionAsset Actions
         {
             get => _actions;
@@ -140,8 +99,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>左下に出す最近の行の数。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">1 未満。</exception>
         public int VisibleLines
         {
             get => Math.Max(1, _visibleLines);
@@ -157,8 +114,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>行が届いてから薄くするまでの秒数。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">負か有限でない。</exception>
         public float FadeSeconds
         {
             get => _fadeSeconds >= 0f && !float.IsInfinity(_fadeSeconds) ? _fadeSeconds : DefaultFadeSeconds;
@@ -174,25 +129,16 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>入力欄を開いているか。</summary>
         public bool IsOpen => _state.IsOpen;
 
-        /// <summary>開いている入力欄の宛先。閉じている間は最後に開いた宛先。</summary>
         public ChatChannel Channel => _channel;
 
-        /// <summary>入力欄。要素を持っていなければ null。</summary>
         public TextField Field => _field;
 
-        /// <summary>今止めているアクション (例: "Player/Move")。閉じている間は空。</summary>
         public IReadOnlyList<string> SuspendedActions => _state.SuspendedActions;
 
-        /// <summary>出している行の文 (古い順)。</summary>
         public IReadOnlyList<string> Lines => _lines;
 
-        /// <summary>
-        /// line を 1 行の文にする。名前は participants から引き、引けないか null なら <c>?&lt;id&gt;</c> にする。
-        /// 本文は表を引かずにそのまま入れる。
-        /// </summary>
         public static LocalizedText LineText(ChatLine line, IParticipants participants)
         {
             var name = participants != null && participants.TryGet(line.SenderId, out var participant) && participant.Name.Length > 0
@@ -201,24 +147,16 @@ namespace Shooter.Runtime
             return new LocalizedText(line.Channel == ChatChannel.Team ? TeamLineKey : LineKey, name, line.Text);
         }
 
-        /// <summary>出している行のうち index 番目 (古い順) がチームの行か。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が 0 以上 <see cref="Lines"/> の数未満でない。</exception>
         public bool IsTeamLine(int index)
         {
             return ShownEntry(index).Line.Channel == ChatChannel.Team;
         }
 
-        /// <summary>出している行のうち index 番目 (古い順) を薄くしているか。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">index が 0 以上 <see cref="Lines"/> の数未満でない。</exception>
         public bool IsFadedLine(int index)
         {
             return IsFaded(ShownEntry(index));
         }
 
-        /// <summary>
-        /// lines を出す行にする。前に出していたのと同じ行は届いた時刻を引き継ぎ、新しい行は今届いたものとする。null なら行を消す。
-        /// 要素を持っている間は <see cref="GameSignals.Chat"/> が出されるたびに呼ばれる。
-        /// </summary>
         public void Show(IReadOnlyList<ChatLine> lines)
         {
             var previous = _entries.ToArray();
@@ -246,8 +184,6 @@ namespace Shooter.Runtime
             Render();
         }
 
-        /// <summary>時間を deltaSeconds 進め、薄くする行を決め直す。Play 中は Update が呼ぶ。</summary>
-        /// <exception cref="ArgumentOutOfRangeException">deltaSeconds が負か有限でない。</exception>
         public void Advance(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -259,11 +195,6 @@ namespace Shooter.Runtime
             RefreshFade();
         }
 
-        /// <summary>
-        /// channel へ送る入力欄を開き、プレイヤーの入力を止めて入力欄にフォーカスを置く。
-        /// 開いたら true。<see cref="Sender"/> が null か、要素を持っていないか、既に開いていれば何もせず false。
-        /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">channel が定義に無い値。</exception>
         public bool Open(ChatChannel channel)
         {
             if (!Enum.IsDefined(typeof(ChatChannel), channel))
@@ -306,10 +237,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 入力欄の本文を前後の空白を除いて <see cref="Sender"/> に渡し、閉じる。送ったら true。
-        /// 本文が空なら送らずに閉じて false。<see cref="Sender"/> が投げたら開いたまま本文を残して false。閉じていれば何もせず false。
-        /// </summary>
         public bool Submit()
         {
             if (!_state.IsOpen)
@@ -342,7 +269,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>送らずに入力欄を閉じ、止めた入力を戻す。閉じていれば何もしない。</summary>
         public void Cancel()
         {
             if (_state.IsOpen)

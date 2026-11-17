@@ -8,10 +8,8 @@ using UnityEngine;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="CaptureTheFlagSceneBuilder"/> のパス・台の配置・調整値のアセットを確かめる。シーンを組んで NavMesh を焼く処理は、
-    /// 開いているシーンを置き換える (NewScene Single) ので <c>-executeMethod Shooter.Editor.CaptureTheFlagSceneBuilder.Build</c> で確かめる。
-    /// </summary>
+    // シーンを組んで NavMesh を焼く処理は開いているシーンを置き換える (NewScene Single) ので、
+    // -executeMethod Shooter.Editor.CaptureTheFlagSceneBuilder.Build で確かめる。
     public sealed class CaptureTheFlagSceneBuilderTests
     {
         private string _folder;

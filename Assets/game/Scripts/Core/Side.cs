@@ -2,22 +2,14 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 試合の陣営。0 以上の整数の ID で区別する。2 チームのモードでは 0 が <see cref="Team.Alpha"/>、1 が <see cref="Team.Bravo"/> にあたる。
-    /// FFA では参加者ごとに、分隊制では分隊ごとに 1 つの陣営になる。
-    /// </summary>
     public readonly struct Side : IEquatable<Side>, IComparable<Side>
     {
-        /// <summary><see cref="Team.Alpha"/> にあたる陣営。</summary>
         public static readonly Side Alpha = new Side(0);
 
-        /// <summary><see cref="Team.Bravo"/> にあたる陣営。</summary>
         public static readonly Side Bravo = new Side(1);
 
-        /// <summary>陣営の ID。0 以上。</summary>
         public int Id { get; }
 
-        /// <param name="id">陣営の ID。0 以上。</param>
         public Side(int id)
         {
             if (id < 0)
@@ -28,10 +20,8 @@ namespace Shooter.Core
             Id = id;
         }
 
-        /// <summary>Alpha と Bravo のどちらかにあたるなら true。</summary>
         public bool IsTeam => Id == Alpha.Id || Id == Bravo.Id;
 
-        /// <summary>team にあたる陣営。定義されていない値は <see cref="ArgumentOutOfRangeException"/>。</summary>
         public static Side FromTeam(Team team)
         {
             switch (team)
@@ -45,10 +35,8 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>team にあたる陣営。null は null のまま。</summary>
         public static Side? FromTeam(Team? team) => team.HasValue ? FromTeam(team.Value) : (Side?)null;
 
-        /// <summary>この陣営にあたる <see cref="Team"/>。Alpha と Bravo のどちらでもなければ false。</summary>
         public bool TryGetTeam(out Team team)
         {
             if (Id == Alpha.Id)
@@ -67,7 +55,6 @@ namespace Shooter.Core
             return false;
         }
 
-        /// <summary>この陣営にあたる <see cref="Team"/>。Alpha と Bravo のどちらでもなければ <see cref="InvalidOperationException"/>。</summary>
         public Team ToTeam()
         {
             if (!TryGetTeam(out var team))
@@ -78,7 +65,6 @@ namespace Shooter.Core
             return team;
         }
 
-        /// <summary>side にあたる <see cref="Team"/>。null は null のまま。Alpha と Bravo のどちらでもなければ <see cref="InvalidOperationException"/>。</summary>
         public static Team? ToTeam(Side? side) => side.HasValue ? side.Value.ToTeam() : (Team?)null;
 
         public bool Equals(Side other) => Id == other.Id;

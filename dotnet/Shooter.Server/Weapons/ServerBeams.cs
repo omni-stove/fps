@@ -7,14 +7,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    /// <summary>
-    /// ビーム (<see cref="RoundDelivery.Beam"/>)。押した・離したの要求で照射を持ち、毎 tick 判定してダメージを出す。
-    /// 照射の間合いはサーバーの <see cref="BeamState"/> が数え、照射のたびに弾 (熱) を 1 発使い、当てた所までの線を <see cref="BeamStateMessage"/> で送る。
-    /// </summary>
-    /// <remarks>
-    /// 始点と向きは押したときの要求にしか載らないので、その後の照射は撃った人の体の今の位置と yaw に合わせて回す (上下の向きは押したときのまま)。
-    /// 当たりは押したときの遅れ (サーバーの tick と撃った人が見ていた tick の差) だけ巻き戻した相手に当てる。
-    /// </remarks>
+    // 始点と向きは押したときの要求にしか載らないので、その後の照射は撃った人の体の今の位置と yaw に合わせて回す (上下の向きは押したときのまま)。
     internal sealed class ServerBeams
     {
         private readonly Dictionary<int, HeldFire> _beams = new Dictionary<int, HeldFire>();
@@ -46,10 +39,7 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>
-        /// 受け入れた射撃 shot の弾 1 本。押した知らせ (<see cref="ServerShot.Trigger"/>) なら始める。
-        /// 押した・離したを送らない撃ち手 (Bot) の射撃は、照射 1 回ぶんとして当てる。
-        /// </summary>
+        // 押した・離したを送らない撃ち手 (Bot) の射撃は、照射 1 回ぶんとして当てる。
         public void Fire(in ServerShot shot, PlannedRound planned)
         {
             var spec = shot.Round.Beam ?? throw new ArgumentException("the round needs RoundSpec.Beam", nameof(shot));
@@ -103,7 +93,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>shooterId が引き金を離した。</summary>
         public void Release(int shooterId)
         {
             if (_beams.TryGetValue(shooterId, out var beam) && beam.State.IsFiring)
@@ -149,7 +138,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>playerId が抜けた・倒れた・試合が始まった。</summary>
         public void Forget(int playerId)
         {
             if (!_beams.TryGetValue(playerId, out var beam))

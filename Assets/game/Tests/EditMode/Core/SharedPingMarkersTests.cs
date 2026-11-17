@@ -77,7 +77,6 @@ namespace Shooter.Core.Tests
             Assert.That(markers.Markers[0].IsTracking, Is.False);
             Assert.That(markers.Markers[0].Position, Is.EqualTo(_here));
 
-            // 見失った後に遅れて届いた位置は捨てる
             Assert.That(markers.Move(1, _there), Is.False);
             Assert.That(markers.Markers[0].Position, Is.EqualTo(_here));
 

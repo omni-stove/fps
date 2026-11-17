@@ -166,25 +166,21 @@ namespace Shooter.Runtime
         }
 
         // 床に立てる物と、壁や人に貼る物 (C4) とで置ける所が違うので、種類ごとに差し替えられるようにする。
-        // surface は貼り付けた先。床に置く物は null。
         public virtual DeployVerdict Survey(Transform owner, Vector3 aimOrigin, Vector3 aimDirection, DeploySpec spec, out Pose pose, out Collider surface)
         {
             surface = null;
             return DeploySurveyor.Survey(owner, aimOrigin, aimDirection, spec, out pose);
         }
 
-        // true なら、置いた物があるうちに短く押す (DetonateTapSeconds より前に離す) と、置いた物を Detonate で起爆する。
         public virtual bool Detonates => false;
 
         public virtual float DetonateTapSeconds => 0f;
 
-        // placed は持ち主が置いているこの種類の物すべて (呼ぶ側が写した一覧)。起爆した数を返す。
         public virtual int Detonate(IReadOnlyList<Deployable> placed, AbilityContext context)
         {
             return 0;
         }
 
-        // 起爆の案内のように、置いた物を名前で呼ぶ UI が引く表のキー。空なら Id で呼ぶ。
         public virtual string DisplayNameKey => string.Empty;
 
         // 足元が原点、前が +Z で、spec の大きさに収める。置けるかの判定がこの大きさで調べるため。
@@ -199,7 +195,6 @@ namespace Shooter.Runtime
         {
         }
 
-        // 貼り付けた先 (surface) が要る種類 (C4) だけが上書きする。
         protected virtual void OnPlaced(Deployable deployable, AbilityContext context, Collider surface)
         {
             OnPlaced(deployable, context);

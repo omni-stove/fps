@@ -9,11 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// ProgressionRecorder が自分 (Damageable.IsLocalPlayer の者) のキル・アシストと試合の終わりを XP と戦績に数え、試合の終わりに保存し、
-    /// 自分以外のキル・自滅・味方撃ちを数えないことを確かめる。調整値は ProgressionSpec.Default
-    /// (キル 100・頭 +50・アシスト 50・試合 250・勝ち +500、レベル 2 は 500 から)。
-    /// </summary>
+    // 期待値は ProgressionSpec.Default の調整値 (キル 100・頭 +50・アシスト 50・試合 250・勝ち +500、レベル 2 は 500 から) から出す。
     public sealed class ProgressionRecorderTests
     {
         private const string WeaponId = "rifle";

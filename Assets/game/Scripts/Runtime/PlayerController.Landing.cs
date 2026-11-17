@@ -5,20 +5,11 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// <see cref="PlayerController"/> のうち、空中から接地に変わった (着地した) ときの処理。
-    /// <see cref="FallDamage"/> が On なら、着地の速さから <see cref="FallDamageCalculator"/> で落下ダメージを求め、
-    /// 同じ GameObject の <see cref="Damageable"/> に与える。撃った者はいないので、倒れたらキルログには自滅として出る。
-    /// </summary>
     public sealed partial class PlayerController
     {
         private FallDamage _fallDamage = FallDamage.Off;
         private Damageable _fallDamageTarget;
 
-        /// <summary>
-        /// 落下ダメージを受けるか。既定は Off。オフラインのルールを読む <see cref="GameBootstrap"/> と <see cref="CampaignRunner"/> が
-        /// <see cref="ApplyRules"/> で決める (シーンには保存しない)。
-        /// </summary>
         public FallDamage FallDamage
         {
             get => _fallDamage;
@@ -33,7 +24,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>rules のうち移動に関わるもの (<see cref="GameRules.FallDamage"/>) を効かせる。</summary>
         public void ApplyRules(GameRules rules)
         {
             if (rules == null)
@@ -45,13 +35,11 @@ namespace Shooter.Runtime
             Debug.Log(FormatFallDamageRuleLog(rules.FallDamage), this);
         }
 
-        /// <summary>落下ダメージのルールのログ。例: <c>[Player] fallDamage=On</c>。</summary>
         public static string FormatFallDamageRuleLog(FallDamage fallDamage)
         {
             return $"{LogTag} fallDamage={fallDamage}";
         }
 
-        /// <summary>落下ダメージを与えたときのログ。例: <c>[Player] fall damage=42 speed=17.90 health=58</c>。</summary>
         public static string FormatFallDamageLog(int damage, float fallSpeed, int health)
         {
             return LogTag
@@ -60,10 +48,7 @@ namespace Shooter.Runtime
                 + " health=" + health.ToString(CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// 着地した <see cref="Tick"/> で呼ばれる。fallSpeed は着地したときの下向きの速さ (m/s、0 以上)。
-        /// 初期化直後の最初の接地は、空中から降りたのか分からないので着地として扱わない。
-        /// </summary>
+        // 初期化直後の最初の接地は、空中から降りたのか分からないので着地として扱わない。
         private void OnLanded(float fallSpeed)
         {
             if (_fallDamage != FallDamage.On)

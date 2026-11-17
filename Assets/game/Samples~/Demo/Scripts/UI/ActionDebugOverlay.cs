@@ -6,16 +6,8 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// プレイヤーの今のアクション (<see cref="PlayerActionReader.Current"/>) を画面の左上に 1 項目 1 行で出すデバッグ表示。
-    /// 行の文字列と有効かどうかは <see cref="ActionDebugFormat.Lines"/> が決め、有効な行は色を変える。
-    /// Editor と Development Build だけで動き (<see cref="IsSupported"/>)、それ以外と専用サーバーでは何も作らず何もしない。
-    /// 表示は HUD とは別の UIDocument と PanelSettings をコードで作って出し、HUD の uxml/uss には触らない。
-    /// F3 で表示と非表示を切り替える (入力アセットは変えず <see cref="Keyboard.current"/> を直接読む)。既定は表示。
-    /// 既定の HUD の作り役 (<see cref="DefaultHudFactory"/>) が <see cref="GameSignals.LocalPlayer"/> のプレイヤーに付け、その <see cref="PlayerActionReader"/> を
-    /// <see cref="Bind"/> で渡す。渡されないまま Awake を迎えたら同じ GameObject から探し、
-    /// 無ければエラーを出して自分を無効にする。
-    /// </summary>
+    // デバッグ表示のために HUD の uxml/uss と入力アセットを変えないよう、表示は別の UIDocument と PanelSettings をコードで作り、
+    // F3 は Keyboard.current を直接読む。
     [DisallowMultipleComponent]
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で組み立てた値を同じフレームのうちに出す。
     [DefaultExecutionOrder(110)]
@@ -23,16 +15,14 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[ActionDebug]";
 
-        /// <summary>表示用に作る GameObject の名前。</summary>
         public const string DocumentObjectName = "ActionDebugOverlay";
 
-        /// <summary>表示用に作る PanelSettings の名前。</summary>
         public const string PanelSettingsName = "ActionDebugPanelSettings";
 
-        /// <summary>HUD (sortingOrder 0) より手前に出す。</summary>
+        // HUD (sortingOrder 0) より手前に出す。
         public const float SortingOrder = 100f;
 
-        /// <summary>行を並べる枠の名前 (UI Toolkit Debugger で探すとき用)。</summary>
+        // 名前を付けるのは UI Toolkit Debugger で探すときのため。
         public const string ContainerName = "action-debug";
 
         private const float ScreenMargin = 16f;
@@ -54,7 +44,6 @@ namespace Shooter.Runtime
         private PlayerActionState _shown;
         private bool _hasShown;
 
-        /// <summary>この Build でデバッグ表示を出すか。Editor と Development Build だけ true。</summary>
         public static bool IsSupported
         {
             get
@@ -67,15 +56,12 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>表示するアクションの読み元。未配線なら null。</summary>
         public PlayerActionReader Reader => _reader;
 
         private static bool ShouldRun => IsSupported && !NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild);
 
-        /// <summary>表示中か (F3 で切り替わる)。動いていなくても、次に動いたときに出すかどうかを返す。</summary>
         public bool IsVisible => _visible;
 
-        /// <summary>表示に使っている UIDocument。まだ作っていなければ null。</summary>
         public UIDocument Document => _documentObject != null ? _documentObject.GetComponent<UIDocument>() : null;
 
         private void Awake()
@@ -100,7 +86,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>表示するアクションの読み元を渡す。</summary>
         public void Bind(PlayerActionReader reader)
         {
             if (reader == null)
@@ -112,7 +97,6 @@ namespace Shooter.Runtime
             _hasShown = false;
         }
 
-        /// <summary>表示と非表示を切り替える。F3 を押したときと同じ。</summary>
         public void SetVisible(bool visible)
         {
             _visible = visible;
@@ -204,10 +188,6 @@ namespace Shooter.Runtime
             _hasShown = true;
         }
 
-        /// <summary>
-        /// 表示用の PanelSettings と UIDocument を持つ GameObject を作る。作ってあれば何もしない。
-        /// 文字の描画に要るテーマは HUD と同じもの (<see cref="Hud.ThemeResourcePath"/>) を使う。見つからなければエラーを出して false。
-        /// </summary>
         private bool TryCreateDocument()
         {
             if (_documentObject != null)
@@ -240,7 +220,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>UIDocument の今の木に、行の数だけ Label を並べた枠を足す。木がまだ無ければ false。</summary>
         private bool TryBuildView()
         {
             var document = Document;

@@ -6,10 +6,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// 既定の HUD (<see cref="Hud.Create"/>) にミニマップ・コンパス・チャット・ボイス・観戦・投票の view が揃って Hud.uxml の枠を受け、
-    /// HUD の量でミニマップとコンパスを出し入れすることを確かめる。
-    /// </summary>
     public sealed class HudTests
     {
         private Hud _hud;

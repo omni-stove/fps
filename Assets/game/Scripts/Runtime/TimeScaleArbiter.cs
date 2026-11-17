@@ -5,29 +5,13 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 時間の速さ (スローモーション) の口。<see cref="Request"/> で理由・倍率・秒数を受け、一番遅いものを Time.timeScale にし、
-    /// Time.fixedDeltaTime も同じ倍率にする。期限が来たら元へ戻す。どの要求をまとめてどの値を書くかは Core の <see cref="TimeScaleArbitration"/> が決める。
-    /// <para>
-    /// 受けるのはルールの <see cref="SlowMotion"/> が On のオフラインだけ。ルールは <see cref="SlowMotionActionInstaller"/> が
-    /// プレイヤーを持ち主にして <see cref="ApplyRules"/> で入れ、持ち主が消える (シーンを離れる) と Off に戻る。
-    /// ネット対戦中か (<see cref="NetworkSessionSource"/>) はネットのアセンブリが登録する。断ったときはその理由をログに出す。
-    /// </para>
-    /// <para>
-    /// ポーズ中 (<see cref="GameUi.IsPauseOpen"/>) は秒数を数えず速さにも触らず、閉じた後に今の要求の速さを書き直す。
-    /// どの場面で要求するかは使う側に任せる (組み込みではデバッグパネルのボタンだけが要求する)。
-    /// </para>
-    /// 要求を受けると、Play 中は秒数を数える GameObject をシーンをまたいで 1 つ常駐させる。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class TimeScaleArbiter : MonoBehaviour
     {
         public const string LogTag = TimeScaleArbitration.LogTag;
 
-        /// <summary>常駐させる GameObject の名前。</summary>
         public const string ObjectName = "TimeScaleArbiter";
 
-        /// <summary>ルールの持ち主が消えて要求を取り下げたときの理由。</summary>
         public const string RuleOwnerGoneReason = "ruleOwnerGone";
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
@@ -39,21 +23,15 @@ namespace Shooter.Runtime
         private static Func<bool> _networkSessionSource;
         private static bool _wasPaused;
 
-        /// <summary>
-        /// 今のルール。<see cref="ApplyRules"/> で入れた持ち主が消えていれば Off。
-        /// </summary>
         public static SlowMotion Rule => _ruleOwner != null ? _rule : SlowMotion.Off;
 
-        /// <summary>
-        /// ネット対戦中かを返す処理。ネットのアセンブリが起動時に登録する。null なら専用サーバーのビルドだけをネット対戦とみなす。
-        /// </summary>
+        // Runtime はネットのアセンブリを参照できないので、ネット対戦中かはネットのアセンブリが起動時に登録する。
         public static Func<bool> NetworkSessionSource
         {
             get => _networkSessionSource;
             set => _networkSessionSource = value;
         }
 
-        /// <summary>ネット対戦中か。専用サーバーのビルドか、<see cref="NetworkSessionSource"/> が true を返す。</summary>
         public static bool IsNetworkSession
         {
             get
@@ -83,13 +61,10 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>受けている要求のうち一番遅い倍率。要求が無ければ 1。ポーズ中も要求の倍率を返す。</summary>
         public static float Scale => _arbitration.Scale;
 
-        /// <summary>受けている要求 (受けた順) の写し。</summary>
         public static IReadOnlyList<TimeScaleRequest> Requests => _arbitration.Requests;
 
-        /// <summary>常駐している秒数の数え役。まだ要求を受けていなければ null。</summary>
         public static TimeScaleArbiter Instance => _instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -99,12 +74,6 @@ namespace Shooter.Runtime
             _networkSessionSource = null;
         }
 
-        /// <summary>
-        /// ルールを入れる。owner (プレイヤーなど) が消えると Off に戻る。Off にしたときに受けている要求があれば取り下げてログに出す
-        /// (速さは次のフレームで戻す)。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">owner が null。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">rule が知らない値。</exception>
         public static void ApplyRules(SlowMotion rule, UnityEngine.Object owner)
         {
             if (owner == null)
@@ -131,13 +100,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 時間の速さを scale にする要求を、実時間で seconds 秒だけ出す。同じ reason で出し直すと倍率と秒数を置き換える。
-        /// ルールが Off かネット対戦中なら断ってログに出し、その理由を返す。受けたら <see cref="TimeScaleRefusal.None"/> で、
-        /// 速さは次のフレームから変わる (ポーズ中なら閉じた後から)。
-        /// </summary>
-        /// <exception cref="ArgumentException">reason が null か空。</exception>
-        /// <exception cref="ArgumentOutOfRangeException">scale が 0 以下か 1 より大きい、seconds が 0 以下か有限でない。</exception>
         public static TimeScaleRefusal Request(string reason, float scale, float seconds)
         {
             TimeScaleArbitration.Validate(reason, scale, seconds);
@@ -155,7 +117,6 @@ namespace Shooter.Runtime
             return TimeScaleRefusal.None;
         }
 
-        /// <summary>reason の要求を取り下げる。あれば true で、速さは次のフレームで書き直す。</summary>
         public static bool Cancel(string reason)
         {
             var requests = _arbitration.Requests;
@@ -175,7 +136,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>要求をすべて取り下げ、because を添えてログに出す。速さは次のフレームで戻す。</summary>
         public static void CancelAll(string because)
         {
             foreach (var request in _arbitration.CancelAll())
@@ -184,10 +144,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 1 フレーム分進め、書くべき値を Time.timeScale と Time.fixedDeltaTime に書く。Play 中は常駐の Update が呼ぶ。
-        /// ルールの持ち主が消えたか、ネット対戦が始まっていれば、先に要求をすべて取り下げる。
-        /// </summary>
         internal static void Tick(float realDeltaSeconds, bool paused)
         {
             if (_arbitration.HasRequests)
@@ -239,7 +195,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>要求・ルール・覚えた値を Play の開始時の状態に戻す。Unity の時間には触らない。</summary>
         internal static void ResetState()
         {
             _arbitration.Reset();

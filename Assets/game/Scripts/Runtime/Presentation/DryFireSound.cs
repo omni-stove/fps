@@ -5,12 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// 弾切れでトリガーを引いたときの空撃ちの音を鳴らす。撃つ人の本体に付ける。音は <see cref="WeaponExtrasCatalog"/> から武器の Id で引く。
-    /// オフラインでは同じ階層の <see cref="WeaponController.DryFired"/> を購読し、ネット対戦では <c>Shooter.Net.NetPlayer</c> が
-    /// <see cref="Play"/> を呼ぶ。手元のプレイヤー (<see cref="IsLocal"/>) は 2D、それ以外は本体の位置から 3D で鳴らす。
-    /// 専用サーバーでは有効になったときに自分を止める (<c>Shooter.Net.HeadlessPresentation</c> も止める)。
-    /// </summary>
     [DisallowMultipleComponent]
     public sealed class DryFireSound : MonoBehaviour
     {
@@ -26,10 +20,6 @@ namespace Shooter.Runtime
         private bool _subscribed;
         private AudioSource _source;
 
-        /// <summary>
-        /// 音を引く設定。初めて読んだときに <see cref="WeaponExtrasCatalog.Load"/> で探し、無ければ null (鳴らさない)。
-        /// 代入すると探さずにそれを使う。
-        /// </summary>
         public WeaponExtrasCatalog Catalog
         {
             get
@@ -49,10 +39,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 2D で鳴らすか。同じ本体の <see cref="WeaponPresentation.IsLocal"/> に従い (ネット対戦では NetPlayer が持ち主かどうかを代入している)、
-        /// それが無ければ同じ階層に <see cref="WeaponController"/> があるときだけ true。
-        /// </summary>
+        // ネット対戦では NetPlayer が WeaponPresentation.IsLocal に持ち主かどうかを代入しているので、自分では決めずにそれに従う。
         public bool IsLocal
         {
             get
@@ -62,7 +49,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>空撃ちの音を鳴らす音源。初めて鳴らすまでは null。</summary>
         public AudioSource Source => _source;
 
         private void OnEnable()
@@ -91,10 +77,6 @@ namespace Shooter.Runtime
             _subscribed = false;
         }
 
-        /// <summary>
-        /// weaponId の武器の空撃ちの音を鳴らし、鳴らしたら true。素材の有無にかかわらず <see cref="FormatLog"/> の形でログに出す。
-        /// カタログが無い・武器が無い (どちらも 1 度だけ警告)・音の枠が空なら鳴らさずに false。
-        /// </summary>
         public bool Play(string weaponId)
         {
             var catalog = Catalog;
@@ -133,7 +115,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>空撃ちの音を鳴らすときのログ。例: <c>[Presentation] dry-fire weapon=rifle-id sound=DryFire</c>。音が無ければ <c>sound=none</c>。</summary>
         public static string FormatLog(string weaponId, AudioClip sound)
         {
             return LogTag + " dry-fire weapon=" + (weaponId ?? string.Empty) + " sound=" + (sound != null ? sound.name : "none");

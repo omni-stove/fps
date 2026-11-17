@@ -8,7 +8,6 @@ using Shooter.Server.Eos;
 
 namespace Shooter.Server
 {
-    /// <summary><c>-register-lobby</c> のときだけ足す、EOS のロビーにサーバーを載せておくモジュール。</summary>
     internal sealed class ServerLobbyModule : IServerModule, IDisposable
     {
         private readonly Func<TextWriter, IServerLobbyBackend> _createBackend;
@@ -85,7 +84,6 @@ namespace Shooter.Server
             }
         }
 
-        /// <summary>ロビーを閉じ終えるのを待たずに SDK を手放す。<see cref="Stop"/> を通らずに捨てるとき用。</summary>
         public void Dispose()
         {
             _registration?.Dispose();

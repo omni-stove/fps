@@ -5,20 +5,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    /// <summary>
-    /// SquadCommand の入力 (<see cref="PlayerActionReader.HeldCommands"/> の <see cref="PlayerCommands.SquadCommand"/>) で、味方の bot (<see cref="EnemyAgent"/>) に指示を出す。
-    /// <list type="bullet">
-    /// <item>短く押して離すと、照準の先に応じて指示を出す。敵を指していればその敵を狙わせ (<see cref="EnemyAgent.OrderAttack"/>)、
-    /// 地面や物を指していればそこへ行って守らせる (<see cref="EnemyAgent.OrderHold"/>)。何を指したかは印 (Ping) と同じく <see cref="PingAim.Resolve"/> で決める。</item>
-    /// <item><see cref="SquadOrderSpec.HoldSeconds"/> 押し続けると、指示を取り消して付いてこさせる (<see cref="EnemyAgent.OrderFollow"/>)。</item>
-    /// <item>指示は、自分と同じ陣営 (<see cref="SideMember"/>) で生きている bot に出す。分隊のあるモード (<see cref="ModeRunnerBase.HasSquads"/>) では
-    /// 離れていても分隊の全員に、そうでなければ <see cref="SquadOrderSpec.NearbyRadius"/> 以内の bot にだけ出す (<see cref="SquadOrderRecipients"/>)。</item>
-    /// <item>出したら <c>[Squad] order</c>、出さなかったら理由を <c>[Squad] refused</c> でログに出す。</item>
-    /// <item>狙う・守る指示は <see cref="GameSignals.SquadOrder"/> に出す。どう出すかは UI が決める。
-    /// 狙う敵が倒れるか、指示を受けた bot が誰もその指示を続けていなければ印を消す。</item>
-    /// </list>
-    /// 値は Inspector の値から作る <see cref="Spec"/> に従い、プレイヤーに付けるときは <see cref="SquadCommandActionInstaller"/> が squad.json の値を書き込む。オフラインの bot だけが相手で、ネット対戦の bot には出さない。
-    /// </summary>
     // PlayerActionReader (DefaultExecutionOrder 100) がその LateUpdate で読んだ押下を、同じフレームのうちに使う。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(110)]
@@ -63,32 +49,22 @@ namespace Shooter.Runtime
         private Vector3 _currentPoint;
         private Damageable _currentTarget;
 
-        /// <summary>指示の印が出た・動いた・消えたときに呼ばれる。表示が読み直す。</summary>
         public event Action<SquadCommandController> Changed;
 
         public bool IsConfigured => _configured;
 
-        /// <summary>
-        /// 今の値の <see cref="SquadOrderSpec"/>。<see cref="Configure"/> の後はそのときの値で、前は Inspector の値から作る。値が不正なら ArgumentOutOfRangeException。
-        /// </summary>
         public SquadOrderSpec Spec => _spec ?? (_spec = CreateSpec());
 
-        /// <summary>最後に指示を出そうとしたときに出さなかった理由。出したら <see cref="SquadOrderRefusal.None"/>。</summary>
         public SquadOrderRefusal LastRefusal => _lastRefusal;
 
-        /// <summary>HUD に印を出している指示の種類 (<see cref="BotErrandKind.Hold"/> か <see cref="BotErrandKind.Attack"/>)。出していなければ None。</summary>
         public BotErrandKind CurrentOrder => _currentKind;
 
-        /// <summary>印の位置。守る指示なら守る場所、狙う指示なら狙う敵の狙う点 (敵が動けば動く)。</summary>
         public Vector3 CurrentPoint => _currentKind == BotErrandKind.Attack && _currentTarget != null ? _currentTarget.AimPoint : _currentPoint;
 
-        /// <summary>狙う指示の敵。無ければ null。</summary>
         public Damageable CurrentTarget => _currentKind == BotErrandKind.Attack ? _currentTarget : null;
 
-        /// <summary>最後の指示を受けた bot。</summary>
         public IReadOnlyList<EnemyAgent> Recipients => _recipients;
 
-        /// <summary>印を見るカメラ。プレイヤーの視点 (<see cref="ViewRig"/>) のカメラで、無ければ null。</summary>
         public Camera ViewCamera
         {
             get
@@ -98,7 +74,7 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>時刻 (秒) を返すもの。null なら <see cref="Time.time"/>。テストが差し込む。</summary>
+        // テストが時刻を差し込めるよう差し替えられるようにする。
         public Func<float> Clock { get; set; }
 
         private float Now => Clock != null ? Clock() : Time.time;
@@ -116,15 +92,11 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>シリアライズされた値から <see cref="SquadOrderSpec"/> を作る。値が不正なら ArgumentOutOfRangeException。</summary>
         public SquadOrderSpec CreateSpec()
         {
             return new SquadOrderSpec(_holdSeconds, _maxDistance, _enemyAimToleranceDegrees, _nearbyRadius, _followDistance, _leashDistance);
         }
 
-        /// <summary>
-        /// spec の値をシリアライズされる値に書き込む。シーン・プレハブの生成スクリプトとテストが差し込むのに使う。次の <see cref="Configure"/> から使う。
-        /// </summary>
         public void ApplySpec(SquadOrderSpec spec)
         {
             if (spec == null)
@@ -144,10 +116,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// Inspector の値で設定を作り直し、押しかけのボタンと出している印を捨てる。bot が受けている指示はそのまま。
-        /// Inspector の値が不正 (<see cref="CreateSpec"/>) なら何も変えずに ArgumentOutOfRangeException。
-        /// </summary>
         public void Configure()
         {
             // 不正な値に指示を出すまで気づかないことがないよう、状態を変える前に作って確かめる。
@@ -163,10 +131,6 @@ namespace Shooter.Runtime
             NotifyChanged();
         }
 
-        /// <summary>
-        /// 照準 (<see cref="ViewRig.ResolveAim"/>) の先に応じて指示を出す。出したら true と、受けた bot の数を返す。
-        /// 出さなければ false を返し、理由 (<see cref="LastRefusal"/>) を <c>[Squad] refused</c> でログに出す。
-        /// </summary>
         public bool TryOrder(out int recipients)
         {
             recipients = 0;
@@ -185,11 +149,6 @@ namespace Shooter.Runtime
             return TryOrderAlong(origin, direction, out recipients);
         }
 
-        /// <summary>
-        /// origin から direction への照準の先に応じて指示を出す。何を指したかは <see cref="PingAim.Resolve"/> で決める。
-        /// 返り値とログは <see cref="TryOrder"/> と同じ。
-        /// </summary>
-        /// <exception cref="ArgumentException">origin が有限でないか、direction が 0 か有限でない。</exception>
         public bool TryOrderAlong(Vector3 origin, Vector3 direction, out int recipients)
         {
             recipients = 0;
@@ -248,10 +207,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 指示を取り消して付いてこさせる (長押し)。付いてきた bot がいれば true とその数を返し、<c>[Squad] order kind=Follow</c> をログに出す。
-        /// 出している印は消す。
-        /// </summary>
         public bool Recall(out int recipients)
         {
             recipients = 0;
@@ -286,9 +241,6 @@ namespace Shooter.Runtime
             return true;
         }
 
-        /// <summary>
-        /// 狙う敵が倒れたか、指示を受けた bot が誰もその指示を続けていなければ印を消す。Play 中は LateUpdate が呼ぶ。
-        /// </summary>
         public void Tick()
         {
             if (_currentKind == BotErrandKind.None)
@@ -317,9 +269,6 @@ namespace Shooter.Runtime
             }
         }
 
-        /// <summary>
-        /// 分隊のあるモード (<see cref="ModeRunnerBase.HasSquads"/>) を始めていて、member がその参加者なら true。
-        /// </summary>
         public static bool InSquadMode(SideMember member)
         {
             if (member == null)
@@ -446,7 +395,6 @@ namespace Shooter.Runtime
             _currentTarget = null;
         }
 
-        // _recipients に指示を出す bot を入れ、分隊のあるモードかを返す。
         private bool CollectRecipients(SideMember leader)
         {
             _bots.Clear();

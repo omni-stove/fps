@@ -8,11 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// モードの物と壊れる物 (<see cref="Pickup"/>・<see cref="BombSite"/>・<see cref="ControlPointZone"/>・<see cref="ShrinkingZone"/>・
-    /// <see cref="DestructiblePiece"/>) が、プレハブを渡されればその見た目で出し、空なら今までの仮の形で出すことを確かめる。
-    /// プレハブの代わりに、当たり判定の付いた Cube を子に持つシーンの GameObject を使う (Instantiate は同じく複製する)。
-    /// </summary>
+    // Instantiate はプレハブと同じく複製するので、プレハブの代わりに、当たり判定の付いた Cube を子に持つシーンの GameObject を使う。
     public sealed class ModePlaceholderPrefabSlotTests
     {
         private const string ModelName = "Model";
@@ -282,7 +278,7 @@ namespace Shooter.Tests.EditMode
             return zone;
         }
 
-        /// <summary>印の Renderer の複製された材質を消すよう覚え、最初のものを返す (Edit Mode では OnDestroy が呼ばれないため)。</summary>
+        // Edit Mode では OnDestroy が呼ばれないので、印の Renderer の複製された材質を消すよう覚えておく。
         private Material TrackMaterials(GameObject marker)
         {
             Material first = null;
@@ -299,7 +295,6 @@ namespace Shooter.Tests.EditMode
             return first;
         }
 
-        /// <summary>当たり判定と Renderer の付いた Cube (<see cref="ModelName"/>) を子に持つ、プレハブ代わりの GameObject。</summary>
         private GameObject Prefab(string name)
         {
             var root = Track(new GameObject(name));

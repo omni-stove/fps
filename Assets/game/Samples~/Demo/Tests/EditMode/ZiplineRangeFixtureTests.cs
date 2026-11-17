@@ -16,7 +16,6 @@ using ZiplineRule = Shooter.Core.Zipline;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>射撃場のジップライン (<see cref="Shooter.Editor.ZiplineRangeFixture"/>) が乗れる線を置くことを確かめる。</summary>
     public sealed class ZiplineRangeFixtureTests
     {
         [Test]

@@ -7,9 +7,6 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// リーンのボタンから移動の入力の Lean が決まること (両方押し・切り替え) と、取り付けがモードを渡すこと。
-    /// </summary>
     public sealed class LeanControllerTests
     {
         private const PlayerCommands Left = PlayerCommands.LeanLeft;

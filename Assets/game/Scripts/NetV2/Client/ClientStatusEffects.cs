@@ -4,20 +4,13 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    /// <summary>
-    /// サーバーから届いた状態異常 (<see cref="StatusEffectMessage"/>) を相手と種類ごとに持ち、残りを数え下ろす。
-    /// 付いた・切れたを <see cref="Started"/>・<see cref="Ended"/> で知らせ、Unity の側が燃えている見た目を出し消しする。
-    /// 自分の分は HUD が <see cref="TryGetLongest"/> で読んで残りを出す。
-    /// </summary>
     public sealed class ClientStatusEffects
     {
         private readonly List<Entry> _entries = new List<Entry>();
         private readonly List<Entry> _ending = new List<Entry>();
 
-        /// <summary>相手 (プレイヤー Id) に種類 (Id) の状態異常が付いた。延びただけのときは呼ばない。</summary>
         public event Action<int, string> Started;
 
-        /// <summary>相手 (プレイヤー Id) の種類 (Id) の状態異常が切れた。</summary>
         public event Action<int, string> Ended;
 
         public int Count => _entries.Count;
@@ -54,9 +47,7 @@ namespace Shooter.NetV2
             }
         }
 
-        /// <summary>
-        /// deltaSeconds 数え下ろし、0 になったものを切れたことにする。サーバーの切れた知らせ (残り 0) より先に切れても、見た目は時間どおりに消える。
-        /// </summary>
+        // サーバーの切れた知らせ (残り 0) を待たずに数え下ろすのは、知らせが遅れても見た目を時間どおりに消すため。
         public void Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -83,14 +74,12 @@ namespace Shooter.NetV2
             RaiseEnded();
         }
 
-        /// <summary>targetId にかかっている kindId の残り秒数。かかっていなければ 0。</summary>
         public float RemainingSeconds(int targetId, string kindId)
         {
             var index = IndexOf(targetId, kindId);
             return index >= 0 ? _entries[index].RemainingSeconds : 0f;
         }
 
-        /// <summary>targetId にかかっている中で、いちばん長く残る種類と残り秒数。何もかかっていなければ false。</summary>
         public bool TryGetLongest(int targetId, out string kindId, out float remainingSeconds)
         {
             kindId = null;
@@ -107,7 +96,6 @@ namespace Shooter.NetV2
             return kindId != null;
         }
 
-        /// <summary>targetId の状態異常をすべて切れたことにする (相手が見えなくなった)。</summary>
         public void Forget(int targetId)
         {
             _ending.Clear();
@@ -124,7 +112,6 @@ namespace Shooter.NetV2
             RaiseEnded();
         }
 
-        /// <summary>すべて切れたことにする (試合から抜けた)。</summary>
         public void Clear()
         {
             _ending.Clear();

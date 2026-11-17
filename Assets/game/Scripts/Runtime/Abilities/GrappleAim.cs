@@ -15,12 +15,10 @@ namespace Shooter.Runtime
 
         public Collider Surface { get; }
 
-        // 縄の刺さった点 (ワールド)。縁へ寄せたなら縁の高さ。
         public Vector3 Point { get; }
 
         public Vector3 Normal { get; }
 
-        // 目から照準の先で当たった点までの距離。縁へ寄せる前の点で測る。
         public float Distance { get; }
 
         public bool SnappedToEdge { get; }

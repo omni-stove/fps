@@ -10,10 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    /// <summary>
-    /// <see cref="WeaponAssetBuilder"/> を一時フォルダに走らせて、出力と GUID の保持を確かめる。
-    /// リポジトリの Assets/game/Weapons は触らない。
-    /// </summary>
+    // リポジトリの Assets/game/Weapons を触らないよう、一時フォルダに走らせる。
     public sealed class WeaponAssetBuilderTests
     {
         private string _folder;
@@ -526,7 +523,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(handgunGuid, Is.Not.Empty);
             Assert.That(catalogGuid, Is.Not.Empty);
 
-            // 手で書き換えられたアセットも、2 回目で GUID を保ったまま既定の値に戻る。
             var rifle = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(_riflePath);
             rifle.Damage = 1;
             rifle.Id = "00000000-0000-4000-8000-000000000099";
@@ -737,7 +733,6 @@ namespace Shooter.Tests.EditMode
             return WeaponAssetBuilder.BuildAt(_riflePath, _handgunPath, _catalogPath, _loadoutPath);
         }
 
-        // 部品の入れ子 (バースト・飛ぶ弾・爆発・弾薬の種類) を持つ武器。アセットを通しても落ちないことを確かめる。
         private static WeaponSpec PartsSpec()
         {
             return new WeaponSpec(

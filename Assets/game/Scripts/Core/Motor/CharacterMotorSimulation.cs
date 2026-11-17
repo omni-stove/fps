@@ -4,11 +4,9 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になる。
-    /// 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
-    /// カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
-    /// </summary>
+    // 予測・再シミュレーション・サーバーで同じ処理を通すので、同じ状態と入力と世界からは同じ結果になるようにする。
+    // 姿勢の判断は状態と入力だけから行い、体に残った前の tick の姿勢には頼らない (巻き戻しで状態が飛んでも同じ答えにするため)。
+    // カバー中に寄せるときに向きを回さないのは、向きは持ち主の視点操作が決めて入力に乗せるもので、シミュレーションからは書けないため。
     public sealed class CharacterMotorSimulation
     {
         public const string ReasonDowned = "downed";
@@ -44,7 +42,6 @@ namespace Shooter.Core
         {
         }
 
-        /// <summary>prone は伏せの速さと飛び込み。伏せの高さは body の <see cref="StanceGeometry.Prone"/> を使う。</summary>
         public CharacterMotorSimulation(CharacterBody body, PlayerMotor motor, float tickSeconds, float killPlaneY, ProneSpec prone)
         {
             Body = body ?? throw new ArgumentNullException(nameof(body));
@@ -76,7 +73,7 @@ namespace Shooter.Core
 
         public ProneSpec ProneSpec { get; }
 
-        /// <summary>つかまれるはしご。状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。</summary>
+        // 状態ははしごをこの並びの番号で指すので、予測とサーバーで同じ並びを渡す。
         public IReadOnlyList<MapLadder> Ladders
         {
             get => _ladders;
@@ -99,14 +96,13 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>吹き飛ばされている間の重力・空中の効き・着地と打ち切りの秒数。予測とサーバーで同じ値を渡す。</summary>
         public KnockbackSpec Knockback
         {
             get => _knockbackSpec;
             set => _knockbackSpec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        /// <summary>泳げる水。予測とサーバーで同じ水を渡す (片方だけ水があると、泳ぐかが毎 tick 食い違う)。</summary>
+        // 予測とサーバーで同じ水を渡す。片方だけ水があると、泳ぐかが毎 tick 食い違う。
         public IWaterVolumes Water
         {
             get => _water;
@@ -144,10 +140,7 @@ namespace Shooter.Core
             return new Vector3(MathF.Sin(yaw), 0f, MathF.Cos(yaw));
         }
 
-        /// <summary>
-        /// state を velocity で吹き飛ばした状態。動かすのは次の <see cref="Step"/> から。
-        /// 速さは <see cref="KnockbackSpec.TryGetVelocity"/> で決める (オフラインの吹き飛ばしと同じ計算にするため)。
-        /// </summary>
+        // 速さは KnockbackSpec.TryGetVelocity で決める (オフラインの吹き飛ばしと同じ計算にするため)。
         public static CharacterMotorState Launch(CharacterMotorState state, Vector3 velocity)
         {
             return state.WithKnockback(state.Knockback.Launch(velocity));
@@ -163,7 +156,7 @@ namespace Shooter.Core
             var vault = state.Vault;
             var startVelocity = state.Velocity;
             var ladder = AdvanceRegrab(state.Ladder);
-            var swim = SwimStep.Step(state.Swim, state.Position, _water, _swim, TickSeconds);
+            var swim = SwimStep.Step(state.Swim, state.Position, state.IsGrounded, Body.Geometry, _water, _swim, TickSeconds);
             var traversal = new TraversalStates(
                 LeanStep.Step(state, input, swim, Body, _motor.Spec, TickSeconds),
                 swim,
@@ -193,6 +186,12 @@ namespace Shooter.Core
             if (ladder.IsClimbing && (!input.LadderAllowed || ladder.Index >= _ladders.Count))
             {
                 ladder = Leave(ladder);
+            }
+
+            // はしごにつかまったまま水に下りても泳ぎに替えない。はしごの位置に置き直す動きと浮く動きがぶつかるため
+            if (traversal.Swim.IsSwimming && !ladder.IsClimbing)
+            {
+                return StepSwim(state, input, vault, ladder, startVelocity, traversal);
             }
 
             var wasProne = _proneInput.IsActive || state.IsProne;
@@ -377,6 +376,74 @@ namespace Shooter.Core
             }
 
             return Finish(velocity, stance, CharacterCoverState.Out, CharacterVaultState.None, input, ladder, traversal, _knockback.Capture());
+        }
+
+        // 回避・伏せ・しゃがみ・カバーは水の中では使えないので、吹き飛ばしと同じくやめさせてから泳がせる。
+        // ダッシュは泳ぐ速さが 1 つなので読まない。撃つ構えはシミュレーションが持たないので CharacterMotorState.CanAimDownSights で止める。
+        private CharacterMotorState StepSwim(
+            CharacterMotorState state, CharacterMotorInput input, CharacterVaultState vault, CharacterLadderState ladder, Vector3 startVelocity,
+            TraversalStates traversal)
+        {
+            _dodge.Cancel();
+            ReleaseProne();
+            _dodge.Step(TickSeconds);
+            var stance = ResolveStance(state.Stance, false, false);
+
+            // 縁に手が届くかは地上と同じ乗り越えの調べで決め、上がる動きも同じ軌跡にする (予測とサーバーで同じ答えにするため)
+            if (!vault.IsVaulting && input.Jump && input.VaultAllowed && stance == PlayerStance.Standing)
+            {
+                vault = TryStartVault(input.Yaw);
+            }
+
+            var velocity = vault.IsVaulting
+                ? FollowVault(ref vault)
+                : Paddle(state.Swim.IsSwimming, input, startVelocity, traversal.Swim.SurfaceY);
+            return Finish(velocity, stance, CharacterCoverState.Out, vault, input, ladder, traversal);
+        }
+
+        // 縦は重力の代わりに浮く力で、水面が胸に来る高さへ寄せる。ジャンプで寄る速さを泳ぐ速さにし、しゃがみで潜る。
+        // 倒れている間は Restrained がしゃがみを入れるが、潜らせると倒れただけで溺れるので潜らせない
+        private Vector3 Paddle(bool wasSwimming, CharacterMotorInput input, Vector3 startVelocity, float surfaceY)
+        {
+            var tuning = _swim;
+            var horizontal = PlayerMotor.ToWorld(input.Move, input.Yaw) * (tuning.Speed * input.CarrySpeedMultiplier);
+            var vertical = startVelocity.Y;
+            if (!wasSwimming)
+            {
+                // 入った tick に落ちる速さを泳ぐ速さまで消す。高くから飛び込んでも、浅い底に落下の速さのまま着かないため
+                vertical = Math.Max(vertical, -tuning.Speed);
+            }
+
+            float rise;
+            if (input.Crouch && !input.Downed)
+            {
+                vertical = -tuning.Speed;
+                rise = vertical * TickSeconds;
+            }
+            else
+            {
+                var gap = SwimStep.FloatY(surfaceY, Body.Geometry) - Body.Position.Y;
+                var toward = gap > 0f ? 1f : (gap < 0f ? -1f : 0f);
+                vertical = input.Jump && toward > 0f
+                    ? tuning.Speed
+                    : MoveTowards(vertical, toward * tuning.Speed, tuning.Buoyancy * TickSeconds);
+                rise = vertical * TickSeconds;
+
+                // 浮く高さを越えた分を次の tick で戻すと、水面で上下に揺れ続けるので、越える tick はちょうどで止める
+                if ((toward > 0f && rise > gap) || (toward < 0f && rise < gap))
+                {
+                    rise = gap;
+                    vertical = 0f;
+                }
+            }
+
+            var contacts = Body.Move(new Vector3(horizontal.X * TickSeconds, rise, horizontal.Y * TickSeconds));
+            if ((vertical < 0f && (contacts & CapsuleContacts.Below) != 0) || (vertical > 0f && (contacts & CapsuleContacts.Above) != 0))
+            {
+                vertical = 0f;
+            }
+
+            return new Vector3(horizontal.X, vertical, horizontal.Y);
         }
 
         // 落下の下限を確かめ、作業用に戻した回避・伏せの中身を状態へ写す

@@ -536,6 +536,7 @@ namespace Shooter.NetV2
             _hud = null;
             _remoteRoot = null;
             _world = null;
+            _structures?.ClearStates();
         }
 
         private System.Numerics.Vector3? ControlPointPosition(int index)

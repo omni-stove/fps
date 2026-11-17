@@ -1,8 +1,6 @@
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// 持ち主が数えた何発目かがサーバーとずれていたときに、サーバーの番号に合わせ直させる (ばらつきの乱数をそろえるため)。
-    /// </summary>
+    // ばらつきの乱数をそろえるため、持ち主が数えた何発目かがサーバーとずれていたらサーバーの番号に合わせ直させる。
     public sealed class ShotIndexCorrectedMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -11,7 +9,6 @@ namespace Shooter.Protocol
 
         public byte Version => CurrentVersion;
 
-        /// <summary>持ち主が付けた番号の世代 (持ち替え・リロードで変わる)。</summary>
         public int Generation { get; set; }
 
         public int ClientIndex { get; set; }

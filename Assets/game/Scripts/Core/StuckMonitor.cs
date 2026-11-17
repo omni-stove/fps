@@ -3,38 +3,23 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 目的地へ向かっているのに進めていないことを見つけ、立て直し (<see cref="StuckRecovery"/>) を軽いものから順に返す。
-    /// 進めないまま <see cref="StuckSeconds"/> 経つたびに次の段階を 1 回だけ返し、
-    /// <see cref="StuckRecovery.Warp"/> の次は <see cref="StuckRecovery.Repath"/> からやり直す。位置と時間は外から渡し、移動そのものはしない。
-    /// </summary>
-    /// <remarks>
-    /// 詰まる前は、最後に進めた地点から <see cref="ProgressDistance"/> 動けば進めたとみなす (追う目標が逃げていても誤って詰まりとしない)。
-    /// 立て直しを始めた後は、基準点から経路の進む向き (分からなければ目的地の方向) へ <see cref="ProgressDistance"/> 以上動いたときだけ立ち直ったとみなす。
-    /// 寄り道で横へ動いたり、同じ所を行き来したりしただけで段階が最初に戻るのを防ぐため。
-    /// 立て直しの途中で目的地が <see cref="GoalChangeDistance"/> 以上変わったら、段階も経過時間もそのままに、基準点を今の位置へ移して測り直す。
-    /// </remarks>
+    // 詰まる前は、最後に進めた地点から ProgressDistance 動けば進めたとみなす (追う目標が逃げていても誤って詰まりとしないため)。
+    // 立て直しを始めた後は、基準点から経路の進む向き (分からなければ目的地の方向) へ ProgressDistance 以上動いたときだけ立ち直ったとみなす。
+    // 寄り道で横へ動いたり、同じ所を行き来したりしただけで段階が最初に戻るのを防ぐため。
     public sealed class StuckMonitor
     {
-        /// <summary>立て直しの途中で目的地へ近づけたときに、それまで進めずにいた秒数を渡して呼ばれる。</summary>
         public event Action<float> Recovered;
 
-        /// <summary>進めないまま次の段階へ移るまでの秒数。</summary>
         public float StuckSeconds { get; }
 
-        /// <summary>これだけ動けば (立て直し中は目的地の方向へこれだけ動けば) 進めたとみなす距離 (メートル)。</summary>
         public float ProgressDistance { get; }
 
-        /// <summary>立て直しの途中で目的地がこれ以上変わったら、新しい目的地までの距離から測り直す距離 (メートル)。</summary>
         public float GoalChangeDistance { get; }
 
-        /// <summary>最後に返した段階。進めている間は <see cref="StuckRecovery.None"/>。</summary>
         public StuckRecovery Stage { get; private set; }
 
-        /// <summary>最後に進めた (または最後の段階を返した) ときから、進めずにいる秒数。</summary>
         public float StalledSeconds { get; private set; }
 
-        /// <summary>最後に進めたときから、進めずにいる合計秒数。</summary>
         public float TotalStalledSeconds { get; private set; }
 
         private Vector3 _anchor;
@@ -42,9 +27,6 @@ namespace Shooter.Core
         private Vector3? _pathDirection;
         private bool _tracking;
 
-        /// <param name="stuckSeconds">次の段階へ移るまでの秒数。正の有限値。</param>
-        /// <param name="progressDistance">進めたとみなす距離。正の有限値。</param>
-        /// <param name="goalChangeDistance">別の目的地とみなす距離。正の有限値。</param>
         public StuckMonitor(float stuckSeconds, float progressDistance, float goalChangeDistance)
         {
             RequirePositive(stuckSeconds, nameof(stuckSeconds));
@@ -56,7 +38,6 @@ namespace Shooter.Core
             GoalChangeDistance = goalChangeDistance;
         }
 
-        /// <summary>見張りをやめ、段階と経過時間を最初に戻す。次の <see cref="Tick"/> の位置から測り直す。</summary>
         public void Reset()
         {
             _tracking = false;
@@ -65,14 +46,7 @@ namespace Shooter.Core
             TotalStalledSeconds = 0f;
         }
 
-        /// <summary>
-        /// 時間を進め、この tick に試す立て直しを返す。何もしなくてよければ <see cref="StuckRecovery.None"/>。
-        /// 向かう先が無ければ (<paramref name="goal"/> が null、着いた後も含む) 止まっていて当然なので <see cref="Reset"/> する。
-        /// </summary>
-        /// <param name="deltaSeconds">前回からの経過時間 (秒)。0 以上の有限値。</param>
-        /// <param name="position">今の位置。有限値。</param>
-        /// <param name="goal">向かっている先。無ければ null。有限値。</param>
-        /// <param name="pathWaypoint">目的地への経路上で、今の位置から <see cref="ProgressDistance"/> 以上先にある最初の角。立て直し中はこの向きへ <see cref="ProgressDistance"/> 進めば立ち直ったとみなす。分からなければ null (目的地の直線方向への移動で測る)。</param>
+        // 向かう先が無ければ (goal が null、着いた後も含む) 止まっていて当然なので、詰まりとせず Reset する。
         public StuckRecovery Tick(float deltaSeconds, Vector3 position, Vector3? goal, Vector3? pathWaypoint = null)
         {
             if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
@@ -149,7 +123,6 @@ namespace Shooter.Core
             return Stage;
         }
 
-        /// <summary>3 成分すべてが有限なら true。</summary>
         public static bool IsFinite(Vector3 value)
         {
             return !float.IsNaN(value.X) && !float.IsInfinity(value.X)

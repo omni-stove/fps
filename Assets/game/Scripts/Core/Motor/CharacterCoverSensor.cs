@@ -24,11 +24,6 @@ namespace Shooter.Core
             _body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
-        /// <summary>
-        /// position から direction へ壁を探し、facing を向いているとして <see cref="CoverProbe.Evaluate"/> で判定する。
-        /// spec は探す距離と判定に使う移動の設定。壁なら topY に壁の上端の高さ (ワールド) を入れる。
-        /// </summary>
-        /// <exception cref="ArgumentNullException">spec が null のとき。</exception>
         public CoverProbeResult Probe(Vector3 position, Vector3 direction, Vector3 facing, MotorSpec spec, out float topY)
         {
             if (spec == null)

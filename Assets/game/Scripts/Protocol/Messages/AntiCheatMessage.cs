@@ -4,12 +4,10 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// <see cref="AntiCheatPacket"/> を形を変えずに運ぶのは、EOS の P2P のピア同士と同じ Hello とメッセージの手順を
-    /// .NET のサーバーとの間でもそのまま使うため。向きごとに Id を分けるのは、受け取る種類を向きで分けている表
-    /// (<see cref="MatchMessages"/>) に、相手が送るはずの無い向きを読ませないため。
-    /// 読んだパケットを写すのは、通信路の受信用の配列が次の受け取りで上書きされるため。
-    /// </summary>
+    // AntiCheatPacket を形を変えずに運ぶのは、EOS の P2P のピア同士と同じ Hello とメッセージの手順を
+    // .NET のサーバーとの間でもそのまま使うため。向きごとに Id を分けるのは、受け取る種類を向きで分けている表
+    // (MatchMessages) に、相手が送るはずの無い向きを読ませないため。
+    // 読んだパケットを写すのは、通信路の受信用の配列が次の受け取りで上書きされるため。
     public abstract class AntiCheatMessage : IMessage
     {
         public const byte CurrentVersion = 1;

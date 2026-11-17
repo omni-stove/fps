@@ -3,26 +3,14 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// クライアントから届いた射撃 (始点・向き・見ていた時点) をサーバーで受け付けてよいか調べる。
-    /// 壁の向こうから撃つ・遠くから撃つといった、始点のごまかしを防ぐ。
-    /// </summary>
     public static class ShotValidator
     {
-        /// <summary>
-        /// 始点とサーバー上の本人の位置のずれの既定の上限 (m)。目の高さと、予測で先に進んでいる分 (ダッシュ 8m/s で 0.2 秒ほど) を見込む。
-        /// </summary>
+        // 目の高さと、予測で先に進んでいる分 (ダッシュ 8m/s で 0.2 秒ほど) を見込んだ長さ。
         public const float DefaultMaxOriginOffset = 3f;
 
         // これより短い向きは 0 とみなす。
         private const float _minDirectionLengthSquared = 1e-12f;
 
-        /// <summary>射撃を調べ、捨てるべき理由を返す。受け付けてよければ <see cref="ShotRejection.None"/>。</summary>
-        /// <param name="origin">クライアントが送ってきた始点。</param>
-        /// <param name="direction">クライアントが送ってきた向き。長さは問わない。</param>
-        /// <param name="time">クライアントが見ていた時点。</param>
-        /// <param name="shooterPosition">サーバーの知る撃った本人の今の位置。</param>
-        /// <param name="maxOriginOffset">origin と shooterPosition の距離の上限 (m)。0 以上の有限値。</param>
         public static ShotRejection Check(Vector3 origin, Vector3 direction, ShotTime time, Vector3 shooterPosition, float maxOriginOffset)
         {
             if (float.IsNaN(maxOriginOffset) || float.IsInfinity(maxOriginOffset) || maxOriginOffset < 0f)

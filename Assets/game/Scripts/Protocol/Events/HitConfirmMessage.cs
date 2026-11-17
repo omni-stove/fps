@@ -2,7 +2,6 @@ using Shooter.Core;
 
 namespace Shooter.Protocol
 {
-    /// <summary>撃った人にだけ送る、自分の弾が当たった知らせ (ヒットマーカー)。</summary>
     public sealed class HitConfirmMessage : IMessage
     {
         public const byte CurrentVersion = 1;

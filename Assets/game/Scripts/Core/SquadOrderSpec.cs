@@ -2,10 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 分隊への指示 (SquadCommand) の調整値。長押しとみなす秒数、照準の先を探す距離と敵に吸い付く角度、
-    /// 分隊の無いモードで指示が届く範囲、付いていくときの距離。
-    /// </summary>
     public sealed class SquadOrderSpec
     {
         public const float DefaultHoldSeconds = 0.5f;
@@ -17,12 +13,6 @@ namespace Shooter.Core
 
         public static SquadOrderSpec Default { get; } = new SquadOrderSpec();
 
-        /// <param name="holdSeconds">押し続けてこれだけ経ったら長押し (付いてこさせる) にする秒数。0 より大きい有限値。</param>
-        /// <param name="maxDistance">照準の先を探す距離 (m)。0 より大きい有限値。</param>
-        /// <param name="enemyAimToleranceDegrees">照準が敵から外れていても敵を指したとみなす角度 (度)。0 以上 90 未満。</param>
-        /// <param name="nearbyRadius">分隊の無いモードで、指示した人からこの距離 (m、水平) 以内の同じ陣営の bot に指示を出す。0 より大きい有限値。</param>
-        /// <param name="followDistance">付いていくとき、指示した人からこれより離れたら寄っていく距離 (m、水平)。0 より大きい有限値。</param>
-        /// <param name="leashDistance">付いていくとき、撃ち合っていてもこれより離れたら戻る距離 (m、水平)。followDistance 以上の有限値。</param>
         public SquadOrderSpec(
             float holdSeconds = DefaultHoldSeconds,
             float maxDistance = DefaultMaxDistance,
@@ -71,7 +61,6 @@ namespace Shooter.Core
 
         public float LeashDistance { get; }
 
-        /// <summary><see cref="PingAim.Resolve"/> に渡す、届く距離と敵に吸い付く角度。</summary>
         public PingSpec Aim { get; }
 
         private static void RequirePositive(float value, string name)

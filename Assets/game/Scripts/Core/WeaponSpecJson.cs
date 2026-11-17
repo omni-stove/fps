@@ -133,7 +133,6 @@ namespace Shooter.Core
         public const string ExplosionRadiusItem = "explosionRadius";
         public const string AdsFieldOfViewItem = "adsFieldOfView";
 
-        /// <summary><c>falloff</c> にこの文字列を書くと <see cref="DamageFalloff.None"/> (減衰しない) になる。</summary>
         public const string NoFalloff = "None";
 
         private static readonly string[] _triggerFlatItems = { FireModeItem, FireIntervalItem };
@@ -228,8 +227,6 @@ namespace Shooter.Core
 
         private static readonly string[] _breathHoldItems = { MaxHoldSecondsItem, RecoverSecondsItem, SwayMultiplierItem };
 
-        /// <summary>武器 1 つの JSON を読む。sourceName は例外の文に出す読み元の名前。</summary>
-        /// <exception cref="ServerDataJsonException">文法・項目・値が不正。<see cref="ServerDataJsonException.Item"/> に項目の道筋を持つ。</exception>
         public static WeaponSpec Parse(string text, string sourceName)
         {
             var source = ServerDataJson.SourceOf(sourceName, Kind);
@@ -237,7 +234,6 @@ namespace Shooter.Core
             return Read(new ServerDataJson.Fields(source, Kind, root, string.Empty, ItemNames));
         }
 
-        /// <summary>spec を部品に分けた形の JSON にする。<see cref="Parse"/> で読み直すと同じ値になる。</summary>
         public static string Write(WeaponSpec spec)
         {
             if (spec == null)
@@ -872,10 +868,8 @@ namespace Shooter.Core
             return all.ToArray();
         }
 
-        /// <summary>
-        /// 部品 1 つの項目を読む。部品のオブジェクト (<see cref="Fields"/>) に無い項目は、部品に分ける前の形で武器の直下に平らに書いた項目から読む。
-        /// 同じ値を両方に書いたら、どちらを使うか読み手が迷うので断る。
-        /// </summary>
+        // 部品のオブジェクトに無い項目は、部品に分ける前の形で武器の直下に平らに書いた項目から読む。
+        // 同じ値を両方に書いたら、どちらを使うか読み手が迷うので断る。
         private sealed class Part
         {
             private readonly ServerDataJson.Fields _top;
@@ -899,7 +893,6 @@ namespace Shooter.Core
                 return new Part(top.Object(name, known), top, name, flatItems);
             }
 
-            /// <summary>item を書いたオブジェクトと、そこでの項目名を返す。どこにも無ければ null。</summary>
             public ServerDataJson.Fields Owner(string item, out string name)
             {
                 var flat = FlatName(item);
@@ -967,7 +960,6 @@ namespace Shooter.Core
                 return Fields.ToInt(Fields.ItemPath(item), Fields.Require(item));
             }
 
-            /// <summary>create が引数名を添えて投げた不正を、その値を読んだ項目の道筋を添えた <see cref="ServerDataJsonException"/> にする。</summary>
             public T Build<T>(Func<T> create)
             {
                 try

@@ -2,12 +2,10 @@ using System;
 
 namespace Shooter.Protocol
 {
-    /// <summary>全員に送るキルログの 1 行 (<c>Shooter.Core.KillFeedEntry</c> の中身)。自滅なら倒した人と倒された人が同じ。</summary>
     public sealed class KilledMessage : IMessage
     {
         public const byte CurrentVersion = 2;
 
-        /// <summary>1 つに載せるアシストした参加者の最大数。</summary>
         public const int MaxAssisters = 16;
 
         private readonly int[] _assisterIds = new int[MaxAssisters];
@@ -24,13 +22,10 @@ namespace Shooter.Protocol
 
         public bool Headshot { get; set; }
 
-        /// <summary>味方を倒したか。</summary>
         public bool Friendly { get; set; }
 
-        /// <summary>アシストした参加者の数。</summary>
         public int AssisterCount { get; private set; }
 
-        /// <summary>index 番目にアシストした参加者の Id。</summary>
         public int AssisterId(int index)
         {
             if ((uint)index >= (uint)AssisterCount)
@@ -46,7 +41,6 @@ namespace Shooter.Protocol
             AssisterCount = 0;
         }
 
-        /// <exception cref="InvalidOperationException">もう <see cref="MaxAssisters"/> 人いる。</exception>
         public void AddAssister(int playerId)
         {
             if (playerId < 0)

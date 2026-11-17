@@ -9,7 +9,6 @@ namespace Shooter.Core
         // 面の上で起爆すると、爆風を遮るかを調べる線がその面の中から始まり、面の向こうの相手にも遮られずに届いてしまう。
         public const float DetonationStandoff = 0.05f;
 
-        // 当たったときの起爆は Resolve が出す。こちらは飛ぶ弾が止まった・寿命が切れたときに、その弾を持つ側が呼ぶ。
         public static IReadOnlyList<ImpactOrder> ResolveDetonation(ImpactSpec impact, DetonationTrigger cause, Vector3 point)
         {
             if (impact == null)

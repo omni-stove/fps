@@ -3,11 +3,8 @@ using System.Globalization;
 
 namespace Shooter.Protocol
 {
-    /// <summary>持ち主にだけ送るグレネードの残り (Netcode の <c>NetGrenadeState</c> の中身)。</summary>
-    /// <remarks>
-    /// 種類ごとの残りを構造体の配列で持たずにクラスにしたのは、代入で配列が共有され、基準のスナップショットまで書き換わらないようにするため。
-    /// 読むたびに配列や同じ Id の文字列を作り直さず、前に読んだものを使い回す。
-    /// </remarks>
+    // 種類ごとの残りを構造体の配列で持たずにクラスにしたのは、代入で配列が共有され、基準のスナップショットまで書き換わらないようにするため。
+    // 読むたびに配列や同じ Id の文字列を作り直さず、前に読んだものを使い回す。
     public sealed class GrenadePouchSync
     {
         public const int MaxTypes = 16;
@@ -15,7 +12,6 @@ namespace Shooter.Protocol
         private readonly string[] _typeIds = new string[MaxTypes];
         private readonly int[] _remaining = new int[MaxTypes];
 
-        /// <summary>試合のルールで投げられるか。</summary>
         public bool Enabled { get; set; }
 
         public int Count { get; private set; }

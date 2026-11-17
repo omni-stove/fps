@@ -29,7 +29,6 @@ namespace Shooter.Core
 
         public string VisualId { get; }
 
-        /// <summary>種類の Id (<see cref="StatusEffectKinds"/>)。同じ種類をかけ直すと、別に重ねずに延ばす。</summary>
         public string KindId { get; }
     }
 }

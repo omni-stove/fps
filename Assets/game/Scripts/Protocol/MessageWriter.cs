@@ -5,16 +5,13 @@ using System.Text;
 
 namespace Shooter.Protocol
 {
-    /// <summary>
-    /// メッセージをバイト列に書く。数はリトルエンディアン、文字列は UTF-8 のバイト数 (ushort) を前に付けて書く。
-    /// 毎回作らずに使い回せるよう、書いた中身は <see cref="Reset"/> で捨てる。
-    /// </summary>
+    // 毎回作らずに使い回せるよう、書いた中身は Reset で捨てる。
     public sealed class MessageWriter
     {
-        /// <summary>既定の最長のバイト数。1 つのメッセージの長さを ushort で表せる範囲に収める。</summary>
+        // 1 つのメッセージの長さを ushort で表せる範囲に収める。
         public const int DefaultMaxLength = ushort.MaxValue;
 
-        /// <summary>文字列 1 つの最長のバイト数 (UTF-8)。長さの前置きが ushort のため。</summary>
+        // 長さの前置きが ushort のため。
         public const int MaxStringBytes = ushort.MaxValue;
 
         private const int _initialCapacity = 256;
@@ -23,7 +20,6 @@ namespace Shooter.Protocol
 
         private byte[] _buffer;
 
-        /// <param name="maxLength">書ける最長のバイト数。超えると <see cref="InvalidOperationException"/> を投げる。</param>
         public MessageWriter(int maxLength = DefaultMaxLength)
         {
             if (maxLength <= 0)
@@ -35,25 +31,21 @@ namespace Shooter.Protocol
             _buffer = new byte[Math.Min(_initialCapacity, maxLength)];
         }
 
-        /// <summary>書ける最長のバイト数。</summary>
         public int MaxLength { get; }
 
-        /// <summary>今までに書いたバイト数。</summary>
         public int Length { get; private set; }
 
-        /// <summary>書いた中身を捨てる。確保した配列は使い回す。</summary>
         public void Reset()
         {
             Length = 0;
         }
 
-        /// <summary>書いた中身を指す。次に書くか <see cref="Reset"/> するまでしか中身を保証しない。</summary>
+        // 写さずに中の配列を指すので、次に書くか Reset するまでしか中身を保証しない。
         public ArraySegment<byte> AsSegment()
         {
             return new ArraySegment<byte>(_buffer, 0, Length);
         }
 
-        /// <summary>書いた中身を写した新しい配列。</summary>
         public byte[] ToArray()
         {
             var copy = new byte[Length];
@@ -61,7 +53,6 @@ namespace Shooter.Protocol
             return copy;
         }
 
-        /// <summary>メッセージの Id・版・中身の順に書く。</summary>
         public void WriteMessage(IMessage message)
         {
             if (message == null)
@@ -90,7 +81,6 @@ namespace Shooter.Protocol
             _buffer[at] = value;
         }
 
-        /// <summary>1 バイトで書く (true は 1、false は 0)。</summary>
         public void WriteBool(bool value)
         {
             WriteByte(value ? (byte)1 : (byte)0);
@@ -138,19 +128,17 @@ namespace Shooter.Protocol
             _buffer[at + 3] = (byte)(value >> 24);
         }
 
-        /// <summary>IEEE 754 の 32 ビットのビット列のまま書く (NaN も書ける。値の妥当性は読む側のメッセージが見る)。</summary>
+        // NaN もそのまま書くのは、値の妥当性を読む側のメッセージが見るため。
         public void WriteSingle(float value)
         {
             WriteInt32(BitConverter.SingleToInt32Bits(value));
         }
 
-        /// <summary>IEEE 754 の 64 ビットのビット列のまま書く。</summary>
         public void WriteDouble(double value)
         {
             WriteInt64(BitConverter.DoubleToInt64Bits(value));
         }
 
-        /// <summary>x・y の順に <see cref="WriteSingle"/> で書く。</summary>
         public void WriteVector2(Vector2 value)
         {
             // 8 バイトを 1 回で取るのは、収まらないときに x だけが残らないようにするため。
@@ -159,7 +147,6 @@ namespace Shooter.Protocol
             PutUInt32(at + 4, unchecked((uint)BitConverter.SingleToInt32Bits(value.Y)));
         }
 
-        /// <summary>x・y・z の順に <see cref="WriteSingle"/> で書く。</summary>
         public void WriteVector3(Vector3 value)
         {
             // 12 バイトを 1 回で取るのは、収まらないときに x や y だけが残らないようにするため。
@@ -169,7 +156,6 @@ namespace Shooter.Protocol
             PutUInt32(at + 8, unchecked((uint)BitConverter.SingleToInt32Bits(value.Z)));
         }
 
-        /// <summary>x・y・z・w の順に <see cref="WriteSingle"/> で書く。</summary>
         public void WriteQuaternion(Quaternion value)
         {
             // 16 バイトを 1 回で取るのは、収まらないときに一部の成分だけが残らないようにするため。
@@ -180,15 +166,11 @@ namespace Shooter.Protocol
             PutUInt32(at + 12, unchecked((uint)BitConverter.SingleToInt32Bits(value.W)));
         }
 
-        /// <summary>UTF-8 のバイト数 (ushort) を書いてから中身を書く。null は空文字列として書く。</summary>
-        /// <exception cref="ArgumentException">UTF-8 で <see cref="MaxStringBytes"/> バイトを超える、または対になっていないサロゲートを含む。</exception>
         public void WriteString(string value)
         {
             WriteString(value, MaxStringBytes);
         }
 
-        /// <summary><see cref="WriteString(string)"/> と同じく書くが、UTF-8 で maxBytes バイトを超えるなら書かずに投げる。</summary>
-        /// <exception cref="ArgumentException">UTF-8 で maxBytes バイトを超える、または対になっていないサロゲートを含む。</exception>
         public void WriteString(string value, int maxBytes)
         {
             if (maxBytes < 0 || maxBytes > MaxStringBytes)
@@ -221,7 +203,6 @@ namespace Shooter.Protocol
             _utf8.GetBytes(text, 0, text.Length, _buffer, at);
         }
 
-        /// <summary>バイト列をそのまま (長さを付けずに) 書く。</summary>
         public void WriteBytes(ArraySegment<byte> bytes)
         {
             if (bytes.Array == null)
@@ -233,7 +214,6 @@ namespace Shooter.Protocol
             Buffer.BlockCopy(bytes.Array, bytes.Offset, _buffer, at, bytes.Count);
         }
 
-        /// <returns>書き始める位置。</returns>
         private int Reserve(int count)
         {
             if (count > MaxLength - Length)

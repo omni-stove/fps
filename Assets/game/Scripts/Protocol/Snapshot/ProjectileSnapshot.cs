@@ -3,9 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <remarks>
-    /// 発射の知らせ (<see cref="ProjectileSpawnedMessage"/>) が落ちても、後から見えるようになった人にも弾が見えるよう、スナップショットにも並べる。
-    /// </remarks>
+    // 発射の知らせ (ProjectileSpawnedMessage) が落ちても、後から見えるようになった人にも弾が見えるよう、スナップショットにも並べる。
     public struct ProjectileSnapshot : ISnapshotEntity<ProjectileSnapshot>
     {
         public int ProjectileId { get; set; }

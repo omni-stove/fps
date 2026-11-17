@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 照準器 (<see cref="SightSpec"/>) の JSON の項目。武器の <c>aim.sight</c> (<see cref="WeaponSpecJson"/>) と
-    /// アタッチメントの <c>attachment.sight</c> (<see cref="InventoryJson"/>) で同じ形を読み書きする。
-    /// </summary>
+    // 武器の aim.sight とアタッチメントの attachment.sight で同じ形を読み書きするので、ここにまとめる。
     internal static class SightSpecJson
     {
         public const string SightItem = "sight";
@@ -20,7 +17,6 @@ namespace Shooter.Core
             ReticleIdItem, ScopeOverlayItem, EyeViewInThirdPersonItem, AimedInProgressItem,
         };
 
-        /// <exception cref="ServerDataJsonException">値が不正。項目の道筋を持つ。</exception>
         public static SightSpec Read(ServerDataJson.Fields fields)
         {
             if (fields == null)
@@ -43,7 +39,6 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>sight を <see cref="SightItem"/> のオブジェクトとして書く。既定 (<see cref="SightSpec.IsDefault"/>) なら何も書かない。</summary>
         public static void Write(ServerDataJson.Writer writer, SightSpec sight)
         {
             if (writer == null)

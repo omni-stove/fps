@@ -2,7 +2,6 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    /// <summary>撃たれた人にだけ送る、受けたダメージと撃ってきた位置 (被弾の向きの表示)。</summary>
     public sealed class DamageTakenMessage : IMessage
     {
         public const byte CurrentVersion = 1;
@@ -11,7 +10,6 @@ namespace Shooter.Protocol
 
         public byte Version => CurrentVersion;
 
-        /// <summary>撃ってきた位置が分かるか (落下などなら false)。</summary>
         public bool HasSource { get; set; }
 
         public Vector3 SourcePosition { get; set; }

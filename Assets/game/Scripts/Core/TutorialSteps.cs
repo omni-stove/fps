@@ -3,29 +3,18 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    /// <summary>
-    /// 射撃場のチュートリアルの進み。手順 (<see cref="Order"/>: 移動・照準・射撃・リロード・しゃがみ・カバー) を順に 1 つずつ進め、
-    /// 今の手順を終えたかを毎フレームの観測 (<see cref="Observe"/>) から決める。
-    /// 手順ごとの数え (歩いた距離・覗き込んだ時間・当てた回数) はその手順に入ってから数え始め、前の手順でしたことは持ち越さない。
-    /// </summary>
     public sealed class TutorialSteps
     {
-        /// <summary>移動の手順を終えるまでに歩く距離 (m)。</summary>
         public const float DefaultMoveMeters = 3f;
 
-        /// <summary>照準の手順を終えるまでに覗き込む時間 (秒、途中で離してもよい)。</summary>
         public const float DefaultAimSeconds = 0.5f;
 
-        /// <summary>射撃の手順を終えるまでに標的に当てる回数。</summary>
         public const int DefaultHitsRequired = 3;
 
-        /// <summary>
-        /// 1 回の観測でこれより長く動いたら、歩いたのではなく位置を移された (出現し直した) と見なして数えない (m)。
-        /// ダッシュ (8m/s) で 10fps まで落ちても 0.8m なので、歩きを捨てることはない。
-        /// </summary>
+        // 1 回の観測でこれより長く動いたら、歩いたのではなく位置を移された (出現し直した) と見なして数えない。
+        // ダッシュ (8m/s) で 10fps まで落ちても 0.8m なので、歩きを捨てることはない。
         public const float DefaultTeleportMeters = 2f;
 
-        /// <summary>手順の並び。この順に進む。</summary>
         public static IReadOnlyList<TutorialStep> Order { get; } = new[]
         {
             TutorialStep.Move,
@@ -46,10 +35,6 @@ namespace Shooter.Core
         private float _aimedSeconds;
         private int _hits;
 
-        /// <param name="moveMeters">移動の手順で歩く距離 (m)。0 より大きい有限値。</param>
-        /// <param name="aimSeconds">照準の手順で覗き込む時間 (秒)。0 以上の有限値 (0 なら覗き込んだ時点で終える)。</param>
-        /// <param name="hitsRequired">射撃の手順で当てる回数。1 以上。</param>
-        /// <param name="teleportMeters">1 回の観測でこれより長い移動は数えない (m)。moveMeters 以下でもよいが 0 より大きい有限値。</param>
         public TutorialSteps(
             float moveMeters = DefaultMoveMeters,
             float aimSeconds = DefaultAimSeconds,
@@ -88,14 +73,10 @@ namespace Shooter.Core
 
         public int HitsRequired => _hitsRequired;
 
-        /// <summary>すべての手順を終えたか。</summary>
         public bool IsComplete => _index >= Order.Count;
 
-        /// <summary>今の手順の位置 (0 始まり)。すべて終えたら <see cref="Order"/> の数。</summary>
         public int CurrentIndex => _index;
 
-        /// <summary>今の手順。</summary>
-        /// <exception cref="InvalidOperationException">すべて終えている。</exception>
         public TutorialStep Current
         {
             get
@@ -109,13 +90,8 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>射撃の手順で、ここまでに当てた回数。他の手順では 0。</summary>
         public int Hits => _hits;
 
-        /// <summary>
-        /// 今の手順の進み (0〜1)。移動は歩いた距離、照準は覗き込んだ時間、射撃は当てた回数で、他の手順は終えるまで 0。
-        /// すべて終えたら 1。
-        /// </summary>
         public float StepProgress
         {
             get
@@ -139,19 +115,11 @@ namespace Shooter.Core
             }
         }
 
-        /// <summary>
-        /// メニューのチュートリアルから来たか (requestedFromMenu)、まだ一度も終えていなければ (alreadyCompleted が false) 始める。
-        /// </summary>
         public static bool ShouldStart(bool alreadyCompleted, bool requestedFromMenu)
         {
             return requestedFromMenu || !alreadyCompleted;
         }
 
-        /// <summary>
-        /// 1 フレーム分の様子 observation で今の手順を数え、終えたら次の手順へ進めて true を返す。
-        /// 1 回で進むのは 1 手順だけ (同じフレームで次の手順の条件を満たしていても、それは次の観測で数える)。
-        /// すべて終えていれば何もせず false。
-        /// </summary>
         public bool Observe(TutorialObservation observation)
         {
             if (IsComplete)
@@ -169,18 +137,12 @@ namespace Shooter.Core
             return true;
         }
 
-        /// <summary>最初の手順からやり直す。</summary>
         public void Restart()
         {
             _index = 0;
             ResetCounts();
         }
 
-        /// <summary>
-        /// 方向ごとに分かれたキー (上・左・下・右の順) を 1 つの表記にまとめる。どれも 1 文字ならつなげ (<c>WASD</c>)、
-        /// そうでなければ / で区切る (<c>Up/Left/Down/Right</c>)。空の要素は飛ばす。
-        /// </summary>
-        /// <returns>まとめた表記。空でない要素が無ければ空文字。</returns>
         public static string JoinDirectionalKeys(IReadOnlyList<string> keys)
         {
             if (keys == null)

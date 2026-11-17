@@ -72,7 +72,7 @@ namespace Shooter.Core
             var platform = defaultPlatform;
             if (platformText != null && !TryParsePlatform(platformText, out platform))
             {
-                error = PlatformFlag + " must be windows or macos (got '" + platformText + "')";
+                error = PlatformFlag + " must be windows, macos or webgl (got '" + platformText + "')";
                 return false;
             }
 
@@ -89,6 +89,8 @@ namespace Shooter.Core
                     return "windows";
                 case ClientPlatform.MacOS:
                     return "macos";
+                case ClientPlatform.WebGL:
+                    return "webgl";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(platform), platform, "unknown platform");
             }
@@ -101,7 +103,15 @@ namespace Shooter.Core
 
         private static string ExecutableExtension(ClientPlatform platform)
         {
-            return platform == ClientPlatform.Windows ? ".exe" : ".app";
+            switch (platform)
+            {
+                case ClientPlatform.Windows:
+                    return ".exe";
+                case ClientPlatform.MacOS:
+                    return ".app";
+                default:
+                    return string.Empty;
+            }
         }
 
         private static bool TryParsePlatform(string text, out ClientPlatform platform)

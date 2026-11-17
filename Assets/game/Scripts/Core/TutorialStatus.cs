@@ -14,7 +14,8 @@ namespace Fps.Core
         /// <param name="device">キーの表記に使う入力機器。</param>
         /// <exception cref="ArgumentNullException">steps が null。</exception>
         /// <exception cref="ArgumentException">終えていない手順で actionPath が空。</exception>
-        public TutorialStatus(TutorialSteps steps, string actionPath, InputDeviceKind device)
+        /// <param name="keyLabel">出したときのキーの表記。割り当てを替えたとき段階が変わって出し直されるように持つ。null なら UI が引く。</param>
+        public TutorialStatus(TutorialSteps steps, string actionPath, InputDeviceKind device, string keyLabel = null)
         {
             if (steps == null)
             {
@@ -34,7 +35,11 @@ namespace Fps.Core
             HitsRequired = steps.HitsRequired;
             ActionPath = IsComplete ? null : actionPath;
             Device = device;
+            KeyLabel = IsComplete ? null : keyLabel;
         }
+
+        /// <summary>出したときのキーの表記。無ければ null。<see cref="IsComplete"/> なら null。</summary>
+        public string KeyLabel { get; }
 
         /// <summary>すべての手順を終えたか。</summary>
         public bool IsComplete { get; }
@@ -69,7 +74,8 @@ namespace Fps.Core
                 && Hits == other.Hits
                 && HitsRequired == other.HitsRequired
                 && string.Equals(ActionPath, other.ActionPath, StringComparison.Ordinal)
-                && Device == other.Device;
+                && Device == other.Device
+                && string.Equals(KeyLabel, other.KeyLabel, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
@@ -89,7 +95,7 @@ namespace Fps.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(IsComplete, Step, StepNumber, Hits, HitsRequired, ActionPath, Device);
+            return HashCode.Combine(IsComplete, Step, StepNumber, Hits, HitsRequired, ActionPath, Device, KeyLabel);
         }
 
         public override string ToString()

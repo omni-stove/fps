@@ -118,7 +118,7 @@ namespace Fps.Tests.EditMode
             Assert.That(_view.IsShown, Is.False);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
         }
-    
+
         [Test]
         public void APublishedStatusIsShownAsItsPrompt()
         {

@@ -151,6 +151,128 @@ namespace Shooter.Server.Tests
             Assert.That(Fail(Env(), flag, value), Does.Contain(expected));
         }
 
+        [Test]
+        public void WithoutPrivacyFlagsTheLaunchIsPublic()
+        {
+            var launch = Parse(Env());
+
+            Assert.That(launch.PrivateMatch, Is.False);
+            Assert.That(launch.JoinCode, Is.Null);
+        }
+
+        [Test]
+        public void PrivateAloneLeavesTheCodeToBeGenerated()
+        {
+            var launch = Parse(Env(), "--private");
+
+            Assert.That(launch.PrivateMatch, Is.True);
+            Assert.That(launch.JoinCode, Is.Null);
+        }
+
+        [Test]
+        public void TheJoinCodeIsNormalizedAndMakesTheMatchPrivate()
+        {
+            var launch = Parse(Env(), "--join-code", "ab-12_c");
+
+            Assert.That(launch.PrivateMatch, Is.True);
+            Assert.That(launch.JoinCode, Is.EqualTo("AB-12_C"));
+        }
+
+        [Test]
+        public void PrivacyFlagsSurviveSwappingTheOptions()
+        {
+            var launch = Parse(Env(), "--private", "--join-code", "FRIENDS", "-transport", "eos");
+
+            var udp = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            Assert.That(udp.PrivateMatch, Is.True);
+            Assert.That(udp.JoinCode, Is.EqualTo("FRIENDS"));
+        }
+
+        [TestCase("--join-code", ServerLaunch.JoinCodeFlag + " requires a value")]
+        [TestCase("--join-code", ServerLaunch.JoinCodeFlag + " requires a value", "--private")]
+        [TestCase("--join-code", ServerLaunch.JoinCodeFlag + " must be 1-16 characters", "has/slash")]
+        [TestCase("--join-code", ServerLaunch.JoinCodeFlag + " must be 1-16 characters", "ABCDEFGHJKMNPQRST")]
+        [TestCase("--join-code", ServerLaunch.JoinCodeFlag + " is given more than once", "A", "--join-code", "B")]
+        [TestCase("--private", ServerLaunch.PrivateFlag + " is given more than once", "--private")]
+        public void BadPrivacyFlagsAreRejected(string flag, string expected, params string[] rest)
+        {
+            var args = new List<string> { flag };
+            args.AddRange(rest);
+
+            Assert.That(Fail(Env(), args.ToArray()), Does.StartWith(expected));
+        }
+
+        [Test]
+        public void APublicLaunchKeepsThePublicRules()
+        {
+            var rules = new NetMatchSettings(joinCode: "IGNORED");
+
+            var applied = Parse(Env()).ApplyPrivacy(rules, _ => throw new AssertionException("must not generate"), out var generated);
+
+            Assert.That(applied, Is.SameAs(rules));
+            Assert.That(generated, Is.False);
+        }
+
+        [Test]
+        public void PrivateGeneratesACodeWhenNeitherTheArgumentsNorTheRulesHaveOne()
+        {
+            var next = 0;
+            var applied = Parse(Env(), "--private").ApplyPrivacy(new NetMatchSettings(maxPlayers: 4), _ => next++, out var generated);
+
+            Assert.That(generated, Is.True);
+            Assert.That(applied.PrivateMatch, Is.True);
+            Assert.That(applied.JoinCode, Is.EqualTo("234567"));
+            Assert.That(applied.JoinCode, Has.Length.EqualTo(JoinCode.DefaultLength));
+            Assert.That(applied.MaxPlayers, Is.EqualTo(4), "the other rules are kept");
+        }
+
+        [Test]
+        public void TheRulesFileCanMakeThePrivateMatchAlone()
+        {
+            var applied = Parse(Env()).ApplyPrivacy(new NetMatchSettings(privateMatch: true, joinCode: "friends"), _ => 0, out var generated);
+
+            Assert.That(generated, Is.False);
+            Assert.That(applied.PrivateMatch, Is.True);
+            Assert.That(applied.JoinCode, Is.EqualTo("FRIENDS"));
+        }
+
+        [Test]
+        public void ThePrivateRulesWithoutACodeGetAGeneratedOne()
+        {
+            var applied = Parse(Env()).ApplyPrivacy(new NetMatchSettings(privateMatch: true), _ => 1, out var generated);
+
+            Assert.That(generated, Is.True);
+            Assert.That(applied.JoinCode, Is.EqualTo("333333"));
+        }
+
+        [Test]
+        public void TheArgumentsWinOverTheRules()
+        {
+            var rules = new NetMatchSettings(privateMatch: false, joinCode: "FROMRULES");
+
+            Assert.That(Parse(Env(), "--private").ApplyPrivacy(rules, _ => 0, out var generated).JoinCode, Is.EqualTo("FROMRULES"));
+            Assert.That(generated, Is.False, "--private alone uses the code in the rules");
+
+            var applied = Parse(Env(), "--join-code", "FROMARGS").ApplyPrivacy(rules, _ => 0, out generated);
+
+            Assert.That(applied.PrivateMatch, Is.True);
+            Assert.That(applied.JoinCode, Is.EqualTo("FROMARGS"));
+            Assert.That(generated, Is.False);
+        }
+
+        [Test]
+        public void ThePrivacyLogLineShowsTheCodeAndWhetherItWasGenerated()
+        {
+            Assert.That(ServerLaunch.PrivacyLogLine(NetMatchSettings.Default, false), Is.EqualTo("[Server] public match"));
+            Assert.That(
+                ServerLaunch.PrivacyLogLine(new NetMatchSettings(privateMatch: true, joinCode: "ABC234"), true),
+                Is.EqualTo("[Server] private match join_code=ABC234 (generated; pass --join-code to choose one)"));
+            Assert.That(
+                ServerLaunch.PrivacyLogLine(new NetMatchSettings(privateMatch: true, joinCode: "FRIENDS"), false),
+                Is.EqualTo("[Server] private match join_code=FRIENDS"));
+        }
+
         private static ServerLaunch Parse(Dictionary<string, string> environment, params string[] args)
         {
             Assert.That(ServerLaunch.TryParse(args, Lookup(environment), out var launch, out var error), Is.True, error);

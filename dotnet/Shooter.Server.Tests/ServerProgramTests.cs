@@ -393,6 +393,57 @@ namespace Shooter.Server.Tests
             Assert.That(_error.ToString(), Does.Contain("[Net] cannot load EOS credentials: "));
         }
 
+        [Test]
+        public void WithoutPrivateTheServerSaysItIsPublic()
+        {
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] public match"));
+            Assert.That(_output.ToString(), Does.Not.Contain("join_code="));
+        }
+
+        [Test]
+        public void PrivateWithoutACodeLogsTheGeneratedCode()
+        {
+            Assert.That(Run("--private"), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(
+                _output.ToString(),
+                Does.Match(@"\[Server\] private match join_code=[" + JoinCode.Alphabet + "]{" + JoinCode.DefaultLength
+                    + @"} \(generated; pass --join-code to choose one\)"));
+        }
+
+        [Test]
+        public void TheJoinCodeArgumentWinsOverTheRulesFile()
+        {
+            TestRules.Write(
+                _data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(privateMatch: true, joinCode: "FROMRULES")));
+
+            Assert.That(Run("--join-code", "friends"), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] private match join_code=FRIENDS" + Environment.NewLine));
+            Assert.That(_output.ToString(), Does.Not.Contain("FROMRULES"));
+        }
+
+        [Test]
+        public void TheRulesFileAloneMakesThePrivateMatch()
+        {
+            TestRules.Write(
+                _data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(privateMatch: true, joinCode: "FROMRULES")));
+
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Server] private match join_code=FROMRULES" + Environment.NewLine));
+        }
+
+        [Test]
+        public void ABadJoinCodeIsAUsageError()
+        {
+            Assert.That(Run("--join-code", "no/slash"), Is.EqualTo(ServerProgram.ExitUsage));
+
+            Assert.That(_error.ToString(), Does.StartWith("[Net] invalid arguments: --join-code must be"));
+        }
+
         private void AddCredentials()
         {
             _environment[EosCredentials.ProductIdVariable] = "product";

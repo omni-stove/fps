@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using Shooter.Core;
 using Shooter.EosSdk;
 using Shooter.Protocol;
@@ -75,6 +76,10 @@ namespace Shooter.Server
             }
 
             output.WriteLine(rules.LogLine);
+
+            // コードを当てれば非公開の試合に入れるので、続きを読まれうる System.Random ではなく JoinCode と同じ暗号の乱数で作る
+            rules = rules.WithSettings(launch.ApplyPrivacy(rules.Settings, RandomNumberGenerator.GetInt32, out var generatedJoinCode));
+            output.WriteLine(ServerLaunch.PrivacyLogLine(rules.Settings, generatedJoinCode));
 
             var mapPool = rules.Settings.MapPool;
             if (!ServerMapData.TryLoad(launch.StartMap(mapPool), runtime.MapSearchRoots, out var map, out problem))

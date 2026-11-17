@@ -24,6 +24,29 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void WithSettingsReplacesOnlyTheSettings()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+            var settings = data.Settings.WithPrivacy(true, "FRIENDS");
+
+            var changed = data.WithSettings(settings);
+
+            Assert.That(changed.Settings, Is.SameAs(settings));
+            Assert.That(changed.File, Is.SameAs(data.File));
+            Assert.That(changed.File.Settings.PrivateMatch, Is.False, "the file stays as it was read");
+            Assert.That(changed.Name, Is.EqualTo(data.Name));
+            Assert.That(changed.Path, Is.EqualTo(data.Path));
+            Assert.That(changed.Ping, Is.SameAs(data.Ping));
+            Assert.That(changed.Grenades, Is.SameAs(data.Grenades));
+            Assert.That(changed.Bots, Is.SameAs(data.Bots));
+            Assert.That(changed.Items, Is.SameAs(data.Items));
+            Assert.That(changed.Knockback, Is.SameAs(data.Knockback));
+            Assert.That(changed.Assist, Is.SameAs(data.Assist));
+            Assert.That(data.Settings.PrivateMatch, Is.False);
+        }
+
+        [Test]
         public void LoadsTheRulesFromTheFirstRootThatHasThem()
         {
             var path = TestRules.Write(_second.Path, "Domination", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Domination), name: "Domination"));

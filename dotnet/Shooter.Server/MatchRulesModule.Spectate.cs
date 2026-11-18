@@ -29,6 +29,13 @@ namespace Shooter.Server
                 return null;
             }
 
+            // ラウンドの合間の観戦もこの決まりより先に断つのは、Off のルールで誰にも観戦先を割り当てないため
+            if (_data.Rules.Spectating == Spectating.Off)
+            {
+                _spectating.Remove(viewerId);
+                return null;
+            }
+
             // ラウンドの合間にやられ演出の決まりと生死を見ないのは、クライアントの ClientSpectate が同じ決まりで観戦を始めるため
             var betweenRounds = CurrentRoundPhase() == RoundPhase.Preparing;
             if (!betweenRounds

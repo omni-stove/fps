@@ -312,6 +312,10 @@ namespace Shooter.Server
             points.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // 爆弾は 1 つなので Id は固定。持ち主のチームは攻撃側にして、クライアントが攻守を知れるようにする
         public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
         {

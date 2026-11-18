@@ -235,7 +235,7 @@ namespace Shooter.Server
 
             return attackerId == victimId
                 || !session.HasPlayer(attackerId)
-                || _data.Rules.FriendlyFire == FriendlyFire.On
+                || session.Spec.Rules.FriendlyFire == FriendlyFire.On
                 || session.GetTeam(attackerId) != session.GetTeam(victimId);
         }
 

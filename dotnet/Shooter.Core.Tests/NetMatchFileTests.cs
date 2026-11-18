@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -362,6 +363,40 @@ namespace Shooter.Core.Tests
             Assert.That(read.ControlPoints[0].Center, Is.EqualTo(new Vector3(0f, 0f, 15f)));
             Assert.That(read.ControlPoints[1].Radius, Is.EqualTo(4f));
             Assert.That(NetMapPoints.Write(read), Is.EqualTo(text));
+            Assert.That(read.FlagBases, Is.Empty);
+            Assert.That(text, Does.Not.Contain(NetMapPoints.FlagBasesItem), "a map without flag bases is written as before");
+        }
+
+        [Test]
+        public void MapPointsCarryFlagBases()
+        {
+            var points = new NetMapPoints(
+                new List<SpawnPoint> { new SpawnPoint(new Vector3(1f, 0.5f, -2.25f), Team.Alpha) },
+                new List<ControlPointArea>(),
+                new List<FlagBasePoint>
+                {
+                    new FlagBasePoint(Team.Bravo, new Vector3(20f, 0.5f, 1.5f)),
+                    new FlagBasePoint(Team.Alpha, new Vector3(-20f, 0.5f, -1.5f)),
+                });
+
+            var text = NetMapPoints.Write(points);
+            var read = NetMapPoints.Parse(text, "NetCtf01.points.json");
+
+            Assert.That(text, Does.Contain("\"flagBases\": ["));
+            Assert.That(read.FlagBases, Has.Count.EqualTo(2));
+            Assert.That(read.FlagBases[0].Team, Is.EqualTo(Team.Bravo));
+            Assert.That(read.FlagBases[0].Position, Is.EqualTo(new Vector3(20f, 0.5f, 1.5f)));
+            Assert.That(read.FlagBases[1].Team, Is.EqualTo(Team.Alpha));
+            Assert.That(read.FlagBases[1].Position, Is.EqualTo(new Vector3(-20f, 0.5f, -1.5f)));
+            Assert.That(NetMapPoints.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void AFlagBaseNeedsATeamWithAFlagAndAFinitePosition()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FlagBasePoint((Team)7, Vector3.Zero));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FlagBasePoint(Team.Alpha, new Vector3(float.NaN, 0f, 0f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new FlagBasePoint(Team.Bravo, new Vector3(0f, float.PositiveInfinity, 0f)));
         }
 
         // 書き出したファイルを手で直したり書式を変えたりしたまま、サーバーが起動できなくなるのを防ぐ
@@ -453,6 +488,10 @@ namespace Shooter.Core.Tests
         [TestCase("{\"spawnPoints\": [{\"position\": [0, 1, 2], \"team\": \"Charlie\"}]}", "spawnPoints[0].team")]
         [TestCase("{\"controlPoints\": [{\"index\": 0, \"center\": [0, 0, 0], \"radius\": 0, \"height\": 3}]}", "controlPoints[0].radius")]
         [TestCase("{\"controlPoints\": [{\"index\": 0, \"center\": [0, 0, 0], \"radius\": 1}]}", "controlPoints[0].height")]
+        [TestCase("{\"flagBases\": [{\"position\": [0, 1, 2]}]}", "flagBases[0].team")]
+        [TestCase("{\"flagBases\": [{\"team\": \"Charlie\", \"position\": [0, 1, 2]}]}", "flagBases[0].team")]
+        [TestCase("{\"flagBases\": [{\"team\": \"Alpha\"}]}", "flagBases[0].position")]
+        [TestCase("{\"flagBases\": [{\"team\": \"Alpha\", \"position\": [0, 1]}]}", "flagBases[0].position")]
         public void BadMapPointsNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMapPoints.Parse(text, "bad.points.json"));

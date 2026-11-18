@@ -53,12 +53,21 @@ namespace Shooter.Server
         // killWinner は Session がキル数で決めた勝者
         Team? DecideWinner(Team? killWinner);
 
+        // 勝ちを数えるときに、この人が勝ったか。勝者が 1 人の目的は、チームでなく勝った人で決める
+        bool IsWinningPlayer(int playerId, Team playerTeam, Team? winner)
+        {
+            return winner.HasValue && playerTeam == winner.Value;
+        }
+
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);
 
         // 旗・爆弾・タグのように場に置く物。持たない目的は空にする
         void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items);
+
+        // Session が書いた行のうち、目的が数え直すもの (FFA のキル数など) を上書きする。Session に居ない人には呼ばない
+        void FillPlayer(int playerId, ref PlayerSnapshot snapshot);
     }
 
     // 目的の実装が試合の側に触れる口。Session を直接渡さないのは、Session が作られる前に目的を選んで Session の上限を決めるため

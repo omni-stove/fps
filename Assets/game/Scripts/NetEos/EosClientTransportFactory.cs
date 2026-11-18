@@ -26,6 +26,11 @@ namespace Shooter.NetEos
             return new EosLobbyBackend(credentials, EosTransportInstaller.LobbyDisplayName);
         }
 
+        public ILeaderboardBackend CreateLeaderboardBackend(EosCredentials credentials)
+        {
+            return new EosLeaderboardQuery(credentials, EosTransportInstaller.LobbyDisplayName);
+        }
+
         public IVoiceSession CreateVoiceSession(Action<string> log)
         {
             return new EosVoiceSession(log);

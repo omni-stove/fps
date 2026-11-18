@@ -79,5 +79,9 @@ namespace Shooter.Server
         {
             items.Clear();
         }
+
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
     }
 }

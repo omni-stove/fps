@@ -63,7 +63,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -175,7 +175,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -207,7 +207,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":10").And.Contain("\"aimAssist\":true"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11").And.Contain("\"aimAssist\":true"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -259,7 +259,67 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.RumbleStrength, Is.EqualTo(ControlSettings.Default.RumbleStrength));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":10").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+                Does.Contain("\"version\":11").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 地域とテレメトリの同意を変えて閉じ、起動し直しても残っている
+        [Test]
+        public void SavesTheRegionAndTheTelemetryConsentAndLoadsThemBackAfterARestart()
+        {
+            var settings = ControlSettings.Default.WithQuickMatchRegion("europe").WithTelemetryConsent(true);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo("europe"));
+            Assert.That(loaded.TelemetryConsent, Is.True);
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":11").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 版 10 の保存がある状態で起動すると、地域は Auto・同意は無しになり、ほかの設定は消えずに版 11 で書き直される
+        [Test]
+        public void VersionTenDataSilentlyGetsTheOnlineDefaultsAndIsRewrittenInTheCurrentVersion()
+        {
+            var saved = ControlSettings.Default
+                .WithInvertLookY(true)
+                .WithRumbleEnabled(false)
+                .WithAimAssist(false)
+                .WithPalette(ColorPalette.RedGreen)
+                .With(ControlValue.FieldOfView, 80);
+            var versionTen = OldVersion(saved.ToJson(), 10, null);
+            Assert.That(versionTen, Does.Contain("\"version\":10").And.Not.Contain("quickMatchRegion").And.Not.Contain("telemetryConsent"));
+            PlayerPrefs.SetString(_store.Key, versionTen);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo(ControlSettings.AutoRegion));
+            Assert.That(loaded.TelemetryConsent, Is.False);
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":11").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ABrokenRegionFallsBackToAutoWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithQuickMatchRegion("asia").WithTelemetryConsent(true).ToJson()
+                    .Replace("\"quickMatchRegion\":\"asia\"", "\"quickMatchRegion\":\"Asia Pacific\""));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*'quickMatchRegion'"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo(ControlSettings.AutoRegion));
+            Assert.That(loaded.TelemetryConsent, Is.True, "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -432,9 +492,15 @@ namespace Shooter.Tests.EditMode
 
         // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。版 8 までは版 9 で足したエイムアシストを持たない (初期値のときだけ除ける)。
         // 版 9 までは版 10 で足した視点の上下反転・デッドゾーン・振動・振動の強さを持たない (初期値のときだけ除ける)。
+        // 版 10 までは版 11 で足した地域とテレメトリの同意を持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 11)
+            {
+                old = old.Replace(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false", string.Empty);
+            }
+
             if (version < 10)
             {
                 old = old.Replace(",\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100", string.Empty);

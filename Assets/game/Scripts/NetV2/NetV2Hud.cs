@@ -46,11 +46,12 @@ namespace Shooter.NetV2
         private float? _localCharge;
         private GrenadeCountStatus? _grenades;
         private DominationStatus _domination;
+        private ClientCaptureTheFlagStatus _captureTheFlag;
+        private ModeStatus _modeStatus;
         private ScoreboardEntry[] _publishedScoreboard;
         private Func<float> _blindSeconds;
         private IInventoryControl _inventory;
         private ClientSearchAndDestroyStatus _searchAndDestroy;
-        private ModeStatus _modeStatus;
 
         public HudModel Model => _model;
 
@@ -102,6 +103,7 @@ namespace Shooter.NetV2
             netHud._maxHealth = Math.Max(1, maxHealth);
             netHud._findWeapon = findWeapon;
             netHud._roster = new Roster(netHud);
+            netHud._captureTheFlag = new ClientCaptureTheFlagStatus(localPlayerId);
             netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId, ConfiguredSearchAndDestroy());
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
@@ -167,8 +169,8 @@ namespace Shooter.NetV2
                 }
             }
 
-            var alpha = match.Objective == MatchObjective.None ? match.AlphaScore : match.AlphaPoints;
-            var bravo = match.Objective == MatchObjective.None ? match.BravoScore : match.BravoPoints;
+            var alpha = TeamScore(match, match.AlphaScore, match.AlphaPoints);
+            var bravo = TeamScore(match, match.BravoScore, match.BravoPoints);
             if (!_shown || alpha != _alpha || bravo != _bravo)
             {
                 _alpha = alpha;
@@ -209,11 +211,7 @@ namespace Shooter.NetV2
 
             _shown = true;
             ShowControlPoints(snapshot);
-            if (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
-            {
-                PublishModeStatus(_searchAndDestroy.Status);
-            }
-
+            ShowModeStatus(snapshot);
             ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
             ShowScoreboard(snapshot);
         }
@@ -251,6 +249,20 @@ namespace Shooter.NetV2
 
             _idleRemaining = null;
             Refresh();
+        }
+
+        // FFA は AlphaPoints・BravoPoints に 1 キルの点とキル数の上限を載せていてチームの点ではないので、GunGame と同じく 0 を出す
+        private static int TeamScore(MatchSnapshot match, int score, int points)
+        {
+            switch (match.Objective)
+            {
+                case MatchObjective.None:
+                    return score;
+                case MatchObjective.FreeForAll:
+                    return 0;
+                default:
+                    return points;
+            }
         }
 
         // 勝ちに要るラウンド数・設置の秒数はスナップショットに無いので、手元の入口 (GameContent) の値で出す
@@ -407,6 +419,18 @@ namespace Shooter.NetV2
             GameSignals.Domination.Publish(_domination);
         }
 
+        private void ShowModeStatus(SnapshotMessage snapshot)
+        {
+            // || だと先の Apply で後の Apply が飛ばされ、目的が変わったときに後の側の状態が残るので | で両方に渡す
+            var changed = (_captureTheFlag != null && _captureTheFlag.Apply(snapshot))
+                | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot));
+            if (changed)
+            {
+                // 片方が出したあとに、もう片方が消えたことで null を出して上書きしないように、残っている方を出す
+                PublishModeStatus(_captureTheFlag?.Status ?? _searchAndDestroy?.Status);
+            }
+        }
+
         private static bool SameDomination(
             DominationStatus status, float alpha, float bravo, float remaining, bool ended, Team? winner, List<ControlPointStatus> points)
         {
@@ -509,12 +533,8 @@ namespace Shooter.NetV2
                 _domination = null;
             }
 
-            if (_modeStatus != null)
-            {
-                GameSignals.ModeStatus.ClearIfCurrent(_modeStatus);
-                _modeStatus = null;
-            }
-
+            PublishModeStatus(null);
+            _captureTheFlag?.Clear();
             _searchAndDestroy?.Reset();
 
             if (_publishedScoreboard != null)

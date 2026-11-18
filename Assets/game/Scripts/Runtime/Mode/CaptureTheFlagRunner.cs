@@ -9,8 +9,7 @@ namespace Shooter.Runtime
     {
         public const float DefaultBotPlanIntervalSeconds = 0.5f;
 
-        // 段差の上下で旗を拾ったり運び込んだりしないよう、上下の差も見る。
-        public const float ReachHeight = 2f;
+        public const float ReachHeight = CaptureTheFlag.ReachHeight;
 
         // 間隔の設定が小さすぎても、毎フレームより細かくは決め直さないための下限。
         private const float _minimumPlanInterval = 0.05f;
@@ -226,8 +225,7 @@ namespace Shooter.Runtime
 
         public static bool IsWithin(Vector3 ground, Vector3 point, float radius)
         {
-            var offset = ground - point;
-            return Mathf.Abs(offset.y) <= ReachHeight && ((offset.x * offset.x) + (offset.z * offset.z)) <= radius * radius;
+            return CaptureTheFlag.IsWithin(ground.ToNumerics(), point.ToNumerics(), radius);
         }
 
         public FlagBase BaseOf(Side side)

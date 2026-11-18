@@ -51,6 +51,30 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheLeaderboardsAreReadFromTheEntryFieldBeforeResources()
+        {
+            KitTuning.Reload();
+            var fromResources = KitTuning.Leaderboards;
+
+            Assert.That(fromResources, Is.Not.SameAs(LeaderboardSpec.Default), "Resources/Tuning/leaderboards.json is read");
+            Assert.That(fromResources.Find("kills").StatName, Is.EqualTo("Kills"));
+            Assert.That(fromResources.Find("wins").Stat, Is.EqualTo(PlayerStat.MatchesWon));
+
+            var content = Content("Game");
+            content.LeaderboardsTuning = Text(
+                "GameLeaderboards", "{ \"boards\": [ { \"id\": \"best\", \"stat\": \"Kills\", \"aggregation\": \"Max\" } ], \"pageSize\": 10 }");
+            GameContent.Use(content);
+            KitTuning.Reload();
+
+            var fromContent = KitTuning.Leaderboards;
+
+            Assert.That(fromContent.Boards, Has.Count.EqualTo(1));
+            Assert.That(fromContent.Find("best").Aggregation, Is.EqualTo(LeaderboardAggregation.Max));
+            Assert.That(fromContent.PageSize, Is.EqualTo(10));
+            KitTuning.Reload();
+        }
+
+        [Test]
         public void AnEmptyEntryFieldFallsBackToResources()
         {
             var ping = KitTuning.Load(c => c.PingTuning, KitTuning.PingResourcePath, TuningJson.ParsePing, PingSpec.Default);

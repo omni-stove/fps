@@ -228,6 +228,10 @@ namespace Shooter.Server
             items.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // Unity の NetControlPointState と同じく、1% 未満の動きで送り直さないよう 0 に向けて切り捨てる
         internal static sbyte ToPercent(float control)
         {

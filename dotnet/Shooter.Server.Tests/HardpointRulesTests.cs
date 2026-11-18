@@ -337,7 +337,7 @@ namespace Shooter.Server.Tests
 
             public Team? Winner { get; private set; }
 
-            public void Begin(IMatchObjectiveRules rules, GameRules gameRules, NetMatchSettings settings)
+            public void Begin(HardpointRules rules, GameRules gameRules, NetMatchSettings settings)
             {
                 _rules = rules;
                 Session = new TeamDeathmatchSession(

@@ -13,6 +13,12 @@ namespace Shooter.Server
 
         public const float ClearanceSkin = 0.02f;
 
+        // Unity の DeploySurveyor が足元から探す上下の幅と同じ
+        public const float MaxVerticalReach = 2.5f;
+
+        // 射線の終点は足場の面に当たらないよう、置く地点より少し上にする
+        public const float SightLift = 0.1f;
+
         private const int _overlapCapacity = 8;
 
         private readonly int[] _overlaps = new int[_overlapCapacity];

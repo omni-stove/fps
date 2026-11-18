@@ -217,6 +217,20 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
             }
 
+            // 真上の屋根や壁の向こうの床を送られても置けないよう、上下のずれに上限を置き、持ち主の体から置く地点まで壁が無いかも見る
+            if (MathF.Abs(offset.Y) > MaxVerticalReach)
+            {
+                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
+            }
+
+            var sight = position + new Vector3(0f, SightLift, 0f) - body.Center;
+            var sightDistance = sight.Length();
+            if (sightDistance > 1e-4f
+                && _context.World.Raycast(body.Center, sight / sightDistance, sightDistance, ServerHitboxes.RaycastLayers, out _))
+            {
+                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
+            }
+
             var roster = RosterOf(playerId, type);
             if (!roster.CanPlace)
             {

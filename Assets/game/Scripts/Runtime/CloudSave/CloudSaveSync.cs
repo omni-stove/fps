@@ -54,6 +54,9 @@ namespace Shooter.Runtime
 
         public ISaveStorage Local => _local;
 
+        // 中身を読めるかを確かめる。読めない中身 (新しい版のゲームが書いたものなど) を手元に書くと、読み直しで空のセーブに差し替わり、それがクラウドへ戻ってしまう。
+        public Func<string, string, bool> CanRead { get; set; }
+
         public ICloudSaveBackend Backend => _backend;
 
         public bool IsSignedIn => _account != null;
@@ -295,7 +298,15 @@ namespace Shooter.Runtime
             // 読んでいる間に手元で書いた分を消さないよう、決めるのは読み終えた今の手元で行う。
             var exists = _local.TryRead(slot, out var localText) && localText != null;
             var local = CloudSaveMerge.Local(_stamps.TryGet(slot, out var recorded) ? recorded : (CloudSaveStamp?)null, exists);
-            switch (CloudSaveMerge.Decide(local, cloud))
+            var action = CloudSaveMerge.Decide(local, cloud);
+            if (action == CloudSaveAction.Download && !cloud.Deleted && CanRead != null && !CanRead(slot, cloud.Text))
+            {
+                Debug.LogWarning(CloudSaveLog.CloudRejected(slot, "the saved content cannot be read by this version"));
+                Complete(operation);
+                return;
+            }
+
+            switch (action)
             {
                 case CloudSaveAction.Download:
                     Download(operation, cloud, exists ? localText : null);

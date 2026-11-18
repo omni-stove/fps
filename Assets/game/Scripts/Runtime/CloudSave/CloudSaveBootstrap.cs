@@ -38,7 +38,28 @@ namespace Shooter.Runtime
 
         public static CloudSaveSync Create(ISaveStorage local, ICloudSaveBackend backend)
         {
-            return new CloudSaveSync(local, backend, Syncs, _startupSlots, UnixMillisecondsNow);
+            return new CloudSaveSync(local, backend, Syncs, _startupSlots, UnixMillisecondsNow) { CanRead = CanRead };
+        }
+
+        public static bool CanRead(string slot, string text)
+        {
+            try
+            {
+                if (string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal))
+                {
+                    PlayerProfile.FromJson(text);
+                }
+                else
+                {
+                    CampaignSave.FromJson(text);
+                }
+
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
 
         private static CloudSaveSync Acquire()

@@ -36,6 +36,16 @@ namespace Shooter.Core
             return (SavedAt.GetHashCode() * 397) ^ (Deleted ? 1 : 0);
         }
 
+        public static bool operator ==(CloudSaveStamp left, CloudSaveStamp right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(CloudSaveStamp left, CloudSaveStamp right)
+        {
+            return !left.Equals(right);
+        }
+
         public override string ToString()
         {
             return "savedAt=" + SavedAt.ToString(CultureInfo.InvariantCulture) + (Deleted ? " deleted" : string.Empty);

@@ -399,6 +399,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ACloudSaveWhoseContentThisVersionCannotReadIsLeftUntouched()
+        {
+            var local = new MemorySaveStorage();
+            var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
+            var unreadable = CloudSaveEnvelope.Saved(ProfileStore.Slot, 5000, "{\"version\":999}").ToJson();
+            backend.Files[ProfileFile] = unreadable;
+            var sync = Create(local, backend);
+            sync.CanRead = CloudSaveBootstrap.CanRead;
+
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileStore.Slot, "the saved content cannot be read by this version"));
+            Drain(sync);
+
+            Assert.That(local.Has(ProfileStore.Slot), Is.False);
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(unreadable));
+        }
+
+        [Test]
         public void ACloudFileHoldingAnotherSlotIsLeftUntouched()
         {
             var local = new MemorySaveStorage();

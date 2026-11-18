@@ -10,9 +10,11 @@ namespace Shooter.Server
         private readonly ChatMessage _chatMessage = new ChatMessage();
 
         private ChatGate _chatGate;
+        private ChatWordFilter _chatWordFilter;
         private float _nextChatRefusalLogTime;
 
         // 参加していない人と試合の無いときに理由も出さずに捨てるのは、印と同じにするため。
+        // 語の絞り込みをクライアントでなくここで掛けるのは、手を入れたクライアントでも素通りさせないため。
         internal ChatRefusal? ServerChat(int playerId, Shooter.Protocol.ChatChannel channel, string text)
         {
             if (_session == null || _chatGate == null || !_session.HasPlayer(playerId))
@@ -20,7 +22,13 @@ namespace Shooter.Server
                 return null;
             }
 
-            var refusal = _chatGate.TryAccept(playerId, (Shooter.Core.ChatChannel)(int)channel, text, _now, out var line);
+            var refusal = _chatGate.TryAccept(playerId, (Shooter.Core.ChatChannel)(int)channel, text, _now, out var accepted);
+            if (refusal != ChatRefusal.None)
+            {
+                return RefuseChat(playerId, refusal);
+            }
+
+            refusal = _chatWordFilter.Apply(accepted, out var line);
             if (refusal != ChatRefusal.None)
             {
                 return RefuseChat(playerId, refusal);
@@ -38,6 +46,11 @@ namespace Shooter.Server
                 SendToAll(TransportChannel.Reliable, _chatMessage);
             }
 
+            if (!string.Equals(line.Text, accepted.Text, System.StringComparison.Ordinal))
+            {
+                _log.WriteLine(ChatLog.Masked(line));
+            }
+
             _log.WriteLine(ChatLog.Accepted(line));
             _match.WriteChat(line);
             return ChatRefusal.None;
@@ -48,10 +61,12 @@ namespace Shooter.Server
             ServerChat(player.PlayerId, request.Channel, request.Text);
         }
 
-        private void PrepareChat(NetMatchSettings settings)
+        private void PrepareChat(NetMatchSettings settings, ChatWordFilterSpec words)
         {
             _chatGate = new ChatGate(settings);
+            _chatWordFilter = new ChatWordFilter(words);
             _log.WriteLine(ChatLog.Gate(_chatGate));
+            _log.WriteLine(ChatLog.WordFilter(_chatWordFilter));
         }
 
         private void ChatPlayerLeft(int playerId)

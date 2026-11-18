@@ -57,7 +57,7 @@ namespace Shooter.Server
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);
 
-        // 旗・爆弾のように、置き場所と運ぶ人で描く目的の物
+        // 旗・爆弾・タグのように場に置く物。持たない目的は空にする
         void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items);
     }
 

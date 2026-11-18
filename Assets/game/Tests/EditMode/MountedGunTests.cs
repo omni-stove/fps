@@ -126,7 +126,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(mounted.Problem, Is.EqualTo(MountedGunLog.ReasonSeatCount));
             Assert.That(mounted.IsReady, Is.False);
             Assert.That(mounted.Shield, Is.Null);
-            Assert.That(MountedGun.Active, Does.Not.Contain(mounted));
+            Assert.That(MountedGun.Active, Has.No.Member(mounted));
         }
 
         [Test]

@@ -9,7 +9,19 @@ namespace Shooter.Server
     // ここでは試合の出来事をそれへ渡す
     internal sealed partial class MatchRulesModule : IMatchObjectiveHost
     {
+        private readonly Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> _createObjective;
         private IMatchObjectiveRules _objective;
+
+        public MatchRulesModule()
+            : this(ServerObjectiveFactory.Create)
+        {
+        }
+
+        // ServerObjectiveFactory に登録する前の目的の実装でも、試合を通して試せるよう選び方を差し替えられる口
+        internal MatchRulesModule(Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> createObjective)
+        {
+            _createObjective = createObjective ?? throw new ArgumentNullException(nameof(createObjective));
+        }
 
         internal IMatchObjectiveRules Objective => _objective;
 
@@ -18,6 +30,9 @@ namespace Shooter.Server
 
         // ラウンド制の試合でなければ null
         internal EliminationObjective Elimination => (_objective as EliminationRules)?.Elimination;
+
+        // 爆弾設置の試合でなければ null
+        internal SearchAndDestroy SearchAndDestroy => (_objective as SearchAndDestroyRules)?.Game;
 
         private bool IsBetweenRounds => _objective != null && _objective.HoldsFire;
 

@@ -311,7 +311,7 @@ namespace Shooter.Server.Tests
 
             var e = Assert.Throws<InvalidOperationException>(() => module.Start(context));
 
-            Assert.That(e.Message, Is.EqualTo("no rules were made for the match objective CaptureTheFlag"));
+            Assert.That(e.Message, Is.EqualTo("no rules were created for the match objective CaptureTheFlag"));
         }
 
         private CaptureTheFlagRules Rules => (CaptureTheFlagRules)_module.Objective;

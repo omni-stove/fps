@@ -14,6 +14,7 @@ namespace Shooter.Core
         public const string InfectedRespawnSecondsItem = "infectedRespawnSeconds";
         public const string ScorePerInfectionItem = "scorePerInfection";
         public const string ScorePerSurvivedRoundItem = "scorePerSurvivedRound";
+        public const string InfectedWeaponIdItem = "infectedWeaponId";
 
         private const string _kind = "infected JSON";
 
@@ -27,6 +28,7 @@ namespace Shooter.Core
             InfectedRespawnSecondsItem,
             ScorePerInfectionItem,
             ScorePerSurvivedRoundItem,
+            InfectedWeaponIdItem,
         };
 
         public static InfectedSpec Parse(string text, string sourceName)
@@ -41,6 +43,7 @@ namespace Shooter.Core
                 var infectedRespawnSeconds = fields.ReadFloat(InfectedRespawnSecondsItem, InfectedSpec.DefaultInfectedRespawnSeconds);
                 var scorePerInfection = fields.ReadInt(ScorePerInfectionItem, InfectedSpec.DefaultScorePerInfection);
                 var scorePerSurvivedRound = fields.ReadInt(ScorePerSurvivedRoundItem, InfectedSpec.DefaultScorePerSurvivedRound);
+                var infectedWeaponId = fields.ReadString(InfectedWeaponIdItem, InfectedSpec.DefaultInfectedWeaponId);
                 return SpecJsonReader.Build(
                     fields,
                     ItemNames,
@@ -52,7 +55,8 @@ namespace Shooter.Core
                         infectedSpeedMultiplier,
                         infectedRespawnSeconds,
                         scorePerInfection,
-                        scorePerSurvivedRound));
+                        scorePerSurvivedRound,
+                        infectedWeaponId));
             });
         }
     }

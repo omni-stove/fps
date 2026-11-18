@@ -19,7 +19,6 @@ namespace Shooter.Server
         private readonly Dictionary<int, int> _lastKillers = new Dictionary<int, int>();
         private readonly KilledMessage _killed = new KilledMessage();
         private readonly TeleportedMessage _teleported = new TeleportedMessage();
-        private readonly Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> _createObjective;
 
         private ServerContext _context;
         private TextWriter _log;
@@ -31,17 +30,6 @@ namespace Shooter.Server
         private KillShot? _killShot;
         private float _now;
         private long _tick;
-
-        public MatchRulesModule()
-            : this(ServerObjectiveFactory.Create)
-        {
-        }
-
-        // ServerObjectiveFactory に載せる前の目的も試合として通せるよう、目的の選び方を差し替えられるようにする
-        internal MatchRulesModule(Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> createObjective)
-        {
-            _createObjective = createObjective ?? throw new ArgumentNullException(nameof(createObjective));
-        }
 
         public event Action<int> PlayerSpawned;
 
@@ -69,7 +57,7 @@ namespace Shooter.Server
             var rules = _data.Rules;
             var settings = _data.Settings;
             _objective = _createObjective(rules.Objective, settings, this)
-                ?? throw new InvalidOperationException("no rules were made for the match objective " + rules.Objective);
+                ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             CheckOtherMaps();
             _objective.UseMap(context.Map, points);
             try
@@ -132,7 +120,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
-            PrepareChat(settings);
+            PrepareChat(settings, _data.ChatWords);
             PrepareMapVote();
             StartObjective();
         }
@@ -316,7 +304,10 @@ namespace Shooter.Server
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
-            snapshot.Rules = MatchRulesSync.From(_data.Rules);
+            var synced = MatchRulesSync.From(_data.Rules);
+            synced.WeatherId = _data.Settings.WeatherId;
+            synced.TimeOfDayId = _data.Settings.TimeOfDayId;
+            snapshot.Rules = synced;
             _objective.FillMatch(ref snapshot);
             FillRound(ref snapshot);
         }

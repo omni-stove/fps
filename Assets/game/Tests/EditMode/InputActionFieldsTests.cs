@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Shooter.Runtime;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine.InputSystem;
 
 namespace Shooter.Tests.EditMode
@@ -12,31 +13,23 @@ namespace Shooter.Tests.EditMode
     {
         private static IEnumerable<FieldInfo> InputActionFieldsOfUnityObjects()
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => a.GetName().Name.StartsWith("Shooter.", StringComparison.Ordinal) && !a.GetName().Name.StartsWith("Shooter.Tests", StringComparison.Ordinal));
-            foreach (var assembly in assemblies)
+            var types = TypeCache.GetTypesDerivedFrom<UnityEngine.Object>()
+                .Where(t => IsKitAssembly(t.Assembly.GetName().Name));
+            foreach (var type in types)
             {
-                Type[] types;
-                try
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly))
                 {
-                    types = assembly.GetTypes();
-                }
-                catch (ReflectionTypeLoadException e)
-                {
-                    types = e.Types.Where(t => t != null).ToArray();
-                }
-
-                foreach (var type in types.Where(t => typeof(UnityEngine.Object).IsAssignableFrom(t)))
-                {
-                    foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly))
+                    if (field.FieldType == typeof(InputAction) || field.FieldType == typeof(InputAction[]))
                     {
-                        if (field.FieldType == typeof(InputAction) || field.FieldType == typeof(InputAction[]))
-                        {
-                            yield return field;
-                        }
+                        yield return field;
                     }
                 }
             }
+        }
+
+        private static bool IsKitAssembly(string assemblyName)
+        {
+            return assemblyName.StartsWith("Shooter.", StringComparison.Ordinal) && !assemblyName.StartsWith("Shooter.Tests", StringComparison.Ordinal);
         }
 
         [Test]

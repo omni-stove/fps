@@ -42,9 +42,45 @@ namespace Shooter.Tests.EditMode
             Assert.That(ProfileStore.Slot, Is.EqualTo("profile"));
             Assert.That(
                 storage.Text("profile"),
-                Is.EqualTo("{\"version\":3,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234}"));
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
             Assert.That(new ProfileStore(storage).Load(), Is.EqualTo(profile));
             Assert.That(new ProfileStore(storage, 1500).Load(), Is.EqualTo(profile), "a saved rating wins over the initial rating");
+        }
+
+        [Test]
+        public void TheAchievementsAndStatsAreReadBackByANewStore()
+        {
+            var storage = new MemorySaveStorage();
+            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4, 1234, 2, 1, 754, new[] { "first-blood", "veteran" });
+
+            new ProfileStore(storage).Save(profile);
+            var read = new ProfileStore(storage).Load();
+
+            Assert.That(read, Is.EqualTo(profile));
+            Assert.That(read.Achievements, Is.EqualTo(new[] { "first-blood", "veteran" }));
+            Assert.That(read.Headshots, Is.EqualTo(2));
+            Assert.That(read.MeleeKills, Is.EqualTo(1));
+            Assert.That(read.PlaySeconds, Is.EqualTo(754));
+        }
+
+        [Test]
+        public void AVersion3ProfileKeepsItsRecordAndStartsWithNoAchievements()
+        {
+            var storage = new MemorySaveStorage();
+            const string version3 = "{\"version\":3,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234}";
+            storage.Write(ProfileStore.Slot, version3);
+            var writes = storage.WriteCount;
+
+            var profile = new ProfileStore(storage, 1500).Load();
+
+            Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4, 1234)));
+            Assert.That(profile.Achievements, Is.Empty);
+            Assert.That(profile.PlaySeconds, Is.Zero);
+            Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
+            Assert.That(storage.WriteCount, Is.EqualTo(writes), "the old save is rewritten by the next save, not by reading");
+            LogAssert.NoUnexpectedReceived();
         }
 
         [Test]
@@ -110,10 +146,10 @@ namespace Shooter.Tests.EditMode
         public void AProfileFromANewerVersionIsRejected()
         {
             var storage = new MemorySaveStorage();
-            const string newer = "{\"version\":4,\"xp\":900,\"kills\":3,\"assists\":0,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1000,\"prestige\":1}";
+            const string newer = "{\"version\":5,\"xp\":900,\"kills\":3,\"assists\":0,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1000,\"prestige\":1}";
             storage.Write(ProfileStore.Slot, newer);
 
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 4"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 5"));
             LogAssert.Expect(LogType.Warning, "[Progression] kept the rejected profile in slot=profile-rejected");
             var profile = new ProfileStore(storage).Load();
 

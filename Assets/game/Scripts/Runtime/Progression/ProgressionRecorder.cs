@@ -38,9 +38,17 @@ namespace Shooter.Runtime
             Profile = PlayerProfile.Started(skill.InitialRating);
         }
 
+        // 実績の記録係が同じプロフィールを書き換えるので、変わるたびに知らせる。保存はこの記録係だけがする。
+        public event Action<PlayerProfile> ProfileChanged;
+
+        // 試合を数え終えてから保存するまでの間に呼ぶ。ここで書き換えた分は同じ保存に入る。
+        public event Action<MatchResult> MatchRecording;
+
         public ProgressionLedger Ledger { get; }
 
         public SkillRating Skill { get; }
+
+        public IParticipants Participants => _participants;
 
         public PlayerProfile Profile { get; private set; }
 
@@ -70,13 +78,30 @@ namespace Shooter.Runtime
                 return;
             }
 
-            Profile = _store.Load();
+            var loaded = _store.Load();
             Debug.Log(ProgressionLog.Configured(Ledger.Spec));
             Debug.Log(ProgressionLog.SkillConfigured(Skill.Spec));
-            Debug.Log(ProgressionLog.Loaded(Profile, Level));
+            Debug.Log(ProgressionLog.Loaded(loaded, Ledger.LevelOf(loaded)));
             CombatEvents.Killed += OnKilled;
             CombatEvents.MatchFinished += OnMatchFinished;
             IsInstalled = true;
+            SetProfile(loaded);
+        }
+
+        public void Change(Func<PlayerProfile, PlayerProfile> change)
+        {
+            if (change == null)
+            {
+                throw new ArgumentNullException(nameof(change));
+            }
+
+            if (!IsInstalled)
+            {
+                // 読み込む前に書き換えると、Install で読んだプロフィールに上書きされて消えるので断る。
+                throw new InvalidOperationException("the profile can only be changed while the progression recorder is installed");
+            }
+
+            SetProfile(change(Profile) ?? throw new InvalidOperationException("the change must return a profile"));
         }
 
         public void Uninstall()
@@ -101,9 +126,9 @@ namespace Shooter.Runtime
             if (IsLocal(entry.KillerId))
             {
                 var kill = Ledger.RecordKill(Profile, entry.Headshot);
-                Profile = kill.Profile;
                 Debug.Log(ProgressionLog.Killed(entry.Headshot, kill));
                 LogLevelUp(kill);
+                SetProfile(kill.Profile);
                 return;
             }
 
@@ -113,9 +138,9 @@ namespace Shooter.Runtime
             }
 
             var assist = Ledger.RecordAssist(Profile);
-            Profile = assist.Profile;
             Debug.Log(ProgressionLog.Assisted(assist));
             LogLevelUp(assist);
+            SetProfile(assist.Profile);
         }
 
         // 自分の Id が並びに 2 度あってもアシストの XP を 2 度与えないよう、数えずに有無だけを見る。
@@ -140,14 +165,15 @@ namespace Shooter.Runtime
         private void OnMatchFinished(MatchResult result)
         {
             var award = Ledger.RecordMatch(Profile, result);
-            Profile = award.Profile;
             Debug.Log(ProgressionLog.MatchRecorded(result, award));
             LogLevelUp(award);
+            SetProfile(award.Profile);
             if (result.Rated)
             {
                 Rate(result);
             }
 
+            Notify(MatchRecording, result);
             Save();
         }
 
@@ -155,8 +181,41 @@ namespace Shooter.Runtime
         {
             var previous = Profile.Rating;
             var opponents = result.OpponentRating ?? Skill.Spec.InitialRating;
-            Profile = Profile.WithRating(Skill.Next(previous, opponents, result.Outcome));
-            Debug.Log(ProgressionLog.Rated(result.Outcome, previous, Profile.Rating, opponents));
+            var rating = Skill.Next(previous, opponents, result.Outcome);
+            Debug.Log(ProgressionLog.Rated(result.Outcome, previous, rating, opponents));
+            SetProfile(Profile.WithRating(rating));
+        }
+
+        private void SetProfile(PlayerProfile profile)
+        {
+            if (profile.Equals(Profile))
+            {
+                return;
+            }
+
+            Profile = profile;
+            Notify(ProfileChanged, profile);
+        }
+
+        // 聞き手の例外で数えた結果の保存を止めないよう、CombatEvents と同じくログに出して続ける。
+        private static void Notify<T>(Action<T> handlers, T value)
+        {
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    ((Action<T>)handler)(value);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
 
         private void Save()

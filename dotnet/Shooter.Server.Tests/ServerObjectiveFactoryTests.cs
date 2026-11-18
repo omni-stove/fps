@@ -158,6 +158,15 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void CaptureTheFlagIsNotOfferedByTheFactoryYet()
+        {
+            var e = Assert.Throws<InvalidOperationException>(
+                () => ServerObjectiveFactory.Create(MatchObjective.CaptureTheFlag, new NetMatchSettings(), _host));
+
+            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective CaptureTheFlag"));
+        }
+
+        [Test]
         public void TheFactoryNeedsSettingsAndAHost()
         {
             Assert.Throws<ArgumentNullException>(() => ServerObjectiveFactory.Create(MatchObjective.None, null, _host));

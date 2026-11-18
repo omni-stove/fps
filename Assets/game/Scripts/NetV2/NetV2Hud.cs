@@ -46,6 +46,8 @@ namespace Shooter.NetV2
         private float? _localCharge;
         private GrenadeCountStatus? _grenades;
         private DominationStatus _domination;
+        private ClientCaptureTheFlagStatus _captureTheFlag;
+        private ModeStatus _modeStatus;
         private ScoreboardEntry[] _publishedScoreboard;
         private Func<float> _blindSeconds;
         private IInventoryControl _inventory;
@@ -100,6 +102,7 @@ namespace Shooter.NetV2
             netHud._maxHealth = Math.Max(1, maxHealth);
             netHud._findWeapon = findWeapon;
             netHud._roster = new Roster(netHud);
+            netHud._captureTheFlag = new ClientCaptureTheFlagStatus(localPlayerId);
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
@@ -206,6 +209,7 @@ namespace Shooter.NetV2
 
             _shown = true;
             ShowControlPoints(snapshot);
+            ShowModeStatus(snapshot);
             ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
             ShowScoreboard(snapshot);
         }
@@ -373,6 +377,35 @@ namespace Shooter.NetV2
             GameSignals.Domination.Publish(_domination);
         }
 
+        private void ShowModeStatus(SnapshotMessage snapshot)
+        {
+            if (_captureTheFlag == null || !_captureTheFlag.Apply(snapshot))
+            {
+                return;
+            }
+
+            var status = _captureTheFlag.Status;
+            if (status == null)
+            {
+                ClearModeStatus();
+                return;
+            }
+
+            _modeStatus = status;
+            GameSignals.ModeStatus.Publish(status);
+        }
+
+        private void ClearModeStatus()
+        {
+            if (_modeStatus == null)
+            {
+                return;
+            }
+
+            GameSignals.ModeStatus.ClearIfCurrent(_modeStatus);
+            _modeStatus = null;
+        }
+
         private static bool SameDomination(
             DominationStatus status, float alpha, float bravo, float remaining, bool ended, Team? winner, List<ControlPointStatus> points)
         {
@@ -474,6 +507,9 @@ namespace Shooter.NetV2
                 GameSignals.Domination.ClearIfCurrent(_domination);
                 _domination = null;
             }
+
+            ClearModeStatus();
+            _captureTheFlag?.Clear();
 
             if (_publishedScoreboard != null)
             {

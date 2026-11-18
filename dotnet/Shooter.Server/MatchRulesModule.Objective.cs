@@ -42,6 +42,13 @@ namespace Shooter.Server
             _objective?.FillControlPoints(points);
         }
 
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+            _objective?.FillObjectiveItems(items);
+        }
+
         private void StartObjective()
         {
             _objective.Start();

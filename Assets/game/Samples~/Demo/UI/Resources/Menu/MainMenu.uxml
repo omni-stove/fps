@@ -16,6 +16,12 @@
             <ui:Button name="menu-loadout" text="#menu.loadout" class="menu__button" />
             <!-- 成長の記録 (レベル・XP・戦績・次のアンロック) を出す。 -->
             <ui:Button name="menu-profile" text="#menu.profile" class="menu__button" />
+            <!-- 統計・リーダーボード・リプレイ・見た目・持ち物庫は、Shooter.Runtime.MainMenuPanels に画面が登録されているときだけ MainMenuScreen が出す。 -->
+            <ui:Button name="menu-stats" text="#menu.stats" class="menu__button" style="display: none;" />
+            <ui:Button name="menu-leaderboard" text="#menu.leaderboard" class="menu__button" style="display: none;" />
+            <ui:Button name="menu-replays" text="#menu.replays" class="menu__button" style="display: none;" />
+            <ui:Button name="menu-cosmetics" text="#menu.cosmetics" class="menu__button" style="display: none;" />
+            <ui:Button name="menu-stash" text="#menu.stash" class="menu__button" style="display: none;" />
             <ui:Button name="menu-range" text="#menu.range" class="menu__button" />
             <!-- 射撃場を読み、終えたことがあってもチュートリアルを最初から出す。 -->
             <ui:Button name="menu-tutorial" text="#menu.tutorial" class="menu__button" />
@@ -36,5 +42,7 @@
         <ui:VisualElement name="menu-party-slot" class="menu__party-slot" style="display: none;" />
         <!-- 参加コードで入る画面の差し込み口。MainMenuScreen が CustomMatchPanel で中身を作る (見た目は CustomMatch.uss)。 -->
         <ui:VisualElement name="menu-custom-match-slot" class="menu__custom-match-slot" style="display: none;" />
+        <!-- MainMenuPanels に登録された画面 (統計など) の差し込み口。どの画面もここを使い、中身は登録した側が作る。 -->
+        <ui:VisualElement name="menu-panel-slot" class="menu__panel-slot" style="display: none;" />
     </ui:VisualElement>
 </ui:UXML>

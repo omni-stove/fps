@@ -170,6 +170,24 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void APlayerMovedToTheOtherTeamIsToldToClearTheOldTeamsUavMarks()
+        {
+            Start(Rules(), Spec(uavKills: 1, airstrikeKills: 3));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            Use(1, StreakSpec.UavRewardId);
+            var placed = _transport.Read<PingPlacedMessage>(3, Copy).Single();
+            Assert.That(_match.TryGetPlayer(new ConnectionId(3), out var mover), Is.True);
+
+            mover.MoveTo(Team.Bravo);
+            _streaks.HandleTeamChanged(mover, Team.Alpha);
+
+            var removed = _transport.Read<PingRemovedMessage>(3, m => new PingRemovedMessage { PingId = m.PingId, Reason = m.Reason }).Single();
+            Assert.That(removed.PingId, Is.EqualTo(placed.PingId));
+            Assert.That(removed.Reason, Is.EqualTo(PingRemoval.Cleared));
+        }
+
+        [Test]
         public void TheAirstrikeFallsWhereTheUserAimsAndDamagesThroughCombat()
         {
             Start(Rules(), Spec(uavKills: 3, airstrikeKills: 1, shellCount: 1, intervalSeconds: 0.1f, spread: 0f));
@@ -191,7 +209,7 @@ namespace Shooter.Server.Tests
             Step(0.2f);
 
             Assert.That(_rules.Session.IsAlive(4), Is.False, _log.ToString());
-            var killed = _transport.Read<KilledMessage>(4, m => new KilledMessage { KillerId = m.KillerId, VictimId = m.VictimId, WeaponId = m.WeaponId }).Single();
+            var killed = _transport.Read<KilledMessage>(4, m => new KilledMessage { KillerId = m.KillerId, VictimId = m.VictimId, WeaponId = m.WeaponId }).Single(m => m.VictimId == 4);
             Assert.That(killed.KillerId, Is.EqualTo(1));
             Assert.That(killed.WeaponId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
             Assert.That(_transport.Read<ExplosionMessage>(3, m => new ExplosionMessage { WeaponId = m.WeaponId }).Single().WeaponId, Is.EqualTo(StreakSpec.AirstrikeRewardId));

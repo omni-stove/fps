@@ -77,6 +77,7 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.MapChanged += HandleMapChanged;
+            _match.TeamChanged += HandleTeamChanged;
             _rules.MatchStarted += HandleMatchStarted;
             _combat.PlayerKilled += HandlePlayerKilled;
 
@@ -126,6 +127,7 @@ namespace Shooter.Server
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.MapChanged -= HandleMapChanged;
+            _match.TeamChanged -= HandleTeamChanged;
             _rules.MatchStarted -= HandleMatchStarted;
             _combat.PlayerKilled -= HandlePlayerKilled;
             _trackers.Clear();
@@ -411,6 +413,20 @@ namespace Shooter.Server
         private void HandlePlayerLeft(ServerPlayer player)
         {
             _trackers.Remove(player.PlayerId);
+        }
+
+        // 印は送り先をチームで選ぶので、移った人には移る前のチームの印を直接消させる (移った後では届かない)
+        internal void HandleTeamChanged(ServerPlayer player, Team from)
+        {
+            foreach (var mark in _marks)
+            {
+                if (mark.Team == from)
+                {
+                    _removed.PingId = mark.Id;
+                    _removed.Reason = PingRemoval.Cleared;
+                    _context.Messenger.Send(player.Connection, TransportChannel.Reliable, _removed);
+                }
+            }
         }
 
         private void HandleMatchStarted()

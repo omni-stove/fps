@@ -250,6 +250,69 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRecordContentAndModeTuningAreKeptAndStartEmpty()
+        {
+            var content = Content("A");
+            var slots = new (System.Func<TextAsset> get, System.Action<TextAsset> set)[]
+            {
+                (() => content.ChatWordsTuning, v => content.ChatWordsTuning = v),
+                (() => content.AchievementsTuning, v => content.AchievementsTuning = v),
+                (() => content.LeaderboardsTuning, v => content.LeaderboardsTuning = v),
+                (() => content.CosmeticsTuning, v => content.CosmeticsTuning = v),
+                (() => content.WeatherTuning, v => content.WeatherTuning = v),
+                (() => content.TelemetryTuning, v => content.TelemetryTuning = v),
+                (() => content.InfectedTuning, v => content.InfectedTuning = v),
+                (() => content.LootTuning, v => content.LootTuning = v),
+                (() => content.StashTuning, v => content.StashTuning = v),
+                (() => content.ExtractionTuning, v => content.ExtractionTuning = v),
+            };
+
+            foreach (var slot in slots)
+            {
+                Assert.That(slot.get(), Is.Null);
+            }
+
+            var assigned = new List<TextAsset>();
+            foreach (var slot in slots)
+            {
+                var asset = Track(new TextAsset("{}"));
+                assigned.Add(asset);
+                slot.set(asset);
+            }
+
+            for (var i = 0; i < slots.Length; i++)
+            {
+                Assert.That(slots[i].get(), Is.SameAs(assigned[i]), "slot " + i + " keeps its own file");
+            }
+        }
+
+        [Test]
+        public void FillEmptyFillsTheRecordContentAndModeTuning()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            var weather = Track(new TextAsset("{}"));
+            var loot = Track(new TextAsset("{}"));
+            var stashA = Track(new TextAsset("{}"));
+            var stashB = Track(new TextAsset("{}"));
+            var files = new Dictionary<string, TextAsset[]>
+            {
+                { "weather", new[] { weather } },
+                { "loot", new[] { loot } },
+                { "stash", new[] { stashA, stashB } },
+            };
+
+            var left = GameContentAssets.FillEmpty(content, _ => new Object[0], name => files.TryGetValue(name, out var found) ? found : new TextAsset[0]);
+
+            Assert.That(content.WeatherTuning, Is.SameAs(weather));
+            Assert.That(content.LootTuning, Is.SameAs(loot));
+            Assert.That(content.StashTuning, Is.Null);
+            Assert.That(content.ChatWordsTuning, Is.Null);
+            Assert.That(left, Does.Contain("StashTuning"));
+            Assert.That(left, Does.Not.Contain("WeatherTuning").And.Not.Contain("LootTuning"));
+            Assert.That(left, Does.Not.Contain("ChatWordsTuning"), "a tuning slot with no file falls back to Resources/Tuning");
+        }
+
+        [Test]
         public void TheSkillTuningIsKeptAndStartsEmpty()
         {
             var content = Content("A");
@@ -269,6 +332,16 @@ namespace Shooter.Tests.EditMode
         [TestCase("_minimapTuning", "Resources/Tuning/minimap")]
         [TestCase("_assistTuning", "Resources/Tuning/assist")]
         [TestCase("_rumbleTuning", "Resources/Tuning/rumble")]
+        [TestCase("_chatWordsTuning", "Resources/Tuning/chat-words")]
+        [TestCase("_achievementsTuning", "Resources/Tuning/achievements")]
+        [TestCase("_leaderboardsTuning", "Resources/Tuning/leaderboards")]
+        [TestCase("_cosmeticsTuning", "Resources/Tuning/cosmetics")]
+        [TestCase("_weatherTuning", "Resources/Tuning/weather")]
+        [TestCase("_telemetryTuning", "Resources/Tuning/telemetry")]
+        [TestCase("_infectedTuning", "Resources/Tuning/infected")]
+        [TestCase("_lootTuning", "Resources/Tuning/loot")]
+        [TestCase("_stashTuning", "Resources/Tuning/stash")]
+        [TestCase("_extractionTuning", "Resources/Tuning/extraction")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -397,7 +470,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(left, Does.Not.Contain("MinimapTuning").And.Not.Contain("AssistTuning").And.Not.Contain("GrenadeTuning"));
             Assert.That(left, Does.Not.Contain("PingTuning"), "a tuning slot with no file falls back to Resources/Tuning");
             Assert.That(asked, Does.Contain("aim-assist").And.Contain("skill").And.Contain("progression").And.Not.Contain("grenade"));
-            Assert.That(asked, Has.Count.EqualTo(17));
+            Assert.That(asked, Does.Contain("chat-words").And.Contain("achievements").And.Contain("leaderboards").And.Contain("cosmetics"));
+            Assert.That(asked, Does.Contain("weather").And.Contain("telemetry").And.Contain("infected").And.Contain("loot"));
+            Assert.That(asked, Does.Contain("stash").And.Contain("extraction"));
+            Assert.That(asked, Has.Count.EqualTo(27));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

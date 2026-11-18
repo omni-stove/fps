@@ -57,6 +57,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Party.Value, Is.Null);
             Assert.That(GameSignals.PartyControl.Value, Is.Null);
             Assert.That(GameSignals.JoinByCode.Value, Is.Null);
+            Assert.That(GameSignals.ReportSender.Value, Is.Null);
+            Assert.That(GameSignals.BlockControl.Value, Is.Null);
+            Assert.That(GameSignals.Achievements.Value, Is.Null);
+            Assert.That(GameSignals.Leaderboard.Value, Is.Null);
+            Assert.That(GameSignals.Replays.Value, Is.Null);
+            Assert.That(GameSignals.Cosmetics.Value, Is.Null);
+            Assert.That(GameSignals.Stash.Value, Is.Null);
         }
 
         [Test]
@@ -171,6 +178,13 @@ namespace Shooter.Tests.EditMode
             GameSignals.Party.Publish(new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Ann", true) }, "lobby-1", true));
             GameSignals.PartyControl.Publish(new FakePartyControl());
             GameSignals.JoinByCode.Publish(new FakeJoinByCode());
+            GameSignals.ReportSender.Publish(new FakeReportSender());
+            GameSignals.BlockControl.Publish(new FakeBlockControl());
+            GameSignals.Achievements.Publish(new[] { new AchievementProgress("first-blood", 0, 1, false) });
+            GameSignals.Leaderboard.Publish(new LeaderboardStatus("kills", LeaderboardStage.Loading, null));
+            GameSignals.Replays.Publish(new FakeReplayLibrary());
+            GameSignals.Cosmetics.Publish(new FakeCosmeticLocker());
+            GameSignals.Stash.Publish(new StashStatus(60, null));
             heard = 0;
 
             GameSignals.ResetAll();
@@ -228,6 +242,41 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.JoinByCode.Value, Is.SameAs(join));
             Assert.That(GameSignals.Party.HasValue, Is.True, "being outside a party is still something to show");
             Assert.That(heardParty, Is.EqualTo(new PartyStatus?[] { new PartyStatus(PartyStage.None, null, string.Empty, false) }));
+        }
+
+        [Test]
+        public void TheModerationRecordAndContentSignalsHoldWhatWasPublished()
+        {
+            var report = new FakeReportSender();
+            var block = new FakeBlockControl();
+            var achievements = new[] { new AchievementProgress("marksman", 10, 50, false) };
+            var replays = new FakeReplayLibrary();
+            var cosmetics = new FakeCosmeticLocker();
+            var heardLeaderboard = new List<LeaderboardStatus?>();
+            GameSignals.Leaderboard.Changed += heardLeaderboard.Add;
+
+            GameSignals.ReportSender.Publish(report);
+            GameSignals.BlockControl.Publish(block);
+            GameSignals.Achievements.Publish(achievements);
+            GameSignals.Leaderboard.Publish(new LeaderboardStatus("wins", LeaderboardStage.Unavailable, null));
+            GameSignals.Replays.Publish(replays);
+            GameSignals.Cosmetics.Publish(cosmetics);
+            GameSignals.Stash.Publish(new StashStatus(10, Array.Empty<StashStack>()));
+
+            GameSignals.ReportSender.Value.Report(7, ReportReason.Cheating);
+            GameSignals.BlockControl.Value.SetMuted(7, true);
+
+            Assert.That(report.Sent, Is.EqualTo(new[] { (7, ReportReason.Cheating) }));
+            Assert.That(GameSignals.BlockControl.Value.IsMuted(7), Is.True);
+            Assert.That(GameSignals.BlockControl.Value.IsBlocked(7), Is.False);
+            Assert.That(GameSignals.Achievements.Value, Is.SameAs(achievements));
+            Assert.That(
+                heardLeaderboard,
+                Is.EqualTo(new LeaderboardStatus?[] { new LeaderboardStatus("wins", LeaderboardStage.Unavailable, Array.Empty<LeaderboardRow>()) }));
+            Assert.That(GameSignals.Replays.Value, Is.SameAs(replays));
+            Assert.That(GameSignals.Cosmetics.Value, Is.SameAs(cosmetics));
+            Assert.That(GameSignals.Stash.HasValue, Is.True, "an empty stash is still something to show");
+            Assert.That(GameSignals.Stash.Value.Value.FreeSlots, Is.EqualTo(10));
         }
 
         [Test]
@@ -348,6 +397,105 @@ namespace Shooter.Tests.EditMode
             public void Join(string code, Action<JoinCodeOutcome> done)
             {
                 done(JoinCodeOutcome.NotFound);
+            }
+        }
+
+        private sealed class FakeReportSender : IReportSender
+        {
+            public List<(int, ReportReason)> Sent { get; } = new List<(int, ReportReason)>();
+
+            public void Report(int participantId, ReportReason reason)
+            {
+                Sent.Add((participantId, reason));
+            }
+        }
+
+        private sealed class FakeBlockControl : IBlockControl
+        {
+            private readonly HashSet<int> _blocked = new HashSet<int>();
+            private readonly HashSet<int> _muted = new HashSet<int>();
+
+            public event Action Changed;
+
+            public bool IsBlocked(int participantId)
+            {
+                return _blocked.Contains(participantId);
+            }
+
+            public bool IsMuted(int participantId)
+            {
+                return _muted.Contains(participantId);
+            }
+
+            public void SetBlocked(int participantId, bool blocked)
+            {
+                Set(_blocked, participantId, blocked);
+            }
+
+            public void SetMuted(int participantId, bool muted)
+            {
+                Set(_muted, participantId, muted);
+            }
+
+            private void Set(HashSet<int> set, int participantId, bool on)
+            {
+                if (on)
+                {
+                    set.Add(participantId);
+                }
+                else
+                {
+                    set.Remove(participantId);
+                }
+
+                Changed?.Invoke();
+            }
+        }
+
+        private sealed class FakeReplayLibrary : IReplayLibrary
+        {
+            public event Action Changed
+            {
+                add { }
+                remove { }
+            }
+
+            public IReadOnlyList<ReplayEntry> Entries => Array.Empty<ReplayEntry>();
+
+            public bool Play(string replayId)
+            {
+                return false;
+            }
+
+            public bool Delete(string replayId)
+            {
+                return false;
+            }
+        }
+
+        private sealed class FakeCosmeticLocker : ICosmeticLocker
+        {
+            public event Action Changed
+            {
+                add { }
+                remove { }
+            }
+
+            public CosmeticCatalog Catalog => CosmeticCatalog.Default;
+
+            public string EquippedId(CosmeticKind kind)
+            {
+                return null;
+            }
+
+            public bool IsUnlocked(string cosmeticId)
+            {
+                return false;
+            }
+
+            public bool Equip(CosmeticKind kind, string cosmeticId)
+            {
+                return false;
             }
         }
     }

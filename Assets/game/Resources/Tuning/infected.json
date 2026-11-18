@@ -1,0 +1,10 @@
+{
+  "initialInfected": 1,
+  "startDelaySeconds": 10,
+  "roundSeconds": 300,
+  "infectedMaxHealth": 150,
+  "infectedSpeedMultiplier": 1.15,
+  "infectedRespawnSeconds": 3,
+  "scorePerInfection": 1,
+  "scorePerSurvivedRound": 3
+}

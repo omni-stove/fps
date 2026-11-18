@@ -10,18 +10,18 @@ namespace Shooter.Runtime
         public static LocalizedText DefendRole => new LocalizedText("mode.snd.defendRole");
 
         // 時計の書式は言語に依らないので、表を引かずにそのまま運ぶ。
-        public static LocalizedText Clock(SearchAndDestroy game)
+        public static LocalizedText Clock(ISearchAndDestroyView game)
         {
             Require(game);
             if (game.Phase == RoundPhase.Preparing)
             {
-                return LocalizedText.Literal(HudNumberFormat.RemainingTime(game.Rounds.PreparationRemaining));
+                return LocalizedText.Literal(HudNumberFormat.RemainingTime(game.PreparationRemaining));
             }
 
             return LocalizedText.Literal(HudNumberFormat.RemainingTime(IsPlantedOrAfter(game.Bomb) ? game.FuseRemaining : game.RoundRemaining));
         }
 
-        public static IReadOnlyList<ModeHudScoreLine> Scores(SearchAndDestroy game, Side? ownSide)
+        public static IReadOnlyList<ModeHudScoreLine> Scores(ISearchAndDestroyView game, Side? ownSide)
         {
             Require(game);
             var attacker = game.Attacker;
@@ -51,7 +51,7 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        public static IReadOnlyList<LocalizedText> Lines(SearchAndDestroy game, int? localPlayerId)
+        public static IReadOnlyList<LocalizedText> Lines(ISearchAndDestroyView game, int? localPlayerId)
         {
             Require(game);
             var lines = new List<LocalizedText>();
@@ -60,9 +60,9 @@ namespace Shooter.Runtime
                 return lines;
             }
 
-            lines.Add(new LocalizedText("mode.snd.round", game.RoundNumber, game.Spec.WinsToWin));
+            lines.Add(new LocalizedText("mode.snd.round", game.RoundNumber, game.WinsToWin));
 
-            var local = localPlayerId.HasValue && game.Mode.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
+            var local = localPlayerId.HasValue && game.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
             if (local.HasValue && game.Phase != RoundPhase.Ended)
             {
                 lines.Add(new LocalizedText(game.IsAttacker(local.Value) ? "mode.snd.youAttack" : "mode.snd.youDefend"));
@@ -75,7 +75,7 @@ namespace Shooter.Runtime
                     lines.Add(new LocalizedText("mode.snd.previousRound", RoundResult(game.LastRoundWinner, game.LastRoundEnd.Value)));
                 }
 
-                lines.Add(new LocalizedText("mode.snd.startsIn", HudFormat.DisplayedSeconds(game.Rounds.PreparationRemaining)));
+                lines.Add(new LocalizedText("mode.snd.startsIn", HudFormat.DisplayedSeconds(game.PreparationRemaining)));
                 return lines;
             }
 
@@ -155,7 +155,7 @@ namespace Shooter.Runtime
             }
         }
 
-        public static LocalizedText Result(SearchAndDestroy game)
+        public static LocalizedText Result(ISearchAndDestroyView game)
         {
             Require(game);
             return game.Phase == RoundPhase.Ended && game.Winner.HasValue
@@ -174,7 +174,7 @@ namespace Shooter.Runtime
             return (int)Math.Floor(clamped * 100f);
         }
 
-        private static void Require(SearchAndDestroy game)
+        private static void Require(ISearchAndDestroyView game)
         {
             if (game == null)
             {

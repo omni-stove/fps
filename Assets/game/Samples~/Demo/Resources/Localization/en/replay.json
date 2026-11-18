@@ -1,0 +1,14 @@
+{
+  "replay.title": "REPLAYS",
+  "replay.empty": "No replays yet. Play an online match to record one.",
+  "replay.unavailable": "Replays are not available in this build.",
+  "replay.entry": "{0}   {1}   {2}",
+  "replay.date": "{0}-{1}-{2} {3}:{4}",
+  "replay.duration": "{0}:{1}",
+  "replay.play": "PLAY",
+  "replay.delete": "DELETE",
+  "replay.confirmDelete": "DELETE?",
+  "replay.back": "BACK",
+  "replay.playFailed": "This replay cannot be played. It may have been recorded by another version of the game.",
+  "replay.deleteFailed": "This replay could not be deleted."
+}

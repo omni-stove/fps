@@ -6,5 +6,6 @@
   "infectedSpeedMultiplier": 1.15,
   "infectedRespawnSeconds": 3,
   "scorePerInfection": 1,
-  "scorePerSurvivedRound": 3
+  "scorePerSurvivedRound": 3,
+  "infectedWeaponId": ""
 }

@@ -188,6 +188,11 @@ namespace Shooter.Server
 
         internal ServerDeployRefusal Place(int playerId, string typeId, Vector3 position, float yaw)
         {
+            if (_data.Rules?.Actions.Abilities != Abilities.On)
+            {
+                return Refuse(playerId, null, ServerDeployRefusal.RuleOff);
+            }
+
             if (!_rules.CanFire(playerId) || !_bodies.TryGet(playerId, out var body) || !body.HasSpawned)
             {
                 return Refuse(playerId, null, ServerDeployRefusal.CannotAct);

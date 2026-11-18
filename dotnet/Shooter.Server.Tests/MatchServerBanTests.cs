@@ -112,7 +112,7 @@ namespace Shooter.Server.Tests
             _console.Execute("ban " + first.Accepted.PlayerId.ToString(CultureInfo.InvariantCulture) + " griefing");
             Pump(() => first.Disconnected);
 
-            Assert.That(first.ServerDisconnectingReason, Is.EqualTo("shooter:rejected:banned"));
+            Assert.That(first.DisconnectReason, Is.EqualTo("shooter:rejected:banned"));
             Assert.That(_log.ToString(), Does.Contain("[Net] dropped client 1: banned from the admin console (address=127.0.0.1 banned_at=2026-11-18T09:00:00Z reason=\"griefing\")"));
             Assert.That(_server.Match.HumanCount, Is.Zero);
             Assert.That(File.ReadAllText(_bans.Path), Does.Contain("\"address\": \"127.0.0.1\""));
@@ -137,7 +137,7 @@ namespace Shooter.Server.Tests
             _console.Execute("kick " + client.Accepted.PlayerId.ToString(CultureInfo.InvariantCulture));
             Pump(() => client.Disconnected);
 
-            Assert.That(client.ServerDisconnectingReason, Is.EqualTo("shooter:rejected:kicked"));
+            Assert.That(client.DisconnectReason, Is.EqualTo("shooter:rejected:kicked"));
             Assert.That(_log.ToString(), Does.Contain("[Net] dropped client 1: kicked from the admin console"));
             Assert.That(Request("device1").Accepted, Is.Not.Null, "a kicked player can come back");
         }

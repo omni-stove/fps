@@ -56,6 +56,12 @@ namespace Shooter.Server
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);
+
+        // 旗・爆弾・タグのように目的が持つ物。並びは呼ぶ前のものが残っているので、目的が空にしてから載せる
+        void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items);
+
+        // Session が書いた行のうち、目的が数え直すもの (FFA のキル数など) を上書きする。Session に居ない人には呼ばない
+        void FillPlayer(int playerId, ref PlayerSnapshot snapshot);
     }
 
     // 目的の実装が試合の側に触れる口。Session を直接渡さないのは、Session が作られる前に目的を選んで Session の上限を決めるため

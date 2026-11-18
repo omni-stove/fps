@@ -56,7 +56,8 @@ namespace Shooter.Server
             var points = PointsOf(context.Map);
             var rules = _data.Rules;
             var settings = _data.Settings;
-            _objective = ServerObjectiveFactory.Create(rules.Objective, settings, this);
+            _objective = _createObjective(rules.Objective, settings, this)
+                ?? throw new InvalidOperationException("no rules were made for the match objective " + rules.Objective);
             CheckOtherMaps();
             _objective.UseMap(context.Map, points);
             try
@@ -267,6 +268,7 @@ namespace Shooter.Server
             }
 
             FillControlPoints(snapshot.ControlPoints);
+            FillObjectiveItems(snapshot.ObjectiveItems);
         }
 
         public bool CanFire(int playerId)
@@ -324,6 +326,7 @@ namespace Shooter.Server
             snapshot.HasKiller = _lastKillers.TryGetValue(playerId, out var killer);
             snapshot.KillerId = snapshot.HasKiller ? killer : 0;
             snapshot.SpawnProtectionSeconds = HudFormat.DisplayedSeconds(_session.GetSpawnProtectionRemaining(playerId));
+            _objective.FillPlayer(playerId, ref snapshot);
             return true;
         }
 

@@ -9,7 +9,19 @@ namespace Shooter.Server
     // ここでは試合の出来事をそれへ渡す
     internal sealed partial class MatchRulesModule : IMatchObjectiveHost
     {
+        private readonly Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> _createObjective;
         private IMatchObjectiveRules _objective;
+
+        public MatchRulesModule()
+            : this(ServerObjectiveFactory.Create)
+        {
+        }
+
+        // ServerObjectiveFactory にまだ載せていない目的も試合として動かして確かめられるよう、目的の作り方を外から渡せるようにする
+        internal MatchRulesModule(Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> createObjective)
+        {
+            _createObjective = createObjective ?? throw new ArgumentNullException(nameof(createObjective));
+        }
 
         internal IMatchObjectiveRules Objective => _objective;
 
@@ -40,6 +52,13 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(points);
             points.Clear();
             _objective?.FillControlPoints(points);
+        }
+
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+            _objective?.FillObjectiveItems(items);
         }
 
         private void StartObjective()

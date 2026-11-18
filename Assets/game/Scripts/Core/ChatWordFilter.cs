@@ -216,13 +216,13 @@ namespace Shooter.Core
                     return 'ヴ';
                 }
 
-                if (_voicedBases.IndexOf(kana) >= 0)
+                if (_voicedBases.Contains(kana))
                 {
                     used = 2;
                     return (char)(kana + 1);
                 }
             }
-            else if (next == _halfWidthSemiVoicedMark && _semiVoicedBases.IndexOf(kana) >= 0)
+            else if (next == _halfWidthSemiVoicedMark && _semiVoicedBases.Contains(kana))
             {
                 used = 2;
                 return (char)(kana + 2);

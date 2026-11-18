@@ -85,6 +85,30 @@ namespace Shooter.Core
             return new GunGameKill(killerId, killerBefore, killerAfter, victimId, victimBefore, victimAfter, finished);
         }
 
+        // ReportKill で進めずに段を直に書くのは、オンラインのクライアントにはサーバーが決めた段だけが届き、どの武器で倒したかが届かないため。
+        public void SetTier(int playerId, int tier, Side side)
+        {
+            if (tier < 0 || tier > Ladder.TierCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tier), tier, "tier must be 0 to the tier count of the ladder");
+            }
+
+            if (tier == 0)
+            {
+                _tiers.Remove(playerId);
+            }
+            else
+            {
+                _tiers[playerId] = tier;
+            }
+
+            if (tier == Ladder.TierCount && !FinisherId.HasValue)
+            {
+                FinisherId = playerId;
+                FinisherSide = side;
+            }
+        }
+
         public void Reset()
         {
             _tiers.Clear();

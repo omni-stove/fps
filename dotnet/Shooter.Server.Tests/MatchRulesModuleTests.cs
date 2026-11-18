@@ -614,6 +614,32 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheWeatherAndTimeOfDayIdsOfTheRulesAreSentWithTheMatch()
+        {
+            Start(Plain(), new NetMatchSettings(weatherId: "storm-night", timeOfDayId: "storm-night"));
+            Join(1);
+
+            var snapshot = default(MatchSnapshot);
+            _module.FillMatch(ref snapshot);
+
+            Assert.That(snapshot.Rules.WeatherId, Is.EqualTo("storm-night"));
+            Assert.That(snapshot.Rules.TimeOfDayId, Is.EqualTo("storm-night"));
+        }
+
+        [Test]
+        public void UnsetWeatherAndTimeOfDayIdsAreSentEmptySoTheMapDefaultIsUsed()
+        {
+            Start(Plain());
+            Join(1);
+
+            var snapshot = default(MatchSnapshot);
+            _module.FillMatch(ref snapshot);
+
+            Assert.That(snapshot.Rules.WeatherId, Is.Null);
+            Assert.That(snapshot.Rules.TimeOfDayId, Is.Null);
+        }
+
+        [Test]
         public void RayCapsuleFindsTheNearSide()
         {
             Assert.That(

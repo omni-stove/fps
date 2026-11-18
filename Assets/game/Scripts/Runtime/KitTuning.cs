@@ -40,6 +40,9 @@ namespace Shooter.Runtime
 
         public static AssistSpec Assist => Load(c => c.AssistTuning, AssistResourcePath, AssistJson.Parse, AssistSpec.Default);
 
+        public static LeaderboardSpec Leaderboards =>
+            Load(c => c.LeaderboardsTuning, LeaderboardJson.ResourcePath, LeaderboardJson.Parse, LeaderboardSpec.Default);
+
         public static void Reload()
         {
             _loaded.Clear();

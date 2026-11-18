@@ -14,6 +14,8 @@ namespace Shooter.NetV2
 
         ILobbyBackend CreateLobbyBackend(EosCredentials credentials);
 
+        ILeaderboardBackend CreateLeaderboardBackend(EosCredentials credentials);
+
         // EOS のプラットフォームとログインは、ロビーのサービスか通信路が済ませたものを使うので、どちらかがログインしてから IVoiceSession.Join する。
         IVoiceSession CreateVoiceSession(Action<string> log);
 

@@ -147,6 +147,43 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheLeaderboardTextsAreReadFromTheLeaderboardTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var leaderboard = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("leaderboard.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(leaderboard.Keys.All(key => key.StartsWith("leaderboard.", StringComparison.Ordinal)), Is.True, code);
+                foreach (var key in new[]
+                {
+                    LeaderboardText.TitleKey, LeaderboardText.LoadingKey, LeaderboardText.UnavailableKey, LeaderboardText.EmptyKey,
+                    LeaderboardText.NoBoardsKey, LeaderboardText.RankKey, LeaderboardText.UnknownPlayerKey, LeaderboardText.YouKey,
+                    LeaderboardText.RefreshKey, LeaderboardText.BackKey,
+                })
+                {
+                    Assert.That(leaderboard.Contains(key), Is.True, code + " " + key);
+                }
+
+                // 既定のボードの名前のキーも同じ表に置く
+                foreach (var board in LeaderboardSpec.Default.Boards)
+                {
+                    Assert.That(leaderboard.Contains(board.DisplayNameKey), Is.True, code + " " + board.DisplayNameKey);
+                }
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Format(LeaderboardText.RankKey, 57), Is.EqualTo("57 位"));
+            Assert.That(japanese.Resolve(LeaderboardText.PlayerName(new LeaderboardRow(57, "Me", 12, true))), Is.EqualTo("Me (自分)"));
+            Assert.That(japanese.Get("leaderboard.kills"), Is.EqualTo("キル数"));
+            var english = JapaneseGameTextSetUp.LoadTable(GameLanguage.English);
+            Assert.That(english.Format(LeaderboardText.RankKey, 57), Is.EqualTo("#57"));
+            Assert.That(english.Resolve(LeaderboardText.PlayerName(new LeaderboardRow(3, string.Empty, 0, true))), Is.EqualTo("Unnamed player (you)"));
+        }
+
+        [Test]
         public void TheAssistTextsAreReadFromTheAssistTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

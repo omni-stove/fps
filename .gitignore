@@ -41,6 +41,10 @@ eos.env
 /[Aa]ssets/[Ss]treaming[Aa]ssets/EOS/
 /[Aa]ssets/[Ss]treaming[Aa]ssets/EOS.meta
 
+# 専用サーバーの BAN の一覧 (--ban-file)。プレイヤーの IP アドレスと ProductUserId が入るのでコミットしない
+bans.local.json
+bans.local.json.tmp
+
 # Claude Code の worktree
 /.claude/worktrees/
 

@@ -72,6 +72,19 @@ namespace Shooter.Core.Tests
             Assert.That(notice.Describe(), Does.Contain("detail=server-draining"));
         }
 
+        [TestCase(DisconnectNotice.BannedDetail, false, "shooter:rejected:banned")]
+        [TestCase(DisconnectNotice.KickedDetail, true, "shooter:rejected:kicked")]
+        public void AnAdminRemovalKeepsItsDetail(string detail, bool wasConnected, string reason)
+        {
+            Assert.That(DisconnectNotice.RejectedReason(detail), Is.EqualTo(reason));
+
+            var notice = DisconnectNotice.Classify(reason, wasConnected, "0.2.0");
+
+            Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.Rejected));
+            Assert.That(notice.Detail, Is.EqualTo(detail));
+            Assert.That(notice.WasConnected, Is.EqualTo(wasConnected));
+        }
+
         [Test]
         public void ARejectionDropsAnUnreadableDetail()
         {

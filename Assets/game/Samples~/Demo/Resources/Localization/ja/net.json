@@ -7,6 +7,8 @@
   "net.disconnect.versionMismatch": "版が違います。",
   "net.disconnect.serverDraining": "サーバーが止まる準備中のため参加できません。別のサーバーにつないでください。",
   "net.disconnect.idleKicked": "操作が無い時間が続いたため、サーバーから切断されました (放置)。",
+  "net.disconnect.banned": "このサーバーから BAN されているため参加できません。",
+  "net.disconnect.kicked": "サーバーの管理者に切断されました (キック)。",
   "net.disconnect.versionMismatchAdvice": "{0}サーバーと同じ版のゲームでつないでください。",
   "net.disconnect.versionMismatchDetail": "版が違います (サーバー {0} / このゲーム {1})。サーバーと同じ版のゲームでつないでください。"
 }

@@ -79,7 +79,10 @@ namespace Shooter.Core.Tests
             Assert.That((int)ReportReason.Spam, Is.EqualTo(2));
             Assert.That((int)ReportReason.OffensiveName, Is.EqualTo(3));
             Assert.That((int)ReportReason.Other, Is.EqualTo(4));
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
             Assert.That(Enum.GetValues(typeof(ReportReason)).Length, Is.EqualTo(5));
+#pragma warning restore CA2263
         }
     }
 }

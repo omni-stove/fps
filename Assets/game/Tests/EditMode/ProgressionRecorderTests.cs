@@ -187,7 +187,9 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(
                 _storage.Text(ProfileStore.Slot),
-                Is.EqualTo("{\"version\":3,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0,\"rating\":1000}"));
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0,\"rating\":1000,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
         }
 
         [Test]
@@ -207,7 +209,9 @@ namespace Shooter.Tests.EditMode
 
                 Assert.That(
                     _storage.Text(ProfileStore.Slot),
-                    Is.EqualTo("{\"version\":3,\"xp\":1230,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":2,\"wins\":1,\"rating\":1516}"));
+                    Is.EqualTo(
+                        "{\"version\":4,\"xp\":1230,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":2,\"wins\":1,\"rating\":1516,"
+                        + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
             }
             finally
             {
@@ -447,6 +451,60 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec, Is.Not.SameAs(SkillSpec.Default));
             Assert.That(spec.InitialRating, Is.EqualTo(1000));
             Assert.That(spec.KFactor, Is.EqualTo(32f));
+        }
+
+        [Test]
+        public void EachChangeOfTheProfileIsAnnounced()
+        {
+            var seen = new List<PlayerProfile>();
+            _recorder.ProfileChanged += seen.Add;
+            new ProfileStore(_storage).Save(new PlayerProfile(400, 4, 1, 1, 0));
+
+            _recorder.Install();
+            Kill(_player, _enemy, headshot: false);
+            Kill(_enemy, _otherEnemy, headshot: false);
+
+            Assert.That(seen, Is.EqualTo(new[] { new PlayerProfile(400, 4, 1, 1, 0), new PlayerProfile(500, 5, 1, 1, 0) }));
+        }
+
+        [Test]
+        public void AChangeMadeWhileTheMatchIsRecordedIsSavedWithIt()
+        {
+            _recorder.Install();
+            MatchResult? recorded = null;
+            _recorder.MatchRecording += result =>
+            {
+                recorded = result;
+                _recorder.Change(profile => profile.WithStats(0, 0, 90));
+            };
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            var expected = new PlayerProfile(250, 0, 0, 1, 0).WithStats(0, 0, 90);
+            Assert.That(recorded, Is.EqualTo(new MatchResult(MatchOutcome.Lost, 0, 0, 0)));
+            Assert.That(_recorder.Profile, Is.EqualTo(expected));
+            Assert.That(new ProfileStore(_storage).Load(), Is.EqualTo(expected));
+            Assert.That(_storage.WriteCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheLedgerKeepsTheAchievementsAndStats()
+        {
+            new ProfileStore(_storage).Save(new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 3, 1, 60, new[] { "first-blood" }));
+            _recorder.Install();
+
+            Kill(_player, _enemy, headshot: true);
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 1, 0, 10, rated: true, opponentRating: 1000));
+
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(900, 1, 0, 1, 1, 0, 1016, 3, 1, 60, new[] { "first-blood" })));
+        }
+
+        [Test]
+        public void TheProfileCannotBeChangedBeforeInstall()
+        {
+            Assert.Throws<InvalidOperationException>(() => _recorder.Change(profile => profile.WithStats(1, 0, 0)));
+            Assert.Throws<ArgumentNullException>(() => _recorder.Change(null));
+            Assert.That(_recorder.Profile, Is.EqualTo(PlayerProfile.Empty));
         }
 
         [Test]

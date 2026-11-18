@@ -11,6 +11,8 @@ namespace Shooter.Server.Tests
     // SDK を置いた手元でも置いていない CI でも同じテストが通るよう、どちらのビルドかで期待を分ける
     public sealed class ServerModulesTests
     {
+        private static readonly string[] _meleeIds = { "knife", "axe" };
+
         private TempDirectory _roots;
         private TempDirectory _library;
         private Dictionary<string, string> _environment;
@@ -38,10 +40,10 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsAntiCheatMovementRulesVehiclesCombatBotsAndSnapshots()
+        public void WithoutRegisterLobbyAddsTheMatchAndCombatModulesAndSnapshotsLast()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(8));
+            Assert.That(_modules, Has.Count.EqualTo(12));
             Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
             Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
             Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
@@ -50,7 +52,66 @@ namespace Shooter.Server.Tests
             Assert.That(_modules[4], Is.InstanceOf<ServerCombat>());
             Assert.That(_modules[5], Is.InstanceOf<ServerInventories>());
             Assert.That(_modules[6], Is.InstanceOf<ServerBots>());
-            Assert.That(_modules[7], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[7], Is.InstanceOf<ServerMelee>());
+            Assert.That(_modules[8], Is.InstanceOf<ServerStreaks>());
+            Assert.That(_modules[9], Is.InstanceOf<ServerDeployables>());
+            Assert.That(_modules[10], Is.InstanceOf<ServerKillCam>());
+            Assert.That(_modules[11], Is.InstanceOf<ServerSnapshots>());
+        }
+
+        [Test]
+        public void WithoutTuningFilesTheCombatModulesUseTheDefaults()
+        {
+            Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.True, error);
+
+            Assert.That(tuning.Melee, Is.SameAs(MeleeSpec.Default));
+            Assert.That(tuning.Streaks, Is.SameAs(StreakSpec.Default));
+            Assert.That(tuning.Deployables.Count, Is.Zero);
+            Assert.That(tuning.LogLine, Is.EqualTo("[Server] combat tuning melee=default streaks=default deployables=none"));
+        }
+
+        [Test]
+        public void TheCombatModulesReadTheirTuningFromServerData()
+        {
+            var tuningDirectory = Path.Combine(_roots.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuningDirectory);
+            File.WriteAllText(Path.Combine(tuningDirectory, ServerCombatTuning.MeleeFileName), "{\"damage\": 80, \"reach\": 2.5}");
+            File.WriteAllText(
+                Path.Combine(tuningDirectory, ServerCombatTuning.StreaksFileName),
+                "{\"rewards\": [{\"id\": \"uav\", \"killsRequired\": 2}]}");
+
+            Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.True, error);
+
+            Assert.That(tuning.Melee.Damage, Is.EqualTo(80));
+            Assert.That(tuning.Melee.Reach, Is.EqualTo(2.5f));
+            Assert.That(tuning.Streaks.Rewards.Count, Is.EqualTo(1));
+            Assert.That(tuning.Streaks.Rewards[0].KillsRequired, Is.EqualTo(2));
+            Assert.That(tuning.MeleePath, Is.EqualTo(Path.GetFullPath(Path.Combine(tuningDirectory, ServerCombatTuning.MeleeFileName))));
+        }
+
+        [Test]
+        public void AnUnreadableTuningFileStopsTheStart()
+        {
+            var tuningDirectory = Path.Combine(_roots.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuningDirectory);
+            File.WriteAllText(Path.Combine(tuningDirectory, ServerCombatTuning.MeleeFileName), "{\"dmg\": 10}");
+
+            Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.False);
+
+            Assert.That(tuning, Is.Null);
+            Assert.That(error, Does.StartWith("cannot read melee tuning: "));
+        }
+
+        [Test]
+        public void OnlyAGunGameCountsMeleeKillsWithTheKnifeId()
+        {
+            var gunGame = new NetMatchSettings(gunGame: new GunGameSpec(
+                600f, 2f, new[] { TestRules.RifleId }, _meleeIds, true));
+
+            Assert.That(ServerModules.MeleeWeaponIdFor(TestRules.Data(GameRules.Default.WithObjective(MatchObjective.GunGame), gunGame)), Is.EqualTo("knife"));
+            Assert.That(ServerModules.MeleeWeaponIdFor(TestRules.Data(GameRules.Default, gunGame)), Is.Null);
+            Assert.That(ServerModules.MeleeWeaponIdFor(TestRules.Data(GameRules.Default.WithObjective(MatchObjective.GunGame), new NetMatchSettings(
+                gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true)))), Is.Null);
         }
 
         [Test]
@@ -98,8 +159,8 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(8));
-            Assert.That(_modules[7], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(_modules, Has.Count.EqualTo(13));
+            Assert.That(_modules[12], Is.InstanceOf<ServerLobbyModule>());
         }
 
         [Test]

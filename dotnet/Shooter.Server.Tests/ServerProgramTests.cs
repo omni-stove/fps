@@ -281,7 +281,8 @@ namespace Shooter.Server.Tests
             TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
 
             Assert.That(RunWithServerModules(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
-            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 8 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[ServerHost] started with 12 module(s)"));
+            Assert.That(_output.ToString(), Does.Contain("[Server] combat tuning melee=default streaks=default deployables=none"));
             Assert.That(_output.ToString(), Does.Contain("[AntiCheat] disabled on the dedicated server by default"));
             Assert.That(_output.ToString(), Does.Contain("[AntiCheat] session not started (disabled)"));
         }

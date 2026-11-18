@@ -335,6 +335,7 @@ namespace Shooter.NetV2
                 LocalPlayer = () => _local,
                 Voice = NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),
                 VoiceLobbyId = _matchLobby?.LobbyId,
+                Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
             }));
             if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
             {

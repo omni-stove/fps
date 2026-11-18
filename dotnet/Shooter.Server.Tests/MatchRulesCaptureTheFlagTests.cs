@@ -9,7 +9,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // CTF はまだ ServerObjectiveFactory に載せていないので、目的の選び方を差し替えた MatchRulesModule で試合として通す
     public sealed class MatchRulesCaptureTheFlagTests
     {
         private const float _tickSeconds = 1f / 60f;
@@ -363,8 +362,7 @@ namespace Shooter.Server.Tests
             var events = new ServerEventWriter(true, _json, _log);
             _match = new ServerMatch(settings.RestartDelaySeconds, _log, events, () => _time);
             _context = Context(settings, points ?? Points());
-            var module = new MatchRulesModule((objective, s, host) =>
-                objective == MatchObjective.CaptureTheFlag ? new CaptureTheFlagRules(s, host) : ServerObjectiveFactory.Create(objective, s, host));
+            var module = new MatchRulesModule();
             module.Start(_context);
             _module = module;
         }

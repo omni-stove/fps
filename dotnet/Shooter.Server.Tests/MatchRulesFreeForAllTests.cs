@@ -8,7 +8,6 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // FreeForAllRules はまだ ServerObjectiveFactory に載せていないので、目的の作り方を差し替えた MatchRulesModule で試合として進める
     public sealed class MatchRulesFreeForAllTests
     {
         private const float _tickSeconds = 1f / 60f;
@@ -237,12 +236,12 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void TheFactoryDoesNotPickTheFreeForAllYet()
+        public void TheFactoryPicksTheFreeForAll()
         {
-            var e = Assert.Throws<InvalidOperationException>(
-                () => ServerObjectiveFactory.Create(MatchObjective.FreeForAll, new NetMatchSettings(), new NullHost(_log)));
+            var rules = ServerObjectiveFactory.Create(MatchObjective.FreeForAll, new NetMatchSettings(), new NullHost(_log));
 
-            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective FreeForAll"));
+            Assert.That(rules, Is.TypeOf<FreeForAllRules>());
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.FreeForAll));
         }
 
         [Test]
@@ -286,9 +285,7 @@ namespace Shooter.Server.Tests
 
         private static IMatchObjectiveRules CreateObjective(MatchObjective objective, NetMatchSettings settings, IMatchObjectiveHost host)
         {
-            return objective == MatchObjective.FreeForAll
-                ? new FreeForAllRules(settings, host)
-                : ServerObjectiveFactory.Create(objective, settings, host);
+            return ServerObjectiveFactory.Create(objective, settings, host);
         }
 
         private void Start(FreeForAllSpec freeForAll, float restartDelaySeconds = 10f)

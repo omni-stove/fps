@@ -69,6 +69,8 @@ namespace Shooter.NetV2
         private InputAction _leanLeft;
         [NonSerialized]
         private InputAction _leanRight;
+        [NonSerialized]
+        private InputAction _melee;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private LeanInput _leanInput = new LeanInput();
@@ -94,6 +96,7 @@ namespace Shooter.NetV2
         private bool _previousSeatLatched;
         private bool _leanLeftLatched;
         private bool _leanRightLatched;
+        private bool _meleeLatched;
 
         public Camera Camera => _camera;
 
@@ -210,11 +213,20 @@ namespace Shooter.NetV2
                 !paused && _leanRight != null && _leanRight.IsPressed(),
                 leanRightPressed && !paused);
             var aim = IsAiming;
+
+            // 押して離すまでが tick より短くても振れるよう、そのフレームの間に押したことも押している扱いにする
+            var melee = (Take(ref _meleeLatched) || IsMeleeHeld) && !paused;
+            IsMeleeSent = melee;
             var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
             yaw = degrees * Mathf.Deg2Rad;
             buttons = SnapshotMotion.Buttons(
-                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive);
+                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee);
         }
+
+        public bool IsMeleeHeld => !GameUi.IsPauseOpen && _melee != null && _melee.IsPressed();
+
+        // 最後の tick で近接を押していると送ったか。手元の振る見た目 (ClientMelee) をサーバーと同じ押し始めで始めるため
+        public bool IsMeleeSent { get; private set; }
 
         // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
         public bool BlocksAds { get; set; }
@@ -309,6 +321,7 @@ namespace Shooter.NetV2
             _previousSeat = Find(actions, InputActionPaths.Previous, false);
             _leanLeft = Find(actions, InputActionPaths.LeanLeft);
             _leanRight = Find(actions, InputActionPaths.LeanRight);
+            _melee = Find(actions, InputActionPaths.Melee, false);
         }
 
         private void OnDestroy()
@@ -352,6 +365,7 @@ namespace Shooter.NetV2
             _previousSeatLatched |= Pressed(_previousSeat);
             _leanLeftLatched |= Pressed(_leanLeft);
             _leanRightLatched |= Pressed(_leanRight);
+            _meleeLatched |= Pressed(_melee);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

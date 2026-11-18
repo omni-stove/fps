@@ -263,9 +263,9 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void TheFactoryDoesNotPickKillConfirmedYet()
+        public void TheFactoryPicksKillConfirmed()
         {
-            Assert.Throws<InvalidOperationException>(() => Start(Spec(scoreLimit: 5), useFactory: true));
+            Assert.DoesNotThrow(() => Start(Spec(scoreLimit: 5), useFactory: true));
         }
 
         private static KillConfirmedSpec Spec(

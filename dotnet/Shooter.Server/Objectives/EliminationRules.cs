@@ -143,6 +143,12 @@ namespace Shooter.Server
             points.Clear();
         }
 
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+        }
+
         // ダウン中の人を数えないのは、時間切れの時点で撃ち合えない人だから
         private int CountStanding(Team team)
         {

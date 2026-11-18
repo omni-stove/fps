@@ -267,6 +267,63 @@ namespace Shooter.Core.Tests
             Assert.That(KillConfirmedText.DiscardLog(tag, null), Is.EqualTo("[Mode] killconfirmed discard tag=1 owner=3 side=1 by=-"));
         }
 
+        [Test]
+        public void SetCountsCopiesTheCountsWithoutScoring()
+        {
+            var mode = new KillConfirmed(new KillConfirmedSpec(10, 300f, 3f, _tagLifetime));
+
+            mode.SetCounts(Side.Alpha, 4, 1);
+            mode.SetCounts(Side.Bravo, 2, 3);
+
+            Assert.That(mode.GetConfirmed(Side.Alpha), Is.EqualTo(4));
+            Assert.That(mode.GetDenied(Side.Alpha), Is.EqualTo(1));
+            Assert.That(mode.GetConfirmed(Side.Bravo), Is.EqualTo(2));
+            Assert.That(mode.GetDenied(Side.Bravo), Is.EqualTo(3));
+            Assert.That(mode.Session.GetScore(Side.Alpha), Is.Zero);
+            Assert.That(mode.Session.State, Is.EqualTo(GameModeState.Waiting));
+
+            mode.SetCounts(Side.Alpha, 0, 0);
+            Assert.That(mode.GetConfirmed(Side.Alpha), Is.Zero);
+            Assert.That(mode.GetDenied(Side.Alpha), Is.Zero);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => mode.SetCounts(Side.Alpha, -1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => mode.SetCounts(Side.Alpha, 0, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => mode.SetCounts(new Side(5), 0, 0));
+        }
+
+        [Test]
+        public void ShowTagAddsTheServerTagUnderItsIdAndDiscardRemovesIt()
+        {
+            var mode = new KillConfirmed(new KillConfirmedSpec(10, 300f, 3f, _tagLifetime));
+
+            var tag = mode.ShowTag(7, 42, Side.Bravo);
+
+            Assert.That(tag.Id, Is.EqualTo(7));
+            Assert.That(tag.OwnerId, Is.EqualTo(42));
+            Assert.That(tag.OwnerSide, Is.EqualTo(Side.Bravo));
+            Assert.That(tag.SecondsLeft, Is.EqualTo(_tagLifetime));
+            Assert.That(mode.Tags.Count, Is.EqualTo(1));
+            Assert.That(mode.ShowTag(7, 42, Side.Bravo), Is.SameAs(tag), "showing the same tag again keeps one");
+            Assert.That(mode.Tags.Count, Is.EqualTo(1));
+            Assert.Throws<InvalidOperationException>(() => mode.ShowTag(7, 43, Side.Bravo));
+            Assert.Throws<ArgumentOutOfRangeException>(() => mode.ShowTag(0, 42, Side.Bravo));
+            Assert.Throws<ArgumentOutOfRangeException>(() => mode.ShowTag(8, 42, new Side(5)));
+
+            Assert.That(mode.Discard(7), Is.True);
+            Assert.That(mode.Tags, Is.Empty);
+        }
+
+        [Test]
+        public void ADroppedTagAfterAShownTagTakesTheNextId()
+        {
+            var mode = Start();
+            mode.ShowTag(5, _alpha1, Side.Alpha);
+
+            var dropped = mode.DropTag(_bravo1);
+
+            Assert.That(dropped.Id, Is.EqualTo(6));
+        }
+
         private static KillConfirmed Start(int scoreLimit = 10, float respawnSeconds = 3f)
         {
             var mode = new KillConfirmed(new KillConfirmedSpec(scoreLimit, 300f, respawnSeconds, _tagLifetime));

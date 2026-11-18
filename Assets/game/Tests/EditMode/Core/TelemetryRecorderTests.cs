@@ -82,6 +82,7 @@ namespace Shooter.Core.Tests
                 recorder.RecordCrash("E", "first", "at A()");
 
                 recorder.SetConsent(false);
+                System.Threading.SpinWait.SpinUntil(() => _sinks[0].Disposed, 5000);
 
                 Assert.That(_sinks[0].Disposed, Is.True);
                 Assert.That(_sinks[0].Flushes, Has.Count.EqualTo(1), "lines left after withdrawing are not sent");
@@ -353,7 +354,10 @@ namespace Shooter.Core.Tests
 
             public List<bool> Flushes { get; } = new List<bool>();
 
-            public bool Disposed { get; private set; }
+            // 同意を外したときの Dispose は別スレッドで走るので、テストのスレッドから見えるよう volatile にする
+            private volatile bool _disposed;
+
+            public bool Disposed => _disposed;
 
             public bool Refuse { get; set; }
 
@@ -377,7 +381,7 @@ namespace Shooter.Core.Tests
 
             public void Dispose()
             {
-                Disposed = true;
+                _disposed = true;
             }
         }
     }

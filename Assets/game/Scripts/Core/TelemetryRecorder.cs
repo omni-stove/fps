@@ -123,10 +123,11 @@ namespace Shooter.Core
                     {
                         toClose.Dispose();
                     }
+#pragma warning disable CA1031 // 同意を外したあとの後始末の失敗は、記録せず捨てる。どの例外でも呼び出し元には返せない
                     catch (Exception)
                     {
-                        // 同意を外したあとの後始末の失敗は、記録せず捨てる
                     }
+#pragma warning restore CA1031
                 });
             }
 

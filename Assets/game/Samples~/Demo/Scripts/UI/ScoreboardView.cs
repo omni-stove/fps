@@ -563,6 +563,14 @@ namespace Shooter.Runtime
 
         private void Rebuild(VisualElement element)
         {
+            // 押した直後以外 (スコア更新・名簿の変化) の作り直しでも、乗っていたボタンへフォーカスを戻すため、消す前に控える。
+            string focusedKey = null;
+            if (_pinned && _focusKey == null && element.panel?.focusController?.focusedElement is Button focused
+                && element.Contains(focused))
+            {
+                focusedKey = focused.userData as string;
+            }
+
             element.Clear();
 
             var caption = Row(CaptionRowClass);
@@ -660,7 +668,7 @@ namespace Shooter.Runtime
                 back.name = BackButtonName;
                 footer.Add(back);
                 element.Add(footer);
-                RestoreFocus(element);
+                RestoreFocus(element, focusedKey);
             }
         }
 
@@ -670,9 +678,9 @@ namespace Shooter.Runtime
             return participantId + ":" + className;
         }
 
-        private void RestoreFocus(VisualElement element)
+        private void RestoreFocus(VisualElement element, string fallbackKey)
         {
-            var key = _focusKey;
+            var key = _focusKey ?? fallbackKey;
             _focusKey = null;
             Button target = null;
             if (key != null)

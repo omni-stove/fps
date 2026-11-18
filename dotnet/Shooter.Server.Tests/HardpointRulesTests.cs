@@ -317,7 +317,7 @@ namespace Shooter.Server.Tests
             private const float _tickSeconds = 1f / 60f;
 
             private readonly NetMapPoints _points;
-            private IMatchObjectiveRules _rules;
+            private HardpointRules _rules;
             private long _tick;
 
             public MatchHost(TextWriter log, NetMapPoints points)

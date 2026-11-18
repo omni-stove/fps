@@ -115,6 +115,65 @@ namespace Shooter.Core
             return true;
         }
 
+        // オンラインのクライアントが、サーバーで数えた確定・阻止の数をそのまま写すための口。点数 (Session) は動かさない。
+        public void SetCounts(Side side, int confirmed, int denied)
+        {
+            if (!Session.Layout.Contains(side))
+            {
+                throw new ArgumentOutOfRangeException(nameof(side), side, "side is not part of this team layout");
+            }
+
+            if (confirmed < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(confirmed), confirmed, "confirmed must not be negative");
+            }
+
+            if (denied < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(denied), denied, "denied must not be negative");
+            }
+
+            _confirmed[side] = confirmed;
+            _denied[side] = denied;
+        }
+
+        // オンラインのクライアントが、サーバーが落としたタグを同じ Id で写すための口。持ち主は Session に居なくてよい。
+        // 消える時刻はサーバーが数えて消えたタグを Discard させるので、残り秒は寿命の満タンのまま置く。
+        public KillConfirmedTag ShowTag(int tagId, int ownerId, Side ownerSide)
+        {
+            if (tagId < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, "tagId must be at least 1");
+            }
+
+            if (!Session.Layout.Contains(ownerSide))
+            {
+                throw new ArgumentOutOfRangeException(nameof(ownerSide), ownerSide, "ownerSide is not part of this team layout");
+            }
+
+            var existing = FindTag(tagId);
+            if (existing != null)
+            {
+                if (existing.OwnerId != ownerId || existing.OwnerSide != ownerSide)
+                {
+                    throw new InvalidOperationException("tag " + tagId + " is already shown for another owner; discard it first");
+                }
+
+                return existing;
+            }
+
+            var tag = new KillConfirmedTag(tagId, ownerId, ownerSide, Spec.TagLifetimeSeconds);
+            _tags.Add(tag);
+
+            // 後から DropTag しても写したタグと Id が重ならないようにする。
+            if (tagId >= _nextTagId)
+            {
+                _nextTagId = tagId == int.MaxValue ? tagId : tagId + 1;
+            }
+
+            return tag;
+        }
+
         public void Reset()
         {
             ClearTags();

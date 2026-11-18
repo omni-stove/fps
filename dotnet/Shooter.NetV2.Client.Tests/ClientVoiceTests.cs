@@ -32,9 +32,9 @@ namespace Shooter.NetV2.Tests
         {
             _session = new FakeVoiceSession();
             _roster = new VoiceRoster();
-            _roster.Set(_self, _selfId);
-            _roster.Set(_ally, _allyId);
-            _roster.Set(_enemy, _enemyId);
+            _roster.Set(_self, _selfId, true);
+            _roster.Set(_ally, _allyId, true);
+            _roster.Set(_enemy, _enemyId, true);
             _voice = new ClientVoice(_session, _roster);
             _statuses = new List<VoiceStatus?>();
             _voice.StatusChanged += _statuses.Add;
@@ -308,7 +308,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_session.Speakers, Is.Empty);
             Assert.That(_voice.Status.Value.SpeakingIds, Is.Empty);
 
-            _roster.Set(_stranger, 4);
+            _roster.Set(_stranger, 4, true);
 
             Assert.That(_session.WantsReceiving(_stranger), Is.True);
             Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_unmappedOnly));

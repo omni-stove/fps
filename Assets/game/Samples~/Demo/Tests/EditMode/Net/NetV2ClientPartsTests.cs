@@ -121,7 +121,7 @@ namespace Shooter.Net.Tests
             context.VoiceRoster = roster;
             _parts = NetV2ClientParts.Create(context);
             var message = new VoiceRosterMessage();
-            message.Add(2, "0123456789abcdef0123456789abcdef");
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
             _parts.First(part => part.Handle(message));
             var chat = (NetV2ChatPart)_parts[2];
             chat.Handle(new ChatMessage { SenderId = 2, Text = "before" });
@@ -154,7 +154,7 @@ namespace Shooter.Net.Tests
             context.VoiceRoster = roster;
             _parts = NetV2ClientParts.Create(context);
             var message = new VoiceRosterMessage();
-            message.Add(7, "0123456789abcdef0123456789abcdef");
+            message.Add(7, "0123456789abcdef0123456789abcdef", true);
             _parts.First(part => part.Handle(message));
             var chat = (NetV2ChatPart)_parts[2];
 
@@ -172,7 +172,7 @@ namespace Shooter.Net.Tests
             context.VoiceRoster = roster;
             _parts = NetV2ClientParts.Create(context);
             var message = new VoiceRosterMessage();
-            message.Add(2, "0123456789abcdef0123456789abcdef");
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
 
             var taker = _parts.FirstOrDefault(part => part.Handle(message));
 
@@ -189,7 +189,7 @@ namespace Shooter.Net.Tests
             context.VoiceRoster = roster;
             _parts = NetV2ClientParts.Create(context);
             var message = new VoiceRosterMessage();
-            message.Add(2, "0123456789abcdef0123456789abcdef");
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
 
             var taker = _parts.FirstOrDefault(part => part.Handle(message));
 

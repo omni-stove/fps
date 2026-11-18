@@ -6,6 +6,7 @@ namespace Shooter.NetV2
 {
     // 画面は参加者 Id で操作するが、試合をまたいで覚えるのはボイスの名簿 (VoiceRoster) が引けるログインの Id にする。
     // 名簿に載っていない人 (EOS を使わない UDP の試合など) は覚える Id が無いので、この試合の間だけ参加者 Id で止める。
+    // 通信路が確かめていない Id は誰でも名乗れ、ほかの人の Id を名乗った相手を止めるとその人まで試合をまたいで止まるので、名簿に載っていない人と同じに扱う。
     public sealed class ClientBlocks : IDisposable
     {
         private readonly BlockList _list;
@@ -77,7 +78,7 @@ namespace Shooter.NetV2
                 userId = candidate;
             }
 
-            return userId != null && BlockList.IsValidUserId(userId);
+            return userId != null && _roster.IsVerified(userId) && BlockList.IsValidUserId(userId);
         }
 
         public void Dispose()

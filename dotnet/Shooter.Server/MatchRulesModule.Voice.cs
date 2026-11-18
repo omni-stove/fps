@@ -63,7 +63,7 @@ namespace Shooter.Server
             {
                 if (player.VoiceUserId != null && _sentVoiceRoster.TryGetValue(player.VoiceUserId, out var playerId) && playerId == player.PlayerId)
                 {
-                    _voiceRoster.Add(playerId, player.VoiceUserId);
+                    _voiceRoster.Add(playerId, player.VoiceUserId, player.ProductUserId != null);
                 }
             }
 

@@ -13,6 +13,8 @@ namespace Shooter.Core.Tests
         private static readonly string[] _aliceOnly = { _alice };
         private static readonly string[] _bobOnly = { _bob };
         private static readonly string[] _aliceAndBob = { _alice, _bob };
+        private static readonly string[] _rootNotObject = { "the root must be an object" };
+        private static readonly string[] _unsupportedVersion = { "unsupported version (expected 1 to 1)" };
 
         [Test]
         public void ANewListBlocksAndMutesNobody()
@@ -118,7 +120,7 @@ namespace Shooter.Core.Tests
         {
             BlockList.FromJson("[]", out var problems);
 
-            Assert.That(problems, Is.EqualTo(new[] { "the root must be an object" }));
+            Assert.That(problems, Is.EqualTo(_rootNotObject));
         }
 
         [TestCase("{\"blocked\":[\"" + _alice + "\"]}")]
@@ -129,7 +131,7 @@ namespace Shooter.Core.Tests
             var list = BlockList.FromJson(json, out var problems);
 
             Assert.That(list.BlockedCount, Is.Zero);
-            Assert.That(problems, Is.EqualTo(new[] { "unsupported version (expected 1 to 1)" }));
+            Assert.That(problems, Is.EqualTo(_unsupportedVersion));
         }
 
         [Test]

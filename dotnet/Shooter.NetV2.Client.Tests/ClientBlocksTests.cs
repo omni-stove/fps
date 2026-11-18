@@ -15,6 +15,14 @@ namespace Shooter.NetV2.Tests
         private const int _unlistedId = 9;
 
         private static readonly string[] _otherOnly = { _other };
+        private static readonly string[] _blockedSavedLog = { "[Block] block=on participant=2 saved" };
+        private static readonly string[] _blockedThisMatchLog = { "[Block] block=on participant=9 this match only (no user id for the participant)" };
+        private static readonly string[] _selfRefusedLogs =
+        {
+            "[Block] block refused participant=1 (the local player)",
+            "[Block] mute refused participant=1 (the local player)",
+        };
+        private static readonly string[] _negativeRefusedLog = { "[Block] block refused participant=-1 (not a participant id)" };
 
         private readonly List<string> _logs = new List<string>();
         private BlockList _list;
@@ -31,8 +39,8 @@ namespace Shooter.NetV2.Tests
             _changes = 0;
             _list = new BlockList();
             _roster = new VoiceRoster();
-            _roster.Set(_self, _selfId);
-            _roster.Set(_other, _otherId);
+            _roster.Set(_self, _selfId, true);
+            _roster.Set(_other, _otherId, true);
             _blocks = new ClientBlocks(_list, _roster, () => _selfId, _ => _saves++, _logs.Add);
             _blocks.Changed += () => _changes++;
         }
@@ -53,7 +61,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_list.Blocked, Is.EqualTo(_otherOnly));
             Assert.That(_saves, Is.EqualTo(1));
             Assert.That(_changes, Is.EqualTo(1));
-            Assert.That(_logs, Is.EqualTo(new[] { "[Block] block=on participant=2 saved" }));
+            Assert.That(_logs, Is.EqualTo(_blockedSavedLog));
         }
 
         [Test]
@@ -74,7 +82,7 @@ namespace Shooter.NetV2.Tests
             _blocks.SetBlocked(_otherId, true);
 
             _roster.Clear();
-            _roster.Set(_other, 5);
+            _roster.Set(_other, 5, true);
 
             Assert.That(_blocks.IsBlocked(5), Is.True);
             Assert.That(_blocks.IsBlocked(_otherId), Is.False, "someone else may have the old id now");
@@ -112,7 +120,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_blocks.IsBlocked(_unlistedId), Is.True);
             Assert.That(_list.BlockedCount, Is.Zero);
             Assert.That(_saves, Is.Zero);
-            Assert.That(_logs, Is.EqualTo(new[] { "[Block] block=on participant=9 this match only (no user id for the participant)" }));
+            Assert.That(_logs, Is.EqualTo(_blockedThisMatchLog));
         }
 
         [Test]
@@ -121,12 +129,49 @@ namespace Shooter.NetV2.Tests
             _blocks.SetMuted(_unlistedId, true);
             const string late = "cccccccccccccccccccccccccccccccc";
 
-            _roster.Set(late, _unlistedId);
+            _roster.Set(late, _unlistedId, true);
 
             Assert.That(_list.IsMuted(late), Is.True);
             Assert.That(_blocks.IsMuted(_unlistedId), Is.True);
             Assert.That(_saves, Is.EqualTo(1));
             Assert.That(_logs, Has.Member("[Block] mute participant=9 now has a user id; saved"));
+        }
+
+        [Test]
+        public void AnUnverifiedUserIdIsKeptForThisMatchOnly()
+        {
+            const string claimed = "cccccccccccccccccccccccccccccccc";
+            _roster.Set(claimed, _unlistedId, false);
+
+            Assert.That(_blocks.SetBlocked(_unlistedId, true), Is.True);
+
+            Assert.That(_blocks.IsBlocked(_unlistedId), Is.True);
+            Assert.That(_list.IsBlocked(claimed), Is.False, "anyone can claim an unverified id");
+            Assert.That(_saves, Is.Zero);
+        }
+
+        [Test]
+        public void AMatchOnlyBlockIsNotSavedWhenTheRosterNamesThePlayerUnverified()
+        {
+            _blocks.SetMuted(_unlistedId, true);
+            const string claimed = "cccccccccccccccccccccccccccccccc";
+
+            _roster.Set(claimed, _unlistedId, false);
+
+            Assert.That(_list.IsMuted(claimed), Is.False);
+            Assert.That(_blocks.IsMuted(_unlistedId), Is.True);
+            Assert.That(_saves, Is.Zero);
+        }
+
+        [Test]
+        public void ASavedBlockDoesNotHoldAgainstAnUnverifiedClaimOfTheId()
+        {
+            _blocks.SetBlocked(_otherId, true);
+
+            _roster.Clear();
+            _roster.Set(_other, 5, false);
+
+            Assert.That(_blocks.IsBlocked(5), Is.False);
         }
 
         [Test]
@@ -149,11 +194,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_blocks.IsBlocked(_selfId), Is.False);
             Assert.That(_list.BlockedCount, Is.Zero);
             Assert.That(_changes, Is.Zero);
-            Assert.That(_logs, Is.EqualTo(new[]
-            {
-                "[Block] block refused participant=1 (the local player)",
-                "[Block] mute refused participant=1 (the local player)",
-            }));
+            Assert.That(_logs, Is.EqualTo(_selfRefusedLogs));
         }
 
         [Test]
@@ -161,13 +202,13 @@ namespace Shooter.NetV2.Tests
         {
             Assert.That(_blocks.SetBlocked(-1, true), Is.False);
 
-            Assert.That(_logs, Is.EqualTo(new[] { "[Block] block refused participant=-1 (not a participant id)" }));
+            Assert.That(_logs, Is.EqualTo(_negativeRefusedLog));
         }
 
         [Test]
         public void TwoUserIdsWithTheSameParticipantIdAreNotGuessed()
         {
-            _roster.Set("dddddddddddddddddddddddddddddddd", _otherId);
+            _roster.Set("dddddddddddddddddddddddddddddddd", _otherId, true);
 
             Assert.That(_blocks.TryGetUserId(_otherId, out var userId), Is.False);
             Assert.That(userId, Is.Null);
@@ -194,7 +235,7 @@ namespace Shooter.NetV2.Tests
         public void ARosterChangeIsPassedOnSoListenersRecheck()
         {
             var message = new VoiceRosterMessage();
-            message.Add(_otherId, _other);
+            message.Add(_otherId, _other, true);
 
             _roster.Apply(message);
 
@@ -206,7 +247,7 @@ namespace Shooter.NetV2.Tests
         {
             _blocks.Dispose();
 
-            _roster.Set("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 4);
+            _roster.Set("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 4, true);
 
             Assert.That(_changes, Is.Zero);
             Assert.Throws<ObjectDisposedException>(() => _blocks.SetBlocked(_otherId, true));

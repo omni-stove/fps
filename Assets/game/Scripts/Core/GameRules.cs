@@ -73,6 +73,10 @@ namespace Shooter.Core
 
         public Streaks Streaks { get; }
 
+        public TextChat TextChat { get; }
+
+        public Spectating Spectating { get; }
+
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -96,7 +100,9 @@ namespace Shooter.Core
             ViewMode viewMode = ViewMode.FirstPerson,
             int playerMaxHealth = DefaultPlayerMaxHealth,
             ZoneDamageMultipliers zoneDamage = null,
-            Streaks streaks = Streaks.On)
+            Streaks streaks = Streaks.On,
+            TextChat textChat = TextChat.On,
+            Spectating spectating = Spectating.On)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -199,6 +205,16 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(streaks), streaks, "streaks is not a defined Streaks");
             }
 
+            if (!Enum.IsDefined(typeof(TextChat), textChat))
+            {
+                throw new ArgumentOutOfRangeException(nameof(textChat), textChat, "textChat is not a defined TextChat");
+            }
+
+            if (!Enum.IsDefined(typeof(Spectating), spectating))
+            {
+                throw new ArgumentOutOfRangeException(nameof(spectating), spectating, "spectating is not a defined Spectating");
+            }
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -222,6 +238,8 @@ namespace Shooter.Core
             PlayerMaxHealth = playerMaxHealth;
             ZoneDamage = zoneDamage ?? ZoneDamageMultipliers.Default;
             Streaks = streaks;
+            TextChat = textChat;
+            Spectating = spectating;
         }
 
         public GameRules WithFriendlyFire(FriendlyFire value) => Copy(friendlyFire: value);
@@ -288,6 +306,10 @@ namespace Shooter.Core
 
         public GameRules WithStreaks(Streaks value) => Copy(streaks: value);
 
+        public GameRules WithTextChat(TextChat value) => Copy(textChat: value);
+
+        public GameRules WithSpectating(Spectating value) => Copy(spectating: value);
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -311,7 +333,9 @@ namespace Shooter.Core
             ViewMode? viewMode = null,
             int? playerMaxHealth = null,
             ZoneDamageMultipliers zoneDamage = null,
-            Streaks? streaks = null)
+            Streaks? streaks = null,
+            TextChat? textChat = null,
+            Spectating? spectating = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -336,7 +360,9 @@ namespace Shooter.Core
                 viewMode ?? ViewMode,
                 playerMaxHealth ?? PlayerMaxHealth,
                 zoneDamage ?? ZoneDamage,
-                streaks ?? Streaks);
+                streaks ?? Streaks,
+                textChat ?? TextChat,
+                spectating ?? Spectating);
         }
     }
 }

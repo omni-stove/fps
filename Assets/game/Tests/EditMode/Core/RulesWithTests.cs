@@ -87,6 +87,8 @@ namespace Shooter.Core.Tests
                 (nameof(GameRules.PlayerMaxHealth), r => r.WithPlayerMaxHealth(150), 150),
                 (nameof(GameRules.ZoneDamage), r => r.WithZoneDamage(otherZoneDamage), otherZoneDamage),
                 (nameof(GameRules.Streaks), r => r.WithStreaks(Streaks.Off), Streaks.Off),
+                (nameof(GameRules.TextChat), r => r.WithTextChat(TextChat.Off), TextChat.Off),
+                (nameof(GameRules.Spectating), r => r.WithSpectating(Spectating.Off), Spectating.Off),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);

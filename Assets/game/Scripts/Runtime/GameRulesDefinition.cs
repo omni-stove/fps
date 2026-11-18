@@ -173,6 +173,13 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("倒れずに倒した数で UAV・空爆を得るストリークをプレイヤーに付けるか")]
         private Streaks _streaks = Streaks.On;
 
+        [Header("チャット・観戦")]
+        [SerializeField, Tooltip("試合中に文字のチャットを送れるか")]
+        private TextChat _textChat = TextChat.On;
+
+        [SerializeField, Tooltip("試合を観戦できるか")]
+        private Spectating _spectating = Spectating.On;
+
         public FriendlyFire FriendlyFire
         {
             get => _friendlyFire;
@@ -479,6 +486,18 @@ namespace Shooter.Runtime
             set => _streaks = value;
         }
 
+        public TextChat TextChat
+        {
+            get => _textChat;
+            set => _textChat = value;
+        }
+
+        public Spectating Spectating
+        {
+            get => _spectating;
+            set => _spectating = value;
+        }
+
         public GameRules ToRules()
         {
             try
@@ -537,7 +556,9 @@ namespace Shooter.Runtime
                         _bodyDamageMultiplier,
                         _limbDamageMultiplier,
                         ZoneDamageMultipliers.Default.WeakPoint),
-                    _streaks);
+                    _streaks,
+                    _textChat,
+                    _spectating);
             }
             catch (ArgumentException e)
             {
@@ -593,6 +614,8 @@ namespace Shooter.Runtime
             _bodyDamageMultiplier = rules.ZoneDamage.Body;
             _limbDamageMultiplier = rules.ZoneDamage.Limb;
             _streaks = rules.Streaks;
+            _textChat = rules.TextChat;
+            _spectating = rules.Spectating;
 
             var actions = rules.Actions;
             _downed = actions.Downed;

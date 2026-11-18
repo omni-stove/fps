@@ -31,6 +31,8 @@ namespace Shooter.Core
         public const string PlayerMaxHealthItem = "playerMaxHealth";
         public const string ZoneDamageItem = "zoneDamage";
         public const string StreaksItem = "streaks";
+        public const string TextChatItem = "textChat";
+        public const string SpectatingItem = "spectating";
 
         public const string HeadItem = "head";
         public const string BodyItem = "body";
@@ -94,6 +96,8 @@ namespace Shooter.Core
             PlayerMaxHealthItem,
             ZoneDamageItem,
             StreaksItem,
+            TextChatItem,
+            SpectatingItem,
         };
 
         public static IReadOnlyList<string> ActionItemNames { get; } = new[]
@@ -204,7 +208,9 @@ namespace Shooter.Core
                     top.ReadEnum(ViewModeItem, defaults.ViewMode),
                     top.ReadInt(PlayerMaxHealthItem, defaults.PlayerMaxHealth),
                     zoneDamage,
-                    top.ReadEnum(StreaksItem, defaults.Streaks));
+                    top.ReadEnum(StreaksItem, defaults.Streaks),
+                    top.ReadEnum(TextChatItem, defaults.TextChat),
+                    top.ReadEnum(SpectatingItem, defaults.Spectating));
             }
             catch (ArgumentException e)
             {
@@ -276,6 +282,8 @@ namespace Shooter.Core
             writer.Double(LimbItem, rules.ZoneDamage.Limb);
             writer.EndObject();
             writer.Enum(StreaksItem, rules.Streaks);
+            writer.Enum(TextChatItem, rules.TextChat);
+            writer.Enum(SpectatingItem, rules.Spectating);
             return writer.Finish();
         }
 

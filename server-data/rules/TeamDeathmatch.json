@@ -55,7 +55,9 @@
       "body": 1,
       "limb": 0.75
     },
-    "streaks": "On"
+    "streaks": "On",
+    "textChat": "On",
+    "spectating": "On"
   },
   "match": {
     "scoreLimit": 10,

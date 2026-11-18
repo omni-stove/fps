@@ -25,6 +25,10 @@ namespace Shooter.Protocol
         public Melee Melee { get; set; }
         public Streaks Streaks { get; set; }
 
+        public TextChat TextChat { get; set; }
+        public Spectating Spectating { get; set; }
+        public Abilities Abilities { get; set; }
+
         public string WeatherId { get; set; }
 
         public string TimeOfDayId { get; set; }
@@ -70,6 +74,9 @@ namespace Shooter.Protocol
                 Jump = actions.Jump,
                 Melee = actions.Melee,
                 Streaks = rules.Streaks,
+                TextChat = rules.TextChat,
+                Spectating = rules.Spectating,
+                Abilities = actions.Abilities,
             };
         }
 
@@ -91,6 +98,9 @@ namespace Shooter.Protocol
                 && Jump == other.Jump
                 && Melee == other.Melee
                 && Streaks == other.Streaks
+                && TextChat == other.TextChat
+                && Spectating == other.Spectating
+                && Abilities == other.Abilities
                 && string.Equals(WeatherId ?? "", other.WeatherId ?? "", System.StringComparison.Ordinal)
                 && string.Equals(TimeOfDayId ?? "", other.TimeOfDayId ?? "", System.StringComparison.Ordinal);
         }
@@ -113,6 +123,9 @@ namespace Shooter.Protocol
             writer.WriteByte((byte)Jump);
             writer.WriteByte((byte)Melee);
             writer.WriteByte((byte)Streaks);
+            writer.WriteByte((byte)TextChat);
+            writer.WriteByte((byte)Spectating);
+            writer.WriteByte((byte)Abilities);
             writer.WriteString(WeatherId, MatchProtocol.MaxContentIdBytes);
             writer.WriteString(TimeOfDayId, MatchProtocol.MaxContentIdBytes);
         }
@@ -137,6 +150,9 @@ namespace Shooter.Protocol
                 Jump = (Jump)reader.ReadByteBelow(EnumRange<Jump>.Count, "jump rule"),
                 Melee = (Melee)reader.ReadByteBelow(EnumRange<Melee>.Count, "melee rule"),
                 Streaks = (Streaks)reader.ReadByteBelow(EnumRange<Streaks>.Count, "streaks rule"),
+                TextChat = (TextChat)reader.ReadByteBelow(EnumRange<TextChat>.Count, "text chat rule"),
+                Spectating = (Spectating)reader.ReadByteBelow(EnumRange<Spectating>.Count, "spectating rule"),
+                Abilities = (Abilities)reader.ReadByteBelow(EnumRange<Abilities>.Count, "abilities rule"),
                 WeatherId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.WeatherId),
                 TimeOfDayId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.TimeOfDayId),
             };

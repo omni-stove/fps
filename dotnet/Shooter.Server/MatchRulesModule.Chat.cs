@@ -22,6 +22,12 @@ namespace Shooter.Server
                 return null;
             }
 
+            // 門より先に断るのは、ルールで閉じた文を送った時刻として覚えさせないため。
+            if (_session.Spec.Rules.TextChat == TextChat.Off)
+            {
+                return RefuseChat(playerId, ChatRefusal.RuleOff);
+            }
+
             var refusal = _chatGate.TryAccept(playerId, (Shooter.Core.ChatChannel)(int)channel, text, _now, out var accepted);
             if (refusal != ChatRefusal.None)
             {

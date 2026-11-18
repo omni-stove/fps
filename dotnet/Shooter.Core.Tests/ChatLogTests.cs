@@ -29,6 +29,7 @@ namespace Shooter.Core.Tests
         {
             Assert.That(ChatLog.Refused(1, ChatRefusal.TooSoon), Is.EqualTo("[Chat] refused sender=1 reason=TooSoon"));
             Assert.That(ChatLog.Refused(3, ChatRefusal.Empty), Is.EqualTo("[Chat] refused sender=3 reason=Empty"));
+            Assert.That(ChatLog.Refused(4, ChatRefusal.RuleOff), Is.EqualTo("[Chat] refused sender=4 reason=RuleOff"));
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, ChatRefusal.None));
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, (ChatRefusal)99));
         }

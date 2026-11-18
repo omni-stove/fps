@@ -15,6 +15,8 @@ namespace Shooter.Core
         public const float DefaultBombPickupRadius = 1.5f;
         public const float DefaultDefuseRadius = 2f;
 
+        public static SearchAndDestroySpec Default { get; } = new SearchAndDestroySpec();
+
         public int SiteCount { get; }
 
         public float RoundSeconds { get; }

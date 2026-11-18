@@ -10,10 +10,10 @@ namespace Shooter.Runtime
     // 戻った瞬間に遠くから自分のタグを拾ってしまわないようにするため。
     public sealed class KillConfirmedRunner : ModeRunnerBase
     {
-        public const int DefaultScoreLimit = 20;
-        public const float DefaultTimeLimitSeconds = 300f;
-        public const float DefaultRespawnSeconds = 3f;
-        public const float DefaultTagLifetimeSeconds = 30f;
+        public const int DefaultScoreLimit = KillConfirmedSpec.DefaultScoreLimit;
+        public const float DefaultTimeLimitSeconds = KillConfirmedSpec.DefaultTimeLimitSeconds;
+        public const float DefaultRespawnSeconds = KillConfirmedSpec.DefaultRespawnSeconds;
+        public const float DefaultTagLifetimeSeconds = KillConfirmedSpec.DefaultTagLifetimeSeconds;
         public const int DefaultPointsPerConfirm = KillConfirmedSpec.DefaultPointsPerConfirm;
 
         public const float DefaultTagRadius = KillConfirmedSpec.DefaultTagPickupRadius;

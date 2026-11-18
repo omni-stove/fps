@@ -62,7 +62,86 @@ namespace Shooter.Server.Tests
             Assert.That(data.BotsPath, Is.Null);
             Assert.That(data.Assist, Is.SameAs(AssistSpec.Default));
             Assert.That(data.AssistPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5"));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+        }
+
+        [Test]
+        public void ReadsTheModeSpecsAndTheWeatherAndTimeOfDayOfTheRules()
+        {
+            var settings = new NetMatchSettings(
+                weatherId: "rain",
+                timeOfDayId: "dusk",
+                captureTheFlag: new CaptureTheFlagSpec(scoreLimit: 5, returnSeconds: 12f),
+                hardpoint: new HardpointSpec(HardpointSpec.MinPointCount, 45f, 2f, 150, 600f, 4f),
+                searchAndDestroy: new SearchAndDestroySpec(winsToWin: 6, fuseSeconds: 40f),
+                freeForAll: new FreeForAllSpec(scoreLimit: 25, pointsPerKill: 2),
+                killConfirmed: new KillConfirmedSpec(30, 420f, 2f, 20f, 3, 1.5f),
+                gunGame: new GunGameSpec(480f, 1f, new[] { TestRules.RifleId, TestRules.HandgunId }, new[] { TestRules.HandgunId }, false));
+            TestRules.Write(_first.Path, "GunGame", TestRules.File(GameRules.Default.WithObjective(MatchObjective.GunGame), settings, "GunGame"));
+
+            Assert.That(ServerRulesData.TryLoad("GunGame", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.GunGame));
+            Assert.That(data.Settings.WeatherId, Is.EqualTo("rain"));
+            Assert.That(data.Settings.TimeOfDayId, Is.EqualTo("dusk"));
+            Assert.That(data.Settings.CaptureTheFlag.ScoreLimit, Is.EqualTo(5));
+            Assert.That(data.Settings.CaptureTheFlag.ReturnSeconds, Is.EqualTo(12f));
+            Assert.That(data.Settings.Hardpoint.RotateSeconds, Is.EqualTo(45f));
+            Assert.That(data.Settings.Hardpoint.ScoreLimit, Is.EqualTo(150));
+            Assert.That(data.Settings.SearchAndDestroy.WinsToWin, Is.EqualTo(6));
+            Assert.That(data.Settings.SearchAndDestroy.FuseSeconds, Is.EqualTo(40f));
+            Assert.That(data.Settings.FreeForAll.ScoreLimit, Is.EqualTo(25));
+            Assert.That(data.Settings.FreeForAll.PointsPerKill, Is.EqualTo(2));
+            Assert.That(data.Settings.KillConfirmed.TagLifetimeSeconds, Is.EqualTo(20f));
+            Assert.That(data.Settings.KillConfirmed.PointsPerConfirm, Is.EqualTo(3));
+            Assert.That(data.Settings.GunGame.TierWeaponIds, Is.EqualTo(new[] { TestRules.RifleId, TestRules.HandgunId }));
+            Assert.That(data.Settings.GunGame.MeleeWeaponIds, Is.EqualTo(new[] { TestRules.HandgunId }));
+            Assert.That(data.Settings.GunGame.DemotesOnMelee, Is.False);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules GunGame objective=GunGame ").And.EndWith(" weather=rain timeOfDay=dusk"));
+        }
+
+        [Test]
+        public void WithSettingsKeepsTheModeSpecsThroughPrivacy()
+        {
+            var gunGame = new GunGameSpec(tierWeaponIds: new[] { TestRules.RifleId });
+            var settings = new NetMatchSettings(weatherId: "fog", gunGame: gunGame);
+            TestRules.Write(_first.Path, "TeamDeathmatch", TestRules.File(settings: settings));
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            var changed = data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS"));
+
+            Assert.That(changed.Settings.WeatherId, Is.EqualTo("fog"));
+            Assert.That(changed.Settings.GunGame.TierWeaponIds, Is.EqualTo(new[] { TestRules.RifleId }));
+            Assert.That(changed.Settings.CaptureTheFlag, Is.SameAs(data.Settings.CaptureTheFlag));
+        }
+
+        [Test]
+        public void AGunGameRulesFileWithoutTiersStopsTheLoad()
+        {
+            var directory = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName);
+            Directory.CreateDirectory(directory);
+            var text = NetMatchFile.Write(TestRules.File(name: "GunGame"))
+                .Replace("\"objective\": \"None\"", "\"objective\": \"GunGame\"");
+            Assert.That(text, Does.Contain("\"objective\": \"GunGame\""));
+            File.WriteAllText(Path.Combine(directory, "GunGame.json"), text);
+
+            Assert.That(ServerRulesData.TryLoad("GunGame", Roots(), out _, out var error), Is.False);
+
+            Assert.That(error, Does.StartWith("cannot read rules GunGame: ").And.Contain("match.gunGame.tierWeaponIds"));
+        }
+
+        [TestCase("{\"match\": {\"weatherId\": \"rain/../x\"}}", "match.weatherId")]
+        [TestCase("{\"match\": {\"hardpoint\": {\"rotateSeconds\": 0}}}", "match.hardpoint.rotateSeconds")]
+        [TestCase("{\"match\": {\"killConfirmed\": {\"pointsPerConfirm\": 0}}}", "match.killConfirmed.pointsPerConfirm")]
+        public void BrokenModeItemsNameTheFileAndItem(string json, string item)
+        {
+            var directory = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName);
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "Bad.json"), json);
+
+            Assert.That(ServerRulesData.TryLoad("Bad", Roots(), out _, out var error), Is.False);
+
+            Assert.That(error, Does.StartWith("cannot read rules Bad: ").And.Contain("Bad.json").And.Contain(item));
         }
 
         [Test]

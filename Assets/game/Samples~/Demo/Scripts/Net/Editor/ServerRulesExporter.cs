@@ -119,19 +119,38 @@ namespace Shooter.Editor
                 throw new InvalidOperationException(LogTag + " " + AssetDatabase.GetAssetPath(match) + " cannot be used by the match: " + error);
             }
 
+            NetMatchSettings settings;
+            try
+            {
+                settings = match.ToSettings();
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is WeaponDefinitionException)
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + AssetDatabase.GetAssetPath(match) + " has match settings the server cannot use: " + e.Message, e);
+            }
+
             var loadout = NetMatchDefinition.PickLoadout(match);
             var catalog = NetMatchDefinition.PickCatalog(match);
-            return new NetMatchFile(
-                asset.name,
-                rules,
-                match.ToSettings(),
-                loadout.name,
-                loadout.ToRule(),
-                loadout.ToSpecs(),
-                loadout.SwitchSeconds,
-                catalog != null ? catalog.name : null,
-                catalog != null ? catalog.ToCatalog() : null,
-                motor);
+            try
+            {
+                return new NetMatchFile(
+                    asset.name,
+                    rules,
+                    settings,
+                    loadout.name,
+                    loadout.ToRule(),
+                    loadout.ToSpecs(),
+                    loadout.SwitchSeconds,
+                    catalog != null ? catalog.name : null,
+                    catalog != null ? catalog.ToCatalog() : null,
+                    motor);
+            }
+            catch (ArgumentException e) when (e.ParamName == "settings")
+            {
+                throw new InvalidOperationException(
+                    LogTag + " rules " + AssetDatabase.GetAssetPath(asset) + " cannot be played with " + AssetDatabase.GetAssetPath(match) + ": " + e.Message, e);
+            }
         }
 
         public static IReadOnlyList<string> ExportPoints(string directory)

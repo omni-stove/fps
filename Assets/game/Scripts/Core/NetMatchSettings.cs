@@ -32,6 +32,9 @@ namespace Shooter.Core
         // Core からは Protocol を参照できないので、Shooter.Protocol.MatchProtocol.MaxChatBytes (512) を UTF-8 の 1 文字の最大 3 バイトで割った数にする
         public const int MaxMaxChatLength = 170;
 
+        // 天候と時刻の Id はマップ名と同じくファイル名やアセットの Id に使うので、マップ名と同じ長さで切る
+        public const int MaxEnvironmentIdLength = NetLaunchOptions.MaxMapNameLength;
+
         public NetMatchSettings(
             int scoreLimit = DefaultScoreLimit,
             float timeLimitSeconds = DefaultTimeLimitSeconds,
@@ -55,7 +58,15 @@ namespace Shooter.Core
             int maxChatLength = DefaultMaxChatLength,
             int roundWinsToWin = DefaultRoundWinsToWin,
             float roundPreparationSeconds = DefaultRoundPreparationSeconds,
-            float roundTimeLimitSeconds = DefaultRoundTimeLimitSeconds)
+            float roundTimeLimitSeconds = DefaultRoundTimeLimitSeconds,
+            string weatherId = null,
+            string timeOfDayId = null,
+            CaptureTheFlagSpec captureTheFlag = null,
+            HardpointSpec hardpoint = null,
+            SearchAndDestroySpec searchAndDestroy = null,
+            FreeForAllSpec freeForAll = null,
+            KillConfirmedSpec killConfirmed = null,
+            GunGameSpec gunGame = null)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -100,6 +111,14 @@ namespace Shooter.Core
             RequireNotNegative(roundPreparationSeconds, nameof(roundPreparationSeconds));
             RequirePositive(roundTimeLimitSeconds, nameof(roundTimeLimitSeconds));
 
+            WeatherId = OptionalId(weatherId, nameof(weatherId));
+            TimeOfDayId = OptionalId(timeOfDayId, nameof(timeOfDayId));
+            CaptureTheFlag = captureTheFlag ?? CaptureTheFlagSpec.Default;
+            Hardpoint = hardpoint ?? HardpointSpec.Default;
+            SearchAndDestroy = searchAndDestroy ?? SearchAndDestroySpec.Default;
+            FreeForAll = freeForAll ?? FreeForAllSpec.Default;
+            KillConfirmed = killConfirmed ?? KillConfirmedSpec.Default;
+            GunGame = gunGame ?? GunGameSpec.Default;
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
@@ -152,7 +171,15 @@ namespace Shooter.Core
                 maxChatLength: MaxChatLength,
                 roundWinsToWin: RoundWinsToWin,
                 roundPreparationSeconds: RoundPreparationSeconds,
-                roundTimeLimitSeconds: RoundTimeLimitSeconds);
+                roundTimeLimitSeconds: RoundTimeLimitSeconds,
+                weatherId: WeatherId,
+                timeOfDayId: TimeOfDayId,
+                captureTheFlag: CaptureTheFlag,
+                hardpoint: Hardpoint,
+                searchAndDestroy: SearchAndDestroy,
+                freeForAll: FreeForAll,
+                killConfirmed: KillConfirmed,
+                gunGame: GunGame);
         }
 
         public int ScoreLimit { get; }
@@ -200,6 +227,39 @@ namespace Shooter.Core
         public float RoundPreparationSeconds { get; }
 
         public float RoundTimeLimitSeconds { get; }
+
+        public string WeatherId { get; }
+
+        public string TimeOfDayId { get; }
+
+        public CaptureTheFlagSpec CaptureTheFlag { get; }
+
+        // PointCount はマップの拠点の数で決まるので、ここの値は使わず、試合を始めるときにマップの数で作り直す
+        public HardpointSpec Hardpoint { get; }
+
+        // SiteCount はマップの爆破地点の数で決まるので、ここの値は使わず、試合を始めるときにマップの数で作り直す
+        public SearchAndDestroySpec SearchAndDestroy { get; }
+
+        public FreeForAllSpec FreeForAll { get; }
+
+        public KillConfirmedSpec KillConfirmed { get; }
+
+        public GunGameSpec GunGame { get; }
+
+        private static string OptionalId(string id, string name)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+
+            if (!ConnectionExtras.IsValidField(id, MaxEnvironmentIdLength))
+            {
+                throw new ArgumentException(name + " must be 1-" + MaxEnvironmentIdLength + " characters of [0-9A-Za-z_-]", name);
+            }
+
+            return id;
+        }
 
         private static IReadOnlyList<string> CopyMapPool(IReadOnlyList<string> mapPool)
         {

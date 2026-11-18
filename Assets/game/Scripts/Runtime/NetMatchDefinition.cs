@@ -70,6 +70,32 @@ namespace Shooter.Runtime
         [SerializeField, Min(1f), Tooltip("1 ラウンドの制限時間 (秒)。切れたら立っている人の多いチームが取る")]
         private float _roundTimeLimitSeconds = NetMatchSettings.DefaultRoundTimeLimitSeconds;
 
+        [Header("ほかのモード")]
+        [SerializeField, Tooltip("旗取りの調整値。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private CaptureTheFlagDefinition _captureTheFlag;
+
+        [SerializeField, Tooltip("移る拠点 (Hardpoint) の調整値。拠点の数はマップで決まる。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private HardpointDefinition _hardpoint;
+
+        [SerializeField, Tooltip("爆破 (Search and Destroy) の調整値。爆破地点の数はマップで決まる。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private SearchAndDestroyDefinition _searchAndDestroy;
+
+        [SerializeField, Tooltip("個人戦 (FFA) の調整値。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private FreeForAllDefinition _freeForAll;
+
+        [SerializeField, Tooltip("キル確定 (Kill Confirmed) の調整値。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private KillConfirmedDefinition _killConfirmed;
+
+        [SerializeField, Tooltip("ガンゲームの武器の並びと調整値。空なら入口 (GameContent) のもの、それも無ければ武器の並びの無い既定値")]
+        private GunGameLadderDefinition _gunGameLadder;
+
+        [Header("天候と時刻")]
+        [SerializeField, Tooltip("試合の天候の Id。英数字と - _ で 64 文字まで。空ならマップの既定")]
+        private string _weatherId = string.Empty;
+
+        [SerializeField, Tooltip("試合の時刻の Id。英数字と - _ で 64 文字まで。空ならマップの既定")]
+        private string _timeOfDayId = string.Empty;
+
         [Header("試合の間")]
         [SerializeField, Tooltip("次の試合のマップの候補 (マップのシーン名)。空なら今のマップのまま続ける")]
         private List<string> _mapPool = new List<string>();
@@ -168,6 +194,54 @@ namespace Shooter.Runtime
             set => _maxTeamSizeDifference = value;
         }
 
+        public CaptureTheFlagDefinition CaptureTheFlag
+        {
+            get => _captureTheFlag;
+            set => _captureTheFlag = value;
+        }
+
+        public HardpointDefinition Hardpoint
+        {
+            get => _hardpoint;
+            set => _hardpoint = value;
+        }
+
+        public SearchAndDestroyDefinition SearchAndDestroy
+        {
+            get => _searchAndDestroy;
+            set => _searchAndDestroy = value;
+        }
+
+        public FreeForAllDefinition FreeForAll
+        {
+            get => _freeForAll;
+            set => _freeForAll = value;
+        }
+
+        public KillConfirmedDefinition KillConfirmed
+        {
+            get => _killConfirmed;
+            set => _killConfirmed = value;
+        }
+
+        public GunGameLadderDefinition GunGameLadder
+        {
+            get => _gunGameLadder;
+            set => _gunGameLadder = value;
+        }
+
+        public string WeatherId
+        {
+            get => _weatherId;
+            set => _weatherId = value ?? string.Empty;
+        }
+
+        public string TimeOfDayId
+        {
+            get => _timeOfDayId;
+            set => _timeOfDayId = value ?? string.Empty;
+        }
+
         public void SetRules(IEnumerable<GameRulesDefinition> rules)
         {
             _rules = rules == null ? new List<GameRulesDefinition>() : new List<GameRulesDefinition>(rules);
@@ -226,7 +300,90 @@ namespace Shooter.Runtime
                 _maxChatLength,
                 _roundWinsToWin,
                 _roundPreparationSeconds,
-                _roundTimeLimitSeconds);
+                _roundTimeLimitSeconds,
+                _weatherId,
+                _timeOfDayId,
+                ToCaptureTheFlag(),
+                ToHardpoint(),
+                ToSearchAndDestroy(),
+                ToFreeForAll(),
+                ToKillConfirmed(),
+                ToGunGame());
+        }
+
+        // オフラインのモードと同じ値で動くよう、各モードのランナーと同じ順 (この欄、入口) で調整値のアセットを選ぶ
+        private CaptureTheFlagSpec ToCaptureTheFlag()
+        {
+            var definition = GameContent.Pick(_captureTheFlag, c => c.CaptureTheFlag);
+            return definition != null ? definition.ToSpec() : CaptureTheFlagSpec.Default;
+        }
+
+        private HardpointSpec ToHardpoint()
+        {
+            var definition = GameContent.Pick(_hardpoint, c => c.Hardpoint);
+            return definition != null ? definition.ToSpec(HardpointSpec.Default.PointCount) : HardpointSpec.Default;
+        }
+
+        private SearchAndDestroySpec ToSearchAndDestroy()
+        {
+            var definition = GameContent.Pick(_searchAndDestroy, c => c.SearchAndDestroy);
+            return definition != null ? definition.ToSpec(SearchAndDestroySpec.Default.SiteCount) : SearchAndDestroySpec.Default;
+        }
+
+        private FreeForAllSpec ToFreeForAll()
+        {
+            var definition = GameContent.Pick(_freeForAll, c => c.FreeForAll);
+            if (definition == null)
+            {
+                return FreeForAllSpec.Default;
+            }
+
+            try
+            {
+                return new FreeForAllSpec(definition.ScoreLimit, definition.TimeLimitSeconds, definition.RespawnSeconds, definition.PointsPerKill);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                throw new InvalidOperationException($"free for all definition '{definition.name}' is invalid: {e.Message}", e);
+            }
+        }
+
+        private KillConfirmedSpec ToKillConfirmed()
+        {
+            var definition = GameContent.Pick(_killConfirmed, c => c.KillConfirmed);
+            return definition != null ? definition.ToSpec() : KillConfirmedSpec.Default;
+        }
+
+        private GunGameSpec ToGunGame()
+        {
+            var definition = GameContent.Pick(_gunGameLadder, c => c.GunGameLadder);
+            if (definition == null)
+            {
+                return GunGameSpec.Default;
+            }
+
+            // 段の無い並びで書き出しを止めないのは、ガンゲームを遊ばないルールまで書き出せなくなるため。要るかは NetMatchFile が目的を見て確かめる
+            var tierIds = new List<string>();
+            var meleeIds = new List<string>();
+            if (definition.Tiers.Count > 0)
+            {
+                var ladder = definition.ToLadder();
+                foreach (var tier in ladder.Tiers)
+                {
+                    tierIds.Add(tier.WeaponId);
+                }
+
+                meleeIds.AddRange(ladder.MeleeWeaponIds);
+            }
+
+            try
+            {
+                return new GunGameSpec(definition.TimeLimitSeconds, definition.RespawnSeconds, tierIds, meleeIds, definition.DemotesOnMelee);
+            }
+            catch (ArgumentException e)
+            {
+                throw new InvalidOperationException($"gun game ladder '{definition.name}' is invalid: {e.Message}", e);
+            }
         }
 
         public NetMotorSettings ToMotor()

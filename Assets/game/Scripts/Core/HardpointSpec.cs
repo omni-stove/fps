@@ -4,6 +4,17 @@ namespace Shooter.Core
 {
     public sealed class HardpointSpec
     {
+        public const int MinPointCount = 2;
+        public const float DefaultRotateSeconds = 30f;
+        public const float DefaultPointsPerSecond = 1f;
+        public const int DefaultScoreLimit = 100;
+        public const float DefaultTimeLimitSeconds = 300f;
+        public const float DefaultRespawnSeconds = 3f;
+
+        // 拠点の数はマップの拠点で決まり、調整値として持たないので、受け付ける最小の数で作る。
+        public static HardpointSpec Default { get; } = new HardpointSpec(
+            MinPointCount, DefaultRotateSeconds, DefaultPointsPerSecond, DefaultScoreLimit, DefaultTimeLimitSeconds, DefaultRespawnSeconds);
+
         public int PointCount { get; }
 
         public float RotateSeconds { get; }
@@ -25,9 +36,9 @@ namespace Shooter.Core
             float respawnSeconds)
         {
             // 1 つだけでは移る先が無いので 2 以上にする。
-            if (pointCount < 2)
+            if (pointCount < MinPointCount)
             {
-                throw new ArgumentOutOfRangeException(nameof(pointCount), pointCount, "pointCount must be at least 2");
+                throw new ArgumentOutOfRangeException(nameof(pointCount), pointCount, "pointCount must be at least " + MinPointCount);
             }
 
             if (!(rotateSeconds > 0f) || float.IsInfinity(rotateSeconds))

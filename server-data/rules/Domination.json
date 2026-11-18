@@ -80,7 +80,57 @@
     "maxChatLength": 120,
     "roundWinsToWin": 3,
     "roundPreparationSeconds": 5,
-    "roundTimeLimitSeconds": 120
+    "roundTimeLimitSeconds": 120,
+    "weatherId": "",
+    "timeOfDayId": "",
+    "captureTheFlag": {
+      "scoreLimit": 3,
+      "timeLimitSeconds": 600,
+      "respawnSeconds": 5,
+      "pickupRadius": 1.5,
+      "captureRadius": 2,
+      "returnSeconds": 20,
+      "pointsPerCapture": 1
+    },
+    "hardpoint": {
+      "rotateSeconds": 30,
+      "pointsPerSecond": 1,
+      "scoreLimit": 100,
+      "timeLimitSeconds": 300,
+      "respawnSeconds": 3
+    },
+    "searchAndDestroy": {
+      "roundSeconds": 120,
+      "plantSeconds": 3,
+      "defuseSeconds": 5,
+      "fuseSeconds": 30,
+      "winsToWin": 4,
+      "preparationSeconds": 5,
+      "swapEveryRounds": 2,
+      "bombPickupRadius": 1.5,
+      "defuseRadius": 2
+    },
+    "freeForAll": {
+      "scoreLimit": 15,
+      "timeLimitSeconds": 300,
+      "respawnSeconds": 3,
+      "pointsPerKill": 1
+    },
+    "killConfirmed": {
+      "scoreLimit": 20,
+      "timeLimitSeconds": 300,
+      "respawnSeconds": 3,
+      "tagLifetimeSeconds": 30,
+      "pointsPerConfirm": 1,
+      "tagPickupRadius": 1
+    },
+    "gunGame": {
+      "timeLimitSeconds": 600,
+      "respawnSeconds": 2,
+      "tierWeaponIds": [],
+      "meleeWeaponIds": [],
+      "demotesOnMelee": true
+    }
   },
   "motor": {
     "walkSpeed": 5,

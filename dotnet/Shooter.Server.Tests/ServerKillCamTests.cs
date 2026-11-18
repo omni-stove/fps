@@ -219,7 +219,7 @@ namespace Shooter.Server.Tests
             Assert.That(message.PoseAt(message.Count - 1).Eye.X, Is.EqualTo(2999f));
             Assert.That(message.OffsetAt(message.Count - 1), Is.EqualTo(offsets[2999]));
 
-            var shortClip = new KillCamClip(new[] { 0f, 0.5f, 1f }, new[] { poses[0], poses[1], poses[2] });
+            var shortClip = new KillCamClip(new List<float> { 0f, 0.5f, 1f }, new List<KillCamPose> { poses[0], poses[1], poses[2] });
             ServerKillCam.Fill(message, 3, 4, shortClip);
             Assert.That(message.Count, Is.EqualTo(3), "a clip that fits is sent whole and replaces the previous one");
         }

@@ -17,7 +17,7 @@ namespace Shooter.Server
         {
         }
 
-        // ServerObjectiveFactory にまだ載せていない目的も試合として動かして確かめられるよう、目的の作り方を外から渡せるようにする
+        // ServerObjectiveFactory に登録する前の目的の実装でも、試合を通して試せるよう選び方を差し替えられる口
         internal MatchRulesModule(Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> createObjective)
         {
             _createObjective = createObjective ?? throw new ArgumentNullException(nameof(createObjective));

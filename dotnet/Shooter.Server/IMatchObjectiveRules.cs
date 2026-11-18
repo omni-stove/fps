@@ -57,7 +57,7 @@ namespace Shooter.Server
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);
 
-        // 旗・爆弾・タグのように目的が持つ物。並びは呼ぶ前のものが残っているので、目的が空にしてから載せる
+        // 旗・爆弾・タグのように場に置く物。持たない目的は空にする
         void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items);
 
         // Session が書いた行のうち、目的が数え直すもの (FFA のキル数など) を上書きする。Session に居ない人には呼ばない

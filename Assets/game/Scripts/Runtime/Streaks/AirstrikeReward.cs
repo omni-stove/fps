@@ -19,7 +19,8 @@ namespace Shooter.Runtime
         private float Now => Clock != null ? Clock() : Time.time;
 
         // 送られた高さは選んだときの地面なので、中心も弾も真上から落として決め直す (専用サーバーの ServerStreaks と同じ)。
-        public Vector3 Call(Vector3 target, float headingDegrees, StreakAirstrikeSpec spec, string weaponId, System.Random random)
+        // targeting を渡すと、探し始めを使った人の高さにし、探す幅を max(viewHeight, dropHeight) にする。空なら選んだ高さから dropHeight で探す。
+        public Vector3 Call(Vector3 target, float headingDegrees, StreakAirstrikeSpec spec, string weaponId, System.Random random, StreakTargetingSpec targeting = null)
         {
             if (!IsFinite(target))
             {
@@ -38,10 +39,13 @@ namespace Shooter.Runtime
 
             random = random ?? new System.Random();
             var now = Now;
-            var center = Drop(target, spec.DropHeight);
+            var searchHeight = targeting != null ? Mathf.Max(targeting.ViewHeight, spec.DropHeight) : spec.DropHeight;
+            var baseY = targeting != null ? transform.position.y : target.y;
+            var center = Drop(new Vector3(target.x, baseY, target.z), searchHeight);
             for (var i = 0; i < spec.ShellCount; i++)
             {
-                var point = Drop(AirstrikeLine.ShellPoint(center.ToNumerics(), headingDegrees, spec, i, random).ToUnity(), spec.DropHeight);
+                var shell = AirstrikeLine.ShellPoint(center.ToNumerics(), headingDegrees, spec, i, random).ToUnity();
+                var point = Drop(new Vector3(shell.x, baseY, shell.z), searchHeight);
                 Enqueue(new Strike(now + ((i + 1) * spec.IntervalSeconds), point, i + 1, spec.ShellCount, spec.Explosion, weaponId));
             }
 

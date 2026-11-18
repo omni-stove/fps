@@ -185,7 +185,7 @@ namespace Shooter.Runtime
                     airstrike = gameObject.AddComponent<AirstrikeReward>();
                 }
 
-                airstrike.Call(target.Target.ToUnity(), target.HeadingDegrees, _tracker.Spec.Airstrike, used, Random ?? new System.Random());
+                airstrike.Call(target.Target.ToUnity(), target.HeadingDegrees, _tracker.Spec.Airstrike, used, Random ?? new System.Random(), _tracker.Spec.Targeting);
             }
 
             return true;

@@ -172,6 +172,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AStrikeSearchesFromTheUsersHeightWithinTheViewHeight()
+        {
+            var airstrike = User();
+            airstrike.transform.position = new Vector3(0f, 60f, 0f);
+            var floor = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            floor.transform.position = new Vector3(0f, -50.5f, 0f);
+            floor.transform.localScale = new Vector3(20f, 1f, 20f);
+            Physics.SyncTransforms();
+
+            var center = airstrike.Call(new Vector3(0f, 0f, 0f), 0f, Spec(1, 0f, dropHeight: 40f), WeaponId, new System.Random(1), new StreakTargetingSpec(viewHeight: 150f));
+
+            var onGround = ImpactResolver.DetonationPoint(new System.Numerics.Vector3(0f, -50f, 0f), System.Numerics.Vector3.UnitY).ToUnity();
+            Assert.That(Vector3.Distance(center, onGround), Is.LessThan(1e-4f), "ground further than dropHeight below the chosen height is still found");
+        }
+
+        [Test]
         public void ACancelledStrikeDoesNotLand()
         {
             var airstrike = User();

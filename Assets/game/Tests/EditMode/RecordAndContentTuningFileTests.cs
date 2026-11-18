@@ -111,6 +111,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.InfectedRespawnSeconds, Is.EqualTo(InfectedSpec.DefaultInfectedRespawnSeconds));
             Assert.That(spec.ScorePerInfection, Is.EqualTo(InfectedSpec.DefaultScorePerInfection));
             Assert.That(spec.ScorePerSurvivedRound, Is.EqualTo(InfectedSpec.DefaultScorePerSurvivedRound));
+            Assert.That(spec.InfectedWeaponId, Is.EqualTo(InfectedSpec.DefaultInfectedWeaponId));
         }
 
         [Test]

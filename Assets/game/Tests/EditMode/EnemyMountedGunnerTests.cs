@@ -94,6 +94,14 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TickRejectsANegativeOrNonFiniteStep()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => _gunner.Tick(-0.1f));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => _gunner.Tick(float.NaN));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => _gunner.Tick(float.PositiveInfinity));
+        }
+
+        [Test]
         public void AGunThatCannotTurnToTheTargetIsNotACandidate()
         {
             _target.transform.position = _behind;

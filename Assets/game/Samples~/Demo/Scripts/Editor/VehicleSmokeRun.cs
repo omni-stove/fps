@@ -502,7 +502,7 @@ namespace Shooter.Editor
         {
             TargetDummy best = null;
             var bestDistance = float.PositiveInfinity;
-            foreach (var target in UnityEngine.Object.FindObjectsByType<TargetDummy>(FindObjectsSortMode.None))
+            foreach (var target in UnityEngine.Object.FindObjectsByType<TargetDummy>())
             {
                 if (target.Damageable == null || target.Damageable.Id == null
                     || !target.Damageable.Id.StartsWith(VehicleRangeSceneBuilder.TargetIdPrefix, StringComparison.Ordinal))

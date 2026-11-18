@@ -3,8 +3,12 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
+    // 感染者の武器を Id で持つのは、Unity 抜きのサーバーが WeaponDefinition を読めず、武器を Id で引くため。
+    // 空を認めるのは、感染しても持っている武器のままにするゲームに Id を書かせないため。
     public sealed class InfectedSpec
     {
+        public const string DefaultInfectedWeaponId = "";
+
         public const int DefaultInitialInfected = 1;
         public const float DefaultStartDelaySeconds = 10f;
         public const float DefaultRoundSeconds = 300f;
@@ -24,7 +28,8 @@ namespace Shooter.Core
             float infectedSpeedMultiplier = DefaultInfectedSpeedMultiplier,
             float infectedRespawnSeconds = DefaultInfectedRespawnSeconds,
             int scorePerInfection = DefaultScorePerInfection,
-            int scorePerSurvivedRound = DefaultScorePerSurvivedRound)
+            int scorePerSurvivedRound = DefaultScorePerSurvivedRound,
+            string infectedWeaponId = DefaultInfectedWeaponId)
         {
             InitialInfected = SpecGuard.AtLeast(initialInfected, 1, nameof(initialInfected));
             StartDelaySeconds = SpecGuard.NonNegativeFinite(startDelaySeconds, nameof(startDelaySeconds));
@@ -44,6 +49,7 @@ namespace Shooter.Core
             InfectedRespawnSeconds = SpecGuard.NonNegativeFinite(infectedRespawnSeconds, nameof(infectedRespawnSeconds));
             ScorePerInfection = SpecGuard.NonNegative(scorePerInfection, nameof(scorePerInfection));
             ScorePerSurvivedRound = SpecGuard.NonNegative(scorePerSurvivedRound, nameof(scorePerSurvivedRound));
+            InfectedWeaponId = infectedWeaponId == null ? string.Empty : infectedWeaponId.Trim();
         }
 
         public int InitialInfected { get; }
@@ -61,5 +67,9 @@ namespace Shooter.Core
         public int ScorePerInfection { get; }
 
         public int ScorePerSurvivedRound { get; }
+
+        public string InfectedWeaponId { get; }
+
+        public bool HasInfectedWeapon => InfectedWeaponId.Length > 0;
     }
 }

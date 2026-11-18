@@ -131,6 +131,98 @@ namespace Shooter.NetV2.Tests
             Assert.That(_log, Has.None.Contains("skill"));
         }
 
+        private static LobbyInfo RegionServer(string id, string endpoint, int players, string region)
+        {
+            return new LobbyInfo(
+                id, _owner, ServerLobby.MaxMembers(NetMatchSettings.DefaultMaxPlayers), new[] { _owner },
+                ServerLobby.Attributes(endpoint, _version, players, NetMatchSettings.Default, null, region));
+        }
+
+        private static List<LobbyInfo> TwoRegions()
+        {
+            return new List<LobbyInfo>
+            {
+                RegionServer("asia", "203.0.113.1:7777", 5, "asia"),
+                RegionServer("europe", "203.0.113.2:7777", 1, "europe"),
+            };
+        }
+
+        private void SearchIn(string region, List<LobbyInfo> lobbies)
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add) { PreferredRegion = region };
+            search.Begin(0f, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(lobbies);
+        }
+
+        [Test]
+        public void ThePreferredRegionDecidesTheServer()
+        {
+            SearchIn("europe", TwoRegions());
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.2"), "the quieter server in the preferred region wins over the busier one elsewhere");
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0 preferring region europe"));
+            Assert.That(_log, Has.Some.EqualTo(
+                "[Lobby] quick match picked id=europe server=203.0.113.2:7777 players=1/8 region=europe; connecting " + _ready));
+        }
+
+        [Test]
+        public void ChangingTheRegionChangesTheServer()
+        {
+            SearchIn("asia", TwoRegions());
+
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.1"));
+        }
+
+        [Test]
+        public void AutoTakesTheBusiestServerInAnyRegion()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+            Assert.That(search.PreferredRegion, Is.EqualTo(ControlSettings.AutoRegion));
+            Assert.That(search.PrefersAnyRegion, Is.True);
+            search.Begin(0f, options => _ready = options, reason => _failure = reason);
+            _backend.CompleteLogin(_self);
+            _backend.CompleteSearch(TwoRegions());
+
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.1"));
+            Assert.That(_log, Has.Some.EqualTo("[Lobby] logging in to search shooter-server:0.3.0"));
+            Assert.That(_log, Has.Some.StartsWith("[Lobby] quick match picked id=asia server=203.0.113.1:7777 players=5/8 region=asia; connecting"));
+        }
+
+        [Test]
+        public void FallsBackToAnotherRegionWhenThePreferredOneHasNoServer()
+        {
+            SearchIn("north-america", new List<LobbyInfo>
+            {
+                RegionServer("europe", "203.0.113.2:7777", 1, "europe"),
+                Server("unnamed", "203.0.113.3:7777", 2),
+                RegionServer("na-full", "203.0.113.4:7777", NetMatchSettings.DefaultMaxPlayers, "north-america"),
+            });
+
+            Assert.That(_failure, Is.Null);
+            Assert.That(_ready.Address, Is.EqualTo("203.0.113.3"), "a server without a region counts as another region");
+            Assert.That(_log, Has.Some.StartsWith(
+                "[Lobby] quick match picked id=unnamed server=203.0.113.3:7777 players=2/8 region=- (none open in north-america); connecting"));
+        }
+
+        [Test]
+        public void ThePreferredRegionIsSetOnlyBeforeTheSearchAndMustBeARegionName()
+        {
+            var search = new QuickMatchSearch(_backend, _version, _log.Add);
+
+            Assert.Throws<ArgumentNullException>(() => search.PreferredRegion = null);
+            Assert.Throws<ArgumentException>(() => search.PreferredRegion = "Europe");
+            Assert.Throws<ArgumentException>(() => search.PreferredRegion = "eu west");
+            Assert.That(search.PreferredRegion, Is.EqualTo(ControlSettings.AutoRegion));
+
+            search.PreferredRegion = "europe";
+            search.Begin(0f, options => _ready = options, reason => _failure = reason);
+
+            Assert.Throws<InvalidOperationException>(() => search.PreferredRegion = "asia");
+            Assert.That(search.PreferredRegion, Is.EqualTo("europe"));
+        }
+
         [Test]
         public void APartyOnlyPicksAServerWithRoomForEveryone()
         {

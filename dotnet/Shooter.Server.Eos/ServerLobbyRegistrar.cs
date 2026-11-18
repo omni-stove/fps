@@ -24,6 +24,7 @@ namespace Shooter.Server.Eos
         private readonly RetrySchedule _schedule;
         private readonly TextWriter _log;
         private Action<string> _failed;
+        private string _region;
         private Step _step;
         private float _now;
         private int _players;
@@ -102,6 +103,26 @@ namespace Shooter.Server.Eos
 
         public int? PublishedSkillAverage => IsRegistered ? _publishedSkillAverage : null;
 
+        // 地域は作るときにだけ載せ、PublishChanges では送らない。起動の間は変わらない値を、人が入るたびに書き直さないため。
+        public string Region
+        {
+            get => _region;
+            set
+            {
+                if (_step != Step.Idle)
+                {
+                    throw new InvalidOperationException("set Region before the server lobby registrar begins");
+                }
+
+                if (value != null && !ServerLobby.IsRegionName(value))
+                {
+                    throw new ArgumentException("'" + value + "' is not a server region (" + ServerLobby.RegionRule + ")", nameof(value));
+                }
+
+                _region = value;
+            }
+        }
+
         public void Begin(float now, Action<string> failed)
         {
             if (_step != Step.Idle)
@@ -113,7 +134,7 @@ namespace Shooter.Server.Eos
             _now = now;
             _schedule.Start(now);
             _step = Step.Waiting;
-            _log.WriteLine(_logPrefix + "registering server=" + _endpoint + " bucket=" + ServerLobby.BucketId(_version));
+            _log.WriteLine(_logPrefix + "registering server=" + _endpoint + " bucket=" + ServerLobby.BucketId(_version) + RegionText());
             Attempt();
         }
 
@@ -263,7 +284,7 @@ namespace Shooter.Server.Eos
             _service.CreateLobby(
                 ServerLobby.MaxMembers(_maxPlayers),
                 true,
-                ServerLobby.Attributes(_endpoint, _version, players, _match, skillAverage),
+                ServerLobby.Attributes(_endpoint, _version, players, _match, skillAverage, _region),
                 (lobby, error) => HandleCreated(lobby, error, players, skillAverage));
         }
 
@@ -289,7 +310,8 @@ namespace Shooter.Server.Eos
             _lastError = null;
             HasRegistered = true;
             _log.WriteLine(_logPrefix + "registered id=" + lobby.Id + " server=" + _endpoint + " players=" + players
-                + (skillAverage.HasValue ? " skill_average=" + SkillText(skillAverage) : ""));
+                + (skillAverage.HasValue ? " skill_average=" + SkillText(skillAverage) : "")
+                + RegionText());
             PublishChanges();
         }
 
@@ -414,6 +436,11 @@ namespace Shooter.Server.Eos
             {
                 Attempt();
             }
+        }
+
+        private string RegionText()
+        {
+            return _region == null ? "" : " region=" + _region;
         }
 
         private static string SkillText(int? skillAverage)

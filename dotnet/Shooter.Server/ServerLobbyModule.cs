@@ -19,6 +19,7 @@ namespace Shooter.Server
         private ServerMatch _match;
         private ServerLobbyRegistration _registration;
         private int? _skillAverage;
+        private string _region;
 
         public ServerLobbyModule(Func<TextWriter, IServerLobbyBackend> createBackend, string endpoint)
             : this(createBackend, endpoint, StopwatchClock(), Thread.Sleep)
@@ -39,6 +40,26 @@ namespace Shooter.Server
 
         public int? SkillAverage => _skillAverage;
 
+        // 作ったロビーの属性は人数と平均しか書き直さないので、登録を始めた後に替えても載らない。Start より前だけ受ける。
+        public string Region
+        {
+            get => _region;
+            set
+            {
+                if (_context != null)
+                {
+                    throw new InvalidOperationException("set Region before the lobby module starts");
+                }
+
+                if (value != null && !ServerLobby.IsRegionName(value))
+                {
+                    throw new ArgumentException("'" + value + "' is not a server region (" + ServerLobby.RegionRule + ")", nameof(value));
+                }
+
+                _region = value;
+            }
+        }
+
         public void Start(ServerContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -55,7 +76,8 @@ namespace Shooter.Server
                 context.Log,
                 _clock,
                 _sleep,
-                reason => context.Control.Fail(ServerProgram.ExitLobbyFailed, ServerLobbyService.LogPrefix + reason));
+                reason => context.Control.Fail(ServerProgram.ExitLobbyFailed, ServerLobbyService.LogPrefix + reason),
+                region: _region);
         }
 
         public void Tick(long tick, float deltaSeconds)

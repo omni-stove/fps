@@ -21,6 +21,8 @@ namespace Shooter.Core
 
         public const string VoiceEnabledKey = "voice_enabled";
 
+        public const string RegionKey = "region";
+
         public const string TeamDeathmatchMode = "tdm";
 
         // 同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないよう、接頭辞を付ける。
@@ -52,6 +54,17 @@ namespace Shooter.Core
         public static IReadOnlyList<LobbyAttribute> Attributes(
             string endpoint, string version, int players, NetMatchSettings match, int? skillAverage)
         {
+            return Attributes(endpoint, version, players, match, skillAverage, null);
+        }
+
+        public static IReadOnlyList<LobbyAttribute> Attributes(
+            string endpoint, string version, int players, NetMatchSettings match, int? skillAverage, string region)
+        {
+            if (region != null && !IsRegionName(region))
+            {
+                throw new ArgumentException("'" + region + "' is not a server region (" + RegionRule + ")", nameof(region));
+            }
+
             if (string.IsNullOrWhiteSpace(endpoint))
             {
                 throw new ArgumentException("must not be null or blank", nameof(endpoint));
@@ -87,7 +100,22 @@ namespace Shooter.Core
                 attributes.Add(SkillAverageAttribute(skillAverage.Value));
             }
 
+            if (region != null)
+            {
+                attributes.Add(LobbyAttribute.OfText(RegionKey, region));
+            }
+
             return attributes;
+        }
+
+        public static string RegionRule =>
+            "a-z, 0-9 and '-' inside, up to " + ControlSettings.MaxRegionLength + " characters, not '" + ControlSettings.AutoRegion + "'";
+
+        // 設定の地域と同じ書き方に絞るのは、名前の揺れで同じ地域のサーバーを別の地域として後回しにしないため。
+        // auto は「どこでもよい」という設定の値なので、サーバーの地域の名前には使わせない。
+        public static bool IsRegionName(string region)
+        {
+            return ControlSettings.IsValidRegion(region) && region != ControlSettings.AutoRegion;
         }
 
         public static LobbyAttribute SkillAverageAttribute(int skillAverage)

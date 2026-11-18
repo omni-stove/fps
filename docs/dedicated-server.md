@@ -122,6 +122,9 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
 ```
 
 - `-register-lobby <公開 IPv4:ポート>` を付けると、クイックマッチで探せる EOS のロビーに載る。ボイスはこのロビーの部屋を使うので、付けないサーバーにはボイスが無い。
+- `--region <地域>` で、ロビーに地域 (`region` の属性) を載せる。`-register-lobby` と一緒にだけ使え、名前は小文字の英字・数字と途中の `-` で 32 文字まで (`auto` は使えない)。
+  クイックマッチは設定の地域 (既定の Auto はどこでも) のサーバーを先に選び、その地域に入れるサーバーが無ければほかの地域 (地域の無いサーバーも含む) から選ぶ。
+  名前はクライアントの設定の候補 (Demo では `Resources/Settings/QuickMatchRegions.json`) と揃える。
 - `--private` か `--join-code <コード>` で、参加コードの合う人だけを入れる。コードを省くと作ってログに出す。
 - `--ban-file <パス>` で BAN の一覧を読み書きする ([キックと BAN](#キックと-ban))。
 - `-eac` は [anti-cheat.md](anti-cheat.md)。

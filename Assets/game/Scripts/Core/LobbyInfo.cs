@@ -111,7 +111,9 @@ namespace Shooter.Core
                 ? (int)value
                 : (int?)null;
 
-        public bool VoiceEnabled => TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
+        public string Region => TryGetText(ServerLobby.RegionKey, out var value) ? value : null;
+
+        public bool VoiceEnabled =>TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
 
         public bool IsOwnedBy(string userId)
         {

@@ -109,7 +109,7 @@ namespace Shooter.Net.Tests
         {
             var context = Context(null);
             context.Replay = true;
-            context.ReplayFreeSpeed = 9f;
+            context.ReplayFreeSpeed = () => 9f;
 
             _parts = NetV2ClientParts.Create(context);
 

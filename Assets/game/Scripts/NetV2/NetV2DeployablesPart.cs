@@ -100,12 +100,15 @@ namespace Shooter.NetV2
         public IClientDeployableView Show(DeployableKind kind, string typeId, Team team, bool isOwn, System.Numerics.Vector3 position, float yaw)
         {
             _definitions.TryGetValue(typeId ?? "", out var definition);
+            var turret = definition as TurretDeployDefinition;
             var visual = definition != null && definition.Prefab != null
                 ? UnityEngine.Object.Instantiate(definition.Prefab)
-                : CreatePlaceholder(kind, definition);
+                : turret != null ? turret.CreateLook() : CreatePlaceholder(kind, definition);
             visual.name = "Net" + (string.IsNullOrEmpty(typeId) ? kind.ToString() : typeId);
             Quiet(visual);
-            var view = new View(visual);
+            // タレットのスナップショットの向きは頭の向きなので、台は回さず頭だけに当てる
+            var head = turret != null ? FindHead(visual.transform) : null;
+            var view = new View(visual, head);
             view.Move(position, yaw);
             _log(ClientDeployLog.Look(typeId, kind.ToString(), definition != null && definition.Prefab != null));
             return view;
@@ -132,6 +135,19 @@ namespace Shooter.NetV2
             {
                 obstacle.enabled = false;
             }
+        }
+
+        private static Transform FindHead(Transform root)
+        {
+            foreach (var child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child != root && child.name == Turret.HeadName)
+                {
+                    return child;
+                }
+            }
+
+            return null;
         }
 
         private static GameObject CreatePlaceholder(DeployableKind kind, DeployAbilityDefinition definition)
@@ -169,9 +185,12 @@ namespace Shooter.NetV2
         {
             private readonly GameObject _visual;
 
-            internal View(GameObject visual)
+            private readonly Transform _head;
+
+            internal View(GameObject visual, Transform head = null)
             {
                 _visual = visual;
+                _head = head;
             }
 
             public GameObject Visual => _visual;
@@ -182,7 +201,15 @@ namespace Shooter.NetV2
             {
                 if (_visual != null)
                 {
-                    _visual.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), Quaternion.Euler(0f, yaw, 0f));
+                    var rotation = Quaternion.Euler(0f, yaw, 0f);
+                    if (_head != null)
+                    {
+                        _visual.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), Quaternion.identity);
+                        _head.rotation = rotation;
+                        return;
+                    }
+
+                    _visual.transform.SetPositionAndRotation(NetV2Math.ToUnity(position), rotation);
                 }
             }
 

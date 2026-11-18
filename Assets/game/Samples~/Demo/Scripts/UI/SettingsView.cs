@@ -45,6 +45,12 @@ namespace Shooter.Runtime
 
         public const string RumbleButtonName = "settings-rumble";
 
+        public const string RegionButtonName = "settings-region";
+
+        public const string TelemetryButtonName = "settings-telemetry";
+
+        public const string RegionTextKeyPrefix = "settings.region.";
+
         public const string VoiceMicrophoneButtonName = "settings-voice-microphone";
 
         public const string VoiceVolumeSliderName = "settings-voice-volume";
@@ -107,6 +113,10 @@ namespace Shooter.Runtime
         private Button _aimAssistButton;
         private Button _invertLookYButton;
         private Button _rumbleButton;
+        private Button _regionButton;
+        private Button _telemetryButton;
+        private readonly IReadOnlyList<string> _regionsGiven;
+        private IReadOnlyList<string> _regions;
         private Button _voiceMicrophoneButton;
         private SliderInt _voiceVolumeSlider;
         private Label _voiceVolumeLabel;
@@ -123,14 +133,31 @@ namespace Shooter.Runtime
             InputActionAsset actions = null,
             ISettingsSink sink = null,
             LanguagePreferenceStore languageStore = null,
-            VoiceSettingsStore voiceStore = null)
+            VoiceSettingsStore voiceStore = null,
+            IReadOnlyList<string> regions = null)
         {
+            List<string> offered = null;
+            if (regions != null)
+            {
+                offered = new List<string>();
+                foreach (var region in regions)
+                {
+                    if (!ControlSettings.IsValidRegion(region) || region == ControlSettings.AutoRegion || offered.Contains(region))
+                    {
+                        throw new ArgumentException($"'{region}' is not a region that can be offered", nameof(regions));
+                    }
+
+                    offered.Add(region);
+                }
+            }
+
             _store = store ?? new ControlSettingsStore();
             _bindingStore = bindingStore ?? new InputBindingOverridesStore();
             _actionAsset = actions;
             _sink = sink ?? AppliedControlSettings.Sink;
             _languageStore = languageStore ?? new LanguagePreferenceStore();
             _voiceStore = voiceStore ?? new VoiceSettingsStore();
+            _regionsGiven = offered?.AsReadOnly();
         }
 
         public event Action BackRequested;
@@ -154,6 +181,9 @@ namespace Shooter.Runtime
         public PlayerBindings Bindings => _bindings;
 
         public IReadOnlyList<GameLanguage> Languages => _languages;
+
+        // Refresh はスライダーを動かすたびに走るので、Resources の一覧は最初に要るときに 1 度だけ読む。
+        public IReadOnlyList<string> Regions => _regions ??= _regionsGiven ?? QuickMatchRegionList.Load();
 
         public RebindResult PendingConflict => _pendingConflict;
 
@@ -274,6 +304,41 @@ namespace Shooter.Runtime
             return available[0];
         }
 
+        // 一覧に名前の無い地域は、サーバーが載せる名前をそのまま出せば選んだものと分かる。
+        public static string FormatRegion(string region)
+        {
+            if (region == null)
+            {
+                throw new ArgumentNullException(nameof(region));
+            }
+
+            return Localizer.TryGet(RegionTextKeyPrefix + region, out var text) ? text : region;
+        }
+
+        // 一覧から消えた地域を保存していても押せば一覧の地域へ移れるよう、見つからなければ Auto の次 (一覧の先頭) にする。
+        public static string NextRegion(string region, IReadOnlyList<string> available)
+        {
+            if (available == null)
+            {
+                throw new ArgumentNullException(nameof(available));
+            }
+
+            if (region == ControlSettings.AutoRegion)
+            {
+                return available.Count > 0 ? available[0] : ControlSettings.AutoRegion;
+            }
+
+            for (var i = 0; i < available.Count; i++)
+            {
+                if (available[i] == region)
+                {
+                    return i + 1 < available.Count ? available[i + 1] : ControlSettings.AutoRegion;
+                }
+            }
+
+            return available.Count > 0 ? available[0] : ControlSettings.AutoRegion;
+        }
+
         public static ColorPalette NextPalette(ColorPalette palette)
         {
             var all = TeamPalette.All;
@@ -356,6 +421,8 @@ namespace Shooter.Runtime
             _aimAssistButton = null;
             _invertLookYButton = null;
             _rumbleButton = null;
+            _regionButton = null;
+            _telemetryButton = null;
             _voiceMicrophoneButton = null;
             _voiceVolumeSlider = null;
             _voiceVolumeLabel = null;
@@ -498,6 +565,18 @@ namespace Shooter.Runtime
         {
             EnsureOpen();
             Edit(_editing.WithRumbleEnabled(enabled));
+        }
+
+        public void SetQuickMatchRegion(string region)
+        {
+            EnsureOpen();
+            Edit(_editing.WithQuickMatchRegion(region));
+        }
+
+        public void SetTelemetryConsent(bool consent)
+        {
+            EnsureOpen();
+            Edit(_editing.WithTelemetryConsent(consent));
         }
 
         public void SetMicrophoneEnabled(bool enabled)
@@ -778,6 +857,12 @@ namespace Shooter.Runtime
             content.Add(BuildVoiceMicrophoneRow());
             content.Add(BuildVoiceVolumeRow());
 
+            content.Add(NewLabel(Localizer.Get("settings.section.online"), "settings__section"));
+            content.Add(BuildRegionRow());
+
+            content.Add(NewLabel(Localizer.Get("settings.section.privacy"), "settings__section"));
+            content.Add(BuildTelemetryRow());
+
             content.Add(NewLabel(Localizer.Get("settings.section.language"), "settings__section"));
             content.Add(BuildLanguageRow());
 
@@ -1010,6 +1095,27 @@ namespace Shooter.Runtime
             return row;
         }
 
+        private VisualElement BuildRegionRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.region"), "settings__caption"));
+            _regionButton = NewButton(
+                RegionButtonName, string.Empty, () => SetQuickMatchRegion(NextRegion(_editing.QuickMatchRegion, Regions)));
+            _regionButton.AddToClassList("settings__palette");
+            row.Add(_regionButton);
+            return row;
+        }
+
+        private VisualElement BuildTelemetryRow()
+        {
+            var row = NewRow();
+            row.Add(NewLabel(Localizer.Get("settings.telemetry"), "settings__caption"));
+            _telemetryButton = NewButton(TelemetryButtonName, string.Empty, () => SetTelemetryConsent(!_editing.TelemetryConsent));
+            _telemetryButton.AddToClassList("settings__mode");
+            row.Add(_telemetryButton);
+            return row;
+        }
+
         private VisualElement BuildVoiceMicrophoneRow()
         {
             var row = NewRow();
@@ -1150,6 +1256,18 @@ namespace Shooter.Runtime
             if (_sliders.TryGetValue(ControlValue.RumbleStrength, out var rumbleStrength))
             {
                 rumbleStrength.SetEnabled(_editing.RumbleEnabled);
+            }
+
+            if (_regionButton != null)
+            {
+                var region = _editing.QuickMatchRegion;
+                _regionButton.text = FormatRegion(region);
+                _regionButton.SetEnabled(NextRegion(region, Regions) != region);
+            }
+
+            if (_telemetryButton != null)
+            {
+                _telemetryButton.text = FormatOnOff(_editing.TelemetryConsent);
             }
 
             RefreshVoice();

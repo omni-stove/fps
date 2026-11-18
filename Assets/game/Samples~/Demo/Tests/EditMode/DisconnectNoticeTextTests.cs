@@ -85,6 +85,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ABanSaysThePlayerIsBanned()
+        {
+            var text = For(DisconnectNotice.RejectedReason(DisconnectNotice.BannedDetail), false);
+
+            Assert.That(text, Is.EqualTo(new LocalizedText("net.disconnect.banned")));
+            Assert.That(Localizer.Resolve(text), Is.EqualTo("このサーバーから BAN されているため参加できません。"));
+            Assert.That(For(DisconnectNotice.RejectedReason(DisconnectNotice.BannedDetail), true), Is.EqualTo(DisconnectNoticeText.BannedMessage), "banned while playing");
+        }
+
+        [Test]
+        public void AKickSaysTheAdministratorRemovedThePlayer()
+        {
+            var text = For(DisconnectNotice.RejectedReason(DisconnectNotice.KickedDetail), true);
+
+            Assert.That(text, Is.EqualTo(new LocalizedText("net.disconnect.kicked")));
+            Assert.That(Localizer.Resolve(text), Is.EqualTo("サーバーの管理者に切断されました (キック)。"));
+        }
+
+        [Test]
         public void TheIdleKickedReasonSaysThePlayerWasIdle()
         {
             var text = For(DisconnectNotice.IdleKickedReason, true);

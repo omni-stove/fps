@@ -20,6 +20,10 @@ namespace Shooter.Core
 
         public const string JoinCodeMismatchDetail = "join-code-mismatch";
 
+        public const string BannedDetail = "banned";
+
+        public const string KickedDetail = "kicked";
+
         // 切断理由はサーバー (または途中の誰か) が自由に送れるので、文に混ぜる符号は長さと文字を絞ってから使う。
         public const int MaxDetailLength = 32;
 

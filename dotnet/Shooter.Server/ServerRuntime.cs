@@ -19,8 +19,10 @@ namespace Shooter.Server
             IReadOnlyList<string> credentialSearchRoots,
             Func<IMatchTransport> createTransport,
             EosTransportFactory createEosTransport = null,
-            string builtVersion = null)
+            string builtVersion = null,
+            TextReader input = null)
         {
+            Input = input;
             Output = output ?? throw new ArgumentNullException(nameof(output));
             Error = error ?? throw new ArgumentNullException(nameof(error));
             Environment = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -38,6 +40,9 @@ namespace Shooter.Server
         public TextWriter Output { get; }
 
         public TextWriter Error { get; }
+
+        // null なら管理のコマンドを読まない。
+        public TextReader Input { get; }
 
         public Func<string, string> Environment { get; }
 
@@ -63,7 +68,8 @@ namespace Shooter.Server
                 ServerMapData.DefaultSearchRoots(),
                 ServerMapData.DefaultSearchRoots(),
                 () => new UdpMatchTransport(),
-                builtVersion: ServerBuildVersion.Embedded());
+                builtVersion: ServerBuildVersion.Embedded(),
+                input: Console.In);
         }
 
         private static bool CreateProcessEosTransport(

@@ -73,6 +73,43 @@ docker stop -t 700 shooter-server
 
 `compose.yaml` には 700 秒を書いてある。Kubernetes では `terminationGracePeriodSeconds` を同じように決める。
 
+### キックと BAN
+
+サーバーは標準入力から 1 行に 1 つのコマンドを読む。`make server-dotnet` ならそのまま端末に打つ。
+
+```sh
+make server-dotnet ARGS="--ban-file bans.local.json"
+```
+
+| コマンド | すること |
+| --- | --- |
+| `players` | つないでいる人を `player <番号> ... product_user_id=... address=...` で並べる |
+| `kick <番号> [理由]` | その人を切る。また入れる |
+| `ban <番号\|ProductUserId\|IP アドレス> [理由]` | 一覧に足してファイルに書き戻し、当てはまる人を切る |
+| `unban <ProductUserId\|IP アドレス>` | 一覧から除いてファイルに書き戻す |
+| `bans` | 一覧を並べる |
+| `help` | コマンドを並べる |
+
+- `ban <番号>` は、EOS でつないだ人なら ProductUserId を、UDP でつないだ人なら接続元の IP アドレスを載せる。
+  UDP でクライアントが名乗る ProductUserId は確かめられないので、ProductUserId の BAN は EOS の通信路でだけ効く。
+  EOS の P2P では接続元が分からないので、アドレスの BAN は UDP でだけ効く。同じ NAT の後ろの人もまとめて断る。
+- 切られた人と断られた人のクライアントは、メニューに BAN されたこと (キックならキックされたこと) を出す。理由の文はサーバーのログと一覧にだけ残り、クライアントには送らない。
+- `--ban-file` が無いと BAN は止めるまでしか覚えない。ファイルがまだ無ければ空の一覧として起動し、最初の `ban` で作る。
+- 読めない一覧 (JSON の誤り・知らない欄・形の違う Id やアドレス) では、欄の場所を添えたエラーで終了コード 3 になる。
+- 一覧はサーバーが書き戻すので、手で直すときはサーバーを止めてからにする。`bans.local.json` は `.gitignore` に入れてある。
+
+```json
+{
+  "bans": [
+    { "productUserId": "0002aaaabbbbccccddddeeeeffff0001", "reason": "aimbot", "bannedAt": "2026-11-18T09:00:00Z" },
+    { "address": "203.0.113.5" }
+  ]
+}
+```
+
+docker では `docker run -i` (compose なら `stdin_open: true`) で標準入力を開け、`docker attach shooter-server` で打つ。
+一覧はボリュームに置く (`-v ./bans:/bans` と `--ban-file /bans/bans.json`)。標準入力が閉じていると `[Admin] stdin closed` と出し、コマンドを読まずに動き続ける。
+
 ## 引数と環境変数
 
 イメージ名より後ろの引数はサーバーに渡る。引数は `ServerLaunch` と `NetLaunchOptions`、環境変数は `ServerLaunch` と `EosCredentials`、
@@ -86,6 +123,7 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
 
 - `-register-lobby <公開 IPv4:ポート>` を付けると、クイックマッチで探せる EOS のロビーに載る。ボイスはこのロビーの部屋を使うので、付けないサーバーにはボイスが無い。
 - `--private` か `--join-code <コード>` で、参加コードの合う人だけを入れる。コードを省くと作ってログに出す。
+- `--ban-file <パス>` で BAN の一覧を読み書きする ([キックと BAN](#キックと-ban))。
 - `-eac` は [anti-cheat.md](anti-cheat.md)。
 
 ## クライアントからつなぐ

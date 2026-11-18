@@ -204,6 +204,26 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheBanFileIsOptionalAndSurvivesSwappingTheOptions()
+        {
+            Assert.That(Parse(Env()).BanFile, Is.Null);
+
+            var launch = Parse(Env(), "--ban-file", "bans.local.json", "-transport", "eos");
+            var udp = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            Assert.That(launch.BanFile, Is.EqualTo("bans.local.json"));
+            Assert.That(udp.BanFile, Is.EqualTo("bans.local.json"));
+        }
+
+        [TestCase(ServerLaunch.BanFileFlag + " requires a path", "--ban-file")]
+        [TestCase(ServerLaunch.BanFileFlag + " requires a path", "--ban-file", "--private")]
+        [TestCase(ServerLaunch.BanFileFlag + " is given more than once", "--ban-file", "a.json", "--ban-file", "b.json")]
+        public void BadBanFileFlagsAreRejected(string expected, params string[] args)
+        {
+            Assert.That(Fail(Env(), args), Does.StartWith(expected));
+        }
+
+        [Test]
         public void APublicLaunchKeepsThePublicRules()
         {
             var rules = new NetMatchSettings(joinCode: "IGNORED");

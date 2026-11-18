@@ -26,9 +26,19 @@ namespace Shooter.Server
 
         public const string JoinCodeFlag = "--join-code";
 
+        public const string BanFileFlag = "--ban-file";
+
         private ServerLaunch(
-            NetLaunchOptions options, string version, int drainTimeoutSeconds, string rules, AntiCheatSettings antiCheat, bool privateMatch, string joinCode)
+            NetLaunchOptions options,
+            string version,
+            int drainTimeoutSeconds,
+            string rules,
+            AntiCheatSettings antiCheat,
+            bool privateMatch,
+            string joinCode,
+            string banFile)
         {
+            BanFile = banFile;
             PrivateMatch = privateMatch;
             JoinCode = joinCode;
             AntiCheat = antiCheat;
@@ -63,10 +73,13 @@ namespace Shooter.Server
 
         public string JoinCode { get; }
 
+        // null なら BAN は起動している間だけ覚え、ファイルには残さない。
+        public string BanFile { get; }
+
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile);
         }
 
         // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
@@ -176,13 +189,18 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryParseBanFile(args, out var banFile, out error))
+            {
+                return false;
+            }
+
             if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
             {
                 return false;
             }
 
             launch = new ServerLaunch(
-                options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat, privateMatch, joinCode);
+                options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat, privateMatch, joinCode, banFile);
             return true;
         }
 
@@ -233,6 +251,36 @@ namespace Shooter.Server
             }
 
             privateMatch = privateGiven || joinCode != null;
+            error = null;
+            return true;
+        }
+
+        // 値の先頭の - を断るのは、パスを書き忘れたときに次のフラグをファイル名として読み、BAN を思わぬ場所へ書き出さないため
+        private static bool TryParseBanFile(IReadOnlyList<string> args, out string banFile, out string error)
+        {
+            banFile = null;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (!string.Equals(args[i], BanFileFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = BanFileFlag + " requires a path";
+                    return false;
+                }
+
+                if (banFile != null)
+                {
+                    error = BanFileFlag + " is given more than once";
+                    return false;
+                }
+
+                banFile = args[++i];
+            }
+
             error = null;
             return true;
         }

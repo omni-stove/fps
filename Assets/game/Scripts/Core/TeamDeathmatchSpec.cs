@@ -26,6 +26,9 @@ namespace Shooter.Core
 
         public int PointsPerAssist { get; }
 
+        // 全滅で試合を終えないのは、全滅をラウンドの終わりとして外 (EliminationObjective) が数え、試合を次のラウンドへ続けるため
+        public bool RespawnsByRound { get; }
+
         public TeamDeathmatchSpec(
             int scoreLimit,
             float timeLimitSeconds,
@@ -34,7 +37,8 @@ namespace Shooter.Core
             int sideCount = DefaultSideCount,
             int sideCapacity = DefaultSideCapacity,
             int pointsPerKill = DefaultPointsPerKill,
-            int pointsPerAssist = DefaultPointsPerAssist)
+            int pointsPerAssist = DefaultPointsPerAssist,
+            bool respawnsByRound = false)
         {
             if (scoreLimit <= 0)
             {
@@ -79,6 +83,7 @@ namespace Shooter.Core
             SideCapacity = sideCapacity;
             PointsPerKill = pointsPerKill;
             PointsPerAssist = pointsPerAssist;
+            RespawnsByRound = respawnsByRound;
         }
     }
 }

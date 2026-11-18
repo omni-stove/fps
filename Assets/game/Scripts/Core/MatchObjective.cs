@@ -6,5 +6,7 @@ namespace Shooter.Core
         None,
 
         Domination,
+
+        Elimination,
     }
 }

@@ -101,7 +101,7 @@ namespace Shooter.Core.Tests
         }
 
         [TestCase(-1)]
-        [TestCase(2)]
+        [TestCase(3)]
         public void RejectsAnUndefinedObjective(int value)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(objective: (MatchObjective)value));
@@ -127,11 +127,12 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void MatchObjectiveHasNoneAndDominationInThatOrder()
+        public void MatchObjectiveHasNoneDominationAndEliminationInThatOrder()
         {
             // 値の並びがアセットの直列化に乗るので、後ろに足したことを固定する。
             Assert.That((int)MatchObjective.None, Is.EqualTo(0));
             Assert.That((int)MatchObjective.Domination, Is.EqualTo(1));
+            Assert.That((int)MatchObjective.Elimination, Is.EqualTo(2));
         }
 
         [Test]

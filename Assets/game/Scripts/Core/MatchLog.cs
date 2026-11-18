@@ -144,6 +144,30 @@ namespace Shooter.Core
             return Tag + " round phase=" + (phase.HasValue ? phase.Value.ToString() : "none");
         }
 
+        public static string Elimination(int winsToWin, float preparationSeconds, float roundTimeLimitSeconds)
+        {
+            return Tag + " elimination winsToWin=" + winsToWin.ToString(CultureInfo.InvariantCulture)
+                + " preparation=" + preparationSeconds.ToString(CultureInfo.InvariantCulture)
+                + "s roundTimeLimit=" + roundTimeLimitSeconds.ToString(CultureInfo.InvariantCulture) + "s";
+        }
+
+        public static string RoundPreparing(int round)
+        {
+            return Tag + " round " + round.ToString(CultureInfo.InvariantCulture) + " preparing";
+        }
+
+        public static string RoundLive(int round)
+        {
+            return Tag + " round " + round.ToString(CultureInfo.InvariantCulture) + " live";
+        }
+
+        public static string RoundEnded(int round, Team? winner, int alphaWins, int bravoWins)
+        {
+            return Tag + " round " + round.ToString(CultureInfo.InvariantCulture)
+                + " ended winner=" + (winner.HasValue ? winner.Value.ToString() : "draw")
+                + " wins=" + alphaWins.ToString(CultureInfo.InvariantCulture) + "-" + bravoWins.ToString(CultureInfo.InvariantCulture);
+        }
+
         public static string MapChanged(string fromMap, string toMap)
         {
             if (string.IsNullOrEmpty(fromMap))

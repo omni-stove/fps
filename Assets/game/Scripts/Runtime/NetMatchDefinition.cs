@@ -60,6 +60,16 @@ namespace Shooter.Runtime
         [SerializeField, Min(1), Tooltip("占領を速める人数の上限")]
         private int _maxCapturers = DominationSpec.DefaultMaxCapturers;
 
+        [Header("ラウンド制 (全滅)")]
+        [SerializeField, Min(1), Tooltip("先に取ったチームが勝つラウンドの数")]
+        private int _roundWinsToWin = NetMatchSettings.DefaultRoundWinsToWin;
+
+        [SerializeField, Min(0f), Tooltip("ラウンドの頭で全員が出直してから撃ち合いを始めるまでの秒数")]
+        private float _roundPreparationSeconds = NetMatchSettings.DefaultRoundPreparationSeconds;
+
+        [SerializeField, Min(1f), Tooltip("1 ラウンドの制限時間 (秒)。切れたら立っている人の多いチームが取る")]
+        private float _roundTimeLimitSeconds = NetMatchSettings.DefaultRoundTimeLimitSeconds;
+
         [Header("試合の間")]
         [SerializeField, Tooltip("次の試合のマップの候補 (マップのシーン名)。空なら今のマップのまま続ける")]
         private List<string> _mapPool = new List<string>();
@@ -213,7 +223,10 @@ namespace Shooter.Runtime
                 _privateMatch,
                 _joinCode,
                 _chatIntervalSeconds,
-                _maxChatLength);
+                _maxChatLength,
+                _roundWinsToWin,
+                _roundPreparationSeconds,
+                _roundTimeLimitSeconds);
         }
 
         public NetMotorSettings ToMotor()

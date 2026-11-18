@@ -38,15 +38,18 @@ namespace Shooter.Core
 
             var scoreLimit = new ScoreLimitWin(spec.ScoreLimit);
             var timeLimit = new TimeLimitWin();
-            var winConditions = spec.Rules.RespawnMode == RespawnMode.None
+            var winConditions = spec.Rules.RespawnMode == RespawnMode.None && !spec.RespawnsByRound
                 ? new IWinCondition[] { new LastSideStandingWin(), scoreLimit, timeLimit }
                 : new IWinCondition[] { scoreLimit, timeLimit };
+
+            // NoRespawn にすると倒れた人が ModeSession の中で倒れたままになり、次のラウンドのキルを数えなくなるので、出直しの決まりを持たせない
+            var respawn = spec.RespawnsByRound ? null : RespawnPolicy.FromRules(spec.Rules, spec.RespawnSeconds);
 
             _session = new ModeSession(
                 new TwoTeams(),
                 spec.TimeLimitSeconds,
                 new IScoreRule[] { new KillScore(spec.PointsPerKill, spec.PointsPerAssist) },
-                RespawnPolicy.FromRules(spec.Rules, spec.RespawnSeconds),
+                respawn,
                 winConditions);
             _session.StateChanged += state => StateChanged?.Invoke(state);
             _session.RespawnReady += playerId => RespawnReady?.Invoke(playerId);

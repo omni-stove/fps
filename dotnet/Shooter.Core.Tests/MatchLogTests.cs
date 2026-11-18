@@ -30,6 +30,16 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void FormatsTheRoundsOfAnEliminationMatch()
+        {
+            Assert.That(MatchLog.Elimination(3, 5f, 120f), Is.EqualTo("[Match] elimination winsToWin=3 preparation=5s roundTimeLimit=120s"));
+            Assert.That(MatchLog.RoundPreparing(2), Is.EqualTo("[Match] round 2 preparing"));
+            Assert.That(MatchLog.RoundLive(2), Is.EqualTo("[Match] round 2 live"));
+            Assert.That(MatchLog.RoundEnded(2, Team.Bravo, 1, 1), Is.EqualTo("[Match] round 2 ended winner=Bravo wins=1-1"));
+            Assert.That(MatchLog.RoundEnded(3, null, 1, 1), Is.EqualTo("[Match] round 3 ended winner=draw wins=1-1"));
+        }
+
+        [Test]
         public void FormatsEndedInDraw()
         {
             Assert.That(MatchLog.Ended(null), Is.EqualTo("[Match] ended winner=draw"));

@@ -42,6 +42,8 @@ namespace Shooter.NetV2
 
         public Func<bool> PushToTalkHeld { get; set; }
 
+        public BlockListStore Blocks { get; set; } = new BlockListStore();
+
         // null ならオフラインと同じ Resources の調整値 (melee・streaks の JSON) を使う
         public MeleeSpec Melee { get; set; }
 
@@ -63,11 +65,14 @@ namespace Shooter.NetV2
             }
 
             var client = context.Client;
+            var blocks = new NetV2BlockPart(
+                client, context.VoiceRoster, context.Blocks ?? new BlockListStore(), context.Voice == null, context.Log);
             var deployables = new NetV2DeployablesPart(context.Send, () => client.PlayerId, DeployDefinitionsOf(context.Abilities), context.Log);
             var parts = new List<INetV2ClientPart>
             {
+                blocks,
                 new NetV2MinimapPart(() => client.PlayerId, context.Pings, context.Minimap, context.ControlPointPosition),
-                new NetV2ChatPart(context.Send, ClientChat.DefaultCapacity, context.Log),
+                new NetV2ChatPart(context.Send, ClientChat.DefaultCapacity, context.Log, blocks.Blocks),
                 new NetV2MapVotePart(context.Send, context.Log, context.MapDecided),
                 new NetV2SpectatePart(client, context.Send, context.LocalPlayer),
 
@@ -83,7 +88,14 @@ namespace Shooter.NetV2
             if (context.Voice != null)
             {
                 parts.Add(new NetV2VoicePart(
-                    context.Client, context.Voice, context.VoiceLobbyId, context.VoiceRoster, context.VoiceSettings, context.Log, context.PushToTalkHeld));
+                    context.Client,
+                    context.Voice,
+                    context.VoiceLobbyId,
+                    context.VoiceRoster,
+                    context.VoiceSettings,
+                    context.Log,
+                    context.PushToTalkHeld,
+                    blocks.Blocks));
             }
 
             return parts;

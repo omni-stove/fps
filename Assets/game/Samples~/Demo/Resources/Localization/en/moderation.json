@@ -1,0 +1,17 @@
+{
+  "moderation.players": "Players",
+  "moderation.back": "Back",
+  "moderation.mute": "Mute",
+  "moderation.unmute": "Unmute",
+  "moderation.block": "Block",
+  "moderation.unblock": "Unblock",
+  "moderation.report": "Report",
+  "moderation.reported": "Reported",
+  "moderation.reportPrompt": "Why are you reporting {0}?",
+  "moderation.cancel": "Cancel",
+  "moderation.reason.cheating": "Cheating",
+  "moderation.reason.abuse": "Abuse",
+  "moderation.reason.spam": "Spam",
+  "moderation.reason.offensiveName": "Offensive name",
+  "moderation.reason.other": "Other"
+}

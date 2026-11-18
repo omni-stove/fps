@@ -186,6 +186,74 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void LinesFromABlockedSenderAreDroppedWithoutLoggingTheText()
+        {
+            var blocks = Blocks();
+            var chat = new ClientChat(4, Send, _logs.Add, blocks);
+            blocks.SetBlocked(5, true);
+
+            Assert.That(chat.Handle(Message(5, WireChatChannel.All, "secret"), 1d), Is.True, "the message is still taken");
+            Assert.That(chat.Handle(Message(6, WireChatChannel.All, "hello"), 2d), Is.True);
+
+            Assert.That(chat.Lines, Is.EqualTo(new[] { new ChatLine(6, CoreChatChannel.All, "hello", 2d) }));
+            Assert.That(_logs, Has.Member("[Chat] dropped a line from a blocked sender=5"));
+            Assert.That(_logs, Has.None.Contains("secret"));
+        }
+
+        [Test]
+        public void RemoveBlockedTakesAwayLinesShownBeforeTheBlock()
+        {
+            var blocks = Blocks();
+            var chat = new ClientChat(4, Send, _logs.Add, blocks);
+            chat.Handle(Message(5, WireChatChannel.All, "a"), 1d);
+            chat.Handle(Message(6, WireChatChannel.Team, "b"), 2d);
+            chat.Handle(Message(5, WireChatChannel.All, "c"), 3d);
+            blocks.SetBlocked(5, true);
+
+            Assert.That(chat.RemoveBlocked(), Is.EqualTo(2));
+            Assert.That(chat.RemoveBlocked(), Is.Zero);
+
+            Assert.That(chat.Lines, Is.EqualTo(new[] { new ChatLine(6, CoreChatChannel.Team, "b", 2d) }));
+            Assert.That(_logs, Has.Member("[Chat] removed 2 shown line(s) from blocked senders"));
+        }
+
+        [Test]
+        public void UnblockingLetsNewLinesThroughAgain()
+        {
+            var blocks = Blocks();
+            var chat = new ClientChat(4, Send, _logs.Add, blocks);
+            blocks.SetBlocked(5, true);
+            chat.Handle(Message(5, WireChatChannel.All, "a"), 1d);
+
+            blocks.SetBlocked(5, false);
+            chat.Handle(Message(5, WireChatChannel.All, "b"), 2d);
+
+            Assert.That(chat.Lines, Is.EqualTo(new[] { new ChatLine(5, CoreChatChannel.All, "b", 2d) }));
+        }
+
+        [Test]
+        public void MutingDoesNotDropChat()
+        {
+            var blocks = Blocks();
+            var chat = new ClientChat(4, Send, _logs.Add, blocks);
+            blocks.SetMuted(5, true);
+
+            chat.Handle(Message(5, WireChatChannel.All, "a"), 1d);
+
+            Assert.That(chat.Lines.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WithoutBlocksRemoveBlockedDoesNothing()
+        {
+            var chat = Chat(2);
+            chat.Handle(Message(5, WireChatChannel.All, "a"), 1d);
+
+            Assert.That(chat.RemoveBlocked(), Is.Zero);
+            Assert.That(chat.Lines.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void TheConstructorAndSendRejectBadArguments()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new ClientChat(0, Send, _logs.Add));
@@ -198,6 +266,12 @@ namespace Shooter.NetV2.Tests
         private ClientChat Chat(int capacity)
         {
             return new ClientChat(capacity, Send, _logs.Add);
+        }
+
+        // 名簿が空なので、ブロックはこの試合だけ参加者 Id で効く。
+        private static ClientBlocks Blocks()
+        {
+            return new ClientBlocks(new BlockList(), new VoiceRoster(), () => 1, _ => { }, _ => { });
         }
 
         private bool Send(IMessage message)

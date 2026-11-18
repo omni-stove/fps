@@ -23,7 +23,7 @@ namespace Shooter.NetV2.Tests
         [Test]
         public void ApplyReplacesTheWholeRosterWithOneChange()
         {
-            _roster.Set(_bob, 9);
+            _roster.Set(_bob, 9, true);
             _changes = 0;
 
             _roster.Apply(Message((1, _alice), (2, _bob)));
@@ -75,12 +75,31 @@ namespace Shooter.NetV2.Tests
             Assert.Throws<ArgumentNullException>(() => _roster.Apply(null));
         }
 
+        [Test]
+        public void ApplyKeepsWhetherEachIdWasVerifiedAndAChangeOfItIsAChange()
+        {
+            var message = new VoiceRosterMessage();
+            message.Add(1, _alice, true);
+            message.Add(2, _bob, false);
+            _roster.Apply(message);
+
+            Assert.That(_roster.IsVerified(_alice), Is.True);
+            Assert.That(_roster.IsVerified(_bob), Is.False);
+            Assert.That(_roster.TryGetPlayerId(_bob, out _), Is.True, "an unverified id still routes the voice");
+
+            _changes = 0;
+            _roster.Apply(Message((1, _alice), (2, _bob)));
+
+            Assert.That(_changes, Is.EqualTo(1));
+            Assert.That(_roster.IsVerified(_bob), Is.True);
+        }
+
         private static VoiceRosterMessage Message(params (int PlayerId, string UserId)[] entries)
         {
             var message = new VoiceRosterMessage();
             foreach (var entry in entries)
             {
-                message.Add(entry.PlayerId, entry.UserId);
+                message.Add(entry.PlayerId, entry.UserId, true);
             }
 
             return message;

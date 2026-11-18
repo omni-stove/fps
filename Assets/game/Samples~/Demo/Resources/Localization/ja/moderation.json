@@ -1,0 +1,17 @@
+{
+  "moderation.players": "プレイヤー",
+  "moderation.back": "戻る",
+  "moderation.mute": "ミュート",
+  "moderation.unmute": "ミュート解除",
+  "moderation.block": "ブロック",
+  "moderation.unblock": "ブロック解除",
+  "moderation.report": "通報",
+  "moderation.reported": "通報済み",
+  "moderation.reportPrompt": "{0} を通報する理由",
+  "moderation.cancel": "やめる",
+  "moderation.reason.cheating": "チート",
+  "moderation.reason.abuse": "暴言・嫌がらせ",
+  "moderation.reason.spam": "スパム",
+  "moderation.reason.offensiveName": "不適切な名前",
+  "moderation.reason.other": "その他"
+}

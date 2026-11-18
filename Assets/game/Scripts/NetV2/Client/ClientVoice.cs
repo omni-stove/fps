@@ -11,6 +11,7 @@ namespace Shooter.NetV2
     {
         private readonly IVoiceSession _session;
         private readonly VoiceRoster _roster;
+        private readonly ClientBlocks _blocks;
         private readonly Dictionary<int, Team> _teams = new Dictionary<int, Team>();
         private readonly Dictionary<string, bool> _receiving = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly List<string> _participants = new List<string>();
@@ -24,13 +25,19 @@ namespace Shooter.NetV2
         private VoiceStatus? _status;
         private bool _disposed;
 
-        public ClientVoice(IVoiceSession session, VoiceRoster roster)
+        public ClientVoice(IVoiceSession session, VoiceRoster roster, ClientBlocks blocks = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _roster = roster ?? throw new ArgumentNullException(nameof(roster));
+            _blocks = blocks;
             _session.SpeakersChanged += HandleSpeakersChanged;
             _session.StateChanged += HandleStateChanged;
             _roster.Changed += Refresh;
+            if (_blocks != null)
+            {
+                _blocks.Changed += Refresh;
+            }
+
             _session.SetVolume(_settings.Volume);
         }
 
@@ -173,6 +180,11 @@ namespace Shooter.NetV2
                 return true;
             }
 
+            if (_blocks != null && _blocks.IsMutedUser(productUserId))
+            {
+                return false;
+            }
+
             return _localTeam.HasValue && _teams.TryGetValue(playerId, out var team) && team == _localTeam.Value;
         }
 
@@ -187,6 +199,11 @@ namespace Shooter.NetV2
             _session.SpeakersChanged -= HandleSpeakersChanged;
             _session.StateChanged -= HandleStateChanged;
             _roster.Changed -= Refresh;
+            if (_blocks != null)
+            {
+                _blocks.Changed -= Refresh;
+            }
+
             _session.Dispose();
             _entered = false;
             if (_status.HasValue)

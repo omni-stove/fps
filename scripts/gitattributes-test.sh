@@ -21,6 +21,7 @@ check Assets/game/Rules/NetMatch.asset text auto
 check Assets/game/Scenes/NetTest/NavMesh-Floor.asset text unset
 check Assets/game/Scenes/NetTest/NavMesh-Floor.asset diff unset
 check Assets/game/Scenes/NetTest/NavMesh-Floor.asset merge unset
+check ProjectSettings/NavMeshAreas.asset diff unspecified
 check Assets/game/Scenes/A/LightingData.asset text unset
 check Assets/game/Audio/A.wav text unset
 check Assets/game/Audio/A.wav diff unset

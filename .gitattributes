@@ -2,7 +2,7 @@
 * text=auto eol=lf
 
 # Force Text でも NavMesh は中身がバイナリで、テキストとして差分もマージもできない
-**/NavMesh*.asset binary
+**/NavMesh-*.asset binary
 LightingData.asset binary
 
 # 画像

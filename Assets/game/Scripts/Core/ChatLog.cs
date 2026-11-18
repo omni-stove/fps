@@ -23,6 +23,35 @@ namespace Shooter.Core
                 gate.MaxLength);
         }
 
+        // 語そのものはゲームの載せた不適切な語なので、ログには数だけを出す。
+        public static string WordFilter(ChatWordFilter filter)
+        {
+            if (filter == null)
+            {
+                throw new ArgumentNullException(nameof(filter));
+            }
+
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} word filter words={1} action={2} mask={3} wholeWordsOnly={4}",
+                Tag,
+                filter.Count,
+                filter.Spec.Action,
+                filter.Spec.Mask,
+                filter.Spec.WholeWordsOnly ? "true" : "false");
+        }
+
+        public static string Masked(ChatLine line)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} masked sender={1} channel={2} at={3:0.00}",
+                Tag,
+                line.SenderId,
+                line.Channel,
+                line.SentAtSeconds);
+        }
+
         public static string Accepted(ChatLine line)
         {
             return string.Format(

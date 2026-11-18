@@ -1,0 +1,6 @@
+{
+  "words": ["badword", "noob"],
+  "mask": "*",
+  "action": "Mask",
+  "wholeWordsOnly": false
+}

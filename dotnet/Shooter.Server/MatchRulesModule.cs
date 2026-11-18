@@ -56,7 +56,8 @@ namespace Shooter.Server
             var points = PointsOf(context.Map);
             var rules = _data.Rules;
             var settings = _data.Settings;
-            _objective = ServerObjectiveFactory.Create(rules.Objective, settings, this);
+            _objective = _createObjective(rules.Objective, settings, this)
+                ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             CheckOtherMaps();
             _objective.UseMap(context.Map, points);
             try
@@ -119,7 +120,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
-            PrepareChat(settings);
+            PrepareChat(settings, _data.ChatWords);
             PrepareMapVote();
             StartObjective();
         }
@@ -267,6 +268,7 @@ namespace Shooter.Server
             }
 
             FillControlPoints(snapshot.ControlPoints);
+            FillObjectiveItems(snapshot.ObjectiveItems);
         }
 
         public bool CanFire(int playerId)
@@ -302,7 +304,10 @@ namespace Shooter.Server
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
-            snapshot.Rules = MatchRulesSync.From(_data.Rules);
+            var synced = MatchRulesSync.From(_data.Rules);
+            synced.WeatherId = _data.Settings.WeatherId;
+            synced.TimeOfDayId = _data.Settings.TimeOfDayId;
+            snapshot.Rules = synced;
             _objective.FillMatch(ref snapshot);
             FillRound(ref snapshot);
         }

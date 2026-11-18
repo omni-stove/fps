@@ -14,6 +14,9 @@ namespace Shooter.Protocol
         public Team Team { get; set; }
         public bool IsBot { get; set; }
 
+        // 部分を分けずに Identity に載せるのは、部分のビットに空きが無く、陣営と同じく入り直すとき以外ほぼ変わらないため。
+        public string CosmeticId { get; set; }
+
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
 
@@ -62,6 +65,10 @@ namespace Shooter.Protocol
 
         public int Assists { get; set; }
 
+        public int GunGameTier { get; set; }
+
+        public int StreakKills { get; set; }
+
         public int EntityId => PlayerId;
 
         public int PresentBits => (int)Present;
@@ -73,7 +80,9 @@ namespace Shooter.Protocol
         public int ChangedBits(in PlayerSnapshot baseline)
         {
             var bits = PlayerFields.None;
-            if (Team != baseline.Team || IsBot != baseline.IsBot)
+            if (Team != baseline.Team
+                || IsBot != baseline.IsBot
+                || !string.Equals(CosmeticId ?? "", baseline.CosmeticId ?? "", System.StringComparison.Ordinal))
             {
                 bits |= PlayerFields.Identity;
             }
@@ -174,6 +183,11 @@ namespace Shooter.Protocol
                 bits |= PlayerFields.Assists;
             }
 
+            if (GunGameTier != baseline.GunGameTier || StreakKills != baseline.StreakKills)
+            {
+                bits |= PlayerFields.Progress;
+            }
+
             return (int)bits;
         }
 
@@ -184,6 +198,7 @@ namespace Shooter.Protocol
             {
                 writer.WriteByte((byte)Team);
                 writer.WriteBool(IsBot);
+                writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -293,6 +308,17 @@ namespace Shooter.Protocol
 
                 writer.WriteInt32(Assists);
             }
+
+            if ((fields & PlayerFields.Progress) != 0)
+            {
+                if (GunGameTier < 0 || StreakKills < 0)
+                {
+                    throw new System.InvalidOperationException("gun game tier and streak kills must not be negative");
+                }
+
+                writer.WriteInt32(GunGameTier);
+                writer.WriteInt32(StreakKills);
+            }
         }
 
         public void ReadBits(MessageReader reader, int id, int bits)
@@ -304,6 +330,7 @@ namespace Shooter.Protocol
             {
                 Team = (Team)reader.ReadByteBelow(EnumRange<Team>.Count, "team");
                 IsBot = reader.ReadBool();
+                CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -409,6 +436,12 @@ namespace Shooter.Protocol
             {
                 Assists = reader.ReadInt32AtLeast(0, "assists");
             }
+
+            if ((fields & PlayerFields.Progress) != 0)
+            {
+                GunGameTier = reader.ReadInt32AtLeast(0, "gun game tier");
+                StreakKills = reader.ReadInt32AtLeast(0, "streak kills");
+            }
         }
 
         public void FillFrom(in PlayerSnapshot baseline)
@@ -418,6 +451,7 @@ namespace Shooter.Protocol
             {
                 Team = baseline.Team;
                 IsBot = baseline.IsBot;
+                CosmeticId = baseline.CosmeticId;
             }
 
             if ((missing & PlayerFields.Motion) != 0)
@@ -502,6 +536,12 @@ namespace Shooter.Protocol
             if ((missing & PlayerFields.Assists) != 0)
             {
                 Assists = baseline.Assists;
+            }
+
+            if ((missing & PlayerFields.Progress) != 0)
+            {
+                GunGameTier = baseline.GunGameTier;
+                StreakKills = baseline.StreakKills;
             }
 
             Present = PlayerFields.All;

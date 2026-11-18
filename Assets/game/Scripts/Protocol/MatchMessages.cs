@@ -25,6 +25,9 @@ namespace Shooter.Protocol
                 new ChatRequestMessage(),
                 new MapVoteRequestMessage(),
                 new SpectateRequestMessage(),
+                new StreakUseRequestMessage(),
+                new DeployRequestMessage(),
+                new ReportRequestMessage(),
             };
         }
 
@@ -62,6 +65,8 @@ namespace Shooter.Protocol
                 new InventoryStateMessage(),
                 new VehicleCorrectedMessage(),
                 new ChatMessage(),
+                new StreakActivatedMessage(),
+                new KillCamClipMessage(),
             };
         }
 

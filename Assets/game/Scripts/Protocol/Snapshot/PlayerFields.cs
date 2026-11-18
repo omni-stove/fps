@@ -2,6 +2,8 @@ using System;
 
 namespace Shooter.Protocol
 {
+    // Gun Game の段とストリークを別々の部分にせず Progress にまとめるのは、SnapshotList が部分のビットを 2 バイトで書き、
+    // これで 16 個の空きを使い切るため。
     [Flags]
     public enum PlayerFields
     {
@@ -21,7 +23,8 @@ namespace Shooter.Protocol
         Vehicle = 1 << 12,
         Traversal = 1 << 13,
         Assists = 1 << 14,
-        All = (1 << 15) - 1,
-        Optional = Traversal | Assists,
+        Progress = 1 << 15,
+        All = (1 << 16) - 1,
+        Optional = Traversal | Assists | Progress,
     }
 }

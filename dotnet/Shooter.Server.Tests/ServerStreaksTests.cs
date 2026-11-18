@@ -343,7 +343,12 @@ namespace Shooter.Server.Tests
         {
             return new StreakActivatedMessage
             {
-                PlayerId = m.PlayerId, Team = m.Team, RewardId = m.RewardId, HasTarget = m.HasTarget, Target = m.Target, DurationSeconds = m.DurationSeconds,
+                PlayerId = m.PlayerId,
+                Team = m.Team,
+                RewardId = m.RewardId,
+                HasTarget = m.HasTarget,
+                Target = m.Target,
+                DurationSeconds = m.DurationSeconds,
             };
         }
 

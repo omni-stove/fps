@@ -27,6 +27,9 @@ namespace Shooter.Protocol
         public const ushort ChatRequest = 27;
         public const ushort MapVoteRequest = 28;
         public const ushort SpectateRequest = 29;
+        public const ushort StreakUseRequest = 30;
+        public const ushort DeployRequest = 31;
+        public const ushort ReportRequest = 32;
 
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;
@@ -54,5 +57,7 @@ namespace Shooter.Protocol
         public const ushort InventoryState = 82;
         public const ushort VehicleCorrected = 83;
         public const ushort Chat = 84;
+        public const ushort StreakActivated = 85;
+        public const ushort KillCamClip = 86;
     }
 }

@@ -21,6 +21,10 @@ namespace Shooter.Protocol
         public Ladder Ladder { get; set; }
         public ReloadMode ReloadMode { get; set; }
 
+        public string WeatherId { get; set; }
+
+        public string TimeOfDayId { get; set; }
+
         public Jump Jump
         {
             get => _jumpForbidden ? Jump.Off : Jump.On;
@@ -77,7 +81,9 @@ namespace Shooter.Protocol
                 && Prone == other.Prone
                 && Ladder == other.Ladder
                 && ReloadMode == other.ReloadMode
-                && Jump == other.Jump;
+                && Jump == other.Jump
+                && string.Equals(WeatherId ?? "", other.WeatherId ?? "", System.StringComparison.Ordinal)
+                && string.Equals(TimeOfDayId ?? "", other.TimeOfDayId ?? "", System.StringComparison.Ordinal);
         }
 
         internal void Write(MessageWriter writer)
@@ -96,9 +102,11 @@ namespace Shooter.Protocol
             writer.WriteByte((byte)Ladder);
             writer.WriteByte((byte)ReloadMode);
             writer.WriteByte((byte)Jump);
+            writer.WriteString(WeatherId, MatchProtocol.MaxContentIdBytes);
+            writer.WriteString(TimeOfDayId, MatchProtocol.MaxContentIdBytes);
         }
 
-        internal static MatchRulesSync Read(MessageReader reader)
+        internal static MatchRulesSync Read(MessageReader reader, in MatchRulesSync previous)
         {
             return new MatchRulesSync
             {
@@ -116,6 +124,8 @@ namespace Shooter.Protocol
                 Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
                 ReloadMode = (ReloadMode)reader.ReadByteBelow(EnumRange<ReloadMode>.Count, "reload mode"),
                 Jump = (Jump)reader.ReadByteBelow(EnumRange<Jump>.Count, "jump rule"),
+                WeatherId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.WeatherId),
+                TimeOfDayId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.TimeOfDayId),
             };
         }
     }

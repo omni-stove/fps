@@ -29,6 +29,16 @@ namespace Shooter.Protocol
 
         public RoundPhase Round { get; set; }
 
+        public bool HasActivePoint { get; set; }
+
+        public int ActivePointIndex { get; set; }
+
+        public bool HasBomb { get; set; }
+
+        public BombState Bomb { get; set; }
+
+        public int ObjectiveRemainingSeconds { get; set; }
+
         internal MatchFields ChangedFields(in MatchSnapshot baseline)
         {
             var fields = MatchFields.None;
@@ -57,6 +67,15 @@ namespace Shooter.Protocol
             if (HasRound != baseline.HasRound || (HasRound && Round != baseline.Round))
             {
                 fields |= MatchFields.Round;
+            }
+
+            if (HasActivePoint != baseline.HasActivePoint
+                || (HasActivePoint && ActivePointIndex != baseline.ActivePointIndex)
+                || HasBomb != baseline.HasBomb
+                || (HasBomb && Bomb != baseline.Bomb)
+                || ObjectiveRemainingSeconds != baseline.ObjectiveRemainingSeconds)
+            {
+                fields |= MatchFields.ObjectiveState;
             }
 
             return fields;
@@ -93,6 +112,26 @@ namespace Shooter.Protocol
                 writer.WriteBool(HasRound);
                 writer.WriteByte(HasRound ? (byte)Round : (byte)0);
             }
+
+            if ((fields & MatchFields.ObjectiveState) != 0)
+            {
+                if (HasActivePoint && (ActivePointIndex < 0 || ActivePointIndex >= SnapshotMessage.MaxControlPoints))
+                {
+                    throw new System.InvalidOperationException(
+                        "the active point index must be 0 to " + (SnapshotMessage.MaxControlPoints - 1));
+                }
+
+                if (ObjectiveRemainingSeconds < 0)
+                {
+                    throw new System.InvalidOperationException("objective remaining seconds must not be negative");
+                }
+
+                writer.WriteBool(HasActivePoint);
+                writer.WriteByte(HasActivePoint ? (byte)ActivePointIndex : (byte)0);
+                writer.WriteBool(HasBomb);
+                writer.WriteByte(HasBomb ? (byte)Bomb : (byte)0);
+                writer.WriteInt32(ObjectiveRemainingSeconds);
+            }
         }
 
         internal void Read(MessageReader reader, MatchFields fields)
@@ -111,7 +150,7 @@ namespace Shooter.Protocol
 
             if ((fields & MatchFields.Rules) != 0)
             {
-                Rules = MatchRulesSync.Read(reader);
+                Rules = MatchRulesSync.Read(reader, Rules);
             }
 
             if ((fields & MatchFields.Objective) != 0)
@@ -125,6 +164,15 @@ namespace Shooter.Protocol
             {
                 HasRound = reader.ReadBool();
                 Round = (RoundPhase)reader.ReadByteBelow(EnumRange<RoundPhase>.Count, "round phase");
+            }
+
+            if ((fields & MatchFields.ObjectiveState) != 0)
+            {
+                HasActivePoint = reader.ReadBool();
+                ActivePointIndex = reader.ReadByteBelow(SnapshotMessage.MaxControlPoints, "active point");
+                HasBomb = reader.ReadBool();
+                Bomb = (BombState)reader.ReadByteBelow(EnumRange<BombState>.Count, "bomb state");
+                ObjectiveRemainingSeconds = reader.ReadInt32AtLeast(0, "objective remaining seconds");
             }
         }
 
@@ -159,6 +207,15 @@ namespace Shooter.Protocol
             {
                 HasRound = baseline.HasRound;
                 Round = baseline.Round;
+            }
+
+            if ((missing & MatchFields.ObjectiveState) != 0)
+            {
+                HasActivePoint = baseline.HasActivePoint;
+                ActivePointIndex = baseline.ActivePointIndex;
+                HasBomb = baseline.HasBomb;
+                Bomb = baseline.Bomb;
+                ObjectiveRemainingSeconds = baseline.ObjectiveRemainingSeconds;
             }
         }
     }

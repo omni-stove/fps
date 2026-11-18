@@ -59,7 +59,7 @@ namespace Shooter.Core
             return profile.WithStats(headshots, meleeKills, profile.PlaySeconds);
         }
 
-        public PlayerProfile RecordPlayTime(PlayerProfile profile, double seconds)
+        public static PlayerProfile RecordPlayTime(PlayerProfile profile, double seconds)
         {
             if (profile == null)
             {

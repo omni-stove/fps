@@ -139,7 +139,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            _progression.Change(profile => Tracker.RecordPlayTime(profile, whole));
+            _progression.Change(profile => AchievementTracker.RecordPlayTime(profile, whole));
             Debug.Log(AchievementLog.PlayTime(whole, _progression.Profile.PlaySeconds));
         }
 

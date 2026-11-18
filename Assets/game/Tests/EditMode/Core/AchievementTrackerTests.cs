@@ -59,12 +59,12 @@ namespace Shooter.Core.Tests
         {
             var profile = PlayerProfile.Empty.WithStats(0, 0, 100);
 
-            Assert.That(_tracker.RecordPlayTime(profile, 59.9).PlaySeconds, Is.EqualTo(159));
-            Assert.That(_tracker.RecordPlayTime(profile, 0.5), Is.SameAs(profile));
-            Assert.That(_tracker.RecordPlayTime(PlayerProfile.Empty.WithStats(0, 0, int.MaxValue - 1), 10).PlaySeconds, Is.EqualTo(int.MaxValue));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _tracker.RecordPlayTime(profile, -1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _tracker.RecordPlayTime(profile, double.NaN));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _tracker.RecordPlayTime(profile, double.PositiveInfinity));
+            Assert.That(AchievementTracker.RecordPlayTime(profile, 59.9).PlaySeconds, Is.EqualTo(159));
+            Assert.That(AchievementTracker.RecordPlayTime(profile, 0.5), Is.SameAs(profile));
+            Assert.That(AchievementTracker.RecordPlayTime(PlayerProfile.Empty.WithStats(0, 0, int.MaxValue - 1), 10).PlaySeconds, Is.EqualTo(int.MaxValue));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AchievementTracker.RecordPlayTime(profile, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AchievementTracker.RecordPlayTime(profile, double.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AchievementTracker.RecordPlayTime(profile, double.PositiveInfinity));
         }
 
         [Test]
@@ -133,7 +133,7 @@ namespace Shooter.Core.Tests
         {
             Assert.Throws<ArgumentNullException>(() => new AchievementTracker(null));
             Assert.Throws<ArgumentNullException>(() => _tracker.RecordKill(null, false, "rifle"));
-            Assert.Throws<ArgumentNullException>(() => _tracker.RecordPlayTime(null, 1));
+            Assert.Throws<ArgumentNullException>(() => AchievementTracker.RecordPlayTime(null, 1));
             Assert.Throws<ArgumentNullException>(() => _tracker.Unlock(null, new List<AchievementDefinition>()));
             Assert.Throws<ArgumentNullException>(() => _tracker.Unlock(PlayerProfile.Empty, null));
             Assert.Throws<ArgumentNullException>(() => _tracker.Progress(null));

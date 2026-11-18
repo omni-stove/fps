@@ -52,7 +52,7 @@ namespace Shooter.Core
             return false;
         }
 
-        private static IReadOnlyList<string> CopyIds(IReadOnlyList<string> ids, string name)
+        private static System.Collections.ObjectModel.ReadOnlyCollection<string> CopyIds(IReadOnlyList<string> ids, string name)
         {
             var copy = new string[ids.Count];
             for (var i = 0; i < copy.Length; i++)

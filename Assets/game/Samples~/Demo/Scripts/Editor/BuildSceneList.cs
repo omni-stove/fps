@@ -82,6 +82,8 @@ namespace Shooter.Editor
 
         public static string HordeScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.HordeName);
         public static string BattleRoyaleScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
+        public static string InfectedScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.InfectedName);
+        public static string ExtractionScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.ExtractionName);
 
         public static string ModeTestScene => ShooterKitRoot.OutputScene("ModeTest");
 
@@ -118,6 +120,8 @@ namespace Shooter.Editor
                     CaptureTheFlagScene,
                     HordeScene,
                     BattleRoyaleScene,
+                    InfectedScene,
+                    ExtractionScene,
                     ModeTestScene,
                     NetArena01Scene,
                     NetTestScene,
@@ -163,6 +167,10 @@ namespace Shooter.Editor
                     return HordeScene;
                 case GameRulesAssetBuilder.BattleRoyaleName:
                     return BattleRoyaleScene;
+                case GameRulesAssetBuilder.InfectedName:
+                    return InfectedScene;
+                case GameRulesAssetBuilder.ExtractionName:
+                    return ExtractionScene;
                 default:
                     throw new ArgumentException(
                         $"'{name}' is not one of the mode names ({string.Join(", ", GameRulesAssetBuilder.ModeNames)})", nameof(name));

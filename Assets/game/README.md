@@ -185,6 +185,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
 | Gun Game | `GunGameStatus` |
 | Battle Royale | `BattleRoyaleStatus` |
 | Horde | `HordeStatus` |
+| Infected | `InfectedStatus` |
+| 脱出 | `ExtractionStatus` |
 
 サンプルの `ModeHudView` は、`Detail` の型ごとに `ModeHudFormatters` に登録した書式役 (`IModeHudFormatter`。土台は `ModeHudFormatterBase`) で文にする。
 
@@ -196,6 +198,48 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 ポーズ・ロードアウトの選択・持ち物・メニューとの行き来は、UI が `GameUi.Pause`・`LoadoutSelect`・`InventoryScreen`・`Menu` に自分の実装を入れる (サンプルは既定を `UseDefault…` で入れる)。
 既定の HUD を止めたら `GameUi.Pause` は必須 (無いとポーズ中も操作が止まらない)。
+
+#### メインメニューの画面 (サンプルの決まり)
+
+統計・リーダーボード・リプレイ・見た目・持ち物庫のボタンは、`MainMenuPanels` に画面が登録された種類 (`MainMenuPanelKind`) だけが出る。
+サンプルは `DefaultMenuScreens.RegisterMainMenuPanels` で 5 つとも登録する。
+
+| 画面 | 開くときに読むもの | 無いとき |
+| --- | --- | --- |
+| 統計 (`StatsPanel`) | `ProgressionBootstrap` のプロフィールと実績 | 開けず、メニューに理由を出す |
+| リーダーボード (`LeaderboardPanel`) | `GameSignals.LeaderboardControl` (EOS が使えるとき `NetV2OnlineServices` が出す) | 開いて「使えない」を出す |
+| リプレイ (`ReplayPanel`) | `GameSignals.Replays` (NetV2 の起動で `NetV2Replays` が出す) | 開いて「使えない」を出す |
+| 見た目 (`CosmeticsPanel`) | `GameSignals.Cosmetics` | 開けず、メニューに理由を出す |
+| 持ち物庫 (`StashPanel`) | `GameSignals.Stash`、無ければ `StashStore` に残した中身 | 空の持ち物庫を出す |
+
+- 自分の画面に替えるなら、同じ種類を `MainMenuPanels.Register(kind, slot => ...)` で登録し直す (後の登録が勝つ)。登録はメニューのシーンを読む前 (`BeforeSceneLoad`) に済ませる。
+- ボタンを消すなら `MainMenuPanels.Unregister(kind)` を呼ぶ。
+
+#### リプレイ
+
+ネット対戦は、届いた知らせを `Application.persistentDataPath` の `Replays/` に 1 試合 1 ファイル (`*.replay`) で残す。古いものから消して `ReplayLibrary.DefaultMaxReplays` 本までにする。
+
+- 書き始めるのはサーバーに承認されてから。承認の前に抜けた試合のファイルは消す。書けないときは残さずに試合を続ける。
+- 一覧の再生は `NetV2Client.BeginReplay` が同じ部品で試合を流し直す。`Next`・`Previous` で人と自由なカメラを巡り、終わるとメニューに戻る。
+- 版の違う (通信の版が違う) ファイルや壊れたファイルは、画面を替えずに一覧に再生できないと出す。
+
+#### 試合中の部品 (NetV2)
+
+`NetV2ClientParts.Create` が作る部品に、天候と時刻 (`NetV2WeatherPart`。シーンの `WeatherController` に当てる) と通報 (`NetV2ReportPart`。`GameSignals.ReportSender` を出す) が入る。
+リプレイの再生では通報の代わりに見方の部品 (`NetV2ReplayViewPart`) が入る。
+サーバーの側で通報を残す・統計を送る・テレメトリを残すには、起動の引数で頼む (`docs/dedicated-server.md` の「通報・統計・テレメトリ」)。
+
+## モードのシーン (サンプル)
+
+モードのシーンとルールは、名前の一覧 `GameRulesAssetBuilder.ModeNames` (Infected・脱出 (`Extraction`) を含む 12 個) で揃える。
+
+1. **Shooter > Build Game Rules Assets** で、モードごとのルールを `Rules/<名前>.asset` に作る。
+2. **Shooter > Build <モード> Scene** (Infected なら **Build Infected Scene**、脱出なら **Build Extraction Scene**) でシーンを `Scenes/<名前>.unity` に作る。ルールが無ければそのモードの分だけ作る。
+3. **Shooter > Register Build Scenes** で、作ったシーンを Build Settings に並べる (`BuildSceneList.Scenes` の順)。
+4. シーンを開いて Play すると、そのモードが始まる。
+
+- Infected はプレイヤーと bot 4 体が生存者で始まり、倒された人は感染者として戻る。ルールは `GameRulesAssetBuilder.InfectedRules`。
+- 脱出は敵の bot 3 体の中で箱から物を拾い、開いた脱出地点に立ち続けると持ち物が持ち物庫へ入る。倒れたら戻らない。ルールは `GameRulesAssetBuilder.ExtractionRules`、箱から出る物は `Modes/ExtractionLoot.json`。
 
 ## 乗り物を足す
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Shooter.Core;
 using Shooter.Server.Eos;
 
@@ -100,6 +101,12 @@ namespace Shooter.Server
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat, vehicles, streaks, deployables }));
 
+            // 通報・統計・テレメトリは試合の状態を変えず、ルールが出したキルと試合の始まり・終わりを読むだけなので、スナップショットより後でよい
+            if (!TryAddRecords(launch, runtime, libraryDirectory, rules, modules, out error))
+            {
+                return false;
+            }
+
             if (!launch.Options.RegistersLobby)
             {
                 return true;
@@ -119,6 +126,133 @@ namespace Shooter.Server
 
             modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region });
             return true;
+        }
+
+        private static bool TryAddRecords(
+            ServerLaunch launch,
+            ServerRuntime runtime,
+            string libraryDirectory,
+            MatchRulesModule rules,
+            ICollection<IServerModule> modules,
+            out string error)
+        {
+            ArgumentNullException.ThrowIfNull(launch);
+            ArgumentNullException.ThrowIfNull(runtime);
+            ArgumentNullException.ThrowIfNull(rules);
+            ArgumentNullException.ThrowIfNull(modules);
+
+            var records = launch.Records;
+            var output = runtime.Output;
+            if (records.ReportFile != null)
+            {
+                modules.Add(new ServerReports(records.ReportFile, () => DateTime.UtcNow));
+            }
+            else
+            {
+                output.WriteLine(ServerRecordsLog.ReportsOff());
+            }
+
+            if (!TryAddStats(launch, runtime, libraryDirectory, rules, modules, out error))
+            {
+                return false;
+            }
+
+            return TryAddTelemetry(records, runtime, modules, out error);
+        }
+
+        // 統計は EOS の ProductUserId ごとに送るので、認証情報の無いまま --stats で起動させると、送れたつもりで何も残らない
+        private static bool TryAddStats(
+            ServerLaunch launch,
+            ServerRuntime runtime,
+            string libraryDirectory,
+            MatchRulesModule rules,
+            ICollection<IServerModule> modules,
+            out string error)
+        {
+            if (!launch.Records.SendsStats)
+            {
+                runtime.Output.WriteLine(ServerRecordsLog.StatsNotAsked());
+                error = null;
+                return true;
+            }
+
+            var prefix = StatsIngestLog.Tag + " ";
+            var flag = ServerLaunch.StatsFlag;
+            if (!TryLoadCredentials(runtime, prefix, flag, out var credentials, out error))
+            {
+                return false;
+            }
+
+            if (!EosServerStats.TryPrepare(credentials, launch.Version, libraryDirectory, out var createBackend, out var sdkError))
+            {
+                error = prefix + flag + " cannot use EOS: " + sdkError;
+                return false;
+            }
+
+            var root = RootWithTuning(runtime.MapSearchRoots, ServerStatsModule.TuningFileName);
+            var spec = LeaderboardSpec.Default;
+            if (root != null && !ServerStatsModule.TryLoadSpec(root, out spec, out var specError))
+            {
+                error = prefix + specError;
+                return false;
+            }
+
+            runtime.Output.WriteLine(ServerRecordsLog.LeaderboardTuning(TuningPath(root, ServerStatsModule.TuningFileName)));
+            modules.Add(new ServerStatsModule(rules, createBackend, spec));
+            error = null;
+            return true;
+        }
+
+        private static bool TryAddTelemetry(
+            ServerRecordsLaunch records, ServerRuntime runtime, ICollection<IServerModule> modules, out string error)
+        {
+            // 同意が無ければ何も残さないので、壊れた調整値のファイルで起動を止めないよう、読みもしない
+            if (!records.TelemetryConsent)
+            {
+                runtime.Output.WriteLine(ServerRecordsLog.TelemetryNotAsked());
+                error = null;
+                return true;
+            }
+
+            var root = RootWithTuning(runtime.MapSearchRoots, ServerTelemetry.TuningFileName);
+            var spec = TelemetrySpec.Default;
+            if (root != null && !ServerTelemetry.TryLoadSpec(root, out spec, out var specError))
+            {
+                error = TelemetryLog.Tag + " " + specError;
+                return false;
+            }
+
+            if (spec.Sink == TelemetrySink.LocalFile && records.TelemetryDirectory == null)
+            {
+                error = ServerRecordsLog.TelemetryNeedsFolder();
+                return false;
+            }
+
+            runtime.Output.WriteLine(ServerRecordsLog.TelemetryTuning(TuningPath(root, ServerTelemetry.TuningFileName)));
+            modules.Add(new ServerTelemetry(spec, records.TelemetryDirectory, true, () => DateTime.UtcNow));
+            error = null;
+            return true;
+        }
+
+        // ルールや近接の調整値 (ServerCombatTuning) と同じく、探す場所を前から順に見て最初に見つかったファイルを使う
+        private static string RootWithTuning(IReadOnlyList<string> searchRoots, string fileName)
+        {
+            foreach (var root in searchRoots)
+            {
+                if (File.Exists(TuningPath(root, fileName)))
+                {
+                    return root;
+                }
+            }
+
+            return null;
+        }
+
+        private static string TuningPath(string root, string fileName)
+        {
+            return root == null
+                ? null
+                : Path.GetFullPath(Path.Combine(root, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, fileName));
         }
 
         private static bool TryCreateAntiCheat(

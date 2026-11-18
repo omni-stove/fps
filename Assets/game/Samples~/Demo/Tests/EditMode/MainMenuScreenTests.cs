@@ -66,7 +66,10 @@ namespace Shooter.Tests.EditMode
             CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
             GameSignals.ResetAll();
+
+            // サンプルの登録 (DefaultMenuScreens) を戻し、残りのテストとエディターのメニューから画面を消したままにしない
             MainMenuPanels.Clear();
+            DefaultMenuScreens.RegisterMainMenuPanels();
         }
 
         [Test]

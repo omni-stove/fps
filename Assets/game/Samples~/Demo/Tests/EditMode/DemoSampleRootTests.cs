@@ -68,6 +68,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.FreeForAllPath, Is.EqualTo(Root + "/Rules/FreeForAll.asset"));
             Assert.That(GameRulesAssetBuilder.CaptureTheFlagPath, Is.EqualTo(Root + "/Rules/CaptureTheFlag.asset"));
             Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo(Root + "/Rules/BattleRoyale.asset"));
+            Assert.That(GameRulesAssetBuilder.InfectedPath, Is.EqualTo(Root + "/Rules/Infected.asset"));
+            Assert.That(GameRulesAssetBuilder.ExtractionPath, Is.EqualTo(Root + "/Rules/Extraction.asset"));
 
             Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo(Root + "/Weapons/Rifle.asset"));
             Assert.That(WeaponAssetBuilder.HandgunPath, Is.EqualTo(Root + "/Weapons/Handgun.asset"));
@@ -110,6 +112,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.CaptureTheFlagScene, Is.EqualTo(Root + "/Scenes/CaptureTheFlag.unity"));
             Assert.That(BuildSceneList.HordeScene, Is.EqualTo(Root + "/Scenes/Horde.unity"));
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo(Root + "/Scenes/BattleRoyale.unity"));
+            Assert.That(BuildSceneList.InfectedScene, Is.EqualTo(Root + "/Scenes/Infected.unity"));
+            Assert.That(BuildSceneList.ExtractionScene, Is.EqualTo(Root + "/Scenes/Extraction.unity"));
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo(Root + "/Scenes/ModeTest.unity"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(Root + "/Scenes/NetTest.unity"));
             Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.Lean), Is.EqualTo(Root + "/Scenes/Feature_Lean.unity"));

@@ -21,6 +21,26 @@ namespace Shooter.Core
             return Tag + " stopped recording; the match goes on without it: " + message;
         }
 
+        public static string RecordingTo(string path)
+        {
+            return Tag + " recording this match to " + path;
+        }
+
+        public static string CannotRecord(string path, string message)
+        {
+            return Tag + " not recording this match: cannot open " + path + " (" + message + ")";
+        }
+
+        public static string DiscardedEmpty(string path)
+        {
+            return Tag + " removed " + path + " because nothing was recorded";
+        }
+
+        public static string DiscardFailed(string path, string message)
+        {
+            return Tag + " could not remove the empty recording " + path + " (" + message + ")";
+        }
+
         public static string RecordingFinished(int records, int durationTicks, int tickRate)
         {
             return Tag + " recorded " + Count(records) + " events over " + Seconds(durationTicks, tickRate) + " s";

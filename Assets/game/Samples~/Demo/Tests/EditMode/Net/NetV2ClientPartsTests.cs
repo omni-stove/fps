@@ -14,6 +14,8 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
+        private const int VoiceIndex = 12;
+
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
         private MatchClient _client;
@@ -51,6 +53,7 @@ namespace Shooter.Net.Tests
             GameSignals.Voice.Clear();
             GameSignals.Streak.Clear();
             GameSignals.KillCam.Clear();
+            GameSignals.ReportSender.Clear();
         }
 
         [Test]
@@ -70,6 +73,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2DeployablesPart),
                 typeof(NetV2DeployInputPart),
                 typeof(NetV2KillCamPart),
+                typeof(NetV2WeatherPart),
+                typeof(NetV2ReportPart),
             }));
         }
 
@@ -92,9 +97,75 @@ namespace Shooter.Net.Tests
                 typeof(NetV2DeployablesPart),
                 typeof(NetV2DeployInputPart),
                 typeof(NetV2KillCamPart),
+                typeof(NetV2WeatherPart),
+                typeof(NetV2ReportPart),
                 typeof(NetV2VoicePart),
             }));
-            Assert.That(((NetV2VoicePart)_parts[10]).Voice, Is.Not.Null);
+            Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
+        }
+
+        [Test]
+        public void AReplayHasTheViewPartInsteadOfTheReportPart()
+        {
+            var context = Context(null);
+            context.Replay = true;
+            context.ReplayFreeSpeed = 9f;
+
+            _parts = NetV2ClientParts.Create(context);
+
+            Assert.That(_parts.Select(p => p.GetType()), Is.EqualTo(new[]
+            {
+                typeof(NetV2BlockPart),
+                typeof(NetV2MinimapPart),
+                typeof(NetV2ChatPart),
+                typeof(NetV2MapVotePart),
+                typeof(NetV2SpectatePart),
+                typeof(NetV2StreakPart),
+                typeof(NetV2MeleePart),
+                typeof(NetV2DeployablesPart),
+                typeof(NetV2DeployInputPart),
+                typeof(NetV2KillCamPart),
+                typeof(NetV2WeatherPart),
+                typeof(NetV2ReplayViewPart),
+            }));
+            Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
+        }
+
+        [Test]
+        public void TheReportPartPublishesTheSenderOnTheFirstSnapshotAndClearsItOnDispose()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+            var report = _parts.OfType<NetV2ReportPart>().Single();
+
+            Assert.That(GameSignals.ReportSender.HasValue, Is.False, "nothing is published before the match starts");
+
+            report.Apply(new SnapshotMessage());
+
+            Assert.That(GameSignals.ReportSender.Value, Is.SameAs(report.ReportSender));
+
+            report.Dispose();
+
+            Assert.That(GameSignals.ReportSender.HasValue, Is.False);
+        }
+
+        [Test]
+        public void TheWeatherPartLooksForTheSkyThroughTheContext()
+        {
+            var asked = 0;
+            var context = Context(null);
+            context.Weather = () =>
+            {
+                asked++;
+                return null;
+            };
+            _parts = NetV2ClientParts.Create(context);
+            var weather = _parts.OfType<NetV2WeatherPart>().Single();
+
+            weather.Apply(new SnapshotMessage());
+
+            Assert.That(asked, Is.EqualTo(1));
+            Assert.That(weather.AppliedTo, Is.Null);
+            Assert.That(_logs.Count(line => line == WeatherLog.NoController(null, null)), Is.EqualTo(1), "a scene without a sky is logged once");
         }
 
         [Test]
@@ -164,7 +235,7 @@ namespace Shooter.Net.Tests
             var voice = new FakeVoiceSession();
             _parts = NetV2ClientParts.Create(Context(voice));
 
-            _parts[10].Dispose();
+            _parts[VoiceIndex].Dispose();
 
             Assert.That(voice.Disposed, Is.True);
         }

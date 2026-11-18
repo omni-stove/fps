@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Shooter.Core;
 using Shooter.Protocol;
 using Shooter.Runtime;
@@ -71,8 +72,18 @@ namespace Shooter.NetV2
         private int _shotIndex;
         private int _shotGeneration;
         private bool _finished;
+        private ReplayTransport _replay;
+        private ReplayRecorder _recorder;
+        private string _recordingPath;
 
         public MatchClient Client => _client;
+
+        // ファイルから再生している (相手のサーバーがいない) か
+        public bool IsReplay => _replay != null;
+
+        public ReplayTransport Replay => _replay;
+
+        public ReplayRecorder Recorder => _recorder;
 
         public ClientMatch Match => _match;
 
@@ -99,6 +110,7 @@ namespace Shooter.NetV2
 
             GameUi.OnlineStarter = new MenuStarter(server);
             NetV2OnlineServices.Install();
+            NetV2Replays.Install();
             switch (start)
             {
                 case NetClientStart.Connect:
@@ -155,6 +167,43 @@ namespace Shooter.NetV2
             client._matchLobby = result.MatchLobby;
             client.Connect(result.Options);
             return null;
+        }
+
+        // ReplayLibrary の再生の口。読めないファイルや版の違うファイルは、画面を替える前に例外で断り、一覧に理由を出させる (ReplayLibrary.Play)。
+        public static bool BeginReplay(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("path must not be empty", nameof(path));
+            }
+
+            if (Current != null && !Current._finished)
+            {
+                throw new InvalidOperationException("already in an online match; leave it before playing a replay");
+            }
+
+            var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            ReplayTransport replay;
+            try
+            {
+                replay = new ReplayTransport(input, line => Debug.Log(line));
+            }
+            catch
+            {
+                input.Dispose();
+                throw;
+            }
+
+            if (!BuildVersion.TryNormalize(Application.version, out var version, out var versionError))
+            {
+                replay.Dispose();
+                throw new InvalidOperationException("cannot read the build version (Application.version): " + versionError);
+            }
+
+            ReleaseFinished();
+            var client = Create(true);
+            client.Play(replay, version);
+            return true;
         }
 
         private static NetV2Client Create(bool fromMenu)
@@ -324,23 +373,9 @@ namespace Shooter.NetV2
             Debug.Log(antiCheat.Describe(), this);
             var eos = _options.Transport == NetTransportKind.Eos;
             Action<string> log = line => Debug.Log(line, this);
-            var transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, log) : new UdpMatchTransport();
-            _client = new MatchClient(transport, version, _deviceKey, "", BuildExtras, log);
-            _client.Accepted += HandleAccepted;
-            _client.SnapshotReceived += HandleSnapshot;
-            _client.MessageReceived += HandleMessage;
-            _client.Disconnected += HandleDisconnected;
-            _parts.AddRange(NetV2ClientParts.Create(new NetV2ClientPartsContext(_client, SendReliable, log)
-            {
-                Pings = _pings.Markers,
-                Minimap = MinimapPublisher.Tuning,
-                ControlPointPosition = ControlPointPosition,
-                MapDecided = _mapChange.Decide,
-                LocalPlayer = () => _local,
-                Voice = NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),
-                VoiceLobbyId = _matchLobby?.LobbyId,
-                Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
-            }));
+            IMatchTransport transport = eos ? NetV2Eos.Factory.Create(plan.Credentials, log) : new UdpMatchTransport();
+            transport = NetV2Replays.Record(transport, version, log, out _recorder, out _recordingPath);
+            StartClient(transport, version, log, false);
             if (!NetV2AntiCheat.TryCreate(antiCheat, _client, HandleAntiCheatRemoved, out _antiCheat, out antiCheatError))
             {
                 Leave(ExitMisconfigured, AntiCheatSettings.LogTag + " " + antiCheatError);
@@ -356,6 +391,39 @@ namespace Shooter.NetV2
             {
                 Leave(ExitConnectFailed, LogTag + " failed to start " + _options + ": " + e.Message);
             }
+        }
+
+        private void StartClient(IMatchTransport transport, string version, Action<string> log, bool replay)
+        {
+            _client = new MatchClient(transport, version, _deviceKey, "", BuildExtras, log);
+            _client.Accepted += HandleAccepted;
+            _client.SnapshotReceived += HandleSnapshot;
+            _client.MessageReceived += HandleMessage;
+            _client.Disconnected += HandleDisconnected;
+            _parts.AddRange(NetV2ClientParts.Create(new NetV2ClientPartsContext(_client, SendReliable, log)
+            {
+                Pings = _pings.Markers,
+                Minimap = MinimapPublisher.Tuning,
+                ControlPointPosition = ControlPointPosition,
+                MapDecided = _mapChange.Decide,
+                LocalPlayer = () => _local,
+
+                // 再生には相手がおらず、ボイスの部屋も無いので、声の部品を作らない
+                Voice = replay ? null : NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),
+                VoiceLobbyId = replay ? null : _matchLobby?.LobbyId,
+                Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
+                Replay = replay,
+            }));
+        }
+
+        // 再生ではサーバーがいないので、EAC も通信路の選び方も使わず、ファイルを読む通信路を MatchClient に渡して試合中と同じ部品を動かす。
+        private void Play(ReplayTransport replay, string version)
+        {
+            _replay = replay;
+            Action<string> log = line => Debug.Log(line, this);
+            StartClient(replay, version, log, true);
+            NetV2AntiCheat.TryCreate(AntiCheatSettings.Disabled("replay"), _client, HandleAntiCheatRemoved, out _antiCheat, out _);
+            _client.Connect(string.Empty, 0);
         }
 
         // Netcode のクライアントと同じく、EOS を求められても認証情報が揃わなければ UDP でつなぐ。
@@ -404,6 +472,12 @@ namespace Shooter.NetV2
             if (_client == null || _finished)
             {
                 return;
+            }
+
+            // 再生の時計は画面の時間で進める。マップを読んでいる間も進めると、読み終えたときに知らせがまとめて届くので、読み終えるまで止める
+            if (_replay != null && _mapLoad == null)
+            {
+                _replay.Advance(Time.unscaledDeltaTime);
             }
 
             _client.Poll();
@@ -468,6 +542,9 @@ namespace Shooter.NetV2
             _match?.Detach();
             _antiCheat?.End();
             _client?.Dispose();
+            NetV2Replays.Kept(_recorder, _recordingPath, line => Debug.Log(line));
+            _recorder = null;
+            _recordingPath = null;
             DestroyViews();
         }
 
@@ -607,6 +684,14 @@ namespace Shooter.NetV2
         private void HandleDisconnected(DisconnectNotice notice)
         {
             _antiCheat?.End();
+
+            // 再生の終わりは切断として届くが、切れたのではないので、メニューに理由を出さずに戻る
+            if (_replay != null)
+            {
+                Finish(null);
+                return;
+            }
+
             if (!notice.WasConnected)
             {
                 Leave(ExitConnectFailed, LogTag + " failed to connect to " + _options.Endpoint + " " + notice.Describe(), notice);
@@ -670,7 +755,7 @@ namespace Shooter.NetV2
             _finished = true;
             if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
             {
-                Application.Quit(reason.ExitCode);
+                Application.Quit(reason != null ? reason.ExitCode : ExitDisconnected);
                 return;
             }
 

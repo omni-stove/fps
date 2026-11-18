@@ -53,6 +53,15 @@ namespace Shooter.NetV2
         public IReadOnlyList<AbilityDefinition> Abilities { get; set; } = Array.Empty<AbilityDefinition>();
 
         public float KillCamSpeed { get; set; } = 1f;
+
+        // ファイルから再生する (ReplayTransport) か。再生では通報を送る相手がいないので通報の口を出さず、見方の部品を足す
+        public bool Replay { get; set; }
+
+        // 再生の自由なカメラの速さ (m/s)
+        public float ReplayFreeSpeed { get; set; } = DeathCamFraming.DefaultFreeSpeed;
+
+        // null なら天候の部品がシーンの WeatherController を探す
+        public Func<WeatherController> Weather { get; set; }
     }
 
     public static class NetV2ClientParts
@@ -83,7 +92,19 @@ namespace Shooter.NetV2
                 new NetV2DeployInputPart(
                     deployables, NetV2DeployInputPart.SlotsOf(context.Abilities), () => CanAct(client), context.LocalPlayer),
                 new NetV2KillCamPart(client, context.KillCamSpeed, context.LocalPlayer, context.Log),
+
+                // 天候と時刻もスナップショットの MatchRulesSync で届くので、マップを替えるたびにシーンの空へ当て直す
+                new NetV2WeatherPart(context.Weather, context.Log),
             };
+
+            if (context.Replay)
+            {
+                parts.Add(new NetV2ReplayViewPart(client, context.ReplayFreeSpeed));
+            }
+            else
+            {
+                parts.Add(new NetV2ReportPart(context.Send, context.Log));
+            }
 
             if (context.Voice != null)
             {

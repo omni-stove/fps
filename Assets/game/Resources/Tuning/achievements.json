@@ -4,5 +4,6 @@
     { "id": "marksman", "nameKey": "achievement.marksman", "descriptionKey": "achievement.marksman.description", "stat": "Headshots", "target": 50, "hidden": false },
     { "id": "veteran", "nameKey": "achievement.veteran", "descriptionKey": "achievement.veteran.description", "stat": "MatchesPlayed", "target": 25, "hidden": false },
     { "id": "victor", "nameKey": "achievement.victor", "descriptionKey": "achievement.victor.description", "stat": "MatchesWon", "target": 10, "hidden": false }
-  ]
+  ],
+  "meleeWeaponIds": ["knife"]
 }

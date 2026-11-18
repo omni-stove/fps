@@ -48,7 +48,9 @@ namespace Shooter.Core.Tests
         {
             Assert.That(
                 ProgressionLog.Loaded(new PlayerProfile(900, 1, 1, 1, 1, 2), 2),
-                Is.EqualTo("[Progression] profile xp=900 kills=1 assists=2 deaths=1 matches=1 wins=1 rating=1000 level=2"));
+                Is.EqualTo(
+                    "[Progression] profile xp=900 kills=1 assists=2 deaths=1 matches=1 wins=1 rating=1000"
+                    + " headshots=0 meleeKills=0 playSeconds=0 achievements= level=2"));
             Assert.That(ProgressionLog.ProfileRejected("bad"), Is.EqualTo("[Progression] profile rejected: bad"));
             Assert.That(ProgressionLog.ProfileKept("profile-rejected"), Is.EqualTo("[Progression] kept the rejected profile in slot=profile-rejected"));
         }
@@ -66,7 +68,9 @@ namespace Shooter.Core.Tests
         {
             Assert.That(
                 ProgressionLog.Saved(new PlayerProfile(900, 1, 1, 1, 1, 0, 1234)),
-                Is.EqualTo("[Progression] saved xp=900 kills=1 assists=0 deaths=1 matches=1 wins=1 rating=1234"));
+                Is.EqualTo(
+                    "[Progression] saved xp=900 kills=1 assists=0 deaths=1 matches=1 wins=1 rating=1234"
+                    + " headshots=0 meleeKills=0 playSeconds=0 achievements="));
             Assert.That(ProgressionLog.SaveFailed("disk full"), Is.EqualTo("[Progression] could not save the profile: disk full"));
         }
 

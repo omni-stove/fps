@@ -54,6 +54,18 @@ namespace Shooter.Core
 
         public bool IsEmpty => !(Duration > 0f);
 
+        public float OffsetAt(int index)
+        {
+            CheckIndex(index);
+            return _offsets[index];
+        }
+
+        public KillCamPose PoseAt(int index)
+        {
+            CheckIndex(index);
+            return _poses[index];
+        }
+
         public KillCamPose Sample(float offset)
         {
             if (_offsets.Length == 0)
@@ -171,6 +183,14 @@ namespace Shooter.Core
             }
 
             return (float)(Math.Atan2(facing.X, facing.Z) * 180d / Math.PI);
+        }
+
+        private void CheckIndex(int index)
+        {
+            if ((uint)index >= (uint)_offsets.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "index must be below " + _offsets.Length);
+            }
         }
 
         private static void RequirePositive(float value, string name)

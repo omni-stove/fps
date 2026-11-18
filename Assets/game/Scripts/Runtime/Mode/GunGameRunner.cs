@@ -8,8 +8,8 @@ namespace Shooter.Runtime
     // 段が変わった人の武器を次の Tick の頭で替えるのは、撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。
     public sealed class GunGameRunner : ModeRunnerBase
     {
-        public const float DefaultTimeLimitSeconds = 600f;
-        public const float DefaultRespawnSeconds = 2f;
+        public const float DefaultTimeLimitSeconds = GunGameSpec.DefaultTimeLimitSeconds;
+        public const float DefaultRespawnSeconds = GunGameSpec.DefaultRespawnSeconds;
 
         [SerializeField, Tooltip("武器の並びと制限時間・リスポーンの秒数。空なら入口 (GameContent) のものを使う")]
         private GunGameLadderDefinition _ladder;

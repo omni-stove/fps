@@ -8,5 +8,17 @@ namespace Shooter.Core
         Domination,
 
         Elimination,
+
+        CaptureTheFlag,
+
+        Hardpoint,
+
+        SearchAndDestroy,
+
+        FreeForAll,
+
+        KillConfirmed,
+
+        GunGame,
     }
 }

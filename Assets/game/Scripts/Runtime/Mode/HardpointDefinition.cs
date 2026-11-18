@@ -9,7 +9,7 @@ namespace Shooter.Runtime
     public sealed class HardpointDefinition : ScriptableObject
     {
         // Validate は拠点の数を知らないので、HardpointSpec が受け付ける最小の数で確かめる。
-        private const int _minimumPointCount = 2;
+        private const int _minimumPointCount = HardpointSpec.MinPointCount;
 
         [SerializeField, Min(0.01f), Tooltip("有効な拠点が次の拠点へ移るまでの秒数")]
         private float _rotateSeconds = HardpointRunner.DefaultRotateSeconds;

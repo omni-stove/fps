@@ -102,7 +102,9 @@ namespace Shooter.Server
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
             + " crouchHeight=" + Motor.Stance.Crouched.Height.ToString(CultureInfo.InvariantCulture)
-            + " radius=" + Motor.Stance.Radius.ToString(CultureInfo.InvariantCulture);
+            + " radius=" + Motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
+            + " weather=" + (Settings.WeatherId ?? "default")
+            + " timeOfDay=" + (Settings.TimeOfDayId ?? "default");
 
         public static bool TryLoad(string name, IReadOnlyList<string> searchRoots, out ServerRulesData data, out string error)
         {

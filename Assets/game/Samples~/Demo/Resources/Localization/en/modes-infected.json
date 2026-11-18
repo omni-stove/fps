@@ -1,0 +1,8 @@
+{
+  "mode.infected.survivors": "SURVIVORS",
+  "mode.infected.infected": "INFECTED",
+  "mode.infected.outbreakIn": "Infection starts in {0} s",
+  "mode.infected.counts": "Survivors {0} / Infected {1}",
+  "mode.infected.youAreSurvivor": "You are a survivor: stay alive until time runs out",
+  "mode.infected.youAreInfected": "You are infected: infect every survivor"
+}

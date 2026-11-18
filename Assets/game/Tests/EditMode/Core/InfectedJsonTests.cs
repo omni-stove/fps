@@ -11,7 +11,7 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedItemNames =
         {
             "initialInfected", "startDelaySeconds", "roundSeconds", "infectedMaxHealth",
-            "infectedSpeedMultiplier", "infectedRespawnSeconds", "scorePerInfection", "scorePerSurvivedRound",
+            "infectedSpeedMultiplier", "infectedRespawnSeconds", "scorePerInfection", "scorePerSurvivedRound", "infectedWeaponId",
         };
 
         [Test]
@@ -19,7 +19,8 @@ namespace Shooter.Core.Tests
         {
             var spec = InfectedJson.Parse(
                 "{\"initialInfected\": 2, \"startDelaySeconds\": 5, \"roundSeconds\": 180, \"infectedMaxHealth\": 200,"
-                + " \"infectedSpeedMultiplier\": 1.3, \"infectedRespawnSeconds\": 0, \"scorePerInfection\": 2, \"scorePerSurvivedRound\": 0}",
+                + " \"infectedSpeedMultiplier\": 1.3, \"infectedRespawnSeconds\": 0, \"scorePerInfection\": 2, \"scorePerSurvivedRound\": 0,"
+                + " \"infectedWeaponId\": \" knife-01 \"}",
                 _source);
 
             Assert.That(spec.InitialInfected, Is.EqualTo(2));
@@ -30,6 +31,8 @@ namespace Shooter.Core.Tests
             Assert.That(spec.InfectedRespawnSeconds, Is.EqualTo(0f));
             Assert.That(spec.ScorePerInfection, Is.EqualTo(2));
             Assert.That(spec.ScorePerSurvivedRound, Is.EqualTo(0));
+            Assert.That(spec.InfectedWeaponId, Is.EqualTo("knife-01"), "the id is trimmed");
+            Assert.That(spec.HasInfectedWeapon, Is.True);
         }
 
         [Test]
@@ -45,6 +48,16 @@ namespace Shooter.Core.Tests
             Assert.That(spec.InfectedRespawnSeconds, Is.EqualTo(3f));
             Assert.That(spec.ScorePerInfection, Is.EqualTo(1));
             Assert.That(spec.ScorePerSurvivedRound, Is.EqualTo(3));
+            Assert.That(spec.InfectedWeaponId, Is.Empty, "the infected keep the weapons they had");
+            Assert.That(spec.HasInfectedWeapon, Is.False);
+        }
+
+        [Test]
+        public void ABlankWeaponIdMeansTheInfectedKeepTheirWeapons()
+        {
+            Assert.That(new InfectedSpec(infectedWeaponId: null).InfectedWeaponId, Is.Empty);
+            Assert.That(new InfectedSpec(infectedWeaponId: "  ").HasInfectedWeapon, Is.False);
+            Assert.That(InfectedSpec.Default.HasInfectedWeapon, Is.False);
         }
 
         [Test]
@@ -65,6 +78,7 @@ namespace Shooter.Core.Tests
             var respawn = Reject("{\"infectedRespawnSeconds\": -1}");
             var score = Reject("{\"scorePerInfection\": -1}");
             var fraction = Reject("{\"initialInfected\": 1.5}");
+            var weapon = Reject("{\"infectedWeaponId\": 3}");
 
             Assert.That(initial.Item, Is.EqualTo("initialInfected"));
             Assert.That(initial.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
@@ -76,6 +90,7 @@ namespace Shooter.Core.Tests
             Assert.That(respawn.Item, Is.EqualTo("infectedRespawnSeconds"));
             Assert.That(score.Item, Is.EqualTo("scorePerInfection"));
             Assert.That(fraction.Item, Is.EqualTo("initialInfected"));
+            Assert.That(weapon.Item, Is.EqualTo("infectedWeaponId"));
         }
 
         private static TuningJsonException Reject(string json)

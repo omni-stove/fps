@@ -43,6 +43,25 @@ namespace Shooter.Core
 
         public static string EndedLog(Side winner) => Tag + " ended winner=" + Number(winner.Id);
 
+        public static string SettingsLog(SearchAndDestroySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new System.ArgumentNullException(nameof(spec));
+            }
+
+            return Tag + " net sites=" + Number(spec.SiteCount)
+                + " winsToWin=" + Number(spec.WinsToWin)
+                + " round=" + Seconds(spec.RoundSeconds) + "s"
+                + " plant=" + Seconds(spec.PlantSeconds) + "s"
+                + " defuse=" + Seconds(spec.DefuseSeconds) + "s"
+                + " fuse=" + Seconds(spec.FuseSeconds) + "s"
+                + " preparation=" + Seconds(spec.PreparationSeconds) + "s"
+                + " swapEvery=" + Number(spec.SwapEveryRounds);
+        }
+
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+        private static string Seconds(float value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

@@ -49,6 +49,8 @@ namespace Shooter.NetV2
         private ScoreboardEntry[] _publishedScoreboard;
         private Func<float> _blindSeconds;
         private IInventoryControl _inventory;
+        private ClientSearchAndDestroyStatus _searchAndDestroy;
+        private ModeStatus _modeStatus;
 
         public HudModel Model => _model;
 
@@ -100,6 +102,7 @@ namespace Shooter.NetV2
             netHud._maxHealth = Math.Max(1, maxHealth);
             netHud._findWeapon = findWeapon;
             netHud._roster = new Roster(netHud);
+            netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId, ConfiguredSearchAndDestroy());
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
@@ -164,8 +167,8 @@ namespace Shooter.NetV2
                 }
             }
 
-            var alpha = match.Objective == MatchObjective.None ? match.AlphaScore : match.AlphaPoints;
-            var bravo = match.Objective == MatchObjective.None ? match.BravoScore : match.BravoPoints;
+            var alpha = TeamScore(match, match.AlphaScore, match.AlphaPoints);
+            var bravo = TeamScore(match, match.BravoScore, match.BravoPoints);
             if (!_shown || alpha != _alpha || bravo != _bravo)
             {
                 _alpha = alpha;
@@ -206,6 +209,11 @@ namespace Shooter.NetV2
 
             _shown = true;
             ShowControlPoints(snapshot);
+            if (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
+            {
+                PublishModeStatus(_searchAndDestroy.Status);
+            }
+
             ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
             ShowScoreboard(snapshot);
         }
@@ -245,8 +253,48 @@ namespace Shooter.NetV2
             Refresh();
         }
 
+        // FFA は AlphaPoints・BravoPoints に 1 キルの点とキル数の上限を載せていてチームの点ではないので、GunGame と同じく 0 を出す
+        private static int TeamScore(MatchSnapshot match, int score, int points)
+        {
+            switch (match.Objective)
+            {
+                case MatchObjective.None:
+                    return score;
+                case MatchObjective.FreeForAll:
+                    return 0;
+                default:
+                    return points;
+            }
+        }
+
+        // 勝ちに要るラウンド数・設置の秒数はスナップショットに無いので、手元の入口 (GameContent) の値で出す
+        private static SearchAndDestroySpec ConfiguredSearchAndDestroy()
+        {
+            var definition = GameContent.Pick(c => c.SearchAndDestroy);
+            return definition != null ? definition.ToSpec(SearchAndDestroySpec.Default.SiteCount) : SearchAndDestroySpec.Default;
+        }
+
+        private void PublishModeStatus(ModeStatus status)
+        {
+            if (_modeStatus != null)
+            {
+                GameSignals.ModeStatus.ClearIfCurrent(_modeStatus);
+            }
+
+            _modeStatus = status;
+            if (_modeStatus != null)
+            {
+                GameSignals.ModeStatus.Publish(_modeStatus);
+            }
+        }
+
         private void Update()
         {
+            if (_searchAndDestroy != null && _searchAndDestroy.Tick(Time.unscaledDeltaTime))
+            {
+                PublishModeStatus(_searchAndDestroy.Status);
+            }
+
             var changed = false;
             if (_idleRemaining.HasValue)
             {
@@ -474,6 +522,14 @@ namespace Shooter.NetV2
                 GameSignals.Domination.ClearIfCurrent(_domination);
                 _domination = null;
             }
+
+            if (_modeStatus != null)
+            {
+                GameSignals.ModeStatus.ClearIfCurrent(_modeStatus);
+                _modeStatus = null;
+            }
+
+            _searchAndDestroy?.Reset();
 
             if (_publishedScoreboard != null)
             {

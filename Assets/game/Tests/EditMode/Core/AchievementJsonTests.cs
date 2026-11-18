@@ -8,7 +8,9 @@ namespace Shooter.Core.Tests
     {
         private const string _source = "achievements.json";
 
-        private static readonly string[] _expectedItemNames = { "achievements" };
+        private static readonly string[] _expectedItemNames = { "achievements", "meleeWeaponIds" };
+        private static readonly string[] _axeAndKnife = { "axe", "knife" };
+        private static readonly string[] _knifeOnly = { "knife" };
         private static readonly string[] _expectedAchievementItemNames = { "id", "nameKey", "descriptionKey", "stat", "target", "hidden" };
 
         [Test]
@@ -59,6 +61,35 @@ namespace Shooter.Core.Tests
             Assert.That(spec.Achievements[3].Stat, Is.EqualTo(PlayerStat.MatchesWon));
             Assert.That(spec.Achievements[3].Target, Is.EqualTo(10));
             Assert.That(spec.Achievements[3].Hidden, Is.False);
+        }
+
+        [Test]
+        public void ReadsTheMeleeWeaponIds()
+        {
+            var spec = AchievementJson.Parse("{\"meleeWeaponIds\": [\" axe \", \"knife\"]}", _source);
+
+            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(_axeAndKnife));
+            Assert.That(spec.IsMelee("axe"), Is.True);
+            Assert.That(spec.IsMelee("rifle"), Is.False);
+            Assert.That(spec.IsMelee(null), Is.False);
+            Assert.That(spec.Achievements, Is.SameAs(AchievementSpec.DefaultAchievements));
+        }
+
+        [Test]
+        public void LeftOutMeleeWeaponIdsUseTheDefaultAndAnEmptyListHasNone()
+        {
+            Assert.That(AchievementJson.Parse("{}", _source).MeleeWeaponIds, Is.EqualTo(_knifeOnly));
+            Assert.That(AchievementJson.Parse("{\"meleeWeaponIds\": []}", _source).MeleeWeaponIds, Is.Empty);
+        }
+
+        [Test]
+        public void ABlankMeleeWeaponIdNamesItsItem()
+        {
+            var blank = Reject("{\"meleeWeaponIds\": [\" \"]}");
+            var notText = Reject("{\"meleeWeaponIds\": [1]}");
+
+            Assert.That(blank.Item, Is.EqualTo("meleeWeaponIds"));
+            Assert.That(notText.Item, Is.EqualTo("meleeWeaponIds[0]"));
         }
 
         [Test]

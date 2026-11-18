@@ -7,6 +7,7 @@ namespace Shooter.Core
         public const string ResourcePath = "Tuning/achievements";
 
         public const string AchievementsItem = "achievements";
+        public const string MeleeWeaponIdsItem = "meleeWeaponIds";
 
         public const string IdItem = "id";
         public const string NameKeyItem = "nameKey";
@@ -17,7 +18,7 @@ namespace Shooter.Core
 
         private const string _kind = "achievement JSON";
 
-        public static IReadOnlyList<string> ItemNames { get; } = new[] { AchievementsItem };
+        public static IReadOnlyList<string> ItemNames { get; } = new[] { AchievementsItem, MeleeWeaponIdsItem };
 
         public static IReadOnlyList<string> AchievementItemNames { get; } = new[]
         {
@@ -34,7 +35,8 @@ namespace Shooter.Core
             return SpecJsonReader.Read(text, sourceName, _kind, ItemNames, fields =>
             {
                 var achievements = SpecJsonReader.ReadList(fields, AchievementsItem, AchievementItemNames, ReadAchievement);
-                return SpecJsonReader.Build(fields, ItemNames, () => new AchievementSpec(achievements));
+                var meleeWeaponIds = SpecJsonReader.ReadStrings(fields, MeleeWeaponIdsItem);
+                return SpecJsonReader.Build(fields, ItemNames, () => new AchievementSpec(achievements, meleeWeaponIds));
             });
         }
 

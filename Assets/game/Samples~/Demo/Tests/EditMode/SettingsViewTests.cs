@@ -60,6 +60,148 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheLayoutIsInResources()
+        {
+            Assert.That(
+                Resources.Load<VisualTreeAsset>(SettingsView.LayoutResourcePath),
+                Is.Not.Null,
+                "Assets/game/Samples~/Demo/UI/Resources/Menu/Settings.uxml should be loadable from Resources");
+        }
+
+        [Test]
+        public void TheLayoutHasEveryElementTheViewLooksUp()
+        {
+            var root = Resources.Load<VisualTreeAsset>(SettingsView.LayoutResourcePath).Instantiate().Q<VisualElement>(SettingsView.RootName);
+
+            Assert.That(root, Is.Not.Null);
+            Assert.That(root.ClassListContains("settings"), Is.True);
+            Assert.That(root.Q<Label>(SettingsView.TitleName), Is.Not.Null);
+            Assert.That(root.Q<ScrollView>(SettingsView.ScrollName), Is.Not.Null);
+            foreach (var value in ControlSettings.Values)
+            {
+                Assert.That(root.Q<SliderInt>(SettingsView.SliderName(value)), Is.Not.Null, value.ToString());
+                Assert.That(root.Q<Label>(SettingsView.ValueLabelName(value)), Is.Not.Null, value.ToString());
+            }
+
+            foreach (var device in new[] { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad })
+            {
+                foreach (var action in new[] { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim })
+                {
+                    Assert.That(root.Q<Button>(SettingsView.ModeButtonName(device, action)), Is.Not.Null, $"{device} {action}");
+                }
+            }
+
+            var buttons = new[]
+            {
+                SettingsView.AimAssistButtonName,
+                SettingsView.InvertLookYButtonName,
+                SettingsView.RumbleButtonName,
+                SettingsView.BloodButtonName,
+                SettingsView.PaletteButtonName,
+                SettingsView.SubtitlesButtonName,
+                SettingsView.VoiceMicrophoneButtonName,
+                SettingsView.LanguageButtonName,
+                SettingsView.RebindCancelButtonName,
+                SettingsView.RebindUndoButtonName,
+                SettingsView.RebindKeepButtonName,
+                SettingsView.ResetButtonName,
+                SettingsView.BindingsResetButtonName,
+                SettingsView.BackButtonName,
+            };
+            foreach (var name in buttons)
+            {
+                Assert.That(root.Q<Button>(name), Is.Not.Null, name);
+            }
+
+            Assert.That(root.Q<Label>(SettingsView.PaletteFriendlySampleName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.PaletteEnemySampleName), Is.Not.Null);
+            Assert.That(root.Q<SliderInt>(SettingsView.VoiceVolumeSliderName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.VoiceVolumeValueName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(SettingsView.RebindNoticeRowName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.RebindNoticeName), Is.Not.Null);
+            Assert.That(root.Q<VisualElement>(SettingsView.BindingsName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.BindingsUnavailableName), Is.Not.Null);
+        }
+
+        [Test]
+        public void OpenMovesTheStyledLayoutRootIntoTheContainer()
+        {
+            _view.Open(_container);
+
+            Assert.That(_container.childCount, Is.EqualTo(1));
+            Assert.That(_view.Root.name, Is.EqualTo(SettingsView.RootName));
+            Assert.That(_view.Root.parent, Is.SameAs(_container));
+            Assert.That(_view.Root.styleSheets.Contains(Resources.Load<StyleSheet>(SettingsView.StyleResourcePath)), Is.True, "Settings.uss comes with the root");
+        }
+
+        [Test]
+        public void OpenTurnsEveryTextKeyOfTheLayoutIntoTheCurrentLanguage()
+        {
+            _view.Open(_container);
+
+            _view.Root.Query<TextElement>().ForEach(element =>
+                Assert.That(element.text, Does.Not.StartWith(LocalizedTexts.KeyPrefix), element.name));
+            var sections = _view.Root.Query<Label>(className: "settings__section").ToList().Select(label => label.text).ToList();
+            Assert.That(sections, Is.EqualTo(new[]
+            {
+                Localizer.Get("settings.section.viewAndSound"),
+                Localizer.Get("settings.section.gamepad"),
+                Localizer.Get("settings.section.effects"),
+                Localizer.Get("settings.section.accessibility"),
+                Localizer.Get(VoiceText.SettingsSectionKey),
+                Localizer.Get("settings.section.language"),
+                Localizer.Get("settings.section.holdModes"),
+                Localizer.Get("settings.section.bindings"),
+            }));
+            Assert.That(sections[0], Is.EqualTo("視点と音"));
+        }
+
+        [Test]
+        public void ChoosingEnglishRebuildsTheLayoutTextsInEnglish()
+        {
+            _view.Open(_container);
+
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
+            _view.SetLanguage(GameLanguage.English);
+
+            Assert.That(_view.Root.Q<Label>(className: "settings__section").text, Is.EqualTo("View and sound"));
+            _view.Root.Query<TextElement>().ForEach(element =>
+                Assert.That(element.text, Does.Not.StartWith(LocalizedTexts.KeyPrefix), element.name));
+        }
+
+        [Test]
+        public void TheBindingsListAndItsUnavailableNoteShowOneAtATime()
+        {
+            _view.Open(_container);
+
+            var hasBindings = _view.Bindings != null;
+            var list = _view.Root.Q<VisualElement>(SettingsView.BindingsName);
+            var note = _view.Root.Q<Label>(SettingsView.BindingsUnavailableName);
+            Assert.That(list.style.display.value, Is.EqualTo(hasBindings ? DisplayStyle.Flex : DisplayStyle.None));
+            Assert.That(note.style.display.value, Is.EqualTo(hasBindings ? DisplayStyle.None : DisplayStyle.Flex));
+            Assert.That(note.text, Is.EqualTo("入力の割り当てが見つからないため、変えられません。"));
+            Assert.That(_view.Root.Q<Button>(SettingsView.BindingsResetButtonName).enabledSelf, Is.EqualTo(hasBindings));
+            Assert.That(list.childCount, Is.GreaterThanOrEqualTo(1), "the device header row is in the layout");
+        }
+
+        [Test]
+        public void TheLayoutKeepsTheAimRowsRightAfterTheSensitivities()
+        {
+            _view.Open(_container);
+
+            var order = _view.Root.Query<VisualElement>().ToList();
+            int IndexOf(string name) => order.IndexOf(_view.Root.Q<VisualElement>(name));
+
+            Assert.That(IndexOf(SettingsView.SliderName(ControlValue.AdsSensitivity)), Is.LessThan(IndexOf(SettingsView.AimAssistButtonName)));
+            Assert.That(IndexOf(SettingsView.AimAssistButtonName), Is.LessThan(IndexOf(SettingsView.InvertLookYButtonName)));
+            Assert.That(IndexOf(SettingsView.InvertLookYButtonName), Is.LessThan(IndexOf(SettingsView.SliderName(ControlValue.FieldOfView))));
+            Assert.That(IndexOf(SettingsView.SliderName(ControlValue.StickDeadzone)), Is.LessThan(IndexOf(SettingsView.RumbleButtonName)));
+            Assert.That(IndexOf(SettingsView.RumbleButtonName), Is.LessThan(IndexOf(SettingsView.SliderName(ControlValue.RumbleStrength))));
+            Assert.That(IndexOf(SettingsView.ScrollName), Is.LessThan(IndexOf(SettingsView.RebindNoticeRowName)), "the notice stays below the scrolled rows");
+            Assert.That(IndexOf(SettingsView.RebindNoticeRowName), Is.LessThan(IndexOf(SettingsView.BackButtonName)));
+        }
+
+        [Test]
         public void OpenBuildsASliderForEveryValueAndAButtonForEveryMode()
         {
             _view.Open(_container);

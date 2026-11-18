@@ -1,0 +1,165 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <!-- 設定画面。Shooter.Runtime.SettingsView が読み込み、根の "settings" をメインメニューの差し込み口やポーズ画面の枠へ移して、name で要素を探して値をつなぐ。 -->
+    <!-- text の "#キー" は文字列表 (Demo サンプルの Resources/Localization/ja/settings.json など) のキーで、SettingsView が Shooter.Runtime.LocalizedTexts で今の言語の文字にする。 -->
+    <!-- 根を入れ物へ移すので、見た目 (Settings.uss) は UXML の頂ではなく根に付ける。 -->
+    <ui:VisualElement name="settings" class="settings">
+        <Style src="Settings.uss" />
+        <ui:Label name="settings-title" text="#settings.title" class="settings__title" />
+        <!-- 割り当ての行を足すとポーズ画面の枠に収まらないので、見出しと下のボタン以外はスクロールさせる。 -->
+        <ui:ScrollView name="settings-scroll" mode="Vertical" class="settings__scroll">
+            <ui:Label text="#settings.section.viewAndSound" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.mouseSensitivity" class="settings__caption" />
+                <ui:SliderInt name="settings-mouse-sensitivity" class="settings__slider" />
+                <ui:Label name="settings-mouse-sensitivity-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.gamepadSensitivity" class="settings__caption" />
+                <ui:SliderInt name="settings-gamepad-sensitivity" class="settings__slider" />
+                <ui:Label name="settings-gamepad-sensitivity-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.adsSensitivity" class="settings__caption" />
+                <ui:SliderInt name="settings-ads-sensitivity" class="settings__slider" />
+                <ui:Label name="settings-ads-sensitivity-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <!-- 狙いに関わる設定なので、視野角や音量より前の、感度の並びのすぐ後に置く。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.aimAssist" class="settings__caption" />
+                <ui:Button name="settings-aim-assist" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.invertLookY" class="settings__caption" />
+                <ui:Button name="settings-invert-look-y" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.fieldOfView" class="settings__caption" />
+                <ui:SliderInt name="settings-field-of-view" class="settings__slider" />
+                <ui:Label name="settings-field-of-view-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.masterVolume" class="settings__caption" />
+                <ui:SliderInt name="settings-master-volume" class="settings__slider" />
+                <ui:Label name="settings-master-volume-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.effectsVolume" class="settings__caption" />
+                <ui:SliderInt name="settings-effects-volume" class="settings__slider" />
+                <ui:Label name="settings-effects-volume-value" text="" class="settings__value" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.gamepad" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.stickDeadzone" class="settings__caption" />
+                <ui:SliderInt name="settings-stick-deadzone" class="settings__slider" />
+                <ui:Label name="settings-stick-deadzone-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.rumble" class="settings__caption" />
+                <ui:Button name="settings-rumble" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <!-- 振動を切っている間は SettingsView がこのスライダーを触れなくする。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.rumbleStrength" class="settings__caption" />
+                <ui:SliderInt name="settings-rumble-strength" class="settings__slider" />
+                <ui:Label name="settings-rumble-strength-value" text="" class="settings__value" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.effects" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.cameraShake" class="settings__caption" />
+                <ui:SliderInt name="settings-camera-shake" class="settings__slider" />
+                <ui:Label name="settings-camera-shake-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.viewmodelMotion" class="settings__caption" />
+                <ui:SliderInt name="settings-viewmodel-motion" class="settings__slider" />
+                <ui:Label name="settings-viewmodel-motion-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.blood" class="settings__caption" />
+                <ui:Button name="settings-blood" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.accessibility" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.palette" class="settings__caption" />
+                <ui:Button name="settings-palette" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
+            <!-- 組を切り替えたとき、試合に入らなくても色と印の違いが分かるように、ネームプレートと同じ書き方の見本を並べる。文字と色は SettingsView が入れる。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="" class="settings__caption" />
+                <ui:Label name="settings-palette-friendly" text="" class="settings__palette-sample" />
+                <ui:Label name="settings-palette-enemy" text="" class="settings__palette-sample" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.subtitles" class="settings__caption" />
+                <ui:Button name="settings-subtitles" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+
+            <ui:Label text="#voice.settings.section" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#voice.settings.microphone" class="settings__caption" />
+                <ui:Button name="settings-voice-microphone" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#voice.settings.volume" class="settings__caption" />
+                <ui:SliderInt name="settings-voice-volume" class="settings__slider" />
+                <ui:Label name="settings-voice-volume-value" text="" class="settings__value" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.language" class="settings__section" />
+            <!-- 今の言語が読めなくても選べるよう、ボタンには SettingsView がその言語自身での名前を入れる。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.language" class="settings__caption" />
+                <ui:Button name="settings-language" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.holdModes" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="" class="settings__caption" />
+                <ui:Label text="#settings.device.keyboardMouse" class="settings__column" />
+                <ui:Label text="#settings.device.gamepad" class="settings__column" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.action.sprint" class="settings__caption" />
+                <ui:Button name="settings-mode-keyboard-mouse-sprint" text="" class="settings__button settings__mode" />
+                <ui:Button name="settings-mode-gamepad-sprint" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.action.crouch" class="settings__caption" />
+                <ui:Button name="settings-mode-keyboard-mouse-crouch" text="" class="settings__button settings__mode" />
+                <ui:Button name="settings-mode-gamepad-crouch" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.action.aim" class="settings__caption" />
+                <ui:Button name="settings-mode-keyboard-mouse-aim" text="" class="settings__button settings__mode" />
+                <ui:Button name="settings-mode-gamepad-aim" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.bindings" class="settings__section" />
+            <!-- Input Actions が無くて割り当てを変えられないときだけ、SettingsView が下の一覧の代わりに出す。 -->
+            <ui:Label name="settings-bindings-unavailable" text="#settings.bindings.unavailable" class="settings__note" style="display: none;" />
+            <!-- 割り当ての一覧。行は Input Actions の割り当て (PlayerBindings.Slots) から SettingsView が見出しの後ろに足す。 -->
+            <ui:VisualElement name="settings-bindings">
+                <ui:VisualElement class="settings__row">
+                    <ui:Label text="" class="settings__caption" />
+                    <ui:Label text="#settings.device.keyboardMouse" class="settings__column" />
+                    <ui:Label text="#settings.device.gamepad" class="settings__column" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:ScrollView>
+        <!-- 割り当ての入力を待っている間と、重なりを決めるときだけ SettingsView が出す。 -->
+        <ui:VisualElement name="settings-rebind-notice-row" class="settings__notice-row" style="display: none;">
+            <ui:Label name="settings-rebind-notice" text="" class="settings__notice" />
+            <ui:Button name="settings-rebind-cancel" text="#settings.rebind.cancel" class="settings__button" />
+            <ui:Button name="settings-rebind-undo" text="#settings.rebind.undo" class="settings__button" />
+            <ui:Button name="settings-rebind-keep" text="#settings.rebind.keep" class="settings__button" />
+        </ui:VisualElement>
+        <ui:VisualElement class="settings__footer">
+            <ui:Button name="settings-reset" text="#settings.reset" class="settings__button" />
+            <ui:Button name="settings-bindings-reset" text="#settings.bindings.reset" class="settings__button" />
+            <ui:Button name="settings-back" text="#settings.back" class="settings__button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

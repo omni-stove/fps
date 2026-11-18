@@ -6,6 +6,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CloudSaveStampsTests
     {
+        static readonly string[] ExpectedSlotOrder = { "campaign-Mission02", "profile" };
+
         [Test]
         public void EmptyStampsAreWrittenWithNoSlots()
         {
@@ -23,7 +25,7 @@ namespace Shooter.Core.Tests
                 stamps.ToJson(),
                 Is.EqualTo("{\"version\":1,\"slots\":{\"campaign-Mission02\":{\"savedAt\":10,\"deleted\":true},"
                     + "\"profile\":{\"savedAt\":20,\"deleted\":false}}}"));
-            Assert.That(stamps.Slots, Is.EqualTo(new[] { "campaign-Mission02", "profile" }));
+            Assert.That(stamps.Slots, Is.EqualTo(ExpectedSlotOrder));
             Assert.That(stamps.Count, Is.EqualTo(2));
         }
 

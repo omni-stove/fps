@@ -8,6 +8,8 @@ using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Runtime;
 using UnityEngine;
+// Connect と Player Data Storage の名前空間を両方開くと型名がぶつかりうるので、ロビーと同じく Connect は別名で参照する
+using EosConnect = Epic.OnlineServices.Connect;
 
 namespace Shooter.NetEos
 {
@@ -32,6 +34,11 @@ namespace Shooter.NetEos
         private EosDeviceLogin _login;
         private double _retryLoginAt;
         private bool _off;
+        private Epic.OnlineServices.Platform.PlatformInterface _watchedPlatform;
+        private EosConnect.ConnectInterface _watchedConnect;
+        private ulong _authExpirationNotification;
+        private ulong _loginStatusNotification;
+        private EosDeviceLogin _refresh;
 
         public EosPlayerDataStorage(IEosClientTransportFactory factory)
         {
@@ -52,6 +59,7 @@ namespace Shooter.NetEos
         public void Tick()
         {
             EnsureLogin();
+            WatchLogin();
             if (EosPlatform.Current != null)
             {
                 EosPlatform.Tick();
@@ -125,6 +133,76 @@ namespace Shooter.NetEos
                     Debug.LogWarning(CloudSaveLog.Off(loginError + "; signing in again later"));
                 }
             });
+        }
+
+        // ロビーが先にログインしていても、ロビーを閉じると通知が外れるので、ここでも自分で見張る。
+        private void WatchLogin()
+        {
+            var platform = EosPlatform.Current;
+            if (platform == null || EosPlatform.LocalUserId == null || ReferenceEquals(platform, _watchedPlatform))
+            {
+                return;
+            }
+
+            _watchedPlatform = platform;
+            _refresh?.Cancel();
+            _refresh = null;
+            _watchedConnect = platform.GetConnectInterface();
+            _authExpirationNotification = 0;
+            _loginStatusNotification = 0;
+            if (_watchedConnect != null)
+            {
+                var expirationOptions = new EosConnect.AddNotifyAuthExpirationOptions();
+                _authExpirationNotification = _watchedConnect.AddNotifyAuthExpiration(ref expirationOptions, null, HandleAuthExpiration);
+                var statusOptions = new EosConnect.AddNotifyLoginStatusChangedOptions();
+                _loginStatusNotification = _watchedConnect.AddNotifyLoginStatusChanged(ref statusOptions, null, HandleLoginStatusChanged);
+            }
+
+            if (_authExpirationNotification == 0 || _loginStatusNotification == 0)
+            {
+                Debug.LogWarning(CloudSaveLog.LoginNotWatched());
+            }
+        }
+
+        private void HandleAuthExpiration(ref EosConnect.AuthExpirationCallbackInfo info)
+        {
+            if (_refresh != null || !IsSignedIn(info.LocalUserId) || !ReferenceEquals(EosPlatform.Current, _watchedPlatform))
+            {
+                return;
+            }
+
+            _refresh = new EosDeviceLogin(_watchedConnect, EosTransportInstaller.LobbyDisplayName, SystemInfo.deviceModel);
+            _refresh.Begin((userId, error) =>
+            {
+                _refresh = null;
+                if (error != null)
+                {
+                    // 期限が切れればログインの状態の通知が来て、EnsureLogin からログインし直す。
+                    Debug.LogWarning(CloudSaveLog.LoginRefreshFailed(error));
+                    return;
+                }
+
+                Debug.Log(CloudSaveLog.LoginRefreshed());
+            });
+        }
+
+        private void HandleLoginStatusChanged(ref EosConnect.LoginStatusChangedCallbackInfo info)
+        {
+            if (info.CurrentStatus == LoginStatus.LoggedIn || !IsSignedIn(info.LocalUserId))
+            {
+                return;
+            }
+
+            EosPlatform.ForgetLogin(info.LocalUserId);
+            _refresh?.Cancel();
+            _refresh = null;
+        }
+
+        private static bool IsSignedIn(ProductUserId userId)
+        {
+            var current = EosPlatform.LocalUserId;
+            return userId != null && current != null
+                && string.Equals(userId.ToString(), current.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
         // 設定が足りないのはやり直しても直らないので、この起動の間は手元だけにする。

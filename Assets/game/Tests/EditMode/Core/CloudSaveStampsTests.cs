@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CloudSaveStampsTests
     {
-        private static readonly string[] _expectedSlotOrder ={ "campaign-Mission02", "profile" };
+        private static readonly string[] _expectedSlotOrder = { "campaign-Mission02", "profile" };
 
         [Test]
         public void EmptyStampsAreWrittenWithNoSlots()

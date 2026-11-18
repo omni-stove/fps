@@ -23,6 +23,21 @@ namespace Shooter.Core
             return LogTag + " signed out; saving locally until the next sign-in";
         }
 
+        public static string LoginRefreshed()
+        {
+            return LogTag + " refreshed the EOS login";
+        }
+
+        public static string LoginRefreshFailed(string error)
+        {
+            return LogTag + " refreshing the EOS login failed: " + Require(error, nameof(error)) + "; signing in again when it expires";
+        }
+
+        public static string LoginNotWatched()
+        {
+            return LogTag + " EOS connect notifications could not be registered; an expired login will not be refreshed";
+        }
+
         public static string Uploaded(string slot, CloudSaveStamp stamp)
         {
             return LogTag + " uploaded slot=" + Require(slot, nameof(slot)) + " " + stamp;

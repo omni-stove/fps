@@ -74,5 +74,10 @@ namespace Shooter.Server
         {
             points.Clear();
         }
+
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            items.Clear();
+        }
     }
 }

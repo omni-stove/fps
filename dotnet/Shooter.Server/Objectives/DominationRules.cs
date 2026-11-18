@@ -222,6 +222,12 @@ namespace Shooter.Server
             }
         }
 
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+        }
+
         // Unity の NetControlPointState と同じく、1% 未満の動きで送り直さないよう 0 に向けて切り捨てる
         internal static sbyte ToPercent(float control)
         {

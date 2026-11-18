@@ -10,6 +10,9 @@ namespace Shooter.Core
         // これより短い間隔の記録を捨てるのは、フレームレートが高いと固定長の容量が足りなくなるため。
         public const float SampleInterval = 1f / 60f;
 
+        // float の 1/60 は 1/60 より少し長く、60 Hz で記録すると間隔が SampleInterval に届かず 1 つおきに捨ててしまうので、この差までは同じ間隔とみなす。
+        private const double _intervalTolerance = 1e-6;
+
         private readonly double[] _times;
         private readonly KillCamPose[] _poses;
         private int _start;
@@ -20,7 +23,7 @@ namespace Shooter.Core
             Seconds = seconds;
 
             // 切り出しの先頭より前の記録も 1 件残すと、先頭の姿勢を補間で出せる
-            var capacity = (int)Math.Ceiling(seconds / SampleInterval) + 2;
+            var capacity = (int)Math.Ceiling(seconds / (SampleInterval - _intervalTolerance)) + 2;
             _times = new double[capacity];
             _poses = new KillCamPose[capacity];
         }
@@ -53,7 +56,7 @@ namespace Shooter.Core
                     return true;
                 }
 
-                if (time - newest < SampleInterval)
+                if (time - newest < SampleInterval - _intervalTolerance)
                 {
                     return false;
                 }

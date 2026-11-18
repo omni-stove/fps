@@ -167,8 +167,8 @@ namespace Shooter.NetV2
                 }
             }
 
-            var alpha = match.Objective == MatchObjective.None ? match.AlphaScore : match.AlphaPoints;
-            var bravo = match.Objective == MatchObjective.None ? match.BravoScore : match.BravoPoints;
+            var alpha = TeamScore(match, match.AlphaScore, match.AlphaPoints);
+            var bravo = TeamScore(match, match.BravoScore, match.BravoPoints);
             if (!_shown || alpha != _alpha || bravo != _bravo)
             {
                 _alpha = alpha;
@@ -251,6 +251,20 @@ namespace Shooter.NetV2
 
             _idleRemaining = null;
             Refresh();
+        }
+
+        // FFA は AlphaPoints・BravoPoints に 1 キルの点とキル数の上限を載せていてチームの点ではないので、GunGame と同じく 0 を出す
+        private static int TeamScore(MatchSnapshot match, int score, int points)
+        {
+            switch (match.Objective)
+            {
+                case MatchObjective.None:
+                    return score;
+                case MatchObjective.FreeForAll:
+                    return 0;
+                default:
+                    return points;
+            }
         }
 
         // 勝ちに要るラウンド数・設置の秒数はスナップショットに無いので、手元の入口 (GameContent) の値で出す

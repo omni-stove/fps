@@ -148,6 +148,19 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void FreeForAllDoesNotShowThePointsPerKillAndLimitAsTeamScores()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll);
+            snapshot.Match.AlphaPoints = 1;
+            snapshot.Match.BravoPoints = 15;
+
+            _hud.Apply(snapshot);
+
+            Assert.That(_hud.Model.FirstScore, Is.Zero);
+            Assert.That(_hud.Model.SecondScore, Is.Zero);
+        }
+
+        [Test]
         public void DominationPublishesThePointsInOrderUntilOneIsMissing()
         {
             var snapshot = Snapshot(MatchObjective.Domination);

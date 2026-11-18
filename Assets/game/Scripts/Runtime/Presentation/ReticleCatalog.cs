@@ -44,7 +44,8 @@ namespace Shooter.Runtime
 
         public static ReticleCatalog Load()
         {
-            return Resources.Load<ReticleCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.Reticles);
+            return fromContent != null ? fromContent : Resources.Load<ReticleCatalog>(ResourcePath);
         }
 
         public static ReticleEntry Resolve(ReticleCatalog catalog, string reticleId, bool scopeOverlay)

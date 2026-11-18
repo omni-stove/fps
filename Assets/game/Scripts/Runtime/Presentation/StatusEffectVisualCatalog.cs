@@ -18,7 +18,8 @@ namespace Shooter.Runtime
 
         public static StatusEffectVisualCatalog Load()
         {
-            return Resources.Load<StatusEffectVisualCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.StatusEffectVisuals);
+            return fromContent != null ? fromContent : Resources.Load<StatusEffectVisualCatalog>(ResourcePath);
         }
 
         public void SetKinds(IEnumerable<StatusEffectVisualEntry> kinds)

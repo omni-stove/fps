@@ -127,6 +127,87 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheReticleCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.Reticles, Is.Null);
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(Resources.Load<ReticleCatalog>(ReticleCatalog.ResourcePath)));
+
+            content.Reticles = Track(ScriptableObject.CreateInstance<ReticleCatalog>());
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(content.Reticles));
+
+            content.Reticles = null;
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(Resources.Load<ReticleCatalog>(ReticleCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void TheStatusEffectVisualCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.StatusEffectVisuals, Is.Null);
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(Resources.Load<StatusEffectVisualCatalog>(StatusEffectVisualCatalog.ResourcePath)));
+
+            content.StatusEffectVisuals = Track(ScriptableObject.CreateInstance<StatusEffectVisualCatalog>());
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(content.StatusEffectVisuals));
+
+            content.StatusEffectVisuals = null;
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(Resources.Load<StatusEffectVisualCatalog>(StatusEffectVisualCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void TheFlashOverlayCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.FlashOverlay, Is.Null);
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(Resources.Load<FlashOverlayCatalog>(FlashOverlayCatalog.ResourcePath)));
+
+            content.FlashOverlay = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(content.FlashOverlay));
+
+            content.FlashOverlay = null;
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(Resources.Load<FlashOverlayCatalog>(FlashOverlayCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void FillEmptyFillsTheReticleStatusEffectAndFlashCatalogs()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            var reticles = Track(ScriptableObject.CreateInstance<ReticleCatalog>());
+            var statusEffects = Track(ScriptableObject.CreateInstance<StatusEffectVisualCatalog>());
+            var flashA = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            var flashB = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            var candidates = new Dictionary<System.Type, Object[]>
+            {
+                { typeof(ReticleCatalog), new Object[] { reticles } },
+                { typeof(StatusEffectVisualCatalog), new Object[] { statusEffects } },
+                { typeof(FlashOverlayCatalog), new Object[] { flashA, flashB } },
+            };
+
+            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
+
+            Assert.That(content.Reticles, Is.SameAs(reticles));
+            Assert.That(content.StatusEffectVisuals, Is.SameAs(statusEffects));
+            Assert.That(content.FlashOverlay, Is.Null);
+            Assert.That(left, Does.Contain("FlashOverlay"));
+            Assert.That(left, Does.Not.Contain("Reticles").And.Not.Contain("StatusEffectVisuals"));
+        }
+
+        [TestCase("_reticles", "Resources/Presentation/ReticleCatalog")]
+        [TestCase("_statusEffectVisuals", "Resources/Presentation/StatusEffectVisualsCatalog")]
+        [TestCase("_flashOverlay", "Resources/Presentation/FlashOverlayCatalog")]
+        public void TheCatalogFieldsNameTheirResourceFallback(string field, string resourcePath)
+        {
+            var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var tooltip = (TooltipAttribute)System.Attribute.GetCustomAttribute(info, typeof(TooltipAttribute));
+
+            Assert.That(tooltip, Is.Not.Null);
+            Assert.That(tooltip.tooltip, Does.Contain("空なら " + resourcePath + "、"));
+        }
+
+        [Test]
         public void TheStreakAimAssistAndProgressionTuningAreKeptAndStartEmpty()
         {
             var content = Content("A");

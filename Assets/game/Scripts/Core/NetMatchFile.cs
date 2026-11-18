@@ -37,6 +37,9 @@ namespace Shooter.Core
         public const string JoinCodeItem = "joinCode";
         public const string ChatIntervalSecondsItem = "chatIntervalSeconds";
         public const string MaxChatLengthItem = "maxChatLength";
+        public const string RoundWinsToWinItem = "roundWinsToWin";
+        public const string RoundPreparationSecondsItem = "roundPreparationSeconds";
+        public const string RoundTimeLimitSecondsItem = "roundTimeLimitSeconds";
 
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
@@ -140,7 +143,7 @@ namespace Shooter.Core
             ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, RestartDelaySecondsItem, MaxHealthItem, MinEnemySpawnDistanceItem,
             ReconnectGraceSecondsItem, MaxShotOriginOffsetItem, DominationScoreLimitItem, CaptureSecondsItem, PointsPerSecondItem,
             MaxCapturersItem, MaxPlayersItem, MapPoolItem, MapVoteSecondsItem, MaxTeamSizeDifferenceItem, PrivateMatchItem, JoinCodeItem,
-            ChatIntervalSecondsItem, MaxChatLengthItem,
+            ChatIntervalSecondsItem, MaxChatLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem, RoundTimeLimitSecondsItem,
         };
 
         public NetMatchFile(
@@ -281,6 +284,9 @@ namespace Shooter.Core
             writer.String(JoinCodeItem, s.JoinCode ?? string.Empty);
             writer.Float(ChatIntervalSecondsItem, s.ChatIntervalSeconds);
             writer.Int(MaxChatLengthItem, s.MaxChatLength);
+            writer.Int(RoundWinsToWinItem, s.RoundWinsToWin);
+            writer.Float(RoundPreparationSecondsItem, s.RoundPreparationSeconds);
+            writer.Float(RoundTimeLimitSecondsItem, s.RoundTimeLimitSeconds);
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -439,7 +445,10 @@ namespace Shooter.Core
                     match.ReadBool(PrivateMatchItem, d.PrivateMatch),
                     match.ReadString(JoinCodeItem, d.JoinCode),
                     match.ReadFloat(ChatIntervalSecondsItem, d.ChatIntervalSeconds),
-                    match.ReadInt(MaxChatLengthItem, d.MaxChatLength));
+                    match.ReadInt(MaxChatLengthItem, d.MaxChatLength),
+                    match.ReadInt(RoundWinsToWinItem, d.RoundWinsToWin),
+                    match.ReadFloat(RoundPreparationSecondsItem, d.RoundPreparationSeconds),
+                    match.ReadFloat(RoundTimeLimitSecondsItem, d.RoundTimeLimitSeconds));
             }
             catch (ArgumentException e)
             {

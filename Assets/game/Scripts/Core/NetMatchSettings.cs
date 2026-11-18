@@ -19,6 +19,9 @@ namespace Shooter.Core
         public const int DefaultMaxTeamSizeDifference = 0;
         public const float DefaultChatIntervalSeconds = 1f;
         public const int DefaultMaxChatLength = 120;
+        public const int DefaultRoundWinsToWin = 3;
+        public const float DefaultRoundPreparationSeconds = 5f;
+        public const float DefaultRoundTimeLimitSeconds = 120f;
 
         // Core からは Protocol を参照できないので、Shooter.Protocol.SnapshotMessage.MaxPlayers の値を写す
         public const int MaxMaxPlayers = 64;
@@ -49,7 +52,10 @@ namespace Shooter.Core
             bool privateMatch = false,
             string joinCode = null,
             float chatIntervalSeconds = DefaultChatIntervalSeconds,
-            int maxChatLength = DefaultMaxChatLength)
+            int maxChatLength = DefaultMaxChatLength,
+            int roundWinsToWin = DefaultRoundWinsToWin,
+            float roundPreparationSeconds = DefaultRoundPreparationSeconds,
+            float roundTimeLimitSeconds = DefaultRoundTimeLimitSeconds)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -90,6 +96,10 @@ namespace Shooter.Core
                     nameof(maxChatLength), maxChatLength, nameof(maxChatLength) + " must be between 1 and " + MaxMaxChatLength);
             }
 
+            RequirePositive(roundWinsToWin, nameof(roundWinsToWin));
+            RequireNotNegative(roundPreparationSeconds, nameof(roundPreparationSeconds));
+            RequirePositive(roundTimeLimitSeconds, nameof(roundTimeLimitSeconds));
+
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
@@ -110,6 +120,9 @@ namespace Shooter.Core
             PointsPerSecond = pointsPerSecond;
             MaxCapturers = maxCapturers;
             MaxPlayers = maxPlayers;
+            RoundWinsToWin = roundWinsToWin;
+            RoundPreparationSeconds = roundPreparationSeconds;
+            RoundTimeLimitSeconds = roundTimeLimitSeconds;
         }
 
         public static NetMatchSettings Default { get; } = new NetMatchSettings();
@@ -136,7 +149,10 @@ namespace Shooter.Core
                 privateMatch: privateMatch,
                 joinCode: joinCode,
                 chatIntervalSeconds: ChatIntervalSeconds,
-                maxChatLength: MaxChatLength);
+                maxChatLength: MaxChatLength,
+                roundWinsToWin: RoundWinsToWin,
+                roundPreparationSeconds: RoundPreparationSeconds,
+                roundTimeLimitSeconds: RoundTimeLimitSeconds);
         }
 
         public int ScoreLimit { get; }
@@ -178,6 +194,12 @@ namespace Shooter.Core
         public float ChatIntervalSeconds { get; }
 
         public int MaxChatLength { get; }
+
+        public int RoundWinsToWin { get; }
+
+        public float RoundPreparationSeconds { get; }
+
+        public float RoundTimeLimitSeconds { get; }
 
         private static IReadOnlyList<string> CopyMapPool(IReadOnlyList<string> mapPool)
         {

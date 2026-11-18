@@ -55,10 +55,18 @@ namespace Shooter.Server
             var settings = _data.Settings;
             CheckOtherMaps(rules);
             PrepareObjective(rules, settings, points, out var killScoreLimit);
+            PrepareElimination(rules, settings);
+            var rounds = _elimination != null;
             try
             {
+                // ラウンド制では試合全体を時間で切らず、1 ラウンドの制限時間で区切るので、Session の制限時間は届かない長さにする
                 _session = new TeamDeathmatchSession(
-                    new TeamDeathmatchSpec(killScoreLimit, settings.TimeLimitSeconds, settings.RespawnSeconds, rules),
+                    new TeamDeathmatchSpec(
+                        rounds ? int.MaxValue : killScoreLimit,
+                        rounds ? float.MaxValue : settings.TimeLimitSeconds,
+                        settings.RespawnSeconds,
+                        rules,
+                        respawnsByRound: rounds),
                     settings.MaxHealth,
                     points.SpawnPoints,
                     new SpawnSelector(settings.MinEnemySpawnDistance),
@@ -118,6 +126,7 @@ namespace Shooter.Server
             PrepareChat(settings);
             PrepareMapVote();
             StartObjective();
+            StartElimination();
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -129,6 +138,7 @@ namespace Shooter.Server
             AdvanceRevives(deltaSeconds);
             _session.Tick(deltaSeconds);
             TickObjective(deltaSeconds);
+            TickElimination(deltaSeconds);
             TickRound();
             TickIdle(deltaSeconds);
             TickPings();
@@ -213,6 +223,7 @@ namespace Shooter.Server
             }
 
             StopObjective();
+            StopElimination();
             StopMapVote();
             _session = null;
         }
@@ -226,7 +237,7 @@ namespace Shooter.Server
 
             // Session は攻撃者と被害者が同じ Id のダメージを自滅として扱うので、攻撃者のいないダメージはそれに寄せる
             var source = attackerId ?? victimId;
-            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId))
+            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId) || IsBetweenRounds)
             {
                 return DamageOutcome.Ignored;
             }
@@ -268,7 +279,7 @@ namespace Shooter.Server
         public bool CanFire(int playerId)
         {
             return _session != null && _session.HasPlayer(playerId) && _session.State == GameModeState.Playing
-                && _session.IsAlive(playerId) && !_session.IsDowned(playerId);
+                && _session.IsAlive(playerId) && !_session.IsDowned(playerId) && !IsBetweenRounds;
         }
 
         public void NotifyFired(int playerId)
@@ -294,12 +305,13 @@ namespace Shooter.Server
             snapshot.Winner = winner ?? Team.Alpha;
             snapshot.AlphaScore = _session.GetScore(Team.Alpha);
             snapshot.BravoScore = _session.GetScore(Team.Bravo);
-            snapshot.RemainingSeconds = (int)Math.Ceiling(_session.RemainingSeconds);
+            snapshot.RemainingSeconds = (int)Math.Ceiling(_elimination != null ? _elimination.RemainingSeconds : _session.RemainingSeconds);
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
             snapshot.Rules = MatchRulesSync.From(_data.Rules);
             FillObjective(ref snapshot);
+            FillElimination(ref snapshot);
             FillRound(ref snapshot);
         }
 
@@ -351,6 +363,7 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
+            EliminationPlayerJoined(playerId);
             VoicePlayerJoined(player);
             OnPlayerJoined(player);
         }
@@ -364,6 +377,7 @@ namespace Shooter.Server
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
             ObjectivePlayerLeft(playerId);
+            EliminationPlayerLeft(playerId);
             ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
             VoicePlayerLeft(player);
@@ -395,6 +409,7 @@ namespace Shooter.Server
             PingMatchRestarted();
             _session.ChangeTeam(playerId, player.Team);
             ObjectivePlayerJoined(playerId);
+            EliminationPlayerJoined(playerId);
         }
 
         private void HandleMatchRestarted()
@@ -419,11 +434,18 @@ namespace Shooter.Server
             ClearDowned();
             PingMatchRestarted();
             ObjectiveMatchRestarted();
+            EliminationMatchRestarted();
             SpectateMatchRestarted();
         }
 
+        // ラウンド制では試合の点数をラウンドの勝ち数にするので、キルの点数では書き換えない
         private void HandleScoreChanged(int alpha, int bravo)
         {
+            if (_elimination != null)
+            {
+                return;
+            }
+
             _match.SetScores(alpha, bravo);
             _log.WriteLine(MatchLog.Score(alpha, bravo));
         }
@@ -437,6 +459,7 @@ namespace Shooter.Server
             _match.WriteKill(killerId, victimId, byAlly, assisterIds);
             SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
             ObjectivePlayerKilled(victimId);
+            EliminationPlayerKilled(killerId, victimId);
             SpectatePlayerKilled(victimId);
         }
 

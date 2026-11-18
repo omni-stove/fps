@@ -8,7 +8,7 @@ namespace Shooter.Server
     // プレイヤー Id でなく ProductUserId で数えるのは、抜けてつなぎ直すと Id が変わっても同じ人の数を 1 つにまとめるため。
     internal sealed class ServerMatchStats
     {
-        private static readonly int _statCount = Enum.GetValues(typeof(PlayerStat)).Length;
+        private static readonly int _statCount = Enum.GetValues<PlayerStat>().Length;
 
         // EOS の ProductUserId は 16 進なので大文字と小文字を区別しない
         private readonly Dictionary<string, long[]> _byUser = new Dictionary<string, long[]>(StringComparer.OrdinalIgnoreCase);

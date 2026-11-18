@@ -37,6 +37,7 @@ namespace Shooter.Server.Eos.Tests
         public void TearDown()
         {
             _queue.Dispose();
+            _backend.Dispose();
             _log.Dispose();
         }
 

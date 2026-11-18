@@ -29,6 +29,7 @@ namespace Shooter.NetV2.Tests
         public void TearDown()
         {
             _leaderboard.Dispose();
+            _backend.Dispose();
         }
 
         [Test]

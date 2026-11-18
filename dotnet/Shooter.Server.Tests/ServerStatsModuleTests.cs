@@ -41,6 +41,7 @@ namespace Shooter.Server.Tests
             _module?.Dispose();
             _rules?.Stop();
             _transport.Dispose();
+            _backend.Dispose();
             _log.Dispose();
         }
 

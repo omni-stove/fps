@@ -49,6 +49,7 @@ namespace Shooter.Tests.EditMode
             // オフラインだけのビルドと同じく、パーティと参加コードの口が無い状態から始める
             GameSignals.PartyControl.Clear();
             GameSignals.JoinByCode.Clear();
+            MainMenuPanels.Clear();
         }
 
         [TearDown]
@@ -65,6 +66,7 @@ namespace Shooter.Tests.EditMode
             CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
             GameSignals.ResetAll();
+            MainMenuPanels.Clear();
         }
 
         [Test]
@@ -111,8 +113,13 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定・ロードアウト・プロフィール・パーティ・コードで入るは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 5));
+            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 5 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 10));
+            foreach (var kind in MainMenuPanels.Kinds)
+            {
+                Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.PanelButtonName(kind)));
+            }
+
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.SettingsButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.LoadoutButtonName));
             Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.ProfileButtonName));
@@ -310,6 +317,231 @@ namespace Shooter.Tests.EditMode
             _screen.OpenParty();
             Assert.That(_screen.IsPartyOpen, Is.False);
             Assert.That(_host.Loaded, Is.Empty);
+        }
+
+        [Test]
+        public void WithoutRegisteredScreensTheirButtonsAreHiddenAndSkipped()
+        {
+            _screen.Bind(_root);
+
+            foreach (var kind in MainMenuPanels.Kinds)
+            {
+                var buttonName = MainMenuScreen.PanelButtonName(kind);
+                Assert.That(_screen.IsButtonShown(buttonName), Is.False, buttonName);
+                Assert.That(_root.Q<Button>(buttonName).style.display.value, Is.EqualTo(DisplayStyle.None), buttonName);
+            }
+
+            Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            // プロフィール (5) の次は、隠れた 5 つ (6〜10) を飛ばして射撃場 (11)
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(5));
+            Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.ProfileButtonName));
+            _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(11));
+            Assert.That(MainMenuScreen.ButtonNames[11], Is.EqualTo(MainMenuScreen.RangeButtonName));
+
+            _screen.OpenPanel(MainMenuPanelKind.Stats);
+
+            Assert.That(_screen.IsPanelOpen, Is.False, "nothing opens without a registered screen");
+            Assert.That(_screen.OpenPanelKind, Is.Null);
+            Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            Assert.That(_screen.Notice, Is.Null);
+        }
+
+        [Test]
+        public void TheScreenButtonsSitAfterTheProfileInTheirOwnOrder()
+        {
+            var names = MainMenuScreen.ButtonNames.ToList();
+            var profile = names.IndexOf(MainMenuScreen.ProfileButtonName);
+
+            Assert.That(names.GetRange(profile + 1, 5), Is.EqualTo(new[]
+            {
+                "menu-stats", "menu-leaderboard", "menu-replays", "menu-cosmetics", "menu-stash",
+            }));
+            Assert.That(MainMenuPanels.Kinds.Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 5)));
+        }
+
+        [Test]
+        public void ARegisteredScreenShowsItsButtonOpensInTheSlotAndBackReturnsToItsButton()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.Leaderboard, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.LeaderboardButtonName), Is.True);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.False, "only the registered screen gets a button");
+
+            _screen.OpenPanel(MainMenuPanelKind.Leaderboard);
+
+            Assert.That(_screen.IsPanelOpen, Is.True);
+            Assert.That(_screen.OpenPanelKind, Is.EqualTo(MainMenuPanelKind.Leaderboard));
+            Assert.That(_screen.Panel, Is.SameAs(opened));
+            Assert.That(opened.Container, Is.SameAs(_screen.PanelSlot));
+            Assert.That(_screen.PanelSlot.childCount, Is.EqualTo(1));
+            Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_screen.Buttons.All(b => !b.enabledSelf), Is.True);
+            Assert.That(_screen.Choose(MenuDestination.Range), Is.False, "the menu does not move while the screen is open");
+            _screen.OpenProfile();
+            Assert.That(_screen.IsProfileOpen, Is.False, "only one overlay at a time");
+            _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(-1), "the gamepad moves inside the screen, not the menu");
+
+            opened.Cancel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(_screen.OpenPanelKind, Is.Null);
+            Assert.That(opened.Disposals, Is.EqualTo(1));
+            Assert.That(_screen.PanelSlot.childCount, Is.Zero, "the shared slot is emptied for the next screen");
+            Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.LeaderboardButtonName)));
+            Assert.That(_host.Loaded, Is.Empty);
+
+            opened.Cancel();
+            Assert.That(opened.Disposals, Is.EqualTo(1), "a closed screen no longer closes the menu's slot");
+        }
+
+        [Test]
+        public void TheScreenButtonsFollowTheRegistrationsWhileTheMenuIsShown()
+        {
+            _screen.Bind(_root);
+
+            MainMenuPanels.Register(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            MainMenuPanels.Register(MainMenuPanelKind.Stash, slot => new FakeMenuPanel(slot));
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True, "a screen registered after the menu opened shows its button");
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StashButtonName), Is.True);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.ReplaysButtonName), Is.False);
+
+            var names = MainMenuScreen.ButtonNames.ToList();
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            _screen.MoveFocus(1);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(names.IndexOf(MainMenuScreen.StatsButtonName)));
+
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.True);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.False);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(names.IndexOf(MainMenuScreen.StashButtonName)),
+                "the focus leaves the hidden button for the next shown one");
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.False, "nothing is left to unregister");
+        }
+
+        [Test]
+        public void AScreenStaysOpenWhenItIsUnregisteredUntilBackIsPressed()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.Replays, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+            _screen.OpenPanel(MainMenuPanelKind.Replays);
+
+            MainMenuPanels.Unregister(MainMenuPanelKind.Replays);
+
+            Assert.That(_screen.IsPanelOpen, Is.True);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.ReplaysButtonName), Is.False);
+
+            opened.Cancel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.RangeButtonName),
+                "back lands on the next shown button because the screen's own button is gone");
+        }
+
+        [Test]
+        public void AScreenThatFailsToOpenOnlyShowsANotice()
+        {
+            var applied = Localizer.Language;
+            Localizer.Apply(GameLanguage.Japanese);
+            try
+            {
+                MainMenuPanels.Register(MainMenuPanelKind.Cosmetics, slot =>
+                {
+                    slot.Add(new Label("half built"));
+                    throw new InvalidOperationException("no cosmetic catalog");
+                });
+                MainMenuPanels.Register(MainMenuPanelKind.Stash, slot => null);
+                _screen.Bind(_root);
+                LogAssert.Expect(LogType.Error, new Regex(@"^\[Menu\] cannot open the Cosmetics screen: no cosmetic catalog"));
+
+                _screen.OpenPanel(MainMenuPanelKind.Cosmetics);
+
+                Assert.That(_screen.IsPanelOpen, Is.False);
+                Assert.That(_screen.Notice, Is.EqualTo("この画面を開けません: no cosmetic catalog"));
+                Assert.That(_screen.PanelSlot.childCount, Is.Zero);
+                Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+                Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+                Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.CosmeticsButtonName)));
+
+                Localizer.Apply(GameLanguage.English);
+                Assert.That(_screen.Notice, Is.EqualTo("This screen cannot be opened: no cosmetic catalog"));
+
+                LogAssert.Expect(LogType.Error, new Regex(@"^\[Menu\] cannot open the Stash screen: the registered Stash screen returned nothing"));
+
+                _screen.OpenPanel(MainMenuPanelKind.Stash);
+
+                Assert.That(_screen.IsPanelOpen, Is.False);
+                Assert.That(_screen.Notice, Is.EqualTo("This screen cannot be opened: the registered Stash screen returned nothing"));
+                Assert.That(_screen.Buttons.All(b => b.enabledSelf), Is.True);
+            }
+            finally
+            {
+                Localizer.Apply(applied);
+            }
+        }
+
+        [Test]
+        public void RebindingDisposesTheOpenScreen()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.Stats, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+            _screen.OpenPanel(MainMenuPanelKind.Stats);
+
+            _screen.Bind(_root);
+
+            Assert.That(opened.Disposals, Is.EqualTo(1));
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True, "the registration outlives the layout");
+        }
+
+        [Test]
+        public void TheRegistryRejectsAMissingScreenAndReplacesARepeatedOne()
+        {
+            Assert.Throws<ArgumentNullException>(() => MainMenuPanels.Register(MainMenuPanelKind.Stats, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MainMenuPanels.Register((MainMenuPanelKind)99, slot => null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MainMenuScreen.PanelButtonName((MainMenuPanelKind)99));
+            Assert.That(MainMenuPanels.IsRegistered(MainMenuPanelKind.Stats), Is.False);
+
+            var changed = new System.Collections.Generic.List<MainMenuPanelKind>();
+            Action<MainMenuPanelKind> record = changed.Add;
+            MainMenuPanels.Changed += record;
+            try
+            {
+                Func<VisualElement, IMainMenuPanel> first = slot => new FakeMenuPanel(slot);
+                Func<VisualElement, IMainMenuPanel> second = slot => new FakeMenuPanel(slot);
+                MainMenuPanels.Register(MainMenuPanelKind.Stats, first);
+                MainMenuPanels.Register(MainMenuPanelKind.Stats, second);
+
+                Assert.That(MainMenuPanels.TryGet(MainMenuPanelKind.Stats, out var registered), Is.True);
+                Assert.That(registered, Is.SameAs(second));
+
+                MainMenuPanels.Clear();
+
+                Assert.That(MainMenuPanels.IsRegistered(MainMenuPanelKind.Stats), Is.False);
+                Assert.That(changed, Is.EqualTo(new[] { MainMenuPanelKind.Stats, MainMenuPanelKind.Stats, MainMenuPanelKind.Stats }));
+            }
+            finally
+            {
+                MainMenuPanels.Changed -= record;
+            }
         }
 
         [Test]
@@ -898,6 +1130,31 @@ namespace Shooter.Tests.EditMode
             public void Leave()
             {
                 Calls.Add("Leave");
+            }
+        }
+
+        private sealed class FakeMenuPanel : IMainMenuPanel
+        {
+            public FakeMenuPanel(VisualElement container)
+            {
+                Container = container;
+                container.Add(new Label("screen"));
+            }
+
+            public event Action Cancelled;
+
+            public VisualElement Container { get; }
+
+            public int Disposals { get; private set; }
+
+            public void Cancel()
+            {
+                Cancelled?.Invoke();
+            }
+
+            public void Dispose()
+            {
+                Disposals++;
             }
         }
 

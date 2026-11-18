@@ -74,7 +74,11 @@ namespace Shooter.Runtime
 
         public void Tick(float deltaSeconds)
         {
-            SpecGuard.NonNegativeFinite(deltaSeconds, nameof(deltaSeconds));
+            if (!(deltaSeconds >= 0f) || float.IsInfinity(deltaSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), deltaSeconds, "deltaSeconds must be a non-negative finite number");
+            }
+
             if (_agent == null)
             {
                 _agent = GetComponent<EnemyAgent>();

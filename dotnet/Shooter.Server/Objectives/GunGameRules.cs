@@ -194,6 +194,12 @@ namespace Shooter.Server
             points.Clear();
         }
 
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+        }
+
         // 段の数まで登った値をそのまま送るのは、クライアントがそれで登り切った人を知るため
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {

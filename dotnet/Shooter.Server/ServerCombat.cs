@@ -70,6 +70,9 @@ namespace Shooter.Server
 
         public string Name => "combat";
 
+        // 近接・ストリーク・設置物のように戦闘の外で数える仕組みが、倒したことを知る口。撃った弾・爆発・落下・溺れも含めて、キルを数えるたびに出す
+        public event Action<KillFeedEntry> PlayerKilled;
+
         internal ServerHitboxes Hitboxes => _hitboxes;
 
         internal ServerStructures Structures => _structures;
@@ -108,6 +111,7 @@ namespace Shooter.Server
             _bodies.Teleported += HandleTeleported;
             _rules.PlayerSpawned += HandlePlayerSpawned;
             _rules.MatchStarted += HandleMatchStarted;
+            _rules.PlayerKilled += HandlePlayerKilled;
             _movement.Landed += HandleLanded;
             _movement.Drowned += HandleDrowned;
 
@@ -207,6 +211,7 @@ namespace Shooter.Server
             _bodies.Teleported -= HandleTeleported;
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _rules.MatchStarted -= HandleMatchStarted;
+            _rules.PlayerKilled -= HandlePlayerKilled;
             _movement.Landed -= HandleLanded;
             _movement.Drowned -= HandleDrowned;
             _fighters.Clear();
@@ -340,6 +345,58 @@ namespace Shooter.Server
             {
                 _log.WriteLine(ServerMovementLog.DrownDamage(player.PlayerId, tick, damage, outcome));
             }
+        }
+
+        // 近接・ストリーク・設置物が与えるダメージの口。撃った弾と同じく MatchRulesModule.ApplyDamage を通すので、味方撃ち・出現直後の無敵・
+        // ダウン・キルの数え方とキルフィードは撃った弾と同じになる。攻撃者が抜けていれば、爆発と同じく攻撃者のいないダメージ (倒れたら自滅) にする
+        internal DamageOutcome DealDamage(int? attackerId, int victimId, int amount, string weaponId, HitZone zone, Vector3? source)
+        {
+            ArgumentNullException.ThrowIfNull(weaponId);
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            if (!IsHittable(victimId))
+            {
+                return DamageOutcome.Ignored;
+            }
+
+            var attacker = attackerId.HasValue && _match.TryGetPlayer(attackerId.Value, out _) ? attackerId : null;
+            var outcome = _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker ?? victimId, victimId, weaponId, zone));
+            if (outcome == DamageOutcome.Ignored)
+            {
+                return outcome;
+            }
+
+            var reflected = attacker.HasValue && IsReflected(attacker.Value, victimId);
+            var hurt = reflected ? attacker.Value : victimId;
+            if (source.HasValue && _fighters.TryGetValue(hurt, out var hurtFighter) && _bodies.TryGet(hurt, out var hurtBody))
+            {
+                hurtFighter.LastHitDirection = hurtBody.Position - source.Value;
+            }
+
+            if (!attacker.HasValue || attacker.Value == victimId)
+            {
+                SendDamageTaken(victimId, source, amount);
+            }
+            else if (reflected)
+            {
+                SendDamageTaken(attacker.Value, null, amount);
+            }
+            else
+            {
+                SendHitConfirm(attacker.Value, amount, zone, outcome);
+                SendDamageTaken(victimId, source, amount);
+            }
+
+            _log.WriteLine(ServerCombatLog.Dealt(attacker, victimId, weaponId, amount, zone, outcome));
+            return outcome;
+        }
+
+        private void HandlePlayerKilled(KillFeedEntry entry)
+        {
+            PlayerKilled?.Invoke(entry);
         }
 
         private ServerPlayerWeapons ActiveWeapons(Fighter fighter)

@@ -46,6 +46,7 @@ namespace Shooter.Server.Tests
             Join(2);
             Assert.That(TeamOf(1), Is.EqualTo(Team.Alpha));
             Assert.That(TeamOf(2), Is.EqualTo(Team.Bravo));
+            Assert.That(_module.Objective, Is.TypeOf<EliminationRules>());
             Assert.That(_log.ToString(), Does.Contain("[Match] elimination winsToWin=2 preparation=1s roundTimeLimit=30s"));
 
             Step();
@@ -205,6 +206,7 @@ namespace Shooter.Server.Tests
             Join(2);
             Step();
 
+            Assert.That(_module.Objective, Is.TypeOf<TeamKillsRules>());
             Assert.That(_module.Elimination, Is.Null);
             Assert.That(_module.CurrentRoundPhase(), Is.Null);
             Assert.That(_module.CanFire(1), Is.True);

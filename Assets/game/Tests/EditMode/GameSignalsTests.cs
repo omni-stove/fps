@@ -261,7 +261,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("wins", LeaderboardStage.Unavailable, null));
             GameSignals.Replays.Publish(replays);
             GameSignals.Cosmetics.Publish(cosmetics);
-            GameSignals.Stash.Publish(new StashStatus(10, Array.Empty<StashStack>()));
+            GameSignals.Stash.Publish(new StashStatus(10, Array.Empty<StashEntry>()));
 
             GameSignals.ReportSender.Value.Report(7, ReportReason.Cheating);
             GameSignals.BlockControl.Value.SetMuted(7, true);

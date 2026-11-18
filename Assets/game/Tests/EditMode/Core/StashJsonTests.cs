@@ -65,19 +65,19 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheStatusKeepsACopyAndChecksTheCapacity()
         {
-            var stacks = new[] { new StashStack(_bandage, 3) };
+            var stacks = new[] { new StashEntry(_bandage, 3) };
             var status = new StashStatus(4, stacks);
-            stacks[0] = new StashStack(_bandage, 9);
+            stacks[0] = new StashEntry(_bandage, 9);
 
             Assert.That(status.Stacks[0].Count, Is.EqualTo(3));
             Assert.That(status.FreeSlots, Is.EqualTo(3));
-            Assert.That(status, Is.EqualTo(new StashStatus(4, new[] { new StashStack(_bandage, 3) })));
-            Assert.That(status, Is.Not.EqualTo(new StashStatus(5, new[] { new StashStack(_bandage, 3) })));
+            Assert.That(status, Is.EqualTo(new StashStatus(4, new[] { new StashEntry(_bandage, 3) })));
+            Assert.That(status, Is.Not.EqualTo(new StashStatus(5, new[] { new StashEntry(_bandage, 3) })));
             Assert.That(default(StashStatus).Stacks, Is.Empty);
             Assert.That(status.ToString(), Is.EqualTo("stash 1/4"));
             Assert.Throws<ArgumentOutOfRangeException>(() => new StashStatus(0, null));
             Assert.Throws<ArgumentException>(() => new StashStatus(1, new[] { stacks[0], stacks[0] }));
-            Assert.Throws<ArgumentException>(() => new StashStatus(1, new StashStack[] { null }));
+            Assert.Throws<ArgumentException>(() => new StashStatus(1, new StashEntry[] { null }));
         }
 
         private static string Stack(int count)

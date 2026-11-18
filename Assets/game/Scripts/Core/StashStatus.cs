@@ -7,16 +7,16 @@ namespace Shooter.Core
     public readonly struct StashStatus : IEquatable<StashStatus>
     {
         // 渡された一覧を後から書き換えられても変わらないよう写しを持つ。default ではコンストラクタを通らず null になるので、読むときに空へ寄せる。
-        private readonly StashStack[] _stacks;
+        private readonly StashEntry[] _stacks;
 
-        public StashStatus(int capacity, IReadOnlyList<StashStack> stacks)
+        public StashStatus(int capacity, IReadOnlyList<StashEntry> stacks)
         {
             if (capacity < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(capacity), capacity, "capacity must be at least 1");
             }
 
-            var copy = new StashStack[stacks?.Count ?? 0];
+            var copy = new StashEntry[stacks?.Count ?? 0];
             if (copy.Length > capacity)
             {
                 throw new ArgumentException("stacks has " + copy.Length + " stacks, more than the capacity " + capacity, nameof(stacks));
@@ -33,7 +33,7 @@ namespace Shooter.Core
 
         public int Capacity { get; }
 
-        public IReadOnlyList<StashStack> Stacks => _stacks ?? Array.Empty<StashStack>();
+        public IReadOnlyList<StashEntry> Stacks => _stacks ?? Array.Empty<StashEntry>();
 
         public int FreeSlots => Capacity - Stacks.Count;
 

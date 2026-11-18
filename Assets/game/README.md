@@ -91,7 +91,7 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `Leaderboard` | `LeaderboardStatus?` | 開いているリーダーボード (ボードの Id・`LeaderboardStage`・順位と名前と得点の `LeaderboardRow` の一覧) |
 | `Replays` | `IReplayLibrary` | 残したリプレイの一覧 (`ReplayEntry`) と、再生・消す口 |
 | `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
-| `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashStack` の一覧) |
+| `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |
 
 #### 購読のしかた
 

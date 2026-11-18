@@ -70,8 +70,8 @@ namespace Shooter.Core
 
             var trimmed = fileName.Trim();
             if (trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
-                || trimmed.IndexOf('/') >= 0
-                || trimmed.IndexOf('\\') >= 0
+                || trimmed.Contains('/')
+                || trimmed.Contains('\\')
                 || trimmed == "."
                 || trimmed == "..")
             {

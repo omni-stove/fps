@@ -28,11 +28,11 @@ namespace Shooter.Core
             });
         }
 
-        private static StashStack ReadStack(ServerDataJson.Fields entry)
+        private static StashEntry ReadStack(ServerDataJson.Fields entry)
         {
             var itemId = SpecJsonReader.RequireText(entry, ItemIdItem);
             var count = entry.ToInt(entry.ItemPath(CountItem), entry.Require(CountItem));
-            return new StashStack(itemId, count);
+            return new StashEntry(itemId, count);
         }
     }
 }

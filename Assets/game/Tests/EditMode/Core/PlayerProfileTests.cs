@@ -10,6 +10,10 @@ namespace Shooter.Core.Tests
         private static readonly string[] _firstBlood = { "first-blood" };
         private static readonly string[] _firstBloodQuoted = { "first-blood", "a \"quoted\" id" };
         private static readonly string[] _a = { "a" };
+        private static readonly string[] _paddedFirstBloodVeteran = { " first-blood ", "veteran" };
+        private static readonly string[] _firstBloodVictor = { "first-blood", "victor" };
+        private static readonly string[] _blank = { "" };
+        private static readonly string[] _aAndPaddedA = { "a", " a" };
 
         [Test]
         public void KeepsTheValues()
@@ -36,12 +40,12 @@ namespace Shooter.Core.Tests
         [Test]
         public void KeepsTheStatsAndAchievements()
         {
-            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { " first-blood ", "veteran" });
+            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, _paddedFirstBloodVeteran);
 
             Assert.That(profile.Headshots, Is.EqualTo(5));
             Assert.That(profile.MeleeKills, Is.EqualTo(2));
             Assert.That(profile.PlaySeconds, Is.EqualTo(3600));
-            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood", "veteran" }));
+            Assert.That(profile.Achievements, Is.EqualTo(_firstBloodVeteran));
             Assert.That(profile.HasAchievement("veteran"), Is.True);
             Assert.That(profile.HasAchievement("victor"), Is.False);
             Assert.That(profile.HasAchievement(null), Is.False);
@@ -58,19 +62,19 @@ namespace Shooter.Core.Tests
 
             ids[0] = "victor";
 
-            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood" }));
+            Assert.That(profile.Achievements, Is.EqualTo(_firstBlood));
         }
 
         [Test]
         public void WithAchievementAddsTheIdOnceAtTheEnd()
         {
-            var profile = new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, new[] { "first-blood" });
+            var profile = new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, _firstBlood);
 
             var next = profile.WithAchievement("victor");
 
-            Assert.That(next.Achievements, Is.EqualTo(new[] { "first-blood", "victor" }));
-            Assert.That(next, Is.EqualTo(new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, new[] { "first-blood", "victor" })));
-            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood" }), "the profile itself does not change");
+            Assert.That(next.Achievements, Is.EqualTo(_firstBloodVictor));
+            Assert.That(next, Is.EqualTo(new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, _firstBloodVictor)));
+            Assert.That(profile.Achievements, Is.EqualTo(_firstBlood), "the profile itself does not change");
             Assert.That(next.WithAchievement("victor"), Is.SameAs(next));
             Assert.Throws<ArgumentException>(() => profile.WithAchievement(" "));
             Assert.Throws<ArgumentException>(() => profile.WithAchievement(null));
@@ -79,13 +83,13 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheWithMethodsKeepTheOtherValues()
         {
-            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood" });
+            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, _firstBlood);
 
-            Assert.That(profile.WithRating(1300), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1300, 5, 2, 3600, new[] { "first-blood" })));
+            Assert.That(profile.WithRating(1300), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1300, 5, 2, 3600, _firstBlood)));
             Assert.That(
                 profile.WithRecord(1700, 13, 5, 4, 3, 8),
-                Is.EqualTo(new PlayerProfile(1700, 13, 5, 4, 3, 8, 1234, 5, 2, 3600, new[] { "first-blood" })));
-            Assert.That(profile.WithStats(6, 3, 3700), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 6, 3, 3700, new[] { "first-blood" })));
+                Is.EqualTo(new PlayerProfile(1700, 13, 5, 4, 3, 8, 1234, 5, 2, 3600, _firstBlood)));
+            Assert.That(profile.WithStats(6, 3, 3700), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 6, 3, 3700, _firstBlood)));
             Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(-1, 0, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(0, -1, 0));
             Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(0, 0, -1));
@@ -94,9 +98,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void ABlankOrRepeatedAchievementIsRejected()
         {
-            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new[] { "" }));
+            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, _blank));
             Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new string[] { null }));
-            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new[] { "a", " a" }));
+            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, _aAndPaddedA));
         }
 
         [Test]

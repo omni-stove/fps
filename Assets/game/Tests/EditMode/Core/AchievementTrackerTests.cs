@@ -10,6 +10,9 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _unlockedInOrder = { "old-event", "first-blood", "veteran", "victor" };
         private static readonly string[] _newlyUnlockedInOrder = { "first-blood", "veteran", "victor" };
+        private static readonly string[] _axe = { "axe" };
+        private static readonly string[] _firstBlood = { "first-blood" };
+        private static readonly string[] _oldEvent = { "old-event" };
         private static readonly string[] _survivorAndRemoved = { "survivor", "removed" };
 
         private readonly AchievementTracker _tracker = new AchievementTracker(AchievementSpec.Default);
@@ -51,7 +54,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheMeleeWeaponsComeFromTheSpec()
         {
-            var tracker = new AchievementTracker(new AchievementSpec(null, new[] { "axe" }));
+            var tracker = new AchievementTracker(new AchievementSpec(null, _axe));
 
             Assert.That(tracker.RecordKill(PlayerProfile.Empty, false, "axe").MeleeKills, Is.EqualTo(1));
             Assert.That(tracker.RecordKill(PlayerProfile.Empty, false, "knife").MeleeKills, Is.Zero);
@@ -82,7 +85,7 @@ namespace Shooter.Core.Tests
 
             var after = _tracker.Unlock(new PlayerProfile(100, 1, 0, 0, 0), unlocked);
 
-            Assert.That(after.Achievements, Is.EqualTo(new[] { "first-blood" }));
+            Assert.That(after.Achievements, Is.EqualTo(_firstBlood));
             Assert.That(unlocked.Count, Is.EqualTo(1));
             Assert.That(unlocked[0].Id, Is.EqualTo("first-blood"));
         }
@@ -91,7 +94,7 @@ namespace Shooter.Core.Tests
         public void AnUnlockedAchievementIsNotUnlockedAgain()
         {
             var unlocked = new List<AchievementDefinition>();
-            var profile = new PlayerProfile(0, 5, 0, 0, 0, 0, 1000, 0, 0, 0, new[] { "first-blood" });
+            var profile = new PlayerProfile(0, 5, 0, 0, 0, 0, 1000, 0, 0, 0, _firstBlood);
 
             var next = _tracker.Unlock(profile, unlocked);
 
@@ -103,7 +106,7 @@ namespace Shooter.Core.Tests
         public void SeveralAchievementsUnlockTogetherInTheSpecOrder()
         {
             var unlocked = new List<AchievementDefinition>();
-            var profile = new PlayerProfile(0, 1, 0, 25, 10, 0, 1000, 0, 0, 0, new[] { "old-event" });
+            var profile = new PlayerProfile(0, 1, 0, 25, 10, 0, 1000, 0, 0, 0, _oldEvent);
 
             var next = _tracker.Unlock(profile, unlocked);
 

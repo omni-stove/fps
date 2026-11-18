@@ -9,7 +9,11 @@ namespace Shooter.Runtime
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static ProgressionRecorder _recorder;
 
+        private static AchievementRecorder _achievements;
+
         public static ProgressionRecorder Recorder => _recorder;
+
+        public static AchievementRecorder Achievements => _achievements;
 
         // 値を覚えずに呼ぶたびに今のプロフィールを引くのは、試合中にレベルが上がればその場で使えるようにするため。
         public static bool IsUnlocked(string id)
@@ -44,16 +48,37 @@ namespace Shooter.Runtime
                 return recorder;
             }
 
+            return Install(new AchievementRecorder(recorder)).Progression;
+        }
+
+        public static AchievementRecorder Install(AchievementRecorder achievements)
+        {
+            if (achievements == null)
+            {
+                throw new ArgumentNullException(nameof(achievements));
+            }
+
+            if (_achievements == achievements)
+            {
+                return achievements;
+            }
+
             Uninstall();
+            var recorder = achievements.Progression;
             recorder.Install();
+            achievements.Install();
             _recorder = recorder;
-            return recorder;
+            _achievements = achievements;
+            return achievements;
         }
 
         public static void Uninstall()
         {
             var recorder = _recorder;
+            var achievements = _achievements;
             _recorder = null;
+            _achievements = null;
+            achievements?.Uninstall();
             recorder?.Uninstall();
         }
 

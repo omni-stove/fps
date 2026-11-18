@@ -251,10 +251,5 @@ namespace Shooter.Server
                 _mode.Start();
             }
         }
-
-        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

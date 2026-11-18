@@ -246,6 +246,33 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheStatsTextsAndTheShippedAchievementNamesAreReadFromTheStatsTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var stats = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("stats.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(
+                    stats.Keys.All(key => key.StartsWith("stats.", StringComparison.Ordinal) || key.StartsWith("achievement.", StringComparison.Ordinal)),
+                    Is.True,
+                    code);
+                Assert.That(stats.Contains("stats.playTime"), Is.True, code);
+                foreach (var achievement in AchievementSpec.DefaultAchievements)
+                {
+                    Assert.That(stats.Contains(achievement.DisplayNameKey), Is.True, $"{code}: {achievement.DisplayNameKey}");
+                    Assert.That(stats.Contains(achievement.DescriptionKey), Is.True, $"{code}: {achievement.DescriptionKey}");
+                }
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Format("stats.playTime", 2, 3), Is.EqualTo("遊んだ時間 2 時間 3 分"));
+            Assert.That(japanese.Format("stats.achievement.progress", "名射手", 7, 50), Is.EqualTo("名射手: 7/50"));
+        }
+
+        [Test]
         public void EveryLanguageHasAReadableTable()
         {
             foreach (var language in GameLanguages.All)

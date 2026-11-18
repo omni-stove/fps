@@ -33,6 +33,8 @@ namespace Shooter.Tests.EditMode
                 Assert.That(spec.Achievements[i].Target, Is.EqualTo(defaults[i].Target));
                 Assert.That(spec.Achievements[i].Hidden, Is.EqualTo(defaults[i].Hidden));
             }
+
+            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(AchievementSpec.DefaultMeleeWeaponIds));
         }
 
         [Test]

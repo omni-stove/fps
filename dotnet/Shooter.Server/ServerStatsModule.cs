@@ -192,7 +192,10 @@ namespace Shooter.Server
                 }
 
                 _stats.Add(userId, PlayerStat.MatchesPlayed);
-                if (winner.HasValue && player.Team == winner.Value)
+                var won = _rules.Objective != null
+                    ? _rules.Objective.IsWinningPlayer(player.PlayerId, player.Team, winner)
+                    : winner.HasValue && player.Team == winner.Value;
+                if (won)
                 {
                     _stats.Add(userId, PlayerStat.MatchesWon);
                 }

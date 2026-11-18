@@ -53,6 +53,12 @@ namespace Shooter.Server
         // killWinner は Session がキル数で決めた勝者
         Team? DecideWinner(Team? killWinner);
 
+        // 勝ちを数えるときに、この人が勝ったか。勝者が 1 人の目的は、チームでなく勝った人で決める
+        bool IsWinningPlayer(int playerId, Team playerTeam, Team? winner)
+        {
+            return winner.HasValue && playerTeam == winner.Value;
+        }
+
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);

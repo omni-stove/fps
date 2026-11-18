@@ -16,6 +16,9 @@ namespace Shooter.Server.Tests
         private const string _bob = "fedcba9876543210fedcba9876543210";
         private static readonly DateTime _time = new DateTime(2026, 11, 18, 9, 0, 0, DateTimeKind.Utc);
 
+        private static readonly string[] _carolOnly = { "carol" };
+        private static readonly string[] _winsOnly = { "wins" };
+
         private StringWriter _log;
         private RecordingTransport _transport;
         private FakeStatsIngestBackend _backend;
@@ -157,8 +160,8 @@ namespace Shooter.Server.Tests
         public void CountsTeamKillsAndSuicidesOnlyAsDeaths()
         {
             var stats = new ServerMatchStats();
-            stats.RecordKill(_alice, _bob, new[] { "carol" }, headshot: true, friendly: false, self: false);
-            stats.RecordKill(_alice, _bob, new[] { "carol" }, headshot: false, friendly: true, self: false);
+            stats.RecordKill(_alice, _bob, _carolOnly, headshot: true, friendly: false, self: false);
+            stats.RecordKill(_alice, _bob, _carolOnly, headshot: false, friendly: true, self: false);
             stats.RecordKill(_alice, _alice, null, headshot: false, friendly: false, self: true);
             stats.RecordKill(null, _bob, null, headshot: false, friendly: false, self: false);
 
@@ -183,7 +186,7 @@ namespace Shooter.Server.Tests
             var ingest = ServerMatchStats.Build(spec, stat => stat == PlayerStat.Kills ? 4 : 1);
 
             Assert.That(ingest, Is.EqualTo(new[] { new StatIngest("Score", 4) }));
-            Assert.That(ServerMatchStats.DuplicateStatNames(spec).Select(b => b.Id), Is.EqualTo(new[] { "wins" }));
+            Assert.That(ServerMatchStats.DuplicateStatNames(spec).Select(b => b.Id), Is.EqualTo(_winsOnly));
 
             Start(spec);
             Assert.That(_log.ToString(), Does.Contain(

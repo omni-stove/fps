@@ -336,6 +336,7 @@ namespace Shooter.Server.Tests
             var turret = new DeployType(_turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), TurretSpec.Default, "weapon-missing");
             Start(new DeployCatalog(new[] { turret }));
             Join(1);
+            Join(2);
             Step(0.2f);
 
             Assert.That(_log.ToString(), Does.Contain("[Deploy] net kind=deploy-turret unusable: weapon weapon-missing is not in the rules TeamDeathmatch"));

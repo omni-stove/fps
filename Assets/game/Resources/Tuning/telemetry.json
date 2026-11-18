@@ -1,0 +1,9 @@
+{
+  "sink": "LocalFile",
+  "fileName": "telemetry.jsonl",
+  "endpoint": "",
+  "flushIntervalSeconds": 10,
+  "maxFileBytes": 5242880,
+  "crashReports": true,
+  "sampleRate": 1
+}

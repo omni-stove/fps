@@ -216,6 +216,25 @@ namespace Shooter.Net.Tests
             Assert.Throws<ArgumentNullException>(() => new NetV2JoinByCode(CreateBackend, _version, () => 1, Connect, null));
         }
 
+        [TestCase(JoinCodeOutcome.NotFound)]
+        [TestCase(JoinCodeOutcome.Full)]
+        [TestCase(JoinCodeOutcome.VersionMismatch)]
+        [TestCase(JoinCodeOutcome.Failed)]
+        public void TheClientRefusesAResultThatFoundNoServerWithoutStartingAConnection(JoinCodeOutcome outcome)
+        {
+            var refusal = NetV2Client.ConnectByJoinCode(JoinCodeResult.NotJoined(outcome, "not joined"));
+
+            Assert.That(refusal, Is.EqualTo("no server was found for the join code (" + outcome + ")"));
+            Assert.That(NetV2Client.Current, Is.Null);
+        }
+
+        [Test]
+        public void TheClientNeedsAJoinResult()
+        {
+            Assert.Throws<ArgumentNullException>(() => NetV2Client.ConnectByJoinCode(null));
+            Assert.That(NetV2Client.Current, Is.Null);
+        }
+
         private ILobbyBackend CreateBackend()
         {
             var backend = new FakeLobbyBackend();

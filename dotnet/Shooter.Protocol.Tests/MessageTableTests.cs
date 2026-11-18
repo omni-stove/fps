@@ -153,11 +153,26 @@ namespace Shooter.Protocol.Tests
         public void UnknownInputButtonIsRejected()
         {
             var input = new InputMessage();
-            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)512));
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)1024));
             var writer = new MessageWriter();
             writer.WriteMessage(input);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void TheMeleeButtonIsReadByTheServer()
+        {
+            var input = new InputMessage();
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, InputButtons.Melee | InputButtons.Crouch));
+            var writer = new MessageWriter();
+            writer.WriteMessage(input);
+
+            var got = (InputMessage)MatchMessages.CreateServerTable().Read(writer.AsSegment());
+
+            Assert.That((int)InputButtons.Melee, Is.EqualTo(512));
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Melee | InputButtons.Crouch));
+            Assert.That(InputButtons.All & InputButtons.Melee, Is.EqualTo(InputButtons.Melee));
         }
 
         [Test]
@@ -175,6 +190,9 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.ChatRequest)]
         [TestCase(MessageIds.MapVoteRequest)]
         [TestCase(MessageIds.SpectateRequest)]
+        [TestCase(MessageIds.StreakUseRequest)]
+        [TestCase(MessageIds.DeployRequest)]
+        [TestCase(MessageIds.ReportRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);
@@ -184,6 +202,8 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.Chat)]
         [TestCase(MessageIds.MapVoteState)]
         [TestCase(MessageIds.VoiceRoster)]
+        [TestCase(MessageIds.StreakActivated)]
+        [TestCase(MessageIds.KillCamClip)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);

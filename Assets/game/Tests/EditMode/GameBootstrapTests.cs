@@ -1265,6 +1265,56 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TargetDummyNamesCountFromOne()
+        {
+            Assert.That(GameBootstrap.TargetDummyName(0), Is.EqualTo("TargetDummy1"));
+            Assert.That(GameBootstrap.TargetDummyName(4), Is.EqualTo("TargetDummy5"));
+        }
+
+        [Test]
+        public void TargetDummyPositionsAreTenMetresAheadOfTheFeetTwoMetresApart()
+        {
+            var positions = GameBootstrap.TargetDummyPositions(new Vector3(1f, 0f, 2f), Quaternion.identity);
+
+            var expected = new[]
+            {
+                new Vector3(-3f, 0f, 12f),
+                new Vector3(-1f, 0f, 12f),
+                new Vector3(1f, 0f, 12f),
+                new Vector3(3f, 0f, 12f),
+                new Vector3(5f, 0f, 12f),
+            };
+            Assert.That(positions, Has.Length.EqualTo(expected.Length));
+            for (var i = 0; i < expected.Length; i++)
+            {
+                Assert.That(Vector3.Distance(positions[i], expected[i]), Is.LessThan(1e-4f), "dummy " + i + " at " + positions[i]);
+            }
+        }
+
+        [Test]
+        public void TargetDummyPositionsIgnoreThePlayersPitch()
+        {
+            var level = GameBootstrap.TargetDummyPositions(Vector3.zero, Quaternion.identity);
+
+            // 見上げても見下ろしても水平な前方に並び、真下を向いて前方が無いときは +Z に並ぶ。
+            foreach (var pitch in new[] { -30f, 45f, 90f })
+            {
+                var pitched = GameBootstrap.TargetDummyPositions(Vector3.zero, Quaternion.Euler(pitch, 0f, 0f));
+                for (var i = 0; i < level.Length; i++)
+                {
+                    Assert.That(Vector3.Distance(pitched[i], level[i]), Is.LessThan(1e-4f), "pitch " + pitch + ", dummy " + i);
+                }
+            }
+        }
+
+        [Test]
+        public void HoldControlWhileDeadRejectsMissingParts()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => GameBootstrap.HoldControlWhileDead(null, _world.Mover));
+            Assert.Throws<System.ArgumentNullException>(() => GameBootstrap.HoldControlWhileDead(_world.PlayerDamageable, null));
+        }
+
+        [Test]
         public void PlayerHasThePresentationAndGrenadeComponentsAndIsTheLocalPlayer()
         {
             var player = _world.Player;

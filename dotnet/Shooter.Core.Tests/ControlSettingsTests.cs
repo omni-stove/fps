@@ -727,7 +727,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true" + _defaultOnline +"}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true" + _defaultOnline + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
@@ -793,7 +793,7 @@ namespace Shooter.Core.Tests
             var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
 
             Assert.That(json, Does.StartWith(Json("{'version':11,")));
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true" + _defaultOnline +"}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true" + _defaultOnline + "}")));
             Assert.That(json, Does.Not.Contain("language"));
         }
 
@@ -1032,7 +1032,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + _defaultOnline +"}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + _defaultOnline + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.AimAssist, Is.EqualTo(enabled));
@@ -1050,7 +1050,7 @@ namespace Shooter.Core.Tests
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.AimAssist, Is.True);
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.EndWith(Json(",'aimAssist':true" + _defaultOnline +"}")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.EndWith(Json(",'aimAssist':true" + _defaultOnline + "}")));
         }
 
         [Test]

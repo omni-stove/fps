@@ -4,9 +4,20 @@ namespace Shooter.Core
 {
     public sealed class KillConfirmedSpec
     {
+        public const int DefaultScoreLimit = 20;
+
+        public const float DefaultTimeLimitSeconds = 300f;
+
+        public const float DefaultRespawnSeconds = 3f;
+
+        public const float DefaultTagLifetimeSeconds = 30f;
+
         public const int DefaultPointsPerConfirm = 1;
 
         public const float DefaultTagPickupRadius = 1f;
+
+        public static KillConfirmedSpec Default { get; } = new KillConfirmedSpec(
+            DefaultScoreLimit, DefaultTimeLimitSeconds, DefaultRespawnSeconds, DefaultTagLifetimeSeconds);
 
         public int ScoreLimit { get; }
 

@@ -95,6 +95,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheInfectedModeTextsAreReadFromTheModesInfectedTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var modes = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("modes-infected.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(modes.Keys.All(key => key.StartsWith("mode.infected.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(modes.Contains("mode.infected.outbreakIn"), Is.True, code);
+                Assert.That(modes.Contains("mode.infected.counts"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-infected.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("mode.infected.infected"), Is.EqualTo("感染者"));
+        }
+
+        [Test]
         public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
         {
             var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
@@ -108,6 +129,27 @@ namespace Shooter.Core.Tests
 
             Assert.That(modes.Get("mode.guardian.youAreLeader"), Is.EqualTo("あなたがリーダー"));
             Assert.That(modes.Get("mode.br.noWeapon"), Is.EqualTo("武器なし: 落ちている武器を拾う"));
+        }
+
+        [Test]
+        public void TheExtractionTextsAreReadFromTheExtractionTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var extraction = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("extraction.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(extraction.Keys.All(key => key.StartsWith("extraction.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(extraction.Contains("extraction.hud.extracting"), Is.True, code);
+                Assert.That(extraction.Contains("extraction.stash.title"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("extraction.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("extraction.hud.closedExit"), Is.EqualTo("この脱出地点は閉じている"));
         }
 
         [Test]

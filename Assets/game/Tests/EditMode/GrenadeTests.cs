@@ -360,7 +360,7 @@ namespace Shooter.Tests.EditMode
 
             var result = grenade.Explode();
 
-            var zone = Object.FindObjectsByType<AreaEffectZone>(FindObjectsSortMode.None).Single();
+            var zone = Object.FindObjectsByType<AreaEffectZone>().Single();
             _created.Add(zone.gameObject);
             Assert.That(result.Damaged, Is.Zero, "smoke does not explode");
             Assert.That(target.Health.Current, Is.EqualTo(target.Health.Max));

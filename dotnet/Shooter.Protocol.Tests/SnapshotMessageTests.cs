@@ -138,8 +138,9 @@ namespace Shooter.Protocol.Tests
             var baseline = Build(100, 0f);
             var current = Build(101, 0f);
 
-            // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。乗り物は並びの数だけ。
-            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6 + 1;
+            // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。
+            // 乗り物・目的の物・設置物は並びの数だけ。
+            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6 + 1 + 1 + 1;
             Assert.That(Size(current, baseline), Is.EqualTo(expected));
         }
 
@@ -675,7 +676,7 @@ namespace Shooter.Protocol.Tests
 
         private static ArraySegment<byte> OnePlayer(SnapshotMessage baseline, PlayerFields bits, Action<MessageWriter> parts)
         {
-            const int listCount = 5;
+            const int listCount = 7;
             var empty = Build(5, 0f);
             empty.HasOwner = false;
             empty.Players.Clear();
@@ -683,6 +684,8 @@ namespace Shooter.Protocol.Tests
             empty.ControlPoints.Clear();
             empty.Projectiles.Clear();
             empty.Vehicles.Clear();
+            empty.ObjectiveItems.Clear();
+            empty.Deployables.Clear();
             empty.Baseline = baseline;
             var head = new MessageWriter();
             head.WriteMessage(empty);
@@ -841,6 +844,11 @@ namespace Shooter.Protocol.Tests
             Assert.That(am.BravoPoints, Is.EqualTo(em.BravoPoints));
             Assert.That(am.HasRound, Is.EqualTo(em.HasRound));
             Assert.That(am.Round, Is.EqualTo(em.Round));
+            Assert.That(am.HasActivePoint, Is.EqualTo(em.HasActivePoint));
+            Assert.That(am.ActivePointIndex, Is.EqualTo(em.ActivePointIndex));
+            Assert.That(am.HasBomb, Is.EqualTo(em.HasBomb));
+            Assert.That(am.Bomb, Is.EqualTo(em.Bomb));
+            Assert.That(am.ObjectiveRemainingSeconds, Is.EqualTo(em.ObjectiveRemainingSeconds));
 
             Assert.That(actual.HasOwner, Is.EqualTo(expected.HasOwner));
             Assert.That(actual.Owner.LastProcessedInputTick, Is.EqualTo(expected.Owner.LastProcessedInputTick));
@@ -878,6 +886,22 @@ namespace Shooter.Protocol.Tests
             {
                 Assert.That(actual.ControlPoints[i].Index, Is.EqualTo(expected.ControlPoints[i].Index));
                 Assert.That(actual.ControlPoints[i].ChangedBits(expected.ControlPoints[i]), Is.Zero);
+            }
+
+            Assert.That(actual.ObjectiveItems.Count, Is.EqualTo(expected.ObjectiveItems.Count));
+            for (var i = 0; i < expected.ObjectiveItems.Count; i++)
+            {
+                Assert.That(actual.ObjectiveItems[i].ItemId, Is.EqualTo(expected.ObjectiveItems[i].ItemId));
+                Assert.That(actual.ObjectiveItems[i].Present, Is.EqualTo(ObjectiveItemFields.All));
+                Assert.That(actual.ObjectiveItems[i].ChangedBits(expected.ObjectiveItems[i]), Is.Zero);
+            }
+
+            Assert.That(actual.Deployables.Count, Is.EqualTo(expected.Deployables.Count));
+            for (var i = 0; i < expected.Deployables.Count; i++)
+            {
+                Assert.That(actual.Deployables[i].DeployableId, Is.EqualTo(expected.Deployables[i].DeployableId));
+                Assert.That(actual.Deployables[i].Present, Is.EqualTo(DeployableFields.All));
+                Assert.That(actual.Deployables[i].ChangedBits(expected.Deployables[i]), Is.Zero);
             }
         }
     }

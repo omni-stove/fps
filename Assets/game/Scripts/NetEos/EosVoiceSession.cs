@@ -73,6 +73,7 @@ namespace Shooter.NetEos
             private readonly Action<string> _log;
             private PlatformInterfaceHandle _handle;
             private string _lobbyId;
+            private PlatformInterfaceHandle _joiningHandle;
             private string _roomName;
             private ulong _connectionNotification;
             private ulong _statusNotification;
@@ -94,7 +95,8 @@ namespace Shooter.NetEos
 
             public void Tick()
             {
-                if (!_disposed && _handle != null && _handle.Alive)
+                var handle = _handle ?? _joiningHandle;
+                if (!_disposed && handle != null && handle.Alive)
                 {
                     EosPlatform.Tick();
                 }
@@ -107,9 +109,9 @@ namespace Shooter.NetEos
                     throw new ObjectDisposedException(nameof(EosVoiceSession));
                 }
 
-                if (_lobbyId != null)
+                if (_lobbyId != null || _joiningHandle != null)
                 {
-                    throw new InvalidOperationException("already in the voice room of lobby " + _lobbyId);
+                    throw new InvalidOperationException("already joining or in an EOS voice room");
                 }
 
                 var handle = PlatformInterfaceHandle.Acquire(out var unavailable);
@@ -125,15 +127,41 @@ namespace Shooter.NetEos
                     LocalUserId = handle.LocalUserId,
                     LocalRTCOptions = RoomOptions(),
                 };
-                var result = handle.Lobby.JoinRTCRoom(ref joinOptions);
-                if (result != Result.Success)
+                _joiningHandle = handle;
+                handle.Lobby.JoinRTCRoom(ref joinOptions, null, (ref JoinRTCRoomCallbackInfo info) =>
                 {
-                    done("joining the RTC room of the EOS lobby id=" + lobbyId + " failed: " + result);
+                    FinishJoin(handle, lobbyId, info.ResultCode, done);
+                });
+            }
+
+            private void FinishJoin(PlatformInterfaceHandle handle, string lobbyId, Result joined, Action<string> done)
+            {
+                // 返事を待つ間に LeaveRoom や Dispose があったら、もう要らない部屋なので、入れていたら出るだけにする
+                if (_disposed || !ReferenceEquals(_joiningHandle, handle))
+                {
+                    if (joined == Result.Success && handle.Alive)
+                    {
+                        LeaveRtcRoom(handle, lobbyId);
+                    }
+
+                    return;
+                }
+
+                _joiningHandle = null;
+                if (joined != Result.Success)
+                {
+                    done("joining the RTC room of the EOS lobby id=" + lobbyId + " failed: " + joined);
+                    return;
+                }
+
+                if (!handle.Alive)
+                {
+                    done("the EOS platform shut down while joining the RTC room of the lobby id=" + lobbyId);
                     return;
                 }
 
                 var nameOptions = new GetRTCRoomNameOptions { LobbyId = lobbyId, LocalUserId = handle.LocalUserId };
-                result = handle.Lobby.GetRTCRoomName(ref nameOptions, out var roomName);
+                var result = handle.Lobby.GetRTCRoomName(ref nameOptions, out var roomName);
                 var room = Text(roomName);
                 if (result != Result.Success || room == null)
                 {
@@ -159,6 +187,7 @@ namespace Shooter.NetEos
 
             public void LeaveRoom()
             {
+                _joiningHandle = null;
                 if (_lobbyId == null)
                 {
                     return;
@@ -319,11 +348,13 @@ namespace Shooter.NetEos
             private void LeaveRtcRoom(PlatformInterfaceHandle handle, string lobbyId)
             {
                 var options = new LeaveRTCRoomOptions { LobbyId = lobbyId, LocalUserId = handle.LocalUserId };
-                var result = handle.Lobby.LeaveRTCRoom(ref options);
-                if (result != Result.Success && result != Result.NotFound)
+                handle.Lobby.LeaveRTCRoom(ref options, null, (ref LeaveRTCRoomCallbackInfo info) =>
                 {
-                    _log(VoiceLog.LeaveFailed(lobbyId, result.ToString()));
-                }
+                    if (info.ResultCode != Result.Success && info.ResultCode != Result.NotFound)
+                    {
+                        _log(VoiceLog.LeaveFailed(lobbyId, info.ResultCode.ToString()));
+                    }
+                });
             }
 
             private void Clear()

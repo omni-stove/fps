@@ -76,6 +76,21 @@ namespace Shooter.Runtime
 
         public static GameSignal<IJoinByCode> JoinByCode { get; } = new GameSignal<IJoinByCode>(nameof(JoinByCode));
 
+        public static GameSignal<IReportSender> ReportSender { get; } = new GameSignal<IReportSender>(nameof(ReportSender));
+
+        public static GameSignal<IBlockControl> BlockControl { get; } = new GameSignal<IBlockControl>(nameof(BlockControl));
+
+        public static GameSignal<IReadOnlyList<AchievementProgress>> Achievements { get; } =
+            new GameSignal<IReadOnlyList<AchievementProgress>>(nameof(Achievements));
+
+        public static GameSignal<LeaderboardStatus?> Leaderboard { get; } = new GameSignal<LeaderboardStatus?>(nameof(Leaderboard));
+
+        public static GameSignal<IReplayLibrary> Replays { get; } = new GameSignal<IReplayLibrary>(nameof(Replays));
+
+        public static GameSignal<ICosmeticLocker> Cosmetics { get; } = new GameSignal<ICosmeticLocker>(nameof(Cosmetics));
+
+        public static GameSignal<StashStatus?> Stash { get; } = new GameSignal<StashStatus?>(nameof(Stash));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -110,6 +125,13 @@ namespace Shooter.Runtime
             Party.Reset();
             PartyControl.Reset();
             JoinByCode.Reset();
+            ReportSender.Reset();
+            BlockControl.Reset();
+            Achievements.Reset();
+            Leaderboard.Reset();
+            Replays.Reset();
+            Cosmetics.Reset();
+            Stash.Reset();
         }
     }
 }

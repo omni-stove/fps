@@ -16,6 +16,7 @@ namespace Shooter.Server
         public const string InventoryTuningFileName = "inventory.json";
         public const string KnockbackTuningFileName = "knockback.json";
         public const string AssistTuningFileName = "assist.json";
+        public const string ChatWordsTuningFileName = "chat-words.json";
 
         private readonly NetMatchSettings _settings;
 
@@ -23,9 +24,11 @@ namespace Shooter.Server
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
             KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
-            NetMatchSettings settings = null)
+            NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null)
         {
             _settings = settings;
+            ChatWords = chatWords ?? ChatWordFilterSpec.Default;
+            ChatWordsPath = chatWordsPath;
             Assist = assist ?? AssistSpec.Default;
             AssistPath = assistPath;
             Knockback = knockback ?? KnockbackSpec.Default;
@@ -80,12 +83,16 @@ namespace Shooter.Server
 
         public string AssistPath { get; }
 
+        public ChatWordFilterSpec ChatWords { get; }
+
+        public string ChatWordsPath { get; }
+
         public ServerRulesData WithSettings(NetMatchSettings settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             return new ServerRulesData(
                 Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                settings);
+                settings, ChatWords, ChatWordsPath);
         }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -98,11 +105,14 @@ namespace Shooter.Server
             + " inventory=" + (ItemsPath ?? "default")
             + " knockback=" + (KnockbackPath ?? "default")
             + " assist=" + (AssistPath ?? "default")
+            + " chatWords=" + (ChatWordsPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
             + " crouchHeight=" + Motor.Stance.Crouched.Height.ToString(CultureInfo.InvariantCulture)
-            + " radius=" + Motor.Stance.Radius.ToString(CultureInfo.InvariantCulture);
+            + " radius=" + Motor.Stance.Radius.ToString(CultureInfo.InvariantCulture)
+            + " weather=" + (Settings.WeatherId ?? "default")
+            + " timeOfDay=" + (Settings.TimeOfDayId ?? "default");
 
         public static bool TryLoad(string name, IReadOnlyList<string> searchRoots, out ServerRulesData data, out string error)
         {
@@ -273,8 +283,30 @@ namespace Shooter.Server
                 assistPath = null;
             }
 
+            // NG ワードも Unity では Resources の JSON (Tuning/chat-words) から読むので、無ければ同じく語なしで動かす
+            var chatWordsPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, ChatWordsTuningFileName));
+            var chatWords = ChatWordFilterSpec.Default;
+            if (System.IO.File.Exists(chatWordsPath))
+            {
+                try
+                {
+                    chatWords = ChatWordFilterJson.Parse(System.IO.File.ReadAllText(chatWordsPath), chatWordsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read chat word tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                chatWordsPath = null;
+            }
+
             data = new ServerRulesData(
-                name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath);
+                name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath,
+                chatWords: chatWords, chatWordsPath: chatWordsPath);
             error = null;
             return true;
         }

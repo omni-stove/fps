@@ -24,6 +24,11 @@ namespace Shooter.Runtime
         public const string JoinByCodeButtonName = "menu-join-by-code";
         public const string LoadoutButtonName = "menu-loadout";
         public const string ProfileButtonName = "menu-profile";
+        public const string StatsButtonName = "menu-stats";
+        public const string LeaderboardButtonName = "menu-leaderboard";
+        public const string ReplaysButtonName = "menu-replays";
+        public const string CosmeticsButtonName = "menu-cosmetics";
+        public const string StashButtonName = "menu-stash";
         public const string RangeButtonName = "menu-range";
         public const string TutorialButtonName = "menu-tutorial";
         public const string SettingsButtonName = "menu-settings";
@@ -35,9 +40,11 @@ namespace Shooter.Runtime
         public const string ProfileSlotName = "menu-profile-slot";
         public const string PartySlotName = "menu-party-slot";
         public const string CustomMatchSlotName = "menu-custom-match-slot";
+        public const string PanelSlotName = "menu-panel-slot";
 
         public const string PartyUnavailableKey = "menu.partyUnavailable";
         public const string CustomMatchUnavailableKey = "menu.customMatchUnavailable";
+        public const string PanelUnavailableKey = "menu.panelUnavailable";
 
         public static string SettingsUnavailableNotice => Localizer.Get("menu.settingsUnavailable");
 
@@ -61,11 +68,35 @@ namespace Shooter.Runtime
             JoinByCodeButtonName,
             LoadoutButtonName,
             ProfileButtonName,
+            StatsButtonName,
+            LeaderboardButtonName,
+            ReplaysButtonName,
+            CosmeticsButtonName,
+            StashButtonName,
             RangeButtonName,
             TutorialButtonName,
             SettingsButtonName,
             QuitButtonName,
         };
+
+        public static string PanelButtonName(MainMenuPanelKind kind)
+        {
+            switch (kind)
+            {
+                case MainMenuPanelKind.Stats:
+                    return StatsButtonName;
+                case MainMenuPanelKind.Leaderboard:
+                    return LeaderboardButtonName;
+                case MainMenuPanelKind.Replays:
+                    return ReplaysButtonName;
+                case MainMenuPanelKind.Cosmetics:
+                    return CosmeticsButtonName;
+                case MainMenuPanelKind.Stash:
+                    return StashButtonName;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown main menu screen");
+            }
+        }
 
         [SerializeField, Tooltip("The online loadout (Assets/game/Weapons/DefaultLoadout.asset); the slot rules and default weapons come from it. Empty uses the GameContent one")]
         private LoadoutDefinition _loadout;
@@ -93,6 +124,9 @@ namespace Shooter.Runtime
         private PartyPanel _partyPanel;
         private VisualElement _customMatchSlot;
         private CustomMatchPanel _customMatchPanel;
+        private VisualElement _panelSlot;
+        private IMainMenuPanel _panel;
+        private MainMenuPanelKind _panelKind;
         private ProgressionRecorder _progression;
         private ISaveStorage _saveStorage;
         private Label _notice;
@@ -189,12 +223,20 @@ namespace Shooter.Runtime
 
         public bool IsCustomMatchOpen => _customMatchPanel != null;
 
+        public VisualElement PanelSlot => _panelSlot;
+
+        public IMainMenuPanel Panel => _panel;
+
+        public MainMenuPanelKind? OpenPanelKind => _panel != null ? _panelKind : (MainMenuPanelKind?)null;
+
+        public bool IsPanelOpen => _panel != null;
+
         public static bool IsPartyAvailable => GameSignals.PartyControl.HasValue;
 
         public static bool IsJoinByCodeAvailable => GameSignals.JoinByCode.HasValue;
 
         private bool IsOverlayOpen => _settingsOpen || _loadoutPanel != null || _campaignPanel != null || _profilePanel != null
-            || _partyPanel != null || _customMatchPanel != null;
+            || _partyPanel != null || _customMatchPanel != null || _panel != null;
 
         public string Notice => _notice != null && _notice.style.display != DisplayStyle.None ? _notice.text : null;
 
@@ -330,6 +372,8 @@ namespace Shooter.Runtime
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{PartySlotName}'");
             _customMatchSlot = root.Q<VisualElement>(CustomMatchSlotName)
                 ?? throw new InvalidOperationException($"the menu layout has no element named '{CustomMatchSlotName}'");
+            _panelSlot = root.Q<VisualElement>(PanelSlotName)
+                ?? throw new InvalidOperationException($"the menu layout has no element named '{PanelSlotName}'");
 
             for (var i = 0; i < _buttons.Count; i++)
             {
@@ -375,6 +419,8 @@ namespace Shooter.Runtime
                 GameSignals.PartyControl.Changed -= HandlePartyControlChanged;
                 GameSignals.JoinByCode.Changed -= HandleJoinByCodeChanged;
             });
+            MainMenuPanels.Changed += HandlePanelsChanged;
+            _unbind.Add(() => MainMenuPanels.Changed -= HandlePanelsChanged);
 
             _focusIndex = -1;
             _settingsOpen = false;
@@ -385,7 +431,8 @@ namespace Shooter.Runtime
             SetDisplayed(_profileSlot, false);
             SetDisplayed(_partySlot, false);
             SetDisplayed(_customMatchSlot, false);
-            RefreshOnlineButtons();
+            SetDisplayed(_panelSlot, false);
+            RefreshOptionalButtons();
             ShowNotice(null);
         }
 
@@ -717,6 +764,67 @@ namespace Shooter.Runtime
             Debug.Log(MenuNavigator.LogTag + " joined a match by code; waiting for the connection to load the match", this);
         }
 
+        // ボタンを出していない (登録が無い) ときは開かない。開いた後に登録が外れても、戻るまでは開いたままにする。
+        public void OpenPanel(MainMenuPanelKind kind)
+        {
+            var buttonName = PanelButtonName(kind);
+            if (_panelSlot == null || IsOverlayOpen || _leaving)
+            {
+                return;
+            }
+
+            if (!MainMenuPanels.TryGet(kind, out var open))
+            {
+                Debug.Log($"{MenuNavigator.LogTag} the {kind} screen was requested but none is registered (MainMenuPanels)", this);
+                return;
+            }
+
+            ShowNotice(null);
+            _panelSlot.Clear();
+            SetDisplayed(_panelSlot, true);
+            SetButtonsEnabled(false);
+            IMainMenuPanel panel;
+
+            // パーティと違って InvalidOperationException に絞らないのは、画面が外から登録され、どの例外で失敗してもメニューを押せないまま残さないため。
+            try
+            {
+                panel = open(_panelSlot) ?? throw new InvalidOperationException($"the registered {kind} screen returned nothing");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"{MenuNavigator.LogTag} cannot open the {kind} screen: {e.Message}", this);
+                _panelSlot.Clear();
+                SetDisplayed(_panelSlot, false);
+                SetButtonsEnabled(true);
+                ShowNotice(new LocalizedText(PanelUnavailableKey, e.Message));
+                FocusShownAt(IndexOf(buttonName));
+                return;
+            }
+
+            _panel = panel;
+            _panelKind = kind;
+            _panel.Cancelled += ClosePanel;
+        }
+
+        public void ClosePanel()
+        {
+            if (_panel == null)
+            {
+                return;
+            }
+
+            var panel = _panel;
+            _panel = null;
+            panel.Cancelled -= ClosePanel;
+            panel.Dispose();
+
+            // 差し込み口はどの画面も同じなので、前の画面が残した子を次の画面に見せない。
+            _panelSlot.Clear();
+            SetDisplayed(_panelSlot, false);
+            SetButtonsEnabled(true);
+            FocusShownAt(IndexOf(PanelButtonName(_panelKind)));
+        }
+
         // 武器の一覧が壊れていてもプロフィールは出せるので、名前の代わりに Id を出す (ProfilePanel は一覧が無ければ Id を出す)
         private WeaponCatalog ProfileWeapons()
         {
@@ -989,6 +1097,21 @@ namespace Shooter.Runtime
                 case ProfileButtonName:
                     OpenProfile();
                     break;
+                case StatsButtonName:
+                    OpenPanel(MainMenuPanelKind.Stats);
+                    break;
+                case LeaderboardButtonName:
+                    OpenPanel(MainMenuPanelKind.Leaderboard);
+                    break;
+                case ReplaysButtonName:
+                    OpenPanel(MainMenuPanelKind.Replays);
+                    break;
+                case CosmeticsButtonName:
+                    OpenPanel(MainMenuPanelKind.Cosmetics);
+                    break;
+                case StashButtonName:
+                    OpenPanel(MainMenuPanelKind.Stash);
+                    break;
                 case RangeButtonName:
                     Choose(MenuDestination.Range);
                     break;
@@ -1063,15 +1186,20 @@ namespace Shooter.Runtime
 
         private void HandlePartyControlChanged(IPartyControl control)
         {
-            RefreshOnlineButtons();
+            RefreshOptionalButtons();
         }
 
         private void HandleJoinByCodeChanged(IJoinByCode joinByCode)
         {
-            RefreshOnlineButtons();
+            RefreshOptionalButtons();
         }
 
-        private void RefreshOnlineButtons()
+        private void HandlePanelsChanged(MainMenuPanelKind kind)
+        {
+            RefreshOptionalButtons();
+        }
+
+        private void RefreshOptionalButtons()
         {
             if (this == null || _buttons.Count == 0)
             {
@@ -1080,6 +1208,10 @@ namespace Shooter.Runtime
 
             SetDisplayed(_buttons[IndexOf(PartyButtonName)], IsPartyAvailable);
             SetDisplayed(_buttons[IndexOf(JoinByCodeButtonName)], IsJoinByCodeAvailable);
+            foreach (var kind in MainMenuPanels.Kinds)
+            {
+                SetDisplayed(_buttons[IndexOf(PanelButtonName(kind))], MainMenuPanels.IsRegistered(kind));
+            }
 
             // 選んでいたボタンが消えると、ゲームパッドで動かす起点が無くなるので、次に出ているボタンへ移す
             if (!IsOverlayOpen && _focusIndex >= 0 && !IsShown(_buttons[_focusIndex]))
@@ -1181,6 +1313,14 @@ namespace Shooter.Runtime
                 _customMatchPanel = null;
             }
 
+            if (_panel != null)
+            {
+                var panel = _panel;
+                _panel = null;
+                panel.Cancelled -= ClosePanel;
+                panel.Dispose();
+            }
+
             foreach (var undo in _unbind)
             {
                 undo();
@@ -1198,6 +1338,7 @@ namespace Shooter.Runtime
             _profileSlot = null;
             _partySlot = null;
             _customMatchSlot = null;
+            _panelSlot = null;
         }
 
         private static void SetDisplayed(VisualElement element, bool displayed)

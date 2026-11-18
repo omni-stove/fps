@@ -35,6 +35,9 @@ namespace Shooter.Server
 
         public event Action MatchStarted;
 
+        // キルフィードを送り、目的に倒れたことを渡した後に出す。自滅と味方撃ちも含む
+        public event Action<KillFeedEntry> PlayerKilled;
+
         public string Name => "rules";
 
         public TeamDeathmatchSession Session => _session;
@@ -53,20 +56,14 @@ namespace Shooter.Server
             var points = PointsOf(context.Map);
             var rules = _data.Rules;
             var settings = _data.Settings;
-            CheckOtherMaps(rules);
-            PrepareObjective(rules, settings, points, out var killScoreLimit);
-            PrepareElimination(rules, settings);
-            var rounds = _elimination != null;
+            _objective = _createObjective(rules.Objective, settings, this)
+                ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
+            CheckOtherMaps();
+            _objective.UseMap(context.Map, points);
             try
             {
-                // ラウンド制では試合全体を時間で切らず、1 ラウンドの制限時間で区切るので、Session の制限時間は届かない長さにする
                 _session = new TeamDeathmatchSession(
-                    new TeamDeathmatchSpec(
-                        rounds ? int.MaxValue : killScoreLimit,
-                        rounds ? float.MaxValue : settings.TimeLimitSeconds,
-                        settings.RespawnSeconds,
-                        rules,
-                        respawnsByRound: rounds),
+                    _objective.CreateSessionSpec(rules, settings),
                     settings.MaxHealth,
                     points.SpawnPoints,
                     new SpawnSelector(settings.MinEnemySpawnDistance),
@@ -123,10 +120,9 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
-            PrepareChat(settings);
+            PrepareChat(settings, _data.ChatWords);
             PrepareMapVote();
             StartObjective();
-            StartElimination();
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -138,7 +134,6 @@ namespace Shooter.Server
             AdvanceRevives(deltaSeconds);
             _session.Tick(deltaSeconds);
             TickObjective(deltaSeconds);
-            TickElimination(deltaSeconds);
             TickRound();
             TickIdle(deltaSeconds);
             TickPings();
@@ -223,7 +218,6 @@ namespace Shooter.Server
             }
 
             StopObjective();
-            StopElimination();
             StopMapVote();
             _session = null;
         }
@@ -274,6 +268,7 @@ namespace Shooter.Server
             }
 
             FillControlPoints(snapshot.ControlPoints);
+            FillObjectiveItems(snapshot.ObjectiveItems);
         }
 
         public bool CanFire(int playerId)
@@ -305,13 +300,15 @@ namespace Shooter.Server
             snapshot.Winner = winner ?? Team.Alpha;
             snapshot.AlphaScore = _session.GetScore(Team.Alpha);
             snapshot.BravoScore = _session.GetScore(Team.Bravo);
-            snapshot.RemainingSeconds = (int)Math.Ceiling(_elimination != null ? _elimination.RemainingSeconds : _session.RemainingSeconds);
+            snapshot.RemainingSeconds = (int)Math.Ceiling(_objective.RemainingSeconds ?? _session.RemainingSeconds);
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
-            snapshot.Rules = MatchRulesSync.From(_data.Rules);
-            FillObjective(ref snapshot);
-            FillElimination(ref snapshot);
+            var synced = MatchRulesSync.From(_data.Rules);
+            synced.WeatherId = _data.Settings.WeatherId;
+            synced.TimeOfDayId = _data.Settings.TimeOfDayId;
+            snapshot.Rules = synced;
+            _objective.FillMatch(ref snapshot);
             FillRound(ref snapshot);
         }
 
@@ -363,7 +360,6 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
-            EliminationPlayerJoined(playerId);
             VoicePlayerJoined(player);
             OnPlayerJoined(player);
         }
@@ -376,8 +372,7 @@ namespace Shooter.Server
             ForgetDowned(playerId);
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);
-            ObjectivePlayerLeft(playerId);
-            EliminationPlayerLeft(playerId);
+            _objective.PlayerLeft(playerId);
             ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
             VoicePlayerLeft(player);
@@ -409,7 +404,6 @@ namespace Shooter.Server
             PingMatchRestarted();
             _session.ChangeTeam(playerId, player.Team);
             ObjectivePlayerJoined(playerId);
-            EliminationPlayerJoined(playerId);
         }
 
         private void HandleMatchRestarted()
@@ -433,15 +427,14 @@ namespace Shooter.Server
             _lastKillers.Clear();
             ClearDowned();
             PingMatchRestarted();
-            ObjectiveMatchRestarted();
-            EliminationMatchRestarted();
+            _objective.MatchRestarted();
             SpectateMatchRestarted();
         }
 
-        // ラウンド制では試合の点数をラウンドの勝ち数にするので、キルの点数では書き換えない
+        // ラウンド制のように目的が試合の点数を書くなら、キルの点数では書き換えない
         private void HandleScoreChanged(int alpha, int bravo)
         {
-            if (_elimination != null)
+            if (_objective.KeepsMatchScore)
             {
                 return;
             }
@@ -457,16 +450,17 @@ namespace Shooter.Server
             var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
             _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
             _match.WriteKill(killerId, victimId, byAlly, assisterIds);
-            SendKill(KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds));
-            ObjectivePlayerKilled(victimId);
-            EliminationPlayerKilled(killerId, victimId);
+            var entry = KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds);
+            SendKill(entry);
+            _objective.PlayerKilled(killerId, victimId);
             SpectatePlayerKilled(victimId);
+            PlayerKilled?.Invoke(entry);
         }
 
         private void HandleEnded(Team? winner)
         {
             winner = DecideWinner(winner);
-            ObjectiveMatchEnded();
+            _objective.MatchEnded();
             _match.End(winner);
             _reviveHolds.Clear();
             OnMatchEnded(winner);

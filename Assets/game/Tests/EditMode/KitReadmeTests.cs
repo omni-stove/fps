@@ -24,7 +24,7 @@ namespace Shooter.Tests.EditMode
                 .Select(p => p.Name)
                 .ToList();
 
-            Assert.That(signals, Has.Count.EqualTo(30));
+            Assert.That(signals, Has.Count.EqualTo(37));
             foreach (var name in signals)
             {
                 Assert.That(readme, Does.Contain("| `" + name + "` |"), name);

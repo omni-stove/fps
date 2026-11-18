@@ -8,7 +8,7 @@ namespace Shooter.Protocol
     // 壊れた建物の部品のように滅多に変わらず大きい状態は、毎 tick の差分に載せずに StructureStateMessage で送る。
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 14;
+        public const byte CurrentVersion = 15;
 
         public const int NoBaseline = -1;
 
@@ -17,6 +17,8 @@ namespace Shooter.Protocol
         public const int MaxControlPoints = 16;
         public const int MaxProjectiles = 128;
         public const int MaxVehicles = 64;
+        public const int MaxObjectiveItems = 32;
+        public const int MaxDeployables = 64;
 
         private readonly OwnerSnapshot _owner = new OwnerSnapshot();
         private readonly SnapshotList<PlayerSnapshot> _players = new SnapshotList<PlayerSnapshot>(MaxPlayers, "player");
@@ -26,6 +28,10 @@ namespace Shooter.Protocol
         private readonly SnapshotList<ProjectileSnapshot> _projectiles =
             new SnapshotList<ProjectileSnapshot>(MaxProjectiles, "projectile");
         private readonly SnapshotList<VehicleSnapshot> _vehicles = new SnapshotList<VehicleSnapshot>(MaxVehicles, "vehicle");
+        private readonly SnapshotList<ObjectiveItemSnapshot> _objectiveItems =
+            new SnapshotList<ObjectiveItemSnapshot>(MaxObjectiveItems, "objective item");
+        private readonly SnapshotList<DeployableSnapshot> _deployables =
+            new SnapshotList<DeployableSnapshot>(MaxDeployables, "deployable");
 
         private MatchSnapshot _match;
         private MatchFields _matchPresent = MatchFields.All;
@@ -59,6 +65,10 @@ namespace Shooter.Protocol
 
         public SnapshotList<VehicleSnapshot> Vehicles => _vehicles;
 
+        public SnapshotList<ObjectiveItemSnapshot> ObjectiveItems => _objectiveItems;
+
+        public SnapshotList<DeployableSnapshot> Deployables => _deployables;
+
         public void Clear()
         {
             Tick = 0;
@@ -79,6 +89,8 @@ namespace Shooter.Protocol
             _controlPoints.Clear();
             _projectiles.Clear();
             _vehicles.Clear();
+            _objectiveItems.Clear();
+            _deployables.Clear();
         }
 
         public void CopyFrom(SnapshotMessage other)
@@ -101,6 +113,8 @@ namespace Shooter.Protocol
             _controlPoints.CopyFrom(other._controlPoints);
             _projectiles.CopyFrom(other._projectiles);
             _vehicles.CopyFrom(other._vehicles);
+            _objectiveItems.CopyFrom(other._objectiveItems);
+            _deployables.CopyFrom(other._deployables);
         }
 
         public bool TryResolve(SnapshotMessage baseline)
@@ -124,7 +138,9 @@ namespace Shooter.Protocol
                 || !_grenades.CanFillFrom(baseline._grenades)
                 || !_controlPoints.CanFillFrom(baseline._controlPoints)
                 || !_projectiles.CanFillFrom(baseline._projectiles)
-                || !_vehicles.CanFillFrom(baseline._vehicles))
+                || !_vehicles.CanFillFrom(baseline._vehicles)
+                || !_objectiveItems.CanFillFrom(baseline._objectiveItems)
+                || !_deployables.CanFillFrom(baseline._deployables))
             {
                 return false;
             }
@@ -141,6 +157,8 @@ namespace Shooter.Protocol
             _controlPoints.FillFrom(baseline._controlPoints);
             _projectiles.FillFrom(baseline._projectiles);
             _vehicles.FillFrom(baseline._vehicles);
+            _objectiveItems.FillFrom(baseline._objectiveItems);
+            _deployables.FillFrom(baseline._deployables);
             IsComplete = true;
             return true;
         }
@@ -179,6 +197,8 @@ namespace Shooter.Protocol
             _controlPoints.Write(writer, baseline?._controlPoints);
             _projectiles.Write(writer, baseline?._projectiles);
             _vehicles.Write(writer, baseline?._vehicles);
+            _objectiveItems.Write(writer, baseline?._objectiveItems);
+            _deployables.Write(writer, baseline?._deployables);
         }
 
         public void Read(MessageReader reader)
@@ -212,6 +232,8 @@ namespace Shooter.Protocol
             _controlPoints.Read(reader, hasBaseline);
             _projectiles.Read(reader, hasBaseline);
             _vehicles.Read(reader, hasBaseline);
+            _objectiveItems.Read(reader, hasBaseline);
+            _deployables.Read(reader, hasBaseline);
 
             IsComplete = _matchPresent == MatchFields.All
                 && (!HasOwner || _owner.Present == OwnerFields.All)
@@ -219,7 +241,9 @@ namespace Shooter.Protocol
                 && _grenades.IsComplete
                 && _controlPoints.IsComplete
                 && _projectiles.IsComplete
-                && _vehicles.IsComplete;
+                && _vehicles.IsComplete
+                && _objectiveItems.IsComplete
+                && _deployables.IsComplete;
         }
 
         private static void ExpectAll(bool hasBaseline, int present, int all, string what)

@@ -13,11 +13,21 @@ namespace Shooter.Runtime
     {
         public const string LogTag = AppliedControlSettings.LogTag;
 
+        public const string LayoutResourcePath = "Menu/Settings";
+
         public const string StyleResourcePath = "Menu/Settings";
 
         public const string RootName = "settings";
 
         public const string TitleName = "settings-title";
+
+        public const string ScrollName = "settings-scroll";
+
+        public const string BindingsName = "settings-bindings";
+
+        public const string BindingsUnavailableName = "settings-bindings-unavailable";
+
+        public const string RebindNoticeRowName = "settings-rebind-notice-row";
 
         public const string LanguageButtonName = "settings-language";
 
@@ -76,14 +86,6 @@ namespace Shooter.Runtime
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
         private static readonly HoldAction[] _actions = { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim };
 
-        // 視点と音の見出しではなく、血の表示と同じ演出の見出しに並べる数値。
-        private static readonly ControlValue[] _effectValues = { ControlValue.CameraShakeIntensity, ControlValue.ViewmodelMotionIntensity };
-
-        // 視点と音の見出しではなく、振動の On/Off と同じゲームパッドの見出しに並べる数値。
-        private static readonly ControlValue[] _gamepadValues = { ControlValue.StickDeadzone, ControlValue.RumbleStrength };
-
-        private static bool _warnedMissingStyle;
-
         private readonly ControlSettingsStore _store;
         private readonly InputBindingOverridesStore _bindingStore;
         private readonly InputActionAsset _actionAsset;
@@ -93,6 +95,7 @@ namespace Shooter.Runtime
         private readonly Dictionary<ControlValue, Label> _valueLabels = new Dictionary<ControlValue, Label>();
         private readonly Dictionary<string, Button> _modeButtons = new Dictionary<string, Button>(StringComparer.Ordinal);
         private readonly Dictionary<RebindSlot, Button> _rebindButtons = new Dictionary<RebindSlot, Button>();
+        private VisualTreeAsset _layout;
         private VisualElement _root;
         private ScrollView _scroll;
         private ControlSettings _editing;
@@ -362,6 +365,14 @@ namespace Shooter.Runtime
 
             Close();
 
+            var layout = Resources.Load<VisualTreeAsset>(LayoutResourcePath);
+            if (layout == null)
+            {
+                throw new InvalidOperationException(
+                    $"settings layout 'Resources/{LayoutResourcePath}.uxml' was not found (expected under UI/Resources of the Demo sample)");
+            }
+
+            _layout = layout;
             _editing = _sink.Current;
             _saved = _editing;
             _voiceEditing = _voiceStore.Load();
@@ -369,7 +380,18 @@ namespace Shooter.Runtime
             _bindings = CreateBindings();
             _bindingsDirty = false;
             _pendingConflict = null;
-            _root = Build();
+            try
+            {
+                _root = Build();
+            }
+            catch
+            {
+                // 開けなかった画面は何も変えていないので、保存せずに開く前へ戻す。
+                ClearElements();
+                ClearState();
+                throw;
+            }
+
             container.Add(_root);
             Refresh();
             Localizer.Changed += HandleLanguageChanged;
@@ -387,6 +409,13 @@ namespace Shooter.Runtime
             var saved = Save();
             Localizer.Changed -= HandleLanguageChanged;
             DetachElements();
+            ClearState();
+            return saved;
+        }
+
+        private void ClearState()
+        {
+            _layout = null;
             _editing = null;
             _saved = null;
             _voiceEditing = null;
@@ -395,7 +424,6 @@ namespace Shooter.Runtime
             _bindings = null;
             _bindingsDirty = false;
             _pendingConflict = null;
-            return saved;
         }
 
         private void DetachElements()
@@ -403,6 +431,11 @@ namespace Shooter.Runtime
             _root.UnregisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
             _root.RemoveFromHierarchy();
             _root = null;
+            ClearElements();
+        }
+
+        private void ClearElements()
+        {
             _scroll = null;
             _sliders.Clear();
             _valueLabels.Clear();
@@ -431,7 +464,7 @@ namespace Shooter.Runtime
             _languageNames.Clear();
         }
 
-        // 文字は組むときに入れたものが多く、1 つずつ引き直すと入れ忘れが出やすいので、画面ごと今の言語で組み直す。
+        // 割り当ての行や値の文字はコードが入れていて、1 つずつ引き直すと入れ忘れが出やすいので、UXML から画面ごと今の言語で組み直す。
         private void HandleLanguageChanged(GameLanguage language)
         {
             if (_root == null)
@@ -802,120 +835,96 @@ namespace Shooter.Runtime
             RefreshVoice();
         }
 
+        // 根は差し込み口へ移すので、UXML から作った TemplateContainer ではなく、その中の根を返す。
         private VisualElement Build()
         {
-            var root = new VisualElement { name = RootName };
-            root.AddToClassList("settings");
-            AddStyle(root);
+            var root = _layout.Instantiate().Q<VisualElement>(RootName) ?? throw MissingElement<VisualElement>(RootName);
+            root.RemoveFromHierarchy();
 
-            var title = NewLabel(Localizer.Get("settings.title"), "settings__title");
-            title.name = TitleName;
-            root.Add(title);
-
-            // 割り当ての行を足すとポーズ画面の枠に収まらないので、見出しと下のボタン以外はスクロールさせる。
-            _scroll = new ScrollView(ScrollViewMode.Vertical);
-            _scroll.AddToClassList("settings__scroll");
+            Require<Label>(root, TitleName);
+            _scroll = Require<ScrollView>(root, ScrollName);
             _scroll.RegisterCallback<FocusInEvent>(ScrollToFocused);
-            root.Add(_scroll);
-            var content = _scroll.contentContainer;
 
-            content.Add(NewLabel(Localizer.Get("settings.section.viewAndSound"), "settings__section"));
             foreach (var value in ControlSettings.Values)
             {
-                if (Array.IndexOf(_effectValues, value) < 0 && Array.IndexOf(_gamepadValues, value) < 0)
-                {
-                    content.Add(BuildSliderRow(value));
-                }
+                BindSlider(root, value);
+            }
 
-                // 狙いに関わる設定なので、視野角や音量より前の、感度の並びのすぐ後に置く。
-                if (value == ControlValue.AdsSensitivity)
+            foreach (var device in _devices)
+            {
+                foreach (var action in _actions)
                 {
-                    content.Add(BuildAimAssistRow());
-                    content.Add(BuildInvertLookYRow());
+                    BindModeButton(root, device, action);
                 }
             }
 
-            content.Add(NewLabel(Localizer.Get("settings.section.gamepad"), "settings__section"));
-            content.Add(BuildSliderRow(ControlValue.StickDeadzone));
-            content.Add(BuildRumbleRow());
-            content.Add(BuildSliderRow(ControlValue.RumbleStrength));
+            _aimAssistButton = BindButton(root, AimAssistButtonName, () => SetAimAssist(!_editing.AimAssist));
+            _invertLookYButton = BindButton(root, InvertLookYButtonName, () => SetInvertLookY(!_editing.InvertLookY));
+            _rumbleButton = BindButton(root, RumbleButtonName, () => SetRumbleEnabled(!_editing.RumbleEnabled));
+            _bloodButton = BindButton(root, BloodButtonName, () => SetShowBlood(!_editing.ShowBlood));
+            _paletteButton = BindButton(root, PaletteButtonName, () => SetPalette(NextPalette(_editing.Palette)));
+            _friendlySample = Require<Label>(root, PaletteFriendlySampleName);
+            _enemySample = Require<Label>(root, PaletteEnemySampleName);
+            _subtitlesButton = BindButton(root, SubtitlesButtonName, () => SetShowSubtitles(!_editing.ShowSubtitles));
+            _regionButton = BindButton(
+                root, RegionButtonName, () => SetQuickMatchRegion(NextRegion(_editing.QuickMatchRegion, Regions)));
+            _telemetryButton = BindButton(root, TelemetryButtonName, () => SetTelemetryConsent(!_editing.TelemetryConsent));
+            BindVoice(root);
 
-            content.Add(NewLabel(Localizer.Get("settings.section.effects"), "settings__section"));
-            foreach (var value in _effectValues)
+            _languages = Localizer.AvailableLanguages();
+            _languageButton = BindButton(root, LanguageButtonName, () => SetLanguage(NextLanguage(Localizer.Language, _languages)));
+
+            _rebindNoticeRow = Require<VisualElement>(root, RebindNoticeRowName);
+            _rebindNotice = Require<Label>(root, RebindNoticeName);
+            _rebindCancelButton = BindButton(root, RebindCancelButtonName, CancelRebind);
+            _rebindUndoButton = BindButton(root, RebindUndoButtonName, () => UndoRebind());
+            _rebindKeepButton = BindButton(root, RebindKeepButtonName, () => KeepRebind());
+
+            BindButton(root, ResetButtonName, ResetToDefaults);
+            BindButton(root, BindingsResetButtonName, ResetBindingsToDefaults).SetEnabled(_bindings != null);
+            BindButton(root, BackButtonName, RequestBack);
+
+            var bindingsList = Require<VisualElement>(root, BindingsName);
+            var bindingsUnavailable = Require<Label>(root, BindingsUnavailableName);
+
+            // 割り当ての行の見出しは Input Actions にある名前なので、"#" で始まっていてもキーとして読ませないよう、行を足す前に文字を入れる。
+            LocalizedTexts.Bind(root);
+
+            SetDisplayed(bindingsUnavailable, _bindings == null);
+            SetDisplayed(bindingsList, _bindings != null);
+            if (_bindings != null)
             {
-                content.Add(BuildSliderRow(value));
-            }
-
-            content.Add(BuildBloodRow());
-
-            content.Add(NewLabel(Localizer.Get("settings.section.accessibility"), "settings__section"));
-            content.Add(BuildPaletteRow());
-            content.Add(BuildPaletteSampleRow());
-            content.Add(BuildSubtitlesRow());
-
-            content.Add(NewLabel(Localizer.Get(VoiceText.SettingsSectionKey), "settings__section"));
-            content.Add(BuildVoiceMicrophoneRow());
-            content.Add(BuildVoiceVolumeRow());
-
-            content.Add(NewLabel(Localizer.Get("settings.section.online"), "settings__section"));
-            content.Add(BuildRegionRow());
-
-            content.Add(NewLabel(Localizer.Get("settings.section.privacy"), "settings__section"));
-            content.Add(BuildTelemetryRow());
-
-            content.Add(NewLabel(Localizer.Get("settings.section.language"), "settings__section"));
-            content.Add(BuildLanguageRow());
-
-            content.Add(NewLabel(Localizer.Get("settings.section.holdModes"), "settings__section"));
-            content.Add(BuildDeviceHeader());
-            foreach (var action in _actions)
-            {
-                content.Add(BuildModeRow(action));
-            }
-
-            content.Add(NewLabel(Localizer.Get("settings.section.bindings"), "settings__section"));
-            if (_bindings == null)
-            {
-                content.Add(NewLabel(Localizer.Get("settings.bindings.unavailable"), "settings__note"));
-            }
-            else
-            {
-                content.Add(BuildDeviceHeader());
                 var seen = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var slot in PlayerBindings.Slots)
                 {
                     if (seen.Add(slot.ActionName + "/" + slot.Part))
                     {
-                        content.Add(BuildBindingRow(slot.ActionName, slot.Part));
+                        bindingsList.Add(BuildBindingRow(slot.ActionName, slot.Part));
                     }
                 }
             }
-
-            root.Add(BuildRebindNotice());
-
-            var footer = new VisualElement();
-            footer.AddToClassList("settings__footer");
-            footer.Add(NewButton(ResetButtonName, Localizer.Get("settings.reset"), ResetToDefaults));
-            var resetBindings = NewButton(BindingsResetButtonName, Localizer.Get("settings.bindings.reset"), ResetBindingsToDefaults);
-            resetBindings.SetEnabled(_bindings != null);
-            footer.Add(resetBindings);
-            footer.Add(NewButton(BackButtonName, Localizer.Get("settings.back"), RequestBack));
-            root.Add(footer);
 
             root.RegisterCallback<NavigationCancelEvent>(HandleNavigationCancel);
             return root;
         }
 
-        private static VisualElement BuildDeviceHeader()
+        private static T Require<T>(VisualElement root, string name)
+            where T : VisualElement
         {
-            var header = NewRow();
-            header.Add(NewLabel(string.Empty, "settings__caption"));
-            foreach (var device in _devices)
-            {
-                header.Add(NewLabel(DeviceText(device), "settings__column"));
-            }
+            return root.Q<T>(name) ?? throw MissingElement<T>(name);
+        }
 
-            return header;
+        private static InvalidOperationException MissingElement<T>(string name)
+        {
+            return new InvalidOperationException(
+                $"settings layout 'Resources/{LayoutResourcePath}.uxml' has no {typeof(T).Name} named '{name}'");
+        }
+
+        private static Button BindButton(VisualElement root, string name, Action clicked)
+        {
+            var button = Require<Button>(root, name);
+            button.clicked += clicked;
+            return button;
         }
 
         private VisualElement BuildBindingRow(string actionName, string part)
@@ -938,24 +947,6 @@ namespace Shooter.Runtime
             }
 
             return row;
-        }
-
-        private VisualElement BuildRebindNotice()
-        {
-            _rebindNoticeRow = new VisualElement();
-            _rebindNoticeRow.AddToClassList("settings__notice-row");
-
-            _rebindNotice = NewLabel(string.Empty, "settings__notice");
-            _rebindNotice.name = RebindNoticeName;
-            _rebindNoticeRow.Add(_rebindNotice);
-
-            _rebindCancelButton = NewButton(RebindCancelButtonName, Localizer.Get("settings.rebind.cancel"), CancelRebind);
-            _rebindUndoButton = NewButton(RebindUndoButtonName, Localizer.Get("settings.rebind.undo"), () => UndoRebind());
-            _rebindKeepButton = NewButton(RebindKeepButtonName, Localizer.Get("settings.rebind.keep"), () => KeepRebind());
-            _rebindNoticeRow.Add(_rebindCancelButton);
-            _rebindNoticeRow.Add(_rebindUndoButton);
-            _rebindNoticeRow.Add(_rebindKeepButton);
-            return _rebindNoticeRow;
         }
 
         private void ScrollToFocused(FocusInEvent evt)
@@ -981,47 +972,32 @@ namespace Shooter.Runtime
             return false;
         }
 
-        private VisualElement BuildSliderRow(ControlValue value)
+        // 幅は UXML ではなく ControlSettings の範囲から入れ、範囲を変えたときに UXML を直さなくて済むようにする。
+        private void BindSlider(VisualElement root, ControlValue value)
         {
             var range = ControlSettings.RangeOf(value);
-            var row = NewRow();
-            row.Add(NewLabel(ValueText(value), "settings__caption"));
-
-            var slider = new SliderInt(range.Min, range.Max) { name = SliderName(value) };
-            slider.AddToClassList("settings__slider");
+            var slider = Require<SliderInt>(root, SliderName(value));
+            SetRange(slider, range.Min, range.Max);
             slider.RegisterValueChangedCallback(evt => SetValue(value, range.Clamp(evt.newValue)));
-            row.Add(slider);
             _sliders[value] = slider;
-
-            var label = NewLabel(string.Empty, "settings__value");
-            label.name = ValueLabelName(value);
-            row.Add(label);
-            _valueLabels[value] = label;
-            return row;
+            _valueLabels[value] = Require<Label>(root, ValueLabelName(value));
         }
 
-        private VisualElement BuildPaletteRow()
+        // 下限を先に入れると、既定の上限より大きい下限 (視野角など) が一度上限を越える。
+        private static void SetRange(SliderInt slider, int min, int max)
         {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.palette"), "settings__caption"));
-            _paletteButton = NewButton(PaletteButtonName, string.Empty, () => SetPalette(NextPalette(_editing.Palette)));
-            _paletteButton.AddToClassList("settings__palette");
-            row.Add(_paletteButton);
-            return row;
+            slider.highValue = max;
+            slider.lowValue = min;
         }
 
-        // 組を切り替えたとき、試合に入らなくても色と印の違いが分かるように、ネームプレートと同じ書き方の見本を並べる
-        private VisualElement BuildPaletteSampleRow()
+        private void BindModeButton(VisualElement root, InputDeviceKind device, HoldAction action)
         {
-            var row = NewRow();
-            row.Add(NewLabel(string.Empty, "settings__caption"));
-            _friendlySample = NewLabel(string.Empty, "settings__palette-sample");
-            _friendlySample.name = PaletteFriendlySampleName;
-            row.Add(_friendlySample);
-            _enemySample = NewLabel(string.Empty, "settings__palette-sample");
-            _enemySample.name = PaletteEnemySampleName;
-            row.Add(_enemySample);
-            return row;
+            var name = ModeButtonName(device, action);
+            _modeButtons[name] = BindButton(root, name, () =>
+            {
+                var current = _editing.Get(device, action);
+                SetMode(device, action, current == HoldMode.Hold ? HoldMode.Toggle : HoldMode.Hold);
+            });
         }
 
         private void RefreshPalette()
@@ -1045,103 +1021,16 @@ namespace Shooter.Runtime
             }
         }
 
-        private VisualElement BuildSubtitlesRow()
+        private void BindVoice(VisualElement root)
         {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.subtitles"), "settings__caption"));
-            _subtitlesButton = NewButton(SubtitlesButtonName, string.Empty, () => SetShowSubtitles(!_editing.ShowSubtitles));
-            _subtitlesButton.AddToClassList("settings__mode");
-            row.Add(_subtitlesButton);
-            return row;
-        }
+            _voiceMicrophoneButton = BindButton(
+                root, VoiceMicrophoneButtonName, () => SetMicrophoneEnabled(!_voiceEditing.MicrophoneEnabled));
 
-        private VisualElement BuildBloodRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.blood"), "settings__caption"));
-            _bloodButton = NewButton(BloodButtonName, string.Empty, () => SetShowBlood(!_editing.ShowBlood));
-            _bloodButton.AddToClassList("settings__mode");
-            row.Add(_bloodButton);
-            return row;
-        }
-
-        private VisualElement BuildAimAssistRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.aimAssist"), "settings__caption"));
-            _aimAssistButton = NewButton(AimAssistButtonName, string.Empty, () => SetAimAssist(!_editing.AimAssist));
-            _aimAssistButton.AddToClassList("settings__mode");
-            row.Add(_aimAssistButton);
-            return row;
-        }
-
-        private VisualElement BuildInvertLookYRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.invertLookY"), "settings__caption"));
-            _invertLookYButton = NewButton(InvertLookYButtonName, string.Empty, () => SetInvertLookY(!_editing.InvertLookY));
-            _invertLookYButton.AddToClassList("settings__mode");
-            row.Add(_invertLookYButton);
-            return row;
-        }
-
-        private VisualElement BuildRumbleRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.rumble"), "settings__caption"));
-            _rumbleButton = NewButton(RumbleButtonName, string.Empty, () => SetRumbleEnabled(!_editing.RumbleEnabled));
-            _rumbleButton.AddToClassList("settings__mode");
-            row.Add(_rumbleButton);
-            return row;
-        }
-
-        private VisualElement BuildRegionRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.region"), "settings__caption"));
-            _regionButton = NewButton(
-                RegionButtonName, string.Empty, () => SetQuickMatchRegion(NextRegion(_editing.QuickMatchRegion, Regions)));
-            _regionButton.AddToClassList("settings__palette");
-            row.Add(_regionButton);
-            return row;
-        }
-
-        private VisualElement BuildTelemetryRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.telemetry"), "settings__caption"));
-            _telemetryButton = NewButton(TelemetryButtonName, string.Empty, () => SetTelemetryConsent(!_editing.TelemetryConsent));
-            _telemetryButton.AddToClassList("settings__mode");
-            row.Add(_telemetryButton);
-            return row;
-        }
-
-        private VisualElement BuildVoiceMicrophoneRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get(VoiceText.MicrophoneKey), "settings__caption"));
-            _voiceMicrophoneButton = NewButton(
-                VoiceMicrophoneButtonName, string.Empty, () => SetMicrophoneEnabled(!_voiceEditing.MicrophoneEnabled));
-            _voiceMicrophoneButton.AddToClassList("settings__mode");
-            row.Add(_voiceMicrophoneButton);
-            return row;
-        }
-
-        private VisualElement BuildVoiceVolumeRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get(VoiceText.VolumeKey), "settings__caption"));
-
-            _voiceVolumeSlider = new SliderInt(0, VoiceSettings.MaxVolumePercent) { name = VoiceVolumeSliderName };
-            _voiceVolumeSlider.AddToClassList("settings__slider");
+            _voiceVolumeSlider = Require<SliderInt>(root, VoiceVolumeSliderName);
+            SetRange(_voiceVolumeSlider, 0, VoiceSettings.MaxVolumePercent);
             _voiceVolumeSlider.RegisterValueChangedCallback(
                 evt => SetVoiceVolume(Math.Max(0, Math.Min(VoiceSettings.MaxVolumePercent, evt.newValue))));
-            row.Add(_voiceVolumeSlider);
-
-            _voiceVolumeLabel = NewLabel(string.Empty, "settings__value");
-            _voiceVolumeLabel.name = VoiceVolumeValueName;
-            row.Add(_voiceVolumeLabel);
-            return row;
+            _voiceVolumeLabel = Require<Label>(root, VoiceVolumeValueName);
         }
 
         private void RefreshVoice()
@@ -1167,17 +1056,6 @@ namespace Shooter.Runtime
             }
         }
 
-        private VisualElement BuildLanguageRow()
-        {
-            var row = NewRow();
-            row.Add(NewLabel(Localizer.Get("settings.language"), "settings__caption"));
-            _languages = Localizer.AvailableLanguages();
-            _languageButton = NewButton(LanguageButtonName, string.Empty, () => SetLanguage(NextLanguage(Localizer.Language, _languages)));
-            _languageButton.AddToClassList("settings__palette");
-            row.Add(_languageButton);
-            return row;
-        }
-
         // Refresh はスライダーを動かすたびに走るので、言語の表を読んで引いた名前は画面を組み直すまで持つ。
         private string LanguageNameOf(GameLanguage language)
         {
@@ -1188,25 +1066,6 @@ namespace Shooter.Runtime
             }
 
             return name;
-        }
-
-        private VisualElement BuildModeRow(HoldAction action)
-        {
-            var row = NewRow();
-            row.Add(NewLabel(ActionText(action), "settings__caption"));
-            foreach (var device in _devices)
-            {
-                var button = NewButton(ModeButtonName(device, action), string.Empty, () =>
-                {
-                    var current = _editing.Get(device, action);
-                    SetMode(device, action, current == HoldMode.Hold ? HoldMode.Toggle : HoldMode.Hold);
-                });
-                button.AddToClassList("settings__mode");
-                row.Add(button);
-                _modeButtons[ModeButtonName(device, action)] = button;
-            }
-
-            return row;
         }
 
         private void Refresh()
@@ -1415,24 +1274,6 @@ namespace Shooter.Runtime
             }
         }
 
-        private static void AddStyle(VisualElement root)
-        {
-            var style = Resources.Load<StyleSheet>(StyleResourcePath);
-            if (style != null)
-            {
-                root.styleSheets.Add(style);
-                return;
-            }
-
-            // 見た目が崩れるだけで操作はできるので、止めずに一度だけ知らせる。
-            if (!_warnedMissingStyle)
-            {
-                _warnedMissingStyle = true;
-                Debug.LogWarning(
-                    $"{LogTag} style 'Resources/{StyleResourcePath}.uss' was not found (expected under UI/Resources of the Demo sample); the settings are unstyled");
-            }
-        }
-
         private static VisualElement NewRow()
         {
             var row = new VisualElement();
@@ -1454,51 +1295,9 @@ namespace Shooter.Runtime
             return button;
         }
 
-        private static string ValueText(ControlValue value)
-        {
-            switch (value)
-            {
-                case ControlValue.MouseSensitivity:
-                    return Localizer.Get("settings.value.mouseSensitivity");
-                case ControlValue.GamepadSensitivity:
-                    return Localizer.Get("settings.value.gamepadSensitivity");
-                case ControlValue.AdsSensitivity:
-                    return Localizer.Get("settings.value.adsSensitivity");
-                case ControlValue.FieldOfView:
-                    return Localizer.Get("settings.value.fieldOfView");
-                case ControlValue.MasterVolume:
-                    return Localizer.Get("settings.value.masterVolume");
-                case ControlValue.EffectsVolume:
-                    return Localizer.Get("settings.value.effectsVolume");
-                case ControlValue.CameraShakeIntensity:
-                    return Localizer.Get("settings.value.cameraShake");
-                case ControlValue.ViewmodelMotionIntensity:
-                    return Localizer.Get("settings.value.viewmodelMotion");
-                case ControlValue.StickDeadzone:
-                    return Localizer.Get("settings.value.stickDeadzone");
-                case ControlValue.RumbleStrength:
-                    return Localizer.Get("settings.value.rumbleStrength");
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
-            }
-        }
-
         private static string DeviceText(InputDeviceKind device)
         {
             return Localizer.Get(device == InputDeviceKind.Gamepad ? "settings.device.gamepad" : "settings.device.keyboardMouse");
-        }
-
-        private static string ActionText(HoldAction action)
-        {
-            switch (action)
-            {
-                case HoldAction.Sprint:
-                    return Localizer.Get("settings.action.sprint");
-                case HoldAction.Crouch:
-                    return Localizer.Get("settings.action.crouch");
-                default:
-                    return Localizer.Get("settings.action.aim");
-            }
         }
 
         private static string Slug(ControlValue value)

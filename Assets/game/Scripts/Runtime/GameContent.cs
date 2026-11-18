@@ -81,6 +81,38 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("コントローラーの振動の調整値の JSON。空なら Resources/Tuning/rumble")]
         private TextAsset _rumbleTuning;
 
+        [Header("運営・記録・見た目・天候")]
+        [SerializeField, Tooltip("チャットで伏せる語の JSON。空なら Resources/Tuning/chat-words")]
+        private TextAsset _chatWordsTuning;
+
+        [SerializeField, Tooltip("実績の一覧の JSON。空なら Resources/Tuning/achievements")]
+        private TextAsset _achievementsTuning;
+
+        [SerializeField, Tooltip("リーダーボードの一覧の JSON。空なら Resources/Tuning/leaderboards")]
+        private TextAsset _leaderboardsTuning;
+
+        [SerializeField, Tooltip("スキン・迷彩のカタログの JSON。空なら Resources/Tuning/cosmetics")]
+        private TextAsset _cosmeticsTuning;
+
+        [SerializeField, Tooltip("天候と時刻の組の JSON。空なら Resources/Tuning/weather")]
+        private TextAsset _weatherTuning;
+
+        [SerializeField, Tooltip("クラッシュ報告とテレメトリの送り先の JSON。空なら Resources/Tuning/telemetry")]
+        private TextAsset _telemetryTuning;
+
+        [Header("Infected・脱出")]
+        [SerializeField, Tooltip("Infected の調整値の JSON。空なら Resources/Tuning/infected")]
+        private TextAsset _infectedTuning;
+
+        [SerializeField, Tooltip("箱から出る物の表の JSON。空なら Resources/Tuning/loot")]
+        private TextAsset _lootTuning;
+
+        [SerializeField, Tooltip("倉庫の広さと最初の中身の JSON。空なら Resources/Tuning/stash")]
+        private TextAsset _stashTuning;
+
+        [SerializeField, Tooltip("脱出の調整値の JSON。空なら Resources/Tuning/extraction")]
+        private TextAsset _extractionTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -183,6 +215,15 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("水中の色・音・水しぶき。空なら Resources/Presentation/WaterCatalog、それも無ければ既定の色だけで覆う")]
         private WaterCatalog _water;
+
+        [SerializeField, Tooltip("照準器とスコープの照準・縁の見た目 (照準の Id ごと)。空なら Resources/Presentation/ReticleCatalog、それも無ければ既定の形を描く")]
+        private ReticleCatalog _reticles;
+
+        [SerializeField, Tooltip("状態異常の種類ごとの見た目。空なら Resources/Presentation/StatusEffectVisualsCatalog、それも無ければコードで形を作る")]
+        private StatusEffectVisualCatalog _statusEffectVisuals;
+
+        [SerializeField, Tooltip("目くらましの覆いと耳鳴り。空なら Resources/Presentation/FlashOverlayCatalog、それも無ければ既定の色だけで覆う")]
+        private FlashOverlayCatalog _flashOverlay;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
@@ -309,6 +350,66 @@ namespace Shooter.Runtime
         {
             get => _rumbleTuning;
             set => _rumbleTuning = value;
+        }
+
+        public TextAsset ChatWordsTuning
+        {
+            get => _chatWordsTuning;
+            set => _chatWordsTuning = value;
+        }
+
+        public TextAsset AchievementsTuning
+        {
+            get => _achievementsTuning;
+            set => _achievementsTuning = value;
+        }
+
+        public TextAsset LeaderboardsTuning
+        {
+            get => _leaderboardsTuning;
+            set => _leaderboardsTuning = value;
+        }
+
+        public TextAsset CosmeticsTuning
+        {
+            get => _cosmeticsTuning;
+            set => _cosmeticsTuning = value;
+        }
+
+        public TextAsset WeatherTuning
+        {
+            get => _weatherTuning;
+            set => _weatherTuning = value;
+        }
+
+        public TextAsset TelemetryTuning
+        {
+            get => _telemetryTuning;
+            set => _telemetryTuning = value;
+        }
+
+        public TextAsset InfectedTuning
+        {
+            get => _infectedTuning;
+            set => _infectedTuning = value;
+        }
+
+        public TextAsset LootTuning
+        {
+            get => _lootTuning;
+            set => _lootTuning = value;
+        }
+
+        public TextAsset StashTuning
+        {
+            get => _stashTuning;
+            set => _stashTuning = value;
+        }
+
+        public TextAsset ExtractionTuning
+        {
+            get => _extractionTuning;
+            set => _extractionTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog
@@ -507,6 +608,24 @@ namespace Shooter.Runtime
         {
             get => _water;
             set => _water = value;
+        }
+
+        public ReticleCatalog Reticles
+        {
+            get => _reticles;
+            set => _reticles = value;
+        }
+
+        public StatusEffectVisualCatalog StatusEffectVisuals
+        {
+            get => _statusEffectVisuals;
+            set => _statusEffectVisuals = value;
+        }
+
+        public FlashOverlayCatalog FlashOverlay
+        {
+            get => _flashOverlay;
+            set => _flashOverlay = value;
         }
 
         public static GameContent Current

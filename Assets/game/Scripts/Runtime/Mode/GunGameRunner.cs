@@ -8,8 +8,8 @@ namespace Shooter.Runtime
     // 段が変わった人の武器を次の Tick の頭で替えるのは、撃っている最中の WeaponController・EnemyAgent の武器を差し替えないため。
     public sealed class GunGameRunner : ModeRunnerBase
     {
-        public const float DefaultTimeLimitSeconds = 600f;
-        public const float DefaultRespawnSeconds = 2f;
+        public const float DefaultTimeLimitSeconds = GunGameSpec.DefaultTimeLimitSeconds;
+        public const float DefaultRespawnSeconds = GunGameSpec.DefaultRespawnSeconds;
 
         [SerializeField, Tooltip("武器の並びと制限時間・リスポーンの秒数。空なら入口 (GameContent) のものを使う")]
         private GunGameLadderDefinition _ladder;
@@ -93,7 +93,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            _weaponRules = ResolveWeaponRules();
+            _weaponRules = ModeLoadout.RulesOf(LocalPlayer);
             _pendingEquips.Clear();
             foreach (var member in Members)
             {
@@ -180,13 +180,6 @@ namespace Shooter.Runtime
             }
         }
 
-        private GameRules ResolveWeaponRules()
-        {
-            var player = LocalPlayer;
-            var controller = player != null ? player.GetComponentInChildren<WeaponController>(true) : null;
-            return controller != null ? controller.Rules : GameRules.Default;
-        }
-
         private void Equip(GunGame gunGame, SideMember member)
         {
             var id = IdOf(member);
@@ -200,7 +193,9 @@ namespace Shooter.Runtime
             bool changed;
             try
             {
-                changed = EquipController(member, definition) ?? EquipAgent(member, definition) ?? WarnUnarmed(member);
+                changed = ModeLoadout.EquipController(member, definition)
+                    ?? ModeLoadout.EquipAgent(member, definition, _weaponRules)
+                    ?? WarnUnarmed(member);
             }
             catch (Exception e) when (e is WeaponDefinitionException || e is ArgumentException)
             {
@@ -228,52 +223,6 @@ namespace Shooter.Runtime
             {
                 melee.MeleeWeapon = _meleeWeapon;
             }
-        }
-
-        private static bool? EquipController(SideMember member, WeaponDefinition definition)
-        {
-            var controller = member.GetComponentInChildren<WeaponController>(true);
-            if (controller == null)
-            {
-                return null;
-            }
-
-            if (!controller.IsInitialized)
-            {
-                // Awake で作る前なら、作るときにこの武器だけを持たせる。
-                if (controller.Definitions.Count == 1 && controller.Definitions[0] == definition)
-                {
-                    return false;
-                }
-
-                controller.Definitions = new[] { definition };
-                return true;
-            }
-
-            if (controller.Definitions.Count == 1 && controller.Definition == definition)
-            {
-                return false;
-            }
-
-            controller.Initialize(controller.Aim, controller.AttackAction, controller.ReloadAction, null, null, new[] { definition });
-            return true;
-        }
-
-        private bool? EquipAgent(SideMember member, WeaponDefinition definition)
-        {
-            var agent = member.GetComponent<EnemyAgent>();
-            if (agent == null)
-            {
-                return null;
-            }
-
-            if (agent.WeaponDefinition == definition && agent.WeaponRules == _weaponRules)
-            {
-                return false;
-            }
-
-            agent.EquipWeapon(definition, _weaponRules);
-            return true;
         }
 
         private bool WarnUnarmed(SideMember member)

@@ -52,6 +52,9 @@ namespace Shooter.Editor
             new Slot("Suppression", typeof(SuppressionCatalog), c => c.Suppression, (c, v) => c.Suppression = (SuppressionCatalog)v),
             new Slot("AwarenessIndicator", typeof(AwarenessIndicatorCatalog), c => c.AwarenessIndicator, (c, v) => c.AwarenessIndicator = (AwarenessIndicatorCatalog)v),
             new Slot("CameraShake", typeof(CameraShakeSettings), c => c.CameraShake, (c, v) => c.CameraShake = (CameraShakeSettings)v),
+            new Slot("Reticles", typeof(ReticleCatalog), c => c.Reticles, (c, v) => c.Reticles = (ReticleCatalog)v),
+            new Slot("StatusEffectVisuals", typeof(StatusEffectVisualCatalog), c => c.StatusEffectVisuals, (c, v) => c.StatusEffectVisuals = (StatusEffectVisualCatalog)v),
+            new Slot("FlashOverlay", typeof(FlashOverlayCatalog), c => c.FlashOverlay, (c, v) => c.FlashOverlay = (FlashOverlayCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。
@@ -75,6 +78,16 @@ namespace Shooter.Editor
             new TuningSlot("MinimapTuning", MinimapJson.ResourcePath, c => c.MinimapTuning, (c, v) => c.MinimapTuning = v),
             new TuningSlot("AssistTuning", KitTuning.AssistResourcePath, c => c.AssistTuning, (c, v) => c.AssistTuning = v),
             new TuningSlot("RumbleTuning", GamepadRumble.TuningResourcePath, c => c.RumbleTuning, (c, v) => c.RumbleTuning = v),
+            new TuningSlot("ChatWordsTuning", ChatWordFilterJson.ResourcePath, c => c.ChatWordsTuning, (c, v) => c.ChatWordsTuning = v),
+            new TuningSlot("AchievementsTuning", AchievementJson.ResourcePath, c => c.AchievementsTuning, (c, v) => c.AchievementsTuning = v),
+            new TuningSlot("LeaderboardsTuning", LeaderboardJson.ResourcePath, c => c.LeaderboardsTuning, (c, v) => c.LeaderboardsTuning = v),
+            new TuningSlot("CosmeticsTuning", CosmeticJson.ResourcePath, c => c.CosmeticsTuning, (c, v) => c.CosmeticsTuning = v),
+            new TuningSlot("WeatherTuning", WeatherJson.ResourcePath, c => c.WeatherTuning, (c, v) => c.WeatherTuning = v),
+            new TuningSlot("TelemetryTuning", TelemetryJson.ResourcePath, c => c.TelemetryTuning, (c, v) => c.TelemetryTuning = v),
+            new TuningSlot("InfectedTuning", InfectedJson.ResourcePath, c => c.InfectedTuning, (c, v) => c.InfectedTuning = v),
+            new TuningSlot("LootTuning", LootJson.ResourcePath, c => c.LootTuning, (c, v) => c.LootTuning = v),
+            new TuningSlot("StashTuning", StashJson.ResourcePath, c => c.StashTuning, (c, v) => c.StashTuning = v),
+            new TuningSlot("ExtractionTuning", ExtractionJson.ResourcePath, c => c.ExtractionTuning, (c, v) => c.ExtractionTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

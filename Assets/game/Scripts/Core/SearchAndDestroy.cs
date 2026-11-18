@@ -5,7 +5,7 @@ namespace Shooter.Core
 {
     // 倒れたことは次の Tick で気づくので、その場で爆弾を落とせるよう ReportKill・ReportDeath・RemovePlayer をこのクラスにも置く。
     // 全滅は ModeSession と同じく Tick の頭でまとめて調べる (同じ間の相打ちを報告の順によらず同時に扱うため)。
-    public sealed class SearchAndDestroy
+    public sealed class SearchAndDestroy : ISearchAndDestroyView
     {
         // 体力と位置は Core の外にあるので、受けた側がここで戻す。
         public event Action<int> PreparationStarted;
@@ -49,6 +49,10 @@ namespace Shooter.Core
         public RoundPhase Phase => _rounds.Phase;
 
         public int RoundNumber => _rounds.RoundNumber;
+
+        public int WinsToWin => Spec.WinsToWin;
+
+        public float PreparationRemaining => _rounds.PreparationRemaining;
 
         public Side Attacker => _rounds.Attacker;
 
@@ -145,6 +149,8 @@ namespace Shooter.Core
         }
 
         public int GetRoundWins(Side side) => _rounds.GetRoundWins(side);
+
+        public bool HasPlayer(int playerId) => _mode.HasPlayer(playerId);
 
         public bool IsAttacker(int playerId) => _mode.GetSide(playerId) == Attacker;
 

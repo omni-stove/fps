@@ -127,6 +127,87 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheReticleCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.Reticles, Is.Null);
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(Resources.Load<ReticleCatalog>(ReticleCatalog.ResourcePath)));
+
+            content.Reticles = Track(ScriptableObject.CreateInstance<ReticleCatalog>());
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(content.Reticles));
+
+            content.Reticles = null;
+            Assert.That(ReticleCatalog.Load(), Is.SameAs(Resources.Load<ReticleCatalog>(ReticleCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void TheStatusEffectVisualCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.StatusEffectVisuals, Is.Null);
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(Resources.Load<StatusEffectVisualCatalog>(StatusEffectVisualCatalog.ResourcePath)));
+
+            content.StatusEffectVisuals = Track(ScriptableObject.CreateInstance<StatusEffectVisualCatalog>());
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(content.StatusEffectVisuals));
+
+            content.StatusEffectVisuals = null;
+            Assert.That(StatusEffectVisualCatalog.Load(), Is.SameAs(Resources.Load<StatusEffectVisualCatalog>(StatusEffectVisualCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void TheFlashOverlayCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.FlashOverlay, Is.Null);
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(Resources.Load<FlashOverlayCatalog>(FlashOverlayCatalog.ResourcePath)));
+
+            content.FlashOverlay = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(content.FlashOverlay));
+
+            content.FlashOverlay = null;
+            Assert.That(FlashOverlayCatalog.Load(), Is.SameAs(Resources.Load<FlashOverlayCatalog>(FlashOverlayCatalog.ResourcePath)));
+        }
+
+        [Test]
+        public void FillEmptyFillsTheReticleStatusEffectAndFlashCatalogs()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            var reticles = Track(ScriptableObject.CreateInstance<ReticleCatalog>());
+            var statusEffects = Track(ScriptableObject.CreateInstance<StatusEffectVisualCatalog>());
+            var flashA = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            var flashB = Track(ScriptableObject.CreateInstance<FlashOverlayCatalog>());
+            var candidates = new Dictionary<System.Type, Object[]>
+            {
+                { typeof(ReticleCatalog), new Object[] { reticles } },
+                { typeof(StatusEffectVisualCatalog), new Object[] { statusEffects } },
+                { typeof(FlashOverlayCatalog), new Object[] { flashA, flashB } },
+            };
+
+            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
+
+            Assert.That(content.Reticles, Is.SameAs(reticles));
+            Assert.That(content.StatusEffectVisuals, Is.SameAs(statusEffects));
+            Assert.That(content.FlashOverlay, Is.Null);
+            Assert.That(left, Does.Contain("FlashOverlay"));
+            Assert.That(left, Does.Not.Contain("Reticles").And.Not.Contain("StatusEffectVisuals"));
+        }
+
+        [TestCase("_reticles", "Resources/Presentation/ReticleCatalog")]
+        [TestCase("_statusEffectVisuals", "Resources/Presentation/StatusEffectVisualsCatalog")]
+        [TestCase("_flashOverlay", "Resources/Presentation/FlashOverlayCatalog")]
+        public void TheCatalogFieldsNameTheirResourceFallback(string field, string resourcePath)
+        {
+            var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var tooltip = (TooltipAttribute)System.Attribute.GetCustomAttribute(info, typeof(TooltipAttribute));
+
+            Assert.That(tooltip, Is.Not.Null);
+            Assert.That(tooltip.tooltip, Does.Contain("空なら " + resourcePath + "、"));
+        }
+
+        [Test]
         public void TheStreakAimAssistAndProgressionTuningAreKeptAndStartEmpty()
         {
             var content = Content("A");
@@ -169,6 +250,69 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRecordContentAndModeTuningAreKeptAndStartEmpty()
+        {
+            var content = Content("A");
+            var slots = new (System.Func<TextAsset> get, System.Action<TextAsset> set)[]
+            {
+                (() => content.ChatWordsTuning, v => content.ChatWordsTuning = v),
+                (() => content.AchievementsTuning, v => content.AchievementsTuning = v),
+                (() => content.LeaderboardsTuning, v => content.LeaderboardsTuning = v),
+                (() => content.CosmeticsTuning, v => content.CosmeticsTuning = v),
+                (() => content.WeatherTuning, v => content.WeatherTuning = v),
+                (() => content.TelemetryTuning, v => content.TelemetryTuning = v),
+                (() => content.InfectedTuning, v => content.InfectedTuning = v),
+                (() => content.LootTuning, v => content.LootTuning = v),
+                (() => content.StashTuning, v => content.StashTuning = v),
+                (() => content.ExtractionTuning, v => content.ExtractionTuning = v),
+            };
+
+            foreach (var slot in slots)
+            {
+                Assert.That(slot.get(), Is.Null);
+            }
+
+            var assigned = new List<TextAsset>();
+            foreach (var slot in slots)
+            {
+                var asset = Track(new TextAsset("{}"));
+                assigned.Add(asset);
+                slot.set(asset);
+            }
+
+            for (var i = 0; i < slots.Length; i++)
+            {
+                Assert.That(slots[i].get(), Is.SameAs(assigned[i]), "slot " + i + " keeps its own file");
+            }
+        }
+
+        [Test]
+        public void FillEmptyFillsTheRecordContentAndModeTuning()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            var weather = Track(new TextAsset("{}"));
+            var loot = Track(new TextAsset("{}"));
+            var stashA = Track(new TextAsset("{}"));
+            var stashB = Track(new TextAsset("{}"));
+            var files = new Dictionary<string, TextAsset[]>
+            {
+                { "weather", new[] { weather } },
+                { "loot", new[] { loot } },
+                { "stash", new[] { stashA, stashB } },
+            };
+
+            var left = GameContentAssets.FillEmpty(content, _ => new Object[0], name => files.TryGetValue(name, out var found) ? found : new TextAsset[0]);
+
+            Assert.That(content.WeatherTuning, Is.SameAs(weather));
+            Assert.That(content.LootTuning, Is.SameAs(loot));
+            Assert.That(content.StashTuning, Is.Null);
+            Assert.That(content.ChatWordsTuning, Is.Null);
+            Assert.That(left, Does.Contain("StashTuning"));
+            Assert.That(left, Does.Not.Contain("WeatherTuning").And.Not.Contain("LootTuning"));
+            Assert.That(left, Does.Not.Contain("ChatWordsTuning"), "a tuning slot with no file falls back to Resources/Tuning");
+        }
+
+        [Test]
         public void TheSkillTuningIsKeptAndStartsEmpty()
         {
             var content = Content("A");
@@ -188,6 +332,16 @@ namespace Shooter.Tests.EditMode
         [TestCase("_minimapTuning", "Resources/Tuning/minimap")]
         [TestCase("_assistTuning", "Resources/Tuning/assist")]
         [TestCase("_rumbleTuning", "Resources/Tuning/rumble")]
+        [TestCase("_chatWordsTuning", "Resources/Tuning/chat-words")]
+        [TestCase("_achievementsTuning", "Resources/Tuning/achievements")]
+        [TestCase("_leaderboardsTuning", "Resources/Tuning/leaderboards")]
+        [TestCase("_cosmeticsTuning", "Resources/Tuning/cosmetics")]
+        [TestCase("_weatherTuning", "Resources/Tuning/weather")]
+        [TestCase("_telemetryTuning", "Resources/Tuning/telemetry")]
+        [TestCase("_infectedTuning", "Resources/Tuning/infected")]
+        [TestCase("_lootTuning", "Resources/Tuning/loot")]
+        [TestCase("_stashTuning", "Resources/Tuning/stash")]
+        [TestCase("_extractionTuning", "Resources/Tuning/extraction")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -316,7 +470,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(left, Does.Not.Contain("MinimapTuning").And.Not.Contain("AssistTuning").And.Not.Contain("GrenadeTuning"));
             Assert.That(left, Does.Not.Contain("PingTuning"), "a tuning slot with no file falls back to Resources/Tuning");
             Assert.That(asked, Does.Contain("aim-assist").And.Contain("skill").And.Contain("progression").And.Not.Contain("grenade"));
-            Assert.That(asked, Has.Count.EqualTo(17));
+            Assert.That(asked, Does.Contain("chat-words").And.Contain("achievements").And.Contain("leaderboards").And.Contain("cosmetics"));
+            Assert.That(asked, Does.Contain("weather").And.Contain("telemetry").And.Contain("infected").And.Contain("loot"));
+            Assert.That(asked, Does.Contain("stash").And.Contain("extraction"));
+            Assert.That(asked, Has.Count.EqualTo(27));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

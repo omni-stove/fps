@@ -113,7 +113,23 @@ namespace Shooter.Core
                 }
             }
 
-            closing?.Dispose();
+            if (closing != null)
+            {
+                // Dispose は送信中の POST を待つので、呼んだスレッド (クライアントではメイン) を止めないよう別スレッドで閉じる
+                var toClose = closing;
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        toClose.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                        // 同意を外したあとの後始末の失敗は、記録せず捨てる
+                    }
+                });
+            }
+
             _log(TelemetryLog.ConsentChanged(consent));
         }
 
@@ -124,11 +140,18 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(exception));
             }
 
-            // ToString は内側の例外まで含むので、型と文だけでなく、元になった例外まで追える
-            return RecordCrash(exception.GetType().FullName, exception.Message, exception.ToString(), waitForDelivery);
+            // ToString は内側の例外まで含むので、型と文だけでなく、元になった例外まで追える。
+            // 見分けには文を含まない型とスタックだけを使う (文に値が入る例外で別物と数えないため)
+            var signature = new System.Text.StringBuilder();
+            for (var e = exception; e != null; e = e.InnerException)
+            {
+                signature.Append(e.GetType().FullName).Append('\n').Append(e.StackTrace).Append('\n');
+            }
+
+            return RecordCrash(exception.GetType().FullName, exception.Message, exception.ToString(), waitForDelivery, signature.ToString());
         }
 
-        public bool RecordCrash(string exceptionType, string message, string stackTrace, bool waitForDelivery = false)
+        public bool RecordCrash(string exceptionType, string message, string stackTrace, bool waitForDelivery = false, string signatureSource = null)
         {
             ITelemetrySink sink;
             lock (_gate)
@@ -138,7 +161,7 @@ namespace Shooter.Core
                     return false;
                 }
 
-                var signature = (exceptionType ?? string.Empty) + "\n" + (stackTrace ?? string.Empty);
+                var signature = (exceptionType ?? string.Empty) + "\n" + (signatureSource ?? stackTrace ?? string.Empty);
                 if (_crashSignatures.Contains(signature))
                 {
                     return false;

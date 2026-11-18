@@ -300,7 +300,7 @@ namespace Shooter.Core.Tests
 
                 lock (Bodies)
                 {
-                    Bodies.Add(request.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                    Bodies.Add(request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
                     ContentTypes.Add(request.Content.Headers.ContentType.MediaType);
                     Uris.Add(request.RequestUri);
                 }

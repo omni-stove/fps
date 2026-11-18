@@ -50,9 +50,14 @@ namespace Shooter.Runtime
                         ? new LocalizedText("extraction.hud.extractedStashFull", detail.StoredCount, detail.LostCount)
                         : new LocalizedText("extraction.hud.extracted", detail.StoredCount);
                 case ExtractionOutcome.Died:
-                    return detail.StoredCount > 0
-                        ? new LocalizedText("extraction.hud.diedKept", detail.StoredCount)
-                        : new LocalizedText("extraction.hud.died", detail.LostCount);
+                    if (detail.StoredCount > 0)
+                    {
+                        return detail.LostCount > 0
+                            ? new LocalizedText("extraction.hud.diedKeptStashFull", detail.StoredCount, detail.LostCount)
+                            : new LocalizedText("extraction.hud.diedKept", detail.StoredCount);
+                    }
+
+                    return new LocalizedText("extraction.hud.died", detail.LostCount);
                 case ExtractionOutcome.TimedOut:
                     return new LocalizedText("extraction.hud.timedOut", detail.LostCount);
                 default:

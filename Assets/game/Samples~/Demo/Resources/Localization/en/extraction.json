@@ -10,6 +10,7 @@
   "extraction.hud.extractedStashFull": "Extracted: {0} stored, {1} lost (stash full)",
   "extraction.hud.died": "Killed: {0} lost",
   "extraction.hud.diedKept": "Killed: {0} stored",
+  "extraction.hud.diedKeptStashFull": "Killed: {0} stored, {1} lost",
   "extraction.hud.timedOut": "Out of time: {0} lost",
   "extraction.result.extracted": "EXTRACTED",
   "extraction.result.died": "KILLED IN ACTION",

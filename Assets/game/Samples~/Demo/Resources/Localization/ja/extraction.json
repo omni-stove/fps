@@ -10,6 +10,7 @@
   "extraction.hud.extractedStashFull": "脱出成功: {0} 個を持ち帰り、{1} 個を失った (倉庫が一杯)",
   "extraction.hud.died": "撃破された: {0} 個を失った",
   "extraction.hud.diedKept": "撃破された: {0} 個は持ち帰った",
+  "extraction.hud.diedKeptStashFull": "撃破された: {0} 個は持ち帰り、{1} 個を失った",
   "extraction.hud.timedOut": "時間切れ: {0} 個を失った",
   "extraction.result.extracted": "脱出成功",
   "extraction.result.died": "撃破",

@@ -99,6 +99,19 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ADeathWithAFullStashNamesWhatWasLost()
+        {
+            var spec = new ExtractionSpec(60f, 5f, 1, 0f, true);
+            var session = new ExtractionSession(spec, new Stash(1, Catalog()), new[] { _north });
+            session.Pick(_ammo, 70);
+            session.Die();
+
+            var lines = Resolve(Lines(Status(new ExtractionStatus(session, false, false, null), true, Side.Bravo)));
+
+            Assert.That(lines, Is.EqualTo(new[] { "撃破された: 60 個は持ち帰り、10 個を失った" }));
+        }
+
+        [Test]
         public void TheFormatterIsRegisteredForTheStatus()
         {
             var status = Status(new ExtractionStatus(Session(), false, false, null));

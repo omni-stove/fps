@@ -270,6 +270,38 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ASetTierCopiesTheTierAndTheLastTierFinishes()
+        {
+            var game = new GunGame(Ladder(true));
+
+            game.SetTier(_botA, 2, new Side(_botA));
+            Assert.That(game.GetTier(_botA), Is.EqualTo(2));
+            Assert.That(game.GetWeapon(_botA).WeaponId, Is.EqualTo(_handgun));
+            Assert.That(game.GetNextWeapon(_botA), Is.Null);
+            Assert.That(game.FinisherId, Is.Null);
+
+            game.SetTier(_botA, 0, new Side(_botA));
+            Assert.That(game.GetTier(_botA), Is.Zero);
+
+            game.SetTier(_player, 3, new Side(_player));
+            Assert.That(game.GetTier(_player), Is.EqualTo(3));
+            Assert.That(game.GetWeaponTier(_player), Is.EqualTo(2));
+            Assert.That(game.FinisherId, Is.EqualTo(_player));
+            Assert.That(game.FinisherSide, Is.EqualTo(new Side(_player)));
+            Assert.That(game.CheckStanding(null).Winner, Is.EqualTo(new Side(_player)));
+
+            game.SetTier(_botB, 3, new Side(_botB));
+            Assert.That(game.FinisherId, Is.EqualTo(_player), "the first finisher stays");
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => game.SetTier(_botA, -1, new Side(_botA)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => game.SetTier(_botA, 4, new Side(_botA)));
+
+            game.Reset();
+            Assert.That(game.GetTier(_player), Is.Zero);
+            Assert.That(game.FinisherId, Is.Null);
+        }
+
+        [Test]
         public void TheLogTextCountsTiersFromOne()
         {
             Assert.That(GunGameText.Promote(0, 1, 3, "Launcher"), Is.EqualTo("[Mode] gungame promote player=0 tier=2/3 weapon=Launcher"));

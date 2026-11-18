@@ -1,0 +1,41 @@
+# 改行は .editorconfig と同じ LF にそろえる。CRLF のままコミット済みのファイルは Git が変換しないので、まとめて書き換えずに済む
+* text=auto eol=lf
+
+# Force Text でも NavMesh は中身がバイナリで、テキストとして差分もマージもできない
+**/NavMesh*.asset binary
+LightingData.asset binary
+
+# 画像
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.tif binary
+*.tiff binary
+*.psd binary
+*.exr binary
+*.hdr binary
+# 音声
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.aif binary
+*.aiff binary
+# モデル
+*.fbx binary
+*.FBX binary
+*.obj binary
+*.blend binary
+# フォント
+*.ttf binary
+*.otf binary
+# ビルド済み
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.bundle binary
+*.bytes binary
+# サーバー用に書き出したマップのコリジョンと NavMesh
+*.fpsmap binary
+*.fpsnav binary

@@ -88,6 +88,20 @@ namespace Shooter.Runtime
             SetProfile(loaded);
         }
 
+        // 保存先の中身が外から替わったとき (クラウドセーブが他の端末の新しいプロフィールを採ったとき) に呼ぶ。
+        // 読み直さないと、次の保存で手元に持っている古いプロフィールが新しい時刻で書かれ、採った分を消してしまう。
+        public void Reload()
+        {
+            if (!IsInstalled)
+            {
+                return;
+            }
+
+            var loaded = _store.Load();
+            Debug.Log(ProgressionLog.Loaded(loaded, Ledger.LevelOf(loaded)));
+            SetProfile(loaded);
+        }
+
         public void Change(Func<PlayerProfile, PlayerProfile> change)
         {
             if (change == null)

@@ -20,8 +20,12 @@ namespace Shooter.NetEos
         private static ProductUserId _localUserId;
         private static bool _quitHooked;
         private static int _lastTickFrame = -1;
+        private static bool _hasEncryptionKey;
 
         public static PlatformInterface Current => _platform;
+
+        // Player Data Storage は鍵を渡して作ったプラットフォームでしか使えず、鍵は作った後から足せないので覚えておく。
+        public static bool HasEncryptionKey => _platform != null && _hasEncryptionKey;
 
         public static EosRtc.RTCInterface Rtc => _platform?.GetRTCInterface();
 
@@ -99,8 +103,10 @@ namespace Shooter.NetEos
                     CacheDirectory = Application.temporaryCachePath,
                     // RTCOptions を渡さないと GetRTCInterface が null を返し、ロビーの RTC 部屋 (ボイス) に入れない
                     RTCOptions = new RTCOptions { BackgroundMode = RTCBackgroundMode.LeaveRooms },
+                    EncryptionKey = credentials.HasEncryptionKey ? credentials.EncryptionKey : null,
                 };
                 _platform = PlatformInterface.Create(ref options);
+                _hasEncryptionKey = _platform != null && credentials.HasEncryptionKey;
             }
             catch (Exception e)
             {
@@ -148,6 +154,7 @@ namespace Shooter.NetEos
             _platform = null;
             _localUserId = null;
             _lastTickFrame = -1;
+            _hasEncryptionKey = false;
 
             // Shutdown 後は同じプロセスで初期化し直せないので、Play Mode を繰り返すエディタでは呼ばない
             if (!Application.isEditor)

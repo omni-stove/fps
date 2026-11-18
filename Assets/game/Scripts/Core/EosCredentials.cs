@@ -12,6 +12,13 @@ namespace Shooter.Core
         public const string ClientIdVariable = "EOS_CLIENT_ID";
         public const string ClientSecretVariable = "EOS_CLIENT_SECRET";
 
+        // クラウドセーブ (Player Data Storage) を手元で暗号化する鍵。無くても対戦はできるので VariableNames には入れない。
+        // 端末が違っても同じ鍵でないと読めないので、ゲームごとに 1 つ決めて配る。
+        public const string EncryptionKeyVariable = "EOS_ENCRYPTION_KEY";
+
+        // 32 バイトを 16 進で書いた長さ (EOS の Options.EncryptionKey が求める形)。
+        public const int EncryptionKeyLength = 64;
+
         public const string LocalFileName = "eos.local.json";
 
         public static IReadOnlyList<string> VariableNames { get; } = new[]
@@ -33,13 +40,43 @@ namespace Shooter.Core
 
         public string ClientSecret { get; }
 
+        public string EncryptionKey { get; }
+
+        public bool HasEncryptionKey => IsValidEncryptionKey(EncryptionKey);
+
         public EosCredentials(string productId, string sandboxId, string deploymentId, string clientId, string clientSecret)
+            : this(productId, sandboxId, deploymentId, clientId, clientSecret, null)
+        {
+        }
+
+        public EosCredentials(
+            string productId, string sandboxId, string deploymentId, string clientId, string clientSecret, string encryptionKey)
         {
             ProductId = Require(productId, nameof(productId));
             SandboxId = Require(sandboxId, nameof(sandboxId));
             DeploymentId = Require(deploymentId, nameof(deploymentId));
             ClientId = Require(clientId, nameof(clientId));
             ClientSecret = Require(clientSecret, nameof(clientSecret));
+            EncryptionKey = Normalize(encryptionKey);
+        }
+
+        public static bool IsValidEncryptionKey(string key)
+        {
+            if (key == null || key.Length != EncryptionKeyLength)
+            {
+                return false;
+            }
+
+            foreach (var c in key)
+            {
+                var hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+                if (!hex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static EosCredentials Resolve(
@@ -83,13 +120,26 @@ namespace Shooter.Core
                 found[SandboxIdVariable],
                 found[DeploymentIdVariable],
                 found[ClientIdVariable],
-                found[ClientSecretVariable]);
+                found[ClientSecretVariable],
+                ResolveOptional(environment, localFile, EncryptionKeyVariable));
         }
 
         // ログに出ても漏れないよう、値は書かない。
         public override string ToString()
         {
             return "EosCredentials(values hidden)";
+        }
+
+        private static string ResolveOptional(
+            Func<string, string> environment, IReadOnlyDictionary<string, string> localFile, string name)
+        {
+            var value = Normalize(environment(name));
+            if (value == null && localFile != null && localFile.TryGetValue(name, out var fromFile))
+            {
+                value = Normalize(fromFile);
+            }
+
+            return value;
         }
 
         private static string Normalize(string value)

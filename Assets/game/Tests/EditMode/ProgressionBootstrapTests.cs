@@ -137,6 +137,47 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AProfileTakenFromTheCloudIsReadAgain()
+        {
+            var storage = new MemorySaveStorage();
+            var recorder = new ProgressionRecorder(storage, _spec, new OfflineParticipants());
+
+            // 実績が解けて ProfileChanged が増えないよう、実績の無い表で入れる。
+            ProgressionBootstrap.Install(new AchievementRecorder(recorder, new AchievementSpec(Array.Empty<AchievementDefinition>()), () => 0d));
+            var changes = 0;
+            recorder.ProfileChanged += _ => changes++;
+            new ProfileStore(storage).Save(new PlayerProfile(600, 3, 1, 2, 1));
+
+            ProgressionBootstrap.ReloadPulledProfile(CampaignSaveSlots.For("Campaign01"));
+
+            Assert.That(recorder.Profile, Is.EqualTo(PlayerProfile.Empty), "other slots leave the profile alone");
+            Assert.That(changes, Is.Zero);
+
+            ProgressionBootstrap.ReloadPulledProfile(ProfileStore.Slot);
+
+            Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
+            Assert.That(recorder.Level, Is.EqualTo(2));
+            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.True);
+            Assert.That(changes, Is.EqualTo(1));
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            Assert.That(new ProfileStore(storage).Load().Matches, Is.EqualTo(3), "the next save builds on the profile taken from the cloud");
+        }
+
+        [Test]
+        public void ReloadingAnUninstalledRecorderDoesNothing()
+        {
+            var storage = new MemorySaveStorage();
+            var recorder = new ProgressionRecorder(storage, _spec, new OfflineParticipants());
+            new ProfileStore(storage).Save(new PlayerProfile(600, 3, 1, 2, 1));
+
+            recorder.Reload();
+
+            Assert.That(recorder.Profile, Is.EqualTo(PlayerProfile.Empty));
+        }
+
+        [Test]
         public void InstallRejectsNull()
         {
             Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((ISaveStorage)null));

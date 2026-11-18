@@ -6,6 +6,7 @@
         "Shooter.NetV2",
         "Shooter.NetV2.Client",
         "Shooter.Protocol",
+        "Shooter.Runtime",
         "com.Epic.OnlineServices",
         "com.playeveryware.eos.core"
     ],

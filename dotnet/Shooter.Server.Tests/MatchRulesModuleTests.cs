@@ -465,6 +465,44 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheCosmeticSentWithALoadoutIsShownInThePlayerRowUntilTheyLeave()
+        {
+            Start(Plain());
+            Join(1);
+            Join(2);
+
+            var request = new LoadoutRequestMessage { CosmeticId = " skin-desert " };
+            request.WeaponIds.Add("not-a-weapon");
+            _module.OnMessage(new ConnectionId(1), request);
+
+            var player = default(PlayerSnapshot);
+            _module.FillPlayer(1, ref player);
+            Assert.That(player.CosmeticId, Is.EqualTo("skin-desert"), "a rejected loadout still changes the look");
+            Assert.That(_log.ToString(), Does.Contain("[Net] loadout cosmetic client=1 id=skin-desert"));
+            var other = default(PlayerSnapshot);
+            _module.FillPlayer(2, ref other);
+            Assert.That(other.CosmeticId, Is.Empty);
+
+            var lookOnly = new LoadoutRequestMessage { CosmeticId = "skin-night" };
+            _module.OnMessage(new ConnectionId(1), lookOnly);
+
+            Assert.That(_transport.Read<LoadoutAnswerMessage>(1, Copy), Has.Count.EqualTo(1), "a request without weapons is not answered");
+            _module.FillPlayer(1, ref player);
+            Assert.That(player.CosmeticId, Is.EqualTo("skin-night"));
+
+            _module.OnMessage(new ConnectionId(1), new LoadoutRequestMessage());
+            _module.FillPlayer(1, ref player);
+            Assert.That(player.CosmeticId, Is.Empty, "an empty id takes the look off");
+            Assert.That(_log.ToString(), Does.Contain("[Net] loadout cosmetic client=1 id=-"));
+
+            _module.OnMessage(new ConnectionId(1), lookOnly);
+            _match.Leave(new ConnectionId(1));
+            Join(1);
+            _module.FillPlayer(1, ref player);
+            Assert.That(player.CosmeticId, Is.Empty, "leaving forgets the look");
+        }
+
+        [Test]
         public void IdlePlayersAreWarnedThenKicked()
         {
             Start(Plain().WithIdleKickSeconds(20f));

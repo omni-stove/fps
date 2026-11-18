@@ -11,9 +11,13 @@ namespace Shooter.Runtime
 
         private static AchievementRecorder _achievements;
 
+        private static CosmeticLocker _cosmetics;
+
         public static ProgressionRecorder Recorder => _recorder;
 
         public static AchievementRecorder Achievements => _achievements;
+
+        public static CosmeticLocker Cosmetics => _cosmetics;
 
         // 値を覚えずに呼ぶたびに今のプロフィールを引くのは、試合中にレベルが上がればその場で使えるようにするため。
         public static bool IsUnlocked(string id)
@@ -69,6 +73,9 @@ namespace Shooter.Runtime
             achievements.Install();
             _recorder = recorder;
             _achievements = achievements;
+            var cosmetics = new CosmeticLocker(recorder);
+            cosmetics.Install();
+            _cosmetics = cosmetics;
             return achievements;
         }
 
@@ -76,12 +83,14 @@ namespace Shooter.Runtime
         {
             var recorder = _recorder;
             var achievements = _achievements;
+            var cosmetics = _cosmetics;
             _recorder = null;
             _achievements = null;
+            _cosmetics = null;
+            cosmetics?.Uninstall();
             achievements?.Uninstall();
             recorder?.Uninstall();
         }
-
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
         {

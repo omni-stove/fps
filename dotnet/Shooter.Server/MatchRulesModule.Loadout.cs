@@ -12,9 +12,43 @@ namespace Shooter.Server
     {
         private readonly LoadoutAnswerMessage _loadoutAnswer = new LoadoutAnswerMessage();
         private readonly List<string> _requestedWeaponIds = new List<string>();
+        private readonly Dictionary<int, string> _cosmetics = new Dictionary<int, string>();
+
+        public string CosmeticOf(int playerId)
+        {
+            return _cosmetics.TryGetValue(playerId, out var id) ? id : string.Empty;
+        }
+
+        // サーバーは見た目のカタログを持たないので Id を確かめずに中継し、知らない Id は受け取った側が既定の見た目にする。
+        // 見た目は当たりに関わらないので、解けているかもクライアントの申告をそのまま信じる。
+        private void ServerChooseCosmetic(ServerPlayer player, string cosmeticId)
+        {
+            var id = cosmeticId?.Trim() ?? string.Empty;
+            if (string.Equals(id, CosmeticOf(player.PlayerId), StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (id.Length == 0)
+            {
+                _cosmetics.Remove(player.PlayerId);
+            }
+            else
+            {
+                _cosmetics[player.PlayerId] = id;
+            }
+
+            _log.WriteLine(LoadoutChoiceLog.Cosmetic((ulong)player.PlayerId, id));
+        }
 
         private void ServerChooseLoadout(ServerPlayer player, ContentIdList weaponIds)
         {
+            // 武器の無い要求は、並びを保存していない持ち主が見た目だけを送るためのものなので、並びを変えず答えも返さない
+            if (weaponIds.Count == 0)
+            {
+                return;
+            }
+
             _requestedWeaponIds.Clear();
             for (var i = 0; i < weaponIds.Count; i++)
             {
@@ -22,8 +56,7 @@ namespace Shooter.Server
             }
 
             var clientId = (ulong)player.PlayerId;
-            var reason = "no weapons were requested";
-            var accepted = _requestedWeaponIds.Count > 0 && _loadout.TryChoose(player.PlayerId, _requestedWeaponIds, out reason);
+            var accepted = _loadout.TryChoose(player.PlayerId, _requestedWeaponIds, out var reason);
             _log.WriteLine(accepted
                 ? LoadoutChoiceLog.Accepted(clientId, _loadout.WeaponsFor(player.PlayerId))
                 : LoadoutChoiceLog.Rejected(clientId, reason));

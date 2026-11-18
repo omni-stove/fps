@@ -16,6 +16,7 @@ namespace Shooter.Core.Tests
             new[] { new ProgressionUnlock("burst", 2), new ProgressionUnlock("scope", 4) });
 
         private static readonly int[] _singleLevel = { 0 };
+        private static readonly string[] _firstBlood = { "first-blood" };
 
         private static readonly int[] _twoLevels = { 0, 1 };
 
@@ -213,7 +214,28 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new ProgressionAward(PlayerProfile.Empty, 0, 2, 1));
             Assert.That(
                 new ProgressionAward(new PlayerProfile(150, 1, 0, 0, 0), 150, 1, 2).ToString(),
-                Is.EqualTo("+150 xp level 1->2 (xp=150 kills=1 assists=0 deaths=0 matches=0 wins=0 rating=1000)"));
+                Is.EqualTo(
+                    "+150 xp level 1->2 (xp=150 kills=1 assists=0 deaths=0 matches=0 wins=0 rating=1000"
+                    + " headshots=0 meleeKills=0 playSeconds=0 achievements=)"));
+        }
+
+        [Test]
+        public void TheLedgerKeepsTheAchievementsAndStats()
+        {
+            var profile = new PlayerProfile(0, 0, 0, 0, 0, 0, 1234, 4, 2, 600, _firstBlood);
+
+            var kill = _ledger.RecordKill(profile, true).Profile;
+            var assist = _ledger.RecordAssist(profile).Profile;
+            var match = _ledger.RecordMatch(profile, new MatchResult(MatchOutcome.Won, 1, 2, 10)).Profile;
+
+            foreach (var next in new[] { kill, assist, match })
+            {
+                Assert.That(next.Headshots, Is.EqualTo(4), "the headshots are counted by the achievement tracker");
+                Assert.That(next.MeleeKills, Is.EqualTo(2));
+                Assert.That(next.PlaySeconds, Is.EqualTo(600));
+                Assert.That(next.Achievements, Is.EqualTo(_firstBlood));
+                Assert.That(next.Rating, Is.EqualTo(1234));
+            }
         }
 
         [Test]

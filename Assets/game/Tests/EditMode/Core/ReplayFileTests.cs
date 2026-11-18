@@ -10,6 +10,14 @@ namespace Shooter.Core.Tests
     {
         private static readonly DateTime _recordedAt = new DateTime(2026, 11, 18, 9, 15, 30, DateTimeKind.Utc);
 
+        private static readonly string[] _expectedRecords =
+        {
+            "0 Connected ch0 ",
+            "2 Data ch0 0A-14-1E",
+            "2 Data ch1 28",
+            "9 Disconnected ch0 62-79-65",
+        };
+
         [Test]
         public void RecordsComeBackInTheOrderAndTickTheyWereWritten()
         {
@@ -37,13 +45,7 @@ namespace Shooter.Core.Tests
                 Assert.That(reader.Count, Is.EqualTo(4));
             }
 
-            Assert.That(read, Is.EqualTo(new[]
-            {
-                "0 Connected ch0 ",
-                "2 Data ch0 0A-14-1E",
-                "2 Data ch1 28",
-                "9 Disconnected ch0 62-79-65",
-            }));
+            Assert.That(read, Is.EqualTo(_expectedRecords));
         }
 
         [Test]

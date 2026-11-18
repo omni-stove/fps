@@ -5,7 +5,6 @@ using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
 {
-    // 雨・霧・光の値は WeatherSpec の組から、見た目はここに配線した参照から出す。参照が空なら最低限の物をコードで作る。
     [DisallowMultipleComponent]
     public sealed class WeatherController : MonoBehaviour
     {
@@ -146,7 +145,6 @@ namespace Shooter.Runtime
             }
         }
 
-        // オフラインのルールの Id で選ぶ。オンラインの部品が先に選んでいれば、届いたルールの方を残す。
         public WeatherChoice SelectFromRules()
         {
             if (_current.HasValue)
@@ -421,7 +419,6 @@ namespace Shooter.Runtime
                 new Color(0.5f, 0.4f, 0.4f));
         }
 
-        // 色は 0 時・6 時・12 時・18 時に置き、24 時で 0 時の色へ戻す。
         private static Gradient DayGradient(Color midnight, Color dawn, Color noon, Color dusk)
         {
             var gradient = new Gradient();

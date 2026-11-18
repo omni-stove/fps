@@ -2,7 +2,6 @@ using System;
 
 namespace Shooter.Core
 {
-    // 天候の Id は雨・霧・風を、時刻の Id は太陽の高さと明るさを決める。どちらも WeatherSpec の同じ組の一覧から引く。
     public readonly struct WeatherChoice : IEquatable<WeatherChoice>
     {
         public const float HorizonHours = 6f;
@@ -71,7 +70,6 @@ namespace Shooter.Core
             return pitch > 0f && pitch < 180f;
         }
 
-        // 6 時に東の地平 (0 度)、12 時に真上 (90 度)、18 時に西の地平 (180 度) を通る。
         public static float SunPitch(float hours)
         {
             var pitch = (hours - HorizonHours) * DegreesPerHour;

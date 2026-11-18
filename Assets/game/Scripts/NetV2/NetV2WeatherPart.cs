@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace Shooter.NetV2
 {
-    // サーバーのルールが MatchRulesSync で送る天候と時刻の Id で、シーンの WeatherController に選ばせる。
     public sealed class NetV2WeatherPart : INetV2ClientPart
     {
         public const float SearchIntervalSeconds = 1f;

@@ -108,6 +108,18 @@
                 <ui:Label name="settings-voice-volume-value" text="" class="settings__value" />
             </ui:VisualElement>
 
+            <ui:Label text="#settings.section.online" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.region" class="settings__caption" />
+                <ui:Button name="settings-region" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.privacy" class="settings__section" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.telemetry" class="settings__caption" />
+                <ui:Button name="settings-telemetry" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+
             <ui:Label text="#settings.section.language" class="settings__section" />
             <!-- 今の言語が読めなくても選べるよう、ボタンには SettingsView がその言語自身での名前を入れる。 -->
             <ui:VisualElement class="settings__row">

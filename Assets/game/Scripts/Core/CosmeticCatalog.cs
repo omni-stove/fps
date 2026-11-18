@@ -67,5 +67,10 @@ namespace Shooter.Core
         public string VisualId { get; }
 
         public int UnlockLevel { get; }
+
+        public bool IsUnlockedAt(int level)
+        {
+            return level >= UnlockLevel;
+        }
     }
 }

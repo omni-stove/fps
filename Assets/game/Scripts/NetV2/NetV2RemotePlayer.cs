@@ -27,6 +27,14 @@ namespace Shooter.NetV2
 
         public Quaternion Tilt => _tilt;
 
+        public Transform Body => _body;
+
+        // スナップショットが載せてきた見た目の Id。体を替えられなかった (カタログに無い・絵が無い) ときも Id は残し、同じ Id で引き直さない。
+        public string CosmeticId { get; private set; } = string.Empty;
+
+        // 引く口を差し替えられるのは、テストと、見た目の引き方を変えたいゲームのため。
+        public Func<string, GameObject> SkinSource { get; set; }
+
         // 傾ける角度はオフラインと同じ移動の値 (MotorSpec.LeanAngleDegrees) を、サーバーのルールから受け取る。
         public static NetV2RemotePlayer Create(int playerId, StanceGeometry geometry, MotorSpec motor, Transform parent)
         {
@@ -46,11 +54,52 @@ namespace Shooter.NetV2
             remote.PlayerId = playerId;
             remote._geometry = geometry;
             remote._leanAngleDegrees = Mathf.Clamp(motor.LeanAngleDegrees, 0f, 90f);
-            remote._body = CreateBody(geometry, root.transform);
-            remote._standingScale = remote._body.localScale;
-            remote._standingY = remote._body.localPosition.y;
+            remote.SetBody(CreateBody(null, geometry, root.transform));
             NetV2LocalPlayer.AttachPresentation(root, false);
             return remote;
+        }
+
+        public void ShowCosmetic(string cosmeticId)
+        {
+            var id = cosmeticId ?? string.Empty;
+            if (string.Equals(id, CosmeticId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            CosmeticId = id;
+            var source = SkinSource ?? (Func<string, GameObject>)CosmeticLooks.BodyOf;
+            var skin = id.Length == 0 ? null : source(id);
+            var previous = _body;
+            SetBody(CreateBody(skin, _geometry, transform));
+
+            // Destroy はフレームの終わりまで残り、新しい体と重なって見えるので先に隠す
+            previous.gameObject.SetActive(false);
+            if (Application.isPlaying)
+            {
+                Destroy(previous.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(previous.gameObject);
+            }
+
+            Debug.Log(CosmeticLog.RemoteWorn(PlayerId, id, skin != null ? skin.name : null), this);
+        }
+
+        private void SetBody(Transform body)
+        {
+            _body = body;
+            _standingScale = body.localScale;
+            _standingY = body.localPosition.y;
+            if (_stance != PlayerStance.Standing)
+            {
+                ApplyStance(_stance);
+            }
+            else
+            {
+                PlaceBody();
+            }
         }
 
         public void Show(RemotePose pose)
@@ -69,13 +118,22 @@ namespace Shooter.NetV2
             PlaceBody();
         }
 
-        private static Transform CreateBody(StanceGeometry geometry, Transform parent)
+        private static Transform CreateBody(GameObject skin, StanceGeometry geometry, Transform parent)
         {
-            var prefab = Resources.Load<GameObject>(BodyResourcePath);
+            var prefab = skin != null ? skin : Resources.Load<GameObject>(BodyResourcePath);
             GameObject body;
             if (prefab != null)
             {
                 body = Instantiate(prefab, parent, false);
+                if (skin != null)
+                {
+                    // スキンは他のゲームの体を流用して当たりが付いていることがあり、自分の体と射撃の Ray に混ざるので捨てる
+                    foreach (var collider in body.GetComponentsInChildren<Collider>(true))
+                    {
+                        collider.enabled = false;
+                        DestroyCollider(collider);
+                    }
+                }
             }
             else
             {
@@ -83,7 +141,7 @@ namespace Shooter.NetV2
                 body.transform.SetParent(parent, false);
 
                 // 当たりは .fpsmap とサーバーが取るので、見た目に Unity の物理を持たせない
-                Destroy(body.GetComponent<Collider>());
+                DestroyCollider(body.GetComponent<Collider>());
                 var standing = geometry.Standing;
                 body.transform.localScale = new Vector3(geometry.Radius * 2f, standing.Height * 0.5f, geometry.Radius * 2f);
                 body.transform.localPosition = new Vector3(0f, standing.CenterY, 0f);
@@ -91,6 +149,23 @@ namespace Shooter.NetV2
 
             body.name = _bodyName;
             return body.transform;
+        }
+
+        private static void DestroyCollider(Collider collider)
+        {
+            if (collider == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(collider);
+            }
+            else
+            {
+                DestroyImmediate(collider);
+            }
         }
 
         private void ApplyStance(PlayerStance stance)

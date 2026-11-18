@@ -42,6 +42,16 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void WritesTheChosenCosmeticOrADashWhenItIsTakenOff()
+        {
+            Assert.That(LoadoutChoiceLog.Cosmetic(3, "skin-desert"), Is.EqualTo("[Net] loadout cosmetic client=3 id=skin-desert"));
+            Assert.That(LoadoutChoiceLog.Cosmetic(3, ""), Is.EqualTo("[Net] loadout cosmetic client=3 id=-"));
+            Assert.That(LoadoutChoiceLog.Cosmetic(3, null), Is.EqualTo("[Net] loadout cosmetic client=3 id=-"));
+            Assert.That(LoadoutChoiceLog.RequestedCosmetic("skin-desert"), Is.EqualTo("[Net] loadout request cosmetic=skin-desert"));
+            Assert.That(LoadoutChoiceLog.CosmeticTooLong("x", 64), Is.EqualTo("[Net] loadout the cosmetic 'x' is longer than 64 bytes and is not sent"));
+        }
+
+        [Test]
         public void WritesTheAnswerTheOwnerReceived()
         {
             Assert.That(LoadoutChoiceLog.Answer(true, null), Is.EqualTo("[Net] loadout answer accepted applies=next-spawn"));

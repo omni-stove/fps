@@ -1,0 +1,14 @@
+{
+  "leaderboard.title": "リーダーボード",
+  "leaderboard.kills": "キル数",
+  "leaderboard.wins": "勝利数",
+  "leaderboard.loading": "読み込み中…",
+  "leaderboard.unavailable": "リーダーボードは今は使えない",
+  "leaderboard.empty": "まだ誰も載っていない",
+  "leaderboard.noBoards": "リーダーボードが設定されていない",
+  "leaderboard.rank": "{0} 位",
+  "leaderboard.unknownPlayer": "名前の無いプレイヤー",
+  "leaderboard.you": "{0} (自分)",
+  "leaderboard.refresh": "更新",
+  "leaderboard.back": "戻る"
+}

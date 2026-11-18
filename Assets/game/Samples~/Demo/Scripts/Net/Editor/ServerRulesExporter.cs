@@ -163,6 +163,7 @@ namespace Shooter.Editor
                 var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
                 var spawns = new List<SpawnPoint>();
                 var areas = new List<ControlPointArea>();
+                var flagBases = new List<FlagBasePoint>();
 
                 // 並びは階層順にする (サーバーの SpawnSelector の同点の決め手になる)
                 foreach (var rootObject in scene.GetRootGameObjects())
@@ -176,10 +177,22 @@ namespace Shooter.Editor
                     {
                         areas.Add(zone.Area);
                     }
+
+                    foreach (var flagBase in rootObject.GetComponentsInChildren<FlagBase>(false))
+                    {
+                        if (!flagBase.Side.TryGetTeam(out var team))
+                        {
+                            throw new InvalidOperationException(
+                                LogTag + " FlagBase '" + flagBase.name + "' in " + scenePath + " belongs to side " + flagBase.Side.Id
+                                + "; only sides 0 (Alpha) and 1 (Bravo) have flags");
+                        }
+
+                        flagBases.Add(new FlagBasePoint(team, flagBase.Position.ToNumerics()));
+                    }
                 }
 
                 var output = Path.Combine(directory, scene.name + NetMapPoints.Extension);
-                File.WriteAllText(output, NetMapPoints.Write(new NetMapPoints(spawns, areas)));
+                File.WriteAllText(output, NetMapPoints.Write(new NetMapPoints(spawns, areas, flagBases)));
                 written.Add(output);
             }
 

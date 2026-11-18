@@ -171,6 +171,7 @@ namespace Shooter.Server
                     ServerRevive(player.PlayerId, revive.TargetPlayerId);
                     break;
                 case LoadoutRequestMessage loadout:
+                    ServerChooseCosmetic(player, loadout.CosmeticId);
                     ServerChooseLoadout(player, loadout.WeaponIds);
                     break;
                 case ChatRequestMessage chat:
@@ -304,7 +305,7 @@ namespace Shooter.Server
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
-            var synced = MatchRulesSync.From(_data.Rules);
+            var synced = MatchRulesSync.From(_session.Spec.Rules);
             synced.WeatherId = _data.Settings.WeatherId;
             synced.TimeOfDayId = _data.Settings.TimeOfDayId;
             snapshot.Rules = synced;
@@ -321,6 +322,7 @@ namespace Shooter.Server
 
             snapshot.PlayerId = playerId;
             snapshot.Team = _session.GetTeam(playerId);
+            snapshot.CosmeticId = CosmeticOf(playerId);
             snapshot.Health = _session.IsAlive(playerId) ? _session.GetHealth(playerId) : 0;
             snapshot.Downed = DownedOf(playerId);
             snapshot.Kills = _session.GetKills(playerId);
@@ -329,6 +331,7 @@ namespace Shooter.Server
             snapshot.HasKiller = _lastKillers.TryGetValue(playerId, out var killer);
             snapshot.KillerId = snapshot.HasKiller ? killer : 0;
             snapshot.SpawnProtectionSeconds = HudFormat.DisplayedSeconds(_session.GetSpawnProtectionRemaining(playerId));
+            _objective.FillPlayer(playerId, ref snapshot);
             return true;
         }
 
@@ -369,6 +372,7 @@ namespace Shooter.Server
             var playerId = player.PlayerId;
             _lastKillers.Remove(playerId);
             _loadout.Remove(playerId);
+            _cosmetics.Remove(playerId);
             ForgetDowned(playerId);
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);

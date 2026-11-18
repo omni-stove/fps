@@ -477,7 +477,7 @@ namespace Shooter.Server
         {
             var session = _rules.Session;
             return attackerId != victimId
-                && _data.Rules.FriendlyFire == FriendlyFire.Reflect
+                && session.Spec.Rules.FriendlyFire == FriendlyFire.Reflect
                 && session.HasPlayer(attackerId) && session.HasPlayer(victimId)
                 && session.GetTeam(attackerId) == session.GetTeam(victimId);
         }

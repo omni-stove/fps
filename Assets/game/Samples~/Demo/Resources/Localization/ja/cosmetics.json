@@ -1,0 +1,11 @@
+{
+  "cosmetics.title": "見た目",
+  "cosmetics.back": "戻る",
+  "cosmetics.skins": "スキン",
+  "cosmetics.camos": "迷彩",
+  "cosmetics.none": "なし",
+  "cosmetics.equipped": "{0} (装備中)",
+  "cosmetics.locked": "{0} (レベル {1} で解除)",
+  "cosmetics.empty": "まだありません",
+  "cosmetics.refused": "この見た目は着けられません"
+}

@@ -15,6 +15,8 @@ namespace Shooter.Core.Tests
             "'mouseSensitivity':150,'gamepadSensitivity':80,'adsSensitivity':120," +
             "'fieldOfView':75,'masterVolume':40,'effectsVolume':0}";
 
+        private const string _defaultOnline = ",'quickMatchRegion':'auto','telemetryConsent':false";
+
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
         private static readonly HoldAction[] _actions = { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim };
 
@@ -86,12 +88,13 @@ namespace Shooter.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':10,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':11,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
                     "'showBlood':true,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,'showNetStats':false," +
-                    "'colorPalette':'standard','showSubtitles':false,'aimAssist':true}")));
+                    "'colorPalette':'standard','showSubtitles':false,'aimAssist':true," +
+                    "'quickMatchRegion':'auto','telemetryConsent':false}")));
         }
 
         [Test]
@@ -141,7 +144,7 @@ namespace Shooter.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':11,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':12,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -154,9 +157,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':11}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':12}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 11"));
+            Assert.That(problems[0], Does.Contain("version 12"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -388,7 +391,7 @@ namespace Shooter.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -724,7 +727,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true" + _defaultOnline + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
@@ -789,8 +792,8 @@ namespace Shooter.Core.Tests
         {
             var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
 
-            Assert.That(json, Does.StartWith(Json("{'version':10,")));
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true}")));
+            Assert.That(json, Does.StartWith(Json("{'version':11,")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true" + _defaultOnline + "}")));
             Assert.That(json, Does.Not.Contain("language"));
         }
 
@@ -807,13 +810,14 @@ namespace Shooter.Core.Tests
 
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")).And.Not.Contain("language"));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.Not.Contain("language"));
         }
 
         [TestCase(5)]
         [TestCase(8)]
         [TestCase(9)]
         [TestCase(10)]
+        [TestCase(11)]
         public void AVersionWithoutALanguageReportsTheLanguageKeyAsUnknown(int version)
         {
             var json = version >= 8 ? ControlSettings.Default.ToJson() : WithoutPresentation(ControlSettings.Default.ToJson());
@@ -912,7 +916,7 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
             Assert.That(loaded.ShowBlood, Is.True);
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")));
         }
 
         [Test]
@@ -1028,7 +1032,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + "}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + _defaultOnline + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.AimAssist, Is.EqualTo(enabled));
@@ -1046,13 +1050,13 @@ namespace Shooter.Core.Tests
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.AimAssist, Is.True);
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':10,")).And.EndWith(Json(",'aimAssist':true}")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.EndWith(Json(",'aimAssist':true" + _defaultOnline + "}")));
         }
 
         [Test]
         public void VersionEightReportsTheAimAssistKeyAsUnknown()
         {
-            var versionEight = WithoutGamepadFeel(ControlSettings.Default.WithAimAssist(false).ToJson())
+            var versionEight = WithoutOnline(WithoutGamepadFeel(ControlSettings.Default.WithAimAssist(false).ToJson()))
                 .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":8", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionEight, out var problems);
@@ -1273,19 +1277,19 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.RumbleStrength), Is.EqualTo(100));
             Assert.That(
                 loaded.ToJson(),
-                Does.StartWith(Json("{'version':10,"))
+                Does.StartWith(Json("{'version':11,"))
                     .And.Contain(Json(",'showBlood':false,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,")));
         }
 
         [Test]
         public void VersionNineReportsTheGamepadFeelKeysAsUnknown()
         {
-            var versionNine = ControlSettings.Default
+            var versionNine = WithoutOnline(ControlSettings.Default
                 .WithInvertLookY(true)
                 .WithStickDeadzone(300)
                 .WithRumbleEnabled(false)
                 .WithRumbleStrength(20)
-                .ToJson()
+                .ToJson())
                 .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":9", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionNine, out var problems);
@@ -1336,6 +1340,233 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.InvertLookY, Is.True, "the saved value");
         }
 
+        [Test]
+        public void OnlineDefaultsPickAnyRegionAndHaveNoTelemetryConsent()
+        {
+            var settings = ControlSettings.Default;
+
+            Assert.That(ControlSettings.CurrentVersion, Is.EqualTo(11));
+            Assert.That(settings.QuickMatchRegion, Is.EqualTo("auto"));
+            Assert.That(settings.QuickMatchRegion, Is.EqualTo(ControlSettings.AutoRegion));
+            Assert.That(settings.PrefersAnyRegion, Is.True);
+            Assert.That(settings.TelemetryConsent, Is.False);
+        }
+
+        [TestCase("auto", true)]
+        [TestCase("asia", true)]
+        [TestCase("north-america", true)]
+        [TestCase("eu-west-2", true)]
+        [TestCase("a", true)]
+        [TestCase("abcdefghijklmnopqrstuvwxyz012345", true)]
+        [TestCase("abcdefghijklmnopqrstuvwxyz0123456", false)]
+        [TestCase("", false)]
+        [TestCase(null, false)]
+        [TestCase("Asia", false)]
+        [TestCase("north america", false)]
+        [TestCase("north_america", false)]
+        [TestCase("-asia", false)]
+        [TestCase("asia-", false)]
+        [TestCase(" asia", false)]
+        [TestCase("アジア", false)]
+        public void RegionNamesAreLowercaseLettersDigitsAndInnerHyphens(string region, bool expected)
+        {
+            Assert.That(ControlSettings.IsValidRegion(region), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void WithQuickMatchRegionChangesOnlyTheRegion()
+        {
+            var settings = ControlSettings.Default
+                .With(ControlValue.MouseSensitivity, 150)
+                .WithAimAssist(false)
+                .WithTelemetryConsent(true);
+
+            var europe = settings.WithQuickMatchRegion("europe");
+
+            Assert.That(europe.QuickMatchRegion, Is.EqualTo("europe"));
+            Assert.That(europe.PrefersAnyRegion, Is.False);
+            Assert.That(settings.QuickMatchRegion, Is.EqualTo("auto"), "the original does not change");
+            Assert.That(europe.Get(ControlValue.MouseSensitivity), Is.EqualTo(150));
+            Assert.That(europe.AimAssist, Is.False);
+            Assert.That(europe.TelemetryConsent, Is.True);
+            Assert.That(europe, Is.Not.EqualTo(settings));
+            Assert.That(europe.WithQuickMatchRegion("auto"), Is.EqualTo(settings));
+            Assert.That(europe.WithQuickMatchRegion("auto").GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(europe.WithQuickMatchRegion("asia"), Is.Not.EqualTo(europe));
+            Assert.That(settings.WithQuickMatchRegion("auto"), Is.SameAs(settings));
+            Assert.That(europe.WithQuickMatchRegion("europe"), Is.SameAs(europe));
+        }
+
+        [Test]
+        public void WithQuickMatchRegionRejectsWhatIsNotARegionName()
+        {
+            Assert.Throws<ArgumentNullException>(() => ControlSettings.Default.WithQuickMatchRegion(null));
+            Assert.Throws<ArgumentException>(() => ControlSettings.Default.WithQuickMatchRegion(string.Empty));
+            Assert.Throws<ArgumentException>(() => ControlSettings.Default.WithQuickMatchRegion("Europe"));
+            Assert.Throws<ArgumentException>(() => ControlSettings.Default.WithQuickMatchRegion("eu west"));
+        }
+
+        [Test]
+        public void WithTelemetryConsentChangesOnlyThatFlag()
+        {
+            var settings = ControlSettings.Default
+                .WithQuickMatchRegion("asia")
+                .WithShowSubtitles(true)
+                .WithRumbleEnabled(false);
+
+            var consented = settings.WithTelemetryConsent(true);
+
+            Assert.That(consented.TelemetryConsent, Is.True);
+            Assert.That(settings.TelemetryConsent, Is.False, "the original does not change");
+            Assert.That(consented.QuickMatchRegion, Is.EqualTo("asia"));
+            Assert.That(consented.ShowSubtitles, Is.True);
+            Assert.That(consented.RumbleEnabled, Is.False);
+            Assert.That(consented, Is.Not.EqualTo(settings));
+            Assert.That(consented.WithTelemetryConsent(false), Is.EqualTo(settings));
+            Assert.That(consented.WithTelemetryConsent(false).GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+            Assert.That(settings.WithTelemetryConsent(false), Is.SameAs(settings));
+            Assert.That(consented.WithTelemetryConsent(true), Is.SameAs(consented));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheRegionAndTheTelemetryConsent()
+        {
+            var changed = ControlSettings.Default.WithQuickMatchRegion("north-america").WithTelemetryConsent(true);
+
+            foreach (var other in new[]
+            {
+                changed.With(ControlValue.MasterVolume, 10),
+                changed.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle),
+                changed.WithShowNetStats(true),
+                changed.WithPalette(ColorPalette.BlueYellow),
+                changed.WithShowSubtitles(true),
+                changed.WithShowBlood(false),
+                changed.WithAimAssist(false),
+                changed.WithInvertLookY(true),
+                changed.WithRumbleEnabled(false),
+                changed.WithStickDeadzone(300),
+            })
+            {
+                Assert.That(other.QuickMatchRegion, Is.EqualTo("north-america"));
+                Assert.That(other.TelemetryConsent, Is.True);
+            }
+        }
+
+        [Test]
+        public void RoundTripsTheRegionAndTheTelemetryConsent()
+        {
+            var settings = ControlSettings.Default.WithAimAssist(false).WithQuickMatchRegion("eu-west-2").WithTelemetryConsent(true);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(json, Does.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'eu-west-2','telemetryConsent':true}")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo("eu-west-2"));
+            Assert.That(loaded.TelemetryConsent, Is.True);
+        }
+
+        // 版 10 (地域とテレメトリの同意を足す前) の保存を読むと、足した欄は何も言わずに初期値になり、ほかの欄は残る
+        [Test]
+        public void ReadsVersionTenWithTheOnlineDefaultsAndNoProblems()
+        {
+            const string versionTen =
+                "{'version':10,'keyboardMouse':{'sprint':'toggle','crouch':'hold','aim':'hold'}," +
+                "'gamepad':{'sprint':'hold','crouch':'toggle','aim':'toggle'}," +
+                "'mouseSensitivity':150,'gamepadSensitivity':80,'adsSensitivity':120," +
+                "'fieldOfView':75,'masterVolume':40,'effectsVolume':0,'cameraShake':30,'viewmodelMotion':0," +
+                "'showBlood':false,'invertLookY':true,'stickDeadzone':200,'rumble':false,'rumbleStrength':40,'showNetStats':true," +
+                "'colorPalette':'redGreen','showSubtitles':true,'aimAssist':false}";
+            var expected = ControlSettings.Default
+                .With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle)
+                .With(InputDeviceKind.Gamepad, HoldAction.Sprint, HoldMode.Hold)
+                .With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle)
+                .With(ControlValue.MouseSensitivity, 150)
+                .With(ControlValue.GamepadSensitivity, 80)
+                .With(ControlValue.AdsSensitivity, 120)
+                .With(ControlValue.FieldOfView, 75)
+                .With(ControlValue.MasterVolume, 40)
+                .With(ControlValue.EffectsVolume, 0)
+                .With(ControlValue.CameraShakeIntensity, 30)
+                .With(ControlValue.ViewmodelMotionIntensity, 0)
+                .WithShowBlood(false)
+                .WithInvertLookY(true)
+                .WithStickDeadzone(200)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(40)
+                .WithShowNetStats(true)
+                .WithPalette(ColorPalette.RedGreen)
+                .WithShowSubtitles(true)
+                .WithAimAssist(false);
+
+            var loaded = ControlSettings.FromJson(Json(versionTen), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(expected), "every saved value is kept");
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo("auto"));
+            Assert.That(loaded.TelemetryConsent, Is.False);
+            Assert.That(
+                loaded.ToJson(),
+                Does.StartWith(Json("{'version':11,"))
+                    .And.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'auto','telemetryConsent':false}")));
+        }
+
+        [Test]
+        public void VersionTenReportsTheOnlineKeysAsUnknown()
+        {
+            var versionTen = ControlSettings.Default
+                .WithQuickMatchRegion("asia")
+                .WithTelemetryConsent(true)
+                .ToJson()
+                .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":10", StringComparison.Ordinal);
+
+            var loaded = ControlSettings.FromJson(versionTen, out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default), "a version 10 file cannot have these entries");
+            Assert.That(problems, Has.Count.EqualTo(2));
+            Assert.That(string.Join("\n", problems), Does.Contain("'quickMatchRegion'").And.Contain("'telemetryConsent'"));
+        }
+
+        // 地域が欠けている・地域の名前でないなら、地域だけ Auto に戻す
+        [TestCase(",'quickMatchRegion':'europe'", "", "missing")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':'Europe'", "region name")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':''", "region name")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':'eu west'", "region name")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':3", "region name")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':null", "region name")]
+        [TestCase("'quickMatchRegion':'europe'", "'quickMatchRegion':['europe']", "region name")]
+        public void BrokenRegionFallsBackToAutoOnly(string from, string to, string reported)
+        {
+            var valid = ControlSettings.Default.WithQuickMatchRegion("europe").WithTelemetryConsent(true).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'quickMatchRegion'").And.Contain(reported));
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo("auto"), "the default");
+            Assert.That(loaded.TelemetryConsent, Is.True, "the saved value");
+        }
+
+        // 同意が欠けている・真偽値でないなら、同意していないことにする
+        [TestCase(",'telemetryConsent':true", "")]
+        [TestCase("'telemetryConsent':true", "'telemetryConsent':'true'")]
+        [TestCase("'telemetryConsent':true", "'telemetryConsent':1")]
+        [TestCase("'telemetryConsent':true", "'telemetryConsent':null")]
+        public void BrokenTelemetryConsentFallsBackToNoConsent(string from, string to)
+        {
+            var valid = ControlSettings.Default.WithQuickMatchRegion("asia").WithTelemetryConsent(true).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'telemetryConsent'"));
+            Assert.That(loaded.TelemetryConsent, Is.False, "the default");
+            Assert.That(loaded.QuickMatchRegion, Is.EqualTo("asia"), "the saved value");
+        }
+
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
@@ -1349,9 +1580,19 @@ namespace Shooter.Core.Tests
                 StringComparison.Ordinal);
         }
 
+        private static string WithoutOnline(string json)
+        {
+            return json.Replace(Json(_defaultOnline), string.Empty, StringComparison.Ordinal);
+        }
+
         private static string AsVersion(string json, int version)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
+            if (version < 11)
+            {
+                old = WithoutOnline(old);
+            }
+
             if (version < 10)
             {
                 old = WithoutGamepadFeel(old);

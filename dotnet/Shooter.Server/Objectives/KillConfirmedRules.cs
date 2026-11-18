@@ -216,6 +216,10 @@ namespace Shooter.Server
             points.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // 並びの上限を超えた分は載せずに落とす。古い順に載せるので、落ちるのは後から落ちたタグで、点数の判定はサーバーに残る
         public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
         {

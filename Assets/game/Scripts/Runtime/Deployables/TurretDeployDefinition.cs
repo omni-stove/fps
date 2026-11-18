@@ -130,6 +130,12 @@ namespace Shooter.Runtime
             return base.CreateAbility();
         }
 
+        // 専用サーバーのクライアントが、Prefab が空のときに台と回る頭を同じ組み立てで作るための入り口。
+        public GameObject CreateLook()
+        {
+            return CreatePlaceholder(ToDeploySpec());
+        }
+
         protected override GameObject CreatePlaceholder(DeploySpec spec)
         {
             var root = new GameObject(Id);

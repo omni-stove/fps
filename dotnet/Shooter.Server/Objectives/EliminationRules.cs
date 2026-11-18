@@ -149,6 +149,10 @@ namespace Shooter.Server
             items.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // ダウン中の人を数えないのは、時間切れの時点で撃ち合えない人だから
         private int CountStanding(Team team)
         {

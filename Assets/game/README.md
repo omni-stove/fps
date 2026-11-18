@@ -46,6 +46,14 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 - 調整値の JSON は、パッケージの `Resources/Tuning/` と同じパスに置かず、入口の欄に入れる。同じパスだとどちらが読まれるか決まらない。
   - 入口を作るときは、`Assets/` の下で名前がキットの調整値と同じ (`minimap.json` など) ファイルが 1 つだけなら、その欄に入る。
 
+### スキン・迷彩
+
+1. 見た目の一覧の JSON (`Tuning/cosmetics.json` と同じ形) を入口の `CosmeticsTuning` に入れる。キットの既定は空で、何も差し替えない。
+2. **Create > Shooter > Cosmetic Visual Catalog** を作り、JSON の `visualId` ごとに、スキンなら体のプレハブ、迷彩なら武器に塗る材質を入れて、入口の `CosmeticVisuals` に入れる。
+   - スキンの体は `NetV2/RemotePlayerBody` と同じく、根の原点を体の中心に合わせ、立った高さで作る。当たりは付けても捨てる。
+   - 迷彩は一人称の武器のモデルの材質をすべて替える (粒子と線は替えない)。
+3. 着けた見た目はプロフィールに残る。ネット対戦ではスキンだけをロードアウトと一緒に送り、相手の画面の体が替わる。カタログか絵が無い Id は既定の見た目のまま出る。
+
 ### UI
 
 キットのゲーム進行は画面も文も作らない。今の状態は型の付いた値で `GameSignals` (`Shooter.Runtime`) に出し、1 回きりの出来事 (撃った・当たった・倒した) は `CombatEvents` のイベントで知らせる。何をどう出すか (言語を含む) は UI が決める。
@@ -89,6 +97,7 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `BlockControl` | `IBlockControl` | 参加者 Id でブロック (チャットを落とす)・個別ミュート (声を受けない) を切り替え・読む口と、変わった知らせ (`Changed`)。ネット対戦だけが出す。ボイスの名簿に載った人は EOS の ProductUserId で `BlockListStore` (PlayerPrefs) に残り、次の試合でも効く。載っていない人はその試合の間だけ効く |
 | `Achievements` | `IReadOnlyList<AchievementProgress>` | 実績ごとの進み (実績の Id・今の数・目標の数・解けたか) |
 | `Leaderboard` | `LeaderboardStatus?` | 開いているリーダーボード (ボードの Id・`LeaderboardStage`・順位と名前と得点の `LeaderboardRow` の一覧) |
+| `LeaderboardControl` | `ILeaderboardControl` | `LeaderboardSpec` のボードの Id でリーダーボードを開く・読み直す・閉じる口。結果は `Leaderboard` に出る |
 | `Replays` | `IReplayLibrary` | 残したリプレイの一覧 (`ReplayEntry`) と、再生・消す口 |
 | `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
 | `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |

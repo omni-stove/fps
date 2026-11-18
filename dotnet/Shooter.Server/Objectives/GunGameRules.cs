@@ -181,6 +181,12 @@ namespace Shooter.Server
             return TeamOf(DecideSide());
         }
 
+        public bool IsWinningPlayer(int playerId, Team playerTeam, Team? winner)
+        {
+            var side = DecideSide();
+            return side.HasValue && side.Value.Id == playerId;
+        }
+
         public void FillMatch(ref MatchSnapshot snapshot)
         {
             snapshot.Objective = Objective;
@@ -198,6 +204,10 @@ namespace Shooter.Server
         {
             ArgumentNullException.ThrowIfNull(items);
             items.Clear();
+        }
+
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
         }
 
         // 段の数まで登った値をそのまま送るのは、クライアントがそれで登り切った人を知るため

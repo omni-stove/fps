@@ -9,7 +9,12 @@ namespace Shooter.Core
     // 画面の言語は持たない。何をどの言語で出すかは game 側の UI が決め、自分で保存する。
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
-        public const int CurrentVersion = 10;
+        public const int CurrentVersion = 11;
+
+        // 保存した文字列を見て地域を決めていないと分かるよう、空文字や null でなく名前で持つ。
+        public const string AutoRegion = "auto";
+
+        public const int MaxRegionLength = 32;
 
         // 6・7 は画面の言語 (language) も持つが、言語は game 側が自分で保存するので読み飛ばす。
         public const int OldestReadableVersion = 1;
@@ -38,6 +43,8 @@ namespace Shooter.Core
         private const string _stickDeadzoneKey = "stickDeadzone";
         private const string _rumbleKey = "rumble";
         private const string _rumbleStrengthKey = "rumbleStrength";
+        private const string _quickMatchRegionKey = "quickMatchRegion";
+        private const string _telemetryConsentKey = "telemetryConsent";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -148,6 +155,16 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
         };
 
+        private static readonly string[] _versionTenRootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+        };
+
         private static readonly string[] _rootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
@@ -156,6 +173,7 @@ namespace Shooter.Core
             _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
             _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+            _quickMatchRegionKey, _telemetryConsentKey,
         };
 
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
@@ -174,7 +192,9 @@ namespace Shooter.Core
             true,
             true,
             false,
-            true);
+            true,
+            AutoRegion,
+            false);
 
         private readonly HoldMode[] _modes;
 
@@ -194,6 +214,10 @@ namespace Shooter.Core
 
         private readonly bool _rumbleEnabled;
 
+        private readonly string _quickMatchRegion;
+
+        private readonly bool _telemetryConsent;
+
         private ControlSettings(
             HoldMode[] modes,
             int[] amounts,
@@ -203,8 +227,12 @@ namespace Shooter.Core
             bool showBlood,
             bool aimAssist,
             bool invertLookY,
-            bool rumbleEnabled)
+            bool rumbleEnabled,
+            string quickMatchRegion,
+            bool telemetryConsent)
         {
+            _quickMatchRegion = quickMatchRegion;
+            _telemetryConsent = telemetryConsent;
             _modes = modes;
             _amounts = amounts;
             _showNetStats = showNetStats;
@@ -281,6 +309,33 @@ namespace Shooter.Core
 
         public float RumbleStrength => Percent(ControlValue.RumbleStrength);
 
+        public string QuickMatchRegion => _quickMatchRegion;
+
+        public bool PrefersAnyRegion => _quickMatchRegion == AutoRegion;
+
+        public bool TelemetryConsent => _telemetryConsent;
+
+        // サーバーが --region で載せる名前と突き合わせるので、大文字小文字や空白の揺れで別の地域にならないよう、書ける文字を絞る。
+        public static bool IsValidRegion(string region)
+        {
+            if (string.IsNullOrEmpty(region) || region.Length > MaxRegionLength)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < region.Length; i++)
+            {
+                var c = region[i];
+                var letterOrDigit = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+                if (!letterOrDigit && (c != '-' || i == 0 || i == region.Length - 1))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         public ControlSettings With(InputDeviceKind device, HoldAction action, HoldMode mode)
         {
             if (mode != HoldMode.Hold && mode != HoldMode.Toggle)
@@ -297,7 +352,8 @@ namespace Shooter.Core
             var modes = (HoldMode[])_modes.Clone();
             modes[index] = mode;
             return new ControlSettings(
-                modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
+                modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings With(ControlValue value, int amount)
@@ -320,14 +376,17 @@ namespace Shooter.Core
             var amounts = (int[])_amounts.Clone();
             amounts[index] = amount;
             return new ControlSettings(
-                _modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
+                _modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithShowNetStats(bool show)
         {
             return show == _showNetStats
                 ? this
-                : new ControlSettings(_modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithPalette(ColorPalette palette)
@@ -335,35 +394,45 @@ namespace Shooter.Core
             PaletteName(palette);
             return palette == _palette
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithShowSubtitles(bool show)
         {
             return show == _showSubtitles
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithShowBlood(bool show)
         {
             return show == _showBlood
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist, _invertLookY, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithAimAssist(bool enabled)
         {
             return enabled == _aimAssist
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled, _invertLookY, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithInvertLookY(bool invert)
         {
             return invert == _invertLookY
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, invert, _rumbleEnabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, invert, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithStickDeadzone(int permille)
@@ -375,12 +444,44 @@ namespace Shooter.Core
         {
             return enabled == _rumbleEnabled
                 ? this
-                : new ControlSettings(_modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, enabled);
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, enabled,
+                    _quickMatchRegion, _telemetryConsent);
         }
 
         public ControlSettings WithRumbleStrength(int percent)
         {
             return With(ControlValue.RumbleStrength, percent);
+        }
+
+        public ControlSettings WithQuickMatchRegion(string region)
+        {
+            if (region == null)
+            {
+                throw new ArgumentNullException(nameof(region));
+            }
+
+            if (!IsValidRegion(region))
+            {
+                throw new ArgumentException(
+                    $"'{region}' is not a region name ({RegionRule()})",
+                    nameof(region));
+            }
+
+            return region == _quickMatchRegion
+                ? this
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    region, _telemetryConsent);
+        }
+
+        public ControlSettings WithTelemetryConsent(bool consent)
+        {
+            return consent == _telemetryConsent
+                ? this
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, consent);
         }
 
         public string ToJson()
@@ -437,6 +538,11 @@ namespace Shooter.Core
             AppendKey(builder, _showSubtitlesKey).Append(_showSubtitles ? "true" : "false");
             builder.Append(',');
             AppendKey(builder, _aimAssistKey).Append(_aimAssist ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _quickMatchRegionKey);
+            SaveJson.AppendString(builder, _quickMatchRegion);
+            builder.Append(',');
+            AppendKey(builder, _telemetryConsentKey).Append(_telemetryConsent ? "true" : "false");
             builder.Append('}');
             return builder.ToString();
         }
@@ -490,7 +596,9 @@ namespace Shooter.Core
             var hasPresentation = version >= 7;
             var hasAimAssist = version >= 9;
             var hasGamepadFeel = version >= 10;
-            var knownKeys = hasGamepadFeel ? _rootKeys
+            var hasOnline = version >= 11;
+            var knownKeys = hasOnline ? _rootKeys
+                : hasGamepadFeel ? _versionTenRootKeys
                 : hasAimAssist ? _versionNineRootKeys
                 : version >= 8 ? _versionEightRootKeys
                 : hasPresentation ? _versionSevenRootKeys
@@ -518,8 +626,13 @@ namespace Shooter.Core
             var aimAssist = hasAimAssist ? ReadFlag(root, _aimAssistKey, Default._aimAssist, found) : Default._aimAssist;
             var invertLookY = hasGamepadFeel ? ReadFlag(root, _invertLookYKey, Default._invertLookY, found) : Default._invertLookY;
             var rumbleEnabled = hasGamepadFeel ? ReadFlag(root, _rumbleKey, Default._rumbleEnabled, found) : Default._rumbleEnabled;
+            var region = hasOnline ? ReadRegion(root, found) : Default._quickMatchRegion;
+            var telemetryConsent = hasOnline
+                ? ReadFlag(root, _telemetryConsentKey, Default._telemetryConsent, found)
+                : Default._telemetryConsent;
             return new ControlSettings(
-                modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist, invertLookY, rumbleEnabled);
+                modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist, invertLookY, rumbleEnabled,
+                region, telemetryConsent);
         }
 
         public bool Equals(ControlSettings other)
@@ -551,7 +664,9 @@ namespace Shooter.Core
                 && _showBlood == other._showBlood
                 && _aimAssist == other._aimAssist
                 && _invertLookY == other._invertLookY
-                && _rumbleEnabled == other._rumbleEnabled;
+                && _rumbleEnabled == other._rumbleEnabled
+                && string.Equals(_quickMatchRegion, other._quickMatchRegion, StringComparison.Ordinal)
+                && _telemetryConsent == other._telemetryConsent;
         }
 
         public override bool Equals(object obj)
@@ -578,7 +693,9 @@ namespace Shooter.Core
             hash = unchecked((hash * 31) + (_showBlood ? 1 : 0));
             hash = unchecked((hash * 31) + (_aimAssist ? 1 : 0));
             hash = unchecked((hash * 31) + (_invertLookY ? 1 : 0));
-            return unchecked((hash * 31) + (_rumbleEnabled ? 1 : 0));
+            hash = unchecked((hash * 31) + (_rumbleEnabled ? 1 : 0));
+            hash = unchecked((hash * 31) + StringComparer.Ordinal.GetHashCode(_quickMatchRegion));
+            return unchecked((hash * 31) + (_telemetryConsent ? 1 : 0));
         }
 
         public override string ToString()
@@ -691,6 +808,28 @@ namespace Shooter.Core
             }
 
             return palette;
+        }
+
+        private static string ReadRegion(Dictionary<string, object> root, List<string> problems)
+        {
+            if (!root.TryGetValue(_quickMatchRegionKey, out var raw))
+            {
+                problems.Add($"missing '{_quickMatchRegionKey}'");
+                return Default._quickMatchRegion;
+            }
+
+            if (!(raw is string region) || !IsValidRegion(region))
+            {
+                problems.Add($"'{_quickMatchRegionKey}' must be a region name ({RegionRule()}) but was {Describe(raw)}");
+                return Default._quickMatchRegion;
+            }
+
+            return region;
+        }
+
+        private static string RegionRule()
+        {
+            return $"1 to {Format(MaxRegionLength)} of a-z, 0-9 and '-', not starting or ending with '-'";
         }
 
         private float Percent(ControlValue value)

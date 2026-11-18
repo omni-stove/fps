@@ -11,7 +11,24 @@ namespace Shooter.Server
             ServerLaunch launch, ServerRuntime runtime, ServerRulesData rules, ICollection<IServerModule> modules, out string error)
         {
             ArgumentNullException.ThrowIfNull(rules);
-            return Create(launch, runtime, modules, AppContext.BaseDirectory, MotorSettingsFrom(rules), out error);
+            ArgumentNullException.ThrowIfNull(runtime);
+            if (!ServerCombatTuning.TryLoad(runtime.MapSearchRoots, out var tuning, out var tuningError))
+            {
+                error = ServerProgram.LogTag + " " + tuningError;
+                return false;
+            }
+
+            runtime.Output.WriteLine(tuning.LogLine);
+            return Create(launch, runtime, modules, AppContext.BaseDirectory, MotorSettingsFrom(rules), tuning, MeleeWeaponIdFor(rules), out error);
+        }
+
+        // Gun Game は近接で倒したかを武器の Id (meleeWeaponIds) で見分けるので、近接の一撃をその先頭の Id で数えさせる。
+        // それ以外の試合はオフラインの MeleeController と同じく持っている武器の Id で数える
+        public static string MeleeWeaponIdFor(ServerRulesData rules)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+            var melee = rules.Settings.GunGame.MeleeWeaponIds;
+            return rules.Rules.Objective == MatchObjective.GunGame && melee.Count > 0 ? melee[0] : null;
         }
 
         // 移動はクライアントの予測と同じ値で動かすため、ルールのファイルに書き出した NetPlayer.prefab の移動の値と体の寸法を使う。
@@ -27,7 +44,7 @@ namespace Shooter.Server
         public static bool Create(
             ServerLaunch launch, ServerRuntime runtime, ICollection<IServerModule> modules, string libraryDirectory, out string error)
         {
-            return Create(launch, runtime, modules, libraryDirectory, ServerMotorSettings.Default, out error);
+            return Create(launch, runtime, modules, libraryDirectory, ServerMotorSettings.Default, ServerCombatTuning.Default, null, out error);
         }
 
         public static bool Create(
@@ -36,12 +53,15 @@ namespace Shooter.Server
             ICollection<IServerModule> modules,
             string libraryDirectory,
             ServerMotorSettings motorSettings,
+            ServerCombatTuning tuning,
+            string meleeWeaponId,
             out string error)
         {
             ArgumentNullException.ThrowIfNull(launch);
             ArgumentNullException.ThrowIfNull(runtime);
             ArgumentNullException.ThrowIfNull(modules);
             ArgumentNullException.ThrowIfNull(motorSettings);
+            ArgumentNullException.ThrowIfNull(tuning);
 
             if (!TryCreateAntiCheat(launch, runtime, libraryDirectory, out var antiCheat, out error))
             {
@@ -68,7 +88,17 @@ namespace Shooter.Server
 
             // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
             modules.Add(new ServerBots(rules, movement, combat));
-            modules.Add(new ServerSnapshots(motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat, vehicles }));
+
+            // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。
+            // キルカムは Bot が動いた後の姿勢を残すので、Bot より後
+            var streaks = new ServerStreaks(rules, combat, tuning.Streaks);
+            var deployables = new ServerDeployables(rules, combat, tuning.Deployables, tuning.DeployablesPath);
+            modules.Add(new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId));
+            modules.Add(streaks);
+            modules.Add(deployables);
+            modules.Add(new ServerKillCam(rules, combat));
+            modules.Add(new ServerSnapshots(
+                motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat, vehicles, streaks, deployables }));
 
             if (!launch.Options.RegistersLobby)
             {

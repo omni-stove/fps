@@ -112,6 +112,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned += HandlePlayerSpawned;
             _rules.MatchStarted += HandleMatchStarted;
             _rules.PlayerKilled += HandlePlayerKilled;
+            _rules.WeaponsChanged += HandleWeaponsChanged;
             _movement.Landed += HandleLanded;
             _movement.Drowned += HandleDrowned;
 
@@ -212,6 +213,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _rules.MatchStarted -= HandleMatchStarted;
             _rules.PlayerKilled -= HandlePlayerKilled;
+            _rules.WeaponsChanged -= HandleWeaponsChanged;
             _movement.Landed -= HandleLanded;
             _movement.Drowned -= HandleDrowned;
             _fighters.Clear();
@@ -275,6 +277,12 @@ namespace Shooter.Server
             var fighter = GetOrAdd(playerId);
             fighter.Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
             RefillGrenades(fighter);
+        }
+
+        // Gun Game で段が上がった人は、出直しを待たずにその場で次の段の武器に持ち替える (オフラインの GunGameRunner と同じ)
+        private void HandleWeaponsChanged(int playerId)
+        {
+            GetOrAdd(playerId).Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
         }
 
         // 当たり判定は作るときに世界の当たりを受け取るので、作り直す。巻き戻しの記録は前のマップの位置なので一緒に捨てる

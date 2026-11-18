@@ -55,6 +55,7 @@ namespace Shooter.Net.Tests
             GameSignals.GrenadeCount.Clear();
             GameSignals.LocalBlindSeconds.Clear();
             GameSignals.Inventory.Clear();
+            GameSignals.ModeStatus.Clear();
         }
 
         [Test]
@@ -158,6 +159,87 @@ namespace Shooter.Net.Tests
 
             Assert.That(_hud.Model.FirstScore, Is.Zero);
             Assert.That(_hud.Model.SecondScore, Is.Zero);
+        }
+
+        [Test]
+        public void FreeForAllPublishesTheStandingOnlyWhenTheShownValuesChange()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll);
+            snapshot.Match.AlphaPoints = 1;
+            snapshot.Match.RemainingSeconds = 120;
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)new Side(_localId)));
+            Assert.That(status.Detail, Is.EqualTo(new FreeForAllStanding(1, 2, 2, 2)), "2 kills against 0 lead by 2");
+
+            snapshot.Tick++;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(status), "an unchanged standing is not published again");
+
+            snapshot.Players[1].Kills = 3;
+            _hud.Apply(snapshot);
+            var changed = GameSignals.ModeStatus.Value;
+            Assert.That(changed, Is.Not.SameAs(status));
+            Assert.That(changed.Detail, Is.EqualTo(new FreeForAllStanding(2, 2, 2, -1)));
+
+            snapshot.Match.Objective = MatchObjective.None;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "a match without a mode takes the status back");
+        }
+
+        [Test]
+        public void KillConfirmedPublishesTheConfirmedCountsAsTheModeStatus()
+        {
+            var snapshot = Snapshot(MatchObjective.KillConfirmed);
+            snapshot.Tick = 10;
+            snapshot.Match.AlphaScore = 3;
+            snapshot.Match.BravoScore = 5;
+            snapshot.Match.AlphaPoints = 3;
+            snapshot.Match.BravoPoints = 5;
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<KillConfirmed>());
+            Assert.That(((KillConfirmed)status.Detail).GetConfirmed(Side.Bravo), Is.EqualTo(5));
+            Assert.That(_hud.Model.FirstScore, Is.EqualTo(5), "the own team's confirmed count comes first");
+        }
+
+        [Test]
+        public void GunGameShowsTheTiersOnlyWithALocalLadder()
+        {
+            var snapshot = Snapshot(MatchObjective.GunGame);
+            snapshot.Players[0].GunGameTier = 1;
+
+            _hud.Apply(snapshot);
+
+            var ladder = GameContent.Pick(c => c.GunGameLadder);
+            if (ladder == null || ladder.Tiers.Count == 0)
+            {
+                Assert.That(GameSignals.ModeStatus.Value, Is.Null);
+            }
+            else
+            {
+                Assert.That(GameSignals.ModeStatus.Value.Detail, Is.InstanceOf<GunGameStatus>());
+            }
+        }
+
+        [Test]
+        public void TheModeKeyChangesWithTheShownValuesOnly()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll);
+            var key = NetV2Hud.PerSnapshotKey(snapshot);
+
+            snapshot.Tick++;
+            snapshot.Players[0].Health = 10;
+            Assert.That(NetV2Hud.PerSnapshotKey(snapshot), Is.EqualTo(key), "health and the tick are not shown in the mode status");
+
+            snapshot.Players[0].GunGameTier = 1;
+            Assert.That(NetV2Hud.PerSnapshotKey(snapshot), Is.Not.EqualTo(key));
         }
 
         [Test]

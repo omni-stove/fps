@@ -14,9 +14,35 @@ namespace Shooter.Protocol.Tests
         private const int _headBytes = 2 + 1 + 4 + 4 + 1;
 
         [Test]
-        public void TheVersionIs15()
+        public void TheVersionIs16()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(15));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(16));
+        }
+
+        [Test]
+        public void TheMeleeAndStreakRulesRoundTripAndAreSentWhenChanged()
+        {
+            var baseline = Build(100);
+            var current = Build(101);
+            current.Match.Rules = MatchRulesSync.From(
+                GameRules.Default.WithActions(ActionRules.Default.WithMelee(Melee.On)).WithStreaks(Streaks.On));
+
+            var full = Send(current, null);
+            var delta = Send(current, baseline);
+
+            Assert.That(full.Match.Rules.Melee, Is.EqualTo(Melee.On));
+            Assert.That(full.Match.Rules.Streaks, Is.EqualTo(Streaks.On));
+            Assert.That(current.Match.Rules.SameAs(baseline.Match.Rules), Is.False);
+            Assert.That(delta.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(delta.Match.Rules.Melee, Is.EqualTo(Melee.On));
+            Assert.That(delta.Match.Rules.Streaks, Is.EqualTo(Streaks.On));
+        }
+
+        [Test]
+        public void MeleeAndStreaksAreOffBeforeAnyRulesArrive()
+        {
+            Assert.That(default(MatchRulesSync).Melee, Is.EqualTo(Melee.Off));
+            Assert.That(default(MatchRulesSync).Streaks, Is.EqualTo(Streaks.Off));
         }
 
         [Test]

@@ -445,12 +445,12 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void TheFactoryDoesNotOfferSearchAndDestroyYet()
+        public void TheFactoryOffersSearchAndDestroy()
         {
-            var e = Assert.Throws<InvalidOperationException>(
-                () => ServerObjectiveFactory.Create(MatchObjective.SearchAndDestroy, new NetMatchSettings(), new NullHost(_log)));
+            var rules = ServerObjectiveFactory.Create(MatchObjective.SearchAndDestroy, new NetMatchSettings(), new NullHost(_log));
 
-            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective SearchAndDestroy"));
+            Assert.That(rules, Is.TypeOf<SearchAndDestroyRules>());
+            Assert.That(rules.PlaysInRounds, Is.True);
         }
 
         [Test]
@@ -518,9 +518,7 @@ namespace Shooter.Server.Tests
 
         private static IMatchObjectiveRules CreateObjective(MatchObjective objective, NetMatchSettings settings, IMatchObjectiveHost host)
         {
-            return objective == MatchObjective.SearchAndDestroy
-                ? new SearchAndDestroyRules(settings, host)
-                : ServerObjectiveFactory.Create(objective, settings, host);
+            return ServerObjectiveFactory.Create(objective, settings, host);
         }
 
         private void Start(

@@ -310,7 +310,7 @@ namespace Shooter.Server.Tests
                 .WithRegenPerSecond(0f);
         }
 
-        // ServerObjectiveFactory にまだ載せていないので、MatchRulesModule が目的を回す順 (Session の Tick の後に目的の Tick、
+        // 目的だけを確かめるので、MatchRulesModule が目的を回す順 (Session の Tick の後に目的の Tick、
         // 目的が終えたら DecideWinner の勝者で Session を Finish) と出来事の渡し方をここでなぞる
         private sealed class MatchHost : IMatchObjectiveHost
         {

@@ -21,6 +21,10 @@ namespace Shooter.Protocol
         public Ladder Ladder { get; set; }
         public ReloadMode ReloadMode { get; set; }
 
+        // 近接とストリークはクライアントが振る見た目と報酬の枠を出すかを決めるのに要るが、どのルールで動くかはサーバーしか知らないので送る
+        public Melee Melee { get; set; }
+        public Streaks Streaks { get; set; }
+
         public string WeatherId { get; set; }
 
         public string TimeOfDayId { get; set; }
@@ -64,6 +68,8 @@ namespace Shooter.Protocol
                 Ladder = actions.Ladder,
                 ReloadMode = rules.ReloadMode,
                 Jump = actions.Jump,
+                Melee = actions.Melee,
+                Streaks = rules.Streaks,
             };
         }
 
@@ -83,6 +89,8 @@ namespace Shooter.Protocol
                 && Ladder == other.Ladder
                 && ReloadMode == other.ReloadMode
                 && Jump == other.Jump
+                && Melee == other.Melee
+                && Streaks == other.Streaks
                 && string.Equals(WeatherId ?? "", other.WeatherId ?? "", System.StringComparison.Ordinal)
                 && string.Equals(TimeOfDayId ?? "", other.TimeOfDayId ?? "", System.StringComparison.Ordinal);
         }
@@ -103,6 +111,8 @@ namespace Shooter.Protocol
             writer.WriteByte((byte)Ladder);
             writer.WriteByte((byte)ReloadMode);
             writer.WriteByte((byte)Jump);
+            writer.WriteByte((byte)Melee);
+            writer.WriteByte((byte)Streaks);
             writer.WriteString(WeatherId, MatchProtocol.MaxContentIdBytes);
             writer.WriteString(TimeOfDayId, MatchProtocol.MaxContentIdBytes);
         }
@@ -125,6 +135,8 @@ namespace Shooter.Protocol
                 Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
                 ReloadMode = (ReloadMode)reader.ReadByteBelow(EnumRange<ReloadMode>.Count, "reload mode"),
                 Jump = (Jump)reader.ReadByteBelow(EnumRange<Jump>.Count, "jump rule"),
+                Melee = (Melee)reader.ReadByteBelow(EnumRange<Melee>.Count, "melee rule"),
+                Streaks = (Streaks)reader.ReadByteBelow(EnumRange<Streaks>.Count, "streaks rule"),
                 WeatherId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.WeatherId),
                 TimeOfDayId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.TimeOfDayId),
             };

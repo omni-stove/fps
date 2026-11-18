@@ -1,0 +1,19 @@
+{
+  "damage": 50,
+  "reach": 2,
+  "arcDegrees": 90,
+  "swingSeconds": 0.5,
+  "cooldownSeconds": 0.4,
+  "impactSeconds": 0.2,
+  "lungeDistance": 0.75,
+  "finisherSeconds": 1.2,
+  "finisherHealth": 25,
+  "finisherAmmo": 30,
+  "finisherInterruptible": true,
+  "takedownSeconds": 1.5,
+  "takedownInterruptible": true,
+  "takedownWitnessAwareness": 1,
+  "alignSeconds": 0.15,
+  "standDistance": 1.2,
+  "behindArcDegrees": 90
+}

@@ -32,6 +32,36 @@ arm64 のイメージで EOS を使うときは、Epic Developer Portal の SDK 
 
 クライアントとサーバーは同じ版でビルドしたものを使う。版が違うクライアントは断られ、EOS のロビーも版ごとに分かれる。
 
+### モードを選ぶ
+
+モードはルールの JSON の `rules.objective` で決まり、`-rules <ルール名>` でどの JSON を読むかを選ぶ (既定は `TeamDeathmatch`)。
+`server-data/rules/` には各モードの例を置いてある。
+
+```sh
+make server-dotnet ARGS="-rules FreeForAll"
+```
+
+| ルール名 | `rules.objective` | 調整値の欄 (`match.*`) | マップに要るもの |
+| --- | --- | --- | --- |
+| `TeamDeathmatch` | `None` | `scoreLimit`・`timeLimitSeconds`・`respawnSeconds` | チームの出現地点 |
+| `Domination` | `Domination` | `dominationScoreLimit`・`captureSeconds`・`pointsPerSecond`・`maxCapturers` | 拠点 (`controlPoints`) 1 つ以上 |
+| `Elimination` | `Elimination` | `roundWinsToWin`・`roundPreparationSeconds`・`roundTimeLimitSeconds` | チームの出現地点 |
+| `CaptureTheFlag` | `CaptureTheFlag` | `captureTheFlag` | 両チームの旗の台 (`flagBases`) |
+| `Hardpoint` | `Hardpoint` | `hardpoint` | 拠点 2 つ以上 (順に移る) |
+| `SearchAndDestroy` | `SearchAndDestroy` | `searchAndDestroy` | 拠点 1 つ以上 (爆破地点に使う) |
+| `FreeForAll` | `FreeForAll` | `freeForAll` | 出現地点 |
+| `KillConfirmed` | `KillConfirmed` | `killConfirmed` | チームの出現地点 |
+| `GunGame` | `GunGame` | `gunGame` (`tierWeaponIds` は 1 つ以上) | 出現地点 |
+
+- マップに要るものが無いと、起動のときにマップの名前と足りないものを添えたエラー (`[Server] failed to start: ...`) で終了コード 1 になる。`mapPool` の他のマップも起動のうちに確かめる。
+  例のマップ (`NetArena01`・`NetTest`) には旗の台が無いので、旗取りはシーンに旗の台を置いて `make export-server-data` したマップで動かす。
+- `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
+  近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
+- 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、
+  モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
+- 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
+  置ける物 (タレット・盾・囮) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+
 ### 止める
 
 SIGTERM を受けると新しい人を断り、今の試合が終わるか誰もいなくなるか `-drain-timeout` (既定 600 秒) が過ぎてから止まる。

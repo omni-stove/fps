@@ -1,0 +1,22 @@
+{
+  "extraction.hud.exitsOpenIn": "脱出地点が開くまで {0} 秒",
+  "extraction.hud.exitsOpen": "開いている脱出地点 {0}",
+  "extraction.hud.extracting": "脱出まで {0} 秒",
+  "extraction.hud.closedExit": "この脱出地点は閉じている",
+  "extraction.hud.carrying": "所持品 {0}",
+  "extraction.hud.open": "箱を開ける",
+  "extraction.hud.openKey": "[{0}] {1}",
+  "extraction.hud.extracted": "脱出成功: {0} 個を持ち帰った",
+  "extraction.hud.extractedStashFull": "脱出成功: {0} 個を持ち帰り、{1} 個を失った (倉庫が一杯)",
+  "extraction.hud.died": "撃破された: {0} 個を失った",
+  "extraction.hud.diedKept": "撃破された: {0} 個は持ち帰った",
+  "extraction.hud.timedOut": "時間切れ: {0} 個を失った",
+  "extraction.result.extracted": "脱出成功",
+  "extraction.result.died": "撃破",
+  "extraction.result.timedOut": "時間切れ",
+  "extraction.stash.title": "倉庫",
+  "extraction.stash.slots": "{0}/{1} 枠",
+  "extraction.stash.item": "{0} x{1}",
+  "extraction.stash.empty": "倉庫は空",
+  "extraction.stash.back": "戻る"
+}

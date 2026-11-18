@@ -132,6 +132,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheExtractionTextsAreReadFromTheExtractionTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var extraction = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("extraction.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(extraction.Keys.All(key => key.StartsWith("extraction.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(extraction.Contains("extraction.hud.extracting"), Is.True, code);
+                Assert.That(extraction.Contains("extraction.stash.title"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("extraction.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("extraction.hud.closedExit"), Is.EqualTo("この脱出地点は閉じている"));
+        }
+
+        [Test]
         public void TheWeaponNamesAreReadFromTheItemsTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

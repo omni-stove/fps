@@ -1,0 +1,22 @@
+{
+  "extraction.hud.exitsOpenIn": "Exits open in {0}s",
+  "extraction.hud.exitsOpen": "Exits open {0}",
+  "extraction.hud.extracting": "Extracting in {0}s",
+  "extraction.hud.closedExit": "This exit is closed",
+  "extraction.hud.carrying": "Carrying {0}",
+  "extraction.hud.open": "Open container",
+  "extraction.hud.openKey": "[{0}] {1}",
+  "extraction.hud.extracted": "Extracted: {0} stored",
+  "extraction.hud.extractedStashFull": "Extracted: {0} stored, {1} lost (stash full)",
+  "extraction.hud.died": "Killed: {0} lost",
+  "extraction.hud.diedKept": "Killed: {0} stored",
+  "extraction.hud.timedOut": "Out of time: {0} lost",
+  "extraction.result.extracted": "EXTRACTED",
+  "extraction.result.died": "KILLED IN ACTION",
+  "extraction.result.timedOut": "MISSING IN ACTION",
+  "extraction.stash.title": "Stash",
+  "extraction.stash.slots": "{0}/{1} slots",
+  "extraction.stash.item": "{0} x{1}",
+  "extraction.stash.empty": "The stash is empty",
+  "extraction.stash.back": "Back"
+}

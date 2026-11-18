@@ -939,7 +939,7 @@ PlayerSettings:
   cloudProjectId: 8a903a68-a2fb-498b-97b6-0e597026418c
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: shooter
+  projectName: fps
   organizationId: yoneyoneyone99
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

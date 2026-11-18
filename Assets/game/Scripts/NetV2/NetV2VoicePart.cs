@@ -28,13 +28,14 @@ namespace Shooter.NetV2
             VoiceRoster roster,
             VoiceSettingsStore store,
             Action<string> log,
-            Func<bool> pushToTalkHeld = null)
+            Func<bool> pushToTalkHeld = null,
+            ClientBlocks blocks = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _log = log ?? throw new ArgumentNullException(nameof(log));
             _roster = roster ?? throw new ArgumentNullException(nameof(roster));
-            _voice = new ClientVoice(session ?? throw new ArgumentNullException(nameof(session)), _roster);
+            _voice = new ClientVoice(session ?? throw new ArgumentNullException(nameof(session)), _roster, blocks);
             _lobbyId = string.IsNullOrEmpty(lobbyId) ? null : lobbyId;
             _pushToTalkHeld = pushToTalkHeld ?? ReadPushToTalk;
             _voice.StatusChanged += Show;

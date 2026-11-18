@@ -130,6 +130,28 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void OnlyAnIdTheTransportVerifiedIsMarkedVerified()
+        {
+            Join(1, productUserId: _alice);
+            Join(2, voiceUserId: _bob);
+
+            var verified = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            _transport.Read<VoiceRosterMessage>(1, roster =>
+            {
+                verified.Clear();
+                for (var i = 0; i < roster.Count; i++)
+                {
+                    verified[roster.ProductUserId(i)] = roster.Verified(i);
+                }
+
+                return roster;
+            });
+
+            Assert.That(verified[_alice], Is.True);
+            Assert.That(verified[_bob], Is.False);
+        }
+
+        [Test]
         public void BotsAreNeverInTheRoster()
         {
             Join(1, voiceUserId: _alice);

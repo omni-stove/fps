@@ -105,6 +105,15 @@ namespace Shooter.Server
                 output.WriteLine(ServerMapData.PoolLogLine(maps));
             }
 
+            // 壊れた一覧で起動すると、BAN したはずの人を黙って入れてしまうので止める
+            if (!ServerBanList.TryLoad(launch.BanFile, out var bans, out problem))
+            {
+                error.WriteLine(ServerAdminLog.LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            output.WriteLine(ServerAdminLog.Loaded(bans));
+
             var modules = new List<IServerModule>();
             if (!createModules(launch, runtime, rules, modules, out problem))
             {
@@ -116,6 +125,11 @@ namespace Shooter.Server
             foreach (var module in modules)
             {
                 host.Register(module);
+            }
+
+            if (runtime.Input != null)
+            {
+                host.Register(new ServerAdminConsole(runtime.Input, bans, () => DateTime.UtcNow));
             }
 
             var json = launch.Options.LogFormat == ServerLogFormat.Json;
@@ -142,7 +156,8 @@ namespace Shooter.Server
                     () => DateTime.UtcNow,
                     rules.Settings.RestartDelaySeconds,
                     rules,
-                    maps);
+                    maps,
+                    bans);
                 var code = Start(server, error);
                 if (code != ExitOk)
                 {

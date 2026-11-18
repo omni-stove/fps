@@ -104,7 +104,7 @@
         <ui:VisualElement name="chat" class="chat" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上の端の回線の表示 (Ping・ロス・tick)。オンラインで F3 を押すと Shooter.Net の NetStatsView が出す。ミニマップの上の余白に収める。 -->
         <ui:Label name="net-stats" text="" class="net-stats" picking-mode="Ignore" style="display: none;" />
-        <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。 -->
+        <!-- スコアボード。Scoreboard を押している間だけ ScoreboardView が行を作って出す。ポーズ画面の「プレイヤー」で開いたときは、ポーズ画面の前に出して行に通報・ブロック・ミュートのボタンを足す。 -->
         <ui:VisualElement name="scoreboard" class="scoreboard" picking-mode="Ignore" style="display: none;" />
         <!-- ロードアウトの選択。倒されている間に LoadoutSelectView が出し、中身は LoadoutSelectPanel が作る。 -->
         <ui:VisualElement name="loadout-select" class="hud__loadout" picking-mode="Ignore" style="display: none;" />
@@ -141,6 +141,8 @@
                 <ui:Label name="pause-note" text="" class="pause__note" style="display: none;" />
                 <ui:Button name="pause-resume" text="#pause.resume" class="pause__button" />
                 <ui:Button name="pause-settings" text="#pause.settings" class="pause__button" />
+                <!-- 参加者の一覧 (スコアボード) を開き、行から通報・ブロック・ミュートする。操作する口がある (ネット対戦の) 間だけ ScoreboardView が PauseMenu に渡して出す。 -->
+                <ui:Button name="pause-players" text="#moderation.players" class="pause__button" style="display: none;" />
                 <!-- フォトモード。PhotoModeView が入っている間は HUD ごと隠す。 -->
                 <ui:Button name="pause-photo-mode" text="#pause.photoMode" class="pause__button" />
                 <ui:Button name="pause-return-to-menu" text="#pause.returnToMenu" class="pause__button" />

@@ -15,8 +15,8 @@ namespace Shooter.Protocol.Tests
         public void RoundTripsEveryEntryInOrder()
         {
             var sent = new VoiceRosterMessage();
-            sent.Add(3, _alice);
-            sent.Add(7, _bob);
+            sent.Add(3, _alice, true);
+            sent.Add(7, _bob, true);
 
             var got = Read(sent);
 
@@ -25,6 +25,30 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.ProductUserId(0), Is.EqualTo(_alice));
             Assert.That(got.PlayerId(1), Is.EqualTo(7));
             Assert.That(got.ProductUserId(1), Is.EqualTo(_bob));
+        }
+
+        [Test]
+        public void RoundTripsWhetherEachIdWasVerified()
+        {
+            var sent = new VoiceRosterMessage();
+            sent.Add(3, _alice, true);
+            sent.Add(7, _bob, false);
+
+            var got = Read(sent);
+
+            Assert.That(got.Verified(0), Is.True);
+            Assert.That(got.Verified(1), Is.False);
+        }
+
+        [Test]
+        public void AVerifiedFlagThatIsNotABoolIsUnreadable()
+        {
+            var writer = Header(1);
+            writer.WriteInt32(1);
+            writer.WriteString(_alice);
+            writer.WriteByte(2);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
         }
 
         [Test]
@@ -42,11 +66,11 @@ namespace Shooter.Protocol.Tests
         public void AShorterRosterDropsTheOldEntries()
         {
             var two = new VoiceRosterMessage();
-            two.Add(1, _alice);
-            two.Add(2, _bob);
+            two.Add(1, _alice, true);
+            two.Add(2, _bob, true);
             Read(two);
             var one = new VoiceRosterMessage();
-            one.Add(2, _bob);
+            one.Add(2, _bob, true);
 
             var got = Read(one);
 
@@ -59,16 +83,16 @@ namespace Shooter.Protocol.Tests
         public void AddRefusesWhatCannotBeSent()
         {
             var roster = new VoiceRosterMessage();
-            roster.Add(1, _alice);
+            roster.Add(1, _alice, true);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => roster.Add(-1, _bob));
-            Assert.Throws<ArgumentException>(() => roster.Add(2, "not-a-product-user-id"));
-            Assert.Throws<ArgumentException>(() => roster.Add(2, null));
-            Assert.Throws<ArgumentException>(() => roster.Add(2, _alice.ToUpperInvariant()), "the same id in another case is the same user");
+            Assert.Throws<ArgumentOutOfRangeException>(() => roster.Add(-1, _bob, true));
+            Assert.Throws<ArgumentException>(() => roster.Add(2, "not-a-product-user-id", true));
+            Assert.Throws<ArgumentException>(() => roster.Add(2, null, true));
+            Assert.Throws<ArgumentException>(() => roster.Add(2, _alice.ToUpperInvariant(), true), "the same id in another case is the same user");
             Assert.That(roster.Count, Is.EqualTo(1));
 
             roster.Clear();
-            roster.Add(2, _alice);
+            roster.Add(2, _alice, true);
             Assert.That(roster.PlayerId(0), Is.EqualTo(2));
         }
 
@@ -78,11 +102,11 @@ namespace Shooter.Protocol.Tests
             var roster = new VoiceRosterMessage();
             for (var i = 0; i < VoiceRosterMessage.MaxEntries; i++)
             {
-                roster.Add(i, i.ToString("x32", System.Globalization.CultureInfo.InvariantCulture));
+                roster.Add(i, i.ToString("x32", System.Globalization.CultureInfo.InvariantCulture), true);
             }
 
             Assert.That(VoiceRosterMessage.MaxEntries, Is.EqualTo(NetMatchSettings.MaxMaxPlayers));
-            Assert.Throws<InvalidOperationException>(() => roster.Add(1000, _alice));
+            Assert.Throws<InvalidOperationException>(() => roster.Add(1000, _alice, true));
             Assert.That(Read(roster).Count, Is.EqualTo(VoiceRosterMessage.MaxEntries));
         }
 
@@ -92,8 +116,10 @@ namespace Shooter.Protocol.Tests
             var writer = Header(2);
             writer.WriteInt32(1);
             writer.WriteString(_alice);
+            writer.WriteBool(true);
             writer.WriteInt32(2);
             writer.WriteString(_alice);
+            writer.WriteBool(true);
 
             Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
         }

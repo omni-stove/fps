@@ -12,6 +12,8 @@ namespace Shooter.Runtime
         public static LocalizedText VersionMismatchMessage => new LocalizedText("net.disconnect.versionMismatch");
         public static LocalizedText ServerDrainingMessage => new LocalizedText("net.disconnect.serverDraining");
         public static LocalizedText IdleKickedMessage => new LocalizedText("net.disconnect.idleKicked");
+        public static LocalizedText BannedMessage => new LocalizedText("net.disconnect.banned");
+        public static LocalizedText KickedMessage => new LocalizedText("net.disconnect.kicked");
 
         public static LocalizedText For(MenuReturnReason reason)
         {
@@ -47,13 +49,26 @@ namespace Shooter.Runtime
                 case DisconnectKind.VersionMismatch:
                     return VersionMismatchText(notice.ServerVersion, notice.LocalVersion);
                 case DisconnectKind.Rejected:
-                    return string.Equals(notice.Detail, DisconnectNotice.ServerDrainingDetail, StringComparison.Ordinal)
-                        ? ServerDrainingMessage
-                        : RejectedMessage;
+                    return RejectedText(notice.Detail);
                 case DisconnectKind.TimedOut:
                     return notice.WasConnected ? TimedOutMessage : ConnectTimedOutMessage;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(notice), notice.Kind, "unknown disconnect kind");
+            }
+        }
+
+        private static LocalizedText RejectedText(string detail)
+        {
+            switch (detail)
+            {
+                case DisconnectNotice.ServerDrainingDetail:
+                    return ServerDrainingMessage;
+                case DisconnectNotice.BannedDetail:
+                    return BannedMessage;
+                case DisconnectNotice.KickedDetail:
+                    return KickedMessage;
+                default:
+                    return RejectedMessage;
             }
         }
 

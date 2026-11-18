@@ -12,7 +12,7 @@ using Shooter.Core;
 namespace Shooter.Protocol
 {
     // 送受信と再送・ping は LiteNetLib のスレッドが行うので、出来事は TryReceive の中で溜めてから返し、呼ぶ側のスレッドの外で呼び返さない。
-    public sealed class UdpMatchTransport : IMatchTransport
+    public sealed class UdpMatchTransport : IMatchTransport, IConnectionAddresses
     {
         public const string ProtocolMismatchReason = DisconnectNotice.RejectedPrefix + "protocol-mismatch";
 
@@ -161,6 +161,28 @@ namespace Shooter.Protocol
 
             milliseconds = 0;
             return false;
+        }
+
+        public bool TryGetRemoteAddress(ConnectionId connection, out string address)
+        {
+            if (_peers.TryGetValue(connection.Value, out var state) && state.Address != null)
+            {
+                address = state.Address;
+                return true;
+            }
+
+            address = null;
+            return false;
+        }
+
+        public static string AddressText(IPAddress address)
+        {
+            if (address == null)
+            {
+                return null;
+            }
+
+            return (address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address).ToString();
         }
 
         public bool TryReceive(out TransportEvent transportEvent)
@@ -370,7 +392,7 @@ namespace Shooter.Protocol
                 return;
             }
 
-            var state = new PeerState(NextId(), peer);
+            var state = new PeerState(NextId(), peer) { Address = AddressText(request.RemoteEndPoint?.Address) };
             peer.Tag = state;
             _peers.Add(state.Id.Value, state);
         }
@@ -519,6 +541,9 @@ namespace Shooter.Protocol
             public bool Closing { get; set; }
 
             public string LocalReason { get; set; } = "";
+
+            // 今のアドレスではなく承認を求めてきたときの接続元を持つのは、players に出したアドレスと ban で載せるアドレスを食い違わせないため。
+            public string Address { get; set; }
 
             // LiteNetLib の往復時間は最初の ping が返るまで 0 なので、測れたかを別に持つ。
             public bool Measured { get; set; }

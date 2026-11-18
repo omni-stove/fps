@@ -18,8 +18,9 @@ namespace Shooter.NetV2
         private readonly Action<string> _log;
         private readonly List<ChatLine> _lines = new List<ChatLine>();
         private readonly ChatRequestMessage _request = new ChatRequestMessage();
+        private readonly ClientBlocks _blocks;
 
-        public ClientChat(int capacity, Func<IMessage, bool> send, Action<string> log)
+        public ClientChat(int capacity, Func<IMessage, bool> send, Action<string> log, ClientBlocks blocks = null)
         {
             if (capacity < 1)
             {
@@ -29,6 +30,7 @@ namespace Shooter.NetV2
             Capacity = capacity;
             _send = send ?? throw new ArgumentNullException(nameof(send));
             _log = log ?? throw new ArgumentNullException(nameof(log));
+            _blocks = blocks;
             Lines = new ReadOnlyCollection<ChatLine>(_lines);
         }
 
@@ -52,6 +54,12 @@ namespace Shooter.NetV2
             if (!Enum.IsDefined(typeof(CoreChatChannel), channel))
             {
                 _log(ChatLog.IgnoredChannel(chat.SenderId, (int)chat.Channel));
+                return true;
+            }
+
+            if (_blocks != null && _blocks.IsBlocked(chat.SenderId))
+            {
+                _log(ChatLog.DroppedBlocked(chat.SenderId));
                 return true;
             }
 
@@ -93,6 +101,23 @@ namespace Shooter.NetV2
         public void Clear()
         {
             _lines.Clear();
+        }
+
+        // ブロックした人の文が画面に残っていると止めた意味が無いので、届いた後にブロックした分も消す。
+        public int RemoveBlocked()
+        {
+            if (_blocks == null || _lines.Count == 0)
+            {
+                return 0;
+            }
+
+            var removed = _lines.RemoveAll(line => _blocks.IsBlocked(line.SenderId));
+            if (removed > 0)
+            {
+                _log(ChatLog.RemovedBlocked(removed));
+            }
+
+            return removed;
         }
 
         // 入力欄から片割れのサロゲートが来ると MessageWriter が書くときに投げるので、送る前に U+FFFD へ置き換えておく。

@@ -267,6 +267,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheModerationTextsAreReadFromTheModerationTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var moderation = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("moderation.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(moderation.Keys.All(key => key.StartsWith("moderation.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(moderation.Keys, Is.EquivalentTo(ModerationText.Keys), code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            Assert.That(japanese.Get("moderation.block"), Is.EqualTo("ブロック"));
+            Assert.That(japanese.Format("moderation.reportPrompt", "Player 2"), Is.EqualTo("Player 2 を通報する理由"));
+            var english = JapaneseGameTextSetUp.LoadTable(GameLanguage.English);
+            Assert.That(english.Format("moderation.reportPrompt", "Player 2"), Is.EqualTo("Why are you reporting Player 2?"));
+        }
+
+        [Test]
         public void TheStatsTextsAndTheShippedAchievementNamesAreReadFromTheStatsTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

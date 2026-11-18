@@ -85,6 +85,44 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void ATurretWithoutAPrefabIsShownAsABaseAndAHeadAndOnlyTheHeadTurns()
+        {
+            var view = ShowTurret(90f);
+
+            var root = view.Visual.transform;
+            Assert.That(root.Find(TurretDeployDefinition.BaseName), Is.Not.Null);
+            var head = root.Find(Turret.HeadName);
+            Assert.That(head, Is.Not.Null);
+            Assert.That(root.rotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(head.eulerAngles.y, Is.EqualTo(90f).Within(1e-3f));
+            Assert.That(root.Find(TurretDeployDefinition.BaseName).eulerAngles.y, Is.EqualTo(0f).Within(1e-3f));
+
+            view.Move(System.Numerics.Vector3.Zero, 30f);
+
+            Assert.That(root.rotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(head.eulerAngles.y, Is.EqualTo(30f).Within(1e-3f));
+        }
+
+        [Test]
+        public void ATurretPrefabWithoutAHeadTurnsAsAWhole()
+        {
+            var prefab = new GameObject("TurretPrefab");
+            _created.Add(prefab);
+            var turret = ScriptableObject.CreateInstance<TurretDeployDefinition>();
+            turret.Id = "deploy-turret";
+            turret.Prefab = prefab;
+            _created.Add(turret);
+            _part.Dispose();
+            _part = new NetV2DeployablesPart(Send, () => 1, new DeployAbilityDefinition[] { turret }, _logs.Add);
+
+            var view = (NetV2DeployablesPart.View)_part.Show(DeployableKind.Turret, "deploy-turret", Team.Alpha, true, System.Numerics.Vector3.Zero, 90f);
+            _created.Add(view.Visual);
+
+            Assert.That(view.Visual.transform.Find(Turret.HeadName), Is.Null);
+            Assert.That(view.Visual.transform.eulerAngles.y, Is.EqualTo(90f).Within(1e-3f));
+        }
+
+        [Test]
         public void ASnapshotShowsAndRemovesWhatTheServerLists()
         {
             var snapshot = new SnapshotMessage();
@@ -135,6 +173,18 @@ namespace Shooter.Net.Tests
         private NetV2DeployablesPart.View Show(DeployableKind kind, string typeId, System.Numerics.Vector3 position, float yaw)
         {
             var view = (NetV2DeployablesPart.View)_part.Show(kind, typeId, Team.Alpha, true, position, yaw);
+            _created.Add(view.Visual);
+            return view;
+        }
+
+        private NetV2DeployablesPart.View ShowTurret(float yaw)
+        {
+            var turret = ScriptableObject.CreateInstance<TurretDeployDefinition>();
+            turret.Id = "deploy-turret";
+            _created.Add(turret);
+            _part.Dispose();
+            _part = new NetV2DeployablesPart(Send, () => 1, new DeployAbilityDefinition[] { turret }, _logs.Add);
+            var view = (NetV2DeployablesPart.View)_part.Show(DeployableKind.Turret, "deploy-turret", Team.Alpha, true, System.Numerics.Vector3.Zero, yaw);
             _created.Add(view.Visual);
             return view;
         }

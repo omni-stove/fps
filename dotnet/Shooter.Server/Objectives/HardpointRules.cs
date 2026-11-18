@@ -226,6 +226,10 @@ namespace Shooter.Server
             items.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // 有効でない拠点は持ち主も取り合いも無しで送る。有効な拠点の値は押さえている陣営の側に振り切る (Domination の ControlPercent と同じく Alpha が正)
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)
         {

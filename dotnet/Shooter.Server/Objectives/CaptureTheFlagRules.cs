@@ -239,6 +239,10 @@ namespace Shooter.Server
             points.Clear();
         }
 
+        public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
+        {
+        }
+
         // 旗の Id は陣営の番号にする。クライアントは Id ではなく種類と陣営で旗を見分ける
         public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
         {

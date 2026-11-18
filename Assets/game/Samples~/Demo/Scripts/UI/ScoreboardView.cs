@@ -678,6 +678,12 @@ namespace Shooter.Runtime
             return participantId + ":" + className;
         }
 
+        // 理由ごとにキーを分けるのは、作り直しで乗っていた理由とは別の理由へフォーカスが移らないようにするため。
+        private static string ReasonFocusKey(int participantId, ReportReason reason)
+        {
+            return FocusKey(participantId, ReasonButtonClass + ":" + reason);
+        }
+
         private void RestoreFocus(VisualElement element, string fallbackKey)
         {
             var key = _focusKey ?? fallbackKey;
@@ -732,7 +738,7 @@ namespace Shooter.Runtime
                 var report = ActionButton(Localizer.Resolve(ModerationText.Report(reported)), ReportButtonClass, false, () =>
                 {
                     // 理由の行が開いたら、最初の理由へ移す。
-                    _focusKey = FocusKey(id, ReasonButtonClass);
+                    _focusKey = ReasonFocusKey(id, _reasons[0]);
                     BeginReport(id);
                 });
                 report.userData = FocusKey(id, ReportButtonClass);
@@ -764,15 +770,17 @@ namespace Shooter.Runtime
                         _focusKey = FocusKey(participantId, ReportButtonClass);
                         SendReport(participantId, chosen);
                     });
-                reasonButton.userData = FocusKey(participantId, ReasonButtonClass);
+                reasonButton.userData = ReasonFocusKey(participantId, chosen);
                 reasons.Add(reasonButton);
             }
 
-            reasons.Add(ActionButton(Localizer.Resolve(ModerationText.Cancel), CancelReportButtonClass, false, () =>
+            var cancel = ActionButton(Localizer.Resolve(ModerationText.Cancel), CancelReportButtonClass, false, () =>
             {
                 _focusKey = FocusKey(participantId, ReportButtonClass);
                 CancelReport();
-            }));
+            });
+            cancel.userData = FocusKey(participantId, CancelReportButtonClass);
+            reasons.Add(cancel);
             return reasons;
         }
 

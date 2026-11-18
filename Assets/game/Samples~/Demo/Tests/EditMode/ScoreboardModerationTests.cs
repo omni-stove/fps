@@ -209,6 +209,29 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void EachReasonAndTheCancelButtonHaveTheirOwnFocusKey()
+        {
+            PublishPlayers();
+            PublishControls();
+            _view.Pin();
+
+            _view.BeginReport(_otherId);
+
+            var reasons = _view.Element.Q<VisualElement>(className: ScoreboardView.ReasonsRowClass);
+            var keys = reasons.Query<Button>(className: ScoreboardView.ActionButtonClass).ToList()
+                .Select(b => b.userData as string).ToArray();
+            Assert.That(keys, Is.EqualTo(new[]
+            {
+                _otherId + ":" + ScoreboardView.ReasonButtonClass + ":" + ReportReason.Cheating,
+                _otherId + ":" + ScoreboardView.ReasonButtonClass + ":" + ReportReason.Abuse,
+                _otherId + ":" + ScoreboardView.ReasonButtonClass + ":" + ReportReason.Spam,
+                _otherId + ":" + ScoreboardView.ReasonButtonClass + ":" + ReportReason.OffensiveName,
+                _otherId + ":" + ScoreboardView.ReasonButtonClass + ":" + ReportReason.Other,
+                _otherId + ":" + ScoreboardView.CancelReportButtonClass,
+            }), "a rebuild must put focus back on the reason it was on, not the first one");
+        }
+
+        [Test]
         public void CancellingAReportSendsNothing()
         {
             PublishPlayers();

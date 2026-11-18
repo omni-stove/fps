@@ -194,7 +194,7 @@ namespace Shooter.Core
         }
 
         // 保存した文が並びの順で変わらないよう、決まった順にする。
-        private static IReadOnlyList<string> Sorted(HashSet<string> set)
+        private static ReadOnlyCollection<string> Sorted(HashSet<string> set)
         {
             var list = new List<string>(set);
             list.Sort(StringComparer.Ordinal);

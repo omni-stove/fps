@@ -32,7 +32,8 @@ namespace Shooter.Server.Eos
             Func<float> clock,
             Action<int> sleep,
             Action<string> failed,
-            RetrySchedule schedule = null)
+            RetrySchedule schedule = null,
+            string region = null)
         {
             ArgumentNullException.ThrowIfNull(backend);
             ArgumentNullException.ThrowIfNull(match);
@@ -47,7 +48,10 @@ namespace Shooter.Server.Eos
                 version,
                 match,
                 schedule ?? new RetrySchedule(ServerLobby.RetryIntervalSeconds, ServerLobby.TimeoutSeconds),
-                log);
+                log)
+            {
+                Region = region,
+            };
         }
 
         public ServerLobbyService Service => _service;

@@ -287,6 +287,69 @@ namespace Shooter.Server.Tests
             Assert.That(_backend.CreatedAttributes, Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.JoinCodeKey));
         }
 
+        [Test]
+        public void TheRegionGoesIntoTheCreatedLobbyAndTheLog()
+        {
+            _module.Region = "europe";
+            Start();
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedAttributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.RegionKey && a.Text == "europe"));
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] registering server=" + _endpoint + " bucket=shooter-server:0.3.0 region=europe"));
+
+            var lobby = new LobbyInfo("l1", _server, _backend.CreatedMaxMembers, new[] { _server }, _backend.CreatedAttributes);
+            _backend.CompleteCreate(lobby);
+
+            Assert.That(lobby.Region, Is.EqualTo("europe"));
+            Assert.That(LobbySelector.PickServer(new[] { lobby }, "0.3.0", 1, null, "europe"), Is.SameAs(lobby));
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] registered id=l1 server=" + _endpoint + " players=0 region=europe"));
+        }
+
+        [Test]
+        public void TheRegionIsNotSentAgainWhenThePlayersChange()
+        {
+            _module.Region = "asia";
+            Start();
+            Tick();
+            _backend.CompleteLogin(_server);
+            _backend.CompleteCreate(new LobbyInfo("l1", _server, NetMatchSettings.DefaultMaxPlayers, new[] { _server }, _backend.CreatedAttributes));
+
+            _match.Join(new ConnectionId(1), "device1");
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            Assert.That(_backend.Updates[0], Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.RegionKey));
+        }
+
+        [Test]
+        public void WithoutARegionTheLobbyHasNone()
+        {
+            Start();
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_module.Region, Is.Null);
+            Assert.That(_backend.CreatedAttributes, Has.None.Matches<LobbyAttribute>(a => a.Key == ServerLobby.RegionKey));
+            Assert.That(_log.ToString(), Does.Not.Contain("region="));
+        }
+
+        [Test]
+        public void TheRegionIsSetOnlyBeforeStartAndMustBeAServerRegion()
+        {
+            Assert.Throws<ArgumentException>(() => _module.Region = ControlSettings.AutoRegion);
+            Assert.Throws<ArgumentException>(() => _module.Region = "Europe");
+            Assert.That(_module.Region, Is.Null);
+
+            _module.Region = "europe";
+            _module.Region = null;
+            Assert.That(_module.Region, Is.Null);
+
+            Start();
+
+            Assert.Throws<InvalidOperationException>(() => _module.Region = "asia");
+        }
+
         private void Start(ServerRulesData rules = null)
         {
             _module.Start(new ServerContext(

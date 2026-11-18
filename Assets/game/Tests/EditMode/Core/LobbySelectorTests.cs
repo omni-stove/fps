@@ -535,6 +535,130 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentNullException>(() => LobbySelector.DescribeNoServer(null, _version));
         }
 
+        private static LobbyInfo RegionServer(string id, long players, string region, int? skillAverage = null, int max = 8)
+        {
+            var server = Server(id, "203.0.113.1:7777", players, max: max);
+            var attributes = new List<LobbyAttribute>(server.Attributes);
+            if (region != null)
+            {
+                attributes.Add(LobbyAttribute.OfText(ServerLobby.RegionKey, region));
+            }
+
+            if (skillAverage.HasValue)
+            {
+                attributes.Add(LobbyAttribute.OfNumber(ServerLobby.SkillAverageKey, skillAverage.Value));
+            }
+
+            return new LobbyInfo(id, server.OwnerUserId, max, server.Members, attributes);
+        }
+
+        [Test]
+        public void InfoReadsTheRegion()
+        {
+            Assert.That(RegionServer("s", 0, "europe").Region, Is.EqualTo("europe"));
+            Assert.That(RegionServer("s", 0, null).Region, Is.Null);
+        }
+
+        [Test]
+        public void PicksAServerInThePreferredRegionFirst()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RegionServer("asia-busy", 6, "asia"),
+                RegionServer("europe-quiet", 1, "europe"),
+                RegionServer("none", 7, null),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null, "europe").Id, Is.EqualTo("europe-quiet"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null, "asia").Id, Is.EqualTo("asia-busy"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null, ControlSettings.AutoRegion).Id, Is.EqualTo("none"), "auto takes the busiest anywhere");
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null).Id, Is.EqualTo("none"), "the old overload takes any region");
+        }
+
+        [Test]
+        public void FallsBackToOtherRegionsWhenThePreferredOneHasNoRoom()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RegionServer("europe-full", 8, "europe"),
+                RegionServer("asia", 6, "asia"),
+                RegionServer("none", 5, null),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null, "europe").Id, Is.EqualTo("asia"), "a full server in the region is skipped");
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, null, "oceania").Id, Is.EqualTo("asia"), "no server in the region at all");
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 3, null, "asia").Id, Is.EqualTo("none"), "the region has no room for the party");
+            Assert.That(LobbySelector.PickServer(new List<LobbyInfo> { lobbies[0] }, _version, 1, null, "europe"), Is.Null);
+        }
+
+        [Test]
+        public void TheRegionComesBeforeTheSkillAverage()
+        {
+            var lobbies = new List<LobbyInfo>
+            {
+                RegionServer("asia-near", 1, "asia", 1000),
+                RegionServer("europe-far", 1, "europe", 1900),
+                RegionServer("europe-farther", 1, "europe", 2500),
+            };
+
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000, "europe").Id, Is.EqualTo("europe-far"));
+            Assert.That(LobbySelector.PickServer(lobbies, _version, 1, 1000, ControlSettings.AutoRegion).Id, Is.EqualTo("asia-near"));
+        }
+
+        [Test]
+        public void MatchesTheRegionExactly()
+        {
+            var lobby = RegionServer("s", 0, "Europe");
+
+            Assert.That(LobbySelector.IsInRegion(lobby, "europe"), Is.False);
+            Assert.That(LobbySelector.IsInRegion(RegionServer("s", 0, "europe"), "europe"), Is.True);
+            Assert.That(LobbySelector.IsInRegion(RegionServer("s", 0, null), "europe"), Is.False);
+            Assert.That(LobbySelector.IsInRegion(RegionServer("s", 0, null), null), Is.False);
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.IsInRegion(null, "europe"));
+        }
+
+        [Test]
+        public void RejectsAnInvalidPreferredRegion()
+        {
+            var lobbies = new List<LobbyInfo> { RegionServer("s", 0, "europe") };
+
+            Assert.Throws<ArgumentNullException>(() => LobbySelector.PickServer(lobbies, _version, 1, null, null));
+            Assert.Throws<ArgumentException>(() => LobbySelector.PickServer(lobbies, _version, 1, null, "Europe"));
+            Assert.Throws<ArgumentException>(() => LobbySelector.PickServer(lobbies, _version, 1, null, ""));
+        }
+
+        [Test]
+        public void ServerAttributesCarryTheRegionOnlyWhenGiven()
+        {
+            var withRegion = ServerLobby.Attributes("203.0.113.10:7777", _version, 0, NetMatchSettings.Default, null, "north-america");
+            var without = ServerLobby.Attributes("203.0.113.10:7777", _version, 0, NetMatchSettings.Default, null);
+
+            Assert.That(new LobbyInfo("l", "o", 9, Ids("o"), withRegion).Region, Is.EqualTo("north-america"));
+            Assert.That(new LobbyInfo("l", "o", 9, Ids("o"), without).Region, Is.Null);
+            Assert.That(without.Count, Is.EqualTo(withRegion.Count - 1));
+        }
+
+        [TestCase("auto")]
+        [TestCase("Europe")]
+        [TestCase("-asia")]
+        [TestCase("eu west")]
+        [TestCase("")]
+        [TestCase("abcdefghijklmnopqrstuvwxyz0123456")]
+        public void ServerAttributesRejectANonRegionName(string region)
+        {
+            Assert.That(ServerLobby.IsRegionName(region), Is.False);
+            Assert.Throws<ArgumentException>(
+                () => ServerLobby.Attributes("203.0.113.10:7777", _version, 0, NetMatchSettings.Default, null, region));
+        }
+
+        [TestCase("asia")]
+        [TestCase("north-america")]
+        [TestCase("eu1")]
+        public void ServerRegionNamesAreTheSettingsNamesWithoutAuto(string region)
+        {
+            Assert.That(ServerLobby.IsRegionName(region), Is.True);
+        }
+
         [Test]
         public void RetryScheduleWaitsBetweenAttemptsAndExpires()
         {

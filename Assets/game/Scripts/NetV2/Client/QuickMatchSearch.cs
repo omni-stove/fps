@@ -21,6 +21,7 @@ namespace Shooter.NetV2
         private float _now;
         private string _lastRetryReason;
         private bool _joinsMatchLobby;
+        private string _preferredRegion = ControlSettings.AutoRegion;
         private MatchLobbyJoin _lobbyJoin;
         private NetLaunchOptions _picked;
         private MatchLobby _matchLobby;
@@ -70,6 +71,33 @@ namespace Shooter.NetV2
                 _joinsMatchLobby = value;
             }
         }
+
+        // 探している途中で替えると、同じ検索の中で選び方が変わってログと食い違うので、始める前だけ受ける。
+        public string PreferredRegion
+        {
+            get => _preferredRegion;
+            set
+            {
+                if (_step != Step.Idle)
+                {
+                    throw new InvalidOperationException("set PreferredRegion before the quick match search begins");
+                }
+
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value), "pass " + ControlSettings.AutoRegion + " to take any region");
+                }
+
+                if (!ControlSettings.IsValidRegion(value))
+                {
+                    throw new ArgumentException("'" + value + "' is not a region name", nameof(value));
+                }
+
+                _preferredRegion = value;
+            }
+        }
+
+        public bool PrefersAnyRegion => _preferredRegion == ControlSettings.AutoRegion;
 
         // ready の引数で渡さないのは、ロビーに入らない呼び出し方 (JoinsMatchLobby が偽) の ready をそのまま使えるようにするため
         public MatchLobby TakeMatchLobby()
@@ -121,7 +149,8 @@ namespace Shooter.NetV2
             _step = Step.LoggingIn;
             _log(LogPrefix + "logging in to search " + BucketId
                 + (partySize == 1 ? "" : " for a party of " + partySize.ToString(CultureInfo.InvariantCulture))
-                + (skillRating.HasValue ? " near skill " + skillRating.Value.ToString(CultureInfo.InvariantCulture) : ""));
+                + (skillRating.HasValue ? " near skill " + skillRating.Value.ToString(CultureInfo.InvariantCulture) : "")
+                + (PrefersAnyRegion ? "" : " preferring region " + _preferredRegion));
             _backend.Login(Once<string>(HandleLoggedIn));
         }
 
@@ -236,7 +265,7 @@ namespace Shooter.NetV2
 
             var found = lobbies ?? Array.Empty<LobbyInfo>();
             _log(LogPrefix + "found " + found.Count.ToString(CultureInfo.InvariantCulture) + " lobby(s) in " + BucketId);
-            var lobby = LobbySelector.PickServer(found, _version, _partySize, _skillRating);
+            var lobby = LobbySelector.PickServer(found, _version, _partySize, _skillRating, _preferredRegion);
             if (lobby == null)
             {
                 Retry(LobbySelector.DescribeNoServer(found, _version, _partySize));
@@ -259,6 +288,7 @@ namespace Shooter.NetV2
             _log(LogPrefix + "quick match picked id=" + lobby.Id + " server=" + endpoint
                 + " players=" + players.ToString(CultureInfo.InvariantCulture) + "/" + ServerLobby.PlayerSlots(lobby).ToString(CultureInfo.InvariantCulture)
                 + SkillText(lobby)
+                + RegionText(lobby)
                 + "; connecting " + options);
             if (!_joinsMatchLobby)
             {
@@ -300,6 +330,18 @@ namespace Shooter.NetV2
             var average = lobby.SkillAverage;
             return " skill=" + (average.HasValue ? average.Value.ToString(CultureInfo.InvariantCulture) : "-")
                 + " (self " + _skillRating.Value.ToString(CultureInfo.InvariantCulture) + ")";
+        }
+
+        private string RegionText(LobbyInfo lobby)
+        {
+            var region = lobby.Region ?? "-";
+            if (PrefersAnyRegion)
+            {
+                return " region=" + region;
+            }
+
+            return " region=" + region
+                + (LobbySelector.IsInRegion(lobby, _preferredRegion) ? "" : " (none open in " + _preferredRegion + ")");
         }
 
         private void HandleLoggedOut(string reason)

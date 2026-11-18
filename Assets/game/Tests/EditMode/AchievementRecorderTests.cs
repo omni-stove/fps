@@ -158,6 +158,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TimeSpentInTheMenuAfterASceneLoadIsNotAddedToThePlayTime()
+        {
+            Install();
+
+            _now = 100d;
+            CombatEvents.RaiseShotFired(_player, Vector3.zero, Vector3.forward, RifleId);
+            _recorder.StopMatchClock();
+            _now = 7300d;
+            CombatEvents.RaiseShotFired(_player, Vector3.zero, Vector3.forward, RifleId);
+            _now = 7400d;
+            LogAssert.Expect(LogType.Log, "[Achievement] play time +100s total=100s");
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
+
+            Assert.That(_progression.Profile.PlaySeconds, Is.EqualTo(100));
+        }
+
+        [Test]
         public void AMatchWithoutAFightAddsNoPlayTime()
         {
             Install();

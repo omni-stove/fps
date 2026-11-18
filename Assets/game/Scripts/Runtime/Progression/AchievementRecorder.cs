@@ -97,6 +97,12 @@ namespace Shooter.Runtime
         // MatchFinished を出さずにメニューへ戻る経路があるため、シーンの読み込みで時計を止め、試合の外の時間を数えない。
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            StopMatchClock();
+        }
+
+        // SceneManager.sceneLoaded はテストから起こせないので、中身をここへ分けてテストが直接呼ぶ。
+        internal void StopMatchClock()
+        {
             _matchStartedAt = null;
         }
 

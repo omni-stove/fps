@@ -8,6 +8,10 @@ namespace Shooter.Core.Tests
     // 期待値は AchievementSpec.Default (first-blood キル 1・marksman 頭 50・veteran 試合 25・victor 勝ち 10、近接は knife) から出す。
     public sealed class AchievementTrackerTests
     {
+        private static readonly string[] _unlockedInOrder = { "old-event", "first-blood", "veteran", "victor" };
+        private static readonly string[] _newlyUnlockedInOrder = { "first-blood", "veteran", "victor" };
+        private static readonly string[] _survivorAndRemoved = { "survivor", "removed" };
+
         private readonly AchievementTracker _tracker = new AchievementTracker(AchievementSpec.Default);
 
         [Test]
@@ -103,8 +107,8 @@ namespace Shooter.Core.Tests
 
             var next = _tracker.Unlock(profile, unlocked);
 
-            Assert.That(next.Achievements, Is.EqualTo(new[] { "old-event", "first-blood", "veteran", "victor" }));
-            Assert.That(unlocked.ConvertAll(a => a.Id), Is.EqualTo(new[] { "first-blood", "veteran", "victor" }));
+            Assert.That(next.Achievements, Is.EqualTo(_unlockedInOrder));
+            Assert.That(unlocked.ConvertAll(a => a.Id), Is.EqualTo(_newlyUnlockedInOrder));
         }
 
         [Test]
@@ -115,7 +119,7 @@ namespace Shooter.Core.Tests
                 new AchievementDefinition("brawler", "a.brawler", "a.brawler.text", PlayerStat.MeleeKills, 20),
                 new AchievementDefinition("survivor", "a.survivor", "a.survivor.text", PlayerStat.Deaths, 100, hidden: true),
             }));
-            var profile = new PlayerProfile(0, 30, 3, 0, 0, 0, 1000, 0, 5, 0, new[] { "survivor", "removed" });
+            var profile = new PlayerProfile(0, 30, 3, 0, 0, 0, 1000, 0, 5, 0, _survivorAndRemoved);
 
             var progress = tracker.Progress(profile);
 

@@ -9,6 +9,8 @@ namespace Shooter.Core.Tests
         private const string _source = "achievements.json";
 
         private static readonly string[] _expectedItemNames = { "achievements", "meleeWeaponIds" };
+        private static readonly string[] _axeAndKnife = { "axe", "knife" };
+        private static readonly string[] _knifeOnly = { "knife" };
         private static readonly string[] _expectedAchievementItemNames = { "id", "nameKey", "descriptionKey", "stat", "target", "hidden" };
 
         [Test]
@@ -66,7 +68,7 @@ namespace Shooter.Core.Tests
         {
             var spec = AchievementJson.Parse("{\"meleeWeaponIds\": [\" axe \", \"knife\"]}", _source);
 
-            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(new[] { "axe", "knife" }));
+            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(_axeAndKnife));
             Assert.That(spec.IsMelee("axe"), Is.True);
             Assert.That(spec.IsMelee("rifle"), Is.False);
             Assert.That(spec.IsMelee(null), Is.False);
@@ -76,7 +78,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void LeftOutMeleeWeaponIdsUseTheDefaultAndAnEmptyListHasNone()
         {
-            Assert.That(AchievementJson.Parse("{}", _source).MeleeWeaponIds, Is.EqualTo(new[] { "knife" }));
+            Assert.That(AchievementJson.Parse("{}", _source).MeleeWeaponIds, Is.EqualTo(_knifeOnly));
             Assert.That(AchievementJson.Parse("{\"meleeWeaponIds\": []}", _source).MeleeWeaponIds, Is.Empty);
         }
 

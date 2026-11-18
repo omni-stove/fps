@@ -92,6 +92,44 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void BufferKeepsEveryRecordTakenSixtyTimesASecond()
+        {
+            var buffer = new KillCamBuffer(1f);
+            var accumulated = 0.0;
+            for (var i = 0; i <= 30; i++)
+            {
+                Assert.That(buffer.Record(i / 60.0, Pose(i, 0f)), Is.True, "record " + i + " at exact 1/60 s steps");
+            }
+
+            Assert.That(buffer.Count, Is.EqualTo(31));
+
+            var stepped = new KillCamBuffer(1f);
+            for (var i = 0; i <= 30; i++)
+            {
+                Assert.That(stepped.Record(accumulated, Pose(i, 0f)), Is.True, "record " + i + " at summed float 1/60 s steps");
+                accumulated += 1f / 60f;
+            }
+
+            Assert.That(stepped.Count, Is.EqualTo(31));
+        }
+
+        [Test]
+        public void BufferHoldsTheWholeSecondsOfSixtyRecordsASecond()
+        {
+            var buffer = new KillCamBuffer(4f);
+            for (var i = 0; i <= 600; i++)
+            {
+                buffer.Record(i / 60.0, Pose(i, 0f));
+            }
+
+            var clip = buffer.Capture(10.0);
+
+            Assert.That(clip.Duration, Is.EqualTo(4f).Within(_tolerance));
+            Assert.That(clip.Count, Is.EqualTo(241));
+            Assert.That(clip.Sample(0f).Eye.X, Is.EqualTo(360f).Within(_tolerance));
+        }
+
+        [Test]
         public void BufferRejectsInvalidValues()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new KillCamBuffer(0f));
@@ -155,6 +193,21 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentException>(() => new KillCamClip(_zeroZero, new[] { Pose(0, 0f), Pose(1, 0f) }));
             Assert.Throws<InvalidOperationException>(() => KillCamClip.Empty.Sample(0f));
             Assert.That(KillCamClip.Empty.IsEmpty, Is.True);
+        }
+
+        [Test]
+        public void ClipReadsEachRecordByIndex()
+        {
+            var clip = new KillCamClip(_zeroTwo, new[] { Pose(1, 10f), Pose(3, 20f) });
+
+            Assert.That(clip.Count, Is.EqualTo(2));
+            Assert.That(clip.OffsetAt(0), Is.EqualTo(0f));
+            Assert.That(clip.OffsetAt(1), Is.EqualTo(2f));
+            Assert.That(clip.PoseAt(0), Is.EqualTo(Pose(1, 10f)));
+            Assert.That(clip.PoseAt(1), Is.EqualTo(Pose(3, 20f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => clip.OffsetAt(2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => clip.PoseAt(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => KillCamClip.Empty.OffsetAt(0));
         }
 
         [Test]

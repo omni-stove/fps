@@ -2,5 +2,13 @@
   "streak.kills": "Streak {0}",
   "streak.next": "{1} in {0}",
   "streak.ready": "[{0}] Use {1}",
-  "streak.readyNoKey": "{0} ready"
+  "streak.readyNoKey": "{0} ready",
+  "streak.target.choose": "{0}: choose the spot and the approach",
+  "streak.target.move": "Move to place it, look to turn it",
+  "streak.target.confirm": "[{0}] Confirm",
+  "streak.target.confirmNoKey": "Fire to confirm",
+  "streak.target.cancel": "[{0}] Cancel",
+  "streak.target.cancelNoKey": "Aim to cancel",
+  "streak.uav": "UAV",
+  "streak.airstrike": "Airstrike"
 }

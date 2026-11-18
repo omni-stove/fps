@@ -14,11 +14,16 @@ namespace Shooter.Core
         public const int DefaultUavKillsRequired = 3;
         public const int DefaultAirstrikeKillsRequired = 5;
 
-        public StreakSpec(IReadOnlyList<StreakReward> rewards = null, StreakUavSpec uav = null, StreakAirstrikeSpec airstrike = null)
+        public StreakSpec(
+            IReadOnlyList<StreakReward> rewards = null,
+            StreakUavSpec uav = null,
+            StreakAirstrikeSpec airstrike = null,
+            StreakTargetingSpec targeting = null)
         {
             Rewards = rewards == null ? DefaultRewards : CheckRewards(rewards);
             Uav = uav ?? StreakUavSpec.Default;
             Airstrike = airstrike ?? StreakAirstrikeSpec.Default;
+            Targeting = targeting ?? StreakTargetingSpec.Default;
         }
 
         public static IReadOnlyList<StreakReward> DefaultRewards { get; } = new[]
@@ -36,6 +41,13 @@ namespace Shooter.Core
         public StreakUavSpec Uav { get; }
 
         public StreakAirstrikeSpec Airstrike { get; }
+
+        public StreakTargetingSpec Targeting { get; }
+
+        public static bool NeedsTarget(string rewardId)
+        {
+            return string.Equals(rewardId, AirstrikeRewardId, StringComparison.Ordinal);
+        }
 
         public StreakReward FindReward(string id)
         {
@@ -137,7 +149,14 @@ namespace Shooter.Core
 
         public const float DefaultIntervalSeconds = 0.35f;
 
-        public const float DefaultSpread = 6f;
+        // 線の上の各点からずらす半径。線に沿って並べるので、円に散らしていた頃より小さくする。
+        public const float DefaultSpread = 1.5f;
+
+        // 5 発を 6 m おきに並べ、爆発の半径 (6 m) が隙間なく重なる長さ。
+        public const float DefaultLineLength = 24f;
+
+        // 屋根や橋の上で止まるよう、この高さから真下へ落ちる先を探す。
+        public const float DefaultDropHeight = 40f;
 
         // 敵の最大体力 (100) を中心で超え、1 発の直撃で倒せる。
         public const int DefaultMaxDamage = 150;
@@ -157,13 +176,17 @@ namespace Shooter.Core
             float intervalSeconds = DefaultIntervalSeconds,
             float spread = DefaultSpread,
             ExplosionSpec explosion = null,
-            float range = DefaultRange)
+            float range = DefaultRange,
+            float lineLength = DefaultLineLength,
+            float dropHeight = DefaultDropHeight)
         {
             ShellCount = SpecGuard.AtLeast(shellCount, 1, nameof(shellCount));
             IntervalSeconds = SpecGuard.NonNegativeFinite(intervalSeconds, nameof(intervalSeconds));
             Spread = SpecGuard.NonNegativeFinite(spread, nameof(spread));
             Explosion = explosion ?? DefaultExplosion();
             Range = SpecGuard.PositiveFinite(range, nameof(range));
+            LineLength = SpecGuard.NonNegativeFinite(lineLength, nameof(lineLength));
+            DropHeight = SpecGuard.PositiveFinite(dropHeight, nameof(dropHeight));
         }
 
         public int ShellCount { get; }
@@ -176,10 +199,42 @@ namespace Shooter.Core
 
         public float Range { get; }
 
+        public float LineLength { get; }
+
+        public float DropHeight { get; }
+
         public static ExplosionSpec DefaultExplosion()
         {
             return new ExplosionSpec(
                 new ExplosionDamage(DefaultMaxDamage, DefaultRadius, DefaultFullDamageRadius), DefaultStructureDamageAtCenter);
         }
+    }
+
+    public sealed class StreakTargetingSpec
+    {
+        public const float DefaultCursorSpeed = 40f;
+
+        public const float DefaultTurnDegreesPerSecond = 180f;
+
+        public const float DefaultViewHeight = 150f;
+
+        public static readonly StreakTargetingSpec Default = new StreakTargetingSpec();
+
+        public StreakTargetingSpec(
+            float cursorSpeed = DefaultCursorSpeed,
+            float turnDegreesPerSecond = DefaultTurnDegreesPerSecond,
+            float viewHeight = DefaultViewHeight)
+        {
+            CursorSpeed = SpecGuard.PositiveFinite(cursorSpeed, nameof(cursorSpeed));
+            TurnDegreesPerSecond = SpecGuard.PositiveFinite(turnDegreesPerSecond, nameof(turnDegreesPerSecond));
+            ViewHeight = SpecGuard.PositiveFinite(viewHeight, nameof(viewHeight));
+        }
+
+        public float CursorSpeed { get; }
+
+        // ボタンで回す速さにだけ使う。視点の入力は、視点を回すときと同じ感度の設定で回す。
+        public float TurnDegreesPerSecond { get; }
+
+        public float ViewHeight { get; }
     }
 }

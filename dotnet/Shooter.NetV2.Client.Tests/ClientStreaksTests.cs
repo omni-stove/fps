@@ -68,17 +68,17 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
-        public void UsingSendsTheNextRewardAndTheDirectionButKeepsTheSlotUntilTheServerAnswers()
+        public void UsingSendsTheNextRewardWithoutATargetButKeepsTheSlotUntilTheServerAnswers()
         {
             _streaks.Apply(Snapshot(GameModeState.Playing, kills: 2));
-            var direction = new Vector3(0f, -0.5f, 1f);
 
-            Assert.That(_streaks.TryUse(direction, out var sent), Is.True);
+            Assert.That(_streaks.NextRewardId, Is.EqualTo(StreakSpec.UavRewardId));
+            Assert.That(_streaks.TryUse(null, out var sent), Is.True);
 
             Assert.That(sent, Is.True);
             Assert.That(_sent, Has.Count.EqualTo(1));
             Assert.That(_sent[0].RewardId, Is.EqualTo(StreakSpec.UavRewardId));
-            Assert.That(_sent[0].Direction, Is.EqualTo(direction));
+            Assert.That(_sent[0].HasTarget, Is.False);
             Assert.That(_streaks.Status.Value.ReadyCount, Is.EqualTo(1));
             Assert.That(_logs, Has.Member(ClientStreakLog.Requested("net3", StreakSpec.UavRewardId, true)));
         }
@@ -127,7 +127,8 @@ namespace Shooter.NetV2.Tests
         {
             _streaks.Apply(Snapshot(GameModeState.Playing, kills: 1));
 
-            Assert.That(_streaks.TryUse(Vector3.UnitZ, out var sent), Is.False);
+            Assert.That(_streaks.NextRewardId, Is.Null);
+            Assert.That(_streaks.TryUse(null, out var sent), Is.False);
 
             Assert.That(sent, Is.False);
             Assert.That(_sent, Is.Empty);
@@ -140,21 +141,32 @@ namespace Shooter.NetV2.Tests
             _streaks.Apply(Snapshot(GameModeState.Playing, kills: 2));
             _connected = false;
 
-            Assert.That(_streaks.TryUse(Vector3.UnitZ, out var sent), Is.True);
+            Assert.That(_streaks.TryUse(null, out var sent), Is.True);
 
             Assert.That(sent, Is.False);
             Assert.That(_logs, Has.Member(ClientStreakLog.Requested("net3", StreakSpec.UavRewardId, false)));
         }
 
         [Test]
-        public void ANonFiniteDirectionIsNotSent()
+        public void AnAirstrikeIsSentOnlyWithATargetChosenForIt()
         {
-            _streaks.Apply(Snapshot(GameModeState.Playing, kills: 2));
+            _streaks.Apply(Snapshot(GameModeState.Playing, kills: 4));
+            _streaks.Handle(Activated(_localId, Team.Alpha, StreakSpec.UavRewardId, 20f));
+            Assert.That(_streaks.NextRewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+            Assert.That(_streaks.NextReward.DisplayNameKey, Is.EqualTo(StreakSpec.DefaultAirstrikeNameKey));
 
-            Assert.That(_streaks.TryUse(new Vector3(float.NaN, 0f, 1f), out var sent), Is.False);
-
-            Assert.That(sent, Is.False);
+            Assert.That(_streaks.TryUse(null, out var sent), Is.False, "an airstrike needs a target");
+            Assert.That(_streaks.TryUse(Target(StreakSpec.UavRewardId), out sent), Is.False, "a target chosen for another reward is not used");
             Assert.That(_sent, Is.Empty);
+
+            Assert.That(_streaks.TryUse(Target(StreakSpec.AirstrikeRewardId), out sent), Is.True);
+
+            Assert.That(sent, Is.True);
+            Assert.That(_sent, Has.Count.EqualTo(1));
+            Assert.That(_sent[0].RewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+            Assert.That(_sent[0].HasTarget, Is.True);
+            Assert.That(_sent[0].Target, Is.EqualTo(new Vector3(10f, 0.5f, -20f)));
+            Assert.That(_sent[0].HeadingDegrees, Is.EqualTo(270f));
         }
 
         [Test]
@@ -182,12 +194,15 @@ namespace Shooter.NetV2.Tests
                 return true;
             }, _logs.Add);
             streaks.Apply(Snapshot(GameModeState.Playing, kills: 4));
+            streaks.Handle(Activated(_localId, Team.Alpha, StreakSpec.UavRewardId, 20f));
 
-            streaks.TryUse(Vector3.UnitY, out _);
+            streaks.TryUse(Target(StreakSpec.AirstrikeRewardId), out _);
 
             Assert.That(request, Is.Not.Null);
-            Assert.That(request.RewardId, Is.EqualTo(StreakSpec.UavRewardId));
-            Assert.That(request.Direction, Is.EqualTo(Vector3.UnitY));
+            Assert.That(request.RewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+            Assert.That(request.HasTarget, Is.True);
+            Assert.That(request.Target, Is.EqualTo(new Vector3(10f, 0.5f, -20f)));
+            Assert.That(request.HeadingDegrees, Is.EqualTo(270f));
         }
 
         [Test]
@@ -241,8 +256,19 @@ namespace Shooter.NetV2.Tests
             }
 
             var request = (StreakUseRequestMessage)message;
-            _sent.Add(new StreakUseRequestMessage { RewardId = request.RewardId, Direction = request.Direction });
+            _sent.Add(new StreakUseRequestMessage
+            {
+                RewardId = request.RewardId,
+                HasTarget = request.HasTarget,
+                Target = request.Target,
+                HeadingDegrees = request.HeadingDegrees,
+            });
             return true;
+        }
+
+        private static StreakTargetingStatus Target(string rewardId)
+        {
+            return new StreakTargetingStatus(rewardId, StreakSpec.DefaultAirstrikeNameKey, Vector3.Zero, new Vector3(10f, 0.5f, -20f), -90f, 100f, 24f);
         }
     }
 }

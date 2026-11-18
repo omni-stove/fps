@@ -3,10 +3,10 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    // 狙う地点でなく向きを送るのは、地点をサーバーが自分の世界で当たりを取って決め、壁の向こうを指せないようにするため。
+    // 地点は見下ろした地図で選ぶので、壁の向こうも選べる。サーバーは使った人からの水平の距離だけを確かめ、落ちる先は自分の世界で探す。
     public sealed class StreakUseRequestMessage : IMessage
     {
-        public const byte CurrentVersion = 1;
+        public const byte CurrentVersion = 2;
 
         public ushort Id => MessageIds.StreakUseRequest;
 
@@ -14,7 +14,11 @@ namespace Shooter.Protocol
 
         public string RewardId { get; set; } = "";
 
-        public Vector3 Direction { get; set; }
+        public bool HasTarget { get; set; }
+
+        public Vector3 Target { get; set; }
+
+        public float HeadingDegrees { get; set; }
 
         public void Write(MessageWriter writer)
         {
@@ -24,7 +28,12 @@ namespace Shooter.Protocol
             }
 
             writer.WriteString(RewardId, MatchProtocol.MaxContentIdBytes);
-            writer.WriteVector3(Direction);
+            writer.WriteBool(HasTarget);
+            if (HasTarget)
+            {
+                writer.WriteVector3(Target);
+                writer.WriteSingle(HeadingDegrees);
+            }
         }
 
         public void Read(MessageReader reader)
@@ -35,7 +44,9 @@ namespace Shooter.Protocol
                 throw new MessageReadException("a streak use request carries no reward id");
             }
 
-            Direction = reader.ReadFiniteVector3("streak direction");
+            HasTarget = reader.ReadBool();
+            Target = HasTarget ? reader.ReadFiniteVector3("streak target") : Vector3.Zero;
+            HeadingDegrees = HasTarget ? reader.ReadFiniteSingle("streak heading") : 0f;
         }
     }
 }

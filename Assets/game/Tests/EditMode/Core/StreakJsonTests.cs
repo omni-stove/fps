@@ -8,10 +8,15 @@ namespace Shooter.Core.Tests
     {
         private const string _source = "streaks.json";
 
-        private static readonly string[] _expectedItemNames = { "rewards", "uav", "airstrike" };
+        private static readonly string[] _expectedItemNames = { "rewards", "uav", "airstrike", "targeting" };
         private static readonly string[] _expectedRewardItemNames = { "id", "nameKey", "killsRequired" };
         private static readonly string[] _expectedUavItemNames = { "durationSeconds", "range" };
-        private static readonly string[] _expectedAirstrikeItemNames = { "shellCount", "intervalSeconds", "spread", "explosion", "range" };
+        private static readonly string[] _expectedAirstrikeItemNames =
+        {
+            "shellCount", "intervalSeconds", "spread", "explosion", "range", "lineLength", "dropHeight",
+        };
+
+        private static readonly string[] _expectedTargetingItemNames = { "cursorSpeed", "turnDegreesPerSecond", "viewHeight" };
         private static readonly string[] _expectedExplosionItemNames = { "maxDamage", "radius", "fullDamageRadius", "structureDamageAtCenter" };
 
         [Test]
@@ -22,7 +27,9 @@ namespace Shooter.Core.Tests
                 + " {\"id\": \"uav\", \"nameKey\": \"reward.radar\", \"killsRequired\": 7}],"
                 + " \"uav\": {\"durationSeconds\": 12.5, \"range\": 150},"
                 + " \"airstrike\": {\"shellCount\": 8, \"intervalSeconds\": 0.2, \"spread\": 3,"
-                + " \"explosion\": {\"maxDamage\": 90, \"radius\": 4, \"fullDamageRadius\": 1, \"structureDamageAtCenter\": 40}, \"range\": 70}}",
+                + " \"explosion\": {\"maxDamage\": 90, \"radius\": 4, \"fullDamageRadius\": 1, \"structureDamageAtCenter\": 40}, \"range\": 70,"
+                + " \"lineLength\": 30, \"dropHeight\": 25},"
+                + " \"targeting\": {\"cursorSpeed\": 55, \"turnDegreesPerSecond\": 90, \"viewHeight\": 200}}",
                 _source);
 
             Assert.That(spec.Rewards.Count, Is.EqualTo(2));
@@ -43,6 +50,11 @@ namespace Shooter.Core.Tests
             Assert.That(spec.Airstrike.Explosion.StructureDamageAtCenter, Is.EqualTo(40));
             Assert.That(spec.Airstrike.Explosion.Detonation, Is.EqualTo(DetonationTrigger.OnImpact));
             Assert.That(spec.Airstrike.Range, Is.EqualTo(70f));
+            Assert.That(spec.Airstrike.LineLength, Is.EqualTo(30f));
+            Assert.That(spec.Airstrike.DropHeight, Is.EqualTo(25f));
+            Assert.That(spec.Targeting.CursorSpeed, Is.EqualTo(55f));
+            Assert.That(spec.Targeting.TurnDegreesPerSecond, Is.EqualTo(90f));
+            Assert.That(spec.Targeting.ViewHeight, Is.EqualTo(200f));
             Assert.That(spec.FindReward("uav"), Is.SameAs(spec.Rewards[1]));
             Assert.That(spec.FindReward("missing"), Is.Null);
         }
@@ -64,7 +76,12 @@ namespace Shooter.Core.Tests
             Assert.That(empty.Uav.Range, Is.EqualTo(80f));
             Assert.That(empty.Airstrike.ShellCount, Is.EqualTo(5));
             Assert.That(empty.Airstrike.IntervalSeconds, Is.EqualTo(0.35f));
-            Assert.That(empty.Airstrike.Spread, Is.EqualTo(6f));
+            Assert.That(empty.Airstrike.Spread, Is.EqualTo(1.5f));
+            Assert.That(empty.Airstrike.LineLength, Is.EqualTo(24f));
+            Assert.That(empty.Airstrike.DropHeight, Is.EqualTo(40f));
+            Assert.That(empty.Targeting.CursorSpeed, Is.EqualTo(40f));
+            Assert.That(empty.Targeting.TurnDegreesPerSecond, Is.EqualTo(180f));
+            Assert.That(empty.Targeting.ViewHeight, Is.EqualTo(150f));
             Assert.That(empty.Airstrike.Explosion.Damage.MaxDamage, Is.EqualTo(150));
             Assert.That(empty.Airstrike.Explosion.Damage.Radius, Is.EqualTo(6f));
             Assert.That(empty.Airstrike.Explosion.Damage.FullDamageRadius, Is.EqualTo(2f));
@@ -105,6 +122,7 @@ namespace Shooter.Core.Tests
             Assert.That(StreakJson.RewardItemNames, Is.EqualTo(_expectedRewardItemNames));
             Assert.That(StreakJson.UavItemNames, Is.EqualTo(_expectedUavItemNames));
             Assert.That(StreakJson.AirstrikeItemNames, Is.EqualTo(_expectedAirstrikeItemNames));
+            Assert.That(StreakJson.TargetingItemNames, Is.EqualTo(_expectedTargetingItemNames));
             Assert.That(StreakJson.ExplosionItemNames, Is.EqualTo(_expectedExplosionItemNames));
             Assert.That(StreakJson.ResourcePath, Is.EqualTo("Tuning/streaks"));
         }
@@ -122,6 +140,11 @@ namespace Shooter.Core.Tests
             var full = Reject("{\"airstrike\": {\"explosion\": {\"radius\": 2, \"fullDamageRadius\": 2}}}");
             var structure = Reject("{\"airstrike\": {\"explosion\": {\"structureDamageAtCenter\": -5}}}");
             var airstrikeRange = Reject("{\"airstrike\": {\"range\": 0}}");
+            var lineLength = Reject("{\"airstrike\": {\"lineLength\": -1}}");
+            var dropHeight = Reject("{\"airstrike\": {\"dropHeight\": 0}}");
+            var cursorSpeed = Reject("{\"targeting\": {\"cursorSpeed\": 0}}");
+            var turn = Reject("{\"targeting\": {\"turnDegreesPerSecond\": -10}}");
+            var viewHeight = Reject("{\"targeting\": {\"viewHeight\": 0}}");
 
             Assert.That(kills.SourceName, Is.EqualTo(_source));
             Assert.That(kills.Item, Is.EqualTo("rewards[0].killsRequired"));
@@ -136,6 +159,11 @@ namespace Shooter.Core.Tests
             Assert.That(full.Item, Is.EqualTo("airstrike.explosion.fullDamageRadius"));
             Assert.That(structure.Item, Is.EqualTo("airstrike.explosion.structureDamageAtCenter"));
             Assert.That(airstrikeRange.Item, Is.EqualTo("airstrike.range"));
+            Assert.That(lineLength.Item, Is.EqualTo("airstrike.lineLength"));
+            Assert.That(dropHeight.Item, Is.EqualTo("airstrike.dropHeight"));
+            Assert.That(cursorSpeed.Item, Is.EqualTo("targeting.cursorSpeed"));
+            Assert.That(turn.Item, Is.EqualTo("targeting.turnDegreesPerSecond"));
+            Assert.That(viewHeight.Item, Is.EqualTo("targeting.viewHeight"));
         }
 
         [Test]
@@ -208,6 +236,13 @@ namespace Shooter.Core.Tests
             Assert.That(new StreakReward(" uav ", " streak.uav ", 3).DisplayNameKey, Is.EqualTo("streak.uav"));
             Assert.That(new StreakAirstrikeSpec(spread: 0f).Spread, Is.EqualTo(0f));
             Assert.That(new StreakAirstrikeSpec(intervalSeconds: 0f).IntervalSeconds, Is.EqualTo(0f));
+            Assert.That(new StreakAirstrikeSpec(lineLength: 0f).LineLength, Is.EqualTo(0f), "a zero line drops every shell on the centre");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new StreakAirstrikeSpec(dropHeight: 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new StreakTargetingSpec(cursorSpeed: float.NaN));
+            Assert.That(new StreakSpec().Targeting, Is.SameAs(StreakTargetingSpec.Default));
+            Assert.That(StreakSpec.NeedsTarget(StreakSpec.AirstrikeRewardId), Is.True);
+            Assert.That(StreakSpec.NeedsTarget(StreakSpec.UavRewardId), Is.False);
+            Assert.That(StreakSpec.NeedsTarget(null), Is.False);
         }
 
         private static TuningJsonException Reject(string json)

@@ -10,6 +10,7 @@ namespace Shooter.Core
         public const string RewardsItem = "rewards";
         public const string UavItem = "uav";
         public const string AirstrikeItem = "airstrike";
+        public const string TargetingItem = "targeting";
 
         public const string IdItem = "id";
         public const string NameKeyItem = "nameKey";
@@ -22,6 +23,12 @@ namespace Shooter.Core
         public const string IntervalSecondsItem = "intervalSeconds";
         public const string SpreadItem = "spread";
         public const string ExplosionItem = "explosion";
+        public const string LineLengthItem = "lineLength";
+        public const string DropHeightItem = "dropHeight";
+
+        public const string CursorSpeedItem = "cursorSpeed";
+        public const string TurnDegreesPerSecondItem = "turnDegreesPerSecond";
+        public const string ViewHeightItem = "viewHeight";
 
         // 武器の JSON の explosion と同じ名前にし、同じ書き方で爆発を書けるようにする。
         public const string MaxDamageItem = WeaponSpecJson.MaxDamageItem;
@@ -31,14 +38,25 @@ namespace Shooter.Core
 
         private const string _kind = "streak JSON";
 
-        public static IReadOnlyList<string> ItemNames { get; } = new[] { RewardsItem, UavItem, AirstrikeItem };
+        public static IReadOnlyList<string> ItemNames { get; } = new[] { RewardsItem, UavItem, AirstrikeItem, TargetingItem };
 
         // 項目名はコンストラクターの引数名にそろえ、値の検査で断られた項目を ParamName から示せるようにする。
         public static IReadOnlyList<string> RewardItemNames { get; } = new[] { IdItem, NameKeyItem, KillsRequiredItem };
 
         public static IReadOnlyList<string> UavItemNames { get; } = new[] { DurationSecondsItem, RangeItem };
 
-        public static IReadOnlyList<string> AirstrikeItemNames { get; } = new[] { ShellCountItem, IntervalSecondsItem, SpreadItem, ExplosionItem, RangeItem };
+        public static IReadOnlyList<string> AirstrikeItemNames { get; } = new[]
+        {
+            ShellCountItem,
+            IntervalSecondsItem,
+            SpreadItem,
+            ExplosionItem,
+            RangeItem,
+            LineLengthItem,
+            DropHeightItem,
+        };
+
+        public static IReadOnlyList<string> TargetingItemNames { get; } = new[] { CursorSpeedItem, TurnDegreesPerSecondItem, ViewHeightItem };
 
         // 空爆は落ちた所で爆ぜるので、武器の explosion にある detonation は受け付けない。
         public static IReadOnlyList<string> ExplosionItemNames { get; } = new[]
@@ -58,11 +76,13 @@ namespace Shooter.Core
                 var rewards = fields.Find(RewardsItem) == null ? null : ReadRewards(fields);
                 var uav = fields.Object(UavItem, UavItemNames);
                 var airstrike = fields.Object(AirstrikeItem, AirstrikeItemNames);
+                var targeting = fields.Object(TargetingItem, TargetingItemNames);
                 var uavSpec = uav == null ? null : ReadUav(uav);
                 var airstrikeSpec = airstrike == null ? null : ReadAirstrike(airstrike);
+                var targetingSpec = targeting == null ? null : ReadTargeting(targeting);
                 try
                 {
-                    return new StreakSpec(rewards, uavSpec, airstrikeSpec);
+                    return new StreakSpec(rewards, uavSpec, airstrikeSpec, targetingSpec);
                 }
                 catch (ArgumentException e)
                 {
@@ -122,13 +142,30 @@ namespace Shooter.Core
             var explosionFields = fields.Object(ExplosionItem, ExplosionItemNames);
             var explosion = explosionFields == null ? null : ReadExplosion(explosionFields);
             var range = fields.ReadFloat(RangeItem, StreakAirstrikeSpec.DefaultRange);
+            var lineLength = fields.ReadFloat(LineLengthItem, StreakAirstrikeSpec.DefaultLineLength);
+            var dropHeight = fields.ReadFloat(DropHeightItem, StreakAirstrikeSpec.DefaultDropHeight);
             try
             {
-                return new StreakAirstrikeSpec(shellCount, intervalSeconds, spread, explosion, range);
+                return new StreakAirstrikeSpec(shellCount, intervalSeconds, spread, explosion, range, lineLength, dropHeight);
             }
             catch (ArgumentException e)
             {
                 throw Rejected(fields, AirstrikeItemNames, e);
+            }
+        }
+
+        private static StreakTargetingSpec ReadTargeting(ServerDataJson.Fields fields)
+        {
+            var cursorSpeed = fields.ReadFloat(CursorSpeedItem, StreakTargetingSpec.DefaultCursorSpeed);
+            var turnDegreesPerSecond = fields.ReadFloat(TurnDegreesPerSecondItem, StreakTargetingSpec.DefaultTurnDegreesPerSecond);
+            var viewHeight = fields.ReadFloat(ViewHeightItem, StreakTargetingSpec.DefaultViewHeight);
+            try
+            {
+                return new StreakTargetingSpec(cursorSpeed, turnDegreesPerSecond, viewHeight);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, TargetingItemNames, e);
             }
         }
 

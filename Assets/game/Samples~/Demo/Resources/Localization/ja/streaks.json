@@ -2,5 +2,13 @@
   "streak.kills": "ストリーク {0}",
   "streak.next": "{1} まで あと {0}",
   "streak.ready": "[{0}] {1} を使う",
-  "streak.readyNoKey": "{0} を使える"
+  "streak.readyNoKey": "{0} を使える",
+  "streak.target.choose": "{0} の地点と向きを選ぶ",
+  "streak.target.move": "移動で地点、視点で向きを動かす",
+  "streak.target.confirm": "[{0}] 決定",
+  "streak.target.confirmNoKey": "攻撃で決定",
+  "streak.target.cancel": "[{0}] 取消",
+  "streak.target.cancelNoKey": "構えで取消",
+  "streak.uav": "UAV",
+  "streak.airstrike": "空爆"
 }

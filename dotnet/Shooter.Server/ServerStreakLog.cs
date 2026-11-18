@@ -35,19 +35,20 @@ namespace Shooter.Server
             return LogTag + " net uav cleared marks=" + Text(marks);
         }
 
-        public static string AirstrikeCalled(int playerId, Vector3 center, int shells, float intervalSeconds, float spread)
+        public static string AirstrikeCalled(int playerId, Vector3 center, float headingDegrees, int shells, float intervalSeconds, float lineLength)
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} id={1} airstrike at=({2:0.0}, {3:0.0}, {4:0.0}) shells={5} interval={6} spread={7}",
+                "{0} id={1} airstrike at=({2:0.0}, {3:0.0}, {4:0.0}) heading={5:0.0} shells={6} interval={7} line={8}",
                 LogTag,
                 Id(playerId),
                 center.X,
                 center.Y,
                 center.Z,
+                headingDegrees,
                 shells,
                 intervalSeconds,
-                spread);
+                lineLength);
         }
 
         public static string AirstrikeShell(int playerId, int index, int count, int damaged, int killed)

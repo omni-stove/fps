@@ -120,6 +120,62 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheEncryptionKeyIsOptional()
+        {
+            var credentials = EosCredentials.Resolve(Lookup(AllValues("env-")), null, out var missing);
+
+            Assert.That(missing, Is.Empty);
+            Assert.That(credentials.EncryptionKey, Is.Null);
+            Assert.That(credentials.HasEncryptionKey, Is.False);
+            Assert.That(EosCredentials.VariableNames, Does.Not.Contain(EosCredentials.EncryptionKeyVariable));
+        }
+
+        [Test]
+        public void TheEncryptionKeyIsReadFromTheEnvironmentBeforeTheLocalFile()
+        {
+            var fileKey = new string('a', EosCredentials.EncryptionKeyLength);
+            var environmentKey = "  " + new string('B', EosCredentials.EncryptionKeyLength) + "\n";
+            var file = AllValues("file-");
+            file[EosCredentials.EncryptionKeyVariable] = fileKey;
+
+            var fromFile = EosCredentials.Resolve(_emptyEnvironment, file, out _);
+            var environment = new Dictionary<string, string> { { EosCredentials.EncryptionKeyVariable, environmentKey } };
+            var fromEnvironment = EosCredentials.Resolve(Lookup(environment), file, out _);
+
+            Assert.That(fromFile.EncryptionKey, Is.EqualTo(fileKey));
+            Assert.That(fromFile.HasEncryptionKey, Is.True);
+            Assert.That(fromEnvironment.EncryptionKey, Is.EqualTo(new string('B', EosCredentials.EncryptionKeyLength)));
+            Assert.That(fromEnvironment.HasEncryptionKey, Is.True);
+        }
+
+        [Test]
+        public void AnEncryptionKeyOfTheWrongShapeIsKeptButNotUsable()
+        {
+            var credentials = new EosCredentials("p", "s", "d", "c", "x", "not-hex");
+
+            Assert.That(credentials.EncryptionKey, Is.EqualTo("not-hex"));
+            Assert.That(credentials.HasEncryptionKey, Is.False);
+        }
+
+        [Test]
+        public void TellsAValidEncryptionKey()
+        {
+            Assert.That(EosCredentials.IsValidEncryptionKey("0123456789abcdefABCDEF0123456789abcdefABCDEF0123456789abcdef0123"), Is.True);
+            Assert.That(EosCredentials.IsValidEncryptionKey(new string('0', 63)), Is.False);
+            Assert.That(EosCredentials.IsValidEncryptionKey(new string('0', 65)), Is.False);
+            Assert.That(EosCredentials.IsValidEncryptionKey(new string('g', 64)), Is.False);
+            Assert.That(EosCredentials.IsValidEncryptionKey(null), Is.False);
+        }
+
+        [Test]
+        public void HidesTheEncryptionKeyInToString()
+        {
+            var credentials = new EosCredentials("p", "s", "d", "c", "x", new string('f', EosCredentials.EncryptionKeyLength));
+
+            Assert.That(credentials.ToString(), Does.Not.Contain("ffff"));
+        }
+
+        [Test]
         public void RejectsNullLookup()
         {
             Assert.Throws<ArgumentNullException>(() => EosCredentials.Resolve(null, null, out _));

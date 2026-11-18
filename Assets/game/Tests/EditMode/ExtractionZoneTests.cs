@@ -50,7 +50,37 @@ namespace Shooter.Tests.EditMode
 
             _zone.SetOpen(true);
             Assert.That(_zone.IsOpen, Is.True);
-            Assert.That(visual.gameObject.activeSelf, Is.True, "without an open look the placeholder stays and changes colour");
+            Assert.That(visual.gameObject.activeSelf, Is.False, "the closed look hides once the point opens");
+
+            var open = _go.transform.Find(ExtractionZone.VisualName + "-Open");
+            Assert.That(open, Is.Not.Null);
+            Assert.That(open.gameObject.activeSelf, Is.True);
+            Assert.That(open.GetComponent<Collider>(), Is.Null);
+            Assert.That(open.localScale, Is.EqualTo(visual.localScale));
+        }
+
+        [Test]
+        public void AClosedLookAloneStillGetsAnOpenPlaceholder()
+        {
+            var closedLook = new GameObject("ClosedLook");
+            try
+            {
+                _zone.ClosedVisualPrefab = closedLook;
+                _zone.Build();
+
+                _zone.SetOpen(true);
+                var closed = _go.transform.Find(ExtractionZone.VisualName);
+                var open = _go.transform.Find(ExtractionZone.VisualName + "-Open");
+                Assert.That(closed.gameObject.activeSelf, Is.False);
+                Assert.That(open, Is.Not.Null);
+                Assert.That(open.gameObject.activeSelf, Is.True);
+                Assert.That(open.GetComponent<Collider>(), Is.Null);
+                Assert.That(open.localScale, Is.EqualTo(new Vector3(6f, ExtractionZone.PlaceholderThickness, 6f)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(closedLook);
+            }
         }
 
         [Test]

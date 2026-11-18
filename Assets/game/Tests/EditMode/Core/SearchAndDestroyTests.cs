@@ -486,6 +486,39 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new SearchAndDestroyStatus(null, _alphaOne));
         }
 
+        [Test]
+        public void TheGameIsReadThroughTheSameViewAsTheOnlineCopy()
+        {
+            var game = Create(preparationSeconds: 4f, winsToWin: 5);
+            ISearchAndDestroyView view = game;
+
+            game.Start();
+            game.Tick(1f);
+
+            Assert.That(view.WinsToWin, Is.EqualTo(5));
+            Assert.That(view.PreparationRemaining, Is.EqualTo(3f).Within(1e-5f));
+            Assert.That(view.HasPlayer(_bravoTwo), Is.True);
+            Assert.That(view.HasPlayer(99), Is.False);
+            Assert.That(view.IsAttacker(_alphaOne), Is.True);
+            Assert.That(view.RoundNumber, Is.EqualTo(1));
+
+            game.Tick(3f);
+
+            Assert.That(view.Phase, Is.EqualTo(RoundPhase.Live));
+            Assert.That(view.PreparationRemaining, Is.Zero);
+        }
+
+        [Test]
+        public void TheServerSettingsLogListsTheTunedValues()
+        {
+            var spec = new SearchAndDestroySpec(3, 90f, 2.5f, 6f, 40f, 5, 8f, 3);
+
+            Assert.That(
+                SearchAndDestroyText.SettingsLog(spec),
+                Is.EqualTo("[SearchAndDestroy] net sites=3 winsToWin=5 round=90s plant=2.5s defuse=6s fuse=40s preparation=8s swapEvery=3"));
+            Assert.Throws<ArgumentNullException>(() => SearchAndDestroyText.SettingsLog(null));
+        }
+
         private static void Plant(SearchAndDestroy game, int site)
         {
             var carrier = game.CarrierId ?? throw new InvalidOperationException("nobody carries the bomb");

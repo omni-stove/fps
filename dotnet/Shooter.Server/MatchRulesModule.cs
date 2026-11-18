@@ -56,7 +56,9 @@ namespace Shooter.Server
             var points = PointsOf(context.Map);
             var rules = _data.Rules;
             var settings = _data.Settings;
-            _objective = ServerObjectiveFactory.Create(rules.Objective, settings, this);
+            var createObjective = CreateObjective ?? throw new InvalidOperationException("no way to create the match objective rules is set");
+            _objective = createObjective(rules.Objective, settings, this)
+                ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             CheckOtherMaps();
             _objective.UseMap(context.Map, points);
             try
@@ -267,6 +269,7 @@ namespace Shooter.Server
             }
 
             FillControlPoints(snapshot.ControlPoints);
+            FillObjectiveItems(snapshot.ObjectiveItems);
         }
 
         public bool CanFire(int playerId)

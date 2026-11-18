@@ -56,6 +56,9 @@ namespace Shooter.Server
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);
+
+        // 旗・爆弾のように運べる物。受け取る並びは空にしてから書く
+        void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items);
     }
 
     // 目的の実装が試合の側に触れる口。Session を直接渡さないのは、Session が作られる前に目的を選んで Session の上限を決めるため

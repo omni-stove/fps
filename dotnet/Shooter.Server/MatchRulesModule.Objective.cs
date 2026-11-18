@@ -13,11 +13,18 @@ namespace Shooter.Server
 
         internal IMatchObjectiveRules Objective => _objective;
 
+        // Start の前に替える。ServerObjectiveFactory にまだ登録していない目的を、試合として動かして確かめるため
+        internal Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> CreateObjective { get; set; } =
+            ServerObjectiveFactory.Create;
+
         // 拠点制圧の試合でなければ null
         internal DominationObjective Domination => (_objective as DominationRules)?.Domination;
 
         // ラウンド制の試合でなければ null
         internal EliminationObjective Elimination => (_objective as EliminationRules)?.Elimination;
+
+        // 爆弾設置の試合でなければ null
+        internal SearchAndDestroy SearchAndDestroy => (_objective as SearchAndDestroyRules)?.Game;
 
         private bool IsBetweenRounds => _objective != null && _objective.HoldsFire;
 
@@ -40,6 +47,13 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(points);
             points.Clear();
             _objective?.FillControlPoints(points);
+        }
+
+        public void FillObjectiveItems(SnapshotList<ObjectiveItemSnapshot> items)
+        {
+            ArgumentNullException.ThrowIfNull(items);
+            items.Clear();
+            _objective?.FillObjectiveItems(items);
         }
 
         private void StartObjective()

@@ -79,7 +79,7 @@ namespace Shooter.Core.Tests
             Assert.That((int)ReportReason.Spam, Is.EqualTo(2));
             Assert.That((int)ReportReason.OffensiveName, Is.EqualTo(3));
             Assert.That((int)ReportReason.Other, Is.EqualTo(4));
-            Assert.That(Enum.GetValues(typeof(ReportReason)).Length, Is.EqualTo(5));
+            Assert.That(Enum.GetValues<ReportReason>().Length, Is.EqualTo(5));
         }
     }
 }

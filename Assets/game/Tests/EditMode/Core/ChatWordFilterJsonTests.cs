@@ -10,6 +10,8 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedItemNames = { "words", "mask", "action", "wholeWordsOnly" };
 
+        private static readonly string[] _expectedWords = { "darn", "heck" };
+
         [Test]
         public void ReadsEveryItem()
         {
@@ -17,7 +19,7 @@ namespace Shooter.Core.Tests
                 "{\"words\": [\"Darn\", \" heck \", \"DARN\"], \"mask\": \"#\", \"action\": \"Drop\", \"wholeWordsOnly\": true}",
                 _source);
 
-            Assert.That(spec.Words, Is.EqualTo(new[] { "darn", "heck" }), "trimmed, lowercased and merged");
+            Assert.That(spec.Words, Is.EqualTo(_expectedWords), "trimmed, lowercased and merged");
             Assert.That(spec.Mask, Is.EqualTo('#'));
             Assert.That(spec.Action, Is.EqualTo(ChatWordFilterAction.Drop));
             Assert.That(spec.WholeWordsOnly, Is.True);

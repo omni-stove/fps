@@ -121,7 +121,7 @@ namespace Shooter.Server
             _rosters.Clear();
         }
 
-        // 送る数の上限を超えた物は載せない。上限 (SnapshotMessage.MaxDeployables) は 1 人が置ける数より十分大きい
+        // Place が全体の数を SnapshotMessage.MaxDeployables までに抑えるので、置いた物は全部載る
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {
             ArgumentNullException.ThrowIfNull(snapshot);
@@ -223,14 +223,6 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
             }
 
-            var sight = position + new Vector3(0f, SightLift, 0f) - body.Center;
-            var sightDistance = sight.Length();
-            if (sightDistance > 1e-4f
-                && _context.World.Raycast(body.Center, sight / sightDistance, sightDistance, ServerHitboxes.RaycastLayers, out _))
-            {
-                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
-            }
-
             var roster = RosterOf(playerId, type);
             if (!roster.CanPlace)
             {
@@ -247,6 +239,21 @@ namespace Shooter.Server
             if (verdict != DeployVerdict.Ok)
             {
                 return Refuse(playerId, type.Id, RefusalOf(verdict));
+            }
+
+            // 置く地点の物 (梁など) は足場の判定が Blocked で断るので、射線はその後に見る
+            var sight = position + new Vector3(0f, SightLift, 0f) - body.Center;
+            var sightDistance = sight.Length();
+            if (sightDistance > 1e-4f
+                && _context.World.Raycast(body.Center, sight / sightDistance, sightDistance, ServerHitboxes.RaycastLayers, out _))
+            {
+                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
+            }
+
+            // サーバーにある物は必ずスナップショットに載せるため、全員分の合計が送れる数に達したら置かせない
+            if (_placed.Count >= SnapshotMessage.MaxDeployables)
+            {
+                return Refuse(playerId, type.Id, ServerDeployRefusal.LimitReached);
             }
 
             var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth);

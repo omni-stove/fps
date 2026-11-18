@@ -6,6 +6,11 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class PlayerProfileTests
     {
+        private static readonly string[] _firstBloodVeteran = { "first-blood", "veteran" };
+        private static readonly string[] _firstBlood = { "first-blood" };
+        private static readonly string[] _firstBloodQuoted = { "first-blood", "a \"quoted\" id" };
+        private static readonly string[] _a = { "a" };
+
         [Test]
         public void KeepsTheValues()
         {
@@ -159,7 +164,7 @@ namespace Shooter.Core.Tests
                     "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234,"
                     + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
             Assert.That(
-                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood", "veteran" }).ToJson(),
+                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, _firstBloodVeteran).ToJson(),
                 Is.EqualTo(
                     "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234,"
                     + "\"headshots\":5,\"meleeKills\":2,\"playSeconds\":3600,\"achievements\":[\"first-blood\",\"veteran\"]}"));
@@ -204,7 +209,7 @@ namespace Shooter.Core.Tests
                 "{\"version\":4,\"xp\":0,\"kills\":3,\"assists\":0,\"deaths\":0,\"matches\":1,\"wins\":0,\"rating\":1000,"
                 + "\"headshots\":2,\"meleeKills\":1,\"playSeconds\":95,\"achievements\":[\"first-blood\"]}");
 
-            Assert.That(read, Is.EqualTo(new PlayerProfile(0, 3, 0, 1, 0, 0, 1000, 2, 1, 95, new[] { "first-blood" })));
+            Assert.That(read, Is.EqualTo(new PlayerProfile(0, 3, 0, 1, 0, 0, 1000, 2, 1, 95, _firstBlood)));
         }
 
         [Test]
@@ -260,7 +265,7 @@ namespace Shooter.Core.Tests
                 new PlayerProfile(1650, 12, 4, 3, 2, 7),
                 new PlayerProfile(1650, 12, 4, 3, 2, 7, 0),
                 new PlayerProfile(int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue),
-                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood", "a \"quoted\" id" }),
+                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, _firstBloodQuoted),
                 new PlayerProfile(0, 0, 0, 0, 0, 0, 0, int.MaxValue, int.MaxValue, int.MaxValue, null),
             };
 
@@ -451,7 +456,7 @@ namespace Shooter.Core.Tests
                 "the order of unlocking is part of the record");
             Assert.That(
                 profile.WithAchievement("a").GetHashCode(),
-                Is.EqualTo(new PlayerProfile(10, 2, 1, 1, 1, 0, 1000, 0, 0, 0, new[] { "a" }).GetHashCode()));
+                Is.EqualTo(new PlayerProfile(10, 2, 1, 1, 1, 0, 1000, 0, 0, 0, _a).GetHashCode()));
             Assert.That(profile.Equals(null), Is.False);
         }
     }

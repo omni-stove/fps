@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Shooter.Runtime
 {
@@ -65,6 +66,7 @@ namespace Shooter.Runtime
             CombatEvents.DamageTaken += OnDamageTaken;
             _progression.ProfileChanged += OnProfileChanged;
             _progression.MatchRecording += OnMatchRecording;
+            SceneManager.sceneLoaded += OnSceneLoaded;
             _matchStartedAt = null;
             _carrySeconds = 0d;
             IsInstalled = true;
@@ -86,9 +88,16 @@ namespace Shooter.Runtime
             CombatEvents.DamageTaken -= OnDamageTaken;
             _progression.ProfileChanged -= OnProfileChanged;
             _progression.MatchRecording -= OnMatchRecording;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             GameSignals.Achievements.ClearIfCurrent(_published);
             _published = null;
             IsInstalled = false;
+        }
+
+        // MatchFinished を出さずにメニューへ戻る経路があるため、シーンの読み込みで時計を止め、試合の外の時間を数えない。
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            _matchStartedAt = null;
         }
 
         private void OnKilled(KillFeedEntry entry)

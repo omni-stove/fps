@@ -16,6 +16,7 @@ namespace Shooter.Core.Tests
             new[] { new ProgressionUnlock("burst", 2), new ProgressionUnlock("scope", 4) });
 
         private static readonly int[] _singleLevel = { 0 };
+        private static readonly string[] _firstBlood = { "first-blood" };
 
         private static readonly int[] _twoLevels = { 0, 1 };
 
@@ -221,7 +222,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheLedgerKeepsTheAchievementsAndStats()
         {
-            var profile = new PlayerProfile(0, 0, 0, 0, 0, 0, 1234, 4, 2, 600, new[] { "first-blood" });
+            var profile = new PlayerProfile(0, 0, 0, 0, 0, 0, 1234, 4, 2, 600, _firstBlood);
 
             var kill = _ledger.RecordKill(profile, true).Profile;
             var assist = _ledger.RecordAssist(profile).Profile;
@@ -232,7 +233,7 @@ namespace Shooter.Core.Tests
                 Assert.That(next.Headshots, Is.EqualTo(4), "the headshots are counted by the achievement tracker");
                 Assert.That(next.MeleeKills, Is.EqualTo(2));
                 Assert.That(next.PlaySeconds, Is.EqualTo(600));
-                Assert.That(next.Achievements, Is.EqualTo(new[] { "first-blood" }));
+                Assert.That(next.Achievements, Is.EqualTo(_firstBlood));
                 Assert.That(next.Rating, Is.EqualTo(1234));
             }
         }

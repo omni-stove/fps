@@ -730,6 +730,20 @@ namespace Shooter.Core
             TryStart();
         }
 
+        // Restart と違い、点数・キル数・残り時間を戻さずに全員の体力と位置だけを戻す (ラウンド制のラウンドの頭)。
+        public void RespawnAll()
+        {
+            var playerIds = new List<int>(_health.Keys);
+            foreach (var playerId in playerIds)
+            {
+                // 受け手の中で抜けた人は飛ばす
+                if (_health.ContainsKey(playerId))
+                {
+                    Respawn(playerId);
+                }
+            }
+        }
+
         // Session を作り直さないのは、成績・切断した人の保持・チーム分けを捨てずに出現地点だけを替えるため。
         public void ReplaceSpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints)
         {

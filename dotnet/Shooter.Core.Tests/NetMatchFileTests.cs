@@ -460,7 +460,7 @@ namespace Shooter.Core.Tests
             Assert.That(e.Item, Is.EqualTo(item));
         }
 
-        private static string ServerDataRoot()
+        internal static string ServerDataRoot()
         {
             for (var directory = new DirectoryInfo(TestContext.CurrentContext.TestDirectory); directory != null; directory = directory.Parent)
             {

@@ -77,7 +77,10 @@
     "privateMatch": false,
     "joinCode": "",
     "chatIntervalSeconds": 1,
-    "maxChatLength": 120
+    "maxChatLength": 120,
+    "roundWinsToWin": 3,
+    "roundPreparationSeconds": 5,
+    "roundTimeLimitSeconds": 120
   },
   "motor": {
     "walkSpeed": 5,

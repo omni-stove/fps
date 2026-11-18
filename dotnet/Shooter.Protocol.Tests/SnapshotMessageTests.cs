@@ -44,6 +44,21 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void AnEliminationMatchCarriesItsRoundWinsAsPoints()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.Objective = MatchObjective.Elimination;
+            sent.Match.AlphaPoints = 2;
+            sent.Match.BravoPoints = 1;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.Objective, Is.EqualTo(MatchObjective.Elimination));
+            Assert.That(got.Match.AlphaPoints, Is.EqualTo(2));
+            Assert.That(got.Match.BravoPoints, Is.EqualTo(1));
+        }
+
+        [Test]
         public void AMatchWithoutRoundsCarriesNoRoundPhase()
         {
             var sent = Build(100, 0f);

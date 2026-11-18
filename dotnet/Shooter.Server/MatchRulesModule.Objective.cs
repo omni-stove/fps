@@ -186,10 +186,15 @@ namespace Shooter.Server
             }
         }
 
-        // 拠点制圧ならポイントで決めた勝者に差し替える。そうでなければ Session がキル数で決めた値のまま
+        // 拠点制圧ならポイント、ラウンド制ならラウンドの勝ち数で決めた勝者に差し替える。どちらでもなければ Session がキル数で決めた値のまま
         private Team? DecideWinner(Team? winner)
         {
-            return _domination != null ? _domination.DecideWinner() : winner;
+            if (_domination != null)
+            {
+                return _domination.DecideWinner();
+            }
+
+            return _elimination != null ? _elimination.DecideWinner() : winner;
         }
 
         private void FillObjective(ref MatchSnapshot snapshot)

@@ -10,7 +10,9 @@
   "airstrike": {
     "shellCount": 5,
     "intervalSeconds": 0.35,
-    "spread": 6,
+    "spread": 1.5,
+    "lineLength": 24,
+    "dropHeight": 40,
     "explosion": {
       "maxDamage": 150,
       "radius": 6,
@@ -18,5 +20,10 @@
       "structureDamageAtCenter": 100
     },
     "range": 100
+  },
+  "targeting": {
+    "cursorSpeed": 40,
+    "turnDegreesPerSecond": 180,
+    "viewHeight": 150
   }
 }

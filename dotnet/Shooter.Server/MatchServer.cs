@@ -31,6 +31,7 @@ namespace Shooter.Server
         private readonly List<(ConnectionId Connection, string Reason, string LogText)> _kicks =
             new List<(ConnectionId Connection, string Reason, string LogText)>();
         private readonly ServerRulesData _rules;
+        private readonly ServerBanList _bans;
         private readonly ConnectAcceptedMessage _accepted = new ConnectAcceptedMessage();
         private readonly ConnectRejectedMessage _rejected = new ConnectRejectedMessage();
         private readonly ServerDisconnectingMessage _disconnecting = new ServerDisconnectingMessage();
@@ -50,8 +51,10 @@ namespace Shooter.Server
             Func<DateTime> utcNow,
             float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds,
             ServerRulesData rules = null,
-            IReadOnlyList<ServerMapData> maps = null)
+            IReadOnlyList<ServerMapData> maps = null,
+            ServerBanList bans = null)
         {
+            _bans = bans;
             _rules = rules;
             Bodies = new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
             _launch = launch ?? throw new ArgumentNullException(nameof(launch));
@@ -102,7 +105,7 @@ namespace Shooter.Server
 
             _started = true;
             var options = _launch.Options;
-            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies, _transport as IConnectionUserIds));
+            _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies, _transport as IConnectionUserIds, _transport as IConnectionAddresses));
             try
             {
                 _transport.Listen(options.Address, options.Port);
@@ -374,6 +377,14 @@ namespace Shooter.Server
 
             var rejoinKey = verdict.RejoinKey;
             var productUserId = VerifiedProductUserId(connection);
+
+            // 名乗っただけの ProductUserId は名乗らなければ逃れられ、他人の Id を名乗れば他人を締め出せるので、通信路が確かめた Id だけで比べる
+            if (_bans != null && _bans.TryFind(productUserId, RemoteAddress(connection), out var ban))
+            {
+                Reject(connection, DisconnectNotice.RejectedReason(DisconnectNotice.BannedDetail), ServerAdminLog.Refused(ban));
+                return;
+            }
+
             if (productUserId != null)
             {
                 // 名乗った鍵ではなく通信路が確かめた Id で見分け、他人の鍵を送って成績や席を奪えないようにする
@@ -480,6 +491,11 @@ namespace Shooter.Server
             }
 
             return null;
+        }
+
+        private string RemoteAddress(ConnectionId connection)
+        {
+            return _transport is IConnectionAddresses addresses && addresses.TryGetRemoteAddress(connection, out var address) ? address : null;
         }
 
         // 前の接続が切れたと分かる前に同じ人がつなぎ直してきたら、前の接続は戻ってこないので先に抜く。

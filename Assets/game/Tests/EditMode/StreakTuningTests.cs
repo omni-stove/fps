@@ -60,6 +60,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Airstrike.Explosion.Damage.FullDamageRadius, Is.EqualTo(StreakAirstrikeSpec.DefaultFullDamageRadius));
             Assert.That(spec.Airstrike.Explosion.StructureDamageAtCenter, Is.EqualTo(StreakAirstrikeSpec.DefaultStructureDamageAtCenter));
             Assert.That(spec.Airstrike.Range, Is.EqualTo(StreakAirstrikeSpec.DefaultRange));
+            Assert.That(spec.Airstrike.LineLength, Is.EqualTo(StreakAirstrikeSpec.DefaultLineLength));
+            Assert.That(spec.Airstrike.DropHeight, Is.EqualTo(StreakAirstrikeSpec.DefaultDropHeight));
+            Assert.That(spec.Targeting.CursorSpeed, Is.EqualTo(StreakTargetingSpec.DefaultCursorSpeed));
+            Assert.That(spec.Targeting.TurnDegreesPerSecond, Is.EqualTo(StreakTargetingSpec.DefaultTurnDegreesPerSecond));
+            Assert.That(spec.Targeting.ViewHeight, Is.EqualTo(StreakTargetingSpec.DefaultViewHeight));
         }
 
         [Test]

@@ -211,6 +211,39 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheBanListIsLoadedBeforeListening()
+        {
+            var path = System.IO.Path.Combine(_data.Path, "bans.json");
+            System.IO.File.WriteAllText(path, "{ \"bans\": [ { \"address\": \"203.0.113.5\" } ] }");
+
+            Assert.That(Run("--ban-file", path), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Admin] ban list " + path + ": 1 ban(s)"));
+        }
+
+        [Test]
+        public void WithoutABanFileTheBansAreNotKept()
+        {
+            Assert.That(Run(), Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+
+            Assert.That(_output.ToString(), Does.Contain("[Admin] no ban list (--ban-file); bans last until the server stops"));
+            Assert.That(_output.ToString(), Does.Not.Contain("reading commands from stdin"), "without an input there is no console");
+        }
+
+        [Test]
+        public void AnUnreadableBanListExitsMisconfigured()
+        {
+            var path = System.IO.Path.Combine(_data.Path, "bans.json");
+            System.IO.File.WriteAllText(path, "{ \"bans\": [ { \"address\": \"nowhere\" } ] }");
+
+            var code = Run("--ban-file", path);
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.Contain("[Admin] ban list " + path + ": bans[0].address is not a valid address (got 'nowhere')"));
+            Assert.That(_output.ToString(), Does.Not.Contain("server listening"));
+        }
+
+        [Test]
         public void MissingRulesExitMisconfigured()
         {
             var code = Run("-rules", "Domination");

@@ -15,5 +15,7 @@ namespace Shooter.Server
         NotNext,
 
         InvalidAim,
+
+        OutOfRange,
     }
 }

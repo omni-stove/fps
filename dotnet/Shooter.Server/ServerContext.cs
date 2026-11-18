@@ -19,9 +19,11 @@ namespace Shooter.Server
             IServerControl control,
             ServerRulesData rules = null,
             ServerBodies bodies = null,
-            IConnectionUserIds userIds = null)
+            IConnectionUserIds userIds = null,
+            IConnectionAddresses addresses = null)
         {
             UserIds = userIds;
+            Addresses = addresses;
             Rules = rules;
             Bodies = bodies ?? new ServerBodies((rules?.Motor ?? NetMotorSettings.Default).Stance);
             Options = options ?? throw new ArgumentNullException(nameof(options));
@@ -56,5 +58,7 @@ namespace Shooter.Server
         public IServerControl Control { get; }
 
         public IConnectionUserIds UserIds { get; }
+
+        public IConnectionAddresses Addresses { get; }
     }
 }

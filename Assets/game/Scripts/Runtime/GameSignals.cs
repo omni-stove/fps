@@ -55,6 +55,8 @@ namespace Shooter.Runtime
 
         public static GameSignal<StreakStatus?> Streak { get; } = new GameSignal<StreakStatus?>(nameof(Streak));
 
+        public static GameSignal<StreakTargetingStatus?> StreakTargeting { get; } = new GameSignal<StreakTargetingStatus?>(nameof(StreakTargeting));
+
         public static GameSignal<MinimapStatus?> Minimap { get; } = new GameSignal<MinimapStatus?>(nameof(Minimap));
 
         public static GameSignal<IReadOnlyList<ChatLine>> Chat { get; } = new GameSignal<IReadOnlyList<ChatLine>>(nameof(Chat));
@@ -117,6 +119,7 @@ namespace Shooter.Runtime
             PauseTimeMode.Reset();
             PaletteViewer.Reset();
             Streak.Reset();
+            StreakTargeting.Reset();
             Minimap.Reset();
             Chat.Reset();
             Voice.Reset();

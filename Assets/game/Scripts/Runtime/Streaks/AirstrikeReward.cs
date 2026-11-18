@@ -8,9 +8,6 @@ namespace Shooter.Runtime
     [DisallowMultipleComponent]
     public sealed class AirstrikeReward : MonoBehaviour
     {
-        // 広がりが 0 に近くても、狙った面の少し上から地面を探せるようにする。
-        private const float MinGroundProbeHeight = 1f;
-
         // 爆発する時刻の順。同じ時刻なら呼んだ順。
         private readonly List<Strike> _pending = new List<Strike>();
 
@@ -21,72 +18,40 @@ namespace Shooter.Runtime
 
         private float Now => Clock != null ? Clock() : Time.time;
 
-        public Vector3 CallAtAim(
-            float range,
-            int strikes,
-            float intervalSeconds,
-            float spreadRadius,
-            ExplosionSpec explosion,
-            string weaponId,
-            System.Random random)
+        // 送られた高さは選んだときの地面なので、中心も弾も真上から落として決め直す (専用サーバーの ServerStreaks と同じ)。
+        // targeting を渡すと、探し始めを使った人の高さにし、探す幅を max(viewHeight, dropHeight) にする。空なら選んだ高さから dropHeight で探す。
+        public Vector3 Call(Vector3 target, float headingDegrees, StreakAirstrikeSpec spec, string weaponId, System.Random random, StreakTargetingSpec targeting = null)
         {
-            if (float.IsNaN(range) || float.IsInfinity(range) || range <= 0f)
+            if (!IsFinite(target))
             {
-                throw new ArgumentOutOfRangeException(nameof(range), range, "range must be positive and finite");
+                throw new ArgumentOutOfRangeException(nameof(target), target, "target must be finite");
             }
 
-            ResolveAim(range, out var origin, out var direction);
-            var center = Hitscan.TryFirstHit(origin, direction, range, transform, out var hit)
-                ? hit.point
-                : origin + (direction.normalized * range);
-            Call(center, strikes, intervalSeconds, spreadRadius, explosion, weaponId, random);
-            return center;
-        }
-
-        public void Call(
-            Vector3 center,
-            int strikes,
-            float intervalSeconds,
-            float spreadRadius,
-            ExplosionSpec explosion,
-            string weaponId,
-            System.Random random)
-        {
-            if (!IsFinite(center))
+            if (float.IsNaN(headingDegrees) || float.IsInfinity(headingDegrees))
             {
-                throw new ArgumentOutOfRangeException(nameof(center), center, "center must be finite");
+                throw new ArgumentOutOfRangeException(nameof(headingDegrees), headingDegrees, "headingDegrees must be finite");
             }
 
-            if (strikes < 1)
+            if (spec == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(strikes), strikes, "strikes must be at least 1");
-            }
-
-            if (float.IsNaN(intervalSeconds) || float.IsInfinity(intervalSeconds) || intervalSeconds < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(intervalSeconds), intervalSeconds, "intervalSeconds must be non-negative and finite");
-            }
-
-            if (float.IsNaN(spreadRadius) || float.IsInfinity(spreadRadius) || spreadRadius < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(spreadRadius), spreadRadius, "spreadRadius must be non-negative and finite");
-            }
-
-            if (explosion == null)
-            {
-                throw new ArgumentNullException(nameof(explosion));
+                throw new ArgumentNullException(nameof(spec));
             }
 
             random = random ?? new System.Random();
             var now = Now;
-            for (var i = 0; i < strikes; i++)
+            var searchHeight = targeting != null ? Mathf.Max(targeting.ViewHeight, spec.DropHeight) : spec.DropHeight;
+            var baseY = targeting != null ? transform.position.y : target.y;
+            var center = Drop(new Vector3(target.x, baseY, target.z), searchHeight);
+            for (var i = 0; i < spec.ShellCount; i++)
             {
-                var point = PlaceOnGround(ScatterPoint(center, spreadRadius, random), spreadRadius);
-                Enqueue(new Strike(now + ((i + 1) * intervalSeconds), point, i + 1, strikes, explosion, weaponId));
+                var shell = AirstrikeLine.ShellPoint(center.ToNumerics(), headingDegrees, spec, i, random).ToUnity();
+                var point = Drop(new Vector3(shell.x, baseY, shell.z), searchHeight);
+                Enqueue(new Strike(now + ((i + 1) * spec.IntervalSeconds), point, i + 1, spec.ShellCount, spec.Explosion, weaponId));
             }
 
-            Debug.Log(StreakRewardLog.AirstrikeCalled(name, center, strikes, intervalSeconds, spreadRadius), this);
+            Debug.Log(StreakRewardLog.AirstrikeCalled(name, center, headingDegrees, spec.ShellCount, spec.IntervalSeconds, spec.LineLength), this);
             Tick(now);
+            return center;
         }
 
         public int Tick(float now)
@@ -121,24 +86,6 @@ namespace Shooter.Runtime
             return count;
         }
 
-        public static Vector3 ScatterPoint(Vector3 center, float radius, System.Random random)
-        {
-            if (random == null)
-            {
-                throw new ArgumentNullException(nameof(random));
-            }
-
-            if (float.IsNaN(radius) || float.IsInfinity(radius) || radius < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(radius), radius, "radius must be non-negative and finite");
-            }
-
-            // 半径を一様に取ると中心に寄るので、面積で一様になるよう平方根を取る。
-            var distance = radius * Math.Sqrt(random.NextDouble());
-            var angle = random.NextDouble() * 2.0 * Math.PI;
-            return center + new Vector3((float)(distance * Math.Cos(angle)), 0f, (float)(distance * Math.Sin(angle)));
-        }
-
         private void Update()
         {
             Tick(Now);
@@ -155,30 +102,15 @@ namespace Shooter.Runtime
             _pending.Insert(index, strike);
         }
 
-        // 坂や段差で円の上の点が地面に埋まったり宙に浮いたりしないよう、真上から地面を探して面の上に置く。
-        private Vector3 PlaceOnGround(Vector3 point, float spreadRadius)
+        // 坂や段差で線の上の点が地面に埋まったり宙に浮いたりせず、屋根や橋があればその上で止まるよう、上から真下へ探す。
+        private Vector3 Drop(Vector3 point, float height)
         {
-            var height = Mathf.Max(spreadRadius, MinGroundProbeHeight);
             if (Hitscan.TryFirstHit(point + (Vector3.up * height), Vector3.down, height * 2f, transform, out var ground))
             {
                 return ImpactResolver.DetonationPoint(ground.point.ToNumerics(), ground.normal.ToNumerics()).ToUnity();
             }
 
             return point;
-        }
-
-        // 三人称ではカメラの中央が狙いなので視点から狙う。視点が無い (テストや視点を持たない体) ときだけ体の正面を使う。
-        private void ResolveAim(float range, out Vector3 origin, out Vector3 direction)
-        {
-            var rig = GetComponent<ViewRig>();
-            if (rig != null && rig.IsInitialized)
-            {
-                rig.ResolveAim(range, out origin, out direction);
-                return;
-            }
-
-            origin = transform.position;
-            direction = transform.forward;
         }
 
         private static bool IsFinite(Vector3 value)

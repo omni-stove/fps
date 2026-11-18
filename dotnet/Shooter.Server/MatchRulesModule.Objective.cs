@@ -31,6 +31,9 @@ namespace Shooter.Server
         // ラウンド制の試合でなければ null
         internal EliminationObjective Elimination => (_objective as EliminationRules)?.Elimination;
 
+        // 爆弾設置の試合でなければ null
+        internal SearchAndDestroy SearchAndDestroy => (_objective as SearchAndDestroyRules)?.Game;
+
         private bool IsBetweenRounds => _objective != null && _objective.HoldsFire;
 
         ServerBodies IMatchObjectiveHost.Bodies => _bodies;

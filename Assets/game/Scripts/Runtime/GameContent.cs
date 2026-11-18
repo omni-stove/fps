@@ -193,7 +193,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("目くらましの覆いと耳鳴り。空なら Resources/Presentation/FlashOverlayCatalog、それも無ければ既定の色だけで覆う")]
         private FlashOverlayCatalog _flashOverlay;
 
-        //ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
+        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
         private static bool _searched;

@@ -101,10 +101,25 @@ namespace Shooter.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InstallOnPlay()
         {
-            Install(FileSaveStorage.CreateDefault());
+            Install(CloudSaveBootstrap.Storage);
+            var sync = CloudSaveBootstrap.Current;
+            if (sync != null)
+            {
+                sync.SlotPulled -= ReloadPulledProfile;
+                sync.SlotPulled += ReloadPulledProfile;
+            }
+
             // 次の Play まで残すと、その間に走らせた Edit Mode のテストが本物のプロフィールで判定され、保存先にも書き込むので、Play を抜けるときに外す。
             Application.quitting -= Uninstall;
             Application.quitting += Uninstall;
+        }
+
+        internal static void ReloadPulledProfile(string slot)
+        {
+            if (string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal))
+            {
+                _recorder?.Reload();
+            }
         }
     }
 }

@@ -183,7 +183,7 @@ namespace Shooter.Runtime
 
         public ISaveStorage SaveStorage
         {
-            get => _saveStorage ??= FileSaveStorage.CreateDefault();
+            get => _saveStorage ??= CloudSaveBootstrap.Storage;
             set => _saveStorage = value;
         }
 

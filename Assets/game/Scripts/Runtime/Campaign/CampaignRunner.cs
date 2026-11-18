@@ -290,7 +290,7 @@ namespace Shooter.Runtime
             ISaveStorage storage;
             try
             {
-                storage = _storage ?? FileSaveStorage.CreateDefault();
+                storage = _storage ?? CloudSaveBootstrap.Storage;
             }
             catch (ArgumentException e)
             {

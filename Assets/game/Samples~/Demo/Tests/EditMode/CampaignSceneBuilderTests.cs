@@ -218,7 +218,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(layout.Campaign.gameObject.scene, Is.EqualTo(_scene));
             Assert.That(layout.Campaign.Runner, Is.SameAs(layout.Runner));
             Assert.That(layout.Campaign.Bootstrap, Is.SameAs(layout.Bootstrap));
-            Assert.That(layout.Campaign.Storage, Is.Null, "the save storage is FileSaveStorage.CreateDefault, chosen at run time");
+            Assert.That(layout.Campaign.Storage, Is.Null, "the save storage is CloudSaveBootstrap.Storage, chosen at run time");
 
             var checkpoints = Components<CheckpointTrigger>();
             Assert.That(checkpoints, Has.Length.EqualTo(2));

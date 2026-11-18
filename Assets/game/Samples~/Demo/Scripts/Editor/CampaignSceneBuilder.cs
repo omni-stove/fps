@@ -530,7 +530,7 @@ namespace Shooter.Editor
                     }
                 }
 
-                // セーブの置き場所は CampaignRunner が実行時に FileSaveStorage.CreateDefault (スロットはミッション Id ごと) で決める。
+                // セーブの置き場所は CampaignRunner が実行時に CloudSaveBootstrap.Storage (スロットはミッション Id ごと) で決める。
                 // プレイヤーは GameBootstrap が実行時に作るので、CampaignRunner は GameBootstrap から受け取る。
                 var campaignObject = new GameObject(CampaignRunnerObjectName);
                 SceneManager.MoveGameObjectToScene(campaignObject, scene);

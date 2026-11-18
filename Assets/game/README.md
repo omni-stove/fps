@@ -28,6 +28,20 @@
 
 EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパイルされる。
 
+### クラウドセーブ
+
+プロフィール (`profile`) とキャンペーンのセーブ (`campaign`・`campaign-<ミッション Id>`) を EOS の Player Data Storage と同期する。
+
+1. EOS の開発者ポータルで Player Data Storage を使えるようにする。
+2. ほかの認証情報と同じく、環境変数か `eos.local.json` に `EOS_ENCRYPTION_KEY` (16 進 64 文字) を入れる。どの端末でも同じ鍵にする。鍵が違う端末からは読めない。
+
+- 保存はいつも手元に書き、同期はその後で行う。EOS が無いビルド・認証情報か鍵が無いとき・ログインできないとき (オフライン) は手元だけで動き、次にログインしたときに合わせる。
+- 起動時に Device ID で EOS にログインし、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
+- 手元とクラウドが食い違ったら、書いた時刻 (UTC) の新しい方を採る。消したことも時刻付きで送るので、他の端末で消したセーブは戻ってこない。
+- クラウドの方で手元を書き換えたときは、前の手元の中身を `cloud-replaced-<スロット>` に残す。
+- Device ID は端末ごとの Id なので、別の端末と同じアカウントで同期するには、Epic アカウントなどで同じ EOS のユーザーにログインさせる必要がある。
+- 自分の保存先で同期するなら、`ICloudSaveBackend` を実装して `CloudSaveBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
+
 ## サンプル
 
 1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。

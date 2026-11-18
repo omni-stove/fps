@@ -39,6 +39,12 @@ namespace Shooter.NetV2
                 return;
             }
 
+            if (snapshot.Match.Rules.Spectating == Spectating.Off)
+            {
+                Stop();
+                return;
+            }
+
             // 自分の Id と体の寸法は承認されるまで決まらず、部品はつなぐ前に作られるので、マップに入ってから作る
             _spectate ??= new ClientSpectate(_client.PlayerId, _client.TickRate, _client.Motor.Stance, SendRequest);
             _spectate.Apply(snapshot);
@@ -73,8 +79,14 @@ namespace Shooter.NetV2
             }
 
             _disposed = true;
+            Stop();
+        }
+
+        private void Stop()
+        {
             ReleaseView();
             _spectate?.Reset();
+            _spectate = null;
             Publish(null);
         }
 

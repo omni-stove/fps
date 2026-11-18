@@ -9,5 +9,7 @@ namespace Shooter.Core
         TooLong,
 
         TooSoon,
+
+        Blocked,
     }
 }

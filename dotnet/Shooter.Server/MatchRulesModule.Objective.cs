@@ -25,10 +25,6 @@ namespace Shooter.Server
 
         internal IMatchObjectiveRules Objective => _objective;
 
-        // Start の前に替える。ServerObjectiveFactory にまだ登録していない目的を、試合として動かして確かめるため
-        internal Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> CreateObjective { get; set; } =
-            ServerObjectiveFactory.Create;
-
         // 拠点制圧の試合でなければ null
         internal DominationObjective Domination => (_objective as DominationRules)?.Domination;
 

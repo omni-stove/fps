@@ -542,7 +542,7 @@ namespace Shooter.Server.Tests
                 new ServerMessenger(_transport),
                 new StubControl(),
                 TestRules.Data(Rules(objective), settings));
-            var module = new MatchRulesModule { CreateObjective = CreateObjective };
+            var module = new MatchRulesModule(CreateObjective);
             module.Start(_context);
             _module = module;
         }

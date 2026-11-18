@@ -146,7 +146,7 @@ namespace Shooter.Runtime
             }
 
             var rewardId = _aim.RewardId;
-            End();
+            End(reason != CancelledByDeath && reason != CancelledByDisable);
             Debug.Log(StreakLog.TargetingCancelled(Id, rewardId, reason ?? string.Empty), this);
             Cancelled?.Invoke(rewardId, reason ?? string.Empty);
             return true;
@@ -256,7 +256,7 @@ namespace Shooter.Runtime
             }
         }
 
-        private void End()
+        private void End(bool deferRestore = true)
         {
             ReleaseActions();
             HideView();
@@ -264,8 +264,9 @@ namespace Shooter.Runtime
             _spec = null;
             Unpublish();
 
-            // Edit Mode ではフレームが進まないので、すぐ返す。
-            if (Application.isPlaying)
+            // Edit Mode ではフレームが進まないので、すぐ返す。倒れた・無効になったときは押下が残らず、
+            // 先送りするとデスカメラが覚えた値と食い違うので、その場で返す。
+            if (deferRestore && Application.isPlaying)
             {
                 _restoreAfterFrame = Time.frameCount;
             }

@@ -47,6 +47,7 @@ namespace Shooter.Runtime
         private AttachmentModelCatalog _attachmentModels;
         private bool _attachmentModelsResolved;
         private bool _hiddenBySight;
+        private Material _paint;
 
         public ViewmodelCatalog Catalog
         {
@@ -90,6 +91,11 @@ namespace Shooter.Runtime
                 _attachmentModelsResolved = true;
             }
         }
+
+        // 迷彩の材質を渡す差し込み口。空なら着けている迷彩 (GameSignals.Cosmetics) を引く。
+        public Func<Material> PaintSource { get; set; }
+
+        public Material CurrentPaint => _instance != null ? _paint : null;
 
         public IReadOnlyList<string> CurrentAttachments => _instance != null ? _attachments : WeaponAttachments.None;
 
@@ -156,6 +162,14 @@ namespace Shooter.Runtime
                     Attach(attachments);
                     HideForSight(_hiddenBySight, true);
                     Debug.Log($"{AttachedLogPrefix} weapon={wanted} attached={WeaponAttachments.Describe(attachments)} sight={_sockets.Sight != null}", this);
+                }
+                else
+                {
+                    var paint = WantedPaint();
+                    if (paint != _paint)
+                    {
+                        ApplyPaint(paint);
+                    }
                 }
 
                 PlaceForAim();
@@ -292,6 +306,7 @@ namespace Shooter.Runtime
             var catalog = _weapon != null ? _weapon.AttachmentCatalog : KitTuning.Items;
             WeaponAttachmentModels.Apply(_instance.transform, attachments, catalog, AttachmentModels);
             _attachments = attachments;
+            ApplyPaint(WantedPaint());
             _sockets = new WeaponSockets(_instance.transform);
             var pivot = _instance.transform.parent;
             var sight = _sockets.Sight != null && pivot != null ? pivot.InverseTransformPoint(_sockets.Sight.position) - _instance.transform.localPosition : Vector3.zero;
@@ -351,6 +366,8 @@ namespace Shooter.Runtime
                 WeaponAttachmentModels.Apply(instance.transform, _attachments, _weapon != null ? _weapon.AttachmentCatalog : KitTuning.Items, AttachmentModels);
             }
 
+            _paint = null;
+            ApplyPaint(WantedPaint());
             _sockets = new WeaponSockets(instance.transform);
             var sight = _sockets.Sight != null ? pivot.InverseTransformPoint(_sockets.Sight.position) - entry.Offset : Vector3.zero;
             _adsPosition = AimedRootPosition(entry.AdsOffset, sight);
@@ -407,7 +424,29 @@ namespace Shooter.Runtime
             DestroySafely(_instance);
             _instance = null;
             _weaponId = null;
+            _paint = null;
             _sockets = WeaponSockets.None;
+        }
+
+        private Material WantedPaint()
+        {
+            return PaintSource != null ? PaintSource() : CosmeticLooks.WornPaint();
+        }
+
+        private void ApplyPaint(Material paint)
+        {
+            if (_instance == null)
+            {
+                return;
+            }
+
+            var changed = paint != _paint;
+            CamoPaint.Apply(_instance, paint);
+            _paint = paint;
+            if (changed)
+            {
+                Debug.Log($"{LogTag} paint weapon={_weaponId} paint={(paint != null ? paint.name : "-")}", this);
+            }
         }
 
         private ViewmodelSwaySettings SwaySettingsFor(ViewmodelEntry entry)

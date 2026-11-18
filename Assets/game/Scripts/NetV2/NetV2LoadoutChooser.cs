@@ -8,11 +8,13 @@ using UnityEngine;
 namespace Shooter.NetV2
 {
     // 断られた並びを次に自動で送らないよう、受け入れられた並びだけを保存する。
-    // サーバーはどの要求にも送った順に答えるので、届いた答えは待っている先頭の並びへのものとして突き合わせる。
+    // サーバーは武器のある要求にだけ送った順に答えるので、届いた答えは待っている先頭の並びへのものとして突き合わせる。
+    // 見た目は相手から見える体のスキンだけを送る。迷彩は自分の一人称の武器にしか出さず、サーバーを通す必要が無いため。
     internal sealed class NetV2LoadoutChooser : IDisposable
     {
         private readonly NetV2Weapons _weapons;
         private readonly Func<IMessage, bool> _send;
+        private readonly Func<string> _cosmeticId;
         private readonly LoadoutPreferenceStore _store = new LoadoutPreferenceStore();
         private readonly LoadoutRequestMessage _request = new LoadoutRequestMessage();
         private readonly Queue<Pending> _pending = new Queue<Pending>();
@@ -25,9 +27,15 @@ namespace Shooter.NetV2
         private int _screenSession;
 
         public NetV2LoadoutChooser(NetV2Weapons weapons, Func<IMessage, bool> send, UnityEngine.Object context)
+            : this(weapons, send, context, () => CosmeticLooks.WornId(CosmeticKind.Skin))
+        {
+        }
+
+        public NetV2LoadoutChooser(NetV2Weapons weapons, Func<IMessage, bool> send, UnityEngine.Object context, Func<string> cosmeticId)
         {
             _weapons = weapons ?? throw new ArgumentNullException(nameof(weapons));
             _send = send ?? throw new ArgumentNullException(nameof(send));
+            _cosmeticId = cosmeticId ?? throw new ArgumentNullException(nameof(cosmeticId));
             _context = context;
         }
 
@@ -46,12 +54,14 @@ namespace Shooter.NetV2
             var saved = LoadSaved();
             if (saved == null)
             {
+                SendCosmeticOnly();
                 return;
             }
 
             if (!LoadoutSelectionAssets.TryCreate(_weapons.Loadout, _weapons.Catalog, saved, null, out var selection, out var reason))
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " the saved loadout is not sent: " + reason, _context);
+                SendCosmeticOnly();
                 return;
             }
 
@@ -59,6 +69,7 @@ namespace Shooter.NetV2
             if (reason != null)
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " the saved loadout is not sent: " + reason, _context);
+                SendCosmeticOnly();
                 return;
             }
 
@@ -150,8 +161,39 @@ namespace Shooter.NetV2
             _view.ShowSending();
         }
 
+        // 並びを送らない入り方でも相手に着けた体を見せるため、武器の無い要求で見た目だけを送る。サーバーはこの要求に答えないので待ちに積まない
+        private void SendCosmeticOnly()
+        {
+            var cosmeticId = CosmeticToSend();
+            if (cosmeticId.Length == 0)
+            {
+                return;
+            }
+
+            _request.WeaponIds.Clear();
+            _request.CosmeticId = cosmeticId;
+            if (_send(_request))
+            {
+                Debug.Log(LoadoutChoiceLog.RequestedCosmetic(cosmeticId), _context);
+            }
+        }
+
+        // 送れない長さの Id はゲームのカタログの誤りなので、要求ごと落とさず見た目だけを諦める
+        private string CosmeticToSend()
+        {
+            var id = _cosmeticId() ?? string.Empty;
+            if (System.Text.Encoding.UTF8.GetByteCount(id) > MatchProtocol.MaxContentIdBytes)
+            {
+                Debug.LogWarning(LoadoutChoiceLog.CosmeticTooLong(id, MatchProtocol.MaxContentIdBytes), _context);
+                return string.Empty;
+            }
+
+            return id;
+        }
+
         private bool Send(IReadOnlyList<string> weaponIds, int screenSession)
         {
+            _request.CosmeticId = CosmeticToSend();
             _request.WeaponIds.Clear();
             foreach (var id in weaponIds)
             {

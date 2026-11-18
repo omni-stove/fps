@@ -188,8 +188,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(
                 _storage.Text(ProfileStore.Slot),
                 Is.EqualTo(
-                    "{\"version\":4,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0,\"rating\":1000,"
-                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
+                    "{\"version\":5,\"xp\":780,\"kills\":4,\"assists\":1,\"deaths\":1,\"matches\":2,\"wins\":0,\"rating\":1000,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
         }
 
         [Test]
@@ -210,8 +210,8 @@ namespace Shooter.Tests.EditMode
                 Assert.That(
                     _storage.Text(ProfileStore.Slot),
                     Is.EqualTo(
-                        "{\"version\":4,\"xp\":1230,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":2,\"wins\":1,\"rating\":1516,"
-                        + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
+                        "{\"version\":5,\"xp\":1230,\"kills\":4,\"assists\":2,\"deaths\":1,\"matches\":2,\"wins\":1,\"rating\":1516,"
+                        + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
             }
             finally
             {

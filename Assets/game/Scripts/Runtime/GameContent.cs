@@ -225,6 +225,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("目くらましの覆いと耳鳴り。空なら Resources/Presentation/FlashOverlayCatalog、それも無ければ既定の色だけで覆う")]
         private FlashOverlayCatalog _flashOverlay;
 
+        [SerializeField, Tooltip("スキンの体と迷彩の材質 (見た目の visualId ごと)。空なら Resources/Presentation/CosmeticVisualCatalog、それも無ければ見た目を替えない")]
+        private CosmeticVisualCatalog _cosmeticVisuals;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -626,6 +629,12 @@ namespace Shooter.Runtime
         {
             get => _flashOverlay;
             set => _flashOverlay = value;
+        }
+
+        public CosmeticVisualCatalog CosmeticVisuals
+        {
+            get => _cosmeticVisuals;
+            set => _cosmeticVisuals = value;
         }
 
         public static GameContent Current

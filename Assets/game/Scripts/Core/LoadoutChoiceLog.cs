@@ -43,6 +43,23 @@ namespace Shooter.Core
                 + " reason=" + (string.IsNullOrEmpty(reason) ? "-" : reason);
         }
 
+        public static string RequestedCosmetic(string cosmeticId)
+        {
+            return Prefix + " request cosmetic=" + (string.IsNullOrEmpty(cosmeticId) ? "-" : cosmeticId);
+        }
+
+        public static string CosmeticTooLong(string cosmeticId, int maxBytes)
+        {
+            return Prefix + " the cosmetic '" + cosmeticId + "' is longer than " + maxBytes.ToString(CultureInfo.InvariantCulture)
+                + " bytes and is not sent";
+        }
+
+        public static string Cosmetic(ulong clientId, string cosmeticId)
+        {
+            return Prefix + " cosmetic client=" + clientId.ToString(CultureInfo.InvariantCulture)
+                + " id=" + (string.IsNullOrEmpty(cosmeticId) ? "-" : cosmeticId);
+        }
+
         public static string Answer(bool accepted, string reason)
         {
             return accepted

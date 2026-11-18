@@ -7,7 +7,7 @@ namespace Shooter.Core
 {
     public sealed class PlayerProfile : IEquatable<PlayerProfile>
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public const int OldestReadableVersion = 1;
 
@@ -23,6 +23,7 @@ namespace Shooter.Core
         private const string _meleeKillsKey = "meleeKills";
         private const string _playSecondsKey = "playSeconds";
         private const string _achievementsKey = "achievements";
+        private const string _cosmeticsKey = "cosmetics";
 
         private static readonly string[] _version1Keys = { _versionKey, _xpKey, _killsKey, _deathsKey, _matchesKey, _winsKey };
 
@@ -30,17 +31,28 @@ namespace Shooter.Core
 
         private static readonly string[] _version3Keys = { _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey, _ratingKey };
 
-        private static readonly string[] _keys =
+        private static readonly string[] _version4Keys =
         {
             _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey, _ratingKey,
             _headshotsKey, _meleeKillsKey, _playSecondsKey, _achievementsKey,
         };
 
+        private static readonly string[] _keys =
+        {
+            _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey, _ratingKey,
+            _headshotsKey, _meleeKillsKey, _playSecondsKey, _achievementsKey, _cosmeticsKey,
+        };
+
         private static readonly string[] _noAchievements = Array.Empty<string>();
+
+        private static readonly CosmeticKind[] _cosmeticKinds = (CosmeticKind[])Enum.GetValues(typeof(CosmeticKind));
 
         public static readonly PlayerProfile Empty = new PlayerProfile(0, 0, 0, 0, 0, 0);
 
         private readonly string[] _achievements;
+
+        // 種類ごとに 1 つだけ着けるので、CosmeticKind の並びの順に Id (着けていなければ null) を持つ。
+        private readonly string[] _cosmetics;
 
         public PlayerProfile(int xp, int kills, int deaths, int matches, int wins)
             : this(xp, kills, deaths, matches, wins, 0)
@@ -69,6 +81,24 @@ namespace Shooter.Core
             int meleeKills,
             int playSeconds,
             IReadOnlyList<string> achievements)
+            : this(xp, kills, deaths, matches, wins, assists, rating, headshots, meleeKills, playSeconds, achievements, null)
+        {
+        }
+
+        // 着けている Id がカタログにあるか・解けているかは確かめない。カタログはゲームが差し替えるので、読めない Id も消さずに残し、使う側が既定の見た目にする。
+        public PlayerProfile(
+            int xp,
+            int kills,
+            int deaths,
+            int matches,
+            int wins,
+            int assists,
+            int rating,
+            int headshots,
+            int meleeKills,
+            int playSeconds,
+            IReadOnlyList<string> achievements,
+            IReadOnlyDictionary<CosmeticKind, string> cosmetics)
         {
             RequireNonNegative(xp, nameof(xp));
             RequireNonNegative(kills, nameof(kills));
@@ -99,6 +129,7 @@ namespace Shooter.Core
             MeleeKills = meleeKills;
             PlaySeconds = playSeconds;
             _achievements = CopyAchievements(achievements);
+            _cosmetics = CopyCosmetics(cosmetics);
         }
 
         public int Version { get; }
@@ -136,20 +167,43 @@ namespace Shooter.Core
             return id != null && Array.IndexOf(_achievements, id) >= 0;
         }
 
+        public IReadOnlyDictionary<CosmeticKind, string> Cosmetics => CosmeticMap(_cosmetics);
+
+        // 着けていなければ null
+        public string EquippedCosmetic(CosmeticKind kind)
+        {
+            return _cosmetics[CosmeticIndex(kind)];
+        }
+
         public PlayerProfile WithRating(int rating)
         {
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, rating, Headshots, MeleeKills, PlaySeconds, _achievements);
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, rating, Headshots, MeleeKills, PlaySeconds, _achievements, Cosmetics);
         }
 
         // ProgressionLedger が数える項目だけを差し替え、実績の記録係が数える項目は持ち越す。
         public PlayerProfile WithRecord(int xp, int kills, int deaths, int matches, int wins, int assists)
         {
-            return new PlayerProfile(xp, kills, deaths, matches, wins, assists, Rating, Headshots, MeleeKills, PlaySeconds, _achievements);
+            return new PlayerProfile(xp, kills, deaths, matches, wins, assists, Rating, Headshots, MeleeKills, PlaySeconds, _achievements, Cosmetics);
         }
 
         public PlayerProfile WithStats(int headshots, int meleeKills, int playSeconds)
         {
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, headshots, meleeKills, playSeconds, _achievements);
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, headshots, meleeKills, playSeconds, _achievements, Cosmetics);
+        }
+
+        // null か空の Id で外す。外すのと着けるのを分けないのは、画面が選択肢の「無し」を null で渡すだけで済むため。
+        public PlayerProfile WithCosmetic(CosmeticKind kind, string cosmeticId)
+        {
+            var index = CosmeticIndex(kind);
+            var id = string.IsNullOrWhiteSpace(cosmeticId) ? null : cosmeticId.Trim();
+            if (string.Equals(_cosmetics[index], id, StringComparison.Ordinal))
+            {
+                return this;
+            }
+
+            var cosmetics = (string[])_cosmetics.Clone();
+            cosmetics[index] = id;
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, Headshots, MeleeKills, PlaySeconds, _achievements, CosmeticMap(cosmetics));
         }
 
         public PlayerProfile WithAchievement(string id)
@@ -163,7 +217,7 @@ namespace Shooter.Core
             var achievements = new string[_achievements.Length + 1];
             Array.Copy(_achievements, achievements, _achievements.Length);
             achievements[_achievements.Length] = trimmed;
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, Headshots, MeleeKills, PlaySeconds, achievements);
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, Headshots, MeleeKills, PlaySeconds, achievements, Cosmetics);
         }
 
         public string ToJson()
@@ -193,7 +247,29 @@ namespace Shooter.Core
                 SaveJson.AppendString(builder, _achievements[i]);
             }
 
-            builder.Append("]}");
+            builder.Append("],");
+            SaveJson.AppendString(builder, _cosmeticsKey);
+            builder.Append(":{");
+            var first = true;
+            for (var i = 0; i < _cosmeticKinds.Length; i++)
+            {
+                if (_cosmetics[i] == null)
+                {
+                    continue;
+                }
+
+                if (!first)
+                {
+                    builder.Append(',');
+                }
+
+                first = false;
+                SaveJson.AppendString(builder, _cosmeticKinds[i].ToString());
+                builder.Append(':');
+                SaveJson.AppendString(builder, _cosmetics[i]);
+            }
+
+            builder.Append("}}");
             return builder.ToString();
         }
 
@@ -247,9 +323,12 @@ namespace Shooter.Core
             var meleeKills = version < 4 ? 0 : ReadInt(root, _meleeKillsKey);
             var playSeconds = version < 4 ? 0 : ReadInt(root, _playSecondsKey);
             var achievements = version < 4 ? null : ReadIds(root, _achievementsKey);
+
+            // 版 4 までは見た目を着けられなかったので、何も着けていない状態から始める。
+            var cosmetics = version < 5 ? null : ReadCosmetics(root, _cosmeticsKey);
             try
             {
-                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, rating, headshots, meleeKills, playSeconds, achievements);
+                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, rating, headshots, meleeKills, playSeconds, achievements, cosmetics);
             }
             catch (ArgumentException e)
             {
@@ -271,7 +350,8 @@ namespace Shooter.Core
                 && Headshots == other.Headshots
                 && MeleeKills == other.MeleeKills
                 && PlaySeconds == other.PlaySeconds
-                && SameAchievements(_achievements, other._achievements);
+                && SameAchievements(_achievements, other._achievements)
+                && SameAchievements(_cosmetics, other._cosmetics);
         }
 
         public override bool Equals(object obj)
@@ -287,9 +367,15 @@ namespace Shooter.Core
                 achievements.Add(id, StringComparer.Ordinal);
             }
 
+            var cosmetics = new HashCode();
+            foreach (var id in _cosmetics)
+            {
+                cosmetics.Add(id == null ? 0 : StringComparer.Ordinal.GetHashCode(id));
+            }
+
             return HashCode.Combine(
                 HashCode.Combine(Xp, Kills, Assists, Deaths, Matches, Wins, Rating),
-                HashCode.Combine(Headshots, MeleeKills, PlaySeconds, achievements.ToHashCode()));
+                HashCode.Combine(Headshots, MeleeKills, PlaySeconds, achievements.ToHashCode(), cosmetics.ToHashCode()));
         }
 
         public override string ToString()
@@ -310,6 +396,8 @@ namespace Shooter.Core
                     return _version2Keys;
                 case 3:
                     return _version3Keys;
+                case 4:
+                    return _version4Keys;
                 default:
                     return _keys;
             }
@@ -335,6 +423,80 @@ namespace Shooter.Core
             }
 
             return copy;
+        }
+
+        private static string[] CopyCosmetics(IReadOnlyDictionary<CosmeticKind, string> cosmetics)
+        {
+            var copy = new string[_cosmeticKinds.Length];
+            if (cosmetics == null)
+            {
+                return copy;
+            }
+
+            foreach (var pair in cosmetics)
+            {
+                var index = CosmeticIndex(pair.Key);
+                copy[index] = string.IsNullOrWhiteSpace(pair.Value) ? null : pair.Value.Trim();
+            }
+
+            return copy;
+        }
+
+        private static Dictionary<CosmeticKind, string> CosmeticMap(string[] cosmetics)
+        {
+            var map = new Dictionary<CosmeticKind, string>();
+            for (var i = 0; i < _cosmeticKinds.Length; i++)
+            {
+                if (cosmetics[i] != null)
+                {
+                    map[_cosmeticKinds[i]] = cosmetics[i];
+                }
+            }
+
+            return map;
+        }
+
+        private static int CosmeticIndex(CosmeticKind kind)
+        {
+            var index = Array.IndexOf(_cosmeticKinds, kind);
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown cosmetic kind");
+            }
+
+            return index;
+        }
+
+        private static Dictionary<CosmeticKind, string> ReadCosmetics(Dictionary<string, object> fields, string key)
+        {
+            if (!fields.TryGetValue(key, out var value))
+            {
+                throw new FormatException($"invalid profile data: missing '{key}'");
+            }
+
+            if (!(value is Dictionary<string, object> entries))
+            {
+                throw new FormatException($"invalid profile data: '{key}' must be an object");
+            }
+
+            var cosmetics = new Dictionary<CosmeticKind, string>();
+            foreach (var entry in entries)
+            {
+                // 大文字小文字を区別し、数字も受けないのは、書くときの名前 (ToJson) と 1 対 1 にして、壊れた保存を黙って読み替えないため。
+                if (!Enum.TryParse<CosmeticKind>(entry.Key, false, out var kind) || !string.Equals(kind.ToString(), entry.Key, StringComparison.Ordinal))
+                {
+                    throw new FormatException($"invalid profile data: '{key}' has the unknown kind '{entry.Key}'");
+                }
+
+                if (!(entry.Value is string id) || string.IsNullOrWhiteSpace(id))
+                {
+                    throw new FormatException($"invalid profile data: '{key}.{entry.Key}' must be a non-empty string");
+                }
+
+                cosmetics[kind] = id;
+            }
+
+            return cosmetics;
         }
 
         private static string RequireId(string id, string name)

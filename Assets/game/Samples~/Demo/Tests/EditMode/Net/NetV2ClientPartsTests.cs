@@ -11,6 +11,9 @@ namespace Shooter.Net.Tests
 {
     public sealed class NetV2ClientPartsTests
     {
+        // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
+        private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
+
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
         private MatchClient _client;
@@ -21,6 +24,7 @@ namespace Shooter.Net.Tests
         {
             _logs.Clear();
             _decided.Clear();
+            new BlockListStore(BlocksKey).Delete();
             _client = new MatchClient(new SilentTransport(), "0.2.0", RejoinKey.NewDeviceKey(), "tester", _logs.Add);
         }
 
@@ -36,6 +40,8 @@ namespace Shooter.Net.Tests
             }
 
             _client.Dispose();
+            new BlockListStore(BlocksKey).Delete();
+            GameSignals.BlockControl.Clear();
             GameSignals.MapVote.Clear();
             GameSignals.MapVoteSender.Clear();
             GameSignals.Chat.Clear();
@@ -48,12 +54,13 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void WithoutVoiceTheListHasTheMatchAndCombatParts()
+        public void WithoutVoiceTheListHasTheBlockAndTheMatchAndCombatParts()
         {
             _parts = NetV2ClientParts.Create(Context(null));
 
             Assert.That(_parts.Select(p => p.GetType()), Is.EqualTo(new[]
             {
+                typeof(NetV2BlockPart),
                 typeof(NetV2MinimapPart),
                 typeof(NetV2ChatPart),
                 typeof(NetV2MapVotePart),
@@ -75,6 +82,7 @@ namespace Shooter.Net.Tests
 
             Assert.That(_parts.Select(p => p.GetType()), Is.EqualTo(new[]
             {
+                typeof(NetV2BlockPart),
                 typeof(NetV2MinimapPart),
                 typeof(NetV2ChatPart),
                 typeof(NetV2MapVotePart),
@@ -86,7 +94,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2KillCamPart),
                 typeof(NetV2VoicePart),
             }));
-            Assert.That(((NetV2VoicePart)_parts[9]).Voice, Is.Not.Null);
+            Assert.That(((NetV2VoicePart)_parts[10]).Voice, Is.Not.Null);
         }
 
         [Test]
@@ -156,9 +164,77 @@ namespace Shooter.Net.Tests
             var voice = new FakeVoiceSession();
             _parts = NetV2ClientParts.Create(Context(voice));
 
-            _parts[9].Dispose();
+            _parts[10].Dispose();
 
             Assert.That(voice.Disposed, Is.True);
+        }
+
+        [Test]
+        public void TheBlockPartPublishesTheControlOnTheFirstSnapshotAndClearsItOnDispose()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+            var block = (NetV2BlockPart)_parts[0];
+
+            Assert.That(GameSignals.BlockControl.HasValue, Is.False, "nothing is published before the match starts");
+
+            block.Apply(new SnapshotMessage());
+
+            Assert.That(GameSignals.BlockControl.Value, Is.SameAs(block.BlockControl));
+
+            block.Dispose();
+
+            Assert.That(GameSignals.BlockControl.HasValue, Is.False);
+        }
+
+        [Test]
+        public void BlockingThroughTheSignalDropsThatSendersChatAndSavesTheUserId()
+        {
+            var roster = new VoiceRoster();
+            var context = Context(null);
+            context.VoiceRoster = roster;
+            _parts = NetV2ClientParts.Create(context);
+            var message = new VoiceRosterMessage();
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
+            _parts.First(part => part.Handle(message));
+            var chat = (NetV2ChatPart)_parts[2];
+            chat.Handle(new ChatMessage { SenderId = 2, Text = "before" });
+            chat.Handle(new ChatMessage { SenderId = 3, Text = "other" });
+            var heard = 0;
+            var block = (NetV2BlockPart)_parts[0];
+            block.BlockControl.Changed += () => heard++;
+
+            block.BlockControl.SetBlocked(2, true);
+            chat.Handle(new ChatMessage { SenderId = 2, Text = "after" });
+
+            Assert.That(heard, Is.EqualTo(1));
+            Assert.That(block.BlockControl.IsBlocked(2), Is.True);
+            Assert.That(block.BlockControl.IsMuted(2), Is.False, "blocking does not mute the voice");
+            Assert.That(chat.Chat.Lines.Select(line => line.Text), Is.EqualTo(new[] { "other" }), "the shown line is removed and the new one dropped");
+            Assert.That(
+                new BlockListStore(BlocksKey).Load().Blocked,
+                Is.EqualTo(new[] { "0123456789abcdef0123456789abcdef" }),
+                "a reopened client reads the block back");
+        }
+
+        [Test]
+        public void ABlockSavedEarlierAppliesToTheSameUserInTheNextMatch()
+        {
+            var saved = new BlockList();
+            saved.SetBlocked("0123456789abcdef0123456789abcdef", true);
+            new BlockListStore(BlocksKey).Save(saved);
+            var roster = new VoiceRoster();
+            var context = Context(null);
+            context.VoiceRoster = roster;
+            _parts = NetV2ClientParts.Create(context);
+            var message = new VoiceRosterMessage();
+            message.Add(7, "0123456789abcdef0123456789abcdef", true);
+            _parts.First(part => part.Handle(message));
+            var chat = (NetV2ChatPart)_parts[2];
+
+            chat.Handle(new ChatMessage { SenderId = 7, Text = "hi" });
+
+            Assert.That(((NetV2BlockPart)_parts[0]).BlockControl.IsBlocked(7), Is.True);
+            Assert.That(chat.Chat.Lines, Is.Empty);
         }
 
         [Test]
@@ -169,7 +245,7 @@ namespace Shooter.Net.Tests
             context.VoiceRoster = roster;
             _parts = NetV2ClientParts.Create(context);
             var message = new VoiceRosterMessage();
-            message.Add(2, "0123456789abcdef0123456789abcdef");
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
 
             var taker = _parts.FirstOrDefault(part => part.Handle(message));
 
@@ -179,11 +255,20 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void WithoutVoiceNoPartTakesTheRoster()
+        public void WithoutVoiceTheBlockPartTakesTheRoster()
         {
-            _parts = NetV2ClientParts.Create(Context(null));
+            var roster = new VoiceRoster();
+            var context = Context(null);
+            context.VoiceRoster = roster;
+            _parts = NetV2ClientParts.Create(context);
+            var message = new VoiceRosterMessage();
+            message.Add(2, "0123456789abcdef0123456789abcdef", true);
 
-            Assert.That(_parts.Any(part => part.Handle(new VoiceRosterMessage())), Is.False);
+            var taker = _parts.FirstOrDefault(part => part.Handle(message));
+
+            Assert.That(taker, Is.InstanceOf<NetV2BlockPart>());
+            Assert.That(roster.TryGetPlayerId("0123456789abcdef0123456789abcdef", out var playerId), Is.True);
+            Assert.That(playerId, Is.EqualTo(2));
         }
 
         [Test]
@@ -229,6 +314,7 @@ namespace Shooter.Net.Tests
                 Voice = voice,
                 VoiceSettings = new VoiceSettingsStore("Shooter.Tests.NetV2ClientParts.Voice"),
                 PushToTalkHeld = () => false,
+                Blocks = new BlockListStore(BlocksKey),
                 Melee = MeleeSpec.Default,
                 Streaks = StreakSpec.Default,
             };

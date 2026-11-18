@@ -7,6 +7,7 @@ namespace Shooter.NetV2
     public sealed class VoiceRoster
     {
         private readonly Dictionary<string, int> _players = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _verified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public event Action Changed;
 
@@ -14,7 +15,7 @@ namespace Shooter.NetV2
 
         public int Count => _players.Count;
 
-        public void Set(string productUserId, int playerId)
+        public void Set(string productUserId, int playerId, bool verified)
         {
             if (string.IsNullOrEmpty(productUserId))
             {
@@ -26,12 +27,13 @@ namespace Shooter.NetV2
                 throw new ArgumentOutOfRangeException(nameof(playerId), playerId, "a player id must not be negative");
             }
 
-            if (_players.TryGetValue(productUserId, out var current) && current == playerId)
+            if (_players.TryGetValue(productUserId, out var current) && current == playerId && _verified.Contains(productUserId) == verified)
             {
                 return;
             }
 
             _players[productUserId] = playerId;
+            SetVerified(productUserId, verified);
             Changed?.Invoke();
         }
 
@@ -39,6 +41,7 @@ namespace Shooter.NetV2
         {
             if (!string.IsNullOrEmpty(productUserId) && _players.Remove(productUserId))
             {
+                _verified.Remove(productUserId);
                 Changed?.Invoke();
             }
         }
@@ -51,6 +54,7 @@ namespace Shooter.NetV2
             }
 
             _players.Clear();
+            _verified.Clear();
             Changed?.Invoke();
         }
 
@@ -69,9 +73,11 @@ namespace Shooter.NetV2
             }
 
             _players.Clear();
+            _verified.Clear();
             for (var i = 0; i < message.Count; i++)
             {
                 _players[message.ProductUserId(i)] = message.PlayerId(i);
+                SetVerified(message.ProductUserId(i), message.Verified(i));
             }
 
             Changed?.Invoke();
@@ -83,6 +89,23 @@ namespace Shooter.NetV2
             return !string.IsNullOrEmpty(productUserId) && _players.TryGetValue(productUserId, out playerId);
         }
 
+        public bool IsVerified(string productUserId)
+        {
+            return !string.IsNullOrEmpty(productUserId) && _verified.Contains(productUserId);
+        }
+
+        private void SetVerified(string productUserId, bool verified)
+        {
+            if (verified)
+            {
+                _verified.Add(productUserId);
+            }
+            else
+            {
+                _verified.Remove(productUserId);
+            }
+        }
+
         private bool Same(VoiceRosterMessage message)
         {
             if (message.Count != _players.Count)
@@ -92,7 +115,8 @@ namespace Shooter.NetV2
 
             for (var i = 0; i < message.Count; i++)
             {
-                if (!_players.TryGetValue(message.ProductUserId(i), out var playerId) || playerId != message.PlayerId(i))
+                if (!_players.TryGetValue(message.ProductUserId(i), out var playerId) || playerId != message.PlayerId(i)
+                    || _verified.Contains(message.ProductUserId(i)) != message.Verified(i))
                 {
                     return false;
                 }

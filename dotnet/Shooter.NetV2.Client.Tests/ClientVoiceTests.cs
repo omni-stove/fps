@@ -32,9 +32,9 @@ namespace Shooter.NetV2.Tests
         {
             _session = new FakeVoiceSession();
             _roster = new VoiceRoster();
-            _roster.Set(_self, _selfId);
-            _roster.Set(_ally, _allyId);
-            _roster.Set(_enemy, _enemyId);
+            _roster.Set(_self, _selfId, true);
+            _roster.Set(_ally, _allyId, true);
+            _roster.Set(_enemy, _enemyId, true);
             _voice = new ClientVoice(_session, _roster);
             _statuses = new List<VoiceStatus?>();
             _voice.StatusChanged += _statuses.Add;
@@ -308,7 +308,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_session.Speakers, Is.Empty);
             Assert.That(_voice.Status.Value.SpeakingIds, Is.Empty);
 
-            _roster.Set(_stranger, 4);
+            _roster.Set(_stranger, 4, true);
 
             Assert.That(_session.WantsReceiving(_stranger), Is.True);
             Assert.That(_voice.Status.Value.SpeakingIds, Is.EqualTo(_unmappedOnly));
@@ -348,6 +348,81 @@ namespace Shooter.NetV2.Tests
             Assert.That(_session.IsDisposed, Is.True);
             Assert.That(_statuses[_statuses.Count - 1], Is.Null);
             Assert.Throws<ObjectDisposedException>(() => _voice.Enter(_lobby));
+        }
+
+        [Test]
+        public void AMutedAllyIsNotReceivedNorShownAsSpeaking()
+        {
+            var session = new FakeVoiceSession();
+            var blocks = Blocks(new BlockList());
+            using (var voice = new ClientVoice(session, _roster, blocks))
+            {
+                voice.Enter(_lobby);
+                session.AnswerJoin(null);
+                session.Connect();
+                voice.Apply(StartingTeams(), _selfId);
+                session.Speak(_ally, true);
+                Assert.That(voice.Status.Value.SpeakingIds, Is.EqualTo(_allyOnly));
+
+                blocks.SetMuted(_allyId, true);
+
+                Assert.That(session.WantsReceiving(_ally), Is.False);
+                Assert.That(voice.Status.Value.SpeakingIds, Is.Empty);
+
+                blocks.SetMuted(_allyId, false);
+
+                Assert.That(session.WantsReceiving(_ally), Is.True);
+            }
+        }
+
+        [Test]
+        public void AUserMutedInAnEarlierMatchIsNotReceivedFromTheStart()
+        {
+            var session = new FakeVoiceSession();
+            var saved = new BlockList();
+            saved.SetMuted(_ally.ToUpperInvariant(), true);
+            using (var voice = new ClientVoice(session, _roster, Blocks(saved)))
+            {
+                voice.Apply(StartingTeams(), _selfId);
+
+                Assert.That(session.WantsReceiving(_ally), Is.False);
+                Assert.That(session.WantsReceiving(_self), Is.True, "the local player is never muted");
+            }
+        }
+
+        [Test]
+        public void BlockingDoesNotMuteTheVoice()
+        {
+            var session = new FakeVoiceSession();
+            var blocks = Blocks(new BlockList());
+            using (var voice = new ClientVoice(session, _roster, blocks))
+            {
+                voice.Apply(StartingTeams(), _selfId);
+
+                blocks.SetBlocked(_allyId, true);
+
+                Assert.That(session.WantsReceiving(_ally), Is.True);
+            }
+        }
+
+        [Test]
+        public void DisposingStopsListeningToTheBlocks()
+        {
+            var session = new FakeVoiceSession();
+            var blocks = Blocks(new BlockList());
+            var voice = new ClientVoice(session, _roster, blocks);
+            voice.Apply(StartingTeams(), _selfId);
+            voice.Dispose();
+            var requests = session.ReceivingRequests.Count;
+
+            blocks.SetMuted(_allyId, true);
+
+            Assert.That(session.ReceivingRequests.Count, Is.EqualTo(requests));
+        }
+
+        private ClientBlocks Blocks(BlockList list)
+        {
+            return new ClientBlocks(list, _roster, () => _selfId, _ => { }, _ => { });
         }
 
         // 話している人から受けるのを切った人を除くのは、VoiceSession と同じにするため。

@@ -18,19 +18,20 @@ namespace Shooter.Runtime
                 seconds);
         }
 
-        public static string AirstrikeCalled(string user, Vector3 center, int strikes, float intervalSeconds, float spreadRadius)
+        public static string AirstrikeCalled(string user, Vector3 center, float headingDegrees, int strikes, float intervalSeconds, float lineLength)
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} airstrike called user={1} at=({2:0.0}, {3:0.0}, {4:0.0}) strikes={5} interval={6:0.00} spread={7:0.0}",
+                "{0} airstrike called user={1} at=({2:0.0}, {3:0.0}, {4:0.0}) heading={5:0.0} strikes={6} interval={7:0.00} line={8:0.0}",
                 Tag,
                 Token(user),
                 center.x,
                 center.y,
                 center.z,
+                headingDegrees,
                 strikes,
                 intervalSeconds,
-                spreadRadius);
+                lineLength);
         }
 
         public static string AirstrikeStrike(string user, int strike, int strikes, GrenadeExplosion result)

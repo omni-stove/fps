@@ -15,7 +15,7 @@ namespace Shooter.Tests.EditMode
 
         private static readonly ExplosionSpec _spec = new ExplosionSpec(GrenadeSpec.Default.Explosion, 50);
 
-        // 地面を探す線が届かないよう、何も無い高さで爆発させる。
+        // 落ちる先を探す線が届かないよう、何も無い高さで爆発させる。
         private static readonly Vector3 _sky = new Vector3(0f, 50f, 0f);
 
         private readonly List<GameObject> _objects = new List<GameObject>();
@@ -53,9 +53,10 @@ namespace Shooter.Tests.EditMode
         {
             var airstrike = User();
 
-            LogAssert.Expect(LogType.Log, "[Streak] airstrike called user=User at=(0.0, 50.0, 0.0) strikes=3 interval=0.50 spread=4.0");
-            airstrike.Call(_sky, 3, 0.5f, 4f, _spec, WeaponId, new System.Random(7));
+            LogAssert.Expect(LogType.Log, "[Streak] airstrike called user=User at=(0.0, 50.0, 0.0) heading=0.0 strikes=3 interval=0.50 line=8.0");
+            var center = airstrike.Call(_sky, 0f, Spec(3, 0.5f, spread: 4f, lineLength: 8f), WeaponId, new System.Random(7));
 
+            Assert.That(center, Is.EqualTo(_sky), "nothing is under the sky to land on");
             Assert.That(_explosions, Is.Empty, "the first strike waits one interval");
             Assert.That(airstrike.PendingCount, Is.EqualTo(3));
 
@@ -76,54 +77,51 @@ namespace Shooter.Tests.EditMode
         public void ALateTickDetonatesEveryStrikeThatIsDueInOrder()
         {
             var airstrike = User();
-            airstrike.Call(_sky, 4, 1f, 4f, _spec, WeaponId, new System.Random(3));
+            var spec = Spec(4, 1f, spread: 4f, lineLength: 12f);
+            airstrike.Call(_sky, 30f, spec, WeaponId, new System.Random(3));
 
             Assert.That(airstrike.Tick(2.5f), Is.EqualTo(2));
             Assert.That(airstrike.PendingCount, Is.EqualTo(2));
 
-            var expected = Scatter(_sky, 4f, new System.Random(3), 4);
+            var expected = Shells(_sky, 30f, spec, new System.Random(3));
             Assert.That(_explosions[0].Center, Is.EqualTo(expected[0]));
             Assert.That(_explosions[1].Center, Is.EqualTo(expected[1]));
         }
 
         [Test]
-        public void TheStrikesLandInsideTheSpreadWhereTheRandomPutsThem()
+        public void TheStrikesFallAlongTheHeadingFromTheBackEnd()
         {
             var airstrike = User();
-            const float spread = 6f;
-            const int strikes = 8;
+            const int strikes = 5;
 
-            airstrike.Call(_sky, strikes, 0f, spread, _spec, WeaponId, new System.Random(42));
+            airstrike.Call(_sky, 90f, Spec(strikes, 0f, spread: 0f, lineLength: 20f), WeaponId, new System.Random(42));
 
-            var expected = Scatter(_sky, spread, new System.Random(42), strikes);
             Assert.That(_explosions.Count, Is.EqualTo(strikes), "with no interval every strike lands at once");
             for (var i = 0; i < strikes; i++)
             {
                 var center = _explosions[i].Center;
-                Assert.That(center, Is.EqualTo(expected[i]), "the same seed picks the same spots");
+                Assert.That(center.x, Is.EqualTo(-10f + (i * 5f)).Within(1e-4f), "heading 90 flies toward +X, so the first strike lands at the -X end");
                 Assert.That(center.y, Is.EqualTo(_sky.y));
-                Assert.That(new Vector2(center.x - _sky.x, center.z - _sky.z).magnitude, Is.LessThanOrEqualTo(spread + 1e-4f));
+                Assert.That(center.z, Is.EqualTo(_sky.z).Within(1e-4f));
             }
         }
 
         [Test]
-        public void ScatterPointStaysInTheCircleAndFollowsTheSeed()
+        public void TheSpreadMovesEachStrikeOffTheLineByTheSeed()
         {
-            var first = new System.Random(11);
-            var second = new System.Random(11);
-            var center = new Vector3(3f, 2f, -4f);
+            var airstrike = User();
+            const float spread = 3f;
+            var spec = Spec(6, 0f, spread: spread, lineLength: 25f);
 
-            for (var i = 0; i < 100; i++)
+            airstrike.Call(_sky, 0f, spec, WeaponId, new System.Random(42));
+
+            var expected = Shells(_sky, 0f, spec, new System.Random(42));
+            for (var i = 0; i < expected.Length; i++)
             {
-                var point = AirstrikeReward.ScatterPoint(center, 5f, first);
-                Assert.That(point, Is.EqualTo(AirstrikeReward.ScatterPoint(center, 5f, second)));
-                Assert.That(point.y, Is.EqualTo(center.y));
-                Assert.That(new Vector2(point.x - center.x, point.z - center.z).magnitude, Is.LessThanOrEqualTo(5f + 1e-4f));
+                var onLine = AirstrikeLine.PointOnLine(_sky.ToNumerics(), 0f, 25f, i, 6).ToUnity();
+                Assert.That(_explosions[i].Center, Is.EqualTo(expected[i]), "the same seed picks the same spots");
+                Assert.That(Vector3.Distance(_explosions[i].Center, onLine), Is.LessThanOrEqualTo(spread + 1e-4f));
             }
-
-            Assert.That(AirstrikeReward.ScatterPoint(center, 0f, first), Is.EqualTo(center));
-            Assert.Throws<ArgumentNullException>(() => AirstrikeReward.ScatterPoint(center, 1f, null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => AirstrikeReward.ScatterPoint(center, -1f, first));
         }
 
         [Test]
@@ -133,7 +131,7 @@ namespace Shooter.Tests.EditMode
             var target = Target("Target", new Vector3(0f, 1f, 1.5f));
 
             LogAssert.Expect(LogType.Log, "[Streak] airstrike strike=1/1 user=User at=(0.0, 0.1, 0.0) damaged=1 killed=1");
-            airstrike.Call(new Vector3(0f, 0.1f, 0f), 1, 0f, 0f, _spec, WeaponId, new System.Random(1));
+            airstrike.Call(new Vector3(0f, 0.1f, 0f), 0f, Spec(1, 0f, dropHeight: 0.5f), WeaponId, new System.Random(1));
 
             Assert.That(target.IsDead, Is.True);
             Assert.That(_kills.Count, Is.EqualTo(1));
@@ -143,7 +141,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void AStrikeIsPutOnTheGroundUnderIt()
+        public void AStrikeIsPutOnTheGroundUnderTheChosenSpot()
         {
             var airstrike = User();
             var floor = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
@@ -151,39 +149,37 @@ namespace Shooter.Tests.EditMode
             floor.transform.localScale = new Vector3(20f, 1f, 20f);
             Physics.SyncTransforms();
 
-            airstrike.Call(new Vector3(0f, 0.5f, 0f), 1, 0f, 0f, _spec, WeaponId, new System.Random(1));
+            var center = airstrike.Call(new Vector3(0f, 3f, 0f), 0f, Spec(1, 0f, dropHeight: 10f), WeaponId, new System.Random(1));
 
             var onGround = ImpactResolver.DetonationPoint(System.Numerics.Vector3.Zero, System.Numerics.Vector3.UnitY).ToUnity();
+            Assert.That(Vector3.Distance(center, onGround), Is.LessThan(1e-4f), "the height chosen on the map is replaced by the ground");
             Assert.That(Vector3.Distance(_explosions[0].Center, onGround), Is.LessThan(1e-4f));
         }
 
         [Test]
-        public void CallAtAimCentresOnWhatTheAimHits()
+        public void AStrikeStopsOnARoofOverTheChosenSpot()
         {
             var airstrike = User();
-            airstrike.transform.position = new Vector3(0f, 1f, 0f);
-            var wall = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
-            wall.transform.position = new Vector3(0f, 1f, 10f);
-            wall.transform.localScale = new Vector3(4f, 4f, 0.5f);
+            var roof = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            roof.transform.position = new Vector3(0f, 4.5f, 0f);
+            roof.transform.localScale = new Vector3(6f, 1f, 6f);
             Physics.SyncTransforms();
 
-            var center = airstrike.CallAtAim(100f, 1, 5f, 0f, _spec, WeaponId, new System.Random(1));
+            airstrike.Call(new Vector3(0f, 0f, 0f), 0f, Spec(1, 0f, dropHeight: 20f), WeaponId, new System.Random(1));
 
-            Assert.That(center.z, Is.EqualTo(9.75f).Within(1e-3f), "the face of the wall");
-            Assert.That(airstrike.PendingCount, Is.EqualTo(1));
-            Assert.That(airstrike.Cancel(), Is.EqualTo(1));
-            Assert.That(airstrike.Tick(10f), Is.Zero, "a cancelled strike does not land");
+            var onRoof = ImpactResolver.DetonationPoint(new System.Numerics.Vector3(0f, 5f, 0f), System.Numerics.Vector3.UnitY).ToUnity();
+            Assert.That(Vector3.Distance(_explosions[0].Center, onRoof), Is.LessThan(1e-4f), "bombs from above hit the roof first");
         }
 
         [Test]
-        public void CallAtAimCentresAtTheRangeWhenNothingIsHit()
+        public void ACancelledStrikeDoesNotLand()
         {
             var airstrike = User();
-            airstrike.transform.position = new Vector3(0f, 1f, 0f);
+            airstrike.Call(_sky, 0f, Spec(2, 5f), WeaponId, new System.Random(1));
 
-            var center = airstrike.CallAtAim(80f, 1, 5f, 0f, _spec, WeaponId, new System.Random(1));
-
-            Assert.That(Vector3.Distance(center, new Vector3(0f, 1f, 80f)), Is.LessThan(1e-3f));
+            Assert.That(airstrike.Cancel(), Is.EqualTo(2));
+            Assert.That(airstrike.Tick(20f), Is.Zero);
+            Assert.That(_explosions, Is.Empty);
         }
 
         [Test]
@@ -191,24 +187,26 @@ namespace Shooter.Tests.EditMode
         {
             var airstrike = User();
             var random = new System.Random(1);
+            var spec = Spec(1, 1f);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, 0, 1f, 1f, _spec, WeaponId, random));
-            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, 1, -1f, 1f, _spec, WeaponId, random));
-            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, 1, float.NaN, 1f, _spec, WeaponId, random));
-            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, 1, 1f, -1f, _spec, WeaponId, random));
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => airstrike.Call(new Vector3(float.NaN, 0f, 0f), 1, 1f, 1f, _spec, WeaponId, random));
-            Assert.Throws<ArgumentNullException>(() => airstrike.Call(_sky, 1, 1f, 1f, null, WeaponId, random));
-            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.CallAtAim(0f, 1, 1f, 1f, _spec, WeaponId, random));
+            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(new Vector3(float.NaN, 0f, 0f), 0f, spec, WeaponId, random));
+            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, float.NaN, spec, WeaponId, random));
+            Assert.Throws<ArgumentOutOfRangeException>(() => airstrike.Call(_sky, float.PositiveInfinity, spec, WeaponId, random));
+            Assert.Throws<ArgumentNullException>(() => airstrike.Call(_sky, 0f, null, WeaponId, random));
             Assert.That(airstrike.PendingCount, Is.Zero);
         }
 
-        private static Vector3[] Scatter(Vector3 center, float spread, System.Random random, int count)
+        private static StreakAirstrikeSpec Spec(int strikes, float intervalSeconds, float spread = 0f, float lineLength = 0f, float dropHeight = 1f)
         {
-            var points = new Vector3[count];
-            for (var i = 0; i < count; i++)
+            return new StreakAirstrikeSpec(strikes, intervalSeconds, spread, _spec, StreakAirstrikeSpec.DefaultRange, lineLength, dropHeight);
+        }
+
+        private static Vector3[] Shells(Vector3 center, float heading, StreakAirstrikeSpec spec, System.Random random)
+        {
+            var points = new Vector3[spec.ShellCount];
+            for (var i = 0; i < points.Length; i++)
             {
-                points[i] = AirstrikeReward.ScatterPoint(center, spread, random);
+                points[i] = AirstrikeLine.ShellPoint(center.ToNumerics(), heading, spec, i, random).ToUnity();
             }
 
             return points;

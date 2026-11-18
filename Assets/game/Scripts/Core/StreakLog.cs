@@ -57,6 +57,30 @@ namespace Shooter.Core
             return $"{LogTag} id={id} use refused reward={rewardId} missing={missing}";
         }
 
+        public static string TargetingStarted(string id, string rewardId)
+        {
+            return $"{LogTag} id={id} targeting started reward={rewardId}";
+        }
+
+        public static string TargetingConfirmed(string id, StreakTargetingStatus status)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} id={1} targeting confirmed reward={2} at=({3:0.0}, {4:0.0}, {5:0.0}) heading={6:0.0}",
+                LogTag,
+                id,
+                status.RewardId,
+                status.Target.X,
+                status.Target.Y,
+                status.Target.Z,
+                status.HeadingDegrees);
+        }
+
+        public static string TargetingCancelled(string id, string rewardId, string reason)
+        {
+            return $"{LogTag} id={id} targeting cancelled reward={rewardId} reason={reason}";
+        }
+
         private static string Counts(StreakStatus status)
         {
             return "kills=" + status.Kills.ToString(CultureInfo.InvariantCulture) + " ready=" + status.ReadyCount.ToString(CultureInfo.InvariantCulture);

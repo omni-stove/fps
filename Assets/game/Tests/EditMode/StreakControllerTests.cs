@@ -24,6 +24,26 @@ namespace Shooter.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            // Edit Mode では OnDestroy が呼ばれず、StreakTargeting が作った見下ろすカメラと印が残るので、ここで消す
+            foreach (var go in _objects)
+            {
+                var targeting = go != null ? go.GetComponent<StreakTargeting>() : null;
+                if (targeting == null)
+                {
+                    continue;
+                }
+
+                if (targeting.ViewCamera != null)
+                {
+                    Object.DestroyImmediate(targeting.ViewCamera.gameObject);
+                }
+
+                if (targeting.Marker != null)
+                {
+                    Object.DestroyImmediate(targeting.Marker);
+                }
+            }
+
             foreach (var go in _objects)
             {
                 if (go != null)
@@ -146,23 +166,132 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void UsingTheAirstrikeCallsTheConfiguredStrikes()
+        public void UsingTheAirstrikeStartsChoosingAndKeepsTheRewardUntilConfirmed()
         {
-            var spec = new StreakSpec(
-                new[] { new StreakReward("airstrike", "streak.airstrike", 1) },
-                airstrike: new StreakAirstrikeSpec(shellCount: 3, intervalSeconds: 1f, spread: 2f, range: 30f));
-            var streak = Player(spec, side: 0);
+            var streak = Player(AirstrikeSpec(), side: 0);
+            var airstrike = streak.gameObject.AddComponent<AirstrikeReward>();
+            airstrike.Clock = () => _now;
+            Kill(streak, Body("Killed", side: 1));
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player targeting started reward=airstrike");
+            Assert.That(streak.TryUse(), Is.True);
+
+            Assert.That(streak.IsTargeting, Is.True);
+            Assert.That(streak.TryUse(), Is.False, "a second press while choosing does not start again");
+            Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }), "the slot waits for the choice");
+            Assert.That(airstrike.PendingCount, Is.Zero);
+            var shown = GameSignals.StreakTargeting.Value;
+            Assert.That(shown.HasValue, Is.True);
+            Assert.That(shown.Value.RewardId, Is.EqualTo("airstrike"));
+            Assert.That(shown.Value.DisplayNameKey, Is.EqualTo("streak.airstrike"));
+            Assert.That(shown.Value.Target, Is.EqualTo(new System.Numerics.Vector3(0f, 1f, 0f)), "the aim starts under the user");
+            Assert.That(shown.Value.Range, Is.EqualTo(30f));
+            Assert.That(shown.Value.LineLength, Is.EqualTo(10f));
+
+            var view = streak.GetComponent<StreakTargeting>().ViewCamera;
+            Assert.That(view, Is.Not.Null);
+            Assert.That(view.gameObject.activeSelf, Is.True);
+            Assert.That(view.orthographic, Is.True);
+            Assert.That(view.orthographicSize, Is.EqualTo(30f * 1.15f).Within(1e-4f));
+            Assert.That(view.transform.position, Is.EqualTo(new Vector3(0f, 1f + StreakTargetingSpec.DefaultViewHeight, 0f)));
+            Assert.That(Vector3.Angle(view.transform.forward, Vector3.down), Is.LessThan(0.01f), "the view looks straight down");
+            Assert.That(Vector3.Angle(view.transform.up, Vector3.forward), Is.LessThan(0.01f), "north is up on the map");
+        }
+
+        [Test]
+        public void ConfirmingTheChoiceDropsTheAirstrikeAlongTheChosenLine()
+        {
+            var streak = Player(AirstrikeSpec(), side: 0);
             var airstrike = streak.gameObject.AddComponent<AirstrikeReward>();
             airstrike.Clock = () => _now;
             streak.Random = new System.Random(7);
             Kill(streak, Body("Killed", side: 1));
+            streak.TryUse();
+            var targeting = streak.GetComponent<StreakTargeting>();
 
+            targeting.Step(new StreakTargetingInput(new Vector2(0f, 1f), 90f, false, false), 0.5f);
+            Assert.That(GameSignals.StreakTargeting.Value.Value.Target, Is.EqualTo(new System.Numerics.Vector3(0f, 1f, 20f)), "40 m/s north for half a second");
+            Assert.That(GameSignals.StreakTargeting.Value.Value.HeadingDegrees, Is.EqualTo(90f));
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player targeting confirmed reward=airstrike at=(0.0, 1.0, 20.0) heading=90.0");
             LogAssert.Expect(LogType.Log, "[Streak] id=Player used reward=airstrike kills=1 ready=0");
-            LogAssert.Expect(LogType.Log, "[Streak] airstrike called user=Player at=(0.0, 1.0, 30.0) strikes=3 interval=1.00 spread=2.0");
-            Assert.That(streak.TryUse(), Is.True);
+            LogAssert.Expect(LogType.Log, "[Streak] airstrike called user=Player at=(0.0, 1.0, 20.0) heading=90.0 strikes=3 interval=1.00 line=10.0");
+            targeting.Step(new StreakTargetingInput(Vector2.zero, 0f, true, false), 0f);
 
+            Assert.That(streak.IsTargeting, Is.False);
             Assert.That(airstrike.PendingCount, Is.EqualTo(3));
             Assert.That(GameSignals.Streak.Value.Value.ReadyCount, Is.Zero);
+            Assert.That(GameSignals.StreakTargeting.HasValue, Is.False);
+            Assert.That(targeting.ViewCamera.gameObject.activeSelf, Is.False);
+        }
+
+        [Test]
+        public void CancellingTheChoiceKeepsTheReward()
+        {
+            var streak = Player(AirstrikeSpec(), side: 0);
+            var airstrike = streak.gameObject.AddComponent<AirstrikeReward>();
+            Kill(streak, Body("Killed", side: 1));
+            streak.TryUse();
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player targeting cancelled reward=airstrike reason=input");
+            streak.GetComponent<StreakTargeting>().Step(new StreakTargetingInput(new Vector2(1f, 0f), 0f, true, true), 1f);
+
+            Assert.That(streak.IsTargeting, Is.False);
+            Assert.That(airstrike.PendingCount, Is.Zero, "a cancel in the same frame as a confirm wins");
+            Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }));
+            Assert.That(GameSignals.StreakTargeting.HasValue, Is.False);
+        }
+
+        [Test]
+        public void DyingWhileChoosingClosesTheMapAndKeepsTheReward()
+        {
+            var streak = Player(AirstrikeSpec(), side: 0);
+            var airstrike = streak.gameObject.AddComponent<AirstrikeReward>();
+            Kill(streak, Body("Killed", side: 1));
+            streak.TryUse();
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player targeting cancelled reward=airstrike reason=died");
+            streak.GetComponent<Damageable>().Kill();
+
+            Assert.That(streak.IsTargeting, Is.False);
+            Assert.That(airstrike.PendingCount, Is.Zero);
+            Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }));
+        }
+
+        [Test]
+        public void ChoosingTakesTheMovementWeaponAndLookAwayUntilItEnds()
+        {
+            var streak = Player(AirstrikeSpec(), side: 0);
+            var handoff = new ControlHandoff();
+            var look = streak.gameObject.AddComponent<FirstPersonLook>();
+            var targeting = streak.gameObject.AddComponent<StreakTargeting>();
+            var aim = new StreakAim("airstrike", "streak.airstrike", System.Numerics.Vector3.Zero, 0f, 30f, 10f);
+
+            Assert.That(targeting.Begin(aim, StreakTargetingSpec.Default, new[] { handoff }, look), Is.True);
+
+            Assert.That(handoff.IsHeldBy(targeting), Is.True);
+            Assert.That(look.InputSuspended, Is.True);
+            Assert.That(targeting.Begin(aim, StreakTargetingSpec.Default, new[] { handoff }, look), Is.False, "already choosing");
+
+            targeting.Cancel("test");
+
+            Assert.That(handoff.IsHandedOff, Is.False);
+            Assert.That(look.InputSuspended, Is.False);
+        }
+
+        [Test]
+        public void AConfirmedChoiceForARewardNoLongerNextIsNotUsed()
+        {
+            var streak = Player(AirstrikeSpec(), side: 0);
+            var airstrike = streak.gameObject.AddComponent<AirstrikeReward>();
+            Kill(streak, Body("Killed", side: 1));
+            var stale = new StreakTargetingStatus("uav", "streak.uav", System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 0f, 30f, 10f);
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player use refused nothing-ready");
+            Assert.That(streak.UseAt(stale), Is.False);
+
+            Assert.That(airstrike.PendingCount, Is.Zero);
+            Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }));
         }
 
         [Test]
@@ -180,8 +309,11 @@ namespace Shooter.Tests.EditMode
             Kill(streak, Body("B", side: 1));
             Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike", "uav" }));
 
-            LogAssert.Expect(LogType.Log, "[Streak] id=Player used reward=airstrike kills=2 ready=1");
             Assert.That(streak.TryUse(), Is.True);
+            Assert.That(streak.IsTargeting, Is.True, "the airstrike comes first, so the map opens for it");
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player used reward=airstrike kills=2 ready=1");
+            streak.GetComponent<StreakTargeting>().Confirm();
             Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "uav" }));
 
             LogAssert.Expect(LogType.Log, "[Streak] id=Player used reward=uav kills=2 ready=0");
@@ -277,6 +409,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Streak.Value.Value.Kills, Is.EqualTo(1), "turning it on again keeps the count");
             Kill(streak, Body("C", side: 1));
             Assert.That(streak.Status.Value.Kills, Is.EqualTo(2));
+        }
+
+        private static StreakSpec AirstrikeSpec()
+        {
+            return new StreakSpec(
+                new[] { new StreakReward("airstrike", "streak.airstrike", 1) },
+                airstrike: new StreakAirstrikeSpec(shellCount: 3, intervalSeconds: 1f, spread: 0f, range: 30f, lineLength: 10f, dropHeight: 5f));
         }
 
         private StreakController Player(StreakSpec spec, int? side)

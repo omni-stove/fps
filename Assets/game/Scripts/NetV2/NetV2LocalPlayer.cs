@@ -184,7 +184,7 @@ namespace Shooter.NetV2
         // 空中で押したジャンプでしゃがみを解かないよう、今の予測で接地しているかを受け取る。
         public void Sample(bool grounded, out Vector2 move, out float yaw, out InputButtons buttons)
         {
-            var paused = GameUi.IsPauseOpen;
+            var paused = IsInputBlocked;
             move = paused || _move == null ? Vector2.zero : Vector2.ClampMagnitude(_move.ReadValue<Vector2>(), 1f);
             var jump = Take(ref _jumpLatched) && !paused;
             var sprintPressed = Take(ref _sprintLatched);
@@ -216,14 +216,18 @@ namespace Shooter.NetV2
                 sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive);
         }
 
+        public ControlHandoff Handoff { get; } = new ControlHandoff();
+
+        public bool IsInputBlocked => GameUi.IsPauseOpen || Handoff.IsHandedOff;
+
         // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
         public bool BlocksAds { get; set; }
 
-        public bool IsAiming => !GameUi.IsPauseOpen && !BlocksAds && _aim != null && _aim.IsPressed();
+        public bool IsAiming => !IsInputBlocked && !BlocksAds && _aim != null && _aim.IsPressed();
 
         public bool TakeAttack() => Take(ref _attackLatched);
 
-        public bool IsAttackHeld => !GameUi.IsPauseOpen && _attack != null && _attack.IsPressed();
+        public bool IsAttackHeld => !IsInputBlocked && _attack != null && _attack.IsPressed();
 
         public void FaceYaw(float yaw)
         {
@@ -255,7 +259,7 @@ namespace Shooter.NetV2
 
         public void ReadDrive(out Vector2 move, out bool boost, out float vertical)
         {
-            var paused = GameUi.IsPauseOpen;
+            var paused = IsInputBlocked;
             move = paused || _move == null ? Vector2.zero : Vector2.ClampMagnitude(_move.ReadValue<Vector2>(), 1f);
             boost = !paused && _sprint != null && _sprint.IsPressed();
             vertical = paused ? 0f : (_jump != null && _jump.IsPressed() ? 1f : 0f) - (_crouch != null && _crouch.IsPressed() ? 1f : 0f);
@@ -330,7 +334,7 @@ namespace Shooter.NetV2
 
         private void Update()
         {
-            if (GameUi.IsPauseOpen)
+            if (IsInputBlocked)
             {
                 return;
             }

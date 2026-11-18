@@ -11,9 +11,9 @@ namespace Shooter.Protocol.Tests
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
         [Test]
-        public void TheProtocolVersionIs22()
+        public void TheProtocolVersionIs23()
         {
-            Assert.That(MatchProtocol.Version, Is.EqualTo(22));
+            Assert.That(MatchProtocol.Version, Is.EqualTo(23));
         }
 
         [Test]
@@ -64,13 +64,29 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
-        public void StreakUseRequest()
+        public void StreakUseRequestCarriesTheChosenTargetAndHeading()
         {
             var got = ToServer<StreakUseRequestMessage>(
-                new StreakUseRequestMessage { RewardId = "airstrike", Direction = new Vector3(0f, -0.5f, 1f) });
+                new StreakUseRequestMessage { RewardId = "airstrike", HasTarget = true, Target = new Vector3(12f, 0.5f, -30f), HeadingDegrees = 135f });
 
+            Assert.That(StreakUseRequestMessage.CurrentVersion, Is.EqualTo(2));
             Assert.That(got.RewardId, Is.EqualTo("airstrike"));
-            Assert.That(got.Direction, Is.EqualTo(new Vector3(0f, -0.5f, 1f)));
+            Assert.That(got.HasTarget, Is.True);
+            Assert.That(got.Target, Is.EqualTo(new Vector3(12f, 0.5f, -30f)));
+            Assert.That(got.HeadingDegrees, Is.EqualTo(135f));
+        }
+
+        [Test]
+        public void AStreakUseRequestWithoutATargetCarriesOnlyTheReward()
+        {
+            var sent = new StreakUseRequestMessage { RewardId = "uav", Target = new Vector3(1f, 2f, 3f), HeadingDegrees = 90f };
+
+            var got = ToServer<StreakUseRequestMessage>(sent);
+
+            Assert.That(got.RewardId, Is.EqualTo("uav"));
+            Assert.That(got.HasTarget, Is.False);
+            Assert.That(got.Target, Is.EqualTo(Vector3.Zero), "a target is not written without HasTarget");
+            Assert.That(got.HeadingDegrees, Is.Zero);
         }
 
         [Test]
@@ -84,17 +100,31 @@ namespace Shooter.Protocol.Tests
         {
             var writer = Head(MessageIds.StreakUseRequest, StreakUseRequestMessage.CurrentVersion);
             writer.WriteString("");
-            writer.WriteVector3(Vector3.UnitZ);
+            writer.WriteBool(false);
 
             Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
         [Test]
-        public void AStreakUseRequestWithANonFiniteDirectionIsUnreadable()
+        public void AStreakUseRequestWithANonFiniteTargetIsUnreadable()
         {
             var writer = Head(MessageIds.StreakUseRequest, StreakUseRequestMessage.CurrentVersion);
-            writer.WriteString("uav");
+            writer.WriteString("airstrike");
+            writer.WriteBool(true);
             writer.WriteVector3(new Vector3(float.NaN, 0f, 1f));
+            writer.WriteSingle(0f);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void AStreakUseRequestWithANonFiniteHeadingIsUnreadable()
+        {
+            var writer = Head(MessageIds.StreakUseRequest, StreakUseRequestMessage.CurrentVersion);
+            writer.WriteString("airstrike");
+            writer.WriteBool(true);
+            writer.WriteVector3(new Vector3(1f, 0f, 1f));
+            writer.WriteSingle(float.PositiveInfinity);
 
             Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }

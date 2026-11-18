@@ -3,6 +3,7 @@ using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine.UIElements;
+using Vector3 = System.Numerics.Vector3;
 using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
@@ -145,12 +146,83 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WhileChoosingTheViewShowsTheGuidanceInsteadOfTheCount()
+        {
+            var view = CreateHud().Streak;
+            GameSignals.Streak.Publish(new StreakStatus(5, new[] { _uavReady }));
+
+            GameSignals.StreakTargeting.Publish(Choosing());
+
+            Assert.That(view.IsShown, Is.True);
+            Assert.That(view.IsTargeting, Is.True);
+            Assert.That(view.Lines, Is.EqualTo(new[]
+            {
+                "空爆 の地点と向きを選ぶ",
+                "移動で地点、視点で向きを動かす",
+                KeyLine(view.ConfirmKeyLabel, "決定", "攻撃で決定"),
+                KeyLine(view.CancelKeyLabel, "取消", "構えで取消"),
+            }));
+            Assert.That(RowTexts(view), Is.EqualTo(view.Lines));
+            Assert.That(view.Element.Children().All(row => row.ClassListContains(StreakView.TargetingRowClass)), Is.True);
+            Assert.That(view.Element.Children().Any(row => row.ClassListContains(StreakView.ReadyRowClass)), Is.False);
+
+            GameSignals.StreakTargeting.Clear();
+
+            Assert.That(view.IsTargeting, Is.False);
+            Assert.That(view.Lines, Is.EqualTo(new[] { "ストリーク 5", ReadyLine(view.KeyLabel, "uav") }), "the count comes back after choosing");
+            Assert.That(view.Element.Children().Any(row => row.ClassListContains(StreakView.TargetingRowClass)), Is.False);
+        }
+
+        [Test]
+        public void TheGuidanceShowsEvenWithoutAStreakValue()
+        {
+            var view = CreateHud().Streak;
+
+            GameSignals.StreakTargeting.Publish(Choosing());
+
+            Assert.That(view.IsShown, Is.True);
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            GameSignals.StreakTargeting.Clear();
+            Assert.That(view.IsShown, Is.False);
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheGuidanceLinesNameTheKeysOrTheButtonsWhenTheDeviceHasNone()
+        {
+            Assert.That(
+                Resolve(StreakText.TargetingLines(Choosing(), "LMB", " RMB ")),
+                Is.EqualTo(new[] { "空爆 の地点と向きを選ぶ", "移動で地点、視点で向きを動かす", "[LMB] 決定", "[RMB] 取消" }));
+            Assert.That(
+                Resolve(StreakText.TargetingLines(Choosing(), null, " ")),
+                Is.EqualTo(new[] { "空爆 の地点と向きを選ぶ", "移動で地点、視点で向きを動かす", "攻撃で決定", "構えで取消" }));
+
+            var unnamed = new StreakTargetingStatus("strike", string.Empty, Vector3.Zero, Vector3.Zero, 0f, 30f, 10f);
+            Assert.That(Localizer.Resolve(StreakText.TargetingLines(unnamed, "LMB", "RMB")[0]), Is.EqualTo("strike の地点と向きを選ぶ"), "a reward without a name key shows its id");
+        }
+
+        [Test]
         public void EveryStreakKeyIsInBothLanguages()
         {
             foreach (var language in new[] { GameLanguage.Japanese, GameLanguage.English })
             {
                 var table = Localizer.TableOf(language);
-                foreach (var key in new[] { StreakText.KillsKey, StreakText.NextKey, StreakText.ReadyKey, StreakText.ReadyWithoutKeyKey })
+                foreach (var key in new[]
+                {
+                    StreakText.KillsKey,
+                    StreakText.NextKey,
+                    StreakText.ReadyKey,
+                    StreakText.ReadyWithoutKeyKey,
+                    StreakText.TargetChooseKey,
+                    StreakText.TargetMoveKey,
+                    StreakText.TargetConfirmKey,
+                    StreakText.TargetConfirmWithoutKeyKey,
+                    StreakText.TargetCancelKey,
+                    StreakText.TargetCancelWithoutKeyKey,
+                    StreakSpec.DefaultUavNameKey,
+                    StreakSpec.DefaultAirstrikeNameKey,
+                })
                 {
                     Assert.That(table.Get(key), Is.Not.EqualTo(key), language + " " + key);
                 }
@@ -161,6 +233,17 @@ namespace Shooter.Tests.EditMode
         {
             _hud = Hud.Create("StreakTests.Hud");
             return _hud;
+        }
+
+        private static StreakTargetingStatus Choosing()
+        {
+            return new StreakTargetingStatus(
+                StreakSpec.AirstrikeRewardId, StreakSpec.DefaultAirstrikeNameKey, Vector3.Zero, new Vector3(4f, 0f, 9f), 30f, 100f, 24f);
+        }
+
+        private static string KeyLine(string keyLabel, string action, string withoutKey)
+        {
+            return string.IsNullOrEmpty(keyLabel) ? withoutKey : "[" + keyLabel + "] " + action;
         }
 
         private static string ReadyLine(string keyLabel, string rewardName)

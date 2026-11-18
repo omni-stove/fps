@@ -196,12 +196,14 @@ namespace Shooter.Server.Tests
             Assert.That(_streaks.StatusOf(1).Value.Slots[1].Ready, Is.True);
             var target = new Vector3(Body(4).Position.X, 0.5f, Body(4).Position.Z);
 
-            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, target - Body(1).EyePosition), Is.EqualTo(ServerStreakRefusal.None));
+            // 送る高さは手元で探したもので、サーバーは自分の床に置き直す
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, target + new Vector3(0f, 3f, 0f), 90f), Is.EqualTo(ServerStreakRefusal.None));
 
             var activated = _transport.Read<StreakActivatedMessage>(2, Copy).Single();
             Assert.That(activated.RewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
             Assert.That(activated.HasTarget, Is.True);
-            Assert.That(Vector3.Distance(activated.Target, target), Is.LessThan(0.01f), "the server finds the floor where the user aimed");
+            var onFloor = ImpactResolver.DetonationPoint(target, Vector3.UnitY);
+            Assert.That(Vector3.Distance(activated.Target, onFloor), Is.LessThan(0.01f), "the server finds the floor under the chosen spot");
             Assert.That(activated.DurationSeconds, Is.EqualTo(0.1f).Within(1e-6f));
             Assert.That(_rules.Session.GetHealth(4), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), "the shell has not landed yet");
             Assert.That(_streaks.PendingShellCount, Is.EqualTo(1));
@@ -225,12 +227,49 @@ namespace Shooter.Server.Tests
             JoinTwoTeams(4);
             Kill(1, 2);
 
-            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, Vector3.Zero), Is.EqualTo(ServerStreakRefusal.InvalidAim));
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, null), Is.EqualTo(ServerStreakRefusal.InvalidAim));
             Assert.That(Use(1, StreakSpec.AirstrikeRewardId, new Vector3(float.NaN, 0f, 1f)), Is.EqualTo(ServerStreakRefusal.InvalidAim));
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, Vector3.Zero, float.NaN), Is.EqualTo(ServerStreakRefusal.InvalidAim));
 
             Assert.That(_streaks.StatusOf(1).Value.ReadyCount, Is.EqualTo(1));
             Assert.That(_streaks.PendingShellCount, Is.EqualTo(0));
             Assert.That(_transport.Read<StreakActivatedMessage>(1, Copy), Is.Empty);
+        }
+
+        [Test]
+        public void AnAirstrikeBeyondTheRangeIsRefusedAndKeepsTheReward()
+        {
+            Start(Rules(), Spec(uavKills: 3, airstrikeKills: 1, range: 20f));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            var user = Body(1).Position;
+
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, user + new Vector3(0f, 0f, 30f)), Is.EqualTo(ServerStreakRefusal.OutOfRange));
+            Assert.That(_streaks.StatusOf(1).Value.ReadyCount, Is.EqualTo(1));
+            Assert.That(_transport.Read<StreakActivatedMessage>(1, Copy), Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.Refused(1, StreakSpec.AirstrikeRewardId, nameof(ServerStreakRefusal.OutOfRange))));
+
+            // 高さは射程に数えないので、真上の高い所でも水平に 20 m の内なら使える
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, user + new Vector3(0f, 50f, 19f)), Is.EqualTo(ServerStreakRefusal.None));
+        }
+
+        [Test]
+        public void TheShellsFallAlongTheChosenHeadingFromTheBackEnd()
+        {
+            Start(Rules(), Spec(uavKills: 3, airstrikeKills: 1, shellCount: 3, intervalSeconds: 0f, spread: 0f, lineLength: 10f));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            var center = new Vector3(-5f, 0.5f, 20f);
+
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, center, 90f), Is.EqualTo(ServerStreakRefusal.None));
+
+            var explosions = _transport.Read<ExplosionMessage>(1, m => new ExplosionMessage { Center = m.Center }).Select(m => m.Center).ToList();
+            Assert.That(explosions, Has.Count.EqualTo(3));
+            Assert.That(explosions[0].X, Is.EqualTo(-10f).Within(1e-3f), "heading 90 flies toward +X, so the first shell lands at the -X end");
+            Assert.That(explosions[1].X, Is.EqualTo(-5f).Within(1e-3f));
+            Assert.That(explosions[2].X, Is.EqualTo(0f).Within(1e-3f));
+            Assert.That(explosions.Select(e => e.Z), Is.All.EqualTo(20f).Within(1e-3f));
+            Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.AirstrikeCalled(1, explosions[1], 90f, 3, 0f, 10f)));
         }
 
         [Test]
@@ -320,7 +359,7 @@ namespace Shooter.Server.Tests
             JoinTwoTeams(4);
             Kill(1, 2);
 
-            _host.OnMessage(new ConnectionId(1), new StreakUseRequestMessage { RewardId = StreakSpec.UavRewardId, Direction = Vector3.UnitX });
+            _host.OnMessage(new ConnectionId(1), new StreakUseRequestMessage { RewardId = StreakSpec.UavRewardId });
 
             Assert.That(_transport.Read<StreakActivatedMessage>(3, Copy), Has.Count.EqualTo(1));
             Assert.That(_log.ToString(), Does.Contain(StreakLog.Used("net1", StreakSpec.UavRewardId, _streaks.StatusOf(1).Value)));
@@ -340,7 +379,14 @@ namespace Shooter.Server.Tests
         }
 
         private static StreakSpec Spec(
-            int uavKills, int airstrikeKills, float uavRange = StreakUavSpec.DefaultRange, int shellCount = 1, float intervalSeconds = 0.1f, float spread = 0f)
+            int uavKills,
+            int airstrikeKills,
+            float uavRange = StreakUavSpec.DefaultRange,
+            int shellCount = 1,
+            float intervalSeconds = 0.1f,
+            float spread = 0f,
+            float range = StreakAirstrikeSpec.DefaultRange,
+            float lineLength = 0f)
         {
             return new StreakSpec(
                 new[]
@@ -349,7 +395,7 @@ namespace Shooter.Server.Tests
                     new StreakReward(StreakSpec.AirstrikeRewardId, StreakSpec.DefaultAirstrikeNameKey, airstrikeKills),
                 },
                 new StreakUavSpec(_uavSeconds, uavRange),
-                new StreakAirstrikeSpec(shellCount, intervalSeconds, spread));
+                new StreakAirstrikeSpec(shellCount, intervalSeconds, spread, null, range, lineLength));
         }
 
         private static PingPlacedMessage Copy(PingPlacedMessage m)
@@ -429,9 +475,15 @@ namespace Shooter.Server.Tests
             _combat.DealDamage(killer, victim, NetMatchSettings.DefaultMaxHealth, TestRules.RifleId, HitZone.Body, null);
         }
 
-        private ServerStreakRefusal Use(int playerId, string rewardId, Vector3? direction = null)
+        // 地点を渡さなければ、使う人の足元を選んだことにする
+        private ServerStreakRefusal Use(int playerId, string rewardId)
         {
-            return _streaks.Use(playerId, rewardId, direction ?? Vector3.UnitX);
+            return Use(playerId, rewardId, _context.Bodies.TryGet(playerId, out var body) ? body.Position : Vector3.Zero);
+        }
+
+        private ServerStreakRefusal Use(int playerId, string rewardId, Vector3? target, float headingDegrees = 0f)
+        {
+            return _streaks.Use(playerId, rewardId, target, headingDegrees);
         }
 
         private ServerBody Body(int id)

@@ -132,24 +132,37 @@ namespace Shooter.NetV2
             EnemyUavSecondsLeft = Math.Max(0f, EnemyUavSecondsLeft - deltaSeconds);
         }
 
-        // 狙う地点でなく向きを送る (地点はサーバーが自分の世界で決める)。送れたかは sent で返す
-        public bool TryUse(Vector3 direction, out bool sent)
+        public string NextRewardId
+        {
+            get
+            {
+                var ready = _tracker.ReadyRewardIds;
+                return Status.HasValue && ready.Count > 0 ? ready[0] : null;
+            }
+        }
+
+        public StreakReward NextReward => NextRewardId == null ? null : _tracker.Spec.FindReward(NextRewardId);
+
+        // 地点を選ぶ報酬は選んだ地点と向きを送り、選ばない報酬は何も載せない。送れたかは sent で返す
+        public bool TryUse(StreakTargetingStatus? target, out bool sent)
         {
             sent = false;
-            var ready = _tracker.ReadyRewardIds;
-            if (!Status.HasValue || ready.Count == 0)
+            var rewardId = NextRewardId;
+            if (rewardId == null)
             {
                 _log(StreakLog.NothingToUse(_logId));
                 return false;
             }
 
-            if (!IsFinite(direction))
+            if (StreakSpec.NeedsTarget(rewardId) && (!target.HasValue || !string.Equals(target.Value.RewardId, rewardId, StringComparison.Ordinal)))
             {
                 return false;
             }
 
-            _request.RewardId = ready[0];
-            _request.Direction = direction;
+            _request.RewardId = rewardId;
+            _request.HasTarget = target.HasValue;
+            _request.Target = target.HasValue ? target.Value.Target : Vector3.Zero;
+            _request.HeadingDegrees = target.HasValue ? target.Value.HeadingDegrees : 0f;
             sent = _send(_request);
             _log(ClientStreakLog.Requested(_logId, _request.RewardId, sent));
             return true;
@@ -187,13 +200,6 @@ namespace Shooter.NetV2
                     _log(StreakLog.Earned(_logId, rewardId, status));
                 }
             }
-        }
-
-        private static bool IsFinite(Vector3 value)
-        {
-            return !float.IsNaN(value.X) && !float.IsInfinity(value.X)
-                && !float.IsNaN(value.Y) && !float.IsInfinity(value.Y)
-                && !float.IsNaN(value.Z) && !float.IsInfinity(value.Z);
         }
     }
 }

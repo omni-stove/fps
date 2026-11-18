@@ -13,6 +13,18 @@ namespace Shooter.Runtime
 
         public const string ReadyWithoutKeyKey = "streak.readyNoKey";
 
+        public const string TargetChooseKey = "streak.target.choose";
+
+        public const string TargetMoveKey = "streak.target.move";
+
+        public const string TargetConfirmKey = "streak.target.confirm";
+
+        public const string TargetConfirmWithoutKeyKey = "streak.target.confirmNoKey";
+
+        public const string TargetCancelKey = "streak.target.cancel";
+
+        public const string TargetCancelWithoutKeyKey = "streak.target.cancelNoKey";
+
         public static LocalizedText Kills(StreakStatus status)
         {
             return new LocalizedText(KillsKey, status.Kills);
@@ -52,6 +64,17 @@ namespace Shooter.Runtime
                 : new LocalizedText(ReadyKey, keyLabel.Trim(), name);
         }
 
+        public static List<LocalizedText> TargetingLines(StreakTargetingStatus status, string confirmKeyLabel, string cancelKeyLabel)
+        {
+            return new List<LocalizedText>
+            {
+                new LocalizedText(TargetChooseKey, DisplayNames.Of(status.DisplayNameKey, status.RewardId)),
+                new LocalizedText(TargetMoveKey),
+                WithKey(TargetConfirmKey, TargetConfirmWithoutKeyKey, confirmKeyLabel),
+                WithKey(TargetCancelKey, TargetCancelWithoutKeyKey, cancelKeyLabel),
+            };
+        }
+
         public static List<LocalizedText> Lines(StreakStatus status, string keyLabel)
         {
             var lines = new List<LocalizedText> { Kills(status) };
@@ -69,6 +92,11 @@ namespace Shooter.Runtime
             }
 
             return lines;
+        }
+
+        private static LocalizedText WithKey(string key, string withoutKey, string keyLabel)
+        {
+            return string.IsNullOrWhiteSpace(keyLabel) ? new LocalizedText(withoutKey) : new LocalizedText(key, keyLabel.Trim());
         }
     }
 }

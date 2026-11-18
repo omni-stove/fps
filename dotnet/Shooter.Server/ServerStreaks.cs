@@ -8,7 +8,7 @@ using Shooter.Protocol;
 namespace Shooter.Server
 {
     // 倒した数はオフラインの StreakController と同じく Core の StreakTracker で数え、報酬を使うかと効き目はサーバーが決める。
-    // UAV は使った人の陣営にだけ敵を追う印 (PingPlaced) を送り、空爆は ServerCombat.Explode で爆発させる (味方撃ち・キルの数え方は撃った弾と同じ)。
+    // UAV は使った人の陣営にだけ敵を追う印 (PingPlaced) を送り、空爆は選ばれた地点と向きの線に ServerCombat.Explode で爆発させる (味方撃ち・キルの数え方は撃った弾と同じ)。
     internal sealed class ServerStreaks : IServerModule, ISnapshotContributor
     {
         public const string LogTag = ServerStreakLog.LogTag;
@@ -19,10 +19,8 @@ namespace Shooter.Server
         // 断った理由のログを出す最短の間隔 (秒)。連打でログを埋めないため
         private const float _refusalLogInterval = 1f;
 
-        private const float _minDirectionSqrMagnitude = 1e-8f;
-
-        // 広がりが 0 に近くても、狙った面の少し上から地面を探せるようにする (オフラインの AirstrikeReward と同じ)
-        private const float _minGroundProbeHeight = 1f;
+        // 送る側の地点は自分の位置の予測から測るので、サーバーの位置との少しのずれでは断らない
+        private const float _rangeTolerance = 2f;
 
         private readonly MatchRulesModule _rules;
         private readonly ServerCombat _combat;
@@ -113,7 +111,7 @@ namespace Shooter.Server
         {
             if (message is StreakUseRequestMessage request && _match.TryGetPlayer(connection, out var player))
             {
-                Use(player.PlayerId, request.RewardId, request.Direction);
+                Use(player.PlayerId, request.RewardId, request.HasTarget ? request.Target : (Vector3?)null, request.HeadingDegrees);
             }
         }
 
@@ -156,7 +154,7 @@ namespace Shooter.Server
 
         // 送られた報酬が次に使える報酬と違えば断る。StreakTracker は得た順にしか渡さないので、
         // クライアントが古い表示のまま押したときに、見ていたのと違う報酬を使わせないため
-        internal ServerStreakRefusal Use(int playerId, string rewardId, Vector3 direction)
+        internal ServerStreakRefusal Use(int playerId, string rewardId, Vector3? target, float headingDegrees)
         {
             if (!_trackers.TryGetValue(playerId, out var tracker))
             {
@@ -184,18 +182,23 @@ namespace Shooter.Server
                 return Refuse(playerId, rewardId, ServerStreakRefusal.NotNext);
             }
 
-            // 狙えないまま報酬を取り去らないよう、使うと決める前に向きを確かめる
+            // 狙えないまま報酬を取り去らないよう、使うと決める前に地点を確かめる
             var isAirstrike = string.Equals(rewardId, StreakSpec.AirstrikeRewardId, StringComparison.Ordinal);
-            if (isAirstrike && !IsUsableDirection(direction))
+            if (isAirstrike && !IsUsableTarget(target, headingDegrees))
             {
                 return Refuse(playerId, rewardId, ServerStreakRefusal.InvalidAim);
+            }
+
+            if (isAirstrike && !AirstrikeLine.IsWithinRange(body.Position, target.Value, Spec.Airstrike.Range + _rangeTolerance))
+            {
+                return Refuse(playerId, rewardId, ServerStreakRefusal.OutOfRange);
             }
 
             var status = tracker.Use(out var used);
             _log.WriteLine(StreakLog.Used(ServerStreakLog.Id(playerId), used, status));
             if (isAirstrike)
             {
-                CallAirstrike(playerId, body, Vector3.Normalize(direction));
+                CallAirstrike(playerId, target.Value, headingDegrees);
             }
             else
             {
@@ -231,46 +234,27 @@ namespace Shooter.Server
             _log.WriteLine(ServerStreakLog.UavMarked(playerId, team, marked, CountTeam(team), uav.DurationSeconds));
         }
 
-        // 地点は送られた向きからサーバーの世界で当たりを取って決め、壁の向こうを指せないようにする
-        private void CallAirstrike(int playerId, ServerBody user, Vector3 direction)
+        // 送られた高さは手元の世界で探したものなので、中心も弾もサーバーの世界で真上から落として決め直す
+        private void CallAirstrike(int playerId, Vector3 target, float headingDegrees)
         {
             var strike = Spec.Airstrike;
-            var origin = user.EyePosition;
-            var center = _context.World.Raycast(origin, direction, strike.Range, ServerHitboxes.RaycastLayers, out var hit)
-                ? hit.Point
-                : origin + (direction * strike.Range);
-
+            var center = Drop(target, strike.DropHeight);
             for (var i = 0; i < strike.ShellCount; i++)
             {
-                var point = PlaceOnGround(ScatterPoint(center, strike.Spread, _random), strike.Spread);
+                var point = Drop(AirstrikeLine.ShellPoint(center, headingDegrees, strike, i, _random), strike.DropHeight);
                 Enqueue(new Shell(_now + ((i + 1) * strike.IntervalSeconds), point, i + 1, strike.ShellCount, playerId));
             }
 
             Announce(playerId, _rules.Session.GetTeam(playerId), StreakSpec.AirstrikeRewardId, center, strike.ShellCount * strike.IntervalSeconds);
-            _log.WriteLine(ServerStreakLog.AirstrikeCalled(playerId, center, strike.ShellCount, strike.IntervalSeconds, strike.Spread));
+            _log.WriteLine(ServerStreakLog.AirstrikeCalled(playerId, center, headingDegrees, strike.ShellCount, strike.IntervalSeconds, strike.LineLength));
 
             // 間隔が 0 なら呼んだ tick のうちに落とす (オフラインの AirstrikeReward.Call と同じ)
             FireDueShells();
         }
 
-        internal static Vector3 ScatterPoint(Vector3 center, float radius, Random random)
+        // 坂や段差で線の上の点が地面に埋まったり宙に浮いたりせず、屋根や橋があればその上で止まるよう、上から真下へ探す
+        private Vector3 Drop(Vector3 point, float height)
         {
-            ArgumentNullException.ThrowIfNull(random);
-            if (!(radius > 0f))
-            {
-                return center;
-            }
-
-            // 半径を一様に取ると中心に寄るので、面積で一様になるよう平方根を取る
-            var distance = radius * Math.Sqrt(random.NextDouble());
-            var angle = random.NextDouble() * 2.0 * Math.PI;
-            return center + new Vector3((float)(distance * Math.Cos(angle)), 0f, (float)(distance * Math.Sin(angle)));
-        }
-
-        // 坂や段差で円の上の点が地面に埋まったり宙に浮いたりしないよう、真上から地面を探して面の上に置く
-        private Vector3 PlaceOnGround(Vector3 point, float spread)
-        {
-            var height = MathF.Max(spread, _minGroundProbeHeight);
             var top = point + new Vector3(0f, height, 0f);
             if (_context.World.Raycast(top, -Vector3.UnitY, height * 2f, ServerHitboxes.RaycastLayers, out var ground))
             {
@@ -565,10 +549,15 @@ namespace Shooter.Server
             return tracker;
         }
 
-        private static bool IsUsableDirection(Vector3 direction)
+        private static bool IsUsableTarget(Vector3? target, float headingDegrees)
         {
-            return float.IsFinite(direction.X) && float.IsFinite(direction.Y) && float.IsFinite(direction.Z)
-                && direction.LengthSquared() >= _minDirectionSqrMagnitude;
+            if (!target.HasValue)
+            {
+                return false;
+            }
+
+            var point = target.Value;
+            return float.IsFinite(point.X) && float.IsFinite(point.Y) && float.IsFinite(point.Z) && float.IsFinite(headingDegrees);
         }
 
         private readonly struct UavMark

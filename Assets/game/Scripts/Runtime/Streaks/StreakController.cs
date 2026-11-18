@@ -17,6 +17,8 @@ namespace Shooter.Runtime
         private PlayerActionReader _reader;
         private bool _subscribed;
         private StreakStatus? _published;
+        private StreakTargeting _targeting;
+        private int _targetingEndedFrame = -1;
 
         public static StreakSpec Tuning => KitTuning.Load(c => c.StreaksTuning, StreakJson.ResourcePath, StreakJson.Parse, StreakSpec.Default);
 
@@ -29,6 +31,8 @@ namespace Shooter.Runtime
         public IReadOnlyList<string> ReadyRewardIds => _tracker != null ? _tracker.ReadyRewardIds : (IReadOnlyList<string>)Array.Empty<string>();
 
         public System.Random Random { get; set; }
+
+        public bool IsTargeting => _targeting != null && _targeting.IsActive;
 
         // Play 中に付けると Awake で数え始めて自分の Damageable を探すので、Damageable を付けた後に呼ぶ。
         public static StreakController Apply(GameObject player, GameRules rules)
@@ -120,6 +124,12 @@ namespace Shooter.Runtime
                 return false;
             }
 
+            // 地点を選ばせる報酬は、選び終えるまで枠を空けない。選ぶのをやめても報酬は残る。
+            if (StreakSpec.NeedsTarget(ready[0]))
+            {
+                return BeginTargeting(ready[0]);
+            }
+
             // 動かせないまま報酬を取り去らないよう、使うと決める前に動かす部品を確かめる。
             var isUav = string.Equals(ready[0], StreakSpec.UavRewardId, StringComparison.Ordinal);
             var pings = isUav ? GetComponent<PingController>() : null;
@@ -138,7 +148,36 @@ namespace Shooter.Runtime
             {
                 UavReward.Use(gameObject, pings, spec.Uav.DurationSeconds);
             }
-            else if (string.Equals(used, StreakSpec.AirstrikeRewardId, StringComparison.Ordinal))
+
+            return true;
+        }
+
+        // 選んでいる間に倒れたり、別の報酬が先に来たりしたら、選んだ地点では使わない。
+        public bool UseAt(StreakTargetingStatus target)
+        {
+            if (_tracker == null)
+            {
+                return false;
+            }
+
+            var ready = _tracker.ReadyRewardIds;
+            if (ready.Count == 0 || !string.Equals(ready[0], target.RewardId, StringComparison.Ordinal))
+            {
+                Debug.Log(StreakLog.NothingToUse(LogId), this);
+                return false;
+            }
+
+            if (_self != null && _self.IsDead)
+            {
+                Debug.Log(StreakLog.UseRefusedDead(LogId), this);
+                return false;
+            }
+
+            var status = _tracker.Use(out var used);
+            Debug.Log(StreakLog.Used(LogId, used, status), this);
+            Publish();
+
+            if (string.Equals(used, StreakSpec.AirstrikeRewardId, StringComparison.Ordinal))
             {
                 var airstrike = GetComponent<AirstrikeReward>();
                 if (airstrike == null)
@@ -146,12 +185,74 @@ namespace Shooter.Runtime
                     airstrike = gameObject.AddComponent<AirstrikeReward>();
                 }
 
-                var strike = spec.Airstrike;
-                airstrike.CallAtAim(
-                    strike.Range, strike.ShellCount, strike.IntervalSeconds, strike.Spread, strike.Explosion, used, Random ?? new System.Random());
+                airstrike.Call(target.Target.ToUnity(), target.HeadingDegrees, _tracker.Spec.Airstrike, used, Random ?? new System.Random());
             }
 
             return true;
+        }
+
+        public bool CancelTargeting(string reason)
+        {
+            return _targeting != null && _targeting.Cancel(reason);
+        }
+
+        private bool BeginTargeting(string rewardId)
+        {
+            if (IsTargeting)
+            {
+                return false;
+            }
+
+            if (_targeting == null)
+            {
+                _targeting = GetComponent<StreakTargeting>();
+                if (_targeting == null)
+                {
+                    _targeting = gameObject.AddComponent<StreakTargeting>();
+                }
+
+                _targeting.Confirmed += OnTargetConfirmed;
+                _targeting.Cancelled += OnTargetCancelled;
+            }
+
+            var spec = _tracker.Spec;
+            var reward = spec.FindReward(rewardId);
+            var mover = GetComponent<PlayerController>();
+            var weapon = GetComponentInChildren<WeaponController>(true);
+            var look = mover != null ? mover.Look : GetComponent<FirstPersonLook>();
+            var heading = look != null && look.IsInitialized ? look.Yaw : transform.eulerAngles.y;
+            var handoffs = new List<ControlHandoff>(2);
+            if (mover != null)
+            {
+                handoffs.Add(mover.Handoff);
+            }
+
+            // オフラインでは移動と武器が同じ口を共有している (GameBootstrap) ので、別のときだけ武器の口も握る。
+            if (weapon != null && weapon.Handoff != null && (mover == null || !ReferenceEquals(weapon.Handoff, mover.Handoff)))
+            {
+                handoffs.Add(weapon.Handoff);
+            }
+
+            var aim = new StreakAim(
+                rewardId,
+                reward != null ? reward.DisplayNameKey : string.Empty,
+                transform.position.ToNumerics(),
+                heading,
+                spec.Airstrike.Range,
+                spec.Airstrike.LineLength);
+            _targeting.LogId = LogId;
+            return _targeting.Begin(aim, spec.Targeting, handoffs, look);
+        }
+
+        private void OnTargetConfirmed(StreakTargetingStatus target)
+        {
+            _targetingEndedFrame = Time.frameCount;
+            UseAt(target);
+        }
+
+        private void OnTargetCancelled(string rewardId, string reason)
+        {
+            _targetingEndedFrame = Time.frameCount;
         }
 
         // 自分が倒れている間に入った分 (飛んでいる空爆など) は、倒れずに倒した数ではないので数えない。
@@ -202,6 +303,7 @@ namespace Shooter.Runtime
                 return;
             }
 
+            CancelTargeting(StreakTargeting.CancelledByDeath);
             var lost = _tracker.Kills;
             var status = _tracker.Died();
             Debug.Log(StreakLog.Died(LogId, lost, status), this);
@@ -230,12 +332,20 @@ namespace Shooter.Runtime
 
         private void OnDisable()
         {
+            CancelTargeting(StreakTargeting.CancelledByRules);
             Unsubscribe();
             Unpublish();
         }
 
         private void OnDestroy()
         {
+            CancelTargeting(StreakTargeting.CancelledByRules);
+            if (_targeting != null)
+            {
+                _targeting.Confirmed -= OnTargetConfirmed;
+                _targeting.Cancelled -= OnTargetCancelled;
+            }
+
             Unsubscribe();
             Unpublish();
         }
@@ -250,6 +360,12 @@ namespace Shooter.Runtime
             if (_reader == null)
             {
                 _reader = GetComponent<PlayerActionReader>();
+            }
+
+            // 選んでいる間と選び終えたフレームの UseStreak は StreakTargeting が取消に使うので、ここでは読まない。
+            if (IsTargeting || Time.frameCount == _targetingEndedFrame)
+            {
+                return;
             }
 
             // ポーズ画面のボタンを押したつもりで報酬を使わないよう、開いている間は読まない。

@@ -31,6 +31,7 @@ namespace Shooter.Runtime
         private readonly CloudSaveStamps _stamps;
         private readonly List<string> _queue = new List<string>();
         private readonly HashSet<string> _tooLong = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _unreadable = new HashSet<string>(StringComparer.Ordinal);
         private Operation _inFlight;
         private string _account;
         private bool _listPending;
@@ -187,6 +188,7 @@ namespace Shooter.Runtime
             _failures = 0;
             _retryAt = 0d;
             _account = account;
+            _unreadable.Clear();
             if (account == null)
             {
                 _listPending = false;
@@ -289,6 +291,8 @@ namespace Shooter.Runtime
                 catch (FormatException e)
                 {
                     // 新しい版のゲームが書いたものかもしれないので、上書きも取り込みもせずに手元だけで続ける。
+                    // 読めなかったスロットは覚えておき、後の保存でも古い版の中身でクラウドを上書きしない。
+                    _unreadable.Add(slot);
                     Debug.LogWarning(CloudSaveLog.CloudRejected(slot, e.Message));
                     Complete(operation);
                     return;
@@ -299,12 +303,15 @@ namespace Shooter.Runtime
             var exists = _local.TryRead(slot, out var localText) && localText != null;
             var local = CloudSaveMerge.Local(_stamps.TryGet(slot, out var recorded) ? recorded : (CloudSaveStamp?)null, exists);
             var action = CloudSaveMerge.Decide(local, cloud);
-            if (action == CloudSaveAction.Download && !cloud.Deleted && CanRead != null && !CanRead(slot, cloud.Text))
+            if (action != CloudSaveAction.None && cloud != null && !cloud.Deleted && CanRead != null && !CanRead(slot, cloud.Text))
             {
+                _unreadable.Add(slot);
                 Debug.LogWarning(CloudSaveLog.CloudRejected(slot, "the saved content cannot be read by this version"));
                 Complete(operation);
                 return;
             }
+
+            _unreadable.Remove(slot);
 
             switch (action)
             {

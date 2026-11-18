@@ -119,7 +119,7 @@ namespace Shooter.Server
 
             PreparePings(rules);
             PrepareIdle(rules);
-            PrepareChat(settings);
+            PrepareChat(settings, _data.ChatWords);
             PrepareMapVote();
             StartObjective();
         }

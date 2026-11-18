@@ -32,9 +32,10 @@ namespace Shooter.Server.Tests
                 motor);
         }
 
-        public static ServerRulesData Data(GameRules rules = null, NetMatchSettings settings = null, PingSpec ping = null, string name = "TeamDeathmatch")
+        public static ServerRulesData Data(
+            GameRules rules = null, NetMatchSettings settings = null, PingSpec ping = null, string name = "TeamDeathmatch", ChatWordFilterSpec chatWords = null)
         {
-            return new ServerRulesData(name, File(rules, settings, name), ping ?? PingSpec.Default, "memory", null);
+            return new ServerRulesData(name, File(rules, settings, name), ping ?? PingSpec.Default, "memory", null, chatWords: chatWords);
         }
 
         public static NetMapPoints Points(int controlPoints = 0)

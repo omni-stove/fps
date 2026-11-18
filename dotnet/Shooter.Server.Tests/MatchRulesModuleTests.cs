@@ -344,6 +344,56 @@ namespace Shooter.Server.Tests
             Assert.That(JsonOf("chat_refused").Single(), Does.Contain("\"reason\":\"TooLong\""));
         }
 
+        private static readonly string[] _wordsNoobBad = { "noob", "bad" };
+        private static readonly string[] _wordsNoob = { "noob" };
+        private static readonly string[] _textMasked = { "you ****! ***" };
+        private static readonly string[] _textNiceShot = { "nice shot" };
+
+        [Test]
+        public void ChatWordsOfTheTuningReachTheOthersMasked()
+        {
+            Start(Plain(), chatWords: new ChatWordFilterSpec(_wordsNoobBad));
+            Join(1);
+            Join(2);
+
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "you ｎOOb! ＢＡＤ"), Is.EqualTo(ChatRefusal.None));
+
+            Assert.That(_transport.Read<ChatMessage>(2, Copy).Select(m => m.Text), Is.EqualTo(_textMasked));
+            Assert.That(_log.ToString(), Does.Contain("[Chat] word filter words=2 action=Mask mask=* wholeWordsOnly=false"));
+            Assert.That(_log.ToString(), Does.Contain("[Chat] masked sender=1 channel=All at="));
+            Assert.That(_log.ToString(), Does.Not.Contain("noob").And.Not.Contain("ｎOOb"));
+            Assert.That(JsonOf("chat").Single(), Does.Contain("\"length\":\"13\""));
+        }
+
+        [Test]
+        public void ChatWithoutListedWordsIsSentAsWritten()
+        {
+            Start(Plain(), chatWords: new ChatWordFilterSpec(_wordsNoob));
+            Join(1);
+            Join(2);
+
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "nice shot"), Is.EqualTo(ChatRefusal.None));
+
+            Assert.That(_transport.Read<ChatMessage>(2, Copy).Select(m => m.Text), Is.EqualTo(_textNiceShot));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Chat] masked"));
+        }
+
+        [Test]
+        public void ChatWordsSetToDropAreNotSentEvenToTheSender()
+        {
+            Start(Plain(), chatWords: new ChatWordFilterSpec(_wordsNoob, action: ChatWordFilterAction.Drop));
+            Join(1);
+            Join(2);
+
+            Assert.That(_module.ServerChat(1, ChatChannel.All, "NOOB"), Is.EqualTo(ChatRefusal.Blocked));
+
+            Assert.That(_transport.Read<ChatMessage>(1, Copy), Is.Empty);
+            Assert.That(_transport.Read<ChatMessage>(2, Copy), Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain("[Chat] refused sender=1 reason=Blocked"));
+            Assert.That(JsonOf("chat"), Is.Empty);
+            Assert.That(JsonOf("chat_refused").Single(), Does.Contain("\"reason\":\"Blocked\""));
+        }
+
         [Test]
         public void ChatFromSomeoneOutsideTheMatchIsDropped()
         {
@@ -638,7 +688,7 @@ namespace Shooter.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(GameRules rules, NetMatchSettings settings = null, int controlPoints = 0, bool points = true)
+        private void Start(GameRules rules, NetMatchSettings settings = null, int controlPoints = 0, bool points = true, ChatWordFilterSpec chatWords = null)
         {
             settings ??= NetMatchSettings.Default;
             var events = new ServerEventWriter(true, _json, _log);
@@ -651,7 +701,7 @@ namespace Shooter.Server.Tests
                 _match,
                 new ServerMessenger(_transport),
                 _control,
-                TestRules.Data(rules, settings));
+                TestRules.Data(rules, settings, chatWords: chatWords));
             var module = new MatchRulesModule();
             module.Start(_context);
             _module = module;

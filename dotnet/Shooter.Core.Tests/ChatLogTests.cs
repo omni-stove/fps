@@ -5,6 +5,8 @@ namespace Shooter.Core.Tests
 {
     public sealed class ChatLogTests
     {
+        private static readonly string[] _filterWords = { "noob", "ＮＯＯＢ", "bad" };
+
         [Test]
         public void FormatsTheGate()
         {
@@ -29,6 +31,25 @@ namespace Shooter.Core.Tests
             Assert.That(ChatLog.Refused(3, ChatRefusal.Empty), Is.EqualTo("[Chat] refused sender=3 reason=Empty"));
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, ChatRefusal.None));
             Assert.Throws<ArgumentOutOfRangeException>(() => ChatLog.Refused(1, (ChatRefusal)99));
+        }
+
+        [Test]
+        public void FormatsTheWordFilterWithoutItsWords()
+        {
+            var filter = new ChatWordFilter(new ChatWordFilterSpec(_filterWords, '#', ChatWordFilterAction.Drop, true));
+
+            Assert.That(ChatLog.WordFilter(filter), Is.EqualTo("[Chat] word filter words=2 action=Drop mask=# wholeWordsOnly=true"));
+            Assert.That(ChatLog.WordFilter(new ChatWordFilter(ChatWordFilterSpec.Default)), Is.EqualTo("[Chat] word filter words=0 action=Mask mask=* wholeWordsOnly=false"));
+            Assert.Throws<ArgumentNullException>(() => ChatLog.WordFilter(null));
+        }
+
+        [Test]
+        public void FormatsAMaskedLineWithoutItsText()
+        {
+            var line = new ChatLine(2, ChatChannel.Team, "****", 7.5d);
+
+            Assert.That(ChatLog.Masked(line), Is.EqualTo("[Chat] masked sender=2 channel=Team at=7.50"));
+            Assert.That(ChatLog.Refused(2, ChatRefusal.Blocked), Is.EqualTo("[Chat] refused sender=2 reason=Blocked"));
         }
 
         [Test]

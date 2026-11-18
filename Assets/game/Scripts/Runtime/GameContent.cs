@@ -184,7 +184,16 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("水中の色・音・水しぶき。空なら Resources/Presentation/WaterCatalog、それも無ければ既定の色だけで覆う")]
         private WaterCatalog _water;
 
-        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
+        [SerializeField, Tooltip("照準器とスコープの照準・縁の見た目 (照準の Id ごと)。空なら Resources/Presentation/ReticleCatalog、それも無ければ既定の形を描く")]
+        private ReticleCatalog _reticles;
+
+        [SerializeField, Tooltip("状態異常の種類ごとの見た目。空なら Resources/Presentation/StatusEffectVisualsCatalog、それも無ければコードで形を作る")]
+        private StatusEffectVisualCatalog _statusEffectVisuals;
+
+        [SerializeField, Tooltip("目くらましの覆いと耳鳴り。空なら Resources/Presentation/FlashOverlayCatalog、それも無ければ既定の色だけで覆う")]
+        private FlashOverlayCatalog _flashOverlay;
+
+        //ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
         private static bool _searched;
@@ -507,6 +516,24 @@ namespace Shooter.Runtime
         {
             get => _water;
             set => _water = value;
+        }
+
+        public ReticleCatalog Reticles
+        {
+            get => _reticles;
+            set => _reticles = value;
+        }
+
+        public StatusEffectVisualCatalog StatusEffectVisuals
+        {
+            get => _statusEffectVisuals;
+            set => _statusEffectVisuals = value;
+        }
+
+        public FlashOverlayCatalog FlashOverlay
+        {
+            get => _flashOverlay;
+            set => _flashOverlay = value;
         }
 
         public static GameContent Current

@@ -61,7 +61,8 @@ namespace Shooter.Runtime
 
         public static FlashOverlayCatalog Load()
         {
-            return Resources.Load<FlashOverlayCatalog>(ResourcePath);
+            var fromContent = GameContent.Pick(c => c.FlashOverlay);
+            return fromContent != null ? fromContent : Resources.Load<FlashOverlayCatalog>(ResourcePath);
         }
     }
 }

@@ -181,6 +181,12 @@ namespace Shooter.Server
             return TeamOf(DecideSide());
         }
 
+        public bool IsWinningPlayer(int playerId, Team playerTeam, Team? winner)
+        {
+            var side = DecideSide();
+            return side.HasValue && side.Value.Id == playerId;
+        }
+
         public void FillMatch(ref MatchSnapshot snapshot)
         {
             snapshot.Objective = Objective;

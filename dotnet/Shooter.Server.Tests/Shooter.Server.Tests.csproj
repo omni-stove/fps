@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shooter.Server.Eos.Tests/FakeLobbyBackend.cs" Link="FakeLobbyBackend.cs" />
+    <Compile Include="../Shooter.Server.Eos.Tests/FakeStatsIngestBackend.cs" Link="FakeStatsIngestBackend.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.1" />

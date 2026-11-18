@@ -85,6 +85,8 @@ namespace Shooter.Runtime
 
         public static GameSignal<LeaderboardStatus?> Leaderboard { get; } = new GameSignal<LeaderboardStatus?>(nameof(Leaderboard));
 
+        public static GameSignal<ILeaderboardControl> LeaderboardControl { get; } = new GameSignal<ILeaderboardControl>(nameof(LeaderboardControl));
+
         public static GameSignal<IReplayLibrary> Replays { get; } = new GameSignal<IReplayLibrary>(nameof(Replays));
 
         public static GameSignal<ICosmeticLocker> Cosmetics { get; } = new GameSignal<ICosmeticLocker>(nameof(Cosmetics));
@@ -129,6 +131,7 @@ namespace Shooter.Runtime
             BlockControl.Reset();
             Achievements.Reset();
             Leaderboard.Reset();
+            LeaderboardControl.Reset();
             Replays.Reset();
             Cosmetics.Reset();
             Stash.Reset();

@@ -61,6 +61,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.BlockControl.Value, Is.Null);
             Assert.That(GameSignals.Achievements.Value, Is.Null);
             Assert.That(GameSignals.Leaderboard.Value, Is.Null);
+            Assert.That(GameSignals.LeaderboardControl.Value, Is.Null);
             Assert.That(GameSignals.Replays.Value, Is.Null);
             Assert.That(GameSignals.Cosmetics.Value, Is.Null);
             Assert.That(GameSignals.Stash.Value, Is.Null);
@@ -182,6 +183,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.BlockControl.Publish(new FakeBlockControl());
             GameSignals.Achievements.Publish(new[] { new AchievementProgress("first-blood", 0, 1, false) });
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("kills", LeaderboardStage.Loading, null));
+            GameSignals.LeaderboardControl.Publish(new FakeLeaderboardControl());
             GameSignals.Replays.Publish(new FakeReplayLibrary());
             GameSignals.Cosmetics.Publish(new FakeCosmeticLocker());
             GameSignals.Stash.Publish(new StashStatus(60, null));
@@ -252,13 +254,16 @@ namespace Shooter.Tests.EditMode
             var achievements = new[] { new AchievementProgress("marksman", 10, 50, false) };
             var replays = new FakeReplayLibrary();
             var cosmetics = new FakeCosmeticLocker();
+            var leaderboardControl = new FakeLeaderboardControl();
             var heardLeaderboard = new List<LeaderboardStatus?>();
             GameSignals.Leaderboard.Changed += heardLeaderboard.Add;
 
             GameSignals.ReportSender.Publish(report);
             GameSignals.BlockControl.Publish(block);
             GameSignals.Achievements.Publish(achievements);
+            GameSignals.LeaderboardControl.Publish(leaderboardControl);
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("wins", LeaderboardStage.Unavailable, null));
+            GameSignals.LeaderboardControl.Value.Open("kills");
             GameSignals.Replays.Publish(replays);
             GameSignals.Cosmetics.Publish(cosmetics);
             GameSignals.Stash.Publish(new StashStatus(10, Array.Empty<StashEntry>()));
@@ -273,6 +278,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(
                 heardLeaderboard,
                 Is.EqualTo(new LeaderboardStatus?[] { new LeaderboardStatus("wins", LeaderboardStage.Unavailable, Array.Empty<LeaderboardRow>()) }));
+            Assert.That(GameSignals.LeaderboardControl.Value, Is.SameAs(leaderboardControl));
+            Assert.That(leaderboardControl.Opened, Is.EqualTo(new[] { "kills" }));
             Assert.That(GameSignals.Replays.Value, Is.SameAs(replays));
             Assert.That(GameSignals.Cosmetics.Value, Is.SameAs(cosmetics));
             Assert.That(GameSignals.Stash.HasValue, Is.True, "an empty stash is still something to show");
@@ -449,6 +456,26 @@ namespace Shooter.Tests.EditMode
                 }
 
                 Changed?.Invoke();
+            }
+        }
+
+        private sealed class FakeLeaderboardControl : ILeaderboardControl
+        {
+            public List<string> Opened { get; } = new List<string>();
+
+            public bool Open(string boardId)
+            {
+                Opened.Add(boardId);
+                return true;
+            }
+
+            public bool Refresh()
+            {
+                return false;
+            }
+
+            public void Close()
+            {
             }
         }
 

@@ -1,0 +1,14 @@
+{
+  "leaderboard.title": "Leaderboards",
+  "leaderboard.kills": "Kills",
+  "leaderboard.wins": "Wins",
+  "leaderboard.loading": "Loading…",
+  "leaderboard.unavailable": "Leaderboards are not available right now",
+  "leaderboard.empty": "No one is ranked yet",
+  "leaderboard.noBoards": "No leaderboards are set up",
+  "leaderboard.rank": "#{0}",
+  "leaderboard.unknownPlayer": "Unnamed player",
+  "leaderboard.you": "{0} (you)",
+  "leaderboard.refresh": "Refresh",
+  "leaderboard.back": "Back"
+}

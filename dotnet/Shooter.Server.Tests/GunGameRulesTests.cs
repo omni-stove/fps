@@ -72,6 +72,27 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void OnlyTheFinisherCountsAsTheWinnerNotTheirWholeTeam()
+        {
+            var match = new GunGameMatch(Settings(), Rules(FriendlyFire.On), _log);
+            match.Join(1, Team.Alpha);
+            match.Join(2, Team.Bravo);
+            match.Join(3, Team.Alpha);
+            match.Step();
+
+            Assert.That(match.Kill(1, 2, TestRules.RifleId), Is.EqualTo(DamageOutcome.Killed));
+            match.Advance(0.6f);
+            Assert.That(match.Kill(1, 3, TestRules.HandgunId), Is.EqualTo(DamageOutcome.Killed));
+            match.Step();
+
+            Assert.That(match.EndedWith, Is.EqualTo(Team.Alpha));
+            IMatchObjectiveRules rules = match.Rules;
+            Assert.That(rules.IsWinningPlayer(1, Team.Alpha, Team.Alpha), Is.True);
+            Assert.That(rules.IsWinningPlayer(3, Team.Alpha, Team.Alpha), Is.False, "a teammate of the finisher did not win");
+            Assert.That(rules.IsWinningPlayer(2, Team.Bravo, Team.Alpha), Is.False);
+        }
+
+        [Test]
         public void TheNextMatchStartsEveryoneFromTheFirstTier()
         {
             var match = new GunGameMatch(Settings(), Rules(FriendlyFire.Off), _log);

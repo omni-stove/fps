@@ -232,6 +232,30 @@ namespace Shooter.Core
             _respawn?.Cancel(playerId);
         }
 
+        // 抜いて入れ直さず記録の陣営だけを替えるのは、RemovePlayer が倒れている人のリスポーンの待ちを取り消してしまうため。
+        public void ChangeSide(int playerId, Side side)
+        {
+            var record = Find(playerId);
+            if (!_layout.Contains(side))
+            {
+                throw new ArgumentOutOfRangeException(nameof(side), side, "side is not part of this team layout");
+            }
+
+            if (record.Side == side)
+            {
+                return;
+            }
+
+            var capacity = _layout.Capacity;
+            if (capacity.HasValue && CountMembers(side) >= capacity.Value)
+            {
+                throw new InvalidOperationException($"{side} is full");
+            }
+
+            RegisterSide(side);
+            record.Side = side;
+        }
+
         public bool HasPlayer(int playerId) => _players.ContainsKey(playerId);
 
         public Side GetSide(int playerId) => Find(playerId).Side;
@@ -724,7 +748,7 @@ namespace Shooter.Core
 
         private sealed class PlayerRecord
         {
-            public Side Side { get; }
+            public Side Side { get; set; }
             public int Kills { get; set; }
             public int Deaths { get; set; }
             public int Assists { get; set; }

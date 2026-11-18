@@ -19,6 +19,7 @@ namespace Shooter.NetV2
         private readonly Func<int, bool> _slotPressed;
         private readonly Func<bool> _canAct;
         private InputAction[] _actions;
+        private bool _abilitiesOn;
         private bool _disposed;
 
         // slots は能力の枠の順で、置く物でない枠は null。押したかを引く口は、テストや別の入力から差し替えられるよう受け取る
@@ -60,13 +61,20 @@ namespace Shooter.NetV2
             return false;
         }
 
+        // サーバーも同じルールの値で断るので、届いたスナップショットの値で送るかを決める
         public void Apply(SnapshotMessage snapshot)
         {
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            _abilitiesOn = snapshot.Match.Rules.Abilities == Shooter.Core.Abilities.On;
         }
 
         public void Tick(float deltaSeconds)
         {
-            if (_disposed || GameUi.IsPauseOpen)
+            if (_disposed || !_abilitiesOn || GameUi.IsPauseOpen)
             {
                 return;
             }

@@ -326,6 +326,39 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void WithAbilitiesOffTheRuleRefusesAndNothingIsPlaced()
+        {
+            Start(Catalog(), abilities: Abilities.Off);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(_deployables.Place(1, _turretId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.RuleOff));
+            Deploy(2, _shieldId, _bravoFront, 90f);
+
+            Assert.That(Rows(1), Is.Empty);
+            Assert.That(_deployables.Count, Is.EqualTo(0));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=- net refused reason=RuleOff"));
+            Assert.That(_log.ToString(), Does.Not.Contain(" placed serial="));
+        }
+
+        [Test]
+        public void WithAbilitiesOnTheSameRequestIsPlaced()
+        {
+            Start(Catalog(), abilities: Abilities.On);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(_deployables.Place(1, _turretId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None), _log.ToString());
+
+            var rows = Rows(1);
+            Assert.That(rows, Has.Count.EqualTo(1));
+            Assert.That(rows[0].TypeId, Is.EqualTo(_turretId));
+            Assert.That(_log.ToString(), Does.Not.Contain("reason=RuleOff"));
+        }
+
+        [Test]
         public void ADeadPlayerCannotPlace()
         {
             Start(Catalog());
@@ -416,14 +449,14 @@ namespace Shooter.Server.Tests
             });
         }
 
-        private static GameRules Rules()
+        private static GameRules Rules(Abilities abilities)
         {
-            var actions = ActionRules.Default.WithDowned(Downed.Off);
+            var actions = ActionRules.Default.WithDowned(Downed.Off).WithAbilities(abilities);
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
         // wall は Alpha の前 (x=-2) で床から浮いた梁 (y 1.0〜1.4) と、x=-3・z 0〜1 に置いた上面 2.5 の 1 m 角の段
-        private void Start(DeployCatalog catalog, bool wall = false)
+        private void Start(DeployCatalog catalog, bool wall = false, Abilities abilities = Abilities.On)
         {
             var colliders = new List<WorldCollider>
             {
@@ -437,7 +470,7 @@ namespace Shooter.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules()), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(abilities)), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(false, TextWriter.Null, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

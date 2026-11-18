@@ -88,8 +88,8 @@ namespace Shooter.Server.Tests
             Assert.That(_stdout.ToString(), Does.Contain("\"type\":\"kill\""));
             var match = _first.LatestSnapshot.Match;
             Assert.That(match.Objective, Is.EqualTo(MatchObjective.FreeForAll));
-            Assert.That(match.HasWinner, Is.True);
-            Assert.That(match.Winner, Is.EqualTo(Row(_first, attackerId).Value.Team), "the one who reached the kill limit wins");
+            Assert.That(match.HasWinner, Is.False, "no team wins a free-for-all");
+            Assert.That(log, Does.Contain("[FreeForAll] ended winner=" + Text(attackerId)), "the one who reached the kill limit wins");
             Assert.That(Row(_first, attackerId).Value.Kills, Is.EqualTo(1));
             Assert.That(Row(_first, attackerId).Value.StreakKills, Is.EqualTo(1), "the melee kill counts toward the streak");
             Assert.That(Row(_first, victimId).Value.Deaths, Is.EqualTo(1));

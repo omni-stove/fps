@@ -297,7 +297,7 @@ namespace Shooter.NetV2
             }
             catch (Exception e) when (e is WeaponDefinitionException || e is ArgumentException || e is InvalidOperationException)
             {
-                Debug.LogWarning(NetV2Client.LogTag + " gun game ladder '" + definition.name + "' cannot be shown: " + e.Message);
+                Debug.LogWarning(ClientGunGameLog.LadderNotShown(definition.name, e.Message));
                 return null;
             }
         }
@@ -512,7 +512,7 @@ namespace Shooter.NetV2
                 if (!_gunGameMissingLogged)
                 {
                     _gunGameMissingLogged = true;
-                    Debug.LogWarning(NetV2Client.LogTag + " the server plays Gun Game but GameContent has no gun game ladder; the HUD does not show the tiers");
+                    Debug.LogWarning(ClientGunGameLog.LadderMissing());
                 }
 
                 return null;
@@ -522,7 +522,7 @@ namespace Shooter.NetV2
             if (_gunGame.LadderMismatch && !_gunGameMismatchLogged)
             {
                 _gunGameMismatchLogged = true;
-                Debug.LogWarning(NetV2Client.LogTag + " the server's gun game has more tiers than the local ladder; the HUD shows the last local tier");
+                Debug.LogWarning(ClientGunGameLog.LadderMismatch());
             }
 
             return status;

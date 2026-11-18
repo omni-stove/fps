@@ -11,6 +11,8 @@ namespace Shooter.Server.Tests
     // SDK を置いた手元でも置いていない CI でも同じテストが通るよう、どちらのビルドかで期待を分ける
     public sealed class ServerModulesTests
     {
+        private static readonly string[] _meleeIds = { "knife", "axe" };
+
         private TempDirectory _roots;
         private TempDirectory _library;
         private Dictionary<string, string> _environment;
@@ -104,7 +106,7 @@ namespace Shooter.Server.Tests
         public void OnlyAGunGameCountsMeleeKillsWithTheKnifeId()
         {
             var gunGame = new NetMatchSettings(gunGame: new GunGameSpec(
-                600f, 2f, new[] { TestRules.RifleId }, new[] { "knife", "axe" }, true));
+                600f, 2f, new[] { TestRules.RifleId }, _meleeIds, true));
 
             Assert.That(ServerModules.MeleeWeaponIdFor(TestRules.Data(GameRules.Default.WithObjective(MatchObjective.GunGame), gunGame)), Is.EqualTo("knife"));
             Assert.That(ServerModules.MeleeWeaponIdFor(TestRules.Data(GameRules.Default, gunGame)), Is.Null);

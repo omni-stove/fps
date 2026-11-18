@@ -178,7 +178,7 @@ namespace Shooter.Server.Tests
         {
             var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
 
-            foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+            foreach (var objective in Enum.GetValues<MatchObjective>())
             {
                 Assert.DoesNotThrow(() => ServerObjectiveFactory.Create(objective, settings, _host), objective.ToString());
             }

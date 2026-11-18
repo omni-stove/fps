@@ -12,6 +12,7 @@ namespace Shooter.Server.Tests
     {
         private const float _tickSeconds = 1f / 60f;
         private static readonly DateTime _time = new DateTime(2026, 11, 18, 9, 0, 0, DateTimeKind.Utc);
+        private static readonly int[] _firstPlayer = { 1 };
 
         private StringWriter _log;
         private StringWriter _json;
@@ -69,10 +70,10 @@ namespace Shooter.Server.Tests
 
             Step();
 
-            Assert.That(rearmed, Is.EqualTo(new[] { 1 }));
+            Assert.That(rearmed, Is.EqualTo(_firstPlayer));
             Assert.That(_log.ToString(), Does.Contain("[Mode] gungame rearm player=1 weapon=" + TestRules.HandgunId));
             Step();
-            Assert.That(rearmed, Is.EqualTo(new[] { 1 }), "a rearm is told once");
+            Assert.That(rearmed, Is.EqualTo(_firstPlayer), "a rearm is told once");
         }
 
         [Test]

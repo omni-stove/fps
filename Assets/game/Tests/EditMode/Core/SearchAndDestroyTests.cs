@@ -486,11 +486,14 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentNullException>(() => new SearchAndDestroyStatus(null, _alphaOne));
         }
 
+        // The test must read through the interface the online copy implements, so the static type is kept as the interface.
+        private static ISearchAndDestroyView AsView(ISearchAndDestroyView game) => game;
+
         [Test]
         public void TheGameIsReadThroughTheSameViewAsTheOnlineCopy()
         {
             var game = Create(preparationSeconds: 4f, winsToWin: 5);
-            ISearchAndDestroyView view = game;
+            var view = AsView(game);
 
             game.Start();
             game.Tick(1f);

@@ -1,7 +1,10 @@
+using System;
 using System.IO;
+using System.Linq;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Shooter.Tests.EditMode
 {
@@ -25,6 +28,14 @@ namespace Shooter.Tests.EditMode
             "customMatch.notFound",
             "customMatch.full",
             "customMatch.versionMismatch",
+            "menu.settings",
+            "settings.section.bindings",
+            "settings.input.action.PushToTalk",
+            "settings.off",
+            "voice.local",
+            "voice.settings.section",
+            "voice.settings.microphone",
+            "voice.settings.volume",
         };
 
         private GameLanguage _applied;
@@ -66,6 +77,34 @@ namespace Shooter.Tests.EditMode
                 Assert.That(shown, Is.Not.EqualTo(key), key + " has no " + language + " text");
                 Assert.That(readme, Does.Contain("「" + shown + "」"), key + " (" + language + ") is not quoted as the game shows it");
             }
+        }
+
+        [Test]
+        public void TheReadmeNamesTheDefaultPushToTalkKey()
+        {
+            var readme = ReadReadme();
+            var actions = InputSystem.actions;
+            Assert.That(actions, Is.Not.Null, "the project-wide input actions are not set");
+            var pushToTalk = actions.FindAction(InputActionPaths.PushToTalk);
+            Assert.That(pushToTalk, Is.Not.Null, InputActionPaths.PushToTalk + " is not in the input actions");
+
+            var key = pushToTalk.GetBindingDisplayString(InputBinding.MaskByGroup(PlayerBindings.KeyboardMouseGroup), InputBinding.DisplayStringOptions.IgnoreOverrides);
+
+            Assert.That(key, Is.EqualTo("Caps Lock"));
+            Assert.That(readme, Does.Contain("はじめは " + key + " キー"));
+        }
+
+        // macOS は使う理由の文が Info.plist に無いアプリがマイクを開くと止めるので、説明の「マイクの許可」が成り立つにはこれが要る。
+        [Test]
+        public void TheProjectStatesWhyItUsesTheMicrophone()
+        {
+            ReadReadme();
+            var path = Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? string.Empty, "ProjectSettings", "ProjectSettings.asset");
+            var line = File.ReadAllLines(path).Single(l => l.StartsWith("  microphoneUsageDescription:", StringComparison.Ordinal));
+
+            Assert.That(
+                line.Substring("  microphoneUsageDescription:".Length).Trim(),
+                Is.EqualTo("Voice chat sends your voice to your team while you hold Push to talk."));
         }
     }
 }

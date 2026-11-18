@@ -413,7 +413,15 @@ namespace Shooter.NetV2
                 VoiceLobbyId = replay ? null : _matchLobby?.LobbyId,
                 Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
                 Replay = replay,
+                ReplayFreeSpeed = ConfiguredFreeSpeed,
             }));
+        }
+
+        // プレイヤーの死亡カメラに設定された自由なカメラの速さ。まだ無い間は既定
+        private float ConfiguredFreeSpeed()
+        {
+            var deathCamera = _local != null ? _local.GetComponent<PlayerDeathCamera>() : null;
+            return deathCamera != null ? deathCamera.FreeSpeed : DeathCamFraming.DefaultFreeSpeed;
         }
 
         // 再生ではサーバーがいないので、EAC も通信路の選び方も使わず、ファイルを読む通信路を MatchClient に渡して試合中と同じ部品を動かす。

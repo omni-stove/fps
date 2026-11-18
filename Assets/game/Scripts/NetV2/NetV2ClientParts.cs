@@ -57,8 +57,8 @@ namespace Shooter.NetV2
         // ファイルから再生する (ReplayTransport) か。再生では通報を送る相手がいないので通報の口を出さず、見方の部品を足す
         public bool Replay { get; set; }
 
-        // 再生の自由なカメラの速さ (m/s)
-        public float ReplayFreeSpeed { get; set; } = DeathCamFraming.DefaultFreeSpeed;
+        // 再生の自由なカメラの速さ (m/s)。プレイヤーは後から現れるので毎回読む。null なら既定
+        public Func<float> ReplayFreeSpeed { get; set; }
 
         // null なら天候の部品がシーンの WeatherController を探す
         public Func<WeatherController> Weather { get; set; }
@@ -99,7 +99,7 @@ namespace Shooter.NetV2
 
             if (context.Replay)
             {
-                parts.Add(new NetV2ReplayViewPart(client, context.ReplayFreeSpeed));
+                parts.Add(new NetV2ReplayViewPart(client, context.ReplayFreeSpeed ?? (() => DeathCamFraming.DefaultFreeSpeed)));
             }
             else
             {

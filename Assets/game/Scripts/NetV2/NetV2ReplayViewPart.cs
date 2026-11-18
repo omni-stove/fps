@@ -12,22 +12,17 @@ namespace Shooter.NetV2
     {
         private readonly MatchClient _client;
         private readonly Func<Component> _cameraOwner;
-        private readonly float _freeSpeed;
+        private readonly Func<float> _freeSpeed;
         private ClientReplayView _replayView;
         private Component _viewOwner;
         private DeathCamView _view;
         private bool _disposed;
 
-        // freeSpeed は呼ぶ側が設定 (PlayerDeathCamera.FreeSpeed など) から渡す。
-        public NetV2ReplayViewPart(MatchClient client, float freeSpeed, Func<Component> cameraOwner = null)
+        // freeSpeed は呼ぶ側が設定 (PlayerDeathCamera.FreeSpeed など) から読ませる。プレイヤーが後から現れるので値でなく関数で受ける。
+        public NetV2ReplayViewPart(MatchClient client, Func<float> freeSpeed, Func<Component> cameraOwner = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
-            if (!(freeSpeed >= 0f) || float.IsInfinity(freeSpeed))
-            {
-                throw new ArgumentOutOfRangeException(nameof(freeSpeed), freeSpeed, "freeSpeed must be zero or more and finite");
-            }
-
-            _freeSpeed = freeSpeed;
+            _freeSpeed = freeSpeed ?? throw new ArgumentNullException(nameof(freeSpeed));
             _cameraOwner = cameraOwner ?? (() => NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null);
         }
 
@@ -78,7 +73,7 @@ namespace Shooter.NetV2
 
             if (_replayView.IsFree)
             {
-                view.MoveFree(view.ReadMove(), view.ReadLookDegrees(seconds), _freeSpeed, seconds);
+                view.MoveFree(view.ReadMove(), view.ReadLookDegrees(seconds), FreeSpeed(), seconds);
                 return;
             }
 
@@ -99,6 +94,12 @@ namespace Shooter.NetV2
             _disposed = true;
             ReleaseView();
             _replayView?.Reset();
+        }
+
+        private float FreeSpeed()
+        {
+            var speed = _freeSpeed();
+            return speed >= 0f && !float.IsInfinity(speed) ? speed : DeathCamFraming.DefaultFreeSpeed;
         }
 
         private DeathCamView BorrowView()

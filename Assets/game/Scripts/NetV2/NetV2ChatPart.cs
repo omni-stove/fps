@@ -12,11 +12,13 @@ namespace Shooter.NetV2
         private readonly ClientChat _chat;
         private readonly Action<string> _log;
         private readonly Sender _sender;
+        private readonly ClientBlocks _blocks;
         private double _clock;
         private bool _started;
         private bool _disposed;
 
-        public NetV2ChatPart(Func<IMessage, bool> send, int capacity = ClientChat.DefaultCapacity, Action<string> log = null)
+        public NetV2ChatPart(
+            Func<IMessage, bool> send, int capacity = ClientChat.DefaultCapacity, Action<string> log = null, ClientBlocks blocks = null)
         {
             if (send == null)
             {
@@ -24,8 +26,13 @@ namespace Shooter.NetV2
             }
 
             _log = log ?? (line => Debug.Log(line));
-            _chat = new ClientChat(capacity, send, _log);
+            _blocks = blocks;
+            _chat = new ClientChat(capacity, send, _log, blocks);
             _sender = new Sender(this);
+            if (_blocks != null)
+            {
+                _blocks.Changed += HandleBlocksChanged;
+            }
         }
 
         public ClientChat Chat => _chat;
@@ -78,9 +85,22 @@ namespace Shooter.NetV2
             }
 
             _disposed = true;
+            if (_blocks != null)
+            {
+                _blocks.Changed -= HandleBlocksChanged;
+            }
+
             GameSignals.ChatSender.ClearIfCurrent(_sender);
             GameSignals.Chat.ClearIfCurrent(_chat.Lines);
             _chat.Clear();
+        }
+
+        private void HandleBlocksChanged()
+        {
+            if (!_disposed && _chat.RemoveBlocked() > 0 && _started)
+            {
+                GameSignals.Chat.Publish(_chat.Lines);
+            }
         }
 
         // 部品そのものを渡すと UI から Handle や Dispose まで呼べてしまうので、送る口だけの包みを渡す。

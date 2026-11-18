@@ -18,6 +18,7 @@ namespace Shooter.Runtime
 
         public const string ResumeButtonName = "pause-resume";
         public const string SettingsButtonName = "pause-settings";
+        public const string PlayersButtonName = "pause-players";
         public const string ReturnToMenuButtonName = "pause-return-to-menu";
         public const string NoteLabelName = "pause-note";
 
@@ -36,10 +37,12 @@ namespace Shooter.Runtime
         private InputAction _pauseAction;
         private bool _enabledPauseAction;
         private Action _openSettings;
+        private Action _openPlayers;
         private bool _leaving;
 
         private Button _resumeButton;
         private Button _settingsButton;
+        private Button _playersButton;
         private Button _returnToMenuButton;
         private Label _noteLabel;
 
@@ -68,6 +71,17 @@ namespace Shooter.Runtime
             {
                 _openSettings = value;
                 RefreshSettingsButton();
+            }
+        }
+
+        // 参加者を操作できる口 (ブロック・通報) が無いオフラインでは押しても何も無いので、渡されている間だけボタンを出す。
+        public Action OpenPlayers
+        {
+            get => _openPlayers;
+            set
+            {
+                _openPlayers = value;
+                RefreshPlayersButton();
             }
         }
 
@@ -195,11 +209,19 @@ namespace Shooter.Runtime
             _returnToMenuButton = FindRequired<Button>(element, ReturnToMenuButtonName);
             _noteLabel = FindRequired<Label>(element, NoteLabelName);
 
+            // 後から足したボタンなので、これより前に作った差し替えのレイアウトに無くても開けるよう、無ければ出さないだけにする。
+            _playersButton = element.Q<Button>(PlayersButtonName);
+
             _resumeButton.clicked += Close;
             _settingsButton.clicked += HandleSettingsClicked;
             _returnToMenuButton.clicked += HandleReturnToMenuClicked;
+            if (_playersButton != null)
+            {
+                _playersButton.clicked += HandlePlayersClicked;
+            }
 
             RefreshSettingsButton();
+            RefreshPlayersButton();
             RefreshNote();
             RefreshVisibility();
         }
@@ -221,8 +243,14 @@ namespace Shooter.Runtime
                 _returnToMenuButton.clicked -= HandleReturnToMenuClicked;
             }
 
+            if (_playersButton != null)
+            {
+                _playersButton.clicked -= HandlePlayersClicked;
+            }
+
             _resumeButton = null;
             _settingsButton = null;
+            _playersButton = null;
             _returnToMenuButton = null;
             _noteLabel = null;
         }
@@ -252,6 +280,23 @@ namespace Shooter.Runtime
         private void HandleReturnToMenuClicked()
         {
             ReturnToMenu();
+        }
+
+        private void HandlePlayersClicked()
+        {
+            if (_openPlayers == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _openPlayers();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, this);
+            }
         }
 
         private void AcquirePauseAction()
@@ -375,6 +420,14 @@ namespace Shooter.Runtime
         private void RefreshSettingsButton()
         {
             _settingsButton?.SetEnabled(_openSettings != null);
+        }
+
+        private void RefreshPlayersButton()
+        {
+            if (_playersButton != null)
+            {
+                _playersButton.style.display = _openPlayers != null ? DisplayStyle.Flex : DisplayStyle.None;
+            }
         }
 
         private void Raise(Action handlers, string eventName)

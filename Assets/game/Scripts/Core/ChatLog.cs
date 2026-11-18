@@ -67,6 +67,16 @@ namespace Shooter.Core
                 channel);
         }
 
+        public static string DroppedBlocked(int senderId)
+        {
+            return Tag + " dropped a line from a blocked sender=" + senderId.ToString(CultureInfo.InvariantCulture);
+        }
+
+        public static string RemovedBlocked(int count)
+        {
+            return Tag + " removed " + count.ToString(CultureInfo.InvariantCulture) + " shown line(s) from blocked senders";
+        }
+
         public static string Sent(ChatChannel channel, int length, bool sent)
         {
             if (!Enum.IsDefined(typeof(ChatChannel), channel))

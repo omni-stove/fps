@@ -52,7 +52,7 @@ namespace Shooter.Net.Tests
         {
             _part.Handle(Message(2, "early"));
 
-            _part.Apply(new SnapshotMessage());
+            _part.Apply(Snapshot(TextChat.On));
 
             Assert.That(GameSignals.ChatSender.Value, Is.SameAs(_part.ChatSender));
             Assert.That(GameSignals.Chat.Value, Is.EqualTo(new[] { new ChatLine(2, CoreChatChannel.All, "early", 0d) }));
@@ -61,7 +61,7 @@ namespace Shooter.Net.Tests
         [Test]
         public void ReceivedLinesArePublishedOldestFirstWithTheirReceiveTime()
         {
-            _part.Apply(new SnapshotMessage());
+            _part.Apply(Snapshot(TextChat.On));
             _part.Handle(Message(2, "one"));
             _part.Tick(1.5f);
             _part.Handle(new ChatMessage { SenderId = 4, Channel = WireChatChannel.Team, Text = "two" });
@@ -77,7 +77,7 @@ namespace Shooter.Net.Tests
         [Test]
         public void AtCapacityTheOldestLineLeavesTheSignal()
         {
-            _part.Apply(new SnapshotMessage());
+            _part.Apply(Snapshot(TextChat.On));
             foreach (var text in new[] { "a", "b", "c", "d" })
             {
                 _part.Handle(Message(1, text));
@@ -93,7 +93,7 @@ namespace Shooter.Net.Tests
         [Test]
         public void ThePublishedSenderSendsAChatRequest()
         {
-            _part.Apply(new SnapshotMessage());
+            _part.Apply(Snapshot(TextChat.On));
 
             GameSignals.ChatSender.Value.Send(CoreChatChannel.Team, " push B ");
 
@@ -101,6 +101,82 @@ namespace Shooter.Net.Tests
             Assert.That(_sent[0].Channel, Is.EqualTo(WireChatChannel.Team));
             Assert.That(_sent[0].Text, Is.EqualTo("push B"));
             Assert.That(_logs, Has.Member("[Chat] sent channel=Team length=6"));
+        }
+
+        [Test]
+        public void WithTextChatOffNeitherTheSenderNorTheLinesArePublished()
+        {
+            _part.Handle(Message(2, "early"));
+
+            _part.Apply(Snapshot(TextChat.Off));
+
+            Assert.That(GameSignals.ChatSender.HasValue, Is.False);
+            Assert.That(GameSignals.Chat.HasValue, Is.False);
+            Assert.That(_chatChanges, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WithTextChatOffAReceivedLineIsTakenButNotAdded()
+        {
+            _part.Apply(Snapshot(TextChat.Off));
+
+            Assert.That(_part.Handle(Message(2, "muted")), Is.True, "no other part should get the chat line");
+
+            Assert.That(_part.Chat.Lines, Is.Empty);
+            Assert.That(GameSignals.Chat.HasValue, Is.False);
+        }
+
+        [Test]
+        public void TurningOffMidMatchClearsTheSenderAndTheLines()
+        {
+            _part.Apply(Snapshot(TextChat.On));
+            _part.Handle(Message(2, "one"));
+            var sender = GameSignals.ChatSender.Value;
+
+            _part.Apply(Snapshot(TextChat.Off));
+
+            Assert.That(GameSignals.ChatSender.HasValue, Is.False);
+            Assert.That(GameSignals.Chat.HasValue, Is.False);
+            sender.Send(CoreChatChannel.All, "late");
+            Assert.That(_sent, Is.Empty, "a sender kept while off does not send");
+            Assert.That(_logs, Has.Member("[Chat] could not send channel=All length=4 (text chat is off)"));
+        }
+
+        [Test]
+        public void TurningOffDoesNotClearWhatAnotherPartPublished()
+        {
+            _part.Apply(Snapshot(TextChat.On));
+            var otherLines = new[] { new ChatLine(9, CoreChatChannel.All, "other", 0d) };
+            GameSignals.Chat.Publish(otherLines);
+
+            _part.Apply(Snapshot(TextChat.Off));
+
+            Assert.That(GameSignals.Chat.Value, Is.SameAs(otherLines));
+        }
+
+        [Test]
+        public void TurningBackOnPublishesAgainWithTheLinesKeptFromBefore()
+        {
+            _part.Apply(Snapshot(TextChat.On));
+            _part.Handle(Message(2, "before"));
+            _part.Apply(Snapshot(TextChat.Off));
+            _part.Handle(Message(3, "while off"));
+
+            _part.Apply(Snapshot(TextChat.On));
+
+            Assert.That(GameSignals.ChatSender.Value, Is.SameAs(_part.ChatSender));
+            Assert.That(GameSignals.Chat.Value, Is.EqualTo(new[] { new ChatLine(2, CoreChatChannel.All, "before", 0d) }));
+            GameSignals.ChatSender.Value.Send(CoreChatChannel.All, "back");
+            Assert.That(_sent.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RepeatedOnSnapshotsPublishOnlyOnce()
+        {
+            _part.Apply(Snapshot(TextChat.On));
+            _part.Apply(Snapshot(TextChat.On));
+
+            Assert.That(_chatChanges, Is.EqualTo(1));
         }
 
         [Test]
@@ -112,7 +188,7 @@ namespace Shooter.Net.Tests
         [Test]
         public void DisposeClearsOnlyWhatThisPartPublishedAndStopsSending()
         {
-            _part.Apply(new SnapshotMessage());
+            _part.Apply(Snapshot(TextChat.On));
             _part.Handle(Message(1, "a"));
             var sender = GameSignals.ChatSender.Value;
 
@@ -147,6 +223,13 @@ namespace Shooter.Net.Tests
         private void CountChatChange(IReadOnlyList<ChatLine> lines)
         {
             _chatChanges++;
+        }
+
+        private static SnapshotMessage Snapshot(TextChat textChat)
+        {
+            var snapshot = new SnapshotMessage();
+            snapshot.Match.Rules = new MatchRulesSync { TextChat = textChat };
+            return snapshot;
         }
 
         private static ChatMessage Message(int senderId, string text)

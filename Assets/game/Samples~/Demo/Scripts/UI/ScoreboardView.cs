@@ -90,6 +90,7 @@ namespace Shooter.Runtime
         private VisualElement _pausePanel;
         private int _homeIndex = -1;
         private int? _reportingId;
+        private string _focusKey;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _toggleAction;
@@ -215,6 +216,7 @@ namespace Shooter.Runtime
 
             _pinned = false;
             _reportingId = null;
+            _focusKey = null;
             var element = Element;
             if (element != null)
             {
@@ -658,7 +660,33 @@ namespace Shooter.Runtime
                 back.name = BackButtonName;
                 footer.Add(back);
                 element.Add(footer);
+                RestoreFocus(element);
             }
+        }
+
+        // 作り直しで押したボタンごと消えるので、押したボタンを覚えておき、同じボタンへフォーカスを戻す。
+        private static string FocusKey(int participantId, string className)
+        {
+            return participantId + ":" + className;
+        }
+
+        private void RestoreFocus(VisualElement element)
+        {
+            var key = _focusKey;
+            _focusKey = null;
+            Button target = null;
+            if (key != null)
+            {
+                target = element.Query<Button>().Where(b => (b.userData as string) == key).First();
+            }
+
+            // 押したボタンが無効になった・消えたときは、戻るボタンへ移す。
+            if (target == null || !target.enabledSelf)
+            {
+                target = element.Q<Button>(BackButtonName);
+            }
+
+            target?.Focus();
         }
 
         // 操作の無い行にも同じ幅の空の列を置くのは、数の列が行ごとにずれないようにするため。
@@ -674,14 +702,32 @@ namespace Shooter.Runtime
             var id = entry.PlayerId;
             if (blocks != null)
             {
-                actions.Add(ActionButton(Localizer.Resolve(ModerationText.Mute(muted)), MuteButtonClass, muted, () => ToggleMute(id)));
-                actions.Add(ActionButton(Localizer.Resolve(ModerationText.Block(blocked)), BlockButtonClass, blocked, () => ToggleBlock(id)));
+                var mute = ActionButton(Localizer.Resolve(ModerationText.Mute(muted)), MuteButtonClass, muted, () =>
+                {
+                    _focusKey = FocusKey(id, MuteButtonClass);
+                    ToggleMute(id);
+                });
+                mute.userData = FocusKey(id, MuteButtonClass);
+                actions.Add(mute);
+                var block = ActionButton(Localizer.Resolve(ModerationText.Block(blocked)), BlockButtonClass, blocked, () =>
+                {
+                    _focusKey = FocusKey(id, BlockButtonClass);
+                    ToggleBlock(id);
+                });
+                block.userData = FocusKey(id, BlockButtonClass);
+                actions.Add(block);
             }
 
             if (reports != null)
             {
                 var reported = _reported.Contains(id);
-                var report = ActionButton(Localizer.Resolve(ModerationText.Report(reported)), ReportButtonClass, false, () => BeginReport(id));
+                var report = ActionButton(Localizer.Resolve(ModerationText.Report(reported)), ReportButtonClass, false, () =>
+                {
+                    // 理由の行が開いたら、最初の理由へ移す。
+                    _focusKey = FocusKey(id, ReasonButtonClass);
+                    BeginReport(id);
+                });
+                report.userData = FocusKey(id, ReportButtonClass);
                 report.SetEnabled(!reported);
                 actions.Add(report);
             }
@@ -704,11 +750,21 @@ namespace Shooter.Runtime
             foreach (var reason in _reasons)
             {
                 var chosen = reason;
-                reasons.Add(ActionButton(
-                    Localizer.Resolve(ModerationText.Reason(chosen)), ReasonButtonClass, false, () => SendReport(participantId, chosen)));
+                var reasonButton = ActionButton(
+                    Localizer.Resolve(ModerationText.Reason(chosen)), ReasonButtonClass, false, () =>
+                    {
+                        _focusKey = FocusKey(participantId, ReportButtonClass);
+                        SendReport(participantId, chosen);
+                    });
+                reasonButton.userData = FocusKey(participantId, ReasonButtonClass);
+                reasons.Add(reasonButton);
             }
 
-            reasons.Add(ActionButton(Localizer.Resolve(ModerationText.Cancel), CancelReportButtonClass, false, CancelReport));
+            reasons.Add(ActionButton(Localizer.Resolve(ModerationText.Cancel), CancelReportButtonClass, false, () =>
+            {
+                _focusKey = FocusKey(participantId, ReportButtonClass);
+                CancelReport();
+            }));
             return reasons;
         }
 

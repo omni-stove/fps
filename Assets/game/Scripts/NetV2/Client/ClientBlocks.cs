@@ -45,7 +45,13 @@ namespace Shooter.NetV2
 
         public bool IsMutedUser(string userId)
         {
-            return _list.IsMuted(userId) || (_roster.TryGetPlayerId(userId, out var participantId) && _matchMuted.Contains(participantId));
+            // 画面の IsMuted と同じく、確かめた Id のときだけ保存済みの一覧を当てる。確かめていない Id に当てると画面から外せない。
+            if (!_roster.TryGetPlayerId(userId, out var participantId))
+            {
+                return false;
+            }
+
+            return IsMuted(participantId);
         }
 
         public bool SetBlocked(int participantId, bool blocked)

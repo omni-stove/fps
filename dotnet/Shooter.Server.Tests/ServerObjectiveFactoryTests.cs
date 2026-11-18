@@ -157,13 +157,42 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective 99"));
         }
 
-        [Test]
-        public void CaptureTheFlagIsNotOfferedByTheFactoryYet()
+        [TestCase(MatchObjective.CaptureTheFlag, typeof(CaptureTheFlagRules))]
+        [TestCase(MatchObjective.Hardpoint, typeof(HardpointRules))]
+        [TestCase(MatchObjective.SearchAndDestroy, typeof(SearchAndDestroyRules))]
+        [TestCase(MatchObjective.FreeForAll, typeof(FreeForAllRules))]
+        [TestCase(MatchObjective.KillConfirmed, typeof(KillConfirmedRules))]
+        [TestCase(MatchObjective.GunGame, typeof(GunGameRules))]
+        public void EveryOnlineModeHasServerRules(MatchObjective objective, Type expected)
         {
-            var e = Assert.Throws<InvalidOperationException>(
-                () => ServerObjectiveFactory.Create(MatchObjective.CaptureTheFlag, new NetMatchSettings(), _host));
+            var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
 
-            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective CaptureTheFlag"));
+            var rules = ServerObjectiveFactory.Create(objective, settings, _host);
+
+            Assert.That(rules, Is.TypeOf(expected));
+            Assert.That(rules.Objective, Is.EqualTo(objective));
+        }
+
+        [Test]
+        public void EveryObjectiveTheProtocolCarriesHasServerRules()
+        {
+            var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
+
+            foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+            {
+                Assert.DoesNotThrow(() => ServerObjectiveFactory.Create(objective, settings, _host), objective.ToString());
+            }
+        }
+
+        [TestCase(MatchObjective.CaptureTheFlag, "flag")]
+        [TestCase(MatchObjective.Hardpoint, "hardpoint")]
+        [TestCase(MatchObjective.SearchAndDestroy, "bomb site")]
+        public void ModesThatNeedMapPointsRefuseAMapWithoutThem(MatchObjective objective, string what)
+        {
+            var objectiveRules = ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host);
+            var map = TestMaps.Data("Empty", TestRules.Points());
+
+            Assert.Throws<InvalidOperationException>(() => objectiveRules.CheckMap(map, TestRules.Points()), what);
         }
 
         [Test]

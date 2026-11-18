@@ -52,6 +52,13 @@ namespace Shooter.NetV2
         private Func<float> _blindSeconds;
         private IInventoryControl _inventory;
         private ClientSearchAndDestroyStatus _searchAndDestroy;
+        private ClientHardpointStatus _hardpoint;
+        private ClientKillConfirmedStatus _killConfirmed;
+        private ClientGunGameStatus _gunGame;
+        private bool _gunGameMissingLogged;
+        private bool _gunGameMismatchLogged;
+        private ModeStatus _perSnapshotStatus;
+        private long _perSnapshotKey;
 
         public HudModel Model => _model;
 
@@ -105,6 +112,9 @@ namespace Shooter.NetV2
             netHud._roster = new Roster(netHud);
             netHud._captureTheFlag = new ClientCaptureTheFlagStatus(localPlayerId);
             netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId, ConfiguredSearchAndDestroy());
+            netHud._hardpoint = new ClientHardpointStatus(localPlayerId);
+            netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
+            netHud._gunGame = ConfiguredGunGame();
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
@@ -272,6 +282,26 @@ namespace Shooter.NetV2
             return definition != null ? definition.ToSpec(SearchAndDestroySpec.Default.SiteCount) : SearchAndDestroySpec.Default;
         }
 
+        // 武器の表示名の鍵は梯子の定義にしか無いので、サーバーの段の並びではなく手元の入口 (GameContent) の梯子で作る。無ければ Gun Game の状態は出さない
+        private static ClientGunGameStatus ConfiguredGunGame()
+        {
+            var definition = GameContent.Pick(c => c.GunGameLadder);
+            if (definition == null || definition.Tiers.Count == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                return new ClientGunGameStatus(definition.ToLadder());
+            }
+            catch (Exception e) when (e is WeaponDefinitionException || e is ArgumentException || e is InvalidOperationException)
+            {
+                Debug.LogWarning(NetV2Client.LogTag + " gun game ladder '" + definition.name + "' cannot be shown: " + e.Message);
+                return null;
+            }
+        }
+
         private void PublishModeStatus(ModeStatus status)
         {
             if (_modeStatus != null)
@@ -421,13 +451,109 @@ namespace Shooter.NetV2
 
         private void ShowModeStatus(SnapshotMessage snapshot)
         {
-            // || だと先の Apply で後の Apply が飛ばされ、目的が変わったときに後の側の状態が残るので | で両方に渡す
+            // || だと先の Apply で後の Apply が飛ばされ、目的が変わったときに後の側の状態が残るので | ですべてに渡す
             var changed = (_captureTheFlag != null && _captureTheFlag.Apply(snapshot))
-                | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot));
+                | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
+                | (_hardpoint != null && _hardpoint.Apply(snapshot))
+                | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
+                | ApplyPerSnapshot(snapshot);
             if (changed)
             {
-                // 片方が出したあとに、もう片方が消えたことで null を出して上書きしないように、残っている方を出す
-                PublishModeStatus(_captureTheFlag?.Status ?? _searchAndDestroy?.Status);
+                // 1 つが出したあとに、別のものが消えたことで null を出して上書きしないように、残っているものを出す
+                PublishModeStatus(_captureTheFlag?.Status
+                    ?? _searchAndDestroy?.Status
+                    ?? _hardpoint?.Status
+                    ?? _killConfirmed?.Status
+                    ?? _perSnapshotStatus);
+            }
+        }
+
+        // FFA と Gun Game の状態はスナップショットから毎回作り直すので、出す値 (残り秒・状態・勝者・各人のキル数と段) が変わったときだけ差し替える
+        private bool ApplyPerSnapshot(SnapshotMessage snapshot)
+        {
+            var match = snapshot.Match;
+            ModeStatus status = null;
+            if (match.Objective == MatchObjective.FreeForAll)
+            {
+                status = ClientFreeForAllStatus.From(snapshot, _localId);
+            }
+            else if (match.Objective == MatchObjective.GunGame)
+            {
+                status = GunGameStatusOf(snapshot);
+            }
+
+            if (status == null)
+            {
+                if (_perSnapshotStatus == null)
+                {
+                    return false;
+                }
+
+                _perSnapshotStatus = null;
+                _perSnapshotKey = 0;
+                return true;
+            }
+
+            var key = PerSnapshotKey(snapshot);
+            if (_perSnapshotStatus != null && key == _perSnapshotKey)
+            {
+                return false;
+            }
+
+            _perSnapshotStatus = status;
+            _perSnapshotKey = key;
+            return true;
+        }
+
+        private ModeStatus GunGameStatusOf(SnapshotMessage snapshot)
+        {
+            if (_gunGame == null)
+            {
+                if (!_gunGameMissingLogged)
+                {
+                    _gunGameMissingLogged = true;
+                    Debug.LogWarning(NetV2Client.LogTag + " the server plays Gun Game but GameContent has no gun game ladder; the HUD does not show the tiers");
+                }
+
+                return null;
+            }
+
+            var status = _gunGame.Update(snapshot, _localId);
+            if (_gunGame.LadderMismatch && !_gunGameMismatchLogged)
+            {
+                _gunGameMismatchLogged = true;
+                Debug.LogWarning(NetV2Client.LogTag + " the server's gun game has more tiers than the local ladder; the HUD shows the last local tier");
+            }
+
+            return status;
+        }
+
+        public static long PerSnapshotKey(SnapshotMessage snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            var match = snapshot.Match;
+            unchecked
+            {
+                long key = 17;
+                key = (key * 31) + (int)match.Objective;
+                key = (key * 31) + (int)match.State;
+                key = (key * 31) + match.RemainingSeconds;
+                key = (key * 31) + (match.HasWinner ? 1 + (int)match.Winner : 0);
+                key = (key * 31) + match.AlphaPoints;
+                var players = snapshot.Players;
+                for (var i = 0; i < players.Count; i++)
+                {
+                    var row = players[i];
+                    key = (key * 31) + row.PlayerId;
+                    key = (key * 31) + row.Kills;
+                    key = (key * 31) + row.GunGameTier;
+                }
+
+                return key;
             }
         }
 
@@ -536,6 +662,10 @@ namespace Shooter.NetV2
             PublishModeStatus(null);
             _captureTheFlag?.Clear();
             _searchAndDestroy?.Reset();
+            _hardpoint?.Clear();
+            _killConfirmed?.Reset();
+            _perSnapshotStatus = null;
+            _perSnapshotKey = 0;
 
             if (_publishedScoreboard != null)
             {

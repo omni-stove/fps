@@ -31,6 +31,17 @@ namespace Shooter.Server
                 + " team=" + TeamName(team);
         }
 
+        public static string Rearm(int playerId, string weaponId)
+        {
+            return GunGameText.LogPrefix + " rearm player=" + Number(playerId) + " weapon=" + (weaponId ?? "");
+        }
+
+        public static string MissingTierWeapon(int tier, string weaponId, string rulesName)
+        {
+            return "cannot start the " + MatchObjective.GunGame + " match: tier " + Number(tier) + " weapon " + (weaponId ?? "")
+                + " is not in the loadout or the catalog of rules " + (rulesName ?? "");
+        }
+
         private static string TeamName(Team? team)
         {
             return team.HasValue ? team.Value.ToString() : "-";

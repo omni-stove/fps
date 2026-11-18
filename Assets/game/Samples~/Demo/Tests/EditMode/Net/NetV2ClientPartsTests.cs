@@ -43,10 +43,12 @@ namespace Shooter.Net.Tests
             GameSignals.Minimap.Clear();
             GameSignals.Spectate.Clear();
             GameSignals.Voice.Clear();
+            GameSignals.Streak.Clear();
+            GameSignals.KillCam.Clear();
         }
 
         [Test]
-        public void WithoutVoiceTheListHasTheMinimapChatMapVoteAndSpectateParts()
+        public void WithoutVoiceTheListHasTheMatchAndCombatParts()
         {
             _parts = NetV2ClientParts.Create(Context(null));
 
@@ -56,6 +58,11 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ChatPart),
                 typeof(NetV2MapVotePart),
                 typeof(NetV2SpectatePart),
+                typeof(NetV2StreakPart),
+                typeof(NetV2MeleePart),
+                typeof(NetV2DeployablesPart),
+                typeof(NetV2DeployInputPart),
+                typeof(NetV2KillCamPart),
             }));
         }
 
@@ -72,9 +79,75 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ChatPart),
                 typeof(NetV2MapVotePart),
                 typeof(NetV2SpectatePart),
+                typeof(NetV2StreakPart),
+                typeof(NetV2MeleePart),
+                typeof(NetV2DeployablesPart),
+                typeof(NetV2DeployInputPart),
+                typeof(NetV2KillCamPart),
                 typeof(NetV2VoicePart),
             }));
-            Assert.That(((NetV2VoicePart)_parts[4]).Voice, Is.Not.Null);
+            Assert.That(((NetV2VoicePart)_parts[9]).Voice, Is.Not.Null);
+        }
+
+        [Test]
+        public void TheMeleePartUsesTheGivenTuning()
+        {
+            var spec = MeleeJson.Parse("{\"damage\": 70}", "melee.json");
+            var context = Context(null);
+            context.Melee = spec;
+
+            _parts = NetV2ClientParts.Create(context);
+
+            Assert.That(_parts.OfType<NetV2MeleePart>().Single().Melee.Spec, Is.SameAs(spec));
+        }
+
+        [Test]
+        public void AStreakActivationIsTakenByTheStreakPart()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+
+            var taker = _parts.FirstOrDefault(part => part.Handle(new StreakActivatedMessage { PlayerId = 2, RewardId = StreakSpec.UavRewardId }));
+
+            Assert.That(taker, Is.InstanceOf<NetV2StreakPart>());
+        }
+
+        [Test]
+        public void AKillCamClipIsTakenByTheKillCamPartButAKillIsLeftForTheOthers()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+
+            var clipTaker = _parts.FirstOrDefault(part => part.Handle(new KillCamClipMessage { KillerId = 2, VictimId = 1 }));
+            var killTaker = _parts.FirstOrDefault(part => part.Handle(new KilledMessage { KillerId = 2, VictimId = 1 }));
+
+            Assert.That(clipTaker, Is.InstanceOf<NetV2KillCamPart>());
+            Assert.That(killTaker, Is.Null);
+        }
+
+        [Test]
+        public void TheStreakRuleIsOffUntilASnapshotSaysOtherwise()
+        {
+            Assert.That(NetV2ClientParts.StreaksRule(_client), Is.EqualTo(Streaks.Off));
+            Assert.That(NetV2ClientParts.StreaksRule(null), Is.EqualTo(Streaks.Off));
+            Assert.That(NetV2ClientParts.CanAct(_client), Is.False, "no snapshot has arrived");
+        }
+
+        [Test]
+        public void OnlyDeployAbilitiesFillTheSlotsInTheirOrder()
+        {
+            var shield = UnityEngine.ScriptableObject.CreateInstance<ShieldDeployDefinition>();
+            try
+            {
+                var slots = NetV2DeployInputPart.SlotsOf(new AbilityDefinition[] { null, shield, shield });
+
+                Assert.That(slots.Count, Is.EqualTo(NetV2DeployInputPart.SlotCount));
+                Assert.That(slots[0], Is.Null);
+                Assert.That(slots[1], Is.SameAs(shield));
+                Assert.That(NetV2DeployInputPart.SlotsOf(null).All(slot => slot == null), Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(shield);
+            }
         }
 
         [Test]
@@ -83,7 +156,7 @@ namespace Shooter.Net.Tests
             var voice = new FakeVoiceSession();
             _parts = NetV2ClientParts.Create(Context(voice));
 
-            _parts[4].Dispose();
+            _parts[9].Dispose();
 
             Assert.That(voice.Disposed, Is.True);
         }
@@ -156,6 +229,8 @@ namespace Shooter.Net.Tests
                 Voice = voice,
                 VoiceSettings = new VoiceSettingsStore("Shooter.Tests.NetV2ClientParts.Voice"),
                 PushToTalkHeld = () => false,
+                Melee = MeleeSpec.Default,
+                Streaks = StreakSpec.Default,
             };
         }
 

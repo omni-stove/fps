@@ -19,7 +19,79 @@ namespace Shooter.Core.Tests
             Assert.That(profile.Matches, Is.EqualTo(3));
             Assert.That(profile.Wins, Is.EqualTo(2));
             Assert.That(profile.Rating, Is.EqualTo(1234));
-            Assert.That(profile.ToString(), Is.EqualTo("xp=1650 kills=12 assists=7 deaths=4 matches=3 wins=2 rating=1234"));
+            Assert.That(profile.Headshots, Is.Zero);
+            Assert.That(profile.MeleeKills, Is.Zero);
+            Assert.That(profile.PlaySeconds, Is.Zero);
+            Assert.That(profile.Achievements, Is.Empty);
+            Assert.That(
+                profile.ToString(),
+                Is.EqualTo("xp=1650 kills=12 assists=7 deaths=4 matches=3 wins=2 rating=1234 headshots=0 meleeKills=0 playSeconds=0 achievements="));
+        }
+
+        [Test]
+        public void KeepsTheStatsAndAchievements()
+        {
+            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { " first-blood ", "veteran" });
+
+            Assert.That(profile.Headshots, Is.EqualTo(5));
+            Assert.That(profile.MeleeKills, Is.EqualTo(2));
+            Assert.That(profile.PlaySeconds, Is.EqualTo(3600));
+            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood", "veteran" }));
+            Assert.That(profile.HasAchievement("veteran"), Is.True);
+            Assert.That(profile.HasAchievement("victor"), Is.False);
+            Assert.That(profile.HasAchievement(null), Is.False);
+            Assert.That(
+                profile.ToString(),
+                Is.EqualTo("xp=1650 kills=12 assists=7 deaths=4 matches=3 wins=2 rating=1234 headshots=5 meleeKills=2 playSeconds=3600 achievements=first-blood,veteran"));
+        }
+
+        [Test]
+        public void TheAchievementListIsCopied()
+        {
+            var ids = new[] { "first-blood" };
+            var profile = new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, ids);
+
+            ids[0] = "victor";
+
+            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood" }));
+        }
+
+        [Test]
+        public void WithAchievementAddsTheIdOnceAtTheEnd()
+        {
+            var profile = new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, new[] { "first-blood" });
+
+            var next = profile.WithAchievement("victor");
+
+            Assert.That(next.Achievements, Is.EqualTo(new[] { "first-blood", "victor" }));
+            Assert.That(next, Is.EqualTo(new PlayerProfile(10, 1, 0, 1, 1, 0, 1200, 1, 0, 30, new[] { "first-blood", "victor" })));
+            Assert.That(profile.Achievements, Is.EqualTo(new[] { "first-blood" }), "the profile itself does not change");
+            Assert.That(next.WithAchievement("victor"), Is.SameAs(next));
+            Assert.Throws<ArgumentException>(() => profile.WithAchievement(" "));
+            Assert.Throws<ArgumentException>(() => profile.WithAchievement(null));
+        }
+
+        [Test]
+        public void TheWithMethodsKeepTheOtherValues()
+        {
+            var profile = new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood" });
+
+            Assert.That(profile.WithRating(1300), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1300, 5, 2, 3600, new[] { "first-blood" })));
+            Assert.That(
+                profile.WithRecord(1700, 13, 5, 4, 3, 8),
+                Is.EqualTo(new PlayerProfile(1700, 13, 5, 4, 3, 8, 1234, 5, 2, 3600, new[] { "first-blood" })));
+            Assert.That(profile.WithStats(6, 3, 3700), Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 6, 3, 3700, new[] { "first-blood" })));
+            Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(-1, 0, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(0, -1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => profile.WithStats(0, 0, -1));
+        }
+
+        [Test]
+        public void ABlankOrRepeatedAchievementIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new[] { "" }));
+            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new string[] { null }));
+            Assert.Throws<ArgumentException>(() => new PlayerProfile(0, 0, 0, 0, 0, 0, 1000, 0, 0, 0, new[] { "a", " a" }));
         }
 
         [Test]
@@ -80,10 +152,17 @@ namespace Shooter.Core.Tests
         [Test]
         public void WritesTheVersionedJson()
         {
-            Assert.That(PlayerProfile.CurrentVersion, Is.EqualTo(3));
+            Assert.That(PlayerProfile.CurrentVersion, Is.EqualTo(4));
             Assert.That(
                 new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234).ToJson(),
-                Is.EqualTo("{\"version\":3,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234}"));
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
+            Assert.That(
+                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood", "veteran" }).ToJson(),
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234,"
+                    + "\"headshots\":5,\"meleeKills\":2,\"playSeconds\":3600,\"achievements\":[\"first-blood\",\"veteran\"]}"));
         }
 
         [Test]
@@ -95,8 +174,37 @@ namespace Shooter.Core.Tests
             Assert.That(read.Version, Is.EqualTo(PlayerProfile.CurrentVersion));
             Assert.That(
                 read.ToJson(),
-                Is.EqualTo("{\"version\":3,\"xp\":1650,\"kills\":12,\"assists\":0,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1000}"),
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":0,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1000,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"),
                 "the next save writes the current version");
+        }
+
+        [Test]
+        public void AVersion3ProfileIsReadWithNoStatsOrAchievements()
+        {
+            var read = PlayerProfile.FromJson(
+                "{\"version\":3,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234}", 1500);
+
+            Assert.That(read, Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 0, 0, 0, null)));
+            Assert.That(read.Version, Is.EqualTo(4));
+            Assert.That(read.Achievements, Is.Empty);
+            Assert.That(
+                read.ToJson(),
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"),
+                "the next save writes the current version");
+        }
+
+        [Test]
+        public void AVersion4ProfileKeepsItsStatsAndAchievements()
+        {
+            var read = PlayerProfile.FromJson(
+                "{\"version\":4,\"xp\":0,\"kills\":3,\"assists\":0,\"deaths\":0,\"matches\":1,\"wins\":0,\"rating\":1000,"
+                + "\"headshots\":2,\"meleeKills\":1,\"playSeconds\":95,\"achievements\":[\"first-blood\"]}");
+
+            Assert.That(read, Is.EqualTo(new PlayerProfile(0, 3, 0, 1, 0, 0, 1000, 2, 1, 95, new[] { "first-blood" })));
         }
 
         [Test]
@@ -107,10 +215,12 @@ namespace Shooter.Core.Tests
             var read = PlayerProfile.FromJson(version2, 1500);
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 1500)));
-            Assert.That(read.Version, Is.EqualTo(3));
+            Assert.That(read.Version, Is.EqualTo(4));
             Assert.That(
                 read.ToJson(),
-                Is.EqualTo("{\"version\":3,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1500}"),
+                Is.EqualTo(
+                    "{\"version\":4,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1500,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"),
                 "the next save writes the current version");
             Assert.That(PlayerProfile.FromJson(version2).Rating, Is.EqualTo(1000), "without an initial rating the default is used");
         }
@@ -150,6 +260,8 @@ namespace Shooter.Core.Tests
                 new PlayerProfile(1650, 12, 4, 3, 2, 7),
                 new PlayerProfile(1650, 12, 4, 3, 2, 7, 0),
                 new PlayerProfile(int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue),
+                new PlayerProfile(1650, 12, 4, 3, 2, 7, 1234, 5, 2, 3600, new[] { "first-blood", "a \"quoted\" id" }),
+                new PlayerProfile(0, 0, 0, 0, 0, 0, 0, int.MaxValue, int.MaxValue, int.MaxValue, null),
             };
 
             foreach (var profile in profiles)
@@ -207,6 +319,16 @@ namespace Shooter.Core.Tests
         [TestCase("{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1.5}")]
         [TestCase("{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":\"1000\"}")]
         [TestCase("{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"level\":3}")]
+        [TestCase("{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"achievements\":[]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":-1,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":1.5,\"achievements\":[]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":\"first-blood\"}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[1]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[\"\"]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[\"a\",\"a\"]}")]
+        [TestCase("{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"level\":3}")]
         public void BrokenJsonIsAFormatError(string json)
         {
             Assert.Throws<FormatException>(() => PlayerProfile.FromJson(json));
@@ -249,7 +371,7 @@ namespace Shooter.Core.Tests
         }
 
         [TestCase("0")]
-        [TestCase("4")]
+        [TestCase("5")]
         [TestCase("-1")]
         public void AnUnknownVersionIsAFormatError(string version)
         {
@@ -257,15 +379,36 @@ namespace Shooter.Core.Tests
 
             var error = Assert.Throws<FormatException>(() => PlayerProfile.FromJson(json));
 
-            Assert.That(error.Message, Is.EqualTo("unsupported profile data version " + version + " (expected 1 to 3)"));
+            Assert.That(error.Message, Is.EqualTo("unsupported profile data version " + version + " (expected 1 to 4)"));
         }
 
         [Test]
         public void TheVersionIsCheckedBeforeTheOtherKeys()
         {
-            var error = Assert.Throws<FormatException>(() => PlayerProfile.FromJson("{\"version\":4,\"rank\":\"gold\"}"));
+            var error = Assert.Throws<FormatException>(() => PlayerProfile.FromJson("{\"version\":5,\"rank\":\"gold\"}"));
 
-            Assert.That(error.Message, Does.StartWith("unsupported profile data version 4"));
+            Assert.That(error.Message, Does.StartWith("unsupported profile data version 5"));
+        }
+
+        [Test]
+        public void TheAchievementsAreRequiredFromVersion4()
+        {
+            var error = Assert.Throws<FormatException>(
+                () => PlayerProfile.FromJson(
+                    "{\"version\":4,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0}"));
+
+            Assert.That(error.Message, Is.EqualTo("invalid profile data: missing 'achievements'"));
+        }
+
+        [Test]
+        public void Version3HasNoAchievements()
+        {
+            var error = Assert.Throws<FormatException>(
+                () => PlayerProfile.FromJson(
+                    "{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1000,\"playSeconds\":5}"));
+
+            Assert.That(error.Message, Is.EqualTo("invalid profile data: unknown key 'playSeconds'"));
         }
 
         [Test]
@@ -298,6 +441,17 @@ namespace Shooter.Core.Tests
             Assert.That(profile.Equals(new PlayerProfile(10, 2, 1, 1, 0)), Is.False);
             Assert.That(profile.Equals(new PlayerProfile(10, 2, 1, 1, 1, 1)), Is.False);
             Assert.That(profile.Equals(new PlayerProfile(10, 2, 1, 1, 1, 0, 1001)), Is.False);
+            Assert.That(profile.Equals(profile.WithStats(1, 0, 0)), Is.False);
+            Assert.That(profile.Equals(profile.WithStats(0, 1, 0)), Is.False);
+            Assert.That(profile.Equals(profile.WithStats(0, 0, 1)), Is.False);
+            Assert.That(profile.Equals(profile.WithAchievement("first-blood")), Is.False);
+            Assert.That(
+                profile.WithAchievement("a").WithAchievement("b").Equals(profile.WithAchievement("b").WithAchievement("a")),
+                Is.False,
+                "the order of unlocking is part of the record");
+            Assert.That(
+                profile.WithAchievement("a").GetHashCode(),
+                Is.EqualTo(new PlayerProfile(10, 2, 1, 1, 1, 0, 1000, 0, 0, 0, new[] { "a" }).GetHashCode()));
             Assert.That(profile.Equals(null), Is.False);
         }
     }

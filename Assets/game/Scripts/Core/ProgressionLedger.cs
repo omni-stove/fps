@@ -109,7 +109,7 @@ namespace Shooter.Core
         private ProgressionAward Award(PlayerProfile profile, long gain, int kills, int assists, int deaths, int matches, int wins)
         {
             var xp = (int)Math.Min(int.MaxValue, profile.Xp + gain);
-            var next = new PlayerProfile(xp, kills, deaths, matches, wins, assists, profile.Rating);
+            var next = profile.WithRecord(xp, kills, deaths, matches, wins, assists);
             return new ProgressionAward(next, xp - profile.Xp, LevelOf(profile.Xp), LevelOf(xp));
         }
 

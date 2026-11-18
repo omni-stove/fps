@@ -88,10 +88,42 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAchievementsAreRecordedWithTheProgression()
+        {
+            var storage = new MemorySaveStorage();
+            var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(storage, _spec, new OfflineParticipants()));
+            var achievements = ProgressionBootstrap.Achievements;
+
+            Assert.That(achievements, Is.Not.Null);
+            Assert.That(achievements.Progression, Is.SameAs(recorder));
+            Assert.That(achievements.IsInstalled, Is.True);
+
+            ProgressionBootstrap.Uninstall();
+
+            Assert.That(achievements.IsInstalled, Is.False);
+            Assert.That(ProgressionBootstrap.Achievements, Is.Null);
+        }
+
+        [Test]
+        public void AGivenAchievementRecorderIsInstalledWithItsProgression()
+        {
+            var recorder = new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants());
+            var achievements = new AchievementRecorder(recorder, AchievementSpec.Default, () => 0d);
+
+            Assert.That(ProgressionBootstrap.Install(achievements), Is.SameAs(achievements));
+            Assert.That(ProgressionBootstrap.Install(achievements), Is.SameAs(achievements));
+
+            Assert.That(ProgressionBootstrap.Recorder, Is.SameAs(recorder));
+            Assert.That(recorder.IsInstalled, Is.True);
+            Assert.That(achievements.IsInstalled, Is.True);
+        }
+
+        [Test]
         public void InstallRejectsNull()
         {
             Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((ISaveStorage)null));
             Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((ProgressionRecorder)null));
+            Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((AchievementRecorder)null));
             Assert.That(ProgressionBootstrap.Recorder, Is.Null);
         }
     }

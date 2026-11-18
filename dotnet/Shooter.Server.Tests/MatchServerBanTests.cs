@@ -73,7 +73,6 @@ namespace Shooter.Server.Tests
             var client = Request("device1");
 
             Assert.That(client.Accepted, Is.Null);
-            Assert.That(client.RejectedReason, Is.EqualTo("shooter:rejected:banned"));
             Assert.That(client.DisconnectReason, Is.EqualTo(DisconnectNotice.RejectedReason(DisconnectNotice.BannedDetail)));
             Assert.That(_log.ToString(), Does.Contain("[Net] rejected client 1: banned (address=127.0.0.1 reason=\"aimbot\")"));
             Assert.That(_server.Match.HumanCount, Is.Zero);
@@ -120,7 +119,7 @@ namespace Shooter.Server.Tests
             var again = Request("device1");
 
             Assert.That(again.Accepted, Is.Null);
-            Assert.That(again.RejectedReason, Is.EqualTo("shooter:rejected:banned"));
+            Assert.That(again.DisconnectReason,Is.EqualTo("shooter:rejected:banned"));
 
             _console.Execute("unban 127.0.0.1");
             var forgiven = Request("device1");

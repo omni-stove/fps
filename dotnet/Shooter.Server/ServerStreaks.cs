@@ -198,7 +198,7 @@ namespace Shooter.Server
             _log.WriteLine(StreakLog.Used(ServerStreakLog.Id(playerId), used, status));
             if (isAirstrike)
             {
-                CallAirstrike(playerId, target.Value, headingDegrees);
+                CallAirstrike(playerId, target.Value, headingDegrees, body.Position.Y);
             }
             else
             {
@@ -235,13 +235,15 @@ namespace Shooter.Server
         }
 
         // 送られた高さは手元の世界で探したものなので、中心も弾もサーバーの世界で真上から落として決め直す
-        private void CallAirstrike(int playerId, Vector3 target, float headingDegrees)
+        private void CallAirstrike(int playerId, Vector3 target, float headingDegrees, float baseY)
         {
             var strike = Spec.Airstrike;
-            var center = Drop(target, strike.DropHeight);
+            // 届いた高さは使わず X/Z だけ取り、使った人の体の高さを起点にする (屋根の下から探し始めさせないため)
+            var center = Drop(new Vector3(target.X, baseY, target.Z), strike.DropHeight);
             for (var i = 0; i < strike.ShellCount; i++)
             {
-                var point = Drop(AirstrikeLine.ShellPoint(center, headingDegrees, strike, i, _random), strike.DropHeight);
+                var shellPoint = AirstrikeLine.ShellPoint(center, headingDegrees, strike, i, _random);
+                var point = Drop(new Vector3(shellPoint.X, baseY, shellPoint.Z), strike.DropHeight);
                 Enqueue(new Shell(_now + ((i + 1) * strike.IntervalSeconds), point, i + 1, strike.ShellCount, playerId));
             }
 

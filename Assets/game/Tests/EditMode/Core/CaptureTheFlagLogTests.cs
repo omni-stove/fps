@@ -36,6 +36,18 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheNetRulesLineListsTheValuesTheServerPlaysWith()
+        {
+            var spec = new CaptureTheFlagSpec(
+                scoreLimit: 4, timeLimitSeconds: 450f, respawnSeconds: 0f, pickupRadius: 1.25f, captureRadius: 2.5f, returnSeconds: 15f, pointsPerCapture: 2);
+
+            Assert.That(
+                CaptureTheFlagLog.NetRules(spec, 3.5f),
+                Is.EqualTo("[Mode] ctf net scoreLimit=4 timeLimit=450s respawn=3.5s returnTime=15s pickupRadius=1.25 captureRadius=2.5 pointsPerCapture=2"));
+            Assert.Throws<ArgumentNullException>(() => CaptureTheFlagLog.NetRules(null, 1f));
+        }
+
+        [Test]
         public void TheErrandShowsTheDestinationOnlyWhenThereIsOne()
         {
             Assert.That(

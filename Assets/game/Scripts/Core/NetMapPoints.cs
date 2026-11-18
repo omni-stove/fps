@@ -10,6 +10,7 @@ namespace Shooter.Core
 
         public const string SpawnPointsItem = "spawnPoints";
         public const string ControlPointsItem = "controlPoints";
+        public const string FlagBasesItem = "flagBases";
         public const string PositionItem = "position";
         public const string TeamItem = "team";
         public const string IndexItem = "index";
@@ -19,20 +20,30 @@ namespace Shooter.Core
 
         private const string _kind = "map points JSON";
 
-        private static readonly string[] _topItems = { SpawnPointsItem, ControlPointsItem };
+        private static readonly string[] _topItems = { SpawnPointsItem, ControlPointsItem, FlagBasesItem };
         private static readonly string[] _spawnItems = { PositionItem, TeamItem };
         private static readonly string[] _controlItems = { IndexItem, CenterItem, RadiusItem, HeightItem };
+        private static readonly string[] _flagBaseItems = { TeamItem, PositionItem };
 
-        public NetMapPoints(IReadOnlyList<SpawnPoint> spawnPoints, IReadOnlyList<ControlPointArea> controlPoints)
+        public NetMapPoints(
+            IReadOnlyList<SpawnPoint> spawnPoints,
+            IReadOnlyList<ControlPointArea> controlPoints,
+            IReadOnlyList<FlagBasePoint> flagBases = null)
         {
             SpawnPoints = Copy(spawnPoints, nameof(spawnPoints));
             ControlPoints = new List<ControlPointArea>(controlPoints ?? throw new ArgumentNullException(nameof(controlPoints))).AsReadOnly();
+            FlagBases = flagBases == null
+                ? (IReadOnlyList<FlagBasePoint>)Array.Empty<FlagBasePoint>()
+                : new List<FlagBasePoint>(flagBases).AsReadOnly();
         }
 
         // 並びはシーンの階層順。SpawnSelector の同点の決め手になるので並べ替えない。
         public IReadOnlyList<SpawnPoint> SpawnPoints { get; }
 
         public IReadOnlyList<ControlPointArea> ControlPoints { get; }
+
+        // 陣営ごとに 1 つかは、旗を使う目的が始めるときに確かめる。旗を使わないマップでも同じファイルを読むため
+        public IReadOnlyList<FlagBasePoint> FlagBases { get; }
 
         public static NetMapPoints Parse(string text, string sourceName)
         {
@@ -77,7 +88,24 @@ namespace Shooter.Core
                 }
             }
 
-            return new NetMapPoints(spawns, controls);
+            var flagBases = new List<FlagBasePoint>();
+            var flagNodes = top.Array(FlagBasesItem);
+            for (var i = 0; i < flagNodes.Count; i++)
+            {
+                var fields = top.Element(flagNodes[i], FlagBasesItem, i, _flagBaseItems);
+                var team = fields.ToEnum<Team>(fields.ItemPath(TeamItem), fields.Require(TeamItem));
+                var position = fields.ReadVector3(PositionItem);
+                try
+                {
+                    flagBases.Add(new FlagBasePoint(team, position));
+                }
+                catch (ArgumentException e)
+                {
+                    throw fields.Rejected(fields.ItemPath(PositionItem), e.Message, e);
+                }
+            }
+
+            return new NetMapPoints(spawns, controls, flagBases);
         }
 
         public static string Write(NetMapPoints points)
@@ -114,6 +142,22 @@ namespace Shooter.Core
             }
 
             writer.EndArray();
+
+            // 旗の台の無いマップの書き出しを、旗の台を知らなかったころと同じ中身に保つため、空なら項目ごと書かない
+            if (points.FlagBases.Count > 0)
+            {
+                writer.BeginArray(FlagBasesItem);
+                foreach (var flagBase in points.FlagBases)
+                {
+                    writer.BeginElement();
+                    writer.Enum(TeamItem, flagBase.Team);
+                    writer.Vector3(PositionItem, flagBase.Position);
+                    writer.EndObject();
+                }
+
+                writer.EndArray();
+            }
+
             return writer.Finish();
         }
 

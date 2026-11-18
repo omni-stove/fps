@@ -30,6 +30,22 @@ namespace Shooter.Core
                 + " side=" + Number(side.Id) + " score=" + ModeLog.FormatScore(score);
         }
 
+        public static string NetRules(CaptureTheFlagSpec spec, float respawnSeconds)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return Tag + " ctf net scoreLimit=" + Number(spec.ScoreLimit)
+                + " timeLimit=" + Seconds(spec.TimeLimitSeconds)
+                + " respawn=" + Seconds(respawnSeconds)
+                + " returnTime=" + Seconds(spec.ReturnSeconds)
+                + " pickupRadius=" + Decimal(spec.PickupRadius)
+                + " captureRadius=" + Decimal(spec.CaptureRadius)
+                + " pointsPerCapture=" + Number(spec.PointsPerCapture);
+        }
+
         public static string Flags(CaptureTheFlag game)
         {
             if (game == null)
@@ -77,6 +93,16 @@ namespace Shooter.Core
         private static string Number(int value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static string Seconds(float value)
+        {
+            return Decimal(value) + "s";
+        }
+
+        private static string Decimal(float value)
+        {
+            return value.ToString("0.##", CultureInfo.InvariantCulture);
         }
     }
 }

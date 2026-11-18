@@ -516,6 +516,72 @@ namespace Shooter.Core.Tests
             Assert.That(status.IsLocalCarrying, Is.False);
         }
 
+        [Test]
+        public void TheStatusCanBeBuiltFromReceivedFlags()
+        {
+            var status = new CaptureTheFlagStatus(
+                FlagState.Dropped, null, 7f,
+                FlagState.Carried, _alpha1, null,
+                _alpha1, Side.Alpha);
+
+            Assert.That(status.GetState(Side.Alpha), Is.EqualTo(FlagState.Dropped));
+            Assert.That(status.GetCarrierId(Side.Alpha), Is.Null);
+            Assert.That(status.GetReturnSeconds(Side.Alpha), Is.EqualTo(7f));
+            Assert.That(status.GetState(Side.Bravo), Is.EqualTo(FlagState.Carried));
+            Assert.That(status.GetCarrierId(Side.Bravo), Is.EqualTo(_alpha1));
+            Assert.That(status.GetReturnSeconds(Side.Bravo), Is.Null);
+            Assert.That(status.LocalPlayerId, Is.EqualTo(_alpha1));
+            Assert.That(status.LocalSide, Is.EqualTo(Side.Alpha));
+            Assert.That(status.CarriedFlag, Is.EqualTo(Side.Bravo));
+            Assert.That(status.IsLocalCarrying, Is.True);
+        }
+
+        [Test]
+        public void AReceivedStatusWithoutALocalSideCarriesNothing()
+        {
+            var status = new CaptureTheFlagStatus(
+                FlagState.AtBase, null, null,
+                FlagState.Carried, _alpha1, null,
+                _alpha1, null);
+
+            Assert.That(status.LocalPlayerId, Is.EqualTo(_alpha1));
+            Assert.That(status.LocalSide, Is.Null, "a player missing from the snapshot has no side");
+            Assert.That(status.IsLocalCarrying, Is.False);
+        }
+
+        [Test]
+        public void AReceivedStatusMustBeConsistent()
+        {
+            Assert.Throws<ArgumentException>(() => new CaptureTheFlagStatus(
+                FlagState.Carried, null, null, FlagState.AtBase, null, null, null, null), "a carried flag needs a carrier");
+            Assert.Throws<ArgumentException>(() => new CaptureTheFlagStatus(
+                FlagState.AtBase, _alpha1, null, FlagState.AtBase, null, null, null, null), "a flag at its base has no carrier");
+            Assert.Throws<ArgumentException>(() => new CaptureTheFlagStatus(
+                FlagState.AtBase, null, null, FlagState.Dropped, null, null, null, null), "a dropped flag needs its return seconds");
+            Assert.Throws<ArgumentException>(() => new CaptureTheFlagStatus(
+                FlagState.AtBase, null, 3f, FlagState.AtBase, null, null, null, null), "only a dropped flag has return seconds");
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CaptureTheFlagStatus(
+                FlagState.Dropped, null, -1f, FlagState.AtBase, null, null, null, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CaptureTheFlagStatus(
+                (FlagState)9, null, null, FlagState.AtBase, null, null, null, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new CaptureTheFlagStatus(
+                FlagState.AtBase, null, null, FlagState.AtBase, null, null, _alpha1, new Side(2)));
+        }
+
+        [Test]
+        public void ReachingAFlagLooksAcrossTheGroundWithinAStepUpOrDown()
+        {
+            var flag = new System.Numerics.Vector3(10f, 1f, 10f);
+
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(11f, 1f, 10f), flag, 1.5f), Is.True);
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(11.5f, 1f, 10f), flag, 1.5f), Is.True, "the edge counts");
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(11.6f, 1f, 10f), flag, 1.5f), Is.False);
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(10f, 3f, 10f), flag, 1.5f), Is.True, "2m above is still in reach");
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(10f, 3.1f, 10f), flag, 1.5f), Is.False);
+            Assert.That(CaptureTheFlag.IsWithin(new System.Numerics.Vector3(10f, -1.1f, 10f), flag, 1.5f), Is.False);
+            Assert.That(CaptureTheFlag.ReachHeight, Is.EqualTo(2f));
+        }
+
         private static CaptureTheFlag Create(CaptureTheFlagSpec spec = null)
         {
             var game = new CaptureTheFlag(spec ?? new CaptureTheFlagSpec(respawnSeconds: _respawnSeconds, returnSeconds: _returnSeconds));

@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Shooter.Core
 {
     public sealed class CaptureTheFlag
     {
+        // 段差の上下で旗を拾ったり運び込んだりしないよう、上下の差も見る。
+        public const float ReachHeight = 2f;
+
         // 小刻みな Tick を足し合わせると戻る時刻にわずかに届かないことがあるので、この差までは届いたものとして扱う。
         private const double _snap = 1e-6;
 
@@ -50,6 +54,12 @@ namespace Shooter.Core
         {
             RequireFlagSide(side, nameof(side));
             return side == Side.Alpha ? Side.Bravo : Side.Alpha;
+        }
+
+        public static bool IsWithin(Vector3 ground, Vector3 point, float radius)
+        {
+            var offset = ground - point;
+            return Math.Abs(offset.Y) <= ReachHeight && ((offset.X * offset.X) + (offset.Z * offset.Z)) <= radius * radius;
         }
 
         public FlagState GetFlagState(Side flag) => Find(flag).State;

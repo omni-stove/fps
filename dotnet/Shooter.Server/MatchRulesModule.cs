@@ -304,7 +304,7 @@ namespace Shooter.Server
             snapshot.NextMatchSeconds = (int)Math.Ceiling(_match.RestartRemainingSeconds);
             var wave = _session.SecondsUntilNextWave;
             snapshot.NextWaveSeconds = wave.HasValue ? HudFormat.DisplayedSeconds(wave.Value) : 0;
-            var synced = MatchRulesSync.From(_data.Rules);
+            var synced = MatchRulesSync.From(_session.Spec.Rules);
             synced.WeatherId = _data.Settings.WeatherId;
             synced.TimeOfDayId = _data.Settings.TimeOfDayId;
             snapshot.Rules = synced;

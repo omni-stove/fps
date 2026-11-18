@@ -30,7 +30,8 @@ namespace Shooter.Protocol
             get => _jumpForbidden ? Jump.Off : Jump.On;
             set
             {
-                if (!System.Enum.IsDefined(typeof(Jump), value))
+                // Enum.IsDefined は値を箱に入れ、毎 tick 読むルールで GC を起こすので使わない。
+                if (value != Jump.On && value != Jump.Off)
                 {
                     throw new System.ArgumentOutOfRangeException(nameof(value), value, "value is not a defined Jump");
                 }

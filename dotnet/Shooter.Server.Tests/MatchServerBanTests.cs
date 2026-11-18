@@ -119,7 +119,7 @@ namespace Shooter.Server.Tests
             var again = Request("device1");
 
             Assert.That(again.Accepted, Is.Null);
-            Assert.That(again.DisconnectReason,Is.EqualTo("shooter:rejected:banned"));
+            Assert.That(again.DisconnectReason, Is.EqualTo("shooter:rejected:banned"));
 
             _console.Execute("unban 127.0.0.1");
             var forgiven = Request("device1");

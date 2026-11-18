@@ -147,6 +147,8 @@ namespace Shooter.Server.Tests
             _rules.ApplyDamage(1, 2, 100);
             _match.Leave(new ConnectionId(1));
 
+            // 時間切れで終わると Advance の中のモジュールの Tick で送り始めるので、その前から EOS がすぐ返すようにする
+            _backend.SucceedAtOnce();
             Advance(2.1f);
             SendAll();
 

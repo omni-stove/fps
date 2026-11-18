@@ -55,6 +55,7 @@ namespace Shooter.Editor
             new Slot("Reticles", typeof(ReticleCatalog), c => c.Reticles, (c, v) => c.Reticles = (ReticleCatalog)v),
             new Slot("StatusEffectVisuals", typeof(StatusEffectVisualCatalog), c => c.StatusEffectVisuals, (c, v) => c.StatusEffectVisuals = (StatusEffectVisualCatalog)v),
             new Slot("FlashOverlay", typeof(FlashOverlayCatalog), c => c.FlashOverlay, (c, v) => c.FlashOverlay = (FlashOverlayCatalog)v),
+            new Slot("CosmeticVisuals", typeof(CosmeticVisualCatalog), c => c.CosmeticVisuals, (c, v) => c.CosmeticVisuals = (CosmeticVisualCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。

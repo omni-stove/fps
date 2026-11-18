@@ -105,6 +105,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheCosmeticLockerIsPublishedWithTheProgression()
+        {
+            var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants()));
+            var cosmetics = ProgressionBootstrap.Cosmetics;
+
+            Assert.That(cosmetics, Is.Not.Null);
+            Assert.That(cosmetics.Progression, Is.SameAs(recorder));
+            Assert.That(cosmetics.IsInstalled, Is.True);
+            Assert.That(GameSignals.Cosmetics.Value, Is.SameAs(cosmetics));
+
+            ProgressionBootstrap.Uninstall();
+
+            Assert.That(cosmetics.IsInstalled, Is.False);
+            Assert.That(ProgressionBootstrap.Cosmetics, Is.Null);
+            Assert.That(GameSignals.Cosmetics.Value, Is.Null);
+        }
+
+        [Test]
         public void AGivenAchievementRecorderIsInstalledWithItsProgression()
         {
             var recorder = new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants());

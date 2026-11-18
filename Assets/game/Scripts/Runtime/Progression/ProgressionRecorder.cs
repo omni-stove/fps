@@ -218,17 +218,26 @@ namespace Shooter.Runtime
             }
         }
 
-        private void Save()
+        // 試合の外で書き換えたもの (着けた見た目など) は次の試合が終わるまで保存されないので、書き換えた側がすぐ呼ぶ。
+        public bool Save()
         {
+            if (!IsInstalled)
+            {
+                // 読み込む前に書くと、保存してあるプロフィールを始めのプロフィールで上書きして消すので断る。
+                throw new InvalidOperationException("the profile can only be saved while the progression recorder is installed");
+            }
+
             try
             {
                 _store.Save(Profile);
                 Debug.Log(ProgressionLog.Saved(Profile));
+                return true;
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 // 手元の Profile は持ち続けるので、次の試合が終わったときにまとめて書ける。
                 Debug.LogError(ProgressionLog.SaveFailed(e.Message));
+                return false;
             }
         }
 

@@ -28,6 +28,7 @@ namespace Shooter.NetV2
             _weaponHooks.Apply(snapshot);
             ForgetGrenades(snapshot);
             _loadout.Apply(snapshot, _client.PlayerId);
+            ShowCosmetics(snapshot);
             ShowControlPoints(snapshot);
             PlayReloadSound(snapshot);
             foreach (var part in _parts)
@@ -334,6 +335,19 @@ namespace Shooter.NetV2
                 if (visuals != null)
                 {
                     visuals.Hide(kindId);
+                }
+            }
+        }
+
+        // 体を作るのは ClientMatch が相手を足したときで、そのときは見た目の Id がまだ届いていないことがあるので、スナップショットのたびに合わせる (同じ Id なら何もしない)
+        private void ShowCosmetics(SnapshotMessage snapshot)
+        {
+            var players = snapshot.Players;
+            for (var i = 0; i < players.Count; i++)
+            {
+                if (_remotes.TryGetValue(players[i].PlayerId, out var remote) && remote != null)
+                {
+                    remote.ShowCosmetic(players[i].CosmeticId);
                 }
             }
         }

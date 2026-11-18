@@ -105,6 +105,54 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheWornCamoPaintsTheModelAndTakingItOffRestoresTheMaterials()
+        {
+            var tiger = new Material(Shader.Find("Hidden/InternalErrorShader")) { name = "Tiger" };
+            var night = new Material(tiger) { name = "Night" };
+            try
+            {
+                Material worn = tiger;
+                _presenter.PaintSource = () => worn;
+                _presenter.Refresh();
+                var renderer = _presenter.Instance.GetComponent<Renderer>();
+                var original = _riflePrefab.GetComponent<Renderer>().sharedMaterial;
+
+                Assert.That(renderer.sharedMaterial, Is.SameAs(tiger));
+                Assert.That(_presenter.CurrentPaint, Is.SameAs(tiger));
+                Assert.That(_logs, Does.Contain(ViewmodelPresenter.LogTag + " paint weapon=" + RifleId + " paint=Tiger"));
+
+                worn = night;
+                _presenter.Refresh();
+                Assert.That(renderer.sharedMaterial, Is.SameAs(night), "a camo changed in the menu shows without respawning");
+
+                worn = null;
+                _presenter.Refresh();
+                Assert.That(renderer.sharedMaterial, Is.SameAs(original));
+                Assert.That(_presenter.CurrentPaint, Is.Null);
+
+                worn = tiger;
+                _held = HandgunId;
+                _presenter.Refresh();
+                Assert.That(_presenter.Instance.GetComponent<Renderer>().sharedMaterial, Is.SameAs(tiger), "the next weapon is painted too");
+            }
+            finally
+            {
+                Object.DestroyImmediate(tiger);
+                Object.DestroyImmediate(night);
+            }
+        }
+
+        [Test]
+        public void WithoutAWornCamoTheModelKeepsItsMaterials()
+        {
+            _presenter.Refresh();
+
+            Assert.That(_presenter.CurrentPaint, Is.Null);
+            Assert.That(_presenter.Instance.GetComponent<CamoPaint>(), Is.Null);
+            Assert.That(_presenter.Instance.GetComponent<Renderer>().sharedMaterial, Is.SameAs(_riflePrefab.GetComponent<Renderer>().sharedMaterial));
+        }
+
+        [Test]
         public void AimingPutsTheSightAtTheAdsOffset()
         {
             var sightInModel = new Vector3(0.01f, 0.05f, 0.02f);

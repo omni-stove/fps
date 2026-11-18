@@ -171,6 +171,7 @@ namespace Shooter.Server
                     ServerRevive(player.PlayerId, revive.TargetPlayerId);
                     break;
                 case LoadoutRequestMessage loadout:
+                    ServerChooseCosmetic(player, loadout.CosmeticId);
                     ServerChooseLoadout(player, loadout.WeaponIds);
                     break;
                 case ChatRequestMessage chat:
@@ -321,6 +322,7 @@ namespace Shooter.Server
 
             snapshot.PlayerId = playerId;
             snapshot.Team = _session.GetTeam(playerId);
+            snapshot.CosmeticId = CosmeticOf(playerId);
             snapshot.Health = _session.IsAlive(playerId) ? _session.GetHealth(playerId) : 0;
             snapshot.Downed = DownedOf(playerId);
             snapshot.Kills = _session.GetKills(playerId);
@@ -370,6 +372,7 @@ namespace Shooter.Server
             var playerId = player.PlayerId;
             _lastKillers.Remove(playerId);
             _loadout.Remove(playerId);
+            _cosmetics.Remove(playerId);
             ForgetDowned(playerId);
             PingPlayerLeft(playerId);
             IdlePlayerLeft(playerId);

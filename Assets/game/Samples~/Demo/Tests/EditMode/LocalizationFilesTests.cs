@@ -153,6 +153,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheCosmeticsTextsAreReadFromTheCosmeticsTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var cosmetics = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("cosmetics.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(cosmetics.Keys.All(key => key.StartsWith("cosmetics.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(cosmetics.Contains("cosmetics.title"), Is.True, code);
+                Assert.That(cosmetics.Contains("cosmetics.locked"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("cosmetics.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Format("cosmetics.locked", "砂漠", 3), Is.EqualTo("砂漠 (レベル 3 で解除)"));
+        }
+
+        [Test]
         public void TheWeaponNamesAreReadFromTheItemsTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

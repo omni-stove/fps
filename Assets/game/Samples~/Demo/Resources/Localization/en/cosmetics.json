@@ -1,0 +1,11 @@
+{
+  "cosmetics.title": "Cosmetics",
+  "cosmetics.back": "Back",
+  "cosmetics.skins": "Skins",
+  "cosmetics.camos": "Camos",
+  "cosmetics.none": "None",
+  "cosmetics.equipped": "{0} (equipped)",
+  "cosmetics.locked": "{0} (unlocks at level {1})",
+  "cosmetics.empty": "None yet",
+  "cosmetics.refused": "This look cannot be equipped"
+}

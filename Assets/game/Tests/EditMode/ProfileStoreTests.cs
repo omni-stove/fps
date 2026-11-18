@@ -43,8 +43,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(
                 storage.Text("profile"),
                 Is.EqualTo(
-                    "{\"version\":4,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234,"
-                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[]}"));
+                    "{\"version\":5,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234,"
+                    + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
             Assert.That(new ProfileStore(storage).Load(), Is.EqualTo(profile));
             Assert.That(new ProfileStore(storage, 1500).Load(), Is.EqualTo(profile), "a saved rating wins over the initial rating");
         }

@@ -85,6 +85,13 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 | `Party` | `PartyStatus?` | パーティの状態 (`PartyStage`・メンバーの名前とリーダーか・招待のコード・自分がリーダーか) |
 | `PartyControl` | `IPartyControl` | パーティを作る・招待のコードで入る・出る口と、状態が変わった知らせ (`StatusChanged`) |
 | `JoinByCode` | `IJoinByCode` | 参加コードで非公開の試合に入る口。結果 (`JoinCodeOutcome`) を呼び戻しで返す |
+| `ReportSender` | `IReportSender` | 参加者 Id と理由 (`ReportReason`) で通報する口。ネット対戦だけが出す |
+| `BlockControl` | `IBlockControl` | 参加者 Id でブロック・個別ミュートを切り替え・読む口と、変わった知らせ (`Changed`) |
+| `Achievements` | `IReadOnlyList<AchievementProgress>` | 実績ごとの進み (実績の Id・今の数・目標の数・解けたか) |
+| `Leaderboard` | `LeaderboardStatus?` | 開いているリーダーボード (ボードの Id・`LeaderboardStage`・順位と名前と得点の `LeaderboardRow` の一覧) |
+| `Replays` | `IReplayLibrary` | 残したリプレイの一覧 (`ReplayEntry`) と、再生・消す口 |
+| `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
+| `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |
 
 #### 購読のしかた
 

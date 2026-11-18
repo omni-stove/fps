@@ -78,6 +78,16 @@ namespace Shooter.Editor
             new TuningSlot("MinimapTuning", MinimapJson.ResourcePath, c => c.MinimapTuning, (c, v) => c.MinimapTuning = v),
             new TuningSlot("AssistTuning", KitTuning.AssistResourcePath, c => c.AssistTuning, (c, v) => c.AssistTuning = v),
             new TuningSlot("RumbleTuning", GamepadRumble.TuningResourcePath, c => c.RumbleTuning, (c, v) => c.RumbleTuning = v),
+            new TuningSlot("ChatWordsTuning", ChatWordFilterJson.ResourcePath, c => c.ChatWordsTuning, (c, v) => c.ChatWordsTuning = v),
+            new TuningSlot("AchievementsTuning", AchievementJson.ResourcePath, c => c.AchievementsTuning, (c, v) => c.AchievementsTuning = v),
+            new TuningSlot("LeaderboardsTuning", LeaderboardJson.ResourcePath, c => c.LeaderboardsTuning, (c, v) => c.LeaderboardsTuning = v),
+            new TuningSlot("CosmeticsTuning", CosmeticJson.ResourcePath, c => c.CosmeticsTuning, (c, v) => c.CosmeticsTuning = v),
+            new TuningSlot("WeatherTuning", WeatherJson.ResourcePath, c => c.WeatherTuning, (c, v) => c.WeatherTuning = v),
+            new TuningSlot("TelemetryTuning", TelemetryJson.ResourcePath, c => c.TelemetryTuning, (c, v) => c.TelemetryTuning = v),
+            new TuningSlot("InfectedTuning", InfectedJson.ResourcePath, c => c.InfectedTuning, (c, v) => c.InfectedTuning = v),
+            new TuningSlot("LootTuning", LootJson.ResourcePath, c => c.LootTuning, (c, v) => c.LootTuning = v),
+            new TuningSlot("StashTuning", StashJson.ResourcePath, c => c.StashTuning, (c, v) => c.StashTuning = v),
+            new TuningSlot("ExtractionTuning", ExtractionJson.ResourcePath, c => c.ExtractionTuning, (c, v) => c.ExtractionTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

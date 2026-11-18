@@ -1,0 +1,8 @@
+{
+  "presets": [
+    { "id": "clear-noon", "nameKey": "weather.clear-noon", "timeOfDayHours": 12, "fogDensity": 0, "rainIntensity": 0, "windStrength": 0.1, "sunIntensity": 1 },
+    { "id": "overcast-dusk", "nameKey": "weather.overcast-dusk", "timeOfDayHours": 18.5, "fogDensity": 0.02, "rainIntensity": 0, "windStrength": 0.4, "sunIntensity": 0.4 },
+    { "id": "storm-night", "nameKey": "weather.storm-night", "timeOfDayHours": 23, "fogDensity": 0.05, "rainIntensity": 1, "windStrength": 1, "sunIntensity": 0.05 }
+  ],
+  "defaultPreset": "clear-noon"
+}

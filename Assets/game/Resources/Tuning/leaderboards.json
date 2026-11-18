@@ -1,0 +1,8 @@
+{
+  "boards": [
+    { "id": "kills", "nameKey": "leaderboard.kills", "stat": "Kills", "aggregation": "Sum", "statName": "Kills" },
+    { "id": "wins", "nameKey": "leaderboard.wins", "stat": "MatchesWon", "aggregation": "Sum", "statName": "MatchesWon" }
+  ],
+  "pageSize": 50,
+  "refreshSeconds": 60
+}

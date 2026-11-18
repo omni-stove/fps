@@ -95,6 +95,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheInfectedModeTextsAreReadFromTheModesInfectedTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var modes = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("modes-infected.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(modes.Keys.All(key => key.StartsWith("mode.infected.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(modes.Contains("mode.infected.outbreakIn"), Is.True, code);
+                Assert.That(modes.Contains("mode.infected.counts"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-infected.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("mode.infected.infected"), Is.EqualTo("感染者"));
+        }
+
+        [Test]
         public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
         {
             var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)

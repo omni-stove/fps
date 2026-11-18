@@ -1,6 +1,6 @@
 namespace Shooter.Server
 {
-    internal enum ServerBanKind
+    public enum ServerBanKind
     {
         ProductUserId,
         Address,

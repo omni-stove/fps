@@ -6,6 +6,9 @@ namespace Shooter.Server.Tests
 {
     public sealed class ServerRulesDataTests
     {
+        private static readonly string[] _darnWords = { "darn" };
+        private static readonly string[] _badwordNoobWords = { "badword", "noob" };
+
         private TempDirectory _first;
         private TempDirectory _second;
 
@@ -43,6 +46,8 @@ namespace Shooter.Server.Tests
             Assert.That(changed.Items, Is.SameAs(data.Items));
             Assert.That(changed.Knockback, Is.SameAs(data.Knockback));
             Assert.That(changed.Assist, Is.SameAs(data.Assist));
+            Assert.That(changed.ChatWords, Is.SameAs(data.ChatWords));
+            Assert.That(changed.ChatWordsPath, Is.EqualTo(data.ChatWordsPath));
             Assert.That(data.Settings.PrivateMatch, Is.False);
         }
 
@@ -62,7 +67,9 @@ namespace Shooter.Server.Tests
             Assert.That(data.BotsPath, Is.Null);
             Assert.That(data.Assist, Is.SameAs(AssistSpec.Default));
             Assert.That(data.AssistPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.ChatWords, Is.SameAs(ChatWordFilterSpec.Default));
+            Assert.That(data.ChatWordsPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -170,6 +177,50 @@ namespace Shooter.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.StartWith("cannot read assist tuning: ").And.Contain("minDamage"));
+        }
+
+        [Test]
+        public void ReadsTheChatWordTuningBesideTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.ChatWordsTuningFileName),
+                "{\"words\": [\"Darn\"], \"mask\": \"#\", \"action\": \"Drop\", \"wholeWordsOnly\": true}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.ChatWords.Words, Is.EqualTo(_darnWords));
+            Assert.That(data.ChatWords.Mask, Is.EqualTo('#'));
+            Assert.That(data.ChatWords.Action, Is.EqualTo(ChatWordFilterAction.Drop));
+            Assert.That(data.ChatWords.WholeWordsOnly, Is.True);
+            Assert.That(data.ChatWordsPath, Does.EndWith(ServerRulesData.ChatWordsTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" chatWords=" + data.ChatWordsPath + " "));
+        }
+
+        [Test]
+        public void BrokenChatWordTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.ChatWordsTuningFileName), "{\"mask\": \"**\"}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read chat word tuning: ").And.Contain("mask"));
+        }
+
+        [Test]
+        public void TheCommittedChatWordTuningReads()
+        {
+            var path = Path.Combine(RepositoryRoot(), ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, ServerRulesData.ChatWordsTuningFileName);
+            var spec = ChatWordFilterJson.Parse(File.ReadAllText(path), path);
+
+            Assert.That(spec.Words, Is.EqualTo(_badwordNoobWords));
+            Assert.That(spec.Mask, Is.EqualTo(ChatWordFilterSpec.DefaultMask));
+            Assert.That(spec.Action, Is.EqualTo(ChatWordFilterAction.Mask));
+            Assert.That(spec.WholeWordsOnly, Is.False);
         }
 
         [Test]

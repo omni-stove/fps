@@ -64,10 +64,11 @@ namespace Shooter.Tests.EditMode
             return File.ReadAllText(path);
         }
 
-        [TestCase(GameLanguage.English)]
-        [TestCase(GameLanguage.Japanese)]
-        public void TheReadmeQuotesTheMenuAndPanelTextsAsTheGameShowsThem(GameLanguage language)
+        [TestCase("en")]
+        [TestCase("ja")]
+        public void TheReadmeQuotesTheMenuAndPanelTextsAsTheGameShowsThem(string languageCode)
         {
+            var language = new GameLanguage(languageCode);
             var readme = ReadReadme();
             Localizer.Apply(language);
 
@@ -88,7 +89,7 @@ namespace Shooter.Tests.EditMode
             var pushToTalk = actions.FindAction(InputActionPaths.PushToTalk);
             Assert.That(pushToTalk, Is.Not.Null, InputActionPaths.PushToTalk + " is not in the input actions");
 
-            var key = pushToTalk.GetBindingDisplayString(InputBinding.MaskByGroup(PlayerBindings.KeyboardMouseGroup), InputBinding.DisplayStringOptions.IgnoreOverrides);
+            var key = pushToTalk.GetBindingDisplayString(InputBinding.MaskByGroup(PlayerBindings.KeyboardMouseGroup), InputBinding.DisplayStringOptions.IgnoreBindingOverrides);
 
             Assert.That(key, Is.EqualTo("Caps Lock"));
             Assert.That(readme, Does.Contain("はじめは " + key + " キー"));

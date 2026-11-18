@@ -38,6 +38,43 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ChangeSideMovesThePlayerAndKeepsTheirRecordAndRespawnWait()
+        {
+            var session = Create(new TwoTeams(), respawn: new IndividualRespawn(2f));
+            session.AddPlayer(10, Side.Alpha);
+            session.AddPlayer(11, Side.Alpha);
+            session.Start();
+            session.ReportDeath(11);
+
+            session.ChangeSide(11, Side.Bravo);
+
+            Assert.That(session.GetSide(11), Is.EqualTo(Side.Bravo));
+            Assert.That(session.CountMembers(Side.Alpha), Is.EqualTo(1));
+            Assert.That(session.CountMembers(Side.Bravo), Is.EqualTo(1));
+            Assert.That(session.GetDeaths(11), Is.EqualTo(1));
+            Assert.That(session.IsDown(11), Is.True);
+            Assert.That(session.GetRespawnRemaining(11), Is.EqualTo(2f), "the wait started on the old side carries over");
+
+            var respawned = new List<int>();
+            session.RespawnReady += respawned.Add;
+            session.Tick(2f);
+            Assert.That(respawned, Is.EqualTo(_expectedRespawned11));
+        }
+
+        [Test]
+        public void ChangeSideRejectsUnknownPlayersAndSidesOutsideTheLayout()
+        {
+            var session = Create(new Squads(2, 1));
+            session.Join(10);
+            session.Join(11);
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.ChangeSide(99, new Side(0)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.ChangeSide(10, new Side(5)));
+            Assert.Throws<InvalidOperationException>(() => session.ChangeSide(10, session.GetSide(11)), "the other squad is full");
+            Assert.DoesNotThrow(() => session.ChangeSide(10, session.GetSide(10)), "staying on the same side is not a move");
+        }
+
+        [Test]
         public void FreeForAllAddsASidePerPlayer()
         {
             var session = Create(new FreeForAll());

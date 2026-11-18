@@ -40,6 +40,41 @@ namespace Shooter.Core
         public const string RoundWinsToWinItem = "roundWinsToWin";
         public const string RoundPreparationSecondsItem = "roundPreparationSeconds";
         public const string RoundTimeLimitSecondsItem = "roundTimeLimitSeconds";
+        public const string WeatherIdItem = "weatherId";
+        public const string TimeOfDayIdItem = "timeOfDayId";
+
+        public const string CaptureTheFlagItem = "captureTheFlag";
+        public const string PickupRadiusItem = "pickupRadius";
+        public const string CaptureRadiusItem = "captureRadius";
+        public const string ReturnSecondsItem = "returnSeconds";
+        public const string PointsPerCaptureItem = "pointsPerCapture";
+
+        public const string HardpointItem = "hardpoint";
+        public const string RotateSecondsItem = "rotateSeconds";
+
+        public const string SearchAndDestroyItem = "searchAndDestroy";
+        public const string RoundSecondsItem = "roundSeconds";
+        public const string PlantSecondsItem = "plantSeconds";
+        public const string DefuseSecondsItem = "defuseSeconds";
+        public const string FuseSecondsItem = "fuseSeconds";
+        public const string WinsToWinItem = "winsToWin";
+        public const string PreparationSecondsItem = "preparationSeconds";
+        public const string SwapEveryRoundsItem = "swapEveryRounds";
+        public const string BombPickupRadiusItem = "bombPickupRadius";
+        public const string DefuseRadiusItem = "defuseRadius";
+
+        public const string FreeForAllItem = "freeForAll";
+        public const string PointsPerKillItem = "pointsPerKill";
+
+        public const string KillConfirmedItem = "killConfirmed";
+        public const string TagLifetimeSecondsItem = "tagLifetimeSeconds";
+        public const string PointsPerConfirmItem = "pointsPerConfirm";
+        public const string TagPickupRadiusItem = "tagPickupRadius";
+
+        public const string GunGameItem = "gunGame";
+        public const string TierWeaponIdsItem = "tierWeaponIds";
+        public const string MeleeWeaponIdsItem = "meleeWeaponIds";
+        public const string DemotesOnMeleeItem = "demotesOnMelee";
 
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
@@ -144,6 +179,38 @@ namespace Shooter.Core
             ReconnectGraceSecondsItem, MaxShotOriginOffsetItem, DominationScoreLimitItem, CaptureSecondsItem, PointsPerSecondItem,
             MaxCapturersItem, MaxPlayersItem, MapPoolItem, MapVoteSecondsItem, MaxTeamSizeDifferenceItem, PrivateMatchItem, JoinCodeItem,
             ChatIntervalSecondsItem, MaxChatLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem, RoundTimeLimitSecondsItem,
+            WeatherIdItem, TimeOfDayIdItem,
+            CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
+        };
+
+        private static readonly string[] _captureTheFlagItems =
+        {
+            ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, PickupRadiusItem, CaptureRadiusItem, ReturnSecondsItem, PointsPerCaptureItem,
+        };
+
+        // 拠点の数はマップで決まるので項目に持たない
+        private static readonly string[] _hardpointItems =
+        {
+            RotateSecondsItem, PointsPerSecondItem, ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem,
+        };
+
+        // 爆破地点の数はマップで決まるので項目に持たない
+        private static readonly string[] _searchAndDestroyItems =
+        {
+            RoundSecondsItem, PlantSecondsItem, DefuseSecondsItem, FuseSecondsItem, WinsToWinItem, PreparationSecondsItem, SwapEveryRoundsItem,
+            BombPickupRadiusItem, DefuseRadiusItem,
+        };
+
+        private static readonly string[] _freeForAllItems = { ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, PointsPerKillItem };
+
+        private static readonly string[] _killConfirmedItems =
+        {
+            ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, TagLifetimeSecondsItem, PointsPerConfirmItem, TagPickupRadiusItem,
+        };
+
+        private static readonly string[] _gunGameItems =
+        {
+            TimeLimitSecondsItem, RespawnSecondsItem, TierWeaponIdsItem, MeleeWeaponIdsItem, DemotesOnMeleeItem,
         };
 
         public NetMatchFile(
@@ -168,6 +235,12 @@ namespace Shooter.Core
             SwitchSeconds = switchSeconds;
             CatalogName = catalog == null ? null : catalogName ?? string.Empty;
             Catalog = catalog;
+
+            var objectiveProblem = ObjectiveProblem(Rules, Settings);
+            if (objectiveProblem != null)
+            {
+                throw new ArgumentException(objectiveProblem, nameof(settings));
+            }
 
             // 作れないロードアウトを試合の開始まで持ち越さないよう、ここで一度組んで確かめる
             CreateLoadout();
@@ -208,6 +281,13 @@ namespace Shooter.Core
             var rulesNode = top.Find(RulesItem);
             var rules = rulesNode == null ? GameRules.Default : GameRulesJson.FromNode(rulesNode, source, RulesItem + ".");
             var settings = ReadSettings(top.Object(MatchItem, _matchItems));
+            var objectiveProblem = ObjectiveProblem(rules, settings);
+            if (objectiveProblem != null)
+            {
+                var item = MatchItem + "." + GunGameItem + "." + TierWeaponIdsItem;
+                throw top.Rejected(item, objectiveProblem);
+            }
+
             var motor = ReadMotor(top.Object(MotorItem, _motorItems));
             var weapons = ReadWeapons(top);
 
@@ -287,6 +367,68 @@ namespace Shooter.Core
             writer.Int(RoundWinsToWinItem, s.RoundWinsToWin);
             writer.Float(RoundPreparationSecondsItem, s.RoundPreparationSeconds);
             writer.Float(RoundTimeLimitSecondsItem, s.RoundTimeLimitSeconds);
+            writer.String(WeatherIdItem, s.WeatherId ?? string.Empty);
+            writer.String(TimeOfDayIdItem, s.TimeOfDayId ?? string.Empty);
+
+            var ctf = s.CaptureTheFlag;
+            writer.BeginObject(CaptureTheFlagItem);
+            writer.Int(ScoreLimitItem, ctf.ScoreLimit);
+            writer.Float(TimeLimitSecondsItem, ctf.TimeLimitSeconds);
+            writer.Float(RespawnSecondsItem, ctf.RespawnSeconds);
+            writer.Float(PickupRadiusItem, ctf.PickupRadius);
+            writer.Float(CaptureRadiusItem, ctf.CaptureRadius);
+            writer.Float(ReturnSecondsItem, ctf.ReturnSeconds);
+            writer.Int(PointsPerCaptureItem, ctf.PointsPerCapture);
+            writer.EndObject();
+
+            var hardpoint = s.Hardpoint;
+            writer.BeginObject(HardpointItem);
+            writer.Float(RotateSecondsItem, hardpoint.RotateSeconds);
+            writer.Float(PointsPerSecondItem, hardpoint.PointsPerSecond);
+            writer.Int(ScoreLimitItem, hardpoint.ScoreLimit);
+            writer.Float(TimeLimitSecondsItem, hardpoint.TimeLimitSeconds);
+            writer.Float(RespawnSecondsItem, hardpoint.RespawnSeconds);
+            writer.EndObject();
+
+            var snd = s.SearchAndDestroy;
+            writer.BeginObject(SearchAndDestroyItem);
+            writer.Float(RoundSecondsItem, snd.RoundSeconds);
+            writer.Float(PlantSecondsItem, snd.PlantSeconds);
+            writer.Float(DefuseSecondsItem, snd.DefuseSeconds);
+            writer.Float(FuseSecondsItem, snd.FuseSeconds);
+            writer.Int(WinsToWinItem, snd.WinsToWin);
+            writer.Float(PreparationSecondsItem, snd.PreparationSeconds);
+            writer.Int(SwapEveryRoundsItem, snd.SwapEveryRounds);
+            writer.Float(BombPickupRadiusItem, snd.BombPickupRadius);
+            writer.Float(DefuseRadiusItem, snd.DefuseRadius);
+            writer.EndObject();
+
+            var ffa = s.FreeForAll;
+            writer.BeginObject(FreeForAllItem);
+            writer.Int(ScoreLimitItem, ffa.ScoreLimit);
+            writer.Float(TimeLimitSecondsItem, ffa.TimeLimitSeconds);
+            writer.Float(RespawnSecondsItem, ffa.RespawnSeconds);
+            writer.Int(PointsPerKillItem, ffa.PointsPerKill);
+            writer.EndObject();
+
+            var kc = s.KillConfirmed;
+            writer.BeginObject(KillConfirmedItem);
+            writer.Int(ScoreLimitItem, kc.ScoreLimit);
+            writer.Float(TimeLimitSecondsItem, kc.TimeLimitSeconds);
+            writer.Float(RespawnSecondsItem, kc.RespawnSeconds);
+            writer.Float(TagLifetimeSecondsItem, kc.TagLifetimeSeconds);
+            writer.Int(PointsPerConfirmItem, kc.PointsPerConfirm);
+            writer.Float(TagPickupRadiusItem, kc.TagPickupRadius);
+            writer.EndObject();
+
+            var gunGame = s.GunGame;
+            writer.BeginObject(GunGameItem);
+            writer.Float(TimeLimitSecondsItem, gunGame.TimeLimitSeconds);
+            writer.Float(RespawnSecondsItem, gunGame.RespawnSeconds);
+            writer.StringArray(TierWeaponIdsItem, gunGame.TierWeaponIds);
+            writer.StringArray(MeleeWeaponIdsItem, gunGame.MeleeWeaponIds);
+            writer.Bool(DemotesOnMeleeItem, gunGame.DemotesOnMelee);
+            writer.EndObject();
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -423,6 +565,12 @@ namespace Shooter.Core
             }
 
             var d = NetMatchSettings.Default;
+            var captureTheFlag = ReadCaptureTheFlag(match.Object(CaptureTheFlagItem, _captureTheFlagItems), d.CaptureTheFlag);
+            var hardpoint = ReadHardpoint(match.Object(HardpointItem, _hardpointItems), d.Hardpoint);
+            var searchAndDestroy = ReadSearchAndDestroy(match.Object(SearchAndDestroyItem, _searchAndDestroyItems), d.SearchAndDestroy);
+            var freeForAll = ReadFreeForAll(match.Object(FreeForAllItem, _freeForAllItems), d.FreeForAll);
+            var killConfirmed = ReadKillConfirmed(match.Object(KillConfirmedItem, _killConfirmedItems), d.KillConfirmed);
+            var gunGame = ReadGunGame(match.Object(GunGameItem, _gunGameItems), d.GunGame);
             try
             {
                 return new NetMatchSettings(
@@ -448,13 +596,193 @@ namespace Shooter.Core
                     match.ReadInt(MaxChatLengthItem, d.MaxChatLength),
                     match.ReadInt(RoundWinsToWinItem, d.RoundWinsToWin),
                     match.ReadFloat(RoundPreparationSecondsItem, d.RoundPreparationSeconds),
-                    match.ReadFloat(RoundTimeLimitSecondsItem, d.RoundTimeLimitSeconds));
+                    match.ReadFloat(RoundTimeLimitSecondsItem, d.RoundTimeLimitSeconds),
+                    match.ReadString(WeatherIdItem, d.WeatherId),
+                    match.ReadString(TimeOfDayIdItem, d.TimeOfDayId),
+                    captureTheFlag,
+                    hardpoint,
+                    searchAndDestroy,
+                    freeForAll,
+                    killConfirmed,
+                    gunGame);
             }
             catch (ArgumentException e)
             {
                 // NetMatchSettings の引数名は項目名と同じ
                 throw match.Rejected(e.ParamName == null ? match.Path : match.ItemPath(e.ParamName), e.Message, e);
             }
+        }
+
+        // 各モードの Spec の引数名は項目名と同じ
+        private static ServerDataJsonException RejectedSpec(ServerDataJson.Fields fields, ArgumentException e)
+        {
+            return fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
+        }
+
+        private static CaptureTheFlagSpec ReadCaptureTheFlag(ServerDataJson.Fields fields, CaptureTheFlagSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new CaptureTheFlagSpec(
+                    fields.ReadInt(ScoreLimitItem, fallback.ScoreLimit),
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds),
+                    fields.ReadFloat(RespawnSecondsItem, fallback.RespawnSeconds),
+                    fields.ReadFloat(PickupRadiusItem, fallback.PickupRadius),
+                    fields.ReadFloat(CaptureRadiusItem, fallback.CaptureRadius),
+                    fields.ReadFloat(ReturnSecondsItem, fallback.ReturnSeconds),
+                    fields.ReadInt(PointsPerCaptureItem, fallback.PointsPerCapture));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static HardpointSpec ReadHardpoint(ServerDataJson.Fields fields, HardpointSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new HardpointSpec(
+                    fallback.PointCount,
+                    fields.ReadFloat(RotateSecondsItem, fallback.RotateSeconds),
+                    fields.ReadFloat(PointsPerSecondItem, fallback.PointsPerSecond),
+                    fields.ReadInt(ScoreLimitItem, fallback.ScoreLimit),
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds),
+                    fields.ReadFloat(RespawnSecondsItem, fallback.RespawnSeconds));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static SearchAndDestroySpec ReadSearchAndDestroy(ServerDataJson.Fields fields, SearchAndDestroySpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new SearchAndDestroySpec(
+                    fallback.SiteCount,
+                    fields.ReadFloat(RoundSecondsItem, fallback.RoundSeconds),
+                    fields.ReadFloat(PlantSecondsItem, fallback.PlantSeconds),
+                    fields.ReadFloat(DefuseSecondsItem, fallback.DefuseSeconds),
+                    fields.ReadFloat(FuseSecondsItem, fallback.FuseSeconds),
+                    fields.ReadInt(WinsToWinItem, fallback.WinsToWin),
+                    fields.ReadFloat(PreparationSecondsItem, fallback.PreparationSeconds),
+                    fields.ReadInt(SwapEveryRoundsItem, fallback.SwapEveryRounds),
+                    fields.ReadFloat(BombPickupRadiusItem, fallback.BombPickupRadius),
+                    fields.ReadFloat(DefuseRadiusItem, fallback.DefuseRadius));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static FreeForAllSpec ReadFreeForAll(ServerDataJson.Fields fields, FreeForAllSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new FreeForAllSpec(
+                    fields.ReadInt(ScoreLimitItem, fallback.ScoreLimit),
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds),
+                    fields.ReadFloat(RespawnSecondsItem, fallback.RespawnSeconds),
+                    fields.ReadInt(PointsPerKillItem, fallback.PointsPerKill));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static KillConfirmedSpec ReadKillConfirmed(ServerDataJson.Fields fields, KillConfirmedSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new KillConfirmedSpec(
+                    fields.ReadInt(ScoreLimitItem, fallback.ScoreLimit),
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds),
+                    fields.ReadFloat(RespawnSecondsItem, fallback.RespawnSeconds),
+                    fields.ReadFloat(TagLifetimeSecondsItem, fallback.TagLifetimeSeconds),
+                    fields.ReadInt(PointsPerConfirmItem, fallback.PointsPerConfirm),
+                    fields.ReadFloat(TagPickupRadiusItem, fallback.TagPickupRadius));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static GunGameSpec ReadGunGame(ServerDataJson.Fields fields, GunGameSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            var tiers = fields.Has(TierWeaponIdsItem) ? ReadIds(fields, TierWeaponIdsItem) : fallback.TierWeaponIds;
+            var melee = fields.Has(MeleeWeaponIdsItem) ? ReadIds(fields, MeleeWeaponIdsItem) : fallback.MeleeWeaponIds;
+            try
+            {
+                return new GunGameSpec(
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds),
+                    fields.ReadFloat(RespawnSecondsItem, fallback.RespawnSeconds),
+                    tiers,
+                    melee,
+                    fields.ReadBool(DemotesOnMeleeItem, fallback.DemotesOnMelee));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static List<string> ReadIds(ServerDataJson.Fields fields, string item)
+        {
+            var nodes = fields.Array(item);
+            var ids = new List<string>(nodes.Count);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                ids.Add(fields.ToText(fields.ElementPath(item, i), nodes[i]));
+            }
+
+            return ids;
+        }
+
+        // サーバーはまだ新しい目的を動かさないが、動かすときに要る値が欠けたファイルを先に断っておく
+        private static string ObjectiveProblem(GameRules rules, NetMatchSettings settings)
+        {
+            if (rules.Objective == MatchObjective.GunGame && !settings.GunGame.HasTiers)
+            {
+                return "a " + MatchObjective.GunGame + " match needs at least one weapon id in "
+                    + MatchItem + "." + GunGameItem + "." + TierWeaponIdsItem;
+            }
+
+            return null;
         }
 
         private static List<string> ReadMapPool(ServerDataJson.Fields match)

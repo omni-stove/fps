@@ -12,6 +12,8 @@ namespace Shooter.Core
         public const float DefaultReturnSeconds = 20f;
         public const int DefaultPointsPerCapture = 1;
 
+        public static CaptureTheFlagSpec Default { get; } = new CaptureTheFlagSpec();
+
         public int ScoreLimit { get; }
 
         public float TimeLimitSeconds { get; }

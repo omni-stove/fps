@@ -7,11 +7,11 @@ namespace Shooter.Runtime
 {
     public sealed class HardpointRunner : ModeRunnerBase
     {
-        public const float DefaultRotateSeconds = 30f;
-        public const float DefaultPointsPerSecond = 1f;
-        public const int DefaultScoreLimit = 100;
-        public const float DefaultTimeLimitSeconds = 300f;
-        public const float DefaultRespawnSeconds = 3f;
+        public const float DefaultRotateSeconds = HardpointSpec.DefaultRotateSeconds;
+        public const float DefaultPointsPerSecond = HardpointSpec.DefaultPointsPerSecond;
+        public const int DefaultScoreLimit = HardpointSpec.DefaultScoreLimit;
+        public const float DefaultTimeLimitSeconds = HardpointSpec.DefaultTimeLimitSeconds;
+        public const float DefaultRespawnSeconds = HardpointSpec.DefaultRespawnSeconds;
 
         // bot が範囲の縁で出入りを繰り返さないよう、巡回路の端は半径より内側に置く。
         public const float RouteRadiusFraction = 0.5f;

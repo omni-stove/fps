@@ -273,6 +273,21 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheAirstrikeIgnoresTheSentHeightAndLandsOnTheGround()
+        {
+            Start(Rules(), Spec(uavKills: 3, airstrikeKills: 1, shellCount: 2, intervalSeconds: 0f, spread: 0f, lineLength: 10f));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            var user = Body(1).Position;
+
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, new Vector3(user.X, 500f, user.Z + 10f), 90f), Is.EqualTo(ServerStreakRefusal.None));
+
+            var explosions = _transport.Read<ExplosionMessage>(1, m => new ExplosionMessage { Center = m.Center }).Select(m => m.Center).ToList();
+            Assert.That(explosions, Has.Count.EqualTo(2));
+            Assert.That(explosions.Select(e => e.Y), Is.All.LessThan(5f), "the sent height must not lift the blasts into the air");
+        }
+
+        [Test]
         public void ARequestForAnotherRewardThanTheNextIsRefused()
         {
             Start(Rules(), Spec(uavKills: 1, airstrikeKills: 3));

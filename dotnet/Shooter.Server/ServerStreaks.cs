@@ -239,11 +239,13 @@ namespace Shooter.Server
         {
             var strike = Spec.Airstrike;
             // 届いた高さは使わず X/Z だけ取り、使った人の体の高さを起点にする (屋根の下から探し始めさせないため)
-            var center = Drop(new Vector3(target.X, baseY, target.Z), strike.DropHeight);
+            // 探す幅は手元の印 (StreakTargeting.Ground) と同じ viewHeight にし、高低差のある地点でも手元と同じ地面に置く
+            var searchHeight = Math.Max(Spec.Targeting.ViewHeight, strike.DropHeight);
+            var center = Drop(new Vector3(target.X, baseY, target.Z), searchHeight);
             for (var i = 0; i < strike.ShellCount; i++)
             {
                 var shellPoint = AirstrikeLine.ShellPoint(center, headingDegrees, strike, i, _random);
-                var point = Drop(new Vector3(shellPoint.X, baseY, shellPoint.Z), strike.DropHeight);
+                var point = Drop(new Vector3(shellPoint.X, baseY, shellPoint.Z), searchHeight);
                 Enqueue(new Shell(_now + ((i + 1) * strike.IntervalSeconds), point, i + 1, strike.ShellCount, playerId));
             }
 

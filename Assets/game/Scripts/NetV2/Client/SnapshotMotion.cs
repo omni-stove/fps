@@ -181,8 +181,18 @@ namespace Shooter.NetV2
                 lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)));
         }
 
+        // 近接は押している間を送る。サーバー (ServerMelee) とクライアント (ClientMelee) はどちらも押し始めた tick だけ振るので、押したままでは振り直さない
         public static InputButtons Buttons(
-            bool sprint, bool jump, bool crouch, bool cover, bool aim, bool dodge, bool prone = false, bool leanLeft = false, bool leanRight = false)
+            bool sprint,
+            bool jump,
+            bool crouch,
+            bool cover,
+            bool aim,
+            bool dodge,
+            bool prone = false,
+            bool leanLeft = false,
+            bool leanRight = false,
+            bool melee = false)
         {
             var buttons = InputButtons.None;
             buttons |= sprint ? InputButtons.Sprint : InputButtons.None;
@@ -194,6 +204,7 @@ namespace Shooter.NetV2
             buttons |= prone ? InputButtons.Prone : InputButtons.None;
             buttons |= leanLeft ? InputButtons.LeanLeft : InputButtons.None;
             buttons |= leanRight ? InputButtons.LeanRight : InputButtons.None;
+            buttons |= melee ? InputButtons.Melee : InputButtons.None;
             return buttons;
         }
 

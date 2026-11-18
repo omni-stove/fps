@@ -247,7 +247,7 @@ namespace Shooter.Server.Tests
                 .WithObjective(MatchObjective.GunGame);
         }
 
-        // MatchRulesModule と同じ順で Session と目的をつなぐ。ServerObjectiveFactory にまだ登録していないので、MatchRulesModule は使えない
+        // 目的だけを確かめるので、MatchRulesModule を通さずに同じ順で Session と目的をつなぐ
         private sealed class GunGameMatch : IMatchObjectiveHost
         {
             private string _weaponId = string.Empty;

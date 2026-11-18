@@ -88,6 +88,9 @@ namespace Shooter.NetV2
                     }
 
                     CombatEvents.RaiseKilled(entry);
+
+                    // キルカムは続けて届くクリップに倒した武器を添えるので、キルフィードと別に部品にも渡す
+                    HandleByParts(killed);
                     break;
                 case DamageTakenMessage damage:
                     Vector3? source = damage.HasSource ? NetV2Math.ToUnity(damage.SourcePosition) : (Vector3?)null;

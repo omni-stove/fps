@@ -174,6 +174,22 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheMeleeButtonIsCarriedOnTheInputAndDoesNotMoveTheBody()
+        {
+            var melee = SnapshotMotion.Buttons(false, false, false, false, false, false, melee: true);
+            var none = SnapshotMotion.Buttons(false, false, false, false, false, false);
+            var frame = new InputFrame(3, new Vector2(0f, 1f), 0.5f, melee);
+
+            Assert.That(melee, Is.EqualTo(InputButtons.Melee));
+            Assert.That(none & InputButtons.Melee, Is.EqualTo(InputButtons.None));
+            Assert.That(frame.Has(InputButtons.Melee), Is.True);
+            Assert.That(
+                SnapshotMotion.ToInput(frame, false, default),
+                Is.EqualTo(SnapshotMotion.ToInput(new InputFrame(3, new Vector2(0f, 1f), 0.5f, none), false, default)),
+                "the motor input is the same with or without melee");
+        }
+
+        [Test]
         public void CompleteKeepsThePredictedDetailsWhereTheSnapshotAgrees()
         {
             var wall = new Vector3(1f, 0f, 0f);

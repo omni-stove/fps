@@ -59,6 +59,7 @@ namespace Shooter.Server
             _objective = _createObjective(rules.Objective, settings, this)
                 ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             CheckOtherMaps();
+            PrepareGunGame();
             _objective.UseMap(context.Map, points);
             try
             {
@@ -134,6 +135,7 @@ namespace Shooter.Server
             AdvanceRevives(deltaSeconds);
             _session.Tick(deltaSeconds);
             TickObjective(deltaSeconds);
+            TickGunGame();
             TickRound();
             TickIdle(deltaSeconds);
             TickPings();
@@ -270,6 +272,9 @@ namespace Shooter.Server
 
             FillControlPoints(snapshot.ControlPoints);
             FillObjectiveItems(snapshot.ObjectiveItems);
+
+            // 目的が人ごとの欄 (Gun Game の段など) を書くなら、Session の行を書いた後に任せる
+            (_objective as ISnapshotContributor)?.Contribute(snapshot, receiver);
         }
 
         public bool CanFire(int playerId)
@@ -290,7 +295,7 @@ namespace Shooter.Server
 
         public IReadOnlyList<WeaponSpec> WeaponsFor(int playerId)
         {
-            return _loadout.WeaponsFor(playerId);
+            return TryGunGameWeapons(playerId, out var gunGame) ? gunGame : _loadout.WeaponsFor(playerId);
         }
 
         public void FillMatch(ref MatchSnapshot snapshot)
@@ -457,6 +462,7 @@ namespace Shooter.Server
             var entry = KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds);
             SendKill(entry);
             _objective.PlayerKilled(killerId, victimId);
+            CreditGunGameKill(entry);
             SpectatePlayerKilled(victimId);
             PlayerKilled?.Invoke(entry);
         }

@@ -107,21 +107,23 @@ namespace Shooter.Runtime
         private void ShowState()
         {
             var closed = Visual(VisualName, _closedVisualPrefab);
-            var open = _openVisualPrefab != null ? Visual(VisualName + "-Open", _openVisualPrefab) : null;
+            var open = Visual(VisualName + "-Open", _openVisualPrefab);
 
-            closed.gameObject.SetActive(!IsOpen || open == null);
-            if (open != null)
-            {
-                open.gameObject.SetActive(IsOpen);
-            }
+            closed.gameObject.SetActive(!IsOpen);
+            open.gameObject.SetActive(IsOpen);
 
+            var diameter = (IsValidRadius(_radius) ? _radius : DefaultRadius) * 2f;
             if (_closedVisualPrefab == null)
             {
-                var diameter = (IsValidRadius(_radius) ? _radius : DefaultRadius) * 2f;
                 closed.localScale = new Vector3(diameter, PlaceholderThickness, diameter);
+                Paint(closed, DefaultClosedColor);
+            }
 
-                // 開いた見た目が無ければ、開いた・閉じたを仮の円の色で見分ける。
-                Paint(closed, IsOpen && open == null ? DefaultOpenColor : DefaultClosedColor);
+            // 閉じた見た目だけが差し替えでも、開いた地点を見分けられるよう、開いた側が空なら緑の円を出す。
+            if (_openVisualPrefab == null)
+            {
+                open.localScale = new Vector3(diameter, PlaceholderThickness, diameter);
+                Paint(open, DefaultOpenColor);
             }
         }
 

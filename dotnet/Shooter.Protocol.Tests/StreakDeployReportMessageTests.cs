@@ -280,7 +280,7 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.PoseAt(2).Yaw, Is.EqualTo(30f));
             Assert.That(clip.Count, Is.EqualTo(3));
             Assert.That(clip.Duration, Is.EqualTo(1f));
-            Assert.That(clip.Sample(0.25f).Yaw, Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(clip.Sample(0.25f).Yaw, Is.EqualTo(360f).Within(1e-4f));
             Assert.That(clip.Sample(0.75f).Eye, Is.EqualTo(new Vector3(1.5f, 1.6f, 0f)));
         }
 

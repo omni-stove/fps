@@ -6,8 +6,8 @@ namespace Shooter.Server.Tests
 {
     public sealed class ServerRulesDataTests
     {
-        private static readonly string[] DarnWords = { "darn" };
-        private static readonly string[] BadwordNoobWords = { "badword", "noob" };
+        private static readonly string[] _darnWords = { "darn" };
+        private static readonly string[] _badwordNoobWords = { "badword", "noob" };
 
         private TempDirectory _first;
         private TempDirectory _second;
@@ -191,7 +191,7 @@ namespace Shooter.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
 
-            Assert.That(data.ChatWords.Words, Is.EqualTo(DarnWords));
+            Assert.That(data.ChatWords.Words, Is.EqualTo(_darnWords));
             Assert.That(data.ChatWords.Mask, Is.EqualTo('#'));
             Assert.That(data.ChatWords.Action, Is.EqualTo(ChatWordFilterAction.Drop));
             Assert.That(data.ChatWords.WholeWordsOnly, Is.True);
@@ -217,7 +217,7 @@ namespace Shooter.Server.Tests
             var path = Path.Combine(RepositoryRoot(), ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, ServerRulesData.ChatWordsTuningFileName);
             var spec = ChatWordFilterJson.Parse(File.ReadAllText(path), path);
 
-            Assert.That(spec.Words, Is.EqualTo(BadwordNoobWords));
+            Assert.That(spec.Words, Is.EqualTo(_badwordNoobWords));
             Assert.That(spec.Mask, Is.EqualTo(ChatWordFilterSpec.DefaultMask));
             Assert.That(spec.Action, Is.EqualTo(ChatWordFilterAction.Mask));
             Assert.That(spec.WholeWordsOnly, Is.False);

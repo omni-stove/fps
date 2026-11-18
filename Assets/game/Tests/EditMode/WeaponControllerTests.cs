@@ -1380,6 +1380,325 @@ namespace Shooter.Tests.EditMode
             Assert.That(_controller.IsInitialized, Is.False);
         }
 
+        [Test]
+        public void AddWeaponAppendsTheWeaponWithItsAmmoAndKeepsTheHeldOne()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+                var changes = 0;
+                _controller.WeaponChanged += _ => changes++;
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] weapon added index=1 id=" + TestWeapons.HandgunId + " "));
+                Assert.That(_controller.AddWeapon(handgun, new WeaponAmmo(TestWeapons.HandgunId, 5, 20)), Is.True);
+
+                Assert.That(_controller.Loadout.Count, Is.EqualTo(2));
+                Assert.That(_controller.CurrentIndex, Is.Zero, "the held rifle stays in hand");
+                Assert.That(_controller.HeldDefinitions, Is.EqualTo(new[] { _rifle, handgun }));
+                Assert.That(_controller.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(5));
+                Assert.That(_controller.Loadout.Items[1].ReserveAmmo, Is.EqualTo(20));
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(30));
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(90));
+                Assert.That(changes, Is.EqualTo(1));
+
+                Assert.That(_controller.AddWeapon(handgun), Is.False, "the same id is held already");
+                Assert.That(_controller.Loadout.Count, Is.EqualTo(2));
+                Assert.That(changes, Is.EqualTo(1));
+                Assert.Throws<ArgumentException>(() => _controller.AddWeapon(handgun, new WeaponAmmo(TestWeapons.RifleId, 1, 1)));
+                Assert.Throws<ArgumentNullException>(() => _controller.AddWeapon(null));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void SwapWeaponPutsTheNewWeaponInTheDroppedSlotAndHandsBackTheDroppedOne()
+        {
+            var handgun = CreateHandgun();
+            var launcher = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                launcher.name = "Launcher";
+                WeaponAssets.Configure(launcher, TestWeapons.LauncherSpec());
+                InitializeWithRifleAndHandgun(handgun);
+                LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
+                _controller.Fire();
+                LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape(WeaponController.SwitchedLogPrefix) + " index=1 "));
+                Assert.That(_controller.SelectNext(), Is.True);
+
+                Assert.That(_controller.SwapWeapon(TestWeapons.RifleId, handgun, null, null, out _), Is.False, "the handgun is held already");
+                Assert.That(
+                    _controller.SwapWeapon("00000000-0000-4000-8000-00000000ffff", launcher, null, null, out _),
+                    Is.False,
+                    "nothing to drop");
+
+                LogAssert.Expect(
+                    LogType.Log,
+                    new Regex(@"^\[Combat\] weapon swapped index=0 id=" + TestWeapons.LauncherId + " .* dropped=" + TestWeapons.RifleId + " dropped-ammo=29/90 "));
+                Assert.That(
+                    _controller.SwapWeapon(TestWeapons.RifleId, launcher, new WeaponAmmo(TestWeapons.LauncherId, 1, 2), null, out var dropped),
+                    Is.True);
+
+                Assert.That(dropped.Definition, Is.SameAs(_rifle));
+                Assert.That(dropped.Ammo.WeaponId, Is.EqualTo(TestWeapons.RifleId));
+                Assert.That(dropped.Ammo.AmmoInMagazine, Is.EqualTo(29));
+                Assert.That(dropped.Ammo.ReserveAmmo, Is.EqualTo(90));
+                Assert.That(_controller.HeldDefinitions, Is.EqualTo(new[] { launcher, handgun }), "the new weapon takes the dropped slot");
+                Assert.That(_controller.CurrentIndex, Is.Zero, "the picked-up weapon is held");
+                Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(TestWeapons.LauncherId));
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(1));
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(2));
+                Assert.That(_controller.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(12), "the other weapon keeps its ammo");
+                Assert.Throws<ArgumentNullException>(() => _controller.SwapWeapon(TestWeapons.HandgunId, null, null, null, out _));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+                Object.DestroyImmediate(launcher);
+            }
+        }
+
+        [Test]
+        public void DropWeaponRemovesItAndTheLastOneLeavesTheHandsEmptyUntilAWeaponIsAdded()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
+                _controller.Fire();
+
+                Assert.That(_controller.DropWeapon("00000000-0000-4000-8000-00000000ffff", out _), Is.False);
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] weapon dropped index=0 id=" + TestWeapons.RifleId + " .* ammo=29/90$"));
+                Assert.That(_controller.DropWeapon(TestWeapons.RifleId, out var rifle), Is.True);
+
+                Assert.That(rifle.Definition, Is.SameAs(_rifle));
+                Assert.That(rifle.Ammo.AmmoInMagazine, Is.EqualTo(29));
+                Assert.That(rifle.Ammo.ReserveAmmo, Is.EqualTo(90));
+                Assert.That(_controller.HeldDefinitions, Is.EqualTo(new[] { handgun }));
+                Assert.That(_controller.Weapon.Spec.Id, Is.EqualTo(TestWeapons.HandgunId), "dropping the held weapon holds the first left");
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] weapon dropped index=0 id=" + TestWeapons.HandgunId + " .* ammo=12/48$"));
+                LogAssert.Expect(LogType.Log, WeaponController.DisarmedLog);
+                Assert.That(_controller.DropWeapon(TestWeapons.HandgunId, out var last), Is.True);
+
+                Assert.That(last.Definition, Is.SameAs(handgun));
+                Assert.That(_controller.IsUnarmed, Is.True);
+                Assert.That(_controller.Weapon, Is.Null);
+                Assert.That(_controller.CurrentIndex, Is.EqualTo(-1));
+                Assert.That(_controller.HeldDefinitions, Is.Empty);
+                Assert.That(_controller.SnapshotAmmo(), Is.Empty);
+                Assert.That(_controller.AddReserveAmmo(TestWeapons.HandgunId, 5), Is.Zero);
+                Assert.That(_controller.DropWeapon(TestWeapons.HandgunId, out _), Is.False, "nothing is held");
+
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] weapon added index=0 id=" + TestWeapons.RifleId + " "));
+                Assert.That(_controller.AddWeapon(_rifle, new WeaponAmmo(TestWeapons.RifleId, 10, 5)), Is.True);
+
+                Assert.That(_controller.IsUnarmed, Is.False);
+                Assert.That(_controller.HeldDefinitions, Is.EqualTo(new[] { _rifle }), "the dropped handgun does not come back");
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(10));
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(5));
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void SnapshotAmmoListsEveryHeldWeaponInOrder()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                InitializeWithRifleAndHandgun(handgun);
+                LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
+                _controller.Fire();
+
+                var ammo = _controller.SnapshotAmmo();
+
+                Assert.That(ammo.Select(a => a.WeaponId), Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                Assert.That(ammo.Select(a => a.AmmoInMagazine), Is.EqualTo(new[] { 29, 12 }));
+                Assert.That(ammo.Select(a => a.ReserveAmmo), Is.EqualTo(new[] { 90, 48 }));
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void AddReserveAmmoFillsOnlyTheRoomOfThatWeapon()
+        {
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.RestoreLoadout(new[] { new WeaponAmmo(TestWeapons.RifleId, 30, 80) }, TestWeapons.RifleId);
+
+            Assert.That(_controller.AddReserveAmmo(TestWeapons.RifleId, 25), Is.EqualTo(10), "up to the starting reserve of 90");
+            Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(90));
+            Assert.That(_controller.AddReserveAmmo(TestWeapons.RifleId, 5), Is.Zero);
+            Assert.That(_controller.AddReserveAmmo(TestWeapons.HandgunId, 5), Is.Zero, "a weapon not held takes nothing");
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.AddReserveAmmo(TestWeapons.RifleId, -1));
+        }
+
+        [Test]
+        public void UseAmmoPoolsMovesTheReserveIntoThePoolAndKeepsItForRebuiltWeapons()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+                var pool = new FakeAmmoPool("ammo.shared", 200);
+                var replaced = 0;
+                _controller.LoadoutReplaced += () => replaced++;
+
+                _controller.UseAmmoPools(_ => pool);
+
+                Assert.That(_controller.AmmoPools, Is.Not.Null);
+                Assert.That(_controller.Weapon.AmmoPool, Is.SameAs(pool));
+                Assert.That(pool.Count, Is.EqualTo(90), "the rifle's reserve moves into the pool");
+                pool.Put(10);
+                Assert.That(_controller.Weapon.ReserveAmmo, Is.EqualTo(100), "the reserve is what the pool holds");
+
+                _controller.AddWeapon(handgun);
+
+                Assert.That(replaced, Is.EqualTo(1));
+                Assert.That(_controller.Loadout.Items[1].AmmoPool, Is.SameAs(pool), "a weapon added later uses the pool too");
+                Assert.That(pool.Count, Is.EqualTo(100), "the pool already covers the handgun's 48");
+
+                _controller.UseAmmoPools(null);
+
+                Assert.That(_controller.AmmoPools, Is.Null);
+                Assert.That(_controller.Loadout.Items.Select(w => w.AmmoPool), Is.All.Null);
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
+        public void ApplySpreadTurnsTheDirectionInsideTheConeBySeed()
+        {
+            _rifle.HipSpreadDegrees = 0f;
+            _rifle.MoveSpreadDegrees = 0f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            _controller.PlayerId = 2;
+            var forward = Vector3.forward;
+
+            Assert.That(_controller.ApplySpread(_controller.Weapon.Spec, forward, 0), Is.EqualTo(forward), "no cone, no spread");
+
+            _rifle.HipSpreadDegrees = 6f;
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            var spec = _controller.Weapon.Spec;
+            var expected = Shooter.Core.SpreadPattern.Direction(forward.ToNumerics(), 6f, 2, 4).ToUnity();
+
+            var spread = _controller.ApplySpread(spec, forward, 4);
+
+            Assert.That(Vector3.Distance(spread, expected), Is.LessThan(1e-5f));
+            Assert.That(Vector3.Angle(forward, spread), Is.LessThanOrEqualTo(6f + 1e-3f));
+
+            _controller.SpreadScaleSource = () => 0.5f;
+            Assert.That(_controller.CurrentConeDegrees(spec), Is.EqualTo(3f).Within(1e-5f), "the scale narrows the cone");
+            Assert.Throws<ArgumentNullException>(() => _controller.ApplySpread(null, forward, 0));
+            Assert.Throws<ArgumentNullException>(() => _controller.CurrentConeDegrees(null));
+        }
+
+        [Test]
+        public void EnablingTurnsOnTheActionsAndDisablingTurnsOffOnlyThoseItTurnedOn()
+        {
+            _reload.Enable();
+            _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+            Assert.That(_attack.enabled, Is.False, "Edit Mode does not enable on Initialize");
+
+            InvokeLifecycle("OnEnable");
+
+            Assert.That(_attack.enabled, Is.True);
+            Assert.That(_reload.enabled, Is.True);
+
+            InvokeLifecycle("OnDisable");
+
+            Assert.That(_attack.enabled, Is.False);
+            Assert.That(_reload.enabled, Is.True, "an action enabled by someone else stays enabled");
+        }
+
+        [Test]
+        public void ReplacingAnActionTurnsOffTheOldOneOnlyWhenItWasTurnedOnHere()
+        {
+            var otherAttack = new InputAction("OtherAttack", InputActionType.Button);
+            var otherReload = new InputAction("OtherReload", InputActionType.Button);
+            try
+            {
+                _reload.Enable();
+                _controller.Initialize(_camera.transform, _attack, _reload, _rifle);
+                InvokeLifecycle("OnEnable");
+
+                _controller.Initialize(_camera.transform, otherAttack, otherReload, _rifle);
+
+                Assert.That(_controller.AttackAction, Is.SameAs(otherAttack));
+                Assert.That(_attack.enabled, Is.False, "the replaced action was enabled here");
+                Assert.That(_reload.enabled, Is.True, "the replaced action was enabled by someone else");
+
+                InvokeLifecycle("OnEnable");
+                _controller.Initialize(_camera.transform, otherAttack, otherReload, _rifle);
+                Assert.That(otherAttack.enabled, Is.True, "passing the same action again keeps it");
+            }
+            finally
+            {
+                otherAttack.Dispose();
+                otherReload.Dispose();
+            }
+        }
+
+        private void InvokeLifecycle(string method)
+        {
+            // Edit Mode のテストでは OnEnable と OnDisable を Unity が呼ばないので、直に呼ぶ。
+            typeof(WeaponController)
+                .GetMethod(method, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Invoke(_controller, null);
+        }
+
+        private sealed class FakeAmmoPool : Shooter.Core.IAmmoPool
+        {
+            private readonly int _capacity;
+
+            public FakeAmmoPool(string id, int capacity)
+            {
+                Id = id;
+                _capacity = capacity;
+            }
+
+            public event Action Changed;
+
+            public string Id { get; }
+
+            public int Count { get; private set; }
+
+            public int Room => _capacity - Count;
+
+            public int Take(int count)
+            {
+                var taken = Math.Min(count, Count);
+                Count -= taken;
+                Changed?.Invoke();
+                return taken;
+            }
+
+            public int Put(int count)
+            {
+                var put = Math.Min(count, Room);
+                Count += put;
+                Changed?.Invoke();
+                return put;
+            }
+        }
+
         private WeaponDefinition CreateHandgun()
         {
             var handgun = ScriptableObject.CreateInstance<WeaponDefinition>();

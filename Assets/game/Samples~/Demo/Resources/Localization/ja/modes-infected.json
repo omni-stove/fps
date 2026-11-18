@@ -1,0 +1,8 @@
+{
+  "mode.infected.survivors": "生存者",
+  "mode.infected.infected": "感染者",
+  "mode.infected.outbreakIn": "感染開始まで {0} 秒",
+  "mode.infected.counts": "生存者 {0} / 感染者 {1}",
+  "mode.infected.youAreSurvivor": "あなたは生存者: 時間切れまで生き延びる",
+  "mode.infected.youAreInfected": "あなたは感染者: 生存者を全員感染させる"
+}

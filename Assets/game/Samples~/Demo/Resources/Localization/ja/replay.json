@@ -1,0 +1,14 @@
+{
+  "replay.title": "リプレイ",
+  "replay.empty": "リプレイはまだありません。オンラインの試合を遊ぶと記録されます。",
+  "replay.unavailable": "このビルドではリプレイを使えません。",
+  "replay.entry": "{0}   {1}   {2}",
+  "replay.date": "{0}/{1}/{2} {3}:{4}",
+  "replay.duration": "{0}:{1}",
+  "replay.play": "再生",
+  "replay.delete": "削除",
+  "replay.confirmDelete": "本当に削除",
+  "replay.back": "戻る",
+  "replay.playFailed": "このリプレイは再生できません。別の版のゲームで記録したものかもしれません。",
+  "replay.deleteFailed": "このリプレイを削除できませんでした。"
+}

@@ -339,6 +339,42 @@ namespace Shooter.Protocol.Tests
             Assert.That(rules.SameAs(MatchRulesSync.From(GameRules.Default)), Is.False);
         }
 
+        [Test]
+        public void TheSyncedRulesCarryTextChatSpectatingAndAbilities()
+        {
+            var defaults = MatchRulesSync.From(GameRules.Default);
+
+            Assert.That(defaults.TextChat, Is.EqualTo(TextChat.On));
+            Assert.That(defaults.Spectating, Is.EqualTo(Spectating.On));
+            Assert.That(defaults.Abilities, Is.EqualTo(Abilities.Off));
+            Assert.That(MatchRulesSync.From(GameRules.Default.WithTextChat(TextChat.Off)).SameAs(defaults), Is.False);
+            Assert.That(MatchRulesSync.From(GameRules.Default.WithSpectating(Spectating.Off)).SameAs(defaults), Is.False);
+            Assert.That(MatchRulesSync.From(GameRules.Default.WithActions(ActionRules.Default.WithAbilities(Abilities.On))).SameAs(defaults), Is.False);
+        }
+
+        [TestCase(TextChat.Off, Spectating.Off, Abilities.On)]
+        [TestCase(TextChat.On, Spectating.On, Abilities.Off)]
+        [TestCase(TextChat.Off, Spectating.On, Abilities.On)]
+        public void TextChatSpectatingAndAbilitiesRoundTripInTheSnapshot(TextChat textChat, Spectating spectating, Abilities abilities)
+        {
+            var rules = GameRules.Default
+                .WithTextChat(textChat)
+                .WithSpectating(spectating)
+                .WithActions(ActionRules.Default.WithAbilities(abilities));
+            var sent = new SnapshotMessage();
+            sent.Clear();
+            sent.Tick = 10;
+            sent.Match.State = GameModeState.Playing;
+            sent.Match.Rules = MatchRulesSync.From(rules);
+
+            var got = ToClient<SnapshotMessage>(sent);
+
+            Assert.That(got.Match.Rules.TextChat, Is.EqualTo(textChat));
+            Assert.That(got.Match.Rules.Spectating, Is.EqualTo(spectating));
+            Assert.That(got.Match.Rules.Abilities, Is.EqualTo(abilities));
+            Assert.That(got.Match.Rules.SameAs(sent.Match.Rules), Is.True);
+        }
+
         [TestCase("")]
         [TestCase("../NetTest")]
         public void ConnectAcceptedWithAMapThatIsNotASceneNameIsUnreadable(string map)

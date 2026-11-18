@@ -85,6 +85,8 @@ namespace Shooter.Tests.EditMode
             definition.ReloadMode = ReloadMode.Manual;
             definition.ViewMode = ViewMode.ThirdPerson;
             definition.Streaks = Streaks.Off;
+            definition.TextChat = TextChat.Off;
+            definition.Spectating = Spectating.Off;
 
             var rules = definition.ToRules();
 
@@ -134,6 +136,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
             Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
             Assert.That(rules.Streaks, Is.EqualTo(Streaks.Off));
+            Assert.That(rules.TextChat, Is.EqualTo(TextChat.Off));
+            Assert.That(rules.Spectating, Is.EqualTo(Spectating.Off));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
 
@@ -187,7 +191,9 @@ namespace Shooter.Tests.EditMode
                 3,
                 ReloadMode.Manual,
                 ViewMode.ThirdPerson)
-                .WithStreaks(Streaks.Off);
+                .WithStreaks(Streaks.Off)
+                .WithTextChat(TextChat.Off)
+                .WithSpectating(Spectating.Off);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -242,6 +248,8 @@ namespace Shooter.Tests.EditMode
         [TestCase("ReloadMode")]
         [TestCase("ViewMode")]
         [TestCase("Streaks")]
+        [TestCase("TextChat")]
+        [TestCase("Spectating")]
         public void ToRulesRejectsInvalidValuesWithTheAssetName(string field)
         {
             var definition = NewBroken("BrokenRules", field);
@@ -334,6 +342,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode));
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks));
+            Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat));
+            Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)
@@ -480,6 +490,12 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "Streaks":
                     definition.Streaks = (Streaks)99;
+                    break;
+                case "TextChat":
+                    definition.TextChat = (TextChat)99;
+                    break;
+                case "Spectating":
+                    definition.Spectating = (Spectating)99;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

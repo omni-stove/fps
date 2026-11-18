@@ -137,6 +137,45 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void OmittedTextChatAndSpectatingAreOnAndWrittenOffIsRead()
+        {
+            var omitted = GameRulesJson.Parse("{}", _source);
+            Assert.That(omitted.TextChat, Is.EqualTo(TextChat.On));
+            Assert.That(omitted.Spectating, Is.EqualTo(Spectating.On));
+
+            var off = GameRulesJson.Parse("{\"textChat\": \"Off\", \"spectating\": \"Off\"}", _source);
+            Assert.That(off.TextChat, Is.EqualTo(TextChat.Off));
+            Assert.That(off.Spectating, Is.EqualTo(Spectating.Off));
+
+            var overBase = GameRulesJson.Parse("{}", _source, GameRules.Default.WithTextChat(TextChat.Off).WithSpectating(Spectating.Off));
+            Assert.That(overBase.TextChat, Is.EqualTo(TextChat.Off), "omitted keeps the base");
+            Assert.That(overBase.Spectating, Is.EqualTo(Spectating.Off), "omitted keeps the base");
+
+            AssertNames(Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"textChat\": \"Muted\"}", _source)), "textChat");
+            AssertNames(Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"spectating\": \"Muted\"}", _source)), "spectating");
+        }
+
+        [Test]
+        public void WriteThenParseKeepsTextChatAndSpectating()
+        {
+            var defaults = GameRulesJson.Write(GameRules.Default);
+            Assert.That(defaults, Does.Contain("\"textChat\": \"On\""));
+            Assert.That(defaults, Does.Contain("\"spectating\": \"On\""));
+
+            var parsedDefaults = GameRulesJson.Parse(defaults, _source);
+            Assert.That(parsedDefaults.TextChat, Is.EqualTo(TextChat.On));
+            Assert.That(parsedDefaults.Spectating, Is.EqualTo(Spectating.On));
+
+            var written = GameRulesJson.Write(GameRules.Default.WithTextChat(TextChat.Off).WithSpectating(Spectating.Off));
+            Assert.That(written, Does.Contain("\"textChat\": \"Off\""));
+            Assert.That(written, Does.Contain("\"spectating\": \"Off\""));
+
+            var parsed = GameRulesJson.Parse(written, _source);
+            Assert.That(parsed.TextChat, Is.EqualTo(TextChat.Off));
+            Assert.That(parsed.Spectating, Is.EqualTo(Spectating.Off));
+        }
+
+        [Test]
         public void ParseOverBaseRulesChangesOnlyTheWrittenItems()
         {
             var baseRules = GameRules.Default
@@ -172,7 +211,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(23));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(25));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(27));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -492,6 +531,8 @@ namespace Shooter.Core.Tests
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), "viewMode");
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), "streaks");
+            Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat), "textChat");
+            Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating), "spectating");
 
             var a = actual.Actions;
             var b = expected.Actions;

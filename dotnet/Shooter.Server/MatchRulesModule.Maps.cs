@@ -15,7 +15,7 @@ namespace Shooter.Server
         }
 
         // 替えた先で始められないと分かるのが試合の合間だと、遊んでいる人を残して止めるしかないので、起動のうちに断る
-        private void CheckOtherMaps(GameRules rules)
+        private void CheckOtherMaps()
         {
             foreach (var map in _match.Maps)
             {
@@ -27,12 +27,7 @@ namespace Shooter.Server
                 var points = PointsOf(map);
                 RequireSpawnPointFor(map, points, Team.Alpha);
                 RequireSpawnPointFor(map, points, Team.Bravo);
-
-                if (rules.Objective == MatchObjective.Domination && points.ControlPoints.Count == 0)
-                {
-                    throw new InvalidOperationException(
-                        "cannot change to map " + map.Name + " for the " + rules.Objective + " match: it has no control points");
-                }
+                _objective.CheckMap(map, points);
             }
         }
 
@@ -56,14 +51,7 @@ namespace Shooter.Server
             var points = PointsOf(map);
             _session.ReplaceSpawnPoints(points.SpawnPoints);
             _log.WriteLine(MatchLog.Tag + " spawnPoints=" + Text(points.SpawnPoints.Count) + " map=" + map.Name);
-            if (_domination == null)
-            {
-                return;
-            }
-
-            StopObjective();
-            PrepareObjective(_data.Rules, _data.Settings, points, out _);
-            StartObjective();
+            _objective.UseMap(map, points);
             foreach (var player in _match.Players)
             {
                 ObjectivePlayerJoined(player.PlayerId);

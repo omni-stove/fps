@@ -21,7 +21,7 @@ namespace Shooter.Core
             var text = new StringBuilder(LogPrefix).Append(" outbreak first=");
             if (firstInfectedIds.Count == 0)
             {
-                return text.Append(Nobody).ToString();
+                return LogPrefix + " outbreak first=" + Nobody;
             }
 
             for (var i = 0; i < firstInfectedIds.Count; i++)

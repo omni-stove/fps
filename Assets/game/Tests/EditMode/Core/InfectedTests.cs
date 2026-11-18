@@ -7,11 +7,11 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class InfectedTests
     {
-        private const float StartDelaySeconds = 5f;
-        private const float RoundSeconds = 60f;
-        private const float RespawnSeconds = 2f;
-        private const int ScorePerInfection = 2;
-        private const int ScorePerSurvivedRound = 7;
+        private const float _startDelaySeconds = 5f;
+        private const float _roundSeconds = 60f;
+        private const float _respawnSeconds = 2f;
+        private const int _scorePerInfection = 2;
+        private const int _scorePerSurvivedRound = 7;
 
         private static readonly int[] _firstPlayer = { 0 };
         private static readonly int[] _lastPlayer = { 3 };
@@ -24,7 +24,7 @@ namespace Shooter.Core.Tests
             var infected = Started(4, PickFirst);
             var turns = Record(infected);
 
-            infected.Session.Tick(StartDelaySeconds - 0.5f);
+            infected.Session.Tick(_startDelaySeconds - 0.5f);
 
             Assert.That(infected.HasBrokenOut, Is.False);
             Assert.That(infected.SecondsUntilOutbreak, Is.EqualTo(0.5f).Within(1e-4f));
@@ -41,7 +41,7 @@ namespace Shooter.Core.Tests
             var infected = Started(4, PickLast, initialInfected: 1);
             var turns = Record(infected);
 
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
 
             Assert.That(infected.HasBrokenOut, Is.True);
             Assert.That(infected.SecondsUntilOutbreak, Is.Zero);
@@ -62,7 +62,7 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 50; i++)
             {
-                infected.Session.Tick(StartDelaySeconds / 50f);
+                infected.Session.Tick(_startDelaySeconds / 50f);
             }
 
             Assert.That(infected.HasBrokenOut, Is.True);
@@ -74,7 +74,7 @@ namespace Shooter.Core.Tests
         {
             var infected = Started(3, PickFirst, initialInfected: 5);
 
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
 
             Assert.That(infected.FirstInfectedIds, Is.EqualTo(_firstTwoPlayers));
             Assert.That(infected.SurvivorCount, Is.EqualTo(1));
@@ -92,10 +92,10 @@ namespace Shooter.Core.Tests
             Assert.That(infected.Infect(1, 0), Is.True);
 
             Assert.That(session.GetSide(1), Is.EqualTo(Infected.InfectedSide));
-            Assert.That(session.GetScore(Infected.InfectedSide), Is.EqualTo((double)ScorePerInfection));
+            Assert.That(session.GetScore(Infected.InfectedSide), Is.EqualTo((double)_scorePerInfection));
             Assert.That(session.GetKills(0), Is.EqualTo(1));
             Assert.That(session.IsDown(1), Is.True, "the new infected waits to respawn");
-            Assert.That(session.GetRespawnRemaining(1), Is.EqualTo(RespawnSeconds));
+            Assert.That(session.GetRespawnRemaining(1), Is.EqualTo(_respawnSeconds));
             Assert.That(turns.Count, Is.EqualTo(1));
             Assert.That(turns[0].PlayerId, Is.EqualTo(1));
             Assert.That(turns[0].InfectorId, Is.EqualTo((int?)0));
@@ -127,7 +127,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(session.GetScore(Infected.SurvivorSide), Is.Zero);
             Assert.That(infected.IsInfected(0), Is.True);
-            session.Tick(RespawnSeconds);
+            session.Tick(_respawnSeconds);
             Assert.That(respawned, Is.EqualTo(_firstPlayer));
         }
 
@@ -148,7 +148,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo((Side?)Infected.InfectedSide));
-            Assert.That(session.GetScore(Infected.InfectedSide), Is.EqualTo(2d * ScorePerInfection));
+            Assert.That(session.GetScore(Infected.InfectedSide), Is.EqualTo(2d * _scorePerInfection));
         }
 
         [Test]
@@ -157,11 +157,11 @@ namespace Shooter.Core.Tests
             var infected = BrokenOut(3);
             var session = infected.Session;
 
-            session.Tick(RoundSeconds);
+            session.Tick(_roundSeconds);
 
             Assert.That(session.State, Is.EqualTo(GameModeState.Ended));
             Assert.That(session.Winner, Is.EqualTo((Side?)Infected.SurvivorSide));
-            Assert.That(session.GetScore(Infected.SurvivorSide), Is.EqualTo((double)ScorePerSurvivedRound));
+            Assert.That(session.GetScore(Infected.SurvivorSide), Is.EqualTo((double)_scorePerSurvivedRound));
             Assert.That(infected.Infect(1, 0), Is.False, "nobody is infected after the end");
         }
 
@@ -184,7 +184,7 @@ namespace Shooter.Core.Tests
             infected.Reset();
 
             Assert.That(infected.HasBrokenOut, Is.False);
-            Assert.That(infected.SecondsUntilOutbreak, Is.EqualTo(StartDelaySeconds));
+            Assert.That(infected.SecondsUntilOutbreak, Is.EqualTo(_startDelaySeconds));
             Assert.That(infected.FirstInfectedIds, Is.Empty);
             Assert.That(infected.SurvivorCount, Is.EqualTo(3));
             Assert.That(infected.Session.State, Is.EqualTo(GameModeState.Waiting));
@@ -201,7 +201,7 @@ namespace Shooter.Core.Tests
             infected.Session.AddPlayer(3, Infected.SurvivorSide);
             infected.Session.Start();
 
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
 
             Assert.That(infected.FirstInfectedIds, Is.EqualTo(_firstPlayer));
             Assert.That(infected.InfectedCount, Is.EqualTo(2));
@@ -224,12 +224,12 @@ namespace Shooter.Core.Tests
             var infected = Started(4, PickFirst, initialInfected: 3);
             var before = InfectedStatus.Of(infected, 0);
 
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
             var after = InfectedStatus.Of(infected, 0);
             var botsOnly = InfectedStatus.Of(infected, null);
 
             Assert.That(before.HasBrokenOut, Is.False);
-            Assert.That(before.SecondsUntilOutbreak, Is.EqualTo(StartDelaySeconds));
+            Assert.That(before.SecondsUntilOutbreak, Is.EqualTo(_startDelaySeconds));
             Assert.That(before.SurvivorCount, Is.EqualTo(4));
             Assert.That(before.IsLocalPlayerInfected, Is.EqualTo((bool?)false));
             Assert.That(infected.FirstInfectedIds, Is.EqualTo(_firstThreePlayers));
@@ -262,8 +262,8 @@ namespace Shooter.Core.Tests
             var first = Started(4, PickFirst);
             var last = Started(4, PickLast);
 
-            first.Session.Tick(StartDelaySeconds);
-            last.Session.Tick(StartDelaySeconds);
+            first.Session.Tick(_startDelaySeconds);
+            last.Session.Tick(_startDelaySeconds);
 
             Assert.That(first.FirstInfectedIds, Is.EqualTo(_firstPlayer));
             Assert.That(last.FirstInfectedIds, Is.EqualTo(_lastPlayer));
@@ -280,7 +280,7 @@ namespace Shooter.Core.Tests
             }
 
             infected.Session.Start();
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
 
             Assert.That(infected.FirstInfectedIds.Count, Is.EqualTo(1));
             Assert.That(infected.FirstInfectedIds[0], Is.InRange(0, 3));
@@ -292,20 +292,20 @@ namespace Shooter.Core.Tests
         {
             var infected = Started(3, count => count);
 
-            Assert.Throws<InvalidOperationException>(() => infected.Session.Tick(StartDelaySeconds));
+            Assert.Throws<InvalidOperationException>(() => infected.Session.Tick(_startDelaySeconds));
         }
 
-        private static InfectedSpec Spec(int initialInfected, float roundSeconds = RoundSeconds)
+        private static InfectedSpec Spec(int initialInfected, float roundSeconds = _roundSeconds)
         {
             return new InfectedSpec(
                 initialInfected,
-                StartDelaySeconds,
+                _startDelaySeconds,
                 roundSeconds,
                 InfectedSpec.DefaultInfectedMaxHealth,
                 InfectedSpec.DefaultInfectedSpeedMultiplier,
-                RespawnSeconds,
-                ScorePerInfection,
-                ScorePerSurvivedRound);
+                _respawnSeconds,
+                _scorePerInfection,
+                _scorePerSurvivedRound);
         }
 
         private static Infected Started(int players, Func<int, int> pickIndex, int initialInfected = 1)
@@ -324,7 +324,7 @@ namespace Shooter.Core.Tests
         private static Infected BrokenOut(int players)
         {
             var infected = Started(players, PickFirst);
-            infected.Session.Tick(StartDelaySeconds);
+            infected.Session.Tick(_startDelaySeconds);
             Assert.That(infected.FirstInfectedIds, Is.EqualTo(_firstPlayer));
             return infected;
         }

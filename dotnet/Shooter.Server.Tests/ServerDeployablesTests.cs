@@ -281,6 +281,33 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void AFullServerRefusesANewOneButLetsAnOwnerReplaceTheirOldest()
+        {
+            // 足元 0.1 m 角の小さな盾を 0.3 m おきに 8x8 並べ、全員分の合計を SnapshotMessage.MaxDeployables (64) にする
+            var shield = new DeploySpec(SnapshotMessage.MaxDeployables, DeployOverflow.ReplaceOldest, 300, 4f, 30f, 0.25f, 0.1f, 0.5f, 0.1f);
+            Start(Catalog(shield: shield));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            for (var i = 0; i < SnapshotMessage.MaxDeployables; i++)
+            {
+                var position = new Vector3(-4f + (0.3f * (i % 8)), 0.5f, -1.05f + (0.3f * (i / 8)));
+                Assert.That(_deployables.Place(1, _shieldId, position, 0f), Is.EqualTo(ServerDeployRefusal.None), _log.ToString());
+            }
+
+            Assert.That(_deployables.Place(1, _decoyId, new Vector3(-3f, 0.5f, -2f), 0f), Is.EqualTo(ServerDeployRefusal.LimitReached));
+            Assert.That(Rows(1), Has.Count.EqualTo(64));
+
+            Assert.That(_deployables.Place(1, _shieldId, new Vector3(-3f, 0.5f, 1.6f), 0f), Is.EqualTo(ServerDeployRefusal.None), _log.ToString());
+            var rows = Rows(1);
+            Assert.That(rows, Has.Count.EqualTo(64));
+            Assert.That(rows[0].DeployableId, Is.EqualTo(2));
+            Assert.That(rows[63].DeployableId, Is.EqualTo(65));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=deploy-shield serial=1 removed reason=Replaced"));
+        }
+
+        [Test]
         public void RequestsThatCannotBePlacedAreRefused()
         {
             Start(Catalog(), wall: true);

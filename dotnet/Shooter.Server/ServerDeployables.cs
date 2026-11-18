@@ -250,8 +250,10 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
             }
 
-            // サーバーにある物は必ずスナップショットに載せるため、全員分の合計が送れる数に達したら置かせない
-            if (_placed.Count >= SnapshotMessage.MaxDeployables)
+            // サーバーにある物は必ずスナップショットに載せるため、全員分の合計が送れる数に達したら置かせない。
+            // 置き直しで一番古い物が消える分は数が増えないので、消える数を引いて比べる
+            var evicting = Math.Max(0, roster.Count - roster.MaxActive + 1);
+            if (_placed.Count - evicting >= SnapshotMessage.MaxDeployables)
             {
                 return Refuse(playerId, type.Id, ServerDeployRefusal.LimitReached);
             }

@@ -90,6 +90,7 @@ namespace Shooter.Tests.EditMode
             definition.Spectating = Spectating.Off;
             definition.Emote = Emote.On;
             definition.Stamina = Stamina.On;
+            definition.ReloadInterruptedBy = new[] { ReloadInterrupt.Grenade };
             definition.RespawnAnchors = new[] { RespawnAnchor.Beacon, RespawnAnchor.Base };
 
             var rules = definition.ToRules();
@@ -145,6 +146,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.Spectating, Is.EqualTo(Spectating.Off));
             Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
             Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
+            Assert.That(rules.Actions.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Grenade }));
             Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
@@ -157,6 +159,19 @@ namespace Shooter.Tests.EditMode
             Assert.That(definition.Emote, Is.EqualTo(Emote.Off));
             Assert.That(definition.Stamina, Is.EqualTo(Stamina.Off));
             Assert.That(definition.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+            Assert.That(definition.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Melee, ReloadInterrupt.Grenade }));
+        }
+
+        [Test]
+        public void AnEmptyReloadInterruptedByLetsNothingInterruptAReload()
+        {
+            var definition = NewDefinition("NoInterrupts");
+            definition.ReloadInterruptedBy = new ReloadInterrupt[0];
+
+            Assert.That(definition.ToRules().Actions.ReloadInterruptedBy, Is.Empty);
+
+            definition.ReloadInterruptedBy = new[] { ReloadInterrupt.Melee, ReloadInterrupt.Melee };
+            Assert.Throws<GameRulesDefinitionException>(() => definition.ToRules());
         }
 
         [Test]
@@ -245,7 +260,8 @@ namespace Shooter.Tests.EditMode
                     AimToFire.On,
                     Jump.Off,
                     emote: Emote.On,
-                    stamina: Stamina.On),
+                    stamina: Stamina.On,
+                    reloadInterruptedBy: new[] { ReloadInterrupt.Grenade }),
                 2f,
                 FallDamage.On,
                 HudDensity.Hardcore,
@@ -414,6 +430,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating));
             Assert.That(actual.Actions.Emote, Is.EqualTo(expected.Actions.Emote));
             Assert.That(actual.Actions.Stamina, Is.EqualTo(expected.Actions.Stamina));
+            Assert.That(actual.Actions.ReloadInterruptedBy, Is.EqualTo(expected.Actions.ReloadInterruptedBy));
             Assert.That(actual.RespawnAnchors, Is.EqualTo(expected.RespawnAnchors));
         }
 

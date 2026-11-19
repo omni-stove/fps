@@ -323,6 +323,44 @@ namespace Shooter.Server.Tests
             Assert.Throws<ArgumentNullException>(() => new ServerMelee(combat, null, MeleeSpec.Default));
         }
 
+        [Test]
+        public void SwingingCancelsTheReloadAndHoldsOffANewOneUntilTheSwingEnds()
+        {
+            StartWithTwo();
+            FireEast(1);
+            RequestReload(1);
+            Assert.That(IsReloading(1), Is.True, _log.ToString());
+
+            Press(1);
+
+            Assert.That(IsReloading(1), Is.False);
+            Assert.That(_log.ToString(), Does.Contain("[Combat] reload-cancelled player=1 by=Melee"));
+            RequestReload(1);
+            Assert.That(IsReloading(1), Is.False, "no reload while swinging");
+
+            Hold(1, InputButtons.None, (int)(_spec.SwingSeconds / _tickSeconds) + 1);
+            RequestReload(1);
+            Assert.That(IsReloading(1), Is.True);
+        }
+
+        [Test]
+        public void WithoutMeleeInReloadInterruptedByTheReloadGoesOnThroughTheSwing()
+        {
+            var rules = MeleeRules();
+            Start(rules.WithActions(rules.Actions.WithReloadInterruptedBy(new[] { ReloadInterrupt.Grenade })));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            FireEast(1);
+            RequestReload(1);
+
+            Press(1);
+
+            Assert.That(_melee.IsSwinging(1), Is.True);
+            Assert.That(IsReloading(1), Is.True);
+            Assert.That(_log.ToString(), Does.Not.Contain("reload-cancelled"));
+        }
+
         private static GameRules MeleeRules()
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithMelee(Melee.On);
@@ -393,6 +431,39 @@ namespace Shooter.Server.Tests
         {
             Press(id);
             Hold(id, InputButtons.None, (int)(1f / _tickSeconds));
+        }
+
+        private void FireEast(int id)
+        {
+            Assert.That(_context.Bodies.TryGet(id, out var body), Is.True);
+            _host.OnMessage(new ConnectionId((ulong)id), new FireRequestMessage
+            {
+                WeaponId = TestRules.RifleId,
+                Origin = body.EyePosition,
+                Direction = Vector3.UnitX,
+                ClientTick = (int)_host.TickCount,
+                InterpolationAlpha = 0f,
+                ShotIndex = 0,
+                ShotGeneration = 0,
+            });
+        }
+
+        private void RequestReload(int id)
+        {
+            _host.OnMessage(new ConnectionId((ulong)id), new WeaponActionRequestMessage { Action = WeaponAction.Reload });
+        }
+
+        private bool IsReloading(int id)
+        {
+            var snapshot = new SnapshotMessage();
+            foreach (var player in _match.Players)
+            {
+                snapshot.Players.Add().PlayerId = player.PlayerId;
+            }
+
+            Assert.That(_match.TryGetPlayer(id, out var receiver), Is.True);
+            _combat.Contribute(snapshot, receiver);
+            return snapshot.Owner.Weapon.IsReloading;
         }
 
         private void Press(int id)

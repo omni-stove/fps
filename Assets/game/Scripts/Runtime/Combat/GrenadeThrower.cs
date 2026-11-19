@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
-    public sealed class GrenadeThrower : MonoBehaviour
+    public sealed class GrenadeThrower : MonoBehaviour, IWeaponModifier
     {
         public const string LogTag = "[Grenade]";
 
@@ -80,6 +80,19 @@ namespace Shooter.Runtime
         public GrenadeCatalog Catalog => _catalog ?? GrenadeCatalog.Of(InspectorSpec);
 
         public bool IsThrowing => _throwRemaining > 0f;
+
+        public bool InterruptsReload => (_actions ?? ActionRules.Default).InterruptsReload(ReloadInterrupt.Grenade);
+
+        // 射撃は GameBootstrap が FireBlocker で止めているので、ここではリロードだけを止める。
+        bool IWeaponModifier.BlocksFire => false;
+
+        bool IWeaponModifier.BlocksReload => IsThrowing && InterruptsReload;
+
+        float IWeaponModifier.SpreadMultiplier => 1f;
+
+        float IWeaponModifier.ModifyConeDegrees(WeaponSpec spec, float coneDegrees) => coneDegrees;
+
+        float IWeaponModifier.ModifySpreadFraction(float spreadFraction) => spreadFraction;
 
         public Func<bool> ThrowBlocker { get; set; }
 

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4013ad91100027c2ef33ab233776bc82, type: 3}
+  m_Name: Boat
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BoatDefinition
+  _mass: 800
+  _length: 4
+  _width: 2
+  _hullBottom: -0.5
+  _hullHeight: 1
+  _draft: 0.3
+  _heaveDamping: 4
+  _forwardDrag: 0.3
+  _sideDrag: 3
+  _thrust: 6
+  _maxForwardSpeed: 14
+  _maxReverseSpeed: 4
+  _turnRate: 50
+  _turnSpeed: 3
+  _turnResponsiveness: 2

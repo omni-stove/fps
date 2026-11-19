@@ -75,6 +75,7 @@ namespace Shooter.Runtime
         [NonSerialized]
         private bool _specApplied;
         private Melee _rule = Melee.Off;
+        private bool _interruptsReload = ActionRules.Default.InterruptsReload(ReloadInterrupt.Melee);
         private Vector3 _lungeDirection = Vector3.forward;
         private string _swingWeaponId;
 
@@ -156,6 +157,8 @@ namespace Shooter.Runtime
 
         public bool IsShieldBashing { get; private set; }
 
+        public bool InterruptsReload => _interruptsReload;
+
         public bool IsSwinging => _swing != null && _swing.IsSwinging;
 
         public bool IsLunging => _swing != null && _swing.IsLunging;
@@ -164,7 +167,7 @@ namespace Shooter.Runtime
 
         bool IWeaponModifier.BlocksFire => enabled && IsSwinging;
 
-        bool IWeaponModifier.BlocksReload => enabled && IsSwinging;
+        bool IWeaponModifier.BlocksReload => enabled && IsSwinging && _interruptsReload;
 
         float IWeaponModifier.SpreadMultiplier => 1f;
 
@@ -227,6 +230,7 @@ namespace Shooter.Runtime
             }
 
             _rule = rules.Actions.Melee;
+            _interruptsReload = rules.Actions.InterruptsReload(ReloadInterrupt.Melee);
             enabled = _rule == Melee.On;
 
             // Edit Mode では enabled を変えても OnEnable / OnDisable が走らないので、差し込みと振りの取り消しはここでも揃える。

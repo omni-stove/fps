@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -20,24 +21,26 @@ namespace Shooter.Core
                 + " read '" + (string.IsNullOrEmpty(source) ? "-" : source) + "'"
                 + " emote=" + rules.Actions.Emote
                 + " stamina=" + rules.Actions.Stamina
-                + " respawnAnchor=" + Anchors(rules)
+                + " respawnAnchor=" + Join(rules.RespawnAnchors)
+                + " reloadInterruptedBy=" + Join(rules.Actions.ReloadInterruptedBy)
                 + " idleWarningSeconds=" + rules.IdleWarningSeconds.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
-        private static string Anchors(GameRules rules)
+        // 空の一覧を "-" にするのは、空のときも項目が消えずにログを同じ形で読めるようにするため。
+        private static string Join<T>(IReadOnlyList<T> values)
         {
             var text = new StringBuilder();
-            foreach (var anchor in rules.RespawnAnchors)
+            foreach (var value in values)
             {
                 if (text.Length > 0)
                 {
                     text.Append(',');
                 }
 
-                text.Append(anchor.ToString());
+                text.Append(value.ToString());
             }
 
-            return text.ToString();
+            return text.Length > 0 ? text.ToString() : "-";
         }
     }
 }

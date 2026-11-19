@@ -2,7 +2,7 @@ using System;
 
 namespace Shooter.Core
 {
-    public sealed class CampaignNotice
+    public sealed class CampaignNotice : IHudNoticeSource
     {
         private float _savedRemaining;
         private bool _countingDown;

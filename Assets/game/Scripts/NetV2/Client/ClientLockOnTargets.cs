@@ -68,6 +68,12 @@ namespace Shooter.NetV2
             return () => TryLocate(id, out var point) ? point : (Vector3?)null;
         }
 
+        // フレアはまだスナップショットで届かないので、ネット対戦の相手は囮を出さないものとして扱う。
+        public ILockOnDecoy Decoy(int id)
+        {
+            return null;
+        }
+
         private bool TryLocate(int playerId, out Vector3 point)
         {
             point = default;

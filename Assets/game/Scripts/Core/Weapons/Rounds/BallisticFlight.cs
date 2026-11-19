@@ -64,7 +64,9 @@ namespace Shooter.Core
 
         public bool IsDone => State != BallisticState.Flying;
 
-        public BallisticStep Step(float deltaSeconds, Vector3? homingTarget = null)
+        public int? LuredDecoyId { get; private set; }
+
+        public BallisticStep Step(float deltaSeconds, Vector3? homingTarget = null, ILockOnDecoy decoy = null)
         {
             SpecGuard.PositiveFinite(deltaSeconds, nameof(deltaSeconds));
             if (IsDone)
@@ -78,7 +80,9 @@ namespace Shooter.Core
             var remaining = expires ? left : deltaSeconds;
             if (_homing != null)
             {
-                Velocity = ProjectileSteering.Steer(_homing, Position, Velocity, homingTarget, deltaSeconds);
+                var seek = ProjectileSteering.Seek(decoy, Position, homingTarget, LuredDecoyId, out var lure);
+                LuredDecoyId = lure;
+                Velocity = ProjectileSteering.Steer(_homing, Position, Velocity, seek, deltaSeconds);
             }
 
             var hasHit = false;

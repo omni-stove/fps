@@ -44,7 +44,8 @@ namespace Shooter.Server
         // Unity の AircraftPartDamage が Hitbox.Hit で受ける量 (部位の倍率を掛けた量) と揃える。
         private void DamagePart(Car car, string partId, int amount)
         {
-            if (amount <= 0)
+            // 書き出しの MessageWriter.WriteString が長すぎる Id で例外を投げ、スナップショットが毎 tick 失敗するため、載せずに読み捨てる。
+            if (amount <= 0 || System.Text.Encoding.UTF8.GetByteCount(partId) > MatchProtocol.MaxContentIdBytes)
             {
                 return;
             }

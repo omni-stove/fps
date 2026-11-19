@@ -58,7 +58,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(stage, Is.EqualTo(VehicleDamageStage.Destroyed));
         }
 
-        private static readonly int[] ToldOnFirstSightAndChange = { 0, 120, 300 };
+        private static readonly int[] _toldOnFirstSightAndChange ={ 0, 120, 300 };
 
         [Test]
         public void ThePartsAreToldOnFirstSightAndWhenTheyChange()
@@ -73,7 +73,7 @@ namespace Shooter.NetV2.Tests
             vehicles.Apply(Snapshot(4, Vector3.Zero, parts: Taken("wing_left", 120)));
             vehicles.Apply(Snapshot(5, Vector3.Zero, parts: Taken("wing_left", 300)));
 
-            Assert.That(told, Is.EqualTo(ToldOnFirstSightAndChange), "the same damage in a new snapshot is not told again");
+            Assert.That(told, Is.EqualTo(_toldOnFirstSightAndChange), "the same damage in a new snapshot is not told again");
             Assert.That(vehicles.TryGetParts(0, out var latest), Is.True);
             Assert.That(latest.TakenOf("wing_left"), Is.EqualTo(300));
             Assert.That(vehicles.TryGetParts(1, out var unknown), Is.False);

@@ -18,6 +18,7 @@ namespace Shooter.Runtime
             GameUi.UseDefaultLoadoutSelect(new LoadoutSelectState());
             GameUi.UseDefaultMenu(new SceneMenuNavigator());
             GameUi.UseDefaultInventoryScreen(new InventoryScreenState());
+            GameUi.UseDefaultBuyMenuScreen(new BuyMenuScreenState());
             RegisterMainMenuPanels();
         }
 
@@ -109,6 +110,11 @@ namespace Shooter.Runtime
         private sealed class InventoryScreenState : IInventoryScreen
         {
             public bool IsAnyOpen => InventoryView.IsAnyOpen;
+        }
+
+        private sealed class BuyMenuScreenState : IBuyMenuScreen
+        {
+            public bool IsAnyOpen => BuyMenuView.IsAnyOpen;
         }
 
         private sealed class SceneMenuNavigator : IMenuNavigator

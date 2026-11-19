@@ -262,7 +262,7 @@ namespace Shooter.Runtime
             }
 
             // ポーズ中やロードアウト選択中に出現し直したプレイヤーが、画面を操作しているカーソルを奪わないようにする。閉じたときに各画面がロックする。
-            if (!GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen)
+            if (!GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen && !GameUi.IsBuyMenuOpen)
             {
                 LockCursor(true);
             }
@@ -285,7 +285,7 @@ namespace Shooter.Runtime
         private void OnApplicationFocus(bool hasFocus)
         {
             // フォーカスを失うと OS がロックを外すので、戻ったときにかけ直す。
-            if (hasFocus && isActiveAndEnabled && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen)
+            if (hasFocus && isActiveAndEnabled && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen && !GameUi.IsInventoryOpen && !GameUi.IsBuyMenuOpen)
             {
                 LockCursor(true);
             }
@@ -294,7 +294,7 @@ namespace Shooter.Runtime
         // ポーズ画面を開いている間に視点操作が有効・無効になっていることがあるので、開く前の状態には戻さずシーンから決め直す。
         public static void RefreshCursorLock()
         {
-            if (GameUi.IsLoadoutSelectOpen || GameUi.IsInventoryOpen)
+            if (GameUi.IsLoadoutSelectOpen || GameUi.IsInventoryOpen || GameUi.IsBuyMenuOpen)
             {
                 LockCursor(false);
                 return;

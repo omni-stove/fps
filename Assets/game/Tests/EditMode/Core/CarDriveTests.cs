@@ -113,6 +113,29 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ANegativeBrakeAxisDoesNotBrake()
+        {
+            var command = CarDrive.Compute(_spec, VehicleMotorInput.Idle.With(CarDrive.BrakeAxis, -1f), 5f);
+
+            Assert.That(command.BrakeTorque, Is.EqualTo(100f), "only the idle brake holds the car");
+        }
+
+        [Test]
+        public void ReadsEachAxisByItsNumber()
+        {
+            var input = VehicleMotorInput.Idle.With(CarDrive.ThrottleAxis, 1f).With(CarDrive.SteerAxis, 0.5f);
+
+            var command = CarDrive.Compute(_spec, input, 5f);
+
+            Assert.That(CarDrive.ThrottleAxis, Is.EqualTo(0));
+            Assert.That(CarDrive.SteerAxis, Is.EqualTo(1));
+            Assert.That(CarDrive.BrakeAxis, Is.EqualTo(2));
+            Assert.That(CarDrive.RightAxis, Is.EqualTo(3));
+            Assert.That(command.MotorTorque, Is.EqualTo(2000f));
+            Assert.That(command.SteerAngle, Is.EqualTo(15f));
+        }
+
+        [Test]
         public void ComputeRejectsANullSpecOrAnUnknownSpeed()
         {
             Assert.Throws<ArgumentNullException>(() => CarDrive.Compute(null, VehicleMotorInput.Idle, 0f));

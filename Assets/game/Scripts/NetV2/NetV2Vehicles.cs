@@ -100,11 +100,16 @@ namespace Shooter.NetV2
                 }
             }
 
-            if (_driving >= 0 && local != null && _driving < _scene.Count && _scene[_driving].Motor != null)
+            if (_driving >= 0 && local != null && _driving < _scene.Count && _scene[_driving].Motor != null && _scene[_driving].Vehicle != null)
             {
                 local.ReadDrive(out var move, out var boost, out var vertical);
-                var input = new VehicleSeatInput(move, vertical, boost, false, false, false, Vector3.zero, Vector3.zero);
-                _scene[_driving].Motor.SetInput(VehicleMotorLink.ToMotorInput(input));
+                var vehicle = _scene[_driving].Vehicle;
+                var view = local.Camera != null ? local.Camera.transform : local.transform;
+                var input = new VehicleSeatInput(move, vertical, boost, local.IsAttackHeld, local.IsAiming, false, view.position, view.forward);
+                var seats = vehicle.Seats;
+                var driver = vehicle.Spec.DriverSeatIndex;
+                var seat = driver >= 0 && driver < seats.Count ? seats[driver] : null;
+                _scene[_driving].Motor.SetInput(VehicleControlSchemes.For(vehicle.gameObject).ToMotorInput(seat, input, Time.deltaTime));
             }
         }
 

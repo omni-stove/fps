@@ -83,8 +83,7 @@ namespace Shooter.Editor
                 weapons.Add(mount.WeaponSpec ?? throw new InvalidOperationException("weapon mount " + mount.name + " has no weapon"));
             }
 
-            var motor = vehicle.GetComponent<SimpleCarMotor>();
-            var drive = motor != null ? VehicleDriveSpec.FromTopSpeed(motor.Spec.MaxForwardSpeed) : VehicleDriveSpec.Default;
+            var drive = vehicle.TryGetComponent<IVehicleTopSpeed>(out var top) ? VehicleDriveSpec.FromTopSpeed(top.TopSpeed) : VehicleDriveSpec.Default;
             return new MapVehicle(
                 spec,
                 ToNumerics(root.position),

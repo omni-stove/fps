@@ -67,6 +67,31 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnAircraftsDriveLimitCoversItsDiveSpeed()
+        {
+            Object.DestroyImmediate(_car.GetComponent<SimpleCarMotor>());
+            var aircraft = _car.gameObject.AddComponent<SimpleAircraftMotor>();
+            var spec = new AircraftSpec(maxThrust: 10f, maxSpeed: 100f);
+            aircraft.Configure(spec);
+
+            var vehicles = MapVehicleExporter.Collect(new[] { _car.gameObject });
+
+            var expected = AircraftFlight.TopSpeed(spec, Physics.gravity.magnitude) * VehicleDriveSpec.DefaultTopSpeedMargin;
+            Assert.That(vehicles.Vehicles[0].Drive.MaxSpeed, Is.EqualTo(expected).Within(1e-3f));
+            Assert.That(vehicles.Vehicles[0].Drive.MaxSpeed, Is.GreaterThan(100f * VehicleDriveSpec.DefaultTopSpeedMargin));
+        }
+
+        [Test]
+        public void AVehicleWithoutATopSpeedUsesTheDefaultDriveLimit()
+        {
+            Object.DestroyImmediate(_car.GetComponent<SimpleCarMotor>());
+
+            var vehicles = MapVehicleExporter.Collect(new[] { _car.gameObject });
+
+            Assert.That(vehicles.Vehicles[0].Drive.MaxSpeed, Is.EqualTo(VehicleDriveSpec.DefaultMaxSpeed));
+        }
+
+        [Test]
         public void TheWrittenFileReadsBackTheSame()
         {
             var vehicles = MapVehicleExporter.Collect(new[] { _car.gameObject });

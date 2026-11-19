@@ -18,6 +18,8 @@ namespace Shooter.Runtime
 
         public bool IsBound => _bound;
 
+        public IVehicleControlScheme ControlScheme { get; set; }
+
         private void OnEnable()
         {
             Bind();
@@ -79,7 +81,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            _motor.SetInput(ToMotorInput(input));
+            _motor.SetInput(VehicleControlSchemes.For(gameObject).ToMotorInput(seat, input, deltaSeconds));
         }
 
         public void OnSeatVacated(VehicleSeat seat)
@@ -90,11 +92,6 @@ namespace Shooter.Runtime
             }
 
             _motor.SetInput(VehicleMotorInput.Idle);
-        }
-
-        public static VehicleMotorInput ToMotorInput(VehicleSeatInput input)
-        {
-            return new VehicleMotorInput(input.Move.y, input.Move.x, input.Boost ? 1f : 0f, input.Vertical);
         }
     }
 }

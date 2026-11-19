@@ -7,7 +7,7 @@ namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class SimpleCarMotor : MonoBehaviour, IVehicleMotor
+    public sealed class SimpleCarMotor : MonoBehaviour, IVehicleMotor, IVehicleTopSpeed
     {
         [SerializeField, Min(0.01f), Tooltip("車の質量 (kg)。Rigidbody に入れる")]
         private float _mass = CarSpec.DefaultMass;
@@ -57,6 +57,8 @@ namespace Shooter.Runtime
         public IReadOnlyList<CarWheel> Wheels => _wheels;
 
         public CarDriveCommand LastCommand => _lastCommand;
+
+        public float TopSpeed => Spec.MaxForwardSpeed;
 
         public float ForwardSpeed => Vector3.Dot(Body.linearVelocity, transform.forward);
 
@@ -121,7 +123,7 @@ namespace Shooter.Runtime
         // 起こすのは上の軸を押した瞬間だけにする。押したままだと、起こした直後にまた傾いたときに勝手に起き直してしまうため。
         public void SetInput(VehicleMotorInput input)
         {
-            if (input.Vertical > 0f && !(_input.Vertical > 0f))
+            if (input[CarDrive.RightAxis] > 0f && !(_input[CarDrive.RightAxis] > 0f))
             {
                 _rightRequested = true;
             }

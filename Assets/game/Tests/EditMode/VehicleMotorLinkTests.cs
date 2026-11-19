@@ -39,12 +39,52 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheSeatInputMapsMoveToThrottleAndSteerAndDashToTheBrake()
+        public void TheCarSchemeMapsMoveToThrottleAndSteerAndDashToTheBrake()
         {
             var input = new VehicleSeatInput(new Vector2(-0.5f, 0.75f), 1f, true, false, false, false, Vector3.zero, Vector3.zero);
 
-            Assert.That(VehicleMotorLink.ToMotorInput(input), Is.EqualTo(new VehicleMotorInput(0.75f, -0.5f, 1f, 1f)));
-            Assert.That(VehicleMotorLink.ToMotorInput(VehicleSeatInput.Idle), Is.EqualTo(VehicleMotorInput.Idle));
+            Assert.That(CarControlScheme.Instance.ToMotorInput(null, input, 0.02f), Is.EqualTo(new VehicleMotorInput(0.75f, -0.5f, 1f, 1f)));
+            Assert.That(CarControlScheme.Instance.ToMotorInput(null, VehicleSeatInput.Idle, 0.02f), Is.EqualTo(VehicleMotorInput.Idle));
+        }
+
+        [Test]
+        public void WithoutASchemeTheVehicleUsesTheCarScheme()
+        {
+            Assert.That(VehicleControlSchemes.For(_vehicle.gameObject), Is.SameAs(CarControlScheme.Instance));
+            Assert.That(VehicleControlSchemes.For(null), Is.SameAs(CarControlScheme.Instance));
+        }
+
+        [Test]
+        public void ASchemeOnTheVehicleDecidesTheMotorInput()
+        {
+            var scheme = _vehicle.gameObject.AddComponent<RollFromAimScheme>();
+            _link.Bind();
+            var driver = TestCars.Board(_vehicle, "Driver", 0, _created);
+
+            Assert.That(VehicleControlSchemes.For(_vehicle.gameObject), Is.SameAs(scheme));
+            var input = new VehicleSeatInput(new Vector2(0f, 1f), 0f, false, false, false, false, Vector3.zero, Vector3.right);
+            Assert.That(_vehicle.Seats[0].SubmitInput(driver, input, 0.02f), Is.True);
+
+            Assert.That(scheme.LastSeat, Is.SameAs(_vehicle.Seats[0]));
+            Assert.That(_motor.Input, Is.EqualTo(VehicleMotorInput.Idle.With(RollFromAimScheme.RollAxis, 1f)));
+        }
+
+        [Test]
+        public void TheLinksSchemeWinsOverTheOneOnTheVehicle()
+        {
+            _vehicle.gameObject.AddComponent<RollFromAimScheme>();
+            var assigned = new FixedScheme(new VehicleMotorInput(0f, 0f, 0f, 0f, 0f, 0f, 0f, -1f));
+            _link.ControlScheme = assigned;
+            _link.Bind();
+            var driver = TestCars.Board(_vehicle, "Driver", 0, _created);
+
+            Assert.That(VehicleControlSchemes.For(_vehicle.gameObject), Is.SameAs(assigned));
+            _vehicle.Seats[0].SubmitInput(driver, Forward(), 0.02f);
+            Assert.That(_motor.Input, Is.EqualTo(new VehicleMotorInput(0f, 0f, 0f, 0f, 0f, 0f, 0f, -1f)));
+
+            _link.ControlScheme = null;
+            _vehicle.Seats[0].SubmitInput(driver, Forward(), 0.02f);
+            Assert.That(_motor.Input, Is.EqualTo(VehicleMotorInput.Idle), "back to the scheme on the vehicle");
         }
 
         [Test]
@@ -107,6 +147,18 @@ namespace Shooter.Tests.EditMode
         private static VehicleSeatInput Forward()
         {
             return new VehicleSeatInput(new Vector2(0f, 1f), 0f, false, false, false, false, Vector3.zero, Vector3.zero);
+        }
+
+        private sealed class FixedScheme : IVehicleControlScheme
+        {
+            private readonly VehicleMotorInput _input;
+
+            public FixedScheme(VehicleMotorInput input)
+            {
+                _input = input;
+            }
+
+            public VehicleMotorInput ToMotorInput(VehicleSeat seat, VehicleSeatInput input, float deltaSeconds) => _input;
         }
     }
 }

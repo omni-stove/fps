@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Shooter.Editor
 {
     // batchmode には入力が無いので、Interact / Previous の代わりに PlayerVehicleRider.Interact / SwitchSeat を呼び、
-    // 移動・ブレーキ・狙い・射撃は PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座までは歩かせずに移す。
+    // 移動・ブレーキ・狙い・射撃は PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座と飛行機までは歩かせずに移す。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
     public static class VehicleSmokeRun
@@ -21,6 +21,11 @@ namespace Shooter.Editor
         public const float EnterTimeoutSeconds = 120f;
 
         public const float DriveDistance = 10f;
+
+        // 離陸の速さに近づいてから機首を上げる。止まったまま上げると、尾が地面を擦って加速が鈍るため。
+        public const float RotateSpeedFraction = 0.8f;
+        public const float ClimbPitchDegrees = 15f;
+        public const float FlyAltitude = 15f;
         public const float StoppedSpeed = 0.3f;
         public const float AimToleranceDegrees = 1.5f;
 
@@ -46,6 +51,8 @@ namespace Shooter.Editor
         private static Step _step;
         private static Vector3 _driveStart;
         private static Vector3 _driveForward;
+        private static Vector3 _runwayStart;
+        private static Vector3 _runwayForward;
         private static TargetDummy _target;
         private static bool _sawTargetHit;
         private static PlayerVehicleRider _rider;
@@ -72,6 +79,10 @@ namespace Shooter.Editor
             AimAtCar,
             DestroyCar,
             ExitMountedGun,
+            MoveToAircraft,
+            BoardAircraft,
+            TakeOff,
+            Climb,
             Done,
         }
 
@@ -121,6 +132,8 @@ namespace Shooter.Editor
                 new LogExpectation(car + "exploded at=", null),
                 new LogExpectation(car + "wrecked ", null),
                 new LogExpectation(mountedGun + "leave rider=", " seat=0 reason=" + VehicleLeaveReason.Request + " "),
+                new LogExpectation(Prefix(VehicleRangeSceneBuilder.AircraftName) + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
+                new LogExpectation(FlewLogPrefix(VehicleRangeSceneBuilder.AircraftName), null),
             };
         }
 
@@ -132,6 +145,18 @@ namespace Shooter.Editor
         public static string DroveLogPrefix(string vehicle)
         {
             return $"{LogTag} drove '{vehicle}' ";
+        }
+
+        public static string FlewLogPrefix(string vehicle)
+        {
+            return $"{LogTag} flew '{vehicle}' ";
+        }
+
+        public static string FlewLog(string vehicle, float altitude, float speed)
+        {
+            return FlewLogPrefix(vehicle)
+                + "altitude=" + altitude.ToString("0.0", CultureInfo.InvariantCulture)
+                + " speed=" + speed.ToString("0.0", CultureInfo.InvariantCulture);
         }
 
         public static string DroveLog(string vehicle, float distance)
@@ -206,7 +231,8 @@ namespace Shooter.Editor
                 return;
             }
 
-            if (condition.StartsWith(VehicleLog.Tag + " ", StringComparison.Ordinal) || condition.StartsWith(LogTag + " drove ", StringComparison.Ordinal))
+            if (condition.StartsWith(VehicleLog.Tag + " ", StringComparison.Ordinal) || condition.StartsWith(LogTag + " drove ", StringComparison.Ordinal)
+                || condition.StartsWith(LogTag + " flew ", StringComparison.Ordinal))
             {
                 _lines.Add(condition);
             }
@@ -321,9 +347,10 @@ namespace Shooter.Editor
             var gunCar = FindVehicle(CarFixtureBuilder.GunnerVehicleId);
             var car = FindVehicle(CarFixtureBuilder.VehicleId);
             var mountedGun = FindVehicle(VehicleRangeSceneBuilder.MountedGunName);
-            if (gunCar == null || car == null || mountedGun == null)
+            var aircraft = FindVehicle(AircraftFixtureBuilder.VehicleId);
+            if (gunCar == null || car == null || mountedGun == null || aircraft == null)
             {
-                return $"the scene lacks a vehicle (gun car={gunCar != null}, car={car != null}, mounted gun={mountedGun != null}); rerun {VehicleRangeSceneBuilder.MenuPath}";
+                return $"the scene lacks a vehicle (gun car={gunCar != null}, car={car != null}, mounted gun={mountedGun != null}, aircraft={aircraft != null}); rerun {VehicleRangeSceneBuilder.MenuPath}";
             }
 
             switch (_step)
@@ -452,6 +479,54 @@ namespace Shooter.Editor
                         return $"Interact did not get the player off '{mountedGun.name}'";
                     }
 
+                    StartStep(Step.MoveToAircraft, now);
+                    return null;
+
+                case Step.MoveToAircraft:
+                    var pilotSeat = aircraft.Seats[0];
+                    var pilotFeet = pilotSeat.EnterPoints.Count > 0 ? pilotSeat.EnterPoints[0].position : pilotSeat.transform.position;
+                    Teleport(_rider.Mover.Controller, pilotFeet + GameBootstrap.PlayerSpawn);
+                    StartStep(Step.BoardAircraft, now);
+                    return null;
+
+                case Step.BoardAircraft:
+                    if (!_rider.Interact() || _rider.Vehicle != aircraft || _rider.Seat.Role != VehicleSeatRole.Driver)
+                    {
+                        return $"Interact did not seat the player as the pilot of '{aircraft.name}'";
+                    }
+
+                    _runwayStart = aircraft.transform.position;
+                    _runwayForward = Vector3.ProjectOnPlane(aircraft.transform.forward, Vector3.up).normalized;
+                    _input.Move = new Vector2(0f, 1f);
+                    _input.Aim = _runwayForward;
+                    StartStep(Step.TakeOff, now);
+                    return null;
+
+                case Step.TakeOff:
+                    var motor = aircraft.GetComponent<SimpleAircraftMotor>();
+                    if (motor == null)
+                    {
+                        return $"'{aircraft.name}' has no SimpleAircraftMotor";
+                    }
+
+                    if (motor.ForwardSpeed < motor.Spec.LiftSpeed * RotateSpeedFraction)
+                    {
+                        return null;
+                    }
+
+                    _input.Aim = Quaternion.AngleAxis(-ClimbPitchDegrees, Vector3.Cross(Vector3.up, _runwayForward)) * _runwayForward;
+                    StartStep(Step.Climb, now);
+                    return null;
+
+                case Step.Climb:
+                    var altitude = aircraft.transform.position.y - _runwayStart.y;
+                    if (altitude < FlyAltitude)
+                    {
+                        return null;
+                    }
+
+                    Debug.Log(FlewLog(aircraft.name, altitude, aircraft.GetComponent<SimpleAircraftMotor>().ForwardSpeed));
+                    _input.Clear();
                     StartStep(Step.Done, now);
                     return null;
 

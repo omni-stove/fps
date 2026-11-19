@@ -23,6 +23,14 @@ namespace Shooter.Core
         // これより遅ければ、進む向きと逆のアクセルをブレーキでなく切り返しとして扱う。止まり切るまで待つと、ほぼ止まった車が動き出せないため。
         public const float DirectionChangeSpeed = 0.5f;
 
+        public const int ThrottleAxis = 0;
+
+        public const int SteerAxis = 1;
+
+        public const int BrakeAxis = 2;
+
+        public const int RightAxis = 3;
+
         public static CarDriveCommand Compute(CarSpec spec, VehicleMotorInput input, float forwardSpeed)
         {
             if (spec == null)
@@ -35,10 +43,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(forwardSpeed), forwardSpeed, "forwardSpeed must be finite");
             }
 
-            var steer = input.Steer * spec.MaxSteerAngle;
-            var brake = input.Brake * spec.BrakeTorque;
+            var steer = input[SteerAxis] * spec.MaxSteerAngle;
+            // 負のブレーキを捨てるのは、軸が -1 から 1 まで取れても、ブレーキで押し出す向きは無いため。
+            var brake = Math.Max(0f, input[BrakeAxis]) * spec.BrakeTorque;
             var motor = 0f;
-            var throttle = input.Throttle;
+            var throttle = input[ThrottleAxis];
             if (throttle != 0f)
             {
                 var opposing = (throttle > 0f && forwardSpeed < -DirectionChangeSpeed) || (throttle < 0f && forwardSpeed > DirectionChangeSpeed);

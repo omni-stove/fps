@@ -44,6 +44,7 @@ namespace Shooter.Runtime
                 case WeaponCategory.LightMachineGun:
                 case WeaponCategory.Handgun:
                 case WeaponCategory.Launcher:
+                case WeaponCategory.Melee:
                     return GameText.Get("weapon.category." + category);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, "category is not a valid WeaponCategory");

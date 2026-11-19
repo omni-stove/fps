@@ -161,6 +161,9 @@ namespace Shooter.Runtime
                 new CameraShakeFireTrauma(WeaponCategory.LightMachineGun, 0.08f),
                 new CameraShakeFireTrauma(WeaponCategory.Handgun, 0.1f),
                 new CameraShakeFireTrauma(WeaponCategory.Launcher, 0.45f),
+
+                // 近接武器は撃たないのでこの値で揺れることはないが、種別ごとに 1 つずつ並べる決まり (Validate) に合わせる。
+                new CameraShakeFireTrauma(WeaponCategory.Melee, 0.1f),
             };
         }
 

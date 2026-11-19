@@ -160,10 +160,13 @@ namespace Shooter.Core.Tests
         {
             var specs = ReadAll(ReferenceWeaponJsonFolder(folder));
 
-            foreach (var category in Enum.GetValues<WeaponCategory>())
+            // 参考の武器は実在の銃を手本にした組なので、銃でない近接武器の種別は数えない。
+            foreach (var category in Enum.GetValues<WeaponCategory>().Where(category => category != WeaponCategory.Melee))
             {
                 Assert.That(specs.Count(spec => spec.Category == category), Is.EqualTo(4), category.ToString());
             }
+
+            Assert.That(specs.Count(spec => spec.Category == WeaponCategory.Melee), Is.Zero);
         }
 
         [TestCaseSource(nameof(_referenceFolders))]

@@ -1,0 +1,77 @@
+{
+  "id": "2b92ec24-9e3b-4b5a-bf0a-ebaf3b48b544",
+  "nameKey": "weapon.crowbar",
+  "category": "Melee",
+  "shotNoiseRadius": 50,
+  "weight": 1,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Auto",
+    "fireInterval": 0.1
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 30,
+    "reserveAmmo": 90,
+    "reloadSeconds": 2,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 25,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  },
+  "melee": {
+    "swing": {
+      "damage": 30,
+      "reach": 2,
+      "arcDegrees": 70,
+      "swingSeconds": 0.35,
+      "cooldownSeconds": 0.05,
+      "impactSeconds": 0.12,
+      "lungeDistance": 0.25
+    },
+    "heavySwing": {
+      "damage": 75,
+      "reach": 2.2,
+      "arcDegrees": 80,
+      "swingSeconds": 0.55,
+      "cooldownSeconds": 0.15,
+      "impactSeconds": 0.2,
+      "lungeDistance": 0.6
+    },
+    "chargeDelaySeconds": 0.2,
+    "chargeSeconds": 0.7,
+    "throw": {
+      "damage": 50,
+      "speed": 18,
+      "upwardDegrees": 4,
+      "spinDegreesPerSecond": 900,
+      "radius": 0.12,
+      "maxFlightSeconds": 8
+    }
+  }
+}

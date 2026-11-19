@@ -123,7 +123,37 @@ namespace Shooter.Runtime
             return damage;
         }
 
-        private static Damageable FindDamageable(Collider collider)
+        // 人に当たらなかった振りが壁や物を叩いたかを、照準の線で探す。人 (Damageable) の体は叩いた面にしない。体の当たりは TryFind が決めるので。
+        public static bool TryFindSurface(Transform attacker, Vector3 origin, Vector3 direction, float distance, LayerMask mask, out RaycastHit surface)
+        {
+            if (attacker == null)
+            {
+                throw new ArgumentNullException(nameof(attacker));
+            }
+
+            surface = default;
+            if (!(distance > 0f) || direction.sqrMagnitude < 1e-6f)
+            {
+                return false;
+            }
+
+            var hits = Physics.RaycastAll(origin, direction.normalized, distance, mask, QueryTriggerInteraction.Ignore);
+            var found = false;
+            foreach (var hit in hits)
+            {
+                if (hit.collider.transform.IsChildOf(attacker) || (found && hit.distance >= surface.distance))
+                {
+                    continue;
+                }
+
+                surface = hit;
+                found = true;
+            }
+
+            return found && FindDamageable(surface.collider) == null;
+        }
+
+        internal static Damageable FindDamageable(Collider collider)
         {
             var hitbox = Hitbox.FindFor(collider);
             if (hitbox != null && hitbox.Owner != null)

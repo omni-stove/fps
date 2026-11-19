@@ -33,6 +33,8 @@ MonoBehaviour:
     _trauma: 0.1
   - _category: 7
     _trauma: 0.45
+  - _category: 8
+    _trauma: 0.1
   _defaultFireTrauma: 0.08
   _explosionTrauma: 1
   _explosionRadius: 25

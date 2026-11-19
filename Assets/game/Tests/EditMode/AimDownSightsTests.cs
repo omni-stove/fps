@@ -343,6 +343,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AMeleeWeaponIsNeverAimed()
+        {
+            Initialize();
+            var melee = new WeaponSpec(_rifleId, "weapon.crowbar", WeaponCategory.Melee, melee: MeleeWeaponSpec.Default);
+            var gun = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle);
+            var held = melee;
+            _ads.WeaponSource = () => held;
+
+            _ads.Tick(true, true, _ads.TransitionSeconds);
+            Assert.That(_ads.IsAiming, Is.False, "the aim button throws a melee weapon instead");
+            Assert.That(_camera.fieldOfView, Is.EqualTo(_hip).Within(1e-4f));
+
+            held = gun;
+            LogAssert.Expect(LogType.Log, "[View] ads=true");
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.IsAiming, Is.True, "a gun aims again while the button is held");
+        }
+
+        [Test]
         public void ABlockingWeaponReleasesAimingAndKeepsItFromStarting()
         {
             Initialize();

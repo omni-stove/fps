@@ -11,5 +11,6 @@ namespace Shooter.Core
         LightMachineGun,
         Handgun,
         Launcher,
+        Melee,
     }
 }

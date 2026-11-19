@@ -26,6 +26,9 @@ namespace Shooter.Core
 
         public AmmoTypeSelector AmmoTypes { get; }
 
+        // 近接武器でなければ null。溜めは撃ち方 (Trigger) と別に持つ。近接武器は撃たないので、撃ち方の溜めを使うと弾を撃つ処理が走る。
+        public MeleeCharge MeleeCharge { get; }
+
         public int AmmoInMagazine => Ammo.AmmoInMagazine;
         public int ReserveAmmo => Ammo.ReserveAmmo;
         public bool IsReloading => Ammo.IsReloading;
@@ -71,6 +74,7 @@ namespace Shooter.Core
             Trigger = TriggerModels.For(spec);
             Ammo = ammo;
             AmmoTypes = new AmmoTypeSelector(spec);
+            MeleeCharge = spec.IsMelee ? new MeleeCharge(spec.Melee) : null;
             Ammo.Reloaded += () => Reloaded?.Invoke();
         }
 

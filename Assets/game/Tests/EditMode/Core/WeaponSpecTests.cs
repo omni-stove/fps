@@ -173,13 +173,14 @@ namespace Shooter.Core.Tests
         [TestCase(WeaponCategory.LightMachineGun)]
         [TestCase(WeaponCategory.Handgun)]
         [TestCase(WeaponCategory.Launcher)]
+        [TestCase(WeaponCategory.Melee)]
         public void AcceptsEveryDefinedCategory(WeaponCategory category)
         {
             Assert.That(Create(category: category).Category, Is.EqualTo(category));
         }
 
         [TestCase(-1)]
-        [TestCase(8)]
+        [TestCase(9)]
         [TestCase(99)]
         public void RejectsUndefinedCategory(int category)
         {

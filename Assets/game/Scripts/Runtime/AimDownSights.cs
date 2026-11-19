@@ -177,6 +177,13 @@ namespace Shooter.Runtime
             Tick(isPressed, wasPressedThisFrame, _device, deltaSeconds);
         }
 
+        // 近接武器には照準器が無く、覗き込みのボタンは投げ (MeleeController.ThrowAction) に使うので覗き込まない。
+        private bool IsHoldingMeleeWeapon()
+        {
+            var spec = WeaponSource?.Invoke();
+            return spec != null && spec.IsMelee;
+        }
+
         public void Tick(bool isPressed, bool wasPressedThisFrame, InputDeviceKind device, float deltaSeconds)
         {
             EnsureInitialized();
@@ -186,7 +193,7 @@ namespace Shooter.Runtime
             var wasAiming = IsAiming;
             _aimState.Mode = mode;
             _aimState.Update(isPressed, wasPressedThisFrame);
-            _blocked = AdsBlocker != null && AdsBlocker();
+            _blocked = (AdsBlocker != null && AdsBlocker()) || IsHoldingMeleeWeapon();
             var aiming = IsAiming;
             if (aiming != wasAiming)
             {

@@ -19,7 +19,7 @@ namespace Shooter.Tests.EditMode
         {
             var looks = Looks();
 
-            Assert.That(looks.Count, Is.EqualTo(21));
+            Assert.That(looks.Count, Is.EqualTo(25));
             var duplicates = looks.GroupBy(pair => pair.Value.Signature()).Where(group => group.Count() > 1).Select(group => string.Join(", ", group.Select(pair => pair.Key)));
             Assert.That(duplicates, Is.Empty);
         }
@@ -67,6 +67,38 @@ namespace Shooter.Tests.EditMode
             Assert.That(looks["Handgun"].Has(WeaponLook.CompensatorName), Is.False);
             Assert.That(looks["Handgun"].Has(WeaponLook.StockName), Is.False);
             Assert.That(looks["Handgun"].ForeGrip, Is.Null);
+        }
+
+        [Test]
+        public void TheMeleeWeaponsGetABarAClubAndABladeFromTheirSwings()
+        {
+            var looks = Looks();
+
+            Assert.That(looks["Crowbar"].Has(WeaponLook.ShaftName), Is.True);
+            Assert.That(looks["Crowbar"].Has(WeaponLook.HookName), Is.True);
+            Assert.That(looks["Club"].Has(WeaponLook.HeadName), Is.True);
+            Assert.That(looks["Club"].Has(WeaponLook.HookName), Is.False);
+            Assert.That(looks["Machete"].Has(WeaponLook.BladeName), Is.True);
+            Assert.That(looks["Machete"].Has(WeaponLook.ShaftName), Is.False);
+            foreach (var name in new[] { "Crowbar", "Club", "Machete" })
+            {
+                Assert.That(looks[name].Has(WeaponLook.GripName), Is.True, name);
+                Assert.That(looks[name].Has(WeaponLook.BarrelName), Is.False, name);
+                Assert.That(looks[name].Has(WeaponLook.MagazineName), Is.False, name);
+                Assert.That(looks[name].ForeGrip, Is.Null, name);
+            }
+        }
+
+        [Test]
+        public void AMeleeLookGrowsWithTheReachAndStaysInHand()
+        {
+            var shortReach = WeaponLook.MeleeFor(new MeleeWeaponSpec(new MeleeSpec(30, 1f, 70f, 0.35f, 0.05f, 0.12f, 0f)));
+            var longReach = WeaponLook.MeleeFor(new MeleeWeaponSpec(new MeleeSpec(30, 2.5f, 70f, 0.35f, 0.05f, 0.12f, 0f)));
+            var huge = WeaponLook.MeleeFor(new MeleeWeaponSpec(new MeleeSpec(30, 50f, 70f, 0.35f, 0.05f, 0.12f, 0f)));
+
+            Assert.That(shortReach.Muzzle.z, Is.EqualTo(0.45f).Within(1e-5f));
+            Assert.That(longReach.Muzzle.z, Is.EqualTo(0.675f).Within(1e-5f));
+            Assert.That(huge.Muzzle.z, Is.EqualTo(0.8f).Within(1e-5f));
         }
 
         [Test]

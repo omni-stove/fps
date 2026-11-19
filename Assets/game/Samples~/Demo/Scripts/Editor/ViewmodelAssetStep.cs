@@ -83,6 +83,8 @@ namespace Shooter.Editor
                     return new GunShape(0.17f, 0.03f, 0.035f, 0.05f, false);
                 case WeaponCategory.Launcher:
                     return new GunShape(0.5f, 0.25f, 0.11f, 0.11f, true);
+                case WeaponCategory.Melee:
+                    return new GunShape(0.12f, 0.5f, 0.03f, 0.03f, false);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(category), category, "unknown weapon category");
             }
@@ -96,6 +98,8 @@ namespace Shooter.Editor
                     return new Vector3(0.12f, -0.12f, 0.25f);
                 case WeaponCategory.Launcher:
                     return new Vector3(0.17f, -0.17f, 0.12f);
+                case WeaponCategory.Melee:
+                    return new Vector3(0.18f, -0.2f, 0.2f);
                 default:
                     return ViewmodelEntry.DefaultOffset;
             }
@@ -129,6 +133,8 @@ namespace Shooter.Editor
                     return new ViewmodelSwaySettings(bobHorizontalMeters: 0.016f, kickBackMeters: 0.025f, kickPitchDegrees: 1.5f);
                 case WeaponCategory.Handgun:
                     return new ViewmodelSwaySettings(kickBackMeters: 0.02f, kickPitchDegrees: 4f, kickReturnPerSecond: 14f);
+                case WeaponCategory.Melee:
+                    return new ViewmodelSwaySettings(bobHorizontalMeters: 0.018f);
                 case WeaponCategory.Launcher:
                     return new ViewmodelSwaySettings(
                         bobHorizontalMeters: 0.016f, kickBackMeters: 0.08f, kickPitchDegrees: 6f, kickReturnPerSecond: 6f, maxKicks: 1f);

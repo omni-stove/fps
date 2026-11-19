@@ -258,6 +258,72 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AWeaponIsNotAMeleeWeaponUntilItIsTurnedOn()
+        {
+            var definition = NewDefinition("Crowbar");
+            Assert.That(definition.Melee.Enabled, Is.False);
+            Assert.That(definition.ToSpec().Melee, Is.Null);
+
+            definition.Melee.Enabled = true;
+            var spec = definition.ToSpec();
+
+            Assert.That(spec.IsMelee, Is.True);
+            Assert.That(spec.Melee.Swing.Damage, Is.EqualTo(MeleeWeaponSpec.DefaultSwingDamage));
+            Assert.That(spec.Melee.Swing.Reach, Is.EqualTo(MeleeWeaponSpec.DefaultSwingReach));
+            Assert.That(spec.Melee.Swing.SwingSeconds, Is.EqualTo(MeleeWeaponSpec.DefaultSwingSeconds));
+            Assert.That(spec.Melee.CanCharge, Is.False);
+            Assert.That(spec.Melee.CanThrow, Is.False);
+            Assert.That(definition.Melee.ThrownCollectMode, Is.EqualTo(PickupCollectMode.Touch));
+        }
+
+        [Test]
+        public void TheMeleeValuesRoundTripThroughTheDefinitionAndKeepTheLook()
+        {
+            var definition = NewDefinition("Crowbar");
+            var prefab = new GameObject("CrowbarLook");
+            _created.Add(prefab);
+            definition.Melee.ThrownPrefab = prefab;
+            definition.Melee.ThrownCollectMode = PickupCollectMode.Interact;
+            var source = new WeaponSpec(
+                _rifleId,
+                "weapon.crowbar",
+                WeaponCategory.Melee,
+                melee: new MeleeWeaponSpec(
+                    new MeleeSpec(30, 2f, 70f, 0.35f, 0.05f, 0.12f, 0.25f),
+                    new MeleeSpec(75, 2.2f, 80f, 0.55f, 0.15f, 0.2f, 0.6f),
+                    0.25f,
+                    0.7f,
+                    new MeleeThrowSpec(50, 18f, 4f, 900f, 0.12f, 6f)));
+
+            WeaponAssets.Configure(definition, source);
+            var spec = definition.ToSpec();
+
+            Assert.That(definition.Melee.ThrownPrefab, Is.SameAs(prefab), "the look is not in the spec, so configuring keeps it");
+            Assert.That(definition.Melee.ThrownCollectMode, Is.EqualTo(PickupCollectMode.Interact));
+            Assert.That(spec.Category, Is.EqualTo(WeaponCategory.Melee));
+            Assert.That(spec.Melee.Swing.Damage, Is.EqualTo(30));
+            Assert.That(spec.Melee.Swing.ArcDegrees, Is.EqualTo(70f));
+            Assert.That(spec.Melee.Swing.CooldownSeconds, Is.EqualTo(0.05f));
+            Assert.That(spec.Melee.Swing.ImpactSeconds, Is.EqualTo(0.12f));
+            Assert.That(spec.Melee.Swing.LungeDistance, Is.EqualTo(0.25f));
+            Assert.That(spec.Melee.HeavySwing.Damage, Is.EqualTo(75));
+            Assert.That(spec.Melee.HeavySwing.Reach, Is.EqualTo(2.2f));
+            Assert.That(spec.Melee.HeavySwing.SwingSeconds, Is.EqualTo(0.55f));
+            Assert.That(spec.Melee.HeavySwing.LungeDistance, Is.EqualTo(0.6f));
+            Assert.That(spec.Melee.ChargeDelaySeconds, Is.EqualTo(0.25f));
+            Assert.That(spec.Melee.ChargeSeconds, Is.EqualTo(0.7f));
+            Assert.That(spec.Melee.Throw.Damage, Is.EqualTo(50));
+            Assert.That(spec.Melee.Throw.Speed, Is.EqualTo(18f));
+            Assert.That(spec.Melee.Throw.UpwardDegrees, Is.EqualTo(4f));
+            Assert.That(spec.Melee.Throw.SpinDegreesPerSecond, Is.EqualTo(900f));
+            Assert.That(spec.Melee.Throw.Radius, Is.EqualTo(0.12f));
+            Assert.That(spec.Melee.Throw.MaxFlightSeconds, Is.EqualTo(6f));
+
+            WeaponAssets.Configure(definition, new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle));
+            Assert.That(definition.ToSpec().Melee, Is.Null, "configuring a gun turns the melee part off");
+        }
+
+        [Test]
         public void AWeaponIsNotAShieldUntilTheShieldIsTurnedOn()
         {
             var definition = NewDefinition("RiotShield");

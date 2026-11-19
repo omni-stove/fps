@@ -92,7 +92,8 @@ namespace Shooter.Runtime
 
         public float SpinFraction => _trigger.Model != null ? _trigger.Model.SpinFraction : 0f;
 
-        public float ChargeFraction => _trigger.ChargeFraction;
+        // 近接武器の溜めも同じ口で見せ、撃つ武器の溜めのゲージをそのまま使えるようにする。
+        public float ChargeFraction => MeleeCharge != null ? MeleeCharge.Fraction : _trigger.ChargeFraction;
 
         public WeaponDefinition Definition => _loadout != null && !_unarmed ? _loadedDefinitions[_loadout.CurrentIndex] : null;
 
@@ -137,7 +138,7 @@ namespace Shooter.Runtime
 
         public Func<bool> FireBlocker { get; set; }
 
-        public bool IsFireBlocked => IsHolstered || IsSwitching || IsShieldWeapon || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+        public bool IsFireBlocked => IsHolstered || IsSwitching || IsShieldWeapon || IsMeleeWeapon || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         public ControlHandoff Holster { get; } = new ControlHandoff();
 
@@ -206,6 +207,7 @@ namespace Shooter.Runtime
 
                 // 乗り物やテイクダウンは武器をしまわず入力だけ手放すので、押したままの溜めが戻った時に離した扱いで撃たれないよう捨てる。
                 _trigger.Drop();
+                DropMeleeCharge();
                 return;
             }
 
@@ -245,6 +247,11 @@ namespace Shooter.Runtime
             if (weapon.Spec.IsShield)
             {
                 return PullShieldTrigger(weapon, wasPressedThisFrame);
+            }
+
+            if (weapon.Spec.IsMelee)
+            {
+                return PullMeleeTrigger(weapon, isPressed, wasPressedThisFrame);
             }
 
             if (IsFireBlocked || !weapon.Ammo.CanFire)
@@ -540,7 +547,7 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || weapon.Spec.IsShield || IsSwitching || IsReloadBlockedByModifier || !weapon.TryStartReload())
+            if (weapon == null || weapon.Spec.IsShield || weapon.Spec.IsMelee || IsSwitching || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -588,6 +595,7 @@ namespace Shooter.Runtime
             _trigger.Advance(deltaSeconds);
             _recoil.Tick(deltaSeconds);
             RecoverSpread(deltaSeconds);
+            TickMeleeCharge(deltaSeconds);
             SyncShield();
         }
 

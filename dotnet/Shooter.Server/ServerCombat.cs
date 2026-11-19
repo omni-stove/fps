@@ -434,7 +434,7 @@ namespace Shooter.Server
         {
             var damage = DamageCalculator.Scale(amount, hit.DamageMultiplier);
             var attacker = _match.TryGetPlayer(shot.ShooterId, out _) ? shot.ShooterId : (int?)null;
-            var dealt = _vehicles.Damage(hit.VehicleIndex, damage, attacker);
+            var dealt = _vehicles.Damage(hit.VehicleIndex, damage, attacker, hit.VehiclePartId);
             if (attacker.HasValue && dealt > 0 && !_vehicleHitConfirmed)
             {
                 _vehicleHitConfirmed = _collectingPelletHits;

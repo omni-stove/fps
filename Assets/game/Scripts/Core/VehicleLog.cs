@@ -103,6 +103,30 @@ namespace Shooter.Core
                 condition.Thrust);
         }
 
+        public static string PartDamaged(string vehicle, string part, int damage, int total)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' part damaged part={2} dmg={3} total={4}", Tag, vehicle, part, damage, total);
+        }
+
+        public static string TooManyNetParts(string vehicle, string part, int max)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture, "{0} '{1}' part '{2}' is not sent; at most {3} parts per vehicle are synced", Tag, vehicle, part, max);
+        }
+
+        public static string NetCondition(string vehicle, AircraftCondition condition)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' net condition lift={2:0.00}/{3:0.00} control={4:0.00} thrust={5:0.00}",
+                Tag,
+                vehicle,
+                condition.LeftLift,
+                condition.RightLift,
+                condition.Control,
+                condition.Thrust);
+        }
+
         public static string InvalidAircraftDamage(string vehicle, string error)
         {
             return $"{Tag} '{vehicle}' aircraft damage settings are invalid; parts take no flight damage: {error}";

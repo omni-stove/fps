@@ -198,6 +198,7 @@ namespace Shooter.Server
                 row.Velocity = car.Velocity;
                 row.Health = car.Health;
                 row.Stage = car.Stage;
+                row.Parts = car.Parts;
             }
 
             var players = snapshot.Players;
@@ -601,6 +602,8 @@ namespace Shooter.Server
 
             public int? LastAttacker { get; set; }
 
+            public VehiclePartDamageSync Parts { get; set; }
+
             public int LastSequence { get; set; }
 
             public int Generation { get; set; }
@@ -616,6 +619,7 @@ namespace Shooter.Server
                 Health = Map.Spec.MaxHealth;
                 Exploded = false;
                 LastAttacker = null;
+                Parts = VehiclePartDamageSync.None;
                 LastSequence = -1;
                 Durability = new VehicleDurability(Map.Spec.Durability);
                 Drive.Reset();

@@ -279,6 +279,57 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void AShotPartIsSentWithTheDamageItTookAndTheHullIsNot()
+        {
+            StartWithTwoPlayers();
+            Assert.That(Snapshot(1).Vehicles[0].Parts.Count, Is.Zero, "nothing is sent before a part is hit");
+
+            Fire(2, new Vector3(5f, 1f, 0f), -Vector3.UnitX, Tick0());
+            Assert.That(Snapshot(1).Vehicles[0].Parts.Count, Is.Zero, "the hull box has no part");
+
+            Step(0.2f);
+            Fire(2, new Vector3(5f, 1.5f, 1.5f), -Vector3.UnitX, Tick0());
+            Step(0.2f);
+            Fire(2, new Vector3(5f, 1.5f, 1.5f), -Vector3.UnitX, Tick0());
+
+            var parts = Snapshot(1).Vehicles[0].Parts;
+            Assert.That(parts.Count, Is.EqualTo(1), _log.ToString());
+            Assert.That(parts.PartIdAt(0), Is.EqualTo("engine"));
+            Assert.That(parts.TakenOf("engine"), Is.EqualTo(100), "two shots of 25 after the engine's multiplier of 2");
+            Assert.That(_vehicles.PartsOf(0).SameAs(parts), Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Vehicle] 'jeep#0' part damaged part=engine dmg=50 total=50"));
+            Assert.That(_log.ToString(), Does.Contain("[Vehicle] 'jeep#0' part damaged part=engine dmg=50 total=100"));
+        }
+
+        [Test]
+        public void ABlastDamagesTheHullButNoPart()
+        {
+            StartWithTwoPlayers();
+
+            _combat.Explode(new Vector3(0f, 1.5f, 3f), new ExplosionSpec(new ExplosionDamage(100, 4f)), 2, "grenade");
+
+            Assert.That(_vehicles.TryGetState(0, out _, out _, out var health, out _), Is.True);
+            Assert.That(health, Is.LessThan(1000));
+            Assert.That(_vehicles.PartsOf(0).Count, Is.Zero, "a blast is not a hit on a part, as offline");
+        }
+
+        [Test]
+        public void AWreckTakesNoMoreDamageOnItsParts()
+        {
+            StartWithTwoPlayers(maxHealth: 100);
+            _vehicles.Damage(0, 60, 2, "engine");
+            Assert.That(_vehicles.PartsOf(0).TakenOf("engine"), Is.EqualTo(60));
+
+            _vehicles.Damage(0, 60, 2, "engine");
+            Assert.That(_vehicles.TryGetState(0, out _, out _, out _, out var stage), Is.True);
+            Assert.That(stage, Is.EqualTo(VehicleDamageStage.Destroyed));
+            Assert.That(_vehicles.Damage(0, 60, 2, "engine"), Is.Zero);
+
+            Assert.That(_vehicles.PartsOf(0).TakenOf("engine"), Is.EqualTo(120), "the shot that wrecked it still counts, the next does not");
+            Assert.That(Snapshot(1).Vehicles[0].Parts.TakenOf("engine"), Is.EqualTo(120));
+        }
+
+        [Test]
         public void TheShotIsJudgedAgainstWhereTheVehicleWasWhenTheShooterSawIt()
         {
             StartWithTwoPlayers();

@@ -8,6 +8,7 @@ namespace Shooter.Protocol
         None = 0,
         Transform = 1 << 0,
         State = 1 << 1,
-        All = Transform | State,
+        Parts = 1 << 2,
+        All = Transform | State | Parts,
     }
 }

@@ -7,6 +7,9 @@ namespace Shooter.Protocol
     // 誰が座っているかは乗り物ではなくプレイヤーの行 (PlayerSnapshot.Vehicle) に載せる。座席の数だけの並びを構造体に持たせると、差分の基準と中身を共有してしまうため。
     public struct VehicleSnapshot : ISnapshotEntity<VehicleSnapshot>
     {
+        // default では null になるので、読むときに空へ寄せる。
+        private VehiclePartDamageSync _parts;
+
         public int Index { get; set; }
         public VehicleFields Present { get; set; }
 
@@ -17,13 +20,21 @@ namespace Shooter.Protocol
         public int Health { get; set; }
         public VehicleDamageStage Stage { get; set; }
 
+        // 撃たれた部位 (飛行機の翼など) ごとの受けた量。運転する人の側でモーターが回るので、飛び方に効く壊れ具合をそこへ届ける。
+        public VehiclePartDamageSync Parts
+        {
+            get => _parts ?? VehiclePartDamageSync.None;
+            set => _parts = value;
+        }
+
         public int EntityId => Index;
 
         public int PresentBits => (int)Present;
 
         public int AllBits => (int)VehicleFields.All;
 
-        public int OptionalBits => 0;
+        // 部位が無い・撃たれていない乗り物は、基準の無いスナップショットでも部位の欄を書かない。
+        public int OptionalBits => (int)VehicleFields.Parts;
 
         public int ChangedBits(in VehicleSnapshot baseline)
         {
@@ -36,6 +47,11 @@ namespace Shooter.Protocol
             if (Health != baseline.Health || Stage != baseline.Stage)
             {
                 bits |= VehicleFields.State;
+            }
+
+            if (!Parts.SameAs(baseline.Parts))
+            {
+                bits |= VehicleFields.Parts;
             }
 
             return (int)bits;
@@ -61,6 +77,11 @@ namespace Shooter.Protocol
                 writer.WriteInt32(Health);
                 writer.WriteByte((byte)Stage);
             }
+
+            if ((fields & VehicleFields.Parts) != 0)
+            {
+                Parts.Write(writer);
+            }
         }
 
         public void ReadBits(MessageReader reader, int id, int bits)
@@ -80,6 +101,11 @@ namespace Shooter.Protocol
                 Health = reader.ReadInt32AtLeast(0, "vehicle health");
                 Stage = (VehicleDamageStage)reader.ReadByteBelow(EnumRange<VehicleDamageStage>.Count, "vehicle damage stage");
             }
+
+            if ((fields & VehicleFields.Parts) != 0)
+            {
+                Parts = VehiclePartDamageSync.Read(reader);
+            }
         }
 
         public void FillFrom(in VehicleSnapshot baseline)
@@ -96,6 +122,11 @@ namespace Shooter.Protocol
             {
                 Health = baseline.Health;
                 Stage = baseline.Stage;
+            }
+
+            if ((missing & VehicleFields.Parts) != 0)
+            {
+                Parts = baseline.Parts;
             }
 
             Present = VehicleFields.All;

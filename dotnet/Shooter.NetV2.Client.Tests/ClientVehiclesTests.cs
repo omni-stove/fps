@@ -59,6 +59,26 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void ThePartsAreToldOnFirstSightAndWhenTheyChange()
+        {
+            var vehicles = new ClientVehicles(_playerId);
+            var told = new List<int>();
+            vehicles.PartsChanged += (_, parts) => told.Add(parts.TakenOf("wing_left"));
+
+            vehicles.Apply(Snapshot(1, Vector3.Zero));
+            vehicles.Apply(Snapshot(2, Vector3.Zero));
+            vehicles.Apply(Snapshot(3, Vector3.Zero, parts: Taken("wing_left", 120)));
+            vehicles.Apply(Snapshot(4, Vector3.Zero, parts: Taken("wing_left", 120)));
+            vehicles.Apply(Snapshot(5, Vector3.Zero, parts: Taken("wing_left", 300)));
+
+            Assert.That(told, Is.EqualTo(new[] { 0, 120, 300 }), "the same damage in a new snapshot is not told again");
+            Assert.That(vehicles.TryGetParts(0, out var latest), Is.True);
+            Assert.That(latest.TakenOf("wing_left"), Is.EqualTo(300));
+            Assert.That(vehicles.TryGetParts(1, out var unknown), Is.False);
+            Assert.That(unknown.Count, Is.Zero);
+        }
+
+        [Test]
         public void AVehicleThatLeavesTheSnapshotIsForgotten()
         {
             var vehicles = new ClientVehicles(_playerId);
@@ -185,8 +205,18 @@ namespace Shooter.NetV2.Tests
             _client.Poll();
         }
 
+        private static VehiclePartDamageSync Taken(string partId, int damage)
+        {
+            Assert.That(VehiclePartDamageSync.None.TryAdd(partId, damage, out var parts), Is.True);
+            return parts;
+        }
+
         private static SnapshotMessage Snapshot(
-            int tick, Vector3 position, VehicleDamageStage stage = VehicleDamageStage.Intact, VehicleSeatSync seat = default)
+            int tick,
+            Vector3 position,
+            VehicleDamageStage stage = VehicleDamageStage.Intact,
+            VehicleSeatSync seat = default,
+            VehiclePartDamageSync parts = null)
         {
             var snapshot = new SnapshotMessage { Tick = tick };
             ref var player = ref snapshot.Players.Add();
@@ -198,6 +228,7 @@ namespace Shooter.NetV2.Tests
             vehicle.Rotation = Quaternion.Identity;
             vehicle.Health = 500;
             vehicle.Stage = stage;
+            vehicle.Parts = parts;
             return snapshot;
         }
     }

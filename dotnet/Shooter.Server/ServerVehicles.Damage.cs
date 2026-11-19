@@ -13,7 +13,8 @@ namespace Shooter.Server
         // Unity の Vehicle.Explode が自分のコライダーを外して爆発させるのと同じく、爆発している乗り物は自分の爆風を遮らない
         private int _exploding = -1;
 
-        public int Damage(int vehicle, int amount, int? attackerId)
+        // partId は弾が当たった車体の箱の部位。部位ごとの受けた量を運転する人へ届けるのに使い、null なら車体の体力だけを減らす。
+        public int Damage(int vehicle, int amount, int? attackerId, string partId = null)
         {
             if (amount < 0)
             {
@@ -26,8 +27,40 @@ namespace Shooter.Server
                 return 0;
             }
 
+            if (partId != null)
+            {
+                DamagePart(car, partId, amount);
+            }
+
             Damage(car, amount, attackerId, true);
             return amount;
+        }
+
+        public VehiclePartDamageSync PartsOf(int vehicle)
+        {
+            return _cars[vehicle].Parts;
+        }
+
+        // Unity の AircraftPartDamage が Hitbox.Hit で受ける量 (部位の倍率を掛けた量) と揃える。
+        private void DamagePart(Car car, string partId, int amount)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            if (!car.Parts.TryAdd(partId, amount, out var added))
+            {
+                if (CanWarn())
+                {
+                    _log.WriteLine(VehicleLog.TooManyNetParts(car.Name, partId, VehiclePartDamageSync.MaxParts));
+                }
+
+                return;
+            }
+
+            car.Parts = added;
+            _log.WriteLine(VehicleLog.PartDamaged(car.Name, partId, amount, added.TakenOf(partId)));
         }
 
         public int ApplyExplosion(Vector3 center, ExplosionDamage explosion, int? attackerId)
@@ -67,12 +100,13 @@ namespace Shooter.Server
         // 座席から撃つ弾が自分の車体に当たらないよう、撃った人の乗っている乗り物には当てない。
         public bool Raycast(
             Vector3 origin, Vector3 unit, float maxDistance, float tick, int shooterId, out int vehicle, out float distance, out Vector3 normal,
-            out float damageMultiplier)
+            out float damageMultiplier, out string partId)
         {
             vehicle = -1;
             distance = maxDistance;
             normal = default;
             damageMultiplier = 1f;
+            partId = null;
             var own = _riders.TryGetValue(shooterId, out var riding) ? riding.Car.Index : -1;
             foreach (var car in _cars)
             {
@@ -96,6 +130,7 @@ namespace Shooter.Server
                 distance = hit;
                 normal = hitNormal;
                 damageMultiplier = car.Map.PartMultiplier(box);
+                partId = car.Map.Hull[box].PartId;
             }
 
             return vehicle >= 0;
@@ -137,7 +172,7 @@ namespace Shooter.Server
         {
             var offset = to - from;
             var length = offset.Length();
-            return length >= 1e-4f && Raycast(from, offset / length, length, tick, shooterId, out _, out _, out _, out _);
+            return length >= 1e-4f && Raycast(from, offset / length, length, tick, shooterId, out _, out _, out _, out _, out _);
         }
 
         public bool AllowsVehicleWeapon(int vehicle, int weapon, Vector3 direction)

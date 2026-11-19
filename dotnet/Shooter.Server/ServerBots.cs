@@ -16,13 +16,6 @@ namespace Shooter.Server
 
         public const float PositionLogIntervalSeconds = 2f;
 
-        // オフラインの HardpointRunner.RouteAround と同じ巡り方にして、オンラインとオフラインで Bot の集まり方を揃える
-        public const float RallyRouteRadiusFraction = 0.5f;
-        public const float RallyRouteAngleStepDegrees = 137.5f;
-
-        // 動く目的 (台車) へ毎 tick 巡回路を引き直すと経路を探し直し続けるので、範囲の半径のこの割合だけ動いたら引き直す (PayloadRunner と同じ)
-        public const float RallyMoveRadiusFraction = 0.5f;
-
         private readonly MatchRulesModule _rules;
         private readonly ServerMovement _movement;
         private readonly ServerCombat _combat;
@@ -380,7 +373,7 @@ namespace Shooter.Server
 
             var center = rally.Value.Center;
             var radius = rally.Value.Radius;
-            if (_ralliedAt.HasValue && Vector3.Distance(_ralliedAt.Value, center) < radius * RallyMoveRadiusFraction)
+            if (_ralliedAt.HasValue && Vector3.Distance(_ralliedAt.Value, center) < radius * _spec.RallyMoveRadiusFraction)
             {
                 return;
             }
@@ -388,7 +381,7 @@ namespace Shooter.Server
             var slot = 0;
             foreach (var agent in _agents.Values)
             {
-                agent.Brain.SetPatrolRoute(RouteAround(center, radius, slot));
+                agent.Brain.SetPatrolRoute(RouteAround(center, radius, slot, _spec));
                 slot++;
             }
 
@@ -398,8 +391,9 @@ namespace Shooter.Server
         }
 
         // 範囲の中で向かい合う 2 点を往復させる。Bot ごとに向きをずらし、同じ所に固まらないようにする
-        internal static Vector3[] RouteAround(Vector3 center, float radius, int slot)
+        internal static Vector3[] RouteAround(Vector3 center, float radius, int slot, NetBotSpec spec = null)
         {
+            spec ??= NetBotSpec.Default;
             if (!(radius > 0f) || float.IsInfinity(radius))
             {
                 throw new ArgumentOutOfRangeException(nameof(radius), radius, "radius must be positive and finite");
@@ -410,8 +404,8 @@ namespace Shooter.Server
                 throw new ArgumentOutOfRangeException(nameof(slot), slot, "slot must not be negative");
             }
 
-            var angle = slot * RallyRouteAngleStepDegrees % 360f / ServerBotMath.DegreesPerRadian;
-            var offset = new Vector3(MathF.Cos(angle), 0f, MathF.Sin(angle)) * (radius * RallyRouteRadiusFraction);
+            var angle = slot * spec.RallyRouteAngleStepDegrees % 360f / ServerBotMath.DegreesPerRadian;
+            var offset = new Vector3(MathF.Cos(angle), 0f, MathF.Sin(angle)) * (radius * spec.RallyRouteRadiusFraction);
             return new[] { center + offset, center - offset };
         }
 

@@ -85,6 +85,9 @@ namespace Shooter.Core
         public const string RepathDistanceItem = "repathDistance";
         public const string StuckSecondsItem = "stuckSeconds";
         public const string StuckProgressItem = "stuckProgress";
+        public const string RallyRouteRadiusFractionItem = "rallyRouteRadiusFraction";
+        public const string RallyRouteAngleStepDegreesItem = "rallyRouteAngleStepDegrees";
+        public const string RallyMoveRadiusFractionItem = "rallyMoveRadiusFraction";
 
         private const string _grenadeKind = "grenade JSON";
         private const string _pingKind = "ping JSON";
@@ -186,6 +189,9 @@ namespace Shooter.Core
             RepathDistanceItem,
             StuckSecondsItem,
             StuckProgressItem,
+            RallyRouteRadiusFractionItem,
+            RallyRouteAngleStepDegreesItem,
+            RallyMoveRadiusFractionItem,
         };
 
         // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
@@ -351,7 +357,10 @@ namespace Shooter.Core
                     fields.ReadFloat(RepathSecondsItem, defaults.RepathSeconds),
                     fields.ReadFloat(RepathDistanceItem, defaults.RepathDistance),
                     fields.ReadFloat(StuckSecondsItem, defaults.StuckSeconds),
-                    fields.ReadFloat(StuckProgressItem, defaults.StuckProgress));
+                    fields.ReadFloat(StuckProgressItem, defaults.StuckProgress),
+                    fields.ReadFloat(RallyRouteRadiusFractionItem, defaults.RallyRouteRadiusFraction),
+                    fields.ReadFloat(RallyRouteAngleStepDegreesItem, defaults.RallyRouteAngleStepDegrees),
+                    fields.ReadFloat(RallyMoveRadiusFractionItem, defaults.RallyMoveRadiusFraction));
             }
             catch (ArgumentException e)
             {

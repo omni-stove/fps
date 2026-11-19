@@ -22,6 +22,8 @@ namespace Shooter.Runtime
         private IVehicleRider _wheelPreviousRider;
         private VehicleRoute _wheelPreviousRoute;
         private bool _wheelPreviousUnmanned;
+        private bool _wheelPreviousEnabled;
+        private static readonly HashSet<Component> PendingWheelParts = new HashSet<Component>();
         private Transform[] _wheelPreviousWaypoints = Array.Empty<Transform>();
 
         public VehicleSeat Seat => _vehicleSeat;
@@ -273,10 +275,12 @@ namespace Shooter.Runtime
             _ownsWheel = pilot == null;
             if (_ownsWheel)
             {
-                pilot = vehicle.gameObject.AddComponent<BotAircraftPilot>();
+                pilot = AddWheelPart<BotAircraftPilot>(vehicle.gameObject);
             }
             else
             {
+                _wheelPreviousEnabled = pilot.enabled;
+                pilot.enabled = true;
                 _wheelPreviousRider = ReferenceEquals(pilot.Rider, pilot) ? null : pilot.Rider;
                 _wheelPreviousWaypoints = CopyTransforms(pilot.Waypoints);
             }
@@ -293,10 +297,12 @@ namespace Shooter.Runtime
             _ownsWheel = driver == null;
             if (_ownsWheel)
             {
-                driver = gameObject.AddComponent<BotVehicleDriver>();
+                driver = AddWheelPart<BotVehicleDriver>(gameObject);
             }
             else
             {
+                _wheelPreviousEnabled = driver.enabled;
+                driver.enabled = true;
                 _wheelPreviousVehicle = driver.Vehicle;
                 _wheelPreviousRider = driver.Rider;
                 _wheelPreviousRoute = driver.Route;
@@ -409,6 +415,7 @@ namespace Shooter.Runtime
             driver.SetVehicle(_wheelPreviousVehicle);
             driver.SetRoute(_wheelPreviousRoute);
             driver.DrivesUnmanned = _wheelPreviousUnmanned;
+            driver.enabled = _wheelPreviousEnabled;
         }
 
         private void GiveUpStick(BotAircraftPilot pilot)
@@ -424,20 +431,36 @@ namespace Shooter.Runtime
 
             pilot.Rider = _wheelPreviousRider;
             pilot.SetWaypoints(_wheelPreviousWaypoints);
+            pilot.enabled = _wheelPreviousEnabled;
         }
 
-        // 止めてあって消える予定の部品は借りない。Play 中の Destroy はコマの終わりまで待つので、同じコマに座り直すと止まった部品を借りてしまうため。
+        // 消える予定の部品は借りない。Play 中の Destroy はコマの終わりまで待つので、同じコマに座り直すと止まった部品を借りてしまうため。
         private static T FindLivePart<T>(GameObject host) where T : MonoBehaviour
         {
             foreach (var part in host.GetComponents<T>())
             {
-                if (part != null && part.enabled)
+                if (part != null && !PendingWheelParts.Contains(part))
                 {
                     return part;
                 }
             }
 
             return null;
+        }
+
+        // DisallowMultipleComponent の部品は、消える予定の古い部品が残っていると AddComponent が null を返すので、先に消し切る。
+        private static T AddWheelPart<T>(GameObject host) where T : MonoBehaviour
+        {
+            foreach (var part in host.GetComponents<T>())
+            {
+                if (part != null && PendingWheelParts.Remove(part))
+                {
+                    DestroyImmediate(part);
+                }
+            }
+
+            PendingWheelParts.RemoveWhere(p => p == null);
+            return host.AddComponent<T>();
         }
 
         private static Transform[] CopyTransforms(IReadOnlyList<Transform> source)
@@ -465,6 +488,7 @@ namespace Shooter.Runtime
         {
             if (Application.isPlaying)
             {
+                PendingWheelParts.Add(part);
                 Destroy(part);
             }
             else

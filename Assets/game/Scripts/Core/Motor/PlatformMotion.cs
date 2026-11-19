@@ -76,6 +76,16 @@ namespace Shooter.Core
             return obj is PlatformMotion other && Equals(other);
         }
 
+        public static bool operator ==(PlatformMotion left, PlatformMotion right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(PlatformMotion left, PlatformMotion right)
+        {
+            return !left.Equals(right);
+        }
+
         public override int GetHashCode()
         {
             return HashCode.Combine(Pivot, Translation, YawDelta);

@@ -149,6 +149,57 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void EachTeamHasOneFlagBaseBehindItsSpawnsMirroredAcrossTheMiddle()
+        {
+            var bases = ArenaSceneBuilder.FlagBases;
+
+            Assert.That(bases.Select(b => b.Side), Is.EqualTo(CaptureTheFlag.FlagSides));
+            Assert.That(bases[0].Position, Is.EqualTo(new Vector3(0f, ArenaSceneBuilder.GroundY, -27f)));
+            Assert.That(Near(bases[1].Position, ArenaSceneBuilder.MirrorZ(bases[0].Position)), Is.True, "Bravo mirrors Alpha");
+
+            var alphaSpawns = ArenaSceneBuilder.SpawnPoints.Where(p => p.Team == NetSpawnPoint.SpawnTeam.Alpha);
+            Assert.That(bases[0].Position.z, Is.LessThan(alphaSpawns.Min(p => p.Position.z)), "the Alpha base is behind the Alpha spawns");
+            Assert.That(Mathf.Abs(bases[0].Position.z) + CaptureTheFlagSpec.DefaultCaptureRadius, Is.LessThan(ArenaSceneBuilder.HalfExtent),
+                "the base area is inside the boundary");
+        }
+
+        [Test]
+        public void FlagBaseAreasStayClearOfWallsSpawnsAndControlPoints()
+        {
+            Assert.That(ArenaSceneBuilder.FlagBaseOverlaps(CaptureTheFlagSpec.DefaultCaptureRadius), Is.Empty);
+        }
+
+        [Test]
+        public void ATooWideCaptureRadiusIsReportedAsAnOverlap()
+        {
+            var problems = ArenaSceneBuilder.FlagBaseOverlaps(4f);
+
+            Assert.That(problems, Has.Member("FlagBase-0 overlaps Boundary South"));
+            Assert.That(problems, Has.Member("FlagBase-1 overlaps Boundary North"));
+            Assert.That(problems, Has.Member("FlagBase-0 covers Spawn Alpha 2"));
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void FlagBaseOverlapsRefusesARadiusThatIsNotPositive(float radius)
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ArenaSceneBuilder.FlagBaseOverlaps(radius));
+        }
+
+        [Test]
+        public void FlagBasesAreCheckedOnTheNavMesh()
+        {
+            var points = ArenaSceneBuilder.NavMeshCheckPoints();
+
+            foreach (var (side, position) in ArenaSceneBuilder.FlagBases)
+            {
+                Assert.That(points, Has.Member(position), side.ToString());
+            }
+        }
+
+        [Test]
         public void WallsAndStepsMatchTheMovementRules()
         {
             Assert.That(ArenaSceneBuilder.HighWalls, Is.Not.Empty);
@@ -269,6 +320,52 @@ namespace Shooter.Net.Tests
                     Assert.That(child.GetComponent<Collider>(), Is.Null, name + " " + part + " does not block shots or movement");
                 }
             }
+        }
+
+        [Test]
+        public void PopulatedSceneHasBothFlagBasesWithTheGivenRadiusButNoFlags()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene, null, 3.5f);
+
+            var bases = Components<FlagBase>();
+            Assert.That(bases.Select(b => b.Side), Is.EqualTo(new[] { Side.Alpha, Side.Bravo }));
+            foreach (var (side, position) in ArenaSceneBuilder.FlagBases)
+            {
+                var flagBase = bases.Single(b => b.Side == side);
+                Assert.That(flagBase.name, Is.EqualTo("FlagBase-" + side.Id));
+                Assert.That(flagBase.transform.parent.name, Is.EqualTo(NetSceneBuilder.FlagBasesRootName));
+                Assert.That(flagBase.Position, Is.EqualTo(position));
+                Assert.That(flagBase.Radius, Is.EqualTo(3.5f));
+                Assert.That(flagBase.ShowsMarker, Is.True, "the base shows its disc while playing");
+            }
+
+            Assert.That(Components<FlagObject>(), Is.Empty, "the server carries the flags; a scene flag would stay on its base");
+        }
+
+        [Test]
+        public void PopulatedSceneUsesTheDefaultCaptureRadiusWhenNoneIsGiven()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene);
+
+            Assert.That(Components<FlagBase>().Select(b => b.Radius), Is.All.EqualTo(CaptureTheFlagSpec.DefaultCaptureRadius));
+        }
+
+        [Test]
+        public void FlagBasesNeedOneBasePerTeam()
+        {
+            var onlyAlpha = new[] { (Side.Alpha, Vector3.zero) };
+            var twoAlpha = new[] { (Side.Alpha, Vector3.zero), (Side.Alpha, Vector3.one), (Side.Bravo, Vector3.zero) };
+
+            Assert.Throws<System.ArgumentException>(() => NetSceneBuilder.CreateFlagBases(_scene, onlyAlpha, 2f));
+            Assert.Throws<System.ArgumentException>(() => NetSceneBuilder.CreateFlagBases(_scene, twoAlpha, 2f));
+            Assert.That(Components<FlagBase>(), Is.Empty, "nothing is left behind");
+        }
+
+        [Test]
+        public void FlagBasesRefuseARadiusThatIsNotPositiveAndLeaveNothingBehind()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => NetSceneBuilder.CreateFlagBases(_scene, ArenaSceneBuilder.FlagBases, 0f));
+            Assert.That(_scene.GetRootGameObjects().Where(go => go.name == NetSceneBuilder.FlagBasesRootName), Is.Empty);
         }
 
         [Test]

@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     // 起動したかを知らないので、自分の持つ既定値で予測すると片方だけ変えたときに毎 tick ずれるため。
     public sealed class ConnectAcceptedMessage : IMessage
     {
-        public const byte CurrentVersion = 11;
+        public const byte CurrentVersion = 12;
 
         // .NET のサーバーと Netcode のプレイヤーの既定と同じにする。
         public const float DefaultKillPlaneY = -50f;
@@ -194,6 +194,12 @@ namespace Shooter.Protocol
             writer.WriteSingle(wallRun.MinSpeed);
             writer.WriteSingle(wallRun.GravityScale);
             writer.WriteSingle(wallRun.JumpOffSpeed);
+
+            var parachute = settings.Parachute;
+            writer.WriteSingle(parachute.MinOpenHeight);
+            writer.WriteSingle(parachute.DescentSpeed);
+            writer.WriteSingle(parachute.HorizontalSpeed);
+            writer.WriteSingle(parachute.SteerAcceleration);
         }
 
         private static void WriteDirection(MessageWriter writer, Shooter.Core.MoveDirectionScale direction)
@@ -261,6 +267,12 @@ namespace Shooter.Protocol
                 wallRun[i] = reader.ReadFiniteSingle("wall run value");
             }
 
+            var parachute = new float[4];
+            for (var i = 0; i < parachute.Length; i++)
+            {
+                parachute[i] = reader.ReadFiniteSingle("parachute value");
+            }
+
             try
             {
                 return new Shooter.Core.NetMotorSettings(
@@ -276,7 +288,8 @@ namespace Shooter.Protocol
                     new Shooter.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]),
                     new Shooter.Core.SwimTuning(swim[0], swim[1], swim[2]),
-                    new Shooter.Core.WallRunTuning(wallRunEnabled, wallRun[0], wallRun[1], wallRun[2], wallRun[3]));
+                    new Shooter.Core.WallRunTuning(wallRunEnabled, wallRun[0], wallRun[1], wallRun[2], wallRun[3]),
+                    new Shooter.Core.ParachuteTuning(parachute[0], parachute[1], parachute[2], parachute[3]));
             }
             catch (System.ArgumentException e)
             {

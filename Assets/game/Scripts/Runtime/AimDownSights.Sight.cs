@@ -39,7 +39,8 @@ namespace Shooter.Runtime
                 || next.ScopeOverlay != previous.ScopeOverlay
                 || next.ShowsReticle != previous.ShowsReticle
                 || !string.Equals(next.ReticleId, previous.ReticleId, StringComparison.Ordinal)
-                || (next.EyeBlend > 0f) != (previous.EyeBlend > 0f))
+                || (next.EyeBlend > 0f) != (previous.EyeBlend > 0f)
+                || next.VisionMode != previous.VisionMode)
             {
                 Debug.Log(SightLog.Format(next), this);
             }

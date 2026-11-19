@@ -381,6 +381,13 @@ namespace Shooter.Server.Tests
                 var connection = new ConnectionId((ulong)id);
                 _match.Join(connection, "device" + id);
                 _host.OnConnected(connection);
+
+                // アンチチートは無効でも Hello を返し合い、15 秒返らない相手を切るので、実クライアントと同じく無効の Hello を返す
+                var hello = new byte[AntiCheatPacket.HelloSize];
+                AntiCheatPacket.WriteHello(hello, false);
+                var helloMessage = new AntiCheatToServerMessage();
+                helloMessage.SetPacket(new ArraySegment<byte>(hello));
+                _host.OnMessage(connection, helloMessage);
                 _active.Add(id);
             }
         }

@@ -22,6 +22,7 @@ namespace Shooter.Runtime
         public const string FireActionPath = InputActionPaths.Attack;
         public const string AimActionPath = InputActionPaths.Aim;
         public const string ReloadActionPath = InputActionPaths.Reload;
+        public const string CountermeasureActionPath = InputActionPaths.Countermeasure;
 
         private readonly RiderVisibility _hiddenBody = new RiderVisibility();
         private readonly RiderVisibility _hiddenViewmodel = new RiderVisibility();
@@ -33,6 +34,7 @@ namespace Shooter.Runtime
         private readonly ActionSlot _fire = new ActionSlot();
         private readonly ActionSlot _aim = new ActionSlot();
         private readonly ActionSlot _reload = new ActionSlot();
+        private readonly ActionSlot _countermeasure = new ActionSlot();
 
         private PlayerController _mover;
         private WeaponController _weapon;
@@ -314,12 +316,19 @@ namespace Shooter.Runtime
                 Find(actions, PreviousSeatActionPath),
                 Find(actions, FireActionPath),
                 Find(actions, AimActionPath),
-                Find(actions, ReloadActionPath));
+                Find(actions, ReloadActionPath),
+                Find(actions, CountermeasureActionPath));
             return true;
         }
 
         public void SetActions(
-            InputAction interact, InputAction nextSeat, InputAction previousSeat, InputAction fire, InputAction aim, InputAction reload)
+            InputAction interact,
+            InputAction nextSeat,
+            InputAction previousSeat,
+            InputAction fire,
+            InputAction aim,
+            InputAction reload,
+            InputAction countermeasure = null)
         {
             if (_isLive && _interact.Action != null)
             {
@@ -332,6 +341,7 @@ namespace Shooter.Runtime
             _fire.Set(fire, _seat != null);
             _aim.Set(aim, _seat != null);
             _reload.Set(reload, _seat != null);
+            _countermeasure.Set(countermeasure, _seat != null);
 
             if (_isLive && _interact.Action != null)
             {
@@ -434,7 +444,8 @@ namespace Shooter.Runtime
                 HeldInput.IsHeld(_aim.Action),
                 _reload.WasPressedThisFrame(),
                 view.position,
-                view.forward);
+                view.forward,
+                _countermeasure.WasPressedThisFrame());
         }
 
         // Update から呼ぶ。Update の走らない Edit Mode のテストからも、差し込み (SeatInputFilter) を通した入力を流せるよう public にする。
@@ -471,6 +482,7 @@ namespace Shooter.Runtime
             _fire.Acquire();
             _aim.Acquire();
             _reload.Acquire();
+            _countermeasure.Acquire();
 
             ApplyPose(seat);
             ApplyFiring(seat);
@@ -519,6 +531,7 @@ namespace Shooter.Runtime
             _fire.Release();
             _aim.Release();
             _reload.Release();
+            _countermeasure.Release();
             ResumeComponents();
 
             _mover.Handoff.Release(this);

@@ -101,6 +101,12 @@ namespace Shooter.Runtime
 
         public static GameSignal<AircraftStatus?> Aircraft { get; } = new GameSignal<AircraftStatus?>(nameof(Aircraft));
 
+        public static GameSignal<StaminaStatus?> Stamina { get; } = new GameSignal<StaminaStatus?>(nameof(Stamina));
+
+        public static GameSignal<LockOnWarningStatus?> LockOnWarning { get; } = new GameSignal<LockOnWarningStatus?>(nameof(LockOnWarning));
+
+        public static GameSignal<IEmoteControl> Emotes { get; } = new GameSignal<IEmoteControl>(nameof(Emotes));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -146,6 +152,9 @@ namespace Shooter.Runtime
             Cosmetics.Reset();
             Stash.Reset();
             Aircraft.Reset();
+            Stamina.Reset();
+            LockOnWarning.Reset();
+            Emotes.Reset();
         }
     }
 }

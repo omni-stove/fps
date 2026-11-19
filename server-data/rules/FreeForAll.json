@@ -38,7 +38,9 @@
       "slowMotion": "Off",
       "aimToFire": "Off",
       "jump": "On",
-      "reviveRange": 1.5
+      "reviveRange": 1.5,
+      "emote": "Off",
+      "stamina": "Off"
     },
     "spawnProtectionSeconds": 2,
     "fallDamage": "Off",
@@ -57,7 +59,8 @@
     },
     "streaks": "On",
     "textChat": "On",
-    "spectating": "On"
+    "spectating": "On",
+    "respawnAnchor": ["Base"]
   },
   "match": {
     "scoreLimit": 10,

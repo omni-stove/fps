@@ -96,6 +96,8 @@
   "settings.input.action.Chat": "チャット",
   "settings.input.action.TeamChat": "チームチャット",
   "settings.input.action.PushToTalk": "押して話す",
+  "settings.input.action.Emote": "エモート",
+  "settings.input.action.Countermeasure": "フレアを撒く",
   "settings.input.move.up": "前へ移動",
   "settings.input.move.down": "後ろへ移動",
   "settings.input.move.left": "左へ移動",

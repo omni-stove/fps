@@ -123,6 +123,12 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("ふつうのジャンプで跳べるか。Off でも Jump は乗り越え・崖のぼり・伏せから立つ・はしごやジップラインから離れる・パラシュートを開くに使う")]
         private Jump _jump = Jump.On;
 
+        [SerializeField, Tooltip("エモートを使えるか")]
+        private Emote _emote = Emote.Off;
+
+        [SerializeField, Tooltip("走る・跳ぶなどでスタミナを使い、尽きたらできなくなるか")]
+        private Stamina _stamina = Stamina.Off;
+
         [Header("体力とダメージ")]
         [SerializeField, Min(1), Tooltip("プレイヤーの最大体力")]
         private int _playerMaxHealth = GameRules.DefaultPlayerMaxHealth;
@@ -140,6 +146,9 @@ namespace Shooter.Runtime
         [Header("リスポーン")]
         [SerializeField, Min(0f), Tooltip("リスポーンしてからダメージを受けなくなる秒数。0 なら守らない")]
         private float _spawnProtectionSeconds;
+
+        [SerializeField, Tooltip("倒された人を戻す場所の候補。上から試し、使えない候補 (分隊がいない・ビーコンが無い) は飛ばす。1 つ以上、重ねずに並べる")]
+        private RespawnAnchor[] _respawnAnchors = { RespawnAnchor.Base };
 
         [Header("移動")]
         [SerializeField, Tooltip("高い所から落ちたときにダメージを受けるか")]
@@ -402,6 +411,25 @@ namespace Shooter.Runtime
             set => _jump = value;
         }
 
+        public Emote Emote
+        {
+            get => _emote;
+            set => _emote = value;
+        }
+
+        public Stamina Stamina
+        {
+            get => _stamina;
+            set => _stamina = value;
+        }
+
+        // 写しを渡し受けするのは、呼んだ側が配列を書き換えてもアセットの値が黙って変わらないようにするため。
+        public RespawnAnchor[] RespawnAnchors
+        {
+            get => _respawnAnchors != null ? (RespawnAnchor[])_respawnAnchors.Clone() : null;
+            set => _respawnAnchors = value != null ? (RespawnAnchor[])value.Clone() : null;
+        }
+
         public int PlayerMaxHealth
         {
             get => _playerMaxHealth;
@@ -540,7 +568,9 @@ namespace Shooter.Runtime
                         _slowMotion,
                         _aimToFire,
                         _jump,
-                        _reviveRange),
+                        _reviveRange,
+                        _emote,
+                        _stamina),
                     _spawnProtectionSeconds,
                     _fallDamage,
                     _hudDensity,
@@ -558,7 +588,9 @@ namespace Shooter.Runtime
                         ZoneDamageMultipliers.Default.WeakPoint),
                     _streaks,
                     _textChat,
-                    _spectating);
+                    _spectating,
+                    // 空の配列を null と同じく既定へ戻さず断るのは、インスペクターで消し切ったことに気づけるようにするため。
+                    _respawnAnchors ?? Array.Empty<RespawnAnchor>());
             }
             catch (ArgumentException e)
             {
@@ -616,6 +648,11 @@ namespace Shooter.Runtime
             _streaks = rules.Streaks;
             _textChat = rules.TextChat;
             _spectating = rules.Spectating;
+            _respawnAnchors = new RespawnAnchor[rules.RespawnAnchors.Count];
+            for (var i = 0; i < _respawnAnchors.Length; i++)
+            {
+                _respawnAnchors[i] = rules.RespawnAnchors[i];
+            }
 
             var actions = rules.Actions;
             _downed = actions.Downed;
@@ -645,6 +682,8 @@ namespace Shooter.Runtime
             _aimToFire = actions.AimToFire;
             _jump = actions.Jump;
             _reviveRange = actions.ReviveRange;
+            _emote = actions.Emote;
+            _stamina = actions.Stamina;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

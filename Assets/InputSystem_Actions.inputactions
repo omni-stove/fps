@@ -328,6 +328,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Emote",
+                    "type": "Button",
+                    "id": "3c8e1f5a-7b24-4d96-a0e3-9f2b6d4c8a71",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Countermeasure",
+                    "type": "Button",
+                    "id": "e6a4b2d8-1f39-4c57-9b0e-5d7c3a1f8e26",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -1120,6 +1138,28 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "PushToTalk",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a9d3f7b1-5e42-4c08-b6a1-2f8e4d7c9b35",
+                    "path": "<Keyboard>/j",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Emote",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4f1b8e6c-2d73-4a95-8c0f-7e3a5b9d1c62",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Countermeasure",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

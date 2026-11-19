@@ -15,4 +15,6 @@
   <Project Path="Shooter.Server.Eos.Tests/Shooter.Server.Eos.Tests.csproj" />
   <Project Path="Shooter.Server/Shooter.Server.csproj" />
   <Project Path="Shooter.Server.Tests/Shooter.Server.Tests.csproj" />
+  <Project Path="Shooter.Stealth.Core/Shooter.Stealth.Core.csproj" />
+  <Project Path="Shooter.Stealth.Core.Tests/Shooter.Stealth.Core.Tests.csproj" />
 </Solution>

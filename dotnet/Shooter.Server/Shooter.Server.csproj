@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Shooter.Core/Shooter.Core.csproj" />
+    <ProjectReference Include="../Shooter.Stealth.Core/Shooter.Stealth.Core.csproj" />
     <ProjectReference Include="../Shooter.Protocol/Shooter.Protocol.csproj" />
     <ProjectReference Include="../Shooter.EosSdk/Shooter.EosSdk.csproj" />
     <ProjectReference Include="../Shooter.Server.Eos/Shooter.Server.Eos.csproj" />

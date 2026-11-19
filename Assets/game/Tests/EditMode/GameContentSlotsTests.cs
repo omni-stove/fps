@@ -45,23 +45,23 @@ namespace Shooter.Tests.EditMode
             var index = GameContentSlots.All.ToList().FindIndex(s => s.Name == TestSlotName);
 
             GameContentSlots.Register(
-                TestSlotName, typeof(AwarenessIndicatorCatalog), c => c.AwarenessIndicator, (c, v) => c.AwarenessIndicator = (ScriptableObject)v);
+                TestSlotName, typeof(MotorSettings), c => c.AwarenessIndicator, (c, v) => c.AwarenessIndicator = (ScriptableObject)v);
 
             var all = GameContentSlots.All;
             Assert.That(all.Count(s => s.Name == TestSlotName), Is.EqualTo(1));
             Assert.That(all[index].Name, Is.EqualTo(TestSlotName));
-            Assert.That(all[index].AssetType, Is.EqualTo(typeof(AwarenessIndicatorCatalog)));
+            Assert.That(all[index].AssetType, Is.EqualTo(typeof(MotorSettings)));
 
-            var indicator = ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>();
+            var asset = ScriptableObject.CreateInstance<MotorSettings>();
             try
             {
-                all[index].Set(_content, indicator);
-                Assert.That(_content.AwarenessIndicator, Is.SameAs(indicator));
+                all[index].Set(_content, asset);
+                Assert.That(_content.AwarenessIndicator, Is.SameAs(asset));
                 Assert.That(_content.Missions, Is.Null, "the replaced slot's setter is not used");
             }
             finally
             {
-                Object.DestroyImmediate(indicator);
+                Object.DestroyImmediate(asset);
             }
         }
 
@@ -89,28 +89,6 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => GameContentSlots.Register(TestSlotName, typeof(ScriptableObject), null, set));
             Assert.Throws<ArgumentNullException>(() => GameContentSlots.Register(TestSlotName, typeof(ScriptableObject), get, null));
             Assert.That(GameContentSlots.All.Select(s => s.Name), Has.No.Member(TestSlotName), "a rejected slot is not added");
-        }
-
-        [Test]
-        public void TheAwarenessIndicatorSlotReadsAndWritesTheGameContent()
-        {
-            StealthActionInstaller.RegisterContentSlots();
-            var slot = GameContentSlots.All.Single(s => s.Name == StealthActionInstaller.AwarenessIndicatorSlotName);
-            var indicator = ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>();
-            try
-            {
-                Assert.That(slot.AssetType, Is.EqualTo(typeof(AwarenessIndicatorCatalog)));
-                Assert.That(slot.Get(_content), Is.Null);
-
-                slot.Set(_content, indicator);
-
-                Assert.That(_content.AwarenessIndicator, Is.SameAs(indicator));
-                Assert.That(slot.Get(_content), Is.SameAs(indicator));
-            }
-            finally
-            {
-                Object.DestroyImmediate(indicator);
-            }
         }
     }
 }

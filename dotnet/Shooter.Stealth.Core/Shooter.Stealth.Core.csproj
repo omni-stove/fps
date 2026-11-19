@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Unity の Shooter.Stealth.Core アセンブリ (Assets/game/Scripts/Stealth/Core) を Unity 抜きでビルドする。ソースは Assets 側が正 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Shooter.Core/Shooter.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/game/Scripts/Stealth/Core/**/*.cs" />
+  </ItemGroup>
+</Project>

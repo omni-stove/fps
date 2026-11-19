@@ -29,10 +29,6 @@ namespace Shooter.Core.Tests
                 ContextMeleeLog.Witnessed("p1", "e1", "takedown", "e2", "Engaged"),
                 Is.EqualTo("[ContextMelee] witnessed id=p1 target=e1 move=takedown by=e2 stage=Engaged"));
             Assert.That(
-                ContextMeleeLog.Witnessed("p1", "e1", "takedown", "e2", AwarenessStage.Engaged.ToString()),
-                Is.EqualTo("[ContextMelee] witnessed id=p1 target=e1 move=takedown by=e2 stage=Engaged"),
-                "the stage name is the same text the enum used to print");
-            Assert.That(
                 ContextMeleeLog.Witnessed("p1", "e1", "takedown", "e2", "Engaged"),
                 Does.StartWith(ContextMeleeLog.WitnessedPrefix("p1")));
             Assert.That(

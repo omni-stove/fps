@@ -88,9 +88,6 @@ namespace Shooter.Runtime
 
         public static GameSignal<IBlockControl> BlockControl { get; } = new GameSignal<IBlockControl>(nameof(BlockControl));
 
-        public static GameSignal<IReadOnlyList<AchievementProgress>> Achievements { get; } =
-            new GameSignal<IReadOnlyList<AchievementProgress>>(nameof(Achievements));
-
         public static GameSignal<LeaderboardStatus?> Leaderboard { get; } = new GameSignal<LeaderboardStatus?>(nameof(Leaderboard));
 
         public static GameSignal<ILeaderboardControl> LeaderboardControl { get; } = new GameSignal<ILeaderboardControl>(nameof(LeaderboardControl));
@@ -174,7 +171,6 @@ namespace Shooter.Runtime
             JoinByCode.Reset();
             ReportSender.Reset();
             BlockControl.Reset();
-            Achievements.Reset();
             Leaderboard.Reset();
             LeaderboardControl.Reset();
             Replays.Reset();

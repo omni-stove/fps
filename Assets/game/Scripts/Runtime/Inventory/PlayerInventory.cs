@@ -184,7 +184,7 @@ namespace Shooter.Runtime
                 next => _weapons.SetAttachments(weaponId, next),
                 out var itemId,
                 out var replaced,
-                IsAvailable ?? ProgressionBootstrap.IsUnlocked);
+                IsAvailable ?? Unlocks.IsUnlocked);
             Debug.Log(
                 $"{LogTag} attach owner={name} handle={handle} item={itemId ?? "-"} weapon={weaponId ?? "-"} replaced={replaced ?? "-"}"
                 + (result == AttachmentRejection.None ? string.Empty : $" rejected={result}"),

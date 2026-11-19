@@ -8,3 +8,6 @@ using System.Runtime.CompilerServices;
 
 // 隠密の足音の JSON (Shooter.Stealth.Core の StealthNoiseJson) がサーバーデータと同じ JSON の読み手 (ServerDataJson) を、公開の API にせずに使うため
 [assembly: InternalsVisibleTo("Shooter.Stealth.Core")]
+
+// 進行の JSON (Shooter.Progression.Core の ProgressionJson・AchievementJson・PlayerProfile) がサーバーデータとセーブと同じ JSON の読み書き (ServerDataJson・SpecJsonReader・SaveJson) と値の確かめ (SpecLists・SpecGuard) を、公開の API にせずに使うため
+[assembly: InternalsVisibleTo("Shooter.Progression.Core")]

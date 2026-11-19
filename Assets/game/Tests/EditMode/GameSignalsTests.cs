@@ -57,7 +57,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.JoinByCode.Value, Is.Null);
             Assert.That(GameSignals.ReportSender.Value, Is.Null);
             Assert.That(GameSignals.BlockControl.Value, Is.Null);
-            Assert.That(GameSignals.Achievements.Value, Is.Null);
             Assert.That(GameSignals.Leaderboard.Value, Is.Null);
             Assert.That(GameSignals.LeaderboardControl.Value, Is.Null);
             Assert.That(GameSignals.Replays.Value, Is.Null);
@@ -188,7 +187,6 @@ namespace Shooter.Tests.EditMode
             GameSignals.JoinByCode.Publish(new FakeJoinByCode());
             GameSignals.ReportSender.Publish(new FakeReportSender());
             GameSignals.BlockControl.Publish(new FakeBlockControl());
-            GameSignals.Achievements.Publish(new[] { new AchievementProgress("first-blood", 0, 1, false) });
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("kills", LeaderboardStage.Loading, null));
             GameSignals.LeaderboardControl.Publish(new FakeLeaderboardControl());
             GameSignals.Replays.Publish(new FakeReplayLibrary());
@@ -450,7 +448,6 @@ namespace Shooter.Tests.EditMode
         {
             var report = new FakeReportSender();
             var block = new FakeBlockControl();
-            var achievements = new[] { new AchievementProgress("marksman", 10, 50, false) };
             var replays = new FakeReplayLibrary();
             var cosmetics = new FakeCosmeticLocker();
             var leaderboardControl = new FakeLeaderboardControl();
@@ -459,7 +456,6 @@ namespace Shooter.Tests.EditMode
 
             GameSignals.ReportSender.Publish(report);
             GameSignals.BlockControl.Publish(block);
-            GameSignals.Achievements.Publish(achievements);
             GameSignals.LeaderboardControl.Publish(leaderboardControl);
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("wins", LeaderboardStage.Unavailable, null));
             GameSignals.LeaderboardControl.Value.Open("kills");
@@ -473,7 +469,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(report.Sent, Is.EqualTo(new[] { (7, ReportReason.Cheating) }));
             Assert.That(GameSignals.BlockControl.Value.IsMuted(7), Is.True);
             Assert.That(GameSignals.BlockControl.Value.IsBlocked(7), Is.False);
-            Assert.That(GameSignals.Achievements.Value, Is.SameAs(achievements));
             Assert.That(
                 heardLeaderboard,
                 Is.EqualTo(new LeaderboardStatus?[] { new LeaderboardStatus("wins", LeaderboardStage.Unavailable, Array.Empty<LeaderboardRow>()) }));

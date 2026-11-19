@@ -22,26 +22,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheAchievementFileHoldsTheDefaults()
-        {
-            var spec = AchievementJson.Parse(Bundled(AchievementJson.ResourcePath), AchievementJson.ResourcePath);
-            var defaults = AchievementSpec.DefaultAchievements;
-
-            Assert.That(spec.Achievements.Count, Is.EqualTo(defaults.Count));
-            for (var i = 0; i < defaults.Count; i++)
-            {
-                Assert.That(spec.Achievements[i].Id, Is.EqualTo(defaults[i].Id));
-                Assert.That(spec.Achievements[i].DisplayNameKey, Is.EqualTo(defaults[i].DisplayNameKey));
-                Assert.That(spec.Achievements[i].DescriptionKey, Is.EqualTo(defaults[i].DescriptionKey));
-                Assert.That(spec.Achievements[i].Stat, Is.EqualTo(defaults[i].Stat));
-                Assert.That(spec.Achievements[i].Target, Is.EqualTo(defaults[i].Target));
-                Assert.That(spec.Achievements[i].Hidden, Is.EqualTo(defaults[i].Hidden));
-            }
-
-            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(AchievementSpec.DefaultMeleeWeaponIds));
-        }
-
-        [Test]
         public void TheLeaderboardFileHoldsTheDefaults()
         {
             var spec = LeaderboardJson.Parse(Bundled(LeaderboardJson.ResourcePath), LeaderboardJson.ResourcePath);

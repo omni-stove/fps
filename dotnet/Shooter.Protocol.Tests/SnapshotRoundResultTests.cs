@@ -12,8 +12,8 @@ namespace Shooter.Protocol.Tests
         // 設置の割合・解除している人・解除の割合 (4 バイトずつ)
         private const int _progressBytes = 4 + 4 + 4;
 
-        // 試合の部分のビットまでの頭 (Id・版・tick・基準の tick・部分のビット)
-        private const int _headBytes = 2 + 1 + 4 + 4 + 1;
+        // 試合の部分のビットまでの頭 (Id・版・tick・基準の tick・部分のビット (2))
+        private const int _headBytes = 2 + 1 + 4 + 4 + 2;
 
         [Test]
         public void TheRoundResultRoundTrips()

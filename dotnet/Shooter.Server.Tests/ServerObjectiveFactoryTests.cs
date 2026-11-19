@@ -180,8 +180,11 @@ namespace Shooter.Server.Tests
 
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
-                // Payload は設定と型だけを先に足し、サーバーのルールは後から足すので、それまでは下のテストで断ることを確かめる
-                if (objective == MatchObjective.Payload)
+                // Payload・Battle Royale・Extraction は設定と型だけを先に足し、サーバーのルールは後から足すので、
+                // それまでは下のテストで断ることを確かめる
+                if (objective == MatchObjective.Payload
+                    || objective == MatchObjective.BattleRoyale
+                    || objective == MatchObjective.Extraction)
                 {
                     continue;
                 }
@@ -190,13 +193,15 @@ namespace Shooter.Server.Tests
             }
         }
 
-        [Test]
-        public void APayloadMatchIsRefusedUntilTheServerHasItsRules()
+        [TestCase(MatchObjective.Payload, "Payload")]
+        [TestCase(MatchObjective.BattleRoyale, "BattleRoyale")]
+        [TestCase(MatchObjective.Extraction, "Extraction")]
+        public void AMatchIsRefusedUntilTheServerHasItsRules(MatchObjective objective, string name)
         {
             var e = Assert.Throws<InvalidOperationException>(
-                () => ServerObjectiveFactory.Create(MatchObjective.Payload, new NetMatchSettings(), _host));
+                () => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host));
 
-            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective Payload"));
+            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective " + name));
         }
 
         [TestCase(MatchObjective.CaptureTheFlag, "flag")]

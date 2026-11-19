@@ -5,6 +5,7 @@ using Shooter.Core;
 namespace Shooter.Protocol
 {
     // 旗・爆弾・タグを 1 つの並びで送るのは、どれも「置き場所・持ち主・運んでいる人」で描けるから。
+    // 箱と脱出地点も別の並びにしないのは、それに「開いているか・半径」を足すだけで描けるから。
     public struct ObjectiveItemSnapshot : ISnapshotEntity<ObjectiveItemSnapshot>
     {
         public int ItemId { get; set; }
@@ -26,13 +27,19 @@ namespace Shooter.Protocol
 
         public int CarrierId { get; set; }
 
+        // 箱なら開けたか、脱出地点なら開いているか
+        public bool Opened { get; set; }
+
+        // 脱出地点なら待つ範囲の半径、箱なら開けられる距離。持たない物は 0
+        public float Radius { get; set; }
+
         public int EntityId => ItemId;
 
         public int PresentBits => (int)Present;
 
         public int AllBits => (int)ObjectiveItemFields.All;
 
-        public int OptionalBits => 0;
+        public int OptionalBits => (int)ObjectiveItemFields.Optional;
 
         public int ChangedBits(in ObjectiveItemSnapshot baseline)
         {
@@ -55,6 +62,11 @@ namespace Shooter.Protocol
                 || (HasCarrier && CarrierId != baseline.CarrierId))
             {
                 bits |= ObjectiveItemFields.State;
+            }
+
+            if (Opened != baseline.Opened || !Same.Bits(Radius, baseline.Radius))
+            {
+                bits |= ObjectiveItemFields.Access;
             }
 
             return (int)bits;
@@ -95,6 +107,17 @@ namespace Shooter.Protocol
                 writer.WriteByte((byte)State);
                 writer.WriteInt32(HasCarrier ? CarrierId : PlayerIds.None);
             }
+
+            if ((fields & ObjectiveItemFields.Access) != 0)
+            {
+                if (!(Radius >= 0f) || float.IsInfinity(Radius))
+                {
+                    throw new InvalidOperationException("objective item radius must be finite and not negative");
+                }
+
+                writer.WriteBool(Opened);
+                writer.WriteSingle(Radius);
+            }
         }
 
         public void ReadBits(MessageReader reader, int id, int bits)
@@ -127,6 +150,12 @@ namespace Shooter.Protocol
                     throw new MessageReadException("an objective item must have a carrier exactly when it is carried");
                 }
             }
+
+            if ((fields & ObjectiveItemFields.Access) != 0)
+            {
+                Opened = reader.ReadBool();
+                Radius = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "objective item radius");
+            }
         }
 
         public void FillFrom(in ObjectiveItemSnapshot baseline)
@@ -150,6 +179,12 @@ namespace Shooter.Protocol
                 State = baseline.State;
                 HasCarrier = baseline.HasCarrier;
                 CarrierId = baseline.CarrierId;
+            }
+
+            if ((missing & ObjectiveItemFields.Access) != 0)
+            {
+                Opened = baseline.Opened;
+                Radius = baseline.Radius;
             }
 
             Present = ObjectiveItemFields.All;

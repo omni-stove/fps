@@ -368,7 +368,7 @@ namespace Shooter.Editor
             var pickupWeapons = LoadPickupWeapons(catalog);
             ResolvePickupWeapons(spec, pickupWeapons);
             var rules = LoadRules();
-            var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(definitionPath, d => Configure(d, spec));
+            var definition = MissionDefinitionAssets.CreateOrUpdate(definitionPath, d => Configure(d, spec));
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));

@@ -180,7 +180,7 @@ namespace Shooter.Runtime
 
         public WeaponCatalogAsset EffectiveCatalog => GameContent.Pick(_catalog, c => c.WeaponCatalog);
 
-        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
+        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions as MissionCatalog);
 
         public ISaveStorage SaveStorage
         {

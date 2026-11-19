@@ -11,5 +11,7 @@ namespace Shooter.Core
         TooSoon,
 
         Blocked,
+
+        RuleOff,
     }
 }

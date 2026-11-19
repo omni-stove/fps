@@ -1593,7 +1593,8 @@ namespace Shooter.Core.Tests
             Assert.That(ControlSettings.GyroSensitivityRange.Min, Is.EqualTo(10));
             Assert.That(ControlSettings.GyroSensitivityRange.Max, Is.EqualTo(500));
             Assert.That(ControlSettings.GyroSensitivityRange.Default, Is.EqualTo(100));
-            Assert.That(ControlSettings.Values, Has.Count.EqualTo(11), "the gyro sensitivity is not a slider value of the settings screen");        }
+            Assert.That(ControlSettings.Values, Has.Count.EqualTo(11), "the gyro sensitivity is not a slider value of the settings screen");
+        }
 
         // 狙うときだけにしたなら、覗き込んでいる間だけ効く
         [TestCase(false, false, false, false)]

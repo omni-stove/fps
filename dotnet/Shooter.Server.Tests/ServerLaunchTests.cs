@@ -35,6 +35,37 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ThePlaylistIsOptionalAndSurvivesSwappingTheOptions()
+        {
+            Assert.That(Parse(Env()).Playlist, Is.Null);
+
+            var launch = Parse(Env(), "-playlist", "rotation", "-transport", "eos");
+            var udp = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            Assert.That(launch.Playlist, Is.EqualTo("rotation"));
+            Assert.That(udp.Playlist, Is.EqualTo("rotation"));
+            Assert.That(Parse(Env(), "-playlist", "playlist.night-ops").Playlist, Is.EqualTo("playlist.night-ops"));
+        }
+
+        [TestCase(ServerLaunch.PlaylistFlag + " requires a value", "-playlist")]
+        [TestCase(ServerLaunch.PlaylistFlag + " requires a value", "-playlist", "--private")]
+        [TestCase(ServerLaunch.PlaylistFlag + " is given more than once", "-playlist", "a", "-playlist", "b")]
+        [TestCase(ServerLaunch.PlaylistFlag + " must be a playlist id without spaces or control characters (got 'night ops')", "-playlist", "night ops")]
+        [TestCase(
+            ServerLaunch.PlaylistFlag + " and " + ServerLaunch.RulesFlag + " cannot be given together; the playlist names the rules of each match",
+            "-playlist", "rotation", "-rules", "Domination")]
+        [TestCase(
+            ServerLaunch.PlaylistFlag + " and " + ServerLaunch.RulesFlag + " cannot be given together; the playlist names the rules of each match",
+            "-rules", "TeamDeathmatch", "-playlist", "rotation")]
+        [TestCase(
+            ServerLaunch.PlaylistFlag + " and " + NetLaunchOptions.MapFlag + " cannot be given together; the playlist names the map of each match",
+            "-playlist", "rotation", "-map", "NetArena01")]
+        public void BadPlaylistFlagsAreRejected(string expected, params string[] args)
+        {
+            Assert.That(Fail(Env(), args), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void EnvironmentChoosesTheAddressAndPort()
         {
             var launch = Parse(Env(ServerLaunch.AddressVariable, "127.0.0.1", ServerLaunch.PortVariable, " 9000 "));

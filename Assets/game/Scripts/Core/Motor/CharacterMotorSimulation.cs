@@ -607,6 +607,7 @@ namespace Shooter.Core
 
             var position = Body.Position;
             var appliedPeek = previous.AppliedPeek;
+            var facing = Vector3.Zero;
             CoverProbeResult probe;
             float topY;
             if (previous.IsInCover)
@@ -618,11 +619,11 @@ namespace Shooter.Core
             }
             else
             {
-                var forward = YawForward(input.Yaw);
-                probe = _coverSensor.Probe(position, forward, forward, _motor.Spec, out topY);
+                facing = YawForward(input.Yaw);
+                probe = _coverSensor.Probe(position, facing, facing, _motor.Spec, out topY);
             }
 
-            var progressBefore = _cover.EnterProgress;
+            _cover.BodyRadius = Body.Radius;
             var transition = _cover.Step(input.Cover, input.Aim, input.Move, probe, TickSeconds);
             if (!_cover.IsInCover)
             {
@@ -633,33 +634,34 @@ namespace Shooter.Core
             var normal = _cover.Normal;
             if (transition == CoverTransition.Enter)
             {
-                appliedPeek = 0f;
+                appliedPeek = CoverProbe.EnterSideOffset(facing, normal, probe.Distance);
             }
-            else if (_cover.Phase == CoverPhase.Entering || (progressBefore < 1f && _cover.EnterProgress >= 1f))
+            else if (_cover.EnterTurn > 0f)
             {
-                SlideIn(normal, probe.Distance, progressBefore, _cover.EnterProgress);
+                appliedPeek = SlideIn(normal, appliedPeek);
+            }
+            else
+            {
+                appliedPeek = SlidePeek(normal, appliedPeek, _cover.PeekOffset);
             }
 
-            appliedPeek = SlidePeek(normal, appliedPeek, _cover.PeekOffset);
             return new CharacterCoverState(_cover.Capture(), topY, probe.Edges, appliedPeek);
         }
 
-        // 寄せ終わる時刻までの残りを等分して進むので、最後の tick でちょうど目標の距離になる
-        private void SlideIn(Vector3 normal, float distance, float progressBefore, float progressAfter)
+        // 横のずれは壁へ寄せるのと同じ割合で詰め、着いたときに当たり点の正面に来るようにする (CoverController と同じ)
+        private float SlideIn(Vector3 normal, float applied)
         {
-            if (progressBefore >= 1f)
+            var right = CoverProbe.RightAlong(normal);
+            var delta = (-normal * _cover.EnterStep) + (right * (-applied * _cover.EnterTurn));
+            if (delta == Vector3.Zero)
             {
-                return;
+                return applied;
             }
 
-            var fraction = Clamp01((progressAfter - progressBefore) / (1f - progressBefore));
-            if (fraction <= 0f)
-            {
-                return;
-            }
-
-            var gap = distance - CoverProbe.HoldDistance(Body.Radius);
-            Body.Move(-normal * (gap * fraction));
+            var before = Body.Position;
+            Body.Move(delta);
+            var moved = Body.Position - before;
+            return applied + (moved.X * right.X) + (moved.Y * right.Y) + (moved.Z * right.Z);
         }
 
         // 横に障害物があれば出られた分だけを覚え、戻るときに出た分だけ戻す
@@ -885,11 +887,6 @@ namespace Shooter.Core
         private Vector3 RootFor(Vector3 feet)
         {
             return new Vector3(feet.X, feet.Y - Body.Current.BottomY, feet.Z);
-        }
-
-        private static float Clamp01(float value)
-        {
-            return value < 0f ? 0f : (value > 1f ? 1f : value);
         }
 
         // Unity の Mathf.Approximately と同じ判定にして、Unity 版と同じ tick で覗きの寄せを止める

@@ -100,8 +100,11 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("高い壁の端から覗くときに横へ出る距離 (m)")]
         private float _coverPeekSideDistance = MotorSpec.DefaultCoverPeekSideDistance;
 
-        [SerializeField, Min(0.01f), Tooltip("カバーに入るとき、壁へ寄せるのにかける秒数")]
+        [SerializeField, Min(0.01f), Tooltip("カバーに入るとき、壁へ寄せるのにかける最短の秒数。遠い壁へは「カバーへ走る速さ」で寄せる")]
         private float _coverEnterSeconds = MotorSpec.DefaultCoverEnterSeconds;
+
+        [SerializeField, Min(0.01f), Tooltip("離れた壁へカバーに入るとき、壁へ走って寄る速さ (m/s)")]
+        private float _coverEnterSpeed = MotorSpec.DefaultCoverEnterSpeed;
 
         [SerializeField, Min(0f), Tooltip("カバー中に後ろの入力をこれだけ (秒) 続けると出る")]
         private float _coverBackHoldSeconds = MotorSpec.DefaultCoverBackHoldSeconds;
@@ -325,6 +328,12 @@ namespace Shooter.Runtime
             set => _coverBackHoldSeconds = value;
         }
 
+        public float CoverEnterSpeed
+        {
+            get => _coverEnterSpeed;
+            set => _coverEnterSpeed = value;
+        }
+
         public float CoverPeekSlideSeconds
         {
             get => _coverPeekSlideSeconds;
@@ -527,7 +536,8 @@ namespace Shooter.Runtime
                 _leanSpeed,
                 _airJumps,
                 _airJumpSpeed,
-                _jumpGraceSeconds);
+                _jumpGraceSeconds,
+                _coverEnterSpeed);
         }
 
         public ProneSpec CreateProneSpec()
@@ -562,6 +572,7 @@ namespace Shooter.Runtime
             _coverLowWallHeight = MotorSpec.DefaultCoverLowWallHeight;
             _coverPeekSideDistance = MotorSpec.DefaultCoverPeekSideDistance;
             _coverEnterSeconds = MotorSpec.DefaultCoverEnterSeconds;
+            _coverEnterSpeed = MotorSpec.DefaultCoverEnterSpeed;
             _coverBackHoldSeconds = MotorSpec.DefaultCoverBackHoldSeconds;
             _coverPeekSlideSeconds = MotorSpec.DefaultCoverPeekSlideSeconds;
             _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;

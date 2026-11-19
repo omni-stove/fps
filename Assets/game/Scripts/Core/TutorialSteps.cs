@@ -30,6 +30,9 @@ namespace Shooter.Core
         private readonly int _hitsRequired;
         private readonly float _teleportMeters;
 
+        private static readonly IReadOnlyList<TutorialStep> _orderWithoutCover = Without(TutorialStep.Cover);
+
+        private IReadOnlyList<TutorialStep> _steps = Order;
         private int _index;
         private float _movedMeters;
         private float _aimedSeconds;
@@ -73,7 +76,10 @@ namespace Shooter.Core
 
         public int HitsRequired => _hitsRequired;
 
-        public bool IsComplete => _index >= Order.Count;
+        // ルールで切った動作の段は、終えられないので含めない。
+        public IReadOnlyList<TutorialStep> Steps => _steps;
+
+        public bool IsComplete => _index >= _steps.Count;
 
         public int CurrentIndex => _index;
 
@@ -86,7 +92,7 @@ namespace Shooter.Core
                     throw new InvalidOperationException("the tutorial is complete; there is no current step");
                 }
 
-                return Order[_index];
+                return _steps[_index];
             }
         }
 
@@ -139,8 +145,22 @@ namespace Shooter.Core
 
         public void Restart()
         {
-            _index = 0;
-            ResetCounts();
+            Restart(Order);
+        }
+
+        public void Restart(ActionRules actions)
+        {
+            Restart(OrderFor(actions));
+        }
+
+        public static IReadOnlyList<TutorialStep> OrderFor(ActionRules actions)
+        {
+            if (actions == null)
+            {
+                throw new ArgumentNullException(nameof(actions));
+            }
+
+            return actions.Cover == Cover.On ? Order : _orderWithoutCover;
         }
 
         public static string JoinDirectionalKeys(IReadOnlyList<string> keys)
@@ -199,6 +219,27 @@ namespace Shooter.Core
                 default:
                     throw new InvalidOperationException("unknown tutorial step " + Current);
             }
+        }
+
+        private void Restart(IReadOnlyList<TutorialStep> steps)
+        {
+            _steps = steps;
+            _index = 0;
+            ResetCounts();
+        }
+
+        private static TutorialStep[] Without(TutorialStep removed)
+        {
+            var steps = new List<TutorialStep>(Order.Count);
+            foreach (var step in Order)
+            {
+                if (step != removed)
+                {
+                    steps.Add(step);
+                }
+            }
+
+            return steps.ToArray();
         }
 
         private void ResetCounts()

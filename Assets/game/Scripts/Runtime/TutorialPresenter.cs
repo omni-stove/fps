@@ -163,10 +163,15 @@ namespace Shooter.Runtime
 
             _deviceActions = ResolveDeviceActions();
             _device = Gamepad.current != null && Keyboard.current == null ? InputDeviceKind.Gamepad : InputDeviceKind.KeyboardMouse;
-            Begin(world.ActionReader);
+            Begin(world.ActionReader, world.Rules.Actions);
         }
 
         public void Begin(PlayerActionReader reader)
+        {
+            Begin(reader, null);
+        }
+
+        public void Begin(PlayerActionReader reader, ActionRules actions)
         {
             if (reader == null)
             {
@@ -176,7 +181,15 @@ namespace Shooter.Runtime
             Unsubscribe();
             _reader = reader;
             _weapon = reader.Weapon;
-            _steps.Restart();
+            if (actions != null)
+            {
+                _steps.Restart(actions);
+            }
+            else
+            {
+                _steps.Restart();
+            }
+
             _hasLastPosition = false;
             _pendingHits = 0;
             _reloadStarted = false;

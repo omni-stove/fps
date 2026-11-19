@@ -34,11 +34,12 @@ namespace Shooter.Server.Tests
         {
             var spec = new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f);
 
-            Assert.That(spec.CoverMaxEnterDistance, Is.EqualTo(1f));
+            Assert.That(spec.CoverMaxEnterDistance, Is.EqualTo(4f));
             Assert.That(spec.CoverMaxEnterAngleDegrees, Is.EqualTo(45f));
             Assert.That(spec.CoverLowWallHeight, Is.EqualTo(1.1f));
             Assert.That(spec.CoverPeekSideDistance, Is.EqualTo(0.6f));
             Assert.That(spec.CoverEnterSeconds, Is.EqualTo(0.15f));
+            Assert.That(spec.CoverEnterSpeed, Is.EqualTo(8f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.2f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.15f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.3f));
@@ -53,6 +54,8 @@ namespace Shooter.Server.Tests
         [TestCase("coverLowWallHeight", float.NaN)]
         [TestCase("coverPeekSideDistance", -0.1f)]
         [TestCase("coverEnterSeconds", 0f)]
+        [TestCase("coverEnterSpeed", 0f)]
+        [TestCase("coverEnterSpeed", float.PositiveInfinity)]
         [TestCase("coverBackHoldSeconds", -0.1f)]
         [TestCase("coverPeekSlideSeconds", 0f)]
         [TestCase("ladderTopEntryDepth", -0.1f)]
@@ -75,6 +78,7 @@ namespace Shooter.Server.Tests
 
             Assert.That(text, Does.Contain("\"coverMaxEnterDistance\": 2"));
             Assert.That(text, Does.Contain("\"ladderMinApproachSpeed\": 1.5"));
+            Assert.That(text, Does.Contain("\"coverEnterSpeed\": 3"));
             AssertTuned(read);
         }
 
@@ -93,6 +97,7 @@ namespace Shooter.Server.Tests
             Assert.That(read.CoverLowWallHeight, Is.EqualTo(MotorSpec.DefaultCoverLowWallHeight));
             Assert.That(read.CoverPeekSideDistance, Is.EqualTo(MotorSpec.DefaultCoverPeekSideDistance));
             Assert.That(read.CoverEnterSeconds, Is.EqualTo(MotorSpec.DefaultCoverEnterSeconds));
+            Assert.That(read.CoverEnterSpeed, Is.EqualTo(MotorSpec.DefaultCoverEnterSpeed));
             Assert.That(read.CoverBackHoldSeconds, Is.EqualTo(MotorSpec.DefaultCoverBackHoldSeconds));
             Assert.That(read.CoverPeekSlideSeconds, Is.EqualTo(MotorSpec.DefaultCoverPeekSlideSeconds));
             Assert.That(read.LadderTopEntryDepth, Is.EqualTo(MotorSpec.DefaultLadderTopEntryDepth));
@@ -103,6 +108,7 @@ namespace Shooter.Server.Tests
         [TestCase("{\"motor\": {\"coverMaxEnterDistance\": -1}}", "motor.coverMaxEnterDistance")]
         [TestCase("{\"motor\": {\"coverMaxEnterAngleDegrees\": 200}}", "motor.coverMaxEnterAngleDegrees")]
         [TestCase("{\"motor\": {\"coverEnterSeconds\": 0}}", "motor.coverEnterSeconds")]
+        [TestCase("{\"motor\": {\"coverEnterSpeed\": 0}}", "motor.coverEnterSpeed")]
         [TestCase("{\"motor\": {\"coverPeekSlideSeconds\": 0}}", "motor.coverPeekSlideSeconds")]
         [TestCase("{\"motor\": {\"ladderMinApproachDot\": 2}}", "motor.ladderMinApproachDot")]
         [TestCase("{\"motor\": {\"ladderTopEntryDepth\": -1}}", "motor.ladderTopEntryDepth")]
@@ -129,14 +135,14 @@ namespace Shooter.Server.Tests
             Assert.That(got.Motor.Prone.DiveSeconds, Is.EqualTo(ProneSpec.DefaultDiveSeconds));
         }
 
-        [TestCase(1.5f)]
-        [TestCase(1.9f)]
+        [TestCase(4.5f)]
+        [TestCase(5.9f)]
         public void AWallBeyondTheDefaultEnterDistanceCanBeEnteredWithALongerOne(float distance)
         {
             var sample = new CoverWallSample(distance, _wallNormal, 2f, true, true);
 
-            Assert.That(CoverProbe.Evaluate(sample, Vector3.UnitZ, MotorSpec.Default).CanEnter, Is.False, "the default reaches 1 m");
-            Assert.That(CoverProbe.Evaluate(sample, Vector3.UnitZ, SpecWith("coverMaxEnterDistance", 2f)).CanEnter, Is.True);
+            Assert.That(CoverProbe.Evaluate(sample, Vector3.UnitZ, MotorSpec.Default).CanEnter, Is.False, "the default reaches 4 m");
+            Assert.That(CoverProbe.Evaluate(sample, Vector3.UnitZ, SpecWith("coverMaxEnterDistance", 6f)).CanEnter, Is.True);
         }
 
         [Test]
@@ -169,7 +175,7 @@ namespace Shooter.Server.Tests
 
             state.Step(false, false, Vector2.Zero, wall, 0.25f);
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Entering), "0.25 s is half of 0.5 s");
-            Assert.That(state.EnterProgress, Is.EqualTo(0.5f).Within(1e-5f));
+            Assert.That(state.EnterStep, Is.EqualTo(0.25f).Within(1e-5f), "half of the 0.5 m gap in half of the time");
             state.Step(false, false, Vector2.Zero, wall, 0.25f);
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
 
@@ -189,13 +195,59 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void TheSimulationEntersAWall1Point5MetersAwayOnlyWithA2MeterEnterDistance()
+        public void TheSimulationEntersAWall4Point5MetersAwayOnlyWithA6MeterEnterDistance()
         {
             AddFloor();
-            AddBox(new Vector3(0f, 1f, 1.5f + 0.2f), new Vector3(2f, 1f, 0.2f));
+            AddBox(new Vector3(0f, 1f, 4.5f + 0.2f), new Vector3(2f, 1f, 0.2f));
 
-            Assert.That(PressCover(MotorSpec.Default).Cover.IsInCover, Is.False, "the default reaches 1 m");
-            Assert.That(PressCover(SpecWith("coverMaxEnterDistance", 2f)).Cover.IsInCover, Is.True);
+            Assert.That(PressCover(MotorSpec.Default).Cover.IsInCover, Is.False, "the default reaches 4 m");
+            Assert.That(PressCover(SpecWith("coverMaxEnterDistance", 6f)).Cover.IsInCover, Is.True);
+        }
+
+        // 3 m 先の壁まで、体の半径 0.5 m と隙間 0.05 m を残した 2.45 m を走る。1 tick 目は入るだけで動かない。
+        [TestCase(MotorSpec.DefaultCoverEnterSpeed, 20)]
+        [TestCase(4f, 38)]
+        public void TheSimulationRunsToAFarWallAtTheConfiguredSpeed(float speed, int expectedTicks)
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1f, 3f + 0.2f), new Vector3(2f, 1f, 0.2f));
+            var simulation = NewSimulation(SpecWith("coverEnterSpeed", speed));
+            var state = simulation.Step(Settle(simulation), Input(cover: true));
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.Entering));
+            var ticks = 1;
+            while (state.Cover.Snapshot.Phase == CoverPhase.Entering && ticks < 600)
+            {
+                state = simulation.Step(state, Input());
+                ticks++;
+            }
+
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.In));
+            Assert.That(ticks, Is.EqualTo(expectedTicks).Within(1));
+            Assert.That(state.Position.Z, Is.EqualTo(3f - 0.55f).Within(0.03f), "stops at the hold distance from the wall");
+        }
+
+        // 幅 1 m の柱へ 3 m 手前・40° で向いて入る。寄せる間の測り直しが柱の横を抜けると、入った直後に lost で出てしまう。
+        [Test]
+        public void TheSimulationRunsToANarrowPillarEnteredFromASlant()
+        {
+            var yaw = 40f * MathF.PI / 180f;
+            var hitX = 3f * MathF.Tan(yaw);
+            AddFloor();
+            AddBox(new Vector3(hitX, 1f, 3f + 0.2f), new Vector3(0.5f, 1f, 0.2f));
+            var simulation = NewSimulation(MotorSpec.Default);
+            var state = simulation.Step(Settle(simulation), Input(cover: true, yaw: yaw));
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.Entering));
+            Assert.That(state.Cover.AppliedPeek, Is.EqualTo(-hitX).Within(1e-3f), "the body is left of the hit point");
+
+            for (var i = 0; i < 60 && state.Cover.Snapshot.Phase == CoverPhase.Entering; i++)
+            {
+                state = simulation.Step(state, Input(yaw: yaw));
+            }
+
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.In), "the pillar is still found while running to it");
+            Assert.That(state.Position.X, Is.EqualTo(hitX).Within(0.05f), "ends in front of the point it aimed at");
+            Assert.That(state.Position.Z, Is.EqualTo(3f - 0.55f).Within(0.03f));
+            Assert.That(state.Cover.AppliedPeek, Is.EqualTo(0f).Within(0.05f));
         }
 
         [Test]
@@ -254,6 +306,7 @@ namespace Shooter.Server.Tests
                 coverLowWallHeight: 1.4f,
                 coverPeekSideDistance: 0.9f,
                 coverEnterSeconds: 0.4f,
+                coverEnterSpeed: 3f,
                 coverBackHoldSeconds: 0.7f,
                 coverPeekSlideSeconds: 0.25f,
                 ladderTopEntryDepth: 0.6f,
@@ -268,6 +321,7 @@ namespace Shooter.Server.Tests
             Assert.That(read.CoverLowWallHeight, Is.EqualTo(1.4f));
             Assert.That(read.CoverPeekSideDistance, Is.EqualTo(0.9f));
             Assert.That(read.CoverEnterSeconds, Is.EqualTo(0.4f));
+            Assert.That(read.CoverEnterSpeed, Is.EqualTo(3f));
             Assert.That(read.CoverBackHoldSeconds, Is.EqualTo(0.7f));
             Assert.That(read.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
             Assert.That(read.LadderTopEntryDepth, Is.EqualTo(0.6f));
@@ -290,6 +344,7 @@ namespace Shooter.Server.Tests
                 coverLowWallHeight: Pick("coverLowWallHeight", MotorSpec.DefaultCoverLowWallHeight),
                 coverPeekSideDistance: Pick("coverPeekSideDistance", MotorSpec.DefaultCoverPeekSideDistance),
                 coverEnterSeconds: Pick("coverEnterSeconds", MotorSpec.DefaultCoverEnterSeconds),
+                coverEnterSpeed: Pick("coverEnterSpeed", MotorSpec.DefaultCoverEnterSpeed),
                 coverBackHoldSeconds: Pick("coverBackHoldSeconds", MotorSpec.DefaultCoverBackHoldSeconds),
                 coverPeekSlideSeconds: Pick("coverPeekSlideSeconds", MotorSpec.DefaultCoverPeekSlideSeconds),
                 ladderTopEntryDepth: Pick("ladderTopEntryDepth", MotorSpec.DefaultLadderTopEntryDepth),
@@ -310,9 +365,9 @@ namespace Shooter.Server.Tests
                 file.CatalogName, file.Catalog, motor);
         }
 
-        private static CharacterMotorInput Input(bool cover = false, bool aim = false)
+        private static CharacterMotorInput Input(bool cover = false, bool aim = false, float yaw = 0f)
         {
-            return new CharacterMotorInput(Vector2.Zero, 0f, false, false, false, false, cover, aim, false, false);
+            return new CharacterMotorInput(Vector2.Zero, yaw, false, false, false, false, cover, aim, false, false);
         }
 
         private CharacterMotorState PressCover(MotorSpec spec)

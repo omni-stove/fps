@@ -10,16 +10,17 @@ namespace Shooter.Core.Tests
 
         private static readonly Vector3 _wallNormal = new Vector3(0f, 0f, -1f);
 
-        private static CoverProbeResult Wall(CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None)
+        private static CoverProbeResult Wall(CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None, float distance = 0.55f)
         {
-            return new CoverProbeResult(true, true, height, edges, _wallNormal, 0.55f);
+            return new CoverProbeResult(true, true, height, edges, _wallNormal, distance);
         }
 
         [Test]
         public void RestoringACaptureReplaysTheSameTransitions()
         {
             var original = new CoverState(MotorSpec.Default);
-            var pillar = Wall(CoverHeight.High, CoverEdge.Left | CoverEdge.Right);
+            // 壁までの距離を測り直さないので、1 フレームの寄せ (8 m/s で 0.13 m) で寄せ切れる 0.1 m の隙間にする
+            var pillar = Wall(CoverHeight.High, CoverEdge.Left | CoverEdge.Right, 0.15f);
             original.Step(true, false, Vector2.Zero, pillar, _frame);
             original.Step(false, false, new Vector2(-1f, 0f), pillar, _frame);
 

@@ -35,8 +35,8 @@ namespace Shooter.Core.Tests
 
         [TestCase(0f)]
         [TestCase(0.5f)]
-        [TestCase(1.0f)]
-        public void EntersWithinOneMetre(float distance)
+        [TestCase(4.0f)]
+        public void EntersWithinTheDefaultFourMetres(float distance)
         {
             var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 
@@ -45,9 +45,9 @@ namespace Shooter.Core.Tests
             Assert.That(result.Distance, Is.EqualTo(distance));
         }
 
-        [TestCase(1.01f)]
-        [TestCase(5f)]
-        public void WallsFartherThanOneMetreAreOutOfReach(float distance)
+        [TestCase(4.01f)]
+        [TestCase(6f)]
+        public void WallsFartherThanFourMetresAreOutOfReach(float distance)
         {
             var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 
@@ -74,6 +74,18 @@ namespace Shooter.Core.Tests
 
             Assert.That(result.CanEnter, Is.False);
             Assert.That(result.IsWall, Is.True, "the wall is still there, only the angle is off");
+        }
+
+        // 壁の法線は -Z なので壁に沿った右は +X。右へ 40° 向いて 3 m 先に当たると、当たり点は体の 3 tan 40° 右にあり、体は左 (負) へずれている。
+        [Test]
+        public void EnterSideOffsetIsHowFarTheBodyIsBesideTheHitPoint()
+        {
+            var normal = new Vector3(0f, 0f, -1f);
+
+            Assert.That(CoverProbe.EnterSideOffset(Facing(0f), normal, 3f), Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(CoverProbe.EnterSideOffset(Facing(40f), normal, 3f / (float)Math.Cos(40.0 * Math.PI / 180.0)), Is.EqualTo(-3f * (float)Math.Tan(40.0 * Math.PI / 180.0)).Within(1e-4f));
+            Assert.That(CoverProbe.EnterSideOffset(Facing(-30f), normal, 2f), Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(CoverProbe.EnterSideOffset(Vector3.UnitY, normal, 2f), Is.EqualTo(0f));
         }
 
         [Test]

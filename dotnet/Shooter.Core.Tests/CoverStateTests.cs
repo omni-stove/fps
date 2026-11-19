@@ -14,7 +14,12 @@ namespace Shooter.Core.Tests
 
         private static CoverProbeResult Wall(CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None, bool canEnter = true)
         {
-            return new CoverProbeResult(true, canEnter, height, edges, _wallNormal, 0.55f);
+            return WallAt(0.55f, height, edges, canEnter);
+        }
+
+        private static CoverProbeResult WallAt(float distance, CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None, bool canEnter = true)
+        {
+            return new CoverProbeResult(true, canEnter, height, edges, _wallNormal, distance);
         }
 
         // 入って寄せ終わった (中の) 状態にする。
@@ -35,7 +40,8 @@ namespace Shooter.Core.Tests
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Out));
             Assert.That(state.IsInCover, Is.False);
             Assert.That(state.IsPeeking, Is.False);
-            Assert.That(state.EnterProgress, Is.EqualTo(0f));
+            Assert.That(state.EnterStep, Is.EqualTo(0f));
+            Assert.That(state.EnterTurn, Is.EqualTo(0f));
             Assert.That(state.LastExitReason, Is.Null);
         }
 
@@ -83,19 +89,83 @@ namespace Shooter.Core.Tests
             Assert.That(state.IsInCover, Is.False);
         }
 
+        // 0.55 m 先の壁で半径 0 なら隙間は 0.5 m。0.1 / 0.15 秒で 1/3 m 寄せ、残りは最後の Step で寄せ切る。
         [Test]
-        public void EnteringTakesEnterSecondsBeforeBeingIn()
+        public void ANearWallTakesEnterSecondsBeforeBeingIn()
         {
             var state = new CoverState(MotorSpec.Default);
-            state.Step(true, false, _noMove, Wall(), 0f);
+            state.Step(true, false, _noMove, WallAt(0.55f), 0f);
 
-            state.Step(false, false, _noMove, Wall(), 0.1f);
+            state.Step(false, false, _noMove, WallAt(0.55f), 0.1f);
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.Entering));
-            Assert.That(state.EnterProgress, Is.EqualTo(0.1f / MotorSpec.DefaultCoverEnterSeconds).Within(1e-5f));
+            Assert.That(state.EnterStep, Is.EqualTo(0.5f / 3f * 2f).Within(1e-5f));
+            Assert.That(state.EnterTurn, Is.EqualTo(2f / 3f).Within(1e-5f));
 
-            Assert.That(state.Step(false, false, _noMove, Wall(), 0.06f), Is.EqualTo(CoverTransition.None));
+            Assert.That(state.Step(false, false, _noMove, WallAt(0.55f - (1f / 3f)), 0.06f), Is.EqualTo(CoverTransition.None));
             Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
-            Assert.That(state.EnterProgress, Is.EqualTo(1f));
+            Assert.That(state.EnterStep, Is.EqualTo(0.5f / 3f).Within(1e-5f));
+            Assert.That(state.EnterTurn, Is.EqualTo(1f));
+        }
+
+        // 3.05 m 先の壁の隙間 3 m を、既定の 8 m/s で 0.1 秒ごとに 0.8 m ずつ寄せる。
+        [Test]
+        public void AFarWallIsRunToAtTheEnterSpeed()
+        {
+            var state = new CoverState(MotorSpec.Default);
+            state.Step(true, false, _noMove, WallAt(3.05f), 0f);
+
+            var distance = 3.05f;
+            var steps = 0;
+            while (state.Phase == CoverPhase.Entering && steps < 100)
+            {
+                state.Step(false, false, _noMove, WallAt(distance), 0.1f);
+                distance -= state.EnterStep;
+                steps++;
+                if (state.Phase == CoverPhase.Entering)
+                {
+                    Assert.That(state.EnterStep, Is.EqualTo(0.8f).Within(1e-5f));
+                }
+            }
+
+            Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
+            Assert.That(steps, Is.EqualTo(4), "3 m at 0.8 m per step");
+            Assert.That(distance, Is.EqualTo(0.05f).Within(1e-4f), "stops at the wall gap");
+        }
+
+        [Test]
+        public void TheBodyRadiusMovesTheStopPoint()
+        {
+            var state = new CoverState(MotorSpec.Default) { BodyRadius = 0.4f };
+            state.Step(true, false, _noMove, WallAt(1f), 0f);
+
+            state.Step(false, false, _noMove, WallAt(1f), MotorSpec.DefaultCoverEnterSeconds);
+
+            Assert.That(state.Phase, Is.EqualTo(CoverPhase.In));
+            Assert.That(state.EnterStep, Is.EqualTo(0.55f).Within(1e-5f), "1 m minus the 0.4 m radius and the 0.05 m gap");
+            Assert.Throws<ArgumentOutOfRangeException>(() => state.BodyRadius = -0.1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => state.BodyRadius = float.NaN);
+        }
+
+        // 壁が近づかない (体が何かに引っかかって動けない) まま、0.15 + 4 / 8 = 0.65 秒たつと出る。
+        [Test]
+        public void EnteringThatCannotCloseTheGapExitsAsBlocked()
+        {
+            var state = new CoverState(MotorSpec.Default);
+            state.Step(true, false, _noMove, WallAt(3f), 0f);
+
+            var transition = CoverTransition.None;
+            var steps = 0;
+            while (transition == CoverTransition.None && steps < 100)
+            {
+                transition = state.Step(false, false, _noMove, WallAt(3f), 0.05f);
+                steps++;
+            }
+
+            Assert.That(state.EnterTimeoutSeconds, Is.EqualTo(0.65f).Within(1e-5f));
+            Assert.That(transition, Is.EqualTo(CoverTransition.Exit));
+            Assert.That(steps, Is.EqualTo(13).Within(1));
+            Assert.That(state.LastExitReason, Is.EqualTo(CoverState.ReasonBlocked));
+            Assert.That(state.FormatLog(transition), Is.EqualTo("[Cover] exit blocked"));
         }
 
         [Test]

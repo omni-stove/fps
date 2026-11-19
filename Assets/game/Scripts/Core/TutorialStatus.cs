@@ -19,8 +19,8 @@ namespace Shooter.Core
             }
 
             Step = IsComplete ? default : steps.Current;
-            StepNumber = Math.Min(steps.CurrentIndex + 1, TutorialSteps.Order.Count);
-            StepCount = TutorialSteps.Order.Count;
+            StepNumber = Math.Min(steps.CurrentIndex + 1, steps.Steps.Count);
+            StepCount = steps.Steps.Count;
             Hits = steps.Hits;
             HitsRequired = steps.HitsRequired;
             ActionPath = IsComplete ? null : actionPath;

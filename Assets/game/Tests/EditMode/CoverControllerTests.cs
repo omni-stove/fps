@@ -173,10 +173,34 @@ namespace Shooter.Tests.EditMode
             Assert.That(Mathf.Abs(Mathf.DeltaAngle(_body.transform.eulerAngles.y, 0f)), Is.LessThan(0.1f));
         }
 
+        // 幅 1 m の柱へ 3 m 手前・40° で向いて入る。寄せる間の測り直しが柱の横を抜けると、入った直後に lost で出てしまう。
+        [Test]
+        public void RunsToANarrowPillarEnteredFromASlant()
+        {
+            var hitX = 3f * Mathf.Tan(40f * Mathf.Deg2Rad);
+            BuildWall(2f, hitX - 0.5f, hitX + 0.5f, faceZ: 3f);
+            _body.transform.rotation = Quaternion.Euler(0f, 40f, 0f);
+            Physics.SyncTransforms();
+
+            Frame(true, false, Vector2.zero);
+            Assert.That(_cover.Phase, Is.EqualTo(CoverPhase.Entering));
+            Assert.That(_cover.AppliedPeekOffset, Is.EqualTo(-hitX).Within(0.01f), "the body is left of the hit point");
+            for (var i = 0; i < 120 && _cover.Phase == CoverPhase.Entering; i++)
+            {
+                Frame(false, false, Vector2.zero);
+                Physics.SyncTransforms();
+            }
+
+            Assert.That(_cover.Phase, Is.EqualTo(CoverPhase.In), "the pillar is still found while running to it");
+            Assert.That(_body.transform.position.x, Is.EqualTo(hitX).Within(0.05f), "ends in front of the point it aimed at");
+            Assert.That(WallDistance(), Is.EqualTo(CoverProbe.HoldDistance(_radius)).Within(_skinWidth + 0.01f));
+            Assert.That(_cover.AppliedPeekOffset, Is.EqualTo(0f).Within(0.05f));
+        }
+
         [Test]
         public void DoesNotEnterWhenTheWallIsTooFar()
         {
-            BuildWall(2f, -2f, 2f, faceZ: 1.2f);
+            BuildWall(2f, -2f, 2f, faceZ: 4.5f);
 
             _cover.Tick(true, false, Vector2.zero, _frame);
 

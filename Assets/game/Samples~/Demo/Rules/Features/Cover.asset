@@ -56,4 +56,4 @@ MonoBehaviour:
   _idleKickSeconds: 0
   _maxWeapons: 2
   _reloadMode: 0
-  _viewMode: 0
+  _viewMode: 1

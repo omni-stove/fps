@@ -258,6 +258,7 @@ namespace Shooter.Runtime
             }
 
             _state.Spec = _player.Motor.Spec;
+            _state.BodyRadius = BodyRadius();
             var wasInCover = _state.IsInCover;
             if (!wasInCover && (!coverPressed || _player.IsDodging || _player.IsVaulting || _player.IsMantling))
             {
@@ -265,7 +266,6 @@ namespace Shooter.Runtime
             }
 
             _lastProbe = wasInCover ? ProbeHeldWall() : ProbeFront();
-            var progressBefore = _state.EnterProgress;
             var transition = _state.Step(coverPressed, aimHeld, move.ToNumerics(), _lastProbe, deltaSeconds);
             Report(transition);
 
@@ -283,14 +283,17 @@ namespace Shooter.Runtime
             {
                 _savedShoulder = _rig != null ? _rig.Shoulder : ShoulderSide.Right;
                 _shoulderOverridden = false;
-                _appliedPeek = 0f;
+                _appliedPeek = CoverProbe.EnterSideOffset(Flatten(transform.forward).ToNumerics(), _state.Normal, _lastProbe.Distance);
             }
-            else if (_state.Phase == CoverPhase.Entering || (progressBefore < 1f && _state.EnterProgress >= 1f))
+            else if (_state.EnterTurn > 0f)
             {
-                SlideIn(progressBefore, _state.EnterProgress);
+                SlideIn();
+            }
+            else
+            {
+                SlidePeek(deltaSeconds);
             }
 
-            SlidePeek(deltaSeconds);
             UpdateShoulder();
         }
 
@@ -347,25 +350,20 @@ namespace Shooter.Runtime
             return willCrouch ? 1f : Mathf.Min(1f, spec.CrouchSpeed / spec.WalkSpeed);
         }
 
-        // 寄せ終わる時刻までの残りを等分して進むので、最後のフレームでちょうど目標の距離と向きになる。
-        private void SlideIn(float progressBefore, float progressAfter)
+        // 横のずれは壁へ寄せるのと同じ割合で詰め、着いたときに入った時の当たり点の正面に来るようにする。
+        private void SlideIn()
         {
-            if (progressBefore >= 1f)
-            {
-                return;
-            }
-
-            var fraction = Mathf.Clamp01((progressAfter - progressBefore) / (1f - progressBefore));
-            if (fraction <= 0f)
-            {
-                return;
-            }
-
             var normal = _state.Normal.ToUnity();
-            var hold = CoverProbe.HoldDistance(BodyRadius());
-            var gap = _lastProbe.Distance - hold;
-            _player.Controller.Move(-normal * (gap * fraction));
-            TurnTowards(-normal, fraction);
+            var right = CoverProbe.RightAlong(_state.Normal).ToUnity();
+            var delta = (-normal * _state.EnterStep) + (right * (-_appliedPeek * _state.EnterTurn));
+            if (delta != Vector3.zero)
+            {
+                var before = transform.position;
+                _player.Controller.Move(delta);
+                _appliedPeek += Vector3.Dot(transform.position - before, right);
+            }
+
+            TurnTowards(-normal, _state.EnterTurn);
         }
 
         private void SlidePeek(float deltaSeconds)

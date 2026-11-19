@@ -26,8 +26,8 @@ MonoBehaviour:
   _downedBleedoutSeconds: 15
   _downedHealthFraction: 0.3
   _reviveSeconds: 3
-  _cover: 1
-  _blindFire: 1
+  _cover: 0
+  _blindFire: 0
   _activeReload: 1
   _dodge: 0
   _vault: 0

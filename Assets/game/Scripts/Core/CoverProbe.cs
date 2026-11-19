@@ -86,6 +86,19 @@ namespace Shooter.Core
             return result.IsAtRightEdge ? peekSideDistance : 0f;
         }
 
+        // 寄せる間は体から法線の逆向きに測り直すので、斜めから入ると当たり点から横へずれた所を測ってしまう。
+        // このずれを AppliedPeek (測る位置から体が右へ出ている量) として持てば、測り直しは当たり点の正面から撃てる。
+        public static float EnterSideOffset(Vector3 facing, Vector3 normal, float distance)
+        {
+            var forward = Horizontal(facing);
+            if (forward == Vector3.Zero || !IsFinite(distance))
+            {
+                return 0f;
+            }
+
+            return -Vector3.Dot(forward * distance, RightAlong(normal));
+        }
+
         public static float HoldDistance(float bodyRadius)
         {
             if (!(bodyRadius >= 0f) || float.IsInfinity(bodyRadius))

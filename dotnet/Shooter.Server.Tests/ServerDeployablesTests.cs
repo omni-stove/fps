@@ -15,6 +15,7 @@ namespace Shooter.Server.Tests
         private const string _turretId = "deploy-turret";
         private const string _shieldId = "deploy-shield";
         private const string _decoyId = "deploy-decoy";
+        private const string _beaconId = "deploy-beacon";
         private static readonly DateTime _time = new DateTime(2026, 11, 18, 9, 0, 0, DateTimeKind.Utc);
 
         // 床の上面は y=0.5。Alpha (1 と 3) は x=-5、Bravo (2) は x=5 に出る
@@ -402,6 +403,29 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Contain("[Deploy] net kind=deploy-turret unusable: weapon weapon-missing is not in the rules TeamDeathmatch"));
             Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=1 usable=0 from=memory"));
             Assert.That(_deployables.Place(1, _turretId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
+        }
+
+        [Test]
+        public void ABeaconIsRefusedWithTheReasonAndOtherTypesStayUsable()
+        {
+            var beacon = new DeployType(_beaconId, DeployRole.Beacon, DeployType.DefaultDeploy(DeployRole.Beacon), beacon: BeaconSpec.Default);
+            var shield = new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield));
+            Start(new DeployCatalog(new[] { beacon, shield }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(
+                _log.ToString(),
+                Does.Contain("[Deploy] net kind=deploy-beacon unusable: " + ServerDeployables.BeaconUnsupported));
+            Assert.That(ServerDeployables.BeaconUnsupported, Does.Contain("Beacon").And.Contain("dedicated server"));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=2 usable=1 from=memory"));
+            Assert.That(_deployables.Place(1, _beaconId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
+            Assert.That(_deployables.Count, Is.Zero);
+            Assert.That(Rows(1), Is.Empty, "nothing is sent for a refused beacon");
+
+            Assert.That(_deployables.Place(1, _shieldId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None));
+            Assert.That(_deployables.Count, Is.EqualTo(1));
         }
 
         [Test]

@@ -168,6 +168,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("入力がこの秒数無いプレイヤーをサーバーから切る。0 なら切らない")]
         private float _idleKickSeconds;
 
+        [SerializeField, Min(0.01f), Tooltip("放置で切る何秒前に警告を出すか。切る秒数以上なら数え始めてすぐ警告する")]
+        private float _idleWarningSeconds = GameRules.DefaultIdleWarningSeconds;
+
         [Header("武器")]
         [SerializeField, UnityEngine.Range(0, GameRules.MaxWeaponsLimit), Tooltip("1 人が同時に持てる武器の数。上限で別の武器を拾うと今の武器を落として持ち替える。0 なら上限なし")]
         private int _maxWeapons;
@@ -490,6 +493,12 @@ namespace Shooter.Runtime
             set => _idleKickSeconds = value;
         }
 
+        public float IdleWarningSeconds
+        {
+            get => _idleWarningSeconds;
+            set => _idleWarningSeconds = value;
+        }
+
         public int MaxWeapons
         {
             get => _maxWeapons;
@@ -590,7 +599,8 @@ namespace Shooter.Runtime
                     _textChat,
                     _spectating,
                     // 空の配列を null と同じく既定へ戻さず断るのは、インスペクターで消し切ったことに気づけるようにするため。
-                    _respawnAnchors ?? Array.Empty<RespawnAnchor>());
+                    _respawnAnchors ?? Array.Empty<RespawnAnchor>(),
+                    _idleWarningSeconds);
             }
             catch (ArgumentException e)
             {
@@ -638,6 +648,7 @@ namespace Shooter.Runtime
             _objective = rules.Objective;
             _minPlayers = rules.MinPlayers;
             _idleKickSeconds = rules.IdleKickSeconds;
+            _idleWarningSeconds = rules.IdleWarningSeconds;
             _maxWeapons = rules.MaxWeapons;
             _reloadMode = rules.ReloadMode;
             _viewMode = rules.ViewMode;

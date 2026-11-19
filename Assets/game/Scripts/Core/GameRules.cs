@@ -33,6 +33,8 @@ namespace Shooter.Core
         // Core は Runtime の Damageable.DefaultMaxHealth を参照できないので同じ値を持ち、揃っていることは EditMode のテストで確かめる。
         public const int DefaultPlayerMaxHealth = 100;
 
+        public const float DefaultIdleWarningSeconds = 15f;
+
         public FriendlyFire FriendlyFire { get; }
 
         public RespawnMode RespawnMode { get; }
@@ -66,6 +68,8 @@ namespace Shooter.Core
         public int MinPlayers { get; }
 
         public float IdleKickSeconds { get; }
+
+        public float IdleWarningSeconds { get; }
 
         public int MaxWeapons { get; }
 
@@ -112,7 +116,8 @@ namespace Shooter.Core
             Streaks streaks = Streaks.On,
             TextChat textChat = TextChat.On,
             Spectating spectating = Spectating.On,
-            IReadOnlyList<RespawnAnchor> respawnAnchor = null)
+            IReadOnlyList<RespawnAnchor> respawnAnchor = null,
+            float idleWarningSeconds = DefaultIdleWarningSeconds)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -190,6 +195,12 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(idleKickSeconds), idleKickSeconds, "idleKickSeconds must be a non-negative finite number");
             }
 
+            // 放置で切らないルール (idleKickSeconds が 0) でも検査するのは、後から切る秒だけ差し替えた値でも警告の秒が必ず使える状態にしておくため。
+            if (!(idleWarningSeconds > 0f) || float.IsInfinity(idleWarningSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(idleWarningSeconds), idleWarningSeconds, "idleWarningSeconds must be positive and finite");
+            }
+
             if (maxWeapons < 0 || maxWeapons > MaxWeaponsLimit)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxWeapons), maxWeapons, "maxWeapons must be between 0 and " + MaxWeaponsLimit);
@@ -244,6 +255,7 @@ namespace Shooter.Core
             Objective = objective;
             MinPlayers = minPlayers;
             IdleKickSeconds = idleKickSeconds;
+            IdleWarningSeconds = idleWarningSeconds;
             MaxWeapons = maxWeapons;
             ReloadMode = reloadMode;
             ViewMode = viewMode;
@@ -297,6 +309,8 @@ namespace Shooter.Core
         public GameRules WithMinPlayers(int value) => Copy(minPlayers: value);
 
         public GameRules WithIdleKickSeconds(float value) => Copy(idleKickSeconds: value);
+
+        public GameRules WithIdleWarningSeconds(float value) => Copy(idleWarningSeconds: value);
 
         public GameRules WithMaxWeapons(int value) => Copy(maxWeapons: value);
 
@@ -389,7 +403,8 @@ namespace Shooter.Core
             Streaks? streaks = null,
             TextChat? textChat = null,
             Spectating? spectating = null,
-            IReadOnlyList<RespawnAnchor> respawnAnchor = null)
+            IReadOnlyList<RespawnAnchor> respawnAnchor = null,
+            float? idleWarningSeconds = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -417,7 +432,8 @@ namespace Shooter.Core
                 streaks ?? Streaks,
                 textChat ?? TextChat,
                 spectating ?? Spectating,
-                respawnAnchor ?? RespawnAnchors);
+                respawnAnchor ?? RespawnAnchors,
+                idleWarningSeconds ?? IdleWarningSeconds);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Text;
 
 namespace Shooter.Core
@@ -19,7 +20,8 @@ namespace Shooter.Core
                 + " read '" + (string.IsNullOrEmpty(source) ? "-" : source) + "'"
                 + " emote=" + rules.Actions.Emote
                 + " stamina=" + rules.Actions.Stamina
-                + " respawnAnchor=" + Anchors(rules);
+                + " respawnAnchor=" + Anchors(rules)
+                + " idleWarningSeconds=" + rules.IdleWarningSeconds.ToString("0.##", CultureInfo.InvariantCulture);
         }
 
         private static string Anchors(GameRules rules)

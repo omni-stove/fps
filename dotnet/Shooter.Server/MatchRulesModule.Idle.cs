@@ -5,7 +5,8 @@ using Shooter.Protocol;
 
 namespace Shooter.Server
 {
-    // 入力が GameRules.IdleKickSeconds 秒無い人を切る。試合中で、生きていてダウンしていない間だけ数える
+    // 入力が GameRules.IdleKickSeconds 秒無い人を切り、残りが GameRules.IdleWarningSeconds 秒になったら警告する。
+    // 試合中で、生きていてダウンしていない間と、死んで味方を観戦している間だけ数える
     internal sealed partial class MatchRulesModule
     {
         private const InputButtons _pressedButtons = InputButtons.Jump | InputButtons.Cover | InputButtons.Dodge;
@@ -39,7 +40,7 @@ namespace Shooter.Server
                 return;
             }
 
-            _idleTracker = new IdleTracker(seconds);
+            _idleTracker = new IdleTracker(seconds, rules.IdleWarningSeconds);
             _log.WriteLine(MatchLog.Tag + " idle kick seconds=" + seconds.ToString("0.##", CultureInfo.InvariantCulture)
                 + " warning=" + _idleTracker.WarningSeconds.ToString("0.##", CultureInfo.InvariantCulture));
         }
@@ -118,11 +119,21 @@ namespace Shooter.Server
                     continue;
                 }
 
-                var counted = _session.State == GameModeState.Playing && _session.HasPlayer(playerId)
-                    && _session.IsAlive(playerId) && !_session.IsDowned(playerId);
-                ReportIdle(playerId, _idleTracker.SetCounting(playerId, counted));
+                ReportIdle(playerId, _idleTracker.SetCounting(playerId, IsIdleCounted(playerId)));
                 ReportIdle(playerId, _idleTracker.Advance(playerId, deltaSeconds));
             }
+        }
+
+        // 死んでいても観戦先を選んでいる人を数えるのは、観戦にしたまま席を離れた人が試合の枠を埋め続けないようにするため。
+        // 観戦せずに出直しを待つ人と倒れている人は自分では戻れないので数えない
+        private bool IsIdleCounted(int playerId)
+        {
+            if (_session.State != GameModeState.Playing || !_session.HasPlayer(playerId) || _session.IsDowned(playerId))
+            {
+                return false;
+            }
+
+            return _session.IsAlive(playerId) || _spectating.ContainsKey(playerId);
         }
 
         private void ReportIdle(int playerId, IdleChange change)

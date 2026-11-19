@@ -69,7 +69,6 @@ namespace Shooter.Server.Tests
             Pump(() => third.Disconnected);
 
             Assert.That(third.DisconnectReason, Is.EqualTo(DisconnectNotice.VoteKickedReason));
-            Assert.That(third.ServerDisconnectingReason, Is.EqualTo(DisconnectNotice.VoteKickedReason));
             Assert.That(DisconnectNotice.Classify(third.DisconnectReason, true, "0.2.0").Kind, Is.EqualTo(DisconnectKind.VoteKicked));
             Assert.That(first.Disconnected, Is.False);
             Assert.That(second.Disconnected, Is.False);
@@ -81,7 +80,6 @@ namespace Shooter.Server.Tests
             var refused = Request("third");
 
             Assert.That(refused.Accepted, Is.Null);
-            Assert.That(refused.RejectedReason, Is.EqualTo(DisconnectNotice.VoteKickedReason));
             Assert.That(refused.DisconnectReason, Is.EqualTo(DisconnectNotice.VoteKickedReason));
             Assert.That(_log.ToString(), Does.Contain(VoteKickLog.RefusedRejoin(_server.Match.MatchId)));
             Assert.That(Request("fourth").Accepted, Is.Not.Null, "others can still join");

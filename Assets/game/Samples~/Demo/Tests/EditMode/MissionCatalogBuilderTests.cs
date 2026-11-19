@@ -59,7 +59,7 @@ namespace Shooter.Tests.EditMode
         {
             var first = CreateDefinition();
             var secondPath = _folder + "/" + MissionCatalogBuilder.Campaign02Id + ".asset";
-            var second = SceneBuildHelpers.CreateOrUpdateMissionDefinition(
+            var second = MissionDefinitionAssets.CreateOrUpdate(
                 secondPath,
                 d => d.SetObjectives(new[] { new ObjectiveDefinition("reach", "") }));
             var missions = new[]
@@ -148,7 +148,7 @@ namespace Shooter.Tests.EditMode
         public void GivesEachDefinitionItsMissionIdAndKeepsItsAssetName()
         {
             var renamedPath = _folder + "/RenamedCampaign01.asset";
-            var definition = SceneBuildHelpers.CreateOrUpdateMissionDefinition(
+            var definition = MissionDefinitionAssets.CreateOrUpdate(
                 renamedPath,
                 d => d.SetObjectives(new[] { new ObjectiveDefinition("reach", "") }));
             Assert.That(definition.Id, Is.Empty, "a definition made before it had an id");
@@ -208,7 +208,7 @@ namespace Shooter.Tests.EditMode
 
         private MissionDefinition CreateDefinition()
         {
-            return SceneBuildHelpers.CreateOrUpdateMissionDefinition(
+            return MissionDefinitionAssets.CreateOrUpdate(
                 _definitionPath,
                 d => d.SetObjectives(new[] { new ObjectiveDefinition("reach", "") }));
         }

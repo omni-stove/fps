@@ -27,7 +27,6 @@ namespace Shooter.Editor
             new Slot("Motor", typeof(MotorSettings), c => c.Motor, (c, v) => c.Motor = (MotorSettings)v),
             new Slot("WeaponCatalog", typeof(WeaponCatalogAsset), c => c.WeaponCatalog, (c, v) => c.WeaponCatalog = (WeaponCatalogAsset)v),
             new Slot("Loadout", typeof(LoadoutDefinition), c => c.Loadout, (c, v) => c.Loadout = (LoadoutDefinition)v),
-            new Slot("Missions", typeof(MissionCatalog), c => c.Missions, (c, v) => c.Missions = (MissionCatalog)v),
             new Slot("TeamDeathmatch", typeof(TeamDeathmatchDefinition), c => c.TeamDeathmatch, (c, v) => c.TeamDeathmatch = (TeamDeathmatchDefinition)v),
             new Slot("Domination", typeof(DominationDefinition), c => c.Domination, (c, v) => c.Domination = (DominationDefinition)v),
             new Slot("Hardpoint", typeof(HardpointDefinition), c => c.Hardpoint, (c, v) => c.Hardpoint = (HardpointDefinition)v),
@@ -50,7 +49,6 @@ namespace Shooter.Editor
             new Slot("Footsteps", typeof(FootstepSurfaceCatalog), c => c.Footsteps, (c, v) => c.Footsteps = (FootstepSurfaceCatalog)v),
             new Slot("Ragdoll", typeof(RagdollCatalog), c => c.Ragdoll, (c, v) => c.Ragdoll = (RagdollCatalog)v),
             new Slot("Suppression", typeof(SuppressionCatalog), c => c.Suppression, (c, v) => c.Suppression = (SuppressionCatalog)v),
-            new Slot("AwarenessIndicator", typeof(AwarenessIndicatorCatalog), c => c.AwarenessIndicator, (c, v) => c.AwarenessIndicator = (AwarenessIndicatorCatalog)v),
             new Slot("CameraShake", typeof(CameraShakeSettings), c => c.CameraShake, (c, v) => c.CameraShake = (CameraShakeSettings)v),
             new Slot("Reticles", typeof(ReticleCatalog), c => c.Reticles, (c, v) => c.Reticles = (ReticleCatalog)v),
             new Slot("StatusEffectVisuals", typeof(StatusEffectVisualCatalog), c => c.StatusEffectVisuals, (c, v) => c.StatusEffectVisuals = (StatusEffectVisualCatalog)v),
@@ -73,7 +71,7 @@ namespace Shooter.Editor
             new TuningSlot("StaggerTuning", StaggerActionInstaller.TuningResourcePath, c => c.StaggerTuning, (c, v) => c.StaggerTuning = v),
             new TuningSlot("MeleeTuning", MeleeActionInstaller.TuningResourcePath, c => c.MeleeTuning, (c, v) => c.MeleeTuning = v),
             new TuningSlot("TraversalTuning", TraversalJson.ResourcePath, c => c.TraversalTuning, (c, v) => c.TraversalTuning = v),
-            new TuningSlot("StealthTuning", StealthActionInstaller.TuningResourcePath, c => c.StealthTuning, (c, v) => c.StealthTuning = v),
+            new TuningSlot("StealthTuning", KitTuning.StealthResourcePath, c => c.StealthTuning, (c, v) => c.StealthTuning = v),
             new TuningSlot("BotsTuning", KitTuning.BotsResourcePath, c => c.BotsTuning, (c, v) => c.BotsTuning = v),
             new TuningSlot("StreaksTuning", StreakJson.ResourcePath, c => c.StreaksTuning, (c, v) => c.StreaksTuning = v),
             new TuningSlot("AimAssistTuning", AimAssist.TuningResourcePath, c => c.AimAssistTuning, (c, v) => c.AimAssistTuning = v),
@@ -182,7 +180,7 @@ namespace Shooter.Editor
             }
 
             var left = new List<string>();
-            foreach (var slot in _slots)
+            foreach (var slot in AllSlots())
             {
                 if (slot.Get(content) != null)
                 {
@@ -304,6 +302,15 @@ namespace Shooter.Editor
 
             var folder = bundledTuningFolder.Replace('\\', '/').TrimEnd('/') + "/";
             return !normalized.StartsWith(folder, StringComparison.Ordinal);
+        }
+
+        // 登録された枠と組み込みの枠で名前が重なったら、組み込みの欄を二度埋めないように組み込みのほうを使う。
+        private static IEnumerable<Slot> AllSlots()
+        {
+            var builtIn = new HashSet<string>(_slots.Select(s => s.Name), StringComparer.Ordinal);
+            return _slots.Concat(GameContentSlots.All
+                .Where(s => !builtIn.Contains(s.Name))
+                .Select(s => new Slot(s.Name, s.AssetType, s.Get, s.Set)));
         }
 
         private sealed class TuningSlot

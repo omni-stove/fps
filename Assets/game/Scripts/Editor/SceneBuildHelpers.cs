@@ -17,6 +17,8 @@ namespace Shooter.Editor
 
         public const float EnemyAcceleration = 8f;
 
+        private static readonly List<Action<GameObject>> _enemySteps = new List<Action<GameObject>>();
+
         public static string ValidateAssetPath(string path)
         {
             return ValidateAssetPath(path, ".asset");
@@ -114,10 +116,46 @@ namespace Shooter.Editor
             }
         }
 
-        // 既存のアセットは GUID を保つので、それを参照しているシーンは壊れない。
-        public static MissionDefinition CreateOrUpdateMissionDefinition(string path, Action<MissionDefinition> configure)
+        // 本体が型を知らない部品 (隠密など) を、それを持つ側が敵に付けられるようにする。CreateEnemy は登録の順に当てる。
+        public static IReadOnlyList<Action<GameObject>> EnemySteps
         {
-            return CreateOrUpdateAsset(path, configure);
+            get
+            {
+                lock (_enemySteps)
+                {
+                    return _enemySteps.ToArray();
+                }
+            }
+        }
+
+        // [InitializeOnLoadMethod] から呼ばれるので、同じ処理の二度目の登録は足さない。
+        public static void RegisterEnemyStep(Action<GameObject> step)
+        {
+            if (step == null)
+            {
+                throw new ArgumentNullException(nameof(step));
+            }
+
+            lock (_enemySteps)
+            {
+                if (!_enemySteps.Contains(step))
+                {
+                    _enemySteps.Add(step);
+                }
+            }
+        }
+
+        public static bool UnregisterEnemyStep(Action<GameObject> step)
+        {
+            if (step == null)
+            {
+                return false;
+            }
+
+            lock (_enemySteps)
+            {
+                return _enemySteps.Remove(step);
+            }
         }
 
         // 既存のアセットは GUID を保つので、それを参照しているシーンやアセットは壊れない。
@@ -458,8 +496,10 @@ namespace Shooter.Editor
             agent.WeaponDefinition = weapon;
             agent.SetPatrolRoute(patrolRoute);
 
-            // 相手のルールが Off ならすぐ交戦する (今までどおり) ので、どのモードの敵にも付けておく。
-            capsule.AddComponent<EnemyStealth>();
+            foreach (var step in EnemySteps)
+            {
+                step(capsule);
+            }
 
             // 敵は手榴弾を投げない。演出だけを付ける。
             CharacterComponents.Attach(capsule, throwsGrenades: false);

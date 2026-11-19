@@ -35,6 +35,8 @@ namespace Shooter.Runtime
 
         public const string PlaylistsResourcePath = "Tuning/playlists";
 
+        public const string StealthResourcePath = "Tuning/stealth";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 

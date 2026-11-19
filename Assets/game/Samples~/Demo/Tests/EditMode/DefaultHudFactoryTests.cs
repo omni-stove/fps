@@ -82,6 +82,33 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ClearingSignalsAfterTheHudWasDestroyedBuildsNoNewHud()
+        {
+            Object.DestroyImmediate(DefaultHud.gameObject);
+
+            GameSignals.LocalPlayer.Clear();
+            Assert.That(DefaultHudFactory.Current == null, Is.True, "a clear while the model is still published builds nothing");
+            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Is.Empty);
+
+            GameSignals.HudModel.Clear();
+            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Is.Empty, "nothing is left behind when the scene closes");
+
+            GameSignals.HudModel.Publish(_world.HudModel);
+            Assert.That(DefaultHudFactory.Current, Is.Not.Null, "publishing again builds the HUD");
+            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void TheBootstrapGoingAwayAfterTheHudLeavesNoHud()
+        {
+            Object.DestroyImmediate(DefaultHud.gameObject);
+
+            _host.GetComponent<GameBootstrap>().ClearSignals();
+
+            Assert.That(Object.FindObjectsByType<Hud>(FindObjectsInactive.Include), Is.Empty);
+        }
+
+        [Test]
         public void TheActionDebugOverlayReadsThePlayersActionReader()
         {
             Assert.That(_world.Player.GetComponent<ActionDebugOverlay>().Reader, Is.SameAs(_world.ActionReader));

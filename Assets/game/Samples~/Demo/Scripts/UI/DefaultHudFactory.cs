@@ -64,16 +64,17 @@ namespace Shooter.Runtime
 
         private static void HandleLocalPlayerChanged(LocalPlayerSignal player)
         {
-            Sync();
+            Sync(player != null);
             AttachActionDebug(player);
         }
 
         private static void HandleHudModelChanged(HudModel model)
         {
-            Sync();
+            Sync(model != null);
         }
 
-        private static void Sync()
+        // 片付けの通知では作らない。シーンを閉じるときは HUD が先に壊れ、その後の OnDestroy の片付けで作り直すと、閉じたシーンに HUD が残るため。
+        private static void Sync(bool mayCreate = true)
         {
             var wanted = _enabled && (GameSignals.LocalPlayer.HasValue || GameSignals.HudModel.HasValue);
             if (!wanted)
@@ -82,7 +83,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (Current != null || NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
+            if (!mayCreate || Current != null || NetStartup.ShouldDisablePresentation(NetStartup.IsDedicatedServerBuild))
             {
                 return;
             }

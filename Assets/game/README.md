@@ -280,12 +280,15 @@ public sealed class HealthOnlyHud : MonoBehaviour
 1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor`・`AircraftControlScheme` を付ける。
    - 試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてあり、smoke の通しで離陸して 15m 昇るまでを確かめる。
 2. 飛び方の値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) に置き、`SimpleAircraftMotor` と `AircraftControlScheme` の Definition の欄に付ける。空なら既定値で飛ぶ。コードからは `Configure(AircraftSpec)` でその実行の間だけ差し替えられる。押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらない。
-   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Stick・Ground・Damage はまだ値を持たない。
+   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Stick・Damage はまだ値を持たない。
    - Aero の `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` (`AircraftAero.TopSpeed`) はその速さを返す。
    - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。
 3. 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。
    - 1 ステップの力は、推力 + 空力 (`AircraftAero.Compute`) + 地上の力 (`AircraftGroundContact`) の和。同じ GameObject に `IAircraftGroundSource` を付けると地上の力を、`IAircraftConditionSource` を付けると左右の揚力・舵・推力の効き (0 から 1、`AircraftCondition`) を毎ステップそこから読む。
    - `SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
+   - 地上を走らせるなら、機体の根元に `AircraftWheels` を付け、子に `WheelCollider` を置く。機体の重心より前にある車輪が前輪になり、ヨーで向きが変わる (名前は見ない)。向ける角度は止まっているとき `MaxSteerAngle`、`SteerFadeSpeed` まで速くなるにつれ `HighSpeedSteerAngle` へ絞る (`AircraftGround.SteerLimit`)。
+   - ブレーキは全部の車輪に掛かる。エアブレーキ (負のスロットル) の深さに応じて `BrakeTorque` まで、誰も操縦していない (入力が Idle) 間は `IdleBrakeTorque`。浮いている間は前輪をまっすぐに戻し、ブレーキを放す。値はアセットの Ground の欄か `AircraftWheels.Configure(AircraftGroundSpec)` で入れる。
+   - `AircraftWheels` が返す `AircraftGroundContact` は、どれかの車輪が接地しているかと、地面からの高さ (`HeightAboveGround`、m) を持つ。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
 4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
 5. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。

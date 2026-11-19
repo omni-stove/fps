@@ -13,41 +13,28 @@ namespace Shooter.Runtime
         public const string RejectedSlot = "profile-rejected";
 
         public ProfileStore(ISaveStorage storage)
-            : this(storage, SkillSpec.DefaultInitialRating)
-        {
-        }
-
-        public ProfileStore(ISaveStorage storage, int initialRating)
         {
             Storage = storage ?? throw new ArgumentNullException(nameof(storage));
-            if (initialRating < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(initialRating), initialRating, "initialRating must not be negative");
-            }
-
-            InitialRating = initialRating;
         }
 
         public ISaveStorage Storage { get; }
-
-        public int InitialRating { get; }
 
         public PlayerProfile Load()
         {
             if (!Storage.TryRead(Slot, out var text) || text == null)
             {
-                return PlayerProfile.Started(InitialRating);
+                return PlayerProfile.Empty;
             }
 
             try
             {
-                return PlayerProfile.FromJson(text, InitialRating);
+                return PlayerProfile.FromJson(text);
             }
             catch (FormatException e)
             {
                 Debug.LogWarning(ProgressionLog.ProfileRejected(e.Message));
                 KeepRejected(text);
-                return PlayerProfile.Started(InitialRating);
+                return PlayerProfile.Empty;
             }
         }
 

@@ -143,7 +143,9 @@ private void OnDisable()
 
 `ICloudSaveBackend` を `CloudSaveBootstrap.Backend` に、`IAccountBackend` を `AccountBootstrap.Backend` に、`SubsystemRegistration` の初期化で入れる。入れなければ EOS を使い、EOS も無ければ手元だけで動く。
 
-クラウドへ同期するのは `CloudSaveBootstrap.RegisterSlots(owns, startupSlots, canRead)` で登録したスロットだけ。自分のセーブも同期するなら、`SubsystemRegistration` の初期化で、どのスロットが自分のものか・起動時に見に行くスロット・クラウドの中身を読めるか (読めなければ `false` か `FormatException`) を登録する (プロフィールは `ProgressionCloudSave`、キャンペーンは `CampaignCloudSave` が登録する)。
+クラウドへ同期するのは `CloudSaveBootstrap.RegisterSlots(owns, startupSlots, canRead)` で登録したスロットだけ。自分のセーブも同期するなら、`SubsystemRegistration` の初期化で、どのスロットが自分のものか・起動時に見に行くスロット・クラウドの中身を読めるか (読めなければ `false` か `FormatException`) を登録する (プロフィールは `ProgressionCloudSave`、マッチングのレートは `SkillCloudSave`、キャンペーンは `CampaignCloudSave` が登録する)。
+
+マッチングのレートは進行のプロフィールではなく本体の `SkillRecorder` がスロット `skill` に持ち、`SkillBootstrap.Current.Rating` で読む。進行を外したゲームでもレートは回る。版 5 までのプロフィールにあったレートは、`skill` が無いときだけ `ProgressionRecorder` が読み込んだときに引き継ぐ。
 
 装備などの解放は `Unlocks.IsUnlocked(id)` で問い合わせる。門 (`Unlocks.Install(gate)`) が無ければすべて解放で、進行 (`ProgressionBootstrap`) を入れるとプロフィールのレベルで決まる。別の決め方を使うなら自分の門を入れ、外すときは `Unlocks.Uninstall(gate)` に同じ門を渡す。
 

@@ -31,7 +31,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ShowsTheRecordAndThePlayTime()
         {
-            Open(new PlayerProfile(0, 12, 4, 8, 3, 5, 1000, 4, 2, 7384, null));
+            Open(new PlayerProfile(0, 12, 4, 8, 3, 5, 4, 2, 7384, null));
 
             Assert.That(_panel.TitleText, Is.EqualTo("統計"));
             Assert.That(_panel.StatLines, Is.EqualTo(new[]
@@ -61,7 +61,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ListsEachAchievementWithItsProgressOrAsDone()
         {
-            Open(new PlayerProfile(0, 3, 0, 30, 2, 0, 1000, 7, 0, 0, new[] { "first-blood", "veteran" }));
+            Open(new PlayerProfile(0, 3, 0, 30, 2, 0, 7, 0, 0, new[] { "first-blood", "veteran" }));
 
             Assert.That(_panel.AchievementsTitleText, Is.EqualTo("実績 2/4"));
             Assert.That(_panel.AchievementLines, Is.EqualTo(new[]
@@ -128,7 +128,7 @@ namespace Shooter.Tests.EditMode
         {
             Open(PlayerProfile.Empty);
 
-            _panel.Show(new PlayerProfile(0, 1, 0, 2, 1, 0, 1000, 0, 0, 59, new[] { "first-blood" }));
+            _panel.Show(new PlayerProfile(0, 1, 0, 2, 1, 0, 0, 0, 59, new[] { "first-blood" }));
 
             Assert.That(_panel.StatLines[0], Is.EqualTo("試合数 2"));
             Assert.That(_panel.StatLines[2], Is.EqualTo("勝率 50%"));

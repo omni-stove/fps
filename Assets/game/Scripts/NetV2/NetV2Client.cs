@@ -288,8 +288,8 @@ namespace Shooter.NetV2
 
         internal static int? OwnSkillRating()
         {
-            var recorder = ProgressionBootstrap.Recorder;
-            return recorder != null ? recorder.Profile.Rating : (int?)null;
+            var skill = SkillBootstrap.Current;
+            return skill != null ? skill.Rating : (int?)null;
         }
 
         // 通信路がつながった時に読むので、つなぐまでに入ったパーティやログインで決まった ProductUserId も載る。

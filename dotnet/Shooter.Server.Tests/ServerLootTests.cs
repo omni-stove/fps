@@ -453,7 +453,7 @@ namespace Shooter.Server.Tests
             world.CollectUnopenedBoxes(boxes);
             Assert.That(boxes.Select(b => b.ItemId), Is.EqualTo(new[] { _firstBox }), "an opened box is no longer offered");
 
-            var crate = world.SpawnCrate(new Vector3(0f, 0.5f, 20f), _armory);
+            var crate = world.SpawnCrate(new Vector3(0f, 0.5f, 20f), _armory, ServerLoot.DefaultDropReach);
             Assert.That(_loot.TryGetContents(crate, out _, out _), Is.True);
 
             var health = _rules.Session.GetHealth(2);

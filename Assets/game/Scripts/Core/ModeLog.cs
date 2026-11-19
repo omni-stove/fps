@@ -108,6 +108,17 @@ namespace Shooter.Core
                 + ", " + position.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
         }
 
+        // 倒されて戻るときだけ、ルールの RespawnAnchor のどれを使ったかを足す。ラウンドの並べ直しは拠点に決まっているので書かない。
+        public static string Spawn(int playerId, Side side, Vector3 position, RespawnAnchor anchor)
+        {
+            if (!Enum.IsDefined(typeof(RespawnAnchor), anchor))
+            {
+                throw new ArgumentOutOfRangeException(nameof(anchor), anchor, "anchor is not a defined RespawnAnchor");
+            }
+
+            return Spawn(playerId, side, position) + " from=" + anchor;
+        }
+
         public static string Ended(Side? winner)
         {
             return Tag + " ended winner=" + WinnerName(winner);

@@ -62,6 +62,17 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ARespawnNamesTheAnchorItUsed()
+        {
+            var at = new Vector3(1f, 0.5f, -2f);
+
+            Assert.That(ModeLog.Spawn(3, new Side(0), at, RespawnAnchor.Beacon), Is.EqualTo("[Mode] spawn player=3 side=0 at=(1.00, 0.50, -2.00) from=Beacon"));
+            Assert.That(ModeLog.Spawn(3, new Side(0), at, RespawnAnchor.Squad), Is.EqualTo("[Mode] spawn player=3 side=0 at=(1.00, 0.50, -2.00) from=Squad"));
+            Assert.That(ModeLog.Spawn(3, new Side(0), at, RespawnAnchor.Base), Is.EqualTo("[Mode] spawn player=3 side=0 at=(1.00, 0.50, -2.00) from=Base"));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ModeLog.Spawn(3, new Side(0), at, (RespawnAnchor)99));
+        }
+
+        [Test]
         public void KillsListTheirAssistersAndStatsListAssists()
         {
             var session = ThreeSides();

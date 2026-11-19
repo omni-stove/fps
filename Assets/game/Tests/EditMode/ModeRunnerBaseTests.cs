@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -155,6 +156,106 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(bot.IsAlive, Is.True);
             Assert.That(bot.transform.position, Is.EqualTo(new Vector3(3f, 0f, 10f)));
+        }
+
+        [Test]
+        public void ABeaconIsUsedFirstAndLosesAUse()
+        {
+            var (victim, mate, enemy) = AnchorScene();
+            var beacon = PlaceBeacon(victim, new Vector3(10f, 0f, 0f), 2);
+            var expected = beacon.SpawnPose.position;
+            _runner.Rules = GameRules.Default.WithRespawnAnchors(new[] { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base });
+            Begin(new[] { victim, mate, enemy }, new[] { SpawnPoint(0, new Vector3(-30f, 0f, 0f)) }, null);
+
+            KillBy(enemy, victim);
+            LogAssert.Expect(LogType.Log, ModeLog.Spawn(_runner.IdOf(victim), Side.Alpha, expected.ToNumerics(), RespawnAnchor.Beacon));
+            _runner.Tick(RespawnSeconds);
+
+            Assert.That(victim.IsAlive, Is.True);
+            Assert.That(Vector3.Distance(victim.transform.position, expected), Is.LessThan(1e-4f));
+            Assert.That(beacon.UsesLeft, Is.EqualTo(1), "the respawn took one use");
+        }
+
+        [Test]
+        public void ABrokenBeaconFallsToTheSquadNearTheSafestMate()
+        {
+            var (victim, mate, enemy) = AnchorScene();
+            var beacon = PlaceBeacon(victim, new Vector3(10f, 0f, 0f), 2);
+            _runner.Rules = GameRules.Default.WithRespawnAnchors(new[] { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base });
+            Begin(new[] { victim, mate, enemy }, new[] { SpawnPoint(0, new Vector3(-30f, 0f, 0f)) }, null);
+            beacon.Deployable.Remove(DeployRemoval.Destroyed);
+
+            KillBy(enemy, victim);
+            LogAssert.Expect(LogType.Log, new Regex("^" + Regex.Escape("[Mode] spawn player=" + _runner.IdOf(victim) + " side=0 at=") + ".* from=Squad$"));
+            _runner.Tick(RespawnSeconds);
+
+            // 味方 (0, 0, -10) のまわり 2 m の 8 か所のうち、敵 (0, 0, 40) からいちばん遠いのは真後ろ。
+            Assert.That(victim.IsAlive, Is.True);
+            Assert.That(Vector3.Distance(victim.transform.position, new Vector3(0f, 0f, -12f)), Is.LessThan(1e-3f));
+        }
+
+        [Test]
+        public void WithoutABeaconOrAMateTheVictimReturnsToTheBase()
+        {
+            var (victim, _, enemy) = AnchorScene();
+            var basePoint = SpawnPoint(0, new Vector3(-30f, 0f, 0f));
+            _runner.Rules = GameRules.Default.WithRespawnAnchors(new[] { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base });
+            Begin(new[] { victim, enemy }, new[] { basePoint }, null);
+
+            KillBy(enemy, victim);
+            LogAssert.Expect(LogType.Log, ModeLog.Spawn(_runner.IdOf(victim), Side.Alpha, basePoint.Position.ToNumerics(), RespawnAnchor.Base));
+            _runner.Tick(RespawnSeconds);
+
+            Assert.That(victim.transform.position, Is.EqualTo(basePoint.Position));
+        }
+
+        [Test]
+        public void ARecentlyShotMateIsNotASquadAnchor()
+        {
+            var (victim, mate, enemy) = AnchorScene();
+            var basePoint = SpawnPoint(0, new Vector3(-30f, 0f, 0f));
+            _runner.Rules = GameRules.Default.WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Base });
+            Begin(new[] { victim, mate, enemy }, new[] { basePoint }, null);
+
+            mate.Damageable.TakeDamage(10);
+            KillBy(enemy, victim);
+            _runner.Tick(RespawnSeconds);
+
+            Assert.That(SquadSpawnSpec.DefaultDamageCooldownSeconds, Is.GreaterThan(RespawnSeconds));
+            Assert.That(victim.transform.position, Is.EqualTo(basePoint.Position));
+        }
+
+        [Test]
+        public void ARoundResetRespawnGoesToTheBaseAndKeepsTheBeacon()
+        {
+            var (victim, mate, enemy) = AnchorScene();
+            var beacon = PlaceBeacon(victim, new Vector3(10f, 0f, 0f), 2);
+            var basePoint = SpawnPoint(0, new Vector3(-30f, 0f, 0f));
+            _runner.Rules = GameRules.Default.WithRespawnAnchors(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base });
+            Begin(new[] { victim, mate, enemy }, new[] { basePoint }, null);
+
+            LogAssert.Expect(LogType.Log, ModeLog.Spawn(_runner.IdOf(victim), Side.Alpha, basePoint.Position.ToNumerics()));
+            _runner.Respawn(victim);
+
+            Assert.That(victim.transform.position, Is.EqualTo(basePoint.Position));
+            Assert.That(beacon.UsesLeft, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WithoutGivenRulesTheDefaultRespawnsAtTheBase()
+        {
+            Assert.That(_runner.Rules, Is.SameAs(GameRules.Default));
+
+            var (victim, _, enemy) = AnchorScene();
+            var beacon = PlaceBeacon(victim, new Vector3(10f, 0f, 0f), 2);
+            var basePoint = SpawnPoint(0, new Vector3(-30f, 0f, 0f));
+            Begin(new[] { victim, enemy }, new[] { basePoint }, null);
+
+            KillBy(enemy, victim);
+            _runner.Tick(RespawnSeconds);
+
+            Assert.That(victim.transform.position, Is.EqualTo(basePoint.Position));
+            Assert.That(beacon.UsesLeft, Is.EqualTo(2));
         }
 
         [Test]
@@ -464,6 +565,39 @@ namespace Shooter.Tests.EditMode
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);
             return member;
+        }
+
+        // 味方の近くへ戻すには足元に床が要る。倒される人と味方は Alpha、敵は Bravo で、敵は味方から 50 m 離れている。
+        private (SideMember Victim, SideMember Mate, SideMember Enemy) AnchorScene()
+        {
+            var floor = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            floor.name = "Floor";
+            floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            floor.transform.localScale = new Vector3(200f, 1f, 200f);
+
+            var victim = Member("Bot-V", 0, new Vector3(5f, 0f, 5f));
+            var mate = Member("Bot-M", 0, new Vector3(0f, 0f, -10f));
+            var enemy = Member("Bot-E", 1, new Vector3(0f, 0f, 40f));
+            Physics.SyncTransforms();
+            return (victim, mate, enemy);
+        }
+
+        private SpawnBeacon PlaceBeacon(SideMember owner, Vector3 position, int uses)
+        {
+            var definition = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            definition.name = "DeployBeacon";
+            definition.Id = "beacon";
+            definition.Uses = uses;
+            _objects.Add(definition);
+
+            var spec = definition.ToDeploySpec();
+            var deployable = definition.CreateDeployed(new Pose(position, Quaternion.identity), spec);
+            Track(deployable.gameObject);
+            deployable.Initialize(owner.gameObject, owner.name, definition.Id, 1, owner.Side, spec.MaxHealth);
+            var beacon = deployable.GetComponent<SpawnBeacon>();
+            beacon.Arm(definition.ToBeaconSpec());
+            Physics.SyncTransforms();
+            return beacon;
         }
 
         private SideSpawnPoint SpawnPoint(int side, Vector3 position)

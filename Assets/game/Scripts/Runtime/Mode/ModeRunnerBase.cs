@@ -24,7 +24,22 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("GameBootstrap が並べる標的ダミーを隠すか (モードの参加者ではない)")]
         private bool _hideTargetDummies = true;
 
+        [SerializeField, Tooltip("ルールの RespawnAnchor に Squad があるとき、倒された人を味方のどれだけ近くに、どんな味方の近くに戻すか")]
+        private SquadSpawnSettings _squadSpawn = new SquadSpawnSettings();
+
+        // 体の大きさは戻す人の CharacterController から測り、持たない体 (bot など) だけこの大きさとみなす。
+        public const float FallbackBodyRadius = 0.35f;
+        public const float FallbackBodyHeight = 1.8f;
+
+        // 段差や坂に体の底が触れて塞がっているとみなさないよう、足元から少し浮かせて重なりを調べる。
+        private const float BodyLift = 0.1f;
+
+        // 味方の近くに戻す位置の真下に床があるかを、この高さの上からこの深さの下まで探す。
+        private const float GroundProbeAbove = 1f;
+        private const float GroundProbeBelow = 2f;
+
         private readonly List<SideMember> _members = new List<SideMember>();
+        private readonly Dictionary<int, float> _lastDamagedAt = new Dictionary<int, float>();
         private readonly Dictionary<Damageable, int> _ids = new Dictionary<Damageable, int>();
         private readonly List<SideSpawnPoint> _spawnPoints = new List<SideSpawnPoint>();
         private readonly Queue<int> _pendingRespawns = new Queue<int>();
@@ -40,8 +55,22 @@ namespace Shooter.Runtime
         private bool _enabledRestartAction;
         private bool _matchOver;
         private Side? _matchWinner;
+        private GameRules _rules;
+        private GameRules _sceneRules;
+        private SquadSpawnSelector _squadSpawnSelector;
+        // 撃たれてからの秒数を Time.time でなく Tick の刻みで数えるのは、Edit Mode のテストでも同じに進めるため。
+        private float _elapsedSeconds;
 
         public ModeSession Session => _session;
+
+        // 入っていなければ GameBootstrap が組み立てたルール、それも無ければ GameRules.Default を読む。試すときにシーンを組まずに渡せるよう、上書きできるようにしておく。
+        public GameRules Rules
+        {
+            get => _rules ?? _sceneRules ?? GameRules.Default;
+            set => _rules = value;
+        }
+
+        public SquadSpawnSettings SquadSpawn => _squadSpawn ??= new SquadSpawnSettings();
 
         // 入っていなければ KitTuning.Assist を読む。試すときに Resources を通さず値を渡せるよう、上書きできるようにしておく。
         public AssistSpec AssistSpec
@@ -228,6 +257,8 @@ namespace Shooter.Runtime
                 }
             }
 
+            _sceneRules = world != null ? world.Rules : null;
+
             // 再開できなくてもモード自体は進められるので、解決に失敗してもエラーを出して続ける。
             _restartAction = ResolveRestartAction();
 
@@ -303,6 +334,16 @@ namespace Shooter.Runtime
                 throw new ArgumentException("session must have no players; Begin adds the scene's SideMembers", nameof(session));
             }
 
+            SquadSpawnSelector squadSpawnSelector;
+            try
+            {
+                squadSpawnSelector = new SquadSpawnSelector(SquadSpawn.ToSpec());
+            }
+            catch (ArgumentException e)
+            {
+                throw new ArgumentException($"{GetType().Name} '{name}' has an invalid Squad Spawn: {e.Message}", nameof(SquadSpawn), e);
+            }
+
             ValidateSession(session);
 
             var ordered = OrderMembers(members, localPlayer);
@@ -325,6 +366,8 @@ namespace Shooter.Runtime
             }
 
             _session = session;
+            _squadSpawnSelector = squadSpawnSelector;
+            _elapsedSeconds = 0f;
             _localPlayer = localPlayer != null && ordered.Contains(localPlayer) ? localPlayer : null;
             _members.AddRange(ordered);
             _assists = new OfflineAssists(AssistSpec, (attackerId, victimId) => AreAllies(session, attackerId, victimId));
@@ -332,6 +375,7 @@ namespace Shooter.Runtime
             {
                 _ids.Add(_members[id].Damageable, id);
                 _members[id].Damageable.Died += OnMemberDied;
+                _members[id].Damageable.Damaged += OnMemberDamaged;
                 _assists.Watch(_members[id].Damageable, id);
                 Debug.Log(ModeLog.Joined(id, _members[id].name, _members[id].Side), _members[id]);
             }
@@ -362,15 +406,145 @@ namespace Shooter.Runtime
             }
 
             OnBeforeTick(deltaSeconds);
+            _elapsedSeconds += Math.Max(0f, deltaSeconds);
             _assists.Advance(deltaSeconds);
             AdvanceSession(deltaSeconds);
             RespawnPending();
             RefreshHud();
         }
 
+        // ラウンドの始めの並べ直しや感染のように、倒されて戻るのでない呼び出しはビーコンを使わず拠点に戻す。
         public void Respawn(SideMember member)
         {
             RequireMember(member);
+            BasePose(member, out var position, out var rotation);
+            RespawnAt(member, position, rotation);
+        }
+
+        // 倒されて戻るときは、ルールの RespawnAnchor の順にビーコン・味方の近く・拠点を試し、使ったものを返す。
+        public RespawnAnchor RespawnByRules(SideMember member)
+        {
+            var id = RequireMember(member);
+            var pose = default(Pose);
+            var anchor = RespawnAnchorOrder.Choose(
+                Rules.RespawnAnchors,
+                candidate => candidate == RespawnAnchor.Beacon ? TryBeaconPose(member, out pose) : TrySquadPose(member, id, out pose));
+
+            if (anchor == RespawnAnchor.Base)
+            {
+                BasePose(member, out var position, out var rotation);
+                pose = new Pose(position, rotation);
+            }
+
+            Place(member, id, pose.position, pose.rotation, ModeLog.Spawn(id, member.Side, pose.position.ToNumerics(), anchor));
+            return anchor;
+        }
+
+        private bool TryBeaconPose(SideMember member, out Pose pose)
+        {
+            pose = default;
+            return SpawnBeacon.TryFindFor(member.gameObject, out var beacon) && beacon.TryUse(member.gameObject, member.name, out pose);
+        }
+
+        private bool TrySquadPose(SideMember member, int id, out Pose pose)
+        {
+            pose = default;
+            var side = member.Side;
+            var mates = new List<SquadSpawnMate>(_members.Count);
+            var enemies = new List<System.Numerics.Vector3>(_members.Count);
+            for (var otherId = 0; otherId < _members.Count; otherId++)
+            {
+                var other = _members[otherId];
+                if (other == null || otherId == id)
+                {
+                    continue;
+                }
+
+                // ダウン中 (起こされ待ち) の味方は体力が残っていても動けないので、そばに戻しても守り合えない。
+                var alive = other.IsAlive && !(_session.HasPlayer(otherId) && _session.IsDown(otherId));
+                var position = other.GroundPosition.ToNumerics();
+                mates.Add(new SquadSpawnMate(other.Side, position, alive, SecondsSinceDamaged(otherId)));
+                if (alive && other.Side != side)
+                {
+                    enemies.Add(position);
+                }
+            }
+
+            var chosen = _squadSpawnSelector.Select(side, mates, enemies, p => TryStandAt(member, p.ToUnity(), out _));
+            if (!chosen.HasValue || !TryStandAt(member, chosen.Value.ToUnity(), out var ground))
+            {
+                return false;
+            }
+
+            pose = new Pose(ground, FacingOfNearestMate(member, ground));
+            return true;
+        }
+
+        // 床が無い所 (崖の外や空を飛ぶ機体の下) と、壁や置き物に体が重なる所には戻さない。体どうしの重なりは SquadSpawnSelector が見る。
+        private bool TryStandAt(SideMember member, Vector3 position, out Vector3 ground)
+        {
+            ground = position;
+            var from = position + (Vector3.up * GroundProbeAbove);
+            if (!Physics.Raycast(from, Vector3.down, out var hit, GroundProbeAbove + GroundProbeBelow, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            ground = hit.point;
+            var controller = member.GetComponent<CharacterController>();
+            var radius = controller != null ? controller.radius : FallbackBodyRadius;
+            var height = controller != null ? controller.height : FallbackBodyHeight;
+            var bottom = ground + (Vector3.up * (radius + BodyLift));
+            var top = ground + (Vector3.up * Mathf.Max(height - radius, radius + BodyLift));
+            foreach (var overlap in Physics.OverlapCapsule(bottom, top, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            {
+                var other = SideMember.Of(overlap.gameObject);
+                // ダウン中の味方の体は場に残るので、体どうしの判定 (Selector) では避けられず、ここで重なりとして扱う。
+                if (other == null || (other != member && IsDownedBody(other)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsDownedBody(SideMember other)
+        {
+            var otherId = _members.IndexOf(other);
+            return otherId >= 0 && _session.HasPlayer(otherId) && _session.IsDown(otherId);
+        }
+
+        private Quaternion FacingOfNearestMate(SideMember member, Vector3 position)
+        {
+            SideMember nearest = null;
+            var nearestDistance = float.PositiveInfinity;
+            foreach (var other in _members)
+            {
+                if (other == null || other == member || other.Side != member.Side || !other.IsAlive)
+                {
+                    continue;
+                }
+
+                var distance = (other.GroundPosition - position).sqrMagnitude;
+                if (distance < nearestDistance)
+                {
+                    nearest = other;
+                    nearestDistance = distance;
+                }
+            }
+
+            var forward = nearest != null ? Vector3.ProjectOnPlane(nearest.transform.forward, Vector3.up) : Vector3.zero;
+            return forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(forward.normalized, Vector3.up) : member.transform.rotation;
+        }
+
+        private float SecondsSinceDamaged(int playerId)
+        {
+            return _lastDamagedAt.TryGetValue(playerId, out var at) ? Math.Max(0f, _elapsedSeconds - at) : SquadSpawnMate.NeverDamaged;
+        }
+
+        private void BasePose(SideMember member, out Vector3 position, out Quaternion rotation)
+        {
             var side = member.Side;
             var usable = new List<SideSpawnPoint>(_spawnPoints.Count);
             var spawns = new List<SideSpawn>(_spawnPoints.Count);
@@ -393,8 +567,6 @@ namespace Shooter.Runtime
             }
 
             var index = SideSpawnSelector.Select(spawns, side, enemies);
-            Vector3 position;
-            Quaternion rotation;
             if (index >= 0)
             {
                 position = usable[index].Position;
@@ -410,8 +582,6 @@ namespace Shooter.Runtime
                 position = member.GroundPosition;
                 rotation = member.transform.rotation;
             }
-
-            RespawnAt(member, position, rotation);
         }
 
         public void RespawnAt(SideMember member, SideSpawnPoint point)
@@ -427,10 +597,16 @@ namespace Shooter.Runtime
         public void RespawnAt(SideMember member, Vector3 position, Quaternion rotation)
         {
             var id = RequireMember(member);
+            Place(member, id, position, rotation, ModeLog.Spawn(id, member.Side, position.ToNumerics()));
+        }
+
+        private void Place(SideMember member, int id, Vector3 position, Quaternion rotation, string log)
+        {
             _assists?.Clear(id);
+            _lastDamagedAt.Remove(id);
             member.Respawn(position, rotation);
             member.SetActing(_session == null || (!_matchOver && _session.State != GameModeState.Ended));
-            Debug.Log(ModeLog.Spawn(id, member.Side, position.ToNumerics()), member);
+            Debug.Log(log, member);
             OnSpawned(member);
         }
 
@@ -463,6 +639,7 @@ namespace Shooter.Runtime
                 if (damageable != null)
                 {
                     damageable.Died -= OnMemberDied;
+                    damageable.Damaged -= OnMemberDamaged;
                 }
             }
 
@@ -487,6 +664,10 @@ namespace Shooter.Runtime
             _spawnPoints.Clear();
             _pendingRespawns.Clear();
             _warnedMissingSpawn.Clear();
+            _lastDamagedAt.Clear();
+            _squadSpawnSelector = null;
+            _sceneRules = null;
+            _elapsedSeconds = 0f;
             _session = null;
             _localPlayer = null;
             _publishedStatus = null;
@@ -737,6 +918,14 @@ namespace Shooter.Runtime
             return attribution.HasValue ? SideMember.Of(CombatEvents.OfflineObject(attribution.Value.KillerId)) : null;
         }
 
+        private void OnMemberDamaged(Damageable damageable, DamageReport report)
+        {
+            if (_session != null && _ids.TryGetValue(damageable, out var playerId))
+            {
+                _lastDamagedAt[playerId] = _elapsedSeconds;
+            }
+        }
+
         private void OnRespawnReady(int playerId)
         {
             _pendingRespawns.Enqueue(playerId);
@@ -756,7 +945,7 @@ namespace Shooter.Runtime
                 var member = MemberOf(playerId);
                 if (member != null)
                 {
-                    Respawn(member);
+                    RespawnByRules(member);
                 }
             }
         }

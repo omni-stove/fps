@@ -222,6 +222,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 - 書き始めるのはサーバーに承認されてから。承認の前に抜けた試合のファイルは消す。書けないときは残さずに試合を続ける。
 - 一覧の再生は `NetV2Client.BeginReplay` が同じ部品で試合を流し直す。`Next`・`Previous` で人と自由なカメラを巡り、終わるとメニューに戻る。
 - 版の違う (通信の版が違う) ファイルや壊れたファイルは、画面を替えずに一覧に再生できないと出す。
+- 通しの確認は `ReplaySmokeRun` で、smoke のスイートには入っていない (`unity -batchmode -projectPath . -executeMethod Shooter.Editor.ReplaySmokeRun.Run -logFile -`。Play Mode に入るので `-quit` は付けない)。承認と切断だけの記録を `Replays/` に置き、一覧から再生して `NetArena01` を読み、メニューに戻るまでを見る。置いた記録は終わったときに消す。
 
 #### 試合中の部品 (NetV2)
 
@@ -240,6 +241,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 - Infected はプレイヤーと bot 4 体が生存者で始まり、倒された人は感染者として戻る。ルールは `GameRulesAssetBuilder.InfectedRules`。
 - 脱出は敵の bot 3 体の中で箱から物を拾い、開いた脱出地点に立ち続けると持ち物が持ち物庫へ入る。倒れたら戻らない。ルールは `GameRulesAssetBuilder.ExtractionRules`、箱から出る物は `Modes/ExtractionLoot.json`。
+- 通しの確認は `InfectedSmokeRun` (感染者が選ばれ、持ち替えて、どちらかの陣営が勝つまで) と `ExtractionSmokeRun` (箱を開け、開いた地点に立って脱出するまで) で、どちらも smoke のスイートに入っている。脱出の確認は、走らせる前の持ち物庫 (`StashStore.DefaultKey`) を控えて空から始め、終わったら戻す。
 
 ## 乗り物を足す
 

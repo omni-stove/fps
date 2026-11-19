@@ -39,6 +39,8 @@ namespace Shooter.Editor
             new SmokeRunEntry(nameof(WeaponSwitchSmokeRun), WeaponSwitchSmokeRun.LogTag, WeaponSwitchSmokeRun.Run),
             new SmokeRunEntry(nameof(LauncherSmokeRun), LauncherSmokeRun.LogTag, LauncherSmokeRun.Run),
             new SmokeRunEntry(nameof(VehicleSmokeRun), VehicleSmokeRun.LogTag, VehicleSmokeRun.Run),
+            new SmokeRunEntry(nameof(InfectedSmokeRun), InfectedSmokeRun.LogTag, InfectedSmokeRun.Run),
+            new SmokeRunEntry(nameof(ExtractionSmokeRun), ExtractionSmokeRun.LogTag, ExtractionSmokeRun.Run),
         };
 
         public static bool IsActive => SessionState.GetBool(ActiveKey, false);

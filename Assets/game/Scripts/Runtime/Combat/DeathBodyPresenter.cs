@@ -454,6 +454,25 @@ namespace Shooter.Runtime
                 return;
             }
 
+            // 座席の抜け殻は車体と重なっている。kinematic の抜け殻は動かないので、重なりを解く力が車体に掛かり続けて揺らす。
+            // 親にする前に、車体のコライダーとの衝突を切る。
+            var shellColliders = _shell.GetComponentsInChildren<Collider>(true);
+            foreach (var anchorCollider in _anchor.GetComponentsInChildren<Collider>(true))
+            {
+                if (anchorCollider == null || anchorCollider.transform.IsChildOf(_shell.transform))
+                {
+                    continue;
+                }
+
+                foreach (var shellCollider in shellColliders)
+                {
+                    if (shellCollider != null && shellCollider.enabled && anchorCollider.enabled)
+                    {
+                        Physics.IgnoreCollision(anchorCollider, shellCollider, true);
+                    }
+                }
+            }
+
             _shell.transform.SetParent(_anchor, true);
             if (_ragdoll != null)
             {

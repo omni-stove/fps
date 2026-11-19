@@ -978,7 +978,8 @@ namespace Shooter.Server.Tests
             WeaponSpec rifle = null,
             GrenadeCatalog grenades = null,
             NetMapWater water = null,
-            NetMotorSettings motor = null)
+            NetMotorSettings motor = null,
+            IMatchObjectiveRules objective = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -1020,7 +1021,7 @@ namespace Shooter.Server.Tests
                 new StubControl(),
                 data);
             _movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
-            _rules = new MatchRulesModule();
+            _rules = objective == null ? new MatchRulesModule() : new MatchRulesModule((_, _, _) => objective);
             _combat = new ServerCombat(_rules, _movement);
             _host = new ServerHost();
             _host.Register(_movement);

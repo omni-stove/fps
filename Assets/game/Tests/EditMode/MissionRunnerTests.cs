@@ -135,6 +135,39 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnAreaShowsOnTheMinimapOnlyWhileItsObjectiveIsActive()
+        {
+            StartQuietly();
+            var reach = CreateArea<ReachAreaTrigger>("reach");
+            var kill = CreateArea<ReachAreaTrigger>("kill");
+            reach.transform.position = new Vector3(3f, 0f, 4f);
+
+            Assert.That(reach.ShowsOnMinimap, Is.True);
+            Assert.That(reach.Position, Is.EqualTo(new Vector3(3f, 0f, 4f)));
+            Assert.That(kill.ShowsOnMinimap, Is.False, "a locked objective is not where to go yet");
+
+            ExpectMission("objective=reach state=Completed");
+            ExpectMission("objective=kill state=Active");
+            _runner.Progress("reach");
+
+            Assert.That(reach.ShowsOnMinimap, Is.False, "a completed objective is no longer shown");
+            Assert.That(kill.ShowsOnMinimap, Is.True);
+
+            reach.enabled = false;
+            kill.enabled = false;
+            Assert.That(kill.ShowsOnMinimap, Is.False, "a disabled area is not shown");
+        }
+
+        [Test]
+        public void AnUnboundAreaIsNotOnTheMinimap()
+        {
+            var host = Track(new GameObject("Unbound"));
+            host.AddComponent<BoxCollider>().isTrigger = true;
+
+            Assert.That(host.AddComponent<ReachAreaTrigger>().ShowsOnMinimap, Is.False);
+        }
+
+        [Test]
         public void ReachAreaCountsAColliderOnce()
         {
             StartQuietly();

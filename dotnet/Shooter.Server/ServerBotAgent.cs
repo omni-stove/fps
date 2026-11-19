@@ -59,6 +59,9 @@ namespace Shooter.Server
 
         public bool WasClimbing { get; set; }
 
+        // 目的が示した行き先へ巡る路を向けている間はその先。null なら BotRally か出現地点を巡る
+        public Vector3? Goal { get; set; }
+
         public void MarkDead()
         {
             if (_dead)

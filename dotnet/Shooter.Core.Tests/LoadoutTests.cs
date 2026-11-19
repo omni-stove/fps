@@ -42,6 +42,23 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void CanStartHoldingAGivenItemWithoutSwitching()
+        {
+            var switched = 0;
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.5f, null, null, null, 2);
+            loadout.Switched += _ => switched++;
+
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(2));
+            Assert.That(loadout.Current, Is.SameAs(_knife));
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.That(switched, Is.Zero);
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new Loadout<Item>(new[] { _rifle }, 0.5f, null, null, null, 1)).ParamName,
+                Is.EqualTo("currentIndex"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Loadout<Item>(new[] { _rifle }, 0.5f, null, null, null, -1));
+        }
+
+        [Test]
         public void KeepsItsOwnCopyOfTheItems()
         {
             var items = new List<Item> { _rifle, _pistol };

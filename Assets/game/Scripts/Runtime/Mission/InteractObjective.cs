@@ -35,8 +35,10 @@ namespace Shooter.Runtime
             Subscribe();
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
+
             // Start より前の最初の OnEnable ではまだ解決していないので、Start で購読する。
             if (_interactAction != null)
             {
@@ -44,8 +46,9 @@ namespace Shooter.Runtime
             }
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             Unsubscribe();
         }
 

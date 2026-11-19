@@ -148,7 +148,7 @@ namespace Shooter.Tests.EditMode
             recorder.ProfileChanged += _ => changes++;
             new ProfileStore(storage).Save(new PlayerProfile(600, 3, 1, 2, 1));
 
-            ProgressionBootstrap.ReloadPulledProfile(CampaignSaveSlots.For("Campaign01"));
+            ProgressionBootstrap.ReloadPulledProfile("campaign-Campaign01");
 
             Assert.That(recorder.Profile, Is.EqualTo(PlayerProfile.Empty), "other slots leave the profile alone");
             Assert.That(changes, Is.Zero);
@@ -163,6 +163,41 @@ namespace Shooter.Tests.EditMode
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
 
             Assert.That(new ProfileStore(storage).Load().Matches, Is.EqualTo(3), "the next save builds on the profile taken from the cloud");
+        }
+
+        [Test]
+        public void OnlyThePulledProfileIsReadAgainWhenOtherRegisteredSlotsArePulledToo()
+        {
+            const string mission = "campaign-Campaign01";
+            CloudSaveBootstrap.ClearRegisteredSlots();
+            try
+            {
+                CloudSaveBootstrap.RegisterSlots(slot => slot == mission, new[] { mission }, text => true);
+                var storage = new MemorySaveStorage();
+                var backend = new FakeCloudSaveBackend { SignedInAccount = "account-1" };
+                backend.Files[mission + ".json"] = CloudSaveEnvelope.Saved(mission, 5000, "{}").ToJson();
+                backend.Files[ProfileStore.Slot + ".json"] = CloudSaveEnvelope.Saved(
+                    ProfileStore.Slot, 5000, new PlayerProfile(600, 3, 1, 2, 1).ToJson()).ToJson();
+                var sync = CloudSaveBootstrap.Create(storage, backend);
+                var recorder = new ProgressionRecorder(sync, _spec, new OfflineParticipants());
+                ProgressionBootstrap.Install(new AchievementRecorder(recorder, new AchievementSpec(Array.Empty<AchievementDefinition>()), () => 0d));
+                var pulled = new System.Collections.Generic.List<string>();
+                sync.SlotPulled += pulled.Add;
+                sync.SlotPulled += ProgressionBootstrap.ReloadPulledProfile;
+
+                for (var i = 0; i < 50 && !(sync.IsSignedIn && !sync.IsBusy && sync.PendingCount == 0); i++)
+                {
+                    sync.Tick(0d);
+                }
+
+                Assert.That(pulled, Is.EquivalentTo(new[] { ProfileStore.Slot, mission }), "the registered slot is synced with the profile");
+                Assert.That(storage.Text(mission), Is.EqualTo("{}"));
+                Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
+            }
+            finally
+            {
+                CloudSaveBootstrap.ClearRegisteredSlots();
+            }
         }
 
         [Test]

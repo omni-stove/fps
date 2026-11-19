@@ -33,8 +33,8 @@ namespace Shooter.Runtime
                 };
             }
 
-            _device = TutorialPresenter.DetectDevice(_deviceActions, _device);
-            var label = TutorialKeyLabels.For(interact, _device);
+            _device = InputKeyLabels.DetectDevice(_deviceActions, _device);
+            var label = InputKeyLabels.For(interact, _device);
             Report(label, interact);
             return label;
         }

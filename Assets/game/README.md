@@ -68,6 +68,8 @@ private void OnDisable()
 
 `ICloudSaveBackend` を `CloudSaveBootstrap.Backend` に、`IAccountBackend` を `AccountBootstrap.Backend` に、`SubsystemRegistration` の初期化で入れる。入れなければ EOS を使い、EOS も無ければ手元だけで動く。
 
+クラウドへ同期するのはプロフィールと、`CloudSaveBootstrap.RegisterSlots(owns, startupSlots, canRead)` で登録したスロットだけ。自分のセーブも同期するなら、`SubsystemRegistration` の初期化で、どのスロットが自分のものか・起動時に見に行くスロット・クラウドの中身を読めるか (読めなければ `false` か `FormatException`) を登録する (キャンペーンは `CampaignCloudSave` が登録する)。
+
 ## Demo サンプル
 
 1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。

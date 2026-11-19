@@ -13,6 +13,7 @@ namespace Shooter.Runtime
 
         private readonly List<MinimapContact> _contacts = new List<MinimapContact>();
         private readonly List<Damageable> _revealed = new List<Damageable>();
+        private readonly List<IMinimapObjective> _objectives = new List<IMinimapObjective>();
         private MinimapSpec _spec;
         private MinimapStatus? _published;
         private bool _due = true;
@@ -166,13 +167,14 @@ namespace Shooter.Runtime
         private int AddObjectives(GameObject player, SideMember mine)
         {
             var added = 0;
-            foreach (var area in FindObjectsByType<ObjectiveAreaBase>(FindObjectsInactive.Exclude))
+            _objectives.Clear();
+            MinimapObjectives.CopyShownTo(_objectives);
+            foreach (var objective in _objectives)
             {
-                if (area.isActiveAndEnabled && area.Zone != null && area.Zone.IsActive)
-                {
-                    added += AddObjective(area.transform.position, null);
-                }
+                added += AddObjective(objective.Position, null);
             }
+
+            _objectives.Clear();
 
             foreach (var point in FindObjectsByType<ControlPointZone>(FindObjectsInactive.Exclude))
             {

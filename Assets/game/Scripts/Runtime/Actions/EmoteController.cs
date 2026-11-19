@@ -443,7 +443,8 @@ namespace Shooter.Runtime
             }
 
             _changedView = false;
-            if (_rig != null && _rig.Mode == ViewMode.ThirdPerson)
+            // ViewRig を乗り物のカメラが借りている間は、借り手の視点を書き換えない。
+            if (_rig != null && _rig.enabled && _rig.Mode == ViewMode.ThirdPerson)
             {
                 _rig.Mode = ViewMode.FirstPerson;
             }

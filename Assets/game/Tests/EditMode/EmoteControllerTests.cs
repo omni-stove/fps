@@ -336,6 +336,22 @@ namespace Shooter.Tests.EditMode
             Assert.That(emotes.IsPlaying, Is.True);
         }
 
+        [Test]
+        public void AVehicleCameraBorrowingTheRigDuringAnEmoteReturnsToFirstPerson()
+        {
+            var emotes = Player(Emote.On);
+            var rig = emotes.GetComponent<ViewRig>();
+            LogAssert.Expect(LogType.Log, EmoteLog.Played(_emotes[0], hasAnimation: false));
+            Assert.That(emotes.Play(_wave), Is.True);
+
+            var camera = new VehicleCamera(rig);
+            camera.Begin(VehicleCameraView.Chase);
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.ThirdPerson));
+
+            camera.Restore();
+            Assert.That(rig.Mode, Is.EqualTo(ViewMode.FirstPerson));
+        }
+
         private EmoteController Player(Emote rule)
         {
             var go = Body("Player");

@@ -368,7 +368,7 @@ namespace Shooter.Server
 
         public bool BotReload(int playerId)
         {
-            return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && fighter.Weapons.TryReload();
+            return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && !IsReloadHeldOff(fighter) && fighter.Weapons.TryReload();
         }
 
         // 散らばりは持ち主の予測と同じ計算になるよう、武器の値と、サーバーの知る覗き込みと移動の速さで決める。

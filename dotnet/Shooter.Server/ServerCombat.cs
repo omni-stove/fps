@@ -89,6 +89,29 @@ namespace Shooter.Server
 
         internal ZoneDamageMultipliers ZoneDamage => _data.Rules.ZoneDamage;
 
+        // ServerMelee が自分を差し込む。ServerMelee は ServerCombat に頼って作られるので、逆向きに持たせずこの形で受ける
+        internal Func<int, bool> IsMeleeSwinging { get; set; }
+
+        internal void InterruptReload(int playerId, ReloadInterrupt by)
+        {
+            if (!_data.Rules.Actions.InterruptsReload(by) || !_fighters.TryGetValue(playerId, out var fighter))
+            {
+                return;
+            }
+
+            if (fighter.Weapons.CancelReload())
+            {
+                _log.WriteLine(ServerCombatLog.ReloadInterrupted(playerId, by));
+            }
+        }
+
+        private bool IsReloadHeldOff(Fighter fighter)
+        {
+            var actions = _data.Rules.Actions;
+            return (actions.InterruptsReload(ReloadInterrupt.Grenade) && fighter.Grenades.IsThrowing(_now))
+                || (actions.InterruptsReload(ReloadInterrupt.Melee) && IsMeleeSwinging != null && IsMeleeSwinging(fighter.PlayerId));
+        }
+
         internal ServerAreaEffects AreaEffects => _areaEffects;
 
         internal ServerFlash Flash => _flash;
@@ -181,7 +204,7 @@ namespace Shooter.Server
                     {
                         weapons.TryActiveReload();
                     }
-                    else if (action.Action == WeaponAction.Reload)
+                    else if (action.Action == WeaponAction.Reload && !IsReloadHeldOff(fighter))
                     {
                         weapons.TryReload();
                     }

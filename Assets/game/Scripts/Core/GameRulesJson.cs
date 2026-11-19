@@ -69,6 +69,7 @@ namespace Shooter.Core
         public const string ReviveRangeItem = "reviveRange";
         public const string EmoteItem = "emote";
         public const string StaminaItem = "stamina";
+        public const string ReloadInterruptedByItem = "reloadInterruptedBy";
 
         // 項目は 2 段までなので、それより深く入れ子にしたものは読む前に断る。
         private const int _maxDepth = 8;
@@ -137,6 +138,7 @@ namespace Shooter.Core
             ReviveRangeItem,
             EmoteItem,
             StaminaItem,
+            ReloadInterruptedByItem,
         };
 
         // 弱点の倍率はルールで変えるものではないので書けるようにせず、土台のルールの値のままにする。
@@ -277,6 +279,7 @@ namespace Shooter.Core
             writer.Float(ReviveRangeItem, actions.ReviveRange);
             writer.Enum(EmoteItem, actions.Emote);
             writer.Enum(StaminaItem, actions.Stamina);
+            writer.EnumArray(ReloadInterruptedByItem, actions.ReloadInterruptedBy);
             writer.EndObject();
             writer.Float(SpawnProtectionSecondsItem, rules.SpawnProtectionSeconds);
             writer.Enum(FallDamageItem, rules.FallDamage);
@@ -406,7 +409,8 @@ namespace Shooter.Core
                     fields.ReadEnum(JumpItem, defaults.Jump),
                     fields.ReadFloat(ReviveRangeItem, defaults.ReviveRange),
                     fields.ReadEnum(EmoteItem, defaults.Emote),
-                    fields.ReadEnum(StaminaItem, defaults.Stamina));
+                    fields.ReadEnum(StaminaItem, defaults.Stamina),
+                    fields.ReadEnumArray(ReloadInterruptedByItem, defaults.ReloadInterruptedBy));
             }
             catch (ArgumentException e)
             {

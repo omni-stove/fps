@@ -32,6 +32,33 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Samples/ShooterKitDemo/Scenes/NetArena01.unity
     guid: d4f86b6dccbf84e3d8270388af445537
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Playground.unity
+    guid: 27a3c34ab4f324acabecea107eb0da86
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/HighDrop.unity
+    guid: 75d817a90896c41fabff2a013601714d
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Downed.unity
+    guid: c289d5ee7de514b76a337e214553b642
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/WaveTest.unity
+    guid: 5905a52359ef24c62878cc71d51754a8
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/DestructionTest.unity
+    guid: e70c39d84881e4b11b45155ec6fc96cb
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/VehicleRange.unity
+    guid: 770162f204a5c4f37a467105f111ef23
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/ModeTest.unity
+    guid: 84a975511be324a1e85e313a6945d1fc
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/FreeForAll.unity
+    guid: e149178fe3ccf456696c258807ee9ee3
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/KillConfirmed.unity
+    guid: b45dd118b13af435c9f30718cb1ea9cb
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

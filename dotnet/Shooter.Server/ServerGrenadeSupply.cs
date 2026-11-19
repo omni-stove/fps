@@ -50,6 +50,9 @@ namespace Shooter.Server
             _nextThrowAt = double.NegativeInfinity;
         }
 
+        // 投げている間を別に数えず次を投げられる時刻で決めるのは、オフラインの GrenadeThrower.IsThrowing と同じ ThrowSeconds にそろえるため
+        public bool IsThrowing(double nowSeconds) => nowSeconds < _nextThrowAt;
+
         public GrenadeThrowRejection Check(double nowSeconds, string typeId, out GrenadeSpec spec)
         {
             if (!double.IsFinite(nowSeconds))

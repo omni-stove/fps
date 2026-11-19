@@ -104,6 +104,8 @@
         </ui:VisualElement>
         <!-- 自分の乗り物が狙われている警告。GameSignals.LockOnWarning が無し以外の間だけビューが出し、段階の文字と向きの印を入れ、ロック済みなら lock-warning--locked を付ける。 -->
         <ui:VisualElement name="lock-warning" class="lock-warning" picking-mode="Ignore" style="display: none;" />
+        <!-- エモートを選ぶ輪。GameSignals.Emotes がある間に Emote を長押しすると EmoteWheelView が出し、エモートごとの枠 (emote-wheel__slot) を円に並べ、中央 (emote-wheel__center) に指している名前を入れる。 -->
+        <ui:VisualElement name="emote-wheel" class="emote-wheel" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のミニマップの下のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の音の合図の字幕 ([銃声 左後ろ] など)。設定で字幕を On にしているとき、SubtitleView が行 (subtitles__line) を入れ、行があるときだけ出す。 -->

@@ -1275,6 +1275,57 @@
     background-color: rgba(200, 30, 30, 0.85);
 }
 
+/* エモートを選ぶ輪。画面の中央に置き、EmoteWheelView が枠を円周の left / top に置く。幅の半分は EmoteWheelView.WheelHalfSize と揃える。 */
+.emote-wheel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 420px;
+    height: 420px;
+    translate: -50% -50%;
+    border-radius: 210px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.emote-wheel__slot {
+    position: absolute;
+    width: 120px;
+    height: 56px;
+    translate: -50% -50%;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    border-radius: 8px;
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.emote-wheel__slot--selected {
+    border-color: rgb(255, 210, 60);
+    background-color: rgba(120, 90, 0, 0.8);
+    scale: 1.1 1.1;
+}
+
+.emote-wheel__slot-name {
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.emote-wheel__center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* ボイスチャットの欄。左の中ほどに、自分の印を先頭にして話している人を積む。VoiceIndicatorView が行を入れる。 */
 .voice {
     position: absolute;

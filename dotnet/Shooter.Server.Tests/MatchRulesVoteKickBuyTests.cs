@@ -17,7 +17,7 @@ namespace Shooter.Server.Tests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
 
-        // 届いた後もしばらく回し、遅れて切断や返事が来ないことも見る
+        // 届いた後もしばらく回し、遅れて切断や投票の返事が来ないことも見る (購入には断りの答えが返る)
         private const int _ticksAfterDelivery = 30;
 
         private static readonly DateTime _time = new DateTime(2026, 11, 19, 9, 0, 0, DateTimeKind.Utc);
@@ -73,7 +73,7 @@ namespace Shooter.Server.Tests
             _first.Send(new BuyRequestMessage { ItemId = "armor-light" });
             Pump(() => Delivered(MessageIds.VoteKickRequest) && Delivered(MessageIds.BuyRequest));
             var deliveredAt = _first.LatestSnapshot.Tick;
-            Pump(() => _first.LatestSnapshot.Tick >= deliveredAt + _ticksAfterDelivery);
+            Pump(() => _first.LatestSnapshot.Tick >= deliveredAt + _ticksAfterDelivery && _first.Received.Contains(MessageIds.BuyAnswer));
 
             Assert.That(_first.Disconnected, Is.False, "the caller stays connected");
             Assert.That(_second.Disconnected, Is.False, "the target stays connected");
@@ -82,6 +82,7 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Not.Contain("[Net] dropped client"));
             Assert.That(_first.Received, Does.Not.Contain(MessageIds.VoteKickState), "vote kicks are off by default");
             Assert.That(_second.Received, Does.Not.Contain(MessageIds.VoteKickState));
+            Assert.That(_second.Received, Does.Not.Contain(MessageIds.BuyAnswer), "only the buyer hears why the purchase was refused");
             Assert.That(Row(_first, targetId).HasValue, Is.True, "the target is still in the match");
             Assert.That(Row(_second, callerId).HasValue, Is.True);
 

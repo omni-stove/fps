@@ -164,8 +164,8 @@ namespace Shooter.Tests.EditMode
                 var roots = scene.GetRootGameObjects();
                 Assert.That(
                     roots,
-                    Has.Length.EqualTo(5),
-                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table, the perimeter and the platforms");
+                    Has.Length.EqualTo(6),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table, the perimeter, the platforms and the lock-on pen");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
@@ -176,6 +176,10 @@ namespace Shooter.Tests.EditMode
                 var elevatorSettings = AssetDatabase.LoadAssetAtPath<MovingPlatformSettings>(BootstrapSceneBuilder.ElevatorSettingsPath);
                 Assert.That(elevatorSettings, Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
                 AssertPlatforms(roots[4], elevatorSettings);
+                Assert.That(roots[5].name, Is.EqualTo(BootstrapSceneBuilder.LockOnPenName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the lock-on turret");
+                var lockOnWeapon = VehicleRangeSceneBuilder.PickLockOnWeapon(WeaponAssetBuilder.LoadRangeWeapons().Weapons);
+                Assert.That(lockOnWeapon, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
+                AssertLockOnPen(roots[5], lockOnWeapon);
                 Assert.That(
                     roots[2].GetComponentsInChildren<PickupSpawnPoint>().Select(p => p.Contents.Weapon.Id),
                     Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds),
@@ -231,6 +235,177 @@ namespace Shooter.Tests.EditMode
                 UnityEngine.Object.DestroyImmediate(rifle);
                 UnityEngine.Object.DestroyImmediate(range);
                 UnityEngine.Object.DestroyImmediate(elevator);
+            }
+        }
+
+        [Test]
+        public void PopulatingWithALockOnWeaponAddsTheGroundTurretPen()
+        {
+            var scene = TestScenes.NewAdditive();
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            var elevator = ElevatorSettings();
+            var guided = GuidedWeapon();
+            try
+            {
+                var bootstrap = BootstrapSceneBuilder.PopulateScene(
+                    scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), elevator, guided);
+
+                var roots = scene.GetRootGameObjects();
+                Assert.That(roots, Has.Length.EqualTo(5));
+                Assert.That(roots[0], Is.SameAs(bootstrap));
+                Assert.That(roots[3].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName));
+                Assert.That(roots[4].name, Is.EqualTo(BootstrapSceneBuilder.LockOnPenName));
+                AssertLockOnPen(roots[4], guided);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(range);
+                UnityEngine.Object.DestroyImmediate(elevator);
+                UnityEngine.Object.DestroyImmediate(guided);
+            }
+        }
+
+        [Test]
+        public void TheLockOnPenNeedsAWeaponThatCanHome()
+        {
+            var scene = TestScenes.NewAdditive();
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            var elevator = ElevatorSettings();
+            var guided = GuidedWeapon();
+            var unguided = ScriptableObject.CreateInstance<WeaponDefinition>();
+            unguided.name = "Unguided";
+            WeaponAssetBuilder.Configure(
+                unguided,
+                new WeaponSpec(
+                    "0b6f1c2e-3d4a-4e5f-8a9b-1c2d3e4f5a6b",
+                    "weapon.unguided",
+                    WeaponCategory.Launcher,
+                    round: new RoundSpec(RoundDelivery.Projectile, 100f, projectile: new ProjectileSpec(25f, 0f, 6f))));
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.CreateLockOnPen(scene, null));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateLockOnPen(scene, unguided));
+                Assert.Throws<ArgumentNullException>(
+                    () => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), elevator, null));
+                Assert.Throws<ArgumentException>(
+                    () => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), elevator, unguided));
+                Assert.That(scene.rootCount, Is.Zero, "nothing is placed with a weapon that cannot lock on");
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateLockOnPen(default, guided));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(range);
+                UnityEngine.Object.DestroyImmediate(elevator);
+                UnityEngine.Object.DestroyImmediate(guided);
+                UnityEngine.Object.DestroyImmediate(unguided);
+            }
+        }
+
+        [Test]
+        public void TheGroundTurretWatchesPlayersOnTheGroundOnly()
+        {
+            var spec = BootstrapSceneBuilder.GroundTurretSpec;
+
+            Assert.That(spec.TargetTag, Is.EqualTo(GameBootstrap.PlayerTag), "the dummies carry no player tag, so they are not watched");
+            Assert.That(spec.MinTargetHeight, Is.EqualTo(0f));
+            var floor = BootstrapSceneBuilder.LockOnPenCenter.y;
+            Assert.That(spec.IsHighEnough(floor, floor + (GameBootstrap.PlayerHeight / 2f)), Is.True, "a player walking on the floor");
+            Assert.That(spec.TurnDegreesPerSecond, Is.EqualTo(LockOnTurretSpec.DefaultTurnDegreesPerSecond));
+        }
+
+        [Test]
+        public void TheLockOnPenSitsInABackCornerAwayFromTheLanesAndThePlatforms()
+        {
+            var walls = BootstrapSceneBuilder.LockOnPenWalls;
+            Assert.That(walls.Count, Is.EqualTo(5), "four sides with a gap in the east side");
+            var pen = new Bounds(new Bounds(walls[0].Center, walls[0].Size).center, Vector3.zero);
+            foreach (var wall in walls)
+            {
+                var bounds = new Bounds(wall.Center, wall.Size);
+                pen.Encapsulate(bounds);
+                Assert.That(bounds.min.y, Is.EqualTo(0f).Within(1e-5f), $"{wall.Name} stands on the floor");
+                Assert.That(bounds.max.y, Is.GreaterThan(GameBootstrap.EyeOffset.y + GameBootstrap.PlayerSpawn.y), $"{wall.Name} is taller than the eye");
+            }
+
+            var floorHalf = BootstrapSceneBuilder.PerimeterHalfExtents;
+            Assert.That(pen.min.x, Is.GreaterThan(-floorHalf.x));
+            Assert.That(pen.max.z, Is.LessThan(floorHalf.y));
+            Assert.That(pen.max.x, Is.EqualTo(BootstrapSceneBuilder.LockOnPenCenter.x + BootstrapSceneBuilder.LockOnPenHalfExtent).Within(1e-5f));
+
+            var eastNorth = walls.Single(w => w.Name == BootstrapSceneBuilder.LockOnPenEastNorthName);
+            var eastSouth = walls.Single(w => w.Name == BootstrapSceneBuilder.LockOnPenEastSouthName);
+            var gap = (eastNorth.Center.z - (eastNorth.Size.z / 2f)) - (eastSouth.Center.z + (eastSouth.Size.z / 2f));
+            Assert.That(gap, Is.EqualTo(BootstrapSceneBuilder.LockOnPenDoorWidth).Within(1e-5f), "the door is the only opening");
+
+            foreach (var stop in BootstrapSceneBuilder.ShuttleStops)
+            {
+                var shuttle = new Bounds(BootstrapSceneBuilder.ShuttleOrigin + stop, BootstrapSceneBuilder.PlatformSlabSize + (Vector3.up * 4f));
+                Assert.That(shuttle.Intersects(pen), Is.False, "the shuttle runs clear of the pen");
+                Assert.That(shuttle.min.x, Is.GreaterThan(pen.max.x), "the shuttle runs east of the pen");
+            }
+
+            foreach (var cover in BootstrapSceneBuilder.Covers)
+            {
+                Assert.That(new Bounds(cover.Center, cover.Size).Intersects(pen), Is.False, cover.Name);
+            }
+
+            var tower = BootstrapSceneBuilder.ElevatorTower;
+            Assert.That(new Bounds(tower.Center, tower.Size).Intersects(pen), Is.False);
+        }
+
+        [Test]
+        public void TheGroundTurretSeesOnlyTheBackOfTheRangeThroughTheDoor()
+        {
+            var head = BootstrapSceneBuilder.LockOnPenCenter + VehicleRangeSceneBuilder.LockOnTurretHeadLocal;
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+            var chest = Vector3.up * (GameBootstrap.PlayerHeight / 2f);
+
+            var hidden = new System.Collections.Generic.List<(string Name, Vector3 Point)>
+            {
+                ("spawn", GameBootstrap.PlayerSpawn),
+            };
+            foreach (var target in GameBootstrap.TargetDummyPositions(feet, Quaternion.identity))
+            {
+                hidden.Add(("beside a target", target + chest + (Vector3.back * 1f)));
+            }
+
+            foreach (var table in BootstrapSceneBuilder.WeaponTablePositions(16))
+            {
+                hidden.Add(("at the weapon table", table + chest));
+            }
+
+            var platformTop = Vector3.up * ((BootstrapSceneBuilder.PlatformSlabSize.y / 2f) + (GameBootstrap.PlayerHeight / 2f));
+            foreach (var stop in BootstrapSceneBuilder.ShuttleStops)
+            {
+                hidden.Add(("on the shuttle", BootstrapSceneBuilder.ShuttleOrigin + stop + platformTop));
+            }
+
+            foreach (var stop in BootstrapSceneBuilder.ElevatorStops)
+            {
+                hidden.Add(("on the elevator", BootstrapSceneBuilder.ElevatorOrigin + stop + platformTop));
+            }
+
+            var tower = BootstrapSceneBuilder.ElevatorTower;
+            hidden.Add(("on the tower", tower.Center + (Vector3.up * (tower.Size.y / 2f)) + chest));
+
+            foreach (var (name, point) in hidden)
+            {
+                Assert.That(IsBlockedByThePen(head, point), Is.True, $"a player {name} at {point} gets no warning");
+            }
+
+            var door = new Vector3(
+                BootstrapSceneBuilder.LockOnPenCenter.x + BootstrapSceneBuilder.LockOnPenHalfExtent + 1f,
+                chest.y,
+                BootstrapSceneBuilder.LockOnPenCenter.z);
+            foreach (var point in new[] { door, new Vector3(0f, chest.y, door.z), new Vector3(15f, chest.y, door.z) })
+            {
+                Assert.That(IsBlockedByThePen(head, point), Is.False, $"a player at {point} in front of the door is seen");
             }
         }
 
@@ -620,6 +795,71 @@ namespace Shooter.Tests.EditMode
                 Assert.That(box.isTrigger, Is.True, $"{name} is walked through");
                 Assert.That(Vector3.Distance(box.size, expected.Size), Is.LessThan(1e-4f), name);
             }
+        }
+
+        private static WeaponDefinition GuidedWeapon()
+        {
+            var weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
+            weapon.name = "Guided";
+            WeaponAssetBuilder.Configure(
+                weapon,
+                new WeaponSpec(
+                    "7a3e9c1d-2b4f-4c6a-9e8d-5f1a2b3c4d5e",
+                    "weapon.guided",
+                    WeaponCategory.Launcher,
+                    round: new RoundSpec(
+                        RoundDelivery.Projectile,
+                        150f,
+                        projectile: new ProjectileSpec(25f, 0f, 6f),
+                        homing: new HomingSpec(1f, 8f, 90f))));
+            return weapon;
+        }
+
+        private static void AssertLockOnPen(GameObject root, WeaponDefinition weapon)
+        {
+            var walls = BootstrapSceneBuilder.LockOnPenWalls;
+            foreach (var expected in walls)
+            {
+                var wall = root.transform.Find(expected.Name);
+                Assert.That(wall, Is.Not.Null, expected.Name);
+                Assert.That(Vector3.Distance(wall.position, expected.Center), Is.LessThan(1e-4f), expected.Name);
+                Assert.That(Vector3.Distance(wall.lossyScale, expected.Size), Is.LessThan(1e-4f), expected.Name);
+                Assert.That(wall.GetComponent<BoxCollider>().isTrigger, Is.False, $"{expected.Name} blocks the turret's view");
+                Assert.That(wall.gameObject.isStatic, Is.True, expected.Name);
+                Assert.That(SurfaceMaterial.IdOf(wall.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.ConcreteId), expected.Name);
+            }
+
+            var turrets = root.GetComponentsInChildren<LockOnTurret>();
+            Assert.That(turrets, Has.Length.EqualTo(1));
+            var turret = turrets[0];
+            Assert.That(turret.name, Is.EqualTo(BootstrapSceneBuilder.LockOnTurretName));
+            Assert.That(Vector3.Distance(turret.transform.position, BootstrapSceneBuilder.LockOnPenCenter), Is.LessThan(1e-4f));
+            Assert.That(turret.Weapon, Is.SameAs(weapon));
+            Assert.That(turret.Weapon.ToSpec().Round.Homing, Is.Not.Null, "the turret locks on with a homing round");
+            Assert.That(turret.Head.name, Is.EqualTo(VehicleRangeSceneBuilder.LockOnTurretHeadName));
+            Assert.That(turret.Head.parent, Is.SameAs(turret.transform));
+            Assert.That(Vector3.Angle(turret.Head.forward, Vector3.right), Is.LessThan(0.01f), "the head faces the door");
+            Assert.That(turret.Spec.MinTargetHeight, Is.EqualTo(BootstrapSceneBuilder.LockOnTurretMinTargetHeight));
+            Assert.That(turret.Spec.TargetTag, Is.EqualTo(GameBootstrap.PlayerTag));
+            Assert.That(turret.Spec.TurnDegreesPerSecond, Is.EqualTo(LockOnTurretSpec.DefaultTurnDegreesPerSecond));
+            Assert.That(turret.GetComponent<Damageable>(), Is.Null, "the turret only watches; it is not a target");
+        }
+
+        // Edit Mode では物理の当たりを焼き直さないので、壁の箱との交わりを数で確かめる。
+        private static bool IsBlockedByThePen(Vector3 from, Vector3 to)
+        {
+            var offset = to - from;
+            var distance = offset.magnitude;
+            var ray = new Ray(from, offset / distance);
+            foreach (var wall in BootstrapSceneBuilder.LockOnPenWalls)
+            {
+                if (new Bounds(wall.Center, wall.Size).IntersectRay(ray, out var hit) && hit <= distance)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static WeaponDefinition[] LoadFeatured()

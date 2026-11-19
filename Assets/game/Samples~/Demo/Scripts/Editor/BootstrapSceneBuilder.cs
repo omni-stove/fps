@@ -165,6 +165,65 @@ namespace Shooter.Editor
             }
         }
 
+        public const string LockOnPenName = "LockOnPen";
+
+        public const string LockOnTurretName = "LockOnTurret_Ground";
+
+        public const string LockOnPenNorthName = "LockOnPen_North";
+
+        public const string LockOnPenSouthName = "LockOnPen_South";
+
+        public const string LockOnPenWestName = "LockOnPen_West";
+
+        public const string LockOnPenEastNorthName = "LockOnPen_East_North";
+
+        public const string LockOnPenEastSouthName = "LockOnPen_East_South";
+
+        // 奥の左の角に置き、遮蔽物・武器の台・標的・往復する床・エレベーターのどれとも重ならないようにする。
+        public static readonly Vector3 LockOnPenCenter = new Vector3(-19f, 0f, 19f);
+
+        public const float LockOnPenHalfExtent = 3f;
+
+        // 目 (1.6m) より高くして、囲いの外からは入り口を通してしか見通せないようにする。
+        public const float LockOnPenWallHeight = 3f;
+
+        public const float LockOnPenWallThickness = 0.4f;
+
+        // 狭くして、入り口から見通せる範囲を射撃場の奥だけに絞る。広げると標的の列や出現位置の右手まで見える。
+        public const float LockOnPenDoorWidth = 1.5f;
+
+        // 0 にして、地上を歩くプレイヤーも捉える。キットの既定 (5m) は空にいる相手だけを狙う。
+        public const float LockOnTurretMinTargetHeight = 0f;
+
+        // 頭は入り口 (東の壁) へ向けておき、入り口から覗いた相手をすぐ捉えられるようにする。
+        public static Quaternion LockOnTurretHeadRotation => Quaternion.LookRotation(Vector3.right, Vector3.up);
+
+        // 標的の人形を捉えて頭をそちらへ向け続けないよう、プレイヤーのタグの体だけを狙わせる。
+        public static LockOnTurretSpec GroundTurretSpec =>
+            new LockOnTurretSpec(LockOnTurretSpec.DefaultTurnDegreesPerSecond, LockOnTurretMinTargetHeight, GameBootstrap.PlayerTag);
+
+        // 入り口は東 (射撃場の奥、標的の後ろ) へ開ける。出現位置や射撃の列から見えると、射撃場にいる間ずっと警告が出るため。
+        public static IReadOnlyList<LevelBox> LockOnPenWalls
+        {
+            get
+            {
+                var c = LockOnPenCenter;
+                var h = LockOnPenHalfExtent;
+                var t = LockOnPenWallThickness;
+                var y = LockOnPenWallHeight / 2f;
+                var side = h - t - (LockOnPenDoorWidth / 2f);
+                var sideOffset = (LockOnPenDoorWidth / 2f) + (side / 2f);
+                return new[]
+                {
+                    new LevelBox(LockOnPenNorthName, new Vector3(c.x, y, c.z + h - (t / 2f)), new Vector3(2f * h, LockOnPenWallHeight, t)),
+                    new LevelBox(LockOnPenSouthName, new Vector3(c.x, y, c.z - h + (t / 2f)), new Vector3(2f * h, LockOnPenWallHeight, t)),
+                    new LevelBox(LockOnPenWestName, new Vector3(c.x - h + (t / 2f), y, c.z), new Vector3(t, LockOnPenWallHeight, (2f * h) - (2f * t))),
+                    new LevelBox(LockOnPenEastNorthName, new Vector3(c.x + h - (t / 2f), y, c.z + sideOffset), new Vector3(t, LockOnPenWallHeight, side)),
+                    new LevelBox(LockOnPenEastSouthName, new Vector3(c.x + h - (t / 2f), y, c.z - sideOffset), new Vector3(t, LockOnPenWallHeight, side)),
+                };
+            }
+        }
+
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
@@ -192,6 +251,10 @@ namespace Shooter.Editor
             var weapons = LoadPlayerWeapons(reference);
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.RangePath);
             var featured = LoadFeaturedWeapons(reference, realistic);
+            // 名前でなく弾の値で選ぶのは、ゲームが武器を差し替えても、捕捉できる武器ならタレットに付けられるようにするため。
+            var lockOnWeapon = VehicleRangeSceneBuilder.PickLockOnWeapon(WeaponAssetBuilder.LoadRangeWeapons().Weapons)
+                ?? throw new InvalidOperationException(
+                    $"[BootstrapSceneBuilder] no range weapon has a homing round for the lock-on turret; add one to '{WeaponAssetBuilder.RangeWeaponsPath}'");
             var elevator = BuildElevatorSettings();
 
             var directory = Path.GetDirectoryName(path);
@@ -200,7 +263,7 @@ namespace Shooter.Editor
                 Directory.CreateDirectory(directory);
             }
 
-            PopulateScene(scene, weapons, rules, featured, elevator);
+            PopulateScene(scene, weapons, rules, featured, elevator, lockOnWeapon);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -274,6 +337,64 @@ namespace Shooter.Editor
             CreatePlatforms(scene, elevatorSettings);
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;
+        }
+
+        // 見張りのタレットを足す形を分けるのは、捕捉の武器が射撃場の武器のアセット (RangeWeapons) から来て、それを作らずに場を組むテストや他の場の組み立てを変えないため。
+        public static GameObject PopulateScene(
+            Scene scene,
+            IReadOnlyList<WeaponDefinition> weapons,
+            GameRulesDefinition rules,
+            IReadOnlyList<WeaponDefinition> featured,
+            MovingPlatformSettings elevatorSettings,
+            WeaponDefinition lockOnWeapon)
+        {
+            RequireLockOnWeapon(lockOnWeapon);
+            var bootstrap = PopulateScene(scene, weapons, rules, featured, elevatorSettings);
+            CreateLockOnPen(scene, lockOnWeapon);
+            EditorSceneManager.MarkSceneDirty(scene);
+            return bootstrap;
+        }
+
+        // タレットは警告を確かめるための見張りで、撃たない。捕捉の進み方は武器の Homing の値を使う。
+        public static GameObject CreateLockOnPen(Scene scene, WeaponDefinition lockOnWeapon)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            RequireLockOnWeapon(lockOnWeapon);
+
+            var root = new GameObject(LockOnPenName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            try
+            {
+                foreach (var wall in LockOnPenWalls)
+                {
+                    var box = SceneBuildHelpers.CreateStaticBox(scene, root.transform, wall.Name, wall.Center, wall.Size);
+                    SceneBuildHelpers.SetSurfaceMaterial(box, SurfaceImpactAssetStep.ConcreteId);
+                }
+
+                VehicleRangeSceneBuilder.CreateLockOnTurret(
+                    scene, root.transform, LockOnTurretName, LockOnPenCenter, LockOnTurretHeadRotation, lockOnWeapon, GroundTurretSpec);
+            }
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
+
+            return root;
+        }
+
+        private static void RequireLockOnWeapon(WeaponDefinition weapon)
+        {
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            // 値が不正なら ToSpec が ArgumentException を投げる。
+            if (weapon.ToSpec().Round.Homing == null)
+            {
+                throw new ArgumentException($"weapon '{weapon.Id}' has no homing round, so the turret could never lock on", nameof(weapon));
+            }
         }
 
         public static GameObject CreatePlatforms(Scene scene, MovingPlatformSettings elevatorSettings)

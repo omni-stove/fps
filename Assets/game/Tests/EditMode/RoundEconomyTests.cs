@@ -101,6 +101,77 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheLocalPlayersPurchaseIsAnsweredAfterTheWalletChanges()
+        {
+            Start(swapEveryRounds: 0);
+            var answers = new List<PurchaseAnswer>();
+            int? moneyWhenAnswered = null;
+            void Record(PurchaseAnswer answer)
+            {
+                answers.Add(answer);
+                moneyWhenAnswered = GameSignals.Wallet.Value?.Money;
+            }
+
+            CombatEvents.PurchaseAnswered += Record;
+            try
+            {
+                GameSignals.BuySender.Value.Buy(_launcher.Id);
+            }
+            finally
+            {
+                CombatEvents.PurchaseAnswered -= Record;
+            }
+
+            Assert.That(answers, Has.Count.EqualTo(1));
+            Assert.That(answers[0].ItemId, Is.EqualTo(_launcher.Id));
+            Assert.That(answers[0].Verdict, Is.EqualTo(PurchaseVerdict.Bought));
+            Assert.That(moneyWhenAnswered, Is.EqualTo(800 - LauncherPrice), "the wallet is published before the answer");
+        }
+
+        [Test]
+        public void ALocalPurchaseThatCannotBeCarriedIsAnsweredWithTheReason()
+        {
+            Start(swapEveryRounds: 0);
+            var answers = new List<PurchaseAnswer>();
+            CombatEvents.PurchaseAnswered += answers.Add;
+            try
+            {
+                GameSignals.BuySender.Value.Buy(_rifle.Id);
+                GameSignals.BuySender.Value.Buy("unknown");
+            }
+            finally
+            {
+                CombatEvents.PurchaseAnswered -= answers.Add;
+            }
+
+            Assert.That(answers, Has.Count.EqualTo(2));
+            Assert.That(answers[0].ItemId, Is.EqualTo(_rifle.Id));
+            Assert.That(answers[0].Verdict, Is.EqualTo(PurchaseVerdict.CannotCarry), "the rifle is already the first weapon in slot 0");
+            Assert.That(answers[1].ItemId, Is.EqualTo("unknown"));
+            Assert.That(answers[1].Verdict, Is.EqualTo(PurchaseVerdict.UnknownItem));
+            Assert.That(_economy.Economy.MoneyOf(0), Is.EqualTo(800));
+        }
+
+        [Test]
+        public void PurchasesForOtherPlayersAreNotAnswered()
+        {
+            Start(swapEveryRounds: 0);
+            var answers = new List<PurchaseAnswer>();
+            CombatEvents.PurchaseAnswered += answers.Add;
+            try
+            {
+                Assert.That(_economy.Buy(2, _handgun.Id), Is.EqualTo(PurchaseVerdict.Bought));
+                Assert.That(_economy.Buy(0, _rifle.Id), Is.EqualTo(PurchaseVerdict.CannotCarry));
+            }
+            finally
+            {
+                CombatEvents.PurchaseAnswered -= answers.Add;
+            }
+
+            Assert.That(answers, Is.Empty, "only a purchase sent through the buy sender is answered");
+        }
+
+        [Test]
         public void ABoughtWeaponCanFillASlotTheHolderDidNotHave()
         {
             Start(swapEveryRounds: 0);

@@ -598,6 +598,41 @@ namespace Shooter.Tests.EditMode
                 Vector3.Distance(VehicleRangeSceneBuilder.LockOnTurretOrigin, VehicleRangeSceneBuilder.HelicopterOrigin),
                 Is.GreaterThan(VehicleSpec.DefaultEnterRange * 4f),
                 "the turret does not crowd the helicopter pad");
+            Assert.That(turret.Spec.TargetTag, Is.Empty, "the vehicle range turret takes anyone in the air");
+        }
+
+        [Test]
+        public void ALockOnTurretCanBePlacedUnderAParentWithItsOwnSettings()
+        {
+            var parent = new GameObject("Parent");
+            SceneManager.MoveGameObjectToScene(parent, _scene);
+            var spec = new LockOnTurretSpec(45f, 0f, "Player");
+            var rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+
+            var turret = VehicleRangeSceneBuilder.CreateLockOnTurret(
+                _scene, parent.transform, "Watch", new Vector3(3f, 0f, 4f), rotation, _guided, spec);
+
+            Assert.That(turret.transform.parent, Is.SameAs(parent.transform));
+            Assert.That(turret.name, Is.EqualTo("Watch"));
+            Assert.That(Vector3.Distance(turret.transform.position, new Vector3(3f, 0f, 4f)), Is.LessThan(1e-4f));
+            Assert.That(Vector3.Angle(turret.Head.forward, Vector3.right), Is.LessThan(0.01f));
+            Assert.That(turret.Weapon, Is.SameAs(_guided));
+            Assert.That(turret.Spec.TurnDegreesPerSecond, Is.EqualTo(45f));
+            Assert.That(turret.Spec.MinTargetHeight, Is.EqualTo(0f));
+            Assert.That(turret.Spec.TargetTag, Is.EqualTo("Player"));
+
+            var count = _scene.rootCount;
+            Assert.Throws<ArgumentNullException>(
+                () => VehicleRangeSceneBuilder.CreateLockOnTurret(_scene, null, "Watch", Vector3.zero, rotation, null, spec));
+            Assert.Throws<ArgumentNullException>(
+                () => VehicleRangeSceneBuilder.CreateLockOnTurret(_scene, null, "Watch", Vector3.zero, rotation, _guided, null));
+            Assert.Throws<ArgumentException>(
+                () => VehicleRangeSceneBuilder.CreateLockOnTurret(_scene, null, "Watch", Vector3.zero, rotation, _heatGun, spec));
+            Assert.Throws<ArgumentException>(
+                () => VehicleRangeSceneBuilder.CreateLockOnTurret(_scene, null, " ", Vector3.zero, rotation, _guided, spec));
+            Assert.Throws<ArgumentException>(
+                () => VehicleRangeSceneBuilder.CreateLockOnTurret(default, null, "Watch", Vector3.zero, rotation, _guided, spec));
+            Assert.That(_scene.rootCount, Is.EqualTo(count), "nothing is placed when the arguments are refused");
         }
 
         [Test]

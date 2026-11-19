@@ -1162,6 +1162,28 @@
                     "action": "Countermeasure",
                     "isComposite": false,
                     "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "c6e2a94d-7b18-4f3e-9d05-81a7f3c2e4b9",
+                    "path": "<Gamepad>/dpad/up",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Emote",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3b9f0d57-e214-4a6c-b8d3-5c0e7a91f26d",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Countermeasure",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         },

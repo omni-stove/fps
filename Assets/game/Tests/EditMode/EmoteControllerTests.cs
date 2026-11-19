@@ -37,6 +37,7 @@ namespace Shooter.Tests.EditMode
             _now = 0f;
             CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
+            KeySharing.Reset();
         }
 
         [TearDown]
@@ -53,6 +54,62 @@ namespace Shooter.Tests.EditMode
             _objects.Clear();
             CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
+            KeySharing.Reset();
+        }
+
+        [Test]
+        public void TheEmoteKeyIsClaimedOnlyWhileTheRuleIsOn()
+        {
+            var off = Player(Emote.Off);
+            Assert.That(KeySharing.IsClaimed(EmoteController.EmoteActionPath), Is.False);
+
+            var on = Player(Emote.On);
+            Assert.That(KeySharing.IsClaimed(EmoteController.EmoteActionPath), Is.True);
+
+            on.Configure(EmoteRules(Emote.Off));
+            Assert.That(KeySharing.IsClaimed(EmoteController.EmoteActionPath), Is.False);
+
+            off.Configure(EmoteRules(Emote.On));
+            KeySharing.Reset();
+            off.Tick(_now);
+            Assert.That(KeySharing.IsClaimed(EmoteController.EmoteActionPath), Is.True, "a reset claim is made again on the next tick");
+        }
+
+        [Test]
+        public void PingOnTheSharedGamepadButtonYieldsToTheEmoteWheelOnlyOnFoot()
+        {
+            var asset = ProjectActionsClone.Create();
+            var gamepad = InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                var ping = asset.FindAction(InputActionPaths.Ping, true);
+                var emotes = Player(Emote.On);
+
+                Assert.That(KeySharing.Yields(ping, gamepad.dpad.up), Is.True, "the bundled key-sharing.json prefers Emote on the shared button");
+                Assert.That(KeySharing.Yields(asset.FindAction(InputActionPaths.Emote, true), gamepad.dpad.up), Is.False);
+                Assert.That(KeySharing.Yields(ping, gamepad.dpad.down), Is.False, "only the shared button is taken");
+
+                var rider = AddRider(emotes.gameObject, out var actions);
+                try
+                {
+                    Assert.That(CreateVehicle().TryEnter(rider, 0, false), Is.True);
+                    emotes.Tick(_now);
+                    Assert.That(KeySharing.IsClaimed(EmoteController.EmoteActionPath), Is.False);
+                    Assert.That(KeySharing.Yields(ping, gamepad.dpad.up), Is.False, "a rider cannot emote, so the button pings");
+                }
+                finally
+                {
+                    foreach (var action in actions)
+                    {
+                        action.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(gamepad);
+                ProjectActionsClone.Destroy(asset);
+            }
         }
 
         [Test]

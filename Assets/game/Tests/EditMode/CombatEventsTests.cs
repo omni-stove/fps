@@ -436,6 +436,32 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void PurchaseAnsweredPassesTheItemAndTheVerdictAndIsDroppedByClearSubscribers()
+        {
+            var answers = new List<PurchaseAnswer>();
+            CombatEvents.PurchaseAnswered += answers.Add;
+
+            CombatEvents.RaisePurchaseAnswered("rifle", PurchaseVerdict.CannotCarry);
+            CombatEvents.RaisePurchaseAnswered(null, PurchaseVerdict.Bought);
+            CombatEvents.ClearSubscribers();
+            CombatEvents.RaisePurchaseAnswered("rifle", PurchaseVerdict.Bought);
+
+            Assert.That(answers, Has.Count.EqualTo(2));
+            Assert.That(answers[0].ItemId, Is.EqualTo("rifle"));
+            Assert.That(answers[0].Verdict, Is.EqualTo(PurchaseVerdict.CannotCarry));
+            Assert.That(answers[0].Bought, Is.False);
+            Assert.That(answers[1].ItemId, Is.Empty, "a missing id reads as empty");
+            Assert.That(answers[1].Bought, Is.True);
+        }
+
+        [Test]
+        public void APurchaseAnswerRejectsAnUnknownVerdict()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PurchaseAnswer("rifle", (PurchaseVerdict)99));
+            Assert.That(default(PurchaseAnswer).ItemId, Is.Empty);
+        }
+
+        [Test]
         public void ClearSubscribersDropsExplosionAndLandingHandlers()
         {
             var count = 0;

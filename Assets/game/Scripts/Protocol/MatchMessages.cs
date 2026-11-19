@@ -72,6 +72,7 @@ namespace Shooter.Protocol
                 new StreakActivatedMessage(),
                 new KillCamClipMessage(),
                 new StashStateMessage(),
+                new BuyAnswerMessage(),
             };
         }
 

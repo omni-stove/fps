@@ -229,6 +229,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.KillCamClip)]
         [TestCase(MessageIds.VoteKickState)]
         [TestCase(MessageIds.StashState)]
+        [TestCase(MessageIds.BuyAnswer)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);
@@ -273,6 +274,15 @@ namespace Shooter.Protocol.Tests
             Assert.That(interact, Is.InstanceOf<InteractRequestMessage>());
             Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.StashState, out var stash), Is.True);
             Assert.That(stash, Is.InstanceOf<StashStateMessage>());
+        }
+
+        [Test]
+        public void TheBuyAnswerHasItsIdAndIsReadAsItsType()
+        {
+            Assert.That(MessageIds.BuyAnswer, Is.EqualTo(88));
+            Assert.That(new BuyAnswerMessage().Id, Is.EqualTo(MessageIds.BuyAnswer));
+            Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.BuyAnswer, out var answer), Is.True);
+            Assert.That(answer, Is.InstanceOf<BuyAnswerMessage>());
         }
 
         [Test]

@@ -171,6 +171,7 @@ namespace Shooter.Runtime
                 Unlisten();
             }
 
+            RefreshKeyClaim();
             Debug.Log(EmoteLog.Rule(_rule, _emotes), this);
         }
 
@@ -277,6 +278,7 @@ namespace Shooter.Runtime
 
         public void Tick(float now)
         {
+            RefreshKeyClaim();
             if (_current == null)
             {
                 return;
@@ -328,6 +330,7 @@ namespace Shooter.Runtime
             CloseWheel();
             Unlisten();
             ReleaseEmoteAction();
+            ReleaseKeyClaim();
         }
 
         private void OnDestroy()
@@ -336,6 +339,20 @@ namespace Shooter.Runtime
             CloseWheel();
             Unlisten();
             ReleaseEmoteAction();
+            ReleaseKeyClaim();
+        }
+
+        // 輪は長押しで開くので、押した瞬間に読む相手 (key-sharing.json で Emote を prefer にした組) は、輪を開いてから名乗っても譲れない。使える間はずっと名乗る。
+        // 乗っている間は再生を断るので名乗らず、キーを相手に返す。
+        // 前の値を覚えて省かないのは、KeySharing.Reset (Play の開始やテスト) で名乗りが消えても次のフレームで名乗り直すため。
+        private void RefreshKeyClaim()
+        {
+            KeySharing.SetClaim(EmoteActionPath, this, UsesEmotes && enabled && gameObject.activeInHierarchy && !IsRiding());
+        }
+
+        private void ReleaseKeyClaim()
+        {
+            KeySharing.Release(EmoteActionPath, this);
         }
 
         private void LateUpdate()
@@ -357,7 +374,8 @@ namespace Shooter.Runtime
                 ResolveEmoteAction();
             }
 
-            var held = _emoteAction != null && _emoteAction.enabled && _emoteAction.IsPressed() && !GameUi.IsPauseOpen;
+            // 乗っている間はキーを共有する相手に返しているので、押されても輪を出さない。
+            var held = _emoteAction != null && _emoteAction.enabled && _emoteAction.IsPressed() && !GameUi.IsPauseOpen && !IsRiding();
             if (held && !_wheelOpen)
             {
                 _wheelFromInput = OpenWheel();

@@ -48,6 +48,8 @@ namespace Shooter.Runtime
         private InputAction _crouchAction;
         [NonSerialized]
         private InputAction _interactAction;
+        [NonSerialized]
+        private InputAction _leaveHeldAction;
 
         public ReconDrone Drone => _drone != null && _drone.IsArmed ? _drone : null;
 
@@ -136,6 +138,8 @@ namespace Shooter.Runtime
             }
 
             _piloting = false;
+            // ReleaseActions が _interactAction を捨てるので、離されるまで待つための参照を先に取っておく。
+            _leaveHeldAction = _interactAction;
             ReleaseActions();
             HideView();
             if (_drone != null)
@@ -209,7 +213,7 @@ namespace Shooter.Runtime
         {
             // 押したままだと手放しが返った直後に全自動武器が撃ち始めるので、離されるまで待つ。
             if (_restoreAfterFrame >= 0 && Time.frameCount > _restoreAfterFrame
-                && (_interactAction == null || !_interactAction.IsPressed()))
+                && (_leaveHeldAction == null || !_leaveHeldAction.IsPressed()))
             {
                 Restore();
             }
@@ -331,6 +335,7 @@ namespace Shooter.Runtime
         private void Restore()
         {
             _restoreAfterFrame = -1;
+            _leaveHeldAction = null;
             foreach (var handoff in _claimed)
             {
                 handoff.Release(this);

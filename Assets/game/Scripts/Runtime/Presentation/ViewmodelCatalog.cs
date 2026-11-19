@@ -203,6 +203,21 @@ namespace Shooter.Runtime
         [SerializeField, Range(0f, 1f), Tooltip("覗き込み切ったときに跳ね上がりに掛ける倍率")]
         private float _adsKickScale = ViewmodelSwaySettings.DefaultAdsKickScale;
 
+        [SerializeField, Min(0f), Tooltip("近接の振りかぶりで手前へ引く距離 (m)")]
+        private float _meleeWindupBackMeters = ViewmodelSwaySettings.DefaultMeleeWindupBackMeters;
+
+        [SerializeField, Min(0f), Tooltip("近接の当たる瞬間に前へ突き出す距離 (m)")]
+        private float _meleeThrustMeters = ViewmodelSwaySettings.DefaultMeleeThrustMeters;
+
+        [SerializeField, Min(0f), Tooltip("近接で右へ振りかぶってから左へ払う角度の幅 (度)")]
+        private float _meleeSweepDegrees = ViewmodelSwaySettings.DefaultMeleeSweepDegrees;
+
+        [SerializeField, Min(0f), Tooltip("近接の当たる瞬間に銃を左へ傾ける角度 (度)")]
+        private float _meleeRollDegrees = ViewmodelSwaySettings.DefaultMeleeRollDegrees;
+
+        [SerializeField, Range(0f, 1f), Tooltip("近接の振り始めから当たるまでのうち、振りかぶりに使う割合。残りで打ち込む")]
+        private float _meleeWindupFraction = ViewmodelSwaySettings.DefaultMeleeWindupFraction;
+
         public ViewmodelSwayParameters()
         {
         }
@@ -228,6 +243,11 @@ namespace Shooter.Runtime
             _maxKicks = settings.MaxKicks;
             _adsSwayScale = settings.AdsSwayScale;
             _adsKickScale = settings.AdsKickScale;
+            _meleeWindupBackMeters = settings.MeleeWindupBackMeters;
+            _meleeThrustMeters = settings.MeleeThrustMeters;
+            _meleeSweepDegrees = settings.MeleeSweepDegrees;
+            _meleeRollDegrees = settings.MeleeRollDegrees;
+            _meleeWindupFraction = settings.MeleeWindupFraction;
         }
 
         public ViewmodelSwaySettings ToSettings()
@@ -246,7 +266,12 @@ namespace Shooter.Runtime
                 _kickReturnPerSecond,
                 _maxKicks,
                 _adsSwayScale,
-                _adsKickScale);
+                _adsKickScale,
+                _meleeWindupBackMeters,
+                _meleeThrustMeters,
+                _meleeSweepDegrees,
+                _meleeRollDegrees,
+                _meleeWindupFraction);
         }
     }
 }

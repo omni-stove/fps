@@ -99,7 +99,7 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        [TestCase(InputActionPaths.Melee, "<Keyboard>/x")]
+        [TestCase(InputActionPaths.Melee, "<Keyboard>/v")]
         [TestCase(InputActionPaths.Prone, "<Keyboard>/z")]
         [TestCase(InputActionPaths.Ability1, "<Keyboard>/t")]
         [TestCase(InputActionPaths.Ability2, "<Keyboard>/y")]
@@ -182,12 +182,12 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void SwapShoulderIsAButtonOnVAndTheRightStickPress()
+        public void SwapShoulderIsAButtonOnXAndTheRightStickPress()
         {
             var swap = Find(InputActionPaths.SwapShoulder);
 
             Assert.That(swap.type, Is.EqualTo(InputActionType.Button));
-            Assert.That(swap.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/v" && b.groups == "Keyboard&Mouse"));
+            Assert.That(swap.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/x" && b.groups == "Keyboard&Mouse"));
             Assert.That(swap.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/rightStickPress" && b.groups == "Gamepad"));
         }
 

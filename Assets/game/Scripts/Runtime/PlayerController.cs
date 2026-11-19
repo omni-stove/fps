@@ -196,6 +196,7 @@ namespace Shooter.Runtime
             CancelMantle();
             EndMovementOverride();
             ResetTraversal();
+            ResetPlatform();
         }
 
         // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。
@@ -339,6 +340,10 @@ namespace Shooter.Runtime
             Vector3 displacement;
             var paddled = false;
             var movementOverride = SelectMovementOverride();
+
+            // 横取り (はしご・ジップラインなど) は体を自分で置き、泳いでいる間は床に立っていないので運ばない。視点を回すので移動の向きを読む前に呼ぶ。
+            var canRide = movementOverride == null && !_swim.IsSwimming;
+            Ride(canRide);
             var wallRun = WallRunMotion.None;
             if (movementOverride != null)
             {
@@ -406,6 +411,7 @@ namespace Shooter.Runtime
 
             // 泳いでいる間は水底や天井に触れても立っていないので、着地・足音・落下のダメージに数えない。
             var footing = _controller.isGrounded && !_swim.IsSwimming;
+            EndRide(footing, canRide);
             ReportLanding(footing);
             ReportGrounded(footing);
             FinishTraversal(footing, move, sprint, crouch, lean, deltaSeconds);
@@ -586,6 +592,7 @@ namespace Shooter.Runtime
             CancelMantle();
             EndMovementOverride();
             ResetTraversal();
+            ResetPlatform();
             _leanBody = null;
             _motor = new PlayerMotor(spec);
             _dodgeMotion = new DodgeMotion(spec);

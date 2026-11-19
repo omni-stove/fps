@@ -60,6 +60,7 @@ namespace Shooter.Tests.EditMode
         public void TearDown()
         {
             GameRulesOverride.Clear();
+            GameRulesOverride.ClearMutators();
             DestroyWorld(_world);
             Object.DestroyImmediate(_host);
             Object.DestroyImmediate(_rifle);
@@ -612,6 +613,150 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameBootstrap.FormatOverrideLog("Range"), Does.StartWith("[Bootstrap] ").And.Contain("'Range'"));
             Assert.That(GameBootstrap.FormatOverrideLog(null), Does.StartWith("[Bootstrap] ").And.Contain("(none)"));
             Assert.That(GameBootstrap.FormatOverrideLog(string.Empty), Is.EqualTo(GameBootstrap.FormatOverrideLog(null)));
+        }
+
+        [Test]
+        public void PushedMutatorsStackOnTheWiredRulesInOrderAndAreLogged()
+        {
+            var lowHealth = new GameRulesMutator("low-health", "{ \"playerMaxHealth\": 50 }");
+            var headshots = new GameRulesMutator("headshots-only", "{ \"zoneDamage\": { \"body\": 0, \"limb\": 0 } }");
+            GameRulesOverride.PushMutator(lowHealth);
+            GameRulesOverride.PushMutator(headshots);
+            var host = new GameObject("Bootstrap-Mutated");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+
+                var afterLowHealth = lowHealth.Apply(_testRules);
+                LogAssert.Expect(LogType.Log, MutatorLog.Applied(lowHealth, _testRules, afterLowHealth));
+                LogAssert.Expect(LogType.Log, MutatorLog.Applied(headshots, afterLowHealth, headshots.Apply(afterLowHealth)));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules.PlayerMaxHealth, Is.EqualTo(50));
+                Assert.That(world.Rules.ZoneDamage.Body, Is.EqualTo(0d));
+                Assert.That(world.Rules.ZoneDamage.Limb, Is.EqualTo(0d));
+                Assert.That(world.Rules.ZoneDamage.Head, Is.EqualTo(_testRules.ZoneDamage.Head));
+                Assert.That(world.Rules.RegenPerSecond, Is.EqualTo(_testRules.RegenPerSecond), "an item no mutator writes keeps the wired value");
+                Assert.That(world.Rules.InfiniteReserve, Is.EqualTo(_testRules.InfiniteReserve));
+                Assert.That(world.PlayerDamageable.MaxHealth, Is.EqualTo(50));
+                Assert.That(world.Regen.Rules, Is.SameAs(world.Rules));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void MutatorsStackOnTheOverrideRulesToo()
+        {
+            var overridden = _testRules.WithRegenPerSecond(30f);
+            var lowHealth = new GameRulesMutator("low-health", "{ \"playerMaxHealth\": 50 }");
+            GameRulesOverride.Set(overridden);
+            GameRulesOverride.PushMutator(lowHealth);
+            var host = new GameObject("Bootstrap-OverriddenAndMutated");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.FormatOverrideLog(_rules.name));
+                LogAssert.Expect(LogType.Log, MutatorLog.Applied(lowHealth, overridden, lowHealth.Apply(overridden)));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules.RegenPerSecond, Is.EqualTo(30f));
+                Assert.That(world.Rules.PlayerMaxHealth, Is.EqualTo(50));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void AMutatorThatDoesNotFitTheRulesIsSkippedWithAnErrorAndTheRestStillApply()
+        {
+            var blindFire = new GameRulesMutator("blind-fire", "{ \"actions\": { \"blindFire\": \"On\" } }");
+            var lowHealth = new GameRulesMutator("low-health", "{ \"playerMaxHealth\": 50 }");
+            GameRulesOverride.PushMutator(blindFire);
+            GameRulesOverride.PushMutator(lowHealth);
+            var host = new GameObject("Bootstrap-MutatorSkipped");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+
+                var reason = Assert.Throws<GameRulesJsonException>(() => blindFire.Apply(_testRules));
+                LogAssert.Expect(LogType.Error, MutatorLog.Skipped(blindFire, reason));
+                LogAssert.Expect(LogType.Log, MutatorLog.Applied(lowHealth, _testRules, lowHealth.Apply(_testRules)));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules.Actions.BlindFire, Is.EqualTo(BlindFire.Off));
+                Assert.That(world.Rules.PlayerMaxHealth, Is.EqualTo(50));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void AnUnknownSceneMutatorIdIsSkippedWithAnError()
+        {
+            var host = new GameObject("Bootstrap-UnknownMutator");
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.MutatorIds = new[] { "no-such-mutator" };
+
+                LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                    @"^\[Mutator\] skipped id=no-such-mutator: no mutator has this id; known ids are "));
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Rules.PlayerMaxHealth, Is.EqualTo(_testRules.PlayerMaxHealth));
+                Assert.That(world.Rules.RegenPerSecond, Is.EqualTo(_testRules.RegenPerSecond));
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void MutatorIdsCopyTheGivenListAndTreatNullAsEmpty()
+        {
+            var bootstrap = _host.GetComponent<GameBootstrap>();
+            Assert.That(bootstrap.MutatorIds, Is.Empty);
+
+            var ids = new[] { "low-health", "headshots-only" };
+            bootstrap.MutatorIds = ids;
+            ids[0] = "changed";
+            Assert.That(bootstrap.MutatorIds, Is.EqualTo(new[] { "low-health", "headshots-only" }));
+
+            bootstrap.MutatorIds = null;
+            Assert.That(bootstrap.MutatorIds, Is.Empty);
         }
 
         [Test]

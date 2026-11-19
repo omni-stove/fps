@@ -18,7 +18,7 @@ namespace Shooter.Server
 
         private readonly ServerCombat _combat;
         private readonly ServerMovement _movement;
-        private readonly string _weaponId;
+        private string _weaponId;
         private readonly Dictionary<int, Swinger> _swingers = new Dictionary<int, Swinger>();
         private readonly List<int> _candidateIds = new List<int>();
         private readonly List<Vector3> _candidatePoints = new List<Vector3>();
@@ -63,7 +63,15 @@ namespace Shooter.Server
             context.Match.MapChanged += HandleMapChanged;
             _combat.Rules.PlayerSpawned += HandlePlayerSpawned;
             _combat.Rules.MatchStarted += HandleMatchStarted;
+            _combat.Rules.RulesChanged += HandleRulesChanged;
             _log.WriteLine(ServerMeleeLog.Started(_spec, _weaponId, _combat.Rules.Rules?.Actions.Melee ?? Melee.Off));
+        }
+
+        // 起動で渡された Id は起動のルールに合わせたものなので、ルールが替わったら ServerModules と同じ決め方で選び直す
+        private void HandleRulesChanged(ServerRulesData data)
+        {
+            _weaponId = ServerModules.MeleeWeaponIdFor(data) ?? string.Empty;
+            _log.WriteLine(ServerMeleeLog.Started(_spec, _weaponId, data.Rules.Actions.Melee));
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -134,6 +142,7 @@ namespace Shooter.Server
             _context.Match.MapChanged -= HandleMapChanged;
             _combat.Rules.PlayerSpawned -= HandlePlayerSpawned;
             _combat.Rules.MatchStarted -= HandleMatchStarted;
+            _combat.Rules.RulesChanged -= HandleRulesChanged;
             _swingers.Clear();
         }
 

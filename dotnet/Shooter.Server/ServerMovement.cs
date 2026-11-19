@@ -17,7 +17,7 @@ namespace Shooter.Server
 
         private const float _warningIntervalSeconds = 1f;
 
-        private readonly ServerMotorSettings _settings;
+        private ServerMotorSettings _settings;
         private readonly float _tickSeconds;
         private readonly Dictionary<ConnectionId, Mover> _byConnection = new Dictionary<ConnectionId, Mover>();
         private readonly Dictionary<int, Mover> _byPlayer = new Dictionary<int, Mover>();
@@ -59,6 +59,13 @@ namespace Shooter.Server
             _context.Bodies.Teleported += HandleTeleported;
             _context.Bodies.DownedChanged += HandleDownedChanged;
             _context.Match.MapChanged += HandleMapChanged;
+            _context.Match.RulesChanged += HandleRulesChanged;
+        }
+
+        // 体の寸法と移動の値はクライアントの予測と同じ NetPlayer.prefab の値なので替えず、ルール (落下ダメージ・使える動き) だけを替える
+        private void HandleRulesChanged(GameRules rules)
+        {
+            _settings = _settings.WithRules(rules);
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -190,6 +197,7 @@ namespace Shooter.Server
                 _context.Bodies.Teleported -= HandleTeleported;
                 _context.Bodies.DownedChanged -= HandleDownedChanged;
                 _context.Match.MapChanged -= HandleMapChanged;
+                _context.Match.RulesChanged -= HandleRulesChanged;
             }
 
             _byConnection.Clear();

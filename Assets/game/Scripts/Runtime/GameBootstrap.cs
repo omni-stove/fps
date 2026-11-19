@@ -65,6 +65,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す")]
         private GameRulesDefinition _rules;
 
+        [SerializeField, Tooltip("ルールの上にこの順で重ねるミューテーターの Id (mutators.json の id)。GameRulesOverride に積んだものはこの後に重ねる。空なら重ねない")]
+        private string[] _mutatorIds = Array.Empty<string>();
+
         [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
         private AbilityDefinition[] _abilityDefinitions = Array.Empty<AbilityDefinition>();
 
@@ -217,6 +220,12 @@ namespace Shooter.Runtime
         {
             get => _rules;
             set => _rules = value;
+        }
+
+        public IReadOnlyList<string> MutatorIds
+        {
+            get => _mutatorIds ?? Array.Empty<string>();
+            set => _mutatorIds = value == null ? Array.Empty<string>() : new List<string>(value).ToArray();
         }
 
         public GameObject FloorPrefab
@@ -396,6 +405,23 @@ namespace Shooter.Runtime
 
         private GameRules ResolveRules(out bool configured)
         {
+            var baseRules = ResolveBaseRules(out configured);
+            var mutators = SceneMutators();
+            mutators.AddRange(GameRulesOverride.Mutators);
+            if (mutators.Count == 0)
+            {
+                return baseRules;
+            }
+
+            var rules = GameRulesOverride.ApplyMutators(baseRules, mutators);
+
+            // ルールが無いときは Inspector の最大体力を使うが、ミューテーターが体力を書き換えたならそれを効かせる。
+            configured |= rules.PlayerMaxHealth != baseRules.PlayerMaxHealth;
+            return rules;
+        }
+
+        private GameRules ResolveBaseRules(out bool configured)
+        {
             configured = true;
             var overridden = GameRulesOverride.Current;
             if (overridden != null)
@@ -415,6 +441,32 @@ namespace Shooter.Runtime
             }
 
             return definition.ToRules();
+        }
+
+        // 知らない Id で試合を止めず、エラーを出してその 1 つだけを飛ばす (GameRulesOverride.ApplyMutators と同じ扱い)。
+        private List<GameRulesMutator> SceneMutators()
+        {
+            var mutators = new List<GameRulesMutator>();
+            var ids = MutatorIds;
+            if (ids.Count == 0)
+            {
+                return mutators;
+            }
+
+            var available = KitTuning.Mutators;
+            foreach (var id in ids)
+            {
+                var mutator = GameRulesMutator.Find(available, id);
+                if (mutator == null)
+                {
+                    Debug.LogError(MutatorLog.UnknownId(id, available), this);
+                    continue;
+                }
+
+                mutators.Add(mutator);
+            }
+
+            return mutators;
         }
 
         // Inspector の Min は NaN や無限大を止めないので、作り始める前に確かめる。

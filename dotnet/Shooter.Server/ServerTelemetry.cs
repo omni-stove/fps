@@ -27,6 +27,9 @@ namespace Shooter.Server
         private double _now;
         private double? _startedAt;
 
+        // 起動のルールでなく、試合の合間に替わった後の目的で試合のまとめを残す。ルールを読み込まずに起動したなら null
+        private MatchObjective? _objective;
+
         public ServerTelemetry(
             TelemetrySpec spec,
             string folder,
@@ -67,9 +70,11 @@ namespace Shooter.Server
                 TelemetryOrigin.ServerSource, TelemetryOrigin.NewSession(), context.Version, RuntimeInformation.RuntimeIdentifier);
             _recorder = new TelemetryRecorder(_spec, origin, _consent, () => _createSink(WriteLog), _utcNow, _random, WriteLog);
 
+            _objective = context.Rules?.Rules.Objective;
             _match = context.Match;
             _match.Started += HandleStarted;
             _match.Ended += HandleEnded;
+            _match.RulesChanged += HandleRulesChanged;
             AppDomain.CurrentDomain.UnhandledException += HandleUnhandled;
             TaskScheduler.UnobservedTaskException += HandleUnobservedTask;
             _hooked = true;
@@ -189,7 +194,7 @@ namespace Shooter.Server
             };
             var summary = new TelemetryMatchSummary(
                 match.MatchId,
-                _context.Rules?.Rules.Objective.ToString(),
+                _objective?.ToString(),
                 _context.Map.Name,
                 duration,
                 scores,
@@ -197,6 +202,11 @@ namespace Shooter.Server
                 humans: match.HumanCount,
                 bots: match.BotCount);
             recorder.RecordMatchSummary(summary);
+        }
+
+        private void HandleRulesChanged(GameRules rules)
+        {
+            _objective = rules.Objective;
         }
 
         private void HandleUnhandled(object sender, UnhandledExceptionEventArgs args)
@@ -243,6 +253,7 @@ namespace Shooter.Server
             {
                 _match.Started -= HandleStarted;
                 _match.Ended -= HandleEnded;
+                _match.RulesChanged -= HandleRulesChanged;
             }
 
             _match = null;

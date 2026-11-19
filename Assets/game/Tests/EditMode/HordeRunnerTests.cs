@@ -118,6 +118,7 @@ namespace Shooter.Tests.EditMode
             _runner.Tick(0f);
             Assert.That(Detail().Horde.Session.IsAwaitingRespawn(ModeRunnerBase.LocalPlayerId), Is.True);
             Assert.That(Detail().Offer, Is.Null, "a downed player is offered nothing");
+            Assert.That(_runner.IsOfferingInteract, Is.False);
 
             ally.Damageable.Kill();
             _runner.Tick(0f);
@@ -144,6 +145,7 @@ namespace Shooter.Tests.EditMode
             _runner.Tick(0f);
             var offer = Detail().Offer;
             Assert.That(offer.HasValue, Is.True, "the wall in reach is offered");
+            Assert.That(_runner.IsOfferingInteract, Is.True, "a shared key goes to the wall, not to melee");
             Assert.That(offer.Value.Action, Is.EqualTo(HordeFortificationAction.Repair));
             Assert.That(offer.Value.StructureName, Is.EqualTo("Wall"));
             Assert.That(offer.Value.Cost, Is.EqualTo(RepairCostPerPiece));

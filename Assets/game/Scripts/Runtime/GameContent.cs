@@ -138,6 +138,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("プレイリスト (モードとマップの巡り方) の JSON。空なら Resources/Tuning/playlists")]
         private TextAsset _playlistsTuning;
 
+        [SerializeField, Tooltip("同じキーを割り当ててよいアクションの組の JSON。空なら Resources/Tuning/key-sharing")]
+        private TextAsset _keySharingTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -497,6 +500,12 @@ namespace Shooter.Runtime
         {
             get => _playlistsTuning;
             set => _playlistsTuning = value;
+        }
+
+        public TextAsset KeySharingTuning
+        {
+            get => _keySharingTuning;
+            set => _keySharingTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

@@ -14,12 +14,14 @@ namespace Shooter.Tests.EditMode
         public void SetUp()
         {
             GameSignals.ResetAll();
+            KeySharing.Reset();
         }
 
         [TearDown]
         public void TearDown()
         {
             GameSignals.ResetAll();
+            KeySharing.Reset();
         }
 
         [Test]
@@ -38,6 +40,24 @@ namespace Shooter.Tests.EditMode
             slot.Show(_full);
             Assert.That(published, Is.EqualTo(2));
             Assert.That(GameSignals.InteractHint.Value?.Detail, Is.EqualTo(_full));
+        }
+
+        [Test]
+        public void AShownHintClaimsInteractUntilEverySlotClears()
+        {
+            var first = new InteractHintSlot(new object());
+            var second = new InteractHintSlot(new object());
+            Assert.That(KeySharing.IsClaimed("Interact"), Is.False);
+
+            first.Show(_room);
+            second.Show(_full);
+            Assert.That(KeySharing.IsClaimed("Interact"), Is.True);
+
+            first.Clear();
+            Assert.That(KeySharing.IsClaimed("Interact"), Is.True, "the other slot still offers an interaction");
+
+            second.Clear();
+            Assert.That(KeySharing.IsClaimed("Interact"), Is.False);
         }
 
         [Test]

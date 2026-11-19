@@ -1,0 +1,6 @@
+{
+  "shared": [
+    { "actions": ["Melee", "Interact"], "prefer": "Interact" },
+    { "actions": ["Reload", "Interact"], "prefer": "Interact" }
+  ]
+}

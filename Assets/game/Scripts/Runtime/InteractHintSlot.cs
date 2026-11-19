@@ -16,6 +16,7 @@ namespace Shooter.Runtime
 
         public void Show(object detail)
         {
+            KeySharing.Claim(InputActionPaths.Interact, _source);
             var hint = new InteractHint(_source, detail);
             var signal = GameSignals.InteractHint;
             if (_published == hint && signal.HasValue)
@@ -29,6 +30,7 @@ namespace Shooter.Runtime
 
         public void Clear()
         {
+            KeySharing.Release(InputActionPaths.Interact, _source);
             if (_published == null)
             {
                 return;

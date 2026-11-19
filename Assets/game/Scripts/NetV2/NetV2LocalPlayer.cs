@@ -268,7 +268,7 @@ namespace Shooter.NetV2
 
         public bool IsInputBlocked => GameUi.IsPauseOpen || Handoff.IsHandedOff;
 
-        public bool IsMeleeHeld => !IsInputBlocked && _melee != null && _melee.IsPressed();
+        public bool IsMeleeHeld => !IsInputBlocked && KeySharing.IsPressed(_melee);
 
         // 最後の tick で近接を押していると送ったか。手元の振る見た目 (ClientMelee) をサーバーと同じ押し始めで始めるため
         public bool IsMeleeSent { get; private set; }
@@ -458,7 +458,7 @@ namespace Shooter.NetV2
 
         private static bool Pressed(InputAction action)
         {
-            return action != null && action.WasPressedThisFrame();
+            return KeySharing.WasPressedThisFrame(action);
         }
 
         private static bool Take(ref bool latched)

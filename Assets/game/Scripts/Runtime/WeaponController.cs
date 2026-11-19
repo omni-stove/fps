@@ -224,7 +224,7 @@ namespace Shooter.Runtime
             // リロードより先に見るのは、同じフレームに両方押したとき、切り替えた種類を込めるため。
             ReadSwitchAmmoType();
 
-            if (_reloadAction.WasPressedThisFrame())
+            if (KeySharing.WasPressedThisFrame(_reloadAction))
             {
                 PressReload();
             }

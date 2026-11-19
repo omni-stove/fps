@@ -47,6 +47,7 @@ namespace Shooter.Runtime
 
         private readonly InputActionAsset _asset;
         private readonly InputActionMap _map;
+        private readonly KeySharingSpec _sharing;
 
         private InputActionRebindingExtensions.RebindingOperation _operation;
         private RebindSlot _rebindingSlot;
@@ -56,10 +57,20 @@ namespace Shooter.Runtime
         private bool _reenableAfterRebind;
 
         public PlayerBindings(InputActionAsset asset)
+            : this(asset, KitTuning.KeySharing)
+        {
+        }
+
+        public PlayerBindings(InputActionAsset asset, KeySharingSpec sharing)
         {
             if (asset == null)
             {
                 throw new ArgumentNullException(nameof(asset));
+            }
+
+            if (sharing == null)
+            {
+                throw new ArgumentNullException(nameof(sharing));
             }
 
             var map = asset.FindActionMap(MapName);
@@ -70,6 +81,7 @@ namespace Shooter.Runtime
 
             _asset = asset;
             _map = map;
+            _sharing = sharing;
         }
 
         public static IReadOnlyList<RebindSlot> Slots => _slots;
@@ -82,6 +94,8 @@ namespace Shooter.Runtime
         public InputActionAsset Asset => _asset;
 
         public InputActionMap Map => _map;
+
+        public KeySharingSpec Sharing => _sharing;
 
         public bool IsRebinding => _operation != null;
 
@@ -180,7 +194,7 @@ namespace Shooter.Runtime
                 for (var i = 0; i < bindings.Count; i++)
                 {
                     var binding = bindings[i];
-                    if (binding.isComposite || (action == slotAction && i == slotIndex))
+                    if (binding.isComposite || (action == slotAction && i == slotIndex) || _sharing.Allows(slot.ActionName, action.name))
                     {
                         continue;
                     }

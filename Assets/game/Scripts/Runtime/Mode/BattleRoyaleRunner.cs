@@ -510,6 +510,27 @@ namespace Shooter.Runtime
             return true;
         }
 
+        protected override bool OffersInteract
+        {
+            get
+            {
+                var local = LocalPlayer;
+                if (_battleRoyale == null || !_battleRoyale.IsLive || local == null)
+                {
+                    return false;
+                }
+
+                var localId = IdOf(local);
+                if (localId < 0 || !_battleRoyale.IsStanding(localId))
+                {
+                    return false;
+                }
+
+                return NearestDownedSquadmate(local, _battleRoyale.Actions.ReviveRange) >= 0
+                    || (_runningDropper != null && _runningDropper.NearestOpenable(local.GroundPosition) != null);
+            }
+        }
+
         protected override object HudDetail
         {
             get

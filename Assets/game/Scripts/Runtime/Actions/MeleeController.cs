@@ -214,7 +214,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (_meleeAction != null && !_mover.IsControlHandedOff && _meleeAction.WasPressedThisFrame())
+            if (_meleeAction != null && !_mover.IsControlHandedOff && KeySharing.WasPressedThisFrame(_meleeAction))
             {
                 TryMelee();
             }

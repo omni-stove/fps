@@ -97,12 +97,17 @@ namespace Shooter.NetV2
             }
 
             _loot.Tick(deltaSeconds);
-            if (GameUi.IsPauseOpen || !_interactPressed() || !_canAct())
+            var position = _localPosition();
+            var canAct = _canAct();
+            KeySharing.SetClaim(
+                InputActionPaths.Interact,
+                this,
+                canAct && position.HasValue && _loot.TryFindNearestClosedBox(NetV2Math.ToNumerics(position.Value), out _));
+            if (GameUi.IsPauseOpen || !canAct || !_interactPressed())
             {
                 return;
             }
 
-            var position = _localPosition();
             if (position.HasValue)
             {
                 _loot.OpenNearest(NetV2Math.ToNumerics(position.Value));
@@ -117,6 +122,7 @@ namespace Shooter.NetV2
             }
 
             _disposed = true;
+            KeySharing.Release(InputActionPaths.Interact, this);
             foreach (var view in _views.Values)
             {
                 view.Remove();

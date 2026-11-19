@@ -298,6 +298,16 @@ namespace Shooter.Runtime
             }
         }
 
+        protected override bool OffersInteract
+        {
+            get
+            {
+                var player = LocalPlayer;
+                return _extraction != null && !_extraction.IsOver && player != null && player.IsAlive
+                    && NearestClosedContainer(player.GroundPosition) != null;
+            }
+        }
+
         protected override object HudDetail
         {
             get

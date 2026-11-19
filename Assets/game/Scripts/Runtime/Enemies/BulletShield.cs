@@ -21,6 +21,9 @@ namespace Shooter.Runtime
         [SerializeField, Range(0f, 90f), Tooltip("下ろしたときに前へ倒す角度 (度)")]
         private float _loweredTiltDegrees = 70f;
 
+        [SerializeField, Range(1f, RiotShieldSpec.MaxBlockArcDegrees), Tooltip("盾の正面を中心に、弾を止める撃ち手の向きの扇の全体の角度 (度)。360 ならどの向きからでも止める")]
+        private float _blockArcDegrees = RiotShieldSpec.MaxBlockArcDegrees;
+
         private Collider _collider;
         private bool _poseCaptured;
         private Vector3 _raisedPosition;
@@ -34,6 +37,35 @@ namespace Shooter.Runtime
         public Collider Collider => _collider != null ? _collider : (_collider = GetComponent<Collider>());
 
         public EnemyAgent Owner => GetComponentInParent<EnemyAgent>();
+
+        // 敵でない持ち主 (盾の武器を持つプレイヤー) は、体力の持ち主でログと知らせを出す。
+        public Damageable Holder => GetComponentInParent<Damageable>();
+
+        public float BlockArcDegrees
+        {
+            get => _blockArcDegrees;
+            set
+            {
+                if (!(value > 0f && value <= RiotShieldSpec.MaxBlockArcDegrees))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "block arc must be greater than 0 and at most 360 degrees");
+                }
+
+                _blockArcDegrees = value;
+            }
+        }
+
+        // 撃った位置が分からない弾 (爆風の破片など) は向きを決められないので止める側に倒す。
+        public bool Covers(Vector3? sourcePosition)
+        {
+            if (_blockArcDegrees >= RiotShieldSpec.MaxBlockArcDegrees || !sourcePosition.HasValue)
+            {
+                return true;
+            }
+
+            return MeleeJudge.IsWithinArc(
+                transform.position.ToNumerics(), transform.forward.ToNumerics(), _blockArcDegrees, sourcePosition.Value.ToNumerics());
+        }
 
         private void Awake()
         {
@@ -80,7 +112,8 @@ namespace Shooter.Runtime
             }
 
             var shield = collider.GetComponent<BulletShield>();
-            if (shield == null || !shield.IsRaised)
+            // 扇の外から撃たれた弾は止めず、呼び手がそのまま着弾させる。盾の板は持ち主の子なので、Hitbox.FindFor を通って持ち主に当たる。
+            if (shield == null || !shield.IsRaised || !shield.Covers(sourcePosition))
             {
                 return false;
             }
@@ -161,9 +194,10 @@ namespace Shooter.Runtime
         private void OnBlocked(int damage, Vector3? sourcePosition, GameObject shooter)
         {
             var owner = Owner;
-            // 固定銃座の盾は敵に付かないので、盾の名前ではなく、どの銃座の盾が止めたかを出す。
+            // 固定銃座の盾は敵に付かないので、盾の名前ではなく、どの銃座の盾が止めたかを出す。銃座も体力を持つので、持ち主より先に見る。
             var vehicle = owner == null ? GetComponentInParent<Vehicle>() : null;
-            var id = owner != null ? owner.Id : vehicle != null ? vehicle.name : name;
+            var holder = owner == null && vehicle == null ? Holder : null;
+            var id = owner != null ? owner.Id : vehicle != null ? vehicle.name : holder != null ? holder.Id : name;
             Debug.Log(ShieldLog.Blocked(id, damage, DescribeShooter(shooter)), this);
             Blocked?.Invoke(this, damage);
 

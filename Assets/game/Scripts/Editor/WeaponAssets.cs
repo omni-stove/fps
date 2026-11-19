@@ -117,6 +117,7 @@ namespace Shooter.Editor
             definition.DrawSeconds = spec.DrawSeconds;
             definition.HolsterSeconds = spec.HolsterSeconds;
             definition.Description = spec.Description;
+            definition.Shield.Set(spec.Shield);
 
             var trigger = spec.Trigger;
             definition.Burst.Set(trigger.Burst);

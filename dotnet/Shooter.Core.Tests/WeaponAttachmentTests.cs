@@ -87,6 +87,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AttachmentsKeepTheShield()
+        {
+            var shield = new RiotShieldSpec(100f, 0.7f, 1.4f, 0.6f, new MeleeSpec(45, 1.5f, 80f, 0.7f, 0.6f, 0.3f, 0.4f));
+            var shieldRifle = new WeaponSpec(
+                _rifleId,
+                "weapon.rifle",
+                WeaponCategory.AssaultRifle,
+                ammo: new AmmoSpec(30, 90, 2f),
+                round: new RoundSpec(range: 100f),
+                weight: 3f,
+                shield: shield);
+
+            var spec = WeaponAttachments.Apply(shieldRifle, new[] { _scopeId, _suppressorId }, Catalog());
+
+            Assert.That(spec, Is.Not.SameAs(shieldRifle));
+            Assert.That(spec.Shield, Is.SameAs(shield));
+            Assert.That(spec.IsShield, Is.True);
+            Assert.That(WeaponAttachments.Apply(_rifle, new[] { _scopeId }, Catalog()).Shield, Is.Null);
+        }
+
+        [Test]
         public void NoAttachmentsKeepTheSameSpec()
         {
             Assert.That(WeaponAttachments.Apply(_rifle, WeaponAttachments.None, Catalog()), Is.SameAs(_rifle));

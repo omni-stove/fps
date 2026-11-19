@@ -76,6 +76,7 @@ namespace Shooter.Runtime
         private bool _specApplied;
         private Melee _rule = Melee.Off;
         private Vector3 _lungeDirection = Vector3.forward;
+        private string _swingWeaponId;
 
         public Melee Rule => _rule;
 
@@ -142,6 +143,18 @@ namespace Shooter.Runtime
                 return weapon != null ? weapon.Spec.Id : string.Empty;
             }
         }
+
+        // 盾の武器を持っている間は、近接攻撃のボタンでも攻撃のボタンでも盾の殴りの値で振る。
+        public MeleeSpec ShieldBash
+        {
+            get
+            {
+                var weapon = _weapon != null ? _weapon.Weapon : null;
+                return weapon != null && weapon.Spec.IsShield ? weapon.Spec.Shield.Bash : null;
+            }
+        }
+
+        public bool IsShieldBashing { get; private set; }
 
         public bool IsSwinging => _swing != null && _swing.IsSwinging;
 
@@ -328,14 +341,25 @@ namespace Shooter.Runtime
                 return false;
             }
 
+            // 振りは始めたときの値で終えるので (MeleeSwing.Spec)、盾の値は振り始めにだけ差し替えて戻す。調整値の Spec は変えない。
+            var bash = ShieldBash;
+            var normal = _swing.Spec;
+            if (bash != null)
+            {
+                _swing.Spec = bash;
+            }
+
             _swing.TryStart();
+            _swing.Spec = normal;
+            IsShieldBashing = bash != null;
+            _swingWeaponId = bash != null ? _weapon.Weapon.Spec.Id : StrikeWeaponId;
             _lungeDirection = AimForward();
             if (_ads != null)
             {
                 _ads.Release();
             }
 
-            Debug.Log(MeleeLog.Swing(AttackerId), this);
+            Debug.Log(bash != null ? MeleeLog.ShieldBash(AttackerId, _swingWeaponId) : MeleeLog.Swing(AttackerId), this);
             ResolvePresenter()?.OnSwingStarted(gameObject, _swing.CurrentSpec);
             return true;
         }
@@ -345,23 +369,45 @@ namespace Shooter.Runtime
             var swing = EnsureSwing();
             if (swing.IsSwinging && _self != null && (_self.IsDead || _self.IsDowned))
             {
-                swing.Cancel();
+                CancelSwing();
                 return false;
             }
 
             var spec = swing.CurrentSpec;
-            if (!swing.Tick(deltaSeconds))
+            var impact = swing.Tick(deltaSeconds);
+            if (impact)
             {
-                return false;
+                Strike(spec);
             }
 
-            Strike(spec);
-            return true;
+            if (!swing.IsSwinging)
+            {
+                IsShieldBashing = false;
+            }
+
+            return impact;
         }
 
         public void CancelSwing()
         {
             _swing?.Cancel();
+            IsShieldBashing = false;
+        }
+
+        // 攻撃のボタン (WeaponController.ShieldBashRequested) から振る。盾を持っていなければ振らない。
+        public bool TryShieldBash()
+        {
+            if (ShieldBash == null)
+            {
+                return false;
+            }
+
+            return TrySwing();
+        }
+
+        private void OnShieldBashRequested(RiotShieldSpec shield)
+        {
+            TryShieldBash();
         }
 
         void IMovementOverride.Begin(PlayerController mover)
@@ -401,7 +447,8 @@ namespace Shooter.Runtime
             }
 
             Debug.Log(MeleeLog.Hit(AttackerId, hit.Target.Id, spec.Damage, hit.Distance), this);
-            var damage = MeleeStrike.Apply(gameObject, hit, spec.Damage, StrikeWeaponId);
+            // 盾で殴って倒したら、近接の武器 (ナイフなど) ではなく盾の武器で倒したことにする。
+            var damage = MeleeStrike.Apply(gameObject, hit, spec.Damage, _swingWeaponId ?? StrikeWeaponId);
 
             // オフラインで MeleeController を持つのは手元のプレイヤーだけなので、当てたらその画面にヒットマーカーを出す。
             if (_self != null && _self.IsLocalPlayer)
@@ -500,6 +547,7 @@ namespace Shooter.Runtime
             }
 
             _weapon.AddModifier(this);
+            _weapon.ShieldBashRequested += OnShieldBashRequested;
             _mover.RegisterMovementOverride(this);
             AcquireAction();
             _hooked = true;
@@ -518,6 +566,7 @@ namespace Shooter.Runtime
             if (!ReferenceEquals(_weapon, null))
             {
                 _weapon.RemoveModifier(this);
+                _weapon.ShieldBashRequested -= OnShieldBashRequested;
             }
 
             if (!ReferenceEquals(_mover, null))

@@ -120,6 +120,8 @@ namespace Shooter.Server
             var map = _context.Map;
             var points = PointsOf(map);
 
+            // 経済は新しいルールの目的と一覧で作り直すので、前のルールの財布を ClearMatchState で作り直させない
+            StopEconomy();
             StopObjective();
             IgnoreSession(_session);
             ClearMatchState();
@@ -151,6 +153,9 @@ namespace Shooter.Server
                 IdlePlayerJoined(player.PlayerId);
                 ObjectivePlayerJoined(player.PlayerId);
             }
+
+            // 入れ直した全員の財布を作るので、入れ直した後に呼ぶ
+            PrepareEconomy();
         }
     }
 }

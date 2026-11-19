@@ -19,6 +19,7 @@ namespace Shooter.Core.Tests
 
         private static readonly int[] _walletEvents = { _alpha0, _alpha0 };
         private static readonly BuyItem[] _noItem = { null };
+        private static readonly int[] _alphaWallets = { _alpha0, _alpha1 };
 
         [Test]
         public void EveryWalletStartsAtTheStartMoneyAndCanNotBuyBeforeTheBuyTime()
@@ -34,6 +35,24 @@ namespace Shooter.Core.Tests
             Assert.That(economy.HasPlayer(9), Is.False);
             Assert.Throws<ArgumentOutOfRangeException>(() => economy.MoneyOf(9));
             Assert.Throws<ArgumentException>(() => economy.AddPlayer(_alpha0, Side.Alpha));
+        }
+
+        [Test]
+        public void ALeaverLosesTheWalletButTheSideKeepsItsLossStreak()
+        {
+            var economy = NewEconomy();
+            economy.EndRound(Side.Alpha);
+
+            Assert.That(economy.RemovePlayer(_bravo0), Is.True);
+
+            Assert.That(economy.HasPlayer(_bravo0), Is.False);
+            Assert.That(economy.PlayerIds, Is.EquivalentTo(_alphaWallets));
+            Assert.That(economy.LossStreakOf(Side.Bravo), Is.EqualTo(1));
+            Assert.That(economy.RemovePlayer(_bravo0), Is.False, "a wallet is dropped only once");
+            Assert.That(economy.RewardKill(_alpha0, _bravo0), Is.Zero, "nobody is paid for someone who left");
+
+            economy.AddPlayer(_bravo0, Side.Bravo);
+            Assert.That(economy.MoneyOf(_bravo0), Is.EqualTo(800), "joining again starts a new wallet");
         }
 
         [Test]

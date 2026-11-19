@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Shooter.Core;
 using Shooter.Protocol;
@@ -71,6 +72,23 @@ namespace Shooter.Server
 
         // Session が書いた行のうち、目的が数え直すもの (FFA のキル数など) を上書きする。Session に居ない人には呼ばない
         void FillPlayer(int playerId, ref PlayerSnapshot snapshot);
+    }
+
+    // ラウンドの区切りでお金を渡せる目的 (今は Search and Destroy)。MatchRulesModule の経済は、この出来事で買える時間を開け閉めして額を渡す。
+    // IMatchObjectiveRules に足さないのは、ラウンドの無い目的に空の出来事を持たせないため
+    internal interface IEconomyRounds
+    {
+        // ラウンドの準備が始まり、全員を出直させた後。引数はラウンドの番号
+        event Action<int> PreparationStarted;
+
+        event Action<int> RoundStarted;
+
+        // 引き分けなら null
+        event Action<Side?> RoundEnded;
+
+        event Action SidesSwapped;
+
+        event Action<Side> Ended;
     }
 
     // 目的の実装が試合の側に触れる口。Session を直接渡さないのは、Session が作られる前に目的を選んで Session の上限を決めるため

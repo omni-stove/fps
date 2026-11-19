@@ -143,6 +143,8 @@ Device ID は端末ごとの Id なので、それだけでは端末ごとに別
 | `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
 | `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |
 | `Emotes` | `IEmoteControl` | エモートの Id の一覧と、再生する口。`Player/Emote` を押している間だけ出る |
+| `Stamina` | `StaminaStatus?` | この画面のプレイヤーのスタミナ (今の量・上限・尽きた扱いか) |
+| `LockOnWarning` | `LockOnWarningStatus?` | この画面のプレイヤー (乗っている乗り物を含む) を狙っているロックオンの段階 (`LockOnWarningStage`) と、狙ってくる向き (自分の正面から時計回りの度) |
 
 #### 購読のしかた
 
@@ -343,6 +345,77 @@ public sealed class HealthOnlyHud : MonoBehaviour
 8. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
 
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
+
+### ヘリ (`SimpleHelicopterMotor`)
+
+1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleHelicopterMotor` を付ける。当て方の `HelicopterControlScheme` は `SimpleHelicopterMotor` を付けると一緒に付く。
+2. 値は **Create > Shooter > Helicopter Definition** (`HelicopterDefinition`) に置き、`SimpleHelicopterMotor` の Definition に入れる。空なら既定値で飛ぶ。コードからは `Configure(HelicopterSpec)` で差し替えられる。
+3. 操作: 上下 (`VehicleSeatInput.Vertical`、ジャンプで上・しゃがみで下) がコレクティブ、移動の前後左右が機体の傾き (前後左右へ進む)、旋回は視線の向きへ機首を合わせる。手を離すとその場でホバーする。
+4. 真下の地面 (`GroundMask` のレイヤー) が近いと地面効果で浮きやすくなる。ローターは乗ると回り始め、降りると同じ秒数で止まっていく。
+
+### ボート (`SimpleBoatMotor`)
+
+1. `Rigidbody` と当たり判定を持つ船の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleBoatMotor` を付ける。当て方は付けず、車の当て方 (`CarControlScheme`) の前後をスロットル、左右を舵として読む。
+2. 値は **Create > Shooter > Boat Definition** (`BoatDefinition`) に置き、`SimpleBoatMotor` の Definition に入れる。船体の大きさから浮力を測る点を並べ、スクリューは船尾の真ん中に置く。
+3. 浮くのはシーンの水 (`Shooter.Runtime.Traversal.Water`) の中だけ。水の外では浮力も推力も掛からない。
+
+試走場 (**Shooter > Build Vehicle Range Scene**) では、ヘリは北西の角 (`VehicleRangeSceneBuilder.HelicopterOrigin`)、ボートは南東の水 (`BoatGround`) に置いてある。
+
+### フレアとロックオン警告
+
+- フレア: 機体に `VehicleCountermeasures` を付け、数・間隔・燃える秒・誘う角度・見た目 (空なら光る球を作る)・音を Settings (`CountermeasureSettings`) の欄で決める。操縦する人が `Player/Countermeasure` を押すと撒き、狙う側から見て機体とフレアが欄の角度より近ければ捕捉が外れ、撃たれた誘導弾はフレアへ向かう。同乗者が押しても撒かない。
+- ロックオン警告: この画面のプレイヤーに `LockOnWarningPublisher` を付けると、場の `LockOnAim` が自分 (乗っている乗り物を含む) を捉えている段階と向きを `GameSignals.LockOnWarning` に出す。自分の武器や同じ乗り物の武器の捕捉は数えない。サンプルの既定の HUD は `DefaultHudFactory` がプレイヤーに付け、`LockOnWarningView` が文字で出す。
+
+### 乗り物の AI
+
+- 車: 乗り物か Bot に `BotVehicleDriver` を付け、なぞる道 (`VehicleRoute`。点は Transform で、空なら直下の子の順) を入れる。運転席が空なら代わりの運転手を座らせて走る。走り方 (先を見る距離・速さ・角の手前で落とす・詰まったら切り返す) は欄で決める。
+- 飛行機: 機体に `BotAircraftPilot` を付け、回る点の並びと飛ばし方の値 (**Create > Shooter > Bot Aircraft Pilot Settings**) を入れる。点どうしは傾け切って回る輪の直径 (巡航の速さで 600m ほど) より離す。地面が近いと翼を水平に戻して上るのを優先する。
+- 敵と Bot (`EnemyAgent`) が運転席に座ると、飛行機 (`SimpleAircraftMotor` を持つ) なら `BotAircraftPilot`、それ以外なら `BotVehicleDriver` で動かす。乗り物に置いてある部品があればその値を借りる。道は `EnemyAgent.OrderRoute` で指示したものが、乗り物に付いた `VehicleRoute` より先。運転している間は自分の銃を撃たず、撃つのは同乗者の座席に任せる。
+
+### 空中からの脱出
+
+機体から降りる操作が空中で起きると、新しいキーを使わずに脱出 (`VehicleLeaveReason.BailOut`) になり、パラシュートで降りる。決め方は「座席を並べる」の 4. を見る。
+
+## プレイヤーの動作
+
+### エモート
+
+組み方は「ゲームの中身を差し替える」の「エモート」を見る。`Player/Emote` を押している間は `GameSignals.Emotes` が出て、サンプルの HUD はそれをホイール (`EmoteWheelView`) で出す。
+
+### ジャイロ照準
+
+操作設定 (`ControlSettings`) のジャイロの項目 (`gyro`・`gyroSensitivity` (10〜500%、既定 100)・`gyroAimOnly`・`invertGyroY`) で決める。既定は Off。
+On の間は、機器のジャイロ (Input System の `Gyroscope`) の角速度を `FirstPersonLook` が視点の回転に足す。`gyroAimOnly` なら覗き込んでいる間だけ効く。切っている間はセンサーを止める。ジャイロの無い機器では何もしない。
+サンプルの設定画面 (`SettingsView`・`PauseSettingsView`) は、ジャイロの無い機器ではジャイロの項目に触れられず、使えないことを文で出す。
+
+### スタミナ
+
+1. ルールの `actions.stamina` を `On` にする。`StaminaActionInstaller` は `PlayerActions` の組み込みの一覧に入っていて、On ならプレイヤーに `PlayerStamina` を付ける。Off なら何も付かない (前に付けたものは止める)。
+2. 走る (毎秒)・スライディング・回避が量を使い、使わずに少し待つと戻る。尽きると決まった量まで戻るまで走れない。値は `StaminaSpec` で、変えるなら別の値で作った `StaminaActionInstaller` を `PlayerActions.Register` で入れると組み込みのものと置き換わる。
+3. 今の量は `GameSignals.Stamina` に出る。サンプルの HUD は `StaminaView` でゲージにする。
+
+### 動く床・エレベーター (`MovingPlatform`)
+
+1. 床にする GameObject に `MovingPlatform` を付け、通る点 (置いた位置からのずれ) を並べる。点が 1 つなら進まずに回るだけの床になる。Collider が無ければ板を作る (見た目のプレハブが空なら箱)。
+2. 動き方は **Create > Shooter > Moving Platform Settings** (`MovingPlatformSettings`) に置く。`PingPong` は往復、`Loop` は回り続け、`OnCall` は呼ばれた点 (`Call(点の番号)`) へ行くエレベーター。速さ・点での待ち・回る速さもここで決める。空なら往復・2 m/s・1 秒待つ・回らない。
+3. 乗った体は `PlayerController` が床と一緒に運ぶ。上がる床と天井に挟まれると、床が引き返す。
+4. サンプルのブートストラップのシーン (`BootstrapSceneBuilder`) に例がある。
+
+## 復活の場所
+
+倒されて戻るとき、`ModeRunnerBase` はルールの `respawnAnchor` (`GameRules.RespawnAnchors`) を書いた順に試し、最初に選べたもので戻す。既定は `Base` だけで、今までどおり拠点から戻る。
+
+```json
+{ "respawnAnchor": ["Beacon", "Squad", "Base"] }
+```
+
+- `Beacon`: 自分か同じ陣営の人が置いたビーコン (`BeaconDeployDefinition` の置ける物、`SpawnBeacon`) のうち、使える中でいちばん後に置いたものの前から戻り、ビーコンの使える回数を 1 減らす。使い切るか壊されると消える。陣営の無いモードでは置いた本人だけが使える。
+- `Squad`: 同じ陣営の生きている味方のうち、敵から最も遠い味方のまわりに戻す (`SquadSpawnSelector`)。敵が近い味方・撃たれたばかりの味方・ダウン中の味方の近くには戻さず、床が無い所と壁や置き物に重なる所も避ける。値はモードの Runner の `Squad Spawn` の欄 (`SquadSpawnSettings`、`SquadSpawnSpec`) で決める。
+- `Base`: 陣営の出現点 (`SideSpawnPoint`) のうち、敵から遠いもの。出現点が無ければ倒れた場所で戻る。
+- どれも選べなければ (`Base` を書いていなくても) 拠点に戻る。`Base` より後に書いたものは試さない。
+- どれで戻ったかはモードのログに `[Mode] spawn player=… side=… at=(…) from=Beacon` の形で出る。
+- ラウンドの始めの並べ直しや感染で戻すとき (`ModeRunnerBase.Respawn`) は、ビーコンも味方も使わずに拠点へ戻す。
+- ビーコンはオフラインだけで使える。専用サーバーのデプロイの一覧はビーコンを受けず、エラーで断る。
 
 ## 文言・言語 (サンプルの決まり)
 

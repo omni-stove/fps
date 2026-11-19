@@ -317,6 +317,7 @@ namespace Shooter.Runtime
 
             if (!_controller.enabled || !_controller.gameObject.activeInHierarchy)
             {
+                StepStamina(false, deltaSeconds);
                 return;
             }
 
@@ -325,6 +326,8 @@ namespace Shooter.Runtime
             FilterInputForVault(ref sprint, ref crouch, ref jumpPressed);
             FilterInputForProne(ref sprint, ref jumpPressed);
             FilterInputForMantle(ref sprint, ref crouch, ref jumpPressed);
+            FilterInputForStamina(ref sprint);
+            var sprinted = false;
 
             var wasSwimming = _swim.IsSwimming;
             UpdateSwim(deltaSeconds);
@@ -370,6 +373,10 @@ namespace Shooter.Runtime
                     {
                         var carry = CarrySpeedMultiplier;
                         var inJumpGrace = StepAirJump(move, jump, yawRadians, jumpGraceLeft, deltaSeconds);
+
+                        // 押しているだけで止まっている・しゃがんでいる tick は走っていないので減らさない。
+                        sprinted = sprint && !IsProne && !IsCrouched
+                            && move.sqrMagnitude >= SprintInput.MoveThreshold * SprintInput.MoveThreshold;
                         displacement = IsProne
                             ? _motor.StepProne(
                                 move.ToNumerics(), yawRadians, _proneSpec.Speed, _controller.isGrounded, deltaSeconds, carry).ToUnity()
@@ -395,6 +402,7 @@ namespace Shooter.Runtime
             }
 
             SettleWallRun(wallRun, transform.position - before, collisions, deltaSeconds);
+            StepStamina(sprinted, deltaSeconds);
 
             // 泳いでいる間は水底や天井に触れても立っていないので、着地・足音・落下のダメージに数えない。
             var footing = _controller.isGrounded && !_swim.IsSwimming;

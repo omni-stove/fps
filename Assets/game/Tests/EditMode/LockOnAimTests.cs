@@ -95,6 +95,68 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheTrackedTargetAndItsStageCanBeReadFromOutside()
+        {
+            var target = CreateTarget("target", new Vector3(0f, 1f, 20f));
+            var aiming = true;
+            var aim = Create(Guided(), () => aiming);
+            var targets = new HitboxLockOnTargets(aim.transform, Physics.DefaultRaycastLayers);
+            aim.Targets = targets;
+            aim.TargetLookup = targets.Find;
+
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.None));
+            Assert.That(aim.TargetId, Is.Null);
+            Assert.That(aim.Target, Is.Null);
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on tracking target=\d+$"));
+            aim.Tick(_step);
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.Tracking));
+            Assert.That(aim.TargetId, Is.Not.Null);
+            Assert.That(aim.Target, Is.SameAs(target));
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on locked target=\d+$"));
+            aim.Tick(1f);
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.Locked));
+            Assert.That(aim.Target, Is.SameAs(target));
+
+            aiming = false;
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on lost target=none$"));
+            aim.Tick(_step);
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.None));
+            Assert.That(aim.Target, Is.Null);
+        }
+
+        [Test]
+        public void WithoutATargetLookupTheTargetCannotBeNamed()
+        {
+            CreateTarget("target", new Vector3(0f, 1f, 20f));
+            var aim = Create(Guided(), () => true);
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on tracking target=\d+$"));
+            aim.Tick(_step);
+
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.Tracking));
+            Assert.That(aim.Target, Is.Null);
+        }
+
+        [Test]
+        public void HitboxTargetsFindOnlyTheOnesTheyHaveSeen()
+        {
+            var shooter = CreateTarget("shooter", _eye);
+            var seen = CreateTarget("seen", new Vector3(0f, 1f, 10f));
+            var targets = new HitboxLockOnTargets(shooter.transform, Physics.DefaultRaycastLayers);
+            var found = new List<LockOnCandidate>();
+            targets.Collect(_eye.ToNumerics(), Vector3.forward.ToNumerics(), 50f, found);
+
+            Assert.That(targets.Find(found[0].Id), Is.SameAs(seen));
+            Assert.That(targets.Find(-1), Is.Null);
+            Assert.That(targets.Find(99), Is.Null);
+
+            Object.DestroyImmediate(seen.gameObject);
+            Assert.That(targets.Find(found[0].Id) is null, Is.True, "a destroyed body is a plain null, not a destroyed object");
+        }
+
+        [Test]
         public void EachTickWritesTheLockOnToThePublishedHudModel()
         {
             CreateTarget("target", new Vector3(0f, 1f, 20f));

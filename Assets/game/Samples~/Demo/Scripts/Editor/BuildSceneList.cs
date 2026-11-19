@@ -26,9 +26,14 @@ namespace Shooter.Editor
 
         public static string TpsRangeScene => ShooterKitRoot.OutputScene("TpsRange");
 
-        public const string FeatureScenePrefix = "Feature_";
+        // 機能を試すシーン (FeatureSceneBuilder)。名前が一覧で見切れないよう短くする。
+        public static string FeatureScene(string name) => ShooterKitRoot.OutputScene(name);
 
-        public static string FeatureScene(Shooter.Core.GameRulesDebugField field) => ShooterKitRoot.OutputScene(FeatureScenePrefix + field);
+        public static string PlaygroundScene => FeatureScene(FeatureSceneBuilder.PlaygroundName);
+
+        public static string HighDropScene => FeatureScene(FeatureSceneBuilder.HighDropName);
+
+        public static string DownedScene => FeatureScene(DownedSceneBuilder.SceneName);
 
         public static IReadOnlyList<string> FeatureScenes
         {
@@ -37,26 +42,10 @@ namespace Shooter.Editor
                 var scenes = new List<string>();
                 foreach (var feature in FeatureSceneBuilder.All())
                 {
-                    scenes.Add(FeatureScene(feature.Field));
+                    scenes.Add(FeatureScene(feature.Name));
                 }
 
-                return scenes;
-            }
-        }
-
-        // ルールの入り切りでなく移動の調整値で試す機能のシーン。名前は同じ Feature_ で並べる (ルールの名前と重ならないことはテストで確かめる)。
-        public static string TraversalFeatureScene(TraversalFeature feature) => ShooterKitRoot.OutputScene(FeatureScenePrefix + feature);
-
-        public static IReadOnlyList<string> TraversalFeatureScenes
-        {
-            get
-            {
-                var scenes = new List<string>();
-                foreach (var feature in TraversalFeatureSceneBuilder.Features)
-                {
-                    scenes.Add(TraversalFeatureScene(feature));
-                }
-
+                scenes.Add(DownedScene);
                 return scenes;
             }
         }
@@ -127,9 +116,7 @@ namespace Shooter.Editor
                     NetTestScene,
                 };
 
-                var features = new List<string>(FeatureScenes);
-                features.AddRange(TraversalFeatureScenes);
-                scenes.InsertRange(scenes.IndexOf(TpsRangeScene) + 1, features);
+                scenes.InsertRange(scenes.IndexOf(TpsRangeScene) + 1, FeatureScenes);
                 return scenes;
             }
         }
@@ -304,6 +291,39 @@ namespace Shooter.Editor
 
                     var path = scene.path.Replace('\\', '/');
                     if (listed.Contains(path) || !kept.Add(path))
+                    {
+                        continue;
+                    }
+
+                    scenes.Add(scene);
+                }
+            }
+
+            return scenes.ToArray();
+        }
+
+        public static EditorBuildSettingsScene[] Without(IReadOnlyList<EditorBuildSettingsScene> current, IEnumerable<string> paths)
+        {
+            if (paths == null)
+            {
+                throw new ArgumentNullException(nameof(paths));
+            }
+
+            var removed = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var path in paths)
+            {
+                if (!string.IsNullOrEmpty(path))
+                {
+                    removed.Add(path.Replace('\\', '/'));
+                }
+            }
+
+            var scenes = new List<EditorBuildSettingsScene>();
+            if (current != null)
+            {
+                foreach (var scene in current)
+                {
+                    if (scene == null || string.IsNullOrEmpty(scene.path) || removed.Contains(scene.path.Replace('\\', '/')))
                     {
                         continue;
                     }

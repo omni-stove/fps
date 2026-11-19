@@ -816,34 +816,43 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void FeatureRulesTurnOnOnlyTheirOwnField()
+        public void PlaygroundTurnsOnExactlyItsTogglesInThirdPerson()
         {
-            var toggles = GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).ToArray();
+            var rules = GameRulesAssetBuilder.PlaygroundRules();
             var baseRules = GameRulesAssetBuilder.FeatureBaseRules();
 
-            foreach (var field in toggles)
+            foreach (var field in GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle))
             {
-                var rules = GameRulesAssetBuilder.FeatureRules(field);
-
-                Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(1), field + " is on");
-                var expectedView = field == GameRulesDebugField.Cover || field == GameRulesDebugField.BlindFire
-                    ? ViewMode.ThirdPerson
-                    : ViewMode.FirstPerson;
-                Assert.That(rules.ViewMode, Is.EqualTo(expectedView), field + ": F2 switches the view at run time");
-                Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen), field + ": the player collapses in first person");
-                foreach (var other in toggles)
-                {
-                    if (other == field || IsTurnedOnWith(field, other))
-                    {
-                        continue;
-                    }
-
-                    Assert.That(
-                        GameRulesDebugDraft.Read(rules, other),
-                        Is.EqualTo(GameRulesDebugDraft.Read(baseRules, other)),
-                        $"{field} scene leaves {other} as in the base rules");
-                }
+                var expected = GameRulesAssetBuilder.PlaygroundToggles.Contains(field) ? 1 : GameRulesDebugDraft.Read(baseRules, field);
+                Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(expected), field.ToString());
             }
+
+            Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.Count.EqualTo(21));
+            Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.No.Member(GameRulesDebugField.AimToFire), "aiming to fire would tie up the other moves");
+            Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.No.Member(GameRulesDebugField.Downed), "a solo match never downs the player");
+            Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "cover is shown in third person");
+            Assert.That(rules.Actions.GrenadeCount, Is.EqualTo(GameRulesDebugDraft.DefaultGrenadeCount));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), "the double jump steps do not hurt");
+            Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen));
+        }
+
+        [Test]
+        public void HighDropTurnsOnTheParachuteAndTheFallDamageInFirstPerson()
+        {
+            var rules = GameRulesAssetBuilder.HighDropRules();
+
+            Assert.That(GameRulesAssetBuilder.HighDropToggles, Is.EqualTo(new[]
+            {
+                GameRulesDebugField.Parachute,
+                GameRulesDebugField.FallDamage,
+                GameRulesDebugField.Ladder,
+                GameRulesDebugField.Jump,
+            }));
+            Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.On));
+            Assert.That(GameRulesDebugDraft.Read(rules, GameRulesDebugField.Parachute), Is.EqualTo(1));
+            Assert.That(GameRulesDebugDraft.Read(rules, GameRulesDebugField.Ladder), Is.EqualTo(1));
+            Assert.That(GameRulesDebugDraft.Read(rules, GameRulesDebugField.Cover), Is.EqualTo(0));
+            Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.FirstPerson));
         }
 
         [Test]
@@ -864,48 +873,27 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void FeatureRulesBringWhatTheFeatureNeeds()
+        public void FeatureRulesPathIsNamedAfterTheScene()
         {
-            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.BlindFire).Actions.Cover, Is.EqualTo(Cover.On));
-            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Cover).ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "cover is shown in third person");
-            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.BlindFire).ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "blind fire is fired from cover");
-            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Grenade).Actions.GrenadeCount, Is.EqualTo(GameRulesDebugDraft.DefaultGrenadeCount));
-            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Downed).FallDamage, Is.EqualTo(FallDamage.On), "falling off the tower downs the player");
-        }
-
-        [Test]
-        public void FeatureRulesRejectFieldsThatAreNotOnOff()
-        {
-            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.HudDensity));
-            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.ViewMode));
-        }
-
-        [Test]
-        public void FeatureRulesPathIsNamedAfterTheField()
-        {
-            Assert.That(GameRulesAssetBuilder.FeatureRulesPath(GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Rules/Features/Zipline.asset"));
+            Assert.That(GameRulesAssetBuilder.FeatureRulesPath("Playground"), Is.EqualTo(DemoSample.Root + "/Rules/Features/Playground.asset"));
+            Assert.Throws<ArgumentException>(() => GameRulesAssetBuilder.FeatureRulesPath(" "));
         }
 
         [Test]
         public void LoadOrBuildFeatureRulesCreatesOnceAndKeepsEditedValues()
         {
-            var path = _folder + "/Zipline.asset";
+            var path = _folder + "/Playground.asset";
 
-            var built = GameRulesAssetBuilder.LoadOrBuildFeatureRules(GameRulesDebugField.Zipline, path);
+            var built = GameRulesAssetBuilder.LoadOrBuildFeatureRules(path, GameRulesAssetBuilder.PlaygroundRules());
             Assert.That(built, Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path)));
             Assert.That(built.ToRules().Actions.Zipline, Is.EqualTo(Zipline.On));
 
-            GameRulesAssetBuilder.Configure(built, GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Zipline).WithFallDamage(FallDamage.On));
-            var loaded = GameRulesAssetBuilder.LoadOrBuildFeatureRules(GameRulesDebugField.Zipline, path);
+            GameRulesAssetBuilder.Configure(built, GameRulesAssetBuilder.PlaygroundRules().WithFallDamage(FallDamage.On));
+            var loaded = GameRulesAssetBuilder.LoadOrBuildFeatureRules(path, GameRulesAssetBuilder.PlaygroundRules());
 
             Assert.That(loaded, Is.SameAs(built));
             Assert.That(loaded.ToRules().FallDamage, Is.EqualTo(FallDamage.On), "an existing asset is not overwritten");
-        }
-
-        private static bool IsTurnedOnWith(GameRulesDebugField field, GameRulesDebugField other)
-        {
-            return (field == GameRulesDebugField.BlindFire && other == GameRulesDebugField.Cover)
-                || (field == GameRulesDebugField.Downed && other == GameRulesDebugField.FallDamage);
+            Assert.Throws<ArgumentNullException>(() => GameRulesAssetBuilder.LoadOrBuildFeatureRules(path, null));
         }
 
         private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> list)

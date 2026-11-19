@@ -17,7 +17,7 @@ namespace Shooter.Editor
         // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Shooter/Build Wave Test Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[WaveTestSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";
@@ -49,7 +49,6 @@ namespace Shooter.Editor
         public const float EnemySpeed = EnemyTestSceneBuilder.EnemySpeed;
         public const int EnemyMaxHealth = EnemyTestSceneBuilder.EnemyMaxHealth;
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

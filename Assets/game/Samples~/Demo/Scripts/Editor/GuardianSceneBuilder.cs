@@ -10,7 +10,7 @@ namespace Shooter.Editor
     {
         public static string ScenePathValue => BuildSceneList.GuardianScene;
         public static string RulesPathValue => GameRulesAssetBuilder.GuardianPath;
-        public const string MenuPath = "Shooter/Build Guardian Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         // リーダーが倒れた後に残りを倒し切れる程度に抑える。
         public const int TeamSize = 4;
@@ -22,7 +22,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => TwoSides(TeamSize - 1, TeamSize);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new GuardianSceneBuilder().BuildSceneFromMenu();

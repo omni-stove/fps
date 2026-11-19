@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -41,6 +42,47 @@ namespace Shooter.Tests.EditMode
             Assert.That(box.GetComponents<SurfaceMaterial>(), Has.Length.EqualTo(1));
             Assert.That(SurfaceMaterial.IdOf(box.GetComponent<Collider>()), Is.EqualTo("wood"));
             Assert.Throws<ArgumentNullException>(() => SceneBuildHelpers.SetSurfaceMaterial(null, "metal"));
+        }
+
+        [Test]
+        public void PerimeterWallsCloseTheAreaJustOutsideItsEdges()
+        {
+            var root = SceneBuildHelpers.CreatePerimeterWalls(_scene, null, new Vector3(10f, 2f, -5f), new Vector2(20f, 15f), 8f, 1f);
+
+            Assert.That(root.name, Is.EqualTo(SceneBuildHelpers.PerimeterName));
+            Assert.That(root.scene, Is.EqualTo(_scene));
+            Assert.That(root.transform.childCount, Is.EqualTo(4));
+
+            var north = root.transform.Find("Perimeter_North");
+            var south = root.transform.Find("Perimeter_South");
+            var east = root.transform.Find("Perimeter_East");
+            var west = root.transform.Find("Perimeter_West");
+
+            Assert.That(north.position, Is.EqualTo(new Vector3(10f, 6f, 10.5f)));
+            Assert.That(north.localScale, Is.EqualTo(new Vector3(42f, 8f, 1f)));
+            Assert.That(south.position, Is.EqualTo(new Vector3(10f, 6f, -20.5f)));
+            Assert.That(east.position, Is.EqualTo(new Vector3(30.5f, 6f, -5f)));
+            Assert.That(east.localScale, Is.EqualTo(new Vector3(1f, 8f, 30f)));
+            Assert.That(west.position, Is.EqualTo(new Vector3(-10.5f, 6f, -5f)));
+
+            foreach (Transform wall in root.transform)
+            {
+                Assert.That(wall.GetComponent<Collider>(), Is.Not.Null, wall.name);
+                Assert.That(wall.gameObject.isStatic, Is.True, wall.name);
+            }
+        }
+
+        [Test]
+        public void PerimeterWallsRejectAnEmptyArea()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => SceneBuildHelpers.CreatePerimeterWalls(_scene, null, Vector3.zero, new Vector2(0f, 5f)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => SceneBuildHelpers.CreatePerimeterWalls(_scene, null, Vector3.zero, Vector2.one, 0f, 1f));
+        }
+
+        [Test]
+        public void PlaneHalfExtentsAreFiveMetresPerScale()
+        {
+            Assert.That(SceneBuildHelpers.PlaneHalfExtents(new Vector3(8f, 1f, 6f)), Is.EqualTo(new Vector2(40f, 30f)));
         }
 
         [Test]
@@ -182,6 +224,57 @@ namespace Shooter.Tests.EditMode
             SceneManager.MoveGameObjectToScene(new GameObject("Stray"), _scene);
 
             Assert.Throws<InvalidOperationException>(() => SceneBuildHelpers.RequireEmpty(_scene, "test"));
+        }
+
+        public static GameObject AssertPerimeterEncloses(Scene scene, float minX, float maxX, float minZ, float maxZ, float baseY)
+        {
+            var found = scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<Transform>(true))
+                .Where(t => t.name == SceneBuildHelpers.PerimeterName)
+                .ToArray();
+            Assert.That(found, Has.Length.EqualTo(1), $"the scene '{scene.name}' is walled in exactly once");
+            var root = found[0];
+            Assert.That(root.childCount, Is.EqualTo(4), "four walls");
+
+            var north = PerimeterWall(root, "Perimeter_North");
+            var south = PerimeterWall(root, "Perimeter_South");
+            var east = PerimeterWall(root, "Perimeter_East");
+            var west = PerimeterWall(root, "Perimeter_West");
+
+            const float tolerance = 1e-3f;
+            Assert.That(north.position.z - (north.lossyScale.z / 2f), Is.EqualTo(maxZ).Within(tolerance), "the north wall stands on the north edge");
+            Assert.That(south.position.z + (south.lossyScale.z / 2f), Is.EqualTo(minZ).Within(tolerance), "the south wall stands on the south edge");
+            Assert.That(east.position.x - (east.lossyScale.x / 2f), Is.EqualTo(maxX).Within(tolerance), "the east wall stands on the east edge");
+            Assert.That(west.position.x + (west.lossyScale.x / 2f), Is.EqualTo(minX).Within(tolerance), "the west wall stands on the west edge");
+
+            foreach (var wall in new[] { north, south })
+            {
+                Assert.That(wall.position.x - (wall.lossyScale.x / 2f), Is.LessThanOrEqualTo(minX + tolerance), wall.name + " reaches the west edge");
+                Assert.That(wall.position.x + (wall.lossyScale.x / 2f), Is.GreaterThanOrEqualTo(maxX - tolerance), wall.name + " reaches the east edge");
+            }
+
+            foreach (var wall in new[] { east, west })
+            {
+                Assert.That(wall.position.z - (wall.lossyScale.z / 2f), Is.LessThanOrEqualTo(minZ + tolerance), wall.name + " reaches the south edge");
+                Assert.That(wall.position.z + (wall.lossyScale.z / 2f), Is.GreaterThanOrEqualTo(maxZ - tolerance), wall.name + " reaches the north edge");
+            }
+
+            foreach (var wall in new[] { north, south, east, west })
+            {
+                Assert.That(wall.position.y - (wall.lossyScale.y / 2f), Is.EqualTo(baseY).Within(tolerance), wall.name + " stands on the floor");
+                Assert.That(wall.lossyScale.y, Is.EqualTo(SceneBuildHelpers.DefaultPerimeterHeight).Within(tolerance), wall.name + " is too high to jump over");
+                Assert.That(wall.GetComponent<Collider>(), Is.Not.Null, wall.name);
+                Assert.That(wall.gameObject.isStatic, Is.True, wall.name);
+            }
+
+            return root.gameObject;
+        }
+
+        private static Transform PerimeterWall(Transform root, string name)
+        {
+            var wall = root.Find(name);
+            Assert.That(wall, Is.Not.Null, name);
+            return wall;
         }
     }
 }

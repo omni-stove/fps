@@ -26,7 +26,7 @@ namespace Shooter.Editor
             return definition;
         }
 
-        public const string MenuPath = "Shooter/Build Domination Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[DominationSceneBuilder]";
 
         public const string FloorName = ModeSceneBuilder.FloorName;
@@ -145,7 +145,6 @@ namespace Shooter.Editor
             return route;
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。

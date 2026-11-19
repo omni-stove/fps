@@ -71,6 +71,6 @@ private void OnDisable()
 ## Demo サンプル
 
 1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。
-2. **Shooter > Build Main Menu Scene** を一度実行する。
+2. **Shooter > Build All Scenes** を一度実行する（Editor を閉じて `make build-scenes` でもよい。`make setup` も最後にこれを実行する）。全シーンを作り直し、ネット対戦のマップの当たりも書き出す。
 
 このリポジトリでは `Assets/Samples/ShooterKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクなので、サンプルは `Samples~/Demo` の下を直す。

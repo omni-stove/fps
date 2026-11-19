@@ -55,36 +55,40 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ListHasOneFeatureSceneForEachOnOffRuleRightAfterTheTpsRange()
-        {
-            var scenes = BuildSceneList.Scenes.ToList();
-            var fields = Shooter.Core.GameRulesDebugDraft.Fields.Where(Shooter.Core.GameRulesDebugDraft.IsToggle).ToArray();
-            var expected = fields.Select(BuildSceneList.FeatureScene).ToArray();
-
-            Assert.That(BuildSceneList.FeatureScene(Shooter.Core.GameRulesDebugField.Zipline), Is.EqualTo(DemoSample.Root + "/Scenes/Feature_Zipline.unity"));
-            Assert.That(BuildSceneList.FeatureScenes, Is.EqualTo(expected));
-            Assert.That(expected, Has.Length.EqualTo(25));
-            var start = scenes.IndexOf(BuildSceneList.TpsRangeScene) + 1;
-            Assert.That(scenes.Skip(start).Take(expected.Length), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void ListHasTheTraversalFeatureScenesRightAfterTheRuleFeatureScenes()
+        public void ListHasTheFeatureScenesRightAfterTheTpsRange()
         {
             var scenes = BuildSceneList.Scenes.ToList();
             var expected = new[]
             {
-                DemoSample.Root + "/Scenes/Feature_Lean.unity",
-                DemoSample.Root + "/Scenes/Feature_Swim.unity",
-                DemoSample.Root + "/Scenes/Feature_WallRun.unity",
-                DemoSample.Root + "/Scenes/Feature_DoubleJump.unity",
+                DemoSample.Root + "/Scenes/Playground.unity",
+                DemoSample.Root + "/Scenes/HighDrop.unity",
+                DemoSample.Root + "/Scenes/Downed.unity",
             };
 
-            Assert.That(BuildSceneList.TraversalFeatureScenes, Is.EqualTo(expected));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.WallRun), Is.EqualTo(expected[2]));
-            Assert.That(BuildSceneList.FeatureScenes.Intersect(expected), Is.Empty, "no on/off rule shares a traversal scene's name");
-            var start = scenes.IndexOf(BuildSceneList.FeatureScenes.Last()) + 1;
+            Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo(expected[0]));
+            Assert.That(BuildSceneList.HighDropScene, Is.EqualTo(expected[1]));
+            Assert.That(BuildSceneList.DownedScene, Is.EqualTo(expected[2]));
+            Assert.That(BuildSceneList.FeatureScenes, Is.EqualTo(expected));
+            var start = scenes.IndexOf(BuildSceneList.TpsRangeScene) + 1;
             Assert.That(scenes.Skip(start).Take(expected.Length), Is.EqualTo(expected));
+            Assert.That(scenes.Where(path => path.Contains("/Feature_")), Is.Empty, "the per-feature scenes are gone");
+        }
+
+        [Test]
+        public void WithoutDropsTheGivenScenesAndKeepsTheRestInOrder()
+        {
+            var current = new[]
+            {
+                new EditorBuildSettingsScene("Assets/A.unity", true),
+                new EditorBuildSettingsScene("Assets/Feature_Jump.unity", true),
+                new EditorBuildSettingsScene("Assets/B.unity", false),
+            };
+
+            var kept = BuildSceneList.Without(current, new[] { "Assets/Feature_Jump.unity", "Assets/Missing.unity" });
+
+            Assert.That(kept.Select(s => s.path), Is.EqualTo(new[] { "Assets/A.unity", "Assets/B.unity" }));
+            Assert.That(kept[1].enabled, Is.False);
+            Assert.Throws<System.ArgumentNullException>(() => BuildSceneList.Without(current, null));
         }
 
         [Test]

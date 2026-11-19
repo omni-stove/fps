@@ -83,7 +83,7 @@ namespace Shooter.Tests.EditMode
         {
             var layout = MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons);
 
-            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(5));
+            Assert.That(_scene.GetRootGameObjects(), Has.Length.EqualTo(6));
             Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
             Assert.That(layout.Bootstrap.GetComponent<GameBootstrap>().WeaponDefinitions, Is.EqualTo(_weapons));
             Assert.That(layout.Runner.Definition, Is.SameAs(_definition));
@@ -104,6 +104,15 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(layout.Extraction.ObjectiveId, Is.EqualTo(MissionTestSceneBuilder.ExtractId));
             Assert.That(layout.Extraction.Runner, Is.SameAs(layout.Runner));
+        }
+
+        [Test]
+        public void PopulatedSceneIsWalledInAlongTheRuntimeFloor()
+        {
+            MissionTestSceneBuilder.PopulateScene(_scene, _definition, _weapons);
+
+            Assert.That(_scene.GetRootGameObjects().Last().name, Is.EqualTo(SceneBuildHelpers.PerimeterName));
+            SceneBuildHelpersTests.AssertPerimeterEncloses(_scene, -25f, 25f, -25f, 25f, 0f);
         }
 
         [Test]

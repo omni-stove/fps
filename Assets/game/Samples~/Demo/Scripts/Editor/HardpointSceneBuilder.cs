@@ -13,7 +13,7 @@ namespace Shooter.Editor
         public static string RulesPathValue => GameRulesAssetBuilder.HardpointPath;
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.HardpointName);
-        public const string MenuPath = "Shooter/Build Hardpoint Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string PointsRootName = "ControlPoints";
 
@@ -34,7 +34,6 @@ namespace Shooter.Editor
         {
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new HardpointSceneBuilder().BuildSceneFromMenu();

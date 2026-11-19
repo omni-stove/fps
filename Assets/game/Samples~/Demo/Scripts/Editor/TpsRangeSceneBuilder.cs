@@ -13,7 +13,7 @@ namespace Shooter.Editor
     public static class TpsRangeSceneBuilder
     {
         public static string ScenePath => BuildSceneList.TpsRangeScene;
-        public const string MenuPath = "Shooter/Build TPS Range Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[TpsRangeSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";
@@ -92,6 +92,7 @@ namespace Shooter.Editor
         {
             BootstrapObjectName,
             FloorName,
+            SceneBuildHelpers.PerimeterName,
             CoversName,
             VaultWallName,
             OpenAreaName,
@@ -106,7 +107,6 @@ namespace Shooter.Editor
             return ExtensionPoints.CreateAll<ITpsRangeFixture>(f => f.Order);
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
@@ -213,6 +213,7 @@ namespace Shooter.Editor
                 bootstrap.CreatesFloor = false;
 
                 created.Add(SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale));
+                created.Add(SceneBuildHelpers.CreatePerimeterWalls(scene, null, Vector3.zero, SceneBuildHelpers.PlaneHalfExtents(FloorScale)));
                 bootstrap.WeaponDefinitions = weapons;
                 bootstrap.RulesDefinition = rules;
 

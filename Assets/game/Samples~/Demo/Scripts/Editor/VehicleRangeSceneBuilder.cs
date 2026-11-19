@@ -19,7 +19,7 @@ namespace Shooter.Editor
 
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Shooter/Build Vehicle Range Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[VehicleRangeSceneBuilder]";
 
         public const string BootstrapObjectName = "GameBootstrap";
@@ -171,7 +171,6 @@ namespace Shooter.Editor
 
         public const float NavMeshCheckRadius = 1f;
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -291,6 +290,10 @@ namespace Shooter.Editor
             try
             {
                 created.Add(SceneBuildHelpers.CreateStaticPlane(scene, null, OuterGroundName, new Vector3(0f, -OuterGroundDrop, 0f), OuterGroundScale));
+
+                // 床の縁でなく外の地面の縁で囲むのは、乗り物と脱出した人が床の外の地面へ出て行けるようにするため。
+                created.Add(SceneBuildHelpers.CreatePerimeterWalls(
+                    scene, null, new Vector3(0f, -OuterGroundDrop, 0f), SceneBuildHelpers.PlaneHalfExtents(OuterGroundScale)));
 
                 var pool = new GameObject(PoolName);
                 created.Add(pool);

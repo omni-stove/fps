@@ -8,7 +8,7 @@ namespace Shooter.Editor
     {
         public static string ScenePathValue => BuildSceneList.ModeTestScene;
         public static string RulesPathValue => GameRulesAssetBuilder.TeamDeathmatchPath;
-        public const string MenuPath = "Shooter/Build Mode Test Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf("TeamDeathmatch");
 
@@ -17,7 +17,6 @@ namespace Shooter.Editor
         {
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new ModeTestSceneBuilder().BuildSceneFromMenu();

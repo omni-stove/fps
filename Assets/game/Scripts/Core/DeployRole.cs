@@ -6,5 +6,7 @@ namespace Shooter.Core
         Turret,
         Shield,
         Decoy,
+
+        Beacon,
     }
 }

@@ -27,6 +27,9 @@ namespace Shooter.Server.Tests
   ]
 }";
 
+        private static readonly string[] _rotationMaps = { "NetTest", "NetArena01" };
+        private static readonly string[] _lowHealthIds = { "low-health" };
+
         private TempDirectory _first;
         private TempDirectory _second;
 
@@ -58,7 +61,7 @@ namespace Shooter.Server.Tests
             Assert.That(playlist.Playlist.Order, Is.EqualTo(PlaylistOrder.Sequential));
             Assert.That(playlist.Path, Is.EqualTo(path));
             Assert.That(playlist.MutatorsPath, Is.EqualTo(mutatorsPath));
-            Assert.That(playlist.MapNames, Is.EqualTo(new[] { "NetTest", "NetArena01" }));
+            Assert.That(playlist.MapNames, Is.EqualTo(_rotationMaps));
             Assert.That(playlist.Entries, Has.Count.EqualTo(3));
 
             var first = playlist.Entries[0];
@@ -76,7 +79,7 @@ namespace Shooter.Server.Tests
             Assert.That(second.Name, Is.EqualTo("Domination"));
             Assert.That(second.Rules.Objective, Is.EqualTo(MatchObjective.Domination));
             Assert.That(second.Rules.PlayerMaxHealth, Is.EqualTo(50));
-            Assert.That(second.MutatorIds, Is.EqualTo(new[] { "low-health" }));
+            Assert.That(second.MutatorIds, Is.EqualTo(_lowHealthIds));
             Assert.That(second.Data.File.Name, Is.EqualTo("Domination"));
 
             // 同じルールの項目は同じ GameRules を指し、戻ってきたときに目的を作り直さない

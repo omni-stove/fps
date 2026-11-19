@@ -197,13 +197,15 @@ namespace Shooter.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
+        private static readonly string[] _lowHealthIds = { "low-health" };
+
         // TDM (NetTest) → Domination にミューテーターを重ねたもの (NetArena01) → Kill Confirmed (NetTest)
         private static ServerPlaylist Playlist(NetMatchSettings settings)
         {
             var source = new Playlist("rotation", PlaylistOrder.Sequential, new[]
             {
                 new PlaylistEntry(_firstMap, "TeamDeathmatch"),
-                new PlaylistEntry(_secondMap, "Domination", new[] { "low-health" }),
+                new PlaylistEntry(_secondMap, "Domination", _lowHealthIds),
                 new PlaylistEntry(_firstMap, "KillConfirmed"),
             });
             var lowHealth = new GameRulesMutator("low-health", "{ \"playerMaxHealth\": 50 }", "test mutators");

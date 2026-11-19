@@ -49,6 +49,7 @@ namespace Shooter.Runtime
         private bool _isOpen;
         private bool _stepped;
         private bool _registered;
+        private bool _deployedByBailOut;
 
         public event Action<float> Opened;
 
@@ -77,7 +78,7 @@ namespace Shooter.Runtime
                 }
 
                 _rule = value;
-                if (value != Parachute.On)
+                if (value != Parachute.On && !_deployedByBailOut)
                 {
                     Close(ParachuteCloseReason.RuleOff);
                 }
@@ -87,7 +88,10 @@ namespace Shooter.Runtime
         public int Priority => MovementPriority;
 
         // 移した直後の CharacterController の接地は前の位置のままなので、着地は開いてから 1 度動かした後の接地で見る。
-        public bool IsActive => _isOpen && _rule == Parachute.On && enabled && !(_stepped && _mover != null && _mover.IsGrounded);
+        public bool IsActive =>
+            _isOpen && (_rule == Parachute.On || _deployedByBailOut) && enabled && !(_stepped && _mover != null && _mover.IsGrounded);
+
+        public bool IsDeployedByBailOut => _isOpen && _deployedByBailOut;
 
         public PlayerActionConditions Conditions => PlayerActionConditions.Parachuting;
 
@@ -235,6 +239,11 @@ namespace Shooter.Runtime
 
         public float MeasureHeightAboveGround()
         {
+            return MeasureHeightAboveGround(null);
+        }
+
+        public float MeasureHeightAboveGround(Transform ignoredRoot)
+        {
             RequireInitialized();
             var controller = _mover.Controller;
             var halfHeight = controller.height * 0.5f * Mathf.Abs(transform.lossyScale.y);
@@ -247,7 +256,9 @@ namespace Shooter.Runtime
             for (var i = 0; i < count; i++)
             {
                 var hit = _probeBuffer[i];
-                if (hit.collider == null || hit.collider.transform.IsChildOf(transform))
+                if (hit.collider == null
+                    || hit.collider.transform.IsChildOf(transform)
+                    || (ignoredRoot != null && hit.collider.transform.IsChildOf(ignoredRoot)))
                 {
                     continue;
                 }
@@ -273,10 +284,31 @@ namespace Shooter.Runtime
             }
 
             var velocity = _mover.Motor.Velocity;
-            _motion.Open(new System.Numerics.Vector2(velocity.X, velocity.Z));
-            _isOpen = true;
-            _stepped = false;
-            Opened?.Invoke(height);
+            Open(new Vector3(velocity.X, velocity.Y, velocity.Z), height, false);
+            return verdict;
+        }
+
+        // 乗り物から脱出したときに開く口。Rule はジャンプで開けるかのルールなので、脱出には掛けない。
+        // 掛けると、パラシュートを切ったモードでは空中で降りた人がそのまま落ちて死ぬ。
+        public ParachuteOpenVerdict DeployForBailOut(Vector3 inheritedVelocity, Transform vehicleRoot)
+        {
+            RequireInitialized();
+            if (!IsFinite(inheritedVelocity.x) || !IsFinite(inheritedVelocity.y) || !IsFinite(inheritedVelocity.z))
+            {
+                throw new ArgumentOutOfRangeException(nameof(inheritedVelocity), inheritedVelocity, "inheritedVelocity must be finite");
+            }
+
+            var height = MeasureHeightAboveGround(vehicleRoot);
+            var rule = enabled ? Parachute.On : Parachute.Off;
+            var busy = _mover.IsMovementOverridden && !ReferenceEquals(_mover.ActiveMovementOverride, this);
+            var verdict = _motion.Evaluate(rule, _isOpen, busy, height);
+            LastVerdict = verdict;
+            Debug.Log(FormatOpenLog(verdict, height), this);
+            if (verdict == ParachuteOpenVerdict.Open)
+            {
+                Open(inheritedVelocity, height, true);
+            }
+
             return verdict;
         }
 
@@ -327,7 +359,7 @@ namespace Shooter.Runtime
             {
                 Close(ParachuteCloseReason.Landed);
             }
-            else if (_rule != Parachute.On)
+            else if (_rule != Parachute.On && !_deployedByBailOut)
             {
                 Close(ParachuteCloseReason.RuleOff);
             }
@@ -350,10 +382,20 @@ namespace Shooter.Runtime
 
             _isOpen = false;
             _stepped = false;
+            _deployedByBailOut = false;
             _motion?.Reset();
             LastCloseReason = reason;
             Debug.Log(FormatClosedLog(reason), this);
             Closed?.Invoke(reason);
+        }
+
+        private void Open(Vector3 velocity, float height, bool byBailOut)
+        {
+            _motion.Open(new System.Numerics.Vector2(velocity.x, velocity.z));
+            _isOpen = true;
+            _stepped = false;
+            _deployedByBailOut = byBailOut;
+            Opened?.Invoke(height);
         }
 
         private void Register()

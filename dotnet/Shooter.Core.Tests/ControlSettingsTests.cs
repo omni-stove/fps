@@ -17,6 +17,8 @@ namespace Shooter.Core.Tests
 
         private const string _defaultOnline = ",'quickMatchRegion':'auto','telemetryConsent':false";
 
+        private const string _defaultGyro = ",'gyro':false,'gyroSensitivity':100,'gyroAimOnly':false,'invertGyroY':false";
+
         private static readonly InputDeviceKind[] _devices = { InputDeviceKind.KeyboardMouse, InputDeviceKind.Gamepad };
         private static readonly HoldAction[] _actions = { HoldAction.Sprint, HoldAction.Crouch, HoldAction.Aim };
 
@@ -88,13 +90,14 @@ namespace Shooter.Core.Tests
             Assert.That(
                 ControlSettings.Default.ToJson(),
                 Is.EqualTo(Json(
-                    "{'version':11,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
+                    "{'version':12,'keyboardMouse':{'sprint':'hold','crouch':'hold','aim':'hold'}," +
                     "'gamepad':{'sprint':'toggle','crouch':'toggle','aim':'hold'}," +
                     "'mouseSensitivity':100,'gamepadSensitivity':100,'adsSensitivity':100," +
                     "'fieldOfView':60,'masterVolume':100,'effectsVolume':100,'cameraShake':100,'viewmodelMotion':100," +
                     "'showBlood':true,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,'showNetStats':false," +
                     "'colorPalette':'standard','showSubtitles':false,'aimAssist':true," +
-                    "'quickMatchRegion':'auto','telemetryConsent':false}")));
+                    "'quickMatchRegion':'auto','telemetryConsent':false," +
+                    "'gyro':false,'gyroSensitivity':100,'gyroAimOnly':false,'invertGyroY':false}")));
         }
 
         [Test]
@@ -144,7 +147,7 @@ namespace Shooter.Core.Tests
         [TestCase("{'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':'1','gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':0,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
-        [TestCase("{'version':12,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
+        [TestCase("{'version':13,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         [TestCase("{'version':-1,'gamepad':{'sprint':'hold','crouch':'hold','aim':'hold'}}")]
         public void BrokenDataFallsBackToAllDefaults(string text)
         {
@@ -157,9 +160,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void ReportsTheVersionItRejected()
         {
-            ControlSettings.FromJson(Json("{'version':12}"), out var problems);
+            ControlSettings.FromJson(Json("{'version':13}"), out var problems);
 
-            Assert.That(problems[0], Does.Contain("version 12"));
+            Assert.That(problems[0], Does.Contain("version 13").And.Contain("1 to 12"));
         }
 
         // 1 つの操作の値が欠けている・型違い・知らない名前なら、その操作だけ初期値
@@ -391,7 +394,7 @@ namespace Shooter.Core.Tests
         {
             var loaded = ControlSettings.FromJson(Json(_valid), out _);
 
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':12,")));
             Assert.That(ControlSettings.FromJson(loaded.ToJson(), out var problems), Is.EqualTo(loaded));
             Assert.That(problems, Is.Empty);
         }
@@ -727,7 +730,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true" + _defaultOnline + "}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':" + (show ? "true" : "false") + ",'aimAssist':true" + _defaultOnline + _defaultGyro + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.ShowSubtitles, Is.EqualTo(show));
@@ -792,8 +795,8 @@ namespace Shooter.Core.Tests
         {
             var json = ControlSettings.Default.WithShowSubtitles(true).ToJson();
 
-            Assert.That(json, Does.StartWith(Json("{'version':11,")));
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true" + _defaultOnline + "}")));
+            Assert.That(json, Does.StartWith(Json("{'version':12,")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':true" + _defaultOnline + _defaultGyro + "}")));
             Assert.That(json, Does.Not.Contain("language"));
         }
 
@@ -810,7 +813,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.Not.Contain("language"));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':12,")).And.Not.Contain("language"));
         }
 
         [TestCase(5)]
@@ -818,6 +821,7 @@ namespace Shooter.Core.Tests
         [TestCase(9)]
         [TestCase(10)]
         [TestCase(11)]
+        [TestCase(12)]
         public void AVersionWithoutALanguageReportsTheLanguageKeyAsUnknown(int version)
         {
             var json = version >= 8 ? ControlSettings.Default.ToJson() : WithoutPresentation(ControlSettings.Default.ToJson());
@@ -916,7 +920,7 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.ViewmodelMotionIntensity), Is.EqualTo(100));
             Assert.That(loaded.ShowBlood, Is.True);
             Assert.That(loaded.ShowSubtitles, Is.True, "the saved value");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':12,")));
         }
 
         [Test]
@@ -1032,7 +1036,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + _defaultOnline + "}")));
+            Assert.That(json, Does.EndWith(Json(",'showSubtitles':true,'aimAssist':" + (enabled ? "true" : "false") + _defaultOnline + _defaultGyro + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.AimAssist, Is.EqualTo(enabled));
@@ -1050,7 +1054,7 @@ namespace Shooter.Core.Tests
             Assert.That(problems, Is.Empty);
             Assert.That(loaded.AimAssist, Is.True);
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':11,")).And.EndWith(Json(",'aimAssist':true" + _defaultOnline + "}")));
+            Assert.That(loaded.ToJson(), Does.StartWith(Json("{'version':12,")).And.EndWith(Json(",'aimAssist':true" + _defaultOnline + _defaultGyro + "}")));
         }
 
         [Test]
@@ -1277,7 +1281,7 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.Get(ControlValue.RumbleStrength), Is.EqualTo(100));
             Assert.That(
                 loaded.ToJson(),
-                Does.StartWith(Json("{'version':11,"))
+                Does.StartWith(Json("{'version':12,"))
                     .And.Contain(Json(",'showBlood':false,'invertLookY':false,'stickDeadzone':125,'rumble':true,'rumbleStrength':100,")));
         }
 
@@ -1345,7 +1349,7 @@ namespace Shooter.Core.Tests
         {
             var settings = ControlSettings.Default;
 
-            Assert.That(ControlSettings.CurrentVersion, Is.EqualTo(11));
+            Assert.That(ControlSettings.CurrentVersion, Is.EqualTo(12));
             Assert.That(settings.QuickMatchRegion, Is.EqualTo("auto"));
             Assert.That(settings.QuickMatchRegion, Is.EqualTo(ControlSettings.AutoRegion));
             Assert.That(settings.PrefersAnyRegion, Is.True);
@@ -1460,7 +1464,7 @@ namespace Shooter.Core.Tests
             var json = settings.ToJson();
             var loaded = ControlSettings.FromJson(json, out var problems);
 
-            Assert.That(json, Does.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'eu-west-2','telemetryConsent':true}")));
+            Assert.That(json, Does.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'eu-west-2','telemetryConsent':true" + _defaultGyro + "}")));
             Assert.That(problems, Is.Empty);
             Assert.That(loaded, Is.EqualTo(settings));
             Assert.That(loaded.QuickMatchRegion, Is.EqualTo("eu-west-2"));
@@ -1508,17 +1512,17 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.TelemetryConsent, Is.False);
             Assert.That(
                 loaded.ToJson(),
-                Does.StartWith(Json("{'version':11,"))
-                    .And.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'auto','telemetryConsent':false}")));
+                Does.StartWith(Json("{'version':12,"))
+                    .And.EndWith(Json(",'aimAssist':false,'quickMatchRegion':'auto','telemetryConsent':false" + _defaultGyro + "}")));
         }
 
         [Test]
         public void VersionTenReportsTheOnlineKeysAsUnknown()
         {
-            var versionTen = ControlSettings.Default
+            var versionTen = WithoutGyro(ControlSettings.Default
                 .WithQuickMatchRegion("asia")
                 .WithTelemetryConsent(true)
-                .ToJson()
+                .ToJson())
                 .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":10", StringComparison.Ordinal);
 
             var loaded = ControlSettings.FromJson(versionTen, out var problems);
@@ -1567,6 +1571,265 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.QuickMatchRegion, Is.EqualTo("asia"), "the saved value");
         }
 
+        [Test]
+        public void GyroDefaultsLeaveTheViewToTheMouseAndTheStick()
+        {
+            var settings = ControlSettings.Default;
+
+            Assert.That(settings.GyroEnabled, Is.False);
+            Assert.That(settings.GyroSensitivityPercent, Is.EqualTo(100));
+            Assert.That(settings.GyroSensitivity, Is.EqualTo(1f));
+            Assert.That(settings.GyroAimOnly, Is.False);
+            Assert.That(settings.InvertGyroY, Is.False);
+            Assert.That(settings.IsGyroActive(false), Is.False);
+            Assert.That(settings.IsGyroActive(true), Is.False);
+            Assert.That(ControlSettings.GyroSensitivityRange.Min, Is.EqualTo(10));
+            Assert.That(ControlSettings.GyroSensitivityRange.Max, Is.EqualTo(500));
+            Assert.That(ControlSettings.GyroSensitivityRange.Default, Is.EqualTo(100));
+            Assert.That(ControlSettings.Values, Has.Count.EqualTo(10), "the gyro sensitivity is not a slider value of the settings screen");
+        }
+
+        // 狙うときだけにしたなら、覗き込んでいる間だけ効く
+        [TestCase(false, false, false, false)]
+        [TestCase(false, false, true, false)]
+        [TestCase(false, true, true, false)]
+        [TestCase(true, false, false, true)]
+        [TestCase(true, false, true, true)]
+        [TestCase(true, true, false, false)]
+        [TestCase(true, true, true, true)]
+        public void TheGyroTurnsTheViewOnlyWhenOnAndWhileAimingIfAimOnly(bool enabled, bool aimOnly, bool aiming, bool expected)
+        {
+            var settings = ControlSettings.Default.WithGyroEnabled(enabled).WithGyroAimOnly(aimOnly);
+
+            Assert.That(settings.IsGyroActive(aiming), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void WithGyroEntriesChangeOnlyThatEntry()
+        {
+            var settings = ControlSettings.Default.WithInvertLookY(true).WithAimAssist(false);
+
+            var changed = settings
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(250)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true);
+
+            Assert.That(changed.GyroEnabled, Is.True);
+            Assert.That(changed.GyroSensitivityPercent, Is.EqualTo(250));
+            Assert.That(changed.GyroSensitivity, Is.EqualTo(2.5f));
+            Assert.That(changed.GyroAimOnly, Is.True);
+            Assert.That(changed.InvertGyroY, Is.True);
+            Assert.That(changed.InvertLookY, Is.True, "the stick invert is kept");
+            Assert.That(changed.AimAssist, Is.False);
+            Assert.That(settings.GyroEnabled, Is.False, "the original does not change");
+            Assert.That(changed, Is.Not.EqualTo(settings));
+            Assert.That(changed.WithGyroSensitivity(250), Is.SameAs(changed));
+            Assert.That(changed.WithGyroEnabled(true), Is.SameAs(changed));
+            Assert.That(settings.WithGyroAimOnly(false), Is.SameAs(settings));
+            Assert.That(settings.WithInvertGyroY(false), Is.SameAs(settings));
+
+            var back = changed
+                .WithGyroEnabled(false)
+                .WithGyroSensitivity(100)
+                .WithGyroAimOnly(false)
+                .WithInvertGyroY(false);
+
+            Assert.That(back, Is.EqualTo(settings));
+            Assert.That(back.GetHashCode(), Is.EqualTo(settings.GetHashCode()));
+        }
+
+        [TestCase(9)]
+        [TestCase(501)]
+        [TestCase(-100)]
+        public void WithGyroSensitivityRejectsValuesOutsideTheRange(int percent)
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => ControlSettings.Default.WithGyroSensitivity(percent));
+
+            Assert.That(e.Message, Does.Contain("gyroSensitivity").And.Contain("10").And.Contain("500"));
+        }
+
+        [TestCase(2.5f, false, false, 2.5f)]
+        [TestCase(2.5f, true, false, 2.5f)]
+        [TestCase(2.5f, false, true, -2.5f)]
+        [TestCase(-0.75f, true, true, 0.75f)]
+        public void InvertGyroYIsSeparateFromInvertLookY(float lookUp, bool invertLookY, bool invertGyroY, float expected)
+        {
+            var settings = ControlSettings.Default.WithInvertLookY(invertLookY).WithInvertGyroY(invertGyroY);
+
+            Assert.That(settings.ApplyInvertGyroY(lookUp), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ChangingOtherEntriesKeepsTheGyro()
+        {
+            var changed = ControlSettings.Default
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(40)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true);
+
+            foreach (var other in new[]
+            {
+                changed.With(ControlValue.MasterVolume, 10),
+                changed.With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle),
+                changed.WithShowNetStats(true),
+                changed.WithPalette(ColorPalette.BlueYellow),
+                changed.WithShowSubtitles(true),
+                changed.WithShowBlood(false),
+                changed.WithAimAssist(false),
+                changed.WithInvertLookY(true),
+                changed.WithRumbleEnabled(false),
+                changed.WithQuickMatchRegion("asia"),
+                changed.WithTelemetryConsent(true),
+            })
+            {
+                Assert.That(other.GyroEnabled, Is.True);
+                Assert.That(other.GyroSensitivityPercent, Is.EqualTo(40));
+                Assert.That(other.GyroAimOnly, Is.True);
+                Assert.That(other.InvertGyroY, Is.True);
+            }
+        }
+
+        [Test]
+        public void RoundTripsTheGyro()
+        {
+            var settings = ControlSettings.Default
+                .WithTelemetryConsent(true)
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(250)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true);
+
+            var json = settings.ToJson();
+            var loaded = ControlSettings.FromJson(json, out var problems);
+
+            Assert.That(
+                json,
+                Does.StartWith(Json("{'version':12,"))
+                    .And.EndWith(Json(",'telemetryConsent':true,'gyro':true,'gyroSensitivity':250,'gyroAimOnly':true,'invertGyroY':true}")));
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.GyroSensitivity, Is.EqualTo(2.5f));
+        }
+
+        // 版 11 (ジャイロを足す前) の保存を読むと、ジャイロの欄は何も言わずに初期値 (切ってある) になり、ほかの欄は残る
+        [Test]
+        public void ReadsVersionElevenWithTheGyroDefaultsAndNoProblems()
+        {
+            const string versionEleven =
+                "{'version':11,'keyboardMouse':{'sprint':'toggle','crouch':'hold','aim':'hold'}," +
+                "'gamepad':{'sprint':'hold','crouch':'toggle','aim':'toggle'}," +
+                "'mouseSensitivity':150,'gamepadSensitivity':80,'adsSensitivity':120," +
+                "'fieldOfView':75,'masterVolume':40,'effectsVolume':0,'cameraShake':30,'viewmodelMotion':0," +
+                "'showBlood':false,'invertLookY':true,'stickDeadzone':200,'rumble':false,'rumbleStrength':40,'showNetStats':true," +
+                "'colorPalette':'redGreen','showSubtitles':true,'aimAssist':false," +
+                "'quickMatchRegion':'europe','telemetryConsent':true}";
+            var expected = ControlSettings.Default
+                .With(InputDeviceKind.KeyboardMouse, HoldAction.Sprint, HoldMode.Toggle)
+                .With(InputDeviceKind.Gamepad, HoldAction.Sprint, HoldMode.Hold)
+                .With(InputDeviceKind.Gamepad, HoldAction.Aim, HoldMode.Toggle)
+                .With(ControlValue.MouseSensitivity, 150)
+                .With(ControlValue.GamepadSensitivity, 80)
+                .With(ControlValue.AdsSensitivity, 120)
+                .With(ControlValue.FieldOfView, 75)
+                .With(ControlValue.MasterVolume, 40)
+                .With(ControlValue.EffectsVolume, 0)
+                .With(ControlValue.CameraShakeIntensity, 30)
+                .With(ControlValue.ViewmodelMotionIntensity, 0)
+                .WithShowBlood(false)
+                .WithInvertLookY(true)
+                .WithStickDeadzone(200)
+                .WithRumbleEnabled(false)
+                .WithRumbleStrength(40)
+                .WithShowNetStats(true)
+                .WithPalette(ColorPalette.RedGreen)
+                .WithShowSubtitles(true)
+                .WithAimAssist(false)
+                .WithQuickMatchRegion("europe")
+                .WithTelemetryConsent(true);
+
+            var loaded = ControlSettings.FromJson(Json(versionEleven), out var problems);
+
+            Assert.That(problems, Is.Empty);
+            Assert.That(loaded, Is.EqualTo(expected), "every saved value is kept");
+            Assert.That(loaded.GyroEnabled, Is.False);
+            Assert.That(loaded.GyroSensitivityPercent, Is.EqualTo(100));
+            Assert.That(loaded.GyroAimOnly, Is.False);
+            Assert.That(loaded.InvertGyroY, Is.False, "the stick invert does not carry over to the gyro");
+            Assert.That(
+                loaded.ToJson(),
+                Does.StartWith(Json("{'version':12,"))
+                    .And.EndWith(Json(",'quickMatchRegion':'europe','telemetryConsent':true" + _defaultGyro + "}")));
+        }
+
+        [Test]
+        public void VersionElevenReportsTheGyroKeysAsUnknown()
+        {
+            var versionEleven = ControlSettings.Default
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(300)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true)
+                .ToJson()
+                .Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":11", StringComparison.Ordinal);
+
+            var loaded = ControlSettings.FromJson(versionEleven, out var problems);
+
+            Assert.That(loaded, Is.EqualTo(ControlSettings.Default), "a version 11 file cannot have these entries");
+            Assert.That(problems, Has.Count.EqualTo(4));
+            Assert.That(
+                string.Join("\n", problems),
+                Does.Contain("'gyro'").And.Contain("'gyroSensitivity'").And.Contain("'gyroAimOnly'").And.Contain("'invertGyroY'"));
+        }
+
+        // ジャイロの欄が欠けている・型違いなら、その欄だけ初期値に戻し、ほかのジャイロの欄は残す
+        [TestCase(",'gyro':true", "", "'gyro'")]
+        [TestCase("'gyro':true", "'gyro':'on'", "'gyro'")]
+        [TestCase("'gyro':true", "'gyro':1", "'gyro'")]
+        [TestCase("'gyroAimOnly':true", "'gyroAimOnly':null", "'gyroAimOnly'")]
+        [TestCase(",'gyroAimOnly':true", "", "'gyroAimOnly'")]
+        [TestCase("'invertGyroY':true", "'invertGyroY':'yes'", "'invertGyroY'")]
+        [TestCase(",'invertGyroY':true", "", "'invertGyroY'")]
+        public void BrokenGyroFlagFallsBackOnlyForThatFlag(string from, string to, string reported)
+        {
+            var settings = ControlSettings.Default
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(250)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true);
+            var valid = settings.ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain(reported));
+            Assert.That(loaded.GyroSensitivityPercent, Is.EqualTo(250), "the saved value");
+            Assert.That(loaded.GyroEnabled, Is.EqualTo(reported != "'gyro'"));
+            Assert.That(loaded.GyroAimOnly, Is.EqualTo(reported != "'gyroAimOnly'"));
+            Assert.That(loaded.InvertGyroY, Is.EqualTo(reported != "'invertGyroY'"));
+        }
+
+        // 感度が欠けている・整数でないなら初期値、範囲の外なら近い端の値にする
+        [TestCase(",'gyroSensitivity':250", "", 100, "missing")]
+        [TestCase("'gyroSensitivity':250", "'gyroSensitivity':'250'", 100, "integer")]
+        [TestCase("'gyroSensitivity':250", "'gyroSensitivity':true", 100, "integer")]
+        [TestCase("'gyroSensitivity':250", "'gyroSensitivity':900", 500, "outside")]
+        [TestCase("'gyroSensitivity':250", "'gyroSensitivity':0", 10, "outside")]
+        public void BrokenGyroSensitivityFallsBackOnlyForTheSensitivity(string from, string to, int expected, string reported)
+        {
+            var valid = ControlSettings.Default.WithGyroEnabled(true).WithGyroSensitivity(250).ToJson();
+            Assert.That(valid.Contains(Json(from), StringComparison.Ordinal), Is.True);
+
+            var loaded = ControlSettings.FromJson(valid.Replace(Json(from), Json(to), StringComparison.Ordinal), out var problems);
+
+            Assert.That(problems, Has.Count.EqualTo(1));
+            Assert.That(problems[0], Does.Contain("'gyroSensitivity'").And.Contain(reported));
+            Assert.That(loaded.GyroSensitivityPercent, Is.EqualTo(expected));
+            Assert.That(loaded.GyroEnabled, Is.True, "the saved value");
+        }
+
         private static string WithoutPresentation(string json)
         {
             return json.Replace(Json(",'cameraShake':100,'viewmodelMotion':100,'showBlood':true"), string.Empty, StringComparison.Ordinal);
@@ -1580,14 +1843,25 @@ namespace Shooter.Core.Tests
                 StringComparison.Ordinal);
         }
 
+        // 版 11 より前の形式は版 12 で足したジャイロの欄も持たないので、一緒に除く。
         private static string WithoutOnline(string json)
         {
-            return json.Replace(Json(_defaultOnline), string.Empty, StringComparison.Ordinal);
+            return WithoutGyro(json).Replace(Json(_defaultOnline), string.Empty, StringComparison.Ordinal);
+        }
+
+        private static string WithoutGyro(string json)
+        {
+            return json.Replace(Json(_defaultGyro), string.Empty, StringComparison.Ordinal);
         }
 
         private static string AsVersion(string json, int version)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version, StringComparison.Ordinal);
+            if (version < 12)
+            {
+                old = WithoutGyro(old);
+            }
+
             if (version < 11)
             {
                 old = WithoutOnline(old);

@@ -32,7 +32,8 @@ namespace Shooter.Core
             float chaseDistance = DefaultChaseDistance,
             float chaseHeight = DefaultChaseHeight,
             VehicleDurabilitySpec durability = null,
-            VehicleSpeedFieldOfViewSpec speedFieldOfView = null)
+            VehicleSpeedFieldOfViewSpec speedFieldOfView = null,
+            BailOutSpec bailOut = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -81,6 +82,7 @@ namespace Shooter.Core
             ChaseHeight = chaseHeight;
             Durability = durability ?? VehicleDurabilitySpec.Default;
             SpeedFieldOfView = speedFieldOfView ?? VehicleSpeedFieldOfViewSpec.Default;
+            BailOut = bailOut ?? BailOutSpec.Default;
         }
 
         public string Id { get; }
@@ -104,6 +106,8 @@ namespace Shooter.Core
         public VehicleDurabilitySpec Durability { get; }
 
         public VehicleSpeedFieldOfViewSpec SpeedFieldOfView { get; }
+
+        public BailOutSpec BailOut { get; }
 
         public IReadOnlyList<int> WeaponsOfSeat(int seatIndex)
         {

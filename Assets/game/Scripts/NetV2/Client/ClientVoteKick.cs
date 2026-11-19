@@ -9,7 +9,6 @@ namespace Shooter.NetV2
     {
         public event Action<ClientVoteKickState> StateReceived;
 
-        // 進行中の投票。無いときと、決まった (Passed・Failed) 後は空
         public VoteKickStatus? Status { get; private set; }
 
         public bool IsOpen => Status.HasValue;
@@ -39,7 +38,7 @@ namespace Shooter.NetV2
             return wellFormed;
         }
 
-        public VoteKickRequestMessage CallRequest(int targetId)
+        public static VoteKickRequestMessage CallRequest(int targetId)
         {
             if (targetId < 0)
             {

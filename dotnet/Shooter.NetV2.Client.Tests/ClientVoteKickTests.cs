@@ -134,7 +134,7 @@ namespace Shooter.NetV2.Tests
         [Test]
         public void ACallRequestIsAVoteInFavorOfKickingTheTarget()
         {
-            var request = _voteKick.CallRequest(6);
+            var request = ClientVoteKick.CallRequest(6);
 
             Assert.That(request.TargetPlayerId, Is.EqualTo(6));
             Assert.That(request.InFavor, Is.True);
@@ -146,7 +146,7 @@ namespace Shooter.NetV2.Tests
         [Test]
         public void ACallOnANegativeIdIsRejected()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _voteKick.CallRequest(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ClientVoteKick.CallRequest(-1));
         }
 
         [Test]

@@ -94,7 +94,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            var sent = _send(_voteKick.CallRequest(targetId));
+            var sent = _send(ClientVoteKick.CallRequest(targetId));
             _log(VoteKickLog.Called(targetId, sent));
         }
 

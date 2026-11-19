@@ -1,0 +1,88 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1b7f8b2ed200d8db7700d7e5f3118c, type: 3}
+  m_Name: Aircraft
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.AircraftDefinition
+  _mass: 8000
+  _maxThrust: 15
+  _aero:
+    _maxSpeed: 90
+    _liftSpeed: 35
+    _controlSpeed: 25
+    _minControl: 0.1
+    _pitchRate: 60
+    _rollRate: 120
+    _yawRate: 25
+    _responsiveness: 4
+    _alignment: 2
+    _airBrakeDrag: 2
+    _liftSlope: 0.08
+    _criticalAngle: 18
+    _postStallLift: 0.6
+    _inducedDrag: 0.05
+    _weathervane: 3
+    _dihedral: 1.5
+    _wingRoll: 0.5
+  _aim:
+    _pitchGain: 3
+    _yawGain: 1
+    _rollGain: 3
+    _levelGain: 1.5
+    _throttleRate: 0.5
+    _maxLoadFactor: 7
+    _loadFactorMargin: 2
+    _criticalAngleOfAttack: 15
+    _angleOfAttackMargin: 5
+    _groundWarningSeconds: 3
+    _minSinkRate: 4
+  _stick:
+    _deadzone: 0.1
+    _exponent: 2
+    _throttleRate: 0.5
+    _forwardPitchesDown: 1
+  _ground:
+    _maxSteerAngle: 40
+    _highSpeedSteerAngle: 5
+    _steerFadeSpeed: 25
+    _brakeTorque: 20000
+    _idleBrakeTorque: 5000
+    _heightProbeDistance: 200
+  _damage:
+    _parts:
+    - _id: wing_left
+      _effect: 0
+      _durability: 300
+    - _id: wing_right
+      _effect: 1
+      _durability: 300
+    - _id: tail
+      _effect: 2
+      _durability: 200
+    - _id: engine
+      _effect: 3
+      _durability: 250
+    _minLift: 0.2
+    _minControl: 0.3
+    _minThrust: 0
+  _effects:
+    _elevatorAngle: 25
+    _aileronAngle: 20
+    _rudderAngle: 25
+    _minEnginePitch: 0.6
+    _maxEnginePitch: 1.6
+    _minEngineVolume: 0.3
+    _maxEngineVolume: 1
+    _engineSpeedShare: 0.3
+    _vaporLoadFactor: 4
+  _warning:
+    _stallAngleDegrees: 15
+    _stallSpeed: 30

@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 908fb49db7fa84e0eadfbeadebef1d80, type: 3}
   m_Name: TestMission
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MissionDefinition
+  _id: TestMission
   _displayNameKey: campaign.mission.TestMission.name
   _objectives:
   - _id: reach_area
@@ -31,3 +32,4 @@ MonoBehaviour:
     _optional: 0
     _prerequisites:
     - kill_targets
+  _rulesOverride: 

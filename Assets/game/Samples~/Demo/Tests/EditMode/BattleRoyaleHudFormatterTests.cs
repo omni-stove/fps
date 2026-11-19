@@ -282,7 +282,7 @@ namespace Shooter.Tests.EditMode
             new BattleRoyaleHudFormatter().AppendLines(status, lines);
 
             Assert.That(Resolve(lines), Is.EqualTo(new[] { "空から復帰まで 3 秒", "復帰 残り 0 回", "残り分隊 3/3", "順位 3 位以内", "分隊 生存 1" }));
-            Assert.That(lines, Does.Not.Contain(HudText.Respawn(3)), "the generic respawn line is not shown twice");
+            Assert.That(Resolve(lines), Does.Not.Contain(Localizer.Resolve(HudText.Respawn(3))), "the generic respawn line is not shown twice");
         }
 
         [Test]

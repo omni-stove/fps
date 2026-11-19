@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8af4c1550972b43c65219be9f012ef86, type: 3}
+  m_Name: RangeBoss
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.BossDefinition
+  _phases:
+  - _id: Guarded
+    _healthFraction: 1
+    _moveSpeedMultiplier: 1
+    _exposedWeakPoints: []
+  - _id: Exposed
+    _healthFraction: 0.5
+    _moveSpeedMultiplier: 2.5
+    _exposedWeakPoints:
+    - Core
+  _headMultiplier: 0.25
+  _bodyMultiplier: 0.2
+  _limbMultiplier: 0.1
+  _weakPointMultiplier: 3
+  _strafeSpeed: 1.5
+  _strafeHalfWidth: 3

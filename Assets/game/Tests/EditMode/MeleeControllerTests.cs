@@ -238,6 +238,28 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutMeleeInReloadInterruptedBySwingingLetsTheReloadGoOn()
+        {
+            _melee.Configure(GameRules.Default.WithActions(
+                ActionRules.Default.WithMelee(Melee.On).WithReloadInterruptedBy(new[] { ReloadInterrupt.Grenade })));
+            Assert.That(_melee.InterruptsReload, Is.False);
+            Assert.That(_weapon.Fire(), Is.True);
+            Assert.That(_weapon.StartReload(), Is.True);
+
+            Assert.That(_melee.TrySwing(), Is.True);
+            _weapon.Tick(0f);
+
+            Assert.That(_weapon.Weapon.IsReloading, Is.True, "a swing the rules do not list keeps the reload going");
+            Assert.That(_weapon.IsReloadBlockedByModifier, Is.False);
+        }
+
+        [Test]
+        public void ByDefaultMeleeInterruptsTheReload()
+        {
+            Assert.That(_melee.InterruptsReload, Is.True);
+        }
+
+        [Test]
         public void TheSwingLungesForwardUntilTheImpact()
         {
             SettleOnTheFloor();

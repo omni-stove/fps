@@ -12,6 +12,11 @@ namespace Shooter.Server
                 + " zone=" + zone + " dmg=" + Text(amount) + " outcome=" + outcome;
         }
 
+        public static string ReloadInterrupted(int playerId, ReloadInterrupt by)
+        {
+            return ServerCombat.LogTag + " reload-cancelled player=" + Text(playerId) + " by=" + by;
+        }
+
         private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

@@ -22,11 +22,9 @@ namespace Shooter.Runtime
         public const float DefaultBlinkSeconds = 0.25f;
 
         [SerializeField]
-        [Tooltip("捕捉中に点けている時間と消している時間 (秒)。0 以下なら点滅させない。")]
         private float _blinkSeconds = DefaultBlinkSeconds;
 
         [SerializeField]
-        [Tooltip("来る向きの矢印の画像。上向きに描いたもの。空なら三角を描く。")]
         private Texture2D _arrowImage;
 
         private LockOnWarningStatus? _status;

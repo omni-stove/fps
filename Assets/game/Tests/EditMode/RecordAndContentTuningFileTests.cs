@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
@@ -131,6 +135,96 @@ namespace Shooter.Tests.EditMode
             Assert.That(extraction.OpenPoints, Is.EqualTo(ExtractionSpec.DefaultOpenPoints));
             Assert.That(extraction.OpenAfterSeconds, Is.EqualTo(ExtractionSpec.DefaultOpenAfterSeconds));
             Assert.That(extraction.KeepCarriedOnDeath, Is.EqualTo(ExtractionSpec.DefaultKeepCarriedOnDeath));
+        }
+
+        private static readonly (string path, Func<GameContent, TextAsset> select, Action<GameContent, TextAsset> set)[] _newTuningSlots =
+        {
+            (KitTuning.PayloadResourcePath, c => c.PayloadTuning, (c, v) => c.PayloadTuning = v),
+            (KitTuning.EconomyResourcePath, c => c.EconomyTuning, (c, v) => c.EconomyTuning = v),
+            (KitTuning.SupplyDropsResourcePath, c => c.SupplyDropsTuning, (c, v) => c.SupplyDropsTuning = v),
+            (KitTuning.MutatorsResourcePath, c => c.MutatorsTuning, (c, v) => c.MutatorsTuning = v),
+            (KitTuning.PlaylistsResourcePath, c => c.PlaylistsTuning, (c, v) => c.PlaylistsTuning = v),
+        };
+
+        private readonly List<Object> _created = new List<Object>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            GameContent.Use(null);
+            foreach (var created in _created)
+            {
+                if (created != null)
+                {
+                    Object.DestroyImmediate(created);
+                }
+            }
+
+            _created.Clear();
+        }
+
+        [Test]
+        public void TheNewTuningPathsAreUnderTuningAndDistinct()
+        {
+            var paths = new List<string>();
+            foreach (var slot in _newTuningSlots)
+            {
+                Assert.That(slot.path, Does.StartWith("Tuning/"));
+                paths.Add(slot.path);
+            }
+
+            Assert.That(paths, Is.EqualTo(new[] { "Tuning/payload", "Tuning/economy", "Tuning/supply-drops", "Tuning/mutators", "Tuning/playlists" }));
+            Assert.That(paths, Is.Unique);
+        }
+
+        [Test]
+        public void AnEmptyNewTuningSlotReadsTheBundledFileOrTheDefault()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            content.name = "Empty";
+            GameContent.Use(content);
+
+            foreach (var slot in _newTuningSlots)
+            {
+                Assert.That(slot.select(content), Is.Null, slot.path + " starts empty");
+
+                var bundled = Resources.Load<TextAsset>(slot.path);
+                var expected = bundled != null ? bundled.text : "default";
+                var read = KitTuning.Load(slot.select, slot.path, (text, _) => text, "default");
+
+                Assert.That(read, Is.EqualTo(expected), slot.path + " falls back to Resources, then to the default");
+            }
+        }
+
+        [Test]
+        public void AFilledNewTuningSlotIsReadBeforeResources()
+        {
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+            content.name = "Filled";
+            foreach (var slot in _newTuningSlots)
+            {
+                var asset = Track(new TextAsset("{ \"from\": \"" + slot.path + "\" }"));
+                asset.name = slot.path.Substring(slot.path.LastIndexOf('/') + 1);
+                slot.set(content, asset);
+            }
+
+            GameContent.Use(content);
+
+            foreach (var slot in _newTuningSlots)
+            {
+                var text = KitTuning.FindText(slot.select, slot.path, out var source);
+
+                Assert.That(text, Is.EqualTo("{ \"from\": \"" + slot.path + "\" }"));
+                Assert.That(source, Does.Contain("GameContent 'Filled'"));
+                Assert.That(KitTuning.Load(slot.select, slot.path, (t, _) => t, "default"), Is.EqualTo(text));
+            }
+        }
+
+        private T Track<T>(T created)
+            where T : Object
+        {
+            _created.Add(created);
+            return created;
         }
 
         private static string Bundled(string resourcePath)

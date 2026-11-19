@@ -112,6 +112,18 @@ namespace Shooter.Runtime
 
         public static GameSignal<IEmoteControl> Emotes { get; } = new GameSignal<IEmoteControl>(nameof(Emotes));
 
+        public static GameSignal<VoteKickStatus?> VoteKick { get; } = new GameSignal<VoteKickStatus?>(nameof(VoteKick));
+
+        public static GameSignal<IVoteKickSender> VoteKickSender { get; } = new GameSignal<IVoteKickSender>(nameof(VoteKickSender));
+
+        public static GameSignal<WalletStatus?> Wallet { get; } = new GameSignal<WalletStatus?>(nameof(Wallet));
+
+        public static GameSignal<IBuySender> BuySender { get; } = new GameSignal<IBuySender>(nameof(BuySender));
+
+        public static GameSignal<VisionStatus?> Vision { get; } = new GameSignal<VisionStatus?>(nameof(Vision));
+
+        public static GameSignal<DroneStatus?> Drone { get; } = new GameSignal<DroneStatus?>(nameof(Drone));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -162,6 +174,12 @@ namespace Shooter.Runtime
             Stamina.Reset();
             LockOnWarning.Reset();
             Emotes.Reset();
+            VoteKick.Reset();
+            VoteKickSender.Reset();
+            Wallet.Reset();
+            BuySender.Reset();
+            Vision.Reset();
+            Drone.Reset();
         }
     }
 }

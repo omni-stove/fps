@@ -58,6 +58,7 @@ namespace Shooter.Editor
             new Slot("CosmeticVisuals", typeof(CosmeticVisualCatalog), c => c.CosmeticVisuals, (c, v) => c.CosmeticVisuals = (CosmeticVisualCatalog)v),
             new Slot("StreakIcons", typeof(StreakIconCatalog), c => c.StreakIcons, (c, v) => c.StreakIcons = (StreakIconCatalog)v),
             new Slot("EmoteAnimations", typeof(EmoteCatalog), c => c.EmoteAnimations, (c, v) => c.EmoteAnimations = (EmoteCatalog)v),
+            new Slot("VisionVisuals", typeof(VisionVisualCatalog), c => c.VisionVisuals, (c, v) => c.VisionVisuals = (VisionVisualCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。
@@ -93,6 +94,11 @@ namespace Shooter.Editor
             new TuningSlot("StashTuning", StashJson.ResourcePath, c => c.StashTuning, (c, v) => c.StashTuning = v),
             new TuningSlot("ExtractionTuning", ExtractionJson.ResourcePath, c => c.ExtractionTuning, (c, v) => c.ExtractionTuning = v),
             new TuningSlot("ReplayTuning", ReplayJson.ResourcePath, c => c.ReplayTuning, (c, v) => c.ReplayTuning = v),
+            new TuningSlot("PayloadTuning", KitTuning.PayloadResourcePath, c => c.PayloadTuning, (c, v) => c.PayloadTuning = v),
+            new TuningSlot("EconomyTuning", KitTuning.EconomyResourcePath, c => c.EconomyTuning, (c, v) => c.EconomyTuning = v),
+            new TuningSlot("SupplyDropsTuning", KitTuning.SupplyDropsResourcePath, c => c.SupplyDropsTuning, (c, v) => c.SupplyDropsTuning = v),
+            new TuningSlot("MutatorsTuning", KitTuning.MutatorsResourcePath, c => c.MutatorsTuning, (c, v) => c.MutatorsTuning = v),
+            new TuningSlot("PlaylistsTuning", KitTuning.PlaylistsResourcePath, c => c.PlaylistsTuning, (c, v) => c.PlaylistsTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

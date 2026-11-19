@@ -69,6 +69,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Stamina.Value, Is.Null);
             Assert.That(GameSignals.LockOnWarning.Value, Is.Null);
             Assert.That(GameSignals.Emotes.Value, Is.Null);
+            Assert.That(GameSignals.VoteKick.Value, Is.Null);
+            Assert.That(GameSignals.VoteKickSender.Value, Is.Null);
+            Assert.That(GameSignals.Wallet.Value, Is.Null);
+            Assert.That(GameSignals.BuySender.Value, Is.Null);
+            Assert.That(GameSignals.Vision.Value, Is.Null);
+            Assert.That(GameSignals.Drone.Value, Is.Null);
         }
 
         [Test]
@@ -195,6 +201,12 @@ namespace Shooter.Tests.EditMode
             GameSignals.Stamina.Publish(new StaminaStatus(0f, 100f, true));
             GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Locked, 90f));
             GameSignals.Emotes.Publish(new FakeEmoteControl());
+            GameSignals.VoteKick.Publish(new VoteKickStatus(3, 1, 1, 4, 30f));
+            GameSignals.VoteKickSender.Publish(new FakeVoteKickSender());
+            GameSignals.Wallet.Publish(new WalletStatus(800, 16000, true));
+            GameSignals.BuySender.Publish(new FakeBuySender());
+            GameSignals.Vision.Publish(new VisionStatus(VisionMode.Night, VisionSource.Goggles));
+            GameSignals.Drone.Publish(new DroneStatus(1f, 1f, 0, true));
             heard = 0;
 
             GameSignals.ResetAll();
@@ -241,6 +253,109 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Emotes.Value.Play("wave"), Is.True);
             Assert.That(GameSignals.Emotes.Value.Play("dance"), Is.False, "an Id the list does not have");
             Assert.That(emotes.Played, Is.EqualTo(new[] { "wave" }));
+        }
+
+        [Test]
+        public void TheVoteKickWalletVisionAndDroneSignalsHoldWhatWasPublished()
+        {
+            var voteKick = new FakeVoteKickSender();
+            var buy = new FakeBuySender();
+            var heardVision = new List<VisionStatus?>();
+            GameSignals.Vision.Changed += heardVision.Add;
+
+            GameSignals.VoteKick.Publish(new VoteKickStatus(5, 2, 3, 3, 12.5f));
+            GameSignals.VoteKickSender.Publish(voteKick);
+            GameSignals.Wallet.Publish(new WalletStatus(0, 9000, false));
+            GameSignals.BuySender.Publish(buy);
+            GameSignals.Vision.Publish(VisionStatus.None);
+            GameSignals.Vision.Publish(new VisionStatus(VisionMode.Thermal, VisionSource.Scope));
+            GameSignals.Drone.Publish(new DroneStatus(0f, 0.25f, 2, false));
+
+            GameSignals.VoteKickSender.Value.Call(5);
+            GameSignals.VoteKickSender.Value.Vote(false);
+            GameSignals.BuySender.Value.Buy("armor");
+
+            Assert.That(GameSignals.VoteKick.Value, Is.EqualTo((VoteKickStatus?)new VoteKickStatus(5, 2, 3, 3, 12.5f)));
+            Assert.That(GameSignals.VoteKick.Value.Value.HasEnoughVotes, Is.True);
+            Assert.That(GameSignals.VoteKickSender.Value, Is.SameAs(voteKick));
+            Assert.That(voteKick.Called, Is.EqualTo(new[] { 5 }));
+            Assert.That(voteKick.Votes, Is.EqualTo(new[] { false }));
+            Assert.That(GameSignals.Wallet.HasValue, Is.True, "an empty wallet outside the buy time is still something to show");
+            Assert.That(GameSignals.Wallet.Value.Value.CanBuy, Is.False);
+            Assert.That(GameSignals.Wallet.Value.Value.Max, Is.EqualTo(9000));
+            Assert.That(GameSignals.BuySender.Value, Is.SameAs(buy));
+            Assert.That(buy.Bought, Is.EqualTo(new[] { "armor" }));
+            Assert.That(
+                heardVision,
+                Is.EqualTo(new VisionStatus?[] { VisionStatus.None, new VisionStatus(VisionMode.Thermal, VisionSource.Scope) }),
+                "plain sight is still a published value");
+            Assert.That(GameSignals.Drone.Value.Value.IsBatteryEmpty, Is.True);
+            Assert.That(GameSignals.Drone.Value.Value.SpottedCount, Is.EqualTo(2));
+            Assert.That(GameSignals.Drone.Value.Value.Piloting, Is.False);
+        }
+
+        [Test]
+        public void ResetAllDropsTheVoteKickWalletVisionAndDroneSubscribers()
+        {
+            var heard = 0;
+            GameSignals.VoteKick.Changed += _ => heard++;
+            GameSignals.VoteKickSender.Changed += _ => heard++;
+            GameSignals.Wallet.Changed += _ => heard++;
+            GameSignals.BuySender.Changed += _ => heard++;
+            GameSignals.Vision.Changed += _ => heard++;
+            GameSignals.Drone.Changed += _ => heard++;
+
+            GameSignals.ResetAll();
+            GameSignals.VoteKick.Publish(new VoteKickStatus(1, 2, 0, 1, 0f));
+            GameSignals.VoteKickSender.Publish(new FakeVoteKickSender());
+            GameSignals.Wallet.Publish(new WalletStatus(1, 1, true));
+            GameSignals.BuySender.Publish(new FakeBuySender());
+            GameSignals.Vision.Publish(new VisionStatus(VisionMode.Night, VisionSource.Scope));
+            GameSignals.Drone.Publish(new DroneStatus(0.5f, 0.5f, 0, true));
+
+            Assert.That(heard, Is.Zero);
+        }
+
+        [Test]
+        public void TheNewStatusesRejectValuesOutOfRange()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(-1, 0, 0, 1, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(0, -1, 0, 1, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(0, 0, -1, 1, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(0, 0, 0, 0, 0f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(0, 0, 0, 1, float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VoteKickStatus(0, 0, 0, 1, float.PositiveInfinity));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WalletStatus(0, 0, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WalletStatus(-1, 100, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WalletStatus(101, 100, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new WalletStatus(10, 100, true).CanAfford(-1));
+            Assert.Throws<ArgumentException>(() => new VisionStatus(VisionMode.Night, VisionSource.None));
+            Assert.Throws<ArgumentException>(() => new VisionStatus(VisionMode.None, VisionSource.Goggles));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VisionStatus((VisionMode)9, VisionSource.Scope));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VisionStatus(VisionMode.Night, (VisionSource)9));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new DroneStatus(1.5f, 0f, 0, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new DroneStatus(float.NaN, 0f, 0, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new DroneStatus(0f, -0.1f, 0, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new DroneStatus(0f, 0f, -1, false));
+        }
+
+        [Test]
+        public void TheNewStatusesReadTheirDerivedValues()
+        {
+            Assert.That(new VoteKickStatus(1, 2, 2, 3, 5f).HasEnoughVotes, Is.False);
+            Assert.That(default(VoteKickStatus).HasEnoughVotes, Is.False, "a default status has no vote to pass");
+            Assert.That(new WalletStatus(300, 300, true).IsFull, Is.True);
+            Assert.That(new WalletStatus(300, 1000, true).CanAfford(300), Is.True);
+            Assert.That(new WalletStatus(300, 1000, true).CanAfford(301), Is.False);
+            Assert.That(default(WalletStatus).IsFull, Is.False);
+            Assert.That(VisionStatus.None.IsActive, Is.False);
+            Assert.That(new VisionStatus(VisionMode.None, VisionSource.None), Is.EqualTo(VisionStatus.None));
+            Assert.That(new VisionStatus(VisionMode.Night, VisionSource.Goggles).IsActive, Is.True);
+            Assert.That(
+                new VisionStatus(VisionMode.Night, VisionSource.Goggles),
+                Is.Not.EqualTo(new VisionStatus(VisionMode.Night, VisionSource.Scope)),
+                "the same mode from another source is a change");
+            Assert.That(new DroneStatus(0.01f, 1f, 0, true).IsBatteryEmpty, Is.False);
         }
 
         [Test]
@@ -420,6 +535,33 @@ namespace Shooter.Tests.EditMode
             public void Vote(int candidateIndex)
             {
                 Votes.Add(candidateIndex);
+            }
+        }
+
+        private sealed class FakeVoteKickSender : IVoteKickSender
+        {
+            public List<int> Called { get; } = new List<int>();
+
+            public List<bool> Votes { get; } = new List<bool>();
+
+            public void Call(int targetId)
+            {
+                Called.Add(targetId);
+            }
+
+            public void Vote(bool inFavor)
+            {
+                Votes.Add(inFavor);
+            }
+        }
+
+        private sealed class FakeBuySender : IBuySender
+        {
+            public List<string> Bought { get; } = new List<string>();
+
+            public void Buy(string itemId)
+            {
+                Bought.Add(itemId);
             }
         }
 

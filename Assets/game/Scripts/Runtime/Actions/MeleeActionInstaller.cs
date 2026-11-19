@@ -26,6 +26,12 @@ namespace Shooter.Runtime
             var melee = PlayerActions.GetOrAdd<MeleeController>(player);
             melee.ApplyTuning(Tuning);
             melee.Configure(rules);
+
+            // 演出の差し替えが無いときだけ仮の演出を付ける。ゲームが付けた IMeleePresenter を上書きしない。
+            if (melee.Presenter == null && player.GetComponent<IMeleePresenter>() == null)
+            {
+                player.AddComponent<ViewmodelMeleePresenter>();
+            }
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

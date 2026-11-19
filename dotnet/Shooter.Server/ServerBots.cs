@@ -154,6 +154,8 @@ namespace Shooter.Server
                 return;
             }
 
+            // 行き先を先に決めるのは、Rally が行き先を持つ Bot の路を上書きしないよう、この tick の行き先で見分けるため
+            Goals();
             Rally();
             _ids.Clear();
             _ids.AddRange(_agents.Keys);
@@ -364,7 +366,10 @@ namespace Shooter.Server
                     _ralliedAt = null;
                     foreach (var pair in _agents)
                     {
-                        pair.Value.Brain.SetPatrolRoute(ShuffledPatrolRoute(pair.Key));
+                        if (!pair.Value.Goal.HasValue)
+                        {
+                            pair.Value.Brain.SetPatrolRoute(ShuffledPatrolRoute(pair.Key));
+                        }
                     }
                 }
 
@@ -378,16 +383,76 @@ namespace Shooter.Server
                 return;
             }
 
+            // 行き先を持つ Bot の路は Goals が持つので、ここでは上書きも数えもしない
             var slot = 0;
             foreach (var agent in _agents.Values)
             {
+                if (agent.Goal.HasValue)
+                {
+                    continue;
+                }
+
                 agent.Brain.SetPatrolRoute(RouteAround(center, radius, slot, _spec));
                 slot++;
             }
 
             _ralliedAt = center;
             _log.WriteLine(LogTag + " rally x=" + F2(center.X) + " y=" + F2(center.Y) + " z=" + F2(center.Z)
-                + " radius=" + F2(radius) + " bots=" + Text(_agents.Count));
+                + " radius=" + F2(radius) + " bots=" + Text(slot));
+        }
+
+        // 巡る路の 1 点だけにするのは、敵を見たら戦い、見失ったら行き先へ戻る判断 (EnemyBrain) をそのまま使うため。
+        // 行き先が替わったときだけ路を作り直すのは、毎 tick 作り直すと路の進み具合が毎回始めに戻るため
+        private void Goals()
+        {
+            var objective = _rules.Objective;
+            foreach (var pair in _agents)
+            {
+                var agent = pair.Value;
+                var goal = objective?.BotGoal(pair.Key);
+                if (goal == agent.Goal)
+                {
+                    continue;
+                }
+
+                agent.Goal = goal;
+                if (goal.HasValue)
+                {
+                    agent.Brain.SetPatrolRoute(new[] { goal.Value });
+                    _log.WriteLine(ServerBotLog.Goal(pair.Key, goal.Value));
+                }
+                else
+                {
+                    agent.Brain.SetPatrolRoute(DefaultRoute(pair.Key));
+                    _log.WriteLine(ServerBotLog.GoalCleared(pair.Key));
+                }
+            }
+        }
+
+        // 行き先を手放した Bot を、ほかの Bot と同じく BotRally のまわりか出現地点を巡る路に戻す
+        private IReadOnlyList<Vector3> DefaultRoute(int playerId)
+        {
+            var rally = _rules.Objective?.BotRally;
+            if (!rally.HasValue || !_ralliedAt.HasValue)
+            {
+                return ShuffledPatrolRoute(playerId);
+            }
+
+            var slot = 0;
+            foreach (var pair in _agents)
+            {
+                if (pair.Key == playerId)
+                {
+                    break;
+                }
+
+                if (!pair.Value.Goal.HasValue)
+                {
+                    slot++;
+                }
+            }
+
+            return RouteAround(_ralliedAt.Value, rally.Value.Radius, slot, _spec);
         }
 
         // 範囲の中で向かい合う 2 点を往復させる。Bot ごとに向きをずらし、同じ所に固まらないようにする

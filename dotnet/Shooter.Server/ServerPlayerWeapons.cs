@@ -82,6 +82,86 @@ namespace Shooter.Server
             SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon, DrawSeconds, HolsterSeconds));
         }
 
+        // 箱から拾った武器のように、出直しを待たずに外から持たせる口。今の武器を構えたまま並びの末尾に足す。
+        // 同じ武器を持っている・並びが一杯なら足さない (持ち替えの並びは同じ Id を 2 つ持てないため)
+        public bool Give(WeaponSpec spec, float switchSeconds, GameRules rules)
+        {
+            ArgumentNullException.ThrowIfNull(spec);
+            ArgumentNullException.ThrowIfNull(rules);
+            var items = Items;
+            foreach (var held in items)
+            {
+                if (string.Equals(held.Spec.Id, spec.Id, StringComparison.Ordinal))
+                {
+                    _log.WriteLine(ServerWeaponsLog.Give(_playerId, spec.Id, "held"));
+                    return false;
+                }
+            }
+
+            if (items.Count >= OwnerSnapshot.MaxWeapons)
+            {
+                _log.WriteLine(ServerWeaponsLog.Give(_playerId, spec.Id, "full"));
+                return false;
+            }
+
+            if (_loadout == null)
+            {
+                Equip(new[] { spec }, switchSeconds, rules);
+                _log.WriteLine(ServerWeaponsLog.Give(_playerId, spec.Id, null));
+                return true;
+            }
+
+            var weapon = new ServerWeapon(spec, rules);
+            if (_poolFor != null)
+            {
+                weapon.UseAmmoPool(_poolFor(spec));
+            }
+
+            var weapons = new List<ServerWeapon>(items) { weapon };
+            _baseSpecs = new List<WeaponSpec>(_baseSpecs) { spec }.AsReadOnly();
+            SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon, DrawSeconds, HolsterSeconds, _loadout.CurrentIndex));
+            _log.WriteLine(ServerWeaponsLog.Give(_playerId, spec.Id, null));
+            return true;
+        }
+
+        // 武器をすべて手放す。次の Equip か Give まで撃てない (TryFire は NoWeapon を返す)
+        public void Clear()
+        {
+            if (_loadout == null)
+            {
+                return;
+            }
+
+            var count = _loadout.Count;
+            foreach (var weapon in _loadout.Items)
+            {
+                weapon.UseAmmoPool(null);
+            }
+
+            Unsubscribe();
+            _loadout = null;
+            Specs = Array.Empty<WeaponSpec>();
+            _baseSpecs = Array.Empty<WeaponSpec>();
+            _attachments.Clear();
+            _chargeFraction = 0f;
+            _burstRoundsLeft = 0;
+            _log.WriteLine(ServerWeaponsLog.Clear(_playerId, count));
+        }
+
+        // 持っている武器を並びの順に取り出して手放す。付けた物を外した元の値と、付けていた物の Id を返すのは、
+        // 取り出した先 (倒れた人の箱など) が付けた物を別の拾い物として扱えるようにするため
+        public IReadOnlyList<(WeaponSpec Spec, IReadOnlyList<string> Attachments)> Take()
+        {
+            var taken = new List<(WeaponSpec Spec, IReadOnlyList<string> Attachments)>(_baseSpecs.Count);
+            foreach (var spec in _baseSpecs)
+            {
+                taken.Add((spec, AttachmentsOf(spec.Id)));
+            }
+
+            Clear();
+            return taken;
+        }
+
         public IReadOnlyList<string> AttachmentsOf(string weaponId)
         {
             return weaponId != null && _attachments.TryGetValue(weaponId, out var attached) ? attached : WeaponAttachments.None;
@@ -346,16 +426,7 @@ namespace Shooter.Server
 
         private void SetLoadout(Loadout<ServerWeapon> loadout)
         {
-            if (_loadout != null)
-            {
-                _loadout.Switched -= HandleSwitched;
-                foreach (var weapon in _loadout.Items)
-                {
-                    weapon.ReloadStarted -= HandleReloadStarted;
-                    weapon.Reloaded -= HandleReloaded;
-                }
-            }
-
+            Unsubscribe();
             _loadout = loadout;
             var specs = new WeaponSpec[loadout.Items.Count];
             for (var i = 0; i < specs.Length; i++)
@@ -369,6 +440,21 @@ namespace Shooter.Server
             {
                 weapon.ReloadStarted += HandleReloadStarted;
                 weapon.Reloaded += HandleReloaded;
+            }
+        }
+
+        private void Unsubscribe()
+        {
+            if (_loadout == null)
+            {
+                return;
+            }
+
+            _loadout.Switched -= HandleSwitched;
+            foreach (var weapon in _loadout.Items)
+            {
+                weapon.ReloadStarted -= HandleReloadStarted;
+                weapon.Reloaded -= HandleReloaded;
             }
         }
 

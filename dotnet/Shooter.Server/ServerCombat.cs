@@ -520,7 +520,7 @@ namespace Shooter.Server
             return attackerId != victimId
                 && session.Spec.Rules.FriendlyFire == FriendlyFire.Reflect
                 && session.HasPlayer(attackerId) && session.HasPlayer(victimId)
-                && session.GetTeam(attackerId) == session.GetTeam(victimId);
+                && !_rules.AreHostile(attackerId, victimId);
         }
 
         internal bool IsHittable(int playerId)

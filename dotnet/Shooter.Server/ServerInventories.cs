@@ -139,6 +139,80 @@ namespace Shooter.Server
             return _inventories.TryGetValue(playerId, out var inventory) ? inventory : null;
         }
 
+        // 箱の中身・持ち込みのように、目的が外から持ち物に入れる口。入った数を返し、入り切らない分は入れない。
+        // 武器は ServerPlayerWeapons.Give で持たせる (持ち物の武器は持っている武器の写しなので、ここからは入れない)
+        internal int Give(int playerId, string itemId, int count)
+        {
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
+            }
+
+            if (!_inventories.TryGetValue(playerId, out var inventory))
+            {
+                return 0;
+            }
+
+            var given = inventory.Add(itemId, count);
+            _log.WriteLine(ServerInventoryLog.Give(playerId, itemId, count, given));
+            return given;
+        }
+
+        // ServerPlayerWeapons.Give・Clear・Take は持ち物を知らないので、その後にこれで持ち物の武器の写しを今の武器に揃える。返すのは持ち物に入らなかった武器
+        internal IReadOnlyList<string> HoldWeapons(int playerId)
+        {
+            if (_combat == null || !_inventories.TryGetValue(playerId, out var inventory))
+            {
+                return Array.Empty<string>();
+            }
+
+            var weapons = _combat.WeaponsOf(playerId);
+            return inventory.HoldWeapons(weapons.Specs, weapons.AttachmentsOf);
+        }
+
+        // 持ち物を空にする。武器の写しは残すのは、武器を手放すかは ServerPlayerWeapons が決めるため
+        internal void Clear(int playerId)
+        {
+            Take(playerId, null);
+        }
+
+        // 武器でない物をすべて取り出し、並びの順に返す。倒れた人の箱・持ち帰りに使う
+        internal IReadOnlyList<ItemCount> Take(int playerId)
+        {
+            var taken = new List<ItemCount>();
+            Take(playerId, taken);
+            return taken;
+        }
+
+        private void Take(int playerId, List<ItemCount> taken)
+        {
+            if (!_inventories.TryGetValue(playerId, out var inventory))
+            {
+                return;
+            }
+
+            var handles = new List<int>();
+            foreach (var stack in inventory.Stacks)
+            {
+                if (inventory.WeaponIdOf(stack.Handle) == null)
+                {
+                    handles.Add(stack.Handle);
+                }
+            }
+
+            var count = 0;
+            foreach (var handle in handles)
+            {
+                if (inventory.TryGetStack(handle, out var stack) && inventory.TryTake(handle, stack.Count, out var item))
+                {
+                    taken?.Add(item);
+                    count += item.Count;
+                }
+            }
+
+            _log.WriteLine(taken == null ? ServerInventoryLog.Clear(playerId, count) : ServerInventoryLog.Take(playerId, taken.Count, count));
+        }
+
         private void Use(int playerId, Inventory inventory, int handle)
         {
             var session = _rules.Session;

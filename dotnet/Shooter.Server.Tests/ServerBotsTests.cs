@@ -405,6 +405,55 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Not.Contain("[Bot] rally"));
         }
 
+        // 人は離れた所に置き、Bot に見えないようにする。行き先を示している間は出現地点を巡らずそこへ向かう
+        [Test]
+        public void ABotGoesToTheGoalTheObjectiveGivesAndReturnsToPatrolWhenItIsTakenAway()
+        {
+            var goal = new Vector3(6f, 1.1f, -6f);
+            var objective = new TestObjectiveRules();
+            Start(BotTestMaps.Flat(FlatPoints()), Rules(), bots: 2, spec: SightOf(1f), objective: objective);
+            Join(1);
+            Tick();
+            _context.Bodies.Teleport(1, new Vector3(-25f, 1.1f, -25f), 0f, _host.TickCount);
+            var botId = _bots.BotIds.Single();
+            Assert.That(_context.Bodies.TryGet(botId, out var body), Is.True);
+            objective.Goal = id => id == botId ? goal : null;
+
+            Step(12f);
+
+            Assert.That(Vector3.Distance(Flat(body.Position), Flat(goal)), Is.LessThan(1.5f), _log.ToString());
+            Assert.That(_bots.TryGetAgent(botId, out var agent), Is.True);
+            Assert.That(agent.Goal, Is.EqualTo(goal));
+            var goalLine = "[Bot] goal player=" + Text(botId) + " x=6.00 y=1.10 z=-6.00";
+            Assert.That(_log.ToString().Split('\n').Count(line => line.Contains(goalLine, StringComparison.Ordinal)), Is.EqualTo(1),
+                "the route is set once while the goal stays the same");
+
+            objective.Goal = null;
+            Tick();
+
+            Assert.That(agent.Goal, Is.Null);
+            Assert.That(_log.ToString(), Does.Contain("[Bot] goal player=" + Text(botId) + " cleared"));
+        }
+
+        [Test]
+        public void ABotWithAGoalIsLeftOutOfTheRally()
+        {
+            var objective = new TestObjectiveRules { Rally = new ObjectiveRally(new Vector3(0f, 0f, 8f), 3f) };
+            Start(BotTestMaps.Flat(FlatPoints()), Rules(), bots: 3, spec: SightOf(1f), objective: objective);
+            Join(1);
+            Tick();
+            var withGoal = _bots.BotIds.First();
+            objective.Goal = id => id == withGoal ? new Vector3(-6f, 1.1f, 6f) : null;
+            objective.Rally = new ObjectiveRally(new Vector3(0f, 0f, -8f), 3f);
+
+            Tick();
+
+            Assert.That(_bots.Count, Is.EqualTo(2));
+            Assert.That(_log.ToString(), Does.Contain("[Bot] rally x=0.00 y=0.00 z=8.00 radius=3.00 bots=2"), "both bots rally before the goal");
+            Assert.That(_log.ToString(), Does.Contain("[Bot] rally x=0.00 y=0.00 z=-8.00 radius=3.00 bots=1"), "the bot with a goal is not counted");
+            Assert.That(_bots.TryGetAgent(withGoal, out var agent) && agent.Goal.HasValue, Is.True);
+        }
+
         [Test]
         public void TheRallyRouteCrossesTheAreaAndTurnsForEachBot()
         {
@@ -469,7 +518,7 @@ namespace Shooter.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(ServerMapData map, GameRules rules, int bots, NetBotSpec spec = null)
+        private void Start(ServerMapData map, GameRules rules, int bots, NetBotSpec spec = null, IMatchObjectiveRules objective = null)
         {
             var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null, bots: spec);
             var settings = ServerModules.MotorSettingsFrom(data);
@@ -478,7 +527,7 @@ namespace Shooter.Server.Tests
                 NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort, NetTransportKind.Udp, null, null, null, bots, 0, 0, 0, 0);
             _context = new ServerContext(options, "1.0.0", _log, map, _match, new ServerMessenger(_transport), _control, data);
             _movement = new ServerMovement(settings);
-            _rules = new MatchRulesModule();
+            _rules = objective == null ? new MatchRulesModule() : new MatchRulesModule((_, _, _) => objective);
             var combat = new ServerCombat(_rules, _movement);
             _combat = combat;
             _bots = new ServerBots(_rules, _movement, combat);

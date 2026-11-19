@@ -146,6 +146,81 @@ namespace Shooter.Core.Tests
             Assert.That(_view.Element.style.visibility.value, Is.EqualTo(Visibility.Visible));
         }
 
+        [Test]
+        public void BetweenMapUpdatesTheBandFollowsTheLiveHeadingOnline()
+        {
+            _view.Bind(MinimapViewTests.CloneLayout());
+            var live = 90f;
+            GameSignals.LocalHeadingDegrees.Publish(() => live);
+
+            // 知らせの向きは北のままでも、今の向き (東) を中央に置く。
+            GameSignals.Minimap.Publish(MinimapViewTests.Status(Vector3.Zero, 0f,
+                MinimapViewTests.Contact(MinimapContactKind.Objective, new Vector3(10f, 0f, 0f))));
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(90f).Within(Tolerance));
+            Assert.That(_view.TryGetCardinalPosition(2, out var east), Is.True);
+            Assert.That(east, Is.EqualTo(0.5f).Within(Tolerance));
+            Assert.That(_view.Markers[0].X, Is.EqualTo(0.5f).Within(Tolerance));
+
+            // 次の知らせを待たずに、フレームごとに向きを読み直す。
+            live = 45f;
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(45f).Within(Tolerance));
+            Assert.That(_view.TryGetCardinalPosition(0, out var north), Is.True);
+            Assert.That(north, Is.EqualTo(0.25f).Within(Tolerance));
+            Assert.That(_view.Markers[0].X, Is.EqualTo(0.75f).Within(Tolerance));
+            var labels = _view.Element.Query<Label>(className: CompassView.LabelClass).ToList();
+            AssertPercent(labels[0].style.left, 25f);
+
+            live = -30f;
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(330f).Within(Tolerance), "wraps into 0 to 360");
+
+            live = float.NaN;
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(0f).Within(Tolerance), "a broken reading falls back to the map's heading");
+
+            GameSignals.LocalHeadingDegrees.Clear();
+            live = 90f;
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(0f).Within(Tolerance), "without a live source the map's heading is used");
+        }
+
+        [Test]
+        public void BetweenMapUpdatesTheBandFollowsTheLocalPlayerOffline()
+        {
+            _view.Bind(MinimapViewTests.CloneLayout());
+            var player = new GameObject("Player");
+            _objects.Add(player);
+            player.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            GameSignals.LocalPlayer.Publish(new LocalPlayerSignal(player, null, null, null, null, null, null, null));
+
+            GameSignals.Minimap.Publish(MinimapViewTests.Status(Vector3.Zero, 0f));
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(90f).Within(Tolerance));
+
+            player.transform.rotation = Quaternion.Euler(0f, 270f, 0f);
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(270f).Within(Tolerance));
+            Assert.That(_view.TryGetCardinalPosition(6, out var west), Is.True);
+            Assert.That(west, Is.EqualTo(0.5f).Within(Tolerance));
+
+            // 真上を向いて方位が出ないときは、知らせの向きにする。
+            player.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+            _view.FollowHeading();
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(0f).Within(Tolerance));
+        }
+
+        [Test]
+        public void AStatusShownByHandKeepsItsOwnHeading()
+        {
+            _view.Bind(MinimapViewTests.CloneLayout());
+            GameSignals.LocalHeadingDegrees.Publish(() => 90f);
+
+            _view.Show(MinimapViewTests.Status(Vector3.Zero, 180f));
+            _view.FollowHeading();
+
+            Assert.That(_view.HeadingDegrees, Is.EqualTo(180f).Within(Tolerance));
+        }
+
         private static void AssertPercent(StyleLength length, float expected)
         {
             Assert.That(length.value.unit, Is.EqualTo(LengthUnit.Percent));

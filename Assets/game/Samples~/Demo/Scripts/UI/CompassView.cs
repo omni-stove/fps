@@ -42,6 +42,7 @@ namespace Shooter.Runtime
         private readonly List<Marker> _markers = new List<Marker>();
         private MinimapStatus? _status;
         private float _spanDegrees = DefaultSpanDegrees;
+        private float _heading;
         private bool _subscribed;
         private bool _showsSignal;
 
@@ -50,6 +51,8 @@ namespace Shooter.Runtime
         public MinimapStatus? Status => _status;
 
         public IReadOnlyList<Marker> Markers => _markers;
+
+        public float HeadingDegrees => _heading;
 
         public float SpanDegrees
         {
@@ -120,7 +123,7 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            var position = BandPosition(_status.Value.SelfHeadingDegrees, index * 45f, _spanDegrees);
+            var position = BandPosition(_heading, index * 45f, _spanDegrees);
             x = position ?? 0f;
             return position.HasValue;
         }
@@ -129,6 +132,15 @@ namespace Shooter.Runtime
         {
             _showsSignal = false;
             Write(status);
+        }
+
+        // 地図の知らせは間隔ごとにしか来ないので、その間も向きだけは毎フレーム読み直して帯を回す。
+        public void FollowHeading()
+        {
+            if (_status.HasValue && !CurrentHeading(_status.Value).Equals(_heading))
+            {
+                Redraw();
+            }
         }
 
         protected override void OnBound(VisualElement element)
@@ -195,6 +207,11 @@ namespace Shooter.Runtime
             }
         }
 
+        private void LateUpdate()
+        {
+            FollowHeading();
+        }
+
         private void OnDestroy()
         {
             Unsubscribe();
@@ -238,8 +255,32 @@ namespace Shooter.Runtime
 
         private void ShowSignal(MinimapStatus? status)
         {
-            Write(status);
             _showsSignal = true;
+            Write(status);
+        }
+
+        // Show で手渡された値は渡した側が向きまで決めているので、今のプレイヤーの向きで上書きしない。
+        private float CurrentHeading(MinimapStatus status)
+        {
+            if (!_showsSignal)
+            {
+                return status.SelfHeadingDegrees;
+            }
+
+            var source = GameSignals.LocalHeadingDegrees.Value;
+            if (source != null)
+            {
+                var degrees = source();
+                return float.IsNaN(degrees) || float.IsInfinity(degrees) ? status.SelfHeadingDegrees : Mathf.Repeat(degrees, 360f);
+            }
+
+            var player = GameSignals.LocalPlayer.Value?.Player;
+            if (player != null && MinimapProjection.TryHeadingDegrees(player.transform.forward.ToNumerics(), out var heading))
+            {
+                return heading;
+            }
+
+            return status.SelfHeadingDegrees;
         }
 
         private void Redraw()
@@ -248,6 +289,7 @@ namespace Shooter.Runtime
             if (_status.HasValue)
             {
                 var status = _status.Value;
+                _heading = CurrentHeading(status);
                 foreach (var contact in status.Contacts)
                 {
                     if (contact.Kind != MinimapContactKind.Ping && contact.Kind != MinimapContactKind.Objective)
@@ -256,7 +298,7 @@ namespace Shooter.Runtime
                     }
 
                     var bearing = BearingDegrees(status.SelfPosition, contact.Position);
-                    var x = bearing.HasValue ? BandPosition(status.SelfHeadingDegrees, bearing.Value, _spanDegrees) : null;
+                    var x = bearing.HasValue ? BandPosition(_heading, bearing.Value, _spanDegrees) : null;
                     if (x.HasValue)
                     {
                         _markers.Add(new Marker(contact.Kind, contact.Team, x.Value));
@@ -276,7 +318,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var heading = _status.Value.SelfHeadingDegrees;
+            var heading = _heading;
             foreach (var tick in _ticks)
             {
                 Place(tick, BandPosition(heading, (float)tick.userData, _spanDegrees));

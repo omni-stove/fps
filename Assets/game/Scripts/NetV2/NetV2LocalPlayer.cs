@@ -97,6 +97,7 @@ namespace Shooter.NetV2
         private bool _leanLeftLatched;
         private bool _leanRightLatched;
         private bool _meleeLatched;
+        private Func<float> _headingSource;
 
         public Camera Camera => _camera;
 
@@ -112,6 +113,10 @@ namespace Shooter.NetV2
         public Vector3 EyePosition => _eye.position;
 
         public Vector3 AimDirection => _camera.transform.forward;
+
+        public float HeadingDegrees => Mathf.Repeat(YawDegrees, 360f);
+
+        private float YawDegrees => _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
 
         public static NetV2LocalPlayer Create(StanceGeometry geometry, MotorSpec motor, Func<bool> canStand, Vector3 position, float yaw)
         {
@@ -217,7 +222,7 @@ namespace Shooter.NetV2
             // 押して離すまでが tick より短くても振れるよう、そのフレームの間に押したことも押している扱いにする
             var melee = (Take(ref _meleeLatched) || IsMeleeHeld) && !paused;
             IsMeleeSent = melee;
-            var degrees = _look != null && _look.enabled && _look.IsInitialized ? _look.Yaw : transform.eulerAngles.y;
+            var degrees = YawDegrees;
             yaw = degrees * Mathf.Deg2Rad;
             buttons = SnapshotMotion.Buttons(
                 sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee);
@@ -326,6 +331,17 @@ namespace Shooter.NetV2
             _leanLeft = Find(actions, InputActionPaths.LeanLeft);
             _leanRight = Find(actions, InputActionPaths.LeanRight);
             _melee = Find(actions, InputActionPaths.Melee, false);
+        }
+
+        private void OnEnable()
+        {
+            _headingSource ??= () => HeadingDegrees;
+            GameSignals.LocalHeadingDegrees.Publish(_headingSource);
+        }
+
+        private void OnDisable()
+        {
+            GameSignals.LocalHeadingDegrees.ClearIfCurrent(_headingSource);
         }
 
         private void OnDestroy()

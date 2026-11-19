@@ -15,6 +15,7 @@ namespace Shooter.Tests.EditMode
             GameUi.Pause = null;
             GameUi.LoadoutSelect = null;
             GameUi.Menu = null;
+            GameUi.BuyMenuScreen = null;
         }
 
         [Test]

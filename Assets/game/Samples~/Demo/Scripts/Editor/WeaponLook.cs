@@ -494,7 +494,7 @@ namespace Shooter.Editor
             else
             {
                 parts.Add(new WeaponPart(ShaftName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, (handle + length) * 0.5f), new Vector3(0.022f, 0.022f, length - handle), WeaponPaint.Body));
-                parts.Add(new WeaponPart(HookName, WeaponPartShape.Box, new Vector3(0f, 0.025f, length + 0.01f), new Vector3(0.02f, 0.06f, 0.02f), WeaponPaint.Body, new Vector3(-30f, 0f, 0f)));
+                parts.Add(new WeaponPart(HookName, WeaponPartShape.Box, new Vector3(0f, 0.025f, length - 0.01f), new Vector3(0.02f, 0.06f, 0.02f), WeaponPaint.Body, new Vector3(-30f, 0f, 0f)));
                 body = BeamAccent;
                 furniture = PolymerColor;
             }

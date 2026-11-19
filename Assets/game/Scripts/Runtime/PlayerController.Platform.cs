@@ -15,11 +15,13 @@ namespace Shooter.Runtime
         // KnockbackMovement の着地と同じ。上や横へ運ぶ Move は下に触れないので、少し下へ動かして接地を戻さないと、このフレームが空中の扱いになる
         private static readonly Vector3 _rideSettle = new Vector3(0f, -0.05f, 0f);
 
-        private MovingPlatform _platform;
+        private IRideablePlatform _platform;
         private int _platformStepSeen;
         private float _rideSeconds;
 
-        public MovingPlatform Platform => _platform;
+        public MovingPlatform Platform => RiddenPlatform as MovingPlatform;
+
+        public IRideablePlatform RiddenPlatform => IsGone(_platform) ? null : _platform;
 
         public PlatformRide LastRide { get; private set; }
 
@@ -30,7 +32,7 @@ namespace Shooter.Runtime
             LastRide = PlatformRide.None;
             _rideSeconds = 0f;
             var platform = _platform;
-            if (platform == null || !canRide || !_controller.isGrounded || platform.StepCount == _platformStepSeen)
+            if (IsGone(platform) || !canRide || !_controller.isGrounded || platform.StepCount == _platformStepSeen)
             {
                 return;
             }
@@ -78,14 +80,19 @@ namespace Shooter.Runtime
             _rideSeconds = 0f;
         }
 
-        private void SetPlatform(MovingPlatform next)
+        private void SetPlatform(IRideablePlatform next)
         {
-            if (next == _platform)
+            if (IsGone(next))
+            {
+                next = null;
+            }
+
+            if (ReferenceEquals(next, _platform))
             {
                 return;
             }
 
-            if (_platform != null)
+            if (!IsGone(_platform))
             {
                 _platform.Leave(this);
             }
@@ -99,7 +106,13 @@ namespace Shooter.Runtime
             }
         }
 
-        private MovingPlatform FindPlatformUnderFeet()
+        // 口 (interface) で持つと == null が Unity の破棄を見ないので、消えた床をここで null と同じに扱う。
+        private static bool IsGone(IRideablePlatform platform)
+        {
+            return platform == null || (platform is UnityEngine.Object unityObject && unityObject == null);
+        }
+
+        private IRideablePlatform FindPlatformUnderFeet()
         {
             var radius = _controller.radius;
             var probe = Mathf.Max(radius - _platformProbeInset, radius * 0.5f);
@@ -112,7 +125,7 @@ namespace Shooter.Runtime
                 return null;
             }
 
-            return hit.collider.GetComponentInParent<MovingPlatform>();
+            return hit.collider.GetComponentInParent<IRideablePlatform>();
         }
 
         private void TurnWithPlatform(float degrees)

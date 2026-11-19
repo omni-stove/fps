@@ -371,6 +371,22 @@ namespace Shooter.Core
             return true;
         }
 
+        // TimeLimitSeconds を変えず残りだけを延ばすのは、Reset で始めの長さに戻すため。
+        public void ExtendTime(float seconds)
+        {
+            if (!(seconds >= 0f) || float.IsInfinity(seconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative and must be finite");
+            }
+
+            if (State != GameModeState.Playing || seconds == 0f)
+            {
+                return;
+            }
+
+            RemainingSeconds += seconds;
+        }
+
         public void ReportKill(int killerId, int victimId)
         {
             ReportKill(killerId, victimId, null);

@@ -8,7 +8,7 @@ namespace Shooter.Runtime
     // 乗っている体をここから押さないのは、体の当たりと接地は乗る側 (PlayerController) の Move でしか正しく決まらないため。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(ExecutionOrder)]
-    public sealed class MovingPlatform : MonoBehaviour
+    public sealed class MovingPlatform : MonoBehaviour, IRideablePlatform
     {
         public const string LogTag = MovingPlatformLog.LogTag;
 

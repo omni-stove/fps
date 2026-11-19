@@ -103,6 +103,11 @@ namespace Shooter.Runtime
         private void OnValidate()
         {
             _spec = null;
+            if (!_driveUnmanned)
+            {
+                ReleaseStandIn();
+            }
+
             if (_follower != null)
             {
                 RebuildFollower();

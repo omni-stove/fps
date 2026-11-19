@@ -7,9 +7,9 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class VehicleRouteFollowerTests
     {
-        private const float Tolerance = 1e-3f;
+        private const float _tolerance = 1e-3f;
 
-        private static readonly Vector3 North = new Vector3(0f, 0f, 1f);
+        private static readonly Vector3 _north = new Vector3(0f, 0f, 1f);
 
         [Test]
         public void TheDefaultSpecKeepsTheDefaults()
@@ -58,11 +58,11 @@ namespace Shooter.Core.Tests
             var spec = VehicleRouteSpec.Default;
 
             Assert.That(spec.CornerSpeedFor(0f), Is.EqualTo(12f));
-            Assert.That(spec.CornerSpeedFor(45f), Is.EqualTo(8.5f).Within(Tolerance));
+            Assert.That(spec.CornerSpeedFor(45f), Is.EqualTo(8.5f).Within(_tolerance));
             Assert.That(spec.CornerSpeedFor(-90f), Is.EqualTo(5f));
             Assert.That(spec.CornerSpeedFor(170f), Is.EqualTo(5f));
             Assert.That(spec.SpeedToReach(5f, 0f), Is.EqualTo(5f));
-            Assert.That(spec.SpeedToReach(5f, 6f), Is.EqualTo((float)Math.Sqrt(85.0)).Within(Tolerance));
+            Assert.That(spec.SpeedToReach(5f, 6f), Is.EqualTo((float)Math.Sqrt(85.0)).Within(_tolerance));
             Assert.That(spec.LookAheadAt(-12f), Is.EqualTo(11f));
         }
 
@@ -72,19 +72,19 @@ namespace Shooter.Core.Tests
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
             var points = new[] { At(0f, 10f), At(0f, 40f), At(0f, 80f) };
 
-            var fromRest = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.02f);
+            var fromRest = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.02f);
             Assert.That(fromRest.Phase, Is.EqualTo(VehicleRoutePhase.Driving));
             Assert.That(fromRest.TargetIndex, Is.EqualTo(0));
-            Assert.That(fromRest.Steer, Is.EqualTo(0f).Within(Tolerance));
+            Assert.That(fromRest.Steer, Is.EqualTo(0f).Within(_tolerance));
             Assert.That(fromRest.Throttle, Is.EqualTo(1f));
             Assert.That(fromRest.Brake, Is.False);
-            Assert.That(fromRest.TargetSpeed, Is.EqualTo(12f).Within(Tolerance));
+            Assert.That(fromRest.TargetSpeed, Is.EqualTo(12f).Within(_tolerance));
 
-            var atCruise = follower.Tick(points, false, Vector3.Zero, North, 12f, 0.02f);
+            var atCruise = follower.Tick(points, false, Vector3.Zero, _north, 12f, 0.02f);
             Assert.That(atCruise.Throttle, Is.EqualTo(0f));
             Assert.That(atCruise.Brake, Is.False);
 
-            var tooFast = follower.Tick(points, false, Vector3.Zero, North, 15f, 0.02f);
+            var tooFast = follower.Tick(points, false, Vector3.Zero, _north, 15f, 0.02f);
             Assert.That(tooFast.Throttle, Is.EqualTo(0f));
             Assert.That(tooFast.Brake, Is.True);
         }
@@ -94,11 +94,11 @@ namespace Shooter.Core.Tests
         {
             var points = new[] { At(0f, 20f), At(20f, 20f), At(20f, 60f) };
 
-            var far = new VehicleRouteFollower(VehicleRouteSpec.Default).Tick(points, false, Vector3.Zero, North, 12f, 0.02f);
-            Assert.That(far.Steer, Is.EqualTo(0f).Within(Tolerance), "the corner is beyond the look-ahead");
+            var far = new VehicleRouteFollower(VehicleRouteSpec.Default).Tick(points, false, Vector3.Zero, _north, 12f, 0.02f);
+            Assert.That(far.Steer, Is.EqualTo(0f).Within(_tolerance), "the corner is beyond the look-ahead");
             Assert.That(far.Brake, Is.False, "there is room to slow down later");
 
-            var near = new VehicleRouteFollower(VehicleRouteSpec.Default).Tick(points, false, At(0f, 14f), North, 12f, 0.02f);
+            var near = new VehicleRouteFollower(VehicleRouteSpec.Default).Tick(points, false, At(0f, 14f), _north, 12f, 0.02f);
             Assert.That(near.TargetIndex, Is.EqualTo(0));
             Assert.That(near.Steer, Is.EqualTo(1f), "the look-ahead point is already round the right-hand corner");
             Assert.That(near.TargetSpeed, Is.LessThan(10f));
@@ -112,7 +112,7 @@ namespace Shooter.Core.Tests
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
             var points = new[] { At(0f, 20f), At(20f, 20f), At(20f, 60f) };
 
-            var command = follower.Tick(points, false, At(0f, 18f), North, 0f, 0.02f);
+            var command = follower.Tick(points, false, At(0f, 18f), _north, 0f, 0.02f);
 
             Assert.That(command.TargetIndex, Is.EqualTo(1));
             Assert.That(follower.TargetIndex, Is.EqualTo(1));
@@ -136,7 +136,7 @@ namespace Shooter.Core.Tests
         {
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
 
-            var command = follower.Tick(new[] { At(-10f, 10f) }, false, Vector3.Zero, North, 0f, 0.02f);
+            var command = follower.Tick(new[] { At(-10f, 10f) }, false, Vector3.Zero, _north, 0f, 0.02f);
 
             Assert.That(command.Steer, Is.EqualTo(-1f));
             Assert.That(command.TargetSpeed, Is.LessThan(12f), "a large heading error slows the car");
@@ -150,12 +150,12 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 5; i++)
             {
-                var pushing = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.25f);
+                var pushing = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
                 Assert.That(pushing.Phase, Is.EqualTo(VehicleRoutePhase.Driving), $"tick {i}");
                 Assert.That(pushing.Throttle, Is.EqualTo(1f), $"tick {i}");
             }
 
-            var reversing = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.25f);
+            var reversing = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
             Assert.That(reversing.Phase, Is.EqualTo(VehicleRoutePhase.Reversing));
             Assert.That(reversing.Throttle, Is.EqualTo(-0.8f));
             Assert.That(reversing.Steer, Is.EqualTo(1f), "backing with the wheels turned right swings the nose left toward the target");
@@ -164,12 +164,12 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 5; i++)
             {
-                var backing = follower.Tick(points, false, Vector3.Zero, North, -1f, 0.25f);
+                var backing = follower.Tick(points, false, Vector3.Zero, _north, -1f, 0.25f);
                 Assert.That(backing.Phase, Is.EqualTo(VehicleRoutePhase.Reversing), $"reverse tick {i}");
                 Assert.That(backing.Throttle, Is.EqualTo(-0.8f), $"reverse tick {i}");
             }
 
-            var again = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.25f);
+            var again = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
             Assert.That(again.Phase, Is.EqualTo(VehicleRoutePhase.Driving));
             Assert.That(again.Throttle, Is.GreaterThan(0f));
             Assert.That(follower.StalledSeconds, Is.EqualTo(0.25f), "the stall clock starts over after backing up");
@@ -184,7 +184,7 @@ namespace Shooter.Core.Tests
             VehicleRouteCommand command = default;
             for (var i = 0; i < 6; i++)
             {
-                command = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.25f);
+                command = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
             }
 
             Assert.That(command.Phase, Is.EqualTo(VehicleRoutePhase.Reversing));
@@ -199,7 +199,7 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 20; i++)
             {
-                Assert.That(follower.Tick(points, false, Vector3.Zero, North, 5f, 0.25f).Phase, Is.EqualTo(VehicleRoutePhase.Driving));
+                Assert.That(follower.Tick(points, false, Vector3.Zero, _north, 5f, 0.25f).Phase, Is.EqualTo(VehicleRoutePhase.Driving));
             }
 
             Assert.That(follower.StalledSeconds, Is.EqualTo(0f));
@@ -211,24 +211,24 @@ namespace Shooter.Core.Tests
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
             var points = new[] { At(0f, 10f), At(0f, 20f) };
 
-            var approaching = follower.Tick(points, false, At(0f, 12f), North, 12f, 0.02f);
+            var approaching = follower.Tick(points, false, At(0f, 12f), _north, 12f, 0.02f);
             Assert.That(approaching.TargetIndex, Is.EqualTo(1));
-            Assert.That(approaching.TargetSpeed, Is.EqualTo((float)Math.Sqrt(80.0)).Within(Tolerance));
+            Assert.That(approaching.TargetSpeed, Is.EqualTo((float)Math.Sqrt(80.0)).Within(_tolerance));
             Assert.That(approaching.Brake, Is.True);
 
-            var arrived = follower.Tick(points, false, At(0f, 18f), North, 4f, 0.02f);
+            var arrived = follower.Tick(points, false, At(0f, 18f), _north, 4f, 0.02f);
             Assert.That(arrived.Phase, Is.EqualTo(VehicleRoutePhase.Finished));
             Assert.That(follower.IsFinished, Is.True);
             Assert.That(arrived.Steer, Is.EqualTo(0f));
             Assert.That(arrived.Throttle, Is.EqualTo(0f));
             Assert.That(arrived.Brake, Is.True);
 
-            var pushedAway = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.02f);
+            var pushedAway = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.02f);
             Assert.That(pushedAway.Phase, Is.EqualTo(VehicleRoutePhase.Finished), "it stays stopped until restarted");
             Assert.That(pushedAway.Brake, Is.True);
 
             follower.Restart();
-            var restarted = follower.Tick(points, false, Vector3.Zero, North, 0f, 0.02f);
+            var restarted = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.02f);
             Assert.That(restarted.Phase, Is.EqualTo(VehicleRoutePhase.Driving));
             Assert.That(restarted.TargetIndex, Is.EqualTo(0));
             Assert.That(restarted.Throttle, Is.EqualTo(1f));
@@ -241,7 +241,7 @@ namespace Shooter.Core.Tests
             var points = Square(20f);
             follower.Restart(3);
 
-            var command = follower.Tick(points, true, At(0.5f, 0.5f), North, 0f, 0.02f);
+            var command = follower.Tick(points, true, At(0.5f, 0.5f), _north, 0f, 0.02f);
 
             Assert.That(command.Phase, Is.EqualTo(VehicleRoutePhase.Driving));
             Assert.That(command.TargetIndex, Is.EqualTo(0));
@@ -252,7 +252,7 @@ namespace Shooter.Core.Tests
         {
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
 
-            var command = follower.Tick(new[] { At(0f, 1f) }, true, Vector3.Zero, North, 0f, 0.02f);
+            var command = follower.Tick(new[] { At(0f, 1f) }, true, Vector3.Zero, _north, 0f, 0.02f);
 
             Assert.That(command.Phase, Is.EqualTo(VehicleRoutePhase.Finished));
         }
@@ -262,7 +262,7 @@ namespace Shooter.Core.Tests
         {
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
 
-            var command = follower.Tick(Array.Empty<Vector3>(), true, Vector3.Zero, North, 3f, 0.02f);
+            var command = follower.Tick(Array.Empty<Vector3>(), true, Vector3.Zero, _north, 3f, 0.02f);
 
             Assert.That(command.Brake, Is.True);
             Assert.That(command.Throttle, Is.EqualTo(0f));
@@ -275,7 +275,7 @@ namespace Shooter.Core.Tests
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
             follower.Restart(5);
 
-            var command = follower.Tick(new[] { At(0f, 10f), At(0f, 40f) }, false, Vector3.Zero, North, 0f, 0.02f);
+            var command = follower.Tick(new[] { At(0f, 10f), At(0f, 40f) }, false, Vector3.Zero, _north, 0f, 0.02f);
 
             Assert.That(command.TargetIndex, Is.EqualTo(1));
         }
@@ -287,12 +287,12 @@ namespace Shooter.Core.Tests
             var points = new[] { At(0f, 10f) };
 
             Assert.Throws<ArgumentNullException>(() => new VehicleRouteFollower(null));
-            Assert.Throws<ArgumentNullException>(() => follower.Tick(null, false, Vector3.Zero, North, 0f, 0.02f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, Vector3.Zero, North, 0f, -0.02f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, new Vector3(float.NaN, 0f, 0f), North, 0f, 0.02f));
+            Assert.Throws<ArgumentNullException>(() => follower.Tick(null, false, Vector3.Zero, _north, 0f, 0.02f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, Vector3.Zero, _north, 0f, -0.02f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, new Vector3(float.NaN, 0f, 0f), _north, 0f, 0.02f));
             Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, Vector3.Zero, new Vector3(0f, 0f, float.PositiveInfinity), 0f, 0.02f));
-            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, Vector3.Zero, North, float.NaN, 0.02f));
-            Assert.Throws<ArgumentException>(() => follower.Tick(new[] { new Vector3(float.NaN, 0f, 0f) }, false, Vector3.Zero, North, 0f, 0.02f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => follower.Tick(points, false, Vector3.Zero, _north, float.NaN, 0.02f));
+            Assert.Throws<ArgumentException>(() => follower.Tick(new[] { new Vector3(float.NaN, 0f, 0f) }, false, Vector3.Zero, _north, 0f, 0.02f));
             Assert.Throws<ArgumentOutOfRangeException>(() => follower.Restart(-1));
         }
 

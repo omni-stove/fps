@@ -41,8 +41,8 @@ namespace Shooter.Core
     // 高さを見ず水平面だけで追うのは、坂や段差で点の高さと車の高さがずれても、着いたかどうかと向きが変わらないようにするため。
     public sealed class VehicleRouteFollower
     {
-        private const float Epsilon = 1e-6f;
-        private const float RadiansToDegrees = (float)(180.0 / Math.PI);
+        private const float _epsilon = 1e-6f;
+        private const float _radiansToDegrees = (float)(180.0 / Math.PI);
 
         private int _index;
         private float _reverseSteer;
@@ -155,7 +155,9 @@ namespace Shooter.Core
             var target = LookAheadPoint(points, looping, pos, Spec.LookAheadAt(forwardSpeed));
             var angle = HeadingError(Flat(forward), target - pos);
             var steer = Clamp(angle / Spec.FullSteerAngle, -1f, 1f);
-            var targetSpeed = Math.Min(Spec.CornerSpeedFor(angle), UpcomingSpeedLimit(points, looping, pos));
+            // 向きのずれで 0 まで落とすと、止まったままアクセルが 0 になり詰まりも測れず動けなくなるので、詰まりの速さより上に保つ。
+            var turnSpeed = Math.Max(Spec.CornerSpeedFor(angle), Math.Min(Spec.CruiseSpeed, Spec.StuckSpeed * 2f + _epsilon));
+            var targetSpeed = Math.Min(turnSpeed, UpcomingSpeedLimit(points, looping, pos));
 
             var throttle = 0f;
             var brake = false;
@@ -230,20 +232,26 @@ namespace Shooter.Core
                 ? Direction(point, Flat(points[(_index + 1) % count]))
                 : Vector2.Zero;
             var across = incoming + outgoing;
-            if (across.LengthSquared() <= Epsilon)
+            if (across.LengthSquared() <= _epsilon)
             {
                 // 折り返す角では二等分の向きが消えるので、入ってきた向きで測る。
                 across = incoming;
             }
 
-            return across.LengthSquared() > Epsilon && Vector2.Dot(pos - point, across) >= 0f;
+            if (!(across.LengthSquared() > _epsilon) || Vector2.Dot(pos - point, across) < 0f)
+            {
+                return false;
+            }
+
+            // 二等分線は鋭い角ほど入る区間と平行に近づき、角から遠い所でも越えてしまう。先読みで内側を切れる範囲に限る。
+            return Vector2.DistanceSquared(pos, point) <= Spec.LookAheadDistance * Spec.LookAheadDistance;
         }
 
         private static Vector2 Direction(Vector2 from, Vector2 to)
         {
             var delta = to - from;
             var length = delta.Length();
-            return length > Epsilon ? delta / length : Vector2.Zero;
+            return length > _epsilon ? delta / length : Vector2.Zero;
         }
 
         // 車から道の上でいちばん近い所を起点に、道に沿って先読みの距離だけ進んだ点を狙う。点そのものを狙うと、点の手前で急に向きを変えるため。
@@ -262,7 +270,7 @@ namespace Shooter.Core
                 var distance = Vector2.Distance(current, next);
                 if (distance >= remaining)
                 {
-                    return distance > Epsilon ? current + ((next - current) * (remaining / distance)) : next;
+                    return distance > _epsilon ? current + ((next - current) * (remaining / distance)) : next;
                 }
 
                 remaining -= distance;
@@ -338,21 +346,21 @@ namespace Shooter.Core
         // 右へ回すと正。Unity の左手系 (x が右、z が前) に合わせる。
         private static float HeadingError(Vector2 from, Vector2 to)
         {
-            if (from.LengthSquared() <= Epsilon || to.LengthSquared() <= Epsilon)
+            if (from.LengthSquared() <= _epsilon || to.LengthSquared() <= _epsilon)
             {
                 return 0f;
             }
 
             var cross = (from.Y * to.X) - (from.X * to.Y);
             var dot = Vector2.Dot(from, to);
-            return (float)Math.Atan2(cross, dot) * RadiansToDegrees;
+            return (float)Math.Atan2(cross, dot) * _radiansToDegrees;
         }
 
         private static Vector2 ClosestOnSegment(Vector2 from, Vector2 to, Vector2 point)
         {
             var segment = to - from;
             var lengthSquared = segment.LengthSquared();
-            if (lengthSquared <= Epsilon)
+            if (lengthSquared <= _epsilon)
             {
                 return to;
             }

@@ -6,6 +6,8 @@
   "extraction.hud.carrying": "Carrying {0}",
   "extraction.hud.open": "Open container",
   "extraction.hud.openKey": "[{0}] {1}",
+  "extraction.hud.openRefused": "The container did not open",
+  "extraction.hud.openGone": "The container is gone",
   "extraction.hud.extracted": "Extracted: {0} stored",
   "extraction.hud.extractedStashFull": "Extracted: {0} stored, {1} lost (stash full)",
   "extraction.hud.died": "Killed: {0} lost",

@@ -144,13 +144,14 @@ namespace Shooter.Net.Tests
             Assert.That(read.DropHeight, Is.EqualTo(60f));
         }
 
-        // 今のネットのマップには箱・脱出地点・エリアを置いていないので、書き出したファイルにも無い
+        // 箱・脱出地点・エリアを置くのは NetBattleRoyale だけなので、ほかのマップの書き出したファイルには無い
         [Test]
-        public void TheCommittedNetMapsHaveNoBoxesExitsOrZone()
+        public void OnlyTheBattleRoyaleMapHasBoxesExitsOrZone()
         {
+            var battleRoyale = NetSceneBuilder.BattleRoyaleMapName + NetMapPoints.Extension;
             var files = Directory.GetFiles(MapCollisionExporter.OutputDirectory, "*" + NetMapPoints.Extension);
             Assert.That(files, Is.Not.Empty);
-            foreach (var path in files)
+            foreach (var path in files.Where(p => Path.GetFileName(p) != battleRoyale))
             {
                 var read = NetMapPoints.Parse(File.ReadAllText(path), path);
 
@@ -159,6 +160,25 @@ namespace Shooter.Net.Tests
                 Assert.That(read.Zone, Is.Null, path);
                 Assert.That(read.DropHeight, Is.Null, path);
             }
+        }
+
+        [Test]
+        public void TheCommittedBattleRoyaleMapHasItsBoxesExitsAndZone()
+        {
+            var path = Path.Combine(MapCollisionExporter.OutputDirectory, NetSceneBuilder.BattleRoyaleMapName + NetMapPoints.Extension);
+            if (!File.Exists(path))
+            {
+                Assert.Ignore(path + " has not been exported; run make export-server-rules and commit it");
+            }
+
+            var read = NetMapPoints.Parse(File.ReadAllText(path), path);
+
+            Assert.That(read.LootContainers.Select(c => c.Id), Is.EqualTo(NetSceneBuilder.BattleRoyaleLootContainers.Select(c => c.Id)));
+            Assert.That(read.LootContainers.Select(c => c.TableId), Is.EqualTo(NetSceneBuilder.BattleRoyaleLootContainers.Select(c => c.TableId)));
+            Assert.That(read.ExtractionPoints.Select(p => p.Id), Is.EqualTo(NetSceneBuilder.BattleRoyaleExtractionPoints.Select(p => p.Id)));
+            Assert.That(read.Zone, Is.Not.Null);
+            Assert.That(read.Zone.Radius, Is.EqualTo(NetSceneBuilder.BattleRoyaleZoneRadius));
+            Assert.That(read.SpawnPoints, Has.Count.EqualTo(NetSceneBuilder.BattleRoyaleSpawnPoints.Count));
         }
 
         [Test]

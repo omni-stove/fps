@@ -39,6 +39,11 @@ namespace Shooter.Editor
                 ArenaSceneBuilder.BuildAt(ArenaSceneBuilder.ScenePath, ArenaSceneBuilder.NavMeshDataPath);
             }
 
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(NetSceneBuilder.BattleRoyaleScenePath) == null)
+            {
+                NetSceneBuilder.BuildBattleRoyaleAt(NetSceneBuilder.BattleRoyaleScenePath, NetSceneBuilder.BattleRoyaleNavMeshDataPath);
+            }
+
             EnsureFlagBases();
             EnsurePayloadCarts();
         }

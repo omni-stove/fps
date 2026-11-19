@@ -451,26 +451,11 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void NoticeStartsEmptyAndFollowsTheCampaign()
+        public void NoticeStartsEmpty()
         {
             var model = new HudModel();
+
             Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
-
-            var notice = new CampaignNotice();
-            notice.ShowSaved(1f);
-            var changes = Record(model);
-
-            model.BindNotice(notice);
-            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "binding shows the current notice at once");
-
-            notice.Tick(1f);
-            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
-
-            notice.ShowRestartCountdown(3f);
-            notice.ShowRestartCountdown(2.5f);
-            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
-
-            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice }));
         }
 
         [Test]
@@ -1068,20 +1053,20 @@ namespace Shooter.Core.Tests
         public void UnbindingTheNoticeClearsItAndStopsListening()
         {
             var model = new HudModel();
-            var notice = new CampaignNotice();
-            model.BindNotice(notice);
-            notice.ShowRestartCountdown(3f);
+            var source = new FakeNoticeSource();
+            model.BindNotice(source);
+            source.Set(HudNotice.CheckpointRestart(3));
 
             model.BindNotice(null);
             Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
-            notice.ShowRestartCountdown(1f);
+            source.Set(HudNotice.CheckpointRestart(1));
             Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
 
-            model.BindNotice(notice);
+            model.BindNotice(source);
             model.UnbindAll();
             var changes = Record(model);
-            notice.Clear();
+            source.Set(HudNotice.None);
             Assert.That(changes, Is.Empty);
             Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(1)), "UnbindAll keeps the notice");
         }

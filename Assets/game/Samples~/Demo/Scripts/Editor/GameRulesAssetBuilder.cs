@@ -320,9 +320,11 @@ namespace Shooter.Editor
         }
 
         // 戻るのは BattleRoyaleRunner が決める復帰 (redeploy.json) だけなので、ルールでは戻さず (RespawnMode.None)、出現直後の無敵も無くす。
+        // オフラインの BattleRoyaleRunner は Objective を読まないが、専用サーバーは書き出したルールの Objective で目的を選ぶので BattleRoyale にする。
         public static GameRules BattleRoyaleRules()
         {
             return TeamDeathmatchRules()
+                .WithObjective(MatchObjective.BattleRoyale)
                 .WithRespawnMode(RespawnMode.None)
                 .WithSpawnProtectionSeconds(0f)
                 .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier)
@@ -359,9 +361,11 @@ namespace Shooter.Editor
 
         // 倒れたら戻らず (RespawnMode.None) 持ち込んだ物を失うので、出現直後の無敵は無くし、起こす味方もいないのでダウンさせない。
         // 弾は箱から拾わせるので、バトルロイヤルと違って予備弾は増やさない。
+        // バトルロイヤルと同じく、専用サーバーが目的を選べるよう Objective を Extraction にする。
         public static GameRules ExtractionRules()
         {
             return TeamDeathmatchRules()
+                .WithObjective(MatchObjective.Extraction)
                 .WithRespawnMode(RespawnMode.None)
                 .WithSpawnProtectionSeconds(0f)
                 .WithActions(ExtractionActions());

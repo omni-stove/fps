@@ -76,6 +76,12 @@ make server-dotnet ARGS="-rules FreeForAll"
   始まりに全員の武器を空にして `dropHeight` からパラシュートで降ろし (`[BattleRoyale] drop`)、エリアの外の人に段階のダメージを与え (`[Zone] outside`)、
   次の円の中へ物資投下の箱を落とし (`[SupplyDrop] landed`)、倒れきった人の持ち物を箱にし、最後の分隊が残ると `[Mode] placements winner=` を出して終える。
   ダウン・蘇生は分隊の味方で数え、復帰は倒されたときの段階と回数で決まる (`[Mode] redeploy ... verdict=`)。
+- 例のマップ `NetBattleRoyale` (160m 四方) は Battle Royale と Extraction のためのマップで、チームを決めない出現地点 8 つ、箱 12 個 (`net-br-box-01`〜`12`)、
+  脱出地点 4 つ (`net-br-exit-north`・`east`・`south`・`west`)、半径 75m のエリアを置いてある。シーンは `make build-scenes` (`NetSceneBuilder.BuildBattleRoyale`) が作る。
+  箱の `table` は Demo の Extraction のシーンと同じ `demo-supplies`・`demo-valuables` で、キットの `loot.json` には無いので、ゲームが `loot.json` に表を足すまで箱は空のまま開く。
+  箱と脱出地点の見た目はクライアントがスナップショットから出すので、シーンの部品は形も当たりも持たない書き出しの印にしてある。
+  `make export-server-rules` は `BattleRoyale`・`Extraction` のルール (`rules.objective` が `BattleRoyale`・`Extraction`) を NetMatch の並びに無くても書き出し、
+  `loot.json`・`supply-drops.json`・`redeploy.json` を `server-data/tuning` に写す。ルールのアセットの目的が違うと書き出しを止めるので、`make build-scenes` で作り直す。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

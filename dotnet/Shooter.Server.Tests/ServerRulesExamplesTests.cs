@@ -10,6 +10,7 @@ namespace Shooter.Server.Tests
     public sealed class ServerRulesExamplesTests
     {
         private const string _map = "NetArena01";
+        private const string _battleRoyaleMap = "NetBattleRoyale";
         private static readonly int[] _arenaCheckpoints = { 3 };
 
         [TestCase("TeamDeathmatch", MatchObjective.None)]
@@ -151,6 +152,49 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Does.StartWith("cannot change to map " + _map + " for the BattleRoyale match: it has no zone"));
         }
 
+        // Unity の ServerRulesExporter が BattleRoyale・Extraction のルールを書き出すので、書き出す前の checkout では比べられない
+        [TestCase("BattleRoyale", MatchObjective.BattleRoyale)]
+        [TestCase("Extraction", MatchObjective.Extraction)]
+        public void TheBattleRoyaleAndExtractionRulesFilesLoadWithTheirObjective(string name, MatchObjective objective)
+        {
+            RequireExported(Path.Combine(ServerRulesData.RulesDirectoryName, name + NetMatchFile.Extension));
+
+            Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.File.Name, Is.EqualTo(name));
+            Assert.That(data.Rules.Objective, Is.EqualTo(objective));
+            Assert.That(data.Rules.RespawnMode, Is.EqualTo(RespawnMode.None), "a fallen player does not come back by the rules");
+            Assert.That(data.Rules.SpawnProtectionSeconds, Is.Zero);
+            Assert.That(data.Rules.Actions.Parachute, Is.EqualTo(name == "BattleRoyale" ? Parachute.On : Parachute.Off));
+        }
+
+        // 箱・脱出地点・エリアの値はシーンを作る NetSceneBuilder.BattleRoyale* と同じ (足元の高さ y = -1)
+        [Test]
+        public void TheBattleRoyaleMapPointsHaveTheBoxesExitsAndZone()
+        {
+            var path = RequireExported(Path.Combine(ServerMapData.MapsDirectoryName, _battleRoyaleMap + NetMapPoints.Extension));
+
+            var points = NetMapPoints.Parse(File.ReadAllText(path), path);
+
+            Assert.That(points.SpawnPoints, Has.Count.EqualTo(8));
+            Assert.That(points.SpawnPoints, Has.All.Matches<SpawnPoint>(p => p.Team == null), "the objective picks the squads");
+            Assert.That(points.LootContainers, Has.Count.EqualTo(12));
+            Assert.That(points.LootContainers[0].Id, Is.EqualTo("net-br-box-01"));
+            Assert.That(points.LootContainers[0].TableId, Is.EqualTo("demo-supplies"));
+            Assert.That(points.LootContainers[0].Position, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, -30f)));
+            Assert.That(points.LootContainers[11].Id, Is.EqualTo("net-br-box-12"));
+            Assert.That(points.LootContainers[11].TableId, Is.EqualTo("demo-valuables"));
+            Assert.That(points.ExtractionPoints, Has.Count.EqualTo(4));
+            Assert.That(points.ExtractionPoints[0].Id, Is.EqualTo("net-br-exit-north"));
+            Assert.That(points.ExtractionPoints[0].Center, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, 70f)));
+            Assert.That(points.Zone, Is.Not.Null);
+            Assert.That(points.Zone.Center, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, 0f)));
+            Assert.That(points.Zone.Radius, Is.EqualTo(75f));
+            Assert.That(points.DropHeight, Is.Null, "the net map has no offline runner to take the height from");
+            Assert.That(points.ControlPoints, Is.Empty);
+            Assert.That(points.FlagBases, Is.Empty);
+        }
+
         [Test]
         public void TheGunGameExampleClimbsTheLoadoutWeapons()
         {
@@ -161,6 +205,17 @@ namespace Shooter.Server.Tests
             {
                 Assert.That(data.File.CreateLoadout().Contains(id), Is.True, id);
             }
+        }
+
+        private static string RequireExported(string relativePath)
+        {
+            var path = Path.Combine(Roots()[0], ServerMapData.DataDirectoryName, relativePath);
+            if (!File.Exists(path))
+            {
+                Assert.Ignore(path + " has not been exported; run make export-server-rules in Unity and commit server-data");
+            }
+
+            return path;
         }
 
         private static string[] Roots()

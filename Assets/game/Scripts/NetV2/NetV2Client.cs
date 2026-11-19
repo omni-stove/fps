@@ -91,6 +91,9 @@ namespace Shooter.NetV2
 
         public GameObject GrenadePrefab { get; set; }
 
+        // 部品を作る (つなぐ・再生する) 前に置く。null なら箱と脱出地点の形をコードで作る
+        public NetV2LootVisuals LootVisuals { get; set; }
+
         public static NetV2Client Current { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -414,6 +417,7 @@ namespace Shooter.NetV2
                 Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
                 Replay = replay,
                 ReplayFreeSpeed = () => KitTuning.Replay.FreeSpeed,
+                LootVisuals = LootVisuals,
             }));
         }
 

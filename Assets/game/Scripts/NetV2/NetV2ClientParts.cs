@@ -62,6 +62,12 @@ namespace Shooter.NetV2
 
         // null なら天候の部品がシーンの WeatherController を探す
         public Func<WeatherController> Weather { get; set; }
+
+        // 箱・物資投下・倒れた人の箱・脱出地点の差し替えの見た目。null なら NetV2LootPart がコードで形を作る
+        public NetV2LootVisuals LootVisuals { get; set; }
+
+        // null ならエリアの部品がシーンの ShrinkingZone を探して見た目を引き継ぐ
+        public Func<ShrinkingZone> ZoneLook { get; set; }
     }
 
     public static class NetV2ClientParts
@@ -95,6 +101,16 @@ namespace Shooter.NetV2
 
                 // 天候と時刻もスナップショットの MatchRulesSync で届くので、マップを替えるたびにシーンの空へ当て直す
                 new NetV2WeatherPart(context.Weather, context.Log),
+
+                // 箱とエリアは、スナップショットに箱・脱出地点・エリアの欄が無ければ何も出さないので、目的で分けずに並べる。
+                // 再生では開ける要求を受ける相手がいないので、箱は見せるだけにする
+                new NetV2LootPart(
+                    context.Send,
+                    () => !context.Replay && CanAct(client),
+                    context.LootVisuals,
+                    () => LocalPositionOf(context.LocalPlayer),
+                    log: context.Log),
+                new NetV2ZonePart(context.ZoneLook),
             };
 
             if (context.Replay)
@@ -148,6 +164,13 @@ namespace Shooter.NetV2
 
             var row = latest.Players[own];
             return row.Health > 0 && !row.Downed.IsDowned;
+        }
+
+        // 破棄済みの Unity の参照も無いものとして扱うため、?. ではなく != null で確かめる
+        private static UnityEngine.Vector3? LocalPositionOf(Func<NetV2LocalPlayer> localPlayer)
+        {
+            var local = localPlayer?.Invoke();
+            return local != null ? local.transform.position : (UnityEngine.Vector3?)null;
         }
 
         private static List<DeployAbilityDefinition> DeployDefinitionsOf(IReadOnlyList<AbilityDefinition> abilities)

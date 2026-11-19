@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
@@ -43,7 +44,7 @@ namespace Shooter.Server.Tests
         public void WithoutRegisterLobbyAddsTheMatchAndCombatModulesAndSnapshotsLast()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(12));
+            Assert.That(_modules, Has.Count.EqualTo(13));
             Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
             Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
             Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
@@ -51,12 +52,33 @@ namespace Shooter.Server.Tests
             Assert.That(_modules[3], Is.InstanceOf<ServerVehicles>());
             Assert.That(_modules[4], Is.InstanceOf<ServerCombat>());
             Assert.That(_modules[5], Is.InstanceOf<ServerInventories>());
-            Assert.That(_modules[6], Is.InstanceOf<ServerBots>());
-            Assert.That(_modules[7], Is.InstanceOf<ServerMelee>());
-            Assert.That(_modules[8], Is.InstanceOf<ServerStreaks>());
-            Assert.That(_modules[9], Is.InstanceOf<ServerDeployables>());
-            Assert.That(_modules[10], Is.InstanceOf<ServerKillCam>());
-            Assert.That(_modules[11], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[6], Is.InstanceOf<ServerLoot>());
+            Assert.That(_modules[7], Is.InstanceOf<ServerBots>());
+            Assert.That(_modules[8], Is.InstanceOf<ServerMelee>());
+            Assert.That(_modules[9], Is.InstanceOf<ServerStreaks>());
+            Assert.That(_modules[10], Is.InstanceOf<ServerDeployables>());
+            Assert.That(_modules[11], Is.InstanceOf<ServerKillCam>());
+            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+        }
+
+        [Test]
+        public void WithAStashDirectoryTheModulesOpenItAndAnUnusableOneStopsTheStart()
+        {
+            var stashes = Path.Combine(_roots.Path, "stashes");
+
+            Assert.That(Create(_library.Path, ServerLaunch.StashDirectoryFlag, stashes), Is.Null);
+
+            Assert.That(Directory.Exists(stashes), Is.True, "the store is made where the launch says");
+            Assert.That(_modules.OfType<ServerLoot>().Count(), Is.EqualTo(1));
+
+            _modules.Clear();
+            var file = Path.Combine(_roots.Path, "a-file");
+            File.WriteAllText(file, "x");
+
+            var error = Create(_library.Path, ServerLaunch.StashDirectoryFlag, file);
+
+            Assert.That(error, Does.StartWith("[Stash] cannot use the stash directory " + file + ": "));
+            Assert.That(_modules, Is.Empty, "no module is listed when the stash cannot be used");
         }
 
         [Test]
@@ -159,9 +181,9 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(13));
-            Assert.That(_modules[12], Is.InstanceOf<ServerLobbyModule>());
-            Assert.That(((ServerLobbyModule)_modules[12]).Region, Is.Null);
+            Assert.That(_modules, Has.Count.EqualTo(14));
+            Assert.That(_modules[13], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(((ServerLobbyModule)_modules[13]).Region, Is.Null);
         }
 
         [Test]
@@ -175,7 +197,7 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777", "--region", "europe"), Is.Null);
-            Assert.That(((ServerLobbyModule)_modules[12]).Region, Is.EqualTo("europe"));
+            Assert.That(((ServerLobbyModule)_modules[13]).Region, Is.EqualTo("europe"));
         }
 
         [Test]

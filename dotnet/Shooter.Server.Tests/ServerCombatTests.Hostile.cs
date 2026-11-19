@@ -66,6 +66,27 @@ namespace Shooter.Server.Tests
             Assert.That(_combat.CanAfflict(attacker, ally), Is.True);
         }
 
+        // 目的が敵でも味方でもないとした 2 人 (BR の分隊に入れなかった人) の間では、味方撃ちの決まりにかかわらずダメージが入らない
+        [TestCase(FriendlyFire.Off)]
+        [TestCase(FriendlyFire.On)]
+        public void DamageBetweenPlayersWhoAreNeitherHostileNorAlliesIsIgnored(FriendlyFire friendlyFire)
+        {
+            var objective = new TestObjectiveRules { Hostile = (_, _, _, _) => false, Allies = (a, _, b, _) => a == b };
+            Start(Rules().WithFriendlyFire(friendlyFire), objective: objective);
+            Join(1);
+            Join(2);
+            Join(3);
+            Step(0.2f);
+            var (attacker, ally, enemy) = Sides();
+            var full = NetMatchSettings.DefaultMaxHealth;
+
+            Assert.That(_rules.ApplyDamage(attacker, enemy, 10), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(_rules.ApplyDamage(attacker, ally, 10), Is.EqualTo(DamageOutcome.Ignored));
+            Assert.That(_rules.ApplyDamage(null, enemy, 10), Is.EqualTo(DamageOutcome.Damaged), "damage with no attacker still lands");
+            Assert.That(_rules.Session.GetHealth(enemy), Is.EqualTo(full - 10));
+            Assert.That(_rules.Session.GetHealth(ally), Is.EqualTo(full));
+        }
+
         // Session も味方撃ちを目的の敵味方で決めるので、分隊で戦う目的ではチームが同じでも当たり、チームが違っても当たらないことがある
         [Test]
         public void TheSessionLandsDamageByTheHostilityOfTheObjective()

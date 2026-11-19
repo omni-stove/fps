@@ -96,6 +96,12 @@ namespace Shooter.Server.Tests
             Assert.That(_rules.AreHostile(2, Team.Bravo, 4, Team.Alpha), Is.False, "another team in the same squad");
             Assert.That(_rules.AreHostile(5, Team.Bravo, 1, Team.Alpha), Is.False, "a player outside the squads is nobody's enemy");
             Assert.That(_rules.AreHostile(1, Team.Alpha, 1, Team.Alpha), Is.False);
+            Assert.That(_rules.AreAllies(1, Team.Alpha, 3, Team.Alpha), Is.True);
+            Assert.That(_rules.AreAllies(2, Team.Bravo, 4, Team.Alpha), Is.True, "another team in the same squad");
+            Assert.That(_rules.AreAllies(1, Team.Alpha, 4, Team.Alpha), Is.False, "the same team in another squad");
+            Assert.That(_rules.AreAllies(5, Team.Bravo, 1, Team.Alpha), Is.False, "a player outside the squads is nobody's ally");
+            Assert.That(_rules.AreAllies(1, Team.Bravo, 5, Team.Bravo), Is.False, "a player outside the squads is nobody's ally");
+            Assert.That(_rules.AreAllies(5, Team.Bravo, 5, Team.Bravo), Is.True);
 
             var snapshot = default(MatchSnapshot);
             _rules.FillMatch(ref snapshot);
@@ -314,7 +320,27 @@ namespace Shooter.Server.Tests
             Assert.That(_world.Drops.Any(d => d.PlayerId == 4), Is.True);
             Assert.That(_rules.BattleRoyale.Mode.HasPlayer(5), Is.False);
             Assert.That(_log.ToString(), Does.Contain("[BattleRoyale] squad player=5 squad=none (joined after the drop"));
-            Assert.That(_host.Session.ApplyDamage(5, 1, 10), Is.EqualTo(DamageOutcome.Ignored), "a player outside the squads cannot hurt anyone");
+            Assert.That(_rules.AreHostile(5, Team.Alpha, 1, Team.Alpha), Is.False, "a player outside the squads cannot hurt anyone");
+            Assert.That(_rules.AreAllies(5, Team.Alpha, 1, Team.Alpha), Is.False, "nor count as anyone's squadmate");
+        }
+
+        [Test]
+        public void APlayerOutsideTheSquadsNeitherKeepsASquadDownedNorRevivesIt()
+        {
+            Begin(Spec());
+            JoinFour();
+            _host.Join(5, Team.Bravo);
+            _host.Steps(1);
+            Assert.That(_rules.BattleRoyale.Mode.HasPlayer(5), Is.False);
+            var session = _host.Session;
+            Assert.That(session.AreAllies(5, 1), Is.False);
+            Assert.That(session.AreAllies(2, 4), Is.True);
+
+            Assert.That(session.ApplyDamage(1, 2, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed), "4 is standing in squad 1");
+            Assert.That(session.TryRevive(5, 2, 60f), Is.False, "5 is not in squad 1");
+            Assert.That(session.IsDowned(2), Is.True);
+            Assert.That(session.ApplyDamage(1, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Killed), "5 standing does not keep the last of squad 1 downed");
+            Assert.That(session.IsAlive(2), Is.False, "the wiped squad's downed player goes down for good");
         }
 
         [Test]
@@ -489,7 +515,7 @@ namespace Shooter.Server.Tests
                     null,
                     settings.ReconnectGraceSeconds,
                     null,
-                    (a, b) => !rules.AreHostile(a, session.GetTeam(a), b, session.GetTeam(b)));
+                    (a, b) => rules.AreAllies(a, session.GetTeam(a), b, session.GetTeam(b)));
                 Session = session;
                 Session.Spawned += (playerId, point) => Bodies.Teleport(playerId, point.Position, 0f, _tick);
                 Session.Killed += (killerId, victimId, _) => _rules.PlayerKilled(killerId, victimId);

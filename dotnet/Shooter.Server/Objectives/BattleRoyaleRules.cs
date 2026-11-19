@@ -299,6 +299,14 @@ namespace Shooter.Server
             return a != b && mode.HasPlayer(a) && mode.HasPlayer(b) && mode.GetSide(a) != mode.GetSide(b);
         }
 
+        // 分隊に入っていない人は誰の味方でもない。AreHostile の裏返しにすると全員の味方になり、
+        // 分隊の最後の 1 人がダウンで止まり、どの分隊のダウン中の人も起こせてしまう
+        public bool AreAllies(int a, Team aTeam, int b, Team bTeam)
+        {
+            var mode = _battleRoyale.Mode;
+            return a == b || (mode.HasPlayer(a) && mode.HasPlayer(b) && mode.GetSide(a) == mode.GetSide(b));
+        }
+
         public InteractVerdict Interact(int playerId, int itemId)
         {
             return _battleRoyale.IsLive && _battleRoyale.Mode.HasPlayer(playerId) && _battleRoyale.IsStanding(playerId)

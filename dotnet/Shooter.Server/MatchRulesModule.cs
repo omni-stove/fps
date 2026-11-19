@@ -244,7 +244,7 @@ namespace Shooter.Server
 
             // Session は攻撃者と被害者が同じ Id のダメージを自滅として扱うので、攻撃者のいないダメージはそれに寄せる
             var source = attackerId ?? victimId;
-            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId) || IsBetweenRounds)
+            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId) || IsBetweenRounds || AreNeutral(source, victimId))
             {
                 return DamageOutcome.Ignored;
             }

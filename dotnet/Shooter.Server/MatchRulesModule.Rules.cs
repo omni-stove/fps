@@ -34,7 +34,7 @@ namespace Shooter.Server
                     null,
                     settings.ReconnectGraceSeconds,
                     _data.Assist,
-                    (a, b) => !objective.AreHostile(a, session.GetTeam(a), b, session.GetTeam(b)));
+                    (a, b) => objective.AreAllies(a, session.GetTeam(a), b, session.GetTeam(b)));
                 return session;
             }
             catch (ArgumentException e)

@@ -72,6 +72,13 @@ namespace Shooter.Server
             return a != b && aTeam != bTeam;
         }
 
+        // Session が味方撃ち・ダウン・蘇生で数える味方。敵でも味方でもない人 (BR の分隊に入れなかった人) を置ける目的のために、
+        // AreHostile の裏返しと分けておく
+        bool AreAllies(int a, Team aTeam, int b, Team bTeam)
+        {
+            return !AreHostile(a, aTeam, b, bTeam);
+        }
+
         // 場に置いた物 (箱など) を開ける要求。開ける物を持たない目的は断る
         InteractVerdict Interact(int playerId, int itemId)
         {

@@ -43,6 +43,31 @@ namespace Shooter.Protocol
 
         public int ObjectiveRemainingSeconds { get; set; }
 
+        // 始まる前は 0
+        public int RoundNumber { get; set; }
+
+        // ラウンド制でない目的では 0
+        public int RoundsToWin { get; set; }
+
+        public bool HasLastRound { get; set; }
+
+        public RoundEndReason LastRoundEnd { get; set; }
+
+        // 前のラウンドが引き分けなら false
+        public bool HasLastRoundWinner { get; set; }
+
+        public Team LastRoundWinner { get; set; }
+
+        // 0〜1
+        public float PlantFraction { get; set; }
+
+        public bool HasDefuser { get; set; }
+
+        public int DefuserId { get; set; }
+
+        // 0〜1
+        public float DefuseFraction { get; set; }
+
         internal MatchFields ChangedFields(in MatchSnapshot baseline)
         {
             var fields = MatchFields.None;
@@ -84,6 +109,24 @@ namespace Shooter.Protocol
                 || ObjectiveRemainingSeconds != baseline.ObjectiveRemainingSeconds)
             {
                 fields |= MatchFields.ObjectiveState;
+            }
+
+            if (RoundNumber != baseline.RoundNumber
+                || RoundsToWin != baseline.RoundsToWin
+                || HasLastRound != baseline.HasLastRound
+                || (HasLastRound && LastRoundEnd != baseline.LastRoundEnd)
+                || HasLastRoundWinner != baseline.HasLastRoundWinner
+                || (HasLastRoundWinner && LastRoundWinner != baseline.LastRoundWinner))
+            {
+                fields |= MatchFields.RoundResult;
+            }
+
+            if (PlantFraction != baseline.PlantFraction
+                || HasDefuser != baseline.HasDefuser
+                || (HasDefuser && DefuserId != baseline.DefuserId)
+                || DefuseFraction != baseline.DefuseFraction)
+            {
+                fields |= MatchFields.ObjectiveProgress;
             }
 
             return fields;
@@ -142,6 +185,48 @@ namespace Shooter.Protocol
                 writer.WriteByte(HasBomb ? (byte)Bomb : (byte)0);
                 writer.WriteInt32(ObjectiveRemainingSeconds);
             }
+
+            if ((fields & MatchFields.RoundResult) != 0)
+            {
+                if (RoundNumber < 0 || RoundsToWin < 0)
+                {
+                    throw new System.InvalidOperationException("the round number and the rounds to win must not be negative");
+                }
+
+                if (HasLastRoundWinner && !HasLastRound)
+                {
+                    throw new System.InvalidOperationException("a last round winner needs a last round result");
+                }
+
+                writer.WriteInt32(RoundNumber);
+                writer.WriteInt32(RoundsToWin);
+                writer.WriteBool(HasLastRound);
+                writer.WriteByte(HasLastRound ? (byte)LastRoundEnd : (byte)0);
+                writer.WriteBool(HasLastRoundWinner);
+                writer.WriteByte(HasLastRoundWinner ? (byte)LastRoundWinner : (byte)0);
+            }
+
+            if ((fields & MatchFields.ObjectiveProgress) != 0)
+            {
+                RequireFraction(PlantFraction, "plant fraction");
+                RequireFraction(DefuseFraction, "defuse fraction");
+                if (HasDefuser && DefuserId < 0)
+                {
+                    throw new System.InvalidOperationException("the defuser id must not be negative");
+                }
+
+                writer.WriteSingle(PlantFraction);
+                writer.WriteInt32(HasDefuser ? DefuserId : PlayerIds.None);
+                writer.WriteSingle(DefuseFraction);
+            }
+        }
+
+        private static void RequireFraction(float value, string what)
+        {
+            if (!(value >= 0f && value <= 1f))
+            {
+                throw new System.InvalidOperationException(what + " must be within 0 to 1");
+            }
         }
 
         internal void Read(MessageReader reader, MatchFields fields)
@@ -185,6 +270,29 @@ namespace Shooter.Protocol
                 HasBomb = reader.ReadBool();
                 Bomb = (BombState)reader.ReadByteBelow(EnumRange<BombState>.Count, "bomb state");
                 ObjectiveRemainingSeconds = reader.ReadInt32AtLeast(0, "objective remaining seconds");
+            }
+
+            if ((fields & MatchFields.RoundResult) != 0)
+            {
+                RoundNumber = reader.ReadInt32AtLeast(0, "round number");
+                RoundsToWin = reader.ReadInt32AtLeast(0, "rounds to win");
+                HasLastRound = reader.ReadBool();
+                LastRoundEnd = (RoundEndReason)reader.ReadByteBelow(EnumRange<RoundEndReason>.Count, "last round end");
+                HasLastRoundWinner = reader.ReadBool();
+                LastRoundWinner = (Team)reader.ReadByteBelow(EnumRange<Team>.Count, "last round winner");
+                if (HasLastRoundWinner && !HasLastRound)
+                {
+                    throw new MessageReadException("a last round winner needs a last round result");
+                }
+            }
+
+            if ((fields & MatchFields.ObjectiveProgress) != 0)
+            {
+                PlantFraction = reader.ReadFiniteSingleBetween(0f, 1f, "plant fraction");
+                var defuser = reader.ReadInt32AtLeast(PlayerIds.None, "defuser");
+                HasDefuser = defuser != PlayerIds.None;
+                DefuserId = HasDefuser ? defuser : 0;
+                DefuseFraction = reader.ReadFiniteSingleBetween(0f, 1f, "defuse fraction");
             }
         }
 
@@ -230,6 +338,24 @@ namespace Shooter.Protocol
                 HasBomb = baseline.HasBomb;
                 Bomb = baseline.Bomb;
                 ObjectiveRemainingSeconds = baseline.ObjectiveRemainingSeconds;
+            }
+
+            if ((missing & MatchFields.RoundResult) != 0)
+            {
+                RoundNumber = baseline.RoundNumber;
+                RoundsToWin = baseline.RoundsToWin;
+                HasLastRound = baseline.HasLastRound;
+                LastRoundEnd = baseline.LastRoundEnd;
+                HasLastRoundWinner = baseline.HasLastRoundWinner;
+                LastRoundWinner = baseline.LastRoundWinner;
+            }
+
+            if ((missing & MatchFields.ObjectiveProgress) != 0)
+            {
+                PlantFraction = baseline.PlantFraction;
+                HasDefuser = baseline.HasDefuser;
+                DefuserId = baseline.DefuserId;
+                DefuseFraction = baseline.DefuseFraction;
             }
         }
     }

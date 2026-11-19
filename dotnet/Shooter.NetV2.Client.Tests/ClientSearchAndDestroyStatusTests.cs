@@ -11,15 +11,12 @@ namespace Shooter.NetV2.Tests
         private const int _self = 1;
         private const int _enemy = 2;
 
-        private static readonly SearchAndDestroySpec _spec = new SearchAndDestroySpec(
-            siteCount: 2, roundSeconds: 90f, plantSeconds: 2f, defuseSeconds: 4f, fuseSeconds: 20f, winsToWin: 3, preparationSeconds: 5f);
-
         private ClientSearchAndDestroyStatus _status;
 
         [SetUp]
         public void SetUp()
         {
-            _status = new ClientSearchAndDestroyStatus(_self, _spec);
+            _status = new ClientSearchAndDestroyStatus(_self);
         }
 
         [Test]
@@ -35,7 +32,8 @@ namespace Shooter.NetV2.Tests
         [Test]
         public void ThePreparationIsShownInTheSameShapeAsOffline()
         {
-            Assert.That(_status.Apply(Snapshot(RoundPhase.Preparing, BombState.Carried, remaining: 4, attacker: Team.Bravo, carrier: _enemy)), Is.True);
+            var snapshot = Snapshot(RoundPhase.Preparing, BombState.Carried, remaining: 4, attacker: Team.Bravo, carrier: _enemy, round: 1, toWin: 3);
+            Assert.That(_status.Apply(snapshot), Is.True);
 
             var status = _status.Status;
             Assert.That(status.RemainingSeconds, Is.EqualTo(4f));
@@ -50,7 +48,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(game.Phase, Is.EqualTo(RoundPhase.Preparing));
             Assert.That(game.PreparationRemaining, Is.EqualTo(4f));
             Assert.That(game.RoundNumber, Is.EqualTo(1));
-            Assert.That(game.WinsToWin, Is.EqualTo(3), "the snapshot has no wins to win, so the configured value is used");
+            Assert.That(game.WinsToWin, Is.EqualTo(3), "the server's wins to win is shown");
             Assert.That(game.Attacker, Is.EqualTo(Side.Bravo), "the bomb belongs to the attackers");
             Assert.That(game.Defender, Is.EqualTo(Side.Alpha));
             Assert.That(game.Bomb, Is.EqualTo(BombState.Carried));
@@ -61,8 +59,10 @@ namespace Shooter.NetV2.Tests
             Assert.That(game.IsAttacker(_enemy), Is.True);
             Assert.Throws<ArgumentOutOfRangeException>(() => game.IsAttacker(9));
             Assert.That(game.DefuserId, Is.Null);
-            Assert.That(game.LastRoundEnd, Is.Null, "the snapshot does not say how a round ended");
-            Assert.That(game.FuseRemaining, Is.EqualTo(20f));
+            Assert.That(game.DefuseFraction, Is.Zero);
+            Assert.That(game.LastRoundEnd, Is.Null);
+            Assert.That(game.LastRoundWinner, Is.Null);
+            Assert.That(game.FuseRemaining, Is.Zero, "the fuse is not shown before the plant");
         }
 
         [Test]
@@ -80,30 +80,36 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
-        public void ThePlantProgressIsCountedLocallyWhileTheSiteStaysTheSame()
+        public void TheRoundNumberAndWinsToWinComeFromTheServer()
         {
-            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 80, activePoint: 1));
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, alpha: 1, bravo: 0, round: 4, toWin: 6));
+
+            Assert.That(Game().RoundNumber, Is.EqualTo(4), "drawn rounds count, which the wins alone cannot tell");
+            Assert.That(Game().WinsToWin, Is.EqualTo(6));
+
+            Assert.That(_status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, alpha: 1, bravo: 0, round: 5, toWin: 6)), Is.True);
+            Assert.That(Game().RoundNumber, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void ThePlantProgressComesFromTheServer()
+        {
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 80, activePoint: 1, plant: 0.25f));
             Assert.That(Game().PlantingSite, Is.EqualTo(1));
             Assert.That(Game().PlantedSite, Is.Null);
-            Assert.That(Game().PlantFraction, Is.Zero);
+            Assert.That(Game().PlantFraction, Is.EqualTo(0.25f));
 
-            Assert.That(_status.Tick(0.5f), Is.True);
-            Assert.That(Game().PlantFraction, Is.EqualTo(0.25f).Within(1e-5f));
-            Assert.That(_status.Tick(0f), Is.False);
+            var shown = _status.Status;
+            Assert.That(_status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 80, activePoint: 1, plant: 0.255f)), Is.False,
+                "the same shown percent keeps the status");
+            Assert.That(_status.Status, Is.SameAs(shown));
 
-            Assert.That(_status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 79, activePoint: 1)), Is.True);
-            Assert.That(Game().PlantFraction, Is.EqualTo(0.25f).Within(1e-5f), "a new snapshot keeps the progress");
+            Assert.That(_status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 80, activePoint: 1, plant: 0.5f)), Is.True);
+            Assert.That(Game().PlantFraction, Is.EqualTo(0.5f));
 
-            _status.Tick(5f);
-            Assert.That(Game().PlantFraction, Is.EqualTo(1f), "the progress stops at full");
-
-            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 79, activePoint: 0));
-            Assert.That(Game().PlantingSite, Is.EqualTo(0));
-            Assert.That(Game().PlantFraction, Is.Zero, "another site starts over");
-
-            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 79));
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 80, plant: 0.5f));
             Assert.That(Game().PlantingSite, Is.Null);
-            Assert.That(_status.Tick(1f), Is.False, "nothing counts while nobody plants");
+            Assert.That(Game().PlantFraction, Is.Zero, "nobody plants without a site");
         }
 
         [Test]
@@ -118,6 +124,34 @@ namespace Shooter.NetV2.Tests
             Assert.That(game.FuseRemaining, Is.EqualTo(12f));
             Assert.That(game.RoundRemaining, Is.Zero);
             Assert.That(game.CarrierId, Is.Null);
+            Assert.That(game.DefuserId, Is.Null);
+        }
+
+        [Test]
+        public void TheDefuserAndTheDefuseProgressAreShownWhilePlanted()
+        {
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Planted, remaining: 12, activePoint: 0, fuse: 12, carrier: null, defuser: _self, defuse: 0.4f));
+
+            Assert.That(Game().DefuserId, Is.EqualTo(_self));
+            Assert.That(Game().DefuseFraction, Is.EqualTo(0.4f));
+
+            Assert.That(
+                _status.Apply(Snapshot(RoundPhase.Live, BombState.Planted, remaining: 12, activePoint: 0, fuse: 12, carrier: null, defuser: _self, defuse: 0.5f)),
+                Is.True);
+            Assert.That(Game().DefuseFraction, Is.EqualTo(0.5f));
+
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Planted, remaining: 12, activePoint: 0, fuse: 12, carrier: null));
+            Assert.That(Game().DefuserId, Is.Null, "stopping the defuse clears the defuser");
+            Assert.That(Game().DefuseFraction, Is.Zero);
+        }
+
+        [Test]
+        public void ADefuserIsNotShownOnceTheBombIsDefused()
+        {
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Defused, activePoint: 0, carrier: null, defuser: _self, defuse: 1f));
+
+            Assert.That(Game().DefuserId, Is.Null);
+            Assert.That(Game().DefuseFraction, Is.Zero);
         }
 
         [Test]
@@ -132,13 +166,51 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheLastRoundResultComesFromTheServer()
+        {
+            _status.Apply(Snapshot(
+                RoundPhase.Preparing, BombState.Carried, alpha: 1, round: 2, lastEnd: RoundEndReason.Defused, lastWinner: Team.Bravo));
+
+            Assert.That(Game().LastRoundEnd, Is.EqualTo((RoundEndReason?)RoundEndReason.Defused));
+            Assert.That(Game().LastRoundWinner, Is.EqualTo((Side?)Side.Bravo), "the winner is the server's, not guessed from the wins");
+        }
+
+        [Test]
+        public void ADrawnLastRoundHasAResultWithoutAWinner()
+        {
+            _status.Apply(Snapshot(RoundPhase.Preparing, BombState.Carried, round: 2, lastEnd: RoundEndReason.TimeUp));
+
+            Assert.That(Game().LastRoundEnd, Is.EqualTo((RoundEndReason?)RoundEndReason.TimeUp));
+            Assert.That(Game().LastRoundWinner, Is.Null);
+        }
+
+        [Test]
+        public void ANewLastRoundResultReplacesTheStatus()
+        {
+            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, round: 1));
+            var before = _status.Status;
+
+            Assert.That(_status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, round: 1, lastEnd: RoundEndReason.Detonated, lastWinner: Team.Alpha)), Is.True);
+
+            Assert.That(_status.Status, Is.Not.SameAs(before));
+            Assert.That(Game().LastRoundEnd, Is.EqualTo((RoundEndReason?)RoundEndReason.Detonated));
+        }
+
+        [Test]
         public void TheEndedMatchShowsTheWinnerAndTheRoundsPlayed()
         {
-            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, remaining: 30, alpha: 1, bravo: 2));
-            Assert.That(Game().RoundNumber, Is.EqualTo(4));
-
             _status.Apply(Snapshot(
-                RoundPhase.Ended, BombState.Defused, activePoint: 1, alpha: 1, bravo: 3, state: GameModeState.Ended, winner: Team.Bravo, carrier: null));
+                RoundPhase.Ended,
+                BombState.Defused,
+                activePoint: 1,
+                alpha: 1,
+                bravo: 3,
+                state: GameModeState.Ended,
+                winner: Team.Bravo,
+                carrier: null,
+                round: 5,
+                lastEnd: RoundEndReason.Defused,
+                lastWinner: Team.Bravo));
 
             var status = _status.Status;
             Assert.That(status.IsEnded, Is.True);
@@ -146,31 +218,19 @@ namespace Shooter.NetV2.Tests
             var game = Game();
             Assert.That(game.Phase, Is.EqualTo(RoundPhase.Ended));
             Assert.That(game.Winner, Is.EqualTo((Side?)Side.Bravo));
-            Assert.That(game.RoundNumber, Is.EqualTo(4));
+            Assert.That(game.RoundNumber, Is.EqualTo(5));
             Assert.That(game.GetRoundWins(Side.Alpha), Is.EqualTo(1));
             Assert.That(game.GetRoundWins(Side.Bravo), Is.EqualTo(3));
+            Assert.That(game.LastRoundEnd, Is.EqualTo((RoundEndReason?)RoundEndReason.Defused));
             Assert.That(game.LastRoundWinner, Is.EqualTo((Side?)Side.Bravo));
             Assert.Throws<ArgumentOutOfRangeException>(() => game.GetRoundWins(new Side(5)));
-        }
-
-        [Test]
-        public void TheNextMatchForgetsTheLastRoundWinner()
-        {
-            _status.Apply(Snapshot(RoundPhase.Live, BombState.Carried, alpha: 0, bravo: 0));
-            _status.Apply(Snapshot(RoundPhase.Preparing, BombState.Carried, alpha: 1, bravo: 0));
-            Assert.That(Game().LastRoundWinner, Is.EqualTo((Side?)Side.Alpha));
-
-            _status.Apply(Snapshot(RoundPhase.Preparing, BombState.Carried, alpha: 0, bravo: 0));
-
-            Assert.That(Game().LastRoundWinner, Is.Null);
-            Assert.That(Game().RoundNumber, Is.EqualTo(1));
         }
 
         [Test]
         public void ASpectatorWithoutARowHasNoOwnSide()
         {
             var snapshot = Snapshot(RoundPhase.Live, BombState.Carried);
-            var status = new ClientSearchAndDestroyStatus(7, _spec);
+            var status = new ClientSearchAndDestroyStatus(7);
 
             status.Apply(snapshot);
 
@@ -193,7 +253,7 @@ namespace Shooter.NetV2.Tests
         [Test]
         public void BeforeTheFirstRoundTheAttackersAreTheFirstSide()
         {
-            var snapshot = Snapshot(RoundPhase.Waiting, BombState.Carried);
+            var snapshot = Snapshot(RoundPhase.Waiting, BombState.Carried, round: 0);
             snapshot.Match.HasBomb = false;
             snapshot.ObjectiveItems.Clear();
 
@@ -205,9 +265,8 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
-        public void TheStatusNeedsASpecAndASnapshot()
+        public void TheStatusNeedsASnapshot()
         {
-            Assert.Throws<ArgumentNullException>(() => new ClientSearchAndDestroyStatus(_self, null));
             Assert.Throws<ArgumentNullException>(() => _status.Apply(null));
         }
 
@@ -227,7 +286,14 @@ namespace Shooter.NetV2.Tests
             int alpha = 0,
             int bravo = 0,
             GameModeState state = GameModeState.Playing,
-            Team? winner = null)
+            Team? winner = null,
+            int round = 1,
+            int toWin = 4,
+            RoundEndReason? lastEnd = null,
+            Team? lastWinner = null,
+            float plant = 0f,
+            int? defuser = null,
+            float defuse = 0f)
         {
             var snapshot = new SnapshotMessage();
             ref var match = ref snapshot.Match;
@@ -245,6 +311,16 @@ namespace Shooter.NetV2.Tests
             match.HasActivePoint = activePoint.HasValue;
             match.ActivePointIndex = activePoint ?? 0;
             match.ObjectiveRemainingSeconds = fuse;
+            match.RoundNumber = round;
+            match.RoundsToWin = toWin;
+            match.HasLastRound = lastEnd.HasValue;
+            match.LastRoundEnd = lastEnd ?? default;
+            match.HasLastRoundWinner = lastWinner.HasValue;
+            match.LastRoundWinner = lastWinner ?? Team.Alpha;
+            match.PlantFraction = plant;
+            match.HasDefuser = defuser.HasValue;
+            match.DefuserId = defuser ?? 0;
+            match.DefuseFraction = defuse;
 
             ref var self = ref snapshot.Players.Add();
             self.PlayerId = _self;

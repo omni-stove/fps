@@ -111,7 +111,7 @@ namespace Shooter.NetV2
             netHud._findWeapon = findWeapon;
             netHud._roster = new Roster(netHud);
             netHud._captureTheFlag = new ClientCaptureTheFlagStatus(localPlayerId);
-            netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId, ConfiguredSearchAndDestroy());
+            netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId);
             netHud._hardpoint = new ClientHardpointStatus(localPlayerId);
             netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
             netHud._gunGame = ConfiguredGunGame();
@@ -275,13 +275,6 @@ namespace Shooter.NetV2
             }
         }
 
-        // 勝ちに要るラウンド数・設置の秒数はスナップショットに無いので、手元の入口 (GameContent) の値で出す
-        private static SearchAndDestroySpec ConfiguredSearchAndDestroy()
-        {
-            var definition = GameContent.Pick(c => c.SearchAndDestroy);
-            return definition != null ? definition.ToSpec(SearchAndDestroySpec.Default.SiteCount) : SearchAndDestroySpec.Default;
-        }
-
         // 武器の表示名の鍵は梯子の定義にしか無いので、サーバーの段の並びではなく手元の入口 (GameContent) の梯子で作る。無ければ Gun Game の状態は出さない
         private static ClientGunGameStatus ConfiguredGunGame()
         {
@@ -318,11 +311,6 @@ namespace Shooter.NetV2
 
         private void Update()
         {
-            if (_searchAndDestroy != null && _searchAndDestroy.Tick(Time.unscaledDeltaTime))
-            {
-                PublishModeStatus(_searchAndDestroy.Status);
-            }
-
             var changed = false;
             if (_idleRemaining.HasValue)
             {

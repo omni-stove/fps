@@ -129,7 +129,7 @@ namespace Shooter.Server
             var hit = last.HitTarget
                 ? ShotHit.Target(last.Point, last.Normal, flight.Distance, last.TargetId, last.TargetPosition, last.TargetCrouched, last.Zone)
                 : last.HitVehicle
-                    ? ShotHit.Vehicle(last.Point, last.Normal, flight.Distance, last.VehicleIndex, last.DamageMultiplier)
+                    ? ShotHit.Vehicle(last.Point, last.Normal, flight.Distance, last.VehicleIndex, last.DamageMultiplier, last.VehiclePartId)
                     : ShotHit.World(new WorldHit(last.Point, last.Normal, flight.Distance, last.ColliderId, last.Layer));
             SendEnded(flying, hit.HitTarget ? ProjectileEndReason.HitCharacter : ProjectileEndReason.HitWorld);
             Log(flying, hit);

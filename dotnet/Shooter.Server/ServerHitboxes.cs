@@ -248,12 +248,13 @@ namespace Shooter.Server
         private bool NearerVehicle(Vector3 origin, Vector3 unit, float limit, float tick, int shooterId, ref ShotHit hit)
         {
             if (_vehicles == null
-                || !_vehicles.Raycast(origin, unit, limit, tick, shooterId, out var vehicle, out var distance, out var normal, out var multiplier))
+                || !_vehicles.Raycast(
+                    origin, unit, limit, tick, shooterId, out var vehicle, out var distance, out var normal, out var multiplier, out var partId))
             {
                 return false;
             }
 
-            hit = ShotHit.Vehicle(origin + (unit * distance), normal, distance, vehicle, multiplier);
+            hit = ShotHit.Vehicle(origin + (unit * distance), normal, distance, vehicle, multiplier, partId);
             return true;
         }
 
@@ -405,10 +406,11 @@ namespace Shooter.Server
     {
         private ShotHit(
             Vector3 point, Vector3 normal, float distance, bool hitTarget, int targetId, Vector3 targetPosition, bool targetCrouched,
-            HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f)
+            HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f, string vehiclePartId = null)
         {
             VehicleIndex = vehicle;
             DamageMultiplier = damageMultiplier;
+            VehiclePartId = vehiclePartId;
             Point = point;
             Normal = normal;
             Distance = distance;
@@ -450,6 +452,9 @@ namespace Shooter.Server
 
         public float DamageMultiplier { get; }
 
+        // 部位の付いていない車体の箱に当たったときは null。
+        public string VehiclePartId { get; }
+
         public static ShotHit World(WorldHit hit)
         {
             return new ShotHit(hit.Point, hit.Normal, hit.Distance, false, 0, default, false, HitZone.Body, hit.ColliderId, hit.Layer, 0f);
@@ -461,16 +466,16 @@ namespace Shooter.Server
             return new ShotHit(point, normal, distance, true, targetId, targetPosition, crouched, zone, -1, 0, 0f);
         }
 
-        public static ShotHit Vehicle(Vector3 point, Vector3 normal, float distance, int vehicle, float damageMultiplier)
+        public static ShotHit Vehicle(Vector3 point, Vector3 normal, float distance, int vehicle, float damageMultiplier, string partId = null)
         {
-            return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, vehicle, damageMultiplier);
+            return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, vehicle, damageMultiplier, partId);
         }
 
         public ShotHit WithRewind(float rewindTicks)
         {
             return new ShotHit(
                 Point, Normal, Distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, rewindTicks, VehicleIndex,
-                DamageMultiplier);
+                DamageMultiplier, VehiclePartId);
         }
     }
 }

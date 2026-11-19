@@ -155,6 +155,145 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void TheSnapshotCarriesTheDamageEachPartTook()
+        {
+            var sent = new SnapshotMessage { Tick = 10 };
+            ref var vehicle = ref sent.Vehicles.Add();
+            vehicle.Rotation = Quaternion.Identity;
+            vehicle.Health = 700;
+            vehicle.Parts = Parts(("wing_left", 300), ("engine", 40));
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Vehicles[0].Present, Is.EqualTo(VehicleFields.All));
+            var parts = got.Vehicles[0].Parts;
+            Assert.That(parts.Count, Is.EqualTo(2));
+            Assert.That(parts.PartIdAt(0), Is.EqualTo("wing_left"));
+            Assert.That(parts.TakenAt(0), Is.EqualTo(300));
+            Assert.That(parts.TakenOf("engine"), Is.EqualTo(40));
+            Assert.That(parts.TakenOf("tail"), Is.Zero, "a part nobody shot is not listed");
+        }
+
+        [Test]
+        public void AVehicleWithoutDamagedPartsSendsNoPartsEvenWithoutABaseline()
+        {
+            var sent = new SnapshotMessage { Tick = 10 };
+            ref var vehicle = ref sent.Vehicles.Add();
+            vehicle.Rotation = Quaternion.Identity;
+            vehicle.Health = 1000;
+            var withParts = new SnapshotMessage { Tick = 10 };
+            ref var shot = ref withParts.Vehicles.Add();
+            shot.Rotation = Quaternion.Identity;
+            shot.Health = 1000;
+            shot.Parts = Parts(("engine", 1));
+
+            var plain = Bytes(sent);
+            var got = Send(sent, null);
+
+            Assert.That(Bytes(withParts) - plain, Is.EqualTo(1 + 2 + "engine".Length + 4), "a count, the id and the damage");
+            Assert.That(got.Vehicles[0].Present, Is.EqualTo(VehicleFields.All), "the missing parts are filled as none");
+            Assert.That(got.Vehicles[0].Parts.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ANewlyShotPartSendsOnlyTheParts()
+        {
+            var baseline = new SnapshotMessage { Tick = 10 };
+            ref var before = ref baseline.Vehicles.Add();
+            before.Health = 1000;
+            before.Rotation = Quaternion.Identity;
+            before.Parts = Parts(("wing_left", 100));
+            var current = new SnapshotMessage { Tick = 11 };
+            ref var after = ref current.Vehicles.Add();
+            after.Health = 1000;
+            after.Rotation = Quaternion.Identity;
+            after.Parts = Parts(("wing_left", 250));
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Vehicles[0].Present, Is.EqualTo(VehicleFields.Parts));
+            Assert.That(got.TryResolve(received), Is.True);
+            Assert.That(got.Vehicles[0].Parts.TakenOf("wing_left"), Is.EqualTo(250));
+            Assert.That(got.Vehicles[0].Health, Is.EqualTo(1000));
+        }
+
+        [Test]
+        public void UnchangedPartsAreTakenFromTheBaseline()
+        {
+            var baseline = new SnapshotMessage { Tick = 10 };
+            ref var before = ref baseline.Vehicles.Add();
+            before.Rotation = Quaternion.Identity;
+            before.Parts = Parts(("tail", 60));
+            var current = new SnapshotMessage { Tick = 11 };
+            current.Vehicles.Add() = baseline.Vehicles[0];
+            current.Vehicles[0].Position = Vector3.UnitZ;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Vehicles[0].Present, Is.EqualTo(VehicleFields.Transform));
+            Assert.That(got.TryResolve(received), Is.True);
+            Assert.That(got.Vehicles[0].Parts.TakenOf("tail"), Is.EqualTo(60));
+        }
+
+        [Test]
+        public void APartListedTwiceIsRefused()
+        {
+            // 書き手は同じ部位を 2 度並べられないので、正しく書いた後で 2 つ目の Id を 1 つ目と同じ文字に書き換える
+            var sent = new SnapshotMessage { Tick = 1 };
+            ref var vehicle = ref sent.Vehicles.Add();
+            vehicle.Rotation = Quaternion.Identity;
+            vehicle.Parts = Parts(("aaaa", 1), ("bbbb", 2));
+            var writer = new MessageWriter();
+            writer.WriteMessage(sent);
+            var segment = writer.AsSegment();
+            var bytes = new byte[segment.Count];
+            System.Array.Copy(segment.Array, segment.Offset, bytes, 0, segment.Count);
+            var at = IndexOf(bytes, System.Text.Encoding.ASCII.GetBytes("bbbb"));
+            Assert.That(at, Is.GreaterThan(0));
+            System.Text.Encoding.ASCII.GetBytes("aaaa").CopyTo(bytes, at);
+
+            Assert.That(
+                () => MatchMessages.CreateClientTable().Read(new System.ArraySegment<byte>(bytes)),
+                Throws.InstanceOf<MessageReadException>().With.Message.Contains("listed twice"));
+        }
+
+        [Test]
+        public void AddingDamageMakesANewListAndLeavesTheOldOneAlone()
+        {
+            var first = Parts(("wing_left", 100));
+
+            Assert.That(first.TryAdd("wing_left", 50, out var second), Is.True);
+            Assert.That(second.TryAdd("engine", 20, out var third), Is.True);
+
+            Assert.That(first.TakenOf("wing_left"), Is.EqualTo(100));
+            Assert.That(second.TakenOf("wing_left"), Is.EqualTo(150));
+            Assert.That(third.Count, Is.EqualTo(2));
+            Assert.That(first.SameAs(Parts(("wing_left", 100))), Is.True);
+            Assert.That(first.SameAs(second), Is.False);
+            Assert.That(VehiclePartDamageSync.None.Count, Is.Zero);
+            Assert.That(() => first.TryAdd("", 1, out _), Throws.ArgumentException);
+            Assert.That(() => first.TryAdd("tail", -1, out _), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void AFullListTakesNoNewPartButKeepsAddingToItsOwn()
+        {
+            var parts = VehiclePartDamageSync.None;
+            for (var i = 0; i < VehiclePartDamageSync.MaxParts; i++)
+            {
+                Assert.That(parts.TryAdd("part" + i, 1, out parts), Is.True);
+            }
+
+            Assert.That(parts.IsFull, Is.True);
+            Assert.That(parts.TryAdd("one_too_many", 5, out var unchanged), Is.False);
+            Assert.That(unchanged, Is.SameAs(parts));
+            Assert.That(parts.TryAdd("part0", 5, out var added), Is.True);
+            Assert.That(added.TakenOf("part0"), Is.EqualTo(6));
+        }
+
+        [Test]
         public void ANegativeVehicleHealthIsNotWritten()
         {
             var sent = new SnapshotMessage { Tick = 1 };
@@ -173,6 +312,43 @@ namespace Shooter.Protocol.Tests
             var read = table.Read(writer.AsSegment());
             Assert.That(read, Is.InstanceOf<T>());
             return (T)read;
+        }
+
+        private static VehiclePartDamageSync Parts(params (string Id, int Taken)[] parts)
+        {
+            var sync = VehiclePartDamageSync.None;
+            foreach (var (id, taken) in parts)
+            {
+                Assert.That(sync.TryAdd(id, taken, out sync), Is.True);
+            }
+
+            return sync;
+        }
+
+        private static int IndexOf(byte[] bytes, byte[] pattern)
+        {
+            for (var i = 0; i + pattern.Length <= bytes.Length; i++)
+            {
+                var found = true;
+                for (var j = 0; j < pattern.Length && found; j++)
+                {
+                    found = bytes[i + j] == pattern[j];
+                }
+
+                if (found)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int Bytes(SnapshotMessage message)
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(message);
+            return writer.AsSegment().Count;
         }
 
         private static SnapshotMessage Send(SnapshotMessage message, SnapshotMessage baseline)

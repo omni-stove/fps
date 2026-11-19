@@ -22,6 +22,9 @@ namespace Shooter.NetV2
         // 途中から入った人に残骸を見せるため、初めて見た乗り物でもその時の段階で 1 度呼ぶ。
         public event Action<int, VehicleDamageStage> StageChanged;
 
+        // StageChanged と同じく初めて見た乗り物でも 1 度呼ぶのは、前の接続で残った壊れ具合を届いた状態で書き直させるため。
+        public event Action<int, VehiclePartDamageSync> PartsChanged;
+
         public event Action<VehicleSeatSync> LocalSeatChanged;
 
         public event Action<int, Vector3, Quaternion, Vector3> Corrected;
@@ -63,6 +66,13 @@ namespace Shooter.NetV2
                 {
                     track.Stage = row.Stage;
                     StageChanged?.Invoke(row.Index, row.Stage);
+                }
+
+                var parts = row.Parts;
+                if (isNew || !parts.SameAs(track.Parts))
+                {
+                    track.Parts = parts;
+                    PartsChanged?.Invoke(row.Index, parts);
                 }
             }
 
@@ -112,6 +122,18 @@ namespace Shooter.NetV2
 
             health = 0;
             stage = VehicleDamageStage.Intact;
+            return false;
+        }
+
+        public bool TryGetParts(int vehicle, out VehiclePartDamageSync parts)
+        {
+            if (_tracks.TryGetValue(vehicle, out var track))
+            {
+                parts = track.Parts;
+                return true;
+            }
+
+            parts = VehiclePartDamageSync.None;
             return false;
         }
 
@@ -172,6 +194,8 @@ namespace Shooter.NetV2
             public int Health { get; set; }
 
             public VehicleDamageStage Stage { get; set; }
+
+            public VehiclePartDamageSync Parts { get; set; } = VehiclePartDamageSync.None;
         }
     }
 }

@@ -9,8 +9,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.NetV2
 {
-    // 乗り降り・耐久・爆発はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage) は止め、
-    // 煙・火・残骸の見た目 (VehicleDamageEffects) にだけサーバーの段階を渡す。
+    // 乗り降り・耐久・爆発・部位への命中はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage・AircraftPartDamage の命中の受け口) は止め、
+    // 煙・火・残骸の見た目 (VehicleDamageEffects) にサーバーの段階を、飛行機の部位 (AircraftPartDamage) にサーバーの受けた量を渡す。
     // 乗り物の番号は書き出し (MapVehicleExporter) と同じく、有効な乗り物をシーンの並び順で数える。
     internal sealed class NetV2Vehicles
     {
@@ -51,6 +51,7 @@ namespace Shooter.NetV2
             }
 
             _vehicles.StageChanged += HandleStageChanged;
+            _vehicles.PartsChanged += HandlePartsChanged;
             _vehicles.LocalSeatChanged += HandleSeatChanged;
             _vehicles.Corrected += HandleCorrected;
             Debug.Log(NetV2Client.LogTag + " vehicles in scene " + scene.name + ": " + _scene.Count.ToString(CultureInfo.InvariantCulture), _context);
@@ -59,6 +60,11 @@ namespace Shooter.NetV2
                 if (_vehicles.TryGetState(index, out _, out var stage))
                 {
                     HandleStageChanged(index, stage);
+                }
+
+                if (_vehicles.TryGetParts(index, out var parts))
+                {
+                    HandlePartsChanged(index, parts);
                 }
             }
 
@@ -70,6 +76,7 @@ namespace Shooter.NetV2
             if (_vehicles != null)
             {
                 _vehicles.StageChanged -= HandleStageChanged;
+                _vehicles.PartsChanged -= HandlePartsChanged;
                 _vehicles.LocalSeatChanged -= HandleSeatChanged;
                 _vehicles.Corrected -= HandleCorrected;
             }
@@ -213,11 +220,17 @@ namespace Shooter.NetV2
                 impact.enabled = false;
             }
 
+            var parts = vehicle.GetComponentInChildren<AircraftPartDamage>(true);
+            if (parts != null)
+            {
+                parts.Detach();
+            }
+
             var motor = vehicle.GetComponent<IVehicleMotor>();
             var effects = vehicle.GetComponentInChildren<VehicleDamageEffects>(true);
             var mounts = vehicle.WeaponMounts;
             vehicle.enabled = false;
-            return new SceneVehicle(vehicle, body, motor, effects, mounts);
+            return new SceneVehicle(vehicle, body, motor, effects, parts, mounts);
         }
 
         private bool TryFindNearest(Vector3 feet, out int nearest)
@@ -278,6 +291,27 @@ namespace Shooter.NetV2
             if (index < _scene.Count && _scene[index].Effects != null)
             {
                 _scene[index].Effects.Show(stage);
+            }
+        }
+
+        // 届いた中に無い部位は撃たれていないので、耐久のまま (修理された) に戻す。
+        private void HandlePartsChanged(int index, VehiclePartDamageSync parts)
+        {
+            if (index >= _scene.Count || _scene[index].Parts == null || _scene[index].Vehicle == null)
+            {
+                return;
+            }
+
+            var damage = _scene[index].Parts.Damage;
+            var before = damage.Condition;
+            foreach (var part in damage.Spec.Parts)
+            {
+                damage.SetRemaining(part.Id, Math.Max(0, part.Durability - parts.TakenOf(part.Id)));
+            }
+
+            if (damage.Condition != before)
+            {
+                Debug.Log(VehicleLog.NetCondition(_scene[index].Vehicle.name, damage.Condition), _context);
             }
         }
 
@@ -358,12 +392,15 @@ namespace Shooter.NetV2
 
         private sealed class SceneVehicle
         {
-            public SceneVehicle(Vehicle vehicle, Rigidbody body, IVehicleMotor motor, VehicleDamageEffects effects, IReadOnlyList<VehicleWeaponMount> mounts)
+            public SceneVehicle(
+                Vehicle vehicle, Rigidbody body, IVehicleMotor motor, VehicleDamageEffects effects, AircraftPartDamage parts,
+                IReadOnlyList<VehicleWeaponMount> mounts)
             {
                 Vehicle = vehicle;
                 Body = body;
                 Motor = motor;
                 Effects = effects;
+                Parts = parts;
                 Mounts = mounts ?? Array.Empty<VehicleWeaponMount>();
             }
 
@@ -374,6 +411,8 @@ namespace Shooter.NetV2
             public IVehicleMotor Motor { get; }
 
             public VehicleDamageEffects Effects { get; }
+
+            public AircraftPartDamage Parts { get; }
 
             public IReadOnlyList<VehicleWeaponMount> Mounts { get; }
         }

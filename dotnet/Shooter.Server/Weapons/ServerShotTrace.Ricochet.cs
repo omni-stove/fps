@@ -63,7 +63,7 @@ namespace Shooter.Server
             var moved = hit.HitTarget
                 ? ShotHit.Target(hit.Point, hit.Normal, distance, hit.TargetId, hit.TargetPosition, hit.TargetCrouched, hit.Zone)
                 : hit.HitVehicle
-                    ? ShotHit.Vehicle(hit.Point, hit.Normal, distance, hit.VehicleIndex, hit.DamageMultiplier)
+                    ? ShotHit.Vehicle(hit.Point, hit.Normal, distance, hit.VehicleIndex, hit.DamageMultiplier, hit.VehiclePartId)
                     : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
             return moved.WithRewind(hit.RewindTicks);
         }

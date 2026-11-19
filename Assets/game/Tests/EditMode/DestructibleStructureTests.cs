@@ -376,6 +376,59 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void DebrisBelowTheKillPlaneDisappearsBeforeItsLifetime()
+        {
+            _pool.KillPlaneY = -10f;
+            var falling = Spawn();
+            var resting = Spawn();
+
+            falling.transform.position = new Vector3(_origin.x, -10.5f, _origin.z);
+            LogAssert.Expect(LogType.Log, DebrisPool.FormatOutOfBoundsLog(1, 0));
+
+            Assert.That(_pool.Tick(0f), Is.EqualTo(1));
+            Assert.That(falling == null, Is.True);
+            Assert.That(resting != null, Is.True);
+            Assert.That(_pool.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DebrisThatTravelsTooFarFromWhereItSpawnedDisappears()
+        {
+            _pool.MaxTravel = 20f;
+            var near = Spawn();
+            var far = Spawn();
+            var start = far.transform.position;
+
+            near.transform.position = start + new Vector3(19f, 0f, 0f);
+            far.transform.position = start + new Vector3(0f, 0f, 21f);
+            LogAssert.Expect(LogType.Log, DebrisPool.FormatOutOfBoundsLog(0, 1));
+
+            Assert.That(_pool.Tick(0f), Is.EqualTo(1));
+            Assert.That(far == null, Is.True);
+            Assert.That(near != null, Is.True);
+        }
+
+        [Test]
+        public void ZeroMaxTravelKeepsDebrisAtAnyDistance()
+        {
+            _pool.MaxTravel = 0f;
+            var debris = Spawn();
+
+            debris.transform.position += new Vector3(10000f, 0f, 0f);
+
+            Assert.That(_pool.Tick(0f), Is.Zero);
+            Assert.That(debris != null, Is.True);
+        }
+
+        [Test]
+        public void TheOutOfBoundsDefaultsAndLogAreFixed()
+        {
+            Assert.That(_pool.KillPlaneY, Is.EqualTo(-50f));
+            Assert.That(_pool.MaxTravel, Is.EqualTo(100f));
+            Assert.That(DebrisPool.FormatOutOfBoundsLog(2, 3), Is.EqualTo("[Destruction] debris removed out of bounds fell=2 strayed=3"));
+        }
+
+        [Test]
         public void DebrisRemovedFromOutsideIsNotCounted()
         {
             var debris = Spawn();
@@ -404,6 +457,9 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => _pool.Capacity = -1);
             Assert.Throws<ArgumentOutOfRangeException>(() => _pool.Lifetime = 0f);
             Assert.Throws<ArgumentOutOfRangeException>(() => _pool.Lifetime = float.PositiveInfinity);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _pool.KillPlaneY = float.NaN);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _pool.MaxTravel = -1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _pool.MaxTravel = float.PositiveInfinity);
             Assert.Throws<ArgumentOutOfRangeException>(() => _pool.Tick(-1f));
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => _pool.Spawn(Vector3.zero, Quaternion.identity, Vector3.zero, null, Vector3.zero));

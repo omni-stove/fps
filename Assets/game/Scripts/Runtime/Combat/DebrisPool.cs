@@ -14,6 +14,10 @@ namespace Shooter.Runtime
         public const int DefaultCapacity = 200;
         public const float DefaultLifetime = 4f;
 
+        // Runtime は Protocol を参照しないので、キャラクターの落下の下限 (ConnectAcceptedMessage.DefaultKillPlaneY) と同じ値をここにも持つ。
+        public const float DefaultKillPlaneY = -50f;
+        public const float DefaultMaxTravel = 100f;
+
         // Ignore Raycast は Physics.DefaultRaycastLayers に含まれないので、破片が射撃 (Hitscan) や爆発の範囲 (StructureDamage) に拾われない。
         public const int DebrisLayer = 2;
 
@@ -24,6 +28,12 @@ namespace Shooter.Runtime
 
         [SerializeField, Min(0.01f), Tooltip("破片が消えるまでの秒数")]
         private float _lifetime = DefaultLifetime;
+
+        [SerializeField, Tooltip("破片がこの高さ (m) より下へ落ちたら、寿命を待たずに消す")]
+        private float _killPlaneY = DefaultKillPlaneY;
+
+        [SerializeField, Min(0f), Tooltip("破片が出た位置からこの距離 (m) より遠くへ行ったら、寿命を待たずに消す。0 なら距離では消さない")]
+        private float _maxTravel = DefaultMaxTravel;
 
         [SerializeField, Tooltip("破片の見た目。大きさ 1m の形にする (出すときに破片の大きさへ拡大する)。当たり判定が無ければ箱の当たり判定を足す。空なら仮の箱を作る")]
         private GameObject _debrisPrefab;
@@ -64,6 +74,34 @@ namespace Shooter.Runtime
                 }
 
                 _lifetime = value;
+            }
+        }
+
+        public float KillPlaneY
+        {
+            get => _killPlaneY;
+            set
+            {
+                if (float.IsNaN(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "KillPlaneY must not be NaN");
+                }
+
+                _killPlaneY = value;
+            }
+        }
+
+        public float MaxTravel
+        {
+            get => _maxTravel;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "MaxTravel must be zero or a positive finite number");
+                }
+
+                _maxTravel = value;
             }
         }
 
@@ -184,7 +222,7 @@ namespace Shooter.Runtime
                 throw;
             }
 
-            _entries.Add(new Entry(debris, _clock + _lifetime));
+            _entries.Add(new Entry(debris, _clock + _lifetime, position));
             return debris;
         }
 
@@ -197,6 +235,8 @@ namespace Shooter.Runtime
 
             _clock += deltaSeconds;
             var removed = 0;
+            var fell = 0;
+            var strayed = 0;
             for (var i = _entries.Count - 1; i >= 0; i--)
             {
                 var entry = _entries[i];
@@ -206,15 +246,36 @@ namespace Shooter.Runtime
                     continue;
                 }
 
-                if (entry.ExpiresAt <= _clock)
+                var position = entry.Debris.transform.position;
+                var below = position.y < _killPlaneY;
+                var away = !below && _maxTravel > 0f && (position - entry.Origin).sqrMagnitude > _maxTravel * _maxTravel;
+                if (entry.ExpiresAt <= _clock || below || away)
                 {
                     _entries.RemoveAt(i);
                     DestroySafely(entry.Debris);
                     removed++;
+                    if (below)
+                    {
+                        fell++;
+                    }
+                    else if (away)
+                    {
+                        strayed++;
+                    }
                 }
             }
 
+            if (fell > 0 || strayed > 0)
+            {
+                Debug.Log(FormatOutOfBoundsLog(fell, strayed), this);
+            }
+
             return removed;
+        }
+
+        public static string FormatOutOfBoundsLog(int fell, int strayed)
+        {
+            return $"{DestructibleStructure.LogTag} debris removed out of bounds fell={fell} strayed={strayed}";
         }
 
         public void Clear()
@@ -261,10 +322,13 @@ namespace Shooter.Runtime
 
             public double ExpiresAt { get; }
 
-            public Entry(GameObject debris, double expiresAt)
+            public Vector3 Origin { get; }
+
+            public Entry(GameObject debris, double expiresAt, Vector3 origin)
             {
                 Debris = debris;
                 ExpiresAt = expiresAt;
+                Origin = origin;
             }
         }
     }

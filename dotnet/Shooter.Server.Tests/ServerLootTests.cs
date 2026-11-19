@@ -503,7 +503,7 @@ namespace Shooter.Server.Tests
                 Array.Empty<ControlPointArea>(),
                 lootContainers: containers);
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, null);
-            var data = new ServerRulesData("TeamDeathmatch", MatchFile(),PingSpec.Default, "memory", null, items: Items(), loot: Loot());
+            var data = new ServerRulesData("TeamDeathmatch", MatchFile(), PingSpec.Default, "memory", null, items: Items(), loot: Loot());
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

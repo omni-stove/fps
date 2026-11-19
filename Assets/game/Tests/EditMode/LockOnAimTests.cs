@@ -257,6 +257,24 @@ namespace Shooter.Tests.EditMode
             Assert.That(target.Health.Current, Is.EqualTo(90));
         }
 
+        [Test]
+        public void AnAimThatDoesNotPublishLeavesThePlayersHudAlone()
+        {
+            CreateTarget("target", new Vector3(0f, 1f, 20f));
+            var model = new HudModel();
+            model.SetLockOn(0.5f);
+            GameSignals.HudModel.Publish(model);
+            var aim = Create(Guided(), () => true);
+            aim.PublishesToHud = false;
+
+            LogAssert.Expect(LogType.Log, new System.Text.RegularExpressions.Regex(@"^\[Combat\] lock-on locked target=\d+$"));
+            aim.Tick(2f);
+
+            Assert.That(aim.Stage, Is.EqualTo(LockOnWarningStage.Locked));
+            Assert.That(model.LockOnProgress, Is.EqualTo(0.5f).Within(1e-4f), "the player's own lock-on reading stays as it was");
+            Assert.That(model.IsLockedOn, Is.False);
+        }
+
         private static RoundSpec Guided()
         {
             return new RoundSpec(

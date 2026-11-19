@@ -13,6 +13,29 @@ namespace Shooter.Core.Tests
 
             Assert.That(spec.TurnDegreesPerSecond, Is.EqualTo(120f));
             Assert.That(spec.MinTargetHeight, Is.EqualTo(5f));
+            Assert.That(spec.TargetTag, Is.EqualTo(string.Empty));
+            Assert.That(spec.AcceptsTag("Untagged"), Is.True, "without a tag anyone is taken");
+            Assert.That(spec.AcceptsTag(null), Is.True);
+        }
+
+        [Test]
+        public void ATargetTagTakesOnlyBodiesWithThatExactTag()
+        {
+            var spec = new LockOnTurretSpec(90f, 0f, "Player");
+
+            Assert.That(spec.TargetTag, Is.EqualTo("Player"));
+            Assert.That(spec.AcceptsTag("Player"), Is.True);
+            Assert.That(spec.AcceptsTag("player"), Is.False, "tags compare case by case, as Unity does");
+            Assert.That(spec.AcceptsTag("Untagged"), Is.False);
+            Assert.That(spec.AcceptsTag(null), Is.False);
+            Assert.That(new LockOnTurretSpec(90f, 0f, null).TargetTag, Is.EqualTo(string.Empty));
+        }
+
+        [Test]
+        public void ABlankTargetTagIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => new LockOnTurretSpec(90f, 0f, " "));
+            Assert.DoesNotThrow(() => new LockOnTurretSpec(90f, 0f, string.Empty));
         }
 
         [Test]

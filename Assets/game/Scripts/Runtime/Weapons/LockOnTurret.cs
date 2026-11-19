@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 捕捉の進み方は LockOnAim (LockOnTracker) に任せ、ここは空にいる相手へ頭を向けることだけを持つ。
+    // 捕捉の進み方は LockOnAim (LockOnTracker) に任せ、ここは狙う相手 (既定では空にいる相手) を選んで頭を向けることだけを持つ。
     // 捕捉を LockOnAim に通すのは、狙われた側の警告 (LockOnWarningPublisher) とフレア (VehicleCountermeasures) が、
     // プレイヤーの武器に捉えられたときと同じ道で効くようにするため。
     [DisallowMultipleComponent]
@@ -25,6 +25,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("タレットの原点よりこの高さ (m) 以上にいる相手だけを狙う。地上の人や車を捉えないようにする")]
         private float _minTargetHeight = LockOnTurretSpec.DefaultMinTargetHeight;
+
+        [SerializeField, Tooltip("このタグの体 (またはその親) だけを狙う。空なら誰でも狙う")]
+        private string _targetTag = string.Empty;
 
         private readonly List<LockOnCandidate> _candidates = new List<LockOnCandidate>();
 
@@ -103,6 +106,7 @@ namespace Shooter.Runtime
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _turnDegreesPerSecond = spec.TurnDegreesPerSecond;
             _minTargetHeight = spec.MinTargetHeight;
+            _targetTag = spec.TargetTag;
         }
 
         // Update から呼ぶ。物理の進まない Edit Mode のテストからも 1 コマずつ進められるよう public にする。捕捉は LockOnAim.Tick が進める。
@@ -174,6 +178,26 @@ namespace Shooter.Runtime
 
             var body = _targets.Find(candidateId);
             return body != null && self.IsAllyOf(SideMember.Of(body.gameObject));
+        }
+
+        // CompareTag は使わない。プロジェクトに無いタグを渡すとエラーを出すので、ゲームが消したタグが残っていても狙わないだけで済ませる。
+        private bool HasTargetTag(LockOnTurretSpec spec, int candidateId)
+        {
+            if (spec.TargetTag.Length == 0)
+            {
+                return true;
+            }
+
+            var body = _targets.Find(candidateId);
+            for (var node = body != null ? body.transform : null; node != null; node = node.parent)
+            {
+                if (spec.AcceptsTag(node.tag))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private LockOnAim EnsureAim()
@@ -276,7 +300,9 @@ namespace Shooter.Runtime
                 var originY = _owner.transform.position.y;
                 foreach (var candidate in _scratch)
                 {
-                    if (spec.IsHighEnough(originY, candidate.Point.ToUnity().y) && !_owner.IsAlly(self, candidate.Id))
+                    if (spec.IsHighEnough(originY, candidate.Point.ToUnity().y)
+                        && _owner.HasTargetTag(spec, candidate.Id)
+                        && !_owner.IsAlly(self, candidate.Id))
                     {
                         into.Add(candidate);
                     }
@@ -292,7 +318,7 @@ namespace Shooter.Runtime
         {
             try
             {
-                return new LockOnTurretSpec(_turnDegreesPerSecond, _minTargetHeight);
+                return new LockOnTurretSpec(_turnDegreesPerSecond, _minTargetHeight, _targetTag);
             }
             catch (ArgumentException e)
             {

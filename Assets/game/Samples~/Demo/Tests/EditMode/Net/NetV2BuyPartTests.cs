@@ -13,6 +13,7 @@ namespace Shooter.Net.Tests
 
         private readonly List<BuyRequestMessage> _sent = new List<BuyRequestMessage>();
         private readonly List<string> _logs = new List<string>();
+        private readonly List<PurchaseAnswer> _answers = new List<PurchaseAnswer>();
         private NetV2BuyPart _part;
         private bool _connected;
         private int _changes;
@@ -27,12 +28,15 @@ namespace Shooter.Net.Tests
             _connected = true;
             _part = new NetV2BuyPart(Send, 16000, _logs.Add);
             _changes = 0;
+            _answers.Clear();
             GameSignals.Wallet.Changed += CountChange;
+            CombatEvents.PurchaseAnswered += _answers.Add;
         }
 
         [TearDown]
         public void TearDown()
         {
+            CombatEvents.PurchaseAnswered -= _answers.Add;
             GameSignals.Wallet.Changed -= CountChange;
             _part.Dispose();
             GameSignals.Wallet.Clear();
@@ -170,10 +174,79 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void NoMessageIsTaken()
+        public void OnlyTheBuyAnswerIsTaken()
         {
             Assert.That(_part.Handle(new BuyRequestMessage { ItemId = _rifleId }), Is.False);
             Assert.That(_part.Handle(new VoteKickStateMessage()), Is.False);
+            Assert.That(_part.Handle(new BuyAnswerMessage { ItemId = _rifleId, Verdict = PurchaseVerdict.Bought }), Is.True);
+        }
+
+        [TestCase(PurchaseVerdict.Bought)]
+        [TestCase(PurchaseVerdict.CannotCarry)]
+        [TestCase(PurchaseVerdict.NotEnoughMoney)]
+        public void TheServersAnswerIsRaised(PurchaseVerdict verdict)
+        {
+            _part.Apply(Snapshot(800, RoundPhase.Preparing));
+
+            _part.Handle(new BuyAnswerMessage { ItemId = _rifleId, Verdict = verdict });
+
+            Assert.That(_answers, Has.Count.EqualTo(1));
+            Assert.That(_answers[0].ItemId, Is.EqualTo(_rifleId));
+            Assert.That(_answers[0].Verdict, Is.EqualTo(verdict));
+            Assert.That(_logs, Has.Member(EconomyLog.NetBuyAnswer(_rifleId, verdict)));
+        }
+
+        [Test]
+        public void AnAnswerAfterLeavingIsTakenButNotRaised()
+        {
+            _part.Dispose();
+
+            Assert.That(_part.Handle(new BuyAnswerMessage { ItemId = _rifleId, Verdict = PurchaseVerdict.CannotCarry }), Is.True);
+            Assert.That(_answers, Is.Empty);
+        }
+
+        [Test]
+        public void ASentBuyWaitsForTheServersAnswer()
+        {
+            _part.Apply(Snapshot(800, RoundPhase.Preparing));
+
+            _part.BuySender.Buy(_rifleId);
+
+            Assert.That(_answers, Is.Empty, "only the server knows whether the item can be carried");
+        }
+
+        [Test]
+        public void ABuyWithoutAnEconomyIsAnsweredAsNotTheBuyTime()
+        {
+            _part.BuySender.Buy(_rifleId);
+
+            Assert.That(_answers, Has.Count.EqualTo(1));
+            Assert.That(_answers[0].ItemId, Is.EqualTo(_rifleId));
+            Assert.That(_answers[0].Verdict, Is.EqualTo(PurchaseVerdict.NotBuyTime));
+        }
+
+        [Test]
+        public void AnItemIdThatCannotBeSentIsAnsweredAsUnknown()
+        {
+            _part.Apply(Snapshot(800, RoundPhase.Preparing));
+
+            _part.BuySender.Buy(new string('a', MatchProtocol.MaxContentIdBytes + 1));
+
+            Assert.That(_sent, Is.Empty);
+            Assert.That(_answers, Has.Count.EqualTo(1));
+            Assert.That(_answers[0].Verdict, Is.EqualTo(PurchaseVerdict.UnknownItem));
+        }
+
+        [Test]
+        public void ABuyAfterLeavingIsNotAnswered()
+        {
+            _part.Apply(Snapshot(800, RoundPhase.Preparing));
+            var sender = GameSignals.BuySender.Value;
+            _part.Dispose();
+
+            sender.Buy(_rifleId);
+
+            Assert.That(_answers, Is.Empty);
         }
 
         private static SnapshotMessage Snapshot(int money, RoundPhase phase)

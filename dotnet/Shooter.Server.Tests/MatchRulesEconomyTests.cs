@@ -137,6 +137,57 @@ namespace Shooter.Server.Tests
             Assert.That(_module.WeaponsFor(2)[0].Id, Is.EqualTo(_carbineId));
         }
 
+        [Test]
+        public void ABuyRequestIsAnsweredToItsSenderOnly()
+        {
+            Start(startMoney: 2500);
+            Join(1);
+            Join(2);
+            Step();
+
+            _module.OnMessage(new ConnectionId(2), new BuyRequestMessage { ItemId = _carbineId });
+
+            var answers = BuyAnswers(2);
+            Assert.That(answers, Has.Count.EqualTo(1));
+            Assert.That(answers[0].ItemId, Is.EqualTo(_carbineId));
+            Assert.That(answers[0].Verdict, Is.EqualTo(PurchaseVerdict.Bought));
+            Assert.That(BuyAnswers(1), Is.Empty, "the other player is not told about the purchase");
+        }
+
+        [TestCase(_carbineId, 800, PurchaseVerdict.NotEnoughMoney)]
+        [TestCase("not-in-the-list", 5000, PurchaseVerdict.UnknownItem)]
+        [TestCase(TestRules.RifleId, 5000, PurchaseVerdict.CannotCarry)]
+        public void ARefusedBuyRequestIsAnsweredWithItsReason(string itemId, int startMoney, PurchaseVerdict expected)
+        {
+            Start(startMoney: startMoney);
+            Join(1);
+            Join(2);
+            Step();
+
+            _module.OnMessage(new ConnectionId(1), new BuyRequestMessage { ItemId = itemId });
+
+            var answers = BuyAnswers(1);
+            Assert.That(answers, Has.Count.EqualTo(1));
+            Assert.That(answers[0].ItemId, Is.EqualTo(itemId), "the id of the request comes back even when it is not in the list");
+            Assert.That(answers[0].Verdict, Is.EqualTo(expected));
+            Assert.That(_module.Economy.MoneyOf(1), Is.EqualTo(startMoney));
+        }
+
+        [Test]
+        public void ABuyRequestWithoutAnEconomyIsAnsweredAsNotTheBuyTime()
+        {
+            Start(buyList: false);
+            Join(1);
+            Join(2);
+            Step();
+
+            _module.OnMessage(new ConnectionId(1), new BuyRequestMessage { ItemId = _carbineId });
+
+            var answers = BuyAnswers(1);
+            Assert.That(answers, Has.Count.EqualTo(1));
+            Assert.That(answers[0].Verdict, Is.EqualTo(PurchaseVerdict.NotBuyTime));
+        }
+
         [TestCase(_carbineId, 800, PurchaseVerdict.NotEnoughMoney)]
         [TestCase("not-in-the-list", 5000, PurchaseVerdict.UnknownItem)]
         [TestCase(TestRules.RifleId, 5000, PurchaseVerdict.CannotCarry)]
@@ -437,6 +488,11 @@ namespace Shooter.Server.Tests
             var snapshot = new SnapshotMessage();
             _module.Contribute(snapshot, player);
             return snapshot.Owner.Money;
+        }
+
+        private List<BuyAnswerMessage> BuyAnswers(int id)
+        {
+            return _transport.Read<BuyAnswerMessage>(id, m => new BuyAnswerMessage { ItemId = m.ItemId, Verdict = m.Verdict });
         }
 
         private void Step()

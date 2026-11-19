@@ -36,10 +36,22 @@ namespace Shooter.NetV2
 
         public IBuySender BuySender => _sender;
 
-        // 買った結果は届くお金の変化で分かるので、受け取るメッセージは無い
+        // 抜けた後に届いた答えは、もう閉じた購入画面に向けたものなので知らせない
         public bool Handle(IMessage message)
         {
-            return false;
+            if (!(message is BuyAnswerMessage answer))
+            {
+                return false;
+            }
+
+            if (_disposed)
+            {
+                return true;
+            }
+
+            _log(EconomyLog.NetBuyAnswer(answer.ItemId, answer.Verdict));
+            CombatEvents.RaisePurchaseAnswered(answer.ItemId, answer.Verdict);
+            return true;
         }
 
         public void Apply(SnapshotMessage snapshot)
@@ -71,11 +83,19 @@ namespace Shooter.NetV2
             Show(null);
         }
 
+        // 送らずに断るときも、送ったときにサーバーが返すのと同じ理由を知らせる。答えを待つ側を待たせたままにしないため
         private void Buy(string itemId)
         {
-            if (_disposed || !_economy.Status.HasValue)
+            if (_disposed)
             {
-                _log(EconomyLog.NetBuyRefused(itemId, _disposed ? "left the match" : "no economy in this match"));
+                _log(EconomyLog.NetBuyRefused(itemId, "left the match"));
+                return;
+            }
+
+            if (!_economy.Status.HasValue)
+            {
+                _log(EconomyLog.NetBuyRefused(itemId, "no economy in this match"));
+                CombatEvents.RaisePurchaseAnswered(itemId, PurchaseVerdict.NotBuyTime);
                 return;
             }
 
@@ -83,6 +103,7 @@ namespace Shooter.NetV2
             if (request == null)
             {
                 _log(EconomyLog.NetBuyRefused(itemId, problem));
+                CombatEvents.RaisePurchaseAnswered(itemId, PurchaseVerdict.UnknownItem);
                 return;
             }
 

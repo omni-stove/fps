@@ -39,6 +39,9 @@ namespace Shooter.Runtime
 
         public static event Action<MatchResult> MatchFinished;
 
+        // IBuySender.Buy が答えを返さないのは、ネット対戦では答えが後から届くため。この端末の人が送った購入の答えだけを、オフラインでもネット対戦でもここで知らせる。
+        public static event Action<PurchaseAnswer> PurchaseAnswered;
+
         public static ShotAttribution? CurrentAttribution => _attribution;
 
         // ルートを辿らないのは、敵や標的が 1 つの親の下にまとめて置かれ、ルートでは全員が同じ Id になるため。
@@ -130,6 +133,11 @@ namespace Shooter.Runtime
             Invoke(MatchFinished, result);
         }
 
+        public static void RaisePurchaseAnswered(string itemId, PurchaseVerdict verdict)
+        {
+            Invoke(PurchaseAnswered, new PurchaseAnswer(itemId, verdict));
+        }
+
         // 他のアセンブリの出来事に自前で呼ばせないのは、購読者の例外で戦闘の処理を止めない流し方をここの出来事と揃えるため。
         public static void Notify<T>(Action<T> handlers, T value)
         {
@@ -161,6 +169,7 @@ namespace Shooter.Runtime
             Exploded = null;
             Landed = null;
             MatchFinished = null;
+            PurchaseAnswered = null;
             _attribution = null;
             foreach (var clear in _clears)
             {

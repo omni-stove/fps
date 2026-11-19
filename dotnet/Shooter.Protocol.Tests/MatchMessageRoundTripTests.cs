@@ -777,6 +777,68 @@ namespace Shooter.Protocol.Tests
             Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
+        [TestCase(PurchaseVerdict.Bought)]
+        [TestCase(PurchaseVerdict.NotEnoughMoney)]
+        [TestCase(PurchaseVerdict.NotBuyTime)]
+        [TestCase(PurchaseVerdict.CannotCarry)]
+        [TestCase(PurchaseVerdict.UnknownItem)]
+        public void BuyAnswer(PurchaseVerdict verdict)
+        {
+            var got = ToClient<BuyAnswerMessage>(new BuyAnswerMessage { ItemId = "rifle", Verdict = verdict });
+
+            Assert.That(got.ItemId, Is.EqualTo("rifle"));
+            Assert.That(got.Verdict, Is.EqualTo(verdict));
+        }
+
+        [Test]
+        public void ABuyAnswerIsTheIdAndOneVerdictByte()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new BuyAnswerMessage { ItemId = "rifle", Verdict = PurchaseVerdict.CannotCarry });
+
+            // メッセージの Id (2)・版 (1)・品の Id の長さ (2) と中身 (5)・理由 (1)
+            Assert.That(writer.Length, Is.EqualTo(2 + 1 + 2 + 5 + 1));
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void ABuyAnswerWithoutAnItemIsNotWritten(string itemId)
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new BuyAnswerMessage { ItemId = itemId }));
+        }
+
+        [Test]
+        public void ABuyAnswerWithAnUnknownVerdictIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new BuyAnswerMessage { ItemId = "rifle", Verdict = (PurchaseVerdict)99 }));
+        }
+
+        [Test]
+        public void ABuyAnswerWithAnUnknownVerdictIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.BuyAnswer);
+            writer.WriteByte(BuyAnswerMessage.CurrentVersion);
+            writer.WriteString("rifle");
+            writer.WriteByte(99);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void ABuyAnswerWithoutAnItemIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.BuyAnswer);
+            writer.WriteByte(BuyAnswerMessage.CurrentVersion);
+            writer.WriteString("");
+            writer.WriteByte((byte)PurchaseVerdict.Bought);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
         [Test]
         public void MapVoteRequestOutsideTheCandidateLimitIsUnreadable()
         {

@@ -43,6 +43,7 @@ namespace Shooter.Tests.EditMode
         public void SetUp()
         {
             GameSignals.ResetAll();
+            CombatEvents.ClearSubscribers();
             Localizer.Apply(GameLanguage.Japanese);
             _container = new VisualElement();
             _panel = null;
@@ -202,6 +203,86 @@ namespace Shooter.Tests.EditMode
             _panel.ShowVerdict(RifleId, PurchaseVerdict.NotBuyTime);
 
             Assert.That(_panel.Status, Is.EqualTo("準備の時間しか買えない"));
+        }
+
+        [Test]
+        public void TheAnswerRaisedByTheSenderShowsWhyItWasRefused()
+        {
+            Open(800, Catalog());
+            _sender = PublishSender(Catalog(), answersAtOnce: false);
+            _panel.Buy(2);
+
+            CombatEvents.RaisePurchaseAnswered(PistolId, PurchaseVerdict.CannotCarry);
+
+            Assert.That(_panel.PendingItemId, Is.EqualTo(FragId), "an answer for another item is an old one and is dropped");
+
+            CombatEvents.RaisePurchaseAnswered(FragId, PurchaseVerdict.CannotCarry);
+
+            Assert.That(_panel.PendingItemId, Is.Null);
+            Assert.That(_panel.Status, Is.EqualTo("破片手榴弾 はこれ以上持てない"));
+            Assert.That(_panel.IsStatusError, Is.True);
+            Assert.That(_panel.MoneyText, Is.EqualTo("所持金 $800"));
+            Assert.That(Each(i => _panel.ItemButton(i).enabledSelf), Is.All.True);
+        }
+
+        [Test]
+        public void ASenderThatAnswersAtOnceShowsTheRefusalBeforeTheTimeout()
+        {
+            Open(800, Catalog());
+            var sender = new RefusingBuySender(PurchaseVerdict.CannotCarry);
+            GameSignals.BuySender.Publish(sender);
+
+            Assert.That(_panel.Buy(0), Is.True);
+
+            Assert.That(sender.ItemIds, Is.EqualTo(_pistolOnly));
+            Assert.That(_panel.PendingItemId, Is.Null);
+            Assert.That(_panel.Status, Is.EqualTo("跳弾ピストル はこれ以上持てない"));
+            Assert.That(_panel.IsStatusError, Is.True);
+            _panel.Tick(10f);
+            Assert.That(_panel.Status, Is.EqualTo("跳弾ピストル はこれ以上持てない"), "the timeout does not replace the reason");
+        }
+
+        [Test]
+        public void ABoughtAnswerThatFollowsTheWalletKeepsShowingBought()
+        {
+            Open(800, Catalog());
+            _sender = PublishSender(Catalog(), answersAtOnce: true);
+            _panel.Buy(0);
+
+            CombatEvents.RaisePurchaseAnswered(PistolId, PurchaseVerdict.Bought);
+
+            Assert.That(_panel.Status, Is.EqualTo("跳弾ピストル を買った"));
+            Assert.That(_panel.IsStatusError, Is.False);
+        }
+
+        [Test]
+        public void AnAnswerAfterTheTimeoutReplacesTheNotBoughtNotice()
+        {
+            _panel = new BuyMenuPanel(PublishWallet(800), Catalog(), 2f);
+            _sender = PublishSender(Catalog(), answersAtOnce: false);
+            _panel.Buy(0);
+            _panel.Tick(2.1f);
+            Assert.That(_panel.Status, Is.EqualTo("跳弾ピストル を買えなかった"));
+
+            CombatEvents.RaisePurchaseAnswered(PistolId, PurchaseVerdict.Bought);
+
+            Assert.That(_panel.Status, Is.EqualTo("跳弾ピストル を買った"), "a slow server's answer is still shown");
+            Assert.That(_panel.IsStatusError, Is.False);
+        }
+
+        [Test]
+        public void AnswersAreNotShownAfterThePanelClosesOrIsDisposed()
+        {
+            Open(800, Catalog());
+            _panel.Cancel();
+
+            CombatEvents.RaisePurchaseAnswered(PistolId, PurchaseVerdict.CannotCarry);
+
+            Assert.That(_panel.Status, Is.Null);
+
+            _panel.Dispose();
+
+            Assert.DoesNotThrow(() => CombatEvents.RaisePurchaseAnswered(PistolId, PurchaseVerdict.CannotCarry));
         }
 
         [Test]
@@ -401,6 +482,25 @@ namespace Shooter.Tests.EditMode
 
                 var wallet = GameSignals.Wallet.Value.Value;
                 GameSignals.Wallet.Publish(new WalletStatus(wallet.Money - item.Price, wallet.Max, wallet.CanBuy));
+            }
+        }
+
+        // オフラインの経済 (RoundEconomy) が持てない品を断るときと同じく、財布を動かさずにその場で答えだけを出す。
+        private sealed class RefusingBuySender : IBuySender
+        {
+            private readonly PurchaseVerdict _verdict;
+
+            public RefusingBuySender(PurchaseVerdict verdict)
+            {
+                _verdict = verdict;
+            }
+
+            public List<string> ItemIds { get; } = new List<string>();
+
+            public void Buy(string itemId)
+            {
+                ItemIds.Add(itemId);
+                CombatEvents.RaisePurchaseAnswered(itemId, _verdict);
             }
         }
     }

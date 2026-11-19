@@ -93,7 +93,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            Buy(_localPlayerId.Value, itemId);
+            CombatEvents.RaisePurchaseAnswered(itemId, Buy(_localPlayerId.Value, itemId));
         }
 
         public PurchaseVerdict Buy(int playerId, string itemId)

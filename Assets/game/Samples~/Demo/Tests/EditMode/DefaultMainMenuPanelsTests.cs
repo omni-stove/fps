@@ -119,6 +119,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ARegistrationFromTheGameSurvivesTheSampleDefaultsBeingRegisteredAgain()
+        {
+            Func<VisualElement, IMainMenuPanel> custom = slot => null;
+            MainMenuPanels.Register(MainMenuPanelKind.Stats, custom);
+
+            DefaultMenuScreens.RegisterMainMenuPanels();
+
+            Assert.That(MainMenuPanels.TryGet(MainMenuPanelKind.Stats, out var open), Is.True);
+            Assert.That(open, Is.SameAs(custom));
+        }
+
+        [Test]
         public void TheStashShowsWhatTheMatchPublished()
         {
             GameSignals.Stash.Publish(new StashStatus(12, Array.Empty<StashEntry>()));

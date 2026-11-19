@@ -25,6 +25,9 @@ namespace Shooter.Runtime
         private static readonly Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>> _factories =
             new Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>>();
 
+        private static readonly Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>> _defaults =
+            new Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>>();
+
         public static readonly IReadOnlyList<MainMenuPanelKind> Kinds = new[]
         {
             MainMenuPanelKind.Stats,
@@ -43,6 +46,14 @@ namespace Shooter.Runtime
             Changed?.Invoke(kind);
         }
 
+        // 既定の登録をゲームの登録と別に持つのは、サンプルの既定の登録が、ゲームが先に登録した画面を上書きしないようにするため。
+        public static void UseDefault(MainMenuPanelKind kind, Func<VisualElement, IMainMenuPanel> open)
+        {
+            Validate(kind);
+            _defaults[kind] = open ?? throw new ArgumentNullException(nameof(open));
+            Changed?.Invoke(kind);
+        }
+
         public static bool Unregister(MainMenuPanelKind kind)
         {
             Validate(kind);
@@ -57,19 +68,23 @@ namespace Shooter.Runtime
 
         public static bool IsRegistered(MainMenuPanelKind kind)
         {
-            return _factories.ContainsKey(kind);
+            return _factories.ContainsKey(kind) || _defaults.ContainsKey(kind);
         }
 
         public static bool TryGet(MainMenuPanelKind kind, out Func<VisualElement, IMainMenuPanel> open)
         {
-            return _factories.TryGetValue(kind, out open);
+            return _factories.TryGetValue(kind, out open) || _defaults.TryGetValue(kind, out open);
         }
 
         public static void Clear()
         {
             foreach (var kind in Kinds)
             {
-                Unregister(kind);
+                var removed = _defaults.Remove(kind);
+                if (!Unregister(kind) && removed)
+                {
+                    Changed?.Invoke(kind);
+                }
             }
         }
 

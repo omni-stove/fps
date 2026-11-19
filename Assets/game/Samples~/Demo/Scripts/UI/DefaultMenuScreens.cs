@@ -25,11 +25,11 @@ namespace Shooter.Runtime
         // 統計と見た目は記録係が無ければ開くときの例外をメインメニューが知らせに出す。
         public static void RegisterMainMenuPanels()
         {
-            MainMenuPanels.Register(MainMenuPanelKind.Stats, StatsPanel.Open);
-            MainMenuPanels.Register(MainMenuPanelKind.Leaderboard, slot => new LeaderboardPanel(slot));
-            MainMenuPanels.Register(MainMenuPanelKind.Replays, slot => new ReplayPanel(slot));
-            MainMenuPanels.Register(MainMenuPanelKind.Cosmetics, CosmeticsPanel.Open);
-            MainMenuPanels.Register(MainMenuPanelKind.Stash, StashPanel.Open);
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Stats, StatsPanel.Open);
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Leaderboard, slot => new LeaderboardPanel(slot));
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Replays, slot => new ReplayPanel(slot));
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Cosmetics, CosmeticsPanel.Open);
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Stash, StashPanel.Open);
         }
 
         private sealed class PauseMenuState : IPauseState

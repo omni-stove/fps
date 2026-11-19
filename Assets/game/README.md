@@ -81,6 +81,20 @@ Device ID は端末ごとの Id なので、それだけでは端末ごとに別
    - 迷彩は一人称の武器のモデルの材質をすべて替える (粒子と線は替えない)。オフラインの試合でもネット対戦でも、自分の画面の武器にだけ出る。
 3. 着けた見た目はプロフィールに残る。ネット対戦ではスキンだけをロードアウトと一緒に送り、相手の画面の体が替わる。カタログか絵が無い Id は既定の見た目のまま出る。
 
+### エモート
+
+1. エモートの一覧の JSON を入口の `EmotesTuning` に入れる。キットの既定は空で、エモートは無い。
+
+   ```json
+   { "emotes": [ { "id": "wave", "displayNameKey": "emote.wave", "durationSeconds": 2.5, "loops": false, "stopsOnMove": true } ] }
+   ```
+
+   - `loops` が true のものは止めるまで続ける。false のものは `durationSeconds` で終わる。
+   - 撃つ・倒される・ダウンすると、`stopsOnMove` にかかわらず止まる。
+2. **Create > Shooter > Emote Catalog** を作り、JSON の `id` ごとにリグに流すクリップを入れて、入口の `EmoteAnimations` に入れる。クリップの無い Id は体を動かさずに出る。
+3. ルールの `actions.emote` を `On` にし、`EmoteActionInstaller` を `PlayerActions.Register` で入れる。キットは自分では登録しない。
+4. 再生中は一人称から三人称のカメラになり、止まると一人称に戻る。
+
 ### UI
 
 キットのゲーム進行は画面も文も作らない。今の状態は型の付いた値で `GameSignals` (`Shooter.Runtime`) に出し、1 回きりの出来事 (撃った・当たった・倒した) は `CombatEvents` のイベントで知らせる。何をどう出すか (言語を含む) は UI が決める。
@@ -128,6 +142,7 @@ Device ID は端末ごとの Id なので、それだけでは端末ごとに別
 | `Replays` | `IReplayLibrary` | 残したリプレイの一覧 (`ReplayEntry`) と、再生・消す口 |
 | `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
 | `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |
+| `Emotes` | `IEmoteControl` | エモートの Id の一覧と、再生する口。`Player/Emote` を押している間だけ出る |
 
 #### 購読のしかた
 

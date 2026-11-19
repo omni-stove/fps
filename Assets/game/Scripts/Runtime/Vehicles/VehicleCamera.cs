@@ -65,7 +65,9 @@ namespace Shooter.Runtime
             {
                 // カメラはこちらが置くので、ViewRig の LateUpdate に目からのオフセットへ戻させない。
                 _rigWasEnabled = _rig.enabled;
-                _savedMode = _rig.Mode;
+                // エモートが一人称から借りた三人称を、降りた後の戻り先として覚えないため。
+                var emote = _rig.GetComponentInParent<EmoteController>();
+                _savedMode = emote != null && emote.ChangedView ? ViewMode.FirstPerson : _rig.Mode;
                 _rig.enabled = false;
             }
 

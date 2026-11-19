@@ -57,6 +57,7 @@ namespace Shooter.Editor
             new Slot("FlashOverlay", typeof(FlashOverlayCatalog), c => c.FlashOverlay, (c, v) => c.FlashOverlay = (FlashOverlayCatalog)v),
             new Slot("CosmeticVisuals", typeof(CosmeticVisualCatalog), c => c.CosmeticVisuals, (c, v) => c.CosmeticVisuals = (CosmeticVisualCatalog)v),
             new Slot("StreakIcons", typeof(StreakIconCatalog), c => c.StreakIcons, (c, v) => c.StreakIcons = (StreakIconCatalog)v),
+            new Slot("EmoteAnimations", typeof(EmoteCatalog), c => c.EmoteAnimations, (c, v) => c.EmoteAnimations = (EmoteCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。
@@ -84,6 +85,7 @@ namespace Shooter.Editor
             new TuningSlot("AchievementsTuning", AchievementJson.ResourcePath, c => c.AchievementsTuning, (c, v) => c.AchievementsTuning = v),
             new TuningSlot("LeaderboardsTuning", LeaderboardJson.ResourcePath, c => c.LeaderboardsTuning, (c, v) => c.LeaderboardsTuning = v),
             new TuningSlot("CosmeticsTuning", CosmeticJson.ResourcePath, c => c.CosmeticsTuning, (c, v) => c.CosmeticsTuning = v),
+            new TuningSlot("EmotesTuning", EmoteJson.ResourcePath, c => c.EmotesTuning, (c, v) => c.EmotesTuning = v),
             new TuningSlot("WeatherTuning", WeatherJson.ResourcePath, c => c.WeatherTuning, (c, v) => c.WeatherTuning = v),
             new TuningSlot("TelemetryTuning", TelemetryJson.ResourcePath, c => c.TelemetryTuning, (c, v) => c.TelemetryTuning = v),
             new TuningSlot("InfectedTuning", InfectedJson.ResourcePath, c => c.InfectedTuning, (c, v) => c.InfectedTuning = v),

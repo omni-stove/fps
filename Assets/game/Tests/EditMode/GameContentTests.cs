@@ -244,6 +244,47 @@ namespace Shooter.Tests.EditMode
             Assert.That(left, Does.Contain("EmotesTuning"), "the entry lists the emote JSON as a slot to fill");
         }
 
+        [Test]
+        public void TheVisionVisualCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.VisionVisuals, Is.Null);
+            Assert.That(VisionVisualCatalog.Load(), Is.SameAs(Resources.Load<VisionVisualCatalog>(VisionVisualCatalog.ResourcePath)));
+
+            content.VisionVisuals = Track(ScriptableObject.CreateInstance<VisionVisualCatalog>());
+            Assert.That(VisionVisualCatalog.Load(), Is.SameAs(content.VisionVisuals));
+
+            content.VisionVisuals = null;
+            Assert.That(VisionVisualCatalog.Load(), Is.SameAs(Resources.Load<VisionVisualCatalog>(VisionVisualCatalog.ResourcePath)));
+
+            var left = GameContentAssets.FillEmpty(
+                Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
+            Assert.That(left, Does.Contain("VisionVisuals"), "the entry lists the vision visuals as a slot to fill");
+        }
+
+        [Test]
+        public void WithoutAVisionCatalogTheDefaultColorsAreUsed()
+        {
+            Assert.That(VisionVisualCatalog.ColorFor(null, VisionMode.Night), Is.EqualTo(VisionVisualCatalog.DefaultNightColor));
+            Assert.That(VisionVisualCatalog.ColorFor(null, VisionMode.Thermal), Is.EqualTo(VisionVisualCatalog.DefaultThermalColor));
+            Assert.That(VisionVisualCatalog.ColorFor(null, VisionMode.None), Is.EqualTo(Color.clear));
+            Assert.That(VisionVisualCatalog.ImageFor(null, VisionMode.Night), Is.Null);
+
+            var catalog = Track(ScriptableObject.CreateInstance<VisionVisualCatalog>());
+            Assert.That(catalog.NightColor, Is.EqualTo(VisionVisualCatalog.DefaultNightColor), "a new catalog starts from the defaults");
+            Assert.That(catalog.ThermalColor, Is.EqualTo(VisionVisualCatalog.DefaultThermalColor));
+
+            catalog.ThermalColor = Color.red;
+            catalog.NightImage = Track(new Texture2D(2, 2));
+            catalog.SwitchVolume = 3f;
+            Assert.That(VisionVisualCatalog.ColorFor(catalog, VisionMode.Thermal), Is.EqualTo(Color.red));
+            Assert.That(VisionVisualCatalog.ImageFor(catalog, VisionMode.Night), Is.SameAs(catalog.NightImage));
+            Assert.That(VisionVisualCatalog.ImageFor(catalog, VisionMode.Thermal), Is.Null);
+            Assert.That(catalog.SwitchVolume, Is.EqualTo(1f));
+        }
+
+        [TestCase("_visionVisuals", "Resources/Presentation/VisionVisualsCatalog")]
         [TestCase("_emoteAnimations", "Resources/Presentation/EmoteCatalog")]
         [TestCase("_cosmeticVisuals", "Resources/Presentation/CosmeticVisualCatalog")]
         [TestCase("_streakIcons", "Resources/Presentation/StreakIconCatalog")]
@@ -319,6 +360,11 @@ namespace Shooter.Tests.EditMode
                 (() => content.StashTuning, v => content.StashTuning = v),
                 (() => content.ExtractionTuning, v => content.ExtractionTuning = v),
                 (() => content.ReplayTuning, v => content.ReplayTuning = v),
+                (() => content.PayloadTuning, v => content.PayloadTuning = v),
+                (() => content.EconomyTuning, v => content.EconomyTuning = v),
+                (() => content.SupplyDropsTuning, v => content.SupplyDropsTuning = v),
+                (() => content.MutatorsTuning, v => content.MutatorsTuning = v),
+                (() => content.PlaylistsTuning, v => content.PlaylistsTuning = v),
             };
 
             foreach (var slot in slots)
@@ -397,6 +443,11 @@ namespace Shooter.Tests.EditMode
         [TestCase("_stashTuning", "Resources/Tuning/stash")]
         [TestCase("_extractionTuning", "Resources/Tuning/extraction")]
         [TestCase("_replayTuning", "Resources/Tuning/replay")]
+        [TestCase("_payloadTuning", "Resources/Tuning/payload")]
+        [TestCase("_economyTuning", "Resources/Tuning/economy")]
+        [TestCase("_supplyDropsTuning", "Resources/Tuning/supply-drops")]
+        [TestCase("_mutatorsTuning", "Resources/Tuning/mutators")]
+        [TestCase("_playlistsTuning", "Resources/Tuning/playlists")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -528,7 +579,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(asked, Does.Contain("chat-words").And.Contain("achievements").And.Contain("leaderboards").And.Contain("cosmetics"));
             Assert.That(asked, Does.Contain("weather").And.Contain("telemetry").And.Contain("infected").And.Contain("loot"));
             Assert.That(asked, Does.Contain("stash").And.Contain("extraction").And.Contain("replay"));
-            Assert.That(asked, Has.Count.EqualTo(28));
+            Assert.That(asked, Does.Contain("payload").And.Contain("economy").And.Contain("supply-drops").And.Contain("mutators").And.Contain("playlists"));
+            Assert.That(asked, Has.Count.EqualTo(34));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

@@ -625,7 +625,8 @@ namespace Shooter.Runtime
             var sprinting = _mover != null && _mover.IsSprinting;
             var view = _rig != null ? _rig.Mode : ViewMode.FirstPerson;
             var throughSight = _ads != null && _ads.IsInitialized && _ads.SightView.ThroughSight;
-            var shown = ShowsCrosshair(throughSight ? ViewMode.FirstPerson : view, aiming, sprinting);
+            var shown = ShowsCrosshair(throughSight ? ViewMode.FirstPerson : view, aiming, sprinting)
+                && SeatShowsCrosshair(GameSignals.SeatFiring.Value);
             ShownModel.SetCrosshair(_weapon.CrosshairSpreadFraction, CrosshairConeGap(), shown);
             RefreshAimBlock(shown);
         }
@@ -714,6 +715,12 @@ namespace Shooter.Runtime
             }
 
             return _aimBlockSettings;
+        }
+
+        // 運転席や助手席のように撃てない席では、狙う物が無いので照準を出さない。
+        public static bool SeatShowsCrosshair(VehicleSeatFiring? firing)
+        {
+            return firing != VehicleSeatFiring.None;
         }
 
         public static bool ShowsCrosshair(ViewMode view, bool aiming, bool sprinting)

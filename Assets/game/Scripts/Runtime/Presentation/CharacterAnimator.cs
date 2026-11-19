@@ -34,6 +34,7 @@ namespace Shooter.Runtime
         private WeaponController _weapon;
         private AimDownSights _ads;
         private CoverController _cover;
+        private PlayerVehicleRider _rider;
         private Damageable _damageable;
         private EnemyAgent _enemy;
         private NavMeshAgent _navAgent;
@@ -504,8 +505,10 @@ namespace Shooter.Runtime
                 category = _weapon.Weapon.Spec.Category;
             }
 
+            // 座席では乗り物と一緒に動くだけなので、その速さで走る姿にしない。
+            var seated = Rider() != null && Rider().IsRiding;
             return new CharacterPoseInput(
-                HorizontalSpeed(velocity),
+                seated ? 0f : HorizontalSpeed(velocity),
                 _mover.IsGrounded,
                 _mover.IsCrouched,
                 _mover.IsSprinting,
@@ -638,7 +641,33 @@ namespace Shooter.Runtime
         private void PlaceRig()
         {
             _rig.localPosition = new Vector3(0f, FeetLocalY(), 0f);
-            _rig.localRotation = _rigTilt;
+            var seatFacing = SeatFacing();
+            _rig.localRotation = seatFacing.HasValue
+                ? Quaternion.Inverse(transform.rotation) * seatFacing.Value * _rigTilt
+                : _rigTilt;
+        }
+
+        // 座席では本体の向きが視点 (追うカメラの回り込み) に付いて回るので、自分の武器で撃てない席では見た目だけ座席の前へ向け直す。
+        private Quaternion? SeatFacing()
+        {
+            var rider = Rider();
+            var seat = rider != null ? rider.Seat : null;
+            if (seat == null || rider.Firing == VehicleSeatFiring.OwnWeapon)
+            {
+                return null;
+            }
+
+            return Quaternion.Euler(0f, seat.SitYawDegrees, 0f);
+        }
+
+        private PlayerVehicleRider Rider()
+        {
+            if (_source != CharacterAnimatorSource.Player)
+            {
+                return null;
+            }
+
+            return _rider != null ? _rider : (_rider = GetComponent<PlayerVehicleRider>());
         }
 
         // ViewRig は視点を変えたときにしか子孫のレンダラーを書き換えず、後から置いたリグは漏れるので、毎フレーム合わせる。

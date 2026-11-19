@@ -236,6 +236,43 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AVehicleSunkIntoTheGroundStillLetsTheRiderOutOnTopOfIt()
+        {
+            // サスペンションで沈んだ車のように、降りる位置 (原点の高さ) より地面が 0.2m 上にある。
+            var ground = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            ground.name = "Ground";
+            ground.transform.position = new Vector3(0f, -0.3f, 0f);
+            ground.transform.localScale = new Vector3(20f, 1f, 20f);
+            Physics.SyncTransforms();
+            var rider = NewRider("Rider", Vector3.zero);
+            _vehicle.TryEnter(rider, 0);
+
+            Assert.That(_vehicle.IsExitBlocked(_leftExit, rider), Is.True, "the raw exit point is inside the ground");
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Rider seat=0 reason=Request exit=0");
+            Assert.That(_vehicle.TryExit(rider), Is.True);
+            Assert.That(rider.LastFeet.x, Is.EqualTo(_leftExit.x).Within(1e-4f));
+            Assert.That(rider.LastFeet.y, Is.EqualTo(0.2f).Within(1e-3f), "the feet are put on the ground");
+        }
+
+        [Test]
+        public void ARefusedExitNamesWhatBlocksEachCandidate()
+        {
+            Block(_leftExit);
+            Block(_rightExit);
+            Block(_rearExit);
+            var rider = NewRider("Rider", Vector3.zero);
+            _vehicle.TryEnter(rider, 0);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave refused rider=Rider reason=exit_blocked");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' exit=0 blocked by=Blocker");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' exit=1 blocked by=Blocker");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' exit=2 blocked by=Blocker");
+            Assert.That(_vehicle.TryExit(rider), Is.False);
+            Assert.That(_vehicle.FindExitBlocker(_leftExit, rider).name, Is.EqualTo("Blocker"));
+        }
+
+        [Test]
         public void TheVehicleItselfDoesNotBlockTheExit()
         {
             var rider = NewRider("Rider", Vector3.zero);

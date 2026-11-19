@@ -141,6 +141,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(vehicle.WeaponMounts, Is.Empty);
             Assert.That(CarFixtureBuilder.Spec().Weapons, Is.Empty);
             Assert.That(CarFixtureBuilder.Spec("rifle").Seats.Count, Is.EqualTo(3));
+            Assert.That(vehicle.Spec.EnterSeconds, Is.EqualTo(CarFixtureBuilder.EnterSeconds), "the placed car takes time to get in");
+            Assert.That(vehicle.Spec.ExitSeconds, Is.EqualTo(CarFixtureBuilder.ExitSeconds));
+            Assert.That(CarFixtureBuilder.Spec().EnterSeconds, Is.EqualTo(CarFixtureBuilder.EnterSeconds));
+            Assert.That(CarFixtureBuilder.Spec().ExitSeconds, Is.EqualTo(CarFixtureBuilder.ExitSeconds));
+            Assert.That(CarFixtureBuilder.Spec("rifle").EnterSeconds, Is.EqualTo(CarFixtureBuilder.EnterSeconds));
+            Assert.That(CarFixtureBuilder.Spec("rifle").ExitSeconds, Is.EqualTo(CarFixtureBuilder.ExitSeconds));
         }
     }
 }

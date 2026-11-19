@@ -96,6 +96,14 @@ namespace Shooter.Runtime
             }
 
             Debug.Log(VehicleLog.Ram(name, target.Id, amount, speed, driver != null ? driver.name : null, target.Health.Current), target);
+
+            // オフラインで運転するのは手元のプレイヤーだけなので、その人が轢いたときだけ画面にヒットマーカーとダメージ表示を出す。
+            var driverBody = driver != null ? driver.GetComponent<Damageable>() : null;
+            if (driverBody != null && driverBody.IsLocalPlayer)
+            {
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(amount, HitZone.Body, target.IsDead, target.IsDowned, target.AimPoint.ToNumerics()));
+            }
+
             return amount;
         }
 

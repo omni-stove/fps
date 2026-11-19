@@ -16,6 +16,9 @@ namespace Shooter.Runtime
         // 座席に座っている間は、スライディングやはしごなどより優先する。
         public const int MovementOverridePriority = 1000;
 
+        // 座ったまま倒れた体は毎 Tick 座席へ戻すので、蘇るときにこれより離れていれば蘇らせる側が移したものとみなす。
+        public const float RespawnMovedDistance = 1f;
+
         public const string InteractActionPath = InputActionPaths.Interact;
         public const string NextSeatActionPath = InputActionPaths.Next;
         public const string PreviousSeatActionPath = InputActionPaths.Previous;
@@ -51,6 +54,10 @@ namespace Shooter.Runtime
         private OwnWeaponSeatModifier _ownWeapon;
         private VehicleSeatFiring _firing;
         private Weapon _seatWeapon;
+        private InteractHintSlot _boardHint;
+        private readonly VehicleSeatTransition _transition = new VehicleSeatTransition();
+        private Vector3 _enterStartLocal;
+        private bool _diedInSeat;
 
         public event Action<Weapon> SeatWeaponChanged;
 
@@ -125,6 +132,15 @@ namespace Shooter.Runtime
 
         public VehicleSeat Seat => _seat;
 
+        public VehicleSeatTransitionKind Transition => _seat != null ? _transition.Kind : VehicleSeatTransitionKind.None;
+
+        public float TransitionProgress => _seat != null ? _transition.Progress : 1f;
+
+        // 乗り込み・降車の途中と、座ったまま倒れている間は、座席を持っていても運転・射撃・席の移動・降車をさせない。
+        public bool IsSettled => _seat != null && !_transition.IsActive && !IsDead;
+
+        public bool IsDead => _damageable != null && _damageable.IsDead;
+
         int IMovementOverride.Priority => MovementOverridePriority;
 
         bool IMovementOverride.IsActive => _seat != null;
@@ -171,6 +187,7 @@ namespace Shooter.Runtime
             _interact.Release();
             _next.Release();
             _previous.Release();
+            BoardHint.Clear();
             KeySharing.Release(InputActionPaths.Interact, this);
         }
 
@@ -179,6 +196,7 @@ namespace Shooter.Runtime
             if (_damageable != null)
             {
                 _damageable.Died -= OnDied;
+                _damageable.HealthReset -= OnHealthReset;
             }
 
             if (_mover != null)
@@ -200,7 +218,14 @@ namespace Shooter.Runtime
                 return;
             }
 
-            KeySharing.SetClaim(InputActionPaths.Interact, this, OffersInteract);
+            if (_seat == null)
+            {
+                KeySharing.SetClaim(InputActionPaths.Interact, this, RefreshBoardHint());
+                return;
+            }
+
+            KeySharing.SetClaim(InputActionPaths.Interact, this, _interact.Action != null);
+            StepTransition(Time.deltaTime);
             if (_seat == null)
             {
                 return;
@@ -271,6 +296,7 @@ namespace Shooter.Runtime
             if (_damageable != null)
             {
                 _damageable.Died -= OnDied;
+                _damageable.HealthReset -= OnHealthReset;
             }
 
             _mover = mover;
@@ -282,6 +308,7 @@ namespace Shooter.Runtime
             if (_damageable != null)
             {
                 _damageable.Died += OnDied;
+                _damageable.HealthReset += OnHealthReset;
             }
 
             var controller = mover.Controller != null ? mover.Controller : GetComponent<CharacterController>();
@@ -358,7 +385,7 @@ namespace Shooter.Runtime
         {
             if (_seat != null)
             {
-                return Exit();
+                return IsSettled && Exit();
             }
 
             var vehicle = FindNearestVehicle(Vehicle.Active);
@@ -367,11 +394,17 @@ namespace Shooter.Runtime
 
         public Vehicle FindNearestVehicle(IEnumerable<Vehicle> candidates)
         {
+            return FindNearestVehicle(candidates, out _);
+        }
+
+        public Vehicle FindNearestVehicle(IEnumerable<Vehicle> candidates, out int seatIndex)
+        {
             if (candidates == null)
             {
                 throw new ArgumentNullException(nameof(candidates));
             }
 
+            seatIndex = -1;
             Vehicle best = null;
             var bestDistance = float.PositiveInfinity;
             foreach (var candidate in candidates)
@@ -381,10 +414,12 @@ namespace Shooter.Runtime
                     continue;
                 }
 
-                if (candidate.FindBoardableSeat(transform.position, out var distance) >= 0 && distance < bestDistance)
+                var seat = candidate.FindBoardableSeat(transform.position, out var distance);
+                if (seat >= 0 && distance < bestDistance)
                 {
                     best = candidate;
                     bestDistance = distance;
+                    seatIndex = seat;
                 }
             }
 
@@ -394,18 +429,56 @@ namespace Shooter.Runtime
         public bool Exit()
         {
             var vehicle = Vehicle;
-            if (vehicle == null)
+            if (vehicle == null || IsDead)
             {
                 return false;
             }
 
-            return vehicle.EvaluateBailOut() == BailOutVerdict.BailOut ? vehicle.BailOut(this) : vehicle.TryExit(this);
+            // 空中で脱出するときは、壊れかけの機体から出られるよう待たせない。
+            if (vehicle.EvaluateBailOut() == BailOutVerdict.BailOut)
+            {
+                return vehicle.BailOut(this);
+            }
+
+            if (_transition.Kind == VehicleSeatTransitionKind.Exiting)
+            {
+                return false;
+            }
+
+            var seconds = vehicle.Spec.ExitSeconds;
+            if (seconds <= 0f)
+            {
+                return vehicle.TryExit(this);
+            }
+
+            _transition.Begin(VehicleSeatTransitionKind.Exiting, seconds);
+            Debug.Log(VehicleLog.TransitionBegin(vehicle.name, RiderName, _seat.Index, VehicleSeatTransitionKind.Exiting, seconds), this);
+            return true;
         }
 
         public bool SwitchSeat(int direction)
         {
             var vehicle = Vehicle;
-            return vehicle != null && vehicle.TrySwitchSeat(this, direction);
+            return vehicle != null && IsSettled && vehicle.TrySwitchSeat(this, direction);
+        }
+
+        // Edit Mode のテストでは Update が走らないので、時間を進める口を外に出す。
+        public void StepTransition(float deltaSeconds)
+        {
+            var seat = _seat;
+            var finished = _transition.Advance(deltaSeconds);
+            if (seat == null || finished == VehicleSeatTransitionKind.None)
+            {
+                return;
+            }
+
+            var vehicle = seat.Vehicle;
+            var vehicleName = vehicle != null ? vehicle.name : "-";
+            Debug.Log(VehicleLog.TransitionEnd(vehicleName, RiderName, seat.Index, finished), this);
+            if (finished == VehicleSeatTransitionKind.Exiting && vehicle != null)
+            {
+                vehicle.TryExit(this);
+            }
         }
 
         public void SetCameraView(VehicleCameraView view)
@@ -468,6 +541,11 @@ namespace Shooter.Runtime
 
             var input = ReadSeatInput();
             SeatInputFilter?.Filter(seat, ref input);
+            if (!IsSettled)
+            {
+                input = VehicleSeatInput.Idle;
+            }
+
             return seat.SubmitInput(this, input, deltaSeconds);
         }
 
@@ -480,6 +558,7 @@ namespace Shooter.Runtime
 
             _seat = seat;
             _snapYaw = true;
+            BoardHint.Clear();
 
             // 撃つ・持ち替える操作は WeaponController が同じ口を見ていれば一緒に止まる。別の口なら両方に宣言する。
             _mover.Handoff.Claim(this);
@@ -496,7 +575,20 @@ namespace Shooter.Runtime
             ApplyPose(seat);
             ApplyFiring(seat);
             _mover.RegisterMovementOverride(this);
-            PlaceBody(seat.SitPosition, seat.SitYawDegrees);
+            var seconds = seat.Vehicle != null ? seat.Vehicle.Spec.EnterSeconds : 0f;
+            if (seconds > 0f)
+            {
+                // 乗り物が動いても乗り込み口からの動きに見えるよう、始めの位置を乗り物から見た位置で持つ。
+                _enterStartLocal = seat.Vehicle.transform.InverseTransformPoint(transform.position);
+                _transition.Begin(VehicleSeatTransitionKind.Entering, seconds);
+                Debug.Log(VehicleLog.TransitionBegin(seat.Vehicle.name, RiderName, seat.Index, VehicleSeatTransitionKind.Entering, seconds), this);
+            }
+            else
+            {
+                _transition.Clear();
+                PlaceBody(seat.SitPosition, seat.SitYawDegrees);
+            }
+
             _camera.Begin(seat.CameraView);
             _camera.Place(seat);
         }
@@ -510,6 +602,7 @@ namespace Shooter.Runtime
 
             _seat = to;
             _snapYaw = true;
+            _transition.Clear();
             ApplyPose(to);
             ApplyFiring(to);
             PlaceBody(to.SitPosition, to.SitYawDegrees);
@@ -519,7 +612,10 @@ namespace Shooter.Runtime
 
         void IVehicleRider.OnLeft(VehicleSeat seat, VehicleLeaveReason reason, Vector3 feetPosition, Quaternion rotation)
         {
+            var dead = _diedInSeat || IsDead;
             _seat = null;
+            _transition.Clear();
+            _diedInSeat = false;
             ClearFiring();
             if (_mover == null)
             {
@@ -551,7 +647,8 @@ namespace Shooter.Runtime
 
             _claimedWeaponHandoff = false;
             PlaceBody(feetPosition, rotation.eulerAngles.y);
-            if (reason == VehicleLeaveReason.BailOut)
+            // 死んだ乗り手は機体が壊れて空中で降ろされても脱出させない。速さとパラシュートを渡すと死体が降下していくため。
+            if (reason == VehicleLeaveReason.BailOut && !dead)
             {
                 BailOutOf(seat != null ? seat.Vehicle : null);
             }
@@ -605,7 +702,14 @@ namespace Shooter.Runtime
             _lastSeatYaw = seatYaw;
 
             // PlayerController の置き直しは Collider を切って戻すので無視設定が消える。自分で置いて掛け直す。
-            SetBodyPosition(RootPositionFor(seat.SitPosition));
+            var sit = RootPositionFor(seat.SitPosition);
+            if (_transition.Kind == VehicleSeatTransitionKind.Entering)
+            {
+                var start = seat.Vehicle.transform.TransformPoint(_enterStartLocal);
+                sit = Vector3.Lerp(start, sit, Mathf.SmoothStep(0f, 1f, _transition.Progress));
+            }
+
+            SetBodyPosition(sit);
             seat.Vehicle.ReapplyIgnoredCollisions(this);
             return new MovementOverrideStep(
                 Vector3.zero,
@@ -627,6 +731,11 @@ namespace Shooter.Runtime
             if (Firing != VehicleSeatFiring.OwnWeapon)
             {
                 return false;
+            }
+
+            if (!IsSettled)
+            {
+                return true;
             }
 
             isPressed = HeldInput.IsHeld(_fire.Action);
@@ -657,6 +766,7 @@ namespace Shooter.Runtime
             }
 
             Debug.Log(VehicleLog.Firing(seat.Vehicle != null ? seat.Vehicle.name : "-", RiderName, seat.Index, _firing), this);
+            GameSignals.SeatFiring.Publish(_firing);
             if (_seatWeapon != null)
             {
                 SeatWeaponChanged?.Invoke(_seatWeapon);
@@ -678,6 +788,7 @@ namespace Shooter.Runtime
             _ownWeapon = null;
             _seatWeapon = null;
             _firing = VehicleSeatFiring.None;
+            GameSignals.SeatFiring.Clear();
             _hiddenViewmodel.Restore();
             if (hadSeatWeapon)
             {
@@ -779,17 +890,75 @@ namespace Shooter.Runtime
             _suspended.Clear();
         }
 
+        // 乗れる席が近くにあるときに案内を出す。出さないと、長押しの Interact で乗れることが分からないため。
+        public bool RefreshBoardHint()
+        {
+            Vehicle vehicle = null;
+            var seatIndex = -1;
+            if (_seat == null && _interact.Action != null && CanBoard)
+            {
+                vehicle = FindNearestVehicle(Vehicle.Active, out seatIndex);
+            }
+
+            if (vehicle == null)
+            {
+                BoardHint.Clear();
+                return false;
+            }
+
+            BoardHint.Show(new VehicleBoardHint(vehicle.Seats[seatIndex].Role, InteractActionPath));
+            return true;
+        }
+
+        private InteractHintSlot BoardHint => _boardHint ?? (_boardHint = new InteractHintSlot(this));
+
         private void OnInteractPerformed(InputAction.CallbackContext context)
         {
             Interact();
         }
 
+        // 座ったまま倒れ、蘇るまで席を持ち続ける。降ろすと体が降りる位置へ移り、倒れた体が車の外に出てしまうため。
         private void OnDied(Damageable _)
         {
-            var vehicle = Vehicle;
+            var seat = _seat;
+            if (seat == null)
+            {
+                return;
+            }
+
+            _transition.Clear();
+            _diedInSeat = true;
+            var vehicle = seat.Vehicle;
             if (vehicle != null)
             {
-                vehicle.ForceExit(this, VehicleLeaveReason.RiderDied);
+                var presenter = GetComponent<DeathBodyPresenter>();
+                if (presenter != null)
+                {
+                    presenter.Anchor = vehicle.transform;
+                }
+
+                Debug.Log(VehicleLog.DiedInSeat(vehicle.name, RiderName, seat.Index), this);
+            }
+        }
+
+        // 蘇らせる側が先に体を別の場所へ移していればそこに残し、座席のまま蘇ったときだけ降りる位置へ降ろす。
+        // 生きたまま体力を満たし直したとき (ラウンドの切り替えなど) は座ったままにする。
+        private void OnHealthReset(Health _)
+        {
+            var seat = _seat;
+            var vehicle = seat != null ? seat.Vehicle : null;
+            if (vehicle == null || !_diedInSeat)
+            {
+                return;
+            }
+
+            var feet = transform.position - (Vector3.up * FeetBelowRoot);
+            var moved = Vector3.Distance(feet, seat.SitPosition) > RespawnMovedDistance;
+            var rotation = transform.rotation;
+            vehicle.ForceExit(this, VehicleLeaveReason.Forced);
+            if (moved)
+            {
+                PlaceBody(feet, rotation.eulerAngles.y);
             }
         }
 

@@ -67,6 +67,68 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnAnchorSetBeforeDeathHoldsTheShellStillOnTheAnchor()
+        {
+            var vehicle = new GameObject("Car").transform;
+            try
+            {
+                _presenter.Bind(_dummy.Damageable, DeathBody.Collapse);
+                _presenter.Anchor = vehicle;
+                LogAssert.Expect(LogType.Log, "[DeathBody] anchored id=dummy to=Car");
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse id=dummy "));
+
+                _dummy.Damageable.Kill();
+
+                var shell = _presenter.Shell;
+                Assert.That(_presenter.IsAnchored, Is.True);
+                Assert.That(shell.transform.parent, Is.SameAs(vehicle), "the shell rides with the vehicle");
+                Assert.That(shell.transform.position, Is.EqualTo(Home), "it stays where the body fell");
+                var body = shell.GetComponent<Rigidbody>();
+                Assert.That(body.isKinematic, Is.True, "it is not pushed out of the seat");
+                Assert.That(body.linearVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(_presenter.Push(Vector3.forward), Is.False, "the killing shot does not push it");
+                Assert.That(_presenter.Launch(Vector3.up * 10f), Is.False);
+            }
+            finally
+            {
+                var shell = _presenter.Shell;
+                if (shell != null)
+                {
+                    shell.transform.SetParent(null, true);
+                }
+
+                Object.DestroyImmediate(vehicle.gameObject);
+            }
+        }
+
+        [Test]
+        public void AnAnchorSetAfterDeathStillHoldsTheShellAndRespawnLetsItGo()
+        {
+            var vehicle = new GameObject("Car").transform;
+            try
+            {
+                _presenter.Bind(_dummy.Damageable, DeathBody.Collapse);
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[DeathBody\] collapse id=dummy "));
+                _dummy.Damageable.Kill();
+                Assert.That(_presenter.IsAnchored, Is.False);
+
+                LogAssert.Expect(LogType.Log, "[DeathBody] anchored id=dummy to=Car");
+                _presenter.Anchor = vehicle;
+                Assert.That(_presenter.IsAnchored, Is.True);
+                Assert.That(_presenter.Shell.GetComponent<Rigidbody>().isKinematic, Is.True);
+
+                LogAssert.Expect(LogType.Log, "[DeathBody] removed id=dummy reason=respawn");
+                _dummy.Respawn();
+                Assert.That(_presenter.Anchor, Is.Null, "the next death is not anchored unless asked again");
+                Assert.That(vehicle.childCount, Is.Zero, "the shell left with the respawn");
+            }
+            finally
+            {
+                Object.DestroyImmediate(vehicle.gameObject);
+            }
+        }
+
+        [Test]
         public void CollapseHidesTheBodyAndItsHitboxes()
         {
             _presenter.Bind(_dummy.Damageable, DeathBody.Collapse);

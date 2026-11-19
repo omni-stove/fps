@@ -106,7 +106,9 @@ namespace Shooter.Server.Tests
             Assert.That(data.BuyList, Is.Null);
             Assert.That(data.Economy, Is.Null, "no buy list means no economy");
             Assert.That(data.EconomyPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.Loot, Is.SameAs(LootSpec.Default));
+            Assert.That(data.LootPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -366,6 +368,40 @@ namespace Shooter.Server.Tests
             Assert.That(changed.BuyList, Is.SameAs(data.BuyList));
             Assert.That(changed.EconomyPath, Is.EqualTo(data.EconomyPath));
             Assert.That(data.WithRules(GameRules.Default).BuyList, Is.SameAs(data.BuyList));
+        }
+
+        [Test]
+        public void ReadsTheLootTablesBesideTheRulesAndKeepsThemThroughChanges()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.LootTuningFileName),
+                "{\"tables\": [{\"id\": \"supplies\", \"rolls\": 2, \"entries\": [{\"itemId\": \"31d5979e-6067-49d9-b70c-fdcf44dc77d1\", \"weight\": 1, \"minCount\": 1, \"maxCount\": 3}]}]}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            var table = data.Loot.Find("supplies");
+            Assert.That(table, Is.Not.Null);
+            Assert.That(table.Rolls, Is.EqualTo(2));
+            Assert.That(table.Entries[0].MaxCount, Is.EqualTo(3));
+            Assert.That(data.LootPath, Does.EndWith(ServerRulesData.LootTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" loot=" + data.LootPath + " "));
+            Assert.That(data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS")).Loot, Is.SameAs(data.Loot));
+            Assert.That(data.WithRules(GameRules.Default).LootPath, Is.EqualTo(data.LootPath));
+        }
+
+        [Test]
+        public void BrokenLootTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.LootTuningFileName), "{\"tables\": [{\"id\": \"empty\", \"entries\": []}]}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read loot tuning: ").And.Contain("entries"));
         }
 
         [Test]

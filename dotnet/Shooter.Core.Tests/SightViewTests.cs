@@ -23,6 +23,37 @@ namespace Shooter.Core.Tests
             Assert.That(new SightSpec(" redDot ").ReticleId, Is.EqualTo("redDot"));
             Assert.That(new SightSpec(aimedInProgress: 0.5f).IsDefault, Is.False);
             Assert.That(AimSpec.Default.Sight, Is.SameAs(SightSpec.Default));
+            Assert.That(sight.VisionMode, Is.EqualTo(VisionMode.None));
+            Assert.That(new SightSpec(visionMode: VisionMode.Night).IsDefault, Is.False, "a night sight is a sight");
+        }
+
+        [Test]
+        public void RejectsAnUndefinedVisionMode()
+        {
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => new SightSpec(visionMode: (VisionMode)9));
+
+            Assert.That(e.ParamName, Is.EqualTo("visionMode"));
+        }
+
+        [Test]
+        public void TheVisionModeHoldsOnlyWhileAimedIn()
+        {
+            var thermal = new SightSpec("thermal", scopeOverlay: true, visionMode: VisionMode.Thermal);
+
+            Assert.That(SightView.Of(thermal, ViewMode.FirstPerson, 0.5f).VisionMode, Is.EqualTo(VisionMode.None), "not while still raising the gun");
+            Assert.That(SightView.Of(thermal, ViewMode.FirstPerson, 1f).VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(SightView.Of(thermal, ViewMode.ThirdPerson, 1f).VisionMode, Is.EqualTo(VisionMode.None), "over the shoulder the sight is not looked through");
+            Assert.That(SightView.None.VisionMode, Is.EqualTo(VisionMode.None));
+
+            var night = new SightSpec("thermal", scopeOverlay: true, visionMode: VisionMode.Night);
+            Assert.That(SightView.Of(night, ViewMode.FirstPerson, 1f), Is.Not.EqualTo(SightView.Of(thermal, ViewMode.FirstPerson, 1f)));
+            Assert.That(
+                SightView.Of(thermal, ViewMode.FirstPerson, 1f),
+                Is.EqualTo(SightView.Of(new SightSpec("thermal", scopeOverlay: true, visionMode: VisionMode.Thermal), ViewMode.FirstPerson, 1f)));
+            Assert.That(
+                SightView.Of(thermal, ViewMode.FirstPerson, 0.5f),
+                Is.EqualTo(SightView.Of(new SightSpec("thermal", scopeOverlay: true), ViewMode.FirstPerson, 0.5f)),
+                "before aiming in the vision mode does not tell two sights apart");
         }
 
         [TestCase(0f)]

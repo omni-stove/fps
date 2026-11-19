@@ -113,6 +113,7 @@ namespace Shooter.Server
             _rules.MatchStarted += HandleMatchStarted;
             _rules.PlayerKilled += HandlePlayerKilled;
             _rules.WeaponsChanged += HandleWeaponsChanged;
+            _rules.RulesChanged += HandleRulesChanged;
             _movement.Landed += HandleLanded;
             _movement.Drowned += HandleDrowned;
 
@@ -214,6 +215,7 @@ namespace Shooter.Server
             _rules.MatchStarted -= HandleMatchStarted;
             _rules.PlayerKilled -= HandlePlayerKilled;
             _rules.WeaponsChanged -= HandleWeaponsChanged;
+            _rules.RulesChanged -= HandleRulesChanged;
             _movement.Landed -= HandleLanded;
             _movement.Drowned -= HandleDrowned;
             _fighters.Clear();
@@ -283,6 +285,14 @@ namespace Shooter.Server
         private void HandleWeaponsChanged(int playerId)
         {
             GetOrAdd(playerId).Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+        }
+
+        // ルールのモジュールは続けて全員を出現させるので、持ち替え (HandlePlayerSpawned) とグレネードの数はそこで新しいルールのものになる
+        private void HandleRulesChanged(ServerRulesData data)
+        {
+            _data = data;
+            _structures.Enabled = data.Rules.Destruction == Destruction.On;
+            PrepareGrenades(data.Rules);
         }
 
         // 当たり判定は作るときに世界の当たりを受け取るので、作り直す。巻き戻しの記録は前のマップの位置なので一緒に捨てる

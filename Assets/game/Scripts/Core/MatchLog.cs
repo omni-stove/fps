@@ -183,6 +183,11 @@ namespace Shooter.Core
             return Tag + " map changed from=" + fromMap + " to=" + toMap;
         }
 
+        public static string RulesChanged(MatchObjective fromObjective, MatchObjective toObjective)
+        {
+            return Tag + " rules changed objective from=" + fromObjective + " to=" + toObjective;
+        }
+
         public static string NextMatch(float delaySeconds)
         {
             if (!(delaySeconds >= 0f) || float.IsInfinity(delaySeconds))

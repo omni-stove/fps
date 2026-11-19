@@ -187,9 +187,13 @@ namespace Shooter.Server
         }
 
         // 置いた物の形は足元が原点・前が +Z の立てた箱 (DeployAbilityDefinition の決まり)。
-        private static bool RayBox(Vector3 origin, Vector3 unit, float maxDistance, Vector3 position, float yaw, DeploySpec spec, out float distance)
+        // 始点が箱の中なら当てない。Unity の Raycast も始点を含むコライダーには当たらず、置いた物の当たりを知らないサーバーの移動では
+        // 人が置いた物の中へ入れるので、中から撃った弾をその場で止めないため
+        private static bool RayBox(
+            Vector3 origin, Vector3 unit, float maxDistance, Vector3 position, float yaw, DeploySpec spec, out float distance, out Vector3 normal)
         {
             distance = 0f;
+            normal = -unit;
             var right = Right(yaw);
             var forward = Forward(yaw);
             var relative = origin - (position + new Vector3(0f, spec.Height / 2f, 0f));
@@ -198,6 +202,8 @@ namespace Shooter.Server
             var half = new Vector3(spec.Width / 2f, spec.Height / 2f, spec.Depth / 2f);
             var near = 0f;
             var far = maxDistance;
+            var enteredAxis = -1;
+            var enteredSign = 0f;
             for (var axis = 0; axis < 3; axis++)
             {
                 var o = Component(localOrigin, axis);
@@ -220,7 +226,13 @@ namespace Shooter.Server
                     (t1, t2) = (t2, t1);
                 }
 
-                near = Math.Max(near, t1);
+                if (t1 > near)
+                {
+                    near = t1;
+                    enteredAxis = axis;
+                    enteredSign = d > 0f ? -1f : 1f;
+                }
+
                 far = Math.Min(far, t2);
                 if (near > far)
                 {
@@ -228,8 +240,31 @@ namespace Shooter.Server
                 }
             }
 
+            if (enteredAxis < 0)
+            {
+                return false;
+            }
+
             distance = near;
+            normal = (enteredAxis == 0 ? right : enteredAxis == 1 ? Vector3.UnitY : forward) * enteredSign;
             return true;
+        }
+
+        private static float DistanceToBox(Vector3 point, Vector3 position, float yaw, DeploySpec spec)
+        {
+            var right = Right(yaw);
+            var forward = Forward(yaw);
+            var relative = point - (position + new Vector3(0f, spec.Height / 2f, 0f));
+            var outside = new Vector3(
+                Math.Max(0f, Math.Abs(Vector3.Dot(relative, right)) - (spec.Width / 2f)),
+                Math.Max(0f, Math.Abs(relative.Y) - (spec.Height / 2f)),
+                Math.Max(0f, Math.Abs(Vector3.Dot(relative, forward)) - (spec.Depth / 2f)));
+            return outside.Length();
+        }
+
+        private static Vector3 CenterOf(Vector3 position, DeploySpec spec)
+        {
+            return position + new Vector3(0f, spec.Height / 2f, 0f);
         }
 
         private static float Component(Vector3 value, int axis)

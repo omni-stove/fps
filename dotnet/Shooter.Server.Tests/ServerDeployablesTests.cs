@@ -9,7 +9,7 @@ using Shooter.Protocol;
 namespace Shooter.Server.Tests
 {
     // 移動・ルール・戦闘・設置物を同じホストで動かし、置く・撃つ・壊れる・消えるとスナップショットを確かめる
-    public sealed class ServerDeployablesTests
+    public sealed partial class ServerDeployablesTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
         private const string _turretId = "deploy-turret";

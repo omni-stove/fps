@@ -15,6 +15,14 @@ namespace Shooter.Server
 
         public void Apply(in ServerShot shot, Vector3 direction, in ShotHit hit)
         {
+            // 敵の置いた物は弾を受け止めて耐久で受け、着弾の効果 (爆発・状態異常・燃える範囲) を出さない (オフラインの Deployable.TryStopBullet と同じ)。
+            // 飛ぶ弾の止まった所での起爆 (Detonate) は、受け止めた後にも起きる
+            if (hit.HitDeployable)
+            {
+                _combat.DamageDeployable(shot, hit);
+                return;
+            }
+
             // 乗り物は Unity と同じく部位 (HitZone) を持つ的として距離減衰を掛け、そのあと当たった部位の倍率を掛ける
             var impactHit = hit.HitTarget ? ImpactHit.Character(hit.Zone, hit.Point, hit.Distance, _combat.ZoneDamage)
                 : hit.HitVehicle ? ImpactHit.Character(HitZone.Body, hit.Point, hit.Distance, ZoneDamageMultipliers.Default)

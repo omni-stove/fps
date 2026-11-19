@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Runtime;
+using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -166,6 +167,145 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That((int)MatchObjective.CaptureTheFlag, Is.EqualTo(3));
             Assert.That((int)MatchObjective.GunGame, Is.EqualTo(8));
+            Assert.That((int)MatchObjective.Payload, Is.EqualTo(9));
+        }
+
+        [Test]
+        public void AnUntouchedMatchPlaysTheVoteKickPayloadAndEconomyDefaults()
+        {
+            var settings = _match.ToSettings();
+
+            Assert.That(settings.VoteKick.Enabled, Is.False);
+            Assert.That(settings.VoteKick.RequiredYesFraction, Is.EqualTo(VoteKickSpec.DefaultRequiredYesFraction));
+            Assert.That(settings.VoteKick.VoteSeconds, Is.EqualTo(VoteKickSpec.DefaultVoteSeconds));
+            Assert.That(settings.VoteKick.CooldownSeconds, Is.EqualTo(VoteKickSpec.DefaultCooldownSeconds));
+            Assert.That(settings.Payload.CartSpeed, Is.EqualTo(PayloadSpec.DefaultCartSpeed));
+            Assert.That(settings.Payload.MinPushers, Is.EqualTo(PayloadSpec.DefaultMinPushers));
+            Assert.That(settings.Payload.PusherSpeedMultipliers, Is.EqualTo(PayloadSpec.Default.PusherSpeedMultipliers));
+            Assert.That(settings.Payload.RollbackDelaySeconds, Is.EqualTo(PayloadSpec.DefaultRollbackDelaySeconds));
+            Assert.That(settings.Payload.RollbackSpeed, Is.EqualTo(PayloadSpec.DefaultRollbackSpeed));
+            Assert.That(settings.Payload.CheckpointBonusSeconds, Is.EqualTo(PayloadSpec.DefaultCheckpointBonusSeconds));
+            Assert.That(settings.Payload.TimeLimitSeconds, Is.EqualTo(PayloadSpec.DefaultTimeLimitSeconds));
+            Assert.That(settings.Economy.StartMoney, Is.EqualTo(EconomySpec.DefaultStartMoney));
+            Assert.That(settings.Economy.MaxMoney, Is.EqualTo(EconomySpec.DefaultMaxMoney));
+            Assert.That(settings.Economy.KillReward, Is.EqualTo(EconomySpec.DefaultKillReward));
+            Assert.That(settings.Economy.RoundWinReward, Is.EqualTo(EconomySpec.DefaultRoundWinReward));
+            Assert.That(settings.Economy.RoundLossReward, Is.EqualTo(EconomySpec.DefaultRoundLossReward));
+            Assert.That(settings.Economy.LossStreakBonus, Is.EqualTo(EconomySpec.DefaultLossStreakBonus));
+            Assert.That(settings.Economy.MaxLossReward, Is.EqualTo(EconomySpec.DefaultMaxLossReward));
+        }
+
+        [Test]
+        public void TheVoteKickPayloadAndEconomyValuesAreCarried()
+        {
+            _match.SetVoteKick(new VoteKickSpec(true, 0.8f, 20f, 45f));
+            _match.SetPayload(new PayloadSpec(2.5f, 2, new[] { 1f, 1.2f, 1.4f }, 6f, 0f, 40f, 600f));
+            _match.SetEconomy(new EconomySpec(1000, 10000, 250, 2800, 1300, 450, 2650));
+
+            var settings = _match.ToSettings();
+
+            Assert.That(settings.VoteKick.Enabled, Is.True);
+            Assert.That(settings.VoteKick.RequiredYesFraction, Is.EqualTo(0.8f));
+            Assert.That(settings.VoteKick.VoteSeconds, Is.EqualTo(20f));
+            Assert.That(settings.VoteKick.CooldownSeconds, Is.EqualTo(45f));
+            Assert.That(settings.Payload.CartSpeed, Is.EqualTo(2.5f));
+            Assert.That(settings.Payload.MinPushers, Is.EqualTo(2));
+            Assert.That(settings.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 1.2f, 1.4f }));
+            Assert.That(settings.Payload.RollbackDelaySeconds, Is.EqualTo(6f));
+            Assert.That(settings.Payload.RollbackSpeed, Is.Zero);
+            Assert.That(settings.Payload.CheckpointBonusSeconds, Is.EqualTo(40f));
+            Assert.That(settings.Payload.TimeLimitSeconds, Is.EqualTo(600f));
+            Assert.That(settings.Economy.StartMoney, Is.EqualTo(1000));
+            Assert.That(settings.Economy.MaxMoney, Is.EqualTo(10000));
+            Assert.That(settings.Economy.KillReward, Is.EqualTo(250));
+            Assert.That(settings.Economy.RoundWinReward, Is.EqualTo(2800));
+            Assert.That(settings.Economy.RoundLossReward, Is.EqualTo(1300));
+            Assert.That(settings.Economy.LossStreakBonus, Is.EqualTo(450));
+            Assert.That(settings.Economy.MaxLossReward, Is.EqualTo(2650));
+        }
+
+        [Test]
+        public void TheCarriedValuesSurviveTheServerFile()
+        {
+            _match.SetVoteKick(new VoteKickSpec(enabled: true, cooldownSeconds: 10f));
+            _match.SetPayload(new PayloadSpec(minPushers: 3));
+            _match.SetEconomy(new EconomySpec(startMoney: 2000));
+            var settings = _match.ToSettings();
+            var handgun = new WeaponSpec(
+                "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45", "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f,
+                DamageFalloff.None);
+            var file = new NetMatchFile(
+                "Payload",
+                GameRules.Default.WithObjective(MatchObjective.Payload),
+                settings,
+                "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.Handgun } }),
+                new[] { handgun },
+                0.4f,
+                null,
+                null);
+
+            var read = NetMatchFile.Parse(NetMatchFile.Write(file), "Payload.json").Settings;
+
+            Assert.That(read.VoteKick.Enabled, Is.True);
+            Assert.That(read.VoteKick.CooldownSeconds, Is.EqualTo(10f));
+            Assert.That(read.Payload.MinPushers, Is.EqualTo(3));
+            Assert.That(read.Economy.StartMoney, Is.EqualTo(2000));
+        }
+
+        [Test]
+        public void ValuesAtTheEdgeOfTheirRangeAreCarried()
+        {
+            _match.SetVoteKick(new VoteKickSpec(requiredYesFraction: 1f, cooldownSeconds: 0f));
+            _match.SetPayload(new PayloadSpec(pusherSpeedMultipliers: new[] { 1f }, rollbackDelaySeconds: 0f, checkpointBonusSeconds: 0f));
+            _match.SetEconomy(new EconomySpec(startMoney: 1000, maxMoney: 1000, roundLossReward: 100, lossStreakBonus: 0, maxLossReward: 100));
+
+            var settings = _match.ToSettings();
+
+            Assert.That(settings.VoteKick.RequiredYesFraction, Is.EqualTo(1f));
+            Assert.That(settings.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f }));
+            Assert.That(settings.Economy.StartMoney, Is.EqualTo(settings.Economy.MaxMoney));
+        }
+
+        // Inspector の Min・Range では項目どうしの関係 (初めのお金と上限など) や空の並びを止められないので、ToSettings が名前付きで断る
+        [TestCase("_payloadPusherSpeedMultipliers", "pusherSpeedMultipliers")]
+        [TestCase("_economyStartMoney", "startMoney")]
+        [TestCase("_economyMaxLossReward", "maxLossReward")]
+        [TestCase("_voteKickRequiredYesFraction", "requiredYesFraction")]
+        public void AnOutOfRangeValueStopsTheSettingsAtItsName(string field, string param)
+        {
+            var serialized = new SerializedObject(_match);
+            var property = serialized.FindProperty(field);
+            Assert.That(property, Is.Not.Null, field);
+            switch (field)
+            {
+                case "_payloadPusherSpeedMultipliers":
+                    property.arraySize = 0;
+                    break;
+                case "_economyStartMoney":
+                    property.intValue = EconomySpec.DefaultMaxMoney + 1;
+                    break;
+                case "_economyMaxLossReward":
+                    property.intValue = EconomySpec.DefaultRoundLossReward - 1;
+                    break;
+                default:
+                    property.floatValue = 0f;
+                    break;
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var e = Assert.Throws(Is.InstanceOf<ArgumentException>(), () => _match.ToSettings());
+
+            Assert.That(((ArgumentException)e).ParamName, Is.EqualTo(param));
+        }
+
+        [Test]
+        public void SettingASpecRefusesNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => _match.SetVoteKick(null));
+            Assert.Throws<ArgumentNullException>(() => _match.SetPayload(null));
+            Assert.Throws<ArgumentNullException>(() => _match.SetEconomy(null));
         }
 
         private T Make<T>()

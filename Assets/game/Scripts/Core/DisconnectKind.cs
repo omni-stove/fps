@@ -11,5 +11,7 @@ namespace Shooter.Core
         VersionMismatch,
 
         IdleKicked,
+
+        VoteKicked,
     }
 }

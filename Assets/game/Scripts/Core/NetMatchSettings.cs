@@ -66,7 +66,10 @@ namespace Shooter.Core
             SearchAndDestroySpec searchAndDestroy = null,
             FreeForAllSpec freeForAll = null,
             KillConfirmedSpec killConfirmed = null,
-            GunGameSpec gunGame = null)
+            GunGameSpec gunGame = null,
+            VoteKickSpec voteKick = null,
+            PayloadSpec payload = null,
+            EconomySpec economy = null)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -119,6 +122,9 @@ namespace Shooter.Core
             FreeForAll = freeForAll ?? FreeForAllSpec.Default;
             KillConfirmed = killConfirmed ?? KillConfirmedSpec.Default;
             GunGame = gunGame ?? GunGameSpec.Default;
+            VoteKick = voteKick ?? VoteKickSpec.Default;
+            Payload = payload ?? PayloadSpec.Default;
+            Economy = economy ?? EconomySpec.Default;
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
@@ -179,7 +185,10 @@ namespace Shooter.Core
                 searchAndDestroy: SearchAndDestroy,
                 freeForAll: FreeForAll,
                 killConfirmed: KillConfirmed,
-                gunGame: GunGame);
+                gunGame: GunGame,
+                voteKick: VoteKick,
+                payload: Payload,
+                economy: Economy);
         }
 
         public int ScoreLimit { get; }
@@ -245,6 +254,12 @@ namespace Shooter.Core
         public KillConfirmedSpec KillConfirmed { get; }
 
         public GunGameSpec GunGame { get; }
+
+        public VoteKickSpec VoteKick { get; }
+
+        public PayloadSpec Payload { get; }
+
+        public EconomySpec Economy { get; }
 
         private static string OptionalId(string id, string name)
         {

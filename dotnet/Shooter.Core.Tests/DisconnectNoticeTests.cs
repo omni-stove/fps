@@ -105,10 +105,43 @@ namespace Shooter.Core.Tests
             Assert.That(notice.Describe(), Is.EqualTo("kind=IdleKicked connected=True reason=\"shooter:idle-kicked\""));
         }
 
+        [Test]
+        public void TheVoteKickedReasonMeansThePlayersVotedThePlayerOut()
+        {
+            var notice = DisconnectNotice.Classify(" " + DisconnectNotice.VoteKickedReason + "\n", true, "0.2.0");
+
+            Assert.That(DisconnectNotice.VoteKickedReason, Is.EqualTo("shooter:vote-kicked"));
+            Assert.That(notice.Kind, Is.EqualTo(DisconnectKind.VoteKicked));
+            Assert.That(notice.WasConnected, Is.True);
+            Assert.That(notice.Detail, Is.Null);
+            Assert.That(notice.ServerVersion, Is.Null);
+            Assert.That(notice.Describe(), Is.EqualTo("kind=VoteKicked connected=True reason=\" shooter:vote-kicked\n\""));
+        }
+
+        [Test]
+        public void AVoteKickIsToldApartFromAnAdminKick()
+        {
+            var vote = DisconnectNotice.Classify(DisconnectNotice.VoteKickedReason, true, "0.2.0");
+            var admin = DisconnectNotice.Classify(DisconnectNotice.RejectedReason(DisconnectNotice.KickedDetail), true, "0.2.0");
+
+            Assert.That(vote.Kind, Is.EqualTo(DisconnectKind.VoteKicked));
+            Assert.That(admin.Kind, Is.EqualTo(DisconnectKind.Rejected));
+            Assert.That(admin.Detail, Is.EqualTo(DisconnectNotice.KickedDetail));
+        }
+
+        [Test]
+        public void TheDisconnectKindsKeepTheOrderTheyWereAddedIn()
+        {
+            Assert.That((int)DisconnectKind.IdleKicked, Is.EqualTo(4));
+            Assert.That((int)DisconnectKind.VoteKicked, Is.EqualTo(5));
+        }
+
         [TestCase(null)]
         [TestCase("")]
         [TestCase("Disconnected due to host shutting down.")]
         [TestCase("shooter:idle-kicked:extra")]
+        [TestCase("shooter:vote-kicked:extra")]
+        [TestCase("SHOOTER:VOTE-KICKED")]
         [TestCase("shooter:something-new")]
         [TestCase("FPS:SERVER-STOPPED")]
         public void WithoutAKnownCodeAConnectedClientTimedOut(string reason)

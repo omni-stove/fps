@@ -82,6 +82,9 @@ namespace Shooter.Editor
         // この Editor のアセンブリは Shooter.Samples.Net.Editor を参照しないので、ArenaSceneBuilder のマップ名を文字列で持つ (一致はテストで確かめる)。
         public static string NetArena01Scene => ShooterKitRoot.OutputScene("NetArena01");
 
+        // NetArena01 と同じく、NetSceneBuilder.BattleRoyaleMapName を文字列で持つ (一致はテストで確かめる)。
+        public static string NetBattleRoyaleScene => ShooterKitRoot.OutputScene("NetBattleRoyale");
+
         // この順に Build Settings へ並べるので、先頭は起動時のシーンにする。
         public static IReadOnlyList<string> Scenes
         {
@@ -115,6 +118,7 @@ namespace Shooter.Editor
                     PayloadScene,
                     ModeTestScene,
                     NetArena01Scene,
+                    NetBattleRoyaleScene,
                     NetTestScene,
                 };
 
@@ -169,7 +173,7 @@ namespace Shooter.Editor
         }
 
         // 先頭が -map を省いたときのマップになる。出力先ルートが変わるので、読むたびに組む。
-        public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene };
+        public static IReadOnlyList<string> ServerScenes => new[] { NetTestScene, NetArena01Scene, NetBattleRoyaleScene };
 
         public static void RegisterStartScene(string path)
         {

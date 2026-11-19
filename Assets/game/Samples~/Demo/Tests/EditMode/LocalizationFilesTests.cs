@@ -154,6 +154,39 @@ namespace Shooter.Core.Tests
             }
         }
 
+        // ネットの Battle Royale と Extraction のマップの名前と箱の文を足したので、片方の言語だけに足したキーが画面に出ないよう、ファイルごとにキーをそろえる。
+        [TestCase("extraction.json")]
+        [TestCase("match-flow.json")]
+        public void TheExtractionAndMatchFlowFilesHaveTheSameKeysInEnglishAndJapanese(string file)
+        {
+            var english = LayerOf(GameLanguage.English, file);
+            var japanese = LayerOf(GameLanguage.Japanese, file);
+
+            Assert.That(english.Count, Is.GreaterThan(0), "en/" + file);
+            Assert.That(english.Keys.Except(japanese.Keys, StringComparer.Ordinal), Is.Empty, "only in en/" + file);
+            Assert.That(japanese.Keys.Except(english.Keys, StringComparer.Ordinal), Is.Empty, "missing from en/" + file);
+            foreach (var key in japanese.Keys)
+            {
+                Assert.That(StringTable.PlaceholdersOf(english.Get(key)), Is.EqualTo(StringTable.PlaceholdersOf(japanese.Get(key))), file + " " + key);
+            }
+        }
+
+        [Test]
+        public void TheNetBattleRoyaleMapAndTheUnopenedBoxAreNamedInEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var code = GameLanguages.Code(language);
+                Assert.That(LayerOf(language, "match-flow.json").Contains(MapVoteView.MapNameKey("NetBattleRoyale")), Is.True, code);
+                Assert.That(LayerOf(language, "extraction.json").Contains(ExtractionHudFormatter.OpenRefused.Key), Is.True, code);
+                Assert.That(LayerOf(language, "extraction.json").Contains(ExtractionHudFormatter.OpenGone.Key), Is.True, code);
+            }
+
+            Assert.That(LayerOf(GameLanguage.Japanese, "match-flow.json").Get("map.NetBattleRoyale"), Is.EqualTo("広い野原"));
+            Assert.That(LayerOf(GameLanguage.Japanese, "extraction.json").Get("extraction.hud.openRefused"), Is.EqualTo("箱を開けられなかった"));
+            Assert.That(LayerOf(GameLanguage.English, "extraction.json").Get("extraction.hud.openGone"), Is.EqualTo("The container is gone"));
+        }
+
         [Test]
         public void TheEconomyTableNamesEveryPurchaseVerdictAndItemKind()
         {

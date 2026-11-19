@@ -45,7 +45,13 @@ namespace Shooter.Net.Tests
 
             Assert.That(NetSceneBuilder.ScenePath, Is.EqualTo("Assets/ShooterKit/Scenes/NetTest.unity"));
             Assert.That(NetSceneBuilder.MatchDefinitionPath, Is.EqualTo("Assets/ShooterKit/Rules/NetMatch.asset"));
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { "Assets/ShooterKit/Scenes/NetTest.unity", "Assets/ShooterKit/Scenes/NetArena01.unity" }));
+            Assert.That(NetSceneBuilder.BattleRoyaleScenePath, Is.EqualTo("Assets/ShooterKit/Scenes/NetBattleRoyale.unity"));
+            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[]
+            {
+                "Assets/ShooterKit/Scenes/NetTest.unity",
+                "Assets/ShooterKit/Scenes/NetArena01.unity",
+                "Assets/ShooterKit/Scenes/NetBattleRoyale.unity",
+            }));
         }
     }
 }

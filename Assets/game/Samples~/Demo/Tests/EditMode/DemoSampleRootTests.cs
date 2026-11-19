@@ -121,7 +121,9 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(Root + "/Scenes/NetTest.unity"));
             Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo(Root + "/Scenes/Playground.unity"));
             Assert.That(BuildSceneList.HighDropScene, Is.EqualTo(Root + "/Scenes/HighDrop.unity"));
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { Root + "/Scenes/NetTest.unity", Root + "/Scenes/NetArena01.unity" }));
+            Assert.That(
+                BuildSceneList.ServerScenes,
+                Is.EqualTo(new[] { Root + "/Scenes/NetTest.unity", Root + "/Scenes/NetArena01.unity", Root + "/Scenes/NetBattleRoyale.unity" }));
         }
 
         [Test]

@@ -163,8 +163,12 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ServerScenesStartWithTheNetSceneAndHaveTheMaps()
         {
-            Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { BuildSceneList.NetTestScene, BuildSceneList.NetArena01Scene }));
+            Assert.That(
+                BuildSceneList.ServerScenes,
+                Is.EqualTo(new[] { BuildSceneList.NetTestScene, BuildSceneList.NetArena01Scene, BuildSceneList.NetBattleRoyaleScene }));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.NetArena01Scene), "clients load the server's map too");
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.NetBattleRoyaleScene), "clients load the server's map too");
+            Assert.That(BuildSceneList.NetBattleRoyaleScene, Does.EndWith("/NetBattleRoyale.unity"));
         }
 
         [Test]

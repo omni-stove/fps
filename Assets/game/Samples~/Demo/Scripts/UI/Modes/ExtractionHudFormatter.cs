@@ -10,6 +10,11 @@ namespace Shooter.Runtime
     {
         public static LocalizedText ClosedExit => new LocalizedText("extraction.hud.closedExit");
 
+        // 専用サーバーは断った理由を送らないので、クライアントに分かる 2 つ (待っても開かなかった・箱が消えた) だけを文にする
+        public static LocalizedText OpenRefused => new LocalizedText("extraction.hud.openRefused");
+
+        public static LocalizedText OpenGone => new LocalizedText("extraction.hud.openGone");
+
         public static LocalizedText ExitsOpenIn(float seconds)
         {
             return new LocalizedText("extraction.hud.exitsOpenIn", HudFormat.DisplayedSeconds(seconds));

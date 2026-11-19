@@ -3,7 +3,9 @@
     "rootNamespace": "Shooter.Runtime",
     "references": [
         "Shooter.Core",
+        "Shooter.Aircraft.Core",
         "Shooter.Runtime",
+        "Shooter.Aircraft",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

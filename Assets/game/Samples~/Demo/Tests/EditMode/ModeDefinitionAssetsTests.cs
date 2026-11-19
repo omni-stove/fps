@@ -74,6 +74,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheSearchAndDestroyDefinitionGetsTheEconomyOnlyWhenItHasNone()
+        {
+            var snd = SearchAndDestroySceneBuilder.LoadOrCreateDefinition(_folder + "/SearchAndDestroy.asset");
+            var economy = SearchAndDestroySceneBuilder.LoadOrCreateEconomy(_folder + "/SearchAndDestroyEconomy.asset", null);
+            var other = SearchAndDestroySceneBuilder.LoadOrCreateEconomy(_folder + "/OtherEconomy.asset", null);
+
+            Assert.That(snd.Economy, Is.Null, "a new definition starts without an economy");
+            Assert.That(economy.Tuning, Is.Null, "the amounts and items come from Resources/Tuning/economy.json");
+
+            Assert.That(SearchAndDestroySceneBuilder.WireEconomy(snd, economy), Is.True);
+            Assert.That(snd.Economy, Is.SameAs(economy));
+
+            Assert.That(SearchAndDestroySceneBuilder.WireEconomy(snd, other), Is.False, "a game's own economy is kept");
+            Assert.That(snd.Economy, Is.SameAs(economy));
+            Assert.That(SearchAndDestroySceneBuilder.EconomyPath, Is.EqualTo(DemoSample.Root + "/Modes/SearchAndDestroyEconomy.asset"));
+        }
+
+        [Test]
         public void APathOutsideAssetsIsRefused()
         {
             Assert.Throws<ArgumentException>(() => SearchAndDestroySceneBuilder.LoadOrCreateDefinition("Packages/SearchAndDestroy.asset"));

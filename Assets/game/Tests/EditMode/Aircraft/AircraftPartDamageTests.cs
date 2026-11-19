@@ -50,14 +50,14 @@ namespace Shooter.Tests.EditMode
 
             _parts = root.AddComponent<AircraftPartDamage>();
             _parts.Attach(_vehicle);
-            CombatEvents.AircraftPartBroken += OnBroken;
+            AircraftEvents.PartBroken += OnBroken;
             Physics.SyncTransforms();
         }
 
         [TearDown]
         public void TearDown()
         {
-            CombatEvents.AircraftPartBroken -= OnBroken;
+            AircraftEvents.PartBroken -= OnBroken;
             _broken.Clear();
             for (var i = _created.Count - 1; i >= 0; i--)
             {
@@ -200,6 +200,77 @@ namespace Shooter.Tests.EditMode
             ShootDown(-3f, 0f, 100);
 
             Assert.That(_parts.Condition, Is.EqualTo(AircraftCondition.Intact));
+        }
+
+        [Test]
+        public void ClearingTheCombatSubscribersAlsoClearsThePartBrokenSubscribers()
+        {
+            CombatEvents.ClearSubscribers();
+
+            _parts.ApplyPartDamage(AircraftDamageSpec.DefaultRightWingId, 1000, Vector3.zero);
+
+            Assert.That(_broken, Is.Empty);
+        }
+
+        [Test]
+        public void ItIsThePartsNetV2HandsTheServerDamageTo()
+        {
+            Assert.That(_vehicle.GetComponentInChildren<INetVehicleParts>(true), Is.SameAs(_parts));
+        }
+
+        [Test]
+        public void ApplyServerTakenSetsEachPartToItsDurabilityLessWhatTheServerSaysItTook()
+        {
+            var taken = new Dictionary<string, int>
+            {
+                { AircraftDamageSpec.DefaultLeftWingId, 200 },
+                { AircraftDamageSpec.DefaultEngineId, 10000 },
+            };
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' net condition lift=0.47/1.00 control=1.00 thrust=0.00");
+            _parts.ApplyServerTaken(id => taken.TryGetValue(id, out var amount) ? amount : 0);
+
+            Assert.That(_parts.Damage.Remaining(AircraftDamageSpec.DefaultLeftWingId), Is.EqualTo(AircraftDamageSpec.DefaultWingDurability - 200));
+            Assert.That(_parts.Damage.Remaining(AircraftDamageSpec.DefaultEngineId), Is.Zero, "more than the durability leaves nothing, not less");
+            Assert.That(_parts.Damage.IsBroken(AircraftDamageSpec.DefaultEngineId), Is.True);
+            Assert.That(_parts.Condition.LeftLift, Is.EqualTo(0.2f + (0.8f / 3f)).Within(Epsilon));
+            Assert.That(_parts.Condition.Thrust, Is.EqualTo(AircraftDamageSpec.DefaultMinThrust).Within(Epsilon));
+            Assert.That(_broken, Is.Empty, "the server's totals do not replay the breaks");
+        }
+
+        [Test]
+        public void ApplyServerTakenRepairsThePartsTheServerNoLongerLists()
+        {
+            _parts.ApplyPartDamage(AircraftDamageSpec.DefaultTailId, 1000, Vector3.zero);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' net condition lift=1.00/1.00 control=1.00 thrust=1.00");
+            _parts.ApplyServerTaken(_ => 0);
+
+            Assert.That(_parts.Condition, Is.EqualTo(AircraftCondition.Intact));
+        }
+
+        [Test]
+        public void ApplyServerTakenLogsNothingWhenTheConditionStaysAndKeepsTheVehicleNameAfterDetach()
+        {
+            _parts.Detach();
+            var lines = new List<string>();
+            void Heard(string message, string stackTrace, LogType type) => lines.Add(message);
+            Application.logMessageReceived += Heard;
+            try
+            {
+                _parts.ApplyServerTaken(_ => 0);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Heard;
+            }
+
+            Assert.That(lines, Is.Empty);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' net condition lift=1.00/1.00 control=0.30 thrust=1.00");
+            _parts.ApplyServerTaken(id => id == AircraftDamageSpec.DefaultTailId ? AircraftDamageSpec.DefaultTailDurability : 0);
+
+            Assert.Throws<System.ArgumentNullException>(() => _parts.ApplyServerTaken(null));
         }
 
         [Test]

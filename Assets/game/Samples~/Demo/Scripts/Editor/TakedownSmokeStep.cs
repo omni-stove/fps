@@ -348,7 +348,7 @@ namespace Shooter.Editor
                 && stealth.Awareness != null
                 && stealth.Rule == Stealth.On
                 && enemy.Target == world.PlayerDamageable
-                && ContextMeleeSelector.IsUnaware(enemy.State, stealth.Stage);
+                && ContextMeleeSelector.IsUnaware(enemy.State, stealth.IsUnaware);
         }
 
         public static EnemyAgent FindEnemy(GameObject area, string id)

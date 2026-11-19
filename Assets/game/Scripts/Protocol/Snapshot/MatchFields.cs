@@ -2,6 +2,7 @@ using System;
 
 namespace Shooter.Protocol
 {
+    // 1 バイトに収まらなくなったので、SnapshotMessage は部分のビットを 2 バイトで書く。
     [Flags]
     public enum MatchFields
     {
@@ -14,6 +15,7 @@ namespace Shooter.Protocol
         RoundResult = 1 << 5,
         ObjectiveProgress = 1 << 6,
         Payload = 1 << 7,
-        All = Status | Rules | Objective | Round | ObjectiveState | RoundResult | ObjectiveProgress | Payload,
+        BattleRoyale = 1 << 8,
+        All = Status | Rules | Objective | Round | ObjectiveState | RoundResult | ObjectiveProgress | Payload | BattleRoyale,
     }
 }

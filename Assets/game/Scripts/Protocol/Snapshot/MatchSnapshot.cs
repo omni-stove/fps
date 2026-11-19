@@ -1,3 +1,4 @@
+using System.Numerics;
 using Shooter.Core;
 
 namespace Shooter.Protocol
@@ -75,6 +76,23 @@ namespace Shooter.Protocol
 
         public int PayloadPushers { get; set; }
 
+        // 安全なエリアは高さで変わらない円なので、中心は xz だけを送る
+        public Vector2 ZoneCenter { get; set; }
+
+        public float ZoneRadius { get; set; }
+
+        public Vector2 NextZoneCenter { get; set; }
+
+        public float NextZoneRadius { get; set; }
+
+        // 始まる前は 0
+        public int ZonePhase { get; set; }
+
+        // 端数の秒で送らないのは、段階の間ずっと毎 tick 差分に載ってしまうため (RemainingSeconds と同じ)
+        public int ZonePhaseRemainingSeconds { get; set; }
+
+        public int SquadsRemaining { get; set; }
+
         internal MatchFields ChangedFields(in MatchSnapshot baseline)
         {
             var fields = MatchFields.None;
@@ -141,6 +159,17 @@ namespace Shooter.Protocol
                 || PayloadPushers != baseline.PayloadPushers)
             {
                 fields |= MatchFields.Payload;
+            }
+
+            if (!Same.Bits(ZoneCenter, baseline.ZoneCenter)
+                || !Same.Bits(ZoneRadius, baseline.ZoneRadius)
+                || !Same.Bits(NextZoneCenter, baseline.NextZoneCenter)
+                || !Same.Bits(NextZoneRadius, baseline.NextZoneRadius)
+                || ZonePhase != baseline.ZonePhase
+                || ZonePhaseRemainingSeconds != baseline.ZonePhaseRemainingSeconds
+                || SquadsRemaining != baseline.SquadsRemaining)
+            {
+                fields |= MatchFields.BattleRoyale;
             }
 
             return fields;
@@ -246,6 +275,43 @@ namespace Shooter.Protocol
                 writer.WriteInt32(PayloadCheckpointsPassed);
                 writer.WriteInt32(PayloadPushers);
             }
+
+            if ((fields & MatchFields.BattleRoyale) != 0)
+            {
+                RequireFinite(ZoneCenter, "zone center");
+                RequireFinite(NextZoneCenter, "next zone center");
+                RequireRadius(ZoneRadius, "zone radius");
+                RequireRadius(NextZoneRadius, "next zone radius");
+                if (ZonePhase < 0 || ZonePhaseRemainingSeconds < 0 || SquadsRemaining < 0)
+                {
+                    throw new System.InvalidOperationException(
+                        "the zone phase, its remaining seconds and the squads remaining must not be negative");
+                }
+
+                writer.WriteVector2(ZoneCenter);
+                writer.WriteSingle(ZoneRadius);
+                writer.WriteVector2(NextZoneCenter);
+                writer.WriteSingle(NextZoneRadius);
+                writer.WriteInt32(ZonePhase);
+                writer.WriteInt32(ZonePhaseRemainingSeconds);
+                writer.WriteInt32(SquadsRemaining);
+            }
+        }
+
+        private static void RequireFinite(Vector2 value, string what)
+        {
+            if (float.IsNaN(value.X) || float.IsInfinity(value.X) || float.IsNaN(value.Y) || float.IsInfinity(value.Y))
+            {
+                throw new System.InvalidOperationException(what + " must be finite");
+            }
+        }
+
+        private static void RequireRadius(float value, string what)
+        {
+            if (!(value >= 0f) || float.IsInfinity(value))
+            {
+                throw new System.InvalidOperationException(what + " must be finite and not negative");
+            }
         }
 
         private static void RequireFraction(float value, string what)
@@ -328,6 +394,17 @@ namespace Shooter.Protocol
                 PayloadCheckpointsPassed = reader.ReadInt32AtLeast(0, "payload checkpoints passed");
                 PayloadPushers = reader.ReadInt32AtLeast(0, "payload pushers");
             }
+
+            if ((fields & MatchFields.BattleRoyale) != 0)
+            {
+                ZoneCenter = reader.ReadFiniteVector2("zone center");
+                ZoneRadius = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "zone radius");
+                NextZoneCenter = reader.ReadFiniteVector2("next zone center");
+                NextZoneRadius = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "next zone radius");
+                ZonePhase = reader.ReadInt32AtLeast(0, "zone phase");
+                ZonePhaseRemainingSeconds = reader.ReadInt32AtLeast(0, "zone phase remaining seconds");
+                SquadsRemaining = reader.ReadInt32AtLeast(0, "squads remaining");
+            }
         }
 
         internal void FillFrom(in MatchSnapshot baseline, MatchFields present)
@@ -397,6 +474,17 @@ namespace Shooter.Protocol
                 PayloadProgress = baseline.PayloadProgress;
                 PayloadCheckpointsPassed = baseline.PayloadCheckpointsPassed;
                 PayloadPushers = baseline.PayloadPushers;
+            }
+
+            if ((missing & MatchFields.BattleRoyale) != 0)
+            {
+                ZoneCenter = baseline.ZoneCenter;
+                ZoneRadius = baseline.ZoneRadius;
+                NextZoneCenter = baseline.NextZoneCenter;
+                NextZoneRadius = baseline.NextZoneRadius;
+                ZonePhase = baseline.ZonePhase;
+                ZonePhaseRemainingSeconds = baseline.ZonePhaseRemainingSeconds;
+                SquadsRemaining = baseline.SquadsRemaining;
             }
         }
     }

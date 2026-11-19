@@ -10,13 +10,16 @@ namespace Shooter.Protocol.Tests
         // 拠点の有無と番号・爆弾の有無と段階 (1 バイトずつ)、目的の残り秒 (4 バイト)
         private const int _objectiveStateBytes = 1 + 1 + 1 + 1 + 4;
 
-        // 試合の部分のビットまでの頭 (Id・版・tick・基準の tick・部分のビット)
-        private const int _headBytes = 2 + 1 + 4 + 4 + 1;
+        // 試合の部分のビットまでの頭 (Id・版・tick・基準の tick・部分のビット (2))
+        private const int _headBytes = 2 + 1 + 4 + 4 + 2;
+
+        // エリアの中心 (8)・半径 (4)・次の中心 (8)・次の半径 (4)・段階 (4)・段階の残り秒 (4)・残っている分隊 (4)
+        private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs20()
+        public void TheVersionIs21()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(20));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(21));
         }
 
         [Test]
@@ -427,10 +430,10 @@ namespace Shooter.Protocol.Tests
             current.Owner.Money = 1;
             var bytes = Bytes(current, baseline);
 
-            // 試合の部分が空の差分では、頭・持ち主の有無 (1)・持ち主の部分のビット (1)・最後に処理した入力の tick (4) の後にお金が並ぶ
+            // 試合の部分が空の差分では、頭・持ち主の有無 (1)・持ち主の部分のビット (2)・最後に処理した入力の tick (4) の後にお金が並ぶ
             for (var i = 0; i < 4; i++)
             {
-                bytes[_headBytes + 1 + 1 + 4 + i] = 0xFF;
+                bytes[_headBytes + 1 + 2 + 4 + i] = 0xFF;
             }
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
@@ -457,6 +460,568 @@ namespace Shooter.Protocol.Tests
             Assert.That(sent.Owner.Money, Is.Zero);
             Assert.That(sent.Match.PayloadProgress, Is.Zero);
             Assert.That(sent.Match.PayloadPushers, Is.Zero);
+        }
+
+        [Test]
+        public void TheBattleRoyaleRoundTrips()
+        {
+            var sent = Build(100);
+            SetZone(sent, new Vector2(120.5f, -40f), 300f, new Vector2(100f, -20.25f), 150f, 2, 45, 17);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Match.ZoneCenter, Is.EqualTo(new Vector2(120.5f, -40f)));
+            Assert.That(got.Match.ZoneRadius, Is.EqualTo(300f));
+            Assert.That(got.Match.NextZoneCenter, Is.EqualTo(new Vector2(100f, -20.25f)));
+            Assert.That(got.Match.NextZoneRadius, Is.EqualTo(150f));
+            Assert.That(got.Match.ZonePhase, Is.EqualTo(2));
+            Assert.That(got.Match.ZonePhaseRemainingSeconds, Is.EqualTo(45));
+            Assert.That(got.Match.SquadsRemaining, Is.EqualTo(17));
+            Assert.That(got.Match.RemainingSeconds, Is.EqualTo(300));
+        }
+
+        [Test]
+        public void ABattleRoyaleObjectiveRoundTrips()
+        {
+            var sent = Build(100);
+            sent.Match.Objective = MatchObjective.BattleRoyale;
+            var extraction = Build(100);
+            extraction.Match.Objective = MatchObjective.Extraction;
+
+            Assert.That(Send(sent, null).Match.Objective, Is.EqualTo(MatchObjective.BattleRoyale));
+            Assert.That(Send(extraction, null).Match.Objective, Is.EqualTo(MatchObjective.Extraction));
+        }
+
+        [Test]
+        public void ADefaultBattleRoyaleRoundTripsAsZero()
+        {
+            var got = Send(Build(100), null);
+
+            Assert.That(got.Match.ZoneCenter, Is.EqualTo(Vector2.Zero));
+            Assert.That(got.Match.ZoneRadius, Is.Zero);
+            Assert.That(got.Match.NextZoneCenter, Is.EqualTo(Vector2.Zero));
+            Assert.That(got.Match.NextZoneRadius, Is.Zero);
+            Assert.That(got.Match.ZonePhase, Is.Zero);
+            Assert.That(got.Match.ZonePhaseRemainingSeconds, Is.Zero);
+            Assert.That(got.Match.SquadsRemaining, Is.Zero);
+        }
+
+        [Test]
+        public void AShrinkingZoneSendsOnlyTheBattleRoyaleBytesAndResolves()
+        {
+            var baseline = Build(100);
+            SetZone(baseline, new Vector2(10f, 10f), 200f, new Vector2(5f, 5f), 100f, 1, 30, 20);
+            var unchanged = Clone(baseline, 101);
+            var current = Clone(baseline, 101);
+            SetZone(current, new Vector2(9f, 9.5f), 180f, new Vector2(5f, 5f), 100f, 1, 29, 19);
+
+            var got = Send(current, baseline);
+
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(_battleRoyaleBytes));
+            Assert.That(got.IsComplete, Is.False);
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Match.ZoneCenter, Is.EqualTo(new Vector2(9f, 9.5f)));
+            Assert.That(got.Match.ZoneRadius, Is.EqualTo(180f));
+            Assert.That(got.Match.ZonePhaseRemainingSeconds, Is.EqualTo(29));
+            Assert.That(got.Match.SquadsRemaining, Is.EqualTo(19));
+            Assert.That(got.Match.RemainingSeconds, Is.EqualTo(300));
+        }
+
+        [Test]
+        public void AnUnchangedBattleRoyaleIsTakenFromTheBaseline()
+        {
+            var baseline = Build(100);
+            SetZone(baseline, new Vector2(-3f, 4f), 75f, new Vector2(-1f, 2f), 25f, 4, 12, 3);
+            var current = Clone(baseline, 101);
+            current.Match.AlphaScore = 5;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Match.ZoneCenter, Is.EqualTo(new Vector2(-3f, 4f)));
+            Assert.That(got.Match.ZoneRadius, Is.EqualTo(75f));
+            Assert.That(got.Match.NextZoneCenter, Is.EqualTo(new Vector2(-1f, 2f)));
+            Assert.That(got.Match.NextZoneRadius, Is.EqualTo(25f));
+            Assert.That(got.Match.ZonePhase, Is.EqualTo(4));
+            Assert.That(got.Match.ZonePhaseRemainingSeconds, Is.EqualTo(12));
+            Assert.That(got.Match.SquadsRemaining, Is.EqualTo(3));
+            Assert.That(got.Match.AlphaScore, Is.EqualTo(5));
+        }
+
+        [TestCase(float.NaN, 0f, 1f, 1f, 0, 0, 0)]
+        [TestCase(float.PositiveInfinity, 0f, 1f, 1f, 0, 0, 0)]
+        [TestCase(0f, float.NegativeInfinity, 1f, 1f, 0, 0, 0)]
+        [TestCase(0f, 0f, -0.5f, 1f, 0, 0, 0)]
+        [TestCase(0f, 0f, float.NaN, 1f, 0, 0, 0)]
+        [TestCase(0f, 0f, 1f, -1f, 0, 0, 0)]
+        [TestCase(0f, 0f, 1f, float.PositiveInfinity, 0, 0, 0)]
+        [TestCase(0f, 0f, 1f, 1f, -1, 0, 0)]
+        [TestCase(0f, 0f, 1f, 1f, 0, -1, 0)]
+        [TestCase(0f, 0f, 1f, 1f, 0, 0, -1)]
+        public void AnImpossibleBattleRoyaleIsNotWritten(
+            float centerX, float nextCenterZ, float radius, float nextRadius, int phase, int seconds, int squads)
+        {
+            var sent = Build(100);
+            SetZone(sent, new Vector2(centerX, 0f), radius, new Vector2(0f, nextCenterZ), nextRadius, phase, seconds, squads);
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase(0)]
+        [TestCase(4)]
+        [TestCase(8)]
+        [TestCase(16)]
+        [TestCase(20)]
+        [TestCase(24)]
+        [TestCase(28)]
+        [TestCase(32)]
+        public void AnImpossibleBattleRoyaleIsUnreadable(int at)
+        {
+            var baseline = Build(100);
+            var current = Clone(baseline, 101);
+            SetZone(current, new Vector2(1f, 2f), 50f, new Vector2(3f, 4f), 25f, 1, 10, 8);
+            var bytes = Bytes(current, baseline);
+
+            // 差分に載るのは試合の BR の部分だけなので、頭の直後が 中心・半径・次の中心・次の半径・段階・残り秒・分隊 の順に並ぶ。
+            // 0xFF の 4 バイトは浮動小数なら NaN、整数なら -1
+            for (var i = 0; i < 4; i++)
+            {
+                bytes[_headBytes + at + i] = 0xFF;
+            }
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [TestCase(8)]
+        [TestCase(20)]
+        public void ANegativeZoneRadiusIsUnreadable(int at)
+        {
+            var baseline = Build(100);
+            var current = Clone(baseline, 101);
+            SetZone(current, Vector2.Zero, 50f, Vector2.Zero, 25f, 1, 10, 8);
+            var bytes = Bytes(current, baseline);
+            BitConverter.TryWriteBytes(new Span<byte>(bytes, _headBytes + at, 4), -1f);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void TheMatchPartsAreWrittenInTwoBytesAndAnUnknownPartIsUnreadable()
+        {
+            var baseline = Build(100);
+            var current = Clone(baseline, 101);
+            SetZone(current, Vector2.Zero, 1f, Vector2.Zero, 1f, 1, 1, 1);
+            var bytes = Bytes(current, baseline);
+
+            Assert.That(BitConverter.ToUInt16(bytes, _headBytes - 2), Is.EqualTo((ushort)MatchFields.BattleRoyale));
+            Assert.That((int)MatchFields.BattleRoyale, Is.EqualTo(1 << 8));
+
+            bytes[_headBytes - 1] |= 1 << 1;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [TestCase(ObjectiveItemKind.LootBox, 4, false, 1.5f)]
+        [TestCase(ObjectiveItemKind.SupplyCrate, 5, true, 2f)]
+        [TestCase(ObjectiveItemKind.DeathBox, 6, true, 1.25f)]
+        [TestCase(ObjectiveItemKind.ExtractionPoint, 7, true, 8f)]
+        public void ABoxOrAnExtractionPointRoundTrips(ObjectiveItemKind kind, int value, bool opened, float radius)
+        {
+            var sent = Build(100);
+            AddItem(sent, 9, kind, Team.Alpha, 3, new Vector3(12f, 1f, -7f), ObjectiveItemState.Home, PlayerIds.None);
+            sent.ObjectiveItems[0].Opened = opened;
+            sent.ObjectiveItems[0].Radius = radius;
+
+            var got = Send(sent, null);
+
+            Assert.That((int)kind, Is.EqualTo(value));
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.ObjectiveItems[0].Present, Is.EqualTo(ObjectiveItemFields.All));
+            Assert.That(got.ObjectiveItems[0].Kind, Is.EqualTo(kind));
+            Assert.That(got.ObjectiveItems[0].OwnerId, Is.EqualTo(3));
+            Assert.That(got.ObjectiveItems[0].Position, Is.EqualTo(new Vector3(12f, 1f, -7f)));
+            Assert.That(got.ObjectiveItems[0].Opened, Is.EqualTo(opened));
+            Assert.That(got.ObjectiveItems[0].Radius, Is.EqualTo(radius));
+            Assert.That(got.ObjectiveItems[0].ChangedBits(sent.ObjectiveItems[0]), Is.Zero);
+        }
+
+        [Test]
+        public void AFullSnapshotLeavesOutTheAccessWhileItIsDefault()
+        {
+            var plain = Build(100);
+            AddItem(plain, 1, ObjectiveItemKind.LootBox, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            var opened = Build(100);
+            AddItem(opened, 1, ObjectiveItemKind.LootBox, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            opened.ObjectiveItems[0].Opened = true;
+
+            var got = Send(plain, null);
+
+            // 開けたか (1)・半径 (4)
+            Assert.That(Size(opened, null), Is.EqualTo(Size(plain, null) + 1 + 4));
+            Assert.That(got.ObjectiveItems[0].Present, Is.EqualTo(ObjectiveItemFields.All));
+            Assert.That(got.ObjectiveItems[0].Opened, Is.False);
+            Assert.That(got.ObjectiveItems[0].Radius, Is.Zero);
+        }
+
+        [Test]
+        public void AFullSnapshotResetsTheAccessLeftOutToDefault()
+        {
+            var table = MatchMessages.CreateClientTable();
+            var writer = new MessageWriter();
+            var opened = Build(100);
+            AddItem(opened, 1, ObjectiveItemKind.SupplyCrate, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            opened.ObjectiveItems[0].Opened = true;
+            opened.ObjectiveItems[0].Radius = 2f;
+            writer.WriteMessage(opened);
+            table.Read(writer.AsSegment());
+            writer.Reset();
+            var plain = Build(101);
+            AddItem(plain, 1, ObjectiveItemKind.SupplyCrate, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            writer.WriteMessage(plain);
+
+            var got = (SnapshotMessage)table.Read(writer.AsSegment());
+
+            Assert.That(got.ObjectiveItems[0].Opened, Is.False);
+            Assert.That(got.ObjectiveItems[0].Radius, Is.Zero);
+        }
+
+        [Test]
+        public void OpeningABoxSendsOnlyItsAccessAndResolves()
+        {
+            var baseline = Build(100);
+            AddItem(baseline, 2, ObjectiveItemKind.LootBox, Team.Alpha, PlayerIds.None, new Vector3(4f, 0f, 4f), ObjectiveItemState.Home, PlayerIds.None);
+            baseline.ObjectiveItems[0].Radius = 1.5f;
+            var current = Clone(baseline, 101);
+            current.ObjectiveItems[0].Opened = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.ObjectiveItems[0].Present, Is.EqualTo(ObjectiveItemFields.Access));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.ObjectiveItems[0].Opened, Is.True);
+            Assert.That(got.ObjectiveItems[0].Radius, Is.EqualTo(1.5f));
+            Assert.That(got.ObjectiveItems[0].Kind, Is.EqualTo(ObjectiveItemKind.LootBox));
+            Assert.That(got.ObjectiveItems[0].Position, Is.EqualTo(new Vector3(4f, 0f, 4f)));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void AnImpossibleItemRadiusIsNotWritten(float radius)
+        {
+            var sent = Build(100);
+            AddItem(sent, 1, ObjectiveItemKind.ExtractionPoint, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            sent.ObjectiveItems[0].Radius = radius;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        public void AnImpossibleItemRadiusIsUnreadable(float radius)
+        {
+            var sent = Build(100);
+            AddItem(sent, 1, ObjectiveItemKind.ExtractionPoint, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            sent.ObjectiveItems[0].Radius = 6f;
+            var bytes = Bytes(sent, null);
+
+            // 末尾は 半径 (4)・設置物の並びの数 (1)
+            BitConverter.TryWriteBytes(new Span<byte>(bytes, bytes.Length - 1 - 4, 4), radius);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void AnUnknownItemKindIsUnreadable()
+        {
+            var sent = Build(100);
+            AddItem(sent, 1, ObjectiveItemKind.ExtractionPoint, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            var bytes = Bytes(sent, null);
+
+            // 物の種類は、末尾の 種類 (1)・陣営 (1)・持ち主 (4)・位置 (12)・状態 (1)・運んでいる人 (4)・設置物の並びの数 (1) の頭にある
+            var kindAt = bytes.Length - (1 + 1 + 4 + 12 + 1 + 4 + 1);
+            Assert.That(bytes[kindAt], Is.EqualTo((byte)ObjectiveItemKind.ExtractionPoint));
+            bytes[kindAt] = (byte)(ObjectiveItemKind.ExtractionPoint + 1);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void TheSquadAndTheParachuteRoundTrip()
+        {
+            var sent = Build(100);
+            ref var player = ref AddPlayer(sent, 1);
+            player.SquadId = 12;
+            player.IsParachuting = true;
+            player.IsAiming = true;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Players[0].SquadId, Is.EqualTo(12));
+            Assert.That(got.Players[0].IsParachuting, Is.True);
+            Assert.That(got.Players[0].IsAiming, Is.True);
+            Assert.That(got.Players[0].IsGrounded, Is.False);
+            Assert.That(got.Players[0].ChangedBits(sent.Players[0]), Is.Zero);
+        }
+
+        [Test]
+        public void ADefaultSquadAndParachuteRoundTripAsZero()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).SquadId = byte.MaxValue;
+            var plain = Build(101);
+            AddPlayer(plain, 1);
+
+            Assert.That(Send(sent, null).Players[0].SquadId, Is.EqualTo(byte.MaxValue));
+            Assert.That(Send(plain, null).Players[0].SquadId, Is.Zero);
+            Assert.That(Send(plain, null).Players[0].IsParachuting, Is.False);
+        }
+
+        [Test]
+        public void AChangedSquadIsSentWithTheIdentity()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).SquadId = 2;
+            var current = Build(101);
+            AddPlayer(current, 1).SquadId = 5;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].SquadId, Is.EqualTo(5));
+            Assert.That(got.Players[0].WeaponId, Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void OpeningTheParachuteIsSentWithTheMotion()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).SquadId = 3;
+            var current = Build(101);
+            ref var player = ref AddPlayer(current, 1);
+            player.SquadId = 3;
+            player.IsParachuting = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Motion));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].IsParachuting, Is.True);
+            Assert.That(got.Players[0].SquadId, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TheOwnersRedeployAndExtractionRoundTrip()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.RedeploysLeft = 2;
+            sent.Owner.RedeploySeconds = 15;
+            sent.Owner.ExtractionProgress = 0.375f;
+            sent.Owner.HasExtractionPoint = true;
+            sent.Owner.ExtractionPointId = 7;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Owner.RedeploysLeft, Is.EqualTo(2));
+            Assert.That(got.Owner.RedeploySeconds, Is.EqualTo(15));
+            Assert.That(got.Owner.ExtractionProgress, Is.EqualTo(0.375f));
+            Assert.That(got.Owner.HasExtractionPoint, Is.True);
+            Assert.That(got.Owner.ExtractionPointId, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void NoRedeployAndNoExtractionRoundTripAsNone()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.ExtractionPointId = 9;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Owner.RedeploysLeft, Is.Zero);
+            Assert.That(got.Owner.RedeploySeconds, Is.Null);
+            Assert.That(got.Owner.ExtractionProgress, Is.Zero);
+            Assert.That(got.Owner.HasExtractionPoint, Is.False);
+            Assert.That(got.Owner.ExtractionPointId, Is.Zero);
+        }
+
+        [Test]
+        public void ChangedRedeploySendsOnlyItsBytesAndResolves()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            baseline.Owner.RedeploysLeft = 1;
+            baseline.Owner.HasExtractionPoint = true;
+            baseline.Owner.ExtractionPointId = 4;
+            var unchanged = Clone(baseline, 101);
+            var current = Clone(baseline, 101);
+            current.Owner.RedeploySeconds = 9;
+
+            var got = Send(current, baseline);
+
+            // 残り回数 (4)・待っているか (1)・残り秒 (4)
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(4 + 1 + 4));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Owner.RedeploysLeft, Is.EqualTo(1));
+            Assert.That(got.Owner.RedeploySeconds, Is.EqualTo(9));
+            Assert.That(got.Owner.HasExtractionPoint, Is.True);
+            Assert.That(got.Owner.ExtractionPointId, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void ChangedExtractionSendsOnlyItsBytesAndResolves()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            baseline.Owner.RedeploysLeft = 3;
+            baseline.Owner.HasExtractionPoint = true;
+            baseline.Owner.ExtractionPointId = 6;
+            baseline.Owner.ExtractionProgress = 0.25f;
+            var unchanged = Clone(baseline, 101);
+            var current = Clone(baseline, 101);
+            current.Owner.ExtractionProgress = 0.5f;
+
+            var got = Send(current, baseline);
+
+            // 進み (4)・脱出地点 (4)
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(4 + 4));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Owner.ExtractionProgress, Is.EqualTo(0.5f));
+            Assert.That(got.Owner.ExtractionPointId, Is.EqualTo(6));
+            Assert.That(got.Owner.RedeploysLeft, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TheOwnerPartsAreWrittenInTwoBytes()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            var current = Clone(baseline, 101);
+            current.Owner.HasExtractionPoint = true;
+            current.Owner.ExtractionPointId = 1;
+            var bytes = Bytes(current, baseline);
+
+            // 試合の部分が空の差分では、頭・持ち主の有無 (1) の後に持ち主の部分のビットが並ぶ
+            Assert.That(BitConverter.ToUInt16(bytes, _headBytes + 1), Is.EqualTo((ushort)OwnerFields.Extraction));
+            Assert.That((int)OwnerFields.Extraction, Is.EqualTo(1 << 8));
+
+            bytes[_headBytes + 1 + 1] |= 1 << 1;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [TestCase(-1, null, 0f, false, 0)]
+        [TestCase(0, -1, 0f, false, 0)]
+        [TestCase(0, null, -0.1f, true, 1)]
+        [TestCase(0, null, 1.1f, true, 1)]
+        [TestCase(0, null, float.NaN, true, 1)]
+        [TestCase(0, null, 0.5f, false, 0)]
+        [TestCase(0, null, 0f, true, -1)]
+        public void AnImpossibleRedeployOrExtractionIsNotWritten(int left, int? seconds, float progress, bool hasPoint, int point)
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.RedeploysLeft = left;
+            sent.Owner.RedeploySeconds = seconds;
+            sent.Owner.ExtractionProgress = progress;
+            sent.Owner.HasExtractionPoint = hasPoint;
+            sent.Owner.ExtractionPointId = point;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase(0)]
+        [TestCase(5)]
+        public void AnImpossibleRedeployIsUnreadable(int at)
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            var current = Clone(baseline, 101);
+            current.Owner.RedeploysLeft = 1;
+            current.Owner.RedeploySeconds = 3;
+            var bytes = Bytes(current, baseline);
+
+            // 試合の部分が空の差分では、頭・持ち主の有無 (1)・持ち主の部分のビット (2)・最後に処理した入力の tick (4) の後に
+            // 残り回数 (4)・待っているか (1)・残り秒 (4) が並ぶ
+            for (var i = 0; i < 4; i++)
+            {
+                bytes[_headBytes + 1 + 2 + 4 + at + i] = 0xFF;
+            }
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [TestCase(0, 0xFF)]
+        [TestCase(4, 0xFE)]
+        public void AnImpossibleExtractionIsUnreadable(int at, int fill)
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            var current = Clone(baseline, 101);
+            current.Owner.HasExtractionPoint = true;
+            current.Owner.ExtractionPointId = 2;
+            current.Owner.ExtractionProgress = 0.5f;
+            var bytes = Bytes(current, baseline);
+
+            // 進み (4)・脱出地点 (4) が並ぶ。0xFF の 4 バイトの進みは NaN、0xFE で始まる 0xFF の脱出地点は -2
+            bytes[_headBytes + 1 + 2 + 4 + at] = (byte)fill;
+            for (var i = 1; i < 4; i++)
+            {
+                bytes[_headBytes + 1 + 2 + 4 + at + i] = 0xFF;
+            }
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ExtractionProgressWithoutAPointIsUnreadable()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            var current = Clone(baseline, 101);
+            current.Owner.HasExtractionPoint = true;
+            current.Owner.ExtractionPointId = 2;
+            current.Owner.ExtractionProgress = 0.5f;
+            var bytes = Bytes(current, baseline);
+            BitConverter.TryWriteBytes(new Span<byte>(bytes, _headBytes + 1 + 2 + 4 + 4, 4), PlayerIds.None);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ClearingAndCopyingASnapshotHandleTheBattleRoyaleAndExtraction()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            SetZone(sent, new Vector2(1f, 2f), 30f, new Vector2(3f, 4f), 10f, 2, 5, 6);
+            sent.Owner.RedeploysLeft = 1;
+            sent.Owner.RedeploySeconds = 4;
+            sent.Owner.ExtractionProgress = 0.75f;
+            sent.Owner.HasExtractionPoint = true;
+            sent.Owner.ExtractionPointId = 8;
+            var copy = new SnapshotMessage();
+
+            copy.CopyFrom(sent);
+            sent.Clear();
+
+            Assert.That(copy.Match.ZoneRadius, Is.EqualTo(30f));
+            Assert.That(copy.Match.SquadsRemaining, Is.EqualTo(6));
+            Assert.That(copy.Owner.RedeploysLeft, Is.EqualTo(1));
+            Assert.That(copy.Owner.RedeploySeconds, Is.EqualTo(4));
+            Assert.That(copy.Owner.ExtractionProgress, Is.EqualTo(0.75f));
+            Assert.That(copy.Owner.HasExtractionPoint, Is.True);
+            Assert.That(copy.Owner.ExtractionPointId, Is.EqualTo(8));
+            Assert.That(sent.Match.ZoneRadius, Is.Zero);
+            Assert.That(sent.Match.SquadsRemaining, Is.Zero);
+            Assert.That(sent.Owner.RedeploysLeft, Is.Zero);
+            Assert.That(sent.Owner.RedeploySeconds, Is.Null);
+            Assert.That(sent.Owner.ExtractionProgress, Is.Zero);
+            Assert.That(sent.Owner.HasExtractionPoint, Is.False);
+            Assert.That(sent.Owner.ExtractionPointId, Is.Zero);
         }
 
         [Test]
@@ -848,6 +1413,19 @@ namespace Shooter.Protocol.Tests
             item.State = state;
             item.HasCarrier = carrier != PlayerIds.None;
             item.CarrierId = item.HasCarrier ? carrier : 0;
+        }
+
+        private static void SetZone(
+            SnapshotMessage snapshot, Vector2 center, float radius, Vector2 nextCenter, float nextRadius, int phase, int seconds, int squads)
+        {
+            ref var match = ref snapshot.Match;
+            match.ZoneCenter = center;
+            match.ZoneRadius = radius;
+            match.NextZoneCenter = nextCenter;
+            match.NextZoneRadius = nextRadius;
+            match.ZonePhase = phase;
+            match.ZonePhaseRemainingSeconds = seconds;
+            match.SquadsRemaining = squads;
         }
 
         private static void AddDeployable(

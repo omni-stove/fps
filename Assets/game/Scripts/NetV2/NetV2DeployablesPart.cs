@@ -114,13 +114,13 @@ namespace Shooter.NetV2
             return view;
         }
 
-        // 置いた物の差し替えの Prefab には、オフラインで自分で動く部品 (Turret・Decoy・Deployable) と当たりが付いている。
+        // 置いた物の差し替えの Prefab には、オフラインで自分で動く部品 (Turret・Deployable・IClientQuietedBehaviour の印の付いたもの) と当たりが付いている。
         // 動くかと当たりはサーバーが決めるので、手元では止める。当たりを残すと、それを知らないサーバーの移動と手元の予測がずれる
         private static void Quiet(GameObject visual)
         {
             foreach (var behaviour in visual.GetComponentsInChildren<MonoBehaviour>(true))
             {
-                if (behaviour is Turret || behaviour is Decoy || behaviour is Deployable)
+                if (behaviour is Turret || behaviour is IClientQuietedBehaviour || behaviour is Deployable)
                 {
                     behaviour.enabled = false;
                 }

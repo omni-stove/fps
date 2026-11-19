@@ -51,11 +51,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ACarIsDrivenAndAnAircraftIsFlown()
+        public void OnlyAVehicleWithABotPilotedMotorNeedsABotPilot()
         {
-            Assert.That(EnemyAgent.FliesAsAircraft(CreateCar("Jeep")), Is.False);
-            Assert.That(EnemyAgent.FliesAsAircraft(CreateAircraft("Plane")), Is.True);
-            Assert.Throws<ArgumentNullException>(() => EnemyAgent.FliesAsAircraft(null));
+            Assert.That(EnemyAgent.NeedsBotPilot(CreateCar("Jeep")), Is.False);
+            Assert.That(EnemyAgent.NeedsBotPilot(CreatePiloted("Glider")), Is.True);
+            Assert.Throws<ArgumentNullException>(() => EnemyAgent.NeedsBotPilot(null));
+        }
+
+        [Test]
+        public void OnlyAConcreteMonoBehaviourWithIBotPilotIsABotPilotType()
+        {
+            Assert.That(EnemyAgent.IsBotPilotType(typeof(FakeBotPilot)), Is.True);
+            Assert.That(EnemyAgent.IsBotPilotType(typeof(FakeBotPilotedMotor)), Is.False, "a MonoBehaviour without IBotPilot");
+            Assert.That(EnemyAgent.IsBotPilotType(typeof(IBotPilot)), Is.False, "an interface cannot be added");
+            Assert.That(EnemyAgent.IsBotPilotType(typeof(string)), Is.False);
+            Assert.That(EnemyAgent.IsBotPilotType(null), Is.False);
         }
 
         [Test]
@@ -95,13 +105,13 @@ namespace Shooter.Tests.EditMode
             var driver = _agent.GetComponent<BotVehicleDriver>();
             Assert.That(driver, Is.Not.Null);
             Assert.That(_agent.VehicleDriver, Is.SameAs(driver));
-            Assert.That(_agent.AircraftPilot, Is.Null);
+            Assert.That(_agent.VehiclePilot, Is.Null);
             Assert.That(_agent.IsDrivingVehicle, Is.True);
             Assert.That(driver.Vehicle, Is.SameAs(car));
             Assert.That(driver.Rider, Is.SameAs(_agent));
             Assert.That(driver.Route, Is.SameAs(route));
             Assert.That(driver.DrivesUnmanned, Is.False, "the bot drives; no stand-in takes the seat");
-            Assert.That(car.GetComponent<BotAircraftPilot>(), Is.Null);
+            Assert.That(car.GetComponent<IBotPilot>(), Is.Null);
         }
 
         [Test]
@@ -211,22 +221,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void SittingInTheDriverSeatOfAnAircraftAttachesAPilotOnTheAircraft()
+        public void SittingInTheDriverSeatOfAPilotedVehicleAttachesThePilotTypeItNames()
         {
-            var plane = CreateAircraft("Plane");
-            var route = AddRoute(plane);
+            var glider = CreatePiloted("Glider");
+            var route = AddRoute(glider);
             var a = Point("A", new Vector3(1000f, Altitude + 100f, 0f));
             var b = Point("B", new Vector3(0f, Altitude + 100f, 1000f));
             route.SetPoints(a, b);
 
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' bot takes controls rider=enemy-1 as=pilot route=Plane");
-            Assert.That(_agent.TryBoard(plane, 0, requireInRange: false), Is.True);
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Glider' bot takes controls rider=enemy-1 as=pilot route=Glider");
+            Assert.That(_agent.TryBoard(glider, 0, requireInRange: false), Is.True);
 
-            var pilot = plane.GetComponent<BotAircraftPilot>();
+            var pilot = glider.GetComponent<FakeBotPilot>();
             Assert.That(pilot, Is.Not.Null);
-            Assert.That(_agent.AircraftPilot, Is.SameAs(pilot));
+            Assert.That(_agent.VehiclePilot, Is.SameAs(pilot));
             Assert.That(_agent.VehicleDriver, Is.Null);
-            Assert.That(_agent.GetComponent<BotVehicleDriver>(), Is.Null, "an aircraft is not driven like a car");
+            Assert.That(_agent.GetComponent<BotVehicleDriver>(), Is.Null, "a piloted vehicle is not driven like a car");
+            Assert.That(glider.GetComponent<BotVehicleDriver>(), Is.Null);
             Assert.That(_agent.IsDrivingVehicle, Is.True);
             Assert.That(pilot.Rider, Is.SameAs(_agent));
             Assert.That(pilot.Waypoints, Is.EqualTo(new[] { a, b }));
@@ -234,57 +245,56 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ThePilotFliesThroughTheBotsSeatAndLeavingRemovesItAndHandsBackTheControls()
+        public void LeavingAPilotedVehicleRemovesTheAttachedPilot()
         {
-            var plane = CreateAircraft("Plane");
-            var link = plane.GetComponent<VehicleMotorLink>();
-            var before = link.ControlScheme;
-            AddRoute(plane).SetPoints(Point("A", new Vector3(1000f, Altitude, 0f)));
-            _agent.TryBoard(plane, 0, requireInRange: false);
-            var pilot = _agent.AircraftPilot;
+            var glider = CreatePiloted("Glider");
+            _agent.TryBoard(glider, 0, requireInRange: false);
+            Assert.That(glider.GetComponent<FakeBotPilot>(), Is.Not.Null);
 
-            pilot.Tick(0.02f);
-
-            Assert.That(pilot.IsFlying, Is.True);
-            Assert.That(plane.Seats[0].Occupant, Is.SameAs(_agent), "the pilot does not seat a stand-in of its own");
-
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' bot gives up controls rider=enemy-1");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Glider' bot gives up controls rider=enemy-1");
             Assert.That(_agent.TryLeaveVehicle(), Is.True);
 
-            Assert.That(plane.GetComponent<BotAircraftPilot>(), Is.Null);
-            Assert.That(_agent.AircraftPilot, Is.Null);
+            Assert.That(glider.GetComponent<FakeBotPilot>(), Is.Null);
+            Assert.That(_agent.VehiclePilot, Is.Null);
             Assert.That(_agent.IsDrivingVehicle, Is.False);
-            Assert.That(link.ControlScheme, Is.SameAs(before));
         }
 
         [Test]
-        public void APilotPlacedOnTheAircraftIsBorrowedAndKeepsItsWaypointsWithoutARoute()
+        public void APilotPlacedOnTheVehicleIsBorrowedAndHandedBackAsItWas()
         {
-            var plane = CreateAircraft("Plane");
-            var placed = plane.gameObject.AddComponent<BotAircraftPilot>();
+            var glider = CreatePiloted("Glider");
+            var placed = glider.gameObject.AddComponent<FakeBotPilot>();
+            var ownRider = Track(new GameObject("Own Rider")).AddComponent<VehicleTestRider>();
             var own = Point("Own", new Vector3(0f, Altitude, 2000f));
+            placed.Rider = ownRider;
             placed.SetWaypoints(own);
+            placed.enabled = false;
 
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' bot takes controls rider=enemy-1 as=pilot route=none");
-            _agent.TryBoard(plane, 0, requireInRange: false);
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Glider' bot takes controls rider=enemy-1 as=pilot route=none");
+            _agent.TryBoard(glider, 0, requireInRange: false);
 
-            Assert.That(_agent.AircraftPilot, Is.SameAs(placed));
+            Assert.That(glider.GetComponents<FakeBotPilot>(), Has.Length.EqualTo(1), "no second pilot on the vehicle");
+            Assert.That(_agent.VehiclePilot, Is.SameAs(placed));
+            Assert.That(placed.enabled, Is.True);
             Assert.That(placed.Rider, Is.SameAs(_agent));
-            Assert.That(placed.Waypoints, Is.EqualTo(new[] { own }));
+            Assert.That(placed.Waypoints, Is.EqualTo(new[] { own }), "without a route it keeps its own points");
             Assert.That(placed.FollowWaypointHeight, Is.False, "a borrowed pilot keeps how it was set up");
 
             _agent.TryLeaveVehicle();
 
             Assert.That(placed != null, Is.True, "a borrowed pilot stays");
-            Assert.That(placed.Rider, Is.SameAs(placed), "back to flying with its own stand-in");
+            Assert.That(placed.ReleaseCount, Is.EqualTo(1));
+            Assert.That(placed.Rider, Is.SameAs(ownRider));
             Assert.That(placed.Waypoints, Is.EqualTo(new[] { own }));
+            Assert.That(placed.enabled, Is.False);
+            Assert.That(_agent.VehiclePilot, Is.Null);
         }
 
         [Test]
         public void ABorrowedPilotFliesTheRouteAndGetsItsWaypointsBack()
         {
-            var plane = CreateAircraft("Plane");
-            var placed = plane.gameObject.AddComponent<BotAircraftPilot>();
+            var glider = CreatePiloted("Glider");
+            var placed = glider.gameObject.AddComponent<FakeBotPilot>();
             var own = Point("Own", new Vector3(0f, Altitude, 2000f));
             placed.SetWaypoints(own);
             var route = CreateRoute("Ordered");
@@ -292,11 +302,46 @@ namespace Shooter.Tests.EditMode
             route.SetPoints(a);
             _agent.OrderRoute(route);
 
-            _agent.TryBoard(plane, 0, requireInRange: false);
+            _agent.TryBoard(glider, 0, requireInRange: false);
             Assert.That(placed.Waypoints, Is.EqualTo(new[] { a }));
 
             _agent.TryLeaveVehicle();
             Assert.That(placed.Waypoints, Is.EqualTo(new[] { own }));
+        }
+
+        [Test]
+        public void APilotTypeWithoutIBotPilotFallsBackToTheDriver()
+        {
+            var glider = CreatePiloted("Glider");
+            glider.GetComponent<FakeBotPilotedMotor>().PilotType = typeof(VehicleTestRider);
+            AddRoute(glider);
+
+            LogAssert.Expect(
+                LogType.Warning,
+                "[Vehicle] 'Glider' bot pilot type 'Shooter.Tests.EditMode.VehicleTestRider' is not a MonoBehaviour with IBotPilot; the bot drives it as a car");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Glider' bot takes controls rider=enemy-1 as=driver route=Glider");
+            Assert.That(_agent.TryBoard(glider, 0, requireInRange: false), Is.True);
+
+            Assert.That(glider.GetComponent<VehicleTestRider>(), Is.Null, "the wrong type is not added");
+            Assert.That(_agent.VehiclePilot, Is.Null);
+            Assert.That(_agent.VehicleDriver, Is.SameAs(_agent.GetComponent<BotVehicleDriver>()));
+            Assert.That(_agent.VehicleDriver.Vehicle, Is.SameAs(glider));
+            Assert.That(_agent.IsDrivingVehicle, Is.True);
+        }
+
+        [Test]
+        public void NoPilotTypeFallsBackToTheDriver()
+        {
+            var glider = CreatePiloted("Glider");
+            glider.GetComponent<FakeBotPilotedMotor>().PilotType = null;
+
+            LogAssert.Expect(
+                LogType.Warning,
+                "[Vehicle] 'Glider' bot pilot type 'none' is not a MonoBehaviour with IBotPilot; the bot drives it as a car");
+            _agent.TryBoard(glider, 0, requireInRange: false);
+
+            Assert.That(_agent.VehiclePilot, Is.Null);
+            Assert.That(_agent.VehicleDriver, Is.Not.Null);
         }
 
         private Vehicle CreateCar(string name, bool withPassengerSeat = false)
@@ -324,22 +369,11 @@ namespace Shooter.Tests.EditMode
             return vehicle;
         }
 
-        private Vehicle CreateAircraft(string name)
+        // 本物の飛行機を使わないのは、Bot が操縦の部品を選ぶのが動き方の名指す型だけで決まり、飛行機の部品に頼らないことを確かめるため。
+        private Vehicle CreatePiloted(string name)
         {
-            var root = Track(new GameObject(name));
-            root.transform.position = new Vector3(0f, Altitude, 0f);
-            var seat = AddSeat(root, "Pilot Seat", new Vector3(0f, 0.5f, 0.5f));
-            var exit = new GameObject("Exit").transform;
-            exit.SetParent(root.transform, false);
-            exit.localPosition = new Vector3(-3f, 0f, 0f);
-            seat.SetExitPoints(exit);
-            var vehicle = root.AddComponent<Vehicle>();
-            vehicle.Configure(new VehicleSpec(name.ToLowerInvariant(), 500, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) }));
-            var motor = root.AddComponent<SimpleAircraftMotor>();
-            motor.Body.useGravity = false;
-            motor.Body.linearVelocity = new Vector3(0f, 0f, 55f);
-            Assert.That(root.AddComponent<VehicleMotorLink>().Bind(), Is.True);
-            Physics.SyncTransforms();
+            var vehicle = CreateCar(name);
+            vehicle.gameObject.AddComponent<FakeBotPilotedMotor>();
             return vehicle;
         }
 

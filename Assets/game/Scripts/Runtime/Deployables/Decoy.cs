@@ -9,7 +9,7 @@ namespace Shooter.Runtime
     // 撃たれて壊れるのは置ける物の土台 (Deployable) が受け持つ。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Deployable))]
-    public sealed class Decoy : MonoBehaviour
+    public sealed class Decoy : MonoBehaviour, IClientQuietedBehaviour
     {
         public const string LogTag = DecoyLog.Tag;
 

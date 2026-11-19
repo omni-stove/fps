@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 型を BotAircraftPilot の公開メンバーに合わせるのは、今の操縦部品をそのままこの口で扱えるようにするため。
+    // 型を飛行機の Bot の操縦部品の公開メンバーに合わせるのは、今の操縦部品をそのままこの口で扱えるようにするため。
     public interface IBotPilot
     {
         IVehicleRider Rider { get; set; }

@@ -11,7 +11,7 @@ namespace Shooter.Runtime
     // 座席から届いた入力の代わりに AircraftAutopilot の値を返す。
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Vehicle))]
-    public sealed class BotAircraftPilot : MonoBehaviour, IVehicleRider, IVehicleControlScheme
+    public sealed class BotAircraftPilot : MonoBehaviour, IVehicleRider, IVehicleControlScheme, IBotPilot
     {
         public const string LogTag = "[BotAircraftPilot]";
 

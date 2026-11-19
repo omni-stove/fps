@@ -30,6 +30,7 @@ namespace Shooter.Protocol
                 new ReportRequestMessage(),
                 new VoteKickRequestMessage(),
                 new BuyRequestMessage(),
+                new InteractRequestMessage(),
             };
         }
 
@@ -70,6 +71,7 @@ namespace Shooter.Protocol
                 new ChatMessage(),
                 new StreakActivatedMessage(),
                 new KillCamClipMessage(),
+                new StashStateMessage(),
             };
         }
 

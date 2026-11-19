@@ -189,6 +189,56 @@ namespace Shooter.Tests.EditMode
             Assert.That(_scene.rootCount, Is.Zero, "nothing is placed when the weapon is missing");
         }
 
+        [Test]
+        public void EnemyGetsTheStealthFromTheDemoStep()
+        {
+            Assert.That(SceneBuildHelpers.EnemySteps, Has.Member((Action<GameObject>)EnemyStealthBuildStep.Apply));
+
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            try
+            {
+                var agent = SceneBuildHelpers.CreateEnemy(
+                    _scene, null, "Enemy", "enemy", Vector3.zero, Quaternion.identity, Array.Empty<Vector3>(),
+                    new EnemyBody(2f, 0.5f, 3.5f, 80), rifle);
+
+                Assert.That(agent.GetComponents<EnemyStealth>(), Has.Length.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(rifle);
+            }
+        }
+
+        [Test]
+        public void EnemyStepsRunInTheOrderTheyWereRegisteredAndOnlyOnce()
+        {
+            var calls = new System.Collections.Generic.List<string>();
+            Action<GameObject> first = enemy => calls.Add("first:" + enemy.name);
+            Action<GameObject> second = enemy => calls.Add("second:" + enemy.name);
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            SceneBuildHelpers.RegisterEnemyStep(first);
+            SceneBuildHelpers.RegisterEnemyStep(second);
+            SceneBuildHelpers.RegisterEnemyStep(first);
+            try
+            {
+                SceneBuildHelpers.CreateEnemy(
+                    _scene, null, "Grunt", "grunt", Vector3.zero, Quaternion.identity, Array.Empty<Vector3>(),
+                    new EnemyBody(2f, 0.5f, 3.5f, 80), rifle);
+
+                Assert.That(calls, Is.EqualTo(new[] { "first:Grunt", "second:Grunt" }));
+                Assert.That(SceneBuildHelpers.EnemySteps.Count(s => s == first), Is.EqualTo(1));
+            }
+            finally
+            {
+                SceneBuildHelpers.UnregisterEnemyStep(first);
+                SceneBuildHelpers.UnregisterEnemyStep(second);
+                Object.DestroyImmediate(rifle);
+            }
+
+            Assert.That(SceneBuildHelpers.EnemySteps, Has.No.Member(first).And.No.Member(second));
+            Assert.Throws<ArgumentNullException>(() => SceneBuildHelpers.RegisterEnemyStep(null));
+        }
+
         private void AssertStandsOnItsFeet(EnemyAgent agent, Transform parent, Vector3 feet)
         {
             Assert.That(agent.transform.parent, Is.SameAs(parent));

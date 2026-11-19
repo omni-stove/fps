@@ -297,7 +297,7 @@ namespace Shooter.Runtime
 
             var riderRoot = rider != null ? rider.RiderRoot : null;
             var shooter = riderRoot != null ? riderRoot.gameObject : Vehicle.gameObject;
-            StealthNoise.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, origin.ToNumerics(), weapon.Spec.ShotNoiseRadius, false));
+            SoundStimuli.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, origin.ToNumerics(), weapon.Spec.ShotNoiseRadius, false));
 
             // オフラインで PlayerVehicleRider を持つのは手元のプレイヤーだけなので、その人が撃ったときだけヒットマーカーを出す。
             var confirms = rider is PlayerVehicleRider;

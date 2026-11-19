@@ -41,6 +41,7 @@ namespace Shooter.Tests.EditMode
         public void TheKitShipsTheDefaultsInResources()
         {
             Assert.That(StealthActionInstaller.TuningResourcePath, Is.EqualTo("Tuning/stealth"));
+            Assert.That(KitTuning.StealthResourcePath, Is.EqualTo(StealthActionInstaller.TuningResourcePath));
             var asset = Resources.Load<TextAsset>(StealthActionInstaller.TuningResourcePath);
             Assert.That(asset, Is.Not.Null);
 

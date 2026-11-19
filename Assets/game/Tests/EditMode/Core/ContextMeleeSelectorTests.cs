@@ -62,13 +62,13 @@ namespace Shooter.Core.Tests
         [Test]
         public void UnawareMeansOnWatchAndBelowTheNoticeStage()
         {
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Unaware), Is.True);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, AwarenessStage.Unaware), Is.True);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Noticed), Is.False);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, AwarenessStage.Alerted), Is.False);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, AwarenessStage.Engaged), Is.False);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Chase, AwarenessStage.Unaware), Is.False);
-            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Search, AwarenessStage.Unaware), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, true), Is.True);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, true), Is.True);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Idle, false), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Patrol, false), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Chase, true), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Search, true), Is.False);
+            Assert.That(ContextMeleeSelector.IsUnaware(EnemyState.Chase, false), Is.False);
         }
 
         [Test]

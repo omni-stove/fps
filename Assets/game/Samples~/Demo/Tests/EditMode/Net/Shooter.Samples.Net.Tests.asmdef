@@ -3,6 +3,8 @@
     "rootNamespace": "Shooter.Net.Tests",
     "references": [
         "Shooter.Core",
+        "Shooter.Aircraft.Core",
+        "Shooter.Aircraft",
         "Shooter.Editor",
         "Shooter.Samples.Editor",
         "Shooter.Samples.Net.Editor",

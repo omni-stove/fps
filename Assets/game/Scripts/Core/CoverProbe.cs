@@ -11,8 +11,6 @@ namespace Shooter.Core
 
         public const float MaxWallNormalUp = 0.3f;
 
-        public const float MaxEnterLateralOffset = 0.6f;
-
         // 角度と距離の境界ちょうどを float の丸めで落とさないための余裕。
         private const float _boundaryEpsilon = 1e-4f;
 
@@ -59,9 +57,7 @@ namespace Shooter.Core
                 edges |= CoverEdge.Right;
             }
 
-            var faces = FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees)
-                && IsHeldWallReachable(facing, normal, sample.Distance);
-            return new CoverProbeResult(true, faces, height, edges, normal, sample.Distance);
+            return new CoverProbeResult(true, FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees), height, edges, normal, sample.Distance);
         }
 
         public static float PeekOffset(CoverProbeResult result, float preferredSide, MotorSpec spec)
@@ -88,6 +84,19 @@ namespace Shooter.Core
             }
 
             return result.IsAtRightEdge ? peekSideDistance : 0f;
+        }
+
+        // 寄せる間は体から法線の逆向きに測り直すので、斜めから入ると当たり点から横へずれた所を測ってしまう。
+        // このずれを AppliedPeek (測る位置から体が右へ出ている量) として持てば、測り直しは当たり点の正面から撃てる。
+        public static float EnterSideOffset(Vector3 facing, Vector3 normal, float distance)
+        {
+            var forward = Horizontal(facing);
+            if (forward == Vector3.Zero || !IsFinite(distance))
+            {
+                return 0f;
+            }
+
+            return -Vector3.Dot(forward * distance, RightAlong(normal));
         }
 
         public static float HoldDistance(float bodyRadius)
@@ -117,21 +126,6 @@ namespace Shooter.Core
             var flat = new Vector3(v.X, 0f, v.Z);
             var length = flat.Length();
             return length < _minLength ? Vector3.Zero : flat / length;
-        }
-
-        // 寄せている間の測り直しは体から法線の逆向きへ撃つので、入る時の当たり点が横へずれすぎると
-        // 幅の狭い遮蔽物では外れる。遠い壁ほど斜めからは入れないよう、横のずれで絞る。
-        private static bool IsHeldWallReachable(Vector3 facing, Vector3 normal, float distance)
-        {
-            var forward = Horizontal(facing);
-            if (forward == Vector3.Zero)
-            {
-                return false;
-            }
-
-            var cos = Math.Max(-1f, Math.Min(1f, Vector3.Dot(forward, -normal)));
-            var sin = (float)Math.Sqrt(1f - (cos * cos));
-            return distance * sin <= MaxEnterLateralOffset + _boundaryEpsilon;
         }
 
         private static bool FacesWall(Vector3 facing, Vector3 normal, float maxAngleDegrees)

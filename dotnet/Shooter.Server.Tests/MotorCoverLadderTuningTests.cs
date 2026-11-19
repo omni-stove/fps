@@ -226,6 +226,30 @@ namespace Shooter.Server.Tests
             Assert.That(state.Position.Z, Is.EqualTo(3f - 0.55f).Within(0.03f), "stops at the hold distance from the wall");
         }
 
+        // 幅 1 m の柱へ 3 m 手前・40° で向いて入る。寄せる間の測り直しが柱の横を抜けると、入った直後に lost で出てしまう。
+        [Test]
+        public void TheSimulationRunsToANarrowPillarEnteredFromASlant()
+        {
+            var yaw = 40f * MathF.PI / 180f;
+            var hitX = 3f * MathF.Tan(yaw);
+            AddFloor();
+            AddBox(new Vector3(hitX, 1f, 3f + 0.2f), new Vector3(0.5f, 1f, 0.2f));
+            var simulation = NewSimulation(MotorSpec.Default);
+            var state = simulation.Step(Settle(simulation), Input(cover: true, yaw: yaw));
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.Entering));
+            Assert.That(state.Cover.AppliedPeek, Is.EqualTo(-hitX).Within(1e-3f), "the body is left of the hit point");
+
+            for (var i = 0; i < 60 && state.Cover.Snapshot.Phase == CoverPhase.Entering; i++)
+            {
+                state = simulation.Step(state, Input(yaw: yaw));
+            }
+
+            Assert.That(state.Cover.Snapshot.Phase, Is.EqualTo(CoverPhase.In), "the pillar is still found while running to it");
+            Assert.That(state.Position.X, Is.EqualTo(hitX).Within(0.05f), "ends in front of the point it aimed at");
+            Assert.That(state.Position.Z, Is.EqualTo(3f - 0.55f).Within(0.03f));
+            Assert.That(state.Cover.AppliedPeek, Is.EqualTo(0f).Within(0.05f));
+        }
+
         [Test]
         public void TheSimulationPeeksAtTheConfiguredSpeed()
         {
@@ -341,9 +365,9 @@ namespace Shooter.Server.Tests
                 file.CatalogName, file.Catalog, motor);
         }
 
-        private static CharacterMotorInput Input(bool cover = false, bool aim = false)
+        private static CharacterMotorInput Input(bool cover = false, bool aim = false, float yaw = 0f)
         {
-            return new CharacterMotorInput(Vector2.Zero, 0f, false, false, false, false, cover, aim, false, false);
+            return new CharacterMotorInput(Vector2.Zero, yaw, false, false, false, false, cover, aim, false, false);
         }
 
         private CharacterMotorState PressCover(MotorSpec spec)

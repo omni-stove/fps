@@ -283,14 +283,17 @@ namespace Shooter.Runtime
             {
                 _savedShoulder = _rig != null ? _rig.Shoulder : ShoulderSide.Right;
                 _shoulderOverridden = false;
-                _appliedPeek = 0f;
+                _appliedPeek = CoverProbe.EnterSideOffset(Flatten(transform.forward).ToNumerics(), _state.Normal, _lastProbe.Distance);
             }
-            else
+            else if (_state.EnterTurn > 0f)
             {
                 SlideIn();
             }
+            else
+            {
+                SlidePeek(deltaSeconds);
+            }
 
-            SlidePeek(deltaSeconds);
             UpdateShoulder();
         }
 
@@ -347,18 +350,20 @@ namespace Shooter.Runtime
             return willCrouch ? 1f : Mathf.Min(1f, spec.CrouchSpeed / spec.WalkSpeed);
         }
 
+        // 横のずれは壁へ寄せるのと同じ割合で詰め、着いたときに入った時の当たり点の正面に来るようにする。
         private void SlideIn()
         {
             var normal = _state.Normal.ToUnity();
-            if (_state.EnterStep > 0f)
+            var right = CoverProbe.RightAlong(_state.Normal).ToUnity();
+            var delta = (-normal * _state.EnterStep) + (right * (-_appliedPeek * _state.EnterTurn));
+            if (delta != Vector3.zero)
             {
-                _player.Controller.Move(-normal * _state.EnterStep);
+                var before = transform.position;
+                _player.Controller.Move(delta);
+                _appliedPeek += Vector3.Dot(transform.position - before, right);
             }
 
-            if (_state.EnterTurn > 0f)
-            {
-                TurnTowards(-normal, _state.EnterTurn);
-            }
+            TurnTowards(-normal, _state.EnterTurn);
         }
 
         private void SlidePeek(float deltaSeconds)

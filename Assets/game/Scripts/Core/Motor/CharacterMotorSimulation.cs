@@ -607,6 +607,7 @@ namespace Shooter.Core
 
             var position = Body.Position;
             var appliedPeek = previous.AppliedPeek;
+            var facing = Vector3.Zero;
             CoverProbeResult probe;
             float topY;
             if (previous.IsInCover)
@@ -618,8 +619,8 @@ namespace Shooter.Core
             }
             else
             {
-                var forward = YawForward(input.Yaw);
-                probe = _coverSensor.Probe(position, forward, forward, _motor.Spec, out topY);
+                facing = YawForward(input.Yaw);
+                probe = _coverSensor.Probe(position, facing, facing, _motor.Spec, out topY);
             }
 
             _cover.BodyRadius = Body.Radius;
@@ -633,15 +634,34 @@ namespace Shooter.Core
             var normal = _cover.Normal;
             if (transition == CoverTransition.Enter)
             {
-                appliedPeek = 0f;
+                appliedPeek = CoverProbe.EnterSideOffset(facing, normal, probe.Distance);
             }
-            else if (_cover.EnterStep > 0f)
+            else if (_cover.EnterTurn > 0f)
             {
-                Body.Move(-normal * _cover.EnterStep);
+                appliedPeek = SlideIn(normal, appliedPeek);
+            }
+            else
+            {
+                appliedPeek = SlidePeek(normal, appliedPeek, _cover.PeekOffset);
             }
 
-            appliedPeek = SlidePeek(normal, appliedPeek, _cover.PeekOffset);
             return new CharacterCoverState(_cover.Capture(), topY, probe.Edges, appliedPeek);
+        }
+
+        // 横のずれは壁へ寄せるのと同じ割合で詰め、着いたときに当たり点の正面に来るようにする (CoverController と同じ)
+        private float SlideIn(Vector3 normal, float applied)
+        {
+            var right = CoverProbe.RightAlong(normal);
+            var delta = (-normal * _cover.EnterStep) + (right * (-applied * _cover.EnterTurn));
+            if (delta == Vector3.Zero)
+            {
+                return applied;
+            }
+
+            var before = Body.Position;
+            Body.Move(delta);
+            var moved = Body.Position - before;
+            return applied + (moved.X * right.X) + (moved.Y * right.Y) + (moved.Z * right.Z);
         }
 
         // 横に障害物があれば出られた分だけを覚え、戻るときに出た分だけ戻す

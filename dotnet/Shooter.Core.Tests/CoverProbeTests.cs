@@ -76,23 +76,16 @@ namespace Shooter.Core.Tests
             Assert.That(result.IsWall, Is.True, "the wall is still there, only the angle is off");
         }
 
-        [TestCase(3f, 40f)]
-        [TestCase(4f, 45f)]
-        [TestCase(2f, -45f)]
-        public void FarWallsCannotBeEnteredFromASlantThatShiftsTheHitPointSideways(float distance, float yaw)
+        // 壁の法線は -Z なので壁に沿った右は +X。右へ 40° 向いて 3 m 先に当たると、当たり点は体の 3 tan 40° 右にあり、体は左 (負) へずれている。
+        [Test]
+        public void EnterSideOffsetIsHowFarTheBodyIsBesideTheHitPoint()
         {
-            var result = CoverProbe.Evaluate(Sample(distance), Facing(yaw), MotorSpec.Default);
+            var normal = new Vector3(0f, 0f, -1f);
 
-            Assert.That(result.IsWall, Is.True);
-            Assert.That(result.CanEnter, Is.False);
-        }
-
-        [TestCase(4f, 0f)]
-        [TestCase(4f, 8f)]
-        [TestCase(3f, 10f)]
-        public void FarWallsCanBeEnteredFromNearlyHeadOn(float distance, float yaw)
-        {
-            Assert.That(CoverProbe.Evaluate(Sample(distance), Facing(yaw), MotorSpec.Default).CanEnter, Is.True);
+            Assert.That(CoverProbe.EnterSideOffset(Facing(0f), normal, 3f), Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(CoverProbe.EnterSideOffset(Facing(40f), normal, 3f / (float)Math.Cos(40.0 * Math.PI / 180.0)), Is.EqualTo(-3f * (float)Math.Tan(40.0 * Math.PI / 180.0)).Within(1e-4f));
+            Assert.That(CoverProbe.EnterSideOffset(Facing(-30f), normal, 2f), Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(CoverProbe.EnterSideOffset(Vector3.UnitY, normal, 2f), Is.EqualTo(0f));
         }
 
         [Test]

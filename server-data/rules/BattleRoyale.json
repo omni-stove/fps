@@ -43,7 +43,7 @@
       "stamina": "Off",
       "reloadInterruptedBy": ["Melee", "Grenade"]
     },
-    "spawnProtectionSeconds": 2,
+    "spawnProtectionSeconds": 0,
     "fallDamage": "Off",
     "hudDensity": "Full",
     "objective": "BattleRoyale",

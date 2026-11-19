@@ -11,6 +11,8 @@ namespace Shooter.Core.Tests
         private const int _maxHealth = 100;
 
         private static readonly SpawnPoint[] _points = { new SpawnPoint(new Vector3(-10f, 0f, 0f)), new SpawnPoint(new Vector3(10f, 0f, 0f)) };
+        private static readonly int[] _thirdThenFirst = { 3, 1 };
+        private static readonly int[] _thirdOnly = { 3 };
 
         private static GameRules Rules()
         {
@@ -104,7 +106,7 @@ namespace Shooter.Core.Tests
             Assert.That(session.ApplyDamage(2, 3, _maxHealth), Is.EqualTo(DamageOutcome.Killed), "the last standing of the group is not downed");
 
             Assert.That(session.IsAlive(1), Is.False, "the downed ally has nobody left to revive them");
-            Assert.That(killed, Is.EqualTo(new[] { 3, 1 }));
+            Assert.That(killed, Is.EqualTo(_thirdThenFirst));
             Assert.That(session.IsAlive(2), Is.True);
             Assert.That(session.IsAlive(4), Is.True);
         }
@@ -125,7 +127,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(session.IsAlive(3), Is.True);
             Assert.That(session.GetHealth(3), Is.EqualTo(_maxHealth));
-            Assert.That(spawned, Is.EqualTo(new[] { 3 }));
+            Assert.That(spawned, Is.EqualTo(_thirdOnly));
             Assert.That(session.RespawnPlayer(3), Is.False, "a standing player is not brought back again");
             Assert.Throws<ArgumentOutOfRangeException>(() => session.RespawnPlayer(9));
         }

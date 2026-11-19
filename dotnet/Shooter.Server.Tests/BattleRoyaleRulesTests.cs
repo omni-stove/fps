@@ -18,6 +18,10 @@ namespace Shooter.Server.Tests
         private static readonly Vector3 _bravoSpawn = new Vector3(5f, 1f, 0f);
         private static readonly Vector3 _outside = new Vector3(50f, 1f, 0f);
         private static readonly Vector3 _inside = new Vector3(0f, 1f, 0f);
+        private static readonly int[] _allFour = { 1, 2, 3, 4 };
+        private static readonly int[] _firstOnly = { 1 };
+        private static readonly int[] _firstTwice = { 1, 1 };
+        private static readonly int[] _secondOnly = { 2 };
 
         private StringWriter _log;
         private MatchHost _host;
@@ -126,8 +130,8 @@ namespace Shooter.Server.Tests
             _host.Steps(1);
 
             Assert.That(_rules.BattleRoyale.IsLive, Is.True);
-            Assert.That(_world.Disarmed.OrderBy(id => id), Is.EqualTo(new[] { 1, 2, 3, 4 }));
-            Assert.That(_world.Drops.Select(d => d.PlayerId).OrderBy(id => id), Is.EqualTo(new[] { 1, 2, 3, 4 }));
+            Assert.That(_world.Disarmed.OrderBy(id => id), Is.EqualTo(_allFour));
+            Assert.That(_world.Drops.Select(d => d.PlayerId).OrderBy(id => id), Is.EqualTo(_allFour));
             foreach (var (playerId, from) in _world.Drops)
             {
                 Assert.That(_host.Bodies.TryGet(playerId, out var body), Is.True);
@@ -239,7 +243,7 @@ namespace Shooter.Server.Tests
             Assert.That(_rules.BattleRoyale.GetRedeploysLeft(1), Is.Zero);
             Assert.That(_log.ToString(), Does.Contain("[Mode] redeploy player=1 verdict=Waiting phase=1 left=0 in=1.00"));
             _host.Steps(1);
-            Assert.That(_world.DeathBoxes, Is.EqualTo(new[] { 1 }), "the fallen leave their things in a box");
+            Assert.That(_world.DeathBoxes, Is.EqualTo(_firstOnly), "the fallen leave their things in a box");
 
             _host.Steps(65);
 
@@ -253,7 +257,7 @@ namespace Shooter.Server.Tests
 
             Assert.That(_log.ToString(), Does.Contain("[Mode] redeploy player=1 verdict=NoCharges phase=1 left=0"));
             Assert.That(session.IsAlive(1), Is.False, "no charge is left");
-            Assert.That(_world.DeathBoxes, Is.EqualTo(new[] { 1, 1 }));
+            Assert.That(_world.DeathBoxes, Is.EqualTo(_firstTwice));
         }
 
         [Test]
@@ -279,7 +283,7 @@ namespace Shooter.Server.Tests
             Assert.That(_rules.IsWinningPlayer(2, Team.Bravo, null), Is.False);
             Assert.That(_rules.BattleRoyale.GetPlacement(new Side(0)), Is.EqualTo(1));
             Assert.That(_rules.BattleRoyale.GetPlacement(new Side(1)), Is.EqualTo(2));
-            Assert.That(_world.DeathBoxes, Is.EqualTo(new[] { 2 }));
+            Assert.That(_world.DeathBoxes, Is.EqualTo(_secondOnly));
             Assert.That(_log.ToString(), Does.Contain("[Mode] placements winner=0 1:squad=0 2:squad=1"));
             Assert.That(_log.ToString(), Does.Contain("[BattleRoyale] state=Ended winner=squad0 squads=2"));
             _rules.FillMatch(ref snapshot);

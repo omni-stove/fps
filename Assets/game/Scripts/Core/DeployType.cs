@@ -7,7 +7,14 @@ namespace Shooter.Core
     public sealed class DeployType
     {
         public DeployType(
-            string id, DeployRole role, DeploySpec deploy, TurretSpec turret = null, string weaponId = null, DecoySpec decoy = null, BeaconSpec beacon = null)
+            string id,
+            DeployRole role,
+            DeploySpec deploy,
+            TurretSpec turret = null,
+            string weaponId = null,
+            DecoySpec decoy = null,
+            BeaconSpec beacon = null,
+            DroneSpec drone = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -60,6 +67,18 @@ namespace Shooter.Core
                 throw new ArgumentException("only a Beacon has a beacon spec", nameof(beacon));
             }
 
+            if (role == DeployRole.Drone)
+            {
+                if (drone == null)
+                {
+                    throw new ArgumentException("a Drone needs a drone spec", nameof(drone));
+                }
+            }
+            else if (drone != null)
+            {
+                throw new ArgumentException("only a Drone has a drone spec", nameof(drone));
+            }
+
             Id = id;
             Role = role;
             Deploy = deploy ?? throw new ArgumentNullException(nameof(deploy));
@@ -67,6 +86,7 @@ namespace Shooter.Core
             WeaponId = weaponId;
             Decoy = decoy;
             Beacon = beacon;
+            Drone = drone;
         }
 
         public string Id { get; }
@@ -83,7 +103,9 @@ namespace Shooter.Core
 
         public BeaconSpec Beacon { get; }
 
-        // DeploySpec.Default は盾の形と数なので、タレット・囮・ビーコンは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
+        public DroneSpec Drone { get; }
+
+        // DeploySpec.Default は盾の形と数なので、タレット・囮・ビーコン・ドローンは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
         public static DeploySpec DefaultDeploy(DeployRole role)
         {
             switch (role)
@@ -95,6 +117,9 @@ namespace Shooter.Core
                 case DeployRole.Beacon:
                     return Shaped(
                         BeaconSpec.DefaultMaxActive, BeaconSpec.DefaultMaxHealth, BeaconSpec.DefaultWidth, BeaconSpec.DefaultHeight, BeaconSpec.DefaultDepth);
+                case DeployRole.Drone:
+                    return Shaped(
+                        DroneSpec.DefaultMaxActive, DroneSpec.DefaultMaxHealth, DroneSpec.DefaultWidth, DroneSpec.DefaultHeight, DroneSpec.DefaultDepth);
                 case DeployRole.Shield:
                     return DeploySpec.Default;
                 default:

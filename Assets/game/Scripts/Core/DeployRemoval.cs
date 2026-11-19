@@ -14,5 +14,9 @@ namespace Shooter.Core
 
         // 地雷のように自分で爆発して消えたのを、壊された (Destroyed) のと分けてログで見分けられるようにする。
         Detonated,
+
+        // ドローンを持ち主が戻したのと届く距離を越えて落ちたのを、壊された (Destroyed) のや電池切れ (Expired) と分けてログで見分けられるようにする。
+        Recalled,
+        OutOfRange,
     }
 }

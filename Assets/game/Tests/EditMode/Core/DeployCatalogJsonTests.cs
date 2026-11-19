@@ -11,7 +11,7 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedTypeItemNames =
         {
-            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth", "turret", "decoy", "beacon",
+            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth", "turret", "decoy", "beacon", "drone",
         };
 
         private static readonly string[] _expectedTurretItemNames =
@@ -22,6 +22,11 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedDecoyItemNames = { "lifetimeSeconds", "callIntervalSeconds", "callRadius" };
 
         private static readonly string[] _expectedBeaconItemNames = { "uses", "spawnDistance" };
+
+        private static readonly string[] _expectedDroneItemNames =
+        {
+            "speed", "controlRange", "batterySeconds", "spotRadius", "spotIntervalSeconds", "revealSeconds",
+        };
 
         [Test]
         public void ReadsEveryItem()
@@ -241,6 +246,62 @@ namespace Shooter.Core.Tests
             Assert.That(DeployCatalogJson.TurretItemNames, Is.EqualTo(_expectedTurretItemNames));
             Assert.That(DeployCatalogJson.DecoyItemNames, Is.EqualTo(_expectedDecoyItemNames));
             Assert.That(DeployCatalogJson.BeaconItemNames, Is.EqualTo(_expectedBeaconItemNames));
+            Assert.That(DeployCatalogJson.DroneItemNames, Is.EqualTo(_expectedDroneItemNames));
+        }
+
+        [Test]
+        public void ReadsADrone()
+        {
+            var catalog = DeployCatalogJson.Parse(
+                "{\"types\": [{\"id\": \"deploy-drone\", \"role\": \"Drone\", \"maxHealth\": 25,"
+                + " \"drone\": {\"speed\": 8, \"controlRange\": 30, \"batterySeconds\": 20, \"spotRadius\": 10, \"spotIntervalSeconds\": 0.5,"
+                + " \"revealSeconds\": 2}}]}",
+                _source);
+
+            var drone = catalog.All[0];
+            Assert.That(drone.Role, Is.EqualTo(DeployRole.Drone));
+            Assert.That(drone.Deploy.MaxHealth, Is.EqualTo(25));
+            Assert.That(drone.Deploy.Width, Is.EqualTo(0.5f), "the shape is left out and keeps the drone's default");
+            Assert.That(drone.Drone.Speed, Is.EqualTo(8f));
+            Assert.That(drone.Drone.ControlRange, Is.EqualTo(30f));
+            Assert.That(drone.Drone.BatterySeconds, Is.EqualTo(20f));
+            Assert.That(drone.Drone.SpotRadius, Is.EqualTo(10f));
+            Assert.That(drone.Drone.SpotIntervalSeconds, Is.EqualTo(0.5f));
+            Assert.That(drone.Drone.RevealSeconds, Is.EqualTo(2f));
+            Assert.That(drone.Beacon, Is.Null);
+            Assert.That(drone.Turret, Is.Null);
+        }
+
+        [Test]
+        public void ADroneWithoutADroneObjectUsesTheDefaults()
+        {
+            var drone = DeployCatalogJson.Parse("{\"types\": [{\"id\": \"d\", \"role\": \"Drone\"}]}", _source).All[0];
+
+            Assert.That(drone.Deploy.MaxActive, Is.EqualTo(1));
+            Assert.That(drone.Deploy.MaxHealth, Is.EqualTo(40));
+            Assert.That(drone.Deploy.Width, Is.EqualTo(0.5f));
+            Assert.That(drone.Deploy.Height, Is.EqualTo(0.25f));
+            Assert.That(drone.Deploy.Depth, Is.EqualTo(0.5f));
+            Assert.That(drone.Drone, Is.SameAs(DroneSpec.Default));
+        }
+
+        [Test]
+        public void ABadDroneIsRejectedAtItsItem()
+        {
+            var speed = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"d\", \"role\": \"Drone\", \"drone\": {\"speed\": 0}}]}", _source));
+            var battery = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"d\", \"role\": \"Drone\", \"drone\": {\"batterySeconds\": -1}}]}", _source));
+            var unknown = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"d\", \"role\": \"Drone\", \"drone\": {\"altitude\": 2}}]}", _source));
+            var misplaced = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"b\", \"role\": \"Beacon\", \"drone\": {\"speed\": 2}}]}", _source));
+
+            Assert.That(speed.Item, Is.EqualTo("types[0].drone.speed"));
+            Assert.That(speed.InnerException, Is.InstanceOf<ArgumentException>());
+            Assert.That(battery.Item, Is.EqualTo("types[0].drone.batterySeconds"));
+            Assert.That(unknown.Item, Is.EqualTo("types[0].drone.altitude"));
+            Assert.That(misplaced.Item, Is.EqualTo("types[0].drone"));
         }
 
         [Test]

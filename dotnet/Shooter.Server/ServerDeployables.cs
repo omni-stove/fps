@@ -17,6 +17,8 @@ namespace Shooter.Server
 
         internal const string BeaconUnsupported = "a Beacon respawns players only offline; the dedicated server does not respawn at beacons yet";
 
+        internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
+
         private const float _rejectWarningInterval = 1f;
 
         private readonly MatchRulesModule _rules;
@@ -430,6 +432,12 @@ namespace Shooter.Server
             if (type.Role == DeployRole.Beacon)
             {
                 return BeaconUnsupported;
+            }
+
+            // ドローンもスナップショットで送る種類 (DeployableKind) が無く、操縦の入力を受ける口も無いので、ビーコンと同じく置く前に断る
+            if (type.Role == DeployRole.Drone)
+            {
+                return DroneUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)

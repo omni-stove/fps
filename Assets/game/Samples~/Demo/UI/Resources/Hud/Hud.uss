@@ -1794,3 +1794,18 @@
     align-items: center;
     padding-bottom: 120px;
 }
+
+.drone-hud__line {
+    margin-top: 4px;
+    padding: 2px 12px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    -unity-text-align: middle-center;
+}
+
+.drone-hud__warning {
+    background-color: rgba(160, 24, 16, 0.75);
+    -unity-font-style: bold;
+}

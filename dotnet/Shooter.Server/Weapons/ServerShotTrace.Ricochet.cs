@@ -25,8 +25,8 @@ namespace Shooter.Server
             {
                 var last = segments[segments.Count - 1];
 
-                // 人と乗り物に当たった弾はそこで止まり、ダメージを与える。跳ねるのは世界の面だけ。
-                if (!last.HasHit || last.Hit.HitTarget || last.Hit.HitVehicle)
+                // 人・乗り物・置いた物に当たった弾はそこで止まり、ダメージを与える。跳ねるのは世界の面だけ。
+                if (!last.HasHit || last.Hit.HitTarget || last.Hit.HitVehicle || last.Hit.HitDeployable)
                 {
                     return;
                 }
@@ -64,7 +64,9 @@ namespace Shooter.Server
                 ? ShotHit.Target(hit.Point, hit.Normal, distance, hit.TargetId, hit.TargetPosition, hit.TargetCrouched, hit.Zone)
                 : hit.HitVehicle
                     ? ShotHit.Vehicle(hit.Point, hit.Normal, distance, hit.VehicleIndex, hit.DamageMultiplier, hit.VehiclePartId)
-                    : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
+                    : hit.HitDeployable
+                        ? ShotHit.Deployable(hit.Point, hit.Normal, distance, hit.DeployableId)
+                        : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
             return moved.WithRewind(hit.RewindTicks);
         }
     }

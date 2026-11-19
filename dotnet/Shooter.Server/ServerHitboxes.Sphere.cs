@@ -13,7 +13,7 @@ namespace Shooter.Server
         {
             Validate(origin, direction, range, hittable);
             handled = true;
-            if (Nearest(origin, Vector3.Normalize(direction), radius, range, tick, shooterId, hittable, out var hit))
+            if (Nearest(origin, Vector3.Normalize(direction), radius, range, tick, shooterId, hittable, true, out var hit))
             {
                 hits.Add(hit);
             }

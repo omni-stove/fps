@@ -13,6 +13,7 @@ namespace Shooter.Protocol
         ObjectiveState = 1 << 4,
         RoundResult = 1 << 5,
         ObjectiveProgress = 1 << 6,
-        All = Status | Rules | Objective | Round | ObjectiveState | RoundResult | ObjectiveProgress,
+        Payload = 1 << 7,
+        All = Status | Rules | Objective | Round | ObjectiveState | RoundResult | ObjectiveProgress | Payload,
     }
 }

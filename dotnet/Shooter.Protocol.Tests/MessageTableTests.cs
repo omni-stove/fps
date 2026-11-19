@@ -193,6 +193,8 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.StreakUseRequest)]
         [TestCase(MessageIds.DeployRequest)]
         [TestCase(MessageIds.ReportRequest)]
+        [TestCase(MessageIds.VoteKickRequest)]
+        [TestCase(MessageIds.BuyRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);
@@ -204,10 +206,33 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.VoiceRoster)]
         [TestCase(MessageIds.StreakActivated)]
         [TestCase(MessageIds.KillCamClip)]
+        [TestCase(MessageIds.VoteKickState)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.False);
+        }
+
+        [Test]
+        public void TheVoteKickAndBuyMessagesHaveTheirIds()
+        {
+            Assert.That(MessageIds.VoteKickRequest, Is.EqualTo(33));
+            Assert.That(MessageIds.BuyRequest, Is.EqualTo(34));
+            Assert.That(MessageIds.VoteKickState, Is.EqualTo(52));
+            Assert.That(new VoteKickRequestMessage().Id, Is.EqualTo(MessageIds.VoteKickRequest));
+            Assert.That(new BuyRequestMessage().Id, Is.EqualTo(MessageIds.BuyRequest));
+            Assert.That(new VoteKickStateMessage().Id, Is.EqualTo(MessageIds.VoteKickState));
+        }
+
+        [Test]
+        public void TheTablesReadTheVoteKickAndBuyMessagesAsTheirTypes()
+        {
+            Assert.That(MatchMessages.CreateServerTable().TryGet(MessageIds.VoteKickRequest, out var voteKick), Is.True);
+            Assert.That(voteKick, Is.InstanceOf<VoteKickRequestMessage>());
+            Assert.That(MatchMessages.CreateServerTable().TryGet(MessageIds.BuyRequest, out var buy), Is.True);
+            Assert.That(buy, Is.InstanceOf<BuyRequestMessage>());
+            Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.VoteKickState, out var state), Is.True);
+            Assert.That(state, Is.InstanceOf<VoteKickStateMessage>());
         }
 
         [Test]

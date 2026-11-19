@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3a7c15e2f84b06b1c8a4e6f0d52b73, type: 3}
+  m_Name: Playground
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GameRulesDefinition
+  _friendlyFire: 0
+  _respawnMode: 0
+  _waveIntervalSeconds: 10
+  _regenDelaySeconds: 4
+  _regenPerSecond: 20
+  _deathBody: 0
+  _deathCamera: 5
+  _infiniteReserve: 1
+  _reserveAmmoMultiplier: 1
+  _destruction: 1
+  _downed: 0
+  _downedBleedoutSeconds: 15
+  _downedHealthFraction: 0.3
+  _reviveSeconds: 3
+  _reviveRange: 1.5
+  _cover: 1
+  _blindFire: 1
+  _activeReload: 1
+  _dodge: 1
+  _vault: 1
+  _grenade: 1
+  _grenadeCount: 3
+  _melee: 1
+  _stagger: 1
+  _slide: 1
+  _mantle: 1
+  _prone: 1
+  _ladder: 1
+  _zipline: 1
+  _parachute: 0
+  _stealth: 1
+  _suppression: 1
+  _ping: 1
+  _abilities: 1
+  _slowMotion: 1
+  _aimToFire: 0
+  _jump: 1
+  _emote: 0
+  _stamina: 0
+  _playerMaxHealth: 100
+  _headDamageMultiplier: 2
+  _bodyDamageMultiplier: 1
+  _limbDamageMultiplier: 0.75
+  _spawnProtectionSeconds: 0
+  _respawnAnchors: 00000000i
+  _fallDamage: 0
+  _hudDensity: 0
+  _objective: 0
+  _minPlayers: 0
+  _idleKickSeconds: 0
+  _idleWarningSeconds: 15
+  _maxWeapons: 2
+  _reloadMode: 0
+  _viewMode: 1
+  _streaks: 1
+  _textChat: 1
+  _spectating: 1

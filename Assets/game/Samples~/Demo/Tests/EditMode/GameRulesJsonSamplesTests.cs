@@ -138,6 +138,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), name + " actions.slowMotion");
             Assert.That(a.Emote, Is.EqualTo(b.Emote), name + " actions.emote");
             Assert.That(a.Stamina, Is.EqualTo(b.Stamina), name + " actions.stamina");
+            Assert.That(a.ReloadInterruptedBy, Is.EqualTo(b.ReloadInterruptedBy), name + " actions.reloadInterruptedBy");
         }
     }
 }

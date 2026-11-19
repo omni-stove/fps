@@ -59,6 +59,7 @@ namespace Shooter.Server
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _log = context.Log;
+            _combat.IsMeleeSwinging = IsSwinging;
             context.Match.PlayerLeft += HandlePlayerLeft;
             context.Match.MapChanged += HandleMapChanged;
             _combat.Rules.PlayerSpawned += HandlePlayerSpawned;
@@ -143,6 +144,7 @@ namespace Shooter.Server
             _combat.Rules.PlayerSpawned -= HandlePlayerSpawned;
             _combat.Rules.MatchStarted -= HandleMatchStarted;
             _combat.Rules.RulesChanged -= HandleRulesChanged;
+            _combat.IsMeleeSwinging = null;
             _swingers.Clear();
         }
 
@@ -191,6 +193,7 @@ namespace Shooter.Server
 
             swinger.Swing.TryStart();
             _log.WriteLine(MeleeLog.Swing(Text(swinger.PlayerId)));
+            _combat.InterruptReload(swinger.PlayerId, ReloadInterrupt.Melee);
         }
 
         private void Strike(int attackerId, MeleeSpec spec)

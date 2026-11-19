@@ -632,26 +632,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheHudFollowsTheCampaignNoticeOnGameSignals()
+        public void TheHudFollowsTheCampaignNoticeOnCampaignSignals()
         {
             GameSignals.ResetAll();
             var saved = new CampaignNotice();
             saved.ShowSaved(1f);
-            GameSignals.CampaignNotice.Publish(saved);
+            CampaignSignals.Notice.Publish(saved);
             var hud = Hud.Create("HudViewTests.NoticeHud");
             try
             {
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "a notice published before the HUD is shown at once");
 
                 var countdown = new CampaignNotice();
-                GameSignals.CampaignNotice.Publish(countdown);
+                CampaignSignals.Notice.Publish(countdown);
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "a new source replaces the old one");
                 countdown.ShowRestartCountdown(3f);
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)));
                 saved.ShowSaved(2f);
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(3)), "the replaced source is no longer followed");
 
-                GameSignals.CampaignNotice.Clear();
+                CampaignSignals.Notice.Clear();
                 Assert.That(hud.Model.Notice, Is.EqualTo(HudNotice.None), "clearing the signal takes the notice off the HUD");
             }
             finally
@@ -669,7 +669,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.ResetAll();
             var saved = new CampaignNotice();
             saved.ShowSaved(1f);
-            GameSignals.CampaignNotice.Publish(saved);
+            CampaignSignals.Notice.Publish(saved);
             var hud = Hud.Create("HudViewTests.NoticeHud");
             try
             {

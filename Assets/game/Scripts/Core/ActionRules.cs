@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Shooter.Core
 {
@@ -9,6 +11,10 @@ namespace Shooter.Core
         public const float DefaultDownedHealthFraction = 0.3f;
 
         public const float DefaultReviveSeconds = 3f;
+
+        // Default より先に初期化しないと、Default のコンストラクターが null を受けて既定に置き換えるときに null を写す。
+        public static readonly IReadOnlyList<ReloadInterrupt> DefaultReloadInterruptedBy =
+            new ReadOnlyCollection<ReloadInterrupt>(new[] { ReloadInterrupt.Melee, ReloadInterrupt.Grenade });
 
         // Downed が Off でも秒数と割合を入れておくのは、Downed だけを Revive に差し替えたときにそのまま使えるようにするため。
         public static readonly ActionRules Default = new ActionRules(
@@ -78,6 +84,8 @@ namespace Shooter.Core
 
         public Stamina Stamina { get; }
 
+        public IReadOnlyList<ReloadInterrupt> ReloadInterruptedBy { get; }
+
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -107,7 +115,8 @@ namespace Shooter.Core
             Jump jump = Jump.On,
             float reviveRange = ReviveReach.DefaultRange,
             Emote emote = Emote.Off,
-            Stamina stamina = Stamina.Off)
+            Stamina stamina = Stamina.Off,
+            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -193,6 +202,7 @@ namespace Shooter.Core
 
             RequireDefined(emote, nameof(emote));
             RequireDefined(stamina, nameof(stamina));
+            var interrupts = reloadInterruptedBy == null ? DefaultReloadInterruptedBy : CopyInterrupts(reloadInterruptedBy);
 
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
@@ -223,6 +233,20 @@ namespace Shooter.Core
             ReviveRange = reviveRange;
             Emote = emote;
             Stamina = stamina;
+            ReloadInterruptedBy = interrupts;
+        }
+
+        public bool InterruptsReload(ReloadInterrupt action)
+        {
+            for (var i = 0; i < ReloadInterruptedBy.Count; i++)
+            {
+                if (ReloadInterruptedBy[i] == action)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public ActionRules WithDowned(Downed value) => Copy(downed: value);
@@ -283,6 +307,32 @@ namespace Shooter.Core
 
         public ActionRules WithStamina(Stamina value) => Copy(stamina: value);
 
+        public ActionRules WithReloadInterruptedBy(IReadOnlyList<ReloadInterrupt> value) =>
+            Copy(reloadInterruptedBy: value ?? throw new ArgumentNullException(nameof(value)));
+
+        // 空は許すのは、どの動作でもリロードを止めないゲームもあるため。
+        private static ReadOnlyCollection<ReloadInterrupt> CopyInterrupts(IReadOnlyList<ReloadInterrupt> reloadInterruptedBy)
+        {
+            var copy = new ReloadInterrupt[reloadInterruptedBy.Count];
+            for (var i = 0; i < copy.Length; i++)
+            {
+                var action = reloadInterruptedBy[i];
+                if (!Enum.IsDefined(typeof(ReloadInterrupt), action))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(reloadInterruptedBy), action, "reloadInterruptedBy has an action that is not a defined ReloadInterrupt");
+                }
+
+                if (Array.IndexOf(copy, action, 0, i) >= 0)
+                {
+                    throw new ArgumentException($"reloadInterruptedBy lists {action} more than once", nameof(reloadInterruptedBy));
+                }
+
+                copy[i] = action;
+            }
+
+            return new ReadOnlyCollection<ReloadInterrupt>(copy);
+        }
+
         private static void RequireDefined<T>(T value, string name)
             where T : struct, Enum
         {
@@ -321,7 +371,8 @@ namespace Shooter.Core
             Jump? jump = null,
             float? reviveRange = null,
             Emote? emote = null,
-            Stamina? stamina = null)
+            Stamina? stamina = null,
+            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -352,7 +403,8 @@ namespace Shooter.Core
                 jump ?? Jump,
                 reviveRange ?? ReviveRange,
                 emote ?? Emote,
-                stamina ?? Stamina);
+                stamina ?? Stamina,
+                reloadInterruptedBy ?? ReloadInterruptedBy);
         }
     }
 }

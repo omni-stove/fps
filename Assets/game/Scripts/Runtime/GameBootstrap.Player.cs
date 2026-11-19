@@ -305,6 +305,9 @@ namespace Shooter.Runtime
             {
                 var previous = weapon.FireBlocker;
                 weapon.FireBlocker = () => (previous != null && previous()) || (grenades != null && grenades.IsThrowing);
+
+                // Thrown で直接 CancelReload しないのは、投げている間にリロードを始めることも近接と同じ modifier で止めるため。
+                weapon.AddModifier(grenades);
             }
 
             if (ads != null)

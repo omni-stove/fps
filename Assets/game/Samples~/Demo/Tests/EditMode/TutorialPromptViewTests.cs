@@ -126,7 +126,7 @@ namespace Shooter.Tests.EditMode
             _view.Bind(_root);
             var status = new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse);
 
-            GameSignals.Tutorial.Publish(status);
+            CampaignSignals.Tutorial.Publish(status);
 
             Assert.That(_view.IsShown, Is.True);
             Assert.That(_view.IsCompleted, Is.False);
@@ -142,7 +142,7 @@ namespace Shooter.Tests.EditMode
             var steps = AtShoot();
             steps.Observe(Frame(hits: 2));
 
-            GameSignals.Tutorial.Publish(new TutorialStatus(steps, InputActionPaths.Attack, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(steps, InputActionPaths.Attack, InputDeviceKind.KeyboardMouse));
 
             Assert.That(_view.Text, Does.StartWith("[3/6] ").And.EndWith("(2/3)"));
         }
@@ -152,7 +152,7 @@ namespace Shooter.Tests.EditMode
         {
             _view.Bind(_root);
 
-            GameSignals.Tutorial.Publish(new TutorialStatus(Completed(), null, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(Completed(), null, InputDeviceKind.KeyboardMouse));
 
             Assert.That(_view.Text, Is.EqualTo("チュートリアル完了"));
             Assert.That(_view.IsCompleted, Is.True);
@@ -163,9 +163,9 @@ namespace Shooter.Tests.EditMode
         public void ClearingTheStatusHides()
         {
             _view.Bind(_root);
-            GameSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
 
-            GameSignals.Tutorial.Clear();
+            CampaignSignals.Tutorial.Clear();
 
             Assert.That(_view.IsShown, Is.False);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
@@ -174,7 +174,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void BindingCatchesUpWithTheCurrentStatus()
         {
-            GameSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
 
             _view.Bind(_root);
 
@@ -186,10 +186,10 @@ namespace Shooter.Tests.EditMode
         public void AStatusClearedWhileUnboundIsHiddenWhenBoundAgain()
         {
             _view.Bind(_root);
-            GameSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.KeyboardMouse));
             _view.Unbind();
 
-            GameSignals.Tutorial.Clear();
+            CampaignSignals.Tutorial.Clear();
             Assert.That(_view.IsShown, Is.True, "an unbound view does not hear the signal");
             _view.Bind(_root);
 
@@ -205,14 +205,14 @@ namespace Shooter.Tests.EditMode
             steps.Observe(Frame(hits: TutorialSteps.DefaultHitsRequired));
             Assume.That(steps.Current, Is.EqualTo(TutorialStep.Reload));
             _view.Bind(_root);
-            GameSignals.Tutorial.Publish(new TutorialStatus(steps, InputActionPaths.Reload, InputDeviceKind.KeyboardMouse));
+            CampaignSignals.Tutorial.Publish(new TutorialStatus(steps, InputActionPaths.Reload, InputDeviceKind.KeyboardMouse));
             try
             {
                 reload.ApplyBindingOverride(new InputBinding { groups = TutorialKeyLabels.KeyboardMouseGroup, overridePath = "<Keyboard>/f12" });
 
                 _view.RefreshKeys();
 
-                Assert.That(_view.Text, Is.EqualTo(Localizer.Resolve(TutorialText.For(GameSignals.Tutorial.Value.Value))));
+                Assert.That(_view.Text, Is.EqualTo(Localizer.Resolve(TutorialText.For(CampaignSignals.Tutorial.Value.Value))));
                 Assert.That(_view.Text, Does.StartWith("[4/6] F12 "));
             }
             finally

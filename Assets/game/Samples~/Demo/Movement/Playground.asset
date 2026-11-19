@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ede6a9b8c2d45f58d0d3dc27f5b91f6, type: 3}
+  m_Name: Playground
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MotorSettings
+  _walkSpeed: 5
+  _sprintSpeed: 8
+  _crouchSpeed: 2.5
+  _jumpHeight: 1.2
+  _gravity: 20
+  _airControl: 0.1
+  _walkForwardScale: 1
+  _walkBackwardScale: 1
+  _walkSideScale: 1
+  _sprintForwardScale: 1
+  _sprintBackwardScale: 1
+  _sprintSideScale: 1
+  _safeFallSpeed: 12
+  _lethalFallSpeed: 25
+  _dodgeDistance: 3
+  _dodgeSeconds: 0.35
+  _dodgeCooldownSeconds: 0.5
+  _vaultMaxHeight: 1.2
+  _vaultSpeed: 6
+  _vaultReach: 1
+  _vaultMaxAngleDegrees: 45
+  _vaultMinHeight: 0.3
+  _vaultMaxDepth: 1
+  _mantleMaxHeight: 2.2
+  _mantleSpeed: 3
+  _coverMaxEnterDistance: 4
+  _coverMaxEnterAngleDegrees: 45
+  _coverLowWallHeight: 1.1
+  _coverPeekSideDistance: 0.6
+  _coverEnterSeconds: 0.15
+  _coverEnterSpeed: 8
+  _coverBackHoldSeconds: 0.2
+  _coverPeekSlideSeconds: 0.15
+  _ladderTopEntryDepth: 0.3
+  _ladderMinApproachDot: 0.5
+  _ladderMinApproachSpeed: 0.5
+  _proneHeight: 1
+  _proneSpeed: 1.2
+  _proneMaxPitchDegrees: 30
+  _proneSpreadScale: 0.5
+  _diveDistance: 2.5
+  _diveSeconds: 0.5
+  _leanSideOffset: 0.4
+  _leanAngleDegrees: 15
+  _leanSpeed: 6
+  _airJumps: 1
+  _airJumpSpeed: 6.5
+  _jumpGraceSeconds: 0
+  _carryWeightSource: 1
+  _carryMultiplierSource: 1
+  _carryFreeWeight: 0
+  _carrySpeedLossPerKg: 0
+  _carryMinWeightMultiplier: 0.5
+  _carryGaits: 15

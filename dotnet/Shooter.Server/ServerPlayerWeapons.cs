@@ -200,6 +200,17 @@ namespace Shooter.Server
             return _loadout != null && !_loadout.IsSwitching && _loadout.Current.TryStartReload();
         }
 
+        public bool CancelReload()
+        {
+            if (_loadout == null || !_loadout.Current.IsReloading)
+            {
+                return false;
+            }
+
+            _loadout.Current.CancelReload();
+            return true;
+        }
+
         public bool TryActiveReload()
         {
             if (_loadout == null || _loadout.IsSwitching || !_loadout.Current.TryActiveReload(out var result))

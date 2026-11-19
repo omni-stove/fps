@@ -114,6 +114,7 @@ namespace Shooter.Server
             var flight = new ServerGrenadeFlight(_context.World, position, velocity, spec);
             flight.CollideWithCharacters(_bodies, playerId, IsHittable);
             _grenades.Add(new LiveGrenade(_nextGrenadeId++, playerId, spec, flight));
+            InterruptReload(playerId, ReloadInterrupt.Grenade);
 
             // 撃ったときと同じく、投げた時点で出現直後の無敵を解く
             _rules.NotifyFired(playerId);

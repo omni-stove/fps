@@ -1,6 +1,8 @@
 {
   "shared": [
     { "actions": ["Melee", "Interact"], "prefer": "Interact" },
-    { "actions": ["Reload", "Interact"], "prefer": "Interact" }
+    { "actions": ["Reload", "Interact"], "prefer": "Interact" },
+    { "actions": ["Cover", "Countermeasure"] },
+    { "actions": ["Ping", "Emote"], "prefer": "Emote" }
   ]
 }

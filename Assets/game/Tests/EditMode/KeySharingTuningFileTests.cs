@@ -21,13 +21,30 @@ namespace Shooter.Tests.EditMode
 
             var spec = KeySharingJson.Parse(asset.text, "Resources/Tuning/key-sharing.json");
 
-            Assert.That(spec.Shared.Count, Is.EqualTo(2));
+            Assert.That(spec.Shared.Count, Is.EqualTo(4));
             Assert.That(spec.Allows("Melee", "Interact"), Is.True);
             Assert.That(spec.Allows("Reload", "Interact"), Is.True);
             Assert.That(spec.Allows("Melee", "Reload"), Is.False);
             Assert.That(spec.YieldsTo("Melee"), Is.EqualTo(new[] { "Interact" }));
             Assert.That(spec.YieldsTo("Reload"), Is.EqualTo(new[] { "Interact" }));
             Assert.That(spec.YieldsTo("Interact"), Is.Empty);
+        }
+
+        [Test]
+        public void TheBundledFileLetsCountermeasureShareWithCoverAndEmoteWithPing()
+        {
+            var spec = KeySharingJson.Parse(Resources.Load<TextAsset>(KeySharingJson.ResourcePath).text, "key-sharing.json");
+
+            Assert.That(spec.Allows("Countermeasure", "Cover"), Is.True);
+            Assert.That(spec.YieldsTo("Cover"), Is.Empty, "cover is read only on foot and flares only in a vehicle, so neither has to yield");
+            Assert.That(spec.YieldsTo("Countermeasure"), Is.Empty);
+
+            Assert.That(spec.Allows("Emote", "Ping"), Is.True);
+            Assert.That(spec.YieldsTo("Ping"), Is.EqualTo(new[] { "Emote" }));
+            Assert.That(spec.YieldsTo("Emote"), Is.Empty);
+
+            Assert.That(spec.Allows("Emote", "Cover"), Is.False);
+            Assert.That(spec.Allows("Countermeasure", "Ping"), Is.False);
         }
 
         [Test]

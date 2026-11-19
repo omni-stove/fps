@@ -132,7 +132,7 @@ namespace Shooter.Core
             }
 
             var pos = Flat(position);
-            Advance(points, looping, pos);
+            Advance(points, looping, pos, forwardSpeed);
             if (IsFinished)
             {
                 StalledSeconds = 0f;
@@ -193,13 +193,14 @@ namespace Shooter.Core
             return new VehicleRouteCommand(steer, throttle, brake, _index, targetSpeed, VehicleRoutePhase.Driving);
         }
 
-        private void Advance(IReadOnlyList<Vector3> points, bool looping, Vector2 pos)
+        private void Advance(IReadOnlyList<Vector3> points, bool looping, Vector2 pos, float forwardSpeed)
         {
+            var lookAhead = Spec.LookAheadAt(forwardSpeed);
             var count = points.Count;
             var radiusSquared = Spec.ArriveRadius * Spec.ArriveRadius;
             for (var guard = 0; guard < count; guard++)
             {
-                var reached = Vector2.DistanceSquared(pos, Flat(points[_index])) <= radiusSquared || Passed(points, looping, pos);
+                var reached = Vector2.DistanceSquared(pos, Flat(points[_index])) <= radiusSquared || Passed(points, looping, pos, lookAhead);
                 if (!reached)
                 {
                     return;
@@ -217,7 +218,7 @@ namespace Shooter.Core
 
         // 先読みで角の内側を切ると、着いたとみなす輪にも入らず入る区間の先へも抜けないまま次の区間へ移る。
         // 戻ってその点を回り直さないよう、角を二等分する線を越えたら通ったことにする。
-        private bool Passed(IReadOnlyList<Vector3> points, bool looping, Vector2 pos)
+        private bool Passed(IReadOnlyList<Vector3> points, bool looping, Vector2 pos, float lookAhead)
         {
             var count = points.Count;
             // 最初の点はどの向きから入るか決まっていないので、輪に入ったときだけ着いたことにする。
@@ -244,7 +245,7 @@ namespace Shooter.Core
             }
 
             // 二等分線は鋭い角ほど入る区間と平行に近づき、角から遠い所でも越えてしまう。先読みで内側を切れる範囲に限る。
-            return Vector2.DistanceSquared(pos, point) <= Spec.LookAheadDistance * Spec.LookAheadDistance;
+            return Vector2.DistanceSquared(pos, point) <= lookAhead * lookAhead;
         }
 
         private static Vector2 Direction(Vector2 from, Vector2 to)

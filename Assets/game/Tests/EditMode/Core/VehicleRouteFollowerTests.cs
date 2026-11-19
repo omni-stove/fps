@@ -132,6 +132,36 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ASharpTurnBackDoesNotCountAsPassedFarFromTheCorner()
+        {
+            var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);
+            var points = new[] { At(0f, 0f), At(0f, 40f), At(6f, 0f) };
+            follower.Restart(1);
+
+            var command = follower.Tick(points, false, At(2.3f, 10f), _north, 0f, 0.02f);
+
+            Assert.That(command.TargetIndex, Is.EqualTo(1), "30 m from the corner is past the bisector but outside the look-ahead");
+        }
+
+        [Test]
+        public void ASlowCornerSpeedStillKeepsThrottleAndCanReverseWhenStuck()
+        {
+            var follower = new VehicleRouteFollower(new VehicleRouteSpec(cornerSpeed: 0f));
+            var points = new[] { At(10f, 0f) };
+
+            var first = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
+            Assert.That(first.Throttle, Is.GreaterThan(0f), "a target to the side must not drop the target speed to zero");
+
+            VehicleRouteCommand command = first;
+            for (var i = 0; i < 5; i++)
+            {
+                command = follower.Tick(points, false, Vector3.Zero, _north, 0f, 0.25f);
+            }
+
+            Assert.That(command.Phase, Is.EqualTo(VehicleRoutePhase.Reversing));
+        }
+
+        [Test]
         public void ATargetToTheLeftSteersLeft()
         {
             var follower = new VehicleRouteFollower(VehicleRouteSpec.Default);

@@ -9,7 +9,7 @@ namespace Shooter.Core
     // 画面の言語は持たない。何をどの言語で出すかは game 側の UI が決め、自分で保存する。
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
-        public const int CurrentVersion = 12;
+        public const int CurrentVersion = 13;
 
         // 保存した文字列を見て地域を決めていないと分かるよう、空文字や null でなく名前で持つ。
         public const string AutoRegion = "auto";
@@ -49,6 +49,7 @@ namespace Shooter.Core
         private const string _gyroSensitivityKey = "gyroSensitivity";
         private const string _gyroAimOnlyKey = "gyroAimOnly";
         private const string _invertGyroYKey = "invertGyroY";
+        private const string _uiScaleKey = "uiScale";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -70,6 +71,7 @@ namespace Shooter.Core
             ControlValue.ViewmodelMotionIntensity,
             ControlValue.StickDeadzone,
             ControlValue.RumbleStrength,
+            ControlValue.UiScale,
         };
 
         private static readonly ControlValueRange[] _ranges =
@@ -86,13 +88,15 @@ namespace Shooter.Core
             // 0.125 を整数で持てるよう ‰ にする。0.125 は Input System のスティックの既定のデッドゾーンで、今までの効き方を初期値にする。
             new ControlValueRange(0, 500, 125),
             new ControlValueRange(0, 100, 100),
+            // 80 未満では HUD の小さな文字が読めず、150 を超えると参照解像度の画面に枠が収まらない。
+            new ControlValueRange(80, 150, 100),
         };
 
         // ControlValue に入れないのは、ジャイロの感度は On/Off などと GyroFields にまとめて持ち、設定画面でもジャイロの無い機器では一緒に触れなくするため。
         public static ControlValueRange GyroSensitivityRange { get; } = new ControlValueRange(10, 500, 100);
 
         // 古い形式に無い値を、欠けた値として警告しないために、その値を書き始めた形式のバージョンを持つ。
-        private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7, 10, 10 };
+        private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7, 10, 10, 13 };
 
         private static readonly string[] _versionOneRootKeys = { _versionKey, _keyboardMouseKey, _gamepadKey };
 
@@ -183,6 +187,18 @@ namespace Shooter.Core
             _quickMatchRegionKey, _telemetryConsentKey,
         };
 
+        private static readonly string[] _versionTwelveRootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+            _quickMatchRegionKey, _telemetryConsentKey,
+            _gyroKey, _gyroSensitivityKey, _gyroAimOnlyKey, _invertGyroYKey,
+        };
+
         private static readonly string[] _rootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
@@ -193,6 +209,7 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
             _quickMatchRegionKey, _telemetryConsentKey,
             _gyroKey, _gyroSensitivityKey, _gyroAimOnlyKey, _invertGyroYKey,
+            _uiScaleKey,
         };
 
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
@@ -332,6 +349,8 @@ namespace Shooter.Core
         public bool RumbleEnabled => _rumbleEnabled;
 
         public float RumbleStrength => Percent(ControlValue.RumbleStrength);
+
+        public float UiScale => Percent(ControlValue.UiScale);
 
         public string QuickMatchRegion => _quickMatchRegion;
 
@@ -499,6 +518,11 @@ namespace Shooter.Core
             return With(ControlValue.RumbleStrength, percent);
         }
 
+        public ControlSettings WithUiScale(int percent)
+        {
+            return With(ControlValue.UiScale, percent);
+        }
+
         public ControlSettings WithQuickMatchRegion(string region)
         {
             if (region == null)
@@ -592,7 +616,8 @@ namespace Shooter.Core
             foreach (var value in _values)
             {
                 // 版 10 で足した数値は、版 9 までの並びを崩さないよう、同じ版で足した真偽値と並べて後で書く。
-                if (value == ControlValue.StickDeadzone || value == ControlValue.RumbleStrength)
+                // 版 13 の UI の拡大も、版 12 までの並びを崩さないよう最後に書く。
+                if (value == ControlValue.StickDeadzone || value == ControlValue.RumbleStrength || value == ControlValue.UiScale)
                 {
                     continue;
                 }
@@ -633,6 +658,8 @@ namespace Shooter.Core
             AppendKey(builder, _gyroAimOnlyKey).Append(_gyro.AimOnly ? "true" : "false");
             builder.Append(',');
             AppendKey(builder, _invertGyroYKey).Append(_gyro.InvertY ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _uiScaleKey).Append(Format(Get(ControlValue.UiScale)));
             builder.Append('}');
             return builder.ToString();
         }
@@ -688,7 +715,8 @@ namespace Shooter.Core
             var hasGamepadFeel = version >= 10;
             var hasOnline = version >= 11;
             var hasGyro = version >= 12;
-            var knownKeys = hasGyro ? _rootKeys
+            var knownKeys = version >= 13 ? _rootKeys
+                : hasGyro ? _versionTwelveRootKeys
                 : hasOnline ? _versionElevenRootKeys
                 : hasGamepadFeel ? _versionTenRootKeys
                 : hasAimAssist ? _versionNineRootKeys
@@ -1061,6 +1089,8 @@ namespace Shooter.Core
                     return _stickDeadzoneKey;
                 case ControlValue.RumbleStrength:
                     return _rumbleStrengthKey;
+                case ControlValue.UiScale:
+                    return _uiScaleKey;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

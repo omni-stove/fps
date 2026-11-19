@@ -21,5 +21,7 @@ namespace Shooter.Core
         StickDeadzone,
 
         RumbleStrength,
+
+        UiScale,
     }
 }

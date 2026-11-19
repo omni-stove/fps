@@ -22,6 +22,7 @@
   "settings.value.viewmodelMotion": "Weapon sway",
   "settings.value.stickDeadzone": "Stick deadzone",
   "settings.value.rumbleStrength": "Vibration strength",
+  "settings.value.uiScale": "UI scale",
   "settings.aimAssist": "Aim assist (gamepad)",
   "settings.invertLookY": "Invert look Y",
   "settings.rumble": "Vibration",

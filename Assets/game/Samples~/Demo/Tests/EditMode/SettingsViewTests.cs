@@ -732,6 +732,59 @@ namespace Shooter.Tests.EditMode
             LogAssert.NoUnexpectedReceived();
         }
 
+        [Test]
+        public void TheUiScaleRowIsInTheAccessibilitySectionInBothLanguages()
+        {
+            _view.Open(_container);
+
+            var order = _view.Root.Query<VisualElement>().ToList();
+            var slider = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.UiScale));
+            var sections = _view.Root.Query<Label>(className: "settings__section").ToList();
+            var accessibility = sections.Single(label => label.text == Localizer.Get("settings.section.accessibility"));
+            var next = sections[sections.IndexOf(accessibility) + 1];
+            Assert.That(order.IndexOf(slider), Is.GreaterThan(order.IndexOf(accessibility)));
+            Assert.That(order.IndexOf(slider), Is.LessThan(order.IndexOf(next)));
+            Assert.That(order.IndexOf(slider), Is.GreaterThan(order.IndexOf(_container.Q<Button>(SettingsView.SubtitlesButtonName))));
+            Assert.That(CaptionOf(slider), Is.EqualTo("UI の拡大"));
+            Assert.That(slider.lowValue, Is.EqualTo(80));
+            Assert.That(slider.highValue, Is.EqualTo(150));
+            Assert.That(slider.value, Is.EqualTo(100));
+            Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.UiScale)).text, Is.EqualTo("100%"));
+
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
+            _view.SetLanguage(GameLanguage.English);
+
+            Assert.That(CaptionOf(_view.Root.Q<SliderInt>(SettingsView.SliderName(ControlValue.UiScale))), Is.EqualTo("UI scale"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ChangingTheUiScaleTakesEffectAtOnceAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetValue(ControlValue.UiScale, 150);
+
+                Assert.That(AppliedControlSettings.Current.UiScale, Is.EqualTo(1.5f));
+                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(received[0].Get(ControlValue.UiScale), Is.EqualTo(150));
+                Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.UiScale)).text, Is.EqualTo("150%"));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False);
+
+                Assert.That(_view.Close(), Is.True);
+
+                Assert.That(new ControlSettingsStore(_store.Key).Load().Get(ControlValue.UiScale), Is.EqualTo(150));
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
         private static string CaptionOf(VisualElement control)
         {
             Assert.That(control, Is.Not.Null);
@@ -804,6 +857,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 0), Is.EqualTo("0%"));
             Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 500), Is.EqualTo("50%"));
             Assert.That(SettingsView.FormatValue(ControlValue.RumbleStrength, 70), Is.EqualTo("70%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.UiScale, 150), Is.EqualTo("150%"));
             Assert.That(SettingsView.FormatMode(HoldMode.Hold), Is.EqualTo(SettingsView.HoldText));
             Assert.That(SettingsView.FormatMode(HoldMode.Toggle), Is.EqualTo(SettingsView.ToggleText));
         }

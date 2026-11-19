@@ -132,7 +132,7 @@ namespace Shooter.Runtime
                 if (!_warnedNoMotor)
                 {
                     _warnedNoMotor = true;
-                    Debug.LogWarning(VehicleLog.EffectsMissingMotor(name), this);
+                    Debug.LogWarning(AircraftLog.EffectsMissingMotor(name), this);
                 }
 
                 return;

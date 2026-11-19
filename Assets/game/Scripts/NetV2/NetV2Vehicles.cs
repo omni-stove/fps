@@ -9,8 +9,8 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.NetV2
 {
-    // 乗り降り・耐久・爆発・部位への命中はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage・AircraftPartDamage の命中の受け口) は止め、
-    // 煙・火・残骸の見た目 (VehicleDamageEffects) にサーバーの段階を、飛行機の部位 (AircraftPartDamage) にサーバーの受けた量を渡す。
+    // 乗り降り・耐久・爆発・部位への命中はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage・部位の部品 INetVehicleParts の命中の受け口) は止め、
+    // 煙・火・残骸の見た目 (VehicleDamageEffects) にサーバーの段階を、部位の部品 (INetVehicleParts) にサーバーの受けた量を渡す。
     // 乗り物の番号は書き出し (MapVehicleExporter) と同じく、有効な乗り物をシーンの並び順で数える。
     internal sealed class NetV2Vehicles
     {
@@ -239,7 +239,7 @@ namespace Shooter.NetV2
                 impact.enabled = false;
             }
 
-            var parts = vehicle.GetComponentInChildren<AircraftPartDamage>(true);
+            var parts = vehicle.GetComponentInChildren<INetVehicleParts>(true);
             if (parts != null)
             {
                 parts.Detach();
@@ -313,7 +313,6 @@ namespace Shooter.NetV2
             }
         }
 
-        // 届いた中に無い部位は撃たれていないので、耐久のまま (修理された) に戻す。
         private void HandlePartsChanged(int index, VehiclePartDamageSync parts)
         {
             if (index >= _scene.Count || _scene[index].Parts == null || _scene[index].Vehicle == null)
@@ -321,17 +320,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            var damage = _scene[index].Parts.Damage;
-            var before = damage.Condition;
-            foreach (var part in damage.Spec.Parts)
-            {
-                damage.SetRemaining(part.Id, Math.Max(0, part.Durability - parts.TakenOf(part.Id)));
-            }
-
-            if (damage.Condition != before)
-            {
-                Debug.Log(VehicleLog.NetCondition(_scene[index].Vehicle.name, damage.Condition), _context);
-            }
+            _scene[index].Parts.ApplyServerTaken(parts.TakenOf);
         }
 
         // 運転席に着いたら自分の物理で動かし、離れたら補間の姿を置けるよう物理を止める
@@ -412,7 +401,7 @@ namespace Shooter.NetV2
         private sealed class SceneVehicle
         {
             public SceneVehicle(
-                Vehicle vehicle, Rigidbody body, IVehicleMotor motor, VehicleDamageEffects effects, AircraftPartDamage parts,
+                Vehicle vehicle, Rigidbody body, IVehicleMotor motor, VehicleDamageEffects effects, INetVehicleParts parts,
                 IReadOnlyList<VehicleWeaponMount> mounts)
             {
                 Vehicle = vehicle;
@@ -431,7 +420,7 @@ namespace Shooter.NetV2
 
             public VehicleDamageEffects Effects { get; }
 
-            public AircraftPartDamage Parts { get; }
+            public INetVehicleParts Parts { get; }
 
             public IReadOnlyList<VehicleWeaponMount> Mounts { get; }
         }

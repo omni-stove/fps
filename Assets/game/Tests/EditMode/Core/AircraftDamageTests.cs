@@ -170,9 +170,29 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheBrokenLineNamesThePartAndTheMultipliers()
         {
-            var line = VehicleLog.PartBroken("Plane", "wing_left", AircraftDamageEffect.LeftLift, new AircraftCondition(leftLift: 0.2f, thrust: 0.5f));
+            var line = AircraftLog.PartBroken("Plane", "wing_left", AircraftDamageEffect.LeftLift, new AircraftCondition(leftLift: 0.2f, thrust: 0.5f));
 
             Assert.That(line, Is.EqualTo("[Vehicle] 'Plane' part broken part=wing_left effect=LeftLift lift=0.20/1.00 control=1.00 thrust=0.50"));
+        }
+
+        [Test]
+        public void TheNetConditionLineNamesTheMultipliers()
+        {
+            var line = AircraftLog.NetCondition("Plane", new AircraftCondition(leftLift: 0.2f, control: 0.4f));
+
+            Assert.That(line, Is.EqualTo("[Vehicle] 'Plane' net condition lift=0.20/1.00 control=0.40 thrust=1.00"));
+        }
+
+        [Test]
+        public void TheSettingsAndEffectsLinesKeepTheVehicleTag()
+        {
+            Assert.That(
+                AircraftLog.InvalidAircraftDamage("Plane", "bad part"),
+                Is.EqualTo("[Vehicle] 'Plane' aircraft damage settings are invalid; parts take no flight damage: bad part"));
+            Assert.That(
+                AircraftLog.EffectsMissingMotor("Plane"),
+                Is.EqualTo("[Vehicle] 'Plane' has no SimpleAircraftMotor; the aircraft effects show nothing"));
+            Assert.That(AircraftLog.Tag, Is.EqualTo(VehicleLog.Tag));
         }
     }
 }

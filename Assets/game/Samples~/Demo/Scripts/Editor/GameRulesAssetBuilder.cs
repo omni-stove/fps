@@ -182,6 +182,7 @@ namespace Shooter.Editor
 
         // GameRulesDebugDraft と同じく、ブラインドファイアはカバーも、グレネードは数も一緒に入れる。
         // ダウンは倒れる手段が要るので落下ダメージも入れる。
+        // カバーとブラインドファイアは、一人称では張り付くと視界が壁で埋まるだけなので三人称で見せる。
         public static GameRules FeatureRules(GameRulesDebugField field)
         {
             if (!GameRulesDebugDraft.IsToggle(field))
@@ -196,7 +197,10 @@ namespace Shooter.Editor
                 draft.Set(GameRulesDebugField.FallDamage, (int)FallDamage.On);
             }
 
-            return draft.Build();
+            var rules = draft.Build();
+            return field == GameRulesDebugField.Cover || field == GameRulesDebugField.BlindFire
+                ? rules.WithViewMode(ViewMode.ThirdPerson)
+                : rules;
         }
 
         public static string FeatureRulesPath(GameRulesDebugField field)
@@ -363,6 +367,8 @@ namespace Shooter.Editor
         public static ActionRules TpsRangeActions()
         {
             return RangeActions()
+                .WithCover(Cover.On)
+                .WithBlindFire(BlindFire.On)
                 .WithDodge(Dodge.On)
                 .WithVault(Vault.On)
                 .WithMantle(Mantle.On)
@@ -384,14 +390,16 @@ namespace Shooter.Editor
                 .WithGrenadeCount(TeamDeathmatchGrenadeCount);
         }
 
+        // 一人称では壁に張り付いても視界が壁で埋まるだけなので、カバーと (カバー中にだけ撃てる) ブラインドファイアを使わない。
         public static ActionRules CampaignActions()
         {
-            return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On);
         }
 
+        // 一人称なのでカバーを使わない (CampaignActions と同じ理由)。
         public static ActionRules RangeActions()
         {
-            return WithDefaultDownedTimings(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On);
         }
 
         public static GameRulesDefinition LoadRules(string path)

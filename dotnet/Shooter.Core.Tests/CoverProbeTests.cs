@@ -35,8 +35,8 @@ namespace Shooter.Core.Tests
 
         [TestCase(0f)]
         [TestCase(0.5f)]
-        [TestCase(1.0f)]
-        public void EntersWithinOneMetre(float distance)
+        [TestCase(4.0f)]
+        public void EntersWithinTheDefaultFourMetres(float distance)
         {
             var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 
@@ -45,9 +45,9 @@ namespace Shooter.Core.Tests
             Assert.That(result.Distance, Is.EqualTo(distance));
         }
 
-        [TestCase(1.01f)]
-        [TestCase(5f)]
-        public void WallsFartherThanOneMetreAreOutOfReach(float distance)
+        [TestCase(4.01f)]
+        [TestCase(6f)]
+        public void WallsFartherThanFourMetresAreOutOfReach(float distance)
         {
             var result = CoverProbe.Evaluate(Sample(distance), _forward, MotorSpec.Default);
 

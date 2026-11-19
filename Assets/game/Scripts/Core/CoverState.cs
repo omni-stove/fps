@@ -16,11 +16,20 @@ namespace Shooter.Core
 
         public const string ReasonLost = "lost";
 
+        public const string ReasonBlocked = "blocked";
+
+        // 寄せ終わりの判定で、残りの隙間をこれ以下なら着いたとみなす (m)。
+        private const float _arriveDistance = 1e-3f;
+
+        // 経過時間の積み上げの丸めで、最後の tick を 1 つ先へ送らないための余裕 (秒)。
+        private const float _timeEpsilon = 1e-5f;
+
         private const float _sideInputDeadZone = 0.1f;
 
         private float _enterElapsed;
         private float _backElapsed;
         private float _preferredSide = 1f;
+        private float _bodyRadius;
         private MotorSpec _spec;
 
         public CoverState(MotorSpec spec)
@@ -32,6 +41,21 @@ namespace Shooter.Core
         {
             get => _spec;
             set => _spec = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        // 体の大きさは設定なので、スナップショットには含めない。
+        public float BodyRadius
+        {
+            get => _bodyRadius;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "BodyRadius must be finite and not negative");
+                }
+
+                _bodyRadius = value;
+            }
         }
 
         public CoverPhase Phase { get; private set; }
@@ -48,21 +72,11 @@ namespace Shooter.Core
 
         public float PreferredSide => _preferredSide;
 
-        public float EnterProgress
-        {
-            get
-            {
-                switch (Phase)
-                {
-                    case CoverPhase.Out:
-                        return 0f;
-                    case CoverPhase.Entering:
-                        return Math.Min(1f, _enterElapsed / _spec.CoverEnterSeconds);
-                    default:
-                        return 1f;
-                }
-            }
-        }
+        public float EnterStep { get; private set; }
+
+        public float EnterTurn { get; private set; }
+
+        public float EnterTimeoutSeconds => _spec.CoverEnterSeconds + (_spec.CoverMaxEnterDistance / _spec.CoverEnterSpeed);
 
         public string LastExitReason { get; private set; }
 
@@ -78,6 +92,8 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(move), move, "move must be finite");
             }
 
+            EnterStep = 0f;
+            EnterTurn = 0f;
             if (Phase == CoverPhase.Out)
             {
                 return coverPressed && probe.CanEnter ? Enter(probe) : CoverTransition.None;
@@ -110,13 +126,7 @@ namespace Shooter.Core
             switch (Phase)
             {
                 case CoverPhase.Entering:
-                    _enterElapsed += deltaSeconds;
-                    if (_enterElapsed >= _spec.CoverEnterSeconds)
-                    {
-                        Phase = CoverPhase.In;
-                    }
-
-                    return CoverTransition.None;
+                    return StepEntering(probe, deltaSeconds);
 
                 case CoverPhase.In:
                     return aimHeld ? TryPeek(probe) : CoverTransition.None;
@@ -199,6 +209,28 @@ namespace Shooter.Core
             _enterElapsed = 0f;
             _backElapsed = 0f;
             return CoverTransition.Enter;
+        }
+
+        // 近い壁は CoverEnterSeconds をかけて、遠い壁は CoverEnterSpeed で走って寄せる (遅い方に合わせる)。
+        // 着いたかは寄せる予定の距離で決めるので、呼び手が動かせなかった分は次の Step の測り直しで残りに出る。
+        private CoverTransition StepEntering(CoverProbeResult probe, float deltaSeconds)
+        {
+            var gap = Math.Max(0f, probe.Distance - CoverProbe.HoldDistance(_bodyRadius));
+            var remaining = _spec.CoverEnterSeconds - _enterElapsed;
+            var isLastTimed = remaining <= deltaSeconds + _timeEpsilon;
+            _enterElapsed += deltaSeconds;
+            var timed = isLastTimed ? gap : gap * deltaSeconds / remaining;
+            var step = Math.Min(gap, Math.Min(timed, _spec.CoverEnterSpeed * deltaSeconds));
+            EnterStep = step;
+            EnterTurn = gap > _arriveDistance ? step / gap : (isLastTimed ? 1f : deltaSeconds / remaining);
+            if (isLastTimed && gap - step <= _arriveDistance)
+            {
+                EnterTurn = 1f;
+                Phase = CoverPhase.In;
+                return CoverTransition.None;
+            }
+
+            return _enterElapsed >= EnterTimeoutSeconds ? Exit(ReasonBlocked) : CoverTransition.None;
         }
 
         private CoverTransition TryPeek(CoverProbeResult probe)

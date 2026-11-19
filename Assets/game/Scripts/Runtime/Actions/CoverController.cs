@@ -258,6 +258,7 @@ namespace Shooter.Runtime
             }
 
             _state.Spec = _player.Motor.Spec;
+            _state.BodyRadius = BodyRadius();
             var wasInCover = _state.IsInCover;
             if (!wasInCover && (!coverPressed || _player.IsDodging || _player.IsVaulting || _player.IsMantling))
             {
@@ -265,7 +266,6 @@ namespace Shooter.Runtime
             }
 
             _lastProbe = wasInCover ? ProbeHeldWall() : ProbeFront();
-            var progressBefore = _state.EnterProgress;
             var transition = _state.Step(coverPressed, aimHeld, move.ToNumerics(), _lastProbe, deltaSeconds);
             Report(transition);
 
@@ -285,9 +285,9 @@ namespace Shooter.Runtime
                 _shoulderOverridden = false;
                 _appliedPeek = 0f;
             }
-            else if (_state.Phase == CoverPhase.Entering || (progressBefore < 1f && _state.EnterProgress >= 1f))
+            else
             {
-                SlideIn(progressBefore, _state.EnterProgress);
+                SlideIn();
             }
 
             SlidePeek(deltaSeconds);
@@ -347,25 +347,18 @@ namespace Shooter.Runtime
             return willCrouch ? 1f : Mathf.Min(1f, spec.CrouchSpeed / spec.WalkSpeed);
         }
 
-        // 寄せ終わる時刻までの残りを等分して進むので、最後のフレームでちょうど目標の距離と向きになる。
-        private void SlideIn(float progressBefore, float progressAfter)
+        private void SlideIn()
         {
-            if (progressBefore >= 1f)
-            {
-                return;
-            }
-
-            var fraction = Mathf.Clamp01((progressAfter - progressBefore) / (1f - progressBefore));
-            if (fraction <= 0f)
-            {
-                return;
-            }
-
             var normal = _state.Normal.ToUnity();
-            var hold = CoverProbe.HoldDistance(BodyRadius());
-            var gap = _lastProbe.Distance - hold;
-            _player.Controller.Move(-normal * (gap * fraction));
-            TurnTowards(-normal, fraction);
+            if (_state.EnterStep > 0f)
+            {
+                _player.Controller.Move(-normal * _state.EnterStep);
+            }
+
+            if (_state.EnterTurn > 0f)
+            {
+                TurnTowards(-normal, _state.EnterTurn);
+            }
         }
 
         private void SlidePeek(float deltaSeconds)

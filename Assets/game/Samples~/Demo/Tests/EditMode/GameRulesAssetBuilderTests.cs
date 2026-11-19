@@ -20,10 +20,10 @@ namespace Shooter.Tests.EditMode
         {
             new ExpectedActions(
                 Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On, grenade: Grenade.On, grenadeCount: GameRulesAssetBuilder.TeamDeathmatchGrenadeCount),
-            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
-            new ExpectedActions(Downed.Off, Cover.On, BlindFire.On, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On),
+            new ExpectedActions(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On),
             new ExpectedActions(
                 Downed.Off, Cover.On, BlindFire.On, ActiveReload.On, Dodge.On, Vault.On, Grenade.On, GameRulesAssetBuilder.TpsRangeGrenadeCount),
             new ExpectedActions(
@@ -328,7 +328,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void CampaignsCoverBlindFireAndActiveReloadWithoutDowned()
+        public void FirstPersonCampaignsActiveReloadWithoutCoverBlindFireOrDowned()
         {
             var campaigns = new[]
             {
@@ -339,20 +339,20 @@ namespace Shooter.Tests.EditMode
 
             foreach (var rules in campaigns)
             {
-                Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.On));
-                Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.On));
+                Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.Off));
+                Assert.That(rules.Actions.BlindFire, Is.EqualTo(BlindFire.Off));
                 Assert.That(rules.Actions.ActiveReload, Is.EqualTo(ActiveReload.On));
                 Assert.That(rules.Actions.Downed, Is.EqualTo(Downed.Off));
             }
         }
 
         [Test]
-        public void RangeCoversBlindFiresAndActiveReloads()
+        public void FirstPersonRangeActiveReloadsWithoutCoverOrBlindFire()
         {
             var actions = GameRulesAssetBuilder.RangeRules().Actions;
 
-            Assert.That(actions.Cover, Is.EqualTo(Cover.On));
-            Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.On));
+            Assert.That(actions.Cover, Is.EqualTo(Cover.Off));
+            Assert.That(actions.BlindFire, Is.EqualTo(BlindFire.Off));
             Assert.That(actions.ActiveReload, Is.EqualTo(ActiveReload.On));
             Assert.That(actions.Downed, Is.EqualTo(Downed.Off));
         }
@@ -813,7 +813,10 @@ namespace Shooter.Tests.EditMode
                 var rules = GameRulesAssetBuilder.FeatureRules(field);
 
                 Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(1), field + " is on");
-                Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.FirstPerson), field + ": F2 switches the view at run time");
+                var expectedView = field == GameRulesDebugField.Cover || field == GameRulesDebugField.BlindFire
+                    ? ViewMode.ThirdPerson
+                    : ViewMode.FirstPerson;
+                Assert.That(rules.ViewMode, Is.EqualTo(expectedView), field + ": F2 switches the view at run time");
                 Assert.That(rules.DeathCamera, Is.EqualTo(DeathCamera.Fallen), field + ": the player collapses in first person");
                 foreach (var other in toggles)
                 {
@@ -851,6 +854,8 @@ namespace Shooter.Tests.EditMode
         public void FeatureRulesBringWhatTheFeatureNeeds()
         {
             Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.BlindFire).Actions.Cover, Is.EqualTo(Cover.On));
+            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Cover).ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "cover is shown in third person");
+            Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.BlindFire).ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "blind fire is fired from cover");
             Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Grenade).Actions.GrenadeCount, Is.EqualTo(GameRulesDebugDraft.DefaultGrenadeCount));
             Assert.That(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Downed).FallDamage, Is.EqualTo(FallDamage.On), "falling off the tower downs the player");
         }

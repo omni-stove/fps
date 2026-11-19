@@ -275,6 +275,32 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void RulesWithoutCoverEndTheTutorialAfterCrouching()
+        {
+            _presenter.Begin(_world.ActionReader, ActionRules.Default);
+            WalkOff();
+            for (var i = 0; i < 60 && _presenter.Steps.Current == TutorialStep.Aim; i++)
+            {
+                Tick(Vector3.zero, PlayerActionConditions.Aiming);
+            }
+
+            for (var i = 0; i < TutorialSteps.DefaultHitsRequired; i++)
+            {
+                CombatEvents.RaiseHitConfirmed(new HitConfirm(10, HitZone.Body, false, false));
+                Tick(Vector3.zero);
+            }
+
+            Tick(Vector3.zero, PlayerActionConditions.Reloading);
+            Assert.That(_presenter.Steps.Current, Is.EqualTo(TutorialStep.Crouch));
+            Assert.That(Published.StepCount, Is.EqualTo(5));
+
+            Tick(Vector3.zero, PlayerActionConditions.Crouching);
+
+            Assert.That(_presenter.Steps.IsComplete, Is.True);
+            Assert.That(_store.IsCompleted, Is.True);
+        }
+
+        [Test]
         public void EveryStepHasAnAction()
         {
             foreach (var step in TutorialSteps.Order)

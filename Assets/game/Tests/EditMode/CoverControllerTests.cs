@@ -176,7 +176,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void DoesNotEnterWhenTheWallIsTooFar()
         {
-            BuildWall(2f, -2f, 2f, faceZ: 1.2f);
+            BuildWall(2f, -2f, 2f, faceZ: 4.5f);
 
             _cover.Tick(true, false, Vector2.zero, _frame);
 

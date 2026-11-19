@@ -51,11 +51,12 @@ namespace Shooter.Tests.EditMode
         {
             var spec = _settings.CreateSpec();
 
-            Assert.That(spec.CoverMaxEnterDistance, Is.EqualTo(1f));
+            Assert.That(spec.CoverMaxEnterDistance, Is.EqualTo(4f));
             Assert.That(spec.CoverMaxEnterAngleDegrees, Is.EqualTo(45f));
             Assert.That(spec.CoverLowWallHeight, Is.EqualTo(1.1f));
             Assert.That(spec.CoverPeekSideDistance, Is.EqualTo(0.6f));
             Assert.That(spec.CoverEnterSeconds, Is.EqualTo(0.15f));
+            Assert.That(spec.CoverEnterSpeed, Is.EqualTo(8f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.2f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.15f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.3f));
@@ -75,6 +76,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.CoverLowWallHeight, Is.EqualTo(1.4f));
             Assert.That(spec.CoverPeekSideDistance, Is.EqualTo(0.9f));
             Assert.That(spec.CoverEnterSeconds, Is.EqualTo(0.4f));
+            Assert.That(spec.CoverEnterSpeed, Is.EqualTo(3f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.7f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.6f));
@@ -92,6 +94,7 @@ namespace Shooter.Tests.EditMode
             var spec = _settings.CreateSpec();
             Assert.That(spec.CoverMaxEnterDistance, Is.EqualTo(MotorSpec.DefaultCoverMaxEnterDistance));
             Assert.That(spec.CoverEnterSeconds, Is.EqualTo(MotorSpec.DefaultCoverEnterSeconds));
+            Assert.That(spec.CoverEnterSpeed, Is.EqualTo(MotorSpec.DefaultCoverEnterSpeed));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(MotorSpec.DefaultCoverPeekSlideSeconds));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(MotorSpec.DefaultLadderTopEntryDepth));
             Assert.That(spec.LadderMinApproachSpeed, Is.EqualTo(MotorSpec.DefaultLadderMinApproachSpeed));
@@ -101,6 +104,10 @@ namespace Shooter.Tests.EditMode
         public void InvalidValuesThrow()
         {
             _settings.CoverEnterSeconds = 0f;
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => MotorSettings.Resolve(_settings));
+
+            _settings.ResetToDefaults();
+            _settings.CoverEnterSpeed = 0f;
             Assert.Throws<System.ArgumentOutOfRangeException>(() => MotorSettings.Resolve(_settings));
 
             _settings.ResetToDefaults();
@@ -119,6 +126,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(motor.CoverMaxEnterDistance, Is.EqualTo(2f));
             Assert.That(motor.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
+            Assert.That(motor.CoverEnterSpeed, Is.EqualTo(3f));
             Assert.That(motor.LadderMinApproachSpeed, Is.EqualTo(1.5f));
         }
 
@@ -135,6 +143,30 @@ namespace Shooter.Tests.EditMode
             Assert.That(cover.IsInCover, Is.EqualTo(enters));
         }
 
+        // 3 m 先の壁まで、半径 0.5 m と隙間 0.05 m を残した 2.45 m を走る。1 フレーム目は入るだけで動かない。
+        [TestCase(8f, 17)]
+        [TestCase(4f, 32)]
+        public void TheCoverControllerRunsToAFarWallAtTheEnterSpeed(float speed, int expectedFrames)
+        {
+            _settings.CoverEnterSpeed = speed;
+            var cover = CreateCoverPlayer(_settings.CreateSpec());
+            BuildWall(faceZ: 3f);
+
+            cover.Tick(true, false, Vector2.zero, _frame);
+            Assert.That(cover.Phase, Is.EqualTo(CoverPhase.Entering));
+            var frames = 1;
+            while (cover.Phase == CoverPhase.Entering && frames < 500)
+            {
+                cover.Tick(false, false, Vector2.zero, _frame);
+                Physics.SyncTransforms();
+                frames++;
+            }
+
+            Assert.That(cover.Phase, Is.EqualTo(CoverPhase.In));
+            Assert.That(frames, Is.EqualTo(expectedFrames).Within(1));
+            Assert.That(_body.transform.position.z, Is.EqualTo(3f - 0.55f).Within(0.03f), "stops at the hold distance from the wall");
+        }
+
         private void SetValues()
         {
             _settings.CoverMaxEnterDistance = 2f;
@@ -142,6 +174,7 @@ namespace Shooter.Tests.EditMode
             _settings.CoverLowWallHeight = 1.4f;
             _settings.CoverPeekSideDistance = 0.9f;
             _settings.CoverEnterSeconds = 0.4f;
+            _settings.CoverEnterSpeed = 3f;
             _settings.CoverBackHoldSeconds = 0.7f;
             _settings.CoverPeekSlideSeconds = 0.25f;
             _settings.LadderTopEntryDepth = 0.6f;

@@ -36,7 +36,8 @@ namespace Shooter.Core
         // 乗り越え (DefaultVaultSpeed) の半分で、0.8 m 先の高さ 1.8 m の段を約 1 秒で上がる値にしてある。
         public const float DefaultMantleSpeed = 3f;
 
-        public const float DefaultCoverMaxEnterDistance = 1.0f;
+        // 三人称で数歩先の壁へ走って入れる距離にしてある。
+        public const float DefaultCoverMaxEnterDistance = 4.0f;
 
         public const float DefaultCoverMaxEnterAngleDegrees = 45f;
 
@@ -45,6 +46,9 @@ namespace Shooter.Core
         public const float DefaultCoverPeekSideDistance = 0.6f;
 
         public const float DefaultCoverEnterSeconds = 0.15f;
+
+        // 既定のダッシュ (DefaultSprintSpeed) と同じ速さで、4 m 先の壁に 0.5 秒で着く。
+        public const float DefaultCoverEnterSpeed = 8f;
 
         public const float DefaultCoverBackHoldSeconds = 0.2f;
 
@@ -126,6 +130,8 @@ namespace Shooter.Core
 
         public float CoverEnterSeconds { get; }
 
+        public float CoverEnterSpeed { get; }
+
         public float CoverBackHoldSeconds { get; }
 
         public float CoverPeekSlideSeconds { get; }
@@ -193,7 +199,8 @@ namespace Shooter.Core
             float leanSpeed = DefaultLeanSpeed,
             int airJumps = DefaultAirJumps,
             float airJumpSpeed = DefaultAirJumpSpeed,
-            float jumpGraceSeconds = DefaultJumpGraceSeconds)
+            float jumpGraceSeconds = DefaultJumpGraceSeconds,
+            float coverEnterSpeed = DefaultCoverEnterSpeed)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -301,6 +308,7 @@ namespace Shooter.Core
             RequireNotNegative(coverLowWallHeight, nameof(coverLowWallHeight));
             RequireNotNegative(coverPeekSideDistance, nameof(coverPeekSideDistance));
             RequirePositive(coverEnterSeconds, nameof(coverEnterSeconds));
+            RequirePositive(coverEnterSpeed, nameof(coverEnterSpeed));
             RequireNotNegative(coverBackHoldSeconds, nameof(coverBackHoldSeconds));
             RequirePositive(coverPeekSlideSeconds, nameof(coverPeekSlideSeconds));
             RequireNotNegative(ladderTopEntryDepth, nameof(ladderTopEntryDepth));
@@ -353,6 +361,7 @@ namespace Shooter.Core
             CoverLowWallHeight = coverLowWallHeight;
             CoverPeekSideDistance = coverPeekSideDistance;
             CoverEnterSeconds = coverEnterSeconds;
+            CoverEnterSpeed = coverEnterSpeed;
             CoverBackHoldSeconds = coverBackHoldSeconds;
             CoverPeekSlideSeconds = coverPeekSlideSeconds;
             LadderTopEntryDepth = ladderTopEntryDepth;

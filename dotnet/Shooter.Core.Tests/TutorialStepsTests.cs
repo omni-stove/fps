@@ -245,6 +245,43 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RulesWithoutCoverSkipTheCoverStep()
+        {
+            var steps = new TutorialSteps();
+            steps.Restart(ActionRules.Default);
+
+            Assert.That(steps.Steps, Is.EqualTo(new[]
+            {
+                TutorialStep.Move, TutorialStep.Aim, TutorialStep.Shoot, TutorialStep.Reload, TutorialStep.Crouch,
+            }));
+            while (!steps.IsComplete)
+            {
+                Finish(steps);
+            }
+
+            var status = new TutorialStatus(steps, "Player/Crouch", InputDeviceKind.KeyboardMouse);
+            Assert.That(status.IsComplete, Is.True, "finishing crouch ends the tutorial");
+            Assert.That(status.StepNumber, Is.EqualTo(5));
+            Assert.That(status.StepCount, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void RulesWithCoverAndAPlainRestartKeepEveryStep()
+        {
+            var steps = new TutorialSteps();
+
+            steps.Restart(ActionRules.Default.WithCover(Cover.On));
+            Assert.That(steps.Steps, Is.EqualTo(TutorialSteps.Order));
+
+            steps.Restart(ActionRules.Default);
+            steps.Restart();
+            Assert.That(steps.Steps, Is.EqualTo(TutorialSteps.Order));
+            Assert.That(new TutorialSteps().Steps, Is.EqualTo(TutorialSteps.Order));
+            Assert.Throws<ArgumentNullException>(() => steps.Restart((ActionRules)null));
+            Assert.Throws<ArgumentNullException>(() => TutorialSteps.OrderFor(null));
+        }
+
+        [Test]
         public void ACompletedStatusHasNoAction()
         {
             var steps = AtStep(TutorialStep.Cover);

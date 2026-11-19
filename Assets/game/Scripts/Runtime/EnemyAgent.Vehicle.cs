@@ -15,7 +15,7 @@ namespace Shooter.Runtime
         // 運転の部品を運転席に座っている間だけ付けるのは、降りた後も残すと、飛行機の舵を握ったままになり、借りた部品も元の持ち主へ戻らないため。
         private Vehicle _wheelVehicle;
         private BotVehicleDriver _wheelDriver;
-        private BotAircraftPilot _wheelPilot;
+        private IBotPilot _wheelPilot;
         private VehicleRoute _wheelRoute;
         private bool _ownsWheel;
         private Vehicle _wheelPreviousVehicle;
@@ -78,19 +78,28 @@ namespace Shooter.Runtime
 
         public BotVehicleDriver VehicleDriver => _wheelDriver;
 
-        public BotAircraftPilot AircraftPilot => _wheelPilot;
+        public IBotPilot VehiclePilot => IsLive(_wheelPilot) ? _wheelPilot : null;
 
-        public bool IsDrivingVehicle => _wheelDriver != null || _wheelPilot != null;
+        public bool IsDrivingVehicle => _wheelDriver != null || IsLive(_wheelPilot);
 
-        // 飛行機かを動き方の部品で見るのは、BotAircraftPilot が舵を決めるのに SimpleAircraftMotor の飛び方を読むため。
-        public static bool FliesAsAircraft(Vehicle vehicle)
+        // 操縦の部品が要るかを動き方の部品に聞くのは、操縦の部品が舵を決めるのにその動き方を読むので、どの部品で操縦するかを動き方が知っているため。
+        public static bool NeedsBotPilot(Vehicle vehicle)
         {
             if (vehicle == null)
             {
                 throw new ArgumentNullException(nameof(vehicle));
             }
 
-            return vehicle.GetComponent<SimpleAircraftMotor>() != null;
+            return vehicle.TryGetComponent<IBotPilotedMotor>(out _);
+        }
+
+        // AddComponent に渡す前に確かめるのは、Component でない型は例外になり、IBotPilot でない部品は付けても舵を握らずに乗り物へ残るため。
+        public static bool IsBotPilotType(Type type)
+        {
+            return type != null
+                && !type.IsAbstract
+                && typeof(MonoBehaviour).IsAssignableFrom(type)
+                && typeof(IBotPilot).IsAssignableFrom(type);
         }
 
         // 乗り物に付いた道より指示を先にするのは、同じ乗り物でも乗る敵ごとに別の道を走らせられるようにするため。
@@ -253,29 +262,39 @@ namespace Shooter.Runtime
             // 運転している間は自分の銃を撃たず、撃つのは同乗者の座席 (銃手) に任せる。座席に留まる間は撃つ判断まで進まないので、押していた引き金をここで離す。
             ReleaseTrigger();
             _wheelVehicle = vehicle;
-            var flies = FliesAsAircraft(vehicle);
-            if (flies)
-            {
-                TakeStick(vehicle);
-            }
-            else
+            if (!NeedsBotPilot(vehicle) || !TakeStick(vehicle))
             {
                 TakeSteeringWheel(vehicle);
             }
 
             var route = ChooseDriveRoute(_orderRoute, vehicle);
             ApplyWheelRoute(route);
-            Debug.Log(VehicleLog.BotTakesControls(vehicle.name, Id, flies, route != null ? route.name : null), this);
+            Debug.Log(VehicleLog.BotTakesControls(vehicle.name, Id, IsLive(_wheelPilot), route != null ? route.name : null), this);
         }
 
-        // 乗り物に操縦の部品が置いてあればそれを借りるのは、ゲームが機体ごとに決めた飛ばし方の値 (BotAircraftPilotSettings) で飛ばすため。
-        private void TakeStick(Vehicle vehicle)
+        // 乗り物に操縦の部品が置いてあればそれを借りるのは、ゲームが機体ごとに決めた操縦の値で飛ばすため。
+        // 操縦の部品を握れなかったときに false を返し、運転の部品に任せるのは、乗った Bot が舵を誰にも渡さずに座り続けないようにするため。
+        private bool TakeStick(Vehicle vehicle)
         {
-            var pilot = FindLivePart<BotAircraftPilot>(vehicle.gameObject);
+            var type = vehicle.GetComponent<IBotPilotedMotor>().BotPilotType;
+            if (!IsBotPilotType(type))
+            {
+                Debug.LogWarning(VehicleLog.BotPilotTypeInvalid(vehicle.name, type != null ? type.FullName : null), this);
+                return false;
+            }
+
+            var pilot = (IBotPilot)FindLivePart(vehicle.gameObject, type);
             _ownsWheel = pilot == null;
             if (_ownsWheel)
             {
-                pilot = AddWheelPart<BotAircraftPilot>(vehicle.gameObject);
+                // 型が正しくても付かないことがあるのは、RequireComponent を満たせないときなどに AddComponent が null を返すため。
+                pilot = AddWheelPart(vehicle.gameObject, type) as IBotPilot;
+                if (!IsLive(pilot))
+                {
+                    _ownsWheel = false;
+                    Debug.LogWarning(VehicleLog.BotPilotNotAdded(vehicle.name, type.FullName), this);
+                    return false;
+                }
             }
             else
             {
@@ -287,6 +306,7 @@ namespace Shooter.Runtime
 
             pilot.Rider = this;
             _wheelPilot = pilot;
+            return true;
         }
 
         // 乗り物か自分に運転の部品が置いてあればそれを借りるのは、ゲームが決めた走り方の値で走らせるため。
@@ -330,7 +350,7 @@ namespace Shooter.Runtime
             }
 
             ApplyWheelRoute(route);
-            Debug.Log(VehicleLog.BotTakesControls(VehicleName(_wheelVehicle), Id, _wheelPilot != null, route != null ? route.name : null), this);
+            Debug.Log(VehicleLog.BotTakesControls(VehicleName(_wheelVehicle), Id, IsLive(_wheelPilot), route != null ? route.name : null), this);
         }
 
         // 道が無いときに借りた部品の道へ戻すのは、ゲームがその部品に置いた道を、乗った敵が消してしまわないようにするため。
@@ -342,7 +362,7 @@ namespace Shooter.Runtime
                 _wheelDriver.SetRoute(route != null || _ownsWheel ? route : _wheelPreviousRoute);
             }
 
-            if (_wheelPilot != null)
+            if (IsLive(_wheelPilot))
             {
                 if (route != null)
                 {
@@ -376,7 +396,7 @@ namespace Shooter.Runtime
                 GiveUpSteeringWheel(_wheelDriver, destroying);
             }
 
-            if (_wheelPilot != null)
+            if (IsLive(_wheelPilot))
             {
                 GiveUpStick(_wheelPilot);
             }
@@ -418,14 +438,14 @@ namespace Shooter.Runtime
             driver.enabled = _wheelPreviousEnabled;
         }
 
-        private void GiveUpStick(BotAircraftPilot pilot)
+        private void GiveUpStick(IBotPilot pilot)
         {
             pilot.Release();
             if (_ownsWheel)
             {
                 // 乗り手を外すと自分で操縦席に座りに行くので、乗り手は残したまま止めて消す。
                 pilot.enabled = false;
-                DestroyWheelPart(pilot);
+                DestroyWheelPart((Component)pilot);
                 return;
             }
 
@@ -437,7 +457,12 @@ namespace Shooter.Runtime
         // 消える予定の部品は借りない。Play 中の Destroy はコマの終わりまで待つので、同じコマに座り直すと止まった部品を借りてしまうため。
         private static T FindLivePart<T>(GameObject host) where T : MonoBehaviour
         {
-            foreach (var part in host.GetComponents<T>())
+            return (T)FindLivePart(host, typeof(T));
+        }
+
+        private static Component FindLivePart(GameObject host, Type type)
+        {
+            foreach (var part in host.GetComponents(type))
             {
                 if (part != null && !PendingWheelParts.Contains(part))
                 {
@@ -448,10 +473,15 @@ namespace Shooter.Runtime
             return null;
         }
 
-        // DisallowMultipleComponent の部品は、消える予定の古い部品が残っていると AddComponent が null を返すので、先に消し切る。
         private static T AddWheelPart<T>(GameObject host) where T : MonoBehaviour
         {
-            foreach (var part in host.GetComponents<T>())
+            return (T)AddWheelPart(host, typeof(T));
+        }
+
+        // DisallowMultipleComponent の部品は、消える予定の古い部品が残っていると AddComponent が null を返すので、先に消し切る。
+        private static Component AddWheelPart(GameObject host, Type type)
+        {
+            foreach (var part in host.GetComponents(type))
             {
                 if (part != null && PendingWheelParts.Remove(part))
                 {
@@ -460,7 +490,13 @@ namespace Shooter.Runtime
             }
 
             PendingWheelParts.RemoveWhere(p => p == null);
-            return host.AddComponent<T>();
+            return host.AddComponent(type);
+        }
+
+        // interface への null 判定は破棄済みの MonoBehaviour を見逃すので、Unity の null で見る。
+        private static bool IsLive(IBotPilot pilot)
+        {
+            return pilot is UnityEngine.Object unityPilot ? unityPilot != null : pilot != null;
         }
 
         private static Transform[] CopyTransforms(IReadOnlyList<Transform> source)

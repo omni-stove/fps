@@ -66,6 +66,14 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAircraftMotorNamesThisPilotForBots()
+        {
+            Assert.That(_motor, Is.InstanceOf<IBotPilotedMotor>());
+            Assert.That(_motor.BotPilotType, Is.EqualTo(typeof(BotAircraftPilot)));
+            Assert.That(_pilot, Is.InstanceOf<IBotPilot>());
+        }
+
+        [Test]
         public void BelowTheHeldAltitudeItClimbs()
         {
             _pilot.SetWaypoints(Point("A", 0f, 2000f));

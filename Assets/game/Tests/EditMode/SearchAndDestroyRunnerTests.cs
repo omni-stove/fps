@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Shooter.Core;
+using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
@@ -333,6 +334,171 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_runner.TryBegin(), Is.False);
             Assert.That(_runner.IsStarted, Is.False);
+        }
+
+        [Test]
+        public void WithoutAnEconomyThereIsNoMoneyAndTheWeaponsStayAsTheyWere()
+        {
+            var rifle = Weapon("Rifle", TestWeapons.RifleSpec());
+            AddController(_alphaOne).Definitions = new[] { rifle };
+            GameSignals.ResetAll();
+
+            BeginAsLocal(_alphaOne);
+
+            Assert.That(_runner.EffectiveEconomy, Is.Null);
+            Assert.That(_runner.RoundEconomy, Is.Null);
+            Assert.That(GameSignals.Wallet.HasValue, Is.False);
+            Assert.That(GameSignals.BuySender.Value, Is.Null);
+
+            KillBy(_alphaOne, _bravoOne);
+            _bravoTwo.Damageable.Kill();
+            _runner.Tick(0f);
+
+            Assert.That(_runner.Game.GetRoundWins(Side.Alpha), Is.EqualTo(1));
+            Assert.That(GameSignals.Wallet.HasValue, Is.False);
+            Assert.That(AddController(_alphaOne).Definitions, Is.EqualTo(new[] { rifle }));
+        }
+
+        [Test]
+        public void WithAnEconomyKillsAndRoundsPayAndTheWalletIsPublished()
+        {
+            _runner.SwapEveryRounds = 0;
+            _runner.Economy = Economy("SndEconomy", "{\"items\": []}");
+            GameSignals.ResetAll();
+
+            BeginAsLocal(_alphaOne);
+
+            Assert.That(_runner.RoundEconomy, Is.Not.Null);
+            Assert.That(GameSignals.BuySender.Value, Is.SameAs(_runner.RoundEconomy));
+            Assert.That(GameSignals.Wallet.Value, Is.EqualTo((WalletStatus?)new WalletStatus(800, 16000, false)), "no preparation time, no buying");
+
+            KillBy(_alphaOne, _bravoOne);
+            Assert.That(GameSignals.Wallet.Value.Value.Money, Is.EqualTo(800 + 300));
+
+            _bravoTwo.Damageable.Kill();
+            _runner.Tick(0f);
+
+            var economy = _runner.RoundEconomy.Economy;
+            Assert.That(_runner.Game.GetRoundWins(Side.Alpha), Is.EqualTo(1));
+            Assert.That(economy.MoneyOf(_runner.IdOf(_alphaOne)), Is.EqualTo(800 + 300 + 3000));
+            Assert.That(economy.MoneyOf(_runner.IdOf(_alphaTwo)), Is.EqualTo(800 + 3000));
+            Assert.That(economy.MoneyOf(_runner.IdOf(_bravoTwo)), Is.EqualTo(800 + 1400));
+            Assert.That(GameSignals.Wallet.Value.Value.Money, Is.EqualTo(800 + 300 + 3000));
+
+            _runner.Stop();
+
+            Assert.That(GameSignals.Wallet.HasValue, Is.False, "stopping clears what the runner published");
+            Assert.That(GameSignals.BuySender.Value, Is.Null);
+        }
+
+        [Test]
+        public void AWeaponBoughtInThePreparationIsHeldWhenTheRoundStarts()
+        {
+            var rifle = Weapon("Rifle", TestWeapons.RifleSpec());
+            var launcher = Weapon("Launcher", TestWeapons.LauncherSpec());
+            AddController(_alphaOne).Definitions = new[] { rifle };
+            _runner.PreparationSeconds = 5f;
+            _runner.Economy = Economy(
+                "SndEconomy", "{\"items\": [{\"id\": \"" + launcher.Id + "\", \"kind\": \"Weapon\", \"price\": 700, \"slot\": 0}]}", rifle, launcher);
+            GameSignals.ResetAll();
+
+            BeginAsLocal(_alphaOne);
+            Assert.That(_runner.Game.Phase, Is.EqualTo(RoundPhase.Preparing));
+            Assert.That(GameSignals.Wallet.Value.Value.CanBuy, Is.True);
+
+            GameSignals.BuySender.Value.Buy(launcher.Id);
+            _runner.Tick(5f);
+
+            Assert.That(_runner.Game.Phase, Is.EqualTo(RoundPhase.Live));
+            Assert.That(AddController(_alphaOne).Definitions, Is.EqualTo(new[] { launcher }));
+            Assert.That(GameSignals.Wallet.Value, Is.EqualTo((WalletStatus?)new WalletStatus(100, 16000, false)));
+        }
+
+        [Test]
+        public void TheDefinitionsEconomyIsUsedInsteadOfTheRunners()
+        {
+            var economy = Economy("SndEconomy", "{}");
+            var withEconomy = Definition("SndWithEconomy");
+            withEconomy.Economy = economy;
+            var withoutEconomy = Definition("SndWithoutEconomy");
+            _runner.Economy = Economy("RunnerEconomy", "{}");
+
+            _runner.Definition = withEconomy;
+            Assert.That(_runner.EffectiveEconomy, Is.SameAs(economy));
+
+            _runner.Definition = withoutEconomy;
+            Assert.That(_runner.EffectiveEconomy, Is.Null, "a definition without an economy turns it off");
+
+            _runner.Definition = null;
+            Assert.That(_runner.EffectiveEconomy, Is.SameAs(_runner.Economy));
+        }
+
+        [Test]
+        public void TryBeginFailsWithABrokenEconomyAndNamesIt()
+        {
+            _runner.Economy = Economy("BrokenEconomy", "{\"startMoney\": -1}");
+            LogAssert.Expect(LogType.Error, new Regex("BrokenEconomy"));
+
+            Assert.That(_runner.TryBegin(), Is.False);
+            Assert.That(_runner.IsStarted, Is.False);
+        }
+
+        private EconomyDefinition Economy(string name, string json, params WeaponDefinition[] weapons)
+        {
+            var economy = ScriptableObject.CreateInstance<EconomyDefinition>();
+            economy.name = name;
+            _objects.Add(economy);
+            var tuning = new TextAsset(json) { name = name + "-json" };
+            _objects.Add(tuning);
+            economy.Tuning = tuning;
+            if (weapons.Length > 0)
+            {
+                var catalog = ScriptableObject.CreateInstance<WeaponCatalogAsset>();
+                catalog.name = name + "-weapons";
+                catalog.SetWeapons(weapons);
+                _objects.Add(catalog);
+                economy.WeaponCatalog = catalog;
+            }
+
+            return economy;
+        }
+
+        private WeaponDefinition Weapon(string name, WeaponSpec spec)
+        {
+            var definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            definition.name = name;
+            _objects.Add(definition);
+            WeaponAssets.Configure(definition, spec);
+            return definition;
+        }
+
+        private static WeaponController AddController(SideMember member)
+        {
+            var controller = member.GetComponentInChildren<WeaponController>(true);
+            if (controller != null)
+            {
+                return controller;
+            }
+
+            var view = new GameObject(member.name + "-Camera");
+            view.transform.SetParent(member.transform, false);
+            return view.AddComponent<WeaponController>();
+        }
+
+        private static void KillBy(SideMember killer, SideMember victim)
+        {
+            using (CombatEvents.Attribute(killer.gameObject, "test-weapon"))
+            {
+                victim.Damageable.Kill();
+            }
+        }
+
+        private void BeginAsLocal(SideMember localPlayer)
+        {
+            _runner.Begin(
+                new[] { _alphaOne, _alphaTwo, _bravoOne, _bravoTwo },
+                new[] { _alphaSpawnOne, _alphaSpawnTwo, _bravoSpawnOne },
+                localPlayer);
         }
 
         private SearchAndDestroyDefinition Definition(string name)

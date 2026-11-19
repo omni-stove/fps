@@ -44,6 +44,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.1f), Tooltip("防衛側が設置された爆弾を解除できる距離 (m、水平)")]
         private float _defuseRadius = SearchAndDestroySpec.DefaultDefuseRadius;
 
+        [SerializeField, Tooltip("ラウンド制の購入経済。空なら経済なし (お金も購入も無く、持っている武器のまま)。上の Definition を配線したときは、その Definition の Economy を使う")]
+        private EconomyDefinition _economy;
+
         [Header("Objects")]
         [SerializeField, Tooltip("設置地点。番号は 0 から抜けなく 1 つずつ")]
         private BombSite[] _sites = Array.Empty<BombSite>();
@@ -60,8 +63,29 @@ namespace Shooter.Runtime
         private bool _enabledInteractAction;
         private Vector3 _bombGround;
         private bool _hasBombGround;
+        private RoundEconomy _roundEconomy;
+        private EconomyRules _economyRules;
+        private EconomyDefinition _economySource;
 
         public SearchAndDestroy Game => _game;
+
+        public RoundEconomy RoundEconomy => _roundEconomy;
+
+        public EconomyDefinition Economy
+        {
+            get => _economy;
+            set => _economy = value;
+        }
+
+        // 調整値と同じく、Definition (自分のものか入口のもの) があればその Economy を読み、Rules の値の代わりにする。
+        public EconomyDefinition EffectiveEconomy
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return definition != null ? definition.Economy : _economy;
+            }
+        }
 
         public Vector3? BombGround => _hasBombGround ? _bombGround : (Vector3?)null;
 
@@ -227,7 +251,12 @@ namespace Shooter.Runtime
             UnsubscribeGame();
 
             _sortedSites = SortSites(_sites);
-            _game = new SearchAndDestroy(CreateSpec(_sortedSites.Length));
+            var spec = CreateSpec(_sortedSites.Length);
+            // JSON が壊れていたら、試合を始める前に TryBegin のエラーとして止める。
+            var economy = EffectiveEconomy;
+            _economyRules = economy != null ? economy.ToRules() : null;
+            _economySource = economy;
+            _game = new SearchAndDestroy(spec);
             _game.PreparationStarted += OnPreparationStarted;
             _game.RoundStarted += OnRoundStarted;
             _game.RoundEnded += OnRoundEnded;
@@ -265,7 +294,37 @@ namespace Shooter.Runtime
             }
 
             AcquireInteractAction();
+            AttachEconomy();
             _game.Start();
+        }
+
+        // 最初のラウンドの準備 (PreparationStarted) から受けるよう、_game.Start より先に付ける。
+        private void AttachEconomy()
+        {
+            DetachEconomy();
+            if (_economyRules == null || _economySource == null)
+            {
+                return;
+            }
+
+            _roundEconomy = new RoundEconomy(
+                _economyRules,
+                _game.Rounds,
+                Members,
+                LocalPlayer != null ? LocalPlayerId : (int?)null,
+                _economySource.FindWeapon,
+                this);
+        }
+
+        private void DetachEconomy()
+        {
+            _roundEconomy?.Dispose();
+            _roundEconomy = null;
+        }
+
+        protected override void OnKill(SideMember killer, SideMember victim)
+        {
+            _roundEconomy?.Killed(killer, victim);
         }
 
         protected override void TickSession(ModeSession session, float deltaSeconds)
@@ -283,6 +342,9 @@ namespace Shooter.Runtime
         protected override void OnStop()
         {
             ReleaseInteractAction();
+            DetachEconomy();
+            _economyRules = null;
+            _economySource = null;
             UnsubscribeGame();
             _homeRoutes.Clear();
             _hasBombGround = false;

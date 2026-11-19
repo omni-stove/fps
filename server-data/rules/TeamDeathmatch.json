@@ -40,7 +40,8 @@
       "jump": "On",
       "reviveRange": 1.5,
       "emote": "Off",
-      "stamina": "Off"
+      "stamina": "Off",
+      "reloadInterruptedBy": ["Melee", "Grenade"]
     },
     "spawnProtectionSeconds": 2,
     "fallDamage": "Off",

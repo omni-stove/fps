@@ -775,7 +775,8 @@ namespace Shooter.Server
         {
             MatchCarried(raider);
             raider.Session.Die();
-            if (_loot.IsRunning)
+            // KeepCarriedOnDeath のときは Die() が持っている物を持ち物庫へ入れるので、箱にも残すと物が倍になる
+            if (_loot.IsRunning && !_spec.KeepCarriedOnDeath)
             {
                 _loot.SpawnDeathBox(raider.PlayerId);
             }

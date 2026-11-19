@@ -36,7 +36,9 @@ namespace Shooter.Server.Tests
         private static readonly Vector3 _armoryAt = new Vector3(5f, 0f, 10f);
         private static readonly Vector3 _northAt = new Vector3(0f, 0f, 25f);
         private static readonly Vector3 _southAt = new Vector3(0f, 0f, -25f);
-        private static readonly Vector3 _standing = new Vector3(0f, 1.6f, 0f);
+        private static readonly int[] _pointIds = { 0, 1 };
+        private static readonly string[] _device2Files = { "device2.json" };
+        private static readonly Vector3 _standing =new Vector3(0f, 1.6f, 0f);
         private static readonly WeaponCategory[] _firstSlot = { WeaponCategory.AssaultRifle, WeaponCategory.Handgun, WeaponCategory.Shotgun };
         private static readonly WeaponCategory[] _secondSlot = { WeaponCategory.Handgun, WeaponCategory.AssaultRifle, WeaponCategory.Shotgun };
 
@@ -238,7 +240,7 @@ namespace Shooter.Server.Tests
             var snapshot = Contribute(1);
             Assert.That(snapshot.Owner.HasExtractionPoint, Is.False);
             var rows = Rows(snapshot).Where(r => r.Kind == ObjectiveItemKind.ExtractionPoint).ToList();
-            Assert.That(rows.Select(r => r.ItemId), Is.EqualTo(new[] { 0, 1 }), "the points are numbered in id order (north, south)");
+            Assert.That(rows.Select(r => r.ItemId), Is.EqualTo(_pointIds), "the points are numbered in id order (north, south)");
             Assert.That(rows.Single(r => r.ItemId == IndexOf(closed)).Opened, Is.False);
             Assert.That(rows.Single(r => r.ItemId == IndexOf(open)).Opened, Is.True);
             Assert.That(rows[0].Position, Is.EqualTo(_northAt));
@@ -430,7 +432,7 @@ namespace Shooter.Server.Tests
             Assert.That(_extraction.AccountOf(1), Is.Null);
             Assert.That(_extraction.RaidOf(1).BroughtIn, Is.EqualTo(new[] { new ItemCount(_rifleItemId, 1) }));
             Assert.That(_log.ToString(), Does.Contain("[Stash] player=1 has no account key; the stash starts from the starting items and is not saved"));
-            Assert.That(Directory.GetFiles(_store.Directory).Select(f => Path.GetFileName(f)), Is.EqualTo(new[] { "device2.json" }));
+            Assert.That(Directory.GetFiles(_store.Directory).Select(f => Path.GetFileName(f)), Is.EqualTo(_device2Files));
         }
 
         [Test]

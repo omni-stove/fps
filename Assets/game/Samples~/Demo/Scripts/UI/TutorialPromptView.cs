@@ -51,7 +51,7 @@ namespace Shooter.Runtime
 
         public void RefreshKeys()
         {
-            var status = GameSignals.Tutorial.Value;
+            var status = CampaignSignals.Tutorial.Value;
             if (!_showsSignal || !_shown || !status.HasValue)
             {
                 return;
@@ -99,7 +99,7 @@ namespace Shooter.Runtime
         protected override void OnBound(VisualElement element)
         {
             Subscribe();
-            var status = GameSignals.Tutorial.Value;
+            var status = CampaignSignals.Tutorial.Value;
             if (status.HasValue || _showsSignal)
             {
                 Show(status);
@@ -134,7 +134,7 @@ namespace Shooter.Runtime
         {
             if (!_subscribed)
             {
-                GameSignals.Tutorial.Changed += HandleStatusChanged;
+                CampaignSignals.Tutorial.Changed += HandleStatusChanged;
                 _subscribed = true;
             }
         }
@@ -143,7 +143,7 @@ namespace Shooter.Runtime
         {
             if (_subscribed)
             {
-                GameSignals.Tutorial.Changed -= HandleStatusChanged;
+                CampaignSignals.Tutorial.Changed -= HandleStatusChanged;
                 _subscribed = false;
             }
         }
@@ -153,7 +153,7 @@ namespace Shooter.Runtime
             // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
             if (this == null)
             {
-                GameSignals.Tutorial.Changed -= HandleStatusChanged;
+                CampaignSignals.Tutorial.Changed -= HandleStatusChanged;
                 return;
             }
 

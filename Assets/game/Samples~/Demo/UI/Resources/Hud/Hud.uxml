@@ -132,7 +132,7 @@
         <ui:VisualElement name="net-control-points" class="net-control-points" picking-mode="Ignore" style="display: none;" />
         <!-- オフラインのモードの残り時間・陣営ごとの得点・モードが足す行・結果。ModeRunnerBase が ModeHudView に渡している間だけ出し、行は ModeHudView が足す。 -->
         <ui:VisualElement name="mode-hud" class="mode-hud" picking-mode="Ignore" style="display: none;" />
-        <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が GameSignals.Tutorial に段階を出している間だけ TutorialPromptView が出す。 -->
+        <!-- チュートリアルの今の手順。射撃場で TutorialPresenter が CampaignSignals.Tutorial に段階を出している間だけ TutorialPromptView が出す。 -->
         <ui:Label name="tutorial-prompt" text="" class="tutorial-prompt" picking-mode="Ignore" style="display: none;" />
         <ui:Label name="interact-prompt" text="" class="interact-prompt" picking-mode="Ignore" style="display: none;" />
         <!-- キルカムの再生中の枠と見出し (hud.killCam.caption) と再生の進み。再生している間だけ KillCamView が出す。 -->

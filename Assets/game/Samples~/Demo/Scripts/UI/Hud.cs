@@ -412,7 +412,7 @@ namespace Shooter.Runtime
 
             _noticeModel?.BindNotice(null);
             _noticeModel = model;
-            _noticeModel?.BindNotice(GameSignals.CampaignNotice.Value);
+            _noticeModel?.BindNotice(CampaignSignals.Notice.Value);
         }
 
         private void HandleNoticeChanged(CampaignNotice notice)
@@ -463,7 +463,7 @@ namespace Shooter.Runtime
         {
             GameSignals.HudModel.Changed += HandleHudModelChanged;
             GameSignals.LocalPlayer.Changed += HandleLocalPlayerChanged;
-            GameSignals.CampaignNotice.Changed += HandleNoticeChanged;
+            CampaignSignals.Notice.Changed += HandleNoticeChanged;
             GameSignals.HudDensity.Changed += HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed += HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed += HandlePaletteViewerChanged;
@@ -481,7 +481,7 @@ namespace Shooter.Runtime
         {
             GameSignals.HudModel.Changed -= HandleHudModelChanged;
             GameSignals.LocalPlayer.Changed -= HandleLocalPlayerChanged;
-            GameSignals.CampaignNotice.Changed -= HandleNoticeChanged;
+            CampaignSignals.Notice.Changed -= HandleNoticeChanged;
             GameSignals.HudDensity.Changed -= HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed -= HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed -= HandlePaletteViewerChanged;

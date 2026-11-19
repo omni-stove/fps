@@ -42,15 +42,11 @@ namespace Shooter.Runtime
 
         public static GameSignal<InteractHint?> InteractHint { get; } = new GameSignal<InteractHint?>(nameof(InteractHint));
 
-        public static GameSignal<TutorialStatus?> Tutorial { get; } = new GameSignal<TutorialStatus?>(nameof(Tutorial));
-
         public static GameSignal<KillCamStatus?> KillCam { get; } = new GameSignal<KillCamStatus?>(nameof(KillCam));
 
         public static GameSignal<IReadOnlyList<PingMarker>> Pings { get; } = new GameSignal<IReadOnlyList<PingMarker>>(nameof(Pings));
 
         public static GameSignal<SquadOrderStatus?> SquadOrder { get; } = new GameSignal<SquadOrderStatus?>(nameof(SquadOrder));
-
-        public static GameSignal<CampaignNotice> CampaignNotice { get; } = new GameSignal<CampaignNotice>(nameof(CampaignNotice));
 
         public static GameSignal<DisconnectNotice> MenuReturnReason { get; } = new GameSignal<DisconnectNotice>(nameof(MenuReturnReason));
 
@@ -153,11 +149,9 @@ namespace Shooter.Runtime
             Domination.Reset();
             Scoreboard.Reset();
             InteractHint.Reset();
-            Tutorial.Reset();
             KillCam.Reset();
             Pings.Reset();
             SquadOrder.Reset();
-            CampaignNotice.Reset();
             MenuReturnReason.Reset();
             HudDensity.Reset();
             PauseTimeMode.Reset();

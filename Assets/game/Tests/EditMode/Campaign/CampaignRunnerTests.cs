@@ -194,21 +194,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheNoticeIsOnGameSignalsWhileTheCampaignRuns()
+        public void TheNoticeIsOnCampaignSignalsWhileTheCampaignRuns()
         {
             var scene = BuildScene();
-            Assert.That(GameSignals.CampaignNotice.Value, Is.Null);
+            Assert.That(CampaignSignals.Notice.Value, Is.Null);
 
             BeginQuietly(scene);
-            Assert.That(GameSignals.CampaignNotice.Value, Is.SameAs(scene.Campaign.Notice));
+            Assert.That(CampaignSignals.Notice.Value, Is.SameAs(scene.Campaign.Notice));
 
             scene.Campaign.Stop();
-            Assert.That(GameSignals.CampaignNotice.Value, Is.Null, "stopping takes the notice off the signal");
+            Assert.That(CampaignSignals.Notice.Value, Is.Null, "stopping takes the notice off the signal");
 
             var other = new CampaignNotice();
-            GameSignals.CampaignNotice.Publish(other);
+            CampaignSignals.Notice.Publish(other);
             scene.Campaign.Stop();
-            Assert.That(GameSignals.CampaignNotice.Value, Is.SameAs(other), "stopping leaves a notice someone else published");
+            Assert.That(CampaignSignals.Notice.Value, Is.SameAs(other), "stopping leaves a notice someone else published");
         }
 
         [Test]

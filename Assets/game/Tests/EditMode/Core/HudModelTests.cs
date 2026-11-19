@@ -1085,5 +1085,50 @@ namespace Shooter.Core.Tests
             Assert.That(changes, Is.Empty);
             Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(1)), "UnbindAll keeps the notice");
         }
+
+        [Test]
+        public void ANoticeSourceOtherThanTheCampaignIsShownAndLetGo()
+        {
+            var model = new HudModel();
+            var source = new FakeNoticeSource { Notice = HudNotice.CheckpointSaved };
+            var changes = Record(model);
+
+            model.BindNotice(source);
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointSaved), "binding shows the source's notice at once");
+            Assert.That(source.Subscribers, Is.EqualTo(1));
+
+            source.Set(HudNotice.CheckpointRestart(2));
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.CheckpointRestart(2)), "a change from the source reaches the model");
+
+            model.BindNotice(null);
+            Assert.That(source.Subscribers, Is.Zero, "rebinding stops listening to the old source");
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
+
+            model.BindNotice(source);
+            model.UnbindAll();
+            Assert.That(source.Subscribers, Is.Zero, "UnbindAll stops listening to the source");
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice, HudField.Notice }));
+        }
+
+        private sealed class FakeNoticeSource : IHudNoticeSource
+        {
+            private System.Action<HudNotice> _changed;
+
+            public HudNotice Notice { get; set; }
+
+            public int Subscribers => _changed == null ? 0 : _changed.GetInvocationList().Length;
+
+            public event System.Action<HudNotice> Changed
+            {
+                add => _changed += value;
+                remove => _changed -= value;
+            }
+
+            public void Set(HudNotice notice)
+            {
+                Notice = notice;
+                _changed?.Invoke(notice);
+            }
+        }
     }
 }

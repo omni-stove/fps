@@ -382,7 +382,7 @@ namespace Shooter.Runtime
             ApplyPhase(change.Current);
             Debug.Log(FormatPhaseLog(Id, change, reason), this);
             PhaseChanged?.Invoke(this, change);
-            CombatEvents.RaiseBossPhaseChanged(new BossPhaseChangedInfo(gameObject, _self, Id, change));
+            BossEvents.Raise(new BossPhaseChangedInfo(gameObject, _self, Id, change));
         }
 
         private void ApplyPhase(BossPhase phase)

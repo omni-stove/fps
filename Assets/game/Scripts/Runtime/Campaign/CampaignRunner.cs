@@ -510,7 +510,7 @@ namespace Shooter.Runtime
             _reloadPending = false;
             _reloadRemaining = 0f;
             _notice.Clear();
-            GameSignals.CampaignNotice.Publish(_notice);
+            CampaignSignals.Notice.Publish(_notice);
 
             _player.Died += OnPlayerDied;
             _mission.MissionCompleted += OnMissionCompleted;
@@ -626,7 +626,7 @@ namespace Shooter.Runtime
             }
 
             _notice.Clear();
-            GameSignals.CampaignNotice.ClearIfCurrent(_notice);
+            CampaignSignals.Notice.ClearIfCurrent(_notice);
 
             if (_player != null)
             {

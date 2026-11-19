@@ -150,6 +150,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheInstallerAddsTheViewmodelSwingOnce()
+        {
+            new MeleeActionInstaller().Install(_body, Rules());
+            new MeleeActionInstaller().Install(_body, Rules());
+
+            Assert.That(_body.GetComponents<ViewmodelMeleePresenter>(), Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void TheInstallerKeepsAPresenterTheGameSetInCode()
+        {
+            _melee.Presenter = new SilentPresenter();
+
+            new MeleeActionInstaller().Install(_body, Rules());
+
+            Assert.That(_body.GetComponent<ViewmodelMeleePresenter>(), Is.Null);
+        }
+
+        [Test]
         public void ReinstallingKeepsTheBehindArcTheGameSetInCode()
         {
             new MeleeActionInstaller().Install(_body, Rules());
@@ -161,6 +180,21 @@ namespace Shooter.Tests.EditMode
             new ContextMeleeActionInstaller().Install(_body, Rules());
 
             Assert.That(context.BehindArcDegrees, Is.EqualTo(60f));
+        }
+
+        private sealed class SilentPresenter : IMeleePresenter
+        {
+            public void OnSwingStarted(GameObject attacker, MeleeSpec spec)
+            {
+            }
+
+            public void OnHit(GameObject attacker, Damageable target, Vector3 point, Vector3 direction, int damage)
+            {
+            }
+
+            public void OnMissed(GameObject attacker)
+            {
+            }
         }
 
         private InputAction Action(string name, InputActionType type = InputActionType.Button, string controlType = null)

@@ -19,6 +19,7 @@ namespace Shooter.Runtime
         private static float _globalMultiplier = 1f;
 
         private readonly ViewmodelSway _sway = new ViewmodelSway();
+        private readonly ViewmodelMeleeSwing _melee = new ViewmodelMeleeSwing();
         private ViewRig _rig;
         private AimDownSights _ads;
         private CharacterController _controller;
@@ -50,12 +51,18 @@ namespace Shooter.Runtime
 
         public ViewmodelSway Sway => _sway;
 
+        public ViewmodelMeleeSwing MeleeSwing => _melee;
+
         public Transform Pivot => _pivot;
 
         public ViewmodelSwaySettings Settings
         {
             get => _sway.Settings;
-            set => _sway.Settings = value;
+            set
+            {
+                _sway.Settings = value;
+                _melee.Settings = value;
+            }
         }
 
         public Func<float> HorizontalSpeedSource { get; set; }
@@ -135,9 +142,16 @@ namespace Shooter.Runtime
             Apply();
         }
 
+        public void Swing(float swingSeconds, float impactSeconds)
+        {
+            _melee.Start(swingSeconds, impactSeconds);
+            Apply();
+        }
+
         public void ResetMotion()
         {
             _sway.Reset();
+            _melee.Reset();
             _hasLastView = false;
             Apply();
         }
@@ -157,6 +171,7 @@ namespace Shooter.Runtime
             Resolve();
             ReadViewRates(deltaSeconds, out var yawRate, out var pitchRate);
             _sway.Tick(deltaSeconds, HorizontalSpeed(), yawRate, pitchRate, AdsProgress());
+            _melee.Tick(deltaSeconds);
             Apply();
         }
 
@@ -246,8 +261,11 @@ namespace Shooter.Runtime
             }
 
             var multiplier = _globalMultiplier;
-            _pivot.localPosition = _sway.Position.ToUnity() * multiplier;
-            _pivot.localRotation = Quaternion.Euler(-_sway.PitchUpDegrees * multiplier, _sway.YawRightDegrees * multiplier, 0f);
+            _pivot.localPosition = (_sway.Position + _melee.Position).ToUnity() * multiplier;
+            _pivot.localRotation = Quaternion.Euler(
+                -_sway.PitchUpDegrees * multiplier,
+                (_sway.YawRightDegrees + _melee.YawRightDegrees) * multiplier,
+                _melee.RollLeftDegrees * multiplier);
         }
     }
 }

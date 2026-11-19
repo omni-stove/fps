@@ -20,7 +20,8 @@
     "dodge": "Off",
     "vault": "Off",
     "grenade": "Off",
-    "grenadeCount": 0
+    "grenadeCount": 0,
+    "melee": "On"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

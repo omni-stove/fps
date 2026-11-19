@@ -21,6 +21,7 @@
     "vault": "Off",
     "grenade": "Off",
     "grenadeCount": 0,
+    "melee": "On",
     "emote": "On",
     "stamina": "On"
   },

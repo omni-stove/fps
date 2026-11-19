@@ -215,6 +215,7 @@ namespace Shooter.Editor
             GameRulesDebugField.FallDamage,
             GameRulesDebugField.Ladder,
             GameRulesDebugField.Jump,
+            GameRulesDebugField.Melee,
         };
 
         // GameRulesDebugDraft を通すのは、ブラインドファイアはカバーも、グレネードは数も一緒に入れるため。
@@ -275,7 +276,8 @@ namespace Shooter.Editor
             return TeamDeathmatchRules();
         }
 
-        // キルのたびに武器が替わって補給の機会が無いので予備弾を無限にし、近接で倒した相手を 1 段戻せるよう近接攻撃を使えるようにする。
+        // キルのたびに武器が替わって補給の機会が無いので予備弾を無限にする。
+        // 近接で倒した相手を 1 段戻す決まりは近接が無いと成り立たないので、チームデスマッチの値を後で変えても近接は On のまま残す。
         public static GameRules GunGameRules()
         {
             var free = FreeForAllRules();
@@ -411,6 +413,7 @@ namespace Shooter.Editor
         }
 
         // ジャンプを切っても、段差は乗り越えと崖のぼりで上がれる。
+        // 近接は射撃場 (RangeActions) から受け継がずに Off にする。近接の smoke の手順 (MeleeSmokeStep・ContextMeleeSmokeStep) が Off で振れないことを確かめてから、自分の間だけ On にするため。
         public static ActionRules TpsRangeActions()
         {
             return RangeActions()
@@ -426,7 +429,8 @@ namespace Shooter.Editor
                 .WithStagger(Stagger.On)
                 .WithStealth(Stealth.On)
                 .WithSuppression(Suppression.On)
-                .WithJump(Jump.Off);
+                .WithJump(Jump.Off)
+                .WithMelee(Melee.Off);
         }
 
         // カバーとブラインドファイアはオンラインのプレイヤーが対応していないので使わない。
@@ -434,13 +438,15 @@ namespace Shooter.Editor
         {
             return WithDefaultDownedTimings(Downed.Revive, Cover.Off, BlindFire.Off, ActiveReload.On)
                 .WithGrenade(Grenade.On)
-                .WithGrenadeCount(TeamDeathmatchGrenadeCount);
+                .WithGrenadeCount(TeamDeathmatchGrenadeCount)
+                .WithMelee(Melee.On);
         }
 
         // 一人称では壁に張り付いても視界が壁で埋まるだけなので、カバーと (カバー中にだけ撃てる) ブラインドファイアを使わない。
         public static ActionRules CampaignActions()
         {
-            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On)
+                .WithMelee(Melee.On);
         }
 
         // 一人称なのでカバーを使わない (CampaignActions と同じ理由)。
@@ -448,7 +454,8 @@ namespace Shooter.Editor
         {
             return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On)
                 .WithEmote(Emote.On)
-                .WithStamina(Stamina.On);
+                .WithStamina(Stamina.On)
+                .WithMelee(Melee.On);
         }
 
         public static GameRulesDefinition LoadRules(string path)

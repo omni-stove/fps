@@ -18,6 +18,11 @@ namespace Shooter.Core
         public const float DefaultMaxKicks = 3f;
         public const float DefaultAdsSwayScale = 0.15f;
         public const float DefaultAdsKickScale = 0.4f;
+        public const float DefaultMeleeWindupBackMeters = 0.06f;
+        public const float DefaultMeleeThrustMeters = 0.2f;
+        public const float DefaultMeleeSweepDegrees = 40f;
+        public const float DefaultMeleeRollDegrees = 30f;
+        public const float DefaultMeleeWindupFraction = 0.6f;
 
         public static readonly ViewmodelSwaySettings Default = new ViewmodelSwaySettings();
 
@@ -35,7 +40,12 @@ namespace Shooter.Core
             float kickReturnPerSecond = DefaultKickReturnPerSecond,
             float maxKicks = DefaultMaxKicks,
             float adsSwayScale = DefaultAdsSwayScale,
-            float adsKickScale = DefaultAdsKickScale)
+            float adsKickScale = DefaultAdsKickScale,
+            float meleeWindupBackMeters = DefaultMeleeWindupBackMeters,
+            float meleeThrustMeters = DefaultMeleeThrustMeters,
+            float meleeSweepDegrees = DefaultMeleeSweepDegrees,
+            float meleeRollDegrees = DefaultMeleeRollDegrees,
+            float meleeWindupFraction = DefaultMeleeWindupFraction)
         {
             BobHorizontalMeters = NonNegative(bobHorizontalMeters, nameof(bobHorizontalMeters));
             BobVerticalMeters = NonNegative(bobVerticalMeters, nameof(bobVerticalMeters));
@@ -51,6 +61,11 @@ namespace Shooter.Core
             MaxKicks = NonNegative(maxKicks, nameof(maxKicks));
             AdsSwayScale = Fraction(adsSwayScale, nameof(adsSwayScale));
             AdsKickScale = Fraction(adsKickScale, nameof(adsKickScale));
+            MeleeWindupBackMeters = NonNegative(meleeWindupBackMeters, nameof(meleeWindupBackMeters));
+            MeleeThrustMeters = NonNegative(meleeThrustMeters, nameof(meleeThrustMeters));
+            MeleeSweepDegrees = NonNegative(meleeSweepDegrees, nameof(meleeSweepDegrees));
+            MeleeRollDegrees = NonNegative(meleeRollDegrees, nameof(meleeRollDegrees));
+            MeleeWindupFraction = Fraction(meleeWindupFraction, nameof(meleeWindupFraction));
         }
 
         public float BobHorizontalMeters { get; }
@@ -81,6 +96,16 @@ namespace Shooter.Core
         public float AdsSwayScale { get; }
 
         public float AdsKickScale { get; }
+
+        public float MeleeWindupBackMeters { get; }
+
+        public float MeleeThrustMeters { get; }
+
+        public float MeleeSweepDegrees { get; }
+
+        public float MeleeRollDegrees { get; }
+
+        public float MeleeWindupFraction { get; }
 
         private static float NonNegative(float value, string name)
         {

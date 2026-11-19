@@ -15,6 +15,7 @@ namespace Shooter.Core.Tests
         private const string _scopeId = "0d1e2f3a-4b5c-4d6e-9f8a-9b0c1d2e3f4a";
         private const string _magazineId = "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b";
         private const string _pistolSightId = "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c";
+        private const string _brakeId = "3a4b5c6d-7e8f-4a9b-8c1d-2e3f4a5b6c7d";
 
         // 小銃は照準器 (optic) と銃口 (muzzle) を持つ。拳銃は照準器だけ
         private static readonly ItemSpec _rifleItem = new ItemSpec(
@@ -84,6 +85,25 @@ namespace Shooter.Core.Tests
             Assert.That(spec.MagazineSize, Is.EqualTo(30));
             Assert.That(spec.Id, Is.EqualTo(_rifleId));
             Assert.That(spec.Description, Is.EqualTo("test rifle"));
+        }
+
+        [Test]
+        public void TheMoveSpreadMultiplierAlsoScalesTheAdsMoveSpread()
+        {
+            var rifle = new WeaponSpec(
+                _rifleId,
+                "weapon.rifle",
+                WeaponCategory.AssaultRifle,
+                ammo: new AmmoSpec(30, 90, 2f),
+                round: new RoundSpec(range: 100f),
+                aim: new AimSpec(moveSpreadDegrees: 2f, adsMoveSpreadDegrees: 0.6f));
+            var brake = new ItemSpec(_brakeId, "item.brake", attachment: new AttachmentSpec("muzzle", moveSpreadMultiplier: 0.5f));
+            var catalog = new ItemCatalog(new[] { _rifleItem, brake }, new InventoryRule(gridWidth: 6, gridHeight: 2));
+
+            var spec = WeaponAttachments.Apply(rifle, new[] { _brakeId }, catalog);
+
+            Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(spec.AdsMoveSpreadDegrees, Is.EqualTo(0.3f).Within(1e-4f));
         }
 
         [Test]

@@ -38,6 +38,8 @@ MonoBehaviour:
   _hipSpreadDegrees: 1
   _adsSpreadDegrees: 0
   _moveSpreadDegrees: 2
+  _hasAdsMoveSpreadDegrees: 1
+  _adsMoveSpreadDegrees: 0.6
   _shotNoiseRadius: 10
   _delivery: 1
   _projectile:

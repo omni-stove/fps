@@ -9,11 +9,11 @@ namespace Shooter.Core.Tests
     {
         private const string _id = "3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13";
 
-        private static WeaponSpec Spec(float hip = 0f, float ads = 0f, float move = 0f)
+        private static WeaponSpec Spec(float hip = 0f, float ads = 0f, float move = 0f, float? adsMove = null)
         {
             return new WeaponSpec(
                 _id, "Test", WeaponCategory.AssaultRifle, FireMode.Auto, 30, 90, 0.1f, 2f, 10, 100f, DamageFalloff.None,
-                hipSpreadDegrees: hip, adsSpreadDegrees: ads, moveSpreadDegrees: move);
+                hipSpreadDegrees: hip, adsSpreadDegrees: ads, moveSpreadDegrees: move, adsMoveSpreadDegrees: adsMove);
         }
 
         private static float AngleDegrees(Vector3 a, Vector3 b)
@@ -45,6 +45,38 @@ namespace Shooter.Core.Tests
         {
             Assert.That(SpreadPattern.ConeDegrees(Spec(hip: 6f, ads: 1f, move: 4f), 0f, 0.5f), Is.EqualTo(8f).Within(1e-5f));
             Assert.That(SpreadPattern.ConeDegrees(Spec(hip: 6f, ads: 1f, move: 4f), 1f, 1f), Is.EqualTo(5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void AimingBlendsTheMoveSpreadTowardTheAdsMoveSpread()
+        {
+            var spec = Spec(hip: 3f, ads: 0.5f, move: 3f, adsMove: 0.9f);
+
+            Assert.That(SpreadPattern.ConeDegrees(spec, 0f, 1f), Is.EqualTo(6f).Within(1e-5f));
+            Assert.That(SpreadPattern.ConeDegrees(spec, 1f, 1f), Is.EqualTo(1.4f).Within(1e-5f));
+            // 半分覗き込んだとき: 散らばり 1.75 + 移動 1.95
+            Assert.That(SpreadPattern.ConeDegrees(spec, 0.5f, 1f), Is.EqualTo(3.7f).Within(1e-5f));
+            Assert.That(SpreadPattern.ConeDegrees(spec, 1f, 0.5f), Is.EqualTo(0.95f).Within(1e-5f));
+            Assert.That(SpreadPattern.ConeDegrees(spec, 1f, 0f), Is.EqualTo(0.5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void ZeroAdsMoveSpreadMeansAimingWhileMovingDoesNotWiden()
+        {
+            Assert.That(SpreadPattern.ConeDegrees(Spec(hip: 3f, ads: 0.5f, move: 3f, adsMove: 0f), 1f, 1f), Is.EqualTo(0.5f).Within(1e-5f));
+        }
+
+        [Test]
+        public void AimedInMovingConeLooksSmallerThanTheHipMovingCone()
+        {
+            var spec = Spec(hip: 3f, ads: 0.5f, move: 3f, adsMove: 0.9f);
+
+            // 腰だめ FOV 70° と覗き込み FOV 45° で、縦 1080 の画面の半分 540 に写した半径。
+            var hip = SpreadPattern.ScreenRadius(SpreadPattern.ConeDegrees(spec, 0f, 1f), 70f, 540f);
+            var aimed = SpreadPattern.ScreenRadius(SpreadPattern.ConeDegrees(spec, 1f, 1f), 45f, 540f);
+
+            Assert.That(hip, Is.EqualTo(81.0f).Within(0.1f));
+            Assert.That(aimed, Is.EqualTo(31.9f).Within(0.1f));
         }
 
         [Test]

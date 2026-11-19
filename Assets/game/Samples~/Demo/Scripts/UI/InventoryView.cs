@@ -274,7 +274,9 @@ namespace Shooter.Runtime
                 SetOpen(false);
             }
 
-            if (_toggleAction != null && _toggleAction.WasPressedThisFrame() && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen)
+            // 閉じる側は譲らないのは、準備の時間に入る前から開いていた画面を同じキーで閉じられるようにするため
+            if (_toggleAction != null && _toggleAction.WasPressedThisFrame() && !GameUi.IsPauseOpen && !GameUi.IsLoadoutSelectOpen
+                && (_open || !BuyMenuView.TakesToggleKey))
             {
                 SetOpen(!_open);
             }

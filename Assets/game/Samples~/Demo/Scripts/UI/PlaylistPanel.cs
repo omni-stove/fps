@@ -8,9 +8,13 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     // playlists.json は表示名を持たないので、名前は Id から組んだキーで引き、表に無ければ Id をそのまま出す。
-    public sealed class PlaylistPanel : IDisposable
+    public sealed class PlaylistPanel : IMainMenuPanel
     {
         public const string LogTag = "[PlaylistPanel]";
+
+        public const string MenuRunnerObjectName = "PlaylistRunner";
+
+        private static PlaylistRunner _menuRunner;
 
         public const string PanelClass = "playlist-select";
         public const string TitleClass = "playlist-select__title";
@@ -247,6 +251,47 @@ namespace Shooter.Runtime
             _container.RemoveFromClassList(PanelClass);
             Started = null;
             Cancelled = null;
+        }
+
+        // メインメニューの既定の画面 (MainMenuPanels) として開く。ルールの表は渡さないので、ルール名を持つ項目のあるプレイリストは始めるときに理由を出して断る。
+        public static PlaylistPanel Open(VisualElement container)
+        {
+            var panel = new PlaylistPanel(container, MenuRunner());
+            panel.Started += _ => StopOnReturnToMenu();
+            return panel;
+        }
+
+        // 回す役はシーンをまたいで残る (DontDestroyOnLoad) ので、メニューへ戻るたびに作り足さず、残っているものを使い回す
+        public static PlaylistRunner MenuRunner()
+        {
+            if (_menuRunner == null)
+            {
+                _menuRunner = UnityEngine.Object.FindAnyObjectByType<PlaylistRunner>();
+            }
+
+            if (_menuRunner == null)
+            {
+                _menuRunner = new GameObject(MenuRunnerObjectName).AddComponent<PlaylistRunner>();
+            }
+
+            return _menuRunner;
+        }
+
+        // 外してから付けるのは、何度始めても 1 度だけ呼ばれ、Play のたびに MenuNavigator が購読を空にしても付け直せるようにするため
+        private static void StopOnReturnToMenu()
+        {
+            MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            MenuNavigator.ReturningToMenu += HandleReturningToMenu;
+        }
+
+        // 途中でメニューへ戻ったら、プレイリストが積んだルールとミューテーターが、次にメニューから始める試合に効かないよう止める
+        private static void HandleReturningToMenu()
+        {
+            MenuNavigator.ReturningToMenu -= HandleReturningToMenu;
+            if (_menuRunner != null)
+            {
+                _menuRunner.Stop();
+            }
         }
 
         public static string NameKeyOf(string playlistId)

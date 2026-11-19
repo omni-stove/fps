@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 12;
+        private const int VoiceIndex = 14;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -54,6 +54,10 @@ namespace Shooter.Net.Tests
             GameSignals.Streak.Clear();
             GameSignals.KillCam.Clear();
             GameSignals.ReportSender.Clear();
+            GameSignals.VoteKick.Clear();
+            GameSignals.VoteKickSender.Clear();
+            GameSignals.Wallet.Clear();
+            GameSignals.BuySender.Clear();
         }
 
         [Test]
@@ -75,6 +79,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2KillCamPart),
                 typeof(NetV2WeatherPart),
                 typeof(NetV2ReportPart),
+                typeof(NetV2VoteKickPart),
+                typeof(NetV2BuyPart),
             }));
         }
 
@@ -99,6 +105,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2KillCamPart),
                 typeof(NetV2WeatherPart),
                 typeof(NetV2ReportPart),
+                typeof(NetV2VoteKickPart),
+                typeof(NetV2BuyPart),
                 typeof(NetV2VoicePart),
             }));
             Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
@@ -129,6 +137,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ReplayViewPart),
             }));
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
+            Assert.That(_parts.OfType<NetV2VoteKickPart>(), Is.Empty, "a replay has no server to send a vote to");
+            Assert.That(_parts.OfType<NetV2BuyPart>(), Is.Empty, "a replay has no server to buy from");
         }
 
         [Test]
@@ -146,6 +156,76 @@ namespace Shooter.Net.Tests
             report.Dispose();
 
             Assert.That(GameSignals.ReportSender.HasValue, Is.False);
+        }
+
+        [Test]
+        public void AVoteKickStateIsTakenByTheVoteKickPartAndShownOnTheSignal()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+            var state = new VoteKickStateMessage
+            {
+                TargetPlayerId = 4,
+                CallerPlayerId = 2,
+                YesVotes = 1,
+                RequiredVotes = 3,
+                RemainingSeconds = 25f,
+                Outcome = VoteKickOutcome.Undecided,
+            };
+
+            var taker = _parts.FirstOrDefault(part => part.Handle(state));
+
+            Assert.That(taker, Is.InstanceOf<NetV2VoteKickPart>());
+            Assert.That(GameSignals.VoteKick.HasValue, Is.True);
+            Assert.That(GameSignals.VoteKick.Value.Value.TargetId, Is.EqualTo(4));
+            Assert.That(GameSignals.VoteKick.Value.Value.CallerId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TheVoteKickPartPublishesTheSenderOnTheFirstSnapshotAndClearsItOnDispose()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+            var voteKick = _parts.OfType<NetV2VoteKickPart>().Single();
+
+            Assert.That(GameSignals.VoteKickSender.HasValue, Is.False, "nothing is published before the match starts");
+
+            voteKick.Apply(new SnapshotMessage());
+
+            Assert.That(GameSignals.VoteKickSender.Value, Is.SameAs(voteKick.VoteKickSender));
+
+            voteKick.Dispose();
+
+            Assert.That(GameSignals.VoteKickSender.HasValue, Is.False);
+        }
+
+        [Test]
+        public void TheBuyPartPublishesTheWalletAndTheSenderOnlyWhenTheOwnerHasMoney()
+        {
+            _parts = NetV2ClientParts.Create(Context(null));
+            var buy = _parts.OfType<NetV2BuyPart>().Single();
+
+            buy.Apply(new SnapshotMessage());
+
+            Assert.That(GameSignals.Wallet.HasValue, Is.False, "a match without an economy shows no wallet");
+            Assert.That(GameSignals.BuySender.HasValue, Is.False);
+
+            var snapshot = new SnapshotMessage();
+            snapshot.Match.Objective = MatchObjective.SearchAndDestroy;
+            snapshot.Match.State = GameModeState.Playing;
+            snapshot.Match.HasRound = true;
+            snapshot.Match.Round = RoundPhase.Preparing;
+            snapshot.HasOwner = true;
+            snapshot.Owner.Money = 800;
+            buy.Apply(snapshot);
+
+            Assert.That(GameSignals.Wallet.HasValue, Is.True);
+            Assert.That(GameSignals.Wallet.Value.Value.Money, Is.EqualTo(800));
+            Assert.That(GameSignals.Wallet.Value.Value.CanBuy, Is.True, "the preparing phase is the buy time");
+            Assert.That(GameSignals.BuySender.Value, Is.SameAs(buy.BuySender));
+
+            buy.Dispose();
+
+            Assert.That(GameSignals.Wallet.HasValue, Is.False);
+            Assert.That(GameSignals.BuySender.HasValue, Is.False);
         }
 
         [Test]

@@ -30,6 +30,7 @@ namespace Shooter.Runtime
             MainMenuPanels.UseDefault(MainMenuPanelKind.Replays, slot => new ReplayPanel(slot));
             MainMenuPanels.UseDefault(MainMenuPanelKind.Cosmetics, CosmeticsPanel.Open);
             MainMenuPanels.UseDefault(MainMenuPanelKind.Stash, StashPanel.Open);
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Playlists, PlaylistPanel.Open);
         }
 
         private sealed class PauseMenuState : IPauseState

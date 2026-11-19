@@ -64,8 +64,17 @@ namespace Shooter.NetV2
         private bool _gunGameMismatchLogged;
         private ModeStatus _perSnapshotStatus;
         private long _perSnapshotKey;
+        private ClientBattleRoyaleStatus _battleRoyale;
+        private ClientExtractionStatus _extraction;
+        private ModeStatus _extractionStatus;
+        private ClientStash _stash;
+        private StashStatus? _publishedStash;
+        private bool _stashSkipLogged;
 
         public HudModel Model => _model;
+
+        // 箱を開ける・補給を開ける案内に添えるキーの表示。開ける入力を持つ部品が入れる。null ならキーを添えない
+        public string InteractKeyLabel { get; set; }
 
         public IParticipants Participants => _roster;
 
@@ -103,7 +112,8 @@ namespace Shooter.NetV2
 
         // ポーズを開いても対戦は止まらないので、GameSignals.PauseTimeMode は PauseTimeMode.KeepRunning にする。
         // 武器の値を引く口を受け取るのは、溜め・熱・弾薬の種類を出すかを武器の値で決めるため (WeaponSync は無い項目にも 0 を運ぶ)。
-        public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon)
+        // tick の速さは、制限時間の無い Battle Royale の経った時間をスナップショットの tick から数えるのに使う。
+        public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon, int tickRate = TickClock.DefaultTickRate)
         {
             if (findWeapon == null)
             {
@@ -121,6 +131,11 @@ namespace Shooter.NetV2
             netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
             netHud._payload = new ClientPayloadStatus(localPlayerId);
             netHud._gunGame = ConfiguredGunGame();
+            netHud._battleRoyale = new ClientBattleRoyaleStatus(localPlayerId, Math.Max(1, tickRate));
+
+            // 出撃の長さ・脱出に待つ秒・持ち物庫の広さはサーバーが送らないので、オフラインと同じ入口の調整値を読む
+            netHud._extraction = new ClientExtractionStatus(localPlayerId, ExtractionRunner.Tuning);
+            netHud._stash = new ClientStash(ExtractionRunner.StashTuning.Capacity);
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
             GameSignals.PauseTimeMode.Publish(PauseTimeMode.KeepRunning);
@@ -451,6 +466,8 @@ namespace Shooter.NetV2
                 | (_hardpoint != null && _hardpoint.Apply(snapshot))
                 | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
                 | ApplyPayload(snapshot)
+                | (_battleRoyale != null && _battleRoyale.Apply(snapshot, InteractKeyLabel))
+                | ApplyExtraction(snapshot)
                 | ApplyPerSnapshot(snapshot);
             if (changed)
             {
@@ -460,7 +477,94 @@ namespace Shooter.NetV2
                     ?? _hardpoint?.Status
                     ?? _killConfirmed?.Status
                     ?? _payload?.Status
+                    ?? _battleRoyale?.Status
+                    ?? _extractionStatus
                     ?? _perSnapshotStatus);
+            }
+        }
+
+        // 持ち物庫と持っている物はスナップショットに載らず、持ち主にだけこの知らせで届く
+        public void Receive(StashStateMessage message)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            if (_stash != null)
+            {
+                if (_stash.Receive(message))
+                {
+                    PublishStash(_stash.Status);
+                }
+
+                if (_stash.SkippedStacks > 0 && !_stashSkipLogged)
+                {
+                    _stashSkipLogged = true;
+                    Debug.LogWarning(ClientStashLog.SkippedStacks(_stash.SkippedStacks));
+                }
+            }
+
+            if (_extraction != null && _extraction.Receive(message) && _latest != null)
+            {
+                ShowModeStatus(_latest);
+            }
+        }
+
+        // オフラインの ExtractionRunner と同じく、Detail に ExtractionStatus を置き、制限時間は Detail の残りで出すので ModeStatus には載せない
+        public static ModeStatus ExtractionModeStatus(ClientExtractionStatus extraction, string interactKeyLabel)
+        {
+            if (extraction == null)
+            {
+                throw new ArgumentNullException(nameof(extraction));
+            }
+
+            return new ModeStatus(
+                null,
+                new[] { new SideScore(Side.Alpha, extraction.AlphaPoints), new SideScore(Side.Bravo, extraction.BravoPoints) },
+                extraction.OwnSide,
+                extraction.RespawnSeconds,
+                extraction.IsEnded,
+                extraction.Winner,
+                new ExtractionStatus(
+                    extraction.Outcome,
+                    extraction.RemainingSeconds,
+                    extraction.ElapsedSeconds,
+                    extraction.PointsOpen,
+                    extraction.SecondsUntilOpen,
+                    extraction.OpenPointCount,
+                    extraction.HoldProgress,
+                    extraction.HoldRemainingSeconds,
+                    extraction.StandingOnClosedPoint,
+                    extraction.LootInReach,
+                    interactKeyLabel,
+                    extraction.Carried,
+                    extraction.Stored,
+                    extraction.Lost));
+        }
+
+        private bool ApplyExtraction(SnapshotMessage snapshot)
+        {
+            if (_extraction == null || !_extraction.Apply(snapshot))
+            {
+                return false;
+            }
+
+            _extractionStatus = _extraction.IsActive ? ExtractionModeStatus(_extraction, InteractKeyLabel) : null;
+            return true;
+        }
+
+        private void PublishStash(StashStatus? status)
+        {
+            if (_publishedStash.HasValue)
+            {
+                GameSignals.Stash.ClearIfCurrent(_publishedStash);
+            }
+
+            _publishedStash = status;
+            if (_publishedStash.HasValue)
+            {
+                GameSignals.Stash.Publish(_publishedStash);
             }
         }
 
@@ -720,6 +824,12 @@ namespace Shooter.NetV2
             _payloadCartLooked = false;
             _perSnapshotStatus = null;
             _perSnapshotKey = 0;
+            _battleRoyale?.Reset();
+            _extraction?.Clear();
+            _extractionStatus = null;
+            _stash?.Clear();
+            PublishStash(null);
+            _stashSkipLogged = false;
 
             if (_publishedScoreboard != null)
             {

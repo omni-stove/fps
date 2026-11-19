@@ -138,6 +138,12 @@ namespace Shooter.Runtime
 
         public GameObject Boundary => _boundary;
 
+        public Material BoundaryMaterial
+        {
+            get => _boundaryMaterial;
+            set => _boundaryMaterial = value;
+        }
+
         public GameObject BoundaryPrefab
         {
             get => _boundaryPrefab;
@@ -557,8 +563,7 @@ namespace Shooter.Runtime
             }
 
             // 共有の既定の材質を書き換えると他のプリミティブまで透けるので、このエリア用に複製する。
-            _boundaryMaterialInstance = new Material(renderer.sharedMaterial) { name = BoundaryName };
-            MakeTranslucentAndDoubleSided(_boundaryMaterialInstance);
+            _boundaryMaterialInstance = CreateBoundaryMaterial(renderer.sharedMaterial);
             renderer.sharedMaterial = _boundaryMaterialInstance;
             if (!_followsSettings)
             {
@@ -639,6 +644,19 @@ namespace Shooter.Runtime
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
             return mesh;
+        }
+
+        // 対戦のエリア (NetV2ZonePart) が同じ見た目の筒を作るのに使う。共有の材質を書き換えないよう複製を返す。
+        public static Material CreateBoundaryMaterial(Material source)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            var material = new Material(source) { name = BoundaryName };
+            MakeTranslucentAndDoubleSided(material);
+            return material;
         }
 
         // 他のシェーダーの材質では無いプロパティへの書き込みは無視されるので、描画が変わらないだけで壊れない。

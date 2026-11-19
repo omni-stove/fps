@@ -16,6 +16,7 @@ namespace Shooter.Net.Tests
     {
         private const int _localId = 3;
         private const int _otherId = 7;
+        private const string _ammo = "5b0c55a4-8f0e-4a43-9c55-0b1f3ad1e001";
 
         private readonly List<Object> _created = new List<Object>();
         private NetV2Hud _hud;
@@ -57,6 +58,7 @@ namespace Shooter.Net.Tests
             GameSignals.LocalBlindSeconds.Clear();
             GameSignals.Inventory.Clear();
             GameSignals.ModeStatus.Clear();
+            GameSignals.Stash.Clear();
         }
 
         [Test]
@@ -566,6 +568,117 @@ namespace Shooter.Net.Tests
 
             Assert.That(view.KillFeed.Names.Describe(new KillFeedEntry(_otherId, _localId, "", false, false)).Victim,
                 Is.EqualTo(new KillFeedName(BotRoster.KillFeedName(_localId), Team.Bravo, true)));
+        }
+
+        [Test]
+        public void BattleRoyalePublishesTheSquadsAndTheZoneInTheShapeOfOffline()
+        {
+            var snapshot = BattleRoyaleSnapshot(squadsRemaining: 2);
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<BattleRoyaleStatus>(), "the same detail type as offline, so the Battle Royale formatter reads it");
+            var detail = (BattleRoyaleStatus)status.Detail;
+            Assert.That(detail.Session, Is.Null, "the session lives on the server");
+            Assert.That(detail.Game.EntrantCount, Is.EqualTo(2));
+            Assert.That(detail.Game.SquadsRemaining, Is.EqualTo(2));
+            Assert.That(detail.LocalPlayerId, Is.EqualTo((int?)_localId));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)new Side(0)), "the squad id is the side");
+            Assert.That(detail.Zone.HasValue, Is.True);
+            Assert.That(detail.Zone.Value.Stage, Is.EqualTo(ZoneStage.Waiting));
+            Assert.That(detail.Zone.Value.SecondsUntilShrink, Is.EqualTo(12f));
+
+            var formatter = new BattleRoyaleHudFormatter();
+            var lines = new List<LocalizedText>();
+            formatter.AppendLines(status, lines);
+            Assert.That(lines, Does.Contain(BattleRoyaleHudFormatter.SquadsLeft(2, 2)));
+            Assert.That(lines, Does.Contain(BattleRoyaleHudFormatter.Placement(null, 2)));
+            Assert.That(lines, Does.Contain(ZoneHudFormatter.Line(detail.Zone.Value)));
+            Assert.That(lines, Does.Contain(BattleRoyaleHudFormatter.Squad(1, 0)));
+            Assert.That(formatter.Scores(status), Has.Count.EqualTo(2));
+            Assert.That(formatter.Result(status).IsEmpty, Is.True, "the match has not ended");
+
+            _hud.Apply(BattleRoyaleSnapshot(squadsRemaining: 2));
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(status), "unchanged squads are not published again");
+
+            _hud.Apply(Snapshot(MatchObjective.None));
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "a match without a mode takes the status back");
+        }
+
+        [Test]
+        public void ExtractionPublishesTheRaidAndTheStash()
+        {
+            var stash = new StashStateMessage();
+            stash.Stash.Add(_ammo, 10);
+            stash.Carried.Add(_ammo, 20);
+            _hud.Receive(stash);
+
+            Assert.That(GameSignals.Stash.Value.HasValue, Is.True, "the stash panel reads the stash from the server");
+            var published = GameSignals.Stash.Value.Value;
+            Assert.That(published.Stacks, Has.Count.EqualTo(1));
+            Assert.That(published.Stacks[0].ItemId, Is.EqualTo(_ammo));
+            Assert.That(published.Stacks[0].Count, Is.EqualTo(10));
+            Assert.That(published.Capacity, Is.EqualTo(ExtractionRunner.StashTuning.Capacity));
+
+            var snapshot = Snapshot(MatchObjective.Extraction);
+            snapshot.Match.RemainingSeconds = 300;
+            ref var point = ref snapshot.ObjectiveItems.Add();
+            point.ItemId = 1;
+            point.Present = ObjectiveItemFields.All;
+            point.Kind = ObjectiveItemKind.ExtractionPoint;
+            point.State = ObjectiveItemState.Home;
+            point.Opened = true;
+            point.Radius = 3f;
+            point.Position = new System.Numerics.Vector3(100f, 0f, 100f);
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<ExtractionStatus>(), "the same detail type as offline, so the Extraction formatter reads it");
+            var detail = (ExtractionStatus)status.Detail;
+            Assert.That(detail.IsOver, Is.False);
+            Assert.That(detail.RemainingSeconds, Is.EqualTo(300f));
+            Assert.That(detail.PointsOpen, Is.True);
+            Assert.That(detail.OpenPointCount, Is.EqualTo(1));
+            Assert.That(detail.CarriedCount, Is.EqualTo(20));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Bravo));
+
+            var formatter = new ExtractionHudFormatter();
+            var lines = new List<LocalizedText>();
+            formatter.AppendLines(status, lines);
+            Assert.That(lines, Does.Contain(ExtractionHudFormatter.ExitsOpen(1)));
+            Assert.That(lines, Does.Contain(ExtractionHudFormatter.Carrying(20)));
+            Assert.That(formatter.Time(status), Is.EqualTo(ModeStatusFormat.Clock(300f)));
+
+            var killed = new StashStateMessage { Outcome = Shooter.Protocol.ExtractionOutcome.Killed };
+            killed.Stash.Add(_ammo, 10);
+            _hud.Receive(killed);
+
+            var over = (ExtractionStatus)GameSignals.ModeStatus.Value.Detail;
+            Assert.That(over.Outcome, Is.EqualTo(Shooter.Core.ExtractionOutcome.Died));
+            Assert.That(over.LostCount, Is.EqualTo(20), "what was carried did not reach the stash");
+            Assert.That(over.StoredCount, Is.Zero);
+
+            _hud.ClearSignals();
+            Assert.That(GameSignals.Stash.Value, Is.Null);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
+        }
+
+        private static SnapshotMessage BattleRoyaleSnapshot(int squadsRemaining)
+        {
+            var snapshot = Snapshot(MatchObjective.BattleRoyale);
+            snapshot.Match.SquadsRemaining = squadsRemaining;
+            snapshot.Match.ZonePhase = 1;
+            snapshot.Match.ZoneCenter = new System.Numerics.Vector2(0f, 0f);
+            snapshot.Match.ZoneRadius = 100f;
+            snapshot.Match.NextZoneCenter = new System.Numerics.Vector2(10f, 5f);
+            snapshot.Match.NextZoneRadius = 50f;
+            snapshot.Match.ZonePhaseRemainingSeconds = 12;
+            snapshot.Players[snapshot.Players.IndexOf(_localId)].SquadId = 0;
+            snapshot.Players[snapshot.Players.IndexOf(_otherId)].SquadId = 1;
+            return snapshot;
         }
 
         private static SnapshotMessage Snapshot(MatchObjective objective)

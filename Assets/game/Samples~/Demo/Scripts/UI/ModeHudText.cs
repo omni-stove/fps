@@ -73,12 +73,17 @@ namespace Shooter.Runtime
                 throw new ArgumentNullException(nameof(session));
             }
 
-            if (session.State != GameModeState.Ended)
+            return Result(session.State, session.Winner);
+        }
+
+        public static LocalizedText Result(GameModeState state, Side? winner)
+        {
+            if (state != GameModeState.Ended)
             {
                 return default;
             }
 
-            return session.Winner.HasValue ? HudText.Wins(SideName(session.Winner.Value)) : HudText.Draw;
+            return winner.HasValue ? HudText.Wins(SideName(winner.Value)) : HudText.Draw;
         }
     }
 }

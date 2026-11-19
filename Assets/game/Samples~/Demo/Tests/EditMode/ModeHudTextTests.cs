@@ -115,6 +115,14 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheResultFromAStateAndAWinnerIsTheSameAsFromTheSession()
+        {
+            Assert.That(ModeHudText.Result(GameModeState.Playing, new Side(2)).IsEmpty, Is.True, "a winner before the end is not shown");
+            Assert.That(GameText.Resolve(ModeHudText.Result(GameModeState.Ended, new Side(2))), Is.EqualTo("SIDE 2 の勝ち"));
+            Assert.That(ModeHudText.Result(GameModeState.Ended, null), Is.EqualTo(HudText.Draw));
+        }
+
+        [Test]
         public void RejectsNullSession()
         {
             Assert.Throws<ArgumentNullException>(() => ModeHudText.Scores(null, null));

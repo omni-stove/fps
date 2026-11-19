@@ -160,5 +160,33 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => model.SetMagnification(0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => model.SetMagnification(float.PositiveInfinity));
         }
+
+        [Test]
+        public void AMeleeWeaponShowsItsChargeAndNoAmmo()
+        {
+            var melee = new MeleeWeaponSpec(
+                new MeleeSpec(30, 2f, 70f, 0.4f, 0.1f, 0.1f, 0.2f),
+                new MeleeSpec(90, 3f, 110f, 0.8f, 0.3f, 0.5f, 1f),
+                0.2f,
+                0.8f);
+            var weapon = new Weapon(new WeaponSpec(_rifleId, "weapon.crowbar", WeaponCategory.Melee, melee: melee));
+            var model = new HudModel();
+            model.BindWeapon(weapon);
+            model.RefreshWeaponGauges();
+
+            Assert.That(model.MagazineAmmo, Is.Null, "a melee weapon uses no ammo");
+            Assert.That(model.ReserveAmmo, Is.Null);
+            Assert.That(model.ChargeFraction, Is.EqualTo(0f));
+
+            weapon.MeleeCharge.Press();
+            weapon.MeleeCharge.Advance(0.6f);
+            model.RefreshWeaponGauges();
+            Assert.That(model.ChargeFraction, Is.EqualTo(0.5f).Within(1e-5f));
+
+            var noCharge = new Weapon(new WeaponSpec(_rifleId, "weapon.crowbar", WeaponCategory.Melee, melee: new MeleeWeaponSpec()));
+            model.BindWeapon(noCharge);
+            model.RefreshWeaponGauges();
+            Assert.That(model.ChargeFraction, Is.Null, "a melee weapon that cannot charge shows no gauge");
+        }
     }
 }

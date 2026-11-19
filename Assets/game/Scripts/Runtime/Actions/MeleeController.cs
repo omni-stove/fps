@@ -12,6 +12,9 @@ namespace Shooter.Runtime
     {
         public const string MeleeActionPath = InputActionPaths.Melee;
 
+        // 近接武器は覗き込まないので、覗き込みのボタンを投げに使う。
+        public const string ThrowActionPath = InputActionPaths.Aim;
+
         public const int LungePriority = 0;
 
         [SerializeField, Min(1), Tooltip("1 回の当たりのダメージ")]
@@ -70,7 +73,10 @@ namespace Shooter.Runtime
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
         private InputAction _meleeAction;
+        [NonSerialized]
+        private InputAction _throwAction;
         private bool _enabledMeleeAction;
+        private bool _enabledThrowAction;
         private bool _hooked;
         [NonSerialized]
         private bool _specApplied;
@@ -86,6 +92,8 @@ namespace Shooter.Runtime
         public WeaponController Weapon => _weapon;
 
         public InputAction MeleeAction => _meleeAction;
+
+        public InputAction ThrowAction => _throwAction;
 
         public bool IsInitialized => _mover != null && _weapon != null;
 
@@ -131,6 +139,8 @@ namespace Shooter.Runtime
             set => _meleeWeapon = value;
         }
 
+        public WeaponDefinition LastThrownWeapon { get; private set; }
+
         public string StrikeWeaponId
         {
             get
@@ -156,6 +166,17 @@ namespace Shooter.Runtime
         }
 
         public bool IsShieldBashing { get; private set; }
+
+        public MeleeWeaponSpec HeldMeleeWeapon
+        {
+            get
+            {
+                var weapon = _weapon != null ? _weapon.Weapon : null;
+                return weapon != null ? weapon.Spec.Melee : null;
+            }
+        }
+
+        public bool IsMeleeWeaponSwinging { get; private set; }
 
         public bool InterruptsReload => _interruptsReload;
 
@@ -219,6 +240,12 @@ namespace Shooter.Runtime
                 TryMelee();
             }
 
+            var melee = HeldMeleeWeapon;
+            if (melee != null && melee.CanThrow && _throwAction != null && !_mover.IsControlHandedOff && _throwAction.WasPressedThisFrame())
+            {
+                TryThrowWeapon();
+            }
+
             Tick(Time.deltaTime);
         }
 
@@ -266,11 +293,12 @@ namespace Shooter.Runtime
                 Debug.LogWarning($"{MeleeLog.LogTag} '{MeleeActionPath}' が見つからないため、入力では振れません (TrySwing からは振れます)。", this);
             }
 
-            Initialize(mover, weapon, action);
+            var throwAction = actions != null ? actions.FindAction(ThrowActionPath) : null;
+            Initialize(mover, weapon, action, throwAction);
             return true;
         }
 
-        public void Initialize(PlayerController mover, WeaponController weapon, InputAction meleeAction)
+        public void Initialize(PlayerController mover, WeaponController weapon, InputAction meleeAction, InputAction throwAction = null)
         {
             if (mover == null)
             {
@@ -300,6 +328,7 @@ namespace Shooter.Runtime
             _self = GetComponent<Damageable>();
             _ads = GetComponent<AimDownSights>();
             _meleeAction = meleeAction;
+            _throwAction = throwAction;
             SyncHooks();
         }
 
@@ -338,6 +367,21 @@ namespace Shooter.Runtime
 
         public bool TrySwing()
         {
+            return StartSwing(null, 0f);
+        }
+
+        public bool TryWeaponSwing(MeleeSpec spec, float chargeFraction)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return HeldMeleeWeapon != null && StartSwing(spec, chargeFraction);
+        }
+
+        private bool StartSwing(MeleeSpec weaponSwing, float chargeFraction)
+        {
             var refusal = CheckSwing();
             if (refusal != MeleeRefusal.None)
             {
@@ -345,26 +389,84 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            // 振りは始めたときの値で終えるので (MeleeSwing.Spec)、盾の値は振り始めにだけ差し替えて戻す。調整値の Spec は変えない。
+            // 振りは始めたときの値で終えるので (MeleeSwing.Spec)、盾・近接武器の値は振り始めにだけ差し替えて戻す。調整値の Spec は変えない。
             var bash = ShieldBash;
+            var melee = HeldMeleeWeapon;
+            var held = bash ?? weaponSwing ?? melee?.Swing;
             var normal = _swing.Spec;
-            if (bash != null)
+            if (held != null)
             {
-                _swing.Spec = bash;
+                _swing.Spec = held;
             }
 
             _swing.TryStart();
             _swing.Spec = normal;
             IsShieldBashing = bash != null;
-            _swingWeaponId = bash != null ? _weapon.Weapon.Spec.Id : StrikeWeaponId;
+            IsMeleeWeaponSwinging = bash == null && held != null;
+            _swingWeaponId = held != null ? _weapon.Weapon.Spec.Id : StrikeWeaponId;
             _lungeDirection = AimForward();
             if (_ads != null)
             {
                 _ads.Release();
             }
 
-            Debug.Log(bash != null ? MeleeLog.ShieldBash(AttackerId, _swingWeaponId) : MeleeLog.Swing(AttackerId), this);
+            Debug.Log(
+                bash != null ? MeleeLog.ShieldBash(AttackerId, _swingWeaponId)
+                : IsMeleeWeaponSwinging ? MeleeLog.WeaponSwing(AttackerId, _swingWeaponId, chargeFraction)
+                : MeleeLog.Swing(AttackerId),
+                this);
             ResolvePresenter()?.OnSwingStarted(gameObject, _swing.CurrentSpec);
+            return true;
+        }
+
+        public bool TryThrowWeapon()
+        {
+            return TryThrowWeapon(out _);
+        }
+
+        public bool TryThrowWeapon(out ThrownMeleeWeapon thrown)
+        {
+            thrown = null;
+            var melee = HeldMeleeWeapon;
+            if (melee == null || !melee.CanThrow || _weapon.IsMeleeWeaponBlocked)
+            {
+                return false;
+            }
+
+            var refusal = CheckSwing();
+            if (refusal == MeleeRefusal.Cooldown && !IsSwinging)
+            {
+                refusal = MeleeRefusal.None;
+            }
+
+            if (refusal != MeleeRefusal.None)
+            {
+                Debug.Log(MeleeLog.Refused(AttackerId, refusal), this);
+                return false;
+            }
+
+            var weaponId = _weapon.Weapon.Spec.Id;
+            var definition = _weapon.Definition;
+            var settings = definition != null ? definition.Melee : null;
+            var aim = _weapon.Aim;
+            if (!_weapon.DropWeapon(weaponId, out var held))
+            {
+                return false;
+            }
+
+            var direction = ThrownMeleeWeapon.LaunchDirection(aim.forward, aim.right, melee.Throw.UpwardDegrees);
+            thrown = ThrownMeleeWeapon.Throw(
+                gameObject,
+                held,
+                melee.Throw,
+                EyeOrigin(),
+                direction,
+                aim.right,
+                settings != null ? settings.ThrownPrefab : null,
+                settings != null ? settings.ThrownCollectMode : PickupCollectMode.Touch);
+            // 投げた武器はロードアウトから外れるので、投げで倒した帰属の名前を引けるよう定義を残す。
+            LastThrownWeapon = held.Definition;
+            Debug.Log(MeleeLog.Thrown(AttackerId, weaponId), this);
             return true;
         }
 
@@ -387,6 +489,7 @@ namespace Shooter.Runtime
             if (!swing.IsSwinging)
             {
                 IsShieldBashing = false;
+                IsMeleeWeaponSwinging = false;
             }
 
             return impact;
@@ -396,6 +499,7 @@ namespace Shooter.Runtime
         {
             _swing?.Cancel();
             IsShieldBashing = false;
+            IsMeleeWeaponSwinging = false;
         }
 
         // 攻撃のボタン (WeaponController.ShieldBashRequested) から振る。盾を持っていなければ振らない。
@@ -412,6 +516,11 @@ namespace Shooter.Runtime
         private void OnShieldBashRequested(RiotShieldSpec shield)
         {
             TryShieldBash();
+        }
+
+        private void OnMeleeWeaponSwingRequested(MeleeSpec spec, float chargeFraction)
+        {
+            TryWeaponSwing(spec, chargeFraction);
         }
 
         void IMovementOverride.Begin(PlayerController mover)
@@ -446,6 +555,11 @@ namespace Shooter.Runtime
             if (!MeleeStrike.TryFind(transform, origin, forward, spec, _hitMask, out var hit))
             {
                 Debug.Log(MeleeLog.Miss(AttackerId), this);
+                if (IsMeleeWeaponSwinging)
+                {
+                    StrikeSurface(spec);
+                }
+
                 presenter?.OnMissed(gameObject);
                 return;
             }
@@ -461,6 +575,26 @@ namespace Shooter.Runtime
             }
 
             presenter?.OnHit(gameObject, hit.Target, hit.Point, hit.Direction, damage);
+        }
+
+        // 近接武器で人に当たらなかったときだけ、照準の先の壁や物を叩いた手応え (火花・音・跡) を着弾と同じ出来事で出す。
+        private void StrikeSurface(MeleeSpec spec)
+        {
+            var aim = _weapon != null ? _weapon.Aim : null;
+            if (aim == null || !MeleeStrike.TryFindSurface(transform, EyeOrigin(), aim.forward, spec.Reach, _hitMask, out var surface))
+            {
+                return;
+            }
+
+            Debug.Log(MeleeLog.WorldHit(AttackerId, SurfaceMaterial.IdOf(surface.collider)), this);
+            CombatEvents.RaiseImpact(surface.point, surface.normal, surface.collider);
+        }
+
+        // 三人称ではカメラが体の後ろにあるので、線や投げの起点はカメラでなく目 (ViewRig が無ければ体) にする。GrenadeThrower と同じ。
+        private Vector3 EyeOrigin()
+        {
+            var rig = GetComponent<ViewRig>();
+            return rig != null && rig.IsInitialized ? rig.Eye.position : transform.position;
         }
 
         // 三人称ではカメラと体の向きがずれ得るので、狙っている向き (照準) を水平にして使う。真上・真下を向いていれば体の正面。
@@ -552,6 +686,7 @@ namespace Shooter.Runtime
 
             _weapon.AddModifier(this);
             _weapon.ShieldBashRequested += OnShieldBashRequested;
+            _weapon.MeleeWeaponSwingRequested += OnMeleeWeaponSwingRequested;
             _mover.RegisterMovementOverride(this);
             AcquireAction();
             _hooked = true;
@@ -571,6 +706,7 @@ namespace Shooter.Runtime
             {
                 _weapon.RemoveModifier(this);
                 _weapon.ShieldBashRequested -= OnShieldBashRequested;
+                _weapon.MeleeWeaponSwingRequested -= OnMeleeWeaponSwingRequested;
             }
 
             if (!ReferenceEquals(_mover, null))
@@ -589,6 +725,12 @@ namespace Shooter.Runtime
             {
                 _meleeAction.Enable();
             }
+
+            _enabledThrowAction = _throwAction != null && !_throwAction.enabled;
+            if (_enabledThrowAction)
+            {
+                _throwAction.Enable();
+            }
         }
 
         private void ReleaseAction()
@@ -599,6 +741,12 @@ namespace Shooter.Runtime
             }
 
             _enabledMeleeAction = false;
+            if (_enabledThrowAction && _throwAction != null)
+            {
+                _throwAction.Disable();
+            }
+
+            _enabledThrowAction = false;
         }
     }
 }

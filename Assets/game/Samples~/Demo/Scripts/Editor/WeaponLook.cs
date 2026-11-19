@@ -82,6 +82,14 @@ namespace Shooter.Editor
         public const string ReceiverName = "Receiver";
         public const string GripName = "Grip";
         public const string BandName = "Band";
+        public const string ShaftName = "Shaft";
+        public const string HookName = "Hook";
+        public const string HeadName = "Head";
+        public const string BladeName = "Blade";
+
+        // 扇がこれ以上広い近接武器は払って斬る刃に、振りがこれ以上遅いものは重い頭の棍棒に見せる。どちらでもなければ細い金属の棒。
+        public const float BladeMinArcDegrees = 100f;
+        public const float ClubMinSwingSeconds = 0.6f;
 
         public const float ScopeMaxFieldOfView = 40f;
 
@@ -200,6 +208,11 @@ namespace Shooter.Editor
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (spec.IsMelee)
+            {
+                return MeleeFor(spec.Melee);
             }
 
             var category = spec.Category;
@@ -441,6 +454,61 @@ namespace Shooter.Editor
                 sight,
                 new Vector3(0f, gripY, gripZ),
                 foreGrip);
+        }
+
+        // 近接武器の形を選ぶ欄は WeaponSpec に無いので、振りの値から形を決め、新しい近接武器の JSON にも見た目が付くようにする。
+        public static WeaponLook MeleeFor(MeleeWeaponSpec melee)
+        {
+            if (melee == null)
+            {
+                throw new ArgumentNullException(nameof(melee));
+            }
+
+            var swing = melee.Swing;
+            var length = Mathf.Clamp(0.3f + (swing.Reach * 0.15f), 0.45f, 0.8f);
+            const float handle = 0.14f;
+            const float handleWidth = 0.034f;
+            var parts = new List<WeaponPart>
+            {
+                new WeaponPart(GripName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, handle * 0.5f), new Vector3(handleWidth, handleWidth, handle), WeaponPaint.Furniture),
+            };
+
+            Color body;
+            Color furniture;
+            if (swing.ArcDegrees >= BladeMinArcDegrees)
+            {
+                var blade = length - handle;
+                parts.Add(new WeaponPart(BladeName, WeaponPartShape.Box, new Vector3(0f, 0.012f, handle + (blade * 0.5f)), new Vector3(0.005f, 0.05f, blade), WeaponPaint.Body));
+                parts.Add(new WeaponPart("Guard", WeaponPartShape.Box, new Vector3(0f, 0.005f, handle), new Vector3(0.02f, 0.07f, 0.012f), WeaponPaint.Furniture));
+                body = MetalColor;
+                furniture = PolymerColor;
+            }
+            else if (swing.SwingSeconds >= ClubMinSwingSeconds)
+            {
+                var head = length * 0.4f;
+                parts.Add(new WeaponPart(ShaftName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, (handle + length - head) * 0.5f), new Vector3(0.045f, 0.045f, length - head - handle), WeaponPaint.Body));
+                parts.Add(new WeaponPart(HeadName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, length - (head * 0.5f)), new Vector3(0.085f, 0.085f, head), WeaponPaint.Body));
+                body = WoodColor;
+                furniture = new Color(0.3f, 0.18f, 0.1f);
+            }
+            else
+            {
+                parts.Add(new WeaponPart(ShaftName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, (handle + length) * 0.5f), new Vector3(0.022f, 0.022f, length - handle), WeaponPaint.Body));
+                parts.Add(new WeaponPart(HookName, WeaponPartShape.Box, new Vector3(0f, 0.025f, length - 0.01f), new Vector3(0.02f, 0.06f, 0.02f), WeaponPaint.Body, new Vector3(-30f, 0f, 0f)));
+                body = BeamAccent;
+                furniture = PolymerColor;
+            }
+
+            return new WeaponLook(
+                parts,
+                body,
+                furniture,
+                null,
+                new Vector3(0f, 0f, length),
+                new Vector3(0f, 0f, length * 0.5f),
+                new Vector3(0f, handleWidth, handle),
+                new Vector3(0f, 0f, handle * 0.5f),
+                null);
         }
 
         // 構えている間も一人称の銃は隠さないので、不透明な材質しか無い今はレンズや蓋のある円柱で作らず、中を素通しにした枠にする。

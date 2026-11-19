@@ -63,7 +63,7 @@ namespace Shooter.Editor
             }
 
             var round = spec.Round;
-            if (spec.Ammo.Kind == AmmoKind.Heat || round.Delivery == RoundDelivery.Beam || round.Delivery == RoundDelivery.Spray)
+            if (spec.IsMelee || spec.Ammo.Kind == AmmoKind.Heat || round.Delivery == RoundDelivery.Beam || round.Delivery == RoundDelivery.Spray)
             {
                 return (null, null);
             }

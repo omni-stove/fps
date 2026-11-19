@@ -122,6 +122,7 @@ namespace Shooter.Editor
             definition.HolsterSeconds = spec.HolsterSeconds;
             definition.Description = spec.Description;
             definition.Shield.Set(spec.Shield);
+            definition.Melee.Set(spec.Melee);
 
             var trigger = spec.Trigger;
             definition.Burst.Set(trigger.Burst);

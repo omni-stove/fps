@@ -73,7 +73,7 @@ namespace Shooter.Editor
         }
 
         // 光線と噴射は 1 発の弾として ShotFired を出さず (BeamDelivery / SprayDelivery)、ここに銃声を置いても鳴らないので選ばない。
-        // 盾 (WeaponSpec.Shield) は撃てずリロードもしないので、同じく選ばない。
+        // 盾 (WeaponSpec.Shield) と近接武器 (WeaponSpec.Melee) は撃てずリロードもしないので、同じく選ばない。
         public static (string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)? AssetsFor(Shooter.Core.WeaponSpec spec)
         {
             if (spec == null)
@@ -81,7 +81,7 @@ namespace Shooter.Editor
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            if (spec.IsShield || spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray)
+            if (spec.IsShield || spec.IsMelee || spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray)
             {
                 return null;
             }

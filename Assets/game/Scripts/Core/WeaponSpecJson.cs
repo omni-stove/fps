@@ -26,6 +26,7 @@ namespace Shooter.Core
         public const string AimItem = "aim";
         public const string AmmoTypesItem = "ammoTypes";
         public const string ShieldItem = RiotShieldSpecJson.ShieldItem;
+        public const string MeleeItem = MeleeWeaponSpecJson.MeleeItem;
 
         public const string FireModeItem = "fireMode";
         public const string FireIntervalItem = "fireInterval";
@@ -161,7 +162,7 @@ namespace Shooter.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, HolsterSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem, ShieldItem,
+                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, HolsterSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem, ShieldItem, MeleeItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -261,6 +262,8 @@ namespace Shooter.Core
             var ammoTypes = ReadAmmoTypes(fields);
             var shieldFields = fields.Object(ShieldItem, RiotShieldSpecJson.ItemNames);
             var shield = shieldFields == null ? null : RiotShieldSpecJson.Read(shieldFields);
+            var meleeFields = fields.Object(MeleeItem, MeleeWeaponSpecJson.ItemNames);
+            var melee = meleeFields == null ? null : MeleeWeaponSpecJson.Read(meleeFields);
 
             // 名前を出さない武器を null で書いていた頃の JSON も、書かないのと同じに読む。
             var nameKeyNode = fields.FindRaw(NameKeyItem);
@@ -291,7 +294,8 @@ namespace Shooter.Core
                     fields.ReadString(DescriptionItem, string.Empty),
                     drawSeconds,
                     fields.ReadFloat(HolsterSecondsItem, WeaponSpec.DefaultHolsterSeconds),
-                    shield);
+                    shield,
+                    melee);
             }
             catch (ArgumentException e)
             {
@@ -375,6 +379,7 @@ namespace Shooter.Core
             }
 
             RiotShieldSpecJson.Write(writer, spec.Shield);
+            MeleeWeaponSpecJson.Write(writer, spec.Melee);
         }
 
         private static TriggerSpec ReadTrigger(Part part)

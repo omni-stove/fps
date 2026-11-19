@@ -109,6 +109,10 @@ namespace Shooter.Core
 
         public bool IsShield => Shield != null;
 
+        public MeleeWeaponSpec Melee { get; }
+
+        public bool IsMelee => Melee != null;
+
         public WeaponSpec(
             string id,
             string nameKey,
@@ -192,7 +196,8 @@ namespace Shooter.Core
             string description = null,
             float? drawSeconds = null,
             float holsterSeconds = DefaultHolsterSeconds,
-            RiotShieldSpec shield = null)
+            RiotShieldSpec shield = null,
+            MeleeWeaponSpec melee = null)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -210,6 +215,12 @@ namespace Shooter.Core
             }
 
             SpecGuard.NonNegativeFinite(holsterSeconds, nameof(holsterSeconds));
+
+            // 両方を持たせると、攻撃のボタンで盾で殴るか武器で振るかが決まらない。
+            if (shield != null && melee != null)
+            {
+                throw new ArgumentException("a weapon cannot be both a shield and a melee weapon", nameof(melee));
+            }
 
             var resolvedRound = round ?? RoundSpec.Default;
             var resolvedImpact = impact ?? ImpactSpec.Default;
@@ -232,6 +243,7 @@ namespace Shooter.Core
             DrawSeconds = drawSeconds;
             HolsterSeconds = holsterSeconds;
             Shield = shield;
+            Melee = melee;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -239,7 +251,7 @@ namespace Shooter.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds, HolsterSeconds, Shield);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds, HolsterSeconds, Shield, Melee);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

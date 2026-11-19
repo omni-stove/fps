@@ -555,6 +555,98 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheMeleePartReadsBackAndAGunWritesNoMeleePart()
+        {
+            var melee = new MeleeWeaponSpec(
+                new MeleeSpec(30, 2f, 70f, 0.35f, 0.05f, 0.12f, 0.25f),
+                new MeleeSpec(75, 2.2f, 80f, 0.55f, 0.15f, 0.2f, 0.6f),
+                0.25f,
+                0.7f,
+                new MeleeThrowSpec(50, 18f, 4f, 900f, 0.12f, 6f));
+            var crowbar = new WeaponSpec(_rifleId, "weapon.crowbar", WeaponCategory.Melee, melee: melee);
+
+            var written = WeaponSpecJson.Write(crowbar);
+            var read = WeaponSpecJson.Parse(written, "crowbar.json");
+
+            Assert.That(written, Does.Contain("\"melee\""));
+            Assert.That(read.Category, Is.EqualTo(WeaponCategory.Melee));
+            Assert.That(read.IsMelee, Is.True);
+            Assert.That(read.Melee.Swing.Damage, Is.EqualTo(30));
+            Assert.That(read.Melee.Swing.Reach, Is.EqualTo(2f));
+            Assert.That(read.Melee.Swing.ArcDegrees, Is.EqualTo(70f));
+            Assert.That(read.Melee.Swing.SwingSeconds, Is.EqualTo(0.35f));
+            Assert.That(read.Melee.Swing.CooldownSeconds, Is.EqualTo(0.05f));
+            Assert.That(read.Melee.Swing.ImpactSeconds, Is.EqualTo(0.12f));
+            Assert.That(read.Melee.Swing.LungeDistance, Is.EqualTo(0.25f));
+            Assert.That(read.Melee.HeavySwing.Damage, Is.EqualTo(75));
+            Assert.That(read.Melee.HeavySwing.Reach, Is.EqualTo(2.2f));
+            Assert.That(read.Melee.HeavySwing.SwingSeconds, Is.EqualTo(0.55f));
+            Assert.That(read.Melee.HeavySwing.LungeDistance, Is.EqualTo(0.6f));
+            Assert.That(read.Melee.ChargeDelaySeconds, Is.EqualTo(0.25f));
+            Assert.That(read.Melee.ChargeSeconds, Is.EqualTo(0.7f));
+            Assert.That(read.Melee.Throw.Damage, Is.EqualTo(50));
+            Assert.That(read.Melee.Throw.Speed, Is.EqualTo(18f));
+            Assert.That(read.Melee.Throw.UpwardDegrees, Is.EqualTo(4f));
+            Assert.That(read.Melee.Throw.SpinDegreesPerSecond, Is.EqualTo(900f));
+            Assert.That(read.Melee.Throw.Radius, Is.EqualTo(0.12f));
+            Assert.That(read.Melee.Throw.MaxFlightSeconds, Is.EqualTo(6f));
+
+            var plain = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle);
+            Assert.That(WeaponSpecJson.Write(plain), Does.Not.Contain("\"melee\""), "a gun writes the same JSON as before");
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(plain), "plain.json").Melee, Is.Null);
+        }
+
+        [Test]
+        public void ALeftOutMeleeItemTakesItsDefaultAndTheHeavySwingFillsFromTheSwing()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"Melee\", \"melee\": {\"swing\": {\"damage\": 40}, \"heavySwing\": {\"damage\": 100}}}",
+                "melee.json");
+
+            Assert.That(read.Melee.Swing.Damage, Is.EqualTo(40));
+            Assert.That(read.Melee.Swing.Reach, Is.EqualTo(MeleeWeaponSpec.DefaultSwingReach));
+            Assert.That(read.Melee.HeavySwing.Damage, Is.EqualTo(100));
+            Assert.That(read.Melee.HeavySwing.Reach, Is.EqualTo(MeleeWeaponSpec.DefaultSwingReach), "the heavy swing takes what it leaves out from the swing");
+            Assert.That(read.Melee.ChargeSeconds, Is.EqualTo(MeleeWeaponSpec.DefaultChargeSeconds));
+            Assert.That(read.Melee.CanThrow, Is.False);
+
+            var empty = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"Melee\", \"melee\": {}}", "melee.json");
+            Assert.That(empty.Melee.Swing, Is.SameAs(MeleeWeaponSpec.DefaultSwing));
+            Assert.That(empty.Melee.CanCharge, Is.False);
+            Assert.That(empty.Melee.CanThrow, Is.False);
+
+            var thrown = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"Melee\", \"melee\": {\"throw\": {}}}", "melee.json");
+            Assert.That(thrown.Melee.Throw.Damage, Is.EqualTo(MeleeThrowSpec.DefaultDamage));
+            Assert.That(thrown.Melee.Throw.Speed, Is.EqualTo(MeleeThrowSpec.DefaultSpeed));
+        }
+
+        [TestCase("{\"swing\": {\"damage\": 0}}", "melee.swing.damage")]
+        [TestCase("{\"heavySwing\": {\"impactSeconds\": 5}}", "melee.heavySwing.impactSeconds")]
+        [TestCase("{\"swing\": {\"finisherSeconds\": 1}}", "melee.swing.finisherSeconds")]
+        [TestCase("{\"chargeSeconds\": 0}", "melee.chargeSeconds")]
+        [TestCase("{\"throw\": {\"speed\": -1}}", "melee.throw.speed")]
+        [TestCase("{\"throw\": {\"upwardDegrees\": 120}}", "melee.throw.upwardDegrees")]
+        [TestCase("{\"blade\": true}", "melee.blade")]
+        public void ABadMeleeValueNamesItsItem(string melee, string item)
+        {
+            var text = "{\"id\": \"" + _rifleId + "\", \"category\": \"Melee\", \"melee\": " + melee + "}";
+
+            var e = Assert.Throws<ServerDataJsonException>(() => WeaponSpecJson.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
+        }
+
+        [Test]
+        public void AShieldWithAMeleePartIsRefused()
+        {
+            var text = "{\"id\": \"" + _rifleId + "\", \"category\": \"Melee\", \"shield\": {}, \"melee\": {}}";
+
+            var e = Assert.Throws<ServerDataJsonException>(() => WeaponSpecJson.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo("melee"));
+        }
+
+        [Test]
         public void ANullNameKeyMeansNoName()
         {
             var read = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"nameKey\": null, \"category\": \"AssaultRifle\"}", "x.json");

@@ -213,6 +213,10 @@ namespace Shooter.Runtime
         [SerializeField]
         private RiotShieldSettings _shield = new RiotShieldSettings();
 
+        [Header("近接武器")]
+        [SerializeField]
+        private MeleeWeaponSettings _melee = new MeleeWeaponSettings();
+
         // この項目が無かった頃に保存したアセットも読み込むと 0 になるので、0 を未設定とする。
         public const float UnsetAdsFieldOfView = 0f;
 
@@ -516,6 +520,8 @@ namespace Shooter.Runtime
 
         public RiotShieldSettings Shield => _shield ??= new RiotShieldSettings();
 
+        public MeleeWeaponSettings Melee => _melee ??= new MeleeWeaponSettings();
+
         public bool AssignIdIfEmpty()
         {
             if (!string.IsNullOrWhiteSpace(_id))
@@ -585,7 +591,7 @@ namespace Shooter.Runtime
                     Sight.ToSpec(),
                     AdsMoveSpreadDegrees);
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds, Shield.ToSpec());
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds, Shield.ToSpec(), Melee.ToSpec());
             }
             catch (ArgumentException e)
             {

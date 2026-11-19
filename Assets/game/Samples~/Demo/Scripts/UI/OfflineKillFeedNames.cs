@@ -58,6 +58,12 @@ namespace Shooter.Runtime
                 return DisplayNames.Of(meleeWeapon);
             }
 
+            var thrown = melee != null ? melee.LastThrownWeapon : null;
+            if (thrown != null && string.Equals(thrown.Id, weaponId, StringComparison.Ordinal))
+            {
+                return DisplayNames.Of(thrown);
+            }
+
             var controller = killer.GetComponentInChildren<WeaponController>(true);
             var loadout = controller != null ? controller.Loadout : null;
             if (loadout != null)

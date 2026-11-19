@@ -536,6 +536,10 @@ namespace Shooter.Core
             {
                 SetCharge(_weapon.Trigger.ChargeFraction);
             }
+            else if (_weapon.MeleeCharge != null && _weapon.MeleeCharge.Spec.CanCharge)
+            {
+                SetCharge(_weapon.MeleeCharge.Fraction);
+            }
             else
             {
                 ClearCharge();
@@ -568,8 +572,8 @@ namespace Shooter.Core
 
         private void OnWeaponChanged()
         {
-            // 熱で撃つ武器は弾倉を減らさないので、弾数を出すと撃っても変わらない数が並ぶ。撃てるかは熱のゲージで見せる。
-            if (_weapon != null && !_weapon.Ammo.HeatFraction.HasValue)
+            // 熱で撃つ武器は弾倉を減らさないので、弾数を出すと撃っても変わらない数が並ぶ。撃てるかは熱のゲージで見せる。近接武器は弾を使わない。
+            if (_weapon != null && !_weapon.Ammo.HeatFraction.HasValue && !_weapon.Spec.IsMelee)
             {
                 SetAmmo(_weapon.AmmoInMagazine, _weapon.ReserveAmmo, _weapon.IsReloading, _weapon.HasInfiniteReserve);
             }

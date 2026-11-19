@@ -85,6 +85,8 @@ namespace Shooter.Tests.EditMode
             var shells = WeaponAssetBuilder.RangeWeaponSources().ToDictionary(source => source.Name, source => WeaponExtrasAssetStep.ShellFor(source.Spec));
 
             Assert.That(shells["Laser"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["Crowbar"], Is.EqualTo(((string)null, (string)null)));
+            Assert.That(shells["Machete"], Is.EqualTo(((string)null, (string)null)));
             Assert.That(shells["EnergyRifle"], Is.EqualTo(((string)null, (string)null)));
             Assert.That(shells["Flamethrower"], Is.EqualTo(((string)null, (string)null)));
             Assert.That(shells["Crossbow"], Is.EqualTo(((string)null, (string)null)));

@@ -210,6 +210,80 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void HardpointPublishesTheMirroredHillAsTheModeStatusUntilTheModeEnds()
+        {
+            var snapshot = Snapshot(MatchObjective.Hardpoint);
+            snapshot.Match.AlphaPoints = 12;
+            snapshot.Match.BravoPoints = 30;
+            snapshot.Match.RemainingSeconds = 240;
+            snapshot.Match.HasActivePoint = true;
+            snapshot.Match.ActivePointIndex = 1;
+            snapshot.Match.ObjectiveRemainingSeconds = 17;
+            AddPoint(snapshot, 0, null, 0, false);
+            AddPoint(snapshot, 1, Team.Bravo, -100, false);
+            AddPoint(snapshot, 2, null, 0, false);
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<Hardpoint>(), "the same detail type as offline, so the Hardpoint formatter reads it");
+            var hardpoint = (Hardpoint)status.Detail;
+            Assert.That(hardpoint.PointCount, Is.EqualTo(3));
+            Assert.That(hardpoint.ActivePoint, Is.EqualTo(1));
+            Assert.That(hardpoint.SecondsUntilMove, Is.EqualTo(17f));
+            Assert.That(hardpoint.Status, Is.EqualTo(HardpointStatus.Held));
+            Assert.That(hardpoint.Holder, Is.EqualTo(Side.Bravo));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(240f));
+            Assert.That(status.SideScores[0].Score, Is.EqualTo(12d));
+            Assert.That(status.SideScores[1].Score, Is.EqualTo(30d));
+            Assert.That(GameSignals.Domination.Value, Is.Null, "the hill's points are not domination points");
+            Assert.That(_hud.Model.FirstScore, Is.EqualTo(30), "the HUD's team scores are the hardpoint points");
+            Assert.That(_hud.Model.SecondScore, Is.EqualTo(12));
+
+            snapshot.Tick++;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(status), "an unchanged hill is not published again");
+
+            snapshot.Match.State = GameModeState.Ended;
+            snapshot.Match.HasWinner = true;
+            snapshot.Match.Winner = Team.Bravo;
+            _hud.Apply(snapshot);
+            var ended = GameSignals.ModeStatus.Value;
+            Assert.That(ended, Is.Not.SameAs(status));
+            Assert.That(ended.IsEnded, Is.True);
+            Assert.That(ended.Winner, Is.EqualTo((Side?)Side.Bravo), "the server's winner is shown");
+
+            snapshot.Match.Objective = MatchObjective.None;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "a match without a mode takes the status back");
+        }
+
+        [Test]
+        public void ClearSignalsTakesBackTheHardpointStatus()
+        {
+            var snapshot = Snapshot(MatchObjective.Hardpoint);
+            snapshot.Match.HasActivePoint = true;
+            snapshot.Match.ActivePointIndex = 0;
+            snapshot.Match.ObjectiveRemainingSeconds = 20;
+            AddPoint(snapshot, 0, Team.Alpha, 100, false);
+            AddPoint(snapshot, 1, null, 0, false);
+            AddPoint(snapshot, 2, null, 0, false);
+            _hud.Apply(snapshot);
+            var shown = GameSignals.ModeStatus.Value;
+            Assert.That(shown, Is.Not.Null);
+
+            _hud.ClearSignals();
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
+
+            _hud.Apply(snapshot);
+            var again = GameSignals.ModeStatus.Value;
+            Assert.That(again, Is.Not.Null, "the next snapshot after clearing publishes the hill again");
+            Assert.That(again, Is.Not.SameAs(shown));
+        }
+
+        [Test]
         public void GunGameShowsTheTiersOnlyWithALocalLadder()
         {
             var snapshot = Snapshot(MatchObjective.GunGame);

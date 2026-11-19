@@ -370,8 +370,30 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(input.Move, Is.EqualTo(Vector2.zero));
             Assert.That(input.Vertical, Is.Zero);
-            Assert.That(input.FireHeld || input.AimHeld || input.Boost || input.ReloadPressed, Is.False);
+            Assert.That(input.FireHeld || input.AimHeld || input.Boost || input.ReloadPressed || input.CountermeasurePressed, Is.False);
             Assert.That(input.HasAim, Is.True, "aims where the rider looks");
+        }
+
+        [Test]
+        public void TheCountermeasureActionIsReadOnlyWhileRiding()
+        {
+            var countermeasure = new InputAction("Countermeasure", InputActionType.Button);
+            try
+            {
+                _rider.SetActions(null, null, null, null, null, null, countermeasure);
+                Assert.That(countermeasure.enabled, Is.False, "on foot the rider leaves it alone");
+
+                _vehicle.TryEnter(_rider);
+                Assert.That(countermeasure.enabled, Is.True, "boarding starts reading it");
+                Assert.That(_rider.ReadSeatInput().CountermeasurePressed, Is.False, "nothing is pressed");
+
+                Assert.That(_rider.Exit(), Is.True);
+                Assert.That(countermeasure.enabled, Is.False, "leaving gives it back disabled");
+            }
+            finally
+            {
+                countermeasure.Dispose();
+            }
         }
 
         [Test]

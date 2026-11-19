@@ -83,6 +83,8 @@ namespace Shooter.Tests.EditMode
         [TestCase("Chat")]
         [TestCase("TeamChat")]
         [TestCase("PushToTalk")]
+        [TestCase("Emote")]
+        [TestCase("Countermeasure")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
@@ -94,6 +96,8 @@ namespace Shooter.Tests.EditMode
         [TestCase("Chat", "<Keyboard>/enter")]
         [TestCase("TeamChat", "<Keyboard>/u")]
         [TestCase("PushToTalk", "<Keyboard>/capsLock")]
+        [TestCase("Emote", "<Keyboard>/j")]
+        [TestCase("Countermeasure", "<Keyboard>/f")]
         public void LeanChatAndVoiceStartOnTheirKeys(string actionName, string path)
         {
             var slot = new RebindSlot(actionName, InputDeviceKind.KeyboardMouse);

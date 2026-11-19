@@ -87,6 +87,9 @@ namespace Shooter.Tests.EditMode
             definition.Streaks = Streaks.Off;
             definition.TextChat = TextChat.Off;
             definition.Spectating = Spectating.Off;
+            definition.Emote = Emote.On;
+            definition.Stamina = Stamina.On;
+            definition.RespawnAnchors = new[] { RespawnAnchor.Beacon, RespawnAnchor.Base };
 
             var rules = definition.ToRules();
 
@@ -138,7 +141,55 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.Streaks, Is.EqualTo(Streaks.Off));
             Assert.That(rules.TextChat, Is.EqualTo(TextChat.Off));
             Assert.That(rules.Spectating, Is.EqualTo(Spectating.Off));
+            Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
+            Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
+            Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
+        }
+
+        [Test]
+        public void ANewDefinitionRespawnsAtTheBaseOnlyAndLeavesEmoteAndStaminaOff()
+        {
+            var definition = NewDefinition("Fresh");
+
+            Assert.That(definition.Emote, Is.EqualTo(Emote.Off));
+            Assert.That(definition.Stamina, Is.EqualTo(Stamina.Off));
+            Assert.That(definition.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+        }
+
+        [Test]
+        public void TheRespawnAnchorsAreCopiedInAndOut()
+        {
+            var definition = NewDefinition("Anchors");
+            var given = new[] { RespawnAnchor.Squad, RespawnAnchor.Base };
+            definition.RespawnAnchors = given;
+
+            given[0] = RespawnAnchor.Beacon;
+            definition.RespawnAnchors[1] = RespawnAnchor.Beacon;
+
+            Assert.That(definition.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Squad, RespawnAnchor.Base }));
+        }
+
+        [TestCase(new RespawnAnchor[0])]
+        [TestCase(new[] { RespawnAnchor.Base, RespawnAnchor.Base })]
+        [TestCase(new[] { (RespawnAnchor)99 })]
+        public void ToRulesRejectsUnusableRespawnAnchorsWithTheAssetName(RespawnAnchor[] anchors)
+        {
+            var definition = NewDefinition("BrokenAnchors");
+            definition.RespawnAnchors = anchors;
+
+            var e = Assert.Throws<GameRulesDefinitionException>(() => definition.ToRules());
+            Assert.That(e.Message, Does.Contain("BrokenAnchors"));
+            Assert.That(e.InnerException, Is.InstanceOf<ArgumentException>());
+        }
+
+        [Test]
+        public void ToRulesRejectsAMissingRespawnAnchorListInsteadOfFallingBackToTheBase()
+        {
+            var definition = NewDefinition("NoAnchors");
+            definition.RespawnAnchors = null;
+
+            Assert.Throws<GameRulesDefinitionException>(() => definition.ToRules());
         }
 
         [Test]
@@ -181,7 +232,9 @@ namespace Shooter.Tests.EditMode
                     Abilities.On,
                     SlowMotion.On,
                     AimToFire.On,
-                    Jump.Off),
+                    Jump.Off,
+                    emote: Emote.On,
+                    stamina: Stamina.On),
                 2f,
                 FallDamage.On,
                 HudDensity.Hardcore,
@@ -193,7 +246,8 @@ namespace Shooter.Tests.EditMode
                 ViewMode.ThirdPerson)
                 .WithStreaks(Streaks.Off)
                 .WithTextChat(TextChat.Off)
-                .WithSpectating(Spectating.Off);
+                .WithSpectating(Spectating.Off)
+                .WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Beacon, RespawnAnchor.Base });
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -344,6 +398,9 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks));
             Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat));
             Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating));
+            Assert.That(actual.Actions.Emote, Is.EqualTo(expected.Actions.Emote));
+            Assert.That(actual.Actions.Stamina, Is.EqualTo(expected.Actions.Stamina));
+            Assert.That(actual.RespawnAnchors, Is.EqualTo(expected.RespawnAnchors));
         }
 
         private GameRulesDefinition NewBroken(string assetName, string field)

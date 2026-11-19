@@ -15,7 +15,8 @@ namespace Shooter.Runtime
             bool aimHeld,
             bool reloadPressed,
             Vector3 aimOrigin,
-            Vector3 aimDirection)
+            Vector3 aimDirection,
+            bool countermeasurePressed = false)
         {
             if (!(Mathf.Abs(move.x) <= 1f && Mathf.Abs(move.y) <= 1f))
             {
@@ -45,6 +46,7 @@ namespace Shooter.Runtime
             ReloadPressed = reloadPressed;
             AimOrigin = aimOrigin;
             AimDirection = aimDirection.sqrMagnitude > 1e-12f ? aimDirection.normalized : Vector3.zero;
+            CountermeasurePressed = countermeasurePressed;
         }
 
         public Vector2 Move { get; }
@@ -62,6 +64,9 @@ namespace Shooter.Runtime
         public Vector3 AimOrigin { get; }
 
         public Vector3 AimDirection { get; }
+
+        // 押したフレームだけ true にするのは、押し続けてもフレア 1 回分しか撒かないようにするため。
+        public bool CountermeasurePressed { get; }
 
         public bool HasAim => AimDirection != Vector3.zero;
 

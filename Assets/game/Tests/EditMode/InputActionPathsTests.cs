@@ -49,6 +49,8 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.Chat)]
         [TestCase(InputActionPaths.TeamChat)]
         [TestCase(InputActionPaths.PushToTalk)]
+        [TestCase(InputActionPaths.Emote)]
+        [TestCase(InputActionPaths.Countermeasure)]
         public void EveryPathExistsInTheProjectWideActions(string path)
         {
             Find(path);
@@ -111,6 +113,8 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.TeamChat, "<Keyboard>/u")]
         [TestCase(InputActionPaths.PushToTalk, "<Keyboard>/capsLock")]
         [TestCase(InputActionPaths.SwitchStreak, "<Keyboard>/3")]
+        [TestCase(InputActionPaths.Emote, "<Keyboard>/j")]
+        [TestCase(InputActionPaths.Countermeasure, "<Keyboard>/f")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);
@@ -157,6 +161,14 @@ namespace Shooter.Tests.EditMode
             Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Keyboard>/r"));
             Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.path == "<Gamepad>/buttonWest"));
             Assert.That(MatchRunner.RestartActionPath, Is.EqualTo(InputActionPaths.Reload));
+        }
+
+        [Test]
+        public void TheVehicleRiderReadsCountermeasureFromItsOwnPath()
+        {
+            Assert.That(PlayerVehicleRider.CountermeasureActionPath, Is.EqualTo(InputActionPaths.Countermeasure));
+            Assert.That(InputActionPaths.Countermeasure, Is.EqualTo("Player/Countermeasure"));
+            Assert.That(InputActionPaths.Emote, Is.EqualTo("Player/Emote"));
         }
 
         [Test]

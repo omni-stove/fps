@@ -74,6 +74,10 @@ namespace Shooter.Core
 
         public float ReviveRange { get; }
 
+        public Emote Emote { get; }
+
+        public Stamina Stamina { get; }
+
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -101,7 +105,9 @@ namespace Shooter.Core
             SlowMotion slowMotion = SlowMotion.Off,
             AimToFire aimToFire = AimToFire.Off,
             Jump jump = Jump.On,
-            float reviveRange = ReviveReach.DefaultRange)
+            float reviveRange = ReviveReach.DefaultRange,
+            Emote emote = Emote.Off,
+            Stamina stamina = Stamina.Off)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -185,6 +191,9 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(reviveRange), reviveRange, "reviveRange must be positive and finite");
             }
 
+            RequireDefined(emote, nameof(emote));
+            RequireDefined(stamina, nameof(stamina));
+
             Downed = downed;
             DownedBleedoutSeconds = downedBleedoutSeconds;
             DownedHealthFraction = downedHealthFraction;
@@ -212,6 +221,8 @@ namespace Shooter.Core
             AimToFire = aimToFire;
             Jump = jump;
             ReviveRange = reviveRange;
+            Emote = emote;
+            Stamina = stamina;
         }
 
         public ActionRules WithDowned(Downed value) => Copy(downed: value);
@@ -268,6 +279,10 @@ namespace Shooter.Core
 
         public ActionRules WithReviveRange(float value) => Copy(reviveRange: value);
 
+        public ActionRules WithEmote(Emote value) => Copy(emote: value);
+
+        public ActionRules WithStamina(Stamina value) => Copy(stamina: value);
+
         private static void RequireDefined<T>(T value, string name)
             where T : struct, Enum
         {
@@ -304,7 +319,9 @@ namespace Shooter.Core
             SlowMotion? slowMotion = null,
             AimToFire? aimToFire = null,
             Jump? jump = null,
-            float? reviveRange = null)
+            float? reviveRange = null,
+            Emote? emote = null,
+            Stamina? stamina = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -333,7 +350,9 @@ namespace Shooter.Core
                 slowMotion ?? SlowMotion,
                 aimToFire ?? AimToFire,
                 jump ?? Jump,
-                reviveRange ?? ReviveRange);
+                reviveRange ?? ReviveRange,
+                emote ?? Emote,
+                stamina ?? Stamina);
         }
     }
 }

@@ -1,9 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Shooter.Core
 {
     public sealed class GameRules
     {
+        // Default より先に初期化しないと、Default のコンストラクターが null を受けて既定に置き換えるときに null を写す。
+        public static readonly IReadOnlyList<RespawnAnchor> DefaultRespawnAnchors =
+            new ReadOnlyCollection<RespawnAnchor>(new[] { RespawnAnchor.Base });
+
         public static readonly GameRules Default = new GameRules(
             FriendlyFire.Off,
             RespawnMode.Individual,
@@ -77,6 +83,9 @@ namespace Shooter.Core
 
         public Spectating Spectating { get; }
 
+        // 1 つでなく試す順の並びで持つのは、分隊がいない・ビーコンが無いなどで使えない候補から次の候補へ下がれるようにするため。
+        public IReadOnlyList<RespawnAnchor> RespawnAnchors { get; }
+
         public GameRules(
             FriendlyFire friendlyFire,
             RespawnMode respawnMode,
@@ -102,7 +111,8 @@ namespace Shooter.Core
             ZoneDamageMultipliers zoneDamage = null,
             Streaks streaks = Streaks.On,
             TextChat textChat = TextChat.On,
-            Spectating spectating = Spectating.On)
+            Spectating spectating = Spectating.On,
+            IReadOnlyList<RespawnAnchor> respawnAnchor = null)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -215,6 +225,8 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(spectating), spectating, "spectating is not a defined Spectating");
             }
 
+            var anchors = respawnAnchor == null ? DefaultRespawnAnchors : CopyAnchors(respawnAnchor);
+
             FriendlyFire = friendlyFire;
             RespawnMode = respawnMode;
             WaveIntervalSeconds = waveIntervalSeconds;
@@ -240,6 +252,7 @@ namespace Shooter.Core
             Streaks = streaks;
             TextChat = textChat;
             Spectating = spectating;
+            RespawnAnchors = anchors;
         }
 
         public GameRules WithFriendlyFire(FriendlyFire value) => Copy(friendlyFire: value);
@@ -310,6 +323,47 @@ namespace Shooter.Core
 
         public GameRules WithSpectating(Spectating value) => Copy(spectating: value);
 
+        // WithActions と同じく、差し替えたつもりの値が黙って既定に戻らないよう null を受け付けない。
+        public GameRules WithRespawnAnchors(IReadOnlyList<RespawnAnchor> value)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            return Copy(respawnAnchor: value);
+        }
+
+        // 呼んだ側が後から配列を書き換えてもルールが変わらないよう、検査した写しを持つ。
+        private static IReadOnlyList<RespawnAnchor> CopyAnchors(IReadOnlyList<RespawnAnchor> anchors)
+        {
+            // 例外の ParamName はコンストラクターの引数名に揃える (GameRulesJson が項目名として返す)。
+            const string paramName = "respawnAnchor";
+            if (anchors.Count == 0)
+            {
+                throw new ArgumentException("respawnAnchor must list at least one anchor", paramName);
+            }
+
+            var copy = new RespawnAnchor[anchors.Count];
+            for (var i = 0; i < anchors.Count; i++)
+            {
+                var anchor = anchors[i];
+                if (!Enum.IsDefined(typeof(RespawnAnchor), anchor))
+                {
+                    throw new ArgumentOutOfRangeException(paramName, anchor, "respawnAnchor has an anchor that is not a defined RespawnAnchor");
+                }
+
+                if (Array.IndexOf(copy, anchor, 0, i) >= 0)
+                {
+                    throw new ArgumentException($"respawnAnchor lists {anchor} more than once", paramName);
+                }
+
+                copy[i] = anchor;
+            }
+
+            return new ReadOnlyCollection<RespawnAnchor>(copy);
+        }
+
         private GameRules Copy(
             FriendlyFire? friendlyFire = null,
             RespawnMode? respawnMode = null,
@@ -335,7 +389,8 @@ namespace Shooter.Core
             ZoneDamageMultipliers zoneDamage = null,
             Streaks? streaks = null,
             TextChat? textChat = null,
-            Spectating? spectating = null)
+            Spectating? spectating = null,
+            IReadOnlyList<RespawnAnchor> respawnAnchor = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -362,7 +417,8 @@ namespace Shooter.Core
                 zoneDamage ?? ZoneDamage,
                 streaks ?? Streaks,
                 textChat ?? TextChat,
-                spectating ?? Spectating);
+                spectating ?? Spectating,
+                respawnAnchor ?? RespawnAnchors);
         }
     }
 }

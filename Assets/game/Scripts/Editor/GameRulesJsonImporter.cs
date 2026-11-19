@@ -99,6 +99,7 @@ namespace Shooter.Editor
                 names.Add(name, file);
 
                 var rules = GameRulesJson.Parse(File.ReadAllText(file, Encoding.UTF8), file);
+                Debug.Log(GameRulesLog.Read(file, rules));
                 var assetPath = SceneBuildHelpers.ValidateAssetPath(folder + "/" + name + _assetExtension);
                 entries.Add((assetPath, rules));
             }

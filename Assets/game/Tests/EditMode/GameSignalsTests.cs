@@ -65,6 +65,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Replays.Value, Is.Null);
             Assert.That(GameSignals.Cosmetics.Value, Is.Null);
             Assert.That(GameSignals.Stash.Value, Is.Null);
+            Assert.That(GameSignals.Aircraft.Value, Is.Null);
+            Assert.That(GameSignals.Stamina.Value, Is.Null);
+            Assert.That(GameSignals.LockOnWarning.Value, Is.Null);
+            Assert.That(GameSignals.Emotes.Value, Is.Null);
         }
 
         [Test]
@@ -187,6 +191,10 @@ namespace Shooter.Tests.EditMode
             GameSignals.Replays.Publish(new FakeReplayLibrary());
             GameSignals.Cosmetics.Publish(new FakeCosmeticLocker());
             GameSignals.Stash.Publish(new StashStatus(60, null));
+            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
+            GameSignals.Stamina.Publish(new StaminaStatus(0f, 100f, true));
+            GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Locked, 90f));
+            GameSignals.Emotes.Publish(new FakeEmoteControl());
             heard = 0;
 
             GameSignals.ResetAll();
@@ -194,6 +202,45 @@ namespace Shooter.Tests.EditMode
             EverySignalStartsEmpty();
             GameSignals.ModeStatus.Publish(Status());
             Assert.That(heard, Is.Zero, "subscribers from before the reset are gone");
+        }
+
+        [Test]
+        public void ResetAllDropsTheStaminaLockOnAndEmoteSubscribers()
+        {
+            var heardStamina = 0;
+            var heardLockOn = 0;
+            var heardEmotes = 0;
+            GameSignals.Stamina.Changed += _ => heardStamina++;
+            GameSignals.LockOnWarning.Changed += _ => heardLockOn++;
+            GameSignals.Emotes.Changed += _ => heardEmotes++;
+
+            GameSignals.ResetAll();
+            GameSignals.Stamina.Publish(new StaminaStatus(50f, 100f, false));
+            GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Tracking, -45f));
+            GameSignals.Emotes.Publish(new FakeEmoteControl());
+
+            Assert.That(heardStamina, Is.Zero);
+            Assert.That(heardLockOn, Is.Zero);
+            Assert.That(heardEmotes, Is.Zero);
+        }
+
+        [Test]
+        public void TheStaminaLockOnAndEmoteSignalsHoldWhatWasPublished()
+        {
+            var emotes = new FakeEmoteControl();
+
+            GameSignals.Stamina.Publish(new StaminaStatus(0f, 80f, true));
+            GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.None, 0f));
+            GameSignals.Emotes.Publish(emotes);
+
+            Assert.That(GameSignals.Stamina.Value, Is.EqualTo((StaminaStatus?)new StaminaStatus(0f, 80f, true)));
+            Assert.That(GameSignals.Stamina.Value.Value.Depleted, Is.True);
+            Assert.That(GameSignals.LockOnWarning.HasValue, Is.True, "no threat is still something to show");
+            Assert.That(GameSignals.LockOnWarning.Value.Value.IsWarning, Is.False);
+            Assert.That(GameSignals.Emotes.Value.EmoteIds, Is.EqualTo(new[] { "wave", "salute" }));
+            Assert.That(GameSignals.Emotes.Value.Play("wave"), Is.True);
+            Assert.That(GameSignals.Emotes.Value.Play("dance"), Is.False, "an Id the list does not have");
+            Assert.That(emotes.Played, Is.EqualTo(new[] { "wave" }));
         }
 
         [Test]
@@ -497,6 +544,24 @@ namespace Shooter.Tests.EditMode
             public bool Delete(string replayId)
             {
                 return false;
+            }
+        }
+
+        private sealed class FakeEmoteControl : IEmoteControl
+        {
+            public IReadOnlyList<string> EmoteIds { get; } = new[] { "wave", "salute" };
+
+            public List<string> Played { get; } = new List<string>();
+
+            public bool Play(string emoteId)
+            {
+                if (!((IList<string>)EmoteIds).Contains(emoteId))
+                {
+                    return false;
+                }
+
+                Played.Add(emoteId);
+                return true;
             }
         }
 

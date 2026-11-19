@@ -33,7 +33,9 @@ namespace Shooter.Core.Tests
             Abilities.On,
             SlowMotion.On,
             AimToFire.On,
-            Jump.Off);
+            Jump.Off,
+            emote: Emote.On,
+            stamina: Stamina.On);
 
         private static readonly GameRules _rules = new GameRules(
             FriendlyFire.On,
@@ -55,7 +57,8 @@ namespace Shooter.Core.Tests
             60f,
             3,
             ReloadMode.Manual,
-            ViewMode.ThirdPerson);
+            ViewMode.ThirdPerson,
+            respawnAnchor: new[] { RespawnAnchor.Squad, RespawnAnchor.Base });
 
         [Test]
         public void EachGameRulesWithReplacesOnlyItsValue()
@@ -89,6 +92,7 @@ namespace Shooter.Core.Tests
                 (nameof(GameRules.Streaks), r => r.WithStreaks(Streaks.Off), Streaks.Off),
                 (nameof(GameRules.TextChat), r => r.WithTextChat(TextChat.Off), TextChat.Off),
                 (nameof(GameRules.Spectating), r => r.WithSpectating(Spectating.Off), Spectating.Off),
+                (nameof(GameRules.RespawnAnchors), r => r.WithRespawnAnchors(new[] { RespawnAnchor.Beacon }), new[] { RespawnAnchor.Beacon }),
             };
 
             AssertEveryPropertyHasACase(typeof(GameRules), cases.Length);
@@ -132,6 +136,8 @@ namespace Shooter.Core.Tests
                 (nameof(ActionRules.AimToFire), a => a.WithAimToFire(AimToFire.Off), AimToFire.Off),
                 (nameof(ActionRules.Jump), a => a.WithJump(Jump.On), Jump.On),
                 (nameof(ActionRules.ReviveRange), a => a.WithReviveRange(3.5f), 3.5f),
+                (nameof(ActionRules.Emote), a => a.WithEmote(Emote.Off), Emote.Off),
+                (nameof(ActionRules.Stamina), a => a.WithStamina(Stamina.Off), Stamina.Off),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。
@@ -230,6 +236,8 @@ namespace Shooter.Core.Tests
             AssertRejected(() => _actions.WithSlowMotion((SlowMotion)99), "slowMotion");
             AssertRejected(() => _actions.WithAimToFire((AimToFire)99), "aimToFire");
             AssertRejected(() => _actions.WithJump((Jump)99), "jump");
+            AssertRejected(() => _actions.WithEmote((Emote)99), "emote");
+            AssertRejected(() => _actions.WithStamina((Stamina)99), "stamina");
         }
 
         [Test]
@@ -251,6 +259,8 @@ namespace Shooter.Core.Tests
             Assert.That(actions.Abilities, Is.EqualTo(Abilities.Off));
             Assert.That(actions.SlowMotion, Is.EqualTo(SlowMotion.Off));
             Assert.That(actions.AimToFire, Is.EqualTo(AimToFire.Off));
+            Assert.That(actions.Emote, Is.EqualTo(Emote.Off));
+            Assert.That(actions.Stamina, Is.EqualTo(Stamina.Off));
         }
 
         [Test]

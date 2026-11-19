@@ -72,7 +72,8 @@ namespace Shooter.Runtime
                 return RollingBack;
             }
 
-            return status.Pushers > 0 ? Pushing(status.Pushers) : Idle;
+            // 人数が MinPushers に足りないと台車は進まないので、そばにいても押しているとは出さない。
+            return status.Pushers >= status.MinPushers ? Pushing(status.Pushers) : Idle;
         }
 
         public static LocalizedText Role(Side side, Side attackers)

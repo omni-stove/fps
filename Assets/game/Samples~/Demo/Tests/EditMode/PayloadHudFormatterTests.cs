@@ -65,6 +65,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(PayloadHudFormatter.Motion(Detail(pushers: 0, rollingBack: true)), Is.EqualTo(PayloadHudFormatter.RollingBack));
             Assert.That(Localizer.Resolve(PayloadHudFormatter.Motion(Detail(pushers: 2))), Is.EqualTo("2 人が押している"));
             Assert.That(PayloadHudFormatter.Motion(Detail(pushers: 0)), Is.EqualTo(PayloadHudFormatter.Idle));
+            var short2 = new PayloadStatus(Side.Alpha, 0.4f, 1, 2, 1, false, false, 2);
+            Assert.That(PayloadHudFormatter.Motion(short2), Is.EqualTo(PayloadHudFormatter.Idle), "fewer than minPushers do not move the cart");
         }
 
         [Test]

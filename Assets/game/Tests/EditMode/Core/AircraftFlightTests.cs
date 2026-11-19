@@ -22,7 +22,14 @@ namespace Shooter.Core.Tests
                 yawRate: 45f,
                 responsiveness: 2f,
                 alignment: 1f,
-                airBrakeDrag: 3f));
+                airBrakeDrag: 3f,
+                liftSlope: 0.1f,
+                criticalAngle: 10f,
+                postStallLift: 0.5f,
+                inducedDrag: 0.1f,
+                weathervane: 2f,
+                dihedral: 1f,
+                wingRoll: 0.5f));
 
         [Test]
         public void TheAxesAreThrottlePitchRollYaw()
@@ -34,12 +41,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void LiftGrowsWithTheSquareOfSpeedUpToTheWeight()
+        public void LiftGrowsWithTheAngleOfAttackAndTheSquareOfSpeed()
         {
-            Assert.That(AircraftAero.LiftRatio(_spec.Aero, 20f), Is.EqualTo(0.25f).Within(_epsilon));
-            Assert.That(AircraftAero.LiftRatio(_spec.Aero, 40f), Is.EqualTo(1f).Within(_epsilon));
-            Assert.That(AircraftAero.LiftRatio(_spec.Aero, 80f), Is.EqualTo(1f));
-            Assert.That(AircraftAero.LiftRatio(_spec.Aero, -5f), Is.EqualTo(0f));
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, new Vector3(0f, 0f, 40f)), Is.EqualTo(0f), "air along the nose does not lift");
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, AtAngle(5f, 20f)), Is.EqualTo(0.125f).Within(_epsilon));
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, AtAngle(5f, 40f)), Is.EqualTo(0.5f).Within(_epsilon));
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, AtAngle(9f, 40f)), Is.EqualTo(0.9f).Within(_epsilon));
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, AtAngle(9f, 80f)), Is.EqualTo(3.6f).Within(1e-3f), "past the weight");
+            Assert.That(AircraftAero.LiftRatio(_spec.Aero, Vector3.Zero), Is.EqualTo(0f));
         }
 
         [Test]
@@ -61,13 +70,13 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void FullThrottleAtTopSpeedHoldsLevelFlight()
+        public void FullThrottleAtTopSpeedAlongTheNoseBalancesTheDrag()
         {
             var command = AircraftFlight.Compute(_spec, new VehicleMotorInput(1f), new Vector3(0f, 0f, 100f), Vector3.Zero, 10f);
 
-            AssertNear(command.LocalAcceleration, new Vector3(0f, 10f, 0f));
+            AssertNear(command.LocalAcceleration, Vector3.Zero);
             AssertNear(command.LocalAngularAcceleration, Vector3.Zero);
-            Assert.That(command.LiftRatio, Is.EqualTo(1f));
+            Assert.That(command.LiftRatio, Is.EqualTo(0f), "no angle of attack, no lift");
             Assert.That(command.Control, Is.EqualTo(1f));
         }
 
@@ -76,15 +85,15 @@ namespace Shooter.Core.Tests
         {
             var command = AircraftFlight.Compute(_spec, new VehicleMotorInput(-1f), new Vector3(0f, 0f, 50f), Vector3.Zero, 10f);
 
-            AssertNear(command.LocalAcceleration, new Vector3(0f, 10f, -10f));
+            AssertNear(command.LocalAcceleration, new Vector3(0f, 0f, -10f));
         }
 
         [Test]
-        public void SideAndVerticalDriftIsPulledTowardTheNose()
+        public void SideDriftIsPulledTowardTheNoseButVerticalDriftIsLeftToTheLift()
         {
             var command = AircraftFlight.Compute(_spec, VehicleMotorInput.Idle, new Vector3(2f, -4f, 20f), Vector3.Zero, 0f);
 
-            AssertNear(command.LocalAcceleration, new Vector3(-2.040988f, 4.081976f, -0.409878f));
+            AssertNear(command.LocalAcceleration, new Vector3(-2.040988f, 0.081976f, -0.409878f));
         }
 
         [Test]
@@ -117,7 +126,7 @@ namespace Shooter.Core.Tests
                 () => AircraftFlight.Compute(_spec, VehicleMotorInput.Idle, Vector3.Zero, new Vector3(0f, float.PositiveInfinity, 0f), 9.8f));
             Assert.Throws<ArgumentOutOfRangeException>(() => AircraftFlight.Compute(_spec, VehicleMotorInput.Idle, Vector3.Zero, Vector3.Zero, -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => AircraftAero.TopSpeed(_spec, float.NaN));
-            Assert.Throws<ArgumentNullException>(() => AircraftAero.LiftRatio(null, 10f));
+            Assert.Throws<ArgumentNullException>(() => AircraftAero.LiftRatio(null, new Vector3(0f, 0f, 10f)));
             Assert.Throws<ArgumentNullException>(() => AircraftAero.Control(null, 10f));
         }
 
@@ -191,12 +200,17 @@ namespace Shooter.Core.Tests
         {
             var condition = new AircraftCondition(leftLift: 0.5f, rightLift: 1f, control: 0.5f, thrust: 0.25f);
 
+            var climb = AtAngle(5f, 40f);
+            var across = new Vector3(0f, climb.Z, -climb.Y) / climb.Length();
+
             var level = AircraftFlight.Compute(_spec, new VehicleMotorInput(1f), new Vector3(0f, 0f, 100f), Vector3.Zero, 10f, default, condition);
+            var lifting = AircraftFlight.Compute(_spec, VehicleMotorInput.Idle, climb, Vector3.Zero, 10f, default, condition);
             var turning = AircraftFlight.Compute(
                 _spec, new VehicleMotorInput(0f, 1f, 1f, -1f), new Vector3(0f, 0f, 20f), Vector3.Zero, 0f, default, condition);
 
             Assert.That(condition.Lift, Is.EqualTo(0.75f).Within(_epsilon));
-            Assert.That(level.LocalAcceleration.Y, Is.EqualTo(7.5f).Within(_epsilon), "lift is the average of both wings");
+            Assert.That(Vector3.Dot(lifting.LocalAcceleration, across), Is.EqualTo(3.75f).Within(_epsilon), "lift is the sum of both wings");
+            Assert.That(lifting.LocalAngularAcceleration.Z, Is.EqualTo(0.625f).Within(_epsilon), "the stronger right wing rolls it left");
             Assert.That(level.LocalAcceleration.Z, Is.EqualTo(-7.5f).Within(_epsilon), "a quarter of the thrust loses to the drag at top speed");
             Assert.That(level.LocalAcceleration.X, Is.EqualTo(0f).Within(_epsilon));
             AssertNear(turning.LocalAngularAcceleration, new Vector3(-1.570796f, -0.785398f, -3.141593f));
@@ -216,13 +230,19 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheCommandCarriesTheFlightState()
         {
-            var command = AircraftFlight.Compute(_spec, new VehicleMotorInput(1f), new Vector3(0f, 0f, 100f), Vector3.Zero, 10f);
+            var command = AircraftFlight.Compute(_spec, new VehicleMotorInput(1f), AtAngle(5f, 40f), Vector3.Zero, 10f);
 
-            Assert.That(command.State.Airspeed, Is.EqualTo(100f).Within(_epsilon));
-            Assert.That(command.State.AngleOfAttackRadians, Is.EqualTo(0f).Within(_epsilon));
+            Assert.That(command.State.Airspeed, Is.EqualTo(40f).Within(_epsilon));
+            Assert.That(command.State.AngleOfAttackRadians, Is.EqualTo((float)(5.0 * Math.PI / 180.0)).Within(_epsilon));
             Assert.That(command.State.SideslipRadians, Is.EqualTo(0f).Within(_epsilon));
-            Assert.That(command.State.LoadFactor, Is.EqualTo(1f).Within(_epsilon), "the wings carry the full weight");
+            Assert.That(command.State.LoadFactor, Is.EqualTo(0.514221f).Within(_epsilon), "half the weight across the wind, tilted up, plus the drag");
             Assert.That(command.State.Grounded, Is.False);
+        }
+
+        private static Vector3 AtAngle(float degrees, float speed)
+        {
+            var radians = degrees * Math.PI / 180.0;
+            return new Vector3(0f, (float)(-speed * Math.Sin(radians)), (float)(speed * Math.Cos(radians)));
         }
 
         private static void AssertNear(Vector3 actual, Vector3 expected)

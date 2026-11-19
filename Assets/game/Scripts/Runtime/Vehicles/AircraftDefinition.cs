@@ -28,6 +28,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("壊れたときの飛び方の値")]
         private AircraftDamageSettings _damage = new AircraftDamageSettings();
 
+        [SerializeField, Tooltip("舵面の動き・エンジン音・ベイパーの値 (AircraftEffects が読む)")]
+        private AircraftEffectsSettings _effects = new AircraftEffectsSettings();
+
         public float Mass
         {
             get => _mass;
@@ -50,6 +53,8 @@ namespace Shooter.Runtime
 
         public AircraftDamageSettings Damage => _damage ??= new AircraftDamageSettings();
 
+        public AircraftEffectsSettings Effects => _effects ??= new AircraftEffectsSettings();
+
         public AircraftSpec ToSpec()
         {
             try
@@ -67,6 +72,30 @@ namespace Shooter.Runtime
             try
             {
                 return Aim.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftEffectsSpec ToEffectsSpec()
+        {
+            try
+            {
+                return Effects.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftGroundSpec ToGroundSpec()
+        {
+            try
+            {
+                return Ground.ToSpec();
             }
             catch (ArgumentException e)
             {

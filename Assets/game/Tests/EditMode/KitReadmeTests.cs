@@ -1,6 +1,4 @@
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -15,20 +13,14 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheReadmeListsEveryGameSignal()
+        public void TheReadmePointsAtTheGameSignalsSourceInsteadOfListingThem()
         {
             var readme = ReadReadme();
-            var signals = typeof(GameSignals)
-                .GetProperties(BindingFlags.Public | BindingFlags.Static)
-                .Where(p => p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(GameSignal<>))
-                .Select(p => p.Name)
-                .ToList();
+            const string source = "Scripts/Runtime/GameSignals.cs";
 
-            Assert.That(signals, Has.Count.EqualTo(37));
-            foreach (var name in signals)
-            {
-                Assert.That(readme, Does.Contain("| `" + name + "` |"), name);
-            }
+            Assert.That(readme, Does.Contain("`" + source + "`"));
+            Assert.That(File.Exists(ShooterKitRoot.PhysicalPath(ShooterKitRoot.BundledPath(source))), Is.True);
+            Assert.That(readme, Does.Not.Contain("| `" + nameof(GameSignals.LocalPlayer) + "` |"));
         }
 
         [Test]

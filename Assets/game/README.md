@@ -1,18 +1,20 @@
 # Shooter Kit (`com.omnistove.shooter-kit`)
 
-一人称・三人称のシューターのゲームプレイと、シーンやアセットを作る Editor のスクリプトをまとめた UPM パッケージ。
-ゲームごとの中身 (武器・ルール・ミッション・シーン・プレハブ) と、既定の UI・言語の表は、サンプル **Demo Game** (`Samples~/Demo`) にある。
+一人称・三人称のシューターのゲームの進行 (ルール・戦闘・移動・乗り物・ネット対戦) だけを持つ UPM パッケージ。
+画面・文言・見た目・音・武器やルールの中身は持たない。各ゲームはキットの口に合わせて、それらを自分で実装する。
+サンプル **Demo Game** (`Samples~/Demo`) は、その実装例の一つ。
 
-この README には導入と差し替えの手順だけを書く。ほかは次の正本を見る。
+項目・型・値は README に書かず、次の正本を見る。
 
 | 知りたいこと | 正本 |
 | --- | --- |
 | Unity の版・依存パッケージ | `package.json` |
-| コマンド (テスト・取り込み・smoke・点検) と引数 | `mise tasks` (`.mise/tasks.toml`) |
-| 武器・ルールの JSON の項目 | サンプルの `Weapons/Json/`・`Rules/Json/` と、`Shooter.Core` の Spec |
-| 調整値の JSON の項目と既定値 | `Resources/Tuning/*.json` |
-| 入口・アセット・コンポーネントの欄 | 各型の Inspector の Tooltip |
-| 文言のキー | サンプルの `Resources/Localization/ja/` |
+| コマンドと引数 | `mise tasks` (`.mise/tasks.toml`) |
+| 武器・ルールのデータの項目 | `Shooter.Core` の Spec |
+| 調整値の項目と既定値 | `Resources/Tuning/*.json` |
+| アセット・コンポーネントの欄 | 各型の Inspector の Tooltip |
+| UI へ出る状態 | `Scripts/Runtime/GameSignals.cs` のプロパティと、その型 |
+| EOS の設定の名前 | `Scripts/Core/EosCredentials.cs` |
 | 専用サーバー | `docs/dedicated-server.md` |
 
 ## 導入
@@ -28,407 +30,47 @@
 
 EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコンパイルされる。
 
-### クラウドセーブ
+## 各ゲームが実装するもの
 
-プロフィール (`profile`) とキャンペーンのセーブ (`campaign`・`campaign-<ミッション Id>`) を EOS の Player Data Storage と同期する。
+| 実装するもの | キットの口 |
+| --- | --- |
+| 武器・ルール・調整値・見た目と音の参照 | 入口のアセット `GameContent` |
+| 画面 (HUD・メニュー・ポーズ) と文言 | 状態は `GameSignals`、出来事は `CombatEvents` から読み、操作の口を `GameUi` に入れる |
+| 乗り物の動き方と操作の当て方 | `IVehicleMotor`・`IVehicleControlScheme` |
+| クラウドセーブの保存先・サインイン | `ICloudSaveBackend`・`IAccountBackend` |
 
-1. EOS の開発者ポータルで Player Data Storage を使えるようにする。
-2. ほかの認証情報と同じく、環境変数か `eos.local.json` に `EOS_ENCRYPTION_KEY` (16 進 64 文字) を入れる。どの端末でも同じ鍵にする。鍵が違う端末からは読めない。
+### データ
 
-- 保存はいつも手元に書き、同期はその後で行う。EOS が無いビルド・認証情報か鍵が無いとき・ログインできないとき (オフライン) は手元だけで動き、次にログインしたときに合わせる。
-- 起動時に EOS にログインし (下の「アカウント」)、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
-- 手元とクラウドが食い違ったら、書いた時刻 (UTC) の新しい方を採る。消したことも時刻付きで送るので、他の端末で消したセーブは戻ってこない。
-- クラウドの方で手元を書き換えたときは、前の手元の中身を `cloud-replaced-<スロット>` に残す。
-- 自分の保存先で同期するなら、`ICloudSaveBackend` を実装して `CloudSaveBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
+入口のアセット `GameContent` を `make game-content` (か **Shooter > Create Game Content**) で作り、欄に自分のデータを入れる。入れ忘れは `make audit-replacements` で点検する。
 
-### アカウント
+### 画面
 
-Device ID は端末ごとの Id なので、それだけでは端末ごとに別の EOS ユーザーになる。端末をまたいで同じユーザーとしてクラウドセーブを同期するには、Epic アカウントでのサインインを使う。
+`GameSignals` の項目は `GameSignal<T>` で、今の値 `Value`・値があるか `HasValue`・変わったときの `Changed` を持つ。購読を始めたら `Value` を読んで合わせる。モードごとの状態は `ModeStatus.Detail` に入る。
 
-1. EOS の開発者ポータルで、Epic Account Services のアプリケーションを作り、製品のクライアントにつなぐ。権限 (Permissions) には Basic Profile を入れる。Identity Providers に Epic Games を足し、サンドボックスの Connect でも有効にする。
-2. 環境変数か `eos.local.json` に `EOS_EPIC_ACCOUNT_LOGIN=true` を入れる。
-3. 開発中に DevAuthTool で入るなら、`EOS_EPIC_DEV_AUTH` に `localhost:6547/<DevAuthTool に登録した名前>` を入れる。入れなければ AccountPortal (Epic のサインイン画面) を出す。
+```csharp
+private void OnEnable()
+{
+    GameSignals.HudModel.Changed += Bind;
+    Bind(GameSignals.HudModel.Value);
+}
 
-- 起動時は、前にサインインした Epic アカウントで画面を出さずに入り (PersistentAuth)、無ければ Device ID で入る。
-- Demo のプロフィール画面の「アカウント」から、Epic アカウントでのサインインとサインアウトができる。サインアウトすると覚えたサインインも消し、Device ID のユーザーに戻る。
-- サインインの状態は `GameSignals.Account` に、操作の口は `GameSignals.AccountControl` に出る。どちらも、EOS の認証情報があり、`EOS_ENCRYPTION_KEY` か `EOS_EPIC_ACCOUNT_LOGIN` があるときだけ出る。
-- `EOS_EPIC_ACCOUNT_LOGIN` を入れると、AccountPortal を出すために EOS のオーバーレイを切らずに作る。
-- 自分のサインインを使うなら、`IAccountBackend` を実装して `AccountBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
+private void OnDisable()
+{
+    GameSignals.HudModel.Changed -= Bind;
+}
+```
 
-## サンプル
+### 乗り物
+
+`IVehicleMotor` を実装した MonoBehaviour を、`Vehicle`・`VehicleMotorLink` と同じ GameObject に付ける。操作の当て方を替えるなら、`IVehicleControlScheme` の実装も付ける。
+
+### 保存先とサインイン
+
+`ICloudSaveBackend` を `CloudSaveBootstrap.Backend` に、`IAccountBackend` を `AccountBootstrap.Backend` に、`SubsystemRegistration` の初期化で入れる。入れなければ EOS を使い、EOS も無ければ手元だけで動く。
+
+## Demo サンプル
 
 1. **Window > Package Manager** で Shooter Kit の **Samples** から **Demo Game** を **Import** する。
 2. **Shooter > Build Main Menu Scene** を一度実行する。
 
 このリポジトリでは `Assets/Samples/ShooterKitDemo` が `Assets/game/Samples~/Demo` へのシンボリックリンクなので、サンプルは `Samples~/Demo` の下を直す。
-
-## ゲームの中身を差し替える
-
-1. 入口のアセット `GameContent` を作る (`make game-content` か **Shooter > Create Game Content**)。
-2. 入口の欄に自分のアセットを入れる。
-3. `make audit-replacements` で差し替え漏れを点検する。
-
-- 入口は `Resources/ShooterKit/` に 1 つだけ置く。
-- シーンのコンポーネントに配線した参照は入口より先に使われる。入口に頼るシーンではその参照を空にする。
-- 調整値の JSON は、パッケージの `Resources/Tuning/` と同じパスに置かず、入口の欄に入れる。同じパスだとどちらが読まれるか決まらない。
-  - 入口を作るときは、`Assets/` の下で名前がキットの調整値と同じ (`minimap.json` など) ファイルが 1 つだけなら、その欄に入る。
-
-### スキン・迷彩
-
-1. 見た目の一覧の JSON (`Tuning/cosmetics.json` と同じ形) を入口の `CosmeticsTuning` に入れる。キットの既定は空で、何も差し替えない。
-2. **Create > Shooter > Cosmetic Visual Catalog** を作り、JSON の `visualId` ごとに、スキンなら体のプレハブ、迷彩なら武器に塗る材質を入れて、入口の `CosmeticVisuals` に入れる。
-   - スキンの体は `NetV2/RemotePlayerBody` と同じく、根の原点を体の中心に合わせ、立った高さで作る。当たりは付けても捨てる。
-   - 迷彩は一人称の武器のモデルの材質をすべて替える (粒子と線は替えない)。オフラインの試合でもネット対戦でも、自分の画面の武器にだけ出る。
-3. 着けた見た目はプロフィールに残る。ネット対戦ではスキンだけをロードアウトと一緒に送り、相手の画面の体が替わる。カタログか絵が無い Id は既定の見た目のまま出る。
-
-### エモート
-
-1. エモートの一覧の JSON を入口の `EmotesTuning` に入れる。キットの既定は空で、エモートは無い。
-
-   ```json
-   { "emotes": [ { "id": "wave", "displayNameKey": "emote.wave", "durationSeconds": 2.5, "loops": false, "stopsOnMove": true } ] }
-   ```
-
-   - `loops` が true のものは止めるまで続ける。false のものは `durationSeconds` で終わる。
-   - 撃つ・倒される・ダウンすると、`stopsOnMove` にかかわらず止まる。
-2. **Create > Shooter > Emote Catalog** を作り、JSON の `id` ごとにリグに流すクリップを入れて、入口の `EmoteAnimations` に入れる。クリップの無い Id は体を動かさずに出る。
-3. ルールの `actions.emote` を `On` にする。`EmoteActionInstaller` は `PlayerActions` の組み込みの一覧に入っているので、`Register` で足す必要はない。ルールが Off なら何も付かない。
-4. 再生中は一人称から三人称のカメラになり、止まると一人称に戻る。
-
-### UI
-
-キットのゲーム進行は画面も文も作らない。今の状態は型の付いた値で `GameSignals` (`Shooter.Runtime`) に出し、1 回きりの出来事 (撃った・当たった・倒した) は `CombatEvents` のイベントで知らせる。何をどう出すか (言語を含む) は UI が決める。
-既定の UI (`Shooter.Runtime.UI`) と言語の表は Demo サンプルにあり、サンプルを取り込まなければ HUD 無しで動く。
-
-#### `GameSignals` の項目
-
-| 項目 | 型 | 中身 (無いときは null) |
-| --- | --- | --- |
-| `LocalPlayer` | `LocalPlayerSignal` | この画面で操作しているプレイヤーの部品 (`Damageable`・`Weapon`・`Ads`・`Mover`・`Grenades`・`Abilities`・`Actions`) |
-| `HudModel` | `HudModel` | 体力・弾・試合の残り時間・得点・結果などの数。変わった項目を `HudModel.Changed` (`HudField`) で知らせる |
-| `Inventory` | `IInventoryControl` | 持ち物。部品に持ち物の無い画面 (ネット対戦) だけが出す |
-| `GrenadeCount` | `GrenadeCountStatus?` | 残りのグレネード。`GrenadeThrower` の無い画面 (ネット対戦) だけが出す |
-| `LocalBlindSeconds` | `Func<float>` | 目くらましの残り秒数を読む関数。ネット対戦だけが出す |
-| `Participants` | `IParticipants` | `CombatEvents.Killed` の Id を参加者に引く口。ネット対戦だけが出す |
-| `ModeStatus` | `ModeStatus` | オフラインのモードの残り時間・陣営ごとの得点・自分の陣営・リスポーンまでの秒数・勝敗と、モード固有の状態 `Detail` |
-| `Domination` | `DominationStatus` | 拠点制圧の試合の状態 |
-| `Scoreboard` | `IReadOnlyList<ScoreboardEntry>` | スコアボードの行 |
-| `InteractHint` | `InteractHint?` | 近くで Interact したら何が起きるか (`Source` と `Detail`) |
-| `Tutorial` | `TutorialStatus?` | 射撃場のチュートリアルの段階 |
-| `KillCam` | `KillCamStatus?` | 再生しているキルカム |
-| `Pings` | `IReadOnlyList<PingMarker>` | この画面のプレイヤーが付けている印 |
-| `SquadOrder` | `SquadOrderStatus?` | 味方の bot に出している指示 |
-| `CampaignNotice` | `CampaignNotice` | キャンペーンが一時的に出す案内 |
-| `MenuReturnReason` | `DisconnectNotice` | メニューに戻った理由 |
-| `HudDensity` | `HudDensity?` | HUD に出す量 |
-| `PauseTimeMode` | `PauseTimeMode?` | ポーズを開いている間の時間の扱い |
-| `PaletteViewer` | `Team?` | 敵味方の色の組をどのチームから見て塗るか |
-| `Streak` | `StreakStatus?` | この画面のプレイヤーのストリーク (倒れずに倒した数・報酬の枠・使える枠の数) |
-| `Minimap` | `MinimapStatus?` | ミニマップとコンパスに出すもの (自分の位置と向き・味方/敵/印/目標の `MinimapContact` の一覧) |
-| `Chat` | `IReadOnlyList<ChatLine>` | チャットの行 (送った人の参加者 Id・全体かチームか・本文・時刻) |
-| `Voice` | `VoiceStatus?` | ボイスチャットの状態 (自分が話しているか・話している参加者 Id・マイクが使えるか) |
-| `MapVote` | `MapVoteStatus?` | 次のマップの投票 (候補のマップ Id と票数・自分の票・残り秒数・決まったマップ Id) |
-| `Spectate` | `SpectateStatus?` | ネット対戦で味方を見ている状態 (見ている参加者 Id・候補の数・理由) |
-| `ChatSender` | `IChatSender` | チャットを全体かチームへ送る口 (`Send`)。ネット対戦だけが出す |
-| `MapVoteSender` | `IMapVoteSender` | 次のマップに `MapVote` の候補を並びの番号で選ぶ口 (`Vote`)。ネット対戦だけが出す |
-| `Party` | `PartyStatus?` | パーティの状態 (`PartyStage`・メンバーの名前とリーダーか・招待のコード・自分がリーダーか) |
-| `PartyControl` | `IPartyControl` | パーティを作る・招待のコードで入る・出る口と、状態が変わった知らせ (`StatusChanged`) |
-| `JoinByCode` | `IJoinByCode` | 参加コードで非公開の試合に入る口。結果 (`JoinCodeOutcome`) を呼び戻しで返す |
-| `ReportSender` | `IReportSender` | 参加者 Id と理由 (`ReportReason`) で通報する口。ネット対戦だけが出す |
-| `BlockControl` | `IBlockControl` | 参加者 Id でブロック (チャットを落とす)・個別ミュート (声を受けない) を切り替え・読む口と、変わった知らせ (`Changed`)。ネット対戦だけが出す。ボイスの名簿に載った人は EOS の ProductUserId で `BlockListStore` (PlayerPrefs) に残り、次の試合でも効く。載っていない人はその試合の間だけ効く |
-| `Achievements` | `IReadOnlyList<AchievementProgress>` | 実績ごとの進み (実績の Id・今の数・目標の数・解けたか) |
-| `Leaderboard` | `LeaderboardStatus?` | 開いているリーダーボード (ボードの Id・`LeaderboardStage`・順位と名前と得点の `LeaderboardRow` の一覧) |
-| `LeaderboardControl` | `ILeaderboardControl` | `LeaderboardSpec` のボードの Id でリーダーボードを開く・読み直す・閉じる口。結果は `Leaderboard` に出る |
-| `Replays` | `IReplayLibrary` | 残したリプレイの一覧 (`ReplayEntry`) と、再生・消す口 |
-| `Cosmetics` | `ICosmeticLocker` | スキン・迷彩のカタログと、着けている Id・解けているかを読み、着ける口 |
-| `Stash` | `StashStatus?` | 脱出の倉庫の中身 (広さと、持ち物の Id と数の `StashEntry` の一覧) |
-| `Emotes` | `IEmoteControl` | エモートの Id の一覧と、再生する口。`Player/Emote` を押している間だけ出る |
-| `Stamina` | `StaminaStatus?` | この画面のプレイヤーのスタミナ (今の量・上限・尽きた扱いか) |
-| `LockOnWarning` | `LockOnWarningStatus?` | この画面のプレイヤー (乗っている乗り物を含む) を狙っているロックオンの段階 (`LockOnWarningStage`) と、狙ってくる向き (自分の正面から時計回りの度) |
-
-#### 購読のしかた
-
-- 項目はどれも `GameSignal<T>` で、今の値 `Value`・値があるか `HasValue`・値を出したときと消したときに新しい値で呼ばれる `Changed` を持つ。同じ値を出し直しても `Changed` は呼ばれる。
-- 先に出ていた値は `Changed` では来ないので、購読を始めたら `Value` を読んで合わせる。
-- 値と購読者はシーンを読む前 (`SubsystemRegistration`) に空へ戻る。購読は `BeforeSceneLoad` の初期化か、コンポーネントの `OnEnable` で始め、`OnDisable` でやめる。
-- 書くのはゲーム進行だけで、UI は `Publish` も `Clear` もしない。
-
-体力だけを出す最小の HUD。`Assets/` の下のスクリプトに置いて Play すると、プレイヤーが出たときに左上に体力が出る。
-
-```csharp
-using Shooter.Core;
-using Shooter.Runtime;
-using UnityEngine;
-
-public sealed class HealthOnlyHud : MonoBehaviour
-{
-    private HudModel _model;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Create()
-    {
-        DontDestroyOnLoad(new GameObject(nameof(HealthOnlyHud), typeof(HealthOnlyHud)));
-    }
-
-    private void OnEnable()
-    {
-        GameSignals.HudModel.Changed += Bind;
-        Bind(GameSignals.HudModel.Value);
-    }
-
-    private void OnDisable()
-    {
-        GameSignals.HudModel.Changed -= Bind;
-    }
-
-    private void Bind(HudModel model)
-    {
-        _model = model;
-    }
-
-    private void OnGUI()
-    {
-        if (_model != null && _model.CurrentHealth.HasValue)
-        {
-            GUI.Label(new Rect(16, 16, 200, 24), _model.CurrentHealth.Value + " / " + _model.MaxHealth.Value);
-        }
-    }
-}
-```
-
-サンプルを取り込んだまま自分の HUD を出すなら、同じ `Create` の中で `DefaultHudFactory.Enabled = false;` も入れ、既定の HUD を止める。
-
-#### モード固有の表示
-
-モードの Runner (`ModeRunnerBase` の派生) は、自分の Core の状態を `HudDetail` で返し、それが `ModeStatus.Detail` に入る。UI は `Detail` の型を見て何を出すかを決める。
-
-| モード | `Detail` の型 |
-| --- | --- |
-| チームデスマッチ | `ModeSession` |
-| Free for All | `FreeForAllStanding` |
-| Kill Confirmed | `KillConfirmed` |
-| Hardpoint | `Hardpoint` |
-| 爆破 | `SearchAndDestroyStatus` |
-| 旗取り | `CaptureTheFlagStatus` |
-| Execution | `ExecutionStatus` |
-| Guardian | `GuardianStatus` |
-| Gun Game | `GunGameStatus` |
-| Battle Royale | `BattleRoyaleStatus` |
-| Horde | `HordeStatus` |
-| Infected | `InfectedStatus` |
-| 脱出 | `ExtractionStatus` |
-
-サンプルの `ModeHudView` は、`Detail` の型ごとに `ModeHudFormatters` に登録した書式役 (`IModeHudFormatter`。土台は `ModeHudFormatterBase`) で文にする。
-
-- 登録は `ModeHudFormatters.Register<TDetail>(formatter)` で、シーンを読む前 (`BeforeSceneLoad`。Edit Mode でも使うなら `InitializeOnLoadMethod` も) に済ませる。同じ型を登録し直すと置き換わる。
-- 引くときは `Detail` の型、無ければその基底の型の順に探し、どれも無ければ残り時間・得点・リスポーンまでの秒数・結果だけを出す `ModeHudFormatters.Default` を使う。
-- 自分のモードを足すなら、Runner の `HudDetail` で自分の状態の型を返し、その型の書式役を登録する。
-
-#### UI からゲーム進行への口
-
-ポーズ・ロードアウトの選択・持ち物・メニューとの行き来は、UI が `GameUi.Pause`・`LoadoutSelect`・`InventoryScreen`・`Menu` に自分の実装を入れる (サンプルは既定を `UseDefault…` で入れる)。
-既定の HUD を止めたら `GameUi.Pause` は必須 (無いとポーズ中も操作が止まらない)。
-
-#### メインメニューの画面 (サンプルの決まり)
-
-統計・リーダーボード・リプレイ・見た目・持ち物庫のボタンは、`MainMenuPanels` に画面が登録された種類 (`MainMenuPanelKind`) だけが出る。
-サンプルは `DefaultMenuScreens.RegisterMainMenuPanels` で 5 つとも登録する。
-
-| 画面 | 開くときに読むもの | 無いとき |
-| --- | --- | --- |
-| 統計 (`StatsPanel`) | `ProgressionBootstrap` のプロフィールと実績 | 開けず、メニューに理由を出す |
-| リーダーボード (`LeaderboardPanel`) | `GameSignals.LeaderboardControl` (EOS が使えるとき `NetV2OnlineServices` が出す) | 開いて「使えない」を出す |
-| リプレイ (`ReplayPanel`) | `GameSignals.Replays` (NetV2 の起動で `NetV2Replays` が出す) | 開いて「使えない」を出す |
-| 見た目 (`CosmeticsPanel`) | `GameSignals.Cosmetics` | 開けず、メニューに理由を出す |
-| 持ち物庫 (`StashPanel`) | `GameSignals.Stash`、無ければ `StashStore` に残した中身 | 空の持ち物庫を出す |
-
-- 自分の画面に替えるなら、同じ種類を `MainMenuPanels.Register(kind, slot => ...)` で登録し直す (後の登録が勝つ)。登録はメニューのシーンを読む前 (`BeforeSceneLoad`) に済ませる。
-- ボタンを消すなら `MainMenuPanels.Unregister(kind)` を呼ぶ。
-
-#### リプレイ
-
-ネット対戦は、届いた知らせを `Application.persistentDataPath` の `Replays/` に 1 試合 1 ファイル (`*.replay`) で残す。古いものから消して `ReplayLibrary.DefaultMaxReplays` 本までにする。
-
-- 書き始めるのはサーバーに承認されてから。承認の前に抜けた試合のファイルは消す。書けないときは残さずに試合を続ける。
-- 一覧の再生は `NetV2Client.BeginReplay` が同じ部品で試合を流し直す。`Next`・`Previous` で人と自由なカメラを巡り、終わるとメニューに戻る。
-- 版の違う (通信の版が違う) ファイルや壊れたファイルは、画面を替えずに一覧に再生できないと出す。
-- 通しの確認は `ReplaySmokeRun` で、smoke のスイートには入っていない (`unity -batchmode -projectPath . -executeMethod Shooter.Editor.ReplaySmokeRun.Run -logFile -`。Play Mode に入るので `-quit` は付けない)。承認と切断だけの記録を `Replays/` に置き、一覧から再生して `NetArena01` を読み、メニューに戻るまでを見る。置いた記録は終わったときに消す。
-
-#### 試合中の部品 (NetV2)
-
-`NetV2ClientParts.Create` が作る部品に、天候と時刻 (`NetV2WeatherPart`。シーンの `WeatherController` に当てる) と通報 (`NetV2ReportPart`。`GameSignals.ReportSender` を出す) が入る。
-リプレイの再生では通報の代わりに見方の部品 (`NetV2ReplayViewPart`) が入る。
-サーバーの側で通報を残す・統計を送る・テレメトリを残すには、起動の引数で頼む (`docs/dedicated-server.md` の「通報・統計・テレメトリ」)。
-
-## モードのシーン (サンプル)
-
-モードのシーンとルールは、名前の一覧 `GameRulesAssetBuilder.ModeNames` (Infected・脱出 (`Extraction`) を含む 12 個) で揃える。
-
-1. **Shooter > Build Game Rules Assets** で、モードごとのルールを `Rules/<名前>.asset` に作る。
-2. **Shooter > Build <モード> Scene** (Infected なら **Build Infected Scene**、脱出なら **Build Extraction Scene**) でシーンを `Scenes/<名前>.unity` に作る。ルールが無ければそのモードの分だけ作る。
-3. **Shooter > Register Build Scenes** で、作ったシーンを Build Settings に並べる (`BuildSceneList.Scenes` の順)。
-4. シーンを開いて Play すると、そのモードが始まる。
-
-- Infected はプレイヤーと bot 4 体が生存者で始まり、倒された人は感染者として戻る。ルールは `GameRulesAssetBuilder.InfectedRules`。
-- 脱出は敵の bot 3 体の中で箱から物を拾い、開いた脱出地点に立ち続けると持ち物が持ち物庫へ入る。倒れたら戻らない。ルールは `GameRulesAssetBuilder.ExtractionRules`、箱から出る物は `Modes/ExtractionLoot.json`。
-- 通しの確認は `InfectedSmokeRun` (感染者が選ばれ、持ち替えて、どちらかの陣営が勝つまで) と `ExtractionSmokeRun` (箱を開け、開いた地点に立って脱出するまで) で、どちらも smoke のスイートに入っている。脱出の確認は、走らせる前の持ち物庫 (`StashStore.DefaultKey`) を控えて空から始め、終わったら戻す。
-
-## 乗り物を足す
-
-キットは乗り降り・座席・耐久・座席の武器・固定銃座を持ち、動き方は `IVehicleMotor` で差し込む。同梱の動き方は車 (`SimpleCarMotor`) と飛行機 (`SimpleAircraftMotor`)。
-組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder`・`AircraftFixtureBuilder` で、試走場は **Shooter > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
-
-### 座席を並べる
-
-1. 乗り物の根元に `Vehicle` を付け、その子に座席ごとの `VehicleSeat` を置く。座席の番号は子の並び順 (0 から)。
-2. 座席の種類・姿勢・カメラは各 `VehicleSeat` の欄で決める。乗り物の値 (Id・耐久・部位・爆発・乗り込める距離・追うカメラ) は `VehicleDefinition` (Create > Shooter > Vehicle Definition) に入れて `Vehicle` に配線する。コードで組むなら、座席と同じ番号の順に `VehicleSeatSpec` を並べた `VehicleSpec` を `Vehicle.Configure` に渡す。
-   - 運転席 (`Driver`) の入力だけが動き方に届く。運転席が無ければ動かない乗り物 (固定銃座など) になる。
-   - 座席の武器は、乗り物の子に `VehicleWeaponMount` を置き、操作する座席の番号をその欄に入れる。
-   - 助手席から自分の武器で撃たせるなら、その座席の撃てる向きの範囲 (`OwnWeaponArcDegrees`) を 0 より大きくする。
-3. 座席ごとに乗る位置 (`SetEnterPoints`) と降りる位置 (`SetExitPoints`、並びの順に試す) を置く。どの座席からでも使う降りる位置は `Vehicle.SetExitPoints`。
-4. 空中での降り方は `VehicleDefinition` (定義が無ければ `Vehicle`) の脱出 (`BailOutSettings` / `BailOutSpec`) で決める。乗り物の当たり判定の底から地面 (`Vehicle.GroundMask`) までが最低の高さ以上のときにプレイヤーが降りるか、空中で乗り物が壊れると、降りる位置は使わず乗り物の上 (塞がっていれば横) へ `VehicleLeaveReason.BailOut` で出し、乗り物の速さの一部を引き継いでパラシュート (`ParachuteMovement.DeployForBailOut`) を開く。脱出のパラシュートはモードのパラシュートのルール (`ActionRules.Parachute`) が Off でも開く。地上の乗り物でも、何かに載っている間は高さが 0 なので今までどおり降りる。脱出させない乗り物は `Enabled` を切る。
-
-### 動き方を差し込む (`IVehicleMotor`)
-
-1. `IVehicleMotor` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付け、`VehicleMotorLink` も付ける。運転席の入力は、当て方 (`IVehicleControlScheme`) を通って `VehicleMotorInput` になり、`SetInput` に届く。
-   - `VehicleMotorInput` は -1 から 1 の軸を 8 本 (`AxisCount`) 持つだけで、軸に意味は無い。どの番号の軸を何に使うかはモーターが決め、番号を定数で出す (`CarDrive.ThrottleAxis` など)。
-2. `SetInput` では入力を覚えるだけにし、力は `FixedUpdate` で掛ける。座席の入力は `Update` で届くので、その場で掛けると描画の頻度で物理が変わる。
-3. 運転席が空くと `VehicleMotorInput.Idle` が届くので、そのときはアクセルなどを放す。
-4. 調整値は自分の Spec や ScriptableObject に持たせ、`Configure` などで入れる (`SimpleCarMotor` と `CarSpec` が例)。
-5. 最高速度のある動き方は `IVehicleTopSpeed` も実装する。マップの書き出し (`MapVehicleExporter`) が、サーバーの速すぎ判定の上限をここから決める。無ければ既定の上限 (`VehicleDriveSpec.DefaultMaxSpeed`) になる。
-
-### 操作の当て方を決める (`IVehicleControlScheme`)
-
-座席の入力 (`VehicleSeatInput`: 移動・上下・ダッシュ・撃つ・構える・視線の向き) をどの軸に当てるかは、当て方の部品で決める。オフラインの座席もオンラインの運転も同じ当て方を通る。
-
-- 何も付けなければ車の当て方 (`CarControlScheme`) になる。移動の前後が `ThrottleAxis`、左右が `SteerAxis`、ダッシュが `BrakeAxis`、ジャンプ (+1)・しゃがみ (-1) が `RightAxis` (横転を起こす)。
-- 変えるなら、`IVehicleControlScheme` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付ける。コードから入れるなら `VehicleMotorLink.ControlScheme` に入れる (付けた部品より勝つ)。どちらも次の入力から効く。
-- 当て方の中では、座席の入力を使っても、自分の `InputAction` を読んでもよい。例: 飛行機なら視線の向きからピッチとロールを出し、移動の前後を推力に当てる。
-- 使われる当て方は `VehicleControlSchemes.For(乗り物の GameObject)` で引ける。
-
-### 飛行機 (`SimpleAircraftMotor`)
-
-組み方の例はサンプルの `AircraftFixtureBuilder` で、試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてある。smoke の通し (`VehicleSmokeRun`) は、地上で左へ 15° 曲がり、離陸して 15m 昇り、機首を 75° 上へ引き続けても 4 秒の間に迎え角が臨界角を越えず沈まないこと、左の翼を撃ち抜くと左へ傾くことまでを確かめる。
-
-1. `Rigidbody` と当たり判定を持つ機体の根元に、次を付ける。
-   - `Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor` (飛び方)
-   - 当て方 (下の 3.) を 1 つ: `AircraftControlScheme` か `AircraftStickControlScheme`
-   - 地上を走るなら `AircraftWheels` (子に `WheelCollider`)、撃たれて飛び方が崩れるなら `AircraftPartDamage` と部位ごとの `VehiclePart`、見た目と音は `AircraftEffects`、HUD に出すなら `AircraftStatusPublisher`
-2. 値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) 1 つに置き、上の部品それぞれの Definition の欄に同じものを付ける。空の部品は既定値で動く (`AircraftEffects` だけは、空なら `SimpleAircraftMotor` の Definition を読む)。
-   - アセットは質量・推力と、Aero (空力)・Aim (視線の当て方)・Stick (操縦桿)・Ground (地上)・Damage (部位)・Effects (見た目と音)・Warning (HUD の警告) の欄に分かれる。
-   - 押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらず、ぶつかったときの重さだけが変わる。
-   - Aero の `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` (`AircraftAero.TopSpeed`) はその速さを返す。
-   - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。揚力は迎え角に比例し、`CriticalAngle` (度) を越えると失速して落ちる。
-   - どの部品もコードからは `Configure(…Spec)` でその実行の間だけ差し替えられる (アセットより勝つ)。
-   - 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。`SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
-3. 当て方は 2 つあり、どちらか 1 つを付ける。
-   - **視線 (`AircraftControlScheme`、Aim の欄)**: 視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれはそのまま曲がり続ける速さになり、上下は視線の高さへ機首が合う。
-     - G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (失速の防止。下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
-     - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
-   - **操縦桿 (`AircraftStickControlScheme`、Stick の欄)**: 移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きを欄で決める。スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読み、空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
-4. 地上 (`AircraftWheels`、Ground の欄): 機体の重心より前にある車輪が前輪になり、ヨーで向きが変わる (名前は見ない)。向ける角度は止まっているとき `MaxSteerAngle`、`SteerFadeSpeed` まで速くなるにつれ `HighSpeedSteerAngle` へ絞る (`AircraftGround.SteerLimit`)。
-   - ブレーキは全部の車輪に掛かる。エアブレーキ (負のスロットル) の深さに応じて `BrakeTorque` まで、誰も操縦していない (入力が Idle) 間は `IdleBrakeTorque`。浮いている間は前輪をまっすぐに戻し、ブレーキを放す。
-   - 接地と地面からの高さ (`HeightAboveGround`、m) を `IAircraftGroundSource` としてモーターに返す。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
-   - 車輪を付け外ししたり重心を動かしたりしたら `CollectWheels()` を呼ぶ。
-5. 部位 (`AircraftPartDamage`、Damage の欄): 欄に並べた部位ごとに Id・効き先 (左の揚力・右の揚力・舵・推力)・耐久を持つ。機体の体力 (`Vehicle`) とは別に減り、壊れるにつれ効き先の倍率が `MinLift`・`MinControl`・`MinThrust` へ下がる。片翼が弱ると揚力の差で、その側へ傾く。
-   - 撃たれる箱 (とその子のコライダー) に `VehiclePart` を付け、Id を Damage の欄の部位と同じにする。`Vehicle` の値 (`VehicleSpec` の部位、`VehicleDefinition`) にも同じ Id を入れて、当たりの倍率を決める。入れ忘れると、倍率 1 で受けて警告が出る。
-   - 命中は `Hitbox` → `Vehicle.PartDamaged` → `AircraftPartDamage` と届く。命中を通さずに削るなら `ApplyPartDamage(Id, 量, 位置)`。壊れると `CombatEvents.AircraftPartBroken` とログが出て、乗り物の体力を満たし直すと部位も直る。
-   - 飛び方に効くのは `IAircraftConditionSource` として毎ステップ読まれる `Condition` (`AircraftCondition`)。燃料タンクのように欄に無い Id の `VehiclePart` は、倍率だけが効いて飛び方は変わらない。
-   - オンラインでは部位の残りをサーバーが数え、運転する人の側の `AircraftPartDamage` へ乗り物のスナップショットで届く。
-6. 見た目と音 (`AircraftEffects`、Effects の欄): `SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。
-   - 舵面は `AircraftControlSurface` (Transform・役割 Elevator / Aileron / Rudder・蝶番の軸・逆向き) を並べる。回す角度は入力 × 欄の角度。舵面の Transform は蝶番に置き、板はその後ろへずらす。左右の補助翼は片方を逆向きにする (例では右へ傾ける入力で右の後ろの縁が上がるよう、左を逆向きにし、方向舵は軸を下向きにしている)。
-   - エンジン音は AudioClip を入れると繰り返し鳴り、高さと大きさはスロットルと速さ (`MaxSpeed` に対する割合) を `EngineSpeedShare` で混ぜた値で Min から Max の間を動く。空なら鳴らさない。例の音はサンプルが作る仮の音 (`AircraftFixtureBuilder.EngineSoundSpec`) なので、ゲームの音に差し替える。
-   - ベイパーは荷重倍数の大きさが `VaporLoadFactor` を超えている間だけ、翼端 (`VaporAnchors`) に置いたプレハブの TrailRenderer・ParticleSystem を出す。プレハブが空なら白い線をコードで作り、翼端が空なら機体の見た目を包む箱の左右の端から出す。地上では出さない。
-   - Edit Mode では `Bind(SimpleAircraftMotor)` と `Show(入力, State)` で動かせる。
-7. HUD: シーンのどこか (例では機体) に `AircraftStatusPublisher` を 1 つ置くと、ローカルのプレイヤーが運転席で飛ばしている機体の速さ・高度 (世界の高さ)・スロットル・迎え角・G・失速の警告を `GameSignals.Aircraft` (`AircraftStatus`) に出し、降りると消す。警告の閾値はアセットの Warning の欄 (`StallAngleDegrees`・`StallSpeed`、地上では出さない)。
-   - サンプルの既定の HUD は `DefaultHudFactory` が `AircraftHudView` を足し、`Hud.uxml` の `aircraft` の要素に文字で出す。文は `AircraftHudText` が `Resources/Localization/<言語>/` のキーから作る。自分の HUD なら `GameSignals.Aircraft` を購読して描く。
-8. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
-
-プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
-
-### ヘリ (`SimpleHelicopterMotor`)
-
-1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleHelicopterMotor` を付ける。当て方の `HelicopterControlScheme` は `SimpleHelicopterMotor` を付けると一緒に付く。
-2. 値は **Create > Shooter > Helicopter Definition** (`HelicopterDefinition`) に置き、`SimpleHelicopterMotor` の Definition に入れる。空なら既定値で飛ぶ。コードからは `Configure(HelicopterSpec)` で差し替えられる。
-3. 操作: 上下 (`VehicleSeatInput.Vertical`、ジャンプで上・しゃがみで下) がコレクティブ、移動の前後左右が機体の傾き (前後左右へ進む)、旋回は視線の向きへ機首を合わせる。手を離すとその場でホバーする。
-4. 真下の地面 (`GroundMask` のレイヤー) が近いと地面効果で浮きやすくなる。ローターは乗ると回り始め、降りると同じ秒数で止まっていく。
-
-### ボート (`SimpleBoatMotor`)
-
-1. `Rigidbody` と当たり判定を持つ船の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleBoatMotor` を付ける。当て方は付けず、車の当て方 (`CarControlScheme`) の前後をスロットル、左右を舵として読む。
-2. 値は **Create > Shooter > Boat Definition** (`BoatDefinition`) に置き、`SimpleBoatMotor` の Definition に入れる。船体の大きさから浮力を測る点を並べ、スクリューは船尾の真ん中に置く。
-3. 浮くのはシーンの水 (`Shooter.Runtime.Traversal.Water`) の中だけ。水の外では浮力も推力も掛からない。
-
-試走場 (**Shooter > Build Vehicle Range Scene**) では、ヘリは北西の角 (`VehicleRangeSceneBuilder.HelicopterOrigin`)、ボートは南東の水 (`BoatGround`) に置いてある。
-
-### フレアとロックオン警告
-
-- フレア: 機体に `VehicleCountermeasures` を付け、数・間隔・燃える秒・誘う角度・見た目 (空なら光る球を作る)・音を Settings (`CountermeasureSettings`) の欄で決める。操縦する人が `Player/Countermeasure` を押すと撒き、狙う側から見て機体とフレアが欄の角度より近ければ捕捉が外れ、撃たれた誘導弾はフレアへ向かう。同乗者が押しても撒かない。
-- ロックオン警告: この画面のプレイヤーに `LockOnWarningPublisher` を付けると、場の `LockOnAim` が自分 (乗っている乗り物を含む) を捉えている段階と向きを `GameSignals.LockOnWarning` に出す。自分の武器や同じ乗り物の武器の捕捉は数えない。サンプルの既定の HUD は `DefaultHudFactory` がプレイヤーに付け、`LockOnWarningView` が文字で出す。
-
-### 乗り物の AI
-
-- 車: 乗り物か Bot に `BotVehicleDriver` を付け、なぞる道 (`VehicleRoute`。点は Transform で、空なら直下の子の順) を入れる。運転席が空なら代わりの運転手を座らせて走る。走り方 (先を見る距離・速さ・角の手前で落とす・詰まったら切り返す) は欄で決める。
-- 飛行機: 機体に `BotAircraftPilot` を付け、回る点の並びと飛ばし方の値 (**Create > Shooter > Bot Aircraft Pilot Settings**) を入れる。点どうしは傾け切って回る輪の直径 (巡航の速さで 600m ほど) より離す。地面が近いと翼を水平に戻して上るのを優先する。
-- 敵と Bot (`EnemyAgent`) が運転席に座ると、飛行機 (`SimpleAircraftMotor` を持つ) なら `BotAircraftPilot`、それ以外なら `BotVehicleDriver` で動かす。乗り物に置いてある部品があればその値を借りる。道は `EnemyAgent.OrderRoute` で指示したものが、乗り物に付いた `VehicleRoute` より先。運転している間は自分の銃を撃たず、撃つのは同乗者の座席に任せる。
-
-### 空中からの脱出
-
-機体から降りる操作が空中で起きると、新しいキーを使わずに脱出 (`VehicleLeaveReason.BailOut`) になり、パラシュートで降りる。決め方は「座席を並べる」の 4. を見る。
-
-## プレイヤーの動作
-
-### エモート
-
-組み方は「ゲームの中身を差し替える」の「エモート」を見る。`Player/Emote` を押している間は `GameSignals.Emotes` が出て、サンプルの HUD はそれをホイール (`EmoteWheelView`) で出す。
-
-### ジャイロ照準
-
-操作設定 (`ControlSettings`) のジャイロの項目 (`gyro`・`gyroSensitivity` (10〜500%、既定 100)・`gyroAimOnly`・`invertGyroY`) で決める。既定は Off。
-On の間は、機器のジャイロ (Input System の `Gyroscope`) の角速度を `FirstPersonLook` が視点の回転に足す。`gyroAimOnly` なら覗き込んでいる間だけ効く。切っている間はセンサーを止める。ジャイロの無い機器では何もしない。
-サンプルの設定画面 (`SettingsView`・`PauseSettingsView`) は、ジャイロの無い機器ではジャイロの項目に触れられず、使えないことを文で出す。
-
-### スタミナ
-
-1. ルールの `actions.stamina` を `On` にする。`StaminaActionInstaller` は `PlayerActions` の組み込みの一覧に入っていて、On ならプレイヤーに `PlayerStamina` を付ける。Off なら何も付かない (前に付けたものは止める)。
-2. 走る (毎秒)・スライディング・回避が量を使い、使わずに少し待つと戻る。尽きると決まった量まで戻るまで走れない。値は `StaminaSpec` で、変えるなら別の値で作った `StaminaActionInstaller` を `PlayerActions.Register` で入れると組み込みのものと置き換わる。
-3. 今の量は `GameSignals.Stamina` に出る。サンプルの HUD は `StaminaView` でゲージにする。
-
-### 動く床・エレベーター (`MovingPlatform`)
-
-1. 床にする GameObject に `MovingPlatform` を付け、通る点 (置いた位置からのずれ) を並べる。点が 1 つなら進まずに回るだけの床になる。Collider が無ければ板を作る (見た目のプレハブが空なら箱)。
-2. 動き方は **Create > Shooter > Moving Platform Settings** (`MovingPlatformSettings`) に置く。`PingPong` は往復、`Loop` は回り続け、`OnCall` は呼ばれた点 (`Call(点の番号)`) へ行くエレベーター。速さ・点での待ち・回る速さもここで決める。空なら往復・2 m/s・1 秒待つ・回らない。
-3. 乗った体は `PlayerController` が床と一緒に運ぶ。上がる床と天井に挟まれると、床が引き返す。
-4. サンプルのブートストラップのシーン (`BootstrapSceneBuilder`) に例がある。
-
-## 復活の場所
-
-倒されて戻るとき、`ModeRunnerBase` はルールの `respawnAnchor` (`GameRules.RespawnAnchors`) を書いた順に試し、最初に選べたもので戻す。既定は `Base` だけで、今までどおり拠点から戻る。
-
-```json
-{ "respawnAnchor": ["Beacon", "Squad", "Base"] }
-```
-
-- `Beacon`: 自分か同じ陣営の人が置いたビーコン (`BeaconDeployDefinition` の置ける物、`SpawnBeacon`) のうち、使える中でいちばん後に置いたものの前から戻り、ビーコンの使える回数を 1 減らす。使い切るか壊されると消える。陣営の無いモードでは置いた本人だけが使える。
-- `Squad`: 同じ陣営の生きている味方のうち、敵から最も遠い味方のまわりに戻す (`SquadSpawnSelector`)。敵が近い味方・撃たれたばかりの味方・ダウン中の味方の近くには戻さず、床が無い所と壁や置き物に重なる所も避ける。値はモードの Runner の `Squad Spawn` の欄 (`SquadSpawnSettings`、`SquadSpawnSpec`) で決める。
-- `Base`: 陣営の出現点 (`SideSpawnPoint`) のうち、敵から遠いもの。出現点が無ければ倒れた場所で戻る。
-- どれも選べなければ (`Base` を書いていなくても) 拠点に戻る。`Base` より後に書いたものは試さない。
-- どれで戻ったかはモードのログに `[Mode] spawn player=… side=… at=(…) from=Beacon` の形で出る。
-- ラウンドの始めの並べ直しや感染で戻すとき (`ModeRunnerBase.Respawn`) は、ビーコンも味方も使わずに拠点へ戻す。
-- ビーコンはオフラインだけで使える。専用サーバーのデプロイの一覧はビーコンを受けず、エラーで断る。
-
-## 文言・言語 (サンプルの決まり)
-
-キットは言語と文を扱わない。武器などの表示名はキー (ただの文字列) としてデータに持ち、それを文にするのは UI。ここからはサンプルの UI (`Localizer`・`GameText`・`LocalizedTexts`) の決まりで、自分の UI を作るなら従わなくてよい。
-
-文言は、サンプルの `Resources/Strings/<言語コード>.json` の後に `Resources/Localization/<言語コード>/*.json` をファイル名の順に重ね、同じキーは後のファイルが勝つ。`Resources/ShooterKit/` の `LocalizationContent` (**Create > Shooter > Localization Content**) に言語ごとの表を入れると、さらにその後に重なる。
-利用側のファイルは、サンプルのどのファイルより後に並ぶ名前 (`zz-mygame.json` など) にする。同じ名前だとどちらが読まれるか決まらない。
-
-- 文を変える: `Assets/Resources/Localization/ja/zz-mygame.json` に、変えるキーだけを書く。
-- 言語を足す: `Assets/Resources/Localization/Languages/zz-mygame.json` に言語を書き、`Assets/Resources/Localization/<言語コード>/` に `ja` と同じキーの表を置く。表が 1 つでもある言語が設定画面で選べるようになる。
-
-  ```json
-  { "languages": [ { "code": "fr", "name": "Français", "systemLanguages": ["French"] } ] }
-  ```
-
-- 選んだ言語: 設定画面で選ぶと `LanguagePreferenceStore` が `PlayerPrefs` の `Shooter.Language` に言語コードで保存する。キットの操作設定 (`ControlSettings`) には入れない。保存が無ければ OS の言語から決め (言語の一覧の `systemLanguages` に合う言語、どれにも合わなければ `otherSystemLanguages`)、前の形式 (操作設定の中の `language`) が残っていれば最初に読んだときに `Shooter.Language` へ移す。

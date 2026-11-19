@@ -12,26 +12,24 @@ namespace Shooter.Tests.EditMode
             return File.ReadAllText(ShooterKitRoot.PhysicalPath(ShooterKitRoot.BundledPath("README.md")));
         }
 
-        [Test]
-        public void TheReadmeNamesTheSampleUiEntryPoints()
+        [TestCase(nameof(DefaultHudFactory))]
+        [TestCase(nameof(ModeHudFormatters))]
+        [TestCase(nameof(ModeHudFormatterBase))]
+        [TestCase(nameof(Localizer))]
+        [TestCase(nameof(LanguagePreferenceStore))]
+        [TestCase("Shooter.Language")]
+        public void TheKitReadmeLeavesTheSampleUiToTheSample(string sampleName)
         {
-            var readme = ReadReadme();
-
-            Assert.That(readme, Does.Contain(nameof(DefaultHudFactory) + "." + nameof(DefaultHudFactory.Enabled) + " = false;"));
-            Assert.That(readme, Does.Contain(nameof(ModeHudFormatters) + "." + nameof(ModeHudFormatters.Register) + "<TDetail>(formatter)"));
-            Assert.That(readme, Does.Contain(nameof(ModeHudFormatters) + "." + nameof(ModeHudFormatters.Default)));
-            Assert.That(readme, Does.Contain(nameof(ModeHudFormatterBase)));
+            Assert.That(ReadReadme(), Does.Not.Contain(sampleName));
         }
 
         [Test]
-        public void TheReadmeNamesWhereTheChosenLanguageIsSaved()
+        public void TheKitReadmeNamesHowToImportTheSample()
         {
             var readme = ReadReadme();
 
-            Assert.That(LanguagePreferenceStore.DefaultKey, Is.EqualTo("Shooter.Language"));
-            Assert.That(readme, Does.Contain("`" + LanguagePreferenceStore.DefaultKey + "`"));
-            Assert.That(readme, Does.Contain("Resources/" + Localizer.LanguageListFolder + "/zz-mygame.json"));
-            Assert.That(readme, Does.Contain("Resources/" + Localizer.ResourceFolder + "/<言語コード>.json"));
+            Assert.That(readme, Does.Contain("**Demo Game**"));
+            Assert.That(readme, Does.Contain("`Samples~/Demo`"));
         }
     }
 }

@@ -70,7 +70,7 @@ namespace Shooter.Tests.EditMode
         {
             var range = WeaponAssetBuilder.LoadRangeWeapons();
             var optics = RangeWeaponRackFixture.OpticItemIds(KitTuning.Items);
-            Assert.That(optics, Is.EqualTo(new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "a2c5e73b-69fa-4402-b0ef-3c4297973226" }), "the red dot and the 4x scope");
+            Assert.That(optics, Is.EqualTo(new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "a2c5e73b-69fa-4402-b0ef-3c4297973226", "79fb2f9e-fc61-425a-b651-8baa8d1a6b2b" }), "the red dot, the 4x scope and the holographic sight");
             Assert.That(range.Weapons.Count + optics.Count, Is.LessThanOrEqualTo(RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows));
 
             var scene = TestScenes.NewAdditive();

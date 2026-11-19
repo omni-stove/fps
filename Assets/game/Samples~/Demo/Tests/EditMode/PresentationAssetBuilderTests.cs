@@ -231,6 +231,62 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<InvalidOperationException>(() => Build());
         }
 
+        [Test]
+        public void EveryWeaponThatFiresRoundsGetsAFireSound()
+        {
+            var ids = PresentationAssetBuilder.AllWeaponEntries().Select(entry => entry.WeaponId).ToList();
+
+            Assert.That(ids, Is.Unique);
+            foreach (var entry in PresentationAssetBuilder.WeaponEntries())
+            {
+                Assert.That(PresentationAssetBuilder.AllWeaponEntries(), Does.Contain(entry), "the three fixed weapons keep their own sounds");
+            }
+
+            foreach (var (name, spec) in WeaponAssetBuilder.AllWeaponSources())
+            {
+                var beamOrSpray = spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray;
+                Assert.That(ids.Contains(spec.Id), Is.EqualTo(!beamOrSpray), name);
+            }
+
+            foreach (var id in BootstrapSceneBuilder.PlayerWeaponIds.Concat(BootstrapSceneBuilder.FeaturedWeaponIds))
+            {
+                Assert.That(ids, Does.Contain(id), id);
+            }
+        }
+
+        [Test]
+        public void AWeaponWithoutItsOwnSoundBorrowsTheSoundOfItsKind()
+        {
+            var specs = WeaponAssetBuilder.AllWeaponSources().ToDictionary(source => source.Name, source => source.Spec);
+
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["Revolver"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.HandgunFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["Pdw"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.HandgunFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["Pdw"]).Value.MuzzleFlash, Is.EqualTo(PresentationAssetBuilder.HandgunMuzzleFlashEffect));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["HeavySniper"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.RifleFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["ModularRifle"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.RifleFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["QuadRocketLauncher"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.LauncherFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["PumpShotgun"]).Value.Fire, Is.EqualTo(PresentationAssetBuilder.LauncherFireSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["PumpShotgun"]).Value.Reload, Is.EqualTo(PresentationAssetBuilder.RifleReloadSound));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["PumpShotgun"]).Value.MuzzleFlash, Is.EqualTo(PresentationAssetBuilder.RifleMuzzleFlashEffect));
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["Laser"]), Is.Null);
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["Flamethrower"]), Is.Null);
+            Assert.Throws<ArgumentNullException>(() => PresentationAssetBuilder.AssetsFor(null));
+        }
+
+        [Test]
+        public void TheBuiltCatalogGivesThePlayersWeaponsAFireSound()
+        {
+            var catalog = Build();
+
+            Assert.That(catalog.Weapons.Count, Is.EqualTo(PresentationAssetBuilder.AllWeaponEntries().Count));
+            foreach (var id in BootstrapSceneBuilder.PlayerWeaponIds.Concat(BootstrapSceneBuilder.FeaturedWeaponIds))
+            {
+                Assert.That(catalog.TryGetWeapon(id, out var assets), Is.True, id);
+                Assert.That(assets.Fire, Is.Not.Null, id);
+                Assert.That(assets.MuzzleFlash, Is.Not.Null, id);
+            }
+        }
+
         private PresentationCatalog Build()
         {
             return PresentationAssetBuilder.BuildAt(_audioFolder, _presentationFolder, _catalogPath);

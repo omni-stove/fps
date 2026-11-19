@@ -46,6 +46,12 @@
     "recoilRecoveryDelaySeconds": 0.2,
     "blindFireSpreadDegrees": 15,
     "zoomLevels": [20],
-    "swayDegrees": 0
+    "swayDegrees": 0,
+    "sight": {
+      "reticleId": "mildot",
+      "scopeOverlay": true,
+      "eyeViewInThirdPerson": true,
+      "aimedInProgress": 0.9
+    }
   }
 }

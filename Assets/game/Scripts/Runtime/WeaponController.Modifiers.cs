@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Shooter.Core;
 using UnityEngine;
 
 namespace Shooter.Runtime
@@ -64,6 +65,25 @@ namespace Shooter.Runtime
             }
 
             return $"{ReloadCancelledLogPrefix} by={modifier.GetType().Name}";
+        }
+
+        public static string FormatReloadCancelledLog(ReloadInterrupt by)
+        {
+            return $"{ReloadCancelledLogPrefix} by={by}";
+        }
+
+        // 構えのように始めた瞬間だけ取り消す動作は、している間ずっと止める IWeaponModifier では表せないので、呼んだ時点で一度だけ取り消す。
+        public bool InterruptReload(ReloadInterrupt by)
+        {
+            var weapon = Weapon;
+            if (weapon == null || !weapon.IsReloading || !Rules.Actions.InterruptsReload(by))
+            {
+                return false;
+            }
+
+            weapon.CancelReload();
+            Debug.Log(FormatReloadCancelledLog(by), this);
+            return true;
         }
 
         // 負や NaN の倍率は、広がりを 0 (常に真ん中) にする抜け道にも無限の広がりにもならないよう、その modifier だけ無視して警告する。

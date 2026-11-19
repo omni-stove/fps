@@ -89,6 +89,8 @@ namespace Shooter.Runtime
         Crosshair,
 
         Circle,
+
+        MilDot,
     }
 
     [Serializable]

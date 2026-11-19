@@ -351,12 +351,18 @@ namespace Shooter.Runtime
             // 泳ぎの状態は CharacterMotorState.CanAimDownSights と同じ答えにする (ネット対戦の予測と同じく、水の中では構えない)。
             ads.AdsBlocker = () =>
                 (weapon != null && weapon.Weapon != null && weapon.Weapon.Trigger.BlocksAds)
+                || (weapon != null && weapon.Weapon != null && weapon.Weapon.IsReloading && weapon.Rules.Actions.BlocksAimWhileReloading())
                 || (mover != null && mover.TryGetMotorState(out var motor) && !motor.CanAimDownSights);
             ads.AimingChanged += aiming =>
             {
                 if (aiming && mover != null)
                 {
                     mover.ReleaseSprint(SprintInput.ReasonAim);
+                }
+
+                if (aiming && weapon != null)
+                {
+                    weapon.InterruptReload(ReloadInterrupt.Aim);
                 }
             };
 

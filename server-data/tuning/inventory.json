@@ -169,6 +169,20 @@
       }
     },
     {
+      "id": "79fb2f9e-fc61-425a-b651-8baa8d1a6b2b",
+      "nameKey": "item.holoSight",
+      "iconId": "holoSight",
+      "weight": 0.3,
+      "attachment": {
+        "slot": "optic",
+        "adsSpreadMultiplier": 0.85,
+        "zoomLevels": [50],
+        "sight": {
+          "reticleId": "holo"
+        }
+      }
+    },
+    {
       "id": "8d8c8546-59d4-4b4c-ba71-890664e5c260",
       "nameKey": "item.suppressor",
       "iconId": "suppressor",

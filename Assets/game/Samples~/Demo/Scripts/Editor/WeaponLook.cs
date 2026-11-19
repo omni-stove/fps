@@ -54,6 +54,9 @@ namespace Shooter.Editor
         public const string RotaryBarrelPrefix = "RotaryBarrel_";
         public const string ScopeName = "Scope";
         public const string LongScopeName = "LongScope";
+        public const string DotSightName = "DotSight";
+        public const string HoloSightName = "HoloSight";
+        public const string HoloReticleId = "holo";
         public const string MagazineName = "Magazine";
         public const string TubeMagazineName = "TubeMagazine";
         public const string PumpName = "Pump";
@@ -213,7 +216,9 @@ namespace Shooter.Editor
             var rocket = round.Delivery == RoundDelivery.Projectile && impact.Explosion != null && round.Projectile.OnWorldHit == WorldHitResponse.Stop;
             var tube = category == WeaponCategory.Launcher && !drum;
             var narrowest = spec.Aim.ZoomLevels.Min();
-            var scoped = narrowest <= ScopeMaxFieldOfView && !tube;
+            var sightSpec = spec.Aim.Sight;
+            var scoped = (narrowest <= ScopeMaxFieldOfView || sightSpec.ScopeOverlay) && !tube;
+            var reflex = !scoped && !tube && sightSpec.HasReticle;
             var longScope = scoped && (narrowest <= LongScopeMaxFieldOfView || spec.Aim.ZoomLevels.Count > 1);
 
             var r = shape.ReceiverLength;
@@ -404,6 +409,14 @@ namespace Shooter.Editor
                 parts.Add(new WeaponPart("ScopeMount_R", WeaponPartShape.Box, new Vector3(0f, top + 0.007f, scopeZ - (length * 0.3f)), new Vector3(0.012f, 0.014f, 0.012f), WeaponPaint.Body));
                 sight = new Vector3(0f, scopeY, scopeZ - (length * 0.5f));
             }
+            else if (reflex && string.Equals(sightSpec.ReticleId, HoloReticleId, StringComparison.Ordinal))
+            {
+                sight = AddHoloSight(parts, top, r * 0.4f);
+            }
+            else if (reflex)
+            {
+                sight = AddDotSight(parts, top, r * 0.4f);
+            }
             else
             {
                 // 照星は照門と同じ高さまで伸ばす。高さが違うと、構えたときに照準の線が銃身と平行にならず上下に傾いて見える。
@@ -428,6 +441,30 @@ namespace Shooter.Editor
                 sight,
                 new Vector3(0f, gripY, gripZ),
                 foreGrip);
+        }
+
+        // 構えている間も一人称の銃は隠さないので、不透明な材質しか無い今はレンズや蓋のある円柱で作らず、中を素通しにした枠にする。
+        public static Vector3 AddDotSight(List<WeaponPart> parts, float top, float z)
+        {
+            return AddReflexSight(parts, DotSightName, top, z, 0.008f, 0.04f, 0.022f, 0.022f, 0.022f);
+        }
+
+        public static Vector3 AddHoloSight(List<WeaponPart> parts, float top, float z)
+        {
+            return AddReflexSight(parts, HoloSightName, top, z, 0.014f, 0.06f, 0.036f, 0.028f, 0.026f);
+        }
+
+        private static Vector3 AddReflexSight(
+            List<WeaponPart> parts, string name, float top, float z, float baseHeight, float baseLength, float windowWidth, float windowHeight, float frameLength)
+        {
+            const float wall = 0.004f;
+            var windowY = top + baseHeight + (windowHeight * 0.5f);
+            var frameZ = z + ((baseLength - frameLength) * 0.5f);
+            parts.Add(new WeaponPart(name, WeaponPartShape.Box, new Vector3(0f, top + (baseHeight * 0.5f), z), new Vector3(windowWidth + (wall * 2f), baseHeight, baseLength), WeaponPaint.Body));
+            parts.Add(new WeaponPart(name + "Wall_L", WeaponPartShape.Box, new Vector3(-(windowWidth + wall) * 0.5f, windowY, frameZ), new Vector3(wall, windowHeight, frameLength), WeaponPaint.Body));
+            parts.Add(new WeaponPart(name + "Wall_R", WeaponPartShape.Box, new Vector3((windowWidth + wall) * 0.5f, windowY, frameZ), new Vector3(wall, windowHeight, frameLength), WeaponPaint.Body));
+            parts.Add(new WeaponPart(name + "Hood", WeaponPartShape.Box, new Vector3(0f, windowY + ((windowHeight + wall) * 0.5f), frameZ), new Vector3(windowWidth + (wall * 2f), wall, frameLength), WeaponPaint.Body));
+            return new Vector3(0f, windowY, z - (baseLength * 0.5f));
         }
 
         // いくつも当てはまるときは、撃ったときに目立つ効果の色を先にする。
@@ -505,7 +542,27 @@ namespace Shooter.Editor
                 throw new ArgumentNullException(nameof(paint));
             }
 
-            foreach (var part in _parts)
+            BuildParts(parent, _parts, part => paint(part.Paint, ColorOf(part.Paint)), castShadows);
+        }
+
+        public static void BuildParts(Transform parent, IEnumerable<WeaponPart> parts, Func<WeaponPart, Material> materialOf, bool castShadows)
+        {
+            if (parent == null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
+
+            if (parts == null)
+            {
+                throw new ArgumentNullException(nameof(parts));
+            }
+
+            if (materialOf == null)
+            {
+                throw new ArgumentNullException(nameof(materialOf));
+            }
+
+            foreach (var part in parts)
             {
                 var primitive = GameObject.CreatePrimitive(PrimitiveOf(part.Shape));
                 primitive.name = part.Name;
@@ -527,7 +584,7 @@ namespace Shooter.Editor
                 }
 
                 var renderer = primitive.GetComponent<MeshRenderer>();
-                renderer.sharedMaterial = paint(part.Paint, ColorOf(part.Paint));
+                renderer.sharedMaterial = materialOf(part);
                 renderer.shadowCastingMode = castShadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
             }
         }

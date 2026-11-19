@@ -54,6 +54,12 @@
     "recoilRecoveryDelaySeconds": 0.15,
     "blindFireSpreadDegrees": 10,
     "zoomLevels": [42.1],
-    "swayDegrees": 0
+    "swayDegrees": 0,
+    "sight": {
+      "reticleId": "holo",
+      "scopeOverlay": false,
+      "eyeViewInThirdPerson": false,
+      "aimedInProgress": 0.9
+    }
   }
 }

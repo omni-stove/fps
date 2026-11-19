@@ -302,13 +302,27 @@ namespace Shooter.Editor
         public static IReadOnlyList<(string Name, WeaponSpec Spec)> RangeWeaponSources()
         {
             var sources = new List<(string Name, WeaponSpec Spec)>();
-            foreach (var file in WeaponJsonImporter.FindJsonFiles(JsonFolder))
+            AddSources(sources, JsonFolder);
+            return sources;
+        }
+
+        // プレイヤーの初期武器と射撃場の台の武器は Reference と Realistic から取るので、見た目と音はこの全部に作る。
+        public static IReadOnlyList<(string Name, WeaponSpec Spec)> AllWeaponSources()
+        {
+            var sources = new List<(string Name, WeaponSpec Spec)>();
+            AddSources(sources, JsonFolder);
+            AddSources(sources, ReferenceJsonFolder);
+            AddSources(sources, RealisticJsonFolder);
+            return sources;
+        }
+
+        private static void AddSources(List<(string Name, WeaponSpec Spec)> sources, string jsonFolder)
+        {
+            foreach (var file in WeaponJsonImporter.FindJsonFiles(jsonFolder))
             {
                 var name = System.IO.Path.GetFileNameWithoutExtension(file);
                 sources.Add((name, WeaponJsonImporter.ParseSpec(System.IO.File.ReadAllText(file), name + ".json")));
             }
-
-            return sources;
         }
 
         [MenuItem(MenuPath)]

@@ -32,6 +32,18 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void TheAimWhileReloadingBlockRoundTrips()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.Rules = MatchRulesSync.From(GameRules.Default.WithActions(ActionRules.Default.WithAimWhileReloading(AimWhileReloading.Off)));
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.Rules.BlocksAimWhileReloading, Is.True);
+            Assert.That(Send(Build(100, 0f), null).Match.Rules.BlocksAimWhileReloading, Is.False);
+        }
+
+        [Test]
         public void TheRoundPhaseRoundTrips()
         {
             var sent = Build(100, 0f);

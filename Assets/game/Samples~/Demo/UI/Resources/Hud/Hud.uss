@@ -941,7 +941,7 @@
 
 .scoreboard__actions {
     flex-direction: row;
-    width: 400px;
+    width: 520px;
     margin-left: 16px;
     justify-content: flex-end;
 }

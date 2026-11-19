@@ -143,6 +143,9 @@ namespace Shooter.NetV2
                 case InventoryStateMessage inventory:
                     _inventory.Receive(inventory);
                     break;
+                case StashStateMessage stash:
+                    _hud?.Receive(stash);
+                    break;
                 case StructureStateMessage structure:
                     _structures.Receive(structure);
                     break;

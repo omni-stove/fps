@@ -231,6 +231,7 @@ namespace Shooter.Tests.EditMode
 
             var detail = Detail();
             Assert.That(detail.Session, Is.SameAs(_runner.BattleRoyale));
+            Assert.That(detail.Game, Is.SameAs(_runner.BattleRoyale), "the HUD reads the running session through the view");
             Assert.That(detail.LocalPlayerId, Is.EqualTo((int?)ModeRunnerBase.LocalPlayerId));
             Assert.That(detail.ReviveTargetId, Is.Null);
             Assert.That(detail.IsLocalPlayerUnarmed, Is.False, "a player without a WeaponController is not told to pick one up");

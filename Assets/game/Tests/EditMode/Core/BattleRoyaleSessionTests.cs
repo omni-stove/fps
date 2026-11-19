@@ -213,6 +213,59 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheViewReadsTheModeClockAndPlayers()
+        {
+            var br = Create();
+            IBattleRoyaleView view = br;
+            br.Start();
+            br.Tick(3f);
+
+            Assert.That(view.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(view.HasTimeLimit, Is.False);
+            Assert.That(view.RemainingSeconds, Is.Zero, "no time limit");
+            Assert.That(view.ElapsedSeconds, Is.EqualTo(3d).Within(1e-6));
+            Assert.That(view.Winner, Is.Null);
+            Assert.That(view.Sides, Is.EqualTo(br.Mode.Sides));
+            Assert.That(view.HasPlayer(_oneA), Is.True);
+            Assert.That(view.HasPlayer(99), Is.False);
+            Assert.That(view.GetSide(_oneA), Is.EqualTo(_squadOne));
+            Assert.That(view.CountMembers(_squadOne), Is.EqualTo(2));
+
+            var timed = new BattleRoyaleSession(4, 2, 60f, Revive());
+            AddEveryone(timed);
+            IBattleRoyaleView timedView = timed;
+            timed.Start();
+            timed.Tick(10f);
+
+            Assert.That(timedView.HasTimeLimit, Is.True);
+            Assert.That(timedView.RemainingSeconds, Is.EqualTo(50f).Within(1e-4f));
+        }
+
+        [Test]
+        public void AStatusFromAViewTakesTheRedeployAsGiven()
+        {
+            var br = Create();
+            br.Start();
+
+            var status = new BattleRoyaleStatus(br, _zeroA, null, null, false);
+            var given = new BattleRoyaleStatus((IBattleRoyaleView)br, _zeroA, null, null, false, 4f, 1);
+            var spectator = new BattleRoyaleStatus((IBattleRoyaleView)br, null, _zeroB, null, true, 4f, 1);
+
+            Assert.That(status.Game, Is.SameAs(br));
+            Assert.That(given.Session, Is.Null, "only the offline constructor keeps the session");
+            Assert.That(given.Game, Is.SameAs(br));
+            Assert.That(given.LocalRedeploySeconds, Is.EqualTo(4f));
+            Assert.That(given.LocalRedeploysLeft, Is.EqualTo(1));
+            Assert.That(spectator.LocalRedeploySeconds, Is.Null);
+            Assert.That(spectator.LocalRedeploysLeft, Is.Null);
+            Assert.That(spectator.ReviveTargetId, Is.Null);
+            Assert.That(spectator.IsLocalPlayerUnarmed, Is.False);
+            Assert.Throws<ArgumentNullException>(() => new BattleRoyaleStatus((IBattleRoyaleView)null, _zeroA, null, null, false, null, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new BattleRoyaleStatus((IBattleRoyaleView)br, _zeroA, null, null, false, -1f, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new BattleRoyaleStatus((IBattleRoyaleView)br, _zeroA, null, null, false, null, -1));
+        }
+
+        [Test]
         public void WithoutDownsALethalHitKills()
         {
             var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, ActionRules.Default);

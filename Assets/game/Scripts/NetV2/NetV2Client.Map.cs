@@ -121,7 +121,7 @@ namespace Shooter.NetV2
                 AddRemote(id);
             }
 
-            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor);
+            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate);
             _hud.BindStatusEffects(_weaponHooks.StatusEffects);
             _hud.BindInventory(_inventory);
 

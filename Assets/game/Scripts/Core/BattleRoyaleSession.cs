@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    public sealed class BattleRoyaleSession
+    public sealed class BattleRoyaleSession : IBattleRoyaleView
     {
         public const int DefaultSquadCount = 4;
         public const int DefaultSquadSize = 2;
@@ -70,6 +70,25 @@ namespace Shooter.Core
         public int ZonePhaseIndex => _redeploy.PhaseIndex;
 
         public bool IsRedeployOpen => _redeploy.IsOpen;
+
+        // 試合の時計と人の並びは Mode から読めるので、公開の口を増やさず HUD に渡す口としてだけ見せる。
+        GameModeState IBattleRoyaleView.State => _mode.State;
+
+        bool IBattleRoyaleView.HasTimeLimit => !float.IsPositiveInfinity(_mode.TimeLimitSeconds);
+
+        float IBattleRoyaleView.RemainingSeconds => float.IsPositiveInfinity(_mode.TimeLimitSeconds) ? 0f : _mode.RemainingSeconds;
+
+        double IBattleRoyaleView.ElapsedSeconds => _mode.ElapsedSeconds;
+
+        Side? IBattleRoyaleView.Winner => _mode.Winner;
+
+        IReadOnlyList<Side> IBattleRoyaleView.Sides => _mode.Sides;
+
+        bool IBattleRoyaleView.HasPlayer(int playerId) => _mode.HasPlayer(playerId);
+
+        Side IBattleRoyaleView.GetSide(int playerId) => _mode.GetSide(playerId);
+
+        int IBattleRoyaleView.CountMembers(Side squad) => _mode.CountMembers(squad);
 
         public void Start()
         {

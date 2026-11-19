@@ -73,5 +73,11 @@
   "hud.lockOn": "Lock {0}%",
   "hud.lockedOn": "Locked",
   "hud.ability.withHint": "{0}  {1}",
-  "hud.remoteCharge.detonate": "Tap to detonate {0} x{1}"
+  "hud.remoteCharge.detonate": "Tap to detonate {0} x{1}",
+  "hud.wallet": "${0}",
+  "hud.vision.nightVision": "Night vision",
+  "hud.vision.thermal": "Thermal",
+  "hud.drone.battery": "Battery {0}%",
+  "hud.drone.outOfRange": "Out of range: signal lost",
+  "hud.drone.recall": "[{0}] Recall drone"
 }

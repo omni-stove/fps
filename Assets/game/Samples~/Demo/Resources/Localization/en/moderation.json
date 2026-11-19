@@ -13,5 +13,12 @@
   "moderation.reason.abuse": "Abuse",
   "moderation.reason.spam": "Spam",
   "moderation.reason.offensiveName": "Offensive name",
-  "moderation.reason.other": "Other"
+  "moderation.reason.other": "Other",
+  "moderation.voteKick.start": "Vote to kick",
+  "moderation.voteKick.called": "{0} started a vote to kick {1}",
+  "moderation.voteKick.yes": "Yes",
+  "moderation.voteKick.no": "No",
+  "moderation.voteKick.remaining": "{0} s left",
+  "moderation.voteKick.passed": "{0} was kicked by vote",
+  "moderation.voteKick.failed": "The vote to kick {0} failed"
 }

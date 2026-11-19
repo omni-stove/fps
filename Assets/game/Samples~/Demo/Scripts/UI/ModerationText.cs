@@ -36,10 +36,25 @@ namespace Shooter.Runtime
 
         public const string OtherKey = "moderation.reason.other";
 
+        public const string VoteKickStartKey = "moderation.voteKick.start";
+
+        public const string VoteKickCalledKey = "moderation.voteKick.called";
+
+        public const string VoteKickYesKey = "moderation.voteKick.yes";
+
+        public const string VoteKickNoKey = "moderation.voteKick.no";
+
+        public const string VoteKickRemainingKey = "moderation.voteKick.remaining";
+
+        public const string VoteKickPassedKey = "moderation.voteKick.passed";
+
+        public const string VoteKickFailedKey = "moderation.voteKick.failed";
+
         public static IReadOnlyList<string> Keys { get; } = new[]
         {
             PlayersKey, BackKey, MuteKey, UnmuteKey, BlockKey, UnblockKey, ReportKey, ReportedKey, ReportPromptKey, CancelKey,
             CheatingKey, AbuseKey, SpamKey, OffensiveNameKey, OtherKey,
+            VoteKickStartKey, VoteKickCalledKey, VoteKickYesKey, VoteKickNoKey, VoteKickRemainingKey, VoteKickPassedKey, VoteKickFailedKey,
         };
 
         public static LocalizedText Players => new LocalizedText(PlayersKey);

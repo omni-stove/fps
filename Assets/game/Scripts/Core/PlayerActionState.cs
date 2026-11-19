@@ -51,6 +51,9 @@ namespace Shooter.Core
 
         public float SpreadDegrees { get; }
 
+        // Loadout.SwitchLowering と同じく、0 が構えた状態、1 がしまい切った状態。
+        public float SwitchLowering { get; }
+
         public bool IsSprinting => Has(PlayerActionConditions.Sprinting);
         public bool IsCrouching => Has(PlayerActionConditions.Crouching);
         public bool IsDodging => Has(PlayerActionConditions.Dodging);
@@ -80,7 +83,8 @@ namespace Shooter.Core
             ShoulderSide shoulder,
             ViewMode viewMode,
             string weaponName,
-            float spreadDegrees)
+            float spreadDegrees,
+            float switchLowering = 0f)
         {
             if ((flags & ~AllFlags) != 0)
             {
@@ -117,6 +121,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(spreadDegrees), spreadDegrees, "spreadDegrees must be between 0 and 90");
             }
 
+            if (!(switchLowering >= 0f && switchLowering <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(switchLowering), switchLowering, "switchLowering must be between 0 and 1");
+            }
+
             Flags = flags;
             ReloadProgress = reloadProgress;
             ActiveReload = activeReload;
@@ -124,6 +133,7 @@ namespace Shooter.Core
             ViewMode = viewMode;
             _weaponName = weaponName ?? string.Empty;
             SpreadDegrees = spreadDegrees;
+            SwitchLowering = switchLowering;
         }
 
         public static bool IsFiringAfter(float secondsSinceShot, float fireInterval)
@@ -149,7 +159,8 @@ namespace Shooter.Core
                 && Shoulder == other.Shoulder
                 && ViewMode == other.ViewMode
                 && string.Equals(WeaponName, other.WeaponName, StringComparison.Ordinal)
-                && SpreadDegrees.Equals(other.SpreadDegrees);
+                && SpreadDegrees.Equals(other.SpreadDegrees)
+                && SwitchLowering.Equals(other.SwitchLowering);
         }
 
         public override bool Equals(object obj)
@@ -169,7 +180,7 @@ namespace Shooter.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine((int)Flags, ReloadProgress, ActiveReload, (int)Shoulder, (int)ViewMode, WeaponName, SpreadDegrees);
+            return HashCode.Combine((int)Flags, ReloadProgress, ActiveReload, (int)Shoulder, (int)ViewMode, WeaponName, SpreadDegrees, SwitchLowering);
         }
 
         public override string ToString()
@@ -177,14 +188,15 @@ namespace Shooter.Core
             var activeReload = ActiveReload.HasValue ? ActiveReload.Value.ToString() : "-";
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "flags={0} reload={1:0.00} activeReload={2} shoulder={3} view={4} weapon={5} spread={6:0.0}",
+                "flags={0} reload={1:0.00} activeReload={2} shoulder={3} view={4} weapon={5} spread={6:0.0} switch={7:0.00}",
                 Flags,
                 ReloadProgress,
                 activeReload,
                 Shoulder,
                 ViewMode,
                 WeaponName,
-                SpreadDegrees);
+                SpreadDegrees,
+                SwitchLowering);
         }
 
         private bool Has(PlayerActionConditions flag)

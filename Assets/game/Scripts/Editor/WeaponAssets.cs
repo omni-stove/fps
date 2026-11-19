@@ -115,6 +115,7 @@ namespace Shooter.Editor
             definition.Weight = spec.Weight;
             definition.MoveSpeedMultiplier = spec.MoveSpeedMultiplier;
             definition.DrawSeconds = spec.DrawSeconds;
+            definition.HolsterSeconds = spec.HolsterSeconds;
             definition.Description = spec.Description;
 
             var trigger = spec.Trigger;

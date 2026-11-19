@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // PlayerActions に自分で登録しないのは、エモートを選ぶ画面がまだ無く、輪を出しても選べないため。画面を足すときに PlayerActions.Register で入れる。
     public sealed class EmoteActionInstaller : IPlayerActionInstaller
     {
         // ほかのアクションのコンポーネントは読まないので、組み込みの後に呼ぶ。

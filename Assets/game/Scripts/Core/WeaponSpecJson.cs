@@ -18,6 +18,7 @@ namespace Shooter.Core
         public const string MoveSpeedMultiplierItem = "moveSpeedMultiplier";
 
         public const string DrawSecondsItem = "drawSeconds";
+        public const string HolsterSecondsItem = "holsterSeconds";
         public const string TriggerItem = "trigger";
         public const string AmmoItem = "ammo";
         public const string RoundItem = "round";
@@ -158,7 +159,7 @@ namespace Shooter.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
+                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, HolsterSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -284,7 +285,8 @@ namespace Shooter.Core
                     fields.ReadFloat(WeightItem, WeaponSpec.DefaultWeight),
                     fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier),
                     fields.ReadString(DescriptionItem, string.Empty),
-                    drawSeconds);
+                    drawSeconds,
+                    fields.ReadFloat(HolsterSecondsItem, WeaponSpec.DefaultHolsterSeconds));
             }
             catch (ArgumentException e)
             {
@@ -311,6 +313,12 @@ namespace Shooter.Core
             if (spec.DrawSeconds.HasValue)
             {
                 writer.Float(DrawSecondsItem, spec.DrawSeconds.Value);
+            }
+
+            // しまう秒数を持たない武器の JSON も、この項目を足す前と同じ文字列のまま書き戻す。
+            if (spec.HolsterSeconds != WeaponSpec.DefaultHolsterSeconds)
+            {
+                writer.Float(HolsterSecondsItem, spec.HolsterSeconds);
             }
 
             writer.BeginObject(TriggerItem);

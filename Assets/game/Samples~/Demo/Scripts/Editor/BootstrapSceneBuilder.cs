@@ -96,6 +96,75 @@ namespace Shooter.Editor
         // 後ろの列も遮蔽物 (CoverDistance) より手前に収めるため、横の間隔より詰める。
         public const float WeaponTableRowSpacing = 1.5f;
 
+        public const string PlatformsName = "Platforms";
+
+        public const string ShuttleName = "Platform_Shuttle";
+
+        public const string ElevatorName = "Platform_Elevator";
+
+        public const string ElevatorTowerName = "Elevator_Tower";
+
+        public const string ElevatorCallBottomName = "Elevator_Call_Bottom";
+
+        public const string ElevatorCallTopName = "Elevator_Call_Top";
+
+        public const int ElevatorBottomStop = 0;
+
+        public const int ElevatorTopStop = 1;
+
+        public static string PlatformFolder => ShooterKitRoot.OutputPath("Platforms");
+
+        public static string ElevatorSettingsPath => PlatformFolder + "/RangeElevator.asset";
+
+        public const float ElevatorSpeed = 2f;
+
+        public const float ElevatorWaitSeconds = 1f;
+
+        public static readonly Vector3 PlatformSlabSize = MovingPlatform.DefaultSlabSize;
+
+        // CharacterController の既定の段差 (0.3m) より低くして、床から歩いて乗れるようにする。
+        public const float PlatformTopHeight = 0.25f;
+
+        public const float ElevatorRise = 4f;
+
+        // 遮蔽物・武器の台・標的 (x が ±7m の内) の外の左右に置き、射撃の邪魔をしない。
+        public static readonly Vector3 ShuttleOrigin = new Vector3(-12f, PlatformTopHeight - (PlatformSlabSize.y / 2f), 0f);
+
+        public static readonly IReadOnlyList<Vector3> ShuttleStops = new[] { Vector3.zero, new Vector3(0f, 0f, 8f) };
+
+        public static readonly Vector3 ElevatorOrigin = new Vector3(12f, PlatformTopHeight - (PlatformSlabSize.y / 2f), 0f);
+
+        public static readonly IReadOnlyList<Vector3> ElevatorStops = new[] { Vector3.zero, new Vector3(0f, ElevatorRise, 0f) };
+
+        // 上の点に着いた板の上面と塔の上面を揃え、段差なしで降りられるようにする。
+        public static LevelBox ElevatorTower
+        {
+            get
+            {
+                var height = PlatformTopHeight + ElevatorRise;
+                var size = new Vector3(4f, height, 4f);
+                var x = ElevatorOrigin.x + (PlatformSlabSize.x / 2f) + (size.x / 2f);
+                return new LevelBox(ElevatorTowerName, new Vector3(x, height / 2f, ElevatorOrigin.z), size);
+            }
+        }
+
+        // 板の真上でなく手前に置き、乗ったときでなく乗り場に来たときに呼ぶ。
+        public static LevelBox ElevatorCallBottom =>
+            new LevelBox(
+                ElevatorCallBottomName,
+                new Vector3(ElevatorOrigin.x - (PlatformSlabSize.x / 2f) - 1.5f, 1f, ElevatorOrigin.z),
+                new Vector3(2f, 2f, PlatformSlabSize.z));
+
+        public static LevelBox ElevatorCallTop
+        {
+            get
+            {
+                var tower = ElevatorTower;
+                var top = tower.Center.y + (tower.Size.y / 2f);
+                return new LevelBox(ElevatorCallTopName, new Vector3(tower.Center.x, top + 1f, tower.Center.z), new Vector3(2f, 2f, PlatformSlabSize.z));
+            }
+        }
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -124,6 +193,7 @@ namespace Shooter.Editor
             var weapons = LoadPlayerWeapons(reference);
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.RangePath);
             var featured = LoadFeaturedWeapons(reference, realistic);
+            var elevator = BuildElevatorSettings();
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -131,7 +201,7 @@ namespace Shooter.Editor
                 Directory.CreateDirectory(directory);
             }
 
-            PopulateScene(scene, weapons, rules, featured);
+            PopulateScene(scene, weapons, rules, featured, elevator);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -189,6 +259,109 @@ namespace Shooter.Editor
 
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;
+        }
+
+        // 動く床とエレベーターを足す形を分けるのは、エレベーターの設定がアセットで、それを作らずに場を組むテストや他の場の組み立てを変えないため。
+        public static GameObject PopulateScene(
+            Scene scene,
+            IReadOnlyList<WeaponDefinition> weapons,
+            GameRulesDefinition rules,
+            IReadOnlyList<WeaponDefinition> featured,
+            MovingPlatformSettings elevatorSettings)
+        {
+            RequireElevatorSettings(elevatorSettings);
+            var bootstrap = PopulateScene(scene, weapons, rules, featured);
+            CreatePlatforms(scene, elevatorSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            return bootstrap;
+        }
+
+        public static GameObject CreatePlatforms(Scene scene, MovingPlatformSettings elevatorSettings)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            RequireElevatorSettings(elevatorSettings);
+
+            var root = new GameObject(PlatformsName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+
+            // 往復する床は設定を持たせず、キットの既定の動き (往復) を使う。
+            CreatePlatform(root.transform, ShuttleName, ShuttleOrigin, null, ShuttleStops);
+            var elevator = CreatePlatform(root.transform, ElevatorName, ElevatorOrigin, elevatorSettings, ElevatorStops);
+
+            var tower = ElevatorTower;
+            var towerBox = SceneBuildHelpers.CreateStaticBox(scene, root.transform, tower.Name, tower.Center, tower.Size);
+            SceneBuildHelpers.SetSurfaceMaterial(towerBox, SurfaceImpactAssetStep.ConcreteId);
+
+            CreateCallZone(root.transform, ElevatorCallBottom, elevator, ElevatorBottomStop);
+            CreateCallZone(root.transform, ElevatorCallTop, elevator, ElevatorTopStop);
+            return root;
+        }
+
+        // 既存のアセットは GUID を保って中身だけ更新するので、場が参照したまま値を直せる。
+        public static MovingPlatformSettings BuildElevatorSettings()
+        {
+            return SceneBuildHelpers.CreateOrUpdateAsset<MovingPlatformSettings>(ElevatorSettingsPath, ConfigureElevatorSettings);
+        }
+
+        public static void ConfigureElevatorSettings(MovingPlatformSettings settings)
+        {
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            settings.Kind = PlatformRouteKind.OnCall;
+            settings.Speed = ElevatorSpeed;
+            settings.WaitSeconds = ElevatorWaitSeconds;
+            settings.SpinDegreesPerSecond = 0f;
+            settings.DepartWhenBoarded = true;
+        }
+
+        private static void RequireElevatorSettings(MovingPlatformSettings settings)
+        {
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            // 値が不正なら ToSpec が ArgumentOutOfRangeException を投げる。
+            if (settings.ToSpec().Kind != PlatformRouteKind.OnCall)
+            {
+                throw new ArgumentException($"the elevator settings '{settings.name}' must be {PlatformRouteKind.OnCall}", nameof(settings));
+            }
+        }
+
+        private static MovingPlatform CreatePlatform(
+            Transform parent, string name, Vector3 origin, MovingPlatformSettings settings, IReadOnlyList<Vector3> stops)
+        {
+            var body = new GameObject(name);
+            body.transform.SetParent(parent, false);
+            body.transform.position = origin;
+
+            // 板をここで作るのは、MovingPlatform が実行時に作ると Play のたびに既定の板を作った警告が出るため。
+            var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slab.name = MovingPlatform.SlabName;
+            slab.transform.SetParent(body.transform, false);
+            slab.transform.localScale = PlatformSlabSize;
+            SceneBuildHelpers.SetSurfaceMaterial(slab, SurfaceImpactAssetStep.MetalId);
+
+            var platform = body.AddComponent<MovingPlatform>();
+            platform.SlabSize = PlatformSlabSize;
+            platform.Configure(settings, stops);
+            return platform;
+        }
+
+        private static PlatformCallZone CreateCallZone(Transform parent, LevelBox box, MovingPlatform platform, int stop)
+        {
+            var zoneObject = new GameObject(box.Name);
+            zoneObject.transform.SetParent(parent, false);
+            zoneObject.transform.position = box.Center;
+            var zone = zoneObject.AddComponent<PlatformCallZone>();
+            zone.Platform = platform;
+            zone.Stop = stop;
+            zone.Size = box.Size;
+            zone.EnsureTrigger();
+            return zone;
         }
 
         // 床は GameBootstrap が実行時に作るので、遮蔽物は床の上 (y = 0 から) に立つ大きさと位置にしてある。

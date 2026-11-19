@@ -192,6 +192,14 @@ namespace Shooter.Runtime
             PlaceForAim();
         }
 
+        // 持ち替えでしまい切ったときに、構えた位置から下げる距離 (m)。
+        public const float LoweredDrop = 0.5f;
+
+        public static Vector3 LoweredPosition(Vector3 held, float lowering)
+        {
+            return held + (Vector3.down * (LoweredDrop * Mathf.Clamp01(lowering)));
+        }
+
         public static Vector3 AimedRootPosition(Vector3 adsOffset, Vector3 sightInModel)
         {
             return adsOffset - sightInModel;
@@ -205,7 +213,8 @@ namespace Shooter.Runtime
             }
 
             var progress = Mathf.Clamp01(_motion.AdsProgress());
-            _instance.transform.localPosition = Vector3.Lerp(_hipPosition, _adsPosition, progress);
+            var lowering = _weapon != null ? _weapon.SwitchLowering : 0f;
+            _instance.transform.localPosition = LoweredPosition(Vector3.Lerp(_hipPosition, _adsPosition, progress), lowering);
             HideForSight(CurrentSightView().HidesViewmodel, false);
         }
 

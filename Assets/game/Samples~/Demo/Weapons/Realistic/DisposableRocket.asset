@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: b1e55e1f-f9a2-4c60-bdd8-b4a313cb2583
   _nameKey: weapon.real.disposableRocket
-  _description: "Battlefield 4 \u306E AT4 (\u5B9F\u9283\u306F AT4 (M136)) \u3092\u53C2\u8003\u3002\u4E00\u5B9A\u306E 70 m/s \u3067\u98DB\u3073\u3001\u6B69\u5175\u306B\u306F\u7206\u767A 112\u30FB1.5 m \u307E\u3067\u6E1B\u3089\u305A 5 m \u307E\u3067\u5C4A\u304F\u3002"
+  _description: "Battlefield 4 \u306E AT4 (\u5B9F\u9283\u306F AT4 (M136)) \u3092\u53C2\u8003\u3002\u4E00\u5B9A\u306E 70 m/s \u3067\u98DB\u3073\u3001\u6B69\u5175\u306B\u306F\u7206\u767A 112\u30FB1.5 m \u307E\u3067\u6E1B\u3089\u305A 5 m \u307E\u3067\u5C4A\u304F\u3002BF \u306E\u69CB\u3048\u308B\u79D2\u6570\u306F\u516C\u958B\u30C7\u30FC\u30BF\u304C\u7121\u3044\u306E\u3067\u3001\u7A2E\u985E\u3054\u3068\u306B\u63A8\u6E2C\u3057\u305F\u3002"
   _category: 7
   _fireMode: 1
   _magazineSize: 1
@@ -42,6 +42,8 @@ MonoBehaviour:
   _shotNoiseRadius: 50
   _weight: 6.7
   _moveSpeedMultiplier: 1
+  _hasDrawSeconds: 1
+  _drawSeconds: 1.5
   _burst:
     _enabled: 0
     _roundsPerBurst: 3

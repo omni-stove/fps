@@ -228,6 +228,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void HolsterSecondsStartAtZeroAndReachTheSpec()
+        {
+            var definition = NewDefinition("Holster");
+            Assert.That(definition.HolsterSeconds, Is.Zero);
+            Assert.That(definition.ToSpec().HolsterSeconds, Is.Zero);
+
+            definition.HolsterSeconds = 0.4f;
+            Assert.That(definition.ToSpec().HolsterSeconds, Is.EqualTo(0.4f));
+        }
+
+        [Test]
         public void DrawSecondsAreUnsetUntilGivenAndZeroIsKept()
         {
             var definition = NewDefinition("Draw");
@@ -387,6 +398,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("Weight", "")]
         [TestCase("MoveSpeedMultiplier", "")]
         [TestCase("DrawSeconds", "")]
+        [TestCase("HolsterSeconds", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -482,6 +494,9 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "DrawSeconds":
                     definition.DrawSeconds = -0.1f;
+                    break;
+                case "HolsterSeconds":
+                    definition.HolsterSeconds = -0.1f;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

@@ -6,6 +6,8 @@
   "shotNoiseRadius": 50,
   "weight": 3.2,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.6,
+  "holsterSeconds": 0.55,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.0741

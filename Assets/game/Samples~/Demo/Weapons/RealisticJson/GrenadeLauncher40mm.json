@@ -1,11 +1,12 @@
 {
   "id": "e2680d20-0aa4-4a9c-baeb-31430634d792",
   "nameKey": "weapon.real.grenadeLauncher40mm",
-  "description": "Battlefield 4 の M320 HE (実銃は M320 (40mm 榴弾)) を参考。45 m/s で重力 7.2 m/s² の弧を描く。直撃 100 は当たり 25 と爆発 75 に分けた。0.5 秒までの不発は入れていない。",
+  "description": "Battlefield 4 の M320 HE (実銃は M320 (40mm 榴弾)) を参考。45 m/s で重力 7.2 m/s² の弧を描く。直撃 100 は当たり 25 と爆発 75 に分けた。0.5 秒までの不発は入れていない。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Launcher",
   "shotNoiseRadius": 50,
   "weight": 2.6,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

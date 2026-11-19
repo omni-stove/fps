@@ -108,7 +108,7 @@ namespace Shooter.Core
                     : new Weapon(spec, rules);
             }
 
-            var loadout = new Loadout<Weapon>(weapons, switchSeconds, Holster, w => w.Spec.DrawSeconds);
+            var loadout = new Loadout<Weapon>(weapons, switchSeconds, Holster, w => w.Spec.DrawSeconds, w => w.Spec.HolsterSeconds);
 
             // まだ誰も Switched を購読していないうちに選ぶので、呼ぶ側には持ち替えとして見えない
             var equipped = IndexOf(loadout, equippedWeaponId);
@@ -117,7 +117,7 @@ namespace Shooter.Core
                 loadout.TrySelect(equipped);
 
                 // 作り直した時点で持っている武器を、持ち替え中にしないため
-                loadout.Tick(loadout.SwitchSecondsTo(equipped));
+                loadout.Tick(loadout.SwitchRemaining);
             }
 
             unknownWeaponIds = unknown.AsReadOnly();

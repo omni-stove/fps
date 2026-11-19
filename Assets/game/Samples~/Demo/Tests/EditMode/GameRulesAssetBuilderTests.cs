@@ -358,6 +358,19 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void BothRangesLetThePlayerEmoteAndRunOutOfStamina()
+        {
+            foreach (var rules in new[] { GameRulesAssetBuilder.RangeRules(), GameRulesAssetBuilder.TpsRangeRules() })
+            {
+                Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
+                Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
+            }
+
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchActions().Emote, Is.EqualTo(Emote.Off), "online players do not emote");
+            Assert.That(GameRulesAssetBuilder.CampaignActions().Stamina, Is.EqualTo(Stamina.Off));
+        }
+
+        [Test]
         public void EveryModeRulesMatchTheirActionFactories()
         {
             var rules = new[]

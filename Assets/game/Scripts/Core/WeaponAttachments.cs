@@ -106,7 +106,8 @@ namespace Shooter.Core
                 weight,
                 spec.MoveSpeedMultiplier * speed,
                 spec.Description,
-                spec.DrawSeconds);
+                spec.DrawSeconds,
+                spec.HolsterSeconds);
         }
 
         public static IReadOnlyList<string> Keep(ItemCatalog catalog, string weaponId, IEnumerable<string> attachmentItemIds)

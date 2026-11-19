@@ -207,6 +207,118 @@ namespace Shooter.Core.Tests
             Assert.That(loadout.IsSwitching, Is.True);
         }
 
+        [Test]
+        public void TheHeldItemIsHolsteredBeforeTheNextIsDrawn()
+        {
+            var draw = new Dictionary<Item, float?> { [_rifle] = 0.75f, [_pistol] = 0.25f, [_knife] = null };
+            var holster = new Dictionary<Item, float> { [_rifle] = 0.5f, [_pistol] = 0.125f, [_knife] = 0f };
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.5f, null, item => draw[item], item => holster[item]);
+
+            Assert.That(loadout.HolsterSecondsOf(0), Is.EqualTo(0.5f));
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.75f), "the rifle's 0.5 s holster and the pistol's 0.25 s draw");
+            Assert.That(loadout.SwitchSecondsTo(2), Is.EqualTo(1f), "the knife without a draw time adds the loadout's 0.5 s");
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(1), "the switch is decided at once");
+            Assert.That(loadout.SwitchRemaining, Is.EqualTo(0.75f));
+            loadout.Tick(0.25f);
+            Assert.That(loadout.IsHolstering, Is.True);
+            loadout.Tick(0.25f);
+            Assert.That(loadout.IsHolstering, Is.False, "the rifle is put away in 0.5 s");
+            Assert.That(loadout.IsSwitching, Is.True);
+            loadout.Tick(0.25f);
+            Assert.That(loadout.IsSwitching, Is.False);
+
+            Assert.That(loadout.TrySelect(0), Is.True);
+            Assert.That(loadout.SwitchRemaining, Is.EqualTo(0.875f), "the pistol's 0.125 s holster and the rifle's 0.75 s draw");
+        }
+
+        [Test]
+        public void TheLoweringGoesDownWhileHolsteringAndUpWhileDrawing()
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.25f, null, null, item => item == _rifle ? 0.5f : 0f);
+
+            Assert.That(loadout.SwitchLowering, Is.Zero);
+            Assert.That(loadout.TrySelect(1), Is.True);
+            Assert.That(loadout.SwitchLowering, Is.Zero, "the rifle is still in hand");
+            loadout.Tick(0.25f);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(0.5f));
+            loadout.Tick(0.25f);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(1f), "the rifle is put away and the pistol not yet up");
+            loadout.Tick(0.125f);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(0.5f));
+            loadout.Tick(0.125f);
+            Assert.That(loadout.SwitchLowering, Is.Zero);
+
+            Assert.That(loadout.TrySelect(0), Is.True);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(1f), "the pistol has no holster time, so the rifle comes up from below");
+        }
+
+        [Test]
+        public void ReselectingWhileHolsteringKeepsTheGunWhereItWas()
+        {
+            var holster = new Dictionary<Item, float> { [_rifle] = 0.5f, [_pistol] = 1f, [_knife] = 0f };
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.25f, null, null, item => holster[item]);
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            loadout.Tick(0.25f);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(0.5f));
+            Assert.That(loadout.TrySelect(2), Is.True);
+            Assert.That(loadout.SwitchLowering, Is.EqualTo(0.5f));
+        }
+
+        [Test]
+        public void OneTickCarriesOverFromHolsteringIntoDrawing()
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.25f, null, null, item => item == _rifle ? 0.5f : 0f);
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            loadout.Tick(0.625f);
+            Assert.That(loadout.IsHolstering, Is.False);
+            Assert.That(loadout.SwitchRemaining, Is.EqualTo(0.125f));
+        }
+
+        [Test]
+        public void ReselectingMidSwitchKeepsOnlyTheHolsterLeftOfTheItemInHand()
+        {
+            var holster = new Dictionary<Item, float> { [_rifle] = 0.5f, [_pistol] = 1f, [_knife] = 0f };
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.25f, null, null, item => holster[item]);
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            loadout.Tick(0.125f);
+            Assert.That(loadout.SwitchSecondsTo(2), Is.EqualTo(0.625f), "the rifle's 0.375 s left, not the undrawn pistol's 1 s");
+            Assert.That(loadout.TrySelect(2), Is.True);
+            Assert.That(loadout.SwitchRemaining, Is.EqualTo(0.625f));
+
+            loadout.Tick(0.375f);
+            Assert.That(loadout.TrySelect(0), Is.True);
+            Assert.That(loadout.SwitchRemaining, Is.EqualTo(0.25f), "the rifle was already put away, so only the draw is left");
+        }
+
+        [Test]
+        public void WithoutHolsterSecondsOnlyTheDrawIsWaited()
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.4f, null, null);
+
+            Assert.That(loadout.HolsterSecondsOf(0), Is.Zero);
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.4f));
+            Assert.That(loadout.TrySelect(1), Is.True);
+            Assert.That(loadout.IsHolstering, Is.False);
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void AnInvalidHolsterTimeIsRefusedWithoutSwitching(float holsterSeconds)
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.4f, null, null, item => item == _rifle ? holsterSeconds : 0f);
+
+            Assert.Throws<InvalidOperationException>(() => loadout.TrySelect(1));
+            Assert.That(loadout.CurrentIndex, Is.Zero);
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.Throws<ArgumentOutOfRangeException>(() => loadout.HolsterSecondsOf(2));
+        }
+
         [TestCase(-0.1f)]
         [TestCase(float.NaN)]
         [TestCase(float.PositiveInfinity)]

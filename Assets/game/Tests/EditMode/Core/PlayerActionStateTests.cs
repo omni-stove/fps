@@ -12,9 +12,10 @@ namespace Shooter.Core.Tests
             ShoulderSide shoulder = ShoulderSide.Right,
             ViewMode viewMode = ViewMode.FirstPerson,
             string weaponName = "Rifle",
-            float spreadDegrees = 0f)
+            float spreadDegrees = 0f,
+            float switchLowering = 0f)
         {
-            return new PlayerActionState(flags, reloadProgress, activeReload, shoulder, viewMode, weaponName, spreadDegrees);
+            return new PlayerActionState(flags, reloadProgress, activeReload, shoulder, viewMode, weaponName, spreadDegrees, switchLowering);
         }
 
         [Test]
@@ -130,7 +131,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(
                 state.ToString(),
-                Is.EqualTo("flags=Grounded, Reloading reload=0.50 activeReload=Success shoulder=Left view=ThirdPerson weapon=Rifle spread=8.0"));
+                Is.EqualTo("flags=Grounded, Reloading reload=0.50 activeReload=Success shoulder=Left view=ThirdPerson weapon=Rifle spread=8.0 switch=0.00"));
             Assert.That(default(PlayerActionState).ToString(), Does.Contain("activeReload=-"));
         }
 
@@ -212,6 +213,26 @@ namespace Shooter.Core.Tests
         public void RejectsSpreadOutsideZeroToNinety(float spread)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => Create(spreadDegrees: spread));
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(1.1f)]
+        [TestCase(float.NaN)]
+        public void RejectsSwitchLoweringOutsideZeroToOne(float lowering)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => Create(switchLowering: lowering));
+        }
+
+        [Test]
+        public void SwitchLoweringIsKeptComparedAndLogged()
+        {
+            var lowered = Create(switchLowering: 0.75f);
+
+            Assert.That(default(PlayerActionState).SwitchLowering, Is.Zero);
+            Assert.That(lowered.SwitchLowering, Is.EqualTo(0.75f));
+            Assert.That(lowered, Is.Not.EqualTo(Create()));
+            Assert.That(lowered, Is.EqualTo(Create(switchLowering: 0.75f)));
+            Assert.That(lowered.ToString(), Does.EndWith("switch=0.75"));
         }
 
         [Test]

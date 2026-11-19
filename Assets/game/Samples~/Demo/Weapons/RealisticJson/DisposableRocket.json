@@ -1,11 +1,12 @@
 {
   "id": "b1e55e1f-f9a2-4c60-bdd8-b4a313cb2583",
   "nameKey": "weapon.real.disposableRocket",
-  "description": "Battlefield 4 の AT4 (実銃は AT4 (M136)) を参考。一定の 70 m/s で飛び、歩兵には爆発 112・1.5 m まで減らず 5 m まで届く。",
+  "description": "Battlefield 4 の AT4 (実銃は AT4 (M136)) を参考。一定の 70 m/s で飛び、歩兵には爆発 112・1.5 m まで減らず 5 m まで届く。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Launcher",
   "shotNoiseRadius": 50,
   "weight": 6.7,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 1.5,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

@@ -76,6 +76,18 @@ namespace Shooter.Tests.EditMode
             }
         }
 
+        [TestCase("Range")]
+        [TestCase("TpsRange")]
+        public void TheRangeSamplesTurnOnEmotesAndStamina(string name)
+        {
+            var rules = GameRulesJsonImporter.ImportFrom(SamplesFolder + "/" + name + ".json", _folder)[0].ToRules();
+
+            Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
+            Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
+            Assert.That(GameRulesAssetBuilder.RangeRules().Actions.Emote, Is.EqualTo(Emote.On));
+            Assert.That(GameRulesAssetBuilder.RangeRules().Actions.Stamina, Is.EqualTo(Stamina.On));
+        }
+
         private static void AssertSameRules(GameRules actual, GameRules expected, string name)
         {
             Assert.That(actual.FriendlyFire, Is.EqualTo(expected.FriendlyFire), name + " friendlyFire");
@@ -123,6 +135,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(a.Ping, Is.EqualTo(b.Ping), name + " actions.ping");
             Assert.That(a.Abilities, Is.EqualTo(b.Abilities), name + " actions.abilities");
             Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), name + " actions.slowMotion");
+            Assert.That(a.Emote, Is.EqualTo(b.Emote), name + " actions.emote");
+            Assert.That(a.Stamina, Is.EqualTo(b.Stamina), name + " actions.stamina");
         }
     }
 }

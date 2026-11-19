@@ -27,7 +27,9 @@
     "stagger": "On",
     "stealth": "On",
     "suppression": "On",
-    "jump": "Off"
+    "jump": "Off",
+    "emote": "On",
+    "stamina": "On"
   },
   "spawnProtectionSeconds": 0,
   "fallDamage": "Off",

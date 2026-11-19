@@ -22,6 +22,7 @@
   "settings.value.viewmodelMotion": "武器の揺れの強さ",
   "settings.value.stickDeadzone": "スティックのデッドゾーン",
   "settings.value.rumbleStrength": "振動の強さ",
+  "settings.value.uiScale": "UI の拡大",
   "settings.aimAssist": "エイムアシスト (ゲームパッド)",
   "settings.invertLookY": "視点の上下反転",
   "settings.rumble": "振動",

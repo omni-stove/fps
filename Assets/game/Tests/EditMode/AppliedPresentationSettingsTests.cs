@@ -112,6 +112,31 @@ namespace Shooter.Tests.EditMode
             Assert.That(_logs.Exists(log => log.StartsWith(BloodPresenter.LogTag + " decal", StringComparison.Ordinal)), Is.False);
         }
 
+        [Test]
+        public void ChangingOnlyTheUiScaleRaisesChangedOnce()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                AppliedControlSettings.Apply(ControlSettings.Default.WithUiScale(150));
+                AppliedControlSettings.Apply(ControlSettings.Default.WithUiScale(150));
+
+                Assert.That(received, Has.Count.EqualTo(1), "applying the same scale again is not a change");
+                Assert.That(received[0].UiScale, Is.EqualTo(1.5f));
+                Assert.That(AppliedControlSettings.Current.Get(ControlValue.UiScale), Is.EqualTo(150));
+
+                AppliedControlSettings.Apply(ControlSettings.Default);
+
+                Assert.That(received, Has.Count.EqualTo(2));
+                Assert.That(received[1].UiScale, Is.EqualTo(1f));
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
         private void Capture(string condition, string stackTrace, LogType type)
         {
             _logs.Add(condition);

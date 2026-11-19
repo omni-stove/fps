@@ -23,6 +23,16 @@ namespace Shooter.Runtime
 
         public const string AssistResourcePath = "Tuning/assist";
 
+        public const string PayloadResourcePath = "Tuning/payload";
+
+        public const string EconomyResourcePath = "Tuning/economy";
+
+        public const string SupplyDropsResourcePath = "Tuning/supply-drops";
+
+        public const string MutatorsResourcePath = "Tuning/mutators";
+
+        public const string PlaylistsResourcePath = "Tuning/playlists";
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 

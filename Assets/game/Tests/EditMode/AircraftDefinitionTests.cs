@@ -107,6 +107,37 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheEffectsBlockStartsFromTheDefaultsAndSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            var fresh = definition.ToEffectsSpec();
+            Assert.That(fresh.ElevatorAngle, Is.EqualTo(AircraftEffectsSpec.DefaultElevatorAngle));
+            Assert.That(fresh.AileronAngle, Is.EqualTo(AircraftEffectsSpec.DefaultAileronAngle));
+            Assert.That(fresh.RudderAngle, Is.EqualTo(AircraftEffectsSpec.DefaultRudderAngle));
+            Assert.That(fresh.MinEnginePitch, Is.EqualTo(AircraftEffectsSpec.DefaultMinEnginePitch));
+            Assert.That(fresh.MaxEnginePitch, Is.EqualTo(AircraftEffectsSpec.DefaultMaxEnginePitch));
+            Assert.That(fresh.MinEngineVolume, Is.EqualTo(AircraftEffectsSpec.DefaultMinEngineVolume));
+            Assert.That(fresh.MaxEngineVolume, Is.EqualTo(AircraftEffectsSpec.DefaultMaxEngineVolume));
+            Assert.That(fresh.EngineSpeedShare, Is.EqualTo(AircraftEffectsSpec.DefaultEngineSpeedShare));
+            Assert.That(fresh.VaporLoadFactor, Is.EqualTo(AircraftEffectsSpec.DefaultVaporLoadFactor));
+
+            definition.Effects.CopyFrom(new AircraftEffectsSpec(10f, 12f, 14f, 0.7f, 1.4f, 0.2f, 0.8f, 0.5f, 5f));
+            var effects = definition.ToEffectsSpec();
+
+            Assert.That(effects.ElevatorAngle, Is.EqualTo(10f));
+            Assert.That(effects.AileronAngle, Is.EqualTo(12f));
+            Assert.That(effects.RudderAngle, Is.EqualTo(14f));
+            Assert.That(effects.MinEnginePitch, Is.EqualTo(0.7f));
+            Assert.That(effects.MaxEnginePitch, Is.EqualTo(1.4f));
+            Assert.That(effects.MinEngineVolume, Is.EqualTo(0.2f));
+            Assert.That(effects.MaxEngineVolume, Is.EqualTo(0.8f));
+            Assert.That(effects.EngineSpeedShare, Is.EqualTo(0.5f));
+            Assert.That(effects.VaporLoadFactor, Is.EqualTo(5f));
+            Assert.Throws<ArgumentNullException>(() => definition.Effects.CopyFrom(null));
+        }
+
+        [Test]
         public void TheEmptyBlocksStillGiveASpec()
         {
             var definition = NewDefinition("Trainer");
@@ -142,6 +173,22 @@ namespace Shooter.Tests.EditMode
             var error = Assert.Throws<ArgumentException>(() => definition.ToSpec());
 
             Assert.That(error.Message, Does.Contain("BrokenPlane"));
+            Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void ToEffectsSpecNamesTheAssetWhenAValueIsInvalid()
+        {
+            var definition = NewDefinition("LoudPlane");
+            definition.Effects.CopyFrom(new AircraftEffectsSpec(minEnginePitch: 1f, maxEnginePitch: 1f));
+            var settings = definition.Effects;
+            typeof(AircraftEffectsSettings)
+                .GetField("_maxEnginePitch", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(settings, 0.5f);
+
+            var error = Assert.Throws<ArgumentException>(() => definition.ToEffectsSpec());
+
+            Assert.That(error.Message, Does.Contain("LoudPlane"));
             Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
         }
 

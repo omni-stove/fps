@@ -23,6 +23,10 @@ namespace Shooter.Runtime
         // オフラインは StatusEffectReceiver.LocalPlayerBlinded で知らせるので、出すのは受ける役が無い画面 (ネット対戦) だけ。
         public static GameSignal<Func<float>> LocalBlindSeconds { get; } = new GameSignal<Func<float>>(nameof(LocalBlindSeconds));
 
+        // 値でなく読む関数にするのは、地図の知らせ (Minimap) は間隔ごとにしか来ず、コンパスが毎フレーム今の向き (北から時計回りの度) を読み直すため。
+        // オフラインは LocalPlayer の向きから読めるので、出すのは LocalPlayer の無い画面 (ネット対戦) だけ。
+        public static GameSignal<Func<float>> LocalHeadingDegrees { get; } = new GameSignal<Func<float>>(nameof(LocalHeadingDegrees));
+
         // 戦闘の Id (CombatEvents.Killed) の意味がオフラインと違う画面 (ネット対戦) だけが出す。オフラインの Id は UI が部品から引ける。
         public static GameSignal<IParticipants> Participants { get; } = new GameSignal<IParticipants>(nameof(Participants));
 
@@ -104,6 +108,7 @@ namespace Shooter.Runtime
             Inventory.Reset();
             GrenadeCount.Reset();
             LocalBlindSeconds.Reset();
+            LocalHeadingDegrees.Reset();
             Participants.Reset();
             ModeStatus.Reset();
             Domination.Reset();

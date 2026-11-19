@@ -30,6 +30,8 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<string> ReadyRewardIds => _tracker != null ? _tracker.ReadyRewardIds : (IReadOnlyList<string>)Array.Empty<string>();
 
+        public string SelectedRewardId => _tracker?.SelectedRewardId;
+
         public System.Random Random { get; set; }
 
         public bool IsTargeting => _targeting != null && _targeting.IsActive;
@@ -111,8 +113,8 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            var ready = _tracker.ReadyRewardIds;
-            if (ready.Count == 0)
+            var rewardId = _tracker.SelectedRewardId;
+            if (rewardId == null)
             {
                 Debug.Log(StreakLog.NothingToUse(LogId), this);
                 return false;
@@ -125,22 +127,22 @@ namespace Shooter.Runtime
             }
 
             // 地点を選ばせる報酬は、選び終えるまで枠を空けない。選ぶのをやめても報酬は残る。
-            if (StreakSpec.NeedsTarget(ready[0]))
+            if (StreakSpec.NeedsTarget(rewardId))
             {
-                return BeginTargeting(ready[0]);
+                return BeginTargeting(rewardId);
             }
 
             // 動かせないまま報酬を取り去らないよう、使うと決める前に動かす部品を確かめる。
-            var isUav = string.Equals(ready[0], StreakSpec.UavRewardId, StringComparison.Ordinal);
+            var isUav = string.Equals(rewardId, StreakSpec.UavRewardId, StringComparison.Ordinal);
             var pings = isUav ? GetComponent<PingController>() : null;
             if (isUav && pings == null)
             {
-                Debug.LogWarning(StreakLog.RewardUnavailable(LogId, ready[0], nameof(PingController)), this);
+                Debug.LogWarning(StreakLog.RewardUnavailable(LogId, rewardId, nameof(PingController)), this);
                 return false;
             }
 
-            var status = _tracker.Use(out var used);
-            Debug.Log(StreakLog.Used(LogId, used, status), this);
+            var status = _tracker.Use(rewardId, out _);
+            Debug.Log(StreakLog.Used(LogId, rewardId, status), this);
             Publish();
 
             var spec = _tracker.Spec;
@@ -152,7 +154,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // 選んでいる間に倒れたり、別の報酬が先に来たりしたら、選んだ地点では使わない。
+        // 選んでいる間に倒れたり、その報酬がもう無くなったりしたら、選んだ地点では使わない。
         public bool UseAt(StreakTargetingStatus target)
         {
             if (_tracker == null)
@@ -160,8 +162,7 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            var ready = _tracker.ReadyRewardIds;
-            if (ready.Count == 0 || !string.Equals(ready[0], target.RewardId, StringComparison.Ordinal))
+            if (!_tracker.IsReady(target.RewardId))
             {
                 Debug.Log(StreakLog.NothingToUse(LogId), this);
                 return false;
@@ -173,7 +174,8 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            var status = _tracker.Use(out var used);
+            var used = target.RewardId;
+            var status = _tracker.Use(used, out _);
             Debug.Log(StreakLog.Used(LogId, used, status), this);
             Publish();
 
@@ -194,6 +196,19 @@ namespace Shooter.Runtime
         public bool CancelTargeting(string reason)
         {
             return _targeting != null && _targeting.Cancel(reason);
+        }
+
+        // 地点を選んでいる間は、選んでいる報酬を替えると狙いの案内と食い違うので替えない。
+        public bool SelectNext()
+        {
+            if (_tracker == null || IsTargeting || !_tracker.SelectNext())
+            {
+                return false;
+            }
+
+            Debug.Log(StreakLog.Selected(LogId, _tracker.SelectedRewardId, _tracker.Status), this);
+            Publish();
+            return true;
         }
 
         private bool BeginTargeting(string rewardId)
@@ -369,10 +384,18 @@ namespace Shooter.Runtime
             }
 
             // ポーズ画面のボタンを押したつもりで報酬を使わないよう、開いている間は読まない。
-            if (_reader != null
-                && _reader.isActiveAndEnabled
-                && (_reader.PressedCommands & PlayerCommands.UseStreak) != 0
-                && !GameUi.IsPauseOpen)
+            if (_reader == null || !_reader.isActiveAndEnabled || GameUi.IsPauseOpen)
+            {
+                return;
+            }
+
+            var pressed = _reader.PressedCommands;
+            if ((pressed & PlayerCommands.SwitchStreak) != 0)
+            {
+                SelectNext();
+            }
+
+            if ((pressed & PlayerCommands.UseStreak) != 0)
             {
                 TryUse();
             }

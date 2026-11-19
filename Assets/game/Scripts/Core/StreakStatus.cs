@@ -8,8 +8,11 @@ namespace Shooter.Core
     {
         // 渡された一覧を後から書き換えられても変わらないよう写しを持つ。default ではコンストラクタを通らず null になるので、読むときに空へ寄せる。
         private readonly StreakSlot[] _slots;
+        private readonly string _selectedRewardId;
 
-        public StreakStatus(int kills, IReadOnlyList<StreakSlot> slots)
+        // 選んでいる報酬が使える枠に無いとき (渡さなかったときを含む) は、使える枠のうち先頭を選んでいるとみなす。
+        // 使える報酬があれば必ずどれかを選んでいることにして、使うキーの行を出し忘れないため。
+        public StreakStatus(int kills, IReadOnlyList<StreakSlot> slots, string selectedRewardId = null)
         {
             if (kills < 0)
             {
@@ -19,17 +22,27 @@ namespace Shooter.Core
             Kills = kills;
             var copy = new StreakSlot[slots?.Count ?? 0];
             var ready = 0;
+            string firstReady = null;
+            string selected = null;
             for (var i = 0; i < copy.Length; i++)
             {
                 copy[i] = slots[i];
-                if (copy[i].Ready)
+                if (!copy[i].Ready)
                 {
-                    ready++;
+                    continue;
+                }
+
+                ready++;
+                firstReady ??= copy[i].RewardId;
+                if (selected == null && string.Equals(copy[i].RewardId, selectedRewardId, StringComparison.Ordinal))
+                {
+                    selected = copy[i].RewardId;
                 }
             }
 
             _slots = copy;
             ReadyCount = ready;
+            _selectedRewardId = selected ?? firstReady;
         }
 
         public int Kills { get; }
@@ -38,9 +51,17 @@ namespace Shooter.Core
 
         public int ReadyCount { get; }
 
+        // 使える報酬が無ければ空文字。
+        public string SelectedRewardId => _selectedRewardId ?? string.Empty;
+
+        public bool IsSelected(StreakSlot slot)
+        {
+            return slot.Ready && ReadyCount > 0 && string.Equals(slot.RewardId, SelectedRewardId, StringComparison.Ordinal);
+        }
+
         public bool Equals(StreakStatus other)
         {
-            if (Kills != other.Kills || ReadyCount != other.ReadyCount)
+            if (Kills != other.Kills || ReadyCount != other.ReadyCount || !string.Equals(SelectedRewardId, other.SelectedRewardId, StringComparison.Ordinal))
             {
                 return false;
             }
@@ -80,7 +101,7 @@ namespace Shooter.Core
 
         public override int GetHashCode()
         {
-            var hash = HashCode.Combine(Kills, ReadyCount);
+            var hash = HashCode.Combine(Kills, ReadyCount, StringComparer.Ordinal.GetHashCode(SelectedRewardId));
             foreach (var slot in Slots)
             {
                 hash = HashCode.Combine(hash, slot);
@@ -93,7 +114,8 @@ namespace Shooter.Core
         {
             return "kills " + Kills.ToString(CultureInfo.InvariantCulture)
                 + " ready " + ReadyCount.ToString(CultureInfo.InvariantCulture)
-                + "/" + Slots.Count.ToString(CultureInfo.InvariantCulture);
+                + "/" + Slots.Count.ToString(CultureInfo.InvariantCulture)
+                + (ReadyCount > 0 ? " selected " + SelectedRewardId : string.Empty);
         }
     }
 }

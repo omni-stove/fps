@@ -211,7 +211,24 @@ namespace Shooter.Tests.EditMode
             Assert.That(left, Does.Contain("CosmeticVisuals"), "the entry lists the cosmetic visuals as a slot to fill");
         }
 
+        [Test]
+        public void TheStreakIconCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.StreakIcons, Is.Null);
+            Assert.That(StreakIconCatalog.Load(), Is.SameAs(Resources.Load<StreakIconCatalog>(StreakIconCatalog.ResourcePath)));
+
+            content.StreakIcons = Track(ScriptableObject.CreateInstance<StreakIconCatalog>());
+            Assert.That(StreakIconCatalog.Load(), Is.SameAs(content.StreakIcons));
+
+            var left = GameContentAssets.FillEmpty(
+                Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
+            Assert.That(left, Does.Contain("StreakIcons"), "the entry lists the streak icons as a slot to fill");
+        }
+
         [TestCase("_cosmeticVisuals", "Resources/Presentation/CosmeticVisualCatalog")]
+        [TestCase("_streakIcons", "Resources/Presentation/StreakIconCatalog")]
         [TestCase("_reticles", "Resources/Presentation/ReticleCatalog")]
         [TestCase("_statusEffectVisuals", "Resources/Presentation/StatusEffectVisualsCatalog")]
         [TestCase("_flashOverlay", "Resources/Presentation/FlashOverlayCatalog")]

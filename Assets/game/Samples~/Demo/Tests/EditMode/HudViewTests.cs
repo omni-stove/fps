@@ -132,6 +132,33 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void HidingTheAimHidesTheCrosshairTheBlockMarkerAndTheLockOnUntilShownAgain()
+        {
+            var model = new HudModel();
+            var view = new HudView(CloneLayout(), model);
+            model.SetAimBlock(new System.Numerics.Vector2(0.5f, 0.5f));
+            model.SetLockOn(0.5f);
+            Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            view.SetAimHidden(true);
+
+            Assert.That(view.IsAimHidden, Is.True);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(view.Crosshair.ClassListContains(HudView.CrosshairBlockedClass), Is.False);
+            Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            model.SetCrosshair(0.5f, true);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None), "the weapon asking for the crosshair does not bring it back");
+
+            view.SetAimHidden(false);
+
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.AimBlockMarker.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(view.LockOnLabel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+        }
+
+        [Test]
         public void ABlockedAimTintsTheCrosshairAndMarksTheBlockedPoint()
         {
             var model = new HudModel();

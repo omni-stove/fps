@@ -213,6 +213,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("アイテムのアイコン (アイコンの Id ごと)。空なら Resources/Presentation/ItemIconCatalog、それも無ければ持ち物の画面が名前の箱を描く")]
         private ItemIconCatalog _itemIcons;
 
+        [SerializeField, Tooltip("ストリークの報酬のアイコン (報酬の Id ごと)。空なら Resources/Presentation/StreakIconCatalog、それも無ければ HUD が名前の箱を描く")]
+        private StreakIconCatalog _streakIcons;
+
         [SerializeField, Tooltip("水中の色・音・水しぶき。空なら Resources/Presentation/WaterCatalog、それも無ければ既定の色だけで覆う")]
         private WaterCatalog _water;
 
@@ -605,6 +608,12 @@ namespace Shooter.Runtime
         {
             get => _itemIcons;
             set => _itemIcons = value;
+        }
+
+        public StreakIconCatalog StreakIcons
+        {
+            get => _streakIcons;
+            set => _streakIcons = value;
         }
 
         public WaterCatalog Water

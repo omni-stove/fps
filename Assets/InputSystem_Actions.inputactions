@@ -276,6 +276,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "SwitchStreak",
+                    "type": "Button",
+                    "id": "4a457e87-b644-4005-b75c-74d7727023d1",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "LeanLeft",
                     "type": "Button",
                     "id": "6a2c9e4f-8b17-4d53-a6e0-3f9b1d7c5e82",
@@ -1001,6 +1010,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "UseStreak",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "99dec152-314d-47a2-b91d-302c6647771f",
+                    "path": "<Keyboard>/3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "SwitchStreak",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

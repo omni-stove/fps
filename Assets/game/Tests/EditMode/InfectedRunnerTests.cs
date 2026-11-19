@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Shooter.Core;
+using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;

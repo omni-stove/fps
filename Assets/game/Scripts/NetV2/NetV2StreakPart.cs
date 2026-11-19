@@ -18,19 +18,22 @@ namespace Shooter.NetV2
         private readonly StreakSpec _spec;
         private readonly Func<NetV2LocalPlayer> _localPlayer;
         private readonly Func<bool> _usePressed;
+        private readonly Func<bool> _switchPressed;
         private readonly Func<StreakTargeting> _targetingHost;
         private ClientStreaks _streaks;
         private StreakTargeting _targeting;
         private int _targetingEndedFrame = -1;
         private InputAction _useAction;
         private bool _lookedUpAction;
+        private InputAction _switchAction;
+        private bool _lookedUpSwitchAction;
         private StreakStatus? _published;
         private bool _disposed;
 
         // 自分の Id は承認されるまで決まらず、部品はつなぐ前に作られるので、数えるのは最初のスナップショットが届いてから始める。
         // ストリークの規則は MatchRulesSync に載らないので、つなぐ側が知っている試合の規則を引く口で受け取る。
         // 押したかを引く口と地点を選ぶ部品を引く口は、テストや別の入力から差し替えられるよう受け取る。
-        // 無ければ InputSystem の UseStreak を読み、自分の体 (NetV2LocalPlayer) の StreakTargeting で選ぶ
+        // 無ければ InputSystem の UseStreak と SwitchStreak を読み、自分の体 (NetV2LocalPlayer) の StreakTargeting で選ぶ
         public NetV2StreakPart(
             MatchClient client,
             Func<IMessage, bool> send,
@@ -39,7 +42,8 @@ namespace Shooter.NetV2
             StreakSpec spec = null,
             Func<NetV2LocalPlayer> localPlayer = null,
             Func<bool> usePressed = null,
-            Func<StreakTargeting> targeting = null)
+            Func<StreakTargeting> targeting = null,
+            Func<bool> switchPressed = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _send = send ?? throw new ArgumentNullException(nameof(send));
@@ -49,6 +53,7 @@ namespace Shooter.NetV2
             _localPlayer = localPlayer ?? (() => NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null);
             _usePressed = usePressed ?? ReadUsePressed;
             _targetingHost = targeting ?? FindTargeting;
+            _switchPressed = switchPressed ?? ReadSwitchPressed;
         }
 
         public ClientStreaks Counter => _streaks;
@@ -132,7 +137,17 @@ namespace Shooter.NetV2
             }
 
             // ポーズ画面のボタンを押したつもりで報酬を使わないよう、開いている間は読まない (オフラインと同じ)
-            if (!_usePressed() || GameUi.IsPauseOpen || !_published.HasValue)
+            if (GameUi.IsPauseOpen || !_published.HasValue)
+            {
+                return;
+            }
+
+            if (_switchPressed() && _streaks.SelectNext())
+            {
+                Publish();
+            }
+
+            if (!_usePressed())
             {
                 return;
             }
@@ -248,6 +263,17 @@ namespace Shooter.NetV2
             }
 
             return _useAction != null && _useAction.WasPressedThisFrame();
+        }
+
+        private bool ReadSwitchPressed()
+        {
+            if (!_lookedUpSwitchAction)
+            {
+                _lookedUpSwitchAction = true;
+                _switchAction = InputSystem.actions != null ? InputSystem.actions.FindAction(InputActionPaths.SwitchStreak) : null;
+            }
+
+            return _switchAction != null && _switchAction.WasPressedThisFrame();
         }
 
         // Publish は同じ値でも購読者を呼ぶので、変わったときだけ出す

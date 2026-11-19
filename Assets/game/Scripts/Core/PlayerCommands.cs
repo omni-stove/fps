@@ -30,5 +30,7 @@ namespace Shooter.Core
         TeamChat = 1 << 10,
 
         PushToTalk = 1 << 11,
+
+        SwitchStreak = 1 << 12,
     }
 }

@@ -300,7 +300,8 @@ namespace Shooter.Core.Tests
 
                 lock (Bodies)
                 {
-                    Bodies.Add(request.Content.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
+                    // Unity の .NET Standard 2.1 には CancellationToken を取る ReadAsStringAsync がない。
+                    Bodies.Add(request.Content.ReadAsStringAsync().GetAwaiter().GetResult());
                     ContentTypes.Add(request.Content.Headers.ContentType.MediaType);
                     Uris.Add(request.RequestUri);
                 }

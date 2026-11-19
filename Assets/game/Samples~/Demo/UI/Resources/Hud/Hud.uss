@@ -305,7 +305,7 @@
     color: rgba(255, 255, 255, 0.55);
 }
 
-/* 右下の、武器の溜め・熱・弾薬の種類 (3 行) より上に右寄せで積む、自分のストリーク。行は StreakView が入れる。 */
+/* 右下の、武器の溜め・熱・弾薬の種類 (3 行) より上に右寄せで積む、自分のストリーク。数・報酬の枠・切り替えの案内は StreakView が入れる。 */
 .streak {
     position: absolute;
     right: 32px;
@@ -314,11 +314,108 @@
     align-items: flex-end;
 }
 
+.streak__kills {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.streak__cards {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.streak__card {
+    width: 92px;
+    margin: 0 0 0 8px;
+    padding: 6px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+    align-items: center;
+}
+
+.streak__icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.12);
+    -unity-background-scale-mode: scale-to-fit;
+    justify-content: center;
+    align-items: center;
+}
+
+.streak__icon-name {
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.streak__gauge {
+    width: 100%;
+    height: 6px;
+    margin: 6px 0 0 0;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.streak__gauge-fill {
+    height: 100%;
+    background-color: rgb(255, 255, 255);
+}
+
+.streak__caption {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* 使うキーで使われる枠は、縁と色で一目で分かるようにする。 */
+.streak__card--selected {
+    border-color: rgb(255, 214, 92);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.streak__card--selected .streak__gauge-fill,
+.streak__card--held .streak__gauge-fill {
+    background-color: rgb(255, 214, 92);
+}
+
+.streak__card--selected .streak__caption {
+    color: rgb(255, 214, 92);
+}
+
+.streak__card--held {
+    opacity: 0.75;
+}
+
+/* この命ではもう貯まらない枠は、貯めている枠より目立たせない。 */
+.streak__card--spent {
+    opacity: 0.35;
+}
+
+.streak__switch {
+    margin: 6px 0 0 0;
+    font-size: 16px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 選んでいる間の操作の案内。見下ろした画面の明るい地面の上でも読めるよう、背景を濃くする。 */
 .streak__row {
     margin: 4px 0 0 0;
     padding: 4px 14px;
     border-radius: 6px;
-    background-color: rgba(0, 0, 0, 0.4);
     font-size: 22px;
     color: rgb(255, 255, 255);
     -unity-font-style: bold;
@@ -327,11 +424,6 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-.streak__row--ready {
-    color: rgb(255, 214, 92);
-}
-
-/* 見下ろした画面の明るい地面の上でも読めるよう、狙いの案内は背景を濃くする。 */
 .streak__row--targeting {
     background-color: rgba(0, 0, 0, 0.7);
 }

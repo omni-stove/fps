@@ -322,6 +322,51 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SwitchingChoosesWhichHeldRewardTheUseKeyUses()
+        {
+            var spec = new StreakSpec(new[]
+            {
+                new StreakReward("airstrike", "streak.airstrike", 1),
+                new StreakReward("uav", "streak.uav", 2),
+            });
+            var streak = Player(spec, side: 0);
+            Pings(streak);
+            Kill(streak, Body("A", side: 1));
+            Assert.That(streak.SelectNext(), Is.False, "one reward has nothing to switch to");
+            Kill(streak, Body("B", side: 1));
+            Assert.That(streak.SelectedRewardId, Is.EqualTo("airstrike"));
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player selected reward=uav kills=2 ready=2");
+            Assert.That(streak.SelectNext(), Is.True);
+            Assert.That(GameSignals.Streak.Value.Value.SelectedRewardId, Is.EqualTo("uav"), "the HUD hears the new selection");
+
+            LogAssert.Expect(LogType.Log, "[Streak] id=Player used reward=uav kills=2 ready=1");
+            Assert.That(streak.TryUse(), Is.True);
+            Assert.That(streak.IsTargeting, Is.False, "the UAV was chosen, so the map does not open for the airstrike");
+            Assert.That(streak.ReadyRewardIds, Is.EqualTo(new[] { "airstrike" }));
+            Assert.That(streak.SelectedRewardId, Is.EqualTo("airstrike"));
+        }
+
+        [Test]
+        public void TheSelectionDoesNotChangeWhileChoosingASpot()
+        {
+            var spec = new StreakSpec(new[]
+            {
+                new StreakReward("airstrike", "streak.airstrike", 1),
+                new StreakReward("uav", "streak.uav", 2),
+            });
+            var streak = Player(spec, side: 0);
+            streak.gameObject.AddComponent<AirstrikeReward>().Clock = () => _now;
+            Kill(streak, Body("A", side: 1));
+            Kill(streak, Body("B", side: 1));
+            Assert.That(streak.TryUse(), Is.True);
+            Assert.That(streak.IsTargeting, Is.True);
+
+            Assert.That(streak.SelectNext(), Is.False);
+            Assert.That(streak.SelectedRewardId, Is.EqualTo("airstrike"));
+        }
+
+        [Test]
         public void UsingWithNothingReadyIsRefused()
         {
             var streak = Player(StreakSpec.Default, side: 0);

@@ -90,6 +90,7 @@
   "settings.input.action.SwitchGrenade": "Switch grenade",
   "settings.input.action.Inventory": "Inventory",
   "settings.input.action.UseStreak": "Use streak",
+  "settings.input.action.SwitchStreak": "Switch streak",
   "settings.input.action.LeanLeft": "Lean left",
   "settings.input.action.LeanRight": "Lean right",
   "settings.input.action.Chat": "Chat",

@@ -123,6 +123,8 @@ namespace Shooter.Server
             PrepareIdle(rules);
             PrepareChat(settings, _data.ChatWords);
             PrepareMapVote();
+            PrepareVoteKick();
+            PrepareEconomy();
             StartObjective();
         }
 
@@ -140,6 +142,8 @@ namespace Shooter.Server
             TickIdle(deltaSeconds);
             TickPings();
             TickMapVote(deltaSeconds);
+            TickVoteKick(deltaSeconds);
+            TickEconomy(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -185,6 +189,12 @@ namespace Shooter.Server
                 case SpectateRequestMessage spectate:
                     OnSpectateRequest(player, spectate);
                     break;
+                case VoteKickRequestMessage voteKick:
+                    OnVoteKickRequest(player, voteKick);
+                    break;
+                case BuyRequestMessage buy:
+                    OnBuyRequest(player, buy);
+                    break;
             }
         }
 
@@ -194,6 +204,18 @@ namespace Shooter.Server
         partial void OnMapVoteRequest(ServerPlayer player, MapVoteRequestMessage request);
 
         partial void OnSpectateRequest(ServerPlayer player, SpectateRequestMessage request);
+
+        partial void OnVoteKickRequest(ServerPlayer player, VoteKickRequestMessage request);
+
+        partial void OnBuyRequest(ServerPlayer player, BuyRequestMessage request);
+
+        partial void PrepareVoteKick();
+
+        partial void TickVoteKick(float deltaSeconds);
+
+        partial void PrepareEconomy();
+
+        partial void TickEconomy(float deltaSeconds);
 
         partial void OnPlayerJoined(ServerPlayer player);
 

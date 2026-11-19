@@ -24,6 +24,18 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("追うカメラの注視点を、乗り物の原点からどれだけ上に置くか (m)")]
         private float _chaseHeight = VehicleSpec.DefaultChaseHeight;
 
+        [SerializeField, Min(0f), Tooltip("前へ進む速さ (m/s) がこれを超えると画角を広げ始める")]
+        private float _speedFieldOfViewStartSpeed = VehicleSpeedFieldOfViewSpec.DefaultStartSpeed;
+
+        [SerializeField, Min(0f), Tooltip("前へ進む速さ (m/s) がこれに達すると足す画角を全部足す。広げ始める速さより大きくする")]
+        private float _speedFieldOfViewFullSpeed = VehicleSpeedFieldOfViewSpec.DefaultFullSpeed;
+
+        [SerializeField, Range(0f, VehicleSpeedFieldOfViewSpec.MaxExtraDegrees), Tooltip("速いときにカメラの画角へ足す角度 (度)。0 なら画角を変えない")]
+        private float _speedFieldOfViewExtraDegrees = VehicleSpeedFieldOfViewSpec.DefaultExtraDegrees;
+
+        [SerializeField, Min(0f), Tooltip("画角を目標へ寄せる速さ。おおよそこの秒数で 6 割寄る。0 ならすぐに合わせる")]
+        private float _speedFieldOfViewBlendSeconds = VehicleSpeedFieldOfViewSpec.DefaultBlendSeconds;
+
         [SerializeField, Tooltip("部位 (エンジン・燃料など) の Id と、そこに当たったダメージに掛ける倍率。シーンの VehiclePart が Id で指す")]
         private Part[] _parts = Array.Empty<Part>();
 
@@ -76,6 +88,30 @@ namespace Shooter.Runtime
         {
             get => _chaseHeight;
             set => _chaseHeight = value;
+        }
+
+        public float SpeedFieldOfViewStartSpeed
+        {
+            get => _speedFieldOfViewStartSpeed;
+            set => _speedFieldOfViewStartSpeed = value;
+        }
+
+        public float SpeedFieldOfViewFullSpeed
+        {
+            get => _speedFieldOfViewFullSpeed;
+            set => _speedFieldOfViewFullSpeed = value;
+        }
+
+        public float SpeedFieldOfViewExtraDegrees
+        {
+            get => _speedFieldOfViewExtraDegrees;
+            set => _speedFieldOfViewExtraDegrees = value;
+        }
+
+        public float SpeedFieldOfViewBlendSeconds
+        {
+            get => _speedFieldOfViewBlendSeconds;
+            set => _speedFieldOfViewBlendSeconds = value;
         }
 
         public Part[] Parts
@@ -143,7 +179,20 @@ namespace Shooter.Runtime
             try
             {
                 return new VehicleSpec(
-                    _id, _maxHealth, seats, weapons, PartSpecs(), _enterRange, _chaseDistance, _chaseHeight, DurabilitySpec());
+                    _id,
+                    _maxHealth,
+                    seats,
+                    weapons,
+                    PartSpecs(),
+                    _enterRange,
+                    _chaseDistance,
+                    _chaseHeight,
+                    DurabilitySpec(),
+                    new VehicleSpeedFieldOfViewSpec(
+                        _speedFieldOfViewStartSpeed,
+                        _speedFieldOfViewFullSpeed,
+                        _speedFieldOfViewExtraDegrees,
+                        _speedFieldOfViewBlendSeconds));
             }
             catch (ArgumentException e)
             {
@@ -163,6 +212,11 @@ namespace Shooter.Runtime
             _enterRange = spec.EnterRange;
             _chaseDistance = spec.ChaseDistance;
             _chaseHeight = spec.ChaseHeight;
+            var speedFieldOfView = spec.SpeedFieldOfView;
+            _speedFieldOfViewStartSpeed = speedFieldOfView.StartSpeed;
+            _speedFieldOfViewFullSpeed = speedFieldOfView.FullSpeed;
+            _speedFieldOfViewExtraDegrees = speedFieldOfView.ExtraDegrees;
+            _speedFieldOfViewBlendSeconds = speedFieldOfView.BlendSeconds;
             _parts = new Part[spec.Parts.Count];
             for (var i = 0; i < _parts.Length; i++)
             {

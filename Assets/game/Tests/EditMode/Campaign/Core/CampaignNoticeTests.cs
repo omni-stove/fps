@@ -126,5 +126,45 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => notice.Tick(float.PositiveInfinity));
             Assert.That(notice.Notice, Is.EqualTo(HudNotice.None));
         }
+
+        [Test]
+        public void TheHudFollowsTheCampaignNotice()
+        {
+            var model = new HudModel();
+            var notice = new CampaignNotice();
+            notice.ShowSaved(1f);
+            var changes = new List<HudField>();
+            model.Changed += changes.Add;
+
+            model.BindNotice(notice);
+            Assert.That(model.Notice, Is.EqualTo(Saved), "binding shows the current notice at once");
+
+            notice.Tick(1f);
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
+
+            notice.ShowRestartCountdown(3f);
+            notice.ShowRestartCountdown(2.5f);
+            Assert.That(model.Notice, Is.EqualTo(Restart(3)));
+
+            Assert.That(changes, Is.EqualTo(new[] { HudField.Notice, HudField.Notice, HudField.Notice }));
+        }
+
+        [Test]
+        public void TheHudStopsFollowingTheCampaignNoticeOnceUnbound()
+        {
+            var model = new HudModel();
+            var notice = new CampaignNotice();
+            model.BindNotice(notice);
+            notice.ShowRestartCountdown(3f);
+
+            model.BindNotice(null);
+            notice.ShowRestartCountdown(1f);
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.None));
+
+            model.BindNotice(notice);
+            model.UnbindAll();
+            notice.Clear();
+            Assert.That(model.Notice, Is.EqualTo(Restart(1)), "UnbindAll keeps the last notice");
+        }
     }
 }

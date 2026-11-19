@@ -5,6 +5,8 @@
         "Shooter.Core",
         "Shooter.Aircraft.Core",
         "Shooter.Aircraft",
+        "Shooter.Campaign.Core",
+        "Shooter.Campaign",
         "Shooter.Editor",
         "Shooter.NetV2.Client",
         "Shooter.Protocol",

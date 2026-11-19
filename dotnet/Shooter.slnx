@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="Shooter.Aircraft.Core/Shooter.Aircraft.Core.csproj" />
   <Project Path="Shooter.Aircraft.Core.Tests/Shooter.Aircraft.Core.Tests.csproj" />
+  <Project Path="Shooter.Campaign.Core/Shooter.Campaign.Core.csproj" />
+  <Project Path="Shooter.Campaign.Core.Tests/Shooter.Campaign.Core.Tests.csproj" />
   <Project Path="Shooter.Core/Shooter.Core.csproj" />
   <Project Path="Shooter.Core.Tests/Shooter.Core.Tests.csproj" />
   <Project Path="Shooter.EosSdk/Shooter.EosSdk.csproj" />

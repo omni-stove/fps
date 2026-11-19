@@ -136,7 +136,7 @@ namespace Shooter.Runtime
                 }
             }
 
-            return TutorialSteps.JoinDirectionalKeys(labels);
+            return DirectionalKeys.Join(labels);
         }
     }
 }

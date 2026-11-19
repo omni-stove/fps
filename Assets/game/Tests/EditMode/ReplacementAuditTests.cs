@@ -96,21 +96,23 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AnEmptyRequiredReferenceIsListedWithItsPlaceUntilItIsFilled()
         {
-            var root = Track(new GameObject("Mission"));
+            var root = Track(new GameObject("Horde"));
             var child = new GameObject("Runner");
             child.transform.SetParent(root.transform);
             child.SetActive(false);
-            var runner = child.AddComponent<MissionRunner>();
+            var runner = child.AddComponent<HordeRunner>();
             var findings = new List<ReplacementAuditFinding>();
 
             ReplacementAudit.CheckGameObject(root, "Assets/Test.unity", findings);
 
             Assert.That(findings.Count(), Is.EqualTo(1));
             Assert.That(findings[0].Area, Is.EqualTo(ReplacementAuditArea.Reference));
-            Assert.That(findings[0].Where, Is.EqualTo("Assets/Test.unity Mission/Runner"));
-            Assert.That(findings[0].Problem, Does.StartWith("MissionRunner 'Definition' is empty"));
+            Assert.That(findings[0].Where, Is.EqualTo("Assets/Test.unity Horde/Runner"));
+            Assert.That(findings[0].Problem, Does.StartWith("HordeRunner 'Spawner' is empty"));
 
-            runner.Definition = Track(ScriptableObject.CreateInstance<MissionDefinition>());
+            var spawnerHost = Track(new GameObject("Spawner"));
+            spawnerHost.SetActive(false);
+            runner.Spawner = spawnerHost.AddComponent<WaveSpawner>();
             findings.Clear();
 
             ReplacementAudit.CheckGameObject(root, "Assets/Test.unity", findings);

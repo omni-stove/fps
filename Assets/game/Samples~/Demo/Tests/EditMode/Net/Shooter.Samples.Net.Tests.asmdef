@@ -5,6 +5,8 @@
         "Shooter.Core",
         "Shooter.Aircraft.Core",
         "Shooter.Aircraft",
+        "Shooter.Campaign.Core",
+        "Shooter.Campaign",
         "Shooter.Editor",
         "Shooter.Samples.Editor",
         "Shooter.Samples.Net.Editor",

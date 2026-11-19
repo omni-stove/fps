@@ -146,7 +146,7 @@ namespace Shooter.Runtime
         private LoadoutDefinition _loadout;
 
         // キャンペーンを本体の外から足せるように、型は ScriptableObject にとどめる。入れる型は GameContentSlots に登録した枠が決める。
-        [SerializeField, Tooltip("メニューに出すキャンペーンのミッション (MissionCatalog)")]
+        [SerializeField, Tooltip("メニューに出すキャンペーンのミッションの一覧。入れられる型はキャンペーンが登録した枠が決める")]
         private ScriptableObject _missions;
 
         [Header("モード")]

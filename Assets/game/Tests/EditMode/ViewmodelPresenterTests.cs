@@ -324,6 +324,44 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AHiddenReasonFromTheSourceRemovesTheModelUntilItClears()
+        {
+            string reason = null;
+            _presenter.HiddenReasonSource = () => reason;
+            _presenter.Refresh();
+            Assert.That(_presenter.Instance, Is.Not.Null);
+
+            reason = ViewmodelPresenter.ReasonSeated;
+            _presenter.Refresh();
+
+            Assert.That(_presenter.Instance, Is.Null);
+            Assert.That(_logs[_logs.Count - 1], Is.EqualTo(ViewmodelPresenter.FormatRemoveLog(RifleId, ViewmodelPresenter.ReasonSeated)));
+
+            reason = null;
+            _presenter.Refresh();
+
+            Assert.That(_presenter.CurrentWeaponId, Is.EqualTo(RifleId));
+            Assert.That(_logs[_logs.Count - 1], Is.EqualTo(ViewmodelPresenter.FormatSpawnLog(RifleId, "RifleModel", true)));
+        }
+
+        [Test]
+        public void TheSourceIsNotAskedWhileTheViewIsNotFirstPerson()
+        {
+            var asked = 0;
+            _presenter.HiddenReasonSource = () =>
+            {
+                asked++;
+                return null;
+            };
+            _rig.Mode = ViewMode.ThirdPerson;
+
+            _presenter.Refresh();
+
+            Assert.That(asked, Is.EqualTo(0));
+            Assert.That(_presenter.Instance, Is.Null);
+        }
+
+        [Test]
         public void UnarmedShowsNothing()
         {
             _presenter.Refresh();

@@ -269,7 +269,7 @@ namespace Shooter.Runtime
         // 乗り物に操縦の部品が置いてあればそれを借りるのは、ゲームが機体ごとに決めた飛ばし方の値 (BotAircraftPilotSettings) で飛ばすため。
         private void TakeStick(Vehicle vehicle)
         {
-            var pilot = vehicle.GetComponent<BotAircraftPilot>();
+            var pilot = FindLivePart<BotAircraftPilot>(vehicle.gameObject);
             _ownsWheel = pilot == null;
             if (_ownsWheel)
             {
@@ -288,11 +288,7 @@ namespace Shooter.Runtime
         // 乗り物か自分に運転の部品が置いてあればそれを借りるのは、ゲームが決めた走り方の値で走らせるため。
         private void TakeSteeringWheel(Vehicle vehicle)
         {
-            var driver = vehicle.GetComponent<BotVehicleDriver>();
-            if (driver == null)
-            {
-                driver = GetComponent<BotVehicleDriver>();
-            }
+            var driver = FindLivePart<BotVehicleDriver>(vehicle.gameObject) ?? FindLivePart<BotVehicleDriver>(gameObject);
 
             _ownsWheel = driver == null;
             if (_ownsWheel)
@@ -428,6 +424,20 @@ namespace Shooter.Runtime
 
             pilot.Rider = _wheelPreviousRider;
             pilot.SetWaypoints(_wheelPreviousWaypoints);
+        }
+
+        // 止めてあって消える予定の部品は借りない。Play 中の Destroy はコマの終わりまで待つので、同じコマに座り直すと止まった部品を借りてしまうため。
+        private static T FindLivePart<T>(GameObject host) where T : MonoBehaviour
+        {
+            foreach (var part in host.GetComponents<T>())
+            {
+                if (part != null && part.enabled)
+                {
+                    return part;
+                }
+            }
+
+            return null;
         }
 
         private static Transform[] CopyTransforms(IReadOnlyList<Transform> source)

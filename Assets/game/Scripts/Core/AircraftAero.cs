@@ -26,13 +26,33 @@ namespace Shooter.Core
     public static class AircraftAero
     {
         private const float _degreesToRadians = (float)(Math.PI / 180.0);
+        private const float _radiansToDegrees = (float)(180.0 / Math.PI);
 
-        // 揚力を重さまでで止めるのは、迎え角を持たない作りで速いほど浮くと、操縦しなくても勝手に昇ってしまうため。
-        public static float LiftRatio(AircraftAeroSpec aero, float forwardSpeed)
+        // 臨界角を越えた先を平板の形 (迎え角の 2 倍の sin) にするのは、横から風を受ける 90 度や後ろ向きでも係数が続けて変わり、急に跳ねないようにするため。
+        public static float LiftCoefficient(AircraftAeroSpec aero, float angleOfAttackRadians)
         {
             RequireAero(aero);
-            var ratio = Math.Max(0f, forwardSpeed) / aero.LiftSpeed;
-            return Math.Min(1f, ratio * ratio);
+            if (!float.IsFinite(angleOfAttackRadians))
+            {
+                throw new ArgumentOutOfRangeException(nameof(angleOfAttackRadians), angleOfAttackRadians, "angleOfAttackRadians must be finite");
+            }
+
+            var degrees = angleOfAttackRadians * _radiansToDegrees;
+            if (Math.Abs(degrees) <= aero.CriticalAngle)
+            {
+                return aero.LiftSlope * degrees;
+            }
+
+            return aero.PostStallLift * (float)Math.Sin(2.0 * angleOfAttackRadians);
+        }
+
+        // 重さで止めないのは、速く飛んで機首を引き起こしたときに重さより大きく持ち上げ、G が掛かって曲がれるようにするため。
+        public static float LiftRatio(AircraftAeroSpec aero, Vector3 localVelocity)
+        {
+            RequireAero(aero);
+            RequireFinite(localVelocity, nameof(localVelocity));
+            var coefficient = LiftCoefficient(aero, AngleOfAttack(localVelocity));
+            return coefficient / aero.MaxLiftCoefficient * (PlaneSpeedSquared(localVelocity) / (aero.LiftSpeed * aero.LiftSpeed));
         }
 
         public static float Control(AircraftAeroSpec aero, float forwardSpeed)
@@ -43,6 +63,7 @@ namespace Shooter.Core
         }
 
         // 降下では重さも前へ押すので、最高速度より速くなる。サーバーの速すぎ判定にはこちらを使う。
+        // 揚力で増える抗力は速さを落とす向きにしか働かないので、ここでは数えずに上の限りとして使う。
         public static float TopSpeed(AircraftSpec spec, float gravity)
         {
             RequireSpec(spec);
@@ -66,22 +87,64 @@ namespace Shooter.Core
 
             var aero = spec.Aero;
             var forwardSpeed = Math.Max(0f, localVelocity.Z);
-            var lift = LiftRatio(aero, forwardSpeed);
             var control = Control(aero, forwardSpeed);
+            var angleOfAttack = AngleOfAttack(localVelocity);
+            var coefficient = LiftCoefficient(aero, angleOfAttack);
+            var lift = LiftRatio(aero, localVelocity);
 
             var throttle = input[AircraftFlight.ThrottleAxis];
             var drag = spec.DragCoefficient * (1f + (Math.Max(0f, -throttle) * aero.AirBrakeDrag));
-            var acceleration = new Vector3(0f, gravity * lift * condition.Lift, 0f) - (localVelocity * (localVelocity.Length() * drag));
+            var acceleration = -(localVelocity * (localVelocity.Length() * drag));
 
-            // 横と上下へ流れる速さを機首の向きへ寄せるのは、翼が空気を受ける代わりで、これが無いと機首を回しても進む向きが曲がらないため。
-            acceleration -= new Vector3(localVelocity.X, localVelocity.Y, 0f) * (aero.Alignment * control);
+            // 左右の翼に半分ずつ持たせるのは、片翼が壊れたときに持ち上げる力が減るだけでなく、残った側へ傾くようにするため。
+            var wingLift = gravity * lift * 0.5f;
+            var leftLift = wingLift * condition.LeftLift;
+            var rightLift = wingLift * condition.RightLift;
+            var planeSpeed = (float)Math.Sqrt(PlaneSpeedSquared(localVelocity));
+            if (planeSpeed > 0f)
+            {
+                // 揚力を機体の上でなく風に直角な向きへ掛けるのは、迎え角が大きいほど揚力が後ろへ傾き、そのぶん速さを削るようにするため。
+                var across = new Vector3(0f, localVelocity.Z, -localVelocity.Y) / planeSpeed;
+                var along = new Vector3(0f, localVelocity.Y, localVelocity.Z) / planeSpeed;
+                var totalLift = leftLift + rightLift;
+                acceleration += across * totalLift;
+                acceleration -= along * (aero.InducedDrag * coefficient * totalLift);
+            }
+
+            // 上下へ流れる速さを寄せないのは、それを揚力が受け持つようになり、寄せる力が残ると失速しても落ちなくなるため。
+            acceleration -= new Vector3(localVelocity.X, 0f, 0f) * (aero.Alignment * control);
 
             var target = new Vector3(
                 -input[AircraftFlight.PitchAxis] * aero.PitchRate,
                 input[AircraftFlight.YawAxis] * aero.YawRate,
                 -input[AircraftFlight.RollAxis] * aero.RollRate) * (_degreesToRadians * control * condition.Control);
             var angular = (target - localAngularVelocity) * aero.Responsiveness;
+
+            var sideslip = Sideslip(localVelocity);
+            var pressure = localVelocity.LengthSquared() / (aero.LiftSpeed * aero.LiftSpeed);
+            angular += new Vector3(
+                0f,
+                aero.Weathervane * sideslip * pressure,
+                (aero.Dihedral * sideslip * pressure) + ((rightLift - leftLift) * aero.WingRoll));
             return new AircraftAeroForces(acceleration, angular, lift, control);
+        }
+
+        // AircraftFlightState と同じ測り方にするのは、HUD に出る迎え角と揚力を決める迎え角が食い違わないようにするため。
+        private static float AngleOfAttack(Vector3 localVelocity)
+        {
+            return (float)Math.Atan2(-localVelocity.Y, localVelocity.Z);
+        }
+
+        private static float Sideslip(Vector3 localVelocity)
+        {
+            var speed = localVelocity.Length();
+            return speed > 0f ? (float)Math.Asin(Math.Clamp(localVelocity.X / speed, -1f, 1f)) : 0f;
+        }
+
+        // 横へ流れる分を除くのは、翼が受けて揚力になるのは機体の上下と前後を含む面を流れる風だけのため。
+        private static float PlaneSpeedSquared(Vector3 localVelocity)
+        {
+            return (localVelocity.Y * localVelocity.Y) + (localVelocity.Z * localVelocity.Z);
         }
 
         private static void RequireAero(AircraftAeroSpec aero)

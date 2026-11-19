@@ -147,7 +147,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(view.Element.name, Is.EqualTo(AircraftHudView.UxmlName));
             Assert.That(view.IsShown, Is.False, "nothing to show until the player flies");
 
-            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
+            AircraftSignals.Status.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
             Assert.That(view.IsShown, Is.True);
             Assert.That(view.Lines, Has.Count.EqualTo(5));
             Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));

@@ -46,11 +46,26 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Aero.Responsiveness, Is.EqualTo(AircraftAeroSpec.DefaultResponsiveness));
             Assert.That(spec.Aero.Alignment, Is.EqualTo(AircraftAeroSpec.DefaultAlignment));
             Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(AircraftAeroSpec.DefaultAirBrakeDrag));
+            Assert.That(spec.Aero.LiftSlope, Is.EqualTo(AircraftAeroSpec.DefaultLiftSlope));
+            Assert.That(spec.Aero.CriticalAngle, Is.EqualTo(AircraftAeroSpec.DefaultCriticalAngle));
+            Assert.That(spec.Aero.PostStallLift, Is.EqualTo(AircraftAeroSpec.DefaultPostStallLift));
+            Assert.That(spec.Aero.InducedDrag, Is.EqualTo(AircraftAeroSpec.DefaultInducedDrag));
+            Assert.That(spec.Aero.Weathervane, Is.EqualTo(AircraftAeroSpec.DefaultWeathervane));
+            Assert.That(spec.Aero.Dihedral, Is.EqualTo(AircraftAeroSpec.DefaultDihedral));
+            Assert.That(spec.Aero.WingRoll, Is.EqualTo(AircraftAeroSpec.DefaultWingRoll));
             Assert.That(aim.PitchGain, Is.EqualTo(AircraftAimSpec.DefaultPitchGain));
             Assert.That(aim.YawGain, Is.EqualTo(AircraftAimSpec.DefaultYawGain));
             Assert.That(aim.RollGain, Is.EqualTo(AircraftAimSpec.DefaultRollGain));
             Assert.That(aim.LevelGain, Is.EqualTo(AircraftAimSpec.DefaultLevelGain));
             Assert.That(aim.ThrottleRate, Is.EqualTo(AircraftAimSpec.DefaultThrottleRate));
+
+            var ground = definition.ToGroundSpec();
+            Assert.That(ground.MaxSteerAngle, Is.EqualTo(AircraftGroundSpec.DefaultMaxSteerAngle));
+            Assert.That(ground.HighSpeedSteerAngle, Is.EqualTo(AircraftGroundSpec.DefaultHighSpeedSteerAngle));
+            Assert.That(ground.SteerFadeSpeed, Is.EqualTo(AircraftGroundSpec.DefaultSteerFadeSpeed));
+            Assert.That(ground.BrakeTorque, Is.EqualTo(AircraftGroundSpec.DefaultBrakeTorque));
+            Assert.That(ground.IdleBrakeTorque, Is.EqualTo(AircraftGroundSpec.DefaultIdleBrakeTorque));
+            Assert.That(ground.HeightProbeDistance, Is.EqualTo(AircraftGroundSpec.DefaultHeightProbeDistance));
         }
 
         [Test]
@@ -69,7 +84,14 @@ namespace Shooter.Tests.EditMode
                     yawRate: 15f,
                     responsiveness: 3f,
                     alignment: 1.5f,
-                    airBrakeDrag: 4f));
+                    airBrakeDrag: 4f,
+                    liftSlope: 0.09f,
+                    criticalAngle: 14f,
+                    postStallLift: 0.4f,
+                    inducedDrag: 0.07f,
+                    weathervane: 2.5f,
+                    dihedral: 0.8f,
+                    wingRoll: 0.3f));
             var definition = NewDefinition("Trainer");
 
             definition.CopyFrom(original);
@@ -89,6 +111,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Aero.Responsiveness, Is.EqualTo(3f));
             Assert.That(spec.Aero.Alignment, Is.EqualTo(1.5f));
             Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(4f));
+            Assert.That(spec.Aero.LiftSlope, Is.EqualTo(0.09f));
+            Assert.That(spec.Aero.CriticalAngle, Is.EqualTo(14f));
+            Assert.That(spec.Aero.PostStallLift, Is.EqualTo(0.4f));
+            Assert.That(spec.Aero.InducedDrag, Is.EqualTo(0.07f));
+            Assert.That(spec.Aero.Weathervane, Is.EqualTo(2.5f));
+            Assert.That(spec.Aero.Dihedral, Is.EqualTo(0.8f));
+            Assert.That(spec.Aero.WingRoll, Is.EqualTo(0.3f));
         }
 
         [Test]
@@ -119,6 +148,37 @@ namespace Shooter.Tests.EditMode
             Assert.That(stick.Exponent, Is.EqualTo(1.5f));
             Assert.That(stick.ThrottleRate, Is.EqualTo(0.8f));
             Assert.That(stick.ForwardPitchesDown, Is.False);
+        }
+
+        [Test]
+        public void TheEffectsBlockStartsFromTheDefaultsAndSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            var fresh = definition.ToEffectsSpec();
+            Assert.That(fresh.ElevatorAngle, Is.EqualTo(AircraftEffectsSpec.DefaultElevatorAngle));
+            Assert.That(fresh.AileronAngle, Is.EqualTo(AircraftEffectsSpec.DefaultAileronAngle));
+            Assert.That(fresh.RudderAngle, Is.EqualTo(AircraftEffectsSpec.DefaultRudderAngle));
+            Assert.That(fresh.MinEnginePitch, Is.EqualTo(AircraftEffectsSpec.DefaultMinEnginePitch));
+            Assert.That(fresh.MaxEnginePitch, Is.EqualTo(AircraftEffectsSpec.DefaultMaxEnginePitch));
+            Assert.That(fresh.MinEngineVolume, Is.EqualTo(AircraftEffectsSpec.DefaultMinEngineVolume));
+            Assert.That(fresh.MaxEngineVolume, Is.EqualTo(AircraftEffectsSpec.DefaultMaxEngineVolume));
+            Assert.That(fresh.EngineSpeedShare, Is.EqualTo(AircraftEffectsSpec.DefaultEngineSpeedShare));
+            Assert.That(fresh.VaporLoadFactor, Is.EqualTo(AircraftEffectsSpec.DefaultVaporLoadFactor));
+
+            definition.Effects.CopyFrom(new AircraftEffectsSpec(10f, 12f, 14f, 0.7f, 1.4f, 0.2f, 0.8f, 0.5f, 5f));
+            var effects = definition.ToEffectsSpec();
+
+            Assert.That(effects.ElevatorAngle, Is.EqualTo(10f));
+            Assert.That(effects.AileronAngle, Is.EqualTo(12f));
+            Assert.That(effects.RudderAngle, Is.EqualTo(14f));
+            Assert.That(effects.MinEnginePitch, Is.EqualTo(0.7f));
+            Assert.That(effects.MaxEnginePitch, Is.EqualTo(1.4f));
+            Assert.That(effects.MinEngineVolume, Is.EqualTo(0.2f));
+            Assert.That(effects.MaxEngineVolume, Is.EqualTo(0.8f));
+            Assert.That(effects.EngineSpeedShare, Is.EqualTo(0.5f));
+            Assert.That(effects.VaporLoadFactor, Is.EqualTo(5f));
+            Assert.Throws<ArgumentNullException>(() => definition.Effects.CopyFrom(null));
         }
 
         [Test]
@@ -157,6 +217,22 @@ namespace Shooter.Tests.EditMode
             var error = Assert.Throws<ArgumentException>(() => definition.ToSpec());
 
             Assert.That(error.Message, Does.Contain("BrokenPlane"));
+            Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void ToEffectsSpecNamesTheAssetWhenAValueIsInvalid()
+        {
+            var definition = NewDefinition("LoudPlane");
+            definition.Effects.CopyFrom(new AircraftEffectsSpec(minEnginePitch: 1f, maxEnginePitch: 1f));
+            var settings = definition.Effects;
+            typeof(AircraftEffectsSettings)
+                .GetField("_maxEnginePitch", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(settings, 0.5f);
+
+            var error = Assert.Throws<ArgumentException>(() => definition.ToEffectsSpec());
+
+            Assert.That(error.Message, Does.Contain("LoudPlane"));
             Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
         }
 

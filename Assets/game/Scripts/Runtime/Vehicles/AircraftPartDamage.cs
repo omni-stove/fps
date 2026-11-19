@@ -6,7 +6,7 @@ namespace Shooter.Runtime
 {
     // 機体の SimpleAircraftMotor と同じ GameObject に置く。モーターは IAircraftConditionSource を毎ステップ引き直すので、付けるだけで効く。
     [DisallowMultipleComponent]
-    public sealed class AircraftPartDamage : MonoBehaviour, IAircraftConditionSource
+    public sealed class AircraftPartDamage : MonoBehaviour, IAircraftConditionSource, INetVehicleParts
     {
         [SerializeField, Tooltip("部位の耐久と効き先を読む機体のアセット (Damage の欄)。空なら既定値")]
         private AircraftDefinition _definition;
@@ -38,6 +38,9 @@ namespace Shooter.Runtime
         public AircraftDamageSpec Spec => Damage.Spec;
 
         public AircraftCondition Condition => Damage.Condition;
+
+        // つないだ乗り物でなく最後に渡された乗り物の名前を使うのは、NetV2 が命中の受け口を外した (Detach) 後のログも乗り物の名前で出すため。
+        private string VehicleName => _vehicle != null ? _vehicle.name : name;
 
         private void OnEnable()
         {
@@ -118,6 +121,28 @@ namespace Shooter.Runtime
             return true;
         }
 
+        // 届いた中に無い部位は撃たれていないので、耐久のまま (修理された) に戻す。
+        // 壊れた知らせ (AircraftEvents) を出さないのは、届くのは受けた量の合計だけなので、途中から入った人にも過去の破損を出し直してしまうため。
+        public void ApplyServerTaken(Func<string, int> takenOf)
+        {
+            if (takenOf == null)
+            {
+                throw new ArgumentNullException(nameof(takenOf));
+            }
+
+            var damage = Damage;
+            var before = damage.Condition;
+            foreach (var part in damage.Spec.Parts)
+            {
+                damage.SetRemaining(part.Id, Math.Max(0, part.Durability - takenOf(part.Id)));
+            }
+
+            if (damage.Condition != before)
+            {
+                Debug.Log(AircraftLog.NetCondition(VehicleName, damage.Condition), this);
+            }
+        }
+
         private void OnPartDamaged(Vehicle vehicle, VehiclePart part, int damage)
         {
             ApplyPartDamage(part.PartId, damage, part.transform.position);
@@ -132,9 +157,8 @@ namespace Shooter.Runtime
         private void ReportBroken(AircraftPartDamageResult result, Vector3 position)
         {
             var condition = Damage.Condition;
-            var vehicleName = _attached != null ? _attached.name : name;
-            Debug.Log(VehicleLog.PartBroken(vehicleName, result.PartId, result.Effect, condition), this);
-            CombatEvents.RaiseAircraftPartBroken(new AircraftPartBrokenInfo(gameObject, result.PartId, result.Effect, position, condition));
+            Debug.Log(AircraftLog.PartBroken(VehicleName, result.PartId, result.Effect, condition), this);
+            AircraftEvents.RaisePartBroken(new AircraftPartBrokenInfo(gameObject, result.PartId, result.Effect, position, condition));
         }
 
         // 命中の途中で呼ばれるので、アセットの誤りで例外を投げると撃った側の処理まで止まる。誤りはログに出し、部位が飛び方に効かない機体として続ける。
@@ -151,7 +175,7 @@ namespace Shooter.Runtime
             }
             catch (ArgumentException e)
             {
-                Debug.LogError(VehicleLog.InvalidAircraftDamage(name, e.Message), this);
+                Debug.LogError(AircraftLog.InvalidAircraftDamage(name, e.Message), this);
                 return new AircraftDamageSpec(Array.Empty<AircraftDamagePartSpec>());
             }
         }

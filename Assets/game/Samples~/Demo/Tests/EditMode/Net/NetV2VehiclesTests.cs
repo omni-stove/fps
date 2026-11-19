@@ -7,6 +7,7 @@ using Shooter.Runtime;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Shooter.Net.Tests
@@ -61,6 +62,7 @@ namespace Shooter.Net.Tests
             var source = plane.GetComponent<IAircraftConditionSource>();
             Assert.That(source.Condition, Is.EqualTo(AircraftCondition.Intact));
 
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' net condition lift=0.20/1.00 control=1.00 thrust=1.00");
             Deliver(Taken(AircraftDamageSpec.DefaultLeftWingId, AircraftDamageSpec.DefaultWingDurability), driving: true);
 
             Assert.That(source.Condition.LeftLift, Is.EqualTo(AircraftDamageSpec.DefaultMinLift).Within(Epsilon));
@@ -125,7 +127,7 @@ namespace Shooter.Net.Tests
 
             Assert.DoesNotThrow(() => Deliver(Taken(AircraftDamageSpec.DefaultLeftWingId, 50), driving: true));
 
-            Assert.That(jeep.GetComponent<AircraftPartDamage>(), Is.Null);
+            Assert.That(jeep.GetComponentInChildren<INetVehicleParts>(true), Is.Null);
             Assert.That(_vehicles.Count, Is.EqualTo(1));
         }
 

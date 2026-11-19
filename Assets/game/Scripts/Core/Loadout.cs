@@ -66,6 +66,19 @@ namespace Shooter.Core
             _holsterSeconds = holsterSeconds;
         }
 
+        // 並びに武器を足して作り直すとき、TrySelect で戻すと持ち替えの待ちが始まるので、構えていた番号のまま始める。
+        public Loadout(
+            IReadOnlyList<T> items, float switchSeconds, Action<T> onHolster, Func<T, float?> drawSeconds, Func<T, float> holsterSeconds, int currentIndex)
+            : this(items, switchSeconds, onHolster, drawSeconds, holsterSeconds)
+        {
+            if (currentIndex < 0 || currentIndex >= Items.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentIndex), currentIndex, "currentIndex is outside the loadout");
+            }
+
+            CurrentIndex = currentIndex;
+        }
+
         public IReadOnlyList<T> Items { get; }
 
         public int Count => Items.Count;

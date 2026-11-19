@@ -397,6 +397,104 @@ namespace Shooter.Server.Tests
             Assert.That(inventory.CountOf(_magazineId), Is.EqualTo(1));
         }
 
+        [Test]
+        public void GivingPutsWhatFitsAndTellsTheOwner()
+        {
+            Start(Catalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            inventory.Remove(_herbId, 4);
+            var sentBefore = _transport.Read<InventoryStateMessage>(1, Copy).Count;
+
+            // 4x2 にケース (2x1) が 1 つ。残り 6 マスにハーブ 3 個の山が 6 つまで入る
+            var given = _inventories.Give(1, _herbId, 20);
+            Tick();
+
+            Assert.That(given, Is.EqualTo(18));
+            Assert.That(inventory.CountOf(_herbId), Is.EqualTo(18));
+            Assert.That(_transport.Read<InventoryStateMessage>(1, Copy), Has.Count.EqualTo(sentBefore + 1));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] give owner=1 item=" + _herbId + " count=18/20 partial"));
+        }
+
+        [Test]
+        public void GivingAnUnknownItemOrToSomeoneWithoutAnInventoryGivesNothing()
+        {
+            Start(Catalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(_inventories.Give(1, "no-such-item", 1), Is.Zero);
+            Assert.That(_inventories.Give(99, _herbId, 1), Is.Zero);
+            Assert.That(_inventories.Give(1, _herbId, 0), Is.Zero);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _inventories.Give(1, _herbId, -1));
+        }
+
+        [Test]
+        public void TakingReturnsEveryStackAndLeavesTheWeapons()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+
+            var taken = _inventories.Take(1);
+
+            // 小銃の弾 90 発 (60 + 30) と拳銃の弾 48 発
+            Assert.That(taken.Where(i => i.ItemId == _rifleAmmoId).Sum(i => i.Count), Is.EqualTo(90));
+            Assert.That(taken.Where(i => i.ItemId == _pistolAmmoId).Sum(i => i.Count), Is.EqualTo(48));
+            Assert.That(taken.Any(i => i.ItemId == _rifleItemId || i.ItemId == _handgunItemId), Is.False, "weapons are taken through ServerPlayerWeapons");
+            Assert.That(inventory.CountOf(_rifleAmmoId), Is.Zero);
+            Assert.That(inventory.CountOf(_pistolAmmoId), Is.Zero);
+            Assert.That(inventory.HoldsWeapon(TestRules.RifleId), Is.True);
+            Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] take owner=1 stacks=" + taken.Count + " items=138"));
+            Assert.That(_inventories.Take(99), Is.Empty);
+        }
+
+        [Test]
+        public void ClearingEmptiesTheItemsAndLightensTheBody()
+        {
+            Start(Catalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _inventories.Clear(1);
+            Tick();
+
+            Assert.That(_inventories.InventoryOf(1).Stacks, Is.Empty);
+            Assert.That(Body(1).CarriedItemWeight, Is.Zero);
+            Assert.That(_inventories.Take(1), Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] clear owner=1 items=5"));
+        }
+
+        [Test]
+        public void TakenWeaponsLeaveTheInventoryOnceItIsHeldAgain()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var weapons = _combat.WeaponsOf(1);
+            var inventory = _inventories.InventoryOf(1);
+
+            weapons.Take();
+            _inventories.HoldWeapons(1);
+
+            Assert.That(inventory.HoldsWeapon(TestRules.RifleId), Is.False);
+            Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.False);
+
+            Assert.That(weapons.Give(TestRules.Handgun(), 0.4f, Rules()), Is.True);
+            var missing = _inventories.HoldWeapons(1);
+
+            Assert.That(missing, Is.Empty);
+            Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.True);
+        }
+
         // 8x4 の持ち物に、小銃 (4x2・5.56) と拳銃 (2x1・9mm) と、1 発 0.01 kg・60 発で 1 山の弾薬
         private static ItemCatalog WeaponCatalog()
         {

@@ -171,9 +171,17 @@ namespace Shooter.Editor
                 var areas = new List<ControlPointArea>();
                 var flagBases = new List<FlagBasePoint>();
                 var carts = new List<PayloadCart>();
+                var lootContainers = new List<LootContainer>();
+                var extractionZones = new List<ExtractionZone>();
+                var shrinkingZones = new List<ShrinkingZone>();
+                var battleRoyaleRunners = new List<BattleRoyaleRunner>();
                 foreach (var rootObject in scene.GetRootGameObjects())
                 {
                     carts.AddRange(rootObject.GetComponentsInChildren<PayloadCart>(false));
+                    lootContainers.AddRange(rootObject.GetComponentsInChildren<LootContainer>(false));
+                    extractionZones.AddRange(rootObject.GetComponentsInChildren<ExtractionZone>(false));
+                    shrinkingZones.AddRange(rootObject.GetComponentsInChildren<ShrinkingZone>(false));
+                    battleRoyaleRunners.AddRange(rootObject.GetComponentsInChildren<BattleRoyaleRunner>(false));
                 }
 
                 // 並びは階層順にする (サーバーの SpawnSelector の同点の決め手になる)
@@ -208,7 +216,16 @@ namespace Shooter.Editor
 
                 var payload = ToPayload(scenePath, carts, attackerSideId: FindAttackerSideId(scene));
                 var output = Path.Combine(directory, scene.name + NetMapPoints.Extension);
-                File.WriteAllText(output, NetMapPoints.Write(new NetMapPoints(spawns, areas, flagBases, payload)));
+                var points = new NetMapPoints(
+                    spawns,
+                    areas,
+                    flagBases,
+                    payload,
+                    ServerDataMaps.ToLootContainers(scenePath, lootContainers),
+                    ServerDataMaps.ToExtractionPoints(scenePath, extractionZones),
+                    ServerDataMaps.ToZone(scenePath, shrinkingZones),
+                    ServerDataMaps.ToDropHeight(scenePath, battleRoyaleRunners));
+                File.WriteAllText(output, NetMapPoints.Write(points));
                 written.Add(output);
             }
 

@@ -25,6 +25,9 @@ namespace Shooter.Runtime
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
+        [SerializeField, Tooltip("箱の Id。シーンの中で重ならないこと。ネットの試合で開ける要求と開けた記録はこれで引く (オブジェクトの名前は使わない)")]
+        private string _containerId = string.Empty;
+
         [SerializeField, Tooltip("中身を引く表の Id (loot.json の tables[].id)。表に無ければ開けても空")]
         private string _tableId = string.Empty;
 
@@ -38,6 +41,12 @@ namespace Shooter.Runtime
         private GameObject _openedVisualPrefab;
 
         private readonly List<ItemCount> _contents = new List<ItemCount>();
+
+        public string ContainerId
+        {
+            get => _containerId ?? string.Empty;
+            set => _containerId = value ?? string.Empty;
+        }
 
         public string TableId
         {

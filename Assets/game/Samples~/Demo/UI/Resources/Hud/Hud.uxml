@@ -38,7 +38,7 @@
         <ui:VisualElement name="ability-slots" class="ability-slots" picking-mode="Ignore" style="display: none;" />
         <!-- 自分のストリーク (今の数と、報酬ごとのアイコン・貯まり具合・使うキー)。StreakView が枠 (streak__card) を入れ、GameSignals.Streak に値があるときだけ出す。地点を選んでいる間 (GameSignals.StreakTargeting) は操作の案内に替える。 -->
         <ui:VisualElement name="streak" class="streak" picking-mode="Ignore" style="display: none;" />
-        <!-- 自分の所持金。GameSignals.Wallet に値があるときだけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <!-- 自分の所持金。GameSignals.Wallet に値があるときだけ WalletView が額の Label (wallet-money) を入れて出す (Hud にはまだ付けておらず、付くまでは隠したままにする)。 -->
         <ui:VisualElement name="wallet" class="wallet" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />

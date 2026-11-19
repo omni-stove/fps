@@ -1,0 +1,18 @@
+{
+  "economy.title": "購入",
+  "economy.money": "所持金 ${0}",
+  "economy.price": "${0}",
+  "economy.empty": "買える品が無い",
+  "economy.close": "閉じる",
+  "economy.buying": "{0} を購入中…",
+  "economy.noAnswer": "{0} を買えなかった",
+  "economy.noSender": "この試合では買えない",
+  "economy.kind.Weapon": "武器・枠 {0}",
+  "economy.kind.Throwable": "投げ物",
+  "economy.kind.Armor": "防具 +{0}",
+  "economy.verdict.Bought": "{0} を買った",
+  "economy.verdict.NotEnoughMoney": "{0} を買うお金が足りない",
+  "economy.verdict.NotBuyTime": "準備の時間しか買えない",
+  "economy.verdict.CannotCarry": "{0} はこれ以上持てない",
+  "economy.verdict.UnknownItem": "{0} は売っていない"
+}

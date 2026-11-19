@@ -1,0 +1,18 @@
+{
+  "economy.title": "BUY",
+  "economy.money": "Money ${0}",
+  "economy.price": "${0}",
+  "economy.empty": "Nothing is for sale",
+  "economy.close": "CLOSE",
+  "economy.buying": "Buying {0}…",
+  "economy.noAnswer": "{0} was not bought",
+  "economy.noSender": "You cannot buy in this match",
+  "economy.kind.Weapon": "Weapon · slot {0}",
+  "economy.kind.Throwable": "Throwable",
+  "economy.kind.Armor": "Armor +{0}",
+  "economy.verdict.Bought": "Bought {0}",
+  "economy.verdict.NotEnoughMoney": "Not enough money for {0}",
+  "economy.verdict.NotBuyTime": "You can only buy during the buy time",
+  "economy.verdict.CannotCarry": "You cannot carry {0}",
+  "economy.verdict.UnknownItem": "{0} is not for sale"
+}

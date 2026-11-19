@@ -70,6 +70,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo(Root + "/Rules/BattleRoyale.asset"));
             Assert.That(GameRulesAssetBuilder.InfectedPath, Is.EqualTo(Root + "/Rules/Infected.asset"));
             Assert.That(GameRulesAssetBuilder.ExtractionPath, Is.EqualTo(Root + "/Rules/Extraction.asset"));
+            Assert.That(GameRulesAssetBuilder.PayloadPath, Is.EqualTo(Root + "/Rules/Payload.asset"));
+            Assert.That(SearchAndDestroySceneBuilder.EconomyPath, Is.EqualTo(Root + "/Modes/SearchAndDestroyEconomy.asset"));
 
             Assert.That(WeaponAssetBuilder.RiflePath, Is.EqualTo(Root + "/Weapons/Rifle.asset"));
             Assert.That(WeaponAssetBuilder.HandgunPath, Is.EqualTo(Root + "/Weapons/Handgun.asset"));
@@ -114,6 +116,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo(Root + "/Scenes/BattleRoyale.unity"));
             Assert.That(BuildSceneList.InfectedScene, Is.EqualTo(Root + "/Scenes/Infected.unity"));
             Assert.That(BuildSceneList.ExtractionScene, Is.EqualTo(Root + "/Scenes/Extraction.unity"));
+            Assert.That(BuildSceneList.PayloadScene, Is.EqualTo(Root + "/Scenes/Payload.unity"));
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo(Root + "/Scenes/ModeTest.unity"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(Root + "/Scenes/NetTest.unity"));
             Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo(Root + "/Scenes/Playground.unity"));
@@ -129,6 +132,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(WaveTestSceneBuilder.NavMeshDataPath, Is.EqualTo(Root + "/Scenes/WaveTest/NavMesh-Floor.asset"));
             Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo(Root + "/Scenes/Campaign01/NavMesh-Level.asset"));
             Assert.That(Campaign02Mission.NavMeshDataPath, Is.EqualTo(Root + "/Scenes/Campaign02/NavMesh-Level.asset"));
+            Assert.That(new PayloadSceneBuilder().NavMeshDataPath, Is.EqualTo(Root + "/Scenes/Payload/NavMesh-Floor.asset"));
         }
 
         [Test]
@@ -143,6 +147,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo("Assets/ShooterKit/Scenes/Campaign01/NavMesh-Level.asset"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/ShooterKit/Scenes/NetTest.unity"));
             Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo("Assets/ShooterKit/Scenes/Playground.unity"));
+            Assert.That(BuildSceneList.PayloadScene, Is.EqualTo("Assets/ShooterKit/Scenes/Payload.unity"));
+            Assert.That(GameRulesAssetBuilder.PayloadPath, Is.EqualTo("Assets/ShooterKit/Rules/Payload.asset"));
             Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo("Assets/ShooterKit/Tuning/Playground.json"));
 
             ShooterKitRoot.ClearPreferredOutput();

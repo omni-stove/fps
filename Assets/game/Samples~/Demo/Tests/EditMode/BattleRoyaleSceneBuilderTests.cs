@@ -31,6 +31,19 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.Actions.Downed, Is.EqualTo(Downed.Revive));
         }
 
+        // シーンの Runner は Definition を付けず、入口か Resources/Tuning の調整値を読むので、同梱の値で投下と復帰が入ることを確かめる。
+        [Test]
+        public void TheBundledTuningDropsSuppliesAndRedeploysByParachute()
+        {
+            Assert.That(BattleRoyaleRunner.RedeployTuning.IsEnabled, Is.True, "redeploy.json gives every player a redeploy");
+            Assert.That(
+                BattleRoyaleRunner.RedeployTuning.LastPhaseIndex,
+                Is.LessThan(BattleRoyaleSceneBuilder.ZonePhases.Count),
+                "the redeploy closes before the last circle");
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().Actions.Parachute, Is.EqualTo(Parachute.On), "a redeployed player drops in by parachute");
+            Assert.That(BattleRoyaleSceneBuilder.SupplyDropsObjectName, Is.EqualTo("SupplyDrops"));
+        }
+
         [Test]
         public void SixSquadsOfThreeAndThePlayerHasTwoBotSquadmates()
         {

@@ -34,8 +34,21 @@ namespace Shooter.Tests.EditMode
                     nameof(VehicleSmokeRun),
                     nameof(InfectedSmokeRun),
                     nameof(ExtractionSmokeRun),
+                    nameof(BattleRoyaleSmokeRun),
+                    nameof(PayloadSmokeRun),
+                    nameof(SearchAndDestroySmokeRun),
                 }));
             Assert.That(SmokeSuite.Runs.Select(run => run.LogTag), Is.Unique);
+        }
+
+        [Test]
+        public void TheModeRunsUseTheirOwnLogTags()
+        {
+            var tags = SmokeSuite.Runs.ToDictionary(run => run.Name, run => run.LogTag);
+
+            Assert.That(tags[nameof(BattleRoyaleSmokeRun)], Is.EqualTo("[BattleRoyaleSmokeRun]"));
+            Assert.That(tags[nameof(PayloadSmokeRun)], Is.EqualTo("[PayloadSmokeRun]"));
+            Assert.That(tags[nameof(SearchAndDestroySmokeRun)], Is.EqualTo("[SearchAndDestroySmokeRun]"));
         }
 
         // スイートに入れず、それぞれの -executeMethod で単独に走らせる SmokeRun。
@@ -44,10 +57,8 @@ namespace Shooter.Tests.EditMode
             nameof(TpsActionSmokeRun),
             nameof(TpsRangeSmokeRun),
             nameof(KnockbackSmokeRun),
-            nameof(BattleRoyaleSmokeRun),
             nameof(DominationSmokeRun),
             nameof(CaptureTheFlagSmokeRun),
-            nameof(PayloadSmokeRun),
         };
 
         [Test]

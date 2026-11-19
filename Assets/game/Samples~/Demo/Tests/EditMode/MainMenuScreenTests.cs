@@ -116,8 +116,8 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 5 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 10));
+            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 6 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 11));
             foreach (var kind in MainMenuPanels.Kinds)
             {
                 Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.PanelButtonName(kind)));
@@ -336,7 +336,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            // プロフィール (5) の次は、隠れた 5 つ (6〜10) を飛ばして射撃場 (11)
+            // プロフィール (5) の次は、隠れた 6 つ (6〜11) を飛ばして射撃場 (12)
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
@@ -344,8 +344,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(_screen.FocusIndex, Is.EqualTo(5));
             Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.ProfileButtonName));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(11));
-            Assert.That(MainMenuScreen.ButtonNames[11], Is.EqualTo(MainMenuScreen.RangeButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(12));
+            Assert.That(MainMenuScreen.ButtonNames[12], Is.EqualTo(MainMenuScreen.RangeButtonName));
 
             _screen.OpenPanel(MainMenuPanelKind.Stats);
 
@@ -362,11 +362,33 @@ namespace Shooter.Tests.EditMode
             var names = MainMenuScreen.ButtonNames.ToList();
             var profile = names.IndexOf(MainMenuScreen.ProfileButtonName);
 
-            Assert.That(names.GetRange(profile + 1, 5), Is.EqualTo(new[]
+            Assert.That(names.GetRange(profile + 1, 6), Is.EqualTo(new[]
             {
-                "menu-stats", "menu-leaderboard", "menu-replays", "menu-cosmetics", "menu-stash",
+                "menu-stats", "menu-leaderboard", "menu-replays", "menu-cosmetics", "menu-stash", "menu-playlists",
             }));
-            Assert.That(MainMenuPanels.Kinds.Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 5)));
+            Assert.That(MainMenuPanels.Kinds.Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 6)));
+        }
+
+        [Test]
+        public void TheRegisteredPlaylistScreenOpensFromItsButtonAndBackReturnsToIt()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.Playlists, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.PlaylistsButtonName), Is.True);
+            Assert.That(MainMenuScreen.PanelButtonName(MainMenuPanelKind.Playlists), Is.EqualTo(MainMenuScreen.PlaylistsButtonName));
+
+            _screen.OpenPanel(MainMenuPanelKind.Playlists);
+
+            Assert.That(_screen.OpenPanelKind, Is.EqualTo(MainMenuPanelKind.Playlists));
+            Assert.That(opened, Is.Not.Null);
+            Assert.That(opened.Container, Is.SameAs(_screen.PanelSlot));
+
+            opened.Cancel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(_screen.FocusIndex, Is.EqualTo(MainMenuScreen.ButtonNames.ToList().IndexOf(MainMenuScreen.PlaylistsButtonName)));
         }
 
         [Test]

@@ -323,9 +323,14 @@ namespace Shooter.Tests.EditMode
                 keys.Add(PlaylistPanel.MutatorKeyOf(mutator.Id));
             }
 
+            Assert.That(KitTuning.Playlists, Is.Not.Empty, "the bundled example names its playlists and modes");
             foreach (var playlist in KitTuning.Playlists)
             {
                 keys.Add(PlaylistPanel.NameKeyOf(playlist.Id));
+                foreach (var entry in playlist.Entries)
+                {
+                    keys.Add(PlaylistPanel.ModeKeyOf(entry.Scene));
+                }
             }
 
             foreach (var language in _languages)

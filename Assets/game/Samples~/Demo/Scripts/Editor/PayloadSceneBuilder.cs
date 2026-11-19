@@ -2,20 +2,18 @@ using System;
 using System.Collections.Generic;
 using Shooter.Core;
 using Shooter.Runtime;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
     // 台車の形は PayloadCart.BodyPrefab を空にして置き、Play 中に仮の箱を作らせる。ゲームはシーンの Inspector で差し替える。
-    // Payload のルールのアセットはまだ無いので、同じ決まりのチームデスマッチのルールで組む。
     // 台車の速さや時間は Definition を付けずに入口 (GameContent) か Resources/Tuning/payload.json から読ませる。
     public sealed class PayloadSceneBuilder : ModeSceneBuilder
     {
-        public const string SceneName = "Payload";
+        public const string SceneName = GameRulesAssetBuilder.PayloadName;
 
-        public const string MenuPath = "Shooter/Build Payload Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string RouteRootName = "PayloadRoute";
         public const string CartObjectName = "PayloadCart";
@@ -62,20 +60,19 @@ namespace Shooter.Editor
         {
         }
 
-        public static string ScenePathValue => ShooterKitRoot.OutputScene(SceneName);
+        public static string ScenePathValue => BuildSceneList.PayloadScene;
 
-        public static string RulesPathValue => GameRulesAssetBuilder.TeamDeathmatchPath;
+        public static string RulesPathValue => GameRulesAssetBuilder.PayloadPath;
 
         protected override IReadOnlyList<ModeSideLayout> Sides =>
             AttackerSide == Side.Alpha ? TwoSides(AttackerBots, DefenderBots) : TwoSides(DefenderBots, AttackerBots);
 
         protected override IReadOnlyList<ModeObstacle> Obstacles => PayloadObstacles;
 
-        [MenuItem(MenuPath)]
+        // GameRulesAssetBuilder.Build を先に回していなくても組めるよう、ルールが無ければここで作る (あれば調整した値を残す)。
         public static void Build()
         {
-            // 調整したルールを残すよう、無いときだけ作る。
-            GameRulesAssetBuilder.LoadOrBuildFeatureRules(RulesPathValue, GameRulesAssetBuilder.TeamDeathmatchRules());
+            GameRulesAssetBuilder.LoadOrBuildModeRules(GameRulesAssetBuilder.PayloadName);
             new PayloadSceneBuilder().BuildSceneFromMenu();
         }
 

@@ -13,5 +13,10 @@
   "playlist.mutator.low-health": "体力半分",
   "playlist.mutator.headshots-only": "ヘッドショットのみ",
   "playlist.mutator.no-regen": "自然回復なし",
-  "playlist.mutator.infinite-ammo": "弾数無限"
+  "playlist.mutator.infinite-ammo": "弾数無限",
+  "playlist.name.demo-objectives": "目標モード巡り",
+  "playlist.name.demo-mutated": "ミューテーター入り",
+  "playlist.mode.Payload": "ペイロード",
+  "playlist.mode.SearchAndDestroy": "サーチ&デストロイ",
+  "playlist.mode.BattleRoyale": "バトルロイヤル"
 }

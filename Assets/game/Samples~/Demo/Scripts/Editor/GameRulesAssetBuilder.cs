@@ -36,6 +36,7 @@ namespace Shooter.Editor
         public const string BattleRoyaleName = "BattleRoyale";
         public const string InfectedName = "Infected";
         public const string ExtractionName = "Extraction";
+        public const string PayloadName = "Payload";
 
         public static string FreeForAllPath => Folder + "/" + FreeForAllName + ".asset";
         public static string KillConfirmedPath => Folder + "/" + KillConfirmedName + ".asset";
@@ -49,6 +50,7 @@ namespace Shooter.Editor
         public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
         public static string InfectedPath => Folder + "/" + InfectedName + ".asset";
         public static string ExtractionPath => Folder + "/" + ExtractionName + ".asset";
+        public static string PayloadPath => Folder + "/" + PayloadName + ".asset";
 
         public const float HordeWaveIntervalSeconds = 30f;
 
@@ -72,6 +74,7 @@ namespace Shooter.Editor
             BattleRoyaleName,
             InfectedName,
             ExtractionName,
+            PayloadName,
         };
 
         public const int TpsRangeGrenadeCount = 3;
@@ -302,11 +305,6 @@ namespace Shooter.Editor
                 .WithSpawnProtectionSeconds(0f);
         }
 
-        public static GameRules SearchAndDestroyRules()
-        {
-            return ExecutionRules().WithActions(SearchAndDestroyActions());
-        }
-
         public static GameRules CaptureTheFlagRules()
         {
             return TeamDeathmatchRules().WithActions(CaptureTheFlagActions());
@@ -321,13 +319,36 @@ namespace Shooter.Editor
                 .WithReserveAmmoMultiplier(HordeReserveAmmoMultiplier);
         }
 
-        // 倒れたら戻らない (RespawnMode.None) ので、出現直後の無敵は無くす。
+        // 戻るのは BattleRoyaleRunner が決める復帰 (redeploy.json) だけなので、ルールでは戻さず (RespawnMode.None)、出現直後の無敵も無くす。
         public static GameRules BattleRoyaleRules()
         {
             return TeamDeathmatchRules()
                 .WithRespawnMode(RespawnMode.None)
                 .WithSpawnProtectionSeconds(0f)
-                .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier);
+                .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier)
+                .WithActions(BattleRoyaleActions());
+        }
+
+        // パラシュートが Off だと、復帰した人を上空から降ろせず (ParachuteMovement.TryOpenAt が断る)、出現点の地面に戻してしまう。
+        public static ActionRules BattleRoyaleActions()
+        {
+            return TeamDeathmatchActions().WithParachute(Parachute.On);
+        }
+
+        // 台車の進み方と時間は PayloadRunner が payload.json から読むので、ルールはチームデスマッチのまま、目的だけをサーバーのルール (server-data/rules/Payload.json) と同じ Payload にする。
+        public static GameRules PayloadRules()
+        {
+            return TeamDeathmatchRules().WithObjective(MatchObjective.Payload);
+        }
+
+        // 経済 (economy.json) は SearchAndDestroySceneBuilder が Definition に付ける。チームデスマッチの値を後で変えても買い物が成り立つよう、
+        // 買った武器を入れる枠 0 と 1 を両方持てる本数と、買う意味が残る有限の予備弾は写さずにここで決める。
+        public static GameRules SearchAndDestroyRules()
+        {
+            return ExecutionRules()
+                .WithActions(SearchAndDestroyActions())
+                .WithMaxWeapons(DemoMaxWeapons)
+                .WithInfiniteReserve(false);
         }
 
         // 倒された人はすぐ感染者として戻る (RespawnMode.Individual) ので、起こしてもらうダウンは使わない。
@@ -374,6 +395,8 @@ namespace Shooter.Editor
                     return InfectedRules();
                 case ExtractionName:
                     return ExtractionRules();
+                case PayloadName:
+                    return PayloadRules();
                 default:
                     throw new ArgumentException($"'{name}' is not one of the mode names ({string.Join(", ", ModeNames)})", nameof(name));
             }

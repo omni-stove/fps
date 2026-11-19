@@ -73,6 +73,16 @@ namespace Shooter.Runtime
             return Of(slot.DisplayNameKey, slot.RewardId);
         }
 
+        public static LocalizedText Of(BuyItem item)
+        {
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item));
+            }
+
+            return Of(item.NameKey, item.Id);
+        }
+
         // ミッションは Id を人に見せる名前にしていないので、キーが空なら Id ではなく空の文にする。
         public static LocalizedText Mission(string displayNameKey)
         {

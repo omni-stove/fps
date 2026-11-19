@@ -152,9 +152,6 @@ namespace Shooter.NetV2
                 case VehicleCorrectedMessage corrected:
                     _match?.Vehicles.Correct(corrected);
                     break;
-                case VoteKickStateMessage voteKick:
-                    _voteKick.Receive(voteKick);
-                    break;
                 default:
                     if (!_weaponHooks.Handle(message) && !HandleByParts(message))
                     {

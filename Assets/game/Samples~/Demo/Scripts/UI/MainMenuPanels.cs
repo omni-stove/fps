@@ -11,6 +11,7 @@ namespace Shooter.Runtime
         Replays,
         Cosmetics,
         Stash,
+        Playlists,
     }
 
     public interface IMainMenuPanel : IDisposable
@@ -37,6 +38,7 @@ namespace Shooter.Runtime
             MainMenuPanelKind.Replays,
             MainMenuPanelKind.Cosmetics,
             MainMenuPanelKind.Stash,
+            MainMenuPanelKind.Playlists,
         };
 
         public static event Action<MainMenuPanelKind> Changed;

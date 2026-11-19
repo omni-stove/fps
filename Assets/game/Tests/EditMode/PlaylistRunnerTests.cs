@@ -413,7 +413,26 @@ namespace Shooter.Tests.EditMode
             var playlists = PlaylistJson.Parse(asset.text, "Resources/" + KitTuning.PlaylistsResourcePath + ".json");
             Resources.UnloadAsset(asset);
 
-            Assert.That(playlists, Is.Empty, "the kit ships no playlist; a game adds its own scenes");
+            // 例は Demo のモードのシーンを名前で並べる。ゲームは自分のシーンに書き換える。
+            Assert.That(playlists.Select(p => p.Id), Is.EqualTo(new[] { "demo-objectives", "demo-mutated" }));
+            var objectives = playlists[0];
+            Assert.That(objectives.Order, Is.EqualTo(PlaylistOrder.Sequential));
+            Assert.That(objectives.Entries.Select(e => e.Scene), Is.EqualTo(new[] { "Payload", "SearchAndDestroy", "BattleRoyale" }));
+            Assert.That(objectives.Entries.All(e => !e.HasRules && e.MutatorIds.Count == 0), Is.True, "the scenes keep their own rules");
+
+            var mutated = playlists[1];
+            Assert.That(mutated.Order, Is.EqualTo(PlaylistOrder.Shuffle));
+            Assert.That(mutated.Entries.Select(e => e.Scene), Is.EqualTo(new[] { "Payload", "BattleRoyale" }));
+            Assert.That(mutated.Entries[0].MutatorIds, Is.EqualTo(new[] { "low-health" }));
+            Assert.That(mutated.Entries[1].MutatorIds, Is.EqualTo(new[] { "no-regen" }));
+            foreach (var entry in mutated.Entries)
+            {
+                foreach (var id in entry.MutatorIds)
+                {
+                    Assert.That(GameRulesMutator.Find(KitTuning.Mutators, id), Is.Not.Null, id + " is in mutators.json");
+                }
+            }
+
             Assert.That(PlaylistJson.ResourcePath, Is.EqualTo(KitTuning.PlaylistsResourcePath));
         }
 

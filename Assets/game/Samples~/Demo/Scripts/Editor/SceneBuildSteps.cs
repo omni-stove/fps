@@ -41,6 +41,7 @@ namespace Shooter.Editor
             new SceneBuildStep("Guardian", 210, GuardianSceneBuilder.Build),
             new SceneBuildStep("Extraction", 220, ExtractionSceneBuilder.Build),
             new SceneBuildStep("BattleRoyale", 230, BattleRoyaleSceneBuilder.Build),
+            new SceneBuildStep("Payload", 240, PayloadSceneBuilder.Build),
             new SceneBuildStep("Campaign", 300, CampaignSceneBuilder.Build),
 
             // メニューは作戦の一覧を載せるので、作戦のシーンの後に作る。

@@ -10,7 +10,6 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    // 試合が数分かかるので SmokeSuite には入れていない。
     // batchmode には入力が無いので、プレイヤーは出現点に立ったままで、台車を押すのは bot だけになる。
     // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
@@ -503,6 +502,11 @@ namespace Shooter.Editor
             else
             {
                 Debug.LogError(line);
+            }
+
+            if (SmokeSuite.TakeOver(LogTag, exitCode))
+            {
+                return;
             }
 
             if (Application.isBatchMode)

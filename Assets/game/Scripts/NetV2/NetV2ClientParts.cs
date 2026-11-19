@@ -103,7 +103,10 @@ namespace Shooter.NetV2
             }
             else
             {
+                // 通報と同じく、投票と購入も送る相手 (サーバー) のいない再生では口を出さない
                 parts.Add(new NetV2ReportPart(context.Send, context.Log));
+                parts.Add(new NetV2VoteKickPart(context.Send, context.Log));
+                parts.Add(new NetV2BuyPart(context.Send, context.Log));
             }
 
             if (context.Voice != null)

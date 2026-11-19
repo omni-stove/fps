@@ -18,12 +18,16 @@ namespace Shooter.Tests.EditMode
             new Vector2(PayloadCart.DefaultBodySize.x, PayloadCart.DefaultBodySize.z).magnitude / 2f;
 
         [Test]
-        public void TheSceneUsesThePayloadPathAndTheTeamDeathmatchRules()
+        public void TheSceneUsesThePayloadPathAndThePayloadRules()
         {
             var builder = new PayloadSceneBuilder();
 
             Assert.That(builder.ScenePath, Is.EqualTo(ShooterKitRoot.OutputScene("Payload")));
-            Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.TeamDeathmatchPath));
+            Assert.That(builder.ScenePath, Is.EqualTo(BuildSceneList.PayloadScene));
+            Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.PayloadPath));
+            Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.ModeRulesPath(GameRulesAssetBuilder.PayloadName)));
+            Assert.That(PayloadSceneBuilder.MenuPath, Is.EqualTo(SceneBuildSteps.MenuPath));
+            Assert.That(SceneBuildSteps.BuiltIn.Select(step => step.Name), Has.Member("Payload"));
             Assert.That(builder.NavMeshDataPath, Is.EqualTo(ModeSceneBuilder.NavMeshDataPathFor(builder.ScenePath)));
             Assert.That(builder.NavMeshDataPath, Does.EndWith("/Payload/NavMesh-Floor.asset"));
             Assert.That(builder.LogTag, Is.EqualTo("[PayloadSceneBuilder]"));

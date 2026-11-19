@@ -108,7 +108,8 @@ namespace Shooter.Runtime
         private static bool IsFloatAction(InputAction action)
         {
             var controlType = action.expectedControlType;
-            return string.IsNullOrEmpty(controlType)
+            // Control Type が Any（空）のアクションは Vector2 などが割り当たりうるので、ボタン型のときだけ通す。
+            return (string.IsNullOrEmpty(controlType) && action.type == InputActionType.Button)
                 || controlType == "Axis"
                 || controlType == "Button"
                 || controlType == "Analog";

@@ -72,6 +72,56 @@ namespace Shooter.Editor
             };
         }
 
+        // 光線と噴射は 1 発の弾として ShotFired を出さず (BeamDelivery / SprayDelivery)、ここに銃声を置いても鳴らないので選ばない。
+        public static (string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)? AssetsFor(Shooter.Core.WeaponSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray)
+            {
+                return null;
+            }
+
+            switch (spec.Category)
+            {
+                case Shooter.Core.WeaponCategory.Handgun:
+                case Shooter.Core.WeaponCategory.SubmachineGun:
+                    return (HandgunFireSound, HandgunReloadSound, HandgunMuzzleFlashEffect, HandgunThirdPersonMuzzleFlashEffect);
+                case Shooter.Core.WeaponCategory.Launcher:
+                    return (LauncherFireSound, LauncherReloadSound, LauncherMuzzleFlashEffect, LauncherThirdPersonMuzzleFlashEffect);
+                case Shooter.Core.WeaponCategory.Shotgun:
+                    return (LauncherFireSound, RifleReloadSound, RifleMuzzleFlashEffect, RifleThirdPersonMuzzleFlashEffect);
+                default:
+                    return (RifleFireSound, RifleReloadSound, RifleMuzzleFlashEffect, RifleThirdPersonMuzzleFlashEffect);
+            }
+        }
+
+        // 種類から既存の音を借りるのは、武器ごとに音を作らなくても、JSON に足した武器が撃ったときに必ず鳴るようにするため。
+        public static IReadOnlyList<(string WeaponId, string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)> AllWeaponEntries()
+        {
+            var entries = new List<(string WeaponId, string Fire, string Reload, string MuzzleFlash, string ThirdPersonMuzzleFlash)>(WeaponEntries());
+            var listed = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in entries)
+            {
+                listed.Add(entry.WeaponId);
+            }
+
+            foreach (var (_, spec) in WeaponAssetBuilder.AllWeaponSources())
+            {
+                var assets = AssetsFor(spec);
+                if (assets.HasValue && listed.Add(spec.Id))
+                {
+                    var (fire, reload, flash, thirdPersonFlash) = assets.Value;
+                    entries.Add((spec.Id, fire, reload, flash, thirdPersonFlash));
+                }
+            }
+
+            return entries;
+        }
+
         public static IReadOnlyList<SoundSpec> SoundSpecs()
         {
             return new[]
@@ -216,7 +266,7 @@ namespace Shooter.Editor
             };
 
             var weapons = new List<WeaponPresentationAssets>();
-            foreach (var entry in WeaponEntries())
+            foreach (var entry in AllWeaponEntries())
             {
                 weapons.Add(new WeaponPresentationAssets(
                     entry.WeaponId, clips[entry.Fire], clips[entry.Reload], effects[entry.MuzzleFlash], effects[entry.ThirdPersonMuzzleFlash]));

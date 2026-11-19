@@ -118,6 +118,28 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AMilDotScopeShowsItsReticleAcrossTheLens()
+        {
+            var catalog = ScriptableObject.CreateInstance<ReticleCatalog>();
+            _created.Add(catalog);
+            var mildot = new ReticleEntry("mildot", null, ReticleShape.MilDot, Color.black, 1f);
+            catalog.SetReticles(new[] { mildot });
+            var overlay = CreateOverlay(out var element);
+            overlay.Catalog = catalog;
+            overlay.SightSource = () => SightView.Of(new SightSpec("mildot", scopeOverlay: true), ViewMode.FirstPerson, 1f);
+
+            overlay.Refresh();
+
+            Assert.That(overlay.Reticle, Is.SameAs(mildot));
+            Assert.That(overlay.Shown.ScopeOverlay, Is.True);
+            Assert.That(element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            // 縁あり: 1000 px × 直径 0.92 × 1 = 920 px。点は柱の始まりより内側に収まる
+            Assert.That(ScopeOverlayView.ReticleSize(mildot, true, 1000f, ReticleCatalog.DefaultLensDiameter), Is.EqualTo(920f).Within(1e-3f));
+            Assert.That(ScopeOverlayView.MilDotSpacing * ScopeOverlayView.MilDotsPerArm, Is.LessThan(ScopeOverlayView.MilDotPostStart));
+        }
+
+        [Test]
         public void ThirdPersonOverTheShoulderShowsNothing()
         {
             var overlay = CreateOverlay(out _);

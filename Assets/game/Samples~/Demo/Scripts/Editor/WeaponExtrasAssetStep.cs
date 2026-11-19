@@ -203,7 +203,7 @@ namespace Shooter.Editor
             var weapons = new List<WeaponExtrasAssets>();
             var listed = new HashSet<string>(StringComparer.Ordinal);
             var models = 0;
-            foreach (var (weaponName, spec) in WeaponAssetBuilder.RangeWeaponSources())
+            foreach (var (weaponName, spec) in WeaponAssetBuilder.AllWeaponSources())
             {
                 var (shell, landSound) = fixedEntries.TryGetValue(spec.Id, out var fixedEntry) ? (fixedEntry.Shell, fixedEntry.LandSound) : ShellFor(spec);
                 var dryFire = fixedEntry.DryFire ?? DryFireClickSound;

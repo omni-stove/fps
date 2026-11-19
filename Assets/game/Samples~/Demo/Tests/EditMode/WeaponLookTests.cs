@@ -70,6 +70,68 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheSightOfTheDataPicksTheSightOnTheModel()
+        {
+            var looks = WeaponAssetBuilder.AllWeaponSources().ToDictionary(source => source.Name, source => WeaponLook.For(source.Spec));
+
+            Assert.That(looks["HeavySniper"].Has(WeaponLook.LongScopeName), Is.True);
+            Assert.That(looks["BullpupRifle"].Has(WeaponLook.ScopeName), Is.True);
+            Assert.That(looks["ModularRifle"].Has(WeaponLook.DotSightName), Is.True);
+            Assert.That(looks["ModularRifle"].Has("FrontSight"), Is.False);
+            Assert.That(looks["MachinePistol"].Has(WeaponLook.HoloSightName), Is.True);
+            Assert.That(looks["MachinePistol"].Has(WeaponLook.DotSightName), Is.False);
+            Assert.That(looks["Revolver"].Has("FrontSight"), Is.True);
+            Assert.That(looks["Revolver"].Has(WeaponLook.DotSightName), Is.False);
+            Assert.That(looks["Rifle"].Has("FrontSight"), Is.True, "the default rifle keeps its iron sights so the red dot attachment shows");
+        }
+
+        [Test]
+        public void EveryWeaponThatZoomsLikeAScopeShowsTheScopeWhenAimedIn()
+        {
+            foreach (var (name, spec) in WeaponAssetBuilder.AllWeaponSources())
+            {
+                var look = WeaponLook.For(spec);
+                var scoped = look.Has(WeaponLook.ScopeName) || look.Has(WeaponLook.LongScopeName);
+                if (scoped)
+                {
+                    Assert.That(spec.Aim.Sight.ScopeOverlay, Is.True, name);
+                    Assert.That(spec.Aim.Sight.HasReticle, Is.True, name);
+                }
+
+                if (spec.Aim.Sight.ScopeOverlay)
+                {
+                    Assert.That(scoped, Is.True, name);
+                }
+                else if (spec.Aim.Sight.HasReticle)
+                {
+                    Assert.That(look.Has(WeaponLook.DotSightName) || look.Has(WeaponLook.HoloSightName), Is.True, name);
+                }
+            }
+        }
+
+        [Test]
+        public void AReflexSightLeavesTheLineOfSightOpen()
+        {
+            foreach (var (name, spec) in WeaponAssetBuilder.AllWeaponSources())
+            {
+                var look = WeaponLook.For(spec);
+                if (!look.Has(WeaponLook.DotSightName) && !look.Has(WeaponLook.HoloSightName))
+                {
+                    continue;
+                }
+
+                foreach (var part in look.Parts)
+                {
+                    var half = part.Size * 0.5f;
+                    var blocks = Mathf.Abs(look.Sight.x - part.Center.x) < half.x
+                        && Mathf.Abs(look.Sight.y - part.Center.y) < half.y
+                        && part.Center.z + half.z > look.Sight.z;
+                    Assert.That(blocks, Is.False, name + " " + part.Name);
+                }
+            }
+        }
+
+        [Test]
         public void TheAccentColorShowsWhatTheRoundDoes()
         {
             var looks = Looks();

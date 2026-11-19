@@ -59,7 +59,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(catalog, Is.SameAs(AssetDatabase.LoadAssetAtPath<ViewmodelCatalog>(_catalogPath)));
             Assert.DoesNotThrow(() => catalog.Validate());
-            Assert.That(catalog.Weapons.Count, Is.EqualTo(WeaponAssetBuilder.RangeWeaponSources().Count), "every range weapon gets its own viewmodel");
+            Assert.That(catalog.Weapons.Count, Is.EqualTo(WeaponAssetBuilder.AllWeaponSources().Count), "every weapon of the range, reference and realistic sets gets its own viewmodel");
             foreach (var (name, spec) in ViewmodelAssetStep.Weapons())
             {
                 Assert.That(catalog.TryGetWeapon(spec.Id, out var entry), Is.True, spec.Id);

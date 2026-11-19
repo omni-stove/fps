@@ -105,6 +105,18 @@ namespace Shooter.Server
             }
         }
 
+        // 構えている間ずっと取り消すと、構えたまま送ったリロードがすぐ消えて弾を込められないので、押し始めた tick だけ取り消す。
+        private void InterruptReloadOnAim(Fighter fighter)
+        {
+            var aiming = _movement.IsAiming(fighter.PlayerId);
+            if (aiming && !fighter.WasAiming)
+            {
+                InterruptReload(fighter.PlayerId, ReloadInterrupt.Aim);
+            }
+
+            fighter.WasAiming = aiming;
+        }
+
         private bool IsReloadHeldOff(Fighter fighter)
         {
             var actions = _data.Rules.Actions;
@@ -151,6 +163,7 @@ namespace Shooter.Server
             _now += deltaSeconds;
             foreach (var fighter in _fighters.Values)
             {
+                InterruptReloadOnAim(fighter);
                 fighter.Weapons.Tick(deltaSeconds);
                 if (_bodies.TryGet(fighter.PlayerId, out var body))
                 {
@@ -576,6 +589,8 @@ namespace Shooter.Server
             public ServerShotSequence Shots { get; } = new ServerShotSequence();
 
             public Vector3 LastHitDirection { get; set; }
+
+            public bool WasAiming { get; set; }
         }
     }
 }

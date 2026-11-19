@@ -28,6 +28,13 @@ MonoBehaviour:
   _falloffMinMultiplier: 0.6
   _explosionRadius: 0
   _adsFieldOfView: 42.1
+  _sight:
+    _enabled: 1
+    _reticleId: holo
+    _scopeOverlay: 0
+    _eyeViewInThirdPerson: 0
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _blindFireSpreadDegrees: 10
   _activeReloadWindowStart: 0.5
   _activeReloadWindowLength: 0.15

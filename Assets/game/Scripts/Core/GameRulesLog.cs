@@ -23,6 +23,7 @@ namespace Shooter.Core
                 + " stamina=" + rules.Actions.Stamina
                 + " respawnAnchor=" + Join(rules.RespawnAnchors)
                 + " reloadInterruptedBy=" + Join(rules.Actions.ReloadInterruptedBy)
+                + " aimWhileReloading=" + rules.Actions.AimWhileReloading
                 + " idleWarningSeconds=" + rules.IdleWarningSeconds.ToString("0.##", CultureInfo.InvariantCulture);
         }
 

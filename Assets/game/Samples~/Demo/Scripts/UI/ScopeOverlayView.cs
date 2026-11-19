@@ -13,6 +13,13 @@ namespace Shooter.Runtime
 
         public const string ImageClass = "scope-overlay__image";
 
+        public const int MilDotsPerArm = 4;
+
+        // 点の間隔を縁の内側の半径の割合で決めるのは、画面の大きさが変わっても点で測る距離の目安が変わらないようにするため。
+        public const float MilDotSpacing = 0.1f;
+
+        public const float MilDotPostStart = 0.6f;
+
         private ReticleCatalog _catalog;
         private bool _catalogResolved;
         private Hud _hud;
@@ -226,6 +233,9 @@ namespace Shooter.Runtime
                     Line(painter, center + new Vector2(postStart, 0f), center + new Vector2(half, 0f), thick);
                     Line(painter, center + new Vector2(0f, postStart), center + new Vector2(0f, half), thick);
                     break;
+                case ReticleShape.MilDot:
+                    DrawMilDot(painter, center, half, color);
+                    break;
                 case ReticleShape.Circle:
                     painter.strokeColor = color;
                     painter.lineWidth = Mathf.Max(1f, half * 0.08f);
@@ -237,6 +247,29 @@ namespace Shooter.Runtime
                 default:
                     Dot(painter, center, half, color);
                     break;
+            }
+        }
+
+        private static void DrawMilDot(Painter2D painter, Vector2 center, float half, Color color)
+        {
+            var thin = Mathf.Max(1f, half * 0.004f);
+            var thick = Mathf.Max(3f, half * 0.02f);
+            var postStart = half * MilDotPostStart;
+            var dot = Mathf.Max(1.5f, half * 0.008f);
+            painter.strokeColor = color;
+            painter.lineCap = LineCap.Butt;
+            Line(painter, center + new Vector2(-postStart, 0f), center + new Vector2(postStart, 0f), thin);
+            Line(painter, center + new Vector2(0f, -postStart), center + new Vector2(0f, postStart), thin);
+            Line(painter, center + new Vector2(-half, 0f), center + new Vector2(-postStart, 0f), thick);
+            Line(painter, center + new Vector2(postStart, 0f), center + new Vector2(half, 0f), thick);
+            Line(painter, center + new Vector2(0f, postStart), center + new Vector2(0f, half), thick);
+            for (var i = 1; i <= MilDotsPerArm; i++)
+            {
+                var step = half * MilDotSpacing * i;
+                Dot(painter, center + new Vector2(step, 0f), dot, color);
+                Dot(painter, center + new Vector2(-step, 0f), dot, color);
+                Dot(painter, center + new Vector2(0f, step), dot, color);
+                Dot(painter, center + new Vector2(0f, -step), dot, color);
             }
         }
 

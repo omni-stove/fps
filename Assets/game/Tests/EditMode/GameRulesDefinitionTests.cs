@@ -90,7 +90,8 @@ namespace Shooter.Tests.EditMode
             definition.Spectating = Spectating.Off;
             definition.Emote = Emote.On;
             definition.Stamina = Stamina.On;
-            definition.ReloadInterruptedBy = new[] { ReloadInterrupt.Grenade };
+            definition.ReloadInterruptedBy = new[] { ReloadInterrupt.Grenade, ReloadInterrupt.Aim };
+            definition.AimWhileReloading = AimWhileReloading.Off;
             definition.RespawnAnchors = new[] { RespawnAnchor.Beacon, RespawnAnchor.Base };
 
             var rules = definition.ToRules();
@@ -146,7 +147,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.Spectating, Is.EqualTo(Spectating.Off));
             Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
             Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
-            Assert.That(rules.Actions.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Grenade }));
+            Assert.That(rules.Actions.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Grenade, ReloadInterrupt.Aim }));
+            Assert.That(rules.Actions.AimWhileReloading, Is.EqualTo(AimWhileReloading.Off));
             Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
             Assert.That(definition.ToRules(), Is.Not.SameAs(rules));
         }
@@ -160,6 +162,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(definition.Stamina, Is.EqualTo(Stamina.Off));
             Assert.That(definition.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
             Assert.That(definition.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Melee, ReloadInterrupt.Grenade }));
+            Assert.That(definition.AimWhileReloading, Is.EqualTo(AimWhileReloading.On));
         }
 
         [Test]

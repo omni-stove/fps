@@ -15,6 +15,8 @@ namespace Shooter.Server
     {
         public const string CatalogFileName = "deployables.json";
 
+        internal const string BeaconUnsupported = "a Beacon respawns players only offline; the dedicated server does not respawn at beacons yet";
+
         private const float _rejectWarningInterval = 1f;
 
         private readonly MatchRulesModule _rules;
@@ -413,6 +415,13 @@ namespace Shooter.Server
             {
                 return "the id is longer than " + MatchProtocol.MaxContentIdBytes.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + " bytes and cannot be sent";
+            }
+
+            // 復活の場所はまだ専用サーバーの出現で選ばれず、スナップショットにも送る種類 (DeployableKind) が無い。置かせると使えない物が残るだけなので、
+            // 置く前に断る
+            if (type.Role == DeployRole.Beacon)
+            {
+                return BeaconUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)

@@ -71,7 +71,8 @@ namespace Shooter.Core
                 zoom ?? aim.ZoomLevels,
                 aim.BreathHold,
                 aim.SwayDegrees,
-                sight ?? aim.Sight);
+                sight ?? aim.Sight,
+                Angle(aim.AdsMoveSpreadDegrees * move));
 
             var ammo = spec.Ammo;
             var newAmmo = new AmmoSpec(

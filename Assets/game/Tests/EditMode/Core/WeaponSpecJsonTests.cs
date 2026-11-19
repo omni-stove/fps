@@ -318,6 +318,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\"}]}}}", "round.penetration.materials[0].penetrability")]
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
         [TestCase("{\"aim\": {\"sight\": {\"aimedInProgress\": 1.5}}}", "aim.sight.aimedInProgress")]
+        [TestCase("{\"aim\": {\"adsMoveSpreadDegrees\": 90.5}}", "aim.adsMoveSpreadDegrees")]
+        [TestCase("{\"aim\": {\"adsMoveSpreadDegrees\": \"x\"}}", "aim.adsMoveSpreadDegrees")]
         [TestCase("{\"aim\": {\"sight\": {\"overlay\": true}}}", "aim.sight.overlay")]
         [TestCase("{\"aim\": {\"sight\": {\"visionMode\": \"Infrared\"}}}", "aim.sight.visionMode")]
         [TestCase("{\"aim\": {\"sight\": {\"visionMode\": 2}}}", "aim.sight.visionMode")]
@@ -445,6 +447,28 @@ namespace Shooter.Core.Tests
             Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").DrawSeconds, Is.EqualTo(0.3f));
             Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.DrawSecondsItem), "a weapon without a draw time writes the same JSON as before");
             Assert.That(read.WithFireInterval(read.FireInterval * 2f).DrawSeconds, Is.EqualTo(0.3f));
+        }
+
+        [Test]
+        public void TheAdsMoveSpreadReadsBackAndIsLeftOutWhenItIsTheMoveSpread()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"aim\": {\"moveSpreadDegrees\": 3, \"adsMoveSpreadDegrees\": 0.9}}",
+                "x.json");
+            var zero = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"aim\": {\"moveSpreadDegrees\": 3, \"adsMoveSpreadDegrees\": 0}}",
+                "x.json");
+            var bare = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"aim\": {\"moveSpreadDegrees\": 3}}", "x.json");
+
+            Assert.That(read.AdsMoveSpreadDegrees, Is.EqualTo(0.9f));
+            Assert.That(zero.AdsMoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(bare.AdsMoveSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(WeaponSpecJson.Write(read), Does.Contain("\"adsMoveSpreadDegrees\": 0.9"));
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").AdsMoveSpreadDegrees, Is.EqualTo(0.9f));
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(zero), "again.json").AdsMoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.AdsMoveSpreadDegreesItem), "a weapon without an aimed move spread writes the same JSON as before");
+            Assert.That(read.WithFireInterval(read.FireInterval * 2f).AdsMoveSpreadDegrees, Is.EqualTo(0.9f));
         }
 
         [Test]

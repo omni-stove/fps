@@ -86,6 +86,8 @@ namespace Shooter.Core
 
         public float MoveSpreadDegrees => Aim.MoveSpreadDegrees;
 
+        public float AdsMoveSpreadDegrees => Aim.AdsMoveSpreadDegrees;
+
         public float RecoilRecoveryDelaySeconds => Aim.RecoilRecoveryDelaySeconds;
 
         public float ShotNoiseRadius { get; }
@@ -134,7 +136,8 @@ namespace Shooter.Core
             float recoilRecoveryDelaySeconds = DefaultRecoilRecoveryDelaySeconds,
             float shotNoiseRadius = DefaultShotNoiseRadius,
             float weight = DefaultWeight,
-            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier)
+            float moveSpeedMultiplier = DefaultMoveSpeedMultiplier,
+            float? adsMoveSpreadDegrees = null)
             : this(
                 id,
                 nameKey,
@@ -164,7 +167,8 @@ namespace Shooter.Core
                     blindFireSpreadDegrees,
                     adsFieldOfView.HasValue
                         ? new[] { AdsZoom.ValidateFieldOfView(adsFieldOfView.Value, nameof(adsFieldOfView)) }
-                        : null),
+                        : null,
+                    adsMoveSpreadDegrees: adsMoveSpreadDegrees),
                 null,
                 shotNoiseRadius,
                 weight,

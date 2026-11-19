@@ -14,6 +14,8 @@ namespace Shooter.Server.Tests
 
         public Func<int, Team, int, Team, bool> Hostile { get; set; }
 
+        public Func<int, Team, int, Team, bool> Allies { get; set; }
+
         public Func<int, int, InteractVerdict> OnInteract { get; set; }
 
         public Func<int, Vector3?> Goal { get; set; }
@@ -35,6 +37,11 @@ namespace Shooter.Server.Tests
         bool IMatchObjectiveRules.AreHostile(int a, Team aTeam, int b, Team bTeam)
         {
             return Hostile != null ? Hostile(a, aTeam, b, bTeam) : _default.AreHostile(a, aTeam, b, bTeam);
+        }
+
+        bool IMatchObjectiveRules.AreAllies(int a, Team aTeam, int b, Team bTeam)
+        {
+            return Allies != null ? Allies(a, aTeam, b, bTeam) : !((IMatchObjectiveRules)this).AreHostile(a, aTeam, b, bTeam);
         }
 
         InteractVerdict IMatchObjectiveRules.Interact(int playerId, int itemId)

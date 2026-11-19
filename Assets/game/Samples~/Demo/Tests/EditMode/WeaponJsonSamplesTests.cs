@@ -158,6 +158,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees));
             Assert.That(actual.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees));
             Assert.That(actual.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees));
+            Assert.That(actual.AdsMoveSpreadDegrees, Is.EqualTo(expected.AdsMoveSpreadDegrees));
             Assert.That(actual.RecoilRecoveryDelaySeconds, Is.EqualTo(expected.RecoilRecoveryDelaySeconds));
         }
 

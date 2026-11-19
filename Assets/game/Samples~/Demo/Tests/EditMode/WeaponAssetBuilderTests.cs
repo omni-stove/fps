@@ -572,6 +572,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(rifle.HipSpreadDegrees, Is.EqualTo(3f));
             Assert.That(rifle.AdsSpreadDegrees, Is.EqualTo(0.5f));
             Assert.That(rifle.MoveSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(rifle.AdsMoveSpreadDegrees, Is.EqualTo(0.9f));
 
             var handgun = WeaponAssetBuilder.HandgunSpec();
             Assert.That(handgun.RecoilPitchDegrees, Is.EqualTo(2.5f));
@@ -580,6 +581,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(handgun.HipSpreadDegrees, Is.EqualTo(2f));
             Assert.That(handgun.AdsSpreadDegrees, Is.EqualTo(0.8f));
             Assert.That(handgun.MoveSpreadDegrees, Is.EqualTo(1.5f));
+            Assert.That(handgun.AdsMoveSpreadDegrees, Is.EqualTo(0.45f));
         }
 
         [Test]
@@ -676,6 +678,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(asset.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
             Assert.That(asset.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
             Assert.That(asset.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);
+            Assert.That(asset.AdsMoveSpreadDegrees, Is.EqualTo(expected.AdsMoveSpreadDegrees), message);
 
             var spec = asset.ToSpec();
             Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(expected.RecoilPitchDegrees), message);
@@ -685,6 +688,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.HipSpreadDegrees, Is.EqualTo(expected.HipSpreadDegrees), message);
             Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(expected.AdsSpreadDegrees), message);
             Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(expected.MoveSpreadDegrees), message);
+            Assert.That(spec.AdsMoveSpreadDegrees, Is.EqualTo(expected.AdsMoveSpreadDegrees), message);
         }
 
         [Test]

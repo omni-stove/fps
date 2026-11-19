@@ -9,7 +9,7 @@ using Random = UnityEngine.Random;
 namespace Shooter.Runtime
 {
     // 撃った者 (WeaponPresentation) とは別の GameObject に持たせるのは、撃った者が倒れて消えても壁の銃痕を残すため。
-    // 銃痕は世界の座標に置くので、当たった物が動いても付いていかない。
+    // 当たった物が動いたら銃痕も一緒に動かす (DecalAttachment)。
     // 当たったコライダーが消える・切られる・非アクティブになったら (壊せる部品が壊れたときなど)、宙に残らないよう剥がす。
     [DisallowMultipleComponent]
     public sealed class ImpactDecals : MonoBehaviour
@@ -115,7 +115,7 @@ namespace Shooter.Runtime
             var pose = DecalPose(impact.Point, impact.Normal, rollDegrees);
             var size = surface.DecalSize > 0f ? surface.DecalSize : SurfaceImpactAssets.DefaultDecalSize;
             decal.MaterialId = impact.MaterialId;
-            decal.Anchor = impact.Collider;
+            decal.Attachment.Attach(impact.Collider, impact.Point, pose.rotation, Vector3.forward * SurfaceOffset);
             decal.Renderer.sharedMaterial = surface.Decal;
             decal.Root.transform.SetPositionAndRotation(pose.position, pose.rotation);
             decal.Root.transform.localScale = new Vector3(size, size, 1f);
@@ -162,6 +162,27 @@ namespace Shooter.Runtime
             return released;
         }
 
+        public int FollowAnchors()
+        {
+            if (_pool == null || _pool.ActiveCount == 0)
+            {
+                return 0;
+            }
+
+            var moved = 0;
+            _pool.CopyActive(_scratch);
+            foreach (var decal in _scratch)
+            {
+                if (decal.Attachment.Follow(decal.Root.transform))
+                {
+                    moved++;
+                }
+            }
+
+            _scratch.Clear();
+            return moved;
+        }
+
         public static Pose DecalPose(Vector3 point, Vector3 normal, float rollDegrees)
         {
             var n = normal.sqrMagnitude > 0f ? normal.normalized : Vector3.up;
@@ -195,6 +216,7 @@ namespace Shooter.Runtime
         private void LateUpdate()
         {
             ReleaseDetached();
+            FollowAnchors();
         }
 
         private void OnDestroy()
@@ -219,6 +241,7 @@ namespace Shooter.Runtime
 
         private static void HideDecal(PooledDecal decal)
         {
+            decal.Attachment.Clear();
             if (decal.Root != null)
             {
                 decal.Root.SetActive(false);
@@ -274,9 +297,6 @@ namespace Shooter.Runtime
 
     public sealed class PooledDecal
     {
-        private Collider _anchor;
-        private bool _anchored;
-
         public PooledDecal(GameObject root, MeshRenderer renderer)
         {
             Root = root;
@@ -289,17 +309,10 @@ namespace Shooter.Runtime
 
         public string MaterialId { get; set; } = SurfaceMaterial.DefaultId;
 
-        public Collider Anchor
-        {
-            get => _anchor;
-            set
-            {
-                _anchor = value;
-                _anchored = !ReferenceEquals(value, null);
-            }
-        }
+        public DecalAttachment Attachment { get; } = new DecalAttachment();
 
-        // 消された Collider も == null になるので、初めから貼り先が無かった銃痕 (剥がさない) と分けるために _anchored を持つ。
-        public bool IsDetached => _anchored && (_anchor == null || !_anchor.enabled || !_anchor.gameObject.activeInHierarchy);
+        public Collider Anchor => Attachment.Collider;
+
+        public bool IsDetached => Attachment.IsDetached;
     }
 }

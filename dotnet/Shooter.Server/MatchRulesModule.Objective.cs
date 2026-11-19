@@ -63,6 +63,19 @@ namespace Shooter.Server
             return _objective != null ? _objective.AreHostile(a, aTeam, b, bTeam) : aTeam != bTeam;
         }
 
+        // 敵でも味方でもない 2 人 (BR の分隊に入れなかった人と誰か)。Session は味方でない人を敵として撃たせるので、ここで止める
+        private bool AreNeutral(int a, int b)
+        {
+            if (a == b || _objective == null)
+            {
+                return false;
+            }
+
+            var aTeam = _session.GetTeam(a);
+            var bTeam = _session.GetTeam(b);
+            return !_objective.AreHostile(a, aTeam, b, bTeam) && !_objective.AreAllies(a, aTeam, b, bTeam);
+        }
+
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)
         {
             ArgumentNullException.ThrowIfNull(points);

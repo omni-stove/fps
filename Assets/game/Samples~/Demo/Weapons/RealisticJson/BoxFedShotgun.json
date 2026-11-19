@@ -48,6 +48,7 @@
     "hipSpreadDegrees": 2.43,
     "adsSpreadDegrees": 0.05,
     "moveSpreadDegrees": 0.61,
+    "adsMoveSpreadDegrees": 0.183,
     "recoilPitchDegrees": 1.67,
     "recoilYawDegrees": 0.58,
     "recoilRecoveryPerSecond": 5.38,

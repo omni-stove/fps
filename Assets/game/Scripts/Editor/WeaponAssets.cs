@@ -110,6 +110,10 @@ namespace Shooter.Editor
             definition.HipSpreadDegrees = spec.HipSpreadDegrees;
             definition.AdsSpreadDegrees = spec.AdsSpreadDegrees;
             definition.MoveSpreadDegrees = spec.MoveSpreadDegrees;
+            // JSON で書かなかったときと同じアセットになるよう、移動と同じ値は未設定にする。
+            definition.AdsMoveSpreadDegrees = spec.AdsMoveSpreadDegrees != spec.MoveSpreadDegrees
+                ? spec.AdsMoveSpreadDegrees
+                : (float?)null;
             definition.RecoilRecoveryDelaySeconds = spec.RecoilRecoveryDelaySeconds;
             definition.ShotNoiseRadius = spec.ShotNoiseRadius;
             definition.Weight = spec.Weight;

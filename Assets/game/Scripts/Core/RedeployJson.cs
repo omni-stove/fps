@@ -16,13 +16,16 @@ namespace Shooter.Core
 
         public static RedeploySpec Parse(string text, string sourceName)
         {
-            return SpecJsonReader.Read(text, sourceName, _kind, ItemNames, fields =>
-            {
-                var charges = fields.ReadInt(ChargesItem, RedeploySpec.DefaultCharges);
-                var lastPhaseIndex = fields.ReadInt(LastPhaseIndexItem, RedeploySpec.DefaultLastPhaseIndex);
-                var delaySeconds = fields.ReadFloat(DelaySecondsItem, RedeploySpec.DefaultDelaySeconds);
-                return SpecJsonReader.Build(fields, ItemNames, () => new RedeploySpec(charges, lastPhaseIndex, delaySeconds));
-            });
+            return SpecJsonReader.Read(text, sourceName, _kind, ItemNames, Read);
+        }
+
+        // 別の調整値のファイルの中の節 (battle-royale.json の redeploy) からも同じ項目で読めるよう、節を受け取る口を分ける
+        internal static RedeploySpec Read(ServerDataJson.Fields fields)
+        {
+            var charges = fields.ReadInt(ChargesItem, RedeploySpec.DefaultCharges);
+            var lastPhaseIndex = fields.ReadInt(LastPhaseIndexItem, RedeploySpec.DefaultLastPhaseIndex);
+            var delaySeconds = fields.ReadFloat(DelaySecondsItem, RedeploySpec.DefaultDelaySeconds);
+            return SpecJsonReader.Build(fields, ItemNames, () => new RedeploySpec(charges, lastPhaseIndex, delaySeconds));
         }
     }
 }

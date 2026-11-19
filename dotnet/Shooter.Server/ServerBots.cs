@@ -658,7 +658,8 @@ namespace Shooter.Server
             foreach (var other in _bodies.All)
             {
                 var id = other.PlayerId;
-                if (id == selfId || !session.HasPlayer(id) || session.GetTeam(id) == team || !session.IsAlive(id) || session.IsDowned(id))
+                // 敵は目的が決める (BR では分隊に入れなかった人が敵でも味方でもない) ので、味方でないかでなく目的の AreHostile で外す
+                if (id == selfId || !session.HasPlayer(id) || !_rules.AreHostile(selfId, id) || !session.IsAlive(id) || session.IsDowned(id))
                 {
                     continue;
                 }

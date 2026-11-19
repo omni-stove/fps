@@ -20,17 +20,22 @@ namespace Shooter.Server
         private TeamDeathmatchSession CreateSession(ServerMapData map, NetMapPoints points)
         {
             var settings = _data.Settings;
+            var objective = _objective;
+            TeamDeathmatchSession session = null;
             try
             {
-                return new TeamDeathmatchSession(
-                    _objective.CreateSessionSpec(_data.Rules, settings),
+                // 味方撃ち・ダウン・蘇生も目的の敵味方 (分隊で戦う BR など) で決めさせる。目的を作り直すと Session も作り直すので、作ったときの目的に聞く
+                session = new TeamDeathmatchSession(
+                    objective.CreateSessionSpec(_data.Rules, settings),
                     settings.MaxHealth,
                     points.SpawnPoints,
                     new SpawnSelector(settings.MinEnemySpawnDistance),
                     PositionOf,
                     null,
                     settings.ReconnectGraceSeconds,
-                    _data.Assist);
+                    _data.Assist,
+                    (a, b) => objective.AreAllies(a, session.GetTeam(a), b, session.GetTeam(b)));
+                return session;
             }
             catch (ArgumentException e)
             {

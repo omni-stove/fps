@@ -86,6 +86,9 @@ namespace Shooter.Editor
 
         public const float RifleMoveSpreadDegrees = 3f;
 
+        // 覗き込んで動いたときに照準の開きが腰だめで動いたときより大きく見えないよう、移動の 3 割に絞る。
+        public const float RifleAdsMoveSpreadDegrees = 0.9f;
+
         public const float RifleWeight = 3.5f;
 
         // rifle の 1 発より大きく跳ねるようにする。
@@ -105,6 +108,9 @@ namespace Shooter.Editor
 
         // 軽いので rifle より小さくする。
         public const float HandgunMoveSpreadDegrees = 1.5f;
+
+        // rifle と同じく移動の 3 割に絞る。
+        public const float HandgunAdsMoveSpreadDegrees = 0.45f;
 
         public const float HandgunWeight = 1f;
 
@@ -144,7 +150,8 @@ namespace Shooter.Editor
                 hipSpreadDegrees: RifleHipSpreadDegrees,
                 adsSpreadDegrees: RifleAdsSpreadDegrees,
                 moveSpreadDegrees: RifleMoveSpreadDegrees,
-                weight: RifleWeight);
+                weight: RifleWeight,
+                adsMoveSpreadDegrees: RifleAdsMoveSpreadDegrees);
         }
 
         public static WeaponDefinition LoadRifle()
@@ -184,7 +191,8 @@ namespace Shooter.Editor
                 hipSpreadDegrees: HandgunHipSpreadDegrees,
                 adsSpreadDegrees: HandgunAdsSpreadDegrees,
                 moveSpreadDegrees: HandgunMoveSpreadDegrees,
-                weight: HandgunWeight);
+                weight: HandgunWeight,
+                adsMoveSpreadDegrees: HandgunAdsMoveSpreadDegrees);
         }
 
         // 建造物を壊す確認用なので、既定のロードアウトとカタログには入れない。

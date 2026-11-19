@@ -463,6 +463,74 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheShieldReadsBackAndANonShieldWeaponWritesNoShield()
+        {
+            var shield = new WeaponSpec(
+                _rifleId,
+                "weapon.riotShield",
+                WeaponCategory.Handgun,
+                shield: new RiotShieldSpec(100f, 0.7f, 1.4f, 0.6f, new MeleeSpec(45, 1.5f, 80f, 0.7f, 0.6f, 0.3f, 0.4f)));
+
+            var written = WeaponSpecJson.Write(shield);
+            var read = WeaponSpecJson.Parse(written, "shield.json");
+
+            Assert.That(written, Does.Contain("\"shield\""));
+            Assert.That(read.IsShield, Is.True);
+            Assert.That(read.Shield.BlockArcDegrees, Is.EqualTo(100f));
+            Assert.That(read.Shield.Width, Is.EqualTo(0.7f));
+            Assert.That(read.Shield.Height, Is.EqualTo(1.4f));
+            Assert.That(read.Shield.MoveSpeedMultiplier, Is.EqualTo(0.6f));
+            Assert.That(read.Shield.Bash.Damage, Is.EqualTo(45));
+            Assert.That(read.Shield.Bash.Reach, Is.EqualTo(1.5f));
+            Assert.That(read.Shield.Bash.ArcDegrees, Is.EqualTo(80f));
+            Assert.That(read.Shield.Bash.SwingSeconds, Is.EqualTo(0.7f));
+            Assert.That(read.Shield.Bash.CooldownSeconds, Is.EqualTo(0.6f));
+            Assert.That(read.Shield.Bash.ImpactSeconds, Is.EqualTo(0.3f));
+            Assert.That(read.Shield.Bash.LungeDistance, Is.EqualTo(0.4f));
+            Assert.That(read.WithFireInterval(read.FireInterval * 2f).Shield, Is.SameAs(read.Shield));
+
+            var plain = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle);
+            Assert.That(WeaponSpecJson.Write(plain), Does.Not.Contain("\"shield\""), "a weapon without a shield writes the same JSON as before");
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(plain), "plain.json").Shield, Is.Null);
+        }
+
+        [Test]
+        public void ALeftOutShieldItemTakesItsDefault()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": {\"bash\": {\"damage\": 60}}}", "shield.json");
+
+            Assert.That(read.Shield.BlockArcDegrees, Is.EqualTo(RiotShieldSpec.DefaultBlockArcDegrees));
+            Assert.That(read.Shield.Width, Is.EqualTo(RiotShieldSpec.DefaultWidth));
+            Assert.That(read.Shield.Height, Is.EqualTo(RiotShieldSpec.DefaultHeight));
+            Assert.That(read.Shield.MoveSpeedMultiplier, Is.EqualTo(RiotShieldSpec.DefaultMoveSpeedMultiplier));
+            Assert.That(read.Shield.Bash.Damage, Is.EqualTo(60));
+            Assert.That(read.Shield.Bash.Reach, Is.EqualTo(RiotShieldSpec.DefaultBashReach));
+            Assert.That(read.Shield.Bash.SwingSeconds, Is.EqualTo(RiotShieldSpec.DefaultBashSwingSeconds));
+
+            var empty = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": {}}", "shield.json");
+            Assert.That(empty.Shield.Bash, Is.SameAs(RiotShieldSpec.DefaultBash));
+        }
+
+        [TestCase("{\"blockArcDegrees\": 0}", "shield.blockArcDegrees")]
+        [TestCase("{\"blockArcDegrees\": 361}", "shield.blockArcDegrees")]
+        [TestCase("{\"width\": 0}", "shield.width")]
+        [TestCase("{\"height\": -1}", "shield.height")]
+        [TestCase("{\"moveSpeedMultiplier\": 1.5}", "shield.moveSpeedMultiplier")]
+        [TestCase("{\"bash\": {\"damage\": 0}}", "shield.bash.damage")]
+        [TestCase("{\"bash\": {\"impactSeconds\": 5}}", "shield.bash.impactSeconds")]
+        [TestCase("{\"bash\": {\"finisherSeconds\": 1}}", "shield.bash.finisherSeconds")]
+        [TestCase("{\"angle\": 90}", "shield.angle")]
+        public void ABadShieldValueNamesItsItem(string shield, string item)
+        {
+            var text = "{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": " + shield + "}";
+
+            var e = Assert.Throws<ServerDataJsonException>(() => WeaponSpecJson.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
+        }
+
+        [Test]
         public void ANullNameKeyMeansNoName()
         {
             var read = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"nameKey\": null, \"category\": \"AssaultRifle\"}", "x.json");

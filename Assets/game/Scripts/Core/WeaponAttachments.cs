@@ -107,7 +107,8 @@ namespace Shooter.Core
                 spec.MoveSpeedMultiplier * speed,
                 spec.Description,
                 spec.DrawSeconds,
-                spec.HolsterSeconds);
+                spec.HolsterSeconds,
+                spec.Shield);
         }
 
         public static IReadOnlyList<string> Keep(ItemCatalog catalog, string weaponId, IEnumerable<string> attachmentItemIds)

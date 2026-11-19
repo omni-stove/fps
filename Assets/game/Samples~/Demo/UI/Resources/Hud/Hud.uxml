@@ -10,7 +10,7 @@
         <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
         <!-- スコープの縁と照準器の照準。被弾の赤の上、ほかの表示の後ろに描く。ScopeOverlayView が覗き込んでいる間だけ出す。 -->
         <ui:VisualElement name="scope-overlay" class="scope-overlay" picking-mode="Ignore" style="display: none;" />
-        <!-- 暗視・サーマルで画面を染める色。スコープの縁の上、ほかの表示の後ろに描く。GameSignals.Vision が効いている間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <!-- 暗視・サーマルで画面を染める色。スコープの縁の上、ほかの表示の後ろに描く。GameSignals.Vision が効いている間だけ VisionOverlayView が色 (と画像) を入れて出す。 -->
         <ui:VisualElement name="vision-overlay" class="vision-overlay" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />

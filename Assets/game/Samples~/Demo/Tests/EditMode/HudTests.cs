@@ -34,6 +34,39 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheCrosshairHidesWhileAStreakSpotIsBeingChosen()
+        {
+            var view = _hud.View;
+            Assert.That(view, Is.Not.Null);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            GameSignals.StreakTargeting.Publish(new StreakTargetingStatus(
+                StreakSpec.AirstrikeRewardId, StreakSpec.DefaultAirstrikeNameKey,
+                System.Numerics.Vector3.Zero, new System.Numerics.Vector3(4f, 0f, 9f), 30f, 100f, 24f));
+
+            Assert.That(view.IsAimHidden, Is.True);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            GameSignals.StreakTargeting.Clear();
+
+            Assert.That(view.IsAimHidden, Is.False);
+            Assert.That(view.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+        }
+
+        [Test]
+        public void ARebuiltViewStartsWithTheAimHiddenWhileChoosing()
+        {
+            GameSignals.StreakTargeting.Publish(new StreakTargetingStatus(
+                StreakSpec.AirstrikeRewardId, StreakSpec.DefaultAirstrikeNameKey,
+                System.Numerics.Vector3.Zero, System.Numerics.Vector3.Zero, 0f, 100f, 24f));
+
+            _hud.RebuildView();
+
+            Assert.That(_hud.View.IsAimHidden, Is.True);
+            Assert.That(_hud.View.Crosshair.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
         public void TheDefaultHudCarriesTheMapChatVoiceSpectateAndVoteViews()
         {
             Assert.That(_hud.Minimap, Is.Not.Null, "minimap");

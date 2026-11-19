@@ -190,6 +190,24 @@ namespace Shooter.Runtime
 
         public HudVisibility Visibility => _visibility;
 
+        public bool IsAimHidden { get; private set; }
+
+        // ストリークの地点を選ぶ見下ろした画面では、照準は画面の中央を指さず狙いにも使わないので、照準に重ねるものごと隠す。
+        public void SetAimHidden(bool hidden)
+        {
+            if (IsAimHidden == hidden)
+            {
+                return;
+            }
+
+            IsAimHidden = hidden;
+            ShowCrosshair();
+            ShowAimBlock();
+            ShowLockOn();
+        }
+
+        private bool ShowsAim => _visibility.Crosshair && !IsAimHidden;
+
         public void ApplyVisibility(HudVisibility visibility)
         {
             _visibility = visibility ?? throw new ArgumentNullException(nameof(visibility));
@@ -432,7 +450,7 @@ namespace Shooter.Runtime
         {
             var text = _model.IsLockedOn ? GameText.Get(LockedOnKey) : Percent(LockOnKey, _model.LockOnProgress);
             LockOnLabel.EnableInClassList(LockedOnClass, _model.IsLockedOn);
-            ShowOrHide(LockOnLabel, text, _visibility.Crosshair);
+            ShowOrHide(LockOnLabel, text, ShowsAim);
         }
 
         private static string Percent(string key, float? fraction)
@@ -455,7 +473,7 @@ namespace Shooter.Runtime
         // 大きさ 0 の箱を中央に置いているので、箱の scale で線と隙間がまとめて中央へ縮む。
         private void ShowCrosshair()
         {
-            Crosshair.style.display = Display(_model.IsCrosshairVisible && _visibility.Crosshair);
+            Crosshair.style.display = Display(_model.IsCrosshairVisible && ShowsAim);
             var scale = _visibility.CrosshairScale;
             Crosshair.style.scale = new Scale(new Vector2(scale, scale));
 
@@ -470,7 +488,7 @@ namespace Shooter.Runtime
 
         private void ShowAimBlock()
         {
-            var blocked = _model.IsAimBlocked && _model.IsCrosshairVisible && _visibility.Crosshair;
+            var blocked = _model.IsAimBlocked && _model.IsCrosshairVisible && ShowsAim;
             Crosshair.EnableInClassList(CrosshairBlockedClass, blocked);
             var point = _model.AimBlockPoint;
             AimBlockMarker.style.display = Display(blocked && point.HasValue);

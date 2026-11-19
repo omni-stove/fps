@@ -108,7 +108,7 @@ namespace Shooter.Server
                 _settings, ChatWords, ChatWordsPath);
         }
 
-        public string LogLine =>ServerProgram.LogTag + " rules " + Name
+        public string LogLine => ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Path

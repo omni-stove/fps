@@ -67,6 +67,9 @@ make server-dotnet ARGS="-rules FreeForAll"
   脱出地点 (`ExtractionZone`) を `extractionPoints` (`id`・`center`・`radius`) に、縮むエリア (`ShrinkingZone`) の最初の円を `zone` (`center`・`radius`) に、
   パラシュートで降ろす `BattleRoyaleRunner` の高さを `dropHeight` に書き出す。どれも置いていないマップでは項目ごと書かない。
   `id` は部品の `Container Id`・`Point Id` から取り (オブジェクトの名前は使わない)、空や重なりがあると書き出しを止める。エリアが 2 つ以上でも止める。
+  箱の中身は試合の始まりに `server-data/tuning/loot.json` (クライアントの `Resources/Tuning/loot.json` と同じ中身) の表の `table` から引き、
+  ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
+  箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

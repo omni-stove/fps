@@ -21,6 +21,9 @@ namespace Shooter.Server
         // 財布の額は試合の設定 (match.economy) から読み、ここには買える品と値段の一覧を置く
         public const string EconomyTuningFileName = "economy.json";
 
+        // 箱の中身を引く表。Unity の Resources (Tuning/loot) と同じ書き方で、表の Id はマップの地点ファイルの箱が引く
+        public const string LootTuningFileName = "loot.json";
+
         // プレイリストはルールの並びなので、rules と並べて server-data の下に置く
         public const string PlaylistsDirectoryName = "playlists";
 
@@ -31,9 +34,11 @@ namespace Shooter.Server
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
             KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
             NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null,
-            EconomyRules buyList = null, string economyPath = null)
+            EconomyRules buyList = null, string economyPath = null, LootSpec loot = null, string lootPath = null)
         {
             _settings = settings;
+            Loot = loot ?? LootSpec.Default;
+            LootPath = lootPath;
             BuyList = buyList;
             EconomyPath = economyPath;
             ChatWords = chatWords ?? ChatWordFilterSpec.Default;
@@ -101,6 +106,11 @@ namespace Shooter.Server
 
         public string EconomyPath { get; }
 
+        // 置いていなければ Core の既定 (表なし) で、箱は空のまま開く
+        public LootSpec Loot { get; }
+
+        public string LootPath { get; }
+
         // 額は試合の設定から取るので、設定を差し替えた (WithSettings) 後もその額で組む
         public EconomyRules Economy => BuyList == null ? null : new EconomyRules(Settings.Economy, BuyList.Catalog, BuyList.ResetOnSwap);
 
@@ -109,7 +119,7 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(settings);
             return new ServerRulesData(
                 Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath);
+                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
         }
 
         // ルールのファイルを作り直すのは、NetMatchFile が目的に要る設定とロードアウトを作るときに確かめるので、
@@ -122,7 +132,7 @@ namespace Shooter.Server
                 File.Catalog, File.Motor);
             return new ServerRulesData(
                 Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath);
+                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
         }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -137,6 +147,7 @@ namespace Shooter.Server
             + " assist=" + (AssistPath ?? "default")
             + " chatWords=" + (ChatWordsPath ?? "default")
             + " economy=" + (EconomyPath ?? "none")
+            + " loot=" + (LootPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -356,9 +367,30 @@ namespace Shooter.Server
                 economyPath = null;
             }
 
+            // 箱の表も Unity では Resources の JSON (Tuning/loot) から読むので、無ければ同じく表なしで動かす
+            var lootPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, LootTuningFileName));
+            var loot = LootSpec.Default;
+            if (System.IO.File.Exists(lootPath))
+            {
+                try
+                {
+                    loot = LootJson.Parse(System.IO.File.ReadAllText(lootPath), lootPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read loot tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                lootPath = null;
+            }
+
             data = new ServerRulesData(
                 name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath,
-                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath);
+                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath, loot: loot, lootPath: lootPath);
             error = null;
             return true;
         }

@@ -84,6 +84,7 @@ namespace Shooter.Core.Tests
                 (nameof(GameRules.Objective), r => r.WithObjective(MatchObjective.None), MatchObjective.None),
                 (nameof(GameRules.MinPlayers), r => r.WithMinPlayers(0), 0),
                 (nameof(GameRules.IdleKickSeconds), r => r.WithIdleKickSeconds(0f), 0f),
+                (nameof(GameRules.IdleWarningSeconds), r => r.WithIdleWarningSeconds(30f), 30f),
                 (nameof(GameRules.MaxWeapons), r => r.WithMaxWeapons(0), 0),
                 (nameof(GameRules.ReloadMode), r => r.WithReloadMode(ReloadMode.Auto), ReloadMode.Auto),
                 (nameof(GameRules.ViewMode), r => r.WithViewMode(ViewMode.FirstPerson), ViewMode.FirstPerson),
@@ -201,6 +202,7 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithObjective((MatchObjective)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMinPlayers(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithIdleKickSeconds(float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithIdleWarningSeconds(0f));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMaxWeapons(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMaxWeapons(GameRules.MaxWeaponsLimit + 1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithReloadMode((ReloadMode)99));

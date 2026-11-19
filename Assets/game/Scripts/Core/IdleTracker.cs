@@ -5,8 +5,6 @@ namespace Shooter.Core
 {
     public sealed class IdleTracker
     {
-        public const float DefaultWarningSeconds = 15f;
-
         private readonly Dictionary<int, Entry> _entries = new Dictionary<int, Entry>();
 
         public float KickSeconds { get; }
@@ -17,7 +15,7 @@ namespace Shooter.Core
 
         public IEnumerable<int> PlayerIds => _entries.Keys;
 
-        public IdleTracker(float kickSeconds, float warningSeconds = DefaultWarningSeconds)
+        public IdleTracker(float kickSeconds, float warningSeconds)
         {
             if (!(kickSeconds > 0f) || float.IsInfinity(kickSeconds))
             {

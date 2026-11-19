@@ -71,9 +71,11 @@ namespace Shooter.Tests.EditMode
                 typeof(BlindFireActionInstaller),
                 typeof(MoveActionInstaller),
                 typeof(ProneActionInstaller),
+                typeof(StaminaActionInstaller),
                 typeof(SuppressionActionInstaller),
                 typeof(AbilityActionInstaller),
                 typeof(GrenadeActionInstaller),
+                typeof(EmoteActionInstaller),
             };
 
             // 後から足したアクションが登録されていても確かめられるよう、組み込みだけを取り出して並びを見る。

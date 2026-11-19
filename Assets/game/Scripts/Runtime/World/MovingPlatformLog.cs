@@ -21,6 +21,16 @@ namespace Shooter.Runtime
             return $"{LogTag} '{platform}' 乗っている体が挟まれるので引き返します stop={from} -> stop={to}";
         }
 
+        public static string CallZoneWithoutPlatform(string zone)
+        {
+            return $"{LogTag} 呼び出し口 '{zone}' に呼ぶ床 (MovingPlatform) が設定されていません。";
+        }
+
+        public static string CallZoneStopOutOfRange(string zone, string platform, int stop, int count)
+        {
+            return $"{LogTag} 呼び出し口 '{zone}' の stop={stop} は '{platform}' の点の数 ({count}) の外です。";
+        }
+
         public static string Called(string platform, int stop, PlatformRouteKind kind, bool accepted)
         {
             return accepted

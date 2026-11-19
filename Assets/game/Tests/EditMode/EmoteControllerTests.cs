@@ -292,12 +292,32 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheInstallerIsNotRegisteredWithThePlayerActions()
+        public void TheInstallerIsBuiltIntoThePlayerActions()
         {
+            var count = 0;
             foreach (var installer in PlayerActions.Installers)
             {
-                Assert.That(installer, Is.Not.InstanceOf<EmoteActionInstaller>());
+                if (installer is EmoteActionInstaller)
+                {
+                    count++;
+                }
             }
+
+            Assert.That(count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AttachingThePlayerActionsAddsTheControllerOnlyWhenTheRuleIsOn()
+        {
+            var off = Body("Off");
+            PlayerActions.Attach(off, EmoteRules(Emote.Off));
+            Assert.That(off.GetComponent<EmoteController>(), Is.Null);
+
+            var on = Body("On");
+            PlayerActions.Attach(on, EmoteRules(Emote.On));
+            var controller = on.GetComponent<EmoteController>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(controller.UsesEmotes, Is.True);
         }
 
         [Test]

@@ -155,10 +155,24 @@ namespace Shooter.Runtime
 
         public static bool WasPressedThisFrame(InputAction action)
         {
-            if (action == null || !action.WasPressedThisFrame())
+            if (action == null)
             {
                 return false;
             }
+
+            // この関数は押下のないフレームにも呼ばれる。ここで外さないと、離したあとも譲った印が残り、次の押下を Claim なしでも譲ってしまう。
+            if (!action.IsPressed())
+            {
+                _yieldedUntilRelease.Remove(action);
+            }
+
+            if (!action.WasPressedThisFrame())
+            {
+                return false;
+            }
+
+            // 新しい押下は、前の押下で譲った印を引き継がず判定し直す。
+            _yieldedUntilRelease.Remove(action);
 
             if (!Yields(action))
             {

@@ -6,7 +6,11 @@ namespace Shooter.Core.Tests
 {
     public sealed class NetMatchModeSettingsTests
     {
-        private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
+        private static readonly float[] _oneAndTwo = { 1f, 2f };
+        private static readonly float[] _onlyOne = { 1f };
+        private static readonly float[] _oneAndOneHalf = { 1f, 1.5f };
+
+        private const string _handgunId ="b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
         private const string _knifeId = "5f0c2d8e-71a4-4b39-9e6d-3a8b1c4f2e07";
 
         private static NetMatchFile File(NetMatchSettings settings, MatchObjective objective = MatchObjective.None)
@@ -332,7 +336,7 @@ namespace Shooter.Core.Tests
             Assert.That(s.VoteKick.CooldownSeconds, Is.Zero);
             Assert.That(s.Payload.CartSpeed, Is.EqualTo(3f));
             Assert.That(s.Payload.MinPushers, Is.EqualTo(2));
-            Assert.That(s.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 2f }));
+            Assert.That(s.Payload.PusherSpeedMultipliers, Is.EqualTo(_oneAndTwo));
             Assert.That(s.Payload.RollbackDelaySeconds, Is.Zero);
             Assert.That(s.Payload.RollbackSpeed, Is.EqualTo(1f));
             Assert.That(s.Payload.CheckpointBonusSeconds, Is.Zero);
@@ -667,7 +671,7 @@ namespace Shooter.Core.Tests
             Assert.That(settings.VoteKick.Enabled, Is.True);
             Assert.That(settings.VoteKick.RequiredYesFraction, Is.EqualTo(0.5f));
             Assert.That(settings.Economy.StartMoney, Is.EqualTo(1500));
-            Assert.That(settings.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f }));
+            Assert.That(settings.Payload.PusherSpeedMultipliers, Is.EqualTo(_onlyOne));
         }
 
         [TestCase(0, 0f)]
@@ -683,7 +687,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void PayloadSpecDoesNotMoveBelowTheMinimumPushers()
         {
-            var spec = new PayloadSpec(cartSpeed: 2f, minPushers: 2, pusherSpeedMultipliers: new[] { 1f, 1.5f });
+            var spec = new PayloadSpec(cartSpeed: 2f, minPushers: 2, pusherSpeedMultipliers: _oneAndOneHalf);
 
             Assert.That(spec.SpeedFor(1), Is.Zero);
             Assert.That(spec.SpeedFor(2), Is.EqualTo(2f));
@@ -699,7 +703,7 @@ namespace Shooter.Core.Tests
 
             multipliers[1] = 9f;
 
-            Assert.That(spec.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 2f }));
+            Assert.That(spec.PusherSpeedMultipliers, Is.EqualTo(_oneAndTwo));
         }
 
         [TestCase(1, 1400)]

@@ -7,6 +7,7 @@ namespace Shooter.Server.Tests
     public sealed class ServerRulesDataTests
     {
         private static readonly string[] _darnWords = { "darn" };
+        private static readonly float[] _oneAndOnePointFour = { 1f, 1.4f };
         private static readonly string[] _badwordNoobWords = { "badword", "noob" };
 
         private TempDirectory _first;
@@ -142,7 +143,7 @@ namespace Shooter.Server.Tests
         {
             var settings = new NetMatchSettings(
                 voteKick: new VoteKickSpec(true, 0.7f, 25f, 90f),
-                payload: new PayloadSpec(2f, 2, new[] { 1f, 1.4f }, 8f, 0.25f, 30f, 420f),
+                payload: new PayloadSpec(2f, 2, _oneAndOnePointFour, 8f, 0.25f, 30f, 420f),
                 economy: new EconomySpec(600, 12000, 200, 3500, 1500, 300, 2700));
             TestRules.Write(_first.Path, "Payload", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Payload), settings, "Payload"));
 
@@ -155,7 +156,7 @@ namespace Shooter.Server.Tests
             Assert.That(data.Settings.VoteKick.CooldownSeconds, Is.EqualTo(90f));
             Assert.That(data.Settings.Payload.CartSpeed, Is.EqualTo(2f));
             Assert.That(data.Settings.Payload.MinPushers, Is.EqualTo(2));
-            Assert.That(data.Settings.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 1.4f }));
+            Assert.That(data.Settings.Payload.PusherSpeedMultipliers, Is.EqualTo(_oneAndOnePointFour));
             Assert.That(data.Settings.Payload.RollbackDelaySeconds, Is.EqualTo(8f));
             Assert.That(data.Settings.Payload.RollbackSpeed, Is.EqualTo(0.25f));
             Assert.That(data.Settings.Payload.CheckpointBonusSeconds, Is.EqualTo(30f));

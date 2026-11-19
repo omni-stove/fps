@@ -20,5 +20,7 @@ namespace Shooter.Core
         KillConfirmed,
 
         GunGame,
+
+        Payload,
     }
 }

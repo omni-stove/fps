@@ -180,8 +180,23 @@ namespace Shooter.Server.Tests
 
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
+                // Payload は設定と型だけを先に足し、サーバーのルールは後から足すので、それまでは下のテストで断ることを確かめる
+                if (objective == MatchObjective.Payload)
+                {
+                    continue;
+                }
+
                 Assert.DoesNotThrow(() => ServerObjectiveFactory.Create(objective, settings, _host), objective.ToString());
             }
+        }
+
+        [Test]
+        public void APayloadMatchIsRefusedUntilTheServerHasItsRules()
+        {
+            var e = Assert.Throws<InvalidOperationException>(
+                () => ServerObjectiveFactory.Create(MatchObjective.Payload, new NetMatchSettings(), _host));
+
+            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective Payload"));
         }
 
         [TestCase(MatchObjective.CaptureTheFlag, "flag")]

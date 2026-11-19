@@ -76,6 +76,29 @@ namespace Shooter.Core
         public const string MeleeWeaponIdsItem = "meleeWeaponIds";
         public const string DemotesOnMeleeItem = "demotesOnMelee";
 
+        public const string VoteKickItem = "voteKick";
+        public const string EnabledItem = "enabled";
+        public const string RequiredYesFractionItem = "requiredYesFraction";
+        public const string VoteSecondsItem = "voteSeconds";
+        public const string CooldownSecondsItem = "cooldownSeconds";
+
+        public const string PayloadItem = "payload";
+        public const string CartSpeedItem = "cartSpeed";
+        public const string MinPushersItem = "minPushers";
+        public const string PusherSpeedMultipliersItem = "pusherSpeedMultipliers";
+        public const string RollbackDelaySecondsItem = "rollbackDelaySeconds";
+        public const string RollbackSpeedItem = "rollbackSpeed";
+        public const string CheckpointBonusSecondsItem = "checkpointBonusSeconds";
+
+        public const string EconomyItem = "economy";
+        public const string StartMoneyItem = "startMoney";
+        public const string MaxMoneyItem = "maxMoney";
+        public const string KillRewardItem = "killReward";
+        public const string RoundWinRewardItem = "roundWinReward";
+        public const string RoundLossRewardItem = "roundLossReward";
+        public const string LossStreakBonusItem = "lossStreakBonus";
+        public const string MaxLossRewardItem = "maxLossReward";
+
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
         public const string SprintSpeedItem = "sprintSpeed";
@@ -182,6 +205,7 @@ namespace Shooter.Core
             ChatIntervalSecondsItem, MaxChatLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem, RoundTimeLimitSecondsItem,
             WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
+            VoteKickItem, PayloadItem, EconomyItem,
         };
 
         private static readonly string[] _captureTheFlagItems =
@@ -212,6 +236,20 @@ namespace Shooter.Core
         private static readonly string[] _gunGameItems =
         {
             TimeLimitSecondsItem, RespawnSecondsItem, TierWeaponIdsItem, MeleeWeaponIdsItem, DemotesOnMeleeItem,
+        };
+
+        private static readonly string[] _voteKickItems = { EnabledItem, RequiredYesFractionItem, VoteSecondsItem, CooldownSecondsItem };
+
+        // 道筋と中継点の位置はマップで決まるので項目に持たない
+        private static readonly string[] _payloadItems =
+        {
+            CartSpeedItem, MinPushersItem, PusherSpeedMultipliersItem, RollbackDelaySecondsItem, RollbackSpeedItem, CheckpointBonusSecondsItem,
+            TimeLimitSecondsItem,
+        };
+
+        private static readonly string[] _economyItems =
+        {
+            StartMoneyItem, MaxMoneyItem, KillRewardItem, RoundWinRewardItem, RoundLossRewardItem, LossStreakBonusItem, MaxLossRewardItem,
         };
 
         public NetMatchFile(
@@ -430,6 +468,36 @@ namespace Shooter.Core
             writer.StringArray(MeleeWeaponIdsItem, gunGame.MeleeWeaponIds);
             writer.Bool(DemotesOnMeleeItem, gunGame.DemotesOnMelee);
             writer.EndObject();
+
+            var voteKick = s.VoteKick;
+            writer.BeginObject(VoteKickItem);
+            writer.Bool(EnabledItem, voteKick.Enabled);
+            writer.Float(RequiredYesFractionItem, voteKick.RequiredYesFraction);
+            writer.Float(VoteSecondsItem, voteKick.VoteSeconds);
+            writer.Float(CooldownSecondsItem, voteKick.CooldownSeconds);
+            writer.EndObject();
+
+            var payload = s.Payload;
+            writer.BeginObject(PayloadItem);
+            writer.Float(CartSpeedItem, payload.CartSpeed);
+            writer.Int(MinPushersItem, payload.MinPushers);
+            writer.FloatArray(PusherSpeedMultipliersItem, payload.PusherSpeedMultipliers);
+            writer.Float(RollbackDelaySecondsItem, payload.RollbackDelaySeconds);
+            writer.Float(RollbackSpeedItem, payload.RollbackSpeed);
+            writer.Float(CheckpointBonusSecondsItem, payload.CheckpointBonusSeconds);
+            writer.Float(TimeLimitSecondsItem, payload.TimeLimitSeconds);
+            writer.EndObject();
+
+            var economy = s.Economy;
+            writer.BeginObject(EconomyItem);
+            writer.Int(StartMoneyItem, economy.StartMoney);
+            writer.Int(MaxMoneyItem, economy.MaxMoney);
+            writer.Int(KillRewardItem, economy.KillReward);
+            writer.Int(RoundWinRewardItem, economy.RoundWinReward);
+            writer.Int(RoundLossRewardItem, economy.RoundLossReward);
+            writer.Int(LossStreakBonusItem, economy.LossStreakBonus);
+            writer.Int(MaxLossRewardItem, economy.MaxLossReward);
+            writer.EndObject();
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -573,6 +641,9 @@ namespace Shooter.Core
             var freeForAll = ReadFreeForAll(match.Object(FreeForAllItem, _freeForAllItems), d.FreeForAll);
             var killConfirmed = ReadKillConfirmed(match.Object(KillConfirmedItem, _killConfirmedItems), d.KillConfirmed);
             var gunGame = ReadGunGame(match.Object(GunGameItem, _gunGameItems), d.GunGame);
+            var voteKick = ReadVoteKick(match.Object(VoteKickItem, _voteKickItems), d.VoteKick);
+            var payload = ReadPayload(match.Object(PayloadItem, _payloadItems), d.Payload);
+            var economy = ReadEconomy(match.Object(EconomyItem, _economyItems), d.Economy);
             try
             {
                 return new NetMatchSettings(
@@ -606,7 +677,10 @@ namespace Shooter.Core
                     searchAndDestroy,
                     freeForAll,
                     killConfirmed,
-                    gunGame);
+                    gunGame,
+                    voteKick,
+                    payload,
+                    economy);
             }
             catch (ArgumentException e)
             {
@@ -756,6 +830,88 @@ namespace Shooter.Core
                     tiers,
                     melee,
                     fields.ReadBool(DemotesOnMeleeItem, fallback.DemotesOnMelee));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static VoteKickSpec ReadVoteKick(ServerDataJson.Fields fields, VoteKickSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new VoteKickSpec(
+                    fields.ReadBool(EnabledItem, fallback.Enabled),
+                    fields.ReadFloat(RequiredYesFractionItem, fallback.RequiredYesFraction),
+                    fields.ReadFloat(VoteSecondsItem, fallback.VoteSeconds),
+                    fields.ReadFloat(CooldownSecondsItem, fallback.CooldownSeconds));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static PayloadSpec ReadPayload(ServerDataJson.Fields fields, PayloadSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            var multipliers = fallback.PusherSpeedMultipliers;
+            if (fields.Has(PusherSpeedMultipliersItem))
+            {
+                var nodes = fields.Array(PusherSpeedMultipliersItem);
+                var read = new List<float>(nodes.Count);
+                for (var i = 0; i < nodes.Count; i++)
+                {
+                    read.Add(fields.ToFloat(fields.ElementPath(PusherSpeedMultipliersItem, i), nodes[i]));
+                }
+
+                multipliers = read;
+            }
+
+            try
+            {
+                return new PayloadSpec(
+                    fields.ReadFloat(CartSpeedItem, fallback.CartSpeed),
+                    fields.ReadInt(MinPushersItem, fallback.MinPushers),
+                    multipliers,
+                    fields.ReadFloat(RollbackDelaySecondsItem, fallback.RollbackDelaySeconds),
+                    fields.ReadFloat(RollbackSpeedItem, fallback.RollbackSpeed),
+                    fields.ReadFloat(CheckpointBonusSecondsItem, fallback.CheckpointBonusSeconds),
+                    fields.ReadFloat(TimeLimitSecondsItem, fallback.TimeLimitSeconds));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static EconomySpec ReadEconomy(ServerDataJson.Fields fields, EconomySpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new EconomySpec(
+                    fields.ReadInt(StartMoneyItem, fallback.StartMoney),
+                    fields.ReadInt(MaxMoneyItem, fallback.MaxMoney),
+                    fields.ReadInt(KillRewardItem, fallback.KillReward),
+                    fields.ReadInt(RoundWinRewardItem, fallback.RoundWinReward),
+                    fields.ReadInt(RoundLossRewardItem, fallback.RoundLossReward),
+                    fields.ReadInt(LossStreakBonusItem, fallback.LossStreakBonus),
+                    fields.ReadInt(MaxLossRewardItem, fallback.MaxLossReward));
             }
             catch (ArgumentException e)
             {

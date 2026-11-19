@@ -7,6 +7,7 @@ namespace Shooter.Server.Tests
     public sealed class ServerRulesDataTests
     {
         private static readonly string[] _darnWords = { "darn" };
+        private static readonly float[] _oneAndOnePointFour = { 1f, 1.4f };
         private static readonly string[] _badwordNoobWords = { "badword", "noob" };
 
         private TempDirectory _first;
@@ -170,9 +171,101 @@ namespace Shooter.Server.Tests
             Assert.That(error, Does.StartWith("cannot read rules GunGame: ").And.Contain("match.gunGame.tierWeaponIds"));
         }
 
+        [Test]
+        public void ReadsTheVoteKickPayloadAndEconomyOfTheRules()
+        {
+            var settings = new NetMatchSettings(
+                voteKick: new VoteKickSpec(true, 0.7f, 25f, 90f),
+                payload: new PayloadSpec(2f, 2, _oneAndOnePointFour, 8f, 0.25f, 30f, 420f),
+                economy: new EconomySpec(600, 12000, 200, 3500, 1500, 300, 2700));
+            TestRules.Write(_first.Path, "Payload", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Payload), settings, "Payload"));
+
+            Assert.That(ServerRulesData.TryLoad("Payload", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(data.Settings.VoteKick.Enabled, Is.True);
+            Assert.That(data.Settings.VoteKick.RequiredYesFraction, Is.EqualTo(0.7f));
+            Assert.That(data.Settings.VoteKick.VoteSeconds, Is.EqualTo(25f));
+            Assert.That(data.Settings.VoteKick.CooldownSeconds, Is.EqualTo(90f));
+            Assert.That(data.Settings.Payload.CartSpeed, Is.EqualTo(2f));
+            Assert.That(data.Settings.Payload.MinPushers, Is.EqualTo(2));
+            Assert.That(data.Settings.Payload.PusherSpeedMultipliers, Is.EqualTo(_oneAndOnePointFour));
+            Assert.That(data.Settings.Payload.RollbackDelaySeconds, Is.EqualTo(8f));
+            Assert.That(data.Settings.Payload.RollbackSpeed, Is.EqualTo(0.25f));
+            Assert.That(data.Settings.Payload.CheckpointBonusSeconds, Is.EqualTo(30f));
+            Assert.That(data.Settings.Payload.TimeLimitSeconds, Is.EqualTo(420f));
+            Assert.That(data.Settings.Economy.StartMoney, Is.EqualTo(600));
+            Assert.That(data.Settings.Economy.MaxMoney, Is.EqualTo(12000));
+            Assert.That(data.Settings.Economy.KillReward, Is.EqualTo(200));
+            Assert.That(data.Settings.Economy.RoundWinReward, Is.EqualTo(3500));
+            Assert.That(data.Settings.Economy.RoundLossReward, Is.EqualTo(1500));
+            Assert.That(data.Settings.Economy.LossStreakBonus, Is.EqualTo(300));
+            Assert.That(data.Settings.Economy.MaxLossReward, Is.EqualTo(2700));
+        }
+
+        [Test]
+        public void ARulesFileWithoutTheVoteKickPayloadAndEconomySectionsLoadsTheirDefaults()
+        {
+            var directory = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName);
+            Directory.CreateDirectory(directory);
+            var text = NetMatchFile.Write(TestRules.File());
+            var start = text.IndexOf(",\n    \"voteKick\": {", System.StringComparison.Ordinal);
+            var end = text.IndexOf("\n  },\n  \"motor\"", System.StringComparison.Ordinal);
+            Assert.That(start, Is.GreaterThan(0));
+            Assert.That(end, Is.GreaterThan(start));
+            File.WriteAllText(Path.Combine(directory, "TeamDeathmatch.json"), text.Remove(start, end - start));
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Settings.VoteKick, Is.SameAs(VoteKickSpec.Default));
+            Assert.That(data.Settings.VoteKick.Enabled, Is.False);
+            Assert.That(data.Settings.Payload, Is.SameAs(PayloadSpec.Default));
+            Assert.That(data.Settings.Economy, Is.SameAs(EconomySpec.Default));
+        }
+
+        [TestCase("TeamDeathmatch")]
+        [TestCase("SearchAndDestroy")]
+        [TestCase("CaptureTheFlag")]
+        public void TheCommittedRulesKeepVoteKicksOffAndTheDefaultPayloadAndEconomy(string name)
+        {
+            Assert.That(ServerRulesData.TryLoad(name, new[] { RepositoryRoot() }, out var data, out var error), Is.True, error);
+
+            Assert.That(data.Settings.VoteKick.Enabled, Is.False);
+            Assert.That(data.Settings.VoteKick.RequiredYesFraction, Is.EqualTo(VoteKickSpec.DefaultRequiredYesFraction));
+            Assert.That(data.Settings.Payload.CartSpeed, Is.EqualTo(PayloadSpec.DefaultCartSpeed));
+            Assert.That(data.Settings.Payload.PusherSpeedMultipliers, Is.EqualTo(PayloadSpec.Default.PusherSpeedMultipliers));
+            Assert.That(data.Settings.Economy.StartMoney, Is.EqualTo(EconomySpec.DefaultStartMoney));
+            Assert.That(data.Settings.Economy.MaxLossReward, Is.EqualTo(EconomySpec.DefaultMaxLossReward));
+        }
+
+        [Test]
+        public void WithSettingsKeepsTheVoteKickPayloadAndEconomyThroughPrivacy()
+        {
+            var settings = new NetMatchSettings(voteKick: new VoteKickSpec(enabled: true), economy: new EconomySpec(startMoney: 0));
+            TestRules.Write(_first.Path, "TeamDeathmatch", TestRules.File(settings: settings));
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            var changed = data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS"));
+
+            Assert.That(changed.Settings.VoteKick.Enabled, Is.True);
+            Assert.That(changed.Settings.Economy.StartMoney, Is.Zero);
+            Assert.That(changed.Settings.Payload, Is.SameAs(data.Settings.Payload));
+        }
+
+        [Test]
+        public void TheEconomyTuningAndPlaylistsHaveTheseNames()
+        {
+            Assert.That(ServerRulesData.EconomyTuningFileName, Is.EqualTo("economy.json"));
+            Assert.That(ServerRulesData.PlaylistsDirectoryName, Is.EqualTo("playlists"));
+        }
+
         [TestCase("{\"match\": {\"weatherId\": \"rain/../x\"}}", "match.weatherId")]
         [TestCase("{\"match\": {\"hardpoint\": {\"rotateSeconds\": 0}}}", "match.hardpoint.rotateSeconds")]
         [TestCase("{\"match\": {\"killConfirmed\": {\"pointsPerConfirm\": 0}}}", "match.killConfirmed.pointsPerConfirm")]
+        [TestCase("{\"match\": {\"voteKick\": {\"requiredYesFraction\": 2}}}", "match.voteKick.requiredYesFraction")]
+        [TestCase("{\"match\": {\"payload\": {\"minPushers\": 0}}}", "match.payload.minPushers")]
+        [TestCase("{\"match\": {\"payload\": {\"pusherSpeedMultipliers\": [-1]}}}", "match.payload.pusherSpeedMultipliers")]
+        [TestCase("{\"match\": {\"economy\": {\"startMoney\": 99999}}}", "match.economy.startMoney")]
         public void BrokenModeItemsNameTheFileAndItem(string json, string item)
         {
             var directory = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName);

@@ -18,6 +18,12 @@ namespace Shooter.Server
         public const string AssistTuningFileName = "assist.json";
         public const string ChatWordsTuningFileName = "chat-words.json";
 
+        // 財布の額は試合の設定 (match.economy) から読み、ここには買える品と値段の一覧を置く
+        public const string EconomyTuningFileName = "economy.json";
+
+        // プレイリストはルールの並びなので、rules と並べて server-data の下に置く
+        public const string PlaylistsDirectoryName = "playlists";
+
         private readonly NetMatchSettings _settings;
 
         public ServerRulesData(

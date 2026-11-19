@@ -120,6 +120,63 @@ namespace Shooter.Runtime
         [SerializeField, Range(1, NetMatchSettings.MaxMaxChatLength), Tooltip("チャットの 1 行の文字数の上限")]
         private int _maxChatLength = NetMatchSettings.DefaultMaxChatLength;
 
+        [Header("投票キック (専用サーバー)")]
+        [SerializeField, Tooltip("プレイヤーが投票で他のプレイヤーを試合から外せるようにする")]
+        private bool _voteKickEnabled = VoteKickSpec.DefaultEnabled;
+
+        [SerializeField, Range(0.01f, 1f), Tooltip("投票できる人のうち、賛成がこの割合以上ならキックする")]
+        private float _voteKickRequiredYesFraction = VoteKickSpec.DefaultRequiredYesFraction;
+
+        [SerializeField, Min(0.01f), Tooltip("投票を受け付ける秒数")]
+        private float _voteKickSeconds = VoteKickSpec.DefaultVoteSeconds;
+
+        [SerializeField, Min(0f), Tooltip("投票を起こした人が次の投票を起こせるまでの秒数")]
+        private float _voteKickCooldownSeconds = VoteKickSpec.DefaultCooldownSeconds;
+
+        [Header("台車 (Payload)")]
+        [SerializeField, Min(0.01f), Tooltip("押す人数が最少のときの台車の速さ (m/秒)")]
+        private float _payloadCartSpeed = PayloadSpec.DefaultCartSpeed;
+
+        [SerializeField, Min(1), Tooltip("台車が動き出すのに要る、攻め側の押す人数")]
+        private int _payloadMinPushers = PayloadSpec.DefaultMinPushers;
+
+        [SerializeField, Tooltip("押す人数ごとの速さの倍率。先頭が最少の人数のときで、並びより多い人数は最後の値。1 つ以上")]
+        private List<float> _payloadPusherSpeedMultipliers = new List<float>(PayloadSpec.Default.PusherSpeedMultipliers);
+
+        [SerializeField, Min(0f), Tooltip("誰も押さなくなってから台車が戻り始めるまでの秒数")]
+        private float _payloadRollbackDelaySeconds = PayloadSpec.DefaultRollbackDelaySeconds;
+
+        [SerializeField, Min(0f), Tooltip("台車が戻る速さ (m/秒)。0 なら戻らない")]
+        private float _payloadRollbackSpeed = PayloadSpec.DefaultRollbackSpeed;
+
+        [SerializeField, Min(0f), Tooltip("中継点に着いたときに制限時間へ足す秒数")]
+        private float _payloadCheckpointBonusSeconds = PayloadSpec.DefaultCheckpointBonusSeconds;
+
+        [SerializeField, Min(1f), Tooltip("台車を運び切るまでの制限時間 (秒)")]
+        private float _payloadTimeLimitSeconds = PayloadSpec.DefaultTimeLimitSeconds;
+
+        [Header("購入経済")]
+        [SerializeField, Min(0), Tooltip("試合の初めに財布に入っているお金")]
+        private int _economyStartMoney = EconomySpec.DefaultStartMoney;
+
+        [SerializeField, Min(1), Tooltip("財布に入るお金の上限")]
+        private int _economyMaxMoney = EconomySpec.DefaultMaxMoney;
+
+        [SerializeField, Min(0), Tooltip("1 キルでもらえるお金")]
+        private int _economyKillReward = EconomySpec.DefaultKillReward;
+
+        [SerializeField, Min(0), Tooltip("ラウンドに勝ったチームの全員がもらえるお金")]
+        private int _economyRoundWinReward = EconomySpec.DefaultRoundWinReward;
+
+        [SerializeField, Min(0), Tooltip("ラウンドに負けたチームの全員がもらえるお金 (1 連敗目)")]
+        private int _economyRoundLossReward = EconomySpec.DefaultRoundLossReward;
+
+        [SerializeField, Min(0), Tooltip("連敗が 1 つ増えるごとに、負けたときのお金に足す額")]
+        private int _economyLossStreakBonus = EconomySpec.DefaultLossStreakBonus;
+
+        [SerializeField, Min(0), Tooltip("連敗で増える、負けたときのお金の上限")]
+        private int _economyMaxLossReward = EconomySpec.DefaultMaxLossReward;
+
         [Header("プレイヤーの移動と体")]
         [SerializeField, Tooltip("移動の値。空なら入口 (GameContent) の Motor、それも無ければ Resources の MotorSettings")]
         private MotorSettings _motorSettings;
@@ -242,6 +299,51 @@ namespace Shooter.Runtime
             set => _timeOfDayId = value ?? string.Empty;
         }
 
+        public void SetVoteKick(VoteKickSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _voteKickEnabled = spec.Enabled;
+            _voteKickRequiredYesFraction = spec.RequiredYesFraction;
+            _voteKickSeconds = spec.VoteSeconds;
+            _voteKickCooldownSeconds = spec.CooldownSeconds;
+        }
+
+        public void SetPayload(PayloadSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _payloadCartSpeed = spec.CartSpeed;
+            _payloadMinPushers = spec.MinPushers;
+            _payloadPusherSpeedMultipliers = new List<float>(spec.PusherSpeedMultipliers);
+            _payloadRollbackDelaySeconds = spec.RollbackDelaySeconds;
+            _payloadRollbackSpeed = spec.RollbackSpeed;
+            _payloadCheckpointBonusSeconds = spec.CheckpointBonusSeconds;
+            _payloadTimeLimitSeconds = spec.TimeLimitSeconds;
+        }
+
+        public void SetEconomy(EconomySpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            _economyStartMoney = spec.StartMoney;
+            _economyMaxMoney = spec.MaxMoney;
+            _economyKillReward = spec.KillReward;
+            _economyRoundWinReward = spec.RoundWinReward;
+            _economyRoundLossReward = spec.RoundLossReward;
+            _economyLossStreakBonus = spec.LossStreakBonus;
+            _economyMaxLossReward = spec.MaxLossReward;
+        }
+
         public void SetRules(IEnumerable<GameRulesDefinition> rules)
         {
             _rules = rules == null ? new List<GameRulesDefinition>() : new List<GameRulesDefinition>(rules);
@@ -308,7 +410,24 @@ namespace Shooter.Runtime
                 ToSearchAndDestroy(),
                 ToFreeForAll(),
                 ToKillConfirmed(),
-                ToGunGame());
+                ToGunGame(),
+                new VoteKickSpec(_voteKickEnabled, _voteKickRequiredYesFraction, _voteKickSeconds, _voteKickCooldownSeconds),
+                new PayloadSpec(
+                    _payloadCartSpeed,
+                    _payloadMinPushers,
+                    _payloadPusherSpeedMultipliers,
+                    _payloadRollbackDelaySeconds,
+                    _payloadRollbackSpeed,
+                    _payloadCheckpointBonusSeconds,
+                    _payloadTimeLimitSeconds),
+                new EconomySpec(
+                    _economyStartMoney,
+                    _economyMaxMoney,
+                    _economyKillReward,
+                    _economyRoundWinReward,
+                    _economyRoundLossReward,
+                    _economyLossStreakBonus,
+                    _economyMaxLossReward));
         }
 
         // オフラインのモードと同じ値で動くよう、各モードのランナーと同じ順 (この欄、入口) で調整値のアセットを選ぶ

@@ -135,6 +135,30 @@
       "tierWeaponIds": [],
       "meleeWeaponIds": [],
       "demotesOnMelee": true
+    },
+    "voteKick": {
+      "enabled": false,
+      "requiredYesFraction": 0.6,
+      "voteSeconds": 30,
+      "cooldownSeconds": 120
+    },
+    "payload": {
+      "cartSpeed": 1.5,
+      "minPushers": 1,
+      "pusherSpeedMultipliers": [1, 1.5, 2],
+      "rollbackDelaySeconds": 10,
+      "rollbackSpeed": 0.5,
+      "checkpointBonusSeconds": 60,
+      "timeLimitSeconds": 300
+    },
+    "economy": {
+      "startMoney": 800,
+      "maxMoney": 16000,
+      "killReward": 300,
+      "roundWinReward": 3000,
+      "roundLossReward": 1400,
+      "lossStreakBonus": 500,
+      "maxLossReward": 3400
     }
   },
   "motor": {

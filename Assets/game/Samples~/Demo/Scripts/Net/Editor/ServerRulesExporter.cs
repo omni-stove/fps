@@ -20,6 +20,9 @@ namespace Shooter.Editor
         public const string MapsFolder = DataFolder + "/maps";
         public const string TuningFolder = DataFolder + "/tuning";
 
+        // サーバーの ServerRulesData.PlaylistsDirectoryName と同じ名前にする
+        public const string PlaylistsFolder = DataFolder + "/playlists";
+
         public static string ProjectRoot => Path.GetDirectoryName(Application.dataPath) ?? ".";
 
         public const string PingFileName = "ping.json";
@@ -28,6 +31,9 @@ namespace Shooter.Editor
         public const string KnockbackFileName = "knockback.json";
         public const string BotsFileName = "bots.json";
         public const string AssistFileName = "assist.json";
+
+        // 財布の額は試合の設定 (match.economy) に乗せて書き出すので、このファイルには買える品と値段の一覧だけを置く
+        public const string EconomyFileName = "economy.json";
 
         public const string AllDefaultsJson = "{}\n";
 

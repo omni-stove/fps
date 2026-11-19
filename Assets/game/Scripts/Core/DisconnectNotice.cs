@@ -10,6 +10,8 @@ namespace Shooter.Core
 
         public const string IdleKickedReason = ReasonPrefix + "idle-kicked";
 
+        public const string VoteKickedReason = ReasonPrefix + "vote-kicked";
+
         public const string VersionMismatchPrefix = ReasonPrefix + "version-mismatch:";
 
         public const string RejectedPrefix = ReasonPrefix + "rejected:";
@@ -104,6 +106,11 @@ namespace Shooter.Core
             if (string.Equals(code, IdleKickedReason, StringComparison.Ordinal))
             {
                 return new DisconnectNotice(DisconnectKind.IdleKicked, wasConnected, null, null, null, raw);
+            }
+
+            if (string.Equals(code, VoteKickedReason, StringComparison.Ordinal))
+            {
+                return new DisconnectNotice(DisconnectKind.VoteKicked, wasConnected, null, null, null, raw);
             }
 
             if (code.StartsWith(VersionMismatchPrefix, StringComparison.Ordinal))

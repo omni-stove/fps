@@ -61,41 +61,17 @@ namespace Shooter.Server
             CheckOtherMaps();
             PrepareGunGame();
             _objective.UseMap(context.Map, points);
-            try
-            {
-                _session = new TeamDeathmatchSession(
-                    _objective.CreateSessionSpec(rules, settings),
-                    settings.MaxHealth,
-                    points.SpawnPoints,
-                    new SpawnSelector(settings.MinEnemySpawnDistance),
-                    PositionOf,
-                    null,
-                    settings.ReconnectGraceSeconds,
-                    _data.Assist);
-            }
-            catch (ArgumentException e)
-            {
-                throw new InvalidOperationException(
-                    "cannot start the match on " + context.Map.Name + " (" + points.SpawnPoints.Count.ToString(CultureInfo.InvariantCulture)
-                    + " spawn points): " + e.Message, e);
-            }
+            _session = CreateSession(context.Map, points);
 
             _loadout = _data.File.CreateLoadout();
-            _session.Started += HandleStarted;
-            _session.Restarted += HandleRestarted;
-            _session.ScoreChanged += HandleScoreChanged;
-            _session.Killed += HandleKilled;
-            _session.Spawned += HandleSpawned;
-            _session.Ended += HandleEnded;
-            _session.HeldExpired += HandleHeldExpired;
-            _session.Downed += HandleDowned;
-            _session.Revived += HandleRevived;
-            _session.DownedChanged += HandleDownedChanged;
+            ListenToSession(_session);
             _match.ChooseTeam = ChooseTeam;
+            _match.CheckNextRules = CheckNextRules;
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.Restarted += HandleMatchRestarted;
             _match.MapChanged += HandleMapChanged;
+            _match.RulesChanged += HandleRulesChanged;
             _match.TeamChanged += HandleTeamChanged;
 
             _log.WriteLine(MatchLog.Tag + " waiting for players scoreLimit=" + Text(_session.Spec.ScoreLimit)
@@ -236,14 +212,21 @@ namespace Shooter.Server
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.Restarted -= HandleMatchRestarted;
             _match.MapChanged -= HandleMapChanged;
+            _match.RulesChanged -= HandleRulesChanged;
             _match.TeamChanged -= HandleTeamChanged;
             if (_match.ChooseTeam == ChooseTeam)
             {
                 _match.ChooseTeam = null;
             }
 
+            if (_match.CheckNextRules == CheckNextRules)
+            {
+                _match.CheckNextRules = null;
+            }
+
             StopObjective();
             StopMapVote();
+            _nextData = null;
             _session = null;
         }
 
@@ -452,6 +435,12 @@ namespace Shooter.Server
         private void HandleMatchRestarted()
         {
             OnNextMatchStarting();
+            if (_nextData != null)
+            {
+                UseNextRules();
+                return;
+            }
+
             if (_session.State == GameModeState.Ended)
             {
                 _session.Restart();
@@ -466,12 +455,17 @@ namespace Shooter.Server
         // Session が点数・キル数・時間・体力を戻した直後。続けて点数・各プレイヤー・出現の知らせが来る
         private void HandleRestarted()
         {
+            ClearMatchState();
+            _objective.MatchRestarted();
+            SpectateMatchRestarted();
+        }
+
+        private void ClearMatchState()
+        {
             _loadout.ResetBudgets();
             _lastKillers.Clear();
             ClearDowned();
             PingMatchRestarted();
-            _objective.MatchRestarted();
-            SpectateMatchRestarted();
         }
 
         // ラウンド制のように目的が試合の点数を書くなら、キルの点数では書き換えない

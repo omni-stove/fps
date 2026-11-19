@@ -462,6 +462,7 @@ namespace Shooter.Server
         {
             // 終わった試合の Id で記録できるよう、Id を作り直す前に替える
             ChangeMapForNextMatch();
+            ChangeRulesForNextMatch();
             BalanceTeamsForNextMatch();
             State = GameModeState.Waiting;
             _restartRemaining = 0f;
@@ -473,8 +474,10 @@ namespace Shooter.Server
             TryStart();
         }
 
-        // 中身を ServerMatch.Maps.cs・ServerMatch.Balance.cs に分けて書けるよう partial method にする (書かれていなければ何もしない)
+        // 中身を ServerMatch.Maps.cs・ServerMatch.Rules.cs・ServerMatch.Balance.cs に分けて書けるよう partial method にする (書かれていなければ何もしない)
         partial void ChangeMapForNextMatch();
+
+        partial void ChangeRulesForNextMatch();
 
         partial void BalanceTeamsForNextMatch();
 

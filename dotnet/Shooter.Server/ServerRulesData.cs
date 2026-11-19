@@ -95,7 +95,20 @@ namespace Shooter.Server
                 settings, ChatWords, ChatWordsPath);
         }
 
-        public string LogLine => ServerProgram.LogTag + " rules " + Name
+        // ルールのファイルを作り直すのは、NetMatchFile が目的に要る設定とロードアウトを作るときに確かめるので、
+        // 次の試合で使えないルールを受け付けた後で試合の合間に止まらないようにするため。ファイルを読み直さないのは、調整値を試合の途中で替えないため
+        public ServerRulesData WithRules(GameRules rules)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+            var file = new NetMatchFile(
+                File.Name, rules, File.Settings, File.LoadoutName, File.LoadoutRule, File.LoadoutWeapons, File.SwitchSeconds, File.CatalogName,
+                File.Catalog, File.Motor);
+            return new ServerRulesData(
+                Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
+                _settings, ChatWords, ChatWordsPath);
+        }
+
+        public string LogLine =>ServerProgram.LogTag + " rules " + Name
             + " objective=" + Rules.Objective
             + " weapons=" + File.LoadoutWeapons.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Path

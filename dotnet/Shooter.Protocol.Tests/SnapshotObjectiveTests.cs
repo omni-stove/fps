@@ -14,9 +14,9 @@ namespace Shooter.Protocol.Tests
         private const int _headBytes = 2 + 1 + 4 + 4 + 1;
 
         [Test]
-        public void TheVersionIs18()
+        public void TheVersionIs19()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(18));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(19));
         }
 
         [Test]

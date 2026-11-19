@@ -16,6 +16,8 @@ namespace Shooter.Protocol
         LeanLeft = 128,
         LeanRight = 256,
         Melee = 512,
-        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight | Melee,
+        OpenParachute = 1024,
+        CloseParachute = 2048,
+        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight | Melee | OpenParachute | CloseParachute,
     }
 }

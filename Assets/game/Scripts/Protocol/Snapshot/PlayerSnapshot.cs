@@ -5,7 +5,7 @@ namespace Shooter.Protocol
 {
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
-        private const int _motionFlagCount = 4;
+        private const int _motionFlagCount = 5;
         private const float _leanSteps = 127f;
 
         public int PlayerId { get; set; }
@@ -17,6 +17,9 @@ namespace Shooter.Protocol
         // 部分を分けずに Identity に載せるのは、部分のビットに空きが無く、陣営と同じく入り直すとき以外ほぼ変わらないため。
         public string CosmeticId { get; set; }
 
+        // 陣営と同じく試合の間ほぼ変わらないので、部分を分けずに Identity に載せる
+        public byte SquadId { get; set; }
+
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
 
@@ -26,6 +29,9 @@ namespace Shooter.Protocol
 
         public bool IsProne { get; set; }
         public bool IsAiming { get; set; }
+
+        // 部分のビットに空きが無く、落ちる速さと一緒に変わるので、Motion の旗のバイトに載せる
+        public bool IsParachuting { get; set; }
 
         public CoverSync Cover { get; set; }
         public DodgeSnapshot Dodge { get; set; }
@@ -82,6 +88,7 @@ namespace Shooter.Protocol
             var bits = PlayerFields.None;
             if (Team != baseline.Team
                 || IsBot != baseline.IsBot
+                || SquadId != baseline.SquadId
                 || !string.Equals(CosmeticId ?? "", baseline.CosmeticId ?? "", System.StringComparison.Ordinal))
             {
                 bits |= PlayerFields.Identity;
@@ -93,7 +100,8 @@ namespace Shooter.Protocol
                 || IsGrounded != baseline.IsGrounded
                 || IsCrouched != baseline.IsCrouched
                 || IsProne != baseline.IsProne
-                || IsAiming != baseline.IsAiming)
+                || IsAiming != baseline.IsAiming
+                || IsParachuting != baseline.IsParachuting)
             {
                 bits |= PlayerFields.Motion;
             }
@@ -199,6 +207,7 @@ namespace Shooter.Protocol
                 writer.WriteByte((byte)Team);
                 writer.WriteBool(IsBot);
                 writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
+                writer.WriteByte(SquadId);
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -211,7 +220,8 @@ namespace Shooter.Protocol
                     throw new System.InvalidOperationException("a player cannot be both crouched and prone");
                 }
 
-                writer.WriteByte((byte)((IsGrounded ? 1 : 0) | (IsCrouched ? 2 : 0) | (IsAiming ? 4 : 0) | (IsProne ? 8 : 0)));
+                writer.WriteByte((byte)((IsGrounded ? 1 : 0) | (IsCrouched ? 2 : 0) | (IsAiming ? 4 : 0) | (IsProne ? 8 : 0)
+                    | (IsParachuting ? 16 : 0)));
             }
 
             if ((fields & PlayerFields.Cover) != 0)
@@ -331,6 +341,7 @@ namespace Shooter.Protocol
                 Team = (Team)reader.ReadByteBelow(EnumRange<Team>.Count, "team");
                 IsBot = reader.ReadBool();
                 CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
+                SquadId = reader.ReadByte();
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -343,6 +354,7 @@ namespace Shooter.Protocol
                 IsCrouched = (flags & 2) != 0;
                 IsAiming = (flags & 4) != 0;
                 IsProne = (flags & 8) != 0;
+                IsParachuting = (flags & 16) != 0;
                 if (IsCrouched && IsProne)
                 {
                     throw new MessageReadException("a player is both crouched and prone");
@@ -452,6 +464,7 @@ namespace Shooter.Protocol
                 Team = baseline.Team;
                 IsBot = baseline.IsBot;
                 CosmeticId = baseline.CosmeticId;
+                SquadId = baseline.SquadId;
             }
 
             if ((missing & PlayerFields.Motion) != 0)
@@ -463,6 +476,7 @@ namespace Shooter.Protocol
                 IsCrouched = baseline.IsCrouched;
                 IsProne = baseline.IsProne;
                 IsAiming = baseline.IsAiming;
+                IsParachuting = baseline.IsParachuting;
             }
 
             if ((missing & PlayerFields.Cover) != 0)

@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     // 落ちてもよい届け方で送れるよう、まだサーバーが処理したと分からない直近の tick を続けて MaxFrames 個まで載せる。
     public sealed class InputMessage : IMessage
     {
-        public const byte CurrentVersion = 4;
+        public const byte CurrentVersion = 5;
 
         public const int MaxFrames = 16;
 

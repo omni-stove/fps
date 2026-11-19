@@ -153,11 +153,31 @@ namespace Shooter.Protocol.Tests
         public void UnknownInputButtonIsRejected()
         {
             var input = new InputMessage();
-            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)1024));
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)4096));
             var writer = new MessageWriter();
             writer.WriteMessage(input);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void TheParachuteButtonsAreReadByTheServer()
+        {
+            var input = new InputMessage();
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, InputButtons.OpenParachute | InputButtons.Sprint));
+            input.Add(new InputFrame(2, Vector2.Zero, 0f, InputButtons.CloseParachute));
+            var writer = new MessageWriter();
+            writer.WriteMessage(input);
+
+            var got = (InputMessage)MatchMessages.CreateServerTable().Read(writer.AsSegment());
+
+            Assert.That((int)InputButtons.OpenParachute, Is.EqualTo(1024));
+            Assert.That((int)InputButtons.CloseParachute, Is.EqualTo(2048));
+            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(5));
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.OpenParachute | InputButtons.Sprint));
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.CloseParachute));
+            Assert.That(InputButtons.All & (InputButtons.OpenParachute | InputButtons.CloseParachute),
+                Is.EqualTo(InputButtons.OpenParachute | InputButtons.CloseParachute));
         }
 
         [Test]
@@ -195,6 +215,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.ReportRequest)]
         [TestCase(MessageIds.VoteKickRequest)]
         [TestCase(MessageIds.BuyRequest)]
+        [TestCase(MessageIds.InteractRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);
@@ -207,6 +228,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.StreakActivated)]
         [TestCase(MessageIds.KillCamClip)]
         [TestCase(MessageIds.VoteKickState)]
+        [TestCase(MessageIds.StashState)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);
@@ -233,6 +255,24 @@ namespace Shooter.Protocol.Tests
             Assert.That(buy, Is.InstanceOf<BuyRequestMessage>());
             Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.VoteKickState, out var state), Is.True);
             Assert.That(state, Is.InstanceOf<VoteKickStateMessage>());
+        }
+
+        [Test]
+        public void TheInteractAndStashMessagesHaveTheirIds()
+        {
+            Assert.That(MessageIds.InteractRequest, Is.EqualTo(35));
+            Assert.That(MessageIds.StashState, Is.EqualTo(87));
+            Assert.That(new InteractRequestMessage().Id, Is.EqualTo(MessageIds.InteractRequest));
+            Assert.That(new StashStateMessage().Id, Is.EqualTo(MessageIds.StashState));
+        }
+
+        [Test]
+        public void TheTablesReadTheInteractAndStashMessagesAsTheirTypes()
+        {
+            Assert.That(MatchMessages.CreateServerTable().TryGet(MessageIds.InteractRequest, out var interact), Is.True);
+            Assert.That(interact, Is.InstanceOf<InteractRequestMessage>());
+            Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.StashState, out var stash), Is.True);
+            Assert.That(stash, Is.InstanceOf<StashStateMessage>());
         }
 
         [Test]

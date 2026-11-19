@@ -32,6 +32,7 @@ namespace Shooter.Protocol
         public const ushort ReportRequest = 32;
         public const ushort VoteKickRequest = 33;
         public const ushort BuyRequest = 34;
+        public const ushort InteractRequest = 35;
 
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;
@@ -62,5 +63,6 @@ namespace Shooter.Protocol
         public const ushort Chat = 84;
         public const ushort StreakActivated = 85;
         public const ushort KillCamClip = 86;
+        public const ushort StashState = 87;
     }
 }

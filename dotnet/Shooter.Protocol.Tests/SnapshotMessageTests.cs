@@ -203,7 +203,8 @@ namespace Shooter.Protocol.Tests
 
             // tick・基準の tick・試合と持ち主の部分のビット・処理済みの入力・並びの数と、物ごとの Id と部分のビットだけになる。
             // 乗り物・目的の物・設置物は並びの数だけ。
-            var expected = 2 + 1 + 4 + 4 + 1 + 1 + 1 + 4 + 4 + (2 * 6) + 6 + 6 + 6 + 1 + 1 + 1;
+            // 試合と持ち主の部分のビットは 2 バイトずつ。
+            var expected = 2 + 1 + 4 + 4 + 2 + 1 + 2 + 4 + 4 + (2 * 6) + 6 + 6 + 6 + 1 + 1 + 1;
             Assert.That(Size(current, baseline), Is.EqualTo(expected));
         }
 
@@ -393,7 +394,7 @@ namespace Shooter.Protocol.Tests
             writer.WriteByte(SnapshotMessage.CurrentVersion);
             writer.WriteInt32(5);
             writer.WriteInt32(SnapshotMessage.NoBaseline);
-            writer.WriteByte((byte)MatchFields.Status);
+            writer.WriteUInt16((ushort)MatchFields.Status);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
         }
@@ -712,6 +713,37 @@ namespace Shooter.Protocol.Tests
         public void NegativeAssistsAreUnreadable()
         {
             var data = OnePlayerDelta(PlayerFields.Assists, w => w.WriteInt32(-1));
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
+        }
+
+        [TestCase(16, true)]
+        [TestCase(16 | 1, true)]
+        [TestCase(8, false)]
+        public void TheParachuteIsReadFromTheMotionFlags(int flags, bool parachuting)
+        {
+            var got = (SnapshotMessage)MatchMessages.CreateClientTable().Read(OnePlayerDelta(PlayerFields.Motion, w =>
+            {
+                w.WriteVector3(new Vector3(0f, 80f, 0f));
+                w.WriteVector3(new Vector3(0f, -5f, 0f));
+                w.WriteSingle(0f);
+                w.WriteByte((byte)flags);
+            }));
+
+            Assert.That(got.Players[0].IsParachuting, Is.EqualTo(parachuting));
+            Assert.That(got.Players[0].Position, Is.EqualTo(new Vector3(0f, 80f, 0f)));
+        }
+
+        [Test]
+        public void AnUnknownMotionFlagIsRejected()
+        {
+            var data = OnePlayerDelta(PlayerFields.Motion, w =>
+            {
+                w.WriteVector3(Vector3.Zero);
+                w.WriteVector3(Vector3.Zero);
+                w.WriteSingle(0f);
+                w.WriteByte(32);
+            });
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(data));
         }

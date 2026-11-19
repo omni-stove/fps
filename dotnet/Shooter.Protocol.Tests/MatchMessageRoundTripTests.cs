@@ -1312,6 +1312,190 @@ namespace Shooter.Protocol.Tests
             writer.WriteBool(false);
         }
 
+        [Test]
+        public void InteractRequest()
+        {
+            var got = ToServer<InteractRequestMessage>(new InteractRequestMessage { ItemId = 17 });
+
+            Assert.That(got.ItemId, Is.EqualTo(17));
+            Assert.That(ToServer<InteractRequestMessage>(new InteractRequestMessage()).ItemId, Is.Zero);
+        }
+
+        [Test]
+        public void AnInteractRequestWithANegativeItemIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new InteractRequestMessage { ItemId = -1 }));
+        }
+
+        [Test]
+        public void AnInteractRequestWithANegativeItemIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.InteractRequest);
+            writer.WriteByte(InteractRequestMessage.CurrentVersion);
+            writer.WriteInt32(-1);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [TestCase(ExtractionOutcome.None)]
+        [TestCase(ExtractionOutcome.Extracted)]
+        [TestCase(ExtractionOutcome.Killed)]
+        [TestCase(ExtractionOutcome.TimedOut)]
+        public void StashState(ExtractionOutcome outcome)
+        {
+            var sent = new StashStateMessage { Outcome = outcome };
+            sent.Stash.Add("ammo-rifle", 240);
+            sent.Stash.Add("armor-light", 1);
+            sent.Carried.Add("medkit", 3);
+            sent.Carried.Add("gold-bar", ushort.MaxValue);
+            sent.Carried.Add("rifle", 1);
+            sent.BroughtIn.Add("rifle", 1);
+
+            var got = ToClient<StashStateMessage>(sent);
+
+            Assert.That(got.Outcome, Is.EqualTo(outcome));
+            Assert.That(got.Stash.Count, Is.EqualTo(2));
+            Assert.That(got.Stash.IdAt(0), Is.EqualTo("ammo-rifle"));
+            Assert.That(got.Stash.CountAt(0), Is.EqualTo(240));
+            Assert.That(got.Stash.IdAt(1), Is.EqualTo("armor-light"));
+            Assert.That(got.Stash.CountAt(1), Is.EqualTo(1));
+            Assert.That(got.Carried.Count, Is.EqualTo(3));
+            Assert.That(got.Carried.IdAt(0), Is.EqualTo("medkit"));
+            Assert.That(got.Carried.CountAt(0), Is.EqualTo(3));
+            Assert.That(got.Carried.IdAt(1), Is.EqualTo("gold-bar"));
+            Assert.That(got.Carried.CountAt(1), Is.EqualTo(ushort.MaxValue));
+            Assert.That(got.Carried.IdAt(2), Is.EqualTo("rifle"));
+            Assert.That(got.BroughtIn.Count, Is.EqualTo(1));
+            Assert.That(got.BroughtIn.IdAt(0), Is.EqualTo("rifle"));
+            Assert.That(got.BroughtIn.CountAt(0), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnEmptyStashStateRoundTrips()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new StashStateMessage());
+
+            var got = (StashStateMessage)_client.Read(writer.AsSegment());
+
+            // Id・版 (2 + 1)、3 つの並びの数 (1 ずつ)、脱出の結果 (1)
+            Assert.That(writer.Length, Is.EqualTo(3 + 3 + 1));
+            Assert.That(got.Stash.Count, Is.Zero);
+            Assert.That(got.Carried.Count, Is.Zero);
+            Assert.That(got.BroughtIn.Count, Is.Zero);
+            Assert.That(got.Outcome, Is.EqualTo(ExtractionOutcome.None));
+        }
+
+        [Test]
+        public void AStashStateReadAgainReplacesTheOldLists()
+        {
+            var full = new StashStateMessage { Outcome = ExtractionOutcome.Killed };
+            full.Carried.Add("medkit", 2);
+            full.Carried.Add("rifle", 1);
+            ToClient<StashStateMessage>(full);
+            var fewer = new StashStateMessage();
+            fewer.Carried.Add("rifle", 1);
+
+            var got = ToClient<StashStateMessage>(fewer);
+
+            Assert.That(got.Carried.Count, Is.EqualTo(1));
+            Assert.That(got.Carried.IdAt(0), Is.EqualTo("rifle"));
+            Assert.That(got.Outcome, Is.EqualTo(ExtractionOutcome.None));
+        }
+
+        [Test]
+        public void ClearingAndCopyingAStashKeepTheItems()
+        {
+            var sent = new StashStateMessage { Outcome = ExtractionOutcome.Extracted };
+            sent.Stash.Add("medkit", 4);
+            var copy = new StashItemList("copy");
+
+            copy.CopyFrom(sent.Stash);
+            sent.Clear();
+
+            Assert.That(copy.Count, Is.EqualTo(1));
+            Assert.That(copy.IdAt(0), Is.EqualTo("medkit"));
+            Assert.That(copy.CountAt(0), Is.EqualTo(4));
+            Assert.That(sent.Stash.Count, Is.Zero);
+            Assert.That(sent.Outcome, Is.EqualTo(ExtractionOutcome.None));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => sent.Stash.IdAt(0));
+        }
+
+        [TestCase(null, 1)]
+        [TestCase("", 1)]
+        [TestCase("medkit", 0)]
+        [TestCase("medkit", -1)]
+        [TestCase("medkit", ushort.MaxValue + 1)]
+        public void AnImpossibleStashItemIsNotAdded(string itemId, int count)
+        {
+            var list = new StashStateMessage().Stash;
+
+            Assert.Throws(Is.InstanceOf<System.ArgumentException>(), () => list.Add(itemId, count));
+            Assert.That(list.Count, Is.Zero);
+        }
+
+        [Test]
+        public void AStashListStopsAtItsLimit()
+        {
+            var list = new StashStateMessage().Carried;
+            for (var i = 0; i < StashItemList.MaxCount; i++)
+            {
+                list.Add("item-" + i, 1);
+            }
+
+            Assert.Throws<System.InvalidOperationException>(() => list.Add("one-more", 1));
+            Assert.That(list.Count, Is.EqualTo(StashItemList.MaxCount));
+        }
+
+        [Test]
+        public void AStashStateWithAnUnknownOutcomeIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new StashStateMessage { Outcome = (ExtractionOutcome)4 }));
+        }
+
+        [Test]
+        public void AStashItemLongerThanAContentIdIsNotWritten()
+        {
+            var sent = new StashStateMessage();
+            sent.Stash.Add(new string('a', MatchProtocol.MaxContentIdBytes + 1), 1);
+
+            Assert.Throws<System.ArgumentException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase("medkit", 1, 4)]
+        [TestCase("medkit", 0, 0)]
+        [TestCase("", 1, 0)]
+        public void AnImpossibleStashStateIsUnreadable(string itemId, int count, int outcome)
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.StashState);
+            writer.WriteByte(StashStateMessage.CurrentVersion);
+            writer.WriteByte(1);
+            writer.WriteString(itemId);
+            writer.WriteUInt16((ushort)count);
+            writer.WriteByte(0);
+            writer.WriteByte(0);
+            writer.WriteByte((byte)outcome);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void AStashStateThatEndsEarlyIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.StashState);
+            writer.WriteByte(StashStateMessage.CurrentVersion);
+            writer.WriteByte(2);
+            writer.WriteString("medkit");
+            writer.WriteUInt16(1);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
         private T ToServer<T>(IMessage message)
             where T : class, IMessage
         {

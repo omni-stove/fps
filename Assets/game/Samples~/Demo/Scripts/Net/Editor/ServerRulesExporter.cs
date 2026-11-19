@@ -35,7 +35,21 @@ namespace Shooter.Editor
         // 財布の額は試合の設定 (match.economy) に乗せて書き出すので、このファイルには買える品と値段の一覧だけを置く
         public const string EconomyFileName = "economy.json";
 
+        // サーバーの ServerRulesData.LootTuningFileName と同じ名前にする
+        public const string LootFileName = "loot.json";
+
+        public const string SupplyDropsFileName = "supply-drops.json";
+        public const string RedeployFileName = "redeploy.json";
+
         public const string AllDefaultsJson = "{}\n";
+
+        // 試合の設定 (NetMatch) の並びに無くても、Demo のネットのマップ (NetBattleRoyale) で遊べるよう必ず書き出すモードのルール。
+        // サーバーはファイルの Objective で目的を選ぶので、アセットの Objective が違えば書き出さずに止める
+        public static readonly IReadOnlyList<(string Name, MatchObjective Objective)> ModeRulesToExport = new[]
+        {
+            (GameRulesAssetBuilder.BattleRoyaleName, MatchObjective.BattleRoyale),
+            (GameRulesAssetBuilder.ExtractionName, MatchObjective.Extraction),
+        };
 
         public static IReadOnlyList<GameRulesDefinition> RulesToExport(NetMatchDefinition match)
         {
@@ -75,8 +89,6 @@ namespace Shooter.Editor
         public static IReadOnlyList<string> ExportRules(string directory)
         {
             var match = NetSceneBuilder.LoadOrBuildMatch();
-            var motor = match.ToMotor();
-            Directory.CreateDirectory(directory);
             var rules = RulesToExport(match);
             if (rules.Count == 0)
             {
@@ -84,6 +96,83 @@ namespace Shooter.Editor
                     LogTag + " no rules to export; set Rules in GameContent or in " + AssetDatabase.GetAssetPath(match));
             }
 
+            return WriteRules(directory, match, WithModeRules(rules, LoadModeRules()));
+        }
+
+        // 同じアセットを 2 度書かないよう、並びに既にあるルールは足さない
+        public static IReadOnlyList<GameRulesDefinition> WithModeRules(
+            IReadOnlyList<GameRulesDefinition> rules, IReadOnlyList<GameRulesDefinition> modeRules)
+        {
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            if (modeRules == null)
+            {
+                throw new ArgumentNullException(nameof(modeRules));
+            }
+
+            var combined = new List<GameRulesDefinition>(rules);
+            foreach (var candidate in modeRules)
+            {
+                if (candidate != null && !combined.Contains(candidate))
+                {
+                    combined.Add(candidate);
+                }
+            }
+
+            return combined;
+        }
+
+        // アセットが無ければ GameRulesAssetBuilder と同じ値で作る。あれば、ゲームが変えた値を残すため作り直さない
+        public static IReadOnlyList<GameRulesDefinition> LoadModeRules()
+        {
+            var loaded = new List<GameRulesDefinition>(ModeRulesToExport.Count);
+            foreach (var (name, objective) in ModeRulesToExport)
+            {
+                var asset = GameRulesAssetBuilder.LoadOrBuildModeRules(name);
+                RequireObjective(asset, objective);
+                loaded.Add(asset);
+            }
+
+            return loaded;
+        }
+
+        public static void RequireObjective(GameRulesDefinition asset, MatchObjective objective)
+        {
+            if (asset == null)
+            {
+                throw new ArgumentNullException(nameof(asset));
+            }
+
+            if (!asset.TryToRules(out var rules, out var error))
+            {
+                throw new InvalidOperationException(LogTag + " invalid game rules " + AssetDatabase.GetAssetPath(asset) + ": " + error);
+            }
+
+            if (rules.Objective != objective)
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + AssetDatabase.GetAssetPath(asset) + " has the objective " + rules.Objective + ", but the server plays '"
+                    + asset.name + "' as " + objective + "; set its Objective or rebuild it with make build-scenes (GameRulesAssetBuilder.Build)");
+            }
+        }
+
+        public static IReadOnlyList<string> WriteRules(string directory, NetMatchDefinition match, IReadOnlyList<GameRulesDefinition> rules)
+        {
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
+            var motor = match.ToMotor();
+            Directory.CreateDirectory(directory);
             var written = new List<string>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var asset in rules)
@@ -329,6 +418,9 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, KnockbackFileName, c => c.KnockbackTuning, KitTuning.KnockbackResourcePath, TuningJson.ParseKnockback),
                 ExportTuningFile(directory, BotsFileName, c => c.BotsTuning, KitTuning.BotsResourcePath, TuningJson.ParseBots),
                 ExportTuningFile(directory, AssistFileName, c => c.AssistTuning, KitTuning.AssistResourcePath, AssistJson.Parse),
+                ExportTuningFile(directory, LootFileName, c => c.LootTuning, LootJson.ResourcePath, LootJson.Parse),
+                ExportTuningFile(directory, SupplyDropsFileName, c => c.SupplyDropsTuning, KitTuning.SupplyDropsResourcePath, SupplyDropJson.Parse),
+                ExportTuningFile(directory, RedeployFileName, c => c.RedeployTuning, RedeployJson.ResourcePath, RedeployJson.Parse),
             };
         }
 

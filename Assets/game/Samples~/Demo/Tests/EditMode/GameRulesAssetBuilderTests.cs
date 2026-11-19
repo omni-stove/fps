@@ -871,6 +871,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void BattleRoyaleAndExtractionNameTheirObjectiveForTheDedicatedServer()
+        {
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().Objective, Is.EqualTo(MatchObjective.BattleRoyale));
+            Assert.That(GameRulesAssetBuilder.ExtractionRules().Objective, Is.EqualTo(MatchObjective.Extraction));
+            Assert.That(
+                GameRulesAssetBuilder.ModeRules(GameRulesAssetBuilder.BattleRoyaleName).Objective, Is.EqualTo(MatchObjective.BattleRoyale));
+            Assert.That(GameRulesAssetBuilder.ModeRules(GameRulesAssetBuilder.ExtractionName).Objective, Is.EqualTo(MatchObjective.Extraction));
+
+            var built = GameRulesAssetBuilder.BuildModesAt(_folder);
+            var names = ToArray(GameRulesAssetBuilder.ModeNames);
+            Assert.That(
+                built[Array.IndexOf(names, GameRulesAssetBuilder.BattleRoyaleName)].ToRules().Objective,
+                Is.EqualTo(MatchObjective.BattleRoyale),
+                "the objective survives the asset round trip");
+            Assert.That(built[Array.IndexOf(names, GameRulesAssetBuilder.ExtractionName)].ToRules().Objective, Is.EqualTo(MatchObjective.Extraction));
+        }
+
+        [Test]
         public void BattleRoyaleOpensTheParachuteForRedeploysButOnlyThere()
         {
             var battleRoyale = GameRulesAssetBuilder.BattleRoyaleRules();

@@ -14,6 +14,8 @@ namespace Shooter.Runtime
 
         public const string PanelName = "buy-menu";
 
+        private const string PauseMenuName = "pause-menu";
+
         [SerializeField, Min(0.1f), Tooltip("Seconds to wait for the wallet to drop after sending a purchase before saying it was not bought")]
         private float _answerSeconds = BuyMenuPanel.DefaultAnswerSeconds;
 
@@ -95,7 +97,17 @@ namespace Shooter.Runtime
         {
             _host = new VisualElement { name = PanelName };
             _host.style.display = DisplayStyle.None;
-            element.Add(_host);
+            // 一時停止の画面より奥に置くため、末尾ではなくその直前に差し込む
+            var pause = element.Q<VisualElement>(PauseMenuName);
+            if (pause != null && pause.parent == element)
+            {
+                element.Insert(element.IndexOf(pause), _host);
+            }
+            else
+            {
+                element.Add(_host);
+            }
+
             Rebuild();
         }
 

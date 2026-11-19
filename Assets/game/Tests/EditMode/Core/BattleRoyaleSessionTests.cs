@@ -26,6 +26,13 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedBleedEvents = { "downed 11 by 0", "bledout 11 credit 0" };
         private static readonly string[] _expectedReviveEvents = { "downed 11 by 0", "revived 11 by 10" };
         private static readonly string[] _expectedEliminations = { "eliminated 1 place 4", "eliminated 2 place 3", "eliminated 3 place 2" };
+        private static readonly string[] _expectedWaiting = { "11 Waiting" };
+        private static readonly string[] _expectedWaitThenWiped = { "11 Waiting", "10 SquadWiped" };
+        private static readonly string[] _expectedBothWiped = { "10 SquadWiped", "11 SquadWiped" };
+        private static readonly string[] _expectedWaitThenNoCharges = { "11 Waiting", "11 NoCharges" };
+        private static readonly string[] _expectedPastPhase = { "11 PastPhase" };
+        private static readonly string[] _expectedDisabled = { "11 Disabled" };
+        private static readonly int[] _expectedReturned = { _oneB };
 
         [Test]
         public void ALethalHitDownsWhileASquadmateStands()
@@ -283,9 +290,171 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ABledOutPlayerWaitsAndReturnsWhileASquadmateStands()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            var decisions = RecordRedeploys(br);
+            var returned = new List<int>();
+            br.Mode.RespawnReady += returned.Add;
+            br.Start();
+            br.ReportLethal(_oneB, _zeroA);
+
+            BleedOut(br);
+
+            Assert.That(decisions, Is.EqualTo(_expectedWaiting));
+            Assert.That(br.Mode.IsDown(_oneB), Is.True);
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.True);
+            Assert.That(br.GetRedeployRemaining(_oneB), Is.EqualTo(3f), "the wait started in the tick that bled out");
+            Assert.That(br.Mode.GetRespawnRemaining(_oneB), Is.EqualTo(3f));
+            Assert.That(br.GetRedeploysLeft(_oneB), Is.Zero, "the only charge is spent");
+            Assert.That(br.Mode.IsSideEliminated(_squadOne), Is.False);
+            Assert.That(br.CountStanding(_squadOne), Is.EqualTo(1));
+
+            br.Tick(2f);
+            Assert.That(returned, Is.Empty);
+
+            br.Tick(1f);
+
+            Assert.That(returned, Is.EqualTo(_expectedReturned));
+            Assert.That(br.Mode.IsDown(_oneB), Is.False);
+            Assert.That(br.IsStanding(_oneB), Is.True);
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.False);
+            Assert.That(br.GetRedeployRemaining(_oneB), Is.Null);
+            Assert.That(br.CountStanding(_squadOne), Is.EqualTo(2));
+            Assert.That(br.Mode.GetDeaths(_oneB), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ASquadWipedWhileWaitingDoesNotReturn()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            var decisions = RecordRedeploys(br);
+            var returned = new List<int>();
+            br.Mode.RespawnReady += returned.Add;
+            br.Start();
+            br.ReportLethal(_oneB, _zeroA);
+            BleedOut(br);
+
+            Assert.That(br.ReportLethal(_oneA, _zeroA), Is.EqualTo(BattleRoyaleHit.Killed), "no one stands to revive, so the hit kills");
+
+            Assert.That(decisions, Is.EqualTo(_expectedWaitThenWiped));
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.False);
+            Assert.That(br.Mode.IsSideEliminated(_squadOne), Is.True);
+
+            br.Tick(0f);
+            Assert.That(br.GetPlacement(_squadOne), Is.EqualTo(4));
+
+            br.Tick(10f);
+            Assert.That(returned, Is.Empty);
+            Assert.That(br.Mode.IsDown(_oneB), Is.True);
+        }
+
+        [Test]
+        public void TheLastStandingMemberAndTheDownedSquadmateDoNotReturn()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 0f));
+            var decisions = RecordRedeploys(br);
+            br.Start();
+            br.ReportLethal(_oneB, _zeroA);
+
+            br.ReportLethal(_oneA, _zeroB);
+
+            Assert.That(decisions, Is.EqualTo(_expectedBothWiped));
+            Assert.That(br.Mode.IsDown(_oneA), Is.True);
+            Assert.That(br.Mode.IsDown(_oneB), Is.True);
+            Assert.That(br.GetRedeploysLeft(_oneA), Is.EqualTo(1), "a refused redeploy spends nothing");
+        }
+
+        [Test]
+        public void AZeroSecondWaitReturnsAtOnceAndTheSecondFallIsFinal()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 0f));
+            var decisions = RecordRedeploys(br);
+            var returned = new List<int>();
+            br.Mode.RespawnReady += returned.Add;
+            br.Start();
+            br.ReportLethal(_oneB, _zeroA);
+            BleedOut(br);
+
+            Assert.That(returned, Is.EqualTo(_expectedReturned));
+            Assert.That(br.IsStanding(_oneB), Is.True);
+
+            Assert.That(br.ReportLethal(_oneB, _zeroA), Is.EqualTo(BattleRoyaleHit.Downed));
+            BleedOut(br);
+
+            Assert.That(decisions, Is.EqualTo(_expectedWaitThenNoCharges));
+            Assert.That(returned, Is.EqualTo(_expectedReturned));
+            Assert.That(br.Mode.IsDown(_oneB), Is.True);
+            Assert.That(br.GetRedeploysLeft(_oneB), Is.Zero);
+        }
+
+        [Test]
+        public void PastTheLastPhaseNoOneReturns()
+        {
+            var br = Create(new RedeploySpec(charges: 2, lastPhaseIndex: 0, delaySeconds: 1f));
+            var decisions = RecordRedeploys(br);
+            br.Start();
+            Assert.That(br.IsRedeployOpen, Is.True);
+
+            br.SetZonePhase(1);
+            br.ReportLethal(_oneB, _zeroA);
+            BleedOut(br);
+
+            Assert.That(br.ZonePhaseIndex, Is.EqualTo(1));
+            Assert.That(br.IsRedeployOpen, Is.False);
+            Assert.That(decisions, Is.EqualTo(_expectedPastPhase));
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.False);
+            Assert.That(br.GetRedeploysLeft(_oneB), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void WithoutARedeploySpecNoOneReturns()
+        {
+            var br = Create();
+            var decisions = RecordRedeploys(br);
+            br.Start();
+            br.ReportLethal(_oneB, _zeroA);
+            BleedOut(br);
+
+            Assert.That(br.RedeployRules, Is.SameAs(RedeploySpec.None));
+            Assert.That(br.IsRedeployOpen, Is.False);
+            Assert.That(decisions, Is.EqualTo(_expectedDisabled));
+            Assert.That(br.Mode.IsAwaitingRespawn(_oneB), Is.False);
+        }
+
+        [Test]
+        public void ResetGivesTheChargesBackAndTheEndCancelsTheWaits()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 0, delaySeconds: 8f));
+            br.Start();
+            br.SetZonePhase(0);
+            br.ReportLethal(_oneB, _zeroA);
+            BleedOut(br);
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.True);
+
+            Wipe(br, _twoA, _twoB);
+            Wipe(br, _threeA, _threeB);
+            br.ReportLethal(_oneA, _zeroA);
+            br.Tick(0f);
+
+            Assert.That(br.Mode.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(br.IsAwaitingRedeploy(_oneB), Is.False);
+            Assert.That(br.GetRedeployRemaining(_oneB), Is.Null);
+
+            br.SetZonePhase(2);
+            br.Reset();
+
+            Assert.That(br.GetRedeploysLeft(_oneB), Is.EqualTo(1));
+            Assert.That(br.ZonePhaseIndex, Is.Zero);
+            Assert.That(br.IsRedeployOpen, Is.True);
+        }
+
+        [Test]
         public void InvalidArgumentsThrow()
         {
             var br = Create();
+            Assert.Throws<ArgumentOutOfRangeException>(() => br.GetRedeploysLeft(99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => br.SetZonePhase(-1));
 
             Assert.Throws<ArgumentNullException>(() => new BattleRoyaleSession(4, 2, 60f, null));
             Assert.Throws<ArgumentOutOfRangeException>(() => new BattleRoyaleSession(1, 2, 60f, Revive()));
@@ -295,11 +464,25 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => br.Tick(-1f));
         }
 
-        private static BattleRoyaleSession Create()
+        private static BattleRoyaleSession Create(RedeploySpec redeploy = null)
         {
-            var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, Revive());
+            var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, Revive(), redeploy);
             AddEveryone(br);
             return br;
+        }
+
+        // 失血は 15 秒。2 回に分けるのは、倒れる Tick を 5 秒にして、その Tick で戻る待ちがどれだけ進むかを決まった値にするため。
+        private static void BleedOut(BattleRoyaleSession br)
+        {
+            br.Tick(ActionRules.DefaultDownedBleedoutSeconds - 5f);
+            br.Tick(5f);
+        }
+
+        private static List<string> RecordRedeploys(BattleRoyaleSession br)
+        {
+            var log = new List<string>();
+            br.RedeployDecided += (player, verdict) => log.Add(player + " " + verdict);
+            return log;
         }
 
         private static ActionRules Revive() => ActionRules.Default.WithDowned(Downed.Revive);

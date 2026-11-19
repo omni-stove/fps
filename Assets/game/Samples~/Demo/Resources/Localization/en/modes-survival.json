@@ -17,6 +17,8 @@
   "mode.br.supplyWaiting": "Unopened supply crates {0}",
   "mode.br.supplyOpen": "Open the supply crate",
   "mode.br.supplyOpenKey": "[{0}] {1}",
+  "mode.br.redeployIn": "Redeploying from the sky in {0}s",
+  "mode.br.redeploysLeft": "Redeploys left {0}",
   "mode.horde.wave": "WAVE {0}/{1}",
   "mode.horde.waveEndless": "WAVE {0}",
   "mode.horde.remainingEnemies": "Enemies left {0}",

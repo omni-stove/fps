@@ -29,6 +29,8 @@ namespace Shooter.Runtime
 
         public const string SupplyDropsResourcePath = "Tuning/supply-drops";
 
+        public const string RedeployResourcePath = RedeployJson.ResourcePath;
+
         public const string MutatorsResourcePath = "Tuning/mutators";
 
         public const string PlaylistsResourcePath = "Tuning/playlists";

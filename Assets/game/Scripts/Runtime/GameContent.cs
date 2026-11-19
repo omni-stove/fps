@@ -119,7 +119,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("リプレイの再生の調整値の JSON。空なら Resources/Tuning/replay")]
         private TextAsset _replayTuning;
 
-        [Header("Payload・お金・補給・ルールの変え方・プレイリスト")]
+        [Header("Payload・お金・補給・復帰・ルールの変え方・プレイリスト")]
         [SerializeField, Tooltip("Payload の調整値の JSON。空なら Resources/Tuning/payload")]
         private TextAsset _payloadTuning;
 
@@ -128,6 +128,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("補給の投下の調整値の JSON。空なら Resources/Tuning/supply-drops")]
         private TextAsset _supplyDropsTuning;
+
+        [SerializeField, Tooltip("Battle Royale で倒されたときにパラシュートで戻る調整値の JSON。空なら Resources/Tuning/redeploy")]
+        private TextAsset _redeployTuning;
 
         [SerializeField, Tooltip("ルールを変える組 (ミューテーター) の一覧の JSON。空なら Resources/Tuning/mutators")]
         private TextAsset _mutatorsTuning;
@@ -474,6 +477,12 @@ namespace Shooter.Runtime
         {
             get => _supplyDropsTuning;
             set => _supplyDropsTuning = value;
+        }
+
+        public TextAsset RedeployTuning
+        {
+            get => _redeployTuning;
+            set => _redeployTuning = value;
         }
 
         public TextAsset MutatorsTuning

@@ -24,6 +24,14 @@ namespace Shooter.Core
             IsLocalPlayerAtSupplyDrop = localPlayerId.HasValue && isLocalPlayerAtSupplyDrop;
             InteractKeyLabel = interactKeyLabel;
 
+            if (localPlayerId.HasValue && session.Mode.HasPlayer(localPlayerId.Value))
+            {
+                LocalRedeploySeconds = session.GetRedeployRemaining(localPlayerId.Value);
+                LocalRedeploysLeft = session.IsRedeployOpen || LocalRedeploySeconds.HasValue
+                    ? session.GetRedeploysLeft(localPlayerId.Value)
+                    : (int?)null;
+            }
+
             foreach (var drop in SupplyDrops)
             {
                 if (drop.HasLanded)
@@ -57,6 +65,12 @@ namespace Shooter.Core
         public bool IsLocalPlayerAtSupplyDrop { get; }
 
         public string InteractKeyLabel { get; }
+
+        // 戻る待ちの間だけ値を持つ。
+        public float? LocalRedeploySeconds { get; }
+
+        // まだ戻れる段階にいる (または戻る待ちの) 間だけ値を持つ。待ちに入った分はもう引いてある。
+        public int? LocalRedeploysLeft { get; }
 
         private static SupplyDropMark[] Copy(IReadOnlyList<SupplyDropMark> drops)
         {

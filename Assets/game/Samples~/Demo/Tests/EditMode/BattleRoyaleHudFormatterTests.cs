@@ -249,6 +249,77 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void FormatsTheRedeployLines()
+        {
+            Assert.That(Localizer.Resolve(BattleRoyaleHudFormatter.RedeployIn(4)), Is.EqualTo("空から復帰まで 4 秒"));
+            Assert.That(Localizer.Resolve(BattleRoyaleHudFormatter.RedeploysLeft(2)), Is.EqualTo("復帰 残り 2 回"));
+            Assert.That(BattleRoyaleHudFormatter.RedeployIn(4), Is.EqualTo(new LocalizedText("mode.br.redeployIn", 4)));
+            Assert.That(BattleRoyaleHudFormatter.RedeploysLeft(0), Is.EqualTo(new LocalizedText("mode.br.redeploysLeft", 0)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudFormatter.RedeployIn(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudFormatter.RedeploysLeft(-1));
+            Assert.Throws<ArgumentNullException>(() => BattleRoyaleHudFormatter.RedeployLines(null));
+        }
+
+        [Test]
+        public void AWaitingPlayerSeesTheRedeployInsteadOfTheRespawnLine()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            br.Start();
+            Assert.That(
+                Resolve(BattleRoyaleHudFormatter.RedeployLines(new BattleRoyaleStatus(br, _player, null, null, false))),
+                Is.EqualTo(new[] { "復帰 残り 1 回" }));
+
+            br.ReportLethal(_player, _enemy);
+            br.Tick(ActionRules.DefaultDownedBleedoutSeconds - 5f);
+            br.Tick(5f);
+
+            var detail = new BattleRoyaleStatus(br, _player, null, null, false);
+            Assert.That(detail.LocalRedeploySeconds, Is.EqualTo(3f));
+            Assert.That(detail.LocalRedeploysLeft, Is.EqualTo(0));
+            var status = new ModeStatus(null, Status(br, detail, isEnded: false).SideScores, new Side(0), 3f, false, null, detail);
+            var lines = new List<LocalizedText>();
+
+            new BattleRoyaleHudFormatter().AppendLines(status, lines);
+
+            Assert.That(Resolve(lines), Is.EqualTo(new[] { "空から復帰まで 3 秒", "復帰 残り 0 回", "残り分隊 3/3", "順位 3 位以内", "分隊 生存 1" }));
+            Assert.That(lines, Does.Not.Contain(HudText.Respawn(3)), "the generic respawn line is not shown twice");
+        }
+
+        [Test]
+        public void NoRedeployLinesWhenItIsOffPastTheLastPhaseOrAfterTheMatch()
+        {
+            var off = Create();
+            off.Start();
+            Assert.That(BattleRoyaleHudFormatter.RedeployLines(new BattleRoyaleStatus(off, _player, null, null, false)), Is.Empty);
+
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 0, delaySeconds: 8f));
+            br.Start();
+            br.SetZonePhase(1);
+            Assert.That(BattleRoyaleHudFormatter.RedeployLines(new BattleRoyaleStatus(br, _player, null, null, false)), Is.Empty);
+            Assert.That(BattleRoyaleHudFormatter.RedeployLines(new BattleRoyaleStatus(br, null, null, null, false)), Is.Empty, "a spectator has no redeploys");
+
+            var ended = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            ended.Start();
+            ended.ReportLethal(_enemy, _player);
+            ended.ReportLethal(_otherEnemy, _player);
+            ended.Tick(0f);
+            Assert.That(ended.Mode.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(BattleRoyaleHudFormatter.RedeployLines(new BattleRoyaleStatus(ended, _player, null, null, false)), Is.Empty);
+        }
+
+        [Test]
+        public void TheRedeployTextsExistInEveryLanguage()
+        {
+            var en = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Localization/en/modes-survival");
+            var ja = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Localization/ja/modes-survival");
+            foreach (var key in new[] { "mode.br.redeployIn", "mode.br.redeploysLeft" })
+            {
+                Assert.That(en.text, Does.Contain("\"" + key + "\""), key);
+                Assert.That(ja.text, Does.Contain("\"" + key + "\""), key);
+            }
+        }
+
+        [Test]
         public void TheZoneLineShowsTheTimeUntilTheNextShrink()
         {
             var schedule = new ZoneSchedule(
@@ -275,9 +346,9 @@ namespace Shooter.Tests.EditMode
             return new ModeStatus(null, scores, new Side(0), null, isEnded, isEnded ? mode.Winner : null, detail);
         }
 
-        private static BattleRoyaleSession Create()
+        private static BattleRoyaleSession Create(RedeploySpec redeploy = null)
         {
-            var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, ActionRules.Default.WithDowned(Downed.Revive));
+            var br = new BattleRoyaleSession(4, 2, float.PositiveInfinity, ActionRules.Default.WithDowned(Downed.Revive), redeploy);
             br.Mode.AddPlayer(_player, new Side(0));
             br.Mode.AddPlayer(_squadmate, new Side(0));
             br.Mode.AddPlayer(_enemy, new Side(1));

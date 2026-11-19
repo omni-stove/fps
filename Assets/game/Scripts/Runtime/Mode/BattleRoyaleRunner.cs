@@ -96,6 +96,18 @@ namespace Shooter.Runtime
 
         public BattleRoyaleDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.BattleRoyale);
 
+        public static RedeploySpec RedeployTuning =>
+            KitTuning.Load(c => c.RedeployTuning, RedeployJson.ResourcePath, RedeployJson.Parse, RedeploySpec.Default);
+
+        public RedeploySpec EffectiveRedeploy
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return (definition != null ? definition.ReadRedeploy() : null) ?? RedeployTuning;
+            }
+        }
+
         public float EffectiveBotPlanIntervalSeconds
         {
             get
@@ -194,7 +206,9 @@ namespace Shooter.Runtime
         }
 
         // このモードはダウンが前提なので、actions のダウンが Off でも Revive にして使う。
-        public static BattleRoyaleSession CreateBattleRoyale(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions)
+        // redeploy が null なら戻らない試合にするのは、調整値の読み先を決めるのが Runner (EffectiveRedeploy) で、ここではないため。
+        public static BattleRoyaleSession CreateBattleRoyale(
+            int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions, RedeploySpec redeploy = null)
         {
             if (actions == null)
             {
@@ -208,15 +222,16 @@ namespace Shooter.Runtime
 
             var withDowned = actions.Downed == Downed.Revive ? actions : actions.WithDowned(Downed.Revive);
             var limit = timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
-            return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned);
+            return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned, redeploy);
         }
 
         public BattleRoyaleSession CreateConfiguredBattleRoyale(ActionRules actions)
         {
             var definition = EffectiveDefinition;
+            var redeploy = EffectiveRedeploy;
             return definition != null
-                ? definition.CreateBattleRoyale(actions)
-                : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions);
+                ? definition.CreateBattleRoyale(actions, redeploy)
+                : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions, redeploy);
         }
 
         public void Begin(
@@ -422,6 +437,7 @@ namespace Shooter.Runtime
 
             StartZone();
             StartSupplyDrops();
+            SyncZonePhase();
             _untilBotPlan = 0f;
 
             // Begin は OnBegan の前に HUD を書くので、エリアと武器なしの案内を出すためにもう一度書く。
@@ -441,6 +457,7 @@ namespace Shooter.Runtime
                 return;
             }
 
+            SyncZonePhase();
             var local = LocalPlayer;
             if (local != null && _interactAction != null && _interactAction.IsPressed())
             {
@@ -466,6 +483,12 @@ namespace Shooter.Runtime
                 _untilBotPlan = Mathf.Max(0.05f, EffectiveBotPlanIntervalSeconds);
                 PlanBots();
             }
+        }
+
+        // このモードで戻るのは倒されて戻る待ちを終えた人だけなので、戻った場所から上空へ出してパラシュートで降ろす。
+        protected override void OnSpawned(SideMember member)
+        {
+            DropByParachute(member);
         }
 
         protected override bool InterceptDeath(SideMember killer, SideMember victim)
@@ -582,6 +605,15 @@ namespace Shooter.Runtime
             if (zone.Begin())
             {
                 _runningZone = zone;
+            }
+        }
+
+        // エリアが無いシーンでは段階が進まないので、回数を使い切るまで戻れる。
+        private void SyncZonePhase()
+        {
+            if (_runningZone != null && _runningZone.IsRunning)
+            {
+                _battleRoyale.SetZonePhase(_runningZone.State.PhaseIndex);
             }
         }
 
@@ -832,6 +864,7 @@ namespace Shooter.Runtime
             _battleRoyale.PlayerBledOut += OnPlayerBledOut;
             _battleRoyale.PlayerFinished += OnPlayerFinished;
             _battleRoyale.SquadEliminated += OnSquadEliminated;
+            _battleRoyale.RedeployDecided += OnRedeployDecided;
             _battleRoyale.Ended += OnBattleRoyaleEnded;
             _subscribed = true;
         }
@@ -849,6 +882,7 @@ namespace Shooter.Runtime
             _battleRoyale.PlayerBledOut -= OnPlayerBledOut;
             _battleRoyale.PlayerFinished -= OnPlayerFinished;
             _battleRoyale.SquadEliminated -= OnSquadEliminated;
+            _battleRoyale.RedeployDecided -= OnRedeployDecided;
             _battleRoyale.Ended -= OnBattleRoyaleEnded;
             _subscribed = false;
         }
@@ -895,6 +929,20 @@ namespace Shooter.Runtime
 
             member.Damageable.SetDowned(false);
             DropBelongings(member);
+        }
+
+        // 戻る設定の無い試合では倒れるたびに Disabled を出しても役に立たないので出さない。
+        private void OnRedeployDecided(int playerId, RedeployVerdict verdict)
+        {
+            if (verdict == RedeployVerdict.Disabled)
+            {
+                return;
+            }
+
+            var seconds = verdict == RedeployVerdict.Waiting ? _battleRoyale.RedeployRules.DelaySeconds : (float?)null;
+            Debug.Log(
+                BattleRoyaleLog.Redeploy(playerId, verdict, _battleRoyale.ZonePhaseIndex, _battleRoyale.GetRedeploysLeft(playerId), seconds),
+                MemberOf(playerId));
         }
 
         private void OnSquadEliminated(Side squad, int place)

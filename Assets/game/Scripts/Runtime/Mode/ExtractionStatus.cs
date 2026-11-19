@@ -38,6 +38,43 @@ namespace Shooter.Runtime
             LostCount = Total(Lost);
         }
 
+        // 対戦では ExtractionSession をサーバーだけが持つので、スナップショットと持ち物庫の知らせから読んだ値で作る。
+        public ExtractionStatus(
+            ExtractionOutcome outcome,
+            float remainingSeconds,
+            float elapsedSeconds,
+            bool pointsOpen,
+            float secondsUntilOpen,
+            int openPointCount,
+            float? holdProgress,
+            float holdRemainingSeconds,
+            bool standingOnClosedPoint,
+            bool lootInReach,
+            string interactKeyLabel,
+            IReadOnlyList<ItemCount> carried,
+            IReadOnlyList<ItemCount> stored,
+            IReadOnlyList<ItemCount> lost)
+        {
+            Outcome = outcome;
+            RemainingSeconds = Math.Max(0f, remainingSeconds);
+            ElapsedSeconds = Math.Max(0f, elapsedSeconds);
+            PointsOpen = pointsOpen;
+            SecondsUntilOpen = pointsOpen ? 0f : Math.Max(0f, secondsUntilOpen);
+            OpenPointCount = Math.Max(0, openPointCount);
+            IsHolding = !IsOver && holdProgress.HasValue;
+            HoldProgress = IsHolding ? Math.Min(1f, Math.Max(0f, holdProgress.Value)) : 0f;
+            HoldRemainingSeconds = IsHolding ? Math.Max(0f, holdRemainingSeconds) : 0f;
+            StandingOnClosedPoint = !IsOver && !IsHolding && standingOnClosedPoint;
+            LootInReach = !IsOver && lootInReach;
+            InteractKeyLabel = interactKeyLabel;
+            Carried = Copy(carried ?? Array.Empty<ItemCount>());
+            Stored = Copy(stored ?? Array.Empty<ItemCount>());
+            Lost = Copy(lost ?? Array.Empty<ItemCount>());
+            CarriedCount = Total(Carried);
+            StoredCount = Total(Stored);
+            LostCount = Total(Lost);
+        }
+
         public ExtractionOutcome Outcome { get; }
 
         public bool IsOver => Outcome != ExtractionOutcome.Raiding;

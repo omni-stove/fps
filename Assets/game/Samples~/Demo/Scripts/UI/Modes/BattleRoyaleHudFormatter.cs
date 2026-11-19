@@ -55,19 +55,18 @@ namespace Shooter.Runtime
             return downed == 0 ? text : ModeHudText.WithDowned(text, downed);
         }
 
-        public static IReadOnlyList<ModeHudScoreLine> Squads(BattleRoyaleSession session, Side? ownSide)
+        public static IReadOnlyList<ModeHudScoreLine> Squads(IBattleRoyaleView session, Side? ownSide)
         {
             if (session == null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            var mode = session.Mode;
             var lines = new List<ModeHudScoreLine>();
-            foreach (var side in mode.Sides)
+            foreach (var side in session.Sides)
             {
                 var place = session.GetPlacement(side);
-                if (!place.HasValue && mode.CountMembers(side) == 0)
+                if (!place.HasValue && session.CountMembers(side) == 0)
                 {
                     continue;
                 }
@@ -90,24 +89,23 @@ namespace Shooter.Runtime
         }
 
         public static IReadOnlyList<LocalizedText> Lines(
-            BattleRoyaleSession session, int? localPlayerId, int? reviveTargetId, LocalizedText zoneLine, bool unarmed)
+            IBattleRoyaleView session, int? localPlayerId, int? reviveTargetId, LocalizedText zoneLine, bool unarmed)
         {
             if (session == null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            var mode = session.Mode;
             var lines = new List<LocalizedText>();
             if (session.EntrantCount > 0)
             {
                 lines.Add(SquadsLeft(session.SquadsRemaining, session.EntrantCount));
             }
 
-            var local = localPlayerId.HasValue && mode.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
+            var local = localPlayerId.HasValue && session.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
             if (local.HasValue && session.EntrantCount > 0)
             {
-                var squad = mode.GetSide(local.Value);
+                var squad = session.GetSide(local.Value);
                 var place = session.GetPlacement(squad);
                 if (place.HasValue || session.SquadsRemaining > 0)
                 {
@@ -120,12 +118,12 @@ namespace Shooter.Runtime
                 lines.Add(zoneLine);
             }
 
-            if (!local.HasValue || mode.State != GameModeState.Playing)
+            if (!local.HasValue || session.State != GameModeState.Playing)
             {
                 return lines;
             }
 
-            var ownSquad = mode.GetSide(local.Value);
+            var ownSquad = session.GetSide(local.Value);
             lines.Add(Squad(session.CountStanding(ownSquad), session.CountDowned(ownSquad)));
 
             if (session.IsDowned(local.Value))
@@ -135,7 +133,7 @@ namespace Shooter.Runtime
                 return lines;
             }
 
-            if (reviveTargetId.HasValue && mode.HasPlayer(reviveTargetId.Value) && session.IsDowned(reviveTargetId.Value))
+            if (reviveTargetId.HasValue && session.HasPlayer(reviveTargetId.Value) && session.IsDowned(reviveTargetId.Value))
             {
                 lines.Add(HudText.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(reviveTargetId.Value))));
             }
@@ -183,7 +181,7 @@ namespace Shooter.Runtime
             }
 
             var lines = new List<LocalizedText>();
-            if (detail.Session.Mode.State != GameModeState.Playing)
+            if (detail.Game.State != GameModeState.Playing)
             {
                 return lines;
             }
@@ -235,7 +233,7 @@ namespace Shooter.Runtime
             }
 
             var lines = new List<LocalizedText>();
-            if (detail.Session.Mode.State != GameModeState.Playing)
+            if (detail.Game.State != GameModeState.Playing)
             {
                 return lines;
             }
@@ -253,14 +251,14 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        public static LocalizedText Result(BattleRoyaleSession session)
+        public static LocalizedText Result(IBattleRoyaleView session)
         {
             if (session == null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            return ModeHudText.Result(session.Mode);
+            return ModeHudText.Result(session.State, session.Winner);
         }
 
         public LocalizedText Time(ModeStatus status)
@@ -270,15 +268,13 @@ namespace Shooter.Runtime
                 return ModeStatusFormat.Remaining(status);
             }
 
-            var mode = detail.Session.Mode;
-            return float.IsPositiveInfinity(mode.TimeLimitSeconds)
-                ? ModeStatusFormat.Clock(mode.ElapsedSeconds)
-                : ModeStatusFormat.Clock(mode.RemainingSeconds);
+            var game = detail.Game;
+            return game.HasTimeLimit ? ModeStatusFormat.Clock(game.RemainingSeconds) : ModeStatusFormat.Clock(game.ElapsedSeconds);
         }
 
         public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status)
         {
-            return status.Detail is BattleRoyaleStatus detail ? Squads(detail.Session, status.OwnSide) : ModeStatusFormat.Scores(status);
+            return status.Detail is BattleRoyaleStatus detail ? Squads(detail.Game, status.OwnSide) : ModeStatusFormat.Scores(status);
         }
 
         public void AppendLines(ModeStatus status, List<LocalizedText> lines)
@@ -287,7 +283,7 @@ namespace Shooter.Runtime
             {
                 lines.AddRange(RedeployLines(detail));
                 var zoneLine = detail.Zone.HasValue ? ZoneHudFormatter.Line(detail.Zone.Value) : default;
-                lines.AddRange(Lines(detail.Session, detail.LocalPlayerId, detail.ReviveTargetId, zoneLine, detail.IsLocalPlayerUnarmed));
+                lines.AddRange(Lines(detail.Game, detail.LocalPlayerId, detail.ReviveTargetId, zoneLine, detail.IsLocalPlayerUnarmed));
                 lines.AddRange(SupplyLines(detail));
             }
             else
@@ -298,7 +294,7 @@ namespace Shooter.Runtime
 
         public LocalizedText Result(ModeStatus status)
         {
-            return status.Detail is BattleRoyaleStatus detail ? Result(detail.Session) : ModeStatusFormat.Result(status);
+            return status.Detail is BattleRoyaleStatus detail ? Result(detail.Game) : ModeStatusFormat.Result(status);
         }
 
         // SubsystemRegistration は BeforeSceneLoad より先に走るので、ゲームが BeforeSceneLoad で登録した書式役がこれを置き換えられる

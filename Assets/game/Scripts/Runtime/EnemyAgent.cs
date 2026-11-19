@@ -668,6 +668,8 @@ namespace Shooter.Runtime
                 _self.Died -= OnDied;
                 _self.Damaged -= OnDamaged;
             }
+
+            GiveUpWheelOnDestroy();
         }
 
         private void Update()

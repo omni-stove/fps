@@ -29,6 +29,9 @@ namespace Shooter.Runtime
 
         public ILockOnTargets Targets { get; set; }
 
+        // 敵の捕捉 (LockOnTurret) が、この画面のプレイヤーの照準の捕捉表示を書き換えないよう切れるようにする。
+        public bool PublishesToHud { get; set; } = true;
+
         // Targets の Id は集め方ごとの番号で場の物を指さないので、狙われた側が自分かどうかを確かめるには Id を体に引き直す関数が要る。
         public Func<int, Damageable> TargetLookup { get; set; }
 
@@ -117,6 +120,11 @@ namespace Shooter.Runtime
         // 付けるのはこの画面のプレイヤーだけなので、出している HUD の値 (オフラインもネット対戦も GameSignals.HudModel) に書く。
         private void ShowOnHud()
         {
+            if (!PublishesToHud)
+            {
+                return;
+            }
+
             var model = GameSignals.HudModel.Value;
             if (model != null)
             {

@@ -9,6 +9,7 @@ using Unity.AI.Navigation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using WaterVolume = Shooter.Runtime.Traversal.Water;
 
 namespace Shooter.Tests.EditMode
 {
@@ -16,13 +17,18 @@ namespace Shooter.Tests.EditMode
     {
         private const float Epsilon = 1e-3f;
         private const string HeatGunId = "0f6a2c1e-7b3d-4e59-9a84-d2c5b1e3f760";
+        private const string GuidedId = "3c7d9e21-4b5a-4f6c-8d7e-9a0b1c2d3e4f";
+        private const float GuidedRange = 150f;
 
         private readonly List<UnityEngine.Object> _assets = new List<UnityEngine.Object>();
         private Scene _scene;
         private WeaponDefinition _rifle;
         private WeaponDefinition _heatGun;
+        private WeaponDefinition _guided;
         private GameRulesDefinition _rules;
         private AircraftDefinition _aircraft;
+        private HelicopterDefinition _helicopter;
+        private BoatDefinition _boat;
         private AudioClip _engine;
 
         [SetUp]
@@ -39,6 +45,18 @@ namespace Shooter.Tests.EditMode
                     trigger: new TriggerSpec(FireMode.Auto, 0.12f),
                     ammo: new AmmoSpec(1, 0, 0f, kind: AmmoKind.Heat, heat: new HeatSpec(0.1f, 0.4f, 0.3f, 1.5f)),
                     impact: new ImpactSpec(22)));
+            _guided = NewWeapon(
+                "Guided",
+                new WeaponSpec(
+                    GuidedId,
+                    "weapon.guided",
+                    WeaponCategory.Launcher,
+                    round: new RoundSpec(
+                        RoundDelivery.Projectile,
+                        GuidedRange,
+                        projectile: new ProjectileSpec(25f, 0f, 6f),
+                        homing: new HomingSpec(1f, 8f, 90f)),
+                    impact: new ImpactSpec(120)));
             _rules = ScriptableObject.CreateInstance<GameRulesDefinition>();
             _rules.name = "Rules";
             _assets.Add(_rules);
@@ -47,6 +65,14 @@ namespace Shooter.Tests.EditMode
             _aircraft.name = "Aircraft";
             _assets.Add(_aircraft);
             AircraftFixtureBuilder.Configure(_aircraft);
+            _helicopter = ScriptableObject.CreateInstance<HelicopterDefinition>();
+            _helicopter.name = "Helicopter";
+            _assets.Add(_helicopter);
+            VehicleFixtureBuilder.ConfigureHelicopter(_helicopter);
+            _boat = ScriptableObject.CreateInstance<BoatDefinition>();
+            _boat.name = "Boat";
+            _assets.Add(_boat);
+            VehicleFixtureBuilder.ConfigureBoat(_boat);
             _engine = AudioClip.Create("Engine", 4410, 1, 44100, false);
             _assets.Add(_engine);
         }
@@ -125,7 +151,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheGunCarWaitsBesideThePlayerWithItsDriverSeatClosest()
         {
-            var bootstrap = VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            var bootstrap = CreateActors();
 
             Assert.That(bootstrap.name, Is.EqualTo(VehicleRangeSceneBuilder.BootstrapObjectName));
             Assert.That(bootstrap.CreatesFloor, Is.False);
@@ -156,7 +182,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheRoofGunCanReachATargetWhereverTheCarStops()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
 
             var targets = Find(VehicleRangeSceneBuilder.TargetsName).GetComponentsInChildren<TargetDummy>();
             Assert.That(targets.Select(t => t.Damageable.Id), Is.EqualTo(new[] { "VehicleTarget0", "VehicleTarget1", "VehicleTarget2" }));
@@ -176,7 +202,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheMountedGunFacesTheCarItDestroysFromOutsideTheBlast()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
 
             var mounted = Find(VehicleRangeSceneBuilder.MountedGunName).GetComponent<MountedGun>();
             Assert.That(mounted.IsReady, Is.True);
@@ -200,7 +226,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheAircraftWaitsAtTheStartOfAClearRunway()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
             Physics.SyncTransforms();
 
             var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
@@ -252,7 +278,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheEnemyStandsBeyondEarshotOfWhatTheSmokeFires()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
 
             var enemy = Find(VehicleRangeSceneBuilder.EnemiesName).GetComponentInChildren<EnemyAgent>();
             Assert.That(enemy.Id, Is.EqualTo(VehicleRangeSceneBuilder.EnemyId));
@@ -272,12 +298,16 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ActorsNeedWeaponsAndRules()
+        public void ActorsNeedWeaponsRulesAndEveryVehicleAsset()
         {
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules, _aircraft));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, null, _rules, _aircraft));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, null, _aircraft));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, null));
+            var rifle = new[] { _rifle };
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules, _aircraft, _helicopter, _boat, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, null, _rules, _aircraft, _helicopter, _boat, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, null, _aircraft, _helicopter, _boat, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, null, _helicopter, _boat, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, null, _boat, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, null, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, _boat, null));
             Assert.That(_scene.rootCount, Is.Zero, "nothing is placed when an argument is missing");
         }
 
@@ -286,16 +316,278 @@ namespace Shooter.Tests.EditMode
         {
             _aircraft.MaxThrust = -1f;
 
-            var error = Assert.Throws<ArgumentException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft));
+            var error = Assert.Throws<ArgumentException>(() => CreateActors());
 
             Assert.That(error.Message, Does.Contain("'Aircraft'"));
             Assert.That(_scene.rootCount, Is.Zero);
         }
 
         [Test]
+        public void InvalidHelicopterOrBoatAssetsPlaceNothingAndNameTheAsset()
+        {
+            _helicopter.MaxSpeed = -1f;
+            var helicopterError = Assert.Throws<ArgumentException>(() => CreateActors());
+            Assert.That(helicopterError.Message, Does.Contain("'Helicopter'"));
+            Assert.That(_scene.rootCount, Is.Zero);
+
+            VehicleFixtureBuilder.ConfigureHelicopter(_helicopter);
+            _boat.Draft = _boat.HullHeight + 1f;
+            var boatError = Assert.Throws<ArgumentException>(() => CreateActors());
+            Assert.That(boatError.Message, Does.Contain("'Boat'"));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void AWeaponWithoutHomingCannotArmTheTurret()
+        {
+            var error = Assert.Throws<ArgumentException>(
+                () => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _rifle));
+
+            Assert.That(error.ParamName, Is.EqualTo("lockOnWeapon"));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void TheTurretWeaponIsPickedByItsHomingRoundNotItsName()
+        {
+            Assert.That(VehicleRangeSceneBuilder.PickLockOnWeapon(new[] { _rifle, null, _heatGun, _guided }), Is.SameAs(_guided));
+            Assert.That(VehicleRangeSceneBuilder.PickLockOnWeapon(new[] { _rifle, _heatGun }), Is.Null);
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.PickLockOnWeapon(null));
+        }
+
+        [Test]
+        public void TheGroundReachesFarPastTheFloorWithoutCoveringIt()
+        {
+            VehicleRangeSceneBuilder.CreateLevel(_scene);
+            VehicleRangeSceneBuilder.CreateSurroundings(_scene);
+            Physics.SyncTransforms();
+
+            var outer = Find(VehicleRangeSceneBuilder.OuterGroundName);
+            Assert.That(outer.transform.position.y, Is.EqualTo(-VehicleRangeSceneBuilder.OuterGroundDrop).Within(Epsilon));
+            Assert.That(VehicleRangeSceneBuilder.OuterGroundHalfExtent, Is.EqualTo(2000f).Within(Epsilon));
+            Assert.That(outer.isStatic, Is.True);
+
+            Assert.That(Physics.Raycast(new Vector3(0f, 10f, 10f), Vector3.down, out var onFloor, 20f), Is.True);
+            Assert.That(onFloor.collider.name, Is.EqualTo(VehicleRangeSceneBuilder.FloorName), "the floor stays on top where the two overlap");
+
+            // 飛行機は滑走路の先の北へ 1km 近く飛んでから脱出するので、その下にも地面がある。
+            Assert.That(Physics.Raycast(new Vector3(VehicleRangeSceneBuilder.AircraftOrigin.x, 50f, 1500f), Vector3.down, out var outside, 100f), Is.True);
+            Assert.That(outside.collider.name, Is.EqualTo(VehicleRangeSceneBuilder.OuterGroundName));
+        }
+
+        [Test]
+        public void ThePoolIsWaterWithASurfaceMarkThatDoesNotStopAnyone()
+        {
+            VehicleRangeSceneBuilder.CreateSurroundings(_scene);
+
+            var pool = Find(VehicleRangeSceneBuilder.PoolName).transform;
+            Assert.That(pool.position, Is.EqualTo(VehicleRangeSceneBuilder.PoolGround));
+
+            var water = pool.Find(VehicleRangeSceneBuilder.WaterName).GetComponent<WaterVolume>();
+            Assert.That(water, Is.Not.Null);
+            Assert.That(water.Size, Is.EqualTo(VehicleRangeSceneBuilder.PoolSize));
+            Assert.That(water.SurfaceHeight, Is.EqualTo(VehicleRangeSceneBuilder.PoolSurfaceHeight));
+            Assert.That(water.Box.SurfaceY, Is.EqualTo(VehicleRangeSceneBuilder.PoolSurfaceHeight).Within(Epsilon));
+
+            var surface = pool.Find(VehicleRangeSceneBuilder.WaterSurfaceName);
+            Assert.That(surface.GetComponentsInChildren<Collider>(), Is.Empty);
+            Assert.That(surface.position.y, Is.LessThan(VehicleRangeSceneBuilder.PoolSurfaceHeight));
+
+            var half = VehicleRangeSceneBuilder.PoolSize / 2f;
+            Assert.That(Mathf.Abs(VehicleRangeSceneBuilder.PoolGround.x) + half.x, Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent));
+            Assert.That(Mathf.Abs(VehicleRangeSceneBuilder.PoolGround.z) + half.z, Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent));
+            foreach (var target in VehicleRangeSceneBuilder.TargetGrounds)
+            {
+                Assert.That(Mathf.Abs(target.z - VehicleRangeSceneBuilder.PoolGround.z), Is.GreaterThan(half.z), "the pool stays south of the targets");
+            }
+
+            Assert.That(VehicleRangeSceneBuilder.PoolGround.z + half.z, Is.LessThan(VehicleRangeSceneBuilder.GunCarOrigin.z - VehicleRangeSceneBuilder.CourseWidth));
+        }
+
+        [Test]
+        public void TheHelicopterFliesOnItsAssetAndBoardsFromTheSide()
+        {
+            CreateActors();
+            Physics.SyncTransforms();
+
+            var helicopter = Find(VehicleRangeSceneBuilder.HelicopterName).GetComponent<Vehicle>();
+            Assert.That(helicopter.VehicleId, Is.EqualTo(VehicleFixtureBuilder.HelicopterVehicleId));
+            Assert.That(helicopter.transform.position, Is.EqualTo(VehicleRangeSceneBuilder.HelicopterOrigin));
+            Assert.That(helicopter.Seats.Select(s => s.Role), Is.EqualTo(new[] { VehicleSeatRole.Driver, VehicleSeatRole.Passenger }));
+            Assert.That(helicopter.Spec.ChaseDistance, Is.EqualTo(VehicleFixtureBuilder.HelicopterChaseDistance));
+
+            var motor = helicopter.GetComponent<SimpleHelicopterMotor>();
+            Assert.That(motor, Is.Not.Null);
+            Assert.That(motor.Definition, Is.SameAs(_helicopter));
+            Assert.That(motor.Body.mass, Is.EqualTo(_helicopter.Mass));
+            Assert.That(VehicleControlSchemes.For(helicopter.gameObject), Is.InstanceOf<HelicopterControlScheme>());
+            Assert.That(helicopter.GetComponent<VehicleMotorLink>(), Is.Not.Null);
+
+            var rotor = helicopter.transform.Find(VehicleFixtureBuilder.HelicopterRotorName);
+            Assert.That(rotor.GetComponentsInChildren<Collider>(), Is.Empty, "the rotor does not knock the helicopter about");
+
+            var lowest = helicopter.GetComponentsInChildren<Collider>().Min(c => c.bounds.min.y);
+            Assert.That(lowest, Is.EqualTo(VehicleRangeSceneBuilder.HelicopterOrigin.y).Within(Epsilon), "the skids stand on the floor");
+
+            Assert.That(helicopter.FindBoardableSeat(helicopter.Seats[0].EnterPoints[0].position, out var distance), Is.EqualTo(0));
+            Assert.That(distance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+
+            // smoke は機首の向きへ 10m 進めるので、その先も床の上で、Bot の車の道からも離れている。
+            var ahead = VehicleRangeSceneBuilder.HelicopterOrigin
+                + (VehicleRangeSceneBuilder.HelicopterRotation * Vector3.forward * (VehicleSmokeRun.HelicopterAdvanceDistance + VehicleFixtureBuilder.RotorSpan));
+            Assert.That(Mathf.Abs(ahead.x), Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent));
+            foreach (var point in VehicleRangeSceneBuilder.BotCarRoutePoints)
+            {
+                Assert.That(Mathf.Abs(point.z - VehicleRangeSceneBuilder.HelicopterOrigin.z), Is.GreaterThan(VehicleFixtureBuilder.RotorSpan * 2f));
+            }
+        }
+
+        [Test]
+        public void TheBoatRestsAfloatInThePoolWithRoomToSailAhead()
+        {
+            CreateActors();
+            Physics.SyncTransforms();
+
+            var boat = Find(VehicleRangeSceneBuilder.BoatName).GetComponent<Vehicle>();
+            var hull = _boat.ToSpec();
+            Assert.That(boat.VehicleId, Is.EqualTo(VehicleFixtureBuilder.BoatVehicleId));
+            Assert.That(boat.Seats.Select(s => s.Role), Is.EqualTo(new[] { VehicleSeatRole.Driver, VehicleSeatRole.Passenger }));
+            Assert.That(boat.transform.position.y, Is.EqualTo(VehicleRangeSceneBuilder.PoolSurfaceHeight + 0.2f).Within(Epsilon), "the default hull sits 0.3m deep");
+            Assert.That(VehicleRangeSceneBuilder.BoatOrigin(hull), Is.EqualTo(boat.transform.position));
+
+            var motor = boat.GetComponent<SimpleBoatMotor>();
+            Assert.That(motor.Definition, Is.SameAs(_boat));
+            Assert.That(motor.Body.mass, Is.EqualTo(_boat.Mass));
+            Assert.That(boat.GetComponent<VehicleMotorLink>(), Is.Not.Null);
+
+            var box = boat.transform.Find(VehicleFixtureBuilder.HullName).GetComponent<BoxCollider>().bounds;
+            Assert.That(box.size.x, Is.EqualTo(hull.Width).Within(Epsilon));
+            Assert.That(box.size.z, Is.EqualTo(hull.Length).Within(Epsilon));
+            Assert.That(box.min.y, Is.EqualTo(boat.transform.position.y + hull.HullBottom).Within(Epsilon), "the hull box bottoms out where the buoyancy is measured");
+            Assert.That(box.min.y, Is.GreaterThan(VehicleRangeSceneBuilder.PoolGround.y), "the hull floats clear of the floor");
+
+            var half = VehicleRangeSceneBuilder.PoolSize / 2f;
+            var start = boat.transform.position;
+            var end = start + (VehicleRangeSceneBuilder.BoatRotation * Vector3.forward * (VehicleSmokeRun.SailDistance + hull.Length));
+            foreach (var point in new[] { start, end })
+            {
+                Assert.That(Mathf.Abs(point.x - VehicleRangeSceneBuilder.PoolGround.x), Is.LessThan(half.x - hull.Width), point.ToString());
+                Assert.That(Mathf.Abs(point.z - VehicleRangeSceneBuilder.PoolGround.z), Is.LessThan(half.z - (hull.Length / 2f)), point.ToString());
+            }
+
+            Assert.That(boat.FindBoardableSeat(boat.Seats[0].EnterPoints[0].position, out var distance), Is.EqualTo(0));
+            Assert.That(distance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+        }
+
+        [Test]
+        public void TheBotCarLoopsTheWestStripApartFromTheCarTheSmokeDestroys()
+        {
+            CreateActors();
+
+            var botCar = Find(VehicleRangeSceneBuilder.BotCarName).GetComponent<Vehicle>();
+            var target = Find(VehicleRangeSceneBuilder.CarName).GetComponent<Vehicle>();
+            Assert.That(botCar.VehicleId, Is.EqualTo(VehicleRangeSceneBuilder.BotCarVehicleId));
+            Assert.That(target.VehicleId, Is.EqualTo(CarFixtureBuilder.VehicleId), "the smoke still finds the car it destroys by its id");
+            Assert.That(botCar.OccupantOf(botCar.Spec.DriverSeatIndex), Is.Null, "the stand-in driver sits down only in play");
+
+            var driver = botCar.GetComponent<BotVehicleDriver>();
+            Assert.That(driver, Is.Not.Null);
+            Assert.That(driver.DrivesUnmanned, Is.True);
+            Assert.That(driver.Route, Is.SameAs(Find(VehicleRangeSceneBuilder.BotCarRouteName).GetComponent<VehicleRoute>()));
+            Assert.That(driver.Route.Loop, Is.True);
+            Assert.That(driver.Route.Points.Select(p => p.position), Is.EqualTo(VehicleRangeSceneBuilder.BotCarRoutePoints));
+
+            var runwayEdge = VehicleRangeSceneBuilder.AircraftOrigin.x - (AircraftFixtureBuilder.WingSpan / 2f);
+            foreach (var point in VehicleRangeSceneBuilder.BotCarRoutePoints)
+            {
+                Assert.That(point.x + CarFixtureBuilder.BodySize.x, Is.LessThan(runwayEdge - 5f), $"{point} keeps off the runway");
+                Assert.That(Mathf.Abs(point.x), Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent - 5f));
+                Assert.That(Mathf.Abs(point.z), Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent - 5f));
+                Assert.That(
+                    Vector3.Distance(point, VehicleRangeSceneBuilder.CarOrigin),
+                    Is.GreaterThan(VehicleDurabilitySpec.DefaultExplosionRadius + 2f),
+                    "the destroyed car's blast does not reach the loop");
+            }
+
+            var toFirst = VehicleRangeSceneBuilder.BotCarRoutePoints[0] - VehicleRangeSceneBuilder.BotCarOrigin;
+            Assert.That(Vector3.Angle(botCar.transform.forward, toFirst), Is.LessThan(1f), "the car starts facing its first point");
+        }
+
+        [Test]
+        public void TheBotAircraftTakesOffOutsideTheFloorAndCirclesAboveTheTurret()
+        {
+            CreateActors();
+
+            var plane = Find(VehicleRangeSceneBuilder.BotAircraftName).GetComponent<Vehicle>();
+            Assert.That(plane.VehicleId, Is.EqualTo(VehicleRangeSceneBuilder.BotAircraftVehicleId));
+            Assert.That(plane.GetComponent<VehicleCountermeasures>(), Is.Null, "only the player's aircraft carries flares");
+
+            var pilot = plane.GetComponent<BotAircraftPilot>();
+            Assert.That(pilot, Is.Not.Null);
+            Assert.That(pilot.FollowWaypointHeight, Is.True);
+            Assert.That(pilot.Waypoints.Select(w => w.position), Is.EqualTo(VehicleRangeSceneBuilder.BotAircraftWaypoints));
+            Assert.That(pilot.Waypoints.Select(w => w.parent.name), Has.All.EqualTo(VehicleRangeSceneBuilder.BotAircraftWaypointsName));
+
+            Assert.That(Mathf.Abs(VehicleRangeSceneBuilder.BotAircraftOrigin.x), Is.GreaterThan(VehicleRangeSceneBuilder.FloorHalfExtent + AircraftFixtureBuilder.WingSpan));
+            Assert.That(VehicleRangeSceneBuilder.BotAircraftAltitude, Is.GreaterThan(GuidedRange), "the turret never reaches the bot");
+            var waypoints = VehicleRangeSceneBuilder.BotAircraftWaypoints;
+            for (var i = 0; i < waypoints.Length; i++)
+            {
+                var next = waypoints[(i + 1) % waypoints.Length];
+                Assert.That(Vector3.Distance(waypoints[i], next), Is.GreaterThanOrEqualTo(600f), "points are further apart than the turning circle");
+                Assert.That(Mathf.Abs(waypoints[i].x), Is.LessThan(VehicleRangeSceneBuilder.OuterGroundHalfExtent));
+                Assert.That(Mathf.Abs(waypoints[i].z), Is.LessThan(VehicleRangeSceneBuilder.OuterGroundHalfExtent));
+            }
+
+            var toFirst = Vector3.ProjectOnPlane(waypoints[0] - VehicleRangeSceneBuilder.BotAircraftOrigin, Vector3.up);
+            Assert.That(Vector3.Angle(plane.transform.forward, toFirst), Is.LessThan(10f), "the take-off run points at the first waypoint");
+        }
+
+        [Test]
+        public void TheAircraftCarriesFlaresAndBailsOutInTheAir()
+        {
+            CreateActors();
+
+            var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
+            Assert.That(aircraft.VehicleId, Is.EqualTo(AircraftFixtureBuilder.VehicleId));
+            Assert.That(aircraft.Spec.BailOut.Enabled, Is.True);
+            Assert.That(aircraft.Spec.BailOut.MinHeight, Is.EqualTo(BailOutSpec.DefaultMinHeight));
+            Assert.That(aircraft.Spec.Parts.Select(p => p.Id), Is.EquivalentTo(AircraftDamageSpec.Default.Parts.Select(p => p.Id)), "re-specifying keeps the parts");
+
+            var flares = aircraft.GetComponent<VehicleCountermeasures>();
+            Assert.That(flares, Is.Not.Null);
+            Assert.That(flares.Settings.Count, Is.EqualTo(CountermeasureSpec.DefaultCount));
+            Assert.That(flares.Settings.EjectLocalOffset, Is.EqualTo(VehicleFixtureBuilder.AircraftFlareEjectLocal));
+            Assert.That(flares.Settings.FlarePrefab, Is.Null, "an empty slot falls back to the glowing ball");
+            Assert.That(flares.Remaining, Is.EqualTo(CountermeasureSpec.DefaultCount));
+        }
+
+        [Test]
+        public void TheLockOnTurretUsesTheHomingWeaponAndCoversTheClimbOut()
+        {
+            CreateActors();
+
+            var turret = Find(VehicleRangeSceneBuilder.LockOnTurretName).GetComponent<LockOnTurret>();
+            Assert.That(turret, Is.Not.Null);
+            Assert.That(turret.Weapon, Is.SameAs(_guided));
+            Assert.That(turret.Head.name, Is.EqualTo(VehicleRangeSceneBuilder.LockOnTurretHeadName));
+            Assert.That(turret.Head.GetComponentsInChildren<Collider>(), Is.Empty, "the head does not block its own line of sight");
+            Assert.That(turret.Spec.MinTargetHeight, Is.EqualTo(LockOnTurretSpec.DefaultMinTargetHeight));
+            Assert.That(Find(VehicleRangeSceneBuilder.LockOnWarningName).GetComponent<LockOnWarningPublisher>(), Is.Not.Null);
+
+            // 離陸して 15m まで上がったころの飛行機が射程に入る。
+            var climbing = new Vector3(VehicleRangeSceneBuilder.AircraftOrigin.x, 15f, 60f);
+            Assert.That(Vector3.Distance(turret.Head.position, climbing), Is.LessThan(GuidedRange));
+            Assert.That(
+                Vector3.Distance(VehicleRangeSceneBuilder.LockOnTurretOrigin, VehicleRangeSceneBuilder.HelicopterOrigin),
+                Is.GreaterThan(VehicleSpec.DefaultEnterRange * 4f),
+                "the turret does not crowd the helicopter pad");
+        }
+
+        [Test]
         public void TheAircraftCarriesItsAssetWheelsPartsEffectsAndStatus()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _engine);
+            CreateActors(_engine);
 
             var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
             var motor = aircraft.GetComponent<SimpleAircraftMotor>();
@@ -356,7 +648,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ShootingTheLeftWingThroughItsHitboxBreaksItsLift()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
 
             var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
             var damage = aircraft.GetComponent<AircraftPartDamage>();
@@ -379,7 +671,7 @@ namespace Shooter.Tests.EditMode
                 new AircraftDamagePartSpec("right", AircraftDamageEffect.RightLift, 100),
             }));
 
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+            CreateActors();
 
             var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
             Assert.That(aircraft.GetComponentsInChildren<VehiclePart>().Select(p => p.PartId), Is.EquivalentTo(new[] { "left", "right" }));
@@ -392,6 +684,11 @@ namespace Shooter.Tests.EditMode
             var origin = new Vector3(x, 20f, VehicleRangeSceneBuilder.GunCarOrigin.z);
             Assert.That(Physics.Raycast(origin, Vector3.down, out var hit, 40f), Is.True, $"nothing under x={x}");
             return hit.point.y;
+        }
+
+        private GameBootstrap CreateActors(AudioClip engine = null)
+        {
+            return VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _guided, engine);
         }
 
         private WeaponDefinition NewWeapon(string name, WeaponSpec spec)

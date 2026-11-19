@@ -14,6 +14,7 @@ namespace Shooter.Runtime
         private SquadOrderSpec _orderSpec = SquadOrderSpec.Default;
         private bool _orderArrived;
         private BotInputSpec _orderInput = BotInputSpec.Default;
+        private VehicleRoute _orderRoute;
 
         public BotErrand Order => _order;
 
@@ -22,6 +23,22 @@ namespace Shooter.Runtime
         public SideMember OrderLeader => _orderLeader;
 
         public bool HasArrivedForOrder => _orderArrived;
+
+        public VehicleRoute OrderedRoute => _orderRoute;
+
+        // 守る・狙う・付いて行く指示と別に持つのは、歩いて動く指示を消さずに、運転席に座ったときに走る道だけを決められるようにするため。
+        // null を渡すと、乗り物に付いた VehicleRoute へ戻る。
+        public void OrderRoute(VehicleRoute route)
+        {
+            if (ReferenceEquals(route, _orderRoute))
+            {
+                return;
+            }
+
+            _orderRoute = route;
+            Debug.Log(VehicleLog.BotRouteOrdered(Id, route != null ? route.name : null), this);
+            RefreshWheelRoute();
+        }
 
         public bool OrderHold(Vector3 place, SideMember leader, SquadOrderSpec spec)
         {

@@ -81,6 +81,11 @@ namespace Shooter.Server
                 var data = _data.WithRules(rules);
                 var objective = _createObjective(rules.Objective, data.Settings, this)
                     ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
+                if (objective is GunGameRules)
+                {
+                    FillGunGameWeapons(data, new Dictionary<string, WeaponSpec>(StringComparer.Ordinal));
+                }
+
                 foreach (var map in MapsToCheck())
                 {
                     var points = PointsOf(map);

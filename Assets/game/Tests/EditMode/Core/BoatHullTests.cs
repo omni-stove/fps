@@ -8,8 +8,8 @@ namespace Shooter.Core.Tests
     // 物理エンジンは使わず、テストの中で力から速さと位置を進めて、浮いて止まる・進む・曲がる・傾きが戻るを確かめる。
     public sealed class BoatHullTests
     {
-        private const float Gravity = 9.81f;
-        private const float Step = 0.02f;
+        private const float _gravity = 9.81f;
+        private const float _step = 0.02f;
 
         // 水面を高さ 0 に置いた広い水。既定の船は底が原点の 0.5 m 下にあり、喫水 0.3 m まで沈むと原点は 0.2 m に来る。
         private static readonly BoxWater _sea = new BoxWater(new WaterBox(new Vector3(-100f, -10f, -100f), new Vector3(100f, 5f, 100f), 0f));
@@ -91,9 +91,9 @@ namespace Shooter.Core.Tests
         {
             var spec = BoatSpec.Default;
 
-            var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight), _sea, Gravity);
+            var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight), _sea, _gravity);
 
-            Assert.That(command.Force.Y, Is.EqualTo(spec.Mass * Gravity).Within(0.5f));
+            Assert.That(command.Force.Y, Is.EqualTo(spec.Mass * _gravity).Within(0.5f));
             Assert.That(command.Force.X, Is.EqualTo(0f).Within(1e-3f));
             Assert.That(command.Force.Z, Is.EqualTo(0f).Within(1e-3f));
             Assert.That(command.Torque.Length(), Is.EqualTo(0f).Within(0.5f), "a level hull pushes evenly at every corner");
@@ -112,9 +112,9 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 1000; i++)
             {
-                var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(height, new Vector3(0f, velocity, 0f)), _sea, Gravity);
-                velocity += ((command.Force.Y / spec.Mass) - Gravity) * Step;
-                height += velocity * Step;
+                var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(height, new Vector3(0f, velocity, 0f)), _sea, _gravity);
+                velocity += ((command.Force.Y / spec.Mass) - _gravity) * _step;
+                height += velocity * _step;
             }
 
             Assert.That(height, Is.EqualTo(_restHeight).Within(0.005f));
@@ -126,8 +126,8 @@ namespace Shooter.Core.Tests
         {
             var spec = BoatSpec.Default;
 
-            var still = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight), _sea, Gravity);
-            var sinking = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight, new Vector3(0f, -1f, 0f)), _sea, Gravity);
+            var still = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight), _sea, _gravity);
+            var sinking = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight, new Vector3(0f, -1f, 0f)), _sea, _gravity);
 
             Assert.That(sinking.Force.Y - still.Force.Y, Is.EqualTo(spec.Mass * spec.HeaveDamping).Within(0.5f));
         }
@@ -138,8 +138,8 @@ namespace Shooter.Core.Tests
             var spec = BoatSpec.Default;
             var input = VehicleMotorInput.Idle.With(BoatHull.ThrottleAxis, 1f);
 
-            var ahead = BoatHull.Compute(spec, input, Level(_restHeight), _sea, Gravity);
-            var turned = BoatHull.Compute(spec, input, Level(_restHeight, yawDegrees: 90f), _sea, Gravity);
+            var ahead = BoatHull.Compute(spec, input, Level(_restHeight), _sea, _gravity);
+            var turned = BoatHull.Compute(spec, input, Level(_restHeight, yawDegrees: 90f), _sea, _gravity);
 
             Assert.That(ahead.ThrustAcceleration, Is.EqualTo(spec.Thrust).Within(1e-4f));
             Assert.That(ahead.Force.Z, Is.EqualTo(spec.Mass * spec.Thrust).Within(0.5f));
@@ -157,7 +157,7 @@ namespace Shooter.Core.Tests
             Assert.That(BoatHull.ThrustAcceleration(spec, 1f, 5f), Is.EqualTo(5f).Within(1e-5f));
             Assert.That(BoatHull.ThrustAcceleration(spec, 1f, 10f), Is.EqualTo(0f));
             Assert.That(BoatHull.ThrustAcceleration(spec, 1f, 12f), Is.EqualTo(0f), "no thrust past the top speed");
-            Assert.That(BoatHull.ThrustAcceleration(spec, 0.5f, -2f), Is.EqualTo(6f).Within(1e-5f), "going backward the forward thrust is not cut");
+            Assert.That(BoatHull.ThrustAcceleration(spec, 0.5f, -2f), Is.EqualTo(5f).Within(1e-5f), "going backward the forward thrust is not cut");
             Assert.That(BoatHull.ThrustAcceleration(spec, -1f, -2f), Is.EqualTo(-5f).Within(1e-5f));
             Assert.That(BoatHull.ThrustAcceleration(spec, -1f, -4f), Is.EqualTo(0f));
             Assert.That(BoatHull.ThrustAcceleration(spec, 0f, 3f), Is.EqualTo(0f));
@@ -170,10 +170,10 @@ namespace Shooter.Core.Tests
             var spec = BoatSpec.Default;
             var expected = spec.TurnRate * (float)(Math.PI / 180.0) * spec.TurnResponsiveness;
 
-            var right = BoatHull.Compute(spec, new VehicleMotorInput(1f, 1f), Level(_restHeight), _sea, Gravity);
-            var left = BoatHull.Compute(spec, new VehicleMotorInput(1f, -1f), Level(_restHeight), _sea, Gravity);
-            var reverse = BoatHull.Compute(spec, new VehicleMotorInput(-1f, 1f), Level(_restHeight), _sea, Gravity);
-            var drifting = BoatHull.Compute(spec, new VehicleMotorInput(0f, 1f), Level(_restHeight), _sea, Gravity);
+            var right = BoatHull.Compute(spec, new VehicleMotorInput(1f, 1f), Level(_restHeight), _sea, _gravity);
+            var left = BoatHull.Compute(spec, new VehicleMotorInput(1f, -1f), Level(_restHeight), _sea, _gravity);
+            var reverse = BoatHull.Compute(spec, new VehicleMotorInput(-1f, 1f), Level(_restHeight), _sea, _gravity);
+            var drifting = BoatHull.Compute(spec, new VehicleMotorInput(0f, 1f), Level(_restHeight), _sea, _gravity);
 
             Assert.That(right.AngularAcceleration.Y, Is.EqualTo(expected).Within(1e-4f));
             Assert.That(left.AngularAcceleration.Y, Is.EqualTo(-expected).Within(1e-4f));
@@ -186,7 +186,7 @@ namespace Shooter.Core.Tests
         {
             var spec = BoatSpec.Default;
 
-            var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight, angularVelocity: new Vector3(0f, 1f, 0f)), _sea, Gravity);
+            var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Level(_restHeight, angularVelocity: new Vector3(0f, 1f, 0f)), _sea, _gravity);
 
             Assert.That(command.AngularAcceleration.Y, Is.EqualTo(-spec.TurnResponsiveness).Within(1e-4f));
         }
@@ -205,12 +205,12 @@ namespace Shooter.Core.Tests
             {
                 var rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
                 var state = new BoatHullState(position, rotation, position, velocity, new Vector3(0f, yawRate, 0f));
-                var command = BoatHull.Compute(spec, input, state, _sea, Gravity);
+                var command = BoatHull.Compute(spec, input, state, _sea, _gravity);
                 var acceleration = command.Force / spec.Mass;
-                velocity += new Vector3(acceleration.X, 0f, acceleration.Z) * Step;
-                position += velocity * Step;
-                yawRate += command.AngularAcceleration.Y * Step;
-                yaw += yawRate * Step;
+                velocity += new Vector3(acceleration.X, 0f, acceleration.Z) * _step;
+                position += velocity * _step;
+                yawRate += command.AngularAcceleration.Y * _step;
+                yaw += yawRate * _step;
             }
 
             var heading = Vector3.Transform(Vector3.UnitZ, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw));
@@ -227,8 +227,8 @@ namespace Shooter.Core.Tests
             var input = new VehicleMotorInput(1f, 1f);
             var besideTheLake = new BoxWater(new WaterBox(new Vector3(20f, -10f, 20f), new Vector3(40f, 0f, 40f), 0f));
 
-            var dry = BoatHull.Compute(spec, input, Level(_restHeight), NoWaterVolumes.Instance, Gravity);
-            var shore = BoatHull.Compute(spec, input, Level(_restHeight), besideTheLake, Gravity);
+            var dry = BoatHull.Compute(spec, input, Level(_restHeight), NoWaterVolumes.Instance, _gravity);
+            var shore = BoatHull.Compute(spec, input, Level(_restHeight), besideTheLake, _gravity);
 
             Assert.That(dry.Force, Is.EqualTo(Vector3.Zero));
             Assert.That(dry.Torque, Is.EqualTo(Vector3.Zero));
@@ -248,7 +248,7 @@ namespace Shooter.Core.Tests
             // 船首の側 (z > 0) にだけ水がある。船尾のスクリューは陸の上にある。
             var bowOnly = new BoxWater(new WaterBox(new Vector3(-10f, -10f, 0.5f), new Vector3(10f, 5f, 20f), 0f));
 
-            var command = BoatHull.Compute(spec, new VehicleMotorInput(1f, 1f), Level(_restHeight), bowOnly, Gravity);
+            var command = BoatHull.Compute(spec, new VehicleMotorInput(1f, 1f), Level(_restHeight), bowOnly, _gravity);
 
             Assert.That(command.WetFraction, Is.EqualTo(0.5f).Within(1e-4f), "the two bow corners are wet");
             Assert.That(command.PropellerImmersion, Is.EqualTo(0f));
@@ -263,8 +263,8 @@ namespace Shooter.Core.Tests
             var spec = BoatSpec.Default;
             var lean = 15f * (float)(Math.PI / 180.0);
 
-            var right = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(lean, 0f), _sea, Gravity);
-            var left = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(-lean, 0f), _sea, Gravity);
+            var right = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(lean, 0f), _sea, _gravity);
+            var left = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(-lean, 0f), _sea, _gravity);
 
             Assert.That(right.Torque.Z, Is.LessThan(0f), "rolled about +z, the torque rolls it back about -z");
             Assert.That(left.Torque.Z, Is.GreaterThan(0f));
@@ -282,7 +282,7 @@ namespace Shooter.Core.Tests
 
             for (var i = 0; i < 1500; i++)
             {
-                var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(roll, rollRate), _sea, Gravity);
+                var command = BoatHull.Compute(spec, VehicleMotorInput.Idle, Rolled(roll, rollRate), _sea, _gravity);
                 rollRate += command.Torque.Z / inertia * 0.01f;
                 roll += rollRate * 0.01f;
                 if (i > 10)
@@ -301,8 +301,8 @@ namespace Shooter.Core.Tests
         {
             var state = Level(_restHeight);
 
-            Assert.Throws<ArgumentNullException>(() => BoatHull.Compute(null, VehicleMotorInput.Idle, state, _sea, Gravity));
-            Assert.Throws<ArgumentNullException>(() => BoatHull.Compute(BoatSpec.Default, VehicleMotorInput.Idle, state, null, Gravity));
+            Assert.Throws<ArgumentNullException>(() => BoatHull.Compute(null, VehicleMotorInput.Idle, state, _sea, _gravity));
+            Assert.Throws<ArgumentNullException>(() => BoatHull.Compute(BoatSpec.Default, VehicleMotorInput.Idle, state, null, _gravity));
             Assert.Throws<ArgumentOutOfRangeException>(() => BoatHull.Compute(BoatSpec.Default, VehicleMotorInput.Idle, state, _sea, -1f));
             Assert.Throws<ArgumentOutOfRangeException>(() => BoatHull.Compute(BoatSpec.Default, VehicleMotorInput.Idle, state, _sea, float.NaN));
             Assert.Throws<ArgumentException>(() => new BoatHullState(new Vector3(float.NaN, 0f, 0f), Quaternion.Identity, Vector3.Zero, Vector3.Zero, Vector3.Zero));

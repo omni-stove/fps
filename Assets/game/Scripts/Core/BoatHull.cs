@@ -98,7 +98,7 @@ namespace Shooter.Core
         // これより遅ければ、後ろへのスロットルで舵を後退向きに切り替える。止まり切るまで待つと、ほぼ止まった船が後ろへ曲がり出せないため。
         public const float DirectionChangeSpeed = CarDrive.DirectionChangeSpeed;
 
-        private const float DegreesToRadians = (float)(Math.PI / 180.0);
+        private const float _degreesToRadians = (float)(Math.PI / 180.0);
 
         public static BoatHullCommand Compute(BoatSpec spec, VehicleMotorInput input, BoatHullState state, IWaterVolumes water, float gravity)
         {
@@ -163,7 +163,7 @@ namespace Shooter.Core
 
             var control = Math.Min(1f, Math.Max(Math.Abs(forwardSpeed) / spec.TurnSpeed, Math.Abs(throttle))) * propellerImmersion;
             var reversing = forwardSpeed < -DirectionChangeSpeed || (forwardSpeed <= DirectionChangeSpeed && throttle < 0f);
-            var targetYawRate = input[SteerAxis] * spec.TurnRate * DegreesToRadians * control * (reversing ? -1f : 1f);
+            var targetYawRate = input[SteerAxis] * spec.TurnRate * _degreesToRadians * control * (reversing ? -1f : 1f);
             var yawAcceleration = (targetYawRate - state.AngularVelocity.Y) * spec.TurnResponsiveness * wetFraction;
             return new BoatHullCommand(force, torque, new Vector3(0f, yawAcceleration, 0f), wetFraction, propellerImmersion, thrust);
         }

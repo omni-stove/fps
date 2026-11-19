@@ -55,7 +55,6 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(EnemyAgent.NeedsBotPilot(CreateCar("Jeep")), Is.False);
             Assert.That(EnemyAgent.NeedsBotPilot(CreatePiloted("Glider")), Is.True);
-            Assert.That(EnemyAgent.NeedsBotPilot(CreateAircraft("Plane")), Is.True);
             Assert.Throws<ArgumentNullException>(() => EnemyAgent.NeedsBotPilot(null));
         }
 
@@ -63,7 +62,6 @@ namespace Shooter.Tests.EditMode
         public void OnlyAConcreteMonoBehaviourWithIBotPilotIsABotPilotType()
         {
             Assert.That(EnemyAgent.IsBotPilotType(typeof(FakeBotPilot)), Is.True);
-            Assert.That(EnemyAgent.IsBotPilotType(typeof(BotAircraftPilot)), Is.True);
             Assert.That(EnemyAgent.IsBotPilotType(typeof(FakeBotPilotedMotor)), Is.False, "a MonoBehaviour without IBotPilot");
             Assert.That(EnemyAgent.IsBotPilotType(typeof(IBotPilot)), Is.False, "an interface cannot be added");
             Assert.That(EnemyAgent.IsBotPilotType(typeof(string)), Is.False);
@@ -113,7 +111,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(driver.Rider, Is.SameAs(_agent));
             Assert.That(driver.Route, Is.SameAs(route));
             Assert.That(driver.DrivesUnmanned, Is.False, "the bot drives; no stand-in takes the seat");
-            Assert.That(car.GetComponent<BotAircraftPilot>(), Is.Null);
+            Assert.That(car.GetComponent<IBotPilot>(), Is.Null);
         }
 
         [Test]
@@ -346,35 +344,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_agent.VehicleDriver, Is.Not.Null);
         }
 
-        // 飛行機の動き方が自分の操縦の部品を名指し、その部品が乗った Bot の座席を通って飛ばすところまでを、本物の部品どうしで確かめる。
-        [Test]
-        public void AnAircraftGetsItsOwnPilotWhichFliesThroughTheBotsSeatAndLeavingHandsBackTheControls()
-        {
-            var plane = CreateAircraft("Plane");
-            var link = plane.GetComponent<VehicleMotorLink>();
-            var before = link.ControlScheme;
-            AddRoute(plane).SetPoints(Point("A", new Vector3(1000f, Altitude, 0f)));
-
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' bot takes controls rider=enemy-1 as=pilot route=Plane");
-            _agent.TryBoard(plane, 0, requireInRange: false);
-            var pilot = plane.GetComponent<BotAircraftPilot>();
-            Assert.That(pilot, Is.Not.Null);
-            Assert.That(_agent.VehiclePilot, Is.SameAs(pilot));
-
-            pilot.Tick(0.02f);
-
-            Assert.That(pilot.IsFlying, Is.True);
-            Assert.That(plane.Seats[0].Occupant, Is.SameAs(_agent), "the pilot does not seat a stand-in of its own");
-
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' bot gives up controls rider=enemy-1");
-            Assert.That(_agent.TryLeaveVehicle(), Is.True);
-
-            Assert.That(plane.GetComponent<BotAircraftPilot>(), Is.Null);
-            Assert.That(_agent.VehiclePilot, Is.Null);
-            Assert.That(_agent.IsDrivingVehicle, Is.False);
-            Assert.That(link.ControlScheme, Is.SameAs(before));
-        }
-
         private Vehicle CreateCar(string name, bool withPassengerSeat = false)
         {
             var root = Track(new GameObject(name));
@@ -405,25 +374,6 @@ namespace Shooter.Tests.EditMode
         {
             var vehicle = CreateCar(name);
             vehicle.gameObject.AddComponent<FakeBotPilotedMotor>();
-            return vehicle;
-        }
-
-        private Vehicle CreateAircraft(string name)
-        {
-            var root = Track(new GameObject(name));
-            root.transform.position = new Vector3(0f, Altitude, 0f);
-            var seat = AddSeat(root, "Pilot Seat", new Vector3(0f, 0.5f, 0.5f));
-            var exit = new GameObject("Exit").transform;
-            exit.SetParent(root.transform, false);
-            exit.localPosition = new Vector3(-3f, 0f, 0f);
-            seat.SetExitPoints(exit);
-            var vehicle = root.AddComponent<Vehicle>();
-            vehicle.Configure(new VehicleSpec(name.ToLowerInvariant(), 500, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) }));
-            var motor = root.AddComponent<SimpleAircraftMotor>();
-            motor.Body.useGravity = false;
-            motor.Body.linearVelocity = new Vector3(0f, 0f, 55f);
-            Assert.That(root.AddComponent<VehicleMotorLink>().Bind(), Is.True);
-            Physics.SyncTransforms();
             return vehicle;
         }
 

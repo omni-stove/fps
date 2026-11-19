@@ -1,0 +1,16 @@
+{
+    "name": "Shooter.Aircraft.Core",
+    "rootNamespace": "Shooter.Core",
+    "references": [
+        "Shooter.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

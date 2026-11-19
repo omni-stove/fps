@@ -88,7 +88,7 @@ namespace Shooter.Core
             new ControlValueRange(0, 100, 100),
         };
 
-        // ControlValue に入れないのは、設定画面が ControlValue のすべてに UXML のスライダーを求め、ジャイロの欄はまだ画面に無いため。
+        // ControlValue に入れないのは、ジャイロの感度は On/Off などと GyroFields にまとめて持ち、設定画面でもジャイロの無い機器では一緒に触れなくするため。
         public static ControlValueRange GyroSensitivityRange { get; } = new ControlValueRange(10, 500, 100);
 
         // 古い形式に無い値を、欠けた値として警告しないために、その値を書き始めた形式のバージョンを持つ。

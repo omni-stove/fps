@@ -5,6 +5,7 @@ using Shooter.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
+using InputGyroscope = UnityEngine.InputSystem.Gyroscope;
 
 namespace Shooter.Runtime
 {
@@ -54,6 +55,18 @@ namespace Shooter.Runtime
         public const string InvertLookYButtonName = "settings-invert-look-y";
 
         public const string RumbleButtonName = "settings-rumble";
+
+        public const string GyroButtonName = "settings-gyro";
+
+        public const string GyroSensitivitySliderName = "settings-gyro-sensitivity";
+
+        public const string GyroSensitivityValueName = GyroSensitivitySliderName + "-value";
+
+        public const string GyroAimOnlyButtonName = "settings-gyro-aim-only";
+
+        public const string InvertGyroYButtonName = "settings-invert-gyro-y";
+
+        public const string GyroUnavailableName = "settings-gyro-unavailable";
 
         public const string RegionButtonName = "settings-region";
 
@@ -116,6 +129,13 @@ namespace Shooter.Runtime
         private Button _aimAssistButton;
         private Button _invertLookYButton;
         private Button _rumbleButton;
+        private readonly Func<bool> _gyroAvailable;
+        private Button _gyroButton;
+        private SliderInt _gyroSensitivitySlider;
+        private Label _gyroSensitivityLabel;
+        private Button _gyroAimOnlyButton;
+        private Button _invertGyroYButton;
+        private Label _gyroUnavailable;
         private Button _regionButton;
         private Button _telemetryButton;
         private readonly IReadOnlyList<string> _regionsGiven;
@@ -137,7 +157,8 @@ namespace Shooter.Runtime
             ISettingsSink sink = null,
             LanguagePreferenceStore languageStore = null,
             VoiceSettingsStore voiceStore = null,
-            IReadOnlyList<string> regions = null)
+            IReadOnlyList<string> regions = null,
+            Func<bool> gyroAvailable = null)
         {
             List<string> offered = null;
             if (regions != null)
@@ -161,6 +182,7 @@ namespace Shooter.Runtime
             _languageStore = languageStore ?? new LanguagePreferenceStore();
             _voiceStore = voiceStore ?? new VoiceSettingsStore();
             _regionsGiven = offered?.AsReadOnly();
+            _gyroAvailable = gyroAvailable ?? HasGyroDevice;
         }
 
         public event Action BackRequested;
@@ -189,6 +211,8 @@ namespace Shooter.Runtime
         public IReadOnlyList<string> Regions => _regions ??= _regionsGiven ?? QuickMatchRegionList.Load();
 
         public RebindResult PendingConflict => _pendingConflict;
+
+        public bool GyroAvailable => _gyroAvailable();
 
         public bool HasUnsavedChanges =>
             _editing != null && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved));
@@ -246,6 +270,18 @@ namespace Shooter.Runtime
                 default:
                     return amount.ToString(CultureInfo.InvariantCulture) + "%";
             }
+        }
+
+        public static string FormatGyroSensitivity(int percent)
+        {
+            return percent.ToString(CultureInfo.InvariantCulture) + "%";
+        }
+
+        // GyroLook と同じ機器 (Input System の今のジャイロ) を見る。止めてあっても GyroLook が使うときに入れるので、有効かどうかは問わない。
+        public static bool HasGyroDevice()
+        {
+            var device = InputGyroscope.current;
+            return device != null && device.added;
         }
 
         public static string FormatVoiceVolume(int percent)
@@ -395,6 +431,7 @@ namespace Shooter.Runtime
             container.Add(_root);
             Refresh();
             Localizer.Changed += HandleLanguageChanged;
+            InputSystem.onDeviceChange += HandleDeviceChange;
             FocusFirst();
         }
 
@@ -408,6 +445,7 @@ namespace Shooter.Runtime
             _bindings?.CancelRebind();
             var saved = Save();
             Localizer.Changed -= HandleLanguageChanged;
+            InputSystem.onDeviceChange -= HandleDeviceChange;
             DetachElements();
             ClearState();
             return saved;
@@ -454,6 +492,12 @@ namespace Shooter.Runtime
             _aimAssistButton = null;
             _invertLookYButton = null;
             _rumbleButton = null;
+            _gyroButton = null;
+            _gyroSensitivitySlider = null;
+            _gyroSensitivityLabel = null;
+            _gyroAimOnlyButton = null;
+            _invertGyroYButton = null;
+            _gyroUnavailable = null;
             _regionButton = null;
             _telemetryButton = null;
             _voiceMicrophoneButton = null;
@@ -598,6 +642,30 @@ namespace Shooter.Runtime
         {
             EnsureOpen();
             Edit(_editing.WithRumbleEnabled(enabled));
+        }
+
+        public void SetGyroEnabled(bool enabled)
+        {
+            EnsureOpen();
+            Edit(_editing.WithGyroEnabled(enabled));
+        }
+
+        public void SetGyroSensitivity(int percent)
+        {
+            EnsureOpen();
+            Edit(_editing.WithGyroSensitivity(percent));
+        }
+
+        public void SetGyroAimOnly(bool aimOnly)
+        {
+            EnsureOpen();
+            Edit(_editing.WithGyroAimOnly(aimOnly));
+        }
+
+        public void SetInvertGyroY(bool invert)
+        {
+            EnsureOpen();
+            Edit(_editing.WithInvertGyroY(invert));
         }
 
         public void SetQuickMatchRegion(string region)
@@ -861,6 +929,7 @@ namespace Shooter.Runtime
             _aimAssistButton = BindButton(root, AimAssistButtonName, () => SetAimAssist(!_editing.AimAssist));
             _invertLookYButton = BindButton(root, InvertLookYButtonName, () => SetInvertLookY(!_editing.InvertLookY));
             _rumbleButton = BindButton(root, RumbleButtonName, () => SetRumbleEnabled(!_editing.RumbleEnabled));
+            BindGyro(root);
             _bloodButton = BindButton(root, BloodButtonName, () => SetShowBlood(!_editing.ShowBlood));
             _paletteButton = BindButton(root, PaletteButtonName, () => SetPalette(NextPalette(_editing.Palette)));
             _friendlySample = Require<Label>(root, PaletteFriendlySampleName);
@@ -1021,6 +1090,60 @@ namespace Shooter.Runtime
             }
         }
 
+        private void BindGyro(VisualElement root)
+        {
+            _gyroButton = BindButton(root, GyroButtonName, () => SetGyroEnabled(!_editing.GyroEnabled));
+            var range = ControlSettings.GyroSensitivityRange;
+            _gyroSensitivitySlider = Require<SliderInt>(root, GyroSensitivitySliderName);
+            SetRange(_gyroSensitivitySlider, range.Min, range.Max);
+            _gyroSensitivitySlider.RegisterValueChangedCallback(evt => SetGyroSensitivity(range.Clamp(evt.newValue)));
+            _gyroSensitivityLabel = Require<Label>(root, GyroSensitivityValueName);
+            _gyroAimOnlyButton = BindButton(root, GyroAimOnlyButtonName, () => SetGyroAimOnly(!_editing.GyroAimOnly));
+            _invertGyroYButton = BindButton(root, InvertGyroYButtonName, () => SetInvertGyroY(!_editing.InvertGyroY));
+            _gyroUnavailable = Require<Label>(root, GyroUnavailableName);
+        }
+
+        // 保存した値は消さずに出し、ジャイロのある機器へ移ればそのまま効くようにする。
+        private void RefreshGyro()
+        {
+            if (_editing == null || _gyroButton == null)
+            {
+                return;
+            }
+
+            var available = GyroAvailable;
+            var adjustable = available && _editing.GyroEnabled;
+            _gyroButton.text = FormatOnOff(_editing.GyroEnabled);
+            _gyroButton.SetEnabled(available);
+            _gyroSensitivitySlider.SetValueWithoutNotify(_editing.GyroSensitivityPercent);
+            _gyroSensitivitySlider.SetEnabled(adjustable);
+            _gyroSensitivityLabel.text = FormatGyroSensitivity(_editing.GyroSensitivityPercent);
+            _gyroAimOnlyButton.text = FormatOnOff(_editing.GyroAimOnly);
+            _gyroAimOnlyButton.SetEnabled(adjustable);
+            _invertGyroYButton.text = FormatOnOff(_editing.InvertGyroY);
+            _invertGyroYButton.SetEnabled(adjustable);
+            SetDisplayed(_gyroUnavailable, !available);
+        }
+
+        // パッドを開いている間に挿し抜きしても、閉じて開き直さずに欄の触れる・触れないを合わせる。
+        private void HandleDeviceChange(InputDevice device, InputDeviceChange change)
+        {
+            if (_root == null || !(device is InputGyroscope))
+            {
+                return;
+            }
+
+            switch (change)
+            {
+                case InputDeviceChange.Added:
+                case InputDeviceChange.Removed:
+                case InputDeviceChange.Disconnected:
+                case InputDeviceChange.Reconnected:
+                    RefreshGyro();
+                    break;
+            }
+        }
+
         private void BindVoice(VisualElement root)
         {
             _voiceMicrophoneButton = BindButton(
@@ -1116,6 +1239,8 @@ namespace Shooter.Runtime
             {
                 rumbleStrength.SetEnabled(_editing.RumbleEnabled);
             }
+
+            RefreshGyro();
 
             if (_regionButton != null)
             {

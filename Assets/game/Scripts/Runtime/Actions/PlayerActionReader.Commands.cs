@@ -127,12 +127,12 @@ namespace Shooter.Runtime
                     continue;
                 }
 
-                if (action.WasPressedThisFrame())
+                if (KeySharing.WasPressedThisFrame(action))
                 {
                     pressed |= _commands[i];
                 }
 
-                if (action.IsPressed())
+                if (KeySharing.IsPressed(action))
                 {
                     held |= _commands[i];
                 }

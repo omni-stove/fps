@@ -14,8 +14,10 @@ namespace Shooter.Runtime
             _source = source ?? throw new ArgumentNullException(nameof(source));
         }
 
-        public void Show(object detail)
+        // 案内を出していても、押して何も起きないとき (弾が満タンの弾薬箱など) は譲らせない。canInteract で呼ぶ側が決める。
+        public void Show(object detail, bool canInteract = true)
         {
+            KeySharing.SetClaim(InputActionPaths.Interact, _source, canInteract);
             var hint = new InteractHint(_source, detail);
             var signal = GameSignals.InteractHint;
             if (_published == hint && signal.HasValue)
@@ -29,6 +31,7 @@ namespace Shooter.Runtime
 
         public void Clear()
         {
+            KeySharing.Release(InputActionPaths.Interact, _source);
             if (_published == null)
             {
                 return;

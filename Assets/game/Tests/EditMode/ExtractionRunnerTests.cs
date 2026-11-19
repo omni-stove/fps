@@ -68,21 +68,27 @@ namespace Shooter.Tests.EditMode
             var north = Zone("Exit-North", "north", _northAt);
             _runner.SetContainers(new[] { crate });
             _runner.SetZones(new[] { north });
+            player.transform.position = _besideCrate;
+            Assert.That(_runner.IsOfferingInteract, Is.False, "a runner that has not started offers nothing");
+            player.transform.position = Vector3.zero;
             _runner.BeginRaid(new[] { player }, Array.Empty<SideSpawnPoint>(), player);
 
             Assert.That(north.IsOpen, Is.True, "the only exit is opened from the start");
             Assert.That(Detail().LootInReach, Is.False, "the crate is out of reach");
+            Assert.That(_runner.IsOfferingInteract, Is.False);
             Assert.That(_runner.TryLoot(), Is.False);
 
             player.transform.position = _besideCrate;
             _runner.Tick(0f);
             Assert.That(Detail().LootInReach, Is.True);
+            Assert.That(_runner.IsOfferingInteract, Is.True, "a shared key goes to the crate, not to melee");
             Assert.That(_runner.TryLoot(), Is.True);
             Assert.That(crate.IsOpened, Is.True);
             AssertItems(crate.Contents, (_ammo, _ammoPerCrate));
             AssertItems(_runner.Extraction.Carried, (_ammo, _ammoPerCrate));
             Assert.That(Detail().CarriedCount, Is.EqualTo(_ammoPerCrate));
             Assert.That(Detail().LootInReach, Is.False, "an opened crate is not offered again");
+            Assert.That(_runner.IsOfferingInteract, Is.False);
             Assert.That(_runner.TryLoot(), Is.False, "an opened crate cannot be opened twice");
 
             player.transform.position = _northAt;

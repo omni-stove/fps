@@ -73,6 +73,7 @@ namespace Shooter.NetV2
 
         public void Leave()
         {
+            KeySharing.Release(InputActionPaths.Interact, this);
             if (_vehicles != null)
             {
                 _vehicles.StageChanged -= HandleStageChanged;
@@ -169,6 +170,7 @@ namespace Shooter.NetV2
             }
 
             var seat = _vehicles.LocalSeat;
+            KeySharing.SetClaim(InputActionPaths.Interact, this, seat.IsRiding || TryFindNearest(feet, out _));
             if (local.TakeInteract())
             {
                 if (seat.IsRiding)

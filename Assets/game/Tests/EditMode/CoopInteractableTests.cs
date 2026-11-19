@@ -85,6 +85,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ItOffersInteractOnlyWhileALocalPlayerIsInside()
+        {
+            var player = Track(GameObject.CreatePrimitive(PrimitiveType.Capsule));
+            player.tag = CoopInteractable.DefaultPlayerTag;
+            Assert.That(_interactable.OffersInteract, Is.False);
+
+            var untagged = Track(GameObject.CreatePrimitive(PrimitiveType.Capsule));
+            _interactable.HandleEnter(untagged.GetComponent<Collider>());
+            Assert.That(_interactable.OffersInteract, Is.False, "a collider without the player tag does not use this terminal's key");
+
+            _interactable.HandleEnter(player.GetComponent<Collider>());
+            Assert.That(_interactable.OffersInteract, Is.True);
+
+            _interactable.HandleExit(player.GetComponent<Collider>());
+            Assert.That(_interactable.OffersInteract, Is.False);
+        }
+
+        [Test]
         public void APlayerInsideWithoutPressingDoesNotCount()
         {
             var player = Track(GameObject.CreatePrimitive(PrimitiveType.Capsule));

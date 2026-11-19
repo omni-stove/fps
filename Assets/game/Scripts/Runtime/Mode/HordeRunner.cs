@@ -172,6 +172,15 @@ namespace Shooter.Runtime
             }
         }
 
+        protected override bool OffersInteract
+        {
+            get
+            {
+                var local = LocalPlayer;
+                return _horde != null && local != null && _horde.Session.HasPlayer(LocalPlayerId) && Offer(local)?.Verdict == HordePurchaseVerdict.Ok;
+            }
+        }
+
         private HordeFortificationOffer? Offer(SideMember local)
         {
             var session = _horde.Session;

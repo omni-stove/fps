@@ -37,6 +37,8 @@ namespace Shooter.Runtime
 
         public const string StealthResourcePath = "Tuning/stealth";
 
+        public const string KeySharingResourcePath = KeySharingJson.ResourcePath;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
@@ -72,6 +74,9 @@ namespace Shooter.Runtime
 
         public static IReadOnlyList<Playlist> Playlists =>
             Load(c => c.PlaylistsTuning, PlaylistsResourcePath, PlaylistJson.Parse, PlaylistJson.Empty);
+
+        public static KeySharingSpec KeySharing =>
+            Load(c => c.KeySharingTuning, KeySharingResourcePath, KeySharingJson.Parse, KeySharingSpec.Default);
 
         public static void Reload()
         {

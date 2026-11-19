@@ -23,7 +23,7 @@ namespace Shooter.Tests.EditMode
         public void SetUp()
         {
             _asset = ProjectActionsClone.Create();
-            _bindings = new PlayerBindings(_asset);
+            _bindings = new PlayerBindings(_asset, KeySharingSpec.Default);
         }
 
         [TearDown]
@@ -234,6 +234,35 @@ namespace Shooter.Tests.EditMode
             _bindings.ApplyOverride(ReloadKey, "<Keyboard>/e");
 
             Assert.That(_bindings.FindConflicts(ReloadKey).Select(c => c.ActionName), Is.EqualTo(new[] { "Interact" }));
+        }
+
+        [Test]
+        public void AnActionAllowedToShareAKeyIsNotAConflict()
+        {
+            var sharing = new KeySharingSpec(new[] { new KeySharingRule(new[] { "Reload", "Interact" }, "Interact") });
+            using (var bindings = new PlayerBindings(_asset, sharing))
+            {
+                Assert.That(bindings.Sharing, Is.SameAs(sharing));
+                Assert.That(bindings.FindConflicts(ReloadKey, "<Keyboard>/e"), Is.Empty, "Reload may share E with Interact");
+                Assert.That(
+                    bindings.FindConflicts(new RebindSlot("Interact", InputDeviceKind.KeyboardMouse), "<Keyboard>/r"),
+                    Is.Empty,
+                    "the rule works from either side");
+                Assert.That(bindings.FindConflicts(ReloadKey, "<Keyboard>/w").Select(c => c.ActionName), Is.EqualTo(new[] { "Move" }), "other actions still conflict");
+                Assert.That(bindings.FindConflicts(JumpPad, "<Gamepad>/buttonWest").Select(c => c.ActionName), Is.EqualTo(new[] { "Reload" }));
+            }
+
+            Assert.Throws<ArgumentNullException>(() => new PlayerBindings(_asset, null));
+        }
+
+        [Test]
+        public void TheOneArgumentConstructorReadsTheConfiguredSharing()
+        {
+            using (var bindings = new PlayerBindings(_asset))
+            {
+                Assert.That(bindings.Sharing, Is.SameAs(KitTuning.KeySharing));
+                Assert.That(bindings.FindConflicts(ReloadKey, "<Keyboard>/e"), Is.Empty, "the bundled key-sharing.json lets Reload share with Interact");
+            }
         }
 
         [Test]

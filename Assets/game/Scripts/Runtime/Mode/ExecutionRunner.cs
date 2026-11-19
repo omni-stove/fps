@@ -242,6 +242,21 @@ namespace Shooter.Runtime
             return true;
         }
 
+        protected override bool OffersInteract
+        {
+            get
+            {
+                var local = LocalPlayer;
+                if (_execution == null || !_execution.IsLive || local == null)
+                {
+                    return false;
+                }
+
+                var localId = IdOf(local);
+                return localId >= 0 && !_execution.Mode.IsDown(localId) && !_execution.IsDowned(localId) && NearestDowned(local) >= 0;
+            }
+        }
+
         protected override object HudDetail
         {
             get

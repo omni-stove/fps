@@ -135,6 +135,11 @@ namespace Shooter.Runtime
 
         protected virtual object HudDetail => null;
 
+        // 手元のプレイヤーが今 Interact で何かできるか。同じキーを共有する近接などに押下を譲らせるのに使う。
+        protected virtual bool OffersInteract => false;
+
+        public bool IsOfferingInteract => IsStarted && OffersInteract;
+
         protected virtual void ValidateSession(ModeSession session)
         {
         }
@@ -209,6 +214,7 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             ReleaseRestartAction();
+            KeySharing.Release(InputActionPaths.Interact, this);
         }
 
         private void OnDestroy()
@@ -224,6 +230,7 @@ namespace Shooter.Runtime
             }
 
             Tick(Time.deltaTime);
+            KeySharing.SetClaim(InputActionPaths.Interact, this, IsOfferingInteract);
 
             if (_session != null && _matchOver && _restartAction != null && _restartAction.WasPressedThisFrame())
             {
@@ -633,6 +640,7 @@ namespace Shooter.Runtime
         {
             OnStopping();
             ReleaseRestartAction();
+            KeySharing.Release(InputActionPaths.Interact, this);
 
             foreach (var damageable in _ids.Keys)
             {

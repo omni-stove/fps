@@ -50,6 +50,20 @@ namespace Shooter.Runtime
         {
             base.OnDisable();
             Unsubscribe();
+            KeySharing.Release(InputActionPaths.Interact, this);
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            KeySharing.Release(InputActionPaths.Interact, this);
+        }
+
+        public bool OffersInteract => Zone != null && Zone.IsOccupied && Zone.IsActive;
+
+        private void Update()
+        {
+            KeySharing.SetClaim(InputActionPaths.Interact, this, OffersInteract);
         }
 
         public bool Interact()

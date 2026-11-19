@@ -67,6 +67,8 @@ namespace Shooter.Runtime
 
         public bool IsCompleted => Hold.IsCompleted;
 
+        public bool OffersInteract => !Hold.IsCompleted && _playersInside.Count > 0;
+
         public string PlayerTag
         {
             get => _playerTag;
@@ -116,11 +118,13 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             DisableAction();
+            KeySharing.Release(InputActionPaths.Interact, this);
         }
 
         private void Update()
         {
             Tick(Time.deltaTime);
+            KeySharing.SetClaim(InputActionPaths.Interact, this, OffersInteract);
         }
 
         private void OnTriggerEnter(Collider other)

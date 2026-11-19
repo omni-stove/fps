@@ -337,6 +337,30 @@ namespace Shooter.Runtime
             UpdateObjectiveInput();
         }
 
+        protected override bool OffersInteract
+        {
+            get
+            {
+                var local = LocalPlayer;
+                if (_game == null || local == null
+                    || _game.Phase != RoundPhase.Live || _game.Mode.State != GameModeState.Playing)
+                {
+                    return false;
+                }
+
+                var id = IdOf(local);
+                if (id < 0 || !_game.Mode.HasPlayer(id) || !local.IsAlive || _game.Mode.IsDown(id))
+                {
+                    return false;
+                }
+
+                var ground = local.GroundPosition;
+                return _game.IsAttacker(id)
+                    ? _game.CarrierId == id && SiteAt(ground).HasValue
+                    : _game.Bomb == BombState.Planted && IsNearBomb(ground, _game.Spec.DefuseRadius);
+            }
+        }
+
         protected override object HudDetail => _game != null ? new SearchAndDestroyStatus(_game, LocalPlayer != null ? LocalPlayerId : (int?)null) : null;
 
         protected override void OnStop()

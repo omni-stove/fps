@@ -171,6 +171,7 @@ namespace Shooter.Runtime.Traversal
         {
             ReleaseInteract();
             ReleaseNow(ReasonDisabled);
+            KeySharing.Release(InputActionPaths.Interact, this);
         }
 
         private void OnDestroy()
@@ -195,6 +196,7 @@ namespace Shooter.Runtime.Traversal
             }
 
             TickCooldown(Time.deltaTime);
+            KeySharing.SetClaim(InputActionPaths.Interact, this, OffersGrab);
             if (_isRiding || _mover.IsControlHandedOff)
             {
                 return;
@@ -398,6 +400,9 @@ namespace Shooter.Runtime.Traversal
             // ほかの横取りに替わった・登録を外された・PlayerController が止まったとき。自分で離したならもう掴まっていない。
             ReleaseNow(ReasonInterrupted);
         }
+
+        public bool OffersGrab =>
+            _interactAction != null && CanGrab() && Zipline.FindNearest(HandPosition, _grabRadius) != null;
 
         private bool CanGrab()
         {

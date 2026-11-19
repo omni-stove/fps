@@ -64,6 +64,8 @@ namespace Shooter.Runtime
 
         public bool IsRiding => _seat != null;
 
+        public bool OffersInteract => _interact.Action != null && (_seat != null || FindNearestVehicle(Vehicle.Active) != null);
+
         public VehicleSeatFiring Firing => _seat != null ? _firing : VehicleSeatFiring.None;
 
         public Weapon SeatWeapon => _seat != null ? _seatWeapon : null;
@@ -169,6 +171,7 @@ namespace Shooter.Runtime
             _interact.Release();
             _next.Release();
             _previous.Release();
+            KeySharing.Release(InputActionPaths.Interact, this);
         }
 
         private void OnDestroy()
@@ -197,6 +200,7 @@ namespace Shooter.Runtime
                 return;
             }
 
+            KeySharing.SetClaim(InputActionPaths.Interact, this, OffersInteract);
             if (_seat == null)
             {
                 return;

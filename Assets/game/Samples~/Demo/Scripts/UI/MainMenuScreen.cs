@@ -923,7 +923,7 @@ namespace Shooter.Runtime
             var catalog = EffectiveMissions;
             if (catalog == null)
             {
-                error = "no mission catalog is wired to the menu or set in the GameContent; rerun Shooter/Build Mission Catalog and Shooter/Build Main Menu Scene";
+                error = "no mission catalog is wired to the menu or set in the GameContent; run Shooter/Build All Scenes";
                 return false;
             }
 

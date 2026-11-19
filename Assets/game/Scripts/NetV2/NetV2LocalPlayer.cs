@@ -198,6 +198,12 @@ namespace Shooter.NetV2
                 presenter = gameObject.AddComponent<ViewmodelPresenter>();
             }
 
+            // 近接の振りは NetV2MeleePart がこの体の IMeleePresenter に渡す。ゲームが付けた物は上書きしない。
+            if (GetComponent<IMeleePresenter>() == null)
+            {
+                gameObject.AddComponent<ViewmodelMeleePresenter>();
+            }
+
             return presenter;
         }
 

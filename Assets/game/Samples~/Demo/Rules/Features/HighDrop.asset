@@ -34,7 +34,7 @@ MonoBehaviour:
   _vault: 0
   _grenade: 0
   _grenadeCount: 0
-  _melee: 0
+  _melee: 1
   _stagger: 0
   _slide: 0
   _mantle: 0

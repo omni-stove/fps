@@ -23,7 +23,7 @@
       "vault": "Off",
       "grenade": "On",
       "grenadeCount": 2,
-      "melee": "Off",
+      "melee": "On",
       "stagger": "Off",
       "slide": "Off",
       "mantle": "Off",

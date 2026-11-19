@@ -32,6 +32,9 @@ namespace Shooter.Server.Tests
             Assert.That(rules.Objective, Is.EqualTo(objective));
         }
 
+        [TestCase("TeamDeathmatch")]
+        [TestCase("Domination")]
+        [TestCase("Elimination")]
         [TestCase("CaptureTheFlag")]
         [TestCase("Hardpoint")]
         [TestCase("SearchAndDestroy")]
@@ -39,11 +42,24 @@ namespace Shooter.Server.Tests
         [TestCase("KillConfirmed")]
         [TestCase("GunGame")]
         [TestCase("Payload")]
-        public void TheOnlineModeExamplesTurnOnMeleeAndTheKillCam(string name)
+        public void EveryExampleRulesFileTurnsOnMelee(string name)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
 
             Assert.That(data.Rules.Actions.Melee, Is.EqualTo(Melee.On));
+        }
+
+        [TestCase("CaptureTheFlag")]
+        [TestCase("Hardpoint")]
+        [TestCase("SearchAndDestroy")]
+        [TestCase("FreeForAll")]
+        [TestCase("KillConfirmed")]
+        [TestCase("GunGame")]
+        [TestCase("Payload")]
+        public void TheOnlineModeExamplesTurnOnTheKillCam(string name)
+        {
+            Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
+
             Assert.That(data.Rules.DeathCamera, Is.EqualTo(DeathCamera.KillCam));
             Assert.That(data.Rules.Streaks, Is.EqualTo(name == "GunGame" ? Streaks.Off : Streaks.On), "a gun game climbs by kills, not by streak rewards");
         }

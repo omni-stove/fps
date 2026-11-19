@@ -10,7 +10,8 @@ namespace Shooter.Server.Tests
     {
         private const string _shotgunId = "9e8d7c6b-5a49-4382-9170-6f5e4d3c2b1a";
         private const float _switchSeconds = 0.4f;
-        private static readonly string[] _magazine = { "magazine-item" };
+        private static readonly string[] _magazine = { "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9" };
+        private const string _rifleItemId = "2c3d4e5f-6071-4829-93a4-b5c6d7e8f90a";
 
         private StringWriter _log;
         private ServerPlayerWeapons _weapons;
@@ -79,7 +80,7 @@ namespace Shooter.Server.Tests
             var catalog = new ItemCatalog(
                 new[]
                 {
-                    new ItemSpec("rifle-item", "weapon.rifle", weaponId: TestRules.RifleId, attachmentSlots: _magazineSlot),
+                    new ItemSpec(_rifleItemId, "weapon.rifle", weaponId: TestRules.RifleId, attachmentSlots: _magazineSlot),
                     new ItemSpec(_magazine[0], "item.extendedMagazine", attachment: new AttachmentSpec("magazine", magazineSizeBonus: 10)),
                 },
                 InventoryRule.Default);

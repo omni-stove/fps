@@ -102,6 +102,26 @@ expect "テストが読む server-data" "full=false
 test=true
 format=false" "" "" "$full_test"
 
+mkdir -p Assets/game/Resources/Tuning
+echo '{}' >Assets/game/Resources/Tuning/grenade.json
+expect "Unity 側のデータ (テストが読むことがある)" "full=false
+test=true
+format=false" "" "" "$full_test"
+
+echo 'x' >Assets/game/Scripts/UI/Hud.prefab
+echo 'class Hud2 {}' >>Assets/game/Scripts/UI/Hud.cs
+expect "Unity だけの .cs とプレハブ" "full=false
+test=true
+format=true" "Assets/game/Scripts/UI/Hud.cs" "dotnet format dotnet/Shooter.slnx --verify-no-changes -v q --include Assets/game/Scripts/UI/Hud.cs
+dotnet format whitespace Assets/game --folder --verify-no-changes -v q --include Scripts/UI/Hud.cs" "$full_test"
+
+echo 'x' >Assets/game/Scripts/UI/Panel.cs
+echo 'x' >Assets/game/Scripts/UI/Panel.cs.meta
+echo '# y' >>docs/a.md
+expect "Unity だけの新しい .cs とその .meta と文書" "full=false
+test=false
+format=true" "Assets/game/Scripts/UI/Panel.cs" "dotnet format whitespace Assets/game --folder --verify-no-changes -v q --include Scripts/UI/Panel.cs" ""
+
 echo 'indent_style = space' >>.editorconfig
 expect "書式の規則" "full=true
 test=true

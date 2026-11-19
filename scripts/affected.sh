@@ -3,7 +3,7 @@
 #   scripts/affected.sh <base>       full= test= format= を true か false で 1 行ずつ出す ($GITHUB_OUTPUT にそのまま足せる形)
 #   scripts/affected.sh --cs <base>  変わって今もある Assets/game と dotnet の .cs を 1 行ずつ出す (lint.sh --since が書式を見る範囲)
 # full: 全部の検査の前提 (ビルド設定・書式の規則・CI とそのスクリプト) が変わったか、<base> を引けないとき。
-# test: dotnet/Shooter.slnx がビルドに取り込むファイルか、テストが読む server-data が変わったとき。full なら true。
+# test: dotnet のテストに影響しないと確かなファイル (no_test_effect) の外が変わったとき。full なら true。
 # format: .cs が変わったとき。full なら true。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
@@ -16,13 +16,28 @@ fi
 base="${1:?usage: scripts/affected.sh [--cs] <base>}"
 
 # dotnet の外から取り込むフォルダは csproj の Compile Include="../../<dir>/**" から引き、プロジェクトを足しても書き直さずに済むようにする。
-test_roots() {
+compile_roots() {
 	echo dotnet/
-	echo server-data/
 	local csproj
 	while IFS= read -r csproj; do
 		sed -nE 's#.*Include="\.\./\.\./([^"*]*)\*\*.*#\1#p' "$csproj"
 	done < <(git ls-files -- 'dotnet/*.csproj')
+}
+
+# テストはリポジトリのあちこちの JSON・.asset・dll を読むので、読むものを並べるのではなく、読まないと確かなものだけを並べる。
+# ビルドに入らない .cs (と、その .cs.meta) と、文書・CI の設定・スクリプト。
+no_test_effect() {
+	local root
+	case "$1" in
+	*.md | docs/* | .github/* | scripts/*) return 0 ;;
+	*.cs | *.cs.meta)
+		while IFS= read -r root; do
+			case "$1" in "$root"*) return 1 ;; esac
+		done <<<"$roots"
+		return 0
+		;;
+	esac
+	return 1
 }
 
 is_full() {
@@ -59,15 +74,13 @@ if [ "$mode" = cs ]; then
 	exit 0
 fi
 
-roots="$(test_roots)"
+roots="$(compile_roots)"
 full=false test=false format=false
 while IFS= read -r path; do
 	[ -n "$path" ] || continue
 	if is_full "$path"; then full=true; fi
 	case "$path" in *.cs) format=true ;; esac
-	while IFS= read -r root; do
-		case "$path" in "$root"*) test=true ;; esac
-	done <<<"$roots"
+	if ! no_test_effect "$path"; then test=true; fi
 done <<<"$changed"
 
 if [ "$full" = true ]; then

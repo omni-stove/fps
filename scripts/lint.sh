@@ -8,7 +8,7 @@
 # --fix-meta は .meta の抜けだけを直して終わる。CI の meta ジョブが dotnet 無しで作り直すため。
 # --comments は comment_problems だけを検査して終わる。scripts/lint-test.sh が dotnet 無しで確かめるため。
 # --since <base> は C# の書式とアナライザを <base> から変わった .cs だけで見る (CI の PR で時間を縮めるため)。
-# .cs が変わっていなければ dotnet を呼ばず、dotnet のビルドに入るものが変わっていなければ dotnet/Shooter.slnx を読まない。ビルド設定や書式の規則が変わったら全部を見る (scripts/affected.sh の full)。
+# .cs が変わっていなければ dotnet を呼ばず、dotnet のテストに影響しうるものが変わっていなければ dotnet/Shooter.slnx を読まない。ビルド設定や書式の規則が変わったら全部を見る (scripts/affected.sh の full)。
 # 他の検査はどれも速いので、いつも全部を見る。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
@@ -196,7 +196,7 @@ format_changed() {
 		case "$path" in Assets/game/*) assets+=("${path#Assets/game/}") ;; esac
 	done < <(bash scripts/affected.sh --cs "$since")
 	[ "${#cs[@]}" -gt 0 ] || return 0
-	# slnx は読み込みに restore が要って重いので、dotnet のビルドに入るファイルが変わったときだけ見る。
+	# slnx は読み込みに restore が要って重いので、affected.sh の test のときだけ見る。
 	if [ "$(bash scripts/affected.sh "$since" | sed -n 's/^test=//p')" = true ]; then
 		dotnet format dotnet/Shooter.slnx ${verify[@]+"${verify[@]}"} -v q --include "${cs[@]}" || status=1
 	fi

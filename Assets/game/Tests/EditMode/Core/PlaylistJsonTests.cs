@@ -6,6 +6,9 @@ namespace Shooter.Core.Tests
     public sealed class PlaylistJsonTests
     {
         private const string _source = "playlists.json";
+        private static readonly string[] _unknownMutator = { "not-in-mutators-json" };
+        private static readonly string[] _playlistItems = { "id", "order", "nextDelaySeconds", "entries" };
+        private static readonly string[] _entryItems = { "scene", "rules", "mutators" };
 
         [Test]
         public void ParseReadsEveryPlaylistAndEntryInOrder()
@@ -62,7 +65,7 @@ namespace Shooter.Core.Tests
                 "{ \"playlists\": [ { \"id\": \"p\", \"entries\": [ { \"scene\": \"Arena\", \"mutators\": [\"not-in-mutators-json\"] } ] } ] }",
                 _source);
 
-            Assert.That(playlists[0].Entries[0].MutatorIds, Is.EqualTo(new[] { "not-in-mutators-json" }));
+            Assert.That(playlists[0].Entries[0].MutatorIds, Is.EqualTo(_unknownMutator));
         }
 
         [TestCase("{ \"playlist\": [] }", "playlist")]
@@ -105,8 +108,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheItemNamesMatchTheConstructorArgumentsSoErrorsPointAtTheItem()
         {
-            Assert.That(PlaylistJson.PlaylistItemNames, Is.EqualTo(new[] { "id", "order", "nextDelaySeconds", "entries" }));
-            Assert.That(PlaylistJson.EntryItemNames, Is.EqualTo(new[] { "scene", "rules", "mutators" }));
+            Assert.That(PlaylistJson.PlaylistItemNames, Is.EqualTo(_playlistItems));
+            Assert.That(PlaylistJson.EntryItemNames, Is.EqualTo(_entryItems));
             Assert.That(PlaylistJson.ResourcePath, Is.EqualTo("Tuning/playlists"));
         }
     }

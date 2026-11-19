@@ -7,12 +7,16 @@ namespace Shooter.Core.Tests
 {
     public sealed class PlaylistTests
     {
-        private static readonly int[] SequentialPositions = { 0, 1, 2, 0, 1, 2, 0 };
-        private static readonly int[] SequentialRounds = { 0, 0, 0, 1, 1, 1, 2 };
-        private static readonly int[] FivePositions = { 0, 1, 2, 3, 4 };
-        private static readonly string[] BothMutators = { "low-health", "no-regen" };
-        private static readonly string[] MissingRules = { "Missing" };
-        private static readonly string[] KnownRules = { "TeamDeathmatch", "Domination" };
+        private static readonly int[] _sequentialPositions = { 0, 1, 2, 0, 1, 2, 0 };
+        private static readonly int[] _sequentialRounds = { 0, 0, 0, 1, 1, 1, 2 };
+        private static readonly int[] _fivePositions = { 0, 1, 2, 3, 4 };
+        private static readonly string[] _bothMutators = { "low-health", "no-regen" };
+        private static readonly string[] _missingRules = { "Missing" };
+        private static readonly string[] _knownRules = { "TeamDeathmatch", "Domination" };
+        private static readonly string[] _lowHealthOnly = { "low-health" };
+        private static readonly string[] _blankMutator = { "a", "" };
+        private static readonly string[] _nullMutator = { null };
+        private static readonly string[] _twoScenes = { "Scene0", "Scene1" };
 
         private static Playlist Make(PlaylistOrder order, int count, float delay = Playlist.DefaultNextDelaySeconds)
         {
@@ -23,12 +27,12 @@ namespace Shooter.Core.Tests
         [Test]
         public void AnEntryKeepsItsSceneRulesAndMutatorsInOrder()
         {
-            var entry = new PlaylistEntry("Arena", "TeamDeathmatch", new[] { "low-health", "no-regen" });
+            var entry = new PlaylistEntry("Arena", "TeamDeathmatch", _bothMutators);
 
             Assert.That(entry.Scene, Is.EqualTo("Arena"));
             Assert.That(entry.Rules, Is.EqualTo("TeamDeathmatch"));
             Assert.That(entry.HasRules, Is.True);
-            Assert.That(entry.MutatorIds, Is.EqualTo(new[] { "low-health", "no-regen" }));
+            Assert.That(entry.MutatorIds, Is.EqualTo(_bothMutators));
         }
 
         [Test]
@@ -50,7 +54,7 @@ namespace Shooter.Core.Tests
             var entry = new PlaylistEntry("Arena", null, ids);
             ids.Add("no-regen");
 
-            Assert.That(entry.MutatorIds, Is.EqualTo(new[] { "low-health" }));
+            Assert.That(entry.MutatorIds, Is.EqualTo(_lowHealthOnly));
             Assert.Throws<NotSupportedException>(() => ((IList<string>)entry.MutatorIds).Add("x"));
         }
 
@@ -59,8 +63,8 @@ namespace Shooter.Core.Tests
         {
             Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry(null)).ParamName, Is.EqualTo("scene"));
             Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry(" ")).ParamName, Is.EqualTo("scene"));
-            Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry("Arena", null, new[] { "a", "" })).ParamName, Is.EqualTo("mutators"));
-            Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry("Arena", null, new string[] { null })).ParamName, Is.EqualTo("mutators"));
+            Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry("Arena", null, _blankMutator)).ParamName, Is.EqualTo("mutators"));
+            Assert.That(Assert.Throws<ArgumentException>(() => new PlaylistEntry("Arena", null, _nullMutator)).ParamName, Is.EqualTo("mutators"));
         }
 
         [Test]
@@ -70,7 +74,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(playlist.Id, Is.EqualTo("rotation"));
             Assert.That(playlist.Order, Is.EqualTo(PlaylistOrder.Shuffle));
-            Assert.That(playlist.Entries.Select(e => e.Scene), Is.EqualTo(new[] { "Scene0", "Scene1" }));
+            Assert.That(playlist.Entries.Select(e => e.Scene), Is.EqualTo(_twoScenes));
             Assert.That(playlist.NextDelaySeconds, Is.EqualTo(3.5f));
             Assert.That(new Playlist("p", PlaylistOrder.Sequential, new[] { new PlaylistEntry("A") }).NextDelaySeconds, Is.EqualTo(10f));
         }
@@ -127,8 +131,8 @@ namespace Shooter.Core.Tests
                 rounds.Add(cursor.Round);
             }
 
-            Assert.That(positions, Is.EqualTo(SequentialPositions));
-            Assert.That(rounds, Is.EqualTo(SequentialRounds));
+            Assert.That(positions, Is.EqualTo(_sequentialPositions));
+            Assert.That(rounds, Is.EqualTo(_sequentialRounds));
         }
 
         [Test]
@@ -172,7 +176,7 @@ namespace Shooter.Core.Tests
 
             for (var round = 0; round < 4; round++)
             {
-                Assert.That(played.Skip(round * 5).Take(5).OrderBy(p => p), Is.EqualTo(FivePositions), "round " + round);
+                Assert.That(played.Skip(round * 5).Take(5).OrderBy(p => p), Is.EqualTo(_fivePositions), "round " + round);
             }
 
             Assert.That(cursor.Round, Is.EqualTo(3));
@@ -225,7 +229,7 @@ namespace Shooter.Core.Tests
             var playlist = new Playlist(
                 "rotation",
                 PlaylistOrder.Sequential,
-                new[] { new PlaylistEntry("Arena", "TeamDeathmatch", BothMutators), new PlaylistEntry("Yard") },
+                new[] { new PlaylistEntry("Arena", "TeamDeathmatch", _bothMutators), new PlaylistEntry("Yard") },
                 2.5f);
             var cursor = new PlaylistCursor(playlist, 1);
             var available = new[] { new GameRulesMutator("low-health", "{}"), new GameRulesMutator("no-regen", "{}") };
@@ -251,10 +255,10 @@ namespace Shooter.Core.Tests
             Assert.That(PlaylistLog.NoSceneLoaded(playlist), Is.EqualTo("[Playlist] id=rotation stopped: no entry has a scene that can be loaded"));
             Assert.That(PlaylistLog.Stopped(playlist), Is.EqualTo("[Playlist] id=rotation stopped"));
             Assert.That(
-                PlaylistLog.UnknownRules(playlist, MissingRules, KnownRules),
+                PlaylistLog.UnknownRules(playlist, _missingRules, _knownRules),
                 Is.EqualTo("playlist 'rotation' names rules that are not in the rules table: Missing; known rules are Domination, TeamDeathmatch"));
             Assert.That(
-                PlaylistLog.UnknownRules(playlist, MissingRules, Array.Empty<string>()),
+                PlaylistLog.UnknownRules(playlist, _missingRules, Array.Empty<string>()),
                 Is.EqualTo("playlist 'rotation' names rules that are not in the rules table: Missing; known rules are (none)"));
         }
 

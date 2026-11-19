@@ -140,7 +140,7 @@ jobs:
 
       # lint.sh --since は affected.sh の test のときだけ restore の要る dotnet/Shooter.slnx を読む
       - name: Restore
-        if: steps.affected.outputs.test != 'false'
+        if: steps.affected.outputs.format != 'false' && steps.affected.outputs.test != 'false'
         run: scripts/install.sh
 
       - name: Lint

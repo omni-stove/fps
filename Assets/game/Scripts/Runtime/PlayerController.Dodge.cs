@@ -80,12 +80,20 @@ namespace Shooter.Runtime
                 return false;
             }
 
+            // ほかの条件より後に聞く。断ったログを、ほかの理由でどのみち転がれないときにまで出さないため。
+            if (!HasStaminaFor(StaminaUse.Dodge))
+            {
+                return false;
+            }
+
             var yawRadians = _look.transform.eulerAngles.y * Mathf.Deg2Rad;
             var direction = DodgeMotion.ResolveDirection(move.ToNumerics(), yawRadians);
             if (!_dodgeMotion.TryStart(direction))
             {
                 return false;
             }
+
+            SpendStamina(StaminaUse.Dodge);
 
             ReleaseCrouch(CrouchInput.ReasonDodge);
             ReleaseSprint(SprintInput.ReasonDodge);

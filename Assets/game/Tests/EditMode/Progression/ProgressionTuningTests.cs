@@ -26,6 +26,46 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAchievementFileHoldsTheDefaults()
+        {
+            var asset = Resources.Load<TextAsset>(AchievementJson.ResourcePath);
+            Assert.That(asset, Is.Not.Null, "the kit ships Resources/" + AchievementJson.ResourcePath + ".json");
+
+            var spec = AchievementJson.Parse(asset.text, AchievementJson.ResourcePath);
+            var defaults = AchievementSpec.DefaultAchievements;
+
+            Assert.That(spec.Achievements.Count, Is.EqualTo(defaults.Count));
+            for (var i = 0; i < defaults.Count; i++)
+            {
+                Assert.That(spec.Achievements[i].Id, Is.EqualTo(defaults[i].Id));
+                Assert.That(spec.Achievements[i].DisplayNameKey, Is.EqualTo(defaults[i].DisplayNameKey));
+                Assert.That(spec.Achievements[i].DescriptionKey, Is.EqualTo(defaults[i].DescriptionKey));
+                Assert.That(spec.Achievements[i].Stat, Is.EqualTo(defaults[i].Stat));
+                Assert.That(spec.Achievements[i].Target, Is.EqualTo(defaults[i].Target));
+                Assert.That(spec.Achievements[i].Hidden, Is.EqualTo(defaults[i].Hidden));
+            }
+
+            Assert.That(spec.MeleeWeaponIds, Is.EqualTo(AchievementSpec.DefaultMeleeWeaponIds));
+        }
+
+        [Test]
+        public void TheKitTuningPathsAreTheOnesTheProgressionReads()
+        {
+            Assert.That(KitTuning.AchievementsResourcePath, Is.EqualTo(AchievementJson.ResourcePath));
+            Assert.That(KitTuning.AchievementsResourcePath, Is.EqualTo("Tuning/achievements"));
+            Assert.That(ProgressionRecorder.ResourcePath, Is.EqualTo(KitTuning.ProgressionResourcePath));
+            Assert.That(KitTuning.ProgressionResourcePath, Is.EqualTo("Tuning/progression"));
+        }
+
+        [Test]
+        public void TheCosmeticCatalogIsReadByTheKitAndUsedByTheLocker()
+        {
+            var locker = new CosmeticLocker(new ProgressionRecorder(new MemorySaveStorage(), ProgressionSpec.Default, new OfflineParticipants()));
+
+            Assert.That(locker.Catalog.Items.Count, Is.EqualTo(CosmeticLooks.LoadCatalog().Items.Count));
+        }
+
+        [Test]
         public void EveryShippedUnlockIsAWeaponOrAnAttachmentOfTheShippedInventory()
         {
             var inventory = InventoryJson.Parse(

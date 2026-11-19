@@ -10,7 +10,7 @@ namespace Shooter.Runtime
         private readonly ProgressionRecorder _progression;
 
         public CosmeticLocker(ProgressionRecorder progression)
-            : this(progression, LoadCatalog())
+            : this(progression, CosmeticLooks.LoadCatalog())
         {
         }
 
@@ -27,11 +27,6 @@ namespace Shooter.Runtime
         public ProgressionRecorder Progression => _progression;
 
         public bool IsInstalled { get; private set; }
-
-        public static CosmeticCatalog LoadCatalog()
-        {
-            return KitTuning.Load(c => c.CosmeticsTuning, CosmeticJson.ResourcePath, CosmeticJson.Parse, CosmeticCatalog.Default);
-        }
 
         public void Install()
         {

@@ -1449,6 +1449,8 @@ namespace Shooter.Runtime
                     return "stick-deadzone";
                 case ControlValue.RumbleStrength:
                     return "rumble-strength";
+                case ControlValue.UiScale:
+                    return "ui-scale";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

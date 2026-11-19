@@ -12,6 +12,8 @@ namespace Shooter.Tests.EditMode
     {
         private const string DefaultGyro = ",\"gyro\":false,\"gyroSensitivity\":100,\"gyroAimOnly\":false,\"invertGyroY\":false";
 
+        private const string DefaultUiScale = ",\"uiScale\":100";
+
         private ControlSettingsStore _store;
 
         [SetUp]
@@ -65,7 +67,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -177,7 +179,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -209,7 +211,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12").And.Contain("\"aimAssist\":true"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13").And.Contain("\"aimAssist\":true"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -261,7 +263,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.RumbleStrength, Is.EqualTo(ControlSettings.Default.RumbleStrength));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":12").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+                Does.Contain("\"version\":13").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -279,7 +281,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.True);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + "}"));
+                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -305,7 +307,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.False);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false" + DefaultGyro + "}"));
+                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false" + DefaultGyro + DefaultUiScale + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -329,12 +331,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.InvertGyroY, Is.True);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":12")
-                    .And.EndWith(",\"gyro\":true,\"gyroSensitivity\":180,\"gyroAimOnly\":true,\"invertGyroY\":true}"));
+                Does.Contain("\"version\":13")
+                    .And.EndWith(",\"gyro\":true,\"gyroSensitivity\":180,\"gyroAimOnly\":true,\"invertGyroY\":true" + DefaultUiScale + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
-        // 版 11 の保存がある状態で起動すると、ジャイロは切ったままになり、ほかの設定は消えずに版 12 で書き直される
+        // 版 11 の保存がある状態で起動すると、ジャイロは切ったままになり、ほかの設定は消えずに今の版で書き直される
         [Test]
         public void VersionElevenDataSilentlyGetsTheGyroOffAndIsRewrittenInTheCurrentVersion()
         {
@@ -356,7 +358,65 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.InvertGyroY, Is.False, "the stick invert does not carry over to the gyro");
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + "}"));
+                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // UI の拡大を変えて閉じ、起動し直しても残っている
+        [Test]
+        public void SavesTheUiScaleAndLoadsItBackAfterARestart()
+        {
+            var settings = ControlSettings.Default.WithUiScale(150).WithInvertGyroY(true);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.Get(ControlValue.UiScale), Is.EqualTo(150));
+            Assert.That(loaded.UiScale, Is.EqualTo(1.5f));
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":13").And.EndWith(",\"invertGyroY\":true,\"uiScale\":150}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 版 12 の保存がある状態で起動すると、UI の拡大は 100% になり、ほかの設定は消えずに版 13 で書き直される
+        [Test]
+        public void VersionTwelveDataSilentlyGetsTheUiScaleAtOneHundredAndIsRewrittenInTheCurrentVersion()
+        {
+            var saved = ControlSettings.Default
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(220)
+                .WithQuickMatchRegion("europe")
+                .With(ControlValue.FieldOfView, 85);
+            var versionTwelve = OldVersion(saved.ToJson(), 12, null);
+            Assert.That(versionTwelve, Does.Contain("\"version\":12").And.Not.Contain("uiScale"));
+            PlayerPrefs.SetString(_store.Key, versionTwelve);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.Get(ControlValue.UiScale), Is.EqualTo(100));
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":13").And.EndWith(",\"gyro\":true,\"gyroSensitivity\":220,\"gyroAimOnly\":false,\"invertGyroY\":false" + DefaultUiScale + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [TestCase(400, 150)]
+        [TestCase(10, 80)]
+        public void AUiScaleOutsideTheRangeIsClampedWithAWarning(int saved, int expected)
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithShowBlood(false).ToJson().Replace("\"uiScale\":100", "\"uiScale\":" + saved));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*'uiScale' " + saved + " is outside 80 to 150; using " + expected));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.Get(ControlValue.UiScale), Is.EqualTo(expected));
+            Assert.That(loaded.ShowBlood, Is.False, "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -562,9 +622,15 @@ namespace Shooter.Tests.EditMode
         // 版 9 までは版 10 で足した視点の上下反転・デッドゾーン・振動・振動の強さを持たない (初期値のときだけ除ける)。
         // 版 10 までは版 11 で足した地域とテレメトリの同意を持たない (初期値のときだけ除ける)。
         // 版 11 までは版 12 で足したジャイロの欄を持たない (初期値のときだけ除ける)。
+        // 版 12 までは版 13 で足した UI の拡大を持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 13)
+            {
+                old = old.Replace(DefaultUiScale, string.Empty);
+            }
+
             if (version < 12)
             {
                 old = old.Replace(DefaultGyro, string.Empty);

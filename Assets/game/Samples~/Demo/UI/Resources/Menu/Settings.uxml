@@ -118,6 +118,11 @@
                 <ui:Label text="#settings.subtitles" class="settings__caption" />
                 <ui:Button name="settings-subtitles" text="" class="settings__button settings__mode" />
             </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.uiScale" class="settings__caption" />
+                <ui:SliderInt name="settings-ui-scale" class="settings__slider" />
+                <ui:Label name="settings-ui-scale-value" text="" class="settings__value" />
+            </ui:VisualElement>
 
             <ui:Label text="#voice.settings.section" class="settings__section" />
             <ui:VisualElement class="settings__row">

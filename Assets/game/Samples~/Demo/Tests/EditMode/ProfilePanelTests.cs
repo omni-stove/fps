@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -64,6 +65,17 @@ namespace Shooter.Tests.EditMode
         public void TearDown()
         {
             _panel?.Dispose();
+            GameSignals.Account.Clear();
+            GameSignals.AccountControl.Clear();
+        }
+
+        private static FakeAccountControl PublishAccount(AccountKind kind, AccountStage stage = AccountStage.Idle,
+            AccountSignInFailure failure = AccountSignInFailure.None, bool epic = true)
+        {
+            var control = new FakeAccountControl { Status = new AccountStatus(kind, stage, failure, epic) };
+            GameSignals.AccountControl.Publish(control);
+            GameSignals.Account.Publish(control.Status);
+            return control;
         }
 
         [Test]
@@ -176,6 +188,109 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutASignInServiceTheAccountSectionIsHidden()
+        {
+            Open(PlayerProfile.Empty);
+
+            Assert.That(_panel.IsAccountShown, Is.False);
+            Assert.That(_panel.PressAccount(), Is.False);
+        }
+
+        [Test]
+        public void OnTheDeviceIdItOffersTheEpicAccount()
+        {
+            var control = PublishAccount(AccountKind.Device);
+            Open(PlayerProfile.Empty);
+
+            Assert.That(_panel.IsAccountShown, Is.True);
+            Assert.That(_container.Q<VisualElement>(ProfilePanel.AccountName).Q<Label>(className: ProfilePanel.SectionTitleClass).text, Is.EqualTo("アカウント"));
+            Assert.That(_panel.AccountStatusText, Is.EqualTo("この端末のアカウントで遊んでいます。セーブはこの端末の分だけ同期します"));
+            Assert.That(_panel.AccountNoticeText, Is.Null);
+            Assert.That(_panel.IsAccountButtonShown, Is.True);
+            Assert.That(_panel.AccountButton.text, Is.EqualTo("Epic アカウントでサインイン"));
+            Assert.That(_panel.AccountButton.enabledSelf, Is.True);
+
+            Assert.That(_panel.PressAccount(), Is.True);
+
+            Assert.That(control.Calls, Is.EqualTo(new[] { "sign-in" }));
+        }
+
+        [Test]
+        public void OnAnEpicAccountItOffersSigningOut()
+        {
+            var control = PublishAccount(AccountKind.Epic);
+            Open(PlayerProfile.Empty);
+
+            Assert.That(_panel.AccountStatusText, Is.EqualTo("Epic アカウントでサインインしています。セーブを他の端末と同期します"));
+            Assert.That(_panel.AccountButton.text, Is.EqualTo("サインアウト"));
+
+            _panel.PressAccount();
+
+            Assert.That(control.Calls, Is.EqualTo(new[] { "sign-out" }));
+        }
+
+        [Test]
+        public void WhileSigningInTheButtonCannotBePressed()
+        {
+            var control = PublishAccount(AccountKind.Device, AccountStage.SigningIn);
+            Open(PlayerProfile.Empty);
+
+            Assert.That(_panel.AccountStatusText, Is.EqualTo("サインインしています…"));
+            Assert.That(_panel.AccountButton.enabledSelf, Is.False);
+            Assert.That(_panel.PressAccount(), Is.False);
+            Assert.That(control.Calls, Is.Empty);
+        }
+
+        [Test]
+        public void ACancelledOrFailedSignInIsShownUnderTheStatus()
+        {
+            PublishAccount(AccountKind.Device, failure: AccountSignInFailure.Cancelled);
+            Open(PlayerProfile.Empty);
+            Assert.That(_panel.AccountNoticeText, Is.EqualTo("サインインを取りやめました"));
+
+            GameSignals.Account.Publish(new AccountStatus(AccountKind.Device, AccountStage.Idle, AccountSignInFailure.Failed, true));
+
+            Assert.That(_panel.AccountNoticeText, Is.EqualTo("サインインできませんでした。時間をおいてもう一度試してください"));
+        }
+
+        [Test]
+        public void TheSectionFollowsTheSignInWhileOpen()
+        {
+            PublishAccount(AccountKind.None, AccountStage.SigningIn);
+            Open(PlayerProfile.Empty);
+
+            GameSignals.Account.Publish(new AccountStatus(AccountKind.Epic, AccountStage.Idle, AccountSignInFailure.None, true));
+            Assert.That(_panel.AccountStatusText, Is.EqualTo("Epic アカウントでサインインしています。セーブを他の端末と同期します"));
+            Assert.That(_panel.AccountButton.text, Is.EqualTo("サインアウト"));
+
+            GameSignals.AccountControl.Clear();
+            Assert.That(_panel.IsAccountShown, Is.False);
+        }
+
+        [Test]
+        public void WithoutEpicAccountsOnlyTheStatusIsShown()
+        {
+            PublishAccount(AccountKind.Device, epic: false);
+            Open(PlayerProfile.Empty);
+
+            Assert.That(_panel.IsAccountShown, Is.True);
+            Assert.That(_panel.IsAccountButtonShown, Is.False);
+            Assert.That(_panel.PressAccount(), Is.False);
+        }
+
+        [Test]
+        public void AfterDisposeTheSignInIsNotFollowed()
+        {
+            var control = PublishAccount(AccountKind.Device);
+            Open(PlayerProfile.Empty);
+            _panel.Dispose();
+
+            Assert.DoesNotThrow(() => GameSignals.Account.Publish(new AccountStatus(AccountKind.Epic, AccountStage.Idle, AccountSignInFailure.None, true)));
+            Assert.That(_panel.PressAccount(), Is.False);
+            Assert.That(control.Calls, Is.Empty);
+        }
+
+        [Test]
         public void RejectsNulls()
         {
             Assert.Throws<ArgumentNullException>(() => new ProfilePanel(null, Ledger(), PlayerProfile.Empty));
@@ -183,6 +298,25 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => new ProfilePanel(new VisualElement(), Ledger(), null));
             Open(PlayerProfile.Empty);
             Assert.Throws<ArgumentNullException>(() => _panel.Show(null));
+        }
+
+        private sealed class FakeAccountControl : IAccountControl
+        {
+            public List<string> Calls { get; } = new List<string>();
+
+            public AccountStatus Status { get; set; }
+
+            public bool SignInWithEpic()
+            {
+                Calls.Add("sign-in");
+                return true;
+            }
+
+            public bool SignOut()
+            {
+                Calls.Add("sign-out");
+                return true;
+            }
         }
     }
 }

@@ -101,6 +101,11 @@ namespace Shooter.Runtime
 
         public static GameSignal<AircraftStatus?> Aircraft { get; } = new GameSignal<AircraftStatus?>(nameof(Aircraft));
 
+        public static GameSignal<AccountStatus?> Account { get; } = new GameSignal<AccountStatus?>(nameof(Account));
+
+        // UI は NetEos を参照しないので、サインインの部品がここに出す。サインインを使えないビルドや設定では出さない。
+        public static GameSignal<IAccountControl> AccountControl { get; } = new GameSignal<IAccountControl>(nameof(AccountControl));
+
         public static GameSignal<StaminaStatus?> Stamina { get; } = new GameSignal<StaminaStatus?>(nameof(Stamina));
 
         public static GameSignal<LockOnWarningStatus?> LockOnWarning { get; } = new GameSignal<LockOnWarningStatus?>(nameof(LockOnWarning));
@@ -152,6 +157,8 @@ namespace Shooter.Runtime
             Cosmetics.Reset();
             Stash.Reset();
             Aircraft.Reset();
+            Account.Reset();
+            AccountControl.Reset();
             Stamina.Reset();
             LockOnWarning.Reset();
             Emotes.Reset();

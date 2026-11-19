@@ -16,6 +16,9 @@ namespace Shooter.Runtime
         public const string StatClass = "profile__stat";
         public const string UnlockClass = "profile__unlock";
         public const string BackClass = "profile__back";
+        public const string AccountStatusClass = "profile__account-status";
+        public const string AccountNoticeClass = "profile__account-notice";
+        public const string AccountButtonClass = "profile__account-button";
 
         public const string LevelName = "profile-level";
         public const string TotalXpName = "profile-total-xp";
@@ -23,6 +26,10 @@ namespace Shooter.Runtime
         public const string StatsName = "profile-stats";
         public const string UnlocksName = "profile-unlocks";
         public const string BackButtonName = "profile-back";
+        public const string AccountName = "profile-account";
+        public const string AccountStatusName = "profile-account-status";
+        public const string AccountNoticeName = "profile-account-notice";
+        public const string AccountButtonName = "profile-account-button";
 
         private readonly VisualElement _container;
         private readonly ProgressionLedger _ledger;
@@ -37,6 +44,11 @@ namespace Shooter.Runtime
         private readonly Label _unlocksTitle;
         private readonly VisualElement _unlocks;
         private readonly Button _back;
+        private readonly VisualElement _account;
+        private readonly Label _accountTitle;
+        private readonly Label _accountStatus;
+        private readonly Label _accountNotice;
+        private readonly Button _accountButton;
         private readonly VisualElement _navigationRoot;
         private PlayerProfile _profile;
         private bool _disposed;
@@ -80,6 +92,19 @@ namespace Shooter.Runtime
             _unlocks.Add(_unlocksTitle);
             container.Add(_unlocks);
 
+            _account = new VisualElement { name = AccountName };
+            _account.AddToClassList(SectionClass);
+            _accountTitle = MakeLabel(SectionTitleClass);
+            _account.Add(_accountTitle);
+            _accountStatus = MakeLabel(AccountStatusClass, AccountStatusName);
+            _account.Add(_accountStatus);
+            _accountNotice = MakeLabel(AccountNoticeClass, AccountNoticeName);
+            _account.Add(_accountNotice);
+            _accountButton = new Button(() => PressAccount()) { name = AccountButtonName };
+            _accountButton.AddToClassList(AccountButtonClass);
+            _account.Add(_accountButton);
+            container.Add(_account);
+
             _back = new Button(Cancel) { name = BackButtonName };
             _back.AddToClassList(BackClass);
             container.Add(_back);
@@ -88,6 +113,10 @@ namespace Shooter.Runtime
             _navigationRoot = container.panel?.visualTree ?? container;
             _navigationRoot.RegisterCallback<NavigationSubmitEvent>(HandleSubmit, TrickleDown.TrickleDown);
             _navigationRoot.RegisterCallback<NavigationCancelEvent>(HandleCancel, TrickleDown.TrickleDown);
+
+            // サインインは画面を開いている間にも終わるので、開いている間も出し直す。
+            GameSignals.Account.Changed += HandleAccountChanged;
+            GameSignals.AccountControl.Changed += HandleAccountControlChanged;
 
             Refresh();
         }
@@ -111,6 +140,29 @@ namespace Shooter.Runtime
         public IReadOnlyList<string> StatLines => LinesOf(_stats, StatClass);
 
         public IReadOnlyList<string> UnlockLines => LinesOf(_unlocks, UnlockClass);
+
+        public Button AccountButton => _accountButton;
+
+        public bool IsAccountShown => _account.style.display != DisplayStyle.None;
+
+        public bool IsAccountButtonShown => IsAccountShown && _accountButton.style.display != DisplayStyle.None;
+
+        public string AccountStatusText => _accountStatus.text;
+
+        public string AccountNoticeText => _accountNotice.style.display != DisplayStyle.None ? _accountNotice.text : null;
+
+        // 押せないとき (サービスが無い・サインインの最中) は何もせず false を返す。
+        public bool PressAccount()
+        {
+            var control = GameSignals.AccountControl.Value;
+            if (_disposed || control == null || !IsAccountButtonShown || !_accountButton.enabledSelf)
+            {
+                return false;
+            }
+
+            var status = CurrentAccountStatus(control);
+            return status.CanSignOut ? control.SignOut() : control.SignInWithEpic();
+        }
 
         public void Show(PlayerProfile profile)
         {
@@ -155,8 +207,59 @@ namespace Shooter.Runtime
             _unlocksTitle.text = ProgressionFormat.NextUnlocksTitle;
             WriteLines(_unlocks, UnlockClass, NextUnlockLines(level));
 
+            RefreshAccount();
+
             _back.text = ProgressionFormat.Back;
             FocusBack();
+        }
+
+        private void RefreshAccount()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            var control = GameSignals.AccountControl.Value;
+            SetDisplayed(_account, control != null);
+            if (control == null)
+            {
+                return;
+            }
+
+            var status = CurrentAccountStatus(control);
+            _accountTitle.text = AccountText.Title;
+            _accountStatus.text = AccountText.Status(status);
+
+            var notice = AccountText.Failure(status.LastFailure);
+            _accountNotice.text = notice ?? string.Empty;
+            SetDisplayed(_accountNotice, notice != null);
+
+            // Epic アカウントを使わない設定では押せることが無いので、ボタンごと隠す。
+            var showButton = status.CanUseEpicAccount || status.Kind == AccountKind.Epic;
+            SetDisplayed(_accountButton, showButton);
+            _accountButton.text = status.Kind == AccountKind.Epic ? AccountText.SignOut : AccountText.SignIn;
+            _accountButton.SetEnabled(status.CanSignOut || status.CanSignInWithEpic);
+        }
+
+        private static AccountStatus CurrentAccountStatus(IAccountControl control)
+        {
+            return GameSignals.Account.Value ?? control.Status;
+        }
+
+        private void HandleAccountChanged(AccountStatus? status)
+        {
+            RefreshAccount();
+        }
+
+        private void HandleAccountControlChanged(IAccountControl control)
+        {
+            RefreshAccount();
+        }
+
+        private static void SetDisplayed(VisualElement element, bool shown)
+        {
+            element.style.display = shown ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         public void Dispose()
@@ -167,6 +270,8 @@ namespace Shooter.Runtime
             }
 
             _disposed = true;
+            GameSignals.Account.Changed -= HandleAccountChanged;
+            GameSignals.AccountControl.Changed -= HandleAccountControlChanged;
             _navigationRoot.UnregisterCallback<NavigationSubmitEvent>(HandleSubmit, TrickleDown.TrickleDown);
             _navigationRoot.UnregisterCallback<NavigationCancelEvent>(HandleCancel, TrickleDown.TrickleDown);
             _container.Clear();
@@ -241,6 +346,12 @@ namespace Shooter.Runtime
             // フォーカスしている戻るのボタンにも届くと Cancelled が二重に走るので、ここで止める
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
+            if (_navigationRoot.focusController?.focusedElement == _accountButton)
+            {
+                PressAccount();
+                return;
+            }
+
             Cancel();
         }
 

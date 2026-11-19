@@ -16,6 +16,7 @@ namespace Shooter.NetEos
             var factory = new EosClientTransportFactory();
             NetV2Eos.Factory = factory;
             CloudSaveBootstrap.Backend = new EosPlayerDataStorage(factory);
+            AccountBootstrap.Backend = new EosAccountBackend(factory);
         }
     }
 }

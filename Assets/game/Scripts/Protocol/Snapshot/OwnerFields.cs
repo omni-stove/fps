@@ -2,6 +2,7 @@ using System;
 
 namespace Shooter.Protocol
 {
+    // 1 バイトに収まらなくなったので、SnapshotMessage は部分のビットを 2 バイトで書く。
     [Flags]
     public enum OwnerFields
     {
@@ -13,6 +14,8 @@ namespace Shooter.Protocol
         Knockback = 1 << 4,
         Respawn = 1 << 5,
         Money = 1 << 6,
-        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money,
+        Redeploy = 1 << 7,
+        Extraction = 1 << 8,
+        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money | Redeploy | Extraction,
     }
 }

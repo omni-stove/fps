@@ -181,6 +181,14 @@ namespace Shooter.Server.Tests
 
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
+                // Battle Royale・Extraction は設定と型だけを先に足し、サーバーのルールは後から足すので、
+                // それまでは下のテストで断ることを確かめる
+                if (objective == MatchObjective.BattleRoyale
+                    || objective == MatchObjective.Extraction)
+                {
+                    continue;
+                }
+
                 Assert.DoesNotThrow(() => ServerObjectiveFactory.Create(objective, settings, _host), objective.ToString());
             }
         }
@@ -219,6 +227,16 @@ namespace Shooter.Server.Tests
             Assert.That(items[0].Kind, Is.EqualTo(ObjectiveItemKind.Cart));
             Assert.That(objective.DecideWinner(Team.Alpha), Is.EqualTo(Team.Bravo), "the defenders hold until the cart arrives");
             objective.Stop();
+        }
+
+        [TestCase(MatchObjective.BattleRoyale, "BattleRoyale")]
+        [TestCase(MatchObjective.Extraction, "Extraction")]
+        public void AMatchIsRefusedUntilTheServerHasItsRules(MatchObjective objective, string name)
+        {
+            var e = Assert.Throws<InvalidOperationException>(
+                () => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host));
+
+            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective " + name));
         }
 
         [TestCase(MatchObjective.CaptureTheFlag, "flag")]

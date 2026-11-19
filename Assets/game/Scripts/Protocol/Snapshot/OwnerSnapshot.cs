@@ -26,6 +26,19 @@ namespace Shooter.Protocol
         // ほかの人の所持金は見せないので、人ごとの行 (PlayerSnapshot) に載せず持ち主にだけ送る。
         public int Money { get; set; }
 
+        public int RedeploysLeft { get; set; }
+
+        // 復帰を待っていなければ null。端数の秒で送らないのは RespawnSeconds と同じく毎 tick 差分に載せないため。
+        public int? RedeploySeconds { get; set; }
+
+        // 0〜1。待っている脱出地点が無ければ 0
+        public float ExtractionProgress { get; set; }
+
+        public bool HasExtractionPoint { get; set; }
+
+        // 脱出地点の物 (ObjectiveItemSnapshot.ItemId)
+        public int ExtractionPointId { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -45,6 +58,11 @@ namespace Shooter.Protocol
             Knockback = other.Knockback;
             RespawnSeconds = other.RespawnSeconds;
             Money = other.Money;
+            RedeploysLeft = other.RedeploysLeft;
+            RedeploySeconds = other.RedeploySeconds;
+            ExtractionProgress = other.ExtractionProgress;
+            HasExtractionPoint = other.HasExtractionPoint;
+            ExtractionPointId = other.ExtractionPointId;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -86,6 +104,18 @@ namespace Shooter.Protocol
             if (Money != baseline.Money)
             {
                 fields |= OwnerFields.Money;
+            }
+
+            if (RedeploysLeft != baseline.RedeploysLeft || RedeploySeconds != baseline.RedeploySeconds)
+            {
+                fields |= OwnerFields.Redeploy;
+            }
+
+            if (!Same.Bits(ExtractionProgress, baseline.ExtractionProgress)
+                || HasExtractionPoint != baseline.HasExtractionPoint
+                || (HasExtractionPoint && ExtractionPointId != baseline.ExtractionPointId))
+            {
+                fields |= OwnerFields.Extraction;
             }
 
             return fields;
@@ -149,6 +179,43 @@ namespace Shooter.Protocol
 
                 writer.WriteInt32(Money);
             }
+
+            if ((fields & OwnerFields.Redeploy) != 0)
+            {
+                var seconds = RedeploySeconds;
+                if (RedeploysLeft < 0 || seconds < 0)
+                {
+                    throw new InvalidOperationException("redeploys left and redeploy seconds must not be negative");
+                }
+
+                writer.WriteInt32(RedeploysLeft);
+                writer.WriteBool(seconds.HasValue);
+                if (seconds.HasValue)
+                {
+                    writer.WriteInt32(seconds.Value);
+                }
+            }
+
+            if ((fields & OwnerFields.Extraction) != 0)
+            {
+                if (!(ExtractionProgress >= 0f && ExtractionProgress <= 1f))
+                {
+                    throw new InvalidOperationException("extraction progress must be within 0 to 1");
+                }
+
+                if (HasExtractionPoint && ExtractionPointId < 0)
+                {
+                    throw new InvalidOperationException("the extraction point id must not be negative");
+                }
+
+                if (!HasExtractionPoint && ExtractionProgress != 0f)
+                {
+                    throw new InvalidOperationException("extraction progress needs an extraction point being waited at");
+                }
+
+                writer.WriteSingle(ExtractionProgress);
+                writer.WriteInt32(HasExtractionPoint ? ExtractionPointId : PlayerIds.None);
+            }
         }
 
         internal void Read(MessageReader reader, OwnerFields fields)
@@ -193,6 +260,24 @@ namespace Shooter.Protocol
             {
                 Money = reader.ReadInt32AtLeast(0, "money");
             }
+
+            if ((fields & OwnerFields.Redeploy) != 0)
+            {
+                RedeploysLeft = reader.ReadInt32AtLeast(0, "redeploys left");
+                RedeploySeconds = reader.ReadBool() ? reader.ReadInt32AtLeast(0, "redeploy seconds") : (int?)null;
+            }
+
+            if ((fields & OwnerFields.Extraction) != 0)
+            {
+                ExtractionProgress = reader.ReadFiniteSingleBetween(0f, 1f, "extraction progress");
+                var point = reader.ReadInt32AtLeast(PlayerIds.None, "extraction point");
+                HasExtractionPoint = point != PlayerIds.None;
+                ExtractionPointId = HasExtractionPoint ? point : 0;
+                if (!HasExtractionPoint && ExtractionProgress != 0f)
+                {
+                    throw new MessageReadException("extraction progress needs an extraction point being waited at");
+                }
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -231,6 +316,19 @@ namespace Shooter.Protocol
             if ((missing & OwnerFields.Money) != 0)
             {
                 Money = baseline.Money;
+            }
+
+            if ((missing & OwnerFields.Redeploy) != 0)
+            {
+                RedeploysLeft = baseline.RedeploysLeft;
+                RedeploySeconds = baseline.RedeploySeconds;
+            }
+
+            if ((missing & OwnerFields.Extraction) != 0)
+            {
+                ExtractionProgress = baseline.ExtractionProgress;
+                HasExtractionPoint = baseline.HasExtractionPoint;
+                ExtractionPointId = baseline.ExtractionPointId;
             }
 
             Present = OwnerFields.All;

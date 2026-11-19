@@ -171,6 +171,10 @@ namespace Shooter.Core
         public const string WallRunMinSpeedItem = "wallRunMinSpeed";
         public const string WallRunGravityScaleItem = "wallRunGravityScale";
         public const string WallRunJumpOffSpeedItem = "wallRunJumpOffSpeed";
+        public const string ParachuteMinOpenHeightItem = "parachuteMinOpenHeight";
+        public const string ParachuteDescentSpeedItem = "parachuteDescentSpeed";
+        public const string ParachuteHorizontalSpeedItem = "parachuteHorizontalSpeed";
+        public const string ParachuteSteerAccelerationItem = "parachuteSteerAcceleration";
 
         private const string _kind = "match rules JSON";
 
@@ -193,6 +197,7 @@ namespace Shooter.Core
             LeanSideOffsetItem, LeanAngleDegreesItem, LeanSpeedItem, AirJumpsItem, AirJumpSpeedItem, JumpGraceSecondsItem,
             SwimSpeedItem, SwimBuoyancyItem, SwimBreathSecondsItem,
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
+            ParachuteMinOpenHeightItem, ParachuteDescentSpeedItem, ParachuteHorizontalSpeedItem, ParachuteSteerAccelerationItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -578,6 +583,11 @@ namespace Shooter.Core
             writer.Float(WallRunMinSpeedItem, wallRun.MinSpeed);
             writer.Float(WallRunGravityScaleItem, wallRun.GravityScale);
             writer.Float(WallRunJumpOffSpeedItem, wallRun.JumpOffSpeed);
+            var parachute = file.Motor.Parachute;
+            writer.Float(ParachuteMinOpenHeightItem, parachute.MinOpenHeight);
+            writer.Float(ParachuteDescentSpeedItem, parachute.DescentSpeed);
+            writer.Float(ParachuteHorizontalSpeedItem, parachute.HorizontalSpeed);
+            writer.Float(ParachuteSteerAccelerationItem, parachute.SteerAcceleration);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -974,6 +984,7 @@ namespace Shooter.Core
                 var prone = ReadProne(fields, dp);
                 var swim = ReadSwim(fields, d.Swim);
                 var wallRun = ReadWallRun(fields, d.WallRun);
+                var parachute = ReadParachute(fields, d.Parachute);
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
@@ -1033,7 +1044,8 @@ namespace Shooter.Core
                         dc.LayerMask),
                     prone,
                     swim,
-                    wallRun);
+                    wallRun,
+                    parachute);
             }
             catch (ArgumentException e)
             {
@@ -1159,6 +1171,28 @@ namespace Shooter.Core
                     : e.ParamName == "minSpeed" ? WallRunMinSpeedItem
                     : e.ParamName == "gravityScale" ? WallRunGravityScaleItem
                     : e.ParamName == "jumpOffSpeed" ? WallRunJumpOffSpeedItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static ParachuteTuning ReadParachute(ServerDataJson.Fields fields, ParachuteTuning fallback)
+        {
+            try
+            {
+                return new ParachuteTuning(
+                    fields.ReadFloat(ParachuteMinOpenHeightItem, fallback.MinOpenHeight),
+                    fields.ReadFloat(ParachuteDescentSpeedItem, fallback.DescentSpeed),
+                    fields.ReadFloat(ParachuteHorizontalSpeedItem, fallback.HorizontalSpeed),
+                    fields.ReadFloat(ParachuteSteerAccelerationItem, fallback.SteerAcceleration));
+            }
+            catch (ArgumentException e)
+            {
+                // ParachuteTuning の引数名には項目名の頭の parachute が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "minOpenHeight" ? ParachuteMinOpenHeightItem
+                    : e.ParamName == "descentSpeed" ? ParachuteDescentSpeedItem
+                    : e.ParamName == "horizontalSpeed" ? ParachuteHorizontalSpeedItem
+                    : e.ParamName == "steerAcceleration" ? ParachuteSteerAccelerationItem
                     : null;
                 throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }

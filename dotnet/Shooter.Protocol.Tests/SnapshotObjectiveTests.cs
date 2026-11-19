@@ -17,9 +17,9 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs21()
+        public void TheVersionIs22()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(21));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(22));
         }
 
         [Test]
@@ -39,6 +39,24 @@ namespace Shooter.Protocol.Tests
             Assert.That(delta.TryResolve(Send(baseline, null)), Is.True);
             Assert.That(delta.Match.Rules.Melee, Is.EqualTo(Melee.On));
             Assert.That(delta.Match.Rules.Streaks, Is.EqualTo(Streaks.On));
+        }
+
+        [Test]
+        public void TheParachuteRuleRoundTripsAndIsSentWhenChanged()
+        {
+            var baseline = Build(100);
+            var current = Build(101);
+            current.Match.Rules = MatchRulesSync.From(GameRules.Default.WithActions(ActionRules.Default.WithParachute(Parachute.On)));
+
+            var full = Send(current, null);
+            var delta = Send(current, baseline);
+
+            Assert.That(MatchRulesSync.From(GameRules.Default).Parachute, Is.EqualTo(Parachute.Off));
+            Assert.That(default(MatchRulesSync).Parachute, Is.EqualTo(Parachute.Off), "nothing opens before the rules arrive");
+            Assert.That(full.Match.Rules.Parachute, Is.EqualTo(Parachute.On));
+            Assert.That(current.Match.Rules.SameAs(baseline.Match.Rules), Is.False);
+            Assert.That(delta.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(delta.Match.Rules.Parachute, Is.EqualTo(Parachute.On));
         }
 
         [Test]

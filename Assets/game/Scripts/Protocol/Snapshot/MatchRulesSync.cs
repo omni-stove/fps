@@ -19,6 +19,9 @@ namespace Shooter.Protocol
         public Ping Ping { get; set; }
         public Prone Prone { get; set; }
         public Ladder Ladder { get; set; }
+
+        // 開けるかで予測の動きが変わるので、ほかの移動のルールと同じく送る
+        public Parachute Parachute { get; set; }
         public ReloadMode ReloadMode { get; set; }
 
         // 近接とストリークはクライアントが振る見た目と報酬の枠を出すかを決めるのに要るが、どのルールで動くかはサーバーしか知らないので送る
@@ -70,6 +73,7 @@ namespace Shooter.Protocol
                 Ping = actions.Ping,
                 Prone = actions.Prone,
                 Ladder = actions.Ladder,
+                Parachute = actions.Parachute,
                 ReloadMode = rules.ReloadMode,
                 Jump = actions.Jump,
                 Melee = actions.Melee,
@@ -94,6 +98,7 @@ namespace Shooter.Protocol
                 && Ping == other.Ping
                 && Prone == other.Prone
                 && Ladder == other.Ladder
+                && Parachute == other.Parachute
                 && ReloadMode == other.ReloadMode
                 && Jump == other.Jump
                 && Melee == other.Melee
@@ -119,6 +124,7 @@ namespace Shooter.Protocol
             writer.WriteByte((byte)Ping);
             writer.WriteByte((byte)Prone);
             writer.WriteByte((byte)Ladder);
+            writer.WriteByte((byte)Parachute);
             writer.WriteByte((byte)ReloadMode);
             writer.WriteByte((byte)Jump);
             writer.WriteByte((byte)Melee);
@@ -146,6 +152,7 @@ namespace Shooter.Protocol
                 Ping = (Ping)reader.ReadByteBelow(EnumRange<Ping>.Count, "ping rule"),
                 Prone = (Prone)reader.ReadByteBelow(EnumRange<Prone>.Count, "prone rule"),
                 Ladder = (Ladder)reader.ReadByteBelow(EnumRange<Ladder>.Count, "ladder rule"),
+                Parachute = (Parachute)reader.ReadByteBelow(EnumRange<Parachute>.Count, "parachute rule"),
                 ReloadMode = (ReloadMode)reader.ReadByteBelow(EnumRange<ReloadMode>.Count, "reload mode"),
                 Jump = (Jump)reader.ReadByteBelow(EnumRange<Jump>.Count, "jump rule"),
                 Melee = (Melee)reader.ReadByteBelow(EnumRange<Melee>.Count, "melee rule"),

@@ -429,6 +429,23 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheParachuteIsReadFromTheRowAndHeldBetweenTicksOfATrack()
+        {
+            var row = new PlayerSnapshot { Position = new Vector3(1f, 20f, 0f), IsParachuting = true };
+            var track = new RemoteTrack();
+            track.Record(10, RemotePose.From(row));
+            track.Record(12, new RemotePose(new Vector3(1f, 0f, 0f), 0f, PlayerStance.Standing, ""));
+
+            Assert.That(RemotePose.From(row).Parachuting, Is.True);
+            Assert.That(RemotePose.From(new PlayerSnapshot()).Parachuting, Is.False);
+            Assert.That(new RemotePose(Vector3.Zero, 0f, PlayerStance.Standing, "").Parachuting, Is.False);
+            Assert.That(track.TrySample(11.5f, out var between), Is.True);
+            Assert.That(between.Parachuting, Is.True, "it is not interpolated, so the earlier record holds");
+            Assert.That(track.TrySample(12f, out var landed), Is.True);
+            Assert.That(landed.Parachuting, Is.False);
+        }
+
+        [Test]
         public void TheWorldReadsTheMapsWaterAndGivesItToThePrediction()
         {
             var directory = Path.Combine(Path.GetTempPath(), "shooter-client-water-" + Guid.NewGuid().ToString("N"));

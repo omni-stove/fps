@@ -14,6 +14,11 @@ namespace Shooter.Core
 
         public const float DefaultSteerAcceleration = 8f;
 
+        // 接地して少しめり込んでいても、Ray の始点が地面の中に入って地面を外さないよう、足元より上から飛ばす。
+        public const float ProbeLift = 0.25f;
+
+        public const float ProbeDistance = 1000f;
+
         private Vector2 _horizontalVelocity;
 
         public ParachuteMotion(
@@ -125,6 +130,17 @@ namespace Shooter.Core
             // 残りが 1 Tick で寄せられる量以下なら、行き過ぎて揺れないよう目標ちょうどに合わせる。
             _horizontalVelocity = distance <= maxChange ? target : _horizontalVelocity + (toTarget * (maxChange / distance));
             return Velocity;
+        }
+
+        // Open で戻さないのは、上限で縮め直すと丸めで値が変わり、予測とサーバーで同じ状態から同じ答えにならないため。
+        public void Restore(Vector2 horizontalVelocity)
+        {
+            if (!IsFinite(horizontalVelocity.X) || !IsFinite(horizontalVelocity.Y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(horizontalVelocity), horizontalVelocity, "horizontalVelocity must be finite");
+            }
+
+            _horizontalVelocity = horizontalVelocity;
         }
 
         public void Reset()

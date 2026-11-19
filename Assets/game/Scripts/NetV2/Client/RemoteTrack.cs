@@ -54,7 +54,7 @@ namespace Shooter.NetV2
             _count = 0;
         }
 
-        // しゃがみ・泳ぎ・壁走りは補間で切り替わらないので、前の記録の値を使う。リーンは量なので位置と同じく補間する。
+        // しゃがみ・泳ぎ・壁走り・パラシュートは補間で切り替わらないので、前の記録の値を使う。リーンは量なので位置と同じく補間する。
         public bool TrySample(float tick, out RemotePose pose)
         {
             pose = default;
@@ -94,7 +94,8 @@ namespace Shooter.NetV2
                     before.WeaponId,
                     before.Lean + ((after.Lean - before.Lean) * t),
                     before.Swimming,
-                    before.WallRun);
+                    before.WallRun,
+                    before.Parachuting);
                 return true;
             }
 

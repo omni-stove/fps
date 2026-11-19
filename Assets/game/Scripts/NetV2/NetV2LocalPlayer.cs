@@ -250,8 +250,12 @@ namespace Shooter.NetV2
             IsMeleeSent = melee;
             var degrees = YawDegrees;
             yaw = degrees * Mathf.Deg2Rad;
+
+            // オフラインの ParachuteMovement と同じく、空中で押したジャンプで開く。ジャンプも送るのは、開けなかった (低すぎる) ときに
+            // オフラインと同じく空中ジャンプになるため。開けるか・もう開いているかはシミュレーションが状態とルールで決める
+            var openParachute = jump && !grounded;
             buttons = SnapshotMotion.Buttons(
-                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee);
+                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee, openParachute);
         }
 
         public ControlHandoff Handoff { get; } = new ControlHandoff();

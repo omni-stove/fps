@@ -165,6 +165,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void NetMatchToMotorCarriesTheSameParachuteTuningAsOffline()
+        {
+            _match = ScriptableObject.CreateInstance<NetMatchDefinition>();
+            _match.MotorSettings = _settings;
+
+            var motor = _match.ToMotor();
+            var offline = TraversalTuning.Current.Parachute;
+
+            Assert.That(motor.Parachute.MinOpenHeight, Is.EqualTo(offline.MinOpenHeight));
+            Assert.That(motor.Parachute.DescentSpeed, Is.EqualTo(offline.DescentSpeed));
+            Assert.That(motor.Parachute.HorizontalSpeed, Is.EqualTo(offline.HorizontalSpeed));
+            Assert.That(motor.Parachute.SteerAcceleration, Is.EqualTo(offline.SteerAcceleration));
+        }
+
+        [Test]
         public void PlayerControllerReadsTheProneFromItsSettings()
         {
             _settings.Prone = new ProneSpec(1.1f, 2.4f, 20f, 0.25f, 4f, 0.8f);

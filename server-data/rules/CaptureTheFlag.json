@@ -234,7 +234,11 @@
     "wallRunMaxSeconds": 1.5,
     "wallRunMinSpeed": 5,
     "wallRunGravityScale": 0.25,
-    "wallRunJumpOffSpeed": 7
+    "wallRunJumpOffSpeed": 7,
+    "parachuteMinOpenHeight": 6,
+    "parachuteDescentSpeed": 4,
+    "parachuteHorizontalSpeed": 6,
+    "parachuteSteerAcceleration": 8
   },
   "loadout": {
     "name": "DefaultLoadout",

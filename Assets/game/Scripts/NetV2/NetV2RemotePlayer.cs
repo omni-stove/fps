@@ -27,6 +27,8 @@ namespace Shooter.NetV2
 
         public Quaternion Tilt => _tilt;
 
+        public bool IsParachuting { get; private set; }
+
         public Transform Body => _body;
 
         // スナップショットが載せてきた見た目の Id。体を替えられなかった (カタログに無い・絵が無い) ときも Id は残し、同じ Id で引き直さない。
@@ -112,7 +114,12 @@ namespace Shooter.NetV2
 
             // 泳ぎと壁走りは補間されず 1 tick で切り替わるので、オフラインの CharacterAnimator と同じ速さで寄せる。
             // 出てきた直後は前の傾きが無いので、起き上がった姿から倒れ込まないよう、そのまま置く。
-            var target = PlayerMockPose.TraversalLean(pose.Lean, pose.Swimming, pose.WallRun, _leanAngleDegrees);
+            // パラシュートはオフラインの ParachuteMovement と同じく移動の横取りなので、リーンや壁走りの傾きに替えて立ったまま吊る。
+            // 開いた tick にリーンがまだ戻りきっていなくても傾けないよう、届いたリーンの量は読まない。
+            IsParachuting = pose.Parachuting;
+            var target = pose.Parachuting
+                ? Quaternion.identity
+                : PlayerMockPose.TraversalLean(pose.Lean, pose.Swimming, pose.WallRun, _leanAngleDegrees);
             _tilt = _snapTilt ? target : Quaternion.Slerp(_tilt, target, PlayerMockPose.BlendFactor(Time.deltaTime));
             _snapTilt = false;
             PlaceBody();

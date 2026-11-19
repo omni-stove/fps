@@ -187,6 +187,36 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheParachuteTuningReadsBackAndDefaultsWhenLeftOut()
+        {
+            var defaults = NetMotorSettings.Default;
+            var motor = new NetMotorSettings(
+                defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, defaults.Swim, defaults.WallRun, new ParachuteTuning(12f, 3f, 7f, 9f));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+
+            var text = NetMatchFile.Write(original);
+            var read = NetMatchFile.Parse(text, "parachute.json").Motor.Parachute;
+
+            Assert.That(read.MinOpenHeight, Is.EqualTo(12f));
+            Assert.That(read.DescentSpeed, Is.EqualTo(3f));
+            Assert.That(read.HorizontalSpeed, Is.EqualTo(7f));
+            Assert.That(read.SteerAcceleration, Is.EqualTo(9f));
+            Assert.That(text, Does.Contain("\"parachuteMinOpenHeight\": 12"));
+
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var partial = NetMatchFile.Parse(bareText + ", \"motor\": {\"parachuteDescentSpeed\": 2.5}}", "partial.json").Motor.Parachute;
+
+            Assert.That(partial.DescentSpeed, Is.EqualTo(2.5f));
+            Assert.That(partial.MinOpenHeight, Is.EqualTo(ParachuteMotion.DefaultMinOpenHeight));
+            Assert.That(partial.HorizontalSpeed, Is.EqualTo(ParachuteMotion.DefaultHorizontalSpeed));
+            Assert.That(partial.SteerAcceleration, Is.EqualTo(ParachuteMotion.DefaultSteerAcceleration));
+            Assert.That(NetMotorSettings.Default.Parachute, Is.SameAs(ParachuteTuning.Default));
+        }
+
+        [Test]
         public void CarryLoadReadsBackAndDefaultsWhenLeftOut()
         {
             var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 5f, 0.04f, 0.6f, CarryGaits.Walk | CarryGaits.Sprint);
@@ -262,6 +292,10 @@ namespace Shooter.Core.Tests
         [TestCase("{\"motor\": {\"wallRunMinSpeed\": -1}}", "motor.wallRunMinSpeed")]
         [TestCase("{\"motor\": {\"wallRunGravityScale\": -1}}", "motor.wallRunGravityScale")]
         [TestCase("{\"motor\": {\"wallRunJumpOffSpeed\": -1}}", "motor.wallRunJumpOffSpeed")]
+        [TestCase("{\"motor\": {\"parachuteMinOpenHeight\": 0}}", "motor.parachuteMinOpenHeight")]
+        [TestCase("{\"motor\": {\"parachuteDescentSpeed\": -1}}", "motor.parachuteDescentSpeed")]
+        [TestCase("{\"motor\": {\"parachuteHorizontalSpeed\": -1}}", "motor.parachuteHorizontalSpeed")]
+        [TestCase("{\"motor\": {\"parachuteSteerAcceleration\": 0}}", "motor.parachuteSteerAcceleration")]
         public void BadMotorValuesNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));

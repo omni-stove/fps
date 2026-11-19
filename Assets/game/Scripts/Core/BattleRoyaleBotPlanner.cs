@@ -21,6 +21,31 @@ namespace Shooter.Core
             IReadOnlyList<Vector3> downedSquadmates,
             float searchRadius)
         {
+            return Plan(position, zone, armed, pickups, downedSquadmates, searchRadius, Array.Empty<Vector3>(), 0f);
+        }
+
+        // 補給の箱は武器を拾った後、次の円へ向かう前に取りに行く。箱は次の円の中に落ちるので、向かえば円の中にも入る。
+        // 次の円の外に残った古い箱は、行くと円の外で足止めされるので、エリアがあるときは次の円の中の箱だけを選ぶ。
+        public static BotErrand Plan(
+            Vector3 position,
+            ZoneState? zone,
+            bool armed,
+            IReadOnlyList<BotPickupOption> pickups,
+            IReadOnlyList<Vector3> downedSquadmates,
+            float searchRadius,
+            IReadOnlyList<Vector3> crates,
+            float crateSearchRadius)
+        {
+            if (crates == null)
+            {
+                throw new ArgumentNullException(nameof(crates));
+            }
+
+            if (!(crateSearchRadius >= 0f) || float.IsInfinity(crateSearchRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(crateSearchRadius), crateSearchRadius, "crateSearchRadius must be a non-negative finite number");
+            }
+
             if (pickups == null)
             {
                 throw new ArgumentNullException(nameof(pickups));
@@ -54,6 +79,12 @@ namespace Shooter.Core
                 {
                     return new BotErrand(BotErrandKind.Collect, pickups[weapon].Position, weapon, true);
                 }
+            }
+
+            var crate = NearestCrate(crates, position, zone, crateSearchRadius);
+            if (crate >= 0)
+            {
+                return new BotErrand(BotErrandKind.OpenCrate, crates[crate], crate, false);
             }
 
             if (zone.HasValue && !InTarget(zone.Value, position))
@@ -104,6 +135,29 @@ namespace Shooter.Core
                 }
 
                 var distance = Vector2.DistanceSquared(Flat(from), Flat(points[i]));
+                if (distance <= limit && distance < bestDistance)
+                {
+                    best = i;
+                    bestDistance = distance;
+                }
+            }
+
+            return best;
+        }
+
+        private static int NearestCrate(IReadOnlyList<Vector3> crates, Vector3 from, ZoneState? zone, float radius)
+        {
+            var best = -1;
+            var bestDistance = float.PositiveInfinity;
+            var limit = radius * radius;
+            for (var i = 0; i < crates.Count; i++)
+            {
+                if (zone.HasValue && !(InCurrent(zone.Value, crates[i]) && InTarget(zone.Value, crates[i])))
+                {
+                    continue;
+                }
+
+                var distance = Vector2.DistanceSquared(Flat(from), Flat(crates[i]));
                 if (distance <= limit && distance < bestDistance)
                 {
                     best = i;

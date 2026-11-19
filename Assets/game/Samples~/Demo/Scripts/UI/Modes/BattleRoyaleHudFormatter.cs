@@ -148,6 +148,64 @@ namespace Shooter.Runtime
             return lines;
         }
 
+        public static LocalizedText SupplyFalling(int count)
+        {
+            if (count < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must be at least 1");
+            }
+
+            return new LocalizedText("mode.br.supplyFalling", count);
+        }
+
+        public static LocalizedText SupplyWaiting(int count)
+        {
+            if (count < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must be at least 1");
+            }
+
+            return new LocalizedText("mode.br.supplyWaiting", count);
+        }
+
+        public static LocalizedText SupplyOpenPrompt(string keyLabel)
+        {
+            var body = new LocalizedText("mode.br.supplyOpen");
+            return string.IsNullOrWhiteSpace(keyLabel) ? body : new LocalizedText("mode.br.supplyOpenKey", keyLabel.Trim(), body);
+        }
+
+        // 落ちている箱を先に出すのは、着く前に向かえば取り合いで先に着けるため。終わった試合では出さない。
+        public static IReadOnlyList<LocalizedText> SupplyLines(BattleRoyaleStatus detail)
+        {
+            if (detail == null)
+            {
+                throw new ArgumentNullException(nameof(detail));
+            }
+
+            var lines = new List<LocalizedText>();
+            if (detail.Session.Mode.State != GameModeState.Playing)
+            {
+                return lines;
+            }
+
+            if (detail.FallingSupplyDrops > 0)
+            {
+                lines.Add(SupplyFalling(detail.FallingSupplyDrops));
+            }
+
+            if (detail.LandedSupplyDrops > 0)
+            {
+                lines.Add(SupplyWaiting(detail.LandedSupplyDrops));
+            }
+
+            if (detail.IsLocalPlayerAtSupplyDrop)
+            {
+                lines.Add(SupplyOpenPrompt(detail.InteractKeyLabel));
+            }
+
+            return lines;
+        }
+
         public static LocalizedText Result(BattleRoyaleSession session)
         {
             if (session == null)
@@ -183,6 +241,7 @@ namespace Shooter.Runtime
             {
                 var zoneLine = detail.Zone.HasValue ? ZoneHudFormatter.Line(detail.Zone.Value) : default;
                 lines.AddRange(Lines(detail.Session, detail.LocalPlayerId, detail.ReviveTargetId, zoneLine, detail.IsLocalPlayerUnarmed));
+                lines.AddRange(SupplyLines(detail));
             }
         }
 

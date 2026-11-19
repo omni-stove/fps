@@ -23,5 +23,7 @@ namespace Shooter.Core
         TakeFlag,
 
         DefendFlag,
+
+        OpenCrate,
     }
 }

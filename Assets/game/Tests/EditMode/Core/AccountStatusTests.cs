@@ -73,7 +73,7 @@ namespace Shooter.Core.Tests
             Assert.That(AccountLoginResult.SignedIn().Error, Is.Null);
             Assert.That(AccountLoginResult.Cancelled().Outcome, Is.EqualTo(AccountLoginOutcome.Cancelled));
             Assert.That(AccountLoginResult.NoSavedLogin("not found").ToString(), Is.EqualTo("NoSavedLogin: not found"));
-            Assert.That(AccountLoginResult.Failed("x"), Is.EqualTo(AccountLoginResult.Failed("x")));
+            Assert.That(AccountLoginResult.Failed("x").Outcome, Is.EqualTo(AccountLoginOutcome.Failed));
             Assert.Throws<ArgumentException>(() => AccountLoginResult.Failed(" "));
             Assert.Throws<ArgumentException>(() => AccountLoginResult.NoSavedLogin(null));
         }

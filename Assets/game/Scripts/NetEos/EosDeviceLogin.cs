@@ -116,7 +116,8 @@ namespace Shooter.NetEos
                 userId = null;
             }
 
-            if (error == null)
+            // 別のユーザー（Epic アカウント）が覚えられている間は、Device ID で入り直しても上書きしない。
+            if (error == null && (EosPlatform.LocalUserId == null || EosPlatform.IsLocalUser(userId)))
             {
                 EosPlatform.RememberLogin(userId);
             }

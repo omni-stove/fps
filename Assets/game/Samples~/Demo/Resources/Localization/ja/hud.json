@@ -73,5 +73,11 @@
   "hud.lockOn": "ロックオン {0}%",
   "hud.lockedOn": "ロックオン完了",
   "hud.ability.withHint": "{0}  {1}",
-  "hud.remoteCharge.detonate": "短く押して{0}を起爆 x{1}"
+  "hud.remoteCharge.detonate": "短く押して{0}を起爆 x{1}",
+  "hud.wallet": "所持金 ${0}",
+  "hud.vision.nightVision": "暗視",
+  "hud.vision.thermal": "サーマル",
+  "hud.drone.battery": "電池 {0}%",
+  "hud.drone.outOfRange": "範囲外: 電波が届かない",
+  "hud.drone.recall": "[{0}] ドローンを戻す"
 }

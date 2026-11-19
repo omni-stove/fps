@@ -308,6 +308,52 @@ namespace Shooter.Core.Tests
             Assert.That(english.Format("moderation.reportPrompt", "Player 2"), Is.EqualTo("Why are you reporting Player 2?"));
         }
 
+        [TestCase("hud.json", "hud.wallet")]
+        [TestCase("hud.json", "hud.vision.nightVision")]
+        [TestCase("hud.json", "hud.vision.thermal")]
+        [TestCase("hud.json", "hud.drone.battery")]
+        [TestCase("hud.json", "hud.drone.outOfRange")]
+        [TestCase("hud.json", "hud.drone.recall")]
+        [TestCase("items.json", "ability.visionGoggles")]
+        [TestCase("items.json", "deployable.reconDrone")]
+        [TestCase("items.json", "weapon.riotShield")]
+        [TestCase("items.json", "item.thermalScope")]
+        [TestCase("moderation.json", ModerationText.VoteKickStartKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickCalledKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickYesKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickNoKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickRemainingKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickPassedKey)]
+        [TestCase("moderation.json", ModerationText.VoteKickFailedKey)]
+        [TestCase("net.json", "net.disconnect.voteKicked")]
+        public void TheVoteKickWalletVisionDroneAndShieldTextsAreInTheirTableOfEveryLanguage(string file, string key)
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var table = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => string.Equals(System.IO.Path.GetFileName(layer.Key), file, StringComparison.Ordinal))
+                    .Value;
+
+                Assert.That(table.Contains(key), Is.True, $"{GameLanguages.Code(language)}: {key} in {file}");
+                Assert.That(table.Get(key), Is.Not.Empty, $"{GameLanguages.Code(language)}: {key}");
+            }
+        }
+
+        [Test]
+        public void TheVoteKickTextsInsertTheirValues()
+        {
+            var japanese = JapaneseGameTextSetUp.LoadTable(GameLanguage.Japanese);
+            var english = JapaneseGameTextSetUp.LoadTable(GameLanguage.English);
+
+            Assert.That(japanese.Format(ModerationText.VoteKickCalledKey, "Player 2", "Player 5"), Is.EqualTo("Player 2 が Player 5 のキックの投票を始めた"));
+            Assert.That(english.Format(ModerationText.VoteKickCalledKey, "Player 2", "Player 5"), Is.EqualTo("Player 2 started a vote to kick Player 5"));
+            Assert.That(japanese.Format(ModerationText.VoteKickRemainingKey, 12), Is.EqualTo("残り 12 秒"));
+            Assert.That(english.Format(ModerationText.VoteKickRemainingKey, 12), Is.EqualTo("12 s left"));
+            Assert.That(japanese.Format("hud.wallet", 3400), Is.EqualTo("所持金 $3400"));
+            Assert.That(english.Format("hud.wallet", 3400), Is.EqualTo("$3400"));
+            Assert.That(english.Format("hud.drone.battery", 40), Is.EqualTo("Battery 40%"));
+        }
+
         [Test]
         public void TheStatsTextsAndTheShippedAchievementNamesAreReadFromTheStatsTableOfEveryLanguage()
         {

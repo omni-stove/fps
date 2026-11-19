@@ -291,13 +291,7 @@ namespace Shooter.Runtime
             UnityEngine.Cursor.lockState = CursorLockMode.None;
             UnityEngine.Cursor.visible = true;
 
-            _ownedPanelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-            _ownedPanelSettings.name = PanelSettingsName;
-            _ownedPanelSettings.themeStyleSheet = theme;
-            _ownedPanelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            _ownedPanelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-            _ownedPanelSettings.referenceResolution = Hud.ReferenceResolution;
-            _ownedPanelSettings.match = 0.5f;
+            _ownedPanelSettings = DemoPanelSettings.Create(PanelSettingsName, theme);
 
             // UIDocument が有効になる前に参照をすべて設定するため、無効で作ってから有効にする
             var documentObject = new GameObject(DocumentObjectName);

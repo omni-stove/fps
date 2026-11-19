@@ -94,13 +94,7 @@ namespace Shooter.Runtime
             GameObject hudObject = null;
             try
             {
-                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-                panelSettings.name = PanelSettingsName;
-                panelSettings.themeStyleSheet = theme;
-                panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-                panelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-                panelSettings.referenceResolution = ReferenceResolution;
-                panelSettings.match = 0.5f;
+                panelSettings = DemoPanelSettings.Create(PanelSettingsName, theme);
 
                 hudObject = new GameObject(objectName);
                 hudObject.SetActive(false);

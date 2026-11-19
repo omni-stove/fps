@@ -1753,3 +1753,50 @@
     white-space: nowrap;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
+
+/* 暗視・サーマルで画面を染める色。ほかの表示の後ろに、画面全体に広げる。色と画像は出す側が入れる。 */
+.vision-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 100% 100%;
+}
+
+/* 投票キックの対象・残り秒・賛否。ボイスの表示の上の左端に、行を縦に並べる。 */
+.vote-kick {
+    position: absolute;
+    left: 24px;
+    top: 22%;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* 自分の所持金。グレネードの数の上の右下に置く。 */
+.wallet {
+    position: absolute;
+    right: 32px;
+    bottom: 200px;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 14px;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* 偵察ドローンを操縦している間の枠。画面全体に広げ、電池・範囲外・戻す操作の行を下中央に並べる。 */
+.drone-hud {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 120px;
+}

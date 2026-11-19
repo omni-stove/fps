@@ -21,7 +21,7 @@ namespace Shooter.Runtime
 
         private const string PauseMenuName = "pause-menu";
 
-        [SerializeField, Min(0.1f), Tooltip("Seconds to wait for the wallet to drop after sending a purchase before saying it was not bought")]
+        [SerializeField, Min(0.1f), Tooltip("Seconds to wait for the answer to a purchase before saying it was not bought")]
         private float _answerSeconds = BuyMenuPanel.DefaultAnswerSeconds;
 
         private readonly List<InputAction> _suspended = new List<InputAction>();

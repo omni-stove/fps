@@ -8,7 +8,8 @@ using UnityEngine.UIElements;
 namespace Shooter.Runtime
 {
     // 買えるか (値段・準備の時間・持てるか) を決めるのは送った先 (GameSignals.BuySender) なので、ここでの見積もりは、断られると分かっている品を送らずに理由を出すためだけに使う。
-    // 送った先は答えを返さない (IBuySender.Buy は void) ので、財布が減ったら買えたとし、答えの届く口を持つ側は ShowVerdict で理由を渡す。
+    // 送った先の答え (買えたか・断った理由) は CombatEvents.PurchaseAnswered で後から届くので、それを受けて出す。
+    // 答えを出さない送り先 (ゲームが自前で足したもの) でも買えたことは分かるよう、財布が減ったら買えたとみなす。
     public sealed class BuyMenuPanel : IDisposable
     {
         public const string LogTag = "[BuyMenu]";
@@ -47,7 +48,8 @@ namespace Shooter.Runtime
         public const string KindKeyPrefix = "economy.kind.";
         public const string VerdictKeyPrefix = "economy.verdict.";
 
-        // 答えを返さない送り先で、持てずに断られたときに「購入中」を出し続けないよう、この秒数で買えなかったと出す。
+        // 答えが届かないとき (つながっておらず送れなかった、答えを出さない送り先など) に「購入中」を出し続けないよう、この秒数で買えなかったと出す。
+        // 秒が過ぎた後に答えが届けば、その答えで出し直す。
         public const float DefaultAnswerSeconds = 2f;
 
         private static StyleSheet _styleSheet;
@@ -136,6 +138,7 @@ namespace Shooter.Runtime
             _navigationRoot = container.panel?.visualTree ?? container;
             _navigationRoot.RegisterCallback<NavigationCancelEvent>(HandleCancel, TrickleDown.TrickleDown);
             GameSignals.Wallet.Changed += HandleWalletChanged;
+            CombatEvents.PurchaseAnswered += HandlePurchaseAnswered;
             Localizer.Changed += HandleLanguageChanged;
 
             _open = true;
@@ -326,7 +329,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // 答えを受けられる送り先 (ネット対戦の受け口など) が理由を渡す。itemId が待っている品と違えば、古い答えとして捨てる。
+        // CombatEvents.PurchaseAnswered で届いた答えを出す。itemId が待っている品と違えば、古い答えとして捨てる。
         public void ShowVerdict(string itemId, PurchaseVerdict verdict)
         {
             if (!IsOpen)
@@ -468,6 +471,7 @@ namespace Shooter.Runtime
         private void Unsubscribe()
         {
             GameSignals.Wallet.Changed -= HandleWalletChanged;
+            CombatEvents.PurchaseAnswered -= HandlePurchaseAnswered;
             Localizer.Changed -= HandleLanguageChanged;
             _navigationRoot.UnregisterCallback<NavigationCancelEvent>(HandleCancel, TrickleDown.TrickleDown);
         }
@@ -580,6 +584,11 @@ namespace Shooter.Runtime
 
             RefreshMoney();
             RefreshItems();
+        }
+
+        private void HandlePurchaseAnswered(PurchaseAnswer answer)
+        {
+            ShowVerdict(answer.ItemId, answer.Verdict);
         }
 
         private void HandleLanguageChanged(GameLanguage language)

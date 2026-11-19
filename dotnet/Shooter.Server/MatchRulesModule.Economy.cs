@@ -13,6 +13,7 @@ namespace Shooter.Server
         private readonly Dictionary<string, WeaponSpec> _economyWeapons = new Dictionary<string, WeaponSpec>(StringComparer.Ordinal);
         private readonly List<int> _economyRearm = new List<int>();
         private readonly List<int> _economyRearming = new List<int>();
+        private readonly BuyAnswerMessage _buyAnswer = new BuyAnswerMessage();
         private Economy _economy;
         private IEconomyRounds _economyRounds;
         private float _nextEconomyRefusalLogTime;
@@ -52,10 +53,13 @@ namespace Shooter.Server
             return verdict;
         }
 
+        // 断りでもお金が動かないとクライアントは理由を知れないので、買えたときも断ったときも送った人に答えを返す
         partial void OnBuyRequest(ServerPlayer player, BuyRequestMessage request)
         {
             TouchIdle(player.PlayerId);
-            ServerBuy(player.PlayerId, request.ItemId);
+            _buyAnswer.ItemId = request.ItemId;
+            _buyAnswer.Verdict = ServerBuy(player.PlayerId, request.ItemId);
+            _context.Messenger.Send(player.Connection, TransportChannel.Reliable, _buyAnswer);
         }
 
         // 起動のときと、次の試合でルールが替わって全員を入れ直した後に呼ぶ

@@ -125,6 +125,11 @@ namespace Shooter.Core
             return Tag + " net buy item=" + ItemText(itemId) + " (" + reason + "; not sent)";
         }
 
+        public static string NetBuyAnswer(string itemId, PurchaseVerdict verdict)
+        {
+            return Tag + " net answer item=" + ItemText(itemId) + " verdict=" + verdict;
+        }
+
         private static string ItemText(string itemId)
         {
             return string.IsNullOrEmpty(itemId) ? "-" : itemId;

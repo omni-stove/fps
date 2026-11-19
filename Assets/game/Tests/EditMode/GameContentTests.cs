@@ -196,42 +196,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void FillEmptyFillsTheRegisteredMissionsAndAwarenessIndicatorSlots()
-        {
-            CampaignContentSlots.Register();
-            StealthActionInstaller.RegisterContentSlots();
-            var content = Track(ScriptableObject.CreateInstance<GameContent>());
-            var missions = Track(ScriptableObject.CreateInstance<MissionCatalog>());
-            var indicatorA = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            var indicatorB = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            var candidates = new Dictionary<System.Type, Object[]>
-            {
-                { typeof(MissionCatalog), new Object[] { missions } },
-                { typeof(AwarenessIndicatorCatalog), new Object[] { indicatorA, indicatorB } },
-            };
-
-            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
-
-            Assert.That(content.Missions, Is.SameAs(missions));
-            Assert.That(content.AwarenessIndicator, Is.Null);
-            Assert.That(left, Does.Contain("AwarenessIndicator"));
-            Assert.That(left, Does.Not.Contain("Missions"));
-        }
-
-        [Test]
-        public void TheMissionsAndAwarenessIndicatorComeFromTheEntry()
-        {
-            var content = Content("A");
-            content.Missions = Track(ScriptableObject.CreateInstance<MissionCatalog>());
-            content.AwarenessIndicator = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            GameContent.Use(content);
-            var runner = Track(new GameObject("Campaign")).AddComponent<CampaignRunner>();
-
-            Assert.That(runner.EffectiveMissions, Is.SameAs(content.Missions));
-            Assert.That(AwarenessIndicatorCatalog.Load(), Is.SameAs(content.AwarenessIndicator));
-        }
-
-        [Test]
         public void TheCosmeticVisualCatalogComesFromTheEntryAndFallsBackToResources()
         {
             var content = Content("A");

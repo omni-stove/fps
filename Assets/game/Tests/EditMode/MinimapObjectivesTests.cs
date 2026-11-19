@@ -65,8 +65,7 @@ namespace Shooter.Tests.EditMode
         public void ADestroyedObjectiveIsDroppedWhenRead()
         {
             var host = new GameObject("Area");
-            host.AddComponent<BoxCollider>().isTrigger = true;
-            var area = host.AddComponent<ReachAreaTrigger>();
+            var area = host.AddComponent<FakeMinimapObjectiveArea>();
             MinimapObjectives.Add(area);
             Assert.That(MinimapObjectives.Count, Is.EqualTo(1));
 

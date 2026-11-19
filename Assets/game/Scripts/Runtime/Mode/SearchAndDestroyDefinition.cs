@@ -35,6 +35,15 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.1f), Tooltip("防衛側が設置された爆弾を解除できる距離 (m、水平)")]
         private float _defuseRadius = SearchAndDestroySpec.DefaultDefuseRadius;
 
+        [SerializeField, Tooltip("ラウンド制の購入経済。空なら経済なし (お金も購入も無く、持っている武器のまま)")]
+        private EconomyDefinition _economy;
+
+        public EconomyDefinition Economy
+        {
+            get => _economy;
+            set => _economy = value;
+        }
+
         public float RoundSeconds
         {
             get => _roundSeconds;

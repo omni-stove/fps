@@ -15,6 +15,10 @@ namespace Shooter.Editor
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.SearchAndDestroyName);
 
+        public const string EconomyName = "SearchAndDestroyEconomy";
+
+        public static string EconomyPath => ModeDefinitionAssets.PathOf(EconomyName);
+
         public const string MenuPath = "Shooter/Build Search And Destroy Scene";
 
         public const string SitesRootName = "BombSites";
@@ -51,6 +55,7 @@ namespace Shooter.Editor
         {
             // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作った後のここで読む。
             var definition = LoadOrCreateDefinition(DefinitionPath);
+            WireEconomy(definition, LoadOrCreateEconomy(EconomyPath, context.Catalog));
 
             var runner = host.AddComponent<SearchAndDestroyRunner>();
             runner.Definition = definition;
@@ -61,6 +66,32 @@ namespace Shooter.Editor
         {
             return ModeDefinitionAssets.LoadOrCreate<SearchAndDestroyDefinition>(
                 path, d => d.CopyFrom(new Shooter.Core.SearchAndDestroySpec()));
+        }
+
+        // 額と品は Resources/Tuning/economy.json から読むので、アセットには武器のカタログだけを入れる。
+        public static EconomyDefinition LoadOrCreateEconomy(string path, WeaponCatalogAsset catalog)
+        {
+            return ModeDefinitionAssets.LoadOrCreate<EconomyDefinition>(path, e => e.WeaponCatalog = catalog);
+        }
+
+        // 経済の欄が無かった頃に作った Definition にも経済を付けるため、空のときだけ埋める。ゲームが別の経済を入れていれば触らない。
+        public static bool WireEconomy(SearchAndDestroyDefinition definition, EconomyDefinition economy)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            if (definition.Economy != null || economy == null)
+            {
+                return false;
+            }
+
+            definition.Economy = economy;
+            EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{ModeDefinitionAssets.LogTag} wired the economy '{AssetDatabase.GetAssetPath(economy)}' to '{AssetDatabase.GetAssetPath(definition)}'");
+            return true;
         }
 
         protected override void AddModeObjects(ModeSceneContext context)

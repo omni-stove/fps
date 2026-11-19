@@ -25,7 +25,7 @@ namespace Shooter.Runtime
 
         public const string PayloadResourcePath = "Tuning/payload";
 
-        public const string EconomyResourcePath = "Tuning/economy";
+        public const string EconomyResourcePath = EconomyJson.ResourcePath;
 
         public const string SupplyDropsResourcePath = "Tuning/supply-drops";
 
@@ -60,6 +60,8 @@ namespace Shooter.Runtime
         public static IReadOnlyList<EmoteSpec> Emotes => Load(c => c.EmotesTuning, EmoteJson.ResourcePath, EmoteJson.Parse, EmoteSpec.DefaultEmotes);
 
         public static InfectedSpec Infected => Load(c => c.InfectedTuning, InfectedJson.ResourcePath, InfectedJson.Parse, InfectedSpec.Default);
+
+        public static EconomyRules Economy => Load(c => c.EconomyTuning, EconomyResourcePath, EconomyJson.Parse, EconomyRules.Default);
 
         public static IReadOnlyList<GameRulesMutator> Mutators =>
             Load(c => c.MutatorsTuning, MutatorsResourcePath, MutatorJson.Parse, MutatorJson.Empty);

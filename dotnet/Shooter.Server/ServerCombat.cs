@@ -288,7 +288,7 @@ namespace Shooter.Server
         // 当たり判定は作るときに世界の当たりを受け取るので、作り直す。巻き戻しの記録は前のマップの位置なので一緒に捨てる
         private void UseMap(ServerMapData map)
         {
-            _hitboxes = new ServerHitboxes(_bodies, map.World, null, _vehicles, _movement.Settings.Motor);
+            _hitboxes = new ServerHitboxes(_bodies, map.World, null, _vehicles, _movement.Settings.Motor, _deployables);
             _shotTrace = new ServerShotTrace(_hitboxes);
             _structures = new ServerStructures(map, _log);
             _structures.Enabled = _data.Rules.Destruction == Destruction.On;

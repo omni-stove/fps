@@ -19,12 +19,19 @@ namespace Shooter.Server
         private readonly List<int> _ids = new List<int>();
         private readonly List<(int Id, RewoundBody Body)> _rewound = new List<(int Id, RewoundBody Body)>();
         private readonly ServerVehicles _vehicles;
+        private readonly ServerDeployables _deployables;
         private readonly MotorSpec _motor;
 
         public ServerHitboxes(
-            ServerBodies bodies, IWorldCollision world, LagCompensator lag = null, ServerVehicles vehicles = null, MotorSpec motor = null)
+            ServerBodies bodies,
+            IWorldCollision world,
+            LagCompensator lag = null,
+            ServerVehicles vehicles = null,
+            MotorSpec motor = null,
+            ServerDeployables deployables = null)
         {
             _vehicles = vehicles;
+            _deployables = deployables;
             _motor = motor ?? MotorSpec.Default;
             _bodies = bodies ?? throw new ArgumentNullException(nameof(bodies));
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -129,7 +136,15 @@ namespace Shooter.Server
             Vector3 origin, Vector3 direction, float range, float tick, int shooterId, Func<int, bool> hittable, out ShotHit hit)
         {
             Validate(origin, direction, range, hittable);
-            return Nearest(origin, Vector3.Normalize(direction), 0f, range, tick, shooterId, hittable, out hit);
+            return Nearest(origin, Vector3.Normalize(direction), 0f, range, tick, shooterId, hittable, true, out hit);
+        }
+
+        // 置いた物の撃つ弾は、撃った物自身を飛ばして持ち主の陣営で通すかを決めるので、置いた物の当たりは撃つ側 (ServerDeployables) が見る
+        public bool RaycastIgnoringDeployables(
+            Vector3 origin, Vector3 direction, float range, float tick, int shooterId, Func<int, bool> hittable, out ShotHit hit)
+        {
+            Validate(origin, direction, range, hittable);
+            return Nearest(origin, Vector3.Normalize(direction), 0f, range, tick, shooterId, hittable, false, out hit);
         }
 
         private static void Validate(Vector3 origin, Vector3 direction, float range, Func<int, bool> hittable)
@@ -152,7 +167,8 @@ namespace Shooter.Server
         }
 
         private bool Nearest(
-            Vector3 origin, Vector3 unit, float radius, float range, float tick, int shooterId, Func<int, bool> hittable, out ShotHit hit)
+            Vector3 origin, Vector3 unit, float radius, float range, float tick, int shooterId, Func<int, bool> hittable, bool deployables,
+            out ShotHit hit)
         {
             hit = default;
             var found = false;
@@ -165,6 +181,12 @@ namespace Shooter.Server
             if (radius > 0f)
             {
                 found |= NearerWorldSphere(origin, unit, radius, found ? hit.Distance : range, ref hit);
+            }
+
+            // 置いた物は動かず巻き戻さないので、記録がまだ無くても当てる
+            if (deployables)
+            {
+                found |= NearerDeployable(origin, unit, found ? hit.Distance : range, shooterId, ref hit);
             }
 
             if (!HasHistory)
@@ -255,6 +277,20 @@ namespace Shooter.Server
             }
 
             hit = ShotHit.Vehicle(origin + (unit * distance), normal, distance, vehicle, multiplier, partId);
+            return true;
+        }
+
+        // 置いた物も .fpsmap に無いので、世界の当たりとは別に見る。撃った人の弾を通す物 (自分と味方の置いた物) は ServerDeployables.Raycast が飛ばす
+        private bool NearerDeployable(Vector3 origin, Vector3 unit, float limit, int shooterId, ref ShotHit hit)
+        {
+            if (_deployables == null
+                || !(limit > 0f)
+                || !_deployables.Raycast(origin, unit, limit, shooterId, out var deployable, out var distance, out var normal))
+            {
+                return false;
+            }
+
+            hit = ShotHit.Deployable(origin + (unit * distance), normal, distance, deployable);
             return true;
         }
 
@@ -406,8 +442,10 @@ namespace Shooter.Server
     {
         private ShotHit(
             Vector3 point, Vector3 normal, float distance, bool hitTarget, int targetId, Vector3 targetPosition, bool targetCrouched,
-            HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f, string vehiclePartId = null)
+            HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f, string vehiclePartId = null,
+            int deployable = 0)
         {
+            DeployableId = deployable;
             VehicleIndex = vehicle;
             DamageMultiplier = damageMultiplier;
             VehiclePartId = vehiclePartId;
@@ -455,6 +493,11 @@ namespace Shooter.Server
         // 部位の付いていない車体の箱に当たったときは null。
         public string VehiclePartId { get; }
 
+        // 置いた物の Id は 1 から振るので、0 は置いた物に当たっていない印
+        public int DeployableId { get; }
+
+        public bool HitDeployable => DeployableId > 0;
+
         public static ShotHit World(WorldHit hit)
         {
             return new ShotHit(hit.Point, hit.Normal, hit.Distance, false, 0, default, false, HitZone.Body, hit.ColliderId, hit.Layer, 0f);
@@ -471,11 +514,21 @@ namespace Shooter.Server
             return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, vehicle, damageMultiplier, partId);
         }
 
+        public static ShotHit Deployable(Vector3 point, Vector3 normal, float distance, int deployableId)
+        {
+            if (deployableId < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(deployableId), deployableId, "deployableId must be at least 1");
+            }
+
+            return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, deployable: deployableId);
+        }
+
         public ShotHit WithRewind(float rewindTicks)
         {
             return new ShotHit(
                 Point, Normal, Distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, rewindTicks, VehicleIndex,
-                DamageMultiplier, VehiclePartId);
+                DamageMultiplier, VehiclePartId, DeployableId);
         }
     }
 }

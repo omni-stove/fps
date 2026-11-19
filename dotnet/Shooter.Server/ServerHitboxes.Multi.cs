@@ -29,7 +29,8 @@ namespace Shooter.Server
             }
 
             // 車体の厚さは .fpsmap に無く測れないので、抜けない物として扱う
-            if (hit.HitVehicle)
+            // 置いた物はオフラインでも弾を受け止めて止める (Deployable.TryStopBullet) ので、抜けない物として扱う
+            if (hit.HitVehicle || hit.HitDeployable)
             {
                 return float.PositiveInfinity;
             }
@@ -74,6 +75,14 @@ namespace Shooter.Server
             var unit = Vector3.Normalize(direction);
             _many.Clear();
             AddWorldHits(origin, unit, range, maxHits);
+
+            // 置いた物は弾を止めるので、その先の物は要らない。いちばん近い 1 つだけを足す
+            var deployableHit = default(ShotHit);
+            if (NearerDeployable(origin, unit, range, shooterId, ref deployableHit))
+            {
+                _many.Add(deployableHit);
+            }
+
             var rewind = AddTargetHits(origin, unit, range, tick, shooterId, hittable);
             _many.Sort((a, b) => a.Distance.CompareTo(b.Distance));
             var count = Math.Min(maxHits, _many.Count);

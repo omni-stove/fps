@@ -88,6 +88,26 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' part '{part}' is not in the spec; it takes damage unscaled";
         }
 
+        public static string PartBroken(string vehicle, string part, AircraftDamageEffect effect, AircraftCondition condition)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' part broken part={2} effect={3} lift={4:0.00}/{5:0.00} control={6:0.00} thrust={7:0.00}",
+                Tag,
+                vehicle,
+                part,
+                effect,
+                condition.LeftLift,
+                condition.RightLift,
+                condition.Control,
+                condition.Thrust);
+        }
+
+        public static string InvalidAircraftDamage(string vehicle, string error)
+        {
+            return $"{Tag} '{vehicle}' aircraft damage settings are invalid; parts take no flight damage: {error}";
+        }
+
         public static string Ram(string vehicle, string target, int damage, float speed, string driver, int health)
         {
             var by = string.IsNullOrEmpty(driver) ? "-" : driver;

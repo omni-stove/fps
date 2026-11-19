@@ -18,7 +18,7 @@ namespace Shooter.Runtime
                 // 崩れた破片で倒したときに撃った者の名前でキルフィードに出せるよう、建物にも帰属を渡す。
                 using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
                 {
-                    Execute(structureOrders, request, hit, direction, null, HitZone.Body, 1f);
+                    Execute(structureOrders, request, hit, direction, null, null);
                 }
 
                 return new ShotOutcome(true, hit, null, null, 0, false, false);
@@ -40,7 +40,7 @@ namespace Shooter.Runtime
             int damage;
             using (CombatEvents.Attribute(request.Shooter, request.WeaponId))
             {
-                damage = Execute(orders, request, hit, direction, owner, hitbox.Zone, hitbox.DamageMultiplier);
+                damage = Execute(orders, request, hit, direction, hitbox, owner);
             }
 
             return new ShotOutcome(true, hit, hitbox, owner, damage, wasAlive, wasAlive && owner.IsDead);
@@ -51,9 +51,8 @@ namespace Shooter.Runtime
             ShotRequest request,
             RaycastHit hit,
             Vector3 direction,
-            Damageable owner,
-            HitZone zone,
-            float damageMultiplier)
+            Hitbox hitbox,
+            Damageable owner)
         {
             var damage = 0;
             foreach (var order in orders)
@@ -61,8 +60,8 @@ namespace Shooter.Runtime
                 switch (order.Kind)
                 {
                     case ImpactOrderKind.Damage:
-                        damage += owner.ApplyResolvedHit(
-                            DamageCalculator.Scale(order.Amount, damageMultiplier), zone, request.SourcePosition, direction, DamageKind.Bullet);
+                        damage += hitbox.ApplyResolvedHit(
+                            DamageCalculator.Scale(order.Amount, hitbox.DamageMultiplier), request.SourcePosition, direction, DamageKind.Bullet);
                         break;
                     case ImpactOrderKind.StructureDamage:
                         StructureDamage.Apply(hit.collider, order.Point.ToUnity(), order.Amount, order.Radius);

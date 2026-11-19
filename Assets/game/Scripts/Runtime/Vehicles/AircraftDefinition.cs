@@ -74,6 +74,18 @@ namespace Shooter.Runtime
             }
         }
 
+        public AircraftDamageSpec ToDamageSpec()
+        {
+            try
+            {
+                return Damage.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
         public void CopyFrom(AircraftSpec spec)
         {
             if (spec == null)

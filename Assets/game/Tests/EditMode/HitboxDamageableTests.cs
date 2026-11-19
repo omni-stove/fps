@@ -272,6 +272,31 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AHitboxReportsTheDamageThatWentThroughItWhileTheOwnerLives()
+        {
+            var head = AddPart("Head", HitZone.Head);
+            var body = AddPart("Body", HitZone.Body);
+            body.DamageMultiplier = 2f;
+            var headHits = 0;
+            var bodyDamage = new System.Collections.Generic.List<int>();
+            head.Hit += (hitbox, damage) => headHits++;
+            body.Hit += (hitbox, damage) =>
+            {
+                Assert.That(hitbox, Is.SameAs(body));
+                bodyDamage.Add(damage);
+            };
+
+            body.ApplyHit(10, 0f, DamageFalloff.None);
+            body.ApplyResolvedHit(0, null, null, DamageKind.Bullet);
+            _damageable.TakeDamage(5);
+            body.ApplyResolvedHit(500, null, null, DamageKind.Bullet);
+            body.ApplyResolvedHit(10, null, null, DamageKind.Bullet);
+
+            Assert.That(bodyDamage, Is.EqualTo(new[] { 20, 500 }), "no zero hits and nothing after the owner is dead");
+            Assert.That(headHits, Is.Zero);
+        }
+
+        [Test]
         public void TryApplyHitLogsAnErrorForHitboxWithoutOwner()
         {
             var orphan = new GameObject("Orphan", typeof(BoxCollider), typeof(Hitbox));

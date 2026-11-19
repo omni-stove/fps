@@ -202,6 +202,82 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void NoOneSpectatesWhenSpectatingIsOff()
+        {
+            Start(Rules(spectating: Spectating.Off));
+            Join(1);
+            Join(2);
+            Join(3);
+            _rules.ApplyDamage(2, 1, 1000);
+            var sent = _transport.Sent.Count;
+
+            Spectate(1, SpectateStep.Next);
+            Spectate(1, SpectateStep.Previous);
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False);
+            Assert.That(_transport.Sent, Has.Count.EqualTo(sent));
+            Assert.That(_rules.ServerSpectate(1, SpectateStep.Next), Is.Null);
+        }
+
+        [Test]
+        public void BetweenRoundsNoOneSpectatesWhenSpectatingIsOff()
+        {
+            Start(Rules(spectating: Spectating.Off));
+            for (var id = 1; id <= 5; id++)
+            {
+                Join(id);
+            }
+
+            var phase = (RoundPhase?)RoundPhase.Preparing;
+            _rules.RoundPhaseSource = () => phase;
+            Tick();
+            _rules.ApplyDamage(2, 5, 1000);
+
+            Spectate(1, SpectateStep.Next);
+            Spectate(5, SpectateStep.Next);
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False, "alive");
+            Assert.That(_rules.TryGetSpectateTarget(5, out _), Is.False, "dead");
+            Assert.That(_rules.ServerSpectate(5, SpectateStep.Next), Is.Null);
+
+            phase = RoundPhase.Live;
+            Tick();
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False, "alive");
+            Assert.That(_rules.TryGetSpectateTarget(5, out _), Is.False, "dead");
+        }
+
+        [Test]
+        public void TheDefaultRulesKeepSpectatingOnBetweenRoundsAndAfterDeath()
+        {
+            Assert.That(GameRules.Default.Spectating, Is.EqualTo(Spectating.On));
+            Start(Rules(spectating: GameRules.Default.Spectating));
+            for (var id = 1; id <= 5; id++)
+            {
+                Join(id);
+            }
+
+            var phase = (RoundPhase?)RoundPhase.Preparing;
+            _rules.RoundPhaseSource = () => phase;
+            Tick();
+            _rules.ApplyDamage(2, 5, 1000);
+
+            Spectate(1, SpectateStep.Next);
+            Spectate(5, SpectateStep.Next);
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out var living), Is.True);
+            Assert.That(living, Is.EqualTo(3));
+            Assert.That(_rules.TryGetSpectateTarget(5, out var dead), Is.True);
+            Assert.That(dead, Is.EqualTo(1));
+
+            phase = RoundPhase.Live;
+            Tick();
+
+            Assert.That(_rules.TryGetSpectateTarget(1, out _), Is.False, "alive");
+            Assert.That(_rules.TryGetSpectateTarget(5, out _), Is.True, "dead under the Ally rule");
+        }
+
+        [Test]
         public void WhenThePreparationEndsLivingSpectatorsStopButTheDeadKeepWatching()
         {
             Start(Rules());
@@ -258,12 +334,13 @@ namespace Shooter.Server.Tests
             Assert.Throws<InvalidOperationException>(() => _rules.CurrentRoundPhase());
         }
 
-        private static GameRules Rules(DeathCamera deathCamera = DeathCamera.Ally)
+        private static GameRules Rules(DeathCamera deathCamera = DeathCamera.Ally, Spectating spectating = Spectating.On)
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithPing(Ping.Off);
             return GameRules.Default
                 .WithActions(actions)
                 .WithDeathCamera(deathCamera)
+                .WithSpectating(spectating)
                 .WithSpawnProtectionSeconds(0f)
                 .WithIdleKickSeconds(0f)
                 .WithRegenPerSecond(0f);

@@ -233,6 +233,139 @@ namespace Shooter.Core.Tests
                 Is.EqualTo("[Streak] id=Player use refused reward=uav missing=PingController"));
         }
 
+        [Test]
+        public void TheFirstEarnedRewardIsSelectedAndALaterOneDoesNotTakeItsPlace()
+        {
+            var spec = new StreakSpec(new[]
+            {
+                new StreakReward("uav", "streak.uav", 1),
+                new StreakReward("airstrike", "streak.airstrike", 2),
+            });
+            var tracker = new StreakTracker(spec);
+            Assert.That(tracker.SelectedRewardId, Is.Null);
+            Assert.That(tracker.Status.SelectedRewardId, Is.Empty);
+
+            tracker.Killed();
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"));
+
+            var status = tracker.Killed();
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"));
+            Assert.That(status.SelectedRewardId, Is.EqualTo("uav"));
+            Assert.That(status.IsSelected(status.Slots[0]), Is.True);
+            Assert.That(status.IsSelected(status.Slots[1]), Is.False);
+        }
+
+        [Test]
+        public void SelectNextCyclesThroughTheReadyRewardsInSlotOrder()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 3);
+            Assert.That(tracker.SelectNext(), Is.False, "nothing to switch to with one reward");
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"));
+
+            KillTimes(tracker, 2);
+            Assert.That(tracker.SelectNext(), Is.True);
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("airstrike"));
+            Assert.That(tracker.Status.SelectedRewardId, Is.EqualTo("airstrike"));
+
+            Assert.That(tracker.SelectNext(), Is.True);
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"), "after the last comes the first");
+        }
+
+        [Test]
+        public void UsingTakesTheSelectedRewardAndLeavesTheOther()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 5);
+            tracker.SelectNext();
+
+            var status = tracker.Use(out var used);
+
+            Assert.That(used, Is.EqualTo("airstrike"));
+            Assert.That(tracker.ReadyRewardIds, Is.EqualTo(_uavOnly));
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"), "the selection moves to what is left");
+            Assert.That(status.SelectedRewardId, Is.EqualTo("uav"));
+        }
+
+        [Test]
+        public void UsingANamedRewardKeepsTheSelectionOnAnother()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 5);
+
+            tracker.Use("airstrike", out var used);
+
+            Assert.That(used, Is.True);
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"));
+            Assert.That(tracker.IsReady("airstrike"), Is.False);
+
+            var before = tracker.Status;
+            Assert.That(tracker.Use("airstrike", out used), Is.EqualTo(before));
+            Assert.That(used, Is.False, "a reward not held is not used");
+            Assert.That(tracker.Use(null, out used), Is.EqualTo(before));
+            Assert.That(used, Is.False);
+
+            tracker.Use("uav", out used);
+            Assert.That(used, Is.True);
+            Assert.That(tracker.SelectedRewardId, Is.Null);
+            Assert.That(tracker.Status.SelectedRewardId, Is.Empty);
+        }
+
+        [Test]
+        public void SelectPicksOnlyAHeldReward()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 5);
+
+            Assert.That(tracker.Select("uav"), Is.False, "already selected");
+            Assert.That(tracker.Select("missing"), Is.False);
+            Assert.That(tracker.Select("airstrike"), Is.True);
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("airstrike"));
+        }
+
+        [Test]
+        public void ResetDropsTheSelection()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 5);
+            tracker.SelectNext();
+
+            tracker.Reset();
+            KillTimes(tracker, 3);
+
+            Assert.That(tracker.SelectedRewardId, Is.EqualTo("uav"));
+        }
+
+        [Test]
+        public void TheStatusFallsBackToTheFirstReadySlotWhenTheSelectionIsNotReady()
+        {
+            var uav = new StreakSlot("uav", "streak.uav", 3, true);
+            var airstrike = new StreakSlot("airstrike", "streak.airstrike", 5, true);
+            var later = new StreakSlot("later", string.Empty, 9, false);
+
+            Assert.That(new StreakStatus(5, new[] { later, uav, airstrike }).SelectedRewardId, Is.EqualTo("uav"));
+            Assert.That(new StreakStatus(5, new[] { later, uav, airstrike }, "later").SelectedRewardId, Is.EqualTo("uav"));
+            Assert.That(new StreakStatus(5, new[] { later, uav, airstrike }, "airstrike").SelectedRewardId, Is.EqualTo("airstrike"));
+            Assert.That(new StreakStatus(1, new[] { later }, "later").SelectedRewardId, Is.Empty);
+            Assert.That(default(StreakStatus).SelectedRewardId, Is.Empty);
+            Assert.That(
+                new StreakStatus(5, new[] { uav, airstrike }, "airstrike"),
+                Is.Not.EqualTo(new StreakStatus(5, new[] { uav, airstrike }, "uav")),
+                "a different selection is a different status");
+        }
+
+        [Test]
+        public void TheSelectedLogLineNamesTheReward()
+        {
+            var tracker = new StreakTracker(StreakSpec.Default);
+            KillTimes(tracker, 5);
+            tracker.SelectNext();
+
+            Assert.That(
+                StreakLog.Selected("Player", tracker.SelectedRewardId, tracker.Status),
+                Is.EqualTo("[Streak] id=Player selected reward=airstrike kills=5 ready=2"));
+        }
+
         private static void KillTimes(StreakTracker tracker, int count)
         {
             for (var i = 0; i < count; i++)

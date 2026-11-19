@@ -96,6 +96,36 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void ARecreatedLobbyKeepsTheRegion()
+        {
+            _registrar.Region = "europe";
+            Register();
+
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.RegionKey].Text, Is.EqualTo("europe"));
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.RegionKey].Text, Is.EqualTo("europe"));
+        }
+
+        [Test]
+        public void TheRegionIsSetOnlyBeforeBegin()
+        {
+            Assert.That(_registrar.Region, Is.Null);
+            Assert.Throws<ArgumentException>(() => _registrar.Region = ControlSettings.AutoRegion);
+            Assert.Throws<ArgumentException>(() => _registrar.Region = "eu west");
+
+            _registrar.Region = "asia";
+            Begin();
+
+            Assert.Throws<InvalidOperationException>(() => _registrar.Region = "europe");
+            Assert.That(_registrar.Region, Is.EqualTo("asia"));
+            Assert.That(Lines()[0], Is.EqualTo("[Lobby] registering server=" + _endpoint + " bucket=shooter-server:" + _version + " region=asia"));
+        }
+
+        [Test]
         public void LogsTheSameLinesAsTheUnityServer()
         {
             Register();

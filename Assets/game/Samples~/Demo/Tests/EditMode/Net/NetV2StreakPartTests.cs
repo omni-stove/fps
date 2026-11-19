@@ -103,6 +103,36 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void PressingSwitchChangesTheSelectedRewardWithoutSendingAndUseSendsIt()
+        {
+            var switching = false;
+            var part = new NetV2StreakPart(_client, Send, () => Streaks.On, _logs.Add, Spec(), () => null, () => _pressed, () => null, () => switching);
+            try
+            {
+                part.Apply(Snapshot(kills: 3));
+                Assert.That(GameSignals.Streak.Value.Value.SelectedRewardId, Is.EqualTo(StreakSpec.UavRewardId));
+
+                switching = true;
+                part.Tick(0.1f);
+                Assert.That(GameSignals.Streak.Value.Value.SelectedRewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+                Assert.That(_sentRewards, Is.Empty, "switching is only on this side");
+                Assert.That(_logs, Has.Member(StreakLog.Selected("net0", StreakSpec.AirstrikeRewardId, GameSignals.Streak.Value.Value)));
+
+                part.Tick(0.1f);
+                Assert.That(GameSignals.Streak.Value.Value.SelectedRewardId, Is.EqualTo(StreakSpec.UavRewardId), "each press moves on and wraps around");
+
+                switching = false;
+                _pressed = true;
+                part.Tick(0.1f);
+                Assert.That(_sentRewards, Is.EqualTo(new[] { StreakSpec.UavRewardId }));
+            }
+            finally
+            {
+                part.Dispose();
+            }
+        }
+
+        [Test]
         public void PressingUseForTheAirstrikeOpensTheMapAndSendsTheChosenSpotOnConfirm()
         {
             var part = AirstrikePart();

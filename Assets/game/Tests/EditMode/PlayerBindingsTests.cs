@@ -75,6 +75,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("CycleMagnification")]
         [TestCase("HoldBreath")]
         [TestCase("SwitchGrenade")]
+        [TestCase("SwitchStreak")]
         [TestCase("Inventory")]
         [TestCase("Previous")]
         [TestCase("LeanLeft")]
@@ -113,6 +114,15 @@ namespace Shooter.Tests.EditMode
             Assert.That(_bindings.PathOf(new RebindSlot("UseStreak", InputDeviceKind.KeyboardMouse)), Is.EqualTo("<Keyboard>/4"));
             Assert.That(_bindings.PathOf(new RebindSlot("UseStreak", InputDeviceKind.Gamepad)), Is.EqualTo("<Gamepad>/dpad/right"));
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot("UseStreak", InputDeviceKind.Gamepad)));
+        }
+
+        [Test]
+        public void SwitchStreakIsOn3NextToUseStreak()
+        {
+            var slot = new RebindSlot("SwitchStreak", InputDeviceKind.KeyboardMouse);
+
+            Assert.That(_bindings.PathOf(slot), Is.EqualTo("<Keyboard>/3"));
+            Assert.That(_bindings.FindConflicts(slot), Is.Empty);
         }
 
         [Test]

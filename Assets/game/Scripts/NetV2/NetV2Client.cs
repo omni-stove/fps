@@ -220,7 +220,11 @@ namespace Shooter.NetV2
                 return;
             }
 
-            _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this)) { JoinsMatchLobby = true };
+            _search = new QuickMatchSearch(backend, Application.version, line => Debug.Log(line, this))
+            {
+                JoinsMatchLobby = true,
+                PreferredRegion = AppliedControlSettings.Current.QuickMatchRegion,
+            };
             var party = NetV2PartyControl.Current;
             _search.Begin(
                 Time.unscaledTime,

@@ -15,6 +15,7 @@ namespace Shooter.NetV2
         private readonly ClientBlocks _blocks;
         private double _clock;
         private bool _started;
+        private bool _off;
         private bool _disposed;
 
         public NetV2ChatPart(
@@ -41,7 +42,18 @@ namespace Shooter.NetV2
 
         public bool Handle(IMessage message)
         {
-            if (_disposed || !_chat.Handle(message, _clock))
+            if (_disposed)
+            {
+                return false;
+            }
+
+            // 他の部品に回しても使い道がないので、Off の間に届いた行も受け取ったことにして捨てる。
+            if (_off && message is ChatMessage)
+            {
+                return true;
+            }
+
+            if (!_chat.Handle(message, _clock))
             {
                 return false;
             }
@@ -55,9 +67,28 @@ namespace Shooter.NetV2
         }
 
         // 部品はつなぐ前に作られ、試合に入ったことは最初のスナップショットで分かるので、そこで送る口と行を出す。
+        // ルールは試合の途中でも変わり得るので、一度出した後も毎回 TextChat を見て出し入れする。
         public void Apply(SnapshotMessage snapshot)
         {
-            if (_disposed || snapshot == null || _started)
+            if (_disposed || snapshot == null)
+            {
+                return;
+            }
+
+            _off = snapshot.Match.Rules.TextChat != TextChat.On;
+            if (_off)
+            {
+                if (_started)
+                {
+                    _started = false;
+                    GameSignals.ChatSender.ClearIfCurrent(_sender);
+                    GameSignals.Chat.ClearIfCurrent(_chat.Lines);
+                }
+
+                return;
+            }
+
+            if (_started)
             {
                 return;
             }
@@ -118,6 +149,13 @@ namespace Shooter.NetV2
                 if (_part._disposed)
                 {
                     _part._log(ChatLog.Sent(channel, text?.Length ?? 0, false));
+                    return;
+                }
+
+                // 引っ込めた後も UI が口を握ったままのことがあり、サーバーが断る文を送らないようにここでも止める。
+                if (_part._off)
+                {
+                    _part._log(ChatLog.TextChatOff(channel, text?.Length ?? 0));
                     return;
                 }
 

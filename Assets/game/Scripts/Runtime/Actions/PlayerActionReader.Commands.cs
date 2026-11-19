@@ -21,6 +21,7 @@ namespace Shooter.Runtime
             PlayerCommands.Chat,
             PlayerCommands.TeamChat,
             PlayerCommands.PushToTalk,
+            PlayerCommands.SwitchStreak,
         };
 
         private readonly InputAction[] _commandActions = new InputAction[_commands.Length];
@@ -61,6 +62,8 @@ namespace Shooter.Runtime
                     return InputActionPaths.TeamChat;
                 case PlayerCommands.PushToTalk:
                     return InputActionPaths.PushToTalk;
+                case PlayerCommands.SwitchStreak:
+                    return InputActionPaths.SwitchStreak;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command), command, "command must be a single PlayerCommands button");
             }

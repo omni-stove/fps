@@ -18,18 +18,51 @@ namespace Shooter.Core
 
         public static LobbyInfo PickServer(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize, int? skillRating)
         {
+            return PickServer(lobbies, version, partySize, skillRating, ControlSettings.AutoRegion);
+        }
+
+        // 地域は腕前より先に見る。腕前の近い遠くのサーバーより、腕前の離れた近くのサーバーの方が遅延で試合が崩れにくいため。
+        // 選んだ地域に入れるサーバーが無いときは、探し続けて待たせるよりほかの地域で遊べる方を採る。
+        public static LobbyInfo PickServer(
+            IReadOnlyList<LobbyInfo> lobbies, string version, int partySize, int? skillRating, string preferredRegion)
+        {
             if (lobbies == null)
             {
                 throw new ArgumentNullException(nameof(lobbies));
             }
 
             ThrowIfInvalidPartySize(partySize);
+            ThrowIfInvalidPreferredRegion(preferredRegion);
+            if (preferredRegion != ControlSettings.AutoRegion)
+            {
+                var inRegion = Pick(lobbies, version, partySize, skillRating, preferredRegion);
+                if (inRegion != null)
+                {
+                    return inRegion;
+                }
+            }
+
+            return Pick(lobbies, version, partySize, skillRating, null);
+        }
+
+        public static bool IsInRegion(LobbyInfo lobby, string region)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            return region != null && string.Equals(lobby.Region, region, StringComparison.Ordinal);
+        }
+
+        private static LobbyInfo Pick(IReadOnlyList<LobbyInfo> lobbies, string version, int partySize, int? skillRating, string region)
+        {
             LobbyInfo best = null;
             long bestGap = 0;
             long bestPlayers = 0;
             foreach (var lobby in lobbies)
             {
-                if (lobby == null || ServerRejection(lobby, version, partySize) != null)
+                if (lobby == null || ServerRejection(lobby, version, partySize) != null || (region != null && !IsInRegion(lobby, region)))
                 {
                     continue;
                 }
@@ -257,6 +290,19 @@ namespace Shooter.Core
             if (partySize < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(partySize), partySize, "must be at least 1");
+            }
+        }
+
+        private static void ThrowIfInvalidPreferredRegion(string preferredRegion)
+        {
+            if (preferredRegion == null)
+            {
+                throw new ArgumentNullException(nameof(preferredRegion), "pass " + ControlSettings.AutoRegion + " to take any region");
+            }
+
+            if (!ControlSettings.IsValidRegion(preferredRegion))
+            {
+                throw new ArgumentException("'" + preferredRegion + "' is not a region name", nameof(preferredRegion));
             }
         }
 

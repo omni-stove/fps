@@ -462,6 +462,7 @@ namespace Shooter.Runtime
             _view.SetTeamColors(_alphaColor, _bravoColor);
             var aimBlockCatalog = AimBlockCatalog;
             _view.SetAimBlockMarker(aimBlockCatalog != null ? aimBlockCatalog.Marker : null);
+            _view.SetAimHidden(GameSignals.StreakTargeting.Value.HasValue);
         }
 
         private void SubscribeSignals()
@@ -472,12 +473,14 @@ namespace Shooter.Runtime
             GameSignals.HudDensity.Changed += HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed += HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed += HandlePaletteViewerChanged;
+            GameSignals.StreakTargeting.Changed += HandleStreakTargetingChanged;
             HandleHudModelChanged(GameSignals.HudModel.Value);
             BindNoticeTo(ShownModel);
             BindLocalPlayer(GameSignals.LocalPlayer.Value);
             HandleDensityChanged(GameSignals.HudDensity.Value);
             HandlePauseTimeModeChanged(GameSignals.PauseTimeMode.Value);
             HandlePaletteViewerChanged(GameSignals.PaletteViewer.Value);
+            HandleStreakTargetingChanged(GameSignals.StreakTargeting.Value);
         }
 
         private void UnsubscribeSignals()
@@ -488,6 +491,7 @@ namespace Shooter.Runtime
             GameSignals.HudDensity.Changed -= HandleDensityChanged;
             GameSignals.PauseTimeMode.Changed -= HandlePauseTimeModeChanged;
             GameSignals.PaletteViewer.Changed -= HandlePaletteViewerChanged;
+            GameSignals.StreakTargeting.Changed -= HandleStreakTargetingChanged;
         }
 
         private void HandleHudModelChanged(HudModel model)
@@ -542,6 +546,18 @@ namespace Shooter.Runtime
             {
                 UseTeamPalette(viewer.Value);
             }
+        }
+
+        private void HandleStreakTargetingChanged(StreakTargetingStatus? targeting)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                UnsubscribeSignals();
+                return;
+            }
+
+            _view?.SetAimHidden(targeting.HasValue);
         }
 
         private void OnEnable()

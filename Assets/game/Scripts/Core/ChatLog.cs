@@ -121,6 +121,21 @@ namespace Shooter.Core
                 length);
         }
 
+        public static string TextChatOff(ChatChannel channel, int length)
+        {
+            if (!Enum.IsDefined(typeof(ChatChannel), channel))
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), channel, "channel must be a defined ChatChannel");
+            }
+
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} could not send channel={1} length={2} (text chat is off)",
+                Tag,
+                channel,
+                length);
+        }
+
         public static string NotSent(ChatChannel channel, ChatRefusal reason)
         {
             if (!Enum.IsDefined(typeof(ChatChannel), channel))

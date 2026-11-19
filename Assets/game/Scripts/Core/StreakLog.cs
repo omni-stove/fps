@@ -42,6 +42,11 @@ namespace Shooter.Core
             return $"{LogTag} id={id} used reward={rewardId} {Counts(status)}";
         }
 
+        public static string Selected(string id, string rewardId, StreakStatus status)
+        {
+            return $"{LogTag} id={id} selected reward={rewardId} {Counts(status)}";
+        }
+
         public static string NothingToUse(string id)
         {
             return $"{LogTag} id={id} use refused nothing-ready";

@@ -170,6 +170,42 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void SwitchingPicksTheOtherHeldRewardWithoutSendingAnything()
+        {
+            Assert.That(_streaks.SelectNext(), Is.False, "nothing to switch before the own row arrives");
+            _streaks.Apply(Snapshot(GameModeState.Playing, kills: 2));
+            Assert.That(_streaks.SelectNext(), Is.False, "one reward has nothing to switch to");
+
+            _streaks.Apply(Snapshot(GameModeState.Playing, kills: 4));
+            Assert.That(_streaks.NextRewardId, Is.EqualTo(StreakSpec.UavRewardId), "the first earned stays selected");
+
+            Assert.That(_streaks.SelectNext(), Is.True);
+
+            Assert.That(_streaks.NextRewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+            Assert.That(_streaks.Status.Value.SelectedRewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+            Assert.That(_sent, Is.Empty);
+            Assert.That(_logs, Has.Member(StreakLog.Selected("net3", StreakSpec.AirstrikeRewardId, _streaks.Status.Value)));
+
+            Assert.That(_streaks.TryUse(Target(StreakSpec.AirstrikeRewardId), out var sent), Is.True);
+            Assert.That(sent, Is.True);
+            Assert.That(_sent[0].RewardId, Is.EqualTo(StreakSpec.AirstrikeRewardId));
+        }
+
+        [Test]
+        public void TheServersActivationEmptiesTheUsedSlotEvenWhenItWasNotTheFirstEarned()
+        {
+            _streaks.Apply(Snapshot(GameModeState.Playing, kills: 4));
+
+            Assert.That(_streaks.Handle(Activated(_localId, Team.Alpha, StreakSpec.AirstrikeRewardId, 3f)), Is.True);
+
+            var status = _streaks.Status.Value;
+            Assert.That(status.ReadyCount, Is.EqualTo(1));
+            Assert.That(status.Slots[0].Ready, Is.True, "the UAV is still held");
+            Assert.That(status.Slots[1].Ready, Is.False);
+            Assert.That(_streaks.NextRewardId, Is.EqualTo(StreakSpec.UavRewardId));
+        }
+
+        [Test]
         public void ANewMatchClearsTheRewardsLikeTheServer()
         {
             _streaks.Apply(Snapshot(GameModeState.Playing, kills: 2));

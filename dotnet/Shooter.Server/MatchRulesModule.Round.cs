@@ -62,6 +62,7 @@ namespace Shooter.Server
             foreach (var viewerId in _spectating.Keys)
             {
                 if (!_session.HasPlayer(viewerId) || _session.IsAlive(viewerId)
+                    || _data.Rules.Spectating == Spectating.Off
                     || _data.Rules.DeathCamera != DeathCamera.Ally || _session.State != GameModeState.Playing)
                 {
                     _roundScratch.Add(viewerId);

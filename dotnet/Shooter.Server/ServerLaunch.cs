@@ -28,6 +28,8 @@ namespace Shooter.Server
 
         public const string BanFileFlag = "--ban-file";
 
+        public const string RegionFlag = "--region";
+
         private ServerLaunch(
             NetLaunchOptions options,
             string version,
@@ -36,9 +38,11 @@ namespace Shooter.Server
             AntiCheatSettings antiCheat,
             bool privateMatch,
             string joinCode,
-            string banFile)
+            string banFile,
+            string region)
         {
             BanFile = banFile;
+            Region = region;
             PrivateMatch = privateMatch;
             JoinCode = joinCode;
             AntiCheat = antiCheat;
@@ -76,10 +80,12 @@ namespace Shooter.Server
         // null なら BAN は起動している間だけ覚え、ファイルには残さない。
         public string BanFile { get; }
 
+        public string Region { get; }
+
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region);
         }
 
         // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
@@ -194,13 +200,26 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryParseRegion(args, options, out var region, out error))
+            {
+                return false;
+            }
+
             if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
             {
                 return false;
             }
 
             launch = new ServerLaunch(
-                options, version, ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds), rules, antiCheat, privateMatch, joinCode, banFile);
+                options,
+                version,
+                ServerDrain.ResolveTimeoutSeconds(args, options.DrainTimeoutSeconds),
+                rules,
+                antiCheat,
+                privateMatch,
+                joinCode,
+                banFile,
+                region);
             return true;
         }
 
@@ -279,6 +298,50 @@ namespace Shooter.Server
                 }
 
                 banFile = args[++i];
+            }
+
+            error = null;
+            return true;
+        }
+
+        // 地域はロビーの属性でしか使わないので、ロビーに載らないサーバーで受けると、地域を分けたつもりで分かれていない運用になる。
+        // 大文字を小文字に直さず断るのは、設定の地域と突き合わせる名前を、運用する人が書いたとおりにログと揃えるため。
+        private static bool TryParseRegion(IReadOnlyList<string> args, NetLaunchOptions options, out string region, out string error)
+        {
+            region = null;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (!string.Equals(args[i], RegionFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = RegionFlag + " requires a value";
+                    return false;
+                }
+
+                if (region != null)
+                {
+                    error = RegionFlag + " is given more than once";
+                    return false;
+                }
+
+                var text = args[++i];
+                if (!ServerLobby.IsRegionName(text))
+                {
+                    error = RegionFlag + " must be " + ServerLobby.RegionRule + " (got '" + text + "')";
+                    return false;
+                }
+
+                region = text;
+            }
+
+            if (region != null && !options.RegistersLobby)
+            {
+                error = RegionFlag + " is published only in the server lobby; pass " + NetLaunchOptions.RegisterLobbyFlag + " too";
+                return false;
             }
 
             error = null;

@@ -38,6 +38,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(PlayerCommands.Chat, InputActionPaths.Chat)]
         [TestCase(PlayerCommands.TeamChat, InputActionPaths.TeamChat)]
         [TestCase(PlayerCommands.PushToTalk, InputActionPaths.PushToTalk)]
+        [TestCase(PlayerCommands.SwitchStreak, InputActionPaths.SwitchStreak)]
         public void ResolvesEachCommandFromTheProjectWideActions(PlayerCommands command, string path)
         {
             Assert.That(PlayerActionReader.CommandActionPath(command), Is.EqualTo(path));

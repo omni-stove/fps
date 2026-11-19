@@ -152,8 +152,8 @@ namespace Shooter.Server
             return _trackers.TryGetValue(playerId, out var tracker) ? tracker.Status : (StreakStatus?)null;
         }
 
-        // 送られた報酬が次に使える報酬と違えば断る。StreakTracker は得た順にしか渡さないので、
-        // クライアントが古い表示のまま押したときに、見ていたのと違う報酬を使わせないため
+        // どの報酬を使うかはクライアントが選ぶ (HUD で選び替えられる) ので、送られた報酬を持っていれば先頭でなくても使わせる。
+        // 送られた報酬を持っていなければ、別の報酬に読み替えずに断る。古い表示のまま押したときに、見ていたのと違う報酬を使わせないため
         internal ServerStreakRefusal Use(int playerId, string rewardId, Vector3? target, float headingDegrees)
         {
             if (!_trackers.TryGetValue(playerId, out var tracker))
@@ -177,9 +177,9 @@ namespace Shooter.Server
                 return Refuse(playerId, rewardId, ServerStreakRefusal.NothingReady);
             }
 
-            if (!string.Equals(ready[0], rewardId, StringComparison.Ordinal))
+            if (!tracker.IsReady(rewardId))
             {
-                return Refuse(playerId, rewardId, ServerStreakRefusal.NotNext);
+                return Refuse(playerId, rewardId, ServerStreakRefusal.NotReady);
             }
 
             // 狙えないまま報酬を取り去らないよう、使うと決める前に地点を確かめる
@@ -194,8 +194,8 @@ namespace Shooter.Server
                 return Refuse(playerId, rewardId, ServerStreakRefusal.OutOfRange);
             }
 
-            var status = tracker.Use(out var used);
-            _log.WriteLine(StreakLog.Used(ServerStreakLog.Id(playerId), used, status));
+            var status = tracker.Use(rewardId, out _);
+            _log.WriteLine(StreakLog.Used(ServerStreakLog.Id(playerId), rewardId, status));
             if (isAirstrike)
             {
                 CallAirstrike(playerId, target.Value, headingDegrees, body.Position.Y);

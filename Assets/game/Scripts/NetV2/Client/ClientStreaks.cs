@@ -106,16 +106,15 @@ namespace Shooter.NetV2
                 return false;
             }
 
-            // サーバーは次に使える報酬しか使わせないので、手元の先頭と違えば手元の数え方がずれている。枠を勝手に空けず、ずれを残す
-            var ready = _tracker.ReadyRewardIds;
-            if (ready.Count == 0 || !string.Equals(ready[0], message.RewardId, StringComparison.Ordinal))
+            // サーバーは持っている報酬しか使わせないので、手元に無ければ手元の数え方がずれている。枠を勝手に空けず、ずれを残す
+            if (!_tracker.IsReady(message.RewardId))
             {
                 _log(ClientStreakLog.NotReadyHere(_logId, message.RewardId));
                 return false;
             }
 
-            var status = _tracker.Use(out var used);
-            _log(StreakLog.Used(_logId, used, status));
+            var status = _tracker.Use(message.RewardId, out _);
+            _log(StreakLog.Used(_logId, message.RewardId, status));
             var changed = Status != status;
             Status = status;
             return changed;
@@ -132,14 +131,8 @@ namespace Shooter.NetV2
             EnemyUavSecondsLeft = Math.Max(0f, EnemyUavSecondsLeft - deltaSeconds);
         }
 
-        public string NextRewardId
-        {
-            get
-            {
-                var ready = _tracker.ReadyRewardIds;
-                return Status.HasValue && ready.Count > 0 ? ready[0] : null;
-            }
-        }
+        // 使うキーで使う報酬 (HUD で選んでいるもの)
+        public string NextRewardId => Status.HasValue ? _tracker.SelectedRewardId : null;
 
         public StreakReward NextReward => NextRewardId == null ? null : _tracker.Spec.FindReward(NextRewardId);
 
@@ -165,6 +158,19 @@ namespace Shooter.NetV2
             _request.HeadingDegrees = target.HasValue ? target.Value.HeadingDegrees : 0f;
             sent = _send(_request);
             _log(ClientStreakLog.Requested(_logId, _request.RewardId, sent));
+            return true;
+        }
+
+        // 選ぶのはクライアントだけで、サーバーは送られた報酬を使うので、何も送らない。変わったら true を返す
+        public bool SelectNext()
+        {
+            if (!Status.HasValue || !_tracker.SelectNext())
+            {
+                return false;
+            }
+
+            Status = _tracker.Status;
+            _log(StreakLog.Selected(_logId, _tracker.SelectedRewardId, Status.Value));
             return true;
         }
 

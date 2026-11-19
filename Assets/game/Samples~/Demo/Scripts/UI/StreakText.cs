@@ -1,17 +1,35 @@
+using System;
 using System.Collections.Generic;
 using Shooter.Core;
 
 namespace Shooter.Runtime
 {
+    public enum StreakCardState
+    {
+        Charging,
+
+        Selected,
+
+        Held,
+
+        Spent,
+    }
+
     public static class StreakText
     {
         public const string KillsKey = "streak.kills";
 
-        public const string NextKey = "streak.next";
+        public const string ProgressKey = "streak.progress";
+
+        public const string UseKey = "streak.use";
 
         public const string ReadyKey = "streak.ready";
 
-        public const string ReadyWithoutKeyKey = "streak.readyNoKey";
+        public const string SpentKey = "streak.spent";
+
+        public const string SwitchKey = "streak.switch";
+
+        public const string SwitchWithoutKeyKey = "streak.switchNoKey";
 
         public const string TargetChooseKey = "streak.target.choose";
 
@@ -30,38 +48,56 @@ namespace Shooter.Runtime
             return new LocalizedText(KillsKey, status.Kills);
         }
 
-        public static bool TryFindNext(StreakStatus status, out StreakSlot next)
+        public static LocalizedText Name(StreakSlot slot)
         {
-            next = default;
-            var found = false;
-            foreach (var slot in status.Slots)
-            {
-                if (slot.Ready || slot.KillsRequired <= status.Kills)
-                {
-                    continue;
-                }
+            return DisplayNames.Of(slot);
+        }
 
-                if (!found || slot.KillsRequired < next.KillsRequired)
-                {
-                    next = slot;
-                    found = true;
-                }
+        public static StreakCardState StateOf(StreakStatus status, StreakSlot slot)
+        {
+            if (slot.Ready)
+            {
+                return status.IsSelected(slot) ? StreakCardState.Selected : StreakCardState.Held;
             }
 
-            return found;
+            return status.Kills >= slot.KillsRequired ? StreakCardState.Spent : StreakCardState.Charging;
         }
 
-        public static LocalizedText Next(StreakStatus status, StreakSlot next)
+        // 使ったものを満たしたままにするのは、この命ではもう貯まらない枠を、貯め始めの空の枠と見分けるため。
+        public static float Fill(StreakStatus status, StreakSlot slot)
         {
-            return new LocalizedText(NextKey, next.KillsRequired - status.Kills, DisplayNames.Of(next));
+            if (StateOf(status, slot) != StreakCardState.Charging)
+            {
+                return 1f;
+            }
+
+            return Math.Min(1f, (float)status.Kills / slot.KillsRequired);
         }
 
-        public static LocalizedText Ready(StreakSlot slot, string keyLabel)
+        // 使うキーで使われるのは選んでいる報酬だけなので、キーはその枠にだけ添える。
+        public static LocalizedText Caption(StreakStatus status, StreakSlot slot, string useKeyLabel)
         {
-            var name = DisplayNames.Of(slot);
-            return string.IsNullOrWhiteSpace(keyLabel)
-                ? new LocalizedText(ReadyWithoutKeyKey, name)
-                : new LocalizedText(ReadyKey, keyLabel.Trim(), name);
+            switch (StateOf(status, slot))
+            {
+                case StreakCardState.Selected:
+                    return WithKey(UseKey, ReadyKey, useKeyLabel);
+                case StreakCardState.Held:
+                    return new LocalizedText(ReadyKey);
+                case StreakCardState.Spent:
+                    return new LocalizedText(SpentKey);
+                default:
+                    return new LocalizedText(ProgressKey, status.Kills, slot.KillsRequired);
+            }
+        }
+
+        public static bool ShowsSwitch(StreakStatus status)
+        {
+            return status.ReadyCount > 1;
+        }
+
+        public static LocalizedText Switch(string switchKeyLabel)
+        {
+            return WithKey(SwitchKey, SwitchWithoutKeyKey, switchKeyLabel);
         }
 
         public static List<LocalizedText> TargetingLines(StreakTargetingStatus status, string confirmKeyLabel, string cancelKeyLabel)
@@ -73,25 +109,6 @@ namespace Shooter.Runtime
                 WithKey(TargetConfirmKey, TargetConfirmWithoutKeyKey, confirmKeyLabel),
                 WithKey(TargetCancelKey, TargetCancelWithoutKeyKey, cancelKeyLabel),
             };
-        }
-
-        public static List<LocalizedText> Lines(StreakStatus status, string keyLabel)
-        {
-            var lines = new List<LocalizedText> { Kills(status) };
-            if (TryFindNext(status, out var next))
-            {
-                lines.Add(Next(status, next));
-            }
-
-            foreach (var slot in status.Slots)
-            {
-                if (slot.Ready)
-                {
-                    lines.Add(Ready(slot, keyLabel));
-                }
-            }
-
-            return lines;
         }
 
         private static LocalizedText WithKey(string key, string withoutKey, string keyLabel)

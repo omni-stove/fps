@@ -224,6 +224,42 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheRegionIsOptionalAndSurvivesSwappingTheOptions()
+        {
+            Assert.That(Parse(Env(), "-register-lobby", "203.0.113.10:7777").Region, Is.Null);
+
+            var launch = Parse(Env(), "-register-lobby", "203.0.113.10:7777", "--region", "north-america");
+            var swapped = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            Assert.That(launch.Region, Is.EqualTo("north-america"));
+            Assert.That(swapped.Region, Is.EqualTo("north-america"));
+            Assert.That(Parse(Env(), "--REGION", "asia", "-register-lobby", "203.0.113.10:7777").Region, Is.EqualTo("asia"));
+        }
+
+        [TestCase(ServerLaunch.RegionFlag + " requires a value", "--region")]
+        [TestCase(ServerLaunch.RegionFlag + " requires a value", "--region", "--private")]
+        [TestCase(ServerLaunch.RegionFlag + " requires a value", "--region", " ")]
+        [TestCase(ServerLaunch.RegionFlag + " is given more than once", "--region", "asia", "--region", "europe")]
+        [TestCase(ServerLaunch.RegionFlag + " must be a-z, 0-9 and '-' inside, up to 32 characters, not 'auto' (got 'auto')", "--region", "auto")]
+        [TestCase(ServerLaunch.RegionFlag + " must be a-z, 0-9 and '-' inside, up to 32 characters, not 'auto' (got 'Europe')", "--region", "Europe")]
+        [TestCase(ServerLaunch.RegionFlag + " must be a-z, 0-9 and '-' inside, up to 32 characters, not 'auto' (got 'eu west')", "--region", "eu west")]
+        [TestCase(ServerLaunch.RegionFlag + " must be a-z, 0-9 and '-' inside, up to 32 characters, not 'auto' (got 'asia-')", "--region", "asia-")]
+        public void BadRegionFlagsAreRejected(string expected, params string[] args)
+        {
+            var withLobby = new List<string>(args) { "-register-lobby", "203.0.113.10:7777" };
+
+            Assert.That(Fail(Env(), withLobby.ToArray()), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TheRegionNeedsTheServerLobby()
+        {
+            Assert.That(
+                Fail(Env(), "--region", "europe"),
+                Is.EqualTo(ServerLaunch.RegionFlag + " is published only in the server lobby; pass " + NetLaunchOptions.RegisterLobbyFlag + " too"));
+        }
+
+        [Test]
         public void APublicLaunchKeepsThePublicRules()
         {
             var rules = new NetMatchSettings(joinCode: "IGNORED");

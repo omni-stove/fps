@@ -161,6 +161,21 @@ namespace Shooter.Server.Tests
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
             Assert.That(_modules, Has.Count.EqualTo(13));
             Assert.That(_modules[12], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(((ServerLobbyModule)_modules[12]).Region, Is.Null);
+        }
+
+        [Test]
+        public void TheLobbyModuleTakesTheRegionOfTheLaunch()
+        {
+            if (!EosSdkBuild.Included || !EosSdkBuild.HasNativeLibrary(AppContext.BaseDirectory))
+            {
+                Assert.Pass("this build does not include the EOS SDK and its native library");
+            }
+
+            WriteLocalFile();
+
+            Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777", "--region", "europe"), Is.Null);
+            Assert.That(((ServerLobbyModule)_modules[12]).Region, Is.EqualTo("europe"));
         }
 
         [Test]

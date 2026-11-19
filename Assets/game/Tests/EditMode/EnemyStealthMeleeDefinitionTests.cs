@@ -47,51 +47,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheDefinitionsGainPerSecondIsUsedOverTheInspector()
+        public void TheStealthsOwnGainIsUsedWithOrWithoutADefinition()
         {
-            _definition.Awareness.CopyFrom(new AwarenessSpec(gainPerSecond: 2f, noticeThreshold: 0.2f));
-            SetStealthField("_gainPerSecond", 0.5f);
+            SetStealthField("_settings._gainPerSecond", 0.5f);
             _agent.Definition = _definition;
 
-            Assert.That(_stealth.CreateSpec().GainPerSecond, Is.EqualTo(2f));
-            Assert.That(_stealth.TryInitialize(), Is.True);
-            Assert.That(_stealth.Awareness.Spec.GainPerSecond, Is.EqualTo(2f));
-            Assert.That(_stealth.Awareness.Spec.NoticeThreshold, Is.EqualTo(0.2f));
-        }
-
-        [Test]
-        public void WithoutADefinitionTheInspectorGainIsUsed()
-        {
-            SetStealthField("_gainPerSecond", 0.5f);
-
-            Assert.That(_agent.EffectiveDefinition, Is.Null);
+            Assert.That(_agent.EffectiveDefinition, Is.SameAs(_definition));
             Assert.That(_stealth.TryInitialize(), Is.True);
             Assert.That(_stealth.Awareness.Spec.GainPerSecond, Is.EqualTo(0.5f));
         }
 
         [Test]
-        public void AnAppliedAwarenessSpecWinsOverTheDefinition()
+        public void AnAppliedAwarenessSpecWinsOverTheInspector()
         {
-            _definition.Awareness.CopyFrom(new AwarenessSpec(gainPerSecond: 2f));
+            SetStealthField("_settings._gainPerSecond", 0.5f);
             _agent.Definition = _definition;
 
             _stealth.ApplySpec(new AwarenessSpec(gainPerSecond: 3f));
 
             Assert.That(_stealth.TryInitialize(), Is.True);
             Assert.That(_stealth.Awareness.Spec.GainPerSecond, Is.EqualTo(3f));
-        }
-
-        [Test]
-        public void AnInvalidDefinitionAwarenessIsReportedAndNothingIsHooked()
-        {
-            var serialized = new SerializedObject(_definition);
-            serialized.FindProperty("_awareness._noticeThreshold").floatValue = 0.9f;
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-            _agent.Definition = _definition;
-
-            LogAssert.Expect(LogType.Error, new Regex(@"^\[Stealth\] id=enemy-1 の設定が不正です: enemy 'Grunt' has invalid awareness"));
-            Assert.That(_stealth.TryInitialize(), Is.False);
-            Assert.That(_stealth.Awareness, Is.Null);
         }
 
         [Test]

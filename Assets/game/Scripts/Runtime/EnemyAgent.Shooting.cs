@@ -348,7 +348,7 @@ namespace Shooter.Runtime
                 damage += result.Damage;
             }
 
-            StealthNoise.Emit(gameObject, new SoundStimulus(SoundCueKind.Gunshot, eye.ToNumerics(), spec.ShotNoiseRadius, false));
+            SoundStimuli.Emit(gameObject, new SoundStimulus(SoundCueKind.Gunshot, eye.ToNumerics(), spec.ShotNoiseRadius, false));
             Debug.Log(
                 string.Format(
                     CultureInfo.InvariantCulture,

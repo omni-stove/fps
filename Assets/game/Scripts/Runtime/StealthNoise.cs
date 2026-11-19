@@ -8,6 +8,22 @@ namespace Shooter.Runtime
     // 字幕 (SubtitleFeed) と分けるのは、あちらは素材があって実際に鳴った音だけを流すが、敵の耳には音の素材の有無に関わらず届けたいため。
     public static class StealthNoise
     {
+        // SoundStimuli は SubsystemRegistration で購読を外すので、その後の AfterAssembliesLoaded でつなぐ。
+#if UNITY_EDITOR
+        [UnityEditor.InitializeOnLoadMethod]
+#endif
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+        internal static void Subscribe()
+        {
+            SoundStimuli.Emitted -= OnEmitted;
+            SoundStimuli.Emitted += OnEmitted;
+        }
+
+        private static void OnEmitted(GameObject source, SoundStimulus sound)
+        {
+            Emit(source, sound);
+        }
+
         public static int Emit(GameObject source, SoundStimulus sound)
         {
             return Emit(source, sound, EnemyStealth.Active);

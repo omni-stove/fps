@@ -59,6 +59,9 @@ namespace Shooter.Server
             return winner.HasValue && playerTeam == winner.Value;
         }
 
+        // Bot に巡らせる場所。null なら ServerBots はマップの出現地点を巡らせる。動く目的 (台車) は Tick ごとに今の場所を返す
+        ObjectiveRally? BotRally => null;
+
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);

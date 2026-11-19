@@ -365,6 +365,106 @@ namespace Shooter.Core.Tests
             Assert.That(NetMapPoints.Write(read), Is.EqualTo(text));
             Assert.That(read.FlagBases, Is.Empty);
             Assert.That(text, Does.Not.Contain(NetMapPoints.FlagBasesItem), "a map without flag bases is written as before");
+            Assert.That(read.Payload, Is.Null);
+            Assert.That(text, Does.Not.Contain("\"" + NetMapPoints.PayloadItem + "\""), "a map without a cart is written as before");
+        }
+
+        private static readonly int[] _secondAndThirdPoints = { 1, 2 };
+        private static readonly int[] _lastPoint = { 1 };
+
+        [Test]
+        public void MapPointsCarryThePayloadRouteAndItsCheckpoints()
+        {
+            var points = new NetMapPoints(
+                new List<SpawnPoint> { new SpawnPoint(new Vector3(1f, 0.5f, -2.25f), Team.Alpha) },
+                new List<ControlPointArea>(),
+                null,
+                new NetMapPayload(
+                    Team.Bravo,
+                    new[] { new Vector3(0f, -1f, -18f), new Vector3(0f, -1f, 0f), new Vector3(4f, -1f, 3f), new Vector3(4f, -1f, 18f) },
+                    _secondAndThirdPoints,
+                    4.5f,
+                    6f));
+
+            var text = NetMapPoints.Write(points);
+            var read = NetMapPoints.Parse(text, "NetArena01.points.json");
+
+            Assert.That(text, Does.Contain(
+                "  \"payload\": {\n"
+                + "    \"attackers\": \"Bravo\",\n"
+                + "    \"radius\": 4.5,\n"
+                + "    \"height\": 6,\n"
+                + "    \"route\": [\n"
+                + "      {\n"
+                + "        \"position\": [0, -1, -18]\n"
+                + "      },\n"
+                + "      {\n"
+                + "        \"position\": [0, -1, 0],\n"
+                + "        \"checkpoint\": true\n"
+                + "      },\n"
+                + "      {\n"
+                + "        \"position\": [4, -1, 3],\n"
+                + "        \"checkpoint\": true\n"
+                + "      },\n"
+                + "      {\n"
+                + "        \"position\": [4, -1, 18]\n"
+                + "      }\n"
+                + "    ]\n"
+                + "  }\n"));
+            Assert.That(read.Payload, Is.Not.Null);
+            Assert.That(read.Payload.Attackers, Is.EqualTo(Team.Bravo));
+            Assert.That(read.Payload.Radius, Is.EqualTo(4.5f));
+            Assert.That(read.Payload.Height, Is.EqualTo(6f));
+            Assert.That(read.Payload.Route.PointCount, Is.EqualTo(4));
+            Assert.That(read.Payload.Route.Point(2), Is.EqualTo(new Vector3(4f, -1f, 3f)));
+            Assert.That(read.Payload.CheckpointPoints, Is.EqualTo(_secondAndThirdPoints));
+            Assert.That(read.Payload.Route.Length, Is.EqualTo(18d + 5d + 15d).Within(1e-4));
+            Assert.That(NetMapPoints.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void APayloadRouteMayLeaveOutTheCheckpointsAndWriteThemFalse()
+        {
+            const string text = "{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": ["
+                + "{\"position\": [0, 0, 0], \"checkpoint\": false}, {\"position\": [0, 0, 10]}]}}";
+
+            var read = NetMapPoints.Parse(text, "hand.points.json");
+
+            Assert.That(read.Payload.Attackers, Is.EqualTo(Team.Alpha));
+            Assert.That(read.Payload.CheckpointPoints, Is.Empty);
+            Assert.That(read.Payload.Route.Length, Is.EqualTo(10d));
+            Assert.That(read.SpawnPoints, Is.Empty);
+        }
+
+        [Test]
+        public void ThePayloadAreaFollowsTheCartAlongTheRoute()
+        {
+            var payload = new NetMapPayload(Team.Alpha, new[] { Vector3.Zero, new Vector3(0f, 0f, 10f) }, null, 2f, 4f);
+
+            var area = payload.AreaAt(5d);
+
+            Assert.That(area.Center, Is.EqualTo(new Vector3(0f, 0f, 5f)));
+            Assert.That(area.Radius, Is.EqualTo(2f));
+            Assert.That(area.Contains(new Vector3(1.5f, 1.9f, 5f)), Is.True);
+            Assert.That(area.Contains(new Vector3(0f, 0f, 7.5f)), Is.False, "2.5 m along the route is outside a 2 m radius");
+            Assert.That(area.Contains(new Vector3(0f, 2.5f, 5f)), Is.False, "above half the height");
+            Assert.That(payload.AreaAt(99d).Center, Is.EqualTo(new Vector3(0f, 0f, 10f)), "past the end stays at the end");
+        }
+
+        [Test]
+        public void APayloadNeedsATeamARouteAndAPositiveArea()
+        {
+            var route = new[] { Vector3.Zero, new Vector3(0f, 0f, 10f) };
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new NetMapPayload((Team)7, route, null, 5f, 6f)).ParamName,
+                Is.EqualTo("attackers"));
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new NetMapPayload(Team.Alpha, route, null, 0f, 6f)).ParamName, Is.EqualTo("radius"));
+            Assert.That(
+                Assert.Throws<ArgumentOutOfRangeException>(() => new NetMapPayload(Team.Alpha, route, null, 5f, float.PositiveInfinity)).ParamName,
+                Is.EqualTo("height"));
+            Assert.Throws<ArgumentNullException>(() => new NetMapPayload(Team.Alpha, null, null, 5f, 6f));
+            Assert.Throws<ArgumentException>(() => new NetMapPayload(Team.Alpha, new[] { Vector3.Zero }, null, 5f, 6f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new NetMapPayload(Team.Alpha, route, _lastPoint, 5f, 6f), "the end is not a checkpoint");
         }
 
         [Test]
@@ -492,6 +592,19 @@ namespace Shooter.Core.Tests
         [TestCase("{\"flagBases\": [{\"team\": \"Charlie\", \"position\": [0, 1, 2]}]}", "flagBases[0].team")]
         [TestCase("{\"flagBases\": [{\"team\": \"Alpha\"}]}", "flagBases[0].position")]
         [TestCase("{\"flagBases\": [{\"team\": \"Alpha\", \"position\": [0, 1]}]}", "flagBases[0].position")]
+        [TestCase("{\"payload\": {\"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0]}, {\"position\": [0, 0, 9]}]}}", "payload.attackers")]
+        [TestCase("{\"payload\": {\"attackers\": \"Charlie\", \"radius\": 5, \"height\": 6, \"route\": []}}", "payload.attackers")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"height\": 6, \"route\": []}}", "payload.radius")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 0, \"height\": 6, \"route\": [{\"position\": [0, 0, 0]}, {\"position\": [0, 0, 9]}]}}", "payload.radius")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": -1, \"route\": [{\"position\": [0, 0, 0]}, {\"position\": [0, 0, 9]}]}}", "payload.height")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6}}", "payload.route")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0]}]}}", "payload.route")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0]}, {\"position\": [0, 0, 0]}]}}", "payload.route")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0], \"checkpoint\": true}, {\"position\": [0, 0, 9]}]}}", "payload.route")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0]}, {\"position\": [0, 0, 9]}]}}", "payload.route[0].position")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0], \"checkpoint\": 1}, {\"position\": [0, 0, 9]}]}}", "payload.route[0].checkpoint")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [{\"position\": [0, 0, 0], \"speed\": 1}, {\"position\": [0, 0, 9]}]}}", "payload.route[0].speed")]
+        [TestCase("{\"payload\": {\"attackers\": \"Alpha\", \"radius\": 5, \"height\": 6, \"route\": [], \"checkpoints\": [1]}}", "payload.checkpoints")]
         public void BadMapPointsNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMapPoints.Parse(text, "bad.points.json"));

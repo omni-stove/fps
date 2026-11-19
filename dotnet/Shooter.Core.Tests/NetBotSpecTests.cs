@@ -54,6 +54,18 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ReadsTheRallyItems()
+        {
+            var spec = TuningJson.ParseBots(
+                "{\"rallyRouteRadiusFraction\": 0.25, \"rallyRouteAngleStepDegrees\": 90, \"rallyMoveRadiusFraction\": 0.75}", "bots.json");
+
+            Assert.That(spec.RallyRouteRadiusFraction, Is.EqualTo(0.25f));
+            Assert.That(spec.RallyRouteAngleStepDegrees, Is.EqualTo(90f));
+            Assert.That(spec.RallyMoveRadiusFraction, Is.EqualTo(0.75f));
+            Assert.That(TuningJson.ParseBots("{}", "bots.json").RallyRouteAngleStepDegrees, Is.EqualTo(NetBotSpec.DefaultRallyRouteAngleStepDegrees));
+        }
+
+        [Test]
         public void LeftOutItemsKeepTheDefaults()
         {
             var spec = TuningJson.ParseBots("{}", "bots.json");

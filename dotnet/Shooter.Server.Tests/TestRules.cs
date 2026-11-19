@@ -55,6 +55,24 @@ namespace Shooter.Server.Tests
                 areas);
         }
 
+        private static readonly int[] _middlePoint = { 1 };
+
+        // Points の出現地点に、z = -10 から z = 10 へまっすぐ 20m の道筋を足す。中継点は真ん中 (z = 0)。押すのは Alpha、範囲は半径 3m・高さ 4m
+        public static NetMapPoints PayloadPoints(Team attackers = Team.Alpha)
+        {
+            var points = Points();
+            return new NetMapPoints(
+                points.SpawnPoints,
+                points.ControlPoints,
+                null,
+                new NetMapPayload(
+                    attackers,
+                    new[] { new Vector3(0f, 0f, -10f), new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 10f) },
+                    _middlePoint,
+                    3f,
+                    4f));
+        }
+
         public static string Write(string root, string name, NetMatchFile file = null)
         {
             var directory = Path.Combine(root, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName);

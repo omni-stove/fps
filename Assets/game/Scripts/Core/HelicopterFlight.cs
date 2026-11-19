@@ -37,9 +37,9 @@ namespace Shooter.Core
         // ローターを回すかを軸で受けるのは、誰も乗っていないときの入力 (VehicleMotorInput.Idle) で宙に浮いたままにせず、落ちるようにするため。
         public const int EngineAxis = 4;
 
-        private const float MinHeadingLength = 1e-3f;
-        private const float DegreesToRadians = (float)(Math.PI / 180.0);
-        private const float RadiansToDegrees = (float)(180.0 / Math.PI);
+        private const float _minHeadingLength = 1e-3f;
+        private const float _degreesToRadians = (float)(Math.PI / 180.0);
+        private const float _radiansToDegrees = (float)(180.0 / Math.PI);
 
         public static HelicopterFlightCommand Compute(
             HelicopterSpec spec,
@@ -99,13 +99,13 @@ namespace Shooter.Core
             var lift = Math.Max(0f, gravity + vertical);
             var acceleration = (horizontal + (Vector3.UnitY * lift)) * (rotor * upright);
 
-            var tilt = spec.MaxTiltAngle * DegreesToRadians;
+            var tilt = spec.MaxTiltAngle * _degreesToRadians;
             var leanForward = (float)Math.Sin(pitch * tilt) - Vector3.Dot(up, heading);
             var leanRight = (float)Math.Sin(roll * tilt) - Vector3.Dot(up, right);
             var aboutRight = (leanForward * spec.TiltStiffness) - (Vector3.Dot(angularVelocity, right) * spec.TiltDamping);
             // 前の軸の正の向きは左へ傾ける回り方 (左手系) なので、右へ傾けるには負に回す。
             var aboutForward = (-leanRight * spec.TiltStiffness) - (Vector3.Dot(angularVelocity, heading) * spec.TiltDamping);
-            var aboutUp = ((input[YawAxis] * spec.MaxYawRate * DegreesToRadians) - angularVelocity.Y) * spec.YawResponse;
+            var aboutUp = ((input[YawAxis] * spec.MaxYawRate * _degreesToRadians) - angularVelocity.Y) * spec.YawResponse;
             var angular = ((right * aboutRight) + (heading * aboutForward) + (Vector3.UnitY * aboutUp)) * rotor;
 
             return new HelicopterFlightCommand(acceleration, angular, groundEffect, upright);
@@ -175,7 +175,7 @@ namespace Shooter.Core
             }
 
             var cosine = up.Y / length;
-            var envelope = (float)Math.Cos(spec.MaxTiltAngle * DegreesToRadians);
+            var envelope = (float)Math.Cos(spec.MaxTiltAngle * _degreesToRadians);
             return Clamp(cosine / envelope, 0f, 1f);
         }
 
@@ -183,14 +183,14 @@ namespace Shooter.Core
         public static Vector3 Heading(Vector3 forward, Vector3 up)
         {
             var flat = new Vector3(forward.X, 0f, forward.Z);
-            if (flat.Length() > MinHeadingLength)
+            if (flat.Length() > _minHeadingLength)
             {
                 return Vector3.Normalize(flat);
             }
 
             var side = forward.Y < 0f ? 1f : -1f;
             var fromUp = new Vector3(up.X, 0f, up.Z) * side;
-            return fromUp.Length() > MinHeadingLength ? Vector3.Normalize(fromUp) : Vector3.UnitZ;
+            return fromUp.Length() > _minHeadingLength ? Vector3.Normalize(fromUp) : Vector3.UnitZ;
         }
 
         // 真上・真下を狙ったときに回さないのは、水平の向きが定まらず左右に振れるため。
@@ -205,14 +205,14 @@ namespace Shooter.Core
             RequireFinite(up, nameof(up));
             RequireFinite(aim, nameof(aim));
             var flatAim = new Vector3(aim.X, 0f, aim.Z);
-            if (!(flatAim.Length() > MinHeadingLength))
+            if (!(flatAim.Length() > _minHeadingLength))
             {
                 return 0f;
             }
 
             var heading = Heading(forward, up);
             var right = Vector3.Cross(Vector3.UnitY, heading);
-            var degrees = (float)Math.Atan2(Vector3.Dot(flatAim, right), Vector3.Dot(flatAim, heading)) * RadiansToDegrees;
+            var degrees = (float)Math.Atan2(Vector3.Dot(flatAim, right), Vector3.Dot(flatAim, heading)) * _radiansToDegrees;
             return Clamp(degrees / spec.YawAimAngle, -1f, 1f);
         }
 

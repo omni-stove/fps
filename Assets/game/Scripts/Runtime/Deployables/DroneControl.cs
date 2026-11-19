@@ -207,7 +207,9 @@ namespace Shooter.Runtime
         // 降りるのに使った押下で、同じフレームに撃たないよう、返すのは押したフレームが終わってからにする。
         private void LateUpdate()
         {
-            if (_restoreAfterFrame >= 0 && Time.frameCount > _restoreAfterFrame)
+            // 押したままだと手放しが返った直後に全自動武器が撃ち始めるので、離されるまで待つ。
+            if (_restoreAfterFrame >= 0 && Time.frameCount > _restoreAfterFrame
+                && (_interactAction == null || !_interactAction.IsPressed()))
             {
                 Restore();
             }

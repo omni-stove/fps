@@ -65,6 +65,41 @@ make server-dotnet ARGS="-rules FreeForAll"
   例のマップでは `NetArena01` にだけ台車を置いてあり、置く前に作ったシーンには旗の台と同じく書き出す前に足して保存する。
   道筋の無いマップ (`NetTest` など) を `-rules Payload` で選ぶと起動しないので、`make server-dotnet ARGS="-rules Payload -map NetArena01"` で立てる。
   Bot は台車のまわりを巡って押し・止め、`[Payload] cart=pushing`・`checkpoint=`・`state=Ended ... winner=` がログに出る。
+- `Payload` の進め方は `match.payload` に書く。持ち時間は `timeLimitSeconds` から始まり、中継点を通るたびに `checkpointBonusSeconds` 足す。
+  台車の範囲に攻め側が `minPushers` 人以上いて守り側がいなければ、`cartSpeed` に `pusherSpeedMultipliers` の倍率 (`minPushers` 人目からの人数ごと、超えた分は最後の値) を掛けた速さで進む。
+  範囲に守り側もいれば止まる。攻め側が範囲に誰もいないまま `rollbackDelaySeconds` 過ぎると、`rollbackSpeed` で最後に通った中継点 (無ければ始点) まで戻る。
+  終点に着けば攻め側、時間が切れれば守り側の勝ち。
+
+  ```json
+  "match": {
+    "respawnSeconds": 5,
+    "payload": { "cartSpeed": 1.5, "minPushers": 1, "pusherSpeedMultipliers": [1, 1.5, 2], "rollbackDelaySeconds": 10, "rollbackSpeed": 0.5, "checkpointBonusSeconds": 60, "timeLimitSeconds": 300 }
+  }
+  ```
+
+- `SearchAndDestroy` のラウンドに人ごとの財布を付けるには、買える品の一覧 `server-data/tuning/economy.json` を置く。
+  書き方はクライアントの `Resources/Tuning/economy.json` と同じで (`items` の `id`・`kind`・`price`・`slot`・`nameKey` と `resetOnSwap`)、
+  `make export-server-rules` は書き出さないので手で置いてコミットする。一覧が無ければ経済は動かず、`[Economy] off: no buy list ...` と出る。
+  例の一覧はルールの JSON にある 2 つの武器 (どちらもロードアウトの既定の武器) だけを売るので、そのままでは持ち替える物が無い。売る武器はルールの JSON の `catalog` に足してから一覧に載せる。
+  額 (始めのお金・上限・キル・ラウンドの勝ち・負け・連敗の上乗せ) はルールの JSON の `match.economy` に書き、一覧の額の欄は読まない。
+
+  ```json
+  "match": {
+    "economy": { "startMoney": 800, "maxMoney": 16000, "killReward": 300, "roundWinReward": 3000, "roundLossReward": 1400, "lossStreakBonus": 500, "maxLossReward": 3400 }
+  }
+  ```
+
+  - 財布は試合の始めに `startMoney` で作り、キルでその場で、ラウンドの終わりに勝ち負けと連敗の数で払う。`resetOnSwap` が `true` なら攻守の入れ替えで `startMoney` に戻す。
+  - 買えるのはラウンドの準備の間 (`searchAndDestroy.preparationSeconds`) だけで、生きている人の武器 (`kind` が `Weapon`) だけ。
+    品の Id は同じルールの JSON の `loadout` か `catalog` にある武器の Id にし、`slot` はロードアウトの枠の番号にする。
+    持たせられない品 (投げ物・防具・ルールに無い武器・枠の外) は、経済を始めるとき (`[Economy] started ...` の前) に `[Economy] item=... is not sold`・`the weapon ... cannot be equipped` と出して売らない。
+  - 買った武器は倒されるまで持ち続け、倒されると次の出現からロードアウトの武器に戻る。買った人には答え (`BuyAnswer`) を返し、断った理由は `[Economy] player=... refused ... verdict=` に出る。
+  - 経済は `SearchAndDestroy` の目的でだけ動く。他の目的では一覧を置いても財布を作らない。
+- ドローン (置ける物の `role` が `Drone`) と盾 (武器の `shield`) はオフラインだけのもので、専用サーバーでは使えない。
+  - `deployables.json` に `Drone` の種類があると、起動のときに `[Deploy] net kind=<id> unusable: a Drone is piloted only offline; ...` と出し、
+    置く要求をビーコンと同じく断る (`[Deploy] ... net refused reason=Unusable`)。
+  - サーバーは盾を出さず、盾の武器も普通の武器として撃たせてしまうので、盾の武器はルールの JSON の `loadout`・`catalog` と `economy.json` に入れない。
+  - 暗視・サーマル (照準の `visionMode` とゴーグル) もオフラインだけで、ネット対戦では効かない。
 - `make export-server-rules` は、シーンの箱 (`LootContainer`) を `<map>.points.json` の `lootContainers` (`id`・`table`・`position`・`reach`) に、
   脱出地点 (`ExtractionZone`) を `extractionPoints` (`id`・`center`・`radius`) に、縮むエリア (`ShrinkingZone`) の最初の円を `zone` (`center`・`radius`) に、
   パラシュートで降ろす `BattleRoyaleRunner` の高さを `dropHeight` に書き出す。どれも置いていないマップでは項目ごと書かない。
@@ -124,6 +159,23 @@ make server-dotnet ARGS="-playlist rotation"
 - 項目がルールとマップを決めるので、`-rules`・`-map` とは一緒に渡せない (終了コード 2)。
 - 最初の項目で始め、試合が終わるたびに次の項目へ進む (最後の後は最初に戻る)。`order` が `Shuffle` なら起動ごとに並びを混ぜる。
 - 試合の設定 (`match.*` の点数・時間・待ち時間・`mapVoteSeconds` など) と武器は最初の項目のルールの JSON のものを使い続け、2 項目目からは `rules.*` (モードと規則) だけを替える。
+  `match.voteKick`・`match.payload`・`match.economy`・`match.searchAndDestroy` も最初の項目のものなので、後の項目で使うモードの節も最初の項目の JSON に書く。
+  放置 (`rules.idleKickSeconds`・`idleWarningSeconds`) は `rules.*` なので項目ごとに替わり、替わるたびに全員の放置の時計を戻す。
+- 経済は `SearchAndDestroy` の項目でだけ財布を作り、次の項目へ移ると財布と買った武器を捨てる。買える品の一覧 (`tuning/economy.json`) の武器は最初の項目の `loadout`・`catalog` から引く。
+- ミューテーターは、項目のルールの `rules` に `mutators.json` の各 `rules` を並びの順に重ねたもの (同じ欄は後が勝つ) で、その項目の間だけ効く。
+  `make export-server-rules` は `mutators.json`・`playlists/*.json` を書き出さないので、クライアントの `Resources/Tuning/mutators.json`・`playlists.json` から写してコミットする
+  (`server-data/tuning/mutators.json` が無ければミューテーターは空で、`mutators` を書いた項目は起動しない)。
+
+  ```json
+  { "mutators": [ { "id": "low-health", "rules": { "playerMaxHealth": 50 } } ] }
+  ```
+
+  ```json
+  { "playlists": [ { "id": "sd-rotation", "order": "Sequential", "entries": [
+    { "scene": "NetArena01", "rules": "Payload" },
+    { "scene": "NetTest", "rules": "SearchAndDestroy", "mutators": ["low-health"] }
+  ] } ] }
+  ```
 - `mapVoteSeconds` が 0 なら、項目のモードはその項目のマップで遊べればよい (次の試合のマップは項目のマップに決まるため)。
   投票するなら、どの項目のモードも、プレイリストに出てくるすべてのマップ (と最初のルールの `mapPool`) で遊べなければならない。
   足りないと待ち受ける前に `[Server] failed to start: playlist <id> entry <n>/<数> cannot use rules ...` で終了コード 1 になる。
@@ -177,6 +229,35 @@ make server-dotnet ARGS="--ban-file bans.local.json"
 
 docker では `docker run -i` (compose なら `stdin_open: true`) で標準入力を開け、`docker attach shooter-server` で打つ。
 一覧はボリュームに置く (`-v ./bans:/bans` と `--ban-file /bans/bans.json`)。標準入力が閉じていると `[Admin] stdin closed` と出し、コマンドを読まずに動き続ける。
+
+### 投票キックと放置
+
+投票キックは専用サーバーだけで動き、ルールの JSON の `match.voteKick` で決める。既定は `enabled: false` で、持ち主が選ぶまで他の人を外す口を開けない。
+
+```json
+"match": {
+  "voteKick": { "enabled": true, "requiredYesFraction": 0.6, "voteSeconds": 30, "cooldownSeconds": 120 }
+}
+```
+
+- 試合にいる人 (Bot は除く) が相手を選んで言い出す (Demo ではスコアボードから)。言い出した人は賛成に数え、票を入れられるのは対象の人を除いた全員。
+  賛成が `requiredYesFraction` (0 より大きく 1 以下) の割合 (切り上げ、最低 1 票) に届くとその場で決まり、`voteSeconds` の間に届かなければ外さない。
+- 進んでいる投票は 1 つだけ。同じ人は `cooldownSeconds` の間、次の投票を言い出せない (つなぎ直しても承認の鍵で数える)。Bot と自分は対象にできない。
+- 外すと決まったら、結果を全員に送ってから対象の人を切る (`[Net] dropped client <番号>: vote kicked (yes 2/2)`)。クライアントはメニューに投票で外されたことを出す。
+  その人は今の試合が終わって次の試合が始まるまで入り直しを断られ (`vote kicked from match ...; refused until the next match`)、次の試合で入れる (`[VoteKick] next match; 1 vote-kicked account(s) may join again`)。
+  BAN の一覧には載せない。承認の鍵を送らない人は見分けられないので、切るだけで入り直しは断れない。
+- 起動のときに `[VoteKick] on yesFraction=... seconds=... cooldown=...` (切っていれば `[VoteKick] off`) が出る。言い出し・票・結果は `[VoteKick] call`・`vote`・`decided` に出る。
+
+放置で切るのはルールの JSON の `rules.idleKickSeconds` (0 なら切らない) と `rules.idleWarningSeconds` で決める。
+
+```json
+"rules": { "idleKickSeconds": 120, "idleWarningSeconds": 15 }
+```
+
+- 動く・向きを変える・跳ぶ・走る/しゃがむ/構える/覗き込むの切り替えなどの入力が `idleKickSeconds` 秒無い人を切り、残りが `idleWarningSeconds` 秒になったら本人に警告を送る (`[Match] idle warning player=...`)。
+  `idleWarningSeconds` は 0 より大きく、`idleKickSeconds` より短くする。
+- 数えるのは試合中に生きている間と、倒れた後に味方を観戦している間だけ。ダウンしている間、観戦せずに出直しを待つ間、試合の合間、Bot は数えない。
+- 切ると `[Match] idle kick player=... after=...s` が出て、クライアントはメニューに放置で切られたことを出す。投票キックと違って、すぐ入り直せる。
 
 ## 引数と環境変数
 

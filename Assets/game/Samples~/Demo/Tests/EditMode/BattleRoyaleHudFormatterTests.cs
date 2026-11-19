@@ -175,6 +175,80 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheSupplyLinesAnnounceFallingAndWaitingCratesAndPromptAtOne()
+        {
+            var br = Create();
+            br.Start();
+            var drops = new[]
+            {
+                new SupplyDropMark(1, new Vector3(1f, 0f, 2f), true),
+                new SupplyDropMark(2, new Vector3(5f, 20f, 2f), false),
+                new SupplyDropMark(3, new Vector3(9f, 0f, 2f), true),
+            };
+            var detail = new BattleRoyaleStatus(br, _player, null, null, false, drops, isLocalPlayerAtSupplyDrop: true, interactKeyLabel: " E ");
+
+            var lines = BattleRoyaleHudFormatter.SupplyLines(detail);
+
+            Assert.That(Resolve(lines), Is.EqualTo(new[] { "補給物資が投下中 (1)", "未開封の補給物資 2", "[E] 補給物資を開ける" }));
+            Assert.That(lines[0], Is.EqualTo(new LocalizedText("mode.br.supplyFalling", 1)));
+            Assert.That(lines[1], Is.EqualTo(new LocalizedText("mode.br.supplyWaiting", 2)));
+            Assert.That(lines[2].Key, Is.EqualTo("mode.br.supplyOpenKey"));
+            Assert.That(Localizer.Resolve(BattleRoyaleHudFormatter.SupplyOpenPrompt(null)), Is.EqualTo("補給物資を開ける"));
+            Assert.That(Localizer.Resolve(BattleRoyaleHudFormatter.SupplyOpenPrompt("  ")), Is.EqualTo("補給物資を開ける"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudFormatter.SupplyFalling(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BattleRoyaleHudFormatter.SupplyWaiting(0));
+            Assert.Throws<ArgumentNullException>(() => BattleRoyaleHudFormatter.SupplyLines(null));
+        }
+
+        [Test]
+        public void TheFormatterAddsTheSupplyLinesAfterTheSquadLines()
+        {
+            var br = Create();
+            br.Start();
+            var drops = new[] { new SupplyDropMark(1, new Vector3(5f, 20f, 2f), false) };
+            var status = Status(br, new BattleRoyaleStatus(br, _player, null, null, false, drops), isEnded: false);
+            var lines = new List<LocalizedText>();
+
+            new BattleRoyaleHudFormatter().AppendLines(status, lines);
+
+            Assert.That(Resolve(lines), Is.EqualTo(new[] { "残り分隊 3/3", "順位 3 位以内", "分隊 生存 2", "補給物資が投下中 (1)" }));
+        }
+
+        [Test]
+        public void NoSupplyLinesWithoutCratesOrAfterTheMatch()
+        {
+            var br = Create();
+            br.Start();
+            Assert.That(BattleRoyaleHudFormatter.SupplyLines(new BattleRoyaleStatus(br, _player, null, null, false)), Is.Empty);
+
+            var drops = new[] { new SupplyDropMark(1, Vector3.Zero, true) };
+            var spectator = new BattleRoyaleStatus(br, null, null, null, false, drops, isLocalPlayerAtSupplyDrop: true);
+            Assert.That(spectator.IsLocalPlayerAtSupplyDrop, Is.False, "without a local player there is no one to open it");
+            Assert.That(Resolve(BattleRoyaleHudFormatter.SupplyLines(spectator)), Is.EqualTo(new[] { "未開封の補給物資 1" }));
+
+            br.ReportLethal(_squadmate, _enemy);
+            br.ReportLethal(_enemy, _player);
+            br.ReportLethal(_otherEnemy, _player);
+            br.Tick(0f);
+
+            Assert.That(BattleRoyaleHudFormatter.SupplyLines(new BattleRoyaleStatus(br, _player, null, null, false, drops)), Is.Empty);
+        }
+
+        [Test]
+        public void TheSupplyTextsExistInEveryLanguage()
+        {
+            var en = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Localization/en/modes-survival");
+            var ja = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Localization/ja/modes-survival");
+            Assert.That(en, Is.Not.Null);
+            Assert.That(ja, Is.Not.Null);
+            foreach (var key in new[] { "mode.br.supplyFalling", "mode.br.supplyWaiting", "mode.br.supplyOpen", "mode.br.supplyOpenKey" })
+            {
+                Assert.That(en.text, Does.Contain("\"" + key + "\""), key);
+                Assert.That(ja.text, Does.Contain("\"" + key + "\""), key);
+            }
+        }
+
+        [Test]
         public void TheZoneLineShowsTheTimeUntilTheNextShrink()
         {
             var schedule = new ZoneSchedule(

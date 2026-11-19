@@ -72,6 +72,11 @@ namespace Shooter.Core
                 + " parachute=" + verdict;
         }
 
+        public static string CrateOpened(int playerId, int crate, int pickups)
+        {
+            return Tag + " crate-opened player=" + Number(playerId) + " crate=" + Number(crate) + " pickups=" + Number(pickups);
+        }
+
         private static string Optional(int? value)
         {
             return value.HasValue ? Number(value.Value) : "-";

@@ -249,6 +249,113 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SupplyCratesDropWithTheZoneShowInTheStatusAndOpenForTheStanding()
+        {
+            var floor = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            floor.transform.localScale = new Vector3(200f, 1f, 200f);
+            Physics.SyncTransforms();
+            var zone = Zone(30f, new ShrinkingZone.PhaseSettings(60f, 10f, 10f, 1f));
+            _runner.Zone = zone;
+            var dropper = Track(new GameObject("SupplyDrops")).AddComponent<SupplyDropper>();
+            dropper.Seed = 3;
+            dropper.Spec = new SupplyDropSpec(new[] { new SupplyDropStage(1, 0f, 5f) }, dropHeight: 5f, fallSpeed: 10f, reach: 2f);
+            dropper.SetFixedContents(new[] { PickupContents.ForHealth(25) });
+            _runner.SupplyDropper = dropper;
+            var player = Member("Player", 0, ZeroSpawn);
+            var mate = Member("Bot-0-1", 0, ZeroSpawnTwo);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+
+            LogAssert.Expect(LogType.Log, "[SupplyDrop] stage phase=1 crates=1");
+            Begin(new[] { player, mate, enemy }, player);
+
+            Assert.That(_runner.RunningSupplyDropper, Is.SameAs(dropper));
+            Assert.That(dropper.IsRunning, Is.True);
+            Assert.That(dropper.Zone, Is.SameAs(zone));
+
+            dropper.Tick(0f);
+            _runner.Tick(0f);
+            var crate = dropper.Crates[0];
+            Assert.That(Detail().FallingSupplyDrops, Is.EqualTo(1));
+            Assert.That(Detail().LandedSupplyDrops, Is.Zero);
+            Assert.That(Detail().SupplyDrops[0].Number, Is.EqualTo(1));
+            Assert.That(Detail().SupplyDrops[0].HasLanded, Is.False);
+
+            dropper.Tick(1f);
+            player.transform.position = new Vector3(crate.Position.x + 1f, 0f, crate.Position.z);
+            _runner.Tick(0f);
+            Assert.That(Detail().FallingSupplyDrops, Is.Zero);
+            Assert.That(Detail().LandedSupplyDrops, Is.EqualTo(1));
+            Assert.That(Detail().IsLocalPlayerAtSupplyDrop, Is.True);
+
+            KillBy(enemy, mate);
+            mate.transform.position = player.transform.position;
+            enemy.transform.position = crate.Position + new Vector3(50f, 0f, 0f);
+            Assert.That(_runner.TryOpenCrate(mate), Is.False, "a downed member cannot open a crate");
+            Assert.That(_runner.TryOpenCrate(enemy), Is.False, "out of reach");
+
+            LogAssert.Expect(LogType.Log, "[Mode] crate-opened player=0 crate=1 pickups=1");
+            Assert.That(_runner.TryOpenCrate(player), Is.True);
+            Assert.That(crate.IsOpened, Is.True);
+            Assert.That(_runner.TryOpenCrate(player), Is.False, "the crate is already open");
+            _runner.Tick(0f);
+            Assert.That(Detail().SupplyDrops, Is.Empty);
+            Assert.That(Detail().IsLocalPlayerAtSupplyDrop, Is.False);
+            Assert.Throws<ArgumentException>(() => _runner.TryOpenCrate(null));
+
+            KillBy(player, enemy);
+            _runner.Tick(0f);
+
+            Assert.That(_runner.Session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(dropper.IsRunning, Is.False, "the drops stop with the match");
+            Assert.That(_runner.RunningSupplyDropper, Is.Null);
+        }
+
+        [Test]
+        public void WithoutAZoneNoSupplyCratesDrop()
+        {
+            var dropper = Track(new GameObject("SupplyDrops")).AddComponent<SupplyDropper>();
+            _runner.SupplyDropper = dropper;
+            var player = Member("Player", 0, ZeroSpawn);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"^\[Mode\] ShrinkingZone がシーンにない"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"^\[Mode\] 縮むエリアが動いていないため、補給の箱は落としません"));
+            Begin(new[] { player, enemy }, player);
+
+            Assert.That(dropper.IsRunning, Is.False);
+            Assert.That(_runner.RunningSupplyDropper, Is.Null);
+            Assert.That(_runner.TryOpenCrate(player), Is.False);
+            Assert.That(Detail().SupplyDrops, Is.Empty);
+        }
+
+        [Test]
+        public void TheDefinitionsSupplyDropTuningIsUsedBeforeTheDroppers()
+        {
+            var json = new TextAsset("{ \"stages\": [ { \"count\": 4, \"intervalSeconds\": 1 } ] }") { name = "Drops" };
+            _objects.Add(json);
+            var definition = ScriptableObject.CreateInstance<BattleRoyaleDefinition>();
+            _objects.Add(definition);
+            definition.SupplyDropTuning = json;
+            _runner.Definition = definition;
+            var zone = Zone(30f, new ShrinkingZone.PhaseSettings(60f, 10f, 10f, 1f));
+            _runner.Zone = zone;
+            var dropper = Track(new GameObject("SupplyDrops")).AddComponent<SupplyDropper>();
+            dropper.Spec = new SupplyDropSpec(new[] { new SupplyDropStage(1, 0f, 1f) });
+            _runner.SupplyDropper = dropper;
+            var player = Member("Player", 0, ZeroSpawn);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+
+            LogAssert.Expect(LogType.Log, "[SupplyDrop] stage phase=1 crates=4");
+            Begin(new[] { player, enemy }, player);
+
+            Assert.That(dropper.ActiveSpec.Stages[0].Count, Is.EqualTo(4));
+            Assert.That(definition.ReadSupplyDrops().Stages[0].Count, Is.EqualTo(4));
+            definition.SupplyDropTuning = null;
+            Assert.That(definition.ReadSupplyDrops(), Is.Null);
+        }
+
+        [Test]
         public void BeginNeedsABattleRoyaleSession()
         {
             var player = Member("Player", 0, ZeroSpawn);

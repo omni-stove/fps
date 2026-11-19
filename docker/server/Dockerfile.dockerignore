@@ -4,6 +4,7 @@
 !.editorconfig
 !dotnet/
 !Assets/game/Scripts/Core/
+!Assets/game/Scripts/Stealth/Core/
 !Assets/game/Scripts/Protocol/
 !server-data/
 

@@ -12,6 +12,7 @@ WORKDIR /src
 COPY .editorconfig ./
 COPY dotnet/ dotnet/
 COPY Assets/game/Scripts/Core/ Assets/game/Scripts/Core/
+COPY Assets/game/Scripts/Stealth/Core/ Assets/game/Scripts/Stealth/Core/
 COPY Assets/game/Scripts/Protocol/ Assets/game/Scripts/Protocol/
 RUN case "$TARGETARCH" in \
       amd64) rid=linux-x64 ;; \

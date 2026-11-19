@@ -196,34 +196,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void FillEmptyLeavesTheRegisteredAwarenessIndicatorSlotWhenTheCandidateIsAmbiguous()
-        {
-            StealthActionInstaller.RegisterContentSlots();
-            var content = Track(ScriptableObject.CreateInstance<GameContent>());
-            var indicatorA = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            var indicatorB = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            var candidates = new Dictionary<System.Type, Object[]>
-            {
-                { typeof(AwarenessIndicatorCatalog), new Object[] { indicatorA, indicatorB } },
-            };
-
-            var left = GameContentAssets.FillEmpty(content, t => candidates.TryGetValue(t, out var found) ? found : new Object[0], _ => new TextAsset[0]);
-
-            Assert.That(content.AwarenessIndicator, Is.Null);
-            Assert.That(left, Does.Contain("AwarenessIndicator"));
-        }
-
-        [Test]
-        public void TheAwarenessIndicatorComesFromTheEntry()
-        {
-            var content = Content("A");
-            content.AwarenessIndicator = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
-            GameContent.Use(content);
-
-            Assert.That(AwarenessIndicatorCatalog.Load(), Is.SameAs(content.AwarenessIndicator));
-        }
-
-        [Test]
         public void TheCosmeticVisualCatalogComesFromTheEntryAndFallsBackToResources()
         {
             var content = Content("A");

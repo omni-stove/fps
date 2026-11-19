@@ -54,7 +54,7 @@ namespace Shooter.Tests.EditMode
         public void AnotherTypeInTheMissionsFieldIsNotReadAsMissions()
         {
             var slot = MissionsSlot();
-            _content.Missions = Track(ScriptableObject.CreateInstance<AwarenessIndicatorCatalog>());
+            _content.Missions = Track(ScriptableObject.CreateInstance<MotorSettings>());
 
             Assert.That(slot.Get(_content), Is.Null);
         }

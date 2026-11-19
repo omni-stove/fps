@@ -9,6 +9,9 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[Signals]";
 
+        // ResetAll で一覧ごと空にしないのは、作った側が静的な欄に持ち続け、ドメインの再読み込みを切った Play では作り直されないため。
+        private static readonly List<Action> _createdResets = new List<Action>();
+
         public static GameSignal<LocalPlayerSignal> LocalPlayer { get; } = new GameSignal<LocalPlayerSignal>(nameof(LocalPlayer));
 
         public static GameSignal<HudModel> HudModel { get; } = new GameSignal<HudModel>(nameof(HudModel));
@@ -124,6 +127,19 @@ namespace Shooter.Runtime
 
         public static GameSignal<DroneStatus?> Drone { get; } = new GameSignal<DroneStatus?>(nameof(Drone));
 
+        // 本体のプロパティにしないのは、本体が型を知らない他のアセンブリ (追加の乗り物など) の signal も、ここの signal と一緒に ResetAll で空へ戻すため。
+        public static GameSignal<T> Create<T>(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException("a signal needs a name for its logs", nameof(name));
+            }
+
+            var signal = new GameSignal<T>(name);
+            _createdResets.Add(signal.Reset);
+            return signal;
+        }
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -180,6 +196,10 @@ namespace Shooter.Runtime
             BuySender.Reset();
             Vision.Reset();
             Drone.Reset();
+            foreach (var reset in _createdResets)
+            {
+                reset();
+            }
         }
     }
 }

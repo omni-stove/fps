@@ -17,6 +17,9 @@ namespace Shooter.Tests.EditMode
     {
         private static readonly Vector3 _eye = new Vector3(0f, 1f, 0f);
 
+        // 静的なのは、登録した外し方がテストの後も CombatEvents に残り続けるので、テストごとにラムダを足して一覧を伸ばさないため。
+        private static int _clearCalls;
+
         private readonly List<Object> _created = new List<Object>();
         private InputAction _attack;
         private InputAction _reload;
@@ -447,6 +450,48 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void NotifyReachesTheSubscribersAfterOneThatThrows()
+        {
+            var heard = new List<int>();
+            Action<int> handlers = _ => throw new InvalidOperationException("boom");
+            handlers += heard.Add;
+            handlers += heard.Add;
+
+            LogAssert.Expect(LogType.Exception, "InvalidOperationException: boom");
+            Assert.DoesNotThrow(() => CombatEvents.Notify(handlers, 7));
+
+            Assert.That(heard, Is.EqualTo(new[] { 7, 7 }));
+        }
+
+        [Test]
+        public void NotifyWithNoSubscribersDoesNothing()
+        {
+            Assert.DoesNotThrow(() => CombatEvents.Notify<int>(null, 7));
+        }
+
+        [Test]
+        public void RegisteredClearRunsOnClearSubscribersOnceEvenIfRegisteredTwice()
+        {
+            CombatEvents.RegisterClear(CountClear);
+            CombatEvents.RegisterClear(CountClear);
+            _clearCalls = 0;
+
+            CombatEvents.ClearSubscribers();
+
+            Assert.That(_clearCalls, Is.EqualTo(1));
+
+            CombatEvents.ClearSubscribers();
+
+            Assert.That(_clearCalls, Is.EqualTo(2), "the registration outlives a clear");
+        }
+
+        [Test]
+        public void RegisterClearRejectsNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => CombatEvents.RegisterClear(null));
+        }
+
+        [Test]
         public void RaiseExplodedPassesTheCenterAndWeapon()
         {
             var explosions = new List<ExplosionInfo>();
@@ -530,6 +575,11 @@ namespace Shooter.Tests.EditMode
             target.AddComponent<Hitbox>().Initialize(zone, damageable);
             Physics.SyncTransforms();
             return damageable;
+        }
+
+        private static void CountClear()
+        {
+            _clearCalls++;
         }
 
         private sealed class Recorder : IDisposable

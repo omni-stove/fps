@@ -217,6 +217,47 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ACreatedSignalHoldsWhatWasPublishedUntilResetAll()
+        {
+            var signal = GameSignals.Create<int?>("CreatedForTest");
+            var heard = new List<int?>();
+            signal.Changed += heard.Add;
+
+            signal.Publish(3);
+
+            Assert.That(signal.Value, Is.EqualTo((int?)3));
+            Assert.That(heard, Is.EqualTo(new int?[] { 3 }));
+
+            GameSignals.ResetAll();
+
+            Assert.That(signal.Value, Is.Null);
+            Assert.That(signal.HasValue, Is.False);
+            signal.Publish(4);
+            Assert.That(heard, Is.EqualTo(new int?[] { 3 }), "subscribers from before the reset are gone");
+            Assert.That(signal.Value, Is.EqualTo((int?)4), "the created signal still works after the reset");
+        }
+
+        [Test]
+        public void CreateNamesTheSignalForItsLogs()
+        {
+            var signal = GameSignals.Create<string>("NamedForTest");
+            signal.Changed += _ => throw new InvalidOperationException("broken view");
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(GameSignals.LogTag) + ".*NamedForTest"));
+            LogAssert.Expect(LogType.Exception, new Regex("broken view"));
+
+            signal.Publish("x");
+
+            Assert.That(signal.ToString(), Is.EqualTo("NamedForTest=x"));
+        }
+
+        [Test]
+        public void CreateRejectsAMissingName()
+        {
+            Assert.Throws<ArgumentException>(() => GameSignals.Create<int?>(null));
+            Assert.Throws<ArgumentException>(() => GameSignals.Create<int?>(string.Empty));
+        }
+
+        [Test]
         public void ResetAllDropsTheStaminaLockOnAndEmoteSubscribers()
         {
             var heardStamina = 0;

@@ -17,6 +17,9 @@ namespace Shooter.Runtime
         private static readonly Dictionary<EntityId, int> _offlineIds = new Dictionary<EntityId, int>();
         private static readonly Dictionary<int, GameObject> _offlineObjects = new Dictionary<int, GameObject>();
 
+        // ClearSubscribers で一覧ごと空にしないのは、登録した側が静的な初期化で 1 度だけ入れ、ドメインの再読み込みを切った Play では入れ直されないため。
+        private static readonly List<Action> _clears = new List<Action>();
+
         public static event Action<ShotFiredInfo> ShotFired;
 
         // 跳ねた弾の続きを ShotFired で出すと、銃声・マズルフラッシュ・薬莢・反動まで跳ねた所でもう一度出てしまうので分ける。
@@ -142,6 +145,26 @@ namespace Shooter.Runtime
             Invoke(AircraftPartBroken, info);
         }
 
+        // 他のアセンブリの出来事に自前で呼ばせないのは、購読者の例外で戦闘の処理を止めない流し方をここの出来事と揃えるため。
+        public static void Notify<T>(Action<T> handlers, T value)
+        {
+            Invoke(handlers, value);
+        }
+
+        // 同じ処理を 2 度入れても 1 度しか呼ばないのは、Play ごとに登録し直す側がいても一覧が伸び続けないようにするため。
+        public static void RegisterClear(Action clear)
+        {
+            if (clear == null)
+            {
+                throw new ArgumentNullException(nameof(clear));
+            }
+
+            if (!_clears.Contains(clear))
+            {
+                _clears.Add(clear);
+            }
+        }
+
         public static void ClearSubscribers()
         {
             ShotFired = null;
@@ -156,6 +179,18 @@ namespace Shooter.Runtime
             MatchFinished = null;
             AircraftPartBroken = null;
             _attribution = null;
+            foreach (var clear in _clears)
+            {
+                // 1 つの外し方の例外で止めないのは、残りの出来事の購読が前の Play から残らないようにするため。
+                try
+                {
+                    clear();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

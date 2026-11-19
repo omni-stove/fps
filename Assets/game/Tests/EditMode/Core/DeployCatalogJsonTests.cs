@@ -11,7 +11,7 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedTypeItemNames =
         {
-            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth", "turret", "decoy",
+            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth", "turret", "decoy", "beacon",
         };
 
         private static readonly string[] _expectedTurretItemNames =
@@ -20,6 +20,8 @@ namespace Shooter.Core.Tests
         };
 
         private static readonly string[] _expectedDecoyItemNames = { "lifetimeSeconds", "callIntervalSeconds", "callRadius" };
+
+        private static readonly string[] _expectedBeaconItemNames = { "uses", "spawnDistance" };
 
         [Test]
         public void ReadsEveryItem()
@@ -65,6 +67,59 @@ namespace Shooter.Core.Tests
             Assert.That(found, Is.SameAs(decoy));
             Assert.That(catalog.TryGet("missing", out _), Is.False);
             Assert.That(catalog.TryGet(null, out _), Is.False);
+        }
+
+        [Test]
+        public void ReadsABeacon()
+        {
+            var catalog = DeployCatalogJson.Parse(
+                "{\"types\": [{\"id\": \"deploy-beacon\", \"role\": \"Beacon\", \"maxActive\": 2, \"maxHealth\": 80,"
+                + " \"beacon\": {\"uses\": 5, \"spawnDistance\": 1.5}}]}",
+                _source);
+
+            var beacon = catalog.All[0];
+            Assert.That(beacon.Role, Is.EqualTo(DeployRole.Beacon));
+            Assert.That(beacon.Deploy.MaxActive, Is.EqualTo(2));
+            Assert.That(beacon.Deploy.MaxHealth, Is.EqualTo(80));
+            Assert.That(beacon.Deploy.Width, Is.EqualTo(0.4f), "the shape is left out and keeps the beacon's default");
+            Assert.That(beacon.Beacon.Uses, Is.EqualTo(5));
+            Assert.That(beacon.Beacon.SpawnDistance, Is.EqualTo(1.5f));
+            Assert.That(beacon.Turret, Is.Null);
+            Assert.That(beacon.Decoy, Is.Null);
+            Assert.That(beacon.WeaponId, Is.Null);
+        }
+
+        [Test]
+        public void ABeaconWithoutABeaconObjectUsesTheDefaults()
+        {
+            var beacon = DeployCatalogJson.Parse("{\"types\": [{\"id\": \"b\", \"role\": \"Beacon\"}]}", _source).All[0];
+
+            Assert.That(beacon.Deploy.MaxActive, Is.EqualTo(1));
+            Assert.That(beacon.Deploy.MaxHealth, Is.EqualTo(150));
+            Assert.That(beacon.Deploy.Width, Is.EqualTo(0.4f));
+            Assert.That(beacon.Deploy.Height, Is.EqualTo(1.2f));
+            Assert.That(beacon.Deploy.Depth, Is.EqualTo(0.4f));
+            Assert.That(beacon.Beacon.Uses, Is.EqualTo(3));
+            Assert.That(beacon.Beacon.SpawnDistance, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ABadBeaconIsRejectedAtItsItem()
+        {
+            var uses = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"b\", \"role\": \"Beacon\", \"beacon\": {\"uses\": 0}}]}", _source));
+            var distance = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"b\", \"role\": \"Beacon\", \"beacon\": {\"spawnDistance\": -1}}]}", _source));
+            var unknown = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"b\", \"role\": \"Beacon\", \"beacon\": {\"charges\": 2}}]}", _source));
+            var misplaced = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"s\", \"role\": \"Shield\", \"beacon\": {\"uses\": 2}}]}", _source));
+
+            Assert.That(uses.Item, Is.EqualTo("types[0].beacon.uses"));
+            Assert.That(uses.InnerException, Is.InstanceOf<ArgumentException>());
+            Assert.That(distance.Item, Is.EqualTo("types[0].beacon.spawnDistance"));
+            Assert.That(unknown.Item, Is.EqualTo("types[0].beacon.charges"));
+            Assert.That(misplaced.Item, Is.EqualTo("types[0].beacon"));
         }
 
         [Test]
@@ -185,6 +240,7 @@ namespace Shooter.Core.Tests
             Assert.That(DeployCatalogJson.TypeItemNames, Is.EqualTo(_expectedTypeItemNames));
             Assert.That(DeployCatalogJson.TurretItemNames, Is.EqualTo(_expectedTurretItemNames));
             Assert.That(DeployCatalogJson.DecoyItemNames, Is.EqualTo(_expectedDecoyItemNames));
+            Assert.That(DeployCatalogJson.BeaconItemNames, Is.EqualTo(_expectedBeaconItemNames));
         }
 
         [Test]
@@ -194,6 +250,9 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentException>(() => new DeployType("t", DeployRole.Turret, DeploySpec.Default, TurretSpec.Default));
             Assert.Throws<ArgumentException>(() => new DeployType("d", DeployRole.Decoy, DeploySpec.Default));
             Assert.Throws<ArgumentException>(() => new DeployType("s", DeployRole.Shield, DeploySpec.Default, decoy: DecoySpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("b", DeployRole.Beacon, DeploySpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("d", DeployRole.Decoy, DeploySpec.Default, decoy: DecoySpec.Default, beacon: BeaconSpec.Default));
+            Assert.That(new DeployType("b", DeployRole.Beacon, DeploySpec.Default, beacon: BeaconSpec.Default).Beacon, Is.SameAs(BeaconSpec.Default));
             Assert.Throws<ArgumentNullException>(() => new DeployType("s", DeployRole.Shield, null));
             Assert.Throws<ArgumentException>(
                 () => new DeployCatalog(new[] { new DeployType("s", DeployRole.Shield, DeploySpec.Default), new DeployType("s", DeployRole.Shield, DeploySpec.Default) }));

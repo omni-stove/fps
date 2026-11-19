@@ -53,6 +53,18 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' leave rider={rider} seat={seat} reason={reason} exit={exit}";
         }
 
+        public static string BailOut(string vehicle, string rider, float inheritedSpeed, ParachuteOpenVerdict? parachute)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' bail out rider={2} speed={3:0.0} parachute={4}",
+                Tag,
+                vehicle,
+                rider,
+                inheritedSpeed,
+                parachute.HasValue ? parachute.Value.ToString() : "-");
+        }
+
         public static string LeaveRefused(string vehicle, string rider, string reason)
         {
             return $"{Tag} '{vehicle}' leave refused rider={rider} reason={reason}";

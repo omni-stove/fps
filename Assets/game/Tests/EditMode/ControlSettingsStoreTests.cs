@@ -10,6 +10,8 @@ namespace Shooter.Tests.EditMode
 {
     public sealed class ControlSettingsStoreTests
     {
+        private const string DefaultGyro = ",\"gyro\":false,\"gyroSensitivity\":100,\"gyroAimOnly\":false,\"invertGyroY\":false";
+
         private ControlSettingsStore _store;
 
         [SetUp]
@@ -63,7 +65,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -175,7 +177,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -207,7 +209,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":11").And.Contain("\"aimAssist\":true"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":12").And.Contain("\"aimAssist\":true"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -259,7 +261,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.RumbleStrength, Is.EqualTo(ControlSettings.Default.RumbleStrength));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":11").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+                Does.Contain("\"version\":12").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -277,11 +279,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.True);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":11").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true}"));
+                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
-        // 版 10 の保存がある状態で起動すると、地域は Auto・同意は無しになり、ほかの設定は消えずに版 11 で書き直される
+        // 版 10 の保存がある状態で起動すると、地域は Auto・同意は無しになり、ほかの設定は消えずに今の版で書き直される
         [Test]
         public void VersionTenDataSilentlyGetsTheOnlineDefaultsAndIsRewrittenInTheCurrentVersion()
         {
@@ -303,7 +305,73 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.False);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":11").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false}"));
+                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false" + DefaultGyro + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 設定ファイルでジャイロを入れて閉じ、起動し直しても残っている
+        [Test]
+        public void SavesTheGyroAndLoadsItBackAfterARestart()
+        {
+            var settings = ControlSettings.Default
+                .WithGyroEnabled(true)
+                .WithGyroSensitivity(180)
+                .WithGyroAimOnly(true)
+                .WithInvertGyroY(true);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.GyroEnabled, Is.True);
+            Assert.That(loaded.GyroSensitivity, Is.EqualTo(1.8f).Within(1e-6f));
+            Assert.That(loaded.GyroAimOnly, Is.True);
+            Assert.That(loaded.InvertGyroY, Is.True);
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":12")
+                    .And.EndWith(",\"gyro\":true,\"gyroSensitivity\":180,\"gyroAimOnly\":true,\"invertGyroY\":true}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 版 11 の保存がある状態で起動すると、ジャイロは切ったままになり、ほかの設定は消えずに版 12 で書き直される
+        [Test]
+        public void VersionElevenDataSilentlyGetsTheGyroOffAndIsRewrittenInTheCurrentVersion()
+        {
+            var saved = ControlSettings.Default
+                .WithInvertLookY(true)
+                .WithQuickMatchRegion("europe")
+                .WithTelemetryConsent(true)
+                .With(ControlValue.GamepadSensitivity, 140);
+            var versionEleven = OldVersion(saved.ToJson(), 11, null);
+            Assert.That(versionEleven, Does.Contain("\"version\":11").And.Not.Contain("gyro"));
+            PlayerPrefs.SetString(_store.Key, versionEleven);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.GyroEnabled, Is.False);
+            Assert.That(loaded.GyroSensitivityPercent, Is.EqualTo(ControlSettings.GyroSensitivityRange.Default));
+            Assert.That(loaded.InvertGyroY, Is.False, "the stick invert does not carry over to the gyro");
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":12").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ABrokenGyroSensitivityIsClampedWithAWarning()
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithGyroEnabled(true).ToJson().Replace("\"gyroSensitivity\":100", "\"gyroSensitivity\":9000"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*'gyroSensitivity' 9000 is outside 10 to 500; using 500"));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.GyroSensitivityPercent, Is.EqualTo(500));
+            Assert.That(loaded.GyroEnabled, Is.True, "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -493,9 +561,15 @@ namespace Shooter.Tests.EditMode
         // 今の形式の json を古い版の形にする。版 6・7 は言語 (language) を持っていた。版 8 までは版 9 で足したエイムアシストを持たない (初期値のときだけ除ける)。
         // 版 9 までは版 10 で足した視点の上下反転・デッドゾーン・振動・振動の強さを持たない (初期値のときだけ除ける)。
         // 版 10 までは版 11 で足した地域とテレメトリの同意を持たない (初期値のときだけ除ける)。
+        // 版 11 までは版 12 で足したジャイロの欄を持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 12)
+            {
+                old = old.Replace(DefaultGyro, string.Empty);
+            }
+
             if (version < 11)
             {
                 old = old.Replace(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false", string.Empty);

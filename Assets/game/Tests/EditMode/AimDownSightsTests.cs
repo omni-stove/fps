@@ -139,6 +139,24 @@ namespace Shooter.Tests.EditMode
             Assert.That(_look.EffectiveMouseSensitivity, Is.EqualTo(mouse));
         }
 
+        // 「狙うときだけ」のジャイロが、覗き込みの間だけ効くよう視点に伝わる
+        [Test]
+        public void AimingTellsTheLookForTheAimOnlyGyro()
+        {
+            Initialize();
+            Assert.That(_look.Aiming, Is.False);
+
+            _ads.Tick(true, true, 0.01f);
+            Assert.That(_look.Aiming, Is.True, "as soon as aiming starts, before the zoom finishes");
+
+            _ads.Tick(false, false, 0.01f);
+            Assert.That(_look.Aiming, Is.False);
+
+            _ads.Tick(true, true, 0.01f);
+            _ads.ResetView();
+            Assert.That(_look.Aiming, Is.False, "resetting the view stops aiming");
+        }
+
         [Test]
         public void ZoomsToTheCurrentWeaponsFieldOfView()
         {

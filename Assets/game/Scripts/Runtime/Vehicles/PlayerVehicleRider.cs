@@ -390,7 +390,12 @@ namespace Shooter.Runtime
         public bool Exit()
         {
             var vehicle = Vehicle;
-            return vehicle != null && vehicle.TryExit(this);
+            if (vehicle == null)
+            {
+                return false;
+            }
+
+            return vehicle.EvaluateBailOut() == BailOutVerdict.BailOut ? vehicle.BailOut(this) : vehicle.TryExit(this);
         }
 
         public bool SwitchSeat(int direction)
@@ -542,10 +547,38 @@ namespace Shooter.Runtime
 
             _claimedWeaponHandoff = false;
             PlaceBody(feetPosition, rotation.eulerAngles.y);
-            if (_mover.Motor != null)
+            if (reason == VehicleLeaveReason.BailOut)
+            {
+                BailOutOf(seat != null ? seat.Vehicle : null);
+            }
+            else if (_mover.Motor != null)
             {
                 _mover.Motor.ResetVelocity();
             }
+        }
+
+        // 足で降りるときと違って速さを残すのは、動いている機体から出た人がその場で止まって見えないようにするため。
+        private void BailOutOf(Vehicle vehicle)
+        {
+            var inherited = Vector3.zero;
+            if (vehicle != null)
+            {
+                inherited = vehicle.Spec.BailOut.InheritedVelocity(vehicle.Velocity.ToNumerics()).ToUnity();
+            }
+
+            if (_mover.Motor != null)
+            {
+                _mover.Motor.SetVelocity(inherited.ToNumerics());
+            }
+
+            ParachuteOpenVerdict? verdict = null;
+            var parachute = GetComponent<ParachuteMovement>();
+            if (parachute != null && parachute.IsInitialized)
+            {
+                verdict = parachute.DeployForBailOut(inherited, vehicle != null ? vehicle.transform : null);
+            }
+
+            Debug.Log(VehicleLog.BailOut(vehicle != null ? vehicle.name : "-", RiderName, inherited.magnitude, verdict), this);
         }
 
         void IMovementOverride.Begin(PlayerController mover)

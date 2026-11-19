@@ -22,7 +22,14 @@ namespace Shooter.Server
         public void RequestStop()
         {
             Interlocked.Increment(ref _stopRequests);
-            _wake.Set();
+            try
+            {
+                _wake.Set();
+            }
+            catch (ObjectDisposedException)
+            {
+                // 止める合図は、ループが終わって破棄した後にも届きうる (合図の購読を外す前に読んだ呼び出し)。そのときはもう起こすループが無いので捨てる。
+            }
         }
 
         public void Run()

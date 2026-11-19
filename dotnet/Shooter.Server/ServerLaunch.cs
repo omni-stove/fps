@@ -30,6 +30,14 @@ namespace Shooter.Server
 
         public const string RegionFlag = "--region";
 
+        public const string ReportFileFlag = "--report-file";
+
+        public const string StatsFlag = "--stats";
+
+        public const string TelemetryFlag = "--telemetry";
+
+        public const string TelemetryDirectoryFlag = "--telemetry-dir";
+
         private ServerLaunch(
             NetLaunchOptions options,
             string version,
@@ -39,10 +47,12 @@ namespace Shooter.Server
             bool privateMatch,
             string joinCode,
             string banFile,
-            string region)
+            string region,
+            ServerRecordsLaunch records)
         {
             BanFile = banFile;
             Region = region;
+            Records = records ?? ServerRecordsLaunch.Off;
             PrivateMatch = privateMatch;
             JoinCode = joinCode;
             AntiCheat = antiCheat;
@@ -82,10 +92,13 @@ namespace Shooter.Server
 
         public string Region { get; }
 
+        // 通報・統計・テレメトリの残し方。どれも運用する人が起動で頼んだときだけ使う。
+        public ServerRecordsLaunch Records { get; }
+
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region, Records);
         }
 
         // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
@@ -205,6 +218,11 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!ServerRecordsLaunch.TryParse(args, out var records, out error))
+            {
+                return false;
+            }
+
             if (!AntiCheatSettings.TryResolveDedicatedServer(args, options, out var antiCheat, out error))
             {
                 return false;
@@ -219,7 +237,8 @@ namespace Shooter.Server
                 privateMatch,
                 joinCode,
                 banFile,
-                region);
+                region,
+                records);
             return true;
         }
 

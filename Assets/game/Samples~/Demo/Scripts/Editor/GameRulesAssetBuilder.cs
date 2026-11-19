@@ -34,6 +34,8 @@ namespace Shooter.Editor
         public const string CaptureTheFlagName = "CaptureTheFlag";
         public const string HordeName = "Horde";
         public const string BattleRoyaleName = "BattleRoyale";
+        public const string InfectedName = "Infected";
+        public const string ExtractionName = "Extraction";
 
         public static string FreeForAllPath => Folder + "/" + FreeForAllName + ".asset";
         public static string KillConfirmedPath => Folder + "/" + KillConfirmedName + ".asset";
@@ -45,6 +47,8 @@ namespace Shooter.Editor
         public static string CaptureTheFlagPath => Folder + "/" + CaptureTheFlagName + ".asset";
         public static string HordePath => Folder + "/" + HordeName + ".asset";
         public static string BattleRoyalePath => Folder + "/" + BattleRoyaleName + ".asset";
+        public static string InfectedPath => Folder + "/" + InfectedName + ".asset";
+        public static string ExtractionPath => Folder + "/" + ExtractionName + ".asset";
 
         public const float HordeWaveIntervalSeconds = 30f;
 
@@ -66,6 +70,8 @@ namespace Shooter.Editor
             CaptureTheFlagName,
             HordeName,
             BattleRoyaleName,
+            InfectedName,
+            ExtractionName,
         };
 
         public const int TpsRangeGrenadeCount = 3;
@@ -271,6 +277,22 @@ namespace Shooter.Editor
                 .WithReserveAmmoMultiplier(BattleRoyaleReserveAmmoMultiplier);
         }
 
+        // 倒された人はすぐ感染者として戻る (RespawnMode.Individual) ので、起こしてもらうダウンは使わない。
+        public static GameRules InfectedRules()
+        {
+            return TeamDeathmatchRules().WithActions(InfectedActions());
+        }
+
+        // 倒れたら戻らず (RespawnMode.None) 持ち込んだ物を失うので、出現直後の無敵は無くし、起こす味方もいないのでダウンさせない。
+        // 弾は箱から拾わせるので、バトルロイヤルと違って予備弾は増やさない。
+        public static GameRules ExtractionRules()
+        {
+            return TeamDeathmatchRules()
+                .WithRespawnMode(RespawnMode.None)
+                .WithSpawnProtectionSeconds(0f)
+                .WithActions(ExtractionActions());
+        }
+
         public static GameRules ModeRules(string name)
         {
             switch (name)
@@ -295,6 +317,10 @@ namespace Shooter.Editor
                     return HordeRules();
                 case BattleRoyaleName:
                     return BattleRoyaleRules();
+                case InfectedName:
+                    return InfectedRules();
+                case ExtractionName:
+                    return ExtractionRules();
                 default:
                     throw new ArgumentException($"'{name}' is not one of the mode names ({string.Join(", ", ModeNames)})", nameof(name));
             }
@@ -319,6 +345,16 @@ namespace Shooter.Editor
 
         // ダウンさせると、倒れるまで旗を持ったまま残り、運ぶ人を撃っても旗が落ちないので、ダウンしないようにする。
         public static ActionRules CaptureTheFlagActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        public static ActionRules InfectedActions()
+        {
+            return TeamDeathmatchActions().WithDowned(Downed.Off);
+        }
+
+        public static ActionRules ExtractionActions()
         {
             return TeamDeathmatchActions().WithDowned(Downed.Off);
         }
@@ -391,6 +427,22 @@ namespace Shooter.Editor
             }
 
             var rules = FeatureRules(field);
+            var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => Configure(d, rules));
+            Debug.Log($"{LogTag} saved '{path}'");
+            return built;
+        }
+
+        // シーンを 1 つ組むメニューからでも、先に Build を回さずに遊べるよう、無ければそのモードの分だけ作る。
+        // ゲーム側で調整した値を残すよう、既にあれば値は変えない。
+        public static GameRulesDefinition LoadOrBuildModeRules(string name)
+        {
+            var path = ModeRulesPath(name);
+            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
+            {
+                return LoadRules(path);
+            }
+
+            var rules = ModeRules(name);
             var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => Configure(d, rules));
             Debug.Log($"{LogTag} saved '{path}'");
             return built;

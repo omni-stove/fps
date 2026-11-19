@@ -12,14 +12,13 @@ using UnityEngine.SceneManagement;
 namespace Shooter.Editor
 {
     // キットの loot.json は空の表なので、このシーンで箱から出る物は Demo 用に作った JSON を Runner に配線して決める。
-    // 倒れても戻らない (RespawnMode.None) ルールが要るので、自分のルールを持つまでは BattleRoyale のルールを使う。
     // 箱は NavMesh を焼く前に置いて敵が避けるようにし、脱出地点は当たり判定の無い床の印なので焼いた後に置く。
     public sealed class ExtractionSceneBuilder : ModeSceneBuilder
     {
-        public const string ModeName = "Extraction";
+        public const string ModeName = GameRulesAssetBuilder.ExtractionName;
 
-        public static string ScenePathValue => ShooterKitRoot.OutputScene(ModeName);
-        public static string RulesPathValue => GameRulesAssetBuilder.BattleRoyalePath;
+        public static string ScenePathValue => BuildSceneList.ExtractionScene;
+        public static string RulesPathValue => GameRulesAssetBuilder.ExtractionPath;
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(ModeName);
         public static string LootTuningPath => ShooterKitRoot.OutputPath("Modes/" + ModeName + "Loot.json");
 
@@ -79,6 +78,7 @@ namespace Shooter.Editor
         [MenuItem(MenuPath)]
         public static void Build()
         {
+            GameRulesAssetBuilder.LoadOrBuildModeRules(ModeName);
             new ExtractionSceneBuilder().BuildSceneFromMenu();
         }
 

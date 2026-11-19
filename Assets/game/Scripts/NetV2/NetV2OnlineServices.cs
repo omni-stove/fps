@@ -1,5 +1,6 @@
 using System;
 using Shooter.Core;
+using Shooter.Runtime;
 using UnityEngine;
 
 namespace Shooter.NetV2
@@ -12,12 +13,16 @@ namespace Shooter.NetV2
 
         private NetV2PartyControl _party;
         private NetV2JoinByCode _joinByCode;
+        private NetV2Leaderboard _leaderboard;
 
         public static NetV2OnlineServices Current { get; private set; }
 
         public NetV2PartyControl Party => _party;
 
         public NetV2JoinByCode JoinByCode => _joinByCode;
+
+        // メインメニューのリーダーボードの画面が開く口 (GameSignals.LeaderboardControl)。EOS のリーダーボードを作れなければ null
+        public NetV2Leaderboard Leaderboard => _leaderboard;
 
         // EOS が無いビルドや認証情報が無いときは作らず、GameSignals に口を出さないことで UI にパーティと参加コードを出させない。
         public static NetV2OnlineServices Install()
@@ -70,6 +75,9 @@ namespace Shooter.NetV2
                 () => services._party != null ? services._party.MatchPlayers : 1,
                 NetV2Client.ConnectByJoinCode,
                 log);
+
+            // ボードの並びはサーバーの送る統計 (server-data/tuning/leaderboards.json) と同じ調整値から読む
+            services._leaderboard = NetV2Leaderboard.Create(KitTuning.Leaderboards, log);
             Debug.Log(PartyLog.On(version), services);
             return services;
         }
@@ -84,6 +92,7 @@ namespace Shooter.NetV2
             var now = Time.unscaledTime;
             _party?.Tick(now);
             _joinByCode?.Tick(now);
+            _leaderboard?.Tick(Time.unscaledDeltaTime);
         }
 
         private void OnDestroy()
@@ -93,6 +102,8 @@ namespace Shooter.NetV2
                 Current = null;
             }
 
+            _leaderboard?.Dispose();
+            _leaderboard = null;
             _joinByCode?.Dispose();
             _joinByCode = null;
             _party?.Dispose();

@@ -299,6 +299,7 @@ namespace Shooter.Tests.EditMode
                 (() => content.LootTuning, v => content.LootTuning = v),
                 (() => content.StashTuning, v => content.StashTuning = v),
                 (() => content.ExtractionTuning, v => content.ExtractionTuning = v),
+                (() => content.ReplayTuning, v => content.ReplayTuning = v),
             };
 
             foreach (var slot in slots)
@@ -376,6 +377,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("_lootTuning", "Resources/Tuning/loot")]
         [TestCase("_stashTuning", "Resources/Tuning/stash")]
         [TestCase("_extractionTuning", "Resources/Tuning/extraction")]
+        [TestCase("_replayTuning", "Resources/Tuning/replay")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -506,8 +508,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(asked, Does.Contain("aim-assist").And.Contain("skill").And.Contain("progression").And.Not.Contain("grenade"));
             Assert.That(asked, Does.Contain("chat-words").And.Contain("achievements").And.Contain("leaderboards").And.Contain("cosmetics"));
             Assert.That(asked, Does.Contain("weather").And.Contain("telemetry").And.Contain("infected").And.Contain("loot"));
-            Assert.That(asked, Does.Contain("stash").And.Contain("extraction"));
-            Assert.That(asked, Has.Count.EqualTo(27));
+            Assert.That(asked, Does.Contain("stash").And.Contain("extraction").And.Contain("replay"));
+            Assert.That(asked, Has.Count.EqualTo(28));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

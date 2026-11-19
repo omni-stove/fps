@@ -12,17 +12,33 @@ namespace Shooter.Tests.EditMode
     public sealed class ExtractionSceneBuilderTests
     {
         [Test]
-        public void TheSceneHasItsOwnPathAndBorrowsTheRulesWithoutRespawns()
+        public void TheSceneIsListedWithTheOtherModesUnderItsOwnRules()
         {
             var builder = new ExtractionSceneBuilder();
 
             Assert.That(builder.ScenePath, Is.EqualTo(DemoSample.Root + "/Scenes/Extraction.unity"));
-            Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.BattleRoyalePath));
+            Assert.That(builder.RulesPath, Is.EqualTo(DemoSample.Root + "/Rules/Extraction.asset"));
             Assert.That(builder.NavMeshDataPath, Is.EqualTo(DemoSample.Root + "/Scenes/Extraction/NavMesh-Floor.asset"));
             Assert.That(builder.LogTag, Is.EqualTo("[ExtractionSceneBuilder]"));
             Assert.That(ExtractionSceneBuilder.DefinitionPath, Is.EqualTo(DemoSample.Root + "/Modes/Extraction.asset"));
             Assert.That(ExtractionSceneBuilder.LootTuningPath, Is.EqualTo(DemoSample.Root + "/Modes/ExtractionLoot.json"));
-            Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().RespawnMode, Is.EqualTo(RespawnMode.None), "a raid ends when the player falls");
+            Assert.That(ExtractionSceneBuilder.ModeName, Is.EqualTo(GameRulesAssetBuilder.ExtractionName));
+            Assert.That(GameRulesAssetBuilder.ModeNames, Has.Member(ExtractionSceneBuilder.ModeName));
+            Assert.That(builder.ScenePath, Is.EqualTo(BuildSceneList.ModeScene(ExtractionSceneBuilder.ModeName)));
+            Assert.That(builder.RulesPath, Is.EqualTo(GameRulesAssetBuilder.ModeRulesPath(ExtractionSceneBuilder.ModeName)));
+            Assert.That(BuildSceneList.Scenes, Has.Member(builder.ScenePath));
+        }
+
+        [Test]
+        public void TheRaidEndsWhenThePlayerFallsAndTheAmmoComesFromTheCrates()
+        {
+            var rules = GameRulesAssetBuilder.ExtractionRules();
+
+            Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.None), "a raid ends when the player falls");
+            Assert.That(rules.SpawnProtectionSeconds, Is.Zero);
+            Assert.That(rules.Actions.Downed, Is.EqualTo(Downed.Off), "nobody is there to revive the player");
+            Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+            Assert.That(rules.InfiniteReserve, Is.False);
         }
 
         [Test]

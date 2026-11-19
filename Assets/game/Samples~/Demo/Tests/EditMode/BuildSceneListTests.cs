@@ -107,6 +107,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ListHasTheInfectedAndExtractionScenesRightAfterTheBattleRoyale()
+        {
+            var scenes = BuildSceneList.Scenes.ToList();
+
+            Assert.That(BuildSceneList.InfectedScene, Is.EqualTo(DemoSample.Root + "/Scenes/Infected.unity"));
+            Assert.That(BuildSceneList.ExtractionScene, Is.EqualTo(DemoSample.Root + "/Scenes/Extraction.unity"));
+            Assert.That(BuildSceneList.ModeScene(GameRulesAssetBuilder.InfectedName), Is.EqualTo(BuildSceneList.InfectedScene));
+            Assert.That(BuildSceneList.ModeScene(GameRulesAssetBuilder.ExtractionName), Is.EqualTo(BuildSceneList.ExtractionScene));
+            var start = scenes.IndexOf(BuildSceneList.BattleRoyaleScene) + 1;
+            Assert.That(
+                scenes.Skip(start).Take(3),
+                Is.EqualTo(new[] { BuildSceneList.InfectedScene, BuildSceneList.ExtractionScene, BuildSceneList.ModeTestScene }));
+            Assert.That(BuildSceneList.WebScenes, Has.No.Member(BuildSceneList.InfectedScene), "the menu has no button for the modes");
+        }
+
+        [Test]
         public void ArrangeSkipsTheModeScenesUntilTheyAreBuilt()
         {
             var modeScenes = GameRulesAssetBuilder.ModeNames.Select(BuildSceneList.ModeScene).ToArray();

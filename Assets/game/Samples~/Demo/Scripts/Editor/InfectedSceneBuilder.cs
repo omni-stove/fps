@@ -6,11 +6,10 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    // まだ入口に並べないモードなので、モード名の一覧 (GameRulesAssetBuilder.ModeNames) と BuildSceneList.Scenes には載せず、ルールもここで作る。
     // bot はみな生存者の陣営に置く。感染者の陣営の出現点は、感染した人が戻る先として置く。
     public sealed class InfectedSceneBuilder : ModeSceneBuilder
     {
-        public const string ModeName = "Infected";
+        public const string ModeName = GameRulesAssetBuilder.InfectedName;
 
         public const string MenuPath = "Shooter/Build Infected Scene";
 
@@ -25,9 +24,9 @@ namespace Shooter.Editor
         {
         }
 
-        public static string ScenePathValue => ShooterKitRoot.OutputScene(ModeName);
+        public static string ScenePathValue => BuildSceneList.InfectedScene;
 
-        public static string RulesPathValue => GameRulesAssetBuilder.Folder + "/" + ModeName + ".asset";
+        public static string RulesPathValue => GameRulesAssetBuilder.InfectedPath;
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(ModeName);
 
@@ -36,30 +35,8 @@ namespace Shooter.Editor
         [MenuItem(MenuPath)]
         public static void Build()
         {
-            LoadOrBuildRules(RulesPathValue);
+            GameRulesAssetBuilder.LoadOrBuildModeRules(ModeName);
             new InfectedSceneBuilder().BuildSceneFromMenu();
-        }
-
-        // 倒された人はすぐ感染者として戻るので、起こしてもらうダウンは使わない。
-        public static GameRules InfectedRules()
-        {
-            return GameRulesAssetBuilder.TeamDeathmatchRules()
-                .WithActions(GameRulesAssetBuilder.TeamDeathmatchActions().WithDowned(Downed.Off));
-        }
-
-        // ゲーム側で調整した値を残すよう、既にあれば値は変えない。
-        public static GameRulesDefinition LoadOrBuildRules(string path)
-        {
-            path = SceneBuildHelpers.ValidateAssetPath(path);
-            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
-            {
-                return GameRulesAssetBuilder.LoadRules(path);
-            }
-
-            var rules = InfectedRules();
-            var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => GameRulesAssetBuilder.Configure(d, rules));
-            Debug.Log($"[{nameof(InfectedSceneBuilder)}] saved '{path}'");
-            return built;
         }
 
         public static InfectedDefinition LoadOrCreateDefinition(string path, WeaponCatalogAsset catalog)

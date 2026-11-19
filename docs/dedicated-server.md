@@ -131,7 +131,23 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
   名前はクライアントの設定の候補 (Demo では `Resources/Settings/QuickMatchRegions.json`) と揃える。
 - `--private` か `--join-code <コード>` で、参加コードの合う人だけを入れる。コードを省くと作ってログに出す。
 - `--ban-file <パス>` で BAN の一覧を読み書きする ([キックと BAN](#キックと-ban))。
+- `--report-file`・`--stats`・`--telemetry` は [通報・統計・テレメトリ](#通報統計テレメトリ)。
 - `-eac` は [anti-cheat.md](anti-cheat.md)。
+
+## 通報・統計・テレメトリ
+
+どれも引数で頼んだときだけ動く。頼まなければ起動のログに頼み方を 1 行ずつ出す。
+
+| 引数 | すること |
+| --- | --- |
+| `--report-file <パス>` | プレイヤーの通報を 1 件 1 行の JSON で足していく。同じ人から同じ相手への通報は 300 秒に 1 件だけ残す。書けない場所なら起動で止まる (終了コード 1) |
+| `--stats` | 試合の終わりにキルなどの数を EOS の Stats に送る (リーダーボードの元)。EOS の認証情報と SDK が要り、無ければ終了コード 3。失敗した送信は間を置いて送り直し、止めるときは残りを送り切るまで少し待つ |
+| `--telemetry` | 運用する人の同意として、試合のまとめとクラッシュを残す。送り先は `server-data/tuning/telemetry.json` (クライアントの `Tuning/telemetry.json` と同じ形、無ければ手元のファイル) |
+| `--telemetry-dir <フォルダ>` | `--telemetry` の送り先が手元のファイル (`LocalFile`) のときの置き場所。`--telemetry` と一緒にだけ使え、送り先が `LocalFile` なのに無ければ終了コード 3 |
+
+- 統計のボードは `server-data/tuning/leaderboards.json` (クライアントの `Tuning/leaderboards.json` と同じ形、無ければ既定のボード) から読む。クライアントと同じ中身にしておく。
+- 統計は EOS の ProductUserId で送るので、UDP でつないで ProductUserId を名乗らない人の数は送らない。
+- docker では置き場所をボリュームにする (`-v ./records:/records` と `--report-file /records/reports.jsonl --telemetry-dir /records`)。
 
 ## クライアントからつなぐ
 

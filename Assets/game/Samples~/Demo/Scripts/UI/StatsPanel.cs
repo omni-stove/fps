@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
-    public sealed class StatsPanel : IDisposable
+    public sealed class StatsPanel : IMainMenuPanel
     {
         public const string PanelClass = "stats";
         public const string TitleClass = "stats__title";
@@ -89,6 +89,16 @@ namespace Shooter.Runtime
         public IReadOnlyList<string> AchievementLines => LinesOf(_achievements, AchievementNameClass);
 
         public IReadOnlyList<string> AchievementDescriptions => LinesOf(_achievements, AchievementDescriptionClass);
+
+        // 記録係が無ければ開けない。メインメニューはこの例外を知らせに出す (MainMenuScreen.OpenPanel)。
+        // 実績の表は記録係が数えているものを使い、記録係より先に開いても同じ調整値を読む
+        public static StatsPanel Open(VisualElement container)
+        {
+            var progression = ProgressionBootstrap.Recorder
+                ?? throw new InvalidOperationException("no progression recorder is installed (ProgressionBootstrap)");
+            var achievements = ProgressionBootstrap.Achievements?.Tracker.Spec ?? AchievementRecorder.LoadSpec();
+            return new StatsPanel(container, progression.Profile, achievements);
+        }
 
         public void Show(PlayerProfile profile)
         {

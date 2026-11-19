@@ -66,7 +66,10 @@ namespace Shooter.Tests.EditMode
             CampaignLaunchSelection.Clear();
             UnityEngine.Object.DestroyImmediate(_owner);
             GameSignals.ResetAll();
+
+            // サンプルの登録 (DefaultMenuScreens) を戻し、残りのテストとエディターのメニューから画面を消したままにしない
             MainMenuPanels.Clear();
+            DefaultMenuScreens.RegisterMainMenuPanels();
         }
 
         [Test]
@@ -432,6 +435,34 @@ namespace Shooter.Tests.EditMode
             Assert.That(_screen.FocusIndex, Is.EqualTo(names.IndexOf(MainMenuScreen.StashButtonName)),
                 "the focus leaves the hidden button for the next shown one");
             Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.False, "nothing is left to unregister");
+        }
+
+        [Test]
+        public void UnregisteringHidesTheDefaultScreenButton()
+        {
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True);
+
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.True);
+            Assert.That(MainMenuPanels.IsRegistered(MainMenuPanelKind.Stats), Is.False);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.False);
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.False);
+
+            MainMenuPanels.Register(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True, "a new registration shows the button again");
+        }
+
+        [Test]
+        public void UnregisteringBeforeTheDefaultIsInstalledKeepsTheButtonHidden()
+        {
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.False, "nothing was visible to remove");
+
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+
+            Assert.That(MainMenuPanels.IsRegistered(MainMenuPanelKind.Stats), Is.False);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.False);
         }
 
         [Test]

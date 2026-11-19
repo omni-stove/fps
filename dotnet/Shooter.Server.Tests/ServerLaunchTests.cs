@@ -224,6 +224,51 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheRecordsAreOffUnlessAskedAndSurviveSwappingTheOptions()
+        {
+            var off = Parse(Env()).Records;
+            Assert.That(off.ReportFile, Is.Null);
+            Assert.That(off.SendsStats, Is.False);
+            Assert.That(off.TelemetryConsent, Is.False);
+            Assert.That(off.TelemetryDirectory, Is.Null);
+
+            var launch = Parse(
+                Env(), "--report-file", "reports/reports.jsonl", "--stats", "--telemetry", "--telemetry-dir", "telemetry", "-transport", "eos");
+            var udp = launch.WithOptions(launch.Options.WithTransport(NetTransportKind.Udp));
+
+            foreach (var records in new[] { launch.Records, udp.Records })
+            {
+                Assert.That(records.ReportFile, Is.EqualTo("reports/reports.jsonl"));
+                Assert.That(records.SendsStats, Is.True);
+                Assert.That(records.TelemetryConsent, Is.True);
+                Assert.That(records.TelemetryDirectory, Is.EqualTo("telemetry"));
+            }
+        }
+
+        [Test]
+        public void TheTelemetryConsentDoesNotNeedAFolder()
+        {
+            var records = Parse(Env(), "--telemetry").Records;
+
+            Assert.That(records.TelemetryConsent, Is.True);
+            Assert.That(records.TelemetryDirectory, Is.Null);
+        }
+
+        [TestCase(ServerLaunch.ReportFileFlag + " requires a path", "--report-file")]
+        [TestCase(ServerLaunch.ReportFileFlag + " requires a path", "--report-file", "--stats")]
+        [TestCase(ServerLaunch.ReportFileFlag + " is given more than once", "--report-file", "a.jsonl", "--report-file", "b.jsonl")]
+        [TestCase(ServerLaunch.StatsFlag + " is given more than once", "--stats", "--stats")]
+        [TestCase(ServerLaunch.TelemetryFlag + " is given more than once", "--telemetry", "--telemetry")]
+        [TestCase(ServerLaunch.TelemetryDirectoryFlag + " requires a path", "--telemetry", "--telemetry-dir")]
+        [TestCase(
+            ServerLaunch.TelemetryDirectoryFlag + " is where the telemetry is kept; pass " + ServerLaunch.TelemetryFlag + " too to agree to keep it",
+            "--telemetry-dir", "telemetry")]
+        public void BadRecordFlagsAreRejected(string expected, params string[] args)
+        {
+            Assert.That(Fail(Env(), args), Does.StartWith(expected));
+        }
+
+        [Test]
         public void TheRegionIsOptionalAndSurvivesSwappingTheOptions()
         {
             Assert.That(Parse(Env(), "-register-lobby", "203.0.113.10:7777").Region, Is.Null);

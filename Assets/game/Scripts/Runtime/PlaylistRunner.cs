@@ -210,7 +210,9 @@ namespace Shooter.Runtime
         private void LoadCurrent()
         {
             var playlist = _cursor.Playlist;
-            for (var attempt = 0; attempt < playlist.Entries.Count; attempt++)
+            // 混ぜた並びは周をまたぐと組み直されるので、試した回数ではなく試した位置で全項目を確かめる。
+            var tried = new HashSet<int>();
+            while (tried.Count < playlist.Entries.Count)
             {
                 var entry = _cursor.Current;
                 Apply(entry);
@@ -221,7 +223,17 @@ namespace Shooter.Runtime
                 }
 
                 Debug.LogError(PlaylistLog.SceneNotLoaded(playlist, _cursor.Position, entry.Scene), this);
-                _cursor.Next();
+                tried.Add(_cursor.Position);
+                if (tried.Count == playlist.Entries.Count)
+                {
+                    break;
+                }
+
+                do
+                {
+                    _cursor.Next();
+                }
+                while (tried.Contains(_cursor.Position));
             }
 
             Debug.LogError(PlaylistLog.NoSceneLoaded(playlist), this);

@@ -287,6 +287,35 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AShuffledPlaylistWithOneLoadableSceneKeepsLoadingItAcrossRounds()
+        {
+            _missingScenes.UnionWith(new[] { "Arena", "Yard" });
+            var playlist = new Playlist("mixed", PlaylistOrder.Shuffle, ThreeEntries().Entries);
+            var ignoring = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                for (var seed = 0; seed < 50; seed++)
+                {
+                    _loaded.Clear();
+                    _runner.Seed = seed;
+                    _runner.Begin(playlist, RulesTable());
+                    for (var i = 0; i < 6; i++)
+                    {
+                        _runner.Advance();
+                    }
+
+                    Assert.That(_runner.IsRunning, Is.True, "seed " + seed);
+                    Assert.That(_loaded, Is.EqualTo(Enumerable.Repeat("Range", 7)), "seed " + seed);
+                }
+            }
+            finally
+            {
+                LogAssert.ignoreFailingMessages = ignoring;
+            }
+        }
+
+        [Test]
         public void BeginByIdFindsThePlaylistOrListsTheKnownIds()
         {
             var playlists = new[] { ThreeEntries(), new Playlist("other", PlaylistOrder.Sequential, new[] { new PlaylistEntry("Range") }) };

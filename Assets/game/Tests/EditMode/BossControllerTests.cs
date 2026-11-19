@@ -32,7 +32,7 @@ namespace Shooter.Tests.EditMode
         public void SetUp()
         {
             CombatEvents.ClearSubscribers();
-            CombatEvents.BossPhaseChanged += _events.Add;
+            BossEvents.BossPhaseChanged += _events.Add;
 
             _root = new GameObject("Boss");
             _damageable = _root.AddComponent<Damageable>();
@@ -59,6 +59,21 @@ namespace Shooter.Tests.EditMode
             Object.DestroyImmediate(_root);
             CombatEvents.ClearSubscribers();
             _events.Clear();
+        }
+
+        [Test]
+        public void ClearingTheCombatSubscribersAlsoClearsThePhaseChangeSubscribers()
+        {
+            CombatEvents.ClearSubscribers();
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Boss\] id=Boss hit zone=Body"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Boss\] id=Boss weakpoint=Core exposed=True$"));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Boss\] id=Boss phase=0->1 "));
+
+            _damageable.TakeDamage(45);
+            _body.ApplyHit(BaseDamage, 0f, DamageFalloff.None);
+
+            Assert.That(_boss.CurrentPhase.Id, Is.EqualTo("Exposed"), "the phase still changes");
+            Assert.That(_events, Is.Empty);
         }
 
         [Test]

@@ -11,7 +11,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // 投票キックを有効にしていない既定のルールと、まだ受け口だけの購入では、ServerModules の一式に UDP で送っても試合が前と同じまま進むことを確かめる
+    // 投票キックを有効にしていない既定のルールと、経済の無い (ラウンドの無い) 試合への購入では、ServerModules の一式に UDP で送っても試合が前と同じまま進むことを確かめる
     [NonParallelizable]
     public sealed class MatchRulesVoteKickBuyTests
     {

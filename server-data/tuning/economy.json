@@ -1,0 +1,7 @@
+{
+  "resetOnSwap": true,
+  "items": [
+    { "id": "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "kind": "Weapon", "price": 2700, "slot": 0, "nameKey": "weapon.rifle" },
+    { "id": "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45", "kind": "Weapon", "price": 500, "slot": 1, "nameKey": "weapon.handgun" }
+  ]
+}

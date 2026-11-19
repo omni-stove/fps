@@ -37,11 +37,9 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Domination.Value, Is.Null);
             Assert.That(GameSignals.Scoreboard.Value, Is.Null);
             Assert.That(GameSignals.InteractHint.Value, Is.Null);
-            Assert.That(GameSignals.Tutorial.Value, Is.Null);
             Assert.That(GameSignals.KillCam.Value, Is.Null);
             Assert.That(GameSignals.Pings.Value, Is.Null);
             Assert.That(GameSignals.SquadOrder.Value, Is.Null);
-            Assert.That(GameSignals.CampaignNotice.Value, Is.Null);
             Assert.That(GameSignals.MenuReturnReason.Value, Is.Null);
             Assert.That(GameSignals.HudDensity.Value, Is.Null);
             Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);

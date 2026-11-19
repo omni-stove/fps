@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using NUnit.Framework;
 using Shooter.Core;
@@ -9,6 +10,7 @@ namespace Shooter.Server.Tests
     public sealed class ServerRulesExamplesTests
     {
         private const string _map = "NetArena01";
+        private static readonly int[] _arenaCheckpoints = { 3 };
 
         [TestCase("TeamDeathmatch", MatchObjective.None)]
         [TestCase("Domination", MatchObjective.Domination)]
@@ -19,6 +21,7 @@ namespace Shooter.Server.Tests
         [TestCase("FreeForAll", MatchObjective.FreeForAll)]
         [TestCase("KillConfirmed", MatchObjective.KillConfirmed)]
         [TestCase("GunGame", MatchObjective.GunGame)]
+        [TestCase("Payload", MatchObjective.Payload)]
         public void EachExampleRulesFileLoadsAndPicksItsObjective(string name, MatchObjective objective)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
@@ -35,6 +38,7 @@ namespace Shooter.Server.Tests
         [TestCase("FreeForAll")]
         [TestCase("KillConfirmed")]
         [TestCase("GunGame")]
+        [TestCase("Payload")]
         public void TheOnlineModeExamplesTurnOnMeleeAndTheKillCam(string name)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
@@ -50,6 +54,7 @@ namespace Shooter.Server.Tests
         [TestCase("FreeForAll")]
         [TestCase("KillConfirmed")]
         [TestCase("GunGame")]
+        [TestCase("Payload")]
         public void TheExampleMapCanBePlayedWithTheExampleRules(string name)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
@@ -74,6 +79,39 @@ namespace Shooter.Server.Tests
             Assert.That(map.Points.FlagBases[0].Position, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, -depth)));
             Assert.That(map.Points.FlagBases[1].Team, Is.EqualTo(Team.Bravo));
             Assert.That(map.Points.FlagBases[1].Position, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, depth)));
+        }
+
+        // 道筋は ArenaSceneBuilder.PayloadRoutePoints と同じ (足元の高さ y = -1、Alpha の手前 z = -18 から Bravo の手前 z = 18、中継点は真ん中)。
+        // 範囲は台車に ControlPointZone を置かないので、遊ぶときに足される ControlPointZone の既定 (半径 5・高さ 6)
+        [Test]
+        public void TheArenaExampleMapCarriesThePayloadRoute()
+        {
+            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out var error), Is.True, error);
+
+            var payload = map.Points.Payload;
+            Assert.That(payload, Is.Not.Null, "run make export-server-rules and commit server-data/maps");
+            Assert.That(payload.Attackers, Is.EqualTo(Team.Alpha));
+            Assert.That(payload.Route.PointCount, Is.EqualTo(7));
+            Assert.That(payload.Route.Point(0), Is.EqualTo(new System.Numerics.Vector3(0f, -1f, -18f)));
+            Assert.That(payload.Route.Point(3), Is.EqualTo(new System.Numerics.Vector3(4f, -1f, 0f)));
+            Assert.That(payload.Route.Point(6), Is.EqualTo(new System.Numerics.Vector3(0f, -1f, 18f)));
+            Assert.That(payload.CheckpointPoints, Is.EqualTo(_arenaCheckpoints));
+            Assert.That(payload.Route.Length, Is.EqualTo(40d).Within(1e-4));
+            Assert.That(payload.Radius, Is.EqualTo(5f));
+            Assert.That(payload.Height, Is.EqualTo(6f));
+            Assert.That(map.Points.ControlPoints, Has.Count.EqualTo(3), "the cart adds no control point");
+        }
+
+        [Test]
+        public void AnExampleMapWithoutARouteIsRefusedForThePayloadExample()
+        {
+            Assert.That(ServerRulesData.TryLoad("Payload", Roots(), out var data, out var error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad("NetTest", Roots(), out var map, out error), Is.True, error);
+            var rules = ServerObjectiveFactory.Create(data.Rules.Objective, data.Settings, new NoSessionHost());
+
+            var e = Assert.Throws<InvalidOperationException>(() => rules.UseMap(map, map.Points));
+
+            Assert.That(e.Message, Does.StartWith("cannot start the Payload match on map NetTest: it has no payload route"));
         }
 
         [Test]

@@ -163,6 +163,7 @@ namespace Shooter.Server.Tests
         [TestCase(MatchObjective.FreeForAll, typeof(FreeForAllRules))]
         [TestCase(MatchObjective.KillConfirmed, typeof(KillConfirmedRules))]
         [TestCase(MatchObjective.GunGame, typeof(GunGameRules))]
+        [TestCase(MatchObjective.Payload, typeof(PayloadRules))]
         public void EveryOnlineModeHasServerRules(MatchObjective objective, Type expected)
         {
             var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
@@ -180,10 +181,9 @@ namespace Shooter.Server.Tests
 
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
-                // Payload・Battle Royale・Extraction は設定と型だけを先に足し、サーバーのルールは後から足すので、
+                // Battle Royale・Extraction は設定と型だけを先に足し、サーバーのルールは後から足すので、
                 // それまでは下のテストで断ることを確かめる
-                if (objective == MatchObjective.Payload
-                    || objective == MatchObjective.BattleRoyale
+                if (objective == MatchObjective.BattleRoyale
                     || objective == MatchObjective.Extraction)
                 {
                     continue;
@@ -193,7 +193,42 @@ namespace Shooter.Server.Tests
             }
         }
 
-        [TestCase(MatchObjective.Payload, "Payload")]
+        [Test]
+        public void PayloadPushesTheCartOfTheMapWithTheConfiguredTuning()
+        {
+            var tuning = new PayloadSpec(cartSpeed: 3f, timeLimitSeconds: 240f);
+            var settings = new NetMatchSettings(respawnSeconds: 6f, payload: tuning);
+
+            var objective = (PayloadRules)ServerObjectiveFactory.Create(MatchObjective.Payload, settings, _host);
+
+            Assert.That(objective.Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(objective.PlaysInRounds, Is.False);
+            Assert.That(objective.KeepsMatchScore, Is.False);
+            var spec = objective.CreateSessionSpec(GameRules.Default, settings);
+            Assert.That(spec.ScoreLimit, Is.EqualTo(int.MaxValue));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(float.MaxValue));
+            Assert.That(spec.RespawnSeconds, Is.EqualTo(6f));
+            Assert.That(objective.Payload, Is.Null);
+
+            var points = TestRules.PayloadPoints();
+            objective.UseMap(TestMaps.Data("NetArena01", points), points);
+            objective.Start();
+
+            Assert.That(objective.Payload.Spec, Is.SameAs(tuning));
+            Assert.That(objective.RemainingSeconds, Is.EqualTo(240f));
+            Assert.That(_log.ToString(), Does.Contain("[Payload] net attackers=Alpha length=20.0m checkpoints=1 radius=3 cartSpeed=3"));
+            var snapshot = default(MatchSnapshot);
+            objective.FillMatch(ref snapshot);
+            Assert.That(snapshot.Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(snapshot.PayloadProgress, Is.Zero);
+            var items = new SnapshotList<ObjectiveItemSnapshot>(SnapshotMessage.MaxObjectiveItems, "objective item");
+            objective.FillObjectiveItems(items);
+            Assert.That(items.Count, Is.EqualTo(1));
+            Assert.That(items[0].Kind, Is.EqualTo(ObjectiveItemKind.Cart));
+            Assert.That(objective.DecideWinner(Team.Alpha), Is.EqualTo(Team.Bravo), "the defenders hold until the cart arrives");
+            objective.Stop();
+        }
+
         [TestCase(MatchObjective.BattleRoyale, "BattleRoyale")]
         [TestCase(MatchObjective.Extraction, "Extraction")]
         public void AMatchIsRefusedUntilTheServerHasItsRules(MatchObjective objective, string name)
@@ -207,6 +242,7 @@ namespace Shooter.Server.Tests
         [TestCase(MatchObjective.CaptureTheFlag, "flag")]
         [TestCase(MatchObjective.Hardpoint, "hardpoint")]
         [TestCase(MatchObjective.SearchAndDestroy, "bomb site")]
+        [TestCase(MatchObjective.Payload, "payload route")]
         public void ModesThatNeedMapPointsRefuseAMapWithoutThem(MatchObjective objective, string what)
         {
             var objectiveRules = ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host);

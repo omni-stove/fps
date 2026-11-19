@@ -8,7 +8,7 @@ namespace Shooter.Core
         private Health _health;
         private Weapon _weapon;
         private Match _match;
-        private CampaignNotice _notice;
+        private IHudNoticeSource _notice;
 
         public event Action<HudField> Changed;
 
@@ -158,7 +158,7 @@ namespace Shooter.Core
             ApplySoloResult(SoloResult, key ?? string.Empty);
         }
 
-        public void BindNotice(CampaignNotice notice)
+        public void BindNotice(IHudNoticeSource notice)
         {
             if (_notice != null)
             {

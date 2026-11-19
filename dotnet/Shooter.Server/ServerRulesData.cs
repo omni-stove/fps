@@ -30,9 +30,12 @@ namespace Shooter.Server
             string name, NetMatchFile file, PingSpec ping, string path, string pingPath, GrenadeCatalog grenades = null, string grenadePath = null,
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
             KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
-            NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null)
+            NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null,
+            EconomyRules buyList = null, string economyPath = null)
         {
             _settings = settings;
+            BuyList = buyList;
+            EconomyPath = economyPath;
             ChatWords = chatWords ?? ChatWordFilterSpec.Default;
             ChatWordsPath = chatWordsPath;
             Assist = assist ?? AssistSpec.Default;
@@ -93,12 +96,20 @@ namespace Shooter.Server
 
         public string ChatWordsPath { get; }
 
+        // 買える品の一覧 (tuning/economy.json) を読んだもの。財布の額 (Spec) は使わず、置いていなければ null で、経済を動かさない
+        public EconomyRules BuyList { get; }
+
+        public string EconomyPath { get; }
+
+        // 額は試合の設定から取るので、設定を差し替えた (WithSettings) 後もその額で組む
+        public EconomyRules Economy => BuyList == null ? null : new EconomyRules(Settings.Economy, BuyList.Catalog, BuyList.ResetOnSwap);
+
         public ServerRulesData WithSettings(NetMatchSettings settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             return new ServerRulesData(
                 Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                settings, ChatWords, ChatWordsPath);
+                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath);
         }
 
         // ルールのファイルを作り直すのは、NetMatchFile が目的に要る設定とロードアウトを作るときに確かめるので、
@@ -111,7 +122,7 @@ namespace Shooter.Server
                 File.Catalog, File.Motor);
             return new ServerRulesData(
                 Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                _settings, ChatWords, ChatWordsPath);
+                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath);
         }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -125,6 +136,7 @@ namespace Shooter.Server
             + " knockback=" + (KnockbackPath ?? "default")
             + " assist=" + (AssistPath ?? "default")
             + " chatWords=" + (ChatWordsPath ?? "default")
+            + " economy=" + (EconomyPath ?? "none")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -323,9 +335,30 @@ namespace Shooter.Server
                 chatWordsPath = null;
             }
 
+            // 買える品の一覧は Unity では Resources の JSON (KitTuning.Economy) から読む。無ければ既定の品で動かさず、経済そのものを止める
+            var economyPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, EconomyTuningFileName));
+            EconomyRules buyList = null;
+            if (System.IO.File.Exists(economyPath))
+            {
+                try
+                {
+                    buyList = EconomyJson.Parse(System.IO.File.ReadAllText(economyPath), economyPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read economy tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                economyPath = null;
+            }
+
             data = new ServerRulesData(
                 name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath,
-                chatWords: chatWords, chatWordsPath: chatWordsPath);
+                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath);
             error = null;
             return true;
         }

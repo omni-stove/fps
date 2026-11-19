@@ -39,6 +39,9 @@ namespace Shooter.Server
         private int _loggedDesired = -1;
         private bool _unavailable;
 
+        // null なら Bot は出現地点を巡っている
+        private Vector3? _ralliedAt;
+
         // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)
         public ServerBots(MatchRulesModule rules, ServerMovement movement, ServerCombat combat, ServerDeployables deployables = null)
         {
@@ -134,6 +137,7 @@ namespace Shooter.Server
                 _agents[playerId] = NewAgent(playerId);
             }
 
+            _ralliedAt = null;
             _log.WriteLine(LogTag + " map=" + map.Name + " bots=" + Text(_agents.Count) + " patrolPoints=" + Text(_patrolPoints.Count)
                 + " navMesh=" + (_hasNavMesh ? "yes" : "no"));
         }
@@ -150,6 +154,7 @@ namespace Shooter.Server
                 return;
             }
 
+            Rally();
             _ids.Clear();
             _ids.AddRange(_agents.Keys);
             foreach (var playerId in _ids)
@@ -314,6 +319,9 @@ namespace Shooter.Server
             var playerId = _nextBotId++;
             _agents.Add(playerId, NewAgent(playerId));
 
+            // 足した Bot は出現地点を巡る路で作るので、次の Rally で目的の場所へ向け直す
+            _ralliedAt = null;
+
             var player = _match.JoinBot(playerId);
             _movement.AddBot(player);
             _log.WriteLine(LogTag + " added player=" + Text(playerId) + " name=" + BotRoster.KillFeedName(playerId) + " team=" + player.Team);
@@ -343,6 +351,62 @@ namespace Shooter.Server
             }
 
             return route;
+        }
+
+        // 目的が場所を示す間は Bot をそのまわりに巡らせ、示さなくなったら (ルールが替わったなど) 出現地点を巡る路に戻す
+        private void Rally()
+        {
+            var rally = _rules.Objective?.BotRally;
+            if (!rally.HasValue)
+            {
+                if (_ralliedAt.HasValue)
+                {
+                    _ralliedAt = null;
+                    foreach (var pair in _agents)
+                    {
+                        pair.Value.Brain.SetPatrolRoute(ShuffledPatrolRoute(pair.Key));
+                    }
+                }
+
+                return;
+            }
+
+            var center = rally.Value.Center;
+            var radius = rally.Value.Radius;
+            if (_ralliedAt.HasValue && Vector3.Distance(_ralliedAt.Value, center) < radius * _spec.RallyMoveRadiusFraction)
+            {
+                return;
+            }
+
+            var slot = 0;
+            foreach (var agent in _agents.Values)
+            {
+                agent.Brain.SetPatrolRoute(RouteAround(center, radius, slot, _spec));
+                slot++;
+            }
+
+            _ralliedAt = center;
+            _log.WriteLine(LogTag + " rally x=" + F2(center.X) + " y=" + F2(center.Y) + " z=" + F2(center.Z)
+                + " radius=" + F2(radius) + " bots=" + Text(_agents.Count));
+        }
+
+        // 範囲の中で向かい合う 2 点を往復させる。Bot ごとに向きをずらし、同じ所に固まらないようにする
+        internal static Vector3[] RouteAround(Vector3 center, float radius, int slot, NetBotSpec spec = null)
+        {
+            spec ??= NetBotSpec.Default;
+            if (!(radius > 0f) || float.IsInfinity(radius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(radius), radius, "radius must be positive and finite");
+            }
+
+            if (slot < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, "slot must not be negative");
+            }
+
+            var angle = slot * spec.RallyRouteAngleStepDegrees % 360f / ServerBotMath.DegreesPerRadian;
+            var offset = new Vector3(MathF.Cos(angle), 0f, MathF.Sin(angle)) * (radius * spec.RallyRouteRadiusFraction);
+            return new[] { center + offset, center - offset };
         }
 
         private bool HasNavMeshNearPatrolPoints()

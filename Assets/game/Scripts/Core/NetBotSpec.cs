@@ -31,6 +31,11 @@ namespace Shooter.Core
         public const float DefaultStuckSeconds = 2f;
         public const float DefaultStuckProgress = 0.5f;
 
+        // オフラインの HardpointRunner.RouteAround・PayloadRunner と同じ巡り方にして、オンラインとオフラインで Bot の集まり方を揃える
+        public const float DefaultRallyRouteRadiusFraction = 0.5f;
+        public const float DefaultRallyRouteAngleStepDegrees = 137.5f;
+        public const float DefaultRallyMoveRadiusFraction = 0.5f;
+
         public static NetBotSpec Default { get; } = new NetBotSpec(
             new EnemySpec(
                 DefaultSightRange,
@@ -62,7 +67,10 @@ namespace Shooter.Core
             float repathSeconds,
             float repathDistance,
             float stuckSeconds,
-            float stuckProgress)
+            float stuckProgress,
+            float rallyRouteRadiusFraction = DefaultRallyRouteRadiusFraction,
+            float rallyRouteAngleStepDegrees = DefaultRallyRouteAngleStepDegrees,
+            float rallyMoveRadiusFraction = DefaultRallyMoveRadiusFraction)
         {
             Brain = brain ?? throw new ArgumentNullException(nameof(brain));
             Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -79,6 +87,12 @@ namespace Shooter.Core
             }
 
             RequireNonNegative(stuckProgress, nameof(stuckProgress));
+            RequireNonNegative(rallyRouteRadiusFraction, nameof(rallyRouteRadiusFraction));
+            RequireNonNegative(rallyRouteAngleStepDegrees, nameof(rallyRouteAngleStepDegrees));
+            RequireNonNegative(rallyMoveRadiusFraction, nameof(rallyMoveRadiusFraction));
+            RallyRouteRadiusFraction = rallyRouteRadiusFraction;
+            RallyRouteAngleStepDegrees = rallyRouteAngleStepDegrees;
+            RallyMoveRadiusFraction = rallyMoveRadiusFraction;
             NavSampleRadius = navSampleRadius;
             RepathSeconds = repathSeconds;
             RepathDistance = repathDistance;
@@ -99,6 +113,12 @@ namespace Shooter.Core
         public float StuckSeconds { get; }
 
         public float StuckProgress { get; }
+
+        public float RallyRouteRadiusFraction { get; }
+
+        public float RallyRouteAngleStepDegrees { get; }
+
+        public float RallyMoveRadiusFraction { get; }
 
         private static void RequireNonNegative(float value, string name)
         {

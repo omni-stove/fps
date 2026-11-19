@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using NUnit.Framework;
 using Shooter.Core;
@@ -45,6 +44,7 @@ namespace Shooter.Server.Tests
             Assert.That(data.Rules.Streaks, Is.EqualTo(name == "GunGame" ? Streaks.Off : Streaks.On), "a gun game climbs by kills, not by streak rewards");
         }
 
+        [TestCase("CaptureTheFlag")]
         [TestCase("Hardpoint")]
         [TestCase("SearchAndDestroy")]
         [TestCase("FreeForAll")]
@@ -59,17 +59,21 @@ namespace Shooter.Server.Tests
             Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
         }
 
-        // 例のマップには旗の台が無いので、旗取りは台を置いて書き出したマップでしか始められない
-        [Test]
-        public void CaptureTheFlagNeedsAMapWithFlagBases()
+        // 台の位置はシーンを作る ArenaSceneBuilder.FlagBases・NetSceneBuilder.FlagBases と同じ (足元の高さ y = -1、自陣の奥の中央)
+        [TestCase("NetArena01", 27f)]
+        [TestCase("NetTest", 26f)]
+        public void EachExampleMapHasOneFlagBasePerTeamBehindItsSpawns(string mapName, float depth)
         {
             Assert.That(ServerRulesData.TryLoad("CaptureTheFlag", Roots(), out var data, out var error), Is.True, error);
-            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad(mapName, Roots(), out var map, out error), Is.True, error);
             var rules = ServerObjectiveFactory.Create(data.Rules.Objective, data.Settings, new NoSessionHost());
 
-            var e = Assert.Throws<InvalidOperationException>(() => rules.CheckMap(map, map.Points));
-
-            Assert.That(e.Message, Does.StartWith("cannot change to map NetArena01 for the CaptureTheFlag match: it has no flag base for team "));
+            Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points), "run make export-server-rules and commit server-data/maps");
+            Assert.That(map.Points.FlagBases, Has.Count.EqualTo(2));
+            Assert.That(map.Points.FlagBases[0].Team, Is.EqualTo(Team.Alpha));
+            Assert.That(map.Points.FlagBases[0].Position, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, -depth)));
+            Assert.That(map.Points.FlagBases[1].Team, Is.EqualTo(Team.Bravo));
+            Assert.That(map.Points.FlagBases[1].Position, Is.EqualTo(new System.Numerics.Vector3(0f, -1f, depth)));
         }
 
         [Test]

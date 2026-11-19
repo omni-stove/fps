@@ -135,15 +135,21 @@ namespace Shooter.Server
                 return null;
             }
 
-            var checkedRules = new HashSet<GameRules>(ReferenceEqualityComparer.Instance);
+            var checkedMaps = new Dictionary<GameRules, HashSet<string>>(ReferenceEqualityComparer.Instance);
             foreach (var entry in Playlist.Entries)
             {
-                if (!checkedRules.Add(entry.Rules))
+                if (!checkedMaps.TryGetValue(entry.Rules, out var maps))
+                {
+                    maps = new HashSet<string>(StringComparer.Ordinal);
+                    checkedMaps.Add(entry.Rules, maps);
+                }
+
+                if (!maps.Add(HoldsMapVote ? string.Empty : entry.Map))
                 {
                     continue;
                 }
 
-                var problem = CheckNextRules(entry.Rules);
+                var problem = CheckNextRules(entry.Rules, MapsOf(entry));
                 if (problem != null)
                 {
                     return ServerPlaylistLog.CannotUseRules(Playlist.Playlist, entry.Position, entry.RulesName, problem);
@@ -194,10 +200,17 @@ namespace Shooter.Server
             }
 
             _log.WriteLine(ServerPlaylistLog.Entry(Playlist, entry, Playlist.Round));
-            if (!RequestNextRules(entry.Rules, out var problem))
+            if (!RequestNextRules(entry.Rules, MapsOf(entry), out var problem))
             {
                 _log.WriteLine(ServerPlaylistLog.RulesRefused(Playlist, entry, problem));
             }
+        }
+
+        // 投票しないなら次の試合のマップは項目のマップに決まる (RequestNextMap は投票しか呼ばない) ので、そのマップだけで確かめる。
+        // すべてのマップで確かめると、台車の道筋のように一部のマップにしか無いものを要るモードを、別のマップの項目と同じプレイリストに入れられないため
+        private ServerMapData[] MapsOf(ServerPlaylistEntry entry)
+        {
+            return HoldsMapVote ? null : new[] { FindMap(entry.Map) };
         }
     }
 }

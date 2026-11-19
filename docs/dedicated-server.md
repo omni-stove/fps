@@ -106,7 +106,8 @@ make server-dotnet ARGS="-rules FreeForAll"
 
 `-playlist <id>` で、`server-data/playlists/*.json` (Unity の `Resources/Tuning/playlists.json` と同じ書き方) のプレイリストに沿って試合ごとにモードとマップを替える。
 項目の `scene` は `server-data/maps/` のマップ名、`rules` はルール名 (省くと `TeamDeathmatch`)、`mutators` は `server-data/tuning/mutators.json` の Id にする。
-`server-data/playlists/rotation.json` に TDM → Domination → Kill Confirmed の例を置いてある。
+`server-data/playlists/rotation.json` に TDM (`NetArena01`) → Domination (`NetTest`) → Payload (`NetArena01`) の例を置いてある。
+台車の道筋は `NetArena01` にしか無いので、Payload の項目は `NetArena01` に置く。
 
 ```sh
 make server-dotnet ARGS="-playlist rotation"
@@ -115,7 +116,9 @@ make server-dotnet ARGS="-playlist rotation"
 - 項目がルールとマップを決めるので、`-rules`・`-map` とは一緒に渡せない (終了コード 2)。
 - 最初の項目で始め、試合が終わるたびに次の項目へ進む (最後の後は最初に戻る)。`order` が `Shuffle` なら起動ごとに並びを混ぜる。
 - 試合の設定 (`match.*` の点数・時間・待ち時間・`mapVoteSeconds` など) と武器は最初の項目のルールの JSON のものを使い続け、2 項目目からは `rules.*` (モードと規則) だけを替える。
-- どの項目のモードも、プレイリストに出てくるすべてのマップ (と最初のルールの `mapPool`) で遊べなければならない。足りないと待ち受ける前に `[Server] failed to start: playlist <id> entry <n>/<数> cannot use rules ...` で終了コード 1 になる。
+- `mapVoteSeconds` が 0 なら、項目のモードはその項目のマップで遊べればよい (次の試合のマップは項目のマップに決まるため)。
+  投票するなら、どの項目のモードも、プレイリストに出てくるすべてのマップ (と最初のルールの `mapPool`) で遊べなければならない。
+  足りないと待ち受ける前に `[Server] failed to start: playlist <id> entry <n>/<数> cannot use rules ...` で終了コード 1 になる。
   知らないミューテーターの Id・無いルール・読めないプレイリストは終了コード 3 になる。
 - `mapVoteSeconds` が 0 より大きく、マップが 2 つ以上あると、マップは投票で決め、モードとミューテーターは次の項目のものにする。投票の知らせには次の項目のルール名が載る。
 

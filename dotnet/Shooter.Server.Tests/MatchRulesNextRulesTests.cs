@@ -161,7 +161,7 @@ namespace Shooter.Server.Tests
             var domination = Plain().WithObjective(MatchObjective.Domination);
             Assert.That(_match.RequestNextRules(domination, out _), Is.True);
 
-            _match.CheckNextRules = _ => "refused";
+            _match.CheckNextRules = (_, _) => "refused";
             Assert.That(_match.RequestNextRules(Plain(), out var error), Is.False);
 
             Assert.That(error, Is.EqualTo("refused"));

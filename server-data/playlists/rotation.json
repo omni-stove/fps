@@ -6,7 +6,7 @@
       "entries": [
         { "scene": "NetArena01", "rules": "TeamDeathmatch" },
         { "scene": "NetTest", "rules": "Domination" },
-        { "scene": "NetArena01", "rules": "KillConfirmed" }
+        { "scene": "NetArena01", "rules": "Payload" }
       ]
     }
   ]

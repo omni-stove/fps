@@ -15,8 +15,14 @@ namespace Shooter.Server
         }
 
         // 替えた先で始められないと分かるのが試合の合間だと、遊んでいる人を残して止めるしかないので、起動のうちに断る
+        // 投票しないプレイリストでは始めのルールのまま他のマップへ移らないので、他のマップは項目ごとに ServerMatch.CheckPlaylist に確かめさせる
         private void CheckOtherMaps()
         {
+            if (_match.Playlist != null && !_match.HoldsMapVote)
+            {
+                return;
+            }
+
             foreach (var map in _match.Maps)
             {
                 if (ReferenceEquals(map, _context.Map))
@@ -51,6 +57,13 @@ namespace Shooter.Server
             var points = PointsOf(map);
             _session.ReplaceSpawnPoints(points.SpawnPoints);
             _log.WriteLine(MatchLog.Tag + " spawnPoints=" + Text(points.SpawnPoints.Count) + " map=" + map.Name);
+            // ルールが替わるなら今の目的は捨てるので渡さない。渡すと、前のモードに要るものが無いマップへ移るとき (Domination → Payload) に落ちる。
+            // 新しい目的には UseNextRules が渡す
+            if (_match.NextRules != null && !ReferenceEquals(_match.NextRules, _data.Rules))
+            {
+                return;
+            }
+
             _objective.UseMap(map, points);
             foreach (var player in _match.Players)
             {

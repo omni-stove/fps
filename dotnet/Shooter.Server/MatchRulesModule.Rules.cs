@@ -73,14 +73,10 @@ namespace Shooter.Server
             session.DownedChanged -= HandleDownedChanged;
         }
 
-        // 試合の合間に作れないと分かると遊んでいる人を残して止めるしかないので、受け付けるときに目的を作り、替わりうるマップを全部確かめる
-        private string CheckNextRules(GameRules rules)
+        // 試合の合間に作れないと分かると遊んでいる人を残して止めるしかないので、受け付けるときに目的を作り、替わりうるマップを全部確かめる。
+        // 今のルールと同じでも確かめるのは、投票しないプレイリストでは今のルールを今のマップでしか確かめていないため
+        private string CheckNextRules(GameRules rules, IReadOnlyList<ServerMapData> maps)
         {
-            if (ReferenceEquals(rules, _data.Rules))
-            {
-                return null;
-            }
-
             try
             {
                 var data = _data.WithRules(rules);
@@ -91,7 +87,7 @@ namespace Shooter.Server
                     FillGunGameWeapons(data, new Dictionary<string, WeaponSpec>(StringComparer.Ordinal));
                 }
 
-                foreach (var map in MapsToCheck())
+                foreach (var map in maps ?? MapsToCheck())
                 {
                     var points = PointsOf(map);
                     RequireSpawnPointFor(map, points, Team.Alpha);

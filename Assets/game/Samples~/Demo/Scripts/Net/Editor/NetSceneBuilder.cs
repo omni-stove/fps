@@ -56,6 +56,16 @@ namespace Shooter.Editor
             ("Control Point A", new Vector3(0f, GroundY, 0f), 0),
         };
 
+        public const string FlagBasesRootName = CaptureTheFlagSceneBuilder.BasesRootName;
+
+        // 旗取りのサーバーは両チームの台が無いマップを断るので、どのルールでも置いておく。CaptureTheFlag.FlagSides の順 (Alpha、Bravo) に、自陣の出現地点の奥の中央へ置く。
+        // 台は足元 (床の高さ) に置き、範囲の円盤を床に出す。上下の差は CaptureTheFlag.ReachHeight 以内なので、床に立つカプセルの中心 (y=0) も届く。
+        public static readonly (Side Side, Vector3 Position)[] FlagBases =
+        {
+            (Side.Alpha, new Vector3(0f, GroundY, -26f)),
+            (Side.Bravo, new Vector3(0f, GroundY, 26f)),
+        };
+
         [MenuItem("Shooter/Net/Build NetTest Scene")]
         public static void Build()
         {
@@ -66,7 +76,7 @@ namespace Shooter.Editor
             }
 
             var match = LoadOrBuildMatch();
-            BuildScene();
+            BuildScene(CaptureRadius(match));
             BuildSceneList.Register(ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + ScenePath + " (match " + MatchDefinitionPath + ", loadout "
@@ -136,6 +146,62 @@ namespace Shooter.Editor
             return light;
         }
 
+        public static string FlagBaseName(Side side)
+        {
+            return CaptureTheFlagSceneBuilder.BaseObjectName(side);
+        }
+
+        // 判定の半径はサーバーが書き出したルールの値で決めるので、シーンの台の半径はクライアントに見せる円盤の大きさにしか使われない。サーバーへ渡すのと同じ値に揃える。
+        public static float CaptureRadius(NetMatchDefinition match)
+        {
+            if (match == null)
+            {
+                throw new ArgumentNullException(nameof(match));
+            }
+
+            return match.ToSettings().CaptureTheFlag.CaptureRadius;
+        }
+
+        // 旗そのもの (FlagObject) はオフラインのランナーが動かすもので、オンラインでは置いても台に立ったまま動かないので、台だけを置く。
+        public static GameObject CreateFlagBases(Scene scene, System.Collections.Generic.IReadOnlyList<(Side Side, Vector3 Position)> bases, float radius)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (bases == null)
+            {
+                throw new ArgumentNullException(nameof(bases));
+            }
+
+            foreach (var flagSide in CaptureTheFlag.FlagSides)
+            {
+                if (bases.Count(b => b.Side == flagSide) != 1)
+                {
+                    throw new ArgumentException("needs exactly one flag base for " + flagSide, nameof(bases));
+                }
+            }
+
+            var root = new GameObject(FlagBasesRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            try
+            {
+                foreach (var (side, position) in bases)
+                {
+                    var baseObject = new GameObject(FlagBaseName(side));
+                    baseObject.transform.SetParent(root.transform, false);
+                    baseObject.transform.SetPositionAndRotation(position, Quaternion.identity);
+                    var flagBase = baseObject.AddComponent<FlagBase>();
+                    flagBase.Side = side;
+                    flagBase.Radius = radius;
+                }
+
+                return root;
+            }
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
+        }
+
         public static NetSpawnPoint CreateSpawnPoint(Transform parent, string pointName, Vector3 position, NetSpawnPoint.SpawnTeam team)
         {
             if (parent == null)
@@ -151,7 +217,7 @@ namespace Shooter.Editor
             return point;
         }
 
-        private static void BuildScene()
+        private static void BuildScene(float captureRadius)
         {
             var scenePath = ScenePath;
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
@@ -190,6 +256,8 @@ namespace Shooter.Editor
                 pointObject.AddComponent<ControlPointZone>().Index = index;
             }
 
+            CreateFlagBases(scene, FlagBases, captureRadius);
+
             BakeNavMesh(ground);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
@@ -209,6 +277,10 @@ namespace Shooter.Editor
             var spawns = SpawnPoints.Select(point => point.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(spawns, NavMeshCheckRadius, "spawn point");
             SceneBuildHelpers.RequireReachable(spawns[0], spawns, NavMeshCheckRadius, "spawn point");
+
+            var bases = FlagBases.Select(flagBase => flagBase.Position).ToList();
+            SceneBuildHelpers.RequireOnNavMesh(bases, NavMeshCheckRadius, "flag base");
+            SceneBuildHelpers.RequireReachable(spawns[0], bases, NavMeshCheckRadius, "flag base");
         }
     }
 }

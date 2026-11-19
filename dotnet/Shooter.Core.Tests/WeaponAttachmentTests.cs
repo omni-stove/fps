@@ -745,5 +745,20 @@ namespace Shooter.Core.Tests
             Assert.That(spec.Aim.Sight, Is.SameAs(SightSpec.Default));
             Assert.That(spec.Aim.ZoomLevels, Is.EqualTo(Floats(30f, 15f)));
         }
+
+        [Test]
+        public void SwappingTheOpticSwapsTheVisionMode()
+        {
+            var thermal = new ItemSpec(
+                _pistolSightId, "item.thermal", attachment: new AttachmentSpec("optic", sight: new SightSpec("thermal", scopeOverlay: true, visionMode: VisionMode.Thermal)));
+            var nightScoped = new WeaponSpec(
+                _rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, aim: new AimSpec(sight: new SightSpec("nv", scopeOverlay: true, visionMode: VisionMode.Night)));
+            var catalog = new ItemCatalog(new[] { _rifleItem, thermal, _suppressor }, InventoryRule.Default);
+
+            Assert.That(WeaponAttachments.Apply(nightScoped, WeaponAttachments.None, catalog).Aim.Sight.VisionMode, Is.EqualTo(VisionMode.Night));
+            Assert.That(WeaponAttachments.Apply(nightScoped, new[] { _pistolSightId }, catalog).Aim.Sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(WeaponAttachments.Apply(nightScoped, new[] { _suppressorId }, catalog).Aim.Sight.VisionMode, Is.EqualTo(VisionMode.Night), "a muzzle keeps the vision");
+            Assert.That(WeaponAttachments.Apply(nightScoped, new[] { _scopeId }, Catalog()).Aim.Sight.VisionMode, Is.EqualTo(VisionMode.None), "a zoom-only optic drops it");
+        }
     }
 }

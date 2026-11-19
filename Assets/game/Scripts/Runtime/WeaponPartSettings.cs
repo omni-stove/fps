@@ -800,6 +800,9 @@ namespace Shooter.Runtime
         [SerializeField, UnityEngine.Range(0.01f, 1f), Tooltip("覗き込みの進み具合がこれ以上で照準と縁を出す")]
         private float _aimedInProgress = SightSpec.DefaultAimedInProgress;
 
+        [SerializeField, Tooltip("構えきっている間だけ照準の中に掛ける見え方 (暗視・サーマル)。None なら素のまま")]
+        private VisionMode _visionMode = VisionMode.None;
+
         public bool Enabled { get => _enabled; set => _enabled = value; }
 
         public string ReticleId { get => _reticleId; set => _reticleId = value ?? string.Empty; }
@@ -810,7 +813,10 @@ namespace Shooter.Runtime
 
         public float AimedInProgress { get => _aimedInProgress; set => _aimedInProgress = value; }
 
-        public SightSpec ToSpec() => _enabled ? new SightSpec(_reticleId, _scopeOverlay, _eyeViewInThirdPerson, _aimedInProgress) : null;
+        public VisionMode VisionMode { get => _visionMode; set => _visionMode = value; }
+
+        public SightSpec ToSpec() =>
+            _enabled ? new SightSpec(_reticleId, _scopeOverlay, _eyeViewInThirdPerson, _aimedInProgress, _visionMode) : null;
 
         public void Set(SightSpec spec)
         {
@@ -821,6 +827,7 @@ namespace Shooter.Runtime
                 _scopeOverlay = spec.ScopeOverlay;
                 _eyeViewInThirdPerson = spec.EyeViewInThirdPerson;
                 _aimedInProgress = spec.AimedInProgress;
+                _visionMode = spec.VisionMode;
             }
         }
     }

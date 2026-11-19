@@ -897,12 +897,35 @@ namespace Shooter.Tests.EditMode
         public void SightLogNamesTheShownReticle()
         {
             var scope = SightView.Of(new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true), ViewMode.ThirdPerson, 1f);
-            Assert.That(SightLog.Format(scope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=mildot eye=true"));
+            Assert.That(SightLog.Format(scope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=mildot eye=true vision=None"));
 
             var plainScope = SightView.Of(new SightSpec(scopeOverlay: true), ViewMode.FirstPerson, 1f);
-            Assert.That(SightLog.Format(plainScope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=default eye=false"));
+            Assert.That(SightLog.Format(plainScope), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=default eye=false vision=None"));
 
-            Assert.That(SightLog.Format(SightView.None), Is.EqualTo("[View] sight aimedIn=false overlay=false reticle=- eye=false"));
+            var thermal = SightView.Of(new SightSpec(scopeOverlay: true, visionMode: VisionMode.Thermal), ViewMode.FirstPerson, 1f);
+            Assert.That(SightLog.Format(thermal), Is.EqualTo("[View] sight aimedIn=true overlay=true reticle=default eye=false vision=Thermal"));
+
+            Assert.That(SightLog.Format(SightView.None), Is.EqualTo("[View] sight aimedIn=false overlay=false reticle=- eye=false vision=None"));
+        }
+
+        [Test]
+        public void TheSightsVisionModeHoldsOnlyWhileAimedInAndIsLogged()
+        {
+            Initialize();
+            var sight = new SightSpec("nv", visionMode: VisionMode.Night);
+            _ads.WeaponSource = () => new WeaponSpec(_rifleId, "Night", WeaponCategory.MarksmanRifle, aim: new AimSpec(sight: sight));
+
+            _ads.Tick(true, true, 0.05f);
+            Assert.That(_ads.SightView.VisionMode, Is.EqualTo(VisionMode.None), "not while still raising the gun");
+
+            LogAssert.Expect(LogType.Log, "[View] sight aimedIn=true overlay=false reticle=nv eye=false vision=Night");
+            _ads.Tick(true, false, 1f);
+            Assert.That(_ads.SightView.VisionMode, Is.EqualTo(VisionMode.Night));
+
+            _ads.ViewModeSource = () => ViewMode.ThirdPerson;
+            LogAssert.Expect(LogType.Log, "[View] sight aimedIn=false overlay=false reticle=- eye=false vision=None");
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.SightView.VisionMode, Is.EqualTo(VisionMode.None), "over the shoulder the sight is not looked through");
         }
 
         private static WeaponSpec Scoped(string id)

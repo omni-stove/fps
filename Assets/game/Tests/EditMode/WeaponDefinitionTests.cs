@@ -295,9 +295,29 @@ namespace Shooter.Tests.EditMode
             Assert.That(sight.ScopeOverlay, Is.True);
             Assert.That(sight.EyeViewInThirdPerson, Is.False);
             Assert.That(sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
+            Assert.That(sight.VisionMode, Is.EqualTo(VisionMode.None));
 
             definition.Sight.Set(SightSpec.Default);
             Assert.That(definition.Sight.Enabled, Is.False);
+        }
+
+        [Test]
+        public void TheSightsVisionModeGoesIntoTheSpecAndBack()
+        {
+            var definition = NewDefinition("Thermal");
+            Assert.That(definition.Sight.VisionMode, Is.EqualTo(VisionMode.None));
+
+            definition.Sight.Enabled = true;
+            definition.Sight.VisionMode = VisionMode.Thermal;
+            var sight = definition.ToSpec().Aim.Sight;
+            Assert.That(sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(sight.IsDefault, Is.False, "a vision mode alone makes the sight worth keeping");
+
+            var other = NewDefinition("Night");
+            other.Sight.Set(new SightSpec("nv", visionMode: VisionMode.Night));
+            Assert.That(other.Sight.Enabled, Is.True);
+            Assert.That(other.Sight.VisionMode, Is.EqualTo(VisionMode.Night));
+            Assert.That(other.ToSpec().Aim.Sight.VisionMode, Is.EqualTo(VisionMode.Night));
         }
 
         [Test]

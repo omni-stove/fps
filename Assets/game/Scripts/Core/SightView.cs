@@ -8,13 +8,14 @@ namespace Shooter.Core
 
         private readonly string _reticleId;
 
-        private SightView(bool throughSight, bool aimedIn, bool scopeOverlay, string reticleId, float eyeBlend)
+        private SightView(bool throughSight, bool aimedIn, bool scopeOverlay, string reticleId, float eyeBlend, VisionMode visionMode)
         {
             ThroughSight = throughSight;
             AimedIn = aimedIn;
             ScopeOverlay = scopeOverlay;
             _reticleId = reticleId;
             EyeBlend = eyeBlend;
+            VisionMode = visionMode;
         }
 
         public bool ThroughSight { get; }
@@ -35,6 +36,8 @@ namespace Shooter.Core
         // 寄せ始めからカメラが体の中を通るので、寄り切るのを待たずに隠す。
         public bool HidesBody => EyeBlend > 0f;
 
+        public VisionMode VisionMode { get; }
+
         public static SightView Of(SightSpec sight, ViewMode view, float adsProgress)
         {
             if (view != ViewMode.FirstPerson && view != ViewMode.ThirdPerson)
@@ -52,7 +55,8 @@ namespace Shooter.Core
                 aimedIn,
                 aimedIn && sight.ScopeOverlay,
                 aimedIn ? sight.ReticleId : string.Empty,
-                eyeView ? progress : 0f);
+                eyeView ? progress : 0f,
+                aimedIn ? sight.VisionMode : VisionMode.None);
         }
 
         public bool Equals(SightView other)
@@ -61,7 +65,8 @@ namespace Shooter.Core
                 && AimedIn == other.AimedIn
                 && ScopeOverlay == other.ScopeOverlay
                 && string.Equals(ReticleId, other.ReticleId, StringComparison.Ordinal)
-                && EyeBlend.Equals(other.EyeBlend);
+                && EyeBlend.Equals(other.EyeBlend)
+                && VisionMode == other.VisionMode;
         }
 
         public static bool operator ==(SightView left, SightView right)
@@ -87,7 +92,8 @@ namespace Shooter.Core
                 hash = (hash * 31) + AimedIn.GetHashCode();
                 hash = (hash * 31) + ScopeOverlay.GetHashCode();
                 hash = (hash * 31) + StringComparer.Ordinal.GetHashCode(ReticleId);
-                return (hash * 31) + EyeBlend.GetHashCode();
+                hash = (hash * 31) + EyeBlend.GetHashCode();
+                return (hash * 31) + (int)VisionMode;
             }
         }
     }

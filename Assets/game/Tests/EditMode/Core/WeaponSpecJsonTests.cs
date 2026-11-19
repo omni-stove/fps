@@ -319,6 +319,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
         [TestCase("{\"aim\": {\"sight\": {\"aimedInProgress\": 1.5}}}", "aim.sight.aimedInProgress")]
         [TestCase("{\"aim\": {\"sight\": {\"overlay\": true}}}", "aim.sight.overlay")]
+        [TestCase("{\"aim\": {\"sight\": {\"visionMode\": \"Infrared\"}}}", "aim.sight.visionMode")]
+        [TestCase("{\"aim\": {\"sight\": {\"visionMode\": 2}}}", "aim.sight.visionMode")]
         [TestCase("{\"weight\": -1}", "weight")]
         [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
         [TestCase("{\"drawSeconds\": -0.5}", "drawSeconds")]
@@ -369,6 +371,34 @@ namespace Shooter.Core.Tests
             Assert.That(read.Aim.Sight.ScopeOverlay, Is.False);
             Assert.That(read.Aim.Sight.EyeViewInThirdPerson, Is.False);
             Assert.That(read.Aim.Sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
+            Assert.That(read.Aim.Sight.VisionMode, Is.EqualTo(VisionMode.None));
+        }
+
+        [TestCase(VisionMode.Night, "\"Night\"")]
+        [TestCase(VisionMode.Thermal, "\"Thermal\"")]
+        public void TheSightsVisionModeReadsBack(VisionMode mode, string written)
+        {
+            var spec = new WeaponSpec(
+                _rifleId,
+                "weapon.nightRifle",
+                WeaponCategory.MarksmanRifle,
+                aim: new AimSpec(sight: new SightSpec(visionMode: mode)));
+
+            var text = WeaponSpecJson.Write(spec);
+            var read = WeaponSpecJson.Parse(text, "night.json");
+
+            Assert.That(text, Does.Contain("\"visionMode\": " + written));
+            Assert.That(read.Aim.Sight.VisionMode, Is.EqualTo(mode));
+            Assert.That(WeaponSpecJson.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void ASightWithoutVisionDoesNotWriteIt()
+        {
+            var scoped = new WeaponSpec(
+                _rifleId, "weapon.scopedRifle", WeaponCategory.MarksmanRifle, aim: new AimSpec(sight: new SightSpec("mildot", true)));
+
+            Assert.That(WeaponSpecJson.Write(scoped), Does.Not.Contain("visionMode"));
         }
 
         [TestCase("{\"category\": \"AssaultRifle\"}", "id")]
